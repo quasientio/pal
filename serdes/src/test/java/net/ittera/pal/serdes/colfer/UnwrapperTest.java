@@ -25,6 +25,7 @@ import static org.junit.Assert.assertNull;
 
 import java.util.List;
 import net.ittera.pal.messages.colfer.Obj;
+import net.ittera.pal.serdes.Unwrapper;
 import net.ittera.pal.serdes.WrappingTestBase;
 import org.junit.Test;
 

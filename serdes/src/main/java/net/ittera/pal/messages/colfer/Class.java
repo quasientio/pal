@@ -34,8 +34,6 @@ public class Class implements Serializable, net.ittera.pal.messages.Marshallable
 
   public String name;
 
-  public boolean unknown;
-
   /** Default constructor */
   public Class() {
     init();
@@ -137,7 +135,7 @@ public class Class implements Serializable, net.ittera.pal.messages.Marshallable
    * @return the number of bytes.
    */
   public int marshalFit() {
-    long n = 1L + 6 + (long) this.name.length() * 3 + 1;
+    long n = 1L + 6 + (long) this.name.length() * 3;
     if (n < 0 || n > (long) Class.colferSizeMax) return Class.colferSizeMax;
     return (int) n;
   }
@@ -228,10 +226,6 @@ public class Class implements Serializable, net.ittera.pal.messages.Marshallable
         buf[ii] = (byte) size;
       }
 
-      if (this.unknown) {
-        buf[i++] = (byte) 1;
-      }
-
       buf[i++] = (byte) 0x7f;
       return i;
     } catch (ArrayIndexOutOfBoundsException e) {
@@ -296,11 +290,6 @@ public class Class implements Serializable, net.ittera.pal.messages.Marshallable
         header = buf[i++];
       }
 
-      if (header == (byte) 1) {
-        this.unknown = true;
-        header = buf[i++];
-      }
-
       if (header != (byte) 0x7f)
         throw new InputMismatchException(format("colfer: unknown header at byte %d", i - 1));
     } finally {
@@ -317,7 +306,7 @@ public class Class implements Serializable, net.ittera.pal.messages.Marshallable
   }
 
   // {@link Serializable} version number.
-  private static final long serialVersionUID = 2L;
+  private static final long serialVersionUID = 1L;
 
   // {@link Serializable} Colfer extension.
   private void writeObject(ObjectOutputStream out) throws IOException {
@@ -371,40 +360,10 @@ public class Class implements Serializable, net.ittera.pal.messages.Marshallable
     return this;
   }
 
-  /**
-   * Gets net.ittera.pal.messages/colfer.Class.unknown.
-   *
-   * @return the value.
-   */
-  public boolean getUnknown() {
-    return this.unknown;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.Class.unknown.
-   *
-   * @param value the replacement.
-   */
-  public void setUnknown(boolean value) {
-    this.unknown = value;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.Class.unknown.
-   *
-   * @param value the replacement.
-   * @return {@code this}.
-   */
-  public Class withUnknown(boolean value) {
-    this.unknown = value;
-    return this;
-  }
-
   @Override
   public final int hashCode() {
     int h = 1;
     if (this.name != null) h = 31 * h + this.name.hashCode();
-    h = 31 * h + (this.unknown ? 1231 : 1237);
     return h;
   }
 
@@ -417,8 +376,7 @@ public class Class implements Serializable, net.ittera.pal.messages.Marshallable
     if (o == null) return false;
     if (o == this) return true;
 
-    return (this.name == null ? o.name == null : this.name.equals(o.name))
-        && this.unknown == o.unknown;
+    return (this.name == null ? o.name == null : this.name.equals(o.name));
   }
 
   @Override
@@ -426,10 +384,6 @@ public class Class implements Serializable, net.ittera.pal.messages.Marshallable
     try {
       if (json.has("name")) {
         this.name = json.get("name").getAsString();
-      }
-
-      if (json.has("unknown")) {
-        this.unknown = json.get("unknown").getAsBoolean();
       }
 
     } catch (Exception e) {

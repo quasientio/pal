@@ -21,6 +21,7 @@ package net.ittera.pal.common.util;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
@@ -30,7 +31,7 @@ public class ClassesTest {
   @Test
   public void getClassForPrimitive() {
     // reminder that <primitive>.class == <Wrapper>.type
-    assert boolean.class == Boolean.TYPE;
+    // -> assert boolean.class == Boolean.TYPE;
 
     assertEquals(boolean.class, Classes.getClassForPrimitive("boolean"));
     assertEquals(Boolean.TYPE, Classes.getClassForPrimitive("boolean"));
@@ -218,6 +219,54 @@ public class ClassesTest {
     assertFalse(Classes.isValidClassName("invalid package.name"));
     assertFalse(Classes.isValidClassName("invalid[package.name]"));
     assertFalse(Classes.isValidClassName("invalid[package.name];"));
+  }
+
+  @Test
+  public void mapToProperArrayClassName_returnsProperClassnameOrNull() {
+    assertNull(Classes.mapToProperArrayClassName(null));
+
+    // int[] -> [I
+    assertEquals("[I", Classes.mapToProperArrayClassName("int[]"));
+    // Integer[] -> [Ljava.lang.Integer;
+    assertEquals("[Ljava.lang.Integer;", Classes.mapToProperArrayClassName("Integer[]"));
+
+    // boolean[] -> [Z
+    assertEquals("[Z", Classes.mapToProperArrayClassName("boolean[]"));
+    // Boolean[] -> [Ljava.lang.Boolean;
+    assertEquals("[Ljava.lang.Boolean;", Classes.mapToProperArrayClassName("Boolean[]"));
+
+    // byte[] -> [B
+    assertEquals("[B", Classes.mapToProperArrayClassName("byte[]"));
+    // Byte[] -> [Ljava.lang.Byte;
+    assertEquals("[Ljava.lang.Byte;", Classes.mapToProperArrayClassName("Byte[]"));
+
+    // char[] -> [C
+    assertEquals("[C", Classes.mapToProperArrayClassName("char[]"));
+    // Character[] -> [Ljava.lang.Character;
+    assertEquals("[Ljava.lang.Character;", Classes.mapToProperArrayClassName("Character[]"));
+
+    // short[] -> [S
+    assertEquals("[S", Classes.mapToProperArrayClassName("short[]"));
+    // Short[] -> [Ljava.lang.Short;
+    assertEquals("[Ljava.lang.Short;", Classes.mapToProperArrayClassName("Short[]"));
+
+    // long[] -> [J
+    assertEquals("[J", Classes.mapToProperArrayClassName("long[]"));
+    // Long[] -> [Ljava.lang.Long;
+    assertEquals("[Ljava.lang.Long;", Classes.mapToProperArrayClassName("Long[]"));
+
+    // float[] -> [F
+    assertEquals("[F", Classes.mapToProperArrayClassName("float[]"));
+    // Float[] -> [Ljava.lang.Float;
+    assertEquals("[Ljava.lang.Float;", Classes.mapToProperArrayClassName("Float[]"));
+
+    // double[] -> [D
+    assertEquals("[D", Classes.mapToProperArrayClassName("double[]"));
+    // Double[] -> [Ljava.lang.Double;
+    assertEquals("[Ljava.lang.Double;", Classes.mapToProperArrayClassName("Double[]"));
+
+    // String[] -> [Ljava.lang.String;
+    assertEquals("[Ljava.lang.String;", Classes.mapToProperArrayClassName("String[]"));
   }
 
   @Test

@@ -36,8 +36,8 @@ import net.ittera.pal.messages.colfer.Obj;
 import net.ittera.pal.messages.colfer.Parameter;
 import net.ittera.pal.messages.types.ExecMessageType;
 import net.ittera.pal.messages.types.SessionCommandType;
+import net.ittera.pal.serdes.Unwrapper;
 import net.ittera.pal.serdes.colfer.ColferUtils;
-import net.ittera.pal.serdes.colfer.Unwrapper;
 
 abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     implements Dispatcher, ExecMessageDispatcher {
@@ -254,15 +254,14 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         || execMessageType.equals(ExecMessageType.INSTANCE_METHOD)) {
       for (Parameter param : parameterList) {
         if (param.getValue().getClazz() == null
-            || param.getValue().getClazz().getUnknown()
-            || param.getValue().getClazz().name.isEmpty()) {
+            || param.getValue().getClazz().getName().isEmpty()) {
           paramClasses.add(null);
         } else {
           Class<?> primitiveClass =
               Classes.getClassForPrimitive(param.getValue().getClazz().getName());
           if (primitiveClass != null) { // param is primitive
             paramClasses.add(primitiveClass);
-          } else { // ie. not a primitive
+          } else { // i.e. not a primitive
             paramClasses.add(
                 Class.forName(
                     param.getValue().getClazz().getName(),

@@ -41,6 +41,7 @@ import net.ittera.pal.common.lang.reflect.FieldSignature;
 import net.ittera.pal.common.lang.reflect.Signature;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
+import net.ittera.pal.common.util.Classes;
 import net.ittera.pal.messages.colfer.Obj;
 import net.ittera.pal.serdes.NonWrappableObjectException;
 import net.ittera.pal.serdes.WrappingTestBase;
@@ -59,11 +60,11 @@ public class WrapperTest extends WrappingTestBase {
   public static void setupLists() {
 
     List<Class<?>> javaLangClasses = new ArrayList<>();
-    javaLangClasses.addAll(primitiveWrapperClasses);
+    javaLangClasses.addAll(Classes.getPrimitiveWrapperClasses());
     javaLangClasses.addAll(nonWrapperJavaLangClasses);
 
     allPrimitiveAndLangClasses = new ArrayList<>();
-    allPrimitiveAndLangClasses.addAll(primitiveClasses);
+    allPrimitiveAndLangClasses.addAll(Classes.getPrimitiveClasses());
     allPrimitiveAndLangClasses.addAll(javaLangClasses);
   }
 
@@ -107,7 +108,7 @@ public class WrapperTest extends WrappingTestBase {
 
     int arraySize = 1;
 
-    for (Class<?> clazz : primitiveClasses) {
+    for (Class<?> clazz : Classes.getPrimitiveClasses()) {
       Object primitiveArray = Array.newInstance(clazz, arraySize);
       assertTrue(
           String.format("%s is not wrappable!", primitiveArray),
@@ -120,7 +121,7 @@ public class WrapperTest extends WrappingTestBase {
 
     // create list of 1-dimensional arrays, one for each of primitiveWrapperClasses, with length=1
     List<?> wrapperArrays =
-        primitiveWrapperClasses.stream().map(WrapperTest::getArrayOfLength1).toList();
+        Classes.getPrimitiveWrapperClasses().stream().map(WrapperTest::getArrayOfLength1).toList();
 
     for (Object wrapperArray : wrapperArrays) {
       assertTrue(
@@ -171,7 +172,6 @@ public class WrapperTest extends WrappingTestBase {
   public void getWrappedClass_nullClass_unknownClassNoName() {
     net.ittera.pal.messages.colfer.Class wrappedClass = Wrapper.getWrappedClass((Class<?>) null);
     assertNotNull(wrappedClass);
-    assertTrue(wrappedClass.getUnknown());
     assertThat(wrappedClass.getName(), is(emptyString()));
   }
 
@@ -181,9 +181,9 @@ public class WrapperTest extends WrappingTestBase {
     for (Class<?> clazz : allPrimitiveAndLangClasses) {
       wrappedClass = Wrapper.getWrappedClass(clazz);
 
-      // neither null nor unknown
+      // neither null nor empty name
       assertNotNull(wrappedClass);
-      assertFalse(wrappedClass.getUnknown());
+      assertFalse(wrappedClass.getName().isEmpty());
 
       // name is set and correctly
       assertEquals(clazz.getName(), wrappedClass.getName());
@@ -197,9 +197,8 @@ public class WrapperTest extends WrappingTestBase {
     wrappedClass = Wrapper.getWrappedClass((String) null);
 
     assertNotNull(wrappedClass);
-    assertTrue(wrappedClass.getUnknown());
 
-    // name is set and correctly
+    // name is empty
     assertTrue(wrappedClass.getName().isEmpty());
   }
 
@@ -212,9 +211,9 @@ public class WrapperTest extends WrappingTestBase {
     for (String classname : classNames) {
       wrappedClass = Wrapper.getWrappedClass(classname);
 
-      // neither null nor unknown
+      // neither null nor name unknown
       assertNotNull(wrappedClass);
-      assertFalse(wrappedClass.getUnknown());
+      assertFalse(wrappedClass.getName().isEmpty());
 
       // name is set and correctly
       assertEquals(classname, wrappedClass.getName());
@@ -232,9 +231,9 @@ public class WrapperTest extends WrappingTestBase {
     for (Class<?> clazz : classes) {
       wrappedClass = Wrapper.getWrappedClass(clazz);
 
-      // neither null nor unknown
+      // neither null nor name unknown
       assertNotNull(wrappedClass);
-      assertFalse(wrappedClass.getUnknown());
+      assertFalse(wrappedClass.getName().isEmpty());
 
       // name is set and correctly
       assertEquals(clazz.getName(), wrappedClass.getName());
@@ -290,9 +289,14 @@ public class WrapperTest extends WrappingTestBase {
     Wrapper.getWrappedObject(new Object(), "238923", ObjectRef.randomRef());
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void getWrappedObject_nullArguments_illegalArgumentException() {
-    Wrapper.getWrappedObject(null, null, null);
+  @Test
+  public void getWrappedObject_nullArguments_objNull() {
+    Obj wrapped = Wrapper.getWrappedObject(null, null, null);
+    assertNotNull(wrapped);
+    assertTrue(wrapped.isNull);
+    assertThat(wrapped.getValue(), is(emptyString()));
+    assertThat(wrapped.getArrayValues(), is(emptyArray()));
+    assertThat(wrapped.getRef(), is(emptyString()));
   }
 
   @Test

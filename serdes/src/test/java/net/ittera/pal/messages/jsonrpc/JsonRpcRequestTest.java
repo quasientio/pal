@@ -150,6 +150,7 @@ public class JsonRpcRequestTest {
     // Serialize the request
     String jsonString = JsonRpcSerializer.toJson(request);
 
+    System.out.println(jsonString);
     // Deserialize the request back
     JsonRpcRequest deserializedRequest =
         JsonRpcSerializer.fromJson(jsonString, JsonRpcRequest.class);
@@ -164,6 +165,7 @@ public class JsonRpcRequestTest {
 
     // Second argument (reference)
     assertNull(deserializedArgs.get(1).getValue());
+    assertNotNull(deserializedArgs.get(1).getRef());
     assertEquals(5678, deserializedArgs.get(1).getRef().intValue());
 
     // Third argument (value with type)
@@ -273,7 +275,9 @@ public class JsonRpcRequestTest {
     assertEquals("com.example.MyClass", deserializedParams.getType());
     assertEquals("myField", deserializedParams.getField());
     assertThat(deserializedParams.getInstance(), is(1234));
-    assertNull(deserializedParams.getValue()); // Value should be null
+    Argument empty = new Argument();
+    assertThat(
+        deserializedParams.getValue(), is(empty)); // Value should be empty (effectively null)
   }
 
   /* Tests for illegal state when using build() */

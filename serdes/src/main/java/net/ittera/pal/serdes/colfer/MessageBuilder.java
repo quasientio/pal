@@ -88,6 +88,7 @@ import net.ittera.pal.messages.types.ExecMessageType;
 import net.ittera.pal.messages.types.InternalHeaderType;
 import net.ittera.pal.messages.types.JsonRpcErrorCode;
 import net.ittera.pal.messages.types.MessageType;
+import net.ittera.pal.serdes.ConversionUtils;
 import net.ittera.pal.serdes.jsonrpc.InvalidJsonRpcParamsException;
 import net.ittera.pal.serdes.jsonrpc.InvalidJsonRpcRequestException;
 import net.ittera.pal.serdes.jsonrpc.JsonRpcMessageUtils;
@@ -1060,7 +1061,6 @@ public final class MessageBuilder {
   // </editor-fold>
 
   // <editor-fold desc="JSON-RPC messages">
-  // TODO
   private Parameter[] jsonRpcParamsToBinaryRpcParams(List<Argument> jsonArgs) {
     if (jsonArgs == null || jsonArgs.isEmpty()) {
       return new Parameter[0];
@@ -1217,10 +1217,11 @@ public final class MessageBuilder {
   }
 
   public JsonRpcResponse jsonRpcResponseFromExecMessageReply(ExecMessage execMessageResponse) {
+    String requestId = execMessageResponse.getResponseToId();
 
     // Create a JSON-RPC response object
     final JsonRpcResponse jsonRpcResponse = new JsonRpcResponse();
-    jsonRpcResponse.setId(execMessageResponse.getResponseToId());
+    jsonRpcResponse.setId(requestId);
 
     switch (ExecMessageType.fromByte(execMessageResponse.getExecMessageType())) {
       case PUT_STATIC_DONE:
@@ -1230,13 +1231,14 @@ public final class MessageBuilder {
         break;
       case RETURN_VALUE:
         jsonRpcResponse.setResult(
-            ColferUtils.toResponseReturnValue(execMessageResponse.getReturnValue()));
+            ConversionUtils.toResponseReturnValue(execMessageResponse.getReturnValue()));
         break;
       case THROWABLE:
         net.ittera.pal.messages.colfer.Throwable raisedThrowable =
             execMessageResponse.getRaisedThrowable().getThrowable();
         JsonRpcErrorData errorData =
             new JsonRpcErrorData.Builder()
+                .withRequestId(requestId)
                 .withThrowableType(raisedThrowable.getType())
                 .withMessage(raisedThrowable.getMessage())
                 .withStackTrace(raisedThrowable.getStackTraceElements())
@@ -1265,16 +1267,27 @@ public final class MessageBuilder {
     return jsonRpcResponse;
   }
 
-  public JsonRpcResponse jsonRpcResponseFromParseError(Exception exception, String requestId) {
+  public JsonRpcResponse jsonRpcResponseFromError(Exception exception, String requestId) {
 
     final JsonRpcResponse jsonRpcResponse = new JsonRpcResponse();
     jsonRpcResponse.setId(requestId);
     final JsonRpcError error;
     JsonRpcErrorData errorData = new JsonRpcErrorData();
 
-    if (exception instanceof JsonRpcParseException) {
-      errorData.setMessage(
-          ((JsonRpcParseException) exception).getJsonParsingException().getMessage());
+    // set request id
+    errorData.setRequestId(requestId);
+
+    // set throwable type
+    if (exception instanceof JsonRpcParseException jsonRpcParseException) {
+      errorData.setThrowableType(
+          jsonRpcParseException.getJsonParsingException().getClass().getName());
+    } else {
+      errorData.setThrowableType(exception.getClass().getName());
+    }
+
+    // set other error data
+    if (exception instanceof JsonRpcParseException jsonRpcParseException) {
+      errorData.setMessage(jsonRpcParseException.getJsonParsingException().getMessage());
       error =
           new JsonRpcError(
               JsonRpcErrorCode.PARSE_ERROR.getCode(),
@@ -1298,8 +1311,8 @@ public final class MessageBuilder {
       errorData.setMessage(exception.getMessage());
       error =
           new JsonRpcError(
-              JsonRpcErrorCode.INTERNAL_ERROR.getCode(),
-              JsonRpcErrorCode.INTERNAL_ERROR.getMessage(),
+              JsonRpcErrorCode.SERVER_ERROR.getCode(),
+              JsonRpcErrorCode.SERVER_ERROR.getMessage(),
               errorData);
     }
     jsonRpcResponse.setError(error);

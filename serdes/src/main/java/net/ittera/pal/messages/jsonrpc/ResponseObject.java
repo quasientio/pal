@@ -3,8 +3,9 @@ package net.ittera.pal.messages.jsonrpc;
 import com.google.gson.annotations.SerializedName;
 import java.util.Arrays;
 import java.util.Objects;
+import net.ittera.pal.serdes.Unwrappable;
 
-public class ResponseObject {
+public class ResponseObject implements Unwrappable {
 
   @javax.annotation.Nullable private String type;
 
@@ -17,11 +18,12 @@ public class ResponseObject {
 
   @SerializedName("array_values")
   @javax.annotation.Nullable
-  private ResponseObject[] arrayValues;
+  private ResponseObject[] arrayValues = new ResponseObject[0];
 
   public ResponseObject() {}
 
   @javax.annotation.Nullable
+  @Override
   public ResponseObject[] getArrayValues() {
     return arrayValues;
   }
@@ -34,11 +36,17 @@ public class ResponseObject {
     return isNull;
   }
 
+  @Override
+  public boolean isNull() {
+    return isNull;
+  }
+
   public void setIsNull(boolean isNull) {
     this.isNull = isNull;
   }
 
   @javax.annotation.Nullable
+  @Override
   public Integer getRef() {
     return ref;
   }
@@ -48,6 +56,7 @@ public class ResponseObject {
   }
 
   @javax.annotation.Nullable
+  @Override
   public String getType() {
     return type;
   }
@@ -57,6 +66,7 @@ public class ResponseObject {
   }
 
   @javax.annotation.Nullable
+  @Override
   public String getValue() {
     return value;
   }
@@ -67,7 +77,9 @@ public class ResponseObject {
 
   @Override
   public boolean equals(Object o) {
-    if (!(o instanceof ResponseObject that)) return false;
+    if (!(o instanceof ResponseObject that)) {
+      return false;
+    }
     return Objects.equals(type, that.type)
         && Objects.equals(isNull, that.isNull)
         && Objects.equals(value, that.value)

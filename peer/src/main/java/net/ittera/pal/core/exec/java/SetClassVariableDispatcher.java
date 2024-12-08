@@ -23,7 +23,6 @@ import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.lang.reflect.AccessibleObject;
-import java.lang.reflect.Field;
 import java.util.List;
 import java.util.UUID;
 import javax.annotation.Nullable;
@@ -31,10 +30,8 @@ import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.core.exec.DispatcherConnector;
 import net.ittera.pal.messages.colfer.ExecMessage;
-import net.ittera.pal.messages.colfer.Obj;
 import net.ittera.pal.messages.types.ExecMessageType;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
-import net.ittera.pal.serdes.colfer.Unwrapper;
 
 @Singleton
 public class SetClassVariableDispatcher extends SetFieldDispatcher {
@@ -68,44 +65,20 @@ public class SetClassVariableDispatcher extends SetFieldDispatcher {
       ExecMessage execMessage, List<Class<?>> parameterTypes, List<Object> args)
       throws ReflectiveOperationException {
 
-    Class<?> clazz =
-        Class.forName(
-            execMessage.getStaticFieldPut().getClazz().getName(),
-            true,
-            Thread.currentThread().getContextClassLoader());
-    final String fieldName = execMessage.getStaticFieldPut().getField().getName();
-    try {
-      return clazz.getField(fieldName);
-    } catch (NoSuchFieldException e) {
-      if (allowNonPublicAccess) {
-        return clazz.getDeclaredField(fieldName);
-      }
-      throw e;
-    }
+    return loadAccessibleObject(
+        execMessage.getStaticFieldPut().getClazz().getName(),
+        execMessage.getStaticFieldPut().getField().getName(),
+        parameterTypes,
+        args);
   }
 
   @Override
   protected @Nullable Object getValueFromMessage(
       final ExecMessage execMessage, final AccessibleObject accessibleObject) {
-
-    final Object value;
-    final Field field = (Field) accessibleObject;
-
-    Obj fieldPutObject = execMessage.getStaticFieldPut().getValueObject();
-    if (fieldPutObject != null) {
-      value = Unwrapper.unwrapObject(fieldPutObject, field.getType());
-      if (logger.isTraceEnabled()) {
-        logger.trace("Unwrapped value: {}", value);
-      }
-    } else {
-      value =
-          objectLookupStore.lookupObject(
-              ObjectRef.from(execMessage.getStaticFieldPut().getValueObjectRef()));
-      if (logger.isTraceEnabled()) {
-        logger.trace("Loaded value: {}", value);
-      }
-    }
-    return value;
+    return getValueFromMessage(
+        execMessage.getStaticFieldPut().getValueObject(),
+        execMessage.getStaticFieldPut().getValueObjectRef(),
+        accessibleObject);
   }
 
   @Override

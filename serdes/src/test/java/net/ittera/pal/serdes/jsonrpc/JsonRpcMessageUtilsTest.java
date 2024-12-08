@@ -55,7 +55,7 @@ public class JsonRpcMessageUtilsTest {
                 parseAndValidateJsonRpcMessage(jsonRpcMessage);
                 fail("Expected InvalidJsonRpcParamsException");
               } catch (InvalidJsonRpcParamsException e) {
-                assertTrue(e.getMessage().contains("Invalid characters in class name"));
+                assertTrue(e.getMessage().contains("Invalid characters in type"));
                 assertNotNull(e.getRequestId());
               }
             });
@@ -142,7 +142,7 @@ public class JsonRpcMessageUtilsTest {
                 parseAndValidateJsonRpcMessage(jsonRpcMessage);
                 fail("Expected InvalidJsonRpcParamsException");
               } catch (InvalidJsonRpcParamsException e) {
-                assertTrue(e.getMessage().contains("Class name is a Java reserved keyword"));
+                assertTrue(e.getMessage().contains("Type name is a Java reserved keyword"));
                 assertNotNull(e.getRequestId());
               }
             });

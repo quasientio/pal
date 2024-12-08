@@ -38,7 +38,7 @@ import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.messages.colfer.ReturnValue;
 import net.ittera.pal.messages.types.ExecMessageType;
 import net.ittera.pal.messages.types.MessageType;
-import net.ittera.pal.serdes.colfer.Unwrapper;
+import net.ittera.pal.serdes.Unwrapper;
 import org.junit.Test;
 
 public class MethodInterceptIT extends AbstractInterceptIT {

@@ -30,8 +30,8 @@ import static org.junit.Assert.assertTrue;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Obj;
 import net.ittera.pal.messages.colfer.ReturnValue;
+import net.ittera.pal.serdes.Unwrapper;
 import net.ittera.pal.serdes.colfer.ColferUtils;
-import net.ittera.pal.serdes.colfer.Unwrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,7 +64,6 @@ public interface ExecMessageAssertions {
     assertEquals(isNull, retObj.getIsNull());
     assertEquals(hasObjRef, retObj.getRef() != null && !retObj.getRef().isEmpty());
     assertThat(retObj.getClazz(), is(not(nullValue())));
-    assertFalse(retObj.getClazz().getUnknown());
     assertEquals(className, retObj.getClazz().getName());
   }
 

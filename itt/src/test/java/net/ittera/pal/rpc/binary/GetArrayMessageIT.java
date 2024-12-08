@@ -23,21 +23,25 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import net.ittera.pal.messages.colfer.ReturnValue;
-import net.ittera.pal.serdes.colfer.Unwrapper;
+import net.ittera.pal.serdes.Unwrapper;
 import org.junit.Test;
 
 /**
- * Naming convention to use: methodName_stateUnderTest_expectedBehavior
+ * Naming convention to use: methodName_stateUnderTest_expectedBehavior.
  *
- * <p>Coverage: --------- Arrays of Primitives & Wrappers. For each type, there are 3 tests: - a
- * null (non-initialized) array - an empty array - an array initialized with some values of the
- * right type
+ * <pre>
+ *   Coverage: Arrays of Primitives & Wrappers.
+ *   For each type, there are 3 tests:
+ *   - a null array
+ *   - an empty array
+ *   - an array populated with some values
+ * </pre>
  *
- * <p>TODO: introduce null values TODO: use assertArrayEquals()
+ * <p>TODO: introduce null values
  */
-public class GetArrayVariableMessageIT extends AbstractBinaryRPCMessageIT {
+public class GetArrayMessageIT extends AbstractBinaryRPCMessageIT {
 
-  protected final String className = "net.ittera.pal.apps.rpc.ArrayVars";
+  protected final String className = "net.ittera.pal.apps.rpc.StaticArrayVars";
 
   // <editor-fold defaultstate="collapsed" desc="primitive array tests">
   @Test
@@ -193,7 +197,7 @@ public class GetArrayVariableMessageIT extends AbstractBinaryRPCMessageIT {
   @Test
   public void getStatic_intArrayNotNull_array() throws Exception {
 
-    ReturnValue retValue = callGetStatic(className, "an_intArray");
+    ReturnValue retValue = callGetStatic(className, "a_intArray");
     assertValueIsArrayOfType(retValue, "[I");
 
     int[] actualArray = {2333, -2, 0, 892, 9381};
@@ -379,14 +383,14 @@ public class GetArrayVariableMessageIT extends AbstractBinaryRPCMessageIT {
   @Test
   public void getStatic_CharacterArrayNull_nullArray() throws Exception {
 
-    ReturnValue retValue = callGetStatic(className, "aNullCharArray");
+    ReturnValue retValue = callGetStatic(className, "aNullCharacterArray");
     assertValueIsNullArrayOfType(retValue, "[Ljava.lang.Character;");
   }
 
   @Test
   public void getStatic_CharacterArrayEmpty_emptyArray() throws Exception {
 
-    ReturnValue retValue = callGetStatic(className, "anEmptyCharArray");
+    ReturnValue retValue = callGetStatic(className, "anEmptyCharacterArray");
     assertValueIsArrayOfType(retValue, "[Ljava.lang.Character;");
     assertValueEqualsArray(new Character[0], retValue);
   }
@@ -394,7 +398,7 @@ public class GetArrayVariableMessageIT extends AbstractBinaryRPCMessageIT {
   @Test
   public void getStatic_CharacterArrayNotNull_array() throws Exception {
 
-    ReturnValue retValue = callGetStatic(className, "aCharArray");
+    ReturnValue retValue = callGetStatic(className, "aCharacterArray");
     assertValueIsArrayOfType(retValue, "[Ljava.lang.Character;");
     assertValueEqualsArray(new Character[] {'a', 'r', 'r', 'a', 'y'}, retValue);
   }
@@ -402,14 +406,14 @@ public class GetArrayVariableMessageIT extends AbstractBinaryRPCMessageIT {
   @Test
   public void getStatic_IntegerArrayNull_nullArray() throws Exception {
 
-    ReturnValue retValue = callGetStatic(className, "aNullIntArray");
+    ReturnValue retValue = callGetStatic(className, "aNullIntegerArray");
     assertValueIsNullArrayOfType(retValue, "[Ljava.lang.Integer;");
   }
 
   @Test
   public void getStatic_IntegerArrayEmpty_emptyArray() throws Exception {
 
-    ReturnValue retValue = callGetStatic(className, "anEmptyIntArray");
+    ReturnValue retValue = callGetStatic(className, "anEmptyIntegerArray");
     assertValueIsArrayOfType(retValue, "[Ljava.lang.Integer;");
     assertValueEqualsArray(new Integer[0], retValue);
   }
@@ -417,7 +421,7 @@ public class GetArrayVariableMessageIT extends AbstractBinaryRPCMessageIT {
   @Test
   public void getStatic_IntegerArrayNotNull_array() throws Exception {
 
-    ReturnValue retValue = callGetStatic(className, "anIntArray");
+    ReturnValue retValue = callGetStatic(className, "aIntegerArray");
     assertValueIsArrayOfType(retValue, "[Ljava.lang.Integer;");
     assertValueEqualsArray(new Integer[] {2333, -2, 0, 892, 9381}, retValue);
   }

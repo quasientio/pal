@@ -23,6 +23,7 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import net.ittera.pal.common.objects.ObjectRef;
@@ -62,6 +63,10 @@ public final class Wrapper {
 
   public static boolean isWrappableCharSeqClass(String classname) {
     return reconstructableCharSeqClassNames.contains(classname);
+  }
+
+  public static List<Class<?>> getReconstructableCharSeqClasses() {
+    return reconstructableCharSeqClasses;
   }
 
   /**
@@ -206,7 +211,7 @@ public final class Wrapper {
     }
 
     if (object == null && classname == null && objectRef == null) {
-      throw new IllegalArgumentException("Object, classname and objectRef are all null");
+      return getWrappedObjectAux(new Obj(), null, null, null);
     }
 
     if (object instanceof Obj) {
@@ -217,6 +222,18 @@ public final class Wrapper {
       throw new NonWrappableObjectException(
           "ObjectRef is null and object is not wrappable", object);
     }
+
+    // we are lenient in our json-deserializer with array class names; here we map to proper array
+    // class name, e.g.:
+    // int[] -> [I
+    // Integer[] -> [Ljava.lang.String;
+    // String[] -> [Ljava.lang.String;
+    // etc.
+    String properArrayClassName = Classes.mapToProperArrayClassName(classname);
+    if (properArrayClassName != null) {
+      classname = properArrayClassName;
+    }
+
     if (classname != null && !Classes.isValidClassName(classname)) {
       throw new IllegalArgumentException("Invalid class name: " + classname);
     }
@@ -226,11 +243,7 @@ public final class Wrapper {
   static net.ittera.pal.messages.colfer.Class getWrappedClass(String className) {
     final net.ittera.pal.messages.colfer.Class wrappedClass =
         new net.ittera.pal.messages.colfer.Class();
-    if (className == null) {
-      wrappedClass.setUnknown(true);
-    } else {
-      wrappedClass.setName(className);
-    }
+    wrappedClass.setName(Objects.requireNonNullElse(className, ""));
     return wrappedClass;
   }
 
@@ -238,7 +251,7 @@ public final class Wrapper {
     final net.ittera.pal.messages.colfer.Class wrappedClass =
         new net.ittera.pal.messages.colfer.Class();
     if (clazz == null) {
-      wrappedClass.setUnknown(true);
+      wrappedClass.setName("");
     } else {
       wrappedClass.setName(clazz.getName());
     }

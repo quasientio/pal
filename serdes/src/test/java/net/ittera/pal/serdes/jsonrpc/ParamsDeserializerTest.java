@@ -1,8 +1,10 @@
 package net.ittera.pal.serdes.jsonrpc;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import com.google.gson.Gson;
@@ -36,7 +38,27 @@ public class ParamsDeserializerTest {
       "\"Hello\"",
       "null",
       "{\"value\": -10}",
-      "{\"value\": \"Hello\", \"type\": \"java.lang.String\"}"
+      "{\"value\": \"Hello\", \"type\": \"java.lang.String\"}",
+      // arrays
+      "[false,false,true]", // no type => Boolean[]
+      "[\"Hello\",\"world\"]", // no type => String[]
+      "[]", // no type => empty Object[]
+      "{\"value\":[false,true],\"type\":\"[Z\"}", // typed boolean array => boolean[]
+      "{\"value\":[\"Hello\",\"world\",\"!\"],\"type\":\"[Ljava.lang.String;\"}", // typed String[]
+      "{\"value\":[1,2,3],\"type\":\"[I\"}", // typed int[] {1,2,3}
+      "{\"value\":[],\"type\":\"[I\"}", // typed empty int[]
+      "{\"value\":null,\"type\":\"[I\"}", // typed null int[]
+      "{\"value\":[\"Hello\",null,\"world\"],\"type\":\"[Ljava.lang.String;\"}", // typed String[]
+      // arrays with suffixed numbers
+      "[239823d, 0.5f, 9999l]", // inferred type -> Double[]
+      "{\"value\":[239823d,38723d,2323d],\"type\":\"[D\"}", // with type
+      "{\"value\":[239823d,38723d,2323d]}", // without type
+      "{\"value\":[\"239823d\",\"0.5\",\"9999d\"],\"type\":\"[Ljava.lang.Double;\"}",
+      "{\"value\":[\"239823d\",\"0.5d\",\"9999d\"]}", // as strings, and without type
+      "{\"value\":[23f,1f,3f],\"type\":\"[F\"}",
+      "{\"value\":[\"23\",\"1f\",\"3f\"],\"type\":\"[Ljava.lang.Float;\"}",
+      "{\"value\":[2398239l,-23L],\"type\":\"[J\"}",
+      "{\"value\":[\"2398239\",\"-23l\"],\"type\":\"[Ljava.lang.Long;\"}",
     };
 
     for (String arg : validArgs) {
@@ -49,9 +71,11 @@ public class ParamsDeserializerTest {
       assertEquals("exampleMethod", params.getMethod());
 
       Argument value = params.getValue();
+      assertNotNull(value);
+      Argument empty = new Argument();
 
       switch (arg) {
-        case "{}", "null" -> assertNull(value); // Now value should be null
+        case "{}", "null" -> assertEquals(empty, value);
         case "4" -> assertEquals(4, value.getValue()); // Integer value
         case "4.3" -> assertEquals(4.3, value.getValue()); // Double value
         case "\"4\"" -> assertEquals("4", value.getValue()); // String value
@@ -60,6 +84,117 @@ public class ParamsDeserializerTest {
         case "{\"value\": \"Hello\", \"type\": \"java.lang.String\"}" -> {
           assertEquals("Hello", value.getValue());
           assertEquals("java.lang.String", value.getType());
+        }
+          // arrays:
+        case "[false,false,true]" -> {
+          Object val = value.getValue();
+          assertTrue(val instanceof Boolean[]);
+          assertArrayEquals(new Boolean[] {false, false, true}, (Boolean[]) val);
+          assertEquals("[Ljava.lang.Boolean;", value.getType());
+        }
+        case "[\"Hello\",\"world\"]" -> {
+          Object val = value.getValue();
+          assertTrue(val instanceof String[]);
+          assertArrayEquals(new String[] {"Hello", "world"}, (String[]) val);
+          assertEquals("[Ljava.lang.String;", value.getType());
+        }
+        case "[]" -> {
+          Object val = value.getValue();
+          assertTrue(val instanceof Object[]);
+          assertEquals(0, ((Object[]) val).length);
+          assertEquals("[Ljava.lang.Object;", value.getType());
+        }
+        case "{\"value\":[false,true],\"type\":\"[Z\"}" -> {
+          Object val = value.getValue();
+          assertTrue(val instanceof boolean[]);
+          assertArrayEquals(new boolean[] {false, true}, (boolean[]) val);
+          assertEquals("[Z", value.getType());
+        }
+        case "{\"value\":[\"Hello\",\"world\",\"!\"],\"type\":\"[Ljava.lang.String;\"}" -> {
+          Object val = value.getValue();
+          assertTrue(val instanceof String[]);
+          assertArrayEquals(new String[] {"Hello", "world", "!"}, (String[]) val);
+          assertEquals("[Ljava.lang.String;", value.getType());
+        }
+        case "{\"value\":[1,2,3],\"type\":\"[I\"}" -> {
+          Object val = value.getValue();
+          assertTrue(val instanceof int[]);
+          assertArrayEquals(new int[] {1, 2, 3}, (int[]) val);
+          assertEquals("[I", value.getType());
+        }
+        case "{\"value\":[],\"type\":\"[I\"}" -> {
+          Object val = value.getValue();
+          assertTrue(val instanceof int[]);
+          assertEquals(0, ((int[]) val).length);
+          assertEquals("[I", value.getType());
+        }
+        case "{\"value\":null,\"type\":\"[I\"}" -> {
+          // null typed array
+          assertNull(value.getValue());
+          assertEquals("[I", value.getType());
+        }
+        case "{\"value\":[\"Hello\",null,\"world\"],\"type\":\"[Ljava.lang.String;\"}" -> {
+          Object val = value.getValue();
+          assertTrue(val instanceof String[]);
+          assertArrayEquals(new String[] {"Hello", null, "world"}, (String[]) val);
+          assertEquals("[Ljava.lang.String;", value.getType());
+        }
+        case "[239823d, 0.5f, 9999l]" -> {
+          Object val = value.getValue();
+          assertTrue(val instanceof Double[]);
+          assertArrayEquals(new Double[] {239823.0, 0.5, 9999.0}, (Double[]) val);
+          assertEquals("[Ljava.lang.Double;", value.getType());
+        }
+        case "{\"value\":[239823d,38723d,2323d],\"type\":\"[D\"}" -> {
+          Object val = value.getValue();
+          assertTrue(val instanceof double[]);
+          assertArrayEquals(new double[] {239823.0, 38723.0, 2323.0}, (double[]) val, 0.0);
+          assertEquals("[D", value.getType());
+        }
+        case "{\"value\":[239823d,38723d,2323d]}" -> {
+          Object val = value.getValue();
+          assertTrue(val instanceof Double[]);
+          assertArrayEquals(new Double[] {239823.0, 38723.0, 2323.0}, (Double[]) val);
+          assertEquals("[Ljava.lang.Double;", value.getType());
+        }
+        case "{\"value\":[\"239823d\",\"0.5\",\"9999d\"],\"type\":\"[Ljava.lang.Double;\"}" -> {
+          Object val = value.getValue();
+          assertTrue(val instanceof Double[]);
+          // With strings, suffix parsing leads all to double
+          assertArrayEquals(new Double[] {239823.0, 0.5, 9999.0}, (Double[]) val);
+          assertEquals("[Ljava.lang.Double;", value.getType());
+        }
+        case "{\"value\":[\"239823d\",\"0.5d\",\"9999d\"]}" -> {
+          // no type given
+          Object val = value.getValue();
+          assertTrue(val instanceof Double[]);
+          // With strings, suffix parsing leads all to double
+          assertArrayEquals(new Double[] {239823.0, 0.5, 9999.0}, (Double[]) val);
+          assertEquals("[Ljava.lang.Double;", value.getType());
+        }
+        case "{\"value\":[23f,1f,3f],\"type\":\"[F\"}" -> {
+          Object val = value.getValue();
+          assertTrue(val instanceof float[]);
+          assertArrayEquals(new float[] {23f, 1f, 3f}, (float[]) val, 0f);
+          assertEquals("[F", value.getType());
+        }
+        case "{\"value\":[\"23\",\"1f\",\"3f\"],\"type\":\"[Ljava.lang.Float;\"}" -> {
+          Object val = value.getValue();
+          assertTrue(val instanceof Float[]);
+          assertArrayEquals(new Float[] {23f, 1f, 3f}, (Float[]) val);
+          assertEquals("[Ljava.lang.Float;", value.getType());
+        }
+        case "{\"value\":[2398239l,-23L],\"type\":\"[J\"}" -> {
+          Object val = value.getValue();
+          assertTrue(val instanceof long[]);
+          assertArrayEquals(new long[] {2398239L, -23L}, (long[]) val);
+          assertEquals("[J", value.getType());
+        }
+        case "{\"value\":[\"2398239\",\"-23l\"],\"type\":\"[Ljava.lang.Long;\"}" -> {
+          Object val = value.getValue();
+          assertTrue(val instanceof Long[]);
+          assertArrayEquals(new Long[] {2398239L, -23L}, (Long[]) val);
+          assertEquals("[Ljava.lang.Long;", value.getType());
         }
         default -> fail("Unexpected argument: " + arg);
       }
@@ -88,7 +223,27 @@ public class ParamsDeserializerTest {
       "\"Hello\"",
       "null",
       "{\"value\": -10}",
-      "{\"value\": \"Hello\", \"type\": \"java.lang.String\"}"
+      "{\"value\": \"Hello\", \"type\": \"java.lang.String\"}",
+      // arrays
+      "[false,false,true]",
+      "[\"Hello\",\"world\"]",
+      "[]",
+      "{\"value\":[false,true],\"type\":\"[Z\"}",
+      "{\"value\":[\"Hello\",\"world\",\"!\"],\"type\":\"[Ljava.lang.String;\"}",
+      "{\"value\":[1,2,3],\"type\":\"[I\"}",
+      "{\"value\":[],\"type\":\"[I\"}",
+      "{\"value\":null,\"type\":\"[I\"}",
+      "{\"value\":[\"Hello\",null,\"world\"],\"type\":\"[Ljava.lang.String;\"}",
+      // arrays with suffixed numbers
+      "[239823d, 0.5f, 9999l]", // without type -> inferred as Double[]
+      "{\"value\":[239823d,38723d,2323d],\"type\":\"[D\"}", // with type
+      "{\"value\":[239823d,38723d,2323d]}", // without type
+      "{\"value\":[\"239823d\",\"0.5\",\"9999d\"],\"type\":\"[Ljava.lang.Double;\"}",
+      "{\"value\":[\"239823d\",\"0.5d\",\"9999d\"]}", // as strings, and without type
+      "{\"value\":[23f,1f,3f],\"type\":\"[F\"}",
+      "{\"value\":[\"23\",\"1f\",\"3f\"],\"type\":\"[Ljava.lang.Float;\"}",
+      "{\"value\":[2398239l,-23L],\"type\":\"[J\"}",
+      "{\"value\":[\"2398239\",\"-23l\"],\"type\":\"[Ljava.lang.Long;\"}",
     };
 
     for (String arg : validArgs) {
@@ -118,6 +273,117 @@ public class ParamsDeserializerTest {
         case "{\"value\": \"Hello\", \"type\": \"java.lang.String\"}" -> {
           assertEquals("Hello", argument.getValue());
           assertEquals("java.lang.String", argument.getType());
+        }
+          // arrays:
+        case "[false,false,true]" -> {
+          Object val = argument.getValue();
+          assertTrue(val instanceof Boolean[]);
+          assertArrayEquals(new Boolean[] {false, false, true}, (Boolean[]) val);
+          assertEquals("[Ljava.lang.Boolean;", argument.getType());
+        }
+        case "[\"Hello\",\"world\"]" -> {
+          Object val = argument.getValue();
+          assertTrue(val instanceof String[]);
+          assertArrayEquals(new String[] {"Hello", "world"}, (String[]) val);
+          assertEquals("[Ljava.lang.String;", argument.getType());
+        }
+        case "[]" -> {
+          Object val = argument.getValue();
+          assertTrue(val instanceof Object[]);
+          assertEquals(0, ((Object[]) val).length);
+          assertEquals("[Ljava.lang.Object;", argument.getType());
+        }
+        case "{\"value\":[false,true],\"type\":\"[Z\"}" -> {
+          Object val = argument.getValue();
+          assertTrue(val instanceof boolean[]);
+          assertArrayEquals(new boolean[] {false, true}, (boolean[]) val);
+          assertEquals("[Z", argument.getType());
+        }
+        case "{\"value\":[\"Hello\",\"world\",\"!\"],\"type\":\"[Ljava.lang.String;\"}" -> {
+          Object val = argument.getValue();
+          assertTrue(val instanceof String[]);
+          assertArrayEquals(new String[] {"Hello", "world", "!"}, (String[]) val);
+          assertEquals("[Ljava.lang.String;", argument.getType());
+        }
+        case "{\"value\":[1,2,3],\"type\":\"[I\"}" -> {
+          Object val = argument.getValue();
+          assertTrue(val instanceof int[]);
+          assertArrayEquals(new int[] {1, 2, 3}, (int[]) val);
+          assertEquals("[I", argument.getType());
+        }
+        case "{\"value\":[],\"type\":\"[I\"}" -> {
+          Object val = argument.getValue();
+          assertTrue(val instanceof int[]);
+          assertEquals(0, ((int[]) val).length);
+          assertEquals("[I", argument.getType());
+        }
+        case "{\"value\":null,\"type\":\"[I\"}" -> {
+          // null typed array
+          assertNull(argument.getValue());
+          assertEquals("[I", argument.getType());
+        }
+        case "{\"value\":[\"Hello\",null,\"world\"],\"type\":\"[Ljava.lang.String;\"}" -> {
+          Object val = argument.getValue();
+          assertTrue(val instanceof String[]);
+          assertArrayEquals(new String[] {"Hello", null, "world"}, (String[]) val);
+          assertEquals("[Ljava.lang.String;", argument.getType());
+        }
+        case "[239823d, 0.5f, 9999l]" -> {
+          Object val = argument.getValue();
+          assertTrue(val instanceof Double[]);
+          assertArrayEquals(new Double[] {239823.0, 0.5, 9999.0}, (Double[]) val);
+          assertEquals("[Ljava.lang.Double;", argument.getType());
+        }
+        case "{\"value\":[239823d,38723d,2323d],\"type\":\"[D\"}" -> {
+          Object val = argument.getValue();
+          assertTrue(val instanceof double[]);
+          assertArrayEquals(new double[] {239823.0, 38723.0, 2323.0}, (double[]) val, 0.0);
+          assertEquals("[D", argument.getType());
+        }
+        case "{\"value\":[239823d,38723d,2323d]}" -> {
+          Object val = argument.getValue();
+          assertTrue(val instanceof Double[]);
+          assertArrayEquals(new Double[] {239823.0, 38723.0, 2323.0}, (Double[]) val);
+          assertEquals("[Ljava.lang.Double;", argument.getType());
+        }
+        case "{\"value\":[\"239823d\",\"0.5\",\"9999d\"],\"type\":\"[Ljava.lang.Double;\"}" -> {
+          Object val = argument.getValue();
+          assertTrue(val instanceof Double[]);
+          // With strings, suffix parsing leads all to double
+          assertArrayEquals(new Double[] {239823.0, 0.5, 9999.0}, (Double[]) val);
+          assertEquals("[Ljava.lang.Double;", argument.getType());
+        }
+        case "{\"value\":[\"239823d\",\"0.5d\",\"9999d\"]}" -> {
+          // no type given
+          Object val = argument.getValue();
+          assertTrue(val instanceof Double[]);
+          // With strings, suffix parsing leads all to double
+          assertArrayEquals(new Double[] {239823.0, 0.5, 9999.0}, (Double[]) val);
+          assertEquals("[Ljava.lang.Double;", argument.getType());
+        }
+        case "{\"value\":[23f,1f,3f],\"type\":\"[F\"}" -> {
+          Object val = argument.getValue();
+          assertTrue(val instanceof float[]);
+          assertArrayEquals(new float[] {23f, 1f, 3f}, (float[]) val, 0f);
+          assertEquals("[F", argument.getType());
+        }
+        case "{\"value\":[\"23\",\"1f\",\"3f\"],\"type\":\"[Ljava.lang.Float;\"}" -> {
+          Object val = argument.getValue();
+          assertTrue(val instanceof Float[]);
+          assertArrayEquals(new Float[] {23f, 1f, 3f}, (Float[]) val);
+          assertEquals("[Ljava.lang.Float;", argument.getType());
+        }
+        case "{\"value\":[2398239l,-23L],\"type\":\"[J\"}" -> {
+          Object val = argument.getValue();
+          assertTrue(val instanceof long[]);
+          assertArrayEquals(new long[] {2398239L, -23L}, (long[]) val);
+          assertEquals("[J", argument.getType());
+        }
+        case "{\"value\":[\"2398239\",\"-23l\"],\"type\":\"[Ljava.lang.Long;\"}" -> {
+          Object val = argument.getValue();
+          assertTrue(val instanceof Long[]);
+          assertArrayEquals(new Long[] {2398239L, -23L}, (Long[]) val);
+          assertEquals("[Ljava.lang.Long;", argument.getType());
         }
         default -> fail("Unexpected argument: " + arg);
       }

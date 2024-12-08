@@ -26,12 +26,12 @@
     </envs>
     <patterns>
       <pattern testClass="net.ittera.pal.rpc.binary.ConstructorMessageIT" />
-      <pattern testClass="net.ittera.pal.rpc.binary.GetArrayVariableMessageIT" />
-      <pattern testClass="net.ittera.pal.rpc.binary.GetClassVariableMessageIT" />
+      <pattern testClass="net.ittera.pal.rpc.binary.GetArrayMessageIT" />
+      <pattern testClass="net.ittera.pal.rpc.binary.GetMessageIT" />
       <pattern testClass="net.ittera.pal.rpc.binary.GetInstanceVariableMessageIT" />
       <pattern testClass="net.ittera.pal.rpc.binary.NonVoidClassMethodMessageIT" />
       <pattern testClass="net.ittera.pal.rpc.binary.NonVoidInstanceMethodMessageIT" />
-      <pattern testClass="net.ittera.pal.rpc.binary.SetClassVariableMessageIT" />
+      <pattern testClass="net.ittera.pal.rpc.binary.PutMessageIT" />
       <pattern testClass="net.ittera.pal.rpc.binary.SetInstanceVariableMessageIT" />
       <pattern testClass="net.ittera.pal.rpc.binary.VoidClassMethodMessageIT" />
       <pattern testClass="net.ittera.pal.rpc.binary.VoidInstanceMethodMessageIT" />

@@ -137,9 +137,8 @@ public class ExecMessageUtils {
           .map(
               param -> {
                 if (param.getValue().getClazz() == null
-                    || param.getValue().getClazz().getUnknown()
-                    || param.getValue().getClazz().name.isEmpty()) {
-                  return "unknown";
+                    || param.getValue().getClazz().getName().isEmpty()) {
+                  return null;
                 } else {
                   return param.getValue().getClazz().getName();
                 }

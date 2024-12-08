@@ -100,7 +100,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
     String fieldName = "someShort";
     short newFieldValue = 987;
-    String fieldClassName = "short.class";
+    String fieldClassName = short.class.getName();
 
     // create and store new instance
     ClassForPutFieldTest target = new ClassForPutFieldTest();
@@ -123,6 +123,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
     assertNull(replyMsg.getReturnValue());
+    assertNull(replyMsg.getRaisedThrowable());
     assertThat(replyMsg.getInstanceFieldPutDone().getField().getName(), is(fieldName));
     assertThat(target.someShort, is(newFieldValue));
     assertThat(
@@ -160,7 +161,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
     String fieldName = "bytes";
     byte[] newFieldValue = "bytes".getBytes(StandardCharsets.UTF_8);
-    String fieldClassName = "[B";
+    String fieldClassName = newFieldValue.getClass().getName();
 
     // create and store new instance
     ClassForPutFieldTest target = new ClassForPutFieldTest();
@@ -183,6 +184,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
     assertNull(replyMsg.getReturnValue());
+    assertNull(replyMsg.getRaisedThrowable());
     assertThat(replyMsg.getInstanceFieldPutDone().getField().getName(), is(fieldName));
     assertThat(target.bytes, is(newFieldValue));
     assertThat(
@@ -220,7 +222,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
     String fieldName = "aLong";
     Long newFieldValue = 100000L;
-    String fieldClassName = "Long.class";
+    String fieldClassName = newFieldValue.getClass().getName();
 
     // create and store new instance
     ClassForPutFieldTest target = new ClassForPutFieldTest();
@@ -243,6 +245,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
     assertNull(replyMsg.getReturnValue());
+    assertNull(replyMsg.getRaisedThrowable());
     assertThat(replyMsg.getInstanceFieldPutDone().getField().getName(), is(fieldName));
     assertThat(target.aLong, is(newFieldValue));
     assertThat(
@@ -279,8 +282,8 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
   public void dispatchIncoming_string_ok() {
 
     String fieldName = "aString";
-    String fieldClassName = "String.class";
     String newFieldValue = "to string or not to";
+    String fieldClassName = newFieldValue.getClass().getName();
 
     // create and store new instance
     ClassForPutFieldTest target = new ClassForPutFieldTest();
@@ -303,6 +306,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
     assertNull(replyMsg.getReturnValue());
+    assertNull(replyMsg.getRaisedThrowable());
     assertThat(replyMsg.getInstanceFieldPutDone().getField().getName(), is(fieldName));
     assertThat(target.aString, is(newFieldValue));
     assertThat(
@@ -358,6 +362,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(2L));
     assertNull(replyMsg.getReturnValue());
+    assertNull(replyMsg.getRaisedThrowable());
     assertThat(replyMsg.getInstanceFieldPutDone().getField().getName(), is(fieldName));
     assertThat(target.aList, sameInstance(newFieldValue));
     assertEquals(newFieldValue, target.aList);
@@ -395,6 +400,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
   public void dispatchIncoming_nullObject_ok() {
 
     String fieldName = "aList";
+    String fieldClassName = "java.util.List";
 
     // create and store new instance
     ClassForPutFieldTest target = new ClassForPutFieldTest();
@@ -403,7 +409,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     ObjectRef targetObjRef = objectLookupStore.storeObject(target);
     ExecMessage incomingMessage =
         messageBuilder.buildPutObject(
-            peerUuid, targetClass.getName(), fieldName, targetObjRef, "List.class", null);
+            peerUuid, targetClass.getName(), fieldName, targetObjRef, fieldClassName, null);
     // dispatch
     ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
@@ -412,6 +418,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
     assertNull(replyMsg.getReturnValue());
+    assertNull(replyMsg.getRaisedThrowable());
     assertThat(replyMsg.getInstanceFieldPutDone().getField().getName(), is(fieldName));
     assertThat(target.aList, is(nullValue()));
     assertThat(
@@ -467,6 +474,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(2L));
     assertNull(replyMsg.getReturnValue());
+    assertNull(replyMsg.getRaisedThrowable());
     assertThat(replyMsg.getInstanceFieldPutDone().getField().getName(), is(fieldName));
     assertThat(target.objects, sameInstance(newFieldValue));
     assertThat(
@@ -522,6 +530,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(2L));
     assertNull(replyMsg.getReturnValue());
+    assertNull(replyMsg.getRaisedThrowable());
     assertThat(replyMsg.getInstanceFieldPutDone().getField().getName(), is(fieldName));
     assertThat(target.lastError, sameInstance(newFieldValue));
     assertThat(
@@ -535,7 +544,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
   public void dispatchIncoming_publicAccessibleObject_noException() throws Throwable {
     String fieldName = "someShort";
     short newFieldValue = 987;
-    String fieldClassName = "short.class";
+    String fieldClassName = short.class.getName();
 
     // create and store new instance
     ClassForPutFieldTest target = new ClassForPutFieldTest();
@@ -563,7 +572,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
       throws Throwable {
     String fieldName = "aLong";
     Long newFieldValue = 98739L;
-    String fieldClassName = Long.class.getName();
+    String fieldClassName = newFieldValue.getClass().getName();
 
     // create and store new instance
     ClassForPutFieldTest target = new ClassForPutFieldTest();
@@ -598,7 +607,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
       throws Throwable {
     String fieldName = "aString";
     String newFieldValue = "I am a new string";
-    String fieldClassName = String.class.getName();
+    String fieldClassName = newFieldValue.getClass().getName();
 
     // create and store new instance
     ClassForPutFieldTest target = new ClassForPutFieldTest();
@@ -633,7 +642,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
       throws Throwable {
     String fieldName = "aPrivateString";
     String newFieldValue = "I am a new private string";
-    String fieldClassName = String.class.getName();
+    String fieldClassName = newFieldValue.getClass().getName();
 
     // create and store new instance
     ClassForPutFieldTest target = new ClassForPutFieldTest();

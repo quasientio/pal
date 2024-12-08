@@ -4,6 +4,8 @@ import java.util.Objects;
 
 /* This class is deserialized within the custom ParamsDeserializer adapter */
 public class Argument {
+  public static final Argument NULL = new Argument();
+
   @javax.annotation.Nullable private Object value;
 
   @javax.annotation.Nullable private Integer ref;
@@ -12,7 +14,7 @@ public class Argument {
 
   public Argument() {}
 
-  public Argument(Object value, String type) {
+  public Argument(Object value, @javax.annotation.Nullable String type) {
     this.value = value;
     this.type = type;
   }
@@ -48,9 +50,15 @@ public class Argument {
     this.type = type;
   }
 
+  public boolean isNull() {
+    return value == null && ref == null && type == null;
+  }
+
   @Override
   public boolean equals(Object o) {
-    if (!(o instanceof Argument argument)) return false;
+    if (!(o instanceof Argument argument)) {
+      return false;
+    }
     return Objects.equals(value, argument.value)
         && Objects.equals(ref, argument.ref)
         && Objects.equals(type, argument.type);

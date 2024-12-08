@@ -35,6 +35,8 @@ import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import net.ittera.pal.serdes.jsonrpc.JsonRpcRequestException;
+import net.ittera.pal.serdes.jsonrpc.JsonRpcSerializer;
+import net.ittera.pal.serdes.jsonrpc.JsonSerializationException;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
@@ -237,22 +239,27 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
   private void dispatchJsonRpcRequest(InboundJsonRpcRequestMsg jsonrpcMsg) {
 
     final long started = System.currentTimeMillis();
-    JsonRpcRequest jsonRpcRequest = null;
+    JsonRpcRequest jsonRpcRequest;
     final JsonRpcResponse jsonRpcResponse;
     String requestId = null;
     Exception parseException = null;
+    Message requestMsg = null;
 
     // parse and validate JSON-RPC message
     try {
       jsonRpcRequest = parseAndValidateJsonRpcMessage(jsonrpcMsg.getJsonMessage());
+      requestId = jsonRpcRequest.getId();
+
+      // create ExecMessage from JSON-RPC request message
+      requestMsg =
+          messageBuilder.jsonRpcRequestToExecMessage(jsonRpcRequest, jsonrpcMsg.getPeerId());
       if (logger.isDebugEnabled()) {
         logger.debug("Received JSON-RPC message from peer w/id: {}", jsonrpcMsg.getPeerId());
       }
-      requestId = jsonRpcRequest.getId();
     } catch (JsonRpcRequestException e) {
-      logger.error("Caught exception parsing message", e);
       requestId = e.getRequestId();
       parseException = e;
+      logger.error("Caught exception parsing message with id: {}", requestId, e);
     } catch (Exception e) {
       parseException = e;
       logger.error("Caught unexpected exception parsing message", e);
@@ -261,16 +268,17 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
     if (parseException != null) {
 
       // parsing+validating failed, log and send error response
-      jsonRpcResponse = messageBuilder.jsonRpcResponseFromParseError(parseException, requestId);
-      new OutboundJsonRpcResponseMsg(jsonrpcMsg.getPeerId(), gson.toJson(jsonRpcResponse))
-          .send(jsonrpcSocket);
+      jsonRpcResponse = messageBuilder.jsonRpcResponseFromError(parseException, requestId);
+      try {
+        new OutboundJsonRpcResponseMsg(
+                jsonrpcMsg.getPeerId(), JsonRpcSerializer.toJson(jsonRpcResponse))
+            .send(jsonrpcSocket);
+      } catch (JsonSerializationException ex) {
+        logger.error("Error sending JSON-RPC response", ex);
+      }
       logMessageDispatch(requestId, null, started);
       return;
     }
-
-    // create ExecMessage from JSON-RPC request message
-    final Message requestMsg =
-        messageBuilder.jsonRpcRequestToExecMessage(jsonRpcRequest, jsonrpcMsg.getPeerId());
 
     // dispatch
     Message replyMsg;
@@ -281,9 +289,14 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
       // dispatching failed, log and send error response
       logger.error(
           "Error dispatching message w/id {}", getMessageId(requestMsg), dispatchException);
-      jsonRpcResponse = messageBuilder.jsonRpcResponseFromParseError(dispatchException, requestId);
-      new OutboundJsonRpcResponseMsg(jsonrpcMsg.getPeerId(), gson.toJson(jsonRpcResponse))
-          .send(jsonrpcSocket);
+      jsonRpcResponse = messageBuilder.jsonRpcResponseFromError(dispatchException, requestId);
+      try {
+        new OutboundJsonRpcResponseMsg(
+                jsonrpcMsg.getPeerId(), JsonRpcSerializer.toJson(jsonRpcResponse))
+            .send(jsonrpcSocket);
+      } catch (JsonSerializationException ex) {
+        logger.error("Error sending JSON-RPC response", ex);
+      }
       logMessageDispatch(requestMsg, jsonRpcResponse.getId(), started);
       return;
     }
@@ -292,8 +305,13 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
     jsonRpcResponse = messageBuilder.jsonRpcResponseFromExecMessageReply(replyMsg.getExecMessage());
 
     // send response
-    new OutboundJsonRpcResponseMsg(jsonrpcMsg.getPeerId(), gson.toJson(jsonRpcResponse))
-        .send(jsonrpcSocket);
+    try {
+      new OutboundJsonRpcResponseMsg(
+              jsonrpcMsg.getPeerId(), JsonRpcSerializer.toJson(jsonRpcResponse))
+          .send(jsonrpcSocket);
+    } catch (JsonSerializationException ex) {
+      logger.error("Error sending JSON-RPC response", ex);
+    }
     logMessageDispatch(requestMsg, replyMsg, started);
   }
 

@@ -120,13 +120,13 @@ public class JsonRpcRequestValidator {
 
     if (!VALID_CLASS_NAME_PATTERN.matcher(simpleClassName).matches()) {
       throw new InvalidJsonRpcParamsException(
-          "Invalid characters in class name: " + simpleClassName, requestId);
+          "Invalid characters in type: " + simpleClassName, requestId);
     }
 
     // Check for Java reserved keywords
     if (JAVA_RESERVED_KEYWORDS.contains(simpleClassName)) {
       throw new InvalidJsonRpcParamsException(
-          "Class name is a Java reserved keyword: " + simpleClassName, requestId);
+          "Type name is a Java reserved keyword: " + simpleClassName, requestId);
     }
 
     /* 4.2 check specific fields that **should be set** based on the method */

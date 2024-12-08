@@ -3,6 +3,7 @@ package net.ittera.pal.messages.jsonrpc;
 import com.google.gson.annotations.SerializedName;
 import java.util.Arrays;
 import java.util.Objects;
+import javax.annotation.Nullable;
 
 public class JsonRpcErrorData {
 
@@ -17,6 +18,8 @@ public class JsonRpcErrorData {
   private String[] stackTrace;
 
   @javax.annotation.Nullable private JsonRpcErrorData cause;
+
+  @javax.annotation.Nullable private String requestId;
 
   @javax.annotation.Nullable
   public JsonRpcErrorData getCause() {
@@ -51,18 +54,30 @@ public class JsonRpcErrorData {
     this.throwableType = throwableType;
   }
 
+  @Nullable
+  public String getRequestId() {
+    return requestId;
+  }
+
+  public void setRequestId(@Nullable String requestId) {
+    this.requestId = requestId;
+  }
+
   @Override
   public boolean equals(Object o) {
-    if (!(o instanceof JsonRpcErrorData that)) return false;
+    if (!(o instanceof JsonRpcErrorData that)) {
+      return false;
+    }
     return Objects.equals(throwableType, that.throwableType)
         && Objects.equals(message, that.message)
+        && Objects.equals(requestId, that.requestId)
         && Objects.deepEquals(stackTrace, that.stackTrace)
         && Objects.equals(cause, that.cause);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(throwableType, message, Arrays.hashCode(stackTrace), cause);
+    return Objects.hash(throwableType, message, requestId, Arrays.hashCode(stackTrace), cause);
   }
 
   @Override
@@ -76,6 +91,8 @@ public class JsonRpcErrorData {
         + ", message='"
         + message
         + '\''
+        + ", requestId="
+        + requestId
         + ", stackTrace="
         + Arrays.deepToString(stackTrace)
         + '}';
@@ -91,6 +108,11 @@ public class JsonRpcErrorData {
 
     public Builder withMessage(String message) {
       errorData.setMessage(message);
+      return this;
+    }
+
+    public Builder withRequestId(String requestId) {
+      errorData.setRequestId(requestId);
       return this;
     }
 

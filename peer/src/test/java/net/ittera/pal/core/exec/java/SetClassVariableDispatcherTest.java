@@ -103,12 +103,12 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
   public void dispatchIncoming_primitive_ok() {
 
     String fieldName = "someShort";
-    String fieldClassName = "short.class";
     short newFieldValue = 987;
+    String fieldValueClassName = short.class.getName();
 
     ExecMessage incomingMessage =
         messageBuilder.buildPutStatic(
-            peerUuid, targetClass.getName(), fieldName, fieldClassName, newFieldValue);
+            peerUuid, targetClass.getName(), fieldName, fieldValueClassName, newFieldValue);
 
     // dispatch
     ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
@@ -118,6 +118,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(0L));
     assertThat(replyMsg.getReturnValue(), is(nullValue()));
+    assertThat(replyMsg.getRaisedThrowable(), is(nullValue()));
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
     assertThat(ClassForPutStaticTest.someShort, is(newFieldValue));
     assertThat(
@@ -167,6 +168,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(0L));
     assertThat(replyMsg.getReturnValue(), is(nullValue()));
+    assertThat(replyMsg.getRaisedThrowable(), is(nullValue()));
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
     assertThat(ClassForPutStaticTest.bytes, is(newFieldValue));
     assertThat(
@@ -202,12 +204,12 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
   public void dispatchIncoming_wrapper_ok() {
 
     String fieldName = "someBoolean";
-    String fieldClassName = "Boolean.class";
     Boolean newFieldValue = true;
+    String fieldValueClassName = newFieldValue.getClass().getName();
 
     ExecMessage incomingMessage =
         messageBuilder.buildPutStatic(
-            peerUuid, targetClass.getName(), fieldName, fieldClassName, newFieldValue);
+            peerUuid, targetClass.getName(), fieldName, fieldValueClassName, newFieldValue);
 
     // dispatch
     assertFalse(ClassForPutStaticTest.someBoolean);
@@ -218,6 +220,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(0L));
     assertThat(replyMsg.getReturnValue(), is(nullValue()));
+    assertThat(replyMsg.getRaisedThrowable(), is(nullValue()));
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
     assertThat(ClassForPutStaticTest.someBoolean, is(newFieldValue));
     assertThat(
@@ -252,12 +255,12 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
   public void dispatchIncoming_string_ok() {
 
     String fieldName = "aString";
-    String fieldClassName = "String.class";
     String newFieldValue = "abnormally";
+    String fieldValueClassName = newFieldValue.getClass().getName();
 
     ExecMessage incomingMessage =
         messageBuilder.buildPutStatic(
-            peerUuid, targetClass.getName(), fieldName, fieldClassName, newFieldValue);
+            peerUuid, targetClass.getName(), fieldName, fieldValueClassName, newFieldValue);
 
     // dispatch
     ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
@@ -267,6 +270,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(0L));
     assertThat(replyMsg.getReturnValue(), is(nullValue()));
+    assertThat(replyMsg.getRaisedThrowable(), is(nullValue()));
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
     assertThat(ClassForPutStaticTest.aString, is(newFieldValue));
     assertThat(
@@ -316,6 +320,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
     assertThat(replyMsg.getReturnValue(), is(nullValue()));
+    assertThat(replyMsg.getRaisedThrowable(), is(nullValue()));
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
     assertThat(ClassForPutStaticTest.aCollection, sameInstance(newFieldValue));
     assertThat(
@@ -350,11 +355,12 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
   public void dispatchIncoming_nullObject_ok() {
 
     String fieldName = "aCollection";
+    String valueClassName = "java.util.List";
 
     assertThat(ClassForPutStaticTest.aCollection, notNullValue());
     ExecMessage incomingMessage =
         messageBuilder.buildPutStatic(
-            peerUuid, targetClass.getName(), fieldName, "List.class", null);
+            peerUuid, targetClass.getName(), fieldName, valueClassName, null);
     // dispatch
     ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
@@ -363,6 +369,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(0L));
     assertThat(replyMsg.getReturnValue(), is(nullValue()));
+    assertThat(replyMsg.getRaisedThrowable(), is(nullValue()));
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
     assertThat(ClassForPutStaticTest.aCollection, is(nullValue()));
     assertThat(
@@ -411,6 +418,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
     assertThat(replyMsg.getReturnValue(), is(nullValue()));
+    assertThat(replyMsg.getRaisedThrowable(), is(nullValue()));
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
     assertThat(ClassForPutStaticTest.objects, sameInstance(newFieldValue));
     assertThat(
@@ -459,6 +467,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
     assertThat(replyMsg.getReturnValue(), is(nullValue()));
+    assertThat(replyMsg.getRaisedThrowable(), is(nullValue()));
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
     assertThat(ClassForPutStaticTest.lastError, sameInstance(newFieldValue));
     assertThat(
@@ -470,11 +479,11 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
   @Test
   public void dispatchIncoming_publicAccessibleObject_noException() throws Throwable {
     String fieldName = "someShort";
-    String fieldClassName = "short.class";
     short newFieldValue = 987;
+    String fieldValueClassName = short.class.getName();
     ExecMessage incomingMessage =
         messageBuilder.buildPutStatic(
-            peerUuid, targetClass.getName(), fieldName, fieldClassName, newFieldValue);
+            peerUuid, targetClass.getName(), fieldName, fieldValueClassName, newFieldValue);
 
     // dispatch with the onlyPublicDispatcher - expect no exception
     ExecMessage replyMsg =

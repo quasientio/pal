@@ -467,14 +467,20 @@ public class ThinPeer implements AutoCloseable {
     }
   }
 
+  public CompletableFuture<JsonRpcResponse> sendJsonRpcRequestToPeer(Object jsonRpc)
+      throws JsonSerializationException {
+    return sendJsonRpcRequestToPeer(jsonRpc, null);
+  }
+
   /**
    * Send a message to the peer via websocket.
    *
    * @param jsonRpc the JSON-RPC request as a String or instance of JsonRpcRequest.
+   * @param messageId the message ID included in the request
    * @return a CompletableFuture that will be completed with the response
    */
-  public CompletableFuture<JsonRpcResponse> sendJsonRpcRequestToPeer(Object jsonRpc)
-      throws JsonSerializationException {
+  public CompletableFuture<JsonRpcResponse> sendJsonRpcRequestToPeer(
+      Object jsonRpc, String messageId) throws JsonSerializationException {
     if (logger.isTraceEnabled()) {
       logger.trace("sendAndReceiveJsonRpcRequest: in with jsonRpc: {}", jsonRpc);
     }
@@ -487,7 +493,7 @@ public class ThinPeer implements AutoCloseable {
         return wsClient.sendAsync(rpcMessage, jsonRpcRequest.getId());
       } else if (jsonRpc instanceof String) {
         rpcMessage = (String) jsonRpc;
-        return wsClient.sendAsync(rpcMessage, null);
+        return wsClient.sendAsync(rpcMessage, messageId);
       } else {
         throw new IllegalArgumentException("Unsupported type for jsonRpc");
       }

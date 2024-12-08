@@ -1,0 +1,198 @@
+package net.ittera.pal.rpc.json;
+
+import static org.junit.Assert.assertArrayEquals;
+
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Locale;
+import javax.annotation.Nonnull;
+import net.ittera.pal.apps.rpc.ArrayVars;
+import net.ittera.pal.common.util.Classes;
+import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
+
+/**
+ * Call Instance Getter/Setter Array Message Integration Test.
+ *
+ * <pre>
+ *  For each array type, this test:
+ *  - Creates a new instance of ArrayVars
+ *  - Invokes setter with a known non-empty array value obtained from a static field
+ *  - Invokes the corresponding getter and verifies that the * returned array matches the expected value
+ * </pre>
+ */
+@RunWith(Parameterized.class)
+public class CallArrayMessageIT extends AbstractJsonRpcMessageIT {
+
+  private static int messageId = 0;
+  private static final String CLASS_NAME = "net.ittera.pal.apps.rpc.ArrayVars";
+
+  private final String getterMethodName; // e.g. getInstanceIntPrimitiveArray
+  private final String setterMethodName; // e.g. setInstanceIntPrimitiveArray
+  private final Class<?> arrayType; // e.g. int[].class
+  private final Object nonEmptyValue; // the array we got from reflection on a_*_Array
+
+  public CallArrayMessageIT(
+      String instanceFieldName,
+      String getterMethodName,
+      String setterMethodName,
+      Class<?> arrayType,
+      Object nonEmptyValue) {
+    this.getterMethodName = getterMethodName;
+    this.setterMethodName = setterMethodName;
+    this.arrayType = arrayType;
+    this.nonEmptyValue = nonEmptyValue;
+
+    logger.debug(
+        "Created CallInstanceMethodArrayMessageIT for field: {}, getter: {}, setter: {}, type: {}",
+        instanceFieldName,
+        getterMethodName,
+        setterMethodName,
+        arrayType);
+  }
+
+  @Parameters(name = "{index}: field={0}, arrayType={3}")
+  public static Collection<Object[]> data() throws Exception {
+    List<Object[]> testData = new ArrayList<>();
+    // Primitive arrays
+    addInstanceArrayTestData(testData, true);
+    // Wrapper arrays + String arrays
+    addInstanceArrayTestData(testData, false);
+    return testData;
+  }
+
+  private static void addInstanceArrayTestData(List<Object[]> testData, boolean isPrimitive)
+      throws Exception {
+    List<Class<?>> arrayClasses =
+        isPrimitive
+            ? Classes.getPrimitiveArrayClasses()
+            : Classes.getPrimitiveWrapperArrayClasses();
+
+    for (Class<?> arrayClass : arrayClasses) {
+      Object nonEmptyValue = getNonEmptyStaticValueFor(arrayClass);
+      if (nonEmptyValue == null) {
+        // If for some reason no nonEmpty value is found, skip this type
+        continue;
+      }
+
+      // Determine the instance field and corresponding getter/setter method names
+      String instanceFieldName = getInstanceFieldName(arrayClass);
+      String getterMethodName = getGetterMethodName(instanceFieldName);
+      String setterMethodName = getSetterMethodName(instanceFieldName);
+
+      testData.add(
+          new Object[] {
+            instanceFieldName, getterMethodName, setterMethodName, arrayClass, nonEmptyValue
+          });
+    }
+
+    // Handle String arrays separately
+    if (!isPrimitive) {
+      Class<?> stringArrayClass = String[].class;
+      String instanceFieldName = "instanceStringArray";
+      Object nonEmptyValue = getNonEmptyStaticValueFor(stringArrayClass);
+      String getterMethodName = getGetterMethodName(instanceFieldName);
+      String setterMethodName = getSetterMethodName(instanceFieldName);
+      testData.add(
+          new Object[] {
+            instanceFieldName, getterMethodName, setterMethodName, stringArrayClass, nonEmptyValue
+          });
+    }
+  }
+
+  private static Object getNonEmptyStaticValueFor(Class<?> arrayClass) throws Exception {
+    Class<?> componentType = arrayClass.getComponentType();
+    String baseFieldName = getNonEmptyFieldName(componentType);
+
+    Field f = ArrayVars.class.getDeclaredField(baseFieldName);
+    f.setAccessible(true);
+    return f.get(null); // static field
+  }
+
+  @Nonnull
+  private static String getNonEmptyFieldName(Class<?> componentType) {
+    // For primitive arrays, the nonEmpty field name is "a_<typeName>_Array"
+    // For wrapper arrays, the nonEmpty field name is "a<TypeName>Array"
+    // For String arrays, it's aStringArray
+    String baseTypeName = componentType.getSimpleName();
+    boolean isPrimitive = componentType.isPrimitive();
+    String baseFieldName;
+    if (componentType == String.class) {
+      baseFieldName = "aStringArray";
+    } else if (isPrimitive) {
+      // primitive arrays: "a_<lowercase type>_array"
+      baseFieldName = "a_" + baseTypeName.toLowerCase(Locale.ENGLISH) + "Array";
+    } else {
+      // wrapper arrays: "a<TypeName>Array"
+      // For Character => aCharacterArray, for Integer => aIntegerArray, etc.
+      baseFieldName = "a" + baseTypeName + "Array";
+    }
+    return baseFieldName;
+  }
+
+  private static String getInstanceFieldName(Class<?> arrayType) {
+    Class<?> componentType = arrayType.getComponentType();
+    if (componentType == String.class) {
+      return "instanceStringArray";
+    }
+
+    String baseTypeName = componentType.getSimpleName();
+    String capitalized = Character.toUpperCase(baseTypeName.charAt(0)) + baseTypeName.substring(1);
+
+    if (componentType.isPrimitive()) {
+      return "instance" + capitalized + "PrimitiveArray";
+    } else {
+      return "instance" + capitalized + "WrapperArray";
+    }
+  }
+
+  private static String getGetterMethodName(String instanceFieldName) {
+    // instanceIntPrimitiveArray => getInstanceIntPrimitiveArray
+    return "get" + capitalizeFirstLetter(instanceFieldName);
+  }
+
+  private static String getSetterMethodName(String instanceFieldName) {
+    // instanceIntPrimitiveArray => setInstanceIntPrimitiveArray
+    return "set" + capitalizeFirstLetter(instanceFieldName);
+  }
+
+  private static String capitalizeFirstLetter(String s) {
+    return Character.toUpperCase(s.charAt(0)) + s.substring(1);
+  }
+
+  @Test
+  public void testCallInstanceGetterSetter() throws Exception {
+    // 1) create an instance
+    long instanceRef = createNewInstance(++messageId, CLASS_NAME);
+
+    // 2) call setter with nonEmptyValue
+    String jsonArg = arrayToJsonString(nonEmptyValue, false);
+    String argsJson =
+            """
+            [
+              {
+                "type": "%s",
+                "value": %s
+              }
+            ]
+            """
+            .formatted(arrayType.getName(), jsonArg);
+
+    JsonRpcResponse setResponse =
+        callInstanceMethod(++messageId, instanceRef, CLASS_NAME, setterMethodName, argsJson);
+    assertPutResultIsVoid(setResponse);
+
+    // 3) call getter (no args)
+    JsonRpcResponse getResponse =
+        callInstanceMethod(++messageId, instanceRef, CLASS_NAME, getterMethodName, null);
+
+    // 4) verify result
+    Object resultValue = assertValueIsArrayOfType(getResponse, arrayType.getName());
+    assertArrayEquals(unwrapArray(nonEmptyValue), unwrapArray(resultValue));
+  }
+}

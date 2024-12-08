@@ -24,7 +24,10 @@ import java.lang.reflect.Field;
 import java.util.List;
 import javax.annotation.Nullable;
 import net.ittera.pal.common.lang.reflect.FieldSignature;
+import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
+import net.ittera.pal.messages.colfer.Obj;
+import net.ittera.pal.serdes.Unwrapper;
 
 public abstract class SetFieldDispatcher extends FieldOpDispatcher {
 
@@ -66,6 +69,56 @@ public abstract class SetFieldDispatcher extends FieldOpDispatcher {
     Field field = (Field) accessibleObject;
     field.set(target, value);
     return Void.getInstance();
+  }
+
+  protected final AccessibleObject loadAccessibleObject(
+      String className, String fieldName, List<Class<?>> parameterTypes, List<Object> args)
+      throws ReflectiveOperationException {
+
+    Class<?> clazz = Class.forName(className, true, Thread.currentThread().getContextClassLoader());
+
+    try {
+      return clazz.getField(fieldName);
+    } catch (NoSuchFieldException e) {
+      if (allowNonPublicAccess) {
+        return clazz.getDeclaredField(fieldName);
+      }
+      throw e;
+    }
+  }
+
+  protected final @Nullable Object getValueFromMessage(
+      Obj valueObject, String objectRef, final AccessibleObject accessibleObject) {
+
+    final Object value;
+    final Field field = (Field) accessibleObject;
+
+    if (valueObject != null) {
+      boolean typeIsAvailable =
+          valueObject.getClazz() != null
+              && valueObject.getClazz().getName() != null
+              && !valueObject.getClazz().getName().isEmpty();
+      if (typeIsAvailable) {
+        try {
+          value = Unwrapper.unwrapObject(valueObject);
+        } catch (ClassNotFoundException e) {
+          throw new IllegalArgumentException(
+              "Class not found: " + valueObject.getClazz().getName(), e);
+        }
+      } else { // type is not available in valueObject, use the field type to unwrap
+        value = Unwrapper.unwrapObject(valueObject, field.getType());
+      }
+      if (logger.isTraceEnabled()) {
+        String valueClassName = value != null ? value.getClass().getName() : "null";
+        logger.trace("Unwrapped value: {}, has class name: {}", value, valueClassName);
+      }
+    } else {
+      value = objectLookupStore.lookupObject(ObjectRef.from(objectRef));
+      if (logger.isTraceEnabled()) {
+        logger.trace("Loaded value: {}", value);
+      }
+    }
+    return value;
   }
 
   @Override

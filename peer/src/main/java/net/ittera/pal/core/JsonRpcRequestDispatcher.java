@@ -210,6 +210,7 @@ class JsonRpcRequestDispatcher extends ConnectedService {
 
     public InternalWebSocketServer(InetSocketAddress address, int workerCount) {
       super(address, workerCount);
+      setReuseAddr(true);
     }
 
     @Override

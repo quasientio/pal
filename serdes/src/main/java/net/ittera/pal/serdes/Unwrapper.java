@@ -17,12 +17,14 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.serdes.colfer;
+package net.ittera.pal.serdes;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import net.ittera.pal.common.util.Classes;
 import net.ittera.pal.messages.colfer.Obj;
+import net.ittera.pal.serdes.colfer.ObjUnwrappableAdapter;
+import net.ittera.pal.serdes.colfer.Wrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,9 +39,9 @@ public class Unwrapper {
   private Unwrapper() {}
 
   @SuppressWarnings("unchecked")
-  private static <T> T reconstructCharSequence(T t, Obj object) {
+  private static <T> T reconstructCharSequence(T t, String value) {
     Class<?> charSeqClass =
-        Wrapper.reconstructableCharSeqClasses.stream()
+        Wrapper.getReconstructableCharSeqClasses().stream()
             .filter(c -> c.equals(t))
             .findFirst()
             .orElseThrow(
@@ -55,7 +57,7 @@ public class Unwrapper {
 
     T newObject;
     try {
-      newObject = (T) c.newInstance(object.getValue());
+      newObject = (T) c.newInstance(value);
     } catch (Exception e) {
       logger.warn("Couldn't instantiate char seq object", e);
       return null;
@@ -73,18 +75,18 @@ public class Unwrapper {
    * @return the unwrapped Object
    */
   @SuppressWarnings("JdkObsolete") // silence errorprone warning about StringBuffer
-  public static java.lang.Object unwrapObject(Obj object, Class<?> clazz) {
+  public static Object unwrapObject(Unwrappable object, Class<?> clazz) {
     if (logger.isTraceEnabled()) {
-      logger.trace("in with object:\n{}, clazz:\n{}", object, clazz);
+      logger.trace("in with unwrappable:\n{}, clazz:\n{}", object.asString(), clazz);
     }
 
-    if (object.getIsNull()) {
+    if (object.isNull()) {
       return null;
     }
 
     // if clazz (from parameter type) is null
     if (clazz == null) {
-      if (object.getClazz() == null || object.getClazz().getUnknown()) {
+      if (object.getType() == null || object.getType().isEmpty()) {
 
         // without object.getClazz we cannot do anything
         throw new IllegalArgumentException("Type is null and wrapped object has no class");
@@ -94,13 +96,10 @@ public class Unwrapper {
         Class<?> objectActualClass;
         try {
           objectActualClass =
-              Class.forName(
-                  object.getClazz().getName(),
-                  true,
-                  Thread.currentThread().getContextClassLoader());
+              Class.forName(object.getType(), true, Thread.currentThread().getContextClassLoader());
         } catch (ClassNotFoundException e) {
           throw new IllegalArgumentException(
-              "Class in obj.clazz not found: " + object.getClazz().getName(), e);
+              "Class in obj.clazz not found: " + object.getType(), e);
         }
         return unwrapObject(object, objectActualClass);
       }
@@ -112,58 +111,40 @@ public class Unwrapper {
     }
 
     if (Wrapper.isWrappableCharSeqClass(clazz)) {
-      return reconstructCharSequence(clazz, object);
+      return reconstructCharSequence(clazz, object.getValue());
     }
 
     // is primitive
     if (Classes.isPrimitiveOrWrapper(clazz)) {
-      if (clazz == byte.class || clazz == Byte.class) {
-        return Byte.parseByte(object.getValue());
-      } else if (clazz == short.class || clazz == Short.class) {
-        return Short.parseShort(object.getValue());
-      } else if (clazz == int.class || clazz == Integer.class) {
-        return Integer.parseInt(object.getValue());
-      } else if (clazz == long.class || clazz == Long.class) {
-        return Long.parseLong(object.getValue());
-      } else if (clazz == float.class || clazz == Float.class) {
-        return Float.parseFloat(object.getValue());
-      } else if (clazz == double.class || clazz == Double.class) {
-        return Double.parseDouble(object.getValue());
-      } else if (clazz == char.class || clazz == Character.class) {
-        return object.getValue().charAt(0);
-      } else if (clazz == boolean.class || clazz == Boolean.class) {
-        return Boolean.parseBoolean(object.getValue());
-      } else {
-        throw new IllegalArgumentException("Unsupported primitive type:" + clazz.getName());
-      }
+      return parsePrimitiveValue(object.getValue(), clazz);
     } else if (clazz.isArray()) { // ARRAY
       Class<?> componentType = clazz.getComponentType();
       // primitive or wrapper array
       if (Classes.isPrimitiveOrWrapper(componentType)) {
         return unwrapPrimitiveArray(object.getArrayValues(), componentType);
       }
-      final Obj[] arrayValues = object.getArrayValues();
+      final Unwrappable[] arrayValues = object.getArrayValues();
       // String[]
       if (clazz == String[].class) {
         final String[] array = new String[arrayValues.length];
         int idx = 0;
-        for (Obj strObj : arrayValues) {
+        for (Unwrappable strObj : arrayValues) {
           array[idx++] = strObj.getValue();
         }
         return array;
-      } else if (Wrapper.reconstructableCharSeqClasses.contains(componentType)) {
+      } else if (Wrapper.getReconstructableCharSeqClasses().contains(componentType)) {
         switch (componentType.getName()) {
           case "java.lang.StringBuilder":
             final StringBuilder[] sbArray = new StringBuilder[arrayValues.length];
             int sbIdx = 0;
-            for (Obj strObj : arrayValues) {
+            for (Unwrappable strObj : arrayValues) {
               sbArray[sbIdx++] = new StringBuilder(strObj.getValue());
             }
             return sbArray;
           case "java.lang.StringBuffer":
             final StringBuffer[] sbfArray = new StringBuffer[arrayValues.length];
             int sbfIdx = 0;
-            for (Obj strObj : arrayValues) {
+            for (Unwrappable strObj : arrayValues) {
               sbfArray[sbfIdx++] = new StringBuffer(strObj.getValue());
             }
             return sbfArray;
@@ -180,17 +161,25 @@ public class Unwrapper {
     }
   }
 
-  public static java.lang.Object unwrapObject(Obj object) throws ClassNotFoundException {
-    final String objClassName = object.getClazz().getName();
-    Class<?> objectClass = Classes.getClassForPrimitive(objClassName);
-    if (objectClass == null) {
-      objectClass =
-          Class.forName(objClassName, true, Thread.currentThread().getContextClassLoader());
-    }
-    return unwrapObject(object, objectClass);
+  public static Object unwrapObject(Obj object) throws ClassNotFoundException {
+    return unwrapObject(new ObjUnwrappableAdapter(object));
   }
 
-  private static Object unwrapPrimitiveArray(Obj[] arrayValues, Class<?> componentType) {
+  public static Object unwrapObject(Obj object, Class<?> clazz) {
+    return unwrapObject(new ObjUnwrappableAdapter(object), clazz);
+  }
+
+  public static Object unwrapObject(Unwrappable wrappedObject) throws ClassNotFoundException {
+    String className = wrappedObject.getType();
+    Class<?> clazz = Classes.getClassForPrimitive(className);
+    if (clazz == null) {
+      clazz = Class.forName(className, true, Thread.currentThread().getContextClassLoader());
+    }
+
+    return unwrapObject(wrappedObject, clazz);
+  }
+
+  private static Object unwrapPrimitiveArray(Unwrappable[] arrayValues, Class<?> componentType) {
     int length = arrayValues.length;
     Object array = Array.newInstance(componentType, length);
     for (int i = 0; i < length; i++) {
@@ -198,5 +187,45 @@ public class Unwrapper {
       Array.set(array, i, value);
     }
     return array;
+  }
+
+  private static Object parsePrimitiveValue(String value, Class<?> clazz) {
+    if (clazz == int.class || clazz == Integer.class) {
+      return Integer.parseInt(value);
+    }
+
+    if (clazz == long.class || clazz == Long.class) {
+      return Long.parseLong(value);
+    }
+
+    if (clazz == short.class || clazz == Short.class) {
+      return Short.parseShort(value);
+    }
+
+    if (clazz == byte.class || clazz == Byte.class) {
+      return Byte.parseByte(value);
+    }
+
+    if (clazz == float.class || clazz == Float.class) {
+      return Float.parseFloat(value);
+    }
+
+    if (clazz == double.class || clazz == Double.class) {
+      return Double.parseDouble(value);
+    }
+
+    if (clazz == boolean.class || clazz == Boolean.class) {
+      return Boolean.parseBoolean(value);
+    }
+
+    if (clazz == char.class || clazz == Character.class) {
+      return value.charAt(0);
+    }
+
+    if (clazz == void.class || clazz == Void.class) {
+      return null;
+    }
+
+    throw new IllegalArgumentException("Unsupported primitive type: " + clazz.getName());
   }
 }

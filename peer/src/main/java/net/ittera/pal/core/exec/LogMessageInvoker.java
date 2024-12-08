@@ -142,9 +142,9 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
 
           if (parseException != null) {
             // parsing+validating failed, log and send error response
-            jsonRpcResponse =
-                messageBuilder.jsonRpcResponseFromParseError(parseException, requestId);
-            // TODO write to Log (ie. send to LogWriter) -> gson.toJson(jsonRpcResponse))
+            jsonRpcResponse = messageBuilder.jsonRpcResponseFromError(parseException, requestId);
+            // TODO write to Log (ie. send to LogWriter) ->
+            // JsonRpcSerializer.toJson(jsonRpcResponse)
             logMessageDispatch(requestId, null, started);
             return;
           }
@@ -171,9 +171,9 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
             // dispatching failed, log and send error response
             logger.error(
                 "Error dispatching message w/id {}", getMessageId(requestMsg), dispatchException);
-            jsonRpcResponse =
-                messageBuilder.jsonRpcResponseFromParseError(dispatchException, requestId);
-            // TODO write to Log (ie. send to LogWriter) -> gson.toJson(jsonRpcResponse))
+            jsonRpcResponse = messageBuilder.jsonRpcResponseFromError(dispatchException, requestId);
+            // TODO write to Log (ie. send to LogWriter) ->
+            // JsonRpcSerializer.toJson(jsonRpcResponse)
             logMessageDispatch(requestMsg, jsonRpcResponse.getId(), started);
             return;
           }
@@ -182,7 +182,7 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
               messageBuilder.jsonRpcResponseFromExecMessageReply(replyMsg.getExecMessage());
 
           // send response
-          // TODO write to Log (ie. send to LogWriter) -> gson.toJson(jsonRpcResponse))
+          // TODO write to Log (ie. send to LogWriter) -> JsonRpcSerializer.toJson(jsonRpcResponse)
           logMessageDispatch(requestMsg, replyMsg, started);
         }
         case BINARY_RPC -> {

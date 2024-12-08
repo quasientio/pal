@@ -30,27 +30,6 @@ import net.ittera.pal.serdes.colfer.Wrapper;
 
 @SuppressWarnings("JdkObsolete") // silence errorprone warnings about StringBuffer usage
 public abstract class WrappingTestBase {
-  protected static final List<Class<?>> primitiveClasses =
-      Arrays.asList(
-          boolean.class,
-          byte.class,
-          char.class,
-          double.class,
-          float.class,
-          int.class,
-          long.class,
-          short.class);
-
-  protected static final List<Class<?>> primitiveWrapperClasses =
-      Arrays.asList(
-          Boolean.class,
-          Byte.class,
-          Character.class,
-          Double.class,
-          Float.class,
-          Integer.class,
-          Long.class,
-          Short.class);
 
   /** Comprehensive list of all java.lang(8) classes */
   protected static final List<Class<?>> nonWrapperJavaLangClasses =

@@ -44,6 +44,10 @@
                             <artifactId>aspects</artifactId>
                         </aspectLibrary>
                     </aspectLibraries>
+                    <excludes>
+                        <exclude>net/ittera/pal/apps/rpc/ArrayVars.java</exclude>
+                        <exclude>net/ittera/pal/apps/rpc/StaticArrayVars.java</exclude>
+                    </excludes>
                 </configuration>
                 <executions>
                     <execution>

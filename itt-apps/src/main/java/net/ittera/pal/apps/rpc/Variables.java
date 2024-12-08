@@ -17,48 +17,26 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package colfer
+package net.ittera.pal.apps.rpc;
 
-/*
- The Object is either a ref (ref!=null), or can be reconstructed.
- An Object can be reconstructed if:
- a) isPrimitive or String and value!=null
- b) isClass=true
-*/
+@SuppressWarnings("unused")
+public class Variables {
 
-type Class struct {
-	name text
-}
+  // instance variables
+  public Integer anInt = 4;
+  Integer anotherInt = 1;
+  private Integer myNullInt;
+  protected String someString = "I'm not blank";
+  public String myNullStr;
+  Boolean myNullBool;
+  public boolean myBool = true;
+  private final short someShort = 233;
 
-type Obj struct {
-	value       text
-	clazz       Class
-	arrayValues []Obj
-	ref         text
-	isNull      bool
-}
-
-type Field struct {
-	clazz Class
-	name  text
-}
-
-type Method struct {
-	clazz Class
-	name  text
-}
-
-type Constructor struct {
-	clazz Class
-}
-
-type Reflectable struct {
-	constructor Constructor
-	method      Method
-	field       Field
-}
-
-type Parameter struct {
-	name  text
-	value Obj
+  // class variables
+  public static String aClassString = "I'm classy";
+  public static String aNullStaticStr;
+  private static Integer aPrivateClassInt = 39328;
+  protected static Boolean aProtectedBool;
+  static boolean aPackageVisibleBool = true;
+  static int aStaticInteger = 3000;
 }
