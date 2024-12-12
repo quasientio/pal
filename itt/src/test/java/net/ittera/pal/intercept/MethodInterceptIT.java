@@ -98,7 +98,12 @@ public class MethodInterceptIT extends AbstractInterceptIT {
                                     verifierThinPeer)
                                 .getReturnValue();
 
-                        assertValueIsObjectOfType(retValue, "java.lang.Integer");
+                        try {
+                          assertValueIsObjectOfType(retValue, "java.lang.Integer");
+                        } catch (ClassNotFoundException e) {
+                          logger.error("Error asserting object type", e);
+                          return new AssertionError("Error asserting object type");
+                        }
                         Object unwrappedObj;
                         try {
                           unwrappedObj = Unwrapper.unwrapObject(retValue.getObject());
@@ -126,7 +131,12 @@ public class MethodInterceptIT extends AbstractInterceptIT {
                                         interceptableAppInstance),
                                     verifierThinPeer)
                                 .getReturnValue();
-                        assertValueIsObjectOfType(retValue, "java.lang.Integer");
+                        try {
+                          assertValueIsObjectOfType(retValue, "java.lang.Integer");
+                        } catch (ClassNotFoundException e) {
+                          logger.error("Error asserting object type", e);
+                          return new AssertionError("Error asserting object type");
+                        }
                         Object unwrappedObj;
                         try {
                           unwrappedObj = Unwrapper.unwrapObject(retValue.getObject());

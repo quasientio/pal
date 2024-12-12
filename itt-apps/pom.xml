@@ -47,6 +47,7 @@
                     <excludes>
                         <exclude>net/ittera/pal/apps/rpc/ArrayVars.java</exclude>
                         <exclude>net/ittera/pal/apps/rpc/StaticArrayVars.java</exclude>
+                        <exclude>net/ittera/pal/apps/rpc/Variables.java</exclude>
                     </excludes>
                 </configuration>
                 <executions>

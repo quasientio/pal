@@ -40,7 +40,7 @@ public abstract class MethodDispatcher extends BaseExecMessageDispatcher {
     if (logger.isTraceEnabled()) {
       logger.trace(
           "invokeIncoming:in w/ accessibleObject: {}, target: {}, args: {}",
-          accessibleObject,
+          ((Method) accessibleObject).toGenericString(),
           target,
           args);
     }

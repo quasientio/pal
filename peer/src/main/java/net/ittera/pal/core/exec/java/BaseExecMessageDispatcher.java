@@ -177,6 +177,11 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       try {
         // 7. Invoke constructor/method/field
         returnValue = invokeIncoming(accessibleObject, target, args, value);
+        if (logger.isTraceEnabled()) {
+          String returnedClass =
+              returnValue == null ? "unavailable" : returnValue.getClass().toString();
+          logger.trace("invokeIncoming returnValue: {} of class: {}", returnValue, returnedClass);
+        }
       } catch (Exception e) {
         logger.error("Error during invocation phase - invoke", e);
         if (e instanceof InvocationTargetException) {

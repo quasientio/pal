@@ -84,19 +84,19 @@ public final class Wrapper {
    *
    * @param wrappedObject the object to wrap into
    * @param object the object to wrap
-   * @param classname the class of the object to wrap
+   * @param givenClassName the class of the object to wrap
    * @param objectRef the object reference, if any
    * @return a Colfer Obj (object) instance
    * @throws NullPointerException if t is null
    */
   private static Obj getWrappedObjectAux(
-      Obj wrappedObject, java.lang.Object object, String classname, ObjectRef objectRef) {
+      Obj wrappedObject, java.lang.Object object, String givenClassName, ObjectRef objectRef) {
 
     if (logger.isTraceEnabled()) {
       logger.trace(
           "in getWrappedObjectAux with object: {}, class: {}, objectRef: {}",
           object,
-          classname,
+          givenClassName,
           objectRef);
     }
 
@@ -105,12 +105,24 @@ public final class Wrapper {
 
     wrappedObject.setIsNull(isNull);
 
-    // if classname is given, use it to set clazz, otherwise use the object's class
-    if (classname != null) {
-      wrappedObject.setClazz(getWrappedClass(classname));
+    /* We use the givenClassName if
+    - object is null, or
+    - the object is a wrapper instance and the givenClassName is the corresponding primitive
+    Otherwise use the object's class
+    */
+    final String className;
+    if (object == null) {
+      className = givenClassName;
     } else {
-      wrappedObject.setClazz(getWrappedClass(object == null ? null : object.getClass()));
+      if (isCorrespondingPrimitive(object, givenClassName)) {
+        className = givenClassName;
+      } else {
+        className = object.getClass().getName();
+      }
     }
+
+    // wrap object's class
+    wrappedObject.setClazz(getWrappedClass(className));
 
     // wrap object reference
     if (objectRef != null) {
@@ -125,7 +137,7 @@ public final class Wrapper {
       // 3. is array of primitives or wrappers
       // 4. is array of String or char sequences
 
-      if ((object instanceof String) || isWrappableCharSeqClass(classname)) {
+      if ((object instanceof String) || isWrappableCharSeqClass(className)) {
         // 1. is String or char sequence
         wrappedObject.setValue(object.toString());
       } else if (Classes.isPrimitiveOrWrapper(object.getClass())) {
@@ -162,6 +174,22 @@ public final class Wrapper {
       logger.trace("out with wrappedValue: {}", ColferUtils.format(wrappedObject));
     }
     return wrappedObject;
+  }
+
+  // returns true if object is a primitive wrapper instance and className
+  // is the corresponding primitive class name
+  private static boolean isCorrespondingPrimitive(Object object, String className) {
+
+    if (object == null) {
+      return false;
+    }
+    Class<?> objectClass = object.getClass();
+
+    if (Classes.isPrimitiveWrapper(objectClass) && className != null) {
+      return Classes.getPrimitiveClassForWrapper(objectClass).getName().equals(className);
+    }
+
+    return false;
   }
 
   /**

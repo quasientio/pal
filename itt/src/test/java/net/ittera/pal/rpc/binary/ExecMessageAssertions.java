@@ -41,11 +41,8 @@ public interface ExecMessageAssertions {
   Logger logger = LoggerFactory.getLogger("tests");
 
   default void assertIsObjectOfType(
-      ReturnValue returnValue,
-      String className,
-      boolean hasObjRef,
-      boolean isNull,
-      boolean isArray) {
+      ReturnValue returnValue, String className, boolean hasObjRef, boolean isNull, boolean isArray)
+      throws ClassNotFoundException {
     logger.trace(
         "in assertIsObjectOfType w/: returnValue:\n{}"
             + ", className: {}, hasObjRef: {}, getIsNull: {}, isArray: {}",
@@ -56,7 +53,6 @@ public interface ExecMessageAssertions {
         isArray);
 
     assertFalse(returnValue.getIsVoid());
-    assertEquals(className, returnValue.getObject().getClazz().getName());
     assertThat(returnValue.getObject(), is(not(nullValue())));
 
     Obj retObj = returnValue.getObject();
@@ -64,26 +60,39 @@ public interface ExecMessageAssertions {
     assertEquals(isNull, retObj.getIsNull());
     assertEquals(hasObjRef, retObj.getRef() != null && !retObj.getRef().isEmpty());
     assertThat(retObj.getClazz(), is(not(nullValue())));
-    assertEquals(className, retObj.getClazz().getName());
+
+    // className can be equal or represent a class that is a superclass of the actual class
+    if (!className.equals(retObj.getClazz().getName())) {
+      Class<?> expectedClazz = Class.forName(className);
+      Class<?> returnedClazz = Class.forName(retObj.getClazz().getName());
+      assertTrue(expectedClazz.isAssignableFrom(returnedClazz));
+    } else {
+      assertEquals(className, retObj.getClazz().getName());
+    }
   }
 
-  default void assertValueIsObjectOfType(ReturnValue returnValue, String className) {
+  default void assertValueIsObjectOfType(ReturnValue returnValue, String className)
+      throws ClassNotFoundException {
     assertIsObjectOfType(returnValue, className, true, false, false);
   }
 
-  default void assertValueIsObjectRefOfType(ReturnValue returnValue, String className) {
+  default void assertValueIsObjectRefOfType(ReturnValue returnValue, String className)
+      throws ClassNotFoundException {
     assertIsObjectOfType(returnValue, className, true, false, false);
   }
 
-  default void assertValueIsArrayOfType(ReturnValue returnValue, String className) {
+  default void assertValueIsArrayOfType(ReturnValue returnValue, String className)
+      throws ClassNotFoundException {
     assertIsObjectOfType(returnValue, className, true, false, true);
   }
 
-  default void assertValueIsNullObjectOfType(ReturnValue returnValue, String className) {
+  default void assertValueIsNullObjectOfType(ReturnValue returnValue, String className)
+      throws ClassNotFoundException {
     assertIsObjectOfType(returnValue, className, false, true, false);
   }
 
-  default void assertValueIsNullArrayOfType(ReturnValue returnValue, String className) {
+  default void assertValueIsNullArrayOfType(ReturnValue returnValue, String className)
+      throws ClassNotFoundException {
     assertIsObjectOfType(returnValue, className, false, true, true);
   }
 

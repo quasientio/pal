@@ -146,6 +146,19 @@ public final class Classes {
     return simpleToLongNames.get(shortName);
   }
 
+  // return primitive class corresponding to wrapper class
+  public static Class<?> getPrimitiveClassForWrapper(Class<?> wrapper) {
+    if (wrapper == null) {
+      return null;
+    }
+
+    if (isPrimitiveWrapper(wrapper)) {
+      return PRIMITIVE_CLASSES.get(PRIMITIVE_WRAPPER_CLASSES.indexOf(wrapper));
+    }
+
+    return null;
+  }
+
   @SuppressWarnings("rawtypes")
   public static Class getClassForPrimitive(String primitiveName) {
     return PRIMITIVE_NAME_TO_CLASS.get(primitiveName);

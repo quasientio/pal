@@ -469,8 +469,9 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // we use a method name that exists but with wrong parameter types
     String methodName = "addWord";
-    Class<?>[] parameterTypes = {Integer.class};
-    Object[] args = {"489"};
+    Object arg = 489;
+    Class<?>[] parameterTypes = {arg.getClass()};
+    Object[] args = {arg};
     ObjectRef[] argObjRefs = {null};
 
     ExecMessage incomingMessage =

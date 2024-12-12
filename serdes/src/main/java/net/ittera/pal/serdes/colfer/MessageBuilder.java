@@ -890,6 +890,12 @@ public final class MessageBuilder {
     // set 'object'
     if (!isVoid) {
       Class<?> objectClass = getClassOfAccessible(accessibleObject, declaringClass);
+      if (logger.isTraceEnabled()) {
+        if (object != null) {
+          logger.trace("object is of class: {}", object.getClass().getName());
+        }
+        logger.trace("objectClass.getName: {}", objectClass.getName());
+      }
       valueMessage.setObject(getWrappedObject(object, objectClass.getName(), objectRef));
     }
 
@@ -1115,6 +1121,7 @@ public final class MessageBuilder {
     instanceFieldPut.setField(getWrappedField(className, fieldName));
     instanceFieldPut.setObjectRef(String.valueOf(putParams.getInstance()));
     Argument value = putParams.getValue();
+    assert value != null;
     if (value.getRef() != null) { // value is an object reference
       instanceFieldPut.setValueObjectRef(value.getRef().toString());
     } else {
@@ -1132,6 +1139,7 @@ public final class MessageBuilder {
     staticFieldPut.setClazz(getWrappedClass(className));
     staticFieldPut.setField(getWrappedField(className, fieldName));
     Argument value = putParams.getValue();
+    assert value != null;
     if (value.getRef() != null) { // value is an object reference
       staticFieldPut.setValueObjectRef(value.getRef().toString());
     } else {

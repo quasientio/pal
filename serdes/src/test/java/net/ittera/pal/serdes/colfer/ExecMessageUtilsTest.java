@@ -23,6 +23,10 @@ public class ExecMessageUtilsTest {
     public int testField;
 
     public void testMethod() {}
+
+    public String nonVoidTestMethod() {
+      return null;
+    }
   }
 
   // <editor-fold desc="getClassname">
@@ -92,7 +96,7 @@ public class ExecMessageUtilsTest {
 
   @Test
   public void getClassname_returnValue() throws NoSuchMethodException {
-    Method method = ClassForTest.class.getMethod("testMethod");
+    Method method = ClassForTest.class.getMethod("nonVoidTestMethod");
     ExecMessage execMessage =
         messageBuilder.buildReturnValue(
             UUID.randomUUID(),
@@ -101,8 +105,7 @@ public class ExecMessageUtilsTest {
             ObjectRef.randomRef(),
             false,
             UUID.randomUUID().toString());
-    assertEquals(
-        method.getReturnType().getSimpleName(), ExecMessageUtils.getClassname(execMessage));
+    assertEquals(method.getReturnType().getName(), ExecMessageUtils.getClassname(execMessage));
   }
 
   @Test

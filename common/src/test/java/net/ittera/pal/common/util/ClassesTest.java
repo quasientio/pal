@@ -278,4 +278,16 @@ public class ClassesTest {
   public void isValidClassName_returnsFalseForEmptyString() {
     assertFalse(Classes.isValidClassName(""));
   }
+
+  @Test
+  public void getPrimitiveForWrapper_returnsPrimitiveClassForWrapper() {
+    assertEquals(boolean.class, Classes.getPrimitiveClassForWrapper(Boolean.class));
+    assertEquals(byte.class, Classes.getPrimitiveClassForWrapper(Byte.class));
+    assertEquals(char.class, Classes.getPrimitiveClassForWrapper(Character.class));
+    assertEquals(short.class, Classes.getPrimitiveClassForWrapper(Short.class));
+    assertEquals(int.class, Classes.getPrimitiveClassForWrapper(Integer.class));
+    assertEquals(long.class, Classes.getPrimitiveClassForWrapper(Long.class));
+    assertEquals(float.class, Classes.getPrimitiveClassForWrapper(Float.class));
+    assertEquals(double.class, Classes.getPrimitiveClassForWrapper(Double.class));
+  }
 }

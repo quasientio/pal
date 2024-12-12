@@ -807,13 +807,14 @@ public class MessageBuilderTest {
 
   // <editor-fold desc="Instance field put messages">
   @Test
-  public void buildPutObject_withObjectValue_instanceFieldPutMessage() {
+  public void buildPutObject_withObjectValue_instanceFieldPutMessage()
+      throws ClassNotFoundException {
     UUID peerUuid = UUID.randomUUID();
     String className = DummyClassForTest.class.getName();
     String fieldName = "anInt";
     ObjectRef targetObjRef = ObjectRef.randomRef();
     String valueClassName = int.class.getName();
-    Object value = "4";
+    Object value = 4;
 
     ExecMessage execMessage =
         messageBuilder.buildPutObject(
@@ -829,7 +830,7 @@ public class MessageBuilderTest {
     assertEquals(targetObjRef, ObjectRef.from(execMessage.getInstanceFieldPut().getObjectRef()));
     assertEquals(
         valueClassName, execMessage.getInstanceFieldPut().getValueObject().getClazz().getName());
-    assertEquals(value, execMessage.getInstanceFieldPut().getValueObject().getValue());
+    assertEquals(value, Unwrapper.unwrapObject(execMessage.getInstanceFieldPut().getValueObject()));
     assertNull(execMessage.getInstanceFieldPut().getContext());
   }
 
