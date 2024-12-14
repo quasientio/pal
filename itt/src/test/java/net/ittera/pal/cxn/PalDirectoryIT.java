@@ -293,16 +293,18 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     palDirectory.registerPeerInLog(peerInfo, inLogInfo);
     palDirectory.registerPeerOutLog(peerInfo, outLogInfo);
     createdLogs.add(inLogInfo.getName());
+    createdLogs.add(outLogInfo.getName());
+
+    assertEquals(1, palDirectory.getAllPeers().size() - preExistingPeers.size());
+    assertEquals(2, palDirectory.getAllLogs().size() - preExistingLogs.size());
 
     // load them
-    Set<LogInfo> peerInLogs = palDirectory.getPeerInLogs(peerInfo.getUuid());
-    Set<LogInfo> peerOutLogs = palDirectory.getPeerOutLogs(peerInfo.getUuid());
+    UUID peerInLog = palDirectory.getPeerInLog(peerInfo.getUuid());
+    UUID peerOutLog = palDirectory.getPeerOutLog(peerInfo.getUuid());
 
     // verify
-    assertEquals(1, peerInLogs.size());
-    assertEquals(1, peerOutLogs.size());
-    assertEquals(inLogInfo, peerInLogs.iterator().next());
-    assertEquals(outLogInfo, peerOutLogs.iterator().next());
+    assertEquals(inLogInfo.getUuid(), peerInLog);
+    assertEquals(outLogInfo.getUuid(), peerOutLog);
 
     // try to unregister the peer logs
     try {

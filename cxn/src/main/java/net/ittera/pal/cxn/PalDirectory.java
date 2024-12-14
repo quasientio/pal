@@ -180,37 +180,27 @@ public class PalDirectory implements AutoCloseable {
     final String peerLogsInPath = getPeerLogsInPath(peerInfo.getUuid());
     final ByteSequence peerLogsInPathKey =
         ByteSequence.from(peerLogsInPath.getBytes(getEncodingCharset()));
-    final ByteSequence logData = ByteSequence.from(logInfo.toJson().getBytes(getEncodingCharset()));
+    final ByteSequence logData =
+        ByteSequence.from(logInfo.getUuid().toString().getBytes(getEncodingCharset()));
     kvClient.put(peerLogsInPathKey, logData).get();
     logger.info(
         "Registered IN log w/name: {} for peer w/uuid: {}", logInfo.getName(), peerInfo.getUuid());
   }
 
-  public Set<LogInfo> getPeerInLogs(UUID peerUuid) throws ExecutionException, InterruptedException {
-    final Set<LogInfo> logs = new HashSet<>();
+  public UUID getPeerInLog(UUID peerUuid) throws ExecutionException, InterruptedException {
     final String peerLogsInPath = getPeerLogsInPath(peerUuid);
     final ByteSequence peerLogsInPathKey =
         ByteSequence.from(peerLogsInPath.getBytes(getEncodingCharset()));
     final GetResponse response =
         kvClient.get(peerLogsInPathKey, GetOption.builder().isPrefix(true).build()).get();
-    for (KeyValue kv : response.getKvs()) {
-      logs.add(LogInfo.fromJson(kv.getValue().toString(getEncodingCharset())));
+    List<KeyValue> kvs = response.getKvs();
+    if (kvs.isEmpty()) {
+      return null;
     }
-    return logs;
-  }
-
-  public Set<LogInfo> getPeerOutLogs(UUID peerUuid)
-      throws ExecutionException, InterruptedException {
-    final Set<LogInfo> logs = new HashSet<>();
-    final String peerLogsOutPath = getPeerLogsOutPath(peerUuid);
-    final ByteSequence peerLogsOutPathKey =
-        ByteSequence.from(peerLogsOutPath.getBytes(getEncodingCharset()));
-    final GetResponse response =
-        kvClient.get(peerLogsOutPathKey, GetOption.builder().isPrefix(true).build()).get();
-    for (KeyValue kv : response.getKvs()) {
-      logs.add(LogInfo.fromJson(kv.getValue().toString(getEncodingCharset())));
+    if (kvs.size() > 1) {
+      throw new IllegalStateException("More than one in-log found for peer w/uuid: " + peerUuid);
     }
-    return logs;
+    return UUID.fromString(kvs.get(0).getValue().toString(getEncodingCharset()));
   }
 
   public void registerPeerOutLog(PeerInfo peerInfo, LogInfo logInfo)
@@ -222,10 +212,27 @@ public class PalDirectory implements AutoCloseable {
     final String peerLogsOutPath = getPeerLogsOutPath(peerInfo.getUuid());
     final ByteSequence peerLogsOutPathKey =
         ByteSequence.from(peerLogsOutPath.getBytes(getEncodingCharset()));
-    final ByteSequence logData = ByteSequence.from(logInfo.toJson().getBytes(getEncodingCharset()));
+    final ByteSequence logData =
+        ByteSequence.from(logInfo.getUuid().toString().getBytes(getEncodingCharset()));
     kvClient.put(peerLogsOutPathKey, logData).get();
     logger.info(
         "Registered OUT log w/name: {} for peer w/uuid: {}", logInfo.getName(), peerInfo.getUuid());
+  }
+
+  public UUID getPeerOutLog(UUID peerUuid) throws ExecutionException, InterruptedException {
+    final String peerLogsOutPath = getPeerLogsOutPath(peerUuid);
+    final ByteSequence peerLogsOutPathKey =
+        ByteSequence.from(peerLogsOutPath.getBytes(getEncodingCharset()));
+    final GetResponse response =
+        kvClient.get(peerLogsOutPathKey, GetOption.builder().isPrefix(true).build()).get();
+    List<KeyValue> kvs = response.getKvs();
+    if (kvs.isEmpty()) {
+      return null;
+    }
+    if (kvs.size() > 1) {
+      throw new IllegalStateException("More than one out-log found for peer w/uuid: " + peerUuid);
+    }
+    return UUID.fromString(kvs.get(0).getValue().toString(getEncodingCharset()));
   }
 
   public PeerInfo getPeerInfo(UUID peerUuid) throws ExecutionException, InterruptedException {
@@ -247,7 +254,12 @@ public class PalDirectory implements AutoCloseable {
       if (kv.getKey().equals(getPeersPathKey())) {
         continue;
       }
-      allPeers.add(PeerInfo.fromJson(kv.getValue().toString(getEncodingCharset())));
+      // only add peers, not logs inside the peer's path
+      String keyPath = kv.getKey().toString(getEncodingCharset());
+      long slashCount = keyPath.chars().filter(ch -> ch == '/').count();
+      if (slashCount == 3) {
+        allPeers.add(PeerInfo.fromJson(kv.getValue().toString(getEncodingCharset())));
+      }
     }
     return allPeers;
   }
@@ -283,7 +295,9 @@ public class PalDirectory implements AutoCloseable {
   public void unregisterPeer(UUID peerUuid) throws ExecutionException, InterruptedException {
     DeleteResponse deleteResponse =
         kvClient
-            .delete(ByteSequence.from(getPeerPath(peerUuid).getBytes(getEncodingCharset())))
+            .delete(
+                ByteSequence.from(getPeerPath(peerUuid).getBytes(getEncodingCharset())),
+                DeleteOption.builder().isPrefix(true).build())
             .get();
     if (deleteResponse.getDeleted() == 1) {
       logger.info("Unregistered peer with uuid: {}", peerUuid);
@@ -640,13 +654,16 @@ public class PalDirectory implements AutoCloseable {
   }
 
   public void unregisterLog(String logName) throws ExecutionException, InterruptedException {
-
+    LogInfo logToUnregister = getLogInfo(logName);
+    if (logToUnregister == null) {
+      logger.warn("Cannot unregister log with name: {}, log does not exist.", logName);
+      return;
+    }
     // verify that no peer is using the log
     for (PeerInfo peer : getAllPeers()) {
       boolean isLogUsed =
-          Stream.concat(
-                  getPeerInLogs(peer.getUuid()).stream(), getPeerOutLogs(peer.getUuid()).stream())
-              .anyMatch(log -> log.getName().equals(logName));
+          Stream.of(getPeerInLog(peer.getUuid()), getPeerOutLog(peer.getUuid()))
+              .anyMatch(logUuid -> logToUnregister.getUuid().equals(logUuid));
       if (isLogUsed) {
         throw new IllegalArgumentException(
             format(
