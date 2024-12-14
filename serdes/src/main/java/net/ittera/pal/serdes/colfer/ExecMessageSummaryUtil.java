@@ -6,49 +6,19 @@ import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Field;
 import net.ittera.pal.messages.colfer.Obj;
 import net.ittera.pal.messages.types.ExecMessageType;
+import net.ittera.pal.serdes.RpcMessageSummaryUtil;
 
-public class ExecMessageSummaryUtil {
+public class ExecMessageSummaryUtil extends RpcMessageSummaryUtil {
 
-  // Helper method to get the short class name
-  private static String shortClassname(String className) {
-    if (className.contains(".")) {
-      String prefix = "";
-      if (className.startsWith("[L")) {
-        prefix = "[L";
-      } else if (className.startsWith("[")) {
-        prefix = "[";
-      }
-      return prefix + className.substring(className.lastIndexOf('.') + 1);
-    } else {
-      return className;
-    }
-  }
-
-  // Helper method to get value or reference
   private static String getObjRepr(Obj obj, String objectRef) {
-    if (obj != null && obj.isNull) {
-      return "=NULL";
-    }
-
-    String repr = "";
-    if (objectRef != null && !objectRef.isEmpty()) {
-      repr = "@" + objectRef;
-    }
-    if (obj != null && obj.value != null && !obj.value.isEmpty()) {
-      repr += "(=" + obj.value + ")";
-    }
-    return repr;
+    return getObjRepr(
+        obj == null ? null : obj.isNull,
+        obj == null ? null : obj.value == null ? null : obj.value,
+        objectRef);
   }
 
   private static String getObjRepr(Obj obj) {
-    if (obj.isNull) {
-      return "=NULL";
-    }
-    String repr = "@" + obj.ref;
-    if (obj.value != null && !obj.value.isEmpty()) {
-      repr += "(=" + obj.value + ")";
-    }
-    return repr;
+    return getObjRepr(obj.isNull, obj.value, obj.ref);
   }
 
   // Helper method to get the class name based on the message type

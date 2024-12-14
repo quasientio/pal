@@ -40,8 +40,6 @@ public class StaticFieldPut implements Serializable, net.ittera.pal.messages.Mar
 
   public String valueObjectRef;
 
-  public int modifiers;
-
   public Context context;
 
   /** Default constructor */
@@ -147,7 +145,7 @@ public class StaticFieldPut implements Serializable, net.ittera.pal.messages.Mar
    * @return the number of bytes.
    */
   public int marshalFit() {
-    long n = 1L + 6 + (long) this.valueObjectRef.length() * 3 + 5;
+    long n = 1L + 6 + (long) this.valueObjectRef.length() * 3;
     if (this.clazz != null) n += 1 + (long) this.clazz.marshalFit();
     if (this.field != null) n += 1 + (long) this.field.marshalFit();
     if (this.valueObject != null) n += 1 + (long) this.valueObject.marshalFit();
@@ -257,25 +255,8 @@ public class StaticFieldPut implements Serializable, net.ittera.pal.messages.Mar
         buf[ii] = (byte) size;
       }
 
-      if (this.modifiers != 0) {
-        int x = this.modifiers;
-        if ((x & ~((1 << 21) - 1)) != 0) {
-          buf[i++] = (byte) (4 | 0x80);
-          buf[i++] = (byte) (x >>> 24);
-          buf[i++] = (byte) (x >>> 16);
-          buf[i++] = (byte) (x >>> 8);
-        } else {
-          buf[i++] = (byte) 4;
-          while (x > 0x7f) {
-            buf[i++] = (byte) (x | 0x80);
-            x >>>= 7;
-          }
-        }
-        buf[i++] = (byte) x;
-      }
-
       if (this.context != null) {
-        buf[i++] = (byte) 5;
+        buf[i++] = (byte) 4;
         i = this.context.marshal(buf, i);
       }
 
@@ -362,24 +343,6 @@ public class StaticFieldPut implements Serializable, net.ittera.pal.messages.Mar
       }
 
       if (header == (byte) 4) {
-        int x = 0;
-        for (int shift = 0; true; shift += 7) {
-          byte b = buf[i++];
-          x |= (b & 0x7f) << shift;
-          if (shift == 28 || b >= 0) break;
-        }
-        this.modifiers = x;
-        header = buf[i++];
-      } else if (header == (byte) (4 | 0x80)) {
-        this.modifiers =
-            (buf[i++] & 0xff) << 24
-                | (buf[i++] & 0xff) << 16
-                | (buf[i++] & 0xff) << 8
-                | (buf[i++] & 0xff);
-        header = buf[i++];
-      }
-
-      if (header == (byte) 5) {
         this.context = new Context();
         i = this.context.unmarshal(buf, i, end);
         header = buf[i++];
@@ -402,7 +365,7 @@ public class StaticFieldPut implements Serializable, net.ittera.pal.messages.Mar
   }
 
   // {@link Serializable} version number.
-  private static final long serialVersionUID = 6L;
+  private static final long serialVersionUID = 5L;
 
   // {@link Serializable} Colfer extension.
   private void writeObject(ObjectOutputStream out) throws IOException {
@@ -544,35 +507,6 @@ public class StaticFieldPut implements Serializable, net.ittera.pal.messages.Mar
   }
 
   /**
-   * Gets net.ittera.pal.messages/colfer.StaticFieldPut.modifiers.
-   *
-   * @return the value.
-   */
-  public int getModifiers() {
-    return this.modifiers;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.StaticFieldPut.modifiers.
-   *
-   * @param value the replacement.
-   */
-  public void setModifiers(int value) {
-    this.modifiers = value;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.StaticFieldPut.modifiers.
-   *
-   * @param value the replacement.
-   * @return {@code this}.
-   */
-  public StaticFieldPut withModifiers(int value) {
-    this.modifiers = value;
-    return this;
-  }
-
-  /**
    * Gets net.ittera.pal.messages/colfer.StaticFieldPut.context.
    *
    * @return the value.
@@ -608,7 +542,6 @@ public class StaticFieldPut implements Serializable, net.ittera.pal.messages.Mar
     if (this.field != null) h = 31 * h + this.field.hashCode();
     if (this.valueObject != null) h = 31 * h + this.valueObject.hashCode();
     if (this.valueObjectRef != null) h = 31 * h + this.valueObjectRef.hashCode();
-    h = 31 * h + this.modifiers;
     if (this.context != null) h = 31 * h + this.context.hashCode();
     return h;
   }
@@ -630,7 +563,6 @@ public class StaticFieldPut implements Serializable, net.ittera.pal.messages.Mar
         && (this.valueObjectRef == null
             ? o.valueObjectRef == null
             : this.valueObjectRef.equals(o.valueObjectRef))
-        && this.modifiers == o.modifiers
         && (this.context == null ? o.context == null : this.context.equals(o.context));
   }
 
@@ -654,10 +586,6 @@ public class StaticFieldPut implements Serializable, net.ittera.pal.messages.Mar
 
       if (json.has("valueObjectRef")) {
         this.valueObjectRef = json.get("valueObjectRef").getAsString();
-      }
-
-      if (json.has("modifiers")) {
-        this.modifiers = json.get("modifiers").getAsInt();
       }
 
       if (json.has("context")) {

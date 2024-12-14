@@ -20,10 +20,9 @@
 package colfer
 
 type StaticFieldGet struct {
-	clazz     Class
-	field     Field
-	modifiers uint32
-	context   Context
+	clazz   Class
+	field   Field
+	context Context
 }
 
 type StaticFieldPut struct {
@@ -31,7 +30,6 @@ type StaticFieldPut struct {
 	field          Field
 	valueObject    Obj
 	valueObjectRef text
-	modifiers      uint32
 	context        Context
 }
 
@@ -49,7 +47,6 @@ type InstanceFieldGet struct {
 	clazz     Class
 	objectRef text
 	field     Field
-	modifiers uint32
 	context   Context
 }
 
@@ -59,7 +56,6 @@ type InstanceFieldPut struct {
 	field          Field
 	valueObject    Obj
 	valueObjectRef text
-	modifiers      uint32
 	context        Context
 }
 

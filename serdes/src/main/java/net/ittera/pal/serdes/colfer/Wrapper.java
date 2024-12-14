@@ -291,22 +291,27 @@ public final class Wrapper {
         new net.ittera.pal.messages.colfer.Field();
     wrappedField.setName(field.getName());
     wrappedField.setClazz(getWrappedClass(field.getDeclaringClass()));
+    wrappedField.setModifiers(field.getModifiers());
     return wrappedField;
   }
 
-  static net.ittera.pal.messages.colfer.Field getWrappedField(Class<?> clazz, String fieldName) {
+  static net.ittera.pal.messages.colfer.Field getWrappedField(
+      Class<?> clazz, String fieldName, int modifiers) {
     final net.ittera.pal.messages.colfer.Field wrappedField =
         new net.ittera.pal.messages.colfer.Field();
     wrappedField.setName(fieldName);
     wrappedField.setClazz(getWrappedClass(clazz));
+    wrappedField.setModifiers(modifiers);
     return wrappedField;
   }
 
-  static net.ittera.pal.messages.colfer.Field getWrappedField(String className, String fieldName) {
+  static net.ittera.pal.messages.colfer.Field getWrappedField(
+      String className, String fieldName, int modifiers) {
     final net.ittera.pal.messages.colfer.Field wrappedField =
         new net.ittera.pal.messages.colfer.Field();
     wrappedField.setName(fieldName);
     wrappedField.setClazz(getWrappedClass(className));
+    wrappedField.setModifiers(modifiers);
     return wrappedField;
   }
 

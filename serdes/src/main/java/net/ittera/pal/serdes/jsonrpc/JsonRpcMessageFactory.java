@@ -7,6 +7,8 @@ import net.ittera.pal.messages.jsonrpc.Params;
 
 public class JsonRpcMessageFactory {
 
+  private JsonRpcMessageFactory() {}
+
   public static JsonRpcRequest buildConstructorCall(
       String id, String type, List<Argument> arguments) {
     return new JsonRpcRequest.Builder()

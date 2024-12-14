@@ -39,13 +39,15 @@ type Obj struct {
 }
 
 type Field struct {
-	clazz Class
-	name  text
+	clazz     Class
+	name      text
+	modifiers uint32
 }
 
 type Method struct {
-	clazz Class
-	name  text
+	clazz     Class
+	name      text
+	modifiers uint32
 }
 
 type Constructor struct {

@@ -38,8 +38,6 @@ public class InstanceFieldGet implements Serializable, net.ittera.pal.messages.M
 
   public Field field;
 
-  public int modifiers;
-
   public Context context;
 
   /** Default constructor */
@@ -145,7 +143,7 @@ public class InstanceFieldGet implements Serializable, net.ittera.pal.messages.M
    * @return the number of bytes.
    */
   public int marshalFit() {
-    long n = 1L + 6 + (long) this.objectRef.length() * 3 + 5;
+    long n = 1L + 6 + (long) this.objectRef.length() * 3;
     if (this.clazz != null) n += 1 + (long) this.clazz.marshalFit();
     if (this.field != null) n += 1 + (long) this.field.marshalFit();
     if (this.context != null) n += 1 + (long) this.context.marshalFit();
@@ -249,25 +247,8 @@ public class InstanceFieldGet implements Serializable, net.ittera.pal.messages.M
         i = this.field.marshal(buf, i);
       }
 
-      if (this.modifiers != 0) {
-        int x = this.modifiers;
-        if ((x & ~((1 << 21) - 1)) != 0) {
-          buf[i++] = (byte) (3 | 0x80);
-          buf[i++] = (byte) (x >>> 24);
-          buf[i++] = (byte) (x >>> 16);
-          buf[i++] = (byte) (x >>> 8);
-        } else {
-          buf[i++] = (byte) 3;
-          while (x > 0x7f) {
-            buf[i++] = (byte) (x | 0x80);
-            x >>>= 7;
-          }
-        }
-        buf[i++] = (byte) x;
-      }
-
       if (this.context != null) {
-        buf[i++] = (byte) 4;
+        buf[i++] = (byte) 3;
         i = this.context.marshal(buf, i);
       }
 
@@ -348,24 +329,6 @@ public class InstanceFieldGet implements Serializable, net.ittera.pal.messages.M
       }
 
       if (header == (byte) 3) {
-        int x = 0;
-        for (int shift = 0; true; shift += 7) {
-          byte b = buf[i++];
-          x |= (b & 0x7f) << shift;
-          if (shift == 28 || b >= 0) break;
-        }
-        this.modifiers = x;
-        header = buf[i++];
-      } else if (header == (byte) (3 | 0x80)) {
-        this.modifiers =
-            (buf[i++] & 0xff) << 24
-                | (buf[i++] & 0xff) << 16
-                | (buf[i++] & 0xff) << 8
-                | (buf[i++] & 0xff);
-        header = buf[i++];
-      }
-
-      if (header == (byte) 4) {
         this.context = new Context();
         i = this.context.unmarshal(buf, i, end);
         header = buf[i++];
@@ -388,7 +351,7 @@ public class InstanceFieldGet implements Serializable, net.ittera.pal.messages.M
   }
 
   // {@link Serializable} version number.
-  private static final long serialVersionUID = 5L;
+  private static final long serialVersionUID = 4L;
 
   // {@link Serializable} Colfer extension.
   private void writeObject(ObjectOutputStream out) throws IOException {
@@ -501,35 +464,6 @@ public class InstanceFieldGet implements Serializable, net.ittera.pal.messages.M
   }
 
   /**
-   * Gets net.ittera.pal.messages/colfer.InstanceFieldGet.modifiers.
-   *
-   * @return the value.
-   */
-  public int getModifiers() {
-    return this.modifiers;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.InstanceFieldGet.modifiers.
-   *
-   * @param value the replacement.
-   */
-  public void setModifiers(int value) {
-    this.modifiers = value;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.InstanceFieldGet.modifiers.
-   *
-   * @param value the replacement.
-   * @return {@code this}.
-   */
-  public InstanceFieldGet withModifiers(int value) {
-    this.modifiers = value;
-    return this;
-  }
-
-  /**
    * Gets net.ittera.pal.messages/colfer.InstanceFieldGet.context.
    *
    * @return the value.
@@ -564,7 +498,6 @@ public class InstanceFieldGet implements Serializable, net.ittera.pal.messages.M
     if (this.clazz != null) h = 31 * h + this.clazz.hashCode();
     if (this.objectRef != null) h = 31 * h + this.objectRef.hashCode();
     if (this.field != null) h = 31 * h + this.field.hashCode();
-    h = 31 * h + this.modifiers;
     if (this.context != null) h = 31 * h + this.context.hashCode();
     return h;
   }
@@ -581,7 +514,6 @@ public class InstanceFieldGet implements Serializable, net.ittera.pal.messages.M
     return (this.clazz == null ? o.clazz == null : this.clazz.equals(o.clazz))
         && (this.objectRef == null ? o.objectRef == null : this.objectRef.equals(o.objectRef))
         && (this.field == null ? o.field == null : this.field.equals(o.field))
-        && this.modifiers == o.modifiers
         && (this.context == null ? o.context == null : this.context.equals(o.context));
   }
 
@@ -600,10 +532,6 @@ public class InstanceFieldGet implements Serializable, net.ittera.pal.messages.M
       if (json.has("field")) {
         JsonObject jsonObj = json.getAsJsonObject("field");
         this.field = new Field().fromJson(jsonObj);
-      }
-
-      if (json.has("modifiers")) {
-        this.modifiers = json.get("modifiers").getAsInt();
       }
 
       if (json.has("context")) {

@@ -35,15 +35,11 @@ public class ColferUtilsTest {
 
     // create marshallable message
     net.ittera.pal.messages.colfer.Field field =
-        Wrapper.getWrappedField(signature.getFieldType(), signature.getName());
-    int modifiers = signature.getModifiers();
+        Wrapper.getWrappedField(
+            signature.getFieldType(), signature.getName(), signature.getModifiers());
     net.ittera.pal.messages.colfer.Context ctxt =
         Wrapper.getWrappedContext(context, this, ObjectRef.randomRef());
-    return new InstanceFieldGet()
-        .withClazz(clazz)
-        .withField(field)
-        .withModifiers(modifiers)
-        .withContext(ctxt);
+    return new InstanceFieldGet().withClazz(clazz).withField(field).withContext(ctxt);
   }
 
   @Test

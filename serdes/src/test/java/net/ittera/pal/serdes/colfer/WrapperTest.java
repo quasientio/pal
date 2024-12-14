@@ -248,11 +248,14 @@ public class WrapperTest extends WrappingTestBase {
 
     var clazz = Integer.class;
     String fieldName = "height";
+    int modifiers = 3;
 
-    net.ittera.pal.messages.colfer.Field wrappedField = Wrapper.getWrappedField(clazz, fieldName);
+    net.ittera.pal.messages.colfer.Field wrappedField =
+        Wrapper.getWrappedField(clazz, fieldName, modifiers);
     assertNotNull(wrappedField);
     assertEquals(fieldName, wrappedField.getName());
     assertEquals(clazz.getName(), wrappedField.getClazz().getName());
+    assertEquals(modifiers, wrappedField.getModifiers());
   }
 
   @Test
@@ -267,12 +270,14 @@ public class WrapperTest extends WrappingTestBase {
   public void getWrappedField_fieldAndClassName_wrappedOk() {
     String className = Integer.class.getName();
     String fieldName = "height";
+    int modifiers = 2;
 
     net.ittera.pal.messages.colfer.Field wrappedField =
-        Wrapper.getWrappedField(className, fieldName);
+        Wrapper.getWrappedField(className, fieldName, modifiers);
     assertNotNull(wrappedField);
     assertEquals(fieldName, wrappedField.getName());
     assertEquals(className, wrappedField.getClazz().getName());
+    assertEquals(modifiers, wrappedField.getModifiers());
   }
 
   // </editor-fold>

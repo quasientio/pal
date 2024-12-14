@@ -384,9 +384,6 @@ public class JsonSerializers {
       if (notEmpty(message.field)) {
         jsonElement.add("field", jsonSerializationContext.serialize(message.field));
       }
-      if (notEmpty(message.modifiers)) {
-        jsonElement.addProperty("modifiers", message.modifiers);
-      }
       if (notEmpty(message.context)) {
         jsonElement.add("context", jsonSerializationContext.serialize(message.context));
       }
@@ -412,9 +409,6 @@ public class JsonSerializers {
       }
       if (notEmpty(message.valueObjectRef)) {
         jsonElement.addProperty("value_objectref", message.valueObjectRef);
-      }
-      if (notEmpty(message.modifiers)) {
-        jsonElement.addProperty("modifiers", message.modifiers);
       }
       if (notEmpty(message.context)) {
         jsonElement.add("context", jsonSerializationContext.serialize(message.context));
@@ -477,9 +471,6 @@ public class JsonSerializers {
       if (notEmpty(message.field)) {
         jsonElement.add("field", jsonSerializationContext.serialize(message.field));
       }
-      if (notEmpty(message.modifiers)) {
-        jsonElement.addProperty("modifiers", message.modifiers);
-      }
       if (notEmpty(message.context)) {
         jsonElement.add("context", jsonSerializationContext.serialize(message.context));
       }
@@ -508,9 +499,6 @@ public class JsonSerializers {
       }
       if (notEmpty(message.valueObjectRef)) {
         jsonElement.addProperty("value_objectref", message.valueObjectRef);
-      }
-      if (notEmpty(message.modifiers)) {
-        jsonElement.addProperty("modifiers", message.modifiers);
       }
       if (notEmpty(message.context)) {
         jsonElement.add("context", jsonSerializationContext.serialize(message.context));
@@ -726,6 +714,9 @@ public class JsonSerializers {
       if (notEmpty(message.clazz)) {
         jsonElement.add("class", jsonSerializationContext.serialize(message.clazz));
       }
+      if (notEmpty(message.modifiers)) {
+        jsonElement.addProperty("modifiers", message.modifiers);
+      }
       return jsonElement;
     }
   }
@@ -740,6 +731,9 @@ public class JsonSerializers {
       }
       if (notEmpty(message.clazz)) {
         jsonElement.add("class", jsonSerializationContext.serialize(message.clazz));
+      }
+      if (notEmpty(message.modifiers)) {
+        jsonElement.addProperty("modifiers", message.modifiers);
       }
       return jsonElement;
     }

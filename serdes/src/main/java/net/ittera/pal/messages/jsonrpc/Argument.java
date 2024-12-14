@@ -1,52 +1,62 @@
 package net.ittera.pal.messages.jsonrpc;
 
 import java.util.Objects;
+import javax.annotation.Nullable;
+import net.ittera.pal.common.objects.ObjectRef;
 
 /* This class is deserialized within the custom ParamsDeserializer adapter */
 public class Argument {
   public static final Argument NULL = new Argument();
 
-  @javax.annotation.Nullable private Object value;
+  @Nullable private Object value;
 
-  @javax.annotation.Nullable private Integer ref;
+  @Nullable private Integer ref;
 
-  @javax.annotation.Nullable private String type;
+  @Nullable private String type;
 
   public Argument() {}
 
-  public Argument(Object value, @javax.annotation.Nullable String type) {
+  public Argument(@Nullable Object value, @Nullable String type) {
     this.value = value;
     this.type = type;
   }
 
-  public Argument(Integer ref) {
+  public Argument(@Nullable Integer ref) {
     this.ref = ref;
   }
 
-  @javax.annotation.Nullable
+  @Nullable
   public Object getValue() {
     return value;
   }
 
-  public void setValue(@javax.annotation.Nullable Object value) {
+  public void setValue(@Nullable Object value) {
     this.value = value;
   }
 
-  @javax.annotation.Nullable
+  @Nullable
   public Integer getRef() {
     return ref;
   }
 
-  public void setRef(@javax.annotation.Nullable Integer ref) {
+  public void setRef(@Nullable Integer ref) {
     this.ref = ref;
   }
 
-  @javax.annotation.Nullable
+  public void setRef(@Nullable ObjectRef ref) {
+    if (ref == null) {
+      this.ref = null;
+    } else {
+      this.ref = ref.getRef();
+    }
+  }
+
+  @Nullable
   public String getType() {
     return type;
   }
 
-  public void setType(@javax.annotation.Nullable String type) {
+  public void setType(@Nullable String type) {
     this.type = type;
   }
 
@@ -88,17 +98,22 @@ public class Argument {
   public static class Builder {
     private final Argument argument = new Argument();
 
-    public Builder withValue(@javax.annotation.Nullable Object value) {
+    public Builder withValue(@Nullable Object value) {
       argument.setValue(value);
       return this;
     }
 
-    public Builder withRef(@javax.annotation.Nullable Integer ref) {
+    public Builder withRef(@Nullable Integer ref) {
       argument.setRef(ref);
       return this;
     }
 
-    public Builder withType(@javax.annotation.Nullable String type) {
+    public Builder withRef(@Nullable ObjectRef ref) {
+      argument.setRef(ref);
+      return this;
+    }
+
+    public Builder withType(@Nullable String type) {
       argument.setType(type);
       return this;
     }

@@ -77,6 +77,7 @@ import net.ittera.pal.messages.colfer.StaticFieldGet;
 import net.ittera.pal.messages.colfer.StaticFieldPut;
 import net.ittera.pal.messages.colfer.StaticFieldPutDone;
 import net.ittera.pal.messages.jsonrpc.Argument;
+import net.ittera.pal.messages.jsonrpc.Executable;
 import net.ittera.pal.messages.jsonrpc.JsonRpcError;
 import net.ittera.pal.messages.jsonrpc.JsonRpcErrorData;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
@@ -626,8 +627,8 @@ public final class MessageBuilder {
 
     net.ittera.pal.messages.colfer.Class clazz = getWrappedClass(fieldSignature.getDeclaringType());
     net.ittera.pal.messages.colfer.Field field =
-        getWrappedField(fieldSignature.getFieldType(), fieldSignature.getName());
-    int modifiers = fieldSignature.getModifiers();
+        getWrappedField(
+            fieldSignature.getFieldType(), fieldSignature.getName(), fieldSignature.getModifiers());
     net.ittera.pal.messages.colfer.Context ctxt =
         includeSourceContext ? getWrappedContext(context, sender, senderObjRef) : null;
 
@@ -640,7 +641,6 @@ public final class MessageBuilder {
                 .withClazz(clazz)
                 .withObjectRef(String.valueOf(targetObjRef.getRef()))
                 .withField(field)
-                .withModifiers(modifiers)
                 .withContext(ctxt));
         break;
       case PUT_FIELD:
@@ -651,16 +651,11 @@ public final class MessageBuilder {
                 .withField(field)
                 .withValueObject(
                     getWrappedObject(arg, fieldSignature.getFieldType().getName(), argObjRef))
-                .withModifiers(modifiers)
                 .withContext(ctxt));
         break;
       case GET_STATIC:
         execMessage.setStaticFieldGet(
-            new StaticFieldGet()
-                .withClazz(clazz)
-                .withField(field)
-                .withModifiers(modifiers)
-                .withContext(ctxt));
+            new StaticFieldGet().withClazz(clazz).withField(field).withContext(ctxt));
         break;
       case PUT_STATIC:
         execMessage.setStaticFieldPut(
@@ -669,7 +664,6 @@ public final class MessageBuilder {
                 .withValueObject(
                     getWrappedObject(arg, fieldSignature.getFieldType().getName(), argObjRef))
                 .withField(field)
-                .withModifiers(modifiers)
                 .withContext(ctxt));
         break;
       default:
@@ -709,11 +703,12 @@ public final class MessageBuilder {
   // <editor-fold desc="Static field get messages">
   public ExecMessage buildGetStatic(UUID peerUuid, String className, String fieldName) {
 
+    int unknownModifiers = 0;
     return newWrapper(ExecMessageType.GET_STATIC, peerUuid)
         .withStaticFieldGet(
             new StaticFieldGet()
                 .withClazz(getWrappedClass(className))
-                .withField(getWrappedField(className, fieldName)));
+                .withField(getWrappedField(className, fieldName, unknownModifiers)));
   }
 
   // </editor-fold>
@@ -722,12 +717,13 @@ public final class MessageBuilder {
   public ExecMessage buildGetObject(
       UUID peerUuid, String className, String fieldName, ObjectRef targetObjRef) {
 
+    int unknownModifiers = 0;
     return newWrapper(ExecMessageType.GET_FIELD, peerUuid)
         .withInstanceFieldGet(
             new InstanceFieldGet()
                 .withClazz(getWrappedClass(className))
                 .withObjectRef(String.valueOf(targetObjRef.getRef()))
-                .withField(getWrappedField((String) null, fieldName)));
+                .withField(getWrappedField((String) null, fieldName, unknownModifiers)));
   }
 
   // </editor-fold>
@@ -736,22 +732,24 @@ public final class MessageBuilder {
   public ExecMessage buildPutStatic(
       UUID peerUuid, String className, String fieldName, String valueClassName, Object value) {
 
+    int unknownModifiers = 0;
     return newWrapper(ExecMessageType.PUT_STATIC, peerUuid)
         .withStaticFieldPut(
             new StaticFieldPut()
                 .withClazz(getWrappedClass(className))
-                .withField(getWrappedField((String) null, fieldName))
+                .withField(getWrappedField((String) null, fieldName, unknownModifiers))
                 .withValueObject(getWrappedObject(value, valueClassName, null)));
   }
 
   public ExecMessage buildPutStatic(
       UUID peerUuid, String className, String fieldName, ObjectRef valueObjectRef) {
 
+    int unknownModifiers = 0;
     return newWrapper(ExecMessageType.PUT_STATIC, peerUuid)
         .withStaticFieldPut(
             new StaticFieldPut()
                 .withClazz(getWrappedClass(className))
-                .withField(getWrappedField((String) null, fieldName))
+                .withField(getWrappedField((String) null, fieldName, unknownModifiers))
                 .withValueObjectRef(String.valueOf(valueObjectRef.getRef())));
   }
 
@@ -780,12 +778,13 @@ public final class MessageBuilder {
       String valueClassName,
       Object value) {
 
+    int unknownModifiers = 0;
     return newWrapper(ExecMessageType.PUT_FIELD, peerUuid, null)
         .withInstanceFieldPut(
             new InstanceFieldPut()
                 .withClazz(getWrappedClass(className))
                 .withObjectRef(String.valueOf(targetObjRef.getRef()))
-                .withField(getWrappedField((String) null, fieldName))
+                .withField(getWrappedField((String) null, fieldName, unknownModifiers))
                 .withValueObject(getWrappedObject(value, valueClassName, null)));
   }
 
@@ -796,12 +795,13 @@ public final class MessageBuilder {
       ObjectRef targetObjRef,
       ObjectRef valueObjectRef) {
 
+    int unknownModifiers = 0;
     return newWrapper(ExecMessageType.PUT_FIELD, peerUuid, null)
         .withInstanceFieldPut(
             new InstanceFieldPut()
                 .withClazz(getWrappedClass(className))
                 .withObjectRef(String.valueOf(targetObjRef.getRef()))
-                .withField(getWrappedField((String) null, fieldName))
+                .withField(getWrappedField((String) null, fieldName, unknownModifiers))
                 .withValueObjectRef(String.valueOf(valueObjectRef.getRef())));
   }
 
@@ -849,7 +849,8 @@ public final class MessageBuilder {
                         .withClazz(
                             getWrappedClass(
                                 ((Method) accessibleObject).getDeclaringClass().getName()))
-                        .withName(((Method) accessibleObject).getName())));
+                        .withName(((Method) accessibleObject).getName())
+                        .withModifiers(((Method) accessibleObject).getModifiers())));
         raisedThrowable.setModifiers(((Method) accessibleObject).getModifiers());
       } else if (accessibleObject instanceof Field) {
         raisedThrowable.setFrom(
@@ -912,7 +913,8 @@ public final class MessageBuilder {
               .withMethod(
                   new net.ittera.pal.messages.colfer.Method()
                       .withClazz(getWrappedClass(declaringClass.getName()))
-                      .withName(((Method) accessibleObject).getName())));
+                      .withName(((Method) accessibleObject).getName())
+                      .withModifiers(((Method) accessibleObject).getModifiers())));
     } else if (accessibleObject instanceof Field) {
       valueMessage.setFrom(
           new Reflectable()
@@ -1116,9 +1118,10 @@ public final class MessageBuilder {
     String className = JsonRpcMessageUtils.getClassName(jsonRpcRequest).orElseThrow();
     String fieldName = JsonRpcMessageUtils.getFieldName(jsonRpcRequest).orElseThrow();
 
+    int unknownModifiers = 0;
     InstanceFieldPut instanceFieldPut = new InstanceFieldPut();
     instanceFieldPut.setClazz(getWrappedClass(className));
-    instanceFieldPut.setField(getWrappedField(className, fieldName));
+    instanceFieldPut.setField(getWrappedField(className, fieldName, unknownModifiers));
     instanceFieldPut.setObjectRef(String.valueOf(putParams.getInstance()));
     Argument value = putParams.getValue();
     assert value != null;
@@ -1135,9 +1138,10 @@ public final class MessageBuilder {
     String className = JsonRpcMessageUtils.getClassName(jsonRpcRequest).orElseThrow();
     String fieldName = JsonRpcMessageUtils.getFieldName(jsonRpcRequest).orElseThrow();
 
+    int unknownModifiers = 0;
     StaticFieldPut staticFieldPut = new StaticFieldPut();
     staticFieldPut.setClazz(getWrappedClass(className));
-    staticFieldPut.setField(getWrappedField(className, fieldName));
+    staticFieldPut.setField(getWrappedField(className, fieldName, unknownModifiers));
     Argument value = putParams.getValue();
     assert value != null;
     if (value.getRef() != null) { // value is an object reference
@@ -1233,9 +1237,42 @@ public final class MessageBuilder {
 
     switch (ExecMessageType.fromByte(execMessageResponse.getExecMessageType())) {
       case PUT_STATIC_DONE:
+        jsonRpcResponse.setResult(
+            new JsonRpcResponseReturnValue.Builder()
+                .withIsVoid(true)
+                .withFrom(
+                    new Executable.Builder()
+                        .withClassName(
+                            execMessageResponse
+                                .getStaticFieldPutDone()
+                                .getField()
+                                .getClazz()
+                                .getName())
+                        .withFieldName(
+                            execMessageResponse.getStaticFieldPutDone().getField().getName())
+                        .withModifiers(
+                            execMessageResponse.getStaticFieldPutDone().getField().getModifiers())
+                        .build())
+                .build());
+        break;
       case PUT_FIELD_DONE:
         jsonRpcResponse.setResult(
-            new JsonRpcResponseReturnValue.Builder().withIsVoid(true).build());
+            new JsonRpcResponseReturnValue.Builder()
+                .withIsVoid(true)
+                .withFrom(
+                    new Executable.Builder()
+                        .withClassName(
+                            execMessageResponse
+                                .getInstanceFieldPutDone()
+                                .getField()
+                                .getClazz()
+                                .getName())
+                        .withFieldName(
+                            execMessageResponse.getInstanceFieldPutDone().getField().getName())
+                        .withModifiers(
+                            execMessageResponse.getInstanceFieldPutDone().getField().getModifiers())
+                        .build())
+                .build());
         break;
       case RETURN_VALUE:
         jsonRpcResponse.setResult(

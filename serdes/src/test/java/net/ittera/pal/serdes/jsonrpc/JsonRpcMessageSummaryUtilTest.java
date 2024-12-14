@@ -1,0 +1,268 @@
+package net.ittera.pal.serdes.jsonrpc;
+
+import static org.junit.Assert.assertEquals;
+
+import java.lang.reflect.AccessibleObject;
+import java.lang.reflect.Method;
+import java.util.List;
+import java.util.UUID;
+import net.ittera.pal.common.objects.ObjectRef;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.jsonrpc.Argument;
+import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
+import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
+import net.ittera.pal.serdes.colfer.MessageBuilder;
+import org.junit.Test;
+
+public class JsonRpcMessageSummaryUtilTest {
+
+  private final MessageBuilder messageBuilder = new MessageBuilder();
+
+  private static String getClassnameWithoutPackage(String className) {
+    if (className.contains(".")) {
+      return className.substring(className.lastIndexOf('.') + 1);
+    } else {
+      return className;
+    }
+  }
+
+  @Test
+  public void getOneLinerSummary_constructor() {
+    String className = "org.cometera.example.ExampleClass";
+    JsonRpcRequest jsonRpcRequest =
+        JsonRpcMessageFactory.buildConstructorCall("1", className, null);
+    assertEquals("new ExampleClass", JsonRpcMessageSummaryUtil.getOneLinerSummary(jsonRpcRequest));
+  }
+
+  @Test
+  public void getOneLinerSummary_instanceMethod() {
+    String className = "org.cometera.example.ExampleClass";
+    String methodName = "testMethod";
+    Integer instance = 9237239;
+    JsonRpcRequest jsonRpcRequest =
+        JsonRpcMessageFactory.buildInstanceMethodCall(
+            "1",
+            className,
+            methodName,
+            instance,
+            List.of(new Argument.Builder().withType("String").withValue("test").build()));
+    assertEquals(
+        "call ExampleClass." + methodName + "@" + instance,
+        JsonRpcMessageSummaryUtil.getOneLinerSummary(jsonRpcRequest));
+  }
+
+  @Test
+  public void getOneLinerSummary_staticMethod() {
+    String className = "org.cometera.example.ExampleClass";
+    String methodName = "testMethod";
+    JsonRpcRequest jsonRpcRequest =
+        JsonRpcMessageFactory.buildClassMethodCall(
+            "1",
+            className,
+            methodName,
+            List.of(new Argument.Builder().withType("String").withValue("test").build()));
+    assertEquals(
+        "call ExampleClass." + methodName,
+        JsonRpcMessageSummaryUtil.getOneLinerSummary(jsonRpcRequest));
+  }
+
+  @Test
+  public void getOneLinerSummary_getStatic() {
+    String className = "org.cometera.example.ExampleClass";
+    String fieldName = "aStaticField";
+    JsonRpcRequest jsonRpcRequest =
+        JsonRpcMessageFactory.buildStaticFieldGet("1", className, fieldName);
+    assertEquals(
+        "get ExampleClass." + fieldName,
+        JsonRpcMessageSummaryUtil.getOneLinerSummary(jsonRpcRequest));
+  }
+
+  @Test
+  public void getOneLinerSummary_putStatic() {
+    String className = "org.cometera.example.ExampleClass";
+    String fieldName = "aStaticField";
+    ObjectRef valueObjectRef = ObjectRef.randomRef();
+    JsonRpcRequest jsonRpcRequest =
+        JsonRpcMessageFactory.buildStaticFieldPut(
+            "1",
+            className,
+            fieldName,
+            new Argument.Builder().withRef(valueObjectRef.getRef()).build());
+    assertEquals(
+        "put ExampleClass." + fieldName + " ⇦ " + "@" + valueObjectRef.getRef(),
+        JsonRpcMessageSummaryUtil.getOneLinerSummary(jsonRpcRequest));
+  }
+
+  @Test
+  public void getOneLinerSummary_getField() {
+    String className = "org.cometera.example.ExampleClass";
+    String fieldName = "aField";
+    ObjectRef instance = ObjectRef.randomRef();
+    JsonRpcRequest jsonRpcRequest =
+        JsonRpcMessageFactory.buildInstanceFieldGet("1", className, instance.getRef(), fieldName);
+    assertEquals(
+        "get ExampleClass." + fieldName + "@" + instance.getRef(),
+        JsonRpcMessageSummaryUtil.getOneLinerSummary(jsonRpcRequest));
+  }
+
+  @Test
+  public void getOneLinerSummary_putField() {
+    String className = "org.cometera.example.ExampleClass";
+    String fieldName = "aField";
+    ObjectRef instance = ObjectRef.randomRef();
+    ObjectRef valueObjectRef = ObjectRef.randomRef();
+    JsonRpcRequest jsonRpcRequest =
+        JsonRpcMessageFactory.buildInstanceFieldPut(
+            "1",
+            className,
+            instance.getRef(),
+            fieldName,
+            new Argument.Builder().withRef(valueObjectRef).build());
+    assertEquals(
+        "put ExampleClass."
+            + fieldName
+            + "@"
+            + instance.getRef()
+            + " ⇦ "
+            + "@"
+            + valueObjectRef.getRef(),
+        JsonRpcMessageSummaryUtil.getOneLinerSummary(jsonRpcRequest));
+  }
+
+  @Test
+  public void getOneLinerSummary_putFieldDone() throws NoSuchFieldException {
+    class DummyClass {
+      @SuppressWarnings("unused")
+      Object myField;
+    }
+
+    UUID peerUuid = UUID.randomUUID();
+    var targetClass = DummyClass.class;
+    String fieldName = "myField";
+    String instanceFieldPutUuid = UUID.randomUUID().toString();
+    AccessibleObject accessibleObject = targetClass.getDeclaredField(fieldName);
+    String responseToId = UUID.randomUUID().toString();
+
+    ExecMessage execMessage =
+        messageBuilder.buildPutObjectDone(
+            peerUuid, accessibleObject, instanceFieldPutUuid, responseToId);
+    JsonRpcResponse jsonRpcResponse =
+        messageBuilder.jsonRpcResponseFromExecMessageReply(execMessage);
+    assertEquals(
+        "put_done " + getClassnameWithoutPackage(targetClass.getName()) + "." + fieldName,
+        JsonRpcMessageSummaryUtil.getOneLinerSummary(jsonRpcResponse));
+  }
+
+  @Test
+  public void getOneLinerSummary_putStaticFieldDone() throws NoSuchFieldException {
+    class DummyClass {
+      @SuppressWarnings("unused")
+      static Object aStaticField;
+    }
+
+    var targetClass = DummyClass.class;
+    UUID peerUuid = UUID.randomUUID();
+    String fieldName = "aStaticField";
+    String staticFieldPutUuid = UUID.randomUUID().toString();
+    AccessibleObject accessibleObject = targetClass.getDeclaredField(fieldName);
+    String responseToId = UUID.randomUUID().toString();
+
+    ExecMessage execMessage =
+        messageBuilder.buildPutStaticDone(
+            peerUuid, accessibleObject, staticFieldPutUuid, responseToId);
+    JsonRpcResponse jsonRpcResponse =
+        messageBuilder.jsonRpcResponseFromExecMessageReply(execMessage);
+    assertEquals(
+        "put_done " + getClassnameWithoutPackage(targetClass.getName()) + "." + fieldName,
+        JsonRpcMessageSummaryUtil.getOneLinerSummary(jsonRpcResponse));
+  }
+
+  @Test
+  public void getOneLinerSummary_throwable() throws NoSuchMethodException {
+    class DummyClass {
+      @SuppressWarnings("unused")
+      public Object myMethod() {
+        throw new RuntimeException("An error occurred");
+      }
+    }
+
+    UUID peerUuid = UUID.randomUUID();
+    String throwableMessage = "my throwable message";
+    Throwable throwable = new RuntimeException(throwableMessage);
+    AccessibleObject accessibleObject = DummyClass.class.getMethod("myMethod");
+    String responseToId = UUID.randomUUID().toString();
+    ExecMessage execMessage =
+        messageBuilder.buildAccessibleObjectThrowable(
+            peerUuid, accessibleObject, throwable, responseToId);
+
+    JsonRpcResponse jsonRpcResponse =
+        messageBuilder.jsonRpcResponseFromExecMessageReply(execMessage);
+    assertEquals(
+        "throw RuntimeException: \"" + throwableMessage + "\"",
+        JsonRpcMessageSummaryUtil.getOneLinerSummary(jsonRpcResponse));
+  }
+
+  @Test
+  public void getOneLinerSummary_returnValueVoid() throws NoSuchMethodException {
+    class DummyClass {
+      @SuppressWarnings("unused")
+      public void addInts(int a, int b) {}
+    }
+
+    UUID peerUuid = UUID.randomUUID();
+    Method method = DummyClass.class.getMethod("addInts", int.class, int.class);
+    ObjectRef returnValueObjRef = ObjectRef.randomRef();
+    String responseToId = UUID.randomUUID().toString();
+
+    ExecMessage execMessage =
+        messageBuilder.buildReturnValue(
+            peerUuid,
+            null,
+            method,
+            returnValueObjRef,
+            method.getReturnType() == void.class,
+            responseToId);
+
+    JsonRpcResponse jsonRpcResponse =
+        messageBuilder.jsonRpcResponseFromExecMessageReply(execMessage);
+    assertEquals("return void", JsonRpcMessageSummaryUtil.getOneLinerSummary(jsonRpcResponse));
+  }
+
+  @Test
+  public void getOneLinerSummary_returnValueNonVoid() throws NoSuchMethodException {
+    class DummyClass {
+      @SuppressWarnings("unused")
+      public int addInts(int a, int b) {
+        return a + b;
+      }
+    }
+
+    UUID peerUuid = UUID.randomUUID();
+    Class<?> targetClass = DummyClass.class;
+    Method method = targetClass.getMethod("addInts", int.class, int.class);
+    ObjectRef returnValueObjRef = ObjectRef.randomRef();
+    int returnValue = 4;
+    String responseToId = UUID.randomUUID().toString();
+
+    ExecMessage execMessage =
+        messageBuilder.buildReturnValue(
+            peerUuid,
+            returnValue,
+            method,
+            returnValueObjRef,
+            method.getReturnType() == void.class,
+            responseToId);
+
+    JsonRpcResponse jsonRpcResponse =
+        messageBuilder.jsonRpcResponseFromExecMessageReply(execMessage);
+    assertEquals(
+        "return "
+            + method.getReturnType().getSimpleName()
+            + "@"
+            + returnValueObjRef.getRef()
+            + "(="
+            + returnValue
+            + ")",
+        JsonRpcMessageSummaryUtil.getOneLinerSummary(jsonRpcResponse));
+  }
+}

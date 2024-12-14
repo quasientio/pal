@@ -36,6 +36,8 @@ public class Field implements Serializable, net.ittera.pal.messages.Marshallable
 
   public String name;
 
+  public int modifiers;
+
   /** Default constructor */
   public Field() {
     init();
@@ -137,7 +139,7 @@ public class Field implements Serializable, net.ittera.pal.messages.Marshallable
    * @return the number of bytes.
    */
   public int marshalFit() {
-    long n = 1L + 6 + (long) this.name.length() * 3;
+    long n = 1L + 6 + (long) this.name.length() * 3 + 5;
     if (this.clazz != null) n += 1 + (long) this.clazz.marshalFit();
     if (n < 0 || n > (long) Field.colferSizeMax) return Field.colferSizeMax;
     return (int) n;
@@ -234,6 +236,23 @@ public class Field implements Serializable, net.ittera.pal.messages.Marshallable
         buf[ii] = (byte) size;
       }
 
+      if (this.modifiers != 0) {
+        int x = this.modifiers;
+        if ((x & ~((1 << 21) - 1)) != 0) {
+          buf[i++] = (byte) (2 | 0x80);
+          buf[i++] = (byte) (x >>> 24);
+          buf[i++] = (byte) (x >>> 16);
+          buf[i++] = (byte) (x >>> 8);
+        } else {
+          buf[i++] = (byte) 2;
+          while (x > 0x7f) {
+            buf[i++] = (byte) (x | 0x80);
+            x >>>= 7;
+          }
+        }
+        buf[i++] = (byte) x;
+      }
+
       buf[i++] = (byte) 0x7f;
       return i;
     } catch (ArrayIndexOutOfBoundsException e) {
@@ -304,6 +323,24 @@ public class Field implements Serializable, net.ittera.pal.messages.Marshallable
         header = buf[i++];
       }
 
+      if (header == (byte) 2) {
+        int x = 0;
+        for (int shift = 0; true; shift += 7) {
+          byte b = buf[i++];
+          x |= (b & 0x7f) << shift;
+          if (shift == 28 || b >= 0) break;
+        }
+        this.modifiers = x;
+        header = buf[i++];
+      } else if (header == (byte) (2 | 0x80)) {
+        this.modifiers =
+            (buf[i++] & 0xff) << 24
+                | (buf[i++] & 0xff) << 16
+                | (buf[i++] & 0xff) << 8
+                | (buf[i++] & 0xff);
+        header = buf[i++];
+      }
+
       if (header != (byte) 0x7f)
         throw new InputMismatchException(format("colfer: unknown header at byte %d", i - 1));
     } finally {
@@ -320,7 +357,7 @@ public class Field implements Serializable, net.ittera.pal.messages.Marshallable
   }
 
   // {@link Serializable} version number.
-  private static final long serialVersionUID = 2L;
+  private static final long serialVersionUID = 3L;
 
   // {@link Serializable} Colfer extension.
   private void writeObject(ObjectOutputStream out) throws IOException {
@@ -403,11 +440,41 @@ public class Field implements Serializable, net.ittera.pal.messages.Marshallable
     return this;
   }
 
+  /**
+   * Gets net.ittera.pal.messages/colfer.Field.modifiers.
+   *
+   * @return the value.
+   */
+  public int getModifiers() {
+    return this.modifiers;
+  }
+
+  /**
+   * Sets net.ittera.pal.messages/colfer.Field.modifiers.
+   *
+   * @param value the replacement.
+   */
+  public void setModifiers(int value) {
+    this.modifiers = value;
+  }
+
+  /**
+   * Sets net.ittera.pal.messages/colfer.Field.modifiers.
+   *
+   * @param value the replacement.
+   * @return {@code this}.
+   */
+  public Field withModifiers(int value) {
+    this.modifiers = value;
+    return this;
+  }
+
   @Override
   public final int hashCode() {
     int h = 1;
     if (this.clazz != null) h = 31 * h + this.clazz.hashCode();
     if (this.name != null) h = 31 * h + this.name.hashCode();
+    h = 31 * h + this.modifiers;
     return h;
   }
 
@@ -421,7 +488,8 @@ public class Field implements Serializable, net.ittera.pal.messages.Marshallable
     if (o == this) return true;
 
     return (this.clazz == null ? o.clazz == null : this.clazz.equals(o.clazz))
-        && (this.name == null ? o.name == null : this.name.equals(o.name));
+        && (this.name == null ? o.name == null : this.name.equals(o.name))
+        && this.modifiers == o.modifiers;
   }
 
   @Override
@@ -434,6 +502,10 @@ public class Field implements Serializable, net.ittera.pal.messages.Marshallable
 
       if (json.has("name")) {
         this.name = json.get("name").getAsString();
+      }
+
+      if (json.has("modifiers")) {
+        this.modifiers = json.get("modifiers").getAsInt();
       }
 
     } catch (Exception e) {

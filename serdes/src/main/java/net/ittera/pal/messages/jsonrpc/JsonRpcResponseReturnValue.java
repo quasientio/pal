@@ -2,13 +2,16 @@ package net.ittera.pal.messages.jsonrpc;
 
 import com.google.gson.annotations.SerializedName;
 import java.util.Objects;
+import javax.annotation.Nullable;
 
 public class JsonRpcResponseReturnValue {
 
   @SerializedName("is_void")
   private Boolean isVoid;
 
-  @javax.annotation.Nullable private ResponseObject value;
+  @Nullable private ResponseObject value;
+
+  private Executable from;
 
   public JsonRpcResponseReturnValue() {}
 
@@ -20,18 +23,28 @@ public class JsonRpcResponseReturnValue {
     this.isVoid = isVoid;
   }
 
-  @javax.annotation.Nullable
+  @Nullable
   public ResponseObject getValue() {
     return value;
   }
 
-  public void setValue(@javax.annotation.Nullable ResponseObject value) {
+  public void setValue(@Nullable ResponseObject value) {
     this.value = value;
+  }
+
+  public Executable getFrom() {
+    return from;
+  }
+
+  public void setFrom(Executable from) {
+    this.from = from;
   }
 
   @Override
   public boolean equals(Object o) {
-    if (!(o instanceof JsonRpcResponseReturnValue that)) return false;
+    if (!(o instanceof JsonRpcResponseReturnValue that)) {
+      return false;
+    }
     return Objects.equals(isVoid, that.isVoid) && Objects.equals(value, that.value);
   }
 
@@ -53,8 +66,13 @@ public class JsonRpcResponseReturnValue {
       return this;
     }
 
-    public Builder withValue(@javax.annotation.Nullable ResponseObject value) {
+    public Builder withValue(@Nullable ResponseObject value) {
       returnValue.setValue(value);
+      return this;
+    }
+
+    public Builder withFrom(Executable from) {
+      returnValue.setFrom(from);
       return this;
     }
 

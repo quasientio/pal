@@ -3,11 +3,19 @@ package net.ittera.pal.serdes.jsonrpc;
 import com.google.gson.Strictness;
 import com.google.gson.stream.JsonReader;
 import java.io.StringReader;
+import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import net.ittera.pal.messages.jsonrpc.Executable;
+import net.ittera.pal.messages.jsonrpc.JsonRpcError;
+import net.ittera.pal.messages.jsonrpc.JsonRpcMessage;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
+import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
+import net.ittera.pal.messages.jsonrpc.JsonRpcResponseReturnValue;
 import net.ittera.pal.messages.types.ExecMessageType;
+import net.ittera.pal.messages.types.JsonRpcRequestType;
+import net.ittera.pal.messages.types.JsonRpcResponseType;
 import net.ittera.pal.messages.types.MessageType;
 
 public class JsonRpcMessageUtils {
@@ -53,6 +61,17 @@ public class JsonRpcMessageUtils {
     return NOT_FOUND_EXCEPTION_TYPES.contains(exceptionType);
   }
 
+  public static Optional<String> getClassName(JsonRpcMessage jsonRpcMessage) {
+    if (jsonRpcMessage instanceof JsonRpcRequest request) {
+      return getClassName(request);
+    } else if (jsonRpcMessage instanceof JsonRpcResponse response) {
+      return getClassName(response);
+    } else {
+      throw new IllegalArgumentException(
+          "Unsupported message type: " + jsonRpcMessage.getClass().getName());
+    }
+  }
+
   public static Optional<String> getClassName(JsonRpcRequest jsonRpcRequest) {
     return switch (jsonRpcRequest.getMethod()) {
       case "new", "call", "get", "put" -> Optional.of(jsonRpcRequest.getParams().getType());
@@ -60,7 +79,57 @@ public class JsonRpcMessageUtils {
     };
   }
 
+  @SuppressWarnings("checkstyle:FallThrough")
+  public static Optional<String> getClassName(JsonRpcResponse jsonRpcResponse) {
+    JsonRpcResponseType jsonRpcResponseType = getJsonRpcResponseType(jsonRpcResponse);
+    boolean isFieldPutDone = false;
+    switch (jsonRpcResponseType) {
+      case ERROR:
+        JsonRpcError error = jsonRpcResponse.getError();
+        if (error == null || error.getData() == null) {
+          return Optional.empty();
+        }
+        return Optional.of(error.getData().getThrowableType());
+      case STATIC_FIELDPUT_DONE:
+      case INSTANCE_FIELDPUT_DONE:
+        isFieldPutDone = true;
+        // fall through
+      case RETURN_VALUE:
+        JsonRpcResponseReturnValue returnValue = jsonRpcResponse.getResult();
+        if (returnValue == null || returnValue.getFrom() == null) {
+          return Optional.empty();
+        }
+        String valueType;
+        if (isFieldPutDone) {
+          valueType = returnValue.getFrom().getClassName();
+        } else {
+          valueType =
+              returnValue.getValue() != null ? returnValue.getValue().getType() : "<unknown>";
+        }
+        return Optional.ofNullable(valueType);
+      default:
+        throw new IllegalArgumentException(
+            String.format("Unsupported JSON-RPC response type: %s", jsonRpcResponseType));
+    }
+  }
+
+  public static Optional<String> getFieldName(JsonRpcResponse jsonRpcResponse) {
+    JsonRpcResponseType jsonRpcResponseType = getJsonRpcResponseType(jsonRpcResponse);
+    switch (jsonRpcResponseType) {
+      case STATIC_FIELDPUT_DONE:
+      case INSTANCE_FIELDPUT_DONE:
+        JsonRpcResponseReturnValue returnValue = jsonRpcResponse.getResult();
+        if (returnValue == null || returnValue.getFrom() == null) {
+          return Optional.empty();
+        }
+        return Optional.ofNullable(returnValue.getFrom().getFieldName());
+      default:
+        return Optional.empty();
+    }
+  }
+
   public static Optional<String> getFieldName(JsonRpcRequest jsonRpcRequest) {
+    assert jsonRpcRequest.getParams().getField() != null;
     return switch (jsonRpcRequest.getMethod()) {
       case "get", "put" -> Optional.of(jsonRpcRequest.getParams().getField());
       default -> Optional.empty();
@@ -102,6 +171,56 @@ public class JsonRpcMessageUtils {
       default ->
           throw new IllegalArgumentException("Unsupported method: " + jsonRpcRequest.getMethod());
     };
+  }
+
+  public static JsonRpcRequestType getJsonRpcRequestType(JsonRpcRequest jsonRpcRequest) {
+    return switch (jsonRpcRequest.getMethod()) {
+      case "new" -> JsonRpcRequestType.CONSTRUCTOR;
+      case "call" -> {
+        if (jsonRpcRequest.getParams().getInstance() == null) {
+          yield JsonRpcRequestType.CLASS_METHOD;
+        } else {
+          yield JsonRpcRequestType.INSTANCE_METHOD;
+        }
+      }
+      case "get" -> {
+        if (jsonRpcRequest.getParams().getInstance() == null) {
+          yield JsonRpcRequestType.GET_STATIC;
+        } else {
+          yield JsonRpcRequestType.GET_FIELD;
+        }
+      }
+      case "put" -> {
+        if (jsonRpcRequest.getParams().getInstance() == null) {
+          yield JsonRpcRequestType.PUT_STATIC;
+        } else {
+          yield JsonRpcRequestType.PUT_FIELD;
+        }
+      }
+      default ->
+          throw new IllegalArgumentException("Unsupported method: " + jsonRpcRequest.getMethod());
+    };
+  }
+
+  public static JsonRpcResponseType getJsonRpcResponseType(JsonRpcResponse jsonRpcResponse) {
+    if (jsonRpcResponse.getError() != null) {
+      return JsonRpcResponseType.ERROR;
+    } else if (jsonRpcResponse.getResult() != null) {
+      JsonRpcResponseReturnValue returnValue = jsonRpcResponse.getResult();
+      Executable from = returnValue.getFrom();
+      boolean isVoid = returnValue.getIsVoid();
+      // a void, field operation can only be the result of a field put
+      if (isVoid && from.getFieldName() != null && !from.getFieldName().isEmpty()) {
+        int fieldModifiers = from.getModifiers();
+        return Modifier.isStatic(fieldModifiers)
+            ? JsonRpcResponseType.STATIC_FIELDPUT_DONE
+            : JsonRpcResponseType.INSTANCE_FIELDPUT_DONE;
+      } else {
+        return JsonRpcResponseType.RETURN_VALUE;
+      }
+    } else {
+      throw new IllegalArgumentException("Unsupported JSON-RPC response type");
+    }
   }
 
   private static class GsonUtils {
