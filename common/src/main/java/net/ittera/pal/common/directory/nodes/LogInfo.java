@@ -135,13 +135,12 @@ public final class LogInfo extends InfoNode implements Comparable<LogInfo> {
     }
     LogInfo logInfo = (LogInfo) o;
     return Objects.equals(name, logInfo.name)
-        && Objects.equals(uuid, logInfo.uuid)
         && Objects.equals(bootstrapServers, logInfo.bootstrapServers);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(name, uuid, bootstrapServers);
+    return Objects.hash(name, bootstrapServers);
   }
 
   @Override

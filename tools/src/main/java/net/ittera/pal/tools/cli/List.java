@@ -178,7 +178,7 @@ public class List extends AbstractPalSubcommand {
     try {
       logsInServers =
           getAdminClientForServers(bootstrapServers).listTopics().names().get().stream()
-              .map(LogInfo::new)
+              .map(name -> new LogInfo(name, bootstrapServers))
               .collect(Collectors.toSet());
     } catch (InterruptedException | ExecutionException e) {
       logger.error("Error listing logs in kafka", e);

@@ -134,6 +134,7 @@ public class LogInfoTest {
             "bytes",
             "exists",
             "humanReadableByteSize",
+            "uuid",
             "ctime",
             "mtime")
         .verify();
