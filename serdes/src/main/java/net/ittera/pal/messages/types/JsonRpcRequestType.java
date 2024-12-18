@@ -7,11 +7,7 @@ public enum JsonRpcRequestType {
   GET_STATIC((byte) 4),
   GET_FIELD((byte) 5),
   PUT_STATIC((byte) 6),
-  PUT_FIELD((byte) 7),
-  PUT_STATIC_DONE((byte) 8),
-  PUT_FIELD_DONE((byte) 9),
-  THROWABLE((byte) 10),
-  RETURN_VALUE((byte) 11);
+  PUT_FIELD((byte) 7);
 
   private final byte idx;
 
@@ -28,10 +24,6 @@ public enum JsonRpcRequestType {
       case 5 -> GET_FIELD;
       case 6 -> PUT_STATIC;
       case 7 -> PUT_FIELD;
-      case 8 -> PUT_STATIC_DONE;
-      case 9 -> PUT_FIELD_DONE;
-      case 10 -> THROWABLE;
-      case 11 -> RETURN_VALUE;
       default -> throw new IllegalArgumentException("Unknown JSON-RPC request type: " + typeAsByte);
     };
   }
