@@ -1420,12 +1420,15 @@ public class MessageBuilderTest {
 
   // <editor-fold desc="Throwable messages">
   @Test
-  public void buildAccessibleObjectThrowable_withConstructor_raisedThrowableMessage() {
+  public void buildAccessibleObjectThrowable_withConstructor_raisedThrowableMessage()
+      throws NoSuchMethodException, NoSuchFieldException {
 
     List<AccessibleObject> accessibleObjects = new ArrayList<>();
-    accessibleObjects.add(DummyClassForTest.class.getDeclaredConstructors()[0]);
-    accessibleObjects.add(DummyClassForTest.class.getDeclaredMethods()[0]);
-    accessibleObjects.add(DummyClassForTest.class.getDeclaredFields()[0]);
+    accessibleObjects.add(DummyClassForTest.class.getConstructor(String.class, int.class));
+    accessibleObjects.add(
+        DummyClassForTest.class.getDeclaredMethod(
+            "dummyMethod", String.class, int.class, List.class));
+    accessibleObjects.add(DummyClassForTest.class.getDeclaredField("anInt"));
 
     UUID peerUuid = UUID.randomUUID();
     String throwableMessage = "my throwable message";
