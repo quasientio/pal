@@ -61,7 +61,7 @@ public class Argument {
   }
 
   public boolean isNull() {
-    return value == null && ref == null && type == null;
+    return value == null && ref == null;
   }
 
   @Override
