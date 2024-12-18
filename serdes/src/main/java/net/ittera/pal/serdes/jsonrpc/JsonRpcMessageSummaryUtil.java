@@ -64,8 +64,8 @@ public class JsonRpcMessageSummaryUtil extends RpcMessageSummaryUtil {
   public static String getOneLinerSummary(JsonRpcResponse msg) {
     JsonRpcResponseType responseType = JsonRpcMessageUtils.getJsonRpcResponseType(msg);
     switch (responseType) {
-      case STATIC_FIELDPUT_DONE:
-      case INSTANCE_FIELDPUT_DONE:
+      case PUT_STATIC_DONE:
+      case PUT_FIELD_DONE:
         return String.format("put_done %s.%s", classname(msg), getFieldName(msg).orElse(""));
       case RETURN_VALUE:
         assert msg.getResult() != null;

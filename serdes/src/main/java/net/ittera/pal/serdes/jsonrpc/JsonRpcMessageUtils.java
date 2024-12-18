@@ -90,8 +90,8 @@ public class JsonRpcMessageUtils {
           return Optional.empty();
         }
         return Optional.of(error.getData().getThrowableType());
-      case STATIC_FIELDPUT_DONE:
-      case INSTANCE_FIELDPUT_DONE:
+      case PUT_STATIC_DONE:
+      case PUT_FIELD_DONE:
         isFieldPutDone = true;
         // fall through
       case RETURN_VALUE:
@@ -115,10 +115,10 @@ public class JsonRpcMessageUtils {
 
   public static Optional<String> getFieldName(JsonRpcResponse jsonRpcResponse) {
     JsonRpcResponseType jsonRpcResponseType = getJsonRpcResponseType(jsonRpcResponse);
+    JsonRpcResponseReturnValue returnValue = jsonRpcResponse.getResult();
     switch (jsonRpcResponseType) {
-      case STATIC_FIELDPUT_DONE:
-      case INSTANCE_FIELDPUT_DONE:
-        JsonRpcResponseReturnValue returnValue = jsonRpcResponse.getResult();
+      case PUT_STATIC_DONE:
+      case PUT_FIELD_DONE:
         if (returnValue == null || returnValue.getFrom() == null) {
           return Optional.empty();
         }
@@ -213,8 +213,8 @@ public class JsonRpcMessageUtils {
       if (isVoid && from.getFieldName() != null && !from.getFieldName().isEmpty()) {
         int fieldModifiers = from.getModifiers();
         return Modifier.isStatic(fieldModifiers)
-            ? JsonRpcResponseType.STATIC_FIELDPUT_DONE
-            : JsonRpcResponseType.INSTANCE_FIELDPUT_DONE;
+            ? JsonRpcResponseType.PUT_STATIC_DONE
+            : JsonRpcResponseType.PUT_FIELD_DONE;
       } else {
         return JsonRpcResponseType.RETURN_VALUE;
       }

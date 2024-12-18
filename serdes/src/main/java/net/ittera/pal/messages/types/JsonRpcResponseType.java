@@ -1,8 +1,8 @@
 package net.ittera.pal.messages.types;
 
 public enum JsonRpcResponseType {
-  STATIC_FIELDPUT_DONE,
-  INSTANCE_FIELDPUT_DONE,
+  PUT_STATIC_DONE,
+  PUT_FIELD_DONE,
   RETURN_VALUE,
   ERROR
 }
