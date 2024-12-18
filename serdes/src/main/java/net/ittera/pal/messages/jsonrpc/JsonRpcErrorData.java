@@ -21,7 +21,9 @@ public class JsonRpcErrorData {
 
   @Nullable private String requestId;
 
-  @javax.annotation.Nullable
+  private Executable from;
+
+  @Nullable
   public JsonRpcErrorData getCause() {
     return cause;
   }
@@ -63,6 +65,14 @@ public class JsonRpcErrorData {
     this.requestId = requestId;
   }
 
+  public Executable getFrom() {
+    return from;
+  }
+
+  public void setFrom(Executable from) {
+    this.from = from;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (!(o instanceof JsonRpcErrorData that)) {
@@ -91,6 +101,8 @@ public class JsonRpcErrorData {
         + ", message='"
         + message
         + '\''
+        + ", from="
+        + from
         + ", requestId="
         + requestId
         + ", stackTrace="
@@ -108,6 +120,11 @@ public class JsonRpcErrorData {
 
     public Builder withMessage(String message) {
       errorData.setMessage(message);
+      return this;
+    }
+
+    public Builder withFrom(Executable from) {
+      errorData.setFrom(from);
       return this;
     }
 

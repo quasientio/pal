@@ -25,8 +25,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Parameter;
-import net.ittera.pal.messages.colfer.RaisedThrowable;
-import net.ittera.pal.messages.colfer.ReturnValue;
+import net.ittera.pal.messages.colfer.Reflectable;
 import net.ittera.pal.messages.types.ExecMessageType;
 
 public class ExecMessageUtils {
@@ -77,32 +76,46 @@ public class ExecMessageUtils {
     return switch (execMessageType) {
       case PUT_FIELD_DONE -> execMessage.getInstanceFieldPutDone().getField().getName();
       case PUT_STATIC_DONE -> execMessage.getStaticFieldPutDone().getField().getName();
-      case RETURN_VALUE -> getFromReflectableName(execMessage.getReturnValue());
-      case THROWABLE -> getFromReflectableName(execMessage.getRaisedThrowable());
+      case RETURN_VALUE -> getFromReflectableName(execMessage.getReturnValue().getFrom());
+      case THROWABLE -> getFromReflectableName(execMessage.getRaisedThrowable().getFrom());
       default ->
           throw new IllegalArgumentException(
               String.format("Unsupported ExecMessage type: %s", execMessageType));
     };
   }
 
-  private static String getFromReflectableName(ReturnValue returnValue) {
-    if (returnValue.getFrom().getConstructor() != null) {
-      return returnValue.getFrom().getConstructor().getClazz().getName();
-    } else if (returnValue.getFrom().getMethod() != null) {
-      return returnValue.getFrom().getMethod().getName();
-    } else if (returnValue.getFrom().getField() != null) {
-      return returnValue.getFrom().getField().getName();
+  public static String getFromExecutableClassName(ExecMessage execMessage) {
+    final ExecMessageType execMessageType =
+        ExecMessageType.fromByte(execMessage.getExecMessageType());
+    return switch (execMessageType) {
+      case PUT_FIELD_DONE -> execMessage.getInstanceFieldPutDone().getClazz().getName();
+      case PUT_STATIC_DONE -> execMessage.getStaticFieldPutDone().getClass().getName();
+      case RETURN_VALUE -> getFromReflectableClassName(execMessage.getReturnValue().getFrom());
+      case THROWABLE -> getFromReflectableClassName(execMessage.getRaisedThrowable().getFrom());
+      default ->
+          throw new IllegalArgumentException(
+              String.format("Unsupported ExecMessage type: %s", execMessageType));
+    };
+  }
+
+  private static String getFromReflectableName(Reflectable from) {
+    if (from.getConstructor() != null) {
+      return "new";
+    } else if (from.getMethod() != null) {
+      return from.getMethod().getName();
+    } else if (from.getField() != null) {
+      return from.getField().getName();
     }
     return null;
   }
 
-  private static String getFromReflectableName(RaisedThrowable raisedThrowable) {
-    if (raisedThrowable.getFrom().getConstructor() != null) {
-      return raisedThrowable.getFrom().getConstructor().getClazz().getName();
-    } else if (raisedThrowable.getFrom().getMethod() != null) {
-      return raisedThrowable.getFrom().getMethod().getName();
-    } else if (raisedThrowable.getFrom().getField() != null) {
-      return raisedThrowable.getFrom().getField().getName();
+  private static String getFromReflectableClassName(Reflectable from) {
+    if (from.getConstructor() != null) {
+      return from.getConstructor().getClazz().getName();
+    } else if (from.getMethod() != null) {
+      return from.getMethod().getClazz().getName();
+    } else if (from.getField() != null) {
+      return from.getField().getClazz().getName();
     }
     return null;
   }

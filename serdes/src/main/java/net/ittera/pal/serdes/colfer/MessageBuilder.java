@@ -1279,18 +1279,21 @@ public final class MessageBuilder {
             ConversionUtils.toResponseReturnValue(execMessageResponse.getReturnValue()));
         break;
       case THROWABLE:
-        net.ittera.pal.messages.colfer.Throwable raisedThrowable =
-            execMessageResponse.getRaisedThrowable().getThrowable();
+        RaisedThrowable raisedThrowable = execMessageResponse.getRaisedThrowable();
+        net.ittera.pal.messages.colfer.Throwable throwable = raisedThrowable.getThrowable();
+        Reflectable fromAccessible = raisedThrowable.getFrom();
         JsonRpcErrorData errorData =
             new JsonRpcErrorData.Builder()
                 .withRequestId(requestId)
-                .withThrowableType(raisedThrowable.getType())
-                .withMessage(raisedThrowable.getMessage())
-                .withStackTrace(raisedThrowable.getStackTraceElements())
+                .withThrowableType(throwable.getType())
+                .withMessage(throwable.getMessage())
+                .withStackTrace(throwable.getStackTraceElements())
                 .build();
-        if (execMessageResponse.getRaisedThrowable() != null
-            && isMethodNotFoundError(
-                execMessageResponse.getRaisedThrowable().getThrowable().getType())) {
+        if (fromAccessible != null) {
+          errorData.setFrom(ConversionUtils.toJsonRpcFromExecutable(fromAccessible));
+        }
+        if (isMethodNotFoundError(
+            execMessageResponse.getRaisedThrowable().getThrowable().getType())) {
           jsonRpcResponse.setError(
               new JsonRpcError(
                   JsonRpcErrorCode.METHOD_NOT_FOUND.getCode(),

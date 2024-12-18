@@ -20,32 +20,8 @@ public class ConversionUtils {
     jsonRpcResponseReturnValue.setIsVoid(returnValue.getIsVoid());
     // set from
     if (returnValue.getFrom() != null) {
-
       Reflectable from = returnValue.getFrom();
-      String fromClassName;
-      String fromField = "";
-      String fromMethod = "";
-      Integer modifiers = null;
-      if (from.getConstructor() != null && !from.getConstructor().getClazz().getName().isEmpty()) {
-        fromClassName = from.getConstructor().getClazz().getName();
-      } else if (from.getMethod() != null && !from.getMethod().getClazz().getName().isEmpty()) {
-        fromClassName = from.getMethod().getClazz().getName();
-        fromMethod = from.getMethod().getName();
-        modifiers = from.getMethod().getModifiers();
-      } else if (from.getField() != null && !from.getField().getClazz().getName().isEmpty()) {
-        fromClassName = from.getField().getClazz().getName();
-        fromField = from.getField().getName();
-        modifiers = from.getField().getModifiers();
-      } else {
-        fromClassName = null;
-      }
-      jsonRpcResponseReturnValue.setFrom(
-          new Executable.Builder()
-              .withClassName(fromClassName)
-              .withMethodName(fromMethod)
-              .withFieldName(fromField)
-              .withModifiers(modifiers)
-              .build());
+      jsonRpcResponseReturnValue.setFrom(toJsonRpcFromExecutable(from));
     }
 
     // set value
@@ -72,5 +48,35 @@ public class ConversionUtils {
       responseObject.setArrayValues(arrayValues.toArray(new ResponseObject[0]));
     }
     return responseObject;
+  }
+
+  public static Executable toJsonRpcFromExecutable(Reflectable fromReflectable) {
+    String fromClassName;
+    String fromField = "";
+    String fromMethod = "";
+    Integer modifiers = null;
+    if (fromReflectable.getConstructor() != null
+        && !fromReflectable.getConstructor().getClazz().getName().isEmpty()) {
+      fromClassName = fromReflectable.getConstructor().getClazz().getName();
+      fromMethod = "new";
+    } else if (fromReflectable.getMethod() != null
+        && !fromReflectable.getMethod().getClazz().getName().isEmpty()) {
+      fromClassName = fromReflectable.getMethod().getClazz().getName();
+      fromMethod = fromReflectable.getMethod().getName();
+      modifiers = fromReflectable.getMethod().getModifiers();
+    } else if (fromReflectable.getField() != null
+        && !fromReflectable.getField().getClazz().getName().isEmpty()) {
+      fromClassName = fromReflectable.getField().getClazz().getName();
+      fromField = fromReflectable.getField().getName();
+      modifiers = fromReflectable.getField().getModifiers();
+    } else {
+      fromClassName = null;
+    }
+    return new Executable.Builder()
+        .withClassName(fromClassName)
+        .withMethodName(fromMethod)
+        .withFieldName(fromField)
+        .withModifiers(modifiers)
+        .build();
   }
 }
