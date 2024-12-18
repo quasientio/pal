@@ -326,17 +326,8 @@ public class JsonRpcMessageUtilsTest {
   }
 
   @Test
-  public void parseJsonRpcMessage_missingOrInvalidJsonRpcVersion_invalidJsonRpcRequestException() {
+  public void parseJsonRpcMessage_invalidJsonRpcVersion_invalidJsonRpcRequestException() {
     Stream.of(
-            """
-          {
-            "id": 1,
-           "method": "new",
-           "params": {
-             "type": "SomeClass"
-           }
-         }
-         """,
             """
           {
            "jsonrpc": "",

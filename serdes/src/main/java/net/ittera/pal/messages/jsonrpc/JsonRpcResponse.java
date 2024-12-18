@@ -8,6 +8,10 @@ public class JsonRpcResponse extends JsonRpcMessage {
 
   @Nullable private JsonRpcError error;
 
+  public JsonRpcResponse() {
+    setJsonrpc(JsonRpcMessage.JSON_RPC_VERSION);
+  }
+
   @Nullable
   public JsonRpcResponseReturnValue getResult() {
     return result;
@@ -28,7 +32,9 @@ public class JsonRpcResponse extends JsonRpcMessage {
 
   @Override
   public boolean equals(Object o) {
-    if (!(o instanceof JsonRpcResponse that)) return false;
+    if (!(o instanceof JsonRpcResponse that)) {
+      return false;
+    }
     return Objects.equals(result, that.result) && Objects.equals(error, that.error);
   }
 
@@ -40,10 +46,13 @@ public class JsonRpcResponse extends JsonRpcMessage {
   @Override
   public String toString() {
     return "JsonRpcResponse{"
-        + "error="
-        + error
+        + "jsonrpc='"
+        + getJsonrpc()
+        + '\''
         + ", result="
         + result
+        + ", error="
+        + error
         + ", id='"
         + id
         + '\''

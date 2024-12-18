@@ -13,7 +13,7 @@ import org.junit.Test;
 public class JsonRpcResponseTest {
 
   @Test
-  public void testSuccessResponse() throws JsonSerializationException {
+  public void testSuccessResponseUsingBuilder() throws JsonSerializationException {
     // Create a successful response
     JsonRpcResponseReturnValue jsonRpcResponseReturnValue =
         new JsonRpcResponseReturnValue.Builder().withIsVoid(true).build();
@@ -38,10 +38,64 @@ public class JsonRpcResponseTest {
   }
 
   @Test
-  public void testErrorResponse() throws JsonSerializationException {
+  public void testSuccessResponseUsingSetters() throws JsonSerializationException {
+    // Create a successful response
+    JsonRpcResponseReturnValue jsonRpcResponseReturnValue = new JsonRpcResponseReturnValue();
+    jsonRpcResponseReturnValue.setIsVoid(true);
+
+    JsonRpcResponse response = new JsonRpcResponse();
+    response.setId("1");
+    response.setResult(jsonRpcResponseReturnValue);
+
+    // Serialize the response
+    String jsonString = JsonRpcSerializer.toJson(response);
+
+    // Deserialize the response back
+    JsonRpcResponse deserializedResponse =
+        JsonRpcSerializer.fromJson(jsonString, JsonRpcResponse.class);
+
+    // Verify the fields
+    assertNotNull(deserializedResponse);
+    assertEquals("2.0", deserializedResponse.getJsonrpc());
+    assertThat(deserializedResponse.getId(), is("1"));
+    assertNull(deserializedResponse.getError());
+    assertNotNull(deserializedResponse.getResult());
+    assertThat(deserializedResponse.getResult().getIsVoid(), is(true));
+  }
+
+  @Test
+  public void testErrorResponseUsingBuilder() throws JsonSerializationException {
     // Create an error response
     JsonRpcError error = new JsonRpcError(-32601, "Method not found");
     JsonRpcResponse response = new JsonRpcResponse.Builder().withError(error).withId(1).build();
+
+    // Serialize the response
+    String jsonString = JsonRpcSerializer.toJson(response);
+
+    // Deserialize the response back
+    JsonRpcResponse deserializedResponse =
+        JsonRpcSerializer.fromJson(jsonString, JsonRpcResponse.class);
+
+    // Verify the fields
+    assertNotNull(deserializedResponse);
+    assertEquals("2.0", deserializedResponse.getJsonrpc());
+    assertThat(deserializedResponse.getId(), is("1"));
+    assertNull(deserializedResponse.getResult());
+    assertNotNull(deserializedResponse.getError());
+    assertThat(deserializedResponse.getError().getCode(), is(-32601));
+    assertEquals("Method not found", deserializedResponse.getError().getMessage());
+  }
+
+  @Test
+  public void testErrorResponseUsingSetters() throws JsonSerializationException {
+    // Create an error response
+    JsonRpcError error = new JsonRpcError();
+    error.setCode(-32601);
+    error.setMessage("Method not found");
+
+    JsonRpcResponse response = new JsonRpcResponse();
+    response.setId("1");
+    response.setError(error);
 
     // Serialize the response
     String jsonString = JsonRpcSerializer.toJson(response);

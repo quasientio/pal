@@ -8,6 +8,10 @@ public class JsonRpcRequest extends JsonRpcMessage {
 
   private Params params;
 
+  public JsonRpcRequest() {
+    setJsonrpc(JsonRpcMessage.JSON_RPC_VERSION);
+  }
+
   public String getMethod() {
     return method;
   }
@@ -26,7 +30,9 @@ public class JsonRpcRequest extends JsonRpcMessage {
 
   @Override
   public boolean equals(Object o) {
-    if (!(o instanceof JsonRpcRequest that)) return false;
+    if (!(o instanceof JsonRpcRequest that)) {
+      return false;
+    }
     return Objects.equals(method, that.method) && Objects.equals(params, that.params);
   }
 
@@ -38,7 +44,10 @@ public class JsonRpcRequest extends JsonRpcMessage {
   @Override
   public String toString() {
     return "JsonRpcRequest{"
-        + "method='"
+        + "jsonrpc='"
+        + getJsonrpc()
+        + '\''
+        + ", method='"
         + method
         + '\''
         + ", params="
