@@ -1,6 +1,7 @@
 package net.ittera.pal.serdes.jsonrpc;
 
 import java.util.List;
+import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.messages.jsonrpc.Argument;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.Params;
@@ -29,6 +30,11 @@ public class JsonRpcMessageFactory {
   }
 
   public static JsonRpcRequest buildInstanceMethodCall(
+      String id, String type, String method, ObjectRef instanceRef, List<Argument> arguments) {
+    return buildInstanceMethodCall(id, type, method, instanceRef.getRef(), arguments);
+  }
+
+  public static JsonRpcRequest buildInstanceMethodCall(
       String id, String type, String method, Integer instanceId, List<Argument> arguments) {
     return new JsonRpcRequest.Builder()
         .withId(id)
@@ -52,6 +58,11 @@ public class JsonRpcMessageFactory {
   }
 
   public static JsonRpcRequest buildInstanceFieldGet(
+      String id, String type, ObjectRef instanceRef, String field) {
+    return buildInstanceFieldGet(id, type, instanceRef.getRef(), field);
+  }
+
+  public static JsonRpcRequest buildInstanceFieldGet(
       String id, String type, Integer instanceId, String field) {
     return new JsonRpcRequest.Builder()
         .withId(id)
@@ -68,6 +79,11 @@ public class JsonRpcMessageFactory {
         .withMethod("put")
         .withParams(new Params.Builder().withType(type).withField(field).withValue(value).build())
         .build();
+  }
+
+  public static JsonRpcRequest buildInstanceFieldPut(
+      String id, String type, ObjectRef instanceRef, String field, Argument value) {
+    return buildInstanceFieldPut(id, type, instanceRef.getRef(), field, value);
   }
 
   public static JsonRpcRequest buildInstanceFieldPut(
