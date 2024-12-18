@@ -6,7 +6,7 @@ import javax.annotation.Nullable;
 
 public class JsonRpcResponseReturnValue {
 
-  @SerializedName("is_void")
+  @SerializedName("void")
   private Boolean isVoid;
 
   @Nullable private ResponseObject value;

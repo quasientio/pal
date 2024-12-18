@@ -697,7 +697,7 @@ public class JsonSerializers {
         jsonElement.addProperty("ref", message.ref);
       }
       if (notEmpty(message.isNull)) {
-        jsonElement.addProperty("is_null", true);
+        jsonElement.addProperty("null", true);
       }
       return jsonElement;
     }
@@ -791,7 +791,7 @@ public class JsonSerializers {
         ReturnValue message, Type type, JsonSerializationContext jsonSerializationContext) {
       final JsonObject jsonElement = new JsonObject();
       if (notEmpty(message.isVoid)) {
-        jsonElement.addProperty("is_void", true);
+        jsonElement.addProperty("void", true);
       }
       if (notEmpty(message.object)) {
         jsonElement.add("object", jsonSerializationContext.serialize(message.object));
@@ -808,8 +808,8 @@ public class JsonSerializers {
         throws JsonParseException {
       final JsonObject jsonObject = json.getAsJsonObject();
       final ReturnValue returnValue = new ReturnValue();
-      if (jsonObject.has("is_void")) {
-        returnValue.isVoid = jsonObject.get("is_void").getAsBoolean();
+      if (jsonObject.has("void")) {
+        returnValue.isVoid = jsonObject.get("void").getAsBoolean();
       }
       if (jsonObject.has("object")) {
         returnValue.object = context.deserialize(jsonObject.get("object"), Obj.class);

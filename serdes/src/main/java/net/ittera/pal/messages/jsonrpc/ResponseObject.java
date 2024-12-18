@@ -9,7 +9,7 @@ public class ResponseObject implements Unwrappable {
 
   @javax.annotation.Nullable private String type;
 
-  @SerializedName("is_null")
+  @SerializedName("null")
   private Boolean isNull;
 
   @javax.annotation.Nullable private String value;
