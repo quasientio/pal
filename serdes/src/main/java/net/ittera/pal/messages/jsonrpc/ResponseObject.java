@@ -3,32 +3,33 @@ package net.ittera.pal.messages.jsonrpc;
 import com.google.gson.annotations.SerializedName;
 import java.util.Arrays;
 import java.util.Objects;
+import javax.annotation.Nullable;
 import net.ittera.pal.serdes.Unwrappable;
 
 public class ResponseObject implements Unwrappable {
 
-  @javax.annotation.Nullable private String type;
+  @Nullable private String type;
 
   @SerializedName("null")
   private Boolean isNull;
 
-  @javax.annotation.Nullable private String value;
+  @Nullable private String value;
 
-  @javax.annotation.Nullable private Integer ref;
+  @Nullable private Integer ref;
 
   @SerializedName("array_values")
-  @javax.annotation.Nullable
+  @Nullable
   private ResponseObject[] arrayValues = new ResponseObject[0];
 
   public ResponseObject() {}
 
-  @javax.annotation.Nullable
+  @Nullable
   @Override
   public ResponseObject[] getArrayValues() {
     return arrayValues;
   }
 
-  public void setArrayValues(@javax.annotation.Nullable ResponseObject[] arrayValues) {
+  public void setArrayValues(@Nullable ResponseObject[] arrayValues) {
     this.arrayValues = arrayValues;
   }
 
@@ -45,33 +46,33 @@ public class ResponseObject implements Unwrappable {
     this.isNull = isNull;
   }
 
-  @javax.annotation.Nullable
+  @Nullable
   @Override
   public Integer getRef() {
     return ref;
   }
 
-  public void setRef(@javax.annotation.Nullable Integer ref) {
+  public void setRef(@Nullable Integer ref) {
     this.ref = ref;
   }
 
-  @javax.annotation.Nullable
+  @Nullable
   @Override
   public String getType() {
     return type;
   }
 
-  public void setType(@javax.annotation.Nullable String type) {
+  public void setType(@Nullable String type) {
     this.type = type;
   }
 
-  @javax.annotation.Nullable
+  @Nullable
   @Override
   public String getValue() {
     return value;
   }
 
-  public void setValue(@javax.annotation.Nullable String value) {
+  public void setValue(@Nullable String value) {
     this.value = value;
   }
 
@@ -113,7 +114,7 @@ public class ResponseObject implements Unwrappable {
   public static class Builder {
     private final ResponseObject responseObject = new ResponseObject();
 
-    public Builder withType(@javax.annotation.Nullable String type) {
+    public Builder withType(@Nullable String type) {
       responseObject.setType(type);
       return this;
     }
@@ -123,17 +124,17 @@ public class ResponseObject implements Unwrappable {
       return this;
     }
 
-    public Builder withValue(@javax.annotation.Nullable String value) {
+    public Builder withValue(@Nullable String value) {
       responseObject.setValue(value);
       return this;
     }
 
-    public Builder withRef(@javax.annotation.Nullable Integer ref) {
+    public Builder withRef(@Nullable Integer ref) {
       responseObject.setRef(ref);
       return this;
     }
 
-    public Builder withArrayValues(@javax.annotation.Nullable ResponseObject[] arrayValues) {
+    public Builder withArrayValues(@Nullable ResponseObject[] arrayValues) {
       responseObject.setArrayValues(arrayValues);
       return this;
     }

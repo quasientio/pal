@@ -1,6 +1,7 @@
 package net.ittera.pal.messages.jsonrpc;
 
 import java.util.Objects;
+import javax.annotation.Nullable;
 
 public class JsonRpcError {
 
@@ -8,7 +9,7 @@ public class JsonRpcError {
 
   private String message;
 
-  @javax.annotation.Nullable private JsonRpcErrorData data;
+  @Nullable private JsonRpcErrorData data;
 
   public JsonRpcError() {}
 
@@ -17,7 +18,7 @@ public class JsonRpcError {
     this.message = message;
   }
 
-  public JsonRpcError(int code, String message, @javax.annotation.Nullable JsonRpcErrorData data) {
+  public JsonRpcError(int code, String message, @Nullable JsonRpcErrorData data) {
     this.code = code;
     this.message = message;
     this.data = data;
@@ -39,12 +40,12 @@ public class JsonRpcError {
     this.message = message;
   }
 
-  @javax.annotation.Nullable
+  @Nullable
   public JsonRpcErrorData getData() {
     return data;
   }
 
-  public void setData(@javax.annotation.Nullable JsonRpcErrorData data) {
+  public void setData(@Nullable JsonRpcErrorData data) {
     this.data = data;
   }
 
@@ -87,7 +88,7 @@ public class JsonRpcError {
       return this;
     }
 
-    public Builder withData(@javax.annotation.Nullable JsonRpcErrorData data) {
+    public Builder withData(@Nullable JsonRpcErrorData data) {
       error.setData(data);
       return this;
     }

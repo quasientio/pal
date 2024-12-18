@@ -3,19 +3,20 @@ package net.ittera.pal.messages.jsonrpc;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import javax.annotation.Nullable;
 
 public class Params {
   private String type;
 
-  @javax.annotation.Nullable private String method;
+  @Nullable private String method;
 
-  @javax.annotation.Nullable private String field;
+  @Nullable private String field;
 
-  @javax.annotation.Nullable private Integer instance;
+  @Nullable private Integer instance;
 
   private List<Argument> args = new ArrayList<>();
 
-  @javax.annotation.Nullable private Argument value;
+  @Nullable private Argument value;
 
   public String getType() {
     return type;
@@ -41,12 +42,12 @@ public class Params {
     this.field = field;
   }
 
-  @javax.annotation.Nullable
+  @Nullable
   public Integer getInstance() {
     return instance;
   }
 
-  public void setInstance(@javax.annotation.Nullable Integer instance) {
+  public void setInstance(@Nullable Integer instance) {
     this.instance = instance;
   }
 
@@ -125,7 +126,7 @@ public class Params {
       return this;
     }
 
-    public Builder withInstance(@javax.annotation.Nullable Integer instance) {
+    public Builder withInstance(@Nullable Integer instance) {
       params.setInstance(instance);
       return this;
     }

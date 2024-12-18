@@ -17,16 +17,16 @@ public class JsonRpcErrorData {
   @SerializedName("stack_trace")
   private String[] stackTrace;
 
-  @javax.annotation.Nullable private JsonRpcErrorData cause;
+  @Nullable private JsonRpcErrorData cause;
 
-  @javax.annotation.Nullable private String requestId;
+  @Nullable private String requestId;
 
   @javax.annotation.Nullable
   public JsonRpcErrorData getCause() {
     return cause;
   }
 
-  public void setCause(@javax.annotation.Nullable JsonRpcErrorData cause) {
+  public void setCause(@Nullable JsonRpcErrorData cause) {
     this.cause = cause;
   }
 
@@ -121,7 +121,7 @@ public class JsonRpcErrorData {
       return this;
     }
 
-    public Builder withCause(@javax.annotation.Nullable JsonRpcErrorData cause) {
+    public Builder withCause(@Nullable JsonRpcErrorData cause) {
       errorData.setCause(cause);
       return this;
     }

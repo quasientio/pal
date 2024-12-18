@@ -1,27 +1,28 @@
 package net.ittera.pal.messages.jsonrpc;
 
 import java.util.Objects;
+import javax.annotation.Nullable;
 
 public class JsonRpcResponse extends JsonRpcMessage {
-  @javax.annotation.Nullable private JsonRpcResponseReturnValue result;
+  @Nullable private JsonRpcResponseReturnValue result;
 
-  @javax.annotation.Nullable private JsonRpcError error;
+  @Nullable private JsonRpcError error;
 
-  @javax.annotation.Nullable
+  @Nullable
   public JsonRpcResponseReturnValue getResult() {
     return result;
   }
 
-  public void setResult(@javax.annotation.Nullable JsonRpcResponseReturnValue result) {
+  public void setResult(@Nullable JsonRpcResponseReturnValue result) {
     this.result = result;
   }
 
-  @javax.annotation.Nullable
+  @Nullable
   public JsonRpcError getError() {
     return error;
   }
 
-  public void setError(@javax.annotation.Nullable JsonRpcError error) {
+  public void setError(@Nullable JsonRpcError error) {
     this.error = error;
   }
 
@@ -67,12 +68,12 @@ public class JsonRpcResponse extends JsonRpcMessage {
       return this;
     }
 
-    public Builder withResult(@javax.annotation.Nullable JsonRpcResponseReturnValue result) {
+    public Builder withResult(@Nullable JsonRpcResponseReturnValue result) {
       response.setResult(result);
       return this;
     }
 
-    public Builder withError(@javax.annotation.Nullable JsonRpcError error) {
+    public Builder withError(@Nullable JsonRpcError error) {
       response.setError(error);
       return this;
     }
