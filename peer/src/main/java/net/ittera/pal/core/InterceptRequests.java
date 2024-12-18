@@ -127,7 +127,7 @@ class InterceptRequests {
         }
       }
     } else {
-      if (interceptableMethod.getName().equalsIgnoreCase("<init>")) {
+      if (interceptableMethod.getName().equalsIgnoreCase("new")) {
         constructorIntercepts =
             cloneListWithNewRequest(constructorIntercepts, interceptRequestEntry);
         if (logger.isDebugEnabled()) {

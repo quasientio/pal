@@ -58,7 +58,7 @@ public class ExecMessageUtils {
     final ExecMessageType execMessageType =
         ExecMessageType.fromByte(execMessage.getExecMessageType());
     return switch (execMessageType) {
-      case CONSTRUCTOR -> "<init>";
+      case CONSTRUCTOR -> "new";
       case INSTANCE_METHOD -> execMessage.getInstanceMethodCall().getName();
       case CLASS_METHOD -> execMessage.getClassMethodCall().getName();
       case GET_STATIC -> execMessage.getStaticFieldGet().getField().getName();

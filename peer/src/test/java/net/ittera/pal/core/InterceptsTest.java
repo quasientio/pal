@@ -100,7 +100,7 @@ public class InterceptsTest extends ZmqEnabledTest {
             peerUuid,
             InterceptType.BEFORE,
             "java.util.ArrayList",
-            "<init>",
+            "new",
             Collections.emptyList(),
             this.getClass().getName(),
             "someCallbackMethod");
@@ -121,7 +121,7 @@ public class InterceptsTest extends ZmqEnabledTest {
             peerUuid,
             InterceptType.BEFORE,
             "java.util.ArrayList",
-            "<init>",
+            "new",
             Collections.emptyList(),
             this.getClass().getName(),
             "someCallbackMethod");
@@ -147,7 +147,7 @@ public class InterceptsTest extends ZmqEnabledTest {
             peerUuid,
             InterceptType.BEFORE,
             "java.util.ArrayList",
-            "<init>",
+            "new",
             Collections.emptyList(),
             this.getClass().getName(),
             "someCallbackMethod");
@@ -174,7 +174,7 @@ public class InterceptsTest extends ZmqEnabledTest {
             peerUuid,
             InterceptType.BEFORE,
             "java.util.ArrayList",
-            "<init>",
+            "new",
             Collections.emptyList(),
             this.getClass().getName(),
             "someCallbackMethod");
@@ -201,7 +201,7 @@ public class InterceptsTest extends ZmqEnabledTest {
             peerUuid,
             InterceptType.BEFORE,
             "java.util.ArrayList",
-            "<init>",
+            "new",
             Collections.emptyList(),
             this.getClass().getName(),
             "someCallbackMethod");
@@ -230,7 +230,7 @@ public class InterceptsTest extends ZmqEnabledTest {
             peerUuid,
             InterceptType.BEFORE,
             "java.util.ArrayList",
-            "<init>",
+            "new",
             Collections.emptyList(),
             this.getClass().getName(),
             "someCallbackMethod");
