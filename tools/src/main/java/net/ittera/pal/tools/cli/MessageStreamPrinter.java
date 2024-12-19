@@ -100,10 +100,10 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
       arity = "0..*",
       description =
           "type(s) of messages to filter by ("
-              + "STATIC_CONSTRUCTOR, RETURN_CLASS, CONSTRUCTOR, INSTANCE_METHOD,"
-              + " CLASS_METHOD, GET_STATIC, GET_FIELD, PUT_STATIC, PUT_FIELD,"
-              + " PUT_STATIC_DONE, PUT_FIELD_DONE, THROWABLE, RETURN_VALUE,"
-              + " JSONRPC_REQUEST, JSONRPC_RESPONSE)")
+              + "CONSTRUCTOR, INSTANCE_METHOD, CLASS_METHOD,"
+              + " GET_STATIC, GET_FIELD,"
+              + " PUT_STATIC, PUT_FIELD, PUT_STATIC_DONE, PUT_FIELD_DONE,"
+              + " RETURN_VALUE, THROWABLE)")
   private List<String> msgTypes;
 
   @Option(
@@ -259,10 +259,12 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
       stream =
           stream.filter(
               (k, message) -> {
-                String messageType = getMessageType(message);
+                String messageType = getMessageTypeName(message);
                 if (messageType == null) {
                   throw new RuntimeException("Unknown message format of message: " + message);
                 }
+                // remove the "EXEC_" prefix
+                messageType = messageType.substring(5);
                 return msgTypes.contains(messageType);
               });
     }
@@ -421,7 +423,14 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
 
           // stream: apply filter: message types
           if (msgTypes != null) {
-            stream = stream.filter(m -> msgTypes.contains(getMessageType(m)));
+            stream =
+                stream.filter(
+                    m -> {
+                      String messageTypeName = getMessageTypeName(m);
+                      // remove the "EXEC_" prefix
+                      messageTypeName = messageTypeName.substring(5);
+                      return msgTypes.contains(messageTypeName);
+                    });
           }
           // stream: apply filter: from peer (uuid)
           if (fromPeer != null) {
@@ -452,7 +461,8 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
                 } else if (jsonOutput) {
                   System.out.printf("%s%n", ColferUtils.toJson(msg, true));
                 } else { // compact format (default)
-                  System.out.printf("uuid=%s type=%s%n", getMessageType(msg), getMessageType(msg));
+                  System.out.printf(
+                      "uuid=%s type=%s%n", getMessageTypeName(msg), getMessageTypeName(msg));
                 }
               });
         };

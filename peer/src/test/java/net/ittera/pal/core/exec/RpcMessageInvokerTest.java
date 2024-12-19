@@ -91,7 +91,7 @@ public class RpcMessageInvokerTest extends ZmqEnabledTest {
     incomingMessageDispatcher = mock(IncomingMessageDispatcher.class);
 
     // stub incomingCall to return a message which seems valid reply
-    when(incomingMessageDispatcher.incomingCall(any(), anyBoolean()))
+    when(incomingMessageDispatcher.incomingCall(any(), any(), anyBoolean()))
         .thenAnswer(
             (Answer<?>)
                 invocation -> {
@@ -150,7 +150,7 @@ public class RpcMessageInvokerTest extends ZmqEnabledTest {
 
     assertThat(rpcMessageInvoker.getRequestsDispatched().get(), is(1L));
     assertThat(listenerReceived.get(), is(1));
-    verify(incomingMessageDispatcher, times(1)).incomingCall(any(), anyBoolean());
+    verify(incomingMessageDispatcher, times(1)).incomingCall(any(), any(), anyBoolean());
 
     // assert reply msg is response to original
     assertThat(replyMsg.getExecMessage().getResponseToId(), is(invokable.getMessageId()));
@@ -197,7 +197,7 @@ public class RpcMessageInvokerTest extends ZmqEnabledTest {
     // assert number of calls
     assertThat(rpcMessageInvoker.getRequestsDispatched().get(), is(1L));
     assertThat(listenerReceived.get(), is(1));
-    verify(incomingMessageDispatcher, times(1)).incomingCall(any(), anyBoolean());
+    verify(incomingMessageDispatcher, times(1)).incomingCall(any(), any(), anyBoolean());
 
     // assert reply msg is response to original
     assertThat(jsonRpcResponse.getId(), is(requestUuid.toString()));
@@ -236,7 +236,7 @@ public class RpcMessageInvokerTest extends ZmqEnabledTest {
     // assert number of calls
     assertThat(rpcMessageInvoker.getRequestsDispatched().get(), is((long) msgCount));
     assertThat(listenerReceived.get(), is(msgCount));
-    verify(incomingMessageDispatcher, times(msgCount)).incomingCall(any(), anyBoolean());
+    verify(incomingMessageDispatcher, times(msgCount)).incomingCall(any(), any(), anyBoolean());
 
     // assert reply msg is response to original
     for (int i = 0; i < msgCount; i++) {
@@ -287,6 +287,6 @@ public class RpcMessageInvokerTest extends ZmqEnabledTest {
     // assert number of calls
     assertThat(rpcMessageInvoker.getRequestsDispatched().get(), is((long) msgCount));
     assertThat(listenerReceived.get(), is(msgCount));
-    verify(incomingMessageDispatcher, times(msgCount)).incomingCall(any(), anyBoolean());
+    verify(incomingMessageDispatcher, times(msgCount)).incomingCall(any(), any(), anyBoolean());
   }
 }

@@ -1,11 +1,12 @@
 package net.ittera.pal.serdes.colfer;
 
 import static net.ittera.pal.serdes.colfer.ExecMessageUtils.getClassname;
+import static net.ittera.pal.serdes.colfer.ExecMessageUtils.getMessageTypeOf;
 
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Field;
 import net.ittera.pal.messages.colfer.Obj;
-import net.ittera.pal.messages.types.ExecMessageType;
+import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.RpcMessageSummaryUtil;
 
 public class ExecMessageSummaryUtil extends RpcMessageSummaryUtil {
@@ -27,43 +28,43 @@ public class ExecMessageSummaryUtil extends RpcMessageSummaryUtil {
   }
 
   public static String getOneLinerSummary(ExecMessage msg) {
-    ExecMessageType execMessageType = ExecMessageType.fromByte(msg.execMessageType);
+    final MessageType execMessageType = getMessageTypeOf(msg);
     switch (execMessageType) {
-      case CONSTRUCTOR:
+      case EXEC_CONSTRUCTOR:
         return "new " + classname(msg);
-      case INSTANCE_METHOD:
+      case EXEC_INSTANCE_METHOD:
         return String.format(
             "call %s.%s@%s",
             classname(msg), msg.instanceMethodCall.name, msg.instanceMethodCall.objectRef);
-      case CLASS_METHOD:
+      case EXEC_CLASS_METHOD:
         return String.format("call %s.%s", classname(msg), msg.classMethodCall.name);
-      case GET_STATIC:
+      case EXEC_GET_STATIC:
         return String.format("get %s.%s", classname(msg), msg.staticFieldGet.field.name);
-      case GET_FIELD:
+      case EXEC_GET_FIELD:
         return String.format(
             "get %s.%s@%s",
             classname(msg), msg.instanceFieldGet.field.name, msg.instanceFieldGet.objectRef);
-      case PUT_STATIC:
+      case EXEC_PUT_STATIC:
         return String.format(
             "put %s.%s ⇦ %s",
             classname(msg),
             msg.staticFieldPut.field.name,
             getObjRepr(msg.staticFieldPut.valueObject, msg.staticFieldPut.valueObjectRef));
-      case PUT_FIELD:
+      case EXEC_PUT_FIELD:
         return String.format(
             "put %s.%s@%s ⇦ %s",
             classname(msg),
             msg.instanceFieldPut.field.name,
             msg.instanceFieldPut.objectRef,
             getObjRepr(msg.instanceFieldPut.valueObject, msg.instanceFieldPut.valueObjectRef));
-      case PUT_STATIC_DONE:
+      case EXEC_PUT_STATIC_DONE:
         return String.format("put_done %s.%s", classname(msg), msg.staticFieldPutDone.field.name);
-      case PUT_FIELD_DONE:
+      case EXEC_PUT_FIELD_DONE:
         return String.format("put_done %s.%s", classname(msg), msg.instanceFieldPutDone.field.name);
-      case THROWABLE:
+      case EXEC_THROWABLE:
         return String.format(
             "throw %s: \"%s\"", classname(msg), msg.raisedThrowable.throwable.message);
-      case RETURN_VALUE:
+      case EXEC_RETURN_VALUE:
         if (msg.returnValue.isVoid) {
           return "return void";
         } else {

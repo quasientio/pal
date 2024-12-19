@@ -37,7 +37,7 @@ import net.ittera.pal.core.exec.DispatcherConnector;
 import net.ittera.pal.core.exec.java.reflect.ReflectionHelper;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Parameter;
-import net.ittera.pal.messages.types.ExecMessageType;
+import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 
 @Singleton
@@ -60,7 +60,7 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
   }
 
   @Override
-  protected final ExecMessage wrapBeforeExecMessage(
+  protected final ExecMessage createBeforeExecMessage(
       Context ctxt, Object sender, Object target, Object[] args) {
 
     return messageBuilder.buildConstructor(
@@ -73,7 +73,7 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
   }
 
   @Override
-  protected final ExecMessage wrapAfterExecMessage(
+  protected final ExecMessage createAfterExecMessage(
       Context ctxt, Object value, ObjectRef objectRef, boolean isVoid) {
 
     final AccessibleObject constructor =
@@ -89,7 +89,7 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
   }
 
   @Override
-  protected ExecMessage wrapAfterExecMessage(
+  protected ExecMessage createAfterExecMessage(
       ExecMessage execMessage,
       Object valueObject,
       ObjectRef valueObjRef,
@@ -155,8 +155,8 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
   }
 
   @Override
-  protected final ExecMessageType getBeforeExecMessageType() {
-    return ExecMessageType.CONSTRUCTOR;
+  protected final MessageType getBeforeExecMessageType() {
+    return MessageType.EXEC_CONSTRUCTOR;
   }
 
   @Override
@@ -174,5 +174,10 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
             true,
             Thread.currentThread().getContextClassLoader());
     return reflectionHelper.lookupConstructor(clazz, args.toArray(), parameterTypes);
+  }
+
+  @Override
+  public MessageType getSupportedMessageType() {
+    return MessageType.EXEC_CONSTRUCTOR;
   }
 }

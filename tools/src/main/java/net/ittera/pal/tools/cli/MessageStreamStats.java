@@ -41,7 +41,7 @@ import net.ittera.pal.cxn.PalDirectory;
 import net.ittera.pal.messages.MessageStreamer;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Message;
-import net.ittera.pal.messages.types.ExecMessageType;
+import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.kafka.KafkaMessageSerde;
 import net.ittera.pal.tools.AbstractTool;
 import net.ittera.pal.tools.stats.ContinuousPrinter;
@@ -218,9 +218,9 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
     counters.getNumberOfMessages().getAndIncrement();
 
     // by msg type
-    AtomicLong messageCounter = counters.getMessagesByType().get(getMessageType(message));
+    AtomicLong messageCounter = counters.getMessagesByType().get(getMessageTypeName(message));
     if (messageCounter == null) {
-      counters.getMessagesByType().put(getMessageType(message), new AtomicLong(1));
+      counters.getMessagesByType().put(getMessageTypeName(message), new AtomicLong(1));
     } else {
       messageCounter.getAndIncrement();
     }
@@ -250,50 +250,49 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
     String methodName;
     String fieldName;
     String classFieldKey;
-    final ExecMessageType execMessageType =
-        ExecMessageType.fromByte(execMessage.getExecMessageType());
-    switch (execMessageType) {
-      case CONSTRUCTOR -> {
+    MessageType messageType = MessageType.fromId(message.getMessageType());
+    switch (messageType) {
+      case EXEC_CONSTRUCTOR -> {
         String objClassKey = execMessage.getConstructorCall().getClazz().getName();
         incrementObjectsCreated(objClassKey);
       }
-      case INSTANCE_METHOD -> {
+      case EXEC_INSTANCE_METHOD -> {
         className = execMessage.getInstanceMethodCall().getClazz().getName();
         methodName = execMessage.getInstanceMethodCall().getName();
         String classMethodKey = String.format("%s.%s()", getShortClassname(className), methodName);
         incrementMethodCalls(classMethodKey);
       }
-      case CLASS_METHOD -> {
+      case EXEC_CLASS_METHOD -> {
         className = execMessage.getClassMethodCall().getClazz().getName();
         methodName = execMessage.getClassMethodCall().getName();
         String classMethodKey = String.format("%s.%s()", getShortClassname(className), methodName);
         incrementMethodCalls(classMethodKey);
       }
-      case GET_STATIC -> {
+      case EXEC_GET_STATIC -> {
         className = execMessage.getStaticFieldGet().getClazz().getName();
         fieldName = execMessage.getStaticFieldGet().getField().getName();
         classFieldKey = String.format("%s.%s", getShortClassname(className), fieldName);
         incrementFieldReads(classFieldKey);
       }
-      case GET_FIELD -> {
+      case EXEC_GET_FIELD -> {
         className = execMessage.getInstanceFieldGet().getClazz().getName();
         fieldName = execMessage.getInstanceFieldGet().getField().getName();
         classFieldKey = String.format("%s.%s", getShortClassname(className), fieldName);
         incrementFieldReads(classFieldKey);
       }
-      case PUT_STATIC -> {
+      case EXEC_PUT_STATIC -> {
         className = execMessage.getStaticFieldPut().getClazz().getName();
         fieldName = execMessage.getStaticFieldPut().getField().getName();
         classFieldKey = String.format("%s.%s", getShortClassname(className), fieldName);
         incrementFieldWrites(classFieldKey);
       }
-      case PUT_FIELD -> {
+      case EXEC_PUT_FIELD -> {
         className = execMessage.getInstanceFieldPut().getClazz().getName();
         fieldName = execMessage.getInstanceFieldPut().getField().getName();
         classFieldKey = String.format("%s.%s", getShortClassname(className), fieldName);
         incrementFieldWrites(classFieldKey);
       }
-      default -> throw new IllegalStateException("Unexpected value: " + execMessageType);
+      default -> throw new IllegalStateException("Unexpected type: " + messageType);
     }
   }
 
@@ -374,9 +373,8 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
           stream.filter(
               (k, m) -> {
                 ExecMessage execMessage = m.getExecMessage();
-                return execMessage != null
-                    && msgTypes.contains(
-                        ExecMessageType.fromByte(execMessage.getExecMessageType()).toString());
+                MessageType messageType = MessageType.fromId(m.getMessageType());
+                return execMessage != null && msgTypes.contains(messageType.name());
               });
     }
 

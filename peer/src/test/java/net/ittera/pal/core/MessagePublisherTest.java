@@ -111,7 +111,7 @@ public class MessagePublisherTest extends ZmqEnabledTest {
     ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
     OutboundMsg outMsg =
         new OutboundMsg(
-            MessageType.EXEC_MESSAGE,
+            MessageType.EXEC_CONSTRUCTOR,
             ExecPhase.BEFORE,
             null,
             msg.getMessageId(),
@@ -141,7 +141,7 @@ public class MessagePublisherTest extends ZmqEnabledTest {
     List<InternalHeader> headers = Collections.singletonList(this.writeAheadHeader);
     OutboundMsg outMsg =
         new OutboundMsg(
-            MessageType.EXEC_MESSAGE,
+            MessageType.EXEC_CONSTRUCTOR,
             ExecPhase.BEFORE,
             headers,
             msg.getMessageId(),
@@ -179,7 +179,7 @@ public class MessagePublisherTest extends ZmqEnabledTest {
       ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
       OutboundMsg outMsg =
           new OutboundMsg(
-              MessageType.EXEC_MESSAGE,
+              MessageType.EXEC_CONSTRUCTOR,
               ExecPhase.BEFORE,
               null,
               msg.getMessageId(),

@@ -36,6 +36,7 @@ import net.ittera.pal.common.runtime.ExecPhase;
 import net.ittera.pal.core.messages.InterceptEventMsg;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InterceptMessage;
+import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.junit.After;
 import org.junit.Before;
@@ -162,7 +163,8 @@ public class InterceptsTest extends ZmqEnabledTest {
 
     // verify it doesn't get intercepted
     List<InterceptMessage> matchingIntercepts =
-        interceptMatcher.getMatchingIntercepts(execMessage, ExecPhase.BEFORE);
+        interceptMatcher.getMatchingIntercepts(
+            execMessage, MessageType.EXEC_CONSTRUCTOR, ExecPhase.BEFORE);
     assertThat(matchingIntercepts, is(empty()));
   }
 
@@ -189,7 +191,8 @@ public class InterceptsTest extends ZmqEnabledTest {
 
     // verify it doesn't get intercepted
     List<InterceptMessage> matchingIntercepts =
-        interceptMatcher.getMatchingIntercepts(execMessage, ExecPhase.AFTER);
+        interceptMatcher.getMatchingIntercepts(
+            execMessage, MessageType.EXEC_CONSTRUCTOR, ExecPhase.AFTER);
     assertThat(matchingIntercepts, is(empty()));
   }
 
@@ -216,7 +219,8 @@ public class InterceptsTest extends ZmqEnabledTest {
 
     // verify that it gets intercepted
     List<InterceptMessage> matchingIntercepts =
-        interceptMatcher.getMatchingIntercepts(execMessage, ExecPhase.BEFORE);
+        interceptMatcher.getMatchingIntercepts(
+            execMessage, MessageType.EXEC_CONSTRUCTOR, ExecPhase.BEFORE);
     assertThat(matchingIntercepts, is(not(empty())));
     assertThat(matchingIntercepts.size(), is(1));
     assertThat(matchingIntercepts.get(0), is(interceptMessage));

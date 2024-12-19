@@ -33,6 +33,7 @@ import net.ittera.pal.core.exec.DuplicateInterceptException;
 import net.ittera.pal.core.messages.InterceptEventMsg;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InterceptMessage;
+import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -97,14 +98,17 @@ public class InterceptMatcher extends ConnectedService {
     }
   }
 
-  public List<InterceptMessage> getMatchingIntercepts(ExecMessage execMessage, ExecPhase phase) {
+  public List<InterceptMessage> getMatchingIntercepts(
+      ExecMessage execMessage, MessageType messageType, ExecPhase phase) {
     if (ExecPhase.BEFORE.equals(phase)) {
       final List<InterceptMessage> beforeIntercepts =
-          allIntercepts.get(InterceptType.BEFORE).getMatchingIntercepts(execMessage);
+          allIntercepts.get(InterceptType.BEFORE).getMatchingIntercepts(execMessage, messageType);
       final List<InterceptMessage> beforeAsyncIntercepts =
-          allIntercepts.get(InterceptType.BEFORE_ASYNC).getMatchingIntercepts(execMessage);
+          allIntercepts
+              .get(InterceptType.BEFORE_ASYNC)
+              .getMatchingIntercepts(execMessage, messageType);
       final List<InterceptMessage> aroundIntercepts =
-          allIntercepts.get(InterceptType.AROUND).getMatchingIntercepts(execMessage);
+          allIntercepts.get(InterceptType.AROUND).getMatchingIntercepts(execMessage, messageType);
       final List<InterceptMessage> interceptMessages =
           new ArrayList<>(
               beforeIntercepts.size() + beforeAsyncIntercepts.size() + aroundIntercepts.size());
@@ -115,9 +119,11 @@ public class InterceptMatcher extends ConnectedService {
     }
     if (ExecPhase.AFTER.equals(phase)) {
       final List<InterceptMessage> afterIntercepts =
-          allIntercepts.get(InterceptType.AFTER).getMatchingIntercepts(execMessage);
+          allIntercepts.get(InterceptType.AFTER).getMatchingIntercepts(execMessage, messageType);
       final List<InterceptMessage> afterAsyncIntercepts =
-          allIntercepts.get(InterceptType.AFTER_ASYNC).getMatchingIntercepts(execMessage);
+          allIntercepts
+              .get(InterceptType.AFTER_ASYNC)
+              .getMatchingIntercepts(execMessage, messageType);
       final List<InterceptMessage> interceptMessages =
           new ArrayList<>(afterIntercepts.size() + afterAsyncIntercepts.size());
       interceptMessages.addAll(afterIntercepts);

@@ -26,11 +26,10 @@ import net.ittera.pal.messages.LogMessage;
 import net.ittera.pal.messages.Marshallable;
 import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.messages.jsonrpc.JsonRpcMessage;
-import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
-import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
-import net.ittera.pal.messages.types.JsonRpcType;
 import net.ittera.pal.messages.types.MessageFormatType;
+import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
+import net.ittera.pal.serdes.jsonrpc.JsonRpcMessageUtils;
 import net.ittera.pal.serdes.jsonrpc.JsonRpcSerializer;
 import net.ittera.pal.serdes.jsonrpc.JsonSerializationException;
 import org.apache.kafka.common.header.Headers;
@@ -111,19 +110,9 @@ public class KafkaLogMessageSerializer implements Serializer<LogMessage<?>> {
       // Set the message-format header
       headers.add("message-format", new byte[] {messageFormat.toByte()});
 
-      // Determine and set the message-type header
-      JsonRpcType messageType;
-      if (jsonRpcMessage instanceof JsonRpcRequest) {
-        messageType = JsonRpcType.REQUEST;
-        logger.debug("Serializing JsonRpcRequest: {}", json);
-      } else if (jsonRpcMessage instanceof JsonRpcResponse) {
-        messageType = JsonRpcType.RESPONSE;
-        logger.debug("Serializing JsonRpcResponse: {}", json);
-      } else {
-        throw new IllegalArgumentException(
-            "Unsupported JsonRpcMessage type: " + content.getClass());
-      }
-      headers.add("message-type", new byte[] {messageType.toByte()});
+      // Set the message-type header
+      MessageType messageType = JsonRpcMessageUtils.getMessageType(jsonRpcMessage);
+      headers.add("message-type", new byte[] {messageType.getId()});
     } else {
       throw new IllegalArgumentException("Unsupported content type: " + content.getClass());
     }

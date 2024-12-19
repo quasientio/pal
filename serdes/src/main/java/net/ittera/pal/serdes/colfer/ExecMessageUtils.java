@@ -26,24 +26,24 @@ import java.util.stream.Collectors;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Parameter;
 import net.ittera.pal.messages.colfer.Reflectable;
-import net.ittera.pal.messages.types.ExecMessageType;
+import net.ittera.pal.messages.types.MessageType;
 
 public class ExecMessageUtils {
 
   public static String getClassname(ExecMessage execMessage) {
-    final ExecMessageType msgType = ExecMessageType.fromByte(execMessage.getExecMessageType());
+    final MessageType msgType = getMessageTypeOf(execMessage);
     return switch (msgType) {
-      case CONSTRUCTOR -> execMessage.getConstructorCall().getClazz().getName();
-      case INSTANCE_METHOD -> execMessage.getInstanceMethodCall().getClazz().getName();
-      case CLASS_METHOD -> execMessage.getClassMethodCall().getClazz().getName();
-      case GET_STATIC -> execMessage.getStaticFieldGet().getClazz().getName();
-      case GET_FIELD -> execMessage.getInstanceFieldGet().getClazz().getName();
-      case PUT_STATIC -> execMessage.getStaticFieldPut().getClazz().getName();
-      case PUT_FIELD -> execMessage.getInstanceFieldPut().getClazz().getName();
-      case PUT_FIELD_DONE -> execMessage.getInstanceFieldPutDone().getClazz().getName();
-      case PUT_STATIC_DONE -> execMessage.getStaticFieldPutDone().getClazz().getName();
-      case THROWABLE -> execMessage.getRaisedThrowable().getThrowable().getType();
-      case RETURN_VALUE ->
+      case EXEC_CONSTRUCTOR -> execMessage.getConstructorCall().getClazz().getName();
+      case EXEC_INSTANCE_METHOD -> execMessage.getInstanceMethodCall().getClazz().getName();
+      case EXEC_CLASS_METHOD -> execMessage.getClassMethodCall().getClazz().getName();
+      case EXEC_GET_STATIC -> execMessage.getStaticFieldGet().getClazz().getName();
+      case EXEC_GET_FIELD -> execMessage.getInstanceFieldGet().getClazz().getName();
+      case EXEC_PUT_STATIC -> execMessage.getStaticFieldPut().getClazz().getName();
+      case EXEC_PUT_FIELD -> execMessage.getInstanceFieldPut().getClazz().getName();
+      case EXEC_PUT_FIELD_DONE -> execMessage.getInstanceFieldPutDone().getClazz().getName();
+      case EXEC_PUT_STATIC_DONE -> execMessage.getStaticFieldPutDone().getClazz().getName();
+      case EXEC_THROWABLE -> execMessage.getRaisedThrowable().getThrowable().getType();
+      case EXEC_RETURN_VALUE ->
           execMessage.getReturnValue().getIsVoid()
               ? "void"
               : execMessage.getReturnValue().getObject().getClazz().getName();
@@ -54,16 +54,15 @@ public class ExecMessageUtils {
   }
 
   public static String getExecutableName(ExecMessage execMessage) {
-    final ExecMessageType execMessageType =
-        ExecMessageType.fromByte(execMessage.getExecMessageType());
+    final MessageType execMessageType = getMessageTypeOf(execMessage);
     return switch (execMessageType) {
-      case CONSTRUCTOR -> "new";
-      case INSTANCE_METHOD -> execMessage.getInstanceMethodCall().getName();
-      case CLASS_METHOD -> execMessage.getClassMethodCall().getName();
-      case GET_STATIC -> execMessage.getStaticFieldGet().getField().getName();
-      case GET_FIELD -> execMessage.getInstanceFieldGet().getField().getName();
-      case PUT_STATIC -> execMessage.getStaticFieldPut().getField().getName();
-      case PUT_FIELD -> execMessage.getInstanceFieldPut().getField().getName();
+      case EXEC_CONSTRUCTOR -> "new";
+      case EXEC_INSTANCE_METHOD -> execMessage.getInstanceMethodCall().getName();
+      case EXEC_CLASS_METHOD -> execMessage.getClassMethodCall().getName();
+      case EXEC_GET_STATIC -> execMessage.getStaticFieldGet().getField().getName();
+      case EXEC_GET_FIELD -> execMessage.getInstanceFieldGet().getField().getName();
+      case EXEC_PUT_STATIC -> execMessage.getStaticFieldPut().getField().getName();
+      case EXEC_PUT_FIELD -> execMessage.getInstanceFieldPut().getField().getName();
       default ->
           throw new IllegalArgumentException(
               String.format("Unsupported ExecMessage type: %s", execMessageType));
@@ -71,13 +70,12 @@ public class ExecMessageUtils {
   }
 
   public static String getFromExecutableName(ExecMessage execMessage) {
-    final ExecMessageType execMessageType =
-        ExecMessageType.fromByte(execMessage.getExecMessageType());
+    final MessageType execMessageType = getMessageTypeOf(execMessage);
     return switch (execMessageType) {
-      case PUT_FIELD_DONE -> execMessage.getInstanceFieldPutDone().getField().getName();
-      case PUT_STATIC_DONE -> execMessage.getStaticFieldPutDone().getField().getName();
-      case RETURN_VALUE -> getFromReflectableName(execMessage.getReturnValue().getFrom());
-      case THROWABLE -> getFromReflectableName(execMessage.getRaisedThrowable().getFrom());
+      case EXEC_PUT_FIELD_DONE -> execMessage.getInstanceFieldPutDone().getField().getName();
+      case EXEC_PUT_STATIC_DONE -> execMessage.getStaticFieldPutDone().getField().getName();
+      case EXEC_RETURN_VALUE -> getFromReflectableName(execMessage.getReturnValue().getFrom());
+      case EXEC_THROWABLE -> getFromReflectableName(execMessage.getRaisedThrowable().getFrom());
       default ->
           throw new IllegalArgumentException(
               String.format("Unsupported ExecMessage type: %s", execMessageType));
@@ -85,13 +83,13 @@ public class ExecMessageUtils {
   }
 
   public static String getFromExecutableClassName(ExecMessage execMessage) {
-    final ExecMessageType execMessageType =
-        ExecMessageType.fromByte(execMessage.getExecMessageType());
+    final MessageType execMessageType = getMessageTypeOf(execMessage);
     return switch (execMessageType) {
-      case PUT_FIELD_DONE -> execMessage.getInstanceFieldPutDone().getClazz().getName();
-      case PUT_STATIC_DONE -> execMessage.getStaticFieldPutDone().getClass().getName();
-      case RETURN_VALUE -> getFromReflectableClassName(execMessage.getReturnValue().getFrom());
-      case THROWABLE -> getFromReflectableClassName(execMessage.getRaisedThrowable().getFrom());
+      case EXEC_PUT_FIELD_DONE -> execMessage.getInstanceFieldPutDone().getClazz().getName();
+      case EXEC_PUT_STATIC_DONE -> execMessage.getStaticFieldPutDone().getClass().getName();
+      case EXEC_RETURN_VALUE -> getFromReflectableClassName(execMessage.getReturnValue().getFrom());
+      case EXEC_THROWABLE ->
+          getFromReflectableClassName(execMessage.getRaisedThrowable().getFrom());
       default ->
           throw new IllegalArgumentException(
               String.format("Unsupported ExecMessage type: %s", execMessageType));
@@ -128,17 +126,16 @@ public class ExecMessageUtils {
    *     otherwise
    */
   public static List<String> getParameterTypes(ExecMessage execMessage) {
-    final ExecMessageType execMessageType =
-        ExecMessageType.fromByte(execMessage.getExecMessageType());
+    final MessageType execMessageType = getMessageTypeOf(execMessage);
     Parameter[] params;
     switch (execMessageType) {
-      case CONSTRUCTOR:
+      case EXEC_CONSTRUCTOR:
         params = execMessage.getConstructorCall().getParameters();
         break;
-      case INSTANCE_METHOD:
+      case EXEC_INSTANCE_METHOD:
         params = execMessage.getInstanceMethodCall().getParameters();
         break;
-      case CLASS_METHOD:
+      case EXEC_CLASS_METHOD:
         params = execMessage.getClassMethodCall().getParameters();
         break;
       default:
@@ -159,5 +156,33 @@ public class ExecMessageUtils {
           .collect(Collectors.toList());
     }
     return Collections.emptyList();
+  }
+
+  public static MessageType getMessageTypeOf(ExecMessage execMessage) {
+    if (execMessage.getConstructorCall() != null) {
+      return MessageType.EXEC_CONSTRUCTOR;
+    } else if (execMessage.getInstanceMethodCall() != null) {
+      return MessageType.EXEC_INSTANCE_METHOD;
+    } else if (execMessage.getClassMethodCall() != null) {
+      return MessageType.EXEC_CLASS_METHOD;
+    } else if (execMessage.getStaticFieldGet() != null) {
+      return MessageType.EXEC_GET_STATIC;
+    } else if (execMessage.getStaticFieldPut() != null) {
+      return MessageType.EXEC_PUT_STATIC;
+    } else if (execMessage.getInstanceFieldGet() != null) {
+      return MessageType.EXEC_GET_FIELD;
+    } else if (execMessage.getInstanceFieldPut() != null) {
+      return MessageType.EXEC_PUT_FIELD;
+    } else if (execMessage.getInstanceFieldPutDone() != null) {
+      return MessageType.EXEC_PUT_FIELD_DONE;
+    } else if (execMessage.getStaticFieldPutDone() != null) {
+      return MessageType.EXEC_PUT_STATIC_DONE;
+    } else if (execMessage.getReturnValue() != null) {
+      return MessageType.EXEC_RETURN_VALUE;
+    } else if (execMessage.getRaisedThrowable() != null) {
+      return MessageType.EXEC_THROWABLE;
+    } else {
+      throw new IllegalArgumentException("Unknown message type");
+    }
   }
 }

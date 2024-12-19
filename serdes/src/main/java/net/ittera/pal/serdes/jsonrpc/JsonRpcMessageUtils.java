@@ -13,9 +13,7 @@ import net.ittera.pal.messages.jsonrpc.JsonRpcMessage;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponseReturnValue;
-import net.ittera.pal.messages.types.ExecMessageType;
-import net.ittera.pal.messages.types.JsonRpcRequestType;
-import net.ittera.pal.messages.types.JsonRpcResponseType;
+import net.ittera.pal.messages.types.JsonRpcType;
 import net.ittera.pal.messages.types.MessageType;
 
 public class JsonRpcMessageUtils {
@@ -81,20 +79,20 @@ public class JsonRpcMessageUtils {
 
   @SuppressWarnings("checkstyle:FallThrough")
   public static Optional<String> getClassName(JsonRpcResponse jsonRpcResponse) {
-    JsonRpcResponseType jsonRpcResponseType = getJsonRpcResponseType(jsonRpcResponse);
+    MessageType jsonRpcResponseType = getJsonRpcResponseType(jsonRpcResponse);
     boolean isFieldPutDone = false;
     switch (jsonRpcResponseType) {
-      case ERROR:
+      case EXEC_THROWABLE:
         JsonRpcError error = jsonRpcResponse.getError();
         if (error == null || error.getData() == null) {
           return Optional.empty();
         }
         return Optional.of(error.getData().getThrowableType());
-      case PUT_STATIC_DONE:
-      case PUT_FIELD_DONE:
+      case EXEC_PUT_STATIC_DONE:
+      case EXEC_PUT_FIELD_DONE:
         isFieldPutDone = true;
         // fall through
-      case RETURN_VALUE:
+      case EXEC_RETURN_VALUE:
         JsonRpcResponseReturnValue returnValue = jsonRpcResponse.getResult();
         if (returnValue == null || returnValue.getFrom() == null) {
           return Optional.empty();
@@ -114,11 +112,11 @@ public class JsonRpcMessageUtils {
   }
 
   public static Optional<String> getFieldName(JsonRpcResponse jsonRpcResponse) {
-    JsonRpcResponseType jsonRpcResponseType = getJsonRpcResponseType(jsonRpcResponse);
+    MessageType jsonRpcResponseType = getJsonRpcResponseType(jsonRpcResponse);
     JsonRpcResponseReturnValue returnValue = jsonRpcResponse.getResult();
     switch (jsonRpcResponseType) {
-      case PUT_STATIC_DONE:
-      case PUT_FIELD_DONE:
+      case EXEC_PUT_STATIC_DONE:
+      case EXEC_PUT_FIELD_DONE:
         if (returnValue == null || returnValue.getFrom() == null) {
           return Optional.empty();
         }
@@ -136,36 +134,39 @@ public class JsonRpcMessageUtils {
     };
   }
 
+  public static MessageType getMessageType(JsonRpcMessage jsonRpcMessage) {
+    if (jsonRpcMessage instanceof JsonRpcRequest request) {
+      return getMessageType(request);
+    } else if (jsonRpcMessage instanceof JsonRpcResponse response) {
+      return getMessageType(response);
+    } else {
+      throw new IllegalArgumentException(
+          "Unsupported message type: " + jsonRpcMessage.getClass().getName());
+    }
+  }
+
   public static MessageType getMessageType(JsonRpcRequest jsonRpcRequest) {
     return switch (jsonRpcRequest.getMethod()) {
-      case "new", "call", "get", "put" -> MessageType.EXEC_MESSAGE;
-      default ->
-          throw new IllegalArgumentException("Unsupported method: " + jsonRpcRequest.getMethod());
-    };
-  }
-
-  public static ExecMessageType getExecMessageType(JsonRpcRequest jsonRpcRequest) {
-    return switch (jsonRpcRequest.getMethod()) {
-      case "new" -> ExecMessageType.CONSTRUCTOR;
+      case "new" -> MessageType.EXEC_CONSTRUCTOR;
       case "call" -> {
         if (jsonRpcRequest.getParams().getInstance() == null) {
-          yield ExecMessageType.CLASS_METHOD;
+          yield MessageType.EXEC_CLASS_METHOD;
         } else {
-          yield ExecMessageType.INSTANCE_METHOD;
+          yield MessageType.EXEC_INSTANCE_METHOD;
         }
       }
       case "get" -> {
         if (jsonRpcRequest.getParams().getInstance() == null) {
-          yield ExecMessageType.GET_STATIC;
+          yield MessageType.EXEC_GET_STATIC;
         } else {
-          yield ExecMessageType.GET_FIELD;
+          yield MessageType.EXEC_GET_FIELD;
         }
       }
       case "put" -> {
         if (jsonRpcRequest.getParams().getInstance() == null) {
-          yield ExecMessageType.PUT_STATIC;
+          yield MessageType.EXEC_PUT_STATIC;
         } else {
-          yield ExecMessageType.PUT_FIELD;
+          yield MessageType.EXEC_PUT_FIELD;
         }
       }
       default ->
@@ -173,38 +174,33 @@ public class JsonRpcMessageUtils {
     };
   }
 
-  public static JsonRpcRequestType getJsonRpcRequestType(JsonRpcRequest jsonRpcRequest) {
-    return switch (jsonRpcRequest.getMethod()) {
-      case "new" -> JsonRpcRequestType.CONSTRUCTOR;
-      case "call" -> {
-        if (jsonRpcRequest.getParams().getInstance() == null) {
-          yield JsonRpcRequestType.CLASS_METHOD;
-        } else {
-          yield JsonRpcRequestType.INSTANCE_METHOD;
-        }
-      }
-      case "get" -> {
-        if (jsonRpcRequest.getParams().getInstance() == null) {
-          yield JsonRpcRequestType.GET_STATIC;
-        } else {
-          yield JsonRpcRequestType.GET_FIELD;
-        }
-      }
-      case "put" -> {
-        if (jsonRpcRequest.getParams().getInstance() == null) {
-          yield JsonRpcRequestType.PUT_STATIC;
-        } else {
-          yield JsonRpcRequestType.PUT_FIELD;
-        }
-      }
-      default ->
-          throw new IllegalArgumentException("Unsupported method: " + jsonRpcRequest.getMethod());
+  public static MessageType getMessageType(JsonRpcResponse jsonRpcResponse) {
+    return getJsonRpcResponseType(jsonRpcResponse);
+  }
+
+  public static JsonRpcType getJsonRpcType(JsonRpcMessage jsonRpcMessage) {
+    return getJsonRpcType(getMessageType(jsonRpcMessage));
+  }
+
+  public static JsonRpcType getJsonRpcType(MessageType messageType) {
+    return switch (messageType) {
+      case EXEC_CONSTRUCTOR,
+              EXEC_INSTANCE_METHOD,
+              EXEC_CLASS_METHOD,
+              EXEC_GET_STATIC,
+              EXEC_GET_FIELD,
+              EXEC_PUT_STATIC,
+              EXEC_PUT_FIELD ->
+          JsonRpcType.REQUEST;
+      case EXEC_PUT_STATIC_DONE, EXEC_PUT_FIELD_DONE, EXEC_RETURN_VALUE, EXEC_THROWABLE ->
+          JsonRpcType.RESPONSE;
+      default -> throw new IllegalArgumentException("Unsupported message type: " + messageType);
     };
   }
 
-  public static JsonRpcResponseType getJsonRpcResponseType(JsonRpcResponse jsonRpcResponse) {
+  private static MessageType getJsonRpcResponseType(JsonRpcResponse jsonRpcResponse) {
     if (jsonRpcResponse.getError() != null) {
-      return JsonRpcResponseType.ERROR;
+      return MessageType.EXEC_THROWABLE;
     } else if (jsonRpcResponse.getResult() != null) {
       JsonRpcResponseReturnValue returnValue = jsonRpcResponse.getResult();
       Executable from = returnValue.getFrom();
@@ -213,10 +209,10 @@ public class JsonRpcMessageUtils {
       if (isVoid && from.getFieldName() != null && !from.getFieldName().isEmpty()) {
         int fieldModifiers = from.getModifiers();
         return Modifier.isStatic(fieldModifiers)
-            ? JsonRpcResponseType.PUT_STATIC_DONE
-            : JsonRpcResponseType.PUT_FIELD_DONE;
+            ? MessageType.EXEC_PUT_STATIC_DONE
+            : MessageType.EXEC_PUT_FIELD_DONE;
       } else {
-        return JsonRpcResponseType.RETURN_VALUE;
+        return MessageType.EXEC_RETURN_VALUE;
       }
     } else {
       throw new IllegalArgumentException("Unsupported JSON-RPC response type");

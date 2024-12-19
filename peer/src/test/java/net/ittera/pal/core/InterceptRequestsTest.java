@@ -31,6 +31,7 @@ import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.core.exec.DuplicateInterceptException;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InterceptMessage;
+import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.junit.Test;
 
@@ -59,7 +60,8 @@ public class InterceptRequestsTest {
     ExecMessage execMessage =
         msgBuilder.buildEmptyConstructor(UUID.randomUUID(), "java.util.ArrayList");
 
-    List<InterceptMessage> matchedIntercepts = interceptRequests.getMatchingIntercepts(execMessage);
+    List<InterceptMessage> matchedIntercepts =
+        interceptRequests.getMatchingIntercepts(execMessage, MessageType.EXEC_CONSTRUCTOR);
     assertThat(matchedIntercepts, is(notNullValue()));
     assertThat(matchedIntercepts.size(), is(1));
   }

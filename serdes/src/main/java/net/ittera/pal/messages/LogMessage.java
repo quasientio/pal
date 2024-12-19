@@ -31,6 +31,7 @@ import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.messages.types.JsonRpcType;
 import net.ittera.pal.messages.types.MessageFormatType;
 import net.ittera.pal.messages.types.MessageType;
+import net.ittera.pal.serdes.jsonrpc.JsonRpcMessageUtils;
 import net.ittera.pal.serdes.jsonrpc.JsonRpcSerializer;
 import net.ittera.pal.serdes.jsonrpc.JsonSerializationException;
 import org.apache.kafka.common.header.Header;
@@ -54,6 +55,15 @@ public class LogMessage<T> {
     this.content = content;
   }
 
+  /**
+   * Creates a LogMessage by deserializing the byte[] data. Used by KafkaLogMessageDeserializer.
+   *
+   * @param topic the topic/Log where the message has been read from
+   * @param offset the offset of the message
+   * @param recordHeaders the headers of the message
+   * @param data the data of the message
+   * @return the deserialized LogMessage
+   */
   public static LogMessage<?> newInstance(
       @Nullable String topic, @Nullable Long offset, Headers recordHeaders, byte[] data) {
     if (recordHeaders == null) {
@@ -74,22 +84,23 @@ public class LogMessage<T> {
     // add all "-id" headers to headers map
     headers.putAll(getIdHeadersFromRecordHeaders(recordHeaders));
 
+    // get message type and set it in headers
+    MessageType messageType = getMessageTypeFromHeader(recordHeaders);
+    if (messageType == null) {
+      throw new IllegalArgumentException("Message type not found in record headers");
+    }
+    headers.put("message-type", messageType.name());
+
     LogMessage<?> logMessage;
     switch (messageFormat) {
       case BINARY_RPC -> {
         // deserialize
         Message message = new Message();
         message.unmarshal(data, 0);
-
-        // get message type and set it in headers
-        MessageType messageType = getBinaryRpcMessageTypeFromHeader(recordHeaders);
-        if (messageType != null) {
-          headers.put("message-type", messageType.name());
-        }
         logMessage = new LogMessage<>(topic, offset, headers, message);
       }
       case JSON_RPC -> {
-        JsonRpcType jsonRpcMessageType = getJsonRpcMessageTypeFromHeader(recordHeaders);
+        JsonRpcType jsonRpcMessageType = JsonRpcMessageUtils.getJsonRpcType(messageType);
         if (jsonRpcMessageType == null) {
           throw new IllegalArgumentException("JSON-RPC message type not found in record headers");
         }
@@ -135,18 +146,10 @@ public class LogMessage<T> {
     return null;
   }
 
-  private static JsonRpcType getJsonRpcMessageTypeFromHeader(Headers headers) {
+  private static MessageType getMessageTypeFromHeader(Headers headers) {
     for (Header header : headers.headers("message-type")) {
       byte typeByte = header.value()[0];
-      return JsonRpcType.fromByte(typeByte);
-    }
-    return null;
-  }
-
-  private static MessageType getBinaryRpcMessageTypeFromHeader(Headers headers) {
-    for (Header header : headers.headers("message-type")) {
-      byte typeByte = header.value()[0];
-      return MessageType.fromByte(typeByte);
+      return MessageType.fromId(typeByte);
     }
     return null;
   }

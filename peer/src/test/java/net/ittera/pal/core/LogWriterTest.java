@@ -169,7 +169,7 @@ public class LogWriterTest extends ZmqEnabledTest {
         msg -> {
           boolean hasExecMessage = msg.getExecMessage() != null;
           MessageType msgType =
-              hasExecMessage ? MessageType.EXEC_MESSAGE : MessageType.INTERCEPT_MESSAGE;
+              hasExecMessage ? MessageType.EXEC_CONSTRUCTOR : MessageType.INTERCEPT_MESSAGE;
           ExecPhase execPhase = hasExecMessage ? ExecPhase.BEFORE : ExecPhase.UNDEFINED;
           OutboundMsg outMsg =
               new OutboundMsg(
@@ -215,7 +215,7 @@ public class LogWriterTest extends ZmqEnabledTest {
         msg -> {
           OutboundMsg outMsg =
               new OutboundMsg(
-                  MessageType.EXEC_MESSAGE,
+                  MessageType.EXEC_CONSTRUCTOR,
                   ExecPhase.BEFORE,
                   headers,
                   getMessageId(msg),

@@ -1,13 +1,16 @@
 package net.ittera.pal.serdes.colfer;
 
-import static net.ittera.pal.messages.types.ExecMessageType.GET_FIELD;
-import static net.ittera.pal.messages.types.ExecMessageType.GET_STATIC;
-import static net.ittera.pal.messages.types.ExecMessageType.PUT_FIELD;
-import static net.ittera.pal.messages.types.ExecMessageType.PUT_FIELD_DONE;
-import static net.ittera.pal.messages.types.ExecMessageType.PUT_STATIC;
-import static net.ittera.pal.messages.types.ExecMessageType.PUT_STATIC_DONE;
-import static net.ittera.pal.messages.types.ExecMessageType.RETURN_VALUE;
-import static net.ittera.pal.messages.types.ExecMessageType.THROWABLE;
+import static net.ittera.pal.messages.types.MessageType.EXEC_CLASS_METHOD;
+import static net.ittera.pal.messages.types.MessageType.EXEC_CONSTRUCTOR;
+import static net.ittera.pal.messages.types.MessageType.EXEC_GET_FIELD;
+import static net.ittera.pal.messages.types.MessageType.EXEC_GET_STATIC;
+import static net.ittera.pal.messages.types.MessageType.EXEC_PUT_FIELD;
+import static net.ittera.pal.messages.types.MessageType.EXEC_PUT_FIELD_DONE;
+import static net.ittera.pal.messages.types.MessageType.EXEC_PUT_STATIC;
+import static net.ittera.pal.messages.types.MessageType.EXEC_PUT_STATIC_DONE;
+import static net.ittera.pal.messages.types.MessageType.EXEC_RETURN_VALUE;
+import static net.ittera.pal.messages.types.MessageType.EXEC_THROWABLE;
+import static net.ittera.pal.serdes.colfer.ExecMessageUtils.getMessageTypeOf;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -47,7 +50,6 @@ import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.messages.colfer.Parameter;
 import net.ittera.pal.messages.types.ControlCommandType;
 import net.ittera.pal.messages.types.ControlStatusType;
-import net.ittera.pal.messages.types.ExecMessageType;
 import net.ittera.pal.messages.types.InternalHeaderType;
 import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.Unwrapper;
@@ -129,9 +131,9 @@ public class MessageBuilderTest {
 
   private ExtractedFieldOpMessageInfo extractedFieldOpMessageInfo(ExecMessage fieldOpMessage) {
     ExtractedFieldOpMessageInfo extractedFieldOpMessageInfo = new ExtractedFieldOpMessageInfo();
-    ExecMessageType execMessageType = ExecMessageType.fromByte(fieldOpMessage.execMessageType);
+    MessageType execMessageType = getMessageTypeOf(fieldOpMessage);
     switch (execMessageType) {
-      case GET_FIELD:
+      case EXEC_GET_FIELD:
         assertNotNull(fieldOpMessage.getInstanceFieldGet());
         extractedFieldOpMessageInfo.targetObjectRef =
             ObjectRef.from(fieldOpMessage.getInstanceFieldGet().getObjectRef());
@@ -141,7 +143,7 @@ public class MessageBuilderTest {
         extractedFieldOpMessageInfo.className =
             fieldOpMessage.getInstanceFieldGet().getClazz().getName();
         break;
-      case PUT_FIELD:
+      case EXEC_PUT_FIELD:
         assertNotNull(fieldOpMessage.getInstanceFieldPut());
         extractedFieldOpMessageInfo.targetObjectRef =
             ObjectRef.from(fieldOpMessage.getInstanceFieldPut().getObjectRef());
@@ -151,7 +153,7 @@ public class MessageBuilderTest {
         extractedFieldOpMessageInfo.className =
             fieldOpMessage.getInstanceFieldPut().getClazz().getName();
         break;
-      case GET_STATIC:
+      case EXEC_GET_STATIC:
         assertNotNull(fieldOpMessage.getStaticFieldGet());
         extractedFieldOpMessageInfo.context = fieldOpMessage.getStaticFieldGet().getContext();
         extractedFieldOpMessageInfo.fieldName =
@@ -159,7 +161,7 @@ public class MessageBuilderTest {
         extractedFieldOpMessageInfo.className =
             fieldOpMessage.getStaticFieldGet().getClazz().getName();
         break;
-      case PUT_STATIC:
+      case EXEC_PUT_STATIC:
         assertNotNull(fieldOpMessage.getStaticFieldPut());
         extractedFieldOpMessageInfo.context = fieldOpMessage.getStaticFieldPut().getContext();
         extractedFieldOpMessageInfo.fieldName =
@@ -167,14 +169,14 @@ public class MessageBuilderTest {
         extractedFieldOpMessageInfo.className =
             fieldOpMessage.getStaticFieldPut().getClazz().getName();
         break;
-      case PUT_FIELD_DONE:
+      case EXEC_PUT_FIELD_DONE:
         assertNotNull(fieldOpMessage.getInstanceFieldPutDone());
         extractedFieldOpMessageInfo.fieldName =
             fieldOpMessage.getInstanceFieldPutDone().getField().getName();
         extractedFieldOpMessageInfo.className =
             fieldOpMessage.getInstanceFieldPutDone().getClazz().getName();
         break;
-      case PUT_STATIC_DONE:
+      case EXEC_PUT_STATIC_DONE:
         assertNotNull(fieldOpMessage.getStaticFieldPutDone());
         extractedFieldOpMessageInfo.fieldName =
             fieldOpMessage.getStaticFieldPutDone().getField().getName();
@@ -182,9 +184,7 @@ public class MessageBuilderTest {
             fieldOpMessage.getStaticFieldPutDone().getClazz().getName();
         break;
       default:
-        fail(
-            "Unexpected ExecMessageType: "
-                + ExecMessageType.fromByte(fieldOpMessage.getExecMessageType()));
+        fail("Unexpected exec MessageType: " + execMessageType.name());
     }
     return extractedFieldOpMessageInfo;
   }
@@ -259,7 +259,7 @@ public class MessageBuilderTest {
     String className = this.getClass().getName();
     ExecMessage execMessage = messageBuilder.buildEmptyConstructor(peerUuid, className);
     assertNotNull(execMessage);
-    assertEquals(ExecMessageType.CONSTRUCTOR.toByte(), execMessage.execMessageType);
+    assertEquals(MessageType.EXEC_CONSTRUCTOR, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getConstructorCall());
     assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
     assertEquals(className, execMessage.constructorCall.getClazz().getName());
@@ -277,7 +277,7 @@ public class MessageBuilderTest {
         messageBuilder.buildNonEmptyConstructor(
             peerUuid, className, parameterTypes, args, argObjRefs);
     assertNotNull(execMessage);
-    assertEquals(ExecMessageType.CONSTRUCTOR.toByte(), execMessage.execMessageType);
+    assertEquals(MessageType.EXEC_CONSTRUCTOR, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getConstructorCall());
     assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
     assertEquals(className, execMessage.constructorCall.getClazz().getName());
@@ -298,7 +298,7 @@ public class MessageBuilderTest {
         messageBuilderWithContext.buildConstructor(
             peerUuid, constructorContext, sender, senderObjRef, args, argObjRefs);
     assertNotNull(execMessage);
-    assertEquals(ExecMessageType.CONSTRUCTOR.toByte(), execMessage.execMessageType);
+    assertEquals(MessageType.EXEC_CONSTRUCTOR, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getConstructorCall());
     assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
     assertEquals(clazz.getName(), execMessage.getConstructorCall().getClazz().getName());
@@ -332,7 +332,7 @@ public class MessageBuilderTest {
             peerUuid, clazz.getName(), parameterTypes, args, sender, senderObjRef);
 
     assertNotNull(execMessage);
-    assertEquals(ExecMessageType.CONSTRUCTOR.toByte(), execMessage.execMessageType);
+    assertEquals(MessageType.EXEC_CONSTRUCTOR, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getConstructorCall());
     assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
     assertEquals(clazz.getName(), execMessage.getConstructorCall().getClazz().getName());
@@ -363,7 +363,7 @@ public class MessageBuilderTest {
         messageBuilder.buildInstanceMethod(
             peerUuid, className, methodName, targetObjRef, parameterTypes, args, argObjRefs);
     assertNotNull(execMessage);
-    assertEquals(ExecMessageType.INSTANCE_METHOD.toByte(), execMessage.execMessageType);
+    assertEquals(MessageType.EXEC_INSTANCE_METHOD, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getInstanceMethodCall());
     assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
     assertEquals(className, execMessage.getInstanceMethodCall().getClazz().getName());
@@ -388,7 +388,7 @@ public class MessageBuilderTest {
         messageBuilderWithContext.buildInstanceMethod(
             peerUuid, instanceMethodContext, sender, senderObjRef, targetObjRef, args, argObjRefs);
     assertNotNull(execMessage);
-    assertEquals(ExecMessageType.INSTANCE_METHOD.toByte(), execMessage.execMessageType);
+    assertEquals(MessageType.EXEC_INSTANCE_METHOD, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getInstanceMethodCall());
     assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
     assertEquals(
@@ -422,7 +422,7 @@ public class MessageBuilderTest {
             args);
 
     assertNotNull(execMessage);
-    assertEquals(ExecMessageType.INSTANCE_METHOD.toByte(), execMessage.execMessageType);
+    assertEquals(MessageType.EXEC_INSTANCE_METHOD, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getInstanceMethodCall());
     assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
     assertEquals(
@@ -466,7 +466,7 @@ public class MessageBuilderTest {
             argObjRefs);
 
     assertNotNull(execMessage);
-    assertEquals(ExecMessageType.CLASS_METHOD.toByte(), execMessage.execMessageType);
+    assertEquals(EXEC_CLASS_METHOD, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getClassMethodCall());
     assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
     assertEquals(className, execMessage.getClassMethodCall().getClazz().getName());
@@ -510,7 +510,7 @@ public class MessageBuilderTest {
 
     // assert expected values of ExecMessage
     assertNotNull(execMessage);
-    assertEquals(ExecMessageType.CLASS_METHOD.toByte(), execMessage.execMessageType);
+    assertEquals(EXEC_CLASS_METHOD, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getClassMethodCall());
     assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
     assertEquals(
@@ -536,7 +536,7 @@ public class MessageBuilderTest {
 
     // assert expected values of ExecMessage
     assertNotNull(execMessage);
-    assertEquals(ExecMessageType.CLASS_METHOD.toByte(), execMessage.execMessageType);
+    assertEquals(EXEC_CLASS_METHOD, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getClassMethodCall());
     assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
     assertEquals(clazz.getName(), execMessage.getClassMethodCall().getClazz().getName());
@@ -566,14 +566,14 @@ public class MessageBuilderTest {
 
     // create a list of specific args for each of the four field op types
     Map<String, Object> map = new HashMap<>();
-    map.put("messageType", GET_FIELD);
+    map.put("messageType", EXEC_GET_FIELD);
     map.put("target", new Object());
     map.put("targetObjectRef", ObjectRef.randomRef());
     List<Map<String, Object>> listOfFieldOpArgs = new ArrayList<>();
     listOfFieldOpArgs.add(map);
 
     map = new HashMap<>();
-    map.put("messageType", PUT_FIELD);
+    map.put("messageType", EXEC_PUT_FIELD);
     map.put("target", new Object());
     map.put("targetObjectRef", ObjectRef.from("492849"));
     map.put("arg", "an argument");
@@ -581,11 +581,11 @@ public class MessageBuilderTest {
     listOfFieldOpArgs.add(map);
 
     map = new HashMap<>();
-    map.put("messageType", GET_STATIC);
+    map.put("messageType", EXEC_GET_STATIC);
     listOfFieldOpArgs.add(map);
 
     map = new HashMap<>();
-    map.put("messageType", PUT_STATIC);
+    map.put("messageType", EXEC_PUT_STATIC);
     map.put("arg", "an argument");
     map.put("argObjRef", ObjectRef.from("8702347"));
     listOfFieldOpArgs.add(map);
@@ -600,7 +600,7 @@ public class MessageBuilderTest {
 
     // call buildFieldOp for each of the four field op types
     for (Map<String, Object> fieldOpArgs : listOfFieldOpArgs) {
-      ExecMessageType execMessageType = (ExecMessageType) fieldOpArgs.get("messageType");
+      MessageType execMessageType = (MessageType) fieldOpArgs.get("messageType");
       ObjectRef targetObjRef = (ObjectRef) fieldOpArgs.get("targetObjectRef");
       Object arg = fieldOpArgs.get("arg");
       ObjectRef argObjRef = (ObjectRef) fieldOpArgs.get("argObjRef");
@@ -617,7 +617,7 @@ public class MessageBuilderTest {
 
       assertNotNull(execMessage);
       assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
-      assertEquals(execMessageType.toByte(), execMessage.execMessageType);
+      assertEquals(execMessageType, getMessageTypeOf(execMessage));
       ExtractedFieldOpMessageInfo extractedFieldOpMessageInfo =
           extractedFieldOpMessageInfo(execMessage);
       assertEquals(targetClass.getName(), extractedFieldOpMessageInfo.className);
@@ -645,14 +645,14 @@ public class MessageBuilderTest {
     String fieldName = "anInt";
     Context context = createContextForFieldOp(targetClass, fieldName);
     AccessibleObject field = targetClass.getDeclaredField("anInt");
-    ExecMessageType type = PUT_FIELD_DONE;
+    MessageType type = EXEC_PUT_FIELD_DONE;
 
     ExecMessage execMessage = builder.buildFieldOpDone(peerUuid, field, context, type);
 
     // assert expected values of ExecMessage
     assertNotNull(execMessage);
     assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
-    assertEquals(type.toByte(), execMessage.execMessageType);
+    assertEquals(type, getMessageTypeOf(execMessage));
     ExtractedFieldOpMessageInfo extractedFieldOpMessageInfo =
         extractedFieldOpMessageInfo(execMessage);
     assertEquals(targetClass.getName(), extractedFieldOpMessageInfo.className);
@@ -668,14 +668,14 @@ public class MessageBuilderTest {
     String fieldName = "anInt";
     Context context = createContextForFieldOp(targetClass, fieldName);
     AccessibleObject field = targetClass.getDeclaredField(fieldName);
-    ExecMessageType type = PUT_STATIC_DONE;
+    MessageType type = EXEC_PUT_STATIC_DONE;
 
     ExecMessage execMessage = builder.buildFieldOpDone(peerUuid, field, context, type);
 
     // assert expected values of ExecMessage
     assertNotNull(execMessage);
     assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
-    assertEquals(type.toByte(), execMessage.execMessageType);
+    assertEquals(type, getMessageTypeOf(execMessage));
     ExtractedFieldOpMessageInfo extractedFieldOpMessageInfo =
         extractedFieldOpMessageInfo(execMessage);
     assertEquals(targetClass.getName(), extractedFieldOpMessageInfo.className);
@@ -697,7 +697,7 @@ public class MessageBuilderTest {
     // assert expected values of ExecMessage
     assertNotNull(execMessage);
     assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
-    assertEquals(ExecMessageType.GET_STATIC.toByte(), execMessage.execMessageType);
+    assertEquals(EXEC_GET_STATIC, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getStaticFieldGet());
     assertEquals(className, execMessage.getStaticFieldGet().getClazz().getName());
     assertEquals(fieldName, execMessage.getStaticFieldGet().getField().getName());
@@ -720,7 +720,7 @@ public class MessageBuilderTest {
     // assert expected values of ExecMessage
     assertNotNull(execMessage);
     assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
-    assertEquals(ExecMessageType.GET_FIELD.toByte(), execMessage.execMessageType);
+    assertEquals(EXEC_GET_FIELD, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getInstanceFieldGet());
     assertEquals(className, execMessage.getInstanceFieldGet().getClazz().getName());
     assertEquals(fieldName, execMessage.getInstanceFieldGet().getField().getName());
@@ -745,7 +745,7 @@ public class MessageBuilderTest {
     // assert expected values of ExecMessage
     assertNotNull(execMessage);
     assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
-    assertEquals(ExecMessageType.PUT_STATIC.toByte(), execMessage.execMessageType);
+    assertEquals(EXEC_PUT_STATIC, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getStaticFieldPut());
     assertEquals(className, execMessage.getStaticFieldPut().getClazz().getName());
     assertEquals(fieldName, execMessage.getStaticFieldPut().getField().getName());
@@ -768,7 +768,7 @@ public class MessageBuilderTest {
     // assert expected values of ExecMessage
     assertNotNull(execMessage);
     assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
-    assertEquals(ExecMessageType.PUT_STATIC.toByte(), execMessage.execMessageType);
+    assertEquals(EXEC_PUT_STATIC, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getStaticFieldPut());
     assertEquals(className, execMessage.getStaticFieldPut().getClazz().getName());
     assertEquals(fieldName, execMessage.getStaticFieldPut().getField().getName());
@@ -795,7 +795,7 @@ public class MessageBuilderTest {
     // assert expected values of ExecMessage
     assertNotNull(execMessage);
     assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
-    assertEquals(ExecMessageType.PUT_STATIC_DONE.toByte(), execMessage.execMessageType);
+    assertEquals(EXEC_PUT_STATIC_DONE, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getStaticFieldPutDone());
     assertEquals(targetClass.getName(), execMessage.getStaticFieldPutDone().getClazz().getName());
     assertEquals(fieldName, execMessage.getStaticFieldPutDone().getField().getName());
@@ -823,7 +823,7 @@ public class MessageBuilderTest {
     // assert expected values of ExecMessage
     assertNotNull(execMessage);
     assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
-    assertEquals(ExecMessageType.PUT_FIELD.toByte(), execMessage.execMessageType);
+    assertEquals(EXEC_PUT_FIELD, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getInstanceFieldPut());
     assertEquals(className, execMessage.getInstanceFieldPut().getClazz().getName());
     assertEquals(fieldName, execMessage.getInstanceFieldPut().getField().getName());
@@ -848,7 +848,7 @@ public class MessageBuilderTest {
     // assert expected values of ExecMessage
     assertNotNull(execMessage);
     assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
-    assertEquals(ExecMessageType.PUT_FIELD.toByte(), execMessage.execMessageType);
+    assertEquals(EXEC_PUT_FIELD, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getInstanceFieldPut());
     assertEquals(className, execMessage.getInstanceFieldPut().getClazz().getName());
     assertEquals(fieldName, execMessage.getInstanceFieldPut().getField().getName());
@@ -876,7 +876,7 @@ public class MessageBuilderTest {
     // assert expected values of ExecMessage
     assertNotNull(execMessage);
     assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
-    assertEquals(ExecMessageType.PUT_FIELD_DONE.toByte(), execMessage.execMessageType);
+    assertEquals(EXEC_PUT_FIELD_DONE, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getInstanceFieldPutDone());
     assertEquals(targetClass.getName(), execMessage.getInstanceFieldPutDone().getClazz().getName());
     assertEquals(fieldName, execMessage.getInstanceFieldPutDone().getField().getName());
@@ -1064,7 +1064,8 @@ public class MessageBuilderTest {
     assertNotNull(interceptKeyMessage);
     assertEquals(target.getClass().getName(), interceptKeyMessage.getClazz());
     assertEquals(target.getClass().getName(), interceptKeyMessage.getClazz());
-    assertEquals(execMessage.getExecMessageType(), interceptKeyMessage.getExecMsgType());
+    assertEquals(
+        getMessageTypeOf(execMessage), MessageType.fromId(interceptKeyMessage.getExecMsgType()));
     assertEquals(
         execMessage.getInstanceMethodCall().getName(), interceptKeyMessage.getExecutableName());
     assertEquals(
@@ -1114,7 +1115,7 @@ public class MessageBuilderTest {
 
     assertNotNull(callbackExecMessage);
     assertEquals(peerUuid.toString(), callbackExecMessage.getPeerUuid());
-    assertEquals(ExecMessageType.CLASS_METHOD.toByte(), callbackExecMessage.getExecMessageType());
+    assertEquals(EXEC_CLASS_METHOD, getMessageTypeOf(callbackExecMessage));
     assertNotNull(callbackExecMessage.getClassMethodCall());
     assertEquals(callbackClassName, callbackExecMessage.getClassMethodCall().getClazz().getName());
     assertEquals(callbackMethodName, callbackExecMessage.getClassMethodCall().getName());
@@ -1190,7 +1191,7 @@ public class MessageBuilderTest {
 
     assertNotNull(callbackExecMessage);
     assertEquals(peerUuid.toString(), callbackExecMessage.getPeerUuid());
-    assertEquals(ExecMessageType.CLASS_METHOD.toByte(), callbackExecMessage.getExecMessageType());
+    assertEquals(EXEC_CLASS_METHOD, getMessageTypeOf(callbackExecMessage));
     assertNotNull(callbackExecMessage.getClassMethodCall());
     assertEquals(callbackClassName, callbackExecMessage.getClassMethodCall().getClazz().getName());
     assertEquals(callbackMethodName, callbackExecMessage.getClassMethodCall().getName());
@@ -1263,7 +1264,7 @@ public class MessageBuilderTest {
 
     assertNotNull(callbackExecMessage);
     assertEquals(peerUuid.toString(), callbackExecMessage.getPeerUuid());
-    assertEquals(ExecMessageType.CLASS_METHOD.toByte(), callbackExecMessage.getExecMessageType());
+    assertEquals(EXEC_CLASS_METHOD, getMessageTypeOf(callbackExecMessage));
     assertNotNull(callbackExecMessage.getClassMethodCall());
     assertEquals(callbackClassName, callbackExecMessage.getClassMethodCall().getClazz().getName());
     assertEquals(callbackMethodName, callbackExecMessage.getClassMethodCall().getName());
@@ -1317,7 +1318,7 @@ public class MessageBuilderTest {
 
     // create a list of specific args for each of the four field op types
     Map<String, Object> map = new HashMap<>();
-    map.put("messageType", GET_FIELD);
+    map.put("messageType", EXEC_GET_FIELD);
     map.put("fieldOpType", FieldOpType.GET);
     map.put("target", new DummyClassForTest());
     map.put("targetObjectRef", ObjectRef.randomRef());
@@ -1325,7 +1326,7 @@ public class MessageBuilderTest {
     listOfFieldOpArgs.add(map);
 
     map = new HashMap<>();
-    map.put("messageType", PUT_FIELD);
+    map.put("messageType", EXEC_PUT_FIELD);
     map.put("fieldOpType", FieldOpType.PUT);
     map.put("target", new DummyClassForTest());
     map.put("targetObjectRef", ObjectRef.from("734524"));
@@ -1335,12 +1336,12 @@ public class MessageBuilderTest {
 
     map = new HashMap<>();
     map.put("fieldOpType", FieldOpType.GET);
-    map.put("messageType", GET_STATIC);
+    map.put("messageType", EXEC_GET_STATIC);
     listOfFieldOpArgs.add(map);
 
     map = new HashMap<>();
     map.put("fieldOpType", FieldOpType.PUT);
-    map.put("messageType", PUT_STATIC);
+    map.put("messageType", EXEC_PUT_STATIC);
     map.put("arg", "378");
     map.put("argObjRef", ObjectRef.from("2987234"));
     listOfFieldOpArgs.add(map);
@@ -1353,7 +1354,7 @@ public class MessageBuilderTest {
 
     // call buildFieldOp for each of the four field op types
     for (Map<String, Object> fieldOpArgs : listOfFieldOpArgs) {
-      ExecMessageType execMessageType = (ExecMessageType) fieldOpArgs.get("messageType");
+      MessageType execMessageType = (MessageType) fieldOpArgs.get("messageType");
       FieldOpType fieldOpType = (FieldOpType) fieldOpArgs.get("fieldOpType");
       var targetClass = DummyClassForTest.class;
       ObjectRef targetObjRef = (ObjectRef) fieldOpArgs.get("targetObjectRef");
@@ -1390,7 +1391,7 @@ public class MessageBuilderTest {
 
       assertNotNull(callbackExecMessage);
       assertEquals(peerUuid.toString(), callbackExecMessage.getPeerUuid());
-      assertEquals(ExecMessageType.CLASS_METHOD.toByte(), callbackExecMessage.getExecMessageType());
+      assertEquals(EXEC_CLASS_METHOD, getMessageTypeOf(callbackExecMessage));
       assertNotNull(callbackExecMessage.getClassMethodCall());
       assertEquals(
           callbackClassName, callbackExecMessage.getClassMethodCall().getClazz().getName());
@@ -1398,14 +1399,14 @@ public class MessageBuilderTest {
 
       // compare argument values
       switch (execMessageType) {
-        case GET_FIELD, GET_STATIC:
+        case EXEC_GET_FIELD, EXEC_GET_STATIC:
           break;
-        case PUT_FIELD:
+        case EXEC_PUT_FIELD:
           assertEquals(
               interceptedExecMessage.getInstanceFieldPut().getValueObject().getValue(),
               callbackExecMessage.getClassMethodCall().getParameters()[0].getValue().getValue());
           break;
-        case PUT_STATIC:
+        case EXEC_PUT_STATIC:
           assertEquals(
               interceptedExecMessage.getStaticFieldPut().getValueObject().getValue(),
               callbackExecMessage.getClassMethodCall().getParameters()[0].getValue().getValue());
@@ -1448,7 +1449,7 @@ public class MessageBuilderTest {
 
       assertNotNull(execMessage);
       assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
-      assertEquals(THROWABLE.toByte(), execMessage.getExecMessageType());
+      assertEquals(EXEC_THROWABLE, getMessageTypeOf(execMessage));
       assertNotNull(execMessage.getRaisedThrowable());
       if (accessibleObject instanceof Method) {
         assertEquals(
@@ -1505,7 +1506,7 @@ public class MessageBuilderTest {
 
               assertNotNull(execMessage);
               assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
-              assertEquals(THROWABLE.toByte(), execMessage.getExecMessageType());
+              assertEquals(EXEC_THROWABLE, getMessageTypeOf(execMessage));
               assertNotNull(execMessage.getRaisedThrowable());
               switch (executableObjectType) {
                 case METHOD:
@@ -1546,7 +1547,7 @@ public class MessageBuilderTest {
 
     assertNotNull(execMessage);
     assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
-    assertEquals(RETURN_VALUE.toByte(), execMessage.getExecMessageType());
+    assertEquals(EXEC_RETURN_VALUE, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getReturnValue());
     assertEquals(
         constructor.getName(),
@@ -1579,7 +1580,7 @@ public class MessageBuilderTest {
 
     assertNotNull(execMessage);
     assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
-    assertEquals(RETURN_VALUE.toByte(), execMessage.getExecMessageType());
+    assertEquals(EXEC_RETURN_VALUE, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getReturnValue());
     assertEquals(method.getName(), execMessage.getReturnValue().getFrom().getMethod().getName());
     assertEquals("int", execMessage.getReturnValue().getObject().getClazz().getName());
@@ -1603,7 +1604,7 @@ public class MessageBuilderTest {
 
     assertNotNull(execMessage);
     assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
-    assertEquals(RETURN_VALUE.toByte(), execMessage.getExecMessageType());
+    assertEquals(EXEC_RETURN_VALUE, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getReturnValue());
     assertEquals(field.getName(), execMessage.getReturnValue().getFrom().getField().getName());
     assertEquals(
@@ -1702,7 +1703,7 @@ public class MessageBuilderTest {
     Message wrappedMessage = messageBuilder.wrap(execMessage);
 
     assertNotNull(wrappedMessage);
-    assertEquals(MessageType.EXEC_MESSAGE.toByte(), wrappedMessage.getMessageType());
+    assertEquals(EXEC_CONSTRUCTOR, getMessageTypeOf(execMessage));
     assertEquals(execMessage, wrappedMessage.getExecMessage());
   }
 
@@ -1726,7 +1727,8 @@ public class MessageBuilderTest {
     Message wrappedMessage = messageBuilder.wrap(interceptMessage);
 
     assertNotNull(wrappedMessage);
-    assertEquals(MessageType.INTERCEPT_MESSAGE.toByte(), wrappedMessage.getMessageType());
+    assertEquals(
+        MessageType.INTERCEPT_MESSAGE, MessageType.fromId(wrappedMessage.getMessageType()));
     assertEquals(interceptMessage, wrappedMessage.getInterceptMessage());
   }
 
@@ -1741,7 +1743,7 @@ public class MessageBuilderTest {
     Message wrappedMessage = messageBuilder.wrap(interceptKeyMessage);
 
     assertNotNull(wrappedMessage);
-    assertEquals(MessageType.INTERCEPT_KEY.toByte(), wrappedMessage.getMessageType());
+    assertEquals(MessageType.INTERCEPT_KEY, MessageType.fromId(wrappedMessage.getMessageType()));
     assertEquals(interceptKeyMessage, wrappedMessage.getInterceptKeyMessage());
   }
 
@@ -1757,7 +1759,8 @@ public class MessageBuilderTest {
     Message wrappedInterceptReply = messageBuilder.wrap(interceptReply);
 
     assertNotNull(wrappedInterceptReply);
-    assertEquals(MessageType.INTERCEPT_REPLY.toByte(), wrappedInterceptReply.getMessageType());
+    assertEquals(
+        MessageType.INTERCEPT_REPLY, MessageType.fromId(wrappedInterceptReply.getMessageType()));
     assertEquals(interceptReply, wrappedInterceptReply.getInterceptReply());
   }
 
@@ -1770,7 +1773,7 @@ public class MessageBuilderTest {
     Message wrappedMessage = messageBuilder.wrap(controlMessage);
 
     assertNotNull(wrappedMessage);
-    assertEquals(MessageType.CONTROL_MESSAGE.toByte(), wrappedMessage.getMessageType());
+    assertEquals(MessageType.CONTROL_MESSAGE, MessageType.fromId(wrappedMessage.getMessageType()));
     assertEquals(controlMessage, wrappedMessage.getControlMessage());
   }
   // </editor-fold>

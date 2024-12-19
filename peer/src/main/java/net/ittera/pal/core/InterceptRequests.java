@@ -33,7 +33,7 @@ import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InterceptMessage;
 import net.ittera.pal.messages.colfer.InterceptableField;
 import net.ittera.pal.messages.colfer.InterceptableMethod;
-import net.ittera.pal.messages.types.ExecMessageType;
+import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.colfer.ExecMessageUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,14 +69,15 @@ class InterceptRequests {
         .collect(Collectors.toList());
   }
 
-  List<InterceptMessage> getMatchingIntercepts(ExecMessage execMessage) {
-    final ExecMessageType execMessageType =
-        ExecMessageType.fromByte(execMessage.getExecMessageType());
-    return switch (execMessageType) {
-      case CONSTRUCTOR -> getMatchingIntercepts(execMessage, constructorIntercepts);
-      case INSTANCE_METHOD, CLASS_METHOD -> getMatchingIntercepts(execMessage, methodIntercepts);
-      case GET_STATIC, GET_FIELD -> getMatchingIntercepts(execMessage, fieldGetIntercepts);
-      case PUT_STATIC, PUT_FIELD -> getMatchingIntercepts(execMessage, fieldPutIntercepts);
+  List<InterceptMessage> getMatchingIntercepts(ExecMessage execMessage, MessageType messageType) {
+    return switch (messageType) {
+      case EXEC_CONSTRUCTOR -> getMatchingIntercepts(execMessage, constructorIntercepts);
+      case EXEC_INSTANCE_METHOD, EXEC_CLASS_METHOD ->
+          getMatchingIntercepts(execMessage, methodIntercepts);
+      case EXEC_GET_STATIC, EXEC_GET_FIELD ->
+          getMatchingIntercepts(execMessage, fieldGetIntercepts);
+      case EXEC_PUT_STATIC, EXEC_PUT_FIELD ->
+          getMatchingIntercepts(execMessage, fieldPutIntercepts);
       default -> Collections.emptyList();
     };
   }

@@ -118,7 +118,7 @@ public class OutboundMsg extends BaseMsg {
     }
 
     // type of message
-    byte[] buff = new byte[] {messageType.toByte()};
+    byte[] buff = new byte[] {messageType.getId()};
     size = 1;
     try {
       if (!socket.send(buff, ZMQ.SNDMORE)) {
@@ -191,7 +191,7 @@ public class OutboundMsg extends BaseMsg {
 
     // type of message
     int msgSize = buff.length;
-    final MessageType messageType = MessageType.fromByte(buff[0]);
+    final MessageType messageType = MessageType.fromId(buff[0]);
     // execution phase
     final ExecPhase execPhase;
     buff = socket.recv();

@@ -35,6 +35,7 @@ import net.ittera.pal.messages.colfer.InstanceFieldPutDone;
 import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.messages.colfer.ReturnValue;
 import net.ittera.pal.messages.colfer.StaticFieldPutDone;
+import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.colfer.JsonSerializers;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.slf4j.Logger;
@@ -149,7 +150,8 @@ public abstract class AbstractMessageInvokerThread extends Thread {
   protected final void dispatch(Message message, Long recordOffset) {
     final ExecMessage execMessage = message.getExecMessage();
     if (execMessage != null) {
-      dispatch(message.getExecMessage(), recordOffset);
+      dispatch(
+          message.getExecMessage(), MessageType.fromId(message.getMessageType()), recordOffset);
       notifyMessageDispatched(message);
       return;
     }
@@ -161,7 +163,10 @@ public abstract class AbstractMessageInvokerThread extends Thread {
   protected final Message dispatch(Message message) {
     final ExecMessage execMessage = message.getExecMessage();
     if (execMessage != null) {
-      final Message reply = messageBuilder.wrap(dispatch(message.getExecMessage(), null));
+      final Message reply =
+          messageBuilder.wrap(
+              dispatch(
+                  message.getExecMessage(), MessageType.fromId(message.getMessageType()), null));
       notifyMessageDispatched(message);
       return reply;
     }
@@ -177,12 +182,13 @@ public abstract class AbstractMessageInvokerThread extends Thread {
         format("No dispatch handler for this message type: %s", message));
   }
 
-  private ExecMessage dispatch(ExecMessage requestMsg, @Nullable Long recordOffset) {
+  private ExecMessage dispatch(
+      ExecMessage requestMsg, MessageType messageType, @Nullable Long recordOffset) {
     final boolean isDirectRequest = recordOffset == null;
 
     ExecMessage replyMsg;
     try {
-      replyMsg = incomingMessageDispatcher.incomingCall(requestMsg, isDirectRequest);
+      replyMsg = incomingMessageDispatcher.incomingCall(requestMsg, messageType, isDirectRequest);
     } catch (UnsupportedMessageException e) {
       logger.warn("Unsupported incoming message", e);
       return null;

@@ -49,7 +49,7 @@ public abstract class MethodDispatcher extends BaseExecMessageDispatcher {
   }
 
   @Override
-  protected ExecMessage wrapAfterExecMessage(
+  protected ExecMessage createAfterExecMessage(
       ExecMessage execMessage,
       Object valueObject,
       ObjectRef valueObjRef,

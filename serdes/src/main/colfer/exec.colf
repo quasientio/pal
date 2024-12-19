@@ -20,14 +20,13 @@
 package colfer
 
 type ExecMessage struct {
-	peerUuid        text
-	messageId       text
-	execMessageType uint8
-	threadName      text
-	currentTime     text
-	dispatchSeq     uint32
-	builderSeq      uint32
-	responseToId    text
+	peerUuid     text
+	messageId    text
+	threadName   text
+	currentTime  text
+	dispatchSeq  uint32
+	builderSeq   uint32
+	responseToId text
 
 	// oneof
 	constructorCall      ConstructorCall

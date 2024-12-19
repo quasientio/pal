@@ -79,7 +79,7 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
     incomingMessageDispatcher = mock(IncomingMessageDispatcher.class);
 
     // stub incomingCall for ExecMessage
-    when(incomingMessageDispatcher.incomingCall(any(), anyBoolean()))
+    when(incomingMessageDispatcher.incomingCall(any(), any(), anyBoolean()))
         .thenAnswer(
             (Answer<?>)
                 invocation -> {
@@ -143,7 +143,7 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
     // wait for the message to be dispatched
     latch.await();
 
-    verify(incomingMessageDispatcher, times(1)).incomingCall(any(), anyBoolean());
+    verify(incomingMessageDispatcher, times(1)).incomingCall(any(), any(), anyBoolean());
 
     assertThat(execMessageReplies.size(), is(1));
     assertThat(logMessageInvoker.getRequestsDispatched().get(), is((long) 1));
@@ -193,7 +193,7 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
     latch.await();
 
     // assert number of calls
-    verify(incomingMessageDispatcher, times(msgCount)).incomingCall(any(), anyBoolean());
+    verify(incomingMessageDispatcher, times(msgCount)).incomingCall(any(), any(), anyBoolean());
     assertThat(logMessageInvoker.getRequestsDispatched().get(), is((long) msgCount));
     assertThat(execMessageReplies.size(), is(msgCount));
 

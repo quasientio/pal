@@ -20,30 +20,67 @@
 package net.ittera.pal.messages.types;
 
 public enum MessageType {
-  CONTROL_MESSAGE((byte) 1),
-  EXEC_MESSAGE((byte) 2),
-  INTERCEPT_MESSAGE((byte) 3),
-  INTERCEPT_KEY((byte) 4),
-  INTERCEPT_REPLY((byte) 5);
+  // EXEC (0 - 30)
+  EXEC_CONSTRUCTOR(MessageFamily.EXEC, (byte) 1),
+  EXEC_INSTANCE_METHOD(MessageFamily.EXEC, (byte) 2),
+  EXEC_CLASS_METHOD(MessageFamily.EXEC, (byte) 3),
+  EXEC_GET_STATIC(MessageFamily.EXEC, (byte) 4),
+  EXEC_GET_FIELD(MessageFamily.EXEC, (byte) 5),
+  EXEC_PUT_STATIC(MessageFamily.EXEC, (byte) 6),
+  EXEC_PUT_FIELD(MessageFamily.EXEC, (byte) 7),
+  EXEC_PUT_STATIC_DONE(MessageFamily.EXEC, (byte) 8),
+  EXEC_PUT_FIELD_DONE(MessageFamily.EXEC, (byte) 9),
+  EXEC_THROWABLE(MessageFamily.EXEC, (byte) 10),
+  EXEC_RETURN_VALUE(MessageFamily.EXEC, (byte) 11),
 
-  private final byte idx;
+  // CONTROL (31 - 50)
+  // command messages
+  CONTROL_MESSAGE(MessageFamily.CONTROL, (byte) 31),
+  //  CONTROL_DELETE_OBJECT(MessageFamily.CONTROL, (byte) 32),
+  //  CONTROL_DELETE_SESSION(MessageFamily.CONTROL, (byte) 33),
 
-  MessageType(byte idx) {
-    this.idx = idx;
+  // status (i.e. reply) messages
+  //  CONTROL_OK(MessageFamily.CONTROL, (byte) 41),
+  //  CONTROL_ERROR(MessageFamily.CONTROL, (byte) 42),
+  //  (the following maybe not needed, we could use a generic control_error message with a code and
+  // message)
+  //  CONTROL_UNAUTHORIZED(MessageFamily.CONTROL, (byte) 43),
+  //  CONTROL_UNSUPPORTED_COMMAND(MessageFamily.CONTROL, (byte) 44),
+  //  CONTROL_NO_SUCH_SESSION(MessageFamily.CONTROL, (byte) 45),
+  //  CONTROL_NO_SUCH_OBJECT(MessageFamily.CONTROL, (byte) 46);
+
+  // INTERCEPT (51 - 60)
+  INTERCEPT_MESSAGE(MessageFamily.INTERCEPT, (byte) 51),
+  INTERCEPT_KEY(MessageFamily.INTERCEPT, (byte) 52),
+  INTERCEPT_REPLY(MessageFamily.INTERCEPT, (byte) 53);
+
+  // META (61 - 80)
+
+  private final MessageFamily family;
+  private final byte id;
+
+  MessageType(MessageFamily family, byte id) {
+    this.family = family;
+    this.id = id;
   }
 
-  public static MessageType fromByte(byte messageTypeAsByte) {
-    return switch (messageTypeAsByte) {
-      case 1 -> CONTROL_MESSAGE;
-      case 2 -> EXEC_MESSAGE;
-      case 3 -> INTERCEPT_MESSAGE;
-      case 4 -> INTERCEPT_KEY;
-      case 5 -> INTERCEPT_REPLY;
-      default -> throw new IllegalArgumentException("Unknown message type: " + messageTypeAsByte);
-    };
+  public MessageFamily getFamily() {
+    return family;
   }
 
-  public byte toByte() {
-    return idx;
+  public byte getId() {
+    return id;
+  }
+
+  private static final MessageType[] LOOKUP = new MessageType[256];
+
+  static {
+    for (MessageType type : values()) {
+      LOOKUP[type.id & 0xFF] = type;
+    }
+  }
+
+  public static MessageType fromId(byte id) {
+    return LOOKUP[id & 0xFF];
   }
 }

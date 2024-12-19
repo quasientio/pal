@@ -36,8 +36,6 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
 
   public String messageId;
 
-  public byte execMessageType;
-
   public String threadName;
 
   public String currentTime;
@@ -185,7 +183,6 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
             + (long) this.peerUuid.length() * 3
             + 6
             + (long) this.messageId.length() * 3
-            + 2
             + 6
             + (long) this.threadName.length() * 3
             + 6
@@ -344,13 +341,8 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
         buf[ii] = (byte) size;
       }
 
-      if (this.execMessageType != 0) {
-        buf[i++] = (byte) 2;
-        buf[i++] = this.execMessageType;
-      }
-
       if (!this.threadName.isEmpty()) {
-        buf[i++] = (byte) 3;
+        buf[i++] = (byte) 2;
         int start = ++i;
 
         String s = this.threadName;
@@ -398,7 +390,7 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
       }
 
       if (!this.currentTime.isEmpty()) {
-        buf[i++] = (byte) 4;
+        buf[i++] = (byte) 3;
         int start = ++i;
 
         String s = this.currentTime;
@@ -448,6 +440,23 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
       if (this.dispatchSeq != 0) {
         int x = this.dispatchSeq;
         if ((x & ~((1 << 21) - 1)) != 0) {
+          buf[i++] = (byte) (4 | 0x80);
+          buf[i++] = (byte) (x >>> 24);
+          buf[i++] = (byte) (x >>> 16);
+          buf[i++] = (byte) (x >>> 8);
+        } else {
+          buf[i++] = (byte) 4;
+          while (x > 0x7f) {
+            buf[i++] = (byte) (x | 0x80);
+            x >>>= 7;
+          }
+        }
+        buf[i++] = (byte) x;
+      }
+
+      if (this.builderSeq != 0) {
+        int x = this.builderSeq;
+        if ((x & ~((1 << 21) - 1)) != 0) {
           buf[i++] = (byte) (5 | 0x80);
           buf[i++] = (byte) (x >>> 24);
           buf[i++] = (byte) (x >>> 16);
@@ -462,25 +471,8 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
         buf[i++] = (byte) x;
       }
 
-      if (this.builderSeq != 0) {
-        int x = this.builderSeq;
-        if ((x & ~((1 << 21) - 1)) != 0) {
-          buf[i++] = (byte) (6 | 0x80);
-          buf[i++] = (byte) (x >>> 24);
-          buf[i++] = (byte) (x >>> 16);
-          buf[i++] = (byte) (x >>> 8);
-        } else {
-          buf[i++] = (byte) 6;
-          while (x > 0x7f) {
-            buf[i++] = (byte) (x | 0x80);
-            x >>>= 7;
-          }
-        }
-        buf[i++] = (byte) x;
-      }
-
       if (!this.responseToId.isEmpty()) {
-        buf[i++] = (byte) 7;
+        buf[i++] = (byte) 6;
         int start = ++i;
 
         String s = this.responseToId;
@@ -528,62 +520,62 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
       }
 
       if (this.constructorCall != null) {
-        buf[i++] = (byte) 8;
+        buf[i++] = (byte) 7;
         i = this.constructorCall.marshal(buf, i);
       }
 
       if (this.instanceMethodCall != null) {
-        buf[i++] = (byte) 9;
+        buf[i++] = (byte) 8;
         i = this.instanceMethodCall.marshal(buf, i);
       }
 
       if (this.classMethodCall != null) {
-        buf[i++] = (byte) 10;
+        buf[i++] = (byte) 9;
         i = this.classMethodCall.marshal(buf, i);
       }
 
       if (this.clinitCall != null) {
-        buf[i++] = (byte) 11;
+        buf[i++] = (byte) 10;
         i = this.clinitCall.marshal(buf, i);
       }
 
       if (this.staticFieldGet != null) {
-        buf[i++] = (byte) 12;
+        buf[i++] = (byte) 11;
         i = this.staticFieldGet.marshal(buf, i);
       }
 
       if (this.staticFieldPut != null) {
-        buf[i++] = (byte) 13;
+        buf[i++] = (byte) 12;
         i = this.staticFieldPut.marshal(buf, i);
       }
 
       if (this.instanceFieldGet != null) {
-        buf[i++] = (byte) 14;
+        buf[i++] = (byte) 13;
         i = this.instanceFieldGet.marshal(buf, i);
       }
 
       if (this.instanceFieldPut != null) {
-        buf[i++] = (byte) 15;
+        buf[i++] = (byte) 14;
         i = this.instanceFieldPut.marshal(buf, i);
       }
 
       if (this.staticFieldPutDone != null) {
-        buf[i++] = (byte) 16;
+        buf[i++] = (byte) 15;
         i = this.staticFieldPutDone.marshal(buf, i);
       }
 
       if (this.instanceFieldPutDone != null) {
-        buf[i++] = (byte) 17;
+        buf[i++] = (byte) 16;
         i = this.instanceFieldPutDone.marshal(buf, i);
       }
 
       if (this.raisedThrowable != null) {
-        buf[i++] = (byte) 18;
+        buf[i++] = (byte) 17;
         i = this.raisedThrowable.marshal(buf, i);
       }
 
       if (this.returnValue != null) {
-        buf[i++] = (byte) 19;
+        buf[i++] = (byte) 18;
         i = this.returnValue.marshal(buf, i);
       }
 
@@ -671,11 +663,6 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
       }
 
       if (header == (byte) 2) {
-        this.execMessageType = buf[i++];
-        header = buf[i++];
-      }
-
-      if (header == (byte) 3) {
         int size = 0;
         for (int shift = 0; true; shift += 7) {
           byte b = buf[i++];
@@ -694,7 +681,7 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
         header = buf[i++];
       }
 
-      if (header == (byte) 4) {
+      if (header == (byte) 3) {
         int size = 0;
         for (int shift = 0; true; shift += 7) {
           byte b = buf[i++];
@@ -713,7 +700,7 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
         header = buf[i++];
       }
 
-      if (header == (byte) 5) {
+      if (header == (byte) 4) {
         int x = 0;
         for (int shift = 0; true; shift += 7) {
           byte b = buf[i++];
@@ -722,7 +709,7 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
         }
         this.dispatchSeq = x;
         header = buf[i++];
-      } else if (header == (byte) (5 | 0x80)) {
+      } else if (header == (byte) (4 | 0x80)) {
         this.dispatchSeq =
             (buf[i++] & 0xff) << 24
                 | (buf[i++] & 0xff) << 16
@@ -731,7 +718,7 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
         header = buf[i++];
       }
 
-      if (header == (byte) 6) {
+      if (header == (byte) 5) {
         int x = 0;
         for (int shift = 0; true; shift += 7) {
           byte b = buf[i++];
@@ -740,7 +727,7 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
         }
         this.builderSeq = x;
         header = buf[i++];
-      } else if (header == (byte) (6 | 0x80)) {
+      } else if (header == (byte) (5 | 0x80)) {
         this.builderSeq =
             (buf[i++] & 0xff) << 24
                 | (buf[i++] & 0xff) << 16
@@ -749,7 +736,7 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
         header = buf[i++];
       }
 
-      if (header == (byte) 7) {
+      if (header == (byte) 6) {
         int size = 0;
         for (int shift = 0; true; shift += 7) {
           byte b = buf[i++];
@@ -768,73 +755,73 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
         header = buf[i++];
       }
 
-      if (header == (byte) 8) {
+      if (header == (byte) 7) {
         this.constructorCall = new ConstructorCall();
         i = this.constructorCall.unmarshal(buf, i, end);
         header = buf[i++];
       }
 
-      if (header == (byte) 9) {
+      if (header == (byte) 8) {
         this.instanceMethodCall = new InstanceMethodCall();
         i = this.instanceMethodCall.unmarshal(buf, i, end);
         header = buf[i++];
       }
 
-      if (header == (byte) 10) {
+      if (header == (byte) 9) {
         this.classMethodCall = new ClassMethodCall();
         i = this.classMethodCall.unmarshal(buf, i, end);
         header = buf[i++];
       }
 
-      if (header == (byte) 11) {
+      if (header == (byte) 10) {
         this.clinitCall = new ClInitCall();
         i = this.clinitCall.unmarshal(buf, i, end);
         header = buf[i++];
       }
 
-      if (header == (byte) 12) {
+      if (header == (byte) 11) {
         this.staticFieldGet = new StaticFieldGet();
         i = this.staticFieldGet.unmarshal(buf, i, end);
         header = buf[i++];
       }
 
-      if (header == (byte) 13) {
+      if (header == (byte) 12) {
         this.staticFieldPut = new StaticFieldPut();
         i = this.staticFieldPut.unmarshal(buf, i, end);
         header = buf[i++];
       }
 
-      if (header == (byte) 14) {
+      if (header == (byte) 13) {
         this.instanceFieldGet = new InstanceFieldGet();
         i = this.instanceFieldGet.unmarshal(buf, i, end);
         header = buf[i++];
       }
 
-      if (header == (byte) 15) {
+      if (header == (byte) 14) {
         this.instanceFieldPut = new InstanceFieldPut();
         i = this.instanceFieldPut.unmarshal(buf, i, end);
         header = buf[i++];
       }
 
-      if (header == (byte) 16) {
+      if (header == (byte) 15) {
         this.staticFieldPutDone = new StaticFieldPutDone();
         i = this.staticFieldPutDone.unmarshal(buf, i, end);
         header = buf[i++];
       }
 
-      if (header == (byte) 17) {
+      if (header == (byte) 16) {
         this.instanceFieldPutDone = new InstanceFieldPutDone();
         i = this.instanceFieldPutDone.unmarshal(buf, i, end);
         header = buf[i++];
       }
 
-      if (header == (byte) 18) {
+      if (header == (byte) 17) {
         this.raisedThrowable = new RaisedThrowable();
         i = this.raisedThrowable.unmarshal(buf, i, end);
         header = buf[i++];
       }
 
-      if (header == (byte) 19) {
+      if (header == (byte) 18) {
         this.returnValue = new ReturnValue();
         i = this.returnValue.unmarshal(buf, i, end);
         header = buf[i++];
@@ -856,7 +843,7 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
   }
 
   // {@link Serializable} version number.
-  private static final long serialVersionUID = 20L;
+  private static final long serialVersionUID = 19L;
 
   // {@link Serializable} Colfer extension.
   private void writeObject(ObjectOutputStream out) throws IOException {
@@ -936,35 +923,6 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
    */
   public ExecMessage withMessageId(String value) {
     this.messageId = value;
-    return this;
-  }
-
-  /**
-   * Gets net.ittera.pal.messages/colfer.ExecMessage.execMessageType.
-   *
-   * @return the value.
-   */
-  public byte getExecMessageType() {
-    return this.execMessageType;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.ExecMessage.execMessageType.
-   *
-   * @param value the replacement.
-   */
-  public void setExecMessageType(byte value) {
-    this.execMessageType = value;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.ExecMessage.execMessageType.
-   *
-   * @param value the replacement.
-   * @return {@code this}.
-   */
-  public ExecMessage withExecMessageType(byte value) {
-    this.execMessageType = value;
     return this;
   }
 
@@ -1466,7 +1424,6 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
     int h = 1;
     if (this.peerUuid != null) h = 31 * h + this.peerUuid.hashCode();
     if (this.messageId != null) h = 31 * h + this.messageId.hashCode();
-    h = 31 * h + (this.execMessageType & 0xff);
     if (this.threadName != null) h = 31 * h + this.threadName.hashCode();
     if (this.currentTime != null) h = 31 * h + this.currentTime.hashCode();
     h = 31 * h + this.dispatchSeq;
@@ -1498,7 +1455,6 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
 
     return (this.peerUuid == null ? o.peerUuid == null : this.peerUuid.equals(o.peerUuid))
         && (this.messageId == null ? o.messageId == null : this.messageId.equals(o.messageId))
-        && this.execMessageType == o.execMessageType
         && (this.threadName == null ? o.threadName == null : this.threadName.equals(o.threadName))
         && (this.currentTime == null
             ? o.currentTime == null
@@ -1553,10 +1509,6 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
 
       if (json.has("messageId")) {
         this.messageId = json.get("messageId").getAsString();
-      }
-
-      if (json.has("execMessageType")) {
-        this.execMessageType = json.get("execMessageType").getAsByte();
       }
 
       if (json.has("threadName")) {

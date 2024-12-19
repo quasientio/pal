@@ -30,7 +30,7 @@ import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.core.exec.DispatcherConnector;
 import net.ittera.pal.messages.colfer.ExecMessage;
-import net.ittera.pal.messages.types.ExecMessageType;
+import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 
 @Singleton
@@ -51,13 +51,13 @@ public class SetClassVariableDispatcher extends SetFieldDispatcher {
   }
 
   @Override
-  protected final ExecMessageType getBeforeExecMessageType() {
-    return ExecMessageType.PUT_STATIC;
+  protected final MessageType getBeforeExecMessageType() {
+    return MessageType.EXEC_PUT_STATIC;
   }
 
   @Override
-  protected final ExecMessageType getAfterExecMessageType() {
-    return ExecMessageType.PUT_STATIC_DONE;
+  protected final MessageType getAfterExecMessageType() {
+    return MessageType.EXEC_PUT_STATIC_DONE;
   }
 
   @Override
@@ -82,7 +82,7 @@ public class SetClassVariableDispatcher extends SetFieldDispatcher {
   }
 
   @Override
-  protected ExecMessage wrapAfterExecMessage(
+  protected ExecMessage createAfterExecMessage(
       ExecMessage execMessage,
       Object valueObject,
       ObjectRef valueObjRef,
@@ -95,5 +95,10 @@ public class SetClassVariableDispatcher extends SetFieldDispatcher {
           messageId, accessibleObject, exceptionWhileLoading, exceptionWhileInvoking);
     }
     return messageBuilder.buildPutStaticDone(peerUuid, accessibleObject, messageId, messageId);
+  }
+
+  @Override
+  public MessageType getSupportedMessageType() {
+    return MessageType.EXEC_PUT_STATIC;
   }
 }

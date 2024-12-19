@@ -26,12 +26,12 @@ import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Parameter;
-import net.ittera.pal.messages.types.ExecMessageType;
+import net.ittera.pal.messages.types.MessageType;
 
 public abstract class FieldOpDispatcher extends BaseExecMessageDispatcher {
 
   @Override
-  protected final ExecMessage wrapBeforeExecMessage(
+  protected final ExecMessage createBeforeExecMessage(
       Context ctxt, Object sender, Object target, Object[] args) {
     Object parameter = (args == null || args.length == 0) ? null : args[0];
     return messageBuilder.buildFieldOp(
@@ -46,7 +46,7 @@ public abstract class FieldOpDispatcher extends BaseExecMessageDispatcher {
   }
 
   @Override
-  protected final ExecMessage wrapAfterExecMessage(
+  protected final ExecMessage createAfterExecMessage(
       Context ctxt, Object value, ObjectRef objectRef, boolean isVoid) {
 
     AccessibleObject field = ((FieldSignature) ctxt.getSignature()).getField();
@@ -71,5 +71,5 @@ public abstract class FieldOpDispatcher extends BaseExecMessageDispatcher {
 
   protected abstract boolean returnsVoid();
 
-  protected abstract ExecMessageType getAfterExecMessageType();
+  protected abstract MessageType getAfterExecMessageType();
 }

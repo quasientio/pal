@@ -28,7 +28,7 @@ import java.util.UUID;
 import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.core.exec.DispatcherConnector;
 import net.ittera.pal.messages.colfer.ExecMessage;
-import net.ittera.pal.messages.types.ExecMessageType;
+import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 
 @Singleton
@@ -49,13 +49,13 @@ public class GetClassVariableDispatcher extends GetFieldDispatcher {
   }
 
   @Override
-  protected final ExecMessageType getBeforeExecMessageType() {
-    return ExecMessageType.GET_STATIC;
+  protected final MessageType getBeforeExecMessageType() {
+    return MessageType.EXEC_GET_STATIC;
   }
 
   @Override
-  protected final ExecMessageType getAfterExecMessageType() {
-    return ExecMessageType.RETURN_VALUE;
+  protected final MessageType getAfterExecMessageType() {
+    return MessageType.EXEC_RETURN_VALUE;
   }
 
   @Override
@@ -77,5 +77,10 @@ public class GetClassVariableDispatcher extends GetFieldDispatcher {
       }
       throw e;
     }
+  }
+
+  @Override
+  public MessageType getSupportedMessageType() {
+    return MessageType.EXEC_GET_STATIC;
   }
 }

@@ -20,15 +20,15 @@
 package net.ittera.pal.tools;
 
 import static net.ittera.pal.serdes.colfer.ExecMessageSummaryUtil.getOneLinerSummary;
+import static net.ittera.pal.serdes.jsonrpc.JsonRpcMessageSummaryUtil.getOneLinerSummary;
+import static net.ittera.pal.serdes.jsonrpc.JsonRpcMessageUtils.getMessageType;
 
 import java.util.Locale;
 import javax.annotation.Nullable;
 import net.ittera.pal.messages.LogMessage;
 import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.messages.jsonrpc.JsonRpcMessage;
-import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
-import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
-import net.ittera.pal.messages.types.ExecMessageType;
+import net.ittera.pal.messages.types.MessageFamily;
 import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.jsonrpc.JsonRpcSerializer;
@@ -56,58 +56,33 @@ public class AbstractTool {
   }
 
   protected static String getPeerUuid(Message msg) {
-    final MessageType messageType = MessageType.fromByte(msg.getMessageType());
-    return switch (messageType) {
-      case EXEC_MESSAGE -> msg.getExecMessage().getPeerUuid();
-      case INTERCEPT_MESSAGE -> msg.getInterceptMessage().getPeerUuid();
+    final MessageType messageType = MessageType.fromId(msg.getMessageType());
+    return switch (messageType.getFamily()) {
+      case EXEC -> msg.getExecMessage().getPeerUuid();
+      case INTERCEPT -> msg.getInterceptMessage().getPeerUuid();
       default -> null;
     };
   }
 
   protected static String getMessageId(Message msg) {
-    final MessageType messageType = MessageType.fromByte(msg.getMessageType());
-    return switch (messageType) {
-      case EXEC_MESSAGE -> msg.getExecMessage().getMessageId();
-      case INTERCEPT_MESSAGE -> msg.getInterceptMessage().getMessageId();
+    final MessageType messageType = MessageType.fromId(msg.getMessageType());
+    return switch (messageType.getFamily()) {
+      case EXEC -> msg.getExecMessage().getMessageId();
+      case INTERCEPT -> msg.getInterceptMessage().getMessageId();
       default -> null;
     };
   }
 
-  protected static String getMessageType(Message msg) {
-    final MessageType messageType = MessageType.fromByte(msg.getMessageType());
-    switch (messageType) {
-      case EXEC_MESSAGE -> {
-        ExecMessageType execMessageType =
-            ExecMessageType.fromByte(msg.getExecMessage().getExecMessageType());
-        return execMessageType.name();
-      }
-      case INTERCEPT_MESSAGE -> {
-        return "InterceptMessage";
-      }
-      case INTERCEPT_REPLY -> {
-        return "InterceptReply";
-      }
-      default -> {
-        return null;
-      }
-    }
+  protected static String getMessageTypeName(Message msg) {
+    final MessageType messageType = MessageType.fromId(msg.getMessageType());
+    return messageType.name();
   }
 
-  protected static String getMessageType(JsonRpcMessage message) {
-    if (message instanceof JsonRpcRequest) {
-      return "JSONRPC_REQUEST";
-    } else if (message instanceof JsonRpcResponse) {
-      return "JSONRPC_RESPONSE";
-    } else {
-      return null;
-    }
-  }
-
-  protected static String getMessageType(LogMessage<?> message) {
+  protected static String getMessageTypeName(LogMessage<?> message) {
     if (isBinaryRpc(message)) {
-      return getMessageType((Message) message.getContent());
+      return getMessageTypeName((Message) message.getContent());
     } else if (isJsonRpc(message)) {
-      return getMessageType((JsonRpcMessage) message.getContent());
+      return getMessageType((JsonRpcMessage) message.getContent()).name();
     }
     return null;
   }
@@ -156,17 +131,14 @@ public class AbstractTool {
   protected static String getMessageOneLiner(LogMessage<?> logMessage) {
     if (isBinaryRpc(logMessage)) {
       Message message = (Message) logMessage.getContent();
-      if (message.getMessageType() == MessageType.EXEC_MESSAGE.toByte()) {
+      MessageType messageType = MessageType.fromId(message.getMessageType());
+      if (messageType.getFamily().equals(MessageFamily.EXEC)) {
         return getOneLinerSummary(message.getExecMessage());
       }
       // TODO: Add support for other message types; for now we return the 1-line Json representation
       return ColferUtils.toJson((Message) logMessage.getContent(), false);
     } else if (isJsonRpc(logMessage)) {
-      try {
-        return JsonRpcSerializer.toJson((JsonRpcMessage) logMessage.getContent());
-      } catch (Exception e) {
-        throw new IllegalArgumentException("Failed to serialize JSON-RPC message", e);
-      }
+      return getOneLinerSummary((JsonRpcMessage) logMessage.getContent());
     } else {
       throw new IllegalArgumentException(
           "Unknown message type of class: " + logMessage.getContent().getClass());

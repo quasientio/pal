@@ -50,6 +50,7 @@ import net.ittera.pal.messages.OutboundMsg;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InternalHeader;
 import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.messages.types.SessionCommandType;
 import net.ittera.pal.messages.types.SessionStatusType;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
@@ -77,7 +78,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
   private ExecutorService execService;
   private InterceptMatcher interceptMatcher;
   private DispatcherConnector dispatcherConnector;
-  private final MessageBuilder msgBuilder = new MessageBuilder();
+  private final MessageBuilder messageBuilder = new MessageBuilder();
   private MessagePublisherStub messagePublisherStub;
   private SessionServiceStub sessionServiceStub;
   private InternalHeader writeAheadHeader;
@@ -86,7 +87,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
 
   @Before
   public void setup() throws Exception {
-    this.writeAheadHeader = msgBuilder.buildWriteAheadHeader(peerUuid);
+    this.writeAheadHeader = messageBuilder.buildWriteAheadHeader(peerUuid);
     this.context = createContext();
     this.execService = Executors.newCachedThreadPool();
     PalDirectory mockDirectory = mock(PalDirectory.class);
@@ -94,7 +95,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     when(directoryConnectionProvider.get()).thenReturn(Optional.of(mockDirectory));
     messagesToMatchReceived = new ArrayList<>();
     interceptMatcher = mock(InterceptMatcher.class);
-    when(interceptMatcher.getMatchingIntercepts(any(), any()))
+    when(interceptMatcher.getMatchingIntercepts(any(), any(), any()))
         .thenAnswer(
             (Answer<?>)
                 invocation -> {
@@ -138,7 +139,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     return new DispatcherConnector(
         context,
         peerUuid,
-        msgBuilder,
+        messageBuilder,
         directoryConnectionProvider,
         runOptions,
         interceptMatcher,
@@ -218,8 +219,9 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
         withIntercepts);
     this.dispatcherConnector = initDispatcherConnector(withPublishing, withIntercepts);
     // sends msg and get reply
-    ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
-    ExecMessage returnedMsg = dispatcherConnector.sendExecMessage(msg, ExecPhase.BEFORE);
+    ExecMessage msg = messageBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+    ExecMessage returnedMsg =
+        dispatcherConnector.sendExecMessage(messageBuilder.wrap(msg), ExecPhase.BEFORE);
 
     // should return same message
     assertThat(returnedMsg, is(msg));
@@ -256,9 +258,10 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
 
     // sends messages and get replies
     for (int i = 0; i < messagesToSend; i++) {
-      ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+      ExecMessage msg = messageBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
       sentMessages.add(msg);
-      ExecMessage returnedMsg = dispatcherConnector.sendExecMessage(msg, ExecPhase.BEFORE);
+      ExecMessage returnedMsg =
+          dispatcherConnector.sendExecMessage(messageBuilder.wrap(msg), ExecPhase.BEFORE);
       returnedMessages.add(returnedMsg);
     }
 
@@ -290,8 +293,8 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
         withPublishing,
         withIntercepts);
     this.dispatcherConnector = initDispatcherConnector(withPublishing, withIntercepts);
-    ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
-    dispatcherConnector.writeAhead(msg);
+    ExecMessage msg = messageBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+    dispatcherConnector.writeAhead(msg, MessageType.EXEC_CONSTRUCTOR);
 
     // verify NO messages received by Intercepts service
     assertThat(messagesToMatchReceived.size(), is(0));

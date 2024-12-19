@@ -19,6 +19,8 @@
 
 package net.ittera.pal.core.exec.java;
 
+import static net.ittera.pal.serdes.colfer.ExecMessageUtils.getMessageTypeOf;
+
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -34,7 +36,7 @@ import net.ittera.pal.core.messages.SessionCommandMsg;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Obj;
 import net.ittera.pal.messages.colfer.Parameter;
-import net.ittera.pal.messages.types.ExecMessageType;
+import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.messages.types.SessionCommandType;
 import net.ittera.pal.serdes.Unwrapper;
 import net.ittera.pal.serdes.colfer.ColferUtils;
@@ -56,12 +58,12 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     }
 
     // 1. Wrap message
-    final ExecMessage beforeExecMsg = wrapBeforeExecMessage(ctxt, sender, target, args);
+    final ExecMessage beforeExecMsg = createBeforeExecMessage(ctxt, sender, target, args);
 
     // 2. Send message
     @SuppressWarnings("unused")
     final ExecMessage beforeExecReplyMsg =
-        connector.sendExecMessage(beforeExecMsg, ExecPhase.BEFORE);
+        connector.sendExecMessage(messageBuilder.wrap(beforeExecMsg), ExecPhase.BEFORE);
 
     // TODO if beforeExecReplyMsg != beforeExecMsg, unpack and exec reply msg
 
@@ -81,11 +83,12 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
     // 5. Wrap object or exception
     final ExecMessage afterExecMsg =
-        wrapAfterExecMessage(ctxt, returnValue, objectRef, returnsVoid);
+        createAfterExecMessage(ctxt, returnValue, objectRef, returnsVoid);
 
     // 6. Send object or exception
     @SuppressWarnings("unused")
-    final ExecMessage afterExecReplyMsg = connector.sendExecMessage(afterExecMsg, ExecPhase.AFTER);
+    final ExecMessage afterExecReplyMsg =
+        connector.sendExecMessage(messageBuilder.wrap(afterExecMsg), ExecPhase.AFTER);
 
     // TODO if afterExecReplyMsg != afterExecMsg, unpack exception or return value
 
@@ -125,6 +128,15 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
           isDirect);
     }
 
+    // get type
+    final MessageType messageType = getMessageTypeOf(incomingCall);
+
+    // check if this dispatcher supports the message type
+    if (!getSupportedMessageType().equals(messageType)) {
+      throw new IllegalArgumentException(
+          "Unsupported message type: " + messageType + " for dispatcher: " + this.getClass());
+    }
+
     // TODO: Verify that message is invokable:- Class can be loaded/found - Method or field can be
     // found in class - Params can be unwrapped or loaded (if refs). What if they are remote?
 
@@ -134,7 +146,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
     // message doesn't come from log so we write-ahead before executing
     if (isDirect) {
-      connector.writeAhead(incomingCall);
+      connector.writeAhead(incomingCall, messageType);
     }
 
     Throwable exceptionWhileLoading = null;
@@ -147,7 +159,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     // Loading phase
     try {
       // 1. Extract and load parameter types from message
-      List<Class<?>> parameterTypes = getParameterTypesFromMessage(incomingCall);
+      List<Class<?>> parameterTypes = getParameterTypesFromMessage(incomingCall, messageType);
 
       // 2. Unwrap and load arguments
       args = getArgsFromMessage(incomingCall, parameterTypes);
@@ -215,7 +227,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
     // 10. Wrap object or exception
     final ExecMessage afterExecMsg =
-        wrapAfterExecMessage(
+        createAfterExecMessage(
             incomingCall,
             returnValue,
             objectRef,
@@ -224,7 +236,8 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
             exceptionWhileInvoking);
 
     // 11. Send object or exception, and receive
-    final ExecMessage afterExecReplyMsg = connector.sendExecMessage(afterExecMsg, ExecPhase.AFTER);
+    final ExecMessage afterExecReplyMsg =
+        connector.sendExecMessage(messageBuilder.wrap(afterExecMsg), ExecPhase.AFTER);
 
     // 12. Return received message
     if (logger.isTraceEnabled()) {
@@ -242,21 +255,20 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
    * Extracts parameter types from the message, and loads the classes for each parameter.
    *
    * @param execMessage The message to extract parameter types from
+   * @param messageType The type of the message
    * @return List of loaded classes for each parameter, or null if execMessage is not a call to
    *     constructor/method.
    * @throws ClassNotFoundException if a parameter class cannot be found
    */
-  private List<Class<?>> getParameterTypesFromMessage(ExecMessage execMessage)
-      throws ClassNotFoundException {
+  private List<Class<?>> getParameterTypesFromMessage(
+      ExecMessage execMessage, MessageType messageType) throws ClassNotFoundException {
 
     final List<Class<?>> paramClasses = new ArrayList<>();
     List<Parameter> parameterList = getParameterList(execMessage);
 
-    final ExecMessageType execMessageType =
-        ExecMessageType.fromByte(execMessage.getExecMessageType());
-    if (execMessageType.equals(ExecMessageType.CONSTRUCTOR)
-        || execMessageType.equals(ExecMessageType.CLASS_METHOD)
-        || execMessageType.equals(ExecMessageType.INSTANCE_METHOD)) {
+    if (messageType.equals(MessageType.EXEC_CONSTRUCTOR)
+        || messageType.equals(MessageType.EXEC_CLASS_METHOD)
+        || messageType.equals(MessageType.EXEC_INSTANCE_METHOD)) {
       for (Parameter param : parameterList) {
         if (param.getValue().getClazz() == null
             || param.getValue().getClazz().getName().isEmpty()) {
@@ -367,15 +379,15 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     connector.sendMessageToSessionService(sessionCommandMsg);
   }
 
-  protected abstract ExecMessage wrapBeforeExecMessage(
+  protected abstract ExecMessage createBeforeExecMessage(
       Context ctxt, Object sender, Object target, Object[] args);
 
   // TODO generalize this method, using a Builder method taking Executable's
   // TODO create a Builder.buildVoidReturnValue() method
-  protected abstract ExecMessage wrapAfterExecMessage(
+  protected abstract ExecMessage createAfterExecMessage(
       Context ctxt, Object value, ObjectRef objectRef, boolean isVoid);
 
-  protected abstract ExecMessage wrapAfterExecMessage(
+  protected abstract ExecMessage createAfterExecMessage(
       ExecMessage execMessage,
       Object valueObject,
       ObjectRef valueObjRef,
@@ -401,7 +413,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
   protected abstract boolean returnsVoid(AccessibleObject accessibleObject);
 
-  protected abstract ExecMessageType getBeforeExecMessageType();
+  protected abstract MessageType getBeforeExecMessageType();
 
   protected abstract List<Parameter> getParameterList(ExecMessage execMessage);
 

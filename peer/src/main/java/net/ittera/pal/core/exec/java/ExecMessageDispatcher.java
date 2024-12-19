@@ -20,9 +20,12 @@
 package net.ittera.pal.core.exec.java;
 
 import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.types.MessageType;
 
 public interface ExecMessageDispatcher {
   ExecMessage dispatchIncoming(ExecMessage incomingCall);
 
   ExecMessage dispatchIncoming(ExecMessage incomingCall, boolean isDirect);
+
+  MessageType getSupportedMessageType();
 }

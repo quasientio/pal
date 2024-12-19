@@ -27,14 +27,14 @@ import org.junit.Test;
 public class MessageTypeTest {
 
   @Test
-  public void testToByte() {
+  public void testGetId() {
     MessageType controlMsg = MessageType.CONTROL_MESSAGE;
     MessageType interceptReply = MessageType.INTERCEPT_REPLY;
 
-    byte controlMsgAsByte = controlMsg.toByte();
-    byte interceptReplyMsgAsByte = interceptReply.toByte();
+    byte controlMsgAsByte = controlMsg.getId();
+    byte interceptReplyMsgAsByte = interceptReply.getId();
 
-    assertThat(MessageType.fromByte(controlMsgAsByte), is(MessageType.CONTROL_MESSAGE));
-    assertThat(MessageType.fromByte(interceptReplyMsgAsByte), is(MessageType.INTERCEPT_REPLY));
+    assertThat(MessageType.fromId(controlMsgAsByte), is(MessageType.CONTROL_MESSAGE));
+    assertThat(MessageType.fromId(interceptReplyMsgAsByte), is(MessageType.INTERCEPT_REPLY));
   }
 }

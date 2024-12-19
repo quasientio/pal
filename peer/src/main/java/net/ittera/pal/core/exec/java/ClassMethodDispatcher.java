@@ -35,7 +35,7 @@ import net.ittera.pal.core.exec.DispatcherConnector;
 import net.ittera.pal.core.exec.java.reflect.ReflectionHelper;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Parameter;
-import net.ittera.pal.messages.types.ExecMessageType;
+import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 
 @Singleton
@@ -58,7 +58,7 @@ public class ClassMethodDispatcher extends MethodDispatcher {
   }
 
   @Override
-  protected final ExecMessage wrapBeforeExecMessage(
+  protected final ExecMessage createBeforeExecMessage(
       Context ctxt, Object sender, Object target, Object[] args) {
     return messageBuilder.buildClassMethod(
         peerUuid,
@@ -70,7 +70,7 @@ public class ClassMethodDispatcher extends MethodDispatcher {
   }
 
   @Override
-  protected ExecMessage wrapAfterExecMessage(
+  protected ExecMessage createAfterExecMessage(
       Context ctxt, Object value, ObjectRef objectRef, boolean isVoid) {
 
     final AccessibleObject method = ((MethodSignature) ctxt.getSignature()).getMethod();
@@ -114,8 +114,8 @@ public class ClassMethodDispatcher extends MethodDispatcher {
   }
 
   @Override
-  protected final ExecMessageType getBeforeExecMessageType() {
-    return ExecMessageType.CLASS_METHOD;
+  protected final MessageType getBeforeExecMessageType() {
+    return MessageType.EXEC_CLASS_METHOD;
   }
 
   @Override
@@ -134,5 +134,10 @@ public class ClassMethodDispatcher extends MethodDispatcher {
             Thread.currentThread().getContextClassLoader());
     return reflectionHelper.lookupMethod(
         clazz, args.toArray(), parameterTypes, execMessage.getClassMethodCall().getName());
+  }
+
+  @Override
+  public MessageType getSupportedMessageType() {
+    return MessageType.EXEC_CLASS_METHOD;
   }
 }

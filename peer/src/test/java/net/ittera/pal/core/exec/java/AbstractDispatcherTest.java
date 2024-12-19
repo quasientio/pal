@@ -34,10 +34,10 @@ import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.common.runtime.Dispatcher;
 import net.ittera.pal.core.exec.DispatcherConnector;
 import net.ittera.pal.core.exec.java.reflect.ReflectionHelper;
+import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.junit.After;
 import org.junit.Before;
-import org.mockito.AdditionalAnswers;
 import org.mockito.Mockito;
 
 public abstract class AbstractDispatcherTest {
@@ -80,7 +80,16 @@ public abstract class AbstractDispatcherTest {
     assertThat(objectLookupStore.size(), is(0L));
     dispatcherConnector = mock(DispatcherConnector.class);
     when(dispatcherConnector.sendExecMessage(any(), any()))
-        .then(AdditionalAnswers.returnsFirstArg());
+        .thenAnswer(
+            invocation -> {
+              Object arg = invocation.getArgument(0);
+              if (arg instanceof Message) {
+                return ((Message) arg).getExecMessage();
+              } else {
+                throw new IllegalArgumentException(
+                    "Expected Message, got " + arg.getClass().getName());
+              }
+            });
     when(dispatcherConnector.sendMessageToSessionService(any())).thenReturn(null);
   }
 

@@ -64,10 +64,10 @@ public class OutboundMsgTest {
 
     // with null headers and responseToId
     OutboundMsg msgOut =
-        new OutboundMsg(MessageType.EXEC_MESSAGE, execPhase, null, execMessageId, null, body);
+        new OutboundMsg(MessageType.EXEC_CONSTRUCTOR, execPhase, null, execMessageId, null, body);
 
     // verify getters
-    assertThat(msgOut.getMessageType(), is(MessageType.EXEC_MESSAGE));
+    assertThat(msgOut.getMessageType(), is(MessageType.EXEC_CONSTRUCTOR));
     assertThat(msgOut.getExecPhase(), is(execPhase));
     assertThat(msgOut.getHeaders(), is(nullValue()));
     assertThat(msgOut.getMessageId(), is(execMessageId));
@@ -197,7 +197,7 @@ public class OutboundMsgTest {
 
     OutboundMsg msg1 =
         new OutboundMsg(
-            MessageType.EXEC_MESSAGE,
+            MessageType.EXEC_CONSTRUCTOR,
             ExecPhase.BEFORE,
             headers,
             messageId,
@@ -207,7 +207,7 @@ public class OutboundMsgTest {
     // equal
     assertThat(
         new OutboundMsg(
-            MessageType.EXEC_MESSAGE,
+            MessageType.EXEC_CONSTRUCTOR,
             ExecPhase.BEFORE,
             headers,
             messageId,
@@ -231,7 +231,7 @@ public class OutboundMsgTest {
         Arrays.asList(writeAhead, writeAhead); // just duplicate the header
     assertThat(
         new OutboundMsg(
-            MessageType.EXEC_MESSAGE,
+            MessageType.EXEC_CONSTRUCTOR,
             ExecPhase.BEFORE,
             otherHeaders,
             messageId,
@@ -242,7 +242,7 @@ public class OutboundMsgTest {
     // different message ID
     assertThat(
         new OutboundMsg(
-            MessageType.EXEC_MESSAGE,
+            MessageType.EXEC_CONSTRUCTOR,
             ExecPhase.BEFORE,
             headers,
             UUID.randomUUID().toString(),
@@ -253,7 +253,7 @@ public class OutboundMsgTest {
     // different responseToId
     assertThat(
         new OutboundMsg(
-            MessageType.EXEC_MESSAGE,
+            MessageType.EXEC_CONSTRUCTOR,
             ExecPhase.BEFORE,
             headers,
             messageId,
@@ -264,7 +264,7 @@ public class OutboundMsgTest {
     // different body
     assertThat(
         new OutboundMsg(
-            MessageType.EXEC_MESSAGE,
+            MessageType.EXEC_CONSTRUCTOR,
             ExecPhase.BEFORE,
             headers,
             messageId,

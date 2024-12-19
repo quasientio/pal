@@ -47,7 +47,6 @@ import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InterceptMessage;
 import net.ittera.pal.messages.colfer.InternalHeader;
 import net.ittera.pal.messages.colfer.Message;
-import net.ittera.pal.messages.types.ExecMessageType;
 import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
@@ -141,12 +140,16 @@ public class DispatcherConnector {
         Collections.singletonList(messageBuilder.buildWriteAheadHeader(peerUuid));
   }
 
-  public ExecMessage sendExecMessage(ExecMessage message, ExecPhase execPhase) {
+  public ExecMessage sendExecMessage(Message message, ExecPhase execPhase) {
     return sendExecMessage(message, execPhase, null);
   }
 
   private ExecMessage sendExecMessage(
-      ExecMessage execMessage, ExecPhase execPhase, @Nullable List<InternalHeader> headers) {
+      Message message, ExecPhase execPhase, @Nullable List<InternalHeader> headers) {
+    if (message.getExecMessage() == null) {
+      throw new IllegalArgumentException("ExecMessage is null");
+    }
+    final ExecMessage execMessage = message.getExecMessage();
     if (logger.isTraceEnabled()) {
       logger.trace(
           "sendExecMessage:in w/ execMessage: {}, execPhase: {}\n, headers: {}",
@@ -155,24 +158,25 @@ public class DispatcherConnector {
           headers);
     }
 
-    ExecMessageType execMessageType = ExecMessageType.fromByte(execMessage.getExecMessageType());
+    MessageType messageType = MessageType.fromId(message.getMessageType());
     List<InterceptMessage> matchingIntercepts = null;
 
-    if (runOptions.contains(RunOptions.WITH_INTERCEPTS) && isInterceptableType(execMessageType)) {
+    if (runOptions.contains(RunOptions.WITH_INTERCEPTS) && isInterceptableType(messageType)) {
       // find matching intercepts for execMessage
-      matchingIntercepts = interceptMatcher.getMatchingIntercepts(execMessage, execPhase);
+      matchingIntercepts =
+          interceptMatcher.getMatchingIntercepts(execMessage, messageType, execPhase);
     }
 
     // publish execMessage -- TODO should we in case of intercepts publish it after
     if (runOptions.contains(RunOptions.WITH_TCP_PUB)) {
       final OutboundMsg msg =
           new OutboundMsg(
-              MessageType.EXEC_MESSAGE,
+              messageType,
               execPhase,
               headers,
               execMessage.getMessageId(),
               execMessage.getResponseToId(),
-              messageBuilder.wrap(execMessage));
+              message);
       publishMessage(msg);
     }
 
@@ -251,7 +255,7 @@ public class DispatcherConnector {
     }
   }
 
-  public void writeAhead(ExecMessage message) {
+  public void writeAhead(ExecMessage message, MessageType messageType) {
     if (logger.isDebugEnabled()) {
       logger.debug(
           "writeAhead:in w/ message with id: {},from {}",
@@ -265,7 +269,7 @@ public class DispatcherConnector {
 
     final OutboundMsg msg =
         new OutboundMsg(
-            MessageType.EXEC_MESSAGE,
+            messageType,
             ExecPhase.BEFORE,
             writeAheadHeaders,
             message.getMessageId(),
@@ -378,15 +382,15 @@ public class DispatcherConnector {
     return reqSocket;
   }
 
-  private boolean isInterceptableType(ExecMessageType type) {
+  private boolean isInterceptableType(MessageType type) {
     return switch (type) {
-      case CONSTRUCTOR,
-              INSTANCE_METHOD,
-              CLASS_METHOD,
-              GET_STATIC,
-              GET_FIELD,
-              PUT_STATIC,
-              PUT_FIELD ->
+      case EXEC_CONSTRUCTOR,
+              EXEC_INSTANCE_METHOD,
+              EXEC_CLASS_METHOD,
+              EXEC_GET_STATIC,
+              EXEC_GET_FIELD,
+              EXEC_PUT_STATIC,
+              EXEC_PUT_FIELD ->
           true;
       default -> false;
     };

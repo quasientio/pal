@@ -21,6 +21,7 @@ package net.ittera.pal.serdes.colfer;
 
 import static net.ittera.pal.serdes.colfer.ExecMessageUtils.getClassname;
 import static net.ittera.pal.serdes.colfer.ExecMessageUtils.getExecutableName;
+import static net.ittera.pal.serdes.colfer.ExecMessageUtils.getMessageTypeOf;
 import static net.ittera.pal.serdes.colfer.ExecMessageUtils.getParameterTypes;
 import static net.ittera.pal.serdes.colfer.Wrapper.getWrappedClass;
 import static net.ittera.pal.serdes.colfer.Wrapper.getWrappedContext;
@@ -85,7 +86,6 @@ import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponseReturnValue;
 import net.ittera.pal.messages.types.ControlCommandType;
 import net.ittera.pal.messages.types.ControlStatusType;
-import net.ittera.pal.messages.types.ExecMessageType;
 import net.ittera.pal.messages.types.InternalHeaderType;
 import net.ittera.pal.messages.types.JsonRpcErrorCode;
 import net.ittera.pal.messages.types.MessageType;
@@ -188,12 +188,11 @@ public final class MessageBuilder {
     return params;
   }
 
-  private ExecMessage newWrapper(ExecMessageType msgType, UUID peerUuid, String responseToId) {
+  private ExecMessage newExecMessage(UUID peerUuid, String responseToId) {
     ExecMessage msgWrapper =
         new ExecMessage()
             .withPeerUuid(peerUuid.toString())
             .withMessageId(UUID.randomUUID().toString())
-            .withExecMessageType(msgType.toByte())
             .withThreadName(Thread.currentThread().getName())
             .withDispatchSeq(threadDispatchSequence.get().intValue())
             .withBuilderSeq(threadBuilderSequence.get().getAndIncrement())
@@ -206,8 +205,8 @@ public final class MessageBuilder {
     return msgWrapper;
   }
 
-  private ExecMessage newWrapper(ExecMessageType msgType, UUID peerUuid) {
-    return newWrapper(msgType, peerUuid, null);
+  private ExecMessage newExecMessage(UUID peerUuid) {
+    return newExecMessage(peerUuid, null);
   }
 
   private net.ittera.pal.messages.colfer.Throwable buildThrowableMessage(Throwable throwable) {
@@ -275,7 +274,7 @@ public final class MessageBuilder {
       constructorCall.setClazz(getWrappedClass(className));
     }
 
-    return newWrapper(ExecMessageType.CONSTRUCTOR, peerUuid).withConstructorCall(constructorCall);
+    return newExecMessage(peerUuid).withConstructorCall(constructorCall);
   }
 
   public ExecMessage buildEmptyConstructor(UUID peerUuid, String className) {
@@ -408,7 +407,7 @@ public final class MessageBuilder {
       Object[] args,
       ObjectRef[] argObjRefs) {
 
-    return newWrapper(ExecMessageType.INSTANCE_METHOD, peerUuid)
+    return newExecMessage(peerUuid)
         .withInstanceMethodCall(
             new InstanceMethodCall()
                 .withParameters(createNamedParameters(parameterTypes, args, argObjRefs))
@@ -440,8 +439,7 @@ public final class MessageBuilder {
       instanceMethodCall.setContext(getWrappedContext(context, sender, senderObjRef));
     }
 
-    return newWrapper(ExecMessageType.INSTANCE_METHOD, peerUuid)
-        .withInstanceMethodCall(instanceMethodCall);
+    return newExecMessage(peerUuid).withInstanceMethodCall(instanceMethodCall);
   }
 
   // </editor-fold>
@@ -467,7 +465,7 @@ public final class MessageBuilder {
     if (includeSourceContext) {
       classMethodCall.setContext(getWrappedContext(null, sender, senderObjRef));
     }
-    return newWrapper(ExecMessageType.CLASS_METHOD, peerUuid).withClassMethodCall(classMethodCall);
+    return newExecMessage(peerUuid).withClassMethodCall(classMethodCall);
   }
 
   public ExecMessage buildClassMethod(
@@ -490,7 +488,7 @@ public final class MessageBuilder {
       classMethodCall.setContext(getWrappedContext(context, sender, senderObjRef));
     }
 
-    return newWrapper(ExecMessageType.CLASS_METHOD, peerUuid).withClassMethodCall(classMethodCall);
+    return newExecMessage(peerUuid).withClassMethodCall(classMethodCall);
   }
 
   /**
@@ -548,22 +546,21 @@ public final class MessageBuilder {
 
     final ClassMethodCall classMethodCall = new ClassMethodCall();
     final String fieldParamType;
-    final ExecMessageType otherMessageType =
-        ExecMessageType.fromByte(otherMessage.getExecMessageType());
+    final MessageType otherMessageType = getMessageTypeOf(otherMessage);
 
     Obj valueObj;
     String valueObjectRef;
     switch (otherMessageType) {
-      case CONSTRUCTOR:
+      case EXEC_CONSTRUCTOR:
         classMethodCall.setParameters(otherMessage.getConstructorCall().getParameters());
         break;
-      case INSTANCE_METHOD:
+      case EXEC_INSTANCE_METHOD:
         classMethodCall.setParameters(otherMessage.getInstanceMethodCall().getParameters());
         break;
-      case CLASS_METHOD:
+      case EXEC_CLASS_METHOD:
         classMethodCall.setParameters(otherMessage.getClassMethodCall().getParameters());
         break;
-      case PUT_STATIC:
+      case EXEC_PUT_STATIC:
         fieldParamType = otherMessage.getStaticFieldPut().getField().getClazz().getName();
         valueObj = otherMessage.getStaticFieldPut().getValueObject();
         if (valueObj != null && !valueObj.getRef().isEmpty()) {
@@ -577,7 +574,7 @@ public final class MessageBuilder {
               createParameter(fieldParamType, valueObj, ObjectRef.from(valueObjectRef))
             });
         break;
-      case PUT_FIELD:
+      case EXEC_PUT_FIELD:
         fieldParamType = otherMessage.getInstanceFieldPut().getField().getClazz().getName();
         valueObj = otherMessage.getInstanceFieldPut().getValueObject();
         if (valueObj != null && !valueObj.getRef().isEmpty()) {
@@ -591,12 +588,12 @@ public final class MessageBuilder {
               createParameter(fieldParamType, valueObj, ObjectRef.from(valueObjectRef))
             });
         break;
-      case GET_STATIC:
+      case EXEC_GET_STATIC:
         fieldParamType = otherMessage.getStaticFieldGet().getField().getClazz().getName();
         classMethodCall.setParameters(
             new Parameter[] {createParameter(fieldParamType, null, null)});
         break;
-      case GET_FIELD:
+      case EXEC_GET_FIELD:
         fieldParamType = otherMessage.getInstanceFieldGet().getField().getClazz().getName();
         classMethodCall.setParameters(
             new Parameter[] {createParameter(fieldParamType, null, null)});
@@ -605,7 +602,7 @@ public final class MessageBuilder {
         logger.error("Unsupported msg type: {}", otherMessageType);
     }
 
-    return newWrapper(ExecMessageType.CLASS_METHOD, peerUuid)
+    return newExecMessage(peerUuid)
         .withClassMethodCall(
             classMethodCall.withClazz(getWrappedClass(className)).withName(methodName));
   }
@@ -616,7 +613,7 @@ public final class MessageBuilder {
   public ExecMessage buildFieldOp(
       UUID peerUuid,
       Context context,
-      ExecMessageType execMessageType,
+      MessageType messageType,
       Object sender,
       ObjectRef senderObjRef,
       ObjectRef targetObjRef,
@@ -632,10 +629,10 @@ public final class MessageBuilder {
     net.ittera.pal.messages.colfer.Context ctxt =
         includeSourceContext ? getWrappedContext(context, sender, senderObjRef) : null;
 
-    final ExecMessage execMessage = newWrapper(execMessageType, peerUuid);
+    final ExecMessage execMessage = newExecMessage(peerUuid);
 
-    switch (execMessageType) {
-      case GET_FIELD:
+    switch (messageType) {
+      case EXEC_GET_FIELD:
         execMessage.setInstanceFieldGet(
             new InstanceFieldGet()
                 .withClazz(clazz)
@@ -643,7 +640,7 @@ public final class MessageBuilder {
                 .withField(field)
                 .withContext(ctxt));
         break;
-      case PUT_FIELD:
+      case EXEC_PUT_FIELD:
         execMessage.setInstanceFieldPut(
             new InstanceFieldPut()
                 .withClazz(clazz)
@@ -653,11 +650,11 @@ public final class MessageBuilder {
                     getWrappedObject(arg, fieldSignature.getFieldType().getName(), argObjRef))
                 .withContext(ctxt));
         break;
-      case GET_STATIC:
+      case EXEC_GET_STATIC:
         execMessage.setStaticFieldGet(
             new StaticFieldGet().withClazz(clazz).withField(field).withContext(ctxt));
         break;
-      case PUT_STATIC:
+      case EXEC_PUT_STATIC:
         execMessage.setStaticFieldPut(
             new StaticFieldPut()
                 .withClazz(clazz)
@@ -667,25 +664,25 @@ public final class MessageBuilder {
                 .withContext(ctxt));
         break;
       default:
-        throw new IllegalArgumentException("Unexpected field op type: " + execMessageType);
+        throw new IllegalArgumentException("Unexpected field op type: " + messageType);
     }
 
     return execMessage;
   }
 
   public ExecMessage buildFieldOpDone(
-      UUID peerUuid, AccessibleObject accessibleObject, Context context, ExecMessageType type) {
+      UUID peerUuid, AccessibleObject accessibleObject, Context context, MessageType type) {
 
     final FieldSignature fieldSignature = (FieldSignature) context.getSignature();
-    final ExecMessage execMessage = newWrapper(type, peerUuid);
+    final ExecMessage execMessage = newExecMessage(peerUuid);
     switch (type) {
-      case PUT_FIELD_DONE:
+      case EXEC_PUT_FIELD_DONE:
         execMessage.setInstanceFieldPutDone(
             new InstanceFieldPutDone()
                 .withClazz(getWrappedClass(fieldSignature.getDeclaringType()))
                 .withField(getWrappedField((Field) accessibleObject)));
         break;
-      case PUT_STATIC_DONE:
+      case EXEC_PUT_STATIC_DONE:
         execMessage.setStaticFieldPutDone(
             new StaticFieldPutDone()
                 .withClazz(getWrappedClass(fieldSignature.getDeclaringType()))
@@ -702,9 +699,8 @@ public final class MessageBuilder {
 
   // <editor-fold desc="Static field get messages">
   public ExecMessage buildGetStatic(UUID peerUuid, String className, String fieldName) {
-
     int unknownModifiers = 0;
-    return newWrapper(ExecMessageType.GET_STATIC, peerUuid)
+    return newExecMessage(peerUuid)
         .withStaticFieldGet(
             new StaticFieldGet()
                 .withClazz(getWrappedClass(className))
@@ -716,9 +712,8 @@ public final class MessageBuilder {
   // <editor-fold desc="Instance field get messages">
   public ExecMessage buildGetObject(
       UUID peerUuid, String className, String fieldName, ObjectRef targetObjRef) {
-
     int unknownModifiers = 0;
-    return newWrapper(ExecMessageType.GET_FIELD, peerUuid)
+    return newExecMessage(peerUuid)
         .withInstanceFieldGet(
             new InstanceFieldGet()
                 .withClazz(getWrappedClass(className))
@@ -731,9 +726,8 @@ public final class MessageBuilder {
   // <editor-fold desc="Static field put messages">
   public ExecMessage buildPutStatic(
       UUID peerUuid, String className, String fieldName, String valueClassName, Object value) {
-
     int unknownModifiers = 0;
-    return newWrapper(ExecMessageType.PUT_STATIC, peerUuid)
+    return newExecMessage(peerUuid)
         .withStaticFieldPut(
             new StaticFieldPut()
                 .withClazz(getWrappedClass(className))
@@ -743,9 +737,8 @@ public final class MessageBuilder {
 
   public ExecMessage buildPutStatic(
       UUID peerUuid, String className, String fieldName, ObjectRef valueObjectRef) {
-
     int unknownModifiers = 0;
-    return newWrapper(ExecMessageType.PUT_STATIC, peerUuid)
+    return newExecMessage(peerUuid)
         .withStaticFieldPut(
             new StaticFieldPut()
                 .withClazz(getWrappedClass(className))
@@ -758,8 +751,7 @@ public final class MessageBuilder {
       AccessibleObject accessibleObject,
       String staticFieldPutId,
       String responseToId) {
-
-    return newWrapper(ExecMessageType.PUT_STATIC_DONE, peerUuid, responseToId)
+    return newExecMessage(peerUuid, responseToId)
         .withStaticFieldPutDone(
             new StaticFieldPutDone()
                 .withClazz(getWrappedClass(((Field) accessibleObject).getDeclaringClass()))
@@ -777,9 +769,8 @@ public final class MessageBuilder {
       ObjectRef targetObjRef,
       String valueClassName,
       Object value) {
-
     int unknownModifiers = 0;
-    return newWrapper(ExecMessageType.PUT_FIELD, peerUuid, null)
+    return newExecMessage(peerUuid, null)
         .withInstanceFieldPut(
             new InstanceFieldPut()
                 .withClazz(getWrappedClass(className))
@@ -794,9 +785,8 @@ public final class MessageBuilder {
       String fieldName,
       ObjectRef targetObjRef,
       ObjectRef valueObjectRef) {
-
     int unknownModifiers = 0;
-    return newWrapper(ExecMessageType.PUT_FIELD, peerUuid, null)
+    return newExecMessage(peerUuid, null)
         .withInstanceFieldPut(
             new InstanceFieldPut()
                 .withClazz(getWrappedClass(className))
@@ -810,8 +800,7 @@ public final class MessageBuilder {
       AccessibleObject accessibleObject,
       String instanceFieldPutId,
       String responseToId) {
-
-    return newWrapper(ExecMessageType.PUT_FIELD_DONE, peerUuid, responseToId)
+    return newExecMessage(peerUuid, responseToId)
         .withInstanceFieldPutDone(
             new InstanceFieldPutDone()
                 .withClazz(getWrappedClass(((Field) accessibleObject).getDeclaringClass()))
@@ -869,7 +858,7 @@ public final class MessageBuilder {
       }
     }
 
-    return newWrapper(ExecMessageType.THROWABLE, peerUuid, responseToId)
+    return newExecMessage(peerUuid, responseToId)
         .withRaisedThrowable(raisedThrowable.withThrowable(buildThrowableMessage(exception)));
   }
 
@@ -928,8 +917,7 @@ public final class MessageBuilder {
     }
 
     // set class and getIsVoid
-    return newWrapper(ExecMessageType.RETURN_VALUE, peerUuid, responseToId)
-        .withReturnValue(valueMessage.withIsVoid(isVoid));
+    return newExecMessage(peerUuid, responseToId).withReturnValue(valueMessage.withIsVoid(isVoid));
   }
 
   private static Class<?> getClassOfAccessible(
@@ -1043,12 +1031,12 @@ public final class MessageBuilder {
   }
 
   public InterceptKeyMessage buildInterceptKey(ExecMessage execMessage) {
-
+    MessageType execMessageType = getMessageTypeOf(execMessage);
     final InterceptKeyMessage keyMessage =
         new InterceptKeyMessage()
             .withClazz(getClassname(execMessage))
             .withExecutableName(getExecutableName(execMessage))
-            .withExecMsgType(execMessage.getExecMessageType());
+            .withExecMsgType(execMessageType.getId());
     final List<String> paramTypes = getParameterTypes(execMessage);
     if (paramTypes != null) {
       keyMessage.setParameterTypes(paramTypes.toArray(new String[0]));
@@ -1192,38 +1180,37 @@ public final class MessageBuilder {
       execMessage.setPeerUuid(fromPeerUuid.toString());
     }
     execMessage.setMessageId(jsonRpcRequest.getId());
-    ExecMessageType execMessageType = JsonRpcMessageUtils.getExecMessageType(jsonRpcRequest);
-    execMessage.setExecMessageType(execMessageType.toByte());
+    MessageType messageType = JsonRpcMessageUtils.getMessageType(jsonRpcRequest);
 
     // currentTime is meant for the client to indicate when then message is sent; as we don't have
     // it in a JSON-RPC request, we set it here to the time the message is received
     execMessage.setCurrentTime(dtf.format(ZonedDateTime.now(ZoneOffset.UTC)));
 
     // Create the appropriate ExecMessage call object based on the ExecMessageType
-    switch (execMessageType) {
-      case CONSTRUCTOR:
+    switch (messageType) {
+      case EXEC_CONSTRUCTOR:
         execMessage.setConstructorCall(createConstructorCall(jsonRpcRequest));
         break;
-      case GET_STATIC:
+      case EXEC_GET_STATIC:
         execMessage.setStaticFieldGet(createStaticFieldGet(jsonRpcRequest));
         break;
-      case GET_FIELD:
+      case EXEC_GET_FIELD:
         execMessage.setInstanceFieldGet(createInstanceFieldGet(jsonRpcRequest));
         break;
-      case PUT_STATIC:
+      case EXEC_PUT_STATIC:
         execMessage.setStaticFieldPut(createStaticFieldPut(jsonRpcRequest));
         break;
-      case PUT_FIELD:
+      case EXEC_PUT_FIELD:
         execMessage.setInstanceFieldPut(createInstanceFieldPut(jsonRpcRequest));
         break;
-      case CLASS_METHOD:
+      case EXEC_CLASS_METHOD:
         execMessage.setClassMethodCall(createClassMethodCall(jsonRpcRequest));
         break;
-      case INSTANCE_METHOD:
+      case EXEC_INSTANCE_METHOD:
         execMessage.setInstanceMethodCall(createInstanceMethodCall(jsonRpcRequest));
         break;
       default:
-        throw new IllegalArgumentException("Unsupported ExecMessageType: " + execMessageType);
+        throw new IllegalArgumentException("Unsupported ExecMessageType: " + messageType);
     }
     return wrap(execMessage);
   }
@@ -1234,9 +1221,10 @@ public final class MessageBuilder {
     // Create a JSON-RPC response object
     final JsonRpcResponse jsonRpcResponse = new JsonRpcResponse();
     jsonRpcResponse.setId(requestId);
+    MessageType responseMessageType = getMessageTypeOf(execMessageResponse);
 
-    switch (ExecMessageType.fromByte(execMessageResponse.getExecMessageType())) {
-      case PUT_STATIC_DONE:
+    switch (responseMessageType) {
+      case EXEC_PUT_STATIC_DONE:
         jsonRpcResponse.setResult(
             new JsonRpcResponseReturnValue.Builder()
                 .withIsVoid(true)
@@ -1255,7 +1243,7 @@ public final class MessageBuilder {
                         .build())
                 .build());
         break;
-      case PUT_FIELD_DONE:
+      case EXEC_PUT_FIELD_DONE:
         jsonRpcResponse.setResult(
             new JsonRpcResponseReturnValue.Builder()
                 .withIsVoid(true)
@@ -1274,11 +1262,11 @@ public final class MessageBuilder {
                         .build())
                 .build());
         break;
-      case RETURN_VALUE:
+      case EXEC_RETURN_VALUE:
         jsonRpcResponse.setResult(
             ConversionUtils.toResponseReturnValue(execMessageResponse.getReturnValue()));
         break;
-      case THROWABLE:
+      case EXEC_THROWABLE:
         RaisedThrowable raisedThrowable = execMessageResponse.getRaisedThrowable();
         net.ittera.pal.messages.colfer.Throwable throwable = raisedThrowable.getThrowable();
         Reflectable fromAccessible = raisedThrowable.getFrom();
@@ -1309,8 +1297,7 @@ public final class MessageBuilder {
         break;
       default:
         throw new RuntimeException(
-            "Unexpected response message type: "
-                + ExecMessageType.fromByte(execMessageResponse.getExecMessageType()).name());
+            "Unexpected response message type: " + responseMessageType.name());
     }
     return jsonRpcResponse;
   }
@@ -1412,32 +1399,31 @@ public final class MessageBuilder {
 
   // <editor-fold desc="Message Wrapper">
   public Message wrap(ExecMessage execMessage) {
-    return new Message()
-        .withMessageType(MessageType.EXEC_MESSAGE.toByte())
-        .withExecMessage(execMessage);
+    final MessageType messageType = getMessageTypeOf(execMessage);
+    return new Message().withMessageType(messageType.getId()).withExecMessage(execMessage);
   }
 
   public Message wrap(InterceptMessage interceptMessage) {
     return new Message()
-        .withMessageType(MessageType.INTERCEPT_MESSAGE.toByte())
+        .withMessageType(MessageType.INTERCEPT_MESSAGE.getId())
         .withInterceptMessage(interceptMessage);
   }
 
   public Message wrap(InterceptKeyMessage interceptKeyMessage) {
     return new Message()
-        .withMessageType(MessageType.INTERCEPT_KEY.toByte())
+        .withMessageType(MessageType.INTERCEPT_KEY.getId())
         .withInterceptKeyMessage(interceptKeyMessage);
   }
 
   public Message wrap(InterceptReply interceptReply) {
     return new Message()
-        .withMessageType(MessageType.INTERCEPT_REPLY.toByte())
+        .withMessageType(MessageType.INTERCEPT_REPLY.getId())
         .withInterceptReply(interceptReply);
   }
 
   public Message wrap(ControlMessage controlMessage) {
     return new Message()
-        .withMessageType(MessageType.CONTROL_MESSAGE.toByte())
+        .withMessageType(MessageType.CONTROL_MESSAGE.getId())
         .withControlMessage(controlMessage);
   }
   // </editor-fold>

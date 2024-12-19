@@ -19,6 +19,8 @@
 
 package net.ittera.pal.core.exec.java;
 
+import static net.ittera.pal.serdes.colfer.ExecMessageUtils.getMessageTypeOf;
+
 import com.google.inject.name.Named;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
@@ -36,7 +38,7 @@ import net.ittera.pal.core.RunOptions;
 import net.ittera.pal.core.exec.UnsupportedMessageException;
 import net.ittera.pal.core.messages.PublishedOffsetMsg;
 import net.ittera.pal.messages.colfer.ExecMessage;
-import net.ittera.pal.messages.types.ExecMessageType;
+import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.Unwrapper;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.slf4j.Logger;
@@ -114,7 +116,9 @@ public class SelfCaller {
                       parameters,
                       new ObjectRef[parameterTypes.length]);
               try {
-                replies.add(incomingMessageDispatcher.incomingCall(request, true));
+                replies.add(
+                    incomingMessageDispatcher.incomingCall(
+                        request, MessageType.EXEC_CLASS_METHOD, true));
               } catch (UnsupportedMessageException e) {
                 logger.error("Unsupported message", e);
               }
@@ -193,10 +197,12 @@ public class SelfCaller {
   }
 
   private int getExitValueFromReply(ExecMessage mainReplyMessage) {
-    return switch (ExecMessageType.fromByte(mainReplyMessage.getExecMessageType())) {
-      case RETURN_VALUE, GET_STATIC, GET_FIELD -> getIntFromReturnValue(mainReplyMessage);
+    final MessageType messageType = getMessageTypeOf(mainReplyMessage);
+    return switch (messageType) {
+      case EXEC_RETURN_VALUE, EXEC_GET_STATIC, EXEC_GET_FIELD ->
+          getIntFromReturnValue(mainReplyMessage);
       default -> {
-        logger.error("Unexpected message type: {}", mainReplyMessage.getExecMessageType());
+        logger.error("Unexpected message type: {}", messageType);
         yield DEFAULT_EXIT_VALUE;
       }
     };

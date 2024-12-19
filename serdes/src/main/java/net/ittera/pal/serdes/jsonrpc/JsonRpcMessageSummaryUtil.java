@@ -2,14 +2,14 @@ package net.ittera.pal.serdes.jsonrpc;
 
 import static net.ittera.pal.serdes.jsonrpc.JsonRpcMessageUtils.getClassName;
 import static net.ittera.pal.serdes.jsonrpc.JsonRpcMessageUtils.getFieldName;
+import static net.ittera.pal.serdes.jsonrpc.JsonRpcMessageUtils.getMessageType;
 
 import net.ittera.pal.messages.jsonrpc.Argument;
 import net.ittera.pal.messages.jsonrpc.JsonRpcMessage;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.messages.jsonrpc.ResponseObject;
-import net.ittera.pal.messages.types.JsonRpcRequestType;
-import net.ittera.pal.messages.types.JsonRpcResponseType;
+import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.RpcMessageSummaryUtil;
 
 public class JsonRpcMessageSummaryUtil extends RpcMessageSummaryUtil {
@@ -29,26 +29,28 @@ public class JsonRpcMessageSummaryUtil extends RpcMessageSummaryUtil {
   }
 
   public static String getOneLinerSummary(JsonRpcRequest msg) {
-    JsonRpcRequestType requestType = JsonRpcMessageUtils.getJsonRpcRequestType(msg);
-    return switch (requestType) {
-      case CONSTRUCTOR -> "new " + classname(msg);
-      case INSTANCE_METHOD ->
+    MessageType messageType = getMessageType(msg);
+    return switch (messageType) {
+      case EXEC_CONSTRUCTOR -> "new " + classname(msg);
+      case EXEC_INSTANCE_METHOD ->
           String.format(
               "call %s.%s@%s",
               classname(msg), msg.getParams().getMethod(), msg.getParams().getInstance());
-      case CLASS_METHOD -> String.format("call %s.%s", classname(msg), msg.getParams().getMethod());
-      case GET_STATIC -> String.format("get %s.%s", classname(msg), msg.getParams().getField());
-      case GET_FIELD ->
+      case EXEC_CLASS_METHOD ->
+          String.format("call %s.%s", classname(msg), msg.getParams().getMethod());
+      case EXEC_GET_STATIC ->
+          String.format("get %s.%s", classname(msg), msg.getParams().getField());
+      case EXEC_GET_FIELD ->
           String.format(
               "get %s.%s@%s",
               classname(msg), msg.getParams().getField(), msg.getParams().getInstance());
-      case PUT_STATIC -> {
+      case EXEC_PUT_STATIC -> {
         assert msg.getParams().getValue() != null;
         yield String.format(
             "put %s.%s ⇦ %s",
             classname(msg), msg.getParams().getField(), getObjRepr(msg.getParams().getValue()));
       }
-      case PUT_FIELD -> {
+      case EXEC_PUT_FIELD -> {
         assert msg.getParams().getValue() != null;
         yield String.format(
             "put %s.%s@%s ⇦ %s",
@@ -57,17 +59,17 @@ public class JsonRpcMessageSummaryUtil extends RpcMessageSummaryUtil {
             msg.getParams().getInstance(),
             getObjRepr(msg.getParams().getValue()));
       }
-      default -> throw new IllegalArgumentException("Unsupported request type: " + requestType);
+      default -> throw new IllegalArgumentException("Unsupported request type: " + messageType);
     };
   }
 
   public static String getOneLinerSummary(JsonRpcResponse msg) {
-    JsonRpcResponseType responseType = JsonRpcMessageUtils.getJsonRpcResponseType(msg);
+    MessageType responseType = getMessageType(msg);
     switch (responseType) {
-      case PUT_STATIC_DONE:
-      case PUT_FIELD_DONE:
+      case EXEC_PUT_STATIC_DONE:
+      case EXEC_PUT_FIELD_DONE:
         return String.format("put_done %s.%s", classname(msg), getFieldName(msg).orElse(""));
-      case RETURN_VALUE:
+      case EXEC_RETURN_VALUE:
         assert msg.getResult() != null;
         if (msg.getResult().getIsVoid()) {
           return "return void";
@@ -92,7 +94,7 @@ public class JsonRpcMessageSummaryUtil extends RpcMessageSummaryUtil {
           return String.format(
               "return %s%s", classname(msg), getObjRepr(msg.getResult().getValue()));
         }
-      case ERROR:
+      case EXEC_THROWABLE:
         String message =
             msg.getError() == null
                 ? ""

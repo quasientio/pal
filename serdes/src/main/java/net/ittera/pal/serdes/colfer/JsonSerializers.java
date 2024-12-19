@@ -19,6 +19,8 @@
 
 package net.ittera.pal.serdes.colfer;
 
+import static net.ittera.pal.serdes.colfer.ExecMessageUtils.getMessageTypeOf;
+
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
@@ -61,7 +63,6 @@ import net.ittera.pal.messages.colfer.StaticFieldPutDone;
 import net.ittera.pal.messages.colfer.Throwable;
 import net.ittera.pal.messages.types.ControlCommandType;
 import net.ittera.pal.messages.types.ControlStatusType;
-import net.ittera.pal.messages.types.ExecMessageType;
 import net.ittera.pal.messages.types.InternalHeaderType;
 import net.ittera.pal.messages.types.MessageType;
 import org.slf4j.Logger;
@@ -124,7 +125,7 @@ public class JsonSerializers {
     @Override
     public JsonElement serialize(
         ExecMessage message, Type type, JsonSerializationContext jsonSerializationContext) {
-      ExecMessageType execMessageType = ExecMessageType.fromByte(message.getExecMessageType());
+      MessageType execMessageType = getMessageTypeOf(message);
       final JsonObject jsonElement = new JsonObject();
 
       if (notEmpty(message.peerUuid)) {
@@ -158,50 +159,50 @@ public class JsonSerializers {
       }
 
       switch (execMessageType) {
-        case CONSTRUCTOR:
+        case EXEC_CONSTRUCTOR:
           jsonElement.add(
               "constructor_call", jsonSerializationContext.serialize(message.constructorCall));
           break;
-        case INSTANCE_METHOD:
+        case EXEC_INSTANCE_METHOD:
           jsonElement.add(
               "instance_method_call",
               jsonSerializationContext.serialize(message.instanceMethodCall));
           break;
-        case CLASS_METHOD:
+        case EXEC_CLASS_METHOD:
           jsonElement.add(
               "class_method_call", jsonSerializationContext.serialize(message.classMethodCall));
           break;
-        case GET_STATIC:
+        case EXEC_GET_STATIC:
           jsonElement.add(
               "static_field_get", jsonSerializationContext.serialize(message.staticFieldGet));
           break;
-        case GET_FIELD:
+        case EXEC_GET_FIELD:
           jsonElement.add(
               "instance_field_get", jsonSerializationContext.serialize(message.instanceFieldGet));
           break;
-        case PUT_STATIC:
+        case EXEC_PUT_STATIC:
           jsonElement.add(
               "static_field_put", jsonSerializationContext.serialize(message.staticFieldPut));
           break;
-        case PUT_FIELD:
+        case EXEC_PUT_FIELD:
           jsonElement.add(
               "instance_field_put", jsonSerializationContext.serialize(message.instanceFieldPut));
           break;
-        case PUT_STATIC_DONE:
+        case EXEC_PUT_STATIC_DONE:
           jsonElement.add(
               "static_field_put_done",
               jsonSerializationContext.serialize(message.staticFieldPutDone));
           break;
-        case PUT_FIELD_DONE:
+        case EXEC_PUT_FIELD_DONE:
           jsonElement.add(
               "instance_field_put_done",
               jsonSerializationContext.serialize(message.instanceFieldPutDone));
           break;
-        case THROWABLE:
+        case EXEC_THROWABLE:
           jsonElement.add(
               "raised_throwable", jsonSerializationContext.serialize(message.raisedThrowable));
           break;
-        case RETURN_VALUE:
+        case EXEC_RETURN_VALUE:
           jsonElement.add("return_value", jsonSerializationContext.serialize(message.returnValue));
           break;
         default:
@@ -636,7 +637,7 @@ public class JsonSerializers {
       if (notEmpty(message.clazz)) {
         jsonElement.addProperty("class", message.clazz);
       }
-      final ExecMessageType execMessageType = ExecMessageType.fromByte(message.execMsgType);
+      MessageType execMessageType = MessageType.fromId(message.execMsgType);
       jsonElement.addProperty("exec_message_type", execMessageType.name());
       if (notEmpty(message.executableName)) {
         jsonElement.addProperty("executable_name", message.executableName);
@@ -852,28 +853,35 @@ public class JsonSerializers {
     public JsonElement serialize(
         Message message, Type type, JsonSerializationContext jsonSerializationContext) {
       final JsonObject jsonElement = new JsonObject();
-      final MessageType messageType = MessageType.fromByte(message.messageType);
+      final MessageType messageType = MessageType.fromId(message.messageType);
       jsonElement.addProperty("type", messageType.name());
-      switch (messageType) {
-        case CONTROL_MESSAGE:
+      switch (messageType.getFamily()) {
+        case CONTROL:
           jsonElement.add(
               "control_message", jsonSerializationContext.serialize(message.controlMessage));
           break;
-        case EXEC_MESSAGE:
+        case EXEC:
           jsonElement.add("exec_message", jsonSerializationContext.serialize(message.execMessage));
           break;
-        case INTERCEPT_MESSAGE:
-          jsonElement.add(
-              "intercept_message", jsonSerializationContext.serialize(message.interceptMessage));
-          break;
-        case INTERCEPT_KEY:
-          jsonElement.add(
-              "intercept_key_message",
-              jsonSerializationContext.serialize(message.interceptKeyMessage));
-          break;
-        case INTERCEPT_REPLY:
-          jsonElement.add(
-              "intercept_reply", jsonSerializationContext.serialize(message.interceptReply));
+        case INTERCEPT:
+          switch (messageType) {
+            case INTERCEPT_MESSAGE:
+              jsonElement.add(
+                  "intercept_message",
+                  jsonSerializationContext.serialize(message.interceptMessage));
+              break;
+            case INTERCEPT_KEY:
+              jsonElement.add(
+                  "intercept_key_message",
+                  jsonSerializationContext.serialize(message.interceptKeyMessage));
+              break;
+            case INTERCEPT_REPLY:
+              jsonElement.add(
+                  "intercept_reply", jsonSerializationContext.serialize(message.interceptReply));
+              break;
+            default:
+              logger.error("Unable to serialize message of type: {}", messageType);
+          }
           break;
         default:
           logger.error("Unable to serialize message of type: {}", messageType);

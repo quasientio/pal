@@ -90,7 +90,7 @@ public class MessageStreamerTest {
           while (latch.getCount() > 0) {
             OutboundMsg outboundMsg =
                 new OutboundMsg(
-                    MessageType.EXEC_MESSAGE,
+                    MessageType.EXEC_CONSTRUCTOR,
                     ExecPhase.BEFORE,
                     new ArrayList<>(),
                     UUID.randomUUID().toString(),

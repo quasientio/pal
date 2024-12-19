@@ -65,7 +65,7 @@ public abstract class GetFieldDispatcher extends FieldOpDispatcher {
   }
 
   @Override
-  protected ExecMessage wrapAfterExecMessage(
+  protected ExecMessage createAfterExecMessage(
       ExecMessage execMessage,
       Object valueObject,
       ObjectRef valueObjRef,

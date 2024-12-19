@@ -36,7 +36,6 @@ import net.ittera.pal.common.lang.intercept.InterceptableMethodCall;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.messages.colfer.ReturnValue;
-import net.ittera.pal.messages.types.ExecMessageType;
 import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.Unwrapper;
 import org.junit.Test;
@@ -169,10 +168,7 @@ public class MethodInterceptIT extends AbstractInterceptIT {
     callbacks.forEach(
         callback -> {
           assertThat(callback, is(not(nullValue())));
-          assertThat(callback.getMessageType(), is(MessageType.EXEC_MESSAGE.toByte()));
-          assertThat(
-              callback.getExecMessage().getExecMessageType(),
-              is(ExecMessageType.CLASS_METHOD.toByte()));
+          assertThat(callback.getMessageType(), is(MessageType.EXEC_CLASS_METHOD.getId()));
           assertThat(
               callback.getExecMessage().getClassMethodCall().getClazz().getName(),
               is(callbackClass));

@@ -271,7 +271,7 @@ class LogWriter extends ConnectedService {
 
     // add message description headers
     newRecord.headers().add("message-format", new byte[] {messageFormat.toByte()});
-    newRecord.headers().add("message-type", new byte[] {messageType.toByte()});
+    newRecord.headers().add("message-type", new byte[] {messageType.getId()});
 
     // send the message
     Future<RecordMetadata> sendFuture;

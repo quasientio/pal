@@ -26,7 +26,7 @@ import net.ittera.pal.core.exec.UnsupportedMessageException;
 import net.ittera.pal.messages.colfer.ControlMessage;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.types.ControlCommandType;
-import net.ittera.pal.messages.types.ExecMessageType;
+import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,22 +79,22 @@ public class IncomingMessageDispatcher {
    * Dispatches the incoming message to the corresponding dispatcher.
    *
    * @param execMessage Message to invoke
+   * @param messageType Type of the message
    * @param isDirect true if message comes from this or another peer, false if it comes from a log
    * @return the returnValue message
    */
-  public ExecMessage incomingCall(ExecMessage execMessage, boolean isDirect)
+  public ExecMessage incomingCall(
+      ExecMessage execMessage, MessageType messageType, boolean isDirect)
       throws UnsupportedMessageException {
 
-    final ExecMessageType execMessageType =
-        ExecMessageType.fromByte(execMessage.getExecMessageType());
-    return switch (execMessageType) {
-      case CONSTRUCTOR -> constructorDispatcher.dispatchIncoming(execMessage, isDirect);
-      case INSTANCE_METHOD -> instanceMethodDispatcher.dispatchIncoming(execMessage, isDirect);
-      case CLASS_METHOD -> classMethodDispatcher.dispatchIncoming(execMessage, isDirect);
-      case GET_STATIC -> getClassVariableDispatcher.dispatchIncoming(execMessage, isDirect);
-      case GET_FIELD -> getInstanceVariableDispatcher.dispatchIncoming(execMessage, isDirect);
-      case PUT_STATIC -> setClassVariableDispatcher.dispatchIncoming(execMessage, isDirect);
-      case PUT_FIELD -> setInstanceVariableDispatcher.dispatchIncoming(execMessage, isDirect);
+    return switch (messageType) {
+      case EXEC_CONSTRUCTOR -> constructorDispatcher.dispatchIncoming(execMessage, isDirect);
+      case EXEC_INSTANCE_METHOD -> instanceMethodDispatcher.dispatchIncoming(execMessage, isDirect);
+      case EXEC_CLASS_METHOD -> classMethodDispatcher.dispatchIncoming(execMessage, isDirect);
+      case EXEC_GET_STATIC -> getClassVariableDispatcher.dispatchIncoming(execMessage, isDirect);
+      case EXEC_GET_FIELD -> getInstanceVariableDispatcher.dispatchIncoming(execMessage, isDirect);
+      case EXEC_PUT_STATIC -> setClassVariableDispatcher.dispatchIncoming(execMessage, isDirect);
+      case EXEC_PUT_FIELD -> setInstanceVariableDispatcher.dispatchIncoming(execMessage, isDirect);
       default ->
           throw new UnsupportedMessageException(
               String.format(
