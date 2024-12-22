@@ -74,8 +74,18 @@ public class ExecMessageUtils {
     return switch (execMessageType) {
       case EXEC_PUT_FIELD_DONE -> execMessage.getInstanceFieldPutDone().getField().getName();
       case EXEC_PUT_STATIC_DONE -> execMessage.getStaticFieldPutDone().getField().getName();
-      case EXEC_RETURN_VALUE -> getFromReflectableName(execMessage.getReturnValue().getFrom());
-      case EXEC_THROWABLE -> getFromReflectableName(execMessage.getRaisedThrowable().getFrom());
+      case EXEC_RETURN_VALUE -> {
+        if (execMessage.getReturnValue().getFrom() == null) {
+          yield null;
+        }
+        yield getFromReflectableName(execMessage.getReturnValue().getFrom());
+      }
+      case EXEC_THROWABLE -> {
+        if (execMessage.getRaisedThrowable().getFrom() == null) {
+          yield null;
+        }
+        yield getFromReflectableName(execMessage.getRaisedThrowable().getFrom());
+      }
       default ->
           throw new IllegalArgumentException(
               String.format("Unsupported ExecMessage type: %s", execMessageType));
@@ -87,9 +97,18 @@ public class ExecMessageUtils {
     return switch (execMessageType) {
       case EXEC_PUT_FIELD_DONE -> execMessage.getInstanceFieldPutDone().getClazz().getName();
       case EXEC_PUT_STATIC_DONE -> execMessage.getStaticFieldPutDone().getClass().getName();
-      case EXEC_RETURN_VALUE -> getFromReflectableClassName(execMessage.getReturnValue().getFrom());
-      case EXEC_THROWABLE ->
-          getFromReflectableClassName(execMessage.getRaisedThrowable().getFrom());
+      case EXEC_RETURN_VALUE -> {
+        if (execMessage.getReturnValue().getFrom() == null) {
+          yield null;
+        }
+        yield getFromReflectableClassName(execMessage.getReturnValue().getFrom());
+      }
+      case EXEC_THROWABLE -> {
+        if (execMessage.getRaisedThrowable().getFrom() == null) {
+          yield null;
+        }
+        yield getFromReflectableClassName(execMessage.getRaisedThrowable().getFrom());
+      }
       default ->
           throw new IllegalArgumentException(
               String.format("Unsupported ExecMessage type: %s", execMessageType));
