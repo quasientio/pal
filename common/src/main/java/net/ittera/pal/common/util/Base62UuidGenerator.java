@@ -1,4 +1,4 @@
-package net.ittera.pal.dsl.jsonrpc;
+package net.ittera.pal.common.util;
 
 import java.math.BigInteger;
 import java.util.UUID;
