@@ -104,8 +104,6 @@ public class LogMessage<T> {
         if (jsonRpcMessageType == null) {
           throw new IllegalArgumentException("JSON-RPC message type not found in record headers");
         }
-        headers.put("message-type", jsonRpcMessageType.name());
-
         switch (jsonRpcMessageType) {
           case REQUEST -> {
             String json = new String(data, StandardCharsets.UTF_8);
