@@ -125,7 +125,6 @@ public class JsonSerializers {
     @Override
     public JsonElement serialize(
         ExecMessage message, Type type, JsonSerializationContext jsonSerializationContext) {
-      MessageType execMessageType = getMessageTypeOf(message);
       final JsonObject jsonElement = new JsonObject();
 
       if (notEmpty(message.peerUuid)) {
@@ -135,8 +134,6 @@ public class JsonSerializers {
       if (notEmpty(message.messageId)) {
         jsonElement.addProperty("message_id", message.messageId);
       }
-
-      jsonElement.addProperty("msg_type", execMessageType.name());
 
       if (notEmpty(message.threadName)) {
         jsonElement.addProperty("thread_name", message.threadName);
@@ -158,6 +155,7 @@ public class JsonSerializers {
         jsonElement.addProperty("response_to", message.responseToId);
       }
 
+      MessageType execMessageType = getMessageTypeOf(message);
       switch (execMessageType) {
         case EXEC_CONSTRUCTOR:
           jsonElement.add(
