@@ -66,7 +66,7 @@ import picocli.CommandLine.ParentCommand;
     commandListHeading = "%nCommands:%n")
 public class MessageStreamPrinter extends AbstractPalSubcommand {
 
-  private final Logger logger = LoggerFactory.getLogger(MessageStreamPrinter.class);
+  private static final Logger logger = LoggerFactory.getLogger(MessageStreamPrinter.class);
 
   @ParentCommand PalCommand palCommand;
 
@@ -91,15 +91,17 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
   @Option(
       names = {"--formats"},
       arity = "0..*",
-      description = "format(s) of messages to filter by (BINARY_RPC, JSON_RPC)")
+      split = ",",
+      description = "comma-separated list of message formats to filter by (BINARY_RPC, JSON_RPC)")
   private List<String> msgFormats;
 
   // TODO consider using EnumSet for msgTypes
   @Option(
       names = {"--types"},
       arity = "0..*",
+      split = ",",
       description =
-          "type(s) of messages to filter by ("
+          "comma-separated list of message types to filter by ("
               + "CONSTRUCTOR, INSTANCE_METHOD, CLASS_METHOD,"
               + " GET_STATIC, GET_FIELD,"
               + " PUT_STATIC, PUT_FIELD, PUT_STATIC_DONE, PUT_FIELD_DONE,"
