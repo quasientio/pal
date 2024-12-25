@@ -73,6 +73,7 @@ public class ParamsDeserializerTest {
       Argument value = params.getValue();
       assertNotNull(value);
       Argument empty = new Argument();
+      assertTrue(empty.isNull());
 
       switch (arg) {
         case "{}", "null" -> assertEquals(empty, value);
