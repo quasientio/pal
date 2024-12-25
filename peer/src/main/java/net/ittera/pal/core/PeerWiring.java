@@ -32,8 +32,8 @@ import net.ittera.pal.common.objects.ConcurrentHashMapObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.common.runtime.DispatchForwarder;
 import net.ittera.pal.common.runtime.ProxyDispatcher;
-import net.ittera.pal.core.exec.java.AspectProxyDispatcher;
-import net.ittera.pal.core.exec.java.CustomClassloader;
+import net.ittera.pal.core.rpc.exec.java.AspectProxyDispatcher;
+import net.ittera.pal.core.rpc.exec.java.CustomClassloader;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.slf4j.Logger;
@@ -80,7 +80,7 @@ class PeerWiring extends AbstractModule {
     // use underscore in names to better filter service-related traces
     properties.setProperty("LogReader.service", "Log_Reader");
     properties.setProperty("LogWriter.service", "Log_Writer");
-    properties.setProperty("RpcRequestDispatcher.service", "RPC_Request_Dispatcher");
+    properties.setProperty("ZmqRpcRequestDispatcher.service", "RPC_Request_Dispatcher");
     properties.setProperty("JsonRpcRequestDispatcher.service", "JSONRPC_Request_Dispatcher");
     properties.setProperty("MessagePublisher.service", "Message_Publisher");
     properties.setProperty("Intercepts.service", "Intercepts_Processor");

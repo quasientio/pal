@@ -57,13 +57,13 @@ import net.ittera.pal.common.cli.PalCommand;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.util.Strings;
-import net.ittera.pal.core.exec.InterceptInformer;
-import net.ittera.pal.core.exec.LogMessageExecutor;
-import net.ittera.pal.core.exec.RpcMessageExecutor;
-import net.ittera.pal.core.exec.ThreadPool;
-import net.ittera.pal.core.exec.java.CustomClassloader;
-import net.ittera.pal.core.exec.java.SelfCaller;
-import net.ittera.pal.core.exec.java.reflect.AnnotationsProcessor;
+import net.ittera.pal.core.intercepts.InterceptInformer;
+import net.ittera.pal.core.rpc.LogMessageExecutor;
+import net.ittera.pal.core.rpc.RpcMessageExecutor;
+import net.ittera.pal.core.rpc.ThreadPool;
+import net.ittera.pal.core.rpc.exec.java.CustomClassloader;
+import net.ittera.pal.core.rpc.exec.java.SelfCaller;
+import net.ittera.pal.core.rpc.exec.java.reflect.AnnotationsProcessor;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.cxn.PalDirectory;
 import org.slf4j.Logger;
@@ -741,7 +741,7 @@ public class Main implements Callable<Integer> {
       services.add(injector.getInstance(MessagePublisher.class));
     }
     if (runOptions.contains(RunOptions.WITH_RPC)) {
-      services.add(injector.getInstance(RpcRequestDispatcher.class));
+      services.add(injector.getInstance(ZmqRpcRequestDispatcher.class));
       sessionRequired = true;
     }
     if (runOptions.contains(RunOptions.WITH_JSONRPC)) {
