@@ -1034,7 +1034,7 @@ public class MessageBuilderTest {
     boolean result = true;
 
     InterceptReply interceptReply =
-        messageBuilder.buildInterceptReply(peerUuid, responseToId, result);
+        messageBuilder.buildInterceptReply(peerUuid, responseToId.toString(), result);
 
     assertNotNull(interceptReply);
     assertEquals(peerUuid.toString(), interceptReply.getPeerUuid());
@@ -1754,7 +1754,7 @@ public class MessageBuilderTest {
     boolean result = true;
 
     InterceptReply interceptReply =
-        messageBuilder.buildInterceptReply(peerUuid, responseToId, result);
+        messageBuilder.buildInterceptReply(peerUuid, responseToId.toString(), result);
 
     Message wrappedInterceptReply = messageBuilder.wrap(interceptReply);
 

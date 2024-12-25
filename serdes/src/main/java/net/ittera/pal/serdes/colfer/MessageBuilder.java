@@ -56,6 +56,8 @@ import net.ittera.pal.common.lang.reflect.FieldSignature;
 import net.ittera.pal.common.lang.reflect.MethodSignature;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
+import net.ittera.pal.common.util.Base62UuidGenerator;
+import net.ittera.pal.common.util.IdGenerator;
 import net.ittera.pal.messages.colfer.ClassMethodCall;
 import net.ittera.pal.messages.colfer.ConstructorCall;
 import net.ittera.pal.messages.colfer.ControlMessage;
@@ -111,6 +113,7 @@ public final class MessageBuilder {
       ThreadLocal.withInitial(() -> new AtomicInteger(1));
 
   private boolean includeSourceContext;
+  private final IdGenerator idGenerator = new Base62UuidGenerator();
 
   public MessageBuilder() {}
 
@@ -128,6 +131,10 @@ public final class MessageBuilder {
   // </editor-fold>
 
   // <editor-fold desc="Private Auxiliary methods">
+  private String nextId() {
+    return idGenerator.nextId();
+  }
+
   private Parameter createParameter(String parameterType, Object arg, ObjectRef argObjRef) {
     Object argValue = arg instanceof Obj ? ((Obj) arg).getValue() : arg;
     return new Parameter().withValue(getWrappedObject(argValue, parameterType, argObjRef));
@@ -192,7 +199,7 @@ public final class MessageBuilder {
     ExecMessage msgWrapper =
         new ExecMessage()
             .withPeerUuid(peerUuid.toString())
-            .withMessageId(UUID.randomUUID().toString())
+            .withMessageId(nextId())
             .withThreadName(Thread.currentThread().getName())
             .withDispatchSeq(threadDispatchSequence.get().intValue())
             .withBuilderSeq(threadBuilderSequence.get().getAndIncrement())
@@ -951,7 +958,7 @@ public final class MessageBuilder {
     return new InterceptMessage()
         .withPeerUuid(peerUuid.toString())
         .withInterceptType(type.toByte())
-        .withMessageId(UUID.randomUUID().toString())
+        .withMessageId(nextId())
         .withClazz(className)
         .withMethod(
             new net.ittera.pal.messages.colfer.InterceptableMethod()
@@ -973,7 +980,7 @@ public final class MessageBuilder {
     return new InterceptMessage()
         .withPeerUuid(peerUuid.toString())
         .withInterceptType(type.toByte())
-        .withMessageId(UUID.randomUUID().toString())
+        .withMessageId(nextId())
         .withClazz(className)
         .withField(
             new net.ittera.pal.messages.colfer.InterceptableField()
@@ -1023,10 +1030,10 @@ public final class MessageBuilder {
         .withCallbackMethod(intercept.getCallbackMethod());
   }
 
-  public InterceptReply buildInterceptReply(UUID peerUuid, UUID responseToId, boolean result) {
+  public InterceptReply buildInterceptReply(UUID peerUuid, String responseToId, boolean result) {
     return new InterceptReply()
         .withPeerUuid(peerUuid.toString())
-        .withResponseToId(responseToId.toString())
+        .withResponseToId(responseToId)
         .withResult(result);
   }
 
@@ -1361,7 +1368,7 @@ public final class MessageBuilder {
     final ControlMessage controlMessage =
         new ControlMessage()
             .withFromPeer(fromPeer.toString())
-            .withMessageId(UUID.randomUUID().toString())
+            .withMessageId(nextId())
             .withCommand(ControlCommandType.DELETE_OBJECT.toByte());
 
     if (body != null && !body.isEmpty()) {
@@ -1373,7 +1380,7 @@ public final class MessageBuilder {
   public ControlMessage buildDeleteSessionControlMessage(UUID fromPeer) {
     return new ControlMessage()
         .withFromPeer(fromPeer.toString())
-        .withMessageId(UUID.randomUUID().toString())
+        .withMessageId(nextId())
         .withCommand(ControlCommandType.DELETE_SESSION.toByte());
   }
 
@@ -1382,7 +1389,7 @@ public final class MessageBuilder {
     final ControlMessage controlMessage =
         new ControlMessage()
             .withFromPeer(fromPeerUuid.toString())
-            .withMessageId(UUID.randomUUID().toString())
+            .withMessageId(nextId())
             .withStatus(statusType.toByte());
 
     if (body != null && !body.isEmpty()) {
