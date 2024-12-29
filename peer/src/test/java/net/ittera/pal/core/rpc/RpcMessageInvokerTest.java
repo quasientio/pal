@@ -43,7 +43,6 @@ import net.ittera.pal.core.RunOptions;
 import net.ittera.pal.core.ZmqEnabledTest;
 import net.ittera.pal.core.messages.InboundJsonRpcRequestMsg;
 import net.ittera.pal.core.messages.OutboundJsonRpcResponseMsg;
-import net.ittera.pal.core.rpc.exec.java.IncomingMessageDispatcher;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
@@ -128,7 +127,7 @@ public class RpcMessageInvokerTest extends ZmqEnabledTest {
   }
 
   @Test
-  public void invokeRpcMessage() throws Exception {
+  public void invokeRpcMessage() {
 
     // start invoker thread
     execService.execute(rpcMessageInvoker);
@@ -148,7 +147,8 @@ public class RpcMessageInvokerTest extends ZmqEnabledTest {
     Message replyMsg = new Message();
     replyMsg.unmarshal(rpcDealerSocket.recv(), 0);
 
-    assertThat(rpcMessageInvoker.getRequestsDispatched().get(), is(1L));
+    assertThat(rpcMessageInvoker.getExecRequestsDispatched(), is(1L));
+    assertThat(rpcMessageInvoker.getRequestsDispatched(), is(1L));
     assertThat(listenerReceived.get(), is(1));
     verify(incomingMessageDispatcher, times(1)).incomingCall(any(), any(), anyBoolean());
 
@@ -157,7 +157,7 @@ public class RpcMessageInvokerTest extends ZmqEnabledTest {
   }
 
   @Test
-  public void invokeJsonRpcMessage() throws Exception {
+  public void invokeJsonRpcMessage() {
 
     // start invoker thread
     execService.execute(rpcMessageInvoker);
@@ -195,7 +195,8 @@ public class RpcMessageInvokerTest extends ZmqEnabledTest {
         gson.fromJson(jsonRpcResponseAsString, JsonRpcResponse.class);
 
     // assert number of calls
-    assertThat(rpcMessageInvoker.getRequestsDispatched().get(), is(1L));
+    assertThat(rpcMessageInvoker.getExecRequestsDispatched(), is(1L));
+    assertThat(rpcMessageInvoker.getRequestsDispatched(), is(1L));
     assertThat(listenerReceived.get(), is(1));
     verify(incomingMessageDispatcher, times(1)).incomingCall(any(), any(), anyBoolean());
 
@@ -204,7 +205,7 @@ public class RpcMessageInvokerTest extends ZmqEnabledTest {
   }
 
   @Test
-  public void invokeManyRpcMessages() throws Exception {
+  public void invokeManyRpcMessages() {
 
     // start invoker thread
     execService.execute(rpcMessageInvoker);
@@ -234,7 +235,8 @@ public class RpcMessageInvokerTest extends ZmqEnabledTest {
     }
 
     // assert number of calls
-    assertThat(rpcMessageInvoker.getRequestsDispatched().get(), is((long) msgCount));
+    assertThat(rpcMessageInvoker.getExecRequestsDispatched(), is((long) msgCount));
+    assertThat(rpcMessageInvoker.getRequestsDispatched(), is((long) msgCount));
     assertThat(listenerReceived.get(), is(msgCount));
     verify(incomingMessageDispatcher, times(msgCount)).incomingCall(any(), any(), anyBoolean());
 
@@ -246,7 +248,7 @@ public class RpcMessageInvokerTest extends ZmqEnabledTest {
   }
 
   @Test
-  public void invokeManyJsonRpcMessages() throws Exception {
+  public void invokeManyJsonRpcMessages() {
 
     // start invoker thread
     execService.execute(rpcMessageInvoker);
@@ -285,7 +287,8 @@ public class RpcMessageInvokerTest extends ZmqEnabledTest {
     }
 
     // assert number of calls
-    assertThat(rpcMessageInvoker.getRequestsDispatched().get(), is((long) msgCount));
+    assertThat(rpcMessageInvoker.getExecRequestsDispatched(), is((long) msgCount));
+    assertThat(rpcMessageInvoker.getRequestsDispatched(), is((long) msgCount));
     assertThat(listenerReceived.get(), is(msgCount));
     verify(incomingMessageDispatcher, times(msgCount)).incomingCall(any(), any(), anyBoolean());
   }

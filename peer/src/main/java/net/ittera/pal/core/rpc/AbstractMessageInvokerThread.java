@@ -20,6 +20,7 @@
 package net.ittera.pal.core.rpc;
 
 import static java.lang.String.format;
+import static net.ittera.pal.serdes.colfer.ExecMessageUtils.getMessageId;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -28,13 +29,14 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.annotation.Nullable;
-import net.ittera.pal.core.rpc.exec.java.IncomingMessageDispatcher;
 import net.ittera.pal.messages.colfer.ControlMessage;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InstanceFieldPutDone;
 import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.messages.colfer.MetaMessage;
 import net.ittera.pal.messages.colfer.ReturnValue;
 import net.ittera.pal.messages.colfer.StaticFieldPutDone;
+import net.ittera.pal.messages.types.MessageFamily;
 import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.colfer.JsonSerializers;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
@@ -47,8 +49,12 @@ public abstract class AbstractMessageInvokerThread extends Thread {
 
   protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-  private final AtomicLong requestsDispatched = new AtomicLong(0);
-  private final AtomicLong requestsDismissed = new AtomicLong(0);
+  private final AtomicLong execRequestsDispatched = new AtomicLong(0);
+  private final AtomicLong execRequestErrors = new AtomicLong(0);
+  private final AtomicLong controlRequestsDispatched = new AtomicLong(0);
+  private final AtomicLong controlRequestErrors = new AtomicLong(0);
+  private final AtomicLong metaRequestsDispatched = new AtomicLong(0);
+  private final AtomicLong metaRequestErrors = new AtomicLong(0);
   private final List<MessageDispatchListener> messageDispatchListeners = new ArrayList<>();
 
   // zmq stuff
@@ -61,6 +67,11 @@ public abstract class AbstractMessageInvokerThread extends Thread {
 
   // used to serialize JSON-RPC messages
   protected Gson gson;
+
+  enum DispatchResultType {
+    OK,
+    DISPATCH_ERROR
+  }
 
   AbstractMessageInvokerThread(
       ThreadGroup group,
@@ -111,20 +122,6 @@ public abstract class AbstractMessageInvokerThread extends Thread {
             .create();
   }
 
-  protected final String getMessageId(Message msg) {
-    final ExecMessage execMessage = msg.getExecMessage();
-    if (execMessage != null) {
-      return execMessage.getMessageId();
-    }
-
-    final ControlMessage controlMessage = msg.getControlMessage();
-    if (controlMessage != null) {
-      return controlMessage.getMessageId();
-    }
-
-    return null;
-  }
-
   protected void closeConnections() {
     if (dispatcherConnector != null) {
       try {
@@ -136,10 +133,17 @@ public abstract class AbstractMessageInvokerThread extends Thread {
 
     if (logger.isDebugEnabled()) {
       logger.debug(
-          "Stopped invoker thread: {}, dispatched={} dismissed={}",
+          "Stopped invoker thread: {}"
+              + ", EXEC requests: dispatched={}, errors={}"
+              + "; CONTROL requests dispatched={}, errors={}"
+              + "; META requests dispatched={}, errors={}",
           getName(),
-          requestsDispatched.get(),
-          requestsDismissed.get());
+          getExecRequestsDispatched(),
+          getExecRequestErrors(),
+          getControlRequestsDispatched(),
+          getControlRequestErrors(),
+          getMetaRequestsDispatched(),
+          getMetaRequestErrors());
     }
   }
 
@@ -178,6 +182,13 @@ public abstract class AbstractMessageInvokerThread extends Thread {
       return reply;
     }
 
+    final MetaMessage metaMessage = message.getMetaMessage();
+    if (metaMessage != null) {
+      final Message reply = messageBuilder.wrap(dispatch(message.getMetaMessage()));
+      notifyMessageDispatched(message);
+      return reply;
+    }
+
     throw new IllegalArgumentException(
         format("No dispatch handler for this message type: %s", message));
   }
@@ -185,52 +196,132 @@ public abstract class AbstractMessageInvokerThread extends Thread {
   private ExecMessage dispatch(
       ExecMessage requestMsg, MessageType messageType, @Nullable Long recordOffset) {
     final boolean isDirectRequest = recordOffset == null;
-
     ExecMessage replyMsg;
+    boolean dispatched = false;
     try {
       replyMsg = incomingMessageDispatcher.incomingCall(requestMsg, messageType, isDirectRequest);
-    } catch (UnsupportedMessageException e) {
-      logger.warn("Unsupported incoming message", e);
-      return null;
+      dispatched = true;
+    } finally {
+      DispatchResultType resultType =
+          dispatched ? DispatchResultType.OK : DispatchResultType.DISPATCH_ERROR;
+      endDispatch(MessageFamily.EXEC, resultType);
     }
 
     if (logger.isDebugEnabled()) {
       logger.debug(
-          "Invoker dispatched Exec Message w/uuid: {} and recordOffset: {}, reply uuid: {}",
+          "Invoker successfully dispatched Exec Message w/id: {} and recordOffset: {}, reply id: {}",
           requestMsg.getMessageId(),
           recordOffset,
           replyMsg.getMessageId());
     }
-    updateCounters();
+
     return replyMsg;
   }
 
   private ControlMessage dispatch(ControlMessage controlMsg) {
-    ControlMessage replyMsg = null;
+    boolean dispatched = false;
+    ControlMessage replyMsg;
     try {
       replyMsg = incomingMessageDispatcher.incomingControlMessage(controlMsg);
-    } catch (UnsupportedMessageException e) {
-      logger.warn("Unsupported incoming message", e);
+      dispatched = true;
+    } finally {
+      DispatchResultType resultType =
+          dispatched ? DispatchResultType.OK : DispatchResultType.DISPATCH_ERROR;
+      endDispatch(MessageFamily.CONTROL, resultType);
     }
-    if (replyMsg != null) {
-      if (logger.isDebugEnabled()) {
-        logger.debug(
-            "Invoker dispatched Exec Message w/uuid: {} , reply uuid: {}",
-            controlMsg.getMessageId(),
-            replyMsg.getMessageId());
-      }
-      updateCounters();
+
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          "Invoker successfully dispatched Control Message w/id: {} , reply id: {}",
+          controlMsg.getMessageId(),
+          replyMsg.getMessageId());
     }
     return replyMsg;
   }
 
-  private void updateCounters() {
-    requestsDispatched.getAndIncrement();
+  private MetaMessage dispatch(MetaMessage metaMessage) {
+    boolean dispatched = false;
+    MetaMessage replyMsg;
+    try {
+      replyMsg = incomingMessageDispatcher.incomingMetaMessage(metaMessage);
+      dispatched = true;
+    } finally {
+      DispatchResultType resultType =
+          dispatched ? DispatchResultType.OK : DispatchResultType.DISPATCH_ERROR;
+      endDispatch(MessageFamily.META, resultType);
+    }
+
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          "Invoker successfully dispatched Meta Message w/id: {} , reply id: {}",
+          metaMessage.getMessageId(),
+          replyMsg.getMessageId());
+    }
+    return replyMsg;
+  }
+
+  private void endDispatch(MessageFamily dispatchedMessageType, DispatchResultType resultType) {
+    switch (dispatchedMessageType) {
+      case EXEC:
+        if (resultType.equals(DispatchResultType.OK)) {
+          execRequestsDispatched.getAndIncrement();
+        } else {
+          execRequestErrors.getAndIncrement();
+        }
+        break;
+      case CONTROL:
+        if (resultType.equals(DispatchResultType.OK)) {
+          controlRequestsDispatched.getAndIncrement();
+        } else {
+          controlRequestErrors.getAndIncrement();
+        }
+        break;
+      case META:
+        if (resultType.equals(DispatchResultType.OK)) {
+          metaRequestsDispatched.getAndIncrement();
+        } else {
+          metaRequestErrors.getAndIncrement();
+        }
+        break;
+      default:
+    }
+
+    // reset MessageBuilder's dispatch sequence
     messageBuilder.resetThreadLocalSequence();
   }
 
-  final AtomicLong getRequestsDispatched() {
-    return requestsDispatched;
+  final long getRequestsDispatched() {
+    return getExecRequestsDispatched()
+        + getControlRequestsDispatched()
+        + getMetaRequestsDispatched();
+  }
+
+  final long getExecRequestsDispatched() {
+    return execRequestsDispatched.get();
+  }
+
+  final long getControlRequestsDispatched() {
+    return controlRequestsDispatched.get();
+  }
+
+  final long getMetaRequestsDispatched() {
+    return metaRequestsDispatched.get();
+  }
+
+  final long getRequestErrors() {
+    return getExecRequestErrors() + getControlRequestErrors() + getMetaRequestErrors();
+  }
+
+  final long getExecRequestErrors() {
+    return execRequestErrors.get();
+  }
+
+  final long getControlRequestErrors() {
+    return controlRequestErrors.get();
+  }
+
+  final long getMetaRequestErrors() {
+    return metaRequestErrors.get();
   }
 
   public void addMessageDispatchListener(MessageDispatchListener listener) {

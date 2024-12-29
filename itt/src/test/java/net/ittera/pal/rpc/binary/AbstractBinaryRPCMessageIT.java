@@ -33,14 +33,18 @@ import com.google.inject.name.Names;
 import java.util.Properties;
 import java.util.UUID;
 import net.ittera.pal.AbstractIntegrationTest;
+import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.objects.ConcurrentHashMapObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectRef;
+import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.cxn.ThinPeer;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InstanceFieldPutDone;
+import net.ittera.pal.messages.colfer.MetaMessage;
 import net.ittera.pal.messages.colfer.ReturnValue;
 import net.ittera.pal.messages.colfer.StaticFieldPutDone;
+import net.ittera.pal.messages.types.RpcType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.junit.AfterClass;
@@ -60,6 +64,9 @@ public abstract class AbstractBinaryRPCMessageIT extends AbstractIntegrationTest
 
   @BeforeClass
   public static void initialize() throws Exception {
+    logger.debug("Initializing before tests...");
+    DirectoryConnectionProvider directoryConnectionProvider =
+        new DirectoryConnectionProvider(getPalDirectoryUrl());
 
     // configure wiring
     AbstractModule module =
@@ -82,12 +89,18 @@ public abstract class AbstractBinaryRPCMessageIT extends AbstractIntegrationTest
     final Properties consumerProperties = getKafkaConsumerProperties();
     final Properties producerProperties = getKafkaProducerProperties();
 
+    // find a peer listening with BINARY-RPC enabled
+    PeerInfo rpcPeer =
+        findRpcPeer(RpcType.BINARY_RPC, directoryConnectionProvider)
+            .orElseThrow(() -> new RuntimeException("No peer found with BINARY-RPC enabled"));
     thinPeer =
         new ThinPeer()
             .withUuid(clientId)
-            .withDirectoryUrl(getPalDirectoryUrl())
+            .withDirectoryProvider(directoryConnectionProvider)
             .withConsumerProperties(consumerProperties)
             .withProducerProperties(producerProperties)
+            .withInitialPeer(rpcPeer)
+            .withOutboundRpcType(RpcType.BINARY_RPC)
             .init();
   }
 
@@ -105,7 +118,22 @@ public abstract class AbstractBinaryRPCMessageIT extends AbstractIntegrationTest
       reply = thinPeer.sendAndReceive(message);
     } catch (Exception e) {
       logger.error(
-          "Exception sending/receiving message with id: {}\n{}",
+          "Exception sending/receiving exec message with id: {}\n{}",
+          message.getMessageId(),
+          ColferUtils.format(message),
+          e);
+      throw e;
+    }
+    return reply;
+  }
+
+  protected MetaMessage sendAndReceive(MetaMessage message) throws Exception {
+    MetaMessage reply;
+    try {
+      reply = thinPeer.sendToPeer(message);
+    } catch (Exception e) {
+      logger.error(
+          "Exception sending/receiving meta message with id: {}\n{}",
           message.getMessageId(),
           ColferUtils.format(message),
           e);

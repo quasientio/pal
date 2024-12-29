@@ -12,20 +12,19 @@ public class JsonRpcMessageFactory {
 
   public static JsonRpcRequest buildConstructorCall(
       String id, String type, List<Argument> arguments) {
-    return new JsonRpcRequest.Builder()
+    return JsonRpcRequest.builder()
         .withId(id)
         .withMethod("new")
-        .withParams(new Params.Builder().withType(type).withArgs(arguments).build())
+        .withParams(Params.builder().withType(type).withArgs(arguments).build())
         .build();
   }
 
   public static JsonRpcRequest buildClassMethodCall(
       String id, String type, String method, List<Argument> arguments) {
-    return new JsonRpcRequest.Builder()
+    return JsonRpcRequest.builder()
         .withId(id)
         .withMethod("call")
-        .withParams(
-            new Params.Builder().withType(type).withMethod(method).withArgs(arguments).build())
+        .withParams(Params.builder().withType(type).withMethod(method).withArgs(arguments).build())
         .build();
   }
 
@@ -36,11 +35,11 @@ public class JsonRpcMessageFactory {
 
   public static JsonRpcRequest buildInstanceMethodCall(
       String id, String type, String method, Integer instanceId, List<Argument> arguments) {
-    return new JsonRpcRequest.Builder()
+    return JsonRpcRequest.builder()
         .withId(id)
         .withMethod("call")
         .withParams(
-            new Params.Builder()
+            Params.builder()
                 .withType(type)
                 .withInstance(instanceId)
                 .withMethod(method)
@@ -50,10 +49,10 @@ public class JsonRpcMessageFactory {
   }
 
   public static JsonRpcRequest buildStaticFieldGet(String id, String type, String field) {
-    return new JsonRpcRequest.Builder()
+    return JsonRpcRequest.builder()
         .withId(id)
         .withMethod("get")
-        .withParams(new Params.Builder().withType(type).withField(field).build())
+        .withParams(Params.builder().withType(type).withField(field).build())
         .build();
   }
 
@@ -64,20 +63,20 @@ public class JsonRpcMessageFactory {
 
   public static JsonRpcRequest buildInstanceFieldGet(
       String id, String type, Integer instanceId, String field) {
-    return new JsonRpcRequest.Builder()
+    return JsonRpcRequest.builder()
         .withId(id)
         .withMethod("get")
         .withParams(
-            new Params.Builder().withType(type).withInstance(instanceId).withField(field).build())
+            Params.builder().withType(type).withInstance(instanceId).withField(field).build())
         .build();
   }
 
   public static JsonRpcRequest buildStaticFieldPut(
       String id, String type, String field, Argument value) {
-    return new JsonRpcRequest.Builder()
+    return JsonRpcRequest.builder()
         .withId(id)
         .withMethod("put")
-        .withParams(new Params.Builder().withType(type).withField(field).withValue(value).build())
+        .withParams(Params.builder().withType(type).withField(field).withValue(value).build())
         .build();
   }
 
@@ -88,11 +87,11 @@ public class JsonRpcMessageFactory {
 
   public static JsonRpcRequest buildInstanceFieldPut(
       String id, String type, Integer instanceId, String field, Argument value) {
-    return new JsonRpcRequest.Builder()
+    return JsonRpcRequest.builder()
         .withId(id)
         .withMethod("put")
         .withParams(
-            new Params.Builder()
+            Params.builder()
                 .withType(type)
                 .withInstance(instanceId)
                 .withField(field)

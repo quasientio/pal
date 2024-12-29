@@ -51,6 +51,7 @@ import net.ittera.pal.messages.colfer.InterceptableField;
 import net.ittera.pal.messages.colfer.InterceptableMethod;
 import net.ittera.pal.messages.colfer.InternalHeader;
 import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.messages.colfer.MetaMessage;
 import net.ittera.pal.messages.colfer.Method;
 import net.ittera.pal.messages.colfer.Obj;
 import net.ittera.pal.messages.colfer.Parameter;
@@ -65,6 +66,8 @@ import net.ittera.pal.messages.types.ControlCommandType;
 import net.ittera.pal.messages.types.ControlStatusType;
 import net.ittera.pal.messages.types.InternalHeaderType;
 import net.ittera.pal.messages.types.MessageType;
+import net.ittera.pal.messages.types.MetaServiceType;
+import net.ittera.pal.messages.types.MetaStatusType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -837,6 +840,35 @@ public class JsonSerializers {
       }
       if (notEmpty(message.status)) {
         ControlStatusType statusType = ControlStatusType.fromByte(message.getStatus());
+        jsonElement.addProperty("status", statusType.name());
+      }
+      if (notEmpty(message.body)) {
+        jsonElement.addProperty("body", message.body);
+      }
+      return jsonElement;
+    }
+  }
+
+  public static class MetaMessageSerializer implements JsonSerializer<MetaMessage> {
+    @Override
+    public JsonElement serialize(
+        MetaMessage message, Type type, JsonSerializationContext jsonSerializationContext) {
+      final JsonObject jsonElement = new JsonObject();
+      if (notEmpty(message.fromPeer)) {
+        jsonElement.addProperty("from_peer", message.fromPeer);
+      }
+      if (notEmpty(message.messageId)) {
+        jsonElement.addProperty("message_id", message.messageId);
+      }
+      if (notEmpty(message.service)) {
+        MetaServiceType metaServiceType = MetaServiceType.fromId(message.getService());
+        jsonElement.addProperty("service", metaServiceType.getJsonName());
+      }
+      if (notEmpty(message.params)) {
+        jsonElement.add("params", jsonSerializationContext.serialize(message.params));
+      }
+      if (notEmpty(message.status)) {
+        MetaStatusType statusType = MetaStatusType.fromId(message.getStatus());
         jsonElement.addProperty("status", statusType.name());
       }
       if (notEmpty(message.body)) {

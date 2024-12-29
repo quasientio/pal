@@ -52,9 +52,11 @@ public enum MessageType {
   // INTERCEPT (51 - 60)
   INTERCEPT_MESSAGE(MessageFamily.INTERCEPT, (byte) 51),
   INTERCEPT_KEY(MessageFamily.INTERCEPT, (byte) 52),
-  INTERCEPT_REPLY(MessageFamily.INTERCEPT, (byte) 53);
+  INTERCEPT_REPLY(MessageFamily.INTERCEPT, (byte) 53),
 
   // META (61 - 80)
+  META_MESSAGE_REQUEST(MessageFamily.META, (byte) 60),
+  META_MESSAGE_REPLY(MessageFamily.META, (byte) 61);
 
   private final MessageFamily family;
   private final byte id;

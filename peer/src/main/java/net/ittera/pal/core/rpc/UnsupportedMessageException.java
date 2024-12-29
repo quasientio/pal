@@ -19,7 +19,7 @@
 
 package net.ittera.pal.core.rpc;
 
-public class UnsupportedMessageException extends Exception {
+public class UnsupportedMessageException extends RuntimeException {
 
   public UnsupportedMessageException(String message) {
     super(message);

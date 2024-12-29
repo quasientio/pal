@@ -207,10 +207,10 @@ public class Caller extends AbstractPalSubcommand {
 
     // validate RPC type and endpoint
     if (optionGiven(rpcType)) {
-      if (!rpcType.equals(RpcType.RPC.name()) && !rpcType.equals(RpcType.JSONRPC.name())) {
+      if (!rpcType.equals(RpcType.BINARY_RPC.name()) && !rpcType.equals(RpcType.JSON_RPC.name())) {
         throw new RuntimeException("Invalid RPC type. Must be RPC or JSONRPC.");
       }
-      if (rpcType.equals(RpcType.JSONRPC.name())) {
+      if (rpcType.equals(RpcType.JSON_RPC.name())) {
         if (!optionGiven(peerIdentifier)) {
           throw new RuntimeException("You must specify a peer to talk to when using JSON-RPC.");
         }
@@ -329,10 +329,10 @@ public class Caller extends AbstractPalSubcommand {
         peerInfo = new PeerInfo();
         if (peerAddress.startsWith("tcp://")) {
           peerInfo.setRpcAddress(peerAddress);
-          inferredRpcType = RpcType.RPC;
+          inferredRpcType = RpcType.BINARY_RPC;
         } else if (peerAddress.startsWith("ws://")) {
           peerInfo.setJsonrpcAddress(peerAddress);
-          inferredRpcType = RpcType.JSONRPC;
+          inferredRpcType = RpcType.JSON_RPC;
         } else {
           throw new RuntimeException(
               "Peer address must start with tcp:// (for ZMQ-RPC) or ws:// (for JSON-RPC)");
@@ -379,7 +379,7 @@ public class Caller extends AbstractPalSubcommand {
     int requestsSent = 0;
     start = System.currentTimeMillis();
     List<CompletableFuture<JsonRpcResponse>> jsonRpcResponseFutures = new ArrayList<>();
-    if (inferredRpcType == RpcType.JSONRPC) {
+    if (inferredRpcType == RpcType.JSON_RPC) {
       if (stdinRequests == null || stdinRequests.isEmpty()) {
         // build and send 1 JSON-RPC request from cmd line args
         jsonRpcResponseFutures.add(
@@ -569,10 +569,10 @@ public class Caller extends AbstractPalSubcommand {
       }
     }
     if (listensToRpc) {
-      return RpcType.RPC;
+      return RpcType.BINARY_RPC;
     }
     if (listensToJsonRpc) {
-      return RpcType.JSONRPC;
+      return RpcType.JSON_RPC;
     }
     throw new RuntimeException("Peer does not have any RPC address");
   }

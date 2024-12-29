@@ -22,8 +22,9 @@ package colfer
 type Message struct {
 	messageType uint8
 	// one of
-	controlMessage      ControlMessage
 	execMessage         ExecMessage
+	controlMessage      ControlMessage
+	metaMessage         MetaMessage
 	interceptMessage    InterceptMessage
 	interceptKeyMessage InterceptKeyMessage
 	interceptReply      InterceptReply

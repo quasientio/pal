@@ -111,6 +111,10 @@ public class ResponseObject implements Unwrappable {
         + '}';
   }
 
+  public static Builder builder() {
+    return new Builder();
+  }
+
   public static class Builder {
     private final ResponseObject responseObject = new ResponseObject();
 

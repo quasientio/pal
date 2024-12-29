@@ -26,19 +26,21 @@ public class Params {
     this.type = type;
   }
 
+  @Nullable
   public String getMethod() {
     return method;
   }
 
-  public void setMethod(String method) {
+  public void setMethod(@Nullable String method) {
     this.method = method;
   }
 
+  @Nullable
   public String getField() {
     return field;
   }
 
-  public void setField(String field) {
+  public void setField(@Nullable String field) {
     this.field = field;
   }
 
@@ -56,24 +58,23 @@ public class Params {
   }
 
   public void setArgs(List<Argument> args) {
-    if (args == null) {
-      this.args = new ArrayList<>();
-    } else {
-      this.args = args;
-    }
+    this.args = Objects.requireNonNullElseGet(args, ArrayList::new);
   }
 
+  @Nullable
   public Argument getValue() {
     return value;
   }
 
-  public void setValue(Argument value) {
+  public void setValue(@Nullable Argument value) {
     this.value = value;
   }
 
   @Override
   public boolean equals(Object o) {
-    if (!(o instanceof Params params)) return false;
+    if (!(o instanceof Params params)) {
+      return false;
+    }
     return Objects.equals(type, params.type)
         && Objects.equals(method, params.method)
         && Objects.equals(field, params.field)
@@ -106,6 +107,10 @@ public class Params {
         + ", value="
         + value
         + '}';
+  }
+
+  public static Builder builder() {
+    return new Builder();
   }
 
   public static class Builder {

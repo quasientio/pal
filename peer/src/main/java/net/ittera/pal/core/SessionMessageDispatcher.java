@@ -90,7 +90,7 @@ public class SessionMessageDispatcher {
       default:
         String errorMessage =
             String.format(
-                "Incoming message w/id %s ignored - no handler:%n%s",
+                "Incoming Control message w/id %s ignored - no handler:%n%s",
                 controlMessage.getMessageId(), ColferUtils.format(controlMessage));
         logger.error(errorMessage);
         return messageBuilder.buildControlMessage(

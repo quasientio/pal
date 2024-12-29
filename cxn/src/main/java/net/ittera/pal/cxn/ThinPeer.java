@@ -43,6 +43,7 @@ import net.ittera.pal.messages.LogMessage;
 import net.ittera.pal.messages.colfer.ControlMessage;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.messages.colfer.MetaMessage;
 import net.ittera.pal.messages.jsonrpc.JsonRpcMessage;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
@@ -114,7 +115,7 @@ public class ThinPeer implements AutoCloseable {
   private Socket peerSocket;
   private WsClient wsClient;
   private String rpcAddress;
-  private RpcType outboundRpcType = RpcType.RPC;
+  private RpcType outboundRpcType = RpcType.BINARY_RPC;
   private PeerInfo initialPeer;
   private PeerInfo currentPeer;
   private boolean talkingToPeer;
@@ -362,7 +363,7 @@ public class ThinPeer implements AutoCloseable {
 
     // configure RPC and connect to initial peer if given
     if (allowP2P) {
-      if (outboundRpcType == RpcType.RPC) {
+      if (outboundRpcType == RpcType.BINARY_RPC) {
         if (zmqContextGiven) {
           logger.info("Using given ZMQ context");
         } else {
@@ -428,6 +429,9 @@ public class ThinPeer implements AutoCloseable {
     peerSocket.setIdentity(identityBytes);
     peerSocket.connect(peer.getRpcAddress());
     isZmqSocketConnected = true;
+    if (logger.isDebugEnabled()) {
+      logger.debug("ZMQ socket connected to peer: {}", peer.getUuid());
+    }
   }
 
   private void connectWebSocket(PeerInfo peer) throws URISyntaxException, InterruptedException {
@@ -447,8 +451,7 @@ public class ThinPeer implements AutoCloseable {
 
   public ExecMessage sendAndReceive(ExecMessage message) throws Exception {
     if (logger.isTraceEnabled()) {
-      logger.trace(
-          "sendAndReceiveJsonRpcRequest: in with message: {}", ColferUtils.format(message));
+      logger.trace("sendAndReceive: in with exec message: {}", ColferUtils.format(message));
     }
     assertInitializedAndActive();
 
@@ -482,7 +485,7 @@ public class ThinPeer implements AutoCloseable {
   public CompletableFuture<JsonRpcResponse> sendJsonRpcRequestToPeer(
       Object jsonRpc, String messageId) throws JsonSerializationException {
     if (logger.isTraceEnabled()) {
-      logger.trace("sendAndReceiveJsonRpcRequest: in with jsonRpc: {}", jsonRpc);
+      logger.trace("sendJsonRpcRequestToPeer: in with jsonRpc: {}", jsonRpc);
     }
     assertInitializedAndActive();
 
@@ -822,7 +825,7 @@ public class ThinPeer implements AutoCloseable {
       sendDeleteSessionRequest();
     }
 
-    if (outboundRpcType == RpcType.RPC) {
+    if (outboundRpcType == RpcType.BINARY_RPC) {
       connectZmqSocket(peer);
     } else { // is JSON-RPC
       connectWebSocket(peer);
@@ -833,9 +836,12 @@ public class ThinPeer implements AutoCloseable {
   }
 
   public ExecMessage sendToPeer(ExecMessage message) {
-    assertInitializedAndActive();
     if (logger.isTraceEnabled()) {
-      logger.trace("sendToPeer: in with message: {}", ColferUtils.format(message));
+      logger.trace("sendToPeer: in with exec message: {}", ColferUtils.format(message));
+    }
+    assertInitializedAndActive();
+    if (!talkingToPeer) {
+      throw new IllegalStateException("Not connected to any peer. Cannot send message.");
     }
     // wrap in Message and send to peer
     peerSocket.send(ColferUtils.toBytes(msgBuilder.wrap(message)));
@@ -849,7 +855,7 @@ public class ThinPeer implements AutoCloseable {
     final ExecMessage replyMsg = replyMsgWrapper.getExecMessage();
     if (logger.isDebugEnabled()) {
       logger.debug(
-          "Got reply message to Exec message: {}, waited {} ms",
+          "Got reply message to exec message: {}, waited {} ms",
           ColferUtils.format(replyMsg),
           (waitEnd - waitStart));
     }
@@ -858,9 +864,12 @@ public class ThinPeer implements AutoCloseable {
   }
 
   public ControlMessage sendToPeer(ControlMessage message) {
-    assertInitializedAndActive();
     if (logger.isTraceEnabled()) {
-      logger.trace("in sendToPeer with Control message: {}", ColferUtils.format(message));
+      logger.trace("in sendToPeer with control message: {}", ColferUtils.format(message));
+    }
+    assertInitializedAndActive();
+    if (!talkingToPeer) {
+      throw new IllegalStateException("Not connected to any peer. Cannot send message.");
     }
     // send message request to peer
     peerSocket.send(ColferUtils.toBytes(msgBuilder.wrap(message)));
@@ -874,8 +883,38 @@ public class ThinPeer implements AutoCloseable {
     final ControlMessage replyMsg = replyMsgWrapper.getControlMessage();
     if (logger.isDebugEnabled()) {
       logger.debug(
-          "Got reply to Control message: {}, waited {} ms",
+          "Got reply to control message: {}, waited {} ms",
           ColferUtils.format(replyMsg),
+          (waitEnd - waitStart));
+    }
+
+    return replyMsg;
+  }
+
+  public MetaMessage sendToPeer(MetaMessage message) {
+    if (logger.isTraceEnabled()) {
+      logger.trace("in sendToPeer with meta message: {}", ColferUtils.format(message));
+    }
+    assertInitializedAndActive();
+    if (!talkingToPeer) {
+      throw new IllegalStateException("Not connected to any peer. Cannot send message.");
+    }
+    // send message request to peer
+    if (logger.isTraceEnabled()) {
+      logger.trace("sending...");
+    }
+    peerSocket.send(ColferUtils.toBytes(msgBuilder.wrap(message)));
+    final long waitStart = System.currentTimeMillis();
+    byte[] reply = peerSocket.recv(0);
+    final long waitEnd = System.currentTimeMillis();
+
+    final Message replyMsgWrapper = new Message();
+    replyMsgWrapper.unmarshal(reply, 0);
+    final MetaMessage replyMsg = replyMsgWrapper.getMetaMessage();
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          "Got reply to meta message w/id: {}, waited {} ms",
+          replyMsg.getMessageId(),
           (waitEnd - waitStart));
     }
 
@@ -1145,9 +1184,6 @@ public class ThinPeer implements AutoCloseable {
 
     @Override
     public void onMessage(String message) {
-      if (logger.isDebugEnabled()) {
-        logger.debug("Received message: {}", message);
-      }
       JsonRpcResponse response;
       try {
         response = JsonRpcSerializer.fromJson(message, JsonRpcResponse.class);

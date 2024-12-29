@@ -58,6 +58,10 @@ public class JsonRpcRequest extends JsonRpcMessage {
         + '}';
   }
 
+  public static Builder builder() {
+    return new Builder();
+  }
+
   public static class Builder {
     private final JsonRpcRequest request = new JsonRpcRequest();
 

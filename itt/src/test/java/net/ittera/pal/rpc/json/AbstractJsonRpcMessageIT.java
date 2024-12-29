@@ -35,9 +35,11 @@ import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.cxn.PalDirectory;
 import net.ittera.pal.cxn.ThinPeer;
+import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.messages.types.RpcType;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
+import net.ittera.pal.serdes.jsonrpc.JsonRpcSerializer;
 import net.ittera.pal.serdes.jsonrpc.JsonSerializationException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -55,10 +57,9 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractIntegrationTest
 
   @BeforeClass
   public static void initialize() throws Exception {
-
+    logger.debug("Initializing before tests...");
     directoryConnectionProvider = new DirectoryConnectionProvider(getPalDirectoryUrl());
 
-    logger.debug("Initializing before tests...");
     // configure wiring
     AbstractModule module =
         new AbstractModule() {
@@ -79,14 +80,14 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractIntegrationTest
 
     // find a peer listening with JSON-RPC enabled
     PeerInfo jsonRpcPeer =
-        findRpcPeer(RpcType.JSONRPC, directoryConnectionProvider)
+        findRpcPeer(RpcType.JSON_RPC, directoryConnectionProvider)
             .orElseThrow(() -> new RuntimeException("No peer found with JSON-RPC enabled"));
     thinPeer =
         new ThinPeer()
             .withUuid(clientId)
             .withDirectoryProvider(directoryConnectionProvider)
             .withInitialPeer(jsonRpcPeer)
-            .withOutboundRpcType(RpcType.JSONRPC)
+            .withOutboundRpcType(RpcType.JSON_RPC)
             .init();
   }
 
@@ -104,6 +105,11 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractIntegrationTest
   protected JsonRpcResponse sendAndReceive(String jsonRpcRequest)
       throws ExecutionException, InterruptedException, JsonSerializationException {
     return sendAndReceive(jsonRpcRequest, null);
+  }
+
+  protected JsonRpcResponse sendAndReceive(JsonRpcRequest jsonRpcRequest)
+      throws JsonSerializationException, ExecutionException, InterruptedException {
+    return sendAndReceive(JsonRpcSerializer.toJson(jsonRpcRequest));
   }
 
   /* Include the messageId in order to avoid client-side parsing (by ThinPeer) and

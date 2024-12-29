@@ -17,15 +17,22 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.core.rpc.exec.java;
+package net.ittera.pal.core.rpc;
 
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import net.ittera.pal.core.MetaMessageDispatcher;
 import net.ittera.pal.core.SessionMessageDispatcher;
-import net.ittera.pal.core.rpc.UnsupportedMessageException;
+import net.ittera.pal.core.rpc.exec.java.ClassMethodDispatcher;
+import net.ittera.pal.core.rpc.exec.java.ConstructorDispatcher;
+import net.ittera.pal.core.rpc.exec.java.GetClassVariableDispatcher;
+import net.ittera.pal.core.rpc.exec.java.GetInstanceVariableDispatcher;
+import net.ittera.pal.core.rpc.exec.java.InstanceMethodDispatcher;
+import net.ittera.pal.core.rpc.exec.java.SetClassVariableDispatcher;
+import net.ittera.pal.core.rpc.exec.java.SetInstanceVariableDispatcher;
 import net.ittera.pal.messages.colfer.ControlMessage;
 import net.ittera.pal.messages.colfer.ExecMessage;
-import net.ittera.pal.messages.types.ControlCommandType;
+import net.ittera.pal.messages.colfer.MetaMessage;
 import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import org.slf4j.Logger;
@@ -75,6 +82,11 @@ public class IncomingMessageDispatcher {
   @Inject
   private SessionMessageDispatcher sessionMessageDispatcher;
 
+  // meta message dispatcher
+  @SuppressWarnings("unused")
+  @Inject
+  private MetaMessageDispatcher metaMessageDispatcher;
+
   /**
    * Dispatches the incoming message to the corresponding dispatcher.
    *
@@ -84,8 +96,7 @@ public class IncomingMessageDispatcher {
    * @return the returnValue message
    */
   public ExecMessage incomingCall(
-      ExecMessage execMessage, MessageType messageType, boolean isDirect)
-      throws UnsupportedMessageException {
+      ExecMessage execMessage, MessageType messageType, boolean isDirect) {
 
     return switch (messageType) {
       case EXEC_CONSTRUCTOR -> constructorDispatcher.dispatchIncoming(execMessage, isDirect);
@@ -103,12 +114,11 @@ public class IncomingMessageDispatcher {
     };
   }
 
-  public ControlMessage incomingControlMessage(ControlMessage controlMessage)
-      throws UnsupportedMessageException {
-    final ControlCommandType commandType = ControlCommandType.fromByte(controlMessage.getCommand());
-    return switch (commandType) {
-      case DELETE_OBJECT, DELETE_SESSION ->
-          sessionMessageDispatcher.incomingControlMessage(controlMessage);
-    };
+  public ControlMessage incomingControlMessage(ControlMessage controlMessage) {
+    return sessionMessageDispatcher.incomingControlMessage(controlMessage);
+  }
+
+  public MetaMessage incomingMetaMessage(MetaMessage metaMessage) {
+    return metaMessageDispatcher.incomingMetaMessage(metaMessage);
   }
 }

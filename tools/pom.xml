@@ -95,7 +95,6 @@
                     <artifactSet>
                         <excludes>
                             <exclude>org.aspectj:aspectjtools:*</exclude>
-                            <exclude>com.fasterxml.jackson.*</exclude>
                             <exclude>org.rocksdb:rocksdbjni:*</exclude>
                         </excludes>
                     </artifactSet>

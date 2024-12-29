@@ -7,6 +7,8 @@ import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Predicate;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
+import net.ittera.pal.common.util.Base62UuidGenerator;
+import net.ittera.pal.common.util.IdGenerator;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.cxn.PalDirectory;
 import net.ittera.pal.messages.types.RpcType;
@@ -19,6 +21,7 @@ public abstract class AbstractIntegrationTest {
 
   private static String PAL_DIRECTORY_URL;
   private static String KAFKA_SERVERS;
+  private static final IdGenerator idGenerator = new Base62UuidGenerator();
 
   protected static Properties getKafkaConsumerProperties() throws IOException {
     var properties = new Properties();
@@ -67,7 +70,7 @@ public abstract class AbstractIntegrationTest {
       throws ExecutionException, InterruptedException {
     Predicate<PeerInfo> hasRpcType =
         peerInfo -> {
-          if (rpcType == RpcType.RPC) {
+          if (rpcType == RpcType.BINARY_RPC) {
             return peerInfo.getRpcAddress() != null;
           } else {
             return peerInfo.getJsonrpcAddress() != null;
@@ -84,5 +87,9 @@ public abstract class AbstractIntegrationTest {
     ctxt.setRcvHWM(10000);
     ctxt.setSndHWM(10000);
     return ctxt;
+  }
+
+  protected static String generateId() {
+    return idGenerator.nextId();
   }
 }

@@ -36,6 +36,7 @@ import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.core.PeerException;
 import net.ittera.pal.core.RunOptions;
 import net.ittera.pal.core.messages.PublishedOffsetMsg;
+import net.ittera.pal.core.rpc.IncomingMessageDispatcher;
 import net.ittera.pal.core.rpc.UnsupportedMessageException;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.types.MessageType;

@@ -9,10 +9,9 @@ public class Argument {
   public static final Argument NULL = new Argument();
 
   @Nullable private Object value;
-
   @Nullable private Integer ref;
-
   @Nullable private String type;
+  @Nullable private String name;
 
   public Argument() {}
 
@@ -60,6 +59,15 @@ public class Argument {
     this.type = type;
   }
 
+  @Nullable
+  public String getName() {
+    return name;
+  }
+
+  public void setName(@Nullable String name) {
+    this.name = name;
+  }
+
   public boolean isNull() {
     return value == null && ref == null;
   }
@@ -71,12 +79,13 @@ public class Argument {
     }
     return Objects.equals(value, argument.value)
         && Objects.equals(ref, argument.ref)
-        && Objects.equals(type, argument.type);
+        && Objects.equals(type, argument.type)
+        && Objects.equals(name, argument.name);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(value, ref, type);
+    return Objects.hash(value, ref, type, name);
   }
 
   @Override
@@ -87,12 +96,18 @@ public class Argument {
         + ", type='"
         + type
         + '\''
+        + ", name="
+        + name
         + ", value="
         + value
         + " ("
         + (value != null ? value.getClass().getSimpleName() : "null")
         + ")"
         + '}';
+  }
+
+  public static Builder builder() {
+    return new Builder();
   }
 
   public static class Builder {
@@ -115,6 +130,11 @@ public class Argument {
 
     public Builder withType(@Nullable String type) {
       argument.setType(type);
+      return this;
+    }
+
+    public Builder withName(@Nullable String name) {
+      argument.setName(name);
       return this;
     }
 

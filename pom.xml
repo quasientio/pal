@@ -56,6 +56,8 @@
         <equalsverifier.version>3.16.1</equalsverifier.version>
         <jsr305.version>3.0.2</jsr305.version>
         <java-websocket.version>1.5.7</java-websocket.version>
+        <classgraph.version>4.8.179</classgraph.version>
+        <jackson.version>2.18.1</jackson.version>
         <spring-boot-loader.version>3.2.1</spring-boot-loader.version>
 
         <!-- LOGGING -->
@@ -339,6 +341,11 @@
                 <artifactId>fastjson</artifactId>
                 <version>${fastjson.version}</version>
             </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
 
             <!-- aspectj -->
             <dependency>
@@ -380,10 +387,18 @@
                 <version>${java-websocket.version}</version>
             </dependency>
 
+            <!-- errorprone -->
             <dependency>
                 <groupId>com.google.errorprone</groupId>
                 <artifactId>error_prone_core</artifactId>
                 <version>${errorprone.plugin.version}</version>
+            </dependency>
+
+            <!-- classgraph -->
+            <dependency>
+                <groupId>io.github.classgraph</groupId>
+                <artifactId>classgraph</artifactId>
+                <version>${classgraph.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

@@ -29,6 +29,7 @@ import net.ittera.pal.messages.colfer.ClassMethodCall;
 import net.ittera.pal.messages.colfer.Constructor;
 import net.ittera.pal.messages.colfer.ConstructorCall;
 import net.ittera.pal.messages.colfer.Context;
+import net.ittera.pal.messages.colfer.ControlMessage;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Field;
 import net.ittera.pal.messages.colfer.InstanceFieldGet;
@@ -42,6 +43,7 @@ import net.ittera.pal.messages.colfer.InterceptableField;
 import net.ittera.pal.messages.colfer.InterceptableMethod;
 import net.ittera.pal.messages.colfer.InternalHeader;
 import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.messages.colfer.MetaMessage;
 import net.ittera.pal.messages.colfer.Method;
 import net.ittera.pal.messages.colfer.Obj;
 import net.ittera.pal.messages.colfer.Parameter;
@@ -58,6 +60,7 @@ import net.ittera.pal.serdes.colfer.JsonSerializers.ClassSerializer;
 import net.ittera.pal.serdes.colfer.JsonSerializers.ConstructorCallSerializer;
 import net.ittera.pal.serdes.colfer.JsonSerializers.ConstructorSerializer;
 import net.ittera.pal.serdes.colfer.JsonSerializers.ContextSerializer;
+import net.ittera.pal.serdes.colfer.JsonSerializers.ControlMessageSerializer;
 import net.ittera.pal.serdes.colfer.JsonSerializers.ExecMessageSerializer;
 import net.ittera.pal.serdes.colfer.JsonSerializers.FieldSerializer;
 import net.ittera.pal.serdes.colfer.JsonSerializers.InstanceFieldGetSerializer;
@@ -71,6 +74,7 @@ import net.ittera.pal.serdes.colfer.JsonSerializers.InterceptableFieldSerializer
 import net.ittera.pal.serdes.colfer.JsonSerializers.InterceptableMethodSerializer;
 import net.ittera.pal.serdes.colfer.JsonSerializers.InternalHeaderSerializer;
 import net.ittera.pal.serdes.colfer.JsonSerializers.MessageSerializer;
+import net.ittera.pal.serdes.colfer.JsonSerializers.MetaMessageSerializer;
 import net.ittera.pal.serdes.colfer.JsonSerializers.MethodSerializer;
 import net.ittera.pal.serdes.colfer.JsonSerializers.ObjSerializer;
 import net.ittera.pal.serdes.colfer.JsonSerializers.ParameterSerializer;
@@ -97,6 +101,9 @@ public class ColferUtils {
   private static Gson createJsonPrinter(boolean prettyPrint) {
     final GsonBuilder printerBuilder =
         new GsonBuilder()
+            // Message (wrapper)
+            .registerTypeAdapter(Message.class, new MessageSerializer())
+            // Exec Message
             .registerTypeAdapter(ExecMessage.class, new ExecMessageSerializer())
             .registerTypeAdapter(ConstructorCall.class, new ConstructorCallSerializer())
             .registerTypeAdapter(InstanceMethodCall.class, new InstanceMethodCallSerializer())
@@ -114,9 +121,6 @@ public class ColferUtils {
             .registerTypeAdapter(InternalHeader.class, new InternalHeaderSerializer())
             .registerTypeAdapter(InterceptableMethod.class, new InterceptableMethodSerializer())
             .registerTypeAdapter(InterceptableField.class, new InterceptableFieldSerializer())
-            .registerTypeAdapter(InterceptMessage.class, new InterceptMessageSerializer())
-            .registerTypeAdapter(InterceptKeyMessage.class, new InterceptKeyMessageSerializer())
-            .registerTypeAdapter(InterceptReply.class, new InterceptReplySerializer())
             .registerTypeAdapter(net.ittera.pal.messages.colfer.Class.class, new ClassSerializer())
             .registerTypeAdapter(Obj.class, new ObjSerializer())
             .registerTypeAdapter(Field.class, new FieldSerializer())
@@ -125,7 +129,14 @@ public class ColferUtils {
             .registerTypeAdapter(Reflectable.class, new ReflectableSerializer())
             .registerTypeAdapter(Parameter.class, new ParameterSerializer())
             .registerTypeAdapter(ReturnValue.class, new ReturnValueAdapter())
-            .registerTypeAdapter(Message.class, new MessageSerializer());
+            // Control Message
+            .registerTypeAdapter(ControlMessage.class, new ControlMessageSerializer())
+            // Control Message
+            .registerTypeAdapter(MetaMessage.class, new MetaMessageSerializer())
+            // Intercept
+            .registerTypeAdapter(InterceptMessage.class, new InterceptMessageSerializer())
+            .registerTypeAdapter(InterceptKeyMessage.class, new InterceptKeyMessageSerializer())
+            .registerTypeAdapter(InterceptReply.class, new InterceptReplySerializer());
 
     if (prettyPrint) {
       printerBuilder.setPrettyPrinting();

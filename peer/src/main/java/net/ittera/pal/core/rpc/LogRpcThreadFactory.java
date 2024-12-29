@@ -1,7 +1,6 @@
 package net.ittera.pal.core.rpc;
 
 import java.util.UUID;
-import net.ittera.pal.core.rpc.exec.java.IncomingMessageDispatcher;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.zeromq.ZContext;
 

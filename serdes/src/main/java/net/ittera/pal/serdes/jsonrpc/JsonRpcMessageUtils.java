@@ -169,6 +169,7 @@ public class JsonRpcMessageUtils {
           yield MessageType.EXEC_PUT_FIELD;
         }
       }
+      case "meta" -> MessageType.META_MESSAGE_REQUEST;
       default ->
           throw new IllegalArgumentException("Unsupported method: " + jsonRpcRequest.getMethod());
     };

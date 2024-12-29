@@ -19,10 +19,12 @@
 
 package net.ittera.pal.serdes.colfer;
 
+import static net.ittera.pal.messages.types.MessageType.META_MESSAGE_REPLY;
 import static net.ittera.pal.serdes.colfer.ExecMessageUtils.getClassname;
 import static net.ittera.pal.serdes.colfer.ExecMessageUtils.getExecutableName;
 import static net.ittera.pal.serdes.colfer.ExecMessageUtils.getMessageTypeOf;
 import static net.ittera.pal.serdes.colfer.ExecMessageUtils.getParameterTypes;
+import static net.ittera.pal.serdes.colfer.MetaMessageUtils.getMessageTypeOf;
 import static net.ittera.pal.serdes.colfer.Wrapper.getWrappedClass;
 import static net.ittera.pal.serdes.colfer.Wrapper.getWrappedContext;
 import static net.ittera.pal.serdes.colfer.Wrapper.getWrappedField;
@@ -41,6 +43,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nullable;
@@ -71,6 +74,7 @@ import net.ittera.pal.messages.colfer.InterceptMessage;
 import net.ittera.pal.messages.colfer.InterceptReply;
 import net.ittera.pal.messages.colfer.InternalHeader;
 import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.messages.colfer.MetaMessage;
 import net.ittera.pal.messages.colfer.Obj;
 import net.ittera.pal.messages.colfer.Parameter;
 import net.ittera.pal.messages.colfer.RaisedThrowable;
@@ -86,11 +90,14 @@ import net.ittera.pal.messages.jsonrpc.JsonRpcErrorData;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponseReturnValue;
+import net.ittera.pal.messages.jsonrpc.ResponseObject;
 import net.ittera.pal.messages.types.ControlCommandType;
 import net.ittera.pal.messages.types.ControlStatusType;
 import net.ittera.pal.messages.types.InternalHeaderType;
 import net.ittera.pal.messages.types.JsonRpcErrorCode;
 import net.ittera.pal.messages.types.MessageType;
+import net.ittera.pal.messages.types.MetaServiceType;
+import net.ittera.pal.messages.types.MetaStatusType;
 import net.ittera.pal.serdes.ConversionUtils;
 import net.ittera.pal.serdes.jsonrpc.InvalidJsonRpcParamsException;
 import net.ittera.pal.serdes.jsonrpc.InvalidJsonRpcRequestException;
@@ -1080,7 +1087,8 @@ public final class MessageBuilder {
       } else {
         valueObj = getWrappedObject(arg.getValue(), arg.getType(), null);
       }
-      binaryRpcParams[i] = new Parameter().withValue(valueObj);
+      String paramName = arg.getName() != null ? arg.getName() : "";
+      binaryRpcParams[i] = new Parameter().withName(paramName).withValue(valueObj);
     }
     return binaryRpcParams;
   }
@@ -1222,6 +1230,29 @@ public final class MessageBuilder {
     return wrap(execMessage);
   }
 
+  public Message jsonRpcRequestToMetaMessage(JsonRpcRequest jsonRpcRequest, UUID fromPeerUuid) {
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          "in jsonRpcRequestToMetaMessage with request: {} from peer: {}",
+          jsonRpcRequest,
+          fromPeerUuid);
+    }
+
+    // get service
+    String serviceName = jsonRpcRequest.getParams().getMethod();
+    MetaServiceType metaServiceType = MetaServiceType.fromJsonName(serviceName);
+    if (metaServiceType == null) {
+      throw new IllegalArgumentException("Unknown meta service type: " + serviceName);
+    }
+
+    // get params
+    List<Argument> args = jsonRpcRequest.getParams().getArgs();
+    Parameter[] params = jsonRpcParamsToBinaryRpcParams(args);
+
+    return wrap(
+        buildMetaMessageRequest(fromPeerUuid, jsonRpcRequest.getId(), metaServiceType, params));
+  }
+
   public JsonRpcResponse jsonRpcResponseFromExecMessageReply(ExecMessage execMessageResponse) {
     String requestId = execMessageResponse.getResponseToId();
 
@@ -1306,6 +1337,54 @@ public final class MessageBuilder {
         throw new RuntimeException(
             "Unexpected response message type: " + responseMessageType.name());
     }
+    return jsonRpcResponse;
+  }
+
+  public JsonRpcResponse jsonRpcResponseFromMetaMessageReply(MetaMessage metaMessageResponse) {
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          "in jsonRpcResponseFromMetaMessageReply with MetaMessage w/id: {}",
+          metaMessageResponse.getMessageId());
+    }
+
+    // Create a JSON-RPC response object
+    final JsonRpcResponse jsonRpcResponse = new JsonRpcResponse();
+    jsonRpcResponse.setId(metaMessageResponse.getMessageId());
+
+    MessageType responseMessageType = getMessageTypeOf(metaMessageResponse);
+    if (!responseMessageType.equals(META_MESSAGE_REPLY)) {
+      throw new IllegalArgumentException(
+          "Unexpected response message type: " + responseMessageType);
+    }
+
+    MetaStatusType statusType = MetaStatusType.fromId(metaMessageResponse.getStatus());
+    switch (statusType) {
+      case OK:
+        jsonRpcResponse.setResult(
+            JsonRpcResponseReturnValue.builder()
+                .withValue(
+                    ResponseObject.builder().withValue(metaMessageResponse.getBody()).build())
+                .build());
+        break;
+      case UNSUPPORTED:
+        jsonRpcResponse.setError(
+            new JsonRpcError(
+                JsonRpcErrorCode.METHOD_NOT_FOUND.getCode(),
+                JsonRpcErrorCode.METHOD_NOT_FOUND.getMessage()));
+        break;
+      case ERROR:
+        String errorMessage = metaMessageResponse.getBody();
+        jsonRpcResponse.setError(
+            new JsonRpcError(
+                JsonRpcErrorCode.SERVER_ERROR.getCode(),
+                JsonRpcErrorCode.SERVER_ERROR.getMessage(),
+                JsonRpcErrorData.builder().withMessage(errorMessage).build()));
+        break;
+      case UNAUTHORIZED:
+      default:
+        throw new IllegalArgumentException("Response with unsupported status type: " + statusType);
+    }
+
     return jsonRpcResponse;
   }
 
@@ -1404,6 +1483,74 @@ public final class MessageBuilder {
 
   // </editor-fold>
 
+  // <editor-fold desc="Meta Messages">
+
+  private static Parameter[] paramMapToParameters(Map<String, Object> params) {
+    if (params == null) {
+      return null;
+    }
+
+    Parameter[] keyValues = new Parameter[params.size()];
+    int index = 0;
+
+    for (Map.Entry<String, Object> entry : params.entrySet()) {
+      Parameter keyValueParam =
+          new Parameter()
+              .withName(entry.getKey())
+              .withValue(getWrappedObject(entry.getValue(), null, null));
+      keyValues[index++] = keyValueParam;
+    }
+    return keyValues;
+  }
+
+  public MetaMessage buildMetaMessageRequest(
+      UUID fromPeerUuid, String requestId, MetaServiceType serviceType) {
+    return buildMetaMessageRequest(fromPeerUuid, requestId, serviceType, (Parameter[]) null);
+  }
+
+  /* Convenience method to pass parameters as a KeyValue Map */
+  public MetaMessage buildMetaMessageRequest(
+      UUID fromPeerUuid,
+      String requestId,
+      MetaServiceType serviceType,
+      @Nullable Map<String, Object> params) {
+    return buildMetaMessageRequest(
+        fromPeerUuid, requestId, serviceType, paramMapToParameters(params));
+  }
+
+  public MetaMessage buildMetaMessageRequest(
+      UUID fromPeerUuid,
+      String requestId,
+      MetaServiceType serviceType,
+      @Nullable Parameter[] params) {
+    final MetaMessage metaMessage =
+        new MetaMessage()
+            .withFromPeer(fromPeerUuid.toString())
+            .withMessageId(requestId)
+            .withService(serviceType.getId());
+
+    if (params != null) {
+      metaMessage.setParams(params);
+    }
+    return metaMessage;
+  }
+
+  public MetaMessage buildMetaMessageReply(
+      UUID fromPeerUuid, MetaStatusType statusType, @Nullable String body, String responseToId) {
+    final MetaMessage metaMessage =
+        new MetaMessage()
+            .withFromPeer(fromPeerUuid.toString())
+            .withMessageId(responseToId)
+            .withStatus(statusType.getId());
+
+    if (body != null && !body.isEmpty()) {
+      metaMessage.setBody(body);
+    }
+    return metaMessage;
+  }
+
+  // </editor-fold>
+
   // <editor-fold desc="Message Wrapper">
   public Message wrap(ExecMessage execMessage) {
     final MessageType messageType = getMessageTypeOf(execMessage);
@@ -1432,6 +1579,11 @@ public final class MessageBuilder {
     return new Message()
         .withMessageType(MessageType.CONTROL_MESSAGE.getId())
         .withControlMessage(controlMessage);
+  }
+
+  public Message wrap(MetaMessage metaMessage) {
+    final MessageType messageType = getMessageTypeOf(metaMessage);
+    return new Message().withMessageType(messageType.getId()).withMetaMessage(metaMessage);
   }
   // </editor-fold>
 }

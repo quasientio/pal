@@ -20,8 +20,8 @@
 package net.ittera.pal.messages.types;
 
 public enum RpcType {
-  RPC((byte) 1),
-  JSONRPC((byte) 2);
+  BINARY_RPC((byte) 1),
+  JSON_RPC((byte) 2);
 
   private final byte idx;
 
@@ -31,8 +31,8 @@ public enum RpcType {
 
   public static RpcType fromByte(byte typeAsByte) {
     return switch (typeAsByte) {
-      case 1 -> RPC;
-      case 2 -> JSONRPC;
+      case 1 -> BINARY_RPC;
+      case 2 -> JSON_RPC;
       default -> throw new IllegalArgumentException("Unknown RPC type: " + typeAsByte);
     };
   }

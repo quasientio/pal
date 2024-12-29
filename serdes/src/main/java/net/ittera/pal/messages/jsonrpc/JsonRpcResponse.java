@@ -59,6 +59,10 @@ public class JsonRpcResponse extends JsonRpcMessage {
         + '}';
   }
 
+  public static Builder builder() {
+    return new Builder();
+  }
+
   public static class Builder {
     private final JsonRpcResponse response = new JsonRpcResponse();
 

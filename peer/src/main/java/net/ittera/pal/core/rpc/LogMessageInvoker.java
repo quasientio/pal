@@ -19,13 +19,13 @@
 
 package net.ittera.pal.core.rpc;
 
+import static net.ittera.pal.serdes.colfer.ExecMessageUtils.getMessageId;
 import static net.ittera.pal.serdes.jsonrpc.JsonRpcMessageUtils.parseAndValidateJsonRpcMessage;
 
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import net.ittera.pal.common.util.UuidUtils;
 import net.ittera.pal.core.messages.InboundLogMsg;
-import net.ittera.pal.core.rpc.exec.java.IncomingMessageDispatcher;
 import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;

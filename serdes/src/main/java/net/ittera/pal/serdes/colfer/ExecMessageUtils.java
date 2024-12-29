@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.messages.colfer.Parameter;
 import net.ittera.pal.messages.colfer.Reflectable;
 import net.ittera.pal.messages.types.MessageType;
@@ -203,5 +204,15 @@ public class ExecMessageUtils {
     } else {
       throw new IllegalArgumentException("Unknown message type");
     }
+  }
+
+  public static String getMessageId(Message msg) {
+    MessageType messageType = MessageType.fromId(msg.getMessageType());
+    return switch (messageType.getFamily()) {
+      case CONTROL -> msg.getControlMessage().getMessageId();
+      case EXEC -> msg.getExecMessage().getMessageId();
+      case INTERCEPT -> msg.getInterceptMessage().getMessageId();
+      case META -> msg.getMetaMessage().getMessageId();
+    };
   }
 }

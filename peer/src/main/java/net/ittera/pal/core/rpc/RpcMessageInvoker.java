@@ -19,6 +19,7 @@
 
 package net.ittera.pal.core.rpc;
 
+import static net.ittera.pal.serdes.colfer.ExecMessageUtils.getMessageId;
 import static net.ittera.pal.serdes.jsonrpc.JsonRpcMessageUtils.parseAndValidateJsonRpcMessage;
 
 import java.nio.channels.ClosedChannelException;
@@ -28,12 +29,14 @@ import java.util.UUID;
 import net.ittera.pal.core.RunOptions;
 import net.ittera.pal.core.messages.InboundJsonRpcRequestMsg;
 import net.ittera.pal.core.messages.OutboundJsonRpcResponseMsg;
-import net.ittera.pal.core.rpc.exec.java.IncomingMessageDispatcher;
 import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
+import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
+import net.ittera.pal.serdes.jsonrpc.InvalidJsonRpcRequestException;
+import net.ittera.pal.serdes.jsonrpc.JsonRpcMessageUtils;
 import net.ittera.pal.serdes.jsonrpc.JsonRpcRequestException;
 import net.ittera.pal.serdes.jsonrpc.JsonRpcSerializer;
 import net.ittera.pal.serdes.jsonrpc.JsonSerializationException;
@@ -209,7 +212,6 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
 
         // send reply
         rpcSocket.send(ColferUtils.toBytes(replyMsg));
-
         if (logger.isDebugEnabled()) {
           final long took = System.currentTimeMillis() - started;
           if (logger.isDebugEnabled()) {
@@ -239,8 +241,8 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
   private void dispatchJsonRpcRequest(InboundJsonRpcRequestMsg jsonrpcMsg) {
 
     final long started = System.currentTimeMillis();
-    JsonRpcRequest jsonRpcRequest;
-    final JsonRpcResponse jsonRpcResponse;
+    JsonRpcRequest jsonRpcRequest = null;
+    JsonRpcResponse jsonRpcResponse = null;
     String requestId = null;
     Exception parseException = null;
     Message requestMsg = null;
@@ -249,10 +251,6 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
     try {
       jsonRpcRequest = parseAndValidateJsonRpcMessage(jsonrpcMsg.getJsonMessage());
       requestId = jsonRpcRequest.getId();
-
-      // create ExecMessage from JSON-RPC request message
-      requestMsg =
-          messageBuilder.jsonRpcRequestToExecMessage(jsonRpcRequest, jsonrpcMsg.getPeerId());
       if (logger.isDebugEnabled()) {
         logger.debug("Received JSON-RPC message from peer w/id: {}", jsonrpcMsg.getPeerId());
       }
@@ -265,10 +263,41 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
       logger.error("Caught unexpected exception parsing message", e);
     }
 
+    // parsing+validating failed, log and send error response
     if (parseException != null) {
-
-      // parsing+validating failed, log and send error response
       jsonRpcResponse = messageBuilder.jsonRpcResponseFromError(parseException, requestId);
+      try {
+        new OutboundJsonRpcResponseMsg(
+                jsonrpcMsg.getPeerId(), JsonRpcSerializer.toJson(jsonRpcResponse))
+            .send(jsonrpcSocket);
+      } catch (JsonSerializationException ex) {
+        logger.error("Error sending JSON-RPC response", ex);
+      }
+      logMessageDispatch(requestId, null, started);
+      return;
+    }
+
+    Exception invalidRequestException = null;
+    // create ExecMessage from JSON-RPC request message
+    MessageType requestMessageType = JsonRpcMessageUtils.getMessageType(jsonRpcRequest);
+    switch (requestMessageType.getFamily()) {
+      case EXEC:
+        requestMsg =
+            messageBuilder.jsonRpcRequestToExecMessage(jsonRpcRequest, jsonrpcMsg.getPeerId());
+        break;
+      case META:
+        requestMsg =
+            messageBuilder.jsonRpcRequestToMetaMessage(jsonRpcRequest, jsonrpcMsg.getPeerId());
+        break;
+      case CONTROL:
+      case INTERCEPT:
+      default:
+        invalidRequestException = new InvalidJsonRpcRequestException("Unsupported request type");
+    }
+
+    // request type is unsupported, log and send error response
+    if (invalidRequestException != null) {
+      jsonRpcResponse = messageBuilder.jsonRpcResponseFromError(invalidRequestException, requestId);
       try {
         new OutboundJsonRpcResponseMsg(
                 jsonrpcMsg.getPeerId(), JsonRpcSerializer.toJson(jsonRpcResponse))
@@ -301,8 +330,20 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
       return;
     }
 
-    // create JSON-RPC response from ExecMessage reply
-    jsonRpcResponse = messageBuilder.jsonRpcResponseFromExecMessageReply(replyMsg.getExecMessage());
+    // create JSON-RPC response from MetaMessage / ExecMessage reply
+
+    switch (requestMessageType.getFamily()) {
+      case EXEC:
+        jsonRpcResponse =
+            messageBuilder.jsonRpcResponseFromExecMessageReply(replyMsg.getExecMessage());
+        break;
+      case META:
+        jsonRpcResponse =
+            messageBuilder.jsonRpcResponseFromMetaMessageReply(replyMsg.getMetaMessage());
+        break;
+      default:
+        // we cannot get here: other branches ruled out in pre-dispatch switch
+    }
 
     // send response
     try {

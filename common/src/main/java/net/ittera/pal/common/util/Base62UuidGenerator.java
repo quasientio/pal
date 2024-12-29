@@ -56,13 +56,4 @@ public class Base62UuidGenerator implements IdGenerator {
 
     return encodeBase62(bytes);
   }
-
-  public static void main(String[] args) {
-    Base62UuidGenerator generator = new Base62UuidGenerator();
-
-    // Generate and print 5 Base62-encoded UUIDs
-    for (int i = 0; i < 25; i++) {
-      System.out.println(generator.nextId());
-    }
-  }
 }

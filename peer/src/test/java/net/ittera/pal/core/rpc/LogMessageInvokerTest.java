@@ -38,7 +38,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import net.ittera.pal.core.ZmqEnabledTest;
 import net.ittera.pal.core.messages.InboundLogMsg;
-import net.ittera.pal.core.rpc.exec.java.IncomingMessageDispatcher;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.types.MessageFormatType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
@@ -146,7 +145,8 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
     verify(incomingMessageDispatcher, times(1)).incomingCall(any(), any(), anyBoolean());
 
     assertThat(execMessageReplies.size(), is(1));
-    assertThat(logMessageInvoker.getRequestsDispatched().get(), is((long) 1));
+    assertThat(logMessageInvoker.getExecRequestsDispatched(), is((long) 1));
+    assertThat(logMessageInvoker.getRequestsDispatched(), is((long) 1));
 
     // assert reply msg is response to original
     assertThat(execMessageReplies.get(0).getResponseToId(), is(invokable.getMessageId()));
@@ -194,7 +194,8 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
 
     // assert number of calls
     verify(incomingMessageDispatcher, times(msgCount)).incomingCall(any(), any(), anyBoolean());
-    assertThat(logMessageInvoker.getRequestsDispatched().get(), is((long) msgCount));
+    assertThat(logMessageInvoker.getExecRequestsDispatched(), is((long) msgCount));
+    assertThat(logMessageInvoker.getRequestsDispatched(), is((long) msgCount));
     assertThat(execMessageReplies.size(), is(msgCount));
 
     // assert reply msg is response to original

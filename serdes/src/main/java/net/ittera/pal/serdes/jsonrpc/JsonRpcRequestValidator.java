@@ -4,10 +4,12 @@ import com.google.common.base.Splitter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Pattern;
 import net.ittera.pal.messages.jsonrpc.Argument;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.Params;
+import net.ittera.pal.messages.types.MetaServiceType;
 
 public class JsonRpcRequestValidator {
   /**
@@ -75,6 +77,8 @@ public class JsonRpcRequestValidator {
           "transient",
           "volatile");
 
+  private static final Set<String> VALID_METHODS = Set.of("new", "call", "get", "put", "meta");
+
   public static void validate(JsonRpcRequest request)
       throws InvalidJsonRpcRequestException, InvalidJsonRpcParamsException {
 
@@ -98,7 +102,7 @@ public class JsonRpcRequestValidator {
       throw new InvalidJsonRpcRequestException("Method is missing", requestId);
     }
 
-    if (!List.of("new", "call", "get", "put").contains(request.getMethod())) {
+    if (!VALID_METHODS.contains(request.getMethod())) {
       throw new InvalidJsonRpcRequestException("Invalid method: " + request.getMethod(), requestId);
     }
 
@@ -106,6 +110,23 @@ public class JsonRpcRequestValidator {
     Params params = request.getParams();
     if (params == null) {
       throw new InvalidJsonRpcParamsException("Params are missing", requestId);
+    }
+
+    // Validate MetaMessage method is known and supported
+    if (request.getMethod().equals("meta")) {
+      String metaMethodName = request.getParams().getMethod();
+      if (metaMethodName == null || metaMethodName.isBlank()) {
+        throw new InvalidJsonRpcParamsException(
+            "Null or blank Params:Method for 'meta' request", requestId);
+      }
+      MetaServiceType metaServiceType = MetaServiceType.fromJsonName(metaMethodName);
+      if (metaServiceType == null) {
+        throw new InvalidJsonRpcParamsException(
+            "Invalid or unsupported Params:Method for 'meta' request", requestId);
+      }
+
+      // no more validations required for Meta messages
+      return;
     }
 
     /* 4.1 check type (i.e. className) */

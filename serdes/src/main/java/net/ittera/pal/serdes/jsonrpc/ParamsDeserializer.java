@@ -112,6 +112,10 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
       return argument;
     } else if (element.isJsonObject()) {
       JsonObject obj = element.getAsJsonObject();
+      if (obj.has("name")) {
+        argument.setName(obj.get("name").getAsString());
+      }
+
       if (obj.has("ref")) {
         // If ref inside object is found, currently we are not handling arrays of refs.
         argument.setRef(obj.get("ref").getAsInt());

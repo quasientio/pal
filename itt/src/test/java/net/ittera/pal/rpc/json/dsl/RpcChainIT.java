@@ -41,13 +41,13 @@ public class RpcChainIT extends AbstractIntegrationTest {
   private ThinPeer createTestThinPeer() throws Exception {
     directoryConnectionProvider = new DirectoryConnectionProvider(getPalDirectoryUrl());
     PeerInfo jsonRpcPeer =
-        findRpcPeer(RpcType.JSONRPC, directoryConnectionProvider)
+        findRpcPeer(RpcType.JSON_RPC, directoryConnectionProvider)
             .orElseThrow(() -> new RuntimeException("No peer found with JSON-RPC enabled"));
     return new ThinPeer()
         .withUuid(UUID.randomUUID())
         .withDirectoryProvider(directoryConnectionProvider)
         .withInitialPeer(jsonRpcPeer)
-        .withOutboundRpcType(RpcType.JSONRPC)
+        .withOutboundRpcType(RpcType.JSON_RPC)
         .init();
   }
 

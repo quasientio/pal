@@ -51,7 +51,9 @@ public class JsonRpcError {
 
   @Override
   public boolean equals(Object o) {
-    if (!(o instanceof JsonRpcError that)) return false;
+    if (!(o instanceof JsonRpcError that)) {
+      return false;
+    }
     return code == that.code
         && Objects.equals(message, that.message)
         && Objects.equals(data, that.data);
@@ -73,6 +75,10 @@ public class JsonRpcError {
         + ", data="
         + data
         + '}';
+  }
+
+  public static Builder builder() {
+    return new Builder();
   }
 
   public static class Builder {

@@ -255,6 +255,92 @@ public class JsonRpcMessageUtilsTest {
 
   // </editor-fold>
 
+  // <editor-fold desc="meta messages">
+  @Test
+  public void parseJsonRpcMessage_invalidMethodControl_invalidJsonRpcRequestException() {
+    String jsonRpcMessage =
+        """
+          {
+           "jsonrpc": "2.0",
+            "id": 1,
+           "method": "control",
+           "params": {
+             "type": "SomeClass"
+           }
+         }
+         """;
+    try {
+      parseAndValidateJsonRpcMessage(jsonRpcMessage);
+      fail("Expected InvalidJsonRpcRequestException");
+    } catch (InvalidJsonRpcRequestException e) {
+      assertNotNull(e.getRequestId());
+      assertTrue(e.getMessage().contains("Invalid method"));
+    }
+  }
+
+  @Test
+  public void parseJsonRpcMessage_missingMetaMethod_invalidJsonRpcParamsException() {
+    String jsonRpcMessage =
+        """
+          {
+           "jsonrpc": "2.0",
+            "id": 1,
+           "method": "meta",
+           "params": {
+             "type": "SomeClass"
+           }
+         }
+         """;
+    try {
+      parseAndValidateJsonRpcMessage(jsonRpcMessage);
+      fail("Expected InvalidJsonRpcParamsException");
+    } catch (InvalidJsonRpcParamsException e) {
+      assertNotNull(e.getRequestId());
+      assertTrue(e.getMessage().contains("Null or blank Params:Method"));
+    }
+  }
+
+  @Test
+  public void parseJsonRpcMessage_invalidMetaMethod_invalidJsonRpcParamsException() {
+    String jsonRpcMessage =
+        """
+             {
+              "jsonrpc": "2.0",
+               "id": 1,
+              "method": "meta",
+              "params": {
+                "method": "not_a_meta_service"
+              }
+            }
+            """;
+    try {
+      parseAndValidateJsonRpcMessage(jsonRpcMessage);
+      fail("Expected InvalidJsonRpcParamsException");
+    } catch (InvalidJsonRpcParamsException e) {
+      assertNotNull(e.getRequestId());
+      assertTrue(e.getMessage().contains("Invalid or unsupported Params:Method"));
+    }
+  }
+
+  @Test
+  public void parseJsonRpcMessage_validMetaMessage_noException() {
+    String jsonRpcMessage =
+        """
+          {
+           "jsonrpc": "2.0",
+            "id": 1,
+           "method": "meta",
+           "params": {
+             "method": "fetch_classes_info"
+           }
+         }
+         """;
+
+    parseAndValidateJsonRpcMessage(jsonRpcMessage);
+  }
+
+  // </editor-fold>
+
   // <editor-fold desc="missing required elements">
   @Test
   public void parseJsonRpcMessage_missingOrInvalidId_invalidJsonRpcRequestException() {

@@ -10,11 +10,13 @@ public class JsonRpcErrorData {
   public JsonRpcErrorData() {}
 
   @SerializedName("throwable_type")
+  @Nullable
   private String throwableType;
 
   private String message;
 
   @SerializedName("stack_trace")
+  @Nullable
   private String[] stackTrace;
 
   @Nullable private JsonRpcErrorData cause;
@@ -44,15 +46,16 @@ public class JsonRpcErrorData {
     return stackTrace;
   }
 
-  public void setStackTrace(String[] stackTrace) {
+  public void setStackTrace(@Nullable String[] stackTrace) {
     this.stackTrace = stackTrace;
   }
 
+  @Nullable
   public String getThrowableType() {
     return throwableType;
   }
 
-  public void setThrowableType(String throwableType) {
+  public void setThrowableType(@Nullable String throwableType) {
     this.throwableType = throwableType;
   }
 
@@ -108,6 +111,10 @@ public class JsonRpcErrorData {
         + ", stackTrace="
         + Arrays.deepToString(stackTrace)
         + '}';
+  }
+
+  public static Builder builder() {
+    return new Builder();
   }
 
   public static class Builder {

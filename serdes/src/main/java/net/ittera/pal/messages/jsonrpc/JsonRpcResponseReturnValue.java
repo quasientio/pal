@@ -58,6 +58,10 @@ public class JsonRpcResponseReturnValue {
     return "JsonRpcResponseReturnValue{" + "isVoid=" + isVoid + ", value=" + value + '}';
   }
 
+  public static Builder builder() {
+    return new Builder();
+  }
+
   public static class Builder {
     private final JsonRpcResponseReturnValue returnValue = new JsonRpcResponseReturnValue();
 

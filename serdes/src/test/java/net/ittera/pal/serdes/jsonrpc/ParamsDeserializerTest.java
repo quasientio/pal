@@ -16,12 +16,39 @@ import org.junit.Test;
 
 public class ParamsDeserializerTest {
 
+  private final Gson gson =
+      new GsonBuilder().registerTypeAdapter(Params.class, new ParamsDeserializer()).create();
+
+  @Test
+  public void testArgumentWithTypeNameAndValue() {
+    String json =
+        """
+            {
+              "type": "example.Type",
+              "method": "exampleMethod",
+              "args": [{"value": "Hello", "type": "java.lang.String", "name": "StringParam"}]
+            }
+            """;
+    Params params = gson.fromJson(json, Params.class);
+
+    // Assertions
+    assertNotNull(params);
+    assertEquals("example.Type", params.getType());
+    assertEquals("exampleMethod", params.getMethod());
+
+    List<Argument> args = params.getArgs();
+    assertNotNull(args);
+    assertEquals(1, args.size());
+
+    Argument argument = args.get(0);
+    assertNotNull(argument);
+    assertEquals("Hello", argument.getValue());
+    assertEquals("java.lang.String", argument.getType());
+    assertEquals("StringParam", argument.getName());
+  }
+
   @Test
   public void testArgumentInValue() {
-
-    Gson gson =
-        new GsonBuilder().registerTypeAdapter(Params.class, new ParamsDeserializer()).create();
-
     String paramsJson =
         "{"
             + "\"type\": \"example.Type\","
@@ -204,10 +231,6 @@ public class ParamsDeserializerTest {
 
   @Test
   public void testArgumentInArgs() {
-
-    Gson gson =
-        new GsonBuilder().registerTypeAdapter(Params.class, new ParamsDeserializer()).create();
-
     String paramsJson =
         "{"
             + "\"type\": \"example.Type\","

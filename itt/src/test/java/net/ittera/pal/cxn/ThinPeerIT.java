@@ -187,9 +187,8 @@ public class ThinPeerIT extends AbstractIntegrationTest {
 
     // try to send a message to the log
     try {
-      var unused =
-          thinPeer.sendExecMessageToLog(
-              msgBuilder.buildEmptyConstructor(thinPeer.getPeerUuid(), "java.lang.String"));
+      thinPeer.sendExecMessageToLog(
+          msgBuilder.buildEmptyConstructor(thinPeer.getPeerUuid(), "java.lang.String"));
       fail("Should have raised IllegalStateException");
     } catch (IllegalStateException e) {
       assertThat(e.getMessage().contains("ThinPeer log producer not configured"), is(true));
@@ -264,7 +263,7 @@ public class ThinPeerIT extends AbstractIntegrationTest {
   @Test
   public void initFullyConnectedAndTestGetters() throws Exception {
     LogInfo inAndOutLog = createTestLog();
-    PeerInfo initialPeer = findRpcPeer(RpcType.JSONRPC, directoryConnectionProvider).orElseThrow();
+    PeerInfo initialPeer = findRpcPeer(RpcType.JSON_RPC, directoryConnectionProvider).orElseThrow();
     Properties producerProperties = getKafkaProducerProperties();
     Properties consumerProperties = getKafkaConsumerProperties();
     UUID peerUuid = UUID.randomUUID();
@@ -279,7 +278,7 @@ public class ThinPeerIT extends AbstractIntegrationTest {
             .withProducerProperties(producerProperties)
             .withConsumerProperties(consumerProperties)
             .withRpcAddress("tcp://localhost:1234")
-            .withOutboundRpcType(RpcType.RPC)
+            .withOutboundRpcType(RpcType.BINARY_RPC)
             .withInitialPeer(initialPeer)
             .withSelfRegistration(false)
             .init();
@@ -297,7 +296,7 @@ public class ThinPeerIT extends AbstractIntegrationTest {
     assertThat(thinPeer.isConsuming(), is(true));
     assertThat(thinPeer.isProducing(), is(true));
     assertThat(thinPeer.getRpcAddress(), is("tcp://localhost:1234"));
-    assertThat(thinPeer.getOutboundRpcType(), is(RpcType.RPC));
+    assertThat(thinPeer.getOutboundRpcType(), is(RpcType.BINARY_RPC));
     assertThat(thinPeer.getInitialPeer(), is(initialPeer));
     assertThat(thinPeer.isSelfRegistering(), is(false));
     assertThat(thinPeer.isTalkingToPeer(), is(true));

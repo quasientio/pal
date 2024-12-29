@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
-import net.ittera.pal.core.rpc.exec.java.IncomingMessageDispatcher;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
