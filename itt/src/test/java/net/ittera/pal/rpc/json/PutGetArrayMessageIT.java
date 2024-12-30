@@ -39,6 +39,7 @@ public class PutGetArrayMessageIT extends AbstractJsonRpcMessageIT {
   private final Object nonEmptyValue;
 
   public PutGetArrayMessageIT(
+      TargetType targetType,
       String nullFieldName,
       String emptyFieldName,
       String nonEmptyFieldName,
@@ -46,6 +47,7 @@ public class PutGetArrayMessageIT extends AbstractJsonRpcMessageIT {
       Object nullValue,
       Object emptyValue,
       Object nonEmptyValue) {
+    super(targetType);
     this.nullFieldName = nullFieldName;
     this.emptyFieldName = emptyFieldName;
     this.nonEmptyFieldName = nonEmptyFieldName;
@@ -61,16 +63,46 @@ public class PutGetArrayMessageIT extends AbstractJsonRpcMessageIT {
         arrayType);
   }
 
-  @Parameters(name = "{index}: nullField={0}, emptyField={1}, nonEmptyField={2}, arrayType={3}")
+  @Parameters(
+      name =
+          "{index}: targetType={0}, nullField={1}, emptyField={2}, nonEmptyField={3}, arrayType={4}")
   public static Collection<Object[]> data() throws Exception {
-    List<Object[]> testData = new ArrayList<>();
+    var targetTypeParams = getSendTargetParameters();
+    List<Object[]> arrayTestData = new ArrayList<>();
 
     // Add test data for primitive arrays
-    addArrayTestData(testData, true);
+    addArrayTestData(arrayTestData, true);
 
     // Add test data for wrapper arrays
-    addArrayTestData(testData, false);
-    return testData;
+    addArrayTestData(arrayTestData, false);
+    // Build the Cartesian product: targetType params X arrayType params
+    List<Object[]> combined = new ArrayList<>();
+    for (Object[] targetTypeEntry : targetTypeParams) {
+      TargetType rpcTargetType = (TargetType) targetTypeEntry[0]; // PEER or LOG
+      for (Object[] arrayEntry : arrayTestData) {
+        String nullFieldName = (String) arrayEntry[0];
+        String emptyFieldName = (String) arrayEntry[1];
+        String nonEmptyFieldName = (String) arrayEntry[2];
+        Class<?> fieldType = (Class<?>) arrayEntry[3];
+        Object nullValue = arrayEntry[4];
+        Object emptyValue = arrayEntry[5];
+        Object nonEmptyValue = arrayEntry[6];
+
+        combined.add(
+            new Object[] {
+              rpcTargetType,
+              nullFieldName,
+              emptyFieldName,
+              nonEmptyFieldName,
+              fieldType,
+              nullValue,
+              emptyValue,
+              nonEmptyValue
+            });
+      }
+    }
+
+    return combined;
   }
 
   private static void addArrayTestData(List<Object[]> testData, boolean isPrimitive)
@@ -132,7 +164,7 @@ public class PutGetArrayMessageIT extends AbstractJsonRpcMessageIT {
   private static Object getFieldValue(String fieldName) throws Exception {
     Field f = ArrayVars.class.getDeclaredField(fieldName);
     f.setAccessible(true);
-    return f.get(null); // static fields for these 3
+    return f.get(null);
   }
 
   // ========== Test Methods ==========

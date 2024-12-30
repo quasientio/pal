@@ -405,7 +405,11 @@ public class Caller extends AbstractPalSubcommand {
       }
     } else {
       // build and send 1 ExecMessage from cmd line args
-      print(thinPeer.sendAndReceive(mainMethodCallBuilder.buildExecMessage()));
+      if (sendToPeer) {
+        print(thinPeer.sendToPeer(mainMethodCallBuilder.buildExecMessage()));
+      } else {
+        print(thinPeer.sendExecMessageToLogAndReceive(mainMethodCallBuilder.buildExecMessage()));
+      }
       requestsSent++;
     }
 

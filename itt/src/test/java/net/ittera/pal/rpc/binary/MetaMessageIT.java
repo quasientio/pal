@@ -32,7 +32,7 @@ import net.ittera.pal.messages.types.MetaStatusType;
 import org.junit.Test;
 
 /** Naming convention to use: methodName_stateUnderTest_expectedBehavior. */
-public class MetaMessageIT extends AbstractBinaryRPCMessageIT {
+public class MetaMessageIT extends AbstractBinaryRpcMessageIT {
 
   private static int findOccurrences(String searchString, String content) {
     // Count occurrences of the searchString in content
@@ -46,7 +46,7 @@ public class MetaMessageIT extends AbstractBinaryRPCMessageIT {
   }
 
   @Test
-  public void sendMetaMessage_fetchClassMetadata_metadataReturned() throws Exception {
+  public void sendMetaMessage_fetchClassMetadata_metadataReturned() {
 
     MetaMessage metaMessageRequest =
         messageBuilder.buildMetaMessageRequest(
@@ -67,7 +67,7 @@ public class MetaMessageIT extends AbstractBinaryRPCMessageIT {
   }
 
   @Test
-  public void sendMetaMessage_fetchClassMetadataWithExcludes_metadataReturned() throws Exception {
+  public void sendMetaMessage_fetchClassMetadataWithExcludes_metadataReturned() {
 
     Map<String, Object> fetchClassMetadataParams =
         Map.of("exclude_prefixes", new String[] {"java.util", "java.lang"});

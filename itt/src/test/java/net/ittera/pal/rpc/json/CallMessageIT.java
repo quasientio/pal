@@ -27,18 +27,31 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Locale;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.messages.types.JsonRpcErrorCode;
 import net.ittera.pal.serdes.Unwrapper;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /** Naming convention to use: methodName_stateUnderTest_expectedBehavior. */
+@RunWith(Parameterized.class)
 public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
   private static int messageId = 0;
   private static final String CLASS_NAME = "net.ittera.pal.apps.rpc.Methods";
+
+  public CallMessageIT(TargetType targetType) {
+    super(targetType);
+  }
+
+  @Parameterized.Parameters(name = "{index}: channel={0}")
+  public static Collection<Object[]> data() {
+    return getSendTargetParameters();
+  }
 
   @Test
   public void callClassMethod_privateWithArg_void() throws Exception {

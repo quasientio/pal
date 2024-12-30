@@ -26,9 +26,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.name.Names;
 import java.util.Properties;
-import java.util.UUID;
 import java.util.concurrent.ExecutionException;
-import net.ittera.pal.AbstractIntegrationTest;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.objects.ConcurrentHashMapObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectLookupStore;
@@ -38,22 +36,23 @@ import net.ittera.pal.cxn.ThinPeer;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.messages.types.RpcType;
+import net.ittera.pal.rpc.AbstractRpcMessageIT;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import net.ittera.pal.serdes.jsonrpc.JsonRpcSerializer;
 import net.ittera.pal.serdes.jsonrpc.JsonSerializationException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-public abstract class AbstractJsonRpcMessageIT extends AbstractIntegrationTest
+public abstract class AbstractJsonRpcMessageIT extends AbstractRpcMessageIT
     implements JsonRpcMessageAssertions {
-  protected static final Logger logger = LoggerFactory.getLogger("tests");
-  protected static final UUID clientId = UUID.randomUUID();
 
-  protected static MessageBuilder messageBuilder;
-  protected static ThinPeer thinPeer;
-  private static DirectoryConnectionProvider directoryConnectionProvider;
+  protected AbstractJsonRpcMessageIT(TargetType targetType) {
+    super(targetType);
+  }
+
+  protected AbstractJsonRpcMessageIT() {
+    this(TargetType.PEER);
+  }
 
   @BeforeClass
   public static void initialize() throws Exception {
@@ -78,6 +77,9 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractIntegrationTest
     final Injector injector = Guice.createInjector(module);
     messageBuilder = injector.getInstance(MessageBuilder.class);
 
+    final Properties consumerProperties = getKafkaConsumerProperties();
+    final Properties producerProperties = getKafkaProducerProperties();
+
     // find a peer listening with JSON-RPC enabled
     PeerInfo jsonRpcPeer =
         findRpcPeer(RpcType.JSON_RPC, directoryConnectionProvider)
@@ -86,6 +88,8 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractIntegrationTest
         new ThinPeer()
             .withUuid(clientId)
             .withDirectoryProvider(directoryConnectionProvider)
+            .withConsumerProperties(consumerProperties)
+            .withProducerProperties(producerProperties)
             .withInitialPeer(jsonRpcPeer)
             .withOutboundRpcType(RpcType.JSON_RPC)
             .init();
@@ -114,12 +118,18 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractIntegrationTest
 
   /* Include the messageId in order to avoid client-side parsing (by ThinPeer) and
    * cause parsing exceptions to happen on the server (i.e. remote peer) */
-  protected JsonRpcResponse sendAndReceive(String jsonRpcRequest, String messageId)
+  protected JsonRpcResponse sendAndReceive(Object jsonRpcRequest, String messageId)
       throws ExecutionException, InterruptedException, JsonSerializationException {
     logger.debug("Sending JSON-RPC request: {}", jsonRpcRequest);
     final JsonRpcResponse response;
     try {
-      response = thinPeer.sendJsonRpcRequestToPeer(jsonRpcRequest, messageId).get();
+      if (targetType.equals(TargetType.PEER)) {
+        logger.debug("Sending message to peer");
+        response = thinPeer.sendJsonRpcRequestToPeer(jsonRpcRequest, messageId).get();
+      } else {
+        logger.debug("Sending message to log");
+        response = thinPeer.sendJsonRpcRequestToLogAndReceive(jsonRpcRequest);
+      }
     } catch (Exception e) {
       logger.error("Exception sending/receiving message: {}", jsonRpcRequest, e);
       throw e;

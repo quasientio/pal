@@ -23,11 +23,14 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Collection;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.messages.colfer.Obj;
 import net.ittera.pal.messages.colfer.ReturnValue;
 import net.ittera.pal.serdes.Unwrapper;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Naming convention to use: methodName_stateUnderTest_expectedBehavior.
@@ -39,9 +42,19 @@ import org.junit.Test;
  *   - primitives - arrays - objectrefs
  * </pre>
  */
-public class PutMessageIT extends AbstractBinaryRPCMessageIT {
+@RunWith(Parameterized.class)
+public class PutMessageIT extends AbstractBinaryRpcMessageIT {
 
   protected static final String CLASS_NAME = "net.ittera.pal.apps.rpc.Variables";
+
+  public PutMessageIT(TargetType targetType) {
+    super(targetType);
+  }
+
+  @Parameterized.Parameters(name = "{index}: channel={0}")
+  public static Collection<Object[]> data() {
+    return getSendTargetParameters();
+  }
 
   @Test
   public void putStatic_integerNotNull_ok() throws Exception {
@@ -111,7 +124,7 @@ public class PutMessageIT extends AbstractBinaryRPCMessageIT {
   }
 
   @Test
-  public void putStatic_noSuchField_exThrown() throws Exception {
+  public void putStatic_noSuchField_exThrown() {
 
     String fieldName = "aMadeUpField";
     String fieldClassName = "java.lang.String";
@@ -121,7 +134,7 @@ public class PutMessageIT extends AbstractBinaryRPCMessageIT {
   }
 
   @Test
-  public void putStatic_noSuchClass_exThrown() throws Exception {
+  public void putStatic_noSuchClass_exThrown() {
     String nonExistingClass = "net.ittera.pal.apps.IDontExist";
     callGetStatic(nonExistingClass, "aStaticInteger", "java.lang.ClassNotFoundException");
   }
@@ -241,7 +254,7 @@ public class PutMessageIT extends AbstractBinaryRPCMessageIT {
   }
 
   @Test
-  public void putField_noSuchInstance_npeThrown() throws Exception {
+  public void putField_noSuchInstance_npeThrown() {
 
     // fake non-existing instance
     ObjectRef badObjRef = ObjectRef.from("30482239");

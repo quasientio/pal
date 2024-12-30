@@ -22,19 +22,32 @@ package net.ittera.pal.rpc.binary;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Collection;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.messages.colfer.ReturnValue;
 import net.ittera.pal.serdes.Unwrapper;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Naming convention to use: methodName_stateUnderTest_expectedBehavior.
  *
  * <p>TODO: arrays objectrefs rest of primitive types (?)
  */
-public class GetMessageIT extends AbstractBinaryRPCMessageIT {
+@RunWith(Parameterized.class)
+public class GetMessageIT extends AbstractBinaryRpcMessageIT {
 
   private static final String CLASS_NAME = "net.ittera.pal.apps.rpc.Variables";
+
+  public GetMessageIT(TargetType targetType) {
+    super(targetType);
+  }
+
+  @Parameterized.Parameters(name = "{index}: channel={0}")
+  public static Collection<Object[]> data() {
+    return getSendTargetParameters();
+  }
 
   @Test
   public void getClassVariable_publicStringNotNull_varReturned() throws Exception {
@@ -84,13 +97,13 @@ public class GetMessageIT extends AbstractBinaryRPCMessageIT {
   }
 
   @Test
-  public void getClassVariable_noSuchClass_exThrown() throws Exception {
+  public void getClassVariable_noSuchClass_exThrown() {
     String nonExistingClass = "net.ittera.pal.apps.IDontExist";
     callGetStatic(nonExistingClass, "aProtectedBool", "java.lang.ClassNotFoundException");
   }
 
   @Test
-  public void getClassVariable_noSuchField_exThrown() throws Exception {
+  public void getClassVariable_noSuchField_exThrown() {
     callGetStatic(CLASS_NAME, "aMadeUpField", "java.lang.NoSuchFieldException");
   }
 
@@ -201,7 +214,7 @@ public class GetMessageIT extends AbstractBinaryRPCMessageIT {
   }
 
   @Test
-  public void getInstanceVariable_noSuchInstance_npeThrown() throws Exception {
+  public void getInstanceVariable_noSuchInstance_npeThrown() {
     // fake non-existing instance
     ObjectRef newObjRef = ObjectRef.from("38923");
 

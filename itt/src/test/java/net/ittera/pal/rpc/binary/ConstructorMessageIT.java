@@ -19,9 +19,12 @@
 
 package net.ittera.pal.rpc.binary;
 
+import java.util.Collection;
 import net.ittera.pal.apps.rpc.Constructors;
 import net.ittera.pal.common.objects.ObjectRef;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Naming convention to use: methodName_stateUnderTest_expectedBehavior
@@ -31,9 +34,19 @@ import org.junit.Test;
  * taking Constructors type, not Object type) - invoke constructor using constructor-ref (requires
  * [ticket:15]) - inner constructor (commented out below), if it makes sense
  */
-public class ConstructorMessageIT extends AbstractBinaryRPCMessageIT {
+@RunWith(Parameterized.class)
+public class ConstructorMessageIT extends AbstractBinaryRpcMessageIT {
 
   protected final String className = "net.ittera.pal.apps.rpc.Constructors";
+
+  public ConstructorMessageIT(TargetType targetType) {
+    super(targetType);
+  }
+
+  @Parameterized.Parameters(name = "{index}: channel={0}")
+  public static Collection<Object[]> data() {
+    return getSendTargetParameters();
+  }
 
   // Explained here why won't pass
   // <a

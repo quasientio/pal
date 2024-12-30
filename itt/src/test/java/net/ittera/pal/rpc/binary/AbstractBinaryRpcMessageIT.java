@@ -31,8 +31,6 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.name.Names;
 import java.util.Properties;
-import java.util.UUID;
-import net.ittera.pal.AbstractIntegrationTest;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.objects.ConcurrentHashMapObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectLookupStore;
@@ -45,22 +43,22 @@ import net.ittera.pal.messages.colfer.MetaMessage;
 import net.ittera.pal.messages.colfer.ReturnValue;
 import net.ittera.pal.messages.colfer.StaticFieldPutDone;
 import net.ittera.pal.messages.types.RpcType;
+import net.ittera.pal.rpc.AbstractRpcMessageIT;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-public abstract class AbstractBinaryRPCMessageIT extends AbstractIntegrationTest
+public abstract class AbstractBinaryRpcMessageIT extends AbstractRpcMessageIT
     implements ExecMessageAssertions {
 
-  protected static final Logger logger = LoggerFactory.getLogger("tests");
+  protected AbstractBinaryRpcMessageIT(TargetType targetType) {
+    super(targetType);
+  }
 
-  protected static final UUID clientId = UUID.randomUUID();
-
-  protected static MessageBuilder messageBuilder;
-  protected static ThinPeer thinPeer;
+  protected AbstractBinaryRpcMessageIT() {
+    this(TargetType.PEER);
+  }
 
   @BeforeClass
   public static void initialize() throws Exception {
@@ -112,10 +110,16 @@ public abstract class AbstractBinaryRPCMessageIT extends AbstractIntegrationTest
     }
   }
 
-  private ExecMessage sendAndReceive(ExecMessage message) throws Exception {
+  private ExecMessage sendAndReceive(ExecMessage message) {
     ExecMessage reply;
     try {
-      reply = thinPeer.sendAndReceive(message);
+      if (targetType.equals(TargetType.PEER)) {
+        logger.debug("Sending message to peer");
+        reply = thinPeer.sendToPeer(message);
+      } else {
+        logger.debug("Sending message to log");
+        reply = thinPeer.sendExecMessageToLogAndReceive(message);
+      }
     } catch (Exception e) {
       logger.error(
           "Exception sending/receiving exec message with id: {}\n{}",
@@ -127,7 +131,7 @@ public abstract class AbstractBinaryRPCMessageIT extends AbstractIntegrationTest
     return reply;
   }
 
-  protected MetaMessage sendAndReceive(MetaMessage message) throws Exception {
+  protected MetaMessage sendAndReceive(MetaMessage message) {
     MetaMessage reply;
     try {
       reply = thinPeer.sendToPeer(message);
@@ -196,12 +200,12 @@ public abstract class AbstractBinaryRPCMessageIT extends AbstractIntegrationTest
     return replyMsg.getReturnValue();
   }
 
-  protected ReturnValue callGetStatic(String className, String fieldName) throws Exception {
+  protected ReturnValue callGetStatic(String className, String fieldName) {
     return callGetStatic(className, fieldName, null);
   }
 
   protected ReturnValue callGetStatic(
-      String className, String fieldName, String expectedThrowableType) throws Exception {
+      String className, String fieldName, String expectedThrowableType) {
     ExecMessage requestMsg = messageBuilder.buildGetStatic(clientId, className, fieldName);
     ExecMessage replyMsg = sendAndReceive(requestMsg);
 
@@ -216,7 +220,7 @@ public abstract class AbstractBinaryRPCMessageIT extends AbstractIntegrationTest
   }
 
   protected void callPutStatic(
-      String className, String fieldName, String fieldClassName, Object value) throws Exception {
+      String className, String fieldName, String fieldClassName, Object value) {
     callPutStatic(className, fieldName, fieldClassName, value, null);
   }
 
@@ -225,8 +229,7 @@ public abstract class AbstractBinaryRPCMessageIT extends AbstractIntegrationTest
       String fieldName,
       String fieldClassName,
       Object value,
-      String expectedThrowableType)
-      throws Exception {
+      String expectedThrowableType) {
     ExecMessage requestMsg =
         messageBuilder.buildPutStatic(clientId, className, fieldName, fieldClassName, value);
     ExecMessage replyMsg = sendAndReceive(requestMsg);
@@ -242,14 +245,12 @@ public abstract class AbstractBinaryRPCMessageIT extends AbstractIntegrationTest
     }
   }
 
-  protected ReturnValue callGetInstanceVar(String className, String fieldName, ObjectRef objRef)
-      throws Exception {
+  protected ReturnValue callGetInstanceVar(String className, String fieldName, ObjectRef objRef) {
     return callGetInstanceVar(className, fieldName, objRef, null);
   }
 
   protected ReturnValue callGetInstanceVar(
-      String className, String fieldName, ObjectRef objRef, String expectedThrowableType)
-      throws Exception {
+      String className, String fieldName, ObjectRef objRef, String expectedThrowableType) {
     ExecMessage requestMsg = messageBuilder.buildGetObject(clientId, className, fieldName, objRef);
     ExecMessage replyMsg = sendAndReceive(requestMsg);
 
@@ -268,8 +269,7 @@ public abstract class AbstractBinaryRPCMessageIT extends AbstractIntegrationTest
       String fieldName,
       ObjectRef targetObjRef,
       String valueClassName,
-      Object value)
-      throws Exception {
+      Object value) {
     callPutField(className, fieldName, targetObjRef, valueClassName, value, null);
   }
 
@@ -279,8 +279,7 @@ public abstract class AbstractBinaryRPCMessageIT extends AbstractIntegrationTest
       ObjectRef targetObjRef,
       String valueClassName,
       Object value,
-      String expectedThrowableType)
-      throws Exception {
+      String expectedThrowableType) {
 
     ExecMessage requestMsg =
         messageBuilder.buildPutObject(
@@ -303,8 +302,7 @@ public abstract class AbstractBinaryRPCMessageIT extends AbstractIntegrationTest
       String methodName,
       String[] parameterTypeNames,
       Object[] parameters,
-      ObjectRef[] paramObjRefs)
-      throws Exception {
+      ObjectRef[] paramObjRefs) {
     return callClassMethod(
         className, methodName, parameterTypeNames, parameters, paramObjRefs, null);
   }
@@ -315,8 +313,7 @@ public abstract class AbstractBinaryRPCMessageIT extends AbstractIntegrationTest
       String[] parameterTypeNames,
       Object[] parameters,
       ObjectRef[] paramObjRefs,
-      String expectedThrowableType)
-      throws Exception {
+      String expectedThrowableType) {
     ExecMessage requestMsg =
         messageBuilder.buildClassMethod(
             clientId,
@@ -344,8 +341,7 @@ public abstract class AbstractBinaryRPCMessageIT extends AbstractIntegrationTest
       String methodName,
       String[] parameterTypeNames,
       Object[] parameters,
-      ObjectRef[] paramObjRefs)
-      throws Exception {
+      ObjectRef[] paramObjRefs) {
     callVoidClassMethod(className, methodName, parameterTypeNames, parameters, paramObjRefs, null);
   }
 
@@ -355,8 +351,7 @@ public abstract class AbstractBinaryRPCMessageIT extends AbstractIntegrationTest
       String[] parameterTypeNames,
       Object[] parameters,
       ObjectRef[] paramObjRefs,
-      String expectedThrowableType)
-      throws Exception {
+      String expectedThrowableType) {
     ExecMessage requestMsg =
         messageBuilder.buildClassMethod(
             clientId,
@@ -384,8 +379,7 @@ public abstract class AbstractBinaryRPCMessageIT extends AbstractIntegrationTest
       ObjectRef targetObjRef,
       String[] parameterTypeNames,
       Object[] parameters,
-      ObjectRef[] paramObjRefs)
-      throws Exception {
+      ObjectRef[] paramObjRefs) {
     return callInstanceMethod(
         className, methodName, targetObjRef, parameterTypeNames, parameters, paramObjRefs, null);
   }
@@ -397,8 +391,7 @@ public abstract class AbstractBinaryRPCMessageIT extends AbstractIntegrationTest
       String[] parameterTypeNames,
       Object[] parameters,
       ObjectRef[] paramObjRefs,
-      String expectedThrowableType)
-      throws Exception {
+      String expectedThrowableType) {
     ExecMessage requestMsg =
         messageBuilder.buildInstanceMethod(
             clientId,
@@ -426,8 +419,7 @@ public abstract class AbstractBinaryRPCMessageIT extends AbstractIntegrationTest
       ObjectRef targetObjRef,
       String[] parameterTypeNames,
       Object[] parameters,
-      ObjectRef[] paramObjRefs)
-      throws Exception {
+      ObjectRef[] paramObjRefs) {
     callVoidInstanceMethod(
         className, methodName, targetObjRef, parameterTypeNames, parameters, paramObjRefs, null);
   }
@@ -439,9 +431,7 @@ public abstract class AbstractBinaryRPCMessageIT extends AbstractIntegrationTest
       String[] parameterTypeNames,
       Object[] parameters,
       ObjectRef[] paramObjRefs,
-      String expectedThrowableType)
-      throws Exception {
-
+      String expectedThrowableType) {
     ExecMessage requestMsg =
         messageBuilder.buildInstanceMethod(
             clientId,

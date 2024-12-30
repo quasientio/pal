@@ -22,9 +22,12 @@ package net.ittera.pal.rpc.binary;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Collection;
 import net.ittera.pal.messages.colfer.ReturnValue;
 import net.ittera.pal.serdes.Unwrapper;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Naming convention to use: methodName_stateUnderTest_expectedBehavior.
@@ -39,9 +42,19 @@ import org.junit.Test;
  *
  * <p>TODO: introduce null values
  */
-public class GetArrayMessageIT extends AbstractBinaryRPCMessageIT {
+@RunWith(Parameterized.class)
+public class GetArrayMessageIT extends AbstractBinaryRpcMessageIT {
 
   protected final String className = "net.ittera.pal.apps.rpc.StaticArrayVars";
+
+  public GetArrayMessageIT(TargetType targetType) {
+    super(targetType);
+  }
+
+  @Parameterized.Parameters(name = "{index}: channel={0}")
+  public static Collection<Object[]> data() {
+    return getSendTargetParameters();
+  }
 
   // <editor-fold defaultstate="collapsed" desc="primitive array tests">
   @Test

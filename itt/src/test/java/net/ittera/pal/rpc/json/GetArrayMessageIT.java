@@ -41,24 +41,40 @@ public class GetArrayMessageIT extends AbstractJsonRpcMessageIT {
   private final Object expectedValue;
 
   // Constructor for parameterized test
-  public GetArrayMessageIT(String fieldName, Class<?> fieldType, Object expectedValue) {
+  public GetArrayMessageIT(
+      TargetType targetType, String fieldName, Class<?> fieldType, Object expectedValue) {
+    super(targetType);
     this.fieldName = fieldName;
     this.fieldType = fieldType;
     this.expectedValue = expectedValue;
   }
 
   // Method that provides test data
-  @Parameters(name = "{index}: fieldName={0}, fieldType={1}")
+  @Parameters(name = "{index}: targetType={0} fieldName={1}, fieldType={2}")
   public static Collection<Object[]> data() throws Exception {
-    List<Object[]> testData = new ArrayList<>();
+    var targetTypeParams = getSendTargetParameters();
+    List<Object[]> arrayTestData = new ArrayList<>();
 
     // Add test data for primitive arrays
-    addArrayTestData(testData, true);
+    addArrayTestData(arrayTestData, true);
 
     // Add test data for wrapper arrays
-    addArrayTestData(testData, false);
+    addArrayTestData(arrayTestData, false);
 
-    return testData;
+    // Build the Cartesian product: targetType params X arrayType params
+    List<Object[]> combined = new ArrayList<>();
+    for (Object[] targetTypeEntry : targetTypeParams) {
+      TargetType rpcTargetType = (TargetType) targetTypeEntry[0]; // PEER or LOG
+      for (Object[] arrayEntry : arrayTestData) {
+        String fieldName = (String) arrayEntry[0];
+        Class<?> fieldType = (Class<?>) arrayEntry[1];
+        Object fieldValue = arrayEntry[2];
+
+        combined.add(new Object[] {rpcTargetType, fieldName, fieldType, fieldValue});
+      }
+    }
+
+    return combined;
   }
 
   private static void addArrayTestData(List<Object[]> testData, boolean isPrimitive)

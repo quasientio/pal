@@ -23,7 +23,12 @@ import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.messages.types.JsonRpcErrorCode;
 import org.junit.Test;
 
-/** Naming convention to use: methodName_stateUnderTest_expectedBehavior. */
+/**
+ * Naming convention to use: methodName_stateUnderTest_expectedBehavior. This test is not
+ * parameterized on TargetType, so it only runs against a Peer via direct socket RPC. That is
+ * because Error responses to JsonRpcRequests are not written to the Log if they are parse/invalid
+ * params/invalid request errors that are returned before dispatching.
+ */
 public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
 
   protected final String className = "net.ittera.pal.apps.rpc.Constructors";

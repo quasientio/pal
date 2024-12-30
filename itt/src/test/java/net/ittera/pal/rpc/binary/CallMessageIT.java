@@ -5,21 +5,34 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Locale;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.messages.colfer.ReturnValue;
 import net.ittera.pal.serdes.Unwrapper;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /** Naming convention to use: methodName_stateUnderTest_expectedBehavior. */
-public class CallMessageIT extends AbstractBinaryRPCMessageIT {
+@RunWith(Parameterized.class)
+public class CallMessageIT extends AbstractBinaryRpcMessageIT {
 
   private static final String CLASS_NAME = "net.ittera.pal.apps.rpc.Methods";
   private static final String[] EMPTY_STRING_ARRAY = {};
   private static final Object[] EMPTY_OBJECT_ARRAY = {};
 
+  public CallMessageIT(TargetType targetType) {
+    super(targetType);
+  }
+
+  @Parameterized.Parameters(name = "{index}: channel={0}")
+  public static Collection<Object[]> data() {
+    return getSendTargetParameters();
+  }
+
   @Test
-  public void callClassMethod_privateWithArg_void() throws Exception {
+  public void callClassMethod_privateWithArg_void() {
     String methodName = "testVoidStatic";
     String[] parameterTypes = {"java.lang.String"};
     Object[] parameters = {"Hello from a unit test"};
@@ -29,7 +42,7 @@ public class CallMessageIT extends AbstractBinaryRPCMessageIT {
   }
 
   @Test
-  public void callClassMethod_privateWithPrimitiveAndWrapperArgs_void() throws Exception {
+  public void callClassMethod_privateWithPrimitiveAndWrapperArgs_void() {
     String methodName = "printArg";
     String[] parameterTypes = {"int", "java.lang.String"};
     Object[] parameters = {2, "more than an argument"};
@@ -39,7 +52,7 @@ public class CallMessageIT extends AbstractBinaryRPCMessageIT {
   }
 
   @Test
-  public void callClassMethod_packageWithNoArgs_void() throws Exception {
+  public void callClassMethod_packageWithNoArgs_void() {
     String methodName = "doSomethingStatically";
 
     callVoidClassMethod(
@@ -47,7 +60,7 @@ public class CallMessageIT extends AbstractBinaryRPCMessageIT {
   }
 
   @Test
-  public void callClassMethod_publicStaticVoidMain_void() throws Exception {
+  public void callClassMethod_publicStaticVoidMain_void() {
     String methodName = "main";
     String[] parameterTypes = {"[Ljava.lang.String;"};
     Object[] parameters = {new String[] {}};
@@ -82,7 +95,7 @@ public class CallMessageIT extends AbstractBinaryRPCMessageIT {
   }
 
   @Test
-  public void callClassMethod_noSuchClass_exThrown() throws Exception {
+  public void callClassMethod_noSuchClass_exThrown() {
     String nonExistingClass = "net.ittera.pal.apps.IDontExist";
     String methodName = "doSomethingStatically";
 
@@ -96,7 +109,7 @@ public class CallMessageIT extends AbstractBinaryRPCMessageIT {
   }
 
   @Test
-  public void callClassMethod_noSuchMethod_exThrown() throws Exception {
+  public void callClassMethod_noSuchMethod_exThrown() {
     String methodName = "a_made_up_method";
 
     callVoidClassMethod(
@@ -109,7 +122,7 @@ public class CallMessageIT extends AbstractBinaryRPCMessageIT {
   }
 
   @Test
-  public void callClassMethod_throwsRuntimeEx_exThrown() throws Exception {
+  public void callClassMethod_throwsRuntimeEx_exThrown() {
     String methodName = "throwRuntimeException";
 
     callVoidClassMethod(
@@ -301,7 +314,7 @@ public class CallMessageIT extends AbstractBinaryRPCMessageIT {
   }
 
   @Test
-  public void callClassMethod_badFormat_exThrown() throws Exception {
+  public void callClassMethod_badFormat_exThrown() {
     String methodName = "parseInt";
     String param = "not_a_num";
     String[] parameterTypes = {param.getClass().getTypeName()};
@@ -318,7 +331,7 @@ public class CallMessageIT extends AbstractBinaryRPCMessageIT {
   }
 
   @Test
-  public void callClassMethod_throwsEx_exThrown() throws Exception {
+  public void callClassMethod_throwsEx_exThrown() {
     String methodName = "throwMeAnException";
 
     callClassMethod(
@@ -443,7 +456,7 @@ public class CallMessageIT extends AbstractBinaryRPCMessageIT {
   }
 
   @Test
-  public void callInstanceMethod_noSuchInstance_throwsNullPointerException() throws Exception {
+  public void callInstanceMethod_noSuchInstance_throwsNullPointerException() {
     String methodName = "printDate";
 
     ObjectRef newObjRef = ObjectRef.from("2398248");

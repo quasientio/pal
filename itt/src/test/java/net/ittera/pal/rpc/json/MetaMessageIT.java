@@ -14,7 +14,11 @@ import net.ittera.pal.messages.jsonrpc.JsonRpcResponseReturnValue;
 import net.ittera.pal.messages.jsonrpc.Params;
 import org.junit.Test;
 
-/** Naming convention to use: methodName_stateUnderTest_expectedBehavior. */
+/**
+ * Naming convention to use: methodName_stateUnderTest_expectedBehavior. This test is not
+ * parameterized on TargetType, so it only runs against a Peer via direct socket RPC. That is
+ * because MetaMessages are currently only sent via directly to a peer via socket RPC.
+ */
 public class MetaMessageIT extends AbstractJsonRpcMessageIT {
 
   private static int findOccurrences(String searchString, String content) {

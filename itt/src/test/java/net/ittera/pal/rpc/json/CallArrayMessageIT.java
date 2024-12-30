@@ -38,32 +38,62 @@ public class CallArrayMessageIT extends AbstractJsonRpcMessageIT {
   private final Object nonEmptyValue; // the array we got from reflection on a_*_Array
 
   public CallArrayMessageIT(
+      TargetType targetType,
       String instanceFieldName,
       String getterMethodName,
       String setterMethodName,
       Class<?> arrayType,
       Object nonEmptyValue) {
+    super(targetType);
     this.getterMethodName = getterMethodName;
     this.setterMethodName = setterMethodName;
     this.arrayType = arrayType;
     this.nonEmptyValue = nonEmptyValue;
 
     logger.debug(
-        "Created CallInstanceMethodArrayMessageIT for field: {}, getter: {}, setter: {}, type: {}",
+        "Created CallArrayMessageIT for targetType: {}, field: {}, getter: {}, setter: {}, type: {}",
+        targetType,
         instanceFieldName,
         getterMethodName,
         setterMethodName,
         arrayType);
   }
 
-  @Parameters(name = "{index}: field={0}, arrayType={3}")
+  @Parameters(name = "{index}: targetType={0}, arrayType={3}")
   public static Collection<Object[]> data() throws Exception {
-    List<Object[]> testData = new ArrayList<>();
+
+    var targetTypeParams = getSendTargetParameters();
+
+    List<Object[]> arrayTestData = new ArrayList<>();
     // Primitive arrays
-    addInstanceArrayTestData(testData, true);
+    addInstanceArrayTestData(arrayTestData, true);
     // Wrapper arrays + String arrays
-    addInstanceArrayTestData(testData, false);
-    return testData;
+    addInstanceArrayTestData(arrayTestData, false);
+
+    // Build the Cartesian product: targetType params X arrayType params
+    List<Object[]> combined = new ArrayList<>();
+    for (Object[] targetTypeEntry : targetTypeParams) {
+      TargetType rpcTargetType = (TargetType) targetTypeEntry[0]; // PEER or LOG
+      for (Object[] arrayEntry : arrayTestData) {
+        String instanceFieldName = (String) arrayEntry[0];
+        String getterMethodName = (String) arrayEntry[1];
+        String setterMethodName = (String) arrayEntry[2];
+        Class<?> arrayClass = (Class<?>) arrayEntry[3];
+        Object nonEmptyValue = arrayEntry[4];
+
+        combined.add(
+            new Object[] {
+              rpcTargetType,
+              instanceFieldName,
+              getterMethodName,
+              setterMethodName,
+              arrayClass,
+              nonEmptyValue
+            });
+      }
+    }
+
+    return combined;
   }
 
   private static void addInstanceArrayTestData(List<Object[]> testData, boolean isPrimitive)

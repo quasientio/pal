@@ -21,13 +21,26 @@ package net.ittera.pal.rpc.json;
 
 import static org.junit.Assert.assertNotNull;
 
+import java.util.Collection;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /** Naming convention to use: methodName_stateUnderTest_expectedBehavior. */
+@RunWith(Parameterized.class)
 public class ConstructorMessageIT extends AbstractJsonRpcMessageIT {
 
   protected final String className = "net.ittera.pal.apps.rpc.Constructors";
+
+  public ConstructorMessageIT(TargetType targetType) {
+    super(targetType);
+  }
+
+  @Parameterized.Parameters(name = "{index}: channel={0}")
+  public static Collection<Object[]> data() {
+    return getSendTargetParameters();
+  }
 
   @Test
   public void constructor_publicNoArgs_newObjectReturned() throws Exception {

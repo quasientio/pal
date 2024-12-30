@@ -5,6 +5,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -50,7 +51,7 @@ public interface JsonRpcMessageAssertions {
   }
 
   default void assertPutResultIsVoid(JsonRpcResponse putResponse) {
-    assertThat(putResponse.getResult(), is(not(nullValue())));
+    assertNotNull(putResponse.getResult());
     assertTrue(putResponse.getResult().getIsVoid());
     assertThat(putResponse.getResult().getValue(), is(nullValue()));
     assertThat(putResponse.getError(), is(nullValue()));
@@ -73,7 +74,7 @@ public interface JsonRpcMessageAssertions {
   // <editor-fold desc="Array assertions">
   default Object assertValueIsArrayOfType(JsonRpcResponse response, String typeName)
       throws ClassNotFoundException {
-    assertThat(response.getResult(), is(not(nullValue())));
+    assertNotNull(response.getResult());
     assertThat(response.getResult().getIsVoid(), is(false));
     assertThat(response.getResult().getValue(), is(not(nullValue())));
     assertThat(response.getResult().getValue().getType(), is(typeName));

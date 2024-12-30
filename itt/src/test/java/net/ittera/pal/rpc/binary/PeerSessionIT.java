@@ -24,14 +24,14 @@ import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.messages.colfer.ReturnValue;
 import org.junit.Test;
 
-public class PeerSessionIT extends AbstractBinaryRPCMessageIT {
+public class PeerSessionIT extends AbstractBinaryRpcMessageIT {
 
-  private ReturnValue addToList(ObjectRef listObjRef, String value) throws Exception {
+  private ReturnValue addToList(ObjectRef listObjRef, String value) {
     return addToList(listObjRef, value, null);
   }
 
   private ReturnValue addToList(
-      ObjectRef listObjRef, String arg, @Nullable String expectedThrowableType) throws Exception {
+      ObjectRef listObjRef, String arg, @Nullable String expectedThrowableType) {
     Object[] parameters = {arg};
     String[] parameterTypes = {arg.getClass().getName()};
     if (expectedThrowableType == null) {

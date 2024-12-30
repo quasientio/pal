@@ -2,15 +2,28 @@ package net.ittera.pal.rpc.json;
 
 import static org.junit.Assert.assertNotNull;
 
+import java.util.Collection;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.messages.types.JsonRpcErrorCode;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /** Naming convention to use: methodName_stateUnderTest_expectedBehavior. */
+@RunWith(Parameterized.class)
 public class PutMessageIT extends AbstractJsonRpcMessageIT {
 
   private static int messageId = 0;
   private static final String CLASS_NAME = "net.ittera.pal.apps.rpc.Variables";
+
+  public PutMessageIT(TargetType targetType) {
+    super(targetType);
+  }
+
+  @Parameterized.Parameters(name = "{index}: channel={0}")
+  public static Collection<Object[]> data() {
+    return getSendTargetParameters();
+  }
 
   @Test
   public void putStatic_integerNotNull_ok() throws Exception {
