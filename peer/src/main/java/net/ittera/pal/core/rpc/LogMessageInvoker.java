@@ -149,6 +149,10 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
             return;
           }
 
+          if (logger.isDebugEnabled()) {
+            logger.debug("Received message with offset: {}, id: {}", msg.getOffset(), requestId);
+          }
+
           UUID fromPeerUuid = null;
           try {
             byte[] producerIdBytes =

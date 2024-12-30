@@ -123,8 +123,9 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
   public ExecMessage dispatchIncoming(ExecMessage incomingCall, boolean isDirect) {
     if (logger.isTraceEnabled()) {
       logger.trace(
-          "dispatchIncoming:in w/ message id: {}, isDirect: {}",
+          "dispatchIncoming:in w/ message id: {}, from peer w/id:{}, isDirect: {}",
           incomingCall.getMessageId(),
+          incomingCall.getPeerUuid(),
           isDirect);
     }
 
