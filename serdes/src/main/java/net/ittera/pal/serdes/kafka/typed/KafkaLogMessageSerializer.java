@@ -27,7 +27,6 @@ import net.ittera.pal.messages.Marshallable;
 import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.messages.jsonrpc.JsonRpcMessage;
 import net.ittera.pal.messages.types.MessageFormatType;
-import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.jsonrpc.JsonRpcMessageUtils;
 import net.ittera.pal.serdes.jsonrpc.JsonRpcSerializer;
@@ -60,6 +59,8 @@ public class KafkaLogMessageSerializer implements Serializer<LogMessage<?>> {
     }
 
     Object content = logMessage.getContent();
+    MessageFormatType messageFormat;
+    byte messageType;
 
     // this is a hack to get the unit tests to pass since the MockProducer doesn't pass in the
     // headers
@@ -73,28 +74,15 @@ public class KafkaLogMessageSerializer implements Serializer<LogMessage<?>> {
 
     if (content instanceof Message message) {
       logger.debug("Serializing Message: {}", ColferUtils.toJson(message, true));
-      MessageFormatType messageFormat = MessageFormatType.BINARY_RPC;
+      messageFormat = MessageFormatType.BINARY_RPC;
+      messageType = message.getMessageType();
 
       // Serialize using Colfer
       data = colferMessageToBytes(message);
-
-      // Set message-format and message-type headers
-      headers.add("message-format", new byte[] {messageFormat.toByte()});
-      headers.add("message-type", new byte[] {message.getMessageType()});
-
-      // set log message headers in the kafka record headers
-      for (Map.Entry<String, String> entry : logMessage.getHeaders().entrySet()) {
-        if (entry.getKey().endsWith("-id")) {
-          // "-id" headers are byte-serialized UUIDs
-          headers.add(entry.getKey(), UuidUtils.toBytes(entry.getValue()));
-        } else {
-          // All other headers are UTF-8 encoded strings
-          headers.add(entry.getKey(), entry.getValue().getBytes(StandardCharsets.UTF_8));
-        }
-      }
-
     } else if (content instanceof JsonRpcMessage jsonRpcMessage) {
-      MessageFormatType messageFormat = MessageFormatType.JSON_RPC;
+      logger.debug("Serializing json-rpc message: {}", jsonRpcMessage);
+      messageFormat = MessageFormatType.JSON_RPC;
+      messageType = JsonRpcMessageUtils.getMessageType(jsonRpcMessage).getId();
 
       // Serialize using Gson
       String json;
@@ -104,17 +92,22 @@ public class KafkaLogMessageSerializer implements Serializer<LogMessage<?>> {
         logger.error("Failed to serialize JsonRpcMessage: {}", jsonRpcMessage, e);
         return null;
       }
-
       data = json.getBytes(StandardCharsets.UTF_8);
-
-      // Set the message-format header
-      headers.add("message-format", new byte[] {messageFormat.toByte()});
-
-      // Set the message-type header
-      MessageType messageType = JsonRpcMessageUtils.getMessageType(jsonRpcMessage);
-      headers.add("message-type", new byte[] {messageType.getId()});
     } else {
       throw new IllegalArgumentException("Unsupported content type: " + content.getClass());
+    }
+
+    // set log message headers in the kafka record headers
+    headers.add("message-format", new byte[] {messageFormat.toByte()});
+    headers.add("message-type", new byte[] {messageType});
+    for (Map.Entry<String, String> entry : logMessage.getHeaders().entrySet()) {
+      if (entry.getKey().endsWith("-id")) {
+        // "-id" headers are byte-serialized UUIDs
+        headers.add(entry.getKey(), UuidUtils.toBytes(entry.getValue()));
+      } else {
+        // All other headers are UTF-8 encoded strings
+        headers.add(entry.getKey(), entry.getValue().getBytes(StandardCharsets.UTF_8));
+      }
     }
 
     return data;
