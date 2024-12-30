@@ -207,12 +207,10 @@ public class ThinPeerIT extends AbstractIntegrationTest {
             .withLogPrefix("test-prefix")
             .withPollingDuration(1000)
             .withZmqContext(zmqContext)
-            .withNoP2P()
             .init();
     assertEquals(getKafkaServers(), thinPeer.getBootstrapServers());
     assertEquals("test-prefix", thinPeer.getLogPrefix());
     assertEquals(1000, thinPeer.getPollingDuration().toMillis());
-    assertFalse(thinPeer.isP2PEnabled());
     assertEquals(zmqContext, thinPeer.getZmqContext());
   }
 
@@ -229,7 +227,7 @@ public class ThinPeerIT extends AbstractIntegrationTest {
     assertFalse(thinPeer.isInitialized());
     ExecMessage msg = msgBuilder.buildEmptyConstructor(thinPeer.getPeerUuid(), "java.lang.String");
     try {
-      thinPeer.sendAndReceive(msg);
+      thinPeer.sendExecMessageToLogAndReceive(msg);
       fail("Should have raised IllegalStateException");
     } catch (IllegalStateException e) {
       // ok
@@ -253,7 +251,7 @@ public class ThinPeerIT extends AbstractIntegrationTest {
     assertTrue(thinPeer.isClosed());
     ExecMessage msg = msgBuilder.buildEmptyConstructor(thinPeer.getPeerUuid(), "java.lang.String");
     try {
-      thinPeer.sendAndReceive(msg);
+      thinPeer.sendToPeer(msg);
       fail("Should have raised IllegalStateException");
     } catch (IllegalStateException e) {
       // ok

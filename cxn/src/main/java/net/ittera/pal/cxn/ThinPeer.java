@@ -76,7 +76,6 @@ public class ThinPeer implements AutoCloseable {
 
   private UUID peerUuid;
   private String peerName;
-  private boolean allowP2P = true;
   private boolean isZmqSocketConnected = false;
   private boolean closed;
   private boolean initialized;
@@ -207,11 +206,6 @@ public class ThinPeer implements AutoCloseable {
 
   public ThinPeer withInitialPeer(PeerInfo initialPeer) {
     this.initialPeer = initialPeer;
-    return this;
-  }
-
-  public ThinPeer withNoP2P() {
-    this.allowP2P = false;
     return this;
   }
 
@@ -362,27 +356,25 @@ public class ThinPeer implements AutoCloseable {
     }
 
     // configure RPC and connect to initial peer if given
-    if (allowP2P) {
-      if (outboundRpcType == RpcType.BINARY_RPC) {
-        if (zmqContextGiven) {
-          logger.info("Using given ZMQ context");
-        } else {
-          logger.info("Initializing zmq context");
-          this.zmqContext = new ZContext();
-        }
-        this.peerSocket = zmqContext.createSocket(SocketType.REQ);
+    if (outboundRpcType == RpcType.BINARY_RPC) {
+      if (zmqContextGiven) {
+        logger.info("Using given ZMQ context");
+      } else {
+        logger.info("Initializing zmq context");
+        this.zmqContext = new ZContext();
       }
-      if (initialPeer != null) {
-        if (initialPeer.getRpcAddress() != null || initialPeer.getJsonrpcAddress() != null) {
-          connectToPeer(initialPeer);
-        } else if (initialPeer.getUuid() != null) {
-          connectToPeer(initialPeer.getUuid());
-        } else {
-          throw new RuntimeException(
-              "Cannot connect to peer without its UUID or "
-                  + "listening (i.e. RPC) address. Peer -> "
-                  + initialPeer);
-        }
+      this.peerSocket = zmqContext.createSocket(SocketType.REQ);
+    }
+    if (initialPeer != null) {
+      if (initialPeer.getRpcAddress() != null || initialPeer.getJsonrpcAddress() != null) {
+        connectToPeer(initialPeer);
+      } else if (initialPeer.getUuid() != null) {
+        connectToPeer(initialPeer.getUuid());
+      } else {
+        throw new RuntimeException(
+            "Cannot connect to peer without its UUID or "
+                + "listening (i.e. RPC) address. Peer -> "
+                + initialPeer);
       }
     }
 
@@ -446,27 +438,6 @@ public class ThinPeer implements AutoCloseable {
     }
     if (closed) {
       throw new IllegalStateException("ThinPeer is closed. Cannot perform operations.");
-    }
-  }
-
-  public ExecMessage sendAndReceive(ExecMessage message) throws Exception {
-    if (logger.isTraceEnabled()) {
-      logger.trace("sendAndReceive: in with exec message: {}", ColferUtils.format(message));
-    }
-    assertInitializedAndActive();
-
-    if (talkingToPeer) {
-      return sendToPeer(message);
-    } else {
-      if (!producing) {
-        throw new IllegalStateException(
-            "ThinPeer log producer not configured. Cannot send messages.");
-      }
-      if (!consuming) {
-        throw new IllegalStateException(
-            "ThinPeer log consumer not configured. Cannot get messages.");
-      }
-      return sendToLogAndReceive(message);
     }
   }
 
@@ -679,37 +650,68 @@ public class ThinPeer implements AutoCloseable {
     return sendFuture;
   }
 
-  private ExecMessage sendToLogAndReceive(ExecMessage message) throws Exception {
-
+  public JsonRpcResponse sendJsonRpcRequestToLogAndReceive(Object jsonRpcRequest)
+      throws JsonSerializationException {
     if (logger.isTraceEnabled()) {
-      logger.trace("sendToLogAndReceive: in with message: {}", ColferUtils.format(message));
+      logger.trace("sendJsonRpcRequestToLogAndReceive: in with jsonRpcRequest: {}", jsonRpcRequest);
     }
-    if (!allowP2P) {
-      return sendAndReceiveConsumingLog(message);
+    assertInitializedAndActive();
+    if (!producing) {
+      throw new IllegalStateException(
+          "ThinPeer log producer not configured. Cannot send messages.");
     }
 
-    return sendToLogConsumeAndSwitchToPeer(message);
+    JsonRpcMessage jsonRpcMessage;
+    if (jsonRpcRequest instanceof JsonRpcRequest) {
+      jsonRpcMessage = (JsonRpcRequest) jsonRpcRequest;
+    } else if (jsonRpcRequest instanceof String) {
+      jsonRpcMessage = JsonRpcSerializer.fromJson((String) jsonRpcRequest, JsonRpcRequest.class);
+    } else {
+      throw new IllegalArgumentException("Unsupported type for jsonRpc");
+    }
+
+    // create kafka record
+    var headers = Map.of("producer-id", peerUuid.toString());
+    LogMessage<JsonRpcMessage> logMessage =
+        new LogMessage<>(outLog.getName(), null, headers, jsonRpcMessage);
+    final ProducerRecord<String, LogMessage<?>> newRecord =
+        new ProducerRecord<>(
+            outLog.getName(), PRODUCER_PARTITION, UUID.randomUUID().toString(), logMessage);
+
+    // send and get offset
+    long sentRecordOffset;
+    Future<RecordMetadata> recordMetadataFuture = producer.send(newRecord);
+    try {
+      RecordMetadata recordMetadata = recordMetadataFuture.get();
+      if (logger.isDebugEnabled()) {
+        logger.debug("Message sent:\n {}", logMessage);
+      }
+      sentRecordOffset = recordMetadata.offset();
+    } catch (Exception e) {
+      logger.error("Error getting sent record metadata", e);
+      return null;
+    }
+
+    // even if we send the request as a JsonRpc message, the peer's reply is written as ExecMessage
+    ExecMessage messageReply =
+        pollForReplyToRequestFromOffset(sentRecordOffset + 1, jsonRpcMessage.getId());
+
+    // convert the ExecMessage reply into a JsonRpc response
+    return msgBuilder.jsonRpcResponseFromExecMessageReply(messageReply);
   }
 
-  private ExecMessage sendToLogConsumeAndSwitchToPeer(ExecMessage message) throws Exception {
+  public ExecMessage sendExecMessageToLogAndReceive(ExecMessage message) {
     if (logger.isTraceEnabled()) {
       logger.trace(
-          "sendToLogConsumeAndSwitchToPeer: in with message: {}", ColferUtils.format(message));
+          "sendExecMessageToLogAndReceive: in with message: {}", ColferUtils.format(message));
     }
-    ExecMessage replyMsg = sendAndReceiveConsumingLog(message);
-
-    if (replyMsg != null) {
-      // switch to direct p2p talk
-      String msgPeerUuid = replyMsg.getPeerUuid();
-      connectToPeer(UUID.fromString(msgPeerUuid));
+    assertInitializedAndActive();
+    if (!producing) {
+      throw new IllegalStateException(
+          "ThinPeer log producer not configured. Cannot send messages.");
     }
-
-    return replyMsg;
-  }
-
-  private ExecMessage sendAndReceiveConsumingLog(ExecMessage message) throws Exception {
-    if (logger.isTraceEnabled()) {
-      logger.trace("sendAndReceiveConsumingLog: in with message: {}", ColferUtils.format(message));
+    if (!consuming) {
+      throw new IllegalStateException("ThinPeer log consumer not configured. Cannot get messages.");
     }
 
     // wrap in LogMessage
@@ -736,12 +738,17 @@ public class ThinPeer implements AutoCloseable {
       return null;
     }
 
-    // now poll to consume
+    return pollForReplyToRequestFromOffset(sentRecordOffset + 1, message.getMessageId());
+  }
+
+  private ExecMessage pollForReplyToRequestFromOffset(long offset, String requestId) {
     if (logger.isDebugEnabled()) {
-      logger.debug("Consumer seeking to offset: {}", sentRecordOffset);
+      logger.debug("Consumer seeking to offset: {}", offset);
     }
+
+    // poll to consume
     synchronized (consumerLock) {
-      consumer.seek(inTopicPartition, sentRecordOffset);
+      consumer.seek(inTopicPartition, offset);
     }
 
     // wait for reply  (should contain responseToId = sentRecordOffset in message)
@@ -765,27 +772,12 @@ public class ThinPeer implements AutoCloseable {
         }
         final ExecMessage execMessage = ((Message) receivedMessage.getContent()).getExecMessage();
         final String responseToId = execMessage == null ? null : execMessage.getResponseToId();
-        if (execMessage != null && message.getMessageId().equals(responseToId)) {
+        if (execMessage != null && requestId.equals(responseToId)) {
           if (logger.isDebugEnabled()) {
             logger.debug(
-                "Got reply with offset {} and uuid {} ",
+                "Got reply with offset {} and id {} ",
                 receivedMsgOffset,
                 execMessage.getMessageId());
-          }
-          // try switching to direct peer talk (i.e. p2p)
-          if (allowP2P) {
-            UUID msgPeerUuid = UUID.fromString(execMessage.getPeerUuid());
-            PeerInfo newPeer = null;
-            try {
-              if (getPalDirectory() != null) {
-                newPeer = getPalDirectory().getPeerInfo(msgPeerUuid);
-              }
-            } catch (Exception ex) {
-              logger.error("Couldn't get peer properties", ex);
-            }
-            if (newPeer != null && !newPeer.equals(currentPeer)) {
-              connectToPeer(newPeer);
-            }
           }
           return execMessage;
         } else {
@@ -816,9 +808,6 @@ public class ThinPeer implements AutoCloseable {
   private void connectToPeer(PeerInfo peer) throws Exception {
     if (logger.isTraceEnabled()) {
       logger.trace("connectToPeer: in with peer: {}", peer.getUuid());
-    }
-    if (!allowP2P) {
-      throw new RuntimeException("Cannot connect to peer: p2p is disallowed");
     }
 
     if (currentPeer != null && isZmqSocketConnected) {
@@ -1055,10 +1044,6 @@ public class ThinPeer implements AutoCloseable {
 
   public String getName() {
     return peerName;
-  }
-
-  public boolean isP2PEnabled() {
-    return allowP2P;
   }
 
   public String getBootstrapServers() {
