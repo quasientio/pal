@@ -33,12 +33,15 @@ public class JsonRpcRequest extends JsonRpcMessage {
     if (!(o instanceof JsonRpcRequest that)) {
       return false;
     }
-    return Objects.equals(method, that.method) && Objects.equals(params, that.params);
+    return getId().equals(that.getId())
+        && getJsonrpc().equals(that.getJsonrpc())
+        && Objects.equals(method, that.method)
+        && Objects.equals(params, that.params);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(method, params);
+    return Objects.hash(getId(), getJsonrpc(), method, params);
   }
 
   @Override
