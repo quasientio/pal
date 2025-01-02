@@ -113,20 +113,11 @@ public class JsonRpcRequestValidator {
       throw new InvalidJsonRpcParamsException("Params are missing", requestId);
     }
 
-    // Validate MetaMessage method is known and supported
-    if (request.getMethod().equals("meta")) {
-      String metaMethodName = request.getParams().getMethod();
-      if (metaMethodName == null || metaMethodName.isBlank()) {
-        throw new InvalidJsonRpcParamsException(
-            "Null or blank Params:Method for 'meta' request", requestId);
-      }
-      MetaServiceType metaServiceType = MetaServiceType.fromJsonName(metaMethodName);
-      if (metaServiceType == null) {
-        throw new InvalidJsonRpcParamsException(
-            "Invalid or unsupported Params:Method for 'meta' request", requestId);
-      }
-
-      // no more validations required for Meta messages
+    /* ----------------------- */
+    /* MetaMessage validations */
+    /* ----------------------- */
+    if (request.getMethod().equalsIgnoreCase(MessageFamily.META.getJsonName())) {
+      MetaMessageValidator.validate(request);
       return;
     }
 
