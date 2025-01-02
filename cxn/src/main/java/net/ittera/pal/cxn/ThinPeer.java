@@ -456,8 +456,8 @@ public class ThinPeer implements AutoCloseable {
    */
   public CompletableFuture<JsonRpcResponse> sendJsonRpcRequestToPeer(
       Object jsonRpc, String messageId) throws JsonSerializationException {
-    if (logger.isTraceEnabled()) {
-      logger.trace("sendJsonRpcRequestToPeer: in with jsonRpc: {}", jsonRpc);
+    if (logger.isDebugEnabled()) {
+      logger.debug("sendJsonRpcRequestToPeer: in with jsonRpc: {}", jsonRpc);
     }
     assertInitializedAndActive();
 
@@ -587,8 +587,8 @@ public class ThinPeer implements AutoCloseable {
   }
 
   public Future<RecordMetadata> sendExecMessageToLog(ExecMessage message) {
-    if (logger.isTraceEnabled()) {
-      logger.trace("sendExecMessageToLog: in with message: {}", ColferUtils.format(message));
+    if (logger.isDebugEnabled()) {
+      logger.debug("sendExecMessageToLog: in with message: {}", ColferUtils.format(message));
     }
     assertInitializedAndActive();
     if (!producing) {
@@ -617,8 +617,8 @@ public class ThinPeer implements AutoCloseable {
   @SuppressWarnings("unused")
   public Future<RecordMetadata> sendJsonRpcRequestToLog(Object jsonRpcRequest)
       throws JsonSerializationException {
-    if (logger.isTraceEnabled()) {
-      logger.trace("sendJsonRpcRequestToLog: in with jsonRpcRequest: {}", jsonRpcRequest);
+    if (logger.isDebugEnabled()) {
+      logger.debug("sendJsonRpcRequestToLog: in with jsonRpcRequest: {}", jsonRpcRequest);
     }
     assertInitializedAndActive();
     if (!producing) {
@@ -653,8 +653,8 @@ public class ThinPeer implements AutoCloseable {
 
   public JsonRpcResponse sendJsonRpcRequestToLogAndReceive(Object jsonRpcRequest)
       throws JsonSerializationException {
-    if (logger.isTraceEnabled()) {
-      logger.trace("sendJsonRpcRequestToLogAndReceive: in with jsonRpcRequest: {}", jsonRpcRequest);
+    if (logger.isDebugEnabled()) {
+      logger.debug("sendJsonRpcRequestToLogAndReceive: in with jsonRpcRequest: {}", jsonRpcRequest);
     }
     assertInitializedAndActive();
     if (!producing) {
@@ -702,8 +702,8 @@ public class ThinPeer implements AutoCloseable {
   }
 
   public ExecMessage sendExecMessageToLogAndReceive(ExecMessage message) {
-    if (logger.isTraceEnabled()) {
-      logger.trace(
+    if (logger.isDebugEnabled()) {
+      logger.debug(
           "sendExecMessageToLogAndReceive: in with message: {}", ColferUtils.format(message));
     }
     assertInitializedAndActive();
@@ -807,8 +807,8 @@ public class ThinPeer implements AutoCloseable {
   }
 
   private void connectToPeer(PeerInfo peer) throws Exception {
-    if (logger.isTraceEnabled()) {
-      logger.trace("connectToPeer: in with peer: {}", peer.getUuid());
+    if (logger.isDebugEnabled()) {
+      logger.debug("connectToPeer: in with peer: {}", peer.getUuid());
     }
 
     // inform remote peer to end session, then close connection
@@ -828,8 +828,8 @@ public class ThinPeer implements AutoCloseable {
   }
 
   public ExecMessage sendToPeer(ExecMessage message) {
-    if (logger.isTraceEnabled()) {
-      logger.trace("sendToPeer: in with exec message: {}", ColferUtils.format(message));
+    if (logger.isDebugEnabled()) {
+      logger.debug("sendToPeer: in with exec message: {}", ColferUtils.format(message));
     }
     assertInitializedAndActive();
     if (!talkingToPeer) {
@@ -856,8 +856,8 @@ public class ThinPeer implements AutoCloseable {
   }
 
   public ControlMessage sendToPeer(ControlMessage message) {
-    if (logger.isTraceEnabled()) {
-      logger.trace("in sendToPeer with control message: {}", ColferUtils.format(message));
+    if (logger.isDebugEnabled()) {
+      logger.debug("in sendToPeer with control message: {}", ColferUtils.format(message));
     }
     assertInitializedAndActive();
     if (!talkingToPeer) {
@@ -884,16 +884,16 @@ public class ThinPeer implements AutoCloseable {
   }
 
   public MetaMessage sendToPeer(MetaMessage message) {
-    if (logger.isTraceEnabled()) {
-      logger.trace("in sendToPeer with meta message: {}", ColferUtils.format(message));
+    if (logger.isDebugEnabled()) {
+      logger.debug("in sendToPeer with meta message: {}", ColferUtils.format(message));
     }
     assertInitializedAndActive();
     if (!talkingToPeer) {
       throw new IllegalStateException("Not connected to any peer. Cannot send message.");
     }
     // send message request to peer
-    if (logger.isTraceEnabled()) {
-      logger.trace("sending...");
+    if (logger.isDebugEnabled()) {
+      logger.debug("sending...");
     }
     peerSocket.send(ColferUtils.toBytes(msgBuilder.wrap(message)));
     final long waitStart = System.currentTimeMillis();
