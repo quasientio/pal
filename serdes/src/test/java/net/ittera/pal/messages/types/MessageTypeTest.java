@@ -28,13 +28,13 @@ public class MessageTypeTest {
 
   @Test
   public void testGetId() {
-    MessageType interceptReply = MessageType.INTERCEPT_REPLY;
     MessageType controlMsg = MessageType.CONTROL_MESSAGE_REQUEST;
+    MessageType interceptResponse = MessageType.INTERCEPT_RESPONSE;
 
     byte controlMsgAsByte = controlMsg.getId();
-    byte interceptReplyMsgAsByte = interceptReply.getId();
+    byte interceptResponseMsgAsByte = interceptResponse.getId();
 
-    assertThat(MessageType.fromId(interceptReplyMsgAsByte), is(MessageType.INTERCEPT_REPLY));
     assertThat(MessageType.fromId(controlMsgAsByte), is(MessageType.CONTROL_MESSAGE_REQUEST));
+    assertThat(MessageType.fromId(interceptResponseMsgAsByte), is(MessageType.INTERCEPT_RESPONSE));
   }
 }

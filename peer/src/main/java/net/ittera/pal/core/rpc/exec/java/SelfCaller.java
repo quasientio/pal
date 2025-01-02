@@ -142,11 +142,11 @@ public class SelfCaller {
     } catch (InterruptedException e) {
       logger.error("Thread interrupted", e);
     }
-    // get reply message
-    final ExecMessage reply = replies.get(0);
-    assert reply != null;
+    // get response message
+    final ExecMessage response = replies.get(0);
+    assert response != null;
 
-    // wait for the reply message offset, to ensure all msg's from have been written to the log
+    // wait for the response message offset, to ensure all msg's from have been written to the log
     if (runOptions.contains(RunOptions.WITH_OUT_LOG)) {
       boolean offsetPublished = false;
       long offset = -1;
@@ -156,22 +156,22 @@ public class SelfCaller {
         PublishedOffsetMsg publishedOffsetMsg = PublishedOffsetMsg.receive(offsetSubscriber, true);
         offset = publishedOffsetMsg.getOffset();
         msgId = publishedOffsetMsg.getMessageId();
-        if (reply.getMessageId().equalsIgnoreCase(msgId)) {
+        if (response.getMessageId().equalsIgnoreCase(msgId)) {
           offsetPublished = true;
         }
       }
       // close socket
       offsetSubscriber.close();
       if (logger.isDebugEnabled()) {
-        logger.debug("Returned reply message with offset={} and id={}", offset, msgId);
+        logger.debug("Returned response message with offset={} and id={}", offset, msgId);
       }
     } else {
       if (logger.isDebugEnabled()) {
-        logger.debug("Returned reply message with id={}", reply.getMessageId());
+        logger.debug("Returned response message with id={}", response.getMessageId());
       }
     }
 
-    return getExitValueFromReply(reply);
+    return getExitValueFromResponse(response);
   }
 
   public int callJar(String jarFile, List<String> argList) throws PeerException {
@@ -197,11 +197,11 @@ public class SelfCaller {
     return callMain(mainClass, argList);
   }
 
-  private int getExitValueFromReply(ExecMessage mainReplyMessage) {
-    final MessageType messageType = getMessageTypeOf(mainReplyMessage);
+  private int getExitValueFromResponse(ExecMessage mainResponseMessage) {
+    final MessageType messageType = getMessageTypeOf(mainResponseMessage);
     return switch (messageType) {
       case EXEC_RETURN_VALUE, EXEC_GET_STATIC, EXEC_GET_FIELD ->
-          getIntFromReturnValue(mainReplyMessage);
+          getIntFromReturnValue(mainResponseMessage);
       default -> {
         logger.error("Unexpected message type: {}", messageType);
         yield DEFAULT_EXIT_VALUE;

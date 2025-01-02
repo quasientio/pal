@@ -28,7 +28,7 @@ public class MetaMessageUtils {
     if (metaMessage.getStatus() == 0) {
       return MessageType.META_MESSAGE_REQUEST;
     } else {
-      return MessageType.META_MESSAGE_REPLY;
+      return MessageType.META_MESSAGE_RESPONSE;
     }
   }
 }

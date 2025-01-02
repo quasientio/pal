@@ -96,7 +96,7 @@ class MessagePublisher extends ConnectedService {
         repSocket.send(ERROR_REPLY);
       }
       if (msg != null) {
-        // reply OK
+        // response OK
         repSocket.send(OK_REPLY);
         // publish the message
         msg.send(pubSocket);

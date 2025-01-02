@@ -102,17 +102,18 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
         messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
 
     // dispatch
-    ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    ExecMessage responseMessage =
+        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
+    assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
-    assertFalse(replyMsg.getReturnValue().getIsVoid());
-    short returned = (short) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
+    assertFalse(responseMessage.getReturnValue().getIsVoid());
+    short returned = (short) Unwrapper.unwrapObject(responseMessage.getReturnValue().getObject());
     assertThat(returned, is(ClassForGetStaticTest.someShort));
     assertThat(
-        replyMsg.getReturnValue(),
+        responseMessage.getReturnValue(),
         Matchers.allOf(
             ComesFromClass.comesFromClass(targetClass), ComesFromReflectable.comesFrom(fieldName)));
   }
@@ -146,17 +147,18 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
         messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
 
     // dispatch
-    ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    ExecMessage responseMessage =
+        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
+    assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
-    assertFalse(replyMsg.getReturnValue().getIsVoid());
-    byte[] returned = (byte[]) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
+    assertFalse(responseMessage.getReturnValue().getIsVoid());
+    byte[] returned = (byte[]) Unwrapper.unwrapObject(responseMessage.getReturnValue().getObject());
     assertThat(returned, is(ClassForGetStaticTest.bytes));
     assertThat(
-        replyMsg.getReturnValue(),
+        responseMessage.getReturnValue(),
         Matchers.allOf(
             ComesFromClass.comesFromClass(targetClass), ComesFromReflectable.comesFrom(fieldName)));
   }
@@ -190,17 +192,19 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
         messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
 
     // dispatch
-    ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    ExecMessage responseMessage =
+        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
+    assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
-    assertFalse(replyMsg.getReturnValue().getIsVoid());
-    Integer returned = (Integer) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
+    assertFalse(responseMessage.getReturnValue().getIsVoid());
+    Integer returned =
+        (Integer) Unwrapper.unwrapObject(responseMessage.getReturnValue().getObject());
     assertThat(returned, is(ClassForGetStaticTest.someInteger));
     assertThat(
-        replyMsg.getReturnValue(),
+        responseMessage.getReturnValue(),
         Matchers.allOf(
             ComesFromClass.comesFromClass(targetClass), ComesFromReflectable.comesFrom(fieldName)));
   }
@@ -234,17 +238,18 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
         messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
 
     // dispatch
-    ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    ExecMessage responseMessage =
+        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
+    assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
-    assertFalse(replyMsg.getReturnValue().getIsVoid());
-    String returned = (String) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
+    assertFalse(responseMessage.getReturnValue().getIsVoid());
+    String returned = (String) Unwrapper.unwrapObject(responseMessage.getReturnValue().getObject());
     assertThat(returned, is(ClassForGetStaticTest.aString));
     assertThat(
-        replyMsg.getReturnValue(),
+        responseMessage.getReturnValue(),
         Matchers.allOf(
             ComesFromClass.comesFromClass(targetClass), ComesFromReflectable.comesFrom(fieldName)));
   }
@@ -278,19 +283,20 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
         messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
 
     // dispatch
-    ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    ExecMessage responseMessage =
+        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
+    assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
-    assertFalse(replyMsg.getReturnValue().getIsVoid());
+    assertFalse(responseMessage.getReturnValue().getIsVoid());
     Object returned =
         objectLookupStore.lookupObject(
-            ObjectRef.from(replyMsg.getReturnValue().getObject().getRef()));
+            ObjectRef.from(responseMessage.getReturnValue().getObject().getRef()));
     assertThat(returned, sameInstance(ClassForGetStaticTest.anObject));
     assertThat(
-        replyMsg.getReturnValue(),
+        responseMessage.getReturnValue(),
         Matchers.allOf(
             ComesFromClass.comesFromClass(targetClass), ComesFromReflectable.comesFrom(fieldName)));
   }
@@ -324,16 +330,17 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
         messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
 
     // dispatch
-    ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    ExecMessage responseMessage =
+        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
+    assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(0L));
-    assertFalse(replyMsg.getReturnValue().getIsVoid());
-    assertTrue(replyMsg.getReturnValue().getObject().getIsNull());
+    assertFalse(responseMessage.getReturnValue().getIsVoid());
+    assertTrue(responseMessage.getReturnValue().getObject().getIsNull());
     assertThat(
-        replyMsg.getReturnValue(),
+        responseMessage.getReturnValue(),
         Matchers.allOf(
             ComesFromClass.comesFromClass(targetClass), ComesFromReflectable.comesFrom(fieldName)));
   }
@@ -367,20 +374,21 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
         messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
 
     // dispatch
-    ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    ExecMessage responseMessage =
+        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
+    assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
-    assertFalse(replyMsg.getReturnValue().getIsVoid());
-    assertNotNull(replyMsg.getReturnValue().getObject().getRef());
+    assertFalse(responseMessage.getReturnValue().getIsVoid());
+    assertNotNull(responseMessage.getReturnValue().getObject().getRef());
     Object returned =
         objectLookupStore.lookupObject(
-            ObjectRef.from(replyMsg.getReturnValue().getObject().getRef()));
+            ObjectRef.from(responseMessage.getReturnValue().getObject().getRef()));
     assertThat(returned, sameInstance(ClassForGetStaticTest.objects));
     assertThat(
-        replyMsg.getReturnValue(),
+        responseMessage.getReturnValue(),
         Matchers.allOf(
             ComesFromClass.comesFromClass(targetClass), ComesFromReflectable.comesFrom(fieldName)));
   }
@@ -414,21 +422,22 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
         messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
 
     // dispatch
-    ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    ExecMessage responseMessage =
+        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
+    assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
-    assertFalse(replyMsg.getReturnValue().getIsVoid());
-    assertNotNull(replyMsg.getReturnValue().getObject().getRef());
+    assertFalse(responseMessage.getReturnValue().getIsVoid());
+    assertNotNull(responseMessage.getReturnValue().getObject().getRef());
     Throwable returned =
         (Throwable)
             objectLookupStore.lookupObject(
-                ObjectRef.from(replyMsg.getReturnValue().getObject().getRef()));
+                ObjectRef.from(responseMessage.getReturnValue().getObject().getRef()));
     assertThat(returned, is(ClassForGetStaticTest.lastError));
     assertThat(
-        replyMsg.getReturnValue(),
+        responseMessage.getReturnValue(),
         Matchers.allOf(
             ComesFromClass.comesFromClass(targetClass), ComesFromReflectable.comesFrom(fieldName)));
   }
@@ -441,11 +450,11 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
         messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
 
     // dispatch with the onlyPublicDispatcher - expect no exception
-    ExecMessage replyMsg =
+    ExecMessage responseMessage =
         ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
-    assertNotNull(replyMsg.getReturnValue());
-    assertFalse(replyMsg.getReturnValue().getIsVoid());
-    assertNull(replyMsg.getRaisedThrowable());
+    assertNotNull(responseMessage.getReturnValue());
+    assertFalse(responseMessage.getReturnValue().getIsVoid());
+    assertNull(responseMessage.getRaisedThrowable());
   }
 
   @Override
@@ -457,18 +466,18 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
         messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
 
     // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
-    ExecMessage replyMsg =
+    ExecMessage responseMessage =
         ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
-    assertNull(replyMsg.getReturnValue());
+    assertNull(responseMessage.getReturnValue());
     assertThat(
-        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        responseMessage.getRaisedThrowable().getThrowable().getType(),
         is("java.lang.NoSuchFieldException"));
 
     // dispatch with the all access dispatcher - expect no exception
-    replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
-    assertNotNull(replyMsg.getReturnValue());
-    assertFalse(replyMsg.getReturnValue().getIsVoid());
-    assertNull(replyMsg.getRaisedThrowable());
+    responseMessage = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    assertNotNull(responseMessage.getReturnValue());
+    assertFalse(responseMessage.getReturnValue().getIsVoid());
+    assertNull(responseMessage.getRaisedThrowable());
   }
 
   @Override
@@ -480,18 +489,18 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
         messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
 
     // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
-    ExecMessage replyMsg =
+    ExecMessage responseMessage =
         ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
-    assertNull(replyMsg.getReturnValue());
+    assertNull(responseMessage.getReturnValue());
     assertThat(
-        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        responseMessage.getRaisedThrowable().getThrowable().getType(),
         is("java.lang.NoSuchFieldException"));
 
     // dispatch with the all access dispatcher - expect no exception
-    replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
-    assertNotNull(replyMsg.getReturnValue());
-    assertFalse(replyMsg.getReturnValue().getIsVoid());
-    assertNull(replyMsg.getRaisedThrowable());
+    responseMessage = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    assertNotNull(responseMessage.getReturnValue());
+    assertFalse(responseMessage.getReturnValue().getIsVoid());
+    assertNull(responseMessage.getRaisedThrowable());
   }
 
   @Override
@@ -503,18 +512,18 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
         messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
 
     // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
-    ExecMessage replyMsg =
+    ExecMessage responseMessage =
         ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
-    assertNull(replyMsg.getReturnValue());
+    assertNull(responseMessage.getReturnValue());
     assertThat(
-        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        responseMessage.getRaisedThrowable().getThrowable().getType(),
         is("java.lang.NoSuchFieldException"));
 
     // dispatch with the all access dispatcher - expect no exception
-    replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
-    assertNotNull(replyMsg.getReturnValue());
-    assertFalse(replyMsg.getReturnValue().getIsVoid());
-    assertNull(replyMsg.getRaisedThrowable());
+    responseMessage = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    assertNotNull(responseMessage.getReturnValue());
+    assertFalse(responseMessage.getReturnValue().getIsVoid());
+    assertNull(responseMessage.getRaisedThrowable());
   }
 
   // auxiliary class

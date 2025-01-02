@@ -85,7 +85,7 @@ public class MethodInterceptIT extends AbstractInterceptIT {
         executor.submit(
             () -> {
               Message callback =
-                  receiveCallbackVerifyAndReply(
+                  receiveCallbackVerifyAndResponse(
                       () -> {
                         ReturnValue retValue =
                             invoke(
@@ -119,7 +119,7 @@ public class MethodInterceptIT extends AbstractInterceptIT {
               logger.debug("first callback received");
 
               callback =
-                  receiveCallbackVerifyAndReply(
+                  receiveCallbackVerifyAndResponse(
                       () -> {
                         ReturnValue retValue =
                             invoke(

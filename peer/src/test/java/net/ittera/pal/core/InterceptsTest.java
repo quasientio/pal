@@ -109,9 +109,9 @@ public class InterceptsTest extends ZmqEnabledTest {
     interceptMessage.marshal(buf, 0);
     new InterceptEventMsg(buf).send(registerSocket);
 
-    // verify reply
-    String reply = registerSocket.recvStr();
-    assertThat(reply, is(InterceptMatcher.REGISTER_OK_REPLY));
+    // verify response
+    String response = registerSocket.recvStr();
+    assertThat(response, is(InterceptMatcher.REGISTER_OK_RESPONSE));
   }
 
   @Test
@@ -128,16 +128,16 @@ public class InterceptsTest extends ZmqEnabledTest {
             "someCallbackMethod");
     new InterceptEventMsg(interceptMessage).send(registerSocket);
 
-    // verify reply
-    String reply = registerSocket.recvStr();
-    assertThat(reply, is(InterceptMatcher.REGISTER_OK_REPLY));
+    // verify response
+    String response = registerSocket.recvStr();
+    assertThat(response, is(InterceptMatcher.REGISTER_OK_RESPONSE));
 
     // now send again
     new InterceptEventMsg(interceptMessage).send(registerSocket);
 
-    // verify reply
-    reply = registerSocket.recvStr();
-    assertThat(reply, is(InterceptMatcher.REGISTER_DUP_REPLY));
+    // verify response
+    response = registerSocket.recvStr();
+    assertThat(response, is(InterceptMatcher.REGISTER_DUP_RESPONSE));
   }
 
   @Test
@@ -154,9 +154,9 @@ public class InterceptsTest extends ZmqEnabledTest {
             "someCallbackMethod");
     new InterceptEventMsg(interceptMessage).send(registerSocket);
 
-    // verify reply
-    String reply = registerSocket.recvStr();
-    assertThat(reply, is(InterceptMatcher.REGISTER_OK_REPLY));
+    // verify response
+    String response = registerSocket.recvStr();
+    assertThat(response, is(InterceptMatcher.REGISTER_OK_RESPONSE));
 
     // create a non-matching ExecMessage
     ExecMessage execMessage = msgBuilder.buildEmptyConstructor(peerUuid, "java.util.HashMap");
@@ -182,9 +182,9 @@ public class InterceptsTest extends ZmqEnabledTest {
             "someCallbackMethod");
     new InterceptEventMsg(interceptMessage).send(registerSocket);
 
-    // verify reply
-    String reply = registerSocket.recvStr();
-    assertThat(reply, is(InterceptMatcher.REGISTER_OK_REPLY));
+    // verify response
+    String response = registerSocket.recvStr();
+    assertThat(response, is(InterceptMatcher.REGISTER_OK_RESPONSE));
 
     // create a matching ExecMessage with non-matching phase (ExecPhase = AFTER)
     ExecMessage execMessage = msgBuilder.buildEmptyConstructor(peerUuid, "java.util.ArrayList");
@@ -210,9 +210,9 @@ public class InterceptsTest extends ZmqEnabledTest {
             "someCallbackMethod");
     new InterceptEventMsg(interceptMessage).send(registerSocket);
 
-    // verify reply
-    String reply = registerSocket.recvStr();
-    assertThat(reply, is(InterceptMatcher.REGISTER_OK_REPLY));
+    // verify response
+    String response = registerSocket.recvStr();
+    assertThat(response, is(InterceptMatcher.REGISTER_OK_RESPONSE));
 
     // now send a matching ExecMessage
     ExecMessage execMessage = msgBuilder.buildEmptyConstructor(peerUuid, "java.util.ArrayList");
@@ -241,15 +241,15 @@ public class InterceptsTest extends ZmqEnabledTest {
     final String interceptId = interceptMessage.getMessageId();
     new InterceptEventMsg(interceptMessage).send(registerSocket);
 
-    // verify reply
-    String reply = registerSocket.recvStr();
-    assertThat(reply, is(InterceptMatcher.REGISTER_OK_REPLY));
+    // verify response
+    String response = registerSocket.recvStr();
+    assertThat(response, is(InterceptMatcher.REGISTER_OK_RESPONSE));
 
     // now unregister
     new InterceptEventMsg(interceptId).send(registerSocket);
 
-    // verify reply
-    reply = registerSocket.recvStr();
-    assertThat(reply, is(InterceptMatcher.UNREGISTER_OK_REPLY));
+    // verify response
+    response = registerSocket.recvStr();
+    assertThat(response, is(InterceptMatcher.UNREGISTER_OK_RESPONSE));
   }
 }

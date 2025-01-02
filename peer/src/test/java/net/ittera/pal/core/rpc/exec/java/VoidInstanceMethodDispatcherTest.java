@@ -121,16 +121,18 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
             argObjRefs);
 
     // dispatch
-    ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    ExecMessage responseMessage =
+        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
+    assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
-    assertTrue(replyMsg.getReturnValue().getIsVoid());
+    assertTrue(responseMessage.getReturnValue().getIsVoid());
     assertThat(target.wordsCollected.size(), is(2));
     assertThat(
-        replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
+        responseMessage.getReturnValue(),
+        allOf(comesFromClass(targetClass), comesFrom(methodName)));
   }
 
   @Test
@@ -183,17 +185,19 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
             argObjRefs);
 
     // dispatch
-    ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    ExecMessage responseMessage =
+        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
 
-    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
+    assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
-    assertTrue(replyMsg.getReturnValue().getIsVoid());
+    assertTrue(responseMessage.getReturnValue().getIsVoid());
     assertThat(target.wordsCollected.size(), is(1));
     assertThat(
-        replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
+        responseMessage.getReturnValue(),
+        allOf(comesFromClass(targetClass), comesFrom(methodName)));
   }
 
   @Test
@@ -246,16 +250,18 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
             argObjRefs);
 
     // dispatch
-    ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    ExecMessage responseMessage =
+        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
+    assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
-    assertTrue(replyMsg.getReturnValue().getIsVoid());
+    assertTrue(responseMessage.getReturnValue().getIsVoid());
     assertThat(target.wordsCollected.size(), is(numberOfWordsToAdd));
     assertThat(
-        replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
+        responseMessage.getReturnValue(),
+        allOf(comesFromClass(targetClass), comesFrom(methodName)));
   }
 
   @Test
@@ -284,16 +290,18 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
             argObjRefs);
 
     // dispatch
-    ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    ExecMessage responseMessage =
+        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
+    assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(2L));
-    assertTrue(replyMsg.getReturnValue().getIsVoid());
+    assertTrue(responseMessage.getReturnValue().getIsVoid());
     assertThat(target.wordsCollected.size(), is(wordList.size()));
     assertThat(
-        replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
+        responseMessage.getReturnValue(),
+        allOf(comesFromClass(targetClass), comesFrom(methodName)));
   }
 
   @Test
@@ -319,16 +327,18 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
             argObjRefs);
 
     // dispatch
-    ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    ExecMessage responseMessage =
+        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
+    assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
-    assertTrue(replyMsg.getReturnValue().getIsVoid());
+    assertTrue(responseMessage.getReturnValue().getIsVoid());
     assertThat(target.wordsCollected.size(), is(0));
     assertThat(
-        replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
+        responseMessage.getReturnValue(),
+        allOf(comesFromClass(targetClass), comesFrom(methodName)));
   }
 
   @Test
@@ -383,16 +393,18 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
             argObjRefs);
 
     // dispatch
-    ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    ExecMessage responseMessage =
+        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
+    assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
-    assertTrue(replyMsg.getReturnValue().getIsVoid());
+    assertTrue(responseMessage.getReturnValue().getIsVoid());
     assertThat(target.wordsCollected.size(), is(4));
     assertThat(
-        replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
+        responseMessage.getReturnValue(),
+        allOf(comesFromClass(targetClass), comesFrom(methodName)));
   }
 
   @Test
@@ -447,15 +459,16 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
             argObjRefs);
 
     // dispatch
-    ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    ExecMessage responseMessage =
+        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
+    assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
-    assertThat(replyMsg.getReturnValue(), is(nullValue()));
+    assertThat(responseMessage.getReturnValue(), is(nullValue()));
     assertThat(
-        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        responseMessage.getRaisedThrowable().getThrowable().getType(),
         is("java.lang.IllegalArgumentException"));
   }
 
@@ -485,15 +498,16 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
             argObjRefs);
 
     // dispatch
-    ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    ExecMessage responseMessage =
+        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
+    assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
-    assertThat(replyMsg.getReturnValue(), is(nullValue()));
+    assertThat(responseMessage.getReturnValue(), is(nullValue()));
     assertThat(
-        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        responseMessage.getRaisedThrowable().getThrowable().getType(),
         is("java.lang.NoSuchMethodException"));
   }
 
@@ -520,10 +534,10 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
             argObjRefs);
 
     // dispatch
-    ExecMessage replyMsg =
+    ExecMessage responseMessage =
         ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
-    assertNotNull(replyMsg.getReturnValue());
-    assertNull(replyMsg.getRaisedThrowable());
+    assertNotNull(responseMessage.getReturnValue());
+    assertNull(responseMessage.getRaisedThrowable());
   }
 
   @Override
@@ -550,17 +564,17 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
             argObjRefs);
 
     // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
-    ExecMessage replyMsg =
+    ExecMessage responseMessage =
         ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
-    assertNull(replyMsg.getReturnValue());
+    assertNull(responseMessage.getReturnValue());
     assertThat(
-        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        responseMessage.getRaisedThrowable().getThrowable().getType(),
         is("java.lang.NoSuchMethodException"));
 
     // dispatch with the all access dispatcher - expect no exception
-    replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
-    assertNotNull(replyMsg.getReturnValue());
-    assertNull(replyMsg.getRaisedThrowable());
+    responseMessage = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    assertNotNull(responseMessage.getReturnValue());
+    assertNull(responseMessage.getRaisedThrowable());
   }
 
   @Override
@@ -587,17 +601,17 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
             argObjRefs);
 
     // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
-    ExecMessage replyMsg =
+    ExecMessage responseMessage =
         ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
-    assertNull(replyMsg.getReturnValue());
+    assertNull(responseMessage.getReturnValue());
     assertThat(
-        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        responseMessage.getRaisedThrowable().getThrowable().getType(),
         is("java.lang.NoSuchMethodException"));
 
     // dispatch with the all access dispatcher - expect no exception
-    replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
-    assertNotNull(replyMsg.getReturnValue());
-    assertNull(replyMsg.getRaisedThrowable());
+    responseMessage = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    assertNotNull(responseMessage.getReturnValue());
+    assertNull(responseMessage.getRaisedThrowable());
   }
 
   @Override
@@ -624,17 +638,17 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
             argObjRefs);
 
     // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
-    ExecMessage replyMsg =
+    ExecMessage responseMessage =
         ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
-    assertNull(replyMsg.getReturnValue());
+    assertNull(responseMessage.getReturnValue());
     assertThat(
-        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        responseMessage.getRaisedThrowable().getThrowable().getType(),
         is("java.lang.NoSuchMethodException"));
 
     // dispatch with the all access dispatcher - expect no exception
-    replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
-    assertNotNull(replyMsg.getReturnValue());
-    assertNull(replyMsg.getRaisedThrowable());
+    responseMessage = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    assertNotNull(responseMessage.getReturnValue());
+    assertNull(responseMessage.getRaisedThrowable());
   }
 
   // auxiliary class

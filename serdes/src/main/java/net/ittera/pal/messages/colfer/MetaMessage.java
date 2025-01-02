@@ -40,6 +40,8 @@ public class MetaMessage implements Serializable, net.ittera.pal.messages.Marsha
 
   public String messageId;
 
+  public String responseToId;
+
   public byte service;
 
   public Parameter[] params;
@@ -59,6 +61,7 @@ public class MetaMessage implements Serializable, net.ittera.pal.messages.Marsha
   private void init() {
     fromPeer = "";
     messageId = "";
+    responseToId = "";
     params = _zeroParams;
     body = "";
   }
@@ -162,6 +165,8 @@ public class MetaMessage implements Serializable, net.ittera.pal.messages.Marsha
             + (long) this.fromPeer.length() * 3
             + 6
             + (long) this.messageId.length() * 3
+            + 6
+            + (long) this.responseToId.length() * 3
             + 2
             + 6
             + 2
@@ -313,13 +318,61 @@ public class MetaMessage implements Serializable, net.ittera.pal.messages.Marsha
         buf[ii] = (byte) size;
       }
 
-      if (this.service != 0) {
+      if (!this.responseToId.isEmpty()) {
         buf[i++] = (byte) 2;
+        int start = ++i;
+
+        String s = this.responseToId;
+        for (int sIndex = 0, sLength = s.length(); sIndex < sLength; sIndex++) {
+          char c = s.charAt(sIndex);
+          if (c < '\u0080') {
+            buf[i++] = (byte) c;
+          } else if (c < '\u0800') {
+            buf[i++] = (byte) (192 | c >>> 6);
+            buf[i++] = (byte) (128 | c & 63);
+          } else if (c < '\ud800' || c > '\udfff') {
+            buf[i++] = (byte) (224 | c >>> 12);
+            buf[i++] = (byte) (128 | c >>> 6 & 63);
+            buf[i++] = (byte) (128 | c & 63);
+          } else {
+            int cp = 0;
+            if (++sIndex < sLength) cp = Character.toCodePoint(c, s.charAt(sIndex));
+            if ((cp >= 1 << 16) && (cp < 1 << 21)) {
+              buf[i++] = (byte) (240 | cp >>> 18);
+              buf[i++] = (byte) (128 | cp >>> 12 & 63);
+              buf[i++] = (byte) (128 | cp >>> 6 & 63);
+              buf[i++] = (byte) (128 | cp & 63);
+            } else buf[i++] = (byte) '?';
+          }
+        }
+        int size = i - start;
+        if (size > MetaMessage.colferSizeMax)
+          throw new IllegalStateException(
+              format(
+                  "colfer: net.ittera.pal.messages/colfer.MetaMessage.responseToId size %d exceeds %d UTF-8 bytes",
+                  size, MetaMessage.colferSizeMax));
+
+        int ii = start - 1;
+        if (size > 0x7f) {
+          i++;
+          for (int x = size; x >= 1 << 14; x >>>= 7) i++;
+          System.arraycopy(buf, start, buf, i - size, size);
+
+          do {
+            buf[ii++] = (byte) (size | 0x80);
+            size >>>= 7;
+          } while (size > 0x7f);
+        }
+        buf[ii] = (byte) size;
+      }
+
+      if (this.service != 0) {
+        buf[i++] = (byte) 3;
         buf[i++] = this.service;
       }
 
       if (this.params.length != 0) {
-        buf[i++] = (byte) 3;
+        buf[i++] = (byte) 4;
         Parameter[] a = this.params;
 
         int x = a.length;
@@ -345,12 +398,12 @@ public class MetaMessage implements Serializable, net.ittera.pal.messages.Marsha
       }
 
       if (this.status != 0) {
-        buf[i++] = (byte) 4;
+        buf[i++] = (byte) 5;
         buf[i++] = this.status;
       }
 
       if (!this.body.isEmpty()) {
-        buf[i++] = (byte) 5;
+        buf[i++] = (byte) 6;
         int start = ++i;
 
         String s = this.body;
@@ -483,11 +536,30 @@ public class MetaMessage implements Serializable, net.ittera.pal.messages.Marsha
       }
 
       if (header == (byte) 2) {
-        this.service = buf[i++];
+        int size = 0;
+        for (int shift = 0; true; shift += 7) {
+          byte b = buf[i++];
+          size |= (b & 0x7f) << shift;
+          if (shift == 28 || b >= 0) break;
+        }
+        if (size < 0 || size > MetaMessage.colferSizeMax)
+          throw new SecurityException(
+              format(
+                  "colfer: net.ittera.pal.messages/colfer.MetaMessage.responseToId size %d exceeds %d UTF-8 bytes",
+                  size, MetaMessage.colferSizeMax));
+
+        int start = i;
+        i += size;
+        this.responseToId = new String(buf, start, size, StandardCharsets.UTF_8);
         header = buf[i++];
       }
 
       if (header == (byte) 3) {
+        this.service = buf[i++];
+        header = buf[i++];
+      }
+
+      if (header == (byte) 4) {
         int length = 0;
         for (int shift = 0; true; shift += 7) {
           byte b = buf[i++];
@@ -510,12 +582,12 @@ public class MetaMessage implements Serializable, net.ittera.pal.messages.Marsha
         header = buf[i++];
       }
 
-      if (header == (byte) 4) {
+      if (header == (byte) 5) {
         this.status = buf[i++];
         header = buf[i++];
       }
 
-      if (header == (byte) 5) {
+      if (header == (byte) 6) {
         int size = 0;
         for (int shift = 0; true; shift += 7) {
           byte b = buf[i++];
@@ -550,7 +622,7 @@ public class MetaMessage implements Serializable, net.ittera.pal.messages.Marsha
   }
 
   // {@link Serializable} version number.
-  private static final long serialVersionUID = 6L;
+  private static final long serialVersionUID = 7L;
 
   // {@link Serializable} Colfer extension.
   private void writeObject(ObjectOutputStream out) throws IOException {
@@ -630,6 +702,35 @@ public class MetaMessage implements Serializable, net.ittera.pal.messages.Marsha
    */
   public MetaMessage withMessageId(String value) {
     this.messageId = value;
+    return this;
+  }
+
+  /**
+   * Gets net.ittera.pal.messages/colfer.MetaMessage.responseToId.
+   *
+   * @return the value.
+   */
+  public String getResponseToId() {
+    return this.responseToId;
+  }
+
+  /**
+   * Sets net.ittera.pal.messages/colfer.MetaMessage.responseToId.
+   *
+   * @param value the replacement.
+   */
+  public void setResponseToId(String value) {
+    this.responseToId = value;
+  }
+
+  /**
+   * Sets net.ittera.pal.messages/colfer.MetaMessage.responseToId.
+   *
+   * @param value the replacement.
+   * @return {@code this}.
+   */
+  public MetaMessage withResponseToId(String value) {
+    this.responseToId = value;
     return this;
   }
 
@@ -754,6 +855,7 @@ public class MetaMessage implements Serializable, net.ittera.pal.messages.Marsha
     int h = 1;
     if (this.fromPeer != null) h = 31 * h + this.fromPeer.hashCode();
     if (this.messageId != null) h = 31 * h + this.messageId.hashCode();
+    if (this.responseToId != null) h = 31 * h + this.responseToId.hashCode();
     h = 31 * h + (this.service & 0xff);
     for (Parameter o : this.params) h = 31 * h + (o == null ? 0 : o.hashCode());
     h = 31 * h + (this.status & 0xff);
@@ -772,6 +874,9 @@ public class MetaMessage implements Serializable, net.ittera.pal.messages.Marsha
 
     return (this.fromPeer == null ? o.fromPeer == null : this.fromPeer.equals(o.fromPeer))
         && (this.messageId == null ? o.messageId == null : this.messageId.equals(o.messageId))
+        && (this.responseToId == null
+            ? o.responseToId == null
+            : this.responseToId.equals(o.responseToId))
         && this.service == o.service
         && java.util.Arrays.equals(this.params, o.params)
         && this.status == o.status
@@ -787,6 +892,10 @@ public class MetaMessage implements Serializable, net.ittera.pal.messages.Marsha
 
       if (json.has("messageId")) {
         this.messageId = json.get("messageId").getAsString();
+      }
+
+      if (json.has("responseToId")) {
+        this.responseToId = json.get("responseToId").getAsString();
       }
 
       if (json.has("service")) {

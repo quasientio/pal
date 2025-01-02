@@ -182,7 +182,7 @@ public class InterceptInformer implements InterceptNodeListener {
     }
     if (!"0".equals(rcvdString)) {
       logger.warn(
-          "Received non-0 reply (code={}) when informing of intercept event: {}",
+          "Received non-0 response (code={}) when informing of intercept event: {}",
           rcvdString,
           message);
     }

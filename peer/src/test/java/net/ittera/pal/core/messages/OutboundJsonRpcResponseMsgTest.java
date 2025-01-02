@@ -44,7 +44,7 @@ public class OutboundJsonRpcResponseMsgTest extends ZmqEnabledTest {
     ZMQ.Socket repSocket = zmqContext.createSocket(SocketType.REP);
     repSocket.connect(socketAddress);
 
-    // before sending a reply from REP to DEALER, we need to receive a request from DEALER
+    // before sending a response from REP to DEALER, we need to receive a request from DEALER
     dealerSocket.send("", ZMQ.SNDMORE); // emulate empty envelope
     dealerSocket.send("fake request", 0);
     String receivedString = repSocket.recvStr();

@@ -290,7 +290,7 @@ class LogWriter extends ConnectedService {
             if (logger.isDebugEnabled()) {
               logger.debug(
                   "new message written to log at offset: {}, w/id: {},"
-                      + " in reply to message w/id: {} ({} bytes)",
+                      + " in response to message w/id: {} ({} bytes)",
                   sentRecordMetadata.offset(),
                   messageId,
                   responseId,

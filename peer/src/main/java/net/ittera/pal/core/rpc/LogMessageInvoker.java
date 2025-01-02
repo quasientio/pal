@@ -167,9 +167,9 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
               messageBuilder.jsonRpcRequestToExecMessage(jsonRpcRequest, fromPeerUuid);
 
           // dispatch
-          Message replyMsg;
+          Message responseMessage;
           try {
-            replyMsg = dispatch(requestMsg);
+            responseMessage = dispatch(requestMsg);
           } catch (Exception dispatchException) {
 
             // dispatching failed, log and send error response
@@ -181,13 +181,14 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
             logMessageDispatch(requestMsg, jsonRpcResponse.getId(), started);
             return;
           }
-          // create JSON-RPC response from ExecMessage reply
+          // create JSON-RPC response from ExecMessage response
           jsonRpcResponse =
-              messageBuilder.jsonRpcResponseFromExecMessageReply(replyMsg.getExecMessage());
+              messageBuilder.jsonRpcResponseFromExecMessageResponse(
+                  responseMessage.getExecMessage());
 
           // send response
           // TODO write to Log (ie. send to LogWriter) -> JsonRpcSerializer.toJson(jsonRpcResponse)
-          logMessageDispatch(requestMsg, replyMsg, started);
+          logMessageDispatch(requestMsg, responseMessage, started);
         }
         case BINARY_RPC -> {
           final Message requestMsg = new Message();

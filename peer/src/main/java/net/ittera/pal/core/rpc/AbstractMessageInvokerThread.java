@@ -167,26 +167,26 @@ public abstract class AbstractMessageInvokerThread extends Thread {
   protected final Message dispatch(Message message) {
     final ExecMessage execMessage = message.getExecMessage();
     if (execMessage != null) {
-      final Message reply =
+      final Message response =
           messageBuilder.wrap(
               dispatch(
                   message.getExecMessage(), MessageType.fromId(message.getMessageType()), null));
       notifyMessageDispatched(message);
-      return reply;
+      return response;
     }
 
     final ControlMessage controlMessage = message.getControlMessage();
     if (controlMessage != null) {
-      final Message reply = messageBuilder.wrap(dispatch(message.getControlMessage()));
+      final Message response = messageBuilder.wrap(dispatch(message.getControlMessage()));
       notifyMessageDispatched(message);
-      return reply;
+      return response;
     }
 
     final MetaMessage metaMessage = message.getMetaMessage();
     if (metaMessage != null) {
-      final Message reply = messageBuilder.wrap(dispatch(message.getMetaMessage()));
+      final Message response = messageBuilder.wrap(dispatch(message.getMetaMessage()));
       notifyMessageDispatched(message);
-      return reply;
+      return response;
     }
 
     throw new IllegalArgumentException(
@@ -196,10 +196,11 @@ public abstract class AbstractMessageInvokerThread extends Thread {
   private ExecMessage dispatch(
       ExecMessage requestMsg, MessageType messageType, @Nullable Long recordOffset) {
     final boolean isDirectRequest = recordOffset == null;
-    ExecMessage replyMsg;
+    ExecMessage responseMessage;
     boolean dispatched = false;
     try {
-      replyMsg = incomingMessageDispatcher.incomingCall(requestMsg, messageType, isDirectRequest);
+      responseMessage =
+          incomingMessageDispatcher.incomingCall(requestMsg, messageType, isDirectRequest);
       dispatched = true;
     } finally {
       DispatchResultType resultType =
@@ -209,20 +210,20 @@ public abstract class AbstractMessageInvokerThread extends Thread {
 
     if (logger.isDebugEnabled()) {
       logger.debug(
-          "Invoker successfully dispatched Exec Message w/id: {} and recordOffset: {}, reply id: {}",
+          "Successfully dispatched Exec Message w/id: {} and recordOffset: {}, response id: {}",
           requestMsg.getMessageId(),
           recordOffset,
-          replyMsg.getMessageId());
+          responseMessage.getMessageId());
     }
 
-    return replyMsg;
+    return responseMessage;
   }
 
   private ControlMessage dispatch(ControlMessage controlMsg) {
     boolean dispatched = false;
-    ControlMessage replyMsg;
+    ControlMessage responseMsg;
     try {
-      replyMsg = incomingMessageDispatcher.incomingControlMessage(controlMsg);
+      responseMsg = incomingMessageDispatcher.incomingControlMessage(controlMsg);
       dispatched = true;
     } finally {
       DispatchResultType resultType =
@@ -232,18 +233,18 @@ public abstract class AbstractMessageInvokerThread extends Thread {
 
     if (logger.isDebugEnabled()) {
       logger.debug(
-          "Invoker successfully dispatched Control Message w/id: {} , reply id: {}",
+          "Invoker successfully dispatched Control Message w/id: {} , response id: {}",
           controlMsg.getMessageId(),
-          replyMsg.getMessageId());
+          responseMsg.getMessageId());
     }
-    return replyMsg;
+    return responseMsg;
   }
 
   private MetaMessage dispatch(MetaMessage metaMessage) {
     boolean dispatched = false;
-    MetaMessage replyMsg;
+    MetaMessage responseMsg;
     try {
-      replyMsg = incomingMessageDispatcher.incomingMetaMessage(metaMessage);
+      responseMsg = incomingMessageDispatcher.incomingMetaMessage(metaMessage);
       dispatched = true;
     } finally {
       DispatchResultType resultType =
@@ -253,11 +254,11 @@ public abstract class AbstractMessageInvokerThread extends Thread {
 
     if (logger.isDebugEnabled()) {
       logger.debug(
-          "Invoker successfully dispatched Meta Message w/id: {} , reply id: {}",
+          "Invoker successfully dispatched Meta Message w/id: {} , response id: {}",
           metaMessage.getMessageId(),
-          replyMsg.getMessageId());
+          responseMsg.getMessageId());
     }
-    return replyMsg;
+    return responseMsg;
   }
 
   private void endDispatch(MessageFamily dispatchedMessageType, DispatchResultType resultType) {
@@ -339,20 +340,21 @@ public abstract class AbstractMessageInvokerThread extends Thread {
     }
   }
 
-  protected void logMessageDispatch(Message requestMsg, String replyId, long dispatchStart) {
-    logMessageDispatch(getMessageId(requestMsg), replyId, dispatchStart);
+  protected void logMessageDispatch(Message requestMsg, String responseId, long dispatchStart) {
+    logMessageDispatch(getMessageId(requestMsg), responseId, dispatchStart);
   }
 
-  protected void logMessageDispatch(Message requestMsg, Message replyMsg, long dispatchStart) {
-    logMessageDispatch(getMessageId(requestMsg), getMessageId(replyMsg), dispatchStart);
+  protected void logMessageDispatch(
+      Message requestMsg, Message responseMessage, long dispatchStart) {
+    logMessageDispatch(getMessageId(requestMsg), getMessageId(responseMessage), dispatchStart);
   }
 
-  protected void logMessageDispatch(String requestId, String replyId, long dispatchStart) {
+  protected void logMessageDispatch(String requestId, String responseId, long dispatchStart) {
     if (logger.isDebugEnabled()) {
       final long took = System.currentTimeMillis() - dispatchStart;
       logger.debug(
-          "Dispatched and sent message w/id: {} in reply to request w/id: {} in {} ms",
-          replyId,
+          "Dispatched and sent message w/id: {} in response to request w/id: {} in {} ms",
+          responseId,
           requestId,
           took);
     }

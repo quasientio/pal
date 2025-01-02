@@ -43,7 +43,7 @@ import net.ittera.pal.core.InterceptMatcher;
 import net.ittera.pal.core.RunOptions;
 import net.ittera.pal.core.ZmqEnabledTest;
 import net.ittera.pal.core.messages.SessionCommandMsg;
-import net.ittera.pal.core.messages.SessionReplyMsg;
+import net.ittera.pal.core.messages.SessionResponseMsg;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.cxn.PalDirectory;
 import net.ittera.pal.messages.OutboundMsg;
@@ -187,13 +187,13 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     SessionCommandMsg sessionCommandMsg1 =
         new SessionCommandMsg(
             SessionCommandType.STORE_OBJECT, UUID.randomUUID(), ObjectRef.from("39872356"));
-    SessionReplyMsg returnedMsg1 =
+    SessionResponseMsg returnedMsg1 =
         dispatcherConnector.sendMessageToSessionService(sessionCommandMsg1);
 
     SessionCommandMsg sessionCommandMsg2 =
         new SessionCommandMsg(
             SessionCommandType.STORE_OBJECT, UUID.randomUUID(), ObjectRef.from("7734876"));
-    SessionReplyMsg returnedMsg2 =
+    SessionResponseMsg returnedMsg2 =
         dispatcherConnector.sendMessageToSessionService(sessionCommandMsg2);
 
     // reply has status OK
@@ -350,8 +350,8 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
             continue;
           }
           messagesReceived.add(msg);
-          SessionReplyMsg replyMsg = new SessionReplyMsg(SessionStatusType.OK);
-          replyMsg.send(repSocket);
+          SessionResponseMsg responseMessage = new SessionResponseMsg(SessionStatusType.OK);
+          responseMessage.send(repSocket);
         } catch (ZMQException ex) {
           int errorCode = ex.getErrorCode();
           if (errorCode == ZError.ETERM) {

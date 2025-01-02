@@ -147,7 +147,7 @@ public class JsonRpcMessageSummaryUtilTest {
         messageBuilder.buildPutObjectDone(
             peerUuid, accessibleObject, instanceFieldPutUuid, responseToId);
     JsonRpcResponse jsonRpcResponse =
-        messageBuilder.jsonRpcResponseFromExecMessageReply(execMessage);
+        messageBuilder.jsonRpcResponseFromExecMessageResponse(execMessage);
     assertEquals(
         "put_done " + getClassnameWithoutPackage(targetClass.getName()) + "." + fieldName,
         JsonRpcMessageSummaryUtil.getOneLinerSummary(jsonRpcResponse));
@@ -171,7 +171,7 @@ public class JsonRpcMessageSummaryUtilTest {
         messageBuilder.buildPutStaticDone(
             peerUuid, accessibleObject, staticFieldPutUuid, responseToId);
     JsonRpcResponse jsonRpcResponse =
-        messageBuilder.jsonRpcResponseFromExecMessageReply(execMessage);
+        messageBuilder.jsonRpcResponseFromExecMessageResponse(execMessage);
     assertEquals(
         "put_done " + getClassnameWithoutPackage(targetClass.getName()) + "." + fieldName,
         JsonRpcMessageSummaryUtil.getOneLinerSummary(jsonRpcResponse));
@@ -196,7 +196,7 @@ public class JsonRpcMessageSummaryUtilTest {
             peerUuid, accessibleObject, throwable, responseToId);
 
     JsonRpcResponse jsonRpcResponse =
-        messageBuilder.jsonRpcResponseFromExecMessageReply(execMessage);
+        messageBuilder.jsonRpcResponseFromExecMessageResponse(execMessage);
     assertEquals(
         "throw RuntimeException: \"" + throwableMessage + "\"",
         JsonRpcMessageSummaryUtil.getOneLinerSummary(jsonRpcResponse));
@@ -224,7 +224,7 @@ public class JsonRpcMessageSummaryUtilTest {
             responseToId);
 
     JsonRpcResponse jsonRpcResponse =
-        messageBuilder.jsonRpcResponseFromExecMessageReply(execMessage);
+        messageBuilder.jsonRpcResponseFromExecMessageResponse(execMessage);
     assertEquals("return void", JsonRpcMessageSummaryUtil.getOneLinerSummary(jsonRpcResponse));
   }
 
@@ -254,7 +254,7 @@ public class JsonRpcMessageSummaryUtilTest {
             responseToId);
 
     JsonRpcResponse jsonRpcResponse =
-        messageBuilder.jsonRpcResponseFromExecMessageReply(execMessage);
+        messageBuilder.jsonRpcResponseFromExecMessageResponse(execMessage);
     assertEquals(
         "return "
             + method.getReturnType().getSimpleName()

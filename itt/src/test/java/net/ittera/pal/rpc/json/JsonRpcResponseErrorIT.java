@@ -51,11 +51,11 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
                     """
             .formatted(++messageId, className);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request, String.valueOf(messageId));
+    JsonRpcResponse responseMessage = sendAndReceive(request, String.valueOf(messageId));
 
     assertErrorResponse(
         messageId,
-        replyMsg,
+        responseMessage,
         JsonRpcErrorCode.PARSE_ERROR,
         null,
         "Failed to deserialize JSON-RPC message");
@@ -77,10 +77,10 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
                     """
             .formatted(++messageId, className);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
-        messageId, replyMsg, JsonRpcErrorCode.INVALID_REQUEST, null, "Method is missing");
+        messageId, responseMessage, JsonRpcErrorCode.INVALID_REQUEST, null, "Method is missing");
   }
 
   @Test
@@ -101,10 +101,14 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
                     """
             .formatted(++messageId, className);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
-        messageId, replyMsg, JsonRpcErrorCode.INVALID_REQUEST, null, "Invalid method: notAMethod");
+        messageId,
+        responseMessage,
+        JsonRpcErrorCode.INVALID_REQUEST,
+        null,
+        "Invalid method: notAMethod");
   }
 
   @Test
@@ -127,11 +131,11 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
                     """
             .formatted(++messageId, className);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
         messageId,
-        replyMsg,
+        responseMessage,
         JsonRpcErrorCode.METHOD_NOT_FOUND,
         "java.lang.NoSuchMethodException",
         "No matching constructor found");
@@ -153,11 +157,11 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
                     """
             .formatted(++messageId, nonExistingClass);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
         messageId,
-        replyMsg,
+        responseMessage,
         JsonRpcErrorCode.METHOD_NOT_FOUND,
         "java.lang.ClassNotFoundException",
         "net.ittera.pal.apps.IDontExist");
@@ -175,10 +179,10 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
                     """
             .formatted(++messageId);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
-        messageId, replyMsg, JsonRpcErrorCode.INVALID_PARAMS, null, "Params are missing");
+        messageId, responseMessage, JsonRpcErrorCode.INVALID_PARAMS, null, "Params are missing");
   }
 
   @Test
@@ -198,10 +202,14 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
                         """
             .formatted(++messageId);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
-        messageId, replyMsg, JsonRpcErrorCode.INVALID_PARAMS, null, "Type is missing in params");
+        messageId,
+        responseMessage,
+        JsonRpcErrorCode.INVALID_PARAMS,
+        null,
+        "Type is missing in params");
   }
 
   @Test
@@ -219,10 +227,14 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
                             """
             .formatted(++messageId);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
-        messageId, replyMsg, JsonRpcErrorCode.INVALID_PARAMS, null, "Invalid characters in type");
+        messageId,
+        responseMessage,
+        JsonRpcErrorCode.INVALID_PARAMS,
+        null,
+        "Invalid characters in type");
   }
 
   @Test
@@ -240,11 +252,11 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
                                 """
             .formatted(++messageId);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
         messageId,
-        replyMsg,
+        responseMessage,
         JsonRpcErrorCode.INVALID_PARAMS,
         null,
         "Type name is a Java reserved keyword");
@@ -265,11 +277,11 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
                                     """
             .formatted(++messageId, className);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
         messageId,
-        replyMsg,
+        responseMessage,
         JsonRpcErrorCode.INVALID_PARAMS,
         null,
         "Method is missing in 'call' request");
@@ -290,11 +302,11 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
                                     """
             .formatted(++messageId, className);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
         messageId,
-        replyMsg,
+        responseMessage,
         JsonRpcErrorCode.INVALID_PARAMS,
         null,
         "Field is missing in 'get' request");
@@ -316,11 +328,11 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
                                     """
             .formatted(++messageId, className);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
         messageId,
-        replyMsg,
+        responseMessage,
         JsonRpcErrorCode.INVALID_PARAMS,
         null,
         "Field is missing in 'put' request");
@@ -342,11 +354,11 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
                                     """
             .formatted(++messageId, className);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
         messageId,
-        replyMsg,
+        responseMessage,
         JsonRpcErrorCode.INVALID_PARAMS,
         null,
         "Value is missing in 'put' request");

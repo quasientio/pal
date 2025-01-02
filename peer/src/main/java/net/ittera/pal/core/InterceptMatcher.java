@@ -53,13 +53,13 @@ public class InterceptMatcher extends ConnectedService {
   private Socket registerSocket; // to listen for new intercepts and register them
   private final String interceptRegAddress;
 
-  // intercept registration reply codes
-  public static final String REGISTER_OK_REPLY = "0";
-  public static final String UNREGISTER_OK_REPLY = "0";
-  public static final String REGISTER_DUP_REPLY = "1";
-  public static final String REGISTER_PARSING_ERROR_REPLY = "2";
-  public static final String REGISTER_UNKNOWN_ERROR_REPLY = "3";
-  public static final String UNREGISTER_UNKNOWN_ERROR_REPLY = "4";
+  // intercept registration response codes
+  public static final String REGISTER_OK_RESPONSE = "0";
+  public static final String UNREGISTER_OK_RESPONSE = "0";
+  public static final String REGISTER_DUP_RESPONSE = "1";
+  public static final String REGISTER_PARSING_ERROR_RESPONSE = "2";
+  public static final String REGISTER_UNKNOWN_ERROR_RESPONSE = "3";
+  public static final String UNREGISTER_UNKNOWN_ERROR_RESPONSE = "4";
 
   // map holding all intercepts
   private final Map<InterceptType, InterceptRequests> allIntercepts =
@@ -180,24 +180,24 @@ public class InterceptMatcher extends ConnectedService {
         interceptMessage.unmarshal(interceptEventMsg.getBody(), 0);
       } catch (Exception e) {
         logger.error("Error parsing intercept request message", e);
-        registerSocket.send(REGISTER_PARSING_ERROR_REPLY);
+        registerSocket.send(REGISTER_PARSING_ERROR_RESPONSE);
       }
       if (interceptMessage != null) {
         try {
           registerInterceptRequest(interceptMessage);
-          registerSocket.send(REGISTER_OK_REPLY);
+          registerSocket.send(REGISTER_OK_RESPONSE);
         } catch (DuplicateInterceptException e) {
           logger.warn("Cannot register duplicate intercept request", e);
-          registerSocket.send(REGISTER_DUP_REPLY);
+          registerSocket.send(REGISTER_DUP_RESPONSE);
         } catch (Exception e) {
-          registerSocket.send(REGISTER_UNKNOWN_ERROR_REPLY);
+          registerSocket.send(REGISTER_UNKNOWN_ERROR_RESPONSE);
         }
       }
     } else { // Type.UNREGISTER
       String interceptMessageId = interceptEventMsg.getInterceptMessageId();
       if (interceptMessageId == null) {
         logger.error("Intercept id is null. Cannot unregister intercept request.");
-        registerSocket.send(UNREGISTER_UNKNOWN_ERROR_REPLY);
+        registerSocket.send(UNREGISTER_UNKNOWN_ERROR_RESPONSE);
         return;
       }
       allIntercepts
@@ -205,7 +205,7 @@ public class InterceptMatcher extends ConnectedService {
           .forEach(
               interceptRequests ->
                   interceptRequests.unregisterInterceptRequest(interceptMessageId));
-      registerSocket.send(UNREGISTER_OK_REPLY);
+      registerSocket.send(UNREGISTER_OK_RESPONSE);
     }
   }
 

@@ -39,7 +39,7 @@ import net.ittera.pal.common.runtime.ExecPhase;
 import net.ittera.pal.core.InterceptMatcher;
 import net.ittera.pal.core.RunOptions;
 import net.ittera.pal.core.messages.SessionCommandMsg;
-import net.ittera.pal.core.messages.SessionReplyMsg;
+import net.ittera.pal.core.messages.SessionResponseMsg;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.cxn.PalDirectory;
 import net.ittera.pal.messages.OutboundMsg;
@@ -208,8 +208,8 @@ public class DispatcherConnector {
       } else if (interceptType.equals(InterceptType.BEFORE)
           || interceptType.equals(InterceptType.AFTER)) {
         @SuppressWarnings("unused")
-        final byte[] unusedReply;
-        unusedReply = sendCallbackToPeer(interceptor, callbackMessage);
+        final byte[] unusedResponse;
+        unusedResponse = sendCallbackToPeer(interceptor, callbackMessage);
       } else {
         logger.error("Unsupported callback type: {}", interceptType);
       }
@@ -224,10 +224,10 @@ public class DispatcherConnector {
     //      if (interceptMessage.getType().equals(Intercepts.InterceptType.AROUND)) {
     // TODO in case of AROUND we should return the execMessage returned by callback only in
     // ExecPhase.After
-    // reply = sendCallbackToPeer(interceptor, callbackMessage);
+    // response = sendCallbackToPeer(interceptor, callbackMessage);
     // only parse execMessage when needed
-    // final ExecMessage replyMsg = ExecMessage.parseFrom(reply);
-    // returnValue = replyMsg;
+    // final ExecMessage responseMessage = ExecMessage.parseFrom(response);
+    // returnValue = responseMessage;
     //      } else {
     returnValue = execMessage;
     //    }
@@ -243,12 +243,12 @@ public class DispatcherConnector {
     long start = Instant.now().toEpochMilli();
     message.send(publisherReqSocket);
     try {
-      String reply = publisherReqSocket.recvStr();
-      if (!"0".equalsIgnoreCase(reply)) {
-        logger.warn("Non-zero reply from message publisher for message: {}", message);
+      String response = publisherReqSocket.recvStr();
+      if (!"0".equalsIgnoreCase(response)) {
+        logger.warn("Non-zero response from message publisher for message: {}", message);
       }
     } catch (ZMQException e) {
-      logger.error("Error receiving reply from publisher socket", e);
+      logger.error("Error receiving response from publisher socket", e);
     } finally {
       totalPubSocketTime.getAndAdd((Instant.now().toEpochMilli() - start));
       totalPublishedRequests.getAndIncrement();
@@ -281,14 +281,14 @@ public class DispatcherConnector {
   }
 
   private @Nullable byte[] sendCallbackMessageToPeer(
-      UUID interceptor, ExecMessage callbackMessage, boolean getReply) throws Exception {
+      UUID interceptor, ExecMessage callbackMessage, boolean getResponse) throws Exception {
     if (logger.isDebugEnabled()) {
       logger.debug(
           "Sending callback message: {} to peer w/uuid: {}",
           ColferUtils.format(callbackMessage),
           interceptor);
     }
-    byte[] reply;
+    byte[] response;
     // get socket for peer and send callback msg
     Socket req = getConnectedReqSocketFor(interceptor);
     final boolean sentOk = req.send(toBytes(messageBuilder.wrap(callbackMessage)), 0);
@@ -300,19 +300,20 @@ public class DispatcherConnector {
           interceptor);
     }
 
-    // block until we get a reply or peer is disconnected
-    reply = null;
-    if (getReply) {
+    // block until we get a response or peer is disconnected
+    response = null;
+    if (getResponse) {
       boolean peerIsUp = true;
-      boolean gotReply = false;
-      while (!gotReply && peerIsUp) {
-        reply = req.recv(0);
-        if (reply != null) {
-          gotReply = true;
+      boolean gotResponse = false;
+      while (!gotResponse && peerIsUp) {
+        response = req.recv(0);
+        if (response != null) {
+          gotResponse = true;
           if (logger.isDebugEnabled()) {
-            final Message callbackReplyMessage = new Message();
-            callbackReplyMessage.unmarshal(reply, 0);
-            logger.debug("Got reply from callback: {}", ColferUtils.format(callbackReplyMessage));
+            final Message callbackResponseMessage = new Message();
+            callbackResponseMessage.unmarshal(response, 0);
+            logger.debug(
+                "Got response from callback: {}", ColferUtils.format(callbackResponseMessage));
           }
         } else { // we hit the timeout, check if peer is alive
           final PalDirectory palDirectory =
@@ -327,28 +328,28 @@ public class DispatcherConnector {
         }
       }
     }
-    // TODO getReply  == false --> we still have to receive() !!
-    return reply;
+    // TODO getResponse  == false --> we still have to receive() !!
+    return response;
   }
 
   private void sendAsyncCallbackToPeer(UUID interceptor, ExecMessage message) throws Exception {
     sendCallbackMessageToPeer(interceptor, message, false);
   }
 
-  public SessionReplyMsg sendMessageToSessionService(SessionCommandMsg sessionCommandMsg) {
-    SessionReplyMsg replyMsg = null;
+  public SessionResponseMsg sendMessageToSessionService(SessionCommandMsg sessionCommandMsg) {
+    SessionResponseMsg responseMessage = null;
     final Socket sessionServiceSocket = threadSessionsSocket.get();
     final boolean msgSent = sessionCommandMsg.send(sessionServiceSocket);
     if (msgSent) {
       if (logger.isDebugEnabled()) {
         logger.debug("Sent session command message: {}", sessionCommandMsg);
       }
-      replyMsg = SessionReplyMsg.receive(sessionServiceSocket, true);
+      responseMessage = SessionResponseMsg.receive(sessionServiceSocket, true);
       if (logger.isDebugEnabled()) {
-        logger.debug("Received session reply message: {}", replyMsg);
+        logger.debug("Received session response message: {}", responseMessage);
       }
     }
-    return replyMsg;
+    return responseMessage;
   }
 
   private byte[] sendCallbackToPeer(UUID interceptor, ExecMessage message) throws Exception {

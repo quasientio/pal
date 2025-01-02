@@ -258,7 +258,7 @@ public class XPubSubPOCTest {
               try {
                 assertThat(v.get().size(), is(expectedMessages));
               } catch (Exception e) {
-                System.err.println("error getting future reply: " + e.getMessage());
+                System.err.println("error getting response future: " + e.getMessage());
                 fail();
               }
             });

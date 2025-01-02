@@ -107,22 +107,23 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
         messageBuilder.buildEmptyConstructor(peerUuid, targetClass.getName());
 
     // dispatch
-    ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    ExecMessage responseMessage =
+        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
 
-    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
+    assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
     assertTrue(
         objectLookupStore.containsObjectRef(
-            ObjectRef.from(replyMsg.getReturnValue().getObject().getRef())));
+            ObjectRef.from(responseMessage.getReturnValue().getObject().getRef())));
     assertThat(
         objectLookupStore.lookupObject(
-            ObjectRef.from(replyMsg.getReturnValue().getObject().getRef())),
+            ObjectRef.from(responseMessage.getReturnValue().getObject().getRef())),
         instanceOf(targetClass));
     assertThat(
-        replyMsg.getReturnValue(),
+        responseMessage.getReturnValue(),
         Matchers.allOf(
             ComesFromClass.comesFromClass(targetClass),
             ComesFromReflectable.comesFrom(targetClass.getName())));
@@ -166,22 +167,23 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
             peerUuid, targetClass.getName(), toNames(parameterTypes), args, argRefs);
 
     // dispatch
-    ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    ExecMessage responseMessage =
+        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
 
-    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
+    assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
     assertTrue(
         objectLookupStore.containsObjectRef(
-            ObjectRef.from(replyMsg.getReturnValue().getObject().getRef())));
+            ObjectRef.from(responseMessage.getReturnValue().getObject().getRef())));
     assertThat(
         objectLookupStore.lookupObject(
-            ObjectRef.from(replyMsg.getReturnValue().getObject().getRef())),
+            ObjectRef.from(responseMessage.getReturnValue().getObject().getRef())),
         instanceOf(targetClass));
     assertThat(
-        replyMsg.getReturnValue(),
+        responseMessage.getReturnValue(),
         Matchers.allOf(
             ComesFromClass.comesFromClass(targetClass),
             ComesFromReflectable.comesFrom(targetClass.getName())));
@@ -223,20 +225,21 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
             peerUuid, targetClass.getName(), toNames(parameterTypes), args, argRefs);
 
     // dispatch
-    ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    ExecMessage responseMessage =
+        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
+    assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
-    ObjectRef objRef = ObjectRef.from(replyMsg.getReturnValue().getObject().getRef());
+    ObjectRef objRef = ObjectRef.from(responseMessage.getReturnValue().getObject().getRef());
     assertTrue(objectLookupStore.containsObjectRef(objRef));
     assertThat(objectLookupStore.lookupObject(objRef), instanceOf(targetClass));
     assertThat(
         ((ClassForConstructorTest) objectLookupStore.lookupObject(objRef)).aLong,
         is((long) args[1] + 1));
     assertThat(
-        replyMsg.getReturnValue(),
+        responseMessage.getReturnValue(),
         Matchers.allOf(
             ComesFromClass.comesFromClass(targetClass),
             ComesFromReflectable.comesFrom(targetClass.getName())));
@@ -257,19 +260,20 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
             peerUuid, targetClass.getName(), toNames(parameterTypes), args, argRefs);
 
     // dispatch
-    ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    ExecMessage responseMessage =
+        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
+    assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(2L));
-    ObjectRef retObjRef = ObjectRef.from(replyMsg.getReturnValue().getObject().getRef());
+    ObjectRef retObjRef = ObjectRef.from(responseMessage.getReturnValue().getObject().getRef());
     assertTrue(objectLookupStore.containsObjectRef(retObjRef));
     assertThat(objectLookupStore.lookupObject(retObjRef), instanceOf(targetClass));
     assertThat(
         ((ClassForConstructorTest) objectLookupStore.lookupObject(retObjRef)).someInteger, is(arg));
     assertThat(
-        replyMsg.getReturnValue(),
+        responseMessage.getReturnValue(),
         Matchers.allOf(
             ComesFromClass.comesFromClass(targetClass),
             ComesFromReflectable.comesFrom(targetClass.getName())));
@@ -288,20 +292,21 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
             peerUuid, targetClass.getName(), toNames(parameterTypes), args, argRefs);
 
     // dispatch
-    ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    ExecMessage responseMessage =
+        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
+    assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
-    ObjectRef objRef = ObjectRef.from(replyMsg.getReturnValue().getObject().getRef());
+    ObjectRef objRef = ObjectRef.from(responseMessage.getReturnValue().getObject().getRef());
     assertTrue(objectLookupStore.containsObjectRef(objRef));
     assertThat(objectLookupStore.lookupObject(objRef), instanceOf(targetClass));
     assertThat(
         ((ClassForConstructorTest) objectLookupStore.lookupObject(objRef)).someInteger,
         is(nullValue()));
     assertThat(
-        replyMsg.getReturnValue(),
+        responseMessage.getReturnValue(),
         Matchers.allOf(
             ComesFromClass.comesFromClass(targetClass),
             ComesFromReflectable.comesFrom(targetClass.getName())));
@@ -319,18 +324,19 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
             peerUuid, targetClass.getName(), toNames(parameterTypes), args, argRefs);
 
     // dispatch
-    ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    ExecMessage responseMessage =
+        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
+    assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
     assertTrue(
         objectLookupStore.containsObjectRef(
-            ObjectRef.from(replyMsg.getReturnValue().getObject().getRef())));
+            ObjectRef.from(responseMessage.getReturnValue().getObject().getRef())));
     assertThat(
         objectLookupStore.lookupObject(
-            ObjectRef.from(replyMsg.getReturnValue().getObject().getRef())),
+            ObjectRef.from(responseMessage.getReturnValue().getObject().getRef())),
         instanceOf(targetClass));
   }
 
@@ -375,17 +381,18 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
             peerUuid, targetClass.getName(), toNames(parameterTypes), args, argRefs);
 
     // dispatch
-    ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    ExecMessage responseMessage =
+        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
+    assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
-    ObjectRef objRef = ObjectRef.from(replyMsg.getReturnValue().getObject().getRef());
+    ObjectRef objRef = ObjectRef.from(responseMessage.getReturnValue().getObject().getRef());
     assertTrue(objectLookupStore.containsObjectRef(objRef));
     assertThat(objectLookupStore.lookupObject(objRef), instanceOf(targetClass));
     assertThat(
-        replyMsg.getReturnValue(),
+        responseMessage.getReturnValue(),
         Matchers.allOf(
             ComesFromClass.comesFromClass(targetClass),
             ComesFromReflectable.comesFrom(targetClass.getName())));
@@ -430,14 +437,15 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
             peerUuid, targetClass.getName(), toNames(parameterTypes), args, argRefs);
 
     // dispatch
-    ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    ExecMessage responseMessage =
+        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
+    assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(0L));
     assertThat(
-        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        responseMessage.getRaisedThrowable().getThrowable().getType(),
         is("java.lang.NumberFormatException"));
   }
 
@@ -453,14 +461,15 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
             peerUuid, targetClass.getName(), toNames(parameterTypes), args, argRefs);
 
     // dispatch
-    ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    ExecMessage responseMessage =
+        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
+    assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(0L));
     assertThat(
-        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        responseMessage.getRaisedThrowable().getThrowable().getType(),
         is("java.lang.NoSuchMethodException"));
   }
 
@@ -472,16 +481,16 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
         messageBuilder.buildEmptyConstructor(peerUuid, targetClass.getName());
 
     // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
-    ExecMessage replyMsg =
+    ExecMessage responseMessage =
         ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
     assertThat(
-        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        responseMessage.getRaisedThrowable().getThrowable().getType(),
         is("java.lang.NoSuchMethodException"));
 
     // dispatch with the all access dispatcher - expect no exception
-    replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
-    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
-    assertNull(replyMsg.getRaisedThrowable());
+    responseMessage = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
+    assertNull(responseMessage.getRaisedThrowable());
   }
 
   @Override
@@ -496,10 +505,10 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
             peerUuid, targetClass.getName(), toNames(parameterTypes), args, argRefs);
 
     // dispatch with the onlyPublicDispatcher - expect no exception
-    ExecMessage replyMsg =
+    ExecMessage responseMessage =
         ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
-    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
-    assertNull(replyMsg.getRaisedThrowable());
+    assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
+    assertNull(responseMessage.getRaisedThrowable());
   }
 
   @Override
@@ -515,16 +524,16 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
             peerUuid, targetClass.getName(), toNames(parameterTypes), args, argRefs);
 
     // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
-    ExecMessage replyMsg =
+    ExecMessage responseMessage =
         ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
     assertThat(
-        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        responseMessage.getRaisedThrowable().getThrowable().getType(),
         is("java.lang.NoSuchMethodException"));
 
     // dispatch with the all access dispatcher - expect no exception
-    replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
-    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
-    assertNull(replyMsg.getRaisedThrowable());
+    responseMessage = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
+    assertNull(responseMessage.getRaisedThrowable());
   }
 
   @Override
@@ -540,16 +549,16 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
             peerUuid, targetClass.getName(), toNames(parameterTypes), args, argRefs);
 
     // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
-    ExecMessage replyMsg =
+    ExecMessage responseMessage =
         ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
     assertThat(
-        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        responseMessage.getRaisedThrowable().getThrowable().getType(),
         is("java.lang.NoSuchMethodException"));
 
     // dispatch with the all access dispatcher - expect no exception
-    replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
-    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
-    assertNull(replyMsg.getRaisedThrowable());
+    responseMessage = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
+    assertNull(responseMessage.getRaisedThrowable());
   }
 
   // auxiliary class

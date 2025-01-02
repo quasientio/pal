@@ -135,9 +135,9 @@ public class ZmqRpcRequestDispatcherTest extends ZmqEnabledTest {
             this.socket.send(peerUuid.toString(), ZMQ.SNDMORE);
             this.socket.send(m, 0);
             logger.debug("sent req: {}", m);
-            String reply = this.socket.recvStr();
-            logger.debug("got reply: {}", reply);
-            replies.add(reply);
+            String response = this.socket.recvStr();
+            logger.debug("got response: {}", response);
+            replies.add(response);
           });
 
       this.socket.close();

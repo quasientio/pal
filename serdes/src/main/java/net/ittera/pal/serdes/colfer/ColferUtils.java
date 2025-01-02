@@ -38,7 +38,7 @@ import net.ittera.pal.messages.colfer.InstanceFieldPutDone;
 import net.ittera.pal.messages.colfer.InstanceMethodCall;
 import net.ittera.pal.messages.colfer.InterceptKeyMessage;
 import net.ittera.pal.messages.colfer.InterceptMessage;
-import net.ittera.pal.messages.colfer.InterceptReply;
+import net.ittera.pal.messages.colfer.InterceptResponse;
 import net.ittera.pal.messages.colfer.InterceptableField;
 import net.ittera.pal.messages.colfer.InterceptableMethod;
 import net.ittera.pal.messages.colfer.InternalHeader;
@@ -69,7 +69,7 @@ import net.ittera.pal.serdes.colfer.JsonSerializers.InstanceFieldPutSerializer;
 import net.ittera.pal.serdes.colfer.JsonSerializers.InstanceMethodCallSerializer;
 import net.ittera.pal.serdes.colfer.JsonSerializers.InterceptKeyMessageSerializer;
 import net.ittera.pal.serdes.colfer.JsonSerializers.InterceptMessageSerializer;
-import net.ittera.pal.serdes.colfer.JsonSerializers.InterceptReplySerializer;
+import net.ittera.pal.serdes.colfer.JsonSerializers.InterceptResponseSerializer;
 import net.ittera.pal.serdes.colfer.JsonSerializers.InterceptableFieldSerializer;
 import net.ittera.pal.serdes.colfer.JsonSerializers.InterceptableMethodSerializer;
 import net.ittera.pal.serdes.colfer.JsonSerializers.InternalHeaderSerializer;
@@ -136,7 +136,7 @@ public class ColferUtils {
             // Intercept
             .registerTypeAdapter(InterceptMessage.class, new InterceptMessageSerializer())
             .registerTypeAdapter(InterceptKeyMessage.class, new InterceptKeyMessageSerializer())
-            .registerTypeAdapter(InterceptReply.class, new InterceptReplySerializer());
+            .registerTypeAdapter(InterceptResponse.class, new InterceptResponseSerializer());
 
     if (prettyPrint) {
       printerBuilder.setPrettyPrinting();

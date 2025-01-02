@@ -89,16 +89,16 @@ public class MessageOffsetInformerTest extends ZmqEnabledTest {
     LogInfo log = new LogInfo("test.log");
 
     AccessibleObject from = this.getClass().getDeclaredMethod("publishOffsets", (Class<?>[]) null);
-    ExecMessage replyMessage =
+    ExecMessage responseMessage =
         messageBuilder.buildReturnValue(
             peerUuid, null, from, null, false, UUID.randomUUID().toString());
 
     // create and send ProducerRecord w/ MessageOffsetInformer callback
     ProducerRecord<String, byte[]> newRecord =
         new ProducerRecord<>(
-            log.getName(), 0, peerUuid.toString(), ColferUtils.toBytes(replyMessage));
+            log.getName(), 0, peerUuid.toString(), ColferUtils.toBytes(responseMessage));
     MessageOffsetInformer offsetInformer =
-        new MessageOffsetInformer(replyMessage.getMessageId(), offsetPublisher);
+        new MessageOffsetInformer(responseMessage.getMessageId(), offsetPublisher);
     assertNotNull(newRecord);
     final RecordMetadata recordMetadata = producer.send(newRecord, offsetInformer).get();
 
@@ -113,7 +113,7 @@ public class MessageOffsetInformerTest extends ZmqEnabledTest {
     PublishedOffsetMsg publishedOffsetMsg = PublishedOffsetMsg.receive(offsetSubscriber);
     assertThat(publishedOffsetMsg, is(notNullValue()));
     assertThat(publishedOffsetMsg.getOffset(), is(recordMetadata.offset()));
-    assertThat(publishedOffsetMsg.getMessageId(), is(replyMessage.getMessageId()));
+    assertThat(publishedOffsetMsg.getMessageId(), is(responseMessage.getMessageId()));
     offsetSubscriber.close();
   }
 }

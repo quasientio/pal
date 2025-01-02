@@ -114,14 +114,14 @@ public abstract class AbstractBinaryRpcMessageIT extends AbstractRpcMessageIT
   }
 
   private ExecMessage sendAndReceive(ExecMessage message) {
-    ExecMessage reply;
+    ExecMessage response;
     try {
       if (targetType.equals(TargetType.PEER)) {
         logger.debug("Sending message to peer");
-        reply = thinPeer.sendToPeer(message);
+        response = thinPeer.sendToPeer(message);
       } else {
         logger.debug("Sending message to log");
-        reply = thinPeer.sendExecMessageToLogAndReceive(message);
+        response = thinPeer.sendExecMessageToLogAndReceive(message);
       }
     } catch (Exception e) {
       logger.error(
@@ -131,13 +131,13 @@ public abstract class AbstractBinaryRpcMessageIT extends AbstractRpcMessageIT
           e);
       throw e;
     }
-    return reply;
+    return response;
   }
 
   protected MetaMessage sendAndReceive(MetaMessage message) {
-    MetaMessage reply;
+    MetaMessage response;
     try {
-      reply = thinPeer.sendToPeer(message);
+      response = thinPeer.sendToPeer(message);
     } catch (Exception e) {
       logger.error(
           "Exception sending/receiving meta message with id: {}\n{}",
@@ -146,7 +146,7 @@ public abstract class AbstractBinaryRpcMessageIT extends AbstractRpcMessageIT
           e);
       throw e;
     }
-    return reply;
+    return response;
   }
 
   protected ReturnValue callConstructor(
@@ -167,20 +167,20 @@ public abstract class AbstractBinaryRpcMessageIT extends AbstractRpcMessageIT
       parameterTypesNamesArray[i] = parameterTypes[i].getName();
     }
 
-    ExecMessage replyMsg =
+    ExecMessage responseMessage =
         sendAndReceive(
             messageBuilder.buildNonEmptyConstructor(
                 clientId, className, parameterTypesNamesArray, args, argObjRefs));
 
     // basic assertions
     if (expectedThrowableType != null) {
-      assertHasThrowableOfType(replyMsg, expectedThrowableType);
+      assertHasThrowableOfType(responseMessage, expectedThrowableType);
     } else {
-      assertThat(replyMsg.getReturnValue(), is(not(nullValue())));
-      assertValueIsObjectRefOfType(replyMsg.getReturnValue(), className);
+      assertThat(responseMessage.getReturnValue(), is(not(nullValue())));
+      assertValueIsObjectRefOfType(responseMessage.getReturnValue(), className);
     }
 
-    return replyMsg.getReturnValue();
+    return responseMessage.getReturnValue();
   }
 
   protected ReturnValue callEmptyConstructor(String className) throws Exception {
@@ -189,18 +189,18 @@ public abstract class AbstractBinaryRpcMessageIT extends AbstractRpcMessageIT
 
   private ReturnValue callEmptyConstructor(String className, String expectedThrowableType)
       throws Exception {
-    ExecMessage replyMsg =
+    ExecMessage responseMessage =
         sendAndReceive(messageBuilder.buildEmptyConstructor(clientId, className));
 
     // basic assertions
     if (expectedThrowableType != null) {
-      assertHasThrowableOfType(replyMsg, expectedThrowableType);
+      assertHasThrowableOfType(responseMessage, expectedThrowableType);
     } else {
-      assertThat(replyMsg.getReturnValue(), is(not(nullValue())));
-      assertValueIsObjectRefOfType(replyMsg.getReturnValue(), className);
+      assertThat(responseMessage.getReturnValue(), is(not(nullValue())));
+      assertValueIsObjectRefOfType(responseMessage.getReturnValue(), className);
     }
 
-    return replyMsg.getReturnValue();
+    return responseMessage.getReturnValue();
   }
 
   protected ReturnValue callGetStatic(String className, String fieldName) {
@@ -210,16 +210,16 @@ public abstract class AbstractBinaryRpcMessageIT extends AbstractRpcMessageIT
   protected ReturnValue callGetStatic(
       String className, String fieldName, String expectedThrowableType) {
     ExecMessage requestMsg = messageBuilder.buildGetStatic(clientId, className, fieldName);
-    ExecMessage replyMsg = sendAndReceive(requestMsg);
+    ExecMessage responseMessage = sendAndReceive(requestMsg);
 
     // basic assertions
     if (expectedThrowableType != null) {
-      assertHasThrowableOfType(replyMsg, expectedThrowableType);
+      assertHasThrowableOfType(responseMessage, expectedThrowableType);
     } else {
-      assertThat(replyMsg.getReturnValue(), is(not(nullValue())));
+      assertThat(responseMessage.getReturnValue(), is(not(nullValue())));
     }
 
-    return replyMsg.getReturnValue();
+    return responseMessage.getReturnValue();
   }
 
   protected void callPutStatic(
@@ -235,15 +235,15 @@ public abstract class AbstractBinaryRpcMessageIT extends AbstractRpcMessageIT
       String expectedThrowableType) {
     ExecMessage requestMsg =
         messageBuilder.buildPutStatic(clientId, className, fieldName, fieldClassName, value);
-    ExecMessage replyMsg = sendAndReceive(requestMsg);
+    ExecMessage responseMessage = sendAndReceive(requestMsg);
 
     // basic assertions
     if (expectedThrowableType != null) {
-      assertHasThrowableOfType(replyMsg, expectedThrowableType);
+      assertHasThrowableOfType(responseMessage, expectedThrowableType);
     } else {
-      assertThat(replyMsg.getReturnValue(), is(nullValue()));
-      assertThat(replyMsg.getStaticFieldPutDone(), is(not(nullValue())));
-      StaticFieldPutDone staticFieldPutDone = replyMsg.getStaticFieldPutDone();
+      assertThat(responseMessage.getReturnValue(), is(nullValue()));
+      assertThat(responseMessage.getStaticFieldPutDone(), is(not(nullValue())));
+      StaticFieldPutDone staticFieldPutDone = responseMessage.getStaticFieldPutDone();
       assertEquals(staticFieldPutDone.getField().getName(), fieldName);
     }
   }
@@ -255,16 +255,16 @@ public abstract class AbstractBinaryRpcMessageIT extends AbstractRpcMessageIT
   protected ReturnValue callGetInstanceVar(
       String className, String fieldName, ObjectRef objRef, String expectedThrowableType) {
     ExecMessage requestMsg = messageBuilder.buildGetObject(clientId, className, fieldName, objRef);
-    ExecMessage replyMsg = sendAndReceive(requestMsg);
+    ExecMessage responseMessage = sendAndReceive(requestMsg);
 
     // basic assertions
     if (expectedThrowableType != null) {
-      assertHasThrowableOfType(replyMsg, expectedThrowableType);
+      assertHasThrowableOfType(responseMessage, expectedThrowableType);
     } else {
-      assertThat(replyMsg.getReturnValue(), is(not(nullValue())));
+      assertThat(responseMessage.getReturnValue(), is(not(nullValue())));
     }
 
-    return replyMsg.getReturnValue();
+    return responseMessage.getReturnValue();
   }
 
   protected void callPutField(
@@ -287,15 +287,15 @@ public abstract class AbstractBinaryRpcMessageIT extends AbstractRpcMessageIT
     ExecMessage requestMsg =
         messageBuilder.buildPutObject(
             clientId, className, fieldName, targetObjRef, valueClassName, value);
-    ExecMessage replyMsg = sendAndReceive(requestMsg);
+    ExecMessage responseMessage = sendAndReceive(requestMsg);
 
     // basic assertions
     if (expectedThrowableType != null) {
-      assertHasThrowableOfType(replyMsg, expectedThrowableType);
+      assertHasThrowableOfType(responseMessage, expectedThrowableType);
     } else {
-      assertThat(replyMsg.getReturnValue(), is(nullValue()));
-      assertThat(replyMsg.getInstanceFieldPutDone(), is(not(nullValue())));
-      InstanceFieldPutDone fieldPutDone = replyMsg.getInstanceFieldPutDone();
+      assertThat(responseMessage.getReturnValue(), is(nullValue()));
+      assertThat(responseMessage.getInstanceFieldPutDone(), is(not(nullValue())));
+      InstanceFieldPutDone fieldPutDone = responseMessage.getInstanceFieldPutDone();
       assertEquals(fieldPutDone.getField().getName(), fieldName);
     }
   }
@@ -327,16 +327,16 @@ public abstract class AbstractBinaryRpcMessageIT extends AbstractRpcMessageIT
             null,
             parameters,
             paramObjRefs);
-    ExecMessage replyMsg = sendAndReceive(requestMsg);
+    ExecMessage responseMessage = sendAndReceive(requestMsg);
 
     // basic assertions
     if (expectedThrowableType != null) {
-      assertHasThrowableOfType(replyMsg, expectedThrowableType);
+      assertHasThrowableOfType(responseMessage, expectedThrowableType);
     } else {
-      assertThat(replyMsg.getReturnValue(), is(not(nullValue())));
+      assertThat(responseMessage.getReturnValue(), is(not(nullValue())));
     }
 
-    return replyMsg.getReturnValue();
+    return responseMessage.getReturnValue();
   }
 
   protected void callVoidClassMethod(
@@ -365,14 +365,14 @@ public abstract class AbstractBinaryRpcMessageIT extends AbstractRpcMessageIT
             null,
             parameters,
             paramObjRefs);
-    ExecMessage replyMsg = sendAndReceive(requestMsg);
+    ExecMessage responseMessage = sendAndReceive(requestMsg);
 
     // basic assertions
     if (expectedThrowableType != null) {
-      assertHasThrowableOfType(replyMsg, expectedThrowableType);
+      assertHasThrowableOfType(responseMessage, expectedThrowableType);
     } else {
-      assertThat(replyMsg.getReturnValue(), is(not(nullValue())));
-      assertTrue(replyMsg.getReturnValue().getIsVoid());
+      assertThat(responseMessage.getReturnValue(), is(not(nullValue())));
+      assertTrue(responseMessage.getReturnValue().getIsVoid());
     }
   }
 
@@ -404,16 +404,16 @@ public abstract class AbstractBinaryRpcMessageIT extends AbstractRpcMessageIT
             parameterTypeNames,
             parameters,
             paramObjRefs);
-    ExecMessage replyMsg = sendAndReceive(requestMsg);
+    ExecMessage responseMessage = sendAndReceive(requestMsg);
 
     // basic assertions
     if (expectedThrowableType != null) {
-      assertHasThrowableOfType(replyMsg, expectedThrowableType);
+      assertHasThrowableOfType(responseMessage, expectedThrowableType);
     } else {
-      assertThat(replyMsg.getReturnValue(), is(not(nullValue())));
+      assertThat(responseMessage.getReturnValue(), is(not(nullValue())));
     }
 
-    return replyMsg.getReturnValue();
+    return responseMessage.getReturnValue();
   }
 
   protected void callVoidInstanceMethod(
@@ -444,14 +444,14 @@ public abstract class AbstractBinaryRpcMessageIT extends AbstractRpcMessageIT
             parameterTypeNames,
             parameters,
             paramObjRefs);
-    ExecMessage replyMsg = sendAndReceive(requestMsg);
+    ExecMessage responseMessage = sendAndReceive(requestMsg);
 
     // basic assertions
     if (expectedThrowableType != null) {
-      assertHasThrowableOfType(replyMsg, expectedThrowableType);
+      assertHasThrowableOfType(responseMessage, expectedThrowableType);
     } else {
-      assertThat(replyMsg.getReturnValue(), is(not(nullValue())));
-      assertTrue(replyMsg.getReturnValue().getIsVoid());
+      assertThat(responseMessage.getReturnValue(), is(not(nullValue())));
+      assertTrue(responseMessage.getReturnValue().getIsVoid());
     }
   }
 

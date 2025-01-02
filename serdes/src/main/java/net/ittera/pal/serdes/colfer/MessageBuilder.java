@@ -73,7 +73,7 @@ import net.ittera.pal.messages.colfer.InstanceFieldPutDone;
 import net.ittera.pal.messages.colfer.InstanceMethodCall;
 import net.ittera.pal.messages.colfer.InterceptKeyMessage;
 import net.ittera.pal.messages.colfer.InterceptMessage;
-import net.ittera.pal.messages.colfer.InterceptReply;
+import net.ittera.pal.messages.colfer.InterceptResponse;
 import net.ittera.pal.messages.colfer.InternalHeader;
 import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.messages.colfer.MetaMessage;
@@ -1057,8 +1057,9 @@ public final class MessageBuilder {
         .withCallbackMethod(intercept.getCallbackMethod());
   }
 
-  public InterceptReply buildInterceptReply(UUID peerUuid, String responseToId, boolean result) {
-    return new InterceptReply()
+  public InterceptResponse buildInterceptResponse(
+      UUID peerUuid, String responseToId, boolean result) {
+    return new InterceptResponse()
         .withPeerUuid(peerUuid.toString())
         .withResponseToId(responseToId)
         .withResult(result);
@@ -1273,7 +1274,6 @@ public final class MessageBuilder {
         buildMetaMessageRequest(fromPeerUuid, jsonRpcRequest.getId(), metaServiceType, params));
   }
 
-  public JsonRpcResponse jsonRpcResponseFromExecMessageReply(ExecMessage execMessageResponse) {
   public Message jsonRpcRequestToControlMessage(JsonRpcRequest jsonRpcRequest, UUID fromPeerUuid) {
     if (logger.isDebugEnabled()) {
       logger.debug(
@@ -1301,6 +1301,7 @@ public final class MessageBuilder {
     return wrap(controlMessage);
   }
 
+  public JsonRpcResponse jsonRpcResponseFromExecMessageResponse(ExecMessage execMessageResponse) {
     String requestId = execMessageResponse.getResponseToId();
 
     // Create a JSON-RPC response object
@@ -1387,10 +1388,10 @@ public final class MessageBuilder {
     return jsonRpcResponse;
   }
 
-  public JsonRpcResponse jsonRpcResponseFromMetaMessageReply(MetaMessage metaMessageResponse) {
+  public JsonRpcResponse jsonRpcResponseFromMetaMessageResponse(MetaMessage metaMessageResponse) {
     if (logger.isDebugEnabled()) {
       logger.debug(
-          "in jsonRpcResponseFromMetaMessageReply with MetaMessage w/id: {}",
+          "in jsonRpcResponseFromMetaMessageResponse with MetaMessage w/id: {}",
           metaMessageResponse.getMessageId());
     }
 
@@ -1401,7 +1402,7 @@ public final class MessageBuilder {
     jsonRpcResponse.setId(metaMessageResponse.getResponseToId());
 
     MessageType responseMessageType = getMessageTypeOf(metaMessageResponse);
-    if (!responseMessageType.equals(META_MESSAGE_REPLY)) {
+    if (!responseMessageType.equals(META_MESSAGE_RESPONSE)) {
       throw new IllegalArgumentException(
           "Unexpected response message type: " + responseMessageType);
     }
@@ -1642,7 +1643,7 @@ public final class MessageBuilder {
     return metaMessage;
   }
 
-  public MetaMessage buildMetaMessageReply(
+  public MetaMessage buildMetaMessageResponse(
       UUID fromPeerUuid, MetaStatusType statusType, @Nullable String body, String responseToId) {
     final MetaMessage metaMessage =
         new MetaMessage()
@@ -1677,10 +1678,10 @@ public final class MessageBuilder {
         .withInterceptKeyMessage(interceptKeyMessage);
   }
 
-  public Message wrap(InterceptReply interceptReply) {
+  public Message wrap(InterceptResponse interceptResponse) {
     return new Message()
-        .withMessageType(MessageType.INTERCEPT_REPLY.getId())
-        .withInterceptReply(interceptReply);
+        .withMessageType(MessageType.INTERCEPT_RESPONSE.getId())
+        .withInterceptResponse(interceptResponse);
   }
 
   public Message wrap(ControlMessage controlMessage) {

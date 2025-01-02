@@ -30,7 +30,7 @@ import net.ittera.pal.messages.BaseMsg;
 import net.ittera.pal.messages.types.SessionStatusType;
 import org.zeromq.ZMQ;
 
-public class SessionReplyMsg extends BaseMsg {
+public class SessionResponseMsg extends BaseMsg {
   /**
    *
    *
@@ -38,7 +38,7 @@ public class SessionReplyMsg extends BaseMsg {
    * FRAMES:
    * -------
    * 1. status             : byte - SessionStatusType
-   * 2. objectRefs         : comma-separated list of objectRefs - in reply to DELETE_SESSION
+   * 2. objectRefs         : comma-separated list of objectRefs - in response to DELETE_SESSION
    * </pre>
    */
 
@@ -47,18 +47,18 @@ public class SessionReplyMsg extends BaseMsg {
 
   @Nullable private Set<ObjectRef> objectRefs;
 
-  private SessionReplyMsg(
+  private SessionResponseMsg(
       @Nonnull SessionStatusType statusType, @Nullable Set<ObjectRef> objectRefs, int size) {
     this(statusType, objectRefs);
     this.size = size;
   }
 
-  public SessionReplyMsg(@Nonnull SessionStatusType statusType) {
+  public SessionResponseMsg(@Nonnull SessionStatusType statusType) {
     Objects.requireNonNull(statusType);
     this.statusType = statusType;
   }
 
-  public SessionReplyMsg(
+  public SessionResponseMsg(
       @Nonnull SessionStatusType statusType, @Nullable Set<ObjectRef> objectRefs) {
     this(statusType);
     this.objectRefs = objectRefs;
@@ -98,9 +98,9 @@ public class SessionReplyMsg extends BaseMsg {
    *
    * @param socket ZMQ socket
    * @param blocking blocking read flag
-   * @return SessionReplyMsg instance, or null if non-blocking and no message available
+   * @return SessionResponseMsg instance, or null if non-blocking and no message available
    */
-  public static SessionReplyMsg receive(ZMQ.Socket socket, boolean blocking) {
+  public static SessionResponseMsg receive(ZMQ.Socket socket, boolean blocking) {
     if (socket == null) {
       throw new IllegalArgumentException("Socket is null");
     }
@@ -125,11 +125,11 @@ public class SessionReplyMsg extends BaseMsg {
               .collect(Collectors.toSet());
     }
 
-    return new SessionReplyMsg(status, objectRefs, msgSize);
+    return new SessionResponseMsg(status, objectRefs, msgSize);
   }
 
   // default is non-blocking
-  public static SessionReplyMsg receive(ZMQ.Socket socket) {
+  public static SessionResponseMsg receive(ZMQ.Socket socket) {
     return receive(socket, false);
   }
 
@@ -142,7 +142,7 @@ public class SessionReplyMsg extends BaseMsg {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    SessionReplyMsg that = (SessionReplyMsg) o;
+    SessionResponseMsg that = (SessionResponseMsg) o;
     return statusType == that.statusType && Objects.equals(objectRefs, that.objectRefs);
   }
 
@@ -154,7 +154,7 @@ public class SessionReplyMsg extends BaseMsg {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("SessionReplyMsg{status=").append(statusType.name());
+    sb.append("SessionResponseMsg{status=").append(statusType.name());
     if (objectRefs != null) {
       String objectRefsAsString =
           objectRefs.stream().map(ObjectRef::asString).collect(Collectors.joining(","));

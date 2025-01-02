@@ -34,12 +34,12 @@ import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 
-public class SessionReplyMsgTest extends ZmqEnabledTest {
+public class SessionResponseMsgTest extends ZmqEnabledTest {
   private static final Logger logger = LoggerFactory.getLogger("tests");
 
   @Test
-  public void sendAndReceiveReplyMsgNoObjects() {
-    SessionReplyMsg msgOut = new SessionReplyMsg(SessionStatusType.OK);
+  public void sendAndReceiveResponseMsgNoObjects() {
+    SessionResponseMsg msgOut = new SessionResponseMsg(SessionStatusType.OK);
 
     // send
     String socketAddress = "inproc://here";
@@ -51,7 +51,7 @@ public class SessionReplyMsgTest extends ZmqEnabledTest {
     msgOut.send(out);
 
     // receive and compare
-    SessionReplyMsg msgIn = SessionReplyMsg.receive(in, true);
+    SessionResponseMsg msgIn = SessionResponseMsg.receive(in, true);
     assertThat(msgIn, is(msgOut));
 
     // close
@@ -61,12 +61,12 @@ public class SessionReplyMsgTest extends ZmqEnabledTest {
   }
 
   @Test
-  public void sendAndReceiveReplyMsgWithObjects() {
+  public void sendAndReceiveResponseMsgWithObjects() {
 
     Set<ObjectRef> objectRefs = new HashSet<>();
     objectRefs.add(ObjectRef.from("498324"));
     objectRefs.add(ObjectRef.from("2348632"));
-    SessionReplyMsg msgOut = new SessionReplyMsg(SessionStatusType.OK, objectRefs);
+    SessionResponseMsg msgOut = new SessionResponseMsg(SessionStatusType.OK, objectRefs);
 
     // send
     String socketAddress = "inproc://here";
@@ -79,7 +79,7 @@ public class SessionReplyMsgTest extends ZmqEnabledTest {
     logger.debug("sent msgOut= {}", msgOut);
 
     // receive and compare
-    SessionReplyMsg msgIn = SessionReplyMsg.receive(in, true);
+    SessionResponseMsg msgIn = SessionResponseMsg.receive(in, true);
     logger.debug("received msgIn= {}", msgIn);
     assertThat(msgIn, is(msgOut));
 

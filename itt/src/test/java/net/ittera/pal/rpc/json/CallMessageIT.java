@@ -73,14 +73,14 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, CLASS_NAME, methodName);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // Assert that the result is not null
-    assertNotNull(replyMsg.getResult());
+    assertNotNull(responseMessage.getResult());
 
     // Assert that returned value is void
-    assertThat(replyMsg.getResult().getIsVoid(), is(true));
-    assertNull(replyMsg.getResult().getValue());
+    assertThat(responseMessage.getResult().getIsVoid(), is(true));
+    assertNull(responseMessage.getResult().getValue());
   }
 
   @Test
@@ -104,14 +104,14 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, CLASS_NAME, methodName);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // Assert that the result is not null
-    assertNotNull(replyMsg.getResult());
+    assertNotNull(responseMessage.getResult());
 
     // Assert that returned value is void
-    assertThat(replyMsg.getResult().getIsVoid(), is(true));
-    assertNull(replyMsg.getResult().getValue());
+    assertThat(responseMessage.getResult().getIsVoid(), is(true));
+    assertNull(responseMessage.getResult().getValue());
   }
 
   @Test
@@ -131,14 +131,14 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, CLASS_NAME, methodName);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // Assert that the result is not null
-    assertNotNull(replyMsg.getResult());
+    assertNotNull(responseMessage.getResult());
 
     // Assert that returned value is void
-    assertThat(replyMsg.getResult().getIsVoid(), is(true));
-    assertNull(replyMsg.getResult().getValue());
+    assertThat(responseMessage.getResult().getIsVoid(), is(true));
+    assertNull(responseMessage.getResult().getValue());
   }
 
   @Test
@@ -161,14 +161,14 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, CLASS_NAME, methodName);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // Assert that the result is not null
-    assertNotNull(replyMsg.getResult());
+    assertNotNull(responseMessage.getResult());
 
     // Assert that returned value is void
-    assertThat(replyMsg.getResult().getIsVoid(), is(true));
-    assertNull(replyMsg.getResult().getValue());
+    assertThat(responseMessage.getResult().getIsVoid(), is(true));
+    assertNull(responseMessage.getResult().getValue());
   }
 
   @Test
@@ -243,14 +243,14 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, CLASS_NAME, methodName, listRef);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // Assert that the result is not null
-    assertNotNull(replyMsg.getResult());
+    assertNotNull(responseMessage.getResult());
 
     // Assert that returned value is void
-    assertThat(replyMsg.getResult().getIsVoid(), is(true));
-    assertNull(replyMsg.getResult().getValue());
+    assertThat(responseMessage.getResult().getIsVoid(), is(true));
+    assertNull(responseMessage.getResult().getValue());
   }
 
   @Test
@@ -272,22 +272,25 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, nonExistingClass, methodName);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // Assert that the result is null
-    assertNull(replyMsg.getResult());
+    assertNull(responseMessage.getResult());
 
     // Verify error code and message
-    assertNotNull(replyMsg.getError());
-    assertThat(replyMsg.getError().getCode(), is(JsonRpcErrorCode.METHOD_NOT_FOUND.getCode()));
+    assertNotNull(responseMessage.getError());
     assertThat(
-        replyMsg.getError().getMessage(), is(JsonRpcErrorCode.METHOD_NOT_FOUND.getMessage()));
+        responseMessage.getError().getCode(), is(JsonRpcErrorCode.METHOD_NOT_FOUND.getCode()));
+    assertThat(
+        responseMessage.getError().getMessage(),
+        is(JsonRpcErrorCode.METHOD_NOT_FOUND.getMessage()));
 
     // Assert errorData
-    assertNotNull(replyMsg.getError().getData());
+    assertNotNull(responseMessage.getError().getData());
     assertThat(
-        replyMsg.getError().getData().getThrowableType(), is("java.lang.ClassNotFoundException"));
-    assertThat(replyMsg.getError().getData().getMessage(), is(nonExistingClass));
+        responseMessage.getError().getData().getThrowableType(),
+        is("java.lang.ClassNotFoundException"));
+    assertThat(responseMessage.getError().getData().getMessage(), is(nonExistingClass));
   }
 
   @Test
@@ -308,22 +311,25 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, CLASS_NAME, methodName);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // Assert that the result is null
-    assertNull(replyMsg.getResult());
+    assertNull(responseMessage.getResult());
 
     // Verify error code and message
-    assertNotNull(replyMsg.getError());
-    assertThat(replyMsg.getError().getCode(), is(JsonRpcErrorCode.METHOD_NOT_FOUND.getCode()));
+    assertNotNull(responseMessage.getError());
     assertThat(
-        replyMsg.getError().getMessage(), is(JsonRpcErrorCode.METHOD_NOT_FOUND.getMessage()));
+        responseMessage.getError().getCode(), is(JsonRpcErrorCode.METHOD_NOT_FOUND.getCode()));
+    assertThat(
+        responseMessage.getError().getMessage(),
+        is(JsonRpcErrorCode.METHOD_NOT_FOUND.getMessage()));
 
     // Assert errorData
-    assertNotNull(replyMsg.getError().getData());
+    assertNotNull(responseMessage.getError().getData());
     assertThat(
-        replyMsg.getError().getData().getThrowableType(), is("java.lang.NoSuchMethodException"));
-    assertThat(replyMsg.getError().getData().getMessage(), containsString(methodName));
+        responseMessage.getError().getData().getThrowableType(),
+        is("java.lang.NoSuchMethodException"));
+    assertThat(responseMessage.getError().getData().getMessage(), containsString(methodName));
   }
 
   @Test
@@ -344,21 +350,24 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, CLASS_NAME, methodName);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // Assert that the result is null
-    assertNull(replyMsg.getResult());
+    assertNull(responseMessage.getResult());
 
     // Verify error code and message
-    assertNotNull(replyMsg.getError());
-    assertThat(replyMsg.getError().getCode(), is(JsonRpcErrorCode.SERVER_ERROR.getCode()));
-    assertThat(replyMsg.getError().getMessage(), is(JsonRpcErrorCode.SERVER_ERROR.getMessage()));
+    assertNotNull(responseMessage.getError());
+    assertThat(responseMessage.getError().getCode(), is(JsonRpcErrorCode.SERVER_ERROR.getCode()));
+    assertThat(
+        responseMessage.getError().getMessage(), is(JsonRpcErrorCode.SERVER_ERROR.getMessage()));
 
     // Assert errorData
-    assertNotNull(replyMsg.getError().getData());
-    assertThat(replyMsg.getError().getData().getThrowableType(), is("java.lang.RuntimeException"));
+    assertNotNull(responseMessage.getError().getData());
     assertThat(
-        replyMsg.getError().getData().getMessage(), containsString("Bastards threw me out!"));
+        responseMessage.getError().getData().getThrowableType(), is("java.lang.RuntimeException"));
+    assertThat(
+        responseMessage.getError().getData().getMessage(),
+        containsString("Bastards threw me out!"));
   }
 
   @Test
@@ -383,15 +392,15 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, CLASS_NAME, methodName, param);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // Assert that the result is not null
-    assertNotNull(replyMsg.getResult());
-    assertThat(replyMsg.getResult().getIsVoid(), is(false));
-    assertNotNull(replyMsg.getResult().getValue());
+    assertNotNull(responseMessage.getResult());
+    assertThat(responseMessage.getResult().getIsVoid(), is(false));
+    assertNotNull(responseMessage.getResult().getValue());
 
     // Unwrap the returned value
-    Object resultValue = Unwrapper.unwrapObject(replyMsg.getResult().getValue());
+    Object resultValue = Unwrapper.unwrapObject(responseMessage.getResult().getValue());
 
     // Test returned value
     String shouldReturn = param.toLowerCase(Locale.getDefault());
@@ -416,15 +425,15 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, CLASS_NAME, methodName);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // Assert that the result is not null
-    assertNotNull(replyMsg.getResult());
-    assertThat(replyMsg.getResult().getIsVoid(), is(false));
-    assertNotNull(replyMsg.getResult().getValue());
+    assertNotNull(responseMessage.getResult());
+    assertThat(responseMessage.getResult().getIsVoid(), is(false));
+    assertNotNull(responseMessage.getResult().getValue());
 
     // Unwrap the returned value
-    Object resultValue = Unwrapper.unwrapObject(replyMsg.getResult().getValue());
+    Object resultValue = Unwrapper.unwrapObject(responseMessage.getResult().getValue());
 
     // Test returned value
     Integer shouldReturn = 5;
@@ -499,15 +508,15 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, CLASS_NAME, methodName, listRef);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // Assert that the result is not null
-    assertNotNull(replyMsg.getResult());
-    assertThat(replyMsg.getResult().getIsVoid(), is(false));
-    assertNotNull(replyMsg.getResult().getValue());
+    assertNotNull(responseMessage.getResult());
+    assertThat(responseMessage.getResult().getIsVoid(), is(false));
+    assertNotNull(responseMessage.getResult().getValue());
 
     // Unwrap the returned value
-    Object resultValue = Unwrapper.unwrapObject(replyMsg.getResult().getValue());
+    Object resultValue = Unwrapper.unwrapObject(responseMessage.getResult().getValue());
 
     // Test returned value
     Integer shouldReturn = Arrays.stream(someIntegers).sum();
@@ -584,15 +593,15 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, CLASS_NAME, methodName, listRef);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // Assert that the result is not null
-    assertNotNull(replyMsg.getResult());
-    assertThat(replyMsg.getResult().getIsVoid(), is(false));
-    assertNotNull(replyMsg.getResult().getValue());
+    assertNotNull(responseMessage.getResult());
+    assertThat(responseMessage.getResult().getIsVoid(), is(false));
+    assertNotNull(responseMessage.getResult().getValue());
 
     // Unwrap the returned value
-    Object resultValue = Unwrapper.unwrapObject(replyMsg.getResult().getValue());
+    Object resultValue = Unwrapper.unwrapObject(responseMessage.getResult().getValue());
 
     // Test returned value
     Integer shouldReturn = Arrays.stream(someIntegers).mapToInt(Integer::intValue).sum();
@@ -617,15 +626,15 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, CLASS_NAME, methodName);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // Assert that the result is not null
-    assertNotNull(replyMsg.getResult());
-    assertThat(replyMsg.getResult().getIsVoid(), is(false));
+    assertNotNull(responseMessage.getResult());
+    assertThat(responseMessage.getResult().getIsVoid(), is(false));
 
     // Unwrap the returned value
-    assertNotNull(replyMsg.getResult().getValue());
-    Object resultValue = Unwrapper.unwrapObject(replyMsg.getResult().getValue());
+    assertNotNull(responseMessage.getResult().getValue());
+    Object resultValue = Unwrapper.unwrapObject(responseMessage.getResult().getValue());
 
     // Test that the returned value is null
     assertNull(resultValue);
@@ -653,15 +662,15 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, CLASS_NAME, methodName, param);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // Assert that the result is not null
-    assertNotNull(replyMsg.getResult());
-    assertThat(replyMsg.getResult().getIsVoid(), is(false));
-    assertNotNull(replyMsg.getResult().getValue());
+    assertNotNull(responseMessage.getResult());
+    assertThat(responseMessage.getResult().getIsVoid(), is(false));
+    assertNotNull(responseMessage.getResult().getValue());
 
     // Unwrap the returned value
-    Object resultValue = Unwrapper.unwrapObject(replyMsg.getResult().getValue());
+    Object resultValue = Unwrapper.unwrapObject(responseMessage.getResult().getValue());
 
     // Test returned value
     char[] shouldReturn = param.toCharArray();
@@ -686,15 +695,15 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, CLASS_NAME, methodName);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // Assert that the result is not null
-    assertNotNull(replyMsg.getResult());
-    assertThat(replyMsg.getResult().getIsVoid(), is(false));
-    assertNotNull(replyMsg.getResult().getValue());
+    assertNotNull(responseMessage.getResult());
+    assertThat(responseMessage.getResult().getIsVoid(), is(false));
+    assertNotNull(responseMessage.getResult().getValue());
 
     // Unwrap the returned value
-    Object resultValue = Unwrapper.unwrapObject(replyMsg.getResult().getValue());
+    Object resultValue = Unwrapper.unwrapObject(responseMessage.getResult().getValue());
 
     // Test returned value
     Long[] shouldReturn = {};
@@ -719,15 +728,15 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, CLASS_NAME, methodName);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // Assert that the result is not null
-    assertNotNull(replyMsg.getResult());
-    assertThat(replyMsg.getResult().getIsVoid(), is(false));
+    assertNotNull(responseMessage.getResult());
+    assertThat(responseMessage.getResult().getIsVoid(), is(false));
 
     // Unwrap the returned value
-    assertNotNull(replyMsg.getResult().getValue());
-    Object resultValue = Unwrapper.unwrapObject(replyMsg.getResult().getValue());
+    assertNotNull(responseMessage.getResult().getValue());
+    Object resultValue = Unwrapper.unwrapObject(responseMessage.getResult().getValue());
 
     // Test that the returned value is null
     assertNull(resultValue);
@@ -752,11 +761,11 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, CLASS_NAME, methodName);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
-    assertNotNull(replyMsg.getResult());
-    assertThat(replyMsg.getResult().getIsVoid(), is(false));
-    assertNotNull(replyMsg.getResult().getValue());
-    Integer firstRef = replyMsg.getResult().getValue().getRef();
+    JsonRpcResponse responseMessage = sendAndReceive(request);
+    assertNotNull(responseMessage.getResult());
+    assertThat(responseMessage.getResult().getIsVoid(), is(false));
+    assertNotNull(responseMessage.getResult().getValue());
+    Integer firstRef = responseMessage.getResult().getValue().getRef();
     assertNotNull(firstRef);
 
     // Second call
@@ -774,11 +783,11 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, CLASS_NAME, methodName);
 
-    replyMsg = sendAndReceive(request);
-    assertNotNull(replyMsg.getResult());
-    assertThat(replyMsg.getResult().getIsVoid(), is(false));
-    assertNotNull(replyMsg.getResult().getValue());
-    Integer secondRef = replyMsg.getResult().getValue().getRef();
+    responseMessage = sendAndReceive(request);
+    assertNotNull(responseMessage.getResult());
+    assertThat(responseMessage.getResult().getIsVoid(), is(false));
+    assertNotNull(responseMessage.getResult().getValue());
+    Integer secondRef = responseMessage.getResult().getValue().getRef();
     assertNotNull(secondRef);
 
     // Assert that the references are the same
@@ -804,13 +813,13 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, CLASS_NAME, methodName);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
-    assertNotNull(replyMsg.getResult());
-    assertThat(replyMsg.getResult().getIsVoid(), is(false));
-    assertNotNull(replyMsg.getResult().getValue());
+    JsonRpcResponse responseMessage = sendAndReceive(request);
+    assertNotNull(responseMessage.getResult());
+    assertThat(responseMessage.getResult().getIsVoid(), is(false));
+    assertNotNull(responseMessage.getResult().getValue());
 
     // Unwrap the returned value
-    Object resultValue = Unwrapper.unwrapObject(replyMsg.getResult().getValue());
+    Object resultValue = Unwrapper.unwrapObject(responseMessage.getResult().getValue());
 
     // Assert that it's an array of object references
     assertTrue(resultValue instanceof Integer[] || resultValue instanceof int[]);
@@ -838,21 +847,24 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, methodName, param);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // Assert that the result is null
-    assertNull(replyMsg.getResult());
+    assertNull(responseMessage.getResult());
 
     // Verify error code and message
-    assertNotNull(replyMsg.getError());
-    assertThat(replyMsg.getError().getCode(), is(JsonRpcErrorCode.SERVER_ERROR.getCode()));
-    assertThat(replyMsg.getError().getMessage(), is(JsonRpcErrorCode.SERVER_ERROR.getMessage()));
+    assertNotNull(responseMessage.getError());
+    assertThat(responseMessage.getError().getCode(), is(JsonRpcErrorCode.SERVER_ERROR.getCode()));
+    assertThat(
+        responseMessage.getError().getMessage(), is(JsonRpcErrorCode.SERVER_ERROR.getMessage()));
 
     // Assert errorData
-    assertNotNull(replyMsg.getError().getData());
+    assertNotNull(responseMessage.getError().getData());
     assertThat(
-        replyMsg.getError().getData().getThrowableType(), is("java.lang.NumberFormatException"));
-    assertThat(replyMsg.getError().getData().getMessage(), containsString("For input string"));
+        responseMessage.getError().getData().getThrowableType(),
+        is("java.lang.NumberFormatException"));
+    assertThat(
+        responseMessage.getError().getData().getMessage(), containsString("For input string"));
   }
 
   @Test
@@ -873,20 +885,22 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, CLASS_NAME, methodName);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // Assert that the result is null
-    assertNull(replyMsg.getResult());
+    assertNull(responseMessage.getResult());
 
     // Verify error code and message
-    assertNotNull(replyMsg.getError());
-    assertThat(replyMsg.getError().getCode(), is(JsonRpcErrorCode.SERVER_ERROR.getCode()));
-    assertThat(replyMsg.getError().getMessage(), is(JsonRpcErrorCode.SERVER_ERROR.getMessage()));
+    assertNotNull(responseMessage.getError());
+    assertThat(responseMessage.getError().getCode(), is(JsonRpcErrorCode.SERVER_ERROR.getCode()));
+    assertThat(
+        responseMessage.getError().getMessage(), is(JsonRpcErrorCode.SERVER_ERROR.getMessage()));
 
     // Assert errorData
-    assertNotNull(replyMsg.getError().getData());
-    assertThat(replyMsg.getError().getData().getThrowableType(), is("java.lang.RuntimeException"));
-    assertThat(replyMsg.getError().getData().getMessage(), is("Here you go"));
+    assertNotNull(responseMessage.getError().getData());
+    assertThat(
+        responseMessage.getError().getData().getThrowableType(), is("java.lang.RuntimeException"));
+    assertThat(responseMessage.getError().getData().getMessage(), is("Here you go"));
   }
 
   @Test
@@ -929,14 +943,14 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, CLASS_NAME, methodName, instanceRef);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // Assert that the result is not null
-    assertNotNull(replyMsg.getResult());
+    assertNotNull(responseMessage.getResult());
 
     // Assert that returned value is void
-    assertThat(replyMsg.getResult().getIsVoid(), is(true));
-    assertNull(replyMsg.getResult().getValue());
+    assertThat(responseMessage.getResult().getIsVoid(), is(true));
+    assertNull(responseMessage.getResult().getValue());
   }
 
   @Test
@@ -983,14 +997,14 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, CLASS_NAME, methodName, instanceRef, param);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // Assert that the result is not null
-    assertNotNull(replyMsg.getResult());
+    assertNotNull(responseMessage.getResult());
 
     // Assert that returned value is void
-    assertThat(replyMsg.getResult().getIsVoid(), is(true));
-    assertNull(replyMsg.getResult().getValue());
+    assertThat(responseMessage.getResult().getIsVoid(), is(true));
+    assertNull(responseMessage.getResult().getValue());
   }
 
   @Test
@@ -1033,14 +1047,14 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, CLASS_NAME, methodName, instanceRef);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // Assert that the result is not null
-    assertNotNull(replyMsg.getResult());
+    assertNotNull(responseMessage.getResult());
 
     // Assert that returned value is void
-    assertThat(replyMsg.getResult().getIsVoid(), is(true));
-    assertNull(replyMsg.getResult().getValue());
+    assertThat(responseMessage.getResult().getIsVoid(), is(true));
+    assertNull(responseMessage.getResult().getValue());
   }
 
   @Test
@@ -1086,20 +1100,22 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, CLASS_NAME, methodName, instanceRef);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // Assert that the result is null
-    assertNull(replyMsg.getResult());
+    assertNull(responseMessage.getResult());
 
     // Verify error code and message
-    assertNotNull(replyMsg.getError());
-    assertThat(replyMsg.getError().getCode(), is(JsonRpcErrorCode.SERVER_ERROR.getCode()));
-    assertThat(replyMsg.getError().getMessage(), is(JsonRpcErrorCode.SERVER_ERROR.getMessage()));
+    assertNotNull(responseMessage.getError());
+    assertThat(responseMessage.getError().getCode(), is(JsonRpcErrorCode.SERVER_ERROR.getCode()));
+    assertThat(
+        responseMessage.getError().getMessage(), is(JsonRpcErrorCode.SERVER_ERROR.getMessage()));
 
     // Assert errorData
-    assertNotNull(replyMsg.getError().getData());
+    assertNotNull(responseMessage.getError().getData());
     assertThat(
-        replyMsg.getError().getData().getThrowableType(), is("java.lang.NullPointerException"));
+        responseMessage.getError().getData().getThrowableType(),
+        is("java.lang.NullPointerException"));
   }
 
   @Test
@@ -1146,22 +1162,25 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, nonExistingClass, methodName, instanceRef);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // Assert that the result is null
-    assertNull(replyMsg.getResult());
+    assertNull(responseMessage.getResult());
 
     // Verify error code and message
-    assertNotNull(replyMsg.getError());
-    assertThat(replyMsg.getError().getCode(), is(JsonRpcErrorCode.METHOD_NOT_FOUND.getCode()));
+    assertNotNull(responseMessage.getError());
     assertThat(
-        replyMsg.getError().getMessage(), is(JsonRpcErrorCode.METHOD_NOT_FOUND.getMessage()));
+        responseMessage.getError().getCode(), is(JsonRpcErrorCode.METHOD_NOT_FOUND.getCode()));
+    assertThat(
+        responseMessage.getError().getMessage(),
+        is(JsonRpcErrorCode.METHOD_NOT_FOUND.getMessage()));
 
     // Assert errorData
-    assertNotNull(replyMsg.getError().getData());
+    assertNotNull(responseMessage.getError().getData());
     assertThat(
-        replyMsg.getError().getData().getThrowableType(), is("java.lang.ClassNotFoundException"));
-    assertThat(replyMsg.getError().getData().getMessage(), is(nonExistingClass));
+        responseMessage.getError().getData().getThrowableType(),
+        is("java.lang.ClassNotFoundException"));
+    assertThat(responseMessage.getError().getData().getMessage(), is(nonExistingClass));
   }
 
   @Test
@@ -1204,22 +1223,25 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, CLASS_NAME, methodName, instanceRef);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // Assert that the result is null
-    assertNull(replyMsg.getResult());
+    assertNull(responseMessage.getResult());
 
     // Verify error code and message
-    assertNotNull(replyMsg.getError());
-    assertThat(replyMsg.getError().getCode(), is(JsonRpcErrorCode.METHOD_NOT_FOUND.getCode()));
+    assertNotNull(responseMessage.getError());
     assertThat(
-        replyMsg.getError().getMessage(), is(JsonRpcErrorCode.METHOD_NOT_FOUND.getMessage()));
+        responseMessage.getError().getCode(), is(JsonRpcErrorCode.METHOD_NOT_FOUND.getCode()));
+    assertThat(
+        responseMessage.getError().getMessage(),
+        is(JsonRpcErrorCode.METHOD_NOT_FOUND.getMessage()));
 
     // Assert errorData
-    assertNotNull(replyMsg.getError().getData());
+    assertNotNull(responseMessage.getError().getData());
     assertThat(
-        replyMsg.getError().getData().getThrowableType(), is("java.lang.NoSuchMethodException"));
-    assertThat(replyMsg.getError().getData().getMessage(), containsString(methodName));
+        responseMessage.getError().getData().getThrowableType(),
+        is("java.lang.NoSuchMethodException"));
+    assertThat(responseMessage.getError().getData().getMessage(), containsString(methodName));
   }
 
   @Test
@@ -1245,20 +1267,22 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, CLASS_NAME, methodName, fakeInstanceRef);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // Assert that the result is null
-    assertNull(replyMsg.getResult());
+    assertNull(responseMessage.getResult());
 
     // Verify error code and message
-    assertNotNull(replyMsg.getError());
-    assertThat(replyMsg.getError().getCode(), is(JsonRpcErrorCode.SERVER_ERROR.getCode()));
-    assertThat(replyMsg.getError().getMessage(), is(JsonRpcErrorCode.SERVER_ERROR.getMessage()));
+    assertNotNull(responseMessage.getError());
+    assertThat(responseMessage.getError().getCode(), is(JsonRpcErrorCode.SERVER_ERROR.getCode()));
+    assertThat(
+        responseMessage.getError().getMessage(), is(JsonRpcErrorCode.SERVER_ERROR.getMessage()));
 
     // Assert errorData
-    assertNotNull(replyMsg.getError().getData());
+    assertNotNull(responseMessage.getError().getData());
     assertThat(
-        replyMsg.getError().getData().getThrowableType(), is("java.lang.NullPointerException"));
+        responseMessage.getError().getData().getThrowableType(),
+        is("java.lang.NullPointerException"));
   }
 
   @Test
@@ -1301,15 +1325,15 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, CLASS_NAME, methodName, instanceRef);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // Assert that the result is not null
-    assertNotNull(replyMsg.getResult());
-    assertThat(replyMsg.getResult().getIsVoid(), is(false));
-    assertNotNull(replyMsg.getResult().getValue());
+    assertNotNull(responseMessage.getResult());
+    assertThat(responseMessage.getResult().getIsVoid(), is(false));
+    assertNotNull(responseMessage.getResult().getValue());
 
     // Unwrap the returned value
-    Object resultValue = Unwrapper.unwrapObject(replyMsg.getResult().getValue());
+    Object resultValue = Unwrapper.unwrapObject(responseMessage.getResult().getValue());
 
     // Test returned value
     Integer shouldReturn = 4;
@@ -1356,15 +1380,15 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, CLASS_NAME, methodName, instanceRef);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // Assert that the result is not null
-    assertNotNull(replyMsg.getResult());
-    assertThat(replyMsg.getResult().getIsVoid(), is(false));
+    assertNotNull(responseMessage.getResult());
+    assertThat(responseMessage.getResult().getIsVoid(), is(false));
 
     // The returned value should be an object reference
-    assertNotNull(replyMsg.getResult().getValue());
-    Integer listRef = replyMsg.getResult().getValue().getRef();
+    assertNotNull(responseMessage.getResult().getValue());
+    Integer listRef = responseMessage.getResult().getValue().getRef();
     assertNotNull(listRef);
   }
 
@@ -1408,15 +1432,15 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, CLASS_NAME, methodName, instanceRef);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // Assert that the result is not null
-    assertNotNull(replyMsg.getResult());
-    assertThat(replyMsg.getResult().getIsVoid(), is(false));
+    assertNotNull(responseMessage.getResult());
+    assertThat(responseMessage.getResult().getIsVoid(), is(false));
 
     // The returned value should be an object reference
-    assertNotNull(replyMsg.getResult().getValue());
-    Integer listRef = replyMsg.getResult().getValue().getRef();
+    assertNotNull(responseMessage.getResult().getValue());
+    Integer listRef = responseMessage.getResult().getValue().getRef();
     assertNotNull(listRef);
   }
 
@@ -1510,13 +1534,13 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, CLASS_NAME, methodName, instanceRef, offsetParam, listRef);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
-    assertNotNull(replyMsg.getResult());
-    assertThat(replyMsg.getResult().getIsVoid(), is(false));
-    assertNotNull(replyMsg.getResult().getValue());
+    JsonRpcResponse responseMessage = sendAndReceive(request);
+    assertNotNull(responseMessage.getResult());
+    assertThat(responseMessage.getResult().getIsVoid(), is(false));
+    assertNotNull(responseMessage.getResult().getValue());
 
     // Unwrap the returned value
-    Object resultValue = Unwrapper.unwrapObject(replyMsg.getResult().getValue());
+    Object resultValue = Unwrapper.unwrapObject(responseMessage.getResult().getValue());
 
     // Test returned value
     Integer shouldReturn = Arrays.stream(someIntegers).map(i -> i + offsetParam).sum();
@@ -1569,18 +1593,19 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(++messageId, CLASS_NAME, methodName, instanceRef, param);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // Assert that the result is null
-    assertNull(replyMsg.getResult());
+    assertNull(responseMessage.getResult());
 
     // Verify error code and message
-    assertNotNull(replyMsg.getError());
-    assertThat(replyMsg.getError().getCode(), is(JsonRpcErrorCode.SERVER_ERROR.getCode()));
-    assertThat(replyMsg.getError().getMessage(), is(JsonRpcErrorCode.SERVER_ERROR.getMessage()));
+    assertNotNull(responseMessage.getError());
+    assertThat(responseMessage.getError().getCode(), is(JsonRpcErrorCode.SERVER_ERROR.getCode()));
+    assertThat(
+        responseMessage.getError().getMessage(), is(JsonRpcErrorCode.SERVER_ERROR.getMessage()));
 
     // Assert errorData
-    assertNotNull(replyMsg.getError().getData());
-    assertThat(replyMsg.getError().getData().getThrowableType(), is("java.lang.Exception"));
+    assertNotNull(responseMessage.getError().getData());
+    assertThat(responseMessage.getError().getData().getThrowableType(), is("java.lang.Exception"));
   }
 }

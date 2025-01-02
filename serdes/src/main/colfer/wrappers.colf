@@ -27,5 +27,5 @@ type Message struct {
 	metaMessage         MetaMessage
 	interceptMessage    InterceptMessage
 	interceptKeyMessage InterceptKeyMessage
-	interceptReply      InterceptReply
+	interceptResponse   InterceptResponse
 }

@@ -42,9 +42,9 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(CLASS_NAME, fieldName, ++messageId);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
-    assertResultEqualsTypeAndValue(replyMsg, String.class, "I'm classy");
+    assertResultEqualsTypeAndValue(responseMessage, String.class, "I'm classy");
   }
 
   @Test
@@ -64,9 +64,9 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(CLASS_NAME, fieldName, ++messageId);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
-    assertResultEqualsTypeAndValue(replyMsg, String.class, null);
+    assertResultEqualsTypeAndValue(responseMessage, String.class, null);
   }
 
   @Test
@@ -86,9 +86,9 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(CLASS_NAME, fieldName, ++messageId);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
-    assertResultEqualsTypeAndValue(replyMsg, Integer.class, 39328);
+    assertResultEqualsTypeAndValue(responseMessage, Integer.class, 39328);
   }
 
   @Test
@@ -108,9 +108,9 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(CLASS_NAME, fieldName, ++messageId);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
-    assertResultEqualsTypeAndValue(replyMsg, Boolean.class, null);
+    assertResultEqualsTypeAndValue(responseMessage, Boolean.class, null);
   }
 
   @Test
@@ -130,9 +130,9 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(CLASS_NAME, fieldName, ++messageId);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
-    assertResultEqualsTypeAndValue(replyMsg, Boolean.class, true);
+    assertResultEqualsTypeAndValue(responseMessage, Boolean.class, true);
   }
 
   @Test
@@ -153,11 +153,11 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(nonExistingClass, fieldName, ++messageId);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
         messageId,
-        replyMsg,
+        responseMessage,
         JsonRpcErrorCode.METHOD_NOT_FOUND,
         "java.lang.ClassNotFoundException",
         nonExistingClass);
@@ -180,11 +180,11 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(CLASS_NAME, fieldName, ++messageId);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
         messageId,
-        replyMsg,
+        responseMessage,
         JsonRpcErrorCode.METHOD_NOT_FOUND,
         "java.lang.NoSuchFieldException",
         fieldName);
@@ -232,9 +232,9 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(CLASS_NAME, fieldName, instanceRef, ++messageId);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
-    assertResultEqualsTypeAndValue(replyMsg, Integer.class, 4);
+    assertResultEqualsTypeAndValue(responseMessage, Integer.class, 4);
   }
 
   @Test
@@ -279,9 +279,9 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(CLASS_NAME, fieldName, instanceRef, ++messageId);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
-    assertResultEqualsTypeAndValue(replyMsg, Integer.class, null);
+    assertResultEqualsTypeAndValue(responseMessage, Integer.class, null);
   }
 
   @Test
@@ -326,9 +326,9 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(CLASS_NAME, fieldName, instanceRef, ++messageId);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
-    assertResultEqualsTypeAndValue(replyMsg, String.class, "I'm not blank");
+    assertResultEqualsTypeAndValue(responseMessage, String.class, "I'm not blank");
   }
 
   @Test
@@ -373,9 +373,9 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(CLASS_NAME, fieldName, instanceRef, ++messageId);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
-    assertResultEqualsTypeAndValue(replyMsg, String.class, null);
+    assertResultEqualsTypeAndValue(responseMessage, String.class, null);
   }
 
   @Test
@@ -420,9 +420,9 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(CLASS_NAME, fieldName, instanceRef, ++messageId);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
-    assertResultEqualsTypeAndValue(replyMsg, Boolean.class, null);
+    assertResultEqualsTypeAndValue(responseMessage, Boolean.class, null);
   }
 
   @Test
@@ -467,9 +467,9 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(CLASS_NAME, fieldName, instanceRef, ++messageId);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
-    assertResultEqualsTypeAndValue(replyMsg, Boolean.class, true);
+    assertResultEqualsTypeAndValue(responseMessage, Boolean.class, true);
   }
 
   @Test
@@ -514,9 +514,9 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(CLASS_NAME, fieldName, instanceRef, ++messageId);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
-    assertResultEqualsTypeAndValue(replyMsg, Short.class, (short) 233);
+    assertResultEqualsTypeAndValue(responseMessage, Short.class, (short) 233);
   }
 
   @Test
@@ -560,11 +560,11 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(nonExistingClass, fieldName, instanceRef, ++messageId);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
         messageId,
-        replyMsg,
+        responseMessage,
         JsonRpcErrorCode.METHOD_NOT_FOUND,
         "java.lang.ClassNotFoundException",
         nonExistingClass);
@@ -593,11 +593,11 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(CLASS_NAME, fieldName, fakeInstanceRef, ++messageId);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
         messageId,
-        replyMsg,
+        responseMessage,
         JsonRpcErrorCode.SERVER_ERROR,
         "java.lang.NullPointerException",
         "No object found with objRef: " + fakeInstanceRef);
@@ -643,11 +643,11 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
             """
             .formatted(CLASS_NAME, fieldName, instanceRef, ++messageId);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
         messageId,
-        replyMsg,
+        responseMessage,
         JsonRpcErrorCode.METHOD_NOT_FOUND,
         "java.lang.NoSuchFieldException",
         fieldName);

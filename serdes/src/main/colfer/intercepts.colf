@@ -60,7 +60,7 @@ type InterceptKeyMessage struct {
 	parameterTypes []text
 }
 
-type InterceptReply struct {
+type InterceptResponse struct {
 	peerUuid     text
 	responseToId text
 	result       bool

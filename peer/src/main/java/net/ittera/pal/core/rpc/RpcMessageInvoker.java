@@ -208,17 +208,17 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
     // dispatch
     if (!unmarshalError) {
       try {
-        final Message replyMsg = dispatch(requestMsg);
+        final Message responseMessage = dispatch(requestMsg);
 
-        // send reply
-        rpcSocket.send(ColferUtils.toBytes(replyMsg));
+        // send response
+        rpcSocket.send(ColferUtils.toBytes(responseMessage));
         if (logger.isDebugEnabled()) {
           final long took = System.currentTimeMillis() - started;
           if (logger.isDebugEnabled()) {
             logger.debug(
-                "Dispatched and sent message w/id: {} in reply to RPC request"
+                "Dispatched and sent message w/id: {} in response to RPC request"
                     + " w/id: {} in {} ms",
-                getMessageId(replyMsg),
+                getMessageId(responseMessage),
                 getMessageId(requestMsg),
                 took);
           }
@@ -318,9 +318,9 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
     }
 
     // dispatch
-    Message replyMsg;
+    Message responseMessage;
     try {
-      replyMsg = dispatch(requestMsg);
+      responseMessage = dispatch(requestMsg);
     } catch (Exception dispatchException) {
 
       // dispatching failed, log and send error response
@@ -338,19 +338,20 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
       return;
     }
 
-    // create JSON-RPC response from MetaMessage / ExecMessage reply
+    // create JSON-RPC response from MetaMessage / ExecMessage response
     switch (requestMessageType.getFamily()) {
       case EXEC:
         jsonRpcResponse =
-            messageBuilder.jsonRpcResponseFromExecMessageResponse(replyMsg.getExecMessage());
+            messageBuilder.jsonRpcResponseFromExecMessageResponse(responseMessage.getExecMessage());
         break;
       case META:
         jsonRpcResponse =
-            messageBuilder.jsonRpcResponseFromMetaMessageResponse(replyMsg.getMetaMessage());
+            messageBuilder.jsonRpcResponseFromMetaMessageResponse(responseMessage.getMetaMessage());
         break;
       case CONTROL:
         jsonRpcResponse =
-            messageBuilder.jsonRpcResponseFromControlMessageResponse(replyMsg.getControlMessage());
+            messageBuilder.jsonRpcResponseFromControlMessageResponse(
+                responseMessage.getControlMessage());
         break;
       default:
         // we cannot get here: other branches ruled out in pre-dispatch switch
@@ -364,7 +365,7 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
     } catch (JsonSerializationException ex) {
       logger.error("Error sending JSON-RPC response", ex);
     }
-    logMessageDispatch(requestMsg, replyMsg, started);
+    logMessageDispatch(requestMsg, responseMessage, started);
   }
 
   private boolean handleSocketException(ZMQException ex) {

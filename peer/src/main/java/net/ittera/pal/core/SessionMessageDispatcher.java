@@ -26,7 +26,7 @@ import java.util.UUID;
 import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.core.messages.SessionCommandMsg;
-import net.ittera.pal.core.messages.SessionReplyMsg;
+import net.ittera.pal.core.messages.SessionResponseMsg;
 import net.ittera.pal.core.rpc.DispatcherConnector;
 import net.ittera.pal.messages.colfer.ControlMessage;
 import net.ittera.pal.messages.types.ControlCommandType;
@@ -64,31 +64,31 @@ public class SessionMessageDispatcher {
 
     // NOTE: the remotePeerUuid is the session id of the peer
     final ControlCommandType commandType = ControlCommandType.fromId(controlMessage.getCommand());
-    SessionReplyMsg sessionReplyMsg;
+    SessionResponseMsg sessionResponseMsg;
     switch (commandType) {
       case DELETE_OBJECT:
         // delete object from peer's session
         final ObjectRef objectRef =
             ObjectRef.from(controlMessage.getParams()[0].getValue().getRef());
-        sessionReplyMsg =
+        sessionResponseMsg =
             dispatcherConnector.sendMessageToSessionService(
                 new SessionCommandMsg(SessionCommandType.DELETE_OBJECT, remotePeerUuid, objectRef));
 
         // delete object reference in objectLookupStore
         objectLookupStore.remove(objectRef);
         logger.info("Object {} deleted for peer w/uuid: {}", objectRef, remotePeerUuid);
-        return sessionReplyMessageToControlMessage(sessionReplyMsg, controlMessageId);
+        return sessionResponseMessageToControlMessage(sessionResponseMsg, controlMessageId);
       case DELETE_SESSION:
         // delete session
-        sessionReplyMsg =
+        sessionResponseMsg =
             dispatcherConnector.sendMessageToSessionService(
                 new SessionCommandMsg(SessionCommandType.DELETE_SESSION, remotePeerUuid));
-        final Set<ObjectRef> objectRefsInSession = sessionReplyMsg.getObjectRefs();
+        final Set<ObjectRef> objectRefsInSession = sessionResponseMsg.getObjectRefs();
         // delete references to objects in objectLookupStore
         if (objectRefsInSession != null && !objectRefsInSession.isEmpty()) {
           objectLookupStore.removeAll(objectRefsInSession);
         }
-        return sessionReplyMessageToControlMessage(sessionReplyMsg, controlMessageId);
+        return sessionResponseMessageToControlMessage(sessionResponseMsg, controlMessageId);
       default:
         String errorMessage =
             String.format(
@@ -100,12 +100,12 @@ public class SessionMessageDispatcher {
     }
   }
 
-  // helper method to map the internal SessionReplyMessage to the public ControlMessage reply
+  // helper method to map the internal SessionResponseMessage to the public ControlMessage response
   @SuppressWarnings("CheckStyle")
-  private ControlMessage sessionReplyMessageToControlMessage(
-      SessionReplyMsg sessionReplyMsg, String requestId) {
+  private ControlMessage sessionResponseMessageToControlMessage(
+      SessionResponseMsg sessionResponseMsg, String requestId) {
     final ControlStatusType statusType =
-        switch (sessionReplyMsg.getStatus()) {
+        switch (sessionResponseMsg.getStatus()) {
           case OK -> ControlStatusType.OK;
           case ERROR -> ControlStatusType.ERROR;
           case UNSUPPORTED_SESSION_CMD -> ControlStatusType.UNSUPPORTED;

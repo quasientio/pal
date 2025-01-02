@@ -44,7 +44,7 @@ import net.ittera.pal.messages.colfer.ControlMessage;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InterceptKeyMessage;
 import net.ittera.pal.messages.colfer.InterceptMessage;
-import net.ittera.pal.messages.colfer.InterceptReply;
+import net.ittera.pal.messages.colfer.InterceptResponse;
 import net.ittera.pal.messages.colfer.InternalHeader;
 import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.messages.colfer.Parameter;
@@ -1028,18 +1028,18 @@ public class MessageBuilderTest {
   }
 
   @Test
-  public void buildInterceptReply_uuidResponseToIdResult_validInterceptReply() {
+  public void buildInterceptResponse_uuidResponseToIdResult_validInterceptResponse() {
     UUID peerUuid = UUID.randomUUID();
     UUID responseToId = UUID.randomUUID();
     boolean result = true;
 
-    InterceptReply interceptReply =
-        messageBuilder.buildInterceptReply(peerUuid, responseToId.toString(), result);
+    InterceptResponse interceptResponse =
+        messageBuilder.buildInterceptResponse(peerUuid, responseToId.toString(), result);
 
-    assertNotNull(interceptReply);
-    assertEquals(peerUuid.toString(), interceptReply.getPeerUuid());
-    assertEquals(responseToId.toString(), interceptReply.getResponseToId());
-    assertEquals(result, interceptReply.getResult());
+    assertNotNull(interceptResponse);
+    assertEquals(peerUuid.toString(), interceptResponse.getPeerUuid());
+    assertEquals(responseToId.toString(), interceptResponse.getResponseToId());
+    assertEquals(result, interceptResponse.getResult());
   }
 
   @Test
@@ -1741,20 +1741,21 @@ public class MessageBuilderTest {
   }
 
   @Test
-  public void wrap_interceptReply_wrappedInterceptReply() {
+  public void wrap_interceptResponse_wrappedInterceptResponse() {
     UUID peerUuid = UUID.randomUUID();
     UUID responseToId = UUID.randomUUID();
     boolean result = true;
 
-    InterceptReply interceptReply =
-        messageBuilder.buildInterceptReply(peerUuid, responseToId.toString(), result);
+    InterceptResponse interceptResponse =
+        messageBuilder.buildInterceptResponse(peerUuid, responseToId.toString(), result);
 
-    Message wrappedInterceptReply = messageBuilder.wrap(interceptReply);
+    Message wrappedInterceptResponse = messageBuilder.wrap(interceptResponse);
 
-    assertNotNull(wrappedInterceptReply);
+    assertNotNull(wrappedInterceptResponse);
     assertEquals(
-        MessageType.INTERCEPT_REPLY, MessageType.fromId(wrappedInterceptReply.getMessageType()));
-    assertEquals(interceptReply, wrappedInterceptReply.getInterceptReply());
+        MessageType.INTERCEPT_RESPONSE,
+        MessageType.fromId(wrappedInterceptResponse.getMessageType()));
+    assertEquals(interceptResponse, wrappedInterceptResponse.getInterceptResponse());
   }
 
   @Test

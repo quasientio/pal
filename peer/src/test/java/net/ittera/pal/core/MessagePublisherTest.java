@@ -119,9 +119,9 @@ public class MessagePublisherTest extends ZmqEnabledTest {
             msgBuilder.wrap(msg));
     outMsg.send(reqSocket);
 
-    // expect a 0-reply
-    String reply = reqSocket.recvStr();
-    assertThat(reply, is("0"));
+    // expect a 0-response
+    String response = reqSocket.recvStr();
+    assertThat(response, is("0"));
 
     // check if it was published
     OutboundMsg publishedOutMsg = OutboundMsg.receive(subSocket, true);
@@ -149,9 +149,9 @@ public class MessagePublisherTest extends ZmqEnabledTest {
             msgBuilder.wrap(msg));
     outMsg.send(reqSocket);
 
-    // expect a 0-reply
-    String reply = reqSocket.recvStr();
-    assertThat(reply, is("0"));
+    // expect a 0-response
+    String response = reqSocket.recvStr();
+    assertThat(response, is("0"));
 
     // get what was published
     OutboundMsg publishedOutMsg = OutboundMsg.receive(subSocket, true);
@@ -188,9 +188,9 @@ public class MessagePublisherTest extends ZmqEnabledTest {
       outMsg.send(reqSocket);
       messagesSent.add(msg);
 
-      // expect a 0-reply
-      String reply = reqSocket.recvStr();
-      assertThat(reply, is("0"));
+      // expect a 0-response
+      String response = reqSocket.recvStr();
+      assertThat(response, is("0"));
     }
 
     // get what was published

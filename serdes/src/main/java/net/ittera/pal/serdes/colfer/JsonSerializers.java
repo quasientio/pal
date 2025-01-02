@@ -46,7 +46,7 @@ import net.ittera.pal.messages.colfer.InstanceFieldPutDone;
 import net.ittera.pal.messages.colfer.InstanceMethodCall;
 import net.ittera.pal.messages.colfer.InterceptKeyMessage;
 import net.ittera.pal.messages.colfer.InterceptMessage;
-import net.ittera.pal.messages.colfer.InterceptReply;
+import net.ittera.pal.messages.colfer.InterceptResponse;
 import net.ittera.pal.messages.colfer.InterceptableField;
 import net.ittera.pal.messages.colfer.InterceptableMethod;
 import net.ittera.pal.messages.colfer.InternalHeader;
@@ -651,10 +651,10 @@ public class JsonSerializers {
     }
   }
 
-  public static class InterceptReplySerializer implements JsonSerializer<InterceptReply> {
+  public static class InterceptResponseSerializer implements JsonSerializer<InterceptResponse> {
     @Override
     public JsonElement serialize(
-        InterceptReply message, Type type, JsonSerializationContext jsonSerializationContext) {
+        InterceptResponse message, Type type, JsonSerializationContext jsonSerializationContext) {
       final JsonObject jsonElement = new JsonObject();
       if (notEmpty(message.peerUuid)) {
         jsonElement.addProperty("peer_uuid", message.peerUuid);
@@ -914,9 +914,10 @@ public class JsonSerializers {
                   "intercept_key_message",
                   jsonSerializationContext.serialize(message.interceptKeyMessage));
               break;
-            case INTERCEPT_REPLY:
+            case INTERCEPT_RESPONSE:
               jsonElement.add(
-                  "intercept_reply", jsonSerializationContext.serialize(message.interceptReply));
+                  "intercept_response",
+                  jsonSerializationContext.serialize(message.interceptResponse));
               break;
             default:
               logger.error("Unable to serialize message of type: {}", messageType);

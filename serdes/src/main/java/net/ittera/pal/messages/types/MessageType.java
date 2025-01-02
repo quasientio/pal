@@ -38,7 +38,7 @@ public enum MessageType {
   CONTROL_MESSAGE_REQUEST(MessageFamily.CONTROL, (byte) 31),
   CONTROL_MESSAGE_RESPONSE(MessageFamily.CONTROL, (byte) 32),
 
-  // status (i.e. reply) messages
+  // status (i.e. response) messages
   //  CONTROL_OK(MessageFamily.CONTROL, (byte) 41),
   //  CONTROL_ERROR(MessageFamily.CONTROL, (byte) 42),
   //  (the following maybe not needed, we could use a generic control_error message with a code and
@@ -51,11 +51,11 @@ public enum MessageType {
   // INTERCEPT (51 - 60)
   INTERCEPT_MESSAGE(MessageFamily.INTERCEPT, (byte) 51),
   INTERCEPT_KEY(MessageFamily.INTERCEPT, (byte) 52),
-  INTERCEPT_REPLY(MessageFamily.INTERCEPT, (byte) 53),
+  INTERCEPT_RESPONSE(MessageFamily.INTERCEPT, (byte) 53),
 
   // META (61 - 80)
   META_MESSAGE_REQUEST(MessageFamily.META, (byte) 60),
-  META_MESSAGE_REPLY(MessageFamily.META, (byte) 61);
+  META_MESSAGE_RESPONSE(MessageFamily.META, (byte) 61);
 
   private final MessageFamily family;
   private final byte id;

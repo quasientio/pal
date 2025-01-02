@@ -35,7 +35,7 @@ import net.ittera.pal.common.objects.ConcurrentHashMapObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.core.messages.SessionCommandMsg;
-import net.ittera.pal.core.messages.SessionReplyMsg;
+import net.ittera.pal.core.messages.SessionResponseMsg;
 import net.ittera.pal.messages.types.SessionCommandType;
 import net.ittera.pal.messages.types.SessionStatusType;
 import org.junit.After;
@@ -84,9 +84,9 @@ public class SessionServiceTest extends ZmqEnabledTest {
         new SessionCommandMsg(SessionCommandType.STORE_OBJECT, sessionId, objectRef);
     boolean sentOk = sessionCommandMsg.send(socket);
     assertTrue(sentOk);
-    SessionReplyMsg sessionReplyMsg = SessionReplyMsg.receive(socket, true);
-    assertNotNull(sessionReplyMsg);
-    assertThat(sessionReplyMsg.getStatus(), is(SessionStatusType.OK));
+    SessionResponseMsg sessionResponseMsg = SessionResponseMsg.receive(socket, true);
+    assertNotNull(sessionResponseMsg);
+    assertThat(sessionResponseMsg.getStatus(), is(SessionStatusType.OK));
   }
 
   @Test
@@ -96,9 +96,9 @@ public class SessionServiceTest extends ZmqEnabledTest {
         new SessionCommandMsg(SessionCommandType.DELETE_SESSION, sessionId);
     boolean sentOk = sessionCommandMsg.send(socket);
     assertTrue(sentOk);
-    SessionReplyMsg sessionReplyMsg = SessionReplyMsg.receive(socket, true);
-    assertNotNull(sessionReplyMsg);
-    assertThat(sessionReplyMsg.getStatus(), is(SessionStatusType.NO_SUCH_SESSION));
+    SessionResponseMsg sessionResponseMsg = SessionResponseMsg.receive(socket, true);
+    assertNotNull(sessionResponseMsg);
+    assertThat(sessionResponseMsg.getStatus(), is(SessionStatusType.NO_SUCH_SESSION));
   }
 
   @Test
@@ -110,20 +110,20 @@ public class SessionServiceTest extends ZmqEnabledTest {
         new SessionCommandMsg(SessionCommandType.STORE_OBJECT, sessionId, objectRef);
     boolean sentOk = sessionCommandMsg.send(socket);
     assertTrue(sentOk);
-    SessionReplyMsg sessionReplyMsg = SessionReplyMsg.receive(socket, true);
-    assertNotNull(sessionReplyMsg);
-    assertThat(sessionReplyMsg.getStatus(), is(SessionStatusType.OK));
+    SessionResponseMsg sessionResponseMsg = SessionResponseMsg.receive(socket, true);
+    assertNotNull(sessionResponseMsg);
+    assertThat(sessionResponseMsg.getStatus(), is(SessionStatusType.OK));
 
     // now delete session
     sessionCommandMsg = new SessionCommandMsg(SessionCommandType.DELETE_SESSION, sessionId);
     sentOk = sessionCommandMsg.send(socket);
     assertTrue(sentOk);
-    sessionReplyMsg = SessionReplyMsg.receive(socket, true);
-    assertNotNull(sessionReplyMsg);
+    sessionResponseMsg = SessionResponseMsg.receive(socket, true);
+    assertNotNull(sessionResponseMsg);
 
     // check status and deleted objectRefs
-    assertThat(sessionReplyMsg.getStatus(), is(SessionStatusType.OK));
-    assertThat(sessionReplyMsg.getObjectRefs(), is(Collections.singleton(objectRef)));
+    assertThat(sessionResponseMsg.getStatus(), is(SessionStatusType.OK));
+    assertThat(sessionResponseMsg.getObjectRefs(), is(Collections.singleton(objectRef)));
   }
 
   @Test
@@ -135,18 +135,18 @@ public class SessionServiceTest extends ZmqEnabledTest {
         new SessionCommandMsg(SessionCommandType.STORE_OBJECT, sessionId, objectRef);
     boolean sentOk = sessionCommandMsg.send(socket);
     assertTrue(sentOk);
-    SessionReplyMsg sessionReplyMsg = SessionReplyMsg.receive(socket, true);
-    assertNotNull(sessionReplyMsg);
-    assertThat(sessionReplyMsg.getStatus(), is(SessionStatusType.OK));
+    SessionResponseMsg sessionResponseMsg = SessionResponseMsg.receive(socket, true);
+    assertNotNull(sessionResponseMsg);
+    assertThat(sessionResponseMsg.getStatus(), is(SessionStatusType.OK));
 
     // now delete object from session
     sessionCommandMsg =
         new SessionCommandMsg(SessionCommandType.DELETE_OBJECT, sessionId, objectRef);
     sentOk = sessionCommandMsg.send(socket);
     assertTrue(sentOk);
-    sessionReplyMsg = SessionReplyMsg.receive(socket, true);
-    assertNotNull(sessionReplyMsg);
-    assertThat(sessionReplyMsg.getStatus(), is(SessionStatusType.OK));
+    sessionResponseMsg = SessionResponseMsg.receive(socket, true);
+    assertNotNull(sessionResponseMsg);
+    assertThat(sessionResponseMsg.getStatus(), is(SessionStatusType.OK));
   }
 
   @Test
@@ -158,9 +158,9 @@ public class SessionServiceTest extends ZmqEnabledTest {
             SessionCommandType.DELETE_OBJECT, sessionId, ObjectRef.from("597636"));
     boolean sentOk = sessionCommandMsg.send(socket);
     assertTrue(sentOk);
-    SessionReplyMsg sessionReplyMsg = SessionReplyMsg.receive(socket, true);
-    assertNotNull(sessionReplyMsg);
-    assertThat(sessionReplyMsg.getStatus(), is(SessionStatusType.NO_SUCH_SESSION));
+    SessionResponseMsg sessionResponseMsg = SessionResponseMsg.receive(socket, true);
+    assertNotNull(sessionResponseMsg);
+    assertThat(sessionResponseMsg.getStatus(), is(SessionStatusType.NO_SUCH_SESSION));
   }
 
   @Test
@@ -172,9 +172,9 @@ public class SessionServiceTest extends ZmqEnabledTest {
         new SessionCommandMsg(SessionCommandType.STORE_OBJECT, sessionId, objectRef);
     boolean sentOk = sessionCommandMsg.send(socket);
     assertTrue(sentOk);
-    SessionReplyMsg sessionReplyMsg = SessionReplyMsg.receive(socket, true);
-    assertNotNull(sessionReplyMsg);
-    assertThat(sessionReplyMsg.getStatus(), is(SessionStatusType.OK));
+    SessionResponseMsg sessionResponseMsg = SessionResponseMsg.receive(socket, true);
+    assertNotNull(sessionResponseMsg);
+    assertThat(sessionResponseMsg.getStatus(), is(SessionStatusType.OK));
 
     // now try to delete object which was not stored in session
     sessionCommandMsg =
@@ -182,9 +182,9 @@ public class SessionServiceTest extends ZmqEnabledTest {
             SessionCommandType.DELETE_OBJECT, sessionId, ObjectRef.from("597636"));
     sentOk = sessionCommandMsg.send(socket);
     assertTrue(sentOk);
-    sessionReplyMsg = SessionReplyMsg.receive(socket, true);
-    assertNotNull(sessionReplyMsg);
-    assertThat(sessionReplyMsg.getStatus(), is(SessionStatusType.NO_SUCH_OBJECT));
+    sessionResponseMsg = SessionResponseMsg.receive(socket, true);
+    assertNotNull(sessionResponseMsg);
+    assertThat(sessionResponseMsg.getStatus(), is(SessionStatusType.NO_SUCH_OBJECT));
   }
 
   @Test
@@ -195,7 +195,7 @@ public class SessionServiceTest extends ZmqEnabledTest {
     SessionCommandMsg sessionCommandMsg =
         new SessionCommandMsg(SessionCommandType.STORE_OBJECT, sessionId1, objectRef1);
     sessionCommandMsg.send(socket);
-    SessionReplyMsg.receive(socket, true);
+    SessionResponseMsg.receive(socket, true);
 
     // store an object into sessionId2
     UUID sessionId2 = UUID.randomUUID();
@@ -203,30 +203,30 @@ public class SessionServiceTest extends ZmqEnabledTest {
     sessionCommandMsg =
         new SessionCommandMsg(SessionCommandType.STORE_OBJECT, sessionId2, objectRef2);
     sessionCommandMsg.send(socket);
-    SessionReplyMsg.receive(socket, true);
+    SessionResponseMsg.receive(socket, true);
 
     // clear sessions
     sessionCommandMsg = new SessionCommandMsg(SessionCommandType.CLEAR_SESSIONS);
     boolean sentOk = sessionCommandMsg.send(socket);
     assertTrue(sentOk);
-    SessionReplyMsg sessionReplyMsg = SessionReplyMsg.receive(socket, true);
-    assertNotNull(sessionReplyMsg);
-    assertThat(sessionReplyMsg.getStatus(), is(SessionStatusType.OK));
+    SessionResponseMsg sessionResponseMsg = SessionResponseMsg.receive(socket, true);
+    assertNotNull(sessionResponseMsg);
+    assertThat(sessionResponseMsg.getStatus(), is(SessionStatusType.OK));
 
     // try to delete the stored objects
     sessionCommandMsg =
         new SessionCommandMsg(SessionCommandType.DELETE_OBJECT, sessionId1, objectRef1);
     sessionCommandMsg.send(socket);
-    sessionReplyMsg = SessionReplyMsg.receive(socket, true);
-    assertNotNull(sessionReplyMsg);
-    assertThat(sessionReplyMsg.getStatus(), is(SessionStatusType.NO_SUCH_SESSION));
+    sessionResponseMsg = SessionResponseMsg.receive(socket, true);
+    assertNotNull(sessionResponseMsg);
+    assertThat(sessionResponseMsg.getStatus(), is(SessionStatusType.NO_SUCH_SESSION));
 
     sessionCommandMsg =
         new SessionCommandMsg(SessionCommandType.DELETE_OBJECT, sessionId2, objectRef2);
     sessionCommandMsg.send(socket);
-    sessionReplyMsg = SessionReplyMsg.receive(socket, true);
-    assertNotNull(sessionReplyMsg);
-    assertThat(sessionReplyMsg.getStatus(), is(SessionStatusType.NO_SUCH_SESSION));
+    sessionResponseMsg = SessionResponseMsg.receive(socket, true);
+    assertNotNull(sessionResponseMsg);
+    assertThat(sessionResponseMsg.getStatus(), is(SessionStatusType.NO_SUCH_SESSION));
   }
 
   @After

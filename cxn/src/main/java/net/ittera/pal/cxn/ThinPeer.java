@@ -693,12 +693,13 @@ public class ThinPeer implements AutoCloseable {
       return null;
     }
 
-    // even if we send the request as a JsonRpc message, the peer's reply is written as ExecMessage
-    ExecMessage messageReply =
-        pollForReplyToRequestFromOffset(sentRecordOffset + 1, jsonRpcMessage.getId());
+    // even if we send the request as a JsonRpc message, the peer's response is written as
+    // ExecMessage
+    ExecMessage messageResponse =
+        pollForResponseToRequestFromOffset(sentRecordOffset + 1, jsonRpcMessage.getId());
 
-    // convert the ExecMessage reply into a JsonRpc response
-    return msgBuilder.jsonRpcResponseFromExecMessageReply(messageReply);
+    // convert the ExecMessage response into a JsonRpc response
+    return msgBuilder.jsonRpcResponseFromExecMessageResponse(messageResponse);
   }
 
   public ExecMessage sendExecMessageToLogAndReceive(ExecMessage message) {
@@ -739,10 +740,10 @@ public class ThinPeer implements AutoCloseable {
       return null;
     }
 
-    return pollForReplyToRequestFromOffset(sentRecordOffset + 1, message.getMessageId());
+    return pollForResponseToRequestFromOffset(sentRecordOffset + 1, message.getMessageId());
   }
 
-  private ExecMessage pollForReplyToRequestFromOffset(long offset, String requestId) {
+  private ExecMessage pollForResponseToRequestFromOffset(long offset, String requestId) {
     if (logger.isDebugEnabled()) {
       logger.debug("Consumer seeking to offset: {}", offset);
     }
@@ -752,7 +753,7 @@ public class ThinPeer implements AutoCloseable {
       consumer.seek(inTopicPartition, offset);
     }
 
-    // wait for reply  (should contain responseToId = sentRecordOffset in message)
+    // wait for response  (should contain responseToId = sentRecordOffset in message)
     while (true) {
       ConsumerRecords<String, LogMessage<?>> records;
       synchronized (consumerLock) {
@@ -776,7 +777,7 @@ public class ThinPeer implements AutoCloseable {
         if (execMessage != null && requestId.equals(responseToId)) {
           if (logger.isDebugEnabled()) {
             logger.debug(
-                "Got reply with offset {} and id {} ",
+                "Got response with offset {} and id {} ",
                 receivedMsgOffset,
                 execMessage.getMessageId());
           }
@@ -839,20 +840,20 @@ public class ThinPeer implements AutoCloseable {
     peerSocket.send(ColferUtils.toBytes(msgBuilder.wrap(message)));
 
     final long waitStart = System.currentTimeMillis();
-    byte[] reply = peerSocket.recv(0);
+    byte[] response = peerSocket.recv(0);
     final long waitEnd = System.currentTimeMillis();
 
-    final Message replyMsgWrapper = new Message();
-    replyMsgWrapper.unmarshal(reply, 0);
-    final ExecMessage replyMsg = replyMsgWrapper.getExecMessage();
+    final Message responseMessageWrapper = new Message();
+    responseMessageWrapper.unmarshal(response, 0);
+    final ExecMessage responseMessage = responseMessageWrapper.getExecMessage();
     if (logger.isDebugEnabled()) {
       logger.debug(
-          "Got reply message to exec message: {}, waited {} ms",
-          ColferUtils.format(replyMsg),
+          "Got response message to exec message: {}, waited {} ms",
+          ColferUtils.format(responseMessage),
           (waitEnd - waitStart));
     }
 
-    return replyMsg;
+    return responseMessage;
   }
 
   public ControlMessage sendToPeer(ControlMessage message) {
@@ -867,20 +868,20 @@ public class ThinPeer implements AutoCloseable {
     peerSocket.send(ColferUtils.toBytes(msgBuilder.wrap(message)));
 
     final long waitStart = System.currentTimeMillis();
-    byte[] reply = peerSocket.recv(0);
+    byte[] response = peerSocket.recv(0);
     final long waitEnd = System.currentTimeMillis();
 
-    final Message replyMsgWrapper = new Message();
-    replyMsgWrapper.unmarshal(reply, 0);
-    final ControlMessage replyMsg = replyMsgWrapper.getControlMessage();
+    final Message responseMessageWrapper = new Message();
+    responseMessageWrapper.unmarshal(response, 0);
+    final ControlMessage responseMessage = responseMessageWrapper.getControlMessage();
     if (logger.isDebugEnabled()) {
       logger.debug(
-          "Got reply to control message: {}, waited {} ms",
-          ColferUtils.format(replyMsg),
+          "Got response to control message: {}, waited {} ms",
+          ColferUtils.format(responseMessage),
           (waitEnd - waitStart));
     }
 
-    return replyMsg;
+    return responseMessage;
   }
 
   public MetaMessage sendToPeer(MetaMessage message) {
@@ -897,20 +898,20 @@ public class ThinPeer implements AutoCloseable {
     }
     peerSocket.send(ColferUtils.toBytes(msgBuilder.wrap(message)));
     final long waitStart = System.currentTimeMillis();
-    byte[] reply = peerSocket.recv(0);
+    byte[] response = peerSocket.recv(0);
     final long waitEnd = System.currentTimeMillis();
 
-    final Message replyMsgWrapper = new Message();
-    replyMsgWrapper.unmarshal(reply, 0);
-    final MetaMessage replyMsg = replyMsgWrapper.getMetaMessage();
+    final Message responseMessageWrapper = new Message();
+    responseMessageWrapper.unmarshal(response, 0);
+    final MetaMessage responseMessage = responseMessageWrapper.getMetaMessage();
     if (logger.isDebugEnabled()) {
       logger.debug(
-          "Got reply to meta message w/id: {}, waited {} ms",
-          replyMsg.getMessageId(),
+          "Got response to meta message w/id: {}, waited {} ms",
+          responseMessage.getMessageId(),
           (waitEnd - waitStart));
     }
 
-    return replyMsg;
+    return responseMessage;
   }
 
   public void sendDeleteSessionCommand() {
@@ -923,8 +924,8 @@ public class ThinPeer implements AutoCloseable {
     final String sessionId = peerUuid.toString();
     if (isZmqSocketConnected) {
       ControlMessage msg = msgBuilder.buildDeleteSessionCommandMessage(peerUuid);
-      ControlMessage replyMsg = sendToPeer(msg);
-      ControlStatusType statusType = ControlStatusType.fromId(replyMsg.getStatus());
+      ControlMessage responseMessage = sendToPeer(msg);
+      ControlStatusType statusType = ControlStatusType.fromId(responseMessage.getStatus());
       if (ControlStatusType.OK.equals(statusType)) {
         logger.debug("Session w/id {} was deleted.", sessionId);
       } else {

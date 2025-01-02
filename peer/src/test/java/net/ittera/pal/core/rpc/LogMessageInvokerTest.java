@@ -90,11 +90,11 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
                   } catch (NoSuchMethodException e) {
                     logger.error("Error getting constructor", e);
                   }
-                  ExecMessage reply =
+                  ExecMessage response =
                       msgBuilder.buildReturnValue(
                           peerUuid, "", constructor, null, false, incomingMsg.getMessageId());
-                  execMessageReplies.add(reply);
-                  return reply;
+                  execMessageReplies.add(response);
+                  return response;
                 });
 
     this.logMessageInvoker =
@@ -148,7 +148,7 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
     assertThat(logMessageInvoker.getExecRequestsDispatched(), is((long) 1));
     assertThat(logMessageInvoker.getRequestsDispatched(), is((long) 1));
 
-    // assert reply msg is response to original
+    // assert response msg is response to original
     assertThat(execMessageReplies.get(0).getResponseToId(), is(invokable.getMessageId()));
   }
 
@@ -198,7 +198,7 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
     assertThat(logMessageInvoker.getRequestsDispatched(), is((long) msgCount));
     assertThat(execMessageReplies.size(), is(msgCount));
 
-    // assert reply msg is response to original
+    // assert response msg is response to original
     for (int i = 0; i < msgCount; i++) {
       assertThat(
           execMessageReplies.get(i).getResponseToId(), is(messagesToInvoke.get(i).getMessageId()));

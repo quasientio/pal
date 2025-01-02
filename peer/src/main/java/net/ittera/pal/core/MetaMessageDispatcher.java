@@ -86,20 +86,20 @@ public class MetaMessageDispatcher {
         try {
           String scanResults =
               classMetadataSerializer.scannedClasspathToJson(compressAndEncode, excludePrefixes);
-          return messageBuilder.buildMetaMessageReply(
+          return messageBuilder.buildMetaMessageResponse(
               peerUuid, MetaStatusType.OK, scanResults, metaMessage.getMessageId());
         } catch (Exception e) {
           logger.error("Error scanning classes", e);
-          return messageBuilder.buildMetaMessageReply(
+          return messageBuilder.buildMetaMessageResponse(
               peerUuid, MetaStatusType.ERROR, e.getMessage(), metaMessage.getMessageId());
         }
       default:
         String errorMessage =
             String.format(
-                "Incoming Meta message w/id=%s from peer=%s ignored - no handler for service type: %s",
+                "Incoming Meta message w/id=%s from peer=%s ignored - no handler for service: %s",
                 metaMessage.getMessageId(), metaMessage.fromPeer, serviceType.name());
         logger.error(errorMessage);
-        return messageBuilder.buildMetaMessageReply(
+        return messageBuilder.buildMetaMessageResponse(
             peerUuid, MetaStatusType.UNSUPPORTED, errorMessage, metaMessage.getMessageId());
     }
   }

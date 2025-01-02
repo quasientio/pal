@@ -62,10 +62,10 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
     // 2. Send message
     @SuppressWarnings("unused")
-    final ExecMessage beforeExecReplyMsg =
+    final ExecMessage beforeExecResponseMsg =
         connector.sendExecMessage(messageBuilder.wrap(beforeExecMsg), ExecPhase.BEFORE);
 
-    // TODO if beforeExecReplyMsg != beforeExecMsg, unpack and exec reply msg
+    // TODO if beforeExecResponseMsg != beforeExecMsg, unpack and exec response msg
 
     // 3. Invoke
     Object returnValue = invoke(ctxt, sender, target, args);
@@ -87,10 +87,10 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
     // 6. Send object or exception
     @SuppressWarnings("unused")
-    final ExecMessage afterExecReplyMsg =
+    final ExecMessage afterExecResponseMsg =
         connector.sendExecMessage(messageBuilder.wrap(afterExecMsg), ExecPhase.AFTER);
 
-    // TODO if afterExecReplyMsg != afterExecMsg, unpack exception or return value
+    // TODO if afterExecResponseMsg != afterExecMsg, unpack exception or return value
 
     // 7. Return object or re-raise exception
     if (returnValue instanceof InvocationExceptionWrapper) {
@@ -237,15 +237,15 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
             exceptionWhileInvoking);
 
     // 11. Send object or exception, and receive
-    final ExecMessage afterExecReplyMsg =
+    final ExecMessage afterExecResponseMsg =
         connector.sendExecMessage(messageBuilder.wrap(afterExecMsg), ExecPhase.AFTER);
 
     // 12. Return received message
     if (logger.isTraceEnabled()) {
       logger.trace(
-          "dispatchIncoming:out returning message: {}", ColferUtils.format(afterExecReplyMsg));
+          "dispatchIncoming:out returning message: {}", ColferUtils.format(afterExecResponseMsg));
     }
-    return afterExecReplyMsg;
+    return afterExecResponseMsg;
   }
 
   final ObjectRef storeObject(Object object) {
@@ -356,7 +356,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
    * Wraps a Throwable message to be sent back to the client, after an exception occurred during
    * loading or invoking an accessible object.
    *
-   * @param messageId The id of the message that this is a reply to
+   * @param messageId The id of the message that this is a response to
    * @param accessibleObject The accessible object that failed to be loaded or invoked
    * @param exceptionWhileLoading Either this or exceptionWhileInvoking must be non-null
    * @param exceptionWhileInvoking Either this or exceptionWhileLoading must be non-null

@@ -33,7 +33,7 @@ import javax.annotation.Nonnull;
 import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.core.messages.SessionCommandMsg;
-import net.ittera.pal.core.messages.SessionReplyMsg;
+import net.ittera.pal.core.messages.SessionResponseMsg;
 import net.ittera.pal.messages.types.SessionStatusType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -168,7 +168,7 @@ public class SessionService extends ConnectedService {
         logger.debug("Received new message: {} ({} bytes)", cmdMsg, cmdMsg.getSize());
       }
 
-      final SessionReplyMsg replyMsg;
+      final SessionResponseMsg responseMessage;
       SessionStatusType status;
       switch (cmdMsg.getCommand()) {
         case STORE_OBJECT:
@@ -181,7 +181,7 @@ public class SessionService extends ConnectedService {
             logger.error("Error storing object in session w/uuid: {}", cmdMsg.getSessionId(), e);
           }
           status = stored ? SessionStatusType.OK : SessionStatusType.ERROR;
-          replyMsg = new SessionReplyMsg(status);
+          responseMessage = new SessionResponseMsg(status);
           break;
         case DELETE_OBJECT:
           Objects.requireNonNull(cmdMsg.getSessionId());
@@ -205,7 +205,7 @@ public class SessionService extends ConnectedService {
                 e);
             status = SessionStatusType.ERROR;
           }
-          replyMsg = new SessionReplyMsg(status);
+          responseMessage = new SessionResponseMsg(status);
           break;
         case DELETE_SESSION:
           Objects.requireNonNull(cmdMsg.getSessionId());
@@ -222,23 +222,23 @@ public class SessionService extends ConnectedService {
             logger.error("Unexpected error deleting session w/uuid: {}", cmdMsg.getSessionId(), e);
             status = SessionStatusType.ERROR;
           }
-          replyMsg =
-              new SessionReplyMsg(
+          responseMessage =
+              new SessionResponseMsg(
                   status, objectsInSession != null ? objectsInSession : new HashSet<>());
           break;
         case CLEAR_SESSIONS:
           sessionsMap.clear();
           logger.info("All sessions cleared.");
           status = SessionStatusType.OK;
-          replyMsg = new SessionReplyMsg(status);
+          responseMessage = new SessionResponseMsg(status);
           break;
         default:
-          replyMsg = new SessionReplyMsg(SessionStatusType.UNSUPPORTED_SESSION_CMD);
+          responseMessage = new SessionResponseMsg(SessionStatusType.UNSUPPORTED_SESSION_CMD);
       }
       if (logger.isDebugEnabled()) {
-        logger.debug("Sending back reply: {}", replyMsg);
+        logger.debug("Sending back response: {}", responseMessage);
       }
-      replyMsg.send(repSocket);
+      responseMessage.send(repSocket);
     }
   }
 

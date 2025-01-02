@@ -57,14 +57,14 @@ public class ConstructorMessageIT extends AbstractJsonRpcMessageIT {
                     """
             .formatted(className);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // assert that the result is not null
-    assertNotNull(replyMsg.getResult());
+    assertNotNull(responseMessage.getResult());
 
     // assert that returned value's ref is not null
-    assertNotNull(replyMsg.getResult().getValue());
-    assertNotNull(replyMsg.getResult().getValue().getRef());
+    assertNotNull(responseMessage.getResult().getValue());
+    assertNotNull(responseMessage.getResult().getValue().getRef());
   }
 
   @Test
@@ -85,14 +85,14 @@ public class ConstructorMessageIT extends AbstractJsonRpcMessageIT {
                     """
             .formatted(className);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // assert that the result is not null
-    assertNotNull(replyMsg.getResult());
+    assertNotNull(responseMessage.getResult());
 
     // assert that returned value's ref is not null
-    assertNotNull(replyMsg.getResult().getValue());
-    assertNotNull(replyMsg.getResult().getValue().getRef());
+    assertNotNull(responseMessage.getResult().getValue());
+    assertNotNull(responseMessage.getResult().getValue().getRef());
   }
 
   @Test
@@ -113,14 +113,14 @@ public class ConstructorMessageIT extends AbstractJsonRpcMessageIT {
                     """
             .formatted(className);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // assert that the result is not null
-    assertNotNull(replyMsg.getResult());
+    assertNotNull(responseMessage.getResult());
 
     // assert that returned value's ref is not null
-    assertNotNull(replyMsg.getResult().getValue());
-    assertNotNull(replyMsg.getResult().getValue().getRef());
+    assertNotNull(responseMessage.getResult().getValue());
+    assertNotNull(responseMessage.getResult().getValue().getRef());
   }
 
   @Test
@@ -141,14 +141,14 @@ public class ConstructorMessageIT extends AbstractJsonRpcMessageIT {
                     """
             .formatted(className);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
 
     // assert that the result is not null
-    assertNotNull(replyMsg.getResult());
+    assertNotNull(responseMessage.getResult());
 
     // assert that returned value's ref is not null
-    assertNotNull(replyMsg.getResult().getValue());
-    assertNotNull(replyMsg.getResult().getValue().getRef());
+    assertNotNull(responseMessage.getResult().getValue());
+    assertNotNull(responseMessage.getResult().getValue().getRef());
   }
 
   @Test
@@ -168,13 +168,13 @@ public class ConstructorMessageIT extends AbstractJsonRpcMessageIT {
                     """
             .formatted(className);
 
-    JsonRpcResponse replyMsg = sendAndReceive(request);
+    JsonRpcResponse responseMessage = sendAndReceive(request);
     // assert that the result is not null
-    assertNotNull(replyMsg.getResult());
+    assertNotNull(responseMessage.getResult());
 
     // assert that returned value's ref is not null
-    assertNotNull(replyMsg.getResult().getValue());
-    Integer instanceId = replyMsg.getResult().getValue().getRef();
+    assertNotNull(responseMessage.getResult().getValue());
+    Integer instanceId = responseMessage.getResult().getValue().getRef();
     assertNotNull(instanceId);
 
     // 2. Construct an instance calling the constructor that takes another instance as arg
@@ -193,13 +193,13 @@ public class ConstructorMessageIT extends AbstractJsonRpcMessageIT {
                     }
                     """
             .formatted(className, instanceId);
-    replyMsg = sendAndReceive(request);
-    logger.debug("replyMsg: {}", replyMsg);
+    responseMessage = sendAndReceive(request);
+    logger.debug("responseMessage: {}", responseMessage);
 
     // assert that the result is not null
-    assertNotNull(replyMsg.getResult());
+    assertNotNull(responseMessage.getResult());
     // assert that returned value's ref is not null
-    assertNotNull(replyMsg.getResult().getValue());
-    assertNotNull(replyMsg.getResult().getValue().getRef());
+    assertNotNull(responseMessage.getResult().getValue());
+    assertNotNull(responseMessage.getResult().getValue().getRef());
   }
 }

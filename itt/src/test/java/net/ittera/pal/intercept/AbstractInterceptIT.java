@@ -147,7 +147,7 @@ public class AbstractInterceptIT extends AbstractIntegrationTest implements Exec
     this.executor = Executors.newFixedThreadPool(1, new ExceptionCatchingThreadFactory());
   }
 
-  protected Message receiveCallbackVerifyAndReply(Supplier<AssertionError> test) {
+  protected Message receiveCallbackVerifyAndResponse(Supplier<AssertionError> test) {
     byte[] req;
     logger.debug("Receiving callback message from socket");
     Socket callbackSocket = threadRepSocket.get();
