@@ -31,7 +31,6 @@ import org.junit.runners.Parameterized.Parameters;
 @RunWith(Parameterized.class)
 public class GetArrayMessageIT extends AbstractJsonRpcMessageIT {
 
-  private static int messageId = 0;
   private static final String CLASS_NAME = "net.ittera.pal.apps.rpc.StaticArrayVars";
   private static final Class<?> CLASS = StaticArrayVars.class;
 
@@ -131,7 +130,7 @@ public class GetArrayMessageIT extends AbstractJsonRpcMessageIT {
     String fieldTypeName = fieldType.getName();
 
     // Call the get static field via JSON-RPC
-    JsonRpcResponse response = callGetStaticField(++messageId, CLASS_NAME, fieldName);
+    JsonRpcResponse response = callGetStaticField(CLASS_NAME, fieldName);
 
     if (expectedValue == null) {
       // Expecting null array

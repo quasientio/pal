@@ -23,13 +23,13 @@ import org.junit.runners.Parameterized.Parameters;
  *  For each array type, this test:
  *  - Creates a new instance of ArrayVars
  *  - Invokes setter with a known non-empty array value obtained from a static field
- *  - Invokes the corresponding getter and verifies that the * returned array matches the expected value
+ *  - Invokes the corresponding getter and verifies that the * returned array matches
+ *  the expected value.
  * </pre>
  */
 @RunWith(Parameterized.class)
 public class CallArrayMessageIT extends AbstractJsonRpcMessageIT {
 
-  private static int messageId = 0;
   private static final String CLASS_NAME = "net.ittera.pal.apps.rpc.ArrayVars";
 
   private final String getterMethodName; // e.g. getInstanceIntPrimitiveArray
@@ -51,7 +51,7 @@ public class CallArrayMessageIT extends AbstractJsonRpcMessageIT {
     this.nonEmptyValue = nonEmptyValue;
 
     logger.debug(
-        "Created CallArrayMessageIT for targetType: {}, field: {}, getter: {}, setter: {}, type: {}",
+        "Created CallArrayMessageIT for target: {}, field: {}, getter: {}, setter: {}, type: {}",
         targetType,
         instanceFieldName,
         getterMethodName,
@@ -198,7 +198,7 @@ public class CallArrayMessageIT extends AbstractJsonRpcMessageIT {
   @Test
   public void testCallInstanceGetterSetter() throws Exception {
     // 1) create an instance
-    long instanceRef = createNewInstance(++messageId, CLASS_NAME);
+    long instanceRef = createNewInstance(CLASS_NAME);
 
     // 2) call setter with nonEmptyValue
     String jsonArg = arrayToJsonString(nonEmptyValue, false);
@@ -214,12 +214,12 @@ public class CallArrayMessageIT extends AbstractJsonRpcMessageIT {
             .formatted(arrayType.getName(), jsonArg);
 
     JsonRpcResponse setResponse =
-        callInstanceMethod(++messageId, instanceRef, CLASS_NAME, setterMethodName, argsJson);
+        callInstanceMethod(instanceRef, CLASS_NAME, setterMethodName, argsJson);
     assertPutResultIsVoid(setResponse);
 
     // 3) call getter (no args)
     JsonRpcResponse getResponse =
-        callInstanceMethod(++messageId, instanceRef, CLASS_NAME, getterMethodName, null);
+        callInstanceMethod(instanceRef, CLASS_NAME, getterMethodName, null);
 
     // 4) verify result
     Object resultValue = assertValueIsArrayOfType(getResponse, arrayType.getName());

@@ -30,6 +30,7 @@ import java.util.concurrent.ExecutionException;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.objects.ConcurrentHashMapObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectLookupStore;
+import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.cxn.PalDirectory;
 import net.ittera.pal.cxn.ThinPeer;
@@ -38,6 +39,7 @@ import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.messages.types.RpcType;
 import net.ittera.pal.rpc.AbstractRpcMessageIT;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
+import net.ittera.pal.serdes.jsonrpc.JsonRpcMessageFactory;
 import net.ittera.pal.serdes.jsonrpc.JsonRpcSerializer;
 import net.ittera.pal.serdes.jsonrpc.JsonSerializationException;
 import org.junit.AfterClass;
@@ -97,7 +99,7 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractRpcMessageIT
 
   @AfterClass
   public static void finalizeStuff() {
-    logger.debug("Finalizing after tests...");
+    logger.debug("Finalizing after json-rpc tests...");
     if (thinPeer != null) {
       thinPeer.close();
     }
@@ -137,8 +139,8 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractRpcMessageIT
     return response;
   }
 
-  // </editor-fold desc="helper methods">
-  protected JsonRpcResponse callGetStaticField(int messageId, String className, String fieldName)
+  // <editor-fold desc="exec methods">
+  protected JsonRpcResponse callGetStaticField(String className, String fieldName)
       throws Exception {
     String request =
             """
@@ -149,16 +151,16 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractRpcMessageIT
                 "type": "%s",
                 "field": "%s"
               },
-              "id": %d
+              "id": %s
             }
             """
-            .formatted(className, fieldName, messageId);
+            .formatted(className, fieldName, generateId());
 
     return sendAndReceive(request);
   }
 
   protected JsonRpcResponse callPutStaticField(
-      int messageId, String className, String fieldName, String fieldValue) throws Exception {
+      String className, String fieldName, String fieldValue) throws Exception {
     String request =
             """
              {
@@ -169,16 +171,16 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractRpcMessageIT
                  "field": "%s",
                  "value": %s
                },
-               "id": %d
+               "id": %s
              }
              """
-            .formatted(className, fieldName, fieldValue, messageId);
+            .formatted(className, fieldName, fieldValue, generateId());
 
     return sendAndReceive(request);
   }
 
   protected JsonRpcResponse callGetInstanceField(
-      int messageId, String className, String fieldName, long instanceRef) throws Exception {
+      String className, String fieldName, long instanceRef) throws Exception {
     String request =
             """
             {
@@ -189,17 +191,16 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractRpcMessageIT
                 "field": "%s",
                 "instance": %d
               },
-              "id": %d
+              "id": %s
             }
             """
-            .formatted(className, fieldName, instanceRef, messageId);
+            .formatted(className, fieldName, instanceRef, generateId());
 
     return sendAndReceive(request);
   }
 
   protected JsonRpcResponse callPutInstanceField(
-      int messageId, String className, String fieldName, long instanceRef, String fieldValue)
-      throws Exception {
+      String className, String fieldName, long instanceRef, String fieldValue) throws Exception {
     String request =
             """
             {
@@ -211,10 +212,10 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractRpcMessageIT
                 "instance": %d,
                 "value": %s
               },
-              "id": %d
+              "id": %s
             }
             """
-            .formatted(className, fieldName, instanceRef, fieldValue, messageId);
+            .formatted(className, fieldName, instanceRef, fieldValue, generateId());
 
     return sendAndReceive(request);
   }
@@ -222,63 +223,12 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractRpcMessageIT
   /**
    * Helper method to call a class method.
    *
-   * @param messageId the message ID
    * @param className the class name
    * @param methodName the method name
    * @param argsJson a JSON array of arguments or null if no args
    * @return JsonRpcResponse
    */
-  protected JsonRpcResponse callClassMethod(
-      int messageId, String className, String methodName, String argsJson) throws Exception {
-
-    String request;
-    if (argsJson == null) {
-      // no arguments
-      request =
-              """
-              {
-                "jsonrpc": "2.0",
-                "id": %d,
-                "method": "call",
-                "params": {
-                  "type": "%s",
-                  "method": "%s"
-                }
-              }
-              """
-              .formatted(messageId, className, methodName);
-    } else {
-      request =
-              """
-              {
-                "jsonrpc": "2.0",
-                "id": %d,
-                "method": "call",
-                "params": {
-                  "type": "%s",
-                  "method": "%s",
-                  "args": %s
-                }
-              }
-              """
-              .formatted(messageId, className, methodName, argsJson);
-    }
-
-    return sendAndReceive(request);
-  }
-
-  /**
-   * Helper method to call an instance method.
-   *
-   * @param messageId the message ID
-   * @param instanceRef the reference to the instance
-   * @param className the class name
-   * @param methodName the method name
-   * @param argsJson a JSON array of arguments or null if no args
-   * @return JsonRpcResponse
-   */
-  protected JsonRpcResponse callInstanceMethod(
-      int messageId, long instanceRef, String className, String methodName, String argsJson)
+  protected JsonRpcResponse callClassMethod(String className, String methodName, String argsJson)
       throws Exception {
 
     String request;
@@ -288,7 +238,55 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractRpcMessageIT
               """
               {
                 "jsonrpc": "2.0",
-                "id": %d,
+                "id": %s,
+                "method": "call",
+                "params": {
+                  "type": "%s",
+                  "method": "%s"
+                }
+              }
+              """
+              .formatted(generateId(), className, methodName);
+    } else {
+      request =
+              """
+              {
+                "jsonrpc": "2.0",
+                "id": %s,
+                "method": "call",
+                "params": {
+                  "type": "%s",
+                  "method": "%s",
+                  "args": %s
+                }
+              }
+              """
+              .formatted(generateId(), className, methodName, argsJson);
+    }
+
+    return sendAndReceive(request);
+  }
+
+  /**
+   * Helper method to call an instance method.
+   *
+   * @param instanceRef the reference to the instance
+   * @param className the class name
+   * @param methodName the method name
+   * @param argsJson a JSON array of arguments or null if no args
+   * @return JsonRpcResponse
+   */
+  protected JsonRpcResponse callInstanceMethod(
+      long instanceRef, String className, String methodName, String argsJson) throws Exception {
+
+    String request;
+    if (argsJson == null) {
+      // no arguments
+      request =
+              """
+              {
+                "jsonrpc": "2.0",
+                "id": %s,
                 "method": "call",
                 "params": {
                   "type": "%s",
@@ -297,13 +295,13 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractRpcMessageIT
                 }
               }
               """
-              .formatted(messageId, className, methodName, instanceRef);
+              .formatted(generateId(), className, methodName, instanceRef);
     } else {
       request =
               """
               {
                 "jsonrpc": "2.0",
-                "id": %d,
+                "id": %s,
                 "method": "call",
                 "params": {
                   "type": "%s",
@@ -313,13 +311,13 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractRpcMessageIT
                 }
               }
               """
-              .formatted(messageId, className, methodName, instanceRef, argsJson);
+              .formatted(generateId(), className, methodName, instanceRef, argsJson);
     }
 
     return sendAndReceive(request);
   }
 
-  protected Integer createNewInstance(int messageId, String className) throws Exception {
+  protected Integer createNewInstance(String className) throws Exception {
     String request =
             """
             {
@@ -328,10 +326,10 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractRpcMessageIT
               "params": {
                 "type": "%s"
               },
-              "id": %d
+              "id": %s
             }
             """
-            .formatted(className, messageId);
+            .formatted(className, generateId());
 
     JsonRpcResponse response = sendAndReceive(request);
     assertNotNull(response.getResult());

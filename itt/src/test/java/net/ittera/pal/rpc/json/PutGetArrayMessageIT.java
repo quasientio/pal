@@ -27,7 +27,6 @@ import org.junit.runners.Parameterized.Parameters;
 @RunWith(Parameterized.class)
 public class PutGetArrayMessageIT extends AbstractJsonRpcMessageIT {
 
-  private static int messageId = 0;
   private static final String CLASS_NAME = "net.ittera.pal.apps.rpc.ArrayVars";
 
   private final String nullFieldName;
@@ -64,8 +63,7 @@ public class PutGetArrayMessageIT extends AbstractJsonRpcMessageIT {
   }
 
   @Parameters(
-      name =
-          "{index}: targetType={0}, nullField={1}, emptyField={2}, nonEmptyField={3}, arrayType={4}")
+      name = "{index}: target={0}, nullField={1}, emptyField={2}, nonEmptyField={3}, arrayType={4}")
   public static Collection<Object[]> data() throws Exception {
     var targetTypeParams = getSendTargetParameters();
     List<Object[]> arrayTestData = new ArrayList<>();
@@ -173,7 +171,7 @@ public class PutGetArrayMessageIT extends AbstractJsonRpcMessageIT {
   public void testGetStaticArray() throws Exception {
     // a 'get' of the nonEmpty static array field should return the expected value (loaded via
     // reflection)
-    JsonRpcResponse response = callGetStaticField(++messageId, CLASS_NAME, nonEmptyFieldName);
+    JsonRpcResponse response = callGetStaticField(CLASS_NAME, nonEmptyFieldName);
     Object resultValue = assertValueIsArrayOfType(response, arrayType.getName());
     Object[] expected = unwrapArray(nonEmptyValue);
     Object[] actual = unwrapArray(resultValue);
@@ -201,11 +199,11 @@ public class PutGetArrayMessageIT extends AbstractJsonRpcMessageIT {
         String.format(
             "{\"value\": %s, \"type\": \"%s\"}",
             arrayToJsonString(value, withNumericSuffix), arrayType.getName());
-    JsonRpcResponse putResponse = callPutStaticField(++messageId, CLASS_NAME, fieldName, jsonValue);
+    JsonRpcResponse putResponse = callPutStaticField(CLASS_NAME, fieldName, jsonValue);
     assertPutResultIsVoid(putResponse);
 
     // Now get and verify
-    JsonRpcResponse getResponse = callGetStaticField(++messageId, CLASS_NAME, fieldName);
+    JsonRpcResponse getResponse = callGetStaticField(CLASS_NAME, fieldName);
 
     if (value == null) {
       assertValueIsNullArrayOfType(getResponse, arrayType.getName());
@@ -218,7 +216,7 @@ public class PutGetArrayMessageIT extends AbstractJsonRpcMessageIT {
   @Test
   public void testPutAndGetInstanceArrays() throws Exception {
     // Create an instance
-    long instanceRef = createNewInstance(++messageId, CLASS_NAME);
+    long instanceRef = createNewInstance(CLASS_NAME);
     List.of(true, false)
         .forEach(
             withNumericSuffix -> {
@@ -261,12 +259,11 @@ public class PutGetArrayMessageIT extends AbstractJsonRpcMessageIT {
             "{\"value\": %s, \"type\": \"%s\"}",
             arrayToJsonString(value, withNumericSuffix), arrayType.getName());
     JsonRpcResponse putResponse =
-        callPutInstanceField(++messageId, CLASS_NAME, fieldName, instanceRef, jsonValue);
+        callPutInstanceField(CLASS_NAME, fieldName, instanceRef, jsonValue);
     assertPutResultIsVoid(putResponse);
 
     // get and verify
-    JsonRpcResponse getResponse =
-        callGetInstanceField(++messageId, CLASS_NAME, fieldName, instanceRef);
+    JsonRpcResponse getResponse = callGetInstanceField(CLASS_NAME, fieldName, instanceRef);
     if (value == null) {
       assertValueIsNullArrayOfType(getResponse, arrayType.getName());
     } else {
