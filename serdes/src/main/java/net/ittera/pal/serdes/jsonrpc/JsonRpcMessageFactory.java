@@ -166,6 +166,41 @@ public class JsonRpcMessageFactory {
     return buildInstanceFieldPut(null, type, instanceId, field, value);
   }
 
+  // </editor-fold>
+
+  // <editor-fold desc="Meta messages">
+  public static JsonRpcRequest buildFetchClassesInfoMetaMessage(
+      @Nullable String[] excludePrefixes) {
+    JsonRpcRequest rpcRequest =
+        JsonRpcRequest.builder()
+            .withId(nextId())
+            .withMethod(MessageFamily.META.getJsonName())
+            .withParams(
+                Params.builder()
+                    .withMethod(MetaServiceType.FETCH_CLASSES_INFO.getJsonName())
+                    .build())
+            .build();
+
+    if (excludePrefixes != null && excludePrefixes.length > 0) {
+      rpcRequest
+          .getParams()
+          .getArgs()
+          .add(
+              Argument.builder()
+                  .withName("exclude_prefixes")
+                  .withValue(new String[] {"java.util", "java.lang"})
+                  .build());
+    }
+    return rpcRequest;
+  }
+
+  public static JsonRpcRequest buildFetchClassesInfoMetaMessage() {
+    return buildFetchClassesInfoMetaMessage(null);
+  }
+
+  // </editor-fold>
+
+  // <editor-fold desc="Control messages">
   public static JsonRpcRequest buildDeleteObjectCommandMessage(Integer objId) {
     return JsonRpcRequest.builder()
         .withId(nextId())
@@ -190,6 +225,9 @@ public class JsonRpcMessageFactory {
             Params.builder().withMethod(ControlCommandType.DELETE_SESSION.getJsonName()).build())
         .build();
   }
+
+  // </editor-fold>
+
   private static String nextId() {
     return idGenerator.nextId();
   }

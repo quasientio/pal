@@ -7,11 +7,10 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import net.ittera.pal.common.util.GzipBase64Utils;
-import net.ittera.pal.messages.jsonrpc.Argument;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponseReturnValue;
-import net.ittera.pal.messages.jsonrpc.Params;
+import net.ittera.pal.serdes.jsonrpc.JsonRpcMessageFactory;
 import org.junit.Test;
 
 /**
@@ -34,13 +33,7 @@ public class MetaMessageIT extends AbstractJsonRpcMessageIT {
 
   @Test
   public void sendMetaMessage_fetchClassMetadata_metadataReturned() throws Exception {
-    JsonRpcRequest rpcRequest =
-        JsonRpcRequest.builder()
-            .withId(generateId())
-            .withMethod("meta")
-            .withParams(Params.builder().withMethod("fetch_classes_info").build())
-            .build();
-
+    JsonRpcRequest rpcRequest = JsonRpcMessageFactory.buildFetchClassesInfoMetaMessage();
     JsonRpcResponse rpcResponse = sendAndReceive(rpcRequest);
     assertNotNull(rpcResponse);
     assertNull(rpcResponse.getError());
@@ -62,21 +55,8 @@ public class MetaMessageIT extends AbstractJsonRpcMessageIT {
 
   @Test
   public void sendMetaMessage_fetchClassMetadataWithExcludes_metadataReturned() throws Exception {
-    JsonRpcRequest rpcRequest =
-        JsonRpcRequest.builder()
-            .withId(generateId())
-            .withMethod("meta")
-            .withParams(
-                Params.builder()
-                    .withMethod("fetch_classes_info")
-                    .addArg(
-                        Argument.builder()
-                            .withName("exclude_prefixes")
-                            .withValue(new String[] {"java.util", "java.lang"})
-                            .build())
-                    .build())
-            .build();
-
+    String[] excludes = new String[] {"java.util", "java.lang"};
+    JsonRpcRequest rpcRequest = JsonRpcMessageFactory.buildFetchClassesInfoMetaMessage(excludes);
     JsonRpcResponse rpcResponse = sendAndReceive(rpcRequest);
     assertNotNull(rpcResponse);
     assertNull(rpcResponse.getError());
