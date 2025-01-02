@@ -60,14 +60,16 @@ public class SessionMessageDispatcher {
   public ControlMessage incomingControlMessage(ControlMessage controlMessage) {
 
     final UUID remotePeerUuid = UUID.fromString(controlMessage.getFromPeer());
+    final String controlMessageId = controlMessage.getMessageId();
 
     // NOTE: the remotePeerUuid is the session id of the peer
-    final ControlCommandType commandType = ControlCommandType.fromByte(controlMessage.getCommand());
+    final ControlCommandType commandType = ControlCommandType.fromId(controlMessage.getCommand());
     SessionReplyMsg sessionReplyMsg;
     switch (commandType) {
       case DELETE_OBJECT:
         // delete object from peer's session
-        final ObjectRef objectRef = ObjectRef.from(controlMessage.getBody());
+        final ObjectRef objectRef =
+            ObjectRef.from(controlMessage.getParams()[0].getValue().getRef());
         sessionReplyMsg =
             dispatcherConnector.sendMessageToSessionService(
                 new SessionCommandMsg(SessionCommandType.DELETE_OBJECT, remotePeerUuid, objectRef));
@@ -75,7 +77,7 @@ public class SessionMessageDispatcher {
         // delete object reference in objectLookupStore
         objectLookupStore.remove(objectRef);
         logger.info("Object {} deleted for peer w/uuid: {}", objectRef, remotePeerUuid);
-        return sessionReplyMessageToControlMessage(sessionReplyMsg);
+        return sessionReplyMessageToControlMessage(sessionReplyMsg, controlMessageId);
       case DELETE_SESSION:
         // delete session
         sessionReplyMsg =
@@ -86,30 +88,31 @@ public class SessionMessageDispatcher {
         if (objectRefsInSession != null && !objectRefsInSession.isEmpty()) {
           objectLookupStore.removeAll(objectRefsInSession);
         }
-        return sessionReplyMessageToControlMessage(sessionReplyMsg);
+        return sessionReplyMessageToControlMessage(sessionReplyMsg, controlMessageId);
       default:
         String errorMessage =
             String.format(
                 "Incoming Control message w/id %s ignored - no handler:%n%s",
-                controlMessage.getMessageId(), ColferUtils.format(controlMessage));
+                controlMessageId, ColferUtils.format(controlMessage));
         logger.error(errorMessage);
-        return messageBuilder.buildControlMessage(
-            peerUuid, ControlStatusType.UNSUPPORTED_COMMAND, errorMessage);
+        return messageBuilder.buildControlStatusMessage(
+            peerUuid, ControlStatusType.UNSUPPORTED, controlMessageId, errorMessage);
     }
   }
 
   // helper method to map the internal SessionReplyMessage to the public ControlMessage reply
   @SuppressWarnings("CheckStyle")
-  private ControlMessage sessionReplyMessageToControlMessage(SessionReplyMsg sessionReplyMsg) {
+  private ControlMessage sessionReplyMessageToControlMessage(
+      SessionReplyMsg sessionReplyMsg, String requestId) {
     final ControlStatusType statusType =
         switch (sessionReplyMsg.getStatus()) {
           case OK -> ControlStatusType.OK;
           case ERROR -> ControlStatusType.ERROR;
-          case UNSUPPORTED_SESSION_CMD -> ControlStatusType.UNSUPPORTED_COMMAND;
+          case UNSUPPORTED_SESSION_CMD -> ControlStatusType.UNSUPPORTED;
           case NO_SUCH_SESSION -> ControlStatusType.NO_SUCH_SESSION;
           case NO_SUCH_OBJECT -> ControlStatusType.NO_SUCH_OBJECT;
         };
 
-    return messageBuilder.buildControlMessage(peerUuid, statusType);
+    return messageBuilder.buildControlStatusMessage(peerUuid, statusType, requestId);
   }
 }

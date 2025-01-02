@@ -20,9 +20,11 @@
 package colfer
 
 type ControlMessage struct {
-	fromPeer  text
-	messageId text
-	command   uint8
-	status    uint8
-	body      text
+	fromPeer     text
+	messageId    text
+	responseToId text
+	command      uint8
+	params       []Parameter
+	status       uint8
+	body         text
 }

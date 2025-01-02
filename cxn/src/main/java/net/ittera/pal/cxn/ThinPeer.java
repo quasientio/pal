@@ -29,7 +29,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -37,7 +36,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
-import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.util.UuidUtils;
 import net.ittera.pal.messages.LogMessage;
 import net.ittera.pal.messages.colfer.ControlMessage;
@@ -51,6 +49,7 @@ import net.ittera.pal.messages.types.ControlStatusType;
 import net.ittera.pal.messages.types.RpcType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
+import net.ittera.pal.serdes.jsonrpc.JsonRpcMessageFactory;
 import net.ittera.pal.serdes.jsonrpc.JsonRpcSerializer;
 import net.ittera.pal.serdes.jsonrpc.JsonSerializationException;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -77,6 +76,7 @@ public class ThinPeer implements AutoCloseable {
   private UUID peerUuid;
   private String peerName;
   private boolean isZmqSocketConnected = false;
+  private boolean isWsClientConnected = false;
   private boolean closed;
   private boolean initialized;
   private final MessageBuilder msgBuilder = new MessageBuilder();
@@ -430,6 +430,7 @@ public class ThinPeer implements AutoCloseable {
     Map<String, String> headers = Map.of("peer-id", peerUuid.toString());
     wsClient = new WsClient(new URI(peer.getJsonrpcAddress()), headers);
     wsClient.connectBlocking();
+    isWsClientConnected = true;
   }
 
   private void assertInitializedAndActive() {
@@ -810,8 +811,10 @@ public class ThinPeer implements AutoCloseable {
       logger.trace("connectToPeer: in with peer: {}", peer.getUuid());
     }
 
-    if (currentPeer != null && isZmqSocketConnected) {
-      sendDeleteSessionRequest();
+    // inform remote peer to end session, then close connection
+    if (currentPeer != null && (isZmqSocketConnected || isWsClientConnected)) {
+      sendDeleteSessionCommand();
+      closePeerSocket();
     }
 
     if (outboundRpcType == RpcType.BINARY_RPC) {
@@ -910,28 +913,39 @@ public class ThinPeer implements AutoCloseable {
     return replyMsg;
   }
 
-  public void sendDeleteSessionRequest() {
-    final String sessionId = peerUuid.toString();
-    ControlMessage msg = msgBuilder.buildDeleteSessionControlMessage(peerUuid);
-    ControlMessage replyMsg = sendToPeer(msg);
-    ControlStatusType statusType = ControlStatusType.fromByte(replyMsg.getStatus());
-    if (Objects.requireNonNull(statusType) == ControlStatusType.OK) {
-      logger.info("Session w/uuid {} was deleted.", sessionId);
-    } else {
-      logger.error("Error deleting session w/uuid {} - status {}", sessionId, statusType.name());
-    }
-  }
+  public void sendDeleteSessionCommand() {
+    assertInitializedAndActive();
 
-  public void sendDeleteObjectRequest(ObjectRef objectRef) throws Exception {
-    ControlMessage msg = msgBuilder.buildDeleteObjectControlMessage(peerUuid, objectRef.asString());
-    ControlMessage replyMsg = sendToPeer(msg);
-    ControlStatusType statusType = ControlStatusType.fromByte(replyMsg.getStatus());
-    if (Objects.requireNonNull(statusType) == ControlStatusType.OK) {
-      logger.debug("Object w/ref {} was deleted.", objectRef);
+    if (currentPeer == null) {
+      throw new IllegalStateException("Not connected to a peer");
+    }
+
+    final String sessionId = peerUuid.toString();
+    if (isZmqSocketConnected) {
+      ControlMessage msg = msgBuilder.buildDeleteSessionCommandMessage(peerUuid);
+      ControlMessage replyMsg = sendToPeer(msg);
+      ControlStatusType statusType = ControlStatusType.fromId(replyMsg.getStatus());
+      if (ControlStatusType.OK.equals(statusType)) {
+        logger.debug("Session w/id {} was deleted.", sessionId);
+      } else {
+        logger.error("Error deleting session w/id: {} - status: {}", sessionId, statusType);
+      }
+    } else if (isWsClientConnected) {
+      JsonRpcRequest request = JsonRpcMessageFactory.buildDeleteSessionCommandMessage();
+      try {
+        JsonRpcResponse response = sendJsonRpcRequestToPeer(request).get();
+        if (response.getError() == null) {
+          logger.debug("Session w/id {} was deleted.", sessionId);
+        } else {
+          logger.error(
+              "Error deleting session w/id: {} - error: {}", sessionId, response.getError());
+        }
+      } catch (Exception e) {
+        logger.error("Error sending json-rpc request to delete session", e);
+      }
     } else {
-      throw new Exception(
-          String.format(
-              "Error deleting object w/ref %s - status %s", objectRef, statusType.name()));
+      throw new IllegalStateException(
+          "Current peer is not null but no active Zmq nor WS socket connection");
     }
   }
 
@@ -964,7 +978,9 @@ public class ThinPeer implements AutoCloseable {
     try {
       if (peerSocket != null) {
         peerSocket.close();
-        logger.info("Peer socket closed.");
+        isZmqSocketConnected = false;
+        peerSocket = null;
+        logger.info("Peer zmq socket closed.");
       }
     } catch (Exception e) {
       logger.warn("Error closing peer zmq socket", e);
@@ -973,6 +989,8 @@ public class ThinPeer implements AutoCloseable {
     try {
       if (wsClient != null) {
         wsClient.close();
+        isWsClientConnected = false;
+        wsClient = null;
         logger.info("WebSocket client closed.");
       }
     } catch (Exception e) {
@@ -984,15 +1002,14 @@ public class ThinPeer implements AutoCloseable {
   public void close() {
     assertInitializedAndActive();
 
-    if (currentPeer != null && isZmqSocketConnected) {
-      sendDeleteSessionRequest();
+    if (currentPeer != null && (isZmqSocketConnected || isWsClientConnected)) {
+      sendDeleteSessionCommand();
     }
 
     // NOTE: we only close resources that were not passed to us
 
     // close socket-related resources
     closePeerSocket();
-    isZmqSocketConnected = false;
     if (!zmqContextGiven) {
       try {
         if (zmqContext != null) {
@@ -1178,7 +1195,7 @@ public class ThinPeer implements AutoCloseable {
       }
       CompletableFuture<JsonRpcResponse> futureResponse = futureResponses.get(response.getId());
       if (futureResponse == null) {
-        logger.error("No future response found for message id: {}", response.getId());
+        logger.error("No response future found for message id: {}", response.getId());
       } else {
         futureResponse.complete(response);
         futureResponses.remove(response.getId());

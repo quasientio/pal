@@ -1620,75 +1620,68 @@ public class MessageBuilderTest {
 
   // <editor-fold desc="Control messages">
   @Test
-  public void buildDeleteObjectControlMessage_withBody_deleteControlMessage() {
+  public void buildDeleteObjectControlMessage_withBody_deleteCommandMessage() {
     MessageBuilder builder = new MessageBuilder(Boolean.toString(false));
     UUID fromPeer = UUID.randomUUID();
-    String body = "someBody";
-    ControlMessage controlMessage = builder.buildDeleteObjectControlMessage(fromPeer, body);
+    ObjectRef objectRef = ObjectRef.randomRef();
+    ControlMessage controlMessage = builder.buildDeleteObjectCommandMessage(fromPeer, objectRef);
 
     assertNotNull(controlMessage);
     assertNotNull(controlMessage.getMessageId());
     assertEquals(fromPeer.toString(), controlMessage.getFromPeer());
-    assertEquals(body, controlMessage.getBody());
-    assertEquals(ControlCommandType.DELETE_OBJECT.toByte(), controlMessage.getCommand());
+    assertEquals(objectRef.asString(), controlMessage.getParams()[0].getValue().getRef());
+    assertEquals(ControlCommandType.DELETE_OBJECT.getId(), controlMessage.getCommand());
   }
 
   @Test
-  public void buildDeleteObjectControlMessage_withNoBody_deleteControlMessage() {
-    MessageBuilder builder = new MessageBuilder(Boolean.toString(false));
-    UUID fromPeer = UUID.randomUUID();
-    ControlMessage controlMessage = builder.buildDeleteObjectControlMessage(fromPeer, null);
-
-    assertNotNull(controlMessage);
-    assertNotNull(controlMessage.getMessageId());
-    assertEquals(fromPeer.toString(), controlMessage.getFromPeer());
-    assertEquals("", controlMessage.getBody());
-    assertEquals(ControlCommandType.DELETE_OBJECT.toByte(), controlMessage.getCommand());
-  }
-
-  @Test
-  public void buildDeleteSessionControlMessage_fromPeer_deleteSessionControlMessage() {
+  public void buildDeleteSessionControlMessage_fromPeer_deleteSessionCommandMessage() {
     MessageBuilder builder = new MessageBuilder(Boolean.toString(false));
     UUID fromPeer = UUID.randomUUID();
 
-    ControlMessage controlMessage = builder.buildDeleteSessionControlMessage(fromPeer);
+    ControlMessage controlMessage = builder.buildDeleteSessionCommandMessage(fromPeer);
 
     assertNotNull(controlMessage);
     assertNotNull(controlMessage.getMessageId());
     assertEquals(fromPeer.toString(), controlMessage.getFromPeer());
     assertEquals("", controlMessage.getBody());
-    assertEquals(ControlCommandType.DELETE_SESSION.toByte(), controlMessage.getCommand());
+    assertEquals(ControlCommandType.DELETE_SESSION.getId(), controlMessage.getCommand());
   }
 
   @Test
-  public void buildControlMessage_withStatusTypeAndBody_controlMessage() {
+  public void buildControlMessage_withStatusTypeAndBody_controlStatusMessage() {
     MessageBuilder builder = new MessageBuilder(Boolean.toString(false));
+    String requestId = UUID.randomUUID().toString();
     UUID fromPeerUuid = UUID.randomUUID();
     ControlStatusType statusType = ControlStatusType.OK;
     String body = "someBody";
 
-    ControlMessage controlMessage = builder.buildControlMessage(fromPeerUuid, statusType, body);
+    ControlMessage controlMessage =
+        builder.buildControlStatusMessage(fromPeerUuid, statusType, requestId, body);
 
     assertNotNull(controlMessage);
     assertNotNull(controlMessage.getMessageId());
     assertEquals(fromPeerUuid.toString(), controlMessage.getFromPeer());
+    assertEquals(requestId, controlMessage.getResponseToId());
     assertEquals(body, controlMessage.getBody());
-    assertEquals(statusType.toByte(), controlMessage.getStatus());
+    assertEquals(statusType.toId(), controlMessage.getStatus());
   }
 
   @Test
-  public void buildControlMessage_withStatusTypeAndNoBody_controlMessage() {
+  public void buildControlMessage_withStatusTypeAndNoBody_controlStatusMessage() {
     MessageBuilder builder = new MessageBuilder(Boolean.toString(false));
+    String requestId = UUID.randomUUID().toString();
     UUID fromPeerUuid = UUID.randomUUID();
     ControlStatusType statusType = ControlStatusType.NO_SUCH_SESSION;
 
-    ControlMessage controlMessage = builder.buildControlMessage(fromPeerUuid, statusType);
+    ControlMessage controlMessage =
+        builder.buildControlStatusMessage(fromPeerUuid, statusType, requestId);
 
     assertNotNull(controlMessage);
     assertNotNull(controlMessage.getMessageId());
     assertEquals(fromPeerUuid.toString(), controlMessage.getFromPeer());
+    assertEquals(requestId, controlMessage.getResponseToId());
     assertEquals("", controlMessage.getBody());
-    assertEquals(statusType.toByte(), controlMessage.getStatus());
+    assertEquals(statusType.toId(), controlMessage.getStatus());
   }
 
   // </editor-fold>
@@ -1767,13 +1760,17 @@ public class MessageBuilderTest {
   @Test
   public void wrap_controlMessage_wrappedControlMessage() {
     UUID fromPeerUuid = UUID.randomUUID();
+    String requestId = UUID.randomUUID().toString();
     ControlStatusType statusType = ControlStatusType.OK;
-    ControlMessage controlMessage = messageBuilder.buildControlMessage(fromPeerUuid, statusType);
+    ControlMessage controlMessage =
+        messageBuilder.buildControlStatusMessage(fromPeerUuid, statusType, requestId);
 
     Message wrappedMessage = messageBuilder.wrap(controlMessage);
 
     assertNotNull(wrappedMessage);
-    assertEquals(MessageType.CONTROL_MESSAGE, MessageType.fromId(wrappedMessage.getMessageType()));
+    assertEquals(
+        MessageType.CONTROL_MESSAGE_RESPONSE, MessageType.fromId(wrappedMessage.getMessageType()));
+    assertEquals(requestId, controlMessage.getResponseToId());
     assertEquals(controlMessage, wrappedMessage.getControlMessage());
   }
   // </editor-fold>

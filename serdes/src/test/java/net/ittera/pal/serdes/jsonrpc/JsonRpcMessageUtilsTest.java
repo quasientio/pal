@@ -255,29 +255,71 @@ public class JsonRpcMessageUtilsTest {
 
   // </editor-fold>
 
-  // <editor-fold desc="meta messages">
+  // <editor-fold desc="control messages">
   @Test
-  public void parseJsonRpcMessage_invalidMethodControl_invalidJsonRpcRequestException() {
+  public void parseJsonRpcMessage_invalidControlMethod_invalidJsonRpcRequestException() {
     String jsonRpcMessage =
         """
-          {
-           "jsonrpc": "2.0",
-            "id": 1,
-           "method": "control",
-           "params": {
-             "type": "SomeClass"
-           }
-         }
-         """;
+              {
+               "jsonrpc": "2.0",
+                "id": 1,
+               "method": "control",
+               "params": {
+                 "method": "SomeClass"
+               }
+             }
+             """;
     try {
       parseAndValidateJsonRpcMessage(jsonRpcMessage);
-      fail("Expected InvalidJsonRpcRequestException");
-    } catch (InvalidJsonRpcRequestException e) {
+      fail("Expected InvalidJsonRpcParamsException");
+    } catch (InvalidJsonRpcParamsException e) {
       assertNotNull(e.getRequestId());
-      assertTrue(e.getMessage().contains("Invalid method"));
+      assertTrue(e.getMessage().contains("Invalid or unsupported params:method"));
     }
   }
 
+  @Test
+  public void parseJsonRpcMessage_deleteObject_ok() {
+    String jsonRpcMessage =
+        """
+              {
+               "jsonrpc": "2.0",
+                "id": 1,
+               "method": "control",
+               "params": {
+                 "method": "delete_object",
+                 "args": [{"ref": 1323424}]
+               }
+             }
+             """;
+    parseAndValidateJsonRpcMessage(jsonRpcMessage);
+  }
+
+  @Test
+  public void parseJsonRpcMessage_deleteObjectNoRef_invalidJsonRpcParamsException() {
+    String jsonRpcMessage =
+        """
+              {
+               "jsonrpc": "2.0",
+                "id": 1,
+               "method": "control",
+               "params": {
+                 "method": "delete_object"
+               }
+             }
+             """;
+    try {
+      parseAndValidateJsonRpcMessage(jsonRpcMessage);
+      fail("Expected InvalidJsonRpcParamsException");
+    } catch (InvalidJsonRpcParamsException e) {
+      assertNotNull(e.getRequestId());
+      assertTrue(e.getMessage().contains("Missing object ref"));
+    }
+  }
+
+  // </editor-fold>
+
+  // <editor-fold desc="meta messages">
   @Test
   public void parseJsonRpcMessage_missingMetaMethod_invalidJsonRpcParamsException() {
     String jsonRpcMessage =
@@ -296,7 +338,7 @@ public class JsonRpcMessageUtilsTest {
       fail("Expected InvalidJsonRpcParamsException");
     } catch (InvalidJsonRpcParamsException e) {
       assertNotNull(e.getRequestId());
-      assertTrue(e.getMessage().contains("Null or blank Params:Method"));
+      assertTrue(e.getMessage().contains("Null or blank params:method"));
     }
   }
 
@@ -318,7 +360,7 @@ public class JsonRpcMessageUtilsTest {
       fail("Expected InvalidJsonRpcParamsException");
     } catch (InvalidJsonRpcParamsException e) {
       assertNotNull(e.getRequestId());
-      assertTrue(e.getMessage().contains("Invalid or unsupported Params:Method"));
+      assertTrue(e.getMessage().contains("Invalid or unsupported params:method"));
     }
   }
 
@@ -469,7 +511,7 @@ public class JsonRpcMessageUtilsTest {
   }
 
   @Test
-  public void parseJsonRpcMessage_missingMethod_invalidJsonRpcRequestException() {
+  public void parseJsonRpcMessage_missingOrInvalidMethod_invalidJsonRpcRequestException() {
     Stream.of(
             """
           {
@@ -491,15 +533,25 @@ public class JsonRpcMessageUtilsTest {
          }
          """,
             """
-          {
-           "jsonrpc": "2.0",
-            "id": 1,
-           "method": null,
-           "params": {
-             "type": "SomeClass"
-           }
+         {
+          "jsonrpc": "2.0",
+           "id": 1,
+          "method": "super",
+          "params": {
+            "type": "SomeClass"
+          }
+        }
+        """,
+            """
+         {
+         "jsonrpc": "2.0",
+          "id": 1,
+         "method": null,
+         "params": {
+           "type": "SomeClass"
          }
-         """)
+        }
+        """)
         .forEach(
             jsonRpcMessage -> {
               try {
@@ -507,7 +559,7 @@ public class JsonRpcMessageUtilsTest {
                 fail("Expected InvalidJsonRpcRequestException");
               } catch (InvalidJsonRpcRequestException e) {
                 assertNotNull(e.getRequestId());
-                assertTrue(e.getMessage().contains("Method"));
+                assertTrue(e.getMessage().contains("Method") || e.getMessage().contains("method"));
               }
             });
   }

@@ -31,17 +31,20 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.name.Names;
 import java.util.Properties;
+import java.util.UUID;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.objects.ConcurrentHashMapObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.cxn.ThinPeer;
+import net.ittera.pal.messages.colfer.ControlMessage;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InstanceFieldPutDone;
 import net.ittera.pal.messages.colfer.MetaMessage;
 import net.ittera.pal.messages.colfer.ReturnValue;
 import net.ittera.pal.messages.colfer.StaticFieldPutDone;
+import net.ittera.pal.messages.types.ControlStatusType;
 import net.ittera.pal.messages.types.RpcType;
 import net.ittera.pal.rpc.AbstractRpcMessageIT;
 import net.ittera.pal.serdes.colfer.ColferUtils;
@@ -104,7 +107,7 @@ public abstract class AbstractBinaryRpcMessageIT extends AbstractRpcMessageIT
 
   @AfterClass
   public static void finalizeStuff() {
-    logger.debug("Finalizing after tests...");
+    logger.debug("Finalizing after binary-rpc tests...");
     if (thinPeer != null) {
       thinPeer.close();
     }
@@ -450,5 +453,24 @@ public abstract class AbstractBinaryRpcMessageIT extends AbstractRpcMessageIT
       assertThat(replyMsg.getReturnValue(), is(not(nullValue())));
       assertTrue(replyMsg.getReturnValue().getIsVoid());
     }
+  }
+
+  /* Control messages */
+  protected boolean sendDeleteObjectCommand(ObjectRef ref) {
+    UUID peerUuid = thinPeer.getPeerUuid();
+    ControlMessage msg = messageBuilder.buildDeleteObjectCommandMessage(peerUuid, ref);
+    ControlMessage response = thinPeer.sendToPeer(msg);
+    logger.debug("response to delete object command: {}", ColferUtils.toJson(response, true));
+    ControlStatusType statusType = ControlStatusType.fromId(response.getStatus());
+    return ControlStatusType.OK.equals(statusType);
+  }
+
+  protected boolean sendDeleteSessionCommand() {
+    UUID sessionId = thinPeer.getPeerUuid();
+    ControlMessage msg = messageBuilder.buildDeleteSessionCommandMessage(sessionId);
+    ControlMessage response = thinPeer.sendToPeer(msg);
+    logger.debug("response to delete session command: {}", ColferUtils.toJson(response, true));
+    ControlStatusType statusType = ControlStatusType.fromId(response.getStatus());
+    return ControlStatusType.OK.equals(statusType);
   }
 }

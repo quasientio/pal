@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
 import net.ittera.pal.messages.jsonrpc.Argument;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.Params;
-import net.ittera.pal.messages.types.MetaServiceType;
+import net.ittera.pal.messages.types.MessageFamily;
 
 public class JsonRpcRequestValidator {
   /**
@@ -77,7 +77,8 @@ public class JsonRpcRequestValidator {
           "transient",
           "volatile");
 
-  private static final Set<String> VALID_METHODS = Set.of("new", "call", "get", "put", "meta");
+  private static final Set<String> VALID_METHODS =
+      Set.of("new", "call", "get", "put", "control", "meta");
 
   public static void validate(JsonRpcRequest request)
       throws InvalidJsonRpcRequestException, InvalidJsonRpcParamsException {
@@ -102,7 +103,7 @@ public class JsonRpcRequestValidator {
       throw new InvalidJsonRpcRequestException("Method is missing", requestId);
     }
 
-    if (!VALID_METHODS.contains(request.getMethod())) {
+    if (VALID_METHODS.stream().noneMatch(m -> m.equalsIgnoreCase(request.getMethod()))) {
       throw new InvalidJsonRpcRequestException("Invalid method: " + request.getMethod(), requestId);
     }
 
@@ -128,6 +129,18 @@ public class JsonRpcRequestValidator {
       // no more validations required for Meta messages
       return;
     }
+
+    /* -------------------------- */
+    /* ControlMessage validations */
+    /* -------------------------- */
+    if (request.getMethod().equalsIgnoreCase(MessageFamily.CONTROL.getJsonName())) {
+      ControlMessageValidator.validate(request);
+      return;
+    }
+
+    /* ------------------------------------------------- */
+    /* Following validations apply only to Exec Messages */
+    /* ------------------------------------------------- */
 
     /* 4.1 check type (i.e. className) */
     String type = params.getType();

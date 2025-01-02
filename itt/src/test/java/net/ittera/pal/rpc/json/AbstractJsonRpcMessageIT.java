@@ -440,4 +440,20 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractRpcMessageIT
   }
 
   // </editor-fold>
+
+  // <editor-fold desc="control methods">
+  protected boolean sendDeleteObjectCommand(ObjectRef ref) throws Exception {
+    JsonRpcRequest request = JsonRpcMessageFactory.buildDeleteObjectCommandMessage(ref);
+    JsonRpcResponse response = thinPeer.sendJsonRpcRequestToPeer(request).get();
+    logger.debug("response to delete object command: {}", response);
+    return response.getError() == null && response.getResult().getIsVoid();
+  }
+
+  protected boolean sendDeleteSessionCommand() throws Exception {
+    JsonRpcRequest request = JsonRpcMessageFactory.buildDeleteSessionCommandMessage();
+    JsonRpcResponse response = thinPeer.sendJsonRpcRequestToPeer(request).get();
+    logger.debug("response to delete session command: {}", response);
+    return response.getError() == null && response.getResult().getIsVoid();
+  }
+  // </editor-fold>
 }

@@ -44,7 +44,7 @@ public class Message implements Serializable, net.ittera.pal.messages.Marshallab
 
   public InterceptKeyMessage interceptKeyMessage;
 
-  public InterceptReply interceptReply;
+  public InterceptResponse interceptResponse;
 
   /** Default constructor */
   public Message() {
@@ -152,7 +152,7 @@ public class Message implements Serializable, net.ittera.pal.messages.Marshallab
     if (this.metaMessage != null) n += 1 + (long) this.metaMessage.marshalFit();
     if (this.interceptMessage != null) n += 1 + (long) this.interceptMessage.marshalFit();
     if (this.interceptKeyMessage != null) n += 1 + (long) this.interceptKeyMessage.marshalFit();
-    if (this.interceptReply != null) n += 1 + (long) this.interceptReply.marshalFit();
+    if (this.interceptResponse != null) n += 1 + (long) this.interceptResponse.marshalFit();
     if (n < 0 || n > (long) Message.colferSizeMax) return Message.colferSizeMax;
     return (int) n;
   }
@@ -225,9 +225,9 @@ public class Message implements Serializable, net.ittera.pal.messages.Marshallab
         i = this.interceptKeyMessage.marshal(buf, i);
       }
 
-      if (this.interceptReply != null) {
+      if (this.interceptResponse != null) {
         buf[i++] = (byte) 6;
-        i = this.interceptReply.marshal(buf, i);
+        i = this.interceptResponse.marshal(buf, i);
       }
 
       buf[i++] = (byte) 0x7f;
@@ -311,8 +311,8 @@ public class Message implements Serializable, net.ittera.pal.messages.Marshallab
       }
 
       if (header == (byte) 6) {
-        this.interceptReply = new InterceptReply();
-        i = this.interceptReply.unmarshal(buf, i, end);
+        this.interceptResponse = new InterceptResponse();
+        i = this.interceptResponse.unmarshal(buf, i, end);
         header = buf[i++];
       }
 
@@ -532,31 +532,31 @@ public class Message implements Serializable, net.ittera.pal.messages.Marshallab
   }
 
   /**
-   * Gets net.ittera.pal.messages/colfer.Message.interceptReply.
+   * Gets net.ittera.pal.messages/colfer.Message.interceptResponse.
    *
    * @return the value.
    */
-  public InterceptReply getInterceptReply() {
-    return this.interceptReply;
+  public InterceptResponse getInterceptResponse() {
+    return this.interceptResponse;
   }
 
   /**
-   * Sets net.ittera.pal.messages/colfer.Message.interceptReply.
+   * Sets net.ittera.pal.messages/colfer.Message.interceptResponse.
    *
    * @param value the replacement.
    */
-  public void setInterceptReply(InterceptReply value) {
-    this.interceptReply = value;
+  public void setInterceptResponse(InterceptResponse value) {
+    this.interceptResponse = value;
   }
 
   /**
-   * Sets net.ittera.pal.messages/colfer.Message.interceptReply.
+   * Sets net.ittera.pal.messages/colfer.Message.interceptResponse.
    *
    * @param value the replacement.
    * @return {@code this}.
    */
-  public Message withInterceptReply(InterceptReply value) {
-    this.interceptReply = value;
+  public Message withInterceptResponse(InterceptResponse value) {
+    this.interceptResponse = value;
     return this;
   }
 
@@ -569,7 +569,7 @@ public class Message implements Serializable, net.ittera.pal.messages.Marshallab
     if (this.metaMessage != null) h = 31 * h + this.metaMessage.hashCode();
     if (this.interceptMessage != null) h = 31 * h + this.interceptMessage.hashCode();
     if (this.interceptKeyMessage != null) h = 31 * h + this.interceptKeyMessage.hashCode();
-    if (this.interceptReply != null) h = 31 * h + this.interceptReply.hashCode();
+    if (this.interceptResponse != null) h = 31 * h + this.interceptResponse.hashCode();
     return h;
   }
 
@@ -598,9 +598,9 @@ public class Message implements Serializable, net.ittera.pal.messages.Marshallab
         && (this.interceptKeyMessage == null
             ? o.interceptKeyMessage == null
             : this.interceptKeyMessage.equals(o.interceptKeyMessage))
-        && (this.interceptReply == null
-            ? o.interceptReply == null
-            : this.interceptReply.equals(o.interceptReply));
+        && (this.interceptResponse == null
+            ? o.interceptResponse == null
+            : this.interceptResponse.equals(o.interceptResponse));
   }
 
   @Override
@@ -635,9 +635,9 @@ public class Message implements Serializable, net.ittera.pal.messages.Marshallab
         this.interceptKeyMessage = new InterceptKeyMessage().fromJson(jsonObj);
       }
 
-      if (json.has("interceptReply")) {
-        JsonObject jsonObj = json.getAsJsonObject("interceptReply");
-        this.interceptReply = new InterceptReply().fromJson(jsonObj);
+      if (json.has("interceptResponse")) {
+        JsonObject jsonObj = json.getAsJsonObject("interceptResponse");
+        this.interceptResponse = new InterceptResponse().fromJson(jsonObj);
       }
 
     } catch (Exception e) {

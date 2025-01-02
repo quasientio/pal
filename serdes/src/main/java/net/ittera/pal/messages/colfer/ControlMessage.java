@@ -7,6 +7,7 @@ package net.ittera.pal.messages.colfer;
 
 import static java.lang.String.format;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import java.io.IOException;
@@ -32,11 +33,18 @@ public class ControlMessage implements Serializable, net.ittera.pal.messages.Mar
   /** The upper limit for serial byte sizes. */
   public static int colferSizeMax = 16 * 1024 * 1024;
 
+  /** The upper limit for the number of elements in a list. */
+  public static int colferListMax = 64 * 1024;
+
   public String fromPeer;
 
   public String messageId;
 
+  public String responseToId;
+
   public byte command;
+
+  public Parameter[] params;
 
   public byte status;
 
@@ -47,10 +55,14 @@ public class ControlMessage implements Serializable, net.ittera.pal.messages.Mar
     init();
   }
 
+  private static final Parameter[] _zeroParams = new Parameter[0];
+
   /** Colfer zero values. */
   private void init() {
     fromPeer = "";
     messageId = "";
+    responseToId = "";
+    params = _zeroParams;
     body = "";
   }
 
@@ -98,7 +110,8 @@ public class ControlMessage implements Serializable, net.ittera.pal.messages.Mar
      *
      * @return the result or {@code null} when EOF.
      * @throws IOException from the input stream.
-     * @throws SecurityException on an upper limit breach defined by {@link #colferSizeMax}.
+     * @throws SecurityException on an upper limit breach defined by either {@link #colferSizeMax}
+     *     or {@link #colferListMax}.
      * @throws InputMismatchException when the data does not match this object's schema.
      */
     public ControlMessage next() throws IOException {
@@ -153,23 +166,32 @@ public class ControlMessage implements Serializable, net.ittera.pal.messages.Mar
             + (long) this.fromPeer.length() * 3
             + 6
             + (long) this.messageId.length() * 3
+            + 6
+            + (long) this.responseToId.length() * 3
             + 2
+            + 6
             + 2
             + 6
             + (long) this.body.length() * 3;
+    for (Parameter o : this.params) {
+      if (o == null) n++;
+      else n += o.marshalFit();
+    }
     if (n < 0 || n > (long) ControlMessage.colferSizeMax) return ControlMessage.colferSizeMax;
     return (int) n;
   }
 
   /**
-   * Serializes the object.
+   * Serializes the object. All {@code null} elements in {@link #params} will be replaced with a
+   * {@code new} value.
    *
    * @param out the data destination.
    * @param buf the initial buffer or {@code null}.
    * @return the final buffer. When the serial fits into {@code buf} then the return is {@code buf}.
    *     Otherwise the return is a new buffer, large enough to hold the whole serial.
    * @throws IOException from {@code out}.
-   * @throws IllegalStateException on an upper limit breach defined by {@link #colferSizeMax}.
+   * @throws IllegalStateException on an upper limit breach defined by either {@link #colferSizeMax}
+   *     or {@link #colferListMax}.
    */
   public byte[] marshal(OutputStream out, byte[] buf) throws IOException {
     int n = 0;
@@ -187,13 +209,15 @@ public class ControlMessage implements Serializable, net.ittera.pal.messages.Mar
   }
 
   /**
-   * Serializes the object.
+   * Serializes the object. All {@code null} elements in {@link #params} will be replaced with a
+   * {@code new} value.
    *
    * @param buf the data destination.
    * @param offset the initial index for {@code buf}, inclusive.
    * @return the final index for {@code buf}, exclusive.
    * @throws BufferOverflowException when {@code buf} is too small.
-   * @throws IllegalStateException on an upper limit breach defined by {@link #colferSizeMax}.
+   * @throws IllegalStateException on an upper limit breach defined by either {@link #colferSizeMax}
+   *     or {@link #colferListMax}.
    */
   public int marshal(byte[] buf, int offset) {
     int i = offset;
@@ -295,18 +319,92 @@ public class ControlMessage implements Serializable, net.ittera.pal.messages.Mar
         buf[ii] = (byte) size;
       }
 
-      if (this.command != 0) {
+      if (!this.responseToId.isEmpty()) {
         buf[i++] = (byte) 2;
+        int start = ++i;
+
+        String s = this.responseToId;
+        for (int sIndex = 0, sLength = s.length(); sIndex < sLength; sIndex++) {
+          char c = s.charAt(sIndex);
+          if (c < '\u0080') {
+            buf[i++] = (byte) c;
+          } else if (c < '\u0800') {
+            buf[i++] = (byte) (192 | c >>> 6);
+            buf[i++] = (byte) (128 | c & 63);
+          } else if (c < '\ud800' || c > '\udfff') {
+            buf[i++] = (byte) (224 | c >>> 12);
+            buf[i++] = (byte) (128 | c >>> 6 & 63);
+            buf[i++] = (byte) (128 | c & 63);
+          } else {
+            int cp = 0;
+            if (++sIndex < sLength) cp = Character.toCodePoint(c, s.charAt(sIndex));
+            if ((cp >= 1 << 16) && (cp < 1 << 21)) {
+              buf[i++] = (byte) (240 | cp >>> 18);
+              buf[i++] = (byte) (128 | cp >>> 12 & 63);
+              buf[i++] = (byte) (128 | cp >>> 6 & 63);
+              buf[i++] = (byte) (128 | cp & 63);
+            } else buf[i++] = (byte) '?';
+          }
+        }
+        int size = i - start;
+        if (size > ControlMessage.colferSizeMax)
+          throw new IllegalStateException(
+              format(
+                  "colfer: net.ittera.pal.messages/colfer.ControlMessage.responseToId size %d exceeds %d UTF-8 bytes",
+                  size, ControlMessage.colferSizeMax));
+
+        int ii = start - 1;
+        if (size > 0x7f) {
+          i++;
+          for (int x = size; x >= 1 << 14; x >>>= 7) i++;
+          System.arraycopy(buf, start, buf, i - size, size);
+
+          do {
+            buf[ii++] = (byte) (size | 0x80);
+            size >>>= 7;
+          } while (size > 0x7f);
+        }
+        buf[ii] = (byte) size;
+      }
+
+      if (this.command != 0) {
+        buf[i++] = (byte) 3;
         buf[i++] = this.command;
       }
 
+      if (this.params.length != 0) {
+        buf[i++] = (byte) 4;
+        Parameter[] a = this.params;
+
+        int x = a.length;
+        if (x > ControlMessage.colferListMax)
+          throw new IllegalStateException(
+              format(
+                  "colfer: net.ittera.pal.messages/colfer.ControlMessage.params length %d exceeds %d elements",
+                  x, ControlMessage.colferListMax));
+        while (x > 0x7f) {
+          buf[i++] = (byte) (x | 0x80);
+          x >>>= 7;
+        }
+        buf[i++] = (byte) x;
+
+        for (int ai = 0; ai < a.length; ai++) {
+          Parameter o = a[ai];
+          if (o == null) {
+            o = new Parameter();
+            a[ai] = o;
+          }
+          i = o.marshal(buf, i);
+        }
+      }
+
       if (this.status != 0) {
-        buf[i++] = (byte) 3;
+        buf[i++] = (byte) 5;
         buf[i++] = this.status;
       }
 
       if (!this.body.isEmpty()) {
-        buf[i++] = (byte) 4;
+        buf[i++] = (byte) 6;
         int start = ++i;
 
         String s = this.body;
@@ -373,7 +471,8 @@ public class ControlMessage implements Serializable, net.ittera.pal.messages.Mar
    * @param offset the initial index for {@code buf}, inclusive.
    * @return the final index for {@code buf}, exclusive.
    * @throws BufferUnderflowException when {@code buf} is incomplete. (EOF)
-   * @throws SecurityException on an upper limit breach defined by {@link #colferSizeMax}.
+   * @throws SecurityException on an upper limit breach defined by either {@link #colferSizeMax} or
+   *     {@link #colferListMax}.
    * @throws InputMismatchException when the data does not match this object's schema.
    */
   public int unmarshal(byte[] buf, int offset) {
@@ -388,7 +487,8 @@ public class ControlMessage implements Serializable, net.ittera.pal.messages.Mar
    * @param end the index limit for {@code buf}, exclusive.
    * @return the final index for {@code buf}, exclusive.
    * @throws BufferUnderflowException when {@code buf} is incomplete. (EOF)
-   * @throws SecurityException on an upper limit breach defined by {@link #colferSizeMax}.
+   * @throws SecurityException on an upper limit breach defined by either {@link #colferSizeMax} or
+   *     {@link #colferListMax}.
    * @throws InputMismatchException when the data does not match this object's schema.
    */
   public int unmarshal(byte[] buf, int offset, int end) {
@@ -437,16 +537,58 @@ public class ControlMessage implements Serializable, net.ittera.pal.messages.Mar
       }
 
       if (header == (byte) 2) {
-        this.command = buf[i++];
+        int size = 0;
+        for (int shift = 0; true; shift += 7) {
+          byte b = buf[i++];
+          size |= (b & 0x7f) << shift;
+          if (shift == 28 || b >= 0) break;
+        }
+        if (size < 0 || size > ControlMessage.colferSizeMax)
+          throw new SecurityException(
+              format(
+                  "colfer: net.ittera.pal.messages/colfer.ControlMessage.responseToId size %d exceeds %d UTF-8 bytes",
+                  size, ControlMessage.colferSizeMax));
+
+        int start = i;
+        i += size;
+        this.responseToId = new String(buf, start, size, StandardCharsets.UTF_8);
         header = buf[i++];
       }
 
       if (header == (byte) 3) {
-        this.status = buf[i++];
+        this.command = buf[i++];
         header = buf[i++];
       }
 
       if (header == (byte) 4) {
+        int length = 0;
+        for (int shift = 0; true; shift += 7) {
+          byte b = buf[i++];
+          length |= (b & 0x7f) << shift;
+          if (shift == 28 || b >= 0) break;
+        }
+        if (length < 0 || length > ControlMessage.colferListMax)
+          throw new SecurityException(
+              format(
+                  "colfer: net.ittera.pal.messages/colfer.ControlMessage.params length %d exceeds %d elements",
+                  length, ControlMessage.colferListMax));
+
+        Parameter[] a = new Parameter[length];
+        for (int ai = 0; ai < length; ai++) {
+          Parameter o = new Parameter();
+          i = o.unmarshal(buf, i, end);
+          a[ai] = o;
+        }
+        this.params = a;
+        header = buf[i++];
+      }
+
+      if (header == (byte) 5) {
+        this.status = buf[i++];
+        header = buf[i++];
+      }
+
+      if (header == (byte) 6) {
         int size = 0;
         for (int shift = 0; true; shift += 7) {
           byte b = buf[i++];
@@ -482,7 +624,7 @@ public class ControlMessage implements Serializable, net.ittera.pal.messages.Mar
   }
 
   // {@link Serializable} version number.
-  private static final long serialVersionUID = 5L;
+  private static final long serialVersionUID = 7L;
 
   // {@link Serializable} Colfer extension.
   private void writeObject(ObjectOutputStream out) throws IOException {
@@ -566,6 +708,35 @@ public class ControlMessage implements Serializable, net.ittera.pal.messages.Mar
   }
 
   /**
+   * Gets net.ittera.pal.messages/colfer.ControlMessage.responseToId.
+   *
+   * @return the value.
+   */
+  public String getResponseToId() {
+    return this.responseToId;
+  }
+
+  /**
+   * Sets net.ittera.pal.messages/colfer.ControlMessage.responseToId.
+   *
+   * @param value the replacement.
+   */
+  public void setResponseToId(String value) {
+    this.responseToId = value;
+  }
+
+  /**
+   * Sets net.ittera.pal.messages/colfer.ControlMessage.responseToId.
+   *
+   * @param value the replacement.
+   * @return {@code this}.
+   */
+  public ControlMessage withResponseToId(String value) {
+    this.responseToId = value;
+    return this;
+  }
+
+  /**
    * Gets net.ittera.pal.messages/colfer.ControlMessage.command.
    *
    * @return the value.
@@ -591,6 +762,35 @@ public class ControlMessage implements Serializable, net.ittera.pal.messages.Mar
    */
   public ControlMessage withCommand(byte value) {
     this.command = value;
+    return this;
+  }
+
+  /**
+   * Gets net.ittera.pal.messages/colfer.ControlMessage.params.
+   *
+   * @return the value.
+   */
+  public Parameter[] getParams() {
+    return this.params;
+  }
+
+  /**
+   * Sets net.ittera.pal.messages/colfer.ControlMessage.params.
+   *
+   * @param value the replacement.
+   */
+  public void setParams(Parameter[] value) {
+    this.params = value;
+  }
+
+  /**
+   * Sets net.ittera.pal.messages/colfer.ControlMessage.params.
+   *
+   * @param value the replacement.
+   * @return {@code this}.
+   */
+  public ControlMessage withParams(Parameter[] value) {
+    this.params = value;
     return this;
   }
 
@@ -657,7 +857,9 @@ public class ControlMessage implements Serializable, net.ittera.pal.messages.Mar
     int h = 1;
     if (this.fromPeer != null) h = 31 * h + this.fromPeer.hashCode();
     if (this.messageId != null) h = 31 * h + this.messageId.hashCode();
+    if (this.responseToId != null) h = 31 * h + this.responseToId.hashCode();
     h = 31 * h + (this.command & 0xff);
+    for (Parameter o : this.params) h = 31 * h + (o == null ? 0 : o.hashCode());
     h = 31 * h + (this.status & 0xff);
     if (this.body != null) h = 31 * h + this.body.hashCode();
     return h;
@@ -674,7 +876,11 @@ public class ControlMessage implements Serializable, net.ittera.pal.messages.Mar
 
     return (this.fromPeer == null ? o.fromPeer == null : this.fromPeer.equals(o.fromPeer))
         && (this.messageId == null ? o.messageId == null : this.messageId.equals(o.messageId))
+        && (this.responseToId == null
+            ? o.responseToId == null
+            : this.responseToId.equals(o.responseToId))
         && this.command == o.command
+        && java.util.Arrays.equals(this.params, o.params)
         && this.status == o.status
         && (this.body == null ? o.body == null : this.body.equals(o.body));
   }
@@ -690,10 +896,22 @@ public class ControlMessage implements Serializable, net.ittera.pal.messages.Mar
         this.messageId = json.get("messageId").getAsString();
       }
 
+      if (json.has("responseToId")) {
+        this.responseToId = json.get("responseToId").getAsString();
+      }
+
       if (json.has("command")) {
         this.command = json.get("command").getAsByte();
       }
 
+      if (json.has("params")) {
+        JsonArray jsonArray = json.getAsJsonArray("params");
+        this.params = new Parameter[jsonArray.size()];
+        for (int i = 0; i < jsonArray.size(); i++) {
+          JsonObject jsonObj = jsonArray.get(i).getAsJsonObject();
+          this.params[i] = new Parameter().fromJson(jsonObj);
+        }
+      }
       if (json.has("status")) {
         this.status = json.get("status").getAsByte();
       }

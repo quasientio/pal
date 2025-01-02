@@ -19,8 +19,10 @@
 
 package net.ittera.pal.messages.types;
 
+import java.util.Locale;
+
 public enum MetaServiceType {
-  FETCH_CLASSES_INFO((byte) 1, "fetch_classes_info");
+  FETCH_CLASSES_INFO((byte) 1);
 
   private static final MetaServiceType[] LOOKUP = new MetaServiceType[256];
 
@@ -31,28 +33,26 @@ public enum MetaServiceType {
   }
 
   private final byte id;
-  private final String jsonName;
 
-  MetaServiceType(byte id, String jsonName) {
+  MetaServiceType(byte id) {
     this.id = id;
-    this.jsonName = jsonName;
   }
 
   public byte getId() {
     return id;
   }
 
-  public String getJsonName() {
-    return jsonName;
-  }
-
   public static MetaServiceType fromId(byte id) {
     return LOOKUP[id & 0xFF];
   }
 
+  public String getJsonName() {
+    return name().toLowerCase(Locale.ROOT);
+  }
+
   public static MetaServiceType fromJsonName(String jsonName) {
     for (MetaServiceType type : values()) {
-      if (type.jsonName.equals(jsonName)) {
+      if (type.getJsonName().equalsIgnoreCase(jsonName)) {
         return type;
       }
     }

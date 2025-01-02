@@ -20,10 +20,11 @@
 package colfer
 
 type MetaMessage struct {
-	fromPeer  text
-	messageId text
-	service   uint8
-	params    []Parameter
-	status    uint8
-	body      text
+	fromPeer     text
+	messageId    text
+	responseToId text
+	service      uint8
+	params       []Parameter
+	status       uint8
+	body         text
 }

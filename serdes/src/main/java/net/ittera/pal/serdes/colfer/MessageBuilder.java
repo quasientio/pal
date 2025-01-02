@@ -19,7 +19,9 @@
 
 package net.ittera.pal.serdes.colfer;
 
-import static net.ittera.pal.messages.types.MessageType.META_MESSAGE_REPLY;
+import static net.ittera.pal.messages.types.MessageType.CONTROL_MESSAGE_RESPONSE;
+import static net.ittera.pal.messages.types.MessageType.META_MESSAGE_RESPONSE;
+import static net.ittera.pal.serdes.colfer.ControlMessageUtils.getMessageTypeOf;
 import static net.ittera.pal.serdes.colfer.ExecMessageUtils.getClassname;
 import static net.ittera.pal.serdes.colfer.ExecMessageUtils.getExecutableName;
 import static net.ittera.pal.serdes.colfer.ExecMessageUtils.getMessageTypeOf;
@@ -138,6 +140,24 @@ public final class MessageBuilder {
   // </editor-fold>
 
   // <editor-fold desc="Private Auxiliary methods">
+  private static Parameter[] paramMapToParameters(Map<String, Object> params) {
+    if (params == null) {
+      return null;
+    }
+
+    Parameter[] keyValues = new Parameter[params.size()];
+    int index = 0;
+
+    for (Map.Entry<String, Object> entry : params.entrySet()) {
+      Parameter keyValueParam =
+          new Parameter()
+              .withName(entry.getKey())
+              .withValue(getWrappedObject(entry.getValue(), null, null));
+      keyValues[index++] = keyValueParam;
+    }
+    return keyValues;
+  }
+
   private String nextId() {
     return idGenerator.nextId();
   }
@@ -1254,6 +1274,33 @@ public final class MessageBuilder {
   }
 
   public JsonRpcResponse jsonRpcResponseFromExecMessageReply(ExecMessage execMessageResponse) {
+  public Message jsonRpcRequestToControlMessage(JsonRpcRequest jsonRpcRequest, UUID fromPeerUuid) {
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          "in jsonRpcRequestToControlMessage with request: {} from peer: {}",
+          jsonRpcRequest,
+          fromPeerUuid);
+    }
+
+    // get command
+    String commandName = jsonRpcRequest.getParams().getMethod();
+    ControlCommandType command = ControlCommandType.fromJsonName(commandName);
+    if (command == null) {
+      throw new IllegalArgumentException("Unknown control command type: " + commandName);
+    }
+
+    // get params
+    List<Argument> args = jsonRpcRequest.getParams().getArgs();
+    Parameter[] params = jsonRpcParamsToBinaryRpcParams(args);
+
+    // create control message
+    ControlMessage controlMessage = buildControlCommandMessage(fromPeerUuid, command, params);
+
+    // set original message id
+    controlMessage.setMessageId(jsonRpcRequest.getId());
+    return wrap(controlMessage);
+  }
+
     String requestId = execMessageResponse.getResponseToId();
 
     // Create a JSON-RPC response object
@@ -1349,7 +1396,9 @@ public final class MessageBuilder {
 
     // Create a JSON-RPC response object
     final JsonRpcResponse jsonRpcResponse = new JsonRpcResponse();
-    jsonRpcResponse.setId(metaMessageResponse.getMessageId());
+
+    // the json-rpc response id must be the original request's id
+    jsonRpcResponse.setId(metaMessageResponse.getResponseToId());
 
     MessageType responseMessageType = getMessageTypeOf(metaMessageResponse);
     if (!responseMessageType.equals(META_MESSAGE_REPLY)) {
@@ -1388,8 +1437,79 @@ public final class MessageBuilder {
     return jsonRpcResponse;
   }
 
-  public JsonRpcResponse jsonRpcResponseFromError(Exception exception, String requestId) {
+  public JsonRpcResponse jsonRpcResponseFromControlMessageResponse(
+      ControlMessage controlMessageResponse) {
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          "in jsonRpcResponseFromControlMessageResponse with control message w/id: {}"
+              + " in response to message w/id: {}",
+          controlMessageResponse.getMessageId(),
+          controlMessageResponse.getResponseToId());
+    }
 
+    // Create a JSON-RPC response object
+    final JsonRpcResponse jsonRpcResponse = new JsonRpcResponse();
+
+    // the json-rpc response id must be the original request's id
+    jsonRpcResponse.setId(controlMessageResponse.getResponseToId());
+    MessageType responseMessageType = getMessageTypeOf(controlMessageResponse);
+    if (!responseMessageType.equals(CONTROL_MESSAGE_RESPONSE)) {
+      throw new IllegalArgumentException(
+          "Unexpected response message type: " + responseMessageType);
+    }
+
+    ControlStatusType statusType = ControlStatusType.fromId(controlMessageResponse.getStatus());
+    String body = controlMessageResponse.getBody();
+    switch (statusType) {
+      case OK:
+        if (body == null || body.isBlank()) {
+          jsonRpcResponse.setResult(JsonRpcResponseReturnValue.builder().withIsVoid(true).build());
+        } else {
+          jsonRpcResponse.setResult(
+              JsonRpcResponseReturnValue.builder()
+                  .withValue(ResponseObject.builder().withValue(body).build())
+                  .build());
+        }
+        break;
+      case UNSUPPORTED:
+        jsonRpcResponse.setError(
+            new JsonRpcError(
+                JsonRpcErrorCode.METHOD_NOT_FOUND.getCode(),
+                JsonRpcErrorCode.METHOD_NOT_FOUND.getMessage()));
+        break;
+      case NO_SUCH_SESSION:
+        jsonRpcResponse.setError(
+            new JsonRpcError(
+                JsonRpcErrorCode.SERVER_ERROR.getCode(),
+                JsonRpcErrorCode.SERVER_ERROR.getMessage(),
+                JsonRpcErrorData.builder().withMessage("No such session").build()));
+        break;
+      case NO_SUCH_OBJECT:
+        jsonRpcResponse.setError(
+            new JsonRpcError(
+                JsonRpcErrorCode.SERVER_ERROR.getCode(),
+                JsonRpcErrorCode.SERVER_ERROR.getMessage(),
+                JsonRpcErrorData.builder().withMessage("No such object").build()));
+        break;
+      case ERROR:
+        JsonRpcError jsonRpcError =
+            new JsonRpcError(
+                JsonRpcErrorCode.SERVER_ERROR.getCode(),
+                JsonRpcErrorCode.SERVER_ERROR.getMessage());
+        if (body == null || body.isBlank()) {
+          jsonRpcError.setData(JsonRpcErrorData.builder().withMessage(body).build());
+        }
+        jsonRpcResponse.setError(jsonRpcError);
+        break;
+      case UNAUTHORIZED:
+      default:
+        throw new IllegalArgumentException("Response with unsupported status type: " + statusType);
+    }
+
+    return jsonRpcResponse;
+  }
+
+  public JsonRpcResponse jsonRpcResponseFromError(Exception exception, String requestId) {
     final JsonRpcResponse jsonRpcResponse = new JsonRpcResponse();
     jsonRpcResponse.setId(requestId);
     final JsonRpcError error;
@@ -1443,33 +1563,38 @@ public final class MessageBuilder {
   // </editor-fold>
 
   // <editor-fold desc="Control messages">
-  public ControlMessage buildDeleteObjectControlMessage(UUID fromPeer, String body) {
-    final ControlMessage controlMessage =
+  public ControlMessage buildControlCommandMessage(
+      UUID fromPeerUuid, ControlCommandType command, @Nullable Parameter[] params) {
+    ControlMessage controlMessage =
         new ControlMessage()
-            .withFromPeer(fromPeer.toString())
+            .withFromPeer(fromPeerUuid.toString())
             .withMessageId(nextId())
-            .withCommand(ControlCommandType.DELETE_OBJECT.toByte());
+            .withCommand(command.getId());
 
-    if (body != null && !body.isEmpty()) {
-      controlMessage.setBody(body);
+    if (params != null && params.length > 0) {
+      controlMessage.setParams(params);
     }
     return controlMessage;
   }
 
-  public ControlMessage buildDeleteSessionControlMessage(UUID fromPeer) {
-    return new ControlMessage()
-        .withFromPeer(fromPeer.toString())
-        .withMessageId(nextId())
-        .withCommand(ControlCommandType.DELETE_SESSION.toByte());
+  public ControlMessage buildDeleteObjectCommandMessage(UUID fromPeer, ObjectRef objectRef) {
+    Parameter[] params =
+        new Parameter[] {new Parameter().withValue(new Obj().withRef(objectRef.asString()))};
+    return buildControlCommandMessage(fromPeer, ControlCommandType.DELETE_OBJECT, params);
   }
 
-  public ControlMessage buildControlMessage(
-      UUID fromPeerUuid, ControlStatusType statusType, @Nullable String body) {
+  public ControlMessage buildDeleteSessionCommandMessage(UUID fromPeer) {
+    return buildControlCommandMessage(fromPeer, ControlCommandType.DELETE_SESSION, null);
+  }
+
+  public ControlMessage buildControlStatusMessage(
+      UUID fromPeerUuid, ControlStatusType statusType, String responseToId, @Nullable String body) {
     final ControlMessage controlMessage =
         new ControlMessage()
             .withFromPeer(fromPeerUuid.toString())
             .withMessageId(nextId())
-            .withStatus(statusType.toByte());
+            .withResponseToId(responseToId)
+            .withStatus(statusType.toId());
 
     if (body != null && !body.isEmpty()) {
       controlMessage.setBody(body);
@@ -1477,32 +1602,14 @@ public final class MessageBuilder {
     return controlMessage;
   }
 
-  public ControlMessage buildControlMessage(UUID fromPeerUuid, ControlStatusType statusType) {
-    return buildControlMessage(fromPeerUuid, statusType, null);
+  public ControlMessage buildControlStatusMessage(
+      UUID fromPeerUuid, ControlStatusType statusType, String responseToId) {
+    return buildControlStatusMessage(fromPeerUuid, statusType, responseToId, null);
   }
 
   // </editor-fold>
 
   // <editor-fold desc="Meta Messages">
-
-  private static Parameter[] paramMapToParameters(Map<String, Object> params) {
-    if (params == null) {
-      return null;
-    }
-
-    Parameter[] keyValues = new Parameter[params.size()];
-    int index = 0;
-
-    for (Map.Entry<String, Object> entry : params.entrySet()) {
-      Parameter keyValueParam =
-          new Parameter()
-              .withName(entry.getKey())
-              .withValue(getWrappedObject(entry.getValue(), null, null));
-      keyValues[index++] = keyValueParam;
-    }
-    return keyValues;
-  }
-
   public MetaMessage buildMetaMessageRequest(
       UUID fromPeerUuid, String requestId, MetaServiceType serviceType) {
     return buildMetaMessageRequest(fromPeerUuid, requestId, serviceType, (Parameter[]) null);
@@ -1540,7 +1647,8 @@ public final class MessageBuilder {
     final MetaMessage metaMessage =
         new MetaMessage()
             .withFromPeer(fromPeerUuid.toString())
-            .withMessageId(responseToId)
+            .withMessageId(nextId())
+            .withResponseToId(responseToId)
             .withStatus(statusType.getId());
 
     if (body != null && !body.isEmpty()) {
@@ -1576,9 +1684,8 @@ public final class MessageBuilder {
   }
 
   public Message wrap(ControlMessage controlMessage) {
-    return new Message()
-        .withMessageType(MessageType.CONTROL_MESSAGE.getId())
-        .withControlMessage(controlMessage);
+    final MessageType messageType = getMessageTypeOf(controlMessage);
+    return new Message().withMessageType(messageType.getId()).withControlMessage(controlMessage);
   }
 
   public Message wrap(MetaMessage metaMessage) {

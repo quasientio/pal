@@ -8,6 +8,9 @@ import net.ittera.pal.common.util.IdGenerator;
 import net.ittera.pal.messages.jsonrpc.Argument;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.Params;
+import net.ittera.pal.messages.types.ControlCommandType;
+import net.ittera.pal.messages.types.MessageFamily;
+import net.ittera.pal.messages.types.MetaServiceType;
 
 public class JsonRpcMessageFactory {
 
@@ -15,6 +18,7 @@ public class JsonRpcMessageFactory {
 
   private JsonRpcMessageFactory() {}
 
+  // <editor-fold desc="Exec messages">
   public static JsonRpcRequest buildConstructorCall(
       @Nullable String id, String type, List<Argument> arguments) {
     return JsonRpcRequest.builder()
@@ -162,6 +166,30 @@ public class JsonRpcMessageFactory {
     return buildInstanceFieldPut(null, type, instanceId, field, value);
   }
 
+  public static JsonRpcRequest buildDeleteObjectCommandMessage(Integer objId) {
+    return JsonRpcRequest.builder()
+        .withId(nextId())
+        .withMethod(MessageFamily.CONTROL.getJsonName())
+        .withParams(
+            Params.builder()
+                .withMethod(ControlCommandType.DELETE_OBJECT.getJsonName())
+                .addArg(Argument.builder().withRef(objId).build())
+                .build())
+        .build();
+  }
+
+  public static JsonRpcRequest buildDeleteObjectCommandMessage(ObjectRef objRef) {
+    return buildDeleteObjectCommandMessage(objRef.getRef());
+  }
+
+  public static JsonRpcRequest buildDeleteSessionCommandMessage() {
+    return JsonRpcRequest.builder()
+        .withId(nextId())
+        .withMethod(MessageFamily.CONTROL.getJsonName())
+        .withParams(
+            Params.builder().withMethod(ControlCommandType.DELETE_SESSION.getJsonName()).build())
+        .build();
+  }
   private static String nextId() {
     return idGenerator.nextId();
   }

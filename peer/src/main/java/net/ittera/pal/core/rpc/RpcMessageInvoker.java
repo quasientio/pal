@@ -279,20 +279,28 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
 
     Exception invalidRequestException = null;
     // create ExecMessage from JSON-RPC request message
-    MessageType requestMessageType = JsonRpcMessageUtils.getMessageType(jsonRpcRequest);
-    switch (requestMessageType.getFamily()) {
-      case EXEC:
-        requestMsg =
-            messageBuilder.jsonRpcRequestToExecMessage(jsonRpcRequest, jsonrpcMsg.getPeerId());
-        break;
-      case META:
-        requestMsg =
-            messageBuilder.jsonRpcRequestToMetaMessage(jsonRpcRequest, jsonrpcMsg.getPeerId());
-        break;
-      case CONTROL:
-      case INTERCEPT:
-      default:
-        invalidRequestException = new InvalidJsonRpcRequestException("Unsupported request type");
+    MessageType requestMessageType = null;
+    try {
+      requestMessageType = JsonRpcMessageUtils.getMessageType(jsonRpcRequest);
+      switch (requestMessageType.getFamily()) {
+        case EXEC:
+          requestMsg =
+              messageBuilder.jsonRpcRequestToExecMessage(jsonRpcRequest, jsonrpcMsg.getPeerId());
+          break;
+        case META:
+          requestMsg =
+              messageBuilder.jsonRpcRequestToMetaMessage(jsonRpcRequest, jsonrpcMsg.getPeerId());
+          break;
+        case CONTROL:
+          requestMsg =
+              messageBuilder.jsonRpcRequestToControlMessage(jsonRpcRequest, jsonrpcMsg.getPeerId());
+          break;
+        case INTERCEPT:
+        default:
+          invalidRequestException = new InvalidJsonRpcRequestException("Unsupported request type");
+      }
+    } catch (Exception e) {
+      invalidRequestException = new InvalidJsonRpcRequestException(e.getMessage());
     }
 
     // request type is unsupported, log and send error response
@@ -331,15 +339,18 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
     }
 
     // create JSON-RPC response from MetaMessage / ExecMessage reply
-
     switch (requestMessageType.getFamily()) {
       case EXEC:
         jsonRpcResponse =
-            messageBuilder.jsonRpcResponseFromExecMessageReply(replyMsg.getExecMessage());
+            messageBuilder.jsonRpcResponseFromExecMessageResponse(replyMsg.getExecMessage());
         break;
       case META:
         jsonRpcResponse =
-            messageBuilder.jsonRpcResponseFromMetaMessageReply(replyMsg.getMetaMessage());
+            messageBuilder.jsonRpcResponseFromMetaMessageResponse(replyMsg.getMetaMessage());
+        break;
+      case CONTROL:
+        jsonRpcResponse =
+            messageBuilder.jsonRpcResponseFromControlMessageResponse(replyMsg.getControlMessage());
         break;
       default:
         // we cannot get here: other branches ruled out in pre-dispatch switch

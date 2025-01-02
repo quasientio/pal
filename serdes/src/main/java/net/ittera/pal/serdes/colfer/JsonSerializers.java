@@ -834,12 +834,18 @@ public class JsonSerializers {
       if (notEmpty(message.messageId)) {
         jsonElement.addProperty("message_id", message.messageId);
       }
+      if (notEmpty(message.responseToId)) {
+        jsonElement.addProperty("response_to", message.responseToId);
+      }
       if (notEmpty(message.command)) {
-        ControlCommandType commandType = ControlCommandType.fromByte(message.getCommand());
+        ControlCommandType commandType = ControlCommandType.fromId(message.getCommand());
         jsonElement.addProperty("command", commandType.name());
       }
+      if (notEmpty(message.params)) {
+        jsonElement.add("params", jsonSerializationContext.serialize(message.params));
+      }
       if (notEmpty(message.status)) {
-        ControlStatusType statusType = ControlStatusType.fromByte(message.getStatus());
+        ControlStatusType statusType = ControlStatusType.fromId(message.getStatus());
         jsonElement.addProperty("status", statusType.name());
       }
       if (notEmpty(message.body)) {
@@ -859,6 +865,9 @@ public class JsonSerializers {
       }
       if (notEmpty(message.messageId)) {
         jsonElement.addProperty("message_id", message.messageId);
+      }
+      if (notEmpty(message.responseToId)) {
+        jsonElement.addProperty("response_to", message.responseToId);
       }
       if (notEmpty(message.service)) {
         MetaServiceType metaServiceType = MetaServiceType.fromId(message.getService());

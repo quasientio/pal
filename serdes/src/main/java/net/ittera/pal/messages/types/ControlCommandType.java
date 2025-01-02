@@ -19,17 +19,19 @@
 
 package net.ittera.pal.messages.types;
 
+import java.util.Locale;
+
 public enum ControlCommandType {
   DELETE_OBJECT((byte) 1),
   DELETE_SESSION((byte) 2);
 
-  private final byte idx;
+  private final byte id;
 
-  ControlCommandType(byte idx) {
-    this.idx = idx;
+  ControlCommandType(byte id) {
+    this.id = id;
   }
 
-  public static ControlCommandType fromByte(byte messageTypeAsByte) {
+  public static ControlCommandType fromId(byte messageTypeAsByte) {
     return switch (messageTypeAsByte) {
       case 1 -> DELETE_OBJECT;
       case 2 -> DELETE_SESSION;
@@ -38,7 +40,20 @@ public enum ControlCommandType {
     };
   }
 
-  public byte toByte() {
-    return idx;
+  public byte getId() {
+    return id;
+  }
+
+  public String getJsonName() {
+    return name().toLowerCase(Locale.ROOT);
+  }
+
+  public static ControlCommandType fromJsonName(String jsonName) {
+    for (ControlCommandType type : values()) {
+      if (type.getJsonName().equalsIgnoreCase(jsonName)) {
+        return type;
+      }
+    }
+    return null;
   }
 }

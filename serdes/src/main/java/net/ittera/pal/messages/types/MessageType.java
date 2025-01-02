@@ -35,9 +35,8 @@ public enum MessageType {
 
   // CONTROL (31 - 50)
   // command messages
-  CONTROL_MESSAGE(MessageFamily.CONTROL, (byte) 31),
-  //  CONTROL_DELETE_OBJECT(MessageFamily.CONTROL, (byte) 32),
-  //  CONTROL_DELETE_SESSION(MessageFamily.CONTROL, (byte) 33),
+  CONTROL_MESSAGE_REQUEST(MessageFamily.CONTROL, (byte) 31),
+  CONTROL_MESSAGE_RESPONSE(MessageFamily.CONTROL, (byte) 32),
 
   // status (i.e. reply) messages
   //  CONTROL_OK(MessageFamily.CONTROL, (byte) 41),
