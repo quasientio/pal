@@ -1,15 +1,11 @@
 package net.ittera.pal.serdes;
 
-import java.util.Arrays;
-
 public interface Unwrappable {
   boolean isNull();
 
   String getValue();
 
   String getType();
-
-  Unwrappable[] getArrayValues();
 
   Integer getRef();
 
@@ -23,8 +19,6 @@ public interface Unwrappable {
         + ", type='"
         + getType()
         + '\''
-        + ", arrayValues="
-        + Arrays.toString(getArrayValues())
         + ", ref="
         + getRef()
         + '}';

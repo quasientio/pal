@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 @SuppressWarnings("unused")
 public class Methods {
@@ -117,6 +118,16 @@ public class Methods {
     if (listOfIntegers != null) {
       for (Integer anInt : listOfIntegers) {
         sum += anInt;
+      }
+    }
+    return sum;
+  }
+
+  public static Float nonVoidSumUpMap(Map<String, Float> mapOfFloats) {
+    float sum = 0;
+    if (mapOfFloats != null) {
+      for (Float f : mapOfFloats.values()) {
+        sum += f;
       }
     }
     return sum;

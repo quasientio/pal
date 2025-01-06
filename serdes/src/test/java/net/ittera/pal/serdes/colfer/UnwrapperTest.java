@@ -20,10 +20,11 @@
 package net.ittera.pal.serdes.colfer;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
+import java.lang.reflect.Array;
 import java.util.List;
+import java.util.Objects;
 import net.ittera.pal.messages.colfer.Obj;
 import net.ittera.pal.serdes.Unwrapper;
 import net.ittera.pal.serdes.WrappingTestBase;
@@ -34,82 +35,31 @@ public class UnwrapperTest extends WrappingTestBase {
 
   @Test
   public void unwrapObject_wrappedNullObject_originalValue() throws ClassNotFoundException {
-    Obj wrappedObj = Wrapper.getWrappedObject(null, "java.lang.Float", null);
+    Obj wrappedObj =
+        Wrapper.getWrappedObject(null, "java.lang.Float", null, WrapPolicy.PREFER_REFERENCE);
     assertNull(Unwrapper.unwrapObject(wrappedObj));
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void unwrapObject_wrappedVoidObject_illegalArgumentException()
-      throws ClassNotFoundException {
-    Object wrappable = void.class;
-    Obj wrappedObj = Wrapper.getWrappedObject(wrappable, wrappable.getClass().getName(), null);
-    Object unwrapped = Unwrapper.unwrapObject(wrappedObj);
-    assertEquals(void.class, unwrapped);
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void unwrapObject_wrappedVoidClass_illegalArgumentException()
-      throws ClassNotFoundException {
-    Object wrappable = Void.class;
-    Obj wrappedObj = Wrapper.getWrappedObject(wrappable, wrappable.getClass().getName(), null);
-    Object unwrapped = Unwrapper.unwrapObject(wrappedObj);
-    assertEquals(void.class, unwrapped);
-  }
-
-  @Test
-  public void unwrapObject_stringBuilder_originalValue() throws ClassNotFoundException {
-    StringBuilder wrappable = new StringBuilder("world");
-    Obj wrappedObj = Wrapper.getWrappedObject(wrappable, wrappable.getClass().getName(), null);
-    Object unwrapped = Unwrapper.unwrapObject(wrappedObj);
-
-    // compare class and value
-    assertEquals(wrappable.getClass(), unwrapped.getClass());
-    assertEquals(wrappable.toString(), unwrapped.toString());
-  }
-
-  @Test
-  @SuppressWarnings("JdkObsolete") // silence errorprone warnings about StringBuffer
-  public void unwrapObject_stringBuffer_originalValue() throws ClassNotFoundException {
-    StringBuffer wrappable = new StringBuffer("world");
-    Obj wrappedObj = Wrapper.getWrappedObject(wrappable, wrappable.getClass().getName(), null);
-    Object unwrapped = Unwrapper.unwrapObject(wrappedObj);
-
-    // compare class and value
-    assertEquals(wrappable.getClass(), unwrapped.getClass());
-    assertEquals(wrappable.toString(), unwrapped.toString());
   }
 
   @Test
   public void unwrapObject_valuedWrappable_originalValue() throws ClassNotFoundException {
 
-    // test all wrappables with value except charSeq's
-    List<Object> valuedWrappableObjs =
-        wrappableObjects.stream()
-            .filter(o -> o != null && o != void.class && o != Void.class)
-            .toList();
+    List<Object> valuedWrappableObjs = wrappableObjects.stream().filter(Objects::nonNull).toList();
 
     for (Object wrappable : valuedWrappableObjs) {
-      Obj wrappedObj = Wrapper.getWrappedObject(wrappable, wrappable.getClass().getName(), null);
+      Obj wrappedObj =
+          Wrapper.getWrappedObject(
+              wrappable, wrappable.getClass().getName(), null, WrapPolicy.PREFER_REFERENCE);
       Object unwrapped = Unwrapper.unwrapObject(wrappedObj);
       // compare class and value(s)
       assertEquals(wrappable.getClass(), unwrapped.getClass());
       if (wrappable.getClass().isArray()) {
-        myAssertArrayEquals(wrappable, unwrapped);
-      } else if (wrappable instanceof CharSequence) {
-        assertEquals(wrappable.toString(), unwrapped.toString());
+        assertEquals(Array.getLength(wrappable), Array.getLength(unwrapped));
+        for (int i = 0; i < Array.getLength(wrappable); i++) {
+          assertEquals(Array.get(wrappable, i).toString(), Array.get(unwrapped, i).toString());
+        }
       } else {
         assertEquals(wrappable, unwrapped);
       }
     }
-  }
-
-  @Test
-  public void unwrapObject_TypeIsNullObjectIsString_returnsString() {
-    Obj wrappedObj = new Obj();
-    wrappedObj.setValue("Hiya");
-    wrappedObj.setClazz(new net.ittera.pal.messages.colfer.Class().withName("java.lang.String"));
-    Object unwrapped = Unwrapper.unwrapObject(wrappedObj, null);
-    assertNotNull(unwrapped);
-    assertEquals(String.class, unwrapped.getClass());
   }
 }

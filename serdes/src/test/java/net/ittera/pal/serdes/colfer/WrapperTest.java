@@ -21,7 +21,6 @@ package net.ittera.pal.serdes.colfer;
 
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.emptyArray;
 import static org.hamcrest.Matchers.emptyString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -76,7 +75,6 @@ public class WrapperTest extends WrappingTestBase {
   // <editor-fold defaultstate="collapsed" desc="isWrappable tests">
   @Test
   public void isWrappable_nonWrappableObject_false() {
-
     for (Object obj : someNonWrappableObjects) {
       assertFalse(String.format("%s should not be wrappable!", obj), Wrapper.isWrappable(obj));
     }
@@ -87,19 +85,6 @@ public class WrapperTest extends WrappingTestBase {
 
     for (Object obj : wrappableObjects) {
       assertTrue(String.format("%s is not wrappable!", obj), Wrapper.isWrappable(obj));
-    }
-  }
-
-  @Test
-  public void isWrappable_oneDimArrayOfNonWrappableObject_false() {
-
-    List<Object[]> nonWrappableArrays =
-        someNonWrappableObjects.stream()
-            .map(o -> getArrayOfLength1(o.getClass()))
-            .collect(toList());
-
-    for (Object array : nonWrappableArrays) {
-      assertFalse(String.format("%s should not be wrappable!", array), Wrapper.isWrappable(array));
     }
   }
 
@@ -129,39 +114,6 @@ public class WrapperTest extends WrappingTestBase {
               "Array of type %s is not wrappable", wrapperArray.getClass().getComponentType()),
           Wrapper.isWrappable(wrapperArray));
     }
-  }
-
-  // 1-dimensional CharSequence arrays (String, StringBuffer, StringBuilder)
-  @Test
-  public void isWrappable_oneDimCharSequenceTypeArray_true() {
-
-    List<CharSequence[]> charSeqArrays = new ArrayList<>();
-    charSeqArrays.add(new StringBuffer[10]);
-    charSeqArrays.add(new StringBuilder[10]);
-
-    for (CharSequence[] array : charSeqArrays) {
-      assertTrue(
-          String.format("Array of type %s is not wrappable", array.getClass().getComponentType()),
-          Wrapper.isWrappable(array));
-    }
-  }
-
-  // </editor-fold>
-
-  // <editor-fold defaultstate="collapsed" desc="isWrappableCharSeqClass tests">
-  @Test
-  public void isWrappableCharSeqClass_charSeqClasses_true() {
-
-    assertTrue(Wrapper.isWrappableCharSeqClass(StringBuffer.class));
-    assertTrue(Wrapper.isWrappableCharSeqClass(StringBuilder.class));
-  }
-
-  @Test
-  public void isWrappableCharSeqClass_nonCharSeqClasses_false() {
-
-    assertFalse(Wrapper.isWrappableCharSeqClass(Integer.class));
-    assertFalse(Wrapper.isWrappableCharSeqClass(String.class));
-    assertFalse(Wrapper.isWrappableCharSeqClass(Character.class));
   }
 
   // </editor-fold>
@@ -286,21 +238,22 @@ public class WrapperTest extends WrappingTestBase {
 
   @Test
   public void getWrappedObject_NullClass_wrapped() {
-    Wrapper.getWrappedObject(new Object(), null, ObjectRef.randomRef());
+    Wrapper.getWrappedObject(
+        new Object(), null, ObjectRef.randomRef(), WrapPolicy.PREFER_REFERENCE);
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void getWrappedObject_InvalidObjectType_illegalArgumentException() {
-    Wrapper.getWrappedObject(new Object(), "238923", ObjectRef.randomRef());
+    Wrapper.getWrappedObject(
+        new Object(), "238923", ObjectRef.randomRef(), WrapPolicy.PREFER_REFERENCE);
   }
 
   @Test
   public void getWrappedObject_nullArguments_objNull() {
-    Obj wrapped = Wrapper.getWrappedObject(null, null, null);
+    Obj wrapped = Wrapper.getWrappedObject(null, null, null, WrapPolicy.PREFER_REFERENCE);
     assertNotNull(wrapped);
     assertTrue(wrapped.isNull);
     assertThat(wrapped.getValue(), is(emptyString()));
-    assertThat(wrapped.getArrayValues(), is(emptyArray()));
     assertThat(wrapped.getRef(), is(emptyString()));
   }
 
@@ -308,11 +261,11 @@ public class WrapperTest extends WrappingTestBase {
   public void getWrappedObject_arrayOfPrimitives_wrappedArrayValuesAndRef() {
     Integer[] intArray = new Integer[] {1, 2, 3};
     Obj wrapped =
-        Wrapper.getWrappedObject(intArray, intArray.getClass().getName(), ObjectRef.randomRef());
+        Wrapper.getWrappedObject(
+            intArray, intArray.getClass().getName(), ObjectRef.randomRef(), WrapPolicy.DETECT);
     assertNotNull(wrapped);
     assertFalse(wrapped.isNull);
-    assertThat(wrapped.getValue(), is(emptyString()));
-    assertThat(wrapped.getArrayValues(), is(not(emptyArray())));
+    assertThat(wrapped.getValue(), is("[1,2,3]"));
     assertThat(wrapped.getRef(), is(not(emptyString())));
   }
 
@@ -322,20 +275,23 @@ public class WrapperTest extends WrappingTestBase {
     Thread[] threadArray = new Thread[] {new Thread(), new Thread()};
     Obj wrapped =
         Wrapper.getWrappedObject(
-            threadArray, threadArray.getClass().getName(), ObjectRef.randomRef());
+            threadArray,
+            threadArray.getClass().getName(),
+            ObjectRef.randomRef(),
+            WrapPolicy.PREFER_REFERENCE);
     assertNotNull(wrapped);
     assertFalse(wrapped.isNull);
     assertThat(wrapped.getValue(), is(emptyString()));
-    assertThat(wrapped.getArrayValues(), is(emptyArray()));
     assertThat(wrapped.getRef(), is(not(emptyString())));
   }
 
   @Test
   public void getWrappedObject_EmptyArray_wrappedArrayWithZeroLength() {
     Integer[] emptyArray = new Integer[0];
-    Obj wrapped = Wrapper.getWrappedObject(emptyArray, emptyArray.getClass().getName(), null);
+    Obj wrapped =
+        Wrapper.getWrappedObject(
+            emptyArray, emptyArray.getClass().getName(), null, WrapPolicy.PREFER_REFERENCE);
     assertNotNull(wrapped);
-    assertEquals(0, wrapped.getArrayValues().length);
   }
 
   @Test
@@ -344,7 +300,7 @@ public class WrapperTest extends WrappingTestBase {
     for (Object obj : someNonWrappableObjects) {
       try {
         logger.debug("Calling Wrapper.getWrappedObject with {} and class {}", obj, obj.getClass());
-        Wrapper.getWrappedObject(obj, obj.getClass().getName(), null);
+        Wrapper.getWrappedObject(obj, obj.getClass().getName(), null, WrapPolicy.PREFER_REFERENCE);
         fail("Should have thrown an exception");
       } catch (NonWrappableObjectException ex) {
         // all good
@@ -362,59 +318,24 @@ public class WrapperTest extends WrappingTestBase {
             .toList();
 
     for (Object obj : valuedWrappableObjects) {
-      Obj wrappedObj = Wrapper.getWrappedObject(obj, obj.getClass().getName(), null);
+      Obj wrappedObj =
+          Wrapper.getWrappedObject(
+              obj, obj.getClass().getName(), null, WrapPolicy.PREFER_REFERENCE);
       assertNotNull(wrappedObj);
       assertNotNull(wrappedObj.getClazz());
       assertNotNull(wrappedObj.getClazz().getName());
 
       assertThat(wrappedObj.getRef(), is(emptyString()));
       assertFalse(wrappedObj.getIsNull());
-      if (isArrayClassName(wrappedObj.getClazz().getName())) {
-        assertNotNull(wrappedObj.getArrayValues());
-      } else {
-        assertThat(wrappedObj.getValue(), is(not(emptyString())));
-        assertThat(wrappedObj.getArrayValues(), is(emptyArray()));
-      }
+      assertThat(wrappedObj.getValue(), is(not(emptyString())));
     }
-  }
-
-  private static boolean isArrayClassName(String className) {
-    return className.startsWith("[");
-  }
-
-  @Test
-  public void getWrappedObject_voidObject_wrappedOk() {
-
-    net.ittera.pal.messages.colfer.Obj wrappedObj =
-        Wrapper.getWrappedObject(void.class, void.class.getName(), null);
-
-    assertNotNull(wrappedObj);
-    assertNotNull(wrappedObj.getClazz());
-    assertNotNull(wrappedObj.getClazz().getName());
-
-    assertThat(wrappedObj.getRef(), is(emptyString()));
-    assertFalse(wrappedObj.getIsNull());
-    assertThat(wrappedObj.getValue(), is(emptyString()));
-  }
-
-  @Test
-  public void getWrappedObject_voidClassObject_wrappedOk() {
-
-    Obj wrappedObj = Wrapper.getWrappedObject(Void.class, Void.class.getName(), null);
-
-    assertNotNull(wrappedObj);
-    assertNotNull(wrappedObj.getClazz());
-    assertNotNull(wrappedObj.getClazz().getName());
-
-    assertThat(wrappedObj.getRef(), is(emptyString()));
-    assertFalse(wrappedObj.getIsNull());
-    assertThat(wrappedObj.getValue(), is(emptyString()));
   }
 
   @Test
   public void getWrappedObject_nullObjAndGivenClassname_wrappedOk() {
 
-    Obj wrappedObj = Wrapper.getWrappedObject(null, "java.lang.String", null);
+    Obj wrappedObj =
+        Wrapper.getWrappedObject(null, "java.lang.String", null, WrapPolicy.PREFER_REFERENCE);
 
     assertNotNull(wrappedObj);
     assertNotNull(wrappedObj.getClazz());
@@ -429,7 +350,9 @@ public class WrapperTest extends WrappingTestBase {
   public void getWrappedObject_ObjectWithObjectRef_wrappedObjectWithRef() {
     ObjectRef objectRef = ObjectRef.randomRef();
     Object object = new ArrayList<String>();
-    Obj wrapped = Wrapper.getWrappedObject(object, object.getClass().getName(), objectRef);
+    Obj wrapped =
+        Wrapper.getWrappedObject(
+            object, object.getClass().getName(), objectRef, WrapPolicy.PREFER_REFERENCE);
     assertNotNull(wrapped);
     assertEquals(String.valueOf(objectRef.getRef()), wrapped.getRef());
   }
@@ -450,6 +373,40 @@ public class WrapperTest extends WrappingTestBase {
     assertEquals(sourceFile, wrappedContext.getSourceLocationFile());
     assertEquals(lineNumber, wrappedContext.getSourceLocationLine());
     assertEquals(withinType.getName(), wrappedContext.getSourceLocationType());
+  }
+
+  // </editor-fold>
+
+  // <editor-fold defaultstate="collapsed" desc="isSimpleType tests">
+  @Test
+  public void isSimpleType_simpleTypes_true() {
+    assertTrue(Wrapper.isSimpleType(null));
+    assertTrue(Wrapper.isSimpleType(false));
+    assertTrue(Wrapper.isSimpleType(23));
+    assertTrue(Wrapper.isSimpleType("another one"));
+  }
+
+  @Test
+  public void isSimpleType_nonSimpleTypes_false() {
+    assertFalse(Wrapper.isSimpleType(new Object()));
+    assertFalse(Wrapper.isSimpleType(new int[] {}));
+  }
+
+  // </editor-fold>
+
+  // <editor-fold defaultstate="collapsed" desc="isSimpleTypeArray tests">
+  @Test
+  public void isSimpleTypeArray_simpleTypeArrays_true() {
+    assertTrue(Wrapper.isSimpleTypeArray(new boolean[] {true, true}));
+    assertTrue(Wrapper.isSimpleTypeArray(new int[] {23, 34, 56}));
+    assertTrue(Wrapper.isSimpleTypeArray(new String[] {"another one", "bytes"}));
+    assertTrue(Wrapper.isSimpleTypeArray(new char[] {'s', 'p', 'l', 'i', 't'}));
+  }
+
+  @Test
+  public void isSimpleTypeArray_nonSimpleTypeArrays_false() {
+    assertFalse(Wrapper.isSimpleTypeArray(null));
+    assertFalse(Wrapper.isSimpleTypeArray(new Object[] {null}));
   }
   // </editor-fold>
 }

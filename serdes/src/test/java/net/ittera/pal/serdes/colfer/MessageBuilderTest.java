@@ -751,7 +751,7 @@ public class MessageBuilderTest {
     assertEquals(fieldName, execMessage.getStaticFieldPut().getField().getName());
     assertEquals(
         valueClassName, execMessage.getStaticFieldPut().getValueObject().getClazz().getName());
-    assertEquals(value, execMessage.getStaticFieldPut().getValueObject().getValue());
+    assertEquals("\"a str value\"", execMessage.getStaticFieldPut().getValueObject().getValue());
     assertNull(execMessage.getStaticFieldPut().getContext());
   }
 
@@ -1330,7 +1330,7 @@ public class MessageBuilderTest {
     map.put("fieldOpType", FieldOpType.PUT);
     map.put("target", new DummyClassForTest());
     map.put("targetObjectRef", ObjectRef.from("734524"));
-    map.put("arg", "87");
+    map.put("arg", 87);
     map.put("argObjRef", ObjectRef.from("2872346"));
     listOfFieldOpArgs.add(map);
 
@@ -1403,8 +1403,9 @@ public class MessageBuilderTest {
           break;
         case EXEC_PUT_FIELD:
           assertEquals(
-              interceptedExecMessage.getInstanceFieldPut().getValueObject().getValue(),
-              callbackExecMessage.getClassMethodCall().getParameters()[0].getValue().getValue());
+              Unwrapper.unwrapObject(interceptedExecMessage.getInstanceFieldPut().getValueObject()),
+              Unwrapper.unwrapObject(
+                  callbackExecMessage.getClassMethodCall().getParameters()[0].getValue()));
           break;
         case EXEC_PUT_STATIC:
           assertEquals(

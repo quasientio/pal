@@ -50,7 +50,7 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
     if (jsonObject.has("value")) {
       JsonElement valueElement = jsonObject.get("value");
       // Pass true to return null for empty inputs
-      Argument valueArgument = deserializeArgument(valueElement);
+      Argument valueArgument = deserializeArgument(valueElement, context);
       params.setValue(valueArgument);
     } else {
       params.setValue(null); // Set to null if `value` is missing
@@ -63,7 +63,7 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
         List<Argument> args = new ArrayList<>();
         for (JsonElement element : argsElement.getAsJsonArray()) {
           // Pass false to keep existing behavior for `args`
-          args.add(deserializeArgument(element));
+          args.add(deserializeArgument(element, context));
         }
         params.setArgs(args);
       } else {
@@ -76,7 +76,7 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
     return params;
   }
 
-  private Argument deserializeArgument(JsonElement element) {
+  private Argument deserializeArgument(JsonElement element, JsonDeserializationContext context) {
     // Handle null or empty object cases
     if (element.isJsonNull()
         || (element.isJsonObject() && element.getAsJsonObject().entrySet().isEmpty())) {
@@ -121,59 +121,61 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
         argument.setRef(obj.get("ref").getAsInt());
       }
 
+      String givenType = null;
+      if (obj.has("type")) {
+        givenType = obj.get("type").getAsString();
+        argument.setType(givenType);
+      }
+
       if (obj.has("value") && obj.has("type")) {
         // Typed scenario:
-        String givenType = obj.get("type").getAsString();
+        assert givenType != null;
         boolean isArray = isArrayType(givenType);
-
         JsonElement valueElem = obj.get("value");
+
         if (valueElem.isJsonNull()) {
           argument.setValue(null);
-          argument.setType(givenType);
           return argument;
         }
         if (isArray) {
           if (!valueElem.isJsonArray()) {
             throw new JsonParseException("Expected 'value' to be an array for type: " + givenType);
           }
-          JsonArray arr = valueElem.getAsJsonArray();
-          Object typedArray = parseJsonArrayToSpecificArrayType(arr, givenType);
+          Object typedArray =
+              parseJsonArrayToSpecificArrayType(valueElem.getAsJsonArray(), givenType);
           argument.setValue(typedArray);
-          argument.setType(givenType);
           return argument;
         } else {
           if (valueElem.isJsonPrimitive()) {
-            JsonPrimitive p = valueElem.getAsJsonPrimitive();
-            Object val = convertJsonPrimitiveToSingleType(p, givenType);
-            argument.setValue(val);
-            argument.setType(givenType);
-            return argument;
-          } else if (valueElem.isJsonObject()) {
-            Argument innerArg = deserializeArgument(valueElem);
-            argument.setValue(innerArg.getValue());
-            argument.setType(innerArg.getType() != null ? innerArg.getType() : givenType);
-            return argument;
-          } else if (valueElem.isJsonArray()) {
-            // single type but got array
-            throw new JsonParseException(
-                "Expected single value, not array, for type: " + givenType);
+            try {
+              Object val =
+                  convertJsonPrimitiveToSingleType(valueElem.getAsJsonPrimitive(), givenType);
+              argument.setValue(val);
+              return argument;
+            } catch (JsonParseException knownTypeEx) {
+              // if not recognized, fallback to reflection-based approach
+            }
           }
-
-          // If we somehow reach here, throw an error
-          throw new JsonParseException("Unsupported format for single-type value: " + givenType);
+          // fallback for arbitrary complex objects
+          try {
+            Class<?> clazz = Class.forName(givenType);
+            Object deserialized = context.deserialize(valueElem, clazz);
+            argument.setValue(deserialized);
+            return argument;
+          } catch (ClassNotFoundException ex) {
+            throw new JsonParseException("Cannot load class: " + givenType, ex);
+          }
         }
-
       } else if (obj.has("value") && !obj.has("type")) {
         // Object with "value": if value is array, infer type
         JsonElement valueElem = obj.get("value");
         if (valueElem.isJsonNull()) {
-          // null array
           argument.setValue(null);
           return argument;
         }
         if (!valueElem.isJsonArray()) {
           // If value is not array, fallback to existing logic for single object
-          Argument innerArg = deserializeArgument(valueElem);
+          Argument innerArg = deserializeArgument(valueElem, context);
           argument.setValue(innerArg.getValue());
           argument.setType(innerArg.getType());
           argument.setRef(innerArg.getRef());
@@ -187,25 +189,10 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
         String inferredType = inferArrayTypeNameFromObjectArray(arrayValues);
         argument.setType(inferredType);
         return argument;
-      } else {
-        // It's an object that may represent a complex argument (not array)
-        // Existing logic from before for objects.
-        if (obj.has("ref")) {
-          argument.setRef(obj.get("ref").getAsInt());
-        }
-        if (obj.has("type")) {
-          argument.setType(obj.get("type").getAsString());
-        }
-        if (obj.has("value")) {
-          Argument innerArg = deserializeArgument(obj.get("value"));
-          argument.setValue(innerArg.getValue());
-          argument.setType(innerArg.getType() != null ? innerArg.getType() : argument.getType());
-        }
-        return argument;
       }
-    } else {
-      throw new JsonParseException("Unsupported Argument format: " + element);
     }
+
+    return argument;
   }
 
   private boolean isArrayType(String givenType) {

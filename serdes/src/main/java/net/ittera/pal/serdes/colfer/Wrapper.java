@@ -21,10 +21,9 @@ package net.ittera.pal.serdes.colfer;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
-import java.util.Arrays;
-import java.util.List;
+import java.util.Collection;
+import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
@@ -43,54 +42,28 @@ public final class Wrapper {
 
   private static final Logger logger = LoggerFactory.getLogger(Wrapper.class);
 
-  static final List<Class<?>> reconstructableCharSeqClasses;
-  static final List<String> reconstructableCharSeqClassNames;
-
-  static {
-    // we don't include String's here, as we check separately
-    reconstructableCharSeqClasses = Arrays.asList(StringBuilder.class, StringBuffer.class);
-    reconstructableCharSeqClassNames =
-        reconstructableCharSeqClasses.stream().map(Class::getName).collect(Collectors.toList());
-  }
+  private static final int MAX_WRAPPABLE_COLLECTION_SIZE = 1000;
 
   private Wrapper() {
     // avoid instantiation
   }
 
-  public static boolean isWrappableCharSeqClass(Class<?> clazz) {
-    return reconstructableCharSeqClasses.contains(clazz);
-  }
-
-  public static boolean isWrappableCharSeqClass(String classname) {
-    return reconstructableCharSeqClassNames.contains(classname);
-  }
-
-  public static List<Class<?>> getReconstructableCharSeqClasses() {
-    return reconstructableCharSeqClasses;
-  }
-
   /**
-   * Helper method for getWrappedObject() that does the actual wrapping work. It is recursive and
-   * will be called for each element of an array/collection.
-   *
-   * <pre>
-   * Wrappable objects:
-   *  - null
-   *  - all primitive types
-   *  - all primitive wrapper types
-   *  - reconstructable char sequence types: String, StringBuilder, StringBuffer
-   *  - arrays of all of the above
-   * </pre>
+   * Helper method for getWrappedObject() that does the actual wrapping work.
    *
    * @param wrappedObject the object to wrap into
    * @param object the object to wrap
    * @param givenClassName the class of the object to wrap
    * @param objectRef the object reference, if any
+   * @param wrapPolicy the wrapping policy to use
    * @return a Colfer Obj (object) instance
-   * @throws NullPointerException if t is null
    */
   private static Obj getWrappedObjectAux(
-      Obj wrappedObject, java.lang.Object object, String givenClassName, ObjectRef objectRef) {
+      Obj wrappedObject,
+      Object object,
+      String givenClassName,
+      ObjectRef objectRef,
+      WrapPolicy wrapPolicy) {
 
     if (logger.isTraceEnabled()) {
       logger.trace(
@@ -99,81 +72,76 @@ public final class Wrapper {
           givenClassName,
           objectRef);
     }
-
-    // set required fields
-    boolean isNull = object == null && objectRef == null;
-
+    // set isNull
+    boolean isNull = (object == null && objectRef == null);
     wrappedObject.setIsNull(isNull);
 
-    /* We use the givenClassName if
-    - object is null, or
-    - the object is a wrapper instance and the givenClassName is the corresponding primitive
-    Otherwise use the object's class
-    */
-    final String className;
-    if (object == null) {
-      className = givenClassName;
-    } else {
-      if (isCorrespondingPrimitive(object, givenClassName)) {
-        className = givenClassName;
-      } else {
-        className = object.getClass().getName();
-      }
-    }
-
-    // wrap object's class
-    wrappedObject.setClazz(getWrappedClass(className));
-
-    // wrap object reference
+    // set ref
     if (objectRef != null) {
       wrappedObject.setRef(String.valueOf(objectRef.getRef()));
     }
 
-    // wrap object
-    if (object != null) {
-      // wrap the object if:
-      // 1. is String or char sequence
-      // 2. is primitive or wrapper
-      // 3. is array of primitives or wrappers
-      // 4. is array of String or char sequences
+    // determine and set class name
+    final String className = pickClassName(object, givenClassName);
+    wrappedObject.setClazz(getWrappedClass(className));
 
-      if ((object instanceof String) || isWrappableCharSeqClass(className)) {
-        // 1. is String or char sequence
-        wrappedObject.setValue(object.toString());
-      } else if (Classes.isPrimitiveOrWrapper(object.getClass())) {
-        // 2. is primitive or wrapper
-        wrappedObject.setValue(String.valueOf(object));
-      } else if (object.getClass().isArray() // array
-          &&
-          // 3. is array of primitives or wrappers
-          (Classes.isPrimitiveOrWrapper(object.getClass().getComponentType())
-              // 4. is array of Strings or char sequences
-              || String.class.equals(object.getClass().getComponentType())
-              || isWrappableCharSeqClass(object.getClass().getComponentType().getName()))) {
-        // TODO only handles 1-dimensional arrays ?? Check out Arrays.deepToString
-        final int length = Array.getLength(object);
-        final Obj[] arrayElements = new Obj[length];
-        // NOTE: we iterate using reflection (Array) because the array type is unknown
-        for (int i = 0; i < length; i++) {
-          final java.lang.Object arrayElem = Array.get(object, i);
-          // wrap all array elements -- recursive
-          arrayElements[i] = getWrappedObject(arrayElem, arrayElem.getClass().getName(), null);
-        }
-        wrappedObject.setArrayValues(arrayElements);
-      } else {
-        // not wrappable
-        boolean isVoid = object == void.class || object == Void.class;
-        if (!isVoid && objectRef == null) {
-          throw new NonWrappableObjectException(
-              "ObjectRef is null and object is not wrappable", object);
+    // determine if we will serialize the value (as JSON)
+    boolean wrapValue =
+        switch (wrapPolicy) {
+          case PREFER_REFERENCE -> // wrap value only if we don't have ref
+              objectRef == null && isWrappable(object);
+          case FORCE_BY_VALUE -> { // always wrap value if possible
+            if (!isWrappable(object)) {
+              throw new NonWrappableObjectException("Object cannot be serialized");
+            }
+            yield true;
+          }
+          case DETECT -> objectRef == null || isWrappable(object);
+        };
+
+    // regardless of the wrap policy, simple types and arrays of simple types are ALWAYS serialized
+    boolean isSimpleType = isSimpleType(object);
+    boolean isSimpleTypeArray = isSimpleTypeArray(object);
+
+    if (logger.isDebugEnabled()) {
+      logger.debug("isSimpleType = {}", isSimpleType);
+      logger.debug("isSimpleTypeArray = {}", isSimpleTypeArray);
+    }
+    if (isSimpleType || isSimpleTypeArray) {
+      wrapValue = true;
+    }
+
+    if (object != null && wrapValue) {
+      // try to wrap
+      try {
+        String json = JsonUtil.toJson(object);
+        wrappedObject.setValue(json);
+      } catch (Exception e) {
+        if (objectRef == null) {
+          throw new RuntimeException("ObjectRef is null but object could not be serialized", e);
         }
       }
     }
-
     if (logger.isTraceEnabled()) {
       logger.trace("out with wrappedValue: {}", ColferUtils.format(wrappedObject));
     }
     return wrappedObject;
+  }
+
+  /* We use the givenClassName if
+   - object is null, or
+   - the object is a wrapper instance and the givenClassName is the corresponding primitive
+   Otherwise use the object's class
+  */
+  private static String pickClassName(Object object, String givenClassName) {
+    if (object == null) {
+      return givenClassName;
+    }
+    if (isCorrespondingPrimitive(object, givenClassName)) {
+      return givenClassName;
+    } else {
+      return object.getClass().getName();
+    }
   }
 
   // returns true if object is a primitive wrapper instance and className
@@ -193,27 +161,88 @@ public final class Wrapper {
   }
 
   /**
-   * See getWrappedObjectAux() for a list of valid wrappable types.
+   *
+   *
+   * <pre>
+   * Wrappable objects are:
+   *
+   * Simple types:
+   *  - null
+   *  - primitive types
+   *  - primitive wrapper types
+   *  - strings
+   *
+   * Arrays & collections, if length < MAX_COLLECTION_SIZE:
+   *  - Lists (if all their elements are wrappable)
+   *  - Maps (if all their keys and values are wrappable)
+   *  - Arrays (if all their elements are wrappable)
+   * </pre>
    *
    * @param object the object to check
    * @return true if the object is wrappable, false otherwise
    */
-  public static boolean isWrappable(java.lang.Object object) {
-    return object == null
-        || object == Void.class
-        || object == void.class
-        || Classes.isPrimitiveOrWrapper(object.getClass())
-        || object instanceof String
-        || isWrappableCharSeqClass(object.getClass())
-        || (object.getClass().isArray()
-            && Classes.isPrimitiveOrWrapper(object.getClass().getComponentType()))
-        ||
-        // String[] will pass the last check so this check is redundant, but they're so common we
-        // can optimize a bit by checking first for String[] and avoid going through its interfaces
-        // as the next check does *
-        (object.getClass().isArray() && String.class.equals(object.getClass().getComponentType()))
-        || (object.getClass().isArray()
-            && isWrappableCharSeqClass(object.getClass().getComponentType()));
+  public static boolean isWrappable(Object object) {
+    if (isSimpleType(object)) {
+      return true;
+    }
+
+    Class<?> clazz = object.getClass();
+    // handle arrays
+    if (clazz.isArray()) {
+      return Array.getLength(object) <= MAX_WRAPPABLE_COLLECTION_SIZE;
+    }
+
+    // handle collections
+    if (object instanceof Collection<?> collection) {
+      return collection.size() <= MAX_WRAPPABLE_COLLECTION_SIZE;
+    }
+
+    // handle Maps
+    if (object instanceof Map<?, ?> map) {
+      return map.size() <= MAX_WRAPPABLE_COLLECTION_SIZE;
+    }
+
+    // if none of the above
+    return false;
+  }
+
+  static boolean isSimpleTypeArray(Object object) {
+    return object != null
+        && object.getClass().isArray()
+        && classIsSimpleType(object.getClass().getComponentType())
+        && Array.getLength(object) <= MAX_WRAPPABLE_COLLECTION_SIZE;
+  }
+
+  static boolean classIsSimpleType(Class<?> clazz) {
+    // is it a primitive or its wrapper?
+    if (Classes.isPrimitiveOrWrapper(clazz)) {
+      return true;
+    }
+
+    if (clazz.equals(String.class)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  static boolean isSimpleType(Object obj) {
+    if (obj == null) {
+      return true;
+    }
+
+    Class<?> clazz = obj.getClass();
+    // is it a primitive or its wrapper?
+    if (Classes.isPrimitiveOrWrapper(clazz)) {
+      return true;
+    }
+
+    if (obj instanceof String) {
+      return true;
+    }
+
+    // everything else is not "simple"
+    return false;
   }
 
   /**
@@ -223,13 +252,15 @@ public final class Wrapper {
    * @param object the object to wrap
    * @param classname the class name of the object to wrap
    * @param objectRef the object reference, if any
+   * @param wrapPolicy the wrapping policy to use
    * @return a Colfer Obj (object) instance
    * @throws NonWrappableObjectException if the object is not wrappable
    */
   static Obj getWrappedObject(
       @Nullable java.lang.Object object,
       @Nullable String classname,
-      @Nullable ObjectRef objectRef) {
+      @Nullable ObjectRef objectRef,
+      @Nullable WrapPolicy wrapPolicy) {
     if (logger.isTraceEnabled()) {
       logger.trace(
           "in getWrappedObject with object: {}, class: {}, objectRef: {}",
@@ -238,8 +269,10 @@ public final class Wrapper {
           objectRef);
     }
 
+    WrapPolicy wrappingPolicy = wrapPolicy != null ? wrapPolicy : WrapPolicy.DETECT;
+
     if (object == null && classname == null && objectRef == null) {
-      return getWrappedObjectAux(new Obj(), null, null, null);
+      return getWrappedObjectAux(new Obj(), null, null, null, wrappingPolicy);
     }
 
     if (object instanceof Obj) {
@@ -265,7 +298,7 @@ public final class Wrapper {
     if (classname != null && !Classes.isValidClassName(classname)) {
       throw new IllegalArgumentException("Invalid class name: " + classname);
     }
-    return getWrappedObjectAux(new Obj(), object, classname, objectRef);
+    return getWrappedObjectAux(new Obj(), object, classname, objectRef, wrappingPolicy);
   }
 
   static net.ittera.pal.messages.colfer.Class getWrappedClass(String className) {
@@ -325,14 +358,20 @@ public final class Wrapper {
       wrappedCtxt.setSenderClass(getWrappedClass(context.getWithinType()));
       if (sender != null) {
         wrappedCtxt.setSender(
-            getWrappedObject(sender, context.getWithinType().getName(), senderObjRef));
+            getWrappedObject(
+                sender,
+                context.getWithinType().getName(),
+                senderObjRef,
+                WrapPolicy.PREFER_REFERENCE));
       }
       wrappedCtxt.setSourceLocationFile(context.getSourceFilename());
       wrappedCtxt.setSourceLocationLine(context.getSourceLine());
       wrappedCtxt.setSourceLocationType(context.getWithinType().getName());
     } else {
       wrappedCtxt.setSenderClass(getWrappedClass(sender.getClass()));
-      wrappedCtxt.setSender(getWrappedObject(sender, sender.getClass().getName(), senderObjRef));
+      wrappedCtxt.setSender(
+          getWrappedObject(
+              sender, sender.getClass().getName(), senderObjRef, WrapPolicy.PREFER_REFERENCE));
     }
 
     return wrappedCtxt;

@@ -50,7 +50,7 @@ public abstract class SetFieldDispatcher extends FieldOpDispatcher {
 
   @Override
   protected Object invokeIncoming(
-      AccessibleObject accessibleObject, Object target, List<Object> args, Object value)
+      AccessibleObject accessibleObject, Object target, List<MessageArgument> args, Object value)
       throws Exception {
 
     // discard args

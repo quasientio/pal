@@ -155,7 +155,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     AccessibleObject accessibleObject = null;
     Object target = null;
     Object value = null;
-    List<Object> args = null;
+    List<MessageArgument> args = null;
 
     // Loading phase
     try {
@@ -166,7 +166,9 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       args = getArgsFromMessage(incomingCall, parameterTypes);
 
       // 3. Load constructor/method/field to call
-      accessibleObject = loadAccessibleObject(incomingCall, parameterTypes, args);
+      accessibleObject =
+          loadAccessibleObject(
+              incomingCall, parameterTypes, args.stream().map(MessageArgument::object).toList());
 
       // 4. Load target for instance methods/field ops
       target = getTargetFromMessage(incomingCall);
@@ -295,9 +297,10 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     return paramClasses;
   }
 
-  private List<Object> getArgsFromMessage(ExecMessage execMessage, List<Class<?>> parameterTypes) {
+  private List<MessageArgument> getArgsFromMessage(
+      ExecMessage execMessage, List<Class<?>> parameterTypes) {
 
-    final List<Object> args = new ArrayList<>();
+    final List<MessageArgument> args = new ArrayList<>();
     final List<Parameter> parameterList = getParameterList(execMessage);
 
     int i = 0;
@@ -308,7 +311,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         }
         Obj obj = parameter.getValue();
         if (obj.getIsNull()) {
-          args.add(null);
+          args.add(new MessageArgument(null, true));
         } else {
           Object lookedUpObj = null;
           final String objRef = obj.getRef();
@@ -318,10 +321,11 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
             lookedUpObj = objectLookupStore.lookupObject(ObjectRef.from(objRef));
           }
           if (lookedUpObj != null) {
-            args.add(lookedUpObj);
+            args.add(new MessageArgument(lookedUpObj, true));
           } else {
             // If not found by reference, unwrap value
-            args.add(Unwrapper.unwrapObject(obj, parameterTypes.get(i)));
+            args.add(
+                new MessageArgument(Unwrapper.unwrapObject(obj, parameterTypes.get(i)), false));
           }
         }
         i++;
@@ -409,7 +413,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
    * @throws Exception if an error occurs during invocation
    */
   protected abstract Object invokeIncoming(
-      AccessibleObject accessibleObject, Object target, List<Object> args, Object value)
+      AccessibleObject accessibleObject, Object target, List<MessageArgument> args, Object value)
       throws Exception;
 
   protected abstract boolean returnsVoid(AccessibleObject accessibleObject);

@@ -7,7 +7,6 @@ package net.ittera.pal.messages.colfer;
 
 import static java.lang.String.format;
 
-import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import java.io.IOException;
@@ -33,14 +32,9 @@ public class Obj implements Serializable, net.ittera.pal.messages.Marshallable {
   /** The upper limit for serial byte sizes. */
   public static int colferSizeMax = 16 * 1024 * 1024;
 
-  /** The upper limit for the number of elements in a list. */
-  public static int colferListMax = 64 * 1024;
-
   public String value;
 
   public Class clazz;
-
-  public Obj[] arrayValues;
 
   public String ref;
 
@@ -51,12 +45,9 @@ public class Obj implements Serializable, net.ittera.pal.messages.Marshallable {
     init();
   }
 
-  private static final Obj[] _zeroArrayValues = new Obj[0];
-
   /** Colfer zero values. */
   private void init() {
     value = "";
-    arrayValues = _zeroArrayValues;
     ref = "";
   }
 
@@ -103,8 +94,7 @@ public class Obj implements Serializable, net.ittera.pal.messages.Marshallable {
      *
      * @return the result or {@code null} when EOF.
      * @throws IOException from the input stream.
-     * @throws SecurityException on an upper limit breach defined by either {@link #colferSizeMax}
-     *     or {@link #colferListMax}.
+     * @throws SecurityException on an upper limit breach defined by {@link #colferSizeMax}.
      * @throws InputMismatchException when the data does not match this object's schema.
      */
     public Obj next() throws IOException {
@@ -152,27 +142,21 @@ public class Obj implements Serializable, net.ittera.pal.messages.Marshallable {
    * @return the number of bytes.
    */
   public int marshalFit() {
-    long n = 1L + 6 + (long) this.value.length() * 3 + 6 + 6 + (long) this.ref.length() * 3 + 1;
+    long n = 1L + 6 + (long) this.value.length() * 3 + 6 + (long) this.ref.length() * 3 + 1;
     if (this.clazz != null) n += 1 + (long) this.clazz.marshalFit();
-    for (Obj o : this.arrayValues) {
-      if (o == null) n++;
-      else n += o.marshalFit();
-    }
     if (n < 0 || n > (long) Obj.colferSizeMax) return Obj.colferSizeMax;
     return (int) n;
   }
 
   /**
-   * Serializes the object. All {@code null} elements in {@link #arrayValues} will be replaced with
-   * a {@code new} value.
+   * Serializes the object.
    *
    * @param out the data destination.
    * @param buf the initial buffer or {@code null}.
    * @return the final buffer. When the serial fits into {@code buf} then the return is {@code buf}.
    *     Otherwise the return is a new buffer, large enough to hold the whole serial.
    * @throws IOException from {@code out}.
-   * @throws IllegalStateException on an upper limit breach defined by either {@link #colferSizeMax}
-   *     or {@link #colferListMax}.
+   * @throws IllegalStateException on an upper limit breach defined by {@link #colferSizeMax}.
    */
   public byte[] marshal(OutputStream out, byte[] buf) throws IOException {
     int n = 0;
@@ -190,15 +174,13 @@ public class Obj implements Serializable, net.ittera.pal.messages.Marshallable {
   }
 
   /**
-   * Serializes the object. All {@code null} elements in {@link #arrayValues} will be replaced with
-   * a {@code new} value.
+   * Serializes the object.
    *
    * @param buf the data destination.
    * @param offset the initial index for {@code buf}, inclusive.
    * @return the final index for {@code buf}, exclusive.
    * @throws BufferOverflowException when {@code buf} is too small.
-   * @throws IllegalStateException on an upper limit breach defined by either {@link #colferSizeMax}
-   *     or {@link #colferListMax}.
+   * @throws IllegalStateException on an upper limit breach defined by {@link #colferSizeMax}.
    */
   public int marshal(byte[] buf, int offset) {
     int i = offset;
@@ -257,34 +239,8 @@ public class Obj implements Serializable, net.ittera.pal.messages.Marshallable {
         i = this.clazz.marshal(buf, i);
       }
 
-      if (this.arrayValues.length != 0) {
-        buf[i++] = (byte) 2;
-        Obj[] a = this.arrayValues;
-
-        int x = a.length;
-        if (x > Obj.colferListMax)
-          throw new IllegalStateException(
-              format(
-                  "colfer: net.ittera.pal.messages/colfer.Obj.arrayValues length %d exceeds %d elements",
-                  x, Obj.colferListMax));
-        while (x > 0x7f) {
-          buf[i++] = (byte) (x | 0x80);
-          x >>>= 7;
-        }
-        buf[i++] = (byte) x;
-
-        for (int ai = 0; ai < a.length; ai++) {
-          Obj o = a[ai];
-          if (o == null) {
-            o = new Obj();
-            a[ai] = o;
-          }
-          i = o.marshal(buf, i);
-        }
-      }
-
       if (!this.ref.isEmpty()) {
-        buf[i++] = (byte) 3;
+        buf[i++] = (byte) 2;
         int start = ++i;
 
         String s = this.ref;
@@ -332,7 +288,7 @@ public class Obj implements Serializable, net.ittera.pal.messages.Marshallable {
       }
 
       if (this.isNull) {
-        buf[i++] = (byte) 4;
+        buf[i++] = (byte) 3;
       }
 
       buf[i++] = (byte) 0x7f;
@@ -354,8 +310,7 @@ public class Obj implements Serializable, net.ittera.pal.messages.Marshallable {
    * @param offset the initial index for {@code buf}, inclusive.
    * @return the final index for {@code buf}, exclusive.
    * @throws BufferUnderflowException when {@code buf} is incomplete. (EOF)
-   * @throws SecurityException on an upper limit breach defined by either {@link #colferSizeMax} or
-   *     {@link #colferListMax}.
+   * @throws SecurityException on an upper limit breach defined by {@link #colferSizeMax}.
    * @throws InputMismatchException when the data does not match this object's schema.
    */
   public int unmarshal(byte[] buf, int offset) {
@@ -370,8 +325,7 @@ public class Obj implements Serializable, net.ittera.pal.messages.Marshallable {
    * @param end the index limit for {@code buf}, exclusive.
    * @return the final index for {@code buf}, exclusive.
    * @throws BufferUnderflowException when {@code buf} is incomplete. (EOF)
-   * @throws SecurityException on an upper limit breach defined by either {@link #colferSizeMax} or
-   *     {@link #colferListMax}.
+   * @throws SecurityException on an upper limit breach defined by {@link #colferSizeMax}.
    * @throws InputMismatchException when the data does not match this object's schema.
    */
   public int unmarshal(byte[] buf, int offset, int end) {
@@ -407,29 +361,6 @@ public class Obj implements Serializable, net.ittera.pal.messages.Marshallable {
       }
 
       if (header == (byte) 2) {
-        int length = 0;
-        for (int shift = 0; true; shift += 7) {
-          byte b = buf[i++];
-          length |= (b & 0x7f) << shift;
-          if (shift == 28 || b >= 0) break;
-        }
-        if (length < 0 || length > Obj.colferListMax)
-          throw new SecurityException(
-              format(
-                  "colfer: net.ittera.pal.messages/colfer.Obj.arrayValues length %d exceeds %d elements",
-                  length, Obj.colferListMax));
-
-        Obj[] a = new Obj[length];
-        for (int ai = 0; ai < length; ai++) {
-          Obj o = new Obj();
-          i = o.unmarshal(buf, i, end);
-          a[ai] = o;
-        }
-        this.arrayValues = a;
-        header = buf[i++];
-      }
-
-      if (header == (byte) 3) {
         int size = 0;
         for (int shift = 0; true; shift += 7) {
           byte b = buf[i++];
@@ -448,7 +379,7 @@ public class Obj implements Serializable, net.ittera.pal.messages.Marshallable {
         header = buf[i++];
       }
 
-      if (header == (byte) 4) {
+      if (header == (byte) 3) {
         this.isNull = true;
         header = buf[i++];
       }
@@ -468,7 +399,7 @@ public class Obj implements Serializable, net.ittera.pal.messages.Marshallable {
   }
 
   // {@link Serializable} version number.
-  private static final long serialVersionUID = 5L;
+  private static final long serialVersionUID = 4L;
 
   // {@link Serializable} Colfer extension.
   private void writeObject(ObjectOutputStream out) throws IOException {
@@ -552,35 +483,6 @@ public class Obj implements Serializable, net.ittera.pal.messages.Marshallable {
   }
 
   /**
-   * Gets net.ittera.pal.messages/colfer.Obj.arrayValues.
-   *
-   * @return the value.
-   */
-  public Obj[] getArrayValues() {
-    return this.arrayValues;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.Obj.arrayValues.
-   *
-   * @param value the replacement.
-   */
-  public void setArrayValues(Obj[] value) {
-    this.arrayValues = value;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.Obj.arrayValues.
-   *
-   * @param value the replacement.
-   * @return {@code this}.
-   */
-  public Obj withArrayValues(Obj[] value) {
-    this.arrayValues = value;
-    return this;
-  }
-
-  /**
    * Gets net.ittera.pal.messages/colfer.Obj.ref.
    *
    * @return the value.
@@ -643,7 +545,6 @@ public class Obj implements Serializable, net.ittera.pal.messages.Marshallable {
     int h = 1;
     if (this.value != null) h = 31 * h + this.value.hashCode();
     if (this.clazz != null) h = 31 * h + this.clazz.hashCode();
-    for (Obj o : this.arrayValues) h = 31 * h + (o == null ? 0 : o.hashCode());
     if (this.ref != null) h = 31 * h + this.ref.hashCode();
     h = 31 * h + (this.isNull ? 1231 : 1237);
     return h;
@@ -660,7 +561,6 @@ public class Obj implements Serializable, net.ittera.pal.messages.Marshallable {
 
     return (this.value == null ? o.value == null : this.value.equals(o.value))
         && (this.clazz == null ? o.clazz == null : this.clazz.equals(o.clazz))
-        && java.util.Arrays.equals(this.arrayValues, o.arrayValues)
         && (this.ref == null ? o.ref == null : this.ref.equals(o.ref))
         && this.isNull == o.isNull;
   }
@@ -677,14 +577,6 @@ public class Obj implements Serializable, net.ittera.pal.messages.Marshallable {
         this.clazz = new Class().fromJson(jsonObj);
       }
 
-      if (json.has("arrayValues")) {
-        JsonArray jsonArray = json.getAsJsonArray("arrayValues");
-        this.arrayValues = new Obj[jsonArray.size()];
-        for (int i = 0; i < jsonArray.size(); i++) {
-          JsonObject jsonObj = jsonArray.get(i).getAsJsonObject();
-          this.arrayValues[i] = new Obj().fromJson(jsonObj);
-        }
-      }
       if (json.has("ref")) {
         this.ref = json.get("ref").getAsString();
       }

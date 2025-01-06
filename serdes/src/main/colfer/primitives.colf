@@ -31,11 +31,10 @@ type Class struct {
 }
 
 type Obj struct {
-	value       text
-	clazz       Class
-	arrayValues []Obj
-	ref         text
-	isNull      bool
+	value  text
+	clazz  Class
+	ref    text
+	isNull bool
 }
 
 type Field struct {

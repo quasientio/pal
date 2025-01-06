@@ -1,37 +1,22 @@
 package net.ittera.pal.core.rpc.meta.java;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.io.BufferedWriter;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.Set;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 public class ClassMetadataSerializerTest {
 
   private ClassMetadataSerializer classMetadataSerializer;
-  private Path outputFile;
 
   @Before
   public void setUp() throws Exception {
-    outputFile = Paths.get("classes.json");
     boolean scanNonPublic = false;
     classMetadataSerializer = new ClassMetadataSerializer(scanNonPublic);
-  }
-
-  @After
-  public void tearDown() throws IOException {
-    if (Files.exists(outputFile)) {
-      Files.delete(outputFile);
-    }
   }
 
   private int findOccurrences(String searchString, String content) {
@@ -45,26 +30,17 @@ public class ClassMetadataSerializerTest {
     return count;
   }
 
-  private int findOccurrences(String searchString) throws IOException {
-    String fileContent = Files.readString(outputFile);
-    return findOccurrences(searchString, fileContent);
-  }
-
   @Test
   public void testScanAndWriteToFile() throws IOException {
-    String scannedText = classMetadataSerializer.scannedClasspathToJson(false, null);
-    BufferedWriter writer = Files.newBufferedWriter(outputFile, UTF_8);
-    writer.write(scannedText);
-    writer.close();
-
+    String classesMetadata = classMetadataSerializer.scannedClasspathToJson(false, null);
     String searchString = "className";
     // expect 10000 classes at least
     int minExpectedClassCount = 10000;
-    assertTrue(findOccurrences(searchString) > minExpectedClassCount);
+    assertTrue(findOccurrences(searchString, classesMetadata) > minExpectedClassCount);
 
     // expect at least 300 java.util classes
     String javaUtilClassNameEntry = "\"className\" : \"java.util.";
-    assertTrue(findOccurrences(javaUtilClassNameEntry) > 300);
+    assertTrue(findOccurrences(javaUtilClassNameEntry, classesMetadata) > 300);
   }
 
   @Test

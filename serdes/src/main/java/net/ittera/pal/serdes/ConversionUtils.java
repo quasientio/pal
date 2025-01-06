@@ -1,7 +1,5 @@
 package net.ittera.pal.serdes;
 
-import java.util.ArrayList;
-import java.util.List;
 import net.ittera.pal.messages.colfer.Obj;
 import net.ittera.pal.messages.colfer.Reflectable;
 import net.ittera.pal.messages.colfer.ReturnValue;
@@ -39,13 +37,6 @@ public class ConversionUtils {
     responseObject.setValue(object.getValue());
     if (object.getRef() != null && !object.getRef().isEmpty()) {
       responseObject.setRef(Integer.parseInt(object.getRef()));
-    }
-    if (object.getArrayValues() != null && object.getArrayValues().length > 0) {
-      List<ResponseObject> arrayValues = new ArrayList<>();
-      for (Obj arrayValue : object.getArrayValues()) {
-        arrayValues.add(toResponseObject(arrayValue));
-      }
-      responseObject.setArrayValues(arrayValues.toArray(new ResponseObject[0]));
     }
     return responseObject;
   }

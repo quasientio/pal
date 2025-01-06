@@ -19,12 +19,13 @@
 
 package net.ittera.pal.serdes;
 
-import java.lang.reflect.Array;
-import java.lang.reflect.Constructor;
+import com.fasterxml.jackson.core.type.TypeReference;
+import java.util.ArrayList;
+import java.util.HashMap;
 import net.ittera.pal.common.util.Classes;
 import net.ittera.pal.messages.colfer.Obj;
+import net.ittera.pal.serdes.colfer.JsonUtil;
 import net.ittera.pal.serdes.colfer.ObjUnwrappableAdapter;
-import net.ittera.pal.serdes.colfer.Wrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,126 +39,65 @@ public class Unwrapper {
 
   private Unwrapper() {}
 
-  @SuppressWarnings("unchecked")
-  private static <T> T reconstructCharSequence(T t, String value) {
-    Class<?> charSeqClass =
-        Wrapper.getReconstructableCharSeqClasses().stream()
-            .filter(c -> c.equals(t))
-            .findFirst()
-            .orElseThrow(
-                () -> new IllegalArgumentException("No matching CharSequence class found"));
-
-    Constructor<?> c;
-    try {
-      c = charSeqClass.getConstructor(String.class);
-    } catch (NoSuchMethodException e) {
-      logger.warn("Couldn't get constructor for char seq object", e);
-      return null;
-    }
-
-    T newObject;
-    try {
-      newObject = (T) c.newInstance(value);
-    } catch (Exception e) {
-      logger.warn("Couldn't instantiate char seq object", e);
-      return null;
-    }
-
-    return newObject;
-  }
-
   /**
    * Returns objects in objectList as Object array with each object typed as its type in classList
    * This method undoes the wrapping of objects done by Wrapper.getWrappedObject()
    *
-   * @param object the Obj instance to unwrap
+   * @param wrappedObject the Obj instance to unwrap
    * @param clazz the class of the object to unwrap
    * @return the unwrapped Object
    */
-  @SuppressWarnings("JdkObsolete") // silence errorprone warning about StringBuffer
-  public static Object unwrapObject(Unwrappable object, Class<?> clazz) {
+  public static Object unwrapObject(Unwrappable wrappedObject, Class<?> clazz) {
     if (logger.isTraceEnabled()) {
-      logger.trace("in with unwrappable:\n{}, clazz:\n{}", object.asString(), clazz);
+      logger.trace("in with unwrappable:\n{}, clazz:\n{}", wrappedObject.asString(), clazz);
     }
 
-    if (object.isNull()) {
+    if (wrappedObject.isNull()) {
       return null;
     }
 
-    // if clazz (from parameter type) is null
+    // if there's a ref but empty value => reference-only scenario
+    Integer ref = wrappedObject.getRef();
+    String valueAsJson = wrappedObject.getValue();
+    if (ref != null && (valueAsJson == null || valueAsJson.isEmpty())) {
+      throw new UnsupportedOperationException("Cannot unwrap reference-only object");
+    }
+
+    // we do have actual JSON in 'value'
+    if (valueAsJson == null || valueAsJson.isEmpty()) {
+      // might be a corner case with inconsistent data
+      throw new IllegalArgumentException("No JSON value found but object is not null");
+    }
+
     if (clazz == null) {
-      if (object.getType() == null || object.getType().isEmpty()) {
-
-        // without object.getClazz we cannot do anything
-        throw new IllegalArgumentException("Type is null and wrapped object has no class");
-      } else {
-
-        // unwrap with the class found in Obj.getClazz -- recursive
-        Class<?> objectActualClass;
-        try {
-          objectActualClass =
-              Class.forName(object.getType(), true, Thread.currentThread().getContextClassLoader());
-        } catch (ClassNotFoundException e) {
-          throw new IllegalArgumentException(
-              "Class in obj.clazz not found: " + object.getType(), e);
-        }
-        return unwrapObject(object, objectActualClass);
+      String typeName = wrappedObject.getType();
+      if (typeName == null || typeName.isEmpty()) {
+        throw new IllegalArgumentException("No type info available for non-null object");
+      }
+      try {
+        clazz = Class.forName(typeName);
+      } catch (ClassNotFoundException e) {
+        throw new IllegalArgumentException("Cannot find class for: " + typeName, e);
       }
     }
 
-    if (clazz == String.class) {
-      // no casting needed
-      return object.getValue();
-    }
-
-    if (Wrapper.isWrappableCharSeqClass(clazz)) {
-      return reconstructCharSequence(clazz, object.getValue());
-    }
-
-    // is primitive
-    if (Classes.isPrimitiveOrWrapper(clazz)) {
-      return parsePrimitiveValue(object.getValue(), clazz);
-    } else if (clazz.isArray()) { // ARRAY
-      Class<?> componentType = clazz.getComponentType();
-      // primitive or wrapper array
-      if (Classes.isPrimitiveOrWrapper(componentType)) {
-        return unwrapPrimitiveArray(object.getArrayValues(), componentType);
+    // specialized list/map logic
+    String className = clazz.getName(); // e.g. "java.util.ArrayList"
+    try {
+      if ("java.util.ArrayList".equals(className)) {
+        // parse as ArrayList of ? (raw type)
+        return JsonUtil.MAPPER.readValue(valueAsJson, new TypeReference<ArrayList<?>>() {});
+      } else if ("java.util.HashMap".equals(className)) { // parse as HashMap of ? to ?
+        return JsonUtil.MAPPER.readValue(valueAsJson, new TypeReference<HashMap<?, ?>>() {});
       }
-      final Unwrappable[] arrayValues = object.getArrayValues();
-      // String[]
-      if (clazz == String[].class) {
-        final String[] array = new String[arrayValues.length];
-        int idx = 0;
-        for (Unwrappable strObj : arrayValues) {
-          array[idx++] = strObj.getValue();
-        }
-        return array;
-      } else if (Wrapper.getReconstructableCharSeqClasses().contains(componentType)) {
-        switch (componentType.getName()) {
-          case "java.lang.StringBuilder":
-            final StringBuilder[] sbArray = new StringBuilder[arrayValues.length];
-            int sbIdx = 0;
-            for (Unwrappable strObj : arrayValues) {
-              sbArray[sbIdx++] = new StringBuilder(strObj.getValue());
-            }
-            return sbArray;
-          case "java.lang.StringBuffer":
-            final StringBuffer[] sbfArray = new StringBuffer[arrayValues.length];
-            int sbfIdx = 0;
-            for (Unwrappable strObj : arrayValues) {
-              sbfArray[sbfIdx++] = new StringBuffer(strObj.getValue());
-            }
-            return sbfArray;
-          default:
-            throw new IllegalArgumentException(
-                "Unsupported char seq array type:" + clazz.getName());
-        }
-      } else {
-        throw new IllegalArgumentException("Unsupported array type:" + clazz.getName());
-      }
-    } else {
-      // no other types supported
-      throw new IllegalArgumentException("Unsupported object type:" + clazz.getName());
+
+      // we can add more specialized checks for LinkedList, TreeMap, etc.
+
+      // Otherwise, parse with the given clazz
+      return JsonUtil.MAPPER.readValue(valueAsJson, clazz);
+
+    } catch (Exception e) {
+      throw new RuntimeException("Error deserializing JSON into: " + className, e);
     }
   }
 
@@ -177,55 +117,5 @@ public class Unwrapper {
     }
 
     return unwrapObject(wrappedObject, clazz);
-  }
-
-  private static Object unwrapPrimitiveArray(Unwrappable[] arrayValues, Class<?> componentType) {
-    int length = arrayValues.length;
-    Object array = Array.newInstance(componentType, length);
-    for (int i = 0; i < length; i++) {
-      Object value = unwrapObject(arrayValues[i], componentType);
-      Array.set(array, i, value);
-    }
-    return array;
-  }
-
-  private static Object parsePrimitiveValue(String value, Class<?> clazz) {
-    if (clazz == int.class || clazz == Integer.class) {
-      return Integer.parseInt(value);
-    }
-
-    if (clazz == long.class || clazz == Long.class) {
-      return Long.parseLong(value);
-    }
-
-    if (clazz == short.class || clazz == Short.class) {
-      return Short.parseShort(value);
-    }
-
-    if (clazz == byte.class || clazz == Byte.class) {
-      return Byte.parseByte(value);
-    }
-
-    if (clazz == float.class || clazz == Float.class) {
-      return Float.parseFloat(value);
-    }
-
-    if (clazz == double.class || clazz == Double.class) {
-      return Double.parseDouble(value);
-    }
-
-    if (clazz == boolean.class || clazz == Boolean.class) {
-      return Boolean.parseBoolean(value);
-    }
-
-    if (clazz == char.class || clazz == Character.class) {
-      return value.charAt(0);
-    }
-
-    if (clazz == void.class || clazz == Void.class) {
-      return null;
-    }
-
-    throw new IllegalArgumentException("Unsupported primitive type: " + clazz.getName());
   }
 }

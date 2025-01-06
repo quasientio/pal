@@ -27,18 +27,6 @@ public class ObjUnwrappableAdapter implements Unwrappable {
   }
 
   @Override
-  public Unwrappable[] getArrayValues() {
-    if (obj.getArrayValues() == null) {
-      return null;
-    }
-    Unwrappable[] adapters = new Unwrappable[obj.getArrayValues().length];
-    for (int i = 0; i < obj.getArrayValues().length; i++) {
-      adapters[i] = new ObjUnwrappableAdapter(obj.getArrayValues()[i]);
-    }
-    return adapters;
-  }
-
-  @Override
   public Integer getRef() {
     if (obj.getRef() == null || obj.getRef().isEmpty()) {
       return null;

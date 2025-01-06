@@ -134,19 +134,25 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
 
   @Override
   protected Object invokeIncoming(
-      AccessibleObject accessibleObject, Object target, List<Object> args, Object value)
+      AccessibleObject accessibleObject, Object target, List<MessageArgument> args, Object value)
       throws Exception {
     // discard target and value
     return invokeIncoming(accessibleObject, args);
   }
 
-  private Object invokeIncoming(AccessibleObject accessibleObject, List<Object> args)
-      throws Exception {
+  private Object invokeIncoming(
+      AccessibleObject accessibleObject, List<MessageArgument> deserializedArgs) throws Exception {
     if (logger.isTraceEnabled()) {
-      logger.trace("invokeIncoming:in w/ accessibleObject: {}, args: {}", accessibleObject, args);
+      logger.trace(
+          "invokeIncoming:in w/ accessibleObject: {}, args: {}",
+          accessibleObject,
+          deserializedArgs);
     }
     Constructor<?> constructor = (Constructor<?>) accessibleObject;
-    return constructor.newInstance(args.toArray(new Object[0]));
+    Object[] args =
+        ParameterAdaptationUtils.adaptParametersForConstructor(
+            constructor, deserializedArgs.toArray(new MessageArgument[0]));
+    return constructor.newInstance(args);
   }
 
   @Override

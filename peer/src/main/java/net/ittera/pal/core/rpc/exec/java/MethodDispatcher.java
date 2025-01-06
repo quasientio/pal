@@ -29,23 +29,27 @@ public abstract class MethodDispatcher extends BaseExecMessageDispatcher {
 
   @Override
   protected Object invokeIncoming(
-      AccessibleObject accessibleObject, Object target, List<Object> args, Object value)
+      AccessibleObject accessibleObject, Object target, List<MessageArgument> args, Object value)
       throws Exception {
     // discard value
     return invokeIncoming(accessibleObject, target, args);
   }
 
-  private Object invokeIncoming(AccessibleObject accessibleObject, Object target, List<Object> args)
+  private Object invokeIncoming(
+      AccessibleObject accessibleObject, Object target, List<MessageArgument> deserializedArgs)
       throws Exception {
     if (logger.isTraceEnabled()) {
       logger.trace(
           "invokeIncoming:in w/ accessibleObject: {}, target: {}, args: {}",
           ((Method) accessibleObject).toGenericString(),
           target,
-          args);
+          deserializedArgs);
     }
     Method method = (Method) accessibleObject;
-    return method.invoke(target, args.toArray());
+    Object[] args =
+        ParameterAdaptationUtils.adaptParametersForMethod(
+            method, deserializedArgs.toArray(new MessageArgument[0]));
+    return method.invoke(target, args);
   }
 
   @Override

@@ -1,7 +1,6 @@
 package net.ittera.pal.messages.jsonrpc;
 
 import com.google.gson.annotations.SerializedName;
-import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nullable;
 import net.ittera.pal.serdes.Unwrappable;
@@ -17,21 +16,7 @@ public class ResponseObject implements Unwrappable {
 
   @Nullable private Integer ref;
 
-  @SerializedName("array_values")
-  @Nullable
-  private ResponseObject[] arrayValues = new ResponseObject[0];
-
   public ResponseObject() {}
-
-  @Nullable
-  @Override
-  public ResponseObject[] getArrayValues() {
-    return arrayValues;
-  }
-
-  public void setArrayValues(@Nullable ResponseObject[] arrayValues) {
-    this.arrayValues = arrayValues;
-  }
 
   public boolean getIsNull() {
     return isNull;
@@ -84,21 +69,18 @@ public class ResponseObject implements Unwrappable {
     return Objects.equals(type, that.type)
         && Objects.equals(isNull, that.isNull)
         && Objects.equals(value, that.value)
-        && Objects.equals(ref, that.ref)
-        && Objects.deepEquals(arrayValues, that.arrayValues);
+        && Objects.equals(ref, that.ref);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(type, isNull, value, ref, Arrays.hashCode(arrayValues));
+    return Objects.hash(type, isNull, value, ref);
   }
 
   @Override
   public String toString() {
     return "ResponseObject{"
-        + "arrayValues="
-        + Arrays.deepToString(arrayValues)
-        + ", type='"
+        + "type='"
         + type
         + '\''
         + ", isNull="
@@ -135,11 +117,6 @@ public class ResponseObject implements Unwrappable {
 
     public Builder withRef(@Nullable Integer ref) {
       responseObject.setRef(ref);
-      return this;
-    }
-
-    public Builder withArrayValues(@Nullable ResponseObject[] arrayValues) {
-      responseObject.setArrayValues(arrayValues);
       return this;
     }
 

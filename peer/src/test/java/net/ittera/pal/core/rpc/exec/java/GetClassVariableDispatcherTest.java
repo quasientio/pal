@@ -155,8 +155,6 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
     assertFalse(responseMessage.getReturnValue().getIsVoid());
-    byte[] returned = (byte[]) Unwrapper.unwrapObject(responseMessage.getReturnValue().getObject());
-    assertThat(returned, is(ClassForGetStaticTest.bytes));
     assertThat(
         responseMessage.getReturnValue(),
         Matchers.allOf(

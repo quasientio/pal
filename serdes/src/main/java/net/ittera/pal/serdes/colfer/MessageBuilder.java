@@ -152,7 +152,7 @@ public final class MessageBuilder {
       Parameter keyValueParam =
           new Parameter()
               .withName(entry.getKey())
-              .withValue(getWrappedObject(entry.getValue(), null, null));
+              .withValue(getWrappedObject(entry.getValue(), null, null, WrapPolicy.FORCE_BY_VALUE));
       keyValues[index++] = keyValueParam;
     }
     return keyValues;
@@ -163,8 +163,11 @@ public final class MessageBuilder {
   }
 
   private Parameter createParameter(String parameterType, Object arg, ObjectRef argObjRef) {
-    Object argValue = arg instanceof Obj ? ((Obj) arg).getValue() : arg;
-    return new Parameter().withValue(getWrappedObject(argValue, parameterType, argObjRef));
+    if (arg instanceof Obj objArg) {
+      return new Parameter().withValue(objArg);
+    }
+    return new Parameter()
+        .withValue(getWrappedObject(arg, parameterType, argObjRef, WrapPolicy.PREFER_REFERENCE));
   }
 
   private Parameter createNamedParameter(
@@ -176,7 +179,7 @@ public final class MessageBuilder {
 
     return new Parameter()
         .withName(paramName == null ? parameter.getName() : paramName)
-        .withValue(getWrappedObject(param, paramType, paramObjRef));
+        .withValue(getWrappedObject(param, paramType, paramObjRef, WrapPolicy.PREFER_REFERENCE));
   }
 
   private Parameter[] createNamedParameters(
@@ -681,7 +684,7 @@ public final class MessageBuilder {
                 .withObjectRef(String.valueOf(targetObjRef.getRef()))
                 .withField(field)
                 .withValueObject(
-                    getWrappedObject(arg, fieldSignature.getFieldType().getName(), argObjRef))
+                    getWrappedObject(arg, null, argObjRef, WrapPolicy.PREFER_REFERENCE))
                 .withContext(ctxt));
         break;
       case EXEC_GET_STATIC:
@@ -693,7 +696,7 @@ public final class MessageBuilder {
             new StaticFieldPut()
                 .withClazz(clazz)
                 .withValueObject(
-                    getWrappedObject(arg, fieldSignature.getFieldType().getName(), argObjRef))
+                    getWrappedObject(arg, null, argObjRef, WrapPolicy.PREFER_REFERENCE))
                 .withField(field)
                 .withContext(ctxt));
         break;
@@ -766,7 +769,8 @@ public final class MessageBuilder {
             new StaticFieldPut()
                 .withClazz(getWrappedClass(className))
                 .withField(getWrappedField((String) null, fieldName, unknownModifiers))
-                .withValueObject(getWrappedObject(value, valueClassName, null)));
+                .withValueObject(
+                    getWrappedObject(value, valueClassName, null, WrapPolicy.PREFER_REFERENCE)));
   }
 
   public ExecMessage buildPutStatic(
@@ -810,7 +814,8 @@ public final class MessageBuilder {
                 .withClazz(getWrappedClass(className))
                 .withObjectRef(String.valueOf(targetObjRef.getRef()))
                 .withField(getWrappedField((String) null, fieldName, unknownModifiers))
-                .withValueObject(getWrappedObject(value, valueClassName, null)));
+                .withValueObject(
+                    getWrappedObject(value, valueClassName, null, WrapPolicy.PREFER_REFERENCE)));
   }
 
   public ExecMessage buildPutObject(
@@ -920,7 +925,8 @@ public final class MessageBuilder {
         }
         logger.trace("objectClass.getName: {}", objectClass.getName());
       }
-      valueMessage.setObject(getWrappedObject(object, objectClass.getName(), objectRef));
+      valueMessage.setObject(
+          getWrappedObject(object, objectClass.getName(), objectRef, WrapPolicy.PREFER_REFERENCE));
     }
 
     // set 'from'
@@ -1104,12 +1110,19 @@ public final class MessageBuilder {
       if (arg.getRef() != null) {
         ObjectRef objectRef = ObjectRef.from(arg.getRef());
         valueObj = new Obj().withRef(String.valueOf(arg.getRef()));
-        getWrappedObject(null, null, objectRef);
+        getWrappedObject(null, null, objectRef, WrapPolicy.FORCE_BY_VALUE);
       } else {
-        valueObj = getWrappedObject(arg.getValue(), arg.getType(), null);
+        valueObj = getWrappedObject(arg.getValue(), arg.getType(), null, WrapPolicy.FORCE_BY_VALUE);
       }
       String paramName = arg.getName() != null ? arg.getName() : "";
-      binaryRpcParams[i] = new Parameter().withName(paramName).withValue(valueObj);
+      Parameter param = new Parameter().withName(paramName).withValue(valueObj);
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            "Converted jsonrpc Argument: {} to binary Parameter: {}",
+            arg,
+            ColferUtils.toJson(param));
+      }
+      binaryRpcParams[i] = param;
     }
     return binaryRpcParams;
   }
@@ -1152,7 +1165,8 @@ public final class MessageBuilder {
     if (value.getRef() != null) { // value is an object reference
       instanceFieldPut.setValueObjectRef(value.getRef().toString());
     } else {
-      instanceFieldPut.setValueObject(getWrappedObject(value.getValue(), value.getType(), null));
+      instanceFieldPut.setValueObject(
+          getWrappedObject(value.getValue(), value.getType(), null, WrapPolicy.FORCE_BY_VALUE));
     }
     return instanceFieldPut;
   }
@@ -1171,7 +1185,8 @@ public final class MessageBuilder {
     if (value.getRef() != null) { // value is an object reference
       staticFieldPut.setValueObjectRef(value.getRef().toString());
     } else {
-      staticFieldPut.setValueObject(getWrappedObject(value.getValue(), value.getType(), null));
+      staticFieldPut.setValueObject(
+          getWrappedObject(value.getValue(), value.getType(), null, WrapPolicy.FORCE_BY_VALUE));
     }
     return staticFieldPut;
   }

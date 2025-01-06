@@ -692,9 +692,6 @@ public class JsonSerializers {
       if (notEmpty(message.clazz)) {
         jsonElement.add("class", jsonSerializationContext.serialize(message.clazz));
       }
-      if (notEmpty(message.arrayValues)) {
-        jsonElement.add("array_values", jsonSerializationContext.serialize(message.arrayValues));
-      }
       if (notEmpty(message.ref)) {
         jsonElement.addProperty("ref", message.ref);
       }

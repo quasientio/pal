@@ -9,6 +9,8 @@ import static org.junit.Assert.fail;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import net.ittera.pal.messages.jsonrpc.Argument;
 import net.ittera.pal.messages.jsonrpc.Params;
@@ -45,6 +47,116 @@ public class ParamsDeserializerTest {
     assertEquals("Hello", argument.getValue());
     assertEquals("java.lang.String", argument.getType());
     assertEquals("StringParam", argument.getName());
+  }
+
+  @Test
+  public void testArgumentWithMapArgument() {
+    String json =
+        """
+                {
+                  "type": "example.Type",
+                  "method": "exampleMethod",
+                  "args": [{"value": {"uno":1,"two":2}, "type": "java.util.HashMap"}]
+                }
+                """;
+    Params params = gson.fromJson(json, Params.class);
+
+    // Assertions
+    assertNotNull(params);
+    assertEquals("example.Type", params.getType());
+    assertEquals("exampleMethod", params.getMethod());
+
+    List<Argument> args = params.getArgs();
+    assertNotNull(args);
+    assertEquals(1, args.size());
+
+    Argument argument = args.get(0);
+    assertNotNull(argument);
+    assertNotNull(argument.getValue());
+    assertEquals(HashMap.class, argument.getValue().getClass());
+    assertEquals(2d, ((HashMap<?, ?>) argument.getValue()).get("two"));
+  }
+
+  @Test
+  public void testArgumentWithTypeAndNullValue() {
+    String json =
+        """
+                {
+                  "type": "example.Type",
+                  "method": "exampleMethod",
+                  "args": [{"value": null, "type": "java.lang.Integer"}]
+                }
+                """;
+    Params params = gson.fromJson(json, Params.class);
+
+    // Assertions
+    assertNotNull(params);
+    assertEquals("example.Type", params.getType());
+    assertEquals("exampleMethod", params.getMethod());
+
+    List<Argument> args = params.getArgs();
+    assertNotNull(args);
+    assertEquals(1, args.size());
+
+    Argument argument = args.get(0);
+    assertNotNull(argument);
+    assertTrue(argument.isNull());
+    assertEquals("java.lang.Integer", argument.getType());
+  }
+
+  @Test
+  public void testArgumentWithTypeAndNoValue() {
+    String json =
+        """
+                    {
+                      "type": "example.Type",
+                      "method": "exampleMethod",
+                      "args": [{"type": "java.lang.Integer"}]
+                    }
+                    """;
+    Params params = gson.fromJson(json, Params.class);
+
+    // Assertions
+    assertNotNull(params);
+    assertEquals("example.Type", params.getType());
+    assertEquals("exampleMethod", params.getMethod());
+
+    List<Argument> args = params.getArgs();
+    assertNotNull(args);
+    assertEquals(1, args.size());
+
+    Argument argument = args.get(0);
+    assertNotNull(argument);
+    assertTrue(argument.isNull());
+    assertEquals("java.lang.Integer", argument.getType());
+  }
+
+  @Test
+  public void testArrayListArgument() {
+    String json =
+        """
+                {
+                  "type": "example.Type",
+                  "method": "exampleMethod",
+                  "args": [{"value": ["Hello", "here"], "type": "java.util.ArrayList"}]
+                }
+                """;
+    Params params = gson.fromJson(json, Params.class);
+
+    // Assertions
+    assertNotNull(params);
+    assertEquals("example.Type", params.getType());
+    assertEquals("exampleMethod", params.getMethod());
+
+    List<Argument> args = params.getArgs();
+    assertNotNull(args);
+    assertEquals(1, args.size());
+
+    Argument argument = args.get(0);
+    assertNotNull(argument);
+    assertNotNull(argument.getValue());
+    assertEquals(ArrayList.class, argument.getValue().getClass());
+    assertEquals(2, ((ArrayList<?>) argument.getValue()).size());
   }
 
   @Test
