@@ -25,6 +25,7 @@ public class GzipBase64Utils {
         gzipStream.write(inputBytes);
       }
       byte[] gzippedBytes = gzipOutputStream.toByteArray();
+      gzipOutputStream.close();
 
       // Encode the gzipped bytes to Base64
       return Base64.getEncoder().encodeToString(gzippedBytes);
@@ -43,8 +44,8 @@ public class GzipBase64Utils {
       byte[] gzippedBytes = Base64.getDecoder().decode(base64Encoded);
 
       // Decompress the gzipped bytes
-      ByteArrayInputStream gzipInputStream = new ByteArrayInputStream(gzippedBytes);
-      try (GZIPInputStream gzipStream = new GZIPInputStream(gzipInputStream);
+      try (ByteArrayInputStream gzipInputStream = new ByteArrayInputStream(gzippedBytes);
+          GZIPInputStream gzipStream = new GZIPInputStream(gzipInputStream);
           ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
         byte[] buffer = new byte[1024];
         int bytesRead;

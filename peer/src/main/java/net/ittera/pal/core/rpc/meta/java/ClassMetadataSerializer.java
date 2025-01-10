@@ -54,6 +54,7 @@ public class ClassMetadataSerializer {
             .enableMethodInfo()
             .enableFieldInfo()
             .acceptPackages()
+            .disableRuntimeInvisibleAnnotations()
             .enableSystemJarsAndModules();
 
     if (scanNonPublic) {
@@ -140,6 +141,9 @@ public class ClassMetadataSerializer {
 
     // convert the json tree to a pretty-printed JSON string
     String classMetadataAsJson = mapper.writeValueAsString(classesArray);
+
+    // help the gc
+    classesArray.removeAll();
 
     if (!compressAndEncode) {
       // return plain JSON

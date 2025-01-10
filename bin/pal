@@ -18,7 +18,7 @@ JAVA_OPTS=${JAVA_OPTS:-""}
 
 # Apply specific options for 'run' command
 if [ "$COMMAND" = "run" ]; then
-  JAVA_OPTS="$JAVA_OPTS -server -XX:+UseG1GC -XX:+UseNUMA -XX:+IgnoreUnrecognizedVMOptions -Xverify:none"
+  JAVA_OPTS="$JAVA_OPTS -server -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+ParallelRefProcEnabled -Xmx1g -XX:+IgnoreUnrecognizedVMOptions -Xverify:none"
 
   # Include JMX options if JMX_HOST and JMX_PORT are set
   if [ -n "$JMX_HOST" ] && [ -n "$JMX_PORT" ]; then
