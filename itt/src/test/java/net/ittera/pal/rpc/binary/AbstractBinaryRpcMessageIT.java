@@ -38,9 +38,11 @@ import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.cxn.ThinPeer;
+import net.ittera.pal.messages.LogMessage;
 import net.ittera.pal.messages.colfer.ControlMessage;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InstanceFieldPutDone;
+import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.messages.colfer.MetaMessage;
 import net.ittera.pal.messages.colfer.ReturnValue;
 import net.ittera.pal.messages.colfer.StaticFieldPutDone;
@@ -119,9 +121,12 @@ public abstract class AbstractBinaryRpcMessageIT extends AbstractRpcMessageIT
       if (targetType.equals(TargetType.PEER)) {
         logger.debug("Sending message to peer");
         response = thinPeer.sendToPeer(message);
+        logger.debug("Received response: {}", response);
       } else {
         logger.debug("Sending message to log");
-        response = thinPeer.sendExecMessageToLogAndReceive(message);
+        LogMessage<Message> responseLogMessage = thinPeer.sendExecMessageToLogAndReceive(message);
+        logger.debug("Received response: {}", responseLogMessage);
+        response = responseLogMessage.getContent().getExecMessage();
       }
     } catch (Exception e) {
       logger.error(

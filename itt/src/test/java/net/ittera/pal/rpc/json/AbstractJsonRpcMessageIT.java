@@ -34,6 +34,7 @@ import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.cxn.PalDirectory;
 import net.ittera.pal.cxn.ThinPeer;
+import net.ittera.pal.messages.LogMessage;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.messages.types.RpcType;
@@ -128,9 +129,13 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractRpcMessageIT
       if (targetType.equals(TargetType.PEER)) {
         logger.debug("Sending message to peer");
         response = thinPeer.sendJsonRpcRequestToPeer(jsonRpcRequest, messageId).get();
+        logger.debug("Received response: {}", response);
       } else {
         logger.debug("Sending message to log");
-        response = thinPeer.sendJsonRpcRequestToLogAndReceive(jsonRpcRequest);
+        LogMessage<JsonRpcResponse> responseLogMessage =
+            thinPeer.sendJsonRpcRequestToLogAndReceive(jsonRpcRequest);
+        logger.debug("Received response: {}", responseLogMessage);
+        response = responseLogMessage.getContent();
       }
     } catch (Exception e) {
       logger.error("Exception sending/receiving message: {}", jsonRpcRequest, e);

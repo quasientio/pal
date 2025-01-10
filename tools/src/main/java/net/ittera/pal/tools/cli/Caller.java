@@ -45,7 +45,9 @@ import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.cxn.ThinPeer;
+import net.ittera.pal.messages.LogMessage;
 import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.messages.colfer.Obj;
 import net.ittera.pal.messages.colfer.RaisedThrowable;
 import net.ittera.pal.messages.colfer.ReturnValue;
@@ -408,7 +410,9 @@ public class Caller extends AbstractPalSubcommand {
       if (sendToPeer) {
         print(thinPeer.sendToPeer(mainMethodCallBuilder.buildExecMessage()));
       } else {
-        print(thinPeer.sendExecMessageToLogAndReceive(mainMethodCallBuilder.buildExecMessage()));
+        LogMessage<Message> responseLogMessage =
+            thinPeer.sendExecMessageToLogAndReceive(mainMethodCallBuilder.buildExecMessage());
+        print(responseLogMessage.getContent().getExecMessage());
       }
       requestsSent++;
     }

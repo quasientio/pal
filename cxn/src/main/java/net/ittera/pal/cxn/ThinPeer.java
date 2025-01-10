@@ -651,7 +651,7 @@ public class ThinPeer implements AutoCloseable {
     return sendFuture;
   }
 
-  public JsonRpcResponse sendJsonRpcRequestToLogAndReceive(Object jsonRpcRequest)
+  public LogMessage<JsonRpcResponse> sendJsonRpcRequestToLogAndReceive(Object jsonRpcRequest)
       throws JsonSerializationException {
     if (logger.isDebugEnabled()) {
       logger.debug("sendJsonRpcRequestToLogAndReceive: in with jsonRpcRequest: {}", jsonRpcRequest);
@@ -695,14 +695,20 @@ public class ThinPeer implements AutoCloseable {
 
     // even if we send the request as a JsonRpc message, the peer's response is written as
     // ExecMessage
-    ExecMessage messageResponse =
+    LogMessage<Message> responseMessage =
         pollForResponseToRequestFromOffset(sentRecordOffset + 1, jsonRpcMessage.getId());
-
     // convert the ExecMessage response into a JsonRpc response
-    return msgBuilder.jsonRpcResponseFromExecMessageResponse(messageResponse);
+    JsonRpcResponse responseAsJsonRpc =
+        msgBuilder.jsonRpcResponseFromExecMessageResponse(
+            responseMessage.getContent().getExecMessage());
+    return new LogMessage<>(
+        responseMessage.getTopic(),
+        responseMessage.getOffset(),
+        responseMessage.getHeaders(),
+        responseAsJsonRpc);
   }
 
-  public ExecMessage sendExecMessageToLogAndReceive(ExecMessage message) {
+  public LogMessage<Message> sendExecMessageToLogAndReceive(ExecMessage message) {
     if (logger.isDebugEnabled()) {
       logger.debug(
           "sendExecMessageToLogAndReceive: in with message: {}", ColferUtils.format(message));
@@ -743,7 +749,7 @@ public class ThinPeer implements AutoCloseable {
     return pollForResponseToRequestFromOffset(sentRecordOffset + 1, message.getMessageId());
   }
 
-  private ExecMessage pollForResponseToRequestFromOffset(long offset, String requestId) {
+  private LogMessage<Message> pollForResponseToRequestFromOffset(long offset, String requestId) {
     if (logger.isDebugEnabled()) {
       logger.debug("Consumer seeking to offset: {}", offset);
     }
@@ -772,7 +778,9 @@ public class ThinPeer implements AutoCloseable {
           }
           continue;
         }
-        final ExecMessage execMessage = ((Message) receivedMessage.getContent()).getExecMessage();
+        @SuppressWarnings("unchecked")
+        final var responseMessage = (LogMessage<Message>) receivedMessage;
+        final ExecMessage execMessage = responseMessage.getContent().getExecMessage();
         final String responseToId = execMessage == null ? null : execMessage.getResponseToId();
         if (execMessage != null && requestId.equals(responseToId)) {
           if (logger.isDebugEnabled()) {
@@ -781,7 +789,7 @@ public class ThinPeer implements AutoCloseable {
                 receivedMsgOffset,
                 execMessage.getMessageId());
           }
-          return execMessage;
+          return responseMessage;
         } else {
           if (logger.isDebugEnabled()) {
             logger.debug("Skipping record with offset {}", receivedMsgOffset);
