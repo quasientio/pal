@@ -132,7 +132,7 @@ public class ClassMetadataSerializer {
       }
 
       if (logger.isDebugEnabled()) {
-        logger.debug("Number of classes returned: {}", scanResult.getAllClasses().size());
+        logger.debug("Number of classes returned: {}", classesArray.size());
       }
     } catch (Exception e) {
       logger.error("Error generating class metadata", e);
