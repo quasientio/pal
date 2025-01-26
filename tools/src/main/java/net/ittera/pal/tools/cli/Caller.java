@@ -44,6 +44,8 @@ import net.ittera.pal.common.cli.PalCommand;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.objects.ObjectRef;
+import net.ittera.pal.common.util.Base62UuidGenerator;
+import net.ittera.pal.common.util.IdGenerator;
 import net.ittera.pal.cxn.ThinPeer;
 import net.ittera.pal.messages.LogMessage;
 import net.ittera.pal.messages.colfer.ExecMessage;
@@ -88,6 +90,7 @@ public class Caller extends AbstractPalSubcommand {
   private String peerAddress;
   private final Gson gson = new Gson();
   private List<String> stdinRequests = new ArrayList<>();
+  private final IdGenerator idGenerator = new Base62UuidGenerator();
 
   @ParentCommand PalCommand palCommand;
 
@@ -398,7 +401,7 @@ public class Caller extends AbstractPalSubcommand {
           if (autoIds) { // generate missing JSON-RPC request IDs
             JsonRpcRequest request = gson.fromJson(jsonRpc, JsonRpcRequest.class);
             if (request.getId() == null || request.getId().isEmpty()) {
-              request.setId(UUID.randomUUID().toString());
+              request.setId(idGenerator.nextId());
             }
             jsonRpcResponseFutures.add(thinPeer.sendJsonRpcRequestToPeer(request));
           } else { // send raw JSON-RPC request
