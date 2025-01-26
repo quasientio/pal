@@ -137,8 +137,8 @@ public class Caller extends AbstractPalSubcommand {
   private String methodName;
 
   @Option(
-      names = {"-f", "--forget-reply"},
-      description = "do not wait for replies (default: false)")
+      names = {"-f", "--forget-response"},
+      description = "do not wait for responses (default: false)")
   private boolean sendAndForget;
 
   @Option(
@@ -190,7 +190,7 @@ public class Caller extends AbstractPalSubcommand {
 
     if (optionGiven(outLogName) && !optionGiven(inLogName) && !sendAndForget) {
       throw new RuntimeException(
-          "You must specify a log to read from, or else use --forget-reply.");
+          "You must specify a log to read from, or else use --forget-response.");
     }
 
     // resolve peer identifier
@@ -213,10 +213,10 @@ public class Caller extends AbstractPalSubcommand {
       }
     }
 
-    // --forget-reply only works with Log, not with peer
+    // --forget-response only works with Log, not with peer
     if (optionGiven(peerIdentifier) && sendAndForget) {
       throw new RuntimeException(
-          "Direct p2p talk (-p) is not compatible with -f (--forget-reply) option");
+          "Direct p2p talk (-p) is not compatible with -f (--forget-response) option");
     }
 
     // validate RPC type and endpoint
@@ -316,7 +316,7 @@ public class Caller extends AbstractPalSubcommand {
 
   /**
    * Serially sends requests in a single (ThinPeer) thread. With log IO 1st req is sent to Log,
-   * waits for Future reply, then sends all other directly to the peer which replied.
+   * waits for Future response, then sends all other directly to the peer which replied.
    *
    * <p>In p2p mode (-p), it sends all directly to peer.
    *
@@ -398,7 +398,6 @@ public class Caller extends AbstractPalSubcommand {
     // send message(s)
     int requestsSent = 0;
     start = System.currentTimeMillis();
-    List<CompletableFuture<JsonRpcResponse>> jsonRpcResponseFutures = new ArrayList<>();
     if (inferredRpcType == RpcType.JSON_RPC) {
       if (stdinRequests == null || stdinRequests.isEmpty()) {
         // build and send 1 JSON-RPC request from cmd line args
@@ -459,9 +458,9 @@ public class Caller extends AbstractPalSubcommand {
 
   /**
    * Use this method when no direct peer-to-peer talk is available or desirable. Sends all requests
-   * to log, and doesn't wait for replies, useful for void methods or any other type of call where
+   * to log, and doesn't wait for responses, useful for void methods or any other type of call where
    * we don't care about the returned value or thrown exceptions. The 'async' word in the method
-   * name simply refers to the fact that ThinPeer won't wait for a reply to the message sent, as
+   * name simply refers to the fact that ThinPeer won't wait for a response to the message sent, as
    * opposed to when calling ThinPeer.sendAndReceiveJsonRpcRequest().
    *
    * @return number of requests sent
@@ -607,11 +606,6 @@ public class Caller extends AbstractPalSubcommand {
     throw new RuntimeException("Peer does not have any RPC address");
   }
 
-  private void print(JsonRpcResponse response) {
-    if (response.getResult() != null) {
-      out.println(response.getResult().toString());
-    } else if (response.getError() != null) {
-      out.println(response.getError());
   private void printIfRequired(JsonRpcResponse response) {
     if (!printResponses) {
       return;
