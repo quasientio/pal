@@ -216,7 +216,7 @@ public class SessionService extends ConnectedService {
             deleteSession(cmdMsg.getSessionId());
             status = SessionStatusType.OK;
           } catch (NoSuchSessionException e) {
-            logger.error("No session found w/uuid: {}", cmdMsg.getSessionId(), e);
+            logger.warn("No session found w/uuid: {}", cmdMsg.getSessionId(), e);
             status = SessionStatusType.NO_SUCH_SESSION;
           } catch (Exception e) {
             logger.error("Unexpected error deleting session w/uuid: {}", cmdMsg.getSessionId(), e);
