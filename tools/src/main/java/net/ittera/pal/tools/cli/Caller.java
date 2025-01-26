@@ -140,6 +140,11 @@ public class Caller extends AbstractPalSubcommand {
   private boolean autoIds;
 
   @Option(
+      names = {"--print-responses"},
+      description = "print response messages (default: false)")
+  private boolean printResponses;
+
+  @Option(
       names = {"-t", "--num-threads"},
       defaultValue = "1",
       paramLabel = "NUM_THREADS",
@@ -408,11 +413,11 @@ public class Caller extends AbstractPalSubcommand {
     } else {
       // build and send 1 ExecMessage from cmd line args
       if (sendToPeer) {
-        print(thinPeer.sendToPeer(mainMethodCallBuilder.buildExecMessage()));
+        printIfRequired(thinPeer.sendToPeer(mainMethodCallBuilder.buildExecMessage()));
       } else {
         LogMessage<Message> responseLogMessage =
             thinPeer.sendExecMessageToLogAndReceive(mainMethodCallBuilder.buildExecMessage());
-        print(responseLogMessage.getContent().getExecMessage());
+        printIfRequired(responseLogMessage.getContent().getExecMessage());
       }
       requestsSent++;
     }
@@ -590,10 +595,17 @@ public class Caller extends AbstractPalSubcommand {
       out.println(response.getResult().toString());
     } else if (response.getError() != null) {
       out.println(response.getError());
+  private void printIfRequired(JsonRpcResponse response) {
+    if (!printResponses) {
+      return;
+    }
     }
   }
 
-  private void print(ExecMessage response) {
+  private void printIfRequired(ExecMessage response) {
+    if (!printResponses) {
+      return;
+    }
     if (response.getReturnValue() != null) {
       print(response.getReturnValue());
     } else if (response.getRaisedThrowable() != null) {
@@ -602,6 +614,9 @@ public class Caller extends AbstractPalSubcommand {
   }
 
   private void print(ReturnValue returnValue) {
+    if (!printResponses) {
+      return;
+    }
     if (returnValue.getIsVoid()) {
       return;
     }
@@ -612,6 +627,9 @@ public class Caller extends AbstractPalSubcommand {
   }
 
   private void print(RaisedThrowable raisedThrowable) {
+    if (!printResponses) {
+      return;
+    }
     out.println(ColferUtils.format(raisedThrowable));
   }
 
