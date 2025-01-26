@@ -60,6 +60,8 @@ import net.ittera.pal.messages.jsonrpc.Params;
 import net.ittera.pal.messages.types.RpcType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
+import net.ittera.pal.serdes.jsonrpc.JsonRpcSerializer;
+import net.ittera.pal.serdes.jsonrpc.JsonSerializationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
@@ -602,6 +604,10 @@ public class Caller extends AbstractPalSubcommand {
     if (!printResponses) {
       return;
     }
+    try {
+      out.println(JsonRpcSerializer.toJson(response));
+    } catch (JsonSerializationException e) {
+      throw new RuntimeException(e);
     }
   }
 
