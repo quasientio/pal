@@ -37,6 +37,8 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -387,6 +389,12 @@ public class Caller extends AbstractPalSubcommand {
       mainMethodCallBuilder =
           new MainMethodCallBuilder(thinPeerUuid, className, methodName, argList);
     }
+
+    // callback list and executor for async response completion
+    CompletableFuture<JsonRpcResponse> responseFuture;
+    ExecutorService onResponseExecutor = Executors.newFixedThreadPool(2);
+    List<CompletableFuture<Void>> callbacks = new ArrayList<>();
+
     // send message(s)
     int requestsSent = 0;
     start = System.currentTimeMillis();
@@ -394,8 +402,10 @@ public class Caller extends AbstractPalSubcommand {
     if (inferredRpcType == RpcType.JSON_RPC) {
       if (stdinRequests == null || stdinRequests.isEmpty()) {
         // build and send 1 JSON-RPC request from cmd line args
-        jsonRpcResponseFutures.add(
-            thinPeer.sendJsonRpcRequestToPeer(mainMethodCallBuilder.buildJsonRpc()));
+        responseFuture = thinPeer.sendJsonRpcRequestToPeer(mainMethodCallBuilder.buildJsonRpc());
+        CompletableFuture<Void> callback =
+            responseFuture.thenAcceptAsync(this::printIfRequired, onResponseExecutor);
+        callbacks.add(callback);
         requestsSent++;
       } else {
         // send N JSON-RPC request(s) read from stdin
@@ -405,10 +415,13 @@ public class Caller extends AbstractPalSubcommand {
             if (request.getId() == null || request.getId().isEmpty()) {
               request.setId(idGenerator.nextId());
             }
-            jsonRpcResponseFutures.add(thinPeer.sendJsonRpcRequestToPeer(request));
+            responseFuture = thinPeer.sendJsonRpcRequestToPeer(request);
           } else { // send raw JSON-RPC request
-            jsonRpcResponseFutures.add(thinPeer.sendJsonRpcRequestToPeer(jsonRpc));
+            responseFuture = thinPeer.sendJsonRpcRequestToPeer(jsonRpc);
           }
+          CompletableFuture<Void> callback =
+              responseFuture.thenAcceptAsync(this::printIfRequired, onResponseExecutor);
+          callbacks.add(callback);
           requestsSent++;
         }
         if (requestsSent > 1 && logger.isDebugEnabled()) {
@@ -427,12 +440,11 @@ public class Caller extends AbstractPalSubcommand {
       requestsSent++;
     }
 
-    // wait for all replies
-    for (CompletableFuture<JsonRpcResponse> future : jsonRpcResponseFutures) {
-      print(future.get());
-    }
+    // wait for all response futures to be done
+    CompletableFuture.allOf(callbacks.toArray(new CompletableFuture[0])).join();
 
     thinPeer.close();
+    onResponseExecutor.shutdownNow();
 
     long spent = System.currentTimeMillis() - start;
     if (logger.isInfoEnabled()) {
