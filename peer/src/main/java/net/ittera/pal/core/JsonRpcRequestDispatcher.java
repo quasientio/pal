@@ -23,10 +23,10 @@ import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.net.InetSocketAddress;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import net.ittera.pal.common.util.Strings;
@@ -56,8 +56,8 @@ import zmq.ZError;
 class JsonRpcRequestDispatcher extends ConnectedService {
 
   private static final Logger logger = LoggerFactory.getLogger(JsonRpcRequestDispatcher.class);
-  private final Map<WebSocket, UUID> webSocketConnectionMapping = new HashMap<>();
-  private final Map<UUID, ConnectionStats> peerStatsMap = new HashMap<>();
+  private final Map<WebSocket, UUID> webSocketConnectionMapping = new ConcurrentHashMap<>();
+  private final Map<UUID, ConnectionStats> peerStatsMap = new ConcurrentHashMap<>();
 
   // websocket stuff
   private final String websocketAddress;
