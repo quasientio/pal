@@ -2,7 +2,7 @@
   hosts: localhost
   connection: local
   vars:
-    docker_pal_dir: "{{ playbook_dir | realpath }}/../../docker/pal"
+    docker_pal_dir: "{{ (playbook_dir + '/../../docker/pal') | realpath }}"
     pal_home: "{{ lookup('env', 'PAL_HOME') }}"
 
     # Docker image names and tags
@@ -25,6 +25,14 @@
       fail:
         msg: "Error: PAL_HOME is undefined. Please set the PAL_HOME environment variable."
       when: pal_home == ""
+
+    - name: Debug docker_pal_dir
+      debug:
+        var: docker_pal_dir
+
+    - name: Debug pal_home
+      debug:
+        var: pal_home
 
     - name: Remove existing bin/ and lib/ from docker/pal
       file:
