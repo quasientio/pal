@@ -16,6 +16,9 @@
     registry_username: "{{ lookup('env', 'CI_REGISTRY_USER') | default(lookup('env', 'REGISTRY_USERNAME')) }}"
     registry_password: "{{ lookup('env', 'CI_REGISTRY_PASSWORD') | default(lookup('env', 'REGISTRY_PASSWORD')) }}"
 
+    # By default we push the image; can be overridden via --extra-vars
+    push_image: true
+
   tasks:
 
     - name: Fail if PAL_HOME is undefined
@@ -66,25 +69,11 @@
         tag: "{{ local_image_tag }}"
         push: no
 
-    #####################################################################
-    # RE-TAG USING A MANUAL DOCKER COMMAND INSTEAD OF THE ANSIBLE MODULE
-    #####################################################################
-
     - name: Re-tag pal:latest -> registry.gitlab.com/cometera/pal/pal:latest
-      command: >
-        docker tag {{ local_image_name }}:{{ local_image_tag }} {{ registry_image_name }}:{{ registry_tag }}
-      register: tag_result
-      changed_when: tag_result.rc == 0
-
-    - name: Verify newly created registry tag
-      command: docker image inspect "{{ registry_image_name }}:{{ registry_tag }}"
-      register: check_tag
-      ignore_errors: yes
-
-    - name: Fail if the registry image was not tagged successfully
-      fail:
-        msg: "Tagging failed: {{ registry_image_name }}:{{ registry_tag }} does not exist locally."
-      when: check_tag.rc != 0
+      community.docker.docker_image_tag:
+        repository: "{{ registry_image_name }}"
+        name: "pal"
+        tag: "{{ registry_tag }}"
 
     - name: Login to Docker registry
       community.docker.docker_login:
@@ -94,6 +83,7 @@
       when:
         - registry_username is defined
         - registry_password is defined
+        - push_image | bool # Only login if push is intended
 
     - name: Push Docker image to registry.gitlab.com
       community.docker.docker_image:
@@ -101,3 +91,4 @@
         name: "{{ registry_image_name }}"
         tag: "{{ registry_tag }}"
         push: yes
+      when: push_image | bool
