@@ -9,7 +9,6 @@ variables:
   SKIP_NON_DEPLOY: "false"
 
 image: maven:3-openjdk-17
-
 services:
   - name: docker:dind
     entrypoint: ["env", "-u", "DOCKER_HOST"]
@@ -32,7 +31,7 @@ clean-install:
   script:
     - mvn $MAVEN_CLI_OPTS clean install -DskipTests
   rules:
-    - if: '$SKIP_NON_DEPLOY == "true"'
+    - if: $SKIP_NON_DEPLOY == "true"
       when: never
     - when: on_success
 
@@ -41,7 +40,7 @@ unit-tests:
   script:
     - mvn $MAVEN_CLI_OPTS test
   rules:
-    - if: '$SKIP_NON_DEPLOY == "true"'
+    - if: $SKIP_NON_DEPLOY == "true"
       when: never
     - when: on_success
 
@@ -73,7 +72,6 @@ integration-tests:
     KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
     KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
     KAFKA_NUM_PARTITIONS: 1
-
   services:
     - name: $CI_REGISTRY/cometera/pal/etcd:latest
       alias: etcd
@@ -95,37 +93,53 @@ integration-tests:
       - itt/logs
       - logs
   rules:
-    - if: '$SKIP_NON_DEPLOY == "true"'
+    - if: $SKIP_NON_DEPLOY == "true"
       when: never
     - when: on_success
 
 publish-pal-image:
   stage: publish-artifacts
-  image: docker:latest
+  image: python:3.9
+  services:
+    - name: docker:dind
+      entrypoint: ["env", "-u", "DOCKER_HOST"]
+      command: ["dockerd-entrypoint.sh"]
+
+  # Keep existing variables so Docker in Docker works
+  variables:
+    DOCKER_DRIVER: overlay2
+    DOCKER_HOST: tcp://docker:2375/
+    DOCKER_TLS_CERTDIR: ""
+
   script:
     - export PAL_VERSION=$(grep '<version>' pom.xml | head -1 | sed -E 's/.*<version>(.+)<\/version>.*/\1/')
     - export PAL_JAR=$CI_PROJECT_DIR/.m2/repository/net/ittera/pal/pal/$PAL_VERSION/pal-$PAL_VERSION.jar
-    - mkdir tools/target/ && cp -f $PAL_JAR tools/target/
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - docker build --file docker/Dockerfile --tag $CI_REGISTRY/cometera/pal/pal:latest .
-    - docker push $CI_REGISTRY/cometera/pal/pal:latest
-  only:
-    - main
+    - export PAL_HOME="$CI_PROJECT_DIR"
+    - echo "PAL_HOME is $PAL_HOME"
+    - mkdir -p "$PAL_HOME/lib" && cp "$PAL_JAR" "$PAL_HOME/lib"
+    - |
+      echo "=== Cloning pal-automate repo ==="
+      git clone https://"$AUTOMATE_REPO_USERNAME":"$AUTOMATE_REPO_TOKEN"@gitlab.com/cometera/pal-automate.git pal-automate
+    - pip install --no-cache-dir ansible requests
+    - ansible-galaxy collection install community.docker --force
+    - |
+      echo "=== Running the Ansible playbook ==="
+      cd pal-automate
+      ansible-playbook ansible/playbooks/build_and_push_pal_image.yml
   rules:
-    - if: '$SKIP_NON_DEPLOY == "true"'
-      when: never
-    - when: on_success
+    - if: $CI_COMMIT_BRANCH == "main" && $SKIP_NON_DEPLOY != "true"
+      when: on_success
+    - when: never
+
 
 deploy-pal:
   stage: publish-artifacts
-  script: 
+  script:
     - mvn deploy -s ci_settings.xml -DskipTests
-  only:
-    - main
   rules:
-    - if: '$SKIP_NON_DEPLOY == "true"'
-      when: never
-    - when: on_success
+    - if: $CI_COMMIT_BRANCH == "main" && $SKIP_NON_DEPLOY != "true"
+      when: on_success
+    - when: never
 
 build_docs:
   stage: build_docs
@@ -140,10 +154,10 @@ build_docs:
     paths:
       - docs/online/site/
     expire_in: 1 hour
-  only:
-    - main
   rules:
-    - when: on_success
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: on_success
+    - when: never
 
 deploy_docs:
   stage: deploy_docs
@@ -156,7 +170,7 @@ deploy_docs:
     - echo -e "Host $DOCS_SSH_HOST\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
   script:
     - rsync -avz --delete -e "ssh -i ~/.ssh/id_rsa" docs/online/site/ $DOCS_SSH_USER@$DOCS_SSH_HOST:$REMOTE_DOCS_PATH
-  only:
-    - main
   rules:
-    - when: on_success
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: on_success
+    - when: never
