@@ -92,7 +92,7 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
       names = {"--formats"},
       arity = "0..*",
       split = ",",
-      description = "comma-separated list of message formats to filter by (BINARY_RPC, JSON_RPC)")
+      description = "comma-separated list of message formats to filter by (BINARY, JSON)")
   private List<String> msgFormats;
 
   // TODO consider using EnumSet for msgTypes

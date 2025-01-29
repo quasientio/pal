@@ -125,7 +125,7 @@ public class Caller extends AbstractPalSubcommand {
 
   @Option(
       names = {"-r", "--rpc-type"},
-      paramLabel = "RPC|JSONRPC",
+      paramLabel = "BIN_RPC|JSON_RPC",
       description = "the RPC type to use")
   private String rpcType;
 
@@ -221,7 +221,7 @@ public class Caller extends AbstractPalSubcommand {
 
     // validate RPC type and endpoint
     if (optionGiven(rpcType)) {
-      if (!rpcType.equals(RpcType.BINARY_RPC.name()) && !rpcType.equals(RpcType.JSON_RPC.name())) {
+      if (!rpcType.equals(RpcType.BIN_RPC.name()) && !rpcType.equals(RpcType.JSON_RPC.name())) {
         throw new RuntimeException("Invalid RPC type. Must be RPC or JSONRPC.");
       }
       if (rpcType.equals(RpcType.JSON_RPC.name())) {
@@ -343,7 +343,7 @@ public class Caller extends AbstractPalSubcommand {
         peerInfo = new PeerInfo();
         if (peerAddress.startsWith("tcp://")) {
           peerInfo.setRpcAddress(peerAddress);
-          inferredRpcType = RpcType.BINARY_RPC;
+          inferredRpcType = RpcType.BIN_RPC;
         } else if (peerAddress.startsWith("ws://")) {
           peerInfo.setJsonrpcAddress(peerAddress);
           inferredRpcType = RpcType.JSON_RPC;
@@ -598,7 +598,7 @@ public class Caller extends AbstractPalSubcommand {
       }
     }
     if (listensToRpc) {
-      return RpcType.BINARY_RPC;
+      return RpcType.BIN_RPC;
     }
     if (listensToJsonRpc) {
       return RpcType.JSON_RPC;

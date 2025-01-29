@@ -276,7 +276,7 @@ public class ThinPeerIT extends AbstractIntegrationTest {
             .withProducerProperties(producerProperties)
             .withConsumerProperties(consumerProperties)
             .withRpcAddress("tcp://localhost:1234")
-            .withOutboundRpcType(RpcType.BINARY_RPC)
+            .withOutboundRpcType(RpcType.BIN_RPC)
             .withInitialPeer(initialPeer)
             .withSelfRegistration(false)
             .init();
@@ -294,7 +294,7 @@ public class ThinPeerIT extends AbstractIntegrationTest {
     assertThat(thinPeer.isConsuming(), is(true));
     assertThat(thinPeer.isProducing(), is(true));
     assertThat(thinPeer.getRpcAddress(), is("tcp://localhost:1234"));
-    assertThat(thinPeer.getOutboundRpcType(), is(RpcType.BINARY_RPC));
+    assertThat(thinPeer.getOutboundRpcType(), is(RpcType.BIN_RPC));
     assertThat(thinPeer.getInitialPeer(), is(initialPeer));
     assertThat(thinPeer.isSelfRegistering(), is(false));
     assertThat(thinPeer.isTalkingToPeer(), is(true));

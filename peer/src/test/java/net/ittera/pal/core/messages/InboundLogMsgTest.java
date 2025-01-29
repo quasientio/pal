@@ -44,8 +44,7 @@ public class InboundLogMsgTest extends ZmqEnabledTest {
     byte[] body = "whatever".getBytes(StandardCharsets.UTF_8);
 
     Headers emptyHeaders = new RecordHeaders();
-    InboundLogMsg msgOut =
-        new InboundLogMsg(offset, MessageFormatType.BINARY_RPC, emptyHeaders, body);
+    InboundLogMsg msgOut = new InboundLogMsg(offset, MessageFormatType.BINARY, emptyHeaders, body);
 
     // send
     String socketAddress = "inproc://here";
@@ -74,27 +73,24 @@ public class InboundLogMsgTest extends ZmqEnabledTest {
     Headers emptyHeaders = new RecordHeaders();
     byte[] body = "whatever".getBytes(StandardCharsets.UTF_8);
 
-    InboundLogMsg msg1 =
-        new InboundLogMsg(offset, MessageFormatType.BINARY_RPC, emptyHeaders, body);
+    InboundLogMsg msg1 = new InboundLogMsg(offset, MessageFormatType.BINARY, emptyHeaders, body);
 
     // equal
-    assertThat(
-        new InboundLogMsg(offset, MessageFormatType.BINARY_RPC, emptyHeaders, body), is(msg1));
+    assertThat(new InboundLogMsg(offset, MessageFormatType.BINARY, emptyHeaders, body), is(msg1));
 
     // different offset
     assertThat(
-        new InboundLogMsg(offset + 1, MessageFormatType.BINARY_RPC, emptyHeaders, body),
-        is(not(msg1)));
+        new InboundLogMsg(offset + 1, MessageFormatType.BINARY, emptyHeaders, body), is(not(msg1)));
 
     // different format
     assertThat(
-        new InboundLogMsg(offset, MessageFormatType.JSON_RPC, emptyHeaders, body), is(not(msg1)));
+        new InboundLogMsg(offset, MessageFormatType.JSON, emptyHeaders, body), is(not(msg1)));
 
     // different body
     assertThat(
         new InboundLogMsg(
             offset,
-            MessageFormatType.BINARY_RPC,
+            MessageFormatType.BINARY,
             emptyHeaders,
             "whatevah".getBytes(StandardCharsets.UTF_8)),
         is(not(msg1)));

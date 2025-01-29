@@ -93,13 +93,13 @@ public class LogMessage<T> {
 
     LogMessage<?> logMessage;
     switch (messageFormat) {
-      case BINARY_RPC -> {
+      case BINARY -> {
         // deserialize
         Message message = new Message();
         message.unmarshal(data, 0);
         logMessage = new LogMessage<>(topic, offset, headers, message);
       }
-      case JSON_RPC -> {
+      case JSON -> {
         JsonRpcType jsonRpcMessageType = JsonRpcMessageUtils.getJsonRpcType(messageType);
         if (jsonRpcMessageType == null) {
           throw new IllegalArgumentException("JSON-RPC message type not found in record headers");

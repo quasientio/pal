@@ -114,7 +114,7 @@ public class ThinPeer implements AutoCloseable {
   private Socket peerSocket;
   private WsClient wsClient;
   private String rpcAddress;
-  private RpcType outboundRpcType = RpcType.BINARY_RPC;
+  private RpcType outboundRpcType = RpcType.BIN_RPC;
   private PeerInfo initialPeer;
   private PeerInfo currentPeer;
   private boolean talkingToPeer;
@@ -356,7 +356,7 @@ public class ThinPeer implements AutoCloseable {
     }
 
     // configure RPC and connect to initial peer if given
-    if (outboundRpcType == RpcType.BINARY_RPC) {
+    if (outboundRpcType == RpcType.BIN_RPC) {
       if (zmqContextGiven) {
         logger.info("Using given ZMQ context");
       } else {
@@ -826,7 +826,7 @@ public class ThinPeer implements AutoCloseable {
       closePeerSocket();
     }
 
-    if (outboundRpcType == RpcType.BINARY_RPC) {
+    if (outboundRpcType == RpcType.BIN_RPC) {
       connectZmqSocket(peer);
     } else { // is JSON-RPC
       connectWebSocket(peer);

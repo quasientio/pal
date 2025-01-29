@@ -94,7 +94,7 @@ public abstract class AbstractBinaryRpcMessageIT extends AbstractRpcMessageIT
 
     // find a peer listening with BINARY-RPC enabled
     PeerInfo rpcPeer =
-        findRpcPeer(RpcType.BINARY_RPC, directoryConnectionProvider)
+        findRpcPeer(RpcType.BIN_RPC, directoryConnectionProvider)
             .orElseThrow(() -> new RuntimeException("No peer found with BINARY-RPC enabled"));
     thinPeer =
         new ThinPeer()
@@ -103,7 +103,7 @@ public abstract class AbstractBinaryRpcMessageIT extends AbstractRpcMessageIT
             .withConsumerProperties(consumerProperties)
             .withProducerProperties(producerProperties)
             .withInitialPeer(rpcPeer)
-            .withOutboundRpcType(RpcType.BINARY_RPC)
+            .withOutboundRpcType(RpcType.BIN_RPC)
             .init();
   }
 

@@ -309,7 +309,7 @@ public class LogReader extends ConnectedService {
         final long messageOffset = record.offset();
         lastOffsetRead = messageOffset;
 
-        // get message format (JSON_RPC, BINARY_RPC, etc.)
+        // get message format (JSON, BINARY, etc.)
         var messageFormat = getMessageFormatFromHeader(record.headers());
         if (messageFormat == null) {
           logger.error(

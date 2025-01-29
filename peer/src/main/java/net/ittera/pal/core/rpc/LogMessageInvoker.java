@@ -117,7 +117,7 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
       final long started = System.currentTimeMillis();
 
       switch (msg.getMessageFormat()) {
-        case JSON_RPC -> {
+        case JSON -> {
           JsonRpcRequest jsonRpcRequest = null;
           final JsonRpcResponse jsonRpcResponse;
           String requestId = null;
@@ -190,7 +190,7 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
           // TODO write to Log (ie. send to LogWriter) -> JsonRpcSerializer.toJson(jsonRpcResponse)
           logMessageDispatch(requestMsg, responseMessage, started);
         }
-        case BINARY_RPC -> {
+        case BINARY -> {
           final Message requestMsg = new Message();
           // parse req
           try {

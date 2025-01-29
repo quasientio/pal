@@ -89,9 +89,9 @@ public class AbstractTool {
 
   protected static String getMessageFormat(LogMessage<?> logMessage) {
     if (isBinaryRpc(logMessage)) {
-      return "BINARY_RPC";
+      return "BINARY";
     } else if (isJsonRpc(logMessage)) {
-      return "JSON_RPC";
+      return "JSON";
     }
     return null;
   }

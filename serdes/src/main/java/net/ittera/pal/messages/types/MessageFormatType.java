@@ -20,8 +20,8 @@
 package net.ittera.pal.messages.types;
 
 public enum MessageFormatType {
-  JSON_RPC((byte) 1),
-  BINARY_RPC((byte) 2);
+  JSON((byte) 1),
+  BINARY((byte) 2);
 
   private final byte idx;
 
@@ -31,8 +31,8 @@ public enum MessageFormatType {
 
   public static MessageFormatType fromByte(byte formatAsByte) {
     return switch (formatAsByte) {
-      case 1 -> JSON_RPC;
-      case 2 -> BINARY_RPC;
+      case 1 -> JSON;
+      case 2 -> BINARY;
       default -> throw new IllegalArgumentException("Unknown message format: " + formatAsByte);
     };
   }
