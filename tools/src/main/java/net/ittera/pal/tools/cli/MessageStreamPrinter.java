@@ -23,6 +23,8 @@ import static net.ittera.pal.common.util.Strings.stringAfter;
 import static net.ittera.pal.common.util.Strings.stringBefore;
 import static picocli.CommandLine.Option;
 
+import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -31,26 +33,26 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 import net.ittera.pal.common.cli.PalCommand;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.cxn.PalDirectory;
-import net.ittera.pal.messages.ContextFillingFixedKeyProcessor;
 import net.ittera.pal.messages.LogMessage;
-import net.ittera.pal.messages.MessageContext;
 import net.ittera.pal.messages.MessageStreamer;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.serdes.colfer.ColferUtils;
-import net.ittera.pal.serdes.kafka.typed.KafkaLogMessageSerde;
-import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.streams.KafkaStreams;
-import org.apache.kafka.streams.StreamsBuilder;
-import org.apache.kafka.streams.StreamsConfig;
-import org.apache.kafka.streams.Topology;
-import org.apache.kafka.streams.kstream.KStream;
-import org.apache.kafka.streams.kstream.Named;
-import org.apache.kafka.streams.processor.api.FixedKeyProcessorSupplier;
+import net.ittera.pal.serdes.kafka.typed.KafkaLogMessageDeserializer;
+import org.apache.kafka.clients.admin.AdminClient;
+import org.apache.kafka.clients.admin.AdminClientConfig;
+import org.apache.kafka.clients.admin.OffsetSpec;
+import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
@@ -67,6 +69,12 @@ import picocli.CommandLine.ParentCommand;
 public class MessageStreamPrinter extends AbstractPalSubcommand {
 
   private static final Logger logger = LoggerFactory.getLogger(MessageStreamPrinter.class);
+
+  enum OutputFormat {
+    FULL,
+    JSON,
+    COMPACT
+  }
 
   @ParentCommand PalCommand palCommand;
 
@@ -111,13 +119,13 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
   @Option(
       names = {"-fp", "--from-peer"},
       paramLabel = "uuid",
-      description = "filter by peer uuid (only valid for BINARY_RPC messages)")
+      description = "Filter by peer uuid")
   private String fromPeer;
 
   @Option(
       names = {"-ft", "--from-thread"},
       paramLabel = "thread_name",
-      description = "filter by thread name (only valid for BINARY_RPC messages)")
+      description = "Filter by thread name")
   private String threadName;
 
   /**
@@ -127,33 +135,37 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
   @Option(
       names = {"-o", "--offset"},
       paramLabel = "offset",
-      description = "print message with given offset (only valid with --log/-l option)")
+      description = {
+        "Print message with given offset (valid with --log/-l option)",
+        "If given, filters are ignored. Combine with --follow/-f to wait for the message"
+      })
   protected Long offset;
+
+  @Option(
+      names = {"-f", "--follow"},
+      description = "Follow new messages (like 'tail -f')")
+  private boolean follow;
 
   @Option(
       names = {"--id"},
       paramLabel = "id",
-      description = "print messages with given ID")
+      description = "Filter by message ID")
   private String id;
 
   @Option(
-      names = {"-f", "--full-output"},
-      description = "full message output")
-  private boolean fullOutput;
+      names = {"--output-format"},
+      description = "Output format. Possible values: ${COMPLETION-CANDIDATES}",
+      defaultValue = "COMPACT")
+  private OutputFormat format;
 
-  @Option(
-      names = {"-j", "--json-output"},
-      description = "full message output (JSON format)")
-  private boolean jsonOutput;
-
-  @Option(names = "-v", description = "run verbosely")
+  @Option(names = "-v", description = "Run verbosely")
   private boolean verbose;
 
   @SuppressWarnings("unused")
   @Option(
       names = {"-h", "--help"},
       usageHelp = true,
-      description = "display this help message")
+      description = "Display this help message")
   private boolean helpRequested = false;
 
   @Override
@@ -161,12 +173,223 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
     initializeDirectoryConnectionProvider(palCommand.getPalDirectoryConnectionString());
   }
 
-  private Integer printLogMessageStream() {
+  private int printLogMessageConsumer() throws Exception {
+
     logger.info("Started printer for log: {}", logIdentifier);
     PalDirectory palDirectory = getPalDirectory();
 
-    LogInfo log = null;
+    // 1) Resolve the log info
+    LogInfo log = resolveLogInfo(palDirectory, logIdentifier);
+    if (log == null) {
+      logger.error("No Log found for identifier: {}", logIdentifier);
+      return 1;
+    }
 
+    final String topic = log.getName();
+    final String bootstrapServers = log.getBootstrapServers();
+
+    // 2) Configure the Consumer
+    Properties consumerProps = new Properties();
+    consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+    consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+    consumerProps.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
+    consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+    consumerProps.put(
+        ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, KafkaLogMessageDeserializer.class);
+
+    // print config and filters
+    if (verbose) {
+      System.out.printf("Kafka config: topic=%s, bootstrap=%s%n", topic, bootstrapServers);
+      if (msgFormats != null) {
+        System.out.printf("Filtering by format(s): %s%n", String.join(",", msgFormats));
+      }
+      if (msgTypes != null) {
+        System.out.printf("Filtering by type(s): %s%n", String.join(",", msgTypes));
+      }
+      if (fromPeer != null) {
+        System.out.printf("Filtering by peer: %s%n", fromPeer);
+      }
+      if (threadName != null) {
+        System.out.printf("Filtering by thread: %s%n", threadName);
+      }
+      if (id != null) {
+        System.out.printf("Filtering by message id: %s%n", id);
+      }
+      if (offset != null) {
+        System.out.printf("Will print message with offset id: %s and then exit%n", offset);
+      }
+    }
+
+    // 3) Create the Consumer
+    try (Consumer<String, LogMessage<?>> consumer = new KafkaConsumer<>(consumerProps)) {
+
+      // 4) Assign single partition: (topic, 0)
+      final TopicPartition partition0 = new TopicPartition(topic, 0);
+      consumer.assign(Collections.singleton(partition0));
+
+      // 5) fetch the "end offset" to know our stopping point
+      final long endOffset;
+      try (AdminClient admin = createAdminClient(bootstrapServers)) {
+        Map<TopicPartition, OffsetSpec> request = Map.of(partition0, OffsetSpec.latest());
+        var offsetsResult = admin.listOffsets(request).all().get();
+        endOffset = offsetsResult.get(partition0).offset();
+      }
+      if (verbose) {
+        System.out.printf("End offset at startup is %d%n", endOffset);
+      }
+
+      // 6) If the user wants to read from a specific offset
+      if (offset != null) {
+        if (offset <= endOffset) {
+          // seek to the given offset if already exists
+          if (verbose) {
+            System.out.printf("Seeking to offset %d%n", offset);
+          }
+          consumer.seek(partition0, offset);
+        } else {
+          // offset is yet to come, so seek to endOffset
+          if (verbose) {
+            System.out.printf("Seeking to latest offset: %d%n", endOffset);
+          }
+          consumer.seek(partition0, endOffset);
+        }
+      } else {
+        // Although we have 'auto.offset.reset=earliest', for explicit control:
+        long earliest =
+            consumer.beginningOffsets(Collections.singleton(partition0)).get(partition0);
+        consumer.seek(partition0, earliest);
+        if (verbose) {
+          System.out.printf("Seeking to earliest offset: %d%n", earliest);
+        }
+      }
+
+      // 7) Start polling
+      final AtomicBoolean done = new AtomicBoolean(false);
+      while (!done.get()) {
+
+        ConsumerRecords<String, LogMessage<?>> records = consumer.poll(Duration.ofMillis(200));
+        if (records.isEmpty()) {
+          // a) If we are in follow mode => keep waiting
+          // b) If offset != null => maybe we already read that offset? We handle that below
+          // c) If not follow => check if we are "caught up"
+          if (!follow && offset == null) {
+            // We can compare current position to endOffset
+            long positionNow = consumer.position(partition0);
+            if (positionNow >= endOffset) {
+              if (verbose) {
+                System.out.printf("Reached end offset (%d). Exiting.%n", endOffset);
+              }
+              break;
+            }
+          }
+          continue; // poll again
+        }
+
+        // 8) Process each record
+        records.forEach(
+            rec -> {
+              long currentOffset = rec.offset();
+
+              // If user gave a specific offset, print it and done after seeing it
+              if (offset != null) {
+                if (currentOffset == offset) {
+                  printRecord(rec.key(), rec.value(), currentOffset);
+                  done.set(true);
+                }
+              } else if (shouldPrint(currentOffset, rec.key(), rec.value())) {
+                // if no offset given, apply filters and print
+                printRecord(rec.key(), rec.value(), currentOffset);
+              }
+            });
+      }
+
+      if (verbose) {
+        System.out.println("Done reading records.");
+      }
+    }
+
+    return 0;
+  }
+
+  private boolean shouldPrint(Long recOffset, String key, LogMessage<?> msg) {
+
+    // First thing is to check offset
+    if (offset != null && offset.equals(recOffset)) {
+      return true;
+    }
+
+    // 1) Filter by msgFormats?
+    if (msgFormats != null) {
+      String format = getMessageFormat(msg);
+      if (format == null || !msgFormats.contains(format)) {
+        return false;
+      }
+    }
+    // 2) Filter by msgTypes?
+    if (msgTypes != null) {
+      String type = getMessageTypeName(msg);
+      if (type != null) {
+        type = type.substring(5); // remove "EXEC_"
+        if (!msgTypes.contains(type)) {
+          return false;
+        }
+      } else {
+        return false;
+      }
+    }
+    // 3) fromPeer
+    if (fromPeer != null) {
+      // the message Key is the peer's UUID
+      String peer = key;
+      if (!fromPeer.equalsIgnoreCase(peer)) {
+        return false;
+      }
+    }
+    // 4) fromThread
+    if (threadName != null) {
+      if (isBinaryRpc(msg)) {
+        Message m = (Message) msg.getContent();
+        if (m != null && m.getExecMessage() != null) {
+          String t = m.getExecMessage().getThreadName();
+          if (!threadName.equalsIgnoreCase(t)) {
+            return false;
+          }
+        }
+      }
+    }
+    // 5) messageId
+    if (id != null) {
+      String msgId = getId(msg);
+      if (!id.equalsIgnoreCase(msgId)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private void printRecord(String key, LogMessage<?> msg, long offset) {
+    switch (format) {
+      case FULL ->
+          System.out.printf(
+              "CONTEXT: offset: %d key: %s %nHEADERS: %s%n%s%n",
+              offset, key, msg.getHeaders(), getMessageContentAsPrettyJson(msg));
+      case JSON ->
+          System.out.printf("offset: %d,%n%s%n", offset, getMessageContentAsPrettyJson(msg));
+      case COMPACT ->
+          System.out.printf(
+              "offset=%d id=%s message=%s%n", offset, getId(msg), getMessageOneLiner(msg));
+      default -> throw new IllegalStateException("Unexpected value: " + format);
+    }
+  }
+
+  private AdminClient createAdminClient(String bootstrapServers) {
+    Properties adminProps = new Properties();
+    adminProps.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+    return AdminClient.create(adminProps);
+  }
+
+  private LogInfo resolveLogInfo(PalDirectory palDirectory, String logIdentifier) {
+    LogInfo log = null;
     // try to get log by name
     try {
       log = palDirectory.getLogInfo(logIdentifier);
@@ -202,198 +425,7 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
         }
       }
     }
-
-    if (log == null) {
-      logger.error("No Log found for identifier: {}", logIdentifier);
-      return 1;
-    }
-
-    // if not a valid UUID, or we have no PalDirectory, then treat log identifier as name
-    final String logName = log.getName();
-    final String bootstrapServers = log.getBootstrapServers();
-
-    /*
-    1. CONFIGURE STREAMS API
-    */
-    Properties props = new Properties();
-    String consumerId = "printer-" + UUID.randomUUID();
-    if (verbose) {
-      System.out.println("CONFIG:");
-      System.out.println("=======");
-      System.out.printf(
-          "Kafka config: topic=%s bootstrap_servers=%s app_id=%s%n%n",
-          logName, bootstrapServers, consumerId);
-    }
-    props.put(StreamsConfig.APPLICATION_ID_CONFIG, consumerId);
-    props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-    props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-    props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, KafkaLogMessageSerde.class);
-
-    /*
-     2. DEFINE PROCESSING TOPOLOGY
-    */
-    final StreamsBuilder builder = new StreamsBuilder();
-
-    // stream: deserialize value
-    KStream<String, LogMessage<?>> stream = builder.stream(logName);
-
-    // stream: apply filter: message formats
-    if (msgFormats != null) {
-      if (verbose) {
-        System.out.printf("Filtering by format(s): %s%n", String.join(",", msgFormats));
-      }
-      stream =
-          stream.filter(
-              (k, message) -> {
-                String messageFormat = getMessageFormat(message);
-                if (messageFormat == null) {
-                  throw new RuntimeException("Unknown message format of message: " + message);
-                }
-                return msgFormats.contains(messageFormat);
-              });
-    }
-
-    // stream: apply filter: message types
-    if (msgTypes != null) {
-      if (verbose) {
-        System.out.printf("Filtering by type(s): %s%n", String.join(",", msgTypes));
-      }
-      stream =
-          stream.filter(
-              (k, message) -> {
-                String messageType = getMessageTypeName(message);
-                if (messageType == null) {
-                  throw new RuntimeException("Unknown message format of message: " + message);
-                }
-                // remove the "EXEC_" prefix
-                messageType = messageType.substring(5);
-                return msgTypes.contains(messageType);
-              });
-    }
-
-    // stream: apply filter: from peer (uuid)
-    if (fromPeer != null) {
-      if (verbose) {
-        System.out.printf("Filtering by peer: %s%n", fromPeer);
-      }
-      stream =
-          stream.filter(
-              (k, message) -> {
-                if (isBinaryRpc(message)) {
-                  return fromPeer.equalsIgnoreCase(getPeerUuid((Message) message.getContent()));
-                } else { // since we don't have the peer for JSONRPC messages, we can't filter by it
-                  return true;
-                }
-              });
-    }
-
-    // stream: apply filter: from thread name
-    if (threadName != null) {
-      if (verbose) {
-        System.out.printf("Filtering by thread: %s%n", threadName);
-      }
-      stream =
-          stream.filter(
-              (k, message) -> {
-                if (isBinaryRpc(message)
-                    && ((Message) message.getContent()).getExecMessage() != null) {
-                  ExecMessage execMessage = ((Message) message.getContent()).getExecMessage();
-                  return execMessage != null
-                      && threadName.equalsIgnoreCase(execMessage.getThreadName());
-                } else { // since we don't have the thread name for non-ExecMessages, we can't
-                  // filter by it
-                  return true;
-                }
-              });
-    }
-
-    // stream: apply filter: msg ID
-    if (id != null) {
-      if (verbose) {
-        System.out.printf("Filtering by message id: %s%n", id);
-      }
-      stream = stream.filter((k, message) -> id.equalsIgnoreCase(getId(message)));
-    }
-
-    // stream: transform: add context  (offset, partition, timestamp, headers, etc.)
-    String logId = log.getUuid() != null ? log.getUuid().toString() : null;
-
-    // Create the processor supplier
-    FixedKeyProcessorSupplier<String, LogMessage<?>, Map<String, Object>> processorSupplier =
-        () -> new ContextFillingFixedKeyProcessor(logId);
-
-    KStream<String, Map<String, Object>> streamWithCtxt =
-        stream.processValues(processorSupplier, Named.as("context-filling-processor"));
-
-    // stream: apply filter: offset
-    if (offset != null) {
-      streamWithCtxt =
-          streamWithCtxt.filter((k, m) -> ((MessageContext) m.get("context")).offset() == offset);
-    }
-
-    // stream: print
-    streamWithCtxt.foreach(
-        (k, m) -> {
-          var msg = (LogMessage<?>) m.get("message");
-          MessageContext ctxt = (MessageContext) m.get("context");
-          if (fullOutput) {
-            System.out.printf(
-                "CONTEXT: offset: %d, topic: %s, partition: %d, key: %s, timestamp: %d %nHEADERS: %s%n%s%n",
-                ctxt.offset(),
-                ctxt.topic(),
-                ctxt.partition(),
-                k,
-                ctxt.timestamp(),
-                msg.getHeaders(),
-                getMessageContentAsPrettyJson(msg));
-          } else if (jsonOutput) { // JSON format pretty-print
-            System.out.printf(
-                "offset: %d,%n%s%n", ctxt.offset(), getMessageContentAsPrettyJson(msg));
-          } else { // JSON format compact
-            System.out.printf(
-                "offset=%d id=%s message=%s%n", ctxt.offset(), getId(msg), getMessageOneLiner(msg));
-          }
-        });
-
-    final Topology topology = builder.build();
-
-    if (verbose) {
-      System.out.println("TOPOLOGY:");
-      System.out.println("=========");
-      System.out.println(topology.describe());
-    }
-
-    /*
-     3. START PROCESSING
-    */
-    @SuppressWarnings("resource")
-    final KafkaStreams streams = new KafkaStreams(topology, props);
-    final CountDownLatch latch = new CountDownLatch(1);
-
-    // attach shutdown handler to catch control-c
-    Runtime.getRuntime()
-        .addShutdownHook(
-            new Thread("streams-shutdown-hook") {
-              @Override
-              public void run() {
-                streams.close();
-                latch.countDown();
-              }
-            });
-
-    // start consuming and printing
-    try {
-      if (verbose) {
-        System.out.println("STREAM:");
-        System.out.println("=======");
-      }
-      streams.start();
-      latch.await();
-    } catch (Throwable e) {
-      logger.error("Uncaught error processing stream", e);
-      return 1;
-    }
-    return 0;
+    return log;
   }
 
   private Integer printSocketMessageStream() throws Exception {
@@ -458,13 +490,13 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
           // stream: print
           stream.forEach(
               msg -> {
-                if (fullOutput) {
-                  System.out.printf("%s%n", msg.toString());
-                } else if (jsonOutput) {
-                  System.out.printf("%s%n", ColferUtils.toJson(msg, true));
-                } else { // compact format (default)
-                  System.out.printf(
-                      "uuid=%s type=%s%n", getMessageTypeName(msg), getMessageTypeName(msg));
+                switch (format) {
+                  case FULL -> System.out.printf("%s%n", msg.toString());
+                  case JSON -> System.out.printf("%s%n", ColferUtils.toJson(msg, true));
+                  case COMPACT ->
+                      System.out.printf(
+                          "uuid=%s type=%s%n", getMessageTypeName(msg), getMessageTypeName(msg));
+                  default -> throw new IllegalStateException("Unexpected value: " + format);
                 }
               });
         };
@@ -505,7 +537,7 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
     if (peerAddress != null || peerUuid != null) {
       return printSocketMessageStream();
     } else if (logIdentifier != null) {
-      return printLogMessageStream();
+      return printLogMessageConsumer();
     } else {
       throw new RuntimeException(
           "Either -log (for log streaming) or -pu/-pa (for socket streaming) is required");
