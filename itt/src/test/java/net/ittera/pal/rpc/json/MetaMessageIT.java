@@ -48,8 +48,7 @@ public class MetaMessageIT extends AbstractJsonRpcMessageIT {
     String plainBody = GzipBase64Utils.decode(body);
 
     String searchString = "className";
-    // expect > 10000 classes
-    int minExpectedClassCount = 10000;
+    int minExpectedClassCount = 5000;
     assertTrue(findOccurrences(searchString, plainBody) > minExpectedClassCount);
   }
 
@@ -71,8 +70,7 @@ public class MetaMessageIT extends AbstractJsonRpcMessageIT {
     String plainBody = GzipBase64Utils.decode(body);
 
     String searchString = "className";
-    // expect > 10000 classes
-    int minExpectedClassCount = 10000;
+    int minExpectedClassCount = 5000;
     assertTrue(findOccurrences(searchString, plainBody) > minExpectedClassCount);
 
     // expect no java.util classes

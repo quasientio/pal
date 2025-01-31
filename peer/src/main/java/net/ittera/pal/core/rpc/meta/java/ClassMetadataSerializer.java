@@ -62,7 +62,11 @@ public class ClassMetadataSerializer {
     }
 
     try (ScanResult scanResult = classGraph.scan()) {
-      for (ClassInfo classInfo : scanResult.getAllClasses()) {
+      for (ClassInfo classInfo :
+          scanResult
+              .getAllClasses()
+              .filter(
+                  classInfo -> !classInfo.getName().contains("$"))) { // filter out inner classes
         // skip class if it starts with an exclude prefix
         String className = classInfo.getName();
         if (CLASS_PREFIXES_TO_EXCLUDE.stream().anyMatch(className::startsWith)) {

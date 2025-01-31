@@ -61,8 +61,7 @@ public class MetaMessageIT extends AbstractBinaryRpcMessageIT {
     // decompress && decode body
     String plainBody = GzipBase64Utils.decode(body);
 
-    // expect > 10000 classes
-    int minExpectedClassCount = 10000;
+    int minExpectedClassCount = 5000;
     assertTrue(findOccurrences("className", plainBody) > minExpectedClassCount);
   }
 
@@ -85,8 +84,7 @@ public class MetaMessageIT extends AbstractBinaryRpcMessageIT {
     // decompress && decode body
     String plainBody = GzipBase64Utils.decode(body);
 
-    // expect > 10000 classes
-    int minExpectedClassCount = 10000;
+    int minExpectedClassCount = 5000;
     assertTrue(findOccurrences("className", plainBody) > minExpectedClassCount);
 
     // expect no java.util classes
