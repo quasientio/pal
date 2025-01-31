@@ -23,7 +23,8 @@ import java.util.Locale;
 
 public enum ControlCommandType {
   DELETE_OBJECT((byte) 1),
-  DELETE_SESSION((byte) 2);
+  DELETE_SESSION((byte) 2),
+  GC((byte) 3);
 
   private final byte id;
 
@@ -35,6 +36,7 @@ public enum ControlCommandType {
     return switch (messageTypeAsByte) {
       case 1 -> DELETE_OBJECT;
       case 2 -> DELETE_SESSION;
+      case 3 -> GC;
       default ->
           throw new IllegalArgumentException("Unknown control command type: " + messageTypeAsByte);
     };

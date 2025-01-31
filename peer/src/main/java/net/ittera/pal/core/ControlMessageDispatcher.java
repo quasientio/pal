@@ -21,6 +21,7 @@ package net.ittera.pal.core;
 
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import java.lang.reflect.Method;
 import java.util.Set;
 import java.util.UUID;
 import net.ittera.pal.common.objects.ObjectLookupStore;
@@ -38,7 +39,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Singleton
-public class SessionMessageDispatcher {
+public class ControlMessageDispatcher {
   @SuppressWarnings("unused")
   @Inject
   private DispatcherConnector dispatcherConnector;
@@ -55,19 +56,18 @@ public class SessionMessageDispatcher {
   @Inject
   private UUID peerUuid;
 
-  private static final Logger logger = LoggerFactory.getLogger(SessionMessageDispatcher.class);
+  private static final Logger logger = LoggerFactory.getLogger(ControlMessageDispatcher.class);
 
   public ControlMessage incomingControlMessage(ControlMessage controlMessage) {
 
     final UUID remotePeerUuid = UUID.fromString(controlMessage.getFromPeer());
     final String controlMessageId = controlMessage.getMessageId();
-
-    // NOTE: the remotePeerUuid is the session id of the peer
     final ControlCommandType commandType = ControlCommandType.fromId(controlMessage.getCommand());
     SessionResponseMsg sessionResponseMsg;
     switch (commandType) {
       case DELETE_OBJECT:
         // delete object from peer's session
+        // NOTE: the remotePeerUuid is the session id of the peer
         final ObjectRef objectRef =
             ObjectRef.from(controlMessage.getParams()[0].getValue().getRef());
         sessionResponseMsg =
@@ -89,6 +89,10 @@ public class SessionMessageDispatcher {
           objectLookupStore.removeAll(objectRefsInSession);
         }
         return sessionResponseMessageToControlMessage(sessionResponseMsg, controlMessageId);
+      case GC:
+        ControlStatusType status =
+            invokeGCReflectively() ? ControlStatusType.OK : ControlStatusType.ERROR;
+        return messageBuilder.buildControlStatusMessage(peerUuid, status, controlMessageId);
       default:
         String errorMessage =
             String.format(
@@ -97,6 +101,23 @@ public class SessionMessageDispatcher {
         logger.error(errorMessage);
         return messageBuilder.buildControlStatusMessage(
             peerUuid, ControlStatusType.UNSUPPORTED, controlMessageId, errorMessage);
+    }
+  }
+
+  private boolean invokeGCReflectively() {
+    try {
+      Class<?> runtimeClass = Class.forName("java.lang.Runtime");
+      Method getRuntimeMethod = runtimeClass.getMethod("getRuntime");
+      Object runtimeInstance = getRuntimeMethod.invoke(null);
+      Method gcMethod = runtimeClass.getMethod("gc");
+      gcMethod.invoke(runtimeInstance);
+      if (logger.isDebugEnabled()) {
+        logger.debug("Garbage collector invoked successfully.");
+      }
+      return true;
+    } catch (Exception e) {
+      logger.error("Error while invoking Runtime.gc()", e);
+      return false;
     }
   }
 

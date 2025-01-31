@@ -28,7 +28,7 @@ import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import org.junit.Test;
 
-public class PeerSessionIT extends AbstractJsonRpcMessageIT {
+public class ControlMessageIT extends AbstractJsonRpcMessageIT {
 
   private void addToList(ObjectRef listObjRef, String value) throws Exception {
     addToList(listObjRef, value, null);
@@ -78,5 +78,11 @@ public class PeerSessionIT extends AbstractJsonRpcMessageIT {
 
     // try to add another value, expect an NPE to be thrown
     addToList(arrayListRef, "testing testing 4 5 6", "java.lang.NullPointerException");
+  }
+
+  @Test
+  public void testGC() throws Exception {
+    boolean result = sendGcCommand();
+    assertThat(result, is(true));
   }
 }

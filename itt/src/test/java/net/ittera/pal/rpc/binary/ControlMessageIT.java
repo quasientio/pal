@@ -19,6 +19,8 @@
 
 package net.ittera.pal.rpc.binary;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertTrue;
 
 import javax.annotation.Nullable;
@@ -26,7 +28,7 @@ import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.messages.colfer.ReturnValue;
 import org.junit.Test;
 
-public class PeerSessionIT extends AbstractBinaryRpcMessageIT {
+public class ControlMessageIT extends AbstractBinaryRpcMessageIT {
   private ReturnValue addToList(ObjectRef listObjRef, String value) {
     return addToList(listObjRef, value, null);
   }
@@ -85,5 +87,11 @@ public class PeerSessionIT extends AbstractBinaryRpcMessageIT {
 
     // try to add another value, expect an NPE to be thrown
     addToList(arrayListRef, "testing testing 4 5 6", "java.lang.NullPointerException");
+  }
+
+  @Test
+  public void testGC() throws Exception {
+    boolean result = sendGcCommand();
+    assertThat(result, is(true));
   }
 }

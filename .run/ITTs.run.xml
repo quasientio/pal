@@ -35,7 +35,7 @@
       <pattern testClass="net.ittera.pal.rpc.binary.SetInstanceVariableMessageIT" />
       <pattern testClass="net.ittera.pal.rpc.binary.VoidClassMethodMessageIT" />
       <pattern testClass="net.ittera.pal.rpc.binary.VoidInstanceMethodMessageIT" />
-      <pattern testClass="net.ittera.pal.rpc.binary.PeerSessionIT" />
+      <pattern testClass="net.ittera.pal.rpc.binary.ControlMessageIT" />
       <pattern testClass="net.ittera.pal.cxn.DirectoryConnectionProviderIT" />
       <pattern testClass="net.ittera.pal.cxn.EtcdIT" />
       <pattern testClass="net.ittera.pal.cxn.PalDirectoryIT" />

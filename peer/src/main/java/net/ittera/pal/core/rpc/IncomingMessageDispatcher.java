@@ -21,8 +21,8 @@ package net.ittera.pal.core.rpc;
 
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import net.ittera.pal.core.ControlMessageDispatcher;
 import net.ittera.pal.core.MetaMessageDispatcher;
-import net.ittera.pal.core.SessionMessageDispatcher;
 import net.ittera.pal.core.rpc.exec.java.ClassMethodDispatcher;
 import net.ittera.pal.core.rpc.exec.java.ConstructorDispatcher;
 import net.ittera.pal.core.rpc.exec.java.GetClassVariableDispatcher;
@@ -80,7 +80,7 @@ public class IncomingMessageDispatcher {
   // control message dispatchers
   @SuppressWarnings("unused")
   @Inject
-  private SessionMessageDispatcher sessionMessageDispatcher;
+  private ControlMessageDispatcher controlMessageDispatcher;
 
   // meta message dispatcher
   @SuppressWarnings("unused")
@@ -115,7 +115,7 @@ public class IncomingMessageDispatcher {
   }
 
   public ControlMessage incomingControlMessage(ControlMessage controlMessage) {
-    return sessionMessageDispatcher.incomingControlMessage(controlMessage);
+    return controlMessageDispatcher.incomingControlMessage(controlMessage);
   }
 
   public MetaMessage incomingMetaMessage(MetaMessage metaMessage) {

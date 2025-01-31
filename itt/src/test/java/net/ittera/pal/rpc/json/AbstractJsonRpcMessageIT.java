@@ -458,5 +458,12 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractRpcMessageIT
     logger.debug("response to delete session command: {}", response);
     return response.getError() == null && response.getResult().getIsVoid();
   }
+
+  protected boolean sendGcCommand() throws Exception {
+    JsonRpcRequest request = JsonRpcMessageFactory.buildGcCommandMessage();
+    JsonRpcResponse response = thinPeer.sendJsonRpcRequestToPeer(request).get();
+    logger.debug("response to GC command: {}", response);
+    return response.getError() == null && response.getResult().getIsVoid();
+  }
   // </editor-fold>
 }

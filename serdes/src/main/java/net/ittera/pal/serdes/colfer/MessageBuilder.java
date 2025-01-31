@@ -1603,6 +1603,10 @@ public final class MessageBuilder {
     return buildControlCommandMessage(fromPeer, ControlCommandType.DELETE_SESSION, null);
   }
 
+  public ControlMessage buildGcCommandMessage(UUID fromPeer) {
+    return buildControlCommandMessage(fromPeer, ControlCommandType.GC, null);
+  }
+
   public ControlMessage buildControlStatusMessage(
       UUID fromPeerUuid, ControlStatusType statusType, String responseToId, @Nullable String body) {
     final ControlMessage controlMessage =

@@ -226,6 +226,14 @@ public class JsonRpcMessageFactory {
         .build();
   }
 
+  public static JsonRpcRequest buildGcCommandMessage() {
+    return JsonRpcRequest.builder()
+        .withId(nextId())
+        .withMethod(MessageFamily.CONTROL.getJsonName())
+        .withParams(Params.builder().withMethod(ControlCommandType.GC.getJsonName()).build())
+        .build();
+  }
+
   // </editor-fold>
 
   private static String nextId() {

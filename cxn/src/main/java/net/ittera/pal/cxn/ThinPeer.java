@@ -34,6 +34,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
+import javax.annotation.Nullable;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.util.UuidUtils;
@@ -1170,7 +1171,7 @@ public class ThinPeer implements AutoCloseable {
       super.send(message);
     }
 
-    public CompletableFuture<JsonRpcResponse> sendAsync(String message, String messageId)
+    public CompletableFuture<JsonRpcResponse> sendAsync(String message, @Nullable String messageId)
         throws JsonSerializationException {
       if (logger.isDebugEnabled()) {
         logger.debug("in sendAsync - sending message to ws socket: {}", message);

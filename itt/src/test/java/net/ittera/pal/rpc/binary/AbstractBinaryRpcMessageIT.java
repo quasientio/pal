@@ -478,4 +478,12 @@ public abstract class AbstractBinaryRpcMessageIT extends AbstractRpcMessageIT
     ControlStatusType statusType = ControlStatusType.fromId(response.getStatus());
     return ControlStatusType.OK.equals(statusType);
   }
+
+  protected boolean sendGcCommand() {
+    ControlMessage msg = messageBuilder.buildGcCommandMessage(thinPeer.getPeerUuid());
+    ControlMessage response = thinPeer.sendToPeer(msg);
+    logger.debug("response to GC command: {}", ColferUtils.toJson(response, true));
+    ControlStatusType statusType = ControlStatusType.fromId(response.getStatus());
+    return ControlStatusType.OK.equals(statusType);
+  }
 }
