@@ -79,18 +79,20 @@ public class ClassMetadataSerializer {
         // create JSON object for the class
         ObjectNode classObject = mapper.createObjectNode();
         classObject.put("className", className);
+        classObject.put("modifiers", classInfo.getModifiers());
 
         // constructors
         ArrayNode constructorsArray = mapper.createArrayNode();
         for (MethodInfo constructorInfo : classInfo.getDeclaredConstructorInfo()) {
           ObjectNode constructorObject = mapper.createObjectNode();
           constructorObject.put("name", constructorInfo.getName());
-          constructorObject.put("modifiers", constructorInfo.getModifiersStr());
+          constructorObject.put("modifiers", constructorInfo.getModifiers());
 
           ArrayNode parametersArray = mapper.createArrayNode();
           for (var paramInfo : constructorInfo.getParameterInfo()) {
             ObjectNode paramObject = mapper.createObjectNode();
             paramObject.put("name", paramInfo.getName());
+            paramObject.put("modifiers", paramInfo.getModifiers());
             paramObject.put("type", paramInfo.getTypeSignatureOrTypeDescriptor().toString());
             parametersArray.add(paramObject);
           }
@@ -104,7 +106,7 @@ public class ClassMetadataSerializer {
         for (MethodInfo methodInfo : classInfo.getDeclaredMethodInfo()) {
           ObjectNode methodObject = mapper.createObjectNode();
           methodObject.put("name", methodInfo.getName());
-          methodObject.put("modifiers", methodInfo.getModifiersStr());
+          methodObject.put("modifiers", methodInfo.getModifiers());
           methodObject.put(
               "returnType",
               methodInfo.getTypeSignatureOrTypeDescriptor().getResultType().toString());
@@ -113,6 +115,7 @@ public class ClassMetadataSerializer {
           for (var paramInfo : methodInfo.getParameterInfo()) {
             ObjectNode paramObject = mapper.createObjectNode();
             paramObject.put("name", paramInfo.getName());
+            paramObject.put("modifiers", paramInfo.getModifiers());
             paramObject.put("type", paramInfo.getTypeSignatureOrTypeDescriptor().toString());
             parametersArray.add(paramObject);
           }
@@ -126,7 +129,7 @@ public class ClassMetadataSerializer {
         for (FieldInfo fieldInfo : classInfo.getDeclaredFieldInfo()) {
           ObjectNode fieldObject = mapper.createObjectNode();
           fieldObject.put("name", fieldInfo.getName());
-          fieldObject.put("modifiers", fieldInfo.getModifiersStr());
+          fieldObject.put("modifiers", fieldInfo.getModifiers());
           fieldObject.put("type", fieldInfo.getTypeSignatureOrTypeDescriptor().toString());
           fieldsArray.add(fieldObject);
         }
