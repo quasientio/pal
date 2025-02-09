@@ -29,10 +29,6 @@ import net.ittera.pal.serdes.colfer.ObjUnwrappableAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * On dynamically creating arrays with generics: see Rohit Jain answer. <a
- * href="https://stackoverflow.com/questions/18581002/how-to-create-a-generic-array">...</a>
- */
 public class Unwrapper {
 
   private static final Logger logger = LoggerFactory.getLogger(Unwrapper.class);
