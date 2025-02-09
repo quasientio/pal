@@ -54,7 +54,8 @@ public class SelfCaller {
 
   private static final Logger logger = LoggerFactory.getLogger(SelfCaller.class);
 
-  static final int DEFAULT_EXIT_VALUE = -987654321;
+  static final int DEFAULT_EXIT_VALUE = -9999;
+  static final int DEFAULT_ERROR_EXIT_VALUE = -8888;
   private final UUID peerUuid;
   private final IncomingMessageDispatcher incomingMessageDispatcher;
   private final MessageBuilder messageBuilder;
@@ -202,6 +203,9 @@ public class SelfCaller {
     return switch (messageType) {
       case EXEC_RETURN_VALUE, EXEC_GET_STATIC, EXEC_GET_FIELD ->
           getIntFromReturnValue(mainResponseMessage);
+      case EXEC_THROWABLE -> {
+        yield DEFAULT_ERROR_EXIT_VALUE;
+      }
       default -> {
         logger.error("Unexpected message type: {}", messageType);
         yield DEFAULT_EXIT_VALUE;
