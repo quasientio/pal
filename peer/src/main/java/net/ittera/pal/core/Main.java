@@ -62,6 +62,7 @@ import net.ittera.pal.core.rpc.LogMessageExecutor;
 import net.ittera.pal.core.rpc.RpcMessageExecutor;
 import net.ittera.pal.core.rpc.ThreadPool;
 import net.ittera.pal.core.rpc.exec.java.CustomClassloader;
+import net.ittera.pal.core.rpc.exec.java.DynamicResourceBundleControlProvider;
 import net.ittera.pal.core.rpc.exec.java.SelfCaller;
 import net.ittera.pal.core.rpc.exec.java.reflect.AnnotationsProcessor;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
@@ -907,6 +908,10 @@ public class Main implements Callable<Integer> {
 
     // init custom classloader
     createCustomClassloader();
+
+    // tell our resource bundle control provider to use our custom classloader
+    DynamicResourceBundleControlProvider.setClassLoaderResolver(
+        (baseName, locale) -> customClassloader);
 
     // inject dependencies
     final Injector injector =
