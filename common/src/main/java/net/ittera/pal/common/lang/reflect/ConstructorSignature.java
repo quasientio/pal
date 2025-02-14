@@ -24,11 +24,28 @@ import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
+/**
+ * Represents the signature of a constructor, encapsulating metadata such as parameter types,
+ * modifiers, and exceptions.
+ */
 @SuppressWarnings("rawtypes")
 public final class ConstructorSignature extends CodeSignature {
 
+  /** The {@link Constructor} instance that this signature represents. */
   @Nonnull private final Constructor constructor;
 
+  /**
+   * Constructs a {@code ConstructorSignature} with detailed metadata.
+   *
+   * @param declaringType the class that declares the constructor
+   * @param declaringTypeName the name of the declaring class
+   * @param modifiers the constructor's modifiers
+   * @param name the name of the constructor
+   * @param exceptionTypes the types of exceptions thrown by the constructor
+   * @param params the parameters of the constructor
+   * @param constructor the {@link Constructor} instance this signature represents; must not be
+   *     {@code null}
+   */
   public ConstructorSignature(
       Class declaringType,
       String declaringTypeName,
@@ -41,6 +58,12 @@ public final class ConstructorSignature extends CodeSignature {
     this.constructor = Objects.requireNonNull(constructor);
   }
 
+  /**
+   * Constructs a {@code ConstructorSignature} based on the specified {@link Constructor}.
+   *
+   * @param constructor the {@link Constructor} to create the signature from; must not be {@code
+   *     null}
+   */
   public ConstructorSignature(Constructor constructor) {
     this(
         constructor.getDeclaringClass(),
@@ -52,11 +75,17 @@ public final class ConstructorSignature extends CodeSignature {
         constructor);
   }
 
+  /**
+   * Returns the {@link Constructor} instance associated with this signature.
+   *
+   * @return the {@link Constructor} represented by this signature
+   */
   @Nonnull
   public Constructor getConstructor() {
     return constructor;
   }
 
+  /** {@inheritDoc} */
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -72,11 +101,13 @@ public final class ConstructorSignature extends CodeSignature {
     return constructor.equals(that.constructor);
   }
 
+  /** {@inheritDoc} */
   @Override
   public int hashCode() {
     return Objects.hash(super.hashCode(), constructor);
   }
 
+  /** {@inheritDoc} */
   @Override
   public String toString() {
     return "ConstructorSignature{"

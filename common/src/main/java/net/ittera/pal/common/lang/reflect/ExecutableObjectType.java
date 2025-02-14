@@ -19,8 +19,33 @@
 
 package net.ittera.pal.common.lang.reflect;
 
+/**
+ * Defines the types of executable objects that can be reflected upon within the Pal runtime.
+ *
+ * @see java.lang.reflect.Constructor
+ * @see java.lang.reflect.Method
+ * @see java.lang.reflect.Field
+ */
 public enum ExecutableObjectType {
+
+  /**
+   * Represents a constructor executable object.
+   *
+   * @see java.lang.reflect.Constructor
+   */
   CONSTRUCTOR,
+
+  /**
+   * Represents a method executable object.
+   *
+   * @see java.lang.reflect.Method
+   */
   METHOD,
+
+  /**
+   * Represents a field executable object.
+   *
+   * @see java.lang.reflect.Field
+   */
   FIELD
 }

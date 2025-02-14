@@ -19,7 +19,14 @@
 
 package net.ittera.pal.common.objects;
 
+/** Thrown to indicate that a specific object was not found. */
 public class ObjectNotFoundException extends Exception {
+
+  /**
+   * Constructs a new {@code ObjectNotFoundException} with the specified detail message.
+   *
+   * @param message the detail message explaining the reason for the exception
+   */
   public ObjectNotFoundException(String message) {
     super(message);
   }

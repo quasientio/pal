@@ -20,9 +20,21 @@
 package net.ittera.pal.common.cli;
 
 /**
- * By having the parent Pal (picocli) command class implement this interface, we can use
- * the @ParentCommand annotation in Pal's subcommands without a cyclic dependency.
+ * Defines a contract for PAL (picocli) command classes to enable subcommands to reference the
+ * parent command without introducing cyclic dependencies.
+ *
+ * <p><strong>Purpose and Role:</strong> By implementing this interface, the parent Pal command
+ * class allows subcommands to use the {@code @ParentCommand} annotation, facilitating hierarchical
+ * command structures within the PAL CLI.
+ *
+ * @see net.ittera.pal.common.cli.PalCommand#getPalDirectoryConnectionString()
  */
 public interface PalCommand {
+
+  /**
+   * Retrieves the connection string used to establish a connection to the PAL directory.
+   *
+   * @return a {@code String} representing the connection string for the PAL directory.
+   */
   String getPalDirectoryConnectionString();
 }

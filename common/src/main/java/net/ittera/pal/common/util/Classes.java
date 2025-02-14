@@ -28,7 +28,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Provides utility methods for handling Java Class objects, particularly focusing on primitive
+ * types, their wrapper classes, and array representations. This class offers functionality to
+ * identify, map, and validate class names related to primitive types and their corresponding
+ * wrapper classes.
+ */
 public final class Classes {
+
+  /** An unmodifiable list containing all Java primitive type classes. */
   private static final List<Class<?>> PRIMITIVE_CLASSES =
       Arrays.asList(
           boolean.class,
@@ -40,6 +48,7 @@ public final class Classes {
           long.class,
           short.class);
 
+  /** An unmodifiable list containing all Java primitive wrapper classes. */
   private static final List<Class<?>> PRIMITIVE_WRAPPER_CLASSES =
       Arrays.asList(
           Boolean.class,
@@ -51,6 +60,7 @@ public final class Classes {
           Long.class,
           Short.class);
 
+  /** An unmodifiable list containing all one-dimensional Java primitive array classes. */
   private static final List<Class<?>> PRIMITIVE_ARRAY_CLASSES =
       Arrays.asList(
           boolean[].class,
@@ -62,6 +72,7 @@ public final class Classes {
           long[].class,
           short[].class);
 
+  /** An unmodifiable list containing all one-dimensional Java primitive wrapper array classes. */
   private static final List<Class<?>> PRIMITIVE_WRAPPER_ARRAY_CLASSES =
       Arrays.asList(
           Boolean[].class,
@@ -73,22 +84,10 @@ public final class Classes {
           Long[].class,
           Short[].class);
 
-  public static List<Class<?>> getPrimitiveClasses() {
-    return Collections.unmodifiableList(PRIMITIVE_CLASSES);
-  }
-
-  public static List<Class<?>> getPrimitiveWrapperClasses() {
-    return Collections.unmodifiableList(PRIMITIVE_WRAPPER_CLASSES);
-  }
-
-  public static List<Class<?>> getPrimitiveArrayClasses() {
-    return Collections.unmodifiableList(PRIMITIVE_ARRAY_CLASSES);
-  }
-
-  public static List<Class<?>> getPrimitiveWrapperArrayClasses() {
-    return Collections.unmodifiableList(PRIMITIVE_WRAPPER_ARRAY_CLASSES);
-  }
-
+  /**
+   * A mapping from simple class names to their fully qualified names for certain commonly used
+   * classes.
+   */
   private static final ImmutableMap<String, String> simpleToLongNames =
       ImmutableMap.<String, String>builder()
           .put("String", "java.lang.String")
@@ -102,6 +101,10 @@ public final class Classes {
           .put("Double", "java.lang.Double")
           .build();
 
+  /**
+   * An unmodifiable map that associates primitive type names with their corresponding Class
+   * objects.
+   */
   private static final Map<String, Class<?>> PRIMITIVE_NAME_TO_CLASS;
 
   static {
@@ -118,6 +121,10 @@ public final class Classes {
     PRIMITIVE_NAME_TO_CLASS = Collections.unmodifiableMap(map);
   }
 
+  /**
+   * An unmodifiable set of Java primitive type names, excluding "void". Used to verify if a given
+   * name corresponds strictly to a primitive type.
+   */
   private static final Set<String> ONLY_PRIMITIVE_NAMES;
 
   static {
@@ -126,6 +133,7 @@ public final class Classes {
     ONLY_PRIMITIVE_NAMES = Collections.unmodifiableSet(primitives);
   }
 
+  /** An unmodifiable set of Java primitive wrapper class names. */
   private static final Set<String> PRIMITIVE_WRAPPER_NAMES;
 
   static {
@@ -136,17 +144,76 @@ public final class Classes {
     PRIMITIVE_WRAPPER_NAMES = Collections.unmodifiableSet(wrappers);
   }
 
+  /** Private constructor to prevent instantiation of this utility class. */
   private Classes() {}
 
+  /**
+   * Retrieves an unmodifiable list of all Java primitive type classes.
+   *
+   * @return an unmodifiable List containing all primitive Class objects.
+   */
+  public static List<Class<?>> getPrimitiveClasses() {
+    return Collections.unmodifiableList(PRIMITIVE_CLASSES);
+  }
+
+  /**
+   * Retrieves an unmodifiable list of all Java primitive wrapper classes.
+   *
+   * @return an unmodifiable List containing all primitive wrapper Class objects.
+   */
+  public static List<Class<?>> getPrimitiveWrapperClasses() {
+    return Collections.unmodifiableList(PRIMITIVE_WRAPPER_CLASSES);
+  }
+
+  /**
+   * Retrieves an unmodifiable list of all one-dimensional Java primitive array classes.
+   *
+   * @return an unmodifiable List containing all primitive array Class objects.
+   */
+  public static List<Class<?>> getPrimitiveArrayClasses() {
+    return Collections.unmodifiableList(PRIMITIVE_ARRAY_CLASSES);
+  }
+
+  /**
+   * Retrieves an unmodifiable list of all one-dimensional Java primitive wrapper array classes.
+   *
+   * @return an unmodifiable List containing all primitive wrapper array Class objects.
+   */
+  public static List<Class<?>> getPrimitiveWrapperArrayClasses() {
+    return Collections.unmodifiableList(PRIMITIVE_WRAPPER_ARRAY_CLASSES);
+  }
+
+  /**
+   * Determines whether the specified class is a primitive wrapper type.
+   *
+   * @param type the Class object to check
+   * @return {@code true} if the specified class is a primitive wrapper; {@code false} otherwise
+   * @see #PRIMITIVE_WRAPPER_CLASSES
+   */
   public static boolean isPrimitiveWrapper(Class<?> type) {
     return PRIMITIVE_WRAPPER_CLASSES.contains(type);
   }
 
+  /**
+   * Converts a simple class name to its fully qualified name.
+   *
+   * @param shortName the simple name of the class
+   * @return the fully qualified class name, or {@code null} if the simple name is not recognized
+   * @see #simpleToLongNames
+   */
   public static String simpleToLongName(String shortName) {
     return simpleToLongNames.get(shortName);
   }
 
-  // return primitive class corresponding to wrapper class
+  /**
+   * Retrieves the corresponding primitive class for a given wrapper class.
+   *
+   * @param wrapper the wrapper Class to convert
+   * @return the associated primitive Class, or {@code null} if the provided class is not a
+   *     primitive wrapper
+   * @see #PRIMITIVE_WRAPPER_CLASSES
+   * @see #PRIMITIVE_CLASSES
+   */
   public static Class<?> getPrimitiveClassForWrapper(Class<?> wrapper) {
     if (wrapper == null) {
       return null;
@@ -159,11 +226,28 @@ public final class Classes {
     return null;
   }
 
+  /**
+   * Retrieves the Class object associated with a given primitive type name.
+   *
+   * @param primitiveName the name of the primitive type
+   * @return the corresponding primitive Class, or {@code null} if the name does not correspond to a
+   *     primitive type
+   * @see #PRIMITIVE_NAME_TO_CLASS
+   */
   @SuppressWarnings("rawtypes")
   public static Class getClassForPrimitive(String primitiveName) {
     return PRIMITIVE_NAME_TO_CLASS.get(primitiveName);
   }
 
+  /**
+   * Checks whether the specified class is either a primitive type or a primitive wrapper type.
+   *
+   * @param type the Class object to check
+   * @return {@code true} if the class is a primitive or a primitive wrapper; {@code false}
+   *     otherwise
+   * @see #PRIMITIVE_CLASSES
+   * @see #PRIMITIVE_WRAPPER_CLASSES
+   */
   public static boolean isPrimitiveOrWrapper(Class<?> type) {
     if (type == null) {
       return false;
@@ -172,19 +256,46 @@ public final class Classes {
     return type.isPrimitive() || isPrimitiveWrapper(type);
   }
 
+  /**
+   * Determines whether the given class name corresponds to a Java primitive type.
+   *
+   * @param className the name of the class to check
+   * @return {@code true} if the class name is a primitive type; {@code false} otherwise
+   * @see #ONLY_PRIMITIVE_NAMES
+   */
   public static boolean isPrimitive(String className) {
     return ONLY_PRIMITIVE_NAMES.contains(className);
   }
 
+  /**
+   * Checks if the provided class name represents a one-dimensional primitive array.
+   *
+   * @param className the name of the class to check
+   * @return {@code true} if the class name is a one-dimensional primitive array; {@code false}
+   *     otherwise
+   */
   public static boolean isOneDimensionalPrimitiveArray(String className) {
     return className.matches("\\[[BCDFIJSZ]");
   }
 
+  /**
+   * Checks if the provided class name represents a one-dimensional primitive wrapper array.
+   *
+   * @param className the name of the class to check
+   * @return {@code true} if the class name is a one-dimensional primitive wrapper array; {@code
+   *     false} otherwise
+   */
   public static boolean isOneDimensionalPrimitiveWrapperArray(String className) {
     return className.matches(
         "\\[L(java\\.lang\\.)?(Boolean|Byte|Character|Short|Integer|Long|Float|Double);");
   }
 
+  /**
+   * Validates whether the provided string is a valid Java class name, including array types.
+   *
+   * @param className the class name to validate
+   * @return {@code true} if the class name is valid; {@code false} otherwise
+   */
   public static boolean isValidClassName(String className) {
     if (className == null || className.isEmpty()) {
       return false;
@@ -197,6 +308,12 @@ public final class Classes {
     return className.matches(regex);
   }
 
+  /**
+   * Validates whether the provided string is a valid non-array Java class name.
+   *
+   * @param className the class name to validate
+   * @return {@code true} if the class name is a valid non-array name; {@code false} otherwise
+   */
   public static boolean isValidNonArrayClassName(String className) {
     if (className == null || className.isEmpty()) {
       return false;
@@ -205,6 +322,12 @@ public final class Classes {
     return className.matches(baseTypeRegex);
   }
 
+  /**
+   * Maps a given type string to its proper array class name representation.
+   *
+   * @param type the type string to map
+   * @return the corresponding array class name, or {@code null} if the type cannot be mapped
+   */
   public static String mapToProperArrayClassName(String type) {
     if (type == null) {
       return null;
@@ -244,6 +367,13 @@ public final class Classes {
     return null;
   }
 
+  /**
+   * Maps a type string to its corresponding component Class object.
+   *
+   * @param givenType the type string to map
+   * @return the corresponding component Class, or {@code null} if the type string does not match
+   *     any known types
+   */
   public static Class<?> mapTypeStringToComponentClass(String givenType) {
     return switch (givenType) {
       case "[I", "int[]" -> int.class;

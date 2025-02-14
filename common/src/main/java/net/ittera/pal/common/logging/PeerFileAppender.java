@@ -20,9 +20,14 @@
 package net.ittera.pal.common.logging;
 
 /**
- * The purpose of this subclass is to not have to change package name in logback.xml after
- * mvn-shading (see issue #168 more details). Having our own FileAppender class means we can leave
- * the full package and class unchanged since we only relocate dependencies, not our own classes
+ * Custom FileAppender that preserves the fully qualified class name in logback.xml after
+ * mvn-shading. This allows the relocation of dependencies without requiring changes to the logging
+ * configuration. By extending Logback's {@link ch.qos.logback.core.FileAppender}, it ensures
+ * consistent logging behavior while maintaining the original package structure for configuration
+ * purposes.
+ *
+ * @see ch.qos.logback.core.FileAppender
+ * @see <a href="https://gitlab.com/cometera/pal/-/issues/168">Issue #168</a>
  */
 @SuppressWarnings("rawtypes")
 public final class PeerFileAppender extends ch.qos.logback.core.FileAppender {}

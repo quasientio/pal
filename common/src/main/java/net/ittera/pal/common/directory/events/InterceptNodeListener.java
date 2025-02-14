@@ -19,7 +19,24 @@
 
 package net.ittera.pal.common.directory.events;
 
+/**
+ * Defines a listener for intercepting node-related events within the PAL system.
+ *
+ * <p>Implementers of this interface can register to receive notifications when specific {@link
+ * InterceptEvent} instances occur, allowing for custom handling of node interactions.
+ *
+ * @see InterceptEvent
+ */
 public interface InterceptNodeListener {
 
+  /**
+   * Handles the specified intercept event.
+   *
+   * <p>This method is invoked by the PAL directory when an {@link InterceptEvent} occurs.
+   *
+   * @param event the {@code InterceptEvent} to be processed Must not be {@code null}.
+   * @throws IllegalArgumentException if the {@code event} is {@code null}
+   * @see InterceptEvent
+   */
   void interceptEvent(InterceptEvent event);
 }

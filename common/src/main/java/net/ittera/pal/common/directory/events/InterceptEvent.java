@@ -29,22 +29,58 @@ import javax.annotation.Nullable;
 import net.ittera.pal.common.directory.nodes.InterceptRequest;
 
 /**
- * Event that is fired when an intercept is added or removed.
+ * Represents an event triggered when an intercept is added or removed within the system.
  *
- * @param type The type of the event. INTERCEPT_ADDED: An intercept was added. INTERCEPT_REMOVED: An
- *     intercept was removed.
- * @param interceptPath The path of the intercept.
- * @param peerUuid The UUID of the peer that owns the new or removed intercept.
- * @param interceptId The Id of the intercept that was added or removed.
- * @param interceptRequest The intercept request that was added. Null if the intercept was removed.
+ * <p>This event encapsulates information about the type of change (addition or removal), the path
+ * of the intercept, the peer involved, the intercept identifier, and the intercept request if
+ * applicable.
+ *
+ * @see InterceptRequest
  */
 public record InterceptEvent(
+    /**
+     * The type of the intercept event indicating addition or removal.
+     *
+     * @see Type
+     */
     @Nonnull InterceptEvent.Type type,
+
+    /**
+     * The hierarchical path of the intercept, structured with four non-empty parts separated by
+     * '/'.
+     */
     @Nonnull String interceptPath,
+
+    /**
+     * The universally unique identifier (UUID) of the peer that owns the new or removed intercept.
+     */
     @Nonnull UUID peerUuid,
+
+    /** The unique identifier of the intercept that was added or removed. */
     @Nonnull String interceptId,
+
+    /**
+     * The {@link InterceptRequest} that was added. This is {@code null} if the intercept was
+     * removed.
+     */
     @Nullable InterceptRequest<?> interceptRequest) {
 
+  /**
+   * Constructs an {@code InterceptEvent} with the specified parameters, ensuring all invariants are
+   * met.
+   *
+   * @param type the type of the event, must not be {@code null}.
+   * @param interceptPath the path of the intercept, must consist of four non-empty parts separated
+   *     by '/' and not {@code null}.
+   * @param peerUuid the UUID of the peer, must not be {@code null}.
+   * @param interceptId the identifier of the intercept, must not be {@code null} or empty.
+   * @param interceptRequest the intercept request, must not be {@code null} if the event type is
+   *     {@link Type#INTERCEPT_ADDED}.
+   * @throws NullPointerException if any of {@code type}, {@code interceptPath}, {@code peerUuid},
+   *     or {@code interceptId} is {@code null}.
+   * @throws IllegalArgumentException if {@code interceptPath} is empty or does not consist of four
+   *     parts, or if {@code interceptId} is empty.
+   */
   public InterceptEvent {
     Objects.requireNonNull(type, "type cannot be null");
     validatePath(interceptPath);
@@ -58,11 +94,23 @@ public record InterceptEvent(
     }
   }
 
+  /** Enumeration of possible types of {@link InterceptEvent}. */
   public enum Type {
+    /** Indicates that an intercept has been successfully added. */
     INTERCEPT_ADDED,
+
+    /** Indicates that an intercept has been successfully removed. */
     INTERCEPT_REMOVED,
   }
 
+  /**
+   * Validates the intercept path to ensure it meets the required format.
+   *
+   * @param path the intercept path to validate, must not be {@code null} or empty.
+   * @throws NullPointerException if {@code path} is {@code null}.
+   * @throws IllegalArgumentException if {@code path} is empty or does not consist of four non-empty
+   *     parts separated by '/'.
+   */
   private static void validatePath(String path) {
     Objects.requireNonNull(path, "interceptPath cannot be null");
     if (path.isEmpty()) {

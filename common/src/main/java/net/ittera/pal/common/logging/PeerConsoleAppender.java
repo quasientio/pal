@@ -20,10 +20,14 @@
 package net.ittera.pal.common.logging;
 
 /**
- * The purpose of this subclass is to not have to change package name in logback.xml after
- * mvn-shading (see issue #168 more details). Having our own ConsoleAppender class means we can
- * leave the full package and class unchanged since we only relocate dependencies, not our own
- * classes
+ * Provides a custom {@code ConsoleAppender} that maintains the original package and class name
+ * after Maven shading. This ensures that the {@code logback.xml} configuration can reference this
+ * appender without requiring changes to the package name. By extending Logback's {@link
+ * ch.qos.logback.core.ConsoleAppender}, this class allows relocation of dependencies without
+ * affecting internal classes.
+ *
+ * @see ch.qos.logback.core.ConsoleAppender
+ * @see <a href="https://gitlab.com/cometera/pal/-/issues/168">Issue #168</a>
  */
 @SuppressWarnings("rawtypes")
 public final class PeerConsoleAppender extends ch.qos.logback.core.ConsoleAppender {}

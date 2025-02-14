@@ -8,8 +8,20 @@ import java.util.Base64;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+/**
+ * Provides utility methods for compressing strings using GZIP and encoding them in Base64, as well
+ * as decoding Base64-encoded strings and decompressing them back to their original form.
+ */
 public class GzipBase64Utils {
 
+  /**
+   * Compresses the specified text using GZIP and encodes the compressed data in Base64.
+   *
+   * @param text the input string to encode; must not be {@code null} or empty
+   * @return a Base64-encoded string representing the compressed input
+   * @throws IllegalArgumentException if {@code text} is {@code null} or empty
+   * @throws RuntimeException if an I/O error occurs during encoding
+   */
   public static String encode(String text) {
     if (text == null || text.isEmpty()) {
       throw new IllegalArgumentException("Input text cannot be null or empty");
@@ -34,6 +46,15 @@ public class GzipBase64Utils {
     }
   }
 
+  /**
+   * Decodes the specified Base64-encoded string and decompresses the resulting data using GZIP to
+   * retrieve the original text.
+   *
+   * @param base64Encoded the Base64-encoded string to decode; must not be {@code null} or empty
+   * @return the original uncompressed string
+   * @throws IllegalArgumentException if {@code base64Encoded} is {@code null} or empty
+   * @throws RuntimeException if an I/O error occurs during decoding
+   */
   public static String decode(String base64Encoded) {
     if (base64Encoded == null || base64Encoded.isEmpty()) {
       throw new IllegalArgumentException("Encoded text cannot be null or empty");

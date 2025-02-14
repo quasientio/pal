@@ -3,15 +3,26 @@ package net.ittera.pal.common.util;
 import java.math.BigInteger;
 import java.util.UUID;
 
+/**
+ * This implementation of the {@link IdGenerator} interface provides a standardized method for
+ * generating Base62-encoded unique identifiers, utilizing {@link UUID} and {@link BigInteger} for
+ * encoding operations.
+ */
 public class Base62UuidGenerator implements IdGenerator {
+
+  /**
+   * The character set used for Base62 encoding, consisting of digits, uppercase, and lowercase
+   * letters.
+   */
   private static final char[] BASE62_CHARACTERS =
       "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".toCharArray();
 
   /**
-   * Encodes a 128-bit UUID value into a Base62 string using BigInteger.
+   * Encodes a 128-bit UUID value into a Base62 string using {@link BigInteger}.
    *
-   * @param bytes The 16-byte array representing the UUID.
-   * @return The Base62-encoded string.
+   * @param bytes The 16-byte array representing the UUID. Must not be {@code null} and must have a
+   *     length of 16.
+   * @return The Base62-encoded string representing the UUID.
    */
   private static String encodeBase62(byte[] bytes) {
     // Use BigInteger to handle the full 128-bit number positively
@@ -38,7 +49,9 @@ public class Base62UuidGenerator implements IdGenerator {
   }
 
   /**
-   * Generates a Base62-encoded UUID.
+   * {@inheritDoc}
+   *
+   * <p>This implementation generates a random UUID and encodes it into a Base62 string.
    *
    * @return A Base62-encoded UUID string.
    */

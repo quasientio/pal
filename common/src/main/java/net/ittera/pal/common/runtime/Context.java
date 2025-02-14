@@ -29,18 +29,50 @@ import net.ittera.pal.common.lang.reflect.Signature;
 import org.aspectj.lang.JoinPoint;
 
 /**
- * This class and the ones under .reflect subpackage partly hold info that will be extracted from
- * aspectj's JoinPoint.StaticPart, allowing us to construct instances for unit-testing, and adding
- * more useful contextual information.
+ * Represents the contextual information extracted from an AspectJ {@link JoinPoint.StaticPart}.
+ * This includes details such as the source file name, line number, the class within which the join
+ * point occurs, and the signature of the method, constructor, or field involved.
+ *
+ * <p>This class allows the reconstruction of execution contexts with additional metadata.
+ *
+ * @see net.ittera.pal.common.lang.reflect.Signature
  */
 @SuppressWarnings("rawtypes")
 public final class Context {
 
+  /**
+   * The name of the source file where the join point is located. This field is non-null and
+   * identifies the filename containing the relevant code.
+   */
   @Nonnull private final String sourceFilename;
+
+  /**
+   * The line number in the source file where the join point occurs. This integer represents the
+   * exact line in the source code.
+   */
   private final int sourceLine;
+
+  /**
+   * The class within which the join point is defined. This field is non-null and references the
+   * enclosing class type.
+   */
   @Nonnull private final Class withinType;
+
+  /**
+   * The signature of the join point, encapsulating method, constructor, or field details. This
+   * field is non-null and provides comprehensive information about the executable element.
+   */
   @Nonnull private final Signature signature;
 
+  /**
+   * Constructs a new {@code Context} instance with the specified details.
+   *
+   * @param sourceFilename the name of the source file; must not be null
+   * @param sourceLine the line number in the source file
+   * @param withinType the class within which the join point is defined; must not be null
+   * @param signature the signature of the join point; must not be null
+   * @throws NullPointerException if any of the non-null parameters are null
+   */
   public Context(
       @Nonnull String sourceFilename,
       int sourceLine,
@@ -52,25 +84,56 @@ public final class Context {
     this.signature = Objects.requireNonNull(signature);
   }
 
+  /**
+   * Retrieves the name of the source file where the join point is located.
+   *
+   * @return the non-null source filename
+   */
   @Nonnull
   public String getSourceFilename() {
     return sourceFilename;
   }
 
+  /**
+   * Retrieves the line number in the source file where the join point occurs.
+   *
+   * @return the source line number
+   */
   public int getSourceLine() {
     return sourceLine;
   }
 
+  /**
+   * Retrieves the class within which the join point is defined.
+   *
+   * @return the non-null class type
+   */
   @Nonnull
   public Class getWithinType() {
     return withinType;
   }
 
+  /**
+   * Retrieves the signature of the join point, which includes details about the method,
+   * constructor, or field.
+   *
+   * @return the non-null signature
+   */
   @Nonnull
   public Signature getSignature() {
     return signature;
   }
 
+  /**
+   * Parses a {@link JoinPoint.StaticPart} to create a corresponding {@code Context} instance.
+   * Extracts relevant information such as source filename, line number, enclosing class, and
+   * signature details.
+   *
+   * @param staticPart the static part of the join point to parse; must not be null
+   * @return a {@code Context} instance representing the parsed join point
+   * @throws IllegalArgumentException if the signature type is unsupported
+   * @throws NullPointerException if any required information from {@code staticPart} is null
+   */
   public static Context parseFrom(final JoinPoint.StaticPart staticPart) {
     final String filename = staticPart.getSourceLocation().getFileName();
     final int sourceLine = staticPart.getSourceLocation().getLine();
@@ -145,6 +208,7 @@ public final class Context {
         "Cannot handle signature of type: " + ajSig.getClass().getName());
   }
 
+  /** {@inheritDoc} */
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -160,11 +224,13 @@ public final class Context {
         && signature.equals(context.signature);
   }
 
+  /** {@inheritDoc} */
   @Override
   public int hashCode() {
     return Objects.hash(sourceFilename, sourceLine, withinType, signature);
   }
 
+  /** {@inheritDoc} */
   @Override
   public String toString() {
     return "Context{"

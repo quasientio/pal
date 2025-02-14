@@ -24,12 +24,33 @@ import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
+/**
+ * Represents the signature of a specific method, encapsulating its declaring class, name,
+ * modifiers, parameter types, exception types, and return type. Extends {@link CodeSignature} to
+ * include method-specific details such as the associated {@link Method} object and its return type.
+ */
 @SuppressWarnings("rawtypes")
 public final class MethodSignature extends CodeSignature {
 
+  /** The {@link Method} instance that defines the method signature. */
   @Nonnull private final Method method;
+
+  /** The {@link Class} object representing the return type of the method. */
   @Nonnull private final Class returnType;
 
+  /**
+   * Creates a new {@code MethodSignature} instance with the specified attributes.
+   *
+   * @param declaringType the class that declares the method
+   * @param declaringTypeName the fully qualified name of the declaring class
+   * @param modifiers the modifier flags for the method
+   * @param name the name of the method
+   * @param exceptionTypes the array of exception types thrown by the method
+   * @param params the parameters of the method
+   * @param method the {@link Method} object representing the method
+   * @param returnType the {@link Class} object representing the return type of the method
+   * @throws NullPointerException if {@code method} or {@code returnType} is {@code null}
+   */
   public MethodSignature(
       Class declaringType,
       String declaringTypeName,
@@ -44,6 +65,12 @@ public final class MethodSignature extends CodeSignature {
     this.returnType = Objects.requireNonNull(returnType);
   }
 
+  /**
+   * Constructs a {@code MethodSignature} based on the provided {@link Method} instance.
+   *
+   * @param method the {@link Method} object to create the signature from
+   * @throws NullPointerException if {@code method} is {@code null}
+   */
   public MethodSignature(Method method) {
     this(
         method.getDeclaringClass(),
@@ -56,16 +83,27 @@ public final class MethodSignature extends CodeSignature {
         method.getReturnType());
   }
 
+  /**
+   * Returns the {@link Method} instance associated with this signature.
+   *
+   * @return the {@link Method} object representing the method signature
+   */
   @Nonnull
   public Method getMethod() {
     return method;
   }
 
+  /**
+   * Returns the return type of the method.
+   *
+   * @return the {@link Class} representing the method's return type
+   */
   @Nonnull
   public Class getReturnType() {
     return returnType;
   }
 
+  /** {@inheritDoc} */
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -81,11 +119,13 @@ public final class MethodSignature extends CodeSignature {
     return method.equals(that.method) && returnType.equals(that.returnType);
   }
 
+  /** {@inheritDoc} */
   @Override
   public int hashCode() {
     return Objects.hash(super.hashCode(), method, returnType);
   }
 
+  /** {@inheritDoc} */
   @Override
   public String toString() {
     return "MethodSignature{"

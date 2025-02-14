@@ -19,16 +19,34 @@
 
 package net.ittera.pal.common.lang;
 
+/** Represents the types of operations that can be performed on a field. */
 public enum FieldOpType {
+
+  /** Represents a get field operation. */
   GET((byte) 1),
+
+  /** Represents a put field operation. */
   PUT((byte) 2);
 
+  /** The byte value associated with the field operation type. */
   private final byte idx;
 
+  /**
+   * Constructs a FieldOpType with the specified byte value.
+   *
+   * @param idx the byte value representing the field operation type
+   */
   FieldOpType(byte idx) {
     this.idx = idx;
   }
 
+  /**
+   * Converts the specified byte value to its corresponding FieldOpType enum constant.
+   *
+   * @param typeAsByte the byte value representing the field operation type
+   * @return the corresponding FieldOpType enum constant
+   * @throws IllegalArgumentException if the byte value does not correspond to any FieldOpType
+   */
   public static FieldOpType fromByte(byte typeAsByte) {
     return switch (typeAsByte) {
       case 1 -> GET;
@@ -37,6 +55,11 @@ public enum FieldOpType {
     };
   }
 
+  /**
+   * Returns the byte value associated with this field operation type.
+   *
+   * @return the byte value representing this FieldOpType
+   */
   public byte toByte() {
     return idx;
   }

@@ -34,23 +34,57 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Encapsulates information and provides serialization methods for intercept requests, so they can
- * be saved to the registry/directory and processed by peers.
+ * Represents a request to intercept a specific call or field op. It encapsulates all necessary
+ * information required to perform the interception, including the type of intercept, the target
+ * class and method, and the specific interceptable action. Requests are serialized in the Pal
+ * directory for later processing by this or any peer in the system.
  *
- * @param <T> The type of interceptable of this request.
+ * @param <T> The type of {@link Interceptable} associated with this request.
+ * @see Interceptable
+ * @see InterceptableMethodCall
+ * @see InterceptableFieldOp
  */
 public final class InterceptRequest<T extends Interceptable> extends InfoNode {
 
+  /** Logger instance for logging events related to {@code InterceptRequest}. */
   private static final Logger logger = LoggerFactory.getLogger(InterceptRequest.class);
+
+  /** Delimiter used to separate fields during serialization. */
   private static final String LINE_SEP = "##";
+
+  /** Unique identifier for this intercept request. */
   @Nonnull private final UUID uuid;
+
+  /** Identifier of the peer that initiated this intercept request. */
   @Nonnull private final UUID peer;
+
+  /** The type of interception being requested. */
   @Nonnull private final InterceptType type;
+
+  /** The fully qualified name of the class where the interception is to occur. */
   @Nonnull private final String clazz;
+
+  /** The fully qualified name of the callback class associated with this interception. */
   @Nonnull private final String callbackClass;
+
+  /** The method name in the callback class that should be invoked upon interception. */
   @Nonnull private final String callbackMethod;
+
+  /** The interceptable action that this request targets. */
   @Nonnull private final T interceptable;
 
+  /**
+   * Constructs a new {@code InterceptRequest} with the specified parameters.
+   *
+   * @param uuid the unique identifier for this request; must not be {@code null}
+   * @param peer the identifier of the peer initiating the request; must not be {@code null}
+   * @param type the type of interception; must not be {@code null}
+   * @param clazz the target class name for interception; must not be {@code null}
+   * @param callbackClass the callback class name; must not be {@code null}
+   * @param callbackMethod the callback method name; must not be {@code null}
+   * @param interceptable the interceptable action; must not be {@code null}
+   * @throws NullPointerException if any of the parameters are {@code null}
+   */
   public InterceptRequest(
       @Nonnull UUID uuid,
       @Nonnull UUID peer,
@@ -59,25 +93,93 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
       @Nonnull String callbackClass,
       @Nonnull String callbackMethod,
       @Nonnull T interceptable) {
-    this.uuid = Objects.requireNonNull(uuid);
-    this.peer = Objects.requireNonNull(peer);
-    this.type = Objects.requireNonNull(type);
-    this.clazz = Objects.requireNonNull(clazz);
-    this.callbackClass = Objects.requireNonNull(callbackClass);
-    this.callbackMethod = Objects.requireNonNull(callbackMethod);
-    this.interceptable = Objects.requireNonNull(interceptable);
+    this.uuid = Objects.requireNonNull(uuid, "uuid must not be null");
+    this.peer = Objects.requireNonNull(peer, "peer must not be null");
+    this.type = Objects.requireNonNull(type, "type must not be null");
+    this.clazz = Objects.requireNonNull(clazz, "clazz must not be null");
+    this.callbackClass = Objects.requireNonNull(callbackClass, "callbackClass must not be null");
+    this.callbackMethod = Objects.requireNonNull(callbackMethod, "callbackMethod must not be null");
+    this.interceptable = Objects.requireNonNull(interceptable, "interceptable must not be null");
   }
 
+  /**
+   * Retrieves the unique identifier of this intercept request.
+   *
+   * @return the {@code UUID} representing this request's unique identifier
+   */
   @Nonnull
   public UUID getUuid() {
     return uuid;
   }
 
+  /**
+   * Retrieves the interceptable action associated with this request.
+   *
+   * @return the {@code Interceptable} action targeted by this request
+   */
   @Nonnull
   public T getInterceptable() {
     return interceptable;
   }
 
+  /**
+   * Retrieves the identifier of the peer that initiated this intercept request.
+   *
+   * @return the {@code UUID} of the initiating peer
+   */
+  @Nonnull
+  public UUID getPeer() {
+    return peer;
+  }
+
+  /**
+   * Retrieves the type of interception being requested.
+   *
+   * @return the {@code InterceptType} of this request
+   */
+  @Nonnull
+  public InterceptType getType() {
+    return type;
+  }
+
+  /**
+   * Retrieves the name of the class where the interception is to occur.
+   *
+   * @return the fully qualified class name as a {@code String}
+   */
+  @Nonnull
+  public String getClazz() {
+    return clazz;
+  }
+
+  /**
+   * Retrieves the name of the callback class associated with this interception.
+   *
+   * @return the fully qualified callback class name as a {@code String}
+   */
+  @Nonnull
+  public String getCallbackClass() {
+    return callbackClass;
+  }
+
+  /**
+   * Retrieves the name of the callback method to be invoked upon interception.
+   *
+   * @return the callback method name as a {@code String}
+   */
+  @Nonnull
+  public String getCallbackMethod() {
+    return callbackMethod;
+  }
+
+  /**
+   * Compares this {@code InterceptRequest} to the specified object.
+   *
+   * @param o the object to compare this {@code InterceptRequest} against
+   * @return {@code true} if the given object represents an {@code InterceptRequest} equivalent to
+   *     this request, {@code false} otherwise
+   * @see Object#equals(Object)
+   */
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -96,11 +198,25 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
         && interceptable.equals(that.interceptable);
   }
 
+  /**
+   * Returns a hash code value for this {@code InterceptRequest}.
+   *
+   * @return a hash code value for this object
+   * @see Object#hashCode()
+   */
   @Override
   public int hashCode() {
     return Objects.hash(uuid, peer, type, clazz, callbackClass, callbackMethod, interceptable);
   }
 
+  /**
+   * Serializes this {@code InterceptRequest} into a byte array using the specified {@code Charset}.
+   * The serialization format separates fields using the predefined line separator.
+   *
+   * @param charset the {@code Charset} to use for encoding the serialized string
+   * @return a byte array representing the serialized form of this request
+   * @throws NullPointerException if {@code charset} is {@code null}
+   */
   public byte[] toBytes(Charset charset) {
     final String s =
         format(
@@ -130,6 +246,16 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
     return s.getBytes(charset);
   }
 
+  /**
+   * Deserializes a byte array into an {@code InterceptRequest} object using the specified {@code
+   * Charset}. This method parses the byte array based on the predefined line separator and
+   * reconstructs the {@code InterceptRequest} with the extracted information.
+   *
+   * @param serialized the byte array containing the serialized {@code InterceptRequest}
+   * @param charset the {@code Charset} to use for decoding the byte array
+   * @return a new instance of {@code InterceptRequest} reconstructed from the byte array
+   * @throws NullPointerException if {@code serialized} or {@code charset} is {@code null}
+   */
   public static InterceptRequest<?> fromBytes(byte[] serialized, Charset charset) {
     if (logger.isDebugEnabled()) {
       logger.debug(
@@ -156,31 +282,11 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
         uuid, peer, type, clazz, callbackClass, callbackMethod, interceptable);
   }
 
-  @Nonnull
-  public UUID getPeer() {
-    return peer;
-  }
-
-  @Nonnull
-  public InterceptType getType() {
-    return type;
-  }
-
-  @Nonnull
-  public String getClazz() {
-    return clazz;
-  }
-
-  @Nonnull
-  public String getCallbackClass() {
-    return callbackClass;
-  }
-
-  @Nonnull
-  public String getCallbackMethod() {
-    return callbackMethod;
-  }
-
+  /**
+   * Returns a string representation of this {@code InterceptRequest}, including all its fields.
+   *
+   * @return a string representation of this intercept request
+   */
   @Override
   public String toString() {
     return "InterceptRequest {"
