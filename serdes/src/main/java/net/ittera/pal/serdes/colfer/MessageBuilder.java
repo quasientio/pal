@@ -108,30 +108,64 @@ import net.ittera.pal.serdes.jsonrpc.JsonRpcParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Constructs and serializes various types of PAL runtime messages using the Colfer serialization
+ * format.
+ *
+ * <p>This class provides methods to build executable messages, control messages, meta messages, and
+ * intercept messages, among others. It handles the conversion between JSON-RPC requests/responses
+ * and the internal message representations, ensuring proper formatting and context inclusion as
+ * configured.
+ */
 public final class MessageBuilder {
 
+  /** Logger instance for logging message building operations. */
   private static final Logger logger = LoggerFactory.getLogger(MessageBuilder.class);
 
-  // ISO 8601 with millis (fraction-of-second) + TZ (no name, only offset)
+  /** Formats date and time in ISO 8601 format with milliseconds and timezone offset. */
   private final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
 
+  /** Thread-local counter for dispatch sequencing of messages per thread. */
   private final ThreadLocal<AtomicInteger> threadDispatchSequence =
       ThreadLocal.withInitial(() -> new AtomicInteger(1));
 
+  /** Thread-local counter for builder sequencing of messages per thread. */
   private final ThreadLocal<AtomicInteger> threadBuilderSequence =
       ThreadLocal.withInitial(() -> new AtomicInteger(1));
 
+  /** Flag indicating whether to include source context information in the built messages. */
   private boolean includeSourceContext;
+
+  /** Generator for unique message identifiers. */
   private final IdGenerator idGenerator = new Base62UuidGenerator();
 
+  /**
+   * Constructs a new {@code MessageBuilder} with default configuration.
+   *
+   * <p>Source context inclusion is disabled by default.
+   */
   public MessageBuilder() {}
 
+  /**
+   * Constructs a new {@code MessageBuilder} with source context configuration.
+   *
+   * @param includeSourceContextStr a string representing whether to include source context
+   *     information in the built messages. Expected values are "true" or "false".
+   */
   @Inject
   public MessageBuilder(@Named("messages.with_src_context") String includeSourceContextStr) {
     this.includeSourceContext = Boolean.parseBoolean(includeSourceContextStr);
   }
 
   // <editor-fold desc="Thread-local sequence stamping methods">
+
+  /**
+   * Resets the thread-local builder sequence counter and increments the dispatch sequence.
+   *
+   * <p>This method resets the {@code threadBuilderSequence} counter to 1 and increments the {@code
+   * threadDispatchSequence} counter for the current thread, ensuring a fresh sequencing for new
+   * message builds.
+   */
   public void resetThreadLocalSequence() {
     threadBuilderSequence.set(new AtomicInteger(1));
     threadDispatchSequence.get().getAndIncrement();
@@ -140,6 +174,14 @@ public final class MessageBuilder {
   // </editor-fold>
 
   // <editor-fold desc="Private Auxiliary methods">
+
+  /**
+   * Converts a parameter map to an array of {@link Parameter} objects.
+   *
+   * @param params the map of parameter names to their respective values
+   * @return an array of {@code Parameter} objects representing the key-value pairs, or {@code null}
+   *     if the input map is {@code null}
+   */
   private static Parameter[] paramMapToParameters(Map<String, Object> params) {
     if (params == null) {
       return null;
@@ -158,10 +200,24 @@ public final class MessageBuilder {
     return keyValues;
   }
 
+  /**
+   * Generates the next unique message identifier.
+   *
+   * @return a unique identifier string
+   */
   private String nextId() {
     return idGenerator.nextId();
   }
 
+  /**
+   * Creates a {@link Parameter} object based on the provided argument and type.
+   *
+   * @param parameterType the type of the parameter
+   * @param arg the argument value, which may be {@code null} or an instance of {@link Obj}
+   * @param argObjRef the reference to an object if the argument is an object reference, otherwise
+   *     {@code null}
+   * @return a {@code Parameter} representing the argument
+   */
   private Parameter createParameter(String parameterType, Object arg, ObjectRef argObjRef) {
     if (arg instanceof Obj objArg) {
       return new Parameter().withValue(objArg);
@@ -170,6 +226,16 @@ public final class MessageBuilder {
         .withValue(getWrappedObject(arg, parameterType, argObjRef, WrapPolicy.PREFER_REFERENCE));
   }
 
+  /**
+   * Creates a named {@link Parameter} for a method or constructor parameter.
+   *
+   * @param parameter the reflective parameter information
+   * @param paramName the name of the parameter, or {@code null} to use the reflective name
+   * @param paramType the type name of the parameter
+   * @param param the value of the parameter
+   * @param paramObjRef the object reference for the parameter if applicable, otherwise {@code null}
+   * @return a {@code Parameter} with the specified name and value
+   */
   private Parameter createNamedParameter(
       java.lang.reflect.Parameter parameter,
       String paramName,
@@ -182,6 +248,15 @@ public final class MessageBuilder {
         .withValue(getWrappedObject(param, paramType, paramObjRef, WrapPolicy.PREFER_REFERENCE));
   }
 
+  /**
+   * Creates an array of named {@link Parameter} objects based on the provided context and
+   * arguments.
+   *
+   * @param context the execution context containing signature information
+   * @param args the array of argument values
+   * @param argObjRefs the array of object references corresponding to the arguments
+   * @return an array of {@code Parameter} objects representing the named parameters
+   */
   private Parameter[] createNamedParameters(
       Context context, Object[] args, ObjectRef[] argObjRefs) {
     final CodeSignature codeSignature = (CodeSignature) context.getSignature();
@@ -199,7 +274,19 @@ public final class MessageBuilder {
     return params;
   }
 
-  // TODO we should be calling createNamedParameter instead of createParameter
+  /**
+   * Creates an array of named {@link Parameter} objects based on parameter types and arguments.
+   *
+   * <p>Args must be set either in {@code args} or {@code argObjRefs}. If {@code null} in both, the
+   * value is assumed to be {@code null}.
+   *
+   * @param parameterTypes the array of parameter type names
+   * @param args the array of argument values, corresponding to {@code parameterTypes}
+   * @param argObjRefs the array of object references corresponding to {@code parameterTypes}
+   * @return an array of {@code Parameter} objects representing the named parameters
+   * @throws IllegalArgumentException if the lengths of {@code parameterTypes}, {@code args}, and
+   *     {@code argObjRefs} are inconsistent
+   */
   private Parameter[] createNamedParameters(
       String[] parameterTypes, Object[] args, ObjectRef[] argObjRefs) {
     final int paramsTypesLength = parameterTypes == null ? 0 : parameterTypes.length;
@@ -209,6 +296,7 @@ public final class MessageBuilder {
       throw new IllegalArgumentException(
           "parameterTypes must be of same length as args and argObjRefs");
     }
+    // TODO we should be calling createNamedParameter instead of createParameter
     final Parameter[] params = new Parameter[paramsTypesLength];
     for (int i = 0; i < paramsTypesLength; i++) {
       assert argObjRefs != null;
@@ -225,6 +313,14 @@ public final class MessageBuilder {
     return params;
   }
 
+  /**
+   * Creates a new {@link ExecMessage} with the specified peer UUID and response ID.
+   *
+   * @param peerUuid the UUID of the peer sending the message
+   * @param responseToId the message ID this {@code ExecMessage} is responding to, or {@code null}
+   *     if not applicable
+   * @return a new {@code ExecMessage} instance with initialized fields
+   */
   private ExecMessage newExecMessage(UUID peerUuid, String responseToId) {
     ExecMessage msgWrapper =
         new ExecMessage()
@@ -242,10 +338,22 @@ public final class MessageBuilder {
     return msgWrapper;
   }
 
+  /**
+   * Creates a new {@link ExecMessage} with the specified peer UUID.
+   *
+   * @param peerUuid the UUID of the peer sending the message
+   * @return a new {@code ExecMessage} instance with initialized fields
+   */
   private ExecMessage newExecMessage(UUID peerUuid) {
     return newExecMessage(peerUuid, null);
   }
 
+  /**
+   * Builds a {@link net.ittera.pal.messages.colfer.Throwable} message from a {@code Throwable}.
+   *
+   * @param throwable the {@code Throwable} to be converted into a message
+   * @return a {@code Throwable} message representing the provided exception
+   */
   private net.ittera.pal.messages.colfer.Throwable buildThrowableMessage(Throwable throwable) {
 
     final net.ittera.pal.messages.colfer.Throwable throwableMsg =
@@ -273,10 +381,23 @@ public final class MessageBuilder {
   // </editor-fold>
 
   // <editor-fold desc="Header messages">
+
+  /**
+   * Builds an {@link InternalHeader} message with the specified header type.
+   *
+   * @param headerType the type of internal header to create
+   * @return a new {@code InternalHeader} instance with the specified type
+   */
   private InternalHeader buildInternalHeaderMessage(InternalHeaderType headerType) {
     return new InternalHeader().withHeaderType(headerType.toByte());
   }
 
+  /**
+   * Builds a write-ahead internal header message for the specified peer.
+   *
+   * @param peerUuid the UUID of the peer for whom the header is being built
+   * @return an {@code InternalHeader} representing a write-ahead message
+   */
   public InternalHeader buildWriteAheadHeader(UUID peerUuid) {
     logger.debug("Building write-ahead header message with peerUuid: {}", peerUuid.toString());
     return buildInternalHeaderMessage(InternalHeaderType.WRITE_AHEAD)
@@ -287,6 +408,21 @@ public final class MessageBuilder {
 
   // <editor-fold desc="Constructor messages">
 
+  /**
+   * Constructs an {@link ExecMessage} for invoking a constructor.
+   *
+   * @param peerUuid the UUID of the peer invoking the constructor
+   * @param className the name of the class whose constructor is being invoked, or {@code null} if
+   *     using context
+   * @param context the execution context containing signature information, or {@code null}
+   * @param sender the object sending the message, or {@code null}
+   * @param senderObjRef the reference to the sender object, or {@code null}
+   * @param parameterTypes the array of parameter type names, or {@code null} if using context
+   * @param args the array of argument values, or {@code null}
+   * @param argObjRefs the array of object references corresponding to the arguments, or {@code
+   *     null}
+   * @return an {@code ExecMessage} representing the constructor invocation
+   */
   private ExecMessage buildConstructorMessage(
       UUID peerUuid,
       String className,
@@ -314,19 +450,30 @@ public final class MessageBuilder {
     return newExecMessage(peerUuid).withConstructorCall(constructorCall);
   }
 
+  /**
+   * Builds an {@link ExecMessage} for invoking an empty (no-argument) constructor.
+   *
+   * @param peerUuid the UUID of the peer invoking the constructor
+   * @param className the name of the class whose constructor is being invoked
+   * @return an {@code ExecMessage} representing the empty constructor invocation
+   */
   public ExecMessage buildEmptyConstructor(UUID peerUuid, String className) {
     return buildConstructorMessage(peerUuid, className, null, null, null, null, null, null);
   }
 
   /**
-   * Args must be set either in args or argObjRefs. If null in both, value is assumed to be null.
+   * Builds an {@link ExecMessage} for invoking a constructor with parameters.
    *
-   * @param peerUuid UUID of the peer
-   * @param className Name of the class
-   * @param parameterTypes Types of the parameters
-   * @param args Should be of same length as parameterTypes. For Strings, primitives and wrappers.
-   * @param argObjRefs Should be of same length as parameterTypes. For objectRefs.
-   * @return ExecMessage
+   * <p>Args must be set either in {@code args} or {@code argObjRefs}. If {@code null} in both, the
+   * value is assumed to be {@code null}.
+   *
+   * @param peerUuid the UUID of the peer invoking the constructor
+   * @param className the name of the class whose constructor is being invoked
+   * @param parameterTypes the array of parameter type names
+   * @param args the array of argument values corresponding to the parameters. For Strings,
+   *     primitives, and wrappers.
+   * @param argObjRefs the array of object references corresponding to the parameters.
+   * @return an {@code ExecMessage} representing the constructor invocation with parameters
    */
   public ExecMessage buildNonEmptyConstructor(
       UUID peerUuid,
@@ -339,6 +486,17 @@ public final class MessageBuilder {
         peerUuid, className, null, null, null, parameterTypes, args, argObjRefs);
   }
 
+  /**
+   * Builds an {@link ExecMessage} for invoking a constructor using execution context.
+   *
+   * @param peerUuid the UUID of the peer invoking the constructor
+   * @param context the execution context containing signature information
+   * @param sender the object sending the message
+   * @param senderObjRef the reference to the sender object
+   * @param args the array of argument values
+   * @param argObjRefs the array of object references corresponding to the arguments
+   * @return an {@code ExecMessage} representing the constructor invocation with execution context
+   */
   public ExecMessage buildConstructor(
       UUID peerUuid,
       Context context,
@@ -353,16 +511,19 @@ public final class MessageBuilder {
 
   /**
    * Convenience method for building a constructor method message packing all arguments in a single
-   * array, regardless of type (ObjectRef or not). TODO: other build methods should pack all
-   * arguments and objRefs in a single array as well
+   * array, regardless of type (ObjectRef or not).
    *
-   * @param peerUuid UUID of this peer
-   * @param className Name of the class
-   * @param parameterTypes Types of the parameters
-   * @param args Should be of same length as parameterTypes. For Strings, primitives and wrappers.
-   * @param sender Sender object
-   * @param senderObjRef Sender object reference
-   * @return ExecMessage
+   * <p>TODO: other build methods should pack all arguments and object references in a single array
+   * as well.
+   *
+   * @param peerUuid the UUID of this peer
+   * @param className the name of the class whose constructor is being invoked
+   * @param parameterTypes the array of parameter type names
+   * @param args the array of argument values. For Strings, primitives, and wrappers.
+   * @param sender the object sending the message
+   * @param senderObjRef the reference to the sender object
+   * @return an {@code ExecMessage} representing the constructor invocation with mixed argument
+   *     types
    */
   public ExecMessage buildConstructor(
       UUID peerUuid,
@@ -396,17 +557,21 @@ public final class MessageBuilder {
   // <editor-fold desc="Instance method messages">
 
   /**
-   * Convenience method for building an instance method message packing all arguments in a single
-   * array, regardless of type (ObjectRef or not). TODO: other build methods should pack all
-   * arguments and objRefs in a single array as well
+   * Builds an {@link ExecMessage} for invoking an instance method with arguments.
    *
-   * @param peerUuid UUID of this peer
-   * @param className Name of the class
-   * @param methodName Name of the method
-   * @param targetObjRef Object reference of the target object
-   * @param parameterTypes Types of the parameters
-   * @param args Should be of same length as parameterTypes.
-   * @return ExecMessage
+   * <p>Convenience method for building an instance method message packing all arguments in a single
+   * array, regardless of type (ObjectRef or not).
+   *
+   * <p>TODO: other build methods should pack all arguments and object references in a single array
+   * as well.
+   *
+   * @param peerUuid the UUID of this peer
+   * @param className the name of the class containing the method
+   * @param methodName the name of the method to be invoked
+   * @param targetObjRef the object reference of the target instance on which the method is invoked
+   * @param parameterTypes the array of parameter type names
+   * @param args the array of argument values corresponding to the parameters
+   * @return an {@code ExecMessage} representing the instance method invocation
    */
   public ExecMessage buildInstanceMethod(
       UUID peerUuid,
@@ -435,6 +600,19 @@ public final class MessageBuilder {
         peerUuid, className, methodName, targetObjRef, parameterTypes, nonObjRefArgs, objRefArgs);
   }
 
+  /**
+   * Builds an {@link ExecMessage} for invoking an instance method with specified arguments and
+   * object references.
+   *
+   * @param peerUuid the UUID of this peer
+   * @param className the name of the class containing the method
+   * @param methodName the name of the method to be invoked
+   * @param targetObjRef the object reference of the target instance on which the method is invoked
+   * @param parameterTypes the array of parameter type names
+   * @param args the array of argument values
+   * @param argObjRefs the array of object references corresponding to the arguments
+   * @return an {@code ExecMessage} representing the instance method invocation
+   */
   public ExecMessage buildInstanceMethod(
       UUID peerUuid,
       String className,
@@ -453,6 +631,18 @@ public final class MessageBuilder {
                 .withObjectRef(String.valueOf(targetObjRef.getRef())));
   }
 
+  /**
+   * Builds an {@link ExecMessage} for invoking an instance method using execution context.
+   *
+   * @param peerUuid the UUID of this peer
+   * @param context the execution context containing method signature information
+   * @param sender the object sending the message
+   * @param senderObjRef the reference to the sender object
+   * @param targetObjRef the object reference of the target instance on which the method is invoked
+   * @param args the array of argument values corresponding to the parameters
+   * @param argObjRefs the array of object references corresponding to the arguments
+   * @return an {@code ExecMessage} representing the instance method invocation with context
+   */
   public ExecMessage buildInstanceMethod(
       UUID peerUuid,
       Context context,
@@ -483,6 +673,18 @@ public final class MessageBuilder {
 
   // <editor-fold desc="Class method messages">
 
+  /**
+   * Builds an {@link ExecMessage} for invoking a class (static) method with arguments.
+   *
+   * @param peerUuid the UUID of this peer
+   * @param className the name of the class containing the method
+   * @param methodName the name of the method to be invoked
+   * @param parameterTypes the array of parameter type names
+   * @param sender the object sending the message
+   * @param senderObjRef the reference to the sender object
+   * @param args the array of argument values corresponding to the parameters
+   * @return an {@code ExecMessage} representing the class method invocation
+   */
   public ExecMessage buildClassMethod(
       UUID peerUuid,
       String className,
@@ -505,6 +707,18 @@ public final class MessageBuilder {
     return newExecMessage(peerUuid).withClassMethodCall(classMethodCall);
   }
 
+  /**
+   * Builds an {@link ExecMessage} for invoking a class (static) method with specified arguments and
+   * object references.
+   *
+   * @param peerUuid the UUID of this peer
+   * @param context the execution context containing method signature information
+   * @param sender the object sending the message
+   * @param senderObjRef the reference to the sender object
+   * @param args the array of argument values corresponding to the parameters
+   * @param argObjRefs the array of object references corresponding to the arguments
+   * @return an {@code ExecMessage} representing the class method invocation with context
+   */
   public ExecMessage buildClassMethod(
       UUID peerUuid,
       Context context,
@@ -529,18 +743,22 @@ public final class MessageBuilder {
   }
 
   /**
-   * Convenience method for building an instance method message packing all arguments in a single
-   * array, regardless of type (ObjectRef or not). TODO: other build methods should pack all
-   * arguments and objRefs in a single array as well.
+   * Builds an {@link ExecMessage} for invoking a class (static) method with arguments.
    *
-   * @param peerUuid UUID of this peer
-   * @param className Name of the class
-   * @param methodName Name of the method
-   * @param parameterTypes Types of the parameters
-   * @param sender Sender object
-   * @param senderObjRef Sender object reference
-   * @param args Should be of same length as parameterTypes.
-   * @return ExecMessage
+   * <p>Convenience method for building a class method message packing all arguments in a single
+   * array, regardless of type (ObjectRef or not).
+   *
+   * <p>TODO: other build methods should pack all arguments and object references in a single array
+   * as well.
+   *
+   * @param peerUuid the UUID of this peer
+   * @param className the name of the class containing the method
+   * @param methodName the name of the method to be invoked
+   * @param parameterTypes the array of parameter type names
+   * @param sender the object sending the message
+   * @param senderObjRef the reference to the sender object
+   * @param args the array of argument values corresponding to the parameters
+   * @return an {@code ExecMessage} representing the class method invocation
    */
   public ExecMessage buildClassMethod(
       UUID peerUuid,
@@ -577,7 +795,18 @@ public final class MessageBuilder {
         objectRefArgs);
   }
 
-  // build ClassMethodCall with another message's parameter list
+  /**
+   * Builds an {@link ExecMessage} for invoking a class (static) method based on another message's
+   * parameters.
+   *
+   * @param peerUuid the UUID of this peer
+   * @param className the name of the class containing the method
+   * @param methodName the name of the method to be invoked
+   * @param otherMessage the {@code ExecMessage} whose parameters will be used for this class method
+   *     invocation
+   * @return an {@code ExecMessage} representing the class method invocation with parameters from
+   *     another message
+   */
   private ExecMessage buildClassMethodWithMessageParameters(
       UUID peerUuid, String className, String methodName, ExecMessage otherMessage) {
 
@@ -647,6 +876,21 @@ public final class MessageBuilder {
   // </editor-fold>
 
   // <editor-fold desc="Field Ops generic">
+
+  /**
+   * Builds an {@link ExecMessage} for performing a field operation.
+   *
+   * @param peerUuid the UUID of the peer performing the operation
+   * @param context the execution context containing field signature information
+   * @param messageType the type of field operation message to build
+   * @param sender the object sending the message
+   * @param senderObjRef the reference to the sender object
+   * @param targetObjRef the reference to the target object for instance field operations
+   * @param arg the argument value for the field operation, if applicable
+   * @param argObjRef the object reference for the argument, if applicable
+   * @return an {@code ExecMessage} representing the field operation
+   * @throws IllegalArgumentException if the message type is unexpected
+   */
   public ExecMessage buildFieldOp(
       UUID peerUuid,
       Context context,
@@ -707,6 +951,16 @@ public final class MessageBuilder {
     return execMessage;
   }
 
+  /**
+   * Builds an {@link ExecMessage} indicating the completion of a field operation.
+   *
+   * @param peerUuid the UUID of the peer indicating the operation completion
+   * @param accessibleObject the accessible object involved in the field operation
+   * @param context the execution context containing field signature information
+   * @param type the type of field operation completion message to build
+   * @return an {@code ExecMessage} representing the field operation completion
+   * @throws IllegalArgumentException if the completion type is unexpected
+   */
   public ExecMessage buildFieldOpDone(
       UUID peerUuid, AccessibleObject accessibleObject, Context context, MessageType type) {
 
@@ -735,6 +989,15 @@ public final class MessageBuilder {
   // </editor-fold>
 
   // <editor-fold desc="Static field get messages">
+
+  /**
+   * Builds an {@link ExecMessage} for getting the value of a static field.
+   *
+   * @param peerUuid the UUID of the peer performing the operation
+   * @param className the name of the class containing the static field
+   * @param fieldName the name of the static field to get
+   * @return an {@code ExecMessage} representing the static field get operation
+   */
   public ExecMessage buildGetStatic(UUID peerUuid, String className, String fieldName) {
     int unknownModifiers = 0;
     return newExecMessage(peerUuid)
@@ -747,6 +1010,16 @@ public final class MessageBuilder {
   // </editor-fold>
 
   // <editor-fold desc="Instance field get messages">
+
+  /**
+   * Builds an {@link ExecMessage} for getting the value of an instance field.
+   *
+   * @param peerUuid the UUID of the peer performing the operation
+   * @param className the name of the class containing the instance field
+   * @param fieldName the name of the instance field to get
+   * @param targetObjRef the reference to the target object whose field value is to be retrieved
+   * @return an {@code ExecMessage} representing the instance field get operation
+   */
   public ExecMessage buildGetObject(
       UUID peerUuid, String className, String fieldName, ObjectRef targetObjRef) {
     int unknownModifiers = 0;
@@ -761,6 +1034,17 @@ public final class MessageBuilder {
   // </editor-fold>
 
   // <editor-fold desc="Static field put messages">
+
+  /**
+   * Builds an {@link ExecMessage} for setting the value of a static field.
+   *
+   * @param peerUuid the UUID of the peer performing the operation
+   * @param className the name of the class containing the static field
+   * @param fieldName the name of the static field to set
+   * @param valueClassName the class name of the value being set
+   * @param value the value to set in the static field
+   * @return an {@code ExecMessage} representing the static field put operation
+   */
   public ExecMessage buildPutStatic(
       UUID peerUuid, String className, String fieldName, String valueClassName, Object value) {
     int unknownModifiers = 0;
@@ -773,6 +1057,16 @@ public final class MessageBuilder {
                     getWrappedObject(value, valueClassName, null, WrapPolicy.PREFER_REFERENCE)));
   }
 
+  /**
+   * Builds an {@link ExecMessage} for setting the value of a static field using an object
+   * reference.
+   *
+   * @param peerUuid the UUID of the peer performing the operation
+   * @param className the name of the class containing the static field
+   * @param fieldName the name of the static field to set
+   * @param valueObjectRef the object reference of the value to set in the static field
+   * @return an {@code ExecMessage} representing the static field put operation
+   */
   public ExecMessage buildPutStatic(
       UUID peerUuid, String className, String fieldName, ObjectRef valueObjectRef) {
     int unknownModifiers = 0;
@@ -784,6 +1078,15 @@ public final class MessageBuilder {
                 .withValueObjectRef(String.valueOf(valueObjectRef.getRef())));
   }
 
+  /**
+   * Builds an {@link ExecMessage} indicating the completion of a static field put operation.
+   *
+   * @param peerUuid the UUID of the peer indicating the operation completion
+   * @param accessibleObject the accessible object involved in the field operation
+   * @param staticFieldPutId the ID of the static field put operation
+   * @param responseToId the message ID this {@code ExecMessage} is responding to
+   * @return an {@code ExecMessage} representing the completion of the static field put operation
+   */
   public ExecMessage buildPutStaticDone(
       UUID peerUuid,
       AccessibleObject accessibleObject,
@@ -800,6 +1103,18 @@ public final class MessageBuilder {
   // </editor-fold>
 
   // <editor-fold desc="Instance field put messages">
+
+  /**
+   * Builds an {@link ExecMessage} for setting the value of an instance field.
+   *
+   * @param peerUuid the UUID of the peer performing the operation
+   * @param className the name of the class containing the instance field
+   * @param fieldName the name of the instance field to set
+   * @param targetObjRef the reference to the target object whose field value is to be set
+   * @param valueClassName the class name of the value being set
+   * @param value the value to set in the instance field
+   * @return an {@code ExecMessage} representing the instance field put operation
+   */
   public ExecMessage buildPutObject(
       UUID peerUuid,
       String className,
@@ -818,6 +1133,17 @@ public final class MessageBuilder {
                     getWrappedObject(value, valueClassName, null, WrapPolicy.PREFER_REFERENCE)));
   }
 
+  /**
+   * Builds an {@link ExecMessage} for setting the value of an instance field using an object
+   * reference.
+   *
+   * @param peerUuid the UUID of the peer performing the operation
+   * @param className the name of the class containing the instance field
+   * @param fieldName the name of the instance field to set
+   * @param targetObjRef the reference to the target object whose field value is to be set
+   * @param valueObjectRef the object reference of the value to set in the instance field
+   * @return an {@code ExecMessage} representing the instance field put operation
+   */
   public ExecMessage buildPutObject(
       UUID peerUuid,
       String className,
@@ -834,6 +1160,15 @@ public final class MessageBuilder {
                 .withValueObjectRef(String.valueOf(valueObjectRef.getRef())));
   }
 
+  /**
+   * Builds an {@link ExecMessage} indicating the completion of an instance field put operation.
+   *
+   * @param peerUuid the UUID of the peer indicating the operation completion
+   * @param accessibleObject the accessible object involved in the field operation
+   * @param instanceFieldPutId the ID of the instance field put operation
+   * @param responseToId the message ID this {@code ExecMessage} is responding to
+   * @return an {@code ExecMessage} representing the completion of the instance field put operation
+   */
   public ExecMessage buildPutObjectDone(
       UUID peerUuid,
       AccessibleObject accessibleObject,
@@ -850,6 +1185,17 @@ public final class MessageBuilder {
   // </editor-fold>
 
   // <editor-fold desc="Throwable messages">
+
+  /**
+   * Builds an {@link ExecMessage} representing a throwable thrown during an accessible object
+   * operation.
+   *
+   * @param peerUuid the UUID of the peer involved in the operation
+   * @param accessibleObject the accessible object involved in the operation, or {@code null}
+   * @param exception the {@code Throwable} that was thrown
+   * @param responseToId the message ID this {@code ExecMessage} is responding to
+   * @return an {@code ExecMessage} representing the raised throwable
+   */
   public ExecMessage buildAccessibleObjectThrowable(
       UUID peerUuid,
       @Nullable AccessibleObject accessibleObject,
@@ -904,6 +1250,18 @@ public final class MessageBuilder {
   // </editor-fold>
 
   // <editor-fold desc="Return value messages">
+
+  /**
+   * Builds an {@link ExecMessage} representing the return value of an accessible object operation.
+   *
+   * @param peerUuid the UUID of the peer involved in the operation
+   * @param object the return value object, or {@code null} if the method is void
+   * @param accessibleObject the accessible object involved in the operation
+   * @param objectRef the reference to the returned object, if applicable
+   * @param isVoid {@code true} if the method has a void return type, otherwise {@code false}
+   * @param responseToId the message ID this {@code ExecMessage} is responding to
+   * @return an {@code ExecMessage} representing the return value
+   */
   public ExecMessage buildReturnValue(
       UUID peerUuid,
       Object object,
@@ -960,6 +1318,14 @@ public final class MessageBuilder {
     return newExecMessage(peerUuid, responseToId).withReturnValue(valueMessage.withIsVoid(isVoid));
   }
 
+  /**
+   * Determines the class of the object associated with an accessible object.
+   *
+   * @param accessibleObject the accessible object involved in the operation
+   * @param declaringClass the declaring class of the accessible object
+   * @return the {@link Class} of the object associated with the accessible object
+   * @throws RuntimeException if the accessible object type is unsupported
+   */
   private static Class<?> getClassOfAccessible(
       AccessibleObject accessibleObject, Class<?> declaringClass) {
     Class<?> objectClass;
@@ -979,6 +1345,20 @@ public final class MessageBuilder {
   // </editor-fold>
 
   // <editor-fold desc="Intercept messages">
+
+  /**
+   * Builds an {@link InterceptMessage} for intercepting a method or field operation.
+   *
+   * @param peerUuid the UUID of the peer initiating the interception
+   * @param type the type of interception
+   * @param className the name of the class containing the interceptable
+   * @param methodName the name of the method to intercept, or {@code null} if intercepting a field
+   * @param parameterTypes the list of parameter type names for method interception, or {@code null}
+   *     if intercepting a field
+   * @param callbackClassName the name of the callback class to notify upon interception
+   * @param callbackMethodName the name of the callback method to invoke
+   * @return an {@code InterceptMessage} representing the interception request
+   */
   public InterceptMessage buildInterceptMessage(
       UUID peerUuid,
       InterceptType type,
@@ -1001,6 +1381,18 @@ public final class MessageBuilder {
         .withCallbackMethod(callbackMethodName);
   }
 
+  /**
+   * Builds an {@link InterceptMessage} for intercepting a field operation.
+   *
+   * @param peerUuid the UUID of the peer initiating the interception
+   * @param type the type of interception
+   * @param className the name of the class containing the field to intercept
+   * @param fieldName the name of the field to intercept
+   * @param fieldOpType the type of field operation to intercept
+   * @param callbackClassName the name of the callback class to notify upon interception
+   * @param callbackMethodName the name of the callback method to invoke
+   * @return an {@code InterceptMessage} representing the interception request
+   */
   public InterceptMessage buildInterceptMessage(
       UUID peerUuid,
       InterceptType type,
@@ -1023,6 +1415,12 @@ public final class MessageBuilder {
         .withCallbackMethod(callbackMethodName);
   }
 
+  /**
+   * Builds an {@link InterceptMessage} based on an {@link InterceptRequest}.
+   *
+   * @param intercept the intercept request containing interception details
+   * @return an {@code InterceptMessage} representing the interception request
+   */
   @SuppressWarnings("unchecked")
   public InterceptMessage buildInterceptMessage(InterceptRequest<?> intercept) {
     boolean isMethodInterceptable =
@@ -1063,6 +1461,14 @@ public final class MessageBuilder {
         .withCallbackMethod(intercept.getCallbackMethod());
   }
 
+  /**
+   * Builds an {@link InterceptResponse} after processing an interception request.
+   *
+   * @param peerUuid the UUID of the peer responding to the interception
+   * @param responseToId the message ID this response is addressing
+   * @param result the result of the interception processing
+   * @return an {@code InterceptResponse} representing the outcome of the interception
+   */
   public InterceptResponse buildInterceptResponse(
       UUID peerUuid, String responseToId, boolean result) {
     return new InterceptResponse()
@@ -1071,6 +1477,12 @@ public final class MessageBuilder {
         .withResult(result);
   }
 
+  /**
+   * Builds an {@link InterceptKeyMessage} based on an existing {@link ExecMessage}.
+   *
+   * @param execMessage the execution message to extract key information from
+   * @return an {@code InterceptKeyMessage} representing the key details of the execution message
+   */
   public InterceptKeyMessage buildInterceptKey(ExecMessage execMessage) {
     MessageType execMessageType = getMessageTypeOf(execMessage);
     final InterceptKeyMessage keyMessage =
@@ -1085,6 +1497,15 @@ public final class MessageBuilder {
     return keyMessage;
   }
 
+  /**
+   * Builds a callback {@link ExecMessage} for an interception request based on the intercepted
+   * message.
+   *
+   * @param peerUuid the UUID of the peer initiating the callback
+   * @param interceptedMessage the {@code ExecMessage} that was intercepted
+   * @param interceptMessage the {@code InterceptMessage} containing interception details
+   * @return an {@code ExecMessage} representing the callback invocation
+   */
   public ExecMessage buildCallbackForInterceptRequest(
       UUID peerUuid, ExecMessage interceptedMessage, InterceptMessage interceptMessage) {
 
@@ -1098,6 +1519,14 @@ public final class MessageBuilder {
   // </editor-fold>
 
   // <editor-fold desc="JSON-RPC messages">
+
+  /**
+   * Converts a list of JSON-RPC {@link Argument} objects to an array of binary {@link Parameter}
+   * objects.
+   *
+   * @param jsonArgs the list of JSON-RPC arguments
+   * @return an array of {@code Parameter} objects representing the binary RPC parameters
+   */
   private Parameter[] jsonRpcParamsToBinaryRpcParams(List<Argument> jsonArgs) {
     if (jsonArgs == null || jsonArgs.isEmpty()) {
       return new Parameter[0];
@@ -1127,6 +1556,12 @@ public final class MessageBuilder {
     return binaryRpcParams;
   }
 
+  /**
+   * Creates an {@link InstanceMethodCall} based on a JSON-RPC {@link JsonRpcRequest}.
+   *
+   * @param jsonRpcRequest the JSON-RPC request to convert
+   * @return an {@code InstanceMethodCall} representing the instance method invocation
+   */
   private InstanceMethodCall createInstanceMethodCall(JsonRpcRequest jsonRpcRequest) {
     var callParams = jsonRpcRequest.getParams();
     String className = JsonRpcMessageUtils.getClassName(jsonRpcRequest).orElseThrow();
@@ -1139,6 +1574,12 @@ public final class MessageBuilder {
     return instanceMethodCall;
   }
 
+  /**
+   * Creates a {@link ClassMethodCall} based on a JSON-RPC {@link JsonRpcRequest}.
+   *
+   * @param jsonRpcRequest the JSON-RPC request to convert
+   * @return a {@code ClassMethodCall} representing the class method invocation
+   */
   private ClassMethodCall createClassMethodCall(JsonRpcRequest jsonRpcRequest) {
     var callParams = jsonRpcRequest.getParams();
     String className = JsonRpcMessageUtils.getClassName(jsonRpcRequest).orElseThrow();
@@ -1150,6 +1591,12 @@ public final class MessageBuilder {
     return classMethodCall;
   }
 
+  /**
+   * Creates an {@link InstanceFieldPut} based on a JSON-RPC {@link JsonRpcRequest}.
+   *
+   * @param jsonRpcRequest the JSON-RPC request to convert
+   * @return an {@code InstanceFieldPut} representing the instance field set operation
+   */
   private InstanceFieldPut createInstanceFieldPut(JsonRpcRequest jsonRpcRequest) {
     var putParams = jsonRpcRequest.getParams();
     String className = JsonRpcMessageUtils.getClassName(jsonRpcRequest).orElseThrow();
@@ -1171,6 +1618,12 @@ public final class MessageBuilder {
     return instanceFieldPut;
   }
 
+  /**
+   * Creates a {@link StaticFieldPut} based on a JSON-RPC {@link JsonRpcRequest}.
+   *
+   * @param jsonRpcRequest the JSON-RPC request to convert
+   * @return a {@code StaticFieldPut} representing the static field set operation
+   */
   private StaticFieldPut createStaticFieldPut(JsonRpcRequest jsonRpcRequest) {
     var putParams = jsonRpcRequest.getParams();
     String className = JsonRpcMessageUtils.getClassName(jsonRpcRequest).orElseThrow();
@@ -1191,6 +1644,12 @@ public final class MessageBuilder {
     return staticFieldPut;
   }
 
+  /**
+   * Creates an {@link InstanceFieldGet} based on a JSON-RPC {@link JsonRpcRequest}.
+   *
+   * @param jsonRpcRequest the JSON-RPC request to convert
+   * @return an {@code InstanceFieldGet} representing the instance field get operation
+   */
   private InstanceFieldGet createInstanceFieldGet(JsonRpcRequest jsonRpcRequest) {
     var getParams = jsonRpcRequest.getParams();
     String className = JsonRpcMessageUtils.getClassName(jsonRpcRequest).orElseThrow();
@@ -1203,6 +1662,12 @@ public final class MessageBuilder {
     return instanceFieldGet;
   }
 
+  /**
+   * Creates a {@link StaticFieldGet} based on a JSON-RPC {@link JsonRpcRequest}.
+   *
+   * @param jsonRpcRequest the JSON-RPC request to convert
+   * @return a {@code StaticFieldGet} representing the static field get operation
+   */
   private StaticFieldGet createStaticFieldGet(JsonRpcRequest jsonRpcRequest) {
     String className = JsonRpcMessageUtils.getClassName(jsonRpcRequest).orElseThrow();
     String fieldName = JsonRpcMessageUtils.getFieldName(jsonRpcRequest).orElseThrow();
@@ -1213,6 +1678,12 @@ public final class MessageBuilder {
     return staticFieldGet;
   }
 
+  /**
+   * Creates a {@link ConstructorCall} based on a JSON-RPC {@link JsonRpcRequest}.
+   *
+   * @param jsonRpcRequest the JSON-RPC request to convert
+   * @return a {@code ConstructorCall} representing the constructor invocation
+   */
   private ConstructorCall createConstructorCall(JsonRpcRequest jsonRpcRequest) {
     var newParams = jsonRpcRequest.getParams();
     String className = JsonRpcMessageUtils.getClassName(jsonRpcRequest).orElseThrow();
@@ -1223,6 +1694,14 @@ public final class MessageBuilder {
     return constructorCall;
   }
 
+  /**
+   * Converts a JSON-RPC {@link JsonRpcRequest} to a binary {@link ExecMessage}.
+   *
+   * @param jsonRpcRequest the JSON-RPC request to convert
+   * @param fromPeerUuid the UUID of the peer sending the request
+   * @return a binary {@code Message} representing the executable message
+   * @throws IllegalArgumentException if the message type of the JSON-RPC request is unsupported
+   */
   public Message jsonRpcRequestToExecMessage(JsonRpcRequest jsonRpcRequest, UUID fromPeerUuid) {
 
     // Create an instance of ExecMessage and initialize required common fields
@@ -1266,6 +1745,14 @@ public final class MessageBuilder {
     return wrap(execMessage);
   }
 
+  /**
+   * Converts a JSON-RPC {@link JsonRpcRequest} to a binary {@link MetaMessage}.
+   *
+   * @param jsonRpcRequest the JSON-RPC request to convert
+   * @param fromPeerUuid the UUID of the peer sending the request
+   * @return a binary {@code Message} representing the meta message
+   * @throws IllegalArgumentException if the meta service type of the JSON-RPC request is unknown
+   */
   public Message jsonRpcRequestToMetaMessage(JsonRpcRequest jsonRpcRequest, UUID fromPeerUuid) {
     if (logger.isDebugEnabled()) {
       logger.debug(
@@ -1289,6 +1776,14 @@ public final class MessageBuilder {
         buildMetaMessageRequest(fromPeerUuid, jsonRpcRequest.getId(), metaServiceType, params));
   }
 
+  /**
+   * Converts a JSON-RPC {@link JsonRpcRequest} to a binary {@link ControlMessage}.
+   *
+   * @param jsonRpcRequest the JSON-RPC request to convert
+   * @param fromPeerUuid the UUID of the peer sending the request
+   * @return a binary {@code Message} representing the control message
+   * @throws IllegalArgumentException if the control command type of the JSON-RPC request is unknown
+   */
   public Message jsonRpcRequestToControlMessage(JsonRpcRequest jsonRpcRequest, UUID fromPeerUuid) {
     if (logger.isDebugEnabled()) {
       logger.debug(
@@ -1316,6 +1811,13 @@ public final class MessageBuilder {
     return wrap(controlMessage);
   }
 
+  /**
+   * Builds a {@link JsonRpcResponse} based on an {@link ExecMessage} response.
+   *
+   * @param execMessageResponse the {@code ExecMessage} containing the response details
+   * @return a {@code JsonRpcResponse} representing the executable message response
+   * @throws RuntimeException if the response message type is unexpected
+   */
   public JsonRpcResponse jsonRpcResponseFromExecMessageResponse(ExecMessage execMessageResponse) {
     String requestId = execMessageResponse.getResponseToId();
 
@@ -1403,6 +1905,13 @@ public final class MessageBuilder {
     return jsonRpcResponse;
   }
 
+  /**
+   * Builds a {@link JsonRpcResponse} based on a {@link MetaMessage} response.
+   *
+   * @param metaMessageResponse the {@code MetaMessage} containing the response details
+   * @return a {@code JsonRpcResponse} representing the meta message response
+   * @throws IllegalArgumentException if the response message type is incorrect
+   */
   public JsonRpcResponse jsonRpcResponseFromMetaMessageResponse(MetaMessage metaMessageResponse) {
     if (logger.isDebugEnabled()) {
       logger.debug(
@@ -1426,7 +1935,7 @@ public final class MessageBuilder {
     switch (statusType) {
       case OK:
         jsonRpcResponse.setResult(
-            JsonRpcResponseReturnValue.builder()
+            new JsonRpcResponseReturnValue.Builder()
                 .withValue(
                     ResponseObject.builder().withValue(metaMessageResponse.getBody()).build())
                 .build());
@@ -1453,6 +1962,13 @@ public final class MessageBuilder {
     return jsonRpcResponse;
   }
 
+  /**
+   * Builds a {@link JsonRpcResponse} based on a {@link ControlMessage} response.
+   *
+   * @param controlMessageResponse the {@code ControlMessage} containing the response details
+   * @return a {@code JsonRpcResponse} representing the control message response
+   * @throws IllegalArgumentException if the response message type is incorrect
+   */
   public JsonRpcResponse jsonRpcResponseFromControlMessageResponse(
       ControlMessage controlMessageResponse) {
     if (logger.isDebugEnabled()) {
@@ -1525,6 +2041,13 @@ public final class MessageBuilder {
     return jsonRpcResponse;
   }
 
+  /**
+   * Builds a {@link JsonRpcResponse} representing an error based on an {@link Exception}.
+   *
+   * @param exception the exception that occurred
+   * @param requestId the ID of the original JSON-RPC request
+   * @return a {@code JsonRpcResponse} representing the error
+   */
   public JsonRpcResponse jsonRpcResponseFromError(Exception exception, String requestId) {
     final JsonRpcResponse jsonRpcResponse = new JsonRpcResponse();
     jsonRpcResponse.setId(requestId);
@@ -1579,6 +2102,15 @@ public final class MessageBuilder {
   // </editor-fold>
 
   // <editor-fold desc="Control messages">
+
+  /**
+   * Builds an {@link ControlMessage} representing a control command.
+   *
+   * @param fromPeerUuid the UUID of the peer sending the control command
+   * @param command the type of control command to build
+   * @param params the array of parameters for the control command, or {@code null} if none
+   * @return a {@code ControlMessage} representing the control command
+   */
   public ControlMessage buildControlCommandMessage(
       UUID fromPeerUuid, ControlCommandType command, @Nullable Parameter[] params) {
     ControlMessage controlMessage =
@@ -1593,20 +2125,48 @@ public final class MessageBuilder {
     return controlMessage;
   }
 
+  /**
+   * Builds a {@link ControlMessage} for deleting an object.
+   *
+   * @param fromPeer the UUID of the peer issuing the delete command
+   * @param objectRef the reference of the object to delete
+   * @return a {@code ControlMessage} representing the delete object command
+   */
   public ControlMessage buildDeleteObjectCommandMessage(UUID fromPeer, ObjectRef objectRef) {
     Parameter[] params =
         new Parameter[] {new Parameter().withValue(new Obj().withRef(objectRef.asString()))};
     return buildControlCommandMessage(fromPeer, ControlCommandType.DELETE_OBJECT, params);
   }
 
+  /**
+   * Builds a {@link ControlMessage} for deleting the current session.
+   *
+   * @param fromPeer the UUID of the peer issuing the delete session command
+   * @return a {@code ControlMessage} representing the delete session command
+   */
   public ControlMessage buildDeleteSessionCommandMessage(UUID fromPeer) {
     return buildControlCommandMessage(fromPeer, ControlCommandType.DELETE_SESSION, null);
   }
 
+  /**
+   * Builds a {@link ControlMessage} for triggering garbage collection.
+   *
+   * @param fromPeer the UUID of the peer issuing the garbage collection command
+   * @return a {@code ControlMessage} representing the garbage collection command
+   */
   public ControlMessage buildGcCommandMessage(UUID fromPeer) {
     return buildControlCommandMessage(fromPeer, ControlCommandType.GC, null);
   }
 
+  /**
+   * Builds an {@link ControlMessage} representing a control status (i.e. response) message.
+   *
+   * @param fromPeerUuid the UUID of the peer sending the status message
+   * @param statusType the type of control status
+   * @param responseToId the message ID this status message is responding to
+   * @param body additional body content of the status message, or {@code null} if none
+   * @return a {@code ControlMessage} representing the control status message
+   */
   public ControlMessage buildControlStatusMessage(
       UUID fromPeerUuid, ControlStatusType statusType, String responseToId, @Nullable String body) {
     final ControlMessage controlMessage =
@@ -1622,6 +2182,15 @@ public final class MessageBuilder {
     return controlMessage;
   }
 
+  /**
+   * Builds an {@link ControlMessage} representing a control status (i.e. response) message without
+   * a body.
+   *
+   * @param fromPeerUuid the UUID of the peer sending the status message
+   * @param statusType the type of control status
+   * @param responseToId the message ID this status message is responding to
+   * @return a {@code ControlMessage} representing the control status message
+   */
   public ControlMessage buildControlStatusMessage(
       UUID fromPeerUuid, ControlStatusType statusType, String responseToId) {
     return buildControlStatusMessage(fromPeerUuid, statusType, responseToId, null);
@@ -1630,12 +2199,31 @@ public final class MessageBuilder {
   // </editor-fold>
 
   // <editor-fold desc="Meta Messages">
+
+  /**
+   * Builds a {@link MetaMessage} representing a meta service request.
+   *
+   * @param fromPeerUuid the UUID of the peer sending the meta message
+   * @param requestId the unique ID of the meta message request
+   * @param serviceType the type of meta service to request
+   * @return a {@code MetaMessage} representing the meta service request
+   */
   public MetaMessage buildMetaMessageRequest(
       UUID fromPeerUuid, String requestId, MetaServiceType serviceType) {
     return buildMetaMessageRequest(fromPeerUuid, requestId, serviceType, (Parameter[]) null);
   }
 
-  /* Convenience method to pass parameters as a KeyValue Map */
+  /**
+   * Builds a {@link MetaMessage} representing a meta service request with parameters.
+   *
+   * <p>Convenience method to pass parameters as a key-value map.
+   *
+   * @param fromPeerUuid the UUID of the peer sending the meta message
+   * @param requestId the unique ID of the meta message request
+   * @param serviceType the type of meta service to request
+   * @param params the map of parameters to include in the meta message, or {@code null} if none
+   * @return a {@code MetaMessage} representing the meta service request with parameters
+   */
   public MetaMessage buildMetaMessageRequest(
       UUID fromPeerUuid,
       String requestId,
@@ -1645,6 +2233,15 @@ public final class MessageBuilder {
         fromPeerUuid, requestId, serviceType, paramMapToParameters(params));
   }
 
+  /**
+   * Builds a {@link MetaMessage} representing a meta service request with parameters.
+   *
+   * @param fromPeerUuid the UUID of the peer sending the meta message
+   * @param requestId the unique ID of the meta message request
+   * @param serviceType the type of meta service to request
+   * @param params the array of parameters to include in the meta message, or {@code null} if none
+   * @return a {@code MetaMessage} representing the meta service request with parameters
+   */
   public MetaMessage buildMetaMessageRequest(
       UUID fromPeerUuid,
       String requestId,
@@ -1662,6 +2259,15 @@ public final class MessageBuilder {
     return metaMessage;
   }
 
+  /**
+   * Builds a {@link MetaMessage} representing a meta service response.
+   *
+   * @param fromPeerUuid the UUID of the peer sending the meta message response
+   * @param statusType the status type of the response
+   * @param body the body content of the response, or {@code null} if none
+   * @param responseToId the message ID this response is addressing
+   * @return a {@code MetaMessage} representing the meta service response
+   */
   public MetaMessage buildMetaMessageResponse(
       UUID fromPeerUuid, MetaStatusType statusType, @Nullable String body, String responseToId) {
     final MetaMessage metaMessage =
@@ -1680,34 +2286,71 @@ public final class MessageBuilder {
   // </editor-fold>
 
   // <editor-fold desc="Message Wrapper">
+
+  /**
+   * Wraps an {@link ExecMessage} into a generic {@link Message}.
+   *
+   * @param execMessage the executable message to wrap
+   * @return a {@code Message} containing the executable message
+   */
   public Message wrap(ExecMessage execMessage) {
     final MessageType messageType = getMessageTypeOf(execMessage);
     return new Message().withMessageType(messageType.getId()).withExecMessage(execMessage);
   }
 
+  /**
+   * Wraps an {@link InterceptMessage} into a generic {@link Message}.
+   *
+   * @param interceptMessage the intercept message to wrap
+   * @return a {@code Message} containing the intercept message
+   */
   public Message wrap(InterceptMessage interceptMessage) {
     return new Message()
         .withMessageType(MessageType.INTERCEPT_MESSAGE.getId())
         .withInterceptMessage(interceptMessage);
   }
 
+  /**
+   * Wraps an {@link InterceptKeyMessage} into a generic {@link Message}.
+   *
+   * @param interceptKeyMessage the intercept key message to wrap
+   * @return a {@code Message} containing the intercept key message
+   */
   public Message wrap(InterceptKeyMessage interceptKeyMessage) {
     return new Message()
         .withMessageType(MessageType.INTERCEPT_KEY.getId())
         .withInterceptKeyMessage(interceptKeyMessage);
   }
 
+  /**
+   * Wraps an {@link InterceptResponse} into a generic {@link Message}.
+   *
+   * @param interceptResponse the intercept response to wrap
+   * @return a {@code Message} containing the intercept response
+   */
   public Message wrap(InterceptResponse interceptResponse) {
     return new Message()
         .withMessageType(MessageType.INTERCEPT_RESPONSE.getId())
         .withInterceptResponse(interceptResponse);
   }
 
+  /**
+   * Wraps a {@link ControlMessage} into a generic {@link Message}.
+   *
+   * @param controlMessage the control message to wrap
+   * @return a {@code Message} containing the control message
+   */
   public Message wrap(ControlMessage controlMessage) {
     final MessageType messageType = getMessageTypeOf(controlMessage);
     return new Message().withMessageType(messageType.getId()).withControlMessage(controlMessage);
   }
 
+  /**
+   * Wraps a {@link MetaMessage} into a generic {@link Message}.
+   *
+   * @param metaMessage the meta message to wrap
+   * @return a {@code Message} containing the meta message
+   */
   public Message wrap(MetaMessage metaMessage) {
     final MessageType messageType = getMessageTypeOf(metaMessage);
     return new Message().withMessageType(messageType.getId()).withMetaMessage(metaMessage);

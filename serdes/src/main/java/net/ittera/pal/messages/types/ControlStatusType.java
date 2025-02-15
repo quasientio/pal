@@ -19,6 +19,10 @@
 
 package net.ittera.pal.messages.types;
 
+/**
+ * Represents the various control status types used within the Pal runtime. Each status type is
+ * associated with a unique byte identifier.
+ */
 public enum ControlStatusType {
   OK((byte) 1),
   ERROR((byte) 2),
@@ -27,12 +31,25 @@ public enum ControlStatusType {
   NO_SUCH_SESSION((byte) 5),
   NO_SUCH_OBJECT((byte) 6);
 
+  /** The byte identifier associated with the control status type. */
   private final byte id;
 
+  /**
+   * Constructs a ControlStatusType with the specified byte identifier.
+   *
+   * @param id the byte value representing the control status type
+   */
   ControlStatusType(byte id) {
     this.id = id;
   }
 
+  /**
+   * Returns the ControlStatusType corresponding to the given byte identifier.
+   *
+   * @param messageTypeAsByte the byte value representing the control status type
+   * @return the corresponding ControlStatusType
+   * @throws IllegalArgumentException if the byte does not correspond to any ControlStatusType
+   */
   public static ControlStatusType fromId(byte messageTypeAsByte) {
     return switch (messageTypeAsByte) {
       case 1 -> OK;
@@ -46,6 +63,11 @@ public enum ControlStatusType {
     };
   }
 
+  /**
+   * Returns the byte identifier associated with this ControlStatusType.
+   *
+   * @return the byte value representing this control status type
+   */
   public byte toId() {
     return id;
   }

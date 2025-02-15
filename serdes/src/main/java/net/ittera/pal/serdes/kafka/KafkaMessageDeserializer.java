@@ -21,4 +21,5 @@ package net.ittera.pal.serdes.kafka;
 
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 
+/** Deserializes Kafka messages into byte arrays. */
 public final class KafkaMessageDeserializer extends ByteArrayDeserializer {}

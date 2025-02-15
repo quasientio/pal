@@ -72,7 +72,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- *
+ * Provides custom JSON serializers and deserializers for Colfer message types.
  *
  * <pre>
  * The Colfer to JSON serializers
@@ -101,30 +101,71 @@ import org.slf4j.LoggerFactory;
  */
 public class JsonSerializers {
 
+  /** Logger instance for JSON serialization operations. */
   private static final Logger logger = LoggerFactory.getLogger(JsonSerializers.class);
 
+  /**
+   * Determines if the provided string is not null and not empty.
+   *
+   * @param value the string to check
+   * @return {@code true} if the string is not null and not empty, {@code false} otherwise
+   */
   private static boolean notEmpty(String value) {
     return value != null && !value.isEmpty();
   }
 
+  /**
+   * Determines if the provided integer is not zero.
+   *
+   * @param value the integer to check
+   * @return {@code true} if the integer is not zero, {@code false} otherwise
+   */
   private static boolean notEmpty(int value) {
     return value != 0;
   }
 
+  /**
+   * Determines if the provided object is not null.
+   *
+   * @param value the object to check
+   * @return {@code true} if the object is not null, {@code false} otherwise
+   */
   private static boolean notEmpty(Object value) {
     return value != null;
   }
 
+  /**
+   * Determines if the provided array is not null and not empty.
+   *
+   * @param value the array to check
+   * @param <E> the type of elements in the array
+   * @return {@code true} if the array is not null and not empty, {@code false} otherwise
+   */
   private static <E> boolean notEmpty(E[] value) {
     return value != null && value.length != 0;
   }
 
+  /**
+   * Determines if the provided boolean is {@code true}.
+   *
+   * @param value the boolean to check
+   * @return {@code true} if the boolean is {@code true}, {@code false} otherwise
+   */
   private static boolean notEmpty(boolean value) {
     return value;
   }
 
+  /** Serializes {@link ExecMessage} objects to JSON. */
   public static class ExecMessageSerializer implements JsonSerializer<ExecMessage> {
 
+    /**
+     * Serializes an {@link ExecMessage} into its corresponding JSON representation.
+     *
+     * @param message the {@link ExecMessage} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link ExecMessage}
+     */
     @Override
     public JsonElement serialize(
         ExecMessage message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -214,7 +255,16 @@ public class JsonSerializers {
     }
   }
 
+  /** Serializes {@link ConstructorCall} objects to JSON. */
   public static class ConstructorCallSerializer implements JsonSerializer<ConstructorCall> {
+    /**
+     * Serializes a {@link ConstructorCall} into its corresponding JSON representation.
+     *
+     * @param message the {@link ConstructorCall} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link ConstructorCall}
+     */
     @Override
     public JsonElement serialize(
         ConstructorCall message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -236,7 +286,16 @@ public class JsonSerializers {
     }
   }
 
+  /** Serializes {@link InstanceMethodCall} objects to JSON. */
   public static class InstanceMethodCallSerializer implements JsonSerializer<InstanceMethodCall> {
+    /**
+     * Serializes an {@link InstanceMethodCall} into its corresponding JSON representation.
+     *
+     * @param message the {@link InstanceMethodCall} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link InstanceMethodCall}
+     */
     @Override
     public JsonElement serialize(
         InstanceMethodCall message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -264,7 +323,16 @@ public class JsonSerializers {
     }
   }
 
+  /** Serializes {@link ClInitCall} objects to JSON. */
   public static class ClInitCallSerializer implements JsonSerializer<ClInitCall> {
+    /**
+     * Serializes a {@link ClInitCall} into its corresponding JSON representation.
+     *
+     * @param message the {@link ClInitCall} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link ClInitCall}
+     */
     @Override
     public JsonElement serialize(
         ClInitCall message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -283,7 +351,16 @@ public class JsonSerializers {
     }
   }
 
+  /** Serializes {@link ClassMethodCall} objects to JSON. */
   public static class ClassMethodCallSerializer implements JsonSerializer<ClassMethodCall> {
+    /**
+     * Serializes a {@link ClassMethodCall} into its corresponding JSON representation.
+     *
+     * @param message the {@link ClassMethodCall} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link ClassMethodCall}
+     */
     @Override
     public JsonElement serialize(
         ClassMethodCall message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -308,7 +385,16 @@ public class JsonSerializers {
     }
   }
 
+  /** Serializes {@link Context} objects to JSON. */
   public static class ContextSerializer implements JsonSerializer<Context> {
+    /**
+     * Serializes a {@link Context} into its corresponding JSON representation.
+     *
+     * @param message the {@link Context} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link Context}
+     */
     @Override
     public JsonElement serialize(
         Context message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -332,7 +418,16 @@ public class JsonSerializers {
     }
   }
 
+  /** Serializes {@link Throwable} objects to JSON. */
   public static class ThrowableSerializer implements JsonSerializer<Throwable> {
+    /**
+     * Serializes a {@link Throwable} into its corresponding JSON representation.
+     *
+     * @param message the {@link Throwable} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link Throwable}
+     */
     @Override
     public JsonElement serialize(
         Throwable message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -354,7 +449,16 @@ public class JsonSerializers {
     }
   }
 
+  /** Serializes {@link RaisedThrowable} objects to JSON. */
   public static class RaisedThrowableSerializer implements JsonSerializer<RaisedThrowable> {
+    /**
+     * Serializes a {@link RaisedThrowable} into its corresponding JSON representation.
+     *
+     * @param message the {@link RaisedThrowable} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link RaisedThrowable}
+     */
     @Override
     public JsonElement serialize(
         RaisedThrowable message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -375,7 +479,16 @@ public class JsonSerializers {
     }
   }
 
+  /** Serializes {@link StaticFieldGet} objects to JSON. */
   public static class StaticFieldGetSerializer implements JsonSerializer<StaticFieldGet> {
+    /**
+     * Serializes a {@link StaticFieldGet} into its corresponding JSON representation.
+     *
+     * @param message the {@link StaticFieldGet} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link StaticFieldGet}
+     */
     @Override
     public JsonElement serialize(
         StaticFieldGet message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -394,8 +507,17 @@ public class JsonSerializers {
     }
   }
 
+  /** Serializes {@link StaticFieldPut} objects to JSON. */
   public static class StaticFieldPutSerializer implements JsonSerializer<StaticFieldPut> {
 
+    /**
+     * Serializes a {@link StaticFieldPut} into its corresponding JSON representation.
+     *
+     * @param message the {@link StaticFieldPut} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link StaticFieldPut}
+     */
     @Override
     public JsonElement serialize(
         StaticFieldPut message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -420,8 +542,17 @@ public class JsonSerializers {
     }
   }
 
+  /** Serializes and deserializes {@link StaticFieldPutDone} objects to and from JSON. */
   public static class StaticFieldPutDoneAdapter
       implements JsonSerializer<StaticFieldPutDone>, JsonDeserializer<StaticFieldPutDone> {
+    /**
+     * Serializes a {@link StaticFieldPutDone} into its corresponding JSON representation.
+     *
+     * @param message the {@link StaticFieldPutDone} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link StaticFieldPutDone}
+     */
     @Override
     public JsonElement serialize(
         StaticFieldPutDone message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -439,6 +570,15 @@ public class JsonSerializers {
       return jsonElement;
     }
 
+    /**
+     * Deserializes a JSON element into a {@link StaticFieldPutDone} object.
+     *
+     * @param json the JSON element to deserialize
+     * @param typeOfT the type of the Object to deserialize to
+     * @param context the context of the deserialization process
+     * @return the deserialized {@link StaticFieldPutDone} object
+     * @throws JsonParseException if the JSON is not in the expected format
+     */
     @Override
     public StaticFieldPutDone deserialize(
         JsonElement json, Type typeOfT, JsonDeserializationContext context)
@@ -458,8 +598,17 @@ public class JsonSerializers {
     }
   }
 
+  /** Serializes {@link InstanceFieldGet} objects to JSON. */
   public static class InstanceFieldGetSerializer implements JsonSerializer<InstanceFieldGet> {
 
+    /**
+     * Serializes an {@link InstanceFieldGet} into its corresponding JSON representation.
+     *
+     * @param message the {@link InstanceFieldGet} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link InstanceFieldGet}
+     */
     @Override
     public JsonElement serialize(
         InstanceFieldGet message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -481,8 +630,17 @@ public class JsonSerializers {
     }
   }
 
+  /** Serializes {@link InstanceFieldPut} objects to JSON. */
   public static class InstanceFieldPutSerializer implements JsonSerializer<InstanceFieldPut> {
 
+    /**
+     * Serializes an {@link InstanceFieldPut} into its corresponding JSON representation.
+     *
+     * @param message the {@link InstanceFieldPut} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link InstanceFieldPut}
+     */
     @Override
     public JsonElement serialize(
         InstanceFieldPut message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -510,8 +668,17 @@ public class JsonSerializers {
     }
   }
 
+  /** Serializes and deserializes {@link InstanceFieldPutDone} objects to and from JSON. */
   public static class InstanceFieldPutDoneAdapter
       implements JsonSerializer<InstanceFieldPutDone>, JsonDeserializer<InstanceFieldPutDone> {
+    /**
+     * Serializes an {@link InstanceFieldPutDone} into its corresponding JSON representation.
+     *
+     * @param message the {@link InstanceFieldPutDone} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link InstanceFieldPutDone}
+     */
     @Override
     public JsonElement serialize(
         InstanceFieldPutDone message,
@@ -531,6 +698,15 @@ public class JsonSerializers {
       return jsonElement;
     }
 
+    /**
+     * Deserializes a JSON element into an {@link InstanceFieldPutDone} object.
+     *
+     * @param json the JSON element to deserialize
+     * @param typeOfT the type of the Object to deserialize to
+     * @param context the context of the deserialization process
+     * @return the deserialized {@link InstanceFieldPutDone} object
+     * @throws JsonParseException if the JSON is not in the expected format
+     */
     @Override
     public InstanceFieldPutDone deserialize(
         JsonElement json, Type typeOfT, JsonDeserializationContext context)
@@ -551,7 +727,16 @@ public class JsonSerializers {
     }
   }
 
+  /** Serializes {@link InternalHeader} objects to JSON. */
   public static class InternalHeaderSerializer implements JsonSerializer<InternalHeader> {
+    /**
+     * Serializes an {@link InternalHeader} into its corresponding JSON representation.
+     *
+     * @param message the {@link InternalHeader} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link InternalHeader}
+     */
     @Override
     public JsonElement serialize(
         InternalHeader message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -566,7 +751,16 @@ public class JsonSerializers {
     }
   }
 
+  /** Serializes {@link InterceptableMethod} objects to JSON. */
   public static class InterceptableMethodSerializer implements JsonSerializer<InterceptableMethod> {
+    /**
+     * Serializes an {@link InterceptableMethod} into its corresponding JSON representation.
+     *
+     * @param message the {@link InterceptableMethod} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link InterceptableMethod}
+     */
     @Override
     public JsonElement serialize(
         InterceptableMethod message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -583,7 +777,16 @@ public class JsonSerializers {
     }
   }
 
+  /** Serializes {@link InterceptableField} objects to JSON. */
   public static class InterceptableFieldSerializer implements JsonSerializer<InterceptableField> {
+    /**
+     * Serializes an {@link InterceptableField} into its corresponding JSON representation.
+     *
+     * @param message the {@link InterceptableField} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link InterceptableField}
+     */
     @Override
     public JsonElement serialize(
         InterceptableField message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -597,7 +800,16 @@ public class JsonSerializers {
     }
   }
 
+  /** Serializes {@link InterceptMessage} objects to JSON. */
   public static class InterceptMessageSerializer implements JsonSerializer<InterceptMessage> {
+    /**
+     * Serializes an {@link InterceptMessage} into its corresponding JSON representation.
+     *
+     * @param message the {@link InterceptMessage} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link InterceptMessage}
+     */
     @Override
     public JsonElement serialize(
         InterceptMessage message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -630,7 +842,16 @@ public class JsonSerializers {
     }
   }
 
+  /** Serializes {@link InterceptKeyMessage} objects to JSON. */
   public static class InterceptKeyMessageSerializer implements JsonSerializer<InterceptKeyMessage> {
+    /**
+     * Serializes an {@link InterceptKeyMessage} into its corresponding JSON representation.
+     *
+     * @param message the {@link InterceptKeyMessage} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link InterceptKeyMessage}
+     */
     @Override
     public JsonElement serialize(
         InterceptKeyMessage message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -651,7 +872,16 @@ public class JsonSerializers {
     }
   }
 
+  /** Serializes {@link InterceptResponse} objects to JSON. */
   public static class InterceptResponseSerializer implements JsonSerializer<InterceptResponse> {
+    /**
+     * Serializes an {@link InterceptResponse} into its corresponding JSON representation.
+     *
+     * @param message the {@link InterceptResponse} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link InterceptResponse}
+     */
     @Override
     public JsonElement serialize(
         InterceptResponse message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -669,7 +899,16 @@ public class JsonSerializers {
     }
   }
 
+  /** Serializes {@link Class} objects to JSON. */
   public static class ClassSerializer implements JsonSerializer<Class> {
+    /**
+     * Serializes a {@link Class} into its corresponding JSON representation.
+     *
+     * @param message the {@link Class} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link Class}
+     */
     @Override
     public JsonElement serialize(
         Class message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -681,7 +920,16 @@ public class JsonSerializers {
     }
   }
 
+  /** Serializes {@link Obj} objects to JSON. */
   public static class ObjSerializer implements JsonSerializer<Obj> {
+    /**
+     * Serializes an {@link Obj} into its corresponding JSON representation.
+     *
+     * @param message the {@link Obj} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link Obj}
+     */
     @Override
     public JsonElement serialize(
         Obj message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -702,7 +950,16 @@ public class JsonSerializers {
     }
   }
 
+  /** Serializes {@link Field} objects to JSON. */
   public static class FieldSerializer implements JsonSerializer<Field> {
+    /**
+     * Serializes a {@link Field} into its corresponding JSON representation.
+     *
+     * @param message the {@link Field} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link Field}
+     */
     @Override
     public JsonElement serialize(
         Field message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -720,7 +977,16 @@ public class JsonSerializers {
     }
   }
 
+  /** Serializes {@link Method} objects to JSON. */
   public static class MethodSerializer implements JsonSerializer<Method> {
+    /**
+     * Serializes a {@link Method} into its corresponding JSON representation.
+     *
+     * @param message the {@link Method} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link Method}
+     */
     @Override
     public JsonElement serialize(
         Method message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -738,7 +1004,16 @@ public class JsonSerializers {
     }
   }
 
+  /** Serializes {@link Constructor} objects to JSON. */
   public static class ConstructorSerializer implements JsonSerializer<Constructor> {
+    /**
+     * Serializes a {@link Constructor} into its corresponding JSON representation.
+     *
+     * @param message the {@link Constructor} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link Constructor}
+     */
     @Override
     public JsonElement serialize(
         Constructor message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -750,7 +1025,16 @@ public class JsonSerializers {
     }
   }
 
+  /** Serializes {@link Reflectable} objects to JSON. */
   public static class ReflectableSerializer implements JsonSerializer<Reflectable> {
+    /**
+     * Serializes a {@link Reflectable} into its corresponding JSON representation.
+     *
+     * @param message the {@link Reflectable} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link Reflectable}
+     */
     @Override
     public JsonElement serialize(
         Reflectable message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -768,7 +1052,16 @@ public class JsonSerializers {
     }
   }
 
+  /** Serializes {@link Parameter} objects to JSON. */
   public static class ParameterSerializer implements JsonSerializer<Parameter> {
+    /**
+     * Serializes a {@link Parameter} into its corresponding JSON representation.
+     *
+     * @param message the {@link Parameter} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link Parameter}
+     */
     @Override
     public JsonElement serialize(
         Parameter message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -783,8 +1076,17 @@ public class JsonSerializers {
     }
   }
 
+  /** Serializes and deserializes {@link ReturnValue} objects to and from JSON. */
   public static class ReturnValueAdapter
       implements JsonSerializer<ReturnValue>, JsonDeserializer<ReturnValue> {
+    /**
+     * Serializes a {@link ReturnValue} into its corresponding JSON representation.
+     *
+     * @param message the {@link ReturnValue} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link ReturnValue}
+     */
     @Override
     public JsonElement serialize(
         ReturnValue message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -801,6 +1103,15 @@ public class JsonSerializers {
       return jsonElement;
     }
 
+    /**
+     * Deserializes a JSON element into a {@link ReturnValue} object.
+     *
+     * @param json the JSON element to deserialize
+     * @param typeOfT the type of the Object to deserialize to
+     * @param context the context of the deserialization process
+     * @return the deserialized {@link ReturnValue} object
+     * @throws JsonParseException if the JSON is not in the expected format
+     */
     @Override
     public ReturnValue deserialize(
         JsonElement json, Type typeOfT, JsonDeserializationContext context)
@@ -820,7 +1131,16 @@ public class JsonSerializers {
     }
   }
 
+  /** Serializes {@link ControlMessage} objects to JSON. */
   public static class ControlMessageSerializer implements JsonSerializer<ControlMessage> {
+    /**
+     * Serializes a {@link ControlMessage} into its corresponding JSON representation.
+     *
+     * @param message the {@link ControlMessage} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link ControlMessage}
+     */
     @Override
     public JsonElement serialize(
         ControlMessage message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -852,7 +1172,16 @@ public class JsonSerializers {
     }
   }
 
+  /** Serializes {@link MetaMessage} objects to JSON. */
   public static class MetaMessageSerializer implements JsonSerializer<MetaMessage> {
+    /**
+     * Serializes a {@link MetaMessage} into its corresponding JSON representation.
+     *
+     * @param message the {@link MetaMessage} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link MetaMessage}
+     */
     @Override
     public JsonElement serialize(
         MetaMessage message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -884,7 +1213,16 @@ public class JsonSerializers {
     }
   }
 
+  /** Serializes {@link Message} objects to JSON. */
   public static class MessageSerializer implements JsonSerializer<Message> {
+    /**
+     * Serializes a {@link Message} into its corresponding JSON representation.
+     *
+     * @param message the {@link Message} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link Message}
+     */
     @Override
     public JsonElement serialize(
         Message message, Type type, JsonSerializationContext jsonSerializationContext) {

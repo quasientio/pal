@@ -22,8 +22,11 @@ package net.ittera.pal.serdes.kafka;
 import org.apache.kafka.common.serialization.StringDeserializer;
 
 /**
- * The purpose of this subclass is to not have to change package name in kafka properties after
- * mvn-shading (see issue #168 more details). Having our own deserializer class means we can leave
- * the full package and class unchanged since we only relocate dependencies, not our own classes
+ * Custom deserializer for Kafka keys that maintains the original fully qualified class name after
+ * Maven shading. This allows Kafka properties to reference the deserializer without requiring
+ * changes to the package name, ensuring compatibility and ease of configuration.
+ *
+ * @see <a href="https://gitlab.com/cometera/pal/-/issues/168">issue #168 for details</a>
+ * @see StringDeserializer
  */
 public final class KafkaKeyDeserializer extends StringDeserializer {}

@@ -12,13 +12,35 @@ import net.ittera.pal.messages.jsonrpc.ResponseObject;
 import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.RpcMessageSummaryUtil;
 
+/**
+ * Utility class for generating concise one-line summaries of JSON-RPC messages.
+ *
+ * <p>This class provides methods to create human-readable summaries for the various types of
+ * JSON-RPC messages, including requests and responses. It extends {@link RpcMessageSummaryUtil} to
+ * leverage common summarization functionality while adding JSON-RPC specific implementations.
+ */
 public class JsonRpcMessageSummaryUtil extends RpcMessageSummaryUtil {
 
-  // Helper method to get the class name based on the message type
+  /**
+   * Retrieves the short class name associated with the given JSON-RPC message.
+   *
+   * @param msg the JSON-RPC message from which to extract the class name
+   * @return the short class name, or an empty string if not available
+   */
   private static String classname(JsonRpcMessage msg) {
     return shortClassname(getClassName(msg).orElse(""));
   }
 
+  /**
+   * Generates a one-line summary for the specified JSON-RPC message.
+   *
+   * <p>This method determines the type of the provided message and delegates to the appropriate
+   * summarization method. It supports both JSON-RPC requests and responses.
+   *
+   * @param msg the JSON-RPC message to summarize
+   * @return a concise one-line summary of the message
+   * @throws IllegalArgumentException if the message type is unsupported
+   */
   public static String getOneLinerSummary(JsonRpcMessage msg) {
     if (msg instanceof JsonRpcRequest request) {
       return getOneLinerSummary(request);
@@ -28,6 +50,16 @@ public class JsonRpcMessageSummaryUtil extends RpcMessageSummaryUtil {
     throw new IllegalArgumentException("Unsupported message type: " + msg.getClass().getName());
   }
 
+  /**
+   * Generates a one-line summary for the specified JSON-RPC request.
+   *
+   * <p>The summary is based on the request's message type, detailing the operation such as
+   * constructor execution, method invocation, field retrieval, or value assignment.
+   *
+   * @param msg the JSON-RPC request to summarize
+   * @return a concise one-line summary of the request
+   * @throws IllegalArgumentException if the request's message type is unsupported
+   */
   public static String getOneLinerSummary(JsonRpcRequest msg) {
     MessageType messageType = getMessageType(msg);
     return switch (messageType) {
@@ -63,6 +95,16 @@ public class JsonRpcMessageSummaryUtil extends RpcMessageSummaryUtil {
     };
   }
 
+  /**
+   * Generates a one-line summary for the specified JSON-RPC response.
+   *
+   * <p>The summary is based on the response's message type, detailing the outcome such as value
+   * return, field assignment completion, or exception throwing.
+   *
+   * @param msg the JSON-RPC response to summarize
+   * @return a concise one-line summary of the response
+   * @throws IllegalArgumentException if the response type is unsupported
+   */
   public static String getOneLinerSummary(JsonRpcResponse msg) {
     MessageType responseType = getMessageType(msg);
     switch (responseType) {
@@ -105,10 +147,22 @@ public class JsonRpcMessageSummaryUtil extends RpcMessageSummaryUtil {
     }
   }
 
+  /**
+   * Constructs a string representation of the given response object.
+   *
+   * @param obj the response object to represent
+   * @return a string representation of the response object
+   */
   private static String getObjRepr(ResponseObject obj) {
     return getObjRepr(obj.isNull(), obj.getValue(), String.valueOf(obj.getRef()));
   }
 
+  /**
+   * Constructs a string representation of the given argument.
+   *
+   * @param argument the argument to represent
+   * @return a string representation of the argument
+   */
   private static String getObjRepr(Argument argument) {
     String argValue = argument.getValue() == null ? null : argument.getValue().toString();
     return getObjRepr(argument.isNull(), argValue, String.valueOf(argument.getRef()));

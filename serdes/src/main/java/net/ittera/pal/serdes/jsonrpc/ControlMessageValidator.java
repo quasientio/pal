@@ -5,7 +5,24 @@ import net.ittera.pal.messages.jsonrpc.Params;
 import net.ittera.pal.messages.types.ControlCommandType;
 import net.ittera.pal.messages.types.MessageFamily;
 
+/**
+ * Validates JSON-RPC control messages to ensure they adhere to the expected format and contain
+ * supported commands.
+ */
 public class ControlMessageValidator {
+  /**
+   * Validates the provided JSON-RPC control message request.
+   *
+   * <p>Ensures that the request method corresponds to the control message family, verifies the
+   * presence and validity of the command type, and checks for necessary arguments based on the
+   * command type.
+   *
+   * @param request the JSON-RPC request to validate
+   * @throws InvalidJsonRpcRequestException if the JSON-RPC request is invalid
+   * @throws InvalidJsonRpcParamsException if the JSON-RPC request parameters are invalid
+   * @throws IllegalArgumentException if the request method name does not correspond to the control
+   *     message family
+   */
   public static void validate(JsonRpcRequest request)
       throws InvalidJsonRpcRequestException, InvalidJsonRpcParamsException {
     // sanity check

@@ -37,13 +37,39 @@ import net.ittera.pal.serdes.jsonrpc.JsonSerializationException;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
 
+/**
+ * Encapsulates a log message with associated metadata and content retrieved from a Kafka topic. The
+ * content can be either a binary {@link Message} or a {@link JsonRpcMessage}.
+ *
+ * @param <T> the type of the message content
+ */
 public class LogMessage<T> {
 
+  /** The Kafka topic from which the message was consumed. */
   private final String topic;
+
+  /** The offset of the message within the Kafka topic. */
   private Long offset;
+
+  /** The headers associated with the Kafka message, represented as key-value pairs. */
   private final Map<String, String> headers;
+
+  /**
+   * The content of the log message, which is either a {@link Message} or a {@link JsonRpcMessage}.
+   */
   private final T content;
 
+  /**
+   * Constructs a new {@code LogMessage} with the specified topic, offset, headers, and content.
+   *
+   * @param topic the Kafka topic from which the message was consumed; may be {@code null}
+   * @param offset the offset of the message within the topic; may be {@code null}
+   * @param headers the headers associated with the message; must not be {@code null}
+   * @param content the content of the message, which must be an instance of {@link Message} or
+   *     {@link JsonRpcMessage}
+   * @throws IllegalArgumentException if {@code content} is not a {@link Message} or {@link
+   *     JsonRpcMessage}
+   */
   public LogMessage(
       @Nullable String topic, @Nullable Long offset, Map<String, String> headers, T content) {
     if (!(content instanceof Message || content instanceof JsonRpcMessage)) {
@@ -56,13 +82,18 @@ public class LogMessage<T> {
   }
 
   /**
-   * Creates a LogMessage by deserializing the byte[] data. Used by KafkaLogMessageDeserializer.
+   * Creates a {@code LogMessage} by deserializing the provided data. This method is utilized by
+   * {@link KafkaLogMessageDeserializer} to convert raw Kafka records into {@code LogMessage}
+   * instances.
    *
-   * @param topic the topic/Log where the message has been read from
-   * @param offset the offset of the message
-   * @param recordHeaders the headers of the message
-   * @param data the data of the message
-   * @return the deserialized LogMessage
+   * @param topic the Kafka topic (i.e. log) from which the message was read; may be {@code null}
+   * @param offset the offset of the message within the topic; may be {@code null}
+   * @param recordHeaders the headers of the Kafka record
+   * @param data the raw byte array representing the message content
+   * @return the deserialized {@code LogMessage} instance
+   * @throws IllegalArgumentException if required headers are missing or the message format/type is
+   *     unsupported
+   * @throws RuntimeException if JSON deserialization fails
    */
   public static LogMessage<?> newInstance(
       @Nullable String topic, @Nullable Long offset, Headers recordHeaders, byte[] data) {
@@ -136,6 +167,12 @@ public class LogMessage<T> {
     return logMessage;
   }
 
+  /**
+   * Retrieves the {@link MessageFormatType} from the provided headers.
+   *
+   * @param headers the headers from which to extract the message format
+   * @return the corresponding {@code MessageFormatType}, or {@code null} if not found
+   */
   private static MessageFormatType getMessageFormatFromHeader(Headers headers) {
     for (Header header : headers.headers("message-format")) {
       byte formatByte = header.value()[0];
@@ -144,6 +181,12 @@ public class LogMessage<T> {
     return null;
   }
 
+  /**
+   * Retrieves the {@link MessageType} from the provided headers.
+   *
+   * @param headers the headers from which to extract the message type
+   * @return the corresponding {@code MessageType}, or {@code null} if not found
+   */
   private static MessageType getMessageTypeFromHeader(Headers headers) {
     for (Header header : headers.headers("message-type")) {
       byte typeByte = header.value()[0];
@@ -152,6 +195,13 @@ public class LogMessage<T> {
     return null;
   }
 
+  /**
+   * Extracts string-based headers from the provided Kafka record headers. Skips headers that are
+   * single-byte or end with "-id".
+   *
+   * @param recordHeaders the Kafka record headers
+   * @return a map of header keys to their string values
+   */
   private static Map<String, String> getStringHeadersFromRecordHeaders(Headers recordHeaders) {
     Map<String, String> headers = new HashMap<>();
     for (Header header : recordHeaders) {
@@ -169,6 +219,13 @@ public class LogMessage<T> {
     return headers;
   }
 
+  /**
+   * Extracts ID-based headers from the provided Kafka record headers. Only includes headers whose
+   * keys end with "-id" and converts their byte values to UUID strings.
+   *
+   * @param recordHeaders the Kafka record headers
+   * @return a map of header keys to their UUID string representations
+   */
   private static Map<String, String> getIdHeadersFromRecordHeaders(Headers recordHeaders) {
     Map<String, String> headers = new HashMap<>();
     for (Header header : recordHeaders) {
@@ -179,26 +236,52 @@ public class LogMessage<T> {
     return headers;
   }
 
+  /**
+   * Retrieves the Kafka topic associated with this log message.
+   *
+   * @return the Kafka topic, or {@code null} if not specified
+   */
   public String getTopic() {
     return topic;
   }
 
+  /**
+   * Retrieves the offset of this log message within the Kafka topic.
+   *
+   * @return the offset, or {@code null} if not specified
+   */
   public Long getOffset() {
     return offset;
   }
 
+  /**
+   * Retrieves the headers associated with this log message.
+   *
+   * @return an unmodifiable map of header keys to values
+   */
   public Map<String, String> getHeaders() {
     return headers;
   }
 
+  /**
+   * Retrieves the content of this log message.
+   *
+   * @return the message content
+   */
   public T getContent() {
     return content;
   }
 
+  /**
+   * Updates the offset of this log message.
+   *
+   * @param offset the new offset value
+   */
   public void setOffset(Long offset) {
     this.offset = offset;
   }
 
+  /** {@inheritDoc} */
   @Override
   public String toString() {
     return "LogMessage{"

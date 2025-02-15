@@ -19,19 +19,33 @@
 
 package net.ittera.pal.messages.types;
 
+/** Enumerates the internal header types utilized by PAL for message dispatching and handling. */
 public enum InternalHeaderType {
   /**
-   * Sent before dispatching a received message. Value is the UUID of the receiving-dispatching
-   * peer, not the producer.
+   * Indicates a write-ahead operation prior to message dispatch. The value represents the UUID of
+   * the receiving-dispatching peer, not the producer.
    */
   WRITE_AHEAD((byte) 1);
 
+  /** The byte value associated with this internal header type. */
   private final byte idx;
 
+  /**
+   * Constructs an InternalHeaderType with the specified byte value.
+   *
+   * @param idx the byte value representing the internal header type
+   */
   InternalHeaderType(byte idx) {
     this.idx = idx;
   }
 
+  /**
+   * Converts a byte value to the corresponding InternalHeaderType.
+   *
+   * @param typeAsByte the byte value representing the internal header type
+   * @return the InternalHeaderType corresponding to the provided byte value
+   * @throws IllegalArgumentException if the byte value does not correspond to any known header type
+   */
   public static InternalHeaderType fromByte(byte typeAsByte) {
     return switch (typeAsByte) {
       case 1 -> WRITE_AHEAD;
@@ -39,6 +53,11 @@ public enum InternalHeaderType {
     };
   }
 
+  /**
+   * Retrieves the byte value associated with this internal header type.
+   *
+   * @return the byte value representing this internal header type
+   */
   public byte toByte() {
     return idx;
   }

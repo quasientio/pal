@@ -21,6 +21,9 @@ package net.ittera.pal.serdes.kafka;
 
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 
+/** Serializer for Kafka messages that handles byte array serialization. */
 public final class KafkaMessageSerializer extends ByteArraySerializer {
+
+  /** Constructs a new {@code KafkaMessageSerializer}. */
   public KafkaMessageSerializer() {}
 }

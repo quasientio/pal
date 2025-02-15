@@ -16,14 +16,29 @@ import net.ittera.pal.messages.jsonrpc.JsonRpcResponseReturnValue;
 import net.ittera.pal.messages.types.JsonRpcType;
 import net.ittera.pal.messages.types.MessageType;
 
+/**
+ * Utility class for handling JSON-RPC messages, including parsing, validation, and extracting
+ * relevant information from requests and responses.
+ */
 public class JsonRpcMessageUtils {
 
+  /** List of exception types that are considered as "Method not found" errors in JSON-RPC. */
   private static final List<String> NOT_FOUND_EXCEPTION_TYPES =
       Arrays.asList(
           "java.lang.ClassNotFoundException",
           "java.lang.NoSuchMethodException",
           "java.lang.NoSuchFieldException");
 
+  /**
+   * Parses a JSON-RPC message string into a {@link JsonRpcRequest} and validates its structure and
+   * content.
+   *
+   * @param jsonRpcMessage the JSON-RPC message as a string to be parsed and validated
+   * @return a validated {@link JsonRpcRequest} object
+   * @throws InvalidJsonRpcRequestException if the request is invalid
+   * @throws InvalidJsonRpcParamsException if the parameters of the request are invalid
+   * @throws JsonRpcParseException if there is an error parsing the JSON-RPC message
+   */
   public static JsonRpcRequest parseAndValidateJsonRpcMessage(String jsonRpcMessage)
       throws InvalidJsonRpcRequestException, InvalidJsonRpcParamsException, JsonRpcParseException {
 
@@ -49,16 +64,26 @@ public class JsonRpcMessageUtils {
   }
 
   /**
-   * Check if the exception type is wrappable inside a JSON-RPC "Method not found" (-32601) so we
-   * can return a proper JsonRpcErrorCode.METHOD_NOT_FOUND
+   * Determines whether the given exception type corresponds to a "Method not found" error in
+   * JSON-RPC, in order to return the appropriate {@link JsonRpcErrorCode#METHOD_NOT_FOUND}.
    *
-   * @param exceptionType the exception type to check
-   * @return true if the exception type is a not found exception, false otherwise
+   * @param exceptionType the fully qualified name of the exception type to check
+   * @return {@code true} if the exception type is recognized as a "not found" exception; {@code
+   *     false} otherwise
    */
   public static boolean isMethodNotFoundError(String exceptionType) {
     return NOT_FOUND_EXCEPTION_TYPES.contains(exceptionType);
   }
 
+  /**
+   * Retrieves the class name associated with the given JSON-RPC message, whether it is a request or
+   * a response.
+   *
+   * @param jsonRpcMessage the JSON-RPC message from which to extract the class name
+   * @return an {@link Optional} containing the class name if present; otherwise, an empty {@link
+   *     Optional}
+   * @throws IllegalArgumentException if the message type is unsupported
+   */
   public static Optional<String> getClassName(JsonRpcMessage jsonRpcMessage) {
     if (jsonRpcMessage instanceof JsonRpcRequest request) {
       return getClassName(request);
@@ -70,6 +95,13 @@ public class JsonRpcMessageUtils {
     }
   }
 
+  /**
+   * Extracts the class name from a {@link JsonRpcRequest} based on its method and parameters.
+   *
+   * @param jsonRpcRequest the JSON-RPC request from which to extract the class name
+   * @return an {@link Optional} containing the class name if the method implies a class operation;
+   *     otherwise, an empty {@link Optional}
+   */
   public static Optional<String> getClassName(JsonRpcRequest jsonRpcRequest) {
     return switch (jsonRpcRequest.getMethod()) {
       case "new", "call", "get", "put" -> Optional.of(jsonRpcRequest.getParams().getType());
@@ -77,6 +109,14 @@ public class JsonRpcMessageUtils {
     };
   }
 
+  /**
+   * Extracts the class name from a {@link JsonRpcResponse} based on its type and result.
+   *
+   * @param jsonRpcResponse the JSON-RPC response from which to extract the class name
+   * @return an {@link Optional} containing the class name if available; otherwise, an empty {@link
+   *     Optional}
+   * @throws IllegalArgumentException if the response type is unsupported
+   */
   @SuppressWarnings("checkstyle:FallThrough")
   public static Optional<String> getClassName(JsonRpcResponse jsonRpcResponse) {
     MessageType jsonRpcResponseType = getJsonRpcResponseType(jsonRpcResponse);
@@ -111,6 +151,14 @@ public class JsonRpcMessageUtils {
     }
   }
 
+  /**
+   * Retrieves the field name associated with a {@link JsonRpcResponse} if the response type
+   * corresponds to a field operation.
+   *
+   * @param jsonRpcResponse the JSON-RPC response from which to extract the field name
+   * @return an {@link Optional} containing the field name if applicable; otherwise, an empty {@link
+   *     Optional}
+   */
   public static Optional<String> getFieldName(JsonRpcResponse jsonRpcResponse) {
     MessageType jsonRpcResponseType = getJsonRpcResponseType(jsonRpcResponse);
     JsonRpcResponseReturnValue returnValue = jsonRpcResponse.getResult();
@@ -126,6 +174,13 @@ public class JsonRpcMessageUtils {
     }
   }
 
+  /**
+   * Extracts the field name from a {@link JsonRpcRequest} based on its method and parameters.
+   *
+   * @param jsonRpcRequest the JSON-RPC request from which to extract the field name
+   * @return an {@link Optional} containing the field name if the method involves a field operation;
+   *     otherwise, an empty {@link Optional}
+   */
   public static Optional<String> getFieldName(JsonRpcRequest jsonRpcRequest) {
     assert jsonRpcRequest.getParams().getField() != null;
     return switch (jsonRpcRequest.getMethod()) {
@@ -134,6 +189,14 @@ public class JsonRpcMessageUtils {
     };
   }
 
+  /**
+   * Determines the {@link MessageType} of a given {@link JsonRpcMessage}, whether it is a request
+   * or a response.
+   *
+   * @param jsonRpcMessage the JSON-RPC message for which to determine the message type
+   * @return the corresponding {@link MessageType} of the message
+   * @throws IllegalArgumentException if the message type is unsupported
+   */
   public static MessageType getMessageType(JsonRpcMessage jsonRpcMessage) {
     if (jsonRpcMessage instanceof JsonRpcRequest request) {
       return getMessageType(request);
@@ -145,6 +208,14 @@ public class JsonRpcMessageUtils {
     }
   }
 
+  /**
+   * Determines the {@link MessageType} of a given {@link JsonRpcRequest} based on its method and
+   * parameters.
+   *
+   * @param jsonRpcRequest the JSON-RPC request for which to determine the message type
+   * @return the corresponding {@link MessageType} of the request
+   * @throws IllegalArgumentException if the method is unsupported
+   */
   public static MessageType getMessageType(JsonRpcRequest jsonRpcRequest) {
     return switch (jsonRpcRequest.getMethod()) {
       case "new" -> MessageType.EXEC_CONSTRUCTOR;
@@ -176,14 +247,36 @@ public class JsonRpcMessageUtils {
     };
   }
 
+  /**
+   * Retrieves the {@link MessageType} of a given {@link JsonRpcResponse}.
+   *
+   * @param jsonRpcResponse the JSON-RPC response for which to determine the message type
+   * @return the corresponding {@link MessageType} of the response
+   */
   public static MessageType getMessageType(JsonRpcResponse jsonRpcResponse) {
     return getJsonRpcResponseType(jsonRpcResponse);
   }
 
+  /**
+   * Converts a {@link JsonRpcMessage} to its corresponding {@link JsonRpcType}, indicating whether
+   * it is a request or a response.
+   *
+   * @param jsonRpcMessage the JSON-RPC message to be converted
+   * @return the corresponding {@link JsonRpcType} of the message
+   * @throws IllegalArgumentException if the message type is unsupported
+   */
   public static JsonRpcType getJsonRpcType(JsonRpcMessage jsonRpcMessage) {
     return getJsonRpcType(getMessageType(jsonRpcMessage));
   }
 
+  /**
+   * Converts a {@link MessageType} to its corresponding {@link JsonRpcType}, indicating whether it
+   * is a request or a response.
+   *
+   * @param messageType the message type to be converted
+   * @return the corresponding {@link JsonRpcType} of the message type
+   * @throws IllegalArgumentException if the message type is unsupported
+   */
   public static JsonRpcType getJsonRpcType(MessageType messageType) {
     return switch (messageType) {
       case EXEC_CONSTRUCTOR,
@@ -200,6 +293,14 @@ public class JsonRpcMessageUtils {
     };
   }
 
+  /**
+   * Determines the specific {@link MessageType} of a {@link JsonRpcResponse} based on its content,
+   * such as whether it contains an error or a return value.
+   *
+   * @param jsonRpcResponse the JSON-RPC response to analyze
+   * @return the specific {@link MessageType} of the response
+   * @throws IllegalArgumentException if the response type is unsupported or cannot be determined
+   */
   private static MessageType getJsonRpcResponseType(JsonRpcResponse jsonRpcResponse) {
     if (jsonRpcResponse.getError() != null) {
       return MessageType.EXEC_THROWABLE;
@@ -221,8 +322,19 @@ public class JsonRpcMessageUtils {
     }
   }
 
+  /**
+   * Utility class for handling Gson-related operations, such as extracting the "id" field from a
+   * JSON string.
+   */
   private static class GsonUtils {
 
+    /**
+     * Extracts the "id" field from a JSON string representing a JSON-RPC message. JSON parsing is
+     * done in Lenient mode, to allow extracting the id even when the JSON may be invalid.
+     *
+     * @param json the JSON string from which to extract the "id" field
+     * @return the value of the "id" field if present; otherwise, {@code null}
+     */
     public static Object extractId(String json) {
       JsonReader reader = new JsonReader(new StringReader(json));
       reader.setStrictness(Strictness.LENIENT); // Enable lenient parsing to handle malformed JSON
@@ -234,6 +346,13 @@ public class JsonRpcMessageUtils {
       }
     }
 
+    /**
+     * Parses a {@link JsonReader} to extract the "id" field value from a JSON object.
+     *
+     * @param reader the {@link JsonReader} positioned at the start of the JSON object
+     * @return the value of the "id" field if found; otherwise, {@code null}
+     * @throws Exception if an error occurs during reading
+     */
     private static Object extractId(JsonReader reader) throws Exception {
       reader.beginObject();
 
@@ -251,6 +370,14 @@ public class JsonRpcMessageUtils {
       return null;
     }
 
+    /**
+     * Reads the value of the "id" field based on its JSON token type.
+     *
+     * @param reader the {@link JsonReader} positioned at the "id" value
+     * @return the "id" value as an {@link Object}, or {@code null} if the value is null or
+     *     unrecognized
+     * @throws Exception if an error occurs during reading
+     */
     private static Object readIdValue(JsonReader reader) throws Exception {
       return switch (reader.peek()) {
         case STRING -> reader.nextString(); // 'id' is a string

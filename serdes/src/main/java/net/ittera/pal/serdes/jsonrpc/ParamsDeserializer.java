@@ -17,9 +17,29 @@ import net.ittera.pal.messages.jsonrpc.Params;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Deserializes JSON elements into {@link Params} instances according to JSON-RPC specifications.
+ * Implements {@link JsonDeserializer} to provide custom deserialization logic for {@link Params}.
+ */
 public class ParamsDeserializer implements JsonDeserializer<Params> {
+
+  /** Logger instance for logging deserialization. */
   protected static final Logger logger = LoggerFactory.getLogger(ParamsDeserializer.class);
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Deserializes a JSON element into a {@link Params} object. It processes each field
+   * individually and handles special cases for 'value' and 'args' fields, ensuring proper type
+   * conversions and error handling.
+   *
+   * @param json the JSON data being deserialized
+   * @param typeOfT the type of the Object to deserialize to
+   * @param context the deserialization context
+   * @return the deserialized {@link Params} instance
+   * @throws JsonParseException if the JSON is not a valid representation for a {@link Params}
+   *     object
+   */
   @Override
   public Params deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
       throws JsonParseException {
@@ -76,6 +96,16 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
     return params;
   }
 
+  /**
+   * Deserializes a JSON element into an {@link Argument} object, handling various data types and
+   * structures, including primitives, arrays, and objects with type information.
+   *
+   * @param element the JSON element representing the argument
+   * @param context the deserialization context
+   * @return the deserialized {@link Argument} instance
+   * @throws JsonParseException if the JSON element cannot be properly deserialized into an {@link
+   *     Argument}
+   */
   private Argument deserializeArgument(JsonElement element, JsonDeserializationContext context) {
     // Handle null or empty object cases
     if (element.isJsonNull()
@@ -195,11 +225,26 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
     return argument;
   }
 
+  /**
+   * Determines if a given type string represents an array type.
+   *
+   * @param givenType the type string to evaluate
+   * @return {@code true} if the type is an array type; {@code false} otherwise
+   */
   private boolean isArrayType(String givenType) {
     // If givenType starts with "[" or ends with "[]", treat it as array type
     return givenType.startsWith("[") || givenType.endsWith("[]");
   }
 
+  /**
+   * Converts a {@link JsonPrimitive} to a specific single Java type based on the provided type
+   * string.
+   *
+   * @param p the JSON primitive to convert
+   * @param givenType the target type as a string
+   * @return the converted value as an {@link Object}
+   * @throws JsonParseException if the conversion fails or the type is unsupported
+   */
   private Object convertJsonPrimitiveToSingleType(JsonPrimitive p, String givenType) {
 
     // Handle common single-element wrapper types and String.
@@ -386,6 +431,13 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
     }
   }
 
+  /**
+   * Parses a {@link JsonArray} and infers the appropriate Java array type based on its elements.
+   *
+   * @param arr the JSON array to parse
+   * @return an array of {@link Object} with elements converted to their inferred types
+   * @throws JsonParseException if the array contains unsupported elements or nested structures
+   */
   private Object[] parseJsonArrayToInferredArrayType(JsonArray arr) {
 
     // If the array is empty, return an empty Object array
@@ -472,13 +524,12 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
     return castInferredArrayToObjectArray(elements);
   }
 
-  // Given a list of elements and flags encounteredNull or not, produce final Object[] of a chosen
-  // wrapper type
-  //  - If boolean only => Boolean[]
-  //  - if integral only => Integer[]
-  //  - if double => Double[]
-  //  - if strings => String[]
-  //  - else => Object[]
+  /**
+   * Casts a list of elements to a specific array type based on the inferred types of the elements.
+   *
+   * @param elements the list of elements to cast
+   * @return an array of {@link Object} with elements of the inferred type
+   */
   private Object[] castInferredArrayToObjectArray(List<Object> elements) {
     boolean allBoolean = true;
     boolean allIntegral = true;
@@ -549,6 +600,14 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
     }
   }
 
+  /**
+   * Parses a {@link JsonArray} into a specific Java array type based on the given type string.
+   *
+   * @param arr the JSON array to parse
+   * @param givenType the target array type as a string
+   * @return the converted Java array
+   * @throws JsonParseException if the array contains invalid elements or the type is unsupported
+   */
   private Object parseJsonArrayToSpecificArrayType(JsonArray arr, String givenType) {
     // givenType could be "[I", "[Z", "[Ljava.lang.String;", "int[]", "Integer[]", etc.
     Class<?> componentType = mapTypeStringToComponentClass(givenType);
@@ -586,6 +645,14 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
     return array;
   }
 
+  /**
+   * Converts a {@link JsonPrimitive} to the specified Java type.
+   *
+   * @param p the JSON primitive to convert
+   * @param targetType the target Java {@link Class} type
+   * @return the converted value as an {@link Object}
+   * @throws JsonParseException if the conversion fails or the type is unsupported
+   */
   private Object convertJsonPrimitiveToType(JsonPrimitive p, Class<?> targetType) {
     if (logger.isTraceEnabled()) {
       logger.trace("Converting JsonPrimitive p: {} to type: {}", p, targetType.getName());
@@ -661,6 +728,12 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
     throw new JsonParseException("Unsupported JsonPrimitive in convertJsonPrimitiveToType");
   }
 
+  /**
+   * Infers the array type name based on the elements of an object array.
+   *
+   * @param array the object array to examine
+   * @return the inferred type name in JVM array type descriptor format
+   */
   private String inferArrayTypeNameFromObjectArray(Object[] array) {
     // If empty array, "Object[]"
     if (array.length == 0) {

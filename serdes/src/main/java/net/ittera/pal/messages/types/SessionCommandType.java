@@ -19,18 +19,44 @@
 
 package net.ittera.pal.messages.types;
 
+/**
+ * Enumerates the various types of session-related control commands within PAL.
+ *
+ * <p>Each command type is associated with a unique byte identifier.
+ */
 public enum SessionCommandType {
-  STORE_OBJECT((byte) 1), // only internal
-  DELETE_OBJECT((byte) 2),
-  DELETE_SESSION((byte) 3),
-  CLEAR_SESSIONS((byte) 4); // only internal
 
+  /** Internal command to store an object reference within the session. */
+  STORE_OBJECT((byte) 1),
+
+  /** Command to delete a specific object reference from the session. */
+  DELETE_OBJECT((byte) 2),
+
+  /** Command to delete the entire session. */
+  DELETE_SESSION((byte) 3),
+
+  /** Internal command to clear all sessions. */
+  CLEAR_SESSIONS((byte) 4);
+
+  /** The unique byte identifier corresponding to the session command type. */
   private final byte idx;
 
+  /**
+   * Constructs a {@code SessionCommandType} with the specified byte identifier.
+   *
+   * @param idx the byte value representing this command type
+   */
   SessionCommandType(byte idx) {
     this.idx = idx;
   }
 
+  /**
+   * Converts a byte value to its corresponding {@code SessionCommandType}.
+   *
+   * @param messageTypeAsByte the byte value representing the command type
+   * @return the {@code SessionCommandType} corresponding to the given byte
+   * @throws IllegalArgumentException if the byte does not correspond to any known command type
+   */
   public static SessionCommandType fromByte(byte messageTypeAsByte) {
     return switch (messageTypeAsByte) {
       case 1 -> STORE_OBJECT;
@@ -42,6 +68,11 @@ public enum SessionCommandType {
     };
   }
 
+  /**
+   * Retrieves the byte identifier associated with this session command type.
+   *
+   * @return the byte value representing this command type
+   */
   public byte toByte() {
     return idx;
   }

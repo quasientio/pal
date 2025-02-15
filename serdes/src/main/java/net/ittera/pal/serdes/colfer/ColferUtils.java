@@ -86,9 +86,19 @@ import net.ittera.pal.serdes.colfer.JsonSerializers.StaticFieldPutDoneAdapter;
 import net.ittera.pal.serdes.colfer.JsonSerializers.StaticFieldPutSerializer;
 import net.ittera.pal.serdes.colfer.JsonSerializers.ThrowableSerializer;
 
+/**
+ * Utility class for serializing and deserializing {@link Marshallable} messages using Colfer and
+ * Gson.
+ *
+ * <p>Provides methods to convert messages to byte arrays or JSON strings, and to deserialize JSON
+ * strings back into message instances. Supports both compact and pretty-printed JSON formats.
+ */
 public class ColferUtils {
 
+  /** Gson instance for compact JSON serialization without pretty printing. */
   private static final Gson jsonPrinter;
+
+  /** Gson instance for JSON serialization with pretty printing enabled. */
   private static final Gson jsonPrettyPrinter;
 
   static {
@@ -96,8 +106,17 @@ public class ColferUtils {
     jsonPrettyPrinter = createJsonPrinter(true);
   }
 
+  /** Private constructor to prevent instantiation of this utility class. */
   private ColferUtils() {}
 
+  /**
+   * Creates a {@link Gson} instance configured for JSON serialization of {@link Marshallable}
+   * messages.
+   *
+   * @param prettyPrint if {@code true}, the Gson instance will format JSON output with indentation
+   *     for readability; otherwise, it will produce compact JSON.
+   * @return a configured {@link Gson} instance for serializing messages.
+   */
   private static Gson createJsonPrinter(boolean prettyPrint) {
     final GsonBuilder printerBuilder =
         new GsonBuilder()
@@ -145,6 +164,16 @@ public class ColferUtils {
     return printerBuilder.create();
   }
 
+  /**
+   * Serializes the given {@link Marshallable} message into a byte array.
+   *
+   * <p>The method calculates the required buffer size, marshals the message into the buffer, and
+   * returns a byte array containing the serialized data. If the serialized data is smaller than the
+   * calculated buffer size, a trimmed array is returned.
+   *
+   * @param message the {@link Marshallable} message to serialize
+   * @return a byte array containing the serialized message, or {@code null} if the message is null
+   */
   public static byte[] toBytes(Marshallable message) {
     if (message == null) {
       return null;
@@ -161,10 +190,26 @@ public class ColferUtils {
     return buf;
   }
 
+  /**
+   * Serializes the given {@link Marshallable} message into a JSON string.
+   *
+   * <p>This method produces compact JSON output without indentation.
+   *
+   * @param message the {@link Marshallable} message to serialize
+   * @return a JSON string representing the serialized message
+   */
   public static String toJson(Marshallable message) {
     return toJson(message, false);
   }
 
+  /**
+   * Serializes the given {@link Marshallable} message into a JSON string.
+   *
+   * @param message the {@link Marshallable} message to serialize
+   * @param prettyPrint if {@code true}, the resulting JSON string will be formatted with
+   *     indentation for readability; otherwise, it will be compact
+   * @return a JSON string representing the serialized message
+   */
   public static String toJson(Marshallable message, boolean prettyPrint) {
     if (prettyPrint) {
       return jsonPrettyPrinter.toJson(message);
@@ -172,6 +217,14 @@ public class ColferUtils {
     return jsonPrinter.toJson(message);
   }
 
+  /**
+   * Deserializes a JSON string into an instance of the specified {@link Marshallable} class.
+   *
+   * @param json the JSON string to deserialize
+   * @param messageClass the {@link Class} object of the target {@link Marshallable} type
+   * @return an instance of {@code messageClass} populated with data from the JSON string
+   * @throws JsonParseException if the JSON is invalid or deserialization fails
+   */
   public static Marshallable fromJson(String json, Class<? extends Marshallable> messageClass)
       throws JsonParseException {
     Gson gson = new Gson();
@@ -186,10 +239,14 @@ public class ColferUtils {
   }
 
   /**
-   * Returns a wrapper around a message, that is formatted lazily, for use in logging calls.
+   * Wraps a {@link Marshallable} message to defer JSON formatting until {@code toString()} is
+   * called.
+   *
+   * <p>This is useful for optimizing logging by avoiding unnecessary serialization.
    *
    * @param message the message to format
-   * @return a wrapper object that will format the message when its toString method is called
+   * @return a lazily-formatted wrapper that serializes the message to JSON upon calling {@code
+   *     toString()}
    */
   public static Object format(Marshallable message) {
     return new Object() {

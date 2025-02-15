@@ -5,8 +5,19 @@ import com.google.gson.GsonBuilder;
 import net.ittera.pal.messages.jsonrpc.JsonRpcMessage;
 import net.ittera.pal.messages.jsonrpc.Params;
 
+/**
+ * Provides functionality to serialize and deserialize JSON-RPC messages using Gson. It offers
+ * methods to convert JsonRpcMessage objects to JSON strings and vice versa, with support for both
+ * compact and pretty-printed JSON formats.
+ */
 public class JsonRpcSerializer {
+  /** Gson instance configured with custom deserializers for JSON-RPC message processing. */
   private static final Gson gson;
+
+  /**
+   * Gson instance configured with custom deserializers and pretty printing enabled for JSON-RPC
+   * message processing.
+   */
   private static final Gson prettyGson;
 
   static {
@@ -19,6 +30,13 @@ public class JsonRpcSerializer {
             .create();
   }
 
+  /**
+   * Serializes a JsonRpcMessage object into its JSON string representation.
+   *
+   * @param message the JsonRpcMessage to serialize
+   * @return the JSON string representation of the message
+   * @throws JsonSerializationException if serialization fails
+   */
   public static String toJson(JsonRpcMessage message) throws JsonSerializationException {
     try {
       return gson.toJson(message);
@@ -27,6 +45,13 @@ public class JsonRpcSerializer {
     }
   }
 
+  /**
+   * Serializes a JsonRpcMessage object into a pretty-printed JSON string representation.
+   *
+   * @param message the JsonRpcMessage to serialize
+   * @return the pretty-printed JSON string representation of the message
+   * @throws JsonSerializationException if serialization fails
+   */
   public static String toPrettyJson(JsonRpcMessage message) throws JsonSerializationException {
     try {
       return prettyGson.toJson(message);
@@ -35,6 +60,15 @@ public class JsonRpcSerializer {
     }
   }
 
+  /**
+   * Deserializes a JSON string into a JsonRpcMessage object of the specified type.
+   *
+   * @param json the JSON string to deserialize
+   * @param clazz the class of the JsonRpcMessage to deserialize into
+   * @param <T> the type of JsonRpcMessage
+   * @return the deserialized JsonRpcMessage object
+   * @throws JsonSerializationException if deserialization fails
+   */
   public static <T extends JsonRpcMessage> T fromJson(String json, Class<T> clazz)
       throws JsonSerializationException {
     try {

@@ -29,8 +29,22 @@ import net.ittera.pal.messages.colfer.Parameter;
 import net.ittera.pal.messages.colfer.Reflectable;
 import net.ittera.pal.messages.types.MessageType;
 
+/**
+ * Provides utility methods for extracting information from {@link ExecMessage} instances.
+ *
+ * <p>This class offers methods to retrieve class names, executable names, parameter types, and
+ * message identifiers based on the type of execution message. It facilitates the handling and
+ * interpretation of different execution scenarios encapsulated within {@link ExecMessage} objects.
+ */
 public class ExecMessageUtils {
 
+  /**
+   * Retrieves the fully qualified class name associated with the given {@link ExecMessage}.
+   *
+   * @param execMessage the execution message from which to extract the class name
+   * @return the name of the class involved in the execution, or the type of the raised throwable
+   * @throws IllegalArgumentException if the message type is unsupported
+   */
   public static String getClassname(ExecMessage execMessage) {
     final MessageType msgType = getMessageTypeOf(execMessage);
     return switch (msgType) {
@@ -54,6 +68,14 @@ public class ExecMessageUtils {
     };
   }
 
+  /**
+   * Retrieves the name of the executable (constructor, method, or field) from the given {@link
+   * ExecMessage}.
+   *
+   * @param execMessage the execution message from which to extract the executable name
+   * @return the name of the executable, such as a constructor name, method name, or field name
+   * @throws IllegalArgumentException if the message type is unsupported
+   */
   public static String getExecutableName(ExecMessage execMessage) {
     final MessageType execMessageType = getMessageTypeOf(execMessage);
     return switch (execMessageType) {
@@ -70,6 +92,13 @@ public class ExecMessageUtils {
     };
   }
 
+  /**
+   * Retrieves the name of the executable from which the current executable is invoked.
+   *
+   * @param execMessage the execution message from which to extract the source executable name
+   * @return the name of the source executable, or {@code null} if not applicable
+   * @throws IllegalArgumentException if the message type is unsupported
+   */
   public static String getFromExecutableName(ExecMessage execMessage) {
     final MessageType execMessageType = getMessageTypeOf(execMessage);
     return switch (execMessageType) {
@@ -93,6 +122,14 @@ public class ExecMessageUtils {
     };
   }
 
+  /**
+   * Retrieves the fully qualified class name of the executable from which the current executable is
+   * invoked.
+   *
+   * @param execMessage the execution message from which to extract the source executable class name
+   * @return the class name of the source executable, or {@code null} if not applicable
+   * @throws IllegalArgumentException if the message type is unsupported
+   */
   public static String getFromExecutableClassName(ExecMessage execMessage) {
     final MessageType execMessageType = getMessageTypeOf(execMessage);
     return switch (execMessageType) {
@@ -116,6 +153,12 @@ public class ExecMessageUtils {
     };
   }
 
+  /**
+   * Extracts the name from a {@link Reflectable} instance.
+   *
+   * @param from the reflectable instance from which to extract the name
+   * @return the name of the constructor, method, or field, or {@code null} if none is present
+   */
   private static String getFromReflectableName(Reflectable from) {
     if (from.getConstructor() != null) {
       return "new";
@@ -127,6 +170,12 @@ public class ExecMessageUtils {
     return null;
   }
 
+  /**
+   * Extracts the fully qualified class name from a {@link Reflectable} instance.
+   *
+   * @param from the reflectable instance from which to extract the class name
+   * @return the class name of the constructor, method, or field, or {@code null} if none is present
+   */
   private static String getFromReflectableClassName(Reflectable from) {
     if (from.getConstructor() != null) {
       return from.getConstructor().getClazz().getName();
@@ -139,11 +188,11 @@ public class ExecMessageUtils {
   }
 
   /**
-   * Get the parameter types of the given ExecMessage.
+   * Retrieves the parameter types from the given {@link ExecMessage}.
    *
-   * @param execMessage the ExecMessage to get the parameter types from
-   * @return null if not a constructor/method call, possibly empty list of parameter class names
-   *     otherwise
+   * @param execMessage the execution message from which to extract parameter types
+   * @return {@code null} if the message is not a constructor or method call; otherwise, a list of
+   *     parameter class names, which may be empty if there are no parameters
    */
   public static List<String> getParameterTypes(ExecMessage execMessage) {
     final MessageType execMessageType = getMessageTypeOf(execMessage);
@@ -178,6 +227,13 @@ public class ExecMessageUtils {
     return Collections.emptyList();
   }
 
+  /**
+   * Determines the {@link MessageType} of the given {@link ExecMessage}.
+   *
+   * @param execMessage the execution message to evaluate
+   * @return the corresponding {@link MessageType} of the execution message
+   * @throws IllegalArgumentException if the message type is unknown or unsupported
+   */
   public static MessageType getMessageTypeOf(ExecMessage execMessage) {
     if (execMessage.getConstructorCall() != null) {
       return MessageType.EXEC_CONSTRUCTOR;
@@ -206,6 +262,12 @@ public class ExecMessageUtils {
     }
   }
 
+  /**
+   * Retrieves the message identifier from the given {@link Message}.
+   *
+   * @param msg the message from which to extract the identifier
+   * @return the message ID associated with the message's type
+   */
   public static String getMessageId(Message msg) {
     MessageType messageType = MessageType.fromId(msg.getMessageType());
     return switch (messageType.getFamily()) {

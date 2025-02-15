@@ -11,6 +11,11 @@ import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.Params;
 import net.ittera.pal.messages.types.MessageFamily;
 
+/**
+ * Validates JSON-RPC requests to ensure they conform to the expected format and adhere to the
+ * protocol specifications. This includes verifying the request ID, JSON-RPC version, method names,
+ * and parameters based on the request type.
+ */
 public class JsonRpcRequestValidator {
   /**
    * Regular expression for a valid class name. This regex ensures that the class name starts with a
@@ -20,8 +25,10 @@ public class JsonRpcRequestValidator {
    */
   private static final String VALID_CLASS_NAME_REGEX = "^[\\p{L}_$][\\p{L}\\p{N}_$]*$";
 
+  /** Compiled pattern for validating class names against the {@link #VALID_CLASS_NAME_REGEX}. */
   private static final Pattern VALID_CLASS_NAME_PATTERN = Pattern.compile(VALID_CLASS_NAME_REGEX);
 
+  /** Set of Java reserved keywords that are not permissible as class names in JSON-RPC requests. */
   private static final List<String> JAVA_RESERVED_KEYWORDS =
       Arrays.asList(
           "class",
@@ -77,9 +84,17 @@ public class JsonRpcRequestValidator {
           "transient",
           "volatile");
 
+  /** Set of valid method names supported by PAL's JSON-RPC protocol. */
   private static final Set<String> VALID_METHODS =
       Set.of("new", "call", "get", "put", "control", "meta");
 
+  /**
+   * Validates the given JSON-RPC request by checking its structure, method name, and parameters.
+   *
+   * @param request the JSON-RPC request to validate
+   * @throws InvalidJsonRpcRequestException if the request is malformed or contains invalid data
+   * @throws InvalidJsonRpcParamsException if the parameters of the request are invalid
+   */
   public static void validate(JsonRpcRequest request)
       throws InvalidJsonRpcRequestException, InvalidJsonRpcParamsException {
 
@@ -268,6 +283,12 @@ public class JsonRpcRequestValidator {
                     }));
   }
 
+  /**
+   * Retrieves the list of arguments associated with the JSON-RPC request based on its method.
+   *
+   * @param jsonRpcRequest the JSON-RPC request from which to extract arguments
+   * @return an {@link Optional} containing the list of arguments if present, otherwise empty
+   */
   private static Optional<List<Argument>> getArguments(JsonRpcRequest jsonRpcRequest) {
     return switch (jsonRpcRequest.getMethod()) {
       case "new", "call" -> Optional.ofNullable(jsonRpcRequest.getParams().getArgs());

@@ -37,21 +37,67 @@ import org.apache.kafka.common.serialization.Serializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Serializes {@link LogMessage} instances for Kafka.
+ *
+ * <p>This serializer handles the conversion of {@link LogMessage} objects into byte arrays suitable
+ * for Kafka. It supports the Binary (Colfer) and JSON (JSON-RPC) message formats. Depending on the
+ * content, it serializes the message accordingly and sets appropriate headers for message format
+ * and type. This serializer integrates with Kafka's serialization mechanism by implementing the
+ * {@link Serializer} interface.
+ */
 public class KafkaLogMessageSerializer implements Serializer<LogMessage<?>> {
 
+  /** Logger for logging events and errors. */
   private static final Logger logger = LoggerFactory.getLogger(KafkaLogMessageSerializer.class);
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>This serializer does not require any configuration.
+   *
+   * @param configs the configuration properties
+   * @param isKey whether the serializer is for key or value
+   */
   @Override
   public void configure(Map<String, ?> configs, boolean isKey) {
     // No configuration needed for this serializer
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Serializes the given {@code logMessage} and delegates to the {@link #serialize(String,
+   * Headers, LogMessage)} method with {@code headers} set to {@code null}.
+   *
+   * @param topic the Kafka topic associated with the serialized data
+   * @param logMessage the log message to serialize
+   * @return the serialized byte array, or {@code null} if {@code logMessage} is {@code null}
+   */
   @Override
   public byte[] serialize(String topic, LogMessage<?> logMessage) {
     // Use the serialize method with Headers when possible
     return serialize(topic, null, logMessage);
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Serializes the provided {@code logMessage} into a byte array based on its content type.
+   * Supports serialization of messages in {@link MessageFormatType#BINARY} (using Colfer) and
+   * {@link MessageFormatType#JSON} (using JSON-RPC). Sets appropriate Kafka headers for message
+   * format and type, and includes additional headers from the log message.
+   *
+   * <p>If the {@code headers} parameter is {@code null}, it initializes with an empty {@link
+   * RecordHeaders} and logs an error.
+   *
+   * @param topic the Kafka topic associated with the serialized data
+   * @param headers the Kafka record headers to include, or {@code null} to use default headers
+   * @param logMessage the log message to serialize
+   * @return the serialized byte array, or {@code null} if {@code logMessage} is {@code null} or
+   *     serialization fails
+   * @throws IllegalArgumentException if the content type of {@code logMessage} is unsupported
+   */
   @Override
   public byte[] serialize(String topic, Headers headers, LogMessage<?> logMessage) {
     if (logMessage == null) {
@@ -113,6 +159,16 @@ public class KafkaLogMessageSerializer implements Serializer<LogMessage<?>> {
     return data;
   }
 
+  /**
+   * Serializes the given {@code Marshallable} message into a byte array using Colfer serialization.
+   *
+   * <p>If the {@code message} is {@code null}, returns {@code null}. Otherwise, it determines the
+   * required buffer size, marshals the message into the buffer, and returns the resulting byte
+   * array trimmed to the actual data size.
+   *
+   * @param message the message to serialize
+   * @return the serialized byte array, or {@code null} if {@code message} is {@code null}
+   */
   private static byte[] colferMessageToBytes(Marshallable message) {
     if (message == null) {
       return null;
@@ -129,6 +185,11 @@ public class KafkaLogMessageSerializer implements Serializer<LogMessage<?>> {
     return buf;
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>No resources are held by this serializer.
+   */
   @Override
   public void close() {
     // No resources to close

@@ -22,10 +22,13 @@ package net.ittera.pal.serdes.kafka.typed;
 import org.apache.kafka.common.serialization.StringSerializer;
 
 /**
- * The purpose of this subclass is to not have to change package name in kafka properties after
- * mvn-shading (see issue #168 more details). Having our own serializer class means we can leave the
- * full package and class unchanged since we only relocate dependencies, not our own classes
+ * Serializer for Kafka message keys that maintains the original package and class name.
+ *
+ * <p>This allows Kafka properties to remain unchanged after Maven shading by relocating
+ * dependencies while keeping the serializer's package and class intact.
  */
 public final class KafkaKeySerializer extends StringSerializer {
+
+  /** Constructs a new KafkaKeySerializer. */
   public KafkaKeySerializer() {}
 }

@@ -22,8 +22,19 @@ package net.ittera.pal.serdes.colfer;
 import net.ittera.pal.messages.colfer.ControlMessage;
 import net.ittera.pal.messages.types.MessageType;
 
+/**
+ * Utility class for operations related to {@link ControlMessage}. Provides methods to determine
+ * message types based on control message status.
+ */
 public class ControlMessageUtils {
 
+  /**
+   * Determines the {@link MessageType} of a given {@link ControlMessage}.
+   *
+   * @param controlMessage the control message whose type is to be determined
+   * @return {@link MessageType#CONTROL_MESSAGE_REQUEST} if the status is 0, {@link
+   *     MessageType#CONTROL_MESSAGE_RESPONSE} otherwise
+   */
   public static MessageType getMessageTypeOf(ControlMessage controlMessage) {
     if (controlMessage.getStatus() == 0) {
       return MessageType.CONTROL_MESSAGE_REQUEST;

@@ -34,29 +34,36 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * WRAPPING METHODS: Two versions of these exist, as we have generally more information when
- * messages are built from local calls (with full reflection details), than when these messages are
- * built for remote calls, and not all context and type information is available.
+ * Utility class for wrapping Java objects into Colfer {@code Obj} instances. Provides methods to
+ * serialize objects, manage object references, and handle contextual wrapping based on specified
+ * wrapping policies.
+ *
+ * <p>This class supports wrapping of simple types, collections, and maps, adhering to size
+ * constraints and wrapping policies to provide a flexible and consistent serialization.
  */
 public final class Wrapper {
 
+  /** Logger instance for logging. */
   private static final Logger logger = LoggerFactory.getLogger(Wrapper.class);
 
+  /** Maximum number of elements allowed in a collection to be considered wrappable. */
   private static final int MAX_WRAPPABLE_COLLECTION_SIZE = 1000;
 
+  /** Private constructor to prevent instantiation of the Wrapper class. */
   private Wrapper() {
     // avoid instantiation
   }
 
   /**
-   * Helper method for getWrappedObject() that does the actual wrapping work.
+   * Wraps the provided object into the specified wrappedObject based on the given parameters.
+   * Determines whether the object should be serialized or referenced according to the wrap policy.
    *
-   * @param wrappedObject the object to wrap into
-   * @param object the object to wrap
-   * @param givenClassName the class of the object to wrap
-   * @param objectRef the object reference, if any
-   * @param wrapPolicy the wrapping policy to use
-   * @return a Colfer Obj (object) instance
+   * @param wrappedObject the Colfer Obj instance to populate with wrapped data
+   * @param object the object to be wrapped
+   * @param givenClassName the class name of the object to wrap
+   * @param objectRef the reference to the object, if any
+   * @param wrapPolicy the policy that dictates how the object should be wrapped
+   * @return the populated Colfer Obj instance representing the wrapped object
    */
   private static Obj getWrappedObjectAux(
       Obj wrappedObject,
@@ -128,11 +135,15 @@ public final class Wrapper {
     return wrappedObject;
   }
 
-  /* We use the givenClassName if
-   - object is null, or
-   - the object is a wrapper instance and the givenClassName is the corresponding primitive
-   Otherwise use the object's class
-  */
+  /**
+   * Determines the appropriate class name to use for wrapping. Uses the given class name if the
+   * object is null or if the object is a primitive wrapper corresponding to the given class name.
+   * Otherwise, it uses the object's actual class name.
+   *
+   * @param object the object whose class name is to be determined
+   * @param givenClassName the provided class name
+   * @return the class name to be used for wrapping
+   */
   private static String pickClassName(Object object, String givenClassName) {
     if (object == null) {
       return givenClassName;
@@ -144,8 +155,14 @@ public final class Wrapper {
     }
   }
 
-  // returns true if object is a primitive wrapper instance and className
-  // is the corresponding primitive class name
+  /**
+   * Checks if the given object is an instance of a primitive wrapper corresponding to the specified
+   * class name.
+   *
+   * @param object the object to check
+   * @param className the class name to compare against
+   * @return true if the object is a primitive wrapper matching the class name, false otherwise
+   */
   private static boolean isCorrespondingPrimitive(Object object, String className) {
 
     if (object == null) {
@@ -161,25 +178,12 @@ public final class Wrapper {
   }
 
   /**
-   *
-   *
-   * <pre>
-   * Wrappable objects are:
-   *
-   * Simple types:
-   *  - null
-   *  - primitive types
-   *  - primitive wrapper types
-   *  - strings
-   *
-   * Arrays & collections, if length < MAX_COLLECTION_SIZE:
-   *  - Lists (if all their elements are wrappable)
-   *  - Maps (if all their keys and values are wrappable)
-   *  - Arrays (if all their elements are wrappable)
-   * </pre>
+   * Determines whether the provided object is eligible for wrapping. Wrappable objects include
+   * simple types (null, primitives, primitive wrappers, strings), and arrays or collections with
+   * elements that are themselves wrappable and do not exceed the maximum wrappable collection size.
    *
    * @param object the object to check
-   * @return true if the object is wrappable, false otherwise
+   * @return {@code true} if the object is wrappable; {@code false} otherwise
    */
   public static boolean isWrappable(Object object) {
     if (isSimpleType(object)) {
@@ -206,6 +210,14 @@ public final class Wrapper {
     return false;
   }
 
+  /**
+   * Checks if the provided object is an array of simple types and does not exceed the maximum
+   * wrappable collection size.
+   *
+   * @param object the object to check
+   * @return {@code true} if the object is an array of simple types within size constraints; {@code
+   *     false} otherwise
+   */
   static boolean isSimpleTypeArray(Object object) {
     return object != null
         && object.getClass().isArray()
@@ -213,6 +225,13 @@ public final class Wrapper {
         && Array.getLength(object) <= MAX_WRAPPABLE_COLLECTION_SIZE;
   }
 
+  /**
+   * Determines if the specified class represents a simple type, which includes primitive types,
+   * their wrapper classes, and {@link String}.
+   *
+   * @param clazz the class to check
+   * @return {@code true} if the class is a simple type; {@code false} otherwise
+   */
   static boolean classIsSimpleType(Class<?> clazz) {
     // is it a primitive or its wrapper?
     if (Classes.isPrimitiveOrWrapper(clazz)) {
@@ -226,6 +245,13 @@ public final class Wrapper {
     return false;
   }
 
+  /**
+   * Determines whether the given object is a simple type. Simple types include {@code null},
+   * primitive types, primitive wrapper types, and {@link String}.
+   *
+   * @param obj the object to check
+   * @return {@code true} if the object is a simple type; {@code false} otherwise
+   */
   static boolean isSimpleType(Object obj) {
     if (obj == null) {
       return true;
@@ -246,15 +272,16 @@ public final class Wrapper {
   }
 
   /**
-   * Wraps objects into a Colfer Obj(ect), which can be later unwrapped into the original object.
-   * See getWrappedObjectAux() for a list of valid wrappable types.
+   * Wraps the provided object into a Colfer {@code Obj} instance, enabling it to be later
+   * unwrapped. Supports various object types as defined by {@link #isWrappable(Object)}.
    *
    * @param object the object to wrap
    * @param classname the class name of the object to wrap
-   * @param objectRef the object reference, if any
-   * @param wrapPolicy the wrapping policy to use
-   * @return a Colfer Obj (object) instance
-   * @throws NonWrappableObjectException if the object is not wrappable
+   * @param objectRef the reference to the object, if any
+   * @param wrapPolicy the policy that dictates how the object should be wrapped
+   * @return a Colfer {@code Obj} instance representing the wrapped object
+   * @throws IllegalArgumentException if the provided class name is invalid
+   * @throws NonWrappableObjectException if the object cannot be wrapped according to the policy
    */
   static Obj getWrappedObject(
       @Nullable java.lang.Object object,
@@ -301,6 +328,12 @@ public final class Wrapper {
     return getWrappedObjectAux(new Obj(), object, classname, objectRef, wrappingPolicy);
   }
 
+  /**
+   * Creates a Colfer {@code Class} instance representing the specified class name.
+   *
+   * @param className the name of the class to wrap
+   * @return a Colfer {@code Class} instance with the provided class name
+   */
   static net.ittera.pal.messages.colfer.Class getWrappedClass(String className) {
     final net.ittera.pal.messages.colfer.Class wrappedClass =
         new net.ittera.pal.messages.colfer.Class();
@@ -308,6 +341,13 @@ public final class Wrapper {
     return wrappedClass;
   }
 
+  /**
+   * Creates a Colfer {@code Class} instance representing the provided {@code Class} object.
+   *
+   * @param clazz the {@code Class} object to wrap
+   * @return a Colfer {@code Class} instance with the name of the provided class, or an empty string
+   *     if {@code clazz} is {@code null}
+   */
   static net.ittera.pal.messages.colfer.Class getWrappedClass(Class<?> clazz) {
     final net.ittera.pal.messages.colfer.Class wrappedClass =
         new net.ittera.pal.messages.colfer.Class();
@@ -319,6 +359,12 @@ public final class Wrapper {
     return wrappedClass;
   }
 
+  /**
+   * Creates a Colfer {@code Field} instance representing the specified {@code Field}.
+   *
+   * @param field the {@code Field} to wrap
+   * @return a Colfer {@code Field} instance containing the field's name, class, and modifiers
+   */
   static net.ittera.pal.messages.colfer.Field getWrappedField(Field field) {
     final net.ittera.pal.messages.colfer.Field wrappedField =
         new net.ittera.pal.messages.colfer.Field();
@@ -328,6 +374,14 @@ public final class Wrapper {
     return wrappedField;
   }
 
+  /**
+   * Creates a Colfer {@code Field} instance with the specified class, field name, and modifiers.
+   *
+   * @param clazz the class declaring the field
+   * @param fieldName the name of the field
+   * @param modifiers the field's modifiers
+   * @return a Colfer {@code Field} instance containing the provided information
+   */
   static net.ittera.pal.messages.colfer.Field getWrappedField(
       Class<?> clazz, String fieldName, int modifiers) {
     final net.ittera.pal.messages.colfer.Field wrappedField =
@@ -338,6 +392,15 @@ public final class Wrapper {
     return wrappedField;
   }
 
+  /**
+   * Creates a Colfer {@code Field} instance with the specified class name, field name, and
+   * modifiers.
+   *
+   * @param className the name of the class declaring the field
+   * @param fieldName the name of the field
+   * @param modifiers the field's modifiers
+   * @return a Colfer {@code Field} instance containing the provided information
+   */
   static net.ittera.pal.messages.colfer.Field getWrappedField(
       String className, String fieldName, int modifiers) {
     final net.ittera.pal.messages.colfer.Field wrappedField =
@@ -348,6 +411,16 @@ public final class Wrapper {
     return wrappedField;
   }
 
+  /**
+   * Wraps the provided context into a Colfer {@code Context} instance, encapsulating contextual
+   * information such as sender details and source location.
+   *
+   * @param context the runtime context, may be {@code null}
+   * @param sender the sender object
+   * @param senderObjRef the reference to the sender object
+   * @return a Colfer {@code Context} instance representing the provided context and sender
+   *     information
+   */
   static net.ittera.pal.messages.colfer.Context getWrappedContext(
       @Nullable Context context, java.lang.Object sender, ObjectRef senderObjRef) {
 

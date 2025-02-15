@@ -19,19 +19,40 @@
 
 package net.ittera.pal.serdes;
 
+/**
+ * This exception is thrown when an attempt is made to wrap an object that is not supported by the
+ * serialization process.
+ */
 public class NonWrappableObjectException extends IllegalArgumentException {
 
+  /** The object that could not be wrapped. */
   private final transient Object nonWrappableObject;
 
+  /**
+   * Constructs a new NonWrappableObjectException with the specified object.
+   *
+   * @param nonWrappableObject the object that cannot be wrapped
+   */
   public NonWrappableObjectException(Object nonWrappableObject) {
     this.nonWrappableObject = nonWrappableObject;
   }
 
+  /**
+   * Constructs a new NonWrappableObjectException with the specified detail message and object.
+   *
+   * @param message the detail message explaining the reason for the exception
+   * @param nonWrappableObject the object that cannot be wrapped
+   */
   public NonWrappableObjectException(String message, Object nonWrappableObject) {
     super(message);
     this.nonWrappableObject = nonWrappableObject;
   }
 
+  /**
+   * Returns the object that could not be wrapped.
+   *
+   * @return the non-wrappable object
+   */
   public Object getNonWrappableObject() {
     return nonWrappableObject;
   }

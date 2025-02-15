@@ -29,19 +29,28 @@ import net.ittera.pal.serdes.colfer.ObjUnwrappableAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Utility class providing static methods for unwrapping serialized (i.e. wrapped) objects back into
+ * their original Java types.
+ */
 public class Unwrapper {
 
+  /** Logger instance for logging within the Unwrapper class. */
   private static final Logger logger = LoggerFactory.getLogger(Unwrapper.class);
 
+  /** Private constructor to prevent instantiation of the Unwrapper utility class. */
   private Unwrapper() {}
 
   /**
-   * Returns objects in objectList as Object array with each object typed as its type in classList
-   * This method undoes the wrapping of objects done by Wrapper.getWrappedObject()
+   * Unwraps the given wrapped object into an instance of the specified class. This method reverses
+   * the wrapping performed by Wrapper.getWrappedObject().
    *
-   * @param wrappedObject the Obj instance to unwrap
-   * @param clazz the class of the object to unwrap
-   * @return the unwrapped Object
+   * @param wrappedObject the object to unwrap
+   * @param clazz the target class to which the object should be unwrapped
+   * @return the unwrapped object
+   * @throws UnsupportedOperationException if attempting to unwrap a reference-only object
+   * @throws IllegalArgumentException if JSON value is missing or type information is unavailable
+   * @throws RuntimeException if an error occurs during deserialization
    */
   public static Object unwrapObject(Unwrappable wrappedObject, Class<?> clazz) {
     if (logger.isTraceEnabled()) {
@@ -97,14 +106,38 @@ public class Unwrapper {
     }
   }
 
+  /**
+   * Unwraps the given Obj instance into a corresponding Java object. This method infers the target
+   * class from the Obj type information.
+   *
+   * @param object the Obj instance to unwrap
+   * @return the unwrapped Java object
+   * @throws ClassNotFoundException if the class specified in the Obj type cannot be found
+   */
   public static Object unwrapObject(Obj object) throws ClassNotFoundException {
     return unwrapObject(new ObjUnwrappableAdapter(object));
   }
 
+  /**
+   * Unwraps the given Obj instance into an object of the specified class.
+   *
+   * @param object the Obj instance to unwrap
+   * @param clazz the target class to which the object should be unwrapped
+   * @return the unwrapped object
+   */
   public static Object unwrapObject(Obj object, Class<?> clazz) {
     return unwrapObject(new ObjUnwrappableAdapter(object), clazz);
   }
 
+  /**
+   * Unwraps the given Unwrappable object into a corresponding Java object. Infers the target class
+   * from the object's type information.
+   *
+   * @param wrappedObject the Unwrappable object to unwrap
+   * @return the unwrapped Java object
+   * @throws ClassNotFoundException if the class specified in the object's type information cannot
+   *     be found
+   */
   public static Object unwrapObject(Unwrappable wrappedObject) throws ClassNotFoundException {
     String className = wrappedObject.getType();
     Class<?> clazz = Classes.getClassForPrimitive(className);
