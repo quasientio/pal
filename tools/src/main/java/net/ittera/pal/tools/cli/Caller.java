@@ -69,6 +69,13 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.ParentCommand;
 
+/**
+ * The {@code Caller} class serves as a command-line interface for sending messages to peers or logs
+ * within the PAL runtime system. It parses and validates user inputs, constructs appropriate
+ * messages, and manages communication with peers, either directly or through designated logs, using
+ * RPC. The class supports synchronous and asynchronous operations, multithreaded request handling,
+ * and configurable RPC types.
+ */
 @Command(
     name = "call",
     customSynopsis = "pal call [OPTIONS] [class args...]%n",
@@ -78,57 +85,98 @@ import picocli.CommandLine.ParentCommand;
     optionListHeading = "%nOptions:%n")
 public class Caller extends AbstractPalSubcommand {
 
+  /** Logger instance. */
   private final Logger logger = LoggerFactory.getLogger(Caller.class);
+
+  /** Path to the caller properties file. */
   private static final String CALLER_PROPERTIES_PATH = "/caller.properties";
+
+  /** Path to the consumer properties file. */
   private static final String CONSUMER_PROPERTIES_PATH = "/consumer.properties";
+
+  /** Path to the producer properties file. */
   private static final String PRODUCER_PROPERTIES_PATH = "/producer.properties";
+
+  /** Builder for constructing messages to be sent. */
   private final MessageBuilder messageBuilder;
+
+  /** Properties loaded from the caller properties file. */
   private final Properties properties = new Properties();
+
+  /** Properties loaded from the consumer properties file. */
   private final Properties consumerProperties = new Properties();
+
+  /** Properties loaded from the producer properties file. */
   private final Properties producerProperties = new Properties();
+
+  /** Duration to poll for messages. */
   private Long pollDuration;
+
+  /** Prefix used for log topics. */
   private String logPrefix;
+
+  /** URL for connecting to the PAL directory service. */
   private String palDirectoryUrl;
+
+  /** Builder for constructing main method call messages. */
   private MainMethodCallBuilder mainMethodCallBuilder;
+
+  /** UUID of the target peer. */
   private UUID peerUuid;
+
+  /** Address of the target peer. */
   private String peerAddress;
+
+  /** Gson instance for JSON processing. */
   private final Gson gson = new Gson();
+
+  /** List of JSON-RPC requests read from standard input. */
   private List<String> stdinRequests = new ArrayList<>();
+
+  /** Generator for creating unique identifiers. */
   private final IdGenerator idGenerator = new Base62UuidGenerator();
 
+  /** Parent command instance for accessing shared configurations. */
   @ParentCommand PalCommand palCommand;
 
   // Options
+
+  /** Specifies the log to read from and write to. */
   @Option(
       names = {"-l", "--log"},
       paramLabel = "name",
       description = "read from and write to given log")
   private String logName;
 
+  /** Specifies the log to read from. */
   @Option(
       names = {"-i", "--from-log"},
       paramLabel = "name",
       description = "read from given log")
   private String inLogName;
 
+  /** Specifies the log to write to. */
   @Option(
       names = {"-o", "--to-log"},
       paramLabel = "name",
       description = "write to given log")
   private String outLogName;
 
+  /** Identifies the peer to communicate with, either by UUID or RPC address. */
   @Option(
       names = {"-p", "--to-peer"},
       paramLabel = "uuid|HOST:PORT",
       description = "talk to peer with given UUID or RPC address")
   private String peerIdentifier;
 
+  /** Specifies the type of RPC to use for communication. */
   @Option(
       names = {"-r", "--rpc-type"},
       paramLabel = "BIN_RPC|JSON_RPC",
       description = "the RPC type to use")
   private String rpcType;
 
+  /** Specifies the method to call on the target class. */
   @Option(
       names = {"-m", "--method"},
       paramLabel = "method",
@@ -136,21 +184,25 @@ public class Caller extends AbstractPalSubcommand {
       description = "method to call on the class (default: main)")
   private String methodName;
 
+  /** Determines whether to send requests without waiting for responses. */
   @Option(
       names = {"-f", "--forget-response"},
       description = "do not wait for responses (default: false)")
   private boolean sendAndForget;
 
+  /** Indicates whether to automatically add missing JSON-RPC request IDs. */
   @Option(
       names = {"-a", "--add-ids"},
       description = "add missing JSON-RPC request IDs (default: false)")
   private boolean autoIds;
 
+  /** Specifies whether to print response messages received from peers or logs. */
   @Option(
       names = {"--print-responses"},
       description = "print response messages (default: false)")
   private boolean printResponses;
 
+  /** Specifies the number of threads (clients) to use for sending requests. */
   @Option(
       names = {"-t", "--num-threads"},
       defaultValue = "1",
@@ -158,9 +210,11 @@ public class Caller extends AbstractPalSubcommand {
       description = "number of threads, i.e. clients to use (default: 1)")
   private int numberOfThreads;
 
+  /** Enables verbose output during execution. */
   @Option(names = "-v", description = "run verbosely")
   private boolean verbose;
 
+  /** Displays the help message when requested. */
   @SuppressWarnings("unused")
   @Option(
       names = {"-h", "--help"},
@@ -169,18 +223,28 @@ public class Caller extends AbstractPalSubcommand {
   private boolean helpRequested = false;
 
   // Arguments
+
+  /** Specifies the class to call. */
   @SuppressWarnings("unused")
   @Parameters(index = "0", arity = "0..1", hidden = true)
   private String className;
 
+  /** Specifies the arguments to pass to the target class method. */
   @SuppressWarnings("unused")
   @Parameters(index = "1..*", arity = "0..*", hidden = true)
   private List<String> argList;
 
+  /** Constructs a new {@code Caller} instance and initializes the message builder. */
   Caller() {
     this.messageBuilder = new MessageBuilder();
   }
 
+  /**
+   * Validates the user input options and arguments, ensuring that required parameters are provided
+   * and configuration options are consistent.
+   *
+   * @throws RuntimeException if input validation fails due to missing or conflicting options.
+   */
   @Override
   protected final void validateInput() {
 
@@ -268,6 +332,12 @@ public class Caller extends AbstractPalSubcommand {
     }
   }
 
+  /**
+   * Initializes the Caller by setting up directory connections and loading necessary properties.
+   *
+   * @throws Exception if initialization fails due to issues with directory connections or property
+   *     loading.
+   */
   @Override
   protected void initialize() throws Exception {
     if (logger.isDebugEnabled()) {
@@ -290,6 +360,11 @@ public class Caller extends AbstractPalSubcommand {
     loadProperties();
   }
 
+  /**
+   * Loads required configuration values from properties files.
+   *
+   * @throws IOException if an error occurs while reading properties files.
+   */
   private void loadProperties() throws IOException {
     // caller properties
     try (final InputStream stream = Caller.class.getResourceAsStream(CALLER_PROPERTIES_PATH)) {
@@ -315,12 +390,10 @@ public class Caller extends AbstractPalSubcommand {
   }
 
   /**
-   * Serially sends requests in a single (ThinPeer) thread. With log IO 1st req is sent to Log,
-   * waits for Future response, then sends all other directly to the peer which replied.
+   * Serially sends requests using a single client.
    *
-   * <p>In p2p mode (-p), it sends all directly to peer.
-   *
-   * @return number of requests sent
+   * @return the number of requests successfully sent.
+   * @throws Exception if an error occurs during the sending of requests.
    */
   private int sendRequestsWithSingleClient() throws Exception {
 
@@ -457,13 +530,12 @@ public class Caller extends AbstractPalSubcommand {
   }
 
   /**
-   * Use this method when no direct peer-to-peer talk is available or desirable. Sends all requests
-   * to log, and doesn't wait for responses, useful for void methods or any other type of call where
-   * we don't care about the returned value or thrown exceptions. The 'async' word in the method
-   * name simply refers to the fact that ThinPeer won't wait for a response to the message sent, as
-   * opposed to when calling ThinPeer.sendAndReceiveJsonRpcRequest().
+   * Sends requests asynchronously without waiting for responses. This method is suitable for
+   * scenarios where responses are not required, such as invoking void methods. All requests are
+   * sent to a log.
    *
-   * @return number of requests sent
+   * @return the number of requests successfully sent.
+   * @throws Exception if an error occurs during the sending of requests.
    */
   private int sendRequestsWithSingleClientAsync() throws Exception {
 
@@ -508,9 +580,11 @@ public class Caller extends AbstractPalSubcommand {
   }
 
   /**
-   * Use this method to send requests in parallel with separate client (ThinPeer) threads NOTE that
-   * this method calls either the sendRequestsWithSingleClient() or
-   * sendRequestsWithSingleClientAsync() methods in parallel threads.
+   * Sends requests using multiple clients in parallel threads. This method leverages multiple
+   * threads to send requests concurrently, either synchronously or asynchronously based on
+   * configuration.
+   *
+   * @throws Exception if an error occurs during the sending of requests.
    */
   private void sendRequestsWithManyClients() throws Exception {
 
@@ -563,6 +637,12 @@ public class Caller extends AbstractPalSubcommand {
     }
   }
 
+  /**
+   * Executes the Caller command based on the provided configuration and user input.
+   *
+   * @return {@code 0} upon successful execution.
+   * @throws Exception if an error occurs during command execution.
+   */
   @Override
   protected int runCommand() throws Exception {
     if (logger.isDebugEnabled()) {
@@ -584,6 +664,14 @@ public class Caller extends AbstractPalSubcommand {
     return 0;
   }
 
+  /**
+   * Retrieves the RPC type supported by the specified peer.
+   *
+   * @param peerUuid the UUID of the peer.
+   * @return the {@link RpcType} supported by the peer.
+   * @throws ExecutionException if an error occurs while fetching peer information.
+   * @throws InterruptedException if the operation is interrupted.
+   */
   private RpcType getRpcTypeForPeer(UUID peerUuid) throws ExecutionException, InterruptedException {
     PeerInfo peerInfo = getPalDirectory().getPeerInfo(peerUuid);
     boolean listensToRpc = peerInfo.getRpcAddress() != null;
@@ -606,6 +694,11 @@ public class Caller extends AbstractPalSubcommand {
     throw new RuntimeException("Peer does not have any RPC address");
   }
 
+  /**
+   * Prints the JSON-RPC response if the {@code printResponses} flag is enabled.
+   *
+   * @param response the {@link JsonRpcResponse} to print.
+   */
   private void printIfRequired(JsonRpcResponse response) {
     if (!printResponses) {
       return;
@@ -617,6 +710,11 @@ public class Caller extends AbstractPalSubcommand {
     }
   }
 
+  /**
+   * Prints the execution message response if the {@code printResponses} flag is enabled.
+   *
+   * @param response the {@link ExecMessage} to print.
+   */
   private void printIfRequired(ExecMessage response) {
     if (!printResponses) {
       return;
@@ -628,6 +726,12 @@ public class Caller extends AbstractPalSubcommand {
     }
   }
 
+  /**
+   * Prints the return value of an executed method if the {@code printResponses} flag is enabled and
+   * the return value is not void.
+   *
+   * @param returnValue the {@link ReturnValue} to print.
+   */
   private void print(ReturnValue returnValue) {
     if (!printResponses) {
       return;
@@ -641,6 +745,11 @@ public class Caller extends AbstractPalSubcommand {
     }
   }
 
+  /**
+   * Prints the raised throwable if the {@code printResponses} flag is enabled.
+   *
+   * @param raisedThrowable the {@link RaisedThrowable} to print.
+   */
   private void print(RaisedThrowable raisedThrowable) {
     if (!printResponses) {
       return;
@@ -648,6 +757,10 @@ public class Caller extends AbstractPalSubcommand {
     out.println(ColferUtils.format(raisedThrowable));
   }
 
+  /**
+   * Builder class for constructing execution messages and JSON-RPC requests for the main method
+   * call.
+   */
   private class MainMethodCallBuilder {
     private final UUID thinPeerUuid;
     final Class<?>[] parameterTypes = new Class[] {String[].class};
@@ -657,6 +770,14 @@ public class Caller extends AbstractPalSubcommand {
     private final Object[] parameters;
     private final ObjectRef[] argObjRefs;
 
+    /**
+     * Constructs a new {@code MainMethodCallBuilder} with the specified parameters.
+     *
+     * @param thinPeerUuid the UUID of the ThinPeer.
+     * @param className the name of the class whose method is to be called.
+     * @param methodName the name of the method to call.
+     * @param argList the list of arguments to pass to the method.
+     */
     public MainMethodCallBuilder(
         UUID thinPeerUuid, String className, String methodName, List<String> argList) {
       // create reusable arrays for message construction
@@ -673,6 +794,11 @@ public class Caller extends AbstractPalSubcommand {
       }
     }
 
+    /**
+     * Builds an {@link ExecMessage} representing the method call.
+     *
+     * @return the constructed {@link ExecMessage}.
+     */
     public ExecMessage buildExecMessage() {
       return messageBuilder.buildClassMethod(
           thinPeerUuid,
@@ -685,6 +811,11 @@ public class Caller extends AbstractPalSubcommand {
           argObjRefs);
     }
 
+    /**
+     * Builds a {@link JsonRpcRequest} representing the method call.
+     *
+     * @return the constructed {@link JsonRpcRequest}.
+     */
     public JsonRpcRequest buildJsonRpc() {
       Params.Builder paramsBuilder =
           new Params.Builder().withMethod(methodName).withType(className);

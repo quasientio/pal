@@ -58,6 +58,17 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.ParentCommand;
 
+/**
+ * Prints messages from peers or logs based on the specified options.
+ *
+ * <p>This command allows users to stream and display messages either from a log identified by name
+ * or UUID or by subscribing to a peer via its UUID or address. It supports filtering messages by
+ * format, type, peer UUID, thread name, message ID, and offset. Additionally, it provides options
+ * to follow new messages similar to the 'tail -f' command.
+ *
+ * <p>The output can be formatted in full, JSON, or compact forms, and verbosity can be toggled for
+ * detailed logging information.
+ */
 @Command(
     name = "print",
     customSynopsis = "pal print [OPTIONS]%n",
@@ -68,34 +79,70 @@ import picocli.CommandLine.ParentCommand;
     commandListHeading = "%nCommands:%n")
 public class MessageStreamPrinter extends AbstractPalSubcommand {
 
+  /** Logger instance. */
   private static final Logger logger = LoggerFactory.getLogger(MessageStreamPrinter.class);
 
+  /**
+   * Enum representing the output formats available for printing messages.
+   *
+   * <p>Supported formats include:
+   *
+   * <ul>
+   *   <li>FULL - Detailed output with context and headers.
+   *   <li>JSON - Output in JSON format.
+   *   <li>COMPACT - Concise output with key information.
+   * </ul>
+   */
   enum OutputFormat {
     FULL,
     JSON,
     COMPACT
   }
 
+  /** Parent command that provides access to the main PalCommand context. */
   @ParentCommand PalCommand palCommand;
 
+  /**
+   * Identifier for the log to read from. Can be specified by log name or UUID.
+   *
+   * <p>When provided, the command will stream messages from the specified log.
+   */
   @Option(
       names = {"-l", "--log"},
       paramLabel = "name|uuid",
       description = "read from given log")
   private String logIdentifier;
 
+  /**
+   * UUID of the peer to subscribe to.
+   *
+   * <p>When provided, the command will subscribe to the peer with the specified UUID to stream
+   * messages.
+   */
   @Option(
       names = {"-pu", "--peer-uuid"},
       paramLabel = "uuid",
       description = "subscribe to peer with given UUID")
   private UUID peerUuid;
 
+  /**
+   * Address of the peer to subscribe to, in the format HOST:PORT.
+   *
+   * <p>When provided, the command will subscribe to the peer at the specified address to stream
+   * messages.
+   */
   @Option(
       names = {"-pa", "--peer-address"},
       paramLabel = "HOST:PORT",
       description = "subscribe to peer with given address")
   private String peerAddress;
 
+  /**
+   * Comma-separated list of message formats to filter by.
+   *
+   * <p>Supported formats are BINARY and JSON. If specified, only messages matching the provided
+   * formats will be displayed.
+   */
   @Option(
       names = {"--formats"},
       arity = "0..*",
@@ -103,7 +150,13 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
       description = "comma-separated list of message formats to filter by (BINARY, JSON)")
   private List<String> msgFormats;
 
-  // TODO consider using EnumSet for msgTypes
+  /**
+   * Comma-separated list of message types to filter by.
+   *
+   * <p>Supported types include: CONSTRUCTOR, INSTANCE_METHOD, CLASS_METHOD, GET_STATIC, GET_FIELD,
+   * PUT_STATIC, PUT_FIELD, PUT_STATIC_DONE, PUT_FIELD_DONE, RETURN_VALUE, THROWABLE.
+   */
+  // TODO consider using EnumSet for better type safety.
   @Option(
       names = {"--types"},
       arity = "0..*",
@@ -116,12 +169,22 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
               + " RETURN_VALUE, THROWABLE)")
   private List<String> msgTypes;
 
+  /**
+   * Peer UUID to filter messages by.
+   *
+   * <p>If specified, only messages from the peer with this UUID will be displayed.
+   */
   @Option(
       names = {"-fp", "--from-peer"},
       paramLabel = "uuid",
       description = "Filter by peer uuid")
   private String fromPeer;
 
+  /**
+   * Thread name to filter messages by.
+   *
+   * <p>If specified, only messages originating from the specified thread name will be displayed.
+   */
   @Option(
       names = {"-ft", "--from-thread"},
       paramLabel = "thread_name",
@@ -129,8 +192,11 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
   private String threadName;
 
   /**
-   * TODO quite inefficient -> consuming all log until given offset. This option should use ThinPeer
-   * (Consumer API), or be in a Search tool that uses it
+   * Offset from which to start printing messages.
+   *
+   * <p>If specified, prints the message at the given offset and then exits. When used, all other
+   * filters are ignored. Combine with the --follow option to wait for the message if it is not yet
+   * available.
    */
   @Option(
       names = {"-o", "--offset"},
@@ -141,26 +207,39 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
       })
   protected Long offset;
 
+  /** If set, the command will follow new messages as they arrive, similar to 'tail -f'. */
   @Option(
       names = {"-f", "--follow"},
       description = "Follow new messages (like 'tail -f')")
   private boolean follow;
 
+  /**
+   * Message ID to filter messages by.
+   *
+   * <p>If specified, only messages with the given ID will be displayed.
+   */
   @Option(
       names = {"--id"},
       paramLabel = "id",
       description = "Filter by message ID")
   private String id;
 
+  /**
+   * Specifies the output format for the printed messages.
+   *
+   * <p>Possible values are FULL, JSON, and COMPACT. The default format is COMPACT.
+   */
   @Option(
       names = {"--output-format"},
       description = "Output format. Possible values: ${COMPLETION-CANDIDATES}",
       defaultValue = "COMPACT")
   private OutputFormat format;
 
+  /** If set, the command will run in verbose mode, providing additional logging information. */
   @Option(names = "-v", description = "Run verbosely")
   private boolean verbose;
 
+  /** Displays the help message and exits. */
   @SuppressWarnings("unused")
   @Option(
       names = {"-h", "--help"},
@@ -168,11 +247,24 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
       description = "Display this help message")
   private boolean helpRequested = false;
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Initializes the directory connection provider using the connection string from the parent
+   * command.
+   */
   @Override
   protected void initialize() {
     initializeDirectoryConnectionProvider(palCommand.getPalDirectoryConnectionString());
   }
 
+  /**
+   * Initiates the printing of log messages by setting up and configuring a Kafka consumer to read
+   * messages from the specified log.
+   *
+   * @return 0 if the operation is successful, 1 if no log is found for the given identifier.
+   * @throws Exception if an error occurs while consuming messages.
+   */
   private int printLogMessageConsumer() throws Exception {
 
     logger.info("Started printer for log: {}", logIdentifier);
@@ -311,6 +403,15 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
     return 0;
   }
 
+  /**
+   * Determines whether a message should be printed based on the current filters and offset.
+   *
+   * @param recOffset the offset of the current record
+   * @param key the key associated with the message
+   * @param msg the log message to evaluate
+   * @return {@code true} if the message meets the criteria and should be printed; {@code false}
+   *     otherwise
+   */
   private boolean shouldPrint(Long recOffset, String key, LogMessage<?> msg) {
 
     // First thing is to check offset
@@ -367,6 +468,13 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
     return true;
   }
 
+  /**
+   * Prints a single record to the standard output in the specified format.
+   *
+   * @param key the key associated with the message
+   * @param msg the log message to print
+   * @param offset the offset of the message
+   */
   private void printRecord(String key, LogMessage<?> msg, long offset) {
     switch (format) {
       case FULL ->
@@ -382,12 +490,25 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
     }
   }
 
+  /**
+   * Creates an AdminClient instance for interacting with Kafka.
+   *
+   * @param bootstrapServers the Kafka bootstrap servers to connect to
+   * @return a configured AdminClient instance
+   */
   private AdminClient createAdminClient(String bootstrapServers) {
     Properties adminProps = new Properties();
     adminProps.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
     return AdminClient.create(adminProps);
   }
 
+  /**
+   * Resolves the LogInfo object based on the provided log identifier.
+   *
+   * @param palDirectory the PalDirectory instance for accessing log information
+   * @param logIdentifier the name or UUID of the log to resolve
+   * @return the resolved LogInfo object, or {@code null} if no matching log is found
+   */
   private LogInfo resolveLogInfo(PalDirectory palDirectory, String logIdentifier) {
     LogInfo log = null;
     // try to get log by name
@@ -428,6 +549,13 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
     return log;
   }
 
+  /**
+   * Initiates the printing of messages by subscribing to a peer's message stream via a socket
+   * connection.
+   *
+   * @return 0 if the operation is successful, 1 if an uncaught error occurs
+   * @throws Exception if an error occurs while consuming messages
+   */
   private Integer printSocketMessageStream() throws Exception {
     ExecutorService executor =
         Executors.newFixedThreadPool(
@@ -529,9 +657,24 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
     return 0;
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>This implementation does not perform additional input validation.
+   */
   @Override
   public void validateInput() {}
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Executes the message streaming command based on the specified options. Depending on the
+   * provided options, it either streams messages from a log or subscribes to a peer's message
+   * stream via socket.
+   *
+   * @return the exit code of the command execution
+   * @throws Exception if an error occurs during command execution
+   */
   @Override
   protected int runCommand() throws Exception {
     if (peerAddress != null || peerUuid != null) {

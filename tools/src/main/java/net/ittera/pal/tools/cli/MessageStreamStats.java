@@ -59,17 +59,51 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
+/**
+ * Collects and displays statistics about message streams.
+ *
+ * <p>This tool processes messages from Kafka logs or socket streams, filters them based on
+ * specified criteria, and aggregates various metrics such as message types, peers, threads, and
+ * field accesses. The aggregated statistics can be printed continuously in either plain text or
+ * JSON format.
+ *
+ * <p>Usage examples:
+ *
+ * <pre>
+ *   # To collect stats from a Kafka log
+ *   stats --bootstrap-servers localhost:9092 --log my-log-topic
+ *
+ *   # To collect stats from a socket stream
+ *   stats --pal-dir-address localhost:2379 --peer-uuid 123e4567-e89b-12d3-a456-426614174000 --peer-address 127.0.0.1:8080
+ * </pre>
+ *
+ * <p>Options allow filtering by message types, peer UUID or address, and thread name.
+ */
 // TODO This class and MessageStreamPrinter should inherit from base class w/ common logic
 @Command(name = "stats")
 public class MessageStreamStats extends AbstractTool implements Callable<Integer> {
 
+  /** Logger for logging information and errors. */
   private final Logger logger = LoggerFactory.getLogger(MessageStreamStats.class);
 
+  /** Aggregates various statistics counters for processed messages. */
   private final Counters counters = new Counters();
+
+  /** Latch used to coordinate shutdown signal handling. */
   private final CountDownLatch shutdownLatch = new CountDownLatch(1);
+
+  /** Handles continuous printing of aggregated statistics. */
   private ContinuousPrinter continuousPrinter;
+
+  /** Indicates whether statistics are being printed externally. */
   private boolean externalPrinting = false;
 
+  /**
+   * Kafka bootstrap server addresses.
+   *
+   * <p>Specifies the Kafka bootstrap servers to connect to. Defaults to "localhost:9092" if not
+   * provided.
+   */
   @Option(
       names = {"-b", "--bootstrap-servers"},
       required = true,
@@ -78,24 +112,45 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
       description = "kafka bootstrap servers (default: ${DEFAULT-VALUE})")
   private String bootstrapServers;
 
+  /**
+   * Kafka topic name to read logs from.
+   *
+   * <p>Specifies the name of the Kafka topic containing logs to be processed.
+   */
   @Option(
       names = {"-l", "--log"},
       paramLabel = "LOG_NAME",
       description = "read from given log")
   private String logName;
 
+  /**
+   * UUID of the peer to subscribe to.
+   *
+   * <p>Filters messages to include only those from the specified peer UUID.
+   */
   @Option(
       names = {"-pu", "--peer-uuid"},
       paramLabel = "PEER_UUID",
       description = "subscribe to peer with given UUID")
   private UUID peerUuid;
 
+  /**
+   * Address of the peer to subscribe to.
+   *
+   * <p>Filters messages to include only those from the specified peer address.
+   */
   @Option(
       names = {"-pa", "--peer-address"},
       paramLabel = "PEER_ADDRESS",
       description = "subscribe to peer with given address")
   private String peerAddress;
 
+  /**
+   * Address of the PAL directory.
+   *
+   * <p>Specifies the address of the PAL directory service. Defaults to "localhost:2379" if not
+   * provided.
+   */
   @Option(
       names = {"-d", "--dir-address"},
       paramLabel = "PAL_DIR_ADDRESS",
@@ -103,7 +158,14 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
       description = "address of PAL directory (default: ${DEFAULT-VALUE})")
   private String palDirAddress;
 
-  // TODO consider using EnumSet for msgTypes
+  /**
+   * Types of messages to filter by.
+   *
+   * <p>Specifies one or more message types to include in the statistics. Supported types include
+   * STATIC_CONSTRUCTOR, RETURN_CLASS, CONSTRUCTOR, INSTANCE_METHOD, CLASS_METHOD, GET_STATIC,
+   * GET_FIELD, PUT_STATIC, PUT_FIELD, PUT_STATIC_DONE, PUT_FIELD_DONE, THROWABLE, RETURN_VALUE.
+   */
+  // TODO consider using EnumSet for better type safety.
   @Option(
       names = {"-t", "--types"},
       arity = "0..*",
@@ -114,12 +176,22 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
               + " PUT_STATIC_DONE, PUT_FIELD_DONE, THROWABLE, RETURN_VALUE)")
   private List<String> msgTypes;
 
+  /**
+   * Peer UUID to filter messages by.
+   *
+   * <p>Includes only messages originating from the specified peer UUID.
+   */
   @Option(
       names = {"-fp", "--from-peer"},
       paramLabel = "PEER_UUID",
       description = "filter by peer uuid")
   private String fromPeer;
 
+  /**
+   * Thread name to filter messages by.
+   *
+   * <p>Includes only messages originating from the specified thread name.
+   */
   @SuppressWarnings("unused")
   @Option(
       names = {"-ft", "--from-thread"},
@@ -127,11 +199,22 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
       description = "filter by thread name")
   private String threadName;
 
+  /**
+   * Flag to enable JSON output for statistics.
+   *
+   * <p>If set, the aggregated statistics will be printed in JSON format. Otherwise, they will be
+   * printed in plain text.
+   */
   @Option(
       names = {"-j", "--json-output"},
       description = "print stats as JSON")
   private boolean jsonOutput;
 
+  /**
+   * Indicates whether help was requested.
+   *
+   * <p>If set, displays the help message and exits.
+   */
   @SuppressWarnings("unused")
   @Option(
       names = {"-h", "--help"},
@@ -139,12 +222,17 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
       description = "display this help message")
   protected boolean helpRequested = false;
 
+  /**
+   * Flag to enable verbose output.
+   *
+   * <p>If set, the tool will output additional debugging and status information.
+   */
   @Option(names = "-v", description = "run verbosely")
   private boolean verbose;
 
   /**
-   * Use this constructor to run this class from another class, not the cmd-line (i.e. from Seer
-   * app)
+   * Constructs a MessageStreamStats instance for log-based streams, intended for use from another
+   * class rather than the command line (e.g., from a Web/GUI application).
    *
    * @param bootstrapServers Kafka bootstrap servers
    * @param logName Kafka topic name
@@ -154,13 +242,14 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
   }
 
   /**
-   * Use this constructor to run this class from another class, not the cmd-line (i.e. from Seer
-   * app) For log-based streams
+   * Constructs a MessageStreamStats instance for log-based streams with additional filtering
+   * options. Intended for use from another class rather than the command line (e.g., from a Web/GUI
+   * application).
    *
    * @param bootstrapServers Kafka bootstrap servers
    * @param logName Kafka topic name
    * @param msgTypes message types to filter by
-   * @param fromPeer peer uuid to filter by
+   * @param fromPeer peer UUID to filter by
    * @param threadName thread name to filter by
    */
   public MessageStreamStats(
@@ -177,6 +266,17 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
     this.externalPrinting = true;
   }
 
+  /**
+   * Constructs a MessageStreamStats instance for socket-based streams with additional filtering
+   * options. Intended for use from another class rather than the command line.
+   *
+   * @param palDirAddress address of the PAL directory
+   * @param peerUuid UUID of the peer to subscribe to
+   * @param peerAddress address of the peer to subscribe to
+   * @param msgTypes message types to filter by
+   * @param fromPeer peer UUID to filter by
+   * @param threadName thread name to filter by
+   */
   // Use this constructor to run this class from another class, not the cmd-line.
   // For socket-based streams
   public MessageStreamStats(
@@ -195,24 +295,49 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
     this.externalPrinting = true;
   }
 
-  /** For use when running as a Picocli command (i.e. from the cmd-line) */
+  /** Default constructor for running as a Picocli command (i.e., from the command line). */
   MessageStreamStats() {}
 
+  /**
+   * Entry point for the MessageStreamStats application.
+   *
+   * @param args command-line arguments
+   */
   public static void main(String[] args) {
     int exitCode = new CommandLine(new MessageStreamStats()).execute(args);
     System.exit(exitCode);
   }
 
+  /**
+   * Extracts the short class name from a fully qualified class name.
+   *
+   * @param classname the fully qualified class name
+   * @return the short class name without package prefixes
+   */
   private String getShortClassname(String classname) {
     String[] classnameParts = Splitter.on('.').splitToList(classname).toArray(new String[0]);
     return classnameParts.length > 0 ? classnameParts[classnameParts.length - 1] : classname;
   }
 
+  /**
+   * Retrieves the counters containing aggregated statistics.
+   *
+   * @return the {@link Counters} instance with current statistics
+   */
   @SuppressWarnings("unused")
   public Counters getCounters() {
     return counters;
   }
 
+  /**
+   * Updates the counters based on the provided message.
+   *
+   * <p>Increments total message count and updates counts by message type, peer UUID, thread name,
+   * and field access types according to the message content.
+   *
+   * @param message the {@link Message} to process and update counters for
+   * @throws IllegalStateException if an unexpected message type is encountered
+   */
   private void updateCounters(Message message) {
     // total messages
     counters.getNumberOfMessages().getAndIncrement();
@@ -296,6 +421,11 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
     }
   }
 
+  /**
+   * Increments the count of objects created for a specific class.
+   *
+   * @param key the class name key representing the object type
+   */
   private void incrementObjectsCreated(String key) {
     AtomicLong counter = counters.getObjectsCreated().get(key);
     if (counter == null) {
@@ -305,6 +435,11 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
     }
   }
 
+  /**
+   * Increments the count of method calls for a specific method.
+   *
+   * @param key the key representing the method (e.g., "ClassName.methodName()")
+   */
   private void incrementMethodCalls(String key) {
     AtomicLong counter = counters.getMethodsCalled().get(key);
     if (counter == null) {
@@ -314,6 +449,11 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
     }
   }
 
+  /**
+   * Increments the count of field read accesses for a specific field.
+   *
+   * @param key the key representing the field (e.g., "ClassName.fieldName")
+   */
   private void incrementFieldReads(String key) {
     AtomicLong counter = counters.getFieldReads().get(key);
     if (counter == null) {
@@ -323,6 +463,11 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
     }
   }
 
+  /**
+   * Increments the count of field write accesses for a specific field.
+   *
+   * @param key the key representing the field (e.g., "ClassName.fieldName")
+   */
   private void incrementFieldWrites(String key) {
     AtomicLong counter = counters.getFieldWrites().get(key);
     if (counter == null) {
@@ -332,6 +477,15 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
     }
   }
 
+  /**
+   * Processes and aggregates statistics from Kafka message streams.
+   *
+   * <p>Sets up Kafka Streams with the specified configurations, applies necessary filters based on
+   * message types and peer UUID, and updates the counters accordingly. This method initializes the
+   * stream processing topology and starts the Kafka Streams application.
+   *
+   * @return exit code indicating success (0) or failure (1)
+   */
   private Integer logMessageStreamStats() {
 
     Objects.requireNonNull(bootstrapServers, "bootstrap servers required");
@@ -424,6 +578,15 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
     return 0;
   }
 
+  /**
+   * Processes and aggregates statistics from socket-based message streams.
+   *
+   * <p>Connects to a message streamer via socket, applies necessary filters, and updates the
+   * counters accordingly. Initializes and manages the streaming and printing threads.
+   *
+   * @return exit code indicating success (0) or failure (1)
+   * @throws Exception if an error occurs during stream processing
+   */
   private Integer socketMessageStreamStats() throws Exception {
     Objects.requireNonNull(palDirAddress, "palDirAddress required");
 
@@ -506,6 +669,15 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
     return 0;
   }
 
+  /**
+   * Executes the message statistics collection.
+   *
+   * <p>Determines the streaming collection method based on provided options and initiates the
+   * appropriate processing logic.
+   *
+   * @return exit code indicating success (0) or failure (1)
+   * @throws Exception if an error occurs during execution
+   */
   @Override
   public Integer call() throws Exception {
     if (peerAddress != null || peerUuid != null) {
@@ -518,11 +690,25 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
     }
   }
 
+  /**
+   * Stops the ongoing stream processing by triggering a shutdown.
+   *
+   * <p>Signals the stream processing threads to terminate gracefully.
+   */
   @SuppressWarnings("unused")
   public void stopStreams() {
     shutdownLatch.countDown();
   }
 
+  /**
+   * Initializes and starts the Kafka Streams processing.
+   *
+   * <p>Sets up state listeners and exception handlers, starts the Kafka Streams instance, and
+   * optionally starts the continuous statistics printer if external printing is not enabled.
+   *
+   * @param streams the {@link KafkaStreams} instance to start
+   * @param counters the {@link Counters} instance to update with stream data
+   */
   private void startStreams(KafkaStreams streams, Counters counters) {
     CompletableFuture<KafkaStreams.State> stateFuture = new CompletableFuture<>();
     // set state listener

@@ -21,8 +21,21 @@ package net.ittera.pal.tools.cli;
 
 import picocli.CommandLine.IVersionProvider;
 
+/**
+ * Provides version information extracted from the application's manifest.
+ *
+ * <p>This implementation of {@link IVersionProvider} retrieves the implementation version specified
+ * in the package's manifest, enabling version reporting in command-line interfaces.
+ */
 public class ManifestVersionProvider implements IVersionProvider {
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Returns the implementation version defined in the package's manifest.
+   *
+   * @return an array containing the implementation version, or {@code null} if not available
+   */
   @Override
   public String[] getVersion() {
     Package p = getClass().getPackage();

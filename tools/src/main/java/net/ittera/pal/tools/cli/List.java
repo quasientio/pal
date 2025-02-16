@@ -57,6 +57,12 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.ParentCommand;
 
+/**
+ * Represents the 'List' subcommand in the PAL CLI tool.
+ *
+ * <p>This command is used to list peers and logs within the directory. It supports various options
+ * for formatting and sorting the output.
+ */
 @Command(
     name = "ls",
     customSynopsis = "pal ls [OPTIONS]%n",
@@ -67,38 +73,46 @@ import picocli.CommandLine.ParentCommand;
     commandListHeading = "%nCommands:%n")
 public class List extends AbstractPalSubcommand {
 
+  /** The parent command to which this subcommand belongs. */
   @ParentCommand PalCommand palCommand;
 
+  /** Flag indicating whether to list logs. */
   @Option(
       names = {"-L", "--logs"},
       description = "list logs")
   private boolean listLogs;
 
+  /** Flag indicating whether to list peers. */
   @Option(
       names = {"-P", "--peers"},
       description = "list peers")
   private boolean listPeers;
 
+  /** Flag indicating whether to use long listing format. */
   @Option(
       names = {"-l", "--long"},
       description = "use long listing format")
   private boolean longListing;
 
+  /** Flag indicating whether to sort logs by size in descending order. */
   @Option(
       names = {"-S", "--sort-by-size"},
       description = "sort logs by size, largest first")
   private boolean sortBySize;
 
+  /** Flag indicating whether to sort by creation or uptime, newest first. */
   @Option(
       names = {"-c", "--sort-by-ctime"},
       description = "sort by creation/up time, newest first")
   private boolean sortByCTime;
 
+  /** Flag indicating whether to reverse the order while sorting. */
   @Option(
       names = {"-r", "--reverse"},
       description = "reverse order while sorting")
   private boolean reverseOrder;
 
+  /** The JMX port used by Kafka servers. Defaults to 10121. */
   @Option(
       names = "--kafka-jmx-port",
       paramLabel = "port",
@@ -106,6 +120,7 @@ public class List extends AbstractPalSubcommand {
       description = "JMX port used by kafka servers (default: ${DEFAULT-VALUE})")
   private Integer kafkaJmxPort;
 
+  /** Flag indicating whether the help message is requested. */
   @SuppressWarnings("unused")
   @Option(
       names = {"-h", "--help"},
@@ -113,27 +128,43 @@ public class List extends AbstractPalSubcommand {
       description = "display this help message")
   private boolean helpRequested = false;
 
+  /** Logger instance. */
   private final Logger logger = LoggerFactory.getLogger(List.class);
+
+  /** Unique identifier for Kafka clients. */
   private static final UUID KAFKA_CLIENT_ID = UUID.randomUUID();
+
+  /** Mapping of server addresses to their respective JMX clients. */
   private final Map<String, JmxClient> jmxClientsPerServer = new HashMap<>();
+
+  /** Mapping of server addresses to their respective Kafka admin clients. */
   private final Map<String, Admin> adminClientsPerServer = new HashMap<>();
 
-  /* Column widths for variable-length fields.
-   NOTE: Adjust these values, not the format strings below.
-  */
+  /**
+   * Column widths for variable-length fields. Adjust these values, not the format strings below.
+   */
   private static final short MAX_LOG_NAME_LEN = 20;
+
   private static final short MAX_LOG_SIZE_LEN = 10;
   private static final short MAX_LOG_IDX_LEN = 8;
   private static final short MAX_PEER_NAME_LEN = 15;
   private static final short MAX_ENDPOINT_LEN = 20;
 
-  // name uuid size start --> end CTime
+  /**
+   * Format string for long listing of logs.
+   *
+   * <p>name uuid size start --> end CTime
+   */
   private static final String LOGS_LONG_FORMAT =
       format(
           "%%-%ds %%-36s  %%-%ds %%-%ds --> %%-%ds %%-8s",
           MAX_LOG_NAME_LEN, MAX_LOG_SIZE_LEN, MAX_LOG_IDX_LEN, MAX_LOG_IDX_LEN);
 
-  // uuid name rpc jsonrpc pub jmx CTime
+  /**
+   * Format string for long listing of peers.
+   *
+   * <p>uuid name rpc jsonrpc pub jmx CTime
+   */
   private static final String PEERS_LONG_FORMAT =
       format(
           "%%-36s %%-%ds %%-%ds %%-%ds %%-%ds %%-%ds %%-8s",
@@ -143,6 +174,12 @@ public class List extends AbstractPalSubcommand {
           MAX_ENDPOINT_LEN,
           MAX_ENDPOINT_LEN);
 
+  /**
+   * Initializes the subcommand by setting up the directory connection.
+   *
+   * <p>Establishes a connection to the PAL directory using the provided connection string. Exits
+   * the program if the connection string is not provided.
+   */
   @Override
   protected void initialize() {
     initializeDirectoryConnectionProvider(palCommand.getPalDirectoryConnectionString());
@@ -153,6 +190,13 @@ public class List extends AbstractPalSubcommand {
     }
   }
 
+  /**
+   * Validates the input options for the subcommand.
+   *
+   * <p>Ensures that either logs or peers are specified for listing, but not both simultaneously.
+   *
+   * @throws RuntimeException if the input options are invalid
+   */
   @Override
   public void validateInput() {
     if (!(listLogs || listPeers)) {
@@ -163,6 +207,12 @@ public class List extends AbstractPalSubcommand {
     }
   }
 
+  /**
+   * Retrieves or creates a Kafka Admin client for the specified bootstrap servers.
+   *
+   * @param bootstrapServers the Kafka bootstrap servers
+   * @return the Kafka Admin client associated with the bootstrap servers
+   */
   private Admin getAdminClientForServers(String bootstrapServers) {
     if (!adminClientsPerServer.containsKey(bootstrapServers)) {
       Properties props = new Properties();
@@ -173,6 +223,12 @@ public class List extends AbstractPalSubcommand {
     return adminClientsPerServer.get(bootstrapServers);
   }
 
+  /**
+   * Retrieves the set of logs present in the specified Kafka servers.
+   *
+   * @param bootstrapServers the Kafka bootstrap servers
+   * @return a set of {@link LogInfo} representing the logs in the servers
+   */
   private Set<LogInfo> getLogsInKafkaServers(String bootstrapServers) {
     Set<LogInfo> logsInServers = null;
     try {
@@ -186,6 +242,11 @@ public class List extends AbstractPalSubcommand {
     return logsInServers;
   }
 
+  /**
+   * Populates the start and end offsets for each log in the provided set.
+   *
+   * @param logInfos the set of {@link LogInfo} objects to be updated with offsets
+   */
   public void fillLogInfosWithOffsets(Set<LogInfo> logInfos) {
     // Group logInfos by their bootstrap servers
     Map<String, Set<LogInfo>> logInfosByServer =
@@ -216,9 +277,15 @@ public class List extends AbstractPalSubcommand {
         });
   }
 
-  /*  TODO fillMbeanInfo with JmxClient is a temporary hack.
-   *  All Log Info should be retrieved from PalDirectory, maintained by the running peers.
-   *  This approach, however, has the advantage of getting live log info as maintained by kafka
+  /**
+   * Retrieves and sets the byte size of the specified log using JMX.
+   *
+   * <p><strong>Note:</strong> This method uses a JMX client to fetch the byte size, which is a
+   * temporary approach. Ideally, all Log Info should be retrieved from PalDirectory or using
+   * Kafka's Admin API. However, this method provides the advantage of obtaining live log info as
+   * maintained by Kafka.
+   *
+   * @param logInfo the {@link LogInfo} object to be updated with its byte size
    */
   public void fillLogInfoSize(LogInfo logInfo) {
     if (logger.isDebugEnabled()) {
@@ -239,6 +306,12 @@ public class List extends AbstractPalSubcommand {
     }
   }
 
+  /**
+   * Retrieves or creates a JMX client for the specified server.
+   *
+   * @param server the server address
+   * @return the {@link JmxClient} associated with the server, or {@code null} if connection fails
+   */
   private JmxClient getJmxClientForServer(String server) {
     if (!jmxClientsPerServer.containsKey(server)) {
       String host = Splitter.on(':').splitToList(server).get(0);
@@ -255,12 +328,25 @@ public class List extends AbstractPalSubcommand {
     return jmxClientsPerServer.get(server);
   }
 
+  /**
+   * Formats the uptime based on the start time.
+   *
+   * @param startDateTime the start time of the peer
+   * @return a formatted uptime string in "H:mm:ss" format
+   */
   private static String getFormattedUptime(OffsetDateTime startDateTime) {
     final OffsetDateTime now = OffsetDateTime.ofInstant(Instant.now(), ZoneOffset.UTC);
     return DurationFormatUtils.formatDuration(
         Duration.between(startDateTime, now).toMillis(), "H:mm:ss");
   }
 
+  /**
+   * Trims the given string to the specified maximum length, appending ".." if trimmed.
+   *
+   * @param astring the string to trim
+   * @param maxLength the maximum allowed length
+   * @return the trimmed string if necessary, otherwise the original string
+   */
   private static String trimTo(String astring, int maxLength) {
     if (astring.length() <= maxLength) {
       return astring;
@@ -268,6 +354,12 @@ public class List extends AbstractPalSubcommand {
     return astring.substring(0, maxLength - 2) + "..";
   }
 
+  /**
+   * Formats the given date and time.
+   *
+   * @param dateTime the date and time to format
+   * @return a formatted date string in "MMM dd HH:mm" format
+   */
   private static String getFormattedDate(OffsetDateTime dateTime) {
     return format(
         "%s %02d %02d:%02d",
@@ -277,6 +369,11 @@ public class List extends AbstractPalSubcommand {
         dateTime.getMinute());
   }
 
+  /**
+   * Prints the information of a log in the appropriate format.
+   *
+   * @param logInfo the {@link LogInfo} object to print
+   */
   private void print(LogInfo logInfo) {
     final String logInfoLine;
     if (longListing) {
@@ -301,6 +398,11 @@ public class List extends AbstractPalSubcommand {
     out.println(logInfoLine);
   }
 
+  /**
+   * Prints the information of a peer in the appropriate format.
+   *
+   * @param peerInfo the {@link PeerInfo} object to print
+   */
   private void print(PeerInfo peerInfo) {
     if (longListing) {
       out.printf(
@@ -326,6 +428,11 @@ public class List extends AbstractPalSubcommand {
     }
   }
 
+  /**
+   * Prints the set of logs in the specified order.
+   *
+   * @param logs the set of {@link LogInfo} objects to print
+   */
   private void printLogs(Set<LogInfo> logs) {
     final Comparator<LogInfo> comparator;
 
@@ -346,6 +453,11 @@ public class List extends AbstractPalSubcommand {
     sortedLogs.forEach(this::print);
   }
 
+  /**
+   * Prints the set of peers in the specified order.
+   *
+   * @param peers the set of {@link PeerInfo} objects to print
+   */
   private void printPeers(Set<PeerInfo> peers) {
     final Comparator<PeerInfo> comparator;
     if (sortByCTime) {
@@ -354,8 +466,8 @@ public class List extends AbstractPalSubcommand {
       comparator = reverseOrder ? cTimeComparator : cTimeComparator.reversed();
     } else {
       final Comparator<PeerInfo> peerNameComparator =
-          (o1, o2) -> // no need to check for null PeerInfo's here since it can't happen
-          Objects.compare(
+          (o1, o2) ->
+              Objects.compare(
                   o1.getName(), o2.getName(), Comparator.nullsLast(Comparator.naturalOrder()));
       comparator = reverseOrder ? peerNameComparator.reversed() : peerNameComparator;
     }
@@ -364,6 +476,13 @@ public class List extends AbstractPalSubcommand {
     sortedPeers.forEach(this::print);
   }
 
+  /**
+   * Closes all resources associated with the subcommand.
+   *
+   * <p>Closes JMX clients and Kafka admin clients before delegating to the superclass method.
+   *
+   * @throws IOException if an I/O error occurs while closing resources
+   */
   @Override
   protected void closeResources() throws IOException {
     // close jmx clients
@@ -376,6 +495,16 @@ public class List extends AbstractPalSubcommand {
     super.closeResources();
   }
 
+  /**
+   * Executes the command based on the provided options.
+   *
+   * <p>If listing logs is requested, it retrieves logs from the directory and Kafka servers, fills
+   * in their offsets and sizes, and prints them. If listing peers is requested, it retrieves peers
+   * from the directory and prints them.
+   *
+   * @return the exit code of the command execution
+   * @throws Exception if an error occurs during command execution
+   */
   @Override
   protected int runCommand() throws Exception {
     if (listLogs) {
@@ -422,8 +551,18 @@ public class List extends AbstractPalSubcommand {
     return 0;
   }
 
+  /** Utility class for fetching Kafka offsets. */
   static class KafkaOffsetFetcher {
 
+    /**
+     * Retrieves the 'earliest' offsets for the specified log names using the provided admin client.
+     *
+     * @param logNames the set of log names
+     * @param adminClient the Kafka admin client
+     * @return a map of log names to their earliest offsets
+     * @throws ExecutionException if the computation threw an exception
+     * @throws InterruptedException if the current thread was interrupted
+     */
     public static Map<String, Long> getStartOffsets(Set<String> logNames, Admin adminClient)
         throws ExecutionException, InterruptedException {
       java.util.List<TopicPartition> topicPartitions =
@@ -438,6 +577,15 @@ public class List extends AbstractPalSubcommand {
                   entry -> entry.getKey().topic(), entry -> entry.getValue().offset()));
     }
 
+    /**
+     * Retrieves the 'latest' offsets for the specified log names using the provided admin client.
+     *
+     * @param logNames the set of log names
+     * @param adminClient the Kafka admin client
+     * @return a map of log names to their latest offsets
+     * @throws ExecutionException if the computation threw an exception
+     * @throws InterruptedException if the current thread was interrupted
+     */
     public static Map<String, Long> getEndOffsets(Set<String> logNames, Admin adminClient)
         throws ExecutionException, InterruptedException {
       java.util.List<TopicPartition> topicPartitions =

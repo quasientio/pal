@@ -33,6 +33,12 @@ import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.ParseResult;
 import picocli.CommandLine.Spec;
 
+/**
+ * The main command class for the PAL command-line interface.
+ *
+ * <p>It configures and initializes the CLI application, manages subcommands, and handles the
+ * execution strategy for processing user input.
+ */
 @Command(
     name = "pal",
     customSynopsis = "pal [OPTIONS] COMMAND",
@@ -47,24 +53,46 @@ import picocli.CommandLine.Spec;
     versionProvider = ManifestVersionProvider.class)
 public class Pal implements Callable<Integer>, PalCommand {
 
+  /** The command specification provided by Picocli for the current command. */
   @SuppressWarnings("unused")
   @Spec
   private CommandSpec spec;
 
+  /**
+   * The URL of the PAL directory, specified via command-line options or environment variables.
+   *
+   * <p>Accepts values in the format {@code HOST:PORT}.
+   */
   @Option(
       names = {"-d", "--dir"},
       paramLabel = "HOST:PORT",
       description = "PAL directory")
   private String palDirectoryUrl;
 
+  /**
+   * Constructs a new instance of the Pal command.
+   *
+   * <p>This constructor is private to enforce usage through the CLI framework.
+   */
   private Pal() {}
 
+  /**
+   * Defines the execution strategy for processing parsed command-line input.
+   *
+   * @param parseResult the result of parsing the command-line arguments
+   * @return the exit code resulting from command execution
+   */
   private int executionStrategy(ParseResult parseResult) {
     init();
     return new CommandLine.RunLast().execute(parseResult);
   }
 
-  // Custom initialization to be done before executing any command or subcommand.
+  /**
+   * Initializes the PAL directory connection string based on command-line options, environment
+   * variables, or defaults.
+   *
+   * <p>This method ensures that the PAL directory URL is set before executing any command.
+   */
   private void init() {
     if (palDirectoryUrl == null || palDirectoryUrl.trim().isEmpty()) {
       String palDirectoryEnvVar = System.getenv("PAL_DIRECTORY");
@@ -75,6 +103,14 @@ public class Pal implements Callable<Integer>, PalCommand {
     }
   }
 
+  /**
+   * The entry point of the PAL CLI application.
+   *
+   * <p>It configures the command hierarchy, adds subcommands, and executes the appropriate command
+   * based on user input.
+   *
+   * @param args the command-line arguments provided by the user
+   */
   public static void main(String[] args) {
     System.setProperty("picocli.ansi", "false");
     Pal pal = new Pal();
@@ -95,6 +131,13 @@ public class Pal implements Callable<Integer>, PalCommand {
     System.exit(exitCode);
   }
 
+  /**
+   * Executes the command when no subcommand is provided.
+   *
+   * <p>It displays the usage information to guide the user.
+   *
+   * @return {@code 0} as the exit code indicating the usage information was displayed successfully
+   */
   @Override
   public Integer call() {
     // no sub-command given, let's help with that
@@ -102,7 +145,11 @@ public class Pal implements Callable<Integer>, PalCommand {
     return 0;
   }
 
-  // PALCommand INTERFACE
+  /**
+   * Retrieves the connection string for the PAL directory.
+   *
+   * @return the PAL directory connection string
+   */
   @Override
   public String getPalDirectoryConnectionString() {
     return this.palDirectoryUrl;

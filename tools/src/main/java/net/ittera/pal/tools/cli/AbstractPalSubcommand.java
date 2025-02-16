@@ -31,31 +31,71 @@ import net.ittera.pal.cxn.PalDirectory;
 import net.ittera.pal.tools.AbstractTool;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Serves as the base class for PAL CLI subcommands, providing common functionalities such as
+ * logging configuration, directory connection management, and resource handling. Subclasses should
+ * implement specific command logic by overriding the {@link #validateInput()}, {@link
+ * #initialize()}, and {@link #runCommand()} methods.
+ */
 public abstract class AbstractPalSubcommand extends AbstractTool implements Callable<Integer> {
+
+  /** Path to the logging configuration file used by Logback. */
   private static final String LOGGING_CONFIG = "/cli-logging.xml";
+
+  /** Provides connections to the PAL directory. */
   protected DirectoryConnectionProvider directoryConnectionProvider;
+
+  /** The output stream used for standard output. */
   protected PrintStream out;
+
+  /** The output stream used for error output. */
   protected PrintStream err;
 
+  /**
+   * Constructs a new AbstractPalSubcommand and initializes the output streams to System.out and
+   * System.err.
+   */
   protected AbstractPalSubcommand() {
     out = System.out;
     err = System.err;
   }
 
+  /**
+   * Initializes the DirectoryConnectionProvider with the given connection string.
+   *
+   * @param paldirConnectionString the connection string for the PAL directory, must not be null or
+   *     empty
+   */
   protected final void initializeDirectoryConnectionProvider(String paldirConnectionString) {
     this.directoryConnectionProvider =
         new DirectoryConnectionProvider(paldirConnectionString, null);
   }
 
+  /**
+   * Checks if a given option string is provided.
+   *
+   * @param option the option string to check
+   * @return {@code true} if the option is non-null and not empty, {@code false} otherwise
+   */
   protected static boolean optionGiven(String option) {
     return !(option == null || option.isEmpty());
   }
 
+  /**
+   * Validates the input provided to the subcommand.
+   *
+   * <p>This method should be implemented by subclasses to perform necessary input validations
+   * before command execution.
+   *
+   * @throws RuntimeException if the input is invalid
+   */
   protected abstract void validateInput();
 
   /**
-   * Logging is configured here and not in the Pal parent command, since we can't configure logback
-   * when launching the 'run' subcommand, i.e. a peer.
+   * Configures the logging framework using the Logback configuration.
+   *
+   * <p>Logging is configured here and not in the PAL parent command because configuring Logback
+   * when launching the 'run' subcommand is not feasible.
    */
   private void configureLogging() {
     LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
@@ -73,6 +113,11 @@ public abstract class AbstractPalSubcommand extends AbstractTool implements Call
     }
   }
 
+  /**
+   * Closes all open resources associated with the directory connection provider.
+   *
+   * @throws IOException if an I/O error occurs while closing resources
+   */
   protected void closeResources() throws IOException {
     directoryConnectionProvider
         .get()
@@ -83,10 +128,27 @@ public abstract class AbstractPalSubcommand extends AbstractTool implements Call
             });
   }
 
+  /**
+   * Executes the subcommand's main logic.
+   *
+   * @return an integer status code representing the result of the command execution
+   * @throws Exception if an error occurs during command execution
+   */
   protected abstract int runCommand() throws Exception;
 
+  /**
+   * Performs initialization steps required before running the command.
+   *
+   * @throws Exception if an error occurs during initialization
+   */
   protected abstract void initialize() throws Exception;
 
+  /**
+   * Retrieves the PalDirectory instance from the directory connection provider.
+   *
+   * @return the PalDirectory instance
+   * @throws RuntimeException if the PalDirectory is not available or not properly configured
+   */
   protected PalDirectory getPalDirectory() {
     Optional<PalDirectory> palDirectory = directoryConnectionProvider.get();
     return palDirectory.orElseThrow(
@@ -96,6 +158,13 @@ public abstract class AbstractPalSubcommand extends AbstractTool implements Call
                     + " or set the ENV variable PAL_DIRECTORY."));
   }
 
+  /**
+   * Executes the subcommand by configuring logging, validating input, initializing, running the
+   * command, and closing resources.
+   *
+   * @return the status code resulting from the command execution
+   * @throws Exception if an error occurs during execution
+   */
   @Override
   public Integer call() throws Exception {
     configureLogging();
