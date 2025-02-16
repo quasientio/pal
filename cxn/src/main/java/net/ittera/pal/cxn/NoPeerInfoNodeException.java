@@ -19,8 +19,14 @@
 
 package net.ittera.pal.cxn;
 
+/** Represents an exception that is thrown when no peer information node is available. */
 public class NoPeerInfoNodeException extends Exception {
 
+  /**
+   * Constructs a new NoPeerInfoNodeException with the specified detail message.
+   *
+   * @param message the detail message explaining the reason for the exception
+   */
   public NoPeerInfoNodeException(String message) {
     super(message);
   }

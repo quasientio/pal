@@ -71,166 +71,376 @@ import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 
-/** This class is not thread-safe. For multithreaded scenarios, use different instances. */
+/**
+ * Represents a versatile, lightweight peer (or client) in the Pal runtime, managing communication
+ * with remote peers via ZeroMQ and WebSockets, and Kafka. Allows both synchronous and asynchronous
+ * operations. This class is not thread-safe; separate instances should be used in multithreaded
+ * environments.
+ *
+ * <p>Use {@link #init()} to initialize the peer before using it, and {@link #close()} to release
+ * resources. Configure the peer using the provided builder methods before initialization.
+ */
 public class ThinPeer implements AutoCloseable {
-
-  private UUID peerUuid;
-  private String peerName;
-  private boolean isZmqSocketConnected = false;
-  private boolean isWsClientConnected = false;
-  private boolean closed;
-  private boolean initialized;
-  private final MessageBuilder msgBuilder = new MessageBuilder();
-
-  // static
+  /** Logger instance for ThinPeer class. */
   private static final Logger logger = LoggerFactory.getLogger(ThinPeer.class);
 
-  // kafka stuff
+  /** Universally unique identifier for this peer instance. */
+  private UUID peerUuid;
+
+  /** Human-readable name for this peer. */
+  private String peerName;
+
+  /** Indicates whether the ZeroMQ socket is currently connected. */
+  private boolean isZmqSocketConnected = false;
+
+  /** Indicates whether the WebSocket client is currently connected. */
+  private boolean isWsClientConnected = false;
+
+  /** Indicates whether this ThinPeer instance has been closed. */
+  private boolean closed;
+
+  /** Indicates whether this ThinPeer instance has been initialized. */
+  private boolean initialized;
+
+  /** Builder utility for constructing various message types. */
+  private final MessageBuilder msgBuilder = new MessageBuilder();
+
+  /** Kafka bootstrap servers for connecting to the cluster. */
   private String bootstrapServers;
+
+  /** Flag indicating whether log input/output is enabled. */
   private boolean logIOEnabled;
+
+  /** LogInfo for incoming input Log. */
   private LogInfo inLog;
+
+  /** LogInfo for output Log. */
   private LogInfo outLog;
+
+  /** Kafka topic partition for input Log messages. */
   private TopicPartition inTopicPartition;
+
+  /** Duration for polling Kafka consumer. */
   private Duration pollingDuration;
+
+  /** Number of preceding records to fetch. */
   private static final int PRECEDING_RECS = 50;
+
+  /** Default partition for producer messages. */
   private static final int PRODUCER_PARTITION = 0;
+
+  /** Default polling duration in milliseconds. */
   private static final int DEFAULT_POLLING_DURATION_MILLIS = 10;
+
+  /** Prefix used for Kafka log topics. */
   private String logPrefix;
+
+  /** Default prefix for Kafka topics. */
   public static final String DEFAULT_TOPIC_PREFIX = "app";
 
+  /** Kafka producer for sending log messages. */
   private Producer<String, LogMessage<?>> producer;
+
+  /** Kafka consumer for receiving log messages. */
   private Consumer<String, LogMessage<?>> consumer;
+
+  /** Lock object for synchronizing access to the consumer. */
   private final Object consumerLock = new Object();
+
+  /** Flag indicating whether a producer was provided externally. */
   private boolean producerGiven;
+
+  /** Flag indicating whether producing is enabled. */
   private boolean producing;
+
+  /** Flag indicating whether a consumer was provided externally. */
   private boolean consumerGiven;
+
+  /** Flag indicating whether consuming is enabled. */
   private boolean consuming;
+
+  /** Configuration properties for the Kafka producer. */
   private Properties producerProperties;
+
+  /** Configuration properties for the Kafka consumer. */
   private Properties consumerProperties;
 
+  /** Cache of the last records read from Kafka, mapped by their offsets. */
   private Map<Long, ConsumerRecord<String, LogMessage<?>>> lastRecordsRead = new HashMap<>();
 
-  // rpc stuff
+  /** ZeroMQ context for managing ZMQ sockets. */
   private ZContext zmqContext;
+
+  /** ZeroMQ socket for peer communication. */
   private Socket peerSocket;
+
+  /** WebSocket client for JSON-RPC communication. */
   private WsClient wsClient;
+
+  /** RPC address for this peer. */
   private String rpcAddress;
+
+  /** Type of outbound RPC mechanism used (binary or JSON). */
   private RpcType outboundRpcType = RpcType.BIN_RPC;
+
+  /** PeerInfo of initial peer to talk to. */
   private PeerInfo initialPeer;
+
+  /** Currently connected peer info. */
   private PeerInfo currentPeer;
+
+  /** Indicates whether this peer is currently communicating with another peer. */
   private boolean talkingToPeer;
+
+  /** Flags if a ZMQ context was provided externally. */
   private boolean zmqContextGiven;
 
-  // PAL directory
+  /** Provider for directory connections to the PAL directory service. */
   private DirectoryConnectionProvider directoryConnectionProvider;
+
+  /** Flag indicating whether a directory connection provider was provided externally. */
   private boolean directoryGiven;
+
+  /** URL of the PAL directory. */
   private String palDirectoryUrl;
+
+  /** Flag indicating whether this peer should register itself with the PAL directory. */
   private boolean registerSelf = false;
 
+  /**
+   * Constructs a new ThinPeer instance with default settings.
+   *
+   * <p>Note: Consider using factory methods for better configuration.
+   */
   public ThinPeer() {
     // TODO use factory method instead of empty constructor
   }
 
+  /**
+   * Sets the UUID for this peer.
+   *
+   * @param uuid the universally unique identifier to assign to this peer
+   * @return the current ThinPeer instance for method chaining
+   */
   public ThinPeer withUuid(UUID uuid) {
     this.peerUuid = uuid;
     return this;
   }
 
+  /**
+   * Sets the human-readable name for this peer.
+   *
+   * @param name the name to assign to this peer
+   * @return the current ThinPeer instance for method chaining
+   */
   public ThinPeer withName(String name) {
     this.peerName = name;
     return this;
   }
 
+  /**
+   * Sets the RPC address for this peer.
+   *
+   * @param rpcAddress the RPC address to assign to this peer
+   * @return the current ThinPeer instance for method chaining
+   */
   public ThinPeer withRpcAddress(String rpcAddress) {
     this.rpcAddress = rpcAddress;
     return this;
   }
 
+  /**
+   * Configures the Kafka bootstrap servers.
+   *
+   * @param bootstrapServers the Kafka bootstrap servers to use
+   * @return the current ThinPeer instance for method chaining
+   */
   public ThinPeer withBootstrapServers(String bootstrapServers) {
     this.bootstrapServers = bootstrapServers;
     return this;
   }
 
+  /**
+   * Sets both the input and output log information.
+   *
+   * @param log the LogInfo instance to assign to both input and output logs
+   * @return the current ThinPeer instance for method chaining
+   */
   public ThinPeer withLog(LogInfo log) {
     this.inLog = log;
     this.outLog = log;
     return this;
   }
 
+  /**
+   * Sets the input log information.
+   *
+   * @param inLog the LogInfo instance to assign to the input log
+   * @return the current ThinPeer instance for method chaining
+   */
   public ThinPeer withInLog(LogInfo inLog) {
     this.inLog = inLog;
     return this;
   }
 
+  /**
+   * Sets the output log information.
+   *
+   * @param outLog the LogInfo instance to assign to the output log
+   * @return the current ThinPeer instance for method chaining
+   */
   public ThinPeer withOutLog(LogInfo outLog) {
     this.outLog = outLog;
     return this;
   }
 
+  /**
+   * Sets the prefix used for Kafka log topics.
+   *
+   * @param logPrefix the prefix to assign to log topics
+   * @return the current ThinPeer instance for method chaining
+   */
   public ThinPeer withLogPrefix(String logPrefix) {
     this.logPrefix = logPrefix;
     return this;
   }
 
+  /**
+   * Assigns an external Kafka consumer.
+   *
+   * @param consumer the Kafka Consumer to use for log consumption
+   * @return the current ThinPeer instance for method chaining
+   */
   public ThinPeer withConsumer(Consumer<String, LogMessage<?>> consumer) {
     this.consumer = consumer;
     this.consumerGiven = true;
     return this;
   }
 
+  /**
+   * Sets the configuration properties for the Kafka consumer.
+   *
+   * @param properties the Properties object containing consumer configurations
+   * @return the current ThinPeer instance for method chaining
+   */
   public ThinPeer withConsumerProperties(Properties properties) {
     this.consumerProperties = properties;
     return this;
   }
 
+  /**
+   * Configures the polling duration for Kafka consumer operations.
+   *
+   * @param millis the duration in milliseconds for each poll interval
+   * @return the current ThinPeer instance for method chaining
+   */
   public ThinPeer withPollingDuration(long millis) {
     this.pollingDuration = Duration.of(millis, ChronoUnit.MILLIS);
     return this;
   }
 
+  /**
+   * Assigns an external Kafka producer.
+   *
+   * @param producer the Kafka Producer to use for log production
+   * @return the current ThinPeer instance for method chaining
+   */
   public ThinPeer withProducer(Producer<String, LogMessage<?>> producer) {
     this.producer = producer;
     this.producerGiven = true;
     return this;
   }
 
+  /**
+   * Sets the configuration properties for the Kafka producer.
+   *
+   * @param properties the Properties object containing producer configurations
+   * @return the current ThinPeer instance for method chaining
+   */
   public ThinPeer withProducerProperties(Properties properties) {
     this.producerProperties = properties;
     return this;
   }
 
+  /**
+   * Assigns an external ZeroMQ context.
+   *
+   * @param zmqContext the ZContext to use for ZeroMQ operations
+   * @return the current ThinPeer instance for method chaining
+   */
   public ThinPeer withZmqContext(ZContext zmqContext) {
     this.zmqContext = zmqContext;
     this.zmqContextGiven = true;
     return this;
   }
 
+  /**
+   * Sets the initial peer information for establishing a connection.
+   *
+   * @param initialPeer the PeerInfo object representing the initial peer to connect to
+   * @return the current ThinPeer instance for method chaining
+   */
   public ThinPeer withInitialPeer(PeerInfo initialPeer) {
     this.initialPeer = initialPeer;
     return this;
   }
 
+  /**
+   * Sets the directory connection provider for interacting with the PAL directory service.
+   *
+   * @param directoryConnectionProvider the DirectoryConnectionProvider to use
+   * @return the current ThinPeer instance for method chaining
+   */
   public ThinPeer withDirectoryProvider(DirectoryConnectionProvider directoryConnectionProvider) {
     this.directoryConnectionProvider = directoryConnectionProvider;
     this.directoryGiven = true;
     return this;
   }
 
+  /**
+   * Sets the URL for the PAL directory service.
+   *
+   * @param palDirectoryUrl the URL to assign to the PAL directory
+   * @return the current ThinPeer instance for method chaining
+   */
   public ThinPeer withDirectoryUrl(String palDirectoryUrl) {
     this.palDirectoryUrl = palDirectoryUrl;
     return this;
   }
 
+  /**
+   * Enables or disables self-registration with the PAL directory.
+   *
+   * @param registerSelf true to register this peer with the PAL directory upon initialization;
+   *     false otherwise
+   * @return the current ThinPeer instance for method chaining
+   */
   public ThinPeer withSelfRegistration(boolean registerSelf) {
     this.registerSelf = registerSelf;
     return this;
   }
 
+  /**
+   * Sets the type of outbound RPC mechanism to use.
+   *
+   * @param rpcType the RpcType to set for outbound RPC
+   * @return the current ThinPeer instance for method chaining
+   */
   public ThinPeer withOutboundRpcType(RpcType rpcType) {
     this.outboundRpcType = rpcType;
     return this;
   }
 
+  /**
+   * Initializes the ThinPeer instance, setting up connections to the PAL directory, configuring
+   * Kafka producers and consumers, and establishing RPC connections to the initial peer if
+   * provided.
+   *
+   * <p>This method must be called before using the ThinPeer.
+   *
+   * @return the initialized ThinPeer instance
+   * @throws Exception if initialization fails due to invalid configurations or connection issues
+   */
   public ThinPeer init() throws Exception {
     // if not given, create random UUID for this peer
     if (this.peerUuid == null) {
@@ -403,6 +613,11 @@ public class ThinPeer implements AutoCloseable {
     return this;
   }
 
+  /**
+   * Retrieves the PAL directory connection.
+   *
+   * @return the PalDirectory instance if available; otherwise, null
+   */
   private PalDirectory getPalDirectory() {
     if (directoryConnectionProvider != null) {
       return directoryConnectionProvider.get().orElse(null);
@@ -410,6 +625,11 @@ public class ThinPeer implements AutoCloseable {
     return null;
   }
 
+  /**
+   * Establishes a ZeroMQ socket connection to the specified peer.
+   *
+   * @param peer the PeerInfo object representing the peer to connect to
+   */
   private void connectZmqSocket(PeerInfo peer) {
     byte[] prefixBytes = "ThinPeer-".getBytes(ZMQ.CHARSET);
     byte[] uuidBytes = UuidUtils.toBytes(peerUuid);
@@ -427,6 +647,13 @@ public class ThinPeer implements AutoCloseable {
     }
   }
 
+  /**
+   * Establishes a WebSocket connection to the specified peer.
+   *
+   * @param peer the PeerInfo object representing the peer to connect to
+   * @throws URISyntaxException if the peer's JSON-RPC address URI is invalid
+   * @throws InterruptedException if the connection attempt is interrupted
+   */
   private void connectWebSocket(PeerInfo peer) throws URISyntaxException, InterruptedException {
     Map<String, String> headers = Map.of("peer-id", peerUuid.toString());
     wsClient = new WsClient(new URI(peer.getJsonrpcAddress()), headers);
@@ -434,6 +661,11 @@ public class ThinPeer implements AutoCloseable {
     isWsClientConnected = true;
   }
 
+  /**
+   * Ensures that the ThinPeer instance is initialized and not closed.
+   *
+   * @throws IllegalStateException if the instance is not initialized or has been closed
+   */
   private void assertInitializedAndActive() {
     if (!initialized) {
       throw new IllegalStateException("ThinPeer is not initialized. Did you call init()?");
@@ -443,17 +675,26 @@ public class ThinPeer implements AutoCloseable {
     }
   }
 
+  /**
+   * Sends a JSON-RPC request to the connected peer.
+   *
+   * @param jsonRpc the JSON-RPC request as a String or instance of JsonRpcRequest
+   * @return a CompletableFuture that will be completed with the response
+   * @throws JsonSerializationException if serialization of the JSON-RPC request fails
+   */
   public CompletableFuture<JsonRpcResponse> sendJsonRpcRequestToPeer(Object jsonRpc)
       throws JsonSerializationException {
     return sendJsonRpcRequestToPeer(jsonRpc, null);
   }
 
   /**
-   * Send a message to the peer via websocket.
+   * Sends a JSON-RPC request to the connected peer with a specified message ID.
    *
-   * @param jsonRpc the JSON-RPC request as a String or instance of JsonRpcRequest.
+   * @param jsonRpc the JSON-RPC request as a String or instance of JsonRpcRequest
    * @param messageId the message ID included in the request
    * @return a CompletableFuture that will be completed with the response
+   * @throws JsonSerializationException if serialization of the JSON-RPC request fails
+   * @throws IllegalStateException if not connected to any peer or the instance is not initialized
    */
   public CompletableFuture<JsonRpcResponse> sendJsonRpcRequestToPeer(
       Object jsonRpc, String messageId) throws JsonSerializationException {
@@ -479,11 +720,26 @@ public class ThinPeer implements AutoCloseable {
     }
   }
 
+  /**
+   * Retrieves the log message at the specified offset.
+   *
+   * @param seek the offset of the message to retrieve
+   * @return the LogMessage at the given offset
+   */
   @SuppressWarnings("unused")
   public LogMessage<?> getMessageAtOffset(Long seek) {
     return getMessageAtOffset(seek, true);
   }
 
+  /**
+   * Retrieves the log message at the specified offset, optionally using the cache.
+   *
+   * @param seek the offset of the message to retrieve
+   * @param lookupCached if true, checks the cached records first
+   * @return the LogMessage at the given offset
+   * @throws IllegalStateException if log consumption is not enabled or the instance is not
+   *     initialized
+   */
   private LogMessage<?> getMessageAtOffset(Long seek, boolean lookupCached) {
     assertInitializedAndActive();
     if (!consuming) {
@@ -538,6 +794,12 @@ public class ThinPeer implements AutoCloseable {
     return logMessage;
   }
 
+  /**
+   * Retrieves a cached log message at the specified offset, if available.
+   *
+   * @param offset the offset of the cached message to retrieve
+   * @return the cached LogMessage if found; otherwise, null
+   */
   private LogMessage<?> getCachedMessageAtOffset(Long offset) {
     ConsumerRecord<String, LogMessage<?>> cachedRecord = lastRecordsRead.get(offset);
     if (cachedRecord != null) {
@@ -549,6 +811,15 @@ public class ThinPeer implements AutoCloseable {
     return null;
   }
 
+  /**
+   * Retrieves a list of log messages starting from the specified offset.
+   *
+   * @param startOffset the starting offset to retrieve messages from
+   * @param numMessages the number of messages to retrieve
+   * @return a list of ConsumerRecord objects containing the retrieved messages
+   * @throws IllegalStateException if log consumption is not enabled or the instance is not
+   *     initialized
+   */
   @SuppressWarnings("unused")
   public List<ConsumerRecord<?, ?>> getMessages(long startOffset, long numMessages) {
     assertInitializedAndActive();
@@ -583,10 +854,22 @@ public class ThinPeer implements AutoCloseable {
     return messages;
   }
 
+  /**
+   * Returns the UUID of this peer.
+   *
+   * @return the UUID assigned to this peer
+   */
   public UUID getPeerUuid() {
     return peerUuid;
   }
 
+  /**
+   * Sends an ExecMessage to the configured Kafka log.
+   *
+   * @param message the ExecMessage to send
+   * @return a Future representing the result of the send operation
+   * @throws IllegalStateException if producing is not enabled or the instance is not initialized
+   */
   public Future<RecordMetadata> sendExecMessageToLog(ExecMessage message) {
     if (logger.isDebugEnabled()) {
       logger.debug("sendExecMessageToLog: in with message: {}", ColferUtils.format(message));
@@ -615,6 +898,14 @@ public class ThinPeer implements AutoCloseable {
     return sendFuture;
   }
 
+  /**
+   * Sends a JSON-RPC request to the configured Kafka log.
+   *
+   * @param jsonRpcRequest the JSON-RPC request as a String or JsonRpcRequest instance
+   * @return a Future representing the result of the send operation
+   * @throws JsonSerializationException if serialization of the JSON-RPC request fails
+   * @throws IllegalStateException if producing is not enabled or the instance is not initialized
+   */
   @SuppressWarnings("unused")
   public Future<RecordMetadata> sendJsonRpcRequestToLog(Object jsonRpcRequest)
       throws JsonSerializationException {
@@ -652,6 +943,14 @@ public class ThinPeer implements AutoCloseable {
     return sendFuture;
   }
 
+  /**
+   * Sends a JSON-RPC request to the configured Kafka log and awaits the corresponding response.
+   *
+   * @param jsonRpcRequest the JSON-RPC request as a String or JsonRpcRequest instance
+   * @return a LogMessage containing the JsonRpcResponse
+   * @throws JsonSerializationException if serialization of the JSON-RPC request fails
+   * @throws IllegalStateException if producing is not enabled or the instance is not initialized
+   */
   public LogMessage<JsonRpcResponse> sendJsonRpcRequestToLogAndReceive(Object jsonRpcRequest)
       throws JsonSerializationException {
     if (logger.isDebugEnabled()) {
@@ -709,6 +1008,14 @@ public class ThinPeer implements AutoCloseable {
         responseAsJsonRpc);
   }
 
+  /**
+   * Sends an ExecMessage to the configured Kafka log and awaits the corresponding response.
+   *
+   * @param message the ExecMessage to send
+   * @return a LogMessage containing the response ExecMessage
+   * @throws IllegalStateException if producing or consuming is not enabled or the instance is not
+   *     initialized
+   */
   public LogMessage<Message> sendExecMessageToLogAndReceive(ExecMessage message) {
     if (logger.isDebugEnabled()) {
       logger.debug(
@@ -750,6 +1057,14 @@ public class ThinPeer implements AutoCloseable {
     return pollForResponseToRequestFromOffset(sentRecordOffset + 1, message.getMessageId());
   }
 
+  /**
+   * Polls the Kafka log for a response message corresponding to the specified request ID, starting
+   * from the given offset.
+   *
+   * @param offset the starting offset to poll from
+   * @param requestId the ID of the request to match responses
+   * @return the LogMessage containing the response
+   */
   private LogMessage<Message> pollForResponseToRequestFromOffset(long offset, String requestId) {
     if (logger.isDebugEnabled()) {
       logger.debug("Consumer seeking to offset: {}", offset);
@@ -800,6 +1115,12 @@ public class ThinPeer implements AutoCloseable {
     }
   }
 
+  /**
+   * Connects to a peer identified by the given UUID using the PAL directory.
+   *
+   * @param peerUuid the UUID of the peer to connect to
+   * @throws Exception if connection fails due to directory access or peer retrieval issues
+   */
   public void connectToPeer(UUID peerUuid) throws Exception {
     assertInitializedAndActive();
     PeerInfo newPeer = null;
@@ -816,6 +1137,12 @@ public class ThinPeer implements AutoCloseable {
     }
   }
 
+  /**
+   * Establishes a connection to the specified peer.
+   *
+   * @param peer the PeerInfo object representing the peer to connect to
+   * @throws Exception if connection setup fails
+   */
   private void connectToPeer(PeerInfo peer) throws Exception {
     if (logger.isDebugEnabled()) {
       logger.debug("connectToPeer: in with peer: {}", peer.getUuid());
@@ -837,6 +1164,13 @@ public class ThinPeer implements AutoCloseable {
     logger.info("Now in direct talk with {}", peer);
   }
 
+  /**
+   * Sends an ExecMessage directly to the connected peer and awaits the response.
+   *
+   * @param message the ExecMessage to send
+   * @return the ExecMessage response from the peer
+   * @throws IllegalStateException if not connected to a peer or the instance is not initialized
+   */
   public ExecMessage sendToPeer(ExecMessage message) {
     if (logger.isDebugEnabled()) {
       logger.debug("sendToPeer: in with exec message: {}", ColferUtils.format(message));
@@ -865,6 +1199,13 @@ public class ThinPeer implements AutoCloseable {
     return responseMessage;
   }
 
+  /**
+   * Sends a ControlMessage directly to the connected peer and awaits the response.
+   *
+   * @param message the ControlMessage to send
+   * @return the ControlMessage response from the peer
+   * @throws IllegalStateException if not connected to a peer or the instance is not initialized
+   */
   public ControlMessage sendToPeer(ControlMessage message) {
     if (logger.isDebugEnabled()) {
       logger.debug("in sendToPeer with control message: {}", ColferUtils.format(message));
@@ -886,13 +1227,20 @@ public class ThinPeer implements AutoCloseable {
     if (logger.isDebugEnabled()) {
       logger.debug(
           "Got response to control message: {}, waited {} ms",
-          ColferUtils.format(responseMessage),
+          responseMessage.getMessageId(),
           (waitEnd - waitStart));
     }
 
     return responseMessage;
   }
 
+  /**
+   * Sends a MetaMessage directly to the connected peer and awaits the response.
+   *
+   * @param message the MetaMessage to send
+   * @return the MetaMessage response from the peer
+   * @throws IllegalStateException if not connected to a peer or the instance is not initialized
+   */
   public MetaMessage sendToPeer(MetaMessage message) {
     if (logger.isDebugEnabled()) {
       logger.debug("in sendToPeer with meta message: {}", ColferUtils.format(message));
@@ -923,6 +1271,11 @@ public class ThinPeer implements AutoCloseable {
     return responseMessage;
   }
 
+  /**
+   * Sends a command to delete the current session with the connected peer.
+   *
+   * @throws IllegalStateException if not connected to a peer or the instance is not initialized
+   */
   public void sendDeleteSessionCommand() {
     assertInitializedAndActive();
 
@@ -959,6 +1312,7 @@ public class ThinPeer implements AutoCloseable {
     }
   }
 
+  /** Closes the Kafka consumer if it was not provided externally. */
   private void closeConsumer() {
     if (consumer != null) {
       try {
@@ -973,6 +1327,7 @@ public class ThinPeer implements AutoCloseable {
     }
   }
 
+  /** Closes the Kafka producer if it was not provided externally. */
   private void closeProducer() {
     if (producer != null) {
       try {
@@ -984,6 +1339,7 @@ public class ThinPeer implements AutoCloseable {
     }
   }
 
+  /** Closes the peer connection sockets, including ZeroMQ and WebSocket clients. */
   private void closePeerSocket() {
     try {
       if (peerSocket != null) {
@@ -1008,6 +1364,12 @@ public class ThinPeer implements AutoCloseable {
     }
   }
 
+  /**
+   * Closes the ThinPeer instance, releasing all associated resources and unregistering from the PAL
+   * directory if self-registration was enabled.
+   *
+   * <p>This method is idempotent and safe to call multiple times.
+   */
   @Override
   public void close() {
     assertInitializedAndActive();
@@ -1057,112 +1419,246 @@ public class ThinPeer implements AutoCloseable {
   }
 
   // <editor-fold desc="Getters">
+
+  /**
+   * Checks if log input/output operations are enabled.
+   *
+   * @return true if log IO is enabled; false otherwise
+   */
   public boolean isLogIOEnabled() {
     return logIOEnabled;
   }
 
+  /**
+   * Checks if this ThinPeer instance has been closed.
+   *
+   * @return true if closed; false otherwise
+   */
   public boolean isClosed() {
     return closed;
   }
 
+  /**
+   * Checks if this ThinPeer instance has been initialized.
+   *
+   * @return true if initialized; false otherwise
+   */
   public boolean isInitialized() {
     return initialized;
   }
 
+  /**
+   * Retrieves the name assigned to this peer.
+   *
+   * @return the peer's name
+   */
   public String getName() {
     return peerName;
   }
 
+  /**
+   * Retrieves the Kafka bootstrap servers configured for this peer.
+   *
+   * @return the Kafka bootstrap servers
+   */
   public String getBootstrapServers() {
     return bootstrapServers;
   }
 
+  /**
+   * Retrieves the LogInfo for input messages.
+   *
+   * @return the input LogInfo
+   */
   public LogInfo getInLog() {
     return inLog;
   }
 
+  /**
+   * Retrieves the LogInfo for output messages.
+   *
+   * @return the output LogInfo
+   */
   public LogInfo getOutLog() {
     return outLog;
   }
 
+  /**
+   * Retrieves the polling duration configured for the Kafka consumer.
+   *
+   * @return the polling Duration
+   */
   public Duration getPollingDuration() {
     return pollingDuration;
   }
 
+  /**
+   * Retrieves the Kafka producer instance.
+   *
+   * @return the Kafka Producer
+   */
   public Producer<String, LogMessage<?>> getProducer() {
     return producer;
   }
 
+  /**
+   * Retrieves the Kafka consumer instance.
+   *
+   * @return the Kafka Consumer
+   */
   public Consumer<String, LogMessage<?>> getConsumer() {
     return consumer;
   }
 
+  /**
+   * Retrieves the Kafka producer configuration properties.
+   *
+   * @return the producer Properties
+   */
   public Properties getProducerProperties() {
     return producerProperties;
   }
 
+  /**
+   * Retrieves the Kafka consumer configuration properties.
+   *
+   * @return the consumer Properties
+   */
   public Properties getConsumerProperties() {
     return consumerProperties;
   }
 
+  /**
+   * Retrieves the ZeroMQ context.
+   *
+   * @return the ZContext used for ZeroMQ operations
+   */
   public ZContext getZmqContext() {
     return zmqContext;
   }
 
+  /**
+   * Retrieves the Binary-RPC address of this peer.
+   *
+   * @return the Binary-RPC address
+   */
   public String getRpcAddress() {
     return rpcAddress;
   }
 
+  /**
+   * Retrieves the outbound RPC type used by this peer.
+   *
+   * @return the outbound RpcType
+   */
   public RpcType getOutboundRpcType() {
     return outboundRpcType;
   }
 
+  /**
+   * Retrieves the initial peer information used for connection.
+   *
+   * @return the initial PeerInfo
+   */
   public PeerInfo getInitialPeer() {
     return initialPeer;
   }
 
+  /**
+   * Retrieves the currently connected peer information.
+   *
+   * @return the current PeerInfo
+   */
   public PeerInfo getCurrentPeer() {
     return currentPeer;
   }
 
+  /**
+   * Checks if this peer is currently communicating with another peer.
+   *
+   * @return true if communicating with a peer; false otherwise
+   */
   public boolean isTalkingToPeer() {
     return talkingToPeer;
   }
 
+  /**
+   * Retrieves the URL of the PAL directory service.
+   *
+   * @return the PAL directory URL
+   */
   public String getPalDirectoryUrl() {
     return palDirectoryUrl;
   }
 
+  /**
+   * Retrieves the prefix used for Kafka log topics.
+   *
+   * @return the log prefix
+   */
   public String getLogPrefix() {
     return logPrefix;
   }
 
+  /**
+   * Checks if this peer is configured to self-register with the PAL directory.
+   *
+   * @return true if self-registration is enabled; false otherwise
+   */
   public boolean isSelfRegistering() {
     return registerSelf;
   }
 
+  /**
+   * Checks if the ZeroMQ socket is currently connected.
+   *
+   * @return true if the ZMQ socket is connected; false otherwise
+   */
   public boolean isZmqSocketConnected() {
     return isZmqSocketConnected;
   }
 
+  /**
+   * Checks if producing is currently enabled.
+   *
+   * @return true if producing is enabled; false otherwise
+   */
   public boolean isProducing() {
     return producing;
   }
 
+  /**
+   * Checks if consuming is currently enabled.
+   *
+   * @return true if consuming is enabled; false otherwise
+   */
   public boolean isConsuming() {
     return consuming;
   }
 
   // </editor-fold>
 
+  /** WebSocket client for handling JSON-RPC communication with a peer. */
   private static final class WsClient extends WebSocketClient {
+    /** Maps message IDs to their corresponding CompletableFuture responses. */
     private final Map<String, CompletableFuture<JsonRpcResponse>> futureResponses =
         new ConcurrentHashMap<>();
 
+    /**
+     * Constructs a new WsClient instance with the specified URI and HTTP headers.
+     *
+     * @param uri the URI to connect to
+     * @param httpHeaders the HTTP headers to include in the WebSocket handshake
+     */
     WsClient(URI uri, Map<String, String> httpHeaders) {
       super(uri, httpHeaders);
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Sends a message through the WebSocket connection.
+     */
     @Override
     public void send(String message) {
       if (logger.isDebugEnabled()) {
@@ -1171,6 +1667,14 @@ public class ThinPeer implements AutoCloseable {
       super.send(message);
     }
 
+    /**
+     * Sends a JSON-RPC request asynchronously through the WebSocket.
+     *
+     * @param message the JSON-RPC request message as a String
+     * @param messageId the identifier for the JSON-RPC message
+     * @return a CompletableFuture that will be completed with the JsonRpcResponse
+     * @throws JsonSerializationException if deserialization of the message fails
+     */
     public CompletableFuture<JsonRpcResponse> sendAsync(String message, @Nullable String messageId)
         throws JsonSerializationException {
       if (logger.isDebugEnabled()) {
@@ -1189,11 +1693,21 @@ public class ThinPeer implements AutoCloseable {
       return futureResponse;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Handles initialization tasks upon opening the WebSocket connection.
+     */
     @Override
     public void onOpen(ServerHandshake handshakedata) {
       logger.info("WebSocket connection opened");
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Processes incoming messages and completes the corresponding CompletableFuture.
+     */
     @Override
     public void onMessage(String message) {
       JsonRpcResponse response;
@@ -1212,11 +1726,21 @@ public class ThinPeer implements AutoCloseable {
       }
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Logs the closure of the WebSocket connection.
+     */
     @Override
     public void onClose(int code, String reason, boolean remote) {
       logger.info("WebSocket connection closed");
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Logs any errors that occur during WebSocket communication.
+     */
     @Override
     public void onError(Exception ex) {
       logger.error("WebSocket error", ex);

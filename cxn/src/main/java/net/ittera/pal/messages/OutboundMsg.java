@@ -35,36 +35,61 @@ import org.slf4j.LoggerFactory;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQException;
 
+/**
+ * Represents an outbound message in the Pal's runtime.
+ *
+ * <p>This class is responsible for constructing and sending messages through ZeroMQ sockets. It
+ * encapsulates the message type, execution phase, headers, identifiers, and body.
+ *
+ * <pre>
+ * FRAMES:
+ * -------
+ * 1. type of message    : int (MessageType)
+ * 2. [execution phase]  : int (ExecPhase: Undefined if MessageType != ExecMessage)
+ * 3. headers to follow  : int
+ * 4. [headers]          : byte[]* (InternalHeader)
+ * 5. message id         : byte[]
+ * 6. responseToId       : byte[]
+ * 7. message body       : byte[]
+ * </pre>
+ */
 public class OutboundMsg extends BaseMsg {
 
+  /** Logger instance. */
   private static final Logger logger = LoggerFactory.getLogger(OutboundMsg.class);
 
-  /**
-   *
-   *
-   * <pre>
-   * FRAMES:
-   * -------
-   * 1. type of message    : int (MessageType)
-   * 2. [execution phase]  : int (ExecPhase: Undefined if MessageType != ExecMessage)
-   * 3. headers to follow  : int
-   * 4. [headers]          : byte[]* (InternalHeader)
-   * 5. message id         : byte[]
-   * 6. responseToId       : byte[]
-   * 7. message body       : byte[]
-   * </pre>
-   */
-
-  // fields
+  /** The type of the message. */
   private final MessageType messageType;
 
+  /** The execution phase associated with the message. */
   private final ExecPhase execPhase;
+
+  /** The list of headers associated with the message. */
   @Nullable private final List<InternalHeader> headers;
+
+  /** The unique identifier for this message. */
   private final String messageId;
+
+  /** The identifier of the message to which this message is a response. */
   @Nullable private final String responseToId;
+
+  /** The body of the message as a byte array. */
   private final byte[] body;
 
-  // Only used by unit test
+  /**
+   * Constructs an OutboundMsg instance with the specified parameters. This constructor is primarily
+   * used for unit testing.
+   *
+   * @param messageType the type of the message
+   * @param execPhase the execution phase of the message
+   * @param headers the headers associated with the message, may be {@code null}
+   * @param messageId the unique identifier for the message
+   * @param responseToId the identifier of the message to which this message is a response, may be
+   *     {@code null}
+   * @param body the body of the message as a byte array
+   * @throws NullPointerException if any of {@code messageType}, {@code execPhase}, {@code
+   *     messageId}, or {@code body} is {@code null}
+   */
   OutboundMsg(
       MessageType messageType,
       ExecPhase execPhase,
@@ -82,6 +107,20 @@ public class OutboundMsg extends BaseMsg {
     this.body = body;
   }
 
+  /**
+   * Constructs an OutboundMsg instance with the specified parameters and marshalls the provided
+   * object.
+   *
+   * @param messageType the type of the message
+   * @param execPhase the execution phase of the message
+   * @param headers the headers associated with the message, may be {@code null}
+   * @param messageId the unique identifier for the message
+   * @param responseToId the identifier of the message to which this message is a response, may be
+   *     {@code null}
+   * @param marshallable the object to be marshalled into the message body, must not be {@code null}
+   * @throws NullPointerException if any of {@code messageType}, {@code execPhase}, {@code
+   *     messageId}, or {@code marshallable} is {@code null}
+   */
   public OutboundMsg(
       MessageType messageType,
       ExecPhase execPhase,
@@ -99,6 +138,18 @@ public class OutboundMsg extends BaseMsg {
     this.body = toBytes(marshallable);
   }
 
+  /**
+   * Constructs an OutboundMsg instance with the specified parameters and body size.
+   *
+   * @param messageType the type of the message
+   * @param execPhase the execution phase of the message
+   * @param headers the headers associated with the message, may be {@code null}
+   * @param messageId the unique identifier for the message
+   * @param responseToId the identifier of the message to which this message is a response, may be
+   *     {@code null}
+   * @param body the body of the message as a byte array
+   * @param size the size of the message in bytes
+   */
   private OutboundMsg(
       MessageType messageType,
       ExecPhase execPhase,
@@ -111,6 +162,13 @@ public class OutboundMsg extends BaseMsg {
     this.size = size;
   }
 
+  /**
+   * Sends the outbound message through the specified ZeroMQ socket.
+   *
+   * @param socket the ZeroMQ socket to send the message through, must not be {@code null}
+   * @return {@code true} if the message was sent successfully; {@code false} otherwise
+   * @throws IllegalArgumentException if the provided socket is {@code null}
+   */
   @Override
   public boolean send(ZMQ.Socket socket) {
     if (socket == null) {
@@ -177,8 +235,16 @@ public class OutboundMsg extends BaseMsg {
     return socket.send(body, 0);
   }
 
-  // blocking flag only applies to first read, by virtue of messages being atomic (if 1st frame is
-  // ready, then all are)
+  /**
+   * Receives an outbound message from the specified ZeroMQ socket.
+   *
+   * @param socket the ZeroMQ socket to receive the message from, must not be {@code null}
+   * @param blocking {@code true} to block until a message is received; {@code false} to return
+   *     immediately if no message is available
+   * @return an {@code OutboundMsg} instance representing the received message, or {@code null} if
+   *     no message was received and {@code blocking} is {@code false}
+   * @throws IllegalArgumentException if the provided socket is {@code null}
+   */
   public static OutboundMsg receive(ZMQ.Socket socket, boolean blocking) {
     if (socket == null) {
       throw new IllegalArgumentException("Socket is null");
@@ -239,11 +305,19 @@ public class OutboundMsg extends BaseMsg {
     return new OutboundMsg(messageType, execPhase, headers, messageId, responseToId, body, msgSize);
   }
 
-  // default is non-blocking
+  /**
+   * Receives an outbound message from the specified ZeroMQ socket in a non-blocking manner.
+   *
+   * @param socket the ZeroMQ socket to receive the message from, must not be {@code null}
+   * @return an {@code OutboundMsg} instance representing the received message, or {@code null} if
+   *     no message was received
+   * @throws IllegalArgumentException if the provided socket is {@code null}
+   */
   public static OutboundMsg receive(ZMQ.Socket socket) {
     return receive(socket, false);
   }
 
+  /** {@inheritDoc} */
   @Override
   @SuppressWarnings("EqualsGetClass")
   public boolean equals(Object o) {
@@ -262,6 +336,7 @@ public class OutboundMsg extends BaseMsg {
         && Arrays.equals(body, that.body);
   }
 
+  /** {@inheritDoc} */
   @Override
   public int hashCode() {
     int result = Objects.hash(messageType, execPhase, headers, messageId, responseToId);
@@ -269,6 +344,7 @@ public class OutboundMsg extends BaseMsg {
     return result;
   }
 
+  /** {@inheritDoc} */
   @Override
   public String toString() {
     return "OutboundMsg{"
@@ -289,29 +365,59 @@ public class OutboundMsg extends BaseMsg {
         + '}';
   }
 
+  /**
+   * Returns the type of the message.
+   *
+   * @return the message type
+   */
   public MessageType getMessageType() {
     return messageType;
   }
 
+  /**
+   * Returns the execution phase of the message.
+   *
+   * @return the execution phase, or {@code null} if not applicable
+   */
   @Nullable
   public ExecPhase getExecPhase() {
     return execPhase;
   }
 
+  /**
+   * Returns the headers associated with the message.
+   *
+   * @return the list of internal headers, or {@code null} if no headers are present
+   */
   @Nullable
   public List<InternalHeader> getHeaders() {
     return headers;
   }
 
+  /**
+   * Returns the unique identifier of the message.
+   *
+   * @return the message identifier
+   */
   public String getMessageId() {
     return messageId;
   }
 
+  /**
+   * Returns the identifier of the message to which this message is a response.
+   *
+   * @return the response-to message identifier, or {@code null} if not applicable
+   */
   @Nullable
   public String getResponseToId() {
     return responseToId;
   }
 
+  /**
+   * Returns the body of the message.
+   *
+   * @return the message body as a byte array
+   */
   public byte[] getBody() {
     return body;
   }

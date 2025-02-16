@@ -21,4 +21,13 @@ package net.ittera.pal.messages;
 
 import org.apache.kafka.common.header.Header;
 
+/**
+ * Represents a header in log messages, implementing the {@link Header} interface from Apache Kafka.
+ *
+ * <p>This record-class encapsulates a key-value pair used to store header information associated
+ * with log messages.
+ *
+ * @param key the key of the header, must not be {@code null} or empty
+ * @param value the value of the header as a byte array, may be {@code null} or empty
+ */
 public record LogMessageHeader(String key, byte[] value) implements Header {}
