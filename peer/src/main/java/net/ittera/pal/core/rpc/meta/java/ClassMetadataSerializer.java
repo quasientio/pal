@@ -79,7 +79,37 @@ public class ClassMetadataSerializer {
         // create JSON object for the class
         ObjectNode classObject = mapper.createObjectNode();
         classObject.put("className", className);
+        classObject.put("simpleName", classInfo.getSimpleName());
+        classObject.put("package", classInfo.getPackageName());
         classObject.put("modifiers", classInfo.getModifiers());
+        classObject.put("majorVersion", classInfo.getClassfileMajorVersion());
+        classObject.put("minorVersion", classInfo.getClassfileMinorVersion());
+        classObject.put("sourceFile", classInfo.getSourceFile());
+        classObject.put("isArrayClass", classInfo.isArrayClass());
+        if (classInfo.getSuperclass() != null) {
+          classObject.put("superclass", classInfo.getSuperclass().getName());
+        }
+
+        // superclasses
+        ArrayNode superClassesArray = mapper.createArrayNode();
+        for (ClassInfo superClass : classInfo.getSuperclasses()) {
+          superClassesArray.add(superClass.getName());
+        }
+        classObject.set("superclasses", superClassesArray);
+
+        // interfaces
+        ArrayNode interfacesArray = mapper.createArrayNode();
+        for (ClassInfo iFace : classInfo.getInterfaces()) {
+          superClassesArray.add(iFace.getName());
+        }
+        classObject.set("interfaces", interfacesArray);
+
+        // subclasses
+        ArrayNode subClassesArray = mapper.createArrayNode();
+        for (ClassInfo subclass : classInfo.getSubclasses()) {
+          subClassesArray.add(subclass.getName());
+        }
+        classObject.set("subclasses", subClassesArray);
 
         // constructors
         ArrayNode constructorsArray = mapper.createArrayNode();
