@@ -368,14 +368,16 @@ public class JsonRpcMessageFactory {
 
   /**
    * Constructs a JSON-RPC meta message to fetch information about classes, optionally excluding
-   * classes with specified prefixes.
+   * classes with specified prefixes, or only those explicitly required to be included.
    *
+   * @param includeClasses an array of class names to include from the fetched information; if
+   *     given, all others will be excluded; may be {@code null} or empty
    * @param excludePrefixes an array of class name prefixes to exclude from the fetched information;
    *     may be {@code null} or empty to include all classes
    * @return a {@link JsonRpcRequest} representing the fetch classes information meta message
    */
   public static JsonRpcRequest buildFetchClassesInfoMetaMessage(
-      @Nullable String[] excludePrefixes) {
+      @Nullable String[] includeClasses, @Nullable String[] excludePrefixes) {
     JsonRpcRequest rpcRequest =
         JsonRpcRequest.builder()
             .withId(nextId())
@@ -390,23 +392,25 @@ public class JsonRpcMessageFactory {
       rpcRequest
           .getParams()
           .getArgs()
-          .add(
-              Argument.builder()
-                  .withName("exclude_prefixes")
-                  .withValue(new String[] {"java.util", "java.lang"})
-                  .build());
+          .add(Argument.builder().withName("exclude_prefixes").withValue(excludePrefixes).build());
+    }
+    if (includeClasses != null && includeClasses.length > 0) {
+      rpcRequest
+          .getParams()
+          .getArgs()
+          .add(Argument.builder().withName("include_classes").withValue(includeClasses).build());
     }
     return rpcRequest;
   }
 
   /**
-   * Constructs a JSON-RPC meta message to fetch information about classes without excluding any
-   * prefixes.
+   * Constructs a JSON-RPC meta message to fetch information about classes without explicitly
+   * including any class names nor excluding any prefixes.
    *
    * @return a {@link JsonRpcRequest} representing the fetch classes information meta message
    */
   public static JsonRpcRequest buildFetchClassesInfoMetaMessage() {
-    return buildFetchClassesInfoMetaMessage(null);
+    return buildFetchClassesInfoMetaMessage(null, null);
   }
 
   // </editor-fold>

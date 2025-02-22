@@ -55,7 +55,8 @@ public class MetaMessageIT extends AbstractJsonRpcMessageIT {
   @Test
   public void sendMetaMessage_fetchClassMetadataWithExcludes_metadataReturned() throws Exception {
     String[] excludes = new String[] {"java.util", "java.lang"};
-    JsonRpcRequest rpcRequest = JsonRpcMessageFactory.buildFetchClassesInfoMetaMessage(excludes);
+    JsonRpcRequest rpcRequest =
+        JsonRpcMessageFactory.buildFetchClassesInfoMetaMessage(null, excludes);
     JsonRpcResponse rpcResponse = sendAndReceive(rpcRequest);
     assertNotNull(rpcResponse);
     assertNull(rpcResponse.getError());
@@ -80,5 +81,28 @@ public class MetaMessageIT extends AbstractJsonRpcMessageIT {
     // expect no java.lang classes
     javaUtilClassNameEntry = "\"className\" : \"java.lang.";
     assertEquals(0, findOccurrences(javaUtilClassNameEntry, plainBody));
+  }
+
+  @Test
+  public void sendMetaMessage_fetchClassMetadataWithIncludeClasses_metadataReturned()
+      throws Exception {
+    String[] includes = new String[] {"java.lang.System", "java.lang.Math"};
+    JsonRpcRequest rpcRequest =
+        JsonRpcMessageFactory.buildFetchClassesInfoMetaMessage(includes, null);
+    JsonRpcResponse rpcResponse = sendAndReceive(rpcRequest);
+    assertNotNull(rpcResponse);
+    assertNull(rpcResponse.getError());
+    assertNotNull(rpcResponse.getResult());
+    JsonRpcResponseReturnValue result = rpcResponse.getResult();
+    assertNotNull(result.getValue());
+    String body = result.getValue().getValue();
+    assertNotNull(body);
+    assertFalse(body.isEmpty());
+
+    // decompress && decode body
+    String plainBody = GzipBase64Utils.decode(body);
+
+    String searchString = "className";
+    assertEquals(2, findOccurrences(searchString, plainBody));
   }
 }

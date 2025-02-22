@@ -59,6 +59,7 @@ public class MetaMessageDispatcher {
     // set parameter defaults
     final boolean compressAndEncode = true;
     Set<String> excludePrefixes = null;
+    Set<String> includeClasses = null;
 
     // parse given params
     Parameter[] params = metaMessage.getParams();
@@ -68,12 +69,22 @@ public class MetaMessageDispatcher {
           continue;
         }
         if (param.getName().equalsIgnoreCase("exclude_prefixes") && param.getValue() != null) {
+          // process "exclude_prefixes"
           excludePrefixes = new HashSet<>();
           try {
             Collections.addAll(
                 excludePrefixes, (String[]) Unwrapper.unwrapObject(param.getValue()));
           } catch (Exception e) {
             throw new RuntimeException("Error unwrapping parameter to 'exclude_prefixes'", e);
+          }
+        } else if (param.getName().equalsIgnoreCase("include_classes")
+            && param.getValue() != null) {
+          // process "include_classes"
+          includeClasses = new HashSet<>();
+          try {
+            Collections.addAll(includeClasses, (String[]) Unwrapper.unwrapObject(param.getValue()));
+          } catch (Exception e) {
+            throw new RuntimeException("Error unwrapping parameter to 'includeClasses'", e);
           }
         } else {
           logger.warn("Ignoring parameter name={}, value={}", param.getName(), param.getValue());
@@ -85,7 +96,8 @@ public class MetaMessageDispatcher {
       case FETCH_CLASSES_INFO:
         try {
           String scanResults =
-              classMetadataSerializer.scannedClasspathToJson(compressAndEncode, excludePrefixes);
+              classMetadataSerializer.scannedClasspathToJson(
+                  compressAndEncode, includeClasses, excludePrefixes);
           return messageBuilder.buildMetaMessageResponse(
               peerUuid, MetaStatusType.OK, scanResults, metaMessage.getMessageId());
         } catch (Exception e) {

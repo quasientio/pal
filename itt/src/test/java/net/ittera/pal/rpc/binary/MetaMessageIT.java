@@ -95,4 +95,26 @@ public class MetaMessageIT extends AbstractBinaryRpcMessageIT {
     javaUtilClassNameEntry = "\"className\" : \"java.lang.";
     assertEquals(0, findOccurrences(javaUtilClassNameEntry, plainBody));
   }
+
+  @Test
+  public void sendMetaMessage_fetchClassMetadataWithIncludeClasses_metadataReturned() {
+
+    Map<String, Object> fetchClassMetadataParams =
+        Map.of("include_classes", new String[] {"java.lang.System", "java.lang.Math"});
+
+    MetaMessage metaMessageRequest =
+        messageBuilder.buildMetaMessageRequest(
+            clientId, generateId(), MetaServiceType.FETCH_CLASSES_INFO, fetchClassMetadataParams);
+
+    MetaMessage metaMessageResponse = sendAndReceive(metaMessageRequest);
+    assertNotNull(metaMessageResponse);
+    assertEquals(MetaStatusType.OK.getId(), metaMessageResponse.getStatus());
+    String body = metaMessageResponse.getBody();
+    assertFalse(body.isEmpty());
+
+    // decompress && decode body
+    String plainBody = GzipBase64Utils.decode(body);
+
+    assertEquals(2, findOccurrences("className", plainBody));
+  }
 }

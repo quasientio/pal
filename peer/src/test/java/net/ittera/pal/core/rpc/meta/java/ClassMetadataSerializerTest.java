@@ -32,7 +32,7 @@ public class ClassMetadataSerializerTest {
 
   @Test
   public void testScanAndWriteToFile() throws IOException {
-    String classesMetadata = classMetadataSerializer.scannedClasspathToJson(false, null);
+    String classesMetadata = classMetadataSerializer.scannedClasspathToJson(false, null, null);
     String searchString = "className";
     // expect 10000 classes at least
     int minExpectedClassCount = 10000;
@@ -49,7 +49,7 @@ public class ClassMetadataSerializerTest {
     additionalExcludePrefixes.add("java.util");
 
     String scannedClasses =
-        classMetadataSerializer.scannedClasspathToJson(false, additionalExcludePrefixes);
+        classMetadataSerializer.scannedClasspathToJson(false, null, additionalExcludePrefixes);
 
     String searchString = "className";
     // expect 10000 classes at least
@@ -59,5 +59,18 @@ public class ClassMetadataSerializerTest {
     // expect no java.util class
     String javaUtilClassNameEntry = "\"className\" : \"java.util.";
     assertEquals(0, findOccurrences(javaUtilClassNameEntry, scannedClasses));
+  }
+
+  @Test
+  public void testScanWithIncludeClasses() throws IOException {
+    Set<String> includeClasses = new HashSet<>();
+    includeClasses.add("java.util.List");
+    includeClasses.add("java.util.Set");
+
+    String scannedClasses =
+        classMetadataSerializer.scannedClasspathToJson(false, includeClasses, null);
+
+    String searchString = "className";
+    assertEquals(2, findOccurrences(searchString, scannedClasses));
   }
 }

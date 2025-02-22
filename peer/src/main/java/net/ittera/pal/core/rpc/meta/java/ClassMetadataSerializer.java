@@ -38,7 +38,9 @@ public class ClassMetadataSerializer {
   }
 
   public String scannedClasspathToJson(
-      boolean compressAndEncode, @Nullable Set<String> additionalExcludePrefixes)
+      boolean compressAndEncode,
+      @Nullable Set<String> includeClasses,
+      @Nullable Set<String> additionalExcludePrefixes)
       throws JsonProcessingException {
     ObjectMapper mapper = new ObjectMapper();
 
@@ -48,14 +50,23 @@ public class ClassMetadataSerializer {
     // store all class metadata as an array
     ArrayNode classesArray = mapper.createArrayNode();
 
-    ClassGraph classGraph =
-        new ClassGraph()
-            .enableClassInfo()
-            .enableMethodInfo()
-            .enableFieldInfo()
-            .acceptPackages()
-            .disableRuntimeInvisibleAnnotations()
-            .enableSystemJarsAndModules();
+    ClassGraph classGraph;
+    if (includeClasses != null && !includeClasses.isEmpty()) {
+      // we will only scan the classes to include
+      classGraph =
+          new ClassGraph()
+              .enableAllInfo()
+              .acceptClasses(includeClasses.toArray(new String[0]))
+              .disableRuntimeInvisibleAnnotations()
+              .enableSystemJarsAndModules();
+    } else {
+      classGraph =
+          new ClassGraph()
+              .enableAllInfo()
+              .acceptPackages()
+              .disableRuntimeInvisibleAnnotations()
+              .enableSystemJarsAndModules();
+    }
 
     if (scanNonPublic) {
       classGraph.ignoreClassVisibility().ignoreMethodVisibility().ignoreFieldVisibility();
