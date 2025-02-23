@@ -147,6 +147,7 @@ public class ClassMetadataSerializer {
           ObjectNode methodObject = mapper.createObjectNode();
           methodObject.put("name", methodInfo.getName());
           methodObject.put("modifiers", methodInfo.getModifiers());
+          methodObject.put("isStatic", methodInfo.isStatic());
           methodObject.put(
               "returnType",
               methodInfo.getTypeSignatureOrTypeDescriptor().getResultType().toString());
@@ -174,6 +175,7 @@ public class ClassMetadataSerializer {
           fieldObject.put("name", fieldInfo.getName());
           fieldObject.put("modifiers", fieldInfo.getModifiers());
           fieldObject.put("type", fieldInfo.getTypeSignatureOrTypeDescriptor().toString());
+          fieldObject.put("isStatic", fieldInfo.isStatic());
           fieldsArray.add(fieldObject);
         }
         classObject.set("fields", fieldsArray);

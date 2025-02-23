@@ -341,6 +341,7 @@ public class Metadata {
   public static class MethodInfo {
     String name;
     int modifiers;
+    boolean isStatic;
     String returnType;
     List<ParameterInfo> parameters = new ArrayList<>();
 
@@ -376,6 +377,14 @@ public class Metadata {
       return returnType;
     }
 
+    public boolean isStatic() {
+      return isStatic;
+    }
+
+    public void setStatic(boolean aStatic) {
+      isStatic = aStatic;
+    }
+
     @Override
     public String toString() {
       return "MethodInfo{"
@@ -387,6 +396,8 @@ public class Metadata {
           + ", returnType='"
           + returnType
           + '\''
+          + ", isStatic="
+          + isStatic
           + ", parameters="
           + parameters
           + '}';
@@ -396,6 +407,7 @@ public class Metadata {
   public static class FieldInfo {
     String name;
     int modifiers;
+    boolean isStatic;
     String type;
 
     public int getModifiers() {
@@ -422,6 +434,14 @@ public class Metadata {
       return type;
     }
 
+    public boolean isStatic() {
+      return isStatic;
+    }
+
+    public void setStatic(boolean aStatic) {
+      isStatic = aStatic;
+    }
+
     @Override
     public String toString() {
       return "FieldInfo{"
@@ -433,6 +453,8 @@ public class Metadata {
           + ", type='"
           + type
           + '\''
+          + ", isStatic="
+          + isStatic
           + '}';
     }
   }
