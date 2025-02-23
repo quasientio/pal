@@ -57,7 +57,7 @@ public class MetaMessageDispatcher {
     final MetaServiceType serviceType = MetaServiceType.fromId(metaMessage.getService());
 
     // set parameter defaults
-    final boolean compressAndEncode = true;
+    boolean compressAndEncode = true;
     Set<String> excludePrefixes = null;
     Set<String> includeClasses = null;
 
@@ -68,7 +68,16 @@ public class MetaMessageDispatcher {
         if (param.getName() == null || param.getValue() == null) {
           continue;
         }
-        if (param.getName().equalsIgnoreCase("exclude_prefixes") && param.getValue() != null) {
+        if (param.getName().equalsIgnoreCase("compress_encode") && param.getValue() != null) {
+          // process "process_encode"
+          try {
+            compressAndEncode =
+                Boolean.parseBoolean((String) Unwrapper.unwrapObject(param.getValue()));
+          } catch (Exception e) {
+            throw new RuntimeException("Error unwrapping parameter to 'compress_encode'", e);
+          }
+        } else if (param.getName().equalsIgnoreCase("exclude_prefixes")
+            && param.getValue() != null) {
           // process "exclude_prefixes"
           excludePrefixes = new HashSet<>();
           try {
