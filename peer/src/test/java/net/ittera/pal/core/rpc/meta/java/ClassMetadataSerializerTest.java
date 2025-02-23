@@ -39,7 +39,7 @@ public class ClassMetadataSerializerTest {
     assertTrue(findOccurrences(searchString, classesMetadata) > minExpectedClassCount);
 
     // expect at least 300 java.util classes
-    String javaUtilClassNameEntry = "\"className\" : \"java.util.";
+    String javaUtilClassNameEntry = "\"className\":\"java.util.";
     assertTrue(findOccurrences(javaUtilClassNameEntry, classesMetadata) > 300);
   }
 

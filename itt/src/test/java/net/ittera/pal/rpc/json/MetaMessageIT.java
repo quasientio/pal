@@ -75,11 +75,11 @@ public class MetaMessageIT extends AbstractJsonRpcMessageIT {
     assertTrue(findOccurrences(searchString, plainBody) > minExpectedClassCount);
 
     // expect no java.util classes
-    String javaUtilClassNameEntry = "\"className\" : \"java.util.";
+    String javaUtilClassNameEntry = "\"className\":\"java.util.";
     assertEquals(0, findOccurrences(javaUtilClassNameEntry, plainBody));
 
     // expect no java.lang classes
-    javaUtilClassNameEntry = "\"className\" : \"java.lang.";
+    javaUtilClassNameEntry = "\"className\":\"java.lang.";
     assertEquals(0, findOccurrences(javaUtilClassNameEntry, plainBody));
   }
 
