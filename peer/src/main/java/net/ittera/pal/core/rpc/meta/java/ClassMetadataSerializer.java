@@ -141,6 +141,9 @@ public class ClassMetadataSerializer {
         // methods
         ArrayNode methodsArray = mapper.createArrayNode();
         for (MethodInfo methodInfo : classInfo.getDeclaredMethodInfo()) {
+          if (isAspectWeaverMethod(methodInfo)) {
+            continue;
+          }
           ObjectNode methodObject = mapper.createObjectNode();
           methodObject.put("name", methodInfo.getName());
           methodObject.put("modifiers", methodInfo.getModifiers());
@@ -164,6 +167,9 @@ public class ClassMetadataSerializer {
         // fields
         ArrayNode fieldsArray = mapper.createArrayNode();
         for (FieldInfo fieldInfo : classInfo.getDeclaredFieldInfo()) {
+          if (isAspectWeaverField(fieldInfo)) {
+            continue;
+          }
           ObjectNode fieldObject = mapper.createObjectNode();
           fieldObject.put("name", fieldInfo.getName());
           fieldObject.put("modifiers", fieldInfo.getModifiers());
@@ -196,5 +202,15 @@ public class ClassMetadataSerializer {
 
     // return the Base64-encoded, GZip-compressed JSON
     return GzipBase64Utils.encode(classMetadataAsJson);
+  }
+
+  private static boolean isAspectWeaverMethod(MethodInfo methodInfo) {
+    return methodInfo.isSynthetic()
+        || methodInfo.getName().contains("_aroundBody")
+        || methodInfo.getName().contains("$");
+  }
+
+  private static boolean isAspectWeaverField(FieldInfo fieldInfo) {
+    return fieldInfo.isSynthetic() || fieldInfo.getName().contains("ajc$");
   }
 }
