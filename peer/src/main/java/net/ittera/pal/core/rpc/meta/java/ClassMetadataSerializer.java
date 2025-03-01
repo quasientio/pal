@@ -51,14 +51,18 @@ public class ClassMetadataSerializer {
       // we will only scan the classes to include
       classGraph =
           new ClassGraph()
-              .enableAllInfo()
+              .enableClassInfo()
+              .enableMethodInfo()
+              .enableFieldInfo()
               .acceptClasses(includeClasses.toArray(new String[0]))
               .disableRuntimeInvisibleAnnotations()
               .enableSystemJarsAndModules();
     } else {
       classGraph =
           new ClassGraph()
-              .enableAllInfo()
+              .enableClassInfo()
+              .enableMethodInfo()
+              .enableFieldInfo()
               .acceptPackages()
               .disableRuntimeInvisibleAnnotations()
               .enableSystemJarsAndModules();
