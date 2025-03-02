@@ -8,10 +8,16 @@ import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ClassInfo;
 import io.github.classgraph.FieldInfo;
 import io.github.classgraph.MethodInfo;
+import io.github.classgraph.MethodParameterInfo;
 import io.github.classgraph.ScanResult;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nullable;
 import net.ittera.pal.common.util.GzipBase64Utils;
@@ -22,10 +28,11 @@ import org.slf4j.LoggerFactory;
 public class ClassMetadataSerializer {
 
   private static final Logger logger = LoggerFactory.getLogger(ClassMetadataSerializer.class);
-  private final boolean scanNonPublic;
   private static final String PAL_PREFIX = "net.ittera.pal.";
   private static final Set<String> CLASS_PREFIXES_TO_EXCLUDE =
       Set.of("com.sun.", "sun.", "jdk.", PAL_PREFIX);
+
+  private final boolean scanNonPublic;
 
   @Inject
   public ClassMetadataSerializer(@Named("rpc.allow_nonpublic") String rpcAllowNonpublicStr) {
@@ -36,13 +43,20 @@ public class ClassMetadataSerializer {
     this.scanNonPublic = rpcAllowNonpublic;
   }
 
+  /**
+   * @param compressAndEncode if true, returns Base64-encoded GZip-compressed JSON
+   * @param includeClasses optional set of specific classes to include
+   * @param additionalExcludePrefixes optional set of additional class prefixes to exclude
+   * @param mergeAncestry if true, merges methods and fields from all ancestors
+   */
   public String scannedClasspathToJson(
       boolean compressAndEncode,
       @Nullable Set<String> includeClasses,
-      @Nullable Set<String> additionalExcludePrefixes)
+      @Nullable Set<String> additionalExcludePrefixes,
+      boolean mergeAncestry)
       throws JsonProcessingException {
-    ObjectMapper mapper = new ObjectMapper();
 
+    ObjectMapper mapper = new ObjectMapper();
     // store all class metadata as an array
     ArrayNode classesArray = mapper.createArrayNode();
 
@@ -74,12 +88,10 @@ public class ClassMetadataSerializer {
 
     try (ScanResult scanResult = classGraph.scan()) {
       for (ClassInfo classInfo :
-          scanResult
-              .getAllClasses()
-              .filter(
-                  classInfo -> !classInfo.getName().contains("$"))) { // filter out inner classes
-        // skip class if it starts with an exclude prefix
+          scanResult.getAllClasses().filter(ci -> !ci.getName().contains("$"))) {
         String className = classInfo.getName();
+
+        // skip class if it starts with an exclude prefix
         if (CLASS_PREFIXES_TO_EXCLUDE.stream().anyMatch(className::startsWith)) {
           continue;
         }
@@ -87,6 +99,7 @@ public class ClassMetadataSerializer {
             && additionalExcludePrefixes.stream().anyMatch(className::startsWith)) {
           continue;
         }
+
         // create JSON object for the class
         ObjectNode classObject = mapper.createObjectNode();
         classObject.put("className", className);
@@ -111,7 +124,7 @@ public class ClassMetadataSerializer {
         // interfaces
         ArrayNode interfacesArray = mapper.createArrayNode();
         for (ClassInfo iFace : classInfo.getInterfaces()) {
-          superClassesArray.add(iFace.getName());
+          interfacesArray.add(iFace.getName());
         }
         classObject.set("interfaces", interfacesArray);
 
@@ -122,66 +135,28 @@ public class ClassMetadataSerializer {
         }
         classObject.set("subclasses", subClassesArray);
 
-        // constructors
+        // If mergeAncestry = false, we only collect declared members from classInfo
+        // Otherwise, we collect and unify from all ancestors.
+        // The final arrays below will contain a merged set of members.
         ArrayNode constructorsArray = mapper.createArrayNode();
-        for (MethodInfo constructorInfo : classInfo.getDeclaredConstructorInfo()) {
-          ObjectNode constructorObject = mapper.createObjectNode();
-          constructorObject.put("name", constructorInfo.getName());
-          constructorObject.put("modifiers", constructorInfo.getModifiers());
-
-          ArrayNode parametersArray = mapper.createArrayNode();
-          for (var paramInfo : constructorInfo.getParameterInfo()) {
-            ObjectNode paramObject = mapper.createObjectNode();
-            paramObject.put("name", paramInfo.getName());
-            paramObject.put("modifiers", paramInfo.getModifiers());
-            paramObject.put("type", paramInfo.getTypeSignatureOrTypeDescriptor().toString());
-            parametersArray.add(paramObject);
-          }
-          constructorObject.set("parameters", parametersArray);
-          constructorsArray.add(constructorObject);
-        }
-        classObject.set("constructors", constructorsArray);
-
-        // methods
         ArrayNode methodsArray = mapper.createArrayNode();
-        for (MethodInfo methodInfo : classInfo.getDeclaredMethodInfo()) {
-          if (isAspectWeaverMethod(methodInfo)) {
-            continue;
-          }
-          ObjectNode methodObject = mapper.createObjectNode();
-          methodObject.put("name", methodInfo.getName());
-          methodObject.put("modifiers", methodInfo.getModifiers());
-          methodObject.put("isStatic", methodInfo.isStatic());
-          methodObject.put(
-              "returnType",
-              methodInfo.getTypeSignatureOrTypeDescriptor().getResultType().toString());
-
-          ArrayNode parametersArray = mapper.createArrayNode();
-          for (var paramInfo : methodInfo.getParameterInfo()) {
-            ObjectNode paramObject = mapper.createObjectNode();
-            paramObject.put("name", paramInfo.getName());
-            paramObject.put("modifiers", paramInfo.getModifiers());
-            paramObject.put("type", paramInfo.getTypeSignatureOrTypeDescriptor().toString());
-            parametersArray.add(paramObject);
-          }
-          methodObject.set("parameters", parametersArray);
-          methodsArray.add(methodObject);
-        }
-        classObject.set("methods", methodsArray);
-
-        // fields
         ArrayNode fieldsArray = mapper.createArrayNode();
-        for (FieldInfo fieldInfo : classInfo.getDeclaredFieldInfo()) {
-          if (isAspectWeaverField(fieldInfo)) {
-            continue;
-          }
-          ObjectNode fieldObject = mapper.createObjectNode();
-          fieldObject.put("name", fieldInfo.getName());
-          fieldObject.put("modifiers", fieldInfo.getModifiers());
-          fieldObject.put("type", fieldInfo.getTypeSignatureOrTypeDescriptor().toString());
-          fieldObject.put("isStatic", fieldInfo.isStatic());
-          fieldsArray.add(fieldObject);
+
+        fillConstructorsArray(mapper, classInfo, constructorsArray);
+        if (!mergeAncestry) {
+          // Plain old declared info
+          fillMethodsArray(mapper, classInfo, methodsArray);
+          fillFieldsArray(mapper, classInfo, fieldsArray);
+        } else {
+          // We'll gather from all ancestors (including interfaces).
+          // This method returns a merged representation for each category.
+          mergeMethods(mapper, classInfo, methodsArray);
+          mergeFields(mapper, classInfo, fieldsArray);
         }
+
+        // Attach arrays
+        classObject.set("constructors", constructorsArray);
+        classObject.set("methods", methodsArray);
         classObject.set("fields", fieldsArray);
 
         // add class to array
@@ -195,7 +170,6 @@ public class ClassMetadataSerializer {
       logger.error("Error generating class metadata", e);
     }
 
-    // convert the json tree to a pretty-printed JSON string
     String classMetadataAsJson = mapper.writeValueAsString(classesArray);
 
     // help the gc
@@ -208,6 +182,317 @@ public class ClassMetadataSerializer {
 
     // return the Base64-encoded, GZip-compressed JSON
     return GzipBase64Utils.encode(classMetadataAsJson);
+  }
+
+  /** Collect declared constructors for a classInfo, excluding synthetic/aspect-weaver items. */
+  private static void fillConstructorsArray(
+      ObjectMapper mapper, ClassInfo classInfo, ArrayNode constructorsArray) {
+    for (MethodInfo constructorInfo : classInfo.getDeclaredConstructorInfo()) {
+      if (isAspectWeaverMethod(constructorInfo)) {
+        continue;
+      }
+      ObjectNode constructorObject = createConstructorJson(mapper, constructorInfo);
+      constructorsArray.add(constructorObject);
+    }
+  }
+
+  /** Collect methods for a classInfo, excluding synthetic/aspect-weaver items. */
+  private static void fillMethodsArray(
+      ObjectMapper mapper, ClassInfo classInfo, ArrayNode methodsArray) {
+    for (MethodInfo methodInfo : classInfo.getMethodInfo()) {
+      if (isAspectWeaverMethod(methodInfo)) {
+        continue;
+      }
+      ObjectNode methodObject = createMethodJson(mapper, methodInfo, null, false);
+      methodsArray.add(methodObject);
+    }
+  }
+
+  /** Collect fields for a classInfo, excluding synthetic/aspect-weaver items. */
+  private static void fillFieldsArray(
+      ObjectMapper mapper, ClassInfo classInfo, ArrayNode fieldsArray) {
+    for (FieldInfo fieldInfo : classInfo.getFieldInfo()) {
+      if (isAspectWeaverField(fieldInfo)) {
+        continue;
+      }
+      ObjectNode fieldObject = createFieldJson(mapper, fieldInfo, null, false);
+      fieldsArray.add(fieldObject);
+    }
+  }
+
+  /**
+   * Merges methods from all ancestors (superclasses + interfaces + their superinterfaces). -
+   * "inheritedFrom" is always the ancestor where it was declared. - If the local class overrides a
+   * method with the same signature, we replace it with the child's version and set "overridden =
+   * true" in the child's JSON.
+   */
+  private static void mergeMethods(
+      ObjectMapper mapper, ClassInfo classInfo, ArrayNode methodsArray) {
+    Map<String, ObjectNode> signatureMap = new HashMap<>();
+
+    // Step 1: gather from all ancestors
+    Set<ClassInfo> allAncestors = gatherAllAncestors(classInfo);
+    for (ClassInfo ancestor : allAncestors) {
+      for (MethodInfo methodInfo : ancestor.getDeclaredMethodInfo()) {
+        if (isAspectWeaverMethod(methodInfo)) {
+          continue;
+        }
+        String sig = methodSignature(methodInfo);
+        if (!signatureMap.containsKey(sig)) {
+          ObjectNode methodJson = createMethodJson(mapper, methodInfo, ancestor.getName(), false);
+          signatureMap.put(sig, methodJson);
+        }
+      }
+    }
+
+    // 2) forcibly add all java.lang.Object methods via reflection
+    addJavaLangObjectMethodsViaReflection(mapper, signatureMap);
+
+    // Step 3: incorporate local declared methods
+    for (MethodInfo methodInfo : classInfo.getDeclaredMethodInfo()) {
+      if (isAspectWeaverMethod(methodInfo)) {
+        continue;
+      }
+      String sig = methodSignature(methodInfo);
+      if (signatureMap.containsKey(sig)) {
+        // It's an override
+        ObjectNode ancestorMethod = signatureMap.get(sig);
+        String inheritedFrom = ancestorMethod.get("inheritedFrom").asText();
+        ObjectNode localJson = createMethodJson(mapper, methodInfo, inheritedFrom, true);
+        signatureMap.put(sig, localJson);
+      } else {
+        // Purely local
+        ObjectNode localJson = createMethodJson(mapper, methodInfo, null, false);
+        signatureMap.put(sig, localJson);
+      }
+    }
+
+    // Put them in the final array
+    for (ObjectNode method : signatureMap.values()) {
+      methodsArray.add(method);
+    }
+  }
+
+  /**
+   * Merges fields from all ancestors. Technically fields aren't inherited in the same sense as
+   * methods, but we do the same pattern for a "full metadata" view. - "inheritedFrom" is set to the
+   * ancestor that declares the field. - If the local class has a field with the same name (i.e.,
+   * shadows the ancestor field), we replace the ancestor entry with the child's and set "overridden
+   * = true".
+   */
+  private static void mergeFields(ObjectMapper mapper, ClassInfo classInfo, ArrayNode fieldsArray) {
+    Map<String, ObjectNode> nameMap = new HashMap<>();
+
+    // Step 1: gather from all ancestors
+    Set<ClassInfo> allAncestors = gatherAllAncestors(classInfo);
+    for (ClassInfo ancestor : allAncestors) {
+      for (FieldInfo fieldInfo : ancestor.getDeclaredFieldInfo()) {
+        if (isAspectWeaverField(fieldInfo)) {
+          continue;
+        }
+        String fieldName = fieldInfo.getName();
+        if (!nameMap.containsKey(fieldName)) {
+          ObjectNode fieldJson = createFieldJson(mapper, fieldInfo, ancestor.getName(), false);
+          nameMap.put(fieldName, fieldJson);
+        }
+      }
+    }
+
+    // Step 2: local declared fields
+    for (FieldInfo fieldInfo : classInfo.getDeclaredFieldInfo()) {
+      if (isAspectWeaverField(fieldInfo)) {
+        continue;
+      }
+      String fieldName = fieldInfo.getName();
+      if (nameMap.containsKey(fieldName)) {
+        // local shadows the ancestor
+        ObjectNode ancestorField = nameMap.get(fieldName);
+        String inheritedFrom = ancestorField.get("inheritedFrom").asText();
+        ObjectNode localFieldJson = createFieldJson(mapper, fieldInfo, inheritedFrom, true);
+        nameMap.put(fieldName, localFieldJson);
+      } else {
+        ObjectNode localFieldJson = createFieldJson(mapper, fieldInfo, null, false);
+        nameMap.put(fieldName, localFieldJson);
+      }
+    }
+
+    for (ObjectNode field : nameMap.values()) {
+      fieldsArray.add(field);
+    }
+  }
+
+  /**
+   * Gathers all superclasses and interfaces (and their superinterfaces) for the given classInfo. We
+   * do a breadth or depth approach to unify them in one Set.
+   */
+  private static Set<ClassInfo> gatherAllAncestors(ClassInfo classInfo) {
+    // use an ordered set so we can iterate first through superclasses
+    Set<ClassInfo> result = new LinkedHashSet<>();
+
+    // First, superclasses
+    result.add(classInfo.getSuperclass());
+    result.addAll(classInfo.getSuperclasses());
+    // We also collect superclasses of superclasses recursively
+    for (ClassInfo sc : classInfo.getSuperclasses()) {
+      gatherAllAncestorsRecursive(sc, result);
+    }
+
+    // Then, interfaces
+    for (ClassInfo iFace : classInfo.getInterfaces()) {
+      result.add(iFace);
+      result.addAll(iFace.getInterfaces()); // superinterfaces
+    }
+    // And interfaces for superinterfaces
+    for (ClassInfo iFace : classInfo.getInterfaces()) {
+      gatherAllAncestorsRecursive(iFace, result);
+    }
+    return result;
+  }
+
+  private static void gatherAllAncestorsRecursive(ClassInfo classInfo, Set<ClassInfo> acc) {
+    if (classInfo == null || acc.contains(classInfo)) {
+      return;
+    }
+    acc.add(classInfo);
+    for (ClassInfo sc : classInfo.getSuperclasses()) {
+      gatherAllAncestorsRecursive(sc, acc);
+    }
+    for (ClassInfo iFace : classInfo.getInterfaces()) {
+      gatherAllAncestorsRecursive(iFace, acc);
+    }
+  }
+
+  /* We explicitly add java.lang.Object methods, which Classgraph leaves out from the scan. */
+  private static void addJavaLangObjectMethodsViaReflection(
+      ObjectMapper mapper, Map<String, ObjectNode> signatureMap) {
+
+    for (Method m : Object.class.getDeclaredMethods()) {
+      if (m.isSynthetic() || m.getName().contains("$")) {
+        continue;
+      }
+      String sig = reflectionMethodSignature(m);
+      // If it’s not already known, we add it as inherited from java.lang.Object
+      if (!signatureMap.containsKey(sig)) {
+        ObjectNode methodJson =
+            createMethodJsonFromReflection(mapper, m, "java.lang.Object", false);
+        signatureMap.put(sig, methodJson);
+      }
+    }
+  }
+
+  // -------------------- JSON creation helpers --------------------
+
+  private static ObjectNode createConstructorJson(ObjectMapper mapper, MethodInfo ctorInfo) {
+    ObjectNode constructorObject = mapper.createObjectNode();
+    constructorObject.put("name", ctorInfo.getName());
+    constructorObject.put("modifiers", ctorInfo.getModifiers());
+
+    ArrayNode parametersArray = mapper.createArrayNode();
+    for (MethodParameterInfo paramInfo : ctorInfo.getParameterInfo()) {
+      ObjectNode paramObject = mapper.createObjectNode();
+      paramObject.put("name", paramInfo.getName());
+      paramObject.put("modifiers", paramInfo.getModifiers());
+      paramObject.put("type", paramInfo.getTypeSignatureOrTypeDescriptor().toString());
+      parametersArray.add(paramObject);
+    }
+    constructorObject.set("parameters", parametersArray);
+
+    return constructorObject;
+  }
+
+  private static ObjectNode createMethodJson(
+      ObjectMapper mapper, MethodInfo methodInfo, String inheritedFrom, boolean overridden) {
+    ObjectNode methodObject = mapper.createObjectNode();
+    methodObject.put("name", methodInfo.getName());
+    methodObject.put("modifiers", methodInfo.getModifiers());
+    methodObject.put("isStatic", methodInfo.isStatic());
+    methodObject.put(
+        "returnType", methodInfo.getTypeSignatureOrTypeDescriptor().getResultType().toString());
+    methodObject.put("overridden", overridden);
+    if (inheritedFrom != null) {
+      methodObject.put("inheritedFrom", inheritedFrom);
+    }
+
+    ArrayNode parametersArray = mapper.createArrayNode();
+    for (MethodParameterInfo paramInfo : methodInfo.getParameterInfo()) {
+      ObjectNode paramObject = mapper.createObjectNode();
+      paramObject.put("name", paramInfo.getName());
+      paramObject.put("modifiers", paramInfo.getModifiers());
+      paramObject.put("type", paramInfo.getTypeSignatureOrTypeDescriptor().toString());
+      parametersArray.add(paramObject);
+    }
+    methodObject.set("parameters", parametersArray);
+
+    return methodObject;
+  }
+
+  private static ObjectNode createMethodJsonFromReflection(
+      ObjectMapper mapper, Method m, String inheritedFrom, boolean overridden) {
+
+    ObjectNode methodObject = mapper.createObjectNode();
+    methodObject.put("name", m.getName());
+    methodObject.put("modifiers", m.getModifiers());
+    methodObject.put("isStatic", Modifier.isStatic(m.getModifiers()));
+    methodObject.put("returnType", m.getReturnType().getName());
+    methodObject.put("overridden", overridden);
+    if (inheritedFrom != null) {
+      methodObject.put("inheritedFrom", inheritedFrom);
+    }
+
+    // Reflection won't give you actual parameter names by default; we would need debug info for
+    // that.
+    // We'll just label them arg0, arg1, etc.
+    ArrayNode parametersArray = mapper.createArrayNode();
+    Class<?>[] paramTypes = m.getParameterTypes();
+    for (int i = 0; i < paramTypes.length; i++) {
+      ObjectNode paramObject = mapper.createObjectNode();
+      paramObject.put("name", "arg" + i);
+      paramObject.put("modifiers", 0); // reflection doesn't track param-level modifiers easily
+      paramObject.put("type", paramTypes[i].getName());
+      parametersArray.add(paramObject);
+    }
+    methodObject.set("parameters", parametersArray);
+
+    return methodObject;
+  }
+
+  private static ObjectNode createFieldJson(
+      ObjectMapper mapper, FieldInfo fieldInfo, String inheritedFrom, boolean overridden) {
+    ObjectNode fieldObject = mapper.createObjectNode();
+    fieldObject.put("name", fieldInfo.getName());
+    fieldObject.put("modifiers", fieldInfo.getModifiers());
+    fieldObject.put("type", fieldInfo.getTypeSignatureOrTypeDescriptor().toString());
+    fieldObject.put("isStatic", fieldInfo.isStatic());
+    fieldObject.put("overridden", overridden);
+    if (inheritedFrom != null) {
+      fieldObject.put("inheritedFrom", inheritedFrom);
+    }
+    return fieldObject;
+  }
+
+  // -------------------- signature utilities for override detection --------------------
+  private static String methodSignature(MethodInfo methodInfo) {
+    // Method signature approach: name + param types + return type
+    // Enough to differentiate overloads.
+    StringBuilder sb = new StringBuilder();
+    sb.append(methodInfo.getName()).append("(");
+    for (MethodParameterInfo p : methodInfo.getParameterInfo()) {
+      sb.append(p.getTypeSignatureOrTypeDescriptor().toString()).append(",");
+    }
+    sb.append(")")
+        .append("->")
+        .append(methodInfo.getTypeSignatureOrTypeDescriptor().getResultType().toString());
+    return sb.toString();
+  }
+
+  private static String reflectionMethodSignature(Method m) {
+    StringBuilder sb = new StringBuilder();
+    sb.append(m.getName()).append("(");
+    for (Class<?> paramType : m.getParameterTypes()) {
+      sb.append(paramType.getName()).append(",");
+    }
+    sb.append(")->").append(m.getReturnType().getName());
+    return sb.toString();
   }
 
   private static boolean isAspectWeaverMethod(MethodInfo methodInfo) {

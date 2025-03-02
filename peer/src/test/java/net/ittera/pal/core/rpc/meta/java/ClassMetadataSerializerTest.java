@@ -31,8 +31,9 @@ public class ClassMetadataSerializerTest {
   }
 
   @Test
-  public void testScanAndWriteToFile() throws IOException {
-    String classesMetadata = classMetadataSerializer.scannedClasspathToJson(false, null, null);
+  public void testScan() throws IOException {
+    String classesMetadata =
+        classMetadataSerializer.scannedClasspathToJson(false, null, null, false);
     String searchString = "className";
     // expect 10000 classes at least
     int minExpectedClassCount = 10000;
@@ -49,7 +50,8 @@ public class ClassMetadataSerializerTest {
     additionalExcludePrefixes.add("java.util");
 
     String scannedClasses =
-        classMetadataSerializer.scannedClasspathToJson(false, null, additionalExcludePrefixes);
+        classMetadataSerializer.scannedClasspathToJson(
+            false, null, additionalExcludePrefixes, false);
 
     String searchString = "className";
     // expect 10000 classes at least
@@ -68,9 +70,29 @@ public class ClassMetadataSerializerTest {
     includeClasses.add("java.util.Set");
 
     String scannedClasses =
-        classMetadataSerializer.scannedClasspathToJson(false, includeClasses, null);
+        classMetadataSerializer.scannedClasspathToJson(false, includeClasses, null, false);
 
     String searchString = "className";
     assertEquals(2, findOccurrences(searchString, scannedClasses));
+  }
+
+  @Test
+  public void testScanWithMergedAncestry() throws IOException {
+    Set<String> includeClasses = new HashSet<>();
+    includeClasses.add("java.util.ArrayList");
+    String scannedClasses =
+        classMetadataSerializer.scannedClasspathToJson(false, includeClasses, null, true);
+
+    String searchString = "className";
+    assertEquals(1, findOccurrences(searchString, scannedClasses));
+
+    // verify that some inherited methods are included
+
+    // inherited from Object
+    assertEquals(3, findOccurrences("\"wait\"", scannedClasses));
+    // inherited from AbstractList
+    assertEquals(1, findOccurrences("\"set\"", scannedClasses));
+    // inherited from List
+    assertTrue(findOccurrences("\"of\"", scannedClasses) > 10);
   }
 }

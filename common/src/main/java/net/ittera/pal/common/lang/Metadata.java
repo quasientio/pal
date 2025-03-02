@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@SuppressWarnings("unused")
 public class Metadata {
 
   private static final Comparator<ParameterInfo> PARAMETER_COMPARATOR =
@@ -342,6 +343,8 @@ public class Metadata {
     String name;
     int modifiers;
     boolean isStatic;
+    String inheritedFrom;
+    boolean overridden;
     String returnType;
     List<ParameterInfo> parameters = new ArrayList<>();
 
@@ -385,21 +388,42 @@ public class Metadata {
       isStatic = aStatic;
     }
 
+    public String getInheritedFrom() {
+      return inheritedFrom;
+    }
+
+    public void setInheritedFrom(String inheritedFrom) {
+      this.inheritedFrom = inheritedFrom;
+    }
+
+    public boolean isOverridden() {
+      return overridden;
+    }
+
+    public void setOverridden(boolean overridden) {
+      this.overridden = overridden;
+    }
+
     @Override
     public String toString() {
       return "MethodInfo{"
-          + "modifiers="
-          + Modifier.toString(modifiers)
-          + ", name='"
+          + "name='"
           + name
           + '\''
+          + ", parameters="
+          + parameters
+          + ", modifiers="
+          + Modifier.toString(modifiers)
+          + ", isStatic="
+          + isStatic
           + ", returnType='"
           + returnType
           + '\''
-          + ", isStatic="
-          + isStatic
-          + ", parameters="
-          + parameters
+          + ", inheritedFrom='"
+          + inheritedFrom
+          + '\''
+          + ", overridden="
+          + overridden
           + '}';
     }
   }
@@ -408,6 +432,8 @@ public class Metadata {
     String name;
     int modifiers;
     boolean isStatic;
+    String inheritedFrom;
+    boolean overridden;
     String type;
 
     public int getModifiers() {
@@ -442,19 +468,40 @@ public class Metadata {
       isStatic = aStatic;
     }
 
+    public String getInheritedFrom() {
+      return inheritedFrom;
+    }
+
+    public void setInheritedFrom(String inheritedFrom) {
+      this.inheritedFrom = inheritedFrom;
+    }
+
+    public boolean isOverridden() {
+      return overridden;
+    }
+
+    public void setOverridden(boolean overridden) {
+      this.overridden = overridden;
+    }
+
     @Override
     public String toString() {
       return "FieldInfo{"
-          + "modifiers="
-          + Modifier.toString(modifiers)
-          + ", name='"
+          + "name='"
           + name
           + '\''
           + ", type='"
           + type
           + '\''
+          + ", modifiers="
+          + modifiers
           + ", isStatic="
           + isStatic
+          + ", inheritedFrom='"
+          + inheritedFrom
+          + '\''
+          + ", overridden="
+          + overridden
           + '}';
     }
   }

@@ -60,6 +60,7 @@ public class MetaMessageDispatcher {
     boolean compressAndEncode = true;
     Set<String> excludePrefixes = null;
     Set<String> includeClasses = null;
+    boolean mergeAncestry = false;
 
     // parse given params
     Parameter[] params = metaMessage.getParams();
@@ -95,6 +96,13 @@ public class MetaMessageDispatcher {
           } catch (Exception e) {
             throw new RuntimeException("Error unwrapping parameter to 'includeClasses'", e);
           }
+        } else if (param.getName().equalsIgnoreCase("merge_ancestry") && param.getValue() != null) {
+          // process "merge_ancestry"
+          try {
+            mergeAncestry = Boolean.parseBoolean((String) Unwrapper.unwrapObject(param.getValue()));
+          } catch (Exception e) {
+            throw new RuntimeException("Error unwrapping parameter to 'merge_ancestry'", e);
+          }
         } else {
           logger.warn("Ignoring parameter name={}, value={}", param.getName(), param.getValue());
         }
@@ -106,7 +114,7 @@ public class MetaMessageDispatcher {
         try {
           String scanResults =
               classMetadataSerializer.scannedClasspathToJson(
-                  compressAndEncode, includeClasses, excludePrefixes);
+                  compressAndEncode, includeClasses, excludePrefixes, mergeAncestry);
           return messageBuilder.buildMetaMessageResponse(
               peerUuid, MetaStatusType.OK, scanResults, metaMessage.getMessageId());
         } catch (Exception e) {
