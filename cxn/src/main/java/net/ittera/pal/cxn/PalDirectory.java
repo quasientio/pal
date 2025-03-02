@@ -159,7 +159,7 @@ public class PalDirectory implements AutoCloseable {
             .target(endpoints)
             .keepaliveTime(ETCD_KEEP_ALIVE_TIME)
             .keepaliveTimeout(ETCD_KEEP_ALIVE_TIMEOUT)
-            .keepaliveWithoutCalls(true)
+            .keepaliveWithoutCalls(false)
             .build();
 
     if (blocking) {
