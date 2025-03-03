@@ -72,8 +72,7 @@ public class MetaMessageDispatcher {
         if (param.getName().equalsIgnoreCase("compress_encode") && param.getValue() != null) {
           // process "process_encode"
           try {
-            compressAndEncode =
-                Boolean.parseBoolean((String) Unwrapper.unwrapObject(param.getValue()));
+            compressAndEncode = (Boolean) Unwrapper.unwrapObject(param.getValue());
           } catch (Exception e) {
             throw new RuntimeException("Error unwrapping parameter to 'compress_encode'", e);
           }
@@ -99,7 +98,7 @@ public class MetaMessageDispatcher {
         } else if (param.getName().equalsIgnoreCase("merge_ancestry") && param.getValue() != null) {
           // process "merge_ancestry"
           try {
-            mergeAncestry = Boolean.parseBoolean((String) Unwrapper.unwrapObject(param.getValue()));
+            mergeAncestry = (Boolean) Unwrapper.unwrapObject(param.getValue());
           } catch (Exception e) {
             throw new RuntimeException("Error unwrapping parameter to 'merge_ancestry'", e);
           }

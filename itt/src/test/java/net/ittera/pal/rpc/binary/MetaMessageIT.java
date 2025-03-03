@@ -24,6 +24,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.util.HashMap;
 import java.util.Map;
 import net.ittera.pal.common.util.GzipBase64Utils;
 import net.ittera.pal.messages.colfer.MetaMessage;
@@ -46,11 +47,18 @@ public class MetaMessageIT extends AbstractBinaryRpcMessageIT {
   }
 
   @Test
-  public void sendMetaMessage_fetchClassMetadata_metadataReturned() {
+  public void sendMetaMessage_fetchClassMetadata_metadataReturned() throws InterruptedException {
 
+    // metadata serialization uses a lot of heap, better request a GC
+    sendGcCommand();
+    Thread.sleep(1000);
+
+    Map<String, Object> fetchClassMetadataParams = new HashMap<>();
+    fetchClassMetadataParams.put("compress_encode", true);
+    fetchClassMetadataParams.put("merge_ancestry", true);
     MetaMessage metaMessageRequest =
         messageBuilder.buildMetaMessageRequest(
-            clientId, generateId(), MetaServiceType.FETCH_CLASSES_INFO);
+            clientId, generateId(), MetaServiceType.FETCH_CLASSES_INFO, fetchClassMetadataParams);
 
     MetaMessage metaMessageResponse = sendAndReceive(metaMessageRequest);
     assertNotNull(metaMessageResponse);
@@ -63,13 +71,23 @@ public class MetaMessageIT extends AbstractBinaryRpcMessageIT {
 
     int minExpectedClassCount = 5000;
     assertTrue(findOccurrences("className", plainBody) > minExpectedClassCount);
+
+    // metadata serialization uses a lot of heap, better request a GC
+    sendGcCommand();
   }
 
   @Test
-  public void sendMetaMessage_fetchClassMetadataWithExcludes_metadataReturned() {
+  public void sendMetaMessage_fetchClassMetadataWithExcludes_metadataReturned()
+      throws InterruptedException {
 
-    Map<String, Object> fetchClassMetadataParams =
-        Map.of("exclude_prefixes", new String[] {"java.util", "java.lang"});
+    // metadata serialization uses a lot of heap, better request a GC
+    sendGcCommand();
+    Thread.sleep(1000);
+
+    Map<String, Object> fetchClassMetadataParams = new HashMap<>();
+    fetchClassMetadataParams.put("exclude_prefixes", new String[] {"java.util", "java.lang"});
+    fetchClassMetadataParams.put("compress_encode", true);
+    fetchClassMetadataParams.put("merge_ancestry", true);
 
     MetaMessage metaMessageRequest =
         messageBuilder.buildMetaMessageRequest(
@@ -94,13 +112,24 @@ public class MetaMessageIT extends AbstractBinaryRpcMessageIT {
     // expect no java.lang classes
     javaUtilClassNameEntry = "\"className\":\"java.lang.";
     assertEquals(0, findOccurrences(javaUtilClassNameEntry, plainBody));
+
+    // metadata serialization uses a lot of heap, better request a GC
+    sendGcCommand();
   }
 
   @Test
-  public void sendMetaMessage_fetchClassMetadataWithIncludeClasses_metadataReturned() {
+  public void sendMetaMessage_fetchClassMetadataWithIncludeClasses_metadataReturned()
+      throws InterruptedException {
 
-    Map<String, Object> fetchClassMetadataParams =
-        Map.of("include_classes", new String[] {"java.lang.System", "java.lang.Math"});
+    // metadata serialization uses a lot of heap, better request a GC
+    sendGcCommand();
+    Thread.sleep(1000);
+
+    Map<String, Object> fetchClassMetadataParams = new HashMap<>();
+    fetchClassMetadataParams.put(
+        "include_classes", new String[] {"java.lang.System", "java.lang.Math"});
+    fetchClassMetadataParams.put("compress_encode", true);
+    fetchClassMetadataParams.put("merge_ancestry", true);
 
     MetaMessage metaMessageRequest =
         messageBuilder.buildMetaMessageRequest(
@@ -116,5 +145,8 @@ public class MetaMessageIT extends AbstractBinaryRpcMessageIT {
     String plainBody = GzipBase64Utils.decode(body);
 
     assertEquals(2, findOccurrences("className", plainBody));
+
+    // metadata serialization uses a lot of heap, better request a GC
+    sendGcCommand();
   }
 }

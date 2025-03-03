@@ -33,7 +33,13 @@ public class MetaMessageIT extends AbstractJsonRpcMessageIT {
 
   @Test
   public void sendMetaMessage_fetchClassMetadata_metadataReturned() throws Exception {
-    JsonRpcRequest rpcRequest = JsonRpcMessageFactory.buildFetchClassesInfoMetaMessage();
+
+    // metadata serialization uses a lot of heap, better request a GC
+    sendGcCommand();
+    Thread.sleep(1000);
+
+    JsonRpcRequest rpcRequest =
+        JsonRpcMessageFactory.buildFetchClassesInfoMetaMessage(null, null, true, true);
     JsonRpcResponse rpcResponse = sendAndReceive(rpcRequest);
     assertNotNull(rpcResponse);
     assertNull(rpcResponse.getError());
@@ -50,13 +56,21 @@ public class MetaMessageIT extends AbstractJsonRpcMessageIT {
     String searchString = "className";
     int minExpectedClassCount = 5000;
     assertTrue(findOccurrences(searchString, plainBody) > minExpectedClassCount);
+
+    // metadata serialization uses a lot of heap, better request a GC
+    sendGcCommand();
   }
 
   @Test
   public void sendMetaMessage_fetchClassMetadataWithExcludes_metadataReturned() throws Exception {
+
+    // metadata serialization uses a lot of heap, better request a GC
+    sendGcCommand();
+    Thread.sleep(1000);
+
     String[] excludes = new String[] {"java.util", "java.lang"};
     JsonRpcRequest rpcRequest =
-        JsonRpcMessageFactory.buildFetchClassesInfoMetaMessage(null, excludes);
+        JsonRpcMessageFactory.buildFetchClassesInfoMetaMessage(null, excludes, true, true);
     JsonRpcResponse rpcResponse = sendAndReceive(rpcRequest);
     assertNotNull(rpcResponse);
     assertNull(rpcResponse.getError());
@@ -81,14 +95,22 @@ public class MetaMessageIT extends AbstractJsonRpcMessageIT {
     // expect no java.lang classes
     javaUtilClassNameEntry = "\"className\":\"java.lang.";
     assertEquals(0, findOccurrences(javaUtilClassNameEntry, plainBody));
+
+    // metadata serialization uses a lot of heap, better request a GC
+    sendGcCommand();
   }
 
   @Test
   public void sendMetaMessage_fetchClassMetadataWithIncludeClasses_metadataReturned()
       throws Exception {
+
+    // metadata serialization uses a lot of heap, better request a GC
+    sendGcCommand();
+    Thread.sleep(1000);
+
     String[] includes = new String[] {"java.lang.System", "java.lang.Math"};
     JsonRpcRequest rpcRequest =
-        JsonRpcMessageFactory.buildFetchClassesInfoMetaMessage(includes, null);
+        JsonRpcMessageFactory.buildFetchClassesInfoMetaMessage(includes, null, true, true);
     JsonRpcResponse rpcResponse = sendAndReceive(rpcRequest);
     assertNotNull(rpcResponse);
     assertNull(rpcResponse.getError());
@@ -104,5 +126,8 @@ public class MetaMessageIT extends AbstractJsonRpcMessageIT {
 
     String searchString = "className";
     assertEquals(2, findOccurrences(searchString, plainBody));
+
+    // metadata serialization uses a lot of heap, better request a GC
+    sendGcCommand();
   }
 }

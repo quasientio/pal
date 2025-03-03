@@ -1,5 +1,6 @@
 package net.ittera.pal.serdes.jsonrpc;
 
+import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nullable;
 import net.ittera.pal.common.objects.ObjectRef;
@@ -374,43 +375,43 @@ public class JsonRpcMessageFactory {
    *     given, all others will be excluded; may be {@code null} or empty
    * @param excludePrefixes an array of class name prefixes to exclude from the fetched information;
    *     may be {@code null} or empty to include all classes
+   * @param compressAndEncode indicates whether the returned metadata should be Gzipped and
+   *     Base64-encoded; if {@code false}, class metadata will be returned as plain JSON
+   * @param mergeAncestry indicates whether to include methods and fields inherited from interfaces
+   *     and superclasses
    * @return a {@link JsonRpcRequest} representing the fetch classes information meta message
    */
   public static JsonRpcRequest buildFetchClassesInfoMetaMessage(
-      @Nullable String[] includeClasses, @Nullable String[] excludePrefixes) {
-    JsonRpcRequest rpcRequest =
-        JsonRpcRequest.builder()
-            .withId(nextId())
-            .withMethod(MessageFamily.META.getJsonName())
-            .withParams(
-                Params.builder()
-                    .withMethod(MetaServiceType.FETCH_CLASSES_INFO.getJsonName())
-                    .build())
-            .build();
+      @Nullable String[] includeClasses,
+      @Nullable String[] excludePrefixes,
+      boolean compressAndEncode,
+      boolean mergeAncestry) {
 
+    /* Create args list */
+    List<Argument> args = new ArrayList<>();
+    // compress_encode
+    args.add(Argument.builder().withName("compress_encode").withValue(compressAndEncode).build());
+    // merge_ancestry
+    args.add(Argument.builder().withName("merge_ancestry").withValue(mergeAncestry).build());
+
+    // exclude_prefixes
     if (excludePrefixes != null && excludePrefixes.length > 0) {
-      rpcRequest
-          .getParams()
-          .getArgs()
-          .add(Argument.builder().withName("exclude_prefixes").withValue(excludePrefixes).build());
+      args.add(Argument.builder().withName("exclude_prefixes").withValue(excludePrefixes).build());
     }
+    // include_classes
     if (includeClasses != null && includeClasses.length > 0) {
-      rpcRequest
-          .getParams()
-          .getArgs()
-          .add(Argument.builder().withName("include_classes").withValue(includeClasses).build());
+      args.add(Argument.builder().withName("include_classes").withValue(includeClasses).build());
     }
-    return rpcRequest;
-  }
 
-  /**
-   * Constructs a JSON-RPC meta message to fetch information about classes without explicitly
-   * including any class names nor excluding any prefixes.
-   *
-   * @return a {@link JsonRpcRequest} representing the fetch classes information meta message
-   */
-  public static JsonRpcRequest buildFetchClassesInfoMetaMessage() {
-    return buildFetchClassesInfoMetaMessage(null, null);
+    return JsonRpcRequest.builder()
+        .withId(nextId())
+        .withMethod(MessageFamily.META.getJsonName())
+        .withParams(
+            Params.builder()
+                .withMethod(MetaServiceType.FETCH_CLASSES_INFO.getJsonName())
+                .withArgs(args)
+                .build())
+        .build();
   }
 
   // </editor-fold>

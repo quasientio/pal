@@ -3,7 +3,6 @@ package net.ittera.pal.core.rpc.meta.java;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 import org.junit.Before;
@@ -31,7 +30,7 @@ public class ClassMetadataSerializerTest {
   }
 
   @Test
-  public void testScan() throws IOException {
+  public void testScan() throws Exception {
     String classesMetadata =
         classMetadataSerializer.scannedClasspathToJson(false, null, null, false);
     String searchString = "className";
@@ -45,7 +44,21 @@ public class ClassMetadataSerializerTest {
   }
 
   @Test
-  public void testScanWithPrefixExcludes() throws IOException {
+  public void testScanWithMergedAncestry() throws Exception {
+    String classesMetadata =
+        classMetadataSerializer.scannedClasspathToJson(false, null, null, true);
+    String searchString = "className";
+    // expect 10000 classes at least
+    int minExpectedClassCount = 10000;
+    assertTrue(findOccurrences(searchString, classesMetadata) > minExpectedClassCount);
+
+    // expect at least 300 java.util classes
+    String javaUtilClassNameEntry = "\"className\":\"java.util.";
+    assertTrue(findOccurrences(javaUtilClassNameEntry, classesMetadata) > 300);
+  }
+
+  @Test
+  public void testScanWithPrefixExcludes() throws Exception {
     Set<String> additionalExcludePrefixes = new HashSet<>();
     additionalExcludePrefixes.add("java.util");
 
@@ -64,7 +77,7 @@ public class ClassMetadataSerializerTest {
   }
 
   @Test
-  public void testScanWithIncludeClasses() throws IOException {
+  public void testScanWithIncludeClasses() throws Exception {
     Set<String> includeClasses = new HashSet<>();
     includeClasses.add("java.util.List");
     includeClasses.add("java.util.Set");
@@ -77,7 +90,7 @@ public class ClassMetadataSerializerTest {
   }
 
   @Test
-  public void testScanWithMergedAncestry() throws IOException {
+  public void testScanWithIncludeClassesAndMergedAncestry() throws Exception {
     Set<String> includeClasses = new HashSet<>();
     includeClasses.add("java.util.ArrayList");
     String scannedClasses =
