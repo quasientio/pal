@@ -1,6 +1,5 @@
 package net.ittera.pal.core.rpc.meta.java;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -44,6 +43,8 @@ public class ClassMetadataSerializer {
   }
 
   /**
+   * Generate class metadata and return it as a (possibly compressed & encoded ) JSON string.
+   *
    * @param compressAndEncode if true, returns Base64-encoded GZip-compressed JSON
    * @param includeClasses optional set of specific classes to include
    * @param additionalExcludePrefixes optional set of additional class prefixes to exclude
@@ -54,7 +55,7 @@ public class ClassMetadataSerializer {
       @Nullable Set<String> includeClasses,
       @Nullable Set<String> additionalExcludePrefixes,
       boolean mergeAncestry)
-      throws JsonProcessingException {
+      throws Exception {
 
     ObjectMapper mapper = new ObjectMapper();
     // store all class metadata as an array
@@ -166,8 +167,6 @@ public class ClassMetadataSerializer {
       if (logger.isDebugEnabled()) {
         logger.debug("Number of classes returned: {}", classesArray.size());
       }
-    } catch (Exception e) {
-      logger.error("Error generating class metadata", e);
     }
 
     String classMetadataAsJson = mapper.writeValueAsString(classesArray);
@@ -230,7 +229,7 @@ public class ClassMetadataSerializer {
       ObjectMapper mapper, ClassInfo classInfo, ArrayNode methodsArray) {
     Map<String, ObjectNode> signatureMap = new HashMap<>();
 
-    // Step 1: gather from all ancestors
+    // 1) gather from all ancestors
     Set<ClassInfo> allAncestors = gatherAllAncestors(classInfo);
     for (ClassInfo ancestor : allAncestors) {
       for (MethodInfo methodInfo : ancestor.getDeclaredMethodInfo()) {
@@ -248,7 +247,7 @@ public class ClassMetadataSerializer {
     // 2) forcibly add all java.lang.Object methods via reflection
     addJavaLangObjectMethodsViaReflection(mapper, signatureMap);
 
-    // Step 3: incorporate local declared methods
+    // 3) incorporate local declared methods
     for (MethodInfo methodInfo : classInfo.getDeclaredMethodInfo()) {
       if (isAspectWeaverMethod(methodInfo)) {
         continue;
@@ -346,6 +345,9 @@ public class ClassMetadataSerializer {
     for (ClassInfo iFace : classInfo.getInterfaces()) {
       gatherAllAncestorsRecursive(iFace, result);
     }
+
+    // remove null entry if it was somehow added
+    result.remove(null);
     return result;
   }
 
@@ -472,16 +474,45 @@ public class ClassMetadataSerializer {
 
   // -------------------- signature utilities for override detection --------------------
   private static String methodSignature(MethodInfo methodInfo) {
-    // Method signature approach: name + param types + return type
-    // Enough to differentiate overloads.
     StringBuilder sb = new StringBuilder();
-    sb.append(methodInfo.getName()).append("(");
-    for (MethodParameterInfo p : methodInfo.getParameterInfo()) {
-      sb.append(p.getTypeSignatureOrTypeDescriptor().toString()).append(",");
+
+    // 1) Check if MethodInfo has a generic signature
+    //    i.e. if method-level type parameters exist
+    var methodSignature = methodInfo.getTypeSignature();
+    if (methodSignature != null
+        && methodSignature.getTypeParameters() != null
+        && !methodSignature.getTypeParameters().isEmpty()) {
+
+      sb.append("<");
+      boolean firstParam = true;
+      for (var typeParam : methodSignature.getTypeParameters()) {
+        if (!firstParam) {
+          sb.append(", ");
+        }
+        sb.append(typeParam.toString()); // includes the bounds, e.g. "K extends ..."
+        firstParam = false;
+      }
+      sb.append("> ");
     }
-    sb.append(")")
-        .append("->")
+
+    // 2) Method name
+    sb.append(methodInfo.getName()).append("(");
+
+    // 3) Parameter types
+    MethodParameterInfo[] params = methodInfo.getParameterInfo();
+    for (int i = 0; i < params.length; i++) {
+      if (i > 0) {
+        sb.append(", ");
+      }
+      // the parameter’s type signature (including generics)
+      sb.append(params[i].getTypeSignatureOrTypeDescriptor().toString());
+    }
+    sb.append(")");
+
+    // 4) Return type
+    sb.append(" -> ")
         .append(methodInfo.getTypeSignatureOrTypeDescriptor().getResultType().toString());
+
     return sb.toString();
   }
 
