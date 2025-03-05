@@ -24,11 +24,22 @@ package net.ittera.pal.messages.types;
  * associated with a unique byte identifier.
  */
 public enum ControlStatusType {
+  /** Informs the peer that the command was invoked successfully. */
   OK((byte) 1),
+
+  /** Informs the peer that the command invocation caused an error. */
   ERROR((byte) 2),
+
+  /** Informs the peer that it is unauthorized to invoke such command. */
   UNAUTHORIZED((byte) 3),
+
+  /** Informs the peer that the command is unsupported. */
   UNSUPPORTED((byte) 4),
+
+  /** Informs the peer that no such session exists. */
   NO_SUCH_SESSION((byte) 5),
+
+  /** Informs the peer that no such object exists. */
   NO_SUCH_OBJECT((byte) 6);
 
   /** The byte identifier associated with the control status type. */

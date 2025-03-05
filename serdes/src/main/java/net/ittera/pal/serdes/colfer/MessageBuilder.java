@@ -683,6 +683,7 @@ public final class MessageBuilder {
    * @param sender the object sending the message
    * @param senderObjRef the reference to the sender object
    * @param args the array of argument values corresponding to the parameters
+   * @param argObjRefs the array of objectRefs corresponding to the parameters
    * @return an {@code ExecMessage} representing the class method invocation
    */
   public ExecMessage buildClassMethod(
