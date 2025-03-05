@@ -33,6 +33,7 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import javax.annotation.Nullable;
 import net.ittera.pal.common.directory.nodes.LogInfo;
@@ -46,6 +47,7 @@ import net.ittera.pal.messages.colfer.MetaMessage;
 import net.ittera.pal.messages.jsonrpc.JsonRpcMessage;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
+import net.ittera.pal.messages.types.ControlCommandType;
 import net.ittera.pal.messages.types.ControlStatusType;
 import net.ittera.pal.messages.types.RpcType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
@@ -83,6 +85,9 @@ import org.zeromq.ZMQ.Socket;
 public class ThinPeer implements AutoCloseable {
   /** Logger instance for ThinPeer class. */
   private static final Logger logger = LoggerFactory.getLogger(ThinPeer.class);
+
+  /** Default PING timeout duration. */
+  private static final Duration PING_TIMEOUT = Duration.ofSeconds(5);
 
   /** Universally unique identifier for this peer instance. */
   private UUID peerUuid;
@@ -718,6 +723,69 @@ public class ThinPeer implements AutoCloseable {
       throw new IllegalStateException(
           "Not connected to any peer. Cannot send and receive JSON-RPC messages to/from log");
     }
+  }
+
+  /**
+   * Sends a Ping request to the connected peer, if any. If connected to a peer via Websocket, then
+   * the ping is sent as a ping frame at the transport layer. If connected to a peer via ZMQ socket,
+   * then the ping is sent using Pal's PING control message, which is an application-layer message
+   * and goes through the RPC dispatch chain.
+   *
+   * @param timeout the amount of time to wait for the Ping response
+   * @return the number of milliseconds waited for the response, or -1 if timed out
+   * @throws IllegalStateException if not connected to any peer via Websocket
+   * @throws InterruptedException if the current thread was interrupted while waiting
+   * @throws ExecutionException if the ping future completed exceptionally
+   */
+  public double sendPing(Duration timeout)
+      throws IllegalStateException, InterruptedException, ExecutionException {
+    assertInitializedAndActive();
+    if (!talkingToPeer) {
+      throw new IllegalStateException("Not connected to any peer");
+    }
+
+    if (wsClient != null && isWsClientConnected) {
+      long start = System.nanoTime();
+      CompletableFuture<Void> voidCompletableFuture = wsClient.sendPingAsync();
+      try {
+        voidCompletableFuture.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+        long elapsedNanos = System.nanoTime() - start;
+        return elapsedNanos / 1_000_000.0;
+      } catch (TimeoutException e) {
+        return -1;
+      }
+    } else if (peerSocket != null && isZmqSocketConnected) {
+      ControlMessage pingMsg =
+          msgBuilder.buildControlCommandMessage(peerUuid, ControlCommandType.PING);
+      long start = System.nanoTime();
+      try {
+        sendToPeer(pingMsg, timeout);
+      } catch (TimeoutException e) {
+        logger.warn("Received TimeoutException sending ping to peer");
+        return -1;
+      }
+      long elapsedNanos = System.nanoTime() - start;
+      return elapsedNanos / 1_000_000.0;
+    } else {
+      throw new IllegalStateException(
+          "Something is wrong. Talking to peer but no connection available");
+    }
+  }
+
+  /**
+   * Sends a Ping request to the connected peer, if any. If connected to a peer via Websocket, then
+   * the ping is sent as a ping frame at the transport layer. If connected to a peer via ZMQ socket,
+   * then the ping is sent using Pal's PING control message, which is at the application-layer and
+   * goes through the RPC dispatch chain. This method calls {@link #sendPing(Duration)} with {@link
+   * #PING_TIMEOUT} as the timeout parameter.
+   *
+   * @return the number of milliseconds waited for the response, -1 if timed out
+   * @throws IllegalStateException if not connected to any peer via Websocket
+   * @throws InterruptedException if the current thread was interrupted while waiting
+   * @throws ExecutionException if the ping future completed exceptionally
+   */
+  public double sendPing() throws IllegalStateException, InterruptedException, ExecutionException {
+    return sendPing(PING_TIMEOUT);
   }
 
   /**
@@ -1644,6 +1712,8 @@ public class ThinPeer implements AutoCloseable {
     private final Map<String, CompletableFuture<JsonRpcResponse>> futureResponses =
         new ConcurrentHashMap<>();
 
+    private CompletableFuture<Void> pingFuture;
+
     /**
      * Constructs a new WsClient instance with the specified URI and HTTP headers.
      *
@@ -1694,6 +1764,39 @@ public class ThinPeer implements AutoCloseable {
     }
 
     /**
+     * Sends a protocol-level WebSocket ping frame. Returns a CompletableFuture that completes when
+     * (and if) the corresponding pong arrives.
+     *
+     * @return a CompletableFuture that will be completed when the Pong is received
+     */
+    public CompletableFuture<Void> sendPingAsync() {
+      if (logger.isDebugEnabled()) {
+        logger.debug("in sendAsync - sending ping to ws socket");
+      }
+      if (pingFuture != null && !pingFuture.isDone()) {
+        throw new IllegalStateException(
+            "A ping is already in flight. Wait for it to complete first.");
+      }
+
+      pingFuture = new CompletableFuture<>();
+      try {
+        super.sendPing();
+      } catch (WebsocketNotConnectedException e) {
+        pingFuture.completeExceptionally(e);
+      }
+      return pingFuture;
+    }
+
+    @Override
+    public void onWebsocketPong(WebSocket conn, Framedata f) {
+      if (pingFuture != null && !pingFuture.isDone()) {
+        pingFuture.complete(null);
+      }
+
+      super.onWebsocketPong(conn, f);
+    }
+
+    /**
      * {@inheritDoc}
      *
      * <p>Handles initialization tasks upon opening the WebSocket connection.
@@ -1734,6 +1837,23 @@ public class ThinPeer implements AutoCloseable {
     @Override
     public void onClose(int code, String reason, boolean remote) {
       logger.info("WebSocket connection closed");
+
+      // complete exceptionally any on-flight ping
+      if (pingFuture != null && !pingFuture.isDone()) {
+        pingFuture.completeExceptionally(
+            new RuntimeException("Connection closed before pong received."));
+      }
+
+      // complete exceptionally any json-rpc request not yet responded
+      if (!futureResponses.isEmpty()) {
+        futureResponses
+            .values()
+            .forEach(
+                f ->
+                    f.completeExceptionally(
+                        new RuntimeException(
+                            "Connection closed before JSON-RPC response received.")));
+      }
     }
 
     /**
@@ -1744,6 +1864,12 @@ public class ThinPeer implements AutoCloseable {
     @Override
     public void onError(Exception ex) {
       logger.error("WebSocket error", ex);
+
+      // complete exceptionally any on-flight ping
+      if (pingFuture != null && !pingFuture.isDone()) {
+        pingFuture.completeExceptionally(
+            new RuntimeException("An error was received while waiting for pong", ex));
+      }
     }
   }
 }

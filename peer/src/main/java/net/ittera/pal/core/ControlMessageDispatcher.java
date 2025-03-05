@@ -93,6 +93,9 @@ public class ControlMessageDispatcher {
         ControlStatusType status =
             invokeGCReflectively() ? ControlStatusType.OK : ControlStatusType.ERROR;
         return messageBuilder.buildControlStatusMessage(peerUuid, status, controlMessageId);
+      case PING:
+        return messageBuilder.buildControlStatusMessage(
+            peerUuid, ControlStatusType.OK, controlMessageId);
       default:
         String errorMessage =
             String.format(

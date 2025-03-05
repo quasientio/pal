@@ -36,7 +36,10 @@ public enum ControlCommandType {
   DELETE_SESSION((byte) 2),
 
   /** Represents a command to initiate garbage collection. */
-  GC((byte) 3);
+  GC((byte) 3),
+
+  /** Represents a PING command, which will be responded with status OK. */
+  PING((byte) 4);
 
   /** The unique identifier associated with the control command type. */
   private final byte id;
@@ -62,6 +65,7 @@ public enum ControlCommandType {
       case 1 -> DELETE_OBJECT;
       case 2 -> DELETE_SESSION;
       case 3 -> GC;
+      case 4 -> PING;
       default ->
           throw new IllegalArgumentException("Unknown control command type: " + messageTypeAsByte);
     };

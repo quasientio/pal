@@ -2126,6 +2126,18 @@ public final class MessageBuilder {
   }
 
   /**
+   * Builds an {@link ControlMessage} representing a control command. This is a convenience method
+   * for control commands that take no params.
+   *
+   * @param fromPeerUuid the UUID of the peer sending the control command
+   * @param command the type of control command to build
+   * @return a {@code ControlMessage} representing the control command
+   */
+  public ControlMessage buildControlCommandMessage(UUID fromPeerUuid, ControlCommandType command) {
+    return buildControlCommandMessage(fromPeerUuid, command, null);
+  }
+
+  /**
    * Builds a {@link ControlMessage} for deleting an object.
    *
    * @param fromPeer the UUID of the peer issuing the delete command

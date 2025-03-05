@@ -79,6 +79,7 @@ public class ThinPeerIT extends AbstractIntegrationTest {
     if (thinPeer != null && !thinPeer.isClosed()) {
       try {
         thinPeer.close();
+        thinPeer = null;
       } catch (IllegalStateException e) {
         // we may close it after testing an uninitialized thin peer, so it's fine
       }
@@ -300,5 +301,20 @@ public class ThinPeerIT extends AbstractIntegrationTest {
     assertThat(thinPeer.isTalkingToPeer(), is(true));
     assertThat(thinPeer.getCurrentPeer(), is(initialPeer));
     assertThat(thinPeer.isZmqSocketConnected(), is(true));
+  }
+
+  @Test
+  public void initAndPing() throws Exception {
+    PeerInfo initialPeer = findRpcPeer(RpcType.JSON_RPC, directoryConnectionProvider).orElseThrow();
+    thinPeer =
+        new ThinPeer()
+            .withDirectoryProvider(directoryConnectionProvider)
+            .withInitialPeer(initialPeer)
+            .withOutboundRpcType(RpcType.JSON_RPC)
+            .withSelfRegistration(false)
+            .init();
+
+    double took = thinPeer.sendPing();
+    logger.debug("Ping reply took {} ms", (long) took);
   }
 }
