@@ -39,7 +39,7 @@ public class MetaMessageIT extends AbstractJsonRpcMessageIT {
     Thread.sleep(1000);
 
     JsonRpcRequest rpcRequest =
-        JsonRpcMessageFactory.buildFetchClassesInfoMetaMessage(null, null, true, true);
+        JsonRpcMessageFactory.buildFetchClassesInfoMetaMessage(null, null, true, false);
     JsonRpcResponse rpcResponse = sendAndReceive(rpcRequest);
     assertNotNull(rpcResponse);
     assertNull(rpcResponse.getError());
@@ -70,7 +70,7 @@ public class MetaMessageIT extends AbstractJsonRpcMessageIT {
 
     String[] excludes = new String[] {"java.util", "java.lang"};
     JsonRpcRequest rpcRequest =
-        JsonRpcMessageFactory.buildFetchClassesInfoMetaMessage(null, excludes, true, true);
+        JsonRpcMessageFactory.buildFetchClassesInfoMetaMessage(null, excludes, true, false);
     JsonRpcResponse rpcResponse = sendAndReceive(rpcRequest);
     assertNotNull(rpcResponse);
     assertNull(rpcResponse.getError());
@@ -110,7 +110,7 @@ public class MetaMessageIT extends AbstractJsonRpcMessageIT {
 
     String[] includes = new String[] {"java.lang.System", "java.lang.Math"};
     JsonRpcRequest rpcRequest =
-        JsonRpcMessageFactory.buildFetchClassesInfoMetaMessage(includes, null, true, true);
+        JsonRpcMessageFactory.buildFetchClassesInfoMetaMessage(includes, null, true, false);
     JsonRpcResponse rpcResponse = sendAndReceive(rpcRequest);
     assertNotNull(rpcResponse);
     assertNull(rpcResponse.getError());

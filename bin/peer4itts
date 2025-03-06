@@ -13,7 +13,7 @@ if [ -z "$KAFKA_SERVERS" ]; then
   exit 3
 fi
 
-JAVA_OPTS="-Xms512m -Xmx2g" pal run \
+pal run \
   --dir $PAL_DIRECTORY \
   --name peer-for-itt \
   --rpc 5656 \

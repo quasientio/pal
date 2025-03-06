@@ -55,7 +55,7 @@ public class MetaMessageIT extends AbstractBinaryRpcMessageIT {
 
     Map<String, Object> fetchClassMetadataParams = new HashMap<>();
     fetchClassMetadataParams.put("compress_encode", true);
-    fetchClassMetadataParams.put("merge_ancestry", true);
+    fetchClassMetadataParams.put("merge_ancestry", false);
     MetaMessage metaMessageRequest =
         messageBuilder.buildMetaMessageRequest(
             clientId, generateId(), MetaServiceType.FETCH_CLASSES_INFO, fetchClassMetadataParams);
@@ -87,7 +87,7 @@ public class MetaMessageIT extends AbstractBinaryRpcMessageIT {
     Map<String, Object> fetchClassMetadataParams = new HashMap<>();
     fetchClassMetadataParams.put("exclude_prefixes", new String[] {"java.util", "java.lang"});
     fetchClassMetadataParams.put("compress_encode", true);
-    fetchClassMetadataParams.put("merge_ancestry", true);
+    fetchClassMetadataParams.put("merge_ancestry", false);
 
     MetaMessage metaMessageRequest =
         messageBuilder.buildMetaMessageRequest(
@@ -129,7 +129,7 @@ public class MetaMessageIT extends AbstractBinaryRpcMessageIT {
     fetchClassMetadataParams.put(
         "include_classes", new String[] {"java.lang.System", "java.lang.Math"});
     fetchClassMetadataParams.put("compress_encode", true);
-    fetchClassMetadataParams.put("merge_ancestry", true);
+    fetchClassMetadataParams.put("merge_ancestry", false);
 
     MetaMessage metaMessageRequest =
         messageBuilder.buildMetaMessageRequest(
