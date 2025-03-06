@@ -94,6 +94,14 @@ public class Metadata {
           }
         }
 
+        // 5. Compare signatures
+        if (m1.getSignature() != null && !m1.getSignature().isBlank()) {
+          int sigCompare = m1.getSignature().compareTo(m2.getSignature());
+          if (sigCompare != 0) {
+            return sigCompare;
+          }
+        }
+
         // If everything is the same, return 0
         return 0;
       };
@@ -328,10 +336,11 @@ public class Metadata {
     @Override
     public String toString() {
       return "ConstructorInfo{"
-          + "modifiers="
-          + Modifier.toString(modifiers)
-          + ", name='"
+          + "name='"
           + name
+          + '\''
+          + ", modifiers='"
+          + Modifier.toString(modifiers)
           + '\''
           + ", parameters="
           + parameters
@@ -346,6 +355,7 @@ public class Metadata {
     String inheritedFrom;
     boolean overridden;
     String returnType;
+    String signature;
     List<ParameterInfo> parameters = new ArrayList<>();
 
     public int getModifiers() {
@@ -380,6 +390,14 @@ public class Metadata {
       return returnType;
     }
 
+    public String getSignature() {
+      return signature;
+    }
+
+    public void setSignature(String signature) {
+      this.signature = signature;
+    }
+
     public boolean isStatic() {
       return isStatic;
     }
@@ -412,18 +430,20 @@ public class Metadata {
           + '\''
           + ", parameters="
           + parameters
-          + ", modifiers="
-          + Modifier.toString(modifiers)
-          + ", isStatic="
-          + isStatic
           + ", returnType='"
           + returnType
+          + '\''
+          + ", modifiers='"
+          + Modifier.toString(modifiers)
           + '\''
           + ", inheritedFrom='"
           + inheritedFrom
           + '\''
           + ", overridden="
           + overridden
+          + ", signature='"
+          + signature
+          + '\''
           + '}';
     }
   }
@@ -493,10 +513,9 @@ public class Metadata {
           + ", type='"
           + type
           + '\''
-          + ", modifiers="
-          + modifiers
-          + ", isStatic="
-          + isStatic
+          + ", modifiers='"
+          + Modifier.toString(modifiers)
+          + '\''
           + ", inheritedFrom='"
           + inheritedFrom
           + '\''
@@ -538,13 +557,14 @@ public class Metadata {
     @Override
     public String toString() {
       return "ParameterInfo{"
-          + "modifiers="
-          + Modifier.toString(modifiers)
-          + ", name='"
+          + "name='"
           + name
           + '\''
           + ", type='"
           + type
+          + '\''
+          + ", modifiers='"
+          + Modifier.toString(modifiers)
           + '\''
           + '}';
     }

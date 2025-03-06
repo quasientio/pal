@@ -14,6 +14,8 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -145,7 +147,6 @@ public class ClassMetadataSerializer {
 
         fillConstructorsArray(mapper, classInfo, constructorsArray);
         if (!mergeAncestry) {
-          // Plain old declared info
           fillMethodsArray(mapper, classInfo, methodsArray);
           fillFieldsArray(mapper, classInfo, fieldsArray);
         } else {
@@ -198,12 +199,23 @@ public class ClassMetadataSerializer {
   /** Collect methods for a classInfo, excluding synthetic/aspect-weaver items. */
   private static void fillMethodsArray(
       ObjectMapper mapper, ClassInfo classInfo, ArrayNode methodsArray) {
+
+    Map<String, ObjectNode> signatureToMethodMap = new HashMap<>();
     for (MethodInfo methodInfo : classInfo.getMethodInfo()) {
       if (isAspectWeaverMethod(methodInfo)) {
         continue;
       }
+      String sig = methodSignature(methodInfo);
       ObjectNode methodObject = createMethodJson(mapper, methodInfo, null, false);
-      methodsArray.add(methodObject);
+      signatureToMethodMap.put(sig, methodObject);
+    }
+
+    // 2) forcibly add all java.lang.Object methods via reflection
+    addJavaLangObjectMethodsViaReflection(mapper, signatureToMethodMap);
+
+    // Put all the methods in the final array
+    for (ObjectNode method : signatureToMethodMap.values()) {
+      methodsArray.add(method);
     }
   }
 
@@ -227,7 +239,7 @@ public class ClassMetadataSerializer {
    */
   private static void mergeMethods(
       ObjectMapper mapper, ClassInfo classInfo, ArrayNode methodsArray) {
-    Map<String, ObjectNode> signatureMap = new HashMap<>();
+    Map<String, ObjectNode> signatureToMethodMap = new HashMap<>();
 
     // 1) gather from all ancestors
     Set<ClassInfo> allAncestors = gatherAllAncestors(classInfo);
@@ -237,15 +249,15 @@ public class ClassMetadataSerializer {
           continue;
         }
         String sig = methodSignature(methodInfo);
-        if (!signatureMap.containsKey(sig)) {
+        if (!signatureToMethodMap.containsKey(sig)) {
           ObjectNode methodJson = createMethodJson(mapper, methodInfo, ancestor.getName(), false);
-          signatureMap.put(sig, methodJson);
+          signatureToMethodMap.put(sig, methodJson);
         }
       }
     }
 
     // 2) forcibly add all java.lang.Object methods via reflection
-    addJavaLangObjectMethodsViaReflection(mapper, signatureMap);
+    addJavaLangObjectMethodsViaReflection(mapper, signatureToMethodMap);
 
     // 3) incorporate local declared methods
     for (MethodInfo methodInfo : classInfo.getDeclaredMethodInfo()) {
@@ -253,21 +265,21 @@ public class ClassMetadataSerializer {
         continue;
       }
       String sig = methodSignature(methodInfo);
-      if (signatureMap.containsKey(sig)) {
+      if (signatureToMethodMap.containsKey(sig)) {
         // It's an override
-        ObjectNode ancestorMethod = signatureMap.get(sig);
+        ObjectNode ancestorMethod = signatureToMethodMap.get(sig);
         String inheritedFrom = ancestorMethod.get("inheritedFrom").asText();
         ObjectNode localJson = createMethodJson(mapper, methodInfo, inheritedFrom, true);
-        signatureMap.put(sig, localJson);
+        signatureToMethodMap.put(sig, localJson);
       } else {
         // Purely local
         ObjectNode localJson = createMethodJson(mapper, methodInfo, null, false);
-        signatureMap.put(sig, localJson);
+        signatureToMethodMap.put(sig, localJson);
       }
     }
 
-    // Put them in the final array
-    for (ObjectNode method : signatureMap.values()) {
+    // Put all methods in the final array
+    for (ObjectNode method : signatureToMethodMap.values()) {
       methodsArray.add(method);
     }
   }
@@ -518,12 +530,56 @@ public class ClassMetadataSerializer {
 
   private static String reflectionMethodSignature(Method m) {
     StringBuilder sb = new StringBuilder();
-    sb.append(m.getName()).append("(");
-    for (Class<?> paramType : m.getParameterTypes()) {
-      sb.append(paramType.getName()).append(",");
+
+    // 1) If the method has type parameters (e.g. <K extends Comparable<? super K>, V>),
+    //    include them at the start.
+    TypeVariable<Method>[] typeParameters = m.getTypeParameters();
+    if (typeParameters.length > 0) {
+      sb.append("<");
+      for (int i = 0; i < typeParameters.length; i++) {
+        if (i > 0) {
+          sb.append(", ");
+        }
+        TypeVariable<Method> tv = typeParameters[i];
+        sb.append(tv.getName());
+
+        // If the bound is not just Object, we show it
+        Type[] bounds = tv.getBounds();
+        if (bounds.length > 0 && !(bounds.length == 1 && bounds[0] == Object.class)) {
+          sb.append(" extends ");
+          for (int b = 0; b < bounds.length; b++) {
+            if (b > 0) {
+              sb.append(" & ");
+            }
+            sb.append(typeToString(bounds[b]));
+          }
+        }
+      }
+      sb.append("> ");
     }
-    sb.append(")->").append(m.getReturnType().getName());
+
+    // 2) Method name
+    sb.append(m.getName()).append("(");
+
+    // 3) Parameter types
+    Type[] paramTypes = m.getGenericParameterTypes();
+    for (int i = 0; i < paramTypes.length; i++) {
+      if (i > 0) {
+        sb.append(", ");
+      }
+      sb.append(typeToString(paramTypes[i]));
+    }
+    sb.append(")");
+
+    // 4) Return type
+    Type returnType = m.getGenericReturnType();
+    sb.append(" -> ").append(typeToString(returnType));
+
     return sb.toString();
+  }
+
+  private static String typeToString(Type type) {
+    return type.getTypeName();
   }
 
   private static boolean isAspectWeaverMethod(MethodInfo methodInfo) {
