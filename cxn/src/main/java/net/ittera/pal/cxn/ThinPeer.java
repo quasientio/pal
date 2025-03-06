@@ -35,6 +35,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import javax.annotation.Nullable;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
@@ -64,7 +66,10 @@ import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.TopicPartition;
+import org.java_websocket.WebSocket;
 import org.java_websocket.client.WebSocketClient;
+import org.java_websocket.exceptions.WebsocketNotConnectedException;
+import org.java_websocket.framing.Framedata;
 import org.java_websocket.handshake.ServerHandshake;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -647,9 +652,41 @@ public class ThinPeer implements AutoCloseable {
     peerSocket.setIdentity(identityBytes);
     peerSocket.connect(peer.getRpcAddress());
     isZmqSocketConnected = true;
+    currentPeer = peer;
+    talkingToPeer = true;
     if (logger.isDebugEnabled()) {
       logger.debug("ZMQ socket connected to peer: {}", peer.getUuid());
     }
+  }
+
+  /**
+   * Establishes a ZeroMQ socket connection to the specified peer, and sends a Ping command, waiting
+   * for the reply within the specified timeout
+   *
+   * @param peer the PeerInfo object representing the peer to connect to
+   * @param timeout the timeout duration
+   * @return Returns true if the connection succeeded within the specified timeout.
+   */
+  private boolean connectZmqSocketWithTimeout(PeerInfo peer, Duration timeout) {
+
+    // we connect normally - in ZMQ this is an asynchronous operation and does not
+    // guarantee that we are indeed paired
+    connectZmqSocket(peer);
+
+    // so we send a ping and wait for the response
+    boolean pingResponded = false;
+    try {
+      pingResponded = sendPing(timeout) != -1;
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    } finally {
+      // reset socket if we got no response to our ping
+      if (!pingResponded) {
+        closePeerZMQSocket();
+      }
+    }
+
+    return pingResponded;
   }
 
   /**
@@ -664,6 +701,30 @@ public class ThinPeer implements AutoCloseable {
     wsClient = new WsClient(new URI(peer.getJsonrpcAddress()), headers);
     wsClient.connectBlocking();
     isWsClientConnected = true;
+    currentPeer = peer;
+    talkingToPeer = true;
+  }
+
+  /**
+   * Establishes a WebSocket connection to the specified peer, with a connect timeout.
+   *
+   * @param peer the PeerInfo object representing the peer to connect to
+   * @param timeout the time to wait before timing out
+   * @return Returns whether the connection succeeded or not
+   * @throws URISyntaxException if the peer's JSON-RPC address URI is invalid
+   * @throws InterruptedException if the connection attempt is interrupted
+   */
+  private boolean connectWebSocketWithTimeout(PeerInfo peer, Duration timeout)
+      throws URISyntaxException, InterruptedException {
+    Map<String, String> headers = Map.of("peer-id", peerUuid.toString());
+    wsClient = new WsClient(new URI(peer.getJsonrpcAddress()), headers);
+    boolean succeeded = wsClient.connectBlocking(timeout.toMillis(), TimeUnit.MILLISECONDS);
+    if (succeeded) {
+      isWsClientConnected = true;
+    }
+    currentPeer = peer;
+    talkingToPeer = true;
+    return succeeded;
   }
 
   /**
@@ -1206,12 +1267,15 @@ public class ThinPeer implements AutoCloseable {
   }
 
   /**
-   * Establishes a connection to the specified peer.
+   * Establishes a connection to the specified peer. If timeout is not null, wait for the connection
+   * to be established up to the given timeout value.
    *
    * @param peer the PeerInfo object representing the peer to connect to
+   * @param timeout the amount of time to wait for the connection to be established
+   * @return true if the connection was established successfully, false if timed out
    * @throws Exception if connection setup fails
    */
-  private void connectToPeer(PeerInfo peer) throws Exception {
+  public boolean connectToPeer(PeerInfo peer, @Nullable Duration timeout) throws Exception {
     if (logger.isDebugEnabled()) {
       logger.debug("connectToPeer: in with peer: {}", peer.getUuid());
     }
@@ -1222,14 +1286,33 @@ public class ThinPeer implements AutoCloseable {
       closePeerSocket();
     }
 
+    boolean connected = true;
     if (outboundRpcType == RpcType.BIN_RPC) {
-      connectZmqSocket(peer);
+      if (timeout != null) {
+        connected = connectZmqSocketWithTimeout(peer, timeout);
+      } else {
+        connectZmqSocket(peer);
+      }
     } else { // is JSON-RPC
-      connectWebSocket(peer);
+      if (timeout != null) {
+        connected = connectWebSocketWithTimeout(peer, timeout);
+      } else {
+        connectWebSocket(peer);
+      }
     }
-    currentPeer = peer;
-    talkingToPeer = true;
     logger.info("Now in direct talk with {}", peer);
+    return connected;
+  }
+
+  /**
+   * Establishes a connection to the specified peer. This method calls {@link
+   * #connectToPeer(PeerInfo, Duration)} with a null timeout value.
+   *
+   * @param peer the PeerInfo object representing the peer to connect to
+   * @throws Exception if connection setup fails
+   */
+  public void connectToPeer(PeerInfo peer) throws Exception {
+    connectToPeer(peer, null);
   }
 
   /**
@@ -1268,38 +1351,86 @@ public class ThinPeer implements AutoCloseable {
   }
 
   /**
-   * Sends a ControlMessage directly to the connected peer and awaits the response.
+   * Sends a ControlMessage directly to the connected peer and awaits the response for up to the
+   * given timeout, if one is given. Otherwise, it waits indefinitely for the response.
+   *
+   * @param message the ControlMessage to send
+   * @param timeout the maximum time to wait for a response; can be null for no timeout
+   * @return the ControlMessage response from the peer
+   * @throws IllegalStateException if not connected to a peer or the instance is not initialized
+   * @throws TimeoutException if no response is received within the given timeout
+   */
+  public ControlMessage sendToPeer(ControlMessage message, @Nullable Duration timeout)
+      throws TimeoutException {
+
+    if (logger.isDebugEnabled()) {
+      logger.debug("in sendToPeer with control message: {}", ColferUtils.format(message));
+    }
+
+    // Ensure we're still connected and initialized
+    assertInitializedAndActive();
+    if (!talkingToPeer) {
+      throw new IllegalStateException("Not connected to any peer. Cannot send message.");
+    }
+
+    int originalTimeout = peerSocket.getReceiveTimeOut();
+    if (timeout != null) {
+      // Temporarily set the socket's receive timeout
+      // recv() will block up to this duration
+      peerSocket.setReceiveTimeOut((int) timeout.toMillis());
+    }
+
+    try {
+      // Send the message
+      peerSocket.send(ColferUtils.toBytes(msgBuilder.wrap(message)));
+
+      final long waitStart = System.currentTimeMillis();
+      byte[] response = peerSocket.recv(0);
+      final long waitEnd = System.currentTimeMillis();
+
+      if (response == null && timeout != null) {
+        // recv() returns null if the timeout was reached
+        throw new TimeoutException(
+            String.format("No response received within %d ms", timeout.toMillis()));
+      }
+
+      // Unmarshal the response into a ControlMessage
+      final Message responseMessageWrapper = new Message();
+      responseMessageWrapper.unmarshal(response, 0);
+      final ControlMessage responseMessage = responseMessageWrapper.getControlMessage();
+
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            "Got response to control message: {}, waited {} ms",
+            responseMessage.getMessageId(),
+            (waitEnd - waitStart));
+      }
+
+      return responseMessage;
+    } finally {
+      if (timeout != null) {
+        // Restore the original timeout
+        peerSocket.setReceiveTimeOut(originalTimeout);
+      }
+    }
+  }
+
+  /**
+   * Sends a ControlMessage directly to the connected peer and awaits the response. This method
+   * calls {@link #sendToPeer(ControlMessage, Duration)} with a null timeout.
    *
    * @param message the ControlMessage to send
    * @return the ControlMessage response from the peer
    * @throws IllegalStateException if not connected to a peer or the instance is not initialized
    */
   public ControlMessage sendToPeer(ControlMessage message) {
-    if (logger.isDebugEnabled()) {
-      logger.debug("in sendToPeer with control message: {}", ColferUtils.format(message));
+    try {
+      return sendToPeer(message, null);
+    } catch (TimeoutException e) {
+      // this should not happen
+      throw new RuntimeException(
+          "This TimeoutException should not have been thrown, but here it is", e);
     }
-    assertInitializedAndActive();
-    if (!talkingToPeer) {
-      throw new IllegalStateException("Not connected to any peer. Cannot send message.");
-    }
-    // send message request to peer
-    peerSocket.send(ColferUtils.toBytes(msgBuilder.wrap(message)));
-
-    final long waitStart = System.currentTimeMillis();
-    byte[] response = peerSocket.recv(0);
-    final long waitEnd = System.currentTimeMillis();
-
-    final Message responseMessageWrapper = new Message();
-    responseMessageWrapper.unmarshal(response, 0);
-    final ControlMessage responseMessage = responseMessageWrapper.getControlMessage();
-    if (logger.isDebugEnabled()) {
-      logger.debug(
-          "Got response to control message: {}, waited {} ms",
-          responseMessage.getMessageId(),
-          (waitEnd - waitStart));
-    }
-
-    return responseMessage;
   }
 
   /**
@@ -1407,26 +1538,40 @@ public class ThinPeer implements AutoCloseable {
     }
   }
 
+  /** Closes the peer ZeroMQ socket. */
+  private void closePeerZMQSocket() {
+    if (peerSocket != null) {
+      peerSocket.close();
+      isZmqSocketConnected = false;
+      peerSocket = null;
+      currentPeer = null;
+      talkingToPeer = false;
+    }
+  }
+
+  /** Closes the peer WebSocket client. */
+  private void closeWSClient() {
+    if (wsClient != null) {
+      wsClient.close();
+      isWsClientConnected = false;
+      wsClient = null;
+      currentPeer = null;
+      talkingToPeer = false;
+    }
+  }
+
   /** Closes the peer connection sockets, including ZeroMQ and WebSocket clients. */
   private void closePeerSocket() {
     try {
-      if (peerSocket != null) {
-        peerSocket.close();
-        isZmqSocketConnected = false;
-        peerSocket = null;
-        logger.info("Peer zmq socket closed.");
-      }
+      closePeerZMQSocket();
+      logger.info("Peer zmq socket closed.");
     } catch (Exception e) {
       logger.warn("Error closing peer zmq socket", e);
     }
 
     try {
-      if (wsClient != null) {
-        wsClient.close();
-        isWsClientConnected = false;
-        wsClient = null;
-        logger.info("WebSocket client closed.");
-      }
+      closeWSClient();
+      logger.info("WebSocket client closed.");
     } catch (Exception e) {
       logger.warn("Error closing peer websocket", e);
     }

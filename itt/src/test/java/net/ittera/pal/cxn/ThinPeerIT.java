@@ -26,6 +26,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.time.Duration;
 import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
@@ -316,5 +317,33 @@ public class ThinPeerIT extends AbstractIntegrationTest {
 
     double took = thinPeer.sendPing();
     logger.debug("Ping reply took {} ms", (long) took);
+  }
+
+  @Test
+  public void initAndConnectWithTimeoutToJsonRpcPeer() throws Exception {
+    thinPeer =
+        new ThinPeer()
+            .withDirectoryProvider(directoryConnectionProvider)
+            .withOutboundRpcType(RpcType.JSON_RPC)
+            .withSelfRegistration(false)
+            .init();
+
+    PeerInfo peer = findRpcPeer(RpcType.JSON_RPC, directoryConnectionProvider).orElseThrow();
+    boolean connected = thinPeer.connectToPeer(peer, Duration.ofSeconds(3));
+    assertTrue(connected);
+  }
+
+  @Test
+  public void initAndConnectWithTimeoutToZmqPeer() throws Exception {
+    thinPeer =
+        new ThinPeer()
+            .withDirectoryProvider(directoryConnectionProvider)
+            .withOutboundRpcType(RpcType.BIN_RPC)
+            .withSelfRegistration(false)
+            .init();
+
+    PeerInfo peer = findRpcPeer(RpcType.BIN_RPC, directoryConnectionProvider).orElseThrow();
+    boolean connected = thinPeer.connectToPeer(peer, Duration.ofSeconds(3));
+    assertTrue(connected);
   }
 }
