@@ -69,8 +69,10 @@ public class MetaMessageIT extends AbstractBinaryRpcMessageIT {
     // decompress && decode body
     String plainBody = GzipBase64Utils.decode(body);
 
-    int minExpectedClassCount = 5000;
-    assertTrue(findOccurrences("className", plainBody) > minExpectedClassCount);
+    int minExpectedClassCount = 3000;
+    int classesInResult = findOccurrences("className", plainBody);
+    logger.debug("fetch_class_info returned {} classes", classesInResult);
+    assertTrue(classesInResult > minExpectedClassCount);
 
     // metadata serialization uses a lot of heap, better request a GC
     sendGcCommand();
@@ -102,8 +104,10 @@ public class MetaMessageIT extends AbstractBinaryRpcMessageIT {
     // decompress && decode body
     String plainBody = GzipBase64Utils.decode(body);
 
-    int minExpectedClassCount = 5000;
-    assertTrue(findOccurrences("className", plainBody) > minExpectedClassCount);
+    int minExpectedClassCount = 3000;
+    int classesInResult = findOccurrences("className", plainBody);
+    logger.debug("fetch_class_info returned {} classes", classesInResult);
+    assertTrue(classesInResult > minExpectedClassCount);
 
     // expect no java.util classes
     String javaUtilClassNameEntry = "\"className\":\"java.util.";

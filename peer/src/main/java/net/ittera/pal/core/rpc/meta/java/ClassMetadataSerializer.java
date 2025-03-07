@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nullable;
 import net.ittera.pal.common.util.GzipBase64Utils;
+import net.ittera.pal.core.rpc.exec.java.CustomClassloader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,14 +35,19 @@ public class ClassMetadataSerializer {
       Set.of("com.sun.", "sun.", "jdk.", PAL_PREFIX);
 
   private final boolean scanNonPublic;
+  @Nullable private final CustomClassloader customClassloader;
 
   @Inject
-  public ClassMetadataSerializer(@Named("rpc.allow_nonpublic") String rpcAllowNonpublicStr) {
-    this(Boolean.parseBoolean(rpcAllowNonpublicStr));
+  public ClassMetadataSerializer(
+      @Named("rpc.allow_nonpublic") String rpcAllowNonpublicStr,
+      @Nullable CustomClassloader customClassloader) {
+    this.scanNonPublic = Boolean.parseBoolean(rpcAllowNonpublicStr);
+    this.customClassloader = customClassloader;
   }
 
   ClassMetadataSerializer(boolean rpcAllowNonpublic) {
     this.scanNonPublic = rpcAllowNonpublic;
+    this.customClassloader = null;
   }
 
   /**
@@ -63,26 +69,25 @@ public class ClassMetadataSerializer {
     // store all class metadata as an array
     ArrayNode classesArray = mapper.createArrayNode();
 
-    ClassGraph classGraph;
+    ClassGraph classGraph =
+        new ClassGraph()
+            .enableClassInfo()
+            .enableMethodInfo()
+            .enableFieldInfo()
+            .disableRuntimeInvisibleAnnotations()
+            .enableSystemJarsAndModules()
+            .removeTemporaryFilesAfterScan();
+
     if (includeClasses != null && !includeClasses.isEmpty()) {
       // we will only scan the classes to include
-      classGraph =
-          new ClassGraph()
-              .enableClassInfo()
-              .enableMethodInfo()
-              .enableFieldInfo()
-              .acceptClasses(includeClasses.toArray(new String[0]))
-              .disableRuntimeInvisibleAnnotations()
-              .enableSystemJarsAndModules();
+      classGraph.acceptClasses(includeClasses.toArray(new String[0]));
     } else {
-      classGraph =
-          new ClassGraph()
-              .enableClassInfo()
-              .enableMethodInfo()
-              .enableFieldInfo()
-              .acceptPackages()
-              .disableRuntimeInvisibleAnnotations()
-              .enableSystemJarsAndModules();
+      classGraph.acceptPackages();
+    }
+
+    if (customClassloader != null) {
+      classGraph.overrideClassLoaders(customClassloader);
+      classGraph.ignoreParentClassLoaders();
     }
 
     if (scanNonPublic) {

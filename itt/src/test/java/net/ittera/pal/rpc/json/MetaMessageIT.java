@@ -54,8 +54,10 @@ public class MetaMessageIT extends AbstractJsonRpcMessageIT {
     String plainBody = GzipBase64Utils.decode(body);
 
     String searchString = "className";
-    int minExpectedClassCount = 5000;
-    assertTrue(findOccurrences(searchString, plainBody) > minExpectedClassCount);
+    int minExpectedClassCount = 3000;
+    int classesInResult = findOccurrences(searchString, plainBody);
+    logger.debug("fetch_class_info returned {} classes", classesInResult);
+    assertTrue(classesInResult > minExpectedClassCount);
 
     // metadata serialization uses a lot of heap, better request a GC
     sendGcCommand();
@@ -85,8 +87,10 @@ public class MetaMessageIT extends AbstractJsonRpcMessageIT {
     String plainBody = GzipBase64Utils.decode(body);
 
     String searchString = "className";
-    int minExpectedClassCount = 5000;
-    assertTrue(findOccurrences(searchString, plainBody) > minExpectedClassCount);
+    int minExpectedClassCount = 3000;
+    int classesInResult = findOccurrences(searchString, plainBody);
+    logger.debug("fetch_class_info returned {} classes", classesInResult);
+    assertTrue(classesInResult > minExpectedClassCount);
 
     // expect no java.util classes
     String javaUtilClassNameEntry = "\"className\":\"java.util.";
