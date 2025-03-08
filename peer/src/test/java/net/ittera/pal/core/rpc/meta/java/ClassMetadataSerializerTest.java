@@ -3,6 +3,8 @@ package net.ittera.pal.core.rpc.meta.java;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Set;
 import org.junit.Before;
@@ -31,8 +33,10 @@ public class ClassMetadataSerializerTest {
 
   @Test
   public void testScan() throws Exception {
-    String classesMetadata =
+    Path classesMetadataPath =
         classMetadataSerializer.scannedClasspathToJson(false, null, null, false);
+    String classesMetadata = Files.readString(classesMetadataPath);
+
     String searchString = "className";
     // expect 10000 classes at least
     int minExpectedClassCount = 10000;
@@ -48,9 +52,10 @@ public class ClassMetadataSerializerTest {
     Set<String> additionalExcludePrefixes = new HashSet<>();
     additionalExcludePrefixes.add("java.util");
 
-    String scannedClasses =
+    Path scannedClassesPath =
         classMetadataSerializer.scannedClasspathToJson(
             false, null, additionalExcludePrefixes, false);
+    String scannedClasses = Files.readString(scannedClassesPath);
 
     String searchString = "className";
     // expect 10000 classes at least
@@ -69,8 +74,9 @@ public class ClassMetadataSerializerTest {
     includeClasses.add("java.util.Set");
     includeClasses.add("java.util.ArrayList");
 
-    String scannedClasses =
+    Path scannedClassesPath =
         classMetadataSerializer.scannedClasspathToJson(false, includeClasses, null, false);
+    String scannedClasses = Files.readString(scannedClassesPath);
 
     String searchString = "className";
     assertEquals(3, findOccurrences(searchString, scannedClasses));

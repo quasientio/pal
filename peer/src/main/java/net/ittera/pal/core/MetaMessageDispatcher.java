@@ -21,6 +21,7 @@ package net.ittera.pal.core;
 
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -111,15 +112,23 @@ public class MetaMessageDispatcher {
     switch (serviceType) {
       case FETCH_CLASSES_INFO:
         try {
-          String scanResults =
+          Path scanResultPath =
               classMetadataSerializer.scannedClasspathToJson(
                   compressAndEncode, includeClasses, excludePrefixes, mergeAncestry);
           return messageBuilder.buildMetaMessageResponse(
-              peerUuid, MetaStatusType.OK, scanResults, metaMessage.getMessageId());
+              peerUuid,
+              serviceType,
+              MetaStatusType.OK,
+              scanResultPath.toString(),
+              metaMessage.getMessageId());
         } catch (Exception e) {
           logger.error("Error scanning classes", e);
           return messageBuilder.buildMetaMessageResponse(
-              peerUuid, MetaStatusType.ERROR, e.getMessage(), metaMessage.getMessageId());
+              peerUuid,
+              serviceType,
+              MetaStatusType.ERROR,
+              e.getMessage(),
+              metaMessage.getMessageId());
         }
       default:
         String errorMessage =
@@ -128,7 +137,11 @@ public class MetaMessageDispatcher {
                 metaMessage.getMessageId(), metaMessage.fromPeer, serviceType.name());
         logger.error(errorMessage);
         return messageBuilder.buildMetaMessageResponse(
-            peerUuid, MetaStatusType.UNSUPPORTED, errorMessage, metaMessage.getMessageId());
+            peerUuid,
+            serviceType,
+            MetaStatusType.UNSUPPORTED,
+            errorMessage,
+            metaMessage.getMessageId());
     }
   }
 }

@@ -33,6 +33,8 @@ import static net.ittera.pal.serdes.colfer.Wrapper.getWrappedField;
 import static net.ittera.pal.serdes.colfer.Wrapper.getWrappedObject;
 import static net.ittera.pal.serdes.jsonrpc.JsonRpcMessageUtils.isMethodNotFoundError;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import java.lang.reflect.AccessibleObject;
@@ -44,6 +46,7 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -2282,16 +2285,31 @@ public final class MessageBuilder {
    * @return a {@code MetaMessage} representing the meta service response
    */
   public MetaMessage buildMetaMessageResponse(
-      UUID fromPeerUuid, MetaStatusType statusType, @Nullable String body, String responseToId) {
+      UUID fromPeerUuid,
+      MetaServiceType serviceType,
+      MetaStatusType statusType,
+      @Nullable String body,
+      String responseToId) {
     final MetaMessage metaMessage =
         new MetaMessage()
             .withFromPeer(fromPeerUuid.toString())
             .withMessageId(nextId())
             .withResponseToId(responseToId)
+            .withService(serviceType.getId())
             .withStatus(statusType.getId());
+    ObjectMapper objectMapper = new ObjectMapper();
 
     if (body != null && !body.isEmpty()) {
-      metaMessage.setBody(body);
+      Map<String, String> responseMap = new HashMap<>();
+      responseMap.put("service", serviceType.getJsonName());
+      responseMap.put("response", body);
+      String bodyAsJSON;
+      try {
+        bodyAsJSON = objectMapper.writeValueAsString(responseMap);
+      } catch (JsonProcessingException e) {
+        throw new RuntimeException(e);
+      }
+      metaMessage.setBody(bodyAsJSON);
     }
     return metaMessage;
   }

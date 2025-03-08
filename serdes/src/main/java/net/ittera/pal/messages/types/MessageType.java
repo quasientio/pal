@@ -78,7 +78,10 @@ public enum MessageType {
   META_MESSAGE_REQUEST(MessageFamily.META, (byte) 60),
 
   /** Represents a meta message response. */
-  META_MESSAGE_RESPONSE(MessageFamily.META, (byte) 61);
+  META_MESSAGE_RESPONSE(MessageFamily.META, (byte) 61),
+
+  /** Represents an unknown message type. */
+  UNKNOWN(null, (byte) 255);
 
   /** The family to which this message type belongs. */
   private final MessageFamily family;

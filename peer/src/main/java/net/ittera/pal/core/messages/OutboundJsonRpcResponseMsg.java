@@ -24,6 +24,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 import net.ittera.pal.common.util.UuidUtils;
 import net.ittera.pal.messages.BaseMsg;
+import net.ittera.pal.messages.types.MessageType;
 import org.zeromq.ZMQ;
 
 public class OutboundJsonRpcResponseMsg extends BaseMsg {
@@ -34,7 +35,8 @@ public class OutboundJsonRpcResponseMsg extends BaseMsg {
    * FRAMES:
    * -------
    * 1. peerId           : byte[] (UUID of WebSocket peer)
-   * 2. message            : byte[] (JSON-RPC response)
+   * 2. message type     : byte[] (MessageType byte)
+   * 3. message          : byte[] (JSON-RPC response as String)
    * </pre>
    */
 
@@ -43,14 +45,18 @@ public class OutboundJsonRpcResponseMsg extends BaseMsg {
 
   private final String jsonMessage;
 
-  public OutboundJsonRpcResponseMsg(UUID peerId, String message) {
+  private final MessageType messageType;
+
+  public OutboundJsonRpcResponseMsg(UUID peerId, String message, MessageType messageType) {
     Stream.of(peerId, message).forEach(Objects::requireNonNull);
     this.peerId = peerId;
     this.jsonMessage = message;
+    this.messageType = messageType;
   }
 
-  private OutboundJsonRpcResponseMsg(UUID peerId, String message, int size) {
-    this(peerId, message);
+  private OutboundJsonRpcResponseMsg(
+      UUID peerId, String message, MessageType messageType, int size) {
+    this(peerId, message, messageType);
     this.size = size;
   }
 
@@ -65,6 +71,14 @@ public class OutboundJsonRpcResponseMsg extends BaseMsg {
     if (!socket.send(buff, ZMQ.SNDMORE)) {
       return false;
     }
+
+    // message type
+    buff = new byte[] {messageType.getId()};
+    if (!socket.send(buff, ZMQ.SNDMORE)) {
+      return false;
+    }
+    size += buff.length;
+
     // message
     buff = jsonMessage.getBytes(ZMQ.CHARSET);
     size += buff.length;
@@ -97,12 +111,17 @@ public class OutboundJsonRpcResponseMsg extends BaseMsg {
     // peerId
     final UUID peerId = UuidUtils.fromBytes(buff);
 
+    // message type
+    buff = socket.recv();
+    MessageType messageType = MessageType.fromId(buff[0]);
+    msgSize += buff.length;
+
     // message body
     buff = socket.recv();
     msgSize += buff.length;
     final String message = new String(buff, ZMQ.CHARSET);
 
-    return new OutboundJsonRpcResponseMsg(peerId, message, msgSize);
+    return new OutboundJsonRpcResponseMsg(peerId, message, messageType, msgSize);
   }
 
   // default is non-blocking
@@ -139,5 +158,9 @@ public class OutboundJsonRpcResponseMsg extends BaseMsg {
 
   public String getJsonMessage() {
     return jsonMessage;
+  }
+
+  public MessageType getMessageType() {
+    return messageType;
   }
 }

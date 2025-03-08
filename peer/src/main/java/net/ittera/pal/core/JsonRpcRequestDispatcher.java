@@ -121,8 +121,10 @@ class JsonRpcRequestDispatcher extends ConnectedService {
           OutboundJsonRpcResponseMsg responseMsg =
               OutboundJsonRpcResponseMsg.receive(dealerSocket, true);
           if (responseMsg != null) {
-            String jsonRpcResponse = responseMsg.getJsonMessage();
-            webSocketServer.sendResponseToWebSocketClient(responseMsg.getPeerId(), jsonRpcResponse);
+            webSocketServer.sendResponseToWebSocketClient(
+                responseMsg.getPeerId(),
+                responseMsg.getJsonMessage(),
+                responseMsg.getMessageType());
           } else {
             logger.warn("Unexpected null response message");
           }

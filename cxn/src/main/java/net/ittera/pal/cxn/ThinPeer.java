@@ -1958,6 +1958,12 @@ public class ThinPeer implements AutoCloseable {
      */
     @Override
     public void onMessage(String message) {
+      if (message == null || message.isBlank()) {
+        if (logger.isDebugEnabled()) {
+          logger.debug("Ignoring received null or empty message...");
+        }
+        return;
+      }
       JsonRpcResponse response;
       try {
         response = JsonRpcSerializer.fromJson(message, JsonRpcResponse.class);

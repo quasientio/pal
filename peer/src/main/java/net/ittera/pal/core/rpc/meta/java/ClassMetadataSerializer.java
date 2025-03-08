@@ -1,5 +1,9 @@
 package net.ittera.pal.core.rpc.meta.java;
 
+import com.fasterxml.jackson.core.JsonEncoding;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -12,16 +16,21 @@ import io.github.classgraph.ScanResult;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.zip.GZIPOutputStream;
 import javax.annotation.Nullable;
-import net.ittera.pal.common.util.GzipBase64Utils;
 import net.ittera.pal.core.rpc.exec.java.CustomClassloader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,8 +66,9 @@ public class ClassMetadataSerializer {
    * @param includeClasses optional set of specific classes to include
    * @param additionalExcludePrefixes optional set of additional class prefixes to exclude
    * @param mergeAncestry if true, merges methods and fields from all ancestors
+   * @return the path of a temporary file created with the contents of the extracted metadata
    */
-  public String scannedClasspathToJson(
+  public Path scannedClasspathToJson(
       boolean compressAndEncode,
       @Nullable Set<String> includeClasses,
       @Nullable Set<String> additionalExcludePrefixes,
@@ -175,18 +185,7 @@ public class ClassMetadataSerializer {
       }
     }
 
-    String classMetadataAsJson = mapper.writeValueAsString(classesArray);
-
-    // help the gc
-    classesArray.removeAll();
-
-    if (!compressAndEncode) {
-      // return plain JSON
-      return classMetadataAsJson;
-    }
-
-    // return the Base64-encoded, GZip-compressed JSON
-    return GzipBase64Utils.encode(classMetadataAsJson);
+    return writeAsJSONToFile(classesArray, mapper, compressAndEncode);
   }
 
   /** Collect declared constructors for a classInfo, excluding synthetic/aspect-weaver items. */
@@ -595,5 +594,28 @@ public class ClassMetadataSerializer {
 
   private static boolean isAspectWeaverField(FieldInfo fieldInfo) {
     return fieldInfo.isSynthetic() || fieldInfo.getName().contains("ajc$");
+  }
+
+  public Path writeAsJSONToFile(ArrayNode classesArray, ObjectMapper mapper, boolean gzipAndEncode)
+      throws Exception {
+    // Decide on file suffix
+    String suffix = gzipAndEncode ? ".gz.b64" : ".json";
+    Path outFile = Files.createTempFile("classinfo_metadata_", suffix);
+
+    // Create the initial file output stream
+    try (FileOutputStream fos = new FileOutputStream(outFile.toFile());
+        // Conditionally wrap the stream in Base64 → GZIP or just use raw:
+        OutputStream finalOut =
+            gzipAndEncode ? new GZIPOutputStream(Base64.getEncoder().wrap(fos)) : fos;
+        // Create a streaming JsonGenerator that writes into finalOut
+        JsonGenerator jGenerator = new JsonFactory().createGenerator(finalOut, JsonEncoding.UTF8)) {
+      jGenerator.writeStartArray();
+      for (JsonNode data : classesArray) {
+        mapper.writeValue(jGenerator, data);
+      }
+      jGenerator.writeEndArray();
+    }
+
+    return outFile;
   }
 }

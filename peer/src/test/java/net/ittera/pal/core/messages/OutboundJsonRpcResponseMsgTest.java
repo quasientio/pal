@@ -26,6 +26,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.UUID;
 import net.ittera.pal.core.ZmqEnabledTest;
+import net.ittera.pal.messages.types.MessageType;
 import org.junit.Test;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
@@ -60,7 +61,8 @@ public class OutboundJsonRpcResponseMsgTest extends ZmqEnabledTest {
           "id": 1
         }
         """;
-    OutboundJsonRpcResponseMsg msgOut = new OutboundJsonRpcResponseMsg(clientId, jsonRpcMessage);
+    OutboundJsonRpcResponseMsg msgOut =
+        new OutboundJsonRpcResponseMsg(clientId, jsonRpcMessage, MessageType.UNKNOWN);
     msgOut.send(repSocket);
 
     // receive and compare
@@ -85,8 +87,10 @@ public class OutboundJsonRpcResponseMsgTest extends ZmqEnabledTest {
               "id": 1
             }
             """;
-    OutboundJsonRpcResponseMsg msg1 = new OutboundJsonRpcResponseMsg(clientId, jsonMessage);
-    OutboundJsonRpcResponseMsg msg2 = new OutboundJsonRpcResponseMsg(clientId, jsonMessage);
+    OutboundJsonRpcResponseMsg msg1 =
+        new OutboundJsonRpcResponseMsg(clientId, jsonMessage, MessageType.UNKNOWN);
+    OutboundJsonRpcResponseMsg msg2 =
+        new OutboundJsonRpcResponseMsg(clientId, jsonMessage, MessageType.UNKNOWN);
     assertThat(msg1, is(msg2));
 
     // test same instance
@@ -94,7 +98,8 @@ public class OutboundJsonRpcResponseMsgTest extends ZmqEnabledTest {
 
     // test two different instances with different clientId
     UUID clientId2 = UUID.randomUUID();
-    OutboundJsonRpcResponseMsg msg3 = new OutboundJsonRpcResponseMsg(clientId2, jsonMessage);
+    OutboundJsonRpcResponseMsg msg3 =
+        new OutboundJsonRpcResponseMsg(clientId2, jsonMessage, MessageType.UNKNOWN);
     assertThat(msg1, is(not(msg3)));
 
     // test two different instances with different jsonMessage
@@ -106,7 +111,8 @@ public class OutboundJsonRpcResponseMsgTest extends ZmqEnabledTest {
               "id": 1
             }
             """;
-    OutboundJsonRpcResponseMsg msg4 = new OutboundJsonRpcResponseMsg(clientId, jsonMessage2);
+    OutboundJsonRpcResponseMsg msg4 =
+        new OutboundJsonRpcResponseMsg(clientId, jsonMessage2, MessageType.UNKNOWN);
     assertThat(msg1, is(not(msg4)));
   }
 }

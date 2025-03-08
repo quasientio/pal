@@ -1,12 +1,30 @@
 package net.ittera.pal.core;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetSocketAddress;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import net.ittera.pal.core.messages.InboundJsonRpcRequestMsg;
+import net.ittera.pal.core.rpc.WebSocketOutputStream;
+import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
+import net.ittera.pal.messages.jsonrpc.JsonRpcResponseReturnValue;
+import net.ittera.pal.messages.jsonrpc.ResponseObject;
+import net.ittera.pal.messages.types.MessageType;
+import net.ittera.pal.messages.types.MetaServiceType;
+import net.ittera.pal.serdes.jsonrpc.JsonRpcSerializer;
+import net.ittera.pal.serdes.jsonrpc.ResponseObjectSerializer;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
@@ -17,9 +35,10 @@ class JsonRpcWebSocketServer extends WebSocketServer {
 
   private static final Logger logger = LoggerFactory.getLogger(JsonRpcWebSocketServer.class);
   private static final int STOP_TIMEOUT_MS = 2000;
-  private static final int WS_THREAD_POOL_SIZE = 2;
+  private static final int WS_THREAD_POOL_SIZE = 3;
   private static final String CLOSE_MSG = "Closing WebSocket server. Bye!";
 
+  private final ObjectMapper responseObjectMapper;
   private final BlockingQueue<InboundJsonRpcRequestMsg> requestQueue;
   private final Map<WebSocket, UUID> webSocketConnectionMapping = new ConcurrentHashMap<>();
   private final Map<UUID, ConnectionStats> peerStatsMap = new ConcurrentHashMap<>();
@@ -29,6 +48,15 @@ class JsonRpcWebSocketServer extends WebSocketServer {
     super(address, WS_THREAD_POOL_SIZE);
     setReuseAddr(true);
     this.requestQueue = requestQueue;
+    this.responseObjectMapper = createResponseObjectMapper();
+  }
+
+  private ObjectMapper createResponseObjectMapper() {
+    ObjectMapper mapper = new ObjectMapper();
+    SimpleModule module = new SimpleModule();
+    module.addSerializer(ResponseObject.class, new ResponseObjectSerializer());
+    mapper.registerModule(module);
+    return mapper;
   }
 
   private WebSocket getConnectionSocketFromId(UUID connId) {
@@ -39,18 +67,95 @@ class JsonRpcWebSocketServer extends WebSocketServer {
         .orElse(null);
   }
 
-  public void sendResponseToWebSocketClient(UUID peerId, String response) {
+  public void sendResponseToWebSocketClient(UUID peerId, String response, MessageType messageType) {
     WebSocket connSocket = getConnectionSocketFromId(peerId);
     if (connSocket == null) {
       logger.error("Error sending back response: no WebSocket peer found for id: {}", peerId);
       return;
     }
+
+    // if it's a non-error response to FETCH_CLASSES_INFO, stream file contents back to client
+    if (messageType.equals(MessageType.META_MESSAGE_RESPONSE)) {
+      try {
+        JsonRpcResponse jsonRpcResponse =
+            JsonRpcSerializer.fromJson(response, JsonRpcResponse.class);
+        if (isClassMetadataResponse(jsonRpcResponse)) {
+          Objects.requireNonNull(jsonRpcResponse.getResult());
+          ResponseObject responseObj = jsonRpcResponse.getResult().getValue();
+          @SuppressWarnings("unchecked")
+          Map<String, String> responseMap =
+              responseObjectMapper.readValue(responseObj.getValue(), Map.class);
+          Path metadataFilePath = Path.of(responseMap.get("response"));
+          sendStreamingResponse(connSocket, jsonRpcResponse.getId(), metadataFilePath);
+          // delete metadata file
+          Files.deleteIfExists(metadataFilePath);
+          peerStatsMap.get(peerId).incrementTotalMessagesSent();
+          logger.debug("Sent back response to peer w/id: {}", peerId);
+          return;
+        }
+      } catch (Exception e) {
+        logger.error("Error sending back response to peer w/id: {}", peerId, e);
+        return;
+      }
+    }
+
+    // other responses are sent to the client directly as a simple message
     try {
       connSocket.send(response);
       peerStatsMap.get(peerId).incrementTotalMessagesSent();
       logger.debug("Sent back response to peer w/id: {}", peerId);
     } catch (Exception e) {
       logger.error("Error sending back response to peer w/id: {}", peerId, e);
+    }
+  }
+
+  private boolean isClassMetadataResponse(JsonRpcResponse jsonRpcResponse) {
+    if (jsonRpcResponse.getResult() != null) {
+      ResponseObject responseObj = jsonRpcResponse.getResult().getValue();
+      if (responseObj != null) {
+        try {
+          @SuppressWarnings("unchecked")
+          Map<String, String> responseMap =
+              responseObjectMapper.readValue(responseObj.getValue(), Map.class);
+          return MetaServiceType.FETCH_CLASSES_INFO
+              .getJsonName()
+              .equals(responseMap.get("service"));
+        } catch (JsonProcessingException e) {
+          logger.error("Error deserializing response map", e);
+        }
+      }
+    }
+    return false;
+  }
+
+  public void sendStreamingResponse(WebSocket conn, String messageId, Path filePath)
+      throws IOException {
+    // 1. Build the JsonRpcResponse (value field is a placeholder)
+    JsonRpcResponse response =
+        JsonRpcResponse.builder()
+            .withId(messageId)
+            .withResult(
+                JsonRpcResponseReturnValue.builder()
+                    .withIsVoid(false)
+                    .withValue(
+                        ResponseObject.builder()
+                            .withIsNull(false)
+                            .withValue("[STREAMING_DATA]") // Placeholder
+                            .build())
+                    .build())
+            .build();
+
+    // 2. Open the file input stream
+    try (InputStream dataStream = Files.newInputStream(filePath)) {
+      // 3. Serialize with the custom serializer and stream to WebSocket
+      try (WebSocketOutputStream wsStream = new WebSocketOutputStream(conn);
+          JsonGenerator generator = responseObjectMapper.getFactory().createGenerator(wsStream)) {
+
+        // Pass the InputStream as a context attribute
+        ObjectWriter writer =
+            responseObjectMapper.writer().withAttribute("valueInputStream", dataStream);
+        writer.writeValue(generator, response);
+      }
     }
   }
 

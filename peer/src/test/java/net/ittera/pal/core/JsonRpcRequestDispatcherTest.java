@@ -31,6 +31,7 @@ import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponseReturnValue;
 import net.ittera.pal.messages.jsonrpc.Params;
+import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.jsonrpc.JsonRpcSerializer;
 import net.ittera.pal.serdes.jsonrpc.JsonSerializationException;
 import org.java_websocket.client.WebSocketClient;
@@ -194,7 +195,9 @@ public class JsonRpcRequestDispatcherTest extends ZmqEnabledTest {
                   .withResult(new JsonRpcResponseReturnValue.Builder().withIsVoid(true).build())
                   .build();
           String responseAsJson = JsonRpcSerializer.toJson(jsonRpcResponse);
-          new OutboundJsonRpcResponseMsg(rpcRequestMsg.getPeerId(), responseAsJson).send(socket);
+          new OutboundJsonRpcResponseMsg(
+                  rpcRequestMsg.getPeerId(), responseAsJson, MessageType.EXEC_RETURN_VALUE)
+              .send(socket);
         } catch (ZMQException ex) {
           int errorCode = ex.getErrorCode();
           if (errorCode == ZError.ETERM) {

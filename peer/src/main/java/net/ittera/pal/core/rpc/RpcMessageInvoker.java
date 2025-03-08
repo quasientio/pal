@@ -19,7 +19,10 @@
 
 package net.ittera.pal.core.rpc;
 
+import static net.ittera.pal.serdes.colfer.ControlMessageUtils.getMessageTypeOf;
 import static net.ittera.pal.serdes.colfer.ExecMessageUtils.getMessageId;
+import static net.ittera.pal.serdes.colfer.ExecMessageUtils.getMessageTypeOf;
+import static net.ittera.pal.serdes.colfer.MetaMessageUtils.getMessageTypeOf;
 import static net.ittera.pal.serdes.jsonrpc.JsonRpcMessageUtils.parseAndValidateJsonRpcMessage;
 
 import java.nio.channels.ClosedChannelException;
@@ -268,7 +271,9 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
       jsonRpcResponse = messageBuilder.jsonRpcResponseFromError(parseException, requestId);
       try {
         new OutboundJsonRpcResponseMsg(
-                jsonrpcMsg.getPeerId(), JsonRpcSerializer.toJson(jsonRpcResponse))
+                jsonrpcMsg.getPeerId(),
+                JsonRpcSerializer.toJson(jsonRpcResponse),
+                MessageType.UNKNOWN)
             .send(jsonrpcSocket);
       } catch (JsonSerializationException ex) {
         logger.error("Error sending JSON-RPC response", ex);
@@ -308,7 +313,9 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
       jsonRpcResponse = messageBuilder.jsonRpcResponseFromError(invalidRequestException, requestId);
       try {
         new OutboundJsonRpcResponseMsg(
-                jsonrpcMsg.getPeerId(), JsonRpcSerializer.toJson(jsonRpcResponse))
+                jsonrpcMsg.getPeerId(),
+                JsonRpcSerializer.toJson(jsonRpcResponse),
+                MessageType.UNKNOWN)
             .send(jsonrpcSocket);
       } catch (JsonSerializationException ex) {
         logger.error("Error sending JSON-RPC response", ex);
@@ -329,7 +336,9 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
       jsonRpcResponse = messageBuilder.jsonRpcResponseFromError(dispatchException, requestId);
       try {
         new OutboundJsonRpcResponseMsg(
-                jsonrpcMsg.getPeerId(), JsonRpcSerializer.toJson(jsonRpcResponse))
+                jsonrpcMsg.getPeerId(),
+                JsonRpcSerializer.toJson(jsonRpcResponse),
+                MessageType.UNKNOWN)
             .send(jsonrpcSocket);
       } catch (JsonSerializationException ex) {
         logger.error("Error sending JSON-RPC response", ex);
@@ -339,28 +348,35 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
     }
 
     // create JSON-RPC response from MetaMessage / ExecMessage response
+    MessageType responseMessageType;
     switch (requestMessageType.getFamily()) {
       case EXEC:
         jsonRpcResponse =
             messageBuilder.jsonRpcResponseFromExecMessageResponse(responseMessage.getExecMessage());
+        responseMessageType = getMessageTypeOf(responseMessage.getExecMessage());
         break;
       case META:
         jsonRpcResponse =
             messageBuilder.jsonRpcResponseFromMetaMessageResponse(responseMessage.getMetaMessage());
+        responseMessageType = getMessageTypeOf(responseMessage.getMetaMessage());
         break;
       case CONTROL:
         jsonRpcResponse =
             messageBuilder.jsonRpcResponseFromControlMessageResponse(
                 responseMessage.getControlMessage());
+        responseMessageType = getMessageTypeOf(responseMessage.getControlMessage());
         break;
       default:
         // we cannot get here: other branches ruled out in pre-dispatch switch
+        responseMessageType = MessageType.UNKNOWN;
     }
 
     // send response
     try {
       new OutboundJsonRpcResponseMsg(
-              jsonrpcMsg.getPeerId(), JsonRpcSerializer.toJson(jsonRpcResponse))
+              jsonrpcMsg.getPeerId(),
+              JsonRpcSerializer.toJson(jsonRpcResponse),
+              responseMessageType)
           .send(jsonrpcSocket);
     } catch (JsonSerializationException ex) {
       logger.error("Error sending JSON-RPC response", ex);
