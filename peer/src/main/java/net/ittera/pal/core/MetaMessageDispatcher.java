@@ -75,7 +75,7 @@ public class MetaMessageDispatcher {
           try {
             compressAndEncode = (Boolean) Unwrapper.unwrapObject(param.getValue());
           } catch (Exception e) {
-            throw new RuntimeException("Error unwrapping parameter to 'compress_encode'", e);
+            throw new RuntimeException("Error unwrapping parameter 'compress_encode'", e);
           }
         } else if (param.getName().equalsIgnoreCase("exclude_prefixes")
             && param.getValue() != null) {
@@ -85,7 +85,7 @@ public class MetaMessageDispatcher {
             Collections.addAll(
                 excludePrefixes, (String[]) Unwrapper.unwrapObject(param.getValue()));
           } catch (Exception e) {
-            throw new RuntimeException("Error unwrapping parameter to 'exclude_prefixes'", e);
+            throw new RuntimeException("Error unwrapping parameter 'exclude_prefixes'", e);
           }
         } else if (param.getName().equalsIgnoreCase("include_classes")
             && param.getValue() != null) {
@@ -94,14 +94,14 @@ public class MetaMessageDispatcher {
           try {
             Collections.addAll(includeClasses, (String[]) Unwrapper.unwrapObject(param.getValue()));
           } catch (Exception e) {
-            throw new RuntimeException("Error unwrapping parameter to 'includeClasses'", e);
+            throw new RuntimeException("Error unwrapping parameter 'includeClasses'", e);
           }
         } else if (param.getName().equalsIgnoreCase("merge_ancestry") && param.getValue() != null) {
           // process "merge_ancestry"
           try {
             mergeAncestry = (Boolean) Unwrapper.unwrapObject(param.getValue());
           } catch (Exception e) {
-            throw new RuntimeException("Error unwrapping parameter to 'merge_ancestry'", e);
+            throw new RuntimeException("Error unwrapping parameter 'merge_ancestry'", e);
           }
         } else {
           logger.warn("Ignoring parameter name={}, value={}", param.getName(), param.getValue());
