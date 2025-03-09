@@ -127,14 +127,20 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractRpcMessageIT
     final JsonRpcResponse response;
     try {
       if (targetType.equals(TargetType.PEER)) {
-        logger.debug("Sending message to peer");
+        logger.debug("Sending message w/id: {} to peer", messageId);
         response = thinPeer.sendJsonRpcRequestToPeer(jsonRpcRequest, messageId).get();
-        logger.debug("Received response: {}", response);
+        logger.debug("Received response for message w/id: {}", messageId);
+        if (logger.isTraceEnabled()) {
+          logger.trace("Received response: {}", response);
+        }
       } else {
-        logger.debug("Sending message to log");
+        logger.debug("Sending message w/id: {} to log", messageId);
         LogMessage<JsonRpcResponse> responseLogMessage =
             thinPeer.sendJsonRpcRequestToLogAndReceive(jsonRpcRequest);
-        logger.debug("Received response: {}", responseLogMessage);
+        logger.debug("Received response for message w/id: {}", messageId);
+        if (logger.isTraceEnabled()) {
+          logger.trace("Received response: {}", responseLogMessage);
+        }
         response = responseLogMessage.getContent();
       }
     } catch (Exception e) {
