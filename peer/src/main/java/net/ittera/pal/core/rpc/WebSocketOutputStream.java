@@ -10,7 +10,13 @@ import org.java_websocket.enums.Opcode;
 public class WebSocketOutputStream extends OutputStream {
   private final WebSocket connection;
   private final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-  private boolean isFirstFrame = true;
+
+  /**
+   * Use of this flag prevents sending FIN twice, which causes the client to receive a second, empty
+   * message *
+   */
+  private boolean finalFrameSent = false;
+
   private static final int CHUNK_SIZE = 4096;
 
   public WebSocketOutputStream(WebSocket conn) {
@@ -18,7 +24,7 @@ public class WebSocketOutputStream extends OutputStream {
   }
 
   @Override
-  public void write(int b) throws IOException {
+  public void write(int b) {
     buffer.write(b);
     if (buffer.size() >= CHUNK_SIZE) {
       flushBuffer(false);
@@ -26,28 +32,35 @@ public class WebSocketOutputStream extends OutputStream {
   }
 
   @Override
-  public void flush() throws IOException {
+  public void flush() {
     flushBuffer(false);
   }
 
   @Override
   public void close() throws IOException {
-    flushBuffer(true); // Send final fragment
-    buffer.close();
+    try {
+      if (!finalFrameSent) {
+        flushBuffer(true);
+      }
+    } finally {
+      buffer.close();
+    }
   }
 
   private void flushBuffer(boolean isLast) {
-    if (buffer.size() == 0 && !isLast) return;
+    // If there's no data and is not the final frame, skip sending
+    if (buffer.size() == 0 && !isLast) {
+      return;
+    }
 
     byte[] data = buffer.toByteArray();
     buffer.reset();
 
-    //    Opcode opcode = isFirstFrame ? Opcode.TEXT : null;
+    // Use TEXT for all frames; let the library handle fragmentation internally
     connection.sendFragmentedFrame(Opcode.TEXT, ByteBuffer.wrap(data), isLast);
 
-    // Update state
-    if (isFirstFrame) {
-      isFirstFrame = false;
+    if (isLast) {
+      finalFrameSent = true;
     }
   }
 }
