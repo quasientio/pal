@@ -36,6 +36,7 @@ public class ClassMetadataSerializerTest {
     Path classesMetadataPath =
         classMetadataSerializer.scannedClasspathToJson(false, null, null, false);
     String classesMetadata = Files.readString(classesMetadataPath);
+    Files.delete(classesMetadataPath);
 
     String searchString = "className";
     // expect 10000 classes at least
@@ -56,6 +57,7 @@ public class ClassMetadataSerializerTest {
         classMetadataSerializer.scannedClasspathToJson(
             false, null, additionalExcludePrefixes, false);
     String scannedClasses = Files.readString(scannedClassesPath);
+    Files.delete(scannedClassesPath);
 
     String searchString = "className";
     // expect 10000 classes at least
@@ -77,6 +79,7 @@ public class ClassMetadataSerializerTest {
     Path scannedClassesPath =
         classMetadataSerializer.scannedClasspathToJson(false, includeClasses, null, false);
     String scannedClasses = Files.readString(scannedClassesPath);
+    Files.delete(scannedClassesPath);
 
     String searchString = "className";
     assertEquals(3, findOccurrences(searchString, scannedClasses));
