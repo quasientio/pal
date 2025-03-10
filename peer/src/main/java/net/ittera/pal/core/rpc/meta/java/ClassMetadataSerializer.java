@@ -3,7 +3,6 @@ package net.ittera.pal.core.rpc.meta.java;
 import com.fasterxml.jackson.core.JsonEncoding;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -76,8 +75,7 @@ public class ClassMetadataSerializer {
       throws Exception {
 
     ObjectMapper mapper = new ObjectMapper();
-    // store all class metadata as an array
-    ArrayNode classesArray = mapper.createArrayNode();
+    int classesScanned = 0;
 
     ClassGraph classGraph =
         new ClassGraph()
@@ -104,7 +102,17 @@ public class ClassMetadataSerializer {
       classGraph.ignoreClassVisibility().ignoreMethodVisibility().ignoreFieldVisibility();
     }
 
-    try (ScanResult scanResult = classGraph.scan()) {
+    // Decide on file suffix
+    String suffix = compressAndEncode ? ".gz.b64" : ".json";
+    Path outFile = Files.createTempFile("classinfo_metadata_", suffix);
+
+    try (FileOutputStream fos = new FileOutputStream(outFile.toFile());
+        OutputStream finalOut =
+            compressAndEncode ? new GZIPOutputStream(Base64.getEncoder().wrap(fos)) : fos;
+        JsonGenerator jGenerator = new JsonFactory().createGenerator(finalOut, JsonEncoding.UTF8);
+        ScanResult scanResult = classGraph.scan()) {
+
+      jGenerator.writeStartArray();
       for (ClassInfo classInfo :
           scanResult.getAllClasses().filter(ci -> !ci.getName().contains("$"))) {
         String className = classInfo.getName();
@@ -176,16 +184,19 @@ public class ClassMetadataSerializer {
         classObject.set("methods", methodsArray);
         classObject.set("fields", fieldsArray);
 
-        // add class to array
-        classesArray.add(classObject);
+        // output new class info to file
+        mapper.writeValue(jGenerator, classObject);
+        classesScanned++;
       }
 
-      if (logger.isDebugEnabled()) {
-        logger.debug("Number of classes returned: {}", classesArray.size());
+      jGenerator.writeEndArray();
+
+      if (logger.isInfoEnabled()) {
+        logger.info("Metadata scanned and serialized for {} classes", classesScanned);
       }
     }
 
-    return writeAsJSONToFile(classesArray, mapper, compressAndEncode);
+    return outFile;
   }
 
   /** Collect declared constructors for a classInfo, excluding synthetic/aspect-weaver items. */
@@ -594,28 +605,5 @@ public class ClassMetadataSerializer {
 
   private static boolean isAspectWeaverField(FieldInfo fieldInfo) {
     return fieldInfo.isSynthetic() || fieldInfo.getName().contains("ajc$");
-  }
-
-  public Path writeAsJSONToFile(ArrayNode classesArray, ObjectMapper mapper, boolean gzipAndEncode)
-      throws Exception {
-    // Decide on file suffix
-    String suffix = gzipAndEncode ? ".gz.b64" : ".json";
-    Path outFile = Files.createTempFile("classinfo_metadata_", suffix);
-
-    // Create the initial file output stream
-    try (FileOutputStream fos = new FileOutputStream(outFile.toFile());
-        // Conditionally wrap the stream in Base64 → GZIP or just use raw:
-        OutputStream finalOut =
-            gzipAndEncode ? new GZIPOutputStream(Base64.getEncoder().wrap(fos)) : fos;
-        // Create a streaming JsonGenerator that writes into finalOut
-        JsonGenerator jGenerator = new JsonFactory().createGenerator(finalOut, JsonEncoding.UTF8)) {
-      jGenerator.writeStartArray();
-      for (JsonNode data : classesArray) {
-        mapper.writeValue(jGenerator, data);
-      }
-      jGenerator.writeEndArray();
-    }
-
-    return outFile;
   }
 }
