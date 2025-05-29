@@ -42,25 +42,54 @@ import zmq.ZError;
  * This class is responsible for receiving JSON-RPC requests from WebSocket clients and dispatching
  * them to the queue of RPCMessageInvoker threads.
  *
- * <p>To avoid sharing the dealer socket among multiple threads, we use the PUSH/PULL pattern. The
- * WebSocket server thread pushes the requests to the push socket and the main dispatcher thread
- * pulls them and sends them to the dealer socket.
+ * <p>It establishes a WebSocket server to handle incoming requests and uses a ZeroMQ DEALER socket
+ * to forward these requests to dispatcher threads. The class leverages a push-pull pattern to avoid
+ * sharing the dealer socket among multiple threads.
  */
 @Singleton
 class JsonRpcRequestDispatcher extends ConnectedService {
 
+  /** Logger instance. */
   private static final Logger logger = LoggerFactory.getLogger(JsonRpcRequestDispatcher.class);
 
-  // websocket stuff
+  /** Address used to bind and establish the WebSocket endpoint. */
   private final String websocketAddress;
+
+  /**
+   * Instance of the WebSocket server responsible for handling JSON-RPC request communication. It is
+   * initialized in the openConnections method.
+   */
   private JsonRpcWebSocketServer webSocketServer;
 
-  // zmq stuff
+  /** Address for the ZeroMQ DEALER socket used in dispatching JSON-RPC requests. */
   private final String dealerAddress;
+
+  /**
+   * ZeroMQ DEALER socket used to send JSON-RPC requests to dispatcher threads. This socket is
+   * created and bound in the openConnections method.
+   */
   private Socket dealerSocket;
 
+  /**
+   * Queue for inbound JSON-RPC request messages received from WebSocket clients. The queue
+   * decouples the WebSocket receiving thread from the processing dispatcher.
+   */
   private final BlockingQueue<InboundJsonRpcRequestMsg> requestQueue = new LinkedBlockingQueue<>();
 
+  /**
+   * Constructs a new instance of JsonRpcRequestDispatcher.
+   *
+   * <p>This constructor initializes the dispatcher with the ZeroMQ context, address configurations,
+   * service thread group, and a unique identifier for the peer.
+   *
+   * @param peerUuid unique identifier for this peer.
+   * @param context ZeroMQ context used for creating and managing sockets.
+   * @param syncSocketAddress synchronization socket address to coordinate service readiness.
+   * @param serviceThreadGroup thread group for managing the dispatcher and related threads.
+   * @param serviceName human-readable name identifying the service instance.
+   * @param websocketAddress address on which the JSON-RPC WebSocket server is bound.
+   * @param dealerAddress address for the ZeroMQ DEALER socket used to dispatch requests.
+   */
   @Inject
   public JsonRpcRequestDispatcher(
       UUID peerUuid,
@@ -75,6 +104,13 @@ class JsonRpcRequestDispatcher extends ConnectedService {
     this.dealerAddress = dealerAddress;
   }
 
+  /**
+   * Opens network connections required for JSON-RPC request dispatching.
+   *
+   * <p>This method extracts the hostname and port from the websocketAddress to initialize and start
+   * the JSON-RPC WebSocket server. It then creates a DEALER socket from the ZeroMQ context, binding
+   * it to the configured dealerAddress for dispatching messages.
+   */
   @Override
   protected void openConnections() {
     // to get remote requests
@@ -89,6 +125,14 @@ class JsonRpcRequestDispatcher extends ConnectedService {
     dealerSocket.bind(dealerAddress);
   }
 
+  /**
+   * Main execution loop for dispatching JSON-RPC messages.
+   *
+   * <p>This method continuously processes inbound messages from the WebSocket request queue,
+   * sending each via the ZeroMQ DEALER socket. Additionally, it polls the DEALER socket for any
+   * response messages and forwards them to the appropriate WebSocket clients. The loop terminates
+   * when a shutdown is requested, the thread is interrupted, or a critical socket error occurs.
+   */
   @Override
   public final void run() {
 
@@ -151,6 +195,11 @@ class JsonRpcRequestDispatcher extends ConnectedService {
     }
   }
 
+  /**
+   * Closes network connections and cleans up resources.
+   *
+   * <p>This method stops the JSON-RPC WebSocket server and safely closes the ZeroMQ DEALER socket.
+   */
   @Override
   protected void closeConnections() {
     webSocketServer.close();

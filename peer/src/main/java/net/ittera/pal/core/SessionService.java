@@ -43,18 +43,49 @@ import org.zeromq.ZMQ.Socket;
 import org.zeromq.ZMQException;
 import zmq.ZError;
 
-// The remote peer's UUID is used as its sessionId
+/**
+ * Service responsible for handling session-related commands in the Pal runtime.
+ *
+ * <p>This class maintains a mapping between peer session identifiers and their stored objects. It
+ * processes commands such as storing objects, deleting objects, removing entire sessions, and
+ * clearing all sessions by interacting with a ZeroMQ REP socket.
+ */
 @Singleton
 public class SessionService extends ConnectedService {
 
+  /** Logging instance. */
   private static final Logger logger = LoggerFactory.getLogger(SessionService.class);
 
-  // one objectRef -> object map for each peer
+  /**
+   * Maps each session's unique identifier (UUID) to its corresponding session storage. Each session
+   * storage maps an {@link ObjectRef} to the actual Object instance.
+   */
   private final Map<UUID, HashMap<ObjectRef, Object>> sessionsMap;
+
+  /** Object lookup store used to retrieve objects associated with a given reference. */
   private final ObjectLookupStore objectLookupStore;
+
+  /** Address used for binding the ZeroMQ REP (reply) socket for session communication. */
   private final String repAddress;
+
+  /** ZeroMQ REP (reply) socket used to receive session commands and send responses. */
   private Socket repSocket;
 
+  /**
+   * Constructs a new SessionService with the required configuration parameters.
+   *
+   * <p>This service handles session-related operations such as storing objects, deleting objects,
+   * and managing session lifecycles. It establishes communication channels using ZeroMQ and relies
+   * on an object lookup store to retrieve objects.
+   *
+   * @param peerUuid Unique identifier for the current peer.
+   * @param context ZeroMQ context used to create communication sockets.
+   * @param syncSocketAddress Address for synchronization readiness.
+   * @param serviceThreadGroup Thread group in which the service operates.
+   * @param serviceName Identifier name for this session service instance.
+   * @param repAddress Address for binding the REP socket used for session command responses.
+   * @param objectLookupStore Service used for looking up objects using their references.
+   */
   @Inject
   public SessionService(
       UUID peerUuid,
@@ -70,6 +101,18 @@ public class SessionService extends ConnectedService {
     sessionsMap = new HashMap<>();
   }
 
+  /**
+   * Stores the object associated with the specified object reference into the session.
+   *
+   * <p>The method retrieves the object using the {@link #objectLookupStore}. If the object is
+   * found, it is added to the session corresponding to {@code sessionId}. If the session does not
+   * exist, a new session is created.
+   *
+   * @param sessionId Unique identifier for the session.
+   * @param objectRef Reference to the object to be stored.
+   * @return {@code true} if the object was successfully stored; {@code false} if the object could
+   *     not be retrieved.
+   */
   private boolean storeInSession(@Nonnull UUID sessionId, @Nonnull ObjectRef objectRef) {
     final Object object = objectLookupStore.lookupObject(objectRef);
     if (object == null) {
@@ -91,6 +134,15 @@ public class SessionService extends ConnectedService {
     return true;
   }
 
+  /**
+   * Deletes the entire session identified by the specified session ID.
+   *
+   * <p>This method clears all stored objects within the session and removes the session from the
+   * internal mapping.
+   *
+   * @param sessionId Unique identifier for the session to be deleted.
+   * @throws NoSuchSessionException if no session exists with the provided {@code sessionId}.
+   */
   private void deleteSession(@Nonnull UUID sessionId) throws NoSuchSessionException {
     HashMap<ObjectRef, Object> peerSession = sessionsMap.get(sessionId);
     if (peerSession == null) {
@@ -104,6 +156,15 @@ public class SessionService extends ConnectedService {
     }
   }
 
+  /**
+   * Removes a specific object from the session based on its object reference.
+   *
+   * @param sessionId Unique identifier of the session containing the object.
+   * @param objectRef Reference to the object to be removed.
+   * @return {@code true} if the object was present in the session and removed; {@code false}
+   *     otherwise.
+   * @throws NoSuchSessionException if the session identified by {@code sessionId} does not exist.
+   */
   private boolean deleteObject(@Nonnull UUID sessionId, @Nonnull ObjectRef objectRef)
       throws NoSuchSessionException {
     Map<ObjectRef, Object> peerSession = sessionsMap.get(sessionId);
@@ -122,6 +183,13 @@ public class SessionService extends ConnectedService {
     return deleted;
   }
 
+  /**
+   * Retrieves all object references stored within the specified session.
+   *
+   * @param sessionId Unique identifier of the session.
+   * @return A set of {@link ObjectRef} instances present in the session.
+   * @throws NoSuchSessionException if no session exists with the provided {@code sessionId}.
+   */
   private Set<ObjectRef> getObjectRefsInSession(@Nonnull UUID sessionId)
       throws NoSuchSessionException {
     final HashMap<ObjectRef, Object> peerSession = sessionsMap.get(sessionId);
@@ -136,6 +204,14 @@ public class SessionService extends ConnectedService {
     return peerSession.keySet();
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>This method implements the main service loop. It continuously reads session commands from
+   * the REP socket, processes each command (such as storing objects, deleting objects, or clearing
+   * sessions), and sends back an appropriate response. The loop terminates if the thread is
+   * interrupted or a socket-related error occurs.
+   */
   @Override
   protected void run() {
     boolean socketError = false;
@@ -242,12 +318,24 @@ public class SessionService extends ConnectedService {
     }
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Opens the necessary connections for the SessionService. In particular, it creates and binds
+   * the REP socket using the configured address.
+   */
   @Override
   protected void openConnections() {
     repSocket = zmqContext.createSocket(SocketType.REP);
     repSocket.bind(repAddress);
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Closes the established connections for the SessionService. This method closes the REP socket
+   * and logs any errors encountered during the closure.
+   */
   @Override
   protected void closeConnections() {
     closeConnection(repSocket, "Error closing REP socket");

@@ -41,12 +41,31 @@ import org.slf4j.LoggerFactory;
  * and asynchronous environment.
  */
 public class CustomClassloader extends URLClassLoader {
+  /** List of registered listeners to be notified after a class is loaded. */
   private final List<ClassLoaderListener> listeners = new ArrayList<>();
+
+  /** ExecutorService responsible for executing listener callbacks asynchronously. */
   private final ExecutorService executorService;
+
+  /** Timeout, in milliseconds, for waiting for the executor service termination during shutdown. */
   private static final int TIMEOUT_MS = 100;
+
+  /** The name assigned to the thread used by the asynchronous executor. */
   private static final String ASYNC_THREAD_NAME = "CustomClassLoader-Async-Thread";
+
+  /** Logger for recording class loading activities and errors. */
   private static final Logger logger = LoggerFactory.getLogger(CustomClassloader.class);
 
+  /**
+   * Constructs a new CustomClassloader using the specified URL array and parent class loader.
+   *
+   * <p>This constructor initializes a single-thread executor for asynchronous processing of class
+   * load notifications. It also logs the initial configuration including the parent class loader
+   * and the URLs.
+   *
+   * @param urls array of URLs from which classes and resources will be loaded; must not be null
+   * @param parent the parent class loader to delegate to if necessary; must not be null
+   */
   public CustomClassloader(URL[] urls, ClassLoader parent) {
     super(urls, parent);
     executorService =
@@ -57,6 +76,21 @@ public class CustomClassloader extends URLClassLoader {
         Arrays.stream(urls).map(URL::toString).collect(Collectors.joining(",")));
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>This method attempts to load the class with the specified binary name. It first checks if
+   * the class was already loaded. If not, it delegates loading to the parent class loader and falls
+   * back to its own {@code findClass} implementation if needed. Once loaded (and optionally
+   * resolved), it asynchronously notifies all registered {@code ClassLoaderListeners} about the new
+   * class.
+   *
+   * @param name the binary name of the class
+   * @param resolve if {@code true} then resolve the class
+   * @return the resulting {@code Class} object
+   * @throws ClassNotFoundException if the class could not be located by both the parent and custom
+   *     loader
+   */
   @Override
   public Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
     CompletableFuture<Class<?>> classLoadedFuture = new CompletableFuture<>();
@@ -99,16 +133,40 @@ public class CustomClassloader extends URLClassLoader {
     }
   }
 
+  /**
+   * Registers a {@code ClassLoaderListener} to receive notifications after successful class
+   * loading.
+   *
+   * <p>Registered listeners can perform additional processing (such as annotation handling) once
+   * the class has been loaded.
+   *
+   * @param listener the listener instance to register; must not be null
+   */
   public void addClassLoadListener(ClassLoaderListener listener) {
     listeners.add(listener);
   }
 
+  /**
+   * Notifies all registered {@code ClassLoaderListeners} that the specified class has been loaded.
+   *
+   * <p>This method is called as part of an asynchronous callback once the class loading is
+   * complete.
+   *
+   * @param clazz the {@code Class} object that was loaded; expected to be non-null
+   */
   private void notifyListeners(Class<?> clazz) {
     for (ClassLoaderListener listener : listeners) {
       listener.classLoaded(clazz);
     }
   }
 
+  /**
+   * Shuts down the asynchronous executor service used for notifying listeners.
+   *
+   * <p>The shutdown process first attempts a graceful termination within a timeout of {@code
+   * TIMEOUT_MS} milliseconds. If the executor does not terminate in time or if interrupted, a
+   * forced shutdown is initiated.
+   */
   public void shutdown() {
     executorService.shutdown();
     try {

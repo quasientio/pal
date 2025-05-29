@@ -44,27 +44,64 @@ import org.zeromq.ZMQ.Socket;
 import org.zeromq.ZMQException;
 import zmq.ZError;
 
+/**
+ * InterceptMatcher is responsible for managing intercept registration requests and providing
+ * matching intercept messages.
+ *
+ * <p>It listens for registration and unregistration events using a ZeroMQ REP socket and maintains
+ * a mapping of intercept requests organized by intercept type. It also provides methods to retrieve
+ * intercepts based on execution messages, message types, and execution phases.
+ */
 @Singleton
 public class InterceptMatcher extends ConnectedService {
 
+  /** Logger instance. */
   private static final Logger logger = LoggerFactory.getLogger(InterceptMatcher.class);
 
-  // zmq stuff
-  private Socket registerSocket; // to listen for new intercepts and register them
+  /** ZeroMQ REP socket used to receive intercept registration and unregistration events. */
+  private Socket registerSocket;
+
+  /** The network address endpoint used for intercept registration communication. */
   private final String interceptRegAddress;
 
-  // intercept registration response codes
+  /** Response code indicating successful intercept registration. */
   public static final String REGISTER_OK_RESPONSE = "0";
+
+  /** Response code indicating successful intercept unregistration. */
   public static final String UNREGISTER_OK_RESPONSE = "0";
+
+  /** Response code indicating that the intercept registration request is a duplicate. */
   public static final String REGISTER_DUP_RESPONSE = "1";
+
+  /**
+   * Response code indicating an error occurred while parsing the intercept registration request.
+   */
   public static final String REGISTER_PARSING_ERROR_RESPONSE = "2";
+
+  /** Response code indicating an unknown error during intercept registration. */
   public static final String REGISTER_UNKNOWN_ERROR_RESPONSE = "3";
+
+  /** Response code indicating an unknown error during intercept unregistration. */
   public static final String UNREGISTER_UNKNOWN_ERROR_RESPONSE = "4";
 
-  // map holding all intercepts
+  /** Map containing registered intercept requests organized by their intercept type. */
   private final Map<InterceptType, InterceptRequests> allIntercepts =
       new EnumMap<>(InterceptType.class);
 
+  /**
+   * Constructs a new InterceptMatcher instance.
+   *
+   * <p>This constructor initializes the intercept matcher by setting up the underlying connected
+   * service and preparing the registry for intercept registration requests across all intercept
+   * types.
+   *
+   * @param peerUuid the unique identifier for this peer in the runtime system
+   * @param context the ZeroMQ context used for socket communication
+   * @param syncSocketAddress the address used for service synchronization
+   * @param serviceThreadGroup the thread group managing service threads
+   * @param serviceName the name of the intercept service
+   * @param interceptRegAddress the network address endpoint for intercept registration
+   */
   @Inject
   public InterceptMatcher(
       UUID peerUuid,
@@ -81,12 +118,29 @@ public class InterceptMatcher extends ConnectedService {
     }
   }
 
+  /**
+   * Opens the necessary connections for intercept registration.
+   *
+   * <p>This method creates a ZeroMQ REP socket and binds it to the configured intercept
+   * registration address.
+   */
   @Override
   protected void openConnections() {
     registerSocket = zmqContext.createSocket(SocketType.REP);
     registerSocket.bind(interceptRegAddress);
   }
 
+  /**
+   * Registers an incoming intercept request.
+   *
+   * <p>The method identifies the proper intercept request registry based on the intercept type
+   * contained in the provided message, and registers the intercept request. A duplicate request
+   * will trigger a DuplicateInterceptException.
+   *
+   * @param incomingInterceptMessage the intercept message containing registration data
+   * @throws DuplicateInterceptException if an intercept request with the same identifier is already
+   *     registered
+   */
   private void registerInterceptRequest(InterceptMessage incomingInterceptMessage)
       throws DuplicateInterceptException {
     InterceptRequests registeredIntercepts =
@@ -99,6 +153,19 @@ public class InterceptMatcher extends ConnectedService {
     }
   }
 
+  /**
+   * Retrieves intercept messages that match the given execution context.
+   *
+   * <p>Depending on the specified execution phase, the method aggregates intercept requests
+   * corresponding to pre-execution (BEFORE) or post-execution (AFTER) phases. If an unsupported
+   * execution phase is provided, an UnsupportedOperationException is thrown.
+   *
+   * @param execMessage the execution message that triggers intercept matching
+   * @param messageType the type of message for which intercepts should be matched
+   * @param phase the execution phase during which intercepts should be gathered (BEFORE or AFTER)
+   * @return a list of intercept messages that match the provided criteria
+   * @throws UnsupportedOperationException if the specified execution phase is not supported
+   */
   public List<InterceptMessage> getMatchingIntercepts(
       ExecMessage execMessage, MessageType messageType, ExecPhase phase) {
     if (ExecPhase.BEFORE.equals(phase)) {
@@ -135,6 +202,13 @@ public class InterceptMatcher extends ConnectedService {
     throw new UnsupportedOperationException("Unsupported execution phase: " + phase);
   }
 
+  /**
+   * Continuously polls for intercept registration events and processes them.
+   *
+   * <p>This method runs in a loop, receiving intercept event messages and dispatching them for
+   * registration or unregistration. It terminates the polling when the thread is interrupted or
+   * when critical errors occur.
+   */
   @Override
   public final void run() {
     while (!Thread.interrupted()) {
@@ -163,6 +237,13 @@ public class InterceptMatcher extends ConnectedService {
     }
   }
 
+  /**
+   * Processes new intercept registration and unregistration events received over the network.
+   *
+   * <p>This method reads an intercept event message from the REP socket. For registration requests,
+   * it parses the message, registers the intercept, and sends a response code. For unregistration
+   * requests, it removes the intercept from all registries and sends the corresponding response.
+   */
   private void registerNewAndGoneIntercepts() {
     InterceptEventMsg interceptEventMsg = InterceptEventMsg.receive(registerSocket, true);
     if (interceptEventMsg == null) {
@@ -209,6 +290,12 @@ public class InterceptMatcher extends ConnectedService {
     }
   }
 
+  /**
+   * Closes established connections associated with intercept registration.
+   *
+   * <p>This method safely closes the ZeroMQ REP socket used for intercept communication and logs
+   * errors if they occur.
+   */
   @Override
   protected void closeConnections() {
     closeConnection(registerSocket, "Error closing register (REP) socket");

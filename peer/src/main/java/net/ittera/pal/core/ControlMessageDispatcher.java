@@ -38,26 +38,71 @@ import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Processes incoming control messages and dispatches the corresponding commands to session
+ * services.
+ *
+ * <p>This dispatcher interprets commands such as object deletion, session deletion, garbage
+ * collection, and ping, by leveraging injected dependencies. For deletion commands, it coordinates
+ * with the session service via {@link DispatcherConnector} and updates the {@link
+ * ObjectLookupStore} accordingly. Garbage collection is triggered reflectively. Responses are
+ * constructed using the injected {@link MessageBuilder} and include the unique peer identifier.
+ */
 @Singleton
 public class ControlMessageDispatcher {
+  /**
+   * Connector to send commands to the session service.
+   *
+   * <p>Used primarily to forward session-related commands such as DELETE_OBJECT and DELETE_SESSION.
+   */
   @SuppressWarnings("unused")
   @Inject
   private DispatcherConnector dispatcherConnector;
 
+  /**
+   * Store for keeping track of object references associated with sessions.
+   *
+   * <p>It is updated when objects or sessions are deleted.
+   */
   @SuppressWarnings("unused")
   @Inject
   private ObjectLookupStore objectLookupStore;
 
+  /**
+   * Utility for building control message responses.
+   *
+   * <p>It creates formatted control status messages based on operation outcomes.
+   */
   @SuppressWarnings("unused")
   @Inject
   private MessageBuilder messageBuilder;
 
+  /** Unique identifier representing this peer instance. */
   @SuppressWarnings("unused")
   @Inject
   private UUID peerUuid;
 
+  /** Logger instance. */
   private static final Logger logger = LoggerFactory.getLogger(ControlMessageDispatcher.class);
 
+  /**
+   * Processes an incoming control message by dispatching the command to appropriate session
+   * actions.
+   *
+   * <p>Depending on the command type embedded in the {@code controlMessage}, this method may:
+   *
+   * <ul>
+   *   <li>Delete an object from a session and remove its reference.
+   *   <li>Delete a session and its associated object references.
+   *   <li>Trigger garbage collection reflectively.
+   *   <li>Respond to a ping with an acknowledgement.
+   *   <li>Return an error response for unsupported commands.
+   * </ul>
+   *
+   * @param controlMessage the incoming control message containing the command and associated
+   *     parameters.
+   * @return a control message response indicating the status of the operation.
+   */
   public ControlMessage incomingControlMessage(ControlMessage controlMessage) {
 
     final UUID remotePeerUuid = UUID.fromString(controlMessage.getFromPeer());
@@ -107,6 +152,15 @@ public class ControlMessageDispatcher {
     }
   }
 
+  /**
+   * Invokes the Java runtime's garbage collector using reflection.
+   *
+   * <p>This approach (invoking the GC method dynamically) is proven to effectively trigger the
+   * collection, whereas a direct method call not always does.
+   *
+   * @return {@code true} if the garbage collector was invoked successfully, {@code false}
+   *     otherwise.
+   */
   private boolean invokeGCReflectively() {
     try {
       Class<?> runtimeClass = Class.forName("java.lang.Runtime");
@@ -124,7 +178,17 @@ public class ControlMessageDispatcher {
     }
   }
 
-  // helper method to map the internal SessionResponseMessage to the public ControlMessage response
+  /**
+   * Converts a session service response into a standardized control message response.
+   *
+   * <p>This helper method maps the status from a {@link SessionResponseMsg} to a corresponding
+   * {@link ControlStatusType} and then constructs a control message using the injected message
+   * builder.
+   *
+   * @param sessionResponseMsg the response message received from the session service.
+   * @param requestId the identifier corresponding to the original control message request.
+   * @return a {@link ControlMessage} encapsulating the status of the session operation.
+   */
   @SuppressWarnings("CheckStyle")
   private ControlMessage sessionResponseMessageToControlMessage(
       SessionResponseMsg sessionResponseMsg, String requestId) {

@@ -19,8 +19,14 @@
 
 package net.ittera.pal.core.intercepts;
 
+/** Exception thrown when attempting to register an intercept that has already been established. */
 public class DuplicateInterceptException extends Exception {
 
+  /**
+   * Constructs a new DuplicateInterceptException with the specified detail message.
+   *
+   * @param message the detail message describing the duplicate intercept scenario
+   */
   public DuplicateInterceptException(String message) {
     super(message);
   }

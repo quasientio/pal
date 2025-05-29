@@ -31,18 +31,47 @@ import org.java_websocket.server.WebSocketServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * A WebSocket server implementation for handling JSON-RPC requests and responses.
+ *
+ * <p>This server listens for incoming WebSocket connections, processes JSON-RPC messages, and
+ * dispatches responses to clients. For certain response types, such as metadata responses, file
+ * contents are streamed back to clients using a custom output stream.
+ */
 class JsonRpcWebSocketServer extends WebSocketServer {
 
+  /** Logger instance. */
   private static final Logger logger = LoggerFactory.getLogger(JsonRpcWebSocketServer.class);
+
+  /** Timeout in milliseconds to wait for the server to stop gracefully. */
   private static final int STOP_TIMEOUT_MS = 2000;
+
+  /** Size of the thread pool for processing WebSocket connections. */
   private static final int WS_THREAD_POOL_SIZE = 3;
+
+  /** Message sent to clients when closing the WebSocket server. */
   private static final String CLOSE_MSG = "Closing WebSocket server. Bye!";
 
+  /** ObjectMapper configured with a custom module for serializing ResponseObject instances. */
   private final ObjectMapper responseObjectMapper;
+
+  /** Queue used to enqueue inbound JSON-RPC request messages for subsequent processing. */
   private final BlockingQueue<InboundJsonRpcRequestMsg> requestQueue;
+
+  /**
+   * Mapping between active WebSocket connections and their corresponding unique peer identifiers.
+   */
   private final Map<WebSocket, UUID> webSocketConnectionMapping = new ConcurrentHashMap<>();
+
+  /** Mapping of peer IDs to connection statistics used for tracking message counts. */
   private final Map<UUID, ConnectionStats> peerStatsMap = new ConcurrentHashMap<>();
 
+  /**
+   * Constructs a JsonRpcWebSocketServer with the specified binding address and request queue.
+   *
+   * @param address the InetSocketAddress on which the server listens for connections
+   * @param requestQueue the BlockingQueue where inbound JSON-RPC requests are enqueued
+   */
   public JsonRpcWebSocketServer(
       InetSocketAddress address, BlockingQueue<InboundJsonRpcRequestMsg> requestQueue) {
     super(address, WS_THREAD_POOL_SIZE);
@@ -51,6 +80,12 @@ class JsonRpcWebSocketServer extends WebSocketServer {
     this.responseObjectMapper = createResponseObjectMapper();
   }
 
+  /**
+   * Creates and configures an ObjectMapper with a custom module for serializing ResponseObject
+   * instances.
+   *
+   * @return a configured ObjectMapper used for serializing JSON-RPC responses
+   */
   private ObjectMapper createResponseObjectMapper() {
     ObjectMapper mapper = new ObjectMapper();
     SimpleModule module = new SimpleModule();
@@ -59,6 +94,12 @@ class JsonRpcWebSocketServer extends WebSocketServer {
     return mapper;
   }
 
+  /**
+   * Retrieves the WebSocket connection associated with the specified peer identifier.
+   *
+   * @param connId the unique identifier for the peer connection
+   * @return the corresponding WebSocket connection, or null if no matching connection is found
+   */
   private WebSocket getConnectionSocketFromId(UUID connId) {
     return webSocketConnectionMapping.entrySet().stream()
         .filter(e -> e.getValue().equals(connId))
@@ -67,6 +108,16 @@ class JsonRpcWebSocketServer extends WebSocketServer {
         .orElse(null);
   }
 
+  /**
+   * Sends the given JSON-RPC response to the client corresponding to the specified peer identifier.
+   *
+   * <p>For responses of type {@code META_MESSAGE_RESPONSE} that indicate a metadata response, the
+   * method streams file contents back to the client; otherwise, the response is sent directly.
+   *
+   * @param peerId the unique identifier of the target peer
+   * @param response the JSON serialized response to be sent
+   * @param messageType the type of message that dictates the response handling behavior
+   */
   public void sendResponseToWebSocketClient(UUID peerId, String response, MessageType messageType) {
     WebSocket connSocket = getConnectionSocketFromId(peerId);
     if (connSocket == null) {
@@ -109,6 +160,15 @@ class JsonRpcWebSocketServer extends WebSocketServer {
     }
   }
 
+  /**
+   * Checks whether the given JSON-RPC response should be treated as a class metadata response.
+   *
+   * <p>This method deserializes the embedded response map and verifies if it corresponds to a
+   * metadata request for class information.
+   *
+   * @param jsonRpcResponse the JSON-RPC response to examine
+   * @return true if the response is recognized as a class metadata response; false otherwise
+   */
   private boolean isClassMetadataResponse(JsonRpcResponse jsonRpcResponse) {
     if (jsonRpcResponse.getResult() != null) {
       ResponseObject responseObj = jsonRpcResponse.getResult().getValue();
@@ -128,6 +188,18 @@ class JsonRpcWebSocketServer extends WebSocketServer {
     return false;
   }
 
+  /**
+   * Sends a streaming JSON-RPC response to a client by transmitting the contents of the specified
+   * file over the WebSocket connection.
+   *
+   * <p>The method builds a placeholder JSON-RPC response, then opens an input stream for the file
+   * and serializes the response using a custom serializer that streams the file content.
+   *
+   * @param conn the WebSocket connection to which the streaming data is sent
+   * @param messageId the identifier associated with the JSON-RPC response message
+   * @param filePath the file path from which data is to be streamed
+   * @throws IOException if an I/O error occurs while reading the file or transmitting data
+   */
   public void sendStreamingResponse(WebSocket conn, String messageId, Path filePath)
       throws IOException {
     // 1. Build the JsonRpcResponse (value field is a placeholder)
@@ -159,6 +231,15 @@ class JsonRpcWebSocketServer extends WebSocketServer {
     }
   }
 
+  /**
+   * Invoked when a new WebSocket connection is opened.
+   *
+   * <p>The method assigns a unique peer identifier based on the handshake header if present;
+   * otherwise, a new UUID is generated. It also initializes connection statistics for the peer.
+   *
+   * @param conn the newly established WebSocket connection
+   * @param handshake the handshake data provided by the connecting client
+   */
   @Override
   public void onOpen(WebSocket conn, ClientHandshake handshake) {
     UUID peerId;
@@ -177,6 +258,17 @@ class JsonRpcWebSocketServer extends WebSocketServer {
     peerStatsMap.put(peerId, new ConnectionStats());
   }
 
+  /**
+   * Invoked when a WebSocket connection is closed.
+   *
+   * <p>This method logs the closure event, removes the mapping for the closed connection, and
+   * cleans up associated connection statistics.
+   *
+   * @param conn the WebSocket connection that was closed
+   * @param code the status code indicating the reason for closure
+   * @param reason a descriptive reason for connection closure
+   * @param remote true if the connection was closed by the remote host, false otherwise
+   */
   @Override
   public void onClose(WebSocket conn, int code, String reason, boolean remote) {
     if (logger.isDebugEnabled()) {
@@ -197,6 +289,15 @@ class JsonRpcWebSocketServer extends WebSocketServer {
     peerStatsMap.remove(peerId);
   }
 
+  /**
+   * Invoked when a message is received from a client.
+   *
+   * <p>This method increments the received message count for the peer, logs the event, constructs
+   * an inbound JSON-RPC request message, and enqueues it for processing.
+   *
+   * @param conn the WebSocket connection from which the message was received
+   * @param message the received message content
+   */
   @Override
   public void onMessage(WebSocket conn, String message) {
     UUID peerId = webSocketConnectionMapping.get(conn);
@@ -213,16 +314,33 @@ class JsonRpcWebSocketServer extends WebSocketServer {
     }
   }
 
+  /**
+   * Invoked when an error occurs on a WebSocket connection.
+   *
+   * @param conn the WebSocket connection where the error occurred (it may be null)
+   * @param ex the exception representing the error encountered
+   */
   @Override
   public void onError(WebSocket conn, Exception ex) {
     logger.error("Error on WebSocket connection", ex);
   }
 
+  /**
+   * Invoked when the WebSocket server has successfully started.
+   *
+   * <p>Logs the server's binding address upon startup.
+   */
   @Override
   public void onStart() {
     logger.info("WebSocket server started on: {}", getAddress());
   }
 
+  /**
+   * Closes the WebSocket server by attempting a graceful shutdown.
+   *
+   * <p>Uses a predefined timeout and close message. Any interruption during the stop process is
+   * logged.
+   */
   public void close() {
     try {
       stop(STOP_TIMEOUT_MS, CLOSE_MSG);
@@ -231,22 +349,42 @@ class JsonRpcWebSocketServer extends WebSocketServer {
     }
   }
 
+  /**
+   * Tracks statistics for a WebSocket connection, including the counts of messages sent and
+   * received.
+   */
   private static class ConnectionStats {
+
+    /** Atomic counter for the total number of messages sent by the connection. */
     private final AtomicInteger totalMessagesSent = new AtomicInteger(0);
+
+    /** Atomic counter for the total number of messages received by the connection. */
     private final AtomicInteger totalMessagesReceived = new AtomicInteger(0);
 
+    /** Increments the counter for total messages sent. */
     public void incrementTotalMessagesSent() {
       totalMessagesSent.incrementAndGet();
     }
 
+    /** Increments the counter for total messages received. */
     public void incrementTotalMessagesReceived() {
       totalMessagesReceived.incrementAndGet();
     }
 
+    /**
+     * Returns the total number of messages sent by the connection.
+     *
+     * @return the message send count
+     */
     public long getTotalMessagesSent() {
       return totalMessagesSent.get();
     }
 
+    /**
+     * Returns the total number of messages received by the connection.
+     *
+     * @return the message receive count
+     */
     public long getTotalMessagesReceived() {
       return totalMessagesReceived.get();
     }

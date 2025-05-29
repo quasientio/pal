@@ -30,20 +30,49 @@ import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 
+/**
+ * Handles dispatching of ZeroMQ RPC requests using a router-dealer proxy.
+ *
+ * <p>This class extends the ConnectedService to manage ZeroMQ socket connections between a router
+ * (for incoming requests) and a dealer (for request forwarding), as well as a control socket for
+ * terminating the proxy. It is intended to be instantiated as a singleton.
+ */
 @Singleton
 class ZmqRpcRequestDispatcher extends ConnectedService {
 
+  /** Logger instance. */
   private static final Logger logger = LoggerFactory.getLogger(ZmqRpcRequestDispatcher.class);
 
-  // zmq stuff
+  /** Network address where the router socket binds; used to receive incoming RPC requests. */
   private final String routerAddress;
+
+  /** Network address where the dealer socket binds; used to forward RPC requests to dispatchers. */
   private final String dealerAddress;
+
+  /** Internal in-process address for controlling the proxy termination. */
   private static final String PROXY_CTRL_ADDRESS = "inproc://rdprxyctrl";
 
+  /** ZeroMQ socket handling incoming RPC requests with the ROUTER protocol. */
   private Socket rpcRouterSocket;
+
+  /** ZeroMQ socket acting as a DEALER to forward RPC requests. */
   private Socket dealerSocket;
+
+  /** ZeroMQ socket used to receive control commands for proxy termination. */
   private Socket ctrlSocket;
 
+  /**
+   * Constructs a ZmqRpcRequestDispatcher, initializing network addresses and configuring the
+   * service.
+   *
+   * @param peerUuid Unique identifier of this peer instance for communication purposes.
+   * @param context Shared ZeroMQ context for creating and managing sockets.
+   * @param syncSocketAddress Address used for synchronizing service readiness.
+   * @param serviceThreadGroup Thread group assigned to manage this service's thread lifecycle.
+   * @param serviceName Descriptive name identifying this service instance.
+   * @param routerAddress Network address where the router socket binds to accept RPC requests.
+   * @param dealerAddress Network address where the dealer socket binds to forward RPC requests.
+   */
   @Inject
   public ZmqRpcRequestDispatcher(
       UUID peerUuid,
@@ -62,6 +91,17 @@ class ZmqRpcRequestDispatcher extends ConnectedService {
         dealerAddress);
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Establishes and binds the ZeroMQ sockets necessary for processing RPC requests:
+   *
+   * <ul>
+   *   <li>A ROUTER socket to receive incoming requests.
+   *   <li>A DEALER socket to forward these requests.
+   *   <li>A control PAIR socket for managing proxy termination commands.
+   * </ul>
+   */
   @Override
   protected void openConnections() {
     // to get requests for dispatchers
@@ -75,12 +115,24 @@ class ZmqRpcRequestDispatcher extends ConnectedService {
     ctrlSocket.bind(PROXY_CTRL_ADDRESS);
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Initiates the ZeroMQ proxy which bridges the router and dealer sockets. This call blocks
+   * while the proxy is active.
+   */
   @Override
   public final void run() {
     // create router-dealer proxy
     ZMQ.proxy(rpcRouterSocket, dealerSocket, null, ctrlSocket);
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Closes the active ZeroMQ connections by attempting to shut down the router, dealer, and
+   * control sockets. In the event of a failure to close any socket, an error is logged.
+   */
   @Override
   protected void closeConnections() {
     closeConnection(rpcRouterSocket, "Error closing RPC router socket");
@@ -88,6 +140,12 @@ class ZmqRpcRequestDispatcher extends ConnectedService {
     closeConnection(ctrlSocket, "Error closing RPC ctrl socket");
   }
 
+  /**
+   * Sends a command to terminate the active ZeroMQ proxy.
+   *
+   * <p>This method creates a temporary PAIR socket, connects to the internal control address, sends
+   * the termination command, and then closes the socket.
+   */
   private void sendProxyTermCmd() {
     ZMQ.Socket ctrlCliSocket = zmqContext.createSocket(SocketType.PAIR);
     ctrlCliSocket.connect(PROXY_CTRL_ADDRESS);
@@ -95,6 +153,12 @@ class ZmqRpcRequestDispatcher extends ConnectedService {
     ctrlCliSocket.close();
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Initiates a stop request for the service by sending a termination command to the running
+   * proxy.
+   */
   @Override
   protected void triggerStop() {
     sendProxyTermCmd();

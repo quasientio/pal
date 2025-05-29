@@ -41,9 +41,32 @@ import net.ittera.pal.messages.types.SessionCommandType;
 import net.ittera.pal.serdes.Unwrapper;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 
+/**
+ * Base dispatcher for execution messages, providing the common logic for handling local and RPC
+ * execution requests within the PAL runtime. This class orchestrates the wrapping, dispatching,
+ * invocation, and response handling of execution messages. Subclasses must implement abstract
+ * methods to create specific message wrappers and handle invocation details.
+ */
 abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     implements Dispatcher, ExecMessageDispatcher {
 
+  /**
+   * Dispatches an execution request by performing pre-invocation messaging, invoking the target
+   * accessible object, and sending post-invocation messaging.
+   *
+   * <p>The process involves creating a before-execution message, sending it, invoking the target,
+   * storing the return value if applicable, and then wrapping and sending an after-execution
+   * message. In case an invocation exception is encountered, this method rethrows the underlying
+   * cause.
+   *
+   * @param ctxt the execution context providing metadata for the dispatch
+   * @param sender the originator of the execution request
+   * @param target the target object on which the execution is performed
+   * @param args the arguments to be supplied to the target accessible object
+   * @return the result of the executed operation, or a special void instance if no result is
+   *     produced
+   * @throws Throwable if an error occurs during invocation or processing phases
+   */
   @Override
   public final Object dispatch(Context ctxt, Object sender, Object target, Object[] args)
       throws Throwable {
@@ -114,11 +137,30 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     return returnValue;
   }
 
+  /**
+   * Dispatches an incoming (via RPC or Log) execution message by processing it as a direct call.
+   *
+   * @param incomingCall the incoming execution message to be dispatched
+   * @return the response execution message after processing the call
+   */
   @Override
   public ExecMessage dispatchIncoming(ExecMessage incomingCall) {
     return dispatchIncoming(incomingCall, true);
   }
 
+  /**
+   * Dispatches an incoming (via RPC or Log) execution message.
+   *
+   * <p>This method validates the message type, writes ahead if not coming from Log, and performs
+   * the loading and invocation phases including argument extraction, accessible object loading, and
+   * target retrieval. It then sends an after-execution message to complete the processing.
+   *
+   * @param incomingCall the execution message to process
+   * @param isDirect flag indicating if the message does not come from a Log, triggering write-ahead
+   *     logging
+   * @return the execution message received in response after processing the incoming call
+   * @throws IllegalArgumentException if the message type is not supported by this dispatcher
+   */
   @Override
   public ExecMessage dispatchIncoming(ExecMessage incomingCall, boolean isDirect) {
     if (logger.isTraceEnabled()) {
@@ -250,6 +292,12 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     return afterExecResponseMsg;
   }
 
+  /**
+   * Stores the provided object in the lookup store and returns its reference.
+   *
+   * @param object the object to be stored; if null, no action is taken
+   * @return an ObjectRef representing the stored object, or null if the object is null
+   */
   final ObjectRef storeObject(Object object) {
     return object != null ? objectLookupStore.storeObject(object) : null;
   }
@@ -297,6 +345,18 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     return paramClasses;
   }
 
+  /**
+   * Extracts and unwraps arguments from the execution message based on the provided parameter
+   * types.
+   *
+   * <p>This method iterates over the parameters contained in the message, attempts to look up
+   * objects by reference, and, if not found, unwraps the object to its expected type.
+   *
+   * @param execMessage the execution message containing parameters
+   * @param parameterTypes the list of expected parameter classes for proper unwrapping
+   * @return a list of MessageArgument instances encapsulating the unwrapped arguments along with a
+   *     flag indicating whether the argument was retrieved by reference
+   */
   private List<MessageArgument> getArgsFromMessage(
       ExecMessage execMessage, List<Class<?>> parameterTypes) {
 
@@ -336,21 +396,28 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
   }
 
   /**
-   * To be overridden by dispatchers that assign a value (SetFieldDispatcher).
+   * Retrieves the value to assign for field operations from the execution message.
    *
-   * @param execMessage The message to extract the value/objectRef from
-   * @param accessibleObject The field to which the value will be assigned
-   * @return The value to assign to the field
+   * <p>Dispatchers overriding this method should extract and return the value object for assignment
+   * operations.
+   *
+   * @param execMessage the execution message containing the value
+   * @param accessibleObject the field related accessible object
+   * @return the value to be assigned, or null if not applicable
    */
   Object getValueFromMessage(ExecMessage execMessage, AccessibleObject accessibleObject) {
     return null;
   }
 
   /**
-   * To be overridden by dispatchers that work on an instance method/variable.
+   * Retrieves the target object for instance method or field operations from the execution message.
    *
-   * @param execMessage The message to extract the target from
-   * @return The target object on which the method/field will be invoked
+   * <p>Overriding dispatchers should extract and return the appropriate target object upon which
+   * the execution should be performed.
+   *
+   * @param execMessage the execution message containing target information
+   * @return the target object on which a method or field operation is to be invoked
+   * @throws NullPointerException if the target object cannot be determined
    */
   Object getTargetFromMessage(ExecMessage execMessage) throws NullPointerException {
     return null;
@@ -378,20 +445,65 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         peerUuid, accessibleObject, throwable, messageId);
   }
 
+  /**
+   * Stores the given object reference in the session associated with the specified peer UUID.
+   *
+   * <p>This method sends a session command message to the session service to persist the object
+   * reference.
+   *
+   * @param peerUuid the UUID identifying the peer whose session is to be updated
+   * @param objectRef the object reference to store in the session
+   */
   private void storeObjectInSession(@Nonnull UUID peerUuid, @Nonnull ObjectRef objectRef) {
     SessionCommandMsg sessionCommandMsg =
         new SessionCommandMsg(SessionCommandType.STORE_OBJECT, peerUuid, objectRef);
     connector.sendMessageToSessionService(sessionCommandMsg);
   }
 
+  /**
+   * Creates an execution message to be sent before the actual invocation.
+   *
+   * <p>Subclasses should construct an appropriate ExecMessage that encapsulates context and
+   * invocation details, to be sent during the pre-execution phase.
+   *
+   * @param ctxt the execution context holding metadata for the invocation
+   * @param sender the originator of the call
+   * @param target the target on which the accessible object will be invoked
+   * @param args the arguments to be used in the invocation
+   * @return the constructed before-execution ExecMessage
+   */
   protected abstract ExecMessage createBeforeExecMessage(
       Context ctxt, Object sender, Object target, Object[] args);
 
-  // TODO generalize this method, using a Builder method taking Executable's
-  // TODO create a Builder.buildVoidReturnValue() method
+  /**
+   * Creates an execution message to be sent after the invocation has been performed.
+   *
+   * <p>This message encapsulates the result of the invocation, including any object reference if
+   * applicable, and indicates whether the invocation returned void.
+   *
+   * @param ctxt the execution context for the call
+   * @param value the return value of the invocation (or exception if occurred)
+   * @param objectRef the reference to the stored result object, if applicable
+   * @param isVoid flag indicating whether the execution result is void
+   * @return the constructed after-execution ExecMessage
+   */
   protected abstract ExecMessage createAfterExecMessage(
       Context ctxt, Object value, ObjectRef objectRef, boolean isVoid);
 
+  /**
+   * Creates an execution response message after processing an incoming execution call.
+   *
+   * <p>This method packages the outcome of the invocation, including any return value, object
+   * reference, or exception encountered during loading or invocation phases.
+   *
+   * @param execMessage the original execution message received
+   * @param valueObject the result of the invocation if successful
+   * @param valueObjRef the object reference corresponding to the result, if available
+   * @param accessibleObject the accessible object that was subject to invocation
+   * @param exceptionWhileLoading the exception encountered during the loading phase, if any
+   * @param exceptionWhileInvoking the exception encountered during the invocation phase, if any
+   * @return the constructed ExecMessage representing the after-execution response
+   */
   protected abstract ExecMessage createAfterExecMessage(
       ExecMessage execMessage,
       Object valueObject,
@@ -400,26 +512,66 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       Throwable exceptionWhileLoading,
       Throwable exceptionWhileInvoking);
 
+  /**
+   * Invokes the target accessible object (e.g., constructor, method, or field) using the provided
+   * parameters.
+   *
+   * <p>This method delegates the actual invocation based on the supplied context, sender, target,
+   * and arguments, returning the result of the operation.
+   *
+   * @param ctxt the execution context providing invocation metadata
+   * @param sender the originator of the invocation request
+   * @param target the target object on which the invocation is to be performed
+   * @param args the arguments for the invocation
+   * @return the result of the accessible object invocation
+   */
   protected abstract Object invoke(Context ctxt, Object sender, Object target, Object[] args);
 
   /**
-   * Invokes the loaded constructor/method/field.
+   * Invokes the loaded accessible object (constructor, method, or field) using the unwrapped
+   * arguments.
    *
-   * @param accessibleObject The constructor/method/field to invoke
-   * @param target Present only for instance methods/field ops
-   * @param args The arguments to pass to the constructor/method
-   * @param value Present only for value-assigning field ops.
-   * @return The return value of the constructor/method/field
-   * @throws Exception if an error occurs during invocation
+   * <p>Subclasses must implement the logic to perform the invocation, handling any value assignment
+   * for field operations.
+   *
+   * @param accessibleObject the accessible object to invoke
+   * @param target the target object for instance operations; may be null for static members
+   * @param args the list of arguments encapsulated in MessageArgument instances
+   * @param value the value to assign for field operations, if applicable
+   * @return the result of the invocation, which may include a wrapped exception
+   * @throws Exception if an error occurs during the invocation process
    */
   protected abstract Object invokeIncoming(
       AccessibleObject accessibleObject, Object target, List<MessageArgument> args, Object value)
       throws Exception;
 
+  /**
+   * Determines whether invoking the specified accessible object results in a void return type.
+   *
+   * @param accessibleObject the method, constructor, or field to evaluate
+   * @return true if the invocation yields no meaningful return value; false otherwise
+   */
   protected abstract boolean returnsVoid(AccessibleObject accessibleObject);
 
+  /**
+   * Retrieves the MessageType corresponding to the before-execution phase.
+   *
+   * <p>This type is used to identify the nature of the operation (constructor, instance method, or
+   * class method) during pre-execution processing.
+   *
+   * @return the MessageType for the before-execution message
+   */
   protected abstract MessageType getBeforeExecMessageType();
 
+  /**
+   * Extracts the list of parameters from the given execution message.
+   *
+   * <p>This method should return the parameters that will be used to determine argument types and
+   * values during the loading phase.
+   *
+   * @param execMessage the execution message containing the parameters
+   * @return a list of Parameter objects extracted from the execution message
+   */
   protected abstract List<Parameter> getParameterList(ExecMessage execMessage);
 
   /**

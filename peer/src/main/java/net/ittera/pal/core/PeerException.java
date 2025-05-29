@@ -19,10 +19,20 @@
 
 package net.ittera.pal.core;
 
+/**
+ * Represents a custom exception used to signal fatal errors in peer operations within the PAL
+ * runtime. This exception encapsulates a {@link FatalCode} that provides a unique error
+ * identification and a descriptive error message.
+ */
 public class PeerException extends Exception {
 
+  /** Static counter used to generate unique numeric codes for each {@link FatalCode} instance. */
   private static int counter = 1;
 
+  /**
+   * Enumerates fatal error codes encountered during peer operations. Each constant holds a unique
+   * numeric identifier and an associated descriptive message.
+   */
   public enum FatalCode {
 
     // TODO use i18n resources for messages
@@ -40,30 +50,61 @@ public class PeerException extends Exception {
     ERROR_PARSING_RPC_PORT_NUMBER("Invalid RPC port"),
     ERROR_PARSING_JSONRPC_PORT_NUMBER("Invalid JSONRPC port");
 
+    /** Unique numeric code representing the fatal error condition. */
     private final int code;
+
+    /** Descriptive error message associated with this fatal error. */
     private final String message;
 
+    /**
+     * Initializes a fatal error code with its corresponding error message. A unique numeric code is
+     * automatically assigned based on a static counter.
+     *
+     * @param message the descriptive error message for this fatal error.
+     */
     FatalCode(String message) {
       this.code = counter++;
       this.message = message;
     }
 
+    /**
+     * Returns the unique numeric code for this fatal error.
+     *
+     * @return the numeric code identifying the error condition.
+     */
     public int getCode() {
       return this.code;
     }
 
+    /**
+     * Returns the descriptive error message for this fatal error.
+     *
+     * @return the error message.
+     */
     public String getMessage() {
       return this.message;
     }
   }
 
+  /** The fatal error code associated with this exception. */
   private final FatalCode fatalCode;
 
+  /**
+   * Constructs a new PeerException using the specified fatal error code. The exception message is
+   * derived from the provided error code's descriptive message.
+   *
+   * @param fatalCode the fatal error code representing the underlying error condition.
+   */
   public PeerException(FatalCode fatalCode) {
     super(fatalCode.getMessage());
     this.fatalCode = fatalCode;
   }
 
+  /**
+   * Retrieves the fatal error code that triggered this exception.
+   *
+   * @return the {@link FatalCode} instance representing the specific error condition.
+   */
   public FatalCode getFatalCode() {
     return fatalCode;
   }

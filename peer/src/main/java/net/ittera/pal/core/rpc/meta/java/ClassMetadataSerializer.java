@@ -34,17 +34,43 @@ import net.ittera.pal.core.rpc.exec.java.CustomClassloader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Scans the classpath to extract metadata for classes and serializes the collected data into JSON
+ * format. The output file may be compressed using GZIP and Base64 encoded based on the
+ * configuration. The generated metadata includes details such as class modifiers, source file,
+ * inheritance hierarchies, constructors, methods, and fields. In addition, it supports merging of
+ * inherited members from ancestor classes and interfaces.
+ */
 @Singleton
 public class ClassMetadataSerializer {
 
+  /** Logger for reporting scanning and serialization events. */
   private static final Logger logger = LoggerFactory.getLogger(ClassMetadataSerializer.class);
+
+  /** Prefix identifier for PAL classes used in exclusion filters. */
   private static final String PAL_PREFIX = "net.ittera.pal.";
+
+  /** Set of class name prefixes to be excluded from scanning. */
   private static final Set<String> CLASS_PREFIXES_TO_EXCLUDE =
       Set.of("com.sun.", "sun.", "jdk.", PAL_PREFIX);
 
+  /** Flag indicating whether non-public classes and members should be scanned. */
   private final boolean scanNonPublic;
+
+  /**
+   * Optional custom classloader used to load classes during scanning. Null to use the default
+   * classloader.
+   */
   @Nullable private final CustomClassloader customClassloader;
 
+  /**
+   * Constructs a ClassMetadataSerializer with the specified non-public scanning option and optional
+   * custom classloader.
+   *
+   * @param rpcAllowNonpublicStr string value that is parsed to determine if non-public members
+   *     should be scanned.
+   * @param customClassloader optional custom classloader to be used for scanning; may be null.
+   */
   @Inject
   public ClassMetadataSerializer(
       @Named("rpc.allow_nonpublic") String rpcAllowNonpublicStr,
@@ -53,19 +79,31 @@ public class ClassMetadataSerializer {
     this.customClassloader = customClassloader;
   }
 
+  /**
+   * Constructs a ClassMetadataSerializer configured to allow or disallow scanning of non-public
+   * members.
+   *
+   * @param rpcAllowNonpublic flag to enable scanning of non-public classes and members.
+   */
   ClassMetadataSerializer(boolean rpcAllowNonpublic) {
     this.scanNonPublic = rpcAllowNonpublic;
     this.customClassloader = null;
   }
 
   /**
-   * Generate class metadata and return it as a (possibly compressed & encoded ) JSON string.
+   * Scans the classpath to collect metadata for classes and serializes the result into a temporary
+   * JSON file. Depending on the parameters, the output may be compressed with GZIP and encoded
+   * using Base64. The metadata includes class details such as name, modifiers, inheritance
+   * information, constructors, methods, and fields.
    *
-   * @param compressAndEncode if true, returns Base64-encoded GZip-compressed JSON
-   * @param includeClasses optional set of specific classes to include
-   * @param additionalExcludePrefixes optional set of additional class prefixes to exclude
-   * @param mergeAncestry if true, merges methods and fields from all ancestors
-   * @return the path of a temporary file created with the contents of the extracted metadata
+   * @param compressAndEncode if true, the output JSON is GZip-compressed and Base64-encoded.
+   * @param includeClasses optional set of fully qualified class names to restrict the scan; if
+   *     null, all classes are scanned.
+   * @param additionalExcludePrefixes optional additional prefixes for class names to exclude from
+   *     scanning.
+   * @param mergeAncestry if true, merges inherited methods and fields with local declarations.
+   * @return the Path of a temporary file containing the serialized metadata.
+   * @throws Exception if scanning or file operations fail.
    */
   public Path scannedClasspathToJson(
       boolean compressAndEncode,
@@ -199,7 +237,14 @@ public class ClassMetadataSerializer {
     return outFile;
   }
 
-  /** Collect declared constructors for a classInfo, excluding synthetic/aspect-weaver items. */
+  /**
+   * Collects declared constructors for the given class metadata, excluding synthetic and
+   * aspect-weaver generated constructors.
+   *
+   * @param mapper ObjectMapper used for constructing JSON objects.
+   * @param classInfo metadata of the class whose constructors are to be serialized.
+   * @param constructorsArray ArrayNode where the serialized constructor data is added.
+   */
   private static void fillConstructorsArray(
       ObjectMapper mapper, ClassInfo classInfo, ArrayNode constructorsArray) {
     for (MethodInfo constructorInfo : classInfo.getDeclaredConstructorInfo()) {
@@ -211,7 +256,15 @@ public class ClassMetadataSerializer {
     }
   }
 
-  /** Collect methods for a classInfo, excluding synthetic/aspect-weaver items. */
+  /**
+   * Collects declared methods for the given class metadata, excluding synthetic and aspect-weaver
+   * items, and adds them to the provided JSON array. Additionally, ensures inclusion of
+   * java.lang.Object methods.
+   *
+   * @param mapper ObjectMapper used to create JSON nodes.
+   * @param classInfo metadata of the class to process.
+   * @param methodsArray ArrayNode to which the method metadata is added.
+   */
   private static void fillMethodsArray(
       ObjectMapper mapper, ClassInfo classInfo, ArrayNode methodsArray) {
 
@@ -234,7 +287,14 @@ public class ClassMetadataSerializer {
     }
   }
 
-  /** Collect fields for a classInfo, excluding synthetic/aspect-weaver items. */
+  /**
+   * Collects declared fields for the provided class metadata, excluding synthetic and aspect-weaver
+   * fields, and appends the serialized data into the given JSON array.
+   *
+   * @param mapper ObjectMapper used for JSON creation.
+   * @param classInfo metadata of the class whose fields are being processed.
+   * @param fieldsArray ArrayNode to hold the serialized field data.
+   */
   private static void fillFieldsArray(
       ObjectMapper mapper, ClassInfo classInfo, ArrayNode fieldsArray) {
     for (FieldInfo fieldInfo : classInfo.getFieldInfo()) {
@@ -247,10 +307,14 @@ public class ClassMetadataSerializer {
   }
 
   /**
-   * Merges methods from all ancestors (superclasses + interfaces + their superinterfaces). -
-   * "inheritedFrom" is always the ancestor where it was declared. - If the local class overrides a
-   * method with the same signature, we replace it with the child's version and set "overridden =
-   * true" in the child's JSON.
+   * Merges methods from all ancestors (superclasses, interfaces, and their ancestors) into a
+   * unified set. For methods overridden in the local class, the local version replaces the
+   * inherited one and is marked as overridden. Also ensures that all methods from java.lang.Object
+   * are included.
+   *
+   * @param mapper ObjectMapper used for creating JSON representations.
+   * @param classInfo metadata of the class for which to merge methods.
+   * @param methodsArray ArrayNode where the merged method metadata is stored.
    */
   private static void mergeMethods(
       ObjectMapper mapper, ClassInfo classInfo, ArrayNode methodsArray) {
@@ -300,11 +364,13 @@ public class ClassMetadataSerializer {
   }
 
   /**
-   * Merges fields from all ancestors. Technically fields aren't inherited in the same sense as
-   * methods, but we do the same pattern for a "full metadata" view. - "inheritedFrom" is set to the
-   * ancestor that declares the field. - If the local class has a field with the same name (i.e.,
-   * shadows the ancestor field), we replace the ancestor entry with the child's and set "overridden
-   * = true".
+   * Merges fields from all ancestors into a unified set. If the local class declares a field that
+   * shadows an inherited field, the local field replaces the ancestor field and is flagged as
+   * overridden.
+   *
+   * @param mapper ObjectMapper used to construct JSON objects.
+   * @param classInfo metadata of the class whose fields are merged.
+   * @param fieldsArray ArrayNode to which the merged field data is added.
    */
   private static void mergeFields(ObjectMapper mapper, ClassInfo classInfo, ArrayNode fieldsArray) {
     Map<String, ObjectNode> nameMap = new HashMap<>();
@@ -348,8 +414,11 @@ public class ClassMetadataSerializer {
   }
 
   /**
-   * Gathers all superclasses and interfaces (and their superinterfaces) for the given classInfo. We
-   * do a breadth or depth approach to unify them in one Set.
+   * Gathers all ancestor classes and interfaces (including recursively collected superclasses and
+   * superinterfaces) for the provided class metadata.
+   *
+   * @param classInfo metadata of the class whose ancestors are to be gathered.
+   * @return an ordered Set of ClassInfo objects representing all ancestors.
    */
   private static Set<ClassInfo> gatherAllAncestors(ClassInfo classInfo) {
     // use an ordered set so we can iterate first through superclasses
@@ -378,6 +447,13 @@ public class ClassMetadataSerializer {
     return result;
   }
 
+  /**
+   * Recursively collects ancestor classes and interfaces for a given class into the provided
+   * accumulator set. This helper method ensures that each ancestor is added only once.
+   *
+   * @param classInfo the current class metadata being processed.
+   * @param acc the accumulator Set to which discovered ancestors are added.
+   */
   private static void gatherAllAncestorsRecursive(ClassInfo classInfo, Set<ClassInfo> acc) {
     if (classInfo == null || acc.contains(classInfo)) {
       return;
@@ -391,7 +467,13 @@ public class ClassMetadataSerializer {
     }
   }
 
-  /* We explicitly add java.lang.Object methods, which Classgraph leaves out from the scan. */
+  /**
+   * Adds methods from java.lang.Object to the provided signature map if they are not already
+   * present. This ensures that standard Object methods are included in the metadata scan.
+   *
+   * @param mapper ObjectMapper used for creating JSON nodes.
+   * @param signatureMap Map associating method signatures with their JSON representations.
+   */
   private static void addJavaLangObjectMethodsViaReflection(
       ObjectMapper mapper, Map<String, ObjectNode> signatureMap) {
 
@@ -411,6 +493,14 @@ public class ClassMetadataSerializer {
 
   // -------------------- JSON creation helpers --------------------
 
+  /**
+   * Creates a JSON representation for the given constructor metadata.
+   *
+   * @param mapper ObjectMapper used to create JSON nodes.
+   * @param ctorInfo metadata of the constructor.
+   * @return an ObjectNode representing the constructor including its name, modifiers, and
+   *     parameters.
+   */
   private static ObjectNode createConstructorJson(ObjectMapper mapper, MethodInfo ctorInfo) {
     ObjectNode constructorObject = mapper.createObjectNode();
     constructorObject.put("name", ctorInfo.getName());
@@ -429,6 +519,17 @@ public class ClassMetadataSerializer {
     return constructorObject;
   }
 
+  /**
+   * Creates a JSON representation for the given method metadata.
+   *
+   * @param mapper ObjectMapper used for JSON creation.
+   * @param methodInfo metadata of the method to be serialized.
+   * @param inheritedFrom the name of the class from which the method is inherited, or null if
+   *     declared locally.
+   * @param overridden true if the method overrides an inherited method.
+   * @return an ObjectNode representing the method's metadata, including name, modifiers, return
+   *     type, and parameters.
+   */
   private static ObjectNode createMethodJson(
       ObjectMapper mapper, MethodInfo methodInfo, String inheritedFrom, boolean overridden) {
     ObjectNode methodObject = mapper.createObjectNode();
@@ -455,6 +556,15 @@ public class ClassMetadataSerializer {
     return methodObject;
   }
 
+  /**
+   * Creates a JSON representation from a reflective Method instance.
+   *
+   * @param mapper ObjectMapper for creating JSON nodes.
+   * @param m the Method instance obtained via reflection.
+   * @param inheritedFrom the class name from which the method is inherited.
+   * @param overridden true if the method is an override of an inherited method.
+   * @return an ObjectNode containing the reflective method's metadata.
+   */
   private static ObjectNode createMethodJsonFromReflection(
       ObjectMapper mapper, Method m, String inheritedFrom, boolean overridden) {
 
@@ -485,6 +595,16 @@ public class ClassMetadataSerializer {
     return methodObject;
   }
 
+  /**
+   * Creates a JSON representation for the given field metadata.
+   *
+   * @param mapper ObjectMapper used to create JSON nodes.
+   * @param fieldInfo metadata of the field.
+   * @param inheritedFrom the name of the class from which the field is inherited, or null if
+   *     declared locally.
+   * @param overridden true if the field overrides or shadows an inherited field.
+   * @return an ObjectNode representing the field's metadata, including name, type, and modifiers.
+   */
   private static ObjectNode createFieldJson(
       ObjectMapper mapper, FieldInfo fieldInfo, String inheritedFrom, boolean overridden) {
     ObjectNode fieldObject = mapper.createObjectNode();
@@ -500,6 +620,15 @@ public class ClassMetadataSerializer {
   }
 
   // -------------------- signature utilities for override detection --------------------
+
+  /**
+   * Generates a unique signature string for the given method based on its name, generic parameters,
+   * parameter types, and return type. This signature is used to detect method overrides and to
+   * uniquely identify methods.
+   *
+   * @param methodInfo metadata of the method.
+   * @return a string representing the method's signature.
+   */
   private static String methodSignature(MethodInfo methodInfo) {
     StringBuilder sb = new StringBuilder();
 
@@ -543,6 +672,13 @@ public class ClassMetadataSerializer {
     return sb.toString();
   }
 
+  /**
+   * Generates a unique signature string for the provided reflective Method instance. This signature
+   * incorporates type parameters, parameter types, and return type.
+   *
+   * @param m the reflective Method instance.
+   * @return a string representing the method's signature.
+   */
   private static String reflectionMethodSignature(Method m) {
     StringBuilder sb = new StringBuilder();
 
@@ -593,16 +729,36 @@ public class ClassMetadataSerializer {
     return sb.toString();
   }
 
+  /**
+   * Converts a Type instance to its string representation.
+   *
+   * @param type the Type to convert.
+   * @return the string representation of the type.
+   */
   private static String typeToString(Type type) {
     return type.getTypeName();
   }
 
+  /**
+   * Determines whether the specified method is synthetic or generated by aspect-weaver tools and
+   * should be excluded.
+   *
+   * @param methodInfo metadata of the method.
+   * @return true if the method is synthetic or aspect-weaver generated; false otherwise.
+   */
   private static boolean isAspectWeaverMethod(MethodInfo methodInfo) {
     return methodInfo.isSynthetic()
         || methodInfo.getName().contains("_aroundBody")
         || methodInfo.getName().contains("$");
   }
 
+  /**
+   * Determines whether the given field is synthetic or generated by aspect-weaver tools and should
+   * be excluded.
+   *
+   * @param fieldInfo metadata of the field.
+   * @return true if the field is synthetic or aspect-weaver generated; false otherwise.
+   */
   private static boolean isAspectWeaverField(FieldInfo fieldInfo) {
     return fieldInfo.isSynthetic() || fieldInfo.getName().contains("ajc$");
   }

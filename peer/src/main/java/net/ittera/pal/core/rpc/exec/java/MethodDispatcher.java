@@ -25,8 +25,28 @@ import java.util.List;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.messages.colfer.ExecMessage;
 
+/**
+ * Provides reflection-based dispatching of method calls.
+ *
+ * <p>This abstract class adapts deserialized parameters to the method's expected signature,
+ * performs the reflective invocation on a given target, and constructs the appropriate
+ * post-execution message, handling both normal return values and execution exceptions.
+ */
 public abstract class MethodDispatcher extends BaseExecMessageDispatcher {
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>This implementation ignores the provided {@code value} parameter and delegates the method
+   * invocation to a specialized private handler.
+   *
+   * @param accessibleObject the reflective method object representing the method to be invoked.
+   * @param target the instance on which the method is to be executed.
+   * @param args the list of message arguments to be adapted and supplied to the method.
+   * @param value an additional parameter that is deliberately ignored.
+   * @return the result produced by the invoked method.
+   * @throws Exception if an error occurs during parameter adaptation or method invocation.
+   */
   @Override
   protected Object invokeIncoming(
       AccessibleObject accessibleObject, Object target, List<MessageArgument> args, Object value)
@@ -35,6 +55,22 @@ public abstract class MethodDispatcher extends BaseExecMessageDispatcher {
     return invokeIncoming(accessibleObject, target, args);
   }
 
+  /**
+   * Invokes the target method using the provided accessible object and adapted parameters.
+   *
+   * <p>The method first logs the invocation details if trace logging is enabled, then adapts the
+   * supplied deserialized message arguments to match the method's parameter types before performing
+   * the reflective invocation.
+   *
+   * @param accessibleObject the reflective representation of the method to be invoked (must be a
+   *     {@link Method}).
+   * @param target the object instance on which the method is invoked.
+   * @param deserializedArgs the list of message arguments to be converted into the method's
+   *     parameter types.
+   * @return the result returned from the method invocation.
+   * @throws Exception if parameter adaptation fails or if an exception is thrown during method
+   *     invocation.
+   */
   private Object invokeIncoming(
       AccessibleObject accessibleObject, Object target, List<MessageArgument> deserializedArgs)
       throws Exception {
@@ -52,6 +88,22 @@ public abstract class MethodDispatcher extends BaseExecMessageDispatcher {
     return method.invoke(target, args);
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Constructs a post-execution message based on the outcome of the method call. If an exception
+   * occurred during method loading or invocation, the returned message wraps the encountered
+   * throwable; otherwise, a normal return value message is constructed.
+   *
+   * @param execMessage the original execution message containing context for the call.
+   * @param valueObject the object returned by the method invocation.
+   * @param valueObjRef a reference wrapper for the returned value.
+   * @param accessibleObject the reflective method object associated with the executed call.
+   * @param exceptionWhileLoading an exception thrown during the method loading phase, if any.
+   * @param exceptionWhileInvoking an exception thrown during the method invocation phase, if any.
+   * @return an {@link ExecMessage} representing the outcome of the execution, either wrapping an
+   *     exception or containing the return value.
+   */
   @Override
   protected ExecMessage createAfterExecMessage(
       ExecMessage execMessage,
@@ -77,6 +129,16 @@ public abstract class MethodDispatcher extends BaseExecMessageDispatcher {
         messageId);
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Determines whether the method associated with the provided accessible object declares a void
+   * return type.
+   *
+   * @param accessibleObject the reflective method object to be evaluated (must be a {@link
+   *     Method}).
+   * @return {@code true} if the method's return type is void; {@code false} otherwise.
+   */
   @Override
   protected boolean returnsVoid(AccessibleObject accessibleObject) {
     return ((Method) accessibleObject).getReturnType().equals(java.lang.Void.TYPE);

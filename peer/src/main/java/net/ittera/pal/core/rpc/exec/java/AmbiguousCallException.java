@@ -4,20 +4,42 @@ import java.lang.reflect.Executable;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * Thrown to indicate that a reflective call to a method or constructor is ambiguous because
+ * multiple candidates match the provided parameters. This exception encapsulates details about the
+ * target class, the identifier of the call (method name or "new" for constructor calls), the list
+ * of parameter types used in the call, and the executable candidates that contributed to the
+ * ambiguity.
+ */
 public class AmbiguousCallException extends Exception {
 
+  /** The name of the target class where the ambiguous call was attempted. */
   private final String className;
+
+  /** The name of the called method, or "new" when a constructor is invoked. */
   private final String methodName;
+
+  /**
+   * The list of parameter types provided for the call. These types are used to determine matching
+   * executable candidates.
+   */
   private final List<Class<?>> parameterTypesToMatch;
+
+  /**
+   * The list of executable members (methods or constructors) that match the provided parameter
+   * types, leading to the ambiguity.
+   */
   private final List<? extends Executable> matchingExecutables;
 
   /**
-   * Used for method calls.
+   * Constructs an AmbiguousCallException for a method call when multiple executable methods match
+   * the provided parameter types.
    *
-   * @param className the class name of the object that the method is called on
-   * @param methodName the name of the method that is called
-   * @param parameterTypesToMatch the types of the parameters that the method is called with
-   * @param matchingExecutables the methods that match the given parameters
+   * @param className the name of the class on which the method was invoked
+   * @param methodName the name of the method that was called
+   * @param parameterTypesToMatch the list of parameter types used in the call; must not be null
+   * @param matchingExecutables the list of method executables that match the given parameters,
+   *     causing ambiguity
    */
   public AmbiguousCallException(
       String className,
@@ -31,11 +53,17 @@ public class AmbiguousCallException extends Exception {
   }
 
   /**
-   * Used for constructor calls.
+   * Constructs an AmbiguousCallException for a constructor call when multiple constructors match
+   * the provided parameter types.
    *
-   * @param className the class name of the constructor that is called
-   * @param parameterTypesToMatch the types of the parameters that the constructor is called with
-   * @param matchingExecutables the constructors that match the given parameters
+   * <p>This constructor automatically sets the method identifier to "new" to indicate object
+   * instantiation.
+   *
+   * @param className the name of the class whose constructor was invoked
+   * @param parameterTypesToMatch the list of parameter types used in the constructor call; must not
+   *     be null
+   * @param matchingExecutables the list of constructor executables that match the given parameters,
+   *     resulting in ambiguity
    */
   public AmbiguousCallException(
       String className,
@@ -44,16 +72,35 @@ public class AmbiguousCallException extends Exception {
     this(className, "new", parameterTypesToMatch, matchingExecutables);
   }
 
+  /**
+   * Returns the exception message describing the ambiguous call. This method delegates to {@link
+   * #getMessage()}.
+   *
+   * @return a string representation of the exception message
+   */
   @Override
   public String toString() {
     return getMessage();
   }
 
+  /**
+   * Returns the list of executable members (methods or constructors) that were found to match the
+   * provided parameters and caused the ambiguity.
+   *
+   * @return a list of matching executable members
+   */
   @SuppressWarnings("unused")
   public List<? extends Executable> getMatchingExecutables() {
     return matchingExecutables;
   }
 
+  /**
+   * Constructs and returns a detailed message describing the ambiguous call. The message includes
+   * the target class, the identifier of the method or constructor, a list of candidate signatures,
+   * and the parameter types supplied for the call.
+   *
+   * @return the detailed exception message
+   */
   @Override
   public String getMessage() {
     StringBuilder sb = new StringBuilder();

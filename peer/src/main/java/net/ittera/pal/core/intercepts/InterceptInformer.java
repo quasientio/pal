@@ -45,22 +45,49 @@ import org.zeromq.ZMQ.Socket;
 import org.zeromq.ZMQException;
 import zmq.ZError;
 
+/**
+ * Handles the relay of intercept events to a specified intercept endpoint.
+ *
+ * <p>This class acts as an {@link InterceptNodeListener} that processes intercept events by either
+ * registering all current intercepts in the system or by handling individual intercept events. It
+ * uses a per-thread ZeroMQ REQ socket to send messages to the intercept service.
+ */
 @Singleton
 public class InterceptInformer implements InterceptNodeListener {
 
+  /** Logger instance used for logging events, errors, and debug information. */
   private static final Logger logger = LoggerFactory.getLogger(InterceptInformer.class);
 
+  /** ZeroMQ context used for creating and managing ZeroMQ sockets for intercept communications. */
   private final ZContext zmqContext;
+
+  /** Builder to construct intercept messages from intercept requests. */
   private final MessageBuilder messageBuilder;
+
+  /**
+   * Provider for connections to the directory service from which peer and intercept information are
+   * retrieved.
+   */
   private final DirectoryConnectionProvider directoryConnectionProvider;
+
+  /** Address string of the intercept endpoint to which intercept messages are sent. */
   private final String interceptsAddress;
+
+  /** Unique identifier for the local peer. */
   private final UUID peerUuid;
 
-  // flag to avoid creating the threadLocal socket when we're trying to close it before having been
-  // created
+  /**
+   * Thread-local flag indicating whether the REQ socket has been created for the current thread.
+   * This flag prevents attempts to close a socket that was never initialized.
+   */
   private final ThreadLocal<Boolean> threadSocketCreated = ThreadLocal.withInitial(() -> false);
 
-  // per-thread REQ socket to send out messages
+  /**
+   * Thread-local REQ socket used to send intercept messages.
+   *
+   * <p>Each thread initializes its own socket which connects to the intercept endpoint specified by
+   * {@code interceptsAddress}. The socket is created on first access.
+   */
   private final ThreadLocal<Socket> threadSocket =
       new ThreadLocal<>() {
         @Override
@@ -76,6 +103,15 @@ public class InterceptInformer implements InterceptNodeListener {
         }
       };
 
+  /**
+   * Constructs an InterceptInformer instance with the necessary dependencies.
+   *
+   * @param zmqContext the ZeroMQ context for socket operations
+   * @param messageBuilder builder to create intercept messages from requests
+   * @param directoryConnectionProvider provider to retrieve the directory connection
+   * @param peerUuid unique identifier for the local peer
+   * @param interceptsAddress endpoint address (injected with qualifier "intercepts.reg")
+   */
   @Inject
   public InterceptInformer(
       ZContext zmqContext,
@@ -90,6 +126,14 @@ public class InterceptInformer implements InterceptNodeListener {
     this.interceptsAddress = interceptsAddress;
   }
 
+  /**
+   * Retrieves all current intercepts from the directory and sends them to the intercept endpoint.
+   *
+   * <p>This method connects to the directory service, obtains all peer information, and for each
+   * peer, retrieves the associated intercept requests. It then builds and sends an intercept
+   * message for each request via a ZeroMQ REQ socket. Any retrieval errors are logged, and
+   * processing continues for remaining peers.
+   */
   public void registerAllInterceptsInDirectory() {
     final Set<PeerInfo> peers;
     final PalDirectory palDirectory =
@@ -118,6 +162,17 @@ public class InterceptInformer implements InterceptNodeListener {
         });
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Processes an intercept event received from the directory. Depending on the event type, it
+   * either builds and sends an intercept message for new intercept registrations or sends a message
+   * indicating removal. Self-produced intercept events (originating from the local peer) are
+   * ignored.
+   *
+   * @param event the intercept event containing the type and associated data for processing
+   * @throws IllegalStateException if the event type is unexpected
+   */
   @Override
   public void interceptEvent(InterceptEvent event) {
     if (logger.isDebugEnabled()) {
@@ -157,6 +212,16 @@ public class InterceptInformer implements InterceptNodeListener {
     sendInterceptEventMsg(interceptEventMsg);
   }
 
+  /**
+   * Sends an intercept event message using the per-thread ZeroMQ REQ socket. On error, fail-close.
+   *
+   * <p>This method logs the outgoing message at trace level, sends the message over the socket, and
+   * then performs a blocking read to receive a response. If the response is not the expected
+   * response ("0") or if a ZMQException occurs (e.g., due to interruption or termination), it logs
+   * a warning and closes the socket.
+   *
+   * @param message the intercept event message to be sent
+   */
   private void sendInterceptEventMsg(InterceptEventMsg message) {
     if (logger.isTraceEnabled()) {
       logger.trace("Sending new intercept evt message: {}", message);
@@ -188,6 +253,13 @@ public class InterceptInformer implements InterceptNodeListener {
     }
   }
 
+  /**
+   * Closes the thread-local ZeroMQ REQ socket if it has been created.
+   *
+   * <p>This method checks whether the current thread has an initialized socket (using a
+   * thread-local flag) and closes it if available. It also cleans up the thread-local variables to
+   * free resources.
+   */
   public void closeThreadLocalSocket() {
     if (Boolean.TRUE.equals(threadSocketCreated.get())) {
       Socket outSocket = threadSocket.get();

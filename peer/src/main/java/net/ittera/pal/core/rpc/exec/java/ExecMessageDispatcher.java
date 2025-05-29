@@ -22,10 +22,40 @@ package net.ittera.pal.core.rpc.exec.java;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.types.MessageType;
 
+/**
+ * Defines a contract for dispatching execution messages for processing.
+ *
+ * <p>Implementations of this interface are responsible for processing incoming {@link ExecMessage}
+ * instances and returning an appropriate response, if applicable. Additionally, a dispatcher must
+ * indicate the type of message it is capable of handling through the {@link
+ * #getSupportedMessageType()} method.
+ */
 public interface ExecMessageDispatcher {
+  /**
+   * Dispatches the provided execution message.
+   *
+   * @param incomingCall the execution message to process; should be non-null.
+   * @return the response execution message produced after processing, or null if no response is
+   *     generated.
+   */
   ExecMessage dispatchIncoming(ExecMessage incomingCall);
 
+  /**
+   * Dispatches the provided execution message.
+   *
+   * @param incomingCall the execution message to process; should be non-null.
+   * @param isDirect flag indicating whether the message is via Peer (direct) or from a Log
+   *     (non-direct)
+   * @return the response execution message produced after processing, or null if no response is
+   *     produced.
+   */
   ExecMessage dispatchIncoming(ExecMessage incomingCall, boolean isDirect);
 
+  /**
+   * Retrieves the message type that this dispatcher is designed to handle.
+   *
+   * @return the supported {@link MessageType} that identifies the kind of execution messages this
+   *     dispatcher can process.
+   */
   MessageType getSupportedMessageType();
 }

@@ -28,27 +28,52 @@ import org.slf4j.LoggerFactory;
 import org.zeromq.ZMQ.Socket;
 
 /**
- * Implements Kafka Producer Callback NOTE: All calls to this class must be made by same thread
- * (kafka's IO thread), since we use zmq to publish received offsets and zmq sockets aren't
- * thread-safe.
+ * A Kafka producer callback that extends CompletableFuture to facilitate asynchronous notification
+ * upon record acknowledgement. Once the broker acknowledges a message, this callback publishes the
+ * new offset via a ZeroMQ socket. All interactions with the ZeroMQ socket must occur from the Kafka
+ * I/O thread due to thread-safety constraints of ZeroMQ.
  */
 class MessageOffsetInformer extends CompletableFuture<Void> implements Callback {
 
+  /**
+   * Unique identifier for the Kafka message associated with this callback. Used to correlate Log
+   * messages with specific message operations.
+   */
   private final String messageId;
+
+  /**
+   * ZeroMQ socket used to publish offset update messages. This socket should only be accessed from
+   * the thread that instantiated this callback.
+   */
   private final Socket offsetPubSocket;
 
+  /** Logger instance. */
   private static final Logger logger = LoggerFactory.getLogger(MessageOffsetInformer.class);
 
+  /**
+   * Constructs a new MessageOffsetInformer with the specified message identifier and ZeroMQ socket.
+   * This callback will utilize the provided socket to send offset updates upon Kafka record
+   * acknowledgement.
+   *
+   * @param messageId the unique identifier for the message; used for logging and tracking purposes
+   * @param offsetPubSocket the ZeroMQ socket designated for publishing offset messages
+   */
   MessageOffsetInformer(String messageId, Socket offsetPubSocket) {
     this.messageId = messageId;
     this.offsetPubSocket = offsetPubSocket;
   }
 
   /**
-   * Kafka producer Callback interface. Called when the record has been acknowledged by the server.
+   * {@inheritDoc}
    *
-   * @param recordMetadata metadata for the record that was sent (i.e. the partition and offset)
-   * @param e The exception thrown during processing of this record. Null if no error occurred.
+   * <p>This method is called when the Kafka producer receives a broker acknowledgement for a sent
+   * record. It logs the received offset, creates an offset message, and publishes it via the ZeroMQ
+   * socket. Finally, the embedded CompletableFuture is completed to signal the end of processing.
+   *
+   * @param recordMetadata metadata for the sent record, including partition and offset details;
+   *     expected to be non-null
+   * @param e the exception encountered during record processing, or null if the operation was
+   *     successful
    */
   @Override
   public void onCompletion(RecordMetadata recordMetadata, Exception e) {

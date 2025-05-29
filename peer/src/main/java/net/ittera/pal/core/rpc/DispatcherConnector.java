@@ -57,26 +57,64 @@ import org.zeromq.ZContext;
 import org.zeromq.ZMQ.Socket;
 import org.zeromq.ZMQException;
 
+/**
+ * Handles routing of execution messages to the WAL and PUB interfaces, intercept callbacks, and
+ * session service through ZeroMQ sockets. This class creates and manages thread-local sockets for
+ * different purposes, such as publishing execution messages, sending session commands, and handling
+ * callback messages. It uses injected dependencies to build messages, resolve peer connections, and
+ * manage intercept logic.
+ */
 @Singleton
 public class DispatcherConnector {
 
+  /** Logger instance. */
   private static final Logger logger = LoggerFactory.getLogger(DispatcherConnector.class);
+
+  /** Timeout (in milliseconds) for receiving responses on callback sockets. */
   private static final int CALLBACK_RECEIVE_TIMEOUT_MS = 3000;
 
+  /** ZeroMQ context used to create and manage zmq sockets. */
   private final ZContext zmqContext;
+
+  /** Unique identifier of the current peer instance. */
   private final UUID peerUuid;
+
+  /** Utility for constructing various message objects used in execution and callback processing. */
   private final MessageBuilder messageBuilder;
+
+  /** Provider to access the directory, which supplies connection details for remote peers. */
   private final DirectoryConnectionProvider directoryConnectionProvider;
+
+  /** Matcher used to determine and retrieve intercepts applicable to execution messages. */
   private final InterceptMatcher interceptMatcher;
+
+  /** Network address used for publishing execution messages. */
   private final String msgPublisherAddress;
+
+  /** Network address of the session service, used for sending session-related commands. */
   private final String sessionServiceAddress;
+
+  /**
+   * Precomputed list of internal headers used for the write-ahead mechanism in message processing.
+   */
   private final List<InternalHeader> writeAheadHeaders;
+
+  /** Set of runtime options that control behavior such as intercept handling and TCP publishing. */
   private final Set<RunOptions> runOptions;
 
+  /**
+   * Atomic counter tracking the cumulative time spent on publishing messages via the publisher
+   * socket.
+   */
   private final AtomicLong totalPubSocketTime = new AtomicLong();
+
+  /** Atomic counter tracking the total number of published requests. */
   private final AtomicLong totalPublishedRequests = new AtomicLong();
 
-  // per-thread REQ socket to publish exec messages
+  /**
+   * Thread-local REQ socket instance used for publishing execution messages. This socket is created
+   * and connected to the message publisher address upon first access.
+   */
   private final ThreadLocal<Socket> threadPubSocket =
       new ThreadLocal<>() {
         @Override
@@ -91,9 +129,17 @@ public class DispatcherConnector {
           return worker;
         }
       };
-  // flag to avoid closing a socket that hasn't been created
+
+  /**
+   * Thread-local flag indicating whether the publisher socket has been created for the current
+   * thread.
+   */
   private final ThreadLocal<Boolean> threadPubSocketCreated = ThreadLocal.withInitial(() -> false);
 
+  /**
+   * Thread-local REQ socket instance used for communication with the session service. This socket
+   * is created and connected to the session service address upon first access.
+   */
   private final ThreadLocal<Socket> threadSessionsSocket =
       new ThreadLocal<>() {
         @Override
@@ -110,14 +156,34 @@ public class DispatcherConnector {
         }
       };
 
+  /**
+   * Thread-local flag indicating whether the session service socket has been created for the
+   * current thread.
+   */
   private final ThreadLocal<Boolean> threadSessionsSocketCreated =
       ThreadLocal.withInitial(() -> false);
 
-  // ThreadLocal map of peerUUID -> socket connecting to remote ROUTER/REQ to invoke intercept
-  // callbacks
+  /**
+   * Thread-local mapping of peer UUIDs to REQ sockets used for handling intercept callback
+   * messages.
+   */
   private final ThreadLocal<Map<UUID, Socket>> callbackSockets =
       ThreadLocal.withInitial(HashMap::new);
 
+  /**
+   * Constructs a new DispatcherConnector with the provided communication context, identifiers,
+   * message builders, directory connection provider, runtime options, intercept matcher, and
+   * service addresses.
+   *
+   * @param zmqContext the ZeroMQ context used for socket creation and management
+   * @param peerUuid the unique identifier for the current peer
+   * @param messageBuilder the builder instance for constructing message objects
+   * @param directoryConnectionProvider provider for retrieving peer connection details
+   * @param runOptions the set of runtime options that influence message processing behavior
+   * @param interceptMatcher matcher used for determining applicable intercepts for messages
+   * @param msgPublisherAddress the address used for publishing execution messages
+   * @param sessionServiceAddress the address for the session service communication
+   */
   @Inject
   public DispatcherConnector(
       ZContext zmqContext,
@@ -140,10 +206,29 @@ public class DispatcherConnector {
         Collections.singletonList(messageBuilder.buildWriteAheadHeader(peerUuid));
   }
 
+  /**
+   * Sends out an execution message for processing. This method delegates to the overloaded version
+   * with null headers.
+   *
+   * @param message the message containing execution information to be sent
+   * @param execPhase the phase of execution associated with the message
+   * @return the resulting ExecMessage after processing and potential intercept handling
+   */
   public ExecMessage sendExecMessage(Message message, ExecPhase execPhase) {
     return sendExecMessage(message, execPhase, null);
   }
 
+  /**
+   * Sends out an execution message with optional headers for processing. Handles intercept
+   * processing, WAL and stream publishing based on the runtime options.
+   *
+   * @param message the message containing execution details; must include a non-null ExecMessage
+   * @param execPhase the phase of execution during which the message is sent
+   * @param headers optional headers for write-ahead or additional processing; can be null
+   * @return the ExecMessage processed or returned by the callback logic, or the original if no
+   *     intercepts apply
+   * @throws IllegalArgumentException if the contained ExecMessage in the provided message is null
+   */
   private ExecMessage sendExecMessage(
       Message message, ExecPhase execPhase, @Nullable List<InternalHeader> headers) {
     if (message.getExecMessage() == null) {
@@ -238,6 +323,13 @@ public class DispatcherConnector {
     return returnValue;
   }
 
+  /**
+   * Publishes the given outbound message on the thread-local publisher socket. Tracks publishing
+   * time and the number of published requests, and logs warnings if the publisher returns a
+   * non-zero response.
+   *
+   * @param message the OutboundMsg to be sent over the network
+   */
   private void publishMessage(OutboundMsg message) {
     Socket publisherReqSocket = threadPubSocket.get();
     long start = Instant.now().toEpochMilli();
@@ -255,6 +347,13 @@ public class DispatcherConnector {
     }
   }
 
+  /**
+   * Writes the provided execution message ahead by publishing it if TCP publishing is enabled. This
+   * mechanism is typically used for logging or preliminary handling before main processing.
+   *
+   * @param message the ExecMessage to be written ahead
+   * @param messageType the type of the message for contextual processing
+   */
   public void writeAhead(ExecMessage message, MessageType messageType) {
     if (logger.isDebugEnabled()) {
       logger.debug(
@@ -280,6 +379,19 @@ public class DispatcherConnector {
     publishMessage(msg);
   }
 
+  /**
+   * Sends a callback execution message to the specified peer. Optionally waits for and returns a
+   * response if requested. The method obtains or creates a thread-local REQ socket connected to the
+   * peer's address, sends the callback, and handles retries if necessary.
+   *
+   * @param interceptor the unique identifier of the peer to which the callback is sent
+   * @param callbackMessage the execution message to be used as a callback
+   * @param getResponse flag indicating whether to wait for and return a response from the peer
+   * @return a byte array representing the response from the peer if getResponse is true; otherwise,
+   *     null
+   * @throws Exception if an error occurs during socket creation, message sending, or response
+   *     retrieval
+   */
   private @Nullable byte[] sendCallbackMessageToPeer(
       UUID interceptor, ExecMessage callbackMessage, boolean getResponse) throws Exception {
     if (logger.isDebugEnabled()) {
@@ -332,10 +444,26 @@ public class DispatcherConnector {
     return response;
   }
 
+  /**
+   * Sends an asynchronous callback message to the specified interceptor. This method does not wait
+   * for a response.
+   *
+   * @param interceptor the unique identifier of the interceptor peer
+   * @param message the callback execution message to send
+   * @throws Exception if an error occurs during sending the callback message
+   */
   private void sendAsyncCallbackToPeer(UUID interceptor, ExecMessage message) throws Exception {
     sendCallbackMessageToPeer(interceptor, message, false);
   }
 
+  /**
+   * Sends a session command message to the session service and returns the corresponding response.
+   * It uses a thread-local REQ socket to communicate with the session service.
+   *
+   * @param sessionCommandMsg the session command message to be sent
+   * @return the SessionResponseMsg received from the session service, or null if the message was
+   *     not sent successfully
+   */
   public SessionResponseMsg sendMessageToSessionService(SessionCommandMsg sessionCommandMsg) {
     SessionResponseMsg responseMessage = null;
     final Socket sessionServiceSocket = threadSessionsSocket.get();
@@ -352,10 +480,26 @@ public class DispatcherConnector {
     return responseMessage;
   }
 
+  /**
+   * Sends a synchronous callback message to the specified peer and waits for its response.
+   *
+   * @param interceptor the unique identifier of the target peer
+   * @param message the callback execution message to be sent
+   * @return a byte array representing the response from the peer
+   * @throws Exception if an error occurs during message transmission or response retrieval
+   */
   private byte[] sendCallbackToPeer(UUID interceptor, ExecMessage message) throws Exception {
     return sendCallbackMessageToPeer(interceptor, message, true);
   }
 
+  /**
+   * Retrieves an existing or creates a new thread-local REQ socket connected to the specified peer.
+   * The connection is established using the peer's address obtained from the directory provider.
+   *
+   * @param peer the unique identifier of the target peer
+   * @return a connected REQ Socket for communication with the specified peer
+   * @throws Exception if the peer's information cannot be retrieved from the directory
+   */
   private Socket getConnectedReqSocketFor(UUID peer) throws Exception {
     // first check if socket for peer is already open
     if (callbackSockets.get().containsKey(peer)) {
@@ -383,6 +527,12 @@ public class DispatcherConnector {
     return reqSocket;
   }
 
+  /**
+   * Determines whether the provided message type is eligible for intercept processing.
+   *
+   * @param type the MessageType to evaluate
+   * @return true if the type supports intercept handling; false otherwise
+   */
   private boolean isInterceptableType(MessageType type) {
     return switch (type) {
       case EXEC_CONSTRUCTOR,
@@ -397,12 +547,20 @@ public class DispatcherConnector {
     };
   }
 
-  // TODO call from single-thread
+  /**
+   * Prints aggregated statistics regarding message publishing, including total time spent and the
+   * number of requests published.
+   */
   void printStats() {
     logger.info("totalPubSocketTime = {} ms", totalPubSocketTime);
     logger.info("totalPublishedRequests = {}", totalPublishedRequests);
   }
 
+  /**
+   * Closes all thread-local sockets used for publishing, session service communication, and
+   * callback handling. Prior to closing, the method prints performance statistics and cleans up
+   * thread-local state.
+   */
   void closeThreadLocalSockets() {
     printStats();
     if (totalPublishedRequests.longValue() != 0) {

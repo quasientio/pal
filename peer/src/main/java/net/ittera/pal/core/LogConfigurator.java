@@ -29,19 +29,62 @@ import net.ittera.pal.cxn.PalDirectory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Configures and manages Log I/O for the PAL runtime.
+ *
+ * <p>This class initializes input and output Logs based on specified log names, application
+ * properties, and the availability of a directory service. Depending on the configuration, Log
+ * entries may be automatically registered or retrieved from the Pal directory, and corresponding
+ * reading and writing operations are initiated.
+ */
 class LogConfigurator {
 
+  /** Logger instance. */
   protected static final Logger logger = LoggerFactory.getLogger(LogConfigurator.class);
+
+  /** Configured name for the input Log; may be set to "auto" for automatic registration. */
   private final String inLogName;
+
+  /** Configured name for the output Log; may be set to "auto" for automatic registration. */
   private final String outLogName;
+
+  /** Initial offset used when reading from the input Log. */
   private final Long inLogOffset;
+
+  /**
+   * Application properties containing configuration such as "paldir_url",
+   * "kafka.bootstrap.servers", and "kafkaTopicPrefix".
+   */
   private final Properties appProps;
+
+  /** Flag indicating if a PalDirectory URL is provided; if not, Log names are used literally. */
   private final boolean noPaldir;
+
+  /** Dependency injection container for obtaining required service instances. */
   private final Injector injector;
+
+  /** Kafka server endpoints derived from the application properties. */
   private final String kafkaServers;
+
+  /** LogInfo instance for the input Log after initialization; may be null if not configured. */
   private LogInfo inLog;
+
+  /** LogInfo instance for the output Log after initialization; may be null if not configured. */
   private LogInfo outLog;
 
+  /**
+   * Constructs a LogConfigurator with the given log parameters, application properties, and
+   * dependency injector.
+   *
+   * @param inLogName the name of the input Log or "auto" to request automatic name registration
+   * @param inLogOffset the starting offset for reading the input Log
+   * @param outLogName the name of the output Log or "auto" to request automatic name registration
+   * @param appProps the configuration properties including keys like "paldir_url",
+   *     "kafka.bootstrap.servers", and "kafkaTopicPrefix"
+   * @param injector the dependency injection container providing required service instances
+   * @throws IllegalArgumentException if the required Kafka servers property
+   *     ("kafka.bootstrap.servers") is missing
+   */
   LogConfigurator(
       String inLogName,
       Long inLogOffset,
@@ -61,6 +104,15 @@ class LogConfigurator {
     }
   }
 
+  /**
+   * Registers a new Log entry in the PalDirectory service.
+   *
+   * <p>Retrieves a PalDirectory instance via dependency injection and registers a new Log entry
+   * based on the Kafka topic prefix and Kafka servers provided in the configuration.
+   *
+   * @return the newly created LogInfo instance
+   * @throws Exception if the directory connection or Log registration fails
+   */
   private LogInfo registerNewLog() throws Exception {
     final PalDirectory palDirectory =
         injector
@@ -70,6 +122,16 @@ class LogConfigurator {
     return palDirectory.newLog(appProps.getProperty("kafkaTopicPrefix"), kafkaServers);
   }
 
+  /**
+   * Retrieves or registers a Log with the specified name using the PalDirectory service.
+   *
+   * <p>If the Log entry already exists, its associated LogInfo is returned. Otherwise, a new
+   * LogInfo is created and registered in the directory.
+   *
+   * @param logName the name of the Log to retrieve or register
+   * @return the LogInfo corresponding to the provided Log name
+   * @throws Exception if the directory connection fails or Log registration encounters an error
+   */
   private LogInfo getOrRegisterGivenLog(String logName) throws Exception {
 
     final PalDirectory palDirectory =
@@ -90,27 +152,47 @@ class LogConfigurator {
     return logInfo;
   }
 
+  /**
+   * Initiates reading from the specified input Log starting at the provided offset.
+   *
+   * <p>Obtains a LogReader instance via dependency injection and begins reading Log entries.
+   *
+   * @param inLog the LogInfo instance representing the input Log
+   * @param inAndOutAreSameLog flag indicating whether the input and output Logs are the same
+   *     instance
+   * @param initialOffset the starting offset for reading the Log
+   * @throws Exception if an error occurs during the Log reading process
+   */
   private void readFromLog(LogInfo inLog, boolean inAndOutAreSameLog, Long initialOffset)
       throws Exception {
     LogReader logMessageReader = injector.getInstance(LogReader.class);
     logMessageReader.readFromLog(inLog, inAndOutAreSameLog, initialOffset);
   }
 
+  /**
+   * Initiates writing to the specified output Log.
+   *
+   * <p>Acquires a LogWriter instance via dependency injection and sets up the Log writing process.
+   *
+   * @param outLog the LogInfo instance representing the output log
+   */
   private void writeToLog(LogInfo outLog) {
     LogWriter logMessageWriter = injector.getInstance(LogWriter.class);
     logMessageWriter.writeToLog(outLog, true);
   }
 
   /**
-   * When both inLog and outLog are "auto", a single log is created and used as both in and out Logs
-   * With noPaldir, 'auto' does not register a new sequentially-named log, but is taken literally as
-   * the log's name.
+   * Initializes the Log configuration for input and output operations.
    *
-   * @throws Exception if getting or registering a log fails
+   * <p>Based on the provided Log names and the presence (or absence) of a PalDirectory URL, this
+   * method either registers new Log entries or retrieves existing ones. For an "auto" setting, it
+   * may create a single Log to serve both input and output roles.
+   *
+   * @throws Exception if Log retrieval, registration, or read/write operations fail
    */
   void init() throws Exception {
 
-    // register log(s)
+    // register Log(s)
     LogInfo newLog = null;
 
     if ("auto".equalsIgnoreCase(inLogName)) {
@@ -134,21 +216,33 @@ class LogConfigurator {
       outLog = noPaldir ? new LogInfo(outLogName, kafkaServers) : getOrRegisterGivenLog(outLogName);
     }
 
-    // init log reader
+    // init Log reader
     if (inLog != null) {
       readFromLog(inLog, Objects.equals(inLog, outLog), inLogOffset);
     }
 
-    // init log writer
+    // init Log writer
     if (outLog != null) {
       writeToLog(outLog);
     }
   }
 
+  /**
+   * Retrieves the configured input Log.
+   *
+   * @return an Optional containing the LogInfo for the input Log if configured, otherwise an empty
+   *     Optional
+   */
   Optional<LogInfo> getInLog() {
     return Optional.ofNullable(inLog);
   }
 
+  /**
+   * Retrieves the configured output Log.
+   *
+   * @return an Optional containing the LogInfo for the output Log if configured, otherwise an empty
+   *     Optional
+   */
   Optional<LogInfo> getOutLog() {
     return Optional.ofNullable(outLog);
   }

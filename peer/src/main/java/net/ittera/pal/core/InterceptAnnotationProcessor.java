@@ -44,13 +44,30 @@ import net.ittera.pal.cxn.PalDirectory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Processes intercept annotations by scanning target class methods for {@link Before} and {@link
+ * After} annotations and registering corresponding intercept requests with a directory service.
+ */
 @Singleton
 public class InterceptAnnotationProcessor {
 
+  /** Logger instance. */
   private static final Logger logger = LoggerFactory.getLogger(InterceptAnnotationProcessor.class);
+
+  /** Unique identifier representing the current peer instance. */
   private final UUID peerUuid;
+
+  /** Provider for obtaining directory connections to register intercept requests. */
   private final DirectoryConnectionProvider directoryConnectionProvider;
 
+  /**
+   * Constructs an InterceptAnnotationProcessor with the specified peer identifier and directory
+   * connection provider.
+   *
+   * @param peerUuid the unique identifier for this peer instance
+   * @param directoryConnectionProvider the provider used for directory connections when registering
+   *     intercept requests
+   */
   @Inject
   InterceptAnnotationProcessor(
       UUID peerUuid, DirectoryConnectionProvider directoryConnectionProvider) {
@@ -58,6 +75,16 @@ public class InterceptAnnotationProcessor {
     this.directoryConnectionProvider = directoryConnectionProvider;
   }
 
+  /**
+   * Inspects the declared methods of the specified class for intercept annotations and registers
+   * intercept requests. This method scans each method of the provided class for the presence of
+   * {@link Before} and {@link After} annotations. For each encountered annotation, it extracts the
+   * required metadata via reflection and constructs an intercept request, which is then registered
+   * with the directory service.
+   *
+   * @param clazz the class whose methods are to be inspected for intercept annotations; must not be
+   *     null
+   */
   public void process(Class<?> clazz) {
     if (logger.isTraceEnabled()) {
       logger.trace("inspecting class '{}' for annotations", clazz.getName());
@@ -131,6 +158,14 @@ public class InterceptAnnotationProcessor {
     // TODO process @After annotation
   }
 
+  /**
+   * Determines the intercept type associated with the provided annotation class.
+   *
+   * @param annotationClass the class of the intercept annotation (e.g. {@link Before}, {@link
+   *     After})
+   * @return the corresponding {@link InterceptType} for the given annotation class
+   * @throws IllegalArgumentException if the provided annotation class is not supported
+   */
   private static InterceptType getTypeForAnnotationClass(
       Class<? extends Annotation> annotationClass) {
     if (annotationClass == Before.class) {
@@ -143,6 +178,14 @@ public class InterceptAnnotationProcessor {
     }
   }
 
+  /**
+   * Registers the specified intercept request with the directory service. This method attempts to
+   * obtain a directory connection from the provider and asynchronously registers the given
+   * intercept request.
+   *
+   * @param interceptRequest the intercept request to register; must contain valid intercept
+   *     metadata
+   */
   private void register(InterceptRequest<?> interceptRequest) {
     try {
       Optional<PalDirectory> directory = directoryConnectionProvider.get();

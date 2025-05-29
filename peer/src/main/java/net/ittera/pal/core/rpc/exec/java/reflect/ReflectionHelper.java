@@ -41,50 +41,92 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * NOTE: lookupMethod will not currently find inherited methods if they're not public, because
- * Class.getDeclaredMethods does not include inherited methods, only Class.getMethods does.
+ * Utility class to facilitate reflective lookup of methods and constructors.
+ *
+ * <p>This helper provides functionality to locate the appropriate method or constructor based on
+ * provided parameters and known parameter types, including handling subtype relationships and
+ * primitive widening where applicable. It also supports caching of lookup results and can
+ * optionally allow access to non-public members.
+ *
+ * <p>NOTE: lookupMethod will not currently find inherited methods if they are not public.
  */
 @Singleton
 public class ReflectionHelper {
+  /** Logger for internal diagnostics and tracing of reflection operations. */
   private static final Logger logger = LoggerFactory.getLogger(ReflectionHelper.class);
+
+  /**
+   * Default flag indicating whether non-public methods and constructors are allowed in lookup
+   * operations.
+   */
   private static final boolean ALLOW_NON_PUBLIC_DEFAULT = false;
+
+  /**
+   * Flag that determines if non-public constructors and methods should be considered during lookup.
+   */
   private final boolean allowNonPublic;
 
+  /** Cache to store resolved methods keyed by unique signatures. */
+  private final Map<String, Method> matchedMethodsCache = new ConcurrentHashMap<>();
+
+  /** Cache to store resolved constructors keyed by unique signatures. */
+  private final Map<String, Constructor<?>> matchedConstructorsCache = new ConcurrentHashMap<>();
+
+  /**
+   * Constructs a ReflectionHelper using the default configuration.
+   *
+   * <p>Non-public member lookup is configured based on a predetermined default flag.
+   */
   public ReflectionHelper() {
     this(ALLOW_NON_PUBLIC_DEFAULT);
   }
 
+  /**
+   * Constructs a ReflectionHelper with a specified configuration.
+   *
+   * @param allowNonPublic if true, allows lookup of non-public methods and constructors; otherwise,
+   *     only public members are considered.
+   */
   public ReflectionHelper(boolean allowNonPublic) {
     this.allowNonPublic = allowNonPublic;
   }
 
+  /**
+   * Constructs a ReflectionHelper with a configuration provided via dependency injection.
+   *
+   * <p>The provided string is parsed as a boolean to determine if non-public member lookup is
+   * permitted.
+   *
+   * @param rpcAllowNonpublicStr a string representing a boolean value ("true" or "false") to enable
+   *     non-public member access.
+   */
   @Inject
   public ReflectionHelper(@Named("rpc.allow_nonpublic") String rpcAllowNonpublicStr) {
     this.allowNonPublic = Boolean.parseBoolean(rpcAllowNonpublicStr);
   }
 
-  private final Map<String, Method> matchedMethodsCache = new ConcurrentHashMap<>();
-  private final Map<String, Constructor<?>> matchedConstructorsCache = new ConcurrentHashMap<>();
-
   /**
-   * Gets the right method when a parameter is a subtype of a method's formal parameter type. Uses
-   * ClassUtils.isAssignable() and Class.isAssignableFrom() to check for assignability.
+   * Locates and returns a method in the specified class that best matches the provided method name
+   * and parameters.
    *
-   * <p>If parameter types are given, method matching will be done using these types. The list of
-   * parameter types should be the same length as the parameters list. When parameter types are
-   * given, no primitive widening will be allowed, i.e. if a method has a formal parameter of type
-   * int, it will not match a call with a parameter of type long.
+   * <p>The resolution process applies assignability rules to check for both exact and subtype
+   * matches of method parameters. It first attempts a direct lookup using the provided known
+   * parameter types. If no exact match is found, it scans public and optionally non-public methods
+   * to find assignable candidates. In ambiguous cases, the best candidate is chosen by narrowing
+   * matches based on exact type equivalence for non-primitive and non-wrapper types.
    *
-   * <p>If a parameter type is null, method matching will be done using the parameters' actual
-   * types. In this case, primitive widening assignment will be allowed for method matching.
+   * <p>Matching results are cached for improved performance on subsequent calls.
    *
-   * @param clazz the class to look up the method in
-   * @param parameters the parameters to match
-   * @param knownParameterTypes the known parameter types; null if the parameter types are unknown
-   * @param methodName the name of the method to look up
-   * @return the matching method
-   * @throws AmbiguousCallException if more than one method matches the call
-   * @throws NoSuchMethodException if no method matches the call
+   * @param clazz the class in which the method is to be located; must be non-null.
+   * @param parameters the array of runtime parameters to match against the method signature; must
+   *     be non-null.
+   * @param knownParameterTypes list of known parameter types corresponding to the parameters; must
+   *     be non-null and same length as parameters. A null entry indicates that the corresponding
+   *     parameter's runtime type should be used.
+   * @param methodName the name of the method to locate; must be non-null.
+   * @return the method that best matches the provided parameters.
+   * @throws AmbiguousCallException if multiple methods equally match the call.
+   * @throws NoSuchMethodException if no matching method is found.
    */
   public Method lookupMethod(
       @Nonnull Class<?> clazz,
@@ -263,23 +305,26 @@ public class ReflectionHelper {
   }
 
   /**
-   * Gets the right constructor when a parameter is a subtype of a constructor's formal parameter
-   * type. Uses ClassUtils.isAssignable() and Class.isAssignableFrom() to check for assignability.
+   * Locates and returns a constructor in the specified class that best matches the provided
+   * parameters.
    *
-   * <p>If parameter types are given, constructor matching will be done using these types. The list
-   * of parameterTypes should be the same length as the parameters list. Also, when parameter types
-   * are given, no primitive widening will be allowed, i.e. if a constructor has a formal parameter
-   * of type int, it will not match a call with a parameter of type long.
+   * <p>The resolution process applies assignability rules similar to method lookup. It first
+   * attempts an exact match using the known parameter types. If no exact public constructor is
+   * found, it scans for assignable candidates among public and optionally non-public constructors,
+   * narrowing down ambiguous matches based on type equivalence for non-primitive and non-wrapper
+   * types.
    *
-   * <p>If a parameter type is null, constructor matching is done using the parameters' actual type.
-   * In this case, primitive widening assignment will be allowed for constructor matching.
+   * <p>Matching results are cached for improved performance on subsequent calls.
    *
-   * @param clazz the class to look up the constructor in
-   * @param parameters the parameters to match
-   * @param knownParameterTypes the known parameter types; null if the parameter types are unknown
-   * @return the matching constructor
-   * @throws AmbiguousCallException if more than one constructor matches the call
-   * @throws NoSuchMethodException if no constructor matches the call
+   * @param clazz the class in which the constructor is to be located; must be non-null.
+   * @param parameters the array of runtime parameters to match against the constructor signature;
+   *     must be non-null.
+   * @param knownParameterTypes list of known parameter types corresponding to the parameters; must
+   *     be non-null and same length as parameters. A null entry indicates that the parameter's
+   *     actual runtime type should be used.
+   * @return the constructor that best matches the provided parameters.
+   * @throws AmbiguousCallException if multiple constructors equally match the call.
+   * @throws NoSuchMethodException if no matching constructor is found.
    */
   public Constructor<?> lookupConstructor(
       @Nonnull Class<?> clazz,
@@ -455,6 +500,17 @@ public class ReflectionHelper {
             parameterTypes.stream().map(Class::getName).collect(Collectors.joining(", "))));
   }
 
+  /**
+   * Caches the resolved member (method or constructor) using a composite key based on class, member
+   * name, and parameter types.
+   *
+   * <p>This caching optimizes lookup by reusing previously resolved members.
+   *
+   * @param clazz the class in which the member is defined.
+   * @param memberName the name of the member; may be null for constructors.
+   * @param parameterTypes the list of parameter types used in the lookup.
+   * @param member the member (method or constructor) that was resolved.
+   */
   private void cache(
       Class<?> clazz, String memberName, List<Class<?>> parameterTypes, Member member) {
     String key = buildKey(clazz, memberName, parameterTypes);
@@ -465,6 +521,15 @@ public class ReflectionHelper {
     }
   }
 
+  /**
+   * Retrieves a cached member matching the specified class, member name, and parameter types.
+   *
+   * @param clazz the class in which the lookup was performed.
+   * @param memberName the name of the member, or null for constructors.
+   * @param parameterTypes the list of parameter types used in the lookup.
+   * @param memberType the expected type of the member (Method or Constructor).
+   * @return the cached member if found, or null otherwise.
+   */
   Member lookupInCache(
       Class<?> clazz,
       String memberName,
@@ -479,6 +544,15 @@ public class ReflectionHelper {
     return null;
   }
 
+  /**
+   * Generates a unique key for caching based on the class loader, class name, member name, and
+   * parameter types.
+   *
+   * @param clazz the class for which the key is generated.
+   * @param memberName the name of the member; may be null for constructors.
+   * @param parameterTypes the list of parameter types used in lookup.
+   * @return a string that uniquely identifies the member lookup signature.
+   */
   private String buildKey(
       Class<?> clazz, @Nullable String memberName, List<Class<?>> parameterTypes) {
     StringBuilder keyBuilder = new StringBuilder(memberName == null ? "" : memberName);
@@ -489,6 +563,19 @@ public class ReflectionHelper {
     return keyBuilder.toString();
   }
 
+  /**
+   * Determines whether the provided parameter can be assigned to the candidate type.
+   *
+   * <p>This method takes into account varargs, using the component types of arrays when needed. If
+   * the parameter is null, it is considered assignable only if the candidate type is not primitive.
+   *
+   * @param parameter the parameter object; may be null.
+   * @param parameterType the expected type for the parameter; if null, the actual type of the
+   *     parameter is used.
+   * @param clazz the candidate type to check assignability against.
+   * @param paramIsVarargs flag indicating if the parameter corresponds to a varargs position.
+   * @return true if the parameter is assignable to the candidate type; false otherwise.
+   */
   private boolean isAssignable(
       Object parameter, @Nullable Class<?> parameterType, Class<?> clazz, boolean paramIsVarargs) {
     if (parameter == null) {
@@ -512,6 +599,22 @@ public class ReflectionHelper {
     return ClassUtils.isAssignable(paramType, clazz);
   }
 
+  /**
+   * (Currently unused) Checks assignability of a parameter to a candidate type with optional
+   * primitive widening.
+   *
+   * <p>When allowPrimitiveWidening is true, the method delegates to the standard assignability
+   * check; otherwise, it directly uses Class.isAssignableFrom or the provided parameter type.
+   *
+   * @param parameter the parameter object; must not be null if its type is undetermined.
+   * @param parameterType the declared type of the parameter; may be null to indicate that the
+   *     actual runtime type should be used.
+   * @param clazz the candidate type to check assignability against.
+   * @param methodIsVarargs flag indicating if the parameter is part of a varargs array.
+   * @param allowPrimitiveWidening flag indicating if primitive widening should be considered.
+   * @return true if the parameter is assignable to the candidate type with respect to the provided
+   *     rules; false otherwise.
+   */
   @SuppressWarnings("unused")
   private boolean isAssignable_notInUse(
       Object parameter,
@@ -533,13 +636,16 @@ public class ReflectionHelper {
   }
 
   /**
-   * Narrows down the list of matching constructors to those that have equal types for all the
-   * parameters that are not primitive or wrapper types. This helps to solve ambiguity when there
-   * are multiple matches only due to primitive widening/auto-boxing.
+   * Narrows down the list of matching constructors to those whose non-primitive (or non-wrapper)
+   * parameter types exactly match the provided parameter types.
    *
-   * @param parameterTypes the parameter types to match
-   * @param matchingConstructors the list of matching constructors
-   * @return the narrowed down list of matching constructors
+   * <p>This approach assists in resolving ambiguities where multiple constructors are candidates
+   * due to differences in primitive widening or auto-boxing conversions.
+   *
+   * @param parameterTypes the array of parameter types to exactly match.
+   * @param matchingConstructors the list of candidate constructors that passed initial
+   *     assignability checks.
+   * @return a list of constructors that exactly match the non-primitive and non-wrapper types.
    */
   private List<Constructor<?>> narrowDownConstructorMatches(
       Class<?>[] parameterTypes, List<Constructor<?>> matchingConstructors) {
@@ -563,13 +669,15 @@ public class ReflectionHelper {
   }
 
   /**
-   * Narrows down the list of matching methods to those that have equal types for all the parameters
-   * that are not primitive or wrapper types. This helps to solve ambiguity when there are multiple
-   * matches only due to primitive widening/auto-boxing.
+   * Narrows down the list of matching methods to those whose non-primitive (or non-wrapper)
+   * parameter types exactly match the provided parameter types.
    *
-   * @param parameterTypes the parameter types to match
-   * @param matchingMethods the list of matching methods
-   * @return the narrowed down list of matching methods
+   * <p>This assists in resolving ambiguities where multiple methods are candidates due to primitive
+   * widening or auto-boxing.
+   *
+   * @param parameterTypes the array of parameter types to exactly match.
+   * @param matchingMethods the list of candidate methods that passed initial assignability checks.
+   * @return a list of methods that exactly match the non-primitive and non-wrapper types.
    */
   private List<Method> narrowDownMethodMatches(
       Class<?>[] parameterTypes, List<Method> matchingMethods) {
@@ -592,6 +700,15 @@ public class ReflectionHelper {
     return exactMatches;
   }
 
+  /**
+   * Logs the parameter values and their corresponding types at the trace level.
+   *
+   * <p>This method is used for debugging purposes and provides detailed information when tracing is
+   * enabled.
+   *
+   * @param parameters the array of parameter objects.
+   * @param parameterTypes the list of expected parameter types; may be null.
+   */
   private void traceParameters(Object[] parameters, @Nullable List<Class<?>> parameterTypes) {
     if (parameters.length == 0) {
       logger.trace("params of length=0");

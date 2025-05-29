@@ -49,21 +49,54 @@ import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 
+/**
+ * This class builds and dispatches execution messages to call the main method either from a
+ * directly specified class or from a JAR's manifest-defined main class.
+ */
 @Singleton
 public class SelfCaller {
 
+  /** Logger instance. */
   private static final Logger logger = LoggerFactory.getLogger(SelfCaller.class);
 
+  /** Default exit value used when an unexpected response is received. */
   static final int DEFAULT_EXIT_VALUE = -9999;
+
+  /** Default exit value used when the response indicates an error condition. */
   static final int DEFAULT_ERROR_EXIT_VALUE = -8888;
+
+  /** The unique identifier representing the current peer. */
   private final UUID peerUuid;
+
+  /** Dispatcher for handling incoming execution response messages. */
   private final IncomingMessageDispatcher incomingMessageDispatcher;
+
+  /** Builder for constructing execution messages. */
   private final MessageBuilder messageBuilder;
+
+  /** Custom ClassLoader used for loading classes during the invocation of main methods. */
   private final ClassLoader customClassloader;
+
+  /** ZeroMQ context used for managing socket communications. */
   private final ZContext context;
+
+  /** Address of the offset publisher socket used for synchronizing log offsets. */
   private final String offsetPubAddress;
+
+  /** Set of runtime options that control behavior such as logging. */
   private final Set<RunOptions> runOptions;
 
+  /**
+   * Constructs a SelfCaller instance with the specified dependencies.
+   *
+   * @param peerUuid the unique identifier for the peer invoking the call.
+   * @param incomingMessageDispatcher the dispatcher to process incoming execution responses.
+   * @param messageBuilder the builder to construct execution messages.
+   * @param customClassloader the custom ClassLoader for context-specific class loading.
+   * @param context the ZeroMQ context for socket operations.
+   * @param offsetPubAddress the address of the offset publisher for log synchronization.
+   * @param runOptions the set of runtime options influencing call behavior.
+   */
   @Inject
   SelfCaller(
       UUID peerUuid,
@@ -82,6 +115,19 @@ public class SelfCaller {
     this.runOptions = runOptions;
   }
 
+  /**
+   * Invokes the main method of the specified Java class via a bootstrapping message.
+   *
+   * <p>This method builds an execution message to call the main method asynchronously on a new
+   * thread. If the runtime option for log offset synchronization is enabled, it will subscribe to
+   * offset messages to ensure log consistency. The exit value returned from the remote call is
+   * extracted from the response.
+   *
+   * @param className the fully qualified name of the class whose main method should be executed.
+   * @param argList a list of arguments to pass to the main method; may be null to denote no
+   *     arguments.
+   * @return the exit code resulting from the main method execution.
+   */
   public int callMain(String className, List<String> argList) {
     if (logger.isDebugEnabled()) {
       logger.debug(
@@ -175,6 +221,20 @@ public class SelfCaller {
     return getExitValueFromResponse(response);
   }
 
+  /**
+   * Invokes the main method of the main class specified in the manifest of the given JAR file.
+   *
+   * <p>The method opens the provided JAR file, retrieves its manifest to determine the main class,
+   * and delegates the call to {@link #callMain(String, List)} with the extracted class name and
+   * arguments.
+   *
+   * @param jarFile the file path of the JAR containing the main class.
+   * @param argList a list of arguments for the main method; may be null if no arguments are
+   *     required.
+   * @return the exit code from the main method execution.
+   * @throws PeerException if the JAR file is missing, its manifest cannot be read, or lacks a
+   *     Main-Class entry.
+   */
   public int callJar(String jarFile, List<String> argList) throws PeerException {
     if (logger.isDebugEnabled()) {
       logger.debug(
@@ -198,6 +258,17 @@ public class SelfCaller {
     return callMain(mainClass, argList);
   }
 
+  /**
+   * Determines the exit value based on the response message from a remote main method invocation.
+   *
+   * <p>This method inspects the message type of the response. For types that represent a return
+   * value or static/field access, it extracts the integer exit value; for throwable messages, it
+   * returns a predefined error exit value; and for unexpected types, it returns a default exit
+   * code.
+   *
+   * @param mainResponseMessage the response message containing the outcome of the execution.
+   * @return the exit code as determined by the content and type of the response message.
+   */
   private int getExitValueFromResponse(ExecMessage mainResponseMessage) {
     final MessageType messageType = getMessageTypeOf(mainResponseMessage);
     return switch (messageType) {
@@ -213,6 +284,16 @@ public class SelfCaller {
     };
   }
 
+  /**
+   * Extracts an integer exit value from the return value of the execution message.
+   *
+   * <p>If the message contains a non-null return object, this method attempts to unwrap it to an
+   * Integer. In case of a failure during unwrapping or if the object is not an Integer, it returns
+   * a default exit code.
+   *
+   * @param message the execution message from which to obtain the return value.
+   * @return the integer value of the return object, or a default exit value if extraction fails.
+   */
   private int getIntFromReturnValue(ExecMessage message) {
     if (message.getReturnValue().getObject() != null) {
       Object returnedObject;

@@ -36,12 +36,38 @@ import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Dispatcher responsible for processing incoming meta messages and generating corresponding
+ * responses.
+ *
+ * <p>This class interprets the service type and parameters from a received meta message, uses the
+ * provided metadata serializer to scan and serialize the classpath based on the parameters, and
+ * constructs an appropriate response using the message builder. It is managed as a singleton with
+ * its dependencies injected.
+ */
 @Singleton
 public class MetaMessageDispatcher {
+
+  /** Unique identifier representing the local peer, used in constructing meta message responses. */
   private final UUID peerUuid;
+
+  /** Serializer for converting scanned class metadata into a JSON representation. */
   private final ClassMetadataSerializer classMetadataSerializer;
+
+  /** Builder responsible for constructing meta message responses. */
   private final MessageBuilder messageBuilder;
 
+  /** Logger instance. */
+  private static final Logger logger = LoggerFactory.getLogger(MetaMessageDispatcher.class);
+
+  /**
+   * Constructs a MetaMessageDispatcher with the specified peer identifier, class metadata
+   * serializer, and message builder.
+   *
+   * @param peerUuid Unique identifier for the local peer.
+   * @param classMetadataSerializer Utility to serialize class metadata into a JSON format.
+   * @param messageBuilder Component that builds meta message responses.
+   */
   @Inject
   public MetaMessageDispatcher(
       UUID peerUuid,
@@ -52,8 +78,21 @@ public class MetaMessageDispatcher {
     this.messageBuilder = messageBuilder;
   }
 
-  private static final Logger logger = LoggerFactory.getLogger(MetaMessageDispatcher.class);
-
+  /**
+   * Processes an incoming meta message by evaluating its service type and associated parameters,
+   * executing the relevant handling logic, and constructing an appropriate response message.
+   *
+   * <p>For messages with a service type of FETCH_CLASSES_INFO, the method scans the classpath and
+   * serializes class metadata into a JSON representation. It supports configurable parameters such
+   * as whether to compress and encode the results, include specific classes, exclude classes based
+   * on prefixes, or merge class ancestry. Unrecognized parameters are logged as warnings.
+   *
+   * @param metaMessage The incoming meta message containing the service identifier and optional
+   *     parameter values.
+   * @return A meta message response reflecting the result of processing, which may indicate
+   *     success, error, or an unsupported service.
+   * @throws RuntimeException If an error occurs while unwrapping any parameter value.
+   */
   public MetaMessage incomingMetaMessage(MetaMessage metaMessage) {
     final MetaServiceType serviceType = MetaServiceType.fromId(metaMessage.getService());
 
@@ -71,7 +110,7 @@ public class MetaMessageDispatcher {
           continue;
         }
         if (param.getName().equalsIgnoreCase("compress_encode") && param.getValue() != null) {
-          // process "process_encode"
+          // process "compress_encode"
           try {
             compressAndEncode = (Boolean) Unwrapper.unwrapObject(param.getValue());
           } catch (Exception e) {

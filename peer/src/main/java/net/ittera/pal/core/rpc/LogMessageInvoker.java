@@ -37,11 +37,34 @@ import org.zeromq.ZMQ;
 import org.zeromq.ZMQException;
 import zmq.ZError;
 
+/**
+ * A specialized invoker thread for processing inbound Log messages received via a ZeroMQ REP
+ * socket.
+ *
+ * <p>This class continuously listens for messages in either JSON-RPC or binary format, performing
+ * parsing, validation, and dispatching to appropriate handlers. It is intended to connect to a
+ * designated Log dealer endpoint.
+ */
 class LogMessageInvoker extends AbstractMessageInvokerThread {
 
+  /** The network endpoint of the Log dealer to which the socket connects. */
   private final String logDealerAddress;
+
+  /** The ZeroMQ socket used for communication with the log dealer. */
   private ZMQ.Socket socket;
 
+  /**
+   * Constructs a LogMessageInvoker thread with specified configuration parameters.
+   *
+   * @param group the thread group for the invoker thread
+   * @param name the name of the thread
+   * @param zmqContext the ZeroMQ context used for socket creation
+   * @param messageBuilder builder for converting messages between representations
+   * @param logDealerAddress network address of the Log dealer endpoint
+   * @param incomingMessageDispatcher dispatcher for processing incoming messages
+   * @param dispatcherConnector connector used by the dispatcher for message routing
+   * @param peerUuid identifier of the peer associated with this invoker
+   */
   public LogMessageInvoker(
       ThreadGroup group,
       String name,
@@ -62,6 +85,16 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
     this.logDealerAddress = logDealerAddress;
   }
 
+  /**
+   * Constructs a LogMessageInvoker with a simplified configuration, automatically assigning thread
+   * group and name.
+   *
+   * @param zmqContext the ZeroMQ context used for socket creation
+   * @param messageBuilder builder for converting messages between representations
+   * @param logDealerAddress network address of the log dealer endpoint
+   * @param incomingMessageDispatcher dispatcher for processing incoming messages
+   * @param peerUuid identifier of the peer associated with this invoker
+   */
   LogMessageInvoker(
       ZContext zmqContext,
       MessageBuilder messageBuilder,
@@ -72,6 +105,14 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
     this.logDealerAddress = logDealerAddress;
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>This method creates a ZeroMQ REP socket connected to the Log dealer and enters a loop to
+   * continuously receive and process Log messages. Messages are handled based on their declared
+   * format (JSON-RPC or binary), with parsing, validation, and dispatching performed as necessary.
+   * The loop terminates gracefully on thread interruption or critical socket exceptions.
+   */
   @Override
   public void run() {
 
@@ -228,6 +269,13 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
     closeConnections();
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Closes the ZeroMQ socket used for communication with the log dealer, handling any exceptions
+   * that occur during the closure process. After closing the socket, it delegates to the superclass
+   * to perform any additional cleanup.
+   */
   @Override
   protected void closeConnections() {
     try {

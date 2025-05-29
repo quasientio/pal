@@ -29,25 +29,58 @@ import net.ittera.pal.messages.BaseMsg;
 import net.ittera.pal.messages.types.SessionCommandType;
 import org.zeromq.ZMQ;
 
+/**
+ * Represents a session command message used for session control within the PAL runtime.
+ *
+ * <p>The message frames are arranged as follows:
+ *
+ * <pre>
+ * FRAMES:
+ * -------
+ * 1. cmd                : byte - SessionCommandType
+ * [2. sessionId]        : UUID - peerUuid used as sessionId. Mandatory except for CLEAR_SESSIONS
+ * [3. objectRef]        : String - mandatory for STORE_OBJECT and DELETE_OBJECT commands
+ * </pre>
+ *
+ * This structure enables precise communication of session commands between components.
+ */
 public class SessionCommandMsg extends BaseMsg {
   /**
-   *
-   *
-   * <pre>
-   * FRAMES:
-   * -------
-   * 1. cmd                : byte - SessionCommandType
-   * [2. sessionId]        : UUID - peerUuid used as sessionId. Mandatory except for CLEAR_SESSIONS
-   * [3. objectRef]        : String - mandatory argument for STORE_OBJECT and DELETE_OBJECT
-   * </pre>
+   * The type of session command represented by this message. This value determines which additional
+   * fields are required.
    */
-
-  // fields
   private final SessionCommandType commandType;
 
+  /**
+   * The unique identifier of the session. This must be provided for all command types except {@code
+   * CLEAR_SESSIONS}.
+   */
   @Nullable private final UUID sessionId;
+
+  /**
+   * The object reference associated with the command. This is required for commands {@code
+   * STORE_OBJECT} and {@code DELETE_OBJECT}.
+   */
   @Nullable private final ObjectRef objectRef;
 
+  /**
+   * Constructs a session command message with the specified command type, session identifier, and
+   * object reference.
+   *
+   * <p>Preconditions:
+   *
+   * <ul>
+   *   <li>{@code commandType} must not be null.
+   *   <li>For command types other than {@code CLEAR_SESSIONS}, {@code sessionId} must not be null.
+   *   <li>For {@code STORE_OBJECT} and {@code DELETE_OBJECT} commands, {@code objectRef} must not
+   *       be null.
+   * </ul>
+   *
+   * @param commandType the session command type
+   * @param sessionId the session identifier; nullable if the command is {@code CLEAR_SESSIONS}
+   * @param objectRef the associated object reference; required for {@code STORE_OBJECT} and {@code
+   *     DELETE_OBJECT}
+   */
   public SessionCommandMsg(
       @Nonnull SessionCommandType commandType,
       @Nullable UUID sessionId,
@@ -65,25 +98,93 @@ public class SessionCommandMsg extends BaseMsg {
     this.objectRef = objectRef;
   }
 
+  /**
+   * Constructs a session command message with the specified command type.
+   *
+   * <p>This constructor is used when no session identifier or object reference is needed.
+   *
+   * @param commandType the session command type
+   */
   public SessionCommandMsg(@Nonnull SessionCommandType commandType) {
     this(commandType, null, null);
   }
 
+  /**
+   * Constructs a session command message with the specified command type and session identifier.
+   *
+   * <p>This constructor is typically used when an object reference is not required.
+   *
+   * <p>Preconditions:
+   *
+   * <ul>
+   *   <li>{@code commandType} must not be null.
+   *   <li>For command types other than {@code CLEAR_SESSIONS}, {@code sessionId} must not be null.
+   * </ul>
+   *
+   * @param commandType the session command type
+   * @param sessionId the session identifier; must be provided if required by the command type
+   */
   public SessionCommandMsg(@Nonnull SessionCommandType commandType, UUID sessionId) {
     this(commandType, sessionId, null);
   }
 
+  /**
+   * Constructs a session command message with all details including the computed message size.
+   *
+   * <p>This constructor is primarily used internally when receiving a message from a socket.
+   *
+   * <p>Preconditions:
+   *
+   * <ul>
+   *   <li>{@code commandType} must not be null.
+   *   <li>For command types other than {@code CLEAR_SESSIONS}, {@code sessionId} must not be null.
+   *   <li>For {@code STORE_OBJECT} and {@code DELETE_OBJECT} commands, {@code objectRef} must not
+   *       be null.
+   * </ul>
+   *
+   * @param commandType the session command type
+   * @param sessionId the session identifier; required based on command type
+   * @param objectRef the object reference associated with the command
+   * @param size the total size of the message as calculated during transmission
+   */
   private SessionCommandMsg(
       @Nonnull SessionCommandType commandType, UUID sessionId, ObjectRef objectRef, int size) {
     this(commandType, sessionId, objectRef);
     this.size = size;
   }
 
+  /**
+   * Constructs a session command message for commands that do not require a session identifier or
+   * object reference, with the specified message size.
+   *
+   * <p>This constructor is used internally to create a message instance, particularly for the
+   * {@code CLEAR_SESSIONS} command.
+   *
+   * @param commandType the session command type
+   * @param size the total size of the message as calculated during transmission
+   */
   private SessionCommandMsg(@Nonnull SessionCommandType commandType, int size) {
     this(commandType);
     this.size = size;
   }
 
+  /**
+   * Sends this session command message via the provided ZeroMQ socket.
+   *
+   * <p>The method assembles the message frames based on the command type and available data,
+   * ensuring that mandatory frames such as the session identifier and object reference are sent as
+   * required.
+   *
+   * <p>Preconditions:
+   *
+   * <ul>
+   *   <li>{@code socket} must not be null.
+   * </ul>
+   *
+   * @param socket the ZeroMQ socket used for sending the message
+   * @return {@code true} if the message is successfully sent on all frames; {@code false} otherwise
+   * @throws IllegalArgumentException if the socket is null
+   */
   @Override
   public boolean send(ZMQ.Socket socket) {
     if (socket == null) {
@@ -127,12 +228,21 @@ public class SessionCommandMsg extends BaseMsg {
   }
 
   /**
-   * Blocking flag only applies to first read, by virtue of messages being atomic (if 1st frame is
-   * ready, then all are).
+   * Receives a session command message from the provided ZeroMQ socket.
    *
-   * @param socket ZMQ socket
-   * @param blocking blocking read flag
-   * @return SessionCommandMsg instance, or null if non-blocking and no message available
+   * <p>The method reads the message frames sequentially based on the expected structure and
+   * constructs an instance of {@code SessionCommandMsg}. In non-blocking mode, if no message is
+   * available, the method returns {@code null}.
+   *
+   * <p>Note: When in non-blocking mode, the blocking flag only applies to the first read. If the
+   * first frame is ready, all subsequent frames are assumed to be available.
+   *
+   * @param socket the ZeroMQ socket from which to receive the message
+   * @param blocking if {@code true} the method blocks until a message is available; if {@code
+   *     false}, returns {@code null} when no message is available
+   * @return a {@code SessionCommandMsg} instance representing the received message, or {@code null}
+   *     if in non-blocking mode and no message is available
+   * @throws IllegalArgumentException if the socket is null
    */
   public static SessionCommandMsg receive(ZMQ.Socket socket, boolean blocking) {
     if (socket == null) {
@@ -168,7 +278,17 @@ public class SessionCommandMsg extends BaseMsg {
     return new SessionCommandMsg(commandType, sessionUuid, objRef, msgSize);
   }
 
-  // default is non-blocking
+  /**
+   * Receives a session command message from the provided ZeroMQ socket in non-blocking mode.
+   *
+   * <p>This method delegates to {@link #receive(ZMQ.Socket, boolean)} with a {@code blocking} flag
+   * of {@code false}.
+   *
+   * @param socket the ZeroMQ socket from which to receive the message
+   * @return a {@code SessionCommandMsg} instance representing the received message, or {@code null}
+   *     if no message is available
+   * @throws IllegalArgumentException if the socket is null
+   */
   public static SessionCommandMsg receive(ZMQ.Socket socket) {
     return receive(socket, false);
   }
@@ -193,6 +313,14 @@ public class SessionCommandMsg extends BaseMsg {
     return Objects.hash(commandType, sessionId, objectRef);
   }
 
+  /**
+   * Returns a string representation of the session command message.
+   *
+   * <p>The representation includes the command type, session identifier, object reference, and the
+   * calculated size.
+   *
+   * @return a string representation of this message
+   */
   @Override
   public String toString() {
     return "SessionCommandMsg{"
@@ -207,15 +335,30 @@ public class SessionCommandMsg extends BaseMsg {
         + '}';
   }
 
+  /**
+   * Retrieves the session command type.
+   *
+   * @return the session command type
+   */
   public SessionCommandType getCommand() {
     return commandType;
   }
 
+  /**
+   * Retrieves the session identifier associated with this message.
+   *
+   * @return the session identifier, or {@code null} if not applicable
+   */
   @Nullable
   public UUID getSessionId() {
     return sessionId;
   }
 
+  /**
+   * Retrieves the object reference associated with this message.
+   *
+   * @return the object reference, or {@code null} if not applicable
+   */
   @Nullable
   public ObjectRef getObjectRef() {
     return objectRef;

@@ -58,31 +58,72 @@ import org.zeromq.ZMQ.Socket;
 import org.zeromq.ZMQException;
 import zmq.ZError;
 
-// TODO A 2nd thread that sends non-urgent messages from a queue.
+/**
+ * LogWriter is responsible for retrieving messages from a ZeroMQ subscriber socket, transforming
+ * header information if needed, and publishing the messages to a Kafka Log. It also optionally
+ * publishes message offset information via a ZeroMQ publisher socket.
+ *
+ * <p>The class manages its own connections to ZeroMQ and Kafka, performing asynchronous checks on
+ * message delivery and maintaining internal counters for sent messages.
+ */
 @Singleton
+// TODO A 2nd thread that sends non-urgent messages from a queue.
 class LogWriter extends ConnectedService {
 
+  /** Logger instance. */
   private static final Logger logger = LoggerFactory.getLogger(LogWriter.class);
 
-  // kafka stuff
+  /** Kafka producer used to send Log messages to a Kafka topic. */
   private Producer<String, byte[]> producer;
+
+  /** Properties used to configure the Kafka producer. */
   private final Properties producerProperties = new Properties();
+
+  /** Timeout duration for closing the Kafka producer. */
   private static final Duration PRODUCER_CLOSE_TIMEOUT = Duration.of(300, ChronoUnit.MILLIS);
 
-  // used to check that messages sent to the log complete successfully
+  /**
+   * Executor service used to asynchronously verify that messages are successfully sent to Kafka.
+   */
   private final ExecutorService producerCheckExecutorService = Executors.newSingleThreadExecutor();
 
-  // zmq stuff
+  /** ZeroMQ subscriber socket used to receive outbound messages. */
   private Socket subscriberSocket;
+
+  /** ZeroMQ publisher socket used to publish message offsets when enabled. */
   private Socket offsetPublisherSocket;
+
+  /** ZeroMQ address to connect the subscriber socket for receiving outgoing messages. */
   private final String outPubAddress;
+
+  /** ZeroMQ address to bind the offset publisher socket for delivering offset updates. */
   private final String offsetPubAddress;
 
+  /** Flag indicating whether message offsets should be published. */
   private boolean publishOffsets;
+
+  /** Information describing the Log to which messages are written. */
   private LogInfo outLog;
+
+  /** Counter tracking the number of messages successfully sent to the Log. */
   private final AtomicInteger messagesSent = new AtomicInteger(0);
+
+  /** Immutable headers used for marking messages as self-produced or dispatched. */
   private static final Map<String, Header> SELF_HEADERS = new HashMap<>();
 
+  /**
+   * Constructs a new LogWriter instance with the required dependencies and configuration.
+   *
+   * @param peerUuid unique identifier for this peer.
+   * @param context ZeroMQ context for creating and managing socket connections.
+   * @param syncSocketAddress address used for synchronizing service startup.
+   * @param serviceThreadGroup thread group in which the service thread will be executed.
+   * @param serviceName logical name that identifies this Log writer service.
+   * @param keySerializer configuration for the Kafka key serializer.
+   * @param valueSerializer configuration for the Kafka value serializer.
+   * @param outPubAddress ZeroMQ address for the outbound publisher connection.
+   * @param offsetPubAddress ZeroMQ address for the message offset publisher connection.
+   */
   @Inject
   public LogWriter(
       UUID peerUuid,
@@ -113,7 +154,19 @@ class LogWriter extends ConnectedService {
         propsStr);
   }
 
-  // Used from unit tests with MockProducer
+  /**
+   * Constructs a LogWriter instance using a provided Kafka producer instance. This constructor is
+   * primarily intended for use in unit tests with a mock producer.
+   *
+   * @param peerUuid unique identifier for this peer.
+   * @param context ZeroMQ context for creating and managing socket connections.
+   * @param syncSocketAddress address used for synchronizing service startup.
+   * @param serviceThreadGroup thread group in which the service thread will be executed.
+   * @param serviceName logical name that identifies this log writer service.
+   * @param outPubAddress ZeroMQ address for the outbound publisher connection.
+   * @param offsetPubAddress ZeroMQ address for the message offset publisher connection.
+   * @param producer Kafka producer instance to be used for sending messages.
+   */
   LogWriter(
       UUID peerUuid,
       ZContext context,
@@ -130,6 +183,10 @@ class LogWriter extends ConnectedService {
     logger.info("Created log message writer");
   }
 
+  /**
+   * Opens ZeroMQ connections for the subscriber and (optionally) for the offset publisher.
+   * Additionally, initializes immutable header entries used for identifying message origins.
+   */
   @Override
   protected void openConnections() {
 
@@ -153,6 +210,14 @@ class LogWriter extends ConnectedService {
         new LogMessageHeader("dispatcher-id", UuidUtils.toBytes(peerUuid)));
   }
 
+  /**
+   * Configures the Log writer with the designated Log information and offset publishing preference.
+   * Sets Kafka producer properties based on the provided Log details and creates the producer if
+   * necessary.
+   *
+   * @param outLog log information containing details such as the Log name and bootstrap servers.
+   * @param publishOffsets flag indicating whether message offsets should be published via ZeroMQ.
+   */
   public void writeToLog(LogInfo outLog, boolean publishOffsets) {
     this.outLog = outLog;
     this.publishOffsets = publishOffsets;
@@ -168,6 +233,10 @@ class LogWriter extends ConnectedService {
         outLog.getBootstrapServers());
   }
 
+  /**
+   * Continuously receives messages from the ZeroMQ subscriber socket and dispatches them to Kafka.
+   * The method processes messages until the thread is interrupted or a socket error occurs.
+   */
   @Override
   public void run() {
     if (logger.isDebugEnabled()) {
@@ -215,6 +284,14 @@ class LogWriter extends ConnectedService {
     }
   }
 
+  /**
+   * Converts internal header representations into headers suitable for the Log message (i.e. Kafka
+   * record). The conversion checks if any header indicates a write-ahead and accordingly selects
+   * the corresponding self-header.
+   *
+   * @param internalHeaders list of internal headers to be converted; may be null.
+   * @return a list of headers appropriate for the Kafka Log message.
+   */
   private List<Header> fromInternalToLog(@Nullable List<InternalHeader> internalHeaders) {
     if (logger.isDebugEnabled()) {
       StringBuilder logHeadersStr = new StringBuilder();
@@ -255,6 +332,19 @@ class LogWriter extends ConnectedService {
     return logHeaders;
   }
 
+  /**
+   * Sends a message to the Kafka Log. Constructs a ProducerRecord with the provided message data,
+   * appends necessary headers, and dispatches it asynchronously using the Kafka producer. An
+   * executor service monitors the send operation and logs confirmation or errors.
+   *
+   * @param messageFormat the format of the message payload.
+   * @param messageType the type identifier for the message.
+   * @param message the byte array payload of the message.
+   * @param messageId unique identifier for the message.
+   * @param responseId identifier of the message to which this is a response.
+   * @param fromPeer UUID of this peer.
+   * @param headers optional iterable of additional headers; may be null.
+   */
   private void sendToKafka(
       MessageFormatType messageFormat,
       MessageType messageType,
@@ -302,6 +392,10 @@ class LogWriter extends ConnectedService {
         });
   }
 
+  /**
+   * Closes the Kafka producer using a predefined timeout to ensure graceful shutdown. Any exception
+   * encountered during closure is logged as a warning.
+   */
   private void closeProducer() {
     if (producer != null) {
       try {
@@ -312,6 +406,10 @@ class LogWriter extends ConnectedService {
     }
   }
 
+  /**
+   * Closes all open connections and resources used by the LogWriter. This includes shutting down
+   * the executor service, closing the Kafka producer, and closing the ZeroMQ sockets.
+   */
   @Override
   protected void closeConnections() {
     // stop the producer async executor

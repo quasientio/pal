@@ -33,19 +33,53 @@ import org.zeromq.ZMQException;
 import zmq.ZError;
 
 // TODO replace this with a XPUB-XSUB proxy
+
+/**
+ * Service responsible for publishing outbound messages.
+ *
+ * <p>This class initializes ZeroMQ REP and PUB sockets to receive requests and publish messages
+ * respectively. It listens continuously for outbound messages, sending an acknowledgment to the
+ * requester while forwarding the message to subscribers. The service stops when interrupted or upon
+ * encountering critical socket errors.
+ */
 @Singleton
 class MessagePublisher extends ConnectedService {
 
+  /** Logger instance. */
   private static final Logger logger = LoggerFactory.getLogger(MessagePublisher.class);
+
+  /** Reply constant indicating successful message processing. */
   private static final String OK_REPLY = "0";
+
+  /** Reply constant indicating an error occurred during message processing. */
   private static final String ERROR_REPLY = "1";
 
-  // zmq stuff
+  /** ZeroMQ REP socket used to receive requests and respond with acknowledgments. */
   private Socket repSocket;
+
+  /** ZeroMQ PUB socket used to publish messages to subscribed services. */
   private Socket pubSocket;
+
+  /**
+   * Address for binding the REP socket; designates where this service listens for incoming
+   * requests.
+   */
   private final String outRepAddress;
+
+  /** Address for binding the PUB socket; designates where this service publishes messages. */
   private final String outPubAddress;
 
+  /**
+   * Constructs a new MessagePublisher instance that sets up the messaging endpoints.
+   *
+   * @param peerUuid Unique identifier representing this peer.
+   * @param context ZeroMQ context used for creating and managing sockets.
+   * @param syncSocketAddress Address of the synchronization socket for service readiness.
+   * @param serviceThreadGroup Thread group under which the service runs.
+   * @param serviceName Unique name identifying this service instance.
+   * @param outRepAddress Socket address for the outgoing REP (reply) endpoint.
+   * @param outPubAddress Socket address for the outgoing PUB (publish) endpoint.
+   */
   @Inject
   public MessagePublisher(
       UUID peerUuid,
@@ -60,6 +94,11 @@ class MessagePublisher extends ConnectedService {
     this.outPubAddress = outPubAddress;
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Opens and binds the ZeroMQ REP and PUB sockets to their respective configured addresses.
+   */
   @Override
   protected void openConnections() {
     // open REP and PUB sockets
@@ -69,6 +108,13 @@ class MessagePublisher extends ConnectedService {
     pubSocket.bind(outPubAddress);
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Runs the service loop to continuously receive outbound messages. Each received message is
+   * acknowledged via a reply on the REP socket and then published to subscribers through the PUB
+   * socket. The method handles specific ZeroMQ exceptions to ensure graceful service shutdown.
+   */
   @Override
   public final void run() {
     boolean socketError = false;
@@ -108,6 +154,12 @@ class MessagePublisher extends ConnectedService {
     }
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Closes the ZeroMQ REP and PUB sockets, ensuring that all associated resources are properly
+   * released.
+   */
   @Override
   protected void closeConnections() {
     closeConnection(repSocket, "Error closing REP socket");

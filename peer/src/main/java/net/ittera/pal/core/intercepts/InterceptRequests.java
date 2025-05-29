@@ -38,22 +38,39 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Thread-safety is guaranteed as long as writing operations (i.e. register and unregister methods)
- * are called exclusively by the InterceptMatcher main and only thread. Reads are thread-safe.
- *
- * <p>We avoid all locking by creating new modified lists. Since we don't anticipate a huge number
- * of intercept events (i.e. register & unregister messages), the cost of creating new lists for
- * each modification should still be lower than matching every message over a zmq channel, or using
- * a locking collection like ConcurrentHashMap.
+ * Manages registration, matching, and unregistration of intercept requests for execution events,
+ * including constructor invocations, method calls, and field accesses. Instances of this class
+ * maintain separate lists for each intercept type, and updates are performed by cloning the
+ * underlying lists to avoid synchronization overhead. Thread-safety for read operations is ensured;
+ * however, registration and unregistration must be performed exclusively from the designated thread
+ * (typically the InterceptMatcher thread) to guarantee safe modifications.
  */
 public class InterceptRequests {
+  /** Logger instance used to log debug messages for intercept request operations. */
   private static final Logger logger = LoggerFactory.getLogger(InterceptRequests.class);
 
+  /** Holds intercept request entries corresponding to constructor execution events. */
   private volatile List<InterceptRequestEntry> constructorIntercepts = new ArrayList<>();
+
+  /** Holds intercept request entries corresponding to instance or class method execution events. */
   private volatile List<InterceptRequestEntry> methodIntercepts = new ArrayList<>();
+
+  /** Holds intercept request entries corresponding to field get operations. */
   private volatile List<InterceptRequestEntry> fieldGetIntercepts = new ArrayList<>();
+
+  /** Holds intercept request entries corresponding to field put operations. */
   private volatile List<InterceptRequestEntry> fieldPutIntercepts = new ArrayList<>();
 
+  /**
+   * Filters the provided list of intercept request entries to find those matching the criteria
+   * extracted from the given execution message.
+   *
+   * @param execMessage the execution message containing context such as classname, executable name,
+   *     and parameter types
+   * @param interceptRequestEntries the list of intercept request entries to be filtered
+   * @return a list of intercept messages corresponding to entries that match the execution message
+   *     criteria; never null but may be empty if no matches are found
+   */
   private List<InterceptMessage> getMatchingIntercepts(
       ExecMessage execMessage, List<InterceptRequestEntry> interceptRequestEntries) {
     final String classname = ExecMessageUtils.getClassname(execMessage);
@@ -68,6 +85,16 @@ public class InterceptRequests {
         .collect(Collectors.toList());
   }
 
+  /**
+   * Retrieves a list of intercept messages that match the provided execution message and message
+   * type. Depending on the message type, the search is performed within the corresponding intercept
+   * request list.
+   *
+   * @param execMessage the execution message providing context for matching intercept requests
+   * @param messageType the type of execution event (e.g., constructor, method, or field access)
+   *     used to select the appropriate list
+   * @return a list of matching intercept messages; if no entries match, an empty list is returned
+   */
   public List<InterceptMessage> getMatchingIntercepts(
       ExecMessage execMessage, MessageType messageType) {
     return switch (messageType) {
@@ -82,6 +109,16 @@ public class InterceptRequests {
     };
   }
 
+  /**
+   * Creates a new list by cloning the provided {@code list} and adding the new intercept request.
+   * If an identical request is already present in the list, a {@code DuplicateInterceptException}
+   * is thrown.
+   *
+   * @param list the original list of intercept request entries
+   * @param newRequest the new intercept request entry to add
+   * @return a new list that contains all entries from the original list plus the new request
+   * @throws DuplicateInterceptException if the new request is already registered in the list
+   */
   @SuppressWarnings({"unchecked", "rawtypes"})
   private List<InterceptRequestEntry> cloneListWithNewRequest(
       List<InterceptRequestEntry> list, InterceptRequestEntry newRequest)
@@ -99,7 +136,18 @@ public class InterceptRequests {
     return newRequestList;
   }
 
-  // This method is called by the InterceptMatcher.run() thread only
+  /**
+   * Registers the specified intercept message by adding it to the appropriate intercept list based
+   * on its type. The intercept message must contain either method or field information. This method
+   * should be called exclusively from the InterceptMatcher thread.
+   *
+   * @param interceptMessage the intercept message to register; it must specify either an
+   *     interceptable method or field
+   * @throws DuplicateInterceptException if an identical intercept request has already been
+   *     registered
+   * @throws IllegalArgumentException if the intercept message lacks both method and field
+   *     information
+   */
   @SuppressWarnings("NonAtomicOperationOnVolatileField")
   public void registerInterceptRequest(InterceptMessage interceptMessage)
       throws DuplicateInterceptException {
@@ -146,6 +194,16 @@ public class InterceptRequests {
     }
   }
 
+  /**
+   * Creates a new list by cloning the provided {@code list} and removing any intercept request
+   * entries whose message identifier matches the specified {@code interceptMessageId} (comparison
+   * is case-insensitive).
+   *
+   * @param list the original list of intercept request entries
+   * @param interceptMessageId the identifier of the intercept request to remove
+   * @return a new list which excludes any requests with the given message identifier; if none
+   *     match, the original list is returned unmodified
+   */
   @SuppressWarnings({"unchecked", "rawtypes"})
   private List<InterceptRequestEntry> cloneListWithDeletedRequest(
       List<InterceptRequestEntry> list, String interceptMessageId) {
@@ -167,7 +225,13 @@ public class InterceptRequests {
     return clonedList;
   }
 
-  // This method is called by the InterceptMatcher.run() thread only
+  /**
+   * Unregisters intercept requests by removing all entries with the specified message identifier
+   * from every intercept list (constructor, method, field get, and field put). This method is
+   * intended to be called exclusively from the InterceptMatcher thread.
+   *
+   * @param interceptMessageId the identifier of the intercept message to unregister
+   */
   @SuppressWarnings("NonAtomicOperationOnVolatileField")
   public void unregisterInterceptRequest(String interceptMessageId) {
     constructorIntercepts = cloneListWithDeletedRequest(constructorIntercepts, interceptMessageId);
@@ -176,6 +240,11 @@ public class InterceptRequests {
     fieldPutIntercepts = cloneListWithDeletedRequest(fieldPutIntercepts, interceptMessageId);
   }
 
+  /**
+   * Returns the total number of registered intercept requests across all categories.
+   *
+   * @return the aggregate count of intercept request entries registered in this instance
+   */
   int getRegisteredRequestsSize() {
     return constructorIntercepts.size()
         + methodIntercepts.size()

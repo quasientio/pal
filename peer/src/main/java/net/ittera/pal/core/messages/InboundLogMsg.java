@@ -32,28 +32,44 @@ import org.apache.kafka.common.header.internals.RecordHeader;
 import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.zeromq.ZMQ;
 
+/**
+ * Represents an inbound log message carrying a log record transmitted via a DEALER socket. Due to
+ * the direct sending by a DEALER, the message emulates a REQ envelope during serialization. The
+ * message is structured into several frames as follows:
+ *
+ * <pre>
+ *   0: Empty REQ envelope (an empty string)
+ *   1: Offset (8-byte long)
+ *   2: Message format (1-byte indicator)
+ *   3: Headers - first an integer count followed by successive key and value frames
+ *   4: Message body (byte array)
+ * </pre>
+ *
+ * Instances can be created either directly via the constructor or through message reception.
+ */
 public class InboundLogMsg extends BaseMsg {
-  /**
-   * This message is sent directly by DEALER, so it needs to emulate a REQ envelope (empty initial
-   * frame) when serializing, and NOT expect it when deserializing.
-   *
-   * <pre>
-   * FRAMES:
-   * -------
-   * 0 [empty REQ envelope]: ""
-   * 1. offset             : long
-   * 2. message format     : byte
-   * 3. message body       : byte[]
-   * </pre>
-   */
-
-  // fields
+  /** The log offset that identifies the position of this message within the log stream. */
   private final long offset;
 
+  /** The format type of the message, indicating how to process the message body. */
   private final MessageFormatType messageFormat;
+
+  /** The headers containing key-value metadata associated with the message. */
   private final Headers headers;
+
+  /** The payload of the message as a byte array. */
   private final byte[] body;
 
+  /**
+   * Constructs an InboundLogMsg with the specified log offset, message format, headers, and body.
+   * All parameters (except the primitive offset) must be non-null.
+   *
+   * @param offset the log offset identifying the message position
+   * @param messageFormat the message format indicator
+   * @param headers the metadata headers associated with the message
+   * @param body the message payload as a byte array
+   * @throws NullPointerException if any of the reference parameters are null
+   */
   public InboundLogMsg(long offset, MessageFormatType messageFormat, Headers headers, byte[] body) {
     Stream.of(offset, headers, body).forEach(Objects::requireNonNull);
     this.offset = offset;
@@ -62,12 +78,35 @@ public class InboundLogMsg extends BaseMsg {
     this.body = body;
   }
 
+  /**
+   * Constructs an InboundLogMsg with the specified log offset, message format, headers, body, and
+   * the total serialized size. This constructor is intended for internal use when reading message
+   * data including total size computation.
+   *
+   * @param offset the log offset identifying the message position
+   * @param messageFormat the message format indicator
+   * @param headers the metadata headers associated with the message
+   * @param body the message payload as a byte array
+   * @param size the total serialized size in bytes of the message
+   * @throws NullPointerException if any of the reference parameters are null
+   */
   private InboundLogMsg(
       long offset, MessageFormatType messageFormat, Headers headers, byte[] body, int size) {
     this(offset, messageFormat, headers, body);
     this.size = size;
   }
 
+  /**
+   * Sends this inbound log message over the specified ZeroMQ socket.
+   *
+   * <p>The method serializes the message into a series of frames: an empty frame (REQ envelope),
+   * the log offset, the message format, header count with key-value pairs, and finally the message
+   * body.
+   *
+   * @param socket the ZeroMQ socket used to send the message; must not be null
+   * @return true if all message frames are successfully sent; false otherwise
+   * @throws IllegalArgumentException if the provided socket is null
+   */
   @Override
   public boolean send(ZMQ.Socket socket) {
     if (socket == null) {
@@ -113,12 +152,17 @@ public class InboundLogMsg extends BaseMsg {
   }
 
   /**
-   * Blocking flag only applies to first read, by virtue of messages being atomic (if 1st frame is
-   * ready, then all are).
+   * Receives an inbound log message from the specified ZeroMQ socket.
    *
-   * @param socket ZMQ socket
-   * @param blocking blocking read flag
-   * @return InboundLogMsg instance, or null if non-blocking and no message available
+   * <p>The read operation applies a blocking flag only to the first frame. Subsequent frames are
+   * read atomically if the first frame is available.
+   *
+   * @param socket the ZeroMQ socket from which to receive the message; must not be null
+   * @param blocking if true, waits for the first frame; if false, returns null when no message is
+   *     available
+   * @return an InboundLogMsg instance if a complete message is received, or null if non-blocking
+   *     mode is active and no message is available
+   * @throws IllegalArgumentException if the provided socket is null
    */
   public static InboundLogMsg receive(ZMQ.Socket socket, boolean blocking) {
     if (socket == null) {
@@ -158,7 +202,15 @@ public class InboundLogMsg extends BaseMsg {
     return new InboundLogMsg(offset, messageFormat, headers, body, msgSize);
   }
 
-  // default is non-blocking
+  /**
+   * Receives an inbound log message from the specified ZeroMQ socket using non-blocking mode.
+   *
+   * @param socket the ZeroMQ socket from which to receive the message; must not be null
+   * @return an InboundLogMsg instance if a complete message is received, or null if no message is
+   *     available
+   * @throws IllegalArgumentException if the provided socket is null
+   * @see #receive(ZMQ.Socket, boolean)
+   */
   public static InboundLogMsg receive(ZMQ.Socket socket) {
     return receive(socket, false);
   }
@@ -200,18 +252,38 @@ public class InboundLogMsg extends BaseMsg {
         + '}';
   }
 
+  /**
+   * Returns the log offset associated with this message.
+   *
+   * @return the offset as a long value
+   */
   public long getOffset() {
     return offset;
   }
 
+  /**
+   * Returns the headers metadata of this message.
+   *
+   * @return the Headers containing key-value pairs for the message
+   */
   public Headers getHeaders() {
     return headers;
   }
 
+  /**
+   * Returns the payload of the message.
+   *
+   * @return a byte array representing the message body
+   */
   public byte[] getBody() {
     return body;
   }
 
+  /**
+   * Returns the message format indicator.
+   *
+   * @return the MessageFormatType defining the format of the message body
+   */
   public MessageFormatType getMessageFormat() {
     return messageFormat;
   }

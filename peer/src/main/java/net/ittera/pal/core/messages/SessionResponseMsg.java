@@ -30,40 +30,80 @@ import net.ittera.pal.messages.BaseMsg;
 import net.ittera.pal.messages.types.SessionStatusType;
 import org.zeromq.ZMQ;
 
+/**
+ * Represents a session response message used within PAL to communicate session-related status
+ * updates. In other words, response to a {@link SessionCommandMsg}.
+ *
+ * <p>This message encapsulates a session status value and, optionally, a set of object references.
+ * The message is transmitted using a two-frame protocol:
+ *
+ * <pre>
+ * FRAMES:
+ * -------
+ * 1. status     : byte - SessionStatusType
+ * 2. objectRefs : comma-separated list of objectRefs (used in response to DELETE_SESSION)
+ * </pre>
+ */
 public class SessionResponseMsg extends BaseMsg {
-  /**
-   *
-   *
-   * <pre>
-   * FRAMES:
-   * -------
-   * 1. status             : byte - SessionStatusType
-   * 2. objectRefs         : comma-separated list of objectRefs - in response to DELETE_SESSION
-   * </pre>
-   */
-
-  // fields
+  /** The session status indicating the outcome of a session operation. */
   private final SessionStatusType statusType;
 
+  /**
+   * Optional set of object references returned with the response, for example, in operations
+   * involving session deletion. May be null if not applicable.
+   */
   @Nullable private Set<ObjectRef> objectRefs;
 
+  /**
+   * Private constructor used internally to create a complete session response message, including
+   * the message size computed during reception.
+   *
+   * @param statusType the session status type; must not be null
+   * @param objectRefs optional set of object references, may be null if not provided
+   * @param size the total size in bytes of the received message frames
+   */
   private SessionResponseMsg(
       @Nonnull SessionStatusType statusType, @Nullable Set<ObjectRef> objectRefs, int size) {
     this(statusType, objectRefs);
     this.size = size;
   }
 
+  /**
+   * Constructs a session response message with the specified session status.
+   *
+   * <p>This constructor initializes the message without any associated object references.
+   *
+   * @param statusType the session status type; must not be null
+   */
   public SessionResponseMsg(@Nonnull SessionStatusType statusType) {
     Objects.requireNonNull(statusType);
     this.statusType = statusType;
   }
 
+  /**
+   * Constructs a session response message with the specified session status and associated object
+   * references.
+   *
+   * @param statusType the session status type; must not be null
+   * @param objectRefs optional set of object references, may be null if not applicable
+   */
   public SessionResponseMsg(
       @Nonnull SessionStatusType statusType, @Nullable Set<ObjectRef> objectRefs) {
     this(statusType);
     this.objectRefs = objectRefs;
   }
 
+  /**
+   * Sends this session response message over the provided ZeroMQ socket.
+   *
+   * <p>The method sends the message in one or two frames. The first frame always contains the
+   * session status as a byte. If object references are provided, they are serialized to a
+   * comma-separated string and sent as a second frame.
+   *
+   * @param socket the ZeroMQ socket over which to send the message; must not be null
+   * @return true if all message frames were sent successfully; false otherwise
+   * @throws IllegalArgumentException if the socket is null
+   */
   @Override
   public boolean send(ZMQ.Socket socket) {
     if (socket == null) {
@@ -93,12 +133,19 @@ public class SessionResponseMsg extends BaseMsg {
   }
 
   /**
-   * Blocking flag only applies to first read, by virtue of messages being atomic (if 1st frame is
-   * read, then all are).
+   * Receives a session response message from the provided ZeroMQ socket.
    *
-   * @param socket ZMQ socket
-   * @param blocking blocking read flag
-   * @return SessionResponseMsg instance, or null if non-blocking and no message available
+   * <p>This method reads the first frame for the session status and, if a subsequent frame is
+   * present, it interprets it as a comma-separated list of object references. Depending on the
+   * {@code blocking} flag, the method either waits for a message or returns {@code null} if none is
+   * available.
+   *
+   * @param socket the ZeroMQ socket from which to receive the message; must not be null
+   * @param blocking if {@code true} a blocking read is performed; if {@code false}, the method
+   *     returns {@code null} when no message is available
+   * @return a SessionResponseMsg instance representing the received message, or {@code null} if
+   *     non-blocking and no message is available
+   * @throws IllegalArgumentException if the socket is null
    */
   public static SessionResponseMsg receive(ZMQ.Socket socket, boolean blocking) {
     if (socket == null) {
@@ -128,7 +175,15 @@ public class SessionResponseMsg extends BaseMsg {
     return new SessionResponseMsg(status, objectRefs, msgSize);
   }
 
-  // default is non-blocking
+  /**
+   * Receives a session response message from the provided ZeroMQ socket in non-blocking mode.
+   *
+   * @param socket the ZeroMQ socket from which to receive the message; must not be null
+   * @return a SessionResponseMsg instance representing the received message, or {@code null} if no
+   *     message is available
+   * @throws IllegalArgumentException if the socket is null
+   * @see #receive(ZMQ.Socket, boolean)
+   */
   public static SessionResponseMsg receive(ZMQ.Socket socket) {
     return receive(socket, false);
   }
@@ -164,10 +219,20 @@ public class SessionResponseMsg extends BaseMsg {
     return sb.toString();
   }
 
+  /**
+   * Returns the session status type associated with this message.
+   *
+   * @return the SessionStatusType representing the message's status
+   */
   public SessionStatusType getStatus() {
     return statusType;
   }
 
+  /**
+   * Returns the set of object references associated with this message.
+   *
+   * @return a Set of ObjectRef instances, or {@code null} if no object references are present
+   */
   @Nullable
   public Set<ObjectRef> getObjectRefs() {
     return objectRefs;
