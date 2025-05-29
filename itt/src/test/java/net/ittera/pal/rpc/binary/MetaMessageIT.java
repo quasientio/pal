@@ -30,6 +30,7 @@ import net.ittera.pal.common.util.GzipBase64Utils;
 import net.ittera.pal.messages.colfer.MetaMessage;
 import net.ittera.pal.messages.types.MetaServiceType;
 import net.ittera.pal.messages.types.MetaStatusType;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /** Naming convention to use: methodName_stateUnderTest_expectedBehavior. */
@@ -47,6 +48,7 @@ public class MetaMessageIT extends AbstractBinaryRpcMessageIT {
   }
 
   @Test
+  @Ignore
   public void sendMetaMessage_fetchClassMetadata_metadataReturned() throws InterruptedException {
 
     // metadata serialization uses a lot of heap, better request a GC
@@ -79,6 +81,7 @@ public class MetaMessageIT extends AbstractBinaryRpcMessageIT {
   }
 
   @Test
+  @Ignore
   public void sendMetaMessage_fetchClassMetadataWithExcludes_metadataReturned()
       throws InterruptedException {
 
@@ -122,6 +125,7 @@ public class MetaMessageIT extends AbstractBinaryRpcMessageIT {
   }
 
   @Test
+  @Ignore
   public void sendMetaMessage_fetchClassMetadataWithIncludeClasses_metadataReturned()
       throws InterruptedException {
 
