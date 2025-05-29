@@ -234,7 +234,7 @@ class JsonRpcWebSocketServer extends WebSocketServer {
   /**
    * Invoked when a new WebSocket connection is opened.
    *
-   * <p>The method assigns a unique peer identifier based on the handshake header if present;
+   * <p>The method assigns a unique peer UUID based on the handshake header if present and valid;
    * otherwise, a new UUID is generated. It also initializes connection statistics for the peer.
    *
    * @param conn the newly established WebSocket connection
@@ -242,16 +242,21 @@ class JsonRpcWebSocketServer extends WebSocketServer {
    */
   @Override
   public void onOpen(WebSocket conn, ClientHandshake handshake) {
-    UUID peerId;
+    UUID peerId = null;
     if (logger.isDebugEnabled()) {
       logger.debug(
           "New connection from: {}", conn.getRemoteSocketAddress().getAddress().getHostAddress());
     }
     if (handshake.hasFieldValue("peer-id")) {
-      peerId = UUID.fromString(handshake.getFieldValue("peer-id"));
-    } else {
+      try {
+        peerId = UUID.fromString(handshake.getFieldValue("peer-id"));
+      } catch (IllegalArgumentException e) {
+        logger.warn("Invalid peer-id value found in header", e);
+      }
+    }
+    if (peerId == null) {
       peerId = UUID.randomUUID();
-      logger.debug("No peer-id header found in handshake. Assigned new id: {}", peerId);
+      logger.debug("No valid peer-id found in handshake. Assigned new id: {}", peerId);
     }
 
     webSocketConnectionMapping.put(conn, peerId);
