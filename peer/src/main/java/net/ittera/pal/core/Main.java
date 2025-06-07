@@ -37,6 +37,8 @@ import java.net.ServerSocket;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -333,6 +335,12 @@ public class Main implements Callable<Integer> {
 
   /** Path to the default logging configuration file in the classpath. */
   private static final String LOGGING_CONFIG = "/peer-logging.xml";
+
+  /** Duration to wait for managed services to stop. */
+  private static final Duration SERVICE_MANAGER_AWAIT_TERM = Duration.of(15, ChronoUnit.SECONDS);
+
+  /** Duration to wait for exec service to stop. */
+  private static final Duration EXECUTOR_AWAIT_TERM = Duration.of(1, ChronoUnit.SECONDS);
 
   /** Container for default ZeroMQ configuration properties and internal endpoint mappings. */
   private static final class ZmqProperties {
@@ -1012,11 +1020,10 @@ public class Main implements Callable<Integer> {
    *
    * @param manager the ServiceManager instance managing the services (can be null)
    * @param injector the Guice injector used to obtain service instances for shutdown procedures
-   * @param fast if true, uses a shorter timeout for shutdown; otherwise waits longer
    */
-  private void shutdown(ServiceManager manager, Injector injector, boolean fast) {
-    if (logger.isDebugEnabled()) {
-      logger.debug("We are shutting down ...");
+  private void shutdown(ServiceManager manager, Injector injector) {
+    if (logger.isInfoEnabled()) {
+      logger.info("Shutting down...");
     }
     ExecutorService singleExecutor = Executors.newSingleThreadExecutor();
     try {
@@ -1070,18 +1077,14 @@ public class Main implements Callable<Integer> {
 
       // wait a bit for services to stop
       if (manager != null) {
-        if (fast) {
-          manager.awaitStopped(500, TimeUnit.MILLISECONDS);
-        } else {
-          manager.awaitStopped(3, TimeUnit.SECONDS);
-        }
+        manager.awaitStopped(SERVICE_MANAGER_AWAIT_TERM);
       }
 
       // wait a bit for exec service to finish closing zmq context
-      if (fast) {
-        singleExecutor.awaitTermination(500, TimeUnit.MILLISECONDS);
-      } else {
-        singleExecutor.awaitTermination(2, TimeUnit.SECONDS);
+      boolean terminated =
+          singleExecutor.awaitTermination(EXECUTOR_AWAIT_TERM.toMillis(), TimeUnit.MILLISECONDS);
+      if (!terminated) {
+        logger.debug("Executor service did not terminate gracefully.");
       }
 
       // in case we're running asService and manager == null
@@ -1210,7 +1213,7 @@ public class Main implements Callable<Integer> {
     final ServiceManager manager = !services.isEmpty() ? createServiceManager(services) : null;
 
     // add shutdown hook
-    Runtime.getRuntime().addShutdownHook(new Thread(() -> shutdown(manager, injector, false)));
+    Runtime.getRuntime().addShutdownHook(new Thread(() -> shutdown(manager, injector)));
 
     // start services
     if (manager != null) { // manager = null if there are no services
@@ -1276,9 +1279,8 @@ public class Main implements Callable<Integer> {
       }
       mainCalled = true;
     }
-    if (mainCalled && !asService) {
-      shutdown(manager, injector, true);
-    } else {
+
+    if (!mainCalled || asService) {
       if (manager != null) {
         manager.awaitStopped();
       } else {
