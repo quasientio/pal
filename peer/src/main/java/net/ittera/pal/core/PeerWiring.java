@@ -95,8 +95,8 @@ class PeerWiring extends AbstractModule {
       Set<RunOptions> runOptions,
       ZContext zmqContext,
       CustomClassloader customClassloader) {
-    if (logger.isInfoEnabled()) {
-      logger.info("Created guice module with properties:{}", printedProperties(properties));
+    if (logger.isDebugEnabled()) {
+      logger.debug("Created guice module with properties:{}", printedProperties(properties));
     }
     this.properties = properties;
     addServiceNamesToProps();
