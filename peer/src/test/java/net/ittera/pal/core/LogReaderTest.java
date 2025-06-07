@@ -155,6 +155,7 @@ public class LogReaderTest extends ZmqEnabledTest {
         new DirectoryConnectionProvider(PalDirectory.NO_URL);
     zmqContext = this.createContext();
     consumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
+    boolean autoCommit = true;
     logReader =
         new LogReader(
             UUID.randomUUID(),
@@ -166,6 +167,7 @@ public class LogReaderTest extends ZmqEnabledTest {
             OFFSET_PUB_ADDRESS,
             directoryConnectionProvider,
             consumer,
+            autoCommit,
             10);
     this.log = new LogInfo("test_app");
     TopicPartition topicPartition = new TopicPartition(log.getName(), 0);

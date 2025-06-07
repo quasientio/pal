@@ -47,6 +47,7 @@ import net.ittera.pal.messages.types.MessageFormatType;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.errors.InterruptException;
 import org.apache.kafka.common.header.Header;
@@ -120,11 +121,17 @@ public class LogReader extends ConnectedService {
    */
   private Long initialOffset;
 
+  /** Highest offset we know was *successfully* committed on the broker (-1 = none). */
+  private final AtomicLong lastCommittedOffset = new AtomicLong(-1);
+
   /** Name of the Kafka topic (or Log) from which messages are read. */
   private String kafkaTopic;
 
   /** Kafka topic partition assigned to the consumer for reading messages. */
   private TopicPartition topicPartition;
+
+  /** Flag to indicate if processed offsets are to be auto-committed. */
+  private final boolean autoCommitEnabled;
 
   /** Kafka consumer instance used for reading messages from the Log. */
   private Consumer<String, byte[]> consumer;
@@ -136,7 +143,7 @@ public class LogReader extends ConnectedService {
   private volatile long lastOffsetRead = -1;
 
   /** Timeout duration for gracefully closing the Kafka consumer. */
-  private static final Duration CONSUMER_CLOSE_TIMEOUT = Duration.of(300, ChronoUnit.MILLIS);
+  private static final Duration CONSUMER_CLOSE_TIMEOUT = Duration.of(10, ChronoUnit.SECONDS);
 
   // synchronization to avoid busy-waiting before acceptingRequests
 
@@ -270,7 +277,10 @@ public class LogReader extends ConnectedService {
     consumerProperties.put("key.deserializer", keyDeserializer);
     consumerProperties.put("value.deserializer", valueDeserializer);
     consumerProperties.put("enable.auto.commit", autoCommit);
-    consumerProperties.put("auto.commit.interval.ms", autoCommitInterval);
+    this.autoCommitEnabled = Boolean.parseBoolean(autoCommit);
+    if (autoCommitEnabled) {
+      consumerProperties.put("auto.commit.interval.ms", autoCommitInterval);
+    }
     consumerProperties.put("auto.offset.reset", autoOffsetReset);
     consumerProperties.put("session.timeout.ms", sessionTimeout);
     StringBuilder propsStr = new StringBuilder();
@@ -310,12 +320,14 @@ public class LogReader extends ConnectedService {
       String offsetPubAddress,
       DirectoryConnectionProvider directoryConnectionProvider,
       Consumer<String, byte[]> consumer,
+      boolean autoCommit,
       long pollDuration) {
     super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
     this.inLogAddress = inLogAddress;
     this.offsetPubAddress = offsetPubAddress;
     this.directoryConnectionProvider = directoryConnectionProvider;
     this.consumer = consumer;
+    this.autoCommitEnabled = autoCommit;
     this.pollDuration = Duration.of(pollDuration, ChronoUnit.MILLIS);
     logger.info("Created log reader for peer with id '{}'", peerUuid);
   }
@@ -480,6 +492,28 @@ public class LogReader extends ConnectedService {
           }
         }
       }
+
+      // async-commit offsets of processed messages
+      if (!autoCommitEnabled && records.count() > 0) {
+        try {
+          consumer.commitAsync(
+              (offsets, exc) -> {
+                if (exc != null) {
+                  logger.warn("Async offset commit failed", exc);
+                } else {
+                  OffsetAndMetadata om = offsets.get(topicPartition);
+                  if (om != null) {
+                    // om.offset() == next to read  →  committed up-to = om.offset()-1
+                    long justCommitted = om.offset() - 1;
+                    lastCommittedOffset.updateAndGet(prev -> Math.max(prev, justCommitted));
+                  }
+                }
+              });
+        } catch (InterruptException e) {
+          break;
+        }
+      }
+
       // let's not to be eager
       Thread.yield();
 
@@ -497,16 +531,68 @@ public class LogReader extends ConnectedService {
   }
 
   /**
-   * Closes the Kafka consumer gracefully using a predefined timeout. Logs a warning if any
-   * exception occurs during the consumer closure.
+   * Gracefully shuts down the Kafka consumer.
+   *
+   * <p>Steps:
+   *
+   * <ol>
+   *   <li>If auto-commit is disabled, determine if some processed records are still uncommitted
+   *       (committed < processed), then attempt a final {@code commitSync()}.
+   *   <li>If that commit is interrupted, log <em>WARN</em> and continue shutdown.
+   *   <li>Temporarily clear the thread-interrupt flag, call {@code consumer.close()} so the
+   *       coordinator/fetcher can close without emitting an ERROR, then restore the flag.
+   * </ol>
    */
   private void closeConsumer() {
-    if (consumer != null) {
-      try {
-        consumer.close(CONSUMER_CLOSE_TIMEOUT);
-      } catch (Exception e) {
-        logger.warn("Error closing consumer", e);
+    if (consumer == null) {
+      return;
+    }
+
+    try {
+      // Final commit if needed when auto-commit is OFF
+      if (!autoCommitEnabled) {
+        long processed = lastOffsetRead; // last record handled
+        long committed = lastCommittedOffset.get(); // last known broker commit
+
+        if (committed < processed) { // something still pending
+          logger.info(
+              "Committing final offsets (processed={}, committed={})", processed, committed);
+          try {
+            Thread.interrupted(); // clear interrupted flag
+            consumer.commitSync();
+            lastCommittedOffset.set(processed);
+          } catch (InterruptException ie) {
+            Thread.currentThread().interrupt();
+            logger.warn(
+                "Interrupted while committing final offsets; " + "data may be re-processed", ie);
+          } catch (Exception ce) {
+            logger.warn("Final offset commit failed", ce);
+          }
+        } else {
+          // Everything already flushed by the async callback
+          logger.debug("All processed offsets already committed (up-to {})", committed);
+        }
       }
+
+      // normal close, shielding Kafka from the interrupt flag
+      boolean wasInterrupted = Thread.interrupted(); // clears the flag & remembers state
+      try {
+        long startTime = System.currentTimeMillis();
+        consumer.close(CONSUMER_CLOSE_TIMEOUT);
+        long endTime = System.currentTimeMillis();
+        long durationMillis = endTime - startTime;
+        if (logger.isDebugEnabled()) {
+          logger.debug("Consumer closed in {} ms", durationMillis);
+        }
+      } finally {
+        if (wasInterrupted) {
+          logger.debug("Restoring thread interrupt for outer handlers");
+          Thread.currentThread().interrupt();
+        }
+      }
+
+    } catch (Exception outer) {
+      logger.warn("Fatal error during consumer shutdown", outer);
     }
   }
 
@@ -540,7 +626,7 @@ public class LogReader extends ConnectedService {
                 UUID uuidInHeader = UuidUtils.fromBytes(header.value());
                 if (peerUuid.equals(uuidInHeader)) {
                   if (logger.isDebugEnabled()) {
-                    logger.debug("Will skip message {} self", hdrName);
+                    logger.debug("Will skip message with self uuid in header {}", hdrName);
                   }
                   return true;
                 }
