@@ -50,6 +50,7 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -104,6 +105,9 @@ public class PalDirectory implements AutoCloseable {
 
   /** Key-Value client for etcd operations. */
   private final KV kvClient;
+
+  /** Flag for idempotent close(). */
+  private static final AtomicBoolean CLOSED = new AtomicBoolean();
 
   /** Namespace used within etcd for organizing entries. */
   private final String namespace;
@@ -453,7 +457,7 @@ public class PalDirectory implements AutoCloseable {
                 ByteSequence.from(getPeerPath(peerUuid).getBytes(getEncodingCharset())),
                 DeleteOption.builder().isPrefix(true).build())
             .get();
-    if (deleteResponse.getDeleted() == 1) {
+    if (deleteResponse.getDeleted() > 0) {
       logger.info("Unregistered peer with uuid: {}", peerUuid);
     } else {
       logger.warn("Could not unregister peer with uuid: {}, peer does not exist.", peerUuid);
@@ -1052,9 +1056,15 @@ public class PalDirectory implements AutoCloseable {
    */
   @Override
   public void close() {
+    if (!CLOSED.compareAndSet(false, true)) {
+      if (logger.isDebugEnabled()) {
+        logger.debug("Directory connection to {} already closed. Skipping...", directoryUrl);
+      }
+      return;
+    }
     kvClient.close();
     client.close();
-    logger.info("Closed directory {}", directoryUrl);
+    logger.info("Closed directory to {}", directoryUrl);
   }
 
   // </editor-fold>
