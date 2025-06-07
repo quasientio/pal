@@ -165,6 +165,9 @@ public class LogReader extends ConnectedService {
    */
   private final AbstractQueue<Long> skipOffsets = new ConcurrentLinkedQueue<>();
 
+  /** An OffsetUpdater instance, which enables skipping processing of self-produced messages. */
+  private OffsetUpdater offsetUpdater;
+
   /**
    * A dedicated thread that listens for published offset messages through a ZMQ SUB socket. The
    * thread enqueues received offsets into the skipOffsets queue, which instructs the LogReader to
@@ -203,6 +206,12 @@ public class LogReader extends ConnectedService {
         } catch (ClosedSelectorException ex) {
           if (logger.isDebugEnabled()) {
             logger.debug("Caught ClosedSelectorException. Breaking out.");
+          }
+          socketError = true;
+        } catch (NullPointerException ex) {
+          if (logger.isDebugEnabled()) {
+            logger.debug(
+                "Caught NPE during blocking read, ZMQ context probably closed. Breaking out.", ex);
           }
           socketError = true;
         } catch (ZMQException ex) {
@@ -390,7 +399,8 @@ public class LogReader extends ConnectedService {
       this.offsetSubscriberSocket = zmqContext.createSocket(SocketType.SUB);
       offsetSubscriberSocket.connect(offsetPubAddress);
       offsetSubscriberSocket.subscribe(ZMQ.SUBSCRIPTION_ALL);
-      new OffsetUpdater(offsetSubscriberSocket).start();
+      this.offsetUpdater = new OffsetUpdater(offsetSubscriberSocket);
+      this.offsetUpdater.start();
     }
   }
 
@@ -697,6 +707,9 @@ public class LogReader extends ConnectedService {
   protected void triggerStop() {
     super.triggerStop();
     acceptingRequests = false;
+    if (offsetUpdater != null) {
+      offsetUpdater.interrupt();
+    }
   }
 
   /**
