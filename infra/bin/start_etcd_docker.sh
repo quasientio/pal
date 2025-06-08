@@ -11,6 +11,10 @@ check_var "PAL_AUTOMATE"
 # Load env variables
 source "$PAL_AUTOMATE/docker/.env"
 
+# Check all required variables are defined
+check_var "ETCD_CLIENT_PORT"
+check_var "ETCD_PEER_PORT"
+
 # Check if a container named "etcd" is running
 if [ "$(docker ps -q -f name=etcd)" ]; then
   log "etcd container already running"
