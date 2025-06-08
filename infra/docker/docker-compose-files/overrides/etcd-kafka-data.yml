@@ -1,0 +1,6 @@
+services:
+  kafka:
+    volumes:
+      - "${KAFKA_DATA_DIR}:/var/lib/kafka/data"
+    environment:
+      KAFKA_LOG_DIRS: /var/lib/kafka/data

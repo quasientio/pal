@@ -10,7 +10,7 @@ check_var "PAL_AUTOMATE"
 
 docker-compose \
 	--project-directory $PAL_AUTOMATE/docker \
-	--file $PAL_AUTOMATE/docker/etcd-kafka-compose.yml \
+	--file $PAL_AUTOMATE/docker/docker-compose-files/etcd-kafka-compose.yml \
 	stop -t 2
 
 removePalNetwork
