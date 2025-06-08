@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 # palind – run “pal run …” inside a Docker container
+# Supports both class-path (-c / -cp / --classpath) and runnable jars (-jar <file>).
 #
 # Example:
 #   palind run \
@@ -16,9 +17,9 @@
 # 0. helper paths / functions
 ###############################################################################
 SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPTS_DIR/docker_utils.sh"       # createPalNetwork
+source "$SCRIPTS_DIR/docker_utils.sh"        # createPalNetwork, log, …
 
-IMAGE="pal"                                  # change tag/registry if needed
+IMAGE="pal"          # adjust if you pushed the image under another tag/registry
 NETWORK="pal"
 CONTAINER="peer"
 
@@ -26,43 +27,49 @@ CONTAINER="peer"
 needs_mount() { [[ "$1" =~ ^/ || "$1" =~ ^\./ || "$1" =~ .*/ ]]; }
 
 ###############################################################################
-# 1. walk argv, collecting mounts and rewriting class‑path flags
+# 1. scan argv; collect mounts and rewrite paths for inside the container
 ###############################################################################
 declare -a VOLUMES NEW_ARGS
 cpIndex=0
 
-# NB: positional for‑loop so we can look ahead when we hit -c / -cp / --classpath
 i=1
 while (( i <= $# )); do
   arg="${!i}"
   case "$arg" in
     -c|-cp|--classpath)
       flag="$arg"
-      (( i++ ))
-      cpSpec="${!i}"
-
+      (( i++ )); cpSpec="${!i}"
       IFS=':' read -ra rawParts <<< "$cpSpec"
-      declare -a mappedParts
+      mappedParts=()
 
       for hostPath in "${rawParts[@]}"; do
         if needs_mount "$hostPath"; then
           abs="$(realpath "$hostPath")"
-          if (( ${#rawParts[@]} == 1 )); then
-            containerPath="/app/classes"
-          else
-            containerPath="/app/classes${cpIndex}"
-          fi
+          containerPath="/app/classes${cpIndex}"
+          (( ${#rawParts[@]} == 1 )) && containerPath="/app/classes"
           VOLUMES+=("-v" "${abs}:${containerPath}:ro")
           mappedParts+=("$containerPath")
           ((cpIndex++))
         else
-          # element already valid inside container (e.g. /app/lib/foo.jar)
           mappedParts+=("$hostPath")
         fi
       done
 
-      # rebuild the CP string for inside the container
       NEW_ARGS+=("$flag" "$(IFS=:; echo "${mappedParts[*]}")")
+      ;;
+
+    -jar)
+      flag="$arg"
+      (( i++ )); jarPath="${!i}"
+      if needs_mount "$jarPath"; then
+        abs="$(realpath "$jarPath")"
+        base="$(basename "$abs")"
+        containerJar="/app/jars/$base"
+        VOLUMES+=("-v" "${abs}:${containerJar}:ro")
+        NEW_ARGS+=("$flag" "$containerJar")
+      else
+        NEW_ARGS+=("$flag" "$jarPath")
+      fi
       ;;
 
     *)
@@ -73,17 +80,18 @@ while (( i <= $# )); do
 done
 
 ###############################################################################
-# 2. handle “traditional” application logs (NOT Kafka topic names)
+# 2. application logs: ./logs by default (override with PAL_LOGS_DIR)
 ###############################################################################
 PAL_LOGS_DIR="${PAL_LOGS_DIR:-$PWD/logs}"
 mkdir -p "$PAL_LOGS_DIR"
 VOLUMES+=("-v" "${PAL_LOGS_DIR}:/app/logs")
 
 ###############################################################################
-# 3. launch
+# 3. launch container
 ###############################################################################
 if docker ps -q -f "name=^/${CONTAINER}$" | grep -q .; then
-  log "Container '${CONTAINER}' already running"; exit 1
+  log "Container '${CONTAINER}' already running"
+  exit 1
 fi
 
 docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
