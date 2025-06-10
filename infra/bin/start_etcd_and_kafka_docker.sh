@@ -51,16 +51,16 @@ createPalNetwork
 
 compose="docker-compose \
   --project-directory $PAL_AUTOMATE/docker \
-  -f $PAL_AUTOMATE/docker/docker-compose-files/etcd-kafka-compose.yml"
+  -f $PAL_AUTOMATE/docker/compose/etcd-kafka-compose.yml"
 
 # Add JMX override if requested
 if [ -n "${KAFKA_JMX_PORT:-}" ]; then
-  compose+=" -f $PAL_AUTOMATE/docker/docker-compose-files/overrides/etcd-kafka-jmx.yml"
+  compose+=" -f $PAL_AUTOMATE/docker/compose/overrides/etcd-kafka-jmx.yml"
 fi
 
 # Add host-data override if requested
 if [ -n "${KAFKA_DATA_DIR:-}" ]; then
-  compose+=" -f $PAL_AUTOMATE/docker/docker-compose-files/overrides/etcd-kafka-data.yml"
+  compose+=" -f $PAL_AUTOMATE/docker/compose/overrides/etcd-kafka-data.yml"
 fi
 
 
