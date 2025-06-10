@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f etcd-kafka-compose.yml
+    kompose.version: 1.36.0 (HEAD)
+  labels:
+    io.kompose.service: etcd
+  name: etcd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: etcd
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f etcd-kafka-compose.yml
+        kompose.version: 1.36.0 (HEAD)
+      labels:
+        io.kompose.service: etcd
+    spec:
+      containers:
+        - args:
+            - ./etcd
+            - -name
+            - default
+            - -initial-advertise-peer-urls
+            - http://etcd:2380
+            - -listen-peer-urls
+            - http://0.0.0.0:2380
+            - -advertise-client-urls
+            - http://etcd:2379
+            - -listen-client-urls
+            - http://0.0.0.0:2379
+            - -initial-cluster
+            - default=http://etcd:2380
+          image: etcd:latest
+          name: etcd
+          ports:
+            - containerPort: 2379
+              protocol: TCP
+            - containerPort: 2380
+              protocol: TCP
+      restartPolicy: Always

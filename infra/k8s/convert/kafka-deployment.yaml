@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f etcd-kafka-compose.yml
+    kompose.version: 1.36.0 (HEAD)
+  labels:
+    io.kompose.service: kafka
+  name: kafka
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: kafka
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f etcd-kafka-compose.yml
+        kompose.version: 1.36.0 (HEAD)
+      labels:
+        io.kompose.service: kafka
+    spec:
+      containers:
+        - env:
+            - name: KAFKA_ADVERTISED_LISTENERS
+              value: |
+                PLAINTEXT://kafka:9092, PLAINTEXT_HOST://localhost:29092
+            - name: KAFKA_CONTROLLER_LISTENER_NAMES
+              value: CONTROLLER
+            - name: KAFKA_CONTROLLER_QUORUM_VOTERS
+              value: 1@kafka:9093
+            - name: KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS
+              value: "0"
+            - name: KAFKA_LISTENERS
+              value: |
+                PLAINTEXT://0.0.0.0:9092, PLAINTEXT_HOST://0.0.0.0:29092, CONTROLLER://0.0.0.0:9093
+            - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+              value: |
+                PLAINTEXT:PLAINTEXT, PLAINTEXT_HOST:PLAINTEXT, CONTROLLER:PLAINTEXT
+            - name: KAFKA_NODE_ID
+              value: "1"
+            - name: KAFKA_NUM_PARTITIONS
+              value: "1"
+            - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_PROCESS_ROLES
+              value: broker,controller
+            - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+              value: "1"
+            - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+              value: "1"
+          image: apache/kafka:3.8.0
+          name: kafka
+          ports:
+            - containerPort: 9092
+              protocol: TCP
+            - containerPort: 29092
+              protocol: TCP
+      restartPolicy: Always
