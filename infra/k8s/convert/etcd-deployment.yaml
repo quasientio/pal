@@ -1,45 +1,63 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  annotations:
-    kompose.cmd: kompose convert -f etcd-kafka-compose.yml
-    kompose.version: 1.36.0 (HEAD)
-  labels:
-    io.kompose.service: etcd
   name: etcd
+  labels:
+    app: etcd
 spec:
   replicas: 1
   selector:
     matchLabels:
-      io.kompose.service: etcd
+      app: etcd
   template:
     metadata:
-      annotations:
-        kompose.cmd: kompose convert -f etcd-kafka-compose.yml
-        kompose.version: 1.36.0 (HEAD)
       labels:
-        io.kompose.service: etcd
+        app: etcd
     spec:
       containers:
-        - args:
-            - ./etcd
-            - -name
-            - default
-            - -initial-advertise-peer-urls
-            - http://etcd:2380
-            - -listen-peer-urls
-            - http://0.0.0.0:2380
-            - -advertise-client-urls
-            - http://etcd:2379
-            - -listen-client-urls
-            - http://0.0.0.0:2379
-            - -initial-cluster
-            - default=http://etcd:2380
-          image: etcd:latest
-          name: etcd
+        - name: etcd
+          image: quay.io/coreos/etcd:v3.5.16
+          imagePullPolicy: IfNotPresent
+          command: ["/usr/local/bin/etcd"]
+          args:
+            - --name=default
+            - --data-dir=/var/lib/etcd         # ⇦ will be a PVC
+            - --initial-advertise-peer-urls=http://etcd:2380
+            - --listen-peer-urls=http://0.0.0.0:2380
+            - --advertise-client-urls=http://etcd:2379
+            - --listen-client-urls=http://0.0.0.0:2379
+            - --initial-cluster=default=http://etcd:2380
           ports:
-            - containerPort: 2379
-              protocol: TCP
-            - containerPort: 2380
-              protocol: TCP
-      restartPolicy: Always
+            - containerPort: 2379   # client
+            - containerPort: 2380   # peer
+          volumeMounts:
+            - name: etcd-data
+              mountPath: /var/lib/etcd         # must match --data-dir
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 2379
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 2379
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+      volumes:
+        - name: etcd-data
+          emptyDir: {}              # ⚠️ dev only; swap for PVC in prod
+          #persistentVolumeClaim:
+          #  claimName: etcd-pvc

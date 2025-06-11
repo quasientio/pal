@@ -1,2 +1,3 @@
 etcd-kafka-compose.yml
 .env
+apply*sh

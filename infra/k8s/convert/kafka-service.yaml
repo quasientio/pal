@@ -1,19 +1,21 @@
 apiVersion: v1
 kind: Service
 metadata:
-  annotations:
-    kompose.cmd: kompose convert -f etcd-kafka-compose.yml
-    kompose.version: 1.36.0 (HEAD)
-  labels:
-    io.kompose.service: kafka
   name: kafka
+  labels:
+    app: kafka
 spec:
+  type: NodePort
+  selector:
+    app: kafka
   ports:
-    - name: "9092"
+    # ── broker listener for in-cluster clients ───────────────────────
+    - name: plaintext
       port: 9092
       targetPort: 9092
-    - name: "29092"
+      nodePort: 30092          # host-facing
+    # ── broker listener for host-side tools (NodePort 30093) ─────────
+    - name: host
       port: 29092
       targetPort: 29092
-  selector:
-    io.kompose.service: kafka
+      nodePort: 30093          # host-facing
