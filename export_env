@@ -7,7 +7,7 @@ export PAL_LOGGING_CONFIG=$PAL_HOME/.local/conf/peer-logging.xml
 # In production you'll probably want these in a file.
 #
 export PAL_DIRECTORY=localhost:2379
-export KAFKA_SERVERS=localhost:9092
+export KAFKA_SERVERS=localhost:29092
 export KAFKA_JMX_PORT=10121
 # export CLASSPATH=
 # export PEER_NAME=
