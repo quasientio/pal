@@ -21,13 +21,13 @@ package net.ittera.pal.tools.cli;
 
 import static java.lang.String.format;
 
-import com.google.common.base.Splitter;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.TextStyle;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -40,16 +40,17 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.management.ObjectName;
 import net.ittera.pal.common.cli.PalCommand;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.util.Strings;
-import net.ittera.pal.cxn.JmxClient;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.apache.kafka.clients.admin.Admin;
+import org.apache.kafka.clients.admin.DescribeLogDirsResult;
 import org.apache.kafka.clients.admin.ListOffsetsResult;
+import org.apache.kafka.clients.admin.LogDirDescription;
 import org.apache.kafka.clients.admin.OffsetSpec;
+import org.apache.kafka.clients.admin.ReplicaInfo;
 import org.apache.kafka.common.TopicPartition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -112,14 +113,6 @@ public class List extends AbstractPalSubcommand {
       description = "reverse order while sorting")
   private boolean reverseOrder;
 
-  /** The JMX port used by Kafka servers. Defaults to 10121. */
-  @Option(
-      names = "--kafka-jmx-port",
-      paramLabel = "port",
-      defaultValue = "10121",
-      description = "JMX port used by kafka servers (default: ${DEFAULT-VALUE})")
-  private Integer kafkaJmxPort;
-
   /** Flag indicating whether the help message is requested. */
   @SuppressWarnings("unused")
   @Option(
@@ -133,9 +126,6 @@ public class List extends AbstractPalSubcommand {
 
   /** Unique identifier for Kafka clients. */
   private static final UUID KAFKA_CLIENT_ID = UUID.randomUUID();
-
-  /** Mapping of server addresses to their respective JMX clients. */
-  private final Map<String, JmxClient> jmxClientsPerServer = new HashMap<>();
 
   /** Mapping of server addresses to their respective Kafka admin clients. */
   private final Map<String, Admin> adminClientsPerServer = new HashMap<>();
@@ -278,54 +268,77 @@ public class List extends AbstractPalSubcommand {
   }
 
   /**
-   * Retrieves and sets the byte size of the specified log using JMX.
+   * Retrieves the on-disk size (in bytes) of a topic/partition from the broker’s
+   * <em>DescribeLogDirs</em> RPC and stores it in the supplied {@link LogInfo}.
    *
-   * <p><strong>Note:</strong> This method uses a JMX client to fetch the byte size, which is a
-   * temporary approach. Ideally, all Log Info should be retrieved from PalDirectory or using
-   * Kafka's Admin API. However, this method provides the advantage of obtaining live log info as
-   * maintained by Kafka.
+   * <p><strong>Prerequisites</strong>
    *
-   * @param logInfo the {@link LogInfo} object to be updated with its byte size
+   * <ul>
+   *   <li>You are running Kafka&nbsp;2.4 + (the Admin API must expose <code>describeLogDirs</code>
+   *       ).
+   *   <li>The cluster is running in KRaft mode and the single broker/controller has <code>
+   *       KAFKA_NODE_ID=1</code>.
+   *   <li>Each topic has a single partition (<code>partition&nbsp;0</code>).
+   * </ul>
+   *
+   * @param logInfo the {@link LogInfo} to update
    */
   public void fillLogInfoSize(LogInfo logInfo) {
-    if (logger.isDebugEnabled()) {
-      logger.debug("Attempting to get mbean info for log: {}", logInfo);
-    }
-    // use a JmxClient to fetch the byte size
-    String query = String.format("kafka.log:type=Log,name=Size,topic=%s,*", logInfo.getName());
-    JmxClient jmxCli = getJmxClientForServer(logInfo.getBootstrapServers());
-    if (jmxCli == null) {
-      logger.error("Cannot fetch bytes for logInfo: {} - no JMX client", logInfo);
-      return;
-    }
-    try {
-      Set<ObjectName> objNames = jmxCli.query(query);
-      logInfo.setBytes((long) jmxCli.getValue(objNames.toArray(new ObjectName[] {})[0]));
-    } catch (Exception e) {
-      logger.error("Error setting bytes property for logInfo: {}", logInfo, e);
-    }
-  }
+    final Logger logger = LoggerFactory.getLogger(getClass());
+    final int BROKER_ID = 1; // KAFKA_NODE_ID=1
 
-  /**
-   * Retrieves or creates a JMX client for the specified server.
-   *
-   * @param server the server address
-   * @return the {@link JmxClient} associated with the server, or {@code null} if connection fails
-   */
-  private JmxClient getJmxClientForServer(String server) {
-    if (!jmxClientsPerServer.containsKey(server)) {
-      String host = Splitter.on(':').splitToList(server).get(0);
-      JmxClient jmxClient = null;
-      try {
-        jmxClient = new JmxClient(host, kafkaJmxPort);
-      } catch (IOException e) {
-        logger.error("Error connecting jmx client to host", e);
-      }
-      if (jmxClient != null) {
-        jmxClientsPerServer.put(server, jmxClient);
-      }
+    if (logger.isDebugEnabled()) {
+      logger.debug("Fetching log size via DescribeLogDirs for {}", logInfo);
     }
-    return jmxClientsPerServer.get(server);
+
+    Admin adminClient;
+    try {
+      adminClient = getAdminClientForServers(logInfo.getBootstrapServers());
+      if (adminClient == null) {
+        logger.error("Cannot create AdminClient for {}", logInfo.getBootstrapServers());
+        return;
+      }
+
+      DescribeLogDirsResult result =
+          adminClient.describeLogDirs(Collections.singletonList(BROKER_ID));
+
+      // New, non-deprecated accessor:
+      Map<Integer, Map<String, LogDirDescription>> brokers =
+          result.allDescriptions().get(); // Map<brokerId, logDir -> desc>
+
+      Map<String, LogDirDescription> logDirs = brokers.get(BROKER_ID);
+      if (logDirs == null) {
+        logger.error("Broker {} absent in DescribeLogDirs response", BROKER_ID);
+        return;
+      }
+
+      for (LogDirDescription dir : logDirs.values()) {
+        if (dir.error() != null) { // log directory offline?
+          logger.warn("Log dir {} on broker {} is offline.", dir, BROKER_ID, dir.error());
+          continue;
+        }
+
+        // dir.replicaInfos() -> Map<TopicPartition, ReplicaInfo>
+        for (Map.Entry<TopicPartition, ReplicaInfo> e : dir.replicaInfos().entrySet()) {
+          TopicPartition tp = e.getKey();
+
+          if (tp.topic().equals(logInfo.getName()) && tp.partition() == 0) {
+            long sizeBytes = e.getValue().size();
+            logInfo.setBytes(sizeBytes);
+            logger.debug("Set size for {} to {} bytes", logInfo, sizeBytes);
+            return; // done
+          }
+        }
+      }
+
+      logger.warn("Topic {} partition 0 not present on broker {}", logInfo.getName(), BROKER_ID);
+
+    } catch (InterruptedException ie) {
+      Thread.currentThread().interrupt();
+      logger.error("Interrupted while waiting for describeLogDirs", ie);
+    } catch (ExecutionException ee) {
+      logger.error("describeLogDirs failed", ee.getCause());
+    }
   }
 
   /**
@@ -479,16 +492,12 @@ public class List extends AbstractPalSubcommand {
   /**
    * Closes all resources associated with the subcommand.
    *
-   * <p>Closes JMX clients and Kafka admin clients before delegating to the superclass method.
+   * <p>Closes Kafka admin clients before delegating to the superclass method.
    *
    * @throws IOException if an I/O error occurs while closing resources
    */
   @Override
   protected void closeResources() throws IOException {
-    // close jmx clients
-    for (JmxClient jmxClient : jmxClientsPerServer.values()) {
-      jmxClient.close();
-    }
     // close kafka admin clients
     adminClientsPerServer.values().forEach(Admin::close);
 
@@ -524,7 +533,7 @@ public class List extends AbstractPalSubcommand {
       // fill offsets of all logs using kafka admin client
       fillLogInfosWithOffsets(logsInDirectory);
 
-      // fill byte size of all logs found in kafka using MBeans (assumes JMX connection)
+      // fill byte size of all logs using kafka admin client
       logsInDirectory.forEach(this::fillLogInfoSize);
 
       if (longListing) {
