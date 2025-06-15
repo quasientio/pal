@@ -4,14 +4,12 @@ if [ -z "$PAL_HOME" ]; then
   echo PAL_HOME is undefined
   exit 1
 fi
-if [ -z "$PAL_DIRECTORY" ]; then
-  echo PAL_DIRECTORY is undefined
-  exit 2
-fi
-if [ -z "$KAFKA_SERVERS" ]; then
-  echo KAFKA_SERVERS is undefined
-  exit 3
-fi
+
+# Provide default for PAL_DIRECTORY if not set
+PAL_DIRECTORY="${PAL_DIRECTORY:-localhost:2379}"
+
+# Provide default for KAFKA_SERVERS if not set
+KAFKA_SERVERS="${KAFKA_SERVERS:-localhost:29092}"
 
 pal run \
   --dir $PAL_DIRECTORY \
