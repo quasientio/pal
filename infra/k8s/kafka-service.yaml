@@ -9,13 +9,8 @@ spec:
   selector:
     app: kafka
   ports:
-    # ── broker listener for in-cluster clients ───────────────────────
-    - name: plaintext
-      port: 9092
-      targetPort: 9092
-      nodePort: 30092          # host-facing
-    # ── broker listener for host-side tools (NodePort 30093) ─────────
-    - name: host
-      port: 29092
-      targetPort: 29092
-      nodePort: 30093          # host-facing
+    # single listener used by both in-cluster pods and host clients
+    - name: external
+      port: 29092          # service port
+      targetPort: 29092    # containerPort
+      nodePort: 30092      # host-facing NodePort
