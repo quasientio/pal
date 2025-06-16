@@ -63,6 +63,10 @@ if [ -n "${KAFKA_DATA_DIR:-}" ]; then
   compose+=" -f $PAL_AUTOMATE/docker/compose/overrides/kafka-data.yml"
 fi
 
+if [ -n "${ETCD_DATA_DIR:-}" ]; then
+  compose+=" -f $PAL_AUTOMATE/docker/compose/overrides/etcd-data.yml"
+fi
+
 
 $compose rm -f
 $compose up --build --detach
