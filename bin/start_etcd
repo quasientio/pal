@@ -1,19 +1,33 @@
 #!/bin/sh
 
-ETCD_CLIENT_PORT=2379
-ETCD_PEER_PORT=2380
+# 1) Unset all ETCD_* env vars except those we want to preserve
+for v in $(env | grep '^ETCD_' | cut -d= -f1); do
+  case "$v" in
+    ETCD_CLIENT_PORT|ETCD_PEER_PORT|ETCD_DATA_DIR)
+      # preserve user‐provided values
+      ;;
+    *)
+      unset "$v"
+      ;;
+  esac
+done
 
-# unset previously set ETCD_ env variables
-for v in `env | grep ^ETCD | cut -d'=' -f1`; do unset $v; done
+# 2) Default ports & data‐dir if not already defined
+: "${ETCD_CLIENT_PORT:=2379}"
+: "${ETCD_PEER_PORT:=2380}"
+: "${ETCD_DATA_DIR:=/tmp/etcd/data}"
 
-export ETCDCTL_API="3"
+# 3) Export all etcd settings via env vars
+export ETCD_NAME="paldir"
+export ETCD_DATA_DIR="$ETCD_DATA_DIR"
+
+export ETCD_CTL_API="3"
 export ALLOW_NONE_AUTHENTICATION="yes"
 export ETCD_LOG_LEVEL="info"
-export ETCD_LISTEN_CLIENT_URLS="http://127.0.0.1:$ETCD_CLIENT_PORT"
-export ETCD_ADVERTISE_CLIENT_URLS="http://127.0.0.1:$ETCD_CLIENT_PORT"
-export ETCD_LISTEN_PEER_URLS="http://127.0.0.1:$ETCD_PEER_PORT"
 
-etcd \
-  --name paldir \
-  --data-dir /tmp/etcd/data \
-  --wal-dir /tmp/etcd/wal
+export ETCD_LISTEN_CLIENT_URLS="http://127.0.0.1:${ETCD_CLIENT_PORT}"
+export ETCD_ADVERTISE_CLIENT_URLS="http://127.0.0.1:${ETCD_CLIENT_PORT}"
+export ETCD_LISTEN_PEER_URLS="http://127.0.0.1:${ETCD_PEER_PORT}"
+
+# 4) Start etcd with no flags—everything comes from the env
+exec etcd
