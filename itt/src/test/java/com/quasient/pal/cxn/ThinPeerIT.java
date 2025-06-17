@@ -329,7 +329,7 @@ public class ThinPeerIT extends AbstractIntegrationTest {
             .init();
 
     PeerInfo peer = findRpcPeer(RpcType.JSON_RPC, directoryConnectionProvider).orElseThrow();
-    boolean connected = thinPeer.connectToPeer(peer, Duration.ofSeconds(120));
+    boolean connected = thinPeer.connectToPeer(peer, Duration.ofMinutes(2));
     assertTrue(connected);
   }
 
@@ -343,7 +343,7 @@ public class ThinPeerIT extends AbstractIntegrationTest {
             .init();
 
     PeerInfo peer = findRpcPeer(RpcType.BIN_RPC, directoryConnectionProvider).orElseThrow();
-    boolean connected = thinPeer.connectToPeer(peer, Duration.ofSeconds(120));
+    boolean connected = thinPeer.connectToPeer(peer, Duration.ofMinutes(2));
     assertTrue(connected);
   }
 }
