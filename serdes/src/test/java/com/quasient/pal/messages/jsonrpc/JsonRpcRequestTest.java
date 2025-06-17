@@ -150,7 +150,6 @@ public class JsonRpcRequestTest {
     // Serialize the request
     String jsonString = JsonRpcSerializer.toJson(request);
 
-    System.out.println(jsonString);
     // Deserialize the request back
     JsonRpcRequest deserializedRequest =
         JsonRpcSerializer.fromJson(jsonString, JsonRpcRequest.class);
