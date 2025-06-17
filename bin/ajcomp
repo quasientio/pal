@@ -2,7 +2,7 @@
 
 PAL_VERSION=1.0.0-SNAPSHOT
 CLASSES_TO_WEAVE=target/classes
-PEER_ASPECTS_JAR="/home/libre/.m2/repository/net/ittera/pal/aspects/${PAL_VERSION}/aspects-${PAL_VERSION}.jar"
+PEER_ASPECTS_JAR="/home/libre/.m2/repository/com/quasient/pal/aspects/${PAL_VERSION}/aspects-${PAL_VERSION}.jar"
 OUTPUT_JAR=apps.jar
 
 # Create jar file containing weaved classes

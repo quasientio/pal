@@ -2,19 +2,19 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
-    <artifactId>peer</artifactId>
+    <artifactId>pal-runtime</artifactId>
     <packaging>jar</packaging>
-    <name>core classes</name>
+    <name>runtime core classes</name>
 
     <parent>
-        <groupId>net.ittera.pal</groupId>
+        <groupId>com.quasient.pal</groupId>
         <artifactId>pal</artifactId>
         <version>1.0.0-SNAPSHOT</version>
     </parent>
 
     <properties>
-        <file.appender.class>net.ittera.pal.common.logging.PeerFileAppender</file.appender.class>
-        <console.appender.class>net.ittera.pal.common.logging.PeerConsoleAppender</console.appender.class>
+        <file.appender.class>com.quasient.pal.common.logging.PeerFileAppender</file.appender.class>
+        <console.appender.class>com.quasient.pal.common.logging.PeerConsoleAppender</console.appender.class>
     </properties>
 
     <build>
@@ -100,20 +100,20 @@
     <dependencies>
         <!-- OWN DEPENDENCIES -->
         <dependency>
-            <groupId>net.ittera.pal</groupId>
-            <artifactId>common</artifactId>
+            <groupId>com.quasient.pal</groupId>
+            <artifactId>pal-core-api</artifactId>
         </dependency>
         <dependency>
-            <groupId>net.ittera.pal</groupId>
-            <artifactId>cxn</artifactId>
+            <groupId>com.quasient.pal</groupId>
+            <artifactId>pal-cxn</artifactId>
         </dependency>
         <dependency>
-            <groupId>net.ittera.pal</groupId>
-            <artifactId>serdes</artifactId>
+            <groupId>com.quasient.pal</groupId>
+            <artifactId>pal-serdes</artifactId>
         </dependency>
         <dependency>
-            <groupId>net.ittera.pal</groupId>
-            <artifactId>aspects</artifactId>
+            <groupId>com.quasient.pal</groupId>
+            <artifactId>pal-weave</artifactId>
         </dependency>
 
         <!-- OTHER DEPENDENCIES -->

@@ -36,7 +36,7 @@
 		<appender-ref ref="tests"/>
 	</logger>
 
-	<logger name="net.ittera.pal" level="debug" additivity="false">
+	<logger name="com.quasient.pal" level="debug" additivity="false">
 		<appender-ref ref="tests"/>
 	</logger>
 

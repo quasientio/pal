@@ -181,7 +181,7 @@ if not pal_home:
   print("PAL_HOME is not defined. Aborting.")
   sys.exit(1)
   
-java_classes_base_path = f'{pal_home}/serdes/src/main/java/net/ittera/pal/messages/colfer'
+java_classes_base_path = f'{pal_home}/serdes/src/main/java/com/quasient/pal/messages/colfer'
 # parse all classes to extract class and fields info
 for filename in os.listdir(java_classes_base_path):
     java_file_path = os.path.join(java_classes_base_path, filename)

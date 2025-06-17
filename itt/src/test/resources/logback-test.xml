@@ -36,15 +36,15 @@
 		<appender-ref ref="tests"/>
 	</logger>
 
-	<logger name="net.ittera.pal" level="debug" additivity="false">
+	<logger name="com.quasient.pal" level="debug" additivity="false">
 		<appender-ref ref="tests"/>
 	</logger>
 
-	<logger name="net.ittera.pal.serdes" level="debug" additivity="false">
+	<logger name="com.quasient.pal.serdes" level="debug" additivity="false">
 		<appender-ref ref="tests"/>
 	</logger>
 
-	<logger name="net.ittera.pal.common.objects.ObjectLookupStoreBackgroundProcessor" level="warn" additivity="false">
+	<logger name="com.quasient.pal.common.objects.ObjectLookupStoreBackgroundProcessor" level="warn" additivity="false">
 		<appender-ref ref="tests"/>
 	</logger>
 

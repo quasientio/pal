@@ -2,19 +2,19 @@
   <configuration default="false" name="ITTs" type="JUnit" factoryName="JUnit">
     <extension name="coverage">
       <pattern>
-        <option name="PATTERN" value="net.ittera.pal.rpc.binary.*" />
+        <option name="PATTERN" value="com.quasient.pal.rpc.binary.*" />
         <option name="ENABLED" value="true" />
       </pattern>
       <pattern>
-        <option name="PATTERN" value="net.ittera.pal.cxn.*" />
+        <option name="PATTERN" value="com.quasient.pal.cxn.*" />
         <option name="ENABLED" value="false" />
       </pattern>
       <pattern>
-        <option name="PATTERN" value="net.ittera.pal.intercept.*" />
+        <option name="PATTERN" value="com.quasient.pal.intercept.*" />
         <option name="ENABLED" value="false" />
       </pattern>
     </extension>
-    <option name="PACKAGE_NAME" value="net.ittera.pal.rpc.binary" />
+    <option name="PACKAGE_NAME" value="com.quasient.pal.rpc.binary" />
     <option name="MAIN_CLASS_NAME" value="" />
     <option name="METHOD_NAME" value="" />
     <option name="TEST_OBJECT" value="pattern" />
@@ -25,22 +25,22 @@
       <env name="PAL_DIRECTORY" value="localhost:2379" />
     </envs>
     <patterns>
-      <pattern testClass="net.ittera.pal.rpc.binary.ConstructorMessageIT" />
-      <pattern testClass="net.ittera.pal.rpc.binary.GetArrayMessageIT" />
-      <pattern testClass="net.ittera.pal.rpc.binary.GetMessageIT" />
-      <pattern testClass="net.ittera.pal.rpc.binary.GetInstanceVariableMessageIT" />
-      <pattern testClass="net.ittera.pal.rpc.binary.NonVoidClassMethodMessageIT" />
-      <pattern testClass="net.ittera.pal.rpc.binary.NonVoidInstanceMethodMessageIT" />
-      <pattern testClass="net.ittera.pal.rpc.binary.PutMessageIT" />
-      <pattern testClass="net.ittera.pal.rpc.binary.SetInstanceVariableMessageIT" />
-      <pattern testClass="net.ittera.pal.rpc.binary.VoidClassMethodMessageIT" />
-      <pattern testClass="net.ittera.pal.rpc.binary.VoidInstanceMethodMessageIT" />
-      <pattern testClass="net.ittera.pal.rpc.binary.ControlMessageIT" />
-      <pattern testClass="net.ittera.pal.cxn.DirectoryConnectionProviderIT" />
-      <pattern testClass="net.ittera.pal.cxn.EtcdIT" />
-      <pattern testClass="net.ittera.pal.cxn.PalDirectoryIT" />
-      <pattern testClass="net.ittera.pal.cxn.ThinPeerIT" />
-      <pattern testClass="net.ittera.pal.intercept.MethodInterceptIT" />
+      <pattern testClass="binary.rpc.com.quasient.pal.ConstructorMessageIT" />
+      <pattern testClass="binary.rpc.com.quasient.pal.GetArrayMessageIT" />
+      <pattern testClass="binary.rpc.com.quasient.pal.GetMessageIT" />
+      <pattern testClass="com.quasient.pal.rpc.binary.GetInstanceVariableMessageIT" />
+      <pattern testClass="com.quasient.pal.rpc.binary.NonVoidClassMethodMessageIT" />
+      <pattern testClass="com.quasient.pal.rpc.binary.NonVoidInstanceMethodMessageIT" />
+      <pattern testClass="binary.rpc.com.quasient.pal.PutMessageIT" />
+      <pattern testClass="com.quasient.pal.rpc.binary.SetInstanceVariableMessageIT" />
+      <pattern testClass="com.quasient.pal.rpc.binary.VoidClassMethodMessageIT" />
+      <pattern testClass="com.quasient.pal.rpc.binary.VoidInstanceMethodMessageIT" />
+      <pattern testClass="binary.rpc.com.quasient.pal.ControlMessageIT" />
+      <pattern testClass="com.quasient.pal.cxn.DirectoryConnectionProviderIT" />
+      <pattern testClass="com.quasient.pal.cxn.EtcdIT" />
+      <pattern testClass="com.quasient.pal.cxn.PalDirectoryIT" />
+      <pattern testClass="com.quasient.pal.cxn.ThinPeerIT" />
+      <pattern testClass="intercept.com.quasient.pal.MethodInterceptIT" />
     </patterns>
     <method v="2">
       <option name="Make" enabled="true" />

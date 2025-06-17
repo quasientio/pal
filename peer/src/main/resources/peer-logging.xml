@@ -24,19 +24,19 @@
     </appender>
 
     <!-- LOGGERS -->
-    <logger name="net.ittera.pal.core" level="info" additivity="false">
+    <logger name="com.quasient.pal.core" level="info" additivity="false">
         <appender-ref ref="peer"/>
     </logger>
 
-    <logger name="net.ittera.pal.common" level="info" additivity="false">
+    <logger name="com.quasient.pal.common" level="info" additivity="false">
         <appender-ref ref="peer"/>
     </logger>
 
-    <logger name="net.ittera.pal.core.LogReader" level="info" additivity="false">
+    <logger name="com.quasient.pal.core.LogReader" level="info" additivity="false">
         <appender-ref ref="peer"/>
     </logger>
 
-    <logger name="net.ittera.pal.cxn" level="info" additivity="false">
+    <logger name="com.quasient.pal.cxn" level="info" additivity="false">
         <appender-ref ref="peer"/>
     </logger>
 

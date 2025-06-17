@@ -1,6 +1,6 @@
 <aspectj>
     <aspects>
-        <aspect name="net.ittera.pal.core.FullQuantizeAspect"/>
+        <aspect name="com.quasient.pal.core.FullQuantizeAspect"/>
     </aspects>
 
     <!-- use these options for debugging weaving: options="-verbose -debug -showWeaveInfo" -->
@@ -8,7 +8,7 @@
     <weaver options="-nowarn">
 
         <!-- peer classes -->
-        <exclude within="net.ittera.pal.core..*"/>
+        <exclude within="com.quasient.pal.core..*"/>
 
         <!-- logging -->
         <exclude within="org.apache.logging..*"/>

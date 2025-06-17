@@ -16,4 +16,4 @@ MAVEN_OPTS="-Xmx1024M \
 
 MAIN_ARGS="$@"
 
-mvn -f tools/pom.xml --quiet exec:java -Dexec.mainClass="net.ittera.pal.tools.cli.Pal" -Dexec.args="$MAIN_ARGS"
+mvn -f tools/pom.xml --quiet exec:java -Dexec.mainClass="com.quasient.pal.tools.cli.Pal" -Dexec.args="$MAIN_ARGS"

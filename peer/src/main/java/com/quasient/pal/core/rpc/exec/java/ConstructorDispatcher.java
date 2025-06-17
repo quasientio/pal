@@ -1,0 +1,335 @@
+/*
+   Copyright (c) 2020 Contributors listed in the AUTHORS file
+
+   This file is part of PAL, the friendly java runtime.
+
+   PAL is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+
+   PAL is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
+package com.quasient.pal.core.rpc.exec.java;
+
+import static java.lang.Class.forName;
+
+import com.quasient.pal.common.lang.reflect.ConstructorSignature;
+import com.quasient.pal.common.objects.ObjectLookupStore;
+import com.quasient.pal.common.objects.ObjectRef;
+import com.quasient.pal.common.runtime.Context;
+import com.quasient.pal.core.rpc.DispatcherConnector;
+import com.quasient.pal.core.rpc.exec.java.reflect.ReflectionHelper;
+import com.quasient.pal.messages.colfer.ExecMessage;
+import com.quasient.pal.messages.colfer.Parameter;
+import com.quasient.pal.messages.types.MessageType;
+import com.quasient.pal.serdes.colfer.MessageBuilder;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
+import java.lang.reflect.AccessibleObject;
+import java.lang.reflect.Constructor;
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * Dispatcher responsible for handling execution messages for constructor calls.
+ *
+ * <p>This class utilizes reflection to look up and invoke constructors based on incoming execution
+ * messages. It builds pre- and post-execution messages to encapsulate the invocation details and
+ * any exceptions that may occur.
+ */
+@Singleton
+public class ConstructorDispatcher extends BaseExecMessageDispatcher {
+
+  /**
+   * Constructs a new dispatcher for handling constructor invocations.
+   *
+   * @param peerUuid the unique identifier for the peer invoking the constructor
+   * @param messageBuilder builder used to create execution messages for dispatching
+   * @param connector connector instance used to facilitate message transport
+   * @param allowNonPublicAccess flag indicating whether non-public constructors may be accessed
+   * @param reflectionHelper helper utility for performing reflection-based lookups
+   * @param objectLookupStore store used for managing object references during dispatch
+   */
+  @Inject
+  public ConstructorDispatcher(
+      UUID peerUuid,
+      MessageBuilder messageBuilder,
+      DispatcherConnector connector,
+      @Named("rpc.allow_nonpublic") String allowNonPublicAccess,
+      ReflectionHelper reflectionHelper,
+      ObjectLookupStore objectLookupStore) {
+    setPeerUuid(peerUuid);
+    setMessageBuilder(messageBuilder);
+    setConnector(connector);
+    setAllowNonPublicAccess(allowNonPublicAccess);
+    setReflectionHelper(reflectionHelper);
+    setObjectLookupStore(objectLookupStore);
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Creates a pre-execution execution message for a constructor call by storing sender and
+   * argument references.
+   *
+   * @param ctxt the current execution context containing invocation data
+   * @param sender the object initiating the constructor call
+   * @param target the target on which the constructor is eventually invoked (unused in constructor
+   *     calls)
+   * @param args the arguments to be passed to the constructor
+   * @return an {@link ExecMessage} representing the constructor call request
+   */
+  @Override
+  protected final ExecMessage createBeforeExecMessage(
+      Context ctxt, Object sender, Object target, Object[] args) {
+
+    return messageBuilder.buildConstructor(
+        peerUuid,
+        ctxt,
+        sender,
+        storeObject(sender),
+        args,
+        Arrays.stream(args).map(this::storeObject).toArray(ObjectRef[]::new));
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Creates a post-execution message after the constructor call. If the invocation resulted in
+   * an exception, the exception is wrapped into a throwable message; otherwise, the return value
+   * message is built.
+   *
+   * @param ctxt the current execution context containing the constructor signature
+   * @param value the object returned from the constructor or an exception wrapper if invocation
+   *     failed
+   * @param objectRef the reference to the constructed object
+   * @param isVoid flag indicating whether the method should be treated as void (always false for
+   *     constructors)
+   * @return an {@link ExecMessage} representing the outcome of the constructor invocation
+   */
+  @Override
+  protected final ExecMessage createAfterExecMessage(
+      Context ctxt, Object value, ObjectRef objectRef, boolean isVoid) {
+
+    final AccessibleObject constructor =
+        ((ConstructorSignature) ctxt.getSignature()).getConstructor();
+
+    if (value instanceof InvocationExceptionWrapper) {
+      Exception invocationException = ((InvocationExceptionWrapper) value).exception();
+      return messageBuilder.buildAccessibleObjectThrowable(
+          peerUuid, constructor, invocationException, null);
+    } else {
+      return messageBuilder.buildReturnValue(peerUuid, value, constructor, objectRef, false, null);
+    }
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Creates a post-execution message based on the provided execution message and the outcome of
+   * the constructor invocation. If exceptions occurred during loading or invoking the constructor,
+   * creates an appropriate throwable message.
+   *
+   * @param execMessage the original execution message associated with this call
+   * @param valueObject the resultant object produced by the constructor
+   * @param valueObjRef reference to the constructed object
+   * @param accessibleObject the reflective constructor object used in the call
+   * @param exceptionWhileLoading exception encountered during the loading phase, if any
+   * @param exceptionWhileInvoking exception encountered during the invocation phase, if any
+   * @return an {@link ExecMessage} encapsulating the result or error state after invoking the
+   *     constructor
+   */
+  @Override
+  protected ExecMessage createAfterExecMessage(
+      ExecMessage execMessage,
+      Object valueObject,
+      ObjectRef valueObjRef,
+      AccessibleObject accessibleObject,
+      Throwable exceptionWhileLoading,
+      Throwable exceptionWhileInvoking) {
+
+    String messageId = execMessage.getMessageId();
+
+    if (exceptionWhileLoading != null || exceptionWhileInvoking != null) {
+      return wrapAfterExecThrowableMessage(
+          messageId, accessibleObject, exceptionWhileLoading, exceptionWhileInvoking);
+    }
+
+    return messageBuilder.buildReturnValue(
+        peerUuid, valueObject, accessibleObject, valueObjRef, false, messageId);
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Invokes the target constructor using the provided context and parameters. Sets the
+   * constructor as accessible before invocation. Exceptions during instantiation are caught, logged
+   * and wrapped into an {@link InvocationExceptionWrapper}.
+   *
+   * @param ctxt the current execution context containing the constructor signature
+   * @param sender the object initiating the invocation
+   * @param target the target for the constructor invocation (unused for constructor calls)
+   * @param args the arguments to be passed to the constructor
+   * @return the new object instance created by the constructor, or an {@link
+   *     InvocationExceptionWrapper} if an error occurs
+   */
+  @Override
+  protected final Object invoke(Context ctxt, Object sender, Object target, Object[] args) {
+    if (logger.isTraceEnabled()) {
+      logger.trace(
+          "invoke w/ ctxt: {}, sender: {}, target: {}, args: {}",
+          ctxt,
+          sender,
+          target,
+          Arrays.toString(args));
+    }
+    final Constructor<?> constructor =
+        ((ConstructorSignature) ctxt.getSignature()).getConstructor();
+    Object newObject;
+    constructor.setAccessible(true);
+    try {
+      newObject = constructor.newInstance(args);
+    } catch (Exception ex) {
+      logger.error("Caught exception while invoking constructor. Will wrap and return it.", ex);
+      return new InvocationExceptionWrapper(ex);
+    }
+
+    return newObject;
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Processes an incoming message for a constructor call. In this implementation, the target
+   * object and the provided value are discarded, and the invocation is handled solely based on the
+   * accessible object and deserialized arguments.
+   *
+   * @param accessibleObject the accessible constructor object to be used for invocation
+   * @param target the target object (ignored in constructor invocations)
+   * @param args list of message arguments to be adapted for the constructor call
+   * @param value a pre-provided value (ignored in this context)
+   * @return the object created by invoking the constructor with adapted arguments
+   * @throws Exception if any error occurs during argument adaptation or constructor invocation
+   */
+  @Override
+  protected Object invokeIncoming(
+      AccessibleObject accessibleObject, Object target, List<MessageArgument> args, Object value)
+      throws Exception {
+    // discard target and value
+    return invokeIncoming(accessibleObject, args);
+  }
+
+  /**
+   * Invokes the constructor represented by the given accessible object using the provided
+   * deserialized arguments.
+   *
+   * <p>Adapts the incoming message arguments to match the constructor's parameter types using a
+   * utility method, then creates a new instance by invoking the constructor.
+   *
+   * @param accessibleObject the reflective constructor to be invoked
+   * @param deserializedArgs the list of arguments deserialized from the incoming message
+   * @return a new object instance created by the constructor
+   * @throws Exception if instantiation fails or arguments are incompatible with the constructor
+   */
+  private Object invokeIncoming(
+      AccessibleObject accessibleObject, List<MessageArgument> deserializedArgs) throws Exception {
+    if (logger.isTraceEnabled()) {
+      logger.trace(
+          "invokeIncoming:in w/ accessibleObject: {}, args: {}",
+          accessibleObject,
+          deserializedArgs);
+    }
+    Constructor<?> constructor = (Constructor<?>) accessibleObject;
+    Object[] args =
+        ParameterAdaptationUtils.adaptParametersForConstructor(
+            constructor, deserializedArgs.toArray(new MessageArgument[0]));
+    return constructor.newInstance(args);
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Indicates that a constructor invocation never returns void.
+   *
+   * @param accessibleObject the accessible constructor (unused in this implementation)
+   * @return always {@code false} since constructors yield object instances
+   */
+  @Override
+  protected final boolean returnsVoid(AccessibleObject accessibleObject) {
+    return false;
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Returns the message type used for pre-execution messages specific to constructor calls.
+   *
+   * @return {@link MessageType#EXEC_CONSTRUCTOR} indicating the message type for constructor
+   *     execution
+   */
+  @Override
+  protected final MessageType getBeforeExecMessageType() {
+    return MessageType.EXEC_CONSTRUCTOR;
+  }
+
+  /**
+   * Retrieves the list of parameters from the constructor call encapsulated within the given
+   * execution message.
+   *
+   * @param execMessage the execution message containing the constructor call details
+   * @return a list of {@link Parameter} objects representing the constructor parameters
+   */
+  @Override
+  protected List<Parameter> getParameterList(ExecMessage execMessage) {
+    return Arrays.asList(execMessage.getConstructorCall().getParameters());
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Loads the constructor reflective object based on the provided execution message, parameter
+   * types, and arguments. It uses dynamic class loading and a helper to accurately match the
+   * constructor signature.
+   *
+   * @param execMessage the execution message containing the target class and constructor details
+   * @param parameterTypes the list of parameter types expected by the constructor
+   * @param args the list of arguments to be passed to the constructor
+   * @return the {@link AccessibleObject} representing the located constructor
+   * @throws ReflectiveOperationException if the target class or constructor cannot be found
+   * @throws AmbiguousCallException if multiple matching constructors are encountered
+   */
+  @Override
+  protected AccessibleObject loadAccessibleObject(
+      ExecMessage execMessage, List<Class<?>> parameterTypes, List<Object> args)
+      throws ReflectiveOperationException, AmbiguousCallException {
+    Class<?> clazz =
+        forName(
+            execMessage.getConstructorCall().getClazz().getName(),
+            true,
+            Thread.currentThread().getContextClassLoader());
+    return reflectionHelper.lookupConstructor(clazz, args.toArray(), parameterTypes);
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Returns the supported message type for this dispatcher, which handles constructor execution
+   * calls.
+   *
+   * @return {@link MessageType#EXEC_CONSTRUCTOR} representing the supported execution message type
+   */
+  @Override
+  public MessageType getSupportedMessageType() {
+    return MessageType.EXEC_CONSTRUCTOR;
+  }
+}

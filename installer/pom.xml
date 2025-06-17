@@ -4,14 +4,14 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
-  <artifactId>pal_installer</artifactId>
+  <artifactId>pal-installer</artifactId>
   <name>installer</name>
   <packaging>pom</packaging>
 
 
   <parent>
     <artifactId>pal</artifactId>
-    <groupId>net.ittera.pal</groupId>
+    <groupId>com.quasient.pal</groupId>
     <version>1.0.0-SNAPSHOT</version>
   </parent>
 

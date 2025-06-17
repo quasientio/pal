@@ -14,8 +14,8 @@ cd $PAL_HOME/serdes
 # re-compile all schemas
 colf-linux -f \
  -b src/main/java \
- -p net.ittera.pal.messages \
- -i net.ittera.pal.messages.Marshallable \
+ -p com.quasient.pal.messages \
+ -i com.quasient.pal.messages.Marshallable \
   Java src/main/colfer/*.colf
 
 # add the fromJson() method to all generated classes

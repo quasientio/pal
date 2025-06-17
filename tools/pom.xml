@@ -3,25 +3,25 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
-    <artifactId>tools</artifactId>
+    <artifactId>pal-cli</artifactId>
     <packaging>jar</packaging>
-    <name>tools (includes CLI)</name>
+    <name>pal CLI classes</name>
 
     <parent>
-        <groupId>net.ittera.pal</groupId>
+        <groupId>com.quasient.pal</groupId>
         <artifactId>pal</artifactId>
         <version>1.0.0-SNAPSHOT</version>
     </parent>
 
 
     <properties>
-        <file.appender.class>net.ittera.pal.common.logging.PeerFileAppender</file.appender.class>
-        <console.appender.class>net.ittera.pal.common.logging.PeerConsoleAppender</console.appender.class>
+        <file.appender.class>com.quasient.pal.common.logging.PeerFileAppender</file.appender.class>
+        <console.appender.class>com.quasient.pal.common.logging.PeerConsoleAppender</console.appender.class>
         <!-- shading related -->
-        <shading.prefix>net.ittera.pal.shd</shading.prefix>
-        <kafka.logger.name>net.ittera.pal.shd.apache.kafka</kafka.logger.name>
+        <shading.prefix>com.quasient.pal.shd</shading.prefix>
+        <kafka.logger.name>com.quasient.pal.shd.apache.kafka</kafka.logger.name>
         <kafka.logger.name.unshaded>org.apache.kafka</kafka.logger.name.unshaded>
-        <jetcd.logger.name>net.ittera.pal.shd.io.etcd</jetcd.logger.name>
+        <jetcd.logger.name>com.quasient.pal.shd.io.etcd</jetcd.logger.name>
         <jetcd.logger.name.unshaded>io.etcd</jetcd.logger.name.unshaded>
     </properties>
 
@@ -200,28 +200,28 @@
                         </filter>
                         <!-- Begin: force inclusion of required classes that are discarded by minimization -->
                         <filter>
-                            <artifact>net.ittera.pal:aspects</artifact>
+                            <artifact>com.quasient.pal:pal-weave</artifact>
                             <includes>
-                                <include>net/ittera/pal/core/**</include>
+                                <include>com/quasient/pal/core/**</include>
                             </includes>
                         </filter>
                         <filter>
-                            <artifact>net.ittera.pal:common</artifact>
+                            <artifact>com.quasient.pal:pal-core-api</artifact>
                             <includes>
-                                <include>net/ittera/pal/common/**</include>
+                                <include>com/quasient/pal/common/**</include>
                             </includes>
                         </filter>
                         <filter>
-                            <artifact>net.ittera.pal:cxn</artifact>
+                            <artifact>com.quasient.pal:pal-cxn</artifact>
                             <includes>
-                                <include>net/ittera/pal/cxn/**</include>
-                                <include>net/ittera/pal/messages/**</include>
+                                <include>com/quasient/pal/cxn/**</include>
+                                <include>com/quasient/pal/messages/**</include>
                             </includes>
                         </filter>
                         <filter>
-                            <artifact>net.ittera.pal:serdes</artifact>
+                            <artifact>com.quasient.pal:pal-serdes</artifact>
                             <includes>
-                                <include>net/ittera/pal/**</include>
+                                <include>com/quasient/pal/**</include>
                             </includes>
                         </filter>
                         <filter>
@@ -237,7 +237,7 @@
                         <transformer
                           implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                           <manifestEntries>
-                            <Main-Class>net.ittera.pal.tools.cli.Pal</Main-Class>
+                            <Main-Class>com.quasient.pal.tools.cli.Pal</Main-Class>
                             <Implementation-Version>${project.version}</Implementation-Version>
                           </manifestEntries>
                         </transformer>
@@ -288,20 +288,20 @@
     <dependencies>
         <!-- OWN DEPENDENCIES -->
         <dependency>
-            <groupId>net.ittera.pal</groupId>
-            <artifactId>common</artifactId>
+            <groupId>com.quasient.pal</groupId>
+            <artifactId>pal-core-api</artifactId>
         </dependency>
         <dependency>
-            <groupId>net.ittera.pal</groupId>
-            <artifactId>serdes</artifactId>
+            <groupId>com.quasient.pal</groupId>
+            <artifactId>pal-serdes</artifactId>
         </dependency>
         <dependency>
-            <groupId>net.ittera.pal</groupId>
-            <artifactId>cxn</artifactId>
+            <groupId>com.quasient.pal</groupId>
+            <artifactId>pal-cxn</artifactId>
         </dependency>
         <dependency>
-            <groupId>net.ittera.pal</groupId>
-            <artifactId>peer</artifactId>
+            <groupId>com.quasient.pal</groupId>
+            <artifactId>pal-runtime</artifactId>
         </dependency>
 
         <!-- OTHER DEPENDENCIES -->
