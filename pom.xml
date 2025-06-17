@@ -94,7 +94,7 @@
                                 -Xplugin:ErrorProne \
                                 -Xep:JUnitIncompatibleType:OFF \
                                 -Xep:DeadException:WARN \
-                                -XepExcludedPaths:.*/serdes/src/main/java/com/quasient/pal/messages/colfer.* \
+                                -XepExcludedPaths:.*/pal-serdes/src/main/java/com/quasient/pal/messages/colfer.* \
                                 -Xep:GuardedBy:OFF
                             </arg>
                         </compilerArgs>
@@ -404,12 +404,12 @@
     </dependencyManagement>
 
     <modules>
-        <module>common</module>
-        <module>peer</module>
-        <module>aspects</module>
-        <module>serdes</module>
-        <module>cxn</module>
-        <module>tools</module>
+        <module>pal-core-api</module>
+        <module>pal-runtime</module>
+        <module>pal-weave</module>
+        <module>pal-serdes</module>
+        <module>pal-cxn</module>
+        <module>pal-cli</module>
         <module>itt-apps</module>
         <module>itt</module>
         <module>installer</module>

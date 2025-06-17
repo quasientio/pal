@@ -11,7 +11,7 @@
   <baseDirectory>pal-${project.version}</baseDirectory>
   <files>
     <file>
-      <source>../tools/target/pal-${project.version}.jar</source>
+      <source>../pal-cli/target/pal-${project.version}.jar</source>
       <outputDirectory>lib</outputDirectory>
     </file>
   </files>
