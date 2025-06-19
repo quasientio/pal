@@ -1,8 +1,7 @@
-<p align="center">
+<p>
 ![pal logo](site/imgs/PAL-logo-01.png)
 <br>
-    <h1 align="center">PAL, a friendly runtime for a connected age</h1>
-</p>
+    <h1>PAL, a friendly runtime for a connected age.</h1>
 
 
 ## Introduction
@@ -20,7 +19,7 @@ As Alan Kay, father of object-oriented programming, [once said](https://en.wikip
 
 PAL is an embodiment of this realization, an exploration into _the big idea_. PAL implements this concept in Java,
 empowering programs with message-passing capabilities, by translating control (via direct invocations)
-into communication (via messages), and enabling a set of standard external interfaces (RPC, REST, PUB/SUB, etc)
+into communication (via messages), and enabling a set of standard external interfaces (RPC, REST, PUB/SUB, etc.)
 out of the box.
 
 ### What PAL isn't
@@ -71,7 +70,7 @@ Pal is 100% java, laid out as a multi-module Maven project.
 
 Quickly build and install, running all unittests: `mvn install -DskipITs`
 
-The above command skips integration tests. To run these as well, follow the instructions in the [itt README](itt/README.md).
+The above command skips integration tests. To run these as well, follow the instructions in the [itt README](modules/itt/README.md).
 
 ### Download
 As an alternative to building PAL from its sources, you may get the binaries of the latest release.
