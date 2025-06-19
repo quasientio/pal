@@ -13,7 +13,7 @@
 #          --rpc 6678 \
 #          --jsonrpc 6679 \
 #          -cp "$(pwd)/target/classes" \
-#          net.ittera.pal.examples.HelloWorld
+#          com.quasient.pal.examples.HelloWorld
 
 ###############################################################################
 # 0. helper paths / functions
