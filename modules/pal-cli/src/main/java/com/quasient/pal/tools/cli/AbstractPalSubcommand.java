@@ -21,12 +21,15 @@ package com.quasient.pal.tools.cli;
 
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.joran.JoranConfigurator;
+import com.quasient.pal.core.Main;
 import com.quasient.pal.cxn.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.PalDirectory;
 import com.quasient.pal.tools.AbstractTool;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import org.slf4j.LoggerFactory;
@@ -40,7 +43,7 @@ import org.slf4j.LoggerFactory;
 public abstract class AbstractPalSubcommand extends AbstractTool implements Callable<Integer> {
 
   /** Path to the logging configuration file used by Logback. */
-  private static final String LOGGING_CONFIG = "/cli-logging.xml";
+  private static final String LOGGING_CONFIG = "/cli-logging-fallback.xml";
 
   /** Provides connections to the PAL directory. */
   protected DirectoryConnectionProvider directoryConnectionProvider;
@@ -92,24 +95,51 @@ public abstract class AbstractPalSubcommand extends AbstractTool implements Call
   protected abstract void validateInput();
 
   /**
-   * Configures the logging framework using the Logback configuration.
+   * Initializes and configures the logging system using Logback.
    *
-   * <p>Logging is configured here and not in the PAL parent command because configuring Logback
-   * when launching the 'run' subcommand is not feasible.
+   * <p>If a system property "cli.logging" is set and points to an existing file, that configuration
+   * is used. Otherwise, the default logging configuration resource is loaded.
    */
   private void configureLogging() {
+    // configure logging
     LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
     JoranConfigurator configurator = new JoranConfigurator();
     configurator.setContext(context);
     context.reset();
-    try (final InputStream stream =
-        AbstractPalSubcommand.class.getResourceAsStream(LOGGING_CONFIG)) {
+
+    // look for a property named cli.logging in the System properties and use it as configuration if
+    // the file exists
+    final String palLogging = System.getProperty("cli.logging");
+    if (palLogging != null && !palLogging.trim().isEmpty()) {
+      boolean givenFileExists = false;
+      try {
+        if (Files.exists(Paths.get(palLogging))) {
+          givenFileExists = true;
+        }
+      } catch (Exception ex) {
+        ex.printStackTrace(System.err);
+      }
+      if (givenFileExists) {
+        try {
+          configurator.doConfigure(palLogging);
+        } catch (Exception ex) {
+          System.err.printf("Error loading logging configuration from %s%n", palLogging);
+          // for more info: StatusPrinter.printInCaseOfErrorsOrWarnings(context);
+          //noinspection CallToPrintStackTrace
+          ex.printStackTrace();
+        }
+        return;
+      }
+    }
+
+    // fall back to our default logging configuration
+    try (final InputStream stream = Main.class.getResourceAsStream(LOGGING_CONFIG)) {
       configurator.doConfigure(stream);
-    } catch (Exception ie) {
+    } catch (Exception ex) {
       System.err.printf("Error loading logging configuration from %s%n", LOGGING_CONFIG);
       // for more info: StatusPrinter.printInCaseOfErrorsOrWarnings(context);
       //noinspection CallToPrintStackTrace
-      ie.printStackTrace();
+      ex.printStackTrace();
     }
   }
 

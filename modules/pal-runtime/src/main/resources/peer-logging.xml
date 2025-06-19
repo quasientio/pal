@@ -44,15 +44,7 @@
         <appender-ref ref="kafka"/>
     </logger>
 
-    <logger name="${kafka.logger.name.unshaded}" level="info" additivity="false">
-        <appender-ref ref="kafka"/>
-    </logger>
-
     <logger name="${jetcd.logger.name}" level="info" additivity="false">
-        <appender-ref ref="etcd"/>
-    </logger>
-
-    <logger name="${jetcd.logger.name.unshaded}" level="info" additivity="false">
         <appender-ref ref="etcd"/>
     </logger>
 

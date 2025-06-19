@@ -11,7 +11,7 @@
   <baseDirectory>pal-${project.version}</baseDirectory>
   <files>
     <file>
-      <source>../pal-cli/target/pal-${project.version}.jar</source>
+      <source>../modules/pal-cli/target/pal-${project.version}.jar</source>
       <outputDirectory>lib</outputDirectory>
     </file>
   </files>
@@ -29,10 +29,6 @@
         <!-- env variables for running docker-compose -->
         <include>.env</include>
       </includes>
-    </fileSet>
-    <fileSet>
-      <directory>../docker</directory>
-      <outputDirectory>docker</outputDirectory>
     </fileSet>
     <fileSet>
       <directory>../bin</directory>

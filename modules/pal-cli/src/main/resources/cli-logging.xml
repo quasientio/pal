@@ -9,14 +9,14 @@
     </appender>
 
     <appender name="kafka" class="${file.appender.class}">
-        <file>${logs.dir}/kafka.log</file>
+        <file>${logs.dir}/kafka-cli.log</file>
         <encoder>
             <pattern>%date %level [%thread][%logger{10}] %message%n</pattern>
         </encoder>
     </appender>
 
     <appender name="etcd" class="${file.appender.class}">
-        <file>${logs.dir}/etcd.log</file>
+        <file>${logs.dir}/etcd-cli.log</file>
         <encoder>
             <pattern>%date %level [%thread][%logger{10}] %message%n</pattern>
         </encoder>
@@ -34,20 +34,12 @@
         <appender-ref ref="kafka"/>
     </logger>
 
-    <logger name="${kafka.logger.name.unshaded}" level="info" additivity="false">
-        <appender-ref ref="kafka"/>
-    </logger>
-
     <logger name="${jetcd.logger.name}" level="info" additivity="false">
         <appender-ref ref="etcd"/>
     </logger>
 
-    <logger name="${jetcd.logger.name.unshaded}" level="info" additivity="false">
-        <appender-ref ref="etcd"/>
-    </logger>
-
     <root level="warn">
-        <!--appender-ref ref="cli"/-->
+        <appender-ref ref="cli"/>
     </root>
 
 </configuration>

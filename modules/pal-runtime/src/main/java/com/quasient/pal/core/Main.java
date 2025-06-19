@@ -334,7 +334,7 @@ public class Main implements Callable<Integer> {
   private static final String PROPERTIES_FILE = "/peer.properties";
 
   /** Path to the default logging configuration file in the classpath. */
-  private static final String LOGGING_CONFIG = "/peer-logging.xml";
+  private static final String LOGGING_CONFIG = "/peer-logging-fallback.xml";
 
   /** Duration to wait for managed services to stop. */
   private static final Duration SERVICE_MANAGER_AWAIT_TERM = Duration.of(15, ChronoUnit.SECONDS);
@@ -384,8 +384,8 @@ public class Main implements Callable<Integer> {
   /**
    * Initializes and configures the logging system using Logback.
    *
-   * <p>If a system property "pal.logging" is set and points to an existing file, that configuration
-   * is used. Otherwise, the default logging configuration resource is loaded.
+   * <p>If a system property "peer.logging" is set and points to an existing file, that
+   * configuration is used. Otherwise, the default logging configuration resource is loaded.
    */
   private void initLogging() {
     // configure logging
@@ -394,9 +394,8 @@ public class Main implements Callable<Integer> {
     configurator.setContext(context);
     context.reset();
 
-    // look for a property named pal.logging in the System properties and use it as configuration if
-    // the file exists
-    final String palLogging = System.getProperty("pal.logging");
+    // look for a property named peer.logging in the System properties
+    final String palLogging = System.getProperty("peer.logging");
     if (palLogging != null && !palLogging.trim().isEmpty()) {
       boolean givenFileExists = false;
       try {

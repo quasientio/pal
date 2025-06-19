@@ -17,12 +17,9 @@
     <properties>
         <file.appender.class>com.quasient.pal.common.logging.PeerFileAppender</file.appender.class>
         <console.appender.class>com.quasient.pal.common.logging.PeerConsoleAppender</console.appender.class>
-        <!-- shading related -->
+        <kafka.logger.name>org.apache.kafka</kafka.logger.name>
+        <jetcd.logger.name>io.etcd</jetcd.logger.name>
         <shading.prefix>com.quasient.pal.shd</shading.prefix>
-        <kafka.logger.name>com.quasient.pal.shd.apache.kafka</kafka.logger.name>
-        <kafka.logger.name.unshaded>org.apache.kafka</kafka.logger.name.unshaded>
-        <jetcd.logger.name>com.quasient.pal.shd.io.etcd</jetcd.logger.name>
-        <jetcd.logger.name.unshaded>io.etcd</jetcd.logger.name.unshaded>
     </properties>
 
 
@@ -51,24 +48,31 @@
                     </execution>
                 </executions>
             </plugin>
-            <!-- also install to local lib/ folder, for our scripts in bin/ to work -->
+            <!-- copy cli-logging.xml to config/ -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-antrun-plugin</artifactId>
-                <version>${maven.plugin.antrun.version}</version>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>${maven.plugin.resources.version}</version>
                 <executions>
                     <execution>
-                        <phase>install</phase>
-                        <configuration>
-                            <target>
-                                <copy
-                                  file="target/${project.build.finalName}.${project.packaging}"
-                                  toDir="${project.basedir}/../lib" />
-                            </target>
-                        </configuration>
+                        <id>copy-logging-config</id>
+                        <phase>prepare-package</phase>
                         <goals>
-                            <goal>run</goal>
+                            <goal>copy-resources</goal>
                         </goals>
+                        <configuration>
+                            <outputDirectory>config</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>src/main/resources</directory>
+                                    <includes>
+                                        <include>cli-logging.xml</include>
+                                    </includes>
+                                    <filtering>true</filtering>
+                                </resource>
+                            </resources>
+                            <overwrite>true</overwrite>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
@@ -280,6 +284,7 @@
                 <filtering>true</filtering>
                 <excludes>
                     <exclude>.gitignore</exclude>
+                    <exclude>cli-logging.xml</exclude>
                 </excludes>
             </resource>
         </resources>

@@ -38,8 +38,11 @@ if [ -n "$JAVA_AGENT" ]; then
 fi
 
 # Include logging configuration
-if [ -f "$PAL_LOGGING_CONFIG" ]; then
-  JAVA_OPTS="$JAVA_OPTS -Dpal.logging=$PAL_LOGGING_CONFIG"
+if [ -f "$PAL_PEER_LOGGING_CONFIG" ]; then
+  JAVA_OPTS="$JAVA_OPTS -Dpeer.logging=$PAL_PEER_LOGGING_CONFIG"
+fi
+if [ -f "$PAL_CLI_LOGGING_CONFIG" ]; then
+  JAVA_OPTS="$JAVA_OPTS -Dcli.logging=$PAL_CLI_LOGGING_CONFIG"
 fi
 
 # Find pal's jar under $PAL_HOME/lib, fallback to lib/

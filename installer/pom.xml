@@ -15,6 +15,14 @@
     <version>1.0.0-SNAPSHOT</version>
   </parent>
 
+  <properties>
+      <file.appender.class>com.quasient.pal.common.logging.PeerFileAppender</file.appender.class>
+      <console.appender.class>com.quasient.pal.common.logging.PeerConsoleAppender</console.appender.class>
+      <kafka.logger.name>com.quasient.pal.shd.apache.kafka</kafka.logger.name>
+      <jetcd.logger.name>com.quasient.pal.shd.io.etcd</jetcd.logger.name>
+  </properties>
+
+
   <build>
     <plugins>
       <plugin>
@@ -30,6 +38,64 @@
               <descriptors>
                 <descriptor>src/maven/assembly/pal-package.xml</descriptor>
               </descriptors>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- copy pal jar to root lib/ folder, for our scripts in bin/ to work -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>copy-pal-cli-jar-to-root-lib</id>
+            <phase>package</phase>
+            <goals><goal>copy</goal></goals>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>com.quasient.pal</groupId>
+                  <artifactId>pal-cli</artifactId>
+                  <version>${project.version}</version>
+                  <outputDirectory>${project.basedir}/../lib</outputDirectory>
+                  <destFileName>pal-${project.version}.jar</destFileName>
+                </artifactItem>
+              </artifactItems>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- copy peer-logging.xml and cli-logging.xml, using the shaded logger names -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>${maven.plugin.resources.version}</version>
+        <executions>
+          <execution>
+            <id>copy-logging-config-from-pal-runtime</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.basedir}/../config</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${project.basedir}/../modules/pal-runtime/src/main/resources</directory>
+                  <includes>
+                    <include>peer-logging.xml</include>
+                  </includes>
+                  <filtering>true</filtering>
+                </resource>
+                <resource>
+                  <directory>${project.basedir}/../modules/pal-cli/src/main/resources</directory>
+                  <includes>
+                    <include>cli-logging.xml</include>
+                  </includes>
+                  <filtering>true</filtering>
+                </resource>
+              </resources>
+              <overwrite>true</overwrite>
             </configuration>
           </execution>
         </executions>
