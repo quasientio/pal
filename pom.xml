@@ -418,7 +418,7 @@
         <module>modules/pal-cli</module>
         <module>modules/itt-apps</module>
         <module>modules/itt</module>
-        <module>installer</module>
+        <module>distribution</module>
     </modules>
 
 
