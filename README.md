@@ -76,8 +76,8 @@ The above command skips integration tests. To run these as well, follow the inst
 ### Download
 As an alternative to building PAL from its sources, you may get the binaries of the latest release.
 Browse to the [PAL Package Registry](https://gitlab.com/cometera/pal/-/packages) and click on
-the __com/quasient/pal/pal_distribution__ package. Under Assets click on the pal_distribution-VERSION-DATE.TAG-bin.zip file
-or the similar .tar.gz file.
+the __com/quasient/pal/pal-distribution__ package. Under Assets click on the pal-distribution-VERSION-DATE.TAG-bin.zip file
+or the equivalent .tar.gz file.
 Once downloaded, simply unzip/tar-gunzip the file wherever you want to install it in your system.
 
 ### Usage
