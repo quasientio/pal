@@ -11,6 +11,8 @@ PAL_DIRECTORY="${PAL_DIRECTORY:-localhost:2379}"
 # Provide default for KAFKA_SERVERS if not set
 KAFKA_SERVERS="${KAFKA_SERVERS:-localhost:29092}"
 
+ITT_APPS_JAR=${PAL_HOME}/modules/itt-apps/target/itt-apps-*.jar
+
 export PAL_PEER_LOGGING_CONFIG="$PAL_HOME/config/peer-logging.xml"
 
 pal run \
@@ -23,4 +25,4 @@ pal run \
   --log auto \
   --kafka-servers $KAFKA_SERVERS \
   --interceptable \
-  --classpath "$PAL_HOME/modules/itt-apps/target/itt-apps-1.0.0-SNAPSHOT.jar"
+  --classpath $ITT_APPS_JAR
