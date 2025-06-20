@@ -117,15 +117,11 @@ publish-pal-image:
     - export PAL_HOME="$CI_PROJECT_DIR"
     - echo "PAL_HOME is $PAL_HOME"
     - mkdir -p "$PAL_HOME/lib" && cp "$PAL_JAR" "$PAL_HOME/lib"
-    - |
-      echo "=== Cloning pal-automate repo ==="
-      git clone https://"$AUTOMATE_REPO_USERNAME":"$AUTOMATE_REPO_TOKEN"@gitlab.com/cometera/pal-automate.git pal-automate
     - pip install --no-cache-dir ansible requests
     - ansible-galaxy collection install community.docker --force
     - |
       echo "=== Running the Ansible playbook ==="
-      cd pal-automate
-      ansible-playbook ansible/playbooks/build_and_push_pal_image.yml
+      ansible-playbook infra/ansible/playbooks/build_and_push_pal_image.yml
   rules:
     - if: $CI_COMMIT_BRANCH == "main" && $SKIP_NON_DEPLOY != "true"
       when: on_success
