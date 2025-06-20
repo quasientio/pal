@@ -69,6 +69,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
@@ -796,35 +797,45 @@ public class Main implements Callable<Integer> {
   }
 
   /**
-   * Retrieves the JMX connection address based on system properties and environment variables.
-   *
-   * @return a string in the format "host:port" representing the JMX address, or null if JMX is
-   *     disabled
+   * Returns the JMX address in "host:port" form, or {@code null} if JMX is disabled /
+   * mis-configured.
    */
-  private String getJmxAddress() {
-    final String jmxRemote = System.getProperty("com.sun.management.jmxremote");
-    if ("false".equalsIgnoreCase(jmxRemote)) {
+  private @Nullable String getJmxAddress() {
+    // Quick exit if explicitly disabled
+    if ("false".equalsIgnoreCase(System.getProperty("com.sun.management.jmxremote"))) {
       return null;
     }
-    final String jmxRemotePortStr = System.getProperty("com.sun.management.jmxremote.port");
-    Integer jmxRemotePort = jmxRemotePortStr != null ? Integer.parseInt(jmxRemotePortStr) : null;
-    String jmxRemoteHost = System.getProperty("java.rmi.server.hostname");
-    if (jmxRemoteHost == null) {
-      final String localOnly = System.getProperty("com.sun.management.jmxremote.local.only");
-      // see if JMX_HOST env variable exists
-      final String hostEnv = System.getenv("JMX_HOST");
-      if (hostEnv != null && !hostEnv.isEmpty()) {
-        jmxRemoteHost = hostEnv;
-      } else if (localOnly != null && !"false".equalsIgnoreCase(localOnly)) {
-        // if local.only, then we assume hostname = 'localhost'
-        jmxRemoteHost = "localhost";
+
+    // Resolve PORT  – property → PAL_ env
+    Integer port = null;
+    String portStr = System.getProperty("com.sun.management.jmxremote.port");
+    if (portStr == null || portStr.isEmpty()) {
+      portStr = System.getenv("PAL_JMX_PORT");
+    }
+    if (portStr != null && !portStr.isEmpty()) {
+      try {
+        port = Integer.parseInt(portStr);
+      } catch (NumberFormatException e) {
+        logger.warn("Invalid JMX port - JMX not configured", e);
       }
     }
-    if (jmxRemoteHost != null && jmxRemotePort != null) {
-      return format("%s:%d", jmxRemoteHost, jmxRemotePort);
-    } else {
-      return null;
+
+    // Resolve HOST – property → PAL_ env → local-only default
+    String host = System.getProperty("java.rmi.server.hostname");
+    if (host == null || host.isEmpty()) {
+      host = System.getenv("PAL_JMX_HOST");
+      if (host == null || host.isEmpty()) {
+        // local-only defaults to TRUE when the prop is absent
+        String localOnly = System.getProperty("com.sun.management.jmxremote.local.only");
+        boolean local = !"false".equalsIgnoreCase(localOnly);
+        if (local) {
+          host = "localhost";
+        }
+      }
     }
+
+    // Assemble
+    return (host != null && port != null) ? host + ':' + port : null;
   }
 
   /**

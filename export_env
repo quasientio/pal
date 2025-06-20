@@ -1,5 +1,5 @@
-export JMX_HOST=localhost
-export JMX_PORT=9012
+export PAL_JMX_HOST=localhost
+export PAL_JMX_PORT=9012
 export PAL_PEER_LOGGING_CONFIG=$PAL_HOME/.local/conf/peer-logging.xml
 export PAL_CLI_LOGGING_CONFIG=$PAL_HOME/.local/conf/cli-logging.xml
 # export NO_COLOR=

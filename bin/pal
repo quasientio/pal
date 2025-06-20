@@ -13,6 +13,14 @@ for arg in "$@"; do
   esac
 done
 
+# Pick up JMX host/port from *prefixed* environment variables
+if [ -n "$PAL_JMX_HOST" ]; then
+  JMX_HOST="$PAL_JMX_HOST"
+fi
+if [ -n "$PAL_JMX_PORT" ]; then
+  JMX_PORT="$PAL_JMX_PORT"
+fi
+
 # Default JVM options
 JAVA_OPTS=${JAVA_OPTS:-""}
 
@@ -20,7 +28,7 @@ JAVA_OPTS=${JAVA_OPTS:-""}
 if [ "$COMMAND" = "run" ]; then
   JAVA_OPTS="$JAVA_OPTS -server -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+ParallelRefProcEnabled -Xmx1g -XX:+IgnoreUnrecognizedVMOptions -Xverify:none"
 
-  # Include JMX options if JMX_HOST and JMX_PORT are set
+  # Include JMX options if JMX_HOST and JMX_PORT are now set
   if [ -n "$JMX_HOST" ] && [ -n "$JMX_PORT" ]; then
     JAVA_OPTS="$JAVA_OPTS \
       -Dcom.sun.management.jmxremote \
