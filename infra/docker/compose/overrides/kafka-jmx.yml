@@ -1,0 +1,6 @@
+services:
+  kafka:
+    ports:
+      - "${KAFKA_JMX_PORT}:${KAFKA_JMX_PORT}"
+    environment:
+      JMX_PORT: "${KAFKA_JMX_PORT}"

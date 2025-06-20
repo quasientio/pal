@@ -1,0 +1,113 @@
+- name: Build and Push PAL Docker Image
+  hosts: localhost
+  connection: local
+  vars:
+    docker_pal_dir: "{{ (playbook_dir + '/../../docker/pal') | realpath }}"
+    pal_home: "{{ lookup('env', 'PAL_HOME') }}"
+
+    # Docker image names and tags
+    local_image_name: "pal"
+    local_image_tag: "latest"
+    registry_image_name: "registry.gitlab.com/cometera/pal/pal"
+    registry_tag: "latest"
+
+    # Docker registry credentials
+    registry_url: "{{ lookup('env', 'CI_REGISTRY') | default(lookup('env', 'REGISTRY_URL')) }}"
+    registry_username: "{{ lookup('env', 'CI_REGISTRY_USER') | default(lookup('env', 'REGISTRY_USERNAME')) }}"
+    registry_password: "{{ lookup('env', 'CI_REGISTRY_PASSWORD') | default(lookup('env', 'REGISTRY_PASSWORD')) }}"
+
+    # By default we push the image; can be overridden via --extra-vars
+    push_image: true
+
+  tasks:
+
+    - name: Fail if PAL_HOME is undefined
+      fail:
+        msg: "Error: PAL_HOME is undefined. Please set the PAL_HOME environment variable."
+      when: pal_home == ""
+
+    - name: Debug docker_pal_dir
+      debug:
+        var: docker_pal_dir
+
+    - name: Debug pal_home
+      debug:
+        var: pal_home
+
+    - name: Remove existing bin/ and lib/ from docker/pal
+      file:
+        path: "{{ docker_pal_dir }}/{{ item }}"
+        state: absent
+      loop:
+        - bin
+        - lib
+
+    - name: Recreate bin/ and lib/ in docker/pal
+      file:
+        path: "{{ docker_pal_dir }}/{{ item }}"
+        state: directory
+      loop:
+        - bin
+        - lib
+
+    - name: Copy pal binary
+      copy:
+        src: "{{ pal_home }}/bin/pal"
+        dest: "{{ docker_pal_dir }}/bin/pal"
+        mode: "0755"
+
+    - name: Copy wait-for script
+      copy:
+        src: "{{ pal_home }}/bin/wait-for"
+        dest: "{{ docker_pal_dir }}/bin/wait-for"
+        mode: "0755"
+
+    - name: Find the JAR file in {{ pal_home }}/lib/
+      find:
+        paths: "{{ pal_home }}/lib/"
+        patterns: "pal-*.jar"
+      register: jar_files
+
+    - name: Fail if no JAR file is found in {{ pal_home }}/lib/
+      fail:
+        msg: "The JAR file (pal-*.jar) is missing in {{ pal_home }}/lib/."
+      when: jar_files.matched == 0
+
+    - name: Copy JAR files
+      copy:
+        src: "{{ pal_home }}/lib/"
+        dest: "{{ docker_pal_dir }}/lib/"
+        mode: "0644"
+
+    - name: Build Docker image locally as pal:latest
+      community.docker.docker_image:
+        source: build
+        build:
+          path: "{{ docker_pal_dir }}"
+        name: "{{ local_image_name }}"
+        tag: "{{ local_image_tag }}"
+        push: no
+
+    - name: Re-tag pal:latest -> registry.gitlab.com/cometera/pal/pal:latest
+      community.docker.docker_image_tag:
+        repository: "{{ registry_image_name }}"
+        name: "pal"
+        tag: "{{ registry_tag }}"
+
+    - name: Login to Docker registry
+      community.docker.docker_login:
+        registry_url: "{{ registry_url }}"
+        username: "{{ registry_username }}"
+        password: "{{ registry_password }}"
+      when:
+        - registry_username is defined
+        - registry_password is defined
+        - push_image | bool # Only login if push is intended
+
+    - name: Push Docker image to registry.gitlab.com
+      community.docker.docker_image:
+        source: local
+        name: "{{ registry_image_name }}"
+        tag: "{{ registry_tag }}"
+        push: yes
+      when: push_image | bool

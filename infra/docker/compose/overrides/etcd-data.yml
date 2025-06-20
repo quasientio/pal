@@ -1,0 +1,11 @@
+# overrides/etcd-kafka-compose.yml
+#
+# Mount a host directory (ETCD_DATA_DIR) into the container and tell etcd
+# to use it as its data store—purely through env-vars, no extra flags.
+
+services:
+  etcd:
+    volumes:
+      - "${ETCD_DATA_DIR}:/etcd-data"
+    environment:
+      ETCD_DATA_DIR: /etcd-data
