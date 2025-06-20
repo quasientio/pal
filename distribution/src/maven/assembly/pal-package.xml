@@ -24,10 +24,6 @@
         <include>COPYING</include>
         <!-- export env variables for running on host -->
         <include>export_env</include>
-        <!-- env variables for running inside docker -->
-        <include>peer.env</include>
-        <!-- env variables for running docker-compose -->
-        <include>.env</include>
       </includes>
     </fileSet>
     <fileSet>
@@ -35,15 +31,9 @@
       <outputDirectory>bin</outputDirectory>
       <includes>
         <include>pal</include>
-        <include>dpal</include>
         <include>start_etcd</include>
         <include>setup_kafka</include>
         <include>start_kafka</include>
-        <include>dstart_etcd</include>
-        <include>dstart_kafka</include>
-        <include>dstop_etcd</include>
-        <include>dstart_etcd_and_kafka</include>
-        <include>dstop_etcd_and_kafka</include>
       </includes>
     </fileSet>
   </fileSets>
