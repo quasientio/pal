@@ -267,11 +267,12 @@ public class SessionService extends ConnectedService {
             objectDeleted = deleteObject(cmdMsg.getSessionId(), cmdMsg.getObjectRef());
             status = objectDeleted ? SessionStatusType.OK : SessionStatusType.NO_SUCH_OBJECT;
           } catch (NoSuchSessionException e) {
-            logger.error(
-                "No session found w/uuid: {} while deleting object w/objectRef: {}",
-                cmdMsg.getSessionId(),
-                cmdMsg.getObjectRef().asString(),
-                e);
+            if (logger.isDebugEnabled()) {
+              logger.debug(
+                  "No session found w/uuid: {} while deleting object w/objectRef: {}",
+                  cmdMsg.getSessionId(),
+                  cmdMsg.getObjectRef().asString());
+            }
             status = SessionStatusType.NO_SUCH_SESSION;
           } catch (Exception e) {
             logger.error(
@@ -292,7 +293,9 @@ public class SessionService extends ConnectedService {
             deleteSession(cmdMsg.getSessionId());
             status = SessionStatusType.OK;
           } catch (NoSuchSessionException e) {
-            logger.warn("No session found w/uuid: {}", cmdMsg.getSessionId(), e);
+            if (logger.isDebugEnabled()) {
+              logger.debug("No session found w/uuid: {}", cmdMsg.getSessionId());
+            }
             status = SessionStatusType.NO_SUCH_SESSION;
           } catch (Exception e) {
             logger.error("Unexpected error deleting session w/uuid: {}", cmdMsg.getSessionId(), e);
