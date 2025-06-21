@@ -20,10 +20,10 @@
 package com.quasient.pal.core.rpc.exec.java;
 
 import com.quasient.pal.common.lang.reflect.MethodSignature;
-import com.quasient.pal.common.objects.ObjectLookupStore;
-import com.quasient.pal.common.objects.ObjectNotFoundException;
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.common.runtime.Context;
+import com.quasient.pal.core.objects.ObjectLookupStore;
+import com.quasient.pal.core.objects.ObjectNotFoundException;
 import com.quasient.pal.core.rpc.DispatcherConnector;
 import com.quasient.pal.core.rpc.exec.java.reflect.ReflectionHelper;
 import com.quasient.pal.messages.colfer.ExecMessage;

@@ -17,7 +17,7 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package com.quasient.pal.common.objects;
+package com.quasient.pal.core.objects;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -26,10 +26,10 @@ import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.quasient.pal.common.objects.ObjectRef;
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
@@ -101,7 +101,8 @@ public class ObjectLookupStoreBackgroundProcessorTest {
               aList = null;
               System.gc();
 
-              ObjectLookupStoreBackgroundProcessor processorSpy = spy(objectLookupStoreProcessor);
+              ObjectLookupStoreBackgroundProcessor processorSpy =
+                  Mockito.spy(objectLookupStoreProcessor);
               processorSpy.start();
               // allow enough time for removeClearedEntries() to be called at least once
               try {

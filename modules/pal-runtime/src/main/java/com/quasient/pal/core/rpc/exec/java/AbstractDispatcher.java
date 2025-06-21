@@ -19,7 +19,7 @@
 
 package com.quasient.pal.core.rpc.exec.java;
 
-import com.quasient.pal.common.objects.ObjectLookupStore;
+import com.quasient.pal.core.objects.ObjectLookupStore;
 import com.quasient.pal.core.rpc.DispatcherConnector;
 import com.quasient.pal.core.rpc.exec.java.reflect.ReflectionHelper;
 import com.quasient.pal.serdes.colfer.MessageBuilder;

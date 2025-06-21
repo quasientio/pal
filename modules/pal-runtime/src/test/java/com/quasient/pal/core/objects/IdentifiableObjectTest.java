@@ -17,7 +17,7 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package com.quasient.pal.common.objects;
+package com.quasient.pal.core.objects;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -28,6 +28,7 @@ import java.lang.ref.WeakReference;
 import java.util.Arrays;
 import java.util.List;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.hamcrest.Matchers;
 import org.junit.Test;
 
 public class IdentifiableObjectTest {
@@ -57,22 +58,22 @@ public class IdentifiableObjectTest {
     // different Integer instances, but with same value should be equal
     Integer int1 = 23;
     Integer int2 = 23;
-    assertThat(new IdentifiableObject(int1), is(new IdentifiableObject(int2)));
+    assertThat(new IdentifiableObject(int1), Matchers.is(new IdentifiableObject(int2)));
 
     // different instances should not be equal
     String str1 = "ABC";
     String str2 = new String("ABC");
-    assertThat(new IdentifiableObject(str1), is(not(new IdentifiableObject(str2))));
+    assertThat(new IdentifiableObject(str1), is(Matchers.not(new IdentifiableObject(str2))));
 
     List<Float> floats1 = Arrays.asList(10f, 11f, 12f);
     List<Float> floats2 = Arrays.asList(10f, 11f, 12f);
-    assertThat(new IdentifiableObject(floats1), is(not(new IdentifiableObject(floats2))));
+    assertThat(new IdentifiableObject(floats1), is(Matchers.not(new IdentifiableObject(floats2))));
 
     // equal instances must be equal
-    assertThat(new IdentifiableObject(23), is(new IdentifiableObject(23)));
-    assertThat(new IdentifiableObject("ABC"), is(new IdentifiableObject("ABC")));
-    assertThat(new IdentifiableObject(floats1), is(new IdentifiableObject(floats1)));
-    assertThat(new IdentifiableObject(Void.class), is(new IdentifiableObject(Void.class)));
+    assertThat(new IdentifiableObject(23), Matchers.is(new IdentifiableObject(23)));
+    assertThat(new IdentifiableObject("ABC"), Matchers.is(new IdentifiableObject("ABC")));
+    assertThat(new IdentifiableObject(floats1), Matchers.is(new IdentifiableObject(floats1)));
+    assertThat(new IdentifiableObject(Void.class), Matchers.is(new IdentifiableObject(Void.class)));
 
     // equals with non-IdentifiableObject
     assertThat(new IdentifiableObject(int2), is(not(int2)));

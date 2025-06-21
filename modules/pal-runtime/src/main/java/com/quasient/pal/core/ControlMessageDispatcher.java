@@ -19,10 +19,10 @@
 
 package com.quasient.pal.core;
 
-import com.quasient.pal.common.objects.ObjectLookupStore;
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.core.messages.SessionCommandMsg;
 import com.quasient.pal.core.messages.SessionResponseMsg;
+import com.quasient.pal.core.objects.ObjectLookupStore;
 import com.quasient.pal.core.rpc.DispatcherConnector;
 import com.quasient.pal.messages.colfer.ControlMessage;
 import com.quasient.pal.messages.types.ControlCommandType;

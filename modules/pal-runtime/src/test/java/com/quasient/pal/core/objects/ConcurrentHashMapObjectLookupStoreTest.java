@@ -17,7 +17,7 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package com.quasient.pal.common.objects;
+package com.quasient.pal.core.objects;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -30,6 +30,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import com.quasient.pal.common.objects.ObjectRef;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;

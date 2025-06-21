@@ -26,11 +26,11 @@ import static org.junit.Assert.assertTrue;
 
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
-import com.quasient.pal.common.objects.ConcurrentHashMapObjectLookupStore;
-import com.quasient.pal.common.objects.ObjectLookupStore;
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.core.messages.SessionCommandMsg;
 import com.quasient.pal.core.messages.SessionResponseMsg;
+import com.quasient.pal.core.objects.ConcurrentHashMapObjectLookupStore;
+import com.quasient.pal.core.objects.ObjectLookupStore;
 import com.quasient.pal.messages.types.SessionCommandType;
 import com.quasient.pal.messages.types.SessionStatusType;
 import java.util.Collections;

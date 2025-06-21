@@ -26,8 +26,6 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.name.Names;
 import com.quasient.pal.common.directory.nodes.PeerInfo;
-import com.quasient.pal.common.objects.ConcurrentHashMapObjectLookupStore;
-import com.quasient.pal.common.objects.ObjectLookupStore;
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.cxn.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.PalDirectory;
@@ -70,9 +68,6 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractRpcMessageIT
             final Properties appProperties = new Properties();
             appProperties.setProperty("messages.with_src_context", Boolean.toString(false));
             Names.bindProperties(binder(), appProperties);
-            bind(ObjectLookupStore.class)
-                .to(ConcurrentHashMapObjectLookupStore.class)
-                .asEagerSingleton();
             bind(MessageBuilder.class).asEagerSingleton();
           }
         };

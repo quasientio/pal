@@ -44,10 +44,6 @@
 		<appender-ref ref="tests"/>
 	</logger>
 
-	<logger name="com.quasient.pal.common.objects.ObjectLookupStoreBackgroundProcessor" level="warn" additivity="false">
-		<appender-ref ref="tests"/>
-	</logger>
-
 	<logger name="org.apache.kafka" level="debug" additivity="false">
 		<appender-ref ref="kafka"/>
 	</logger>

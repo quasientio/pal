@@ -17,19 +17,17 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package com.quasient.pal.common.objects;
+package com.quasient.pal.core.objects;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
+/** Thrown to indicate that a specific object was not found. */
+public class ObjectNotFoundException extends Exception {
 
-import org.junit.Test;
-
-public class ObjectNotFoundExceptionTest {
-
-  @Test
-  public void constructor() {
-    String message = "the exception msg";
-    Exception onfe = new ObjectNotFoundException(message);
-    assertThat(onfe.getMessage(), is(message));
+  /**
+   * Constructs a new {@code ObjectNotFoundException} with the specified detail message.
+   *
+   * @param message the detail message explaining the reason for the exception
+   */
+  public ObjectNotFoundException(String message) {
+    super(message);
   }
 }

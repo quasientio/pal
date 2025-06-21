@@ -27,9 +27,9 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.quasient.pal.common.objects.ConcurrentHashMapObjectLookupStore;
-import com.quasient.pal.common.objects.ObjectLookupStore;
 import com.quasient.pal.common.runtime.Dispatcher;
+import com.quasient.pal.core.objects.ConcurrentHashMapObjectLookupStore;
+import com.quasient.pal.core.objects.ObjectLookupStore;
 import com.quasient.pal.core.rpc.DispatcherConnector;
 import com.quasient.pal.core.rpc.exec.java.reflect.ReflectionHelper;
 import com.quasient.pal.messages.colfer.Message;

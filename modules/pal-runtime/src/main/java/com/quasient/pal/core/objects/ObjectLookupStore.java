@@ -17,8 +17,9 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package com.quasient.pal.common.objects;
+package com.quasient.pal.core.objects;
 
+import com.quasient.pal.common.objects.ObjectRef;
 import java.util.Collection;
 
 /**

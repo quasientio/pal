@@ -24,9 +24,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
 import com.quasient.pal.common.lang.intercept.InterceptType;
-import com.quasient.pal.common.objects.ConcurrentHashMapObjectLookupStore;
-import com.quasient.pal.common.objects.ObjectLookupStore;
 import com.quasient.pal.common.objects.ObjectRef;
+import com.quasient.pal.core.objects.ConcurrentHashMapObjectLookupStore;
+import com.quasient.pal.core.objects.ObjectLookupStore;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.InterceptMessage;
 import com.quasient.pal.serdes.colfer.ExecMessageUtils;
