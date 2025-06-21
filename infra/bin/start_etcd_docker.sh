@@ -6,10 +6,11 @@ SCRIPTS_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
 # Load common functions
 source "$SCRIPTS_DIR/docker_utils.sh"
 
-check_var "PAL_AUTOMATE"
+# Change to infra/ dir
+cd "$SCRIPTS_DIR/.."
 
 # Load env variables
-source "$PAL_AUTOMATE/docker/.env"
+source "docker/.env"
 
 # Check all required variables are defined
 check_var "ETCD_CLIENT_PORT"

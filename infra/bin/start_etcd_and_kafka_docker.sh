@@ -6,10 +6,11 @@ SCRIPTS_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
 # Load common functions
 source $SCRIPTS_DIR/docker_utils.sh
 
-check_var "PAL_AUTOMATE"
+# Change to infra/ dir
+cd "$SCRIPTS_DIR/.."
 
 # Load env variables
-source "$PAL_AUTOMATE/docker/.env"
+source "docker/.env"
 
 # Check all required variables are defined
 check_var "ETCD_CLIENT_PORT"
@@ -50,21 +51,21 @@ fi
 createPalNetwork
 
 compose="docker-compose \
-  --project-directory $PAL_AUTOMATE/docker \
-  -f $PAL_AUTOMATE/docker/compose/etcd-kafka-compose.yml"
+  --project-directory docker \
+  -f docker/compose/etcd-kafka-compose.yml"
 
 # Add JMX override if requested
 if [ -n "${KAFKA_JMX_PORT:-}" ]; then
-  compose+=" -f $PAL_AUTOMATE/docker/compose/overrides/kafka-jmx.yml"
+  compose+=" -f docker/compose/overrides/kafka-jmx.yml"
 fi
 
 # Add host-data override if requested
 if [ -n "${KAFKA_DATA_DIR:-}" ]; then
-  compose+=" -f $PAL_AUTOMATE/docker/compose/overrides/kafka-data.yml"
+  compose+=" -f docker/compose/overrides/kafka-data.yml"
 fi
 
 if [ -n "${ETCD_DATA_DIR:-}" ]; then
-  compose+=" -f $PAL_AUTOMATE/docker/compose/overrides/etcd-data.yml"
+  compose+=" -f docker/compose/overrides/etcd-data.yml"
 fi
 
 
