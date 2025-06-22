@@ -39,6 +39,10 @@ clean-install:
   stage: build
   script:
     - mvn $MAVEN_CLI_OPTS clean install -DskipTests
+  artifacts:
+    paths:
+      - lib/
+    expire_in: 1h
   rules:
     - if: $SKIP_NON_DEPLOY == "true"
       when: never
@@ -90,10 +94,9 @@ integration-tests:
   script:
     - export PAL_HOME=$(pwd)
     - export PAL_VERSION=$(grep '<version>' pom.xml | head -1 | sed -E 's/.*<version>(.+)<\/version>.*/\1/')
-    - export PAL_JAR=$CI_PROJECT_DIR/.m2/repository/com/quasient/pal/pal/$PAL_VERSION/pal-$PAL_VERSION.jar
     - export ITT_APPS_JAR=$CI_PROJECT_DIR/.m2/repository/com/quasient/pal/itt-apps/$PAL_VERSION/itt-apps-$PAL_VERSION.jar
     - export PATH=$PATH:./bin
-    - mkdir lib/ && cp $PAL_JAR lib/ && peer4itts &
+    - peer4itts &
     - mvn $MAVEN_CLI_OPTS verify -DskipUTs
   artifacts:
     when: on_failure
