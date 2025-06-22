@@ -119,7 +119,6 @@ publish-pal-image:
     - export PAL_JAR=$CI_PROJECT_DIR/.m2/repository/com/quasient/pal/pal/$PAL_VERSION/pal-$PAL_VERSION.jar
     - export PAL_HOME="$CI_PROJECT_DIR"
     - echo "PAL_HOME is $PAL_HOME"
-    - mkdir -p "$PAL_HOME/lib" && cp "$PAL_JAR" "$PAL_HOME/lib"
     - pip install --no-cache-dir ansible requests
     - ansible-galaxy collection install community.docker --force
     - |
