@@ -112,7 +112,6 @@ publish-pal-image:
   tags:
     - dind
   script:
-    - docker info
     - export PAL_VERSION=$(grep '<version>' pom.xml | head -1 | sed -E 's/.*<version>(.+)<\/version>.*/\1/')
     - export PAL_JAR=$CI_PROJECT_DIR/.m2/repository/com/quasient/pal/pal/$PAL_VERSION/pal-$PAL_VERSION.jar
     - export PAL_HOME="$CI_PROJECT_DIR"
