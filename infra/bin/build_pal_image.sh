@@ -8,7 +8,11 @@ if [ "$1" = "-nopush" ]; then
     echo "Build without pushing the Docker image."
 else
     echo "Will push the Docker image. Use -nopush to skip pushing it."
-    REGISTRY_URL="registry.gitlab.com"
+    if [ -z "$CI_REGISTRY" ]; then
+      echo "Error: CI_REGISTRY is undefined"
+      exit 1
+    fi
+    REGISTRY_URL="$CI_REGISTRY"
     read -p "$REGISTRY_URL Username: " REGISTRY_USERNAME
     read -s -p "$REGISTRY_URL Password: " REGISTRY_PASSWORD
     echo

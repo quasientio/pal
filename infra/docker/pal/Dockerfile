@@ -2,9 +2,9 @@
 # Dockerfile
 #
 # Build:
-#                   docker build --tag registry.gitlab.com/cometera/pal/pal .
-#    push           docker push registry.gitlab.com/cometera/pal/pal
-#    tag            docker tag registry.gitlab.com/cometera/pal/pal:latest pal:latest
+#                   docker build --tag $CI_REGISTRY/quasient/pal/pal .
+#    push           docker push $CI_REGISTRY/quasient/pal/pal
+#    tag            docker tag $CI_REGISTRY/quasient/pal/pal:latest pal:latest
 # Build Args:       NONE
 # Run ENV-file:     SEE peer.env file
 # Run Cmd Example:  docker run --network=host --name pal --rm --env-file peer.env pal

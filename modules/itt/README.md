@@ -11,10 +11,10 @@ ports (2379 and 9092 respectively), then adjust the corresponding variables in t
 __NOTE__: if you already added `$PAL_HOME/bin` to your PATH variable, you may omit `bin/` from the instructions following.
 
 ## Download Etcd and Kafka docker images
-Pull and tag the provided images for etcd and kafka from the gitlab.com registry:
+Pull and tag the provided images for etcd and kafka:
 ```bash
-docker pull registry.gitlab.com/cometera/pal/etcd:latest && docker tag registry.gitlab.com/cometera/pal/etcd etcd:latest
-docker pull registry.gitlab.com/cometera/pal/kafka:latest && docker tag registry.gitlab.com/cometera/pal/kafka:latest kafka:latest
+docker pull gitlab.cometera.org:5050/quasient/pal/etcd:latest && docker tag gitlab.cometera.org:5050/quasient/pal/etcd:latest etcd:latest
+docker pull apache/kafka:3.8.0 && docker tag apache/kafka:3.8.0 kafka:latest
 ```
 _These images are based on alpine and are relatively small. You may, of course, use your own or any other public
 images, in which case you may need to modify the parameters or variables in the scripts under bin/._

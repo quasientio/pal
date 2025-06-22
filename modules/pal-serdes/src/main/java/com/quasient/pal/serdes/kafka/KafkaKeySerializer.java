@@ -25,9 +25,8 @@ import org.apache.kafka.common.serialization.StringSerializer;
  * Custom Kafka key serializer that extends {@link StringSerializer} to preserve package naming
  * after mvn-shading. This ensures Kafka properties can reference this serializer without requiring
  * changes to its package name, as only external dependencies are relocated during the shading
- * process.
+ * process. See issue #168 for more details.
  *
- * @see <a href="https://gitlab.com/cometera/pal/-/issues/168">issue #168 for details</a>
  * @see StringSerializer
  */
 public final class KafkaKeySerializer extends StringSerializer {

@@ -24,10 +24,9 @@ package com.quasient.pal.common.logging;
  * after Maven shading. This ensures that the {@code logback.xml} configuration can reference this
  * appender without requiring changes to the package name. By extending Logback's {@link
  * ch.qos.logback.core.ConsoleAppender}, this class allows relocation of dependencies without
- * affecting internal classes.
+ * affecting internal classes. See issue #168 for more details.
  *
  * @see ch.qos.logback.core.ConsoleAppender
- * @see <a href="https://gitlab.com/cometera/pal/-/issues/168">Issue #168</a>
  */
 @SuppressWarnings("rawtypes")
 public final class PeerConsoleAppender extends ch.qos.logback.core.ConsoleAppender {}

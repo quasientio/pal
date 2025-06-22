@@ -3,11 +3,11 @@
 #
 # Build:
 #    build          docker build \
-#                     --tag registry.gitlab.com/cometera/pal/etcd:3.5.7 \
-#                     --tag registry.gitlab.com/cometera/pal/etcd:latest \
+#                     --tag $CI_REGISTRY/quasient/pal/etcd:3.5.7 \
+#                     --tag $CI_REGISTRY/quasient/pal/etcd:latest \
 #                     --tag etcd:latest .
-#    push           docker login registry.gitlab.com
-#                   docker push --all-tags registry.gitlab.com/cometera/pal/etcd
+#    push           docker login $CI_REGISTRY
+#                   docker push --all-tags $CI_REGISTRY/quasient/pal/etcd
 #
 # Build Args:
 #                   ETCD_VERSION

@@ -5,16 +5,16 @@
     docker_pal_dir: "{{ (playbook_dir + '/../../docker/pal') | realpath }}"
     pal_home: "{{ lookup('env', 'PAL_HOME') }}"
 
+    # Docker registry credentials
+    registry_url: "{{ lookup('env', 'CI_REGISTRY') | default(lookup('env', 'REGISTRY_URL'), true) }}"
+    registry_username: "{{ lookup('env', 'CI_REGISTRY_USER') | default(lookup('env', 'REGISTRY_USERNAME'), true) }}"
+    registry_password: "{{ lookup('env', 'CI_REGISTRY_PASSWORD') | default(lookup('env', 'REGISTRY_PASSWORD'), true) }}"
+
     # Docker image names and tags
     local_image_name: "pal"
     local_image_tag: "latest"
-    registry_image_name: "registry.gitlab.com/cometera/pal/pal"
+    registry_image_name: "{{ registry_url }}/quasient/pal/pal"
     registry_tag: "latest"
-
-    # Docker registry credentials
-    registry_url: "{{ lookup('env', 'CI_REGISTRY') | default(lookup('env', 'REGISTRY_URL')) }}"
-    registry_username: "{{ lookup('env', 'CI_REGISTRY_USER') | default(lookup('env', 'REGISTRY_USERNAME')) }}"
-    registry_password: "{{ lookup('env', 'CI_REGISTRY_PASSWORD') | default(lookup('env', 'REGISTRY_PASSWORD')) }}"
 
     # By default we push the image; can be overridden via --extra-vars
     push_image: true
@@ -88,7 +88,7 @@
         tag: "{{ local_image_tag }}"
         push: no
 
-    - name: Re-tag pal:latest -> registry.gitlab.com/cometera/pal/pal:latest
+    - name: Re-tag pal:latest -> $CI_REGISTRY/quasient/pal/pal:latest
       community.docker.docker_image_tag:
         repository: "{{ registry_image_name }}"
         name: "pal"
@@ -104,7 +104,7 @@
         - registry_password is defined
         - push_image | bool # Only login if push is intended
 
-    - name: Push Docker image to registry.gitlab.com
+    - name: Push Docker image to gitlab registry
       community.docker.docker_image:
         source: local
         name: "{{ registry_image_name }}"

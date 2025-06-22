@@ -24,9 +24,9 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 /**
  * Custom deserializer for Kafka keys that maintains the original fully qualified class name after
  * Maven shading. This allows Kafka properties to reference the deserializer without requiring
- * changes to the package name, ensuring compatibility and ease of configuration.
+ * changes to the package name, ensuring compatibility and ease of configuration. See issue #168 for
+ * more details.
  *
- * @see <a href="https://gitlab.com/cometera/pal/-/issues/168">issue #168 for details</a>
  * @see StringDeserializer
  */
 public final class KafkaKeyDeserializer extends StringDeserializer {}

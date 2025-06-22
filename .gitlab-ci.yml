@@ -73,7 +73,7 @@ integration-tests:
     KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
     KAFKA_NUM_PARTITIONS: 1
   services:
-    - name: $CI_REGISTRY/cometera/pal/etcd:latest
+    - name: $CI_REGISTRY/quasient/pal/etcd:latest
       alias: etcd
       command: ["./etcd"]
     - name: apache/kafka:3.8.0

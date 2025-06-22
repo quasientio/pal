@@ -1,3 +1,4 @@
+export CI_REGISTRY=gitlab.cometera.org:5050
 export PAL_JMX_HOST=localhost
 export PAL_JMX_PORT=9012
 export PAL_PEER_LOGGING_CONFIG=$PAL_HOME/.local/conf/peer-logging.xml

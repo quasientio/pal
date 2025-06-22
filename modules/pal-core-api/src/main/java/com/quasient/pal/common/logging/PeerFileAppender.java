@@ -24,10 +24,9 @@ package com.quasient.pal.common.logging;
  * mvn-shading. This allows the relocation of dependencies without requiring changes to the logging
  * configuration. By extending Logback's {@link ch.qos.logback.core.FileAppender}, it ensures
  * consistent logging behavior while maintaining the original package structure for configuration
- * purposes.
+ * purposes. See issue #168 for more details.
  *
  * @see ch.qos.logback.core.FileAppender
- * @see <a href="https://gitlab.com/cometera/pal/-/issues/168">Issue #168</a>
  */
 @SuppressWarnings("rawtypes")
 public final class PeerFileAppender extends ch.qos.logback.core.FileAppender {}
