@@ -26,7 +26,6 @@ variables:
 
 stages:
   - build
-  - unit-tests
   - integration-tests
   - publish-artifacts
   - build_docs
@@ -36,33 +35,22 @@ cache:
   paths:
     - .m2/repository
 
-clean-install:
+build-and-unit:
   stage: build
   script:
-    - mvn $MAVEN_CLI_OPTS clean install -DskipTests
+    - mvn $MAVEN_CLI_OPTS clean verify -DskipITs
   artifacts:
     paths:
       - lib/
       - modules/*/target/**
+      - logs/
+      - modules/*/logs/**
+    when: always
     expire_in: 1h
   rules:
     - if: $SKIP_NON_DEPLOY == "true"
       when: never
     - when: on_success
-
-unit-tests:
-  stage: unit-tests
-  script:
-    - mvn $MAVEN_CLI_OPTS test
-  rules:
-    - if: $SKIP_NON_DEPLOY == "true"
-      when: never
-    - when: on_success
-  artifacts:
-    when: on_failure
-    paths:
-      - logs/
-      - modules/*/logs/**
 
 integration-tests:
   stage: integration-tests
