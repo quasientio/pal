@@ -18,7 +18,8 @@ variables:
     -Djava.awt.headless=true
   MAVEN_CLI_OPTS: >
     --batch-mode --errors --fail-at-end --show-version
-    -DinstallAtEnd=true -DdeployAtEnd=true
+    -DinstallAtEnd=true
+    -DdeployAtEnd=true
 
   # Custom
   SKIP_NON_DEPLOY: "false"
@@ -42,6 +43,7 @@ clean-install:
   artifacts:
     paths:
       - lib/
+      - modules/*/target/**
     expire_in: 1h
   rules:
     - if: $SKIP_NON_DEPLOY == "true"
@@ -56,6 +58,11 @@ unit-tests:
     - if: $SKIP_NON_DEPLOY == "true"
       when: never
     - when: on_success
+  artifacts:
+    when: on_failure
+    paths:
+      - logs/
+      - modules/*/logs/**
 
 integration-tests:
   stage: integration-tests
@@ -101,9 +108,9 @@ integration-tests:
   artifacts:
     when: on_failure
     paths:
-      - itt/target/failsafe-reports
-      - itt/logs
-      - logs
+      - modules/itt/target/failsafe-reports/
+      - modules/itt/logs/
+      - logs/
   rules:
     - if: $SKIP_NON_DEPLOY == "true"
       when: never
