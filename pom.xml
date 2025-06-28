@@ -1,3 +1,14 @@
+<!--
+
+    Copyright (C) 2025 Quasient Inc. <https://www.quasient.com>
+
+    Use of this software is governed by the Business Source License 1.1
+    included in the file LICENSE and at https://mariadb.com/bsl11
+
+    Change Date: 2029-10-01
+    Change License: Apache 2.0
+
+-->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
@@ -27,6 +38,7 @@
         <maven.plugin.clean.version>3.3.2</maven.plugin.clean.version>
         <maven.plugin.resources.version>3.2.0</maven.plugin.resources.version>
         <maven.plugin.shade.version>3.5.2</maven.plugin.shade.version>
+        <licensing.plugin.version>5.0.0</licensing.plugin.version>
         <aspectj.plugin.version>1.15.0</aspectj.plugin.version>
         <google.format.plugin.version>2.23</google.format.plugin.version>
         <jacoco.plugin.version>0.8.12</jacoco.plugin.version>
@@ -67,6 +79,10 @@
         <skipTests>false</skipTests>
         <skipITs>${skipTests}</skipITs>
         <skipUTs>${skipTests}</skipUTs>
+
+        <!-- LICENSING :: must be kept in sync with values in licenses/BSL_HEADER.txt -->
+        <changeDate>2029-10-01</changeDate>
+        <copyrightYear>2025</copyrightYear>
 
         <!-- MISC PROPERTIES -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -192,6 +208,55 @@
                         </fileset>
                     </filesets>
                 </configuration>
+            </plugin>
+            <!-- Licensing plugin -->
+            <plugin>
+                <groupId>com.mycila</groupId>
+                <artifactId>license-maven-plugin</artifactId>
+                <version>${licensing.plugin.version}</version>
+                <configuration>
+                    <aggregate>true</aggregate>
+                    <licenseSets>
+                        <licenseSet>
+                            <header>licenses/BSL_HEADER.txt</header>
+                            <excludes>
+                                <exclude>AUTHORS</exclude>
+                                <exclude>.java-version</exclude>
+                                <exclude>**/*.env</exclude>
+                                <exclude>**/*.bak</exclude>
+                                <exclude>venv/**</exclude>
+                                <exclude>.local/**</exclude>
+                                <exclude>.run/**</exclude>
+                                <exclude>docs/**</exclude>
+                                <exclude>site/**</exclude>
+                                <exclude>config/kafka/server.properties</exclude>
+                            </excludes>
+                        </licenseSet>
+                    </licenseSets>
+
+                    <mapping>
+                        <java>SLASHSTAR_STYLE</java>
+                        <colf>SLASHSTAR_STYLE</colf>
+                        <yml>SCRIPT_STYLE</yml>
+                        <yaml>SCRIPT_STYLE</yaml>
+                    </mapping>
+
+                    <properties>
+                        <year>${copyrightYear}</year>
+                        <changeDate>${changeDate}</changeDate>
+                    </properties>
+                </configuration>
+
+                <executions>
+                    <!-- Fail the build if any file is missing or has the wrong header -->
+                    <execution>
+                        <id>validate-headers</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
@@ -457,5 +522,4 @@
             </activation>
         </profile>
     </profiles>
-
 </project>
