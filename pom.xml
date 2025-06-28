@@ -227,6 +227,7 @@
                                 <exclude>venv/**</exclude>
                                 <exclude>.local/**</exclude>
                                 <exclude>.run/**</exclude>
+                                <exclude>.m2/**</exclude>
                                 <exclude>docs/**</exclude>
                                 <exclude>site/**</exclude>
                                 <exclude>config/kafka/server.properties</exclude>
