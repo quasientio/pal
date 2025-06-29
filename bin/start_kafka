@@ -1,6 +1,0 @@
-#!/bin/bash
-
-KAFKA_CONFIG="$PAL_HOME/config/kafka/server.properties"
-
-# Start Kafka
-$KAFKA_HOME/bin/kafka-server-start.sh $KAFKA_CONFIG

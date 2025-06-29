@@ -1,9 +1,0 @@
-#!/bin/bash
-
-PAL_VERSION=1.0.0-SNAPSHOT
-CLASSES_TO_WEAVE=target/classes
-PEER_ASPECTS_JAR="${HOME}/.m2/repository/com/quasient/pal/aspects/${PAL_VERSION}/aspects-${PAL_VERSION}.jar"
-OUTPUT_JAR=apps.jar
-
-# Create jar file containing weaved classes
-ajc -1.8 -aspectpath $PEER_ASPECTS_JAR -inpath $CLASSES_TO_WEAVE -outjar $OUTPUT_JAR

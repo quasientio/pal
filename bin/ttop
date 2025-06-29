@@ -1,3 +1,0 @@
-#!/bin/bash
-
-java -jar $SJK_PATH ttop -p $1 -n 40 -ri 3s

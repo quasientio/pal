@@ -39,7 +39,7 @@ RUN mkdir -p /app/bin /app/lib
 
 # Copy files from the build environment's PAL_HOME to the image
 COPY bin/pal /app/bin/
-COPY bin/wait-for /app/bin/
+COPY utils/wait-for.sh /app/bin/
 COPY lib/pal-*.jar /app/lib/
 
 # Make the pal script executable

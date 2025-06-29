@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Copyright (C) 2025 Quasient Inc. <https://www.quasient.com>
 #
@@ -10,7 +10,12 @@
 #
 
 
-# Paths needed by some tools in bin/
-export JLINE_HOME='/usr/share/java'
-export KAFKA_HOME='/usr/local/lib/kafka'
-export SJK_PATH=$PAL_HOME/peer/tools/lib/sjk-plus-0.5.1.jar
+KAFKA_CONFIG="$PAL_HOME/config/kafka/server.properties"
+
+if [ -z "$KAFKA_HOME" ]; then
+  echo "Error: KAFKA_HOME is undefined"
+  exit 1
+fi
+
+# Start Kafka
+$KAFKA_HOME/bin/kafka-server-start.sh $KAFKA_CONFIG
