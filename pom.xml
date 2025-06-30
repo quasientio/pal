@@ -19,6 +19,14 @@
     <version>1.0.0-SNAPSHOT</version>
     <name>pal</name>
 
+    <licenses>
+        <license>
+            <name>Business Source License 1.1</name>
+            <url>https://mariadb.com/bsl11</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
     <properties>
         <!-- PROJECT VERSION -->
         <pal.version>1.0.0-SNAPSHOT</pal.version>
@@ -39,6 +47,7 @@
         <maven.plugin.resources.version>3.2.0</maven.plugin.resources.version>
         <maven.plugin.shade.version>3.5.2</maven.plugin.shade.version>
         <licensing.plugin.version>5.0.0</licensing.plugin.version>
+        <license.maven.plugin.version>2.6.0</license.maven.plugin.version>
         <aspectj.plugin.version>1.15.0</aspectj.plugin.version>
         <google.format.plugin.version>2.23</google.format.plugin.version>
         <jacoco.plugin.version>0.8.12</jacoco.plugin.version>
@@ -190,6 +199,31 @@
                     <artifactId>maven-dependency-plugin</artifactId>
                     <version>${maven.plugin.dependency.version}</version>
                 </plugin>
+                <!-- Licensing third-party -->
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>license-maven-plugin</artifactId>
+                    <version>${license.maven.plugin.version}</version>
+
+                    <!-- shared configuration visible to every execution -->
+                    <configuration>
+                        <!-- where THIRD_PARTY.md goes -->
+                        <outputDirectory>${project.basedir}</outputDirectory>
+                        <thirdPartyFilename>THIRD_PARTY.md</thirdPartyFilename>
+                        <fileTemplate>${project.basedir}/licenses/THIRD_PARTY.ftl</fileTemplate>
+                        <sortArtifactByName>true</sortArtifactByName>
+
+                        <!-- skip own modules -->
+                        <excludedGroups>com.quasient.pal</excludedGroups>
+
+                        <!-- download-goal settings -->
+                        <licensesConfigFile>${project.basedir}/licenses/url-fixes.xml</licensesConfigFile>
+                        <licensesOutputDirectory>${project.basedir}/licenses/third-party</licensesOutputDirectory>
+                        <includeTransitiveDependencies>true</includeTransitiveDependencies>
+                        <extendedInfo>true</extendedInfo>
+                        <removeOrphanLicenseFiles>true</removeOrphanLicenseFiles>
+                    </configuration>
+                </plugin>
             </plugins>
         </pluginManagement>
 
@@ -209,7 +243,8 @@
                     </filesets>
                 </configuration>
             </plugin>
-            <!-- Licensing plugin -->
+
+            <!-- Licensing -->
             <plugin>
                 <groupId>com.mycila</groupId>
                 <artifactId>license-maven-plugin</artifactId>
@@ -230,6 +265,7 @@
                                 <exclude>.m2/**</exclude>
                                 <exclude>docs/**</exclude>
                                 <exclude>site/**</exclude>
+                                <exclude>licenses/third-party/</exclude>
                                 <exclude>bin/pal</exclude>   <!-- ignore symlink -->
                                 <exclude>infra/bin/palind</exclude>   <!-- ignore symlink -->
                                 <exclude>config/kafka/server.properties</exclude>
@@ -262,7 +298,7 @@
                     </execution>
                 </executions>
             </plugin>
-        </plugins>
+       </plugins>
     </build>
 
     <dependencyManagement>
@@ -524,6 +560,29 @@
                     <name>!env.CI_PROJECT_ID</name>
                 </property>
             </activation>
+        </profile>
+        <profile>
+            <id>release-legal</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>license-maven-plugin</artifactId>
+
+                        <executions>
+                            <execution>
+                                <id>legal-bundle</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>aggregate-add-third-party</goal>
+                                    <goal>aggregate-download-licenses</goal>
+                                </goals>
+                                <inherited>false</inherited>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 </project>

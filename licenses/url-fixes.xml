@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Copyright (C) 2025 Quasient Inc. <https://www.quasient.com>
+
+    Use of this software is governed by the Business Source License 1.1
+    included in the file LICENSE and at https://mariadb.com/bsl11
+
+    Change Date: 2029-10-01
+    Change License: Apache 2.0
+
+-->
+<licenseSummary>
+  <dependencies>
+
+    <!-- 1. Any dependency whose licence URL is the HTTP variant -->
+    <dependency>
+      <groupId>.*</groupId>
+      <artifactId>.*</artifactId>
+
+      <!-- Match licences exactly where the URL is *http://…* -->
+      <matchLicenses>
+        <license>
+          <url>\Qhttp://www.apache.org/licenses/LICENSE-2.0.txt\E</url>
+        </license>
+      </matchLicenses>
+
+      <!-- Replace its licence block with HTTPS (the one all the others use) -->
+      <licenses>
+        <license>
+          <name>Apache License, Version 2.0</name>
+          <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+      </licenses>
+    </dependency>
+
+
+   <!-- 2. Nail down the two GNU texts so the plug-in copies the
+           local files instead of trying to fetch HTTP.
+           NOTE: this doesn't seem to be working; warnings not suppressed -->
+    <dependency>
+      <groupId>.*</groupId>
+      <artifactId>.*</artifactId>
+      <matchLicenses>
+        <license>
+          <url>\Qhttp://www.gnu.org/licenses/old-licenses/lgpl-2.1.html\E</url>
+        </license>
+      </matchLicenses>
+      <licenses>
+        <license>
+          <name>GNU LGPL 2.1</name>
+          <url>file://${project.basedir}/licenses/third-party/lgpl-2.1.txt</url>
+        </license>
+      </licenses>
+    </dependency>
+
+    <dependency>
+      <groupId>.*</groupId>
+      <artifactId>.*</artifactId>
+      <matchLicenses>
+        <license>
+          <url>\Qhttp://www.gnu.org/licenses/gpl-2.0.html\E</url>
+        </license>
+      </matchLicenses>
+      <licenses>
+        <license>
+          <name>GNU GPL 2.0</name>
+          <url>file://${project.basedir}/licenses/third-party/gpl-2.0.txt</url>
+        </license>
+      </licenses>
+    </dependency>
+
+  </dependencies>
+</licenseSummary>
+
