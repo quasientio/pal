@@ -99,8 +99,8 @@ class ObjectLookupStoreBackgroundProcessor {
    */
   @SuppressWarnings("FutureReturnValueIgnored")
   public void start() {
-    if (logger.isDebugEnabled()) {
-      logger.debug("Starting OBJECTS stats");
+    if (logger.isTraceEnabled()) {
+      logger.trace("Starting OBJECTS stats");
     }
 
     scheduler.scheduleAtFixedRate(
@@ -116,13 +116,13 @@ class ObjectLookupStoreBackgroundProcessor {
    */
   private void printStats() {
     try {
-      if (logger.isDebugEnabled()) {
-        logger.debug("OBJECTS: max size={}", objectLookupStoreStats.getMaxSize());
-        logger.debug("OBJECTS: current size={}", objectLookupStore.size());
-        logger.debug(
+      if (logger.isTraceEnabled()) {
+        logger.trace("OBJECTS: max size={}", objectLookupStoreStats.getMaxSize());
+        logger.trace("OBJECTS: current size={}", objectLookupStore.size());
+        logger.trace(
             "OBJECTS: successful lookups={}",
             objectLookupStoreStats.getSuccessfulStoreLookups().get());
-        logger.debug("OBJECTS: total cleared={}", objectLookupStoreStats.getTotalObjectsCleared());
+        logger.trace("OBJECTS: total cleared={}", objectLookupStoreStats.getTotalObjectsCleared());
       }
     } catch (Exception e) {
       logger.error("Error printing stats", e);
@@ -149,9 +149,9 @@ class ObjectLookupStoreBackgroundProcessor {
                 clearedCount.getAndIncrement();
               });
       objectLookupStoreStats.getTotalObjectsCleared().addAndGet(clearedCount.get());
-      if (logger.isDebugEnabled()) {
+      if (logger.isTraceEnabled()) {
         long cleanupEnd = Instant.now().toEpochMilli();
-        logger.debug(
+        logger.trace(
             "Cleaned up {} object refs in {} ms", clearedCount.get(), cleanupEnd - cleanupStart);
       }
     } catch (Exception e) {

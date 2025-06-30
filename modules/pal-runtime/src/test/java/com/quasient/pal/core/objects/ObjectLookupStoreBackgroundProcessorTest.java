@@ -42,7 +42,7 @@ public class ObjectLookupStoreBackgroundProcessorTest {
 
     // mock Logger to enable calls to logger.debug()
     mockedLogger = mock(Logger.class);
-    when(mockedLogger.isDebugEnabled()).thenReturn(loggingEnabled);
+    when(mockedLogger.isTraceEnabled()).thenReturn(loggingEnabled);
     MockedStatic<LoggerFactory> mockedLoggerFactory = mockStatic(LoggerFactory.class);
     mockedLoggerFactory
         .when(() -> LoggerFactory.getLogger(ObjectLookupStoreBackgroundProcessor.class))
@@ -114,15 +114,15 @@ public class ObjectLookupStoreBackgroundProcessorTest {
 
               // verify stats printed
               if (loggingEnabled) {
-                verify(mockedLogger).debug("Starting OBJECTS stats");
+                verify(mockedLogger).trace("Starting OBJECTS stats");
                 verify(mockedLogger, atLeastOnce())
-                    .debug(eq("OBJECTS: max size={}"), (Object) any());
+                    .trace(eq("OBJECTS: max size={}"), (Object) any());
                 verify(mockedLogger, atLeastOnce())
-                    .debug(eq("OBJECTS: current size={}"), (Object) any());
+                    .trace(eq("OBJECTS: current size={}"), (Object) any());
                 verify(mockedLogger, atLeastOnce())
-                    .debug(eq("OBJECTS: successful lookups={}"), (Object) any());
+                    .trace(eq("OBJECTS: successful lookups={}"), (Object) any());
                 verify(mockedLogger, atLeastOnce())
-                    .debug(eq("OBJECTS: total cleared={}"), (Object) any());
+                    .trace(eq("OBJECTS: total cleared={}"), (Object) any());
               }
               mockLoggerFactory.close();
               Mockito.reset(mockedLogger, objectLookupStore);
