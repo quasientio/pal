@@ -33,6 +33,7 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
@@ -53,10 +54,13 @@ class JsonRpcWebSocketServer extends WebSocketServer {
   private static final Logger logger = LoggerFactory.getLogger(JsonRpcWebSocketServer.class);
 
   /** Timeout in milliseconds to wait for the server to stop gracefully. */
-  private static final int STOP_TIMEOUT_MS = 2000;
+  private static final int STOP_TIMEOUT_MS = 10000;
 
   /** Size of the thread pool for processing WebSocket connections. */
   private static final int WS_THREAD_POOL_SIZE = 3;
+
+  /** Latch that allows signalling when the server socket open/ready. */
+  private final CountDownLatch wsSocketReadyLatch;
 
   /** Message sent to clients when closing the WebSocket server. */
   private static final String CLOSE_MSG = "Closing WebSocket server. Bye!";
@@ -80,13 +84,18 @@ class JsonRpcWebSocketServer extends WebSocketServer {
    *
    * @param address the InetSocketAddress on which the server listens for connections
    * @param requestQueue the BlockingQueue where inbound JSON-RPC requests are enqueued
+   * @param wsSocketReadyLatch the CountdownLatch used to signal that the server connection is open
    */
   public JsonRpcWebSocketServer(
-      InetSocketAddress address, BlockingQueue<InboundJsonRpcRequestMsg> requestQueue) {
+      InetSocketAddress address,
+      BlockingQueue<InboundJsonRpcRequestMsg> requestQueue,
+      CountDownLatch wsSocketReadyLatch) {
     super(address, WS_THREAD_POOL_SIZE);
     setReuseAddr(true);
     this.requestQueue = requestQueue;
+    this.wsSocketReadyLatch = wsSocketReadyLatch;
     this.responseObjectMapper = createResponseObjectMapper();
+    logger.info("Initialized WebSocketServer. Will listen on: {}", address);
   }
 
   /**
@@ -347,6 +356,7 @@ class JsonRpcWebSocketServer extends WebSocketServer {
   @Override
   public void onStart() {
     logger.info("WebSocket server started on: {}", getAddress());
+    wsSocketReadyLatch.countDown();
   }
 
   /**

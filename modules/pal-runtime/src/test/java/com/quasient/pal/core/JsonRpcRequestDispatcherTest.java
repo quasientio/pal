@@ -60,8 +60,6 @@ import zmq.ZError;
 public class JsonRpcRequestDispatcherTest extends ZmqEnabledTest {
 
   private static final String DEALER_ADDRESS = "inproc://jsonrpc.dealer";
-  private final String websocketAddress =
-      String.format("ws://localhost:%d", findAvailableServerPort());
   private static final Logger logger = LoggerFactory.getLogger("tests");
   private ServiceManager manager;
   private final ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
@@ -72,6 +70,8 @@ public class JsonRpcRequestDispatcherTest extends ZmqEnabledTest {
 
   @Before
   public void setUp() throws URISyntaxException, InterruptedException {
+    String websocketAddress = String.format("ws://localhost:%d", findAvailableServerPort());
+    logger.debug("New WS address: {}", websocketAddress);
     zmqContext = createContext();
     JsonRpcRequestDispatcher dispatcher =
         new JsonRpcRequestDispatcher(
@@ -82,6 +82,7 @@ public class JsonRpcRequestDispatcherTest extends ZmqEnabledTest {
             "JsonRpcRequestDispatcher.service",
             websocketAddress,
             DEALER_ADDRESS);
+    logger.debug("Created JsonRpcRequestDispatcher service");
     Set<Service> services = new HashSet<>(Collections.singletonList(dispatcher));
     manager = new ServiceManager(services);
     execService = Executors.newSingleThreadExecutor();
@@ -91,8 +92,11 @@ public class JsonRpcRequestDispatcherTest extends ZmqEnabledTest {
     collectGoSignals(services.size(), zmqContext);
 
     // start ws client
+    logger.debug("Starting WsClient");
     webSocketClient = new WsClient(new URI(websocketAddress));
-    webSocketClient.connectBlocking();
+    boolean ok = webSocketClient.connectBlocking(3, TimeUnit.SECONDS);
+    assertTrue("Websocket connection failed", ok);
+    logger.debug("Ws client connected");
 
     // start worker
     rpcMessageInvoker = new Worker(zmqContext, DEALER_ADDRESS);
@@ -102,9 +106,9 @@ public class JsonRpcRequestDispatcherTest extends ZmqEnabledTest {
   @After
   public void cleanup() throws Exception {
     webSocketClient.close();
-    manager.stopAsync().awaitStopped(2, TimeUnit.SECONDS);
+    manager.stopAsync().awaitStopped(10, TimeUnit.SECONDS);
     execService.shutdownNow();
-    execService.awaitTermination(2, TimeUnit.SECONDS);
+    execService.awaitTermination(10, TimeUnit.SECONDS);
     closeContext(zmqContext);
   }
 
@@ -242,8 +246,8 @@ public class JsonRpcRequestDispatcherTest extends ZmqEnabledTest {
 
     public CompletableFuture<JsonRpcResponse> sendAsync(JsonRpcRequest jsonRpcRequest)
         throws JsonSerializationException {
-      if (logger.isTraceEnabled()) {
-        logger.trace("sending message to ws socket: {}", jsonRpcRequest);
+      if (logger.isDebugEnabled()) {
+        logger.debug("sending message to ws socket: {}", jsonRpcRequest);
       }
       while (this.getReadyState() != ReadyState.OPEN) {
         try {
@@ -267,7 +271,7 @@ public class JsonRpcRequestDispatcherTest extends ZmqEnabledTest {
     @Override
     public void onMessage(String message) {
       logger.info("WS received message: {}", message);
-      JsonRpcResponse jsonRpcResponse = null;
+      JsonRpcResponse jsonRpcResponse;
       try {
         jsonRpcResponse = JsonRpcSerializer.fromJson(message, JsonRpcResponse.class);
       } catch (JsonSerializationException e) {

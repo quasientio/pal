@@ -18,6 +18,7 @@ import jakarta.inject.Singleton;
 import java.net.InetSocketAddress;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -107,12 +108,25 @@ class JsonRpcRequestDispatcher extends ConnectedService {
     String hostnameAndPort = Strings.stringAfter(websocketAddress, "ws://");
     String hostname = Strings.stringBefore(hostnameAndPort, ":");
     int port = Integer.parseInt(Strings.stringAfter(hostnameAndPort, ":"));
+    CountDownLatch wsServerReadyLatch = new CountDownLatch(1);
     webSocketServer =
-        new JsonRpcWebSocketServer(new InetSocketAddress(hostname, port), requestQueue);
+        new JsonRpcWebSocketServer(
+            new InetSocketAddress(hostname, port), requestQueue, wsServerReadyLatch);
 
-    // to send the requests to the dispatcher threads
+    // start WS server (async)
+    webSocketServer.start();
+
+    // create and bind dealer socket, to send the requests to the dispatcher threads
     this.dealerSocket = zmqContext.createSocket(SocketType.DEALER);
     dealerSocket.bind(dealerAddress);
+
+    // wait for the websocket server to be ready
+    try {
+      wsServerReadyLatch.await();
+    } catch (InterruptedException e) {
+      // best we can do here is re-throw
+      throw new RuntimeException(e);
+    }
   }
 
   /**
@@ -130,8 +144,6 @@ class JsonRpcRequestDispatcher extends ConnectedService {
     ZMQ.Poller poller = zmqContext.createPoller(1);
     poller.register(dealerSocket, ZMQ.Poller.POLLIN);
 
-    // start WS server
-    webSocketServer.start();
     boolean socketError = false;
 
     while (!shutdownRequested && !Thread.interrupted() && !socketError) {
@@ -169,7 +181,6 @@ class JsonRpcRequestDispatcher extends ConnectedService {
 
       } catch (InterruptedException e) {
         logger.info("Dispatcher thread interrupted, shutting down.");
-        Thread.currentThread().interrupt();
         break;
       } catch (ZMQException ex) {
         int errorCode = ex.getErrorCode();
