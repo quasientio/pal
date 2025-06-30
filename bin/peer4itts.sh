@@ -26,7 +26,7 @@ KAFKA_SERVERS="${KAFKA_SERVERS:-localhost:29092}"
 
 export PAL_PEER_LOGGING_CONFIG="$PAL_HOME/config/peer-logging.xml"
 
-pal run \
+pal.sh run \
   --dir $PAL_DIRECTORY \
   --name peer-for-itt \
   --rpc 5656 \
