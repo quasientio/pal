@@ -33,7 +33,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.junit.After;
 import org.junit.Before;
@@ -272,6 +276,65 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     assertNotNull(newLogInfo.getBootstrapServers());
     assertTrue(palDirectory.logExists(createdLogName));
     assertNotNull(newLogInfo.getUuid());
+  }
+
+  /** Test concurrent creation of logs with the same prefix must yield unique names */
+  @Test
+  public void newLog_concurrentWriters_uniqueNames() throws Exception {
+    final String prefix = "concurrent.topic"; // use a test-specific prefix
+    final int writers = 32; // number of concurrent clients
+    //  figure-out where the new sequence should start
+    LogInfo lastExisting = palDirectory.getLastLogWithPrefix(prefix);
+    long startIndex =
+        (lastExisting == null)
+            ? 1
+            : Long.parseLong(lastExisting.getName().substring(prefix.length())) + 1;
+    logger.debug("startIndex = {}", startIndex);
+
+    ExecutorService pool = Executors.newFixedThreadPool(writers);
+    CountDownLatch readyLatch = new CountDownLatch(writers); // ensure all threads queued
+    CountDownLatch startLatch = new CountDownLatch(1); // fire them simultaneously
+    Set<String> names = ConcurrentHashMap.newKeySet();
+
+    for (int i = 0; i < writers; i++) {
+      var unused =
+          pool.submit(
+              () -> {
+                readyLatch.countDown(); // signal “I’m ready”
+                startLatch.await(); // wait for the green light
+                LogInfo info = palDirectory.newLog(prefix, getKafkaServers());
+                names.add(info.getName());
+                createdLogs.add(info.getName()); // register for @After cleanup
+                return null;
+              });
+    }
+
+    // Wait until all tasks are queued, then start them together
+    readyLatch.await();
+    startLatch.countDown();
+
+    pool.shutdown();
+    assertTrue("Timed out waiting for tasks", pool.awaitTermination(30, TimeUnit.SECONDS));
+
+    //  Assertions
+    assertEquals("Each writer must create one *distinct* log", writers, names.size());
+
+    int finalCount = palDirectory.getLogCount(prefix);
+    assertEquals(
+        "Directory should have gained exactly <writers> logs",
+        startIndex + writers - 1,
+        finalCount);
+
+    // contiguity check relative to *startIndex*
+    List<Long> indexes =
+        names.stream().map(n -> Long.parseLong(n.substring(prefix.length()))).sorted().toList();
+
+    List<Long> sorted = indexes.stream().sorted().toList();
+    assertEquals(writers, sorted.size()); // uniqueness
+    assertEquals(sorted.get(0) + writers - 1, (long) sorted.get(writers - 1)); // no gaps
+    for (int i = 1; i < sorted.size(); i++) {
+      assertEquals(sorted.get(i - 1) + 1, (long) sorted.get(i)); // strictly +1 each step
+    }
   }
 
   @Test

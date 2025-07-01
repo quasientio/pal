@@ -220,14 +220,16 @@ public class PalDirectory implements AutoCloseable {
   }
 
   /**
-   * Creates a new peer in the directory. If the peer already exists (key = peerUuid), then creation
-   * is skipped.
+   * Creates a new peer in the directory. If the peer already exists (key = uuid), then creation is
+   * skipped.
    *
    * @param peerInfo the information of the peer to create. Must contain its uuid.
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
   public void createPeer(PeerInfo peerInfo) throws ExecutionException, InterruptedException {
+    Objects.requireNonNull(peerInfo, "peerInfo cannot be null");
+    Objects.requireNonNull(peerInfo.getUuid(), "peerInfo.uuid cannot be null");
     final Instant now = Instant.now();
     if (peerInfo.getCTime() == null) {
       peerInfo.setCtime(now.toEpochMilli());
@@ -238,7 +240,7 @@ public class PalDirectory implements AutoCloseable {
     final ByteSequence peerKey = ByteSequence.from(getPeerPath(peerInfo.getUuid()).getBytes(UTF8));
     final ByteSequence peerData = ByteSequence.from(peerInfo.toJson().getBytes(UTF8));
 
-    TxnResponse rsp =
+    TxnResponse response =
         kvClient
             .txn()
             .If(new Cmp(peerKey, Cmp.Op.EQUAL, CmpTarget.version(0))) // key must not exist
@@ -246,10 +248,10 @@ public class PalDirectory implements AutoCloseable {
             .commit()
             .get();
 
-    if (rsp.isSucceeded()) {
+    if (response.isSucceeded()) {
       logger.info("Registered peer w/uuid: {}, {}", peerInfo.getUuid(), peerInfo);
     } else {
-      logger.warn("Peer {} already registered — skipping", peerInfo.getUuid());
+      logger.warn("Peer {} already registered - skipping", peerInfo.getUuid());
     }
   }
 
@@ -264,26 +266,44 @@ public class PalDirectory implements AutoCloseable {
    */
   public void registerPeerInLog(PeerInfo peerInfo, LogInfo logInfo)
       throws ExecutionException, InterruptedException, NoPeerInfoNodeException {
-    if (!peerExists(peerInfo.getUuid())) {
-      throw new NoPeerInfoNodeException(
-          format("Peer w/uuid %s does not exist", peerInfo.getUuid()));
+    Objects.requireNonNull(peerInfo, "peerInfo");
+    Objects.requireNonNull(logInfo, "logInfo");
+
+    ByteSequence peerKey = ByteSequence.from(getPeerPath(peerInfo.getUuid()), UTF8);
+    ByteSequence inLogKey = ByteSequence.from(getPeerLogsInPath(peerInfo.getUuid()), UTF8);
+    ByteSequence inLogValue = ByteSequence.from(logInfo.getUuid().toString(), UTF8);
+
+    TxnResponse tx =
+        kvClient
+            .txn()
+            // peer must exist
+            .If(
+                new Cmp(peerKey, Cmp.Op.GREATER, CmpTarget.version(0)),
+                // in-log pointer must NOT exist yet
+                new Cmp(inLogKey, Cmp.Op.EQUAL, CmpTarget.version(0)))
+            .Then(Op.put(inLogKey, inLogValue, PutOption.DEFAULT))
+            .commit()
+            .get();
+
+    if (!tx.isSucceeded()) {
+      // Decide what “failed” means
+      if (!kvClient.get(peerKey).get().getKvs().isEmpty()) {
+        throw new IllegalStateException("IN-log already registered for peer " + peerInfo.getUuid());
+      } else {
+        throw new NoPeerInfoNodeException("Peer " + peerInfo.getUuid() + " does not exist");
+      }
     }
-    final String peerLogsInPath = getPeerLogsInPath(peerInfo.getUuid());
-    final ByteSequence peerLogsInPathKey = ByteSequence.from(peerLogsInPath.getBytes(UTF8));
-    final ByteSequence logData = ByteSequence.from(logInfo.getUuid().toString().getBytes(UTF8));
-    kvClient.put(peerLogsInPathKey, logData).get();
-    logger.info(
-        "Registered IN log w/name: {} for peer w/uuid: {}", logInfo.getName(), peerInfo.getUuid());
+    logger.info("Registered IN log {} for peer {}", logInfo.getName(), peerInfo.getUuid());
   }
 
   /**
-   * Retrieves the UUID of the incoming log associated with the specified peer.
+   * Retrieves the UUID of the IN log associated with the specified peer.
    *
    * @param peerUuid the UUID of the peer
-   * @return the UUID of the incoming log, or {@code null} if none exists
+   * @return the UUID of the IN log, or {@code null} if none exists
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
-   * @throws IllegalStateException if multiple incoming logs are found for the peer
+   * @throws IllegalStateException if multiple IN logs are found for the peer
    */
   public UUID getPeerInLog(UUID peerUuid) throws ExecutionException, InterruptedException {
     final String peerLogsInPath = getPeerLogsInPath(peerUuid);
@@ -295,42 +315,60 @@ public class PalDirectory implements AutoCloseable {
       return null;
     }
     if (kvs.size() > 1) {
-      throw new IllegalStateException("More than one in-log found for peer w/uuid: " + peerUuid);
+      throw new IllegalStateException("More than one IN-log found for peer w/uuid: " + peerUuid);
     }
     return UUID.fromString(kvs.get(0).getValue().toString(UTF8));
   }
 
   /**
-   * Registers an outgoing log for the specified peer.
+   * Registers the OUT log for the specified peer.
    *
    * @param peerInfo the information of the peer
-   * @param logInfo the log information to register as outgoing for the peer
+   * @param logInfo the log information to register as OUT for the peer
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    * @throws NoPeerInfoNodeException if the peer does not exist in the directory
    */
   public void registerPeerOutLog(PeerInfo peerInfo, LogInfo logInfo)
       throws ExecutionException, InterruptedException, NoPeerInfoNodeException {
-    if (!peerExists(peerInfo.getUuid())) {
-      throw new NoPeerInfoNodeException(
-          format("Peer w/uuid %s does not exist", peerInfo.getUuid()));
+
+    Objects.requireNonNull(peerInfo, "peerInfo");
+    Objects.requireNonNull(logInfo, "logInfo");
+
+    ByteSequence peerKey = ByteSequence.from(getPeerPath(peerInfo.getUuid()), UTF8);
+    ByteSequence outLogKey = ByteSequence.from(getPeerLogsOutPath(peerInfo.getUuid()), UTF8);
+    ByteSequence outLogValue = ByteSequence.from(logInfo.getUuid().toString(), UTF8);
+
+    TxnResponse tx =
+        kvClient
+            .txn()
+            .If(
+                new Cmp(peerKey, Cmp.Op.GREATER, CmpTarget.version(0)),
+                new Cmp(outLogKey, Cmp.Op.EQUAL, CmpTarget.version(0)))
+            .Then(Op.put(outLogKey, outLogValue, PutOption.DEFAULT))
+            .commit()
+            .get();
+
+    if (!tx.isSucceeded()) {
+      // Decide what “failed” means
+      if (!kvClient.get(peerKey).get().getKvs().isEmpty()) {
+        throw new IllegalStateException(
+            "OUT-log already registered for peer " + peerInfo.getUuid());
+      } else {
+        throw new NoPeerInfoNodeException("Peer " + peerInfo.getUuid() + " does not exist");
+      }
     }
-    final String peerLogsOutPath = getPeerLogsOutPath(peerInfo.getUuid());
-    final ByteSequence peerLogsOutPathKey = ByteSequence.from(peerLogsOutPath.getBytes(UTF8));
-    final ByteSequence logData = ByteSequence.from(logInfo.getUuid().toString().getBytes(UTF8));
-    kvClient.put(peerLogsOutPathKey, logData).get();
-    logger.info(
-        "Registered OUT log w/name: {} for peer w/uuid: {}", logInfo.getName(), peerInfo.getUuid());
+    logger.info("Registered OUT log {} for peer {}", logInfo.getName(), peerInfo.getUuid());
   }
 
   /**
-   * Retrieves the UUID of the outgoing log associated with the specified peer.
+   * Retrieves the UUID of the OUT log associated with the specified peer.
    *
    * @param peerUuid the UUID of the peer
-   * @return the UUID of the outgoing log, or {@code null} if none exists
+   * @return the UUID of the OUT log, or {@code null} if none exists
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
-   * @throws IllegalStateException if multiple outgoing logs are found for the peer
+   * @throws IllegalStateException if multiple OUT logs are found for the peer
    */
   public UUID getPeerOutLog(UUID peerUuid) throws ExecutionException, InterruptedException {
     final String peerLogsOutPath = getPeerLogsOutPath(peerUuid);
@@ -342,7 +380,7 @@ public class PalDirectory implements AutoCloseable {
       return null;
     }
     if (kvs.size() > 1) {
-      throw new IllegalStateException("More than one out-log found for peer w/uuid: " + peerUuid);
+      throw new IllegalStateException("More than one OUT-log found for peer w/uuid: " + peerUuid);
     }
     return UUID.fromString(kvs.get(0).getValue().toString(UTF8));
   }
@@ -746,7 +784,8 @@ public class PalDirectory implements AutoCloseable {
   // <editor-fold desc="Log methods">
 
   /**
-   * Registers a new log in the directory. If the log already exists, registration is skipped.
+   * Registers a new log in the directory. If the log already exists (key = name), registration is
+   * skipped.
    *
    * @param logInfo the information of the log to register
    * @throws ExecutionException if an error occurs during etcd operation
@@ -754,13 +793,9 @@ public class PalDirectory implements AutoCloseable {
    */
   public void registerLog(LogInfo logInfo) throws ExecutionException, InterruptedException {
     Objects.requireNonNull(logInfo, "logInfo cannot be null");
-    Objects.requireNonNull(logInfo.getBootstrapServers(), "bootstrapServers cannot be null");
-    GetResponse getResponse =
-        kvClient.get(ByteSequence.from(getLogPath(logInfo.getName()).getBytes(UTF8))).get();
-    if (getResponse.getCount() != 0) {
-      logger.info("Skipping registration of existing log with name: {}", logInfo.getName());
-      return;
-    }
+    Objects.requireNonNull(
+        logInfo.getBootstrapServers(), "logInfo.bootstrapServers cannot be null");
+
     if (logInfo.getUuid() == null) {
       logInfo.setUuid(UUID.randomUUID());
     }
@@ -773,9 +808,20 @@ public class PalDirectory implements AutoCloseable {
     }
     final ByteSequence logKey = ByteSequence.from(getLogPath(logInfo.getName()).getBytes(UTF8));
     final ByteSequence logData = ByteSequence.from(logInfo.toJson().getBytes(UTF8));
-    kvClient.put(logKey, logData).get();
-    logger.info(
-        "Registered given log node: {} with uuid: {}", logInfo.getName(), logInfo.getUuid());
+
+    TxnResponse response =
+        kvClient
+            .txn()
+            .If(new Cmp(logKey, Cmp.Op.EQUAL, CmpTarget.version(0))) // key must not exist
+            .Then(Op.put(logKey, logData, PutOption.DEFAULT))
+            .commit()
+            .get();
+
+    if (response.isSucceeded()) {
+      logger.info("Registered log {} w/uuid {}", logInfo.getName(), logInfo.getUuid());
+    } else {
+      logger.warn("Log {} already registered - skipping", logInfo.getName());
+    }
   }
 
   /**
@@ -792,28 +838,65 @@ public class PalDirectory implements AutoCloseable {
       throws ExecutionException, InterruptedException {
     Objects.requireNonNull(logNamePrefix, "logNamePrefix cannot be null");
     Objects.requireNonNull(logServers, "logServers cannot be null");
-    final LogInfo lastLogWithPrefix = getLastLogWithPrefix(logNamePrefix);
 
-    // generate name of new log with given prefix and monotonically increasing counter
-    final String newLogName;
-    if (lastLogWithPrefix == null) {
-      newLogName = format("%s%010d", logNamePrefix, 1);
-    } else {
-      String lastLogIdxStr = Strings.stringAfter(lastLogWithPrefix.getName(), logNamePrefix);
-      newLogName = format("%s%010d", logNamePrefix, Long.parseLong(lastLogIdxStr) + 1);
+    // 1) Atomically increment /<ns>/logs/counters/<prefix>
+    ByteSequence counterKey =
+        ByteSequence.from(String.format("%s/counters/%s", getLogsPath(), logNamePrefix), UTF8);
+
+    long nextIdx;
+    while (true) {
+      GetResponse resp = kvClient.get(counterKey).get(); // read current counter
+      long current =
+          resp.getCount() == 0 ? 0 : Long.parseLong(resp.getKvs().get(0).getValue().toString(UTF8));
+      long version = resp.getCount() == 0 ? 0 : resp.getKvs().get(0).getVersion();
+      nextIdx = current + 1;
+
+      TxnResponse tx =
+          kvClient
+              .txn() // CAS on the version
+              .If(new Cmp(counterKey, Cmp.Op.EQUAL, CmpTarget.version(version)))
+              .Then(
+                  Op.put(
+                      counterKey,
+                      ByteSequence.from(Long.toString(nextIdx), UTF8),
+                      PutOption.DEFAULT))
+              .commit()
+              .get();
+
+      if (tx.isSucceeded()) break; // someone else updated? retry
     }
-    // create and save new LogInfo
-    final LogInfo newLogInfo = new LogInfo(newLogName);
-    newLogInfo.setUuid(UUID.randomUUID());
-    newLogInfo.setBootstrapServers(logServers);
-    final Instant now = Instant.now();
-    newLogInfo.setCtime(now.toEpochMilli());
-    newLogInfo.setMtime(now.toEpochMilli());
-    final ByteSequence newLogKey = ByteSequence.from(getLogPath(newLogName).getBytes(UTF8));
-    final ByteSequence newLogData = ByteSequence.from(newLogInfo.toJson().getBytes(UTF8));
-    kvClient.put(newLogKey, newLogData).get();
-    logger.info("Created new log: {} with uuid: {}", newLogName, newLogInfo.getUuid());
-    return newLogInfo;
+
+    String logName = String.format("%s%010d", logNamePrefix, nextIdx);
+
+    // 2) Create the actual log node (guaranteed unique now)
+    return putNewLogNode(logName, logServers); // helper below
+  }
+
+  /**
+   * Auxiliary method that writes the LogInfo JSON under “…/logs/<name>”.
+   *
+   * @param logName the log name
+   * @param logServers the bootstrap servers for the new log
+   * @return the newly created {@link LogInfo}
+   * @throws ExecutionException if an error occurs during etcd operation
+   * @throws InterruptedException if the current thread is interrupted while waiting
+   */
+  private LogInfo putNewLogNode(String logName, String logServers)
+      throws ExecutionException, InterruptedException {
+
+    LogInfo info = new LogInfo(logName, logServers);
+    info.setUuid(UUID.randomUUID());
+    long now = Instant.now().toEpochMilli();
+    info.setCtime(now);
+    info.setMtime(now);
+
+    ByteSequence logKey = ByteSequence.from(getLogPath(logName), UTF8);
+    ByteSequence logValue = ByteSequence.from(info.toJson(), UTF8);
+
+    kvClient.put(logKey, logValue).get();
+    logger.info("Created new log {} (uuid={})", logName, info.getUuid());
+
+    return info;
   }
 
   /**
@@ -885,20 +968,31 @@ public class PalDirectory implements AutoCloseable {
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
   public Set<LogInfo> getAllLogs() throws ExecutionException, InterruptedException {
-    final GetResponse getResponse =
-        kvClient.get(getLogsPathKey(), GetOption.builder().isPrefix(true).build()).get();
-    final Set<LogInfo> allLogs = new TreeSet<>();
-    for (KeyValue kv : getResponse.getKvs()) {
-      // skip root logs path
-      if (kv.getKey().equals(getLogsPathKey())) {
+    final String logsRoot = getLogsPath(); // "/<ns>/logs"
+    final String logsPrefix = logsRoot + '/'; // "/<ns>/logs/"
+
+    GetResponse resp =
+        kvClient
+            .get(
+                ByteSequence.from(logsPrefix.getBytes(UTF8)),
+                GetOption.builder().isPrefix(true).build())
+            .get();
+
+    Set<LogInfo> logs = new TreeSet<>();
+    for (KeyValue kv : resp.getKvs()) {
+      String fullPath = kv.getKey().toString(UTF8); // e.g. "/<ns>/logs/app0000000001"
+      String remainder = fullPath.substring(logsPrefix.length());
+
+      // skip anything in sub-directories such as "counters/<prefix>"
+      if (remainder.contains("/")) {
         continue;
       }
-      allLogs.add(LogInfo.fromJson(kv.getValue().toString(UTF8)));
+      logs.add(LogInfo.fromJson(kv.getValue().toString(UTF8)));
     }
     if (logger.isDebugEnabled()) {
-      logger.debug("returning from getAllLogs: {}", allLogs);
+      logger.debug("returning from getAllLogs: {}", logs);
     }
-    return allLogs;
+    return logs;
   }
 
   /**
