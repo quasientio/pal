@@ -1061,15 +1061,46 @@ public class PalDirectory implements AutoCloseable {
    */
   @Override
   public void close() {
+    // Fast-path: already closed?
     if (!closed.compareAndSet(false, true)) {
       if (logger.isDebugEnabled()) {
-        logger.debug("Directory connection to {} already closed. Skipping...", directoryUrl);
+        logger.debug("Directory to {} already closed – skipping", directoryUrl);
       }
       return;
     }
-    kvClient.close();
-    client.close();
-    logger.info("Closed directory to {}", directoryUrl);
+
+    RuntimeException firstError = null;
+
+    // 1) Child resources first
+    try {
+      if (kvClient != null) {
+        kvClient.close();
+      }
+    } catch (RuntimeException e) {
+      firstError = e;
+      logger.warn("Failed to close KV client", e);
+    }
+
+    // 2) Parent client next
+    try {
+      if (client != null) {
+        client.close(); // safe even if kvClient.close() already did it
+      }
+    } catch (RuntimeException e) {
+      if (firstError != null) {
+        firstError.addSuppressed(e); // keep the original stack
+      } else {
+        firstError = e;
+      }
+      logger.warn("Failed to close etcd client", e);
+    }
+
+    // 3) Report aggregated failure
+    if (firstError != null) {
+      throw firstError; // AutoCloseable allows unchecked throws
+    }
+
+    logger.info("Closed Directory connection to {}", directoryUrl);
   }
 
   // </editor-fold>
