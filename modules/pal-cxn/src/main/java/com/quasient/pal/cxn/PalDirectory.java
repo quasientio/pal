@@ -102,7 +102,7 @@ public class PalDirectory implements AutoCloseable {
   private final KV kvClient;
 
   /** Flag for idempotent close(). */
-  private static final AtomicBoolean CLOSED = new AtomicBoolean();
+  private final AtomicBoolean closed = new AtomicBoolean();
 
   /** Namespace used within etcd for organizing entries. */
   private final String namespace;
@@ -1061,7 +1061,7 @@ public class PalDirectory implements AutoCloseable {
    */
   @Override
   public void close() {
-    if (!CLOSED.compareAndSet(false, true)) {
+    if (!closed.compareAndSet(false, true)) {
       if (logger.isDebugEnabled()) {
         logger.debug("Directory connection to {} already closed. Skipping...", directoryUrl);
       }
