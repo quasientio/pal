@@ -41,7 +41,6 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -374,18 +373,23 @@ public class PalDirectory implements AutoCloseable {
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
   public Set<PeerInfo> getAllPeers() throws ExecutionException, InterruptedException {
-    final GetResponse response =
-        kvClient.get(getPeersPathKey(), GetOption.builder().isPrefix(true).build()).get();
-    final Set<PeerInfo> allPeers = new TreeSet<>();
-    for (KeyValue kv : response.getKvs()) {
-      // skip root peers path
-      if (kv.getKey().equals(getPeersPathKey())) {
-        continue;
-      }
-      // only add peers, not logs inside the peer's path
-      String keyPath = kv.getKey().toString(UTF8);
-      long slashCount = keyPath.chars().filter(ch -> ch == '/').count();
-      if (slashCount == 3) {
+    final String peersRoot = getPeersPath(); // "/<ns>/peers"
+    final String peersPrefix = peersRoot + "/"; // trailing slash so we never get the root node
+
+    GetResponse resp =
+        kvClient
+            .get(
+                ByteSequence.from(peersPrefix.getBytes(UTF8)),
+                GetOption.builder().isPrefix(true).build())
+            .get();
+
+    // Filter: a peer entry is exactly one segment after “…/peers/”
+    Set<PeerInfo> allPeers = new TreeSet<>();
+    for (KeyValue kv : resp.getKvs()) {
+      String fullPath = kv.getKey().toString(UTF8);
+      String remainder = fullPath.substring(peersPrefix.length()); // strip the known prefix
+
+      if (!remainder.contains("/")) { // no further slash ⇒ “…/peers/<uuid>”
         allPeers.add(PeerInfo.fromJson(kv.getValue().toString(UTF8)));
       }
     }
@@ -462,49 +466,59 @@ public class PalDirectory implements AutoCloseable {
   // <editor-fold desc="Intercept request methods">
 
   /**
-   * Creates an {@link InterceptEvent} based on the received etcd watch event.
+   * Creates an {@link InterceptEvent} based on the received etcd watch event. Handles any namespace
+   * that may itself contain '/' characters.
    *
    * @param event the etcd watch event
    * @return the constructed {@link InterceptEvent}, or {@code null} if the event type is unexpected
    *     or invalid
    */
   private InterceptEvent createInterceptEvent(WatchEvent event) {
+
+    // 1) Map etcd event → domain event type
     final InterceptEvent.Type type;
     switch (event.getEventType()) {
-      case PUT:
-        type = InterceptEvent.Type.INTERCEPT_ADDED;
-        break;
-      case DELETE:
-        type = InterceptEvent.Type.INTERCEPT_REMOVED;
-        break;
-      default:
-        logger.error("Unexpected event of type: {}", event.getEventType().name());
+      case PUT -> type = InterceptEvent.Type.INTERCEPT_ADDED;
+      case DELETE -> type = InterceptEvent.Type.INTERCEPT_REMOVED;
+      default -> {
+        logger.error("Unexpected watch event: {}", event.getEventType());
         return null;
-    }
-    String path = event.getKeyValue().getKey().toString(UTF8);
-    String[] parts =
-        Arrays.stream(path.split("/")).filter(s -> !s.isEmpty()).toArray(String[]::new);
-    if (parts.length == 4) {
-      try {
-        final UUID peerUuid = UUID.fromString(parts[2]);
-        final String interceptId = parts[3];
-        final byte[] data = event.getKeyValue().getValue().getBytes();
-        final InterceptRequest<?> interceptRequest;
-        logger.debug(
-            "Creating intercept event from path: '{}' with value: '{}'",
-            path,
-            new String(data, UTF8));
-        if (type == InterceptEvent.Type.INTERCEPT_ADDED) {
-          interceptRequest = InterceptRequest.fromBytes(data, UTF8);
-        } else {
-          interceptRequest = null;
-        }
-        return new InterceptEvent(type, path, peerUuid, interceptId, interceptRequest);
-      } catch (IllegalArgumentException e) {
-        logger.warn("Invalid UUID or unexpected path of len=4: {}", path, e);
       }
     }
-    return null;
+
+    // 2) Peel off the known prefix   "/<namespace>/intercepts/"
+    String fullPath = event.getKeyValue().getKey().toString(UTF8);
+    String interceptsRoot = getInterceptsPath() + '/';
+
+    if (!fullPath.startsWith(interceptsRoot)) {
+      logger.warn("Intercept path '{}' does not start with '{}'", fullPath, interceptsRoot);
+      return null;
+    }
+
+    String remainder = fullPath.substring(interceptsRoot.length()); // "<peer>/<id>..." or "<peer>"
+    String[] parts = remainder.split("/");
+
+    // 3) We care only about “…/intercepts/<peerUuid>/<interceptId>”
+    if (parts.length < 2) { // event on the peer directory itself → ignore
+      return null;
+    }
+
+    try {
+      UUID peerUuid = UUID.fromString(parts[0]);
+      String interceptId = parts[1];
+
+      InterceptRequest<?> request = null;
+      if (type == InterceptEvent.Type.INTERCEPT_ADDED) {
+        byte[] bytes = event.getKeyValue().getValue().getBytes();
+        request = InterceptRequest.fromBytes(bytes, UTF8);
+      }
+
+      return new InterceptEvent(type, fullPath, peerUuid, interceptId, request);
+
+    } catch (IllegalArgumentException ex) { // malformed UUID or bad data
+      logger.warn("Invalid intercept path '{}'", fullPath, ex);
+      return null;
+    }
   }
 
   /**
