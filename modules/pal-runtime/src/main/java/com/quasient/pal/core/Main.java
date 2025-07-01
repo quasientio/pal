@@ -929,7 +929,7 @@ public class Main implements Callable<Integer> {
       if (name != null) {
         self.setName(name);
       }
-      palDirectory.registerPeer(self);
+      palDirectory.createPeer(self);
     } catch (Exception ex) {
       fatalExit(ex, PeerException.FatalCode.ERROR_REGISTERING_SELF);
     }
@@ -1220,6 +1220,14 @@ public class Main implements Callable<Integer> {
       manager.startAsync();
     }
 
+    // double-check by collecting all READY signals from services before proceeding
+    collectGoSignals(services.size());
+
+    // wait for all services up
+    if (manager != null) {
+      manager.awaitHealthy();
+    }
+
     // block until we're registered in Directory
     if (runOptions.contains(RunOptions.WITH_PALDIR)) {
       try {
@@ -1227,14 +1235,6 @@ public class Main implements Callable<Integer> {
       } finally {
         singleExecutor.shutdownNow();
       }
-    }
-
-    // double-check by collecting all READY signals from services before proceeding
-    collectGoSignals(services.size());
-
-    // wait for all services up
-    if (manager != null) {
-      manager.awaitHealthy();
     }
 
     // start listening to intercept requests

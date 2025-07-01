@@ -475,7 +475,7 @@ public class ThinPeer implements AutoCloseable {
         if (this.rpcAddress != null) {
           self.setRpcAddress(rpcAddress);
         }
-        getPalDirectory().registerPeer(self);
+        getPalDirectory().createPeer(self);
       } catch (Exception ex) {
         logger.error("Error registering peer", ex);
       }

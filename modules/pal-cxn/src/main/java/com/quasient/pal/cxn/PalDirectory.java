@@ -25,9 +25,14 @@ import io.etcd.jetcd.Watch;
 import io.etcd.jetcd.kv.DeleteResponse;
 import io.etcd.jetcd.kv.GetResponse;
 import io.etcd.jetcd.kv.PutResponse;
+import io.etcd.jetcd.kv.TxnResponse;
 import io.etcd.jetcd.maintenance.StatusResponse;
+import io.etcd.jetcd.op.Cmp;
+import io.etcd.jetcd.op.CmpTarget;
+import io.etcd.jetcd.op.Op;
 import io.etcd.jetcd.options.DeleteOption;
 import io.etcd.jetcd.options.GetOption;
+import io.etcd.jetcd.options.PutOption;
 import io.etcd.jetcd.options.WatchOption;
 import io.etcd.jetcd.watch.WatchEvent;
 import io.etcd.jetcd.watch.WatchResponse;
@@ -219,17 +224,14 @@ public class PalDirectory implements AutoCloseable {
   }
 
   /**
-   * Registers a new peer in the directory. If the peer already exists, registration is skipped.
+   * Creates a new peer in the directory. If the peer already exists (key = peerUuid), then creation
+   * is skipped.
    *
-   * @param peerInfo the information of the peer to register
+   * @param peerInfo the information of the peer to create. Must contain its uuid.
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
-  public void registerPeer(PeerInfo peerInfo) throws ExecutionException, InterruptedException {
-    if (peerExists(peerInfo.getUuid())) {
-      logger.warn("Skipping registration of existing peer with uuid: {}", peerInfo.getUuid());
-      return;
-    }
+  public void createPeer(PeerInfo peerInfo) throws ExecutionException, InterruptedException {
     final Instant now = Instant.now();
     if (peerInfo.getCTime() == null) {
       peerInfo.setCtime(now.toEpochMilli());
@@ -241,8 +243,21 @@ public class PalDirectory implements AutoCloseable {
         ByteSequence.from(getPeerPath(peerInfo.getUuid()).getBytes(getEncodingCharset()));
     final ByteSequence peerData =
         ByteSequence.from(peerInfo.toJson().getBytes(getEncodingCharset()));
-    kvClient.put(peerKey, peerData).get();
-    logger.info("Registered peer w/uuid: {}, {}", peerInfo.getUuid(), peerInfo);
+
+    TxnResponse rsp =
+        kvClient
+            .txn()
+            .If(new Cmp(peerKey, Cmp.Op.EQUAL, CmpTarget.version(0))) // key must not exist
+            .Then(Op.put(peerKey, peerData, PutOption.DEFAULT))
+            .commit()
+            .get();
+
+    if (rsp.isSucceeded()) {
+      logger.info("Registered peer w/uuid: {}, {}", peerInfo.getUuid(), peerInfo);
+    }
+    {
+      logger.warn("Peer {} already registered — skipping", peerInfo.getUuid());
+    }
   }
 
   /**

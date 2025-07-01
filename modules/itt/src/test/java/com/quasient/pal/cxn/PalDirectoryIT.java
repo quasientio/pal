@@ -95,7 +95,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   }
 
   @Test
-  public void registerPeer_newPeer_peerCreated() throws Exception {
+  public void createPeer_newPeer_peerCreated() throws Exception {
     final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID());
     peerInfo.setRpcAddress("tcp://127.0.0.1:5671");
 
@@ -103,11 +103,37 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     assertFalse(palDirectory.peerExists(peerInfo.getUuid()));
 
     // register
-    palDirectory.registerPeer(peerInfo);
+    palDirectory.createPeer(peerInfo);
     createdPeers.add(peerInfo.getUuid());
 
     // verify
     assertTrue(palDirectory.peerExists(peerInfo.getUuid()));
+  }
+
+  @Test
+  public void createPeer_peerUuidAlreadyExists_noErrorNoUpdate() throws Exception {
+    UUID peerOneId = UUID.randomUUID();
+    final PeerInfo peerOneInfo = new PeerInfo(peerOneId);
+    peerOneInfo.setRpcAddress("tcp://127.0.0.1:5671");
+
+    // pre-assertions
+    assertFalse(palDirectory.peerExists(peerOneInfo.getUuid()));
+
+    // create
+    palDirectory.createPeer(peerOneInfo);
+    createdPeers.add(peerOneInfo.getUuid());
+
+    // verify
+    assertTrue(palDirectory.peerExists(peerOneInfo.getUuid()));
+
+    // try to create another peer with same uuid
+    final PeerInfo peerTwoInfo = new PeerInfo(peerOneId);
+    peerTwoInfo.setRpcAddress("tcp://127.0.0.1:5765");
+    palDirectory.createPeer(peerTwoInfo);
+
+    // retrieve peer, ensure it's peerOne
+    PeerInfo createdPeerInfo = palDirectory.getPeerInfo(peerOneId);
+    assertEquals(peerOneInfo, createdPeerInfo);
   }
 
   @Test
@@ -123,7 +149,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     peerInfo.setRpcAddress("tcp://127.0.0.1:5671");
     peerInfo.setPubAddress("tcp://localhost:7777");
     peerInfo.setJmxAddress("localhost:9012");
-    palDirectory.registerPeer(peerInfo);
+    palDirectory.createPeer(peerInfo);
     createdPeers.add(peerInfo.getUuid());
 
     // pre-assertions
@@ -154,7 +180,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     // create
     final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID());
     peerInfo.setRpcAddress("tcp://127.0.0.1:5671");
-    palDirectory.registerPeer(peerInfo);
+    palDirectory.createPeer(peerInfo);
     createdPeers.add(peerInfo.getUuid());
 
     // pre-assertions
@@ -176,7 +202,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
       // create a peer
       final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID());
       peerInfo.setRpcAddress("tcp://127.0.0.1:5671");
-      palDirectory.registerPeer(peerInfo);
+      palDirectory.createPeer(peerInfo);
       createdPeers.add(peerInfo.getUuid());
     }
 
@@ -212,7 +238,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
       // create a peer
       final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID());
       peerInfo.setRpcAddress("tcp://127.0.0.1:5671");
-      palDirectory.registerPeer(peerInfo);
+      palDirectory.createPeer(peerInfo);
       createdPeers.add(peerInfo.getUuid());
     }
 
@@ -274,7 +300,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     // register new peer
     final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID());
     peerInfo.setRpcAddress("tcp://127.0.0.1:5671");
-    palDirectory.registerPeer(peerInfo);
+    palDirectory.createPeer(peerInfo);
     createdPeers.add(peerInfo.getUuid());
 
     // create and register In and Out logs for the new peer
@@ -499,7 +525,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   public void registerInterceptAsync_peerExists_registered() throws Exception {
     // create peer
     final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "testing peer");
-    palDirectory.registerPeer(peerInfo);
+    palDirectory.createPeer(peerInfo);
     createdPeers.add(peerInfo.getUuid());
 
     // pre-assertions
@@ -529,7 +555,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   public void registerIntercept_peerExists_registered() throws Exception {
     // create peer
     final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "testing peer");
-    palDirectory.registerPeer(peerInfo);
+    palDirectory.createPeer(peerInfo);
     createdPeers.add(peerInfo.getUuid());
 
     // pre-assertions
@@ -558,7 +584,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   public void unregisterIntercept_interceptExists_unregistered() throws Exception {
     // create peer
     final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "testing peer");
-    palDirectory.registerPeer(peerInfo);
+    palDirectory.createPeer(peerInfo);
     createdPeers.add(peerInfo.getUuid());
 
     // pre-assertions
@@ -590,7 +616,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   @Test
   public void getPeerInterceptRequests_noRequests_emptyList() throws Exception {
     final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "testing peer");
-    palDirectory.registerPeer(peerInfo);
+    palDirectory.createPeer(peerInfo);
     createdPeers.add(peerInfo.getUuid());
 
     // pre-assertions
@@ -603,7 +629,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   public void getPeerInterceptRequests_requestsExist_requestList() throws Exception {
     // create peer
     final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "testing peer");
-    palDirectory.registerPeer(peerInfo);
+    palDirectory.createPeer(peerInfo);
     createdPeers.add(peerInfo.getUuid());
 
     // pre-assertions
@@ -652,11 +678,11 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   public void getAllInterceptRequests_requestsExist_requestList() throws Exception {
     // create two different peers
     final PeerInfo peerInfo1 = new PeerInfo(UUID.randomUUID(), "testing peer 1");
-    palDirectory.registerPeer(peerInfo1);
+    palDirectory.createPeer(peerInfo1);
     createdPeers.add(peerInfo1.getUuid());
 
     final PeerInfo peerInfo2 = new PeerInfo(UUID.randomUUID(), "testing peer 2");
-    palDirectory.registerPeer(peerInfo2);
+    palDirectory.createPeer(peerInfo2);
     createdPeers.add(peerInfo2.getUuid());
 
     // pre-assertions
@@ -731,7 +757,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   public void unregisterPeerInterceptRequests_requestsExist_unregistered() throws Exception {
     // create peer
     final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "testing peer");
-    palDirectory.registerPeer(peerInfo);
+    palDirectory.createPeer(peerInfo);
     createdPeers.add(peerInfo.getUuid());
 
     // pre-assertions
