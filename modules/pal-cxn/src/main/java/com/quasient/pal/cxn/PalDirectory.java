@@ -758,7 +758,8 @@ public class PalDirectory implements AutoCloseable {
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
   public void registerLog(LogInfo logInfo) throws ExecutionException, InterruptedException {
-    Objects.requireNonNull(logInfo, logInfo.getBootstrapServers());
+    Objects.requireNonNull(logInfo, "logInfo cannot be null");
+    Objects.requireNonNull(logInfo.getBootstrapServers(), "bootstrapServers cannot be null");
     GetResponse getResponse =
         kvClient
             .get(ByteSequence.from(getLogPath(logInfo.getName()).getBytes(getEncodingCharset())))
@@ -797,7 +798,8 @@ public class PalDirectory implements AutoCloseable {
    */
   public LogInfo newLog(String logNamePrefix, String logServers)
       throws ExecutionException, InterruptedException {
-    Objects.requireNonNull(logNamePrefix, logServers);
+    Objects.requireNonNull(logNamePrefix, "logNamePrefix cannot be null");
+    Objects.requireNonNull(logServers, "logServers cannot be null");
     final LogInfo lastLogWithPrefix = getLastLogWithPrefix(logNamePrefix);
 
     // generate name of new log with given prefix and monotonically increasing counter
