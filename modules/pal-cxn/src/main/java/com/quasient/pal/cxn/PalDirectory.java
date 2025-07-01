@@ -89,8 +89,8 @@ public class PalDirectory implements AutoCloseable {
   /** Directory name for storing intercept configurations. */
   private static final String INTERCEPTS_DIR = "intercepts";
 
-  /** Character set used for encoding/decoding strings. Initialized lazily to UTF-8. */
-  private static Charset loadedCharset;
+  /** Character set used for encoding/decoding strings. */
+  private static final Charset UTF8 = StandardCharsets.UTF_8;
 
   /** URL of the etcd directory service. */
   private final String directoryUrl;
@@ -216,10 +216,7 @@ public class PalDirectory implements AutoCloseable {
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
   public boolean peerExists(UUID peerUuid) throws ExecutionException, InterruptedException {
-    return kvClient
-            .get(ByteSequence.from(getPeerPath(peerUuid).getBytes(getEncodingCharset())))
-            .get()
-            .getCount()
+    return kvClient.get(ByteSequence.from(getPeerPath(peerUuid).getBytes(UTF8))).get().getCount()
         != 0;
   }
 
@@ -239,10 +236,8 @@ public class PalDirectory implements AutoCloseable {
     if (peerInfo.getMTime() == null) {
       peerInfo.setMtime(now.toEpochMilli());
     }
-    final ByteSequence peerKey =
-        ByteSequence.from(getPeerPath(peerInfo.getUuid()).getBytes(getEncodingCharset()));
-    final ByteSequence peerData =
-        ByteSequence.from(peerInfo.toJson().getBytes(getEncodingCharset()));
+    final ByteSequence peerKey = ByteSequence.from(getPeerPath(peerInfo.getUuid()).getBytes(UTF8));
+    final ByteSequence peerData = ByteSequence.from(peerInfo.toJson().getBytes(UTF8));
 
     TxnResponse rsp =
         kvClient
@@ -254,8 +249,7 @@ public class PalDirectory implements AutoCloseable {
 
     if (rsp.isSucceeded()) {
       logger.info("Registered peer w/uuid: {}, {}", peerInfo.getUuid(), peerInfo);
-    }
-    {
+    } else {
       logger.warn("Peer {} already registered — skipping", peerInfo.getUuid());
     }
   }
@@ -276,10 +270,8 @@ public class PalDirectory implements AutoCloseable {
           format("Peer w/uuid %s does not exist", peerInfo.getUuid()));
     }
     final String peerLogsInPath = getPeerLogsInPath(peerInfo.getUuid());
-    final ByteSequence peerLogsInPathKey =
-        ByteSequence.from(peerLogsInPath.getBytes(getEncodingCharset()));
-    final ByteSequence logData =
-        ByteSequence.from(logInfo.getUuid().toString().getBytes(getEncodingCharset()));
+    final ByteSequence peerLogsInPathKey = ByteSequence.from(peerLogsInPath.getBytes(UTF8));
+    final ByteSequence logData = ByteSequence.from(logInfo.getUuid().toString().getBytes(UTF8));
     kvClient.put(peerLogsInPathKey, logData).get();
     logger.info(
         "Registered IN log w/name: {} for peer w/uuid: {}", logInfo.getName(), peerInfo.getUuid());
@@ -296,8 +288,7 @@ public class PalDirectory implements AutoCloseable {
    */
   public UUID getPeerInLog(UUID peerUuid) throws ExecutionException, InterruptedException {
     final String peerLogsInPath = getPeerLogsInPath(peerUuid);
-    final ByteSequence peerLogsInPathKey =
-        ByteSequence.from(peerLogsInPath.getBytes(getEncodingCharset()));
+    final ByteSequence peerLogsInPathKey = ByteSequence.from(peerLogsInPath.getBytes(UTF8));
     final GetResponse response =
         kvClient.get(peerLogsInPathKey, GetOption.builder().isPrefix(true).build()).get();
     List<KeyValue> kvs = response.getKvs();
@@ -307,7 +298,7 @@ public class PalDirectory implements AutoCloseable {
     if (kvs.size() > 1) {
       throw new IllegalStateException("More than one in-log found for peer w/uuid: " + peerUuid);
     }
-    return UUID.fromString(kvs.get(0).getValue().toString(getEncodingCharset()));
+    return UUID.fromString(kvs.get(0).getValue().toString(UTF8));
   }
 
   /**
@@ -326,10 +317,8 @@ public class PalDirectory implements AutoCloseable {
           format("Peer w/uuid %s does not exist", peerInfo.getUuid()));
     }
     final String peerLogsOutPath = getPeerLogsOutPath(peerInfo.getUuid());
-    final ByteSequence peerLogsOutPathKey =
-        ByteSequence.from(peerLogsOutPath.getBytes(getEncodingCharset()));
-    final ByteSequence logData =
-        ByteSequence.from(logInfo.getUuid().toString().getBytes(getEncodingCharset()));
+    final ByteSequence peerLogsOutPathKey = ByteSequence.from(peerLogsOutPath.getBytes(UTF8));
+    final ByteSequence logData = ByteSequence.from(logInfo.getUuid().toString().getBytes(UTF8));
     kvClient.put(peerLogsOutPathKey, logData).get();
     logger.info(
         "Registered OUT log w/name: {} for peer w/uuid: {}", logInfo.getName(), peerInfo.getUuid());
@@ -346,8 +335,7 @@ public class PalDirectory implements AutoCloseable {
    */
   public UUID getPeerOutLog(UUID peerUuid) throws ExecutionException, InterruptedException {
     final String peerLogsOutPath = getPeerLogsOutPath(peerUuid);
-    final ByteSequence peerLogsOutPathKey =
-        ByteSequence.from(peerLogsOutPath.getBytes(getEncodingCharset()));
+    final ByteSequence peerLogsOutPathKey = ByteSequence.from(peerLogsOutPath.getBytes(UTF8));
     final GetResponse response =
         kvClient.get(peerLogsOutPathKey, GetOption.builder().isPrefix(true).build()).get();
     List<KeyValue> kvs = response.getKvs();
@@ -357,7 +345,7 @@ public class PalDirectory implements AutoCloseable {
     if (kvs.size() > 1) {
       throw new IllegalStateException("More than one out-log found for peer w/uuid: " + peerUuid);
     }
-    return UUID.fromString(kvs.get(0).getValue().toString(getEncodingCharset()));
+    return UUID.fromString(kvs.get(0).getValue().toString(UTF8));
   }
 
   /**
@@ -370,12 +358,12 @@ public class PalDirectory implements AutoCloseable {
    */
   public PeerInfo getPeerInfo(UUID peerUuid) throws ExecutionException, InterruptedException {
     final GetResponse getResponse =
-        kvClient.get(ByteSequence.from(getPeerPath(peerUuid).getBytes(getEncodingCharset()))).get();
+        kvClient.get(ByteSequence.from(getPeerPath(peerUuid).getBytes(UTF8))).get();
     if (getResponse.getCount() == 0) {
       logger.warn("Node for peer w/uuid: {} does not exist", peerUuid);
       return null;
     }
-    return PeerInfo.fromJson(getResponse.getKvs().get(0).getValue().toString(getEncodingCharset()));
+    return PeerInfo.fromJson(getResponse.getKvs().get(0).getValue().toString(UTF8));
   }
 
   /**
@@ -395,10 +383,10 @@ public class PalDirectory implements AutoCloseable {
         continue;
       }
       // only add peers, not logs inside the peer's path
-      String keyPath = kv.getKey().toString(getEncodingCharset());
+      String keyPath = kv.getKey().toString(UTF8);
       long slashCount = keyPath.chars().filter(ch -> ch == '/').count();
       if (slashCount == 3) {
-        allPeers.add(PeerInfo.fromJson(kv.getValue().toString(getEncodingCharset())));
+        allPeers.add(PeerInfo.fromJson(kv.getValue().toString(UTF8)));
       }
     }
     return allPeers;
@@ -459,7 +447,7 @@ public class PalDirectory implements AutoCloseable {
     DeleteResponse deleteResponse =
         kvClient
             .delete(
-                ByteSequence.from(getPeerPath(peerUuid).getBytes(getEncodingCharset())),
+                ByteSequence.from(getPeerPath(peerUuid).getBytes(UTF8)),
                 DeleteOption.builder().isPrefix(true).build())
             .get();
     if (deleteResponse.getDeleted() > 0) {
@@ -493,7 +481,7 @@ public class PalDirectory implements AutoCloseable {
         logger.error("Unexpected event of type: {}", event.getEventType().name());
         return null;
     }
-    String path = event.getKeyValue().getKey().toString(getEncodingCharset());
+    String path = event.getKeyValue().getKey().toString(UTF8);
     String[] parts =
         Arrays.stream(path.split("/")).filter(s -> !s.isEmpty()).toArray(String[]::new);
     if (parts.length == 4) {
@@ -505,9 +493,9 @@ public class PalDirectory implements AutoCloseable {
         logger.debug(
             "Creating intercept event from path: '{}' with value: '{}'",
             path,
-            new String(data, getEncodingCharset()));
+            new String(data, UTF8));
         if (type == InterceptEvent.Type.INTERCEPT_ADDED) {
-          interceptRequest = InterceptRequest.fromBytes(data, getEncodingCharset());
+          interceptRequest = InterceptRequest.fromBytes(data, UTF8);
         } else {
           interceptRequest = null;
         }
@@ -565,15 +553,13 @@ public class PalDirectory implements AutoCloseable {
       throw new NoPeerInfoNodeException(
           format("Peer w/uuid %s does not exist", interceptRequest.getPeer()));
     }
-    final byte[] interceptData = interceptRequest.toBytes(getEncodingCharset());
+    final byte[] interceptData = interceptRequest.toBytes(UTF8);
     final String interceptPath =
         format(
             "%s/%s",
             getInterceptsPathForPeer(interceptRequest.getPeer()), interceptRequest.getUuid());
     kvClient
-        .put(
-            ByteSequence.from(interceptPath.getBytes(getEncodingCharset())),
-            ByteSequence.from(interceptData))
+        .put(ByteSequence.from(interceptPath.getBytes(UTF8)), ByteSequence.from(interceptData))
         .get();
     if (logger.isDebugEnabled()) {
       logger.debug(
@@ -598,14 +584,13 @@ public class PalDirectory implements AutoCloseable {
       throw new NoPeerInfoNodeException(
           format("Peer w/uuid %s does not exist", interceptRequest.getPeer()));
     }
-    final byte[] interceptData = interceptRequest.toBytes(getEncodingCharset());
+    final byte[] interceptData = interceptRequest.toBytes(UTF8);
     final String interceptPath =
         format(
             "%s/%s",
             getInterceptsPathForPeer(interceptRequest.getPeer()), interceptRequest.getUuid());
     return kvClient.put(
-        ByteSequence.from(interceptPath.getBytes(getEncodingCharset())),
-        ByteSequence.from(interceptData));
+        ByteSequence.from(interceptPath.getBytes(UTF8)), ByteSequence.from(interceptData));
   }
 
   /**
@@ -620,12 +605,11 @@ public class PalDirectory implements AutoCloseable {
       throws ExecutionException, InterruptedException {
     final Set<InterceptRequest<?>> interceptRequests = new HashSet<>();
     final String peerInterceptsPath = getInterceptsPathForPeer(peerUuid);
-    final ByteSequence peerInterceptsPathKey =
-        ByteSequence.from(peerInterceptsPath.getBytes(getEncodingCharset()));
+    final ByteSequence peerInterceptsPathKey = ByteSequence.from(peerInterceptsPath.getBytes(UTF8));
     final GetResponse response =
         kvClient.get(peerInterceptsPathKey, GetOption.builder().isPrefix(true).build()).get();
     for (KeyValue kv : response.getKvs()) {
-      final String interceptPath = kv.getKey().toString(getEncodingCharset());
+      final String interceptPath = kv.getKey().toString(UTF8);
       interceptRequests.add(getInterceptRequest(interceptPath));
     }
     return interceptRequests;
@@ -642,7 +626,7 @@ public class PalDirectory implements AutoCloseable {
       final GetResponse response =
           kvClient.get(getInterceptsPathKey(), GetOption.builder().isPrefix(true).build()).get();
       for (KeyValue kv : response.getKvs()) {
-        final String interceptPath = kv.getKey().toString(getEncodingCharset());
+        final String interceptPath = kv.getKey().toString(UTF8);
         interceptRequests.add(getInterceptRequest(interceptPath));
       }
     } catch (ExecutionException | InterruptedException e) {
@@ -663,15 +647,12 @@ public class PalDirectory implements AutoCloseable {
       throws ExecutionException, InterruptedException {
     final byte[] data;
     List<KeyValue> kvs =
-        kvClient
-            .get(ByteSequence.from(interceptPath.getBytes(getEncodingCharset())))
-            .get()
-            .getKvs();
+        kvClient.get(ByteSequence.from(interceptPath.getBytes(UTF8))).get().getKvs();
     if (kvs.isEmpty()) {
       return null;
     }
     data = kvs.get(0).getValue().getBytes();
-    return InterceptRequest.fromBytes(data, getEncodingCharset());
+    return InterceptRequest.fromBytes(data, UTF8);
   }
 
   /**
@@ -702,7 +683,7 @@ public class PalDirectory implements AutoCloseable {
     final DeleteResponse deleteResponse =
         kvClient
             .delete(
-                ByteSequence.from(peerInterceptsPath.getBytes(getEncodingCharset())),
+                ByteSequence.from(peerInterceptsPath.getBytes(UTF8)),
                 DeleteOption.builder().isPrefix(true).build())
             .get();
     if (deleteResponse.getDeleted() == 0) {
@@ -731,7 +712,7 @@ public class PalDirectory implements AutoCloseable {
             .delete(
                 ByteSequence.from(
                     format("%s/%s", peerInterceptsPath, interceptRequestUuid.toString())
-                        .getBytes(getEncodingCharset())))
+                        .getBytes(UTF8)))
             .get();
     if (deleteResponse.getDeleted() == 0) {
       logger.warn(
@@ -761,9 +742,7 @@ public class PalDirectory implements AutoCloseable {
     Objects.requireNonNull(logInfo, "logInfo cannot be null");
     Objects.requireNonNull(logInfo.getBootstrapServers(), "bootstrapServers cannot be null");
     GetResponse getResponse =
-        kvClient
-            .get(ByteSequence.from(getLogPath(logInfo.getName()).getBytes(getEncodingCharset())))
-            .get();
+        kvClient.get(ByteSequence.from(getLogPath(logInfo.getName()).getBytes(UTF8))).get();
     if (getResponse.getCount() != 0) {
       logger.info("Skipping registration of existing log with name: {}", logInfo.getName());
       return;
@@ -778,9 +757,8 @@ public class PalDirectory implements AutoCloseable {
     if (logInfo.getMTime() == null) {
       logInfo.setMtime(now.toEpochMilli());
     }
-    final ByteSequence logKey =
-        ByteSequence.from(getLogPath(logInfo.getName()).getBytes(getEncodingCharset()));
-    final ByteSequence logData = ByteSequence.from(logInfo.toJson().getBytes(getEncodingCharset()));
+    final ByteSequence logKey = ByteSequence.from(getLogPath(logInfo.getName()).getBytes(UTF8));
+    final ByteSequence logData = ByteSequence.from(logInfo.toJson().getBytes(UTF8));
     kvClient.put(logKey, logData).get();
     logger.info(
         "Registered given log node: {} with uuid: {}", logInfo.getName(), logInfo.getUuid());
@@ -817,10 +795,8 @@ public class PalDirectory implements AutoCloseable {
     final Instant now = Instant.now();
     newLogInfo.setCtime(now.toEpochMilli());
     newLogInfo.setMtime(now.toEpochMilli());
-    final ByteSequence newLogKey =
-        ByteSequence.from(getLogPath(newLogName).getBytes(getEncodingCharset()));
-    final ByteSequence newLogData =
-        ByteSequence.from(newLogInfo.toJson().getBytes(getEncodingCharset()));
+    final ByteSequence newLogKey = ByteSequence.from(getLogPath(newLogName).getBytes(UTF8));
+    final ByteSequence newLogData = ByteSequence.from(newLogInfo.toJson().getBytes(UTF8));
     kvClient.put(newLogKey, newLogData).get();
     logger.info("Created new log: {} with uuid: {}", newLogName, newLogInfo.getUuid());
     return newLogInfo;
@@ -836,12 +812,12 @@ public class PalDirectory implements AutoCloseable {
    */
   public LogInfo getLogInfo(String logName) throws ExecutionException, InterruptedException {
     final GetResponse getResponse =
-        kvClient.get(ByteSequence.from(getLogPath(logName).getBytes(getEncodingCharset()))).get();
+        kvClient.get(ByteSequence.from(getLogPath(logName).getBytes(UTF8))).get();
     if (getResponse.getCount() == 0) {
       logger.warn("Node for log w/name: {} does not exist", logName);
       return null;
     }
-    return LogInfo.fromJson(getResponse.getKvs().get(0).getValue().toString(getEncodingCharset()));
+    return LogInfo.fromJson(getResponse.getKvs().get(0).getValue().toString(UTF8));
   }
 
   /**
@@ -853,10 +829,7 @@ public class PalDirectory implements AutoCloseable {
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
   public boolean logExists(String logName) throws ExecutionException, InterruptedException {
-    return kvClient
-            .get(ByteSequence.from(getLogPath(logName).getBytes(getEncodingCharset())))
-            .get()
-            .getCount()
+    return kvClient.get(ByteSequence.from(getLogPath(logName).getBytes(UTF8))).get().getCount()
         != 0;
   }
 
@@ -873,8 +846,7 @@ public class PalDirectory implements AutoCloseable {
     final GetResponse getResponse =
         kvClient
             .get(
-                ByteSequence.from(
-                    format("%s/%s", getLogsPath(), logNamePrefix).getBytes(getEncodingCharset())),
+                ByteSequence.from(format("%s/%s", getLogsPath(), logNamePrefix).getBytes(UTF8)),
                 GetOption.builder()
                     .withSortField(GetOption.SortTarget.CREATE)
                     .withSortOrder(GetOption.SortOrder.ASCEND)
@@ -883,7 +855,7 @@ public class PalDirectory implements AutoCloseable {
             .get();
     final Set<LogInfo> logs = new TreeSet<>();
     for (KeyValue kv : getResponse.getKvs()) {
-      logs.add(LogInfo.fromJson(kv.getValue().toString(getEncodingCharset())));
+      logs.add(LogInfo.fromJson(kv.getValue().toString(UTF8)));
     }
     if (logger.isDebugEnabled()) {
       logger.debug("returning from getAllLogsWithPrefix: {}", logs);
@@ -907,7 +879,7 @@ public class PalDirectory implements AutoCloseable {
       if (kv.getKey().equals(getLogsPathKey())) {
         continue;
       }
-      allLogs.add(LogInfo.fromJson(kv.getValue().toString(getEncodingCharset())));
+      allLogs.add(LogInfo.fromJson(kv.getValue().toString(UTF8)));
     }
     if (logger.isDebugEnabled()) {
       logger.debug("returning from getAllLogs: {}", allLogs);
@@ -983,9 +955,7 @@ public class PalDirectory implements AutoCloseable {
     }
 
     DeleteResponse deleteResponse =
-        kvClient
-            .delete(ByteSequence.from(getLogPath(logName).getBytes(getEncodingCharset())))
-            .get();
+        kvClient.delete(ByteSequence.from(getLogPath(logName).getBytes(UTF8))).get();
     if (deleteResponse.getDeleted() == 1) {
       logger.info("Unregistered (i.e. deleted) log: {}", logName);
     } else {
@@ -1005,8 +975,7 @@ public class PalDirectory implements AutoCloseable {
     final DeleteResponse deleteResponse =
         kvClient
             .delete(
-                ByteSequence.from(
-                    format("%s/%s", getLogsPath(), logNamePrefix).getBytes(getEncodingCharset())),
+                ByteSequence.from(format("%s/%s", getLogsPath(), logNamePrefix).getBytes(UTF8)),
                 DeleteOption.builder().isPrefix(true).build())
             .get();
 
@@ -1110,19 +1079,6 @@ public class PalDirectory implements AutoCloseable {
   // <editor-fold desc="private helpers">
 
   /**
-   * Retrieves the character set used for encoding and decoding strings. Initialized to UTF-8 if not
-   * already set.
-   *
-   * @return the {@link Charset} used for encoding/decoding
-   */
-  private static Charset getEncodingCharset() {
-    if (loadedCharset == null) {
-      loadedCharset = StandardCharsets.UTF_8;
-    }
-    return loadedCharset;
-  }
-
-  /**
    * Retrieves the etcd path for a specific peer.
    *
    * @param peerUuid the UUID of the peer
@@ -1177,7 +1133,7 @@ public class PalDirectory implements AutoCloseable {
    * @return the {@link ByteSequence} representing the peers path key
    */
   private ByteSequence getPeersPathKey() {
-    return ByteSequence.from(getPeersPath().getBytes(getEncodingCharset()));
+    return ByteSequence.from(getPeersPath().getBytes(UTF8));
   }
 
   /**
@@ -1195,7 +1151,7 @@ public class PalDirectory implements AutoCloseable {
    * @return the {@link ByteSequence} representing the logs path key
    */
   private ByteSequence getLogsPathKey() {
-    return ByteSequence.from(getLogsPath().getBytes(getEncodingCharset()));
+    return ByteSequence.from(getLogsPath().getBytes(UTF8));
   }
 
   /**
@@ -1213,7 +1169,7 @@ public class PalDirectory implements AutoCloseable {
    * @return the {@link ByteSequence} representing the intercepts path key
    */
   private ByteSequence getInterceptsPathKey() {
-    return ByteSequence.from(getInterceptsPath().getBytes(getEncodingCharset()));
+    return ByteSequence.from(getInterceptsPath().getBytes(UTF8));
   }
 
   /**
