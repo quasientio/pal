@@ -41,7 +41,6 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -50,6 +49,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -108,7 +108,7 @@ public class PalDirectory implements AutoCloseable {
   private final String namespace;
 
   /** Listeners subscribed to intercept node events. */
-  private final List<InterceptNodeListener> interceptListeners = new ArrayList<>();
+  private final List<InterceptNodeListener> interceptListeners = new CopyOnWriteArrayList<>();
 
   /**
    * Constructs a PalDirectory instance with the specified etcd connection string.
