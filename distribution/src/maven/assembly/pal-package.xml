@@ -44,16 +44,29 @@
 
   <fileSets>
 
-    <!-- top-level metadata / helper scripts – unchanged -->
+    <!-- top-level metadata, config, helper scripts -->
     <fileSet>
       <directory>..</directory>
       <includes>
         <include>README.md</include>
         <include>AUTHORS</include>
-        <include>COPYING</include>
+        <include>LICENSE</include>
+        <include>THIRD_PARTY.md</include>
+        <include>licenses/</include>
+
+        <!-- sample config files -->
+        <include>config/</include>
+
         <!-- export env variables for running on host -->
-        <include>export_env</include>
+        <include>export_env.sh</include>
       </includes>
+
+      <!-- exclude build-time files inside licenses/ -->
+      <excludes>
+        <exclude>licenses/BSL_HEADER.txt</exclude>
+        <exclude>licenses/THIRD_PARTY.ftl</exclude>
+        <exclude>licenses/url-fixes.xml</exclude>
+      </excludes>
     </fileSet>
 
     <!-- everything from ../bin *except* pal.sh (already handled above) -->
