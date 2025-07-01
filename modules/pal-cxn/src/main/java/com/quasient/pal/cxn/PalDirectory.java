@@ -16,7 +16,6 @@ import com.quasient.pal.common.directory.events.InterceptNodeListener;
 import com.quasient.pal.common.directory.nodes.InterceptRequest;
 import com.quasient.pal.common.directory.nodes.LogInfo;
 import com.quasient.pal.common.directory.nodes.PeerInfo;
-import com.quasient.pal.common.util.Strings;
 import io.etcd.jetcd.ByteSequence;
 import io.etcd.jetcd.Client;
 import io.etcd.jetcd.KV;
@@ -983,7 +982,7 @@ public class PalDirectory implements AutoCloseable {
       String fullPath = kv.getKey().toString(UTF8); // e.g. "/<ns>/logs/app0000000001"
       String remainder = fullPath.substring(logsPrefix.length());
 
-      // skip anything in sub-directories such as "counters/<prefix>"
+      // skip anything in subdirectories such as "counters/<prefix>"
       if (remainder.contains("/")) {
         continue;
       }
@@ -1005,21 +1004,25 @@ public class PalDirectory implements AutoCloseable {
    */
   public LogInfo getLastLogWithPrefix(String logNamePrefix)
       throws ExecutionException, InterruptedException {
-    final List<String> logNames =
-        getAllLogsWithPrefix(logNamePrefix).stream().map(LogInfo::getName).toList();
-    long maxLogIndex = -1;
-    String lastLog = null;
-    for (String log : logNames) {
-      // parse index in log names and set max
-      String logIdxStr = Strings.stringAfter(log, logNamePrefix);
-      long logIdx = Long.parseLong(logIdxStr);
-      if (logIdx > maxLogIndex) {
-        maxLogIndex = logIdx;
-        lastLog = log;
-      }
+
+    GetResponse resp =
+        kvClient
+            .get(
+                ByteSequence.from(
+                    String.format("%s/%s", getLogsPath(), logNamePrefix).getBytes(UTF8)),
+                GetOption.builder()
+                    .withSortField(GetOption.SortTarget.KEY)
+                    .withSortOrder(GetOption.SortOrder.DESCEND)
+                    .withLimit(1)
+                    .isPrefix(true)
+                    .build())
+            .get();
+    if (resp.getCount() == 0) {
+      return null;
     }
-    logger.info("With prefix '{}' got last log = {}", logNamePrefix, lastLog);
-    return getLogInfo(lastLog);
+    LogInfo last = LogInfo.fromJson(resp.getKvs().get(0).getValue().toString(UTF8));
+    logger.info("With prefix '{}' got {}", logNamePrefix, last.getName());
+    return last;
   }
 
   /**
