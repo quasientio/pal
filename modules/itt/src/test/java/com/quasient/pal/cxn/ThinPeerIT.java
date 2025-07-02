@@ -85,7 +85,7 @@ public class ThinPeerIT extends AbstractIntegrationTest {
 
   private LogInfo createTestLog() throws Exception {
     LogInfo log = new LogInfo("test_log", getKafkaServers());
-    palDirectory.registerLog(log);
+    palDirectory.createLog(log);
     createdLogs.add(log);
     return log;
   }

@@ -136,7 +136,7 @@ class LogConfigurator {
       logInfo = palDirectory.getLogInfo(logName);
     } else {
       logInfo = new LogInfo(logName, kafkaServers);
-      palDirectory.registerLog(logInfo);
+      palDirectory.createLog(logInfo);
     }
 
     return logInfo;

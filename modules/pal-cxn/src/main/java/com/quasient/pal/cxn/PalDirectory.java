@@ -194,15 +194,6 @@ public class PalDirectory implements AutoCloseable {
     this(endpoints, namespace, false);
   }
 
-  /**
-   * Retrieves the URL of the etcd directory service.
-   *
-   * @return the directory URL
-   */
-  public String getDirectoryUrl() {
-    return directoryUrl;
-  }
-
   // <editor-fold desc="Peer methods">
 
   /**
@@ -248,9 +239,9 @@ public class PalDirectory implements AutoCloseable {
             .get();
 
     if (response.isSucceeded()) {
-      logger.info("Registered peer w/uuid: {}, {}", peerInfo.getUuid(), peerInfo);
+      logger.info("Created peer w/uuid: {}, {}", peerInfo.getUuid(), peerInfo);
     } else {
-      logger.warn("Peer {} already registered - skipping", peerInfo.getUuid());
+      logger.warn("Peer {} already exists - skipping", peerInfo.getUuid());
     }
   }
 
@@ -533,7 +524,7 @@ public class PalDirectory implements AutoCloseable {
     }
 
     String remainder = fullPath.substring(interceptsRoot.length()); // "<peer>/<id>..." or "<peer>"
-    String[] parts = remainder.split("/");
+    String[] parts = remainder.split("/", -1);
 
     // 3) We care only about “…/intercepts/<peerUuid>/<interceptId>”
     if (parts.length < 2) { // event on the peer directory itself → ignore
@@ -783,14 +774,14 @@ public class PalDirectory implements AutoCloseable {
   // <editor-fold desc="Log methods">
 
   /**
-   * Registers a new log in the directory. If the log already exists (key = name), registration is
+   * Creates a new log in the directory. If the log already exists (key = name), creation is
    * skipped.
    *
-   * @param logInfo the information of the log to register
+   * @param logInfo the information of the log to create
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
-  public void registerLog(LogInfo logInfo) throws ExecutionException, InterruptedException {
+  public void createLog(LogInfo logInfo) throws ExecutionException, InterruptedException {
     Objects.requireNonNull(logInfo, "logInfo cannot be null");
     Objects.requireNonNull(
         logInfo.getBootstrapServers(), "logInfo.bootstrapServers cannot be null");
@@ -817,9 +808,9 @@ public class PalDirectory implements AutoCloseable {
             .get();
 
     if (response.isSucceeded()) {
-      logger.info("Registered log {} w/uuid {}", logInfo.getName(), logInfo.getUuid());
+      logger.info("Created log {} w/uuid {}", logInfo.getName(), logInfo.getUuid());
     } else {
-      logger.warn("Log {} already registered - skipping", logInfo.getName());
+      logger.warn("Log {} already exists - skipping", logInfo.getName());
     }
   }
 

@@ -145,7 +145,7 @@ public class LogConfiguratorTest {
     // verify interactions
     verify(mockedPalDirectory, never()).logExists(inLogName);
     verify(mockedPalDirectory, never()).getLogInfo(inLogName);
-    verify(mockedPalDirectory, never()).registerLog(any(LogInfo.class));
+    verify(mockedPalDirectory, never()).createLog(any(LogInfo.class));
     verify(mockedPalDirectory, never()).newLog(any(), any());
     verify(mockedLogReader)
         .readFromLog(argThat(new LogInfoMatcher(new LogInfo(inLogName))), eq(false), eq(null));

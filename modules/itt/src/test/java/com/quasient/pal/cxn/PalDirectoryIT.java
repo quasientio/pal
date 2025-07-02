@@ -338,7 +338,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   }
 
   @Test
-  public void registerLog_logNotRegistered_logRegistered() throws Exception {
+  public void createLog_logNotRegistered_logRegistered() throws Exception {
 
     String logName = "test.topic";
 
@@ -347,7 +347,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
 
     // register
     LogInfo newLogInfo = new LogInfo(logName, getKafkaServers());
-    palDirectory.registerLog(newLogInfo);
+    palDirectory.createLog(newLogInfo);
     createdLogs.add(logName);
 
     // verify
@@ -413,7 +413,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
 
     // register logInfo
     LogInfo newLogInfo = new LogInfo(logName, getKafkaServers());
-    palDirectory.registerLog(newLogInfo);
+    palDirectory.createLog(newLogInfo);
     createdLogs.add(logName);
     assertTrue(palDirectory.logExists(logName));
 
