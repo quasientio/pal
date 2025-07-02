@@ -54,7 +54,7 @@ build-and-unit:
   script:
     - mvn $MAVEN_CLI_OPTS clean install -DskipITs | tee mvn.log
   after_script:
-    - 'echo "Maven exit status: $?"'
+    - 'echo "Job result: $CI_JOB_STATUS"'
   artifacts:
     paths:
       - mvn.log
@@ -104,15 +104,23 @@ integration-tests:
       command: ["./etcd"]
     - name: apache/kafka:3.8.0
       alias: kafka
-  script:
-    - export PAL_HOME=$(pwd)
+  before_script:
+    # environment variables & PATH
+    - export PAL_HOME="$PWD"
     - export PAL_VERSION=$(grep '<version>' pom.xml | head -1 | sed -E 's/.*<version>(.+)<\/version>.*/\1/')
-    - export ITT_APPS_JAR=$CI_PROJECT_DIR/.m2/repository/com/quasient/pal/itt-apps/$PAL_VERSION/itt-apps-$PAL_VERSION.jar
-    - export PATH=$PATH:./bin
+    - export ITT_APPS_JAR="$CI_PROJECT_DIR/.m2/repository/com/quasient/pal/itt-apps/$PAL_VERSION/itt-apps-$PAL_VERSION.jar"
+    - export PATH="$PATH:./bin"
+
+    # config files
+    - cp config/peer-logging.xml.example config/peer-logging.xml
+
+    # launch peer in the background
     - peer4itts.sh &
+  script:
     - mvn $MAVEN_CLI_OPTS verify -DskipUTs
   after_script:
-    - 'echo "Maven exit status: $?"'
+    - 'echo "Job result: $CI_JOB_STATUS"'
+
   artifacts:
     paths:
       - modules/itt/target/failsafe-reports/
@@ -130,21 +138,21 @@ publish-pal-image:
   image: python:3.9
   tags:
     - dind
-  script:
+  before_script:
+    # environment variables & PATH
     - export PAL_VERSION=$(grep '<version>' pom.xml | head -1 | sed -E 's/.*<version>(.+)<\/version>.*/\1/')
     - export PAL_JAR=$CI_PROJECT_DIR/.m2/repository/com/quasient/pal/pal/$PAL_VERSION/pal-$PAL_VERSION.jar
     - export PAL_HOME="$CI_PROJECT_DIR"
-    - echo "PAL_HOME is $PAL_HOME"
+
+    # install dependencies
     - pip install --no-cache-dir ansible requests
     - ansible-galaxy collection install community.docker --force
-    - |
-      echo "=== Running the Ansible playbook ==="
-      ansible-playbook infra/ansible/playbooks/build_and_push_pal_image.yml
+  script:
+    - ansible-playbook infra/ansible/playbooks/build_and_push_pal_image.yml
   rules:
     - if: $CI_COMMIT_BRANCH == "main" && $SKIP_NON_DEPLOY != "true"
       when: on_success
     - when: never
-
 
 deploy-pal:
   stage: publish-artifacts
