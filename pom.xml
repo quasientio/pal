@@ -278,6 +278,8 @@
                         <colf>SLASHSTAR_STYLE</colf>
                         <yml>SCRIPT_STYLE</yml>
                         <yaml>SCRIPT_STYLE</yaml>
+                        <xml>XML_STYLE</xml>
+                        <xml.example>XML_STYLE</xml.example>
                     </mapping>
 
                     <properties>
