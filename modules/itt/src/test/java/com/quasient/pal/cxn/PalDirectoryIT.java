@@ -564,7 +564,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   }
 
   @Test
-  public void registerInterceptAsync_noSuchPeer_exception() throws Exception {
+  public void registerIntercept_noSuchPeer_exception() throws Exception {
     InterceptRequest<InterceptableMethodCall> req =
         new InterceptRequest<>(
             UUID.randomUUID(),
@@ -577,7 +577,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
                 "println", Arrays.asList("java.lang.String", "java.lang.Integer")));
 
     try {
-      palDirectory.registerInterceptAsync(req);
+      palDirectory.registerIntercept(req);
       fail("Should have raised NoPeerInfoNodeException");
     } catch (NoPeerInfoNodeException e) {
       // ok
@@ -585,7 +585,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   }
 
   @Test
-  public void registerInterceptAsync_peerExists_registered() throws Exception {
+  public void registerIntercept_alreadyRegistered_exception() throws Exception {
     // create peer
     final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "testing peer");
     palDirectory.createPeer(peerInfo);
@@ -608,10 +608,17 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
                 "println", Arrays.asList("java.lang.String", "java.lang.Integer")));
 
     // register it
-    palDirectory.registerInterceptAsync(req).get();
+    palDirectory.registerIntercept(req);
     addInterceptRequestToCreated(peerInfo.getUuid(), req.getUuid());
-
     assertEquals(1, palDirectory.getPeerInterceptRequests(peerInfo.getUuid()).size());
+
+    // try to register again
+    try {
+      palDirectory.registerIntercept(req);
+      fail("Should have raised IllegalArgumentException");
+    } catch (IllegalArgumentException e) {
+      // ok
+    }
   }
 
   @Test
@@ -726,7 +733,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
 
     // register them
     for (InterceptRequest<InterceptableMethodCall> interceptRequest : requests) {
-      palDirectory.registerInterceptAsync(interceptRequest).get();
+      palDirectory.registerIntercept(interceptRequest);
       addInterceptRequestToCreated(peerInfo.getUuid(), interceptRequest.getUuid());
     }
 
@@ -797,11 +804,11 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
 
     // register them
     for (InterceptRequest<InterceptableMethodCall> interceptRequest : requestsPeer1) {
-      palDirectory.registerInterceptAsync(interceptRequest).get();
+      palDirectory.registerIntercept(interceptRequest);
       addInterceptRequestToCreated(peerInfo1.getUuid(), interceptRequest.getUuid());
     }
     for (InterceptRequest<InterceptableMethodCall> interceptRequest : requestsPeer2) {
-      palDirectory.registerInterceptAsync(interceptRequest).get();
+      palDirectory.registerIntercept(interceptRequest);
       addInterceptRequestToCreated(peerInfo2.getUuid(), interceptRequest.getUuid());
     }
 
@@ -817,7 +824,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   }
 
   @Test
-  public void unregisterPeerInterceptRequests_requestsExist_unregistered() throws Exception {
+  public void unregisterAllPeerInterceptRequests_requestsExist_unregistered() throws Exception {
     // create peer
     final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "testing peer");
     palDirectory.createPeer(peerInfo);
@@ -845,7 +852,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
         totalPeerIntercepts, palDirectory.getPeerInterceptRequests(peerInfo.getUuid()).size());
 
     // unregister them
-    palDirectory.unregisterPeerInterceptRequests(peerInfo.getUuid());
+    palDirectory.unregisterAllPeerInterceptRequests(peerInfo.getUuid());
     assertEquals(0, palDirectory.getPeerInterceptRequests(peerInfo.getUuid()).size());
   }
 }

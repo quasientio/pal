@@ -24,7 +24,6 @@ import io.etcd.jetcd.KeyValue;
 import io.etcd.jetcd.Watch;
 import io.etcd.jetcd.kv.DeleteResponse;
 import io.etcd.jetcd.kv.GetResponse;
-import io.etcd.jetcd.kv.PutResponse;
 import io.etcd.jetcd.kv.TxnResponse;
 import io.etcd.jetcd.maintenance.StatusResponse;
 import io.etcd.jetcd.op.Cmp;
@@ -50,7 +49,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -277,6 +275,7 @@ public class PalDirectory implements AutoCloseable {
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    * @throws NoPeerInfoNodeException if the peer does not exist in the directory
+   * @throws IllegalStateException if an IN-log is already registered for this peer
    */
   public void registerPeerInLog(PeerInfo peerInfo, LogInfo logInfo)
       throws ExecutionException, InterruptedException, NoPeerInfoNodeException {
@@ -342,6 +341,7 @@ public class PalDirectory implements AutoCloseable {
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    * @throws NoPeerInfoNodeException if the peer does not exist in the directory
+   * @throws IllegalStateException if an OUT-log is already registered for this peer
    */
   public void registerPeerOutLog(PeerInfo peerInfo, LogInfo logInfo)
       throws ExecutionException, InterruptedException, NoPeerInfoNodeException {
@@ -367,7 +367,7 @@ public class PalDirectory implements AutoCloseable {
       // Decide what “failed” means
       if (!kvClient.get(peerInfoKey).get().getKvs().isEmpty()) {
         throw new IllegalStateException(
-            "OUT-log already registered for peer " + peerInfo.getUuid());
+            "An OUT-log is already registered for peer " + peerInfo.getUuid());
       } else {
         throw new NoPeerInfoNodeException("Peer " + peerInfo.getUuid() + " does not exist");
       }
@@ -680,51 +680,47 @@ public class PalDirectory implements AutoCloseable {
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    * @throws NoPeerInfoNodeException if the associated peer does not exist in the directory
+   * @throws IllegalArgumentException if the intercept request is already registered for this peer
    */
   public void registerIntercept(InterceptRequest<?> interceptRequest)
       throws ExecutionException, InterruptedException, NoPeerInfoNodeException {
-    if (!peerExists(interceptRequest.getPeer())) {
-      throw new NoPeerInfoNodeException(
-          format("Peer w/uuid %s does not exist", interceptRequest.getPeer()));
-    }
-    final byte[] interceptData = interceptRequest.toBytes(UTF8);
-    final String interceptPath =
-        format(
-            "%s/%s",
-            getInterceptsPathForPeer(interceptRequest.getPeer()), interceptRequest.getUuid());
-    kvClient
-        .put(ByteSequence.from(interceptPath.getBytes(UTF8)), ByteSequence.from(interceptData))
-        .get();
-    if (logger.isDebugEnabled()) {
-      logger.debug(
-          "created new node for intercept request: {} at path: {}",
-          interceptRequest,
-          interceptPath);
-    }
-  }
 
-  /**
-   * Asynchronously registers a new intercept request in the directory.
-   *
-   * @param interceptRequest the intercept request to register
-   * @return a {@link CompletableFuture} representing the pending completion of the put operation
-   * @throws NoPeerInfoNodeException if the associated peer does not exist in the directory
-   * @throws ExecutionException if an error occurs while checking peer existence
-   * @throws InterruptedException if the current thread is interrupted while waiting
-   */
-  public CompletableFuture<PutResponse> registerInterceptAsync(InterceptRequest<?> interceptRequest)
-      throws NoPeerInfoNodeException, ExecutionException, InterruptedException {
-    if (!peerExists(interceptRequest.getPeer())) {
-      throw new NoPeerInfoNodeException(
-          format("Peer w/uuid %s does not exist", interceptRequest.getPeer()));
-    }
+    UUID peerUuid = interceptRequest.getPeer();
+    UUID interceptUuid = interceptRequest.getUuid();
+
+    ByteSequence peerInfoKey = peerInfoKey(peerUuid);
+    final String interceptPath = format("%s/%s", getInterceptsPathForPeer(peerUuid), interceptUuid);
     final byte[] interceptData = interceptRequest.toBytes(UTF8);
-    final String interceptPath =
-        format(
-            "%s/%s",
-            getInterceptsPathForPeer(interceptRequest.getPeer()), interceptRequest.getUuid());
-    return kvClient.put(
-        ByteSequence.from(interceptPath.getBytes(UTF8)), ByteSequence.from(interceptData));
+    ByteSequence interceptKey = ByteSequence.from(interceptPath.getBytes(UTF8));
+    ByteSequence interceptValue = ByteSequence.from(interceptData);
+
+    TxnResponse tx =
+        kvClient
+            .txn()
+            .If(
+                new Cmp(peerInfoKey, Cmp.Op.GREATER, CmpTarget.version(0)), // peer must exist
+                new Cmp(
+                    interceptKey, Cmp.Op.EQUAL, CmpTarget.version(0))) // intercept must NOT exist
+            .Then(Op.put(interceptKey, interceptValue, PutOption.DEFAULT))
+            .commit()
+            .get();
+
+    if (!tx.isSucceeded()) {
+      // Decide what “failed” means
+      if (!kvClient.get(peerInfoKey).get().getKvs().isEmpty()) {
+        throw new IllegalArgumentException(
+            String.format("Intercept %s already registered for peer %s", interceptUuid, peerUuid));
+      } else {
+        throw new NoPeerInfoNodeException("Peer " + peerUuid + " does not exist");
+      }
+    } else {
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            "Created new node for intercept request: {} at path: {}",
+            interceptRequest,
+            interceptPath);
+      }
+    }
   }
 
   /**
@@ -808,7 +804,7 @@ public class PalDirectory implements AutoCloseable {
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
-  public void unregisterPeerInterceptRequests(UUID peerUuid)
+  public void unregisterAllPeerInterceptRequests(UUID peerUuid)
       throws ExecutionException, InterruptedException {
     if (logger.isDebugEnabled()) {
       logger.debug("Unregistering all intercept requests for peer w/uuid: {}", peerUuid);

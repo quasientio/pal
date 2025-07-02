@@ -20,7 +20,6 @@ import com.quasient.pal.common.lang.intercept.InterceptableFieldOp;
 import com.quasient.pal.common.lang.intercept.InterceptableMethodCall;
 import com.quasient.pal.cxn.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.PalDirectory;
-import io.etcd.jetcd.kv.PutResponse;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.lang.annotation.Annotation;
@@ -170,8 +169,7 @@ public class InterceptAnnotationProcessor {
 
   /**
    * Registers the specified intercept request with the directory service. This method attempts to
-   * obtain a directory connection from the provider and asynchronously registers the given
-   * intercept request.
+   * obtain a directory connection from the provider and register the given intercept request.
    *
    * @param interceptRequest the intercept request to register; must contain valid intercept
    *     metadata
@@ -180,8 +178,7 @@ public class InterceptAnnotationProcessor {
     try {
       Optional<PalDirectory> directory = directoryConnectionProvider.get();
       if (directory.isPresent()) {
-        @SuppressWarnings("unused")
-        PutResponse unusedResponse = directory.get().registerInterceptAsync(interceptRequest).get();
+        directory.get().registerIntercept(interceptRequest);
         logger.debug("Successfully registered new intercept request in directory");
       } else {
         logger.error("Pal Directory is not available");

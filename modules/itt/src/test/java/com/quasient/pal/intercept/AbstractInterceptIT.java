@@ -210,7 +210,7 @@ public class AbstractInterceptIT extends AbstractIntegrationTest implements Exec
 
   @After
   public void tearDown() throws Exception {
-    palDirectory.unregisterPeerInterceptRequests(myPeerUuid);
+    palDirectory.unregisterAllPeerInterceptRequests(myPeerUuid);
     assertionError = null;
     if (threadRepSocketCreated.get()) {
       Socket socket = threadRepSocket.get();
