@@ -68,11 +68,11 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   @After
   public void cleanup() throws Exception {
     for (UUID peer : createdPeers) {
-      palDirectory.unregisterPeer(peer);
+      palDirectory.deletePeer(peer);
       logger.info("Cleaned up created peer: {}", peer);
     }
     for (String log : createdLogs) {
-      palDirectory.unregisterLog(log);
+      palDirectory.deleteLog(log);
       logger.info("Cleaned up created log: {}", log);
     }
     for (Map.Entry<UUID, List<UUID>> entry : createdInterceptRequests.entrySet()) {
@@ -180,7 +180,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   }
 
   @Test
-  public void unregisterPeer_existingPeer_peerDeleted() throws Exception {
+  public void deletePeer_existingPeer_peerDeleted() throws Exception {
     // create
     final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID());
     peerInfo.setRpcAddress("tcp://127.0.0.1:5671");
@@ -191,14 +191,14 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     assertTrue(palDirectory.peerExists(peerInfo.getUuid()));
 
     // unregister
-    palDirectory.unregisterPeer(peerInfo.getUuid());
+    palDirectory.deletePeer(peerInfo.getUuid());
 
     // verify
     assertFalse(palDirectory.peerExists(peerInfo.getUuid()));
   }
 
   @Test
-  public void unregisterAllPeers_existingPeers_allPeersDeleted() throws Exception {
+  public void deleteAllPeers_existingPeers_allPeersDeleted() throws Exception {
 
     // create
     int peersToCreate = 5;
@@ -219,7 +219,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
             .size());
 
     // unregister all - exclude pre-existing
-    palDirectory.unregisterAllPeersWithExcludes(preExistingPeers);
+    palDirectory.deleteAllPeersExcept(preExistingPeers);
 
     assertEquals(preExistingPeers.size(), palDirectory.getAllPeers().size());
   }
@@ -387,13 +387,13 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
 
     // try to unregister the peer logs
     try {
-      palDirectory.unregisterLog(inLogInfo.getName());
+      palDirectory.deleteLog(inLogInfo.getName());
       fail("Should have raised IllegalArgumentException because the log is in use by a peer");
     } catch (IllegalArgumentException e) {
       // ok
     }
     try {
-      palDirectory.unregisterLog(outLogInfo.getName());
+      palDirectory.deleteLog(outLogInfo.getName());
       fail("Should have raised IllegalArgumentException because the log is in use by a peer");
     } catch (IllegalArgumentException e) {
       // ok
@@ -516,7 +516,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     assertEquals(logsToCreate, palDirectory.getLogCount(logNamePrefix));
 
     // unregister with prefix
-    long logsUnregistered = palDirectory.unregisterLogs(logNamePrefix);
+    long logsUnregistered = palDirectory.deleteLogsWithPrefix(logNamePrefix);
     assertEquals(logsToCreate, logsUnregistered);
 
     // verify
@@ -524,7 +524,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   }
 
   @Test
-  public void unregisterAllLogs_existingLogs_allLogsDeleted() throws Exception {
+  public void deleteAllLogs_existingLogs_allLogsDeleted() throws Exception {
     Set<LogInfo> preExistingLogs = palDirectory.getAllLogs();
     String logNamePrefix = "test.topic";
 
@@ -540,7 +540,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
 
     // delete all
     long unregisteredLogs =
-        palDirectory.unregisterAllLogsWithExcludes(
+        palDirectory.deleteAllLogsExcept(
             preExistingLogs.stream().map(LogInfo::getUuid).collect(Collectors.toSet()));
     assertEquals(logsToCreate, unregisteredLogs);
 
@@ -557,7 +557,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     // pre-assertions
     assertTrue(palDirectory.logExists(createdLogName));
 
-    palDirectory.unregisterLog(createdLogName);
+    palDirectory.deleteLog(createdLogName);
 
     // verify
     assertFalse(palDirectory.logExists(createdLogName));

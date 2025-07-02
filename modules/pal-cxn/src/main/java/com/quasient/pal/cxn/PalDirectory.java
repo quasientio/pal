@@ -51,7 +51,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -425,67 +424,82 @@ public class PalDirectory implements AutoCloseable {
   }
 
   /**
-   * Unregisters all peers except those specified in the exclusion set.
+   * Deletes all peer nodes except those specified in the exclusion set.
    *
-   * @param excludePeers a {@link Set} of peer UUIDs to exclude from unregistration; may be {@code
-   *     null}
-   * @return the number of peers unregistered
+   * @param excludePeers a {@link Set} of peer UUIDs to exclude from deletion; may be {@code null}
+   * @return the number of peers deleted
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
-  public long unregisterAllPeersWithExcludes(@Nullable Set<UUID> excludePeers)
+  public long deleteAllPeersExcept(@Nullable Set<UUID> excludePeers)
       throws ExecutionException, InterruptedException {
     long deleted = 0;
     if (excludePeers != null && !excludePeers.isEmpty()) {
+      /* Gather peers we *can* delete */
       for (UUID peerUuid :
           getAllPeers().stream().map(PeerInfo::getUuid).collect(Collectors.toSet())) {
         if (!excludePeers.contains(peerUuid)) {
-          unregisterPeer(peerUuid);
+          deletePeer(peerUuid);
           deleted++;
         }
       }
     } else {
+      /* Fast-path: wipe the entire peers subtree */
       final DeleteResponse deleteResponse =
           kvClient.delete(getPeersPathKey(), DeleteOption.builder().isPrefix(true).build()).get();
       deleted = deleteResponse.getDeleted();
     }
     if (deleted == 0) {
-      logger.warn("No peers found to unregister");
+      logger.warn("No peers found to delete");
     } else {
-      logger.info("Unregistered {} peers", deleted);
+      logger.info("Deleted {} peers", deleted);
     }
     return deleted;
   }
 
   /**
-   * Unregisters all peers in the directory.
+   * Deletes all peer nodes in the directory.
    *
-   * @return the number of peers unregistered
+   * @return the number of peers deleted
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
-  public long unregisterAllPeers() throws ExecutionException, InterruptedException {
-    return unregisterAllPeersWithExcludes(null);
+  public long deleteAllPeers() throws ExecutionException, InterruptedException {
+    return deleteAllPeersExcept(null);
   }
 
   /**
-   * Unregisters a specific peer identified by its UUID.
+   * Deletes a peer sub-tree atomically (root + logs + state).
    *
-   * @param peerUuid the UUID of the peer to unregister
-   * @throws ExecutionException if an error occurs during etcd operation
-   * @throws InterruptedException if the current thread is interrupted while waiting
+   * @param peerUuid the peer’s UUID
+   * @throws ExecutionException on etcd errors
+   * @throws InterruptedException if the thread is interrupted
    */
-  public void unregisterPeer(UUID peerUuid) throws ExecutionException, InterruptedException {
-    DeleteResponse deleteResponse =
+  public void deletePeer(UUID peerUuid) throws ExecutionException, InterruptedException {
+
+    ByteSequence peerKey = ByteSequence.from(getPeerPath(peerUuid), UTF8);
+
+    // 1) Fetch the root node once – we need its current version
+    GetResponse get = kvClient.get(peerKey).get();
+    if (get.getCount() == 0) {
+      logger.warn("Cannot delete peer {}: node does not exist", peerUuid);
+      return;
+    }
+    long version = get.getKvs().get(0).getVersion(); // optimistic-lock token
+
+    // 2) Delete the entire sub-tree, but only if the root’s version  hasn’t changed since step (1)
+    TxnResponse tx =
         kvClient
-            .delete(
-                ByteSequence.from(getPeerPath(peerUuid).getBytes(UTF8)),
-                DeleteOption.builder().isPrefix(true).build())
+            .txn()
+            .If(new Cmp(peerKey, Cmp.Op.EQUAL, CmpTarget.version(version)))
+            .Then(Op.delete(peerKey, DeleteOption.builder().isPrefix(true).build()))
+            .commit()
             .get();
-    if (deleteResponse.getDeleted() > 0) {
-      logger.info("Unregistered peer with uuid: {}", peerUuid);
+
+    if (tx.isSucceeded()) {
+      logger.info("Deleted peer {}", peerUuid);
     } else {
-      logger.warn("Could not unregister peer with uuid: {}, peer does not exist.", peerUuid);
+      logger.warn("Failed to delete peer {}: node was modified concurrently", peerUuid);
     }
   }
 
@@ -1029,95 +1043,132 @@ public class PalDirectory implements AutoCloseable {
   }
 
   /**
-   * Unregisters a specific log identified by its name. Ensures that no peer is using the log before
-   * unregistration.
+   * Deletes a specific log info node identified by its name. Ensures that no peer is using the log
+   * before deletion.
    *
-   * @param logName the name of the log to unregister
+   * @param logName the name of the log to delete
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    * @throws IllegalArgumentException if a peer is currently using the log
    */
-  public void unregisterLog(String logName) throws ExecutionException, InterruptedException {
-    LogInfo logToUnregister = getLogInfo(logName);
-    if (logToUnregister == null) {
-      logger.warn("Cannot unregister log with name: {}, log does not exist.", logName);
+  public void deleteLog(String logName) throws ExecutionException, InterruptedException {
+
+    ByteSequence logKey = ByteSequence.from(getLogPath(logName), UTF8);
+
+    // Fetch the node once (for UUID + version token)
+    GetResponse resp = kvClient.get(logKey).get();
+    if (resp.getCount() == 0) {
+      logger.warn("Cannot delete log '{}': node does not exist", logName);
       return;
     }
-    // verify that no peer is using the log
-    for (PeerInfo peer : getAllPeers()) {
-      boolean isLogUsed =
-          Stream.of(getPeerInLog(peer.getUuid()), getPeerOutLog(peer.getUuid()))
-              .anyMatch(logUuid -> logToUnregister.getUuid().equals(logUuid));
-      if (isLogUsed) {
-        throw new IllegalArgumentException(
-            format(
-                "Cannot unregister log with name: %s, peer w/uuid: %s is using it",
-                logName, peer.getUuid()));
-      }
+    LogInfo logInfo = LogInfo.fromJson(resp.getKvs().get(0).getValue().toString(UTF8));
+    long version = resp.getKvs().get(0).getVersion();
+
+    // Single call to discover *all* used logs
+    if (getAllUsedLogUuids().contains(logInfo.getUuid())) {
+      throw new IllegalArgumentException(
+          "Cannot delete log '" + logName + "': it is in use by at least one peer");
     }
 
-    DeleteResponse deleteResponse =
-        kvClient.delete(ByteSequence.from(getLogPath(logName).getBytes(UTF8))).get();
-    if (deleteResponse.getDeleted() == 1) {
-      logger.info("Unregistered (i.e. deleted) log: {}", logName);
-    } else {
-      logger.warn("Could not unregister log with name: {}, log does not exist.", logName);
-    }
-  }
-
-  /**
-   * Unregisters all logs that have names starting with the specified prefix.
-   *
-   * @param logNamePrefix the prefix of the log names to unregister
-   * @return the number of logs unregistered
-   * @throws ExecutionException if an error occurs during etcd operation
-   * @throws InterruptedException if the current thread is interrupted while waiting
-   */
-  long unregisterLogs(String logNamePrefix) throws ExecutionException, InterruptedException {
-    final DeleteResponse deleteResponse =
+    // Compare-and-delete (optimistic-lock on version)
+    TxnResponse tx =
         kvClient
-            .delete(
-                ByteSequence.from(format("%s/%s", getLogsPath(), logNamePrefix).getBytes(UTF8)),
-                DeleteOption.builder().isPrefix(true).build())
+            .txn()
+            .If(new Cmp(logKey, Cmp.Op.EQUAL, CmpTarget.version(version)))
+            .Then(Op.delete(logKey, DeleteOption.DEFAULT))
+            .commit()
             .get();
 
-    long deleted = deleteResponse.getDeleted();
-    if (deleted == 0) {
-      logger.warn("No logs found to unregister with prefix: {}", logNamePrefix);
+    if (tx.isSucceeded()) {
+      logger.info("Deleted log '{}'", logName);
     } else {
-      logger.info("Unregistered {} logs with prefix: {}", deleted, logNamePrefix);
+      logger.warn("Failed to delete log '{}': node changed concurrently", logName);
     }
-    return deleted;
   }
 
   /**
-   * Unregisters all logs except those specified in the exclusion set.
+   * Collects every log-UUID referenced by any peer under …/logs/in and …/logs/out.
    *
-   * @param excludeLogs a {@link Set} of log UUIDs to exclude from unregistration; may be {@code
-   *     null}
-   * @return the number of logs unregistered
+   * @return the set of UUID's corresponding to all IN/OUT logs used by peers
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
-  long unregisterAllLogsWithExcludes(@Nullable Set<UUID> excludeLogs)
+  private Set<UUID> getAllUsedLogUuids() throws ExecutionException, InterruptedException {
+
+    // Prefix "…/peers/" (include trailing slash, so the root node itself is skipped)
+    ByteSequence peersPrefix = ByteSequence.from((getPeersPath() + '/'), UTF8);
+
+    GetResponse resp = kvClient.get(peersPrefix, GetOption.builder().isPrefix(true).build()).get();
+
+    // Filter client-side for “…/logs/in” and “…/logs/out”
+    Set<UUID> usedLogs = new HashSet<>();
+    for (KeyValue kv : resp.getKvs()) {
+      String key = kv.getKey().toString(UTF8);
+      if (key.endsWith("/logs/in") || key.endsWith("/logs/out")) {
+        usedLogs.add(UUID.fromString(kv.getValue().toString(UTF8)));
+      }
+    }
+    return usedLogs;
+  }
+
+  /**
+   * Deletes all log nodes that have names starting with the specified prefix.
+   *
+   * @param logNamePrefix the prefix of the log names to delete
+   * @return the number of logs deleted
+   * @throws ExecutionException if an error occurs during etcd operation
+   * @throws InterruptedException if the current thread is interrupted while waiting
+   */
+  long deleteLogsWithPrefix(String logNamePrefix) throws ExecutionException, InterruptedException {
+
+    ByteSequence prefixKey =
+        ByteSequence.from(String.format("%s/%s", getLogsPath(), logNamePrefix), UTF8);
+
+    DeleteResponse del =
+        kvClient.delete(prefixKey, DeleteOption.builder().isPrefix(true).build()).get();
+
+    if (del.getDeleted() == 0) {
+      logger.warn("No logs found with prefix '{}'", logNamePrefix);
+    } else {
+      logger.info("Deleted {} log(s) with prefix '{}'", del.getDeleted(), logNamePrefix);
+    }
+    return del.getDeleted();
+  }
+
+  /**
+   * Deletes all log nodes except those specified in the exclusion set.
+   *
+   * @param excludeLogs a {@link Set} of log UUIDs to exclude from deletion; may be {@code null}
+   * @return the number of log entries deleted
+   * @throws ExecutionException if an error occurs during etcd operation
+   * @throws InterruptedException if the current thread is interrupted while waiting
+   */
+  long deleteAllLogsExcept(@Nullable Set<UUID> excludeLogs)
       throws ExecutionException, InterruptedException {
     long deleted = 0;
+
     if (excludeLogs != null && !excludeLogs.isEmpty()) {
-      for (LogInfo log : getAllLogs()) {
-        if (!excludeLogs.contains(log.getUuid())) {
-          unregisterLog(log.getName());
-          deleted++;
-        }
+      /* Gather logs we *can* delete */
+      List<LogInfo> toDelete =
+          getAllLogs().stream().filter(l -> !excludeLogs.contains(l.getUuid())).toList();
+
+      /* One Txn per key (keeps code simple & safe) */
+      for (LogInfo log : toDelete) {
+        deleteLog(log.getName()); // re-use the atomic delete above
+        deleted++;
       }
     } else {
-      DeleteResponse deleteResponse =
+      /* Fast-path: wipe the entire logs subtree */
+      DeleteResponse del =
           kvClient.delete(getLogsPathKey(), DeleteOption.builder().isPrefix(true).build()).get();
-      deleted = deleteResponse.getDeleted();
+
+      deleted = del.getDeleted();
     }
+
     if (deleted == 0) {
-      logger.warn("No logs found to unregister");
+      logger.warn("No logs deleted");
     } else {
-      logger.info("Unregistered {} logs", deleted);
+      logger.info("Deleted {} log(s)", deleted);
     }
     return deleted;
   }

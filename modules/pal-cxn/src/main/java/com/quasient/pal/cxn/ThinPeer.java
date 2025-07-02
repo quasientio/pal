@@ -1607,7 +1607,7 @@ public class ThinPeer implements AutoCloseable {
     // unregister self
     if (getPalDirectory() != null && registerSelf) {
       try {
-        getPalDirectory().unregisterPeer(this.peerUuid);
+        getPalDirectory().deletePeer(this.peerUuid);
       } catch (Exception e) {
         logger.error("Error unregistering self from pal directory.", e);
       }

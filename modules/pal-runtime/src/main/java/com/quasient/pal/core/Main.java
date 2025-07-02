@@ -1057,7 +1057,7 @@ public class Main implements Callable<Integer> {
         palDirectory.ifPresent(
             dir -> {
               try {
-                dir.unregisterPeer(this.uuid);
+                dir.deletePeer(this.uuid);
               } catch (Exception e) {
                 logger.warn("Error unregistering self from PAL directory.", e);
               }

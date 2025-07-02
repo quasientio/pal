@@ -75,9 +75,9 @@ public class ThinPeerIT extends AbstractIntegrationTest {
         // we may close it after testing an uninitialized thin peer, so it's fine
       }
     }
-    // unregister created logs (peers are unregistering themselves when closed)
+    // delete created logs (peers are deleting/unregistering themselves when closed)
     for (String log : createdLogs.stream().map(LogInfo::getName).toList()) {
-      palDirectory.unregisterLog(log);
+      palDirectory.deleteLog(log);
       logger.info("Cleaned up created log: {}", log);
     }
     palDirectory.close();

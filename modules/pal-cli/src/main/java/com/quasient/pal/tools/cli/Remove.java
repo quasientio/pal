@@ -173,7 +173,7 @@ public class Remove extends AbstractPalSubcommand {
    */
   private void deleteLog(LogInfo logInfo) {
     try {
-      getPalDirectory().unregisterLog(logInfo.getName());
+      getPalDirectory().deleteLog(logInfo.getName());
     } catch (Exception e) {
       logger.error("Error unregistering log '{}' from directory", logInfo.getName(), e);
       errors++;
@@ -243,7 +243,7 @@ public class Remove extends AbstractPalSubcommand {
    */
   private void deletePeer(UUID peerUuid) {
     try {
-      getPalDirectory().unregisterPeer(peerUuid);
+      getPalDirectory().deletePeer(peerUuid);
     } catch (Exception e) {
       errors++;
     }
@@ -280,7 +280,7 @@ public class Remove extends AbstractPalSubcommand {
     // delete
     for (PeerInfo peer : matchingPeers) {
       try {
-        getPalDirectory().unregisterPeer(peer.getUuid());
+        getPalDirectory().deletePeer(peer.getUuid());
       } catch (Exception e) {
         logger.error("Error unregistering peer UUID '{}' from directory", peer.getUuid(), e);
         errors++;
@@ -291,7 +291,7 @@ public class Remove extends AbstractPalSubcommand {
   /** Deletes all peers registered in the PAL directory. */
   private void deleteAllPeers() {
     try {
-      long peersUnregistered = getPalDirectory().unregisterAllPeers();
+      long peersUnregistered = getPalDirectory().deleteAllPeers();
       logger.debug("Unregistered {} peers", peersUnregistered);
     } catch (Exception e) {
       errors++;
