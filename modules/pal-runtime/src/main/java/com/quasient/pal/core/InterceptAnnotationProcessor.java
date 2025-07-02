@@ -178,7 +178,7 @@ public class InterceptAnnotationProcessor {
     try {
       Optional<PalDirectory> directory = directoryConnectionProvider.get();
       if (directory.isPresent()) {
-        directory.get().registerIntercept(interceptRequest);
+        directory.get().createIntercept(interceptRequest);
         logger.debug("Successfully registered new intercept request in directory");
       } else {
         logger.error("Pal Directory is not available");

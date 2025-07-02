@@ -52,7 +52,7 @@ public class InterceptAnnotationProcessorTest {
                   return null;
                 })
         .when(palDirectory)
-        .registerIntercept(any());
+        .createIntercept(any());
 
     DirectoryConnectionProvider directoryConnectionProvider =
         mock(DirectoryConnectionProvider.class);
@@ -66,7 +66,7 @@ public class InterceptAnnotationProcessorTest {
     interceptAnnotationProcessor.process(App.class);
 
     // ensure register() called
-    verify(palDirectory, times(1)).registerIntercept(any());
+    verify(palDirectory, times(1)).createIntercept(any());
 
     // verify request contents
     assertThat(requests.size(), is(1));

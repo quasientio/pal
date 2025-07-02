@@ -439,7 +439,7 @@ public class PalDirectory implements AutoCloseable {
   }
 
   /**
-   * Retrieves all registered peers in the directory.
+   * Retrieves all peers in the directory.
    *
    * @return a {@link Set} of {@link PeerInfo} representing all peers
    * @throws ExecutionException if an error occurs during etcd operation
@@ -674,15 +674,15 @@ public class PalDirectory implements AutoCloseable {
   }
 
   /**
-   * Registers a new intercept request in the directory.
+   * Creates a new intercept request in the directory.
    *
-   * @param interceptRequest the intercept request to register
+   * @param interceptRequest the intercept request to create
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    * @throws NoPeerInfoNodeException if the associated peer does not exist in the directory
-   * @throws IllegalArgumentException if the intercept request is already registered for this peer
+   * @throws IllegalArgumentException if the intercept request is already created for this peer
    */
-  public void registerIntercept(InterceptRequest<?> interceptRequest)
+  public void createIntercept(InterceptRequest<?> interceptRequest)
       throws ExecutionException, InterruptedException, NoPeerInfoNodeException {
 
     UUID peerUuid = interceptRequest.getPeer();
@@ -709,7 +709,7 @@ public class PalDirectory implements AutoCloseable {
       // Decide what “failed” means
       if (!kvClient.get(peerInfoKey).get().getKvs().isEmpty()) {
         throw new IllegalArgumentException(
-            String.format("Intercept %s already registered for peer %s", interceptUuid, peerUuid));
+            String.format("Intercept %s already exists for peer %s", interceptUuid, peerUuid));
       } else {
         throw new NoPeerInfoNodeException("Peer " + peerUuid + " does not exist");
       }
@@ -798,16 +798,16 @@ public class PalDirectory implements AutoCloseable {
   }
 
   /**
-   * Unregisters all intercept requests associated with a specific peer.
+   * Deletes all intercept requests associated with a specific peer.
    *
    * @param peerUuid the UUID of the peer
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
-  public void unregisterAllPeerInterceptRequests(UUID peerUuid)
+  public void deleteAllPeerInterceptRequests(UUID peerUuid)
       throws ExecutionException, InterruptedException {
     if (logger.isDebugEnabled()) {
-      logger.debug("Unregistering all intercept requests for peer w/uuid: {}", peerUuid);
+      logger.debug("Deleting all intercept requests for peer w/uuid: {}", peerUuid);
     }
     final String peerInterceptsPath = getInterceptsPathForPeer(peerUuid);
     final DeleteResponse deleteResponse =
@@ -820,21 +820,21 @@ public class PalDirectory implements AutoCloseable {
       logger.warn("No intercept requests found for peer w/uuid: {}", peerUuid);
     } else {
       logger.info(
-          "Unregistered {} intercept request(s) for peer w/uuid: {}",
+          "Deleted {} intercept request(s) for peer w/uuid: {}",
           deleteResponse.getDeleted(),
           peerUuid);
     }
   }
 
   /**
-   * Unregisters a specific intercept request associated with a peer.
+   * Deletes a specific intercept request associated with a peer.
    *
    * @param peerUuid the UUID of the peer
-   * @param interceptRequestUuid the UUID of the intercept request to unregister
+   * @param interceptRequestUuid the UUID of the intercept request to delete
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
-  public void unregisterPeerInterceptRequest(UUID peerUuid, UUID interceptRequestUuid)
+  public void deletePeerInterceptRequest(UUID peerUuid, UUID interceptRequestUuid)
       throws ExecutionException, InterruptedException {
     final String peerInterceptsPath = getInterceptsPathForPeer(peerUuid);
     final DeleteResponse deleteResponse =
@@ -851,7 +851,7 @@ public class PalDirectory implements AutoCloseable {
           peerUuid);
     } else {
       logger.info(
-          "Unregistered intercept request w/uuid: {} for peer w/uuid: {}",
+          "Deleted intercept request w/uuid: {} for peer w/uuid: {}",
           interceptRequestUuid,
           peerUuid);
     }
@@ -912,7 +912,7 @@ public class PalDirectory implements AutoCloseable {
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
-  public LogInfo newLog(String logNamePrefix, String logServers)
+  public LogInfo createLogWithAutoName(String logNamePrefix, String logServers)
       throws ExecutionException, InterruptedException {
     Objects.requireNonNull(logNamePrefix, "logNamePrefix cannot be null");
     Objects.requireNonNull(logServers, "logServers cannot be null");
@@ -1039,7 +1039,7 @@ public class PalDirectory implements AutoCloseable {
   }
 
   /**
-   * Retrieves all logs registered in the directory.
+   * Retrieves all logs in the directory.
    *
    * @return a {@link Set} of all {@link LogInfo} instances
    * @throws ExecutionException if an error occurs during etcd operation

@@ -178,7 +178,7 @@ public class AbstractInterceptIT extends AbstractIntegrationTest implements Exec
   }
 
   protected final void register(InterceptRequest<?> interceptRequest) throws Exception {
-    palDirectory.registerIntercept(interceptRequest);
+    palDirectory.createIntercept(interceptRequest);
   }
 
   private Optional<PeerInfo> findRegisteredPeerListening() throws Exception {
@@ -210,7 +210,7 @@ public class AbstractInterceptIT extends AbstractIntegrationTest implements Exec
 
   @After
   public void tearDown() throws Exception {
-    palDirectory.unregisterAllPeerInterceptRequests(myPeerUuid);
+    palDirectory.deleteAllPeerInterceptRequests(myPeerUuid);
     assertionError = null;
     if (threadRepSocketCreated.get()) {
       Socket socket = threadRepSocket.get();

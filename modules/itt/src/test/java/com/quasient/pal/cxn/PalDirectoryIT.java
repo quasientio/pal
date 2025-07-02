@@ -79,7 +79,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
       UUID peerUuid = entry.getKey();
       List<UUID> peerIntercepts = entry.getValue();
       for (UUID interceptReq : peerIntercepts) {
-        palDirectory.unregisterPeerInterceptRequest(peerUuid, interceptReq);
+        palDirectory.deletePeerInterceptRequest(peerUuid, interceptReq);
         logger.info("Cleaned up created intercept request: {}", interceptReq);
       }
     }
@@ -106,7 +106,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     // pre-assertions
     assertFalse(palDirectory.peerExists(peerInfo.getUuid()));
 
-    // register
+    // create
     palDirectory.createPeer(peerInfo);
     createdPeers.add(peerInfo.getUuid());
 
@@ -190,7 +190,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     // pre-assertions
     assertTrue(palDirectory.peerExists(peerInfo.getUuid()));
 
-    // unregister
+    // delete
     palDirectory.deletePeer(peerInfo.getUuid());
 
     // verify
@@ -218,7 +218,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
             .collect(Collectors.toSet())
             .size());
 
-    // unregister all - exclude pre-existing
+    // delete all - exclude pre-existing
     palDirectory.deleteAllPeersExcept(preExistingPeers);
 
     assertEquals(preExistingPeers.size(), palDirectory.getAllPeers().size());
@@ -263,11 +263,11 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   }
 
   @Test
-  public void newLog_newLogPrefix_logCreated() throws Exception {
+  public void newLog_createLogPrefix_logWithAutoNameCreated() throws Exception {
 
     String logNamePrefix = "test.topic";
 
-    LogInfo newLogInfo = palDirectory.newLog(logNamePrefix, getKafkaServers());
+    LogInfo newLogInfo = palDirectory.createLogWithAutoName(logNamePrefix, getKafkaServers());
     String createdLogName = newLogInfo.getName();
     createdLogs.add(createdLogName);
 
@@ -280,7 +280,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
 
   /** Test concurrent creation of logs with the same prefix must yield unique names */
   @Test
-  public void newLog_concurrentWriters_uniqueNames() throws Exception {
+  public void createLog_WithAutoName_concurrentWriters_uniqueNames() throws Exception {
     final String prefix = "concurrent.topic"; // use a test-specific prefix
     final int writers = 32; // number of concurrent clients
     //  figure-out where the new sequence should start
@@ -302,7 +302,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
               () -> {
                 readyLatch.countDown(); // signal “I’m ready”
                 startLatch.await(); // wait for the green light
-                LogInfo info = palDirectory.newLog(prefix, getKafkaServers());
+                LogInfo info = palDirectory.createLogWithAutoName(prefix, getKafkaServers());
                 names.add(info.getName());
                 createdLogs.add(info.getName()); // register for @After cleanup
                 return null;
@@ -338,14 +338,14 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   }
 
   @Test
-  public void createLog_logNotRegistered_logRegistered() throws Exception {
+  public void createLog_logDoesNotExist_logCreated() throws Exception {
 
     String logName = "test.topic";
 
     // pre-assertions
     assertFalse(palDirectory.logExists(logName));
 
-    // register
+    // create
     LogInfo newLogInfo = new LogInfo(logName, getKafkaServers());
     palDirectory.createLog(newLogInfo);
     createdLogs.add(logName);
@@ -360,15 +360,15 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   @Test
   public void registerPeerLogs_peerRegistered_peerLogsRegistered() throws Exception {
 
-    // register new peer
+    // create new peer
     final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID());
     peerInfo.setRpcAddress("tcp://127.0.0.1:5671");
     palDirectory.createPeer(peerInfo);
     createdPeers.add(peerInfo.getUuid());
 
     // create and register In and Out logs for the new peer
-    LogInfo inLogInfo = palDirectory.newLog("test_in_log", getKafkaServers());
-    LogInfo outLogInfo = palDirectory.newLog("test_out_log", getKafkaServers());
+    LogInfo inLogInfo = palDirectory.createLogWithAutoName("test_in_log", getKafkaServers());
+    LogInfo outLogInfo = palDirectory.createLogWithAutoName("test_out_log", getKafkaServers());
     palDirectory.registerPeerInLog(peerInfo, inLogInfo);
     palDirectory.registerPeerOutLog(peerInfo, outLogInfo);
     createdLogs.add(inLogInfo.getName());
@@ -385,7 +385,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     assertEquals(inLogInfo.getUuid(), peerInLog);
     assertEquals(outLogInfo.getUuid(), peerOutLog);
 
-    // try to unregister the peer logs
+    // try to delete the peer's logs
     try {
       palDirectory.deleteLog(inLogInfo.getName());
       fail("Should have raised IllegalArgumentException because the log is in use by a peer");
@@ -411,7 +411,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   public void getLogInfo_logExists_logInfo() throws Exception {
     String logName = "test.topic";
 
-    // register logInfo
+    // create logInfo
     LogInfo newLogInfo = new LogInfo(logName, getKafkaServers());
     palDirectory.createLog(newLogInfo);
     createdLogs.add(logName);
@@ -438,7 +438,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     // create N logs
     int logsToCreate = 10;
     for (int i = 0; i < logsToCreate; i++) {
-      LogInfo newLogInfo = palDirectory.newLog(logNamePrefix, getKafkaServers());
+      LogInfo newLogInfo = palDirectory.createLogWithAutoName(logNamePrefix, getKafkaServers());
       createdLogs.add(newLogInfo.getName());
     }
 
@@ -453,7 +453,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     // create N logs
     int logsToCreate = 10;
     for (int i = 0; i < logsToCreate; i++) {
-      LogInfo newLogInfo = palDirectory.newLog(logNamePrefix, getKafkaServers());
+      LogInfo newLogInfo = palDirectory.createLogWithAutoName(logNamePrefix, getKafkaServers());
       createdLogs.add(newLogInfo.getName());
     }
 
@@ -473,7 +473,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     // create  a few logs
     int logsToCreate = 10;
     for (int i = 0; i < logsToCreate; i++) {
-      LogInfo newLogInfo = palDirectory.newLog(logNamePrefix, getKafkaServers());
+      LogInfo newLogInfo = palDirectory.createLogWithAutoName(logNamePrefix, getKafkaServers());
       createdLogs.add(newLogInfo.getName());
     }
     assertEquals(logsToCreate, palDirectory.getLogCount(logNamePrefix));
@@ -487,7 +487,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     int logsToCreate = 10;
     String lastCreated = null;
     for (int i = 0; i < logsToCreate; i++) {
-      LogInfo newLogInfo = palDirectory.newLog(logNamePrefix, getKafkaServers());
+      LogInfo newLogInfo = palDirectory.createLogWithAutoName(logNamePrefix, getKafkaServers());
       lastCreated = newLogInfo.getName();
       createdLogs.add(lastCreated);
     }
@@ -502,22 +502,23 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     // create  a few with the prefix
     int logsToCreate = 10;
     for (int i = 0; i < logsToCreate; i++) {
-      LogInfo newLogInfo = palDirectory.newLog(logNamePrefix, getKafkaServers());
+      LogInfo newLogInfo = palDirectory.createLogWithAutoName(logNamePrefix, getKafkaServers());
       createdLogs.add(newLogInfo.getName());
     }
 
     // create a few with another prefix
     for (int i = 0; i < 3; i++) {
-      LogInfo newLogInfo = palDirectory.newLog("some.other.prefix", getKafkaServers());
+      LogInfo newLogInfo =
+          palDirectory.createLogWithAutoName("some.other.prefix", getKafkaServers());
       createdLogs.add(newLogInfo.getName());
     }
 
     // pre-assertions
     assertEquals(logsToCreate, palDirectory.getLogCount(logNamePrefix));
 
-    // unregister with prefix
-    long logsUnregistered = palDirectory.deleteLogsWithPrefix(logNamePrefix);
-    assertEquals(logsToCreate, logsUnregistered);
+    // delete with prefix
+    long logsDeleted = palDirectory.deleteLogsWithPrefix(logNamePrefix);
+    assertEquals(logsToCreate, logsDeleted);
 
     // verify
     assertEquals(0, palDirectory.getLogCount(logNamePrefix));
@@ -531,7 +532,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     // create a few with the prefix
     int logsToCreate = 10;
     for (int i = 0; i < logsToCreate; i++) {
-      LogInfo newLogInfo = palDirectory.newLog(logNamePrefix, getKafkaServers());
+      LogInfo newLogInfo = palDirectory.createLogWithAutoName(logNamePrefix, getKafkaServers());
       createdLogs.add(newLogInfo.getName());
     }
 
@@ -539,10 +540,10 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     assertEquals(preExistingLogs.size() + logsToCreate, palDirectory.getAllLogs().size());
 
     // delete all
-    long unregisteredLogs =
+    long deletedLogs =
         palDirectory.deleteAllLogsExcept(
             preExistingLogs.stream().map(LogInfo::getUuid).collect(Collectors.toSet()));
-    assertEquals(logsToCreate, unregisteredLogs);
+    assertEquals(logsToCreate, deletedLogs);
 
     // verify
     assertEquals(preExistingLogs.size(), palDirectory.getAllLogs().size());
@@ -552,7 +553,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   public void deleteLog_existingLog_logDeleted() throws Exception {
     String logNamePrefix = "test.topic";
 
-    LogInfo newLogInfo = palDirectory.newLog(logNamePrefix, getKafkaServers());
+    LogInfo newLogInfo = palDirectory.createLogWithAutoName(logNamePrefix, getKafkaServers());
     String createdLogName = newLogInfo.getName();
     // pre-assertions
     assertTrue(palDirectory.logExists(createdLogName));
@@ -564,7 +565,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   }
 
   @Test
-  public void registerIntercept_noSuchPeer_exception() throws Exception {
+  public void createIntercept_noSuchPeer_exception() throws Exception {
     InterceptRequest<InterceptableMethodCall> req =
         new InterceptRequest<>(
             UUID.randomUUID(),
@@ -577,7 +578,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
                 "println", Arrays.asList("java.lang.String", "java.lang.Integer")));
 
     try {
-      palDirectory.registerIntercept(req);
+      palDirectory.createIntercept(req);
       fail("Should have raised NoPeerInfoNodeException");
     } catch (NoPeerInfoNodeException e) {
       // ok
@@ -585,7 +586,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   }
 
   @Test
-  public void registerIntercept_alreadyRegistered_exception() throws Exception {
+  public void createIntercept_alreadyExists_exception() throws Exception {
     // create peer
     final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "testing peer");
     palDirectory.createPeer(peerInfo);
@@ -607,14 +608,14 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
             new InterceptableMethodCall(
                 "println", Arrays.asList("java.lang.String", "java.lang.Integer")));
 
-    // register it
-    palDirectory.registerIntercept(req);
+    // create it
+    palDirectory.createIntercept(req);
     addInterceptRequestToCreated(peerInfo.getUuid(), req.getUuid());
     assertEquals(1, palDirectory.getPeerInterceptRequests(peerInfo.getUuid()).size());
 
-    // try to register again
+    // try to create again
     try {
-      palDirectory.registerIntercept(req);
+      palDirectory.createIntercept(req);
       fail("Should have raised IllegalArgumentException");
     } catch (IllegalArgumentException e) {
       // ok
@@ -622,7 +623,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   }
 
   @Test
-  public void registerIntercept_peerExists_registered() throws Exception {
+  public void createIntercept_peerExists_created() throws Exception {
     // create peer
     final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "testing peer");
     palDirectory.createPeer(peerInfo);
@@ -644,14 +645,14 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
             new InterceptableMethodCall(
                 "println", Arrays.asList("java.lang.String", "java.lang.Integer")));
 
-    // register it
-    palDirectory.registerIntercept(req);
+    // create it
+    palDirectory.createIntercept(req);
     addInterceptRequestToCreated(peerInfo.getUuid(), req.getUuid());
     assertEquals(1, palDirectory.getPeerInterceptRequests(peerInfo.getUuid()).size());
   }
 
   @Test
-  public void unregisterIntercept_interceptExists_unregistered() throws Exception {
+  public void deleteIntercept_interceptExists_deleted() throws Exception {
     // create peer
     final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "testing peer");
     palDirectory.createPeer(peerInfo);
@@ -673,13 +674,13 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
             new InterceptableMethodCall(
                 "println", Arrays.asList("java.lang.String", "java.lang.Integer")));
 
-    // register it
-    palDirectory.registerIntercept(req);
+    // create it
+    palDirectory.createIntercept(req);
     addInterceptRequestToCreated(peerInfo.getUuid(), req.getUuid());
     assertEquals(1, palDirectory.getPeerInterceptRequests(peerInfo.getUuid()).size());
 
-    // now unregister
-    palDirectory.unregisterPeerInterceptRequest(peerInfo.getUuid(), req.getUuid());
+    // now delete it
+    palDirectory.deletePeerInterceptRequest(peerInfo.getUuid(), req.getUuid());
     assertEquals(0, palDirectory.getPeerInterceptRequests(peerInfo.getUuid()).size());
   }
 
@@ -731,9 +732,9 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
           }
         });
 
-    // register them
+    // create them
     for (InterceptRequest<InterceptableMethodCall> interceptRequest : requests) {
-      palDirectory.registerIntercept(interceptRequest);
+      palDirectory.createIntercept(interceptRequest);
       addInterceptRequestToCreated(peerInfo.getUuid(), interceptRequest.getUuid());
     }
 
@@ -802,13 +803,13 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
           }
         });
 
-    // register them
+    // create them
     for (InterceptRequest<InterceptableMethodCall> interceptRequest : requestsPeer1) {
-      palDirectory.registerIntercept(interceptRequest);
+      palDirectory.createIntercept(interceptRequest);
       addInterceptRequestToCreated(peerInfo1.getUuid(), interceptRequest.getUuid());
     }
     for (InterceptRequest<InterceptableMethodCall> interceptRequest : requestsPeer2) {
-      palDirectory.registerIntercept(interceptRequest);
+      palDirectory.createIntercept(interceptRequest);
       addInterceptRequestToCreated(peerInfo2.getUuid(), interceptRequest.getUuid());
     }
 
@@ -824,7 +825,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   }
 
   @Test
-  public void unregisterAllPeerInterceptRequests_requestsExist_unregistered() throws Exception {
+  public void deleteAllPeerInterceptRequests_requestsExist_deleted() throws Exception {
     // create peer
     final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "testing peer");
     palDirectory.createPeer(peerInfo);
@@ -833,10 +834,10 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     // pre-assertions
     assertEquals(0, palDirectory.getPeerInterceptRequests(peerInfo.getUuid()).size());
 
-    // create and register some intercept requests
+    // create some intercept requests
     final int totalPeerIntercepts = 3;
     for (int i = 0; i < totalPeerIntercepts; i++) {
-      palDirectory.registerIntercept(
+      palDirectory.createIntercept(
           new InterceptRequest<>(
               UUID.randomUUID(),
               peerInfo.getUuid(),
@@ -851,8 +852,8 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     assertEquals(
         totalPeerIntercepts, palDirectory.getPeerInterceptRequests(peerInfo.getUuid()).size());
 
-    // unregister them
-    palDirectory.unregisterAllPeerInterceptRequests(peerInfo.getUuid());
+    // delete them
+    palDirectory.deleteAllPeerInterceptRequests(peerInfo.getUuid());
     assertEquals(0, palDirectory.getPeerInterceptRequests(peerInfo.getUuid()).size());
   }
 }
