@@ -11,6 +11,7 @@ package com.quasient.pal.cxn;
 
 import static java.lang.String.format;
 
+import com.google.gson.Gson;
 import com.quasient.pal.common.directory.events.InterceptEvent;
 import com.quasient.pal.common.directory.events.InterceptNodeListener;
 import com.quasient.pal.common.directory.nodes.InterceptRequest;
@@ -40,8 +41,11 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
@@ -106,6 +110,9 @@ public class PalDirectory implements AutoCloseable {
 
   /** Listeners subscribed to intercept node events. */
   private final List<InterceptNodeListener> interceptListeners = new CopyOnWriteArrayList<>();
+
+  /** Gson serializer. */
+  private static final Gson gson = new Gson();
 
   /**
    * Constructs a PalDirectory instance with the specified etcd connection string.
@@ -204,44 +211,62 @@ public class PalDirectory implements AutoCloseable {
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
   public boolean peerExists(UUID peerUuid) throws ExecutionException, InterruptedException {
-    return kvClient.get(ByteSequence.from(getPeerPath(peerUuid).getBytes(UTF8))).get().getCount()
-        != 0;
+    return kvClient.get(peerInfoKey(peerUuid)).get().getCount() != 0;
   }
 
   /**
    * Creates a new peer in the directory. If the peer already exists (key = uuid), then creation is
-   * skipped.
+   * skipped. Information is kept in two separate sub-nodes: /info (static) and /state (updatable)
    *
-   * @param peerInfo the information of the peer to create. Must contain its uuid.
+   * @param peer the information of the peer to create. Must contain its uuid.
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
-  public void createPeer(PeerInfo peerInfo) throws ExecutionException, InterruptedException {
-    Objects.requireNonNull(peerInfo, "peerInfo cannot be null");
-    Objects.requireNonNull(peerInfo.getUuid(), "peerInfo.uuid cannot be null");
-    final Instant now = Instant.now();
-    if (peerInfo.getCTime() == null) {
-      peerInfo.setCtime(now.toEpochMilli());
-    }
-    if (peerInfo.getMTime() == null) {
-      peerInfo.setMtime(now.toEpochMilli());
-    }
-    final ByteSequence peerKey = ByteSequence.from(getPeerPath(peerInfo.getUuid()).getBytes(UTF8));
-    final ByteSequence peerData = ByteSequence.from(peerInfo.toJson().getBytes(UTF8));
+  public void createPeer(PeerInfo peer) throws ExecutionException, InterruptedException {
+    Objects.requireNonNull(peer, "peer cannot be null");
+    Objects.requireNonNull(peer.getUuid(), "peer.uuid cannot be null");
 
-    TxnResponse response =
+    long now = System.currentTimeMillis();
+    if (peer.getCTime() == null) peer.setCtime(now);
+    if (peer.getMTime() == null) peer.setMtime(now);
+
+    String infoJson = gson.toJson(PeerStatic.from(peer));
+    String stateJson = gson.toJson(PeerState.from(peer));
+
+    ByteSequence infoKey = peerInfoKey(peer.getUuid());
+    ByteSequence stateKey = peerStateKey(peer.getUuid());
+
+    TxnResponse tx =
         kvClient
             .txn()
-            .If(new Cmp(peerKey, Cmp.Op.EQUAL, CmpTarget.version(0))) // key must not exist
-            .Then(Op.put(peerKey, peerData, PutOption.DEFAULT))
+            .If(new Cmp(infoKey, Cmp.Op.EQUAL, CmpTarget.version(0)))
+            .Then(
+                Op.put(infoKey, ByteSequence.from(infoJson, UTF8), PutOption.DEFAULT),
+                Op.put(stateKey, ByteSequence.from(stateJson, UTF8), PutOption.DEFAULT))
             .commit()
             .get();
 
-    if (response.isSucceeded()) {
-      logger.info("Created peer w/uuid: {}, {}", peerInfo.getUuid(), peerInfo);
+    if (tx.isSucceeded()) {
+      logger.info("Created peer {}", peer.getUuid());
     } else {
-      logger.warn("Peer {} already exists - skipping", peerInfo.getUuid());
+      logger.warn("Peer {} already exists – skipping", peer.getUuid());
     }
+  }
+
+  public void updatePeerState(PeerInfo peer) throws ExecutionException, InterruptedException {
+    writePeerState(peer);
+  }
+
+  private void writePeerState(PeerInfo peer) throws ExecutionException, InterruptedException {
+
+    long now = System.currentTimeMillis();
+    peer.setMtime(now);
+
+    String stateJson = gson.toJson(PeerState.from(peer));
+    ByteSequence stateKey = peerStateKey(peer.getUuid());
+
+    // TODO ‼ attach a lease here if we want automatic expiry
+    kvClient.put(stateKey, ByteSequence.from(stateJson, UTF8)).get();
   }
 
   /**
@@ -258,7 +283,7 @@ public class PalDirectory implements AutoCloseable {
     Objects.requireNonNull(peerInfo, "peerInfo");
     Objects.requireNonNull(logInfo, "logInfo");
 
-    ByteSequence peerKey = ByteSequence.from(getPeerPath(peerInfo.getUuid()), UTF8);
+    ByteSequence peerInfoKey = peerInfoKey(peerInfo.getUuid());
     ByteSequence inLogKey = ByteSequence.from(getPeerLogsInPath(peerInfo.getUuid()), UTF8);
     ByteSequence inLogValue = ByteSequence.from(logInfo.getUuid().toString(), UTF8);
 
@@ -267,7 +292,7 @@ public class PalDirectory implements AutoCloseable {
             .txn()
             // peer must exist
             .If(
-                new Cmp(peerKey, Cmp.Op.GREATER, CmpTarget.version(0)),
+                new Cmp(peerInfoKey, Cmp.Op.GREATER, CmpTarget.version(0)),
                 // in-log pointer must NOT exist yet
                 new Cmp(inLogKey, Cmp.Op.EQUAL, CmpTarget.version(0)))
             .Then(Op.put(inLogKey, inLogValue, PutOption.DEFAULT))
@@ -276,7 +301,7 @@ public class PalDirectory implements AutoCloseable {
 
     if (!tx.isSucceeded()) {
       // Decide what “failed” means
-      if (!kvClient.get(peerKey).get().getKvs().isEmpty()) {
+      if (!kvClient.get(peerInfoKey).get().getKvs().isEmpty()) {
         throw new IllegalStateException("IN-log already registered for peer " + peerInfo.getUuid());
       } else {
         throw new NoPeerInfoNodeException("Peer " + peerInfo.getUuid() + " does not exist");
@@ -324,7 +349,7 @@ public class PalDirectory implements AutoCloseable {
     Objects.requireNonNull(peerInfo, "peerInfo");
     Objects.requireNonNull(logInfo, "logInfo");
 
-    ByteSequence peerKey = ByteSequence.from(getPeerPath(peerInfo.getUuid()), UTF8);
+    ByteSequence peerInfoKey = peerInfoKey(peerInfo.getUuid());
     ByteSequence outLogKey = ByteSequence.from(getPeerLogsOutPath(peerInfo.getUuid()), UTF8);
     ByteSequence outLogValue = ByteSequence.from(logInfo.getUuid().toString(), UTF8);
 
@@ -332,7 +357,7 @@ public class PalDirectory implements AutoCloseable {
         kvClient
             .txn()
             .If(
-                new Cmp(peerKey, Cmp.Op.GREATER, CmpTarget.version(0)),
+                new Cmp(peerInfoKey, Cmp.Op.GREATER, CmpTarget.version(0)),
                 new Cmp(outLogKey, Cmp.Op.EQUAL, CmpTarget.version(0)))
             .Then(Op.put(outLogKey, outLogValue, PutOption.DEFAULT))
             .commit()
@@ -340,7 +365,7 @@ public class PalDirectory implements AutoCloseable {
 
     if (!tx.isSucceeded()) {
       // Decide what “failed” means
-      if (!kvClient.get(peerKey).get().getKvs().isEmpty()) {
+      if (!kvClient.get(peerInfoKey).get().getKvs().isEmpty()) {
         throw new IllegalStateException(
             "OUT-log already registered for peer " + peerInfo.getUuid());
       } else {
@@ -383,13 +408,34 @@ public class PalDirectory implements AutoCloseable {
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
   public PeerInfo getPeerInfo(UUID peerUuid) throws ExecutionException, InterruptedException {
-    final GetResponse getResponse =
-        kvClient.get(ByteSequence.from(getPeerPath(peerUuid).getBytes(UTF8))).get();
-    if (getResponse.getCount() == 0) {
+
+    GetResponse info = kvClient.get(peerInfoKey(peerUuid)).get();
+    if (info.getCount() == 0) {
       logger.warn("Node for peer w/uuid: {} does not exist", peerUuid);
       return null;
     }
-    return PeerInfo.fromJson(getResponse.getKvs().get(0).getValue().toString(UTF8));
+
+    PeerStatic ps = gson.fromJson(info.getKvs().get(0).getValue().toString(UTF8), PeerStatic.class);
+    GetResponse state = kvClient.get(peerStateKey(peerUuid)).get();
+    PeerState pst =
+        state.getCount() == 0
+            ? new PeerState(0L, null, null, null, null)
+            : gson.fromJson(state.getKvs().get(0).getValue().toString(UTF8), PeerState.class);
+
+    PeerInfo p = new PeerInfo(ps.uuid());
+    if (ps.name() != null) {
+      p.setName(ps.name());
+    }
+    p.setCtime(ps.ctimeMillis());
+    if (pst.mtimeMillis() != 0L) { // 0 means “not present”
+      p.setMtime(pst.mtimeMillis());
+    }
+    p.setRpcAddress(pst.binRpc());
+    p.setJsonrpcAddress(pst.jsonRpc());
+    p.setPubAddress(pst.pub());
+    p.setJmxAddress(pst.jmx());
+
+    return p;
   }
 
   /**
@@ -399,28 +445,59 @@ public class PalDirectory implements AutoCloseable {
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
+  @SuppressWarnings("ComputeIfAbsentAmbiguousReference")
   public Set<PeerInfo> getAllPeers() throws ExecutionException, InterruptedException {
-    final String peersRoot = getPeersPath(); // "/<ns>/peers"
-    final String peersPrefix = peersRoot + "/"; // trailing slash so we never get the root node
-
+    String peersPrefix = getPeersPath() + '/'; // “…/peers/”
     GetResponse resp =
         kvClient
-            .get(
-                ByteSequence.from(peersPrefix.getBytes(UTF8)),
-                GetOption.builder().isPrefix(true).build())
+            .get(ByteSequence.from(peersPrefix, UTF8), GetOption.builder().isPrefix(true).build())
             .get();
 
-    // Filter: a peer entry is exactly one segment after “…/peers/”
-    Set<PeerInfo> allPeers = new TreeSet<>();
-    for (KeyValue kv : resp.getKvs()) {
-      String fullPath = kv.getKey().toString(UTF8);
-      String remainder = fullPath.substring(peersPrefix.length()); // strip the known prefix
+    Map<UUID, PeerInfo> map = new HashMap<>();
 
-      if (!remainder.contains("/")) { // no further slash ⇒ “…/peers/<uuid>”
-        allPeers.add(PeerInfo.fromJson(kv.getValue().toString(UTF8)));
+    for (KeyValue kv : resp.getKvs()) {
+      String key = kv.getKey().toString(UTF8);
+
+      // Extract the uuid segment:  "/<ns>/peers/<uuid>/<suffix>"
+      int start = peersPrefix.length();
+      int slash = key.indexOf('/', start);
+      if (slash == -1) { // unexpected
+        continue;
+      }
+      UUID uuid = UUID.fromString(key.substring(start, slash));
+      String suffix = key.substring(slash + 1); // "info", "state", …
+
+      // Get or create a PeerInfo holder
+      PeerInfo p = map.computeIfAbsent(uuid, PeerInfo::new);
+
+      switch (suffix) {
+        case "info" -> {
+          PeerStatic ps = gson.fromJson(kv.getValue().toString(UTF8), PeerStatic.class);
+          if (ps.name() != null) {
+            p.setName(ps.name());
+          }
+          p.setCtime(ps.ctimeMillis()); // InfoNode long setter
+        }
+        case "state" -> {
+          PeerState st = gson.fromJson(kv.getValue().toString(UTF8), PeerState.class);
+          if (st.mtimeMillis() != 0) p.setMtime(st.mtimeMillis());
+          p.setRpcAddress(st.binRpc());
+          p.setJsonrpcAddress(st.jsonRpc());
+          p.setPubAddress(st.pub());
+          p.setJmxAddress(st.jmx());
+        }
+        default -> {
+          /* ignore logs/… */
+        }
       }
     }
-    return allPeers;
+
+    Set<PeerInfo> peers = new TreeSet<>(map.values());
+
+    if (logger.isDebugEnabled()) {
+      logger.debug("all peers: {}", peers);
+    }
+    return peers;
   }
 
   /**
@@ -469,7 +546,7 @@ public class PalDirectory implements AutoCloseable {
   }
 
   /**
-   * Deletes a peer sub-tree atomically (root + logs + state).
+   * Deletes a peer subtree atomically (root + logs + state).
    *
    * @param peerUuid the peer’s UUID
    * @throws ExecutionException on etcd errors
@@ -477,22 +554,23 @@ public class PalDirectory implements AutoCloseable {
    */
   public void deletePeer(UUID peerUuid) throws ExecutionException, InterruptedException {
 
-    ByteSequence peerKey = ByteSequence.from(getPeerPath(peerUuid), UTF8);
+    // 1) Read the immutable node "/peers/<uuid>/info"
+    ByteSequence infoKey = peerInfoKey(peerUuid);
+    ByteSequence peerRoot = ByteSequence.from(getPeerPath(peerUuid), UTF8);
 
-    // 1) Fetch the root node once – we need its current version
-    GetResponse get = kvClient.get(peerKey).get();
+    GetResponse get = kvClient.get(infoKey).get();
     if (get.getCount() == 0) {
       logger.warn("Cannot delete peer {}: node does not exist", peerUuid);
       return;
     }
     long version = get.getKvs().get(0).getVersion(); // optimistic-lock token
 
-    // 2) Delete the entire sub-tree, but only if the root’s version  hasn’t changed since step (1)
+    // 2) Delete the entire subtree iff the /info node is unchanged
     TxnResponse tx =
         kvClient
             .txn()
-            .If(new Cmp(peerKey, Cmp.Op.EQUAL, CmpTarget.version(version)))
-            .Then(Op.delete(peerKey, DeleteOption.builder().isPrefix(true).build()))
+            .If(new Cmp(infoKey, Cmp.Op.EQUAL, CmpTarget.version(version)))
+            .Then(Op.delete(peerRoot, DeleteOption.builder().isPrefix(true).build()))
             .commit()
             .get();
 
@@ -1333,6 +1411,50 @@ public class PalDirectory implements AutoCloseable {
    */
   private String getInterceptsPathForPeer(UUID peerUuid) {
     return format("%s/%s", getInterceptsPath(), peerUuid);
+  }
+
+  private static long toMillis(OffsetDateTime odt) {
+    return odt == null ? 0L : odt.toInstant().toEpochMilli();
+  }
+
+  private String getPeerInfoPath(UUID uuid) {
+    return getPeerPath(uuid) + "/info";
+  }
+
+  private String getPeerStatePath(UUID uuid) {
+    return getPeerPath(uuid) + "/state";
+  }
+
+  private ByteSequence peerInfoKey(UUID uuid) {
+    return ByteSequence.from(getPeerInfoPath(uuid), UTF8);
+  }
+
+  private ByteSequence peerStateKey(UUID uuid) {
+    return ByteSequence.from(getPeerStatePath(uuid), UTF8);
+  }
+
+  // </editor-fold>
+
+  // <editor-fold desc="private records">
+
+  // immutable part
+  private record PeerStatic(UUID uuid, String name, long ctimeMillis) {
+    static PeerStatic from(PeerInfo p) {
+      return new PeerStatic(p.getUuid(), p.getName(), toMillis(p.getCTime()));
+    }
+  }
+
+  // mutable part
+  private record PeerState(
+      long mtimeMillis, String binRpc, String jsonRpc, String pub, String jmx) {
+    static PeerState from(PeerInfo p) {
+      return new PeerState(
+          toMillis(p.getMTime()),
+          p.getRpcAddress(),
+          p.getJsonrpcAddress(),
+          p.getPubAddress(),
+          p.getJmxAddress());
+    }
   }
   // </editor-fold>
 }
