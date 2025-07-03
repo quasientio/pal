@@ -50,6 +50,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -114,7 +115,11 @@ public class PalDirectory implements AutoCloseable {
   /** Listeners subscribed to intercept node events. */
   private final List<InterceptNodeListener> interceptListeners = new CopyOnWriteArrayList<>();
 
+  /** Scheduled executor used to periodically update the live leases. */
   private final ScheduledExecutorService leasePool;
+
+  /** Maps peer UUID's to the leaseId they hold. */
+  private final Map<UUID, Long> peerToLeaseIdCache = new ConcurrentHashMap<>();
 
   /** Gson serializer. */
   private static final Gson gson = new Gson();
@@ -641,6 +646,13 @@ public class PalDirectory implements AutoCloseable {
   public PeerLease createPeerLease(UUID peerUuid, long ttlSeconds)
       throws ExecutionException, InterruptedException, IllegalStateException {
 
+    ByteSequence stateKey = peerStateKey(peerUuid); // "/…/peers/<uuid>/state"
+    GetResponse resp = kvClient.get(stateKey).get();
+
+    if (resp.getCount() == 0) {
+      throw new IllegalStateException("Peer does not exist or is stale (no /state node)");
+    }
+
     Lease leaseClient = client.getLeaseClient();
     long leaseId = leaseClient.grant(ttlSeconds).get().getID();
 
@@ -659,18 +671,12 @@ public class PalDirectory implements AutoCloseable {
             TimeUnit.SECONDS);
 
     /* -------------- attach /state key under the lease --------------- */
-    ByteSequence stateKey = peerStateKey(peerUuid); // "/…/peers/<uuid>/state"
-
-    GetResponse resp = kvClient.get(stateKey).get();
-    ByteSequence stateVal;
-
-    if (resp.getCount() == 0) {
-      throw new IllegalStateException("Peer does not exist or stale (no /state node)");
-    }
-
-    stateVal = resp.getKvs().get(0).getValue(); // keep existing bytes
+    ByteSequence stateVal = resp.getKvs().get(0).getValue(); // keep existing bytes
 
     kvClient.put(stateKey, stateVal, PutOption.builder().withLeaseId(leaseId).build()).get();
+
+    // cache the leaseId
+    peerToLeaseIdCache.put(peerUuid, leaseId);
 
     logger.info("Attached live lease {} (TTL {}s) to peer {}", leaseId, ttlSeconds, peerUuid);
     return new PeerLease(leaseId, ka, leaseClient);
@@ -678,7 +684,7 @@ public class PalDirectory implements AutoCloseable {
 
   // </editor-fold>
 
-  // <editor-fold desc="Intercept request methods">
+  // <editor-fold desc="Intercept methods">
 
   /**
    * Creates an {@link InterceptEvent} based on the received etcd watch event. Handles any namespace
@@ -769,7 +775,74 @@ public class PalDirectory implements AutoCloseable {
   }
 
   /**
-   * Creates a new intercept request in the directory.
+   * Creates an intercept; if ttlSeconds &gt; 0 a dedicated lease with that TTL is granted. If
+   * ttlSeconds == 0, the intercept is attached to the peer’s live lease. If ttlSeconds == 0 and the
+   * peer has no lease, the intercept is created without a lease.
+   *
+   * @param intercept the intercept request to create
+   * @param ttlSeconds the value in seconds for the TTL assigned to this intercept; 0 == use the
+   *     peer's lease.
+   * @throws ExecutionException if an error occurs during etcd operation
+   * @throws InterruptedException if the current thread is interrupted while waiting
+   * @throws NoPeerInfoNodeException if the associated peer does not exist in the directory
+   * @throws IllegalArgumentException if the intercept request is already created for this peer
+   */
+  public void createIntercept(InterceptRequest<?> intercept, long ttlSeconds)
+      throws ExecutionException, InterruptedException, NoPeerInfoNodeException {
+
+    UUID peerUuid = intercept.getPeer();
+    UUID interceptUuid = intercept.getUuid();
+
+    ByteSequence infoKey = peerInfoKey(peerUuid); // "/peers/<uuid>/info"
+    String path = getInterceptsPathForPeer(peerUuid) + '/' + interceptUuid;
+    ByteSequence intKey = ByteSequence.from(path, UTF8);
+    ByteSequence intValue = ByteSequence.from(intercept.toBytes(UTF8));
+
+    /* ---- decide which lease to use ---- */
+    long leaseId =
+        (ttlSeconds > 0)
+            ? client.getLeaseClient().grant(ttlSeconds).get().getID()
+            : currentPeerLeaseId(peerUuid); // helper (may return 0)
+
+    Op.PutOp putOp;
+    if (leaseId == 0 && ttlSeconds == 0) {
+      putOp = Op.put(intKey, intValue, PutOption.DEFAULT);
+    } else {
+      putOp = Op.put(intKey, intValue, PutOption.builder().withLeaseId(leaseId).build());
+    }
+
+    /* ---- single Txn: peer must exist & intercept must be absent ---- */
+    TxnResponse tx =
+        kvClient
+            .txn()
+            .If(
+                new Cmp(infoKey, Cmp.Op.GREATER, CmpTarget.version(0)), // peer exists
+                new Cmp(intKey, Cmp.Op.EQUAL, CmpTarget.version(0))) // intercept absent
+            .Then(putOp)
+            .commit()
+            .get();
+
+    if (!tx.isSucceeded()) {
+      // classify failure with one extra read *only when needed*
+      if (kvClient.get(infoKey).get().getCount() == 0) {
+        throw new NoPeerInfoNodeException("Peer " + peerUuid + " does not exist");
+      } else {
+        throw new IllegalArgumentException(
+            "Intercept " + interceptUuid + " already exists for peer " + peerUuid);
+      }
+    }
+
+    String leaseDesc =
+        (ttlSeconds > 0)
+            ? "dedicated lease " + leaseId + " (TTL " + ttlSeconds + " s)"
+            : (leaseId != 0) ? "peer lease " + leaseId : "no lease";
+
+    logger.info("Created intercept {} for peer {} — {}", interceptUuid, peerUuid, leaseDesc);
+  }
+
+  /**
+   * Creates a new intercept request in the directory, with no custom TTL. Use this method to create
+   * an intercept that uses the peer lease.
    *
    * @param interceptRequest the intercept request to create
    * @throws ExecutionException if an error occurs during etcd operation
@@ -779,43 +852,7 @@ public class PalDirectory implements AutoCloseable {
    */
   public void createIntercept(InterceptRequest<?> interceptRequest)
       throws ExecutionException, InterruptedException, NoPeerInfoNodeException {
-
-    UUID peerUuid = interceptRequest.getPeer();
-    UUID interceptUuid = interceptRequest.getUuid();
-
-    ByteSequence peerInfoKey = peerInfoKey(peerUuid);
-    final String interceptPath = format("%s/%s", getInterceptsPathForPeer(peerUuid), interceptUuid);
-    final byte[] interceptData = interceptRequest.toBytes(UTF8);
-    ByteSequence interceptKey = ByteSequence.from(interceptPath.getBytes(UTF8));
-    ByteSequence interceptValue = ByteSequence.from(interceptData);
-
-    TxnResponse tx =
-        kvClient
-            .txn()
-            .If(
-                new Cmp(peerInfoKey, Cmp.Op.GREATER, CmpTarget.version(0)), // peer must exist
-                new Cmp(
-                    interceptKey, Cmp.Op.EQUAL, CmpTarget.version(0))) // intercept must NOT exist
-            .Then(Op.put(interceptKey, interceptValue, PutOption.DEFAULT))
-            .commit()
-            .get();
-
-    if (!tx.isSucceeded()) {
-      // Decide what “failed” means
-      if (!kvClient.get(peerInfoKey).get().getKvs().isEmpty()) {
-        throw new IllegalArgumentException(
-            String.format("Intercept %s already exists for peer %s", interceptUuid, peerUuid));
-      } else {
-        throw new NoPeerInfoNodeException("Peer " + peerUuid + " does not exist");
-      }
-    } else {
-      if (logger.isDebugEnabled()) {
-        logger.debug(
-            "Created new node for intercept request: {} at path: {}",
-            interceptRequest,
-            interceptPath);
-      }
-    }
+    createIntercept(interceptRequest, 0);
   }
 
   /**
@@ -1355,6 +1392,7 @@ public class PalDirectory implements AutoCloseable {
    */
   @Override
   public void close() {
+
     // Fast-path: already closed?
     if (!closed.compareAndSet(false, true)) {
       if (logger.isDebugEnabled()) {
@@ -1365,33 +1403,51 @@ public class PalDirectory implements AutoCloseable {
 
     RuntimeException firstError = null;
 
-    // 1) Child resources first
+    // 1) Stop keep-alive executor *before* we close the etcd client
+    try {
+      leasePool.shutdownNow(); // cancels KA tasks immediately
+      if (!leasePool.awaitTermination(5, TimeUnit.SECONDS) && logger.isDebugEnabled()) {
+        logger.debug("leasePool did not terminate within 5 s");
+      }
+    } catch (InterruptedException ie) {
+      Thread.currentThread().interrupt();
+      firstError = new RuntimeException("Interrupted while shutting down leasePool", ie);
+    } catch (RuntimeException e) {
+      firstError = e;
+      logger.warn("Failed to shut down leasePool", e);
+    }
+
+    // 2) Child resources
     try {
       if (kvClient != null) {
         kvClient.close();
       }
     } catch (RuntimeException e) {
-      firstError = e;
+      if (firstError != null) {
+        firstError.addSuppressed(e);
+      } else {
+        firstError = e;
+      }
       logger.warn("Failed to close KV client", e);
     }
 
-    // 2) Parent client next
+    // 3) Parent client
     try {
       if (client != null) {
         client.close(); // safe even if kvClient.close() already did it
       }
     } catch (RuntimeException e) {
       if (firstError != null) {
-        firstError.addSuppressed(e); // keep the original stack
+        firstError.addSuppressed(e);
       } else {
         firstError = e;
       }
       logger.warn("Failed to close etcd client", e);
     }
 
-    // 3) Report aggregated failure
+    // 4) Propagate aggregated failure (if any)
     if (firstError != null) {
-      throw firstError; // AutoCloseable allows unchecked throws
+      throw firstError; // AutoCloseable allows unchecked exceptions
     }
 
     logger.info("Closed Directory connection to {}", directoryUrl);
@@ -1523,6 +1579,27 @@ public class PalDirectory implements AutoCloseable {
 
   private ByteSequence peerStateKey(UUID uuid) {
     return ByteSequence.from(getPeerStatePath(uuid), UTF8);
+  }
+
+  /**
+   * Get the lease ID for the given peer. This method first queries a cache; in case of a miss, it
+   * looks up the lease of the peer's /state
+   *
+   * @param peerUuid the ID of the peer with an assigned lease
+   * @return the leaseId set on the peer's /state node, 0 if none
+   * @throws ExecutionException on etcd errors
+   * @throws InterruptedException if the thread is interrupted while waiting
+   */
+  private long currentPeerLeaseId(UUID peerUuid) throws ExecutionException, InterruptedException {
+
+    Long leaseId = peerToLeaseIdCache.get(peerUuid);
+    if (leaseId == null) {
+      // should not happen, but we can fall back to looking up the lease in the peer '/state'
+      GetResponse resp = kvClient.get(peerStateKey(peerUuid)).get();
+      return resp.getCount() == 0 ? 0 : resp.getKvs().get(0).getLease();
+    }
+    // cache hit
+    return leaseId;
   }
 
   // </editor-fold>

@@ -650,6 +650,111 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     assertEquals(1, palDirectory.listInterceptsForPeer(peerInfo.getUuid()).size());
   }
 
+  /* ------------------------------------------------------------------ */
+  /*            I N T E R C E P T   T T L   T E S T S                   */
+  /* ------------------------------------------------------------------ */
+
+  /**
+   * Path A: intercept is bound to the peer’s live lease and vanishes when that lease is revoked.
+   */
+  @Test
+  public void createIntercept_peerLease_autoRemovedOnLeaseRevoke() throws Exception {
+
+    // 1) create peer + live lease (TTL 5 s)
+    PeerInfo peer = new PeerInfo(UUID.randomUUID(), "ttl-peer");
+    palDirectory.createPeer(peer);
+    createdPeers.add(peer.getUuid());
+
+    PeerLease lease = palDirectory.createPeerLease(peer.getUuid(), 5); // keep-alive inside
+
+    // 2) create an intercept with ttl=0 → should attach to peer lease
+    InterceptRequest<InterceptableMethodCall> req =
+        new InterceptRequest<>(
+            UUID.randomUUID(),
+            peer.getUuid(),
+            InterceptType.BEFORE,
+            "java.lang.System",
+            "org.Callback",
+            "noop",
+            new InterceptableMethodCall("currentTimeMillis", List.of()));
+
+    palDirectory.createIntercept(req); // ttlSeconds defaults to 0
+    // (=peer lease)
+
+    assertEquals(1, palDirectory.listInterceptsForPeer(peer.getUuid()).size());
+
+    // 3) revoke lease – should delete /state + intercept
+    lease.close(); // stops KA and revoke(…)
+
+    // 4) wait up to 6 s for etcd to apply the revoke
+    for (int i = 0; i < 12; i++) {
+      if (palDirectory.listInterceptsForPeer(peer.getUuid()).isEmpty()) {
+        break;
+      }
+      TimeUnit.MILLISECONDS.sleep(500);
+    }
+    assertTrue(
+        "Intercept should disappear after lease revoke",
+        palDirectory.listInterceptsForPeer(peer.getUuid()).isEmpty());
+  }
+
+  /** Path B: dedicated one-off TTL – intercept auto-expires even while the peer stays alive. */
+  @Test
+  public void createIntercept_dedicatedTTL_autoExpires() throws Exception {
+
+    PeerInfo peer = new PeerInfo(UUID.randomUUID(), "ttl-peer-2");
+    palDirectory.createPeer(peer);
+    createdPeers.add(peer.getUuid());
+
+    // No peer lease on purpose
+    InterceptRequest<InterceptableMethodCall> req =
+        new InterceptRequest<>(
+            UUID.randomUUID(),
+            peer.getUuid(),
+            InterceptType.BEFORE,
+            "java.lang.System",
+            "org.Callback",
+            "noop",
+            new InterceptableMethodCall("nanoTime", List.of()));
+
+    palDirectory.createIntercept(req, 3); // 3-second dedicated lease
+    assertEquals(1, palDirectory.listInterceptsForPeer(peer.getUuid()).size());
+
+    // Wait 4 s – should expire
+    TimeUnit.SECONDS.sleep(4);
+    assertTrue(palDirectory.listInterceptsForPeer(peer.getUuid()).isEmpty());
+    // peer still lives
+    assertNotNull(palDirectory.getPeer(peer.getUuid()));
+  }
+
+  /** Path C: ttlSeconds=0 and peer has *no* live lease → intercept persists. */
+  @Test
+  public void createIntercept_noLease_persists() throws Exception {
+
+    PeerInfo peer = new PeerInfo(UUID.randomUUID(), "nolease-peer");
+    palDirectory.createPeer(peer);
+    createdPeers.add(peer.getUuid());
+
+    InterceptRequest<InterceptableMethodCall> req =
+        new InterceptRequest<>(
+            UUID.randomUUID(),
+            peer.getUuid(),
+            InterceptType.BEFORE,
+            "java.lang.System",
+            "org.Callback",
+            "noop",
+            new InterceptableMethodCall("currentTimeMillis", List.of()));
+
+    palDirectory.createIntercept(req); // ttlSeconds = 0 → no lease
+    addInterceptRequestToCreated(peer.getUuid(), req.getUuid());
+
+    assertEquals(1, palDirectory.listInterceptsForPeer(peer.getUuid()).size());
+
+    // Wait 4 s – should still be there
+    TimeUnit.SECONDS.sleep(4); // this is random, we could wait forever here
+    assertEquals(1, palDirectory.listInterceptsForPeer(peer.getUuid()).size());
+  }
+
   @Test
   public void deleteIntercept_interceptExists_deleted() throws Exception {
     // create peer
