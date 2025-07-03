@@ -14,6 +14,7 @@ import com.quasient.pal.common.directory.nodes.PeerInfo;
 import com.quasient.pal.common.util.UuidUtils;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
+import com.quasient.pal.cxn.directory.PeerLease;
 import com.quasient.pal.messages.LogMessage;
 import com.quasient.pal.messages.colfer.ControlMessage;
 import com.quasient.pal.messages.colfer.ExecMessage;
@@ -86,11 +87,17 @@ public class ThinPeer implements AutoCloseable {
   /** Default PING timeout duration. */
   private static final Duration PING_TIMEOUT = Duration.ofSeconds(5);
 
+  /** Default value, in seconds, for this peer's keep-alive. */
+  private static final long PEER_KA_SECS = 60;
+
   /** Universally unique identifier for this peer instance. */
   private UUID peerUuid;
 
   /** Human-readable name for this peer. */
   private String peerName;
+
+  /** Lease for maintaining this peer's state liveness in the pal Directory. */
+  private PeerLease peerLease;
 
   /** Indicates whether the ZeroMQ socket is currently connected. */
   private boolean isZmqSocketConnected = false;
@@ -478,6 +485,7 @@ public class ThinPeer implements AutoCloseable {
           self.setRpcAddress(rpcAddress);
         }
         getPalDirectory().createPeer(self);
+        peerLease = getPalDirectory().attachLiveLease(self.getUuid(), PEER_KA_SECS);
       } catch (Exception ex) {
         logger.error("Error registering peer", ex);
       }
@@ -1609,6 +1617,7 @@ public class ThinPeer implements AutoCloseable {
     // unregister self
     if (getPalDirectory() != null && registerSelf) {
       try {
+        peerLease.close(); // revoke + stop keep-alive
         getPalDirectory().deletePeer(this.peerUuid);
       } catch (Exception e) {
         logger.error("Error unregistering self from pal directory.", e);

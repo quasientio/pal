@@ -369,8 +369,8 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     // create and register In and Out logs for the new peer
     LogInfo inLogInfo = palDirectory.createLogWithAutoName("test_in_log", getKafkaServers());
     LogInfo outLogInfo = palDirectory.createLogWithAutoName("test_out_log", getKafkaServers());
-    palDirectory.registerPeerInLog(peerInfo, inLogInfo);
-    palDirectory.registerPeerOutLog(peerInfo, outLogInfo);
+    palDirectory.registerPeerInLog(peerInfo, inLogInfo, null);
+    palDirectory.registerPeerOutLog(peerInfo, outLogInfo, null);
     createdLogs.add(inLogInfo.getName());
     createdLogs.add(outLogInfo.getName());
 

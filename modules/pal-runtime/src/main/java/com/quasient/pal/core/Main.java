@@ -33,6 +33,7 @@ import com.quasient.pal.core.rpc.exec.java.SelfCaller;
 import com.quasient.pal.core.rpc.exec.java.reflect.AnnotationsProcessor;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
+import com.quasient.pal.cxn.directory.PeerLease;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -315,6 +316,9 @@ public class Main implements Callable<Integer> {
   /** ZeroMQ socket used for synchronization and readiness signaling. */
   private Socket syncSocket;
 
+  /** Lease for maintaining this peer's state liveness in the pal Directory. */
+  private PeerLease peerLease;
+
   /** Latch used to prevent premature exit when running in service mode. */
   private final CountDownLatch runAsServiceLatch = new CountDownLatch(1);
 
@@ -332,6 +336,9 @@ public class Main implements Callable<Integer> {
 
   /** Duration to wait for exec service to stop. */
   private static final Duration EXECUTOR_AWAIT_TERM = Duration.of(1, ChronoUnit.SECONDS);
+
+  /** Default value, in seconds, for this peer's keep-alive. */
+  private static final long PEER_KA_SECS = 60;
 
   /** Container for default ZeroMQ configuration properties and internal endpoint mappings. */
   private static final class ZmqProperties {
@@ -878,10 +885,10 @@ public class Main implements Callable<Integer> {
             .orElseThrow(RuntimeException::new);
     try {
       if (inLog != null) {
-        palDirectory.registerPeerInLog(self, inLog);
+        palDirectory.registerPeerInLog(self, inLog, peerLease);
       }
       if (outLog != null) {
-        palDirectory.registerPeerOutLog(self, outLog);
+        palDirectory.registerPeerOutLog(self, outLog, peerLease);
       }
     } catch (Exception ex) {
       fatalExit(ex, PeerException.FatalCode.ERROR_REGISTERING_SELF_LOGS);
@@ -930,6 +937,7 @@ public class Main implements Callable<Integer> {
         self.setName(name);
       }
       palDirectory.createPeer(self);
+      peerLease = palDirectory.attachLiveLease(self.getUuid(), PEER_KA_SECS);
     } catch (Exception ex) {
       fatalExit(ex, PeerException.FatalCode.ERROR_REGISTERING_SELF);
     }
@@ -1057,6 +1065,7 @@ public class Main implements Callable<Integer> {
         palDirectory.ifPresent(
             dir -> {
               try {
+                peerLease.close(); // revoke + stop keep-alive
                 dir.deletePeer(this.uuid);
               } catch (Exception e) {
                 logger.warn("Error unregistering self from PAL directory.", e);

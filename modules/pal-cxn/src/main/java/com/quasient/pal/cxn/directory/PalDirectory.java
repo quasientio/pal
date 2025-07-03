@@ -21,6 +21,7 @@ import io.etcd.jetcd.ByteSequence;
 import io.etcd.jetcd.Client;
 import io.etcd.jetcd.KV;
 import io.etcd.jetcd.KeyValue;
+import io.etcd.jetcd.Lease;
 import io.etcd.jetcd.Watch;
 import io.etcd.jetcd.kv.DeleteResponse;
 import io.etcd.jetcd.kv.GetResponse;
@@ -51,6 +52,10 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
@@ -108,6 +113,8 @@ public class PalDirectory implements AutoCloseable {
 
   /** Listeners subscribed to intercept node events. */
   private final List<InterceptNodeListener> interceptListeners = new CopyOnWriteArrayList<>();
+
+  private final ScheduledExecutorService leasePool;
 
   /** Gson serializer. */
   private static final Gson gson = new Gson();
@@ -176,6 +183,15 @@ public class PalDirectory implements AutoCloseable {
         throw new RuntimeException("Failed to connect to etcd cluster", e.getCause());
       }
     }
+
+    // init lease pool
+    leasePool =
+        Executors.newSingleThreadScheduledExecutor(
+            r -> {
+              Thread t = new Thread(r, "peer-lease-ka");
+              t.setDaemon(true);
+              return t;
+            });
 
     this.kvClient = client.getKVClient();
     Watch watchClient = client.getWatchClient();
@@ -251,11 +267,15 @@ public class PalDirectory implements AutoCloseable {
     }
   }
 
-  public void updatePeerState(PeerInfo peer) throws ExecutionException, InterruptedException {
-    writePeerState(peer);
-  }
-
-  private void writePeerState(PeerInfo peer) throws ExecutionException, InterruptedException {
+  /**
+   * Updates a peer's state, with the provided lease id.
+   *
+   * @param peer the peer to update, containing its current state
+   * @throws ExecutionException on etcd errors
+   * @throws InterruptedException if the current thread is interrupted while waiting
+   */
+  public void updatePeerState(PeerInfo peer, long leaseId)
+      throws ExecutionException, InterruptedException {
 
     long now = System.currentTimeMillis();
     peer.setMtime(now);
@@ -263,8 +283,12 @@ public class PalDirectory implements AutoCloseable {
     String stateJson = gson.toJson(PeerState.from(peer));
     ByteSequence stateKey = peerStateKey(peer.getUuid());
 
-    // TODO ‼ attach a lease here if we want automatic expiry
-    kvClient.put(stateKey, ByteSequence.from(stateJson, UTF8)).get();
+    kvClient
+        .put(
+            stateKey,
+            ByteSequence.from(stateJson, UTF8),
+            PutOption.builder().withLeaseId(leaseId).build())
+        .get();
   }
 
   /**
@@ -272,12 +296,13 @@ public class PalDirectory implements AutoCloseable {
    *
    * @param peerInfo the information of the peer
    * @param logInfo the log information to register as incoming for the peer
+   * @param peerLease the lease assigned to the peer, null if no keep-alive
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    * @throws NoPeerInfoNodeException if the peer does not exist in the directory
    * @throws IllegalStateException if an IN-log is already registered for this peer
    */
-  public void registerPeerInLog(PeerInfo peerInfo, LogInfo logInfo)
+  public void registerPeerInLog(PeerInfo peerInfo, LogInfo logInfo, @Nullable PeerLease peerLease)
       throws ExecutionException, InterruptedException, NoPeerInfoNodeException {
     Objects.requireNonNull(peerInfo, "peerInfo");
     Objects.requireNonNull(logInfo, "logInfo");
@@ -285,6 +310,14 @@ public class PalDirectory implements AutoCloseable {
     ByteSequence peerInfoKey = peerInfoKey(peerInfo.getUuid());
     ByteSequence inLogKey = ByteSequence.from(getPeerLogsInPath(peerInfo.getUuid()), UTF8);
     ByteSequence inLogValue = ByteSequence.from(logInfo.getUuid().toString(), UTF8);
+
+    Op.PutOp putOp;
+    if (peerLease != null) {
+      putOp =
+          Op.put(inLogKey, inLogValue, PutOption.builder().withLeaseId(peerLease.leaseId).build());
+    } else {
+      putOp = Op.put(inLogKey, inLogValue, PutOption.DEFAULT);
+    }
 
     TxnResponse tx =
         kvClient
@@ -294,7 +327,7 @@ public class PalDirectory implements AutoCloseable {
                 new Cmp(peerInfoKey, Cmp.Op.GREATER, CmpTarget.version(0)),
                 // in-log pointer must NOT exist yet
                 new Cmp(inLogKey, Cmp.Op.EQUAL, CmpTarget.version(0)))
-            .Then(Op.put(inLogKey, inLogValue, PutOption.DEFAULT))
+            .Then(putOp)
             .commit()
             .get();
 
@@ -338,12 +371,13 @@ public class PalDirectory implements AutoCloseable {
    *
    * @param peerInfo the information of the peer
    * @param logInfo the log information to register as OUT for the peer
+   * @param peerLease the lease assigned to the peer, null if no keep-alive
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    * @throws NoPeerInfoNodeException if the peer does not exist in the directory
    * @throws IllegalStateException if an OUT-log is already registered for this peer
    */
-  public void registerPeerOutLog(PeerInfo peerInfo, LogInfo logInfo)
+  public void registerPeerOutLog(PeerInfo peerInfo, LogInfo logInfo, @Nullable PeerLease peerLease)
       throws ExecutionException, InterruptedException, NoPeerInfoNodeException {
 
     Objects.requireNonNull(peerInfo, "peerInfo");
@@ -353,13 +387,25 @@ public class PalDirectory implements AutoCloseable {
     ByteSequence outLogKey = ByteSequence.from(getPeerLogsOutPath(peerInfo.getUuid()), UTF8);
     ByteSequence outLogValue = ByteSequence.from(logInfo.getUuid().toString(), UTF8);
 
+    Op.PutOp putOp;
+    if (peerLease != null) {
+      putOp =
+          Op.put(
+              outLogKey, outLogValue, PutOption.builder().withLeaseId(peerLease.leaseId).build());
+    } else {
+      putOp = Op.put(outLogKey, outLogValue, PutOption.DEFAULT);
+    }
+
     TxnResponse tx =
         kvClient
             .txn()
             .If(
-                new Cmp(peerInfoKey, Cmp.Op.GREATER, CmpTarget.version(0)),
-                new Cmp(outLogKey, Cmp.Op.EQUAL, CmpTarget.version(0)))
-            .Then(Op.put(outLogKey, outLogValue, PutOption.DEFAULT))
+                new Cmp(peerInfoKey, Cmp.Op.GREATER, CmpTarget.version(0)), // peer must exist
+                new Cmp(
+                    outLogKey,
+                    Cmp.Op.EQUAL,
+                    CmpTarget.version(0))) // out-log pointer must NOT exist yet
+            .Then(putOp)
             .commit()
             .get();
 
@@ -579,6 +625,59 @@ public class PalDirectory implements AutoCloseable {
     } else {
       logger.warn("Failed to delete peer {}: node was modified concurrently", peerUuid);
     }
+  }
+
+  // </editor-fold>
+
+  // <editor-fold desc="Leases and keep-alive">
+
+  /**
+   * Grants a TTL lease, attaches the peer’s /state key to it, and starts automatic keep-alive's.
+   * Call once right after {@code createPeer()}.
+   *
+   * @param peerUuid the peer’s UUID
+   * @param ttlSeconds desired TTL in seconds (e.g. 60)
+   * @return handle you must {@code close()} on graceful shutdown
+   * @throws ExecutionException on etcd errors
+   * @throws InterruptedException if thread is interrupted while waiting
+   * @throws IllegalStateException if the peer is stale or does not exist
+   */
+  public PeerLease attachLiveLease(UUID peerUuid, long ttlSeconds)
+      throws ExecutionException, InterruptedException, IllegalStateException {
+
+    Lease leaseClient = client.getLeaseClient();
+    long leaseId = leaseClient.grant(ttlSeconds).get().getID();
+
+    /* -------------- keep-alive every TTL/3 seconds ------------------ */
+    ScheduledFuture<?> ka =
+        leasePool.scheduleAtFixedRate(
+            () -> {
+              try {
+                var unused = leaseClient.keepAliveOnce(leaseId);
+              } catch (Exception e) {
+                logger.warn("Lease keep-alive failed for peer {}", peerUuid, e);
+              }
+            },
+            ttlSeconds / 3,
+            ttlSeconds / 3,
+            TimeUnit.SECONDS);
+
+    /* -------------- attach /state key under the lease --------------- */
+    ByteSequence stateKey = peerStateKey(peerUuid); // "/…/peers/<uuid>/state"
+
+    GetResponse resp = kvClient.get(stateKey).get();
+    ByteSequence stateVal;
+
+    if (resp.getCount() == 0) {
+      throw new IllegalStateException("Peer does not exist or stale (no /state node)");
+    }
+
+    stateVal = resp.getKvs().get(0).getValue(); // keep existing bytes
+
+    kvClient.put(stateKey, stateVal, PutOption.builder().withLeaseId(leaseId).build()).get();
+
+    logger.info("Attached live lease {} (TTL {}s) to peer {}", leaseId, ttlSeconds, peerUuid);
+    return new PeerLease(leaseId, ka, leaseClient);
   }
 
   // </editor-fold>
