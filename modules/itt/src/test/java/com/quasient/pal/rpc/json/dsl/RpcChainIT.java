@@ -18,8 +18,8 @@ import static org.junit.Assert.assertNull;
 
 import com.quasient.pal.AbstractIntegrationTest;
 import com.quasient.pal.common.directory.nodes.PeerInfo;
-import com.quasient.pal.cxn.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.ThinPeer;
+import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.dsl.jsonrpc.RpcChain;
 import com.quasient.pal.messages.types.RpcType;
 import java.util.UUID;

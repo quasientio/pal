@@ -14,7 +14,7 @@ import static com.quasient.pal.common.util.Strings.stringBefore;
 import static picocli.CommandLine.Option;
 
 import com.google.common.base.Splitter;
-import com.quasient.pal.cxn.PalDirectory;
+import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.messages.MessageStreamer;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.Message;

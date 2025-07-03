@@ -6,8 +6,8 @@
         <option name="ENABLED" value="true" />
       </pattern>
       <pattern>
-        <option name="PATTERN" value="com.quasient.pal.cxn.*" />
-        <option name="ENABLED" value="false" />
+        <option name="PATTERN" value="com.quasient.pal.cxn.directory.*" />
+        <option name="ENABLED" value="true" />
       </pattern>
       <pattern>
         <option name="PATTERN" value="com.quasient.pal.intercept.*" />

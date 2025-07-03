@@ -12,6 +12,8 @@ package com.quasient.pal.cxn;
 import com.quasient.pal.common.directory.nodes.LogInfo;
 import com.quasient.pal.common.directory.nodes.PeerInfo;
 import com.quasient.pal.common.util.UuidUtils;
+import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
+import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.messages.LogMessage;
 import com.quasient.pal.messages.colfer.ControlMessage;
 import com.quasient.pal.messages.colfer.ExecMessage;

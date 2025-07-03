@@ -7,7 +7,7 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
-package com.quasient.pal.cxn;
+package com.quasient.pal.cxn.directory;
 
 /** Represents an exception that is thrown when no peer information node is available. */
 public class NoPeerInfoNodeException extends Exception {

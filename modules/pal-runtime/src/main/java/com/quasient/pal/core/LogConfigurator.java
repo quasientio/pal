@@ -11,8 +11,8 @@ package com.quasient.pal.core;
 
 import com.google.inject.Injector;
 import com.quasient.pal.common.directory.nodes.LogInfo;
-import com.quasient.pal.cxn.DirectoryConnectionProvider;
-import com.quasient.pal.cxn.PalDirectory;
+import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
+import com.quasient.pal.cxn.directory.PalDirectory;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;

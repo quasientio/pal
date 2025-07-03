@@ -13,7 +13,7 @@ import static picocli.CommandLine.Option;
 
 import com.quasient.pal.common.cli.PalCommand;
 import com.quasient.pal.core.Main;
-import com.quasient.pal.cxn.PalDirectory;
+import com.quasient.pal.cxn.directory.PalDirectory;
 import java.util.Arrays;
 import java.util.concurrent.Callable;
 import picocli.CommandLine;

@@ -10,8 +10,8 @@
 package com.quasient.pal.rpc;
 
 import com.quasient.pal.AbstractIntegrationTest;
-import com.quasient.pal.cxn.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.ThinPeer;
+import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
 import java.util.Arrays;
 import java.util.Collection;

@@ -18,7 +18,7 @@ import com.quasient.pal.core.objects.ConcurrentHashMapObjectLookupStore;
 import com.quasient.pal.core.objects.ObjectLookupStore;
 import com.quasient.pal.core.rpc.exec.java.AspectProxyDispatcher;
 import com.quasient.pal.core.rpc.exec.java.CustomClassloader;
-import com.quasient.pal.cxn.DirectoryConnectionProvider;
+import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
 import java.util.ArrayList;
 import java.util.Collections;

@@ -15,7 +15,7 @@ import static picocli.CommandLine.Option;
 
 import com.quasient.pal.common.cli.PalCommand;
 import com.quasient.pal.common.directory.nodes.LogInfo;
-import com.quasient.pal.cxn.PalDirectory;
+import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.messages.LogMessage;
 import com.quasient.pal.messages.MessageStreamer;
 import com.quasient.pal.messages.colfer.ExecMessage;
