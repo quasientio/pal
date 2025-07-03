@@ -485,7 +485,7 @@ public class ThinPeer implements AutoCloseable {
           self.setRpcAddress(rpcAddress);
         }
         getPalDirectory().createPeer(self);
-        peerLease = getPalDirectory().attachLiveLease(self.getUuid(), PEER_KA_SECS);
+        peerLease = getPalDirectory().createPeerLease(self.getUuid(), PEER_KA_SECS);
       } catch (Exception ex) {
         logger.error("Error registering peer", ex);
       }
@@ -500,7 +500,7 @@ public class ThinPeer implements AutoCloseable {
       String kafkaTopicPrefix = logPrefix != null ? logPrefix : DEFAULT_TOPIC_PREFIX;
       LogInfo lastLog =
           getPalDirectory() != null
-              ? getPalDirectory().getLastLogWithPrefix(kafkaTopicPrefix)
+              ? getPalDirectory().getLatestLogWithPrefix(kafkaTopicPrefix)
               : null;
 
       // configure log to read from; fill bootstrap servers if only log name given
@@ -1257,7 +1257,7 @@ public class ThinPeer implements AutoCloseable {
       throw new RuntimeException("Cannot connect to peer without PAL directory");
     }
     try {
-      newPeer = getPalDirectory().getPeerInfo(peerUuid);
+      newPeer = getPalDirectory().getPeer(peerUuid);
     } catch (Exception ex) {
       logger.error("Couldn't get peer properties", ex);
     }

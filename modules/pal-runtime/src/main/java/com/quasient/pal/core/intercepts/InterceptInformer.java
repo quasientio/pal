@@ -129,7 +129,7 @@ public class InterceptInformer implements InterceptNodeListener {
     final PalDirectory palDirectory =
         directoryConnectionProvider.get().orElseThrow(RuntimeException::new);
     try {
-      peers = palDirectory.getAllPeers();
+      peers = palDirectory.listPeers();
     } catch (Exception e) {
       logger.error("Error retrieving peers from directory", e);
       return;
@@ -138,7 +138,7 @@ public class InterceptInformer implements InterceptNodeListener {
     final List<InterceptRequest<?>> allInterceptRequests = new ArrayList<>();
     for (PeerInfo peer : peers) {
       try {
-        allInterceptRequests.addAll(palDirectory.getPeerInterceptRequests(peer.getUuid()));
+        allInterceptRequests.addAll(palDirectory.listInterceptsForPeer(peer.getUuid()));
       } catch (Exception e) {
         logger.error("Error retrieving intercepts for peer w/uuid:{}", peer.getUuid(), e);
       }

@@ -508,7 +508,7 @@ public class List extends AbstractPalSubcommand {
   protected int runCommand() throws Exception {
     if (listLogs) {
       // get all logs in directory
-      Set<LogInfo> logsInDirectory = getPalDirectory().getAllLogs();
+      Set<LogInfo> logsInDirectory = getPalDirectory().listAllLogs();
 
       // get logs from all different kafka servers
       Set<LogInfo> logsInKafka = new HashSet<>();
@@ -536,7 +536,7 @@ public class List extends AbstractPalSubcommand {
     }
 
     if (listPeers) {
-      Set<PeerInfo> peers = getPalDirectory().getAllPeers();
+      Set<PeerInfo> peers = getPalDirectory().listPeers();
       logger.debug("{} peers found in directory", peers.size());
       if (longListing) {
         out.printf("total %d%n", peers.size());

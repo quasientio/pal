@@ -182,7 +182,7 @@ public class AbstractInterceptIT extends AbstractIntegrationTest implements Exec
   }
 
   private Optional<PeerInfo> findRegisteredPeerListening() throws Exception {
-    return palDirectory.getAllPeers().stream()
+    return palDirectory.listPeers().stream()
         .filter(peer -> !myPeerUuid.equals(peer.getUuid()) && peer.getRpcAddress() != null)
         .findFirst();
   }
@@ -210,7 +210,7 @@ public class AbstractInterceptIT extends AbstractIntegrationTest implements Exec
 
   @After
   public void tearDown() throws Exception {
-    palDirectory.deleteAllPeerInterceptRequests(myPeerUuid);
+    palDirectory.deleteInterceptsForPeer(myPeerUuid);
     assertionError = null;
     if (threadRepSocketCreated.get()) {
       Socket socket = threadRepSocket.get();

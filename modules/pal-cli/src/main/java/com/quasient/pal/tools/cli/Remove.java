@@ -195,7 +195,7 @@ public class Remove extends AbstractPalSubcommand {
     final Set<LogInfo> matchingLogs;
     try {
       matchingLogs =
-          getPalDirectory().getAllLogs().stream()
+          getPalDirectory().listAllLogs().stream()
               .filter(l -> l.getUuid().equals(uuid))
               .collect(Collectors.toSet());
     } catch (Exception e) {
@@ -228,7 +228,7 @@ public class Remove extends AbstractPalSubcommand {
   private void deleteAllLogs() {
     final Set<LogInfo> allLogs;
     try {
-      allLogs = getPalDirectory().getAllLogs();
+      allLogs = getPalDirectory().listAllLogs();
     } catch (Exception e) {
       errors++;
       return;
@@ -258,7 +258,7 @@ public class Remove extends AbstractPalSubcommand {
    */
   private void deletePeersNamed(String peerName) throws Exception {
     final Set<PeerInfo> matchingPeers =
-        getPalDirectory().getAllPeers().stream()
+        getPalDirectory().listPeers().stream()
             .filter(p -> peerName.equals(p.getName()))
             .collect(Collectors.toSet());
 
@@ -291,7 +291,7 @@ public class Remove extends AbstractPalSubcommand {
   /** Deletes all peers registered in the PAL directory. */
   private void deleteAllPeers() {
     try {
-      long peersUnregistered = getPalDirectory().deleteAllPeers();
+      long peersUnregistered = getPalDirectory().deletePeers();
       logger.debug("Unregistered {} peers", peersUnregistered);
     } catch (Exception e) {
       errors++;
@@ -345,7 +345,7 @@ public class Remove extends AbstractPalSubcommand {
           } else {
             // if not a valid UUID we will consider it a name
             if (startingWith) {
-              final Set<PeerInfo> allPeers = getPalDirectory().getAllPeers();
+              final Set<PeerInfo> allPeers = getPalDirectory().listPeers();
               allPeers.stream()
                   .filter(p -> p.getName() != null && p.getName().startsWith(arg))
                   .forEach(p -> deletePeer(p.getUuid()));
@@ -375,7 +375,7 @@ public class Remove extends AbstractPalSubcommand {
           } else {
             // if not a valid UUID we will consider it a name
             if (startingWith) {
-              final Set<LogInfo> allLogs = getPalDirectory().getAllLogs();
+              final Set<LogInfo> allLogs = getPalDirectory().listAllLogs();
               allLogs.stream().filter(l -> l.getName().startsWith(arg)).forEach(this::deleteLog);
             } else {
               final LogInfo log = getPalDirectory().getLogInfo(arg);

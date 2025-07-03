@@ -509,7 +509,7 @@ public class DispatcherConnector {
     // get peer's address
     final PalDirectory palDirectory =
         directoryConnectionProvider.get().orElseThrow(RuntimeException::new);
-    String interceptorAddress = palDirectory.getPeerInfo(peer).getRpcAddress();
+    String interceptorAddress = palDirectory.getPeer(peer).getRpcAddress();
     reqSocket.connect(interceptorAddress);
     // store in thread-local peer->socket map
     callbackSockets.get().put(peer, reqSocket);

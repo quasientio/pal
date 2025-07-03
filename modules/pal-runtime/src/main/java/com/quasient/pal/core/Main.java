@@ -885,10 +885,10 @@ public class Main implements Callable<Integer> {
             .orElseThrow(RuntimeException::new);
     try {
       if (inLog != null) {
-        palDirectory.registerPeerInLog(self, inLog, peerLease);
+        palDirectory.setInLog(self, inLog, peerLease);
       }
       if (outLog != null) {
-        palDirectory.registerPeerOutLog(self, outLog, peerLease);
+        palDirectory.setOutLog(self, outLog, peerLease);
       }
     } catch (Exception ex) {
       fatalExit(ex, PeerException.FatalCode.ERROR_REGISTERING_SELF_LOGS);
@@ -937,7 +937,7 @@ public class Main implements Callable<Integer> {
         self.setName(name);
       }
       palDirectory.createPeer(self);
-      peerLease = palDirectory.attachLiveLease(self.getUuid(), PEER_KA_SECS);
+      peerLease = palDirectory.createPeerLease(self.getUuid(), PEER_KA_SECS);
     } catch (Exception ex) {
       fatalExit(ex, PeerException.FatalCode.ERROR_REGISTERING_SELF);
     }
@@ -1255,7 +1255,7 @@ public class Main implements Callable<Integer> {
               .orElseThrow(RuntimeException::new);
       final InterceptInformer interceptInformer = injector.getInstance(InterceptInformer.class);
       // add as listener for future requests
-      palDirectory.addInterceptNodeListener(interceptInformer);
+      palDirectory.addInterceptListener(interceptInformer);
       // register all current intercepts in directory
       interceptInformer.registerAllInterceptsInDirectory();
     }

@@ -274,7 +274,7 @@ public class PalDirectory implements AutoCloseable {
    * @throws ExecutionException on etcd errors
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
-  public void updatePeerState(PeerInfo peer, long leaseId)
+  public void updatePeer(PeerInfo peer, long leaseId)
       throws ExecutionException, InterruptedException {
 
     long now = System.currentTimeMillis();
@@ -292,7 +292,7 @@ public class PalDirectory implements AutoCloseable {
   }
 
   /**
-   * Registers an incoming log for the specified peer.
+   * Registers the IN log for the specified peer.
    *
    * @param peerInfo the information of the peer
    * @param logInfo the log information to register as incoming for the peer
@@ -302,7 +302,7 @@ public class PalDirectory implements AutoCloseable {
    * @throws NoPeerInfoNodeException if the peer does not exist in the directory
    * @throws IllegalStateException if an IN-log is already registered for this peer
    */
-  public void registerPeerInLog(PeerInfo peerInfo, LogInfo logInfo, @Nullable PeerLease peerLease)
+  public void setInLog(PeerInfo peerInfo, LogInfo logInfo, @Nullable PeerLease peerLease)
       throws ExecutionException, InterruptedException, NoPeerInfoNodeException {
     Objects.requireNonNull(peerInfo, "peerInfo");
     Objects.requireNonNull(logInfo, "logInfo");
@@ -351,7 +351,7 @@ public class PalDirectory implements AutoCloseable {
    * @throws InterruptedException if the current thread is interrupted while waiting
    * @throws IllegalStateException if multiple IN logs are found for the peer
    */
-  public UUID getPeerInLog(UUID peerUuid) throws ExecutionException, InterruptedException {
+  public UUID getInLog(UUID peerUuid) throws ExecutionException, InterruptedException {
     final String peerLogsInPath = getPeerLogsInPath(peerUuid);
     final ByteSequence peerLogsInPathKey = ByteSequence.from(peerLogsInPath.getBytes(UTF8));
     final GetResponse response =
@@ -377,7 +377,7 @@ public class PalDirectory implements AutoCloseable {
    * @throws NoPeerInfoNodeException if the peer does not exist in the directory
    * @throws IllegalStateException if an OUT-log is already registered for this peer
    */
-  public void registerPeerOutLog(PeerInfo peerInfo, LogInfo logInfo, @Nullable PeerLease peerLease)
+  public void setOutLog(PeerInfo peerInfo, LogInfo logInfo, @Nullable PeerLease peerLease)
       throws ExecutionException, InterruptedException, NoPeerInfoNodeException {
 
     Objects.requireNonNull(peerInfo, "peerInfo");
@@ -430,7 +430,7 @@ public class PalDirectory implements AutoCloseable {
    * @throws InterruptedException if the current thread is interrupted while waiting
    * @throws IllegalStateException if multiple OUT logs are found for the peer
    */
-  public UUID getPeerOutLog(UUID peerUuid) throws ExecutionException, InterruptedException {
+  public UUID getOutLog(UUID peerUuid) throws ExecutionException, InterruptedException {
     final String peerLogsOutPath = getPeerLogsOutPath(peerUuid);
     final ByteSequence peerLogsOutPathKey = ByteSequence.from(peerLogsOutPath.getBytes(UTF8));
     final GetResponse response =
@@ -453,7 +453,7 @@ public class PalDirectory implements AutoCloseable {
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
-  public PeerInfo getPeerInfo(UUID peerUuid) throws ExecutionException, InterruptedException {
+  public PeerInfo getPeer(UUID peerUuid) throws ExecutionException, InterruptedException {
 
     GetResponse info = kvClient.get(peerInfoKey(peerUuid)).get();
     if (info.getCount() == 0) {
@@ -492,7 +492,7 @@ public class PalDirectory implements AutoCloseable {
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
   @SuppressWarnings("ComputeIfAbsentAmbiguousReference")
-  public Set<PeerInfo> getAllPeers() throws ExecutionException, InterruptedException {
+  public Set<PeerInfo> listPeers() throws ExecutionException, InterruptedException {
     String peersPrefix = getPeersPath() + '/'; // “…/peers/”
     GetResponse resp =
         kvClient
@@ -554,13 +554,13 @@ public class PalDirectory implements AutoCloseable {
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
-  public long deleteAllPeersExcept(@Nullable Set<UUID> excludePeers)
+  public long purgePeersExcept(@Nullable Set<UUID> excludePeers)
       throws ExecutionException, InterruptedException {
     long deleted = 0;
     if (excludePeers != null && !excludePeers.isEmpty()) {
       /* Gather peers we *can* delete */
       for (UUID peerUuid :
-          getAllPeers().stream().map(PeerInfo::getUuid).collect(Collectors.toSet())) {
+          listPeers().stream().map(PeerInfo::getUuid).collect(Collectors.toSet())) {
         if (!excludePeers.contains(peerUuid)) {
           deletePeer(peerUuid);
           deleted++;
@@ -587,8 +587,8 @@ public class PalDirectory implements AutoCloseable {
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
-  public long deleteAllPeers() throws ExecutionException, InterruptedException {
-    return deleteAllPeersExcept(null);
+  public long deletePeers() throws ExecutionException, InterruptedException {
+    return purgePeersExcept(null);
   }
 
   /**
@@ -627,10 +627,6 @@ public class PalDirectory implements AutoCloseable {
     }
   }
 
-  // </editor-fold>
-
-  // <editor-fold desc="Leases and keep-alive">
-
   /**
    * Grants a TTL lease, attaches the peer’s /state key to it, and starts automatic keep-alive's.
    * Call once right after {@code createPeer()}.
@@ -642,7 +638,7 @@ public class PalDirectory implements AutoCloseable {
    * @throws InterruptedException if thread is interrupted while waiting
    * @throws IllegalStateException if the peer is stale or does not exist
    */
-  public PeerLease attachLiveLease(UUID peerUuid, long ttlSeconds)
+  public PeerLease createPeerLease(UUID peerUuid, long ttlSeconds)
       throws ExecutionException, InterruptedException, IllegalStateException {
 
     Lease leaseClient = client.getLeaseClient();
@@ -830,7 +826,7 @@ public class PalDirectory implements AutoCloseable {
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
-  public Set<InterceptRequest<?>> getPeerInterceptRequests(UUID peerUuid)
+  public Set<InterceptRequest<?>> listInterceptsForPeer(UUID peerUuid)
       throws ExecutionException, InterruptedException {
     final Set<InterceptRequest<?>> interceptRequests = new HashSet<>();
     final String peerInterceptsPath = getInterceptsPathForPeer(peerUuid);
@@ -839,7 +835,7 @@ public class PalDirectory implements AutoCloseable {
         kvClient.get(peerInterceptsPathKey, GetOption.builder().isPrefix(true).build()).get();
     for (KeyValue kv : response.getKvs()) {
       final String interceptPath = kv.getKey().toString(UTF8);
-      interceptRequests.add(getInterceptRequest(interceptPath));
+      interceptRequests.add(getIntercept(interceptPath));
     }
     return interceptRequests;
   }
@@ -849,14 +845,14 @@ public class PalDirectory implements AutoCloseable {
    *
    * @return a {@link Set} of all {@link InterceptRequest} instances
    */
-  public Set<InterceptRequest<?>> getAllInterceptRequests() {
+  public Set<InterceptRequest<?>> listAllIntercepts() {
     final Set<InterceptRequest<?>> interceptRequests = new HashSet<>();
     try {
       final GetResponse response =
           kvClient.get(getInterceptsPathKey(), GetOption.builder().isPrefix(true).build()).get();
       for (KeyValue kv : response.getKvs()) {
         final String interceptPath = kv.getKey().toString(UTF8);
-        interceptRequests.add(getInterceptRequest(interceptPath));
+        interceptRequests.add(getIntercept(interceptPath));
       }
     } catch (ExecutionException | InterruptedException e) {
       logger.error("Error getting all intercept requests", e);
@@ -872,7 +868,7 @@ public class PalDirectory implements AutoCloseable {
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
-  public InterceptRequest<?> getInterceptRequest(String interceptPath)
+  public InterceptRequest<?> getIntercept(String interceptPath)
       throws ExecutionException, InterruptedException {
     final byte[] data;
     List<KeyValue> kvs =
@@ -889,7 +885,7 @@ public class PalDirectory implements AutoCloseable {
    *
    * @param listener the {@link InterceptNodeListener} to add
    */
-  public void addInterceptNodeListener(InterceptNodeListener listener) {
+  public void addInterceptListener(InterceptNodeListener listener) {
     interceptListeners.add(listener);
     if (logger.isDebugEnabled()) {
       logger.debug("Added intercept node listener of class: {}", listener.getClass().getName());
@@ -903,7 +899,7 @@ public class PalDirectory implements AutoCloseable {
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
-  public void deleteAllPeerInterceptRequests(UUID peerUuid)
+  public void deleteInterceptsForPeer(UUID peerUuid)
       throws ExecutionException, InterruptedException {
     if (logger.isDebugEnabled()) {
       logger.debug("Deleting all intercept requests for peer w/uuid: {}", peerUuid);
@@ -933,7 +929,7 @@ public class PalDirectory implements AutoCloseable {
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
-  public void deletePeerInterceptRequest(UUID peerUuid, UUID interceptRequestUuid)
+  public void deleteIntercept(UUID peerUuid, UUID interceptRequestUuid)
       throws ExecutionException, InterruptedException {
     final String peerInterceptsPath = getInterceptsPathForPeer(peerUuid);
     final DeleteResponse deleteResponse =
@@ -1011,7 +1007,7 @@ public class PalDirectory implements AutoCloseable {
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
-  public LogInfo createLogWithAutoName(String logNamePrefix, String logServers)
+  public LogInfo createAutoLog(String logNamePrefix, String logServers)
       throws ExecutionException, InterruptedException {
     Objects.requireNonNull(logNamePrefix, "logNamePrefix cannot be null");
     Objects.requireNonNull(logServers, "logServers cannot be null");
@@ -1046,7 +1042,7 @@ public class PalDirectory implements AutoCloseable {
     String logName = String.format("%s%010d", logNamePrefix, nextIdx);
 
     // 2) Create the actual log node (guaranteed unique now)
-    return putNewLogNode(logName, logServers); // helper below
+    return writeLogInfo(logName, logServers); // helper below
   }
 
   /**
@@ -1058,7 +1054,7 @@ public class PalDirectory implements AutoCloseable {
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
-  private LogInfo putNewLogNode(String logName, String logServers)
+  private LogInfo writeLogInfo(String logName, String logServers)
       throws ExecutionException, InterruptedException {
 
     LogInfo info = new LogInfo(logName, logServers);
@@ -1115,7 +1111,7 @@ public class PalDirectory implements AutoCloseable {
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
-  public Set<LogInfo> getAllLogsWithPrefix(String logNamePrefix)
+  public Set<LogInfo> listLogsWithPrefix(String logNamePrefix)
       throws ExecutionException, InterruptedException {
     final GetResponse getResponse =
         kvClient
@@ -1132,7 +1128,7 @@ public class PalDirectory implements AutoCloseable {
       logs.add(LogInfo.fromJson(kv.getValue().toString(UTF8)));
     }
     if (logger.isDebugEnabled()) {
-      logger.debug("returning from getAllLogsWithPrefix: {}", logs);
+      logger.debug("returning from listLogsWithPrefix: {}", logs);
     }
     return logs;
   }
@@ -1144,7 +1140,7 @@ public class PalDirectory implements AutoCloseable {
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
-  public Set<LogInfo> getAllLogs() throws ExecutionException, InterruptedException {
+  public Set<LogInfo> listAllLogs() throws ExecutionException, InterruptedException {
     final String logsRoot = getLogsPath(); // "/<ns>/logs"
     final String logsPrefix = logsRoot + '/'; // "/<ns>/logs/"
 
@@ -1167,7 +1163,7 @@ public class PalDirectory implements AutoCloseable {
       logs.add(LogInfo.fromJson(kv.getValue().toString(UTF8)));
     }
     if (logger.isDebugEnabled()) {
-      logger.debug("returning from getAllLogs: {}", logs);
+      logger.debug("returning from listAllLogs: {}", logs);
     }
     return logs;
   }
@@ -1180,7 +1176,7 @@ public class PalDirectory implements AutoCloseable {
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
-  public LogInfo getLastLogWithPrefix(String logNamePrefix)
+  public LogInfo getLatestLogWithPrefix(String logNamePrefix)
       throws ExecutionException, InterruptedException {
 
     GetResponse resp =
@@ -1211,8 +1207,9 @@ public class PalDirectory implements AutoCloseable {
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
-  public int getLogCount(String logNamePrefix) throws ExecutionException, InterruptedException {
-    return getAllLogsWithPrefix(logNamePrefix).size();
+  public int countLogsWithPrefix(String logNamePrefix)
+      throws ExecutionException, InterruptedException {
+    return listLogsWithPrefix(logNamePrefix).size();
   }
 
   /**
@@ -1238,7 +1235,7 @@ public class PalDirectory implements AutoCloseable {
     long version = resp.getKvs().get(0).getVersion();
 
     // Single call to discover *all* used logs
-    if (getAllUsedLogUuids().contains(logInfo.getUuid())) {
+    if (collectUsedLogIds().contains(logInfo.getUuid())) {
       throw new IllegalArgumentException(
           "Cannot delete log '" + logName + "': it is in use by at least one peer");
     }
@@ -1266,7 +1263,7 @@ public class PalDirectory implements AutoCloseable {
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
-  private Set<UUID> getAllUsedLogUuids() throws ExecutionException, InterruptedException {
+  private Set<UUID> collectUsedLogIds() throws ExecutionException, InterruptedException {
 
     // Prefix "…/peers/" (include trailing slash, so the root node itself is skipped)
     ByteSequence peersPrefix = ByteSequence.from((getPeersPath() + '/'), UTF8);
@@ -1316,14 +1313,14 @@ public class PalDirectory implements AutoCloseable {
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
-  long deleteAllLogsExcept(@Nullable Set<UUID> excludeLogs)
+  long purgeLogsExcept(@Nullable Set<UUID> excludeLogs)
       throws ExecutionException, InterruptedException {
     long deleted = 0;
 
     if (excludeLogs != null && !excludeLogs.isEmpty()) {
       /* Gather logs we *can* delete */
       List<LogInfo> toDelete =
-          getAllLogs().stream().filter(l -> !excludeLogs.contains(l.getUuid())).toList();
+          listAllLogs().stream().filter(l -> !excludeLogs.contains(l.getUuid())).toList();
 
       /* One Txn per key (keeps code simple & safe) */
       for (LogInfo log : toDelete) {

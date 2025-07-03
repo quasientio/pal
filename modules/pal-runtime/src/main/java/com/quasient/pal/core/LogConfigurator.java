@@ -109,8 +109,7 @@ class LogConfigurator {
             .getInstance(DirectoryConnectionProvider.class)
             .get()
             .orElseThrow(RuntimeException::new);
-    return palDirectory.createLogWithAutoName(
-        appProps.getProperty("kafkaTopicPrefix"), kafkaServers);
+    return palDirectory.createAutoLog(appProps.getProperty("kafkaTopicPrefix"), kafkaServers);
   }
 
   /**

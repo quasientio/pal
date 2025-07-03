@@ -87,7 +87,7 @@ public abstract class AbstractIntegrationTest {
         };
     PalDirectory palDirectory =
         directoryConnectionProvider.get().orElseThrow(RuntimeException::new);
-    return palDirectory.getAllPeers().stream().filter(hasRpcType).findFirst();
+    return palDirectory.listPeers().stream().filter(hasRpcType).findFirst();
   }
 
   protected static ZContext createZmqContext() {

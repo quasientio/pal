@@ -108,7 +108,7 @@ public class LogConfiguratorTest {
     // verify interactions
     verify(mockedPalDirectory, never()).logExists(inLogName);
     verify(mockedPalDirectory, never()).getLogInfo(inLogName);
-    verify(mockedPalDirectory, never()).createLogWithAutoName(any(), any());
+    verify(mockedPalDirectory, never()).createAutoLog(any(), any());
     verify(mockedLogReader)
         .readFromLog(argThat(new LogInfoMatcher(new LogInfo(inLogName))), eq(false), eq(null));
     verify(mockedLogWriter, never()).writeToLog(eq(new LogInfo("app_random1")), anyBoolean());
@@ -126,7 +126,7 @@ public class LogConfiguratorTest {
     // verify interactions
     verify(mockedPalDirectory, never()).logExists(inLogName);
     verify(mockedPalDirectory, never()).getLogInfo(inLogName);
-    verify(mockedPalDirectory, never()).createLogWithAutoName(any(), any());
+    verify(mockedPalDirectory, never()).createAutoLog(any(), any());
     verify(mockedLogReader)
         .readFromLog(argThat(new LogInfoMatcher(new LogInfo("auto"))), eq(true), eq(null));
     verify(mockedLogWriter)
@@ -146,7 +146,7 @@ public class LogConfiguratorTest {
     verify(mockedPalDirectory, never()).logExists(inLogName);
     verify(mockedPalDirectory, never()).getLogInfo(inLogName);
     verify(mockedPalDirectory, never()).createLog(any(LogInfo.class));
-    verify(mockedPalDirectory, never()).createLogWithAutoName(any(), any());
+    verify(mockedPalDirectory, never()).createAutoLog(any(), any());
     verify(mockedLogReader)
         .readFromLog(argThat(new LogInfoMatcher(new LogInfo(inLogName))), eq(false), eq(null));
     verify(mockedLogWriter)
@@ -167,7 +167,7 @@ public class LogConfiguratorTest {
     verify(mockedPalDirectory, never()).getLogInfo(inLogName);
     verify(mockedPalDirectory, never()).logExists(outLogName);
     verify(mockedPalDirectory, never()).getLogInfo(outLogName);
-    verify(mockedPalDirectory, never()).createLogWithAutoName(any(), any());
+    verify(mockedPalDirectory, never()).createAutoLog(any(), any());
     verify(mockedLogReader)
         .readFromLog(argThat(new LogInfoMatcher(new LogInfo(inLogName))), eq(false), eq(null));
     verify(mockedLogWriter)
@@ -185,7 +185,7 @@ public class LogConfiguratorTest {
     // verify interactions
     verify(mockedPalDirectory, never()).logExists(logName);
     verify(mockedPalDirectory, never()).getLogInfo(logName);
-    verify(mockedPalDirectory, never()).createLogWithAutoName(any(), any());
+    verify(mockedPalDirectory, never()).createAutoLog(any(), any());
     verify(mockedLogReader)
         .readFromLog(argThat(new LogInfoMatcher(new LogInfo(logName))), eq(true), eq(null));
     verify(mockedLogWriter)
@@ -203,7 +203,7 @@ public class LogConfiguratorTest {
     // verify interactions
     verify(mockedPalDirectory, never()).logExists(outLogName);
     verify(mockedPalDirectory, never()).getLogInfo(outLogName);
-    verify(mockedPalDirectory, never()).createLogWithAutoName(any(), any());
+    verify(mockedPalDirectory, never()).createAutoLog(any(), any());
     verify(mockedLogReader, never()).readFromLog(any(), anyBoolean(), anyLong());
     verify(mockedLogWriter)
         .writeToLog(argThat(new LogInfoMatcher(new LogInfo(outLogName))), anyBoolean());

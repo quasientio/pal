@@ -663,7 +663,7 @@ public class Caller extends AbstractPalSubcommand {
    * @throws InterruptedException if the operation is interrupted.
    */
   private RpcType getRpcTypeForPeer(UUID peerUuid) throws ExecutionException, InterruptedException {
-    PeerInfo peerInfo = getPalDirectory().getPeerInfo(peerUuid);
+    PeerInfo peerInfo = getPalDirectory().getPeer(peerUuid);
     boolean listensToRpc = peerInfo.getRpcAddress() != null;
     boolean listensToJsonRpc = peerInfo.getJsonrpcAddress() != null;
     if (listensToRpc && listensToJsonRpc) {

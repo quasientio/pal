@@ -524,7 +524,7 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
       if (logUuid != null) {
         try {
           Optional<LogInfo> logInfoByUuid =
-              palDirectory.getAllLogs().stream()
+              palDirectory.listAllLogs().stream()
                   .filter(l -> logUuid.equals(l.getUuid()))
                   .findFirst();
           if (logInfoByUuid.isPresent()) {
@@ -557,7 +557,7 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
             });
 
     if (peerAddress == null) { // peerUuid must be present then
-      peerAddress = getPalDirectory().getPeerInfo(peerUuid).getPubAddress();
+      peerAddress = getPalDirectory().getPeer(peerUuid).getPubAddress();
     }
 
     // parse address

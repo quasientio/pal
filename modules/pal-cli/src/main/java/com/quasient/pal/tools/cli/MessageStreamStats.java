@@ -600,7 +600,7 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
       String palDirectoryUrl =
           palDirAddress != null ? palDirAddress : getProperty("pal_directory", null);
       try (PalDirectory palDirectory = new PalDirectory(palDirectoryUrl)) {
-        peerAddress = palDirectory.getPeerInfo(peerUuid).getPubAddress();
+        peerAddress = palDirectory.getPeer(peerUuid).getPubAddress();
       }
     }
 
