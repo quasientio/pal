@@ -211,6 +211,8 @@ public class JsonRpcErrorData {
 
   /** A builder for constructing {@link JsonRpcErrorData} instances. */
   public static class Builder {
+
+    /** Instance of {@link JsonRpcErrorData} which will be returned. */
     private final JsonRpcErrorData errorData = new JsonRpcErrorData();
 
     /**

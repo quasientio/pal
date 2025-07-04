@@ -1561,22 +1561,54 @@ public class PalDirectory implements AutoCloseable {
     return format("%s/%s", getInterceptsPath(), peerUuid);
   }
 
+  /**
+   * Converts an {@link OffsetDateTime} to the number of milliseconds since the epoch.
+   *
+   * @param odt the {@code OffsetDateTime} to convert; may be {@code null}
+   * @return the epoch millisecond value, or {@code 0L} if {@code odt} is {@code null}
+   */
   private static long toMillis(OffsetDateTime odt) {
     return odt == null ? 0L : odt.toInstant().toEpochMilli();
   }
 
+  /**
+   * Builds the etcd key path for a peer’s info node.
+   *
+   * @param uuid the UUID of the peer
+   * @return the string path under which the peer’s info is stored (i.e. "{@code
+   *     /<peers-path>/<uuid>/info}")
+   */
   private String getPeerInfoPath(UUID uuid) {
     return getPeerPath(uuid) + "/info";
   }
 
+  /**
+   * Builds the etcd key path for a peer’s state node.
+   *
+   * @param uuid the UUID of the peer
+   * @return the string path under which the peer’s state is stored (i.e. "{@code
+   *     /<peers-path>/<uuid>/state}")
+   */
   private String getPeerStatePath(UUID uuid) {
     return getPeerPath(uuid) + "/state";
   }
 
+  /**
+   * Creates a {@link ByteSequence} for the peer info key, using UTF-8 encoding.
+   *
+   * @param uuid the UUID of the peer
+   * @return a {@code ByteSequence} representing the key for the peer’s info node
+   */
   private ByteSequence peerInfoKey(UUID uuid) {
     return ByteSequence.from(getPeerInfoPath(uuid), UTF8);
   }
 
+  /**
+   * Creates a {@link ByteSequence} for the peer state key, using UTF-8 encoding.
+   *
+   * @param uuid the UUID of the peer
+   * @return a {@code ByteSequence} representing the key for the peer’s state node
+   */
   private ByteSequence peerStateKey(UUID uuid) {
     return ByteSequence.from(getPeerStatePath(uuid), UTF8);
   }
@@ -1606,16 +1638,45 @@ public class PalDirectory implements AutoCloseable {
 
   // <editor-fold desc="private records">
 
-  // immutable part
+  /**
+   * Holds the immutable static metadata for a peer.
+   *
+   * @param uuid the unique identifier of the peer
+   * @param name the human-readable name of the peer
+   * @param ctimeMillis the creation time in epoch milliseconds
+   */
   private record PeerStatic(UUID uuid, String name, long ctimeMillis) {
+
+    /**
+     * Creates a new {@code PeerStatic} instance from the given {@link PeerInfo}.
+     *
+     * @param p the source peer info
+     * @return a {@code PeerStatic} containing the peer’s UUID, name, and creation timestamp
+     */
     static PeerStatic from(PeerInfo p) {
       return new PeerStatic(p.getUuid(), p.getName(), toMillis(p.getCTime()));
     }
   }
 
-  // mutable part
+  /**
+   * Holds the mutable state information for a peer.
+   *
+   * @param mtimeMillis the last-modified time in epoch milliseconds
+   * @param binRpc the ZMQ RPC endpoint address
+   * @param jsonRpc the JSON-RPC endpoint address
+   * @param pub the publish-subscribe endpoint address
+   * @param jmx the JMX management endpoint address
+   */
   private record PeerState(
       long mtimeMillis, String binRpc, String jsonRpc, String pub, String jmx) {
+
+    /**
+     * Creates a new {@code PeerState} instance from the given {@link PeerInfo}.
+     *
+     * @param p the source peer info
+     * @return a {@code PeerState} containing the peer’s mutable endpoint addresses and modification
+     *     timestamp
+     */
     static PeerState from(PeerInfo p) {
       return new PeerState(
           toMillis(p.getMTime()),

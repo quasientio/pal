@@ -54,6 +54,7 @@ public class InterceptEventMsg extends BaseMsg {
      */
     UNREGISTER((byte) 2);
 
+    /** The byte value corresponding to the type. */
     private final byte idx;
 
     /**

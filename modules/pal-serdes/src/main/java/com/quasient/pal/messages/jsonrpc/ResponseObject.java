@@ -154,6 +154,8 @@ public class ResponseObject implements Unwrappable {
 
   /** Builder class for constructing instances of {@code ResponseObject}. */
   public static class Builder {
+
+    /** Instance of {@link ResponseObject} which will be returned. */
     private final ResponseObject responseObject = new ResponseObject();
 
     /**

@@ -752,12 +752,25 @@ public class Caller extends AbstractPalSubcommand {
    * call.
    */
   private class MainMethodCallBuilder {
+    /** The UUID of the ThinPeer initiating the call. */
     private final UUID thinPeerUuid;
+
+    /** The array of parameter types for the target method (always String[]). */
     final Class<?>[] parameterTypes = new Class[] {String[].class};
+
+    /** The simple name of the method to invoke. */
     private final String methodName;
+
+    /** The fully qualified name of the class containing the method. */
     private final String className;
+
+    /** The array of parameter type names, derived from {@code parameterTypes}. */
     private final String[] parameterTypesNamesArray;
+
+    /** The actual parameter values to pass to the method (wrapped in an Object[]). */
     private final Object[] parameters;
+
+    /** References for any object parameters, used in JSON-RPC argument handling. */
     private final ObjectRef[] argObjRefs;
 
     /**

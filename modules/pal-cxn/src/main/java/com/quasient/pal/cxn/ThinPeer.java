@@ -1854,10 +1854,12 @@ public class ThinPeer implements AutoCloseable {
 
   /** WebSocket client for handling JSON-RPC communication with a peer. */
   private static final class WsClient extends WebSocketClient {
+
     /** Maps message IDs to their corresponding CompletableFuture responses. */
     private final Map<String, CompletableFuture<JsonRpcResponse>> futureResponses =
         new ConcurrentHashMap<>();
 
+    /** Future of an async ping, that is completed on receiving pong. */
     private CompletableFuture<Void> pingFuture;
 
     /**

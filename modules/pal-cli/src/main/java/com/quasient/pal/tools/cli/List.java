@@ -120,14 +120,23 @@ public class List extends AbstractPalSubcommand {
   /** Mapping of server addresses to their respective Kafka admin clients. */
   private final Map<String, Admin> adminClientsPerServer = new HashMap<>();
 
-  /**
-   * Column widths for variable-length fields. Adjust these values, not the format strings below.
-   */
+  /*---------------------------------------------------------------------------------------------------
+   * Column widths for variable-length fields. Adjust these values, not the format strings that follow.
+   *--------------------------------------------------------------------------------------------------*/
+
+  /** Maximum allowed length (in characters) for the log name representation. */
   private static final short MAX_LOG_NAME_LEN = 20;
 
+  /** Maximum allowed length (in characters) for the log size representation. */
   private static final short MAX_LOG_SIZE_LEN = 10;
+
+  /** Maximum allowed length (in characters) for the log index representation. */
   private static final short MAX_LOG_IDX_LEN = 8;
+
+  /** Maximum allowed length (in characters) for peer names. */
   private static final short MAX_PEER_NAME_LEN = 15;
+
+  /** Maximum allowed length (in characters) for endpoint addresses. */
   private static final short MAX_ENDPOINT_LEN = 20;
 
   /**

@@ -173,6 +173,8 @@ public class Executable {
 
   /** Builder class for {@link Executable}, providing a fluent API for setting properties. */
   public static class Builder {
+
+    /** Instance of {@link Executable} which will be returned. */
     private final Executable executable = new Executable();
 
     /**

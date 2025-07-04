@@ -25,34 +25,24 @@ import javax.annotation.Nullable;
  * of the intercept, the peer involved, the intercept identifier, and the intercept request if
  * applicable.
  *
+ * @param type the type of the intercept event indicating addition or removal. Must not be {@code
+ *     null}.
+ * @param interceptPath the hierarchical path of the intercept, structured with four non-empty parts
+ *     separated by '/' and not {@code null}.
+ * @param peerUuid the universally unique identifier (UUID) of the peer that owns the new or removed
+ *     intercept, must not be {@code null}.
+ * @param interceptId The unique identifier of the intercept that was added or removed. Must not be
+ *     {@code null} or empty.
+ * @param interceptRequest The {@link InterceptRequest} that was added. This is {@code null} if the
+ *     intercept was removed. It cannot be {@code null} if the event type is {@link
+ *     Type#INTERCEPT_ADDED}.
  * @see InterceptRequest
  */
 public record InterceptEvent(
-    /**
-     * The type of the intercept event indicating addition or removal.
-     *
-     * @see Type
-     */
     @Nonnull InterceptEvent.Type type,
-
-    /**
-     * The hierarchical path of the intercept, structured with four non-empty parts separated by
-     * '/'.
-     */
     @Nonnull String interceptPath,
-
-    /**
-     * The universally unique identifier (UUID) of the peer that owns the new or removed intercept.
-     */
     @Nonnull UUID peerUuid,
-
-    /** The unique identifier of the intercept that was added or removed. */
     @Nonnull String interceptId,
-
-    /**
-     * The {@link InterceptRequest} that was added. This is {@code null} if the intercept was
-     * removed.
-     */
     @Nullable InterceptRequest<?> interceptRequest) {
 
   /**

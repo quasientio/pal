@@ -84,8 +84,13 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
    * </ul>
    */
   enum OutputFormat {
+    /** Fully detailed output, including context and headers. */
     FULL,
+
+    /** Machine-readable output serialized as JSON. */
     JSON,
+
+    /** Minimalist output showing only the essentials in a compact form. */
     COMPACT
   }
 

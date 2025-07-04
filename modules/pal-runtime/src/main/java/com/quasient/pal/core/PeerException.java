@@ -26,18 +26,41 @@ public class PeerException extends Exception {
   public enum FatalCode {
 
     // TODO use i18n resources for messages
+
+    /** Error loading application properties from file or resource. */
     ERROR_LOADING_PROPERTIES("Error loading application properties"),
+
+    /** Failure when registering this peer in the Pal Directory. */
     ERROR_REGISTERING_SELF("Error registering self as peer"),
+
+    /** Failure when registering the logs used by this peer. */
     ERROR_REGISTERING_SELF_LOGS("Error registering logs used by self"),
+
+    /** Offset was provided but no log was specified to read from. */
     ERROR_NO_LOG_GIVEN("Offset given but no log to read from"),
 
+    /** No Kafka bootstrap servers configured, required for IN/OUT logs. */
     ERROR_NO_KAFKA_SERVERS_GIVEN("No kafka servers given, required for IN/OUT logs"),
+
+    /** Error initializing IN and/or OUT logs. */
     ERROR_INITIALIZING_LOGS("Error initializing IN/OUT logs"),
+
+    /** Service manager reported a failure during startup or shutdown. */
     ERROR_SERVICE_MANAGER_FAILED("Service manager failure"),
+
+    /** JAR file not found or missing its MANIFEST file. */
     ERROR_JAR_NOT_FOUND_OR_MISSING_MANIFEST("JAR not found or missing MANIFEST"),
+
+    /** No Main-Class entry defined in the JAR’s MANIFEST. */
     ERROR_NO_MAIN_CLASS_IN_JAR_MANIFEST("No Main-Class in MANIFEST"),
+
+    /** Could not find a free random port for socket binding. */
     ERROR_FINDING_RND_PORT("Error finding local random port for socket"),
+
+    /** Invalid or non-numeric RPC port value provided. */
     ERROR_PARSING_RPC_PORT_NUMBER("Invalid RPC port"),
+
+    /** Invalid or non-numeric JSON-RPC port value provided. */
     ERROR_PARSING_JSONRPC_PORT_NUMBER("Invalid JSONRPC port");
 
     /** Unique numeric code representing the fatal error condition. */

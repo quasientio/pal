@@ -114,6 +114,8 @@ public class JsonRpcRequest extends JsonRpcMessage {
 
   /** Builder class for constructing instances of {@link JsonRpcRequest}. */
   public static class Builder {
+
+    /** Instance of {@link JsonRpcRequest} which will be returned. */
     private final JsonRpcRequest request = new JsonRpcRequest();
 
     /**

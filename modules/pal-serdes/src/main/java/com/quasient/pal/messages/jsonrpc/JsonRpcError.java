@@ -160,6 +160,8 @@ public class JsonRpcError {
    * setting error properties.
    */
   public static class Builder {
+
+    /** Instance of {@link JsonRpcError} which will be returned. */
     private final JsonRpcError error = new JsonRpcError();
 
     /**

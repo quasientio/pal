@@ -210,6 +210,8 @@ public class Params {
    * object.
    */
   public static class Builder {
+
+    /** Instance of {@link Params} which will be returned. */
     private final Params params = new Params();
 
     /**

@@ -10,40 +10,23 @@
 package com.quasient.pal.messages;
 
 /**
- * Represents the context of a Log message within the PAL runtime, encapsulating Kafka metadata such
- * as offset, partition, timestamp, topic, and log identifier.
+ * Represents the context of a log message within the Pal runtime, encapsulating Kafka metadata such
+ * as offset, partition, timestamp, topic, and the log identifier.
+ *
+ * @param offset the offset of the message within its partition, indicating its position
+ * @param partition the partition number where the message resides
+ * @param timestamp the epoch‐millisecond timestamp associated with the message (typically
+ *     production time)
+ * @param topic the name of the Kafka topic to which the message belongs
+ * @param logId the unique (PalDirectory) identifier of the log containing the message
  */
 public record MessageContext(
-
-    /*
-     The offset of the message within the partition, indicating its position.
-    */
-    long offset,
-
-    /*
-     The partition number where the message resides.
-    */
-    int partition,
-
-    /*
-     The timestamp associated with the message, typically representing the time of production.
-    */
-    long timestamp,
-
-    /*
-     The topic name to which the message belongs.
-    */
-    String topic,
-
-    /*
-     The unique identifier for the log containing the message.
-    */
-    String logId) {
+    long offset, int partition, long timestamp, String topic, String logId) {
 
   /**
    * Retrieves the topic associated with this message context.
    *
-   * @return the topic name.
+   * @return the Kafka topic name
    */
   @Override
   @SuppressWarnings("unused")
@@ -51,7 +34,11 @@ public record MessageContext(
     return topic;
   }
 
-  /** {@inheritDoc} */
+  /**
+   * Returns a string representation of this MessageContext, including all fields and their values.
+   *
+   * @return a human-readable representation of the context
+   */
   @Override
   public String toString() {
     return "MessageContext{"
@@ -64,8 +51,9 @@ public record MessageContext(
         + ", topic='"
         + topic
         + '\''
-        + ", logId="
+        + ", logId='"
         + logId
+        + '\''
         + '}';
   }
 }

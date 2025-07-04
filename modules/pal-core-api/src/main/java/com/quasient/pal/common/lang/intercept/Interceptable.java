@@ -35,10 +35,10 @@ public abstract class Interceptable {
     /** Represents a method call interceptable with a unique identifier. */
     METHOD_CALL((byte) 1),
 
-    /* Represents a field operation interceptable with a unique identifier. */
+    /** Represents a field operation interceptable with a unique identifier. */
     FIELD_OP((byte) 2);
 
-    /* The unique byte identifier associated with the interceptable type. */
+    /** The unique byte identifier associated with the interceptable type. */
     private final byte idx;
 
     /**
