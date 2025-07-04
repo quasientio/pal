@@ -80,6 +80,7 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractRpcMessageIT
             .withProducerProperties(producerProperties)
             .withInitialPeer(jsonRpcPeer)
             .withOutboundRpcType(RpcType.JSON_RPC)
+            .withWebsocketConnectionLostTimeout(-1) // deactivate timeout for slow CI envs
             .init();
   }
 

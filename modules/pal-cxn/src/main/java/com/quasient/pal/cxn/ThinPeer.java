@@ -186,6 +186,12 @@ public class ThinPeer implements AutoCloseable {
   /** WebSocket client for JSON-RPC communication. */
   private WsClient wsClient;
 
+  /**
+   * Timeout in secs for lost connections. A value lower or equal to 0 results in the check to be
+   * deactivated .
+   */
+  private Integer websocketConnectionLostTimeout;
+
   /** RPC address for this peer. */
   private String rpcAddress;
 
@@ -368,6 +374,18 @@ public class ThinPeer implements AutoCloseable {
    */
   public ThinPeer withProducerProperties(Properties properties) {
     this.producerProperties = properties;
+    return this;
+  }
+
+  /**
+   * Sets the ConnectionLostTimeout (in seconds) for the Websocket Client.
+   *
+   * @param wsConnectionLostTimeout the interval in seconds. A value lower or equal to 0 results in
+   *     the check to be deactivated.
+   * @return the current ThinPeer instance for method chaining
+   */
+  public ThinPeer withWebsocketConnectionLostTimeout(Integer wsConnectionLostTimeout) {
+    this.websocketConnectionLostTimeout = wsConnectionLostTimeout;
     return this;
   }
 
@@ -699,6 +717,9 @@ public class ThinPeer implements AutoCloseable {
   private void connectWebSocket(PeerInfo peer) throws URISyntaxException, InterruptedException {
     Map<String, String> headers = Map.of("peer-id", peerUuid.toString());
     wsClient = new WsClient(new URI(peer.getJsonrpcAddress()), headers);
+    if (websocketConnectionLostTimeout != null) {
+      wsClient.setConnectionLostTimeout(websocketConnectionLostTimeout);
+    }
     wsClient.connectBlocking();
     isWsClientConnected = true;
     currentPeer = peer;
@@ -718,6 +739,9 @@ public class ThinPeer implements AutoCloseable {
       throws URISyntaxException, InterruptedException {
     Map<String, String> headers = Map.of("peer-id", peerUuid.toString());
     wsClient = new WsClient(new URI(peer.getJsonrpcAddress()), headers);
+    if (websocketConnectionLostTimeout != null) {
+      wsClient.setConnectionLostTimeout(websocketConnectionLostTimeout);
+    }
     boolean succeeded = wsClient.connectBlocking(timeout.toMillis(), TimeUnit.MILLISECONDS);
     if (succeeded) {
       isWsClientConnected = true;
