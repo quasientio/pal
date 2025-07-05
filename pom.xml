@@ -288,6 +288,7 @@
                                 <exclude>AUTHORS</exclude>
                                 <exclude>.java-version</exclude>
                                 <exclude>**/*.env</exclude>
+                                <exclude>**/*.env.example</exclude>
                                 <exclude>**/*.bak</exclude>
                                 <exclude>venv/**</exclude>
                                 <exclude>.local/**</exclude>
