@@ -1,0 +1,26 @@
+#
+# Copyright (C) 2025 Quasient Inc. <https://www.quasient.com>
+#
+# Use of this software is governed by the Business Source License 1.1
+# included in the file LICENSE and at https://mariadb.com/bsl11
+#
+# Change Date: 2029-10-01
+# Change License: Apache 2.0
+#
+
+namespace: prod
+resources:
+- namespace.yaml
+- ../../base
+- pvc/kafka-pvc.yaml
+- pvc/etcd-pvc.yaml
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+patches:
+- path: patches/kafka-volume-patch.yaml
+- path: patches/etcd-volume-patch.yaml
+labels:
+- includeSelectors: true
+  pairs:
+    env: prod

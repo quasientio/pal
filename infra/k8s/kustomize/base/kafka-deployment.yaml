@@ -92,6 +92,4 @@ spec:
       restartPolicy: Always
       volumes:
         - name: kafka-data
-          #persistentVolumeClaim:
-          #  claimName: kafka-pvc
-          emptyDir: {}           # ⇨ for dev: ephemeral; swap to PVC for prod
+          emptyDir: {}

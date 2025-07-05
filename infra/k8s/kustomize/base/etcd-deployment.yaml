@@ -68,6 +68,4 @@ spec:
               memory: "512Mi"
       volumes:
         - name: etcd-data
-          emptyDir: {}              # ⚠️ dev only; swap for PVC in prod
-          #persistentVolumeClaim:
-          #  claimName: etcd-pvc
+          emptyDir: {}
