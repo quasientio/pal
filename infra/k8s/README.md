@@ -88,16 +88,6 @@ pal run \
 
 ---
 
-## ⚠️ Troubleshooting
-
-| Symptom                                   | Fix                                                                      |
-|-------------------------------------------|--------------------------------------------------------------------------|
-| `provided port is already allocated`      | `./run_k8s.sh stop` first, or delete the existing namespace              |
-| Pods stuck in `CrashLoopBackOff`          | `kubectl logs <pod> -n <dev|prod>`                                       |
-| Different Minikube IP                     | `minikube delete && minikube start --driver=docker --listen-address=192.168.49.2` |
-
----
-
 ## License
 
 Source files are governed by the **Business Source License 1.1** (see each file header).  
