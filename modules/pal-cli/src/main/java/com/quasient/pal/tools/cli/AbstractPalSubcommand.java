@@ -11,7 +11,7 @@ package com.quasient.pal.tools.cli;
 
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.joran.JoranConfigurator;
-import com.quasient.pal.core.Main;
+import com.quasient.pal.core.service.Main;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.tools.AbstractTool;

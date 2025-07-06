@@ -1,1 +1,1 @@
-com.quasient.pal.core.rpc.exec.java.DynamicResourceBundleControlProvider
+com.quasient.pal.core.execution.java.DynamicResourceBundleControlProvider

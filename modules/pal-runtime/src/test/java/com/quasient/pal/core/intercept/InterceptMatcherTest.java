@@ -1,0 +1,247 @@
+/*
+ * Copyright (C) 2025 Quasient Inc. <https://www.quasient.com>
+ *
+ * Use of this software is governed by the Business Source License 1.1
+ * included in the file LICENSE and at https://mariadb.com/bsl11
+ *
+ * Change Date: 2029-10-01
+ * Change License: Apache 2.0
+ */
+package com.quasient.pal.core.intercept;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+
+import com.google.common.util.concurrent.Service;
+import com.google.common.util.concurrent.ServiceManager;
+import com.quasient.pal.common.lang.intercept.InterceptType;
+import com.quasient.pal.common.runtime.ExecPhase;
+import com.quasient.pal.core.ZmqEnabledTest;
+import com.quasient.pal.core.internal.messages.InterceptEventMsg;
+import com.quasient.pal.messages.colfer.ExecMessage;
+import com.quasient.pal.messages.colfer.InterceptMessage;
+import com.quasient.pal.messages.types.MessageType;
+import com.quasient.pal.serdes.colfer.MessageBuilder;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.zeromq.SocketType;
+import org.zeromq.ZContext;
+import org.zeromq.ZMQ.Socket;
+
+/** This class tests both intercept registration and intercept matching. */
+public class InterceptMatcherTest extends ZmqEnabledTest {
+
+  private UUID peerUuid;
+  private static final String INTERCEPT_REG_ADDRESS = "inproc://intercepts.reg";
+  private ZContext context;
+  private ServiceManager manager;
+  private InterceptMatcher interceptMatcher;
+  private final ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
+  private final MessageBuilder msgBuilder = new MessageBuilder();
+  private Socket registerSocket;
+
+  @Before
+  public void setup() throws InterruptedException {
+    this.peerUuid = UUID.randomUUID();
+    this.context = createContext();
+    this.interceptMatcher =
+        new InterceptMatcher(
+            peerUuid,
+            context,
+            SYNC_SOCKET_ADDRESS,
+            servicesThreadGroup,
+            "InterceptMatcherTest-Service",
+            INTERCEPT_REG_ADDRESS);
+    final Set<Service> services = new HashSet<>(List.of(this.interceptMatcher));
+    this.manager = new ServiceManager(services);
+    // start service
+    manager.startAsync().awaitHealthy();
+    collectGoSignals(services.size(), context);
+
+    // create REQ socket to simulate requests (IRL: InterceptNodeListener)
+    registerSocket = context.createSocket(SocketType.REQ);
+    registerSocket.connect(INTERCEPT_REG_ADDRESS);
+  }
+
+  @After
+  public void cleanup() throws Exception {
+    // shut down services
+    manager.stopAsync();
+
+    // close sockets
+    if (registerSocket != null) {
+      registerSocket.close();
+    }
+
+    // close zmq context
+    closeContext(context);
+  }
+
+  @Test
+  public void registerNewIntercept() {
+    // create and send intercept request
+    InterceptMessage interceptMessage =
+        msgBuilder.buildInterceptMessage(
+            peerUuid,
+            InterceptType.BEFORE,
+            "java.util.ArrayList",
+            "new",
+            Collections.emptyList(),
+            this.getClass().getName(),
+            "someCallbackMethod");
+    byte[] buf = new byte[interceptMessage.marshalFit()];
+    interceptMessage.marshal(buf, 0);
+    new InterceptEventMsg(buf).send(registerSocket);
+
+    // verify response
+    String response = registerSocket.recvStr();
+    assertThat(response, is(InterceptMatcher.REGISTER_OK_RESPONSE));
+  }
+
+  @Test
+  public void registerDuplicateIntercept() {
+    // create and send intercept request
+    InterceptMessage interceptMessage =
+        msgBuilder.buildInterceptMessage(
+            peerUuid,
+            InterceptType.BEFORE,
+            "java.util.ArrayList",
+            "new",
+            Collections.emptyList(),
+            this.getClass().getName(),
+            "someCallbackMethod");
+    new InterceptEventMsg(interceptMessage).send(registerSocket);
+
+    // verify response
+    String response = registerSocket.recvStr();
+    assertThat(response, is(InterceptMatcher.REGISTER_OK_RESPONSE));
+
+    // now send again
+    new InterceptEventMsg(interceptMessage).send(registerSocket);
+
+    // verify response
+    response = registerSocket.recvStr();
+    assertThat(response, is(InterceptMatcher.REGISTER_DUP_RESPONSE));
+  }
+
+  @Test
+  public void registerNewInterceptThenNonMatchingExecMessage() {
+    // create and send intercept request
+    InterceptMessage interceptMessage =
+        msgBuilder.buildInterceptMessage(
+            peerUuid,
+            InterceptType.BEFORE,
+            "java.util.ArrayList",
+            "new",
+            Collections.emptyList(),
+            this.getClass().getName(),
+            "someCallbackMethod");
+    new InterceptEventMsg(interceptMessage).send(registerSocket);
+
+    // verify response
+    String response = registerSocket.recvStr();
+    assertThat(response, is(InterceptMatcher.REGISTER_OK_RESPONSE));
+
+    // create a non-matching ExecMessage
+    ExecMessage execMessage = msgBuilder.buildEmptyConstructor(peerUuid, "java.util.HashMap");
+
+    // verify it doesn't get intercepted
+    List<InterceptMessage> matchingIntercepts =
+        interceptMatcher.getMatchingIntercepts(
+            execMessage, MessageType.EXEC_CONSTRUCTOR, ExecPhase.BEFORE);
+    assertThat(matchingIntercepts, is(empty()));
+  }
+
+  @Test
+  public void registerNewInterceptThenMatchingKeyMessageWithWrongPhase() {
+    // create and send intercept request
+    InterceptMessage interceptMessage =
+        msgBuilder.buildInterceptMessage(
+            peerUuid,
+            InterceptType.BEFORE,
+            "java.util.ArrayList",
+            "new",
+            Collections.emptyList(),
+            this.getClass().getName(),
+            "someCallbackMethod");
+    new InterceptEventMsg(interceptMessage).send(registerSocket);
+
+    // verify response
+    String response = registerSocket.recvStr();
+    assertThat(response, is(InterceptMatcher.REGISTER_OK_RESPONSE));
+
+    // create a matching ExecMessage with non-matching phase (ExecPhase = AFTER)
+    ExecMessage execMessage = msgBuilder.buildEmptyConstructor(peerUuid, "java.util.ArrayList");
+
+    // verify it doesn't get intercepted
+    List<InterceptMessage> matchingIntercepts =
+        interceptMatcher.getMatchingIntercepts(
+            execMessage, MessageType.EXEC_CONSTRUCTOR, ExecPhase.AFTER);
+    assertThat(matchingIntercepts, is(empty()));
+  }
+
+  @Test
+  public void registerNewInterceptThenMatchingKeyMessageAndPhase() {
+    // create and send intercept request
+    InterceptMessage interceptMessage =
+        msgBuilder.buildInterceptMessage(
+            peerUuid,
+            InterceptType.BEFORE,
+            "java.util.ArrayList",
+            "new",
+            Collections.emptyList(),
+            this.getClass().getName(),
+            "someCallbackMethod");
+    new InterceptEventMsg(interceptMessage).send(registerSocket);
+
+    // verify response
+    String response = registerSocket.recvStr();
+    assertThat(response, is(InterceptMatcher.REGISTER_OK_RESPONSE));
+
+    // now send a matching ExecMessage
+    ExecMessage execMessage = msgBuilder.buildEmptyConstructor(peerUuid, "java.util.ArrayList");
+
+    // verify that it gets intercepted
+    List<InterceptMessage> matchingIntercepts =
+        interceptMatcher.getMatchingIntercepts(
+            execMessage, MessageType.EXEC_CONSTRUCTOR, ExecPhase.BEFORE);
+    assertThat(matchingIntercepts, is(not(empty())));
+    assertThat(matchingIntercepts.size(), is(1));
+    assertThat(matchingIntercepts.get(0), is(interceptMessage));
+  }
+
+  @Test
+  public void registerNewInterceptThenUnregister() {
+    // create and send intercept request
+    InterceptMessage interceptMessage =
+        msgBuilder.buildInterceptMessage(
+            peerUuid,
+            InterceptType.BEFORE,
+            "java.util.ArrayList",
+            "new",
+            Collections.emptyList(),
+            this.getClass().getName(),
+            "someCallbackMethod");
+    final String interceptId = interceptMessage.getMessageId();
+    new InterceptEventMsg(interceptMessage).send(registerSocket);
+
+    // verify response
+    String response = registerSocket.recvStr();
+    assertThat(response, is(InterceptMatcher.REGISTER_OK_RESPONSE));
+
+    // now unregister
+    new InterceptEventMsg(interceptId).send(registerSocket);
+
+    // verify response
+    response = registerSocket.recvStr();
+    assertThat(response, is(InterceptMatcher.UNREGISTER_OK_RESPONSE));
+  }
+}

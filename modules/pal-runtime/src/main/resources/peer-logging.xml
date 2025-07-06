@@ -43,7 +43,7 @@
         <appender-ref ref="peer"/>
     </logger>
 
-    <logger name="com.quasient.pal.core.LogReader" level="info" additivity="false">
+    <logger name="com.quasient.pal.core.transport.kafka.LogReader" level="info" additivity="false">
         <appender-ref ref="peer"/>
     </logger>
 
