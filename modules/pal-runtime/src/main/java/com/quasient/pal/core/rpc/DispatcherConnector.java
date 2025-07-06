@@ -14,8 +14,8 @@ import static com.quasient.pal.serdes.colfer.ColferUtils.toBytes;
 
 import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.runtime.ExecPhase;
-import com.quasient.pal.core.InterceptMatcher;
 import com.quasient.pal.core.RunOptions;
+import com.quasient.pal.core.intercepts.InterceptMatcher;
 import com.quasient.pal.core.messages.SessionCommandMsg;
 import com.quasient.pal.core.messages.SessionResponseMsg;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;

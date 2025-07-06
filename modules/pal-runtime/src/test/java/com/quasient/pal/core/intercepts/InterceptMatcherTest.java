@@ -7,7 +7,7 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
-package com.quasient.pal.core;
+package com.quasient.pal.core.intercepts;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
@@ -18,6 +18,7 @@ import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.runtime.ExecPhase;
+import com.quasient.pal.core.ZmqEnabledTest;
 import com.quasient.pal.core.messages.InterceptEventMsg;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.InterceptMessage;
@@ -35,7 +36,8 @@ import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ.Socket;
 
-public class InterceptsTest extends ZmqEnabledTest {
+/** This class tests both intercept registration and intercept matching. */
+public class InterceptMatcherTest extends ZmqEnabledTest {
 
   private UUID peerUuid;
   private static final String INTERCEPT_REG_ADDRESS = "inproc://intercepts.reg";
@@ -56,7 +58,7 @@ public class InterceptsTest extends ZmqEnabledTest {
             context,
             SYNC_SOCKET_ADDRESS,
             servicesThreadGroup,
-            "InterceptsTest-Service",
+            "InterceptMatcherTest-Service",
             INTERCEPT_REG_ADDRESS);
     final Set<Service> services = new HashSet<>(List.of(this.interceptMatcher));
     this.manager = new ServiceManager(services);

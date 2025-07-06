@@ -36,11 +36,11 @@ import org.zeromq.ZMQException;
 import zmq.ZError;
 
 /**
- * Handles the relay of intercept events to a specified intercept endpoint.
+ * Handles the relay of intercept events from PalDirectory to the InterceptMatcher service.
  *
  * <p>This class acts as an {@link InterceptNodeListener} that processes intercept events by either
  * registering all current intercepts in the system or by handling individual intercept events. It
- * uses a per-thread ZeroMQ REQ socket to send messages to the intercept service.
+ * uses a per-thread ZeroMQ REQ socket to send messages to the intercept matcher service.
  */
 @Singleton
 public class InterceptInformer implements InterceptNodeListener {

@@ -24,6 +24,7 @@ import com.quasient.pal.common.directory.nodes.LogInfo;
 import com.quasient.pal.common.directory.nodes.PeerInfo;
 import com.quasient.pal.common.util.Strings;
 import com.quasient.pal.core.intercepts.InterceptInformer;
+import com.quasient.pal.core.intercepts.InterceptMatcher;
 import com.quasient.pal.core.rpc.LogMessageExecutor;
 import com.quasient.pal.core.rpc.RpcMessageExecutor;
 import com.quasient.pal.core.rpc.ThreadPool;

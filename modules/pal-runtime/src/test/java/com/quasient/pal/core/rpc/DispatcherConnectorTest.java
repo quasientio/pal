@@ -17,9 +17,9 @@ import static org.mockito.Mockito.when;
 
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.common.runtime.ExecPhase;
-import com.quasient.pal.core.InterceptMatcher;
 import com.quasient.pal.core.RunOptions;
 import com.quasient.pal.core.ZmqEnabledTest;
+import com.quasient.pal.core.intercepts.InterceptMatcher;
 import com.quasient.pal.core.messages.SessionCommandMsg;
 import com.quasient.pal.core.messages.SessionResponseMsg;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;

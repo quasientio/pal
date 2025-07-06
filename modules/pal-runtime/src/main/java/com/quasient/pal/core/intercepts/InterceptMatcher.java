@@ -7,12 +7,11 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
-package com.quasient.pal.core;
+package com.quasient.pal.core.intercepts;
 
 import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.runtime.ExecPhase;
-import com.quasient.pal.core.intercepts.DuplicateInterceptException;
-import com.quasient.pal.core.intercepts.InterceptRequests;
+import com.quasient.pal.core.ConnectedService;
 import com.quasient.pal.core.messages.InterceptEventMsg;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.InterceptMessage;
