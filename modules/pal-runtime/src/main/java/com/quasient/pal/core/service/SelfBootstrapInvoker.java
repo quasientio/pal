@@ -17,6 +17,7 @@ import com.quasient.pal.core.dispatcher.IncomingMessageDispatcher;
 import com.quasient.pal.core.dispatcher.UnsupportedMessageException;
 import com.quasient.pal.core.execution.java.CustomClassloader;
 import com.quasient.pal.core.internal.messages.PublishedOffsetMsg;
+import com.quasient.pal.core.transport.MessageChannelType;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.types.MessageType;
 import com.quasient.pal.serdes.Unwrapper;
@@ -155,7 +156,7 @@ public class SelfBootstrapInvoker {
               try {
                 replies.add(
                     incomingMessageDispatcher.incomingCall(
-                        request, MessageType.EXEC_CLASS_METHOD, true));
+                        request, MessageType.EXEC_CLASS_METHOD, MessageChannelType.CLI_RPC));
               } catch (UnsupportedMessageException e) {
                 logger.error("Unsupported message", e);
               }

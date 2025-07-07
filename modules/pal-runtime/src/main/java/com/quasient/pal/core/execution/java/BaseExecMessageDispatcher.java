@@ -17,6 +17,7 @@ import com.quasient.pal.common.runtime.Dispatcher;
 import com.quasient.pal.common.runtime.ExecPhase;
 import com.quasient.pal.common.util.Classes;
 import com.quasient.pal.core.internal.messages.SessionCommandMsg;
+import com.quasient.pal.core.transport.MessageChannelType;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.Obj;
 import com.quasient.pal.messages.colfer.Parameter;
@@ -128,17 +129,6 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
   }
 
   /**
-   * Dispatches an incoming (via RPC or Log) execution message by processing it as a direct call.
-   *
-   * @param incomingCall the incoming execution message to be dispatched
-   * @return the response execution message after processing the call
-   */
-  @Override
-  public ExecMessage dispatchIncoming(ExecMessage incomingCall) {
-    return dispatchIncoming(incomingCall, true);
-  }
-
-  /**
    * Dispatches an incoming (via RPC or Log) execution message.
    *
    * <p>This method validates the message type, writes ahead if not coming from Log, and performs
@@ -146,19 +136,18 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
    * target retrieval. It then sends an after-execution message to complete the processing.
    *
    * @param incomingCall the execution message to process
-   * @param isDirect flag indicating if the message does not come from a Log, triggering write-ahead
-   *     logging
+   * @param messageChannel the transport channel through which the message was received
    * @return the execution message received in response after processing the incoming call
    * @throws IllegalArgumentException if the message type is not supported by this dispatcher
    */
   @Override
-  public ExecMessage dispatchIncoming(ExecMessage incomingCall, boolean isDirect) {
+  public ExecMessage dispatchIncoming(ExecMessage incomingCall, MessageChannelType messageChannel) {
     if (logger.isTraceEnabled()) {
       logger.trace(
           "dispatchIncoming:in w/ message id: {}, from peer w/id:{}, isDirect: {}",
           incomingCall.getMessageId(),
           incomingCall.getPeerUuid(),
-          isDirect);
+          messageChannel);
     }
 
     // get type
@@ -173,12 +162,8 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     // TODO: Verify that message is invokable:- Class can be loaded/found - Method or field can be
     // found in class - Params can be unwrapped or loaded (if refs). What if they are remote?
 
-    // TODO: What if this message has intercepts (i.e. around or sequential pre-) ? We should call
-    // an inner zmq service/connector and wait/get them, then execute that or go ahead and execute
-    // this message.
-
-    // message doesn't come from log so we write-ahead before executing
-    if (isDirect) {
+    // if message doesn't come from log we write-ahead before executing
+    if (!MessageChannelType.LOG_RPC.equals(messageChannel)) {
       connector.writeAhead(incomingCall, messageType);
     }
 

@@ -11,13 +11,16 @@ package com.quasient.pal.core.dispatcher;
 
 import static com.quasient.pal.serdes.colfer.ExecMessageUtils.getMessageId;
 import static com.quasient.pal.serdes.jsonrpc.JsonRpcMessageUtils.parseAndValidateJsonRpcMessage;
+import static java.lang.String.format;
 
 import com.quasient.pal.common.util.UuidUtils;
 import com.quasient.pal.core.internal.messages.InboundLogMsg;
+import com.quasient.pal.core.transport.MessageChannelType;
 import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
+import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.messages.jsonrpc.JsonRpcRequest;
-import com.quasient.pal.messages.jsonrpc.JsonRpcResponse;
+import com.quasient.pal.messages.types.MessageType;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
 import com.quasient.pal.serdes.jsonrpc.JsonRpcRequestException;
 import java.nio.charset.StandardCharsets;
@@ -151,7 +154,6 @@ class LogRpcInvoker extends AbstractMessageInvokerThread {
       switch (msg.getMessageFormat()) {
         case JSON -> {
           JsonRpcRequest jsonRpcRequest = null;
-          final JsonRpcResponse jsonRpcResponse;
           String requestId = null;
           Exception parseException = null;
 
@@ -174,11 +176,8 @@ class LogRpcInvoker extends AbstractMessageInvokerThread {
 
           if (parseException != null) {
             // parsing+validating failed, log and send error response
-            jsonRpcResponse = messageBuilder.jsonRpcResponseFromError(parseException, requestId);
-            // TODO write to Log (ie. send to LogWriter) ->
-            // JsonRpcSerializer.toJson(jsonRpcResponse)
             logMessageDispatch(requestId, null, started);
-            return;
+            continue;
           }
 
           if (logger.isDebugEnabled()) {
@@ -199,28 +198,17 @@ class LogRpcInvoker extends AbstractMessageInvokerThread {
               messageBuilder.jsonRpcRequestToExecMessage(jsonRpcRequest, fromPeerUuid);
 
           // dispatch
-          Message responseMessage;
           try {
-            responseMessage = dispatch(requestMsg);
+            dispatch(requestMsg, msg.getOffset());
           } catch (Exception dispatchException) {
 
             // dispatching failed, log and send error response
             logger.error(
                 "Error dispatching message w/id {}", getMessageId(requestMsg), dispatchException);
-            jsonRpcResponse = messageBuilder.jsonRpcResponseFromError(dispatchException, requestId);
-            // TODO write to Log (ie. send to LogWriter) ->
-            // JsonRpcSerializer.toJson(jsonRpcResponse)
-            logMessageDispatch(requestMsg, jsonRpcResponse.getId(), started);
-            return;
+            logMessageDispatch(getMessageId(requestMsg), started);
+            continue;
           }
-          // create JSON-RPC response from ExecMessage response
-          jsonRpcResponse =
-              messageBuilder.jsonRpcResponseFromExecMessageResponse(
-                  responseMessage.getExecMessage());
-
-          // send response
-          // TODO write to Log (ie. send to LogWriter) -> JsonRpcSerializer.toJson(jsonRpcResponse)
-          logMessageDispatch(requestMsg, responseMessage, started);
+          logMessageDispatch(getMessageId(requestMsg), started);
         }
         case BINARY -> {
           final Message requestMsg = new Message();
@@ -241,13 +229,8 @@ class LogRpcInvoker extends AbstractMessageInvokerThread {
 
           // dispatch it
           dispatch(requestMsg, msg.getOffset());
-          if (logger.isDebugEnabled()) {
-            final long took = System.currentTimeMillis() - started;
-            if (logger.isDebugEnabled()) {
-              logger.debug(
-                  "Dispatched log message with id: {} in {} ms", getMessageId(requestMsg), took);
-            }
-          }
+
+          logMessageDispatch(getMessageId(requestMsg), started);
         }
         default ->
             logger.error(
@@ -258,6 +241,30 @@ class LogRpcInvoker extends AbstractMessageInvokerThread {
     }
 
     closeConnections();
+  }
+
+  /**
+   * Dispatches an EXEC message contained within the given Message. This method only supports the
+   * processing of ExecMessages. After dispatching, it notifies registered listeners.
+   *
+   * @param message the message containing an ExecMessage to be processed
+   * @param recordOffset the record offset; if null, the request is considered direct
+   * @throws IllegalArgumentException if the message does not contain an ExecMessage
+   */
+  private void dispatch(Message message, Long recordOffset) {
+    final ExecMessage execMessage = message.getExecMessage();
+    if (execMessage != null) {
+      dispatch(
+          message.getExecMessage(),
+          MessageType.fromId(message.getMessageType()),
+          MessageChannelType.LOG_RPC,
+          recordOffset);
+      notifyMessageDispatched(message);
+      return;
+    }
+
+    // Log message invoker can only dispatch ExecMessages
+    throw new IllegalArgumentException(format("No handler for message: %s", message));
   }
 
   /**

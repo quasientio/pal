@@ -12,7 +12,6 @@ package com.quasient.pal.core.dispatcher;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -68,7 +67,7 @@ public class LogRpcInvokerTest extends ZmqEnabledTest {
     incomingMessageDispatcher = mock(IncomingMessageDispatcher.class);
 
     // stub incomingCall for ExecMessage
-    when(incomingMessageDispatcher.incomingCall(any(), any(), anyBoolean()))
+    when(incomingMessageDispatcher.incomingCall(any(), any(), any()))
         .thenAnswer(
             (Answer<?>)
                 invocation -> {
@@ -131,7 +130,7 @@ public class LogRpcInvokerTest extends ZmqEnabledTest {
     // wait for the message to be dispatched
     latch.await();
 
-    verify(incomingMessageDispatcher, times(1)).incomingCall(any(), any(), anyBoolean());
+    verify(incomingMessageDispatcher, times(1)).incomingCall(any(), any(), any());
 
     assertThat(execMessageReplies.size(), is(1));
     assertThat(logRpcInvoker.getExecRequestsDispatched(), is((long) 1));
@@ -182,7 +181,7 @@ public class LogRpcInvokerTest extends ZmqEnabledTest {
     latch.await();
 
     // assert number of calls
-    verify(incomingMessageDispatcher, times(msgCount)).incomingCall(any(), any(), anyBoolean());
+    verify(incomingMessageDispatcher, times(msgCount)).incomingCall(any(), any(), any());
     assertThat(logRpcInvoker.getExecRequestsDispatched(), is((long) msgCount));
     assertThat(logRpcInvoker.getRequestsDispatched(), is((long) msgCount));
     assertThat(execMessageReplies.size(), is(msgCount));

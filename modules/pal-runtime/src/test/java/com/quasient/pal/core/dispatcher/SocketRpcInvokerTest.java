@@ -12,7 +12,6 @@ package com.quasient.pal.core.dispatcher;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -80,7 +79,7 @@ public class SocketRpcInvokerTest extends ZmqEnabledTest {
     incomingMessageDispatcher = mock(IncomingMessageDispatcher.class);
 
     // stub incomingCall to return a message which seems valid response
-    when(incomingMessageDispatcher.incomingCall(any(), any(), anyBoolean()))
+    when(incomingMessageDispatcher.incomingCall(any(), any(), any()))
         .thenAnswer(
             (Answer<?>)
                 invocation -> {
@@ -140,7 +139,7 @@ public class SocketRpcInvokerTest extends ZmqEnabledTest {
     assertThat(socketRpcInvoker.getExecRequestsDispatched(), is(1L));
     assertThat(socketRpcInvoker.getRequestsDispatched(), is(1L));
     assertThat(listenerReceived.get(), is(1));
-    verify(incomingMessageDispatcher, times(1)).incomingCall(any(), any(), anyBoolean());
+    verify(incomingMessageDispatcher, times(1)).incomingCall(any(), any(), any());
 
     // assert response msg is response to original
     assertThat(responseMessage.getExecMessage().getResponseToId(), is(invokable.getMessageId()));
@@ -188,14 +187,14 @@ public class SocketRpcInvokerTest extends ZmqEnabledTest {
     assertThat(socketRpcInvoker.getExecRequestsDispatched(), is(1L));
     assertThat(socketRpcInvoker.getRequestsDispatched(), is(1L));
     assertThat(listenerReceived.get(), is(1));
-    verify(incomingMessageDispatcher, times(1)).incomingCall(any(), any(), anyBoolean());
+    verify(incomingMessageDispatcher, times(1)).incomingCall(any(), any(), any());
 
     // assert response msg is response to original
     assertThat(jsonRpcResponse.getId(), is(requestUuid.toString()));
   }
 
   @Test
-  public void invokeManyRpcMessages() {
+  public void invokeManyColferRpcMessages() {
 
     // start invoker thread
     execService.execute(socketRpcInvoker);
@@ -228,7 +227,7 @@ public class SocketRpcInvokerTest extends ZmqEnabledTest {
     assertThat(socketRpcInvoker.getExecRequestsDispatched(), is((long) msgCount));
     assertThat(socketRpcInvoker.getRequestsDispatched(), is((long) msgCount));
     assertThat(listenerReceived.get(), is(msgCount));
-    verify(incomingMessageDispatcher, times(msgCount)).incomingCall(any(), any(), anyBoolean());
+    verify(incomingMessageDispatcher, times(msgCount)).incomingCall(any(), any(), any());
 
     // assert response msg is response to original
     for (int i = 0; i < msgCount; i++) {
@@ -280,6 +279,6 @@ public class SocketRpcInvokerTest extends ZmqEnabledTest {
     assertThat(socketRpcInvoker.getExecRequestsDispatched(), is((long) msgCount));
     assertThat(socketRpcInvoker.getRequestsDispatched(), is((long) msgCount));
     assertThat(listenerReceived.get(), is(msgCount));
-    verify(incomingMessageDispatcher, times(msgCount)).incomingCall(any(), any(), anyBoolean());
+    verify(incomingMessageDispatcher, times(msgCount)).incomingCall(any(), any(), any());
   }
 }

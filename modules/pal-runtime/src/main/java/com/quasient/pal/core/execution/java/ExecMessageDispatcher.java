@@ -9,6 +9,7 @@
  */
 package com.quasient.pal.core.execution.java;
 
+import com.quasient.pal.core.transport.MessageChannelType;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.types.MessageType;
 
@@ -21,25 +22,17 @@ import com.quasient.pal.messages.types.MessageType;
  * #getSupportedMessageType()} method.
  */
 public interface ExecMessageDispatcher {
-  /**
-   * Dispatches the provided execution message.
-   *
-   * @param incomingCall the execution message to process; should be non-null.
-   * @return the response execution message produced after processing, or null if no response is
-   *     generated.
-   */
-  ExecMessage dispatchIncoming(ExecMessage incomingCall);
 
   /**
    * Dispatches the provided execution message.
    *
    * @param incomingCall the execution message to process; should be non-null.
-   * @param isDirect flag indicating whether the message is via Peer (direct) or from a Log
+   * @param messageChannel flag indicating whether the message is via Peer (direct) or from a Log
    *     (non-direct)
    * @return the response execution message produced after processing, or null if no response is
    *     produced.
    */
-  ExecMessage dispatchIncoming(ExecMessage incomingCall, boolean isDirect);
+  ExecMessage dispatchIncoming(ExecMessage incomingCall, MessageChannelType messageChannel);
 
   /**
    * Retrieves the message type that this dispatcher is designed to handle.

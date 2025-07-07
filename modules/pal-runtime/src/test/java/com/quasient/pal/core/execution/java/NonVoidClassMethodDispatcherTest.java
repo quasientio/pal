@@ -26,6 +26,7 @@ import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.common.runtime.Context;
 import com.quasient.pal.core.ExecMessageMatchers.ComesFromClass;
 import com.quasient.pal.core.ExecMessageMatchers.ComesFromReflectable;
+import com.quasient.pal.core.transport.MessageChannelType;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.serdes.Unwrapper;
 import java.util.Random;
@@ -111,7 +112,8 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // dispatch
     ExecMessage responseMessage =
-        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+        ((ExecMessageDispatcher) dispatcher)
+            .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
@@ -177,7 +179,8 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // dispatch
     ExecMessage responseMessage =
-        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+        ((ExecMessageDispatcher) dispatcher)
+            .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
@@ -241,7 +244,8 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // dispatch
     ExecMessage responseMessage =
-        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+        ((ExecMessageDispatcher) dispatcher)
+            .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
@@ -283,7 +287,8 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // dispatch
     ExecMessage responseMessage =
-        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+        ((ExecMessageDispatcher) dispatcher)
+            .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
@@ -322,7 +327,8 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // dispatch
     ExecMessage responseMessage =
-        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+        ((ExecMessageDispatcher) dispatcher)
+            .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
@@ -393,7 +399,8 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // dispatch
     ExecMessage responseMessage =
-        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+        ((ExecMessageDispatcher) dispatcher)
+            .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
@@ -462,7 +469,8 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // dispatch
     ExecMessage responseMessage =
-        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+        ((ExecMessageDispatcher) dispatcher)
+            .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
@@ -496,7 +504,8 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // dispatch
     ExecMessage responseMessage =
-        ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+        ((ExecMessageDispatcher) dispatcher)
+            .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
@@ -529,7 +538,8 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // dispatch
     ExecMessage responseMessage =
-        ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
+        ((ExecMessageDispatcher) onlyPublicDispatcher)
+            .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
@@ -561,7 +571,8 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
     ExecMessage responseMessage =
-        ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
+        ((ExecMessageDispatcher) onlyPublicDispatcher)
+            .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     assertThat(responseMessage.getReturnValue(), is(nullValue()));
     assertThat(
@@ -569,7 +580,9 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
         is("java.lang.NoSuchMethodException"));
 
     // dispatch with the all access dispatcher - expect no exception
-    responseMessage = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    responseMessage =
+        ((ExecMessageDispatcher) dispatcher)
+            .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
     assertNotNull(responseMessage.getReturnValue());
     assertNull(responseMessage.getRaisedThrowable());
   }
@@ -596,14 +609,17 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
     ExecMessage responseMessage =
-        ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
+        ((ExecMessageDispatcher) onlyPublicDispatcher)
+            .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
     assertThat(responseMessage.getReturnValue(), is(nullValue()));
     assertThat(
         responseMessage.getRaisedThrowable().getThrowable().getType(),
         is("java.lang.NoSuchMethodException"));
 
     // dispatch with the all access dispatcher - expect no exception
-    responseMessage = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    responseMessage =
+        ((ExecMessageDispatcher) dispatcher)
+            .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
     assertNotNull(responseMessage.getReturnValue());
     assertNull(responseMessage.getRaisedThrowable());
   }
@@ -630,14 +646,17 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
     ExecMessage responseMessage =
-        ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
+        ((ExecMessageDispatcher) onlyPublicDispatcher)
+            .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
     assertThat(responseMessage.getReturnValue(), is(nullValue()));
     assertThat(
         responseMessage.getRaisedThrowable().getThrowable().getType(),
         is("java.lang.NoSuchMethodException"));
 
     // dispatch with the all access dispatcher - expect no exception
-    responseMessage = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    responseMessage =
+        ((ExecMessageDispatcher) dispatcher)
+            .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
     assertNotNull(responseMessage.getReturnValue());
     assertNull(responseMessage.getRaisedThrowable());
   }

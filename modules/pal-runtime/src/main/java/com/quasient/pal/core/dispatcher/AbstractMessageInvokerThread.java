@@ -14,6 +14,7 @@ import static java.lang.String.format;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.quasient.pal.core.transport.MessageChannelType;
 import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import com.quasient.pal.messages.colfer.ControlMessage;
 import com.quasient.pal.messages.colfer.ExecMessage;
@@ -207,43 +208,25 @@ public abstract class AbstractMessageInvokerThread extends Thread {
   public abstract void run();
 
   /**
-   * Dispatches an EXEC message contained within the given Message. This method only supports the
-   * processing of ExecMessages and uses the provided record offset to determine if the call is
-   * direct. After dispatching, it notifies registered listeners.
-   *
-   * @param message the message containing an ExecMessage to be processed
-   * @param recordOffset the record offset; if null, the request is considered direct
-   * @throws IllegalArgumentException if the message does not contain an ExecMessage
-   */
-  protected final void dispatch(Message message, Long recordOffset) {
-    final ExecMessage execMessage = message.getExecMessage();
-    if (execMessage != null) {
-      dispatch(
-          message.getExecMessage(), MessageType.fromId(message.getMessageType()), recordOffset);
-      notifyMessageDispatched(message);
-      return;
-    }
-
-    // Log message invoker can only dispatch ExecMessages
-    throw new IllegalArgumentException(format("No handler for message: %s", message));
-  }
-
-  /**
    * Dispatches a Message based on its internal type (ExecMessage, ControlMessage, or MetaMessage)
    * and returns the corresponding wrapped response. Listeners are notified after successful
    * dispatch.
    *
    * @param message the message to be dispatched
+   * @param channelType the channel (transport) through which the message was received
    * @return the response message wrapped via the MessageBuilder
    * @throws IllegalArgumentException if the message type is not supported for dispatching
    */
-  protected final Message dispatch(Message message) {
+  protected final Message dispatch(Message message, MessageChannelType channelType) {
     final ExecMessage execMessage = message.getExecMessage();
     if (execMessage != null) {
       final Message response =
           messageBuilder.wrap(
               dispatch(
-                  message.getExecMessage(), MessageType.fromId(message.getMessageType()), null));
+                  message.getExecMessage(),
+                  MessageType.fromId(message.getMessageType()),
+                  channelType,
+                  null));
       notifyMessageDispatched(message);
       return response;
     }
@@ -273,18 +256,20 @@ public abstract class AbstractMessageInvokerThread extends Thread {
    *
    * @param requestMsg the ExecMessage to be dispatched
    * @param messageType the type of the message derived from the message's type identifier
-   * @param recordOffset the record offset associated with the message; if null, the dispatch is
-   *     considered direct
+   * @param channelType the channel/transport from which the message came
+   * @param recordOffset the record offset associated with the message, when coming from a Log
    * @return the response ExecMessage generated after processing
    */
-  private ExecMessage dispatch(
-      ExecMessage requestMsg, MessageType messageType, @Nullable Long recordOffset) {
-    final boolean isDirectRequest = recordOffset == null;
+  protected ExecMessage dispatch(
+      ExecMessage requestMsg,
+      MessageType messageType,
+      MessageChannelType channelType,
+      @Nullable Long recordOffset) {
     ExecMessage responseMessage;
     boolean dispatched = false;
     try {
       responseMessage =
-          incomingMessageDispatcher.incomingCall(requestMsg, messageType, isDirectRequest);
+          incomingMessageDispatcher.incomingCall(requestMsg, messageType, channelType);
       dispatched = true;
     } finally {
       DispatchResultType resultType =
@@ -495,7 +480,7 @@ public abstract class AbstractMessageInvokerThread extends Thread {
    *
    * @param message the message that has been processed and dispatched
    */
-  private void notifyMessageDispatched(Message message) {
+  protected void notifyMessageDispatched(Message message) {
     for (MessageDispatchListener listener : messageDispatchListeners) {
       listener.onMessageDispatched(message);
     }
@@ -542,6 +527,20 @@ public abstract class AbstractMessageInvokerThread extends Thread {
           responseId,
           requestId,
           took);
+    }
+  }
+
+  /**
+   * Logs details about the dispatch event including request identifier and the elapsed time since
+   * the given start timestamp.
+   *
+   * @param requestId the identifier of the request message
+   * @param dispatchStart the timestamp marking the start of the dispatch process
+   */
+  protected void logMessageDispatch(String requestId, long dispatchStart) {
+    if (logger.isDebugEnabled()) {
+      final long took = System.currentTimeMillis() - dispatchStart;
+      logger.debug("Dispatched request w/id: {} in {} ms", requestId, took);
     }
   }
 }

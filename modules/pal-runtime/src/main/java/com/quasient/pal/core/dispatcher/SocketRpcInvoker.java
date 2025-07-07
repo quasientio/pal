@@ -18,6 +18,7 @@ import static com.quasient.pal.serdes.jsonrpc.JsonRpcMessageUtils.parseAndValida
 import com.quasient.pal.core.internal.messages.InboundJsonRpcRequestMsg;
 import com.quasient.pal.core.internal.messages.OutboundJsonRpcResponseMsg;
 import com.quasient.pal.core.service.RunOptions;
+import com.quasient.pal.core.transport.MessageChannelType;
 import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.messages.jsonrpc.JsonRpcRequest;
@@ -277,10 +278,10 @@ class SocketRpcInvoker extends AbstractMessageInvokerThread {
   }
 
   /**
-   * Dispatches an BIN-RPC request by unmarshalling the message, processing it, and sending an
+   * Dispatches an ZMQ-RPC request by unmarshalling the message, processing it, and sending an
    * appropriate response.
    *
-   * @param rpcReq the raw BIN-RPC message bytes to be processed
+   * @param rpcReq the raw ZMQ-RPC message bytes to be processed
    */
   private void dispatchRpcRequest(byte[] rpcReq) {
 
@@ -291,7 +292,7 @@ class SocketRpcInvoker extends AbstractMessageInvokerThread {
     try {
       requestMsg.unmarshal(rpcReq, 0);
       if (logger.isDebugEnabled()) {
-        logger.debug("Received RPC message with id: {}", getMessageId(requestMsg));
+        logger.debug("Received ZMQ-RPC message with id: {}", getMessageId(requestMsg));
       }
     } catch (Exception e) {
       logger.error("Caught exception parsing message", e);
@@ -301,7 +302,7 @@ class SocketRpcInvoker extends AbstractMessageInvokerThread {
     // dispatch
     if (!unmarshalError) {
       try {
-        final Message responseMessage = dispatch(requestMsg);
+        final Message responseMessage = dispatch(requestMsg, MessageChannelType.ZMQ_SOCKET_RPC);
 
         // send response
         rpcSocket.send(ColferUtils.toBytes(responseMessage));
@@ -433,7 +434,7 @@ class SocketRpcInvoker extends AbstractMessageInvokerThread {
     // dispatch
     Message responseMessage;
     try {
-      responseMessage = dispatch(requestMsg);
+      responseMessage = dispatch(requestMsg, MessageChannelType.WEBSOCKET_RPC);
     } catch (Exception dispatchException) {
 
       // dispatching failed, log and send error response

@@ -83,7 +83,7 @@ public class SocketRpcExecutor extends ThreadPool {
             messageBuilder,
             incomingMessageDispatcher,
             outboundMessageGateway,
-            MessageChannelType.SOCKET_RPC,
+            MessageChannelType.ZMQ_SOCKET_RPC,
             customClassloader,
             peerUuid));
   }
