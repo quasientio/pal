@@ -42,14 +42,14 @@ import java.util.UUID;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
-public abstract class AbstractBinaryRpcMessageIT extends AbstractRpcMessageIT
+public abstract class AbstractColferRpcMessageIT extends AbstractRpcMessageIT
     implements ExecMessageAssertions {
 
-  protected AbstractBinaryRpcMessageIT(TargetType targetType) {
+  protected AbstractColferRpcMessageIT(TargetType targetType) {
     super(targetType);
   }
 
-  protected AbstractBinaryRpcMessageIT() {
+  protected AbstractColferRpcMessageIT() {
     this(TargetType.PEER);
   }
 

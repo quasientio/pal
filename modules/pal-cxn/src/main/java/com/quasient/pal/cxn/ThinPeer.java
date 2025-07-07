@@ -500,7 +500,7 @@ public class ThinPeer implements AutoCloseable {
           self.setName(peerName);
         }
         if (this.rpcAddress != null) {
-          self.setRpcAddress(rpcAddress);
+          self.setZmqRpcAddress(rpcAddress);
         }
         getPalDirectory().createPeer(self);
         peerLease = getPalDirectory().createPeerLease(self.getUuid(), PEER_KA_SECS);
@@ -605,7 +605,7 @@ public class ThinPeer implements AutoCloseable {
       this.peerSocket = zmqContext.createSocket(SocketType.REQ);
     }
     if (initialPeer != null) {
-      if (initialPeer.getRpcAddress() != null || initialPeer.getJsonrpcAddress() != null) {
+      if (initialPeer.getZmqRpcAddress() != null || initialPeer.getJsonrpcAddress() != null) {
         connectToPeer(initialPeer);
       } else if (initialPeer.getUuid() != null) {
         connectToPeer(initialPeer.getUuid());
@@ -668,7 +668,7 @@ public class ThinPeer implements AutoCloseable {
             .array();
 
     peerSocket.setIdentity(identityBytes);
-    peerSocket.connect(peer.getRpcAddress());
+    peerSocket.connect(peer.getZmqRpcAddress());
     isZmqSocketConnected = true;
     currentPeer = peer;
     talkingToPeer = true;

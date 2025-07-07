@@ -481,7 +481,7 @@ public class PalDirectory implements AutoCloseable {
     if (pst.mtimeMillis() != 0L) { // 0 means “not present”
       p.setMtime(pst.mtimeMillis());
     }
-    p.setRpcAddress(pst.binRpc());
+    p.setZmqRpcAddress(pst.zmqRpc());
     p.setJsonrpcAddress(pst.jsonRpc());
     p.setPubAddress(pst.pub());
     p.setJmxAddress(pst.jmx());
@@ -532,7 +532,7 @@ public class PalDirectory implements AutoCloseable {
         case "state" -> {
           PeerState st = gson.fromJson(kv.getValue().toString(UTF8), PeerState.class);
           if (st.mtimeMillis() != 0) p.setMtime(st.mtimeMillis());
-          p.setRpcAddress(st.binRpc());
+          p.setZmqRpcAddress(st.zmqRpc());
           p.setJsonrpcAddress(st.jsonRpc());
           p.setPubAddress(st.pub());
           p.setJmxAddress(st.jmx());
@@ -1662,13 +1662,13 @@ public class PalDirectory implements AutoCloseable {
    * Holds the mutable state information for a peer.
    *
    * @param mtimeMillis the last-modified time in epoch milliseconds
-   * @param binRpc the ZMQ RPC endpoint address
+   * @param zmqRpc the ZMQ RPC endpoint address
    * @param jsonRpc the JSON-RPC endpoint address
    * @param pub the publish-subscribe endpoint address
    * @param jmx the JMX management endpoint address
    */
   private record PeerState(
-      long mtimeMillis, String binRpc, String jsonRpc, String pub, String jmx) {
+      long mtimeMillis, String zmqRpc, String jsonRpc, String pub, String jmx) {
 
     /**
      * Creates a new {@code PeerState} instance from the given {@link PeerInfo}.
@@ -1680,7 +1680,7 @@ public class PalDirectory implements AutoCloseable {
     static PeerState from(PeerInfo p) {
       return new PeerState(
           toMillis(p.getMTime()),
-          p.getRpcAddress(),
+          p.getZmqRpcAddress(),
           p.getJsonrpcAddress(),
           p.getPubAddress(),
           p.getJmxAddress());

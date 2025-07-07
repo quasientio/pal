@@ -113,7 +113,7 @@ public class AbstractTool {
    * @return the name of the message type if identifiable; otherwise, {@code null}
    */
   protected static String getMessageTypeName(LogMessage<?> message) {
-    if (isBinaryRpc(message)) {
+    if (isColferMessage(message)) {
       return getMessageTypeName((Message) message.getContent());
     } else if (isJsonRpc(message)) {
       return getMessageType((JsonRpcMessage) message.getContent()).name();
@@ -132,7 +132,7 @@ public class AbstractTool {
    *     the format is unrecognized
    */
   protected static String getMessageFormat(LogMessage<?> logMessage) {
-    if (isBinaryRpc(logMessage)) {
+    if (isColferMessage(logMessage)) {
       return "BINARY";
     } else if (isJsonRpc(logMessage)) {
       return "JSON";
@@ -141,13 +141,13 @@ public class AbstractTool {
   }
 
   /**
-   * Checks if the content of a log message is a binary RPC message.
+   * Checks if the content of a log message is a binary, colfer-serialized, RPC message.
    *
    * @param logMessage the log message to check
    * @return {@code true} if the message content is an instance of {@link Message}; {@code false}
    *     otherwise
    */
-  protected static boolean isBinaryRpc(LogMessage<?> logMessage) {
+  protected static boolean isColferMessage(LogMessage<?> logMessage) {
     return logMessage.getContent() instanceof Message;
   }
 
@@ -170,7 +170,7 @@ public class AbstractTool {
    *     null}
    */
   protected static String getId(LogMessage<?> logMessage) {
-    if (isBinaryRpc(logMessage)) {
+    if (isColferMessage(logMessage)) {
       return getMessageId((Message) logMessage.getContent());
     } else if (isJsonRpc(logMessage)) {
       return ((JsonRpcMessage) logMessage.getContent()).getId();
@@ -186,7 +186,7 @@ public class AbstractTool {
    * @throws IllegalArgumentException if serialization fails or if the message type is unknown
    */
   protected static String getMessageContentAsPrettyJson(LogMessage<?> logMessage) {
-    if (isBinaryRpc(logMessage)) {
+    if (isColferMessage(logMessage)) {
       return ColferUtils.toJson((Message) logMessage.getContent(), true);
     } else if (isJsonRpc(logMessage)) {
       try {
@@ -213,7 +213,7 @@ public class AbstractTool {
    * @throws IllegalArgumentException if the message type is unknown
    */
   protected static String getMessageOneLiner(LogMessage<?> logMessage) {
-    if (isBinaryRpc(logMessage)) {
+    if (isColferMessage(logMessage)) {
       Message message = (Message) logMessage.getContent();
       MessageType messageType = MessageType.fromId(message.getMessageType());
       if (messageType.getFamily().equals(MessageFamily.EXEC)) {

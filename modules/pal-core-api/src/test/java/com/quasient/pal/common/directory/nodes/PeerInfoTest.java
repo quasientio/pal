@@ -28,7 +28,7 @@ public class PeerInfoTest {
   private PeerInfo peerInfo;
   private final UUID peerUuid = UUID.randomUUID();
   private final String peerName = "peer-ab";
-  private final String rpcAddress = "localhost:2991";
+  private final String zmqRpcAddress = "localhost:2991";
   private final String jsonRpcAddress = "localhost:8993";
   private final String pubAddress = "localhost:2992";
   private final String jmxAddress = "localhost:2993";
@@ -36,7 +36,7 @@ public class PeerInfoTest {
   @Before
   public void setUp() {
     peerInfo = new PeerInfo(peerUuid, peerName);
-    peerInfo.setRpcAddress(rpcAddress);
+    peerInfo.setZmqRpcAddress(zmqRpcAddress);
     peerInfo.setJsonrpcAddress(jsonRpcAddress);
     peerInfo.setPubAddress(pubAddress);
     peerInfo.setJmxAddress(jmxAddress);
@@ -53,8 +53,8 @@ public class PeerInfoTest {
   }
 
   @Test
-  public void getRpcAddress() {
-    assertEquals(rpcAddress, peerInfo.getRpcAddress());
+  public void getZmqRpcAddress() {
+    assertEquals(zmqRpcAddress, peerInfo.getZmqRpcAddress());
   }
 
   @Test
@@ -108,8 +108,8 @@ public class PeerInfoTest {
                 + ", name='"
                 + peerName
                 + '\''
-                + ", rpcAddress='"
-                + rpcAddress
+                + ", zmqRpcAddress='"
+                + zmqRpcAddress
                 + '\''
                 + ", jsonRpcAddress='"
                 + jsonRpcAddress

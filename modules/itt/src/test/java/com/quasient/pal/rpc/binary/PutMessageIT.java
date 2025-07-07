@@ -33,7 +33,7 @@ import org.junit.runners.Parameterized;
  * </pre>
  */
 @RunWith(Parameterized.class)
-public class PutMessageIT extends AbstractBinaryRpcMessageIT {
+public class PutMessageIT extends AbstractColferRpcMessageIT {
 
   protected static final String CLASS_NAME = "com.quasient.pal.apps.rpc.Variables";
 

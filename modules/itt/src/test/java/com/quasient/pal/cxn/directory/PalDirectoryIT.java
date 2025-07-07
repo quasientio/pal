@@ -101,7 +101,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   @Test
   public void createPeer_newPeer_peerCreated() throws Exception {
     final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID());
-    peerInfo.setRpcAddress("tcp://127.0.0.1:5671");
+    peerInfo.setZmqRpcAddress("tcp://127.0.0.1:5671");
 
     // pre-assertions
     assertFalse(palDirectory.peerExists(peerInfo.getUuid()));
@@ -118,7 +118,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   public void createPeer_peerUuidAlreadyExists_noErrorNoUpdate() throws Exception {
     UUID peerOneId = UUID.randomUUID();
     final PeerInfo peerOneInfo = new PeerInfo(peerOneId);
-    peerOneInfo.setRpcAddress("tcp://127.0.0.1:5671");
+    peerOneInfo.setZmqRpcAddress("tcp://127.0.0.1:5671");
 
     // pre-assertions
     assertFalse(palDirectory.peerExists(peerOneInfo.getUuid()));
@@ -132,7 +132,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
 
     // try to create another peer with same uuid
     final PeerInfo peerTwoInfo = new PeerInfo(peerOneId);
-    peerTwoInfo.setRpcAddress("tcp://127.0.0.1:5765");
+    peerTwoInfo.setZmqRpcAddress("tcp://127.0.0.1:5765");
     palDirectory.createPeer(peerTwoInfo);
 
     // retrieve peer, ensure it's peerOne
@@ -150,7 +150,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   @Test
   public void getPeerInfo_peerExists_peer() throws Exception {
     final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "testing peer");
-    peerInfo.setRpcAddress("tcp://127.0.0.1:5671");
+    peerInfo.setZmqRpcAddress("tcp://127.0.0.1:5671");
     peerInfo.setPubAddress("tcp://localhost:7777");
     peerInfo.setJmxAddress("localhost:9012");
     palDirectory.createPeer(peerInfo);
@@ -164,10 +164,10 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     // verify
     assertEquals(peerInfo.getUuid(), retrievedPeerInfo.getUuid());
     assertEquals(peerInfo.getName(), retrievedPeerInfo.getName());
-    assertNotNull(retrievedPeerInfo.getRpcAddress());
+    assertNotNull(retrievedPeerInfo.getZmqRpcAddress());
     assertNotNull(retrievedPeerInfo.getPubAddress());
     assertNotNull(retrievedPeerInfo.getJmxAddress());
-    assertEquals(peerInfo.getRpcAddress(), retrievedPeerInfo.getRpcAddress());
+    assertEquals(peerInfo.getZmqRpcAddress(), retrievedPeerInfo.getZmqRpcAddress());
     assertEquals(peerInfo.getPubAddress(), retrievedPeerInfo.getPubAddress());
     assertEquals(peerInfo.getJmxAddress(), retrievedPeerInfo.getJmxAddress());
 
@@ -183,7 +183,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   public void deletePeer_existingPeer_peerDeleted() throws Exception {
     // create
     final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID());
-    peerInfo.setRpcAddress("tcp://127.0.0.1:5671");
+    peerInfo.setZmqRpcAddress("tcp://127.0.0.1:5671");
     palDirectory.createPeer(peerInfo);
     createdPeers.add(peerInfo.getUuid());
 
@@ -205,7 +205,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     for (int i = 0; i < peersToCreate; i++) {
       // create a peer
       final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID());
-      peerInfo.setRpcAddress("tcp://127.0.0.1:5671");
+      peerInfo.setZmqRpcAddress("tcp://127.0.0.1:5671");
       palDirectory.createPeer(peerInfo);
       createdPeers.add(peerInfo.getUuid());
     }
@@ -241,7 +241,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     for (int i = 0; i < peersToCreate; i++) {
       // create a peer
       final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID());
-      peerInfo.setRpcAddress("tcp://127.0.0.1:5671");
+      peerInfo.setZmqRpcAddress("tcp://127.0.0.1:5671");
       palDirectory.createPeer(peerInfo);
       createdPeers.add(peerInfo.getUuid());
     }
@@ -362,7 +362,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
 
     // create new peer
     final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID());
-    peerInfo.setRpcAddress("tcp://127.0.0.1:5671");
+    peerInfo.setZmqRpcAddress("tcp://127.0.0.1:5671");
     palDirectory.createPeer(peerInfo);
     createdPeers.add(peerInfo.getUuid());
 

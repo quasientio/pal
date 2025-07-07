@@ -2,7 +2,7 @@
   <configuration default="false" name="ITTs" type="JUnit" factoryName="JUnit">
     <extension name="coverage">
       <pattern>
-        <option name="PATTERN" value="com.quasient.pal.rpc.binary.*" />
+        <option name="PATTERN" value="com.quasient.pal.rpc.binary.AbstractColferRpcMessageIT" />
         <option name="ENABLED" value="true" />
       </pattern>
       <pattern>

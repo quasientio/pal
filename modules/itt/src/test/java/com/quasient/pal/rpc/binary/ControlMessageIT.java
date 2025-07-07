@@ -18,7 +18,7 @@ import com.quasient.pal.messages.colfer.ReturnValue;
 import javax.annotation.Nullable;
 import org.junit.Test;
 
-public class ControlMessageIT extends AbstractBinaryRpcMessageIT {
+public class ControlMessageIT extends AbstractColferRpcMessageIT {
   private ReturnValue addToList(ObjectRef listObjRef, String value) {
     return addToList(listObjRef, value, null);
   }

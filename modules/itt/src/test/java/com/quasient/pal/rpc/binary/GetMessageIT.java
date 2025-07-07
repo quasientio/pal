@@ -26,7 +26,7 @@ import org.junit.runners.Parameterized;
  * <p>TODO: arrays objectrefs rest of primitive types (?)
  */
 @RunWith(Parameterized.class)
-public class GetMessageIT extends AbstractBinaryRpcMessageIT {
+public class GetMessageIT extends AbstractColferRpcMessageIT {
 
   private static final String CLASS_NAME = "com.quasient.pal.apps.rpc.Variables";
 

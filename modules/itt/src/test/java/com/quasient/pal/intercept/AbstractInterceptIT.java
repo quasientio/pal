@@ -183,7 +183,7 @@ public class AbstractInterceptIT extends AbstractIntegrationTest implements Exec
 
   private Optional<PeerInfo> findRegisteredPeerListening() throws Exception {
     return palDirectory.listPeers().stream()
-        .filter(peer -> !myPeerUuid.equals(peer.getUuid()) && peer.getRpcAddress() != null)
+        .filter(peer -> !myPeerUuid.equals(peer.getUuid()) && peer.getZmqRpcAddress() != null)
         .findFirst();
   }
 

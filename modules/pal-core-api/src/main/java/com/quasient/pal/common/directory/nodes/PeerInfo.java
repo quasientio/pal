@@ -34,12 +34,12 @@ public final class PeerInfo extends InfoNode implements Comparable<PeerInfo> {
   private UUID uuid;
 
   /**
-   * The Binary RPC (Remote Procedure Call) address for this peer.
+   * The ZMQ RPC address for this peer.
    *
-   * <p>Used for initiating Binary RPC communications with the peer. Should be a valid network
-   * address.
+   * <p>Used for initiating ZMQ RPC communications with the peer. Should be a valid network address
+   * prefixed by "tcp://".
    */
-  private String rpcAddress;
+  private String zmqRpcAddress;
 
   /**
    * The JSON-RPC address for this peer.
@@ -114,12 +114,12 @@ public final class PeerInfo extends InfoNode implements Comparable<PeerInfo> {
   }
 
   /**
-   * Retrieves the RPC address of this peer.
+   * Retrieves the ZMQ-RPC address of this peer.
    *
-   * @return the RPC address, or {@code null} if not set
+   * @return the ZMQ-RPC address, or {@code null} if not set
    */
-  public String getRpcAddress() {
-    return rpcAddress;
+  public String getZmqRpcAddress() {
+    return zmqRpcAddress;
   }
 
   /**
@@ -132,14 +132,15 @@ public final class PeerInfo extends InfoNode implements Comparable<PeerInfo> {
   }
 
   /**
-   * Sets the RPC address for this peer.
+   * Sets the ZMQ-RPC address for this peer.
    *
-   * <p>This address is used for Remote Procedure Calls and should be a valid network address.
+   * <p>This address is used for ZMQ-based Remote Procedure Calls and should be a valid network
+   * address prefixed by "tcp://".
    *
-   * @param rpcAddress the RPC address to assign; can be {@code null} to unset
+   * @param zmqRpcAddress the ZMQ-RPC address to assign; can be {@code null} to unset
    */
-  public void setRpcAddress(String rpcAddress) {
-    this.rpcAddress = rpcAddress;
+  public void setZmqRpcAddress(String zmqRpcAddress) {
+    this.zmqRpcAddress = zmqRpcAddress;
   }
 
   /**
@@ -245,7 +246,7 @@ public final class PeerInfo extends InfoNode implements Comparable<PeerInfo> {
     }
     PeerInfo peerInfo = (PeerInfo) o;
     return Objects.equals(uuid, peerInfo.uuid)
-        && Objects.equals(rpcAddress, peerInfo.rpcAddress)
+        && Objects.equals(zmqRpcAddress, peerInfo.zmqRpcAddress)
         && Objects.equals(jsonrpcAddress, peerInfo.jsonrpcAddress);
   }
 
@@ -256,7 +257,7 @@ public final class PeerInfo extends InfoNode implements Comparable<PeerInfo> {
    */
   @Override
   public int hashCode() {
-    return Objects.hash(uuid, rpcAddress, jsonrpcAddress);
+    return Objects.hash(uuid, zmqRpcAddress, jsonrpcAddress);
   }
 
   /**
@@ -272,8 +273,8 @@ public final class PeerInfo extends InfoNode implements Comparable<PeerInfo> {
         + ", name='"
         + name
         + '\''
-        + ", rpcAddress='"
-        + rpcAddress
+        + ", zmqRpcAddress='"
+        + zmqRpcAddress
         + '\''
         + ", jsonRpcAddress='"
         + jsonrpcAddress

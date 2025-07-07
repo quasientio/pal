@@ -26,7 +26,7 @@ import org.junit.runners.Parameterized;
 
 /** Naming convention to use: methodName_stateUnderTest_expectedBehavior. */
 @RunWith(Parameterized.class)
-public class ComplexArgsMessageIT extends AbstractBinaryRpcMessageIT {
+public class ComplexArgsMessageIT extends AbstractColferRpcMessageIT {
 
   private static final String CLASS_NAME = "com.quasient.pal.apps.rpc.Methods";
 

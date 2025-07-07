@@ -925,7 +925,7 @@ public class Main implements Callable<Integer> {
       self = new PeerInfo(uuid);
       // public listening interfaces
       if (runOptions.contains(RunOptions.WITH_RPC)) {
-        self.setRpcAddress(properties.getProperty("in.rpc"));
+        self.setZmqRpcAddress(properties.getProperty("in.rpc"));
       }
       if (runOptions.contains(RunOptions.WITH_JSONRPC)) {
         self.setJsonrpcAddress(properties.getProperty("in.jsonrpc"));

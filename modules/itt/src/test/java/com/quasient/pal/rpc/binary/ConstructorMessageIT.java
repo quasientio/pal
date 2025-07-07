@@ -25,7 +25,7 @@ import org.junit.runners.Parameterized;
  * [ticket:15]) - inner constructor (commented out below), if it makes sense
  */
 @RunWith(Parameterized.class)
-public class ConstructorMessageIT extends AbstractBinaryRpcMessageIT {
+public class ConstructorMessageIT extends AbstractColferRpcMessageIT {
 
   protected final String className = "com.quasient.pal.apps.rpc.Constructors";
 

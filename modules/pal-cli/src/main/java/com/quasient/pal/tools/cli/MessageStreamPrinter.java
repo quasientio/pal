@@ -443,7 +443,7 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
     }
     // 4) fromThread
     if (threadName != null) {
-      if (isBinaryRpc(msg)) {
+      if (isColferMessage(msg)) {
         Message m = (Message) msg.getContent();
         if (m != null && m.getExecMessage() != null) {
           String t = m.getExecMessage().getThreadName();

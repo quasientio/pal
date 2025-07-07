@@ -405,7 +405,7 @@ public class Caller extends AbstractPalSubcommand {
       } else {
         peerInfo = new PeerInfo();
         if (peerAddress.startsWith("tcp://")) {
-          peerInfo.setRpcAddress(peerAddress);
+          peerInfo.setZmqRpcAddress(peerAddress);
           inferredRpcType = RpcType.BIN_RPC;
         } else if (peerAddress.startsWith("ws://")) {
           peerInfo.setJsonrpcAddress(peerAddress);
@@ -664,7 +664,7 @@ public class Caller extends AbstractPalSubcommand {
    */
   private RpcType getRpcTypeForPeer(UUID peerUuid) throws ExecutionException, InterruptedException {
     PeerInfo peerInfo = getPalDirectory().getPeer(peerUuid);
-    boolean listensToRpc = peerInfo.getRpcAddress() != null;
+    boolean listensToRpc = peerInfo.getZmqRpcAddress() != null;
     boolean listensToJsonRpc = peerInfo.getJsonrpcAddress() != null;
     if (listensToRpc && listensToJsonRpc) {
       if (!optionGiven(rpcType)) {

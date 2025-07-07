@@ -513,7 +513,7 @@ public class OutboundMessageGateway {
     // get peer's address
     final PalDirectory palDirectory =
         directoryConnectionProvider.get().orElseThrow(RuntimeException::new);
-    String interceptorAddress = palDirectory.getPeer(peer).getRpcAddress();
+    String interceptorAddress = palDirectory.getPeer(peer).getZmqRpcAddress();
     reqSocket.connect(interceptorAddress);
     // store in thread-local peer->socket map
     callbackSockets.get().put(peer, reqSocket);

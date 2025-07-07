@@ -1516,18 +1516,18 @@ public final class MessageBuilder {
   // <editor-fold desc="JSON-RPC messages">
 
   /**
-   * Converts a list of JSON-RPC {@link Argument} objects to an array of binary {@link Parameter}
+   * Converts a list of JSON-RPC {@link Argument} objects to an array of colfer {@link Parameter}
    * objects.
    *
    * @param jsonArgs the list of JSON-RPC arguments
    * @return an array of {@code Parameter} objects representing the binary RPC parameters
    */
-  private Parameter[] jsonRpcParamsToBinaryRpcParams(List<Argument> jsonArgs) {
+  private Parameter[] jsonRpcParamsToColferParams(List<Argument> jsonArgs) {
     if (jsonArgs == null || jsonArgs.isEmpty()) {
       return new Parameter[0];
     }
 
-    Parameter[] binaryRpcParams = new Parameter[jsonArgs.size()];
+    Parameter[] colferParams = new Parameter[jsonArgs.size()];
     for (int i = 0; i < jsonArgs.size(); i++) {
       Argument arg = jsonArgs.get(i);
       Obj valueObj;
@@ -1546,9 +1546,9 @@ public final class MessageBuilder {
             arg,
             ColferUtils.toJson(param));
       }
-      binaryRpcParams[i] = param;
+      colferParams[i] = param;
     }
-    return binaryRpcParams;
+    return colferParams;
   }
 
   /**
@@ -1565,7 +1565,7 @@ public final class MessageBuilder {
     instanceMethodCall.setClazz(getWrappedClass(className));
     instanceMethodCall.setName(callParams.getMethod());
     instanceMethodCall.setObjectRef(String.valueOf(callParams.getInstance()));
-    instanceMethodCall.setParameters(jsonRpcParamsToBinaryRpcParams(callParams.getArgs()));
+    instanceMethodCall.setParameters(jsonRpcParamsToColferParams(callParams.getArgs()));
     return instanceMethodCall;
   }
 
@@ -1582,7 +1582,7 @@ public final class MessageBuilder {
     ClassMethodCall classMethodCall = new ClassMethodCall();
     classMethodCall.setClazz(getWrappedClass(className));
     classMethodCall.setName(callParams.getMethod());
-    classMethodCall.setParameters(jsonRpcParamsToBinaryRpcParams(callParams.getArgs()));
+    classMethodCall.setParameters(jsonRpcParamsToColferParams(callParams.getArgs()));
     return classMethodCall;
   }
 
@@ -1685,7 +1685,7 @@ public final class MessageBuilder {
 
     ConstructorCall constructorCall = new ConstructorCall();
     constructorCall.setClazz(new com.quasient.pal.messages.colfer.Class().withName(className));
-    constructorCall.setParameters(jsonRpcParamsToBinaryRpcParams(newParams.getArgs()));
+    constructorCall.setParameters(jsonRpcParamsToColferParams(newParams.getArgs()));
     return constructorCall;
   }
 
@@ -1765,7 +1765,7 @@ public final class MessageBuilder {
 
     // get params
     List<Argument> args = jsonRpcRequest.getParams().getArgs();
-    Parameter[] params = jsonRpcParamsToBinaryRpcParams(args);
+    Parameter[] params = jsonRpcParamsToColferParams(args);
 
     return wrap(
         buildMetaMessageRequest(fromPeerUuid, jsonRpcRequest.getId(), metaServiceType, params));
@@ -1796,7 +1796,7 @@ public final class MessageBuilder {
 
     // get params
     List<Argument> args = jsonRpcRequest.getParams().getArgs();
-    Parameter[] params = jsonRpcParamsToBinaryRpcParams(args);
+    Parameter[] params = jsonRpcParamsToColferParams(args);
 
     // create control message
     ControlMessage controlMessage = buildControlCommandMessage(fromPeerUuid, command, params);

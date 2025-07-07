@@ -24,7 +24,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 /** Naming convention to use: methodName_stateUnderTest_expectedBehavior. */
-public class MetaMessageIT extends AbstractBinaryRpcMessageIT {
+public class MetaMessageIT extends AbstractColferRpcMessageIT {
 
   private static int findOccurrences(String searchString, String content) {
     // Count occurrences of the searchString in content

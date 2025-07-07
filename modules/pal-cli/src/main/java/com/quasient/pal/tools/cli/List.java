@@ -421,9 +421,10 @@ public class List extends AbstractPalSubcommand {
           PEERS_LONG_FORMAT + "%n",
           peerInfo.getUuid(),
           peerInfo.getName() == null ? "" : trimTo(peerInfo.getName(), MAX_PEER_NAME_LEN),
-          peerInfo.getRpcAddress() == null
+          peerInfo.getZmqRpcAddress() == null
               ? ""
-              : trimTo(Strings.stringAfter(peerInfo.getRpcAddress(), "tcp://"), MAX_ENDPOINT_LEN),
+              : trimTo(
+                  Strings.stringAfter(peerInfo.getZmqRpcAddress(), "tcp://"), MAX_ENDPOINT_LEN),
           peerInfo.getJsonrpcAddress() == null
               ? ""
               : trimTo(

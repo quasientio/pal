@@ -33,7 +33,7 @@ import org.junit.runners.Parameterized;
  * <p>TODO: introduce null values
  */
 @RunWith(Parameterized.class)
-public class GetArrayMessageIT extends AbstractBinaryRpcMessageIT {
+public class GetArrayMessageIT extends AbstractColferRpcMessageIT {
 
   protected final String className = "com.quasient.pal.apps.rpc.StaticArrayVars";
 

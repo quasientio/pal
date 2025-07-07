@@ -80,7 +80,7 @@ public abstract class AbstractIntegrationTest {
     Predicate<PeerInfo> hasRpcType =
         peerInfo -> {
           if (rpcType == RpcType.BIN_RPC) {
-            return peerInfo.getRpcAddress() != null;
+            return peerInfo.getZmqRpcAddress() != null;
           } else {
             return peerInfo.getJsonrpcAddress() != null;
           }
