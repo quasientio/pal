@@ -44,14 +44,14 @@ import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ.Socket;
 
-public class LogMessageInvokerTest extends ZmqEnabledTest {
+public class LogRpcInvokerTest extends ZmqEnabledTest {
   private static final Logger logger = LoggerFactory.getLogger("tests");
   private final UUID peerUuid = UUID.randomUUID();
   private static final String IN_LOG_ADDRESS = "inproc://in_log";
   private ZContext context;
   private Socket dealerSocket;
   private ExecutorService execService;
-  private LogMessageInvoker logMessageInvoker;
+  private LogRpcInvoker logRpcInvoker;
   private IncomingMessageDispatcher incomingMessageDispatcher;
   private final MessageBuilder msgBuilder = new MessageBuilder();
   private final List<ExecMessage> execMessageReplies = new ArrayList<>();
@@ -87,9 +87,8 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
                   return response;
                 });
 
-    this.logMessageInvoker =
-        new LogMessageInvoker(
-            context, msgBuilder, IN_LOG_ADDRESS, incomingMessageDispatcher, peerUuid);
+    this.logRpcInvoker =
+        new LogRpcInvoker(context, msgBuilder, IN_LOG_ADDRESS, incomingMessageDispatcher, peerUuid);
   }
 
   @After
@@ -104,7 +103,7 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
   public void invokeExecMessage() throws Exception {
 
     // start invoker thread
-    execService.execute(logMessageInvoker);
+    execService.execute(logRpcInvoker);
 
     // create new ExecMessage
     ExecMessage invokable = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
@@ -115,8 +114,8 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
     // create a MessageDispatchListener that counts down the latch when a message is dispatched
     MessageDispatchListener listener = message -> latch.countDown();
 
-    // register the listener with the logMessageInvoker
-    logMessageInvoker.addMessageDispatchListener(listener);
+    // register the listener with the logRpcInvoker
+    logRpcInvoker.addMessageDispatchListener(listener);
 
     // send request message to DEALER socket
     int fakeOffset = 0;
@@ -135,8 +134,8 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
     verify(incomingMessageDispatcher, times(1)).incomingCall(any(), any(), anyBoolean());
 
     assertThat(execMessageReplies.size(), is(1));
-    assertThat(logMessageInvoker.getExecRequestsDispatched(), is((long) 1));
-    assertThat(logMessageInvoker.getRequestsDispatched(), is((long) 1));
+    assertThat(logRpcInvoker.getExecRequestsDispatched(), is((long) 1));
+    assertThat(logRpcInvoker.getRequestsDispatched(), is((long) 1));
 
     // assert response msg is response to original
     assertThat(execMessageReplies.get(0).getResponseToId(), is(invokable.getMessageId()));
@@ -146,7 +145,7 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
   public void invokeManyMessages() throws Exception {
 
     // start invoker thread
-    execService.execute(logMessageInvoker);
+    execService.execute(logRpcInvoker);
 
     // create messages
     int fakeOffset = 0;
@@ -163,8 +162,8 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
     // create a MessageDispatchListener that counts down the latch when a message is dispatched
     MessageDispatchListener listener = message -> latch.countDown();
 
-    // register the listener with the logMessageInvoker
-    logMessageInvoker.addMessageDispatchListener(listener);
+    // register the listener with the logRpcInvoker
+    logRpcInvoker.addMessageDispatchListener(listener);
 
     // send log messages to DEALER socket
     Headers emptyHeaders = new RecordHeaders();
@@ -184,8 +183,8 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
 
     // assert number of calls
     verify(incomingMessageDispatcher, times(msgCount)).incomingCall(any(), any(), anyBoolean());
-    assertThat(logMessageInvoker.getExecRequestsDispatched(), is((long) msgCount));
-    assertThat(logMessageInvoker.getRequestsDispatched(), is((long) msgCount));
+    assertThat(logRpcInvoker.getExecRequestsDispatched(), is((long) msgCount));
+    assertThat(logRpcInvoker.getRequestsDispatched(), is((long) msgCount));
     assertThat(execMessageReplies.size(), is(msgCount));
 
     // assert response msg is response to original

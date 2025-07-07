@@ -7,7 +7,7 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
-package com.quasient.pal.core.dispatcher;
+package com.quasient.pal.core.dispatcher.thread;
 
 /**
  * A no-operation {@link Runnable} implementation that performs no actions when run.

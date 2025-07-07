@@ -9,6 +9,7 @@
  */
 package com.quasient.pal.core.dispatcher;
 
+import com.quasient.pal.core.dispatcher.thread.InvokerThreadFactory;
 import com.quasient.pal.core.service.RunOptions;
 import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
@@ -19,10 +20,10 @@ import org.zeromq.ZContext;
 /**
  * Creates and configures threads for handling RPC messages over socket-based channels.
  *
- * <p>This factory extends {@link RpcThreadFactory} and leverages a ZeroMQ context along with
+ * <p>This factory extends {@link InvokerThreadFactory} and leverages a ZeroMQ context along with
  * specific socket addresses to establish both binary and JSON-based RPC communication channels.
  */
-public class SocketRpcThreadFactory extends RpcThreadFactory {
+public class SocketRpcThreadFactory extends InvokerThreadFactory {
 
   /**
    * Set of runtime options that influence the behavior and configuration of RPC message processing.
@@ -52,7 +53,7 @@ public class SocketRpcThreadFactory extends RpcThreadFactory {
    * @param incomingMessageDispatcher the dispatcher that handles incoming RPC messages
    * @param outboundMessageGateway the connector used to link the dispatcher with its corresponding
    *     endpoints
-   * @param rpcChannelType the type of RPC channel to be used for communication
+   * @param messageChannelType the type of RPC channel to be used for communication
    * @param classLoader the class loader utilized for dynamic loading within the RPC system
    * @param peerUuid the unique identifier representing this peer in the network
    */
@@ -64,7 +65,7 @@ public class SocketRpcThreadFactory extends RpcThreadFactory {
       MessageBuilder messageBuilder,
       IncomingMessageDispatcher incomingMessageDispatcher,
       OutboundMessageGateway outboundMessageGateway,
-      RpcChannelType rpcChannelType,
+      MessageChannelType messageChannelType,
       ClassLoader classLoader,
       UUID peerUuid) {
     super.init(
@@ -72,7 +73,7 @@ public class SocketRpcThreadFactory extends RpcThreadFactory {
         messageBuilder,
         incomingMessageDispatcher,
         outboundMessageGateway,
-        rpcChannelType,
+        messageChannelType,
         classLoader,
         peerUuid);
     this.runOptions = runOptions;
@@ -93,7 +94,7 @@ public class SocketRpcThreadFactory extends RpcThreadFactory {
    */
   @Override
   protected AbstractMessageInvokerThread createInvokerThread(String newThreadName) {
-    return new RpcMessageInvoker(
+    return new SocketRpcInvoker(
         threadGroup,
         newThreadName,
         zmqContext,

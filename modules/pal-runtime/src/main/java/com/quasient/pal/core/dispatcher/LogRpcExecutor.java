@@ -12,6 +12,8 @@ package com.quasient.pal.core.dispatcher;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
+import com.quasient.pal.core.dispatcher.thread.InvokerThreadFactory;
+import com.quasient.pal.core.dispatcher.thread.ThreadPool;
 import com.quasient.pal.core.execution.java.CustomClassloader;
 import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
@@ -28,13 +30,13 @@ import org.zeromq.ZContext;
  * custom thread factory for thread creation and management.
  */
 @Singleton
-public class LogMessageExecutor extends ThreadPool {
+public class LogRpcExecutor extends ThreadPool {
 
   /** Logger instance. */
-  protected static final Logger logger = LoggerFactory.getLogger(LogMessageExecutor.class);
+  protected static final Logger logger = LoggerFactory.getLogger(LogRpcExecutor.class);
 
   /**
-   * Constructs a LogMessageExecutor with the necessary dependencies for Log message processing.
+   * Constructs a LogRpcExecutor with the necessary dependencies for Log message processing.
    *
    * <p>The thread pool size is parsed from the provided string parameter and a custom thread
    * factory is created to process Log messages.
@@ -51,7 +53,7 @@ public class LogMessageExecutor extends ThreadPool {
    * @param peerUuid the unique identifier for the peer associated with this executor instance.
    */
   @Inject
-  public LogMessageExecutor(
+  public LogRpcExecutor(
       @Named("log.threadPoolSize") String threadPoolSize,
       ZContext zmqContext,
       @Named("in.log") String logDealerAddress,
@@ -69,7 +71,7 @@ public class LogMessageExecutor extends ThreadPool {
             messageBuilder,
             incomingMessageDispatcher,
             outboundMessageGateway,
-            RpcThreadFactory.RpcChannelType.LOG,
+            InvokerThreadFactory.MessageChannelType.LOG_RPC,
             customClassloader,
             peerUuid));
   }

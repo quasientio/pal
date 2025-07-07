@@ -9,6 +9,7 @@
  */
 package com.quasient.pal.core.dispatcher;
 
+import com.quasient.pal.core.dispatcher.thread.InvokerThreadFactory;
 import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
 import java.util.UUID;
@@ -17,10 +18,10 @@ import org.zeromq.ZContext;
 /**
  * Factory class for creating RPC threads that handle Log messages.
  *
- * <p>This implementation extends RpcThreadFactory to provide specialized thread creation Log
+ * <p>This implementation extends InvokerThreadFactory to provide specialized thread creation Log
  * message dispatch. It sets up threads with a designated Log dealer socket address.
  */
-public class LogRpcThreadFactory extends RpcThreadFactory {
+public class LogRpcThreadFactory extends InvokerThreadFactory {
 
   /**
    * The address of the Log dealer socket. This address is provided during construction and passed
@@ -40,7 +41,7 @@ public class LogRpcThreadFactory extends RpcThreadFactory {
    * @param messageBuilder the builder instance used for serializing Log messages.
    * @param incomingMessageDispatcher the dispatcher responsible for handling incoming Log messages.
    * @param outboundMessageGateway the connector interfacing with the message dispatcher.
-   * @param rpcChannelType the type of RPC channel used for message transmission.
+   * @param messageChannelType the type of RPC channel used for message transmission.
    * @param classLoader the class loader used to resolve classes at runtime.
    * @param peerUuid the unique identifier of this peer.
    */
@@ -50,7 +51,7 @@ public class LogRpcThreadFactory extends RpcThreadFactory {
       MessageBuilder messageBuilder,
       IncomingMessageDispatcher incomingMessageDispatcher,
       OutboundMessageGateway outboundMessageGateway,
-      RpcChannelType rpcChannelType,
+      MessageChannelType messageChannelType,
       ClassLoader classLoader,
       UUID peerUuid) {
     super.init(
@@ -58,7 +59,7 @@ public class LogRpcThreadFactory extends RpcThreadFactory {
         messageBuilder,
         incomingMessageDispatcher,
         outboundMessageGateway,
-        rpcChannelType,
+        messageChannelType,
         classLoader,
         peerUuid);
     this.logDealerSocketAddress = logDealerSocketAddress;
@@ -67,16 +68,16 @@ public class LogRpcThreadFactory extends RpcThreadFactory {
   /**
    * {@inheritDoc}
    *
-   * <p>Creates a new instance of LogMessageInvoker. The new thread is assigned the provided thread
-   * name and is initialized with the ZeroMQ context, message builder, and the Log dealer socket
-   * address to enable processing of incoming Log messages.
+   * <p>Creates a new instance of LogRpcInvoker. The new thread is assigned the provided thread name
+   * and is initialized with the ZeroMQ context, message builder, and the Log dealer socket address
+   * to enable processing of incoming Log messages.
    *
    * @param newThreadName the name to assign to the newly created thread.
    * @return a new instance of AbstractMessageInvokerThread for handling Log messages.
    */
   @Override
   protected AbstractMessageInvokerThread createInvokerThread(String newThreadName) {
-    return new LogMessageInvoker(
+    return new LogRpcInvoker(
         threadGroup,
         newThreadName,
         zmqContext,

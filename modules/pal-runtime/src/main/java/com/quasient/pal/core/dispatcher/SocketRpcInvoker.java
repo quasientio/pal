@@ -42,7 +42,7 @@ import org.zeromq.ZMQException;
 import zmq.ZError;
 
 /**
- * RpcMessageInvoker is responsible for receiving and dispatching BIN-RPC and JSON-RPC messages over
+ * SocketRpcInvoker is responsible for receiving and dispatching BIN-RPC and JSON-RPC messages over
  * ZeroMQ sockets.
  *
  * <p>It creates and manages two separate REP sockets for handling binary (colfer) RPC messages and
@@ -50,7 +50,7 @@ import zmq.ZError;
  * MessageBuilder for (de)serialization. The class continues processing messages until interrupted
  * or a fatal socket error occurs.
  */
-class RpcMessageInvoker extends AbstractMessageInvokerThread {
+class SocketRpcInvoker extends AbstractMessageInvokerThread {
 
   /**
    * Runtime options controlling behavior (e.g. enabling/disabling BIN-RPC or JSON-RPC features).
@@ -79,7 +79,7 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
   private int jsonrpcSocketIndex = -1;
 
   /**
-   * Constructs a new RpcMessageInvoker with the specified parameters.
+   * Constructs a new SocketRpcInvoker with the specified parameters.
    *
    * @param group the thread group to which this thread will belong
    * @param name the name of the thread
@@ -92,7 +92,7 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
    * @param outboundMessageGateway the connector for routing outgoing messages
    * @param peerUuid the unique identifier for this peer
    */
-  public RpcMessageInvoker(
+  public SocketRpcInvoker(
       ThreadGroup group,
       String name,
       ZContext zmqContext,
@@ -127,7 +127,7 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
    * @param incomingMessageDispatcher the dispatcher for routing incoming messages
    * @param peerUuid the unique identifier for this peer
    */
-  RpcMessageInvoker(
+  SocketRpcInvoker(
       ZContext zmqContext,
       MessageBuilder messageBuilder,
       Set<RunOptions> runOptions,

@@ -36,7 +36,7 @@ import zmq.ZError;
  * parsing, validation, and dispatching to appropriate handlers. It is intended to connect to a
  * designated Log dealer endpoint.
  */
-class LogMessageInvoker extends AbstractMessageInvokerThread {
+class LogRpcInvoker extends AbstractMessageInvokerThread {
 
   /** The network endpoint of the Log dealer to which the socket connects. */
   private final String logDealerAddress;
@@ -45,7 +45,7 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
   private ZMQ.Socket socket;
 
   /**
-   * Constructs a LogMessageInvoker thread with specified configuration parameters.
+   * Constructs a LogRpcInvoker thread with specified configuration parameters.
    *
    * @param group the thread group for the invoker thread
    * @param name the name of the thread
@@ -56,7 +56,7 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
    * @param outboundMessageGateway connector used by the dispatcher for message routing
    * @param peerUuid identifier of the peer associated with this invoker
    */
-  public LogMessageInvoker(
+  public LogRpcInvoker(
       ThreadGroup group,
       String name,
       ZContext zmqContext,
@@ -77,7 +77,7 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
   }
 
   /**
-   * Constructs a LogMessageInvoker with a simplified configuration, automatically assigning thread
+   * Constructs a LogRpcInvoker with a simplified configuration, automatically assigning thread
    * group and name.
    *
    * @param zmqContext the ZeroMQ context used for socket creation
@@ -86,7 +86,7 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
    * @param incomingMessageDispatcher dispatcher for processing incoming messages
    * @param peerUuid identifier of the peer associated with this invoker
    */
-  LogMessageInvoker(
+  LogRpcInvoker(
       ZContext zmqContext,
       MessageBuilder messageBuilder,
       String logDealerAddress,

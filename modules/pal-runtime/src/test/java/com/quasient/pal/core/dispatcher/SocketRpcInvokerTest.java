@@ -51,7 +51,7 @@ import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 
-public class RpcMessageInvokerTest extends ZmqEnabledTest {
+public class SocketRpcInvokerTest extends ZmqEnabledTest {
   private static final Logger logger = LoggerFactory.getLogger("tests");
   private final UUID peerUuid = UUID.randomUUID();
   private static final String RPC_DEALER_ADDRESS = "inproc://deal";
@@ -61,7 +61,7 @@ public class RpcMessageInvokerTest extends ZmqEnabledTest {
   private Socket jsonRpcDealerSocket;
   private static final Gson gson = new Gson();
   private ExecutorService execService;
-  private RpcMessageInvoker rpcMessageInvoker;
+  private SocketRpcInvoker socketRpcInvoker;
   private IncomingMessageDispatcher incomingMessageDispatcher;
   private final MessageBuilder msgBuilder = new MessageBuilder();
 
@@ -96,8 +96,8 @@ public class RpcMessageInvokerTest extends ZmqEnabledTest {
                       peerUuid, "", constructor, null, false, incomingMsg.getMessageId());
                 });
 
-    this.rpcMessageInvoker =
-        new RpcMessageInvoker(
+    this.socketRpcInvoker =
+        new SocketRpcInvoker(
             context,
             msgBuilder,
             new HashSet<>(Arrays.asList(RunOptions.WITH_RPC, RunOptions.WITH_JSONRPC)),
@@ -109,7 +109,7 @@ public class RpcMessageInvokerTest extends ZmqEnabledTest {
 
   @After
   public void cleanup() throws Exception {
-    rpcMessageInvoker.closeConnections();
+    socketRpcInvoker.closeConnections();
     closeContext(context);
     execService.shutdownNow();
     execService.awaitTermination(5, TimeUnit.SECONDS);
@@ -120,12 +120,12 @@ public class RpcMessageInvokerTest extends ZmqEnabledTest {
   public void invokeRpcMessage() {
 
     // start invoker thread
-    execService.execute(rpcMessageInvoker);
+    execService.execute(socketRpcInvoker);
 
     // add a message dispatch listener
     AtomicInteger listenerReceived = new AtomicInteger(0);
     MessageDispatchListener dispatchListener = message -> listenerReceived.incrementAndGet();
-    rpcMessageInvoker.addMessageDispatchListener(dispatchListener);
+    socketRpcInvoker.addMessageDispatchListener(dispatchListener);
 
     // deal msg
     ExecMessage invokable = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
@@ -137,8 +137,8 @@ public class RpcMessageInvokerTest extends ZmqEnabledTest {
     Message responseMessage = new Message();
     responseMessage.unmarshal(rpcDealerSocket.recv(), 0);
 
-    assertThat(rpcMessageInvoker.getExecRequestsDispatched(), is(1L));
-    assertThat(rpcMessageInvoker.getRequestsDispatched(), is(1L));
+    assertThat(socketRpcInvoker.getExecRequestsDispatched(), is(1L));
+    assertThat(socketRpcInvoker.getRequestsDispatched(), is(1L));
     assertThat(listenerReceived.get(), is(1));
     verify(incomingMessageDispatcher, times(1)).incomingCall(any(), any(), anyBoolean());
 
@@ -150,12 +150,12 @@ public class RpcMessageInvokerTest extends ZmqEnabledTest {
   public void invokeJsonRpcMessage() {
 
     // start invoker thread
-    execService.execute(rpcMessageInvoker);
+    execService.execute(socketRpcInvoker);
 
     // add a message dispatch listener
     AtomicInteger listenerReceived = new AtomicInteger(0);
     MessageDispatchListener dispatchListener = message -> listenerReceived.incrementAndGet();
-    rpcMessageInvoker.addMessageDispatchListener(dispatchListener);
+    socketRpcInvoker.addMessageDispatchListener(dispatchListener);
 
     // create new JSON-RPC request
     final UUID requestUuid = UUID.randomUUID();
@@ -185,8 +185,8 @@ public class RpcMessageInvokerTest extends ZmqEnabledTest {
         gson.fromJson(jsonRpcResponseAsString, JsonRpcResponse.class);
 
     // assert number of calls
-    assertThat(rpcMessageInvoker.getExecRequestsDispatched(), is(1L));
-    assertThat(rpcMessageInvoker.getRequestsDispatched(), is(1L));
+    assertThat(socketRpcInvoker.getExecRequestsDispatched(), is(1L));
+    assertThat(socketRpcInvoker.getRequestsDispatched(), is(1L));
     assertThat(listenerReceived.get(), is(1));
     verify(incomingMessageDispatcher, times(1)).incomingCall(any(), any(), anyBoolean());
 
@@ -198,12 +198,12 @@ public class RpcMessageInvokerTest extends ZmqEnabledTest {
   public void invokeManyRpcMessages() {
 
     // start invoker thread
-    execService.execute(rpcMessageInvoker);
+    execService.execute(socketRpcInvoker);
 
     // add a message dispatch listener
     AtomicInteger listenerReceived = new AtomicInteger(0);
     MessageDispatchListener dispatchListener = message -> listenerReceived.incrementAndGet();
-    rpcMessageInvoker.addMessageDispatchListener(dispatchListener);
+    socketRpcInvoker.addMessageDispatchListener(dispatchListener);
 
     // deal messages
     int msgCount = 10;
@@ -225,8 +225,8 @@ public class RpcMessageInvokerTest extends ZmqEnabledTest {
     }
 
     // assert number of calls
-    assertThat(rpcMessageInvoker.getExecRequestsDispatched(), is((long) msgCount));
-    assertThat(rpcMessageInvoker.getRequestsDispatched(), is((long) msgCount));
+    assertThat(socketRpcInvoker.getExecRequestsDispatched(), is((long) msgCount));
+    assertThat(socketRpcInvoker.getRequestsDispatched(), is((long) msgCount));
     assertThat(listenerReceived.get(), is(msgCount));
     verify(incomingMessageDispatcher, times(msgCount)).incomingCall(any(), any(), anyBoolean());
 
@@ -241,12 +241,12 @@ public class RpcMessageInvokerTest extends ZmqEnabledTest {
   public void invokeManyJsonRpcMessages() {
 
     // start invoker thread
-    execService.execute(rpcMessageInvoker);
+    execService.execute(socketRpcInvoker);
 
     // add a message dispatch listener
     AtomicInteger listenerReceived = new AtomicInteger(0);
     MessageDispatchListener dispatchListener = message -> listenerReceived.incrementAndGet();
-    rpcMessageInvoker.addMessageDispatchListener(dispatchListener);
+    socketRpcInvoker.addMessageDispatchListener(dispatchListener);
 
     // deal messages
     int msgCount = 10;
@@ -277,8 +277,8 @@ public class RpcMessageInvokerTest extends ZmqEnabledTest {
     }
 
     // assert number of calls
-    assertThat(rpcMessageInvoker.getExecRequestsDispatched(), is((long) msgCount));
-    assertThat(rpcMessageInvoker.getRequestsDispatched(), is((long) msgCount));
+    assertThat(socketRpcInvoker.getExecRequestsDispatched(), is((long) msgCount));
+    assertThat(socketRpcInvoker.getRequestsDispatched(), is((long) msgCount));
     assertThat(listenerReceived.get(), is(msgCount));
     verify(incomingMessageDispatcher, times(msgCount)).incomingCall(any(), any(), anyBoolean());
   }

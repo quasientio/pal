@@ -7,7 +7,7 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
-package com.quasient.pal.core.dispatcher;
+package com.quasient.pal.core.dispatcher.thread;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,7 +29,7 @@ public class ThreadPool {
    *
    * <p>This factory is responsible for tracking the threads created by the thread pool.
    */
-  private final RpcThreadFactory threadFactory;
+  private final InvokerThreadFactory threadFactory;
 
   /**
    * The fixed number of threads that this pool will manage.
@@ -44,7 +44,7 @@ public class ThreadPool {
    * @param poolSize the number of threads to be managed by this pool; must be a positive integer.
    * @param threadFactory the factory instance used to create new threads; must not be {@code null}.
    */
-  ThreadPool(int poolSize, RpcThreadFactory threadFactory) {
+  public ThreadPool(int poolSize, InvokerThreadFactory threadFactory) {
     this.poolSize = poolSize;
     this.threadFactory = threadFactory;
     logger.info("Initialized thread pool, with poolSize={}", poolSize);

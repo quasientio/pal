@@ -23,9 +23,9 @@ import com.quasient.pal.common.cli.PalCommand;
 import com.quasient.pal.common.directory.nodes.LogInfo;
 import com.quasient.pal.common.directory.nodes.PeerInfo;
 import com.quasient.pal.common.util.Strings;
-import com.quasient.pal.core.dispatcher.LogMessageExecutor;
-import com.quasient.pal.core.dispatcher.RpcMessageExecutor;
-import com.quasient.pal.core.dispatcher.ThreadPool;
+import com.quasient.pal.core.dispatcher.LogRpcExecutor;
+import com.quasient.pal.core.dispatcher.SocketRpcExecutor;
+import com.quasient.pal.core.dispatcher.thread.ThreadPool;
 import com.quasient.pal.core.execution.java.CustomClassloader;
 import com.quasient.pal.core.execution.java.DynamicResourceBundleControlProvider;
 import com.quasient.pal.core.intercept.AnnotationsProcessor;
@@ -1050,14 +1050,14 @@ public class Main implements Callable<Integer> {
       // stop peer executor (interrupts all peer exec threads)
       if (runOptions.contains(RunOptions.WITH_RPC)
           || runOptions.contains(RunOptions.WITH_JSONRPC)) {
-        final ThreadPool rpcMessageExecutor = injector.getInstance(RpcMessageExecutor.class);
+        final ThreadPool rpcMessageExecutor = injector.getInstance(SocketRpcExecutor.class);
         rpcMessageExecutor.shutdown();
         logger.info("Done shutting down peer threads");
       }
 
       // stop log executor (interrupts all log exec threads)
       if (runOptions.contains(RunOptions.WITH_IN_LOG)) {
-        final ThreadPool logMessageExecutor = injector.getInstance(LogMessageExecutor.class);
+        final ThreadPool logMessageExecutor = injector.getInstance(LogRpcExecutor.class);
         logMessageExecutor.shutdown();
         logger.info("Done shutting down log threads");
       }
@@ -1271,12 +1271,12 @@ public class Main implements Callable<Integer> {
     if (runOptions.contains(RunOptions.WITH_IN_LOG)) {
       LogReader logMessageReader = injector.getInstance(LogReader.class);
       logMessageReader.acceptRequests(true);
-      injector.getInstance(LogMessageExecutor.class).startAllThreads();
+      injector.getInstance(LogRpcExecutor.class).startAllThreads();
     }
 
     // pre-start threads to create the REP sockets; this must be done after DEALER
     if (runOptions.contains(RunOptions.WITH_RPC) || runOptions.contains(RunOptions.WITH_JSONRPC)) {
-      injector.getInstance(RpcMessageExecutor.class).startAllThreads();
+      injector.getInstance(SocketRpcExecutor.class).startAllThreads();
     }
 
     // now call target (main class or JAR file), if given

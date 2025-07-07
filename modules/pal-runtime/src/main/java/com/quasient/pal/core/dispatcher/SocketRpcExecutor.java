@@ -12,6 +12,8 @@ package com.quasient.pal.core.dispatcher;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
+import com.quasient.pal.core.dispatcher.thread.InvokerThreadFactory;
+import com.quasient.pal.core.dispatcher.thread.ThreadPool;
 import com.quasient.pal.core.execution.java.CustomClassloader;
 import com.quasient.pal.core.service.RunOptions;
 import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
@@ -30,10 +32,10 @@ import org.zeromq.ZContext;
  * environment, including message dispatchers and dynamic class loading support.
  */
 @Singleton
-public class RpcMessageExecutor extends ThreadPool {
+public class SocketRpcExecutor extends ThreadPool {
 
   /** Logger instance. */
-  protected static final Logger logger = LoggerFactory.getLogger(RpcMessageExecutor.class);
+  protected static final Logger logger = LoggerFactory.getLogger(SocketRpcExecutor.class);
 
   /**
    * Constructs a new RPC message executor, setting up the thread pool and associated RPC
@@ -59,7 +61,7 @@ public class RpcMessageExecutor extends ThreadPool {
    * @param peerUuid a unique identifier for this RPC peer within the network.
    */
   @Inject
-  public RpcMessageExecutor(
+  public SocketRpcExecutor(
       @Named("rpc.threadPoolSize") String threadPoolSize,
       ZContext zmqContext,
       Set<RunOptions> runOptions,
@@ -81,7 +83,7 @@ public class RpcMessageExecutor extends ThreadPool {
             messageBuilder,
             incomingMessageDispatcher,
             outboundMessageGateway,
-            RpcThreadFactory.RpcChannelType.SOCKET,
+            InvokerThreadFactory.MessageChannelType.SOCKET_RPC,
             customClassloader,
             peerUuid));
   }

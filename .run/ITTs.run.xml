@@ -10,8 +10,8 @@
         <option name="ENABLED" value="true" />
       </pattern>
       <pattern>
-        <option name="PATTERN" value="com.quasient.pal.intercept.*" />
-        <option name="ENABLED" value="false" />
+        <option name="PATTERN" value="com.quasient.pal.core.intercept.*" />
+        <option name="ENABLED" value="true" />
       </pattern>
     </extension>
     <option name="PACKAGE_NAME" value="com.quasient.pal.rpc.binary" />
