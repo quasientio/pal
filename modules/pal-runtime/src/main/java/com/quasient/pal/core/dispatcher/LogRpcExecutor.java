@@ -12,9 +12,9 @@ package com.quasient.pal.core.dispatcher;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
-import com.quasient.pal.core.dispatcher.thread.InvokerThreadFactory;
 import com.quasient.pal.core.dispatcher.thread.ThreadPool;
 import com.quasient.pal.core.execution.java.CustomClassloader;
+import com.quasient.pal.core.transport.MessageChannelType;
 import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
 import java.util.UUID;
@@ -71,7 +71,7 @@ public class LogRpcExecutor extends ThreadPool {
             messageBuilder,
             incomingMessageDispatcher,
             outboundMessageGateway,
-            InvokerThreadFactory.MessageChannelType.LOG_RPC,
+            MessageChannelType.LOG_RPC,
             customClassloader,
             peerUuid));
   }

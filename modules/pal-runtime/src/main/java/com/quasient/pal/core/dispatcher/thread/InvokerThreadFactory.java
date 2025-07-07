@@ -11,6 +11,7 @@ package com.quasient.pal.core.dispatcher.thread;
 
 import com.quasient.pal.core.dispatcher.AbstractMessageInvokerThread;
 import com.quasient.pal.core.dispatcher.IncomingMessageDispatcher;
+import com.quasient.pal.core.transport.MessageChannelType;
 import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
 import java.util.ArrayList;
@@ -71,27 +72,6 @@ public abstract class InvokerThreadFactory implements ThreadFactory {
 
   /** Class loader used to set the context for created threads. */
   private ClassLoader classLoader;
-
-  /** Enumeration representing the type of messaging channel used for thread creation. */
-  public enum MessageChannelType {
-    /** Socket RPC channel. */
-    SOCKET_RPC("SOCKET_RPC"),
-
-    /** Log channel. */
-    LOG_RPC("LOG_RPC");
-
-    /** Name representing the message channel type. */
-    final String name;
-
-    /**
-     * Constructs an MessageChannelType with a given name.
-     *
-     * @param name The name associated with the RPC channel type.
-     */
-    MessageChannelType(String name) {
-      this.name = name;
-    }
-  }
 
   /**
    * Initializes the thread factory with required communication contexts and parameters.
@@ -160,14 +140,14 @@ public abstract class InvokerThreadFactory implements ThreadFactory {
         (t, e) ->
             logger.error(
                 "Uncaught exception in {} exec thread: {}",
-                messageChannelType.name,
+                messageChannelType.getName(),
                 newThreadName,
                 e));
     addCreatedThread(thread);
     if (logger.isDebugEnabled()) {
       logger.debug(
           "Created new {} executor thread with name: '{}' and id: {}",
-          messageChannelType.name,
+          messageChannelType.getName(),
           newThreadName,
           thread.getId());
     }
@@ -202,7 +182,7 @@ public abstract class InvokerThreadFactory implements ThreadFactory {
    * @return a string representing the base name for threads.
    */
   protected String getThreadBaseName() {
-    return String.format("%s Executor", messageChannelType.name);
+    return String.format("%s Executor", messageChannelType.getName());
   }
 
   /**
@@ -213,6 +193,6 @@ public abstract class InvokerThreadFactory implements ThreadFactory {
    * @return a string representing the thread group name.
    */
   private String getThreadGroupName() {
-    return String.format("%s Executor Group", messageChannelType.name);
+    return String.format("%s Executor Group", messageChannelType.getName());
   }
 }

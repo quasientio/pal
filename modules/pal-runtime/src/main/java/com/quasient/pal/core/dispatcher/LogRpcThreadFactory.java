@@ -10,6 +10,7 @@
 package com.quasient.pal.core.dispatcher;
 
 import com.quasient.pal.core.dispatcher.thread.InvokerThreadFactory;
+import com.quasient.pal.core.transport.MessageChannelType;
 import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
 import java.util.UUID;
