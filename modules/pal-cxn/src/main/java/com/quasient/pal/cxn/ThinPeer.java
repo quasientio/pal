@@ -120,11 +120,11 @@ public class ThinPeer implements AutoCloseable {
   /** Flag indicating whether log input/output is enabled. */
   private boolean logIOEnabled;
 
-  /** LogInfo for incoming input Log. */
-  private LogInfo inLog;
+  /** LogInfo for the input Log. */
+  private LogInfo inputLog;
 
-  /** LogInfo for output Log. */
-  private LogInfo outLog;
+  /** LogInfo for the output Log. */
+  private LogInfo outputLog;
 
   /** Kafka topic partition for input Log messages. */
   private TopicPartition inTopicPartition;
@@ -282,30 +282,30 @@ public class ThinPeer implements AutoCloseable {
    * @return the current ThinPeer instance for method chaining
    */
   public ThinPeer withLog(LogInfo log) {
-    this.inLog = log;
-    this.outLog = log;
+    this.inputLog = log;
+    this.outputLog = log;
     return this;
   }
 
   /**
    * Sets the input log information.
    *
-   * @param inLog the LogInfo instance to assign to the input log
+   * @param inputLog the LogInfo instance to assign to the input log
    * @return the current ThinPeer instance for method chaining
    */
-  public ThinPeer withInLog(LogInfo inLog) {
-    this.inLog = inLog;
+  public ThinPeer withInputLog(LogInfo inputLog) {
+    this.inputLog = inputLog;
     return this;
   }
 
   /**
    * Sets the output log information.
    *
-   * @param outLog the LogInfo instance to assign to the output log
+   * @param outputLog the LogInfo instance to assign to the output log
    * @return the current ThinPeer instance for method chaining
    */
-  public ThinPeer withOutLog(LogInfo outLog) {
-    this.outLog = outLog;
+  public ThinPeer withOutputLog(LogInfo outputLog) {
+    this.outputLog = outputLog;
     return this;
   }
 
@@ -515,22 +515,22 @@ public class ThinPeer implements AutoCloseable {
 
     if (!logless) {
       // get last log with prefix from PAL directory
-      String kafkaTopicPrefix = logPrefix != null ? logPrefix : DEFAULT_TOPIC_PREFIX;
       LogInfo lastLog =
           getPalDirectory() != null
-              ? getPalDirectory().getLatestLogWithPrefix(kafkaTopicPrefix)
+              ? getPalDirectory()
+                  .getLatestLogWithPrefix(logPrefix != null ? logPrefix : DEFAULT_TOPIC_PREFIX)
               : null;
 
       // configure log to read from; fill bootstrap servers if only log name given
       if (withConsumer) {
-        if (this.inLog == null) {
+        if (this.inputLog == null) {
           if (lastLog == null) {
             throw new RuntimeException("Could not get last Log with prefix from PAL directory");
           }
-          this.inLog = lastLog;
+          this.inputLog = lastLog;
         } else {
-          if (this.inLog.getBootstrapServers() == null && bootstrapServers != null) {
-            this.inLog.setBootstrapServers(bootstrapServers);
+          if (this.inputLog.getBootstrapServers() == null && bootstrapServers != null) {
+            this.inputLog.setBootstrapServers(bootstrapServers);
           }
         }
         // configure kafka consumer
@@ -539,7 +539,7 @@ public class ThinPeer implements AutoCloseable {
             throw new RuntimeException("You must supply either Consumer or ConsumerProperties");
           }
           consumerProperties.put("group.id", peerUuid.toString());
-          final String bootstrapServers = this.inLog.getBootstrapServers();
+          final String bootstrapServers = this.inputLog.getBootstrapServers();
           consumerProperties.put("bootstrap.servers", bootstrapServers);
           this.consumer = new KafkaConsumer<>(consumerProperties);
           logger.info(
@@ -553,23 +553,23 @@ public class ThinPeer implements AutoCloseable {
         }
 
         // manual assignment of partition so we can control offset seek
-        inTopicPartition = new TopicPartition(this.inLog.getName(), 0);
+        inTopicPartition = new TopicPartition(this.inputLog.getName(), 0);
         consumer.assign(Collections.singletonList(inTopicPartition));
 
         consuming = true;
-        logger.info("Will read from log: {}", this.inLog);
+        logger.info("Will read from log: {}", this.inputLog);
       }
 
       if (withProducer) {
         // configure log to write to; fill bootstrap servers if only log name given
-        if (outLog == null) {
+        if (outputLog == null) {
           if (lastLog == null) {
             throw new RuntimeException("Could not get last Log with prefix from PAL directory");
           }
-          this.outLog = lastLog;
+          this.outputLog = lastLog;
         } else {
-          if (this.outLog.getBootstrapServers() == null && bootstrapServers != null) {
-            this.outLog.setBootstrapServers(bootstrapServers);
+          if (this.outputLog.getBootstrapServers() == null && bootstrapServers != null) {
+            this.outputLog.setBootstrapServers(bootstrapServers);
           }
         }
 
@@ -579,7 +579,7 @@ public class ThinPeer implements AutoCloseable {
             throw new RuntimeException("You must supply either Producer or ProducerProperties");
           }
           producerProperties.put("client.id", peerUuid.toString());
-          final String bootstrapServers = this.outLog.getBootstrapServers();
+          final String bootstrapServers = this.outputLog.getBootstrapServers();
           producerProperties.put("bootstrap.servers", bootstrapServers);
           this.producer = new KafkaProducer<>(producerProperties);
           logger.info(
@@ -588,7 +588,7 @@ public class ThinPeer implements AutoCloseable {
         }
 
         producing = true;
-        logger.info("Will write to log: {}", this.outLog);
+        logger.info("Will write to log: {}", this.outputLog);
       }
 
       logIOEnabled = true;
@@ -627,8 +627,8 @@ public class ThinPeer implements AutoCloseable {
         directory: {},
         initialPeer: {},
         rpcType: {},
-        inLog: {},
-        outLog: {}
+        inputLog: {},
+        outputLog: {}
         """,
         peerUuid,
         peerName,
@@ -636,8 +636,8 @@ public class ThinPeer implements AutoCloseable {
         palDirectoryUrl,
         initialPeer,
         outboundRpcType,
-        inLog,
-        outLog);
+        inputLog,
+        outputLog);
     return this;
   }
 
@@ -1036,12 +1036,12 @@ public class ThinPeer implements AutoCloseable {
     // wrap in LogMessage
     var headers = Map.of("producer-id", peerUuid.toString());
     LogMessage<Message> logMessage =
-        new LogMessage<>(outLog.getName(), null, headers, msgBuilder.wrap(message));
+        new LogMessage<>(outputLog.getName(), null, headers, msgBuilder.wrap(message));
 
     // create kafka record
     ProducerRecord<String, LogMessage<?>> record =
         new ProducerRecord<>(
-            outLog.getName(), PRODUCER_PARTITION, message.getMessageId(), logMessage);
+            outputLog.getName(), PRODUCER_PARTITION, message.getMessageId(), logMessage);
 
     // send and return future
     var sendFuture = producer.send(record);
@@ -1083,10 +1083,10 @@ public class ThinPeer implements AutoCloseable {
     // create kafka record
     var headers = Map.of("producer-id", peerUuid.toString());
     LogMessage<JsonRpcMessage> logMessage =
-        new LogMessage<>(outLog.getName(), null, headers, jsonRpcMessage);
+        new LogMessage<>(outputLog.getName(), null, headers, jsonRpcMessage);
     final ProducerRecord<String, LogMessage<?>> record =
         new ProducerRecord<>(
-            outLog.getName(), PRODUCER_PARTITION, UUID.randomUUID().toString(), logMessage);
+            outputLog.getName(), PRODUCER_PARTITION, UUID.randomUUID().toString(), logMessage);
 
     // send and return future
     var sendFuture = producer.send(record);
@@ -1127,10 +1127,10 @@ public class ThinPeer implements AutoCloseable {
     // create kafka record
     var headers = Map.of("producer-id", peerUuid.toString());
     LogMessage<JsonRpcMessage> logMessage =
-        new LogMessage<>(outLog.getName(), null, headers, jsonRpcMessage);
+        new LogMessage<>(outputLog.getName(), null, headers, jsonRpcMessage);
     final ProducerRecord<String, LogMessage<?>> newRecord =
         new ProducerRecord<>(
-            outLog.getName(), PRODUCER_PARTITION, UUID.randomUUID().toString(), logMessage);
+            outputLog.getName(), PRODUCER_PARTITION, UUID.randomUUID().toString(), logMessage);
 
     // send and get offset
     long sentRecordOffset;
@@ -1186,12 +1186,12 @@ public class ThinPeer implements AutoCloseable {
     // wrap in LogMessage
     var headers = Map.of("producer-id", peerUuid.toString());
     LogMessage<Message> logMessage =
-        new LogMessage<>(outLog.getName(), null, headers, msgBuilder.wrap(message));
+        new LogMessage<>(outputLog.getName(), null, headers, msgBuilder.wrap(message));
 
     // create kafka record
     ProducerRecord<String, LogMessage<?>> newRecord =
         new ProducerRecord<>(
-            outLog.getName(), PRODUCER_PARTITION, message.getMessageId(), logMessage);
+            outputLog.getName(), PRODUCER_PARTITION, message.getMessageId(), logMessage);
 
     // send and get offset
     long sentRecordOffset;
@@ -1708,8 +1708,8 @@ public class ThinPeer implements AutoCloseable {
    *
    * @return the input LogInfo
    */
-  public LogInfo getInLog() {
-    return inLog;
+  public LogInfo getInputLog() {
+    return inputLog;
   }
 
   /**
@@ -1717,8 +1717,8 @@ public class ThinPeer implements AutoCloseable {
    *
    * @return the output LogInfo
    */
-  public LogInfo getOutLog() {
-    return outLog;
+  public LogInfo getOutputLog() {
+    return outputLog;
   }
 
   /**

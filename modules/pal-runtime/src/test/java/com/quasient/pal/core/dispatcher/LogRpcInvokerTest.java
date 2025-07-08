@@ -46,7 +46,7 @@ import org.zeromq.ZMQ.Socket;
 public class LogRpcInvokerTest extends ZmqEnabledTest {
   private static final Logger logger = LoggerFactory.getLogger("tests");
   private final UUID peerUuid = UUID.randomUUID();
-  private static final String IN_LOG_ADDRESS = "inproc://in_log";
+  private static final String SOURCE_LOG_ADDRESS = "inproc://source_log";
   private ZContext context;
   private Socket dealerSocket;
   private ExecutorService execService;
@@ -61,7 +61,7 @@ public class LogRpcInvokerTest extends ZmqEnabledTest {
     this.execService = Executors.newCachedThreadPool();
     // simulate LogReader's DEALER socket
     this.dealerSocket = context.createSocket(SocketType.DEALER);
-    dealerSocket.bind(IN_LOG_ADDRESS);
+    dealerSocket.bind(SOURCE_LOG_ADDRESS);
 
     /* mock incomingMessageDispatcher */
     incomingMessageDispatcher = mock(IncomingMessageDispatcher.class);
@@ -87,7 +87,8 @@ public class LogRpcInvokerTest extends ZmqEnabledTest {
                 });
 
     this.logRpcInvoker =
-        new LogRpcInvoker(context, msgBuilder, IN_LOG_ADDRESS, incomingMessageDispatcher, peerUuid);
+        new LogRpcInvoker(
+            context, msgBuilder, SOURCE_LOG_ADDRESS, incomingMessageDispatcher, peerUuid);
   }
 
   @After

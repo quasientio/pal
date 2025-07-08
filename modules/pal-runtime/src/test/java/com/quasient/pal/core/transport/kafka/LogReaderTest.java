@@ -126,7 +126,7 @@ public class LogReaderTest extends ZmqEnabledTest {
   private MockConsumer<String, byte[]> consumer;
   private LogInfo log;
   private final int partition = 0;
-  private static final String DEALER_ADDRESS = "inproc://in_log_tests";
+  private static final String DEALER_ADDRESS = "inproc://source_log_tests";
   private static final String OFFSET_PUB_ADDRESS = "inproc://offsets_tests";
   private final ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
   private Set<Service> services;

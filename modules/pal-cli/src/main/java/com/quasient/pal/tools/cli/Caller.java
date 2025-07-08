@@ -102,9 +102,6 @@ public class Caller extends AbstractPalSubcommand {
   /** Duration to poll for messages. */
   private Long pollDuration;
 
-  /** Prefix used for log topics. */
-  private String logPrefix;
-
   /** URL for connecting to the PAL directory service. */
   private String palDirectoryUrl;
 
@@ -140,17 +137,17 @@ public class Caller extends AbstractPalSubcommand {
 
   /** Specifies the log to read from. */
   @Option(
-      names = {"-i", "--from-log"},
+      names = {"-i", "--input-log"},
       paramLabel = "name",
       description = "read from given log")
-  private String inLogName;
+  private String inputLogName;
 
   /** Specifies the log to write to. */
   @Option(
-      names = {"-o", "--to-log"},
+      names = {"-o", "--output-log"},
       paramLabel = "name",
       description = "write to given log")
-  private String outLogName;
+  private String outputLogName;
 
   /** Identifies the peer to communicate with, either by UUID or RPC address. */
   @Option(
@@ -238,11 +235,11 @@ public class Caller extends AbstractPalSubcommand {
   @Override
   protected final void validateInput() {
 
-    if (Stream.of(peerIdentifier, logName, outLogName).noneMatch(Caller::optionGiven)) {
-      throw new RuntimeException("Nowhere to call. Please specify --peer, --log or --out-log.");
+    if (Stream.of(peerIdentifier, logName, outputLogName).noneMatch(Caller::optionGiven)) {
+      throw new RuntimeException("Nowhere to call. Please specify --peer, --log or --output-log.");
     }
 
-    if (optionGiven(outLogName) && !optionGiven(inLogName) && !sendAndForget) {
+    if (optionGiven(outputLogName) && !optionGiven(inputLogName) && !sendAndForget) {
       throw new RuntimeException(
           "You must specify a log to read from, or else use --forget-response.");
     }
@@ -361,12 +358,8 @@ public class Caller extends AbstractPalSubcommand {
       properties.load(stream);
     }
     final String pollDurationProp = properties.getProperty("pollDuration");
-    final String logPrefixProp = properties.getProperty("kafkaTopicPrefix");
     if (pollDurationProp != null && !pollDurationProp.trim().isEmpty()) {
       pollDuration = Long.parseLong(pollDurationProp.trim());
-    }
-    if (logPrefixProp != null && !logPrefixProp.trim().isEmpty()) {
-      logPrefix = logPrefixProp.trim();
     }
 
     // load consumer properties
@@ -425,24 +418,21 @@ public class Caller extends AbstractPalSubcommand {
               .init();
     } else { // send to Log
       if (logName != null) {
-        inLogName = outLogName = logName;
+        inputLogName = outputLogName = logName;
       }
-      LogInfo inLog = inLogName == null ? null : new LogInfo(inLogName);
-      LogInfo outLog = outLogName == null ? null : new LogInfo(outLogName);
+      LogInfo inputLog = inputLogName == null ? null : new LogInfo(inputLogName);
+      LogInfo outputLog = outputLogName == null ? null : new LogInfo(outputLogName);
       thinPeer =
           new ThinPeer()
               .withUuid(thinPeerUuid)
               .withDirectoryUrl(palDirectoryUrl)
               .withSelfRegistration(true)
-              .withInLog(inLog)
-              .withOutLog(outLog)
+              .withInputLog(inputLog)
+              .withOutputLog(outputLog)
               .withConsumerProperties(consumerProperties)
               .withProducerProperties(producerProperties);
       if (pollDuration != null) {
         thinPeer.withPollingDuration(pollDuration);
-      }
-      if (logPrefix != null) {
-        thinPeer.withLogPrefix(logPrefix);
       }
       thinPeer.init();
     }
@@ -530,10 +520,10 @@ public class Caller extends AbstractPalSubcommand {
   private int sendRequestsWithSingleClientAsync() throws Exception {
 
     if (logName != null) {
-      inLogName = outLogName = logName;
+      inputLogName = outputLogName = logName;
     }
-    LogInfo inLog = inLogName == null ? null : new LogInfo(inLogName);
-    LogInfo outLog = outLogName == null ? null : new LogInfo(outLogName);
+    LogInfo inputLog = inputLogName == null ? null : new LogInfo(inputLogName);
+    LogInfo outputLog = outputLogName == null ? null : new LogInfo(outputLogName);
 
     // create ThinPeer
     final UUID thinPeerUuid = UUID.randomUUID();
@@ -542,15 +532,12 @@ public class Caller extends AbstractPalSubcommand {
             .withUuid(thinPeerUuid)
             .withDirectoryUrl(palDirectoryUrl)
             .withSelfRegistration(true)
-            .withInLog(inLog)
-            .withOutLog(outLog)
+            .withInputLog(inputLog)
+            .withOutputLog(outputLog)
             .withConsumerProperties(consumerProperties)
             .withProducerProperties(producerProperties)) {
       if (pollDuration != null) {
         thinPeer.withPollingDuration(pollDuration);
-      }
-      if (logPrefix != null) {
-        thinPeer.withLogPrefix(logPrefix);
       }
       thinPeer.init();
 

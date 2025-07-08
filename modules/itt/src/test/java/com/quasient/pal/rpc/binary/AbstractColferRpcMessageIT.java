@@ -87,6 +87,7 @@ public abstract class AbstractColferRpcMessageIT extends AbstractRpcMessageIT
             .withDirectoryProvider(directoryConnectionProvider)
             .withConsumerProperties(consumerProperties)
             .withProducerProperties(producerProperties)
+            .withLogPrefix("itt")
             .withInitialPeer(rpcPeer)
             .withOutboundRpcType(RpcType.BIN_RPC)
             .init();

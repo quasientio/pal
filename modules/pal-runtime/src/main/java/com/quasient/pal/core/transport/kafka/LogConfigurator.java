@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Configures and manages Log I/O for the PAL runtime.
  *
- * <p>This class initializes input and output Logs based on specified log names, application
+ * <p>This class initializes source and write-ahead Logs based on specified log names, application
  * properties, and the availability of a directory service. Depending on the configuration, Log
  * entries may be automatically registered or retrieved from the Pal directory, and corresponding
  * reading and writing operations are initiated.
@@ -32,19 +32,16 @@ public class LogConfigurator {
   /** Logger instance. */
   protected static final Logger logger = LoggerFactory.getLogger(LogConfigurator.class);
 
-  /** Configured name for the input Log; may be set to "auto" for automatic registration. */
-  private final String inLogName;
+  /** Configured name for the source Log; may be set to "auto" for automatic registration. */
+  private final String sourceLogName;
 
-  /** Configured name for the output Log; may be set to "auto" for automatic registration. */
-  private final String outLogName;
+  /** Configured name for the WAL Log; may be set to "auto" for automatic registration. */
+  private final String writeAheadLogName;
 
-  /** Initial offset used when reading from the input Log. */
-  private final Long inLogOffset;
+  /** Initial offset used when reading from the source Log. */
+  private final Long sourceLogOffset;
 
-  /**
-   * Application properties containing configuration such as "paldir_url",
-   * "kafka.bootstrap.servers", and "kafkaTopicPrefix".
-   */
+  /** Application properties containing configuration not parameterized through CLI options. */
   private final Properties appProps;
 
   /** Flag indicating if a PalDirectory URL is provided; if not, Log names are used literally. */
@@ -56,34 +53,38 @@ public class LogConfigurator {
   /** Kafka server endpoints derived from the application properties. */
   private final String kafkaServers;
 
-  /** LogInfo instance for the input Log after initialization; may be null if not configured. */
-  private LogInfo inLog;
+  /** LogInfo instance for the source Log after initialization; may be null if not configured. */
+  private LogInfo sourceLog;
 
-  /** LogInfo instance for the output Log after initialization; may be null if not configured. */
-  private LogInfo outLog;
+  /**
+   * LogInfo instance for the Write-Ahead Log after initialization; may be null if not configured.
+   */
+  private LogInfo writeAheadLog;
 
   /**
    * Constructs a LogConfigurator with the given log parameters, application properties, and
    * dependency injector.
    *
-   * @param inLogName the name of the input Log or "auto" to request automatic name registration
-   * @param inLogOffset the starting offset for reading the input Log
-   * @param outLogName the name of the output Log or "auto" to request automatic name registration
-   * @param appProps the configuration properties including keys like "paldir_url",
-   *     "kafka.bootstrap.servers", and "kafkaTopicPrefix"
+   * @param sourceLogName the name of the source Log or "auto" to request automatic name
+   *     registration
+   * @param sourceLogOffset the starting offset for reading the source Log
+   * @param writeAheadLogName the name of the writeAheadLog or "auto" to request automatic name
+   *     registration
+   * @param appProps the configuration properties including keys like kafka consumer/producer
+   *     properties
    * @param injector the dependency injection container providing required service instances
    * @throws IllegalArgumentException if the required Kafka servers property
    *     ("kafka.bootstrap.servers") is missing
    */
   public LogConfigurator(
-      String inLogName,
-      Long inLogOffset,
-      String outLogName,
+      String sourceLogName,
+      Long sourceLogOffset,
+      String writeAheadLogName,
       Properties appProps,
       Injector injector) {
-    this.inLogName = inLogName;
-    this.inLogOffset = inLogOffset;
-    this.outLogName = outLogName;
+    this.sourceLogName = sourceLogName;
+    this.sourceLogOffset = sourceLogOffset;
+    this.writeAheadLogName = writeAheadLogName;
     this.appProps = appProps;
     this.injector = injector;
     final String givenPaldirUrl = appProps.getProperty("paldir_url");
@@ -109,7 +110,7 @@ public class LogConfigurator {
             .getInstance(DirectoryConnectionProvider.class)
             .get()
             .orElseThrow(RuntimeException::new);
-    return palDirectory.createAutoLog(appProps.getProperty("kafkaTopicPrefix"), kafkaServers);
+    return palDirectory.createAutoLog(appProps.getProperty("logPrefix"), kafkaServers);
   }
 
   /**
@@ -143,32 +144,32 @@ public class LogConfigurator {
   }
 
   /**
-   * Initiates reading from the specified input Log starting at the provided offset.
+   * Initiates reading from the specified source Log starting at the provided offset.
    *
    * <p>Obtains a LogReader instance via dependency injection and begins reading Log entries.
    *
-   * @param inLog the LogInfo instance representing the input Log
-   * @param inAndOutAreSameLog flag indicating whether the input and output Logs are the same
-   *     instance
+   * @param sourceLog the LogInfo instance representing the source Log
+   * @param sourceAndWalAreSameLog flag indicating whether the source and write-ahead logs are the
+   *     same instance
    * @param initialOffset the starting offset for reading the Log
    * @throws Exception if an error occurs during the Log reading process
    */
-  private void readFromLog(LogInfo inLog, boolean inAndOutAreSameLog, Long initialOffset)
+  private void readFromLog(LogInfo sourceLog, boolean sourceAndWalAreSameLog, Long initialOffset)
       throws Exception {
     LogReader logMessageReader = injector.getInstance(LogReader.class);
-    logMessageReader.readFromLog(inLog, inAndOutAreSameLog, initialOffset);
+    logMessageReader.readFromLog(sourceLog, sourceAndWalAreSameLog, initialOffset);
   }
 
   /**
-   * Initiates writing to the specified output Log.
+   * Initiates writing to the specified Write-Ahead Log.
    *
    * <p>Acquires a LogWriter instance via dependency injection and sets up the Log writing process.
    *
-   * @param outLog the LogInfo instance representing the output log
+   * @param writeAheadLog the LogInfo instance representing the write-ahead log
    */
-  private void writeToLog(LogInfo outLog) {
+  private void writeToLog(LogInfo writeAheadLog) {
     LogWriter logMessageWriter = injector.getInstance(LogWriter.class);
-    logMessageWriter.writeToLog(outLog, true);
+    logMessageWriter.writeToLog(writeAheadLog, true);
   }
 
   /**
@@ -185,55 +186,61 @@ public class LogConfigurator {
     // register Log(s)
     LogInfo newLog = null;
 
-    if ("auto".equalsIgnoreCase(inLogName)) {
+    if ("auto".equalsIgnoreCase(sourceLogName)) {
       if (noPaldir) {
-        inLog = new LogInfo(inLogName, kafkaServers);
+        sourceLog = new LogInfo(sourceLogName, kafkaServers);
       } else {
-        inLog = registerNewLog();
-        newLog = inLog;
+        sourceLog = registerNewLog();
+        newLog = sourceLog;
       }
-    } else if (inLogName != null) {
-      inLog = noPaldir ? new LogInfo(inLogName, kafkaServers) : getOrRegisterGivenLog(inLogName);
+    } else if (sourceLogName != null) {
+      sourceLog =
+          noPaldir
+              ? new LogInfo(sourceLogName, kafkaServers)
+              : getOrRegisterGivenLog(sourceLogName);
     }
 
-    if ("auto".equalsIgnoreCase(outLogName)) {
+    if ("auto".equalsIgnoreCase(writeAheadLogName)) {
       if (noPaldir) {
-        outLog = new LogInfo(outLogName, kafkaServers);
+        writeAheadLog = new LogInfo(writeAheadLogName, kafkaServers);
       } else {
-        outLog = newLog != null ? newLog : registerNewLog();
+        writeAheadLog = newLog != null ? newLog : registerNewLog();
       }
-    } else if (outLogName != null) {
-      outLog = noPaldir ? new LogInfo(outLogName, kafkaServers) : getOrRegisterGivenLog(outLogName);
+    } else if (writeAheadLogName != null) {
+      writeAheadLog =
+          noPaldir
+              ? new LogInfo(writeAheadLogName, kafkaServers)
+              : getOrRegisterGivenLog(writeAheadLogName);
     }
 
     // init Log reader
-    if (inLog != null) {
-      readFromLog(inLog, Objects.equals(inLog, outLog), inLogOffset);
+    if (sourceLog != null) {
+      readFromLog(sourceLog, Objects.equals(sourceLog, writeAheadLog), sourceLogOffset);
     }
 
     // init Log writer
-    if (outLog != null) {
-      writeToLog(outLog);
+    if (writeAheadLog != null) {
+      writeToLog(writeAheadLog);
     }
   }
 
   /**
-   * Retrieves the configured input Log.
+   * Retrieves the configured source Log.
    *
-   * @return an Optional containing the LogInfo for the input Log if configured, otherwise an empty
+   * @return an Optional containing the LogInfo for the source Log if configured, otherwise an empty
    *     Optional
    */
-  public Optional<LogInfo> getInLog() {
-    return Optional.ofNullable(inLog);
+  public Optional<LogInfo> getSourceLog() {
+    return Optional.ofNullable(sourceLog);
   }
 
   /**
-   * Retrieves the configured output Log.
+   * Retrieves the configured Write-Ahead Log.
    *
-   * @return an Optional containing the LogInfo for the output Log if configured, otherwise an empty
-   *     Optional
+   * @return an Optional containing the LogInfo for the write-ahead Log if configured, otherwise an
+   *     empty Optional
    */
-  public Optional<LogInfo> getOutLog() {
-    return Optional.ofNullable(outLog);
+  public Optional<LogInfo> getWriteAheadLog() {
+    return Optional.ofNullable(writeAheadLog);
   }
 }

@@ -34,6 +34,7 @@ pal.sh run \
   --rpc-threads 3 \
   --rpc-allow-nonpublic \
   --log auto \
+  --log-prefix itt \
   --kafka-servers $KAFKA_SERVERS \
   --interceptable \
   --classpath $ITT_APPS_JAR

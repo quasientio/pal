@@ -78,6 +78,7 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractRpcMessageIT
             .withDirectoryProvider(directoryConnectionProvider)
             .withConsumerProperties(consumerProperties)
             .withProducerProperties(producerProperties)
+            .withLogPrefix("itt")
             .withInitialPeer(jsonRpcPeer)
             .withOutboundRpcType(RpcType.JSON_RPC)
             .withWebsocketConnectionLostTimeout(-1) // deactivate timeout for slow CI envs

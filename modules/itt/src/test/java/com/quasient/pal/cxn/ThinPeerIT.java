@@ -254,7 +254,7 @@ public class ThinPeerIT extends AbstractIntegrationTest {
 
   @Test
   public void initFullyConnectedAndTestGetters() throws Exception {
-    LogInfo inAndOutLog = createTestLog();
+    LogInfo inputAndOutputLog = createTestLog();
     PeerInfo initialPeer = findRpcPeer(RpcType.JSON_RPC, directoryConnectionProvider).orElseThrow();
     Properties producerProperties = getKafkaProducerProperties();
     Properties consumerProperties = getKafkaConsumerProperties();
@@ -265,7 +265,7 @@ public class ThinPeerIT extends AbstractIntegrationTest {
             .withDirectoryProvider(directoryConnectionProvider)
             .withConsumer(consumer)
             .withProducer(producer)
-            .withLog(inAndOutLog)
+            .withLog(inputAndOutputLog)
             .withUuid(peerUuid)
             .withProducerProperties(producerProperties)
             .withConsumerProperties(consumerProperties)
@@ -279,8 +279,8 @@ public class ThinPeerIT extends AbstractIntegrationTest {
     assertThat(thinPeer.getPalDirectoryUrl(), is(getPalDirectoryUrl()));
     assertThat(thinPeer.getConsumer(), is(consumer));
     assertThat(thinPeer.getProducer(), is(producer));
-    assertThat(thinPeer.getInLog(), is(inAndOutLog));
-    assertThat(thinPeer.getOutLog(), is(inAndOutLog));
+    assertThat(thinPeer.getInputLog(), is(inputAndOutputLog));
+    assertThat(thinPeer.getOutputLog(), is(inputAndOutputLog));
     assertThat(thinPeer.getPeerUuid(), is(peerUuid));
     assertThat(thinPeer.getProducerProperties(), is(producerProperties));
     assertThat(thinPeer.getConsumerProperties(), is(consumerProperties));

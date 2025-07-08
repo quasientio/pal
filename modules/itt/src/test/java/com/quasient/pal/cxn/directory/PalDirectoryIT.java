@@ -366,34 +366,34 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     palDirectory.createPeer(peerInfo);
     createdPeers.add(peerInfo.getUuid());
 
-    // create and register In and Out logs for the new peer
-    LogInfo inLogInfo = palDirectory.createAutoLog("test_in_log", getKafkaServers());
-    LogInfo outLogInfo = palDirectory.createAutoLog("test_out_log", getKafkaServers());
-    palDirectory.setInLog(peerInfo, inLogInfo, null);
-    palDirectory.setOutLog(peerInfo, outLogInfo, null);
-    createdLogs.add(inLogInfo.getName());
-    createdLogs.add(outLogInfo.getName());
+    // create and register source and writeAhead logs for the new peer
+    LogInfo sourceLogInfo = palDirectory.createAutoLog("test_source_log", getKafkaServers());
+    LogInfo writeAheadLogInfo = palDirectory.createAutoLog("test_wal", getKafkaServers());
+    palDirectory.setSourceLog(peerInfo, sourceLogInfo, null);
+    palDirectory.setWalLog(peerInfo, writeAheadLogInfo, null);
+    createdLogs.add(sourceLogInfo.getName());
+    createdLogs.add(writeAheadLogInfo.getName());
 
     assertEquals(1, palDirectory.listPeers().size() - preExistingPeers.size());
     assertEquals(2, palDirectory.listAllLogs().size() - preExistingLogs.size());
 
     // load them
-    UUID peerInLog = palDirectory.getInLog(peerInfo.getUuid());
-    UUID peerOutLog = palDirectory.getOutLog(peerInfo.getUuid());
+    UUID peerSourceLog = palDirectory.getSourceLogId(peerInfo.getUuid());
+    UUID peerWriteAheadLog = palDirectory.getWalId(peerInfo.getUuid());
 
     // verify
-    assertEquals(inLogInfo.getUuid(), peerInLog);
-    assertEquals(outLogInfo.getUuid(), peerOutLog);
+    assertEquals(sourceLogInfo.getUuid(), peerSourceLog);
+    assertEquals(writeAheadLogInfo.getUuid(), peerWriteAheadLog);
 
     // try to delete the peer's logs
     try {
-      palDirectory.deleteLog(inLogInfo.getName());
+      palDirectory.deleteLog(sourceLogInfo.getName());
       fail("Should have raised IllegalArgumentException because the log is in use by a peer");
     } catch (IllegalArgumentException e) {
       // ok
     }
     try {
-      palDirectory.deleteLog(outLogInfo.getName());
+      palDirectory.deleteLog(writeAheadLogInfo.getName());
       fail("Should have raised IllegalArgumentException because the log is in use by a peer");
     } catch (IllegalArgumentException e) {
       // ok

@@ -297,31 +297,34 @@ public class PalDirectory implements AutoCloseable {
   }
 
   /**
-   * Registers the IN log for the specified peer.
+   * Registers the source log for the specified peer.
    *
    * @param peerInfo the information of the peer
-   * @param logInfo the log information to register as incoming for the peer
+   * @param logInfo the log information to register as source-log for the peer
    * @param peerLease the lease assigned to the peer, null if no keep-alive
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    * @throws NoPeerInfoNodeException if the peer does not exist in the directory
-   * @throws IllegalStateException if an IN-log is already registered for this peer
+   * @throws IllegalStateException if a source log is already registered for this peer
    */
-  public void setInLog(PeerInfo peerInfo, LogInfo logInfo, @Nullable PeerLease peerLease)
+  public void setSourceLog(PeerInfo peerInfo, LogInfo logInfo, @Nullable PeerLease peerLease)
       throws ExecutionException, InterruptedException, NoPeerInfoNodeException {
     Objects.requireNonNull(peerInfo, "peerInfo");
     Objects.requireNonNull(logInfo, "logInfo");
 
     ByteSequence peerInfoKey = peerInfoKey(peerInfo.getUuid());
-    ByteSequence inLogKey = ByteSequence.from(getPeerLogsInPath(peerInfo.getUuid()), UTF8);
-    ByteSequence inLogValue = ByteSequence.from(logInfo.getUuid().toString(), UTF8);
+    ByteSequence sourceLogKey = ByteSequence.from(getPeerSourceLogPath(peerInfo.getUuid()), UTF8);
+    ByteSequence sourceLogValue = ByteSequence.from(logInfo.getUuid().toString(), UTF8);
 
     Op.PutOp putOp;
     if (peerLease != null) {
       putOp =
-          Op.put(inLogKey, inLogValue, PutOption.builder().withLeaseId(peerLease.leaseId).build());
+          Op.put(
+              sourceLogKey,
+              sourceLogValue,
+              PutOption.builder().withLeaseId(peerLease.leaseId).build());
     } else {
-      putOp = Op.put(inLogKey, inLogValue, PutOption.DEFAULT);
+      putOp = Op.put(sourceLogKey, sourceLogValue, PutOption.DEFAULT);
     }
 
     TxnResponse tx =
@@ -330,86 +333,8 @@ public class PalDirectory implements AutoCloseable {
             // peer must exist
             .If(
                 new Cmp(peerInfoKey, Cmp.Op.GREATER, CmpTarget.version(0)),
-                // in-log pointer must NOT exist yet
-                new Cmp(inLogKey, Cmp.Op.EQUAL, CmpTarget.version(0)))
-            .Then(putOp)
-            .commit()
-            .get();
-
-    if (!tx.isSucceeded()) {
-      // Decide what “failed” means
-      if (!kvClient.get(peerInfoKey).get().getKvs().isEmpty()) {
-        throw new IllegalStateException("IN-log already registered for peer " + peerInfo.getUuid());
-      } else {
-        throw new NoPeerInfoNodeException("Peer " + peerInfo.getUuid() + " does not exist");
-      }
-    }
-    logger.info("Registered IN log {} for peer {}", logInfo.getName(), peerInfo.getUuid());
-  }
-
-  /**
-   * Retrieves the UUID of the IN log associated with the specified peer.
-   *
-   * @param peerUuid the UUID of the peer
-   * @return the UUID of the IN log, or {@code null} if none exists
-   * @throws ExecutionException if an error occurs during etcd operation
-   * @throws InterruptedException if the current thread is interrupted while waiting
-   * @throws IllegalStateException if multiple IN logs are found for the peer
-   */
-  public UUID getInLog(UUID peerUuid) throws ExecutionException, InterruptedException {
-    final String peerLogsInPath = getPeerLogsInPath(peerUuid);
-    final ByteSequence peerLogsInPathKey = ByteSequence.from(peerLogsInPath.getBytes(UTF8));
-    final GetResponse response =
-        kvClient.get(peerLogsInPathKey, GetOption.builder().isPrefix(true).build()).get();
-    List<KeyValue> kvs = response.getKvs();
-    if (kvs.isEmpty()) {
-      return null;
-    }
-    if (kvs.size() > 1) {
-      throw new IllegalStateException("More than one IN-log found for peer w/uuid: " + peerUuid);
-    }
-    return UUID.fromString(kvs.get(0).getValue().toString(UTF8));
-  }
-
-  /**
-   * Registers the OUT log for the specified peer.
-   *
-   * @param peerInfo the information of the peer
-   * @param logInfo the log information to register as OUT for the peer
-   * @param peerLease the lease assigned to the peer, null if no keep-alive
-   * @throws ExecutionException if an error occurs during etcd operation
-   * @throws InterruptedException if the current thread is interrupted while waiting
-   * @throws NoPeerInfoNodeException if the peer does not exist in the directory
-   * @throws IllegalStateException if an OUT-log is already registered for this peer
-   */
-  public void setOutLog(PeerInfo peerInfo, LogInfo logInfo, @Nullable PeerLease peerLease)
-      throws ExecutionException, InterruptedException, NoPeerInfoNodeException {
-
-    Objects.requireNonNull(peerInfo, "peerInfo");
-    Objects.requireNonNull(logInfo, "logInfo");
-
-    ByteSequence peerInfoKey = peerInfoKey(peerInfo.getUuid());
-    ByteSequence outLogKey = ByteSequence.from(getPeerLogsOutPath(peerInfo.getUuid()), UTF8);
-    ByteSequence outLogValue = ByteSequence.from(logInfo.getUuid().toString(), UTF8);
-
-    Op.PutOp putOp;
-    if (peerLease != null) {
-      putOp =
-          Op.put(
-              outLogKey, outLogValue, PutOption.builder().withLeaseId(peerLease.leaseId).build());
-    } else {
-      putOp = Op.put(outLogKey, outLogValue, PutOption.DEFAULT);
-    }
-
-    TxnResponse tx =
-        kvClient
-            .txn()
-            .If(
-                new Cmp(peerInfoKey, Cmp.Op.GREATER, CmpTarget.version(0)), // peer must exist
-                new Cmp(
-                    outLogKey,
-                    Cmp.Op.EQUAL,
-                    CmpTarget.version(0))) // out-log pointer must NOT exist yet
+                // source-log pointer must NOT exist yet
+                new Cmp(sourceLogKey, Cmp.Op.EQUAL, CmpTarget.version(0)))
             .Then(putOp)
             .commit()
             .get();
@@ -418,34 +343,114 @@ public class PalDirectory implements AutoCloseable {
       // Decide what “failed” means
       if (!kvClient.get(peerInfoKey).get().getKvs().isEmpty()) {
         throw new IllegalStateException(
-            "An OUT-log is already registered for peer " + peerInfo.getUuid());
+            "Source log already registered for peer " + peerInfo.getUuid());
       } else {
         throw new NoPeerInfoNodeException("Peer " + peerInfo.getUuid() + " does not exist");
       }
     }
-    logger.info("Registered OUT log {} for peer {}", logInfo.getName(), peerInfo.getUuid());
+    logger.info("Registered source log {} for peer {}", logInfo.getName(), peerInfo.getUuid());
   }
 
   /**
-   * Retrieves the UUID of the OUT log associated with the specified peer.
+   * Retrieves the UUID of the source log associated with the specified peer.
    *
    * @param peerUuid the UUID of the peer
-   * @return the UUID of the OUT log, or {@code null} if none exists
+   * @return the UUID of the source log, or {@code null} if none exists
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
-   * @throws IllegalStateException if multiple OUT logs are found for the peer
+   * @throws IllegalStateException if multiple source logs are found for the peer
    */
-  public UUID getOutLog(UUID peerUuid) throws ExecutionException, InterruptedException {
-    final String peerLogsOutPath = getPeerLogsOutPath(peerUuid);
-    final ByteSequence peerLogsOutPathKey = ByteSequence.from(peerLogsOutPath.getBytes(UTF8));
+  public UUID getSourceLogId(UUID peerUuid) throws ExecutionException, InterruptedException {
+    final ByteSequence sourceLogPathKey =
+        ByteSequence.from(getPeerSourceLogPath(peerUuid).getBytes(UTF8));
     final GetResponse response =
-        kvClient.get(peerLogsOutPathKey, GetOption.builder().isPrefix(true).build()).get();
+        kvClient.get(sourceLogPathKey, GetOption.builder().isPrefix(true).build()).get();
     List<KeyValue> kvs = response.getKvs();
     if (kvs.isEmpty()) {
       return null;
     }
     if (kvs.size() > 1) {
-      throw new IllegalStateException("More than one OUT-log found for peer w/uuid: " + peerUuid);
+      throw new IllegalStateException(
+          "More than one source log found for peer w/uuid: " + peerUuid);
+    }
+    return UUID.fromString(kvs.get(0).getValue().toString(UTF8));
+  }
+
+  /**
+   * Registers the WAL (Write-Ahead Log) for the specified peer.
+   *
+   * @param peerInfo the information of the peer
+   * @param logInfo the log information to register as WAL for the peer
+   * @param peerLease the lease assigned to the peer, null if no keep-alive
+   * @throws ExecutionException if an error occurs during etcd operation
+   * @throws InterruptedException if the current thread is interrupted while waiting
+   * @throws NoPeerInfoNodeException if the peer does not exist in the directory
+   * @throws IllegalStateException if an WAL entry is already registered for this peer
+   */
+  public void setWalLog(PeerInfo peerInfo, LogInfo logInfo, @Nullable PeerLease peerLease)
+      throws ExecutionException, InterruptedException, NoPeerInfoNodeException {
+
+    Objects.requireNonNull(peerInfo, "peerInfo");
+    Objects.requireNonNull(logInfo, "logInfo");
+
+    ByteSequence peerInfoKey = peerInfoKey(peerInfo.getUuid());
+    ByteSequence walPathKey = ByteSequence.from(getPeerWALPath(peerInfo.getUuid()), UTF8);
+    ByteSequence walInfoValue = ByteSequence.from(logInfo.getUuid().toString(), UTF8);
+
+    Op.PutOp putOp;
+    if (peerLease != null) {
+      putOp =
+          Op.put(
+              walPathKey, walInfoValue, PutOption.builder().withLeaseId(peerLease.leaseId).build());
+    } else {
+      putOp = Op.put(walPathKey, walInfoValue, PutOption.DEFAULT);
+    }
+
+    TxnResponse tx =
+        kvClient
+            .txn()
+            .If(
+                new Cmp(peerInfoKey, Cmp.Op.GREATER, CmpTarget.version(0)), // peer must exist
+                new Cmp(
+                    walPathKey,
+                    Cmp.Op.EQUAL,
+                    CmpTarget.version(0))) // wal-log pointer must NOT exist yet
+            .Then(putOp)
+            .commit()
+            .get();
+
+    if (!tx.isSucceeded()) {
+      // Decide what “failed” means
+      if (!kvClient.get(peerInfoKey).get().getKvs().isEmpty()) {
+        throw new IllegalStateException(
+            "A Write-Ahead log is already registered for peer " + peerInfo.getUuid());
+      } else {
+        throw new NoPeerInfoNodeException("Peer " + peerInfo.getUuid() + " does not exist");
+      }
+    }
+    logger.info("Registered Write-Ahead log {} for peer {}", logInfo.getName(), peerInfo.getUuid());
+  }
+
+  /**
+   * Retrieves the UUID of the WAL (write-ahead log) associated with the specified peer.
+   *
+   * @param peerUuid the UUID of the peer
+   * @return the UUID of the WAL, or {@code null} if none exists
+   * @throws ExecutionException if an error occurs during etcd operation
+   * @throws InterruptedException if the current thread is interrupted while waiting
+   * @throws IllegalStateException if multiple WAL logs are found for the peer
+   */
+  public UUID getWalId(UUID peerUuid) throws ExecutionException, InterruptedException {
+    final String peerWalPath = getPeerWALPath(peerUuid);
+    final ByteSequence peerWalPathKey = ByteSequence.from(peerWalPath.getBytes(UTF8));
+    final GetResponse response =
+        kvClient.get(peerWalPathKey, GetOption.builder().isPrefix(true).build()).get();
+    List<KeyValue> kvs = response.getKvs();
+    if (kvs.isEmpty()) {
+      return null;
+    }
+    if (kvs.size() > 1) {
+      throw new IllegalStateException("More than one WAL-log found for peer w/uuid: " + peerUuid);
     }
     return UUID.fromString(kvs.get(0).getValue().toString(UTF8));
   }
@@ -1294,9 +1299,9 @@ public class PalDirectory implements AutoCloseable {
   }
 
   /**
-   * Collects every log-UUID referenced by any peer under …/logs/in and …/logs/out.
+   * Collects every log-UUID referenced by any peer under …/logs/source and …/logs/wal.
    *
-   * @return the set of UUID's corresponding to all IN/OUT logs used by peers
+   * @return the set of UUID's corresponding to all Source and Write-Ahead logs used by peers
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
@@ -1307,11 +1312,11 @@ public class PalDirectory implements AutoCloseable {
 
     GetResponse resp = kvClient.get(peersPrefix, GetOption.builder().isPrefix(true).build()).get();
 
-    // Filter client-side for “…/logs/in” and “…/logs/out”
+    // Filter client-side for “…/logs/source” and “…/logs/wal”
     Set<UUID> usedLogs = new HashSet<>();
     for (KeyValue kv : resp.getKvs()) {
       String key = kv.getKey().toString(UTF8);
-      if (key.endsWith("/logs/in") || key.endsWith("/logs/out")) {
+      if (key.endsWith("/logs/source") || key.endsWith("/logs/wal")) {
         usedLogs.add(UUID.fromString(kv.getValue().toString(UTF8)));
       }
     }
@@ -1468,23 +1473,23 @@ public class PalDirectory implements AutoCloseable {
   }
 
   /**
-   * Retrieves the etcd path for a peer's incoming logs.
+   * Retrieves the etcd path for a peer's source log.
    *
    * @param peerUuid the UUID of the peer
-   * @return the etcd path for the peer's incoming logs
+   * @return the etcd path for the peer's source log
    */
-  private String getPeerLogsInPath(UUID peerUuid) {
-    return format("%s/logs/in", getPeerPath(peerUuid));
+  private String getPeerSourceLogPath(UUID peerUuid) {
+    return format("%s/logs/source", getPeerPath(peerUuid));
   }
 
   /**
-   * Retrieves the etcd path for a peer's outgoing logs.
+   * Retrieves the etcd path for a peer's WAL log.
    *
    * @param peerUuid the UUID of the peer
-   * @return the etcd path for the peer's outgoing logs
+   * @return the etcd path for the peer's WAL
    */
-  private String getPeerLogsOutPath(UUID peerUuid) {
-    return format("%s/logs/out", getPeerPath(peerUuid));
+  private String getPeerWALPath(UUID peerUuid) {
+    return format("%s/logs/wal", getPeerPath(peerUuid));
   }
 
   /**

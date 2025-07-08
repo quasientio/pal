@@ -81,7 +81,7 @@ public class LogReader extends ConnectedService {
   private Socket offsetSubscriberSocket;
 
   /** ZMQ address for binding the Log message receiving socket. */
-  private final String inLogAddress;
+  private final String sourceLogAddress;
 
   /** ZMQ address used to connect for receiving offset update messages. */
   private final String offsetPubAddress;
@@ -243,7 +243,7 @@ public class LogReader extends ConnectedService {
    * @param peerId String identifier for this peer, used as Kafka consumer group id.
    * @param pollDuration Duration for which each Kafka poll will block (in millis, provided as
    *     string).
-   * @param inLogAddress Address for binding the Log inbound ZMQ DEALER socket.
+   * @param sourceLogAddress Address for binding the Log inbound ZMQ DEALER socket.
    * @param offsetPubAddress Address to connect for offset publishing via ZMQ SUB socket.
    * @param directoryConnectionProvider Provider for connecting to the Pal directory service to
    *     retrieve log info.
@@ -263,13 +263,13 @@ public class LogReader extends ConnectedService {
       @Named("session.timeout.ms") String sessionTimeout,
       @Named("id") String peerId,
       @Named("pollDuration") String pollDuration,
-      @Named("in.log") String inLogAddress,
+      @Named("source.log") String sourceLogAddress,
       @Named("offset.pub") String offsetPubAddress,
       DirectoryConnectionProvider directoryConnectionProvider) {
     super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
     this.directoryConnectionProvider = directoryConnectionProvider;
     // zmq addresses
-    this.inLogAddress = inLogAddress;
+    this.sourceLogAddress = sourceLogAddress;
     this.offsetPubAddress = offsetPubAddress;
     // prepare Kafka consumer
     this.pollDuration = Duration.of(Long.parseLong(pollDuration), ChronoUnit.MILLIS);
@@ -304,7 +304,7 @@ public class LogReader extends ConnectedService {
    * @param syncSocketAddress Address for service synchronization readiness.
    * @param serviceThreadGroup Thread group for this service.
    * @param serviceName Name of this service.
-   * @param inLogAddress Address for the inbound Log ZMQ DEALER socket.
+   * @param sourceLogAddress Address for the inbound Log ZMQ DEALER socket.
    * @param offsetPubAddress Address for the ZMQ SUB socket to receive offset updates.
    * @param directoryConnectionProvider Provider for obtaining the Pal directory connection.
    * @param consumer A Kafka consumer instance for reading messages.
@@ -316,14 +316,14 @@ public class LogReader extends ConnectedService {
       @Named("sync.ready") String syncSocketAddress,
       ThreadGroup serviceThreadGroup,
       String serviceName,
-      String inLogAddress,
+      String sourceLogAddress,
       String offsetPubAddress,
       DirectoryConnectionProvider directoryConnectionProvider,
       Consumer<String, byte[]> consumer,
       boolean autoCommit,
       long pollDuration) {
     super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
-    this.inLogAddress = inLogAddress;
+    this.sourceLogAddress = sourceLogAddress;
     this.offsetPubAddress = offsetPubAddress;
     this.directoryConnectionProvider = directoryConnectionProvider;
     this.consumer = consumer;
@@ -384,7 +384,7 @@ public class LogReader extends ConnectedService {
       }
     }
     this.logDealerSocket = zmqContext.createSocket(SocketType.DEALER);
-    logDealerSocket.bind(inLogAddress);
+    logDealerSocket.bind(sourceLogAddress);
     // subscriber to get the offsets written by the message writer
     if (skipWrittenOffsets) {
       this.offsetSubscriberSocket = zmqContext.createSocket(SocketType.SUB);

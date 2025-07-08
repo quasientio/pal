@@ -56,7 +56,7 @@ public class LogRpcExecutor extends ThreadPool {
   public LogRpcExecutor(
       @Named("log.threadPoolSize") String threadPoolSize,
       ZContext zmqContext,
-      @Named("in.log") String logDealerAddress,
+      @Named("source.log") String logDealerAddress,
       MessageBuilder messageBuilder,
       IncomingMessageDispatcher incomingMessageDispatcher,
       OutboundMessageGateway outboundMessageGateway,

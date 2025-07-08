@@ -39,11 +39,11 @@ public class PeerException extends Exception {
     /** Offset was provided but no log was specified to read from. */
     ERROR_NO_LOG_GIVEN("Offset given but no log to read from"),
 
-    /** No Kafka bootstrap servers configured, required for IN/OUT logs. */
-    ERROR_NO_KAFKA_SERVERS_GIVEN("No kafka servers given, required for IN/OUT logs"),
+    /** No Kafka bootstrap servers configured, required for Source/Write-Ahead logs. */
+    ERROR_NO_KAFKA_SERVERS_GIVEN("No kafka servers given, required for Source/Write-Ahead logs"),
 
-    /** Error initializing IN and/or OUT logs. */
-    ERROR_INITIALIZING_LOGS("Error initializing IN/OUT logs"),
+    /** Error initializing Source and/or Write-Ahead logs. */
+    ERROR_INITIALIZING_LOGS("Error initializing Source/Write-Ahead logs"),
 
     /** Service manager reported a failure during startup or shutdown. */
     ERROR_SERVICE_MANAGER_FAILED("Service manager failure"),

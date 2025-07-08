@@ -94,7 +94,7 @@ public class LogWriter extends ConnectedService {
   private boolean publishOffsets;
 
   /** Information describing the Log to which messages are written. */
-  private LogInfo outLog;
+  private LogInfo writeAheadLog;
 
   /** Counter tracking the number of messages successfully sent to the Log. */
   private final AtomicInteger messagesSent = new AtomicInteger(0);
@@ -206,13 +206,14 @@ public class LogWriter extends ConnectedService {
    * Sets Kafka producer properties based on the provided Log details and creates the producer if
    * necessary.
    *
-   * @param outLog log information containing details such as the Log name and bootstrap servers.
+   * @param writeAheadLog log information containing details such as the Log name and bootstrap
+   *     servers.
    * @param publishOffsets flag indicating whether message offsets should be published via ZeroMQ.
    */
-  public void writeToLog(LogInfo outLog, boolean publishOffsets) {
-    this.outLog = outLog;
+  public void writeToLog(LogInfo writeAheadLog, boolean publishOffsets) {
+    this.writeAheadLog = writeAheadLog;
     this.publishOffsets = publishOffsets;
-    producerProperties.put("bootstrap.servers", outLog.getBootstrapServers());
+    producerProperties.put("bootstrap.servers", writeAheadLog.getBootstrapServers());
 
     // create producer, if not assigned in constructor
     if (this.producer == null) {
@@ -220,8 +221,8 @@ public class LogWriter extends ConnectedService {
     }
     logger.info(
         "Writing to log: {}, w/ bootstrapServers: {}",
-        outLog.getName(),
-        outLog.getBootstrapServers());
+        writeAheadLog.getName(),
+        writeAheadLog.getBootstrapServers());
   }
 
   /**
@@ -348,7 +349,7 @@ public class LogWriter extends ConnectedService {
       logger.debug("sending new message to kafka log with id: {}", messageId);
     }
     ProducerRecord<String, byte[]> newRecord =
-        new ProducerRecord<>(outLog.getName(), 0, fromPeer.toString(), message, headers);
+        new ProducerRecord<>(writeAheadLog.getName(), 0, fromPeer.toString(), message, headers);
 
     // add message description headers
     newRecord.headers().add("message-format", new byte[] {messageFormat.toByte()});

@@ -55,9 +55,12 @@ public enum RunOptions {
    */
   WITH_INTERCEPTS,
 
-  /** Enables reading and dispatching messages from the Log (i.e. event-sourcing). */
-  WITH_IN_LOG,
+  /**
+   * Enables reading and dispatching messages from the configured source Log (event-sourcing,
+   * WAL-replay).
+   */
+  WITH_SOURCE_LOG,
 
   /** Enables write-ahead publishing of messages to the Log. */
-  WITH_OUT_LOG,
+  WITH_WAL,
 }

@@ -166,7 +166,7 @@ public class SelfBootstrapInvoker {
 
     // prepare offset subscriber
     Socket offsetSubscriber = null;
-    if (runOptions.contains(RunOptions.WITH_OUT_LOG)) {
+    if (runOptions.contains(RunOptions.WITH_WAL)) {
       offsetSubscriber = context.createSocket(SocketType.SUB);
       offsetSubscriber.connect(offsetPubAddress);
       offsetSubscriber.subscribe(ZMQ.SUBSCRIPTION_ALL);
@@ -184,7 +184,7 @@ public class SelfBootstrapInvoker {
     assert response != null;
 
     // wait for the response message offset, to ensure all msg's from have been written to the log
-    if (runOptions.contains(RunOptions.WITH_OUT_LOG)) {
+    if (runOptions.contains(RunOptions.WITH_WAL)) {
       boolean offsetPublished = false;
       long offset = -1;
       String msgId = null;
