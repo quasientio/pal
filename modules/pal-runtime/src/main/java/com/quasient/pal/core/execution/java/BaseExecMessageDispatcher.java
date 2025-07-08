@@ -162,11 +162,6 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     // TODO: Verify that message is invokable:- Class can be loaded/found - Method or field can be
     // found in class - Params can be unwrapped or loaded (if refs). What if they are remote?
 
-    // if message doesn't come from log we write-ahead before executing
-    if (!MessageChannelType.LOG_RPC.equals(messageChannel)) {
-      connector.writeAhead(incomingCall, messageType);
-    }
-
     Throwable exceptionWhileLoading = null;
     Throwable exceptionWhileInvoking = null;
     AccessibleObject accessibleObject = null;
