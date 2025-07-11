@@ -30,6 +30,9 @@ public class PeerException extends Exception {
     /** Error loading application properties from file or resource. */
     ERROR_LOADING_PROPERTIES("Error loading application properties"),
 
+    /** Error validating application properties. */
+    ERROR_VALIDATING_PROPERTIES("Error validating application properties"),
+
     /** Failure when registering this peer in the Pal Directory. */
     ERROR_REGISTERING_SELF("Error registering self as peer"),
 

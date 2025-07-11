@@ -10,10 +10,8 @@
 package com.quasient.pal.core.transport.zmq;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.*;
 
-import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 import com.quasient.pal.common.runtime.ExecPhase;
 import com.quasient.pal.core.ZmqEnabledTest;
@@ -24,12 +22,10 @@ import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.messages.types.InternalHeaderType;
 import com.quasient.pal.messages.types.MessageType;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import org.jctools.queues.MessagePassingQueue;
+import org.jctools.queues.MpscUnboundedArrayQueue;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -38,44 +34,51 @@ import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 
+/**
+ * Tests the queue-driven {@link MessagePublisher}.
+ *
+ * <p>Producers push {@link OutboundMsg}s directly into a JCTools queue; the subscriber socket
+ * verifies everything was published.
+ */
 public class MessagePublisherTest extends ZmqEnabledTest {
-  private final UUID peerUuid = UUID.randomUUID();
-  private static final String OUT_REP_ADDRESS = "inproc://cell";
+
+  // ── constants ──────────────────────────────────────────────────────────
   private static final String OUT_PUB_ADDRESS = "inproc://pub";
+
+  // ── helpers & fixtures ─────────────────────────────────────────────────
+  private final UUID peerUuid = UUID.randomUUID();
+  private final MessageBuilder msgBuilder = new MessageBuilder();
   private ZContext context;
   private ServiceManager manager;
-  private final MessageBuilder msgBuilder = new MessageBuilder();
-  private final ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
-  private InternalHeader writeAheadHeader;
-  private Socket reqSocket;
   private Socket subSocket;
+  private MessagePassingQueue<OutboundMsg> pubQueue;
+  private InternalHeader writeAheadHeader;
 
   @Before
-  public void setup() throws InterruptedException {
-    this.writeAheadHeader = msgBuilder.buildWriteAheadHeader(peerUuid);
-    this.context = createContext();
-    MessagePublisher messagePublisher =
+  public void setup() throws Exception {
+    writeAheadHeader = msgBuilder.buildWriteAheadHeader(peerUuid);
+    context = createContext();
+
+    // shared producer→consumer queue
+    pubQueue = new MpscUnboundedArrayQueue<>(1 << 10);
+
+    MessagePublisher publisher =
         new MessagePublisher(
-            UUID.randomUUID(),
+            peerUuid,
             context,
             SYNC_SOCKET_ADDRESS,
-            servicesThreadGroup,
+            new ThreadGroup("mp-tests"),
             "MessagePublisherTest-Service",
-            OUT_REP_ADDRESS,
+            pubQueue,
             OUT_PUB_ADDRESS);
-    final Set<Service> services = new HashSet<>(List.of(messagePublisher));
-    this.manager = new ServiceManager(services);
 
-    // start service
+    // start via Guava ServiceManager
+    manager = new ServiceManager(Set.of(publisher));
     manager.startAsync().awaitHealthy();
-    collectGoSignals(services.size(), context);
-    assertThat(messagePublisher.isRunning(), is(true));
+    collectGoSignals(1, context);
+    assertThat(publisher.isRunning(), is(true));
 
-    // create REQ socket to simulate requests (IRL: OutboundMessageGateway)
-    reqSocket = context.createSocket(SocketType.REQ);
-    reqSocket.connect(OUT_REP_ADDRESS);
-
-    // create SUB socket to simulate LogWriter
+    // SUB socket to capture what the publisher emits
     subSocket = context.createSocket(SocketType.SUB);
     subSocket.connect(OUT_PUB_ADDRESS);
     subSocket.subscribe(ZMQ.SUBSCRIPTION_ALL);
@@ -83,24 +86,16 @@ public class MessagePublisherTest extends ZmqEnabledTest {
 
   @After
   public void cleanup() throws Exception {
-    // close sockets
-    if (reqSocket != null) {
-      reqSocket.close();
-    }
-    if (subSocket != null) {
-      subSocket.close();
-    }
-    // shut down services
-    manager.stopAsync();
-
+    if (subSocket != null) subSocket.close();
+    manager.stopAsync().awaitStopped(1, TimeUnit.SECONDS);
     closeContext(context);
   }
 
+  // ── test 1 – single ExecMessage without headers ────────────────────────
   @Test
   public void sendExecMessage() {
-    // send 1 message request
     ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
-    OutboundMsg outMsg =
+    OutboundMsg out =
         new OutboundMsg(
             MessageType.EXEC_CONSTRUCTOR,
             ExecPhase.BEFORE,
@@ -108,93 +103,90 @@ public class MessagePublisherTest extends ZmqEnabledTest {
             msg.getMessageId(),
             null,
             msgBuilder.wrap(msg));
-    outMsg.send(reqSocket);
 
-    // expect a 0-response
-    String response = reqSocket.recvStr();
-    assertThat(response, is("0"));
+    assertThat(pubQueue.offer(out), is(true)); // enqueue
 
-    // check if it was published
-    OutboundMsg publishedOutMsg = OutboundMsg.receive(subSocket, true);
-    assertThat(publishedOutMsg, is(notNullValue()));
-    assertThat(publishedOutMsg, is(outMsg));
+    OutboundMsg published = OutboundMsg.receive(subSocket, true);
+    assertThat(published, notNullValue());
+    assertThat(published, is(out)); // byte-wise equality
 
-    // verify exec message is what we sent
-    Message publishedMsg = new Message();
-    publishedMsg.unmarshal(publishedOutMsg.getBody(), 0);
-    assertThat(publishedMsg.getExecMessage(), is(msg));
+    Message unmarshalled = new Message();
+    unmarshalled.unmarshal(published.getBody(), 0);
+    assertThat(unmarshalled.getExecMessage(), is(msg));
   }
 
+  // ── test 2 – ExecMessage with WRITE_AHEAD header ───────────────────────
   @Test
   public void sendExecMessageWithHeaders() {
-    // send 1 message request
     ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
-    List<InternalHeader> headers = Collections.singletonList(this.writeAheadHeader);
-    OutboundMsg outMsg =
+    OutboundMsg out =
         new OutboundMsg(
             MessageType.EXEC_CONSTRUCTOR,
             ExecPhase.BEFORE,
-            headers,
+            List.of(writeAheadHeader),
             msg.getMessageId(),
             null,
             msgBuilder.wrap(msg));
-    outMsg.send(reqSocket);
 
-    // expect a 0-response
-    String response = reqSocket.recvStr();
-    assertThat(response, is("0"));
+    assertThat(pubQueue.offer(out), is(true));
 
-    // get what was published
-    OutboundMsg publishedOutMsg = OutboundMsg.receive(subSocket, true);
-    assertThat(publishedOutMsg, is(notNullValue()));
-    assertThat(publishedOutMsg, is(outMsg));
+    OutboundMsg published = OutboundMsg.receive(subSocket, true);
+    assertThat(published, notNullValue());
+    assertThat(published, is(out));
 
-    // verify exec message is what we sent
-    Message publishedMsg = new Message();
-    publishedMsg.unmarshal(publishedOutMsg.getBody(), 0);
-    // verify header and msg as expected
-    assertThat(publishedOutMsg.getHeaders(), is(notNullValue()));
-    assertThat(
-        publishedOutMsg.getHeaders().get(0).getHeaderType(),
-        is(InternalHeaderType.WRITE_AHEAD.toByte()));
-    assertThat(publishedOutMsg.getHeaders().get(0).getValue(), is(peerUuid.toString()));
-    assertThat(publishedMsg.getExecMessage(), is(msg));
+    // verify header & body
+    assertThat(published.getHeaders(), notNullValue());
+    InternalHeader h = published.getHeaders().get(0);
+    assertThat(h.getHeaderType(), is(InternalHeaderType.WRITE_AHEAD.toByte()));
+    assertThat(h.getValue(), is(peerUuid.toString()));
+
+    Message unmarshalled = new Message();
+    unmarshalled.unmarshal(published.getBody(), 0);
+    assertThat(unmarshalled.getExecMessage(), is(msg));
   }
 
+  // ── test 3 – burst of ExecMessages keeps order ─────────────────────────
   @Test
   public void sendManyExecMessages() {
-    int messagesToSend = 15;
-    List<ExecMessage> messagesSent = new ArrayList<>();
-    for (int i = 0; i < messagesToSend; i++) {
-      // send 1 message request
+    int count = 15;
+    List<ExecMessage> sent = new ArrayList<>();
+
+    for (int i = 0; i < count; i++) {
       ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
-      OutboundMsg outMsg =
+      sent.add(msg);
+      pubQueue.offer(
           new OutboundMsg(
               MessageType.EXEC_CONSTRUCTOR,
               ExecPhase.BEFORE,
               null,
               msg.getMessageId(),
               null,
-              msgBuilder.wrap(msg));
-      outMsg.send(reqSocket);
-      messagesSent.add(msg);
-
-      // expect a 0-response
-      String response = reqSocket.recvStr();
-      assertThat(response, is("0"));
+              msgBuilder.wrap(msg)));
     }
 
-    // get what was published
-    List<ExecMessage> messagesPublished = new ArrayList<>();
-    for (int i = 0; i < messagesToSend; i++) {
-      OutboundMsg publishedOutMsg = OutboundMsg.receive(subSocket, true);
-      assertThat(publishedOutMsg, is(notNullValue()));
-      Message receivedMsg = new Message();
-      receivedMsg.unmarshal(publishedOutMsg.getBody(), 0);
-      messagesPublished.add(receivedMsg.getExecMessage());
+    List<ExecMessage> received = new ArrayList<>();
+    for (int i = 0; i < count; i++) {
+      OutboundMsg published = OutboundMsg.receive(subSocket, true);
+      assertThat(published, notNullValue());
+      Message m = new Message();
+      m.unmarshal(published.getBody(), 0);
+      received.add(m.getExecMessage());
     }
 
-    // compare sent and published lists
-    assertThat(messagesPublished, is(messagesSent));
+    assertThat(received, is(sent)); // order preserved
+  }
+
+  // ── extra sanity: queue offer() should never block/throw ───────────────
+  @Test
+  public void queueAcceptsBurstOf1000() {
+    for (int i = 0; i < 1000; i++) {
+      assertThat(pubQueue.offer(dummyMsg(i)), is(true));
+    }
+  }
+
+  private OutboundMsg dummyMsg(int i) {
+    ExecMessage msgBody = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+    return new OutboundMsg(
+        MessageType.UNKNOWN, ExecPhase.UNDEFINED, null, "DUMMY-" + i, null, msgBody);
   }
 }

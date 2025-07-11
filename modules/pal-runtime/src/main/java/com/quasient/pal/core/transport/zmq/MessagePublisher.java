@@ -9,29 +9,26 @@
  */
 package com.quasient.pal.core.transport.zmq;
 
+import com.quasient.pal.core.internal.concurrent.AdaptiveSpinParkWaitStrategy;
 import com.quasient.pal.core.service.ConnectedService;
 import com.quasient.pal.messages.OutboundMsg;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.util.UUID;
+import org.jctools.queues.MessagePassingQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ.Socket;
-import org.zeromq.ZMQException;
-import zmq.ZError;
-
-// TODO replace this with a XPUB-XSUB proxy
 
 /**
  * Service responsible for publishing outbound messages.
  *
- * <p>This class initializes ZeroMQ REP and PUB sockets to receive requests and publish messages
- * respectively. It listens continuously for outbound messages, sending an acknowledgment to the
- * requester while forwarding the message to subscribers. The service stops when interrupted or upon
- * encountering critical socket errors.
+ * <p>If LogWriter writes WAL messages to Log, this services parallels that behavior, forwarding
+ * such outbound messages through a tcp PUB socket instead. The service stops when interrupted or
+ * upon encountering critical socket errors.
  */
 @Singleton
 public class MessagePublisher extends ConnectedService {
@@ -39,23 +36,23 @@ public class MessagePublisher extends ConnectedService {
   /** Logger instance. */
   private static final Logger logger = LoggerFactory.getLogger(MessagePublisher.class);
 
-  /** Reply constant indicating successful message processing. */
-  private static final String OK_REPLY = "0";
+  /**
+   * A MPSC (Multiple Producer Single Consumer) queue holding the OutboundMessage's to be published.
+   */
+  private final MessagePassingQueue<OutboundMsg> pubQueue;
 
-  /** Reply constant indicating an error occurred during message processing. */
-  private static final String ERROR_REPLY = "1";
-
-  /** ZeroMQ REP socket used to receive requests and respond with acknowledgments. */
-  private Socket repSocket;
+  /** Adaptive dynamic backoff strategy used by the queue drain operation. */
+  private static final MessagePassingQueue.WaitStrategy ZMQ_WAIT =
+      new AdaptiveSpinParkWaitStrategy(20, 50_000L); // 50 µs
 
   /** ZeroMQ PUB socket used to publish messages to subscribed services. */
   private Socket pubSocket;
 
-  /**
-   * Address for binding the REP socket; designates where this service listens for incoming
-   * requests.
-   */
-  private final String outRepAddress;
+  /** true while we are seeing consecutive send failures */
+  private boolean pubDown = false;
+
+  /** # messages dropped since the socket first failed */
+  private long dropped = 0;
 
   /** Address for binding the PUB socket; designates where this service publishes messages. */
   private final String outPubAddress;
@@ -68,7 +65,7 @@ public class MessagePublisher extends ConnectedService {
    * @param syncSocketAddress Address of the synchronization socket for service readiness.
    * @param serviceThreadGroup Thread group under which the service runs.
    * @param serviceName Unique name identifying this service instance.
-   * @param outRepAddress Socket address for the outgoing REP (reply) endpoint.
+   * @param pubQueue initialized {@link OutboundMsg} queue instance from which to consume.
    * @param outPubAddress Socket address for the outgoing PUB (publish) endpoint.
    */
   @Inject
@@ -78,23 +75,21 @@ public class MessagePublisher extends ConnectedService {
       @Named("sync.ready") String syncSocketAddress,
       ThreadGroup serviceThreadGroup,
       @Named("MessagePublisher.service") String serviceName,
-      @Named("out.cell") String outRepAddress,
+      @Named("pub_queue") MessagePassingQueue<OutboundMsg> pubQueue,
       @Named("out.pub") String outPubAddress) {
     super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
-    this.outRepAddress = outRepAddress;
+    this.pubQueue = pubQueue;
     this.outPubAddress = outPubAddress;
   }
 
   /**
    * {@inheritDoc}
    *
-   * <p>Opens and binds the ZeroMQ REP and PUB sockets to their respective configured addresses.
+   * <p>Opens and binds the PUB socket.
    */
   @Override
   protected void openConnections() {
-    // open REP and PUB sockets
-    repSocket = zmqContext.createSocket(SocketType.REP);
-    repSocket.bind(outRepAddress);
+    // open PUB socket
     pubSocket = zmqContext.createSocket(SocketType.PUB);
     pubSocket.bind(outPubAddress);
   }
@@ -102,58 +97,52 @@ public class MessagePublisher extends ConnectedService {
   /**
    * {@inheritDoc}
    *
-   * <p>Runs the service loop to continuously receive outbound messages. Each received message is
-   * acknowledged via a reply on the REP socket and then published to subscribers through the PUB
-   * socket. The method handles specific ZeroMQ exceptions to ensure graceful service shutdown.
+   * <p>Continuously receives messages from the configured Pub Queue and publishes them to
+   * subscribers through the PUB socket. The method processes messages until the thread is
+   * interrupted.
    */
   @Override
   public final void run() {
-    boolean socketError = false;
-    while (!Thread.interrupted() && !socketError) {
-      OutboundMsg msg = null;
-      try {
-        msg = OutboundMsg.receive(repSocket, true);
-      } catch (ZMQException ex) {
-        int errorCode = ex.getErrorCode();
-        if (errorCode == ZError.ETERM) {
-          if (logger.isDebugEnabled()) {
-            logger.debug("Caught ETERM during blocking read. Breaking out.");
-          }
-          socketError = true;
-        } else if (errorCode == ZError.EINTR) {
-          if (logger.isDebugEnabled()) {
-            logger.debug("Caught EINTR during blocking read. Breaking out.");
-          }
-          socketError = true;
-        } else {
-          throw ex;
-        }
-      } catch (Exception e) {
-        logger.error("Error receiving message", e);
-        repSocket.send(ERROR_REPLY);
+
+    pubQueue.drain(
+        this::handleOutboundMessage, ZMQ_WAIT, () -> !Thread.currentThread().isInterrupted());
+  }
+
+  /**
+   * Handles a single {@link OutboundMsg} taken from the pub queue and sends it out via ZMQ PUB.
+   *
+   * @param msg the dequeued message; never {@code null}.
+   */
+  private void handleOutboundMessage(OutboundMsg msg) {
+
+    if (msg.send(pubSocket)) { // ── success ──
+      if (pubDown) {
+        logger.info("PUB socket recovered – {} messages were dropped", dropped);
+        pubDown = false;
+        dropped = 0;
       }
-      if (msg != null) {
-        // response OK
-        repSocket.send(OK_REPLY);
-        // publish the message
-        msg.send(pubSocket);
-        if (logger.isDebugEnabled()) {
-          logger.debug(
-              "Published new message w/id: {} ({} bytes)", msg.getMessageId(), msg.getSize());
-        }
+      if (logger.isDebugEnabled()) {
+        logger.debug("Published msg {} ({} bytes)", msg.getMessageId(), msg.getSize());
       }
+      return;
     }
+
+    /* ── failure ─────────────────────────────────────────────────────── */
+    dropped++;
+    if (!pubDown) { // first failure in a streak
+      logger.warn("PUB socket congested – starting to drop messages");
+      pubDown = true;
+    }
+    // else: still congested – do not flood the log
   }
 
   /**
    * {@inheritDoc}
    *
-   * <p>Closes the ZeroMQ REP and PUB sockets, ensuring that all associated resources are properly
-   * released.
+   * <p>Closes the ZeroMQ PUB sockets, ensuring that all associated resources are properly released.
    */
   @Override
   protected void closeConnections() {
-    closeConnection(repSocket, "Error closing REP socket");
     closeConnection(pubSocket, "Error closing PUB socket");
   }
 }

@@ -117,7 +117,7 @@ public class OutboundMsg extends BaseMsg {
       @Nullable List<InternalHeader> headers,
       String messageId,
       @Nullable String responseToId,
-      @Nullable Marshallable marshallable) {
+      Marshallable marshallable) {
 
     Stream.of(messageType, execPhase, messageId, marshallable).forEach(Objects::requireNonNull);
     this.messageType = messageType;

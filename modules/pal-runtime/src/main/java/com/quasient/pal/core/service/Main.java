@@ -19,6 +19,9 @@ import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.TypeLiteral;
+import com.google.inject.name.Names;
 import com.quasient.pal.common.cli.PalCommand;
 import com.quasient.pal.common.directory.nodes.LogInfo;
 import com.quasient.pal.common.directory.nodes.PeerInfo;
@@ -41,6 +44,7 @@ import com.quasient.pal.core.transport.zmq.ZmqRpcServer;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.cxn.directory.PeerLease;
+import com.quasient.pal.messages.OutboundMsg;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -68,6 +72,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.jctools.queues.MessagePassingQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
@@ -365,6 +370,15 @@ public class Main implements Callable<Integer> {
   /** Default value, in seconds, for this peer's keep-alive. */
   private static final long PEER_KA_SECS = 60;
 
+  /** Default initial capacity for WAL and PUB queue (must be power of 2). */
+  private static final int MPSC_INITIAL_DEFAULT = 1 << 10; // 1024
+
+  /** Default chunk size for WAL and PUB queue (must be power of 2). */
+  private static final int MPSC_CHUNK_DEFAULT = 1 << 10; // 1024
+
+  /** Default maximum capacity for WAL and PUB queue (must be power of 2). */
+  private static final int MPSC_MAX_DEFAULT = 1 << 20; // 1 048 576
+
   /** Container for default ZeroMQ configuration properties and internal endpoint mappings. */
   private static final class ZmqProperties {
     /** Default linger period (in milliseconds) for the ZeroMQ context. */
@@ -468,6 +482,69 @@ public class Main implements Callable<Integer> {
           format("Make sure to have `%s` in the classpath", PROPERTIES_FILE));
     }
     logger.info("Loaded application properties from `{}`", PROPERTIES_FILE);
+  }
+
+  /**
+   * Validates the loaded properties, converting and overriding types where necessary.
+   *
+   * <p>If any property value is invalid, the application terminates with a fatal error.
+   */
+  private void validateProperties() {
+
+    try {
+      // ------------- validate WAL Queue params --------------
+      int walInitial = readPowerOfTwo(properties, "wal.queue.initial", MPSC_INITIAL_DEFAULT);
+      properties.setProperty("wal.queue.initial", String.valueOf(walInitial));
+
+      int walChunk = readPowerOfTwo(properties, "wal.queue.chunk", MPSC_CHUNK_DEFAULT);
+      properties.setProperty("wal.queue.chunk", String.valueOf(walChunk));
+
+      int walMax = readPowerOfTwo(properties, "wal.queue.max", MPSC_MAX_DEFAULT);
+      properties.setProperty("wal.queue.max", String.valueOf(walMax));
+
+      // ------------- validate PUB Queue params --------------
+      int pubInitial = readPowerOfTwo(properties, "pub.queue.initial", MPSC_INITIAL_DEFAULT);
+      properties.setProperty("pub.queue.initial", String.valueOf(pubInitial));
+
+      int pubChunk = readPowerOfTwo(properties, "pub.queue.chunk", MPSC_CHUNK_DEFAULT);
+      properties.setProperty("pub.queue.chunk", String.valueOf(pubChunk));
+
+      int pubMax = readPowerOfTwo(properties, "pub.queue.max", MPSC_MAX_DEFAULT);
+      properties.setProperty("pub.queue.max", String.valueOf(pubMax));
+    } catch (IllegalArgumentException e) {
+      fatalExit(e, PeerException.FatalCode.ERROR_VALIDATING_PROPERTIES);
+    }
+  }
+
+  /**
+   * Return the property’s value (or the supplied default) or throw IllegalArgumentException if the
+   * value exists but is not a power of 2.
+   *
+   * @param props loaded properties
+   * @param key the property name
+   * @param defaultVal the default
+   * @return the property value, if is a power of 2
+   * @throws IllegalArgumentException if the value exists but is not a power of 2
+   */
+  private static int readPowerOfTwo(Properties props, String key, int defaultVal)
+      throws IllegalArgumentException {
+    String raw = props.getProperty(key); // null = not supplied
+    int value = (raw == null) ? defaultVal : Integer.parseInt(raw.trim());
+
+    if (raw != null && !isPowerOfTwo(value)) { // only validate when user overrode
+      throw new IllegalArgumentException(key + " must be a power of two (was " + value + ')');
+    }
+    return value;
+  }
+
+  /**
+   * True if n is a positive power of 2.
+   *
+   * @param n the integer to check
+   * @return true if n is a positive power of 2
+   */
+  private static boolean isPowerOfTwo(int n) {
+    return n > 0 && (n & (n - 1)) == 0;
   }
 
   /**
@@ -658,13 +735,13 @@ public class Main implements Callable<Integer> {
       runOptions.add(RunOptions.WITH_WAL);
     }
 
+    if (tcpPub != null) {
+      runOptions.add(RunOptions.WITH_TCP_PUB);
+    }
+
     // ensure that if offset was given, a log name to read from was also given
     if (startOffset != null && (sourceLog == null || sourceLog.equalsIgnoreCase("auto"))) {
       fatalExit(null, PeerException.FatalCode.ERROR_NO_LOG_GIVEN);
-    }
-
-    if (runOptions.contains(RunOptions.WITH_WAL) || tcpPub != null) {
-      runOptions.add(RunOptions.WITH_TCP_PUB);
     }
 
     if (runOptions.contains(RunOptions.WITH_PALDIR) && interceptable) {
@@ -1128,6 +1205,24 @@ public class Main implements Callable<Integer> {
         logger.debug("Executor service did not terminate gracefully.");
       }
 
+      // clear queues - just to be nice
+      if (runOptions.contains(RunOptions.WITH_WAL)) {
+        MessagePassingQueue<OutboundMsg> walQueue =
+            injector.getInstance(Key.get(new TypeLiteral<>() {}, Names.named("wal_queue")));
+        walQueue.clear();
+        if (logger.isDebugEnabled()) {
+          logger.debug("Cleared internal WAL queue");
+        }
+      }
+      if (runOptions.contains(RunOptions.WITH_TCP_PUB)) {
+        MessagePassingQueue<OutboundMsg> pubQueue =
+            injector.getInstance(Key.get(new TypeLiteral<>() {}, Names.named("pub_queue")));
+        pubQueue.clear();
+        if (logger.isDebugEnabled()) {
+          logger.debug("Cleared internal PUB queue");
+        }
+      }
+
       // in case we're running asService and manager == null
       if (manager == null) {
         runAsServiceLatch.countDown();
@@ -1193,9 +1288,13 @@ public class Main implements Callable<Integer> {
     // for async calls
     final ExecutorService singleExecutor = Executors.newSingleThreadExecutor();
 
+    // validate CLI args and ENV vars
     setEmptyParamsFromEnv();
     validateInput();
+
+    // load and validate properties
     loadProps();
+    validateProperties();
 
     // initialize ZMQ and local sockets
     initZmqContext();

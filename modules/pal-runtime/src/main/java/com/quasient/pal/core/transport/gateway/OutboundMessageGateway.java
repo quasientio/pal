@@ -31,21 +31,22 @@ import com.quasient.pal.serdes.colfer.MessageBuilder;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
-import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.Nullable;
+import org.jctools.queues.MessagePassingQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ.Socket;
-import org.zeromq.ZMQException;
 
 /**
  * A one-stop outbound gateway with the following responsibilities:
@@ -82,9 +83,6 @@ public class OutboundMessageGateway {
   /** Matcher used to determine and retrieve intercepts applicable to execution messages. */
   private final InterceptMatcher interceptMatcher;
 
-  /** Network address used for publishing execution messages. */
-  private final String msgPublisherAddress;
-
   /** Network address of the session service, used for sending session-related commands. */
   private final String sessionServiceAddress;
 
@@ -93,42 +91,24 @@ public class OutboundMessageGateway {
    */
   private final List<InternalHeader> writeAheadHeaders;
 
+  /**
+   * A MPSC (Multiple Producer Single Consumer) queue holding the OutboundMessage's to be written.
+   */
+  private final MessagePassingQueue<OutboundMsg> walQueue;
+
+  /**
+   * Global failure flag, used to let producer threads in {@link OutboundMessageGateway} know WAL is
+   * down.
+   */
+  private final AtomicBoolean walFailed;
+
+  /**
+   * A MPSC (Multiple Producer Single Consumer) queue holding the OutboundMessage's to be published.
+   */
+  private final MessagePassingQueue<OutboundMsg> pubQueue;
+
   /** Set of runtime options that control behavior such as intercept handling and TCP publishing. */
   private final Set<RunOptions> runOptions;
-
-  /**
-   * Atomic counter tracking the cumulative time spent on publishing messages via the publisher
-   * socket.
-   */
-  private final AtomicLong totalPubSocketTime = new AtomicLong();
-
-  /** Atomic counter tracking the total number of published requests. */
-  private final AtomicLong totalPublishedRequests = new AtomicLong();
-
-  /**
-   * Thread-local REQ socket instance used for publishing execution messages. This socket is created
-   * and connected to the message publisher address upon first access.
-   */
-  private final ThreadLocal<Socket> threadPubSocket =
-      new ThreadLocal<>() {
-        @Override
-        protected Socket initialValue() {
-          Socket worker = zmqContext.createSocket(SocketType.REQ);
-          worker.connect(msgPublisherAddress);
-          if (logger.isDebugEnabled()) {
-            logger.debug(
-                "Created and connected new REQ socket to outCellAddress: {}", msgPublisherAddress);
-          }
-          threadPubSocketCreated.set(true);
-          return worker;
-        }
-      };
-
-  /**
-   * Thread-local flag indicating whether the publisher socket has been created for the current
-   * thread.
-   */
-  private final ThreadLocal<Boolean> threadPubSocketCreated = ThreadLocal.withInitial(() -> false);
 
   /**
    * Thread-local REQ socket instance used for communication with the session service. This socket
@@ -175,7 +155,9 @@ public class OutboundMessageGateway {
    * @param directoryConnectionProvider provider for retrieving peer connection details
    * @param runOptions the set of runtime options that influence message processing behavior
    * @param interceptMatcher matcher used for determining applicable intercepts for messages
-   * @param msgPublisherAddress the address used for publishing execution messages
+   * @param walQueue shared queue to put/offer outbound messages to write-ahead
+   * @param walFailed global flag used by the LogWriter to inform of failure and WAL halting
+   * @param pubQueue shared queue to put/offer outbound messages to publish
    * @param sessionServiceAddress the address for the session service communication
    */
   @Inject
@@ -186,7 +168,9 @@ public class OutboundMessageGateway {
       DirectoryConnectionProvider directoryConnectionProvider,
       Set<RunOptions> runOptions,
       InterceptMatcher interceptMatcher,
-      @Named("out.cell") String msgPublisherAddress,
+      @Named("wal_queue") MessagePassingQueue<OutboundMsg> walQueue,
+      @Named("walFailed") AtomicBoolean walFailed,
+      @Named("pub_queue") MessagePassingQueue<OutboundMsg> pubQueue,
       @Named("session.svc") String sessionServiceAddress) {
     this.zmqContext = zmqContext;
     this.peerUuid = peerUuid;
@@ -194,7 +178,9 @@ public class OutboundMessageGateway {
     this.directoryConnectionProvider = directoryConnectionProvider;
     this.runOptions = runOptions;
     this.interceptMatcher = interceptMatcher;
-    this.msgPublisherAddress = msgPublisherAddress;
+    this.walQueue = walQueue;
+    this.walFailed = walFailed;
+    this.pubQueue = pubQueue;
     this.sessionServiceAddress = sessionServiceAddress;
     this.writeAheadHeaders =
         Collections.singletonList(messageBuilder.buildWriteAheadHeader(peerUuid));
@@ -246,17 +232,38 @@ public class OutboundMessageGateway {
           interceptMatcher.getMatchingIntercepts(execMessage, messageType, execPhase);
     }
 
-    // publish execMessage -- TODO should we in case of intercepts publish it after
-    if (runOptions.contains(RunOptions.WITH_TCP_PUB)) {
-      final OutboundMsg msg =
+    // write-ahead and/or publish
+    if (runOptions.contains(RunOptions.WITH_WAL) || runOptions.contains(RunOptions.WITH_TCP_PUB)) {
+
+      // concat headers if required
+      List<InternalHeader> internalHeaders;
+      if (headers == null) {
+        internalHeaders = writeAheadHeaders;
+      } else { // internalHeaders = writeAheadHeaders + headers
+        internalHeaders =
+            Stream.concat(writeAheadHeaders.stream(), headers.stream())
+                .collect(Collectors.toList());
+      }
+
+      // prepare outbound message
+      final OutboundMsg outboundMsg =
           new OutboundMsg(
               messageType,
               execPhase,
-              headers,
+              internalHeaders,
               execMessage.getMessageId(),
               execMessage.getResponseToId(),
               message);
-      publishMessage(msg);
+
+      // write-ahead execMessage -- TODO should we in case of intercepts write-ahead it after?
+      if (runOptions.contains(RunOptions.WITH_WAL)) {
+        writeAhead(outboundMsg);
+      }
+
+      // publish execMessage -- TODO should we in case of intercepts publish it after?
+      if (runOptions.contains(RunOptions.WITH_TCP_PUB)) {
+        publishMessage(outboundMsg);
+      }
     }
 
     if (!runOptions.contains(RunOptions.WITH_INTERCEPTS)) {
@@ -318,59 +325,36 @@ public class OutboundMessageGateway {
   }
 
   /**
-   * Publishes the given outbound message on the thread-local publisher socket. Tracks publishing
-   * time and the number of published requests, and logs warnings if the publisher returns a
-   * non-zero response.
+   * Publishes the provided execution message when PUB is enabled and {@link
+   * com.quasient.pal.core.transport.zmq.MessagePublisher} is up.
    *
-   * @param message the OutboundMsg to be sent over the network
+   * @param message the OutboundMessage to be published
+   * @throws IllegalStateException in case of queue overflow
    */
-  private void publishMessage(OutboundMsg message) {
-    Socket publisherReqSocket = threadPubSocket.get();
-    long start = Instant.now().toEpochMilli();
-    message.send(publisherReqSocket);
-    try {
-      String response = publisherReqSocket.recvStr();
-      if (!"0".equalsIgnoreCase(response)) {
-        logger.warn("Non-zero response from message publisher for message: {}", message);
-      }
-    } catch (ZMQException e) {
-      logger.error("Error receiving response from publisher socket", e);
-    } finally {
-      totalPubSocketTime.getAndAdd((Instant.now().toEpochMilli() - start));
-      totalPublishedRequests.getAndIncrement();
+  private void publishMessage(OutboundMsg message) throws IllegalStateException {
+
+    if (!pubQueue.offer(message)) {
+      throw new IllegalStateException("WAL queue overflow");
     }
   }
 
   /**
-   * Writes the provided execution message ahead by publishing it if TCP publishing is enabled. This
-   * mechanism is typically used for logging or preliminary handling before main processing.
+   * Writes the provided execution message when WAL is enabled and the WAL writer is up.
    *
-   * @param message the ExecMessage to be written ahead
-   * @param messageType the type of the message for contextual processing
+   * @param message the OutboundMessage to be written ahead
+   * @throws IllegalStateException in case of queue overflow
    */
-  public void writeAhead(ExecMessage message, MessageType messageType) {
-    if (logger.isDebugEnabled()) {
-      logger.debug(
-          "writeAhead:in w/ message with id: {},from {}",
-          message.getMessageId(),
-          message.getPeerUuid());
-    }
+  private void writeAhead(OutboundMsg message) throws IllegalStateException {
 
-    if (!runOptions.contains(RunOptions.WITH_TCP_PUB)) {
+    if (walFailed.get()) { // WAL writer unavailable
+      // silently drop message (the WAL writer must have already logged the error when shutting
+      // down)
       return;
     }
 
-    final OutboundMsg msg =
-        new OutboundMsg(
-            messageType,
-            ExecPhase.BEFORE,
-            writeAheadHeaders,
-            message.getMessageId(),
-            message.getResponseToId(),
-            messageBuilder.wrap(message));
-
-    // no intercept matching, just publish it
-    publishMessage(msg);
+    if (!walQueue.offer(message)) {
+      throw new IllegalStateException("WAL queue overflow");
+    }
   }
 
   /**
@@ -541,13 +525,9 @@ public class OutboundMessageGateway {
     };
   }
 
-  /**
-   * Prints aggregated statistics regarding message publishing, including total time spent and the
-   * number of requests published.
-   */
+  /** Prints aggregated statistics regarding message write-ahead and publishing. */
   void printStats() {
-    logger.info("totalPubSocketTime = {} ms", totalPubSocketTime);
-    logger.info("totalPublishedRequests = {}", totalPublishedRequests);
+    // TODO
   }
 
   /**
@@ -557,23 +537,6 @@ public class OutboundMessageGateway {
    */
   public void closeThreadLocalSockets() {
     printStats();
-    if (totalPublishedRequests.longValue() != 0) {
-      logger.info(
-          "avg ms per pub = {} ms",
-          totalPubSocketTime.longValue() / totalPublishedRequests.longValue());
-    }
-
-    if (Boolean.TRUE.equals(threadPubSocketCreated.get())) {
-      Socket socket = threadPubSocket.get();
-      if (socket != null) {
-        socket.close();
-        if (logger.isDebugEnabled()) {
-          logger.debug("Thread local REQ socket for publishing closed");
-        }
-      }
-      threadPubSocket.remove();
-    }
-    threadPubSocketCreated.remove();
 
     if (Boolean.TRUE.equals(threadSessionsSocketCreated.get())) {
       Socket socket = threadSessionsSocket.get();

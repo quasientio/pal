@@ -7,13 +7,13 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
+
 package com.quasient.pal.core.transport.gateway;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.common.runtime.ExecPhase;
@@ -26,24 +26,16 @@ import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.messages.OutboundMsg;
 import com.quasient.pal.messages.colfer.ExecMessage;
-import com.quasient.pal.messages.colfer.InternalHeader;
-import com.quasient.pal.messages.colfer.Message;
-import com.quasient.pal.messages.types.MessageType;
 import com.quasient.pal.messages.types.SessionCommandType;
 import com.quasient.pal.messages.types.SessionStatusType;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.jctools.queues.MessagePassingQueue;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -53,368 +45,223 @@ import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ.Socket;
-import org.zeromq.ZMQException;
-import zmq.ZError;
 
 @SuppressWarnings("DoNotMock")
 public class OutboundMessageGatewayTest extends ZmqEnabledTest {
 
+  // --------------------------------------------------------------------
+  // constants & helpers
+  // --------------------------------------------------------------------
   private static final Logger logger = LoggerFactory.getLogger("tests");
-  private static final String MSG_PUBLISHER_ADDRESS = "inproc://cell_test";
+
   private static final String SESSION_SERVICE_REQ_ADDRESS = "inproc://session_test";
 
   private final UUID peerUuid = UUID.randomUUID();
+  private final MessageBuilder builder = new MessageBuilder();
+  private final List<ExecMessage> msgsSeenByMatcher = new ArrayList<>();
+
+  // --------------------------------------------------------------------
+  // zmq / executor fixtures
+  // --------------------------------------------------------------------
   private ZContext context;
   private ExecutorService execService;
-  private InterceptMatcher interceptMatcher;
-  private OutboundMessageGateway outboundMessageGateway;
-  private final MessageBuilder messageBuilder = new MessageBuilder();
-  private MessagePublisherStub messagePublisherStub;
-  private SessionServiceStub sessionServiceStub;
-  private InternalHeader writeAheadHeader;
-  private DirectoryConnectionProvider directoryConnectionProvider;
-  private List<ExecMessage> messagesToMatchReceived;
+  private SessionServiceStub sessionStub;
 
+  // --------------------------------------------------------------------
+  // DI mocks
+  // --------------------------------------------------------------------
+  private DirectoryConnectionProvider dirProvider;
+  private InterceptMatcher matcher;
+
+  private MessagePassingQueue<OutboundMsg> walQueueMock;
+  private MessagePassingQueue<OutboundMsg> pubQueueMock;
+  private AtomicBoolean walFailed;
+
+  private OutboundMessageGateway gateway;
+
+  // --------------------------------------------------------------------
+  // set-up / tear-down
+  // --------------------------------------------------------------------
   @Before
-  public void setup() throws Exception {
-    this.writeAheadHeader = messageBuilder.buildWriteAheadHeader(peerUuid);
-    this.context = createContext();
-    this.execService = Executors.newCachedThreadPool();
-    PalDirectory mockDirectory = mock(PalDirectory.class);
-    directoryConnectionProvider = mock(DirectoryConnectionProvider.class);
-    when(directoryConnectionProvider.get()).thenReturn(Optional.of(mockDirectory));
-    messagesToMatchReceived = new ArrayList<>();
-    interceptMatcher = mock(InterceptMatcher.class);
-    when(interceptMatcher.getMatchingIntercepts(any(), any(), any()))
+  public void setUp() throws Exception {
+    context = createContext();
+    execService = Executors.newCachedThreadPool();
+    walFailed = new AtomicBoolean(false);
+
+    // ── directory mock
+    PalDirectory dir = mock(PalDirectory.class);
+    dirProvider = mock(DirectoryConnectionProvider.class);
+    when(dirProvider.get()).thenReturn(Optional.of(dir));
+
+    // ── intercept matcher mock
+    matcher = mock(InterceptMatcher.class);
+    when(matcher.getMatchingIntercepts(any(), any(), any()))
         .thenAnswer(
-            (Answer<?>)
-                invocation -> {
-                  ExecMessage execMessage = (ExecMessage) invocation.getArguments()[0];
-                  messagesToMatchReceived.add(execMessage);
-                  // we're not testing matching here, so just return nothing
-                  return Collections.emptyList();
+            (Answer<List<?>>)
+                inv -> {
+                  msgsSeenByMatcher.add((ExecMessage) inv.getArguments()[0]);
+                  return Collections.emptyList(); // no intercepts
                 });
 
-    // start stub services
-    CountDownLatch latch = new CountDownLatch(2);
-    messagePublisherStub = new MessagePublisherStub(context, latch);
-    sessionServiceStub = new SessionServiceStub(context, latch);
-    execService.execute(messagePublisherStub);
-    execService.execute(sessionServiceStub);
+    // ── JCTools queue mocks
+    walQueueMock = mock(MessagePassingQueue.class);
+    pubQueueMock = mock(MessagePassingQueue.class);
+    when(walQueueMock.offer(any())).thenReturn(true);
+    when(pubQueueMock.offer(any())).thenReturn(true);
 
-    // wait for services to start
+    // ── start session-service stub
+    CountDownLatch latch = new CountDownLatch(1);
+    sessionStub = new SessionServiceStub(context, latch);
+    execService.execute(sessionStub);
     latch.await();
   }
 
   @After
-  public void cleanup() throws Exception {
-    messagesToMatchReceived.clear();
-    messagePublisherStub.requestStop();
-    sessionServiceStub.requestStop();
-    outboundMessageGateway.closeThreadLocalSockets();
+  public void tearDown() throws Exception {
+    sessionStub.requestStop();
+    if (gateway != null) gateway.closeThreadLocalSockets();
     execService.shutdownNow();
-    execService.awaitTermination(5, TimeUnit.SECONDS);
+    execService.awaitTermination(3, TimeUnit.SECONDS);
     closeContext(context);
   }
 
-  private OutboundMessageGateway initDispatcherConnector(
-      boolean withPublishing, boolean withIntercepts) {
-    Set<RunOptions> runOptions = EnumSet.noneOf(RunOptions.class);
-    if (withPublishing) {
-      runOptions.add(RunOptions.WITH_TCP_PUB);
-    }
-    if (withIntercepts) {
-      runOptions.add(RunOptions.WITH_INTERCEPTS);
-    }
-    return new OutboundMessageGateway(
-        context,
-        peerUuid,
-        messageBuilder,
-        directoryConnectionProvider,
-        runOptions,
-        interceptMatcher,
-        MSG_PUBLISHER_ADDRESS,
-        SESSION_SERVICE_REQ_ADDRESS);
+  // --------------------------------------------------------------------
+  // helper to build the SUT with flags
+  // --------------------------------------------------------------------
+  private void initGateway(boolean withPub, boolean withIntercepts) {
+    EnumSet<RunOptions> opts = EnumSet.noneOf(RunOptions.class);
+    if (withPub) opts.add(RunOptions.WITH_TCP_PUB);
+    if (withIntercepts) opts.add(RunOptions.WITH_INTERCEPTS);
+
+    gateway =
+        new OutboundMessageGateway(
+            context,
+            peerUuid,
+            builder,
+            dirProvider,
+            opts,
+            matcher,
+            walQueueMock,
+            walFailed,
+            pubQueueMock,
+            SESSION_SERVICE_REQ_ADDRESS);
   }
 
-  // <editor-fold desc="Tests">
+  // --------------------------------------------------------------------
+  // single-message tests
+  // --------------------------------------------------------------------
   @Test
-  public void sendExecMessage() {
-    sendExecMessageWithConditions(true, true);
-  }
-
-  @Test
-  public void sendExecMessageNoPublishing() {
-    sendExecMessageWithConditions(false, true);
-  }
-
-  @Test
-  public void sendExecMessageMany() {
-    sendExecMessageManyWithConditions(true, true);
+  public void execMessage_withPub_withIntercepts() {
+    sendExecMsgAndAssert(true, true);
   }
 
   @Test
-  public void sendExecMessageManyNoPublishing() {
-    sendExecMessageManyWithConditions(false, true);
+  public void execMessage_noPub_withIntercepts() {
+    sendExecMsgAndAssert(false, true);
+  }
+
+  // --------------------------------------------------------------------
+  // burst tests
+  // --------------------------------------------------------------------
+  @Test
+  public void manyExecMessages_withPub_withIntercepts() {
+    sendManyExecMsgsAndAssert(true, true);
   }
 
   @Test
-  public void writeAhead() {
-    writeAheadWithConditions(true, true);
+  public void manyExecMessages_noPub_withIntercepts() {
+    sendManyExecMsgsAndAssert(false, true);
   }
 
-  @Test
-  public void writeAheadNoPublishing() {
-    writeAheadWithConditions(false, true);
-  }
-
+  // --------------------------------------------------------------------
+  // session-service passthrough
+  // --------------------------------------------------------------------
   @Test
   public void sendMessagesToSessionService() {
-    logger.debug("entering sendMessageToSessionService");
-    this.outboundMessageGateway = initDispatcherConnector(false, false);
+    initGateway(false, false);
 
-    // sends 2 messages and get reply
-    SessionCommandMsg sessionCommandMsg1 =
+    SessionCommandMsg cmd1 =
         new SessionCommandMsg(
-            SessionCommandType.STORE_OBJECT, UUID.randomUUID(), ObjectRef.from("39872356"));
-    SessionResponseMsg returnedMsg1 =
-        outboundMessageGateway.sendMessageToSessionService(sessionCommandMsg1);
+            SessionCommandType.STORE_OBJECT, UUID.randomUUID(), ObjectRef.from("123"));
+    SessionResponseMsg resp1 = gateway.sendMessageToSessionService(cmd1);
 
-    SessionCommandMsg sessionCommandMsg2 =
+    SessionCommandMsg cmd2 =
         new SessionCommandMsg(
-            SessionCommandType.STORE_OBJECT, UUID.randomUUID(), ObjectRef.from("7734876"));
-    SessionResponseMsg returnedMsg2 =
-        outboundMessageGateway.sendMessageToSessionService(sessionCommandMsg2);
+            SessionCommandType.STORE_OBJECT, UUID.randomUUID(), ObjectRef.from("456"));
+    SessionResponseMsg resp2 = gateway.sendMessageToSessionService(cmd2);
 
-    // reply has status OK
-    assertThat(returnedMsg1.getStatus(), is(SessionStatusType.OK));
-    assertThat(returnedMsg2.getStatus(), is(SessionStatusType.OK));
+    // gateway got OK back
+    assertThat(resp1.getStatus(), is(SessionStatusType.OK));
+    assertThat(resp2.getStatus(), is(SessionStatusType.OK));
 
-    // verify messages received by SessionService service
-    assertThat(sessionServiceStub.messagesReceived.size(), is(2));
-    assertThat(sessionServiceStub.messagesReceived.get(0), is(sessionCommandMsg1));
-    assertThat(sessionServiceStub.messagesReceived.get(1), is(sessionCommandMsg2));
-
-    logger.debug("leaving sendMessageToSessionService");
+    // stub recorded the calls
+    assertThat(sessionStub.messagesReceived, is(List.of(cmd1, cmd2)));
   }
 
-  // </editor-fold>
+  // --------------------------------------------------------------------
+  // helpers for exec-message tests
+  // --------------------------------------------------------------------
+  private void sendExecMsgAndAssert(boolean withPub, boolean withIntercepts) {
+    initGateway(withPub, withIntercepts);
 
-  // <editor-fold desc="Private helper methods">
-  @SuppressWarnings("SameParameterValue")
-  private void sendExecMessageWithConditions(boolean withPublishing, boolean withIntercepts) {
-    logger.debug(
-        "entering sendExecMessageWithConditions w/publishing: {}, w/intercepts: {}",
-        withPublishing,
-        withIntercepts);
-    this.outboundMessageGateway = initDispatcherConnector(withPublishing, withIntercepts);
-    // sends msg and get reply
-    ExecMessage msg = messageBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
-    ExecMessage returnedMsg =
-        outboundMessageGateway.sendExecMessage(messageBuilder.wrap(msg), ExecPhase.BEFORE);
+    ExecMessage msg = builder.buildEmptyConstructor(peerUuid, "java.lang.String");
+    ExecMessage returned = gateway.sendExecMessage(builder.wrap(msg), ExecPhase.BEFORE);
 
-    // should return same message
-    assertThat(returnedMsg, is(msg));
+    assertThat(returned, is(msg)); // gateway returns same obj
+    assertThat(msgsSeenByMatcher, is(List.of(msg)));
 
-    // verify message was received by Intercepts service
-    assertThat(messagesToMatchReceived.size(), is(1));
-    assertThat(messagesToMatchReceived.get(0), is(msg));
-
-    // verify message was received by Message Publisher
-    if (withPublishing) {
-      assertThat(messagePublisherStub.messagesReceived.size(), is(1));
-      assertThat(
-          messagePublisherStub.messagesReceived.stream()
-              .map(Message::getExecMessage)
-              .collect(Collectors.toList()),
-          is(Collections.singletonList(msg)));
-    } else {
-      assertThat(messagePublisherStub.messagesReceived.size(), is(0));
-    }
-
-    logger.debug("leaving sendExecMessageWithConditions");
+    verify(pubQueueMock, times(withPub ? 1 : 0)).offer(any());
+    verifyNoMoreInteractions(pubQueueMock, walQueueMock);
   }
 
-  @SuppressWarnings("SameParameterValue")
-  private void sendExecMessageManyWithConditions(boolean withPublishing, boolean withIntercepts) {
-    logger.debug(
-        "entering sendExecMessageManyWithConditions w/publishing: {}, w/intercepts: {}",
-        withPublishing,
-        withIntercepts);
-    this.outboundMessageGateway = initDispatcherConnector(withPublishing, withIntercepts);
-    int messagesToSend = 10;
-    List<ExecMessage> sentMessages = new ArrayList<>();
-    List<ExecMessage> returnedMessages = new ArrayList<>();
+  private void sendManyExecMsgsAndAssert(boolean withPub, boolean withIntercepts) {
+    initGateway(withPub, withIntercepts);
 
-    // sends messages and get replies
-    for (int i = 0; i < messagesToSend; i++) {
-      ExecMessage msg = messageBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
-      sentMessages.add(msg);
-      ExecMessage returnedMsg =
-          outboundMessageGateway.sendExecMessage(messageBuilder.wrap(msg), ExecPhase.BEFORE);
-      returnedMessages.add(returnedMsg);
+    int n = 10;
+    List<ExecMessage> sent = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      ExecMessage m = builder.buildEmptyConstructor(peerUuid, "java.lang.String");
+      sent.add(m);
+      gateway.sendExecMessage(builder.wrap(m), ExecPhase.BEFORE);
     }
+    assertThat(msgsSeenByMatcher, is(sent));
 
-    // should return same messages
-    assertThat(returnedMessages, is(sentMessages));
-
-    // verify messages received by Intercepts service
-    assertThat(messagesToMatchReceived.size(), is(messagesToSend));
-    assertThat(messagesToMatchReceived, is(sentMessages));
-
-    // verify messages received by Message Publisher
-    if (withPublishing) {
-      assertThat(messagePublisherStub.messagesReceived.size(), is(messagesToSend));
-      assertThat(
-          messagePublisherStub.messagesReceived.stream()
-              .map(Message::getExecMessage)
-              .collect(Collectors.toList()),
-          is(sentMessages));
-    } else {
-      assertThat(messagePublisherStub.messagesReceived.size(), is(0));
-    }
-    logger.debug("leaving sendExecMessageManyWithConditions");
+    verify(pubQueueMock, times(withPub ? n : 0)).offer(any());
+    verifyNoMoreInteractions(pubQueueMock, walQueueMock);
   }
 
-  @SuppressWarnings("SameParameterValue")
-  private void writeAheadWithConditions(boolean withPublishing, boolean withIntercepts) {
-    logger.debug(
-        "test writeAheadWithConditions (publishing={}, intercepts={})",
-        withPublishing,
-        withIntercepts);
-    this.outboundMessageGateway = initDispatcherConnector(withPublishing, withIntercepts);
-    ExecMessage msg = messageBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
-    outboundMessageGateway.writeAhead(msg, MessageType.EXEC_CONSTRUCTOR);
-
-    // verify NO messages received by Intercepts service
-    assertThat(messagesToMatchReceived.size(), is(0));
-
-    // verify message and header received by Message Publisher
-    if (withPublishing) {
-      assertThat(messagePublisherStub.messagesReceived.size(), is(1));
-      assertThat(
-          messagePublisherStub.messagesReceived.stream()
-              .map(Message::getExecMessage)
-              .collect(Collectors.toList()),
-          is(Collections.singletonList(msg)));
-
-      assertThat(messagePublisherStub.headersReceived.size(), is(1));
-      assertThat(messagePublisherStub.headersReceived.get(0), is(writeAheadHeader));
-    } else {
-      assertThat(messagePublisherStub.messagesReceived.size(), is(0));
-      assertThat(messagePublisherStub.headersReceived.size(), is(0));
-    }
-    logger.debug("test writeAheadWithConditions done (publishing={})", withPublishing);
-  }
-
-  // </editor-fold>
-
-  // <editor-fold desc="Stub classes">
+  // --------------------------------------------------------------------
+  // stub for the session service
+  // --------------------------------------------------------------------
   private static final class SessionServiceStub implements Runnable {
-    List<SessionCommandMsg> messagesReceived = new ArrayList<>();
-    private volatile boolean stopRequested;
-    private final ZContext context;
-    private final CountDownLatch latch;
 
-    SessionServiceStub(ZContext context, CountDownLatch latch) {
-      this.context = context;
-      this.latch = latch;
+    final List<SessionCommandMsg> messagesReceived = new ArrayList<>();
+    private volatile boolean stop;
+    private final ZContext ctx;
+    private final CountDownLatch start;
+
+    SessionServiceStub(ZContext ctx, CountDownLatch start) {
+      this.ctx = ctx;
+      this.start = start;
     }
 
     void requestStop() {
-      stopRequested = true;
+      stop = true;
     }
 
     @Override
     public void run() {
-      Socket repSocket = context.createSocket(SocketType.REP);
-      logger.debug("SessionServiceStub: binding to {}", SESSION_SERVICE_REQ_ADDRESS);
-      repSocket.bind(SESSION_SERVICE_REQ_ADDRESS);
-      logger.debug("SessionServiceStub: starting");
-      latch.countDown();
-      while (!stopRequested && !Thread.interrupted()) {
-        SessionCommandMsg msg;
-        try {
-          msg = SessionCommandMsg.receive(repSocket, true);
-          if (msg == null) {
-            continue;
-          }
-          messagesReceived.add(msg);
-          SessionResponseMsg responseMessage = new SessionResponseMsg(SessionStatusType.OK);
-          responseMessage.send(repSocket);
-        } catch (ZMQException ex) {
-          int errorCode = ex.getErrorCode();
-          if (errorCode == ZError.ETERM) {
-            break;
-          } else if (errorCode == ZError.EINTR) {
-            break;
-          } else {
-            throw ex;
-          }
-        } catch (Exception e) {
-          logger.error("Error parsing received message", e);
-        }
+      Socket rep = ctx.createSocket(SocketType.REP);
+      rep.bind(SESSION_SERVICE_REQ_ADDRESS);
+      rep.setReceiveTimeOut(100); // short poll interval
+      start.countDown();
+      while (!stop && !Thread.interrupted()) {
+        SessionCommandMsg m = SessionCommandMsg.receive(rep, false);
+        if (m == null) continue;
+        messagesReceived.add(m);
+        new SessionResponseMsg(SessionStatusType.OK).send(rep);
       }
-      logger.debug("SessionServiceStub: exiting");
+      rep.close();
     }
   }
-
-  private static final class MessagePublisherStub implements Runnable {
-    List<Message> messagesReceived = new ArrayList<>();
-    List<InternalHeader> headersReceived = new ArrayList<>();
-    private volatile boolean stopRequested;
-    private final ZContext context;
-    private final CountDownLatch latch;
-
-    MessagePublisherStub(ZContext context, CountDownLatch latch) {
-      this.context = context;
-      this.latch = latch;
-    }
-
-    void requestStop() {
-      stopRequested = true;
-    }
-
-    @Override
-    public void run() {
-      Socket repSocket = context.createSocket(SocketType.REP);
-      logger.debug("MessagePublisherStub: binding to {}", MSG_PUBLISHER_ADDRESS);
-      repSocket.bind(MSG_PUBLISHER_ADDRESS);
-      logger.debug("MessagePublisherStub: starting");
-      latch.countDown();
-
-      while (!stopRequested && !Thread.interrupted()) {
-        OutboundMsg msg;
-        try {
-          msg = OutboundMsg.receive(repSocket, true);
-          if (msg == null) {
-            continue;
-          }
-          // add headers & message to lists for verification
-          if (msg.getHeaders() != null) {
-            headersReceived.addAll(msg.getHeaders());
-          }
-          Message message = new Message();
-          message.unmarshal(msg.getBody(), 0);
-          messagesReceived.add(message);
-          repSocket.send("0"); // OK_REPLY
-          logger.debug("Publisher stub replied to received message w/id: {}", msg.getMessageId());
-        } catch (ZMQException ex) {
-          int errorCode = ex.getErrorCode();
-          if (errorCode == ZError.ETERM) {
-            break;
-          } else if (errorCode == ZError.EINTR) {
-            break;
-          } else {
-            logger.error("Unexpected ZMQException", ex);
-            throw ex;
-          }
-        } catch (Exception e) {
-          logger.error("Error parsing received message", e);
-        }
-      }
-      logger.debug("MessagePublisherStub: exiting");
-    }
-  }
-  // </editor-fold>
 }

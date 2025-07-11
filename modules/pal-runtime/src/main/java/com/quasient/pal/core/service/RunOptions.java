@@ -27,7 +27,8 @@ public enum RunOptions {
   /**
    * Enables handling of BIN-RPC requests.
    *
-   * <p>This option configures the system to listen for and process remote procedure call requests.
+   * <p>This option configures the system to listen for and process remote procedure call requests
+   * over a ZMQ socket.
    */
   WITH_RPC,
 
@@ -42,17 +43,12 @@ public enum RunOptions {
   /**
    * Enables publishing messages via TCP.
    *
-   * <p>When selected, this option configures the system to publish messages over a ZMQ PUB socket
-   * (TCP)
+   * <p>When selected, this option configures the system to publish messages over a ZMQ TCP PUB
+   * socket
    */
   WITH_TCP_PUB,
 
-  /**
-   * Allows interception of messages.
-   *
-   * <p>This option permits the system to inspect or modify messages during transmission, which is
-   * useful for debugging, monitoring, or applying custom processing.
-   */
+  /** Allows interception of messages. */
   WITH_INTERCEPTS,
 
   /**

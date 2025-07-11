@@ -7,6 +7,11 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
+
+/*
+ * Copyright (C) 2025 Quasient Inc.
+ * Business Source License 1.1 – see LICENSE.
+ */
 package com.quasient.pal.core.transport.kafka;
 
 import static java.lang.String.format;
@@ -21,7 +26,6 @@ import com.quasient.pal.common.runtime.ExecPhase;
 import com.quasient.pal.core.ZmqEnabledTest;
 import com.quasient.pal.messages.OutboundMsg;
 import com.quasient.pal.messages.colfer.ExecMessage;
-import com.quasient.pal.messages.colfer.InterceptMessage;
 import com.quasient.pal.messages.colfer.InternalHeader;
 import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.messages.types.MessageType;
@@ -34,200 +38,253 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
+import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.Cluster;
+import org.jctools.queues.MessagePassingQueue;
+import org.jctools.queues.MpscChunkedArrayQueue;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.zeromq.SocketType;
 import org.zeromq.ZContext;
-import org.zeromq.ZMQ;
 
+/** Queue-based tests for {@link LogWriter}. */
 public class LogWriterTest extends ZmqEnabledTest {
-  private static final Logger logger = LoggerFactory.getLogger("tests");
-  private ZContext zmqContext;
-  private LogWriter logWriter;
-  private final UUID peerUuid = UUID.randomUUID();
-  private ServiceManager manager;
-  private MockProducer<String, byte[]> producer;
-  private ZMQ.Socket pubSocket;
-  private static final String OUT_PUB_ADDRESS = "inproc://pub";
-  private static final String OFFSET_PUB_ADDRESS = "inproc://offsets";
-  private final MessageBuilder msgBuilder = new MessageBuilder();
-  private final ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
 
-  @After
-  public void cleanup() throws Exception {
-    closeContext(zmqContext);
-    manager.stopAsync().awaitStopped();
-    logger.trace("services stopped");
-    logger.trace("exec service shut down");
+  // ── constants & helpers ───────────────────────────────────────────────
+  private static final UUID PEER_ID = UUID.randomUUID();
+  private static final LogInfo WAL_INFO = new LogInfo("test_app", "localhost:9092");
+
+  private static OutboundMsg wrap(
+      MessageType type, ExecPhase phase, List<InternalHeader> hdrs, Message body) {
+    String msgId =
+        body.getExecMessage() != null
+            ? body.getExecMessage().getMessageId()
+            : body.getInterceptMessage().getMessageId();
+    String respId = body.getExecMessage() != null ? body.getExecMessage().getResponseToId() : null;
+
+    return new OutboundMsg(type, phase, hdrs, msgId, respId, body);
+  }
+
+  private static String idOf(Message m) {
+    if (m.getExecMessage() != null) return m.getExecMessage().getMessageId();
+    if (m.getInterceptMessage() != null) return m.getInterceptMessage().getMessageId();
+    throw new IllegalArgumentException(format("Unsupported message type: %s", m));
+  }
+
+  // ── test fixtures ─────────────────────────────────────────────────────
+  private ZContext zmqCtx;
+  private MessagePassingQueue<OutboundMsg> walQueue;
+  private AtomicBoolean walFailed;
+  private MockProducer<String, byte[]> producer;
+  private LogWriter logWriter;
+  private ServiceManager manager;
+  private final ThreadGroup threadGroup = new ThreadGroup("services-thread-group");
+  private final MessageBuilder builder = new MessageBuilder();
+
+  private OutboundMsg dummy() {
+    // minimal valid body to satisfy OutboundMsg ctor
+    ExecMessage msg = builder.buildEmptyConstructor(PEER_ID, "java.lang.String");
+    return new OutboundMsg(MessageType.UNKNOWN, ExecPhase.UNDEFINED, null, "DUMMY", null, msg);
   }
 
   @Before
-  public void setup() throws Exception {
-    zmqContext = this.createContext();
+  public void setUp() {
+    zmqCtx = createContext();
+    walQueue = new MpscChunkedArrayQueue<>(1 << 10, 1 << 20);
+    walFailed = new AtomicBoolean(false);
+
     producer =
         new MockProducer<>(
             Cluster.empty(), true, null, new KafkaKeySerializer(), new KafkaMessageSerializer());
+
     logWriter =
         new LogWriter(
-            UUID.randomUUID(),
-            zmqContext,
+            PEER_ID,
+            zmqCtx,
             SYNC_SOCKET_ADDRESS,
-            servicesThreadGroup,
+            threadGroup,
             "LogWriterTest-Service",
-            OUT_PUB_ADDRESS,
-            OFFSET_PUB_ADDRESS,
+            walQueue,
+            walFailed,
+            /* offset.pub */ "inproc://offsets",
             producer);
-    // configure log
-    LogInfo log = new LogInfo("test_app", "localhost:9092");
-    logWriter.writeToLog(log, false);
-    // start services
-    final Set<Service> services = new HashSet<>(Collections.singletonList(this.logWriter));
+
+    logWriter.writeToLog(WAL_INFO, /* publishOffsets */ false);
+
+    Set<Service> services = new HashSet<>(Collections.singletonList(logWriter));
     manager = new ServiceManager(services);
     manager.startAsync().awaitHealthy();
-    collectGoSignals(services.size(), zmqContext);
+    collectGoSignals(services.size(), zmqCtx);
   }
 
-  private String getMessageId(Message msg) throws IllegalArgumentException {
-    ExecMessage execMessage = msg.getExecMessage();
-    if (execMessage != null) {
-      return execMessage.getMessageId();
-    }
-    InterceptMessage interceptMessage = msg.getInterceptMessage();
-    if (interceptMessage != null) {
-      return interceptMessage.getMessageId();
-    }
-    throw new IllegalArgumentException(format("Unsupported message type: %s", msg));
-  }
-
-  private String getResponseToId(Message msg) {
-    ExecMessage execMessage = msg.getExecMessage();
-    if (execMessage != null) {
-      String responseToId = execMessage.getResponseToId();
-      if (responseToId != null && !responseToId.isEmpty()) {
-        return responseToId;
-      }
-    }
-    return null;
+  @After
+  public void tearDown() throws InterruptedException {
+    closeContext(zmqCtx);
+    manager.stopAsync().awaitStopped();
   }
 
   @Test
   public void noPublishedMessages() {
     assertThat(logWriter.isRunning(), is(true));
-
-    // we don't publish any messages
-
-    // assert NO published message is produced to the log
+    // enqueue nothing → producer history must stay empty
     assertThat(producer.history().isEmpty(), is(true));
   }
 
   @Test
   public void publishedMixedMessages() throws Exception {
-    // we create outPub socket and publish some messages
-    pubSocket = zmqContext.createSocket(SocketType.PUB);
-    pubSocket.bind(OUT_PUB_ADDRESS);
+    int execCnt = 15, interceptCnt = 5;
+    List<Message> bodies = new ArrayList<>();
 
-    List<Message> messagesCreated = new ArrayList<>();
-    // create ExecMessage's
-    int execMessagesToSend = 15;
-    for (int i = 0; i < execMessagesToSend; i++) {
-      ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
-      messagesCreated.add(msgBuilder.wrap(msg));
+    for (int i = 0; i < execCnt; i++) {
+      bodies.add(builder.wrap(builder.buildEmptyConstructor(PEER_ID, "java.lang.String")));
     }
-    // create InterceptMessages
-    int interceptMessagesToSend = 5;
-    for (int i = 0; i < interceptMessagesToSend; i++) {
-      InterceptMessage msg =
-          msgBuilder.buildInterceptMessage(
-              peerUuid,
-              InterceptType.BEFORE,
-              "java.io.PrintStream",
-              "println",
-              Collections.emptyList(),
-              this.getClass().getName(),
-              "someCallbackMethod");
-      messagesCreated.add(msgBuilder.wrap(msg));
+    for (int i = 0; i < interceptCnt; i++) {
+      bodies.add(
+          builder.wrap(
+              builder.buildInterceptMessage(
+                  PEER_ID,
+                  InterceptType.BEFORE,
+                  "java.io.PrintStream",
+                  "println",
+                  Collections.emptyList(),
+                  getClass().getName(),
+                  "callback")));
     }
 
-    // PUB them
-    messagesCreated.forEach(
-        msg -> {
-          boolean hasExecMessage = msg.getExecMessage() != null;
-          MessageType msgType =
-              hasExecMessage ? MessageType.EXEC_CONSTRUCTOR : MessageType.INTERCEPT_MESSAGE;
-          ExecPhase execPhase = hasExecMessage ? ExecPhase.BEFORE : ExecPhase.UNDEFINED;
-          OutboundMsg outMsg =
-              new OutboundMsg(
-                  msgType, execPhase, null, getMessageId(msg), getResponseToId(msg), msg);
-          outMsg.send(pubSocket);
-        });
+    // enqueue
+    bodies.forEach(
+        m ->
+            walQueue.offer(
+                wrap(
+                    m.getExecMessage() != null
+                        ? MessageType.EXEC_CONSTRUCTOR
+                        : MessageType.INTERCEPT_MESSAGE,
+                    m.getExecMessage() != null ? ExecPhase.BEFORE : ExecPhase.UNDEFINED,
+                    null,
+                    m)));
 
-    // give it some time
-    Thread.sleep(300);
+    Thread.sleep(100);
 
-    // assert published messages are produced to the log
-    List<String> producedMsgUuids = new ArrayList<>();
-    for (ProducerRecord<String, byte[]> record : producer.history()) {
-      Message msg = new Message();
-      msg.unmarshal(record.value(), 0);
-      producedMsgUuids.add(getMessageId(msg));
-    }
-    List<String> sentMsgUuids =
-        messagesCreated.stream().map(this::getMessageId).collect(Collectors.toList());
-    assertThat(producer.history().size(), is(execMessagesToSend + interceptMessagesToSend));
-    assertThat(producedMsgUuids, is(sentMsgUuids));
+    List<String> produced =
+        producer.history().stream()
+            .map(
+                rec -> {
+                  Message m = new Message();
+                  m.unmarshal(rec.value(), 0);
+                  return idOf(m);
+                })
+            .collect(Collectors.toList());
+
+    List<String> sent = bodies.stream().map(LogWriterTest::idOf).collect(Collectors.toList());
+
+    assertThat(producer.history().size(), is(execCnt + interceptCnt));
+    assertThat(produced, is(sent));
   }
 
   @Test
   public void publishedMessagesWithHeader() throws Exception {
-    assertThat(logWriter.isRunning(), is(true));
-
-    // we create outPub socket and publish some messages with header
-    pubSocket = zmqContext.createSocket(SocketType.PUB);
-    pubSocket.bind(OUT_PUB_ADDRESS);
-
-    int messagesToSend = 5;
-    List<Message> messagesCreated = new ArrayList<>();
-    for (int i = 0; i < messagesToSend; i++) {
-      ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
-      messagesCreated.add(msgBuilder.wrap(msg));
+    int cnt = 5;
+    List<Message> bodies = new ArrayList<>();
+    for (int i = 0; i < cnt; i++) {
+      bodies.add(builder.wrap(builder.buildEmptyConstructor(PEER_ID, "java.lang.String")));
     }
 
-    // PUB them
-    List<InternalHeader> headers =
-        Collections.singletonList(msgBuilder.buildWriteAheadHeader(peerUuid));
-    messagesCreated.forEach(
-        msg -> {
-          OutboundMsg outMsg =
-              new OutboundMsg(
-                  MessageType.EXEC_CONSTRUCTOR,
-                  ExecPhase.BEFORE,
-                  headers,
-                  getMessageId(msg),
-                  getResponseToId(msg),
-                  msg);
-          outMsg.send(pubSocket);
-        });
+    List<InternalHeader> hdrs = Collections.singletonList(builder.buildWriteAheadHeader(PEER_ID));
+    bodies.forEach(
+        m -> walQueue.offer(wrap(MessageType.EXEC_CONSTRUCTOR, ExecPhase.BEFORE, hdrs, m)));
 
-    // give it some time
-    Thread.sleep(300);
+    Thread.sleep(100);
 
-    // assert published messages are produced to the log
-    List<String> producedMsgUuids = new ArrayList<>();
-    for (ProducerRecord<String, byte[]> record : producer.history()) {
-      Message msg = new Message();
-      msg.unmarshal(record.value(), 0);
-      producedMsgUuids.add(getMessageId(msg));
+    List<String> produced =
+        producer.history().stream()
+            .map(
+                rec -> {
+                  Message m = new Message();
+                  m.unmarshal(rec.value(), 0);
+                  return idOf(m);
+                })
+            .collect(Collectors.toList());
+
+    List<String> sent = bodies.stream().map(LogWriterTest::idOf).collect(Collectors.toList());
+
+    assertThat(producer.history().size(), is(cnt));
+    assertThat(produced, is(sent));
+  }
+
+  // ── extra check: queue overflow (bounded variant) ─────────────────────
+  @Test
+  public void boundedQueueOverflowStopsProducer() {
+    int initial = 4;
+    int max = 8;
+
+    MessagePassingQueue<OutboundMsg> tiny = new MpscChunkedArrayQueue<>(initial, max);
+    for (int i = 0; i < max; i++) {
+      assertThat(tiny.offer(dummy()), is(true));
     }
-    List<String> sentMsgUuids =
-        messagesCreated.stream().map(this::getMessageId).collect(Collectors.toList());
-    assertThat(producer.history().size(), is(messagesToSend));
-    assertThat(producedMsgUuids, is(sentMsgUuids));
+    assertThat(tiny.offer(dummy()), is(false));
+  }
+
+  // ── extra check: failing producer flips walFailed flag ────────────────
+  @Test
+  public void kafkaExceptionSetsWalFailed() throws Exception {
+    // Custom producer that always fails
+    class FailingProducer extends MockProducer<String, byte[]> {
+      FailingProducer() {
+        super(Cluster.empty(), true, null, new KafkaKeySerializer(), new KafkaMessageSerializer());
+      }
+
+      @Override
+      public synchronized Future<RecordMetadata> send(ProducerRecord<String, byte[]> record) {
+        throw new RuntimeException("boom"); // <─ immediate failure
+      }
+
+      @Override
+      public synchronized Future<RecordMetadata> send(
+          ProducerRecord<String, byte[]> record, Callback cb) {
+        throw new RuntimeException("boom"); // not used, but safe
+      }
+    }
+
+    // ── fresh, private queue & flag ────────────────────────────────
+    MessagePassingQueue<OutboundMsg> methodLocalQueue =
+        new MpscChunkedArrayQueue<>(1 << 10, 1 << 20);
+    AtomicBoolean methodLocalWalFailed = new AtomicBoolean(false);
+
+    FailingProducer badProducer = new FailingProducer();
+    LogWriter failingLogWriter =
+        new LogWriter(
+            PEER_ID,
+            zmqCtx,
+            SYNC_SOCKET_ADDRESS,
+            threadGroup,
+            "FailingWriter",
+            methodLocalQueue,
+            methodLocalWalFailed,
+            "inproc://offsets",
+            badProducer);
+    failingLogWriter.writeToLog(WAL_INFO, false);
+
+    failingLogWriter.writeToLog(WAL_INFO, /* publishOffsets */ false);
+
+    Thread worker = new Thread(failingLogWriter::run);
+    worker.start();
+
+    // enqueue one dummy message
+    methodLocalQueue.offer(dummy());
+
+    // wait up to 1 s for the flag to flip
+    long deadline = System.currentTimeMillis() + 1000;
+    while (!methodLocalWalFailed.get() && System.currentTimeMillis() < deadline) {
+      Thread.sleep(10);
+    }
+    assertThat("walFailed must be true after fatal send", methodLocalWalFailed.get(), is(true));
+
+    worker.join();
   }
 }

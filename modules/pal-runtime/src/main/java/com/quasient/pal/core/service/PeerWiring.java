@@ -11,6 +11,8 @@ package com.quasient.pal.core.service;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
+import com.google.inject.Singleton;
+import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import com.quasient.pal.common.runtime.DispatchForwarder;
 import com.quasient.pal.common.runtime.ProxyDispatcher;
@@ -19,6 +21,7 @@ import com.quasient.pal.core.execution.java.CustomClassloader;
 import com.quasient.pal.core.runtime.objects.ConcurrentHashMapObjectLookupStore;
 import com.quasient.pal.core.runtime.objects.ObjectLookupStore;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
+import com.quasient.pal.messages.OutboundMsg;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -26,6 +29,10 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.jctools.queues.MessagePassingQueue;
+import org.jctools.queues.MpscChunkedArrayQueue;
+import org.jctools.queues.MpscUnboundedArrayQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.ZContext;
@@ -34,9 +41,8 @@ import org.zeromq.ZContext;
  * Guice module for wiring peer components within the Pal runtime.
  *
  * <p>This module sets up dependency injection bindings for key runtime components, such as the
- * ZeroMQ context, custom class loader, and service thread management. It also initializes
- * configuration properties, including setting service-specific names and the unique peer
- * identifier.
+ * ZeroMQ context, custom class loader, and service thread management. It also initializes internal
+ * queues and configuration properties.
  */
 class PeerWiring extends AbstractModule {
 
@@ -67,6 +73,18 @@ class PeerWiring extends AbstractModule {
   private final ThreadGroup serviceThreadGroup = new ThreadGroup("service-threads");
 
   /**
+   * Indicates if the property {@code "wal.queue.unbounded"} == true, so an unbounded queue
+   * implementation is used.
+   */
+  private final boolean walQueueUnbounded;
+
+  /**
+   * Indicates if the property {@code "pub.queue.unbounded"} == true, so an unbounded queue
+   * implementation is used.
+   */
+  private final boolean pubQueueUnbounded;
+
+  /**
    * Constructs a new PeerWiring module.
    *
    * <p>This constructor initializes the module with configuration properties, runtime options,
@@ -94,6 +112,12 @@ class PeerWiring extends AbstractModule {
     this.zmqContext = zmqContext;
     this.peerUuid = UUID.fromString(properties.getProperty("id"));
     this.customClassloader = customClassloader;
+
+    // flags that determine the MPSC queue type to use for WAL and PUB
+    this.walQueueUnbounded =
+        Boolean.parseBoolean(properties.getProperty("wal.queue.unbounded", "false"));
+    this.pubQueueUnbounded =
+        Boolean.parseBoolean(properties.getProperty("pub.queue.unbounded", "false"));
   }
 
   /**
@@ -166,6 +190,51 @@ class PeerWiring extends AbstractModule {
   @SuppressWarnings({"unused", "CloseableProvides"})
   ZContext getZmqContext() {
     return zmqContext;
+  }
+
+  /**
+   * Provides the WAL Queue singleton, initialized with the values given by the corresponding {@code
+   * "wal.queue.*"} parameters.
+   *
+   * @return the initialized bounded or unbounded WAL queue instance
+   */
+  @Provides
+  @Singleton
+  @Named("wal_queue")
+  @SuppressWarnings("unused")
+  MessagePassingQueue<OutboundMsg> provideWalQueue() {
+    return walQueueUnbounded
+        ? new MpscUnboundedArrayQueue<>(Integer.parseInt(properties.getProperty("wal.queue.chunk")))
+        : new MpscChunkedArrayQueue<>(
+            Integer.parseInt(properties.getProperty("wal.queue.initial")),
+            Integer.parseInt(properties.getProperty("wal.queue.max")));
+  }
+
+  /**
+   * Provides the PUB Queue singleton, initialized with the values given by the corresponding {@code
+   * "pub.queue.*"} parameters.
+   *
+   * @return the initialized bounded or unbounded PUB queue instance
+   */
+  @Provides
+  @Singleton
+  @Named("pub_queue")
+  @SuppressWarnings("unused")
+  MessagePassingQueue<OutboundMsg> providePubQueue() {
+    return pubQueueUnbounded
+        ? new MpscUnboundedArrayQueue<>(Integer.parseInt(properties.getProperty("pub.queue.chunk")))
+        : new MpscChunkedArrayQueue<>(
+            Integer.parseInt(properties.getProperty("pub.queue.initial")),
+            Integer.parseInt(properties.getProperty("pub.queue.max")));
+  }
+
+  /** Shared failure flag – singleton instance */
+  @Provides
+  @Singleton
+  @Named("walFailed")
+  @SuppressWarnings("unused")
+  AtomicBoolean provideWalFailedFlag() {
+    return new AtomicBoolean(false);
   }
 
   /**

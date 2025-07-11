@@ -10,10 +10,14 @@
 package com.quasient.pal.core.transport.kafka;
 
 import com.quasient.pal.common.directory.nodes.LogInfo;
+import com.quasient.pal.common.runtime.ExecPhase;
 import com.quasient.pal.common.util.UuidUtils;
+import com.quasient.pal.core.internal.concurrent.AdaptiveSpinParkWaitStrategy;
 import com.quasient.pal.core.service.ConnectedService;
+import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import com.quasient.pal.messages.LogMessageHeader;
 import com.quasient.pal.messages.OutboundMsg;
+import com.quasient.pal.messages.colfer.ConstructorCall;
 import com.quasient.pal.messages.colfer.InternalHeader;
 import com.quasient.pal.messages.types.InternalHeaderType;
 import com.quasient.pal.messages.types.MessageFormatType;
@@ -33,6 +37,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nullable;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -40,25 +45,22 @@ import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.header.Header;
+import org.jctools.queues.MessagePassingQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
-import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
-import org.zeromq.ZMQException;
-import zmq.ZError;
 
 /**
- * LogWriter is responsible for retrieving messages from a ZeroMQ subscriber socket, transforming
- * header information if needed, and publishing the messages to a Kafka Log. It also optionally
- * publishes message offset information via a ZeroMQ publisher socket.
+ * LogWriter is responsible for retrieving messages from a MPSC queue, transforming header
+ * information if needed, and publishing the messages to a Kafka Log. It also optionally publishes
+ * message offset information via a ZeroMQ publisher socket.
  *
  * <p>The class manages its own connections to ZeroMQ and Kafka, performing asynchronous checks on
  * message delivery and maintaining internal counters for sent messages.
  */
 @Singleton
-// TODO A 2nd thread that sends non-urgent messages from a queue.
 public class LogWriter extends ConnectedService {
 
   /** Logger instance. */
@@ -78,14 +80,17 @@ public class LogWriter extends ConnectedService {
    */
   private final ExecutorService producerCheckExecutorService = Executors.newSingleThreadExecutor();
 
-  /** ZeroMQ subscriber socket used to receive outbound messages. */
-  private Socket subscriberSocket;
+  /**
+   * A MPSC (Multiple Producer Single Consumer) queue holding the OutboundMessage's to be written.
+   */
+  private final MessagePassingQueue<OutboundMsg> walQueue;
+
+  /** Adaptive dynamic backoff strategy used by the queue drain operation. */
+  private static final MessagePassingQueue.WaitStrategy ADAPTIVE_100_MICROSECONDS =
+      new AdaptiveSpinParkWaitStrategy();
 
   /** ZeroMQ publisher socket used to publish message offsets when enabled. */
   private Socket offsetPublisherSocket;
-
-  /** ZeroMQ address to connect the subscriber socket for receiving outgoing messages. */
-  private final String outPubAddress;
 
   /** ZeroMQ address to bind the offset publisher socket for delivering offset updates. */
   private final String offsetPubAddress;
@@ -95,6 +100,20 @@ public class LogWriter extends ConnectedService {
 
   /** Information describing the Log to which messages are written. */
   private LogInfo writeAheadLog;
+
+  /** Poison pill to enqueue for graceful self-shutdown, when writing to Kafka fails. */
+  private static final OutboundMsg POISON_PILL =
+      new OutboundMsg(
+          MessageType.UNKNOWN, ExecPhase.UNDEFINED, null, "POISON", null, new ConstructorCall());
+
+  /** Atomic guard to prevent to ensure the poison pill is just sent once. */
+  private final AtomicBoolean pillSent = new AtomicBoolean(false);
+
+  /**
+   * Global failure flag, used to let producer threads in {@link OutboundMessageGateway} know WAL is
+   * down.
+   */
+  private final AtomicBoolean walFailed;
 
   /** Counter tracking the number of messages successfully sent to the Log. */
   private final AtomicInteger messagesSent = new AtomicInteger(0);
@@ -112,7 +131,9 @@ public class LogWriter extends ConnectedService {
    * @param serviceName logical name that identifies this Log writer service.
    * @param keySerializer configuration for the Kafka key serializer.
    * @param valueSerializer configuration for the Kafka value serializer.
-   * @param outPubAddress ZeroMQ address for the outbound publisher connection.
+   * @param walQueue initialized {@link OutboundMsg} queue instance from which to consume.
+   * @param walFailed global flag that used to indicate failure when writing to Kafka so producers
+   *     halt enqueuing.
    * @param offsetPubAddress ZeroMQ address for the message offset publisher connection.
    */
   @Inject
@@ -124,10 +145,12 @@ public class LogWriter extends ConnectedService {
       @Named("LogWriter.service") String serviceName,
       @Named("key.serializer") String keySerializer,
       @Named("value.serializer") String valueSerializer,
-      @Named("out.pub") String outPubAddress,
+      @Named("wal_queue") MessagePassingQueue<OutboundMsg> walQueue,
+      @Named("walFailed") AtomicBoolean walFailed,
       @Named("offset.pub") String offsetPubAddress) {
     super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
-    this.outPubAddress = outPubAddress;
+    this.walQueue = walQueue;
+    this.walFailed = walFailed;
     this.offsetPubAddress = offsetPubAddress;
     producerProperties.put("key.serializer", keySerializer);
     producerProperties.put("value.serializer", valueSerializer);
@@ -154,7 +177,9 @@ public class LogWriter extends ConnectedService {
    * @param syncSocketAddress address used for synchronizing service startup.
    * @param serviceThreadGroup thread group in which the service thread will be executed.
    * @param serviceName logical name that identifies this log writer service.
-   * @param outPubAddress ZeroMQ address for the outbound publisher connection.
+   * @param walQueue initialized WAL queue instance from which to consume.
+   * @param walFailed global flag that used to indicate failure when writing to Kafka so producers
+   *     halt enqueuing.
    * @param offsetPubAddress ZeroMQ address for the message offset publisher connection.
    * @param producer Kafka producer instance to be used for sending messages.
    */
@@ -164,12 +189,14 @@ public class LogWriter extends ConnectedService {
       @Named("sync.ready") String syncSocketAddress,
       ThreadGroup serviceThreadGroup,
       String serviceName,
-      @Named("out.pub") String outPubAddress,
+      @Named("wal_queue") MessagePassingQueue<OutboundMsg> walQueue,
+      @Named("walFailed") AtomicBoolean walFailed,
       @Named("offset.pub") String offsetPubAddress,
       Producer<String, byte[]> producer) {
     super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
     this.producer = producer;
-    this.outPubAddress = outPubAddress;
+    this.walQueue = walQueue;
+    this.walFailed = walFailed;
     this.offsetPubAddress = offsetPubAddress;
     logger.info("Created log message writer");
   }
@@ -180,11 +207,6 @@ public class LogWriter extends ConnectedService {
    */
   @Override
   protected void openConnections() {
-
-    // start subscriber
-    this.subscriberSocket = zmqContext.createSocket(SocketType.SUB);
-    subscriberSocket.connect(outPubAddress);
-    subscriberSocket.subscribe(ZMQ.SUBSCRIPTION_ALL);
 
     // start offsets publisher
     if (publishOffsets) {
@@ -226,52 +248,99 @@ public class LogWriter extends ConnectedService {
   }
 
   /**
-   * Continuously receives messages from the ZeroMQ subscriber socket and dispatches them to Kafka.
-   * The method processes messages until the thread is interrupted or a socket error occurs.
+   * Continuously receives messages from the WAL Queue and dispatches them to Kafka. The method
+   * processes messages until the thread is interrupted.
    */
   @Override
   public void run() {
-    if (logger.isDebugEnabled()) {
-      logger.debug("Starting to dispatch messages to log");
+
+    walQueue.drain(
+        this::handleOutboundMessage,
+        ADAPTIVE_100_MICROSECONDS,
+        () -> !Thread.currentThread().isInterrupted());
+  }
+
+  /**
+   * Handles a single {@link OutboundMsg} taken from the WAL queue and—under normal
+   * circumstances—publishes it to Kafka.
+   *
+   * <p>This method is invoked by {@code walQueue.drain(…)} from the {@code run()} loop,
+   * i.e.&nbsp;always on the <em>single</em> consumer thread. It must be
+   * <strong>non-blocking</strong> and <strong>exception-free</strong>; all error handling is done
+   * inside the method so that the queue’s drain loop can continue (or terminate) deterministically.
+   *
+   * <h3>Control paths</h3>
+   *
+   * <ol>
+   *   <li><b>Graceful exit&nbsp;⟶&nbsp;POISON_PILL</b><br>
+   *       If the message is the sentinel {@link #POISON_PILL}, the method returns immediately.
+   *       {@code run()} will reach the idle strategy, see that {@link Thread#isInterrupted() the
+   *       interrupt flag} is now {@code true} (set elsewhere) and exit.
+   *   <li><b>Normal publishing</b><br>
+   *       &nbsp;&nbsp;• Converts the optional internal headers to Kafka headers via {@link
+   *       #fromInternalToLog(List)}.<br>
+   *       &nbsp;&nbsp;• Delegates to {@link #sendToKafka(MessageFormatType, MessageType, byte[],
+   *       String, String, UUID, Iterable)}.<br>
+   *       Any exception thrown by the Kafka client is caught by the <em>fatal&nbsp;path</em> below.
+   *   <li><b>Fatal path&nbsp;⟶&nbsp;Kafka error</b><br>
+   *       When <code>sendToKafka</code> throws, we:
+   *       <ol type="a">
+   *         <li>Log the failure.
+   *         <li>Atomically flip the shared {@code walFailed} flag (<em>first</em> thread wins), so
+   *             producer threads stop enqueuing.
+   *         <li>Clear the queue to release memory.
+   *         <li>Insert a single {@link #POISON_PILL} (guarded by {@code pillSent}) to wake any
+   *             parked consumer.
+   *         <li>Set the thread’s interrupt flag. This causes the drain loop’s exit-condition {@code
+   *             () -> !Thread.currentThread().isInterrupted()} to evaluate to {@code false} ⇒
+   *             {@code run()} returns ⇒ the service thread terminates.
+   *       </ol>
+   *       All actions after the CAS are idempotent; if multiple messages fail in quick succession
+   *       only the first one performs the cleanup.
+   * </ol>
+   *
+   * <h3>Thread-safety &amp; memory</h3>
+   *
+   * <ul>
+   *   <li>Called only from the consumer thread; no external synchronisation required.
+   *   <li>Uses {@link java.util.concurrent.atomic.AtomicBoolean AtomicBoolean}s (`walFailed`,
+   *       `pillSent`) for single-execution guarantees across possible future callers.
+   *   <li>The queue is fully drained or cleared before the thread exits, so no user payload is left
+   *       reachable.
+   * </ul>
+   *
+   * @param msg the dequeued message; never {@code null}. May be the special {@link #POISON_PILL}
+   *     sentinel to signal shutdown.
+   */
+  private void handleOutboundMessage(OutboundMsg msg) {
+    if (POISON_PILL.equals(msg)) { // graceful exit branch
+      return;
     }
-    boolean socketError = false;
-    while (!Thread.interrupted() && !socketError) {
-      OutboundMsg msg = null;
-      try {
-        msg = OutboundMsg.receive(subscriberSocket, true);
-        assert msg != null;
-        if (logger.isDebugEnabled()) {
-          logger.debug(
-              "Received new message w/id: {} ({} bytes)", msg.getMessageId(), msg.getSize());
-        }
-      } catch (ZMQException ex) {
-        int errorCode = ex.getErrorCode();
-        if (errorCode == ZError.ETERM) {
-          if (logger.isDebugEnabled()) {
-            logger.debug("Caught ETERM during blocking read. Breaking out.");
+
+    try {
+      // normal path
+      final List<Header> logHeaders = fromInternalToLog(msg.getHeaders());
+      sendToKafka(
+          MessageFormatType.BINARY,
+          msg.getMessageType(),
+          msg.getBody(),
+          msg.getMessageId(),
+          msg.getResponseToId(),
+          peerUuid,
+          logHeaders);
+
+    } catch (Exception ex) { // fatal path
+      logger.error("Kafka failed sending message w/id {} → halting WAL", msg.getMessageId(), ex);
+
+      if (walFailed.compareAndSet(false, true)) { // publish failure
+        walQueue.clear(); // free memory
+
+        if (pillSent.compareAndSet(false, true)) {
+          while (!walQueue.offer(POISON_PILL)) {
+            Thread.onSpinWait();
           }
-          socketError = true;
-        } else if (errorCode == ZError.EINTR) {
-          if (logger.isDebugEnabled()) {
-            logger.debug("Caught EINTR during blocking read. Breaking out.");
-          }
-          socketError = true;
-        } else {
-          throw ex;
         }
-      } catch (Exception e) {
-        logger.error("Error parsing received message", e);
-      }
-      if (msg != null) {
-        final List<Header> logHeaders = fromInternalToLog(msg.getHeaders());
-        sendToKafka(
-            MessageFormatType.BINARY,
-            msg.getMessageType(),
-            msg.getBody(),
-            msg.getMessageId(),
-            msg.getResponseToId(),
-            peerUuid,
-            logHeaders);
+        Thread.currentThread().interrupt(); // <─ stop after cleanup
       }
     }
   }
@@ -400,7 +469,7 @@ public class LogWriter extends ConnectedService {
 
   /**
    * Closes all open connections and resources used by the LogWriter. This includes shutting down
-   * the executor service, closing the Kafka producer, and closing the ZeroMQ sockets.
+   * the executor service, closing the Kafka producer, and closing any ZeroMQ sockets.
    */
   @Override
   protected void closeConnections() {
@@ -416,8 +485,7 @@ public class LogWriter extends ConnectedService {
     // close the producer
     closeProducer();
 
-    // close the zmq sockets
-    closeConnection(subscriberSocket, "Error closing subscriber");
+    // close the offset publisher socket
     closeConnection(offsetPublisherSocket, "Error closing offset publisher");
   }
 }
