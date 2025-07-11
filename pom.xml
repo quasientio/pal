@@ -255,7 +255,15 @@
                 <version>${maven.plugin.checkstyle.version}</version>
 
                 <configuration>
-                    <configLocation>build/checkstyle/checkstyle.xml</configLocation>
+                    <configLocation>${maven.multiModuleProjectDirectory}/build/checkstyle/checkstyle.xml</configLocation>
+
+                    <suppressionsLocation>
+                        ${maven.multiModuleProjectDirectory}/build/checkstyle/checkstyle-suppressions.xml
+                    </suppressionsLocation>
+
+                    <!-- tell the plug-in which variable name we used in the XML above -->
+                    <suppressionsFileExpression>checkstyle.suppressions.file</suppressionsFileExpression>
+
 
                     <!-- Show violations in the console and fail the build -->
                     <consoleOutput>true</consoleOutput>
@@ -268,7 +276,6 @@
                         <goals>
                             <goal>check</goal>
                         </goals>
-                        <inherited>false</inherited>
                     </execution>
                 </executions>
             </plugin>
