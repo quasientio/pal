@@ -24,12 +24,13 @@ KAFKA_SERVERS="${KAFKA_SERVERS:-localhost:29092}"
 # Set ITT_APPS_JAR if it's not already set
 : "${ITT_APPS_JAR:=${PAL_HOME}/modules/itt-apps/target/itt-apps-*.jar}"
 
-export PAL_PEER_LOGGING_CONFIG="$PAL_HOME/config/peer-logging.xml"
+export PAL_PEER_LOGGING_CONFIG="${PAL_PEER_LOGGING_CONFIG:-"$PAL_HOME/config/peer-logging.xml"}"
 
 pal.sh run \
   --dir $PAL_DIRECTORY \
   --name peer-for-itt \
   --rpc 5656 \
+  --tcp-pub 8876 \
   --jsonrpc 7789 \
   --rpc-threads 3 \
   --rpc-allow-nonpublic \
