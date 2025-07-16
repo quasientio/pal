@@ -35,12 +35,13 @@ import com.quasient.pal.core.intercept.AnnotationsProcessor;
 import com.quasient.pal.core.intercept.InterceptInformer;
 import com.quasient.pal.core.intercept.InterceptMatcher;
 import com.quasient.pal.core.runtime.session.SessionService;
+import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import com.quasient.pal.core.transport.kafka.LogConfigurator;
 import com.quasient.pal.core.transport.kafka.LogReader;
 import com.quasient.pal.core.transport.kafka.LogWriter;
 import com.quasient.pal.core.transport.websocket.JsonRpcRequestServer;
-import com.quasient.pal.core.transport.zmq.MessagePublisher;
 import com.quasient.pal.core.transport.zmq.ZmqRpcServer;
+import com.quasient.pal.core.transport.zmq.publish.MessagePublisher;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.cxn.directory.PeerLease;
@@ -379,6 +380,9 @@ public class Main implements Callable<Integer> {
   /** Default maximum capacity for WAL and PUB queue (must be power of 2). */
   private static final int MPSC_MAX_DEFAULT = 1 << 20; // 1 048 576
 
+  /** Default capacity for MessagePublisher's internal SPSC queue (must be power of 2). */
+  private static final int SPSC_SIZE_DEFAULT = 1 << 18; // 262144
+
   /** Container for default ZeroMQ configuration properties and internal endpoint mappings. */
   private static final class ZmqProperties {
     /** Default linger period (in milliseconds) for the ZeroMQ context. */
@@ -511,6 +515,11 @@ public class Main implements Callable<Integer> {
 
       int pubMax = readPowerOfTwo(properties, "pub.queue.max", MPSC_MAX_DEFAULT);
       properties.setProperty("pub.queue.max", String.valueOf(pubMax));
+
+      // ------------- validate MessagePublisher internal Queue params --------------
+      int pubSpsc = readPowerOfTwo(properties, "publisher.spsc_size", SPSC_SIZE_DEFAULT);
+      properties.setProperty("publisher.spsc_size", String.valueOf(pubSpsc));
+
     } catch (IllegalArgumentException e) {
       fatalExit(e, PeerException.FatalCode.ERROR_VALIDATING_PROPERTIES);
     }
@@ -1222,6 +1231,9 @@ public class Main implements Callable<Integer> {
           logger.debug("Cleared internal PUB queue");
         }
       }
+
+      // print aggregated stats
+      OutboundMessageGateway.printStats();
 
       // in case we're running asService and manager == null
       if (manager == null) {

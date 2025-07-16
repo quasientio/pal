@@ -18,14 +18,20 @@ import com.quasient.pal.common.runtime.DispatchForwarder;
 import com.quasient.pal.common.runtime.ProxyDispatcher;
 import com.quasient.pal.core.execution.java.AspectProxyDispatcher;
 import com.quasient.pal.core.execution.java.CustomClassloader;
+import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
+import com.quasient.pal.core.internal.concurrent.MpscKind;
 import com.quasient.pal.core.runtime.objects.ConcurrentHashMapObjectLookupStore;
 import com.quasient.pal.core.runtime.objects.ObjectLookupStore;
+import com.quasient.pal.core.transport.zmq.publish.MessagePublisher;
+import com.quasient.pal.core.transport.zmq.publish.MessagePublisherConfig;
+import com.quasient.pal.core.transport.zmq.publish.PublishingDropPolicy;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.messages.OutboundMsg;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
@@ -44,7 +50,7 @@ import org.zeromq.ZContext;
  * ZeroMQ context, custom class loader, and service thread management. It also initializes internal
  * queues and configuration properties.
  */
-class PeerWiring extends AbstractModule {
+public class PeerWiring extends AbstractModule {
 
   /** Logger instance. */
   private static final Logger logger = LoggerFactory.getLogger(PeerWiring.class);
@@ -79,12 +85,6 @@ class PeerWiring extends AbstractModule {
   private final boolean walQueueUnbounded;
 
   /**
-   * Indicates if the property {@code "pub.queue.unbounded"} == true, so an unbounded queue
-   * implementation is used.
-   */
-  private final boolean pubQueueUnbounded;
-
-  /**
    * Constructs a new PeerWiring module.
    *
    * <p>This constructor initializes the module with configuration properties, runtime options,
@@ -113,11 +113,9 @@ class PeerWiring extends AbstractModule {
     this.peerUuid = UUID.fromString(properties.getProperty("id"));
     this.customClassloader = customClassloader;
 
-    // flags that determine the MPSC queue type to use for WAL and PUB
+    // flags that determine the MPSC queue type to use for WAL
     this.walQueueUnbounded =
         Boolean.parseBoolean(properties.getProperty("wal.queue.unbounded", "false"));
-    this.pubQueueUnbounded =
-        Boolean.parseBoolean(properties.getProperty("pub.queue.unbounded", "false"));
   }
 
   /**
@@ -188,7 +186,7 @@ class PeerWiring extends AbstractModule {
    */
   @Provides
   @SuppressWarnings({"unused", "CloseableProvides"})
-  ZContext getZmqContext() {
+  public ZContext getZmqContext() {
     return zmqContext;
   }
 
@@ -202,7 +200,7 @@ class PeerWiring extends AbstractModule {
   @Singleton
   @Named("wal_queue")
   @SuppressWarnings("unused")
-  MessagePassingQueue<OutboundMsg> provideWalQueue() {
+  public MessagePassingQueue<OutboundMsg> getWalQueue() {
     return walQueueUnbounded
         ? new MpscUnboundedArrayQueue<>(Integer.parseInt(properties.getProperty("wal.queue.chunk")))
         : new MpscChunkedArrayQueue<>(
@@ -220,12 +218,19 @@ class PeerWiring extends AbstractModule {
   @Singleton
   @Named("pub_queue")
   @SuppressWarnings("unused")
-  MessagePassingQueue<OutboundMsg> providePubQueue() {
-    return pubQueueUnbounded
-        ? new MpscUnboundedArrayQueue<>(Integer.parseInt(properties.getProperty("pub.queue.chunk")))
-        : new MpscChunkedArrayQueue<>(
-            Integer.parseInt(properties.getProperty("pub.queue.initial")),
-            Integer.parseInt(properties.getProperty("pub.queue.max")));
+  public MessagePassingQueue<OutboundMsg> getPubQueue() {
+    MpscKind kind =
+        MpscKind.valueOf(
+            properties.getProperty("pub.queue.type", "CHUNKED").toUpperCase(Locale.ENGLISH));
+    int initial = Integer.parseInt(properties.getProperty("pub.queue.initial", "1024"));
+
+    if (kind == MpscKind.UNBOUNDED) {
+      int chunk = Integer.parseInt(properties.getProperty("pub.queue.chunk", "1024"));
+      return HwmMessageQueue.createQueue(kind, initial, chunk);
+    }
+
+    int max = Integer.parseInt(properties.getProperty("pub.queue.max", "2048"));
+    return HwmMessageQueue.createQueue(kind, initial, max);
   }
 
   /** Shared failure flag – singleton instance */
@@ -233,7 +238,7 @@ class PeerWiring extends AbstractModule {
   @Singleton
   @Named("walFailed")
   @SuppressWarnings("unused")
-  AtomicBoolean provideWalFailedFlag() {
+  public AtomicBoolean provideWalFailedFlag() {
     return new AtomicBoolean(false);
   }
 
@@ -244,7 +249,7 @@ class PeerWiring extends AbstractModule {
    */
   @Provides
   @SuppressWarnings("unused")
-  UUID getPeerUuid() {
+  public UUID getPeerUuid() {
     return peerUuid;
   }
 
@@ -255,7 +260,7 @@ class PeerWiring extends AbstractModule {
    */
   @Provides
   @SuppressWarnings("unused")
-  ThreadGroup getServiceThreadGroup() {
+  public ThreadGroup getServiceThreadGroup() {
     return serviceThreadGroup;
   }
 
@@ -266,7 +271,7 @@ class PeerWiring extends AbstractModule {
    */
   @Provides
   @SuppressWarnings({"unused", "CloseableProvides"})
-  CustomClassloader getCustomClassloader() {
+  public CustomClassloader getCustomClassloader() {
     return customClassloader;
   }
 
@@ -277,7 +282,31 @@ class PeerWiring extends AbstractModule {
    */
   @Provides
   @SuppressWarnings("unused")
-  Set<RunOptions> getRunOptions() {
+  public Set<RunOptions> getRunOptions() {
     return runOptions;
+  }
+
+  /**
+   * Provides the configuration for {@link MessagePublisher}, parsed from the properties.
+   *
+   * @return record with the given configuration
+   */
+  @SuppressWarnings("unused")
+  @Provides
+  @Singleton
+  public MessagePublisherConfig getMessagePublisherConfig() {
+
+    return new MessagePublisherConfig(
+        Integer.parseInt(properties.getProperty("publisher.spsc_size")),
+        Integer.parseInt(properties.getProperty("publisher.batch_size")),
+        Boolean.parseBoolean(properties.getProperty("publisher.flush_on_close")),
+        properties.getProperty("out.pub"),
+        Integer.parseInt(properties.getProperty("publisher.zmq.linger")),
+        Integer.parseInt(properties.getProperty("publisher.zmq.send_timeout")),
+        Integer.parseInt(properties.getProperty("publisher.zmq.send_hwm")),
+        PublishingDropPolicy.valueOf(
+            properties.getProperty("publisher.drop.policy").toUpperCase(Locale.ENGLISH)),
+        Integer.parseInt(properties.getProperty("publisher.drop.hwm_pct")),
+        Integer.parseInt(properties.getProperty("publisher.drop.keep_pct")));
   }
 }

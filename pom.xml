@@ -82,6 +82,7 @@
         <classgraph.version>4.8.179</classgraph.version>
         <jackson.version>2.18.1</jackson.version>
         <spring-boot-loader.version>3.2.1</spring-boot-loader.version>
+        <jmh.version>1.37</jmh.version>
 
         <!-- LOGGING -->
         <logs.dir>logs</logs.dir>
@@ -559,7 +560,20 @@
                 <artifactId>classgraph</artifactId>
                 <version>${classgraph.version}</version>
             </dependency>
+
+            <!-- JMH benchmarks -->
+            <dependency>
+                <groupId>org.openjdk.jmh</groupId>
+                <artifactId>jmh-core</artifactId>
+                <version>${jmh.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.openjdk.jmh</groupId>
+                <artifactId>jmh-generator-annprocess</artifactId>
+                <version>${jmh.version}</version>
+            </dependency>
         </dependencies>
+
     </dependencyManagement>
 
     <modules>
@@ -571,6 +585,7 @@
         <module>modules/pal-cli</module>
         <module>modules/itt-apps</module>
         <module>modules/itt</module>
+        <module>modules/pal-benchmarks</module>
         <module>distribution</module>
     </modules>
 

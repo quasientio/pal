@@ -15,6 +15,9 @@ import static org.hamcrest.Matchers.*;
 import com.google.common.util.concurrent.ServiceManager;
 import com.quasient.pal.common.runtime.ExecPhase;
 import com.quasient.pal.core.ZmqEnabledTest;
+import com.quasient.pal.core.transport.zmq.publish.MessagePublisher;
+import com.quasient.pal.core.transport.zmq.publish.MessagePublisherConfig;
+import com.quasient.pal.core.transport.zmq.publish.PublishingDropPolicy;
 import com.quasient.pal.messages.OutboundMsg;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.InternalHeader;
@@ -62,15 +65,7 @@ public class MessagePublisherTest extends ZmqEnabledTest {
     // shared producer→consumer queue
     pubQueue = new MpscUnboundedArrayQueue<>(1 << 10);
 
-    MessagePublisher publisher =
-        new MessagePublisher(
-            peerUuid,
-            context,
-            SYNC_SOCKET_ADDRESS,
-            new ThreadGroup("mp-tests"),
-            "MessagePublisherTest-Service",
-            pubQueue,
-            OUT_PUB_ADDRESS);
+    MessagePublisher publisher = getMessagePublisher();
 
     // start via Guava ServiceManager
     manager = new ServiceManager(Set.of(publisher));
@@ -82,6 +77,31 @@ public class MessagePublisherTest extends ZmqEnabledTest {
     subSocket = context.createSocket(SocketType.SUB);
     subSocket.connect(OUT_PUB_ADDRESS);
     subSocket.subscribe(ZMQ.SUBSCRIPTION_ALL);
+  }
+
+  private MessagePublisher getMessagePublisher() {
+    MessagePublisherConfig publisherConfig =
+        new MessagePublisherConfig(
+            262144,
+            1024,
+            false,
+            OUT_PUB_ADDRESS,
+            0,
+            0,
+            10000,
+            PublishingDropPolicy.DROP_NEW,
+            50, // relevant only with DROP_OLD
+            50 // relevant only with DROP_OLD
+            );
+
+    return new MessagePublisher(
+        peerUuid,
+        context,
+        SYNC_SOCKET_ADDRESS,
+        new ThreadGroup("mp-tests"),
+        "MessagePublisherTest-Service",
+        pubQueue,
+        publisherConfig);
   }
 
   @After

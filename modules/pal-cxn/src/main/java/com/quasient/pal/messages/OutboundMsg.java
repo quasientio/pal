@@ -211,10 +211,7 @@ public class OutboundMsg extends BaseMsg {
     }
 
     // responseToId
-    buff =
-        responseToId == null
-            ? String.valueOf(0).getBytes(ZMQ.CHARSET)
-            : responseToId.getBytes(ZMQ.CHARSET);
+    buff = responseToId == null ? "0".getBytes(ZMQ.CHARSET) : responseToId.getBytes(ZMQ.CHARSET);
     size += buff.length;
     if (!socket.send(buff, ZMQ.SNDMORE)) {
       return false;
@@ -223,6 +220,60 @@ public class OutboundMsg extends BaseMsg {
     // message body
     size += body.length;
     return socket.send(body, 0);
+  }
+
+  /**
+   * Sends the outbound message through the specified ZeroMQ socket. Non-blocking version: send
+   * every frame with (flags | ZMQ.SNDMORE) except the last one, which uses only the supplied flags.
+   *
+   * @param socket the ZeroMQ socket to send the message through, must not be {@code null}
+   * @return {@code true} if the message was sent successfully; {@code false} otherwise
+   * @throws IllegalArgumentException if the provided socket is {@code null}
+   * @throws ZMQException on zmq socket error
+   */
+  public boolean send(ZMQ.Socket socket, int flags) throws IllegalArgumentException, ZMQException {
+    if (socket == null) throw new IllegalArgumentException("Socket is null");
+
+    int more = flags | ZMQ.SNDMORE; // convenience
+
+    // 1) message type
+    byte[] buff = {messageType.getId()};
+    size = 1;
+    if (!socket.send(buff, more)) return false;
+
+    // 2) exec phase
+    buff = new byte[] {execPhase.toByte()};
+    size++;
+    if (!socket.send(buff, more)) return false;
+
+    // 3) #headers
+    final int hdrCnt = headers != null ? headers.size() : 0;
+    buff = Integer.toString(hdrCnt).getBytes(ZMQ.CHARSET);
+    size += buff.length;
+    if (!socket.send(buff, more)) return false;
+
+    // 4) headers themselves
+    if (hdrCnt > 0) {
+      for (InternalHeader h : headers) {
+        buff = toBytes(h);
+        size += buff.length;
+        if (!socket.send(buff, more)) return false;
+      }
+    }
+
+    // 5) message-id
+    buff = messageId.getBytes(ZMQ.CHARSET);
+    size += buff.length;
+    if (!socket.send(buff, more)) return false;
+
+    // 6) response-to-id
+    buff = responseToId == null ? "0".getBytes(ZMQ.CHARSET) : responseToId.getBytes(ZMQ.CHARSET);
+    size += buff.length;
+    if (!socket.send(buff, more)) return false;
+
+    // 7) body  (last frame – **no** SNDMORE)
+    size += body.length;
+    return socket.send(body, flags);
   }
 
   /**

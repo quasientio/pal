@@ -42,6 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nullable;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.header.Header;
@@ -236,6 +237,7 @@ public class LogWriter extends ConnectedService {
     this.writeAheadLog = writeAheadLog;
     this.publishOffsets = publishOffsets;
     producerProperties.put("bootstrap.servers", writeAheadLog.getBootstrapServers());
+    producerProperties.put(ProducerConfig.LINGER_MS_CONFIG, "0");
 
     // create producer, if not assigned in constructor
     if (this.producer == null) {
@@ -258,6 +260,10 @@ public class LogWriter extends ConnectedService {
         this::handleOutboundMessage,
         ADAPTIVE_100_MICROSECONDS,
         () -> !Thread.currentThread().isInterrupted());
+
+    if (logger.isDebugEnabled()) {
+      logger.debug("Thread interrupted, stopping...");
+    }
   }
 
   /**
@@ -487,5 +493,7 @@ public class LogWriter extends ConnectedService {
 
     // close the offset publisher socket
     closeConnection(offsetPublisherSocket, "Error closing offset publisher");
+
+    logger.info("Closed connections");
   }
 }

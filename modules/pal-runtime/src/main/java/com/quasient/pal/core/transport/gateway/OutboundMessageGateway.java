@@ -18,6 +18,7 @@ import com.quasient.pal.core.intercept.InterceptMatcher;
 import com.quasient.pal.core.internal.messages.SessionCommandMsg;
 import com.quasient.pal.core.internal.messages.SessionResponseMsg;
 import com.quasient.pal.core.service.RunOptions;
+import com.quasient.pal.core.transport.zmq.publish.MessagePublisher;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.messages.OutboundMsg;
@@ -38,6 +39,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.LongAdder;
+import java.util.concurrent.locks.LockSupport;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -67,6 +70,12 @@ public class OutboundMessageGateway {
 
   /** Timeout (in milliseconds) for receiving responses on callback sockets. */
   private static final int CALLBACK_RECEIVE_TIMEOUT_MS = 3000;
+
+  /**
+   * A shared counter to accumulate the number of messages to be published that were dropped due to
+   * queue congestion.
+   */
+  private static final LongAdder totalDroppedPub = new LongAdder();
 
   /** ZeroMQ context used to create and manage zmq sockets. */
   private final ZContext zmqContext;
@@ -106,6 +115,9 @@ public class OutboundMessageGateway {
    * A MPSC (Multiple Producer Single Consumer) queue holding the OutboundMessage's to be published.
    */
   private final MessagePassingQueue<OutboundMsg> pubQueue;
+
+  /** A per-thread counter of messages dropped without publishing, due to queue congestion. */
+  private final ThreadLocal<Long> localDroppedPub = ThreadLocal.withInitial(() -> Long.valueOf(0));
 
   /** Set of runtime options that control behavior such as intercept handling and TCP publishing. */
   private final Set<RunOptions> runOptions;
@@ -157,7 +169,7 @@ public class OutboundMessageGateway {
    * @param interceptMatcher matcher used for determining applicable intercepts for messages
    * @param walQueue shared queue to put/offer outbound messages to write-ahead
    * @param walFailed global flag used by the LogWriter to inform of failure and WAL halting
-   * @param pubQueue shared queue to put/offer outbound messages to publish
+   * @param pubQueue where to enqueue outbound messages to publish
    * @param sessionServiceAddress the address for the session service communication
    */
   @Inject
@@ -325,16 +337,15 @@ public class OutboundMessageGateway {
   }
 
   /**
-   * Publishes the provided execution message when PUB is enabled and {@link
-   * com.quasient.pal.core.transport.zmq.MessagePublisher} is up.
+   * Enqueues the provided execution message for publishing by the running {@link MessagePublisher}.
    *
    * @param message the OutboundMessage to be published
-   * @throws IllegalStateException in case of queue overflow
    */
-  private void publishMessage(OutboundMsg message) throws IllegalStateException {
+  private void publishMessage(OutboundMsg message) {
 
     if (!pubQueue.offer(message)) {
-      throw new IllegalStateException("WAL queue overflow");
+      localDroppedPub.set(localDroppedPub.get() + 1); // increment thread counter
+      totalDroppedPub.increment(); // increment global counter
     }
   }
 
@@ -352,8 +363,14 @@ public class OutboundMessageGateway {
       return;
     }
 
-    if (!walQueue.offer(message)) {
-      throw new IllegalStateException("WAL queue overflow");
+    int spins = 0;
+    while (!walQueue.offer(message)) {
+      // Lightweight back-off
+      if ((++spins & 0xFF) == 0) {
+        // after 256 failed offers, give scheduler a chance
+        LockSupport.parkNanos(1_000); // 1 µs
+        if (walFailed.get()) return; // re-check failure flag
+      }
     }
   }
 
@@ -525,9 +542,16 @@ public class OutboundMessageGateway {
     };
   }
 
+  /** Returns a consistent, side-effect-free view of the counters. */
+  public static OutboundMessageGatewayStats getStats() {
+    return new OutboundMessageGatewayStats(totalDroppedPub.sum());
+  }
+
   /** Prints aggregated statistics regarding message write-ahead and publishing. */
-  void printStats() {
-    // TODO
+  public static void printStats() {
+    OutboundMessageGatewayStats s = getStats();
+    logger.info(
+        "Dropped {} messages unpublished due to PUB queue congestion", s.messagesDroppedPub());
   }
 
   /**
@@ -536,7 +560,6 @@ public class OutboundMessageGateway {
    * thread-local state.
    */
   public void closeThreadLocalSockets() {
-    printStats();
 
     if (Boolean.TRUE.equals(threadSessionsSocketCreated.get())) {
       Socket socket = threadSessionsSocket.get();

@@ -40,8 +40,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.stubbing.Answer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ.Socket;
@@ -52,7 +50,6 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
   // --------------------------------------------------------------------
   // constants & helpers
   // --------------------------------------------------------------------
-  private static final Logger logger = LoggerFactory.getLogger("tests");
 
   private static final String SESSION_SERVICE_REQ_ADDRESS = "inproc://session_test";
 
@@ -82,6 +79,7 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
   // --------------------------------------------------------------------
   // set-up / tear-down
   // --------------------------------------------------------------------
+  @SuppressWarnings("unchecked")
   @Before
   public void setUp() throws Exception {
     context = createContext();
@@ -128,8 +126,9 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
   // --------------------------------------------------------------------
   // helper to build the SUT with flags
   // --------------------------------------------------------------------
-  private void initGateway(boolean withPub, boolean withIntercepts) {
+  private void initGateway(boolean withWal, boolean withPub, boolean withIntercepts) {
     EnumSet<RunOptions> opts = EnumSet.noneOf(RunOptions.class);
+    if (withWal) opts.add(RunOptions.WITH_WAL);
     if (withPub) opts.add(RunOptions.WITH_TCP_PUB);
     if (withIntercepts) opts.add(RunOptions.WITH_INTERCEPTS);
 
@@ -151,26 +150,26 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
   // single-message tests
   // --------------------------------------------------------------------
   @Test
-  public void execMessage_withPub_withIntercepts() {
-    sendExecMsgAndAssert(true, true);
+  public void execMessage_withWalAndPub_withIntercepts() {
+    sendExecMsgAndAssert(true, true, true);
   }
 
   @Test
-  public void execMessage_noPub_withIntercepts() {
-    sendExecMsgAndAssert(false, true);
+  public void execMessage_walButNoPub_withIntercepts() {
+    sendExecMsgAndAssert(true, false, true);
   }
 
   // --------------------------------------------------------------------
   // burst tests
   // --------------------------------------------------------------------
   @Test
-  public void manyExecMessages_withPub_withIntercepts() {
-    sendManyExecMsgsAndAssert(true, true);
+  public void manyExecMessages_withPubAndPub_withIntercepts() {
+    sendManyExecMsgsAndAssert(true, true, true);
   }
 
   @Test
-  public void manyExecMessages_noPub_withIntercepts() {
-    sendManyExecMsgsAndAssert(false, true);
+  public void manyExecMessages_pubButNoWal_withIntercepts() {
+    sendManyExecMsgsAndAssert(false, true, true);
   }
 
   // --------------------------------------------------------------------
@@ -178,7 +177,7 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
   // --------------------------------------------------------------------
   @Test
   public void sendMessagesToSessionService() {
-    initGateway(false, false);
+    initGateway(false, false, false);
 
     SessionCommandMsg cmd1 =
         new SessionCommandMsg(
@@ -201,8 +200,8 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
   // --------------------------------------------------------------------
   // helpers for exec-message tests
   // --------------------------------------------------------------------
-  private void sendExecMsgAndAssert(boolean withPub, boolean withIntercepts) {
-    initGateway(withPub, withIntercepts);
+  private void sendExecMsgAndAssert(boolean withWal, boolean withPub, boolean withIntercepts) {
+    initGateway(withWal, withPub, withIntercepts);
 
     ExecMessage msg = builder.buildEmptyConstructor(peerUuid, "java.lang.String");
     ExecMessage returned = gateway.sendExecMessage(builder.wrap(msg), ExecPhase.BEFORE);
@@ -211,11 +210,12 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
     assertThat(msgsSeenByMatcher, is(List.of(msg)));
 
     verify(pubQueueMock, times(withPub ? 1 : 0)).offer(any());
+    verify(walQueueMock, times(withWal ? 1 : 0)).offer(any());
     verifyNoMoreInteractions(pubQueueMock, walQueueMock);
   }
 
-  private void sendManyExecMsgsAndAssert(boolean withPub, boolean withIntercepts) {
-    initGateway(withPub, withIntercepts);
+  private void sendManyExecMsgsAndAssert(boolean withWal, boolean withPub, boolean withIntercepts) {
+    initGateway(withWal, withPub, withIntercepts);
 
     int n = 10;
     List<ExecMessage> sent = new ArrayList<>();
@@ -227,6 +227,7 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
     assertThat(msgsSeenByMatcher, is(sent));
 
     verify(pubQueueMock, times(withPub ? n : 0)).offer(any());
+    verify(walQueueMock, times(withWal ? n : 0)).offer(any());
     verifyNoMoreInteractions(pubQueueMock, walQueueMock);
   }
 
