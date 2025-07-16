@@ -38,7 +38,15 @@ class ObjectLookupStoreBackgroundProcessor {
   private static final int DEFAULT_STATS_INTERVAL_SECS = 30;
 
   /** Executor service responsible for scheduling and executing background tasks. */
-  private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+  private final ScheduledExecutorService scheduler =
+      Executors.newScheduledThreadPool(
+          1,
+          r -> {
+            Thread thread = new Thread(r);
+            thread.setName("ObjectLookupStoreBackgroundThread");
+            thread.setDaemon(true);
+            return thread;
+          });
 
   /** The lookup store that holds object references for lookup operations. */
   @Nonnull final ConcurrentHashMapObjectLookupStore objectLookupStore;
