@@ -36,6 +36,7 @@ import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.messages.OutboundMsg;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.Message;
+import com.quasient.pal.serdes.colfer.ColferUtils;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.jctools.queues.MessagePassingQueue;
@@ -168,6 +169,9 @@ public class SendExecMessageUsingMPSCBenchmark {
   private MessagePublisherConfig messagePublisherConfig;
 
   // ----------------------- Other required vars --------------------
+
+  /** Handle to the Guice's Injector. */
+  private Injector injector;
 
   /** Handle to the MessagePublisher PUB socket. */
   private Socket pubSocket;
@@ -327,7 +331,7 @@ public class SendExecMessageUsingMPSCBenchmark {
     customClassloader = new CustomClassloader(new URL[]{}, Thread.currentThread().getContextClassLoader());
 
     // create DI injector
-    Injector injector = Guice.createInjector(new PeerWiring(props, runOpts, zmqCtx, customClassloader));
+    injector = Guice.createInjector(new PeerWiring(props, runOpts, zmqCtx, customClassloader));
 
     // 2 - start consumer services (WAL, PUB, Sessions)
 
@@ -358,18 +362,104 @@ public class SendExecMessageUsingMPSCBenchmark {
 
     // 3 - collect injected handles required in benchmark
     gateway     = injector.getInstance(OutboundMessageGateway.class);
-    MessageBuilder builder = injector.getInstance(MessageBuilder.class);
     walQueue = injector.getInstance(Key.get(new TypeLiteral<>() {}, Names.named("wal_queue")));
     pubQueue = injector.getInstance(Key.get(new TypeLiteral<>() {}, Names.named("pub_queue")));
     messagePublisherConfig = injector.getInstance(MessagePublisherConfig.class);
 
-    // 4 - prepare a small pool of ExecMessages we’ll reuse
-    msgPool = new ArrayList<>(1024);
+    // 4 - prepare a pool of ExecMessages we’ll reuse
+    createMixedSizedMessagePool();
+  }
+
+  /**
+   * Creates a pool of serialized ExecMessages of different sizes and content.
+   * Size doesn't affect queueing in the PUB or WAL queues but affects serialization
+   * inside MessagePublisher (through PUB socket) and LogWriter (through Kafka).
+   * <p>
+   * We create 1024 msg's with a realistic workload distribution of:
+   * <ul>
+   * <li>40% micro (409) - 208 bytes/msg</li>
+   * <li>35% small (358) - 690 bytes/msg</li>
+   * <li>20% medium (205) - 1232 bytes/msg</li>
+   * <li>5% large (52) - 2292 bytes/msg</li>
+   *</ul>
+   */
+  private void createMixedSizedMessagePool() {
+    MessageBuilder builder = injector.getInstance(MessageBuilder.class);
     UUID peerId = injector.getInstance(UUID.class);
-    for (int i = 0; i < 1024; i++) {
+
+    /*  ------- create a batch of micro messages --------  */
+    int microMsgsN = 409;
+    List<Message> microMsgs = new ArrayList<>(microMsgsN);
+    for (int i = 0; i < microMsgsN; i++) {
       ExecMessage e = builder.buildEmptyConstructor(peerId, "java.lang.String");
-      msgPool.add(builder.wrap(e));
+      microMsgs.add(builder.wrap(e));
     }
+    System.out.println();
+    System.out.printf("%d micro messages of size: %d bytes%n", microMsgsN, ColferUtils.toBytes(microMsgs.get(0)).length);
+
+    /*  ------- create a batch of small messages (small Lorem) --------  */
+    int smallMsgsN = 358;
+    List<Message> smallMsgs = new ArrayList<>(smallMsgsN);
+    for (int i = 0; i < smallMsgsN; i++) {
+      ExecMessage e = builder.buildConstructor(
+        peerId,
+        "java.lang.String",
+              new String[]{"java.lang.String"},
+              new Object[]{shortLorem},
+              this,
+              null);
+      smallMsgs.add(builder.wrap(e));
+    }
+    System.out.printf("%d small messages of size: %d bytes%n", smallMsgsN, ColferUtils.toBytes(smallMsgs.get(0)).length);
+
+    /*  ------- create a batch of large messages (list of 100 doubles) --------  */
+
+    int mediumMsgsN = 205;
+    List<Message> mediumMsgs = new ArrayList<>(mediumMsgsN);
+
+    // list instance with 50 doubles
+    List<Double> doubleList = new ArrayList<>();
+    Random random = new Random();
+    for (int i = 0; i < 50; i++) {
+      double randomValue = random.nextDouble(); // Generates a value between 0.0 and 1.0
+      doubleList.add(randomValue);
+    }
+
+    // create the messages
+    for (int i = 0; i < mediumMsgsN; i++) {
+      ExecMessage e = builder.buildClassMethod(
+              peerId,
+              "some.math.like.UtilityClass",
+              "AFancyMethod",
+      new String[]{doubleList.getClass().getName()},
+              this,
+              null,
+              new Object[]{doubleList});
+
+      mediumMsgs.add(builder.wrap(e));
+    }
+    System.out.printf("%d medium messages of size: %d bytes%n", mediumMsgsN, ColferUtils.toBytes(mediumMsgs.get(0)).length);
+
+    /*  ------- create a batch of large messages (long Lorem) --------  */
+    int largeMsgsM = 52;
+    List<Message> largeMsgs = new ArrayList<>(largeMsgsM);
+    for (int i = 0; i < largeMsgsM; i++) {
+      ExecMessage e = builder.buildConstructor(
+              peerId,
+              "java.lang.String",
+              new String[]{"java.lang.String"},
+              new Object[]{longLorem},
+              this,
+              null);
+      largeMsgs.add(builder.wrap(e));
+    }
+    System.out.printf("%d large messages of size: %d bytes%n", largeMsgsM, ColferUtils.toBytes(largeMsgs.get(0)).length);
+
+    msgPool = new ArrayList<>(microMsgs.size() + smallMsgs.size() + mediumMsgs.size() + largeMsgs.size());
+    msgPool.addAll(microMsgs);
+    msgPool.addAll(smallMsgs);
+    msgPool.addAll(mediumMsgs);
+    msgPool.addAll(largeMsgs);
   }
 
   /**
@@ -577,5 +667,36 @@ public class SendExecMessageUsingMPSCBenchmark {
     syncSocket = zmqCtx.createSocket(SocketType.PULL);
     syncSocket.bind(SYNC_READY_ENDPOINT);
   }
+
+  /** Short string argument for messages. */
+  private final String shortLorem = """
+    Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+    Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+    Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+    Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+    """;
+
+  /** Long string argument for messages. */
+  private final String longLorem = """
+    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet,
+    adipiscing nec, ultricies sed, dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper congue,
+    euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est eleifend mi, non fermentum diam nisl sit amet erat.
+    Duis semper. Duis arcu massa, scelerisque vitae, consequat in, pretium a, enim. Pellentesque congue. Ut in risus volutpat
+    libero pharetra tempor. Cras vestibulum bibendum augue. Praesent egestas leo in pede. Praesent blandit odio eu enim.
+    Pellentesque sed dui ut augue blandit sodales. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere
+    cubilia Curae; Aliquam nibh. Mauris ac mauris sed pede pellentesque fermentum. Maecenas adipiscing ante non diam sodales hendrerit.
+
+    Ut velit mauris, egestas sed, gravida nec, ornare ut, mi. Aenean ut orci vel massa suscipit pulvinar. Nulla sollicitudin.
+    Fusce varius, ligula non tempus aliquam, nunc turpis ullamcorper nibh, in tempus sapien eros vitae ligula. Pellentesque
+    rhoncus nunc et augue. Integer id felis. Curabitur aliquet pellentesque diam. Integer quis metus vitae elit lobortis egestas.
+    Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Morbi vel erat non mauris convallis vehicula. Nulla et sapien.
+    Integer tortor tellus, aliquam faucibus, convallis id, congue eu, quam. Mauris ullamcorper felis vitae erat. Proin feugiat,
+    augue non elementum posuere, metus purus iaculis lectus, et tristique ligula justo vitae magna.
+
+    Aliquam convallis sollicitudin purus. Praesent aliquam, enim at fermentum mollis, ligula massa adipiscing nisl, ac euismod
+    nibh nisl eu lectus. Fusce vulputate sem at sapien. Vivamus leo. Aliquam euismod libero eu enim. Nulla nec felis sed leo
+    placerat imperdiet. Aenean suscipit nulla in justo. Suspendisse cursus rutrum augue. Nulla tincidunt tincidunt mi.
+    Curabitur iaculis, lorem vel rhoncus faucibus, felis magna fermentum augue, et ultricies lacus lorem varius purus.
+    """;
 }
 
