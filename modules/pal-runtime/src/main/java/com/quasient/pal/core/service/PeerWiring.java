@@ -287,6 +287,20 @@ public class PeerWiring extends AbstractModule {
   }
 
   /**
+   * Provides the {@link PublishingDropPolicy} for dropping messages to publish, on queue
+   * congestion.
+   *
+   * @return the configured message Drop policy
+   */
+  @SuppressWarnings("unused")
+  @Provides
+  @Singleton
+  public PublishingDropPolicy getPublishingDropPolicy() {
+    return PublishingDropPolicy.valueOf(
+        properties.getProperty("publisher.drop.policy").toUpperCase(Locale.ENGLISH));
+  }
+
+  /**
    * Provides the configuration for {@link MessagePublisher}, parsed from the properties.
    *
    * @return record with the given configuration
@@ -294,7 +308,8 @@ public class PeerWiring extends AbstractModule {
   @SuppressWarnings("unused")
   @Provides
   @Singleton
-  public MessagePublisherConfig getMessagePublisherConfig() {
+  public MessagePublisherConfig getMessagePublisherConfig(
+      PublishingDropPolicy publishingDropPolicy) {
 
     return new MessagePublisherConfig(
         Integer.parseInt(properties.getProperty("publisher.spsc_size")),
@@ -304,8 +319,7 @@ public class PeerWiring extends AbstractModule {
         Integer.parseInt(properties.getProperty("publisher.zmq.linger")),
         Integer.parseInt(properties.getProperty("publisher.zmq.send_timeout")),
         Integer.parseInt(properties.getProperty("publisher.zmq.send_hwm")),
-        PublishingDropPolicy.valueOf(
-            properties.getProperty("publisher.drop.policy").toUpperCase(Locale.ENGLISH)),
+        publishingDropPolicy,
         Integer.parseInt(properties.getProperty("publisher.drop.hwm_pct")),
         Integer.parseInt(properties.getProperty("publisher.drop.keep_pct")));
   }

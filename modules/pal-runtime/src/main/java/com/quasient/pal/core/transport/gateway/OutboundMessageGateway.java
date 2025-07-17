@@ -19,6 +19,7 @@ import com.quasient.pal.core.internal.messages.SessionCommandMsg;
 import com.quasient.pal.core.internal.messages.SessionResponseMsg;
 import com.quasient.pal.core.service.RunOptions;
 import com.quasient.pal.core.transport.zmq.publish.MessagePublisher;
+import com.quasient.pal.core.transport.zmq.publish.PublishingDropPolicy;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.messages.OutboundMsg;
@@ -105,6 +106,9 @@ public class OutboundMessageGateway {
    */
   private final MessagePassingQueue<OutboundMsg> walQueue;
 
+  /** Required handle to the {@link PublishingDropPolicy}. */
+  final PublishingDropPolicy publishingDropPolicy;
+
   /**
    * Global failure flag, used to let producer threads in {@link OutboundMessageGateway} know WAL is
    * down.
@@ -183,6 +187,7 @@ public class OutboundMessageGateway {
       @Named("wal_queue") MessagePassingQueue<OutboundMsg> walQueue,
       @Named("walFailed") AtomicBoolean walFailed,
       @Named("pub_queue") MessagePassingQueue<OutboundMsg> pubQueue,
+      PublishingDropPolicy publishingDropPolicy,
       @Named("session.svc") String sessionServiceAddress) {
     this.zmqContext = zmqContext;
     this.peerUuid = peerUuid;
@@ -193,6 +198,7 @@ public class OutboundMessageGateway {
     this.walQueue = walQueue;
     this.walFailed = walFailed;
     this.pubQueue = pubQueue;
+    this.publishingDropPolicy = publishingDropPolicy;
     this.sessionServiceAddress = sessionServiceAddress;
     this.writeAheadHeaders =
         Collections.singletonList(messageBuilder.buildWriteAheadHeader(peerUuid));
@@ -343,9 +349,37 @@ public class OutboundMessageGateway {
    */
   private void publishMessage(OutboundMsg message) {
 
+    if (PublishingDropPolicy.NONE.equals(publishingDropPolicy)) {
+      blockUntilEnqueued(message);
+      return;
+    }
+
+    // DROP_NEW / OLD branch
     if (!pubQueue.offer(message)) {
       localDroppedPub.set(localDroppedPub.get() + 1); // increment thread counter
       totalDroppedPub.increment(); // increment global counter
+    }
+  }
+
+  /**
+   * Spin/park helper to do a blocking-enqueue msg into the Pub queue. TODO spin threshold or park
+   * duration after profiling
+   *
+   * @param msg message to enqueue
+   */
+  private void blockUntilEnqueued(OutboundMsg msg) {
+    int spins = 0;
+    while (!pubQueue.offer(msg)) {
+
+      // 256 tight spins ≈ 100–150 ns on modern CPU
+      if ((++spins & 0xFF) != 0) {
+        Thread.onSpinWait();
+        continue;
+      }
+
+      // Every 256 failed attempts, give the scheduler a chance
+      LockSupport.parkNanos(1_000); // 1 µs
+      spins = 0; // reset counter
     }
   }
 

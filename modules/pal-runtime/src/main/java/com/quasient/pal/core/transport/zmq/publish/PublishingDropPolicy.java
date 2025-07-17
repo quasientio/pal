@@ -11,12 +11,16 @@ package com.quasient.pal.core.transport.zmq.publish;
 
 /**
  * Enumerates the available policies/strategies to drop messages enqueued to be published when the
- * internal spsc queue is saturated (i.e. producers outpace the publisher's network thread).
+ * PUB queue or {@link MessagePublisher}'s internal SPSC queue is saturated (i.e. producers outpace
+ * the publisher's network thread).
  */
 public enum PublishingDropPolicy {
   /** Producer drops the message that cannot be enqueued. */
   DROP_NEW,
 
   /** Consumer trims oldest messages when backlog crosses a high-water mark. */
-  DROP_OLD
+  DROP_OLD,
+
+  /** Block/slow producers until space is available. */
+  NONE
 }

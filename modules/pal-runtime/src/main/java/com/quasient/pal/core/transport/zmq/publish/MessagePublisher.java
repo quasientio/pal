@@ -167,17 +167,23 @@ public class MessagePublisher extends ConnectedService {
   private void forwardToNetworkThread(OutboundMsg msg) {
     messagesReceived++;
 
-    if (config.dropPolicy() == PublishingDropPolicy.DROP_NEW) {
-      if (!spscQueue.offer(msg)) { // full → drop NEW
-        messagesDroppedUnforwarded++;
-        warnOnce();
+    switch (config.dropPolicy()) {
+      case DROP_NEW -> {
+        if (!spscQueue.offer(msg)) {
+          messagesDroppedUnforwarded++;
+          warnOnce();
+        }
       }
-      return;
-    }
-
-    /* DROP_OLDEST -> always enqueue (will be trimmed in consumer) */
-    while (!spscQueue.offer(msg)) {
-      Thread.onSpinWait(); // should not spin: queue will be trimmed soon
+      case DROP_OLD -> { // current trimming logic
+        while (!spscQueue.offer(msg)) {
+          Thread.onSpinWait(); // will be trimmed soon
+        }
+      }
+      case NONE -> { // ← new branch
+        while (!spscQueue.offer(msg)) {
+          Thread.onSpinWait(); // back-pressure here too
+        }
+      }
     }
   }
 

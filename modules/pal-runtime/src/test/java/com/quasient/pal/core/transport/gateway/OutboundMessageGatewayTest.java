@@ -22,6 +22,7 @@ import com.quasient.pal.core.intercept.InterceptMatcher;
 import com.quasient.pal.core.internal.messages.SessionCommandMsg;
 import com.quasient.pal.core.internal.messages.SessionResponseMsg;
 import com.quasient.pal.core.service.RunOptions;
+import com.quasient.pal.core.transport.zmq.publish.PublishingDropPolicy;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.messages.OutboundMsg;
@@ -143,6 +144,7 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
             walQueueMock,
             walFailed,
             pubQueueMock,
+            PublishingDropPolicy.DROP_OLD,
             SESSION_SERVICE_REQ_ADDRESS);
   }
 
