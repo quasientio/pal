@@ -15,6 +15,8 @@ import static org.hamcrest.Matchers.*;
 import com.google.common.util.concurrent.ServiceManager;
 import com.quasient.pal.common.runtime.ExecPhase;
 import com.quasient.pal.core.ZmqEnabledTest;
+import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
+import com.quasient.pal.core.internal.concurrent.MpscKind;
 import com.quasient.pal.core.transport.zmq.publish.MessagePublisher;
 import com.quasient.pal.core.transport.zmq.publish.MessagePublisherConfig;
 import com.quasient.pal.core.transport.zmq.publish.PublishingDropPolicy;
@@ -27,8 +29,6 @@ import com.quasient.pal.messages.types.MessageType;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import org.jctools.queues.MessagePassingQueue;
-import org.jctools.queues.MpscUnboundedArrayQueue;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -54,7 +54,7 @@ public class MessagePublisherTest extends ZmqEnabledTest {
   private ZContext context;
   private ServiceManager manager;
   private Socket subSocket;
-  private MessagePassingQueue<OutboundMsg> pubQueue;
+  private HwmMessageQueue<OutboundMsg> pubQueue;
   private InternalHeader writeAheadHeader;
 
   @Before
@@ -63,7 +63,7 @@ public class MessagePublisherTest extends ZmqEnabledTest {
     context = createContext();
 
     // shared producer→consumer queue
-    pubQueue = new MpscUnboundedArrayQueue<>(1 << 10);
+    pubQueue = HwmMessageQueue.createQueue(MpscKind.UNBOUNDED, 0, 1 << 10);
 
     MessagePublisher publisher = getMessagePublisher();
 

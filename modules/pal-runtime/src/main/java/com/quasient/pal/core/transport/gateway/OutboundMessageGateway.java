@@ -15,6 +15,7 @@ import static com.quasient.pal.serdes.colfer.ColferUtils.toBytes;
 import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.runtime.ExecPhase;
 import com.quasient.pal.core.intercept.InterceptMatcher;
+import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import com.quasient.pal.core.internal.messages.SessionCommandMsg;
 import com.quasient.pal.core.internal.messages.SessionResponseMsg;
 import com.quasient.pal.core.service.RunOptions;
@@ -118,7 +119,7 @@ public class OutboundMessageGateway {
   /**
    * A MPSC (Multiple Producer Single Consumer) queue holding the OutboundMessage's to be published.
    */
-  private final MessagePassingQueue<OutboundMsg> pubQueue;
+  private final HwmMessageQueue<OutboundMsg> pubQueue;
 
   /** A per-thread counter of messages dropped without publishing, due to queue congestion. */
   private final ThreadLocal<Long> localDroppedPub = ThreadLocal.withInitial(() -> Long.valueOf(0));
@@ -184,9 +185,9 @@ public class OutboundMessageGateway {
       DirectoryConnectionProvider directoryConnectionProvider,
       Set<RunOptions> runOptions,
       InterceptMatcher interceptMatcher,
-      @Named("wal_queue") MessagePassingQueue<OutboundMsg> walQueue,
+      @Named("wal_queue") HwmMessageQueue<OutboundMsg> walQueue,
       @Named("walFailed") AtomicBoolean walFailed,
-      @Named("pub_queue") MessagePassingQueue<OutboundMsg> pubQueue,
+      @Named("pub_queue") HwmMessageQueue<OutboundMsg> pubQueue,
       PublishingDropPolicy publishingDropPolicy,
       @Named("session.svc") String sessionServiceAddress) {
     this.zmqContext = zmqContext;
@@ -349,12 +350,32 @@ public class OutboundMessageGateway {
    */
   private void publishMessage(OutboundMsg message) {
 
-    if (PublishingDropPolicy.NONE.equals(publishingDropPolicy)) {
+    /* ---------------- soft back-pressure for DropPolicy.NONE ------------ */
+    if (publishingDropPolicy == PublishingDropPolicy.NONE) {
+
+      // queue is a HwmMessageQueue, so capacity() is O(1)
+      final int softCap = pubQueue.capacity() * 95 / 100;
+
+      int spins = 0;
+      while (pubQueue.currentSize() >= softCap) {
+        // 256 tight spins ≈ 100–150 ns on modern CPUs
+        if ((++spins & 0xFF) != 0) {
+          Thread.onSpinWait();
+        } else {
+          // after 256 spins, yield for 1 µs to let network thread drain
+          LockSupport.parkNanos(1_000);
+          // TODO: break early if the publisher has failed - requires pubFailed flag, similar to
+          // walFailed
+          // if (pubFailed.get()) break;
+        }
+      }
+
+      // hard guarantee: enqueue or wait until it fits
       blockUntilEnqueued(message);
       return;
     }
 
-    // DROP_NEW / OLD branch
+    /* ---------- DROP_NEW / DROP_OLD path -------------------- */
     if (!pubQueue.offer(message)) {
       localDroppedPub.set(localDroppedPub.get() + 1); // increment thread counter
       totalDroppedPub.increment(); // increment global counter

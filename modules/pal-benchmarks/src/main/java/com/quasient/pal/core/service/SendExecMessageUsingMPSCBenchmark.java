@@ -157,10 +157,10 @@ public class SendExecMessageUsingMPSCBenchmark {
   private MessagePublisher messagePublisher;
 
   /** MPSC queue for WAL .*/
-  private MessagePassingQueue<OutboundMsg> walQueue;
+  private HwmMessageQueue<OutboundMsg> walQueue;
 
   /** MPSC queue for PUB .*/
-  private MessagePassingQueue<OutboundMsg> pubQueue;
+  private HwmMessageQueue<OutboundMsg> pubQueue;
 
   /** Custom classloader. */
   private CustomClassloader customClassloader;
@@ -226,10 +226,11 @@ public class SendExecMessageUsingMPSCBenchmark {
     LogInfo writeAheadLog = new LogInfo(WAL_LOG_NAME, KAFKA_BOOTSTRAP_SERVERS);
 
     // WAL queue params
-    props.setProperty("wal.queue.initial", "1024");
+    // TODO set the following from properties and params; fallback to constants (like for pub queue)
+    props.setProperty("wal.queue.type", "chunked");
+    props.setProperty("wal.queue.initial", "16384");
     props.setProperty("wal.queue.max",     "1048576");
-    props.setProperty("wal.queue.chunk", "1024");
-    props.setProperty("wal.queue.unbounded", "false");  // set to 'true' for unbounded queue
+    props.setProperty("wal.queue.chunk", "4096");
 
     // PUB queue params
     props.setProperty("pub.queue.type", pubQueueType.name());
@@ -249,7 +250,7 @@ public class SendExecMessageUsingMPSCBenchmark {
     props.setProperty("publisher.zmq.linger", "0");
     props.setProperty("publisher.zmq.send_timeout", "0");
     props.setProperty("publisher.zmq.send_hwm", "10000");
-    props.setProperty("publisher.drop.policy", "DROP_OLD");
+    props.setProperty("publisher.drop.policy", "NONE");
     props.setProperty("publisher.drop.hwm_pct", "97");
     props.setProperty("publisher.drop.keep_pct", "92");
 

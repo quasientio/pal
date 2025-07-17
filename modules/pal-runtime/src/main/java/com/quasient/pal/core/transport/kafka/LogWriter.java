@@ -13,6 +13,7 @@ import com.quasient.pal.common.directory.nodes.LogInfo;
 import com.quasient.pal.common.runtime.ExecPhase;
 import com.quasient.pal.common.util.UuidUtils;
 import com.quasient.pal.core.internal.concurrent.AdaptiveSpinParkWaitStrategy;
+import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import com.quasient.pal.core.service.ConnectedService;
 import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import com.quasient.pal.messages.LogMessageHeader;
@@ -146,7 +147,7 @@ public class LogWriter extends ConnectedService {
       @Named("LogWriter.service") String serviceName,
       @Named("key.serializer") String keySerializer,
       @Named("value.serializer") String valueSerializer,
-      @Named("wal_queue") MessagePassingQueue<OutboundMsg> walQueue,
+      @Named("wal_queue") HwmMessageQueue<OutboundMsg> walQueue,
       @Named("walFailed") AtomicBoolean walFailed,
       @Named("offset.pub") String offsetPubAddress) {
     super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
@@ -190,7 +191,7 @@ public class LogWriter extends ConnectedService {
       @Named("sync.ready") String syncSocketAddress,
       ThreadGroup serviceThreadGroup,
       String serviceName,
-      @Named("wal_queue") MessagePassingQueue<OutboundMsg> walQueue,
+      @Named("wal_queue") HwmMessageQueue<OutboundMsg> walQueue,
       @Named("walFailed") AtomicBoolean walFailed,
       @Named("offset.pub") String offsetPubAddress,
       Producer<String, byte[]> producer) {

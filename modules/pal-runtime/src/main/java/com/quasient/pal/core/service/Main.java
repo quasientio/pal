@@ -34,6 +34,7 @@ import com.quasient.pal.core.execution.java.DynamicResourceBundleControlProvider
 import com.quasient.pal.core.intercept.AnnotationsProcessor;
 import com.quasient.pal.core.intercept.InterceptInformer;
 import com.quasient.pal.core.intercept.InterceptMatcher;
+import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import com.quasient.pal.core.runtime.session.SessionService;
 import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import com.quasient.pal.core.transport.kafka.LogConfigurator;
@@ -1216,7 +1217,7 @@ public class Main implements Callable<Integer> {
 
       // clear queues - just to be nice
       if (runOptions.contains(RunOptions.WITH_WAL)) {
-        MessagePassingQueue<OutboundMsg> walQueue =
+        HwmMessageQueue<OutboundMsg> walQueue =
             injector.getInstance(Key.get(new TypeLiteral<>() {}, Names.named("wal_queue")));
         walQueue.clear();
         if (logger.isDebugEnabled()) {

@@ -19,6 +19,7 @@ import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.common.runtime.ExecPhase;
 import com.quasient.pal.core.ZmqEnabledTest;
 import com.quasient.pal.core.intercept.InterceptMatcher;
+import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import com.quasient.pal.core.internal.messages.SessionCommandMsg;
 import com.quasient.pal.core.internal.messages.SessionResponseMsg;
 import com.quasient.pal.core.service.RunOptions;
@@ -36,7 +37,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.jctools.queues.MessagePassingQueue;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -71,8 +71,8 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
   private DirectoryConnectionProvider dirProvider;
   private InterceptMatcher matcher;
 
-  private MessagePassingQueue<OutboundMsg> walQueueMock;
-  private MessagePassingQueue<OutboundMsg> pubQueueMock;
+  private HwmMessageQueue<OutboundMsg> walQueueMock;
+  private HwmMessageQueue<OutboundMsg> pubQueueMock;
   private AtomicBoolean walFailed;
 
   private OutboundMessageGateway gateway;
@@ -103,8 +103,8 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
                 });
 
     // ── JCTools queue mocks
-    walQueueMock = mock(MessagePassingQueue.class);
-    pubQueueMock = mock(MessagePassingQueue.class);
+    walQueueMock = mock(HwmMessageQueue.class);
+    pubQueueMock = mock(HwmMessageQueue.class);
     when(walQueueMock.offer(any())).thenReturn(true);
     when(pubQueueMock.offer(any())).thenReturn(true);
 

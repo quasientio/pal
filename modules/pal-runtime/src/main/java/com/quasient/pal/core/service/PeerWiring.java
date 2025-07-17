@@ -36,9 +36,6 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.jctools.queues.MessagePassingQueue;
-import org.jctools.queues.MpscChunkedArrayQueue;
-import org.jctools.queues.MpscUnboundedArrayQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.ZContext;
@@ -79,12 +76,6 @@ public class PeerWiring extends AbstractModule {
   private final ThreadGroup serviceThreadGroup = new ThreadGroup("service-threads");
 
   /**
-   * Indicates if the property {@code "wal.queue.unbounded"} == true, so an unbounded queue
-   * implementation is used.
-   */
-  private final boolean walQueueUnbounded;
-
-  /**
    * Constructs a new PeerWiring module.
    *
    * <p>This constructor initializes the module with configuration properties, runtime options,
@@ -112,10 +103,6 @@ public class PeerWiring extends AbstractModule {
     this.zmqContext = zmqContext;
     this.peerUuid = UUID.fromString(properties.getProperty("id"));
     this.customClassloader = customClassloader;
-
-    // flags that determine the MPSC queue type to use for WAL
-    this.walQueueUnbounded =
-        Boolean.parseBoolean(properties.getProperty("wal.queue.unbounded", "false"));
   }
 
   /**
@@ -200,12 +187,19 @@ public class PeerWiring extends AbstractModule {
   @Singleton
   @Named("wal_queue")
   @SuppressWarnings("unused")
-  public MessagePassingQueue<OutboundMsg> getWalQueue() {
-    return walQueueUnbounded
-        ? new MpscUnboundedArrayQueue<>(Integer.parseInt(properties.getProperty("wal.queue.chunk")))
-        : new MpscChunkedArrayQueue<>(
-            Integer.parseInt(properties.getProperty("wal.queue.initial")),
-            Integer.parseInt(properties.getProperty("wal.queue.max")));
+  public HwmMessageQueue<OutboundMsg> getWalQueue() {
+    MpscKind kind =
+        MpscKind.valueOf(
+            properties.getProperty("wal.queue.type", "CHUNKED").toUpperCase(Locale.ENGLISH));
+    int initial = Integer.parseInt(properties.getProperty("wal.queue.initial", "1024"));
+
+    if (kind == MpscKind.UNBOUNDED) {
+      int chunk = Integer.parseInt(properties.getProperty("wal.queue.chunk", "1024"));
+      return HwmMessageQueue.createQueue(kind, initial, chunk);
+    }
+
+    int max = Integer.parseInt(properties.getProperty("wal.queue.max", "2048"));
+    return HwmMessageQueue.createQueue(kind, initial, max);
   }
 
   /**
@@ -218,7 +212,7 @@ public class PeerWiring extends AbstractModule {
   @Singleton
   @Named("pub_queue")
   @SuppressWarnings("unused")
-  public MessagePassingQueue<OutboundMsg> getPubQueue() {
+  public HwmMessageQueue<OutboundMsg> getPubQueue() {
     MpscKind kind =
         MpscKind.valueOf(
             properties.getProperty("pub.queue.type", "CHUNKED").toUpperCase(Locale.ENGLISH));

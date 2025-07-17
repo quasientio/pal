@@ -24,6 +24,8 @@ import com.quasient.pal.common.directory.nodes.LogInfo;
 import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.runtime.ExecPhase;
 import com.quasient.pal.core.ZmqEnabledTest;
+import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
+import com.quasient.pal.core.internal.concurrent.MpscKind;
 import com.quasient.pal.messages.OutboundMsg;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.InternalHeader;
@@ -79,8 +81,7 @@ public class LogWriterTest extends ZmqEnabledTest {
 
   // ── test fixtures ─────────────────────────────────────────────────────
   private ZContext zmqCtx;
-  private MessagePassingQueue<OutboundMsg> walQueue;
-  private AtomicBoolean walFailed;
+  private HwmMessageQueue<OutboundMsg> walQueue;
   private MockProducer<String, byte[]> producer;
   private LogWriter logWriter;
   private ServiceManager manager;
@@ -96,8 +97,9 @@ public class LogWriterTest extends ZmqEnabledTest {
   @Before
   public void setUp() {
     zmqCtx = createContext();
-    walQueue = new MpscChunkedArrayQueue<>(1 << 10, 1 << 20);
-    walFailed = new AtomicBoolean(false);
+
+    walQueue = HwmMessageQueue.createQueue(MpscKind.CHUNKED, 1 << 10, 1 << 20);
+    AtomicBoolean walFailed = new AtomicBoolean(false);
 
     producer =
         new MockProducer<>(
@@ -252,8 +254,9 @@ public class LogWriterTest extends ZmqEnabledTest {
     }
 
     // ── fresh, private queue & flag ────────────────────────────────
-    MessagePassingQueue<OutboundMsg> methodLocalQueue =
-        new MpscChunkedArrayQueue<>(1 << 10, 1 << 20);
+    HwmMessageQueue<OutboundMsg> methodLocalQueue =
+        HwmMessageQueue.createQueue(MpscKind.CHUNKED, 1 << 10, 1 << 20);
+
     AtomicBoolean methodLocalWalFailed = new AtomicBoolean(false);
 
     FailingProducer badProducer = new FailingProducer();

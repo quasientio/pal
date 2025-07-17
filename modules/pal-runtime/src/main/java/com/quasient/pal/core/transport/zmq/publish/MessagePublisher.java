@@ -10,6 +10,7 @@
 package com.quasient.pal.core.transport.zmq.publish;
 
 import com.quasient.pal.core.internal.concurrent.AdaptiveSpinParkWaitStrategy;
+import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import com.quasient.pal.core.service.ConnectedService;
 import com.quasient.pal.messages.OutboundMsg;
 import jakarta.inject.Inject;
@@ -112,7 +113,7 @@ public class MessagePublisher extends ConnectedService {
       @Named("sync.ready") String syncSocketAddress,
       ThreadGroup serviceThreadGroup,
       @Named("MessagePublisher.service") String serviceName,
-      @Named("pub_queue") MessagePassingQueue<OutboundMsg> pubQueue,
+      @Named("pub_queue") HwmMessageQueue<OutboundMsg> pubQueue,
       MessagePublisherConfig config) {
     super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
     this.pubQueue = pubQueue;
