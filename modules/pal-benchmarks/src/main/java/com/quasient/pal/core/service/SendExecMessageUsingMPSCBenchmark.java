@@ -120,7 +120,7 @@ public class SendExecMessageUsingMPSCBenchmark {
   private static final int PUB_QUEUE_INITIAL_SIZE = 1 << 14;  // 16384
 
   /** Default value for Pub queue max capacity/size - bounded types. */
-  private static final int PUB_QUEUE_MAX_SIZE = 1 << 24;  // 16777216
+  private static final int PUB_QUEUE_MAX_SIZE = 1 << 20;  // 1M
 
   /** Default value for Pub queue chunk size - unbounded type. */
   private static final int PUB_QUEUE_CHUNK_SIZE = 1 << 13;  // 8192
@@ -243,13 +243,13 @@ public class SendExecMessageUsingMPSCBenchmark {
     }
 
     // MessagePublisher params
-    props.setProperty("publisher.spsc_size", "4194304");
-    props.setProperty("publisher.batch_size", "8192");
-    props.setProperty("publisher.flush_on_close", "false");
+    props.setProperty("publisher.spsc_size", "524288");   // 1 << 19 (half the pub queue size)
+    props.setProperty("publisher.batch_size", "4096");
+    props.setProperty("publisher.flush_on_close", "true");
     props.setProperty("publisher.zmq.linger", "0");
     props.setProperty("publisher.zmq.send_timeout", "0");
-    props.setProperty("publisher.zmq.send_hwm", "500000");
-    props.setProperty("publisher.drop.policy", "DROP_NEW");
+    props.setProperty("publisher.zmq.send_hwm", "10000");
+    props.setProperty("publisher.drop.policy", "DROP_OLD");
     props.setProperty("publisher.drop.hwm_pct", "97");
     props.setProperty("publisher.drop.keep_pct", "92");
 
