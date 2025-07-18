@@ -74,7 +74,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.jctools.queues.MessagePassingQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
@@ -518,8 +517,8 @@ public class Main implements Callable<Integer> {
       properties.setProperty("pub.queue.max", String.valueOf(pubMax));
 
       // ------------- validate MessagePublisher internal Queue params --------------
-      int pubSpsc = readPowerOfTwo(properties, "publisher.spsc_size", SPSC_SIZE_DEFAULT);
-      properties.setProperty("publisher.spsc_size", String.valueOf(pubSpsc));
+      int pubSpsc = readPowerOfTwo(properties, "pub.spsc_size", SPSC_SIZE_DEFAULT);
+      properties.setProperty("pub.spsc_size", String.valueOf(pubSpsc));
 
     } catch (IllegalArgumentException e) {
       fatalExit(e, PeerException.FatalCode.ERROR_VALIDATING_PROPERTIES);
@@ -1225,7 +1224,7 @@ public class Main implements Callable<Integer> {
         }
       }
       if (runOptions.contains(RunOptions.WITH_TCP_PUB)) {
-        MessagePassingQueue<OutboundMsg> pubQueue =
+        HwmMessageQueue<OutboundMsg> pubQueue =
             injector.getInstance(Key.get(new TypeLiteral<>() {}, Names.named("pub_queue")));
         pubQueue.clear();
         if (logger.isDebugEnabled()) {

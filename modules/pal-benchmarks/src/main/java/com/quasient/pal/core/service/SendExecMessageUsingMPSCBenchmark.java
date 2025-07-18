@@ -32,6 +32,7 @@ import com.quasient.pal.core.transport.kafka.LogWriter;
 import com.quasient.pal.core.transport.zmq.publish.MessagePublisher;
 import com.quasient.pal.core.transport.zmq.publish.MessagePublisherConfig;
 import com.quasient.pal.core.transport.zmq.publish.MessagePublisherStats;
+import com.quasient.pal.core.transport.zmq.publish.PublishingDropPolicy;
 import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.messages.OutboundMsg;
 import com.quasient.pal.messages.colfer.ExecMessage;
@@ -39,9 +40,9 @@ import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.serdes.colfer.ColferUtils;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
 import org.apache.commons.lang3.reflect.FieldUtils;
-import org.jctools.queues.MessagePassingQueue;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
@@ -97,11 +98,11 @@ import java.util.concurrent.atomic.AtomicLong;
 @State(Scope.Benchmark)
 public class SendExecMessageUsingMPSCBenchmark {
 
-  /** Path to the default logging configuration file in the classpath. */
-  private static final String LOGGING_CONFIG = "/peer-logging-fallback.xml";
+  /** Logger instance for this class. */
+  private static final Logger logger = LoggerFactory.getLogger("benchmark");
 
-  /** Zmq socket endpoint to synchronize service readiness .*/
-  private static final String SYNC_READY_ENDPOINT = "inproc://sync_ready";
+  /** Path to the default peer logging configuration file in the classpath. */
+  private static final String LOGGING_CONFIG = "/peer-logging-fallback.xml";
 
   /** Kafka bootstrap servers. */
   private static final String KAFKA_BOOTSTRAP_SERVERS = "localhost:29092";
@@ -109,21 +110,68 @@ public class SendExecMessageUsingMPSCBenchmark {
   /** WAL name - (i.e. kafka WAL topic). */
   private static final String WAL_LOG_NAME = "benchmark_log001";
 
+  // ---- Queue Defaults -------------------------------------------------------
+
+  /** . */
+  private static final String DEF_WAL_QUEUE_TYPE   = "chunked";
+
+  /** . */
+  private static final int    DEF_WAL_QUEUE_INITIAL= 16_384;    //  1 << 14
+
+  /** . */
+  private static final int    DEF_WAL_QUEUE_MAX    = 1_048_576; //  1 << 20
+  /** . */
+  private static final int    DEF_WAL_QUEUE_CHUNK  = 4_096;     //  1 << 12
+
+  /** . */
+  private static final int    DEF_PUB_QUEUE_INITIAL= 16_384;    //  1 << 14
+  /** . */
+  private static final int    DEF_PUB_QUEUE_MAX    = 1_048_576; // 1 << 20
+  /** . */
+  private static final int    DEF_PUB_QUEUE_CHUNK  = 8_192;     //  1 << 13
+
+  // ---- MessagePublisher Defaults --------------------------------------------
+
   /** Endpoint for MessagePublisher's Zmq PUB. */
-//  private static final String PUB_ENDPOINT = "inproc://pub";
   private static final String PUB_ENDPOINT = "tcp://localhost:8788";
+
+  /** Default size for the MessagePublisher's SPSC queue. */
+  private static final int    DEF_SPSC_SIZE        = 524_288;   //  1 << 19
+
+  /** Default size for MessagePublisher's send() batch. */
+  private static final int    DEF_BATCH_SIZE       = 4_096;     //  1 << 12
+
+  /** Default flush-on-close policy (whether messages left in the SPSC queue should be flushed on close). */
+  private static final String DEF_FLUSH_ON_CLOSE       = "false";
+
+  /** Default ZMQ linger value for PUB socket. */
+  private static final int DEF_ZMQ_LINGER           = 0;
+
+  /** Default ZMQ send timeout value for PUB socket. */
+  private static final int DEF_ZMQ_SEND_TIMEOUT     = 0;
+
+  /** Default ZMQ send HWM value for PUB socket. */
+  private static final int DEF_ZMQ_SEND_HWM         = 10_000;
+
+  /** Default drop policy for messages enqueued for publishing. */
+  private static final PublishingDropPolicy DEF_DROP_POLICY  = PublishingDropPolicy.DROP_OLD;
+
+  /** Default HWM value indicating when to start trimming the queue - applies to DROP_OLD. */
+  private static final int DEF_DROP_HWM_PCT         = 97;
+
+  /** Default % of queue to keep when trimming old messages - applies to DROP_OLD. */
+  private static final int DEF_DROP_KEEP_PCT        = 92;
+
+  // ---- Dispatcher Defaults --------------------------------------------
+
+  /**
+   * Default value for the "messages.with_src_context", which indicates whether to include source context details
+   * in serializing messages sourced from quantization.
+   */
+  private static final boolean DEF_WITH_SRC_CONTEXT = false;
 
   /** Whether we should register a dummy SUB socket. */
   private static final boolean WITH_DUMMY_SUB = false;
-
-  /** Default value for Pub queue initial size - bounded types. */
-  private static final int PUB_QUEUE_INITIAL_SIZE = 1 << 14;  // 16384
-
-  /** Default value for Pub queue max capacity/size - bounded types. */
-  private static final int PUB_QUEUE_MAX_SIZE = 1 << 20;  // 1M
-
-  /** Default value for Pub queue chunk size - unbounded type. */
-  private static final int PUB_QUEUE_CHUNK_SIZE = 1 << 13;  // 8192
 
 
   // ----------------------- Tunables from the command line -----------------
@@ -140,6 +188,9 @@ public class SendExecMessageUsingMPSCBenchmark {
   public MpscKind pubQueueType;
 
   // ----------------------- Dependency-injected runtime --------------------
+
+  /** Properties for {@link PeerWiring}. */
+  private final Properties props = new Properties();
 
   /** Shared Zmq context. */
   private ZContext               zmqCtx;
@@ -192,7 +243,7 @@ public class SendExecMessageUsingMPSCBenchmark {
   private long dummyRcvs;
 
   /** Dummy subscriber's thread for continuous recv(). */
-  private Thread                 dummySubThread;
+  private Thread    dummySubThread;
 
   /** Flag to let the dummy thread know it's done. */
   private volatile boolean stopDummy;
@@ -206,60 +257,8 @@ public class SendExecMessageUsingMPSCBenchmark {
 
     initLogging();
 
-    /* 1 - prepare properties for PeerWiring */
-    Properties props = new Properties();
-
-    // peer ID
-    props.setProperty("id",  UUID.randomUUID().toString());
-
-    // ZMQ socket endpoints
-    props.setProperty("sync.ready", SYNC_READY_ENDPOINT);  // used by all services
-    props.setProperty("offset.pub",   "inproc://offsets");  // used by LogWriter
-    props.setProperty("out.pub",      PUB_ENDPOINT);  // used by MessagePublisher
-    // props.setProperty("out.pub",      "inproc://pub");  -- OR this to emulate no --pub
-    props.setProperty("session.svc", "inproc://session");  // used by SessionService
-    props.setProperty("intercepts.reg", "inproc://intercept_reg");  // used by InterceptMatcher
-
-    // LogWriter params
-    props.setProperty("key.serializer",   "com.quasient.pal.serdes.kafka.KafkaKeySerializer");
-    props.setProperty("value.serializer", "com.quasient.pal.serdes.kafka.KafkaMessageSerializer");
-    LogInfo writeAheadLog = new LogInfo(WAL_LOG_NAME, KAFKA_BOOTSTRAP_SERVERS);
-
-    // WAL queue params
-    // TODO set the following from properties and params; fallback to constants (like for pub queue)
-    props.setProperty("wal.queue.type", "chunked");
-    props.setProperty("wal.queue.initial", "16384");
-    props.setProperty("wal.queue.max",     "1048576");
-    props.setProperty("wal.queue.chunk", "4096");
-
-    // PUB queue params
-    props.setProperty("pub.queue.type", pubQueueType.name());
-    switch (pubQueueType) {
-      case FIXED, CHUNKED, GROWABLE -> {
-        props.setProperty("pub.queue.initial", String.valueOf(PUB_QUEUE_INITIAL_SIZE));  // 1L << 13
-        props.setProperty("pub.queue.max", String.valueOf(PUB_QUEUE_MAX_SIZE));  // 1L << 24
-      }
-      case UNBOUNDED ->
-              props.setProperty("pub.queue.chunk", String.valueOf(PUB_QUEUE_CHUNK_SIZE));  // set for type=unbounded
-    }
-
-    // MessagePublisher params
-    props.setProperty("publisher.spsc_size", "524288");   // 1 << 19 (half the pub queue size)
-    props.setProperty("publisher.batch_size", "4096");
-    props.setProperty("publisher.flush_on_close", "true");
-    props.setProperty("publisher.zmq.linger", "0");
-    props.setProperty("publisher.zmq.send_timeout", "0");
-    props.setProperty("publisher.zmq.send_hwm", "10000");
-    props.setProperty("publisher.drop.policy", "NONE");
-    props.setProperty("publisher.drop.hwm_pct", "97");
-    props.setProperty("publisher.drop.keep_pct", "92");
-
-    // Required by other classes (execution.java/*)
-    props.setProperty("messages.with_src_context", "false");
-    props.setProperty("rpc.allow_nonpublic", "false");
-    props.setProperty("paldir_url", PalDirectory.NO_URL);
-
-    // -------------------------------------------------------------------
+    // load and set the running properties
+    setWiringProperties();
 
     // set up runOpts based on the selected ExecMessageCallVariant
     EnumSet<RunOptions> runOpts = EnumSet.noneOf(RunOptions.class);
@@ -350,6 +349,7 @@ public class SendExecMessageUsingMPSCBenchmark {
     pubSocket = (ZMQ.Socket) FieldUtils.readField(messagePublisher, "pubSocket", true);
 
     // tell LogWriter which log to write
+    LogInfo writeAheadLog = new LogInfo(WAL_LOG_NAME, KAFKA_BOOTSTRAP_SERVERS);
     walWriter.writeToLog(writeAheadLog, true);
 
     // start all services
@@ -369,6 +369,98 @@ public class SendExecMessageUsingMPSCBenchmark {
 
     // 4 - prepare a pool of ExecMessages we’ll reuse
     createMixedSizedMessagePool();
+  }
+
+  /**
+   * Sets the running properties, reading them from -D... args if available, falling back to defaults.
+   */
+  private void setWiringProperties() {
+
+    // peer ID
+    props.setProperty("id",  UUID.randomUUID().toString());
+
+    // ZMQ socket endpoints
+    props.setProperty("sync.ready", "inproc://sync_ready");  // used by all services
+    props.setProperty("offset.pub",   "inproc://offsets");  // used by LogWriter
+    props.setProperty("out.pub", System.getProperty("pub.endpoint", PUB_ENDPOINT));  // used by MessagePublisher
+    props.setProperty("session.svc", "inproc://session");  // used by SessionService
+    props.setProperty("intercepts.reg", "inproc://intercept_reg");  // used by InterceptMatcher
+
+    // LogWriter params
+    props.setProperty("key.serializer",   "com.quasient.pal.serdes.kafka.KafkaKeySerializer");
+    props.setProperty("value.serializer", "com.quasient.pal.serdes.kafka.KafkaMessageSerializer");
+
+    // WAL queue params
+    props.setProperty("wal.queue.type",
+            System.getProperty("wal.queue.type", DEF_WAL_QUEUE_TYPE));
+
+    props.setProperty("wal.queue.initial",
+            System.getProperty("wal.queue.initial",
+                    String.valueOf(DEF_WAL_QUEUE_INITIAL)));
+
+    props.setProperty("wal.queue.max",
+            System.getProperty("wal.queue.max",
+                    String.valueOf(DEF_WAL_QUEUE_MAX)));
+
+    props.setProperty("wal.queue.chunk",
+            System.getProperty("wal.queue.chunk",
+                    String.valueOf(DEF_WAL_QUEUE_CHUNK)));
+
+
+    // PUB queue params
+    props.setProperty("pub.queue.type", pubQueueType.name());
+    switch (pubQueueType) {
+      case FIXED, CHUNKED, GROWABLE -> {
+        props.setProperty("pub.queue.initial", System.getProperty("pub.queue.initial", String.valueOf(DEF_PUB_QUEUE_INITIAL)));
+        props.setProperty("pub.queue.max", System.getProperty("pub.queue.max", String.valueOf(DEF_PUB_QUEUE_MAX)));
+      }
+      case UNBOUNDED -> props.setProperty("pub.queue.chunk", System.getProperty("pub.queue.chunk", String.valueOf(DEF_PUB_QUEUE_CHUNK)));
+
+      default -> throw new IllegalArgumentException("Unsupported pub.queue.type=" + pubQueueType);
+    }
+
+    // MessagePublisher params
+    props.setProperty("pub.spsc_size",
+            System.getProperty("pub.spsc_size",
+                    String.valueOf(DEF_SPSC_SIZE)));
+
+    props.setProperty("pub.batch_size",
+            System.getProperty("pub.batch_size",
+                    String.valueOf(DEF_BATCH_SIZE)));
+
+    props.setProperty("pub.flush_on_close",
+            System.getProperty("pub.flush_on_close",
+                    DEF_FLUSH_ON_CLOSE));
+
+    props.setProperty("pub.zmq.linger",
+            System.getProperty("pub.zmq.linger",
+                    String.valueOf(DEF_ZMQ_LINGER)));
+
+    props.setProperty("pub.zmq.send_timeout",
+            System.getProperty("pub.zmq.send_timeout",
+                    String.valueOf(DEF_ZMQ_SEND_TIMEOUT)));
+
+    props.setProperty("pub.zmq.send_hwm",
+            System.getProperty("pub.zmq.send_hwm",
+                    String.valueOf(DEF_ZMQ_SEND_HWM)));
+
+    props.setProperty("pub.drop.policy",
+            System.getProperty("pub.drop.policy",
+                    DEF_DROP_POLICY.name()));
+
+    props.setProperty("pub.drop.hwm_pct",
+            System.getProperty("pub.drop.hwm_pct",
+                    String.valueOf(DEF_DROP_HWM_PCT)));
+
+    props.setProperty("pub.drop.keep_pct",
+            System.getProperty("pub.drop.keep_pct",
+                    String.valueOf(DEF_DROP_KEEP_PCT)));
+
+    // Params required by other classes (execution.java/*)
+    props.setProperty("messages.with_src_context",
+            System.getProperty("messages.with_src_context", String.valueOf(DEF_WITH_SRC_CONTEXT)));
+    props.setProperty("rpc.allow_nonpublic", "false");
+    props.setProperty("paldir_url", PalDirectory.NO_URL);
   }
 
   /**
@@ -395,8 +487,7 @@ public class SendExecMessageUsingMPSCBenchmark {
       ExecMessage e = builder.buildEmptyConstructor(peerId, "java.lang.String");
       microMsgs.add(builder.wrap(e));
     }
-    System.out.println();
-    System.out.printf("%d micro messages of size: %d bytes%n", microMsgsN, ColferUtils.toBytes(microMsgs.get(0)).length);
+    logger.debug("{} micro messages of size: {} bytes", microMsgsN, ColferUtils.toBytes(microMsgs.get(0)).length);
 
     /*  ------- create a batch of small messages (small Lorem) --------  */
     int smallMsgsN = 358;
@@ -411,7 +502,7 @@ public class SendExecMessageUsingMPSCBenchmark {
               null);
       smallMsgs.add(builder.wrap(e));
     }
-    System.out.printf("%d small messages of size: %d bytes%n", smallMsgsN, ColferUtils.toBytes(smallMsgs.get(0)).length);
+    logger.debug("{} small messages of size: {} bytes", smallMsgsN, ColferUtils.toBytes(smallMsgs.get(0)).length);
 
     /*  ------- create a batch of large messages (list of 100 doubles) --------  */
 
@@ -439,7 +530,7 @@ public class SendExecMessageUsingMPSCBenchmark {
 
       mediumMsgs.add(builder.wrap(e));
     }
-    System.out.printf("%d medium messages of size: %d bytes%n", mediumMsgsN, ColferUtils.toBytes(mediumMsgs.get(0)).length);
+    logger.debug("{} medium messages of size: {} bytes", mediumMsgsN, ColferUtils.toBytes(mediumMsgs.get(0)).length);
 
     /*  ------- create a batch of large messages (long Lorem) --------  */
     int largeMsgsM = 52;
@@ -454,7 +545,7 @@ public class SendExecMessageUsingMPSCBenchmark {
               null);
       largeMsgs.add(builder.wrap(e));
     }
-    System.out.printf("%d large messages of size: %d bytes%n", largeMsgsM, ColferUtils.toBytes(largeMsgs.get(0)).length);
+    logger.debug("{} large messages of size: {} bytes", largeMsgsM, ColferUtils.toBytes(largeMsgs.get(0)).length);
 
     msgPool = new ArrayList<>(microMsgs.size() + smallMsgs.size() + mediumMsgs.size() + largeMsgs.size());
     msgPool.addAll(microMsgs);
@@ -505,10 +596,14 @@ public class SendExecMessageUsingMPSCBenchmark {
      * ------------------------------------------------- */
     System.out.println();
     System.out.println("----- CONFIGURATION / PARAMETERS -----");
-    System.out.printf("PUB queue initial size (bounded types): %d%n", PUB_QUEUE_INITIAL_SIZE);
-    System.out.printf("PUB queue max size (bounded types): %d%n", PUB_QUEUE_MAX_SIZE);
-    System.out.printf("PUB queue chunk size (unbounded types): %d%n", PUB_QUEUE_CHUNK_SIZE);
-    System.out.printf("No dummy sub (0 subscribers)%n");
+    System.out.printf("PUB queue initial size (bounded types): %s%n", props.getProperty("pub.queue.initial"));
+    System.out.printf("PUB queue max size (bounded types): %s%n",  props.getProperty("pub.queue.max"));
+    System.out.printf("PUB queue chunk size (unbounded types): %s%n", props.getProperty("pub.queue.chunk"));
+    if (WITH_DUMMY_SUB) {
+      System.out.println("1 dummy subscriber");
+    } else {
+      System.out.println("No dummy subscribers");
+    }
     System.out.println(messagePublisherConfig.toString());
 
     /* -------------------------------------------------
@@ -533,9 +628,7 @@ public class SendExecMessageUsingMPSCBenchmark {
     if (WITH_DUMMY_SUB) {
       System.out.printf("Dummy subscriber received %d messages%n", dummyRcvs);
     }
-    if (pubQueue instanceof HwmMessageQueue){
-      System.out.printf("Peak PUB queue depth (i.e. HWM): %,d%n", ((HwmMessageQueue<?>) pubQueue).highWaterMark());
-    }
+    System.out.printf("Peak PUB queue depth (i.e. HWM): %,d%n", pubQueue.highWaterMark());
     System.out.println("------------------------------");
 
     System.out.println();
@@ -666,7 +759,7 @@ public class SendExecMessageUsingMPSCBenchmark {
 
     // start ready socket
     syncSocket = zmqCtx.createSocket(SocketType.PULL);
-    syncSocket.bind(SYNC_READY_ENDPOINT);
+    syncSocket.bind(props.getProperty("sync.ready"));
   }
 
   /** Short string argument for messages. */

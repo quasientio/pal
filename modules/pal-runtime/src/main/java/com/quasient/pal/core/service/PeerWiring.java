@@ -291,7 +291,7 @@ public class PeerWiring extends AbstractModule {
   @Singleton
   public PublishingDropPolicy getPublishingDropPolicy() {
     return PublishingDropPolicy.valueOf(
-        properties.getProperty("publisher.drop.policy").toUpperCase(Locale.ENGLISH));
+        properties.getProperty("pub.drop.policy").toUpperCase(Locale.ENGLISH));
   }
 
   /**
@@ -306,15 +306,15 @@ public class PeerWiring extends AbstractModule {
       PublishingDropPolicy publishingDropPolicy) {
 
     return new MessagePublisherConfig(
-        Integer.parseInt(properties.getProperty("publisher.spsc_size")),
-        Integer.parseInt(properties.getProperty("publisher.batch_size")),
-        Boolean.parseBoolean(properties.getProperty("publisher.flush_on_close")),
+        Integer.parseInt(properties.getProperty("pub.spsc_size")),
+        Integer.parseInt(properties.getProperty("pub.batch_size")),
+        Boolean.parseBoolean(properties.getProperty("pub.flush_on_close")),
         properties.getProperty("out.pub"),
-        Integer.parseInt(properties.getProperty("publisher.zmq.linger")),
-        Integer.parseInt(properties.getProperty("publisher.zmq.send_timeout")),
-        Integer.parseInt(properties.getProperty("publisher.zmq.send_hwm")),
+        Integer.parseInt(properties.getProperty("pub.zmq.linger")),
+        Integer.parseInt(properties.getProperty("pub.zmq.send_timeout")),
+        Integer.parseInt(properties.getProperty("pub.zmq.send_hwm")),
         publishingDropPolicy,
-        Integer.parseInt(properties.getProperty("publisher.drop.hwm_pct")),
-        Integer.parseInt(properties.getProperty("publisher.drop.keep_pct")));
+        Integer.parseInt(properties.getProperty("pub.drop.hwm_pct")),
+        Integer.parseInt(properties.getProperty("pub.drop.keep_pct")));
   }
 }

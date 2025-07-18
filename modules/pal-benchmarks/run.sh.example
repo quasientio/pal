@@ -1,0 +1,54 @@
+#!/bin/sh
+#
+# Copyright (C) 2025 Quasient Inc. <https://www.quasient.com>
+#
+# Use of this software is governed by the Business Source License 1.1
+# included in the file LICENSE and at https://mariadb.com/bsl11
+#
+# Change Date: 2029-10-01
+# Change License: Apache 2.0
+#
+
+
+#----------------- knobs you'd like to tweak quickly -----------------
+
+# One of: NOOP,INTERCEPTS,PUB,WAL,PUB_WAL,INTERCEPTS_PUB,INTERCEPTS_WAL,INTERCEPTS_PUB_WAL
+VARIANT=PUB
+
+
+#-------- Shared MPSC Queue params ---------
+# One of: FIXED,CHUNKED,GROWABLE,UNBOUNDED
+PUB_QUEUE_TYPE=FIXED
+
+PUB_QUEUE_INITIAL=$((16 * 1024))
+PUB_QUEUE_MAX=$((1 * 1024 * 1024))
+PUB_QUEUE_CHUNK=$((8 * 1024))
+
+
+#-------- Publisher params ---------
+PUB_SPSC_SIZE=$((1 << 19))
+PUB_BATCH_SIZE=$((4 * 1024))
+PUB_SNDHWM=10000
+PUB_FLUSH_ON_CLOSE=false
+PUB_DROP_POLICY=DROP_OLD
+PUB_DROP_HWM=97
+PUB_DROP_KEEP=92
+
+
+# full hot path
+java  -Dpeer.logging="$PAL_HOME/config/peer-logging.xml" \
+      -Dpub.queue.initial="$PUB_QUEUE_INITIAL" \
+      -Dpub.queue.max="$PUB_QUEUE_MAX" \
+      -Dpub.queue.chunk="$PUB_QUEUE_CHUNK" \
+      -Dpub.spsc_size="$PUB_SPSC_SIZE" \
+      -Dpub.batch_size="$PUB_BATCH_SIZE" \
+      -Dpub.flush_on_close="$PUB_FLUSH_ON_CLOSE" \
+      -Dpub.drop.policy="$PUB_DROP_POLICY" \
+      -Dpub.drop.hwm_pct="$PUB_DROP_HWM" \
+      -Dpub.drop.keep_pct="$PUB_DROP_KEEP" \
+      -Dpub.zmq.send_hwm="$PUB_SNDHWM" \
+      -jar target/pal-benchmarks-1.0.0-SNAPSHOT.jar \
+      SendExecMessageUsingMPSCBenchmark \
+      -p variant="$VARIANT" \
+      -p pubQueueType="$PUB_QUEUE_TYPE" \
+      -t 8
