@@ -39,12 +39,12 @@ public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
    *
    * <p>Initializes the necessary components to locate and retrieve the requested field value from
    * an instance. This includes setting the peer identifier, the message builder for RPC
-   * communications, a connector for dispatching messages, the access control flag for non-public
+   * communications, a gateway for dispatching messages, the access control flag for non-public
    * members, and the store used to lookup object references.
    *
    * @param peerUuid the unique identifier for the peer.
    * @param messageBuilder builder component used to create messages.
-   * @param connector the connector used for message routing.
+   * @param gateway instance of {@link OutboundMessageGateway} handling message routing
    * @param allowNonPublicAccess a flag (as a string) indicating whether non-public fields can be
    *     accessed.
    * @param objectLookupStore the store used to resolve object references to actual objects.
@@ -53,12 +53,12 @@ public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
   public GetInstanceVariableDispatcher(
       UUID peerUuid,
       MessageBuilder messageBuilder,
-      OutboundMessageGateway connector,
+      OutboundMessageGateway gateway,
       @Named("rpc.allow_nonpublic") String allowNonPublicAccess,
       ObjectLookupStore objectLookupStore) {
     setPeerUuid(peerUuid);
     setMessageBuilder(messageBuilder);
-    setConnector(connector);
+    setMessageGateway(gateway);
     setAllowNonPublicAccess(allowNonPublicAccess);
     setObjectLookupStore(objectLookupStore);
   }

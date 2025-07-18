@@ -46,7 +46,7 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
    *
    * @param peerUuid a unique identifier representing the peer.
    * @param messageBuilder a builder for constructing execution messages.
-   * @param connector the connector used for message routing.
+   * @param gateway the gateway used for message routing.
    * @param allowNonPublicAccess string flag controlling non-public method access (e.g., "true" or
    *     "false").
    * @param reflectionHelper helper for reflective operations to resolve target methods.
@@ -56,13 +56,13 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
   public InstanceMethodDispatcher(
       UUID peerUuid,
       MessageBuilder messageBuilder,
-      OutboundMessageGateway connector,
+      OutboundMessageGateway gateway,
       @Named("rpc.allow_nonpublic") String allowNonPublicAccess,
       ReflectionHelper reflectionHelper,
       ObjectLookupStore objectLookupStore) {
     setPeerUuid(peerUuid);
     setMessageBuilder(messageBuilder);
-    setConnector(connector);
+    setMessageGateway(gateway);
     setAllowNonPublicAccess(allowNonPublicAccess);
     setReflectionHelper(reflectionHelper);
     setObjectLookupStore(objectLookupStore);

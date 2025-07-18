@@ -55,7 +55,7 @@ public class SocketRpcExecutor extends ThreadPool {
    * @param messageBuilder a utility responsible for constructing RPC messages.
    * @param incomingMessageDispatcher the dispatcher that routes incoming RPC messages to their
    *     appropriate handlers.
-   * @param outboundMessageGateway the connector for message routing.
+   * @param outboundMessageGateway the gateway instance for message routing.
    * @param customClassloader the custom class loader employed for dynamic loading of RPC-invoked
    *     classes.
    * @param peerUuid a unique identifier for this RPC peer within the network.

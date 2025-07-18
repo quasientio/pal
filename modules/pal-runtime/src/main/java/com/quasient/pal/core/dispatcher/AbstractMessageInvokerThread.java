@@ -107,7 +107,7 @@ public abstract class AbstractMessageInvokerThread extends Thread {
    * @param zmqContext the ZeroMQ context used for socket communications
    * @param messageBuilder the builder for creating and wrapping messages
    * @param incomingMessageDispatcher the dispatcher handling incoming messages
-   * @param outboundMessageGateway the connector responsible for maintaining dispatcher connections
+   * @param outboundMessageGateway the gateway responsible for maintaining dispatcher connections
    * @param peerUuid the unique identifier for the associated peer
    */
   AbstractMessageInvokerThread(
@@ -171,8 +171,9 @@ public abstract class AbstractMessageInvokerThread extends Thread {
   }
 
   /**
-   * Closes connections managed by the dispatcher connector (if available) and logs dispatch
-   * metrics. This method should be called during thread shutdown to ensure proper resource cleanup.
+   * Closes connections managed by the {@link OutboundMessageGateway} (if available) and logs
+   * dispatch metrics. This method should be called during thread shutdown to ensure proper resource
+   * cleanup.
    */
   protected void closeConnections() {
     if (outboundMessageGateway != null) {

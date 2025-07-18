@@ -43,7 +43,7 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
    *
    * @param peerUuid the unique identifier of the peer
    * @param messageBuilder the builder used to construct messages
-   * @param connector the connector facilitating message routing
+   * @param gateway the gateway used for message routing.
    * @param allowNonPublicAccess a flag indicating if non-public fields may be accessed
    * @param objectLookupStore the store used for resolving object references to instances
    */
@@ -51,12 +51,12 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
   public SetInstanceVariableDispatcher(
       UUID peerUuid,
       MessageBuilder messageBuilder,
-      OutboundMessageGateway connector,
+      OutboundMessageGateway gateway,
       @Named("rpc.allow_nonpublic") String allowNonPublicAccess,
       ObjectLookupStore objectLookupStore) {
     setPeerUuid(peerUuid);
     setMessageBuilder(messageBuilder);
-    setConnector(connector);
+    setMessageGateway(gateway);
     setAllowNonPublicAccess(allowNonPublicAccess);
     setObjectLookupStore(objectLookupStore);
   }

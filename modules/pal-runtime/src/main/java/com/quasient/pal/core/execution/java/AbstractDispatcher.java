@@ -42,7 +42,7 @@ abstract class AbstractDispatcher {
   protected ReflectionHelper reflectionHelper;
 
   /** Connector responsible for managing the routing and dispatching of calls. */
-  protected OutboundMessageGateway connector;
+  protected OutboundMessageGateway messageGateway;
 
   /**
    * Flag indicating whether non-public methods and fields can be accessed during RPC invocation.
@@ -82,11 +82,12 @@ abstract class AbstractDispatcher {
   /**
    * Assigns the {@link OutboundMessageGateway} which handles the routing of calls.
    *
-   * @param connector the dispatcher connector; must be a valid, initialized instance.
+   * @param messageGateway the gateway for routing outgoing messages; must be a valid, initialized
+   *     instance.
    */
   @Inject
-  final void setConnector(OutboundMessageGateway connector) {
-    this.connector = connector;
+  final void setMessageGateway(OutboundMessageGateway messageGateway) {
+    this.messageGateway = messageGateway;
   }
 
   /**

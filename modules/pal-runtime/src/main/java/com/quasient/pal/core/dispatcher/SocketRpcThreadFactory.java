@@ -52,8 +52,7 @@ public class SocketRpcThreadFactory extends InvokerThreadFactory {
    * @param jsonRpcDealerSocketAddress the socket address for the JSON RPC dealer channel
    * @param messageBuilder the builder responsible for creating messages
    * @param incomingMessageDispatcher the dispatcher that handles incoming RPC messages
-   * @param outboundMessageGateway the connector used to link the dispatcher with its corresponding
-   *     endpoints
+   * @param outboundMessageGateway the gateway used for message routing
    * @param messageChannelType the type of RPC channel to be used for communication
    * @param classLoader the class loader utilized for dynamic loading within the RPC system
    * @param peerUuid the unique identifier representing this peer in the network

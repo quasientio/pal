@@ -48,7 +48,7 @@ public class ClassMethodDispatcher extends MethodDispatcher {
    *
    * @param peerUuid a unique identifier representing the messaging peer.
    * @param messageBuilder the builder to construct messages associated with method dispatch.
-   * @param connector the dispatcher connector to facilitate message transport.
+   * @param gateway the dispatcher gateway to facilitate message transport.
    * @param allowNonPublicAccess string indicating if non-public members can be accessed.
    * @param reflectionHelper helper for method lookups.
    * @param objectLookupStore store for object references used in method invocations.
@@ -57,13 +57,13 @@ public class ClassMethodDispatcher extends MethodDispatcher {
   public ClassMethodDispatcher(
       UUID peerUuid,
       MessageBuilder messageBuilder,
-      OutboundMessageGateway connector,
+      OutboundMessageGateway gateway,
       @Named("rpc.allow_nonpublic") String allowNonPublicAccess,
       ReflectionHelper reflectionHelper,
       ObjectLookupStore objectLookupStore) {
     setPeerUuid(peerUuid);
     setMessageBuilder(messageBuilder);
-    setConnector(connector);
+    setMessageGateway(gateway);
     setAllowNonPublicAccess(allowNonPublicAccess);
     setReflectionHelper(reflectionHelper);
     setObjectLookupStore(objectLookupStore);

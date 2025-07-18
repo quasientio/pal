@@ -77,7 +77,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     // 2. Send message
     @SuppressWarnings("unused")
     final ExecMessage beforeExecResponseMsg =
-        connector.sendExecMessage(messageBuilder.wrap(beforeExecMsg), ExecPhase.BEFORE);
+        messageGateway.sendExecMessage(messageBuilder.wrap(beforeExecMsg), ExecPhase.BEFORE);
 
     // TODO if beforeExecResponseMsg != beforeExecMsg, unpack and exec response msg
 
@@ -102,7 +102,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     // 6. Send object or exception
     @SuppressWarnings("unused")
     final ExecMessage afterExecResponseMsg =
-        connector.sendExecMessage(messageBuilder.wrap(afterExecMsg), ExecPhase.AFTER);
+        messageGateway.sendExecMessage(messageBuilder.wrap(afterExecMsg), ExecPhase.AFTER);
 
     // TODO if afterExecResponseMsg != afterExecMsg, unpack exception or return value
 
@@ -252,7 +252,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
     // 11. Send object or exception, and receive
     final ExecMessage afterExecResponseMsg =
-        connector.sendExecMessage(messageBuilder.wrap(afterExecMsg), ExecPhase.AFTER);
+        messageGateway.sendExecMessage(messageBuilder.wrap(afterExecMsg), ExecPhase.AFTER);
 
     // 12. Return received message
     if (logger.isTraceEnabled()) {
@@ -427,7 +427,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
   private void storeObjectInSession(@Nonnull UUID peerUuid, @Nonnull ObjectRef objectRef) {
     SessionCommandMsg sessionCommandMsg =
         new SessionCommandMsg(SessionCommandType.STORE_OBJECT, peerUuid, objectRef);
-    connector.sendMessageToSessionService(sessionCommandMsg);
+    messageGateway.sendMessageToSessionService(sessionCommandMsg);
   }
 
   /**

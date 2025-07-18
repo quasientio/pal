@@ -82,7 +82,7 @@ public abstract class InvokerThreadFactory implements ThreadFactory {
    * @param zmqContext the ZeroMQ context for socket management.
    * @param messageBuilder the builder used for creating messages.
    * @param incomingMessageDispatcher the dispatcher for handling incoming messages.
-   * @param outboundMessageGateway the connector for routing outgoing messages.
+   * @param outboundMessageGateway the gateway for routing outgoing messages.
    * @param messageChannelType the type of RPC channel (e.g., SOCKET or LOG).
    * @param classLoader the class loader to assign to created threads.
    * @param peerUuid the unique identifier for the peer.

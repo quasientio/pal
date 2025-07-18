@@ -45,7 +45,7 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
    *
    * @param peerUuid the unique identifier for the peer invoking the constructor
    * @param messageBuilder builder used to create execution messages for dispatching
-   * @param connector connector instance used to facilitate message transport
+   * @param gateway instance of {@link OutboundMessageGateway} used to facilitate message transport
    * @param allowNonPublicAccess flag indicating whether non-public constructors may be accessed
    * @param reflectionHelper helper utility for performing reflection-based lookups
    * @param objectLookupStore store used for managing object references during dispatch
@@ -54,13 +54,13 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
   public ConstructorDispatcher(
       UUID peerUuid,
       MessageBuilder messageBuilder,
-      OutboundMessageGateway connector,
+      OutboundMessageGateway gateway,
       @Named("rpc.allow_nonpublic") String allowNonPublicAccess,
       ReflectionHelper reflectionHelper,
       ObjectLookupStore objectLookupStore) {
     setPeerUuid(peerUuid);
     setMessageBuilder(messageBuilder);
-    setConnector(connector);
+    setMessageGateway(gateway);
     setAllowNonPublicAccess(allowNonPublicAccess);
     setReflectionHelper(reflectionHelper);
     setObjectLookupStore(objectLookupStore);

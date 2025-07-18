@@ -90,7 +90,7 @@ class SocketRpcInvoker extends AbstractMessageInvokerThread {
    * @param rpcDealerAddress the address of the BIN-RPC dealer for socket connection
    * @param jsonrpcDealerAddress the address of the JSON-RPC dealer for socket connection
    * @param incomingMessageDispatcher the dispatcher used for routing incoming messages
-   * @param outboundMessageGateway the connector for routing outgoing messages
+   * @param outboundMessageGateway the gateway instance for routing outgoing messages
    * @param peerUuid the unique identifier for this peer
    */
   public SocketRpcInvoker(

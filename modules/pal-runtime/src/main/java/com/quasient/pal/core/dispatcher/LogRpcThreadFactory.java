@@ -34,14 +34,14 @@ public class LogRpcThreadFactory extends InvokerThreadFactory {
    * Constructs a new LogRpcThreadFactory with the necessary Log message dispatching.
    *
    * <p>Initializes the thread factory with a ZeroMQ context, Log dealer socket address, message
-   * builder, incoming message dispatcher, dispatcher connector, RPC channel type, class loader, and
-   * peer UUID.
+   * builder, incoming message dispatcher, message gateway, RPC channel type, class loader, and peer
+   * UUID.
    *
    * @param zmqContext the ZeroMQ context used for managing communication sockets.
    * @param logDealerSocketAddress the Log dealer socket address.
    * @param messageBuilder the builder instance used for serializing Log messages.
    * @param incomingMessageDispatcher the dispatcher responsible for handling incoming Log messages.
-   * @param outboundMessageGateway the connector interfacing with the message dispatcher.
+   * @param outboundMessageGateway the gateway for routing messages.
    * @param messageChannelType the type of RPC channel used for message transmission.
    * @param classLoader the class loader used to resolve classes at runtime.
    * @param peerUuid the unique identifier of this peer.

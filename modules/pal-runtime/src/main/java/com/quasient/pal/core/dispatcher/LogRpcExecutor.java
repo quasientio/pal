@@ -47,8 +47,7 @@ public class LogRpcExecutor extends ThreadPool {
    * @param logDealerAddress the network address for the Log dealer endpoint.
    * @param messageBuilder the utility for constructing messages.
    * @param incomingMessageDispatcher the dispatcher that handles routing of incoming Log messages.
-   * @param outboundMessageGateway the connector that facilitates communication with remote
-   *     dispatchers.
+   * @param outboundMessageGateway the gateway that handles message routing.
    * @param customClassloader the class loader for dynamically loading classes during execution.
    * @param peerUuid the unique identifier for the peer associated with this executor instance.
    */

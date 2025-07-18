@@ -56,7 +56,7 @@ class LogRpcInvoker extends AbstractMessageInvokerThread {
    * @param messageBuilder builder for converting messages between representations
    * @param logDealerAddress network address of the Log dealer endpoint
    * @param incomingMessageDispatcher dispatcher for processing incoming messages
-   * @param outboundMessageGateway connector used by the dispatcher for message routing
+   * @param outboundMessageGateway gateway used by the dispatcher for message routing
    * @param peerUuid identifier of the peer associated with this invoker
    */
   public LogRpcInvoker(

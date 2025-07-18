@@ -40,7 +40,7 @@ public class GetClassVariableDispatcher extends GetFieldDispatcher {
    *
    * @param peerUuid a unique identifier for the peer
    * @param messageBuilder the builder responsible for constructing execution messages
-   * @param connector the dispatcher connector handling message routing
+   * @param gateway instance of {@link OutboundMessageGateway} handling message routing
    * @param allowNonPublicAccess a configuration flag (as String) indicating if non-public fields
    *     may be accessed
    * @param objectLookupStore a store for tracking and retrieving objects by identifier
@@ -49,12 +49,12 @@ public class GetClassVariableDispatcher extends GetFieldDispatcher {
   public GetClassVariableDispatcher(
       UUID peerUuid,
       MessageBuilder messageBuilder,
-      OutboundMessageGateway connector,
+      OutboundMessageGateway gateway,
       @Named("rpc.allow_nonpublic") String allowNonPublicAccess,
       ObjectLookupStore objectLookupStore) {
     setPeerUuid(peerUuid);
     setMessageBuilder(messageBuilder);
-    setConnector(connector);
+    setMessageGateway(gateway);
     setAllowNonPublicAccess(allowNonPublicAccess);
     setObjectLookupStore(objectLookupStore);
   }
