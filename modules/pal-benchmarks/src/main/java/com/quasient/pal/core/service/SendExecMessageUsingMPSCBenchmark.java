@@ -89,7 +89,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * </pre>
  */
 
-@Fork(value = 3, jvmArgsAppend = { "-Xms2g", "-Xmx2g" })
+@Fork(value = 2, jvmArgsAppend = { "-Xms2g", "-Xmx2g" })
 @Warmup(iterations = 6,   time = 2, timeUnit = TimeUnit.SECONDS)
 @Measurement(iterations = 10, time = 2, timeUnit = TimeUnit.SECONDS)
 @BenchmarkMode(Mode.Throughput)
@@ -192,6 +192,9 @@ public class SendExecMessageUsingMPSCBenchmark {
   /** Properties for {@link PeerWiring}. */
   private final Properties props = new Properties();
 
+  /** RunOptions set. */
+  private final EnumSet<RunOptions> runOpts = EnumSet.noneOf(RunOptions.class);
+
   /** Shared Zmq context. */
   private ZContext               zmqCtx;
 
@@ -255,76 +258,21 @@ public class SendExecMessageUsingMPSCBenchmark {
   @Setup(Level.Trial)
   public void setUp() throws IllegalAccessException, InterruptedException {
 
+    // initialize logging
     initLogging();
 
     // load and set the running properties
     setWiringProperties();
 
     // set up runOpts based on the selected ExecMessageCallVariant
-    EnumSet<RunOptions> runOpts = EnumSet.noneOf(RunOptions.class);
-    switch (variant) {
-      case INTERCEPTS ->
-              runOpts.add(RunOptions.WITH_INTERCEPTS);
-      case PUB ->
-              runOpts.add(RunOptions.WITH_TCP_PUB);
-      case WAL ->
-              runOpts.add(RunOptions.WITH_WAL);
-      case PUB_WAL -> {
-              runOpts.add(RunOptions.WITH_TCP_PUB);
-              runOpts.add(RunOptions.WITH_WAL);
-      }
-      case INTERCEPTS_PUB -> {
-        runOpts.add(RunOptions.WITH_INTERCEPTS);
-        runOpts.add(RunOptions.WITH_TCP_PUB);
-      }
-      case INTERCEPTS_WAL -> {
-        runOpts.add(RunOptions.WITH_INTERCEPTS);
-        runOpts.add(RunOptions.WITH_WAL);
-      }
-      case INTERCEPTS_PUB_WAL -> {
-        runOpts.add(RunOptions.WITH_INTERCEPTS);
-        runOpts.add(RunOptions.WITH_TCP_PUB);
-        runOpts.add(RunOptions.WITH_WAL);
-      }
-    }
+    setRunOptions();
 
-    // initialize ZMQ context   - shared across services
+   // initialize ZMQ context   - shared across services
     initZmqContextAndGetReady();
 
     // if PUB, attach a dummy subscriber
     if (WITH_DUMMY_SUB && runOpts.contains(RunOptions.WITH_TCP_PUB)) {
-
-      dummySubSocket = zmqCtx.createSocket(SocketType.SUB);
-      dummySubSocket.setRcvHWM(500_000);
-      dummySubSocket.subscribe(ZMQ.SUBSCRIPTION_ALL);
-      dummySubSocket.connect(PUB_ENDPOINT);
-
-      // one–slot poller,  0 = dummySub
-      ZMQ.Poller poller = zmqCtx.createPoller(1);
-      poller.register(dummySubSocket, ZMQ.Poller.POLLIN);
-
-      dummySubThread = new Thread(() -> {
-        while (!stopDummy && !Thread.currentThread().isInterrupted()) {
-
-          // wait max 10 ms for the first frame of a message
-          if (poller.poll(10) == 0) {
-            Thread.onSpinWait();          // nothing yet
-            continue;
-          }
-
-          if (poller.pollin(0)) {           // data ready
-            try {
-              OutboundMsg unused = OutboundMsg.receive(dummySubSocket, true);
-              dummyRcvs++;
-            } catch (Exception ignore) {
-              // ignore malformed / partially received messages – rare on inproc
-            }
-          }
-        }
-      }, "dummy-sub");
-      dummySubThread.setDaemon(true);     // JVM can exit even if we forget to stop it
-      dummySubThread.start();
-      Thread.sleep(200);  // give time for the handshake once publisher starts
+      initDummySubscriber();
     }
 
     // create CustomClassLoader (with no URL's in path)
@@ -333,7 +281,7 @@ public class SendExecMessageUsingMPSCBenchmark {
     // create DI injector
     injector = Guice.createInjector(new PeerWiring(props, runOpts, zmqCtx, customClassloader));
 
-    // 2 - start consumer services (WAL, PUB, Sessions)
+    // ----- start consumer services (WAL, PUB, Sessions)
 
     // collect handles of required services
     messagePublisher = injector.getInstance(MessagePublisher.class);
@@ -361,13 +309,13 @@ public class SendExecMessageUsingMPSCBenchmark {
     // wait for all services up
     serviceManager.awaitHealthy();
 
-    // 3 - collect injected handles required in benchmark
+    // collect injected handles required in benchmark
     gateway     = injector.getInstance(OutboundMessageGateway.class);
     walQueue = injector.getInstance(Key.get(new TypeLiteral<>() {}, Names.named("wal_queue")));
     pubQueue = injector.getInstance(Key.get(new TypeLiteral<>() {}, Names.named("pub_queue")));
     messagePublisherConfig = injector.getInstance(MessagePublisherConfig.class);
 
-    // 4 - prepare a pool of ExecMessages we’ll reuse
+    // Finally - prepare a pool of ExecMessages we’ll reuse
     createMixedSizedMessagePool();
   }
 
@@ -461,6 +409,72 @@ public class SendExecMessageUsingMPSCBenchmark {
             System.getProperty("messages.with_src_context", String.valueOf(DEF_WITH_SRC_CONTEXT)));
     props.setProperty("rpc.allow_nonpublic", "false");
     props.setProperty("paldir_url", PalDirectory.NO_URL);
+  }
+
+  /**
+   * Sets up runOpts based on the selected ExecMessageCallVariant
+   */
+  private void setRunOptions() {
+    switch (variant) {
+      case INTERCEPTS ->
+              runOpts.add(RunOptions.WITH_INTERCEPTS);
+      case PUB ->
+              runOpts.add(RunOptions.WITH_TCP_PUB);
+      case WAL ->
+              runOpts.add(RunOptions.WITH_WAL);
+      case PUB_WAL -> {
+        runOpts.add(RunOptions.WITH_TCP_PUB);
+        runOpts.add(RunOptions.WITH_WAL);
+      }
+      case INTERCEPTS_PUB -> {
+        runOpts.add(RunOptions.WITH_INTERCEPTS);
+        runOpts.add(RunOptions.WITH_TCP_PUB);
+      }
+      case INTERCEPTS_WAL -> {
+        runOpts.add(RunOptions.WITH_INTERCEPTS);
+        runOpts.add(RunOptions.WITH_WAL);
+      }
+      case INTERCEPTS_PUB_WAL -> {
+        runOpts.add(RunOptions.WITH_INTERCEPTS);
+        runOpts.add(RunOptions.WITH_TCP_PUB);
+        runOpts.add(RunOptions.WITH_WAL);
+      }
+    }
+  }
+
+  /** Initializes a dummy subscriber to listen from the MessagePublisher's PUB socket. */
+  private void initDummySubscriber() throws InterruptedException {
+    dummySubSocket = zmqCtx.createSocket(SocketType.SUB);
+    dummySubSocket.setRcvHWM(500_000);
+    dummySubSocket.subscribe(ZMQ.SUBSCRIPTION_ALL);
+    dummySubSocket.connect(PUB_ENDPOINT);
+
+    // one–slot poller,  0 = dummySub
+    ZMQ.Poller poller = zmqCtx.createPoller(1);
+    poller.register(dummySubSocket, ZMQ.Poller.POLLIN);
+
+    dummySubThread = new Thread(() -> {
+      while (!stopDummy && !Thread.currentThread().isInterrupted()) {
+
+        // wait max 10 ms for the first frame of a message
+        if (poller.poll(10) == 0) {
+          Thread.onSpinWait();          // nothing yet
+          continue;
+        }
+
+        if (poller.pollin(0)) {           // data ready
+          try {
+            OutboundMsg unused = OutboundMsg.receive(dummySubSocket, true);
+            dummyRcvs++;
+          } catch (Exception ignore) {
+            // ignore malformed / partially received messages – rare on inproc
+          }
+        }
+      }
+    }, "dummy-sub");
+    dummySubThread.setDaemon(true);     // JVM can exit even if we forget to stop it
+    dummySubThread.start();
+    Thread.sleep(200);  // give time for the handshake once publisher starts
   }
 
   /**
@@ -661,11 +675,12 @@ public class SendExecMessageUsingMPSCBenchmark {
   // ----------------------- Actual benchmark method -----------------------
 
   /**
-   * Runs the actual benchmark logic.
+   * Runs a benchmark on a tight (closed) loop.
+   * <p>This is currently disabled. Add {@code @Benchmark} to re-enable.
+   *
    * @param bh the Blackhole instance that consumes values to prevent JIT optimizations.
    */
   @SuppressWarnings("unused")
-  @Benchmark
   @Threads(Threads.MAX)   // let JMH spawn threads per @Param / CLI -t
   public void hotPath(Blackhole bh) {
     // pick a pre-created ExecMessage (avoids allocation noise)
@@ -676,6 +691,35 @@ public class SendExecMessageUsingMPSCBenchmark {
     bh.consume(ret);
     callsMade.incrementAndGet();
   }
+
+  /**
+   * Benchmark for a realistic workload, with an open-loop switching between
+   * baseline and burst modes.
+   *
+   * @param plan the open-loop plan
+   * @param bh the Blackhole instance that consumes values to prevent JIT optimizations.
+   */
+  @SuppressWarnings("unused")
+  @Benchmark
+  @BenchmarkMode(Mode.SampleTime)                 // per-request latency
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  @Threads(Threads.MAX)
+  public void hotPathBurst(BurstPlan plan, Blackhole bh) {
+
+    long now = System.nanoTime();
+    plan.maybeFlipPhase(now);
+
+    // only run the hot path when the next synthetic request is due
+    if (now >= plan.nextArrivalAt) {
+      Message msg   = plan.takeMessage(next++);
+      ExecMessage r = gateway.sendExecMessage(msg, ExecPhase.BEFORE);
+      bh.consume(r);
+      callsMade.incrementAndGet();
+
+      plan.nextArrivalAt = now + plan.pickIntervalNs();
+    }
+  }
+
 
   // ----------------------- Initialization helpers -----------------------
 
@@ -792,5 +836,90 @@ public class SendExecMessageUsingMPSCBenchmark {
     placerat imperdiet. Aenean suscipit nulla in justo. Suspendisse cursus rutrum augue. Nulla tincidunt tincidunt mi.
     Curabitur iaculis, lorem vel rhoncus faucibus, felis magna fermentum augue, et ultricies lacus lorem varius purus.
     """;
+
+  /** Schedules “open-loop” arrivals:  ↙ baseline  ↔ burst ↘ baseline … */
+  @State(Scope.Benchmark)
+  public static class BurstPlan {
+
+    // ---------- tunables exposed on the CLI (-p) ----------
+
+    /** baseline QPS - λ₁ */
+    @Param({"50"})   public int  baseQps;
+
+    /** burst QPS - λ₂ */
+    @Param({"500"})  public int  burstQps;
+
+    /** seconds in baseline */
+    @Param({"45"})   public long baseSec;
+
+    /** seconds in burst */
+    @Param({"15"})   public long burstSec;
+
+    /** reproducible runs */
+    @Param({"42"})   public long rndSeed;
+    // ------------------------------------------------------
+
+    /* --- heavy-weight objects we share across JMH threads --- */
+
+    /** handle to injected instance of {@link MessageBuilder} */
+    MessageBuilder builder;
+
+    /** handle to pool of pre-created messages to process */
+    List<Message>  msgPool;
+
+    /* --- per-benchmark state --- */
+
+    /** flag to flip between baseline and burst phase */
+    boolean inBurst;
+
+    /** nano time when we flip λ */
+    long    phaseEndsAt;
+
+    /** nano time for the next call */
+    long    nextArrivalAt;
+
+    /** allows random inter-arrival times  */
+    Random  rnd;
+
+    /**
+     * Sets up the baseline <--> burst inter-arrival plan.
+     * @param bench instance of {@link SendExecMessageUsingMPSCBenchmark} to acquire
+     *              handles of existing objects
+     */
+    @SuppressWarnings("unused")
+    @Setup(Level.Iteration)
+    public void init(SendExecMessageUsingMPSCBenchmark bench) {
+      // re-use the message pool already built by the outer benchmark
+      this.builder  = bench.injector.getInstance(MessageBuilder.class);
+      this.msgPool  = bench.msgPool;
+
+      rnd           = new Random(rndSeed);
+      inBurst       = false;
+      long now      = System.nanoTime();
+      phaseEndsAt   = now + TimeUnit.SECONDS.toNanos(baseSec);
+      nextArrivalAt = now;                  // hit immediately
+    }
+
+    /** Exponential inter-arrival time in nanoseconds. */
+    long pickIntervalNs() {
+      double lambda = inBurst ? burstQps : baseQps;
+      double u = 1.0d - rnd.nextDouble();   // avoid ln(0)
+      return (long) (-Math.log(u) * 1_000_000_000d / lambda);
+    }
+
+    /** Flip baseline ↔ burst when the current phase expires. */
+    void maybeFlipPhase(long now) {
+      if (now >= phaseEndsAt) {
+        inBurst     = !inBurst;
+        long durNs  = TimeUnit.SECONDS.toNanos(inBurst ? burstSec : baseSec);
+        phaseEndsAt = now + durNs;
+      }
+    }
+
+    /** Pick the next pre-fabricated ExecMessage (cheap modulo). */
+    Message takeMessage(int idx) {
+      return msgPool.get(idx & 1023);
+    }
+  }
 }
 

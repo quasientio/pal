@@ -14,6 +14,13 @@
 
 # One of: NOOP,INTERCEPTS,PUB,WAL,PUB_WAL,INTERCEPTS_PUB,INTERCEPTS_WAL,INTERCEPTS_PUB_WAL
 VARIANT=PUB
+BASE_QPS=50
+BURST_QPS=500
+BASE_SEC=45
+BURST_SEC=15
+
+# EXAMPLE: “burst 5 % of every 5-minute window”, ie. 4 min 45 s baseline, 15 s burst
+# -p baseSec=285 -p burstSec=15
 
 
 #-------- Shared MPSC Queue params ---------
@@ -51,4 +58,6 @@ java  -Dpeer.logging="$PAL_HOME/config/peer-logging.xml" \
       SendExecMessageUsingMPSCBenchmark \
       -p variant="$VARIANT" \
       -p pubQueueType="$PUB_QUEUE_TYPE" \
+      -p baseQps="$BASE_QPS" -p burstQps="$BURST_QPS"  \
+      -p baseSec="$BASE_SEC" -p burstSec="$BURST_SEC"  \
       -t 8
