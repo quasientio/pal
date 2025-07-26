@@ -30,7 +30,7 @@ import org.zeromq.ZMQException;
 /**
  * Service responsible for publishing outbound messages.
  *
- * <p>If LogWriter writes WAL messages to Log, this services parallels that behavior, forwarding
+ * <p>If KafkaWalWriter writes WAL messages to Log, this services parallels that behavior, forwarding
  * such outbound messages through a tcp PUB socket instead. The service stops when interrupted or
  * upon encountering critical socket errors.
  */

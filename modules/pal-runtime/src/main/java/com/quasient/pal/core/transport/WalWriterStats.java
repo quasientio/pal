@@ -7,14 +7,14 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
-package com.quasient.pal.core.transport.kafka;
+package com.quasient.pal.core.transport;
 
 /**
- * Record of {@link LogWriter} run stats.
+ * Record of {@link WalWriter} run stats.
  *
  * @param messagesReceived number of messages received from the {@code walQueue}
  * @param messagesWritten number of messages published since the socket first failed
- * @param messagesDroppedKafkaError number of new messages not written due to kafka send error
+ * @param messagesDroppedError number of new messages not written due an error
  */
-public record LogWriterStats(
-    long messagesReceived, long messagesWritten, long messagesDroppedKafkaError) {}
+public record WalWriterStats(
+    long messagesReceived, long messagesWritten, long messagesDroppedError) {}

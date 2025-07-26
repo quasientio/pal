@@ -30,7 +30,7 @@ public final class MockBrokersModule extends AbstractModule {
     bind(MessagePublisher.class).to(DummyMessagePublisher.class).in(Singleton.class);
 
     /*
-    // turn off ZMQ offset publishing by LogWriter
+    // turn off ZMQ offset publishing by KafkaWalWriter
     bind(Boolean.class)
             .annotatedWith(com.google.inject.name.Names.named("publishOffsets"))
             .toInstance(false);

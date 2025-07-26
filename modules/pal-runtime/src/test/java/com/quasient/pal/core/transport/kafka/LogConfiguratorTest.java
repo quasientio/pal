@@ -37,7 +37,7 @@ public class LogConfiguratorTest {
 
   private PalDirectory mockedPalDirectory;
   private LogReader mockedLogReader;
-  private LogWriter mockedLogWriter;
+  private KafkaWalWriter mockedKafkaWalWriter;
   private Injector mockedInjector;
   private Properties appProps;
   private static final String LOG_PREFIX = "test_app";
@@ -51,19 +51,19 @@ public class LogConfiguratorTest {
 
     mockedPalDirectory = mock(PalDirectory.class);
     mockedLogReader = mock(LogReader.class);
-    mockedLogWriter = mock(LogWriter.class);
+    mockedKafkaWalWriter = mock(KafkaWalWriter.class);
     mockedInjector = mock(Injector.class);
     var mockedDirectoryConnectionProvider = mock(DirectoryConnectionProvider.class);
     when(mockedDirectoryConnectionProvider.get()).thenReturn(Optional.of(mockedPalDirectory));
     when(mockedInjector.getInstance(DirectoryConnectionProvider.class))
         .thenReturn(mockedDirectoryConnectionProvider);
     when(mockedInjector.getInstance(LogReader.class)).thenReturn(mockedLogReader);
-    when(mockedInjector.getInstance(LogWriter.class)).thenReturn(mockedLogWriter);
+    when(mockedInjector.getInstance(KafkaWalWriter.class)).thenReturn(mockedKafkaWalWriter);
   }
 
   @After
   public void cleanUp() {
-    Mockito.reset(mockedPalDirectory, mockedLogReader, mockedLogWriter, mockedInjector);
+    Mockito.reset(mockedPalDirectory, mockedLogReader, mockedKafkaWalWriter, mockedInjector);
   }
 
   @Test
@@ -93,7 +93,7 @@ public class LogConfiguratorTest {
     verify(mockedPalDirectory, never()).getLogInfo(sourceLogName);
     verify(mockedLogReader)
         .readFromLog(argThat(new LogInfoMatcher(new LogInfo(sourceLogName))), eq(false), eq(null));
-    verify(mockedLogWriter, never()).writeToLog(any(), anyBoolean());
+    verify(mockedKafkaWalWriter, never()).writeToLog(any(), anyBoolean());
   }
 
   @Test
@@ -111,7 +111,7 @@ public class LogConfiguratorTest {
     verify(mockedPalDirectory, never()).createAutoLog(any(), any());
     verify(mockedLogReader)
         .readFromLog(argThat(new LogInfoMatcher(new LogInfo(sourceLogName))), eq(false), eq(null));
-    verify(mockedLogWriter, never()).writeToLog(eq(new LogInfo("app_random1")), anyBoolean());
+    verify(mockedKafkaWalWriter, never()).writeToLog(eq(new LogInfo("app_random1")), anyBoolean());
   }
 
   @Test
@@ -129,7 +129,7 @@ public class LogConfiguratorTest {
     verify(mockedPalDirectory, never()).createAutoLog(any(), any());
     verify(mockedLogReader)
         .readFromLog(argThat(new LogInfoMatcher(new LogInfo("auto"))), eq(true), eq(null));
-    verify(mockedLogWriter)
+    verify(mockedKafkaWalWriter)
         .writeToLog(argThat(new LogInfoMatcher(new LogInfo("auto"))), anyBoolean());
   }
 
@@ -149,7 +149,7 @@ public class LogConfiguratorTest {
     verify(mockedPalDirectory, never()).createAutoLog(any(), any());
     verify(mockedLogReader)
         .readFromLog(argThat(new LogInfoMatcher(new LogInfo(sourceLogName))), eq(false), eq(null));
-    verify(mockedLogWriter)
+    verify(mockedKafkaWalWriter)
         .writeToLog(argThat(new LogInfoMatcher(new LogInfo("auto"))), anyBoolean());
   }
 
@@ -170,7 +170,7 @@ public class LogConfiguratorTest {
     verify(mockedPalDirectory, never()).createAutoLog(any(), any());
     verify(mockedLogReader)
         .readFromLog(argThat(new LogInfoMatcher(new LogInfo(sourceLogName))), eq(false), eq(null));
-    verify(mockedLogWriter)
+    verify(mockedKafkaWalWriter)
         .writeToLog(argThat(new LogInfoMatcher(new LogInfo(writeAheadLogName))), anyBoolean());
   }
 
@@ -188,7 +188,7 @@ public class LogConfiguratorTest {
     verify(mockedPalDirectory, never()).createAutoLog(any(), any());
     verify(mockedLogReader)
         .readFromLog(argThat(new LogInfoMatcher(new LogInfo(logName))), eq(true), eq(null));
-    verify(mockedLogWriter)
+    verify(mockedKafkaWalWriter)
         .writeToLog(argThat(new LogInfoMatcher(new LogInfo(logName))), anyBoolean());
   }
 
@@ -205,7 +205,7 @@ public class LogConfiguratorTest {
     verify(mockedPalDirectory, never()).getLogInfo(writeAheadLogName);
     verify(mockedPalDirectory, never()).createAutoLog(any(), any());
     verify(mockedLogReader, never()).readFromLog(any(), anyBoolean(), anyLong());
-    verify(mockedLogWriter)
+    verify(mockedKafkaWalWriter)
         .writeToLog(argThat(new LogInfoMatcher(new LogInfo(writeAheadLogName))), anyBoolean());
   }
 

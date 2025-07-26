@@ -22,7 +22,7 @@ import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import com.quasient.pal.core.internal.concurrent.MpscKind;
 import com.quasient.pal.core.runtime.objects.ConcurrentHashMapObjectLookupStore;
 import com.quasient.pal.core.runtime.objects.ObjectLookupStore;
-import com.quasient.pal.core.transport.kafka.LogWriter;
+import com.quasient.pal.core.transport.kafka.KafkaWalWriter;
 import com.quasient.pal.core.transport.kafka.ProducerFactory;
 import com.quasient.pal.core.transport.zmq.publish.MessagePublisher;
 import com.quasient.pal.core.transport.zmq.publish.MessagePublisherConfig;
@@ -136,7 +136,7 @@ public class PeerWiring extends AbstractModule {
   private void addServiceNamesToProps() {
     // use underscore in names to better filter service-related traces
     properties.setProperty("LogReader.service", "Log_Reader");
-    properties.setProperty("LogWriter.service", "Log_Writer");
+    properties.setProperty("KafkaWalWriter.service", "Log_Writer");
     properties.setProperty("ZmqRpcServer.service", "RPC_Request_Dispatcher");
     properties.setProperty("JsonRpcRequestServer.service", "JSONRPC_Request_Dispatcher");
     properties.setProperty("MessagePublisher.service", "Message_Publisher");
@@ -182,7 +182,7 @@ public class PeerWiring extends AbstractModule {
 
   /**
    * Provides a {@link ProducerFactory} which allows for lazy initialization of the Kafka Producer,
-   * once the Wal's bootstrap servers are known (see {@link LogWriter#writeToLog}).
+   * once the Wal's bootstrap servers are known (see {@link KafkaWalWriter#writeToLog}).
    *
    * @return a factory that returns a real {@link KafkaProducer}
    */

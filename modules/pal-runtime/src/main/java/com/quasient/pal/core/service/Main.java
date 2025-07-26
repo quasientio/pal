@@ -37,9 +37,9 @@ import com.quasient.pal.core.intercept.InterceptMatcher;
 import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import com.quasient.pal.core.runtime.session.SessionService;
 import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
+import com.quasient.pal.core.transport.kafka.KafkaWalWriter;
 import com.quasient.pal.core.transport.kafka.LogConfigurator;
 import com.quasient.pal.core.transport.kafka.LogReader;
-import com.quasient.pal.core.transport.kafka.LogWriter;
 import com.quasient.pal.core.transport.websocket.JsonRpcRequestServer;
 import com.quasient.pal.core.transport.zmq.ZmqRpcServer;
 import com.quasient.pal.core.transport.zmq.publish.MessagePublisher;
@@ -1081,7 +1081,7 @@ public class Main implements Callable<Integer> {
       sessionRequired = true;
     }
     if (runOptions.contains(RunOptions.WITH_WAL)) {
-      services.add(injector.getInstance(LogWriter.class));
+      services.add(injector.getInstance(KafkaWalWriter.class));
     }
     if (runOptions.contains(RunOptions.WITH_TCP_PUB)) {
       services.add(injector.getInstance(MessagePublisher.class));

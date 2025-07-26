@@ -173,7 +173,7 @@ public class OutboundMessageGateway {
    * @param runOptions the set of runtime options that influence message processing behavior
    * @param interceptMatcher matcher used for determining applicable intercepts for messages
    * @param walQueue shared queue to put/offer outbound messages to write-ahead
-   * @param walFailed global flag used by the LogWriter to inform of failure and WAL halting
+   * @param walFailed global flag used by the KafkaWalWriter to inform of failure and WAL halting
    * @param pubQueue where to enqueue outbound messages to publish
    * @param sessionServiceAddress the address for the session service communication
    */
@@ -405,7 +405,8 @@ public class OutboundMessageGateway {
   }
 
   /**
-   * Writes the provided execution message when WAL is enabled and the WAL writer is up.
+   * Writes the provided execution message when WAL is enabled and the WAL writer is not in Failed
+   * state.
    *
    * @param message the OutboundMessage to be written ahead
    * @throws IllegalStateException in case of queue overflow
@@ -424,7 +425,9 @@ public class OutboundMessageGateway {
       if ((++spins & 0xFF) == 0) {
         // after 256 failed offers, give scheduler a chance
         LockSupport.parkNanos(1_000); // 1 µs
-        if (walFailed.get()) return; // re-check failure flag
+        if (walFailed.get()) {
+          return; // re-check failure flag
+        }
       }
     }
   }

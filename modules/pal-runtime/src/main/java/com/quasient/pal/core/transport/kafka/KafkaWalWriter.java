@@ -15,6 +15,8 @@ import com.quasient.pal.common.util.UuidUtils;
 import com.quasient.pal.core.internal.concurrent.AdaptiveSpinParkWaitStrategy;
 import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import com.quasient.pal.core.service.ConnectedService;
+import com.quasient.pal.core.transport.WalWriterStats;
+import com.quasient.pal.core.transport.WalWriter;
 import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import com.quasient.pal.messages.LogMessageHeader;
 import com.quasient.pal.messages.OutboundMsg;
@@ -54,7 +56,7 @@ import org.zeromq.ZContext;
 import org.zeromq.ZMQ.Socket;
 
 /**
- * LogWriter is responsible for retrieving messages from a MPSC queue, transforming header
+ * KafkaWalWriter is responsible for retrieving messages from a MPSC queue, transforming header
  * information if needed, and publishing the messages to a Kafka Log. It also optionally publishes
  * message offset information via a ZeroMQ publisher socket.
  *
@@ -62,10 +64,10 @@ import org.zeromq.ZMQ.Socket;
  * message delivery and maintaining internal counters for sent messages.
  */
 @Singleton
-public class LogWriter extends ConnectedService {
+public class KafkaWalWriter extends ConnectedService implements WalWriter {
 
   /** Logger instance. */
-  private static final Logger logger = LoggerFactory.getLogger(LogWriter.class);
+  private static final Logger logger = LoggerFactory.getLogger(KafkaWalWriter.class);
 
   /** Factory that returns a {@link Producer} provided its properties. */
   private final ProducerFactory producerFactory;
@@ -141,7 +143,7 @@ public class LogWriter extends ConnectedService {
   private static final Map<String, Header> SELF_HEADERS = new HashMap<>();
 
   /**
-   * Constructs a new LogWriter instance with the required dependencies and configuration.
+   * Constructs a new KafkaWalWriter instance with the required dependencies and configuration.
    *
    * @param peerUuid unique identifier for this peer.
    * @param context ZeroMQ context for creating and managing socket connections.
@@ -155,12 +157,12 @@ public class LogWriter extends ConnectedService {
    * @param producerFactory the factory used to get an initialized Producer
    */
   @Inject
-  public LogWriter(
+  public KafkaWalWriter(
       UUID peerUuid,
       ZContext context,
       @Named("sync.ready") String syncSocketAddress,
       ThreadGroup serviceThreadGroup,
-      @Named("LogWriter.service") String serviceName,
+      @Named("KafkaWalWriter.service") String serviceName,
       @Named("wal_queue") HwmMessageQueue<OutboundMsg> walQueue,
       @Named("walFailed") AtomicBoolean walFailed,
       @Named("offset.pub") String offsetPubAddress,
@@ -465,8 +467,9 @@ public class LogWriter extends ConnectedService {
    *
    * @return snapshot of live stats
    */
-  public LogWriterStats getLiveStats() {
-    return new LogWriterStats(
+  @Override
+  public WalWriterStats getLiveStats() {
+    return new WalWriterStats(
         messagesReceived, messagesWritten.get(), messagesDroppedKafkaError.get());
   }
 
@@ -482,7 +485,7 @@ public class LogWriter extends ConnectedService {
   }
 
   /**
-   * Closes all open connections and resources used by the LogWriter. This includes shutting down
+   * Closes all open connections and resources used by the KafkaWalWriter. This includes shutting down
    * the executor service, closing the Kafka producer, and closing any ZeroMQ sockets.
    */
   @Override

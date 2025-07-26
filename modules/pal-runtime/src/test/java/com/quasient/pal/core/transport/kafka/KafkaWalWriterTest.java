@@ -55,8 +55,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.zeromq.ZContext;
 
-/** Queue-based tests for {@link LogWriter}. */
-public class LogWriterTest extends ZmqEnabledTest {
+/** Queue-based tests for {@link KafkaWalWriter}. */
+public class KafkaWalWriterTest extends ZmqEnabledTest {
 
   // ── constants & helpers ───────────────────────────────────────────────
   private static final UUID PEER_ID = UUID.randomUUID();
@@ -83,7 +83,7 @@ public class LogWriterTest extends ZmqEnabledTest {
   private ZContext zmqCtx;
   private HwmMessageQueue<OutboundMsg> walQueue;
   private MockProducer<String, byte[]> mockProducer;
-  private LogWriter logWriter;
+  private KafkaWalWriter kafkaWalWriter;
   private ServiceManager manager;
   private final ThreadGroup threadGroup = new ThreadGroup("services-thread-group");
   private final MessageBuilder builder = new MessageBuilder();
@@ -105,21 +105,21 @@ public class LogWriterTest extends ZmqEnabledTest {
         new MockProducer<>(
             Cluster.empty(), true, null, new KafkaKeySerializer(), new KafkaMessageSerializer());
 
-    logWriter =
-        new LogWriter(
+    kafkaWalWriter =
+        new KafkaWalWriter(
             PEER_ID,
             zmqCtx,
             SYNC_SOCKET_ADDRESS,
             threadGroup,
-            "LogWriterTest-Service",
+            "KafkaWalWriterTest-Service",
             walQueue,
             walFailed,
             /* offset.pub */ "inproc://offsets",
             props -> mockProducer);
 
-    logWriter.writeToLog(WAL_INFO, /* publishOffsets */ false);
+    kafkaWalWriter.writeToLog(WAL_INFO, /* publishOffsets */ false);
 
-    Set<Service> services = new HashSet<>(Collections.singletonList(logWriter));
+    Set<Service> services = new HashSet<>(Collections.singletonList(kafkaWalWriter));
     manager = new ServiceManager(services);
     manager.startAsync().awaitHealthy();
     collectGoSignals(services.size(), zmqCtx);
@@ -133,7 +133,7 @@ public class LogWriterTest extends ZmqEnabledTest {
 
   @Test
   public void noPublishedMessages() {
-    assertThat(logWriter.isRunning(), is(true));
+    assertThat(kafkaWalWriter.isRunning(), is(true));
     // enqueue nothing → producer history must stay empty
     assertThat(mockProducer.history().isEmpty(), is(true));
   }
@@ -183,7 +183,7 @@ public class LogWriterTest extends ZmqEnabledTest {
                 })
             .collect(Collectors.toList());
 
-    List<String> sent = bodies.stream().map(LogWriterTest::idOf).collect(Collectors.toList());
+    List<String> sent = bodies.stream().map(KafkaWalWriterTest::idOf).collect(Collectors.toList());
 
     assertThat(mockProducer.history().size(), is(execCnt + interceptCnt));
     assertThat(produced, is(sent));
@@ -213,7 +213,7 @@ public class LogWriterTest extends ZmqEnabledTest {
                 })
             .collect(Collectors.toList());
 
-    List<String> sent = bodies.stream().map(LogWriterTest::idOf).collect(Collectors.toList());
+    List<String> sent = bodies.stream().map(KafkaWalWriterTest::idOf).collect(Collectors.toList());
 
     assertThat(mockProducer.history().size(), is(cnt));
     assertThat(produced, is(sent));
@@ -259,8 +259,8 @@ public class LogWriterTest extends ZmqEnabledTest {
 
     AtomicBoolean methodLocalWalFailed = new AtomicBoolean(false);
 
-    LogWriter failingLogWriter =
-        new LogWriter(
+    KafkaWalWriter failingKafkaWalWriter =
+        new KafkaWalWriter(
             PEER_ID,
             zmqCtx,
             SYNC_SOCKET_ADDRESS,
@@ -270,9 +270,9 @@ public class LogWriterTest extends ZmqEnabledTest {
             methodLocalWalFailed,
             "inproc://offsets",
             p -> new FailingProducer());
-    failingLogWriter.writeToLog(WAL_INFO, false);
+    failingKafkaWalWriter.writeToLog(WAL_INFO, false);
 
-    Thread worker = new Thread(failingLogWriter::run);
+    Thread worker = new Thread(failingKafkaWalWriter::run);
     worker.start();
 
     // enqueue one dummy message

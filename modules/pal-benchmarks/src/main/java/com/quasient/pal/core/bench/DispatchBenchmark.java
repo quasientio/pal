@@ -36,8 +36,8 @@ import com.quasient.pal.core.service.PeerWiring;
 import com.quasient.pal.core.service.RunOptions;
 import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import com.quasient.pal.core.transport.gateway.OutboundMessageGatewayStats;
-import com.quasient.pal.core.transport.kafka.LogWriter;
-import com.quasient.pal.core.transport.kafka.LogWriterStats;
+import com.quasient.pal.core.transport.kafka.KafkaWalWriter;
+import com.quasient.pal.core.transport.WalWriterStats;
 import com.quasient.pal.core.transport.zmq.publish.MessagePublisher;
 import com.quasient.pal.core.transport.zmq.publish.MessagePublisherConfig;
 import com.quasient.pal.core.transport.zmq.publish.MessagePublisherStats;
@@ -90,7 +90,7 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  * Variants may include networking features, like WAL and PUB
  * <pre>
- *  producers  → walQueue → LogWriter  (Kafka)
+ *  producers  → walQueue → KafkaWalWriter  (Kafka)
  *             ↘ pubQueue → MessagePublisher (ZMQ)
  * </pre>
  *
@@ -172,7 +172,7 @@ public class DispatchBenchmark {
   /** Default % of queue to keep when trimming old messages - applies to DROP_OLD. */
   private static final int DEF_DROP_KEEP_PCT        = 92;
 
-  // ---- LogWriter Defaults --------------------------------------------
+  // ---- KafkaWalWriter Defaults --------------------------------------------
 
   /** Kafka bootstrap servers. */
   private static final String DEF_KAFKA_BOOTSTRAP_SERVERS = "localhost:29092";
@@ -338,9 +338,9 @@ public class DispatchBenchmark {
       pubSocket = (ZMQ.Socket) FieldUtils.readField(messagePublisher, "pubSocket", true);
     }
     if (runOpts.contains(RunOptions.WITH_WAL)) {
-      LogWriter walWriter = injector.getInstance(LogWriter.class);
+      KafkaWalWriter walWriter = injector.getInstance(KafkaWalWriter.class);
       services.add(walWriter);
-      // tell LogWriter which log to write
+      // tell KafkaWalWriter which log to write
       LogInfo writeAheadLog = new LogInfo(DEF_WAL_LOG_NAME, props.getProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG));
       walWriter.writeToLog(writeAheadLog, false);
     }
@@ -374,12 +374,12 @@ public class DispatchBenchmark {
 
     // ZMQ socket endpoints
     props.setProperty("sync.ready", "inproc://sync_ready");  // used by all services
-    props.setProperty("offset.pub",   "inproc://offsets");  // used by LogWriter
+    props.setProperty("offset.pub",   "inproc://offsets");  // used by KafkaWalWriter
     props.setProperty("out.pub", System.getProperty("pub.endpoint", DEF_PUB_ENDPOINT));  // used by MessagePublisher
     props.setProperty("session.svc", "inproc://session");  // used by SessionService
     props.setProperty("intercepts.reg", "inproc://intercept_reg");  // used by InterceptMatcher
 
-    // LogWriter params
+    // KafkaWalWriter params
     props.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
             System.getProperty("wal.bootstrap_servers", DEF_KAFKA_BOOTSTRAP_SERVERS));
     props.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,   "com.quasient.pal.serdes.kafka.KafkaKeySerializer");
@@ -595,13 +595,13 @@ public class DispatchBenchmark {
     }
 
     if (runOpts.contains(RunOptions.WITH_WAL)) {
-      LogWriter walWriter = injector.getInstance(LogWriter.class);
-      LogWriterStats walWriterStats = walWriter.getLiveStats();
+      KafkaWalWriter walWriter = injector.getInstance(KafkaWalWriter.class);
+      WalWriterStats walWriterStats = walWriter.getLiveStats();
 
       System.out.println("----- WAL counters -----");
       System.out.printf("received : %,d%n", walWriterStats.messagesReceived());
       System.out.printf("written  : %,d%n", walWriterStats.messagesWritten());
-      System.out.printf("error    : %,d%n", walWriterStats.messagesDroppedKafkaError());
+      System.out.printf("error    : %,d%n", walWriterStats.messagesDroppedError());
       System.out.println("------------------------------");
     }
 
