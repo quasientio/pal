@@ -43,7 +43,7 @@ public class MessagePublisher extends ConnectedService {
   /**
    * A MPSC (Multiple Producer Single Consumer) queue holding the OutboundMessage's to be published.
    */
-  private final MessagePassingQueue<OutboundMsg> pubQueue;
+  protected final MessagePassingQueue<OutboundMsg> pubQueue;
 
   /** Adaptive dynamic backoff strategy used by the queue drain operation. */
   private static final MessagePassingQueue.WaitStrategy ZMQ_WAIT =
@@ -56,10 +56,10 @@ public class MessagePublisher extends ConnectedService {
   private final MessagePublisherConfig config;
 
   /** # messages published since the socket first failed */
-  private long messagesPublished = 0;
+  protected long messagesPublished = 0;
 
   /** total of messages received from the {@code pubQueue} */
-  private long messagesReceived = 0;
+  private long messagesReceived;
 
   /** total of messages dropped due to PUB send unsuccessful */
   private long messagesDroppedPublishUnsuccessful = 0;
@@ -93,7 +93,7 @@ public class MessagePublisher extends ConnectedService {
   private final SpscArrayQueue<OutboundMsg> spscQueue;
 
   /** Thread that owns the PUB socket and performs the actual ZMQ send(). */
-  private Thread networkThread;
+  protected Thread networkThread;
 
   /**
    * Constructs a new MessagePublisher instance that sets up the messaging endpoints.
@@ -165,7 +165,7 @@ public class MessagePublisher extends ConnectedService {
    *
    * @param msg the received message to handle. Never {@code null}.
    */
-  private void forwardToNetworkThread(OutboundMsg msg) {
+  protected void forwardToNetworkThread(OutboundMsg msg) {
     messagesReceived++;
 
     switch (config.dropPolicy()) {
@@ -203,7 +203,7 @@ public class MessagePublisher extends ConnectedService {
    * size, calling flushBurst() with each batch to publish them. Enforces {@link
    * PublishingDropPolicy} and honours the flush-on-close flag.
    */
-  private void networkLoop() {
+  protected void networkLoop() {
 
     final int batchSize = config.pubBatchSize();
     final int capacity = config.spscSize();
@@ -279,7 +279,7 @@ public class MessagePublisher extends ConnectedService {
    * @param batch array of messages to be published.
    * @param size the size of the batch (i.e. # of messages to send)
    */
-  private void flushBurst(OutboundMsg[] batch, int size) {
+  protected void flushBurst(OutboundMsg[] batch, int size) {
     for (int i = 0; i < size; i++) {
       OutboundMsg msg = batch[i];
       try {

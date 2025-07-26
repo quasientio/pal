@@ -82,7 +82,7 @@ public class LogWriterTest extends ZmqEnabledTest {
   // ── test fixtures ─────────────────────────────────────────────────────
   private ZContext zmqCtx;
   private HwmMessageQueue<OutboundMsg> walQueue;
-  private MockProducer<String, byte[]> producer;
+  private MockProducer<String, byte[]> mockProducer;
   private LogWriter logWriter;
   private ServiceManager manager;
   private final ThreadGroup threadGroup = new ThreadGroup("services-thread-group");
@@ -101,7 +101,7 @@ public class LogWriterTest extends ZmqEnabledTest {
     walQueue = HwmMessageQueue.createQueue(MpscKind.CHUNKED, 1 << 10, 1 << 20);
     AtomicBoolean walFailed = new AtomicBoolean(false);
 
-    producer =
+    mockProducer =
         new MockProducer<>(
             Cluster.empty(), true, null, new KafkaKeySerializer(), new KafkaMessageSerializer());
 
@@ -115,7 +115,7 @@ public class LogWriterTest extends ZmqEnabledTest {
             walQueue,
             walFailed,
             /* offset.pub */ "inproc://offsets",
-            producer);
+            props -> mockProducer);
 
     logWriter.writeToLog(WAL_INFO, /* publishOffsets */ false);
 
@@ -135,7 +135,7 @@ public class LogWriterTest extends ZmqEnabledTest {
   public void noPublishedMessages() {
     assertThat(logWriter.isRunning(), is(true));
     // enqueue nothing → producer history must stay empty
-    assertThat(producer.history().isEmpty(), is(true));
+    assertThat(mockProducer.history().isEmpty(), is(true));
   }
 
   @Test
@@ -174,7 +174,7 @@ public class LogWriterTest extends ZmqEnabledTest {
     Thread.sleep(100);
 
     List<String> produced =
-        producer.history().stream()
+        mockProducer.history().stream()
             .map(
                 rec -> {
                   Message m = new Message();
@@ -185,7 +185,7 @@ public class LogWriterTest extends ZmqEnabledTest {
 
     List<String> sent = bodies.stream().map(LogWriterTest::idOf).collect(Collectors.toList());
 
-    assertThat(producer.history().size(), is(execCnt + interceptCnt));
+    assertThat(mockProducer.history().size(), is(execCnt + interceptCnt));
     assertThat(produced, is(sent));
   }
 
@@ -204,7 +204,7 @@ public class LogWriterTest extends ZmqEnabledTest {
     Thread.sleep(100);
 
     List<String> produced =
-        producer.history().stream()
+        mockProducer.history().stream()
             .map(
                 rec -> {
                   Message m = new Message();
@@ -215,7 +215,7 @@ public class LogWriterTest extends ZmqEnabledTest {
 
     List<String> sent = bodies.stream().map(LogWriterTest::idOf).collect(Collectors.toList());
 
-    assertThat(producer.history().size(), is(cnt));
+    assertThat(mockProducer.history().size(), is(cnt));
     assertThat(produced, is(sent));
   }
 
@@ -259,7 +259,6 @@ public class LogWriterTest extends ZmqEnabledTest {
 
     AtomicBoolean methodLocalWalFailed = new AtomicBoolean(false);
 
-    FailingProducer badProducer = new FailingProducer();
     LogWriter failingLogWriter =
         new LogWriter(
             PEER_ID,
@@ -270,10 +269,8 @@ public class LogWriterTest extends ZmqEnabledTest {
             methodLocalQueue,
             methodLocalWalFailed,
             "inproc://offsets",
-            badProducer);
+            p -> new FailingProducer());
     failingLogWriter.writeToLog(WAL_INFO, false);
-
-    failingLogWriter.writeToLog(WAL_INFO, /* publishOffsets */ false);
 
     Thread worker = new Thread(failingLogWriter::run);
     worker.start();

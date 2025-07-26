@@ -10,10 +10,42 @@
 #
 
 
-#----------------- knobs you'd like to tweak quickly -----------------
-
+#-------- Variant & IoProfile ---------
 # One of: NOOP,INTERCEPTS,PUB,WAL,PUB_WAL,INTERCEPTS_PUB,INTERCEPTS_WAL,INTERCEPTS_PUB_WAL
-VARIANT=PUB
+VARIANT=NOOP
+
+# One of: CPU_ONLY, MOCK, REAL
+IO_PROFILE=CPU_ONLY
+
+
+# EXAMPLES:
+# --------
+# Just the matcher && callback cost
+# -p variant=INTERCEPTS
+# -p ioProfile=CPU_ONLY
+# 
+# WAL serialisation cost (no network)
+# -p variant=WAL
+# -p ioProfile=MOCK
+#
+# PUB + WAL with real brokers
+# -p variant=PUB_WAL
+# -p ioProfile=REAL
+# 
+# Only the quantization cost
+# -p variant=NOOP
+# -p ioProfile=CPU_ONLY
+#
+# Measure hot path only in terms of CPU -- mock network/IO
+# -p variant=INTERCEPTS_PUB_WAL
+# -p ioProfile=MOCK
+#
+# End to End, full-featured run with production-like cost
+# -p variant=INTERCEPTS_PUB_WAL
+# -p ioProfile=REAL
+
+
+#-------- Baseline and burst mode parameters ---------
 BASE_QPS=50
 BURST_QPS=500
 BASE_SEC=45
@@ -37,7 +69,7 @@ PUB_SPSC_SIZE=$((1 << 19))
 PUB_BATCH_SIZE=$((4 * 1024))
 PUB_SNDHWM=10000
 PUB_FLUSH_ON_CLOSE=false
-PUB_DROP_POLICY=DROP_OLD
+PUB_DROP_POLICY=NONE
 PUB_DROP_HWM=97
 PUB_DROP_KEEP=92
 
@@ -57,6 +89,7 @@ java  -Dpeer.logging="$PAL_HOME/config/peer-logging.xml" \
       -jar target/pal-benchmarks-1.0.0-SNAPSHOT.jar \
       SendExecMessageUsingMPSCBenchmark \
       -p variant="$VARIANT" \
+      -p ioProfile="$IO_PROFILE" \
       -p pubQueueType="$PUB_QUEUE_TYPE" \
       -p baseQps="$BASE_QPS" -p burstQps="$BURST_QPS"  \
       -p baseSec="$BASE_SEC" -p burstSec="$BURST_SEC"  \

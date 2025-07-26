@@ -22,6 +22,8 @@ import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import com.quasient.pal.core.internal.concurrent.MpscKind;
 import com.quasient.pal.core.runtime.objects.ConcurrentHashMapObjectLookupStore;
 import com.quasient.pal.core.runtime.objects.ObjectLookupStore;
+import com.quasient.pal.core.transport.kafka.LogWriter;
+import com.quasient.pal.core.transport.kafka.ProducerFactory;
 import com.quasient.pal.core.transport.zmq.publish.MessagePublisher;
 import com.quasient.pal.core.transport.zmq.publish.MessagePublisherConfig;
 import com.quasient.pal.core.transport.zmq.publish.PublishingDropPolicy;
@@ -36,6 +38,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.apache.kafka.clients.producer.KafkaProducer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.ZContext;
@@ -89,7 +92,7 @@ public class PeerWiring extends AbstractModule {
    * @param customClassloader class loader used for dynamic loading and isolation of runtime
    *     classes.
    */
-  PeerWiring(
+  public PeerWiring(
       Properties properties,
       Set<RunOptions> runOptions,
       ZContext zmqContext,
@@ -175,6 +178,19 @@ public class PeerWiring extends AbstractModule {
   @SuppressWarnings({"unused", "CloseableProvides"})
   public ZContext getZmqContext() {
     return zmqContext;
+  }
+
+  /**
+   * Provides a {@link ProducerFactory} which allows for lazy initialization of the Kafka Producer,
+   * once the Wal's bootstrap servers are known (see {@link LogWriter#writeToLog}).
+   *
+   * @return a factory that returns a real {@link KafkaProducer}
+   */
+  @SuppressWarnings("unused")
+  @Provides
+  @Singleton
+  ProducerFactory getProducerFactory() {
+    return KafkaProducer::new;
   }
 
   /**

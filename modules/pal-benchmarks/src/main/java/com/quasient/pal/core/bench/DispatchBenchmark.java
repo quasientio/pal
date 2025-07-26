@@ -8,7 +8,7 @@
  * Change License: Apache 2.0
  */
 
-package com.quasient.pal.core.service;
+package com.quasient.pal.core.bench;
 
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.joran.JoranConfigurator;
@@ -17,29 +17,36 @@ import com.google.common.util.concurrent.ServiceManager;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
+import com.google.inject.util.Modules;
 import com.quasient.pal.common.directory.nodes.LogInfo;
-import com.quasient.pal.common.runtime.ExecPhase;
+import com.quasient.pal.common.lang.reflect.MethodSignature;
+import com.quasient.pal.common.lang.reflect.Params;
+import com.quasient.pal.common.runtime.Context;
+import com.quasient.pal.common.runtime.DispatchForwarder;
 import com.quasient.pal.core.execution.java.CustomClassloader;
 import com.quasient.pal.core.intercept.InterceptMatcher;
 import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import com.quasient.pal.core.internal.concurrent.MpscKind;
 import com.quasient.pal.core.runtime.session.SessionService;
+import com.quasient.pal.core.service.Main;
+import com.quasient.pal.core.service.PeerWiring;
+import com.quasient.pal.core.service.RunOptions;
 import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import com.quasient.pal.core.transport.gateway.OutboundMessageGatewayStats;
 import com.quasient.pal.core.transport.kafka.LogWriter;
+import com.quasient.pal.core.transport.kafka.LogWriterStats;
 import com.quasient.pal.core.transport.zmq.publish.MessagePublisher;
 import com.quasient.pal.core.transport.zmq.publish.MessagePublisherConfig;
 import com.quasient.pal.core.transport.zmq.publish.MessagePublisherStats;
 import com.quasient.pal.core.transport.zmq.publish.PublishingDropPolicy;
 import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.messages.OutboundMsg;
-import com.quasient.pal.messages.colfer.ExecMessage;
-import com.quasient.pal.messages.colfer.Message;
-import com.quasient.pal.serdes.colfer.ColferUtils;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
 import org.apache.commons.lang3.reflect.FieldUtils;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
 import org.slf4j.Logger;
@@ -50,6 +57,9 @@ import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 
 import java.io.InputStream;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.lang.reflect.Parameter;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -59,56 +69,56 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Micro-benchmark for the *hot* sendExecMessage path:
+ *
+ * Benchmark for the *hot* dispatch path.
+ *
+ * <p>
+ * Driven by two main params/axis: variant and ioProfile
+ * Each axis answers a different question:
+ * <ul>
+ *   <li>variant → “Which Pal features?”</li>
+ *   <li>ioProfile →  “How realistic is the transport?”</li>
+ * </ul>
+ *
+ * <hr>
+ * You can bisect a regression quickly:
+ * <ul>
+ *   <li>Slow only when ioProfile==REAL ⇒ broker tuning;</li>
+ *   <li>slow already at MOCK ⇒ serialisation/callbacks;</li>
+ *   <li>slow even at CPU_ONLY ⇒ quantiser or matcher.</li>
+ * </ul>
+ *
+ * Variants may include networking features, like WAL and PUB
  * <pre>
  *  producers  → walQueue → LogWriter  (Kafka)
  *             ↘ pubQueue → MessagePublisher (ZMQ)
  * </pre>
  *
- * The benchmark:
- *   • builds a Guice Injector with PeerWiring<br>
- *   • starts LogWriter + MessagePublisher via ServiceManager<br>
- *   • repeatedly calls gateway.sendExecMessage(...)
- * <p>
- * Measure throughput (ops/ms) with different producer counts.
- * <p>
- * Run with t=4 threads:
+ * If the chosen variant includes WAL, and 'ioProfile == REAL',
+ * then a Kafka instance must be running. You may use the shipped
+ * script that runs Kafka on docker, or the script that launches
+ * a locall installed Kafka.
  * <pre>
  * >> start_kafka_docker.sh  # or start_kafka
+ *</pre>
  *
- * # only full hot path
- * >> java -Dpeer.logging=$PAL_HOME/config/peer-logging.xml \
- *   -jar target/pal-benchmarks-1.0.0-SNAPSHOT.jar \
- *   SendExecMessageUsingMPSCBenchmark -p variant=WAL_PUB_INTERCEPTS -t 4
- *
- *
- * # compare INTERCEPTS vs FULL
- * >> java -Dpeer.logging=$PAL_HOME/config/peer-logging.xml \
- *   -jar target/pal-benchmarks-1.0.0-SNAPSHOT.jar \
- *   SendExecMessageUsingMPSCBenchmark -p variant=INTERCEPTS,WAL_PUB_INTERCEPTS
- * </pre>
+ * Use the <b>run.sh</b> script to configure and launch this benchmark.
  */
 
-@Fork(value = 2, jvmArgsAppend = { "-Xms2g", "-Xmx2g" })
+@Fork(value = 3, jvmArgsAppend = { "-Xms2g", "-Xmx2g" })
 @Warmup(iterations = 6,   time = 2, timeUnit = TimeUnit.SECONDS)
 @Measurement(iterations = 10, time = 2, timeUnit = TimeUnit.SECONDS)
 @BenchmarkMode(Mode.Throughput)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
-@Timeout(time = 1, timeUnit = TimeUnit.MINUTES)
+@Timeout(time = 10, timeUnit = TimeUnit.MINUTES)
 @State(Scope.Benchmark)
-public class SendExecMessageUsingMPSCBenchmark {
+public class DispatchBenchmark {
 
   /** Logger instance for this class. */
   private static final Logger logger = LoggerFactory.getLogger("benchmark");
 
   /** Path to the default peer logging configuration file in the classpath. */
   private static final String LOGGING_CONFIG = "/peer-logging-fallback.xml";
-
-  /** Kafka bootstrap servers. */
-  private static final String KAFKA_BOOTSTRAP_SERVERS = "localhost:29092";
-
-  /** WAL name - (i.e. kafka WAL topic). */
-  private static final String WAL_LOG_NAME = "benchmark_log001";
 
   // ---- Queue Defaults -------------------------------------------------------
 
@@ -132,8 +142,8 @@ public class SendExecMessageUsingMPSCBenchmark {
 
   // ---- MessagePublisher Defaults --------------------------------------------
 
-  /** Endpoint for MessagePublisher's Zmq PUB. */
-  private static final String PUB_ENDPOINT = "tcp://localhost:8788";
+  /** Default endpoint for MessagePublisher's Zmq PUB. */
+  private static final String DEF_PUB_ENDPOINT = "tcp://127.0.0.1:8788";
 
   /** Default size for the MessagePublisher's SPSC queue. */
   private static final int    DEF_SPSC_SIZE        = 524_288;   //  1 << 19
@@ -162,6 +172,14 @@ public class SendExecMessageUsingMPSCBenchmark {
   /** Default % of queue to keep when trimming old messages - applies to DROP_OLD. */
   private static final int DEF_DROP_KEEP_PCT        = 92;
 
+  // ---- LogWriter Defaults --------------------------------------------
+
+  /** Kafka bootstrap servers. */
+  private static final String DEF_KAFKA_BOOTSTRAP_SERVERS = "localhost:29092";
+
+  /** WAL name - (i.e. kafka WAL topic). */
+  private static final String DEF_WAL_LOG_NAME = "benchmark_log001";
+
   // ---- Dispatcher Defaults --------------------------------------------
 
   /**
@@ -179,9 +197,13 @@ public class SendExecMessageUsingMPSCBenchmark {
   @Param({"1"})
   public int unused;                 // (value unused; @Threads controls parallelism)
 
+  /** Type of {@link IoProfile} to run in relation to IO (networking). */
+  @Param({"CPU_ONLY", "MOCK", "REAL"})
+  public IoProfile ioProfile;
+
   /** Variant of call to sendExecMessage, parameterizes variations of RunOptions. */
   @Param({"NOOP", "INTERCEPTS", "PUB", "WAL", "PUB_WAL", "INTERCEPTS_PUB", "INTERCEPTS_WAL", "INTERCEPTS_PUB_WAL"})
-  public ExecMessageCallVariant variant;
+  public FeatureSetVariant variant;
 
   /** Pub Queue type: FIXED, CHUNKED, GROWABLE, UNBOUNDED */
   @Param({"FIXED", "CHUNKED", "GROWABLE", "UNBOUNDED"})
@@ -193,7 +215,7 @@ public class SendExecMessageUsingMPSCBenchmark {
   private final Properties props = new Properties();
 
   /** RunOptions set. */
-  private final EnumSet<RunOptions> runOpts = EnumSet.noneOf(RunOptions.class);
+  private EnumSet<RunOptions> runOpts;
 
   /** Shared Zmq context. */
   private ZContext               zmqCtx;
@@ -203,9 +225,6 @@ public class SendExecMessageUsingMPSCBenchmark {
 
   /** Manager for all required services. */
   private ServiceManager         serviceManager;
-
-  /** The class under test. */
-  private OutboundMessageGateway gateway;
 
   /** Handle to the injected MessagePublisher. */
   private MessagePublisher messagePublisher;
@@ -231,12 +250,12 @@ public class SendExecMessageUsingMPSCBenchmark {
   private Socket pubSocket;
 
   /** Pool of pre-built messages to use during the bench. */
-  private List<Message>      msgPool;
+  private final List<DispatchArgs>      dispatchables = new ArrayList<>();
 
   /** Counts how many times the benchmark method is called. */
-  private final AtomicLong callsMade = new AtomicLong();
+  private AtomicLong callsMade;
 
-  /** Counter to index the {@code msgPool}. */
+  /** Counter to index the prepared call pool. */
   private int                    next;
 
   /** Dummy subscriber socket to attach when using PUB. */
@@ -256,7 +275,10 @@ public class SendExecMessageUsingMPSCBenchmark {
    * Set up the benchmark run.
    */
   @Setup(Level.Trial)
-  public void setUp() throws IllegalAccessException, InterruptedException {
+  public void setUp() throws IllegalAccessException, InterruptedException, NoSuchMethodException {
+
+    // reset counter to 0
+    callsMade = new AtomicLong();
 
     // initialize logging
     initLogging();
@@ -264,8 +286,20 @@ public class SendExecMessageUsingMPSCBenchmark {
     // load and set the running properties
     setWiringProperties();
 
-    // set up runOpts based on the selected ExecMessageCallVariant
-    setRunOptions();
+    // get the RunOptions based on the selected Variant
+    runOpts = variant.toRunOptions();
+
+    // assert variant <--> ioProfile compatibility
+    if (ioProfile == IoProfile.CPU_ONLY &&
+            (runOpts.contains(RunOptions.WITH_WAL) || runOpts.contains(RunOptions.WITH_TCP_PUB)))  {
+      throw new IllegalArgumentException("CPU_ONLY profile cannot be combined with WAL/PUB variants");
+    }
+
+    if (ioProfile == IoProfile.CPU_ONLY) {
+      // CPU_ONLY profile only compatible with NOOP and INTERCEPTS variants
+      runOpts.remove(RunOptions.WITH_WAL);
+      runOpts.remove(RunOptions.WITH_TCP_PUB);
+    }
 
    // initialize ZMQ context   - shared across services
     initZmqContextAndGetReady();
@@ -279,26 +313,38 @@ public class SendExecMessageUsingMPSCBenchmark {
     customClassloader = new CustomClassloader(new URL[]{}, Thread.currentThread().getContextClassLoader());
 
     // create DI injector
-    injector = Guice.createInjector(new PeerWiring(props, runOpts, zmqCtx, customClassloader));
+    Module brokersModule = null;
+    switch (ioProfile) {
+      case MOCK -> brokersModule = new MockBrokersModule();   // MockProducer + DummyPublisher
+      case REAL -> brokersModule = new RealBrokersModule();   // KafkaProducer provider, etc.
+      // CPU_ONLY: nothing extra
+    }
 
-    // ----- start consumer services (WAL, PUB, Sessions)
+    if (brokersModule == null) {
+      injector = Guice.createInjector(new PeerWiring(props, runOpts, zmqCtx, customClassloader));
+    } else {
+      injector = Guice.createInjector(
+              Modules.override(new PeerWiring(props, runOpts, zmqCtx, customClassloader))
+                      .with(brokersModule));
+    }
 
-    // collect handles of required services
-    messagePublisher = injector.getInstance(MessagePublisher.class);
-
+    // ----- start consumer services (WAL, PUB, Sessions), collecting required handles
     final Set<Service> services = new HashSet<>();
     services.add(injector.getInstance(InterceptMatcher.class));
     services.add(injector.getInstance(SessionService.class));
-    services.add(messagePublisher);
-    LogWriter walWriter = injector.getInstance(LogWriter.class);
-    services.add(walWriter);
+    if (runOpts.contains(RunOptions.WITH_TCP_PUB)) {
+      messagePublisher = injector.getInstance(MessagePublisher.class);
+      services.add(messagePublisher);
+      pubSocket = (ZMQ.Socket) FieldUtils.readField(messagePublisher, "pubSocket", true);
+    }
+    if (runOpts.contains(RunOptions.WITH_WAL)) {
+      LogWriter walWriter = injector.getInstance(LogWriter.class);
+      services.add(walWriter);
+      // tell LogWriter which log to write
+      LogInfo writeAheadLog = new LogInfo(DEF_WAL_LOG_NAME, props.getProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG));
+      walWriter.writeToLog(writeAheadLog, false);
+    }
     serviceManager = new ServiceManager(services);
-
-    pubSocket = (ZMQ.Socket) FieldUtils.readField(messagePublisher, "pubSocket", true);
-
-    // tell LogWriter which log to write
-    LogInfo writeAheadLog = new LogInfo(WAL_LOG_NAME, KAFKA_BOOTSTRAP_SERVERS);
-    walWriter.writeToLog(writeAheadLog, true);
 
     // start all services
     serviceManager.startAsync();
@@ -310,13 +356,12 @@ public class SendExecMessageUsingMPSCBenchmark {
     serviceManager.awaitHealthy();
 
     // collect injected handles required in benchmark
-    gateway     = injector.getInstance(OutboundMessageGateway.class);
     walQueue = injector.getInstance(Key.get(new TypeLiteral<>() {}, Names.named("wal_queue")));
     pubQueue = injector.getInstance(Key.get(new TypeLiteral<>() {}, Names.named("pub_queue")));
     messagePublisherConfig = injector.getInstance(MessagePublisherConfig.class);
 
-    // Finally - prepare a pool of ExecMessages we’ll reuse
-    createMixedSizedMessagePool();
+    // Finally - prepare a pool of messages/invocations we’ll reuse
+    createDispatchables();
   }
 
   /**
@@ -330,13 +375,15 @@ public class SendExecMessageUsingMPSCBenchmark {
     // ZMQ socket endpoints
     props.setProperty("sync.ready", "inproc://sync_ready");  // used by all services
     props.setProperty("offset.pub",   "inproc://offsets");  // used by LogWriter
-    props.setProperty("out.pub", System.getProperty("pub.endpoint", PUB_ENDPOINT));  // used by MessagePublisher
+    props.setProperty("out.pub", System.getProperty("pub.endpoint", DEF_PUB_ENDPOINT));  // used by MessagePublisher
     props.setProperty("session.svc", "inproc://session");  // used by SessionService
     props.setProperty("intercepts.reg", "inproc://intercept_reg");  // used by InterceptMatcher
 
     // LogWriter params
-    props.setProperty("key.serializer",   "com.quasient.pal.serdes.kafka.KafkaKeySerializer");
-    props.setProperty("value.serializer", "com.quasient.pal.serdes.kafka.KafkaMessageSerializer");
+    props.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
+            System.getProperty("wal.bootstrap_servers", DEF_KAFKA_BOOTSTRAP_SERVERS));
+    props.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,   "com.quasient.pal.serdes.kafka.KafkaKeySerializer");
+    props.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "com.quasient.pal.serdes.kafka.KafkaMessageSerializer");
 
     // WAL queue params
     props.setProperty("wal.queue.type",
@@ -411,43 +458,12 @@ public class SendExecMessageUsingMPSCBenchmark {
     props.setProperty("paldir_url", PalDirectory.NO_URL);
   }
 
-  /**
-   * Sets up runOpts based on the selected ExecMessageCallVariant
-   */
-  private void setRunOptions() {
-    switch (variant) {
-      case INTERCEPTS ->
-              runOpts.add(RunOptions.WITH_INTERCEPTS);
-      case PUB ->
-              runOpts.add(RunOptions.WITH_TCP_PUB);
-      case WAL ->
-              runOpts.add(RunOptions.WITH_WAL);
-      case PUB_WAL -> {
-        runOpts.add(RunOptions.WITH_TCP_PUB);
-        runOpts.add(RunOptions.WITH_WAL);
-      }
-      case INTERCEPTS_PUB -> {
-        runOpts.add(RunOptions.WITH_INTERCEPTS);
-        runOpts.add(RunOptions.WITH_TCP_PUB);
-      }
-      case INTERCEPTS_WAL -> {
-        runOpts.add(RunOptions.WITH_INTERCEPTS);
-        runOpts.add(RunOptions.WITH_WAL);
-      }
-      case INTERCEPTS_PUB_WAL -> {
-        runOpts.add(RunOptions.WITH_INTERCEPTS);
-        runOpts.add(RunOptions.WITH_TCP_PUB);
-        runOpts.add(RunOptions.WITH_WAL);
-      }
-    }
-  }
-
   /** Initializes a dummy subscriber to listen from the MessagePublisher's PUB socket. */
   private void initDummySubscriber() throws InterruptedException {
     dummySubSocket = zmqCtx.createSocket(SocketType.SUB);
     dummySubSocket.setRcvHWM(500_000);
     dummySubSocket.subscribe(ZMQ.SUBSCRIPTION_ALL);
-    dummySubSocket.connect(PUB_ENDPOINT);
+    dummySubSocket.connect(DEF_PUB_ENDPOINT);
 
     // one–slot poller,  0 = dummySub
     ZMQ.Poller poller = zmqCtx.createPoller(1);
@@ -478,94 +494,34 @@ public class SendExecMessageUsingMPSCBenchmark {
   }
 
   /**
-   * Creates a pool of serialized ExecMessages of different sizes and content.
-   * Size doesn't affect queueing in the PUB or WAL queues but affects serialization
-   * inside MessagePublisher (through PUB socket) and LogWriter (through Kafka).
-   * <p>
-   * We create 1024 msg's with a realistic workload distribution of:
-   * <ul>
-   * <li>40% micro (409) - 208 bytes/msg</li>
-   * <li>35% small (358) - 690 bytes/msg</li>
-   * <li>20% medium (205) - 1232 bytes/msg</li>
-   * <li>5% large (52) - 2292 bytes/msg</li>
-   *</ul>
+   * Creates a list of DispatchArgs, used to call the dispatcher.
+   *
+   * @throws NoSuchMethodException if a method name used is not found in the expected class
    */
-  private void createMixedSizedMessagePool() {
-    MessageBuilder builder = injector.getInstance(MessageBuilder.class);
-    UUID peerId = injector.getInstance(UUID.class);
+  private void createDispatchables() throws NoSuchMethodException {
 
-    /*  ------- create a batch of micro messages --------  */
-    int microMsgsN = 409;
-    List<Message> microMsgs = new ArrayList<>(microMsgsN);
-    for (int i = 0; i < microMsgsN; i++) {
-      ExecMessage e = builder.buildEmptyConstructor(peerId, "java.lang.String");
-      microMsgs.add(builder.wrap(e));
-    }
-    logger.debug("{} micro messages of size: {} bytes", microMsgsN, ColferUtils.toBytes(microMsgs.get(0)).length);
-
-    /*  ------- create a batch of small messages (small Lorem) --------  */
-    int smallMsgsN = 358;
-    List<Message> smallMsgs = new ArrayList<>(smallMsgsN);
-    for (int i = 0; i < smallMsgsN; i++) {
-      ExecMessage e = builder.buildConstructor(
-        peerId,
-        "java.lang.String",
-              new String[]{"java.lang.String"},
-              new Object[]{shortLorem},
-              this,
-              null);
-      smallMsgs.add(builder.wrap(e));
-    }
-    logger.debug("{} small messages of size: {} bytes", smallMsgsN, ColferUtils.toBytes(smallMsgs.get(0)).length);
-
-    /*  ------- create a batch of large messages (list of 100 doubles) --------  */
-
-    int mediumMsgsN = 205;
-    List<Message> mediumMsgs = new ArrayList<>(mediumMsgsN);
-
-    // list instance with 50 doubles
-    List<Double> doubleList = new ArrayList<>();
-    Random random = new Random();
-    for (int i = 0; i < 50; i++) {
-      double randomValue = random.nextDouble(); // Generates a value between 0.0 and 1.0
-      doubleList.add(randomValue);
-    }
-
-    // create the messages
-    for (int i = 0; i < mediumMsgsN; i++) {
-      ExecMessage e = builder.buildClassMethod(
-              peerId,
-              "some.math.like.UtilityClass",
-              "AFancyMethod",
-      new String[]{doubleList.getClass().getName()},
-              this,
-              null,
-              new Object[]{doubleList});
-
-      mediumMsgs.add(builder.wrap(e));
-    }
-    logger.debug("{} medium messages of size: {} bytes", mediumMsgsN, ColferUtils.toBytes(mediumMsgs.get(0)).length);
-
-    /*  ------- create a batch of large messages (long Lorem) --------  */
-    int largeMsgsM = 52;
-    List<Message> largeMsgs = new ArrayList<>(largeMsgsM);
-    for (int i = 0; i < largeMsgsM; i++) {
-      ExecMessage e = builder.buildConstructor(
-              peerId,
-              "java.lang.String",
-              new String[]{"java.lang.String"},
-              new Object[]{longLorem},
-              this,
-              null);
-      largeMsgs.add(builder.wrap(e));
-    }
-    logger.debug("{} large messages of size: {} bytes", largeMsgsM, ColferUtils.toBytes(largeMsgs.get(0)).length);
-
-    msgPool = new ArrayList<>(microMsgs.size() + smallMsgs.size() + mediumMsgs.size() + largeMsgs.size());
-    msgPool.addAll(microMsgs);
-    msgPool.addAll(smallMsgs);
-    msgPool.addAll(mediumMsgs);
-    msgPool.addAll(largeMsgs);
+    // simplest - create a (static) call: System.currentTimeMillis()
+    Class<?> clzToInvoke = System.class;
+    String methodName = "currentTimeMillis";
+    Method method = System.class.getDeclaredMethod(methodName);
+    Context ctx = new Context(
+            "MyClass.java",
+            34,
+            DummyClassForContext.class,
+            new MethodSignature(
+                    clzToInvoke,
+                    clzToInvoke.getName(),
+                    Modifier.PUBLIC | Modifier.STATIC,
+                    methodName,
+                    new Class[]{},
+                    new Params(null, new Class[]{}, new Parameter[]{}),
+                    method,
+                    Long.TYPE)
+            );
+    Object sender = this;
+    Object target = null;
+    Object[] args = new Object[]{};
+    dispatchables.add(new DispatchArgs(ctx, sender, target, args));
   }
 
   /**
@@ -578,24 +534,25 @@ public class SendExecMessageUsingMPSCBenchmark {
      * Let the publisher flush everything it still has
      * ------------------------------------------------- */
 
-
     // wait until the app’s own queue is empty
     while (!pubQueue.isEmpty()) {
       Thread.onSpinWait();
     }
 
-    // wait until the PUB socket itself reports “ready for output”
-    //    (= everything already handed to ØMQ)
-    while (!pubFlushed(pubSocket)) {
-      Thread.onSpinWait();
-    }
+    if (runOpts.contains(RunOptions.WITH_TCP_PUB)) {
+      // wait until the PUB socket itself reports “ready for output”
+      //    (= everything already handed to ØMQ)
+      while (!pubFlushed(pubSocket)) {
+        Thread.onSpinWait();
+      }
 
-    // stop the dummy subscriber *first* so it cannot race with ctx.close()
-    if (WITH_DUMMY_SUB && dummySubThread != null) {
-      stopDummy = true;              // let the loop exit
-      dummySubThread.interrupt();    // break a blocking recv()
-      dummySubSocket.close();
-      dummySubThread.join();
+      // stop the dummy subscriber *first* so it cannot race with ctx.close()
+      if (WITH_DUMMY_SUB && dummySubThread != null) {
+        stopDummy = true;              // let the loop exit
+        dummySubThread.interrupt();    // break a blocking recv()
+        dummySubSocket.close();
+        dummySubThread.join();
+      }
     }
 
     // now it is safe to shut everything else down
@@ -610,45 +567,64 @@ public class SendExecMessageUsingMPSCBenchmark {
      * ------------------------------------------------- */
     System.out.println();
     System.out.println("----- CONFIGURATION / PARAMETERS -----");
-    System.out.printf("PUB queue initial size (bounded types): %s%n", props.getProperty("pub.queue.initial"));
-    System.out.printf("PUB queue max size (bounded types): %s%n",  props.getProperty("pub.queue.max"));
-    System.out.printf("PUB queue chunk size (unbounded types): %s%n", props.getProperty("pub.queue.chunk"));
-    if (WITH_DUMMY_SUB) {
-      System.out.println("1 dummy subscriber");
-    } else {
-      System.out.println("No dummy subscribers");
+    if (runOpts.contains(RunOptions.WITH_TCP_PUB)) {
+      if (WITH_DUMMY_SUB) {
+        System.out.println("1 dummy subscriber");
+      } else {
+        System.out.println("No dummy subscribers");
+      }
+      System.out.println(messagePublisherConfig.toString());
     }
-    System.out.println(messagePublisherConfig.toString());
 
     /* -------------------------------------------------
      * Print the run statistics
      * ------------------------------------------------- */
     System.out.println();
-    MessagePublisherStats publisherStats = messagePublisher.getEndStats();
+    if (runOpts.contains(RunOptions.WITH_TCP_PUB)) {
+      MessagePublisherStats publisherStats = messagePublisher.getEndStats();
 
-    System.out.println("----- Publisher counters -----");
-    System.out.printf("received  : %,d%n", publisherStats.messagesReceived());
-    System.out.printf("published : %,d%n", publisherStats.messagesPublished());
-    System.out.printf("dropped new (SPSC)      : %,d%n", publisherStats.messagesDroppedUnforwarded());
-    System.out.printf("dropped old (SPSC)      : %,d%n", publisherStats.messagesDroppedEvicted());
-    System.out.printf("dropped(send fail) : %,d%n", publisherStats.messagesDroppedPubFail());
-    System.out.printf("dropped(socket err): %,d%n", publisherStats.messagesDroppedSocketErr());
-    System.out.printf("left in SPSC       : %,d%n", publisherStats.messagesInSpsc());
-    System.out.println("------------------------------");
+      System.out.println("----- Publisher counters -----");
+      System.out.printf("received  : %,d%n", publisherStats.messagesReceived());
+      System.out.printf("published : %,d%n", publisherStats.messagesPublished());
+      System.out.printf("dropped new (SPSC)      : %,d%n", publisherStats.messagesDroppedUnforwarded());
+      System.out.printf("dropped old (SPSC)      : %,d%n", publisherStats.messagesDroppedEvicted());
+      System.out.printf("dropped(send fail) : %,d%n", publisherStats.messagesDroppedPubFail());
+      System.out.printf("dropped(socket err): %,d%n", publisherStats.messagesDroppedSocketErr());
+      System.out.printf("left in SPSC       : %,d%n", publisherStats.messagesInSpsc());
+      System.out.println("------------------------------");
+    }
+
+    if (runOpts.contains(RunOptions.WITH_WAL)) {
+      LogWriter walWriter = injector.getInstance(LogWriter.class);
+      LogWriterStats walWriterStats = walWriter.getLiveStats();
+
+      System.out.println("----- WAL counters -----");
+      System.out.printf("received : %,d%n", walWriterStats.messagesReceived());
+      System.out.printf("written  : %,d%n", walWriterStats.messagesWritten());
+      System.out.printf("error    : %,d%n", walWriterStats.messagesDroppedKafkaError());
+      System.out.println("------------------------------");
+    }
 
     System.out.println();
     System.out.println("------ Benchmark Stats -------");
     System.out.printf("hotPath() called %d times%n", callsMade.get());
-    if (WITH_DUMMY_SUB) {
-      System.out.printf("Dummy subscriber received %d messages%n", dummyRcvs);
+    if (runOpts.contains(RunOptions.WITH_TCP_PUB)) {
+      if (WITH_DUMMY_SUB) {
+        System.out.printf("Dummy subscriber received %d messages%n", dummyRcvs);
+      }
+      System.out.printf("Peak PUB queue depth (i.e. HWM): %,d%n", pubQueue.highWaterMark());
     }
-    System.out.printf("Peak PUB queue depth (i.e. HWM): %,d%n", pubQueue.highWaterMark());
+    if (runOpts.contains(RunOptions.WITH_WAL)) {
+      System.out.printf("Peak WAL queue depth (i.e. HWM): %,d%n", walQueue.highWaterMark());
+    }
     System.out.println("------------------------------");
 
     System.out.println();
     System.out.println("--- MessageGateway stats ---");
     OutboundMessageGatewayStats gatewayStats  = OutboundMessageGateway.getStats();
-    System.out.printf("Dropped %d messages due to PUB queue congestion%n", gatewayStats.messagesDroppedPub());
+    if (runOpts.contains(RunOptions.WITH_TCP_PUB)) {
+      System.out.printf("Dropped %d messages due to PUB queue congestion%n", gatewayStats.messagesDroppedPub());
+    }
     System.out.println("----------------------------");
 
     /* -------------------------------------------------
@@ -675,24 +651,6 @@ public class SendExecMessageUsingMPSCBenchmark {
   // ----------------------- Actual benchmark method -----------------------
 
   /**
-   * Runs a benchmark on a tight (closed) loop.
-   * <p>This is currently disabled. Add {@code @Benchmark} to re-enable.
-   *
-   * @param bh the Blackhole instance that consumes values to prevent JIT optimizations.
-   */
-  @SuppressWarnings("unused")
-  @Threads(Threads.MAX)   // let JMH spawn threads per @Param / CLI -t
-  public void hotPath(Blackhole bh) {
-    // pick a pre-created ExecMessage (avoids allocation noise)
-    Message m = msgPool.get(next & 1023);   // cheap modulo
-    next++;
-
-    ExecMessage ret = gateway.sendExecMessage(m, ExecPhase.BEFORE);
-    bh.consume(ret);
-    callsMade.incrementAndGet();
-  }
-
-  /**
    * Benchmark for a realistic workload, with an open-loop switching between
    * baseline and burst modes.
    *
@@ -702,7 +660,7 @@ public class SendExecMessageUsingMPSCBenchmark {
   @SuppressWarnings("unused")
   @Benchmark
   @BenchmarkMode(Mode.SampleTime)                 // per-request latency
-  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  @OutputTimeUnit(TimeUnit.NANOSECONDS)
   @Threads(Threads.MAX)
   public void hotPathBurst(BurstPlan plan, Blackhole bh) {
 
@@ -711,9 +669,21 @@ public class SendExecMessageUsingMPSCBenchmark {
 
     // only run the hot path when the next synthetic request is due
     if (now >= plan.nextArrivalAt) {
-      Message msg   = plan.takeMessage(next++);
-      ExecMessage r = gateway.sendExecMessage(msg, ExecPhase.BEFORE);
-      bh.consume(r);
+
+      DispatchArgs dispatchArgs = plan.takeDispatchable(next++);
+      Object returnVal;
+      try {
+        returnVal = DispatchForwarder.nonVoidClassMethod(
+                dispatchArgs.ctx,
+                dispatchArgs.sender,
+                dispatchArgs.target,
+                dispatchArgs.args);
+      } catch (Throwable t) {
+        logger.error("Caught throwable in call to DispatchForwarder", t);
+        // re-throw
+        throw new RuntimeException(t);
+      }
+      bh.consume(returnVal);
       callsMade.incrementAndGet();
 
       plan.nextArrivalAt = now + plan.pickIntervalNs();
@@ -864,8 +834,8 @@ public class SendExecMessageUsingMPSCBenchmark {
     /** handle to injected instance of {@link MessageBuilder} */
     MessageBuilder builder;
 
-    /** handle to pool of pre-created messages to process */
-    List<Message>  msgPool;
+    /** handle to pool of pre-created dispatchables */
+    List<DispatchArgs>  dispatchArgs;
 
     /* --- per-benchmark state --- */
 
@@ -883,15 +853,15 @@ public class SendExecMessageUsingMPSCBenchmark {
 
     /**
      * Sets up the baseline <--> burst inter-arrival plan.
-     * @param bench instance of {@link SendExecMessageUsingMPSCBenchmark} to acquire
+     * @param bench instance of {@link DispatchBenchmark} to acquire
      *              handles of existing objects
      */
     @SuppressWarnings("unused")
     @Setup(Level.Iteration)
-    public void init(SendExecMessageUsingMPSCBenchmark bench) {
+    public void init(DispatchBenchmark bench) {
       // re-use the message pool already built by the outer benchmark
       this.builder  = bench.injector.getInstance(MessageBuilder.class);
-      this.msgPool  = bench.msgPool;
+      this.dispatchArgs  = bench.dispatchables;
 
       rnd           = new Random(rndSeed);
       inBurst       = false;
@@ -916,10 +886,22 @@ public class SendExecMessageUsingMPSCBenchmark {
       }
     }
 
-    /** Pick the next pre-fabricated ExecMessage (cheap modulo). */
-    Message takeMessage(int idx) {
-      return msgPool.get(idx & 1023);
+    /** Pick the next pre-fabricated dispatchable (cheap modulo). */
+    DispatchArgs takeDispatchable(int idx) {
+      return dispatchArgs.get(0);
+//      return dispatchArgs.get(idx & 1023);
     }
+  }
+
+  /**
+   * Encapsulates the arguments for calls to {@link DispatchForwarder}
+   *
+   * @param ctx the execution context
+   * @param sender the object initiating the call
+   * @param target the target class on which the static method is invoked
+   * @param args the arguments for the method
+   */
+  public record DispatchArgs(Context ctx, Object sender, Object target, Object[] args) {
   }
 }
 

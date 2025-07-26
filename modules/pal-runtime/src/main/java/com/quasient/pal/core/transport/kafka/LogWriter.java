@@ -41,7 +41,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nullable;
-import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -68,7 +67,13 @@ public class LogWriter extends ConnectedService {
   /** Logger instance. */
   private static final Logger logger = LoggerFactory.getLogger(LogWriter.class);
 
-  /** Kafka producer used to send Log messages to a Kafka topic. */
+  /** Factory that returns a {@link Producer} provided its properties. */
+  private final ProducerFactory producerFactory;
+
+  /**
+   * Kafka producer used to send Log messages to a Kafka topic. Built lazily in {@link #writeToLog}
+   * via the producer factory.
+   */
   private Producer<String, byte[]> producer;
 
   /** Properties used to configure the Kafka producer. */
@@ -123,8 +128,14 @@ public class LogWriter extends ConnectedService {
    */
   private final AtomicBoolean walFailed;
 
-  /** Counter tracking the number of messages successfully sent to the Log. */
-  private final AtomicInteger messagesSent = new AtomicInteger(0);
+  /** Counter tracking total of messages received from the {@code walQueue} */
+  private long messagesReceived;
+
+  /** Counter tracking the number of messages successfully written to the Log. (acks received) */
+  private final AtomicInteger messagesWritten = new AtomicInteger(0);
+
+  /** total of messages dropped due to Kafka error */
+  private final AtomicInteger messagesDroppedKafkaError = new AtomicInteger(0);
 
   /** Immutable headers used for marking messages as self-produced or dispatched. */
   private static final Map<String, Header> SELF_HEADERS = new HashMap<>();
@@ -137,12 +148,11 @@ public class LogWriter extends ConnectedService {
    * @param syncSocketAddress address used for synchronizing service startup.
    * @param serviceThreadGroup thread group in which the service thread will be executed.
    * @param serviceName logical name that identifies this Log writer service.
-   * @param keySerializer configuration for the Kafka key serializer.
-   * @param valueSerializer configuration for the Kafka value serializer.
    * @param walQueue initialized {@link OutboundMsg} queue instance from which to consume.
    * @param walFailed global flag that used to indicate failure when writing to Kafka so producers
    *     halt enqueuing.
    * @param offsetPubAddress ZeroMQ address for the message offset publisher connection.
+   * @param producerFactory the factory used to get an initialized Producer
    */
   @Inject
   public LogWriter(
@@ -151,62 +161,15 @@ public class LogWriter extends ConnectedService {
       @Named("sync.ready") String syncSocketAddress,
       ThreadGroup serviceThreadGroup,
       @Named("LogWriter.service") String serviceName,
-      @Named("key.serializer") String keySerializer,
-      @Named("value.serializer") String valueSerializer,
-      @Named("wal_queue") HwmMessageQueue<OutboundMsg> walQueue,
-      @Named("walFailed") AtomicBoolean walFailed,
-      @Named("offset.pub") String offsetPubAddress) {
-    super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
-    this.walQueue = walQueue;
-    this.walFailed = walFailed;
-    this.offsetPubAddress = offsetPubAddress;
-    producerProperties.put("key.serializer", keySerializer);
-    producerProperties.put("value.serializer", valueSerializer);
-    StringBuilder propsStr = new StringBuilder();
-    for (String propKey : producerProperties.stringPropertyNames()) {
-      propsStr
-          .append(propKey)
-          .append('=')
-          .append(producerProperties.getProperty(propKey))
-          .append(", ");
-    }
-    logger.info(
-        "Created log message writer for peer with id '{}' and properties: [{}]",
-        peerUuid,
-        propsStr);
-  }
-
-  /**
-   * Constructs a LogWriter instance using a provided Kafka producer instance. This constructor is
-   * primarily intended for use in unit tests with a mock producer.
-   *
-   * @param peerUuid unique identifier for this peer.
-   * @param context ZeroMQ context for creating and managing socket connections.
-   * @param syncSocketAddress address used for synchronizing service startup.
-   * @param serviceThreadGroup thread group in which the service thread will be executed.
-   * @param serviceName logical name that identifies this log writer service.
-   * @param walQueue initialized WAL queue instance from which to consume.
-   * @param walFailed global flag that used to indicate failure when writing to Kafka so producers
-   *     halt enqueuing.
-   * @param offsetPubAddress ZeroMQ address for the message offset publisher connection.
-   * @param producer Kafka producer instance to be used for sending messages.
-   */
-  LogWriter(
-      UUID peerUuid,
-      ZContext context,
-      @Named("sync.ready") String syncSocketAddress,
-      ThreadGroup serviceThreadGroup,
-      String serviceName,
       @Named("wal_queue") HwmMessageQueue<OutboundMsg> walQueue,
       @Named("walFailed") AtomicBoolean walFailed,
       @Named("offset.pub") String offsetPubAddress,
-      Producer<String, byte[]> producer) {
+      ProducerFactory producerFactory) {
     super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
-    this.producer = producer;
     this.walQueue = walQueue;
     this.walFailed = walFailed;
     this.offsetPubAddress = offsetPubAddress;
-    logger.info("Created log message writer");
+    this.producerFactory = producerFactory; // store for later
   }
 
   /**
@@ -243,14 +206,17 @@ public class LogWriter extends ConnectedService {
   public void writeToLog(LogInfo writeAheadLog, boolean publishOffsets) {
     this.writeAheadLog = writeAheadLog;
     this.publishOffsets = publishOffsets;
-    producerProperties.put("bootstrap.servers", writeAheadLog.getBootstrapServers());
+
+    producerProperties.put(
+        ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, writeAheadLog.getBootstrapServers());
     producerProperties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KEY_SERIALIZER);
     producerProperties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, VALUE_SERIALIZER);
     producerProperties.put(ProducerConfig.LINGER_MS_CONFIG, "0");
+    producerProperties.put(ProducerConfig.ACKS_CONFIG, "all");
 
-    // create producer, if not assigned in constructor
-    if (this.producer == null) {
-      this.producer = new KafkaProducer<>(producerProperties);
+    // build the producer exactly once
+    if (producer == null) {
+      producer = producerFactory.create(producerProperties);
     }
     logger.info(
         "Writing to log: {}, w/ bootstrapServers: {}",
@@ -268,10 +234,17 @@ public class LogWriter extends ConnectedService {
     walQueue.drain(
         this::handleOutboundMessage,
         ADAPTIVE_100_MICROSECONDS,
-        () -> !Thread.currentThread().isInterrupted());
+        () -> !(shutdownRequested || Thread.currentThread().isInterrupted()));
 
     if (logger.isDebugEnabled()) {
-      logger.debug("Thread interrupted, stopping...");
+      logger.debug(
+          "Thread interrupted or shutdown requested, will process all remaining in queue...");
+    }
+
+    OutboundMsg msg;
+    // after shutdown request, drain queue until empty
+    while ((msg = walQueue.poll()) != null) {
+      handleOutboundMessage(msg);
     }
   }
 
@@ -332,6 +305,8 @@ public class LogWriter extends ConnectedService {
       return;
     }
 
+    messagesReceived++;
+
     try {
       // normal path
       final List<Header> logHeaders = fromInternalToLog(msg.getHeaders());
@@ -345,6 +320,8 @@ public class LogWriter extends ConnectedService {
           logHeaders);
 
     } catch (Exception ex) { // fatal path
+
+      messagesDroppedKafkaError.getAndIncrement();
       logger.error("Kafka failed sending message w/id {} → halting WAL", msg.getMessageId(), ex);
 
       if (walFailed.compareAndSet(false, true)) { // publish failure
@@ -452,7 +429,7 @@ public class LogWriter extends ConnectedService {
         () -> {
           try {
             RecordMetadata sentRecordMetadata = sendFuture.get();
-            messagesSent.getAndIncrement();
+            messagesWritten.getAndIncrement();
             if (logger.isDebugEnabled()) {
               logger.debug(
                   "new message written to log at offset: {}, w/id: {},"
@@ -463,6 +440,7 @@ public class LogWriter extends ConnectedService {
                   message.length);
             }
           } catch (Exception e) {
+            messagesDroppedKafkaError.getAndIncrement();
             logger.error("Error sending message to log", e);
           }
         });
@@ -480,6 +458,27 @@ public class LogWriter extends ConnectedService {
         logger.warn("Error closing producer", e);
       }
     }
+  }
+
+  /**
+   * Returns a consistent, side-effect-free view of the counters.
+   *
+   * @return snapshot of live stats
+   */
+  public LogWriterStats getLiveStats() {
+    return new LogWriterStats(
+        messagesReceived, messagesWritten.get(), messagesDroppedKafkaError.get());
+  }
+
+  /**
+   * Triggers a shutdown sequence for the service.
+   *
+   * <p>Override superclass because we don't want to interrupt the thread, causing in-flight sends
+   * to kafka to fail.
+   */
+  @Override
+  protected void triggerStop() {
+    shutdownRequested = true;
   }
 
   /**
