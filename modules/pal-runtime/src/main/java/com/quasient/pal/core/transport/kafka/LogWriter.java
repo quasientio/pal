@@ -74,6 +74,12 @@ public class LogWriter extends ConnectedService {
   /** Properties used to configure the Kafka producer. */
   private final Properties producerProperties = new Properties();
 
+  /** Kafka key serializer for Wal messages. */
+  private final String KEY_SERIALIZER = "com.quasient.pal.serdes.kafka.KafkaKeySerializer";
+
+  /** Kafka value serializer for Wal messages. */
+  private final String VALUE_SERIALIZER = "com.quasient.pal.serdes.kafka.KafkaMessageSerializer";
+
   /** Timeout duration for closing the Kafka producer. */
   private static final Duration PRODUCER_CLOSE_TIMEOUT = Duration.of(300, ChronoUnit.MILLIS);
 
@@ -238,6 +244,8 @@ public class LogWriter extends ConnectedService {
     this.writeAheadLog = writeAheadLog;
     this.publishOffsets = publishOffsets;
     producerProperties.put("bootstrap.servers", writeAheadLog.getBootstrapServers());
+    producerProperties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KEY_SERIALIZER);
+    producerProperties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, VALUE_SERIALIZER);
     producerProperties.put(ProducerConfig.LINGER_MS_CONFIG, "0");
 
     // create producer, if not assigned in constructor
