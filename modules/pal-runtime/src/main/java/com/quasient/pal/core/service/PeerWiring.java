@@ -197,7 +197,7 @@ public class PeerWiring extends AbstractModule {
    */
   @Provides
   @SuppressWarnings({"unused", "CloseableProvides"})
-  public ZContext getZmqContext() {
+  public ZContext provideZmqContext() {
     return zmqContext;
   }
 
@@ -210,7 +210,7 @@ public class PeerWiring extends AbstractModule {
   @SuppressWarnings("unused")
   @Provides
   @Singleton
-  ProducerFactory getProducerFactory() {
+  ProducerFactory provideProducerFactory() {
     return KafkaProducer::new;
   }
 
@@ -240,7 +240,7 @@ public class PeerWiring extends AbstractModule {
   @Singleton
   @Named("wal_queue")
   @SuppressWarnings("unused")
-  public HwmMessageQueue<OutboundMsg> getWalQueue() {
+  public HwmMessageQueue<OutboundMsg> provideWalQueue() {
     MpscKind kind =
         MpscKind.valueOf(
             properties.getProperty("wal.queue.type", "CHUNKED").toUpperCase(Locale.ENGLISH));
@@ -261,11 +261,11 @@ public class PeerWiring extends AbstractModule {
    *
    * @return the initialized bounded or unbounded PUB queue instance
    */
+  @SuppressWarnings("unused")
   @Provides
   @Singleton
   @Named("pub_queue")
-  @SuppressWarnings("unused")
-  public HwmMessageQueue<OutboundMsg> getPubQueue() {
+  public HwmMessageQueue<OutboundMsg> providePubQueue() {
     MpscKind kind =
         MpscKind.valueOf(
             properties.getProperty("pub.queue.type", "CHUNKED").toUpperCase(Locale.ENGLISH));
@@ -281,10 +281,10 @@ public class PeerWiring extends AbstractModule {
   }
 
   /** Shared failure flag – singleton instance */
+  @SuppressWarnings("unused")
   @Provides
   @Singleton
   @Named("walFailed")
-  @SuppressWarnings("unused")
   public AtomicBoolean provideWalFailedFlag() {
     return new AtomicBoolean(false);
   }
@@ -294,9 +294,9 @@ public class PeerWiring extends AbstractModule {
    *
    * @return the UUID associated with this peer, as derived from the configuration properties.
    */
-  @Provides
   @SuppressWarnings("unused")
-  public UUID getPeerUuid() {
+  @Provides
+  public UUID providePeerUuid() {
     return peerUuid;
   }
 
@@ -305,9 +305,9 @@ public class PeerWiring extends AbstractModule {
    *
    * @return the ThreadGroup designated for organizing service threads.
    */
-  @Provides
   @SuppressWarnings("unused")
-  public ThreadGroup getServiceThreadGroup() {
+  @Provides
+  public ThreadGroup provideServiceThreadGroup() {
     return serviceThreadGroup;
   }
 
@@ -316,9 +316,9 @@ public class PeerWiring extends AbstractModule {
    *
    * @return the CustomClassloader used for loading classes at runtime.
    */
-  @Provides
   @SuppressWarnings({"unused", "CloseableProvides"})
-  public CustomClassloader getCustomClassloader() {
+  @Provides
+  public CustomClassloader provideCustomClassloader() {
     return customClassloader;
   }
 
@@ -327,9 +327,9 @@ public class PeerWiring extends AbstractModule {
    *
    * @return a Set of RunOptions that dictate the peer's runtime behavior.
    */
-  @Provides
   @SuppressWarnings("unused")
-  public Set<RunOptions> getRunOptions() {
+  @Provides
+  public Set<RunOptions> provideRunOptions() {
     return runOptions;
   }
 
@@ -342,7 +342,7 @@ public class PeerWiring extends AbstractModule {
   @SuppressWarnings("unused")
   @Provides
   @Singleton
-  public PublishingDropPolicy getPublishingDropPolicy() {
+  public PublishingDropPolicy providePublishingDropPolicy() {
     return PublishingDropPolicy.valueOf(
         properties.getProperty("pub.drop.policy").toUpperCase(Locale.ENGLISH));
   }
@@ -355,7 +355,7 @@ public class PeerWiring extends AbstractModule {
   @SuppressWarnings("unused")
   @Provides
   @Singleton
-  public MessagePublisherConfig getMessagePublisherConfig(
+  public MessagePublisherConfig provideMessagePublisherConfig(
       PublishingDropPolicy publishingDropPolicy) {
 
     return new MessagePublisherConfig(
