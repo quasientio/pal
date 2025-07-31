@@ -107,9 +107,9 @@ import java.util.stream.DoubleStream;
  * Use the <b>run.sh</b> script to configure and launch this benchmark.
  */
 
-@Fork(value = 1, jvmArgsAppend = { "-Xms2g", "-Xmx2g" })
-@Warmup(iterations = 6,   time = 5, timeUnit = TimeUnit.SECONDS)
-@Measurement(iterations = 10, time = 5, timeUnit = TimeUnit.SECONDS)
+@Fork(value = 5, jvmArgsAppend = { "-Xms2g", "-Xmx2g" })
+@Warmup(iterations = 4,   time = 15, timeUnit = TimeUnit.SECONDS)
+@Measurement(iterations = 5, time = 15, timeUnit = TimeUnit.SECONDS)
 @BenchmarkMode(Mode.Throughput)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @Timeout(time = 10, timeUnit = TimeUnit.MINUTES)
@@ -844,7 +844,6 @@ public class DispatchBenchmark {
   public void hotPathBurst(BurstPlan plan, InputThreadState ts, Blackhole bh) {
 
     long now = System.nanoTime();
-    plan.maybeFlipPhase(now);
 
     // only run the hot path when the next synthetic request is due
     if (now >= plan.nextArrivalAt) {

@@ -14,9 +14,10 @@ import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Random;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Schedules “open-loop” arrivals:  ↙ baseline  ↔ burst ↘ baseline …
@@ -24,94 +25,135 @@ import java.util.concurrent.TimeUnit;
 @State(Scope.Benchmark)
 public class BurstPlan {
 
+  /** Enumerates the distinct phases */
+  enum Phase { BASE, RAMP, BURST }
+
+  /** Logger instance for this class. */
+  private static final Logger logger = LoggerFactory.getLogger("benchmark");
+
+  /** save last phase for logging */
+  private Phase lastPhase;
+
   // ---------- tunables exposed on the CLI (-p) ----------
 
   /**
    * baseline QPS - λ₁
    */
-  @Param({"50"})
+  @Param({"1000"})
   public int baseQps;
 
   /**
    * burst QPS - λ₂
    */
-  @Param({"500"})
-  public int burstQps;
+  @Param({"10000"})  public int    burstQps;
 
   /**
    * seconds in baseline
    */
-  @Param({"45"})
-  public long baseSec;
+  @Param({"30"})     public double baseSec;
 
   /**
-   * seconds in burst
+   * seconds in steady-state burst
    */
-  @Param({"15"})
-  public long burstSec;
+  @Param({"10"})     public double burstSec;
 
   /**
-   * reproducible runs
+   * seconds of linear ramp-up
    */
-  @Param({"42"})
-  public long rndSeed;
-  // ------------------------------------------------------
-
-  /* --- per-benchmark state --- */
+  @Param({"3"})      public double rampSec;
 
   /**
-   * flag to flip between baseline and burst phase
+   * for reproducible runs
    */
-  boolean inBurst;
+  @Param({"42"})     public long   rndSeed;
 
-  /**
-   * nano time when we flip λ
-   */
-  long phaseEndsAt;
+  /* ---------- global timing anchor (shared by all iterations) ---------- */
 
-  /**
-   * nano time for the next call
-   */
-  long nextArrivalAt;
+  /** Timestamp when we start */
+  private static final long RUN_START_NS = System.nanoTime();
+
+  /** base duration cached in ns for speed */
+  private long baseNs;
+
+  /** ramp duration cached in ns for speed */
+  private long rampNs;
+
+  /** full duration cycle cached in ns for speed */
+  private long cycleNs;
+
+  /* ---------- per-iteration objects ---------- */
 
   /**
    * allows random inter-arrival times
    */
-  Random rnd;
+  private Random rnd;
+
+
+  /**
+   * nano time for the next call
+   */
+  long           nextArrivalAt;
+
+  /* ---------- JMH callbacks ---------- */
 
   /**
    * Sets up the baseline <--> burst inter-arrival plan.
-   *
-   * @param bench instance of {@link DispatchBenchmark} to acquire
-   *              handles of existing objects
    */
-  @SuppressWarnings("unused")
-  @Setup(Level.Iteration)
-  public void init(DispatchBenchmark bench) {
+  @Setup(Level.Iteration)          // keep Iteration scope
+  public void init() {
+    // convert only once per fork
+    if (cycleNs == 0) {
+      baseNs  = secsToNs(baseSec);
+      rampNs  = secsToNs(rampSec);
+      long burstNs = secsToNs(burstSec);
+      cycleNs = baseNs + rampNs + burstNs;
+    }
     rnd = new Random(rndSeed);
-    inBurst = false;
-    long now = System.nanoTime();
-    phaseEndsAt = now + TimeUnit.SECONDS.toNanos(baseSec);
-    nextArrivalAt = now;                  // hit immediately
+    nextArrivalAt = System.nanoTime();
   }
 
-  /**
-   * Exponential inter-arrival time in nanoseconds.
-   */
+  /* ---------- helpers ---------- */
+
+  /** Convert seconds (double) to nanoseconds (long) */
+  private static long secsToNs(double sec) {
+    return (long) (sec * 1_000_000_000L + 0.5);
+  }
+
+  /** Return the arrival interval (ns) drawn from an exponential distribution. */
   long pickIntervalNs() {
-    double lambda = inBurst ? burstQps : baseQps;
-    double u = 1.0d - rnd.nextDouble();   // avoid ln(0)
+    double nowOffset = (System.nanoTime() - RUN_START_NS) % cycleNs;
+    double lambda = currentLambda(nowOffset);
+    double u = 1.0 - rnd.nextDouble();          // avoid ln(0)
     return (long) (-Math.log(u) * 1_000_000_000d / lambda);
   }
 
-  /**
-   * Flip baseline ↔ burst when the current phase expires.
-   */
-  void maybeFlipPhase(long now) {
-    if (now >= phaseEndsAt) {
-      inBurst = !inBurst;
-      long durNs = TimeUnit.SECONDS.toNanos(inBurst ? burstSec : baseSec);
-      phaseEndsAt = now + durNs;
+  /** Piece-wise λ(t): baseline → linear ramp-up → flat burst. */
+  private double currentLambda(double offset) {
+
+    Phase newPhase;
+    if (offset < baseNs) {
+      newPhase = Phase.BASE;
+    } else if (offset < baseNs + rampNs) {
+      newPhase = Phase.RAMP;
+    } else {
+      newPhase = Phase.BURST;
     }
+
+    // log the switch the first time we enter a new phase
+    if (newPhase != lastPhase) {
+      logger.debug("Switching phase: {} → {}", lastPhase, newPhase);
+      lastPhase = newPhase;
+    }
+
+    // λ(t) for the current phase
+    return switch (newPhase) {
+      case BASE  -> baseQps;
+      case RAMP  -> {
+        double frac = (offset - baseNs) / (double) rampNs;   // 0 … 1
+        yield baseQps + frac * (burstQps - baseQps);
+      }
+      case BURST -> burstQps;
+    };
   }
 }
+
