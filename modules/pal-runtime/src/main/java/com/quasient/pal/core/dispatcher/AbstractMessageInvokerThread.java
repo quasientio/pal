@@ -39,7 +39,7 @@ import org.zeromq.ZContext;
 /**
  * An abstract thread responsible for dispatching different types of messages (EXEC, CONTROL, and
  * META) to the appropriate handlers via an incoming message dispatcher. This base class is used by
- * both Log and Peer Invoker threads to execute remote calls and handle dispatch errors while
+ * both Log and Socket RPC Invoker threads to execute remote calls and handle dispatch errors while
  * keeping track of dispatch metrics.
  */
 public abstract class AbstractMessageInvokerThread extends Thread {
@@ -171,9 +171,8 @@ public abstract class AbstractMessageInvokerThread extends Thread {
   }
 
   /**
-   * Closes connections managed by the {@link OutboundMessageGateway} (if available) and logs
-   * dispatch metrics. This method should be called during thread shutdown to ensure proper resource
-   * cleanup.
+   * Closes connections managed by the {@link OutboundMessageGateway} and logs dispatch metrics.
+   * This method should be called during thread shutdown to ensure proper resource cleanup.
    */
   protected void closeConnections() {
     if (outboundMessageGateway != null) {
@@ -184,8 +183,8 @@ public abstract class AbstractMessageInvokerThread extends Thread {
       }
     }
 
-    if (logger.isDebugEnabled()) {
-      logger.debug(
+    if (logger.isInfoEnabled()) {
+      logger.info(
           "Stopped invoker thread: {}"
               + ", EXEC requests: dispatched={}, errors={}"
               + "; CONTROL requests dispatched={}, errors={}"

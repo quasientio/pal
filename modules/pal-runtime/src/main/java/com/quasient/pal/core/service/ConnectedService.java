@@ -20,7 +20,10 @@ import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 
 /**
- * An abstract base class for guava-managed services with ZeroMQ based connectivity.
+ * An abstract base class for guava-managed services with ZeroMQ-based readiness signalling to
+ * synchronize all services startup. More specifically, the {@link Main} class waits for all
+ * services to send their ready signal before considering them to be up and start accepting
+ * requests.
  *
  * <p>This class manages a dedicated thread for executing service logic and coordinates the service
  * startup and shutdown sequences. It provides abstract hooks for opening and closing connections as
@@ -44,7 +47,7 @@ public abstract class ConnectedService extends AbstractService {
   /** Prefix used in log messages to indicate service informational events. */
   private static final String INFO_PREFIX = "<SERVICE-INFO>";
 
-  /** Flag indicating a request to shutdown the service execution. */
+  /** Flag indicating a request to shut down the service execution. */
   protected volatile boolean shutdownRequested = false;
 
   /** ZeroMQ context used to create and manage sockets for service communication. */
@@ -102,9 +105,9 @@ public abstract class ConnectedService extends AbstractService {
     logger.info("{} {}: connections open", INFO_PREFIX, serviceName);
     signalReady();
     notifyStarted();
-    logger.info("{} {}: started, now running", INFO_PREFIX, serviceName);
+    logger.info("{} {}: started, now running...", INFO_PREFIX, serviceName);
     run();
-    logger.info("{} {}: finished running", INFO_PREFIX, serviceName);
+    logger.info("{} {}: finished run(), closing down...", INFO_PREFIX, serviceName);
     closeConnections();
     logger.info("{} {}: connections closed", INFO_PREFIX, serviceName);
     notifyStopped();
@@ -175,7 +178,7 @@ public abstract class ConnectedService extends AbstractService {
       try {
         closeable.close();
       } catch (Exception e) {
-        logger.debug(msgForException, e);
+        logger.warn(msgForException, e);
       }
     }
   }

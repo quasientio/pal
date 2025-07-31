@@ -64,10 +64,11 @@ public final class Wrapper {
 
     if (logger.isTraceEnabled()) {
       logger.trace(
-          "in getWrappedObjectAux with object: {}, class: {}, objectRef: {}",
+          "in getWrappedObjectAux with object: {}, class: {}, objectRef: {}, wrapPolicy: {}",
           object,
           givenClassName,
-          objectRef);
+          objectRef,
+          wrapPolicy);
     }
     // set isNull
     boolean isNull = (object == null && objectRef == null);
@@ -101,6 +102,7 @@ public final class Wrapper {
     boolean isSimpleTypeArray = isSimpleTypeArray(object);
 
     if (logger.isDebugEnabled()) {
+      logger.debug("wrapValue = {}", wrapValue);
       logger.debug("isSimpleType = {}", isSimpleType);
       logger.debug("isSimpleTypeArray = {}", isSimpleTypeArray);
     }

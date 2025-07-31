@@ -30,9 +30,9 @@ import org.zeromq.ZMQException;
 /**
  * Service responsible for publishing outbound messages.
  *
- * <p>If KafkaWalWriter writes WAL messages to Log, this services parallels that behavior, forwarding
- * such outbound messages through a tcp PUB socket instead. The service stops when interrupted or
- * upon encountering critical socket errors.
+ * <p>If KafkaWalWriter writes WAL messages to Log, this services parallels that behavior,
+ * forwarding such outbound messages through a tcp PUB socket instead. The service stops when
+ * interrupted or upon encountering critical socket errors.
  */
 @Singleton
 public class MessagePublisher extends ConnectedService {
