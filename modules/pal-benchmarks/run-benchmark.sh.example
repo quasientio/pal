@@ -45,15 +45,22 @@ IO_PROFILE=CPU_ONLY
 # -p ioProfile=REAL
 
 
+#-------- Input Mode & Message type distribution ---------
+
+# tunable payload mix: micro,small,medium,large (sum should == 100)
+SIZE_DIST_PCT=40:35:20:5
+
+# input generator mode: ASYNC | PRELOADED
+INPUT_MODE=ASYNC
+
 #-------- Baseline and burst mode parameters ---------
 BASE_QPS=50
 BURST_QPS=500
-BASE_SEC=45
-BURST_SEC=15
+BASE_SEC=4.5
+BURST_SEC=1.5
 
 # EXAMPLE: “burst 5 % of every 5-minute window”, ie. 4 min 45 s baseline, 15 s burst
 # -p baseSec=285 -p burstSec=15
-
 
 #-------- Shared MPSC Queue params ---------
 # One of: FIXED,CHUNKED,GROWABLE,UNBOUNDED
@@ -65,6 +72,7 @@ PUB_QUEUE_CHUNK=$((8 * 1024))
 
 
 #-------- Publisher params ---------
+PUB_ENDPOINT=tcp://127.0.0.1:7899
 PUB_SPSC_SIZE=$((1 << 19))
 PUB_BATCH_SIZE=$((4 * 1024))
 PUB_SNDHWM=10000
@@ -86,6 +94,7 @@ java  -Dpeer.logging="$PAL_HOME/config/peer-logging.xml" \
       -Dpub.queue.initial="$PUB_QUEUE_INITIAL" \
       -Dpub.queue.max="$PUB_QUEUE_MAX" \
       -Dpub.queue.chunk="$PUB_QUEUE_CHUNK" \
+      -Dpub.endpoint="$PUB_ENDPOINT" \
       -Dpub.spsc_size="$PUB_SPSC_SIZE" \
       -Dpub.batch_size="$PUB_BATCH_SIZE" \
       -Dpub.flush_on_close="$PUB_FLUSH_ON_CLOSE" \
@@ -103,6 +112,8 @@ java  -Dpeer.logging="$PAL_HOME/config/peer-logging.xml" \
       DispatchBenchmark \
       -p variant="$VARIANT" \
       -p ioProfile="$IO_PROFILE" \
+      -p inputMode="$INPUT_MODE" \
+      -p sizeDistPct="$SIZE_DIST_PCT" \
       -p pubQueueType="$PUB_QUEUE_TYPE" \
       -p baseQps="$BASE_QPS" -p burstQps="$BURST_QPS"  \
       -p baseSec="$BASE_SEC" -p burstSec="$BURST_SEC"  \

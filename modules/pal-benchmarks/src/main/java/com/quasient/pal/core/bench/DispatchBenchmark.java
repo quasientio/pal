@@ -26,6 +26,7 @@ import com.quasient.pal.common.lang.reflect.MethodSignature;
 import com.quasient.pal.common.lang.reflect.Params;
 import com.quasient.pal.common.runtime.Context;
 import com.quasient.pal.common.runtime.DispatchForwarder;
+import com.quasient.pal.core.bench.io.InputMode;
 import com.quasient.pal.core.execution.java.CustomClassloader;
 import com.quasient.pal.core.intercept.InterceptMatcher;
 import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
@@ -35,7 +36,6 @@ import com.quasient.pal.core.service.Main;
 import com.quasient.pal.core.service.PeerWiring;
 import com.quasient.pal.core.service.RunOptions;
 import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
-import com.quasient.pal.core.transport.gateway.OutboundMessageGatewayStats;
 import com.quasient.pal.core.transport.gateway.MessageQueueStats;
 import com.quasient.pal.core.transport.gateway.ThreadWaitSnapshot;
 import com.quasient.pal.core.transport.kafka.KafkaWalWriter;
@@ -50,6 +50,7 @@ import com.quasient.pal.serdes.colfer.MessageBuilder;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.openjdk.jmh.annotations.*;
+import org.openjdk.jmh.infra.BenchmarkParams;
 import org.openjdk.jmh.infra.Blackhole;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,7 +62,6 @@ import org.zeromq.ZMQ.Socket;
 import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.lang.reflect.Parameter;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -69,6 +69,7 @@ import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.DoubleStream;
 
 /**
  *
@@ -107,9 +108,9 @@ import java.util.concurrent.atomic.AtomicLong;
  * Use the <b>run.sh</b> script to configure and launch this benchmark.
  */
 
-@Fork(value = 3, jvmArgsAppend = { "-Xms2g", "-Xmx2g" })
-@Warmup(iterations = 6,   time = 2, timeUnit = TimeUnit.SECONDS)
-@Measurement(iterations = 10, time = 2, timeUnit = TimeUnit.SECONDS)
+@Fork(value = 1, jvmArgsAppend = { "-Xms2g", "-Xmx2g" })
+@Warmup(iterations = 6,   time = 5, timeUnit = TimeUnit.SECONDS)
+@Measurement(iterations = 10, time = 5, timeUnit = TimeUnit.SECONDS)
 @BenchmarkMode(Mode.Throughput)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @Timeout(time = 10, timeUnit = TimeUnit.MINUTES)
@@ -207,6 +208,14 @@ public class DispatchBenchmark {
   @Param({"NOOP", "INTERCEPTS", "PUB", "WAL", "PUB_WAL", "INTERCEPTS_PUB", "INTERCEPTS_WAL", "INTERCEPTS_PUB_WAL"})
   public FeatureSetVariant variant;
 
+  /** Four comma‑separated percentages that must add up to 100, e.g. "40,35,20,5". */
+  @Param({"40:35:20:5"})
+  public String sizeDistPct;
+
+  /** Selects which {@link com.quasient.pal.core.bench.io.DispatchArgsSource} to use. */
+  @Param({"ASYNC", "PRELOADED"})
+  public InputMode inputMode;
+
   /** Pub Queue type: FIXED, CHUNKED, GROWABLE, UNBOUNDED */
   @Param({"FIXED", "CHUNKED", "GROWABLE", "UNBOUNDED"})
   public MpscKind pubQueueType;
@@ -248,20 +257,20 @@ public class DispatchBenchmark {
 
   // ----------------------- Other required vars --------------------
 
+  /** number of worker threads in this fork */
+  int jmhThreads;
+
+  /** parsed values from {@link #sizeDistPct} for [micro, small, medium, large] */
+  private int[] sizeDist;
+
   /** Handle to the Guice's Injector. */
   private Injector injector;
 
   /** Handle to the MessagePublisher PUB socket. */
   private Socket pubSocket;
 
-  /** Pool of pre-built messages to use during the bench. */
-  private final List<DispatchArgs>      dispatchables = new ArrayList<>();
-
   /** Counts how many times the benchmark method is called. */
   private AtomicLong callsMade;
-
-  /** Counter to index the prepared call pool. */
-  private int                    next;
 
   /** Dummy subscriber socket to attach when using PUB. */
   private Socket dummySubSocket;
@@ -275,18 +284,26 @@ public class DispatchBenchmark {
   /** Flag to let the dummy thread know it's done. */
   private volatile boolean stopDummy;
 
+  /** Sequence of chars to create random chunks of text. */
+  private static final char[] ALPHA = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ".toCharArray();
 
   /**
    * Set up the benchmark run.
    */
   @Setup(Level.Trial)
-  public void setUp() throws IllegalAccessException, InterruptedException, NoSuchMethodException {
-
-    // reset counter to 0
-    callsMade = new AtomicLong();
+  public void setUp(BenchmarkParams bmParams) throws IllegalAccessException, InterruptedException {
 
     // initialize logging
     initLogging();
+    logger.debug("In setUp");
+
+    // parse size distribution param
+    parseSizeDist();
+
+    this.jmhThreads = bmParams.getThreads();
+
+    // reset counter to 0
+    callsMade = new AtomicLong();
 
     // load and set the running properties
     setWiringProperties();
@@ -337,6 +354,7 @@ public class DispatchBenchmark {
     final Set<Service> services = new HashSet<>();
     services.add(injector.getInstance(InterceptMatcher.class));
     services.add(injector.getInstance(SessionService.class));
+
     if (runOpts.contains(RunOptions.WITH_TCP_PUB)) {
       messagePublisher = injector.getInstance(MessagePublisher.class);
       services.add(messagePublisher);
@@ -368,8 +386,28 @@ public class DispatchBenchmark {
     pubQueue = injector.getInstance(Key.get(new TypeLiteral<>() {}, Names.named("pub_queue")));
     messagePublisherConfig = injector.getInstance(MessagePublisherConfig.class);
 
-    // Finally - prepare a pool of messages/invocations we’ll reuse
-    createDispatchables();
+    logger.debug("setUp completed");
+  }
+
+  /**
+   * Parse {@link #sizeDistPct} into {@link #sizeDist}
+   *
+   * @throws IllegalArgumentException if missing values or sum does not equal 100
+   */
+  private void parseSizeDist() {
+    String[] parts = sizeDistPct.split("\\s*:\\s*");
+    if (parts.length != 4) {
+      throw new IllegalArgumentException("sizeDistPct must have 4 numbers");
+    }
+    sizeDist = new int[4];
+    int sum = 0;
+    for (int i = 0; i < 4; i++) {
+      sizeDist[i] = Integer.parseInt(parts[i]);
+      sum += sizeDist[i];
+    }
+    if (sum != 100) {
+      throw new IllegalArgumentException("sizeDistPct values must add up to 100 (was " + sum + ')');
+    }
   }
 
   /**
@@ -507,17 +545,68 @@ public class DispatchBenchmark {
     Thread.sleep(200);  // give time for the handshake once publisher starts
   }
 
-  /**
-   * Creates a list of DispatchArgs, used to call the dispatcher.
-   *
-   * @throws NoSuchMethodException if a method name used is not found in the expected class
-   */
-  private void createDispatchables() throws NoSuchMethodException {
 
-    // simplest - create a (static) call: System.currentTimeMillis()
-    Class<?> clzToInvoke = System.class;
-    String methodName = "currentTimeMillis";
-    Method method = System.class.getDeclaredMethod(methodName);
+  /**
+   *  Creates a random chunk of text of length between {@code minBytes} and {@code maxBytes}.
+   *
+   * @param minBytes minimum size in bytes
+   * @param maxBytes maximum size in bytes
+   * @param rnd random generator instance
+   * @param prefix some text to prepend to the generated chunk
+   * @return a random chunk of text with len > {@code minBytes} and < {@code maxBytes}
+   */
+  private static String randomText(int minBytes, int maxBytes, Random rnd, String prefix) {
+    int len = rnd.nextInt(maxBytes - minBytes + 1) + minBytes + prefix.length();
+    StringBuilder sb = new StringBuilder(len);
+    sb.append(prefix);
+    for (int i = 0; i < len; i++) {
+      sb.append(ALPHA[rnd.nextInt(ALPHA.length)]);
+    }
+    return sb.toString();
+  }
+
+  /**
+   * Using {@link #randomText}, creates a dispatchable that invokes {@link String#toUpperCase}
+   * on a new String with size > {@code minBytes} and < {@code maxBytes}
+   *
+   * @param minBytes lower bound for String object's length in chars
+   * @param maxBytes upper bound for String object's length in chars
+   * @param rnd a random generator
+   * @param prefix a String that will be prefixed to the generated payload, so we can identify
+   *               the messages in the logs
+   * @return the dispatch args
+   * @throws NoSuchMethodException if declared method not found
+   */
+  private DispatchArgs createTextDispatchable(int minBytes, int maxBytes, Random rnd, String prefix)
+          throws NoSuchMethodException {
+
+    String payload = randomText(minBytes, maxBytes, rnd, prefix);
+
+    Method method = String.class.getDeclaredMethod("toUpperCase");
+    Context ctx = new Context(
+            "DummyClassForContext.java", 0, DummyClassForContext.class,
+            new MethodSignature(String.class, String.class.getName(),
+                    Modifier.PUBLIC, "toUpperCase",
+                    new Class[]{}, new Params(null, method.getParameterTypes(), method.getParameters()),
+                    method, String.class));
+
+    return new DispatchArgs(ctx, this, payload, new Object[]{});
+  }
+
+  /**
+   * call {@link Arrays#stream(double[])} with an array of {@code size} random doubles
+   *
+   * @param size number of doubles in the array
+   * @param rnd random generator
+   * @return DispatchArgs instance
+   * @throws NoSuchMethodException if the method to be invoked is not found
+   */
+   private DispatchArgs createArrayDispatchable(int size, Random rnd) throws NoSuchMethodException {
+     double[] doubles = rnd.doubles(size).toArray();
+
+    Class<?> clzToInvoke = Arrays.class;
+    String methodName = "stream";
+    Method method = clzToInvoke.getDeclaredMethod(methodName, double[].class);
     Context ctx = new Context(
             "MyClass.java",
             34,
@@ -528,14 +617,45 @@ public class DispatchBenchmark {
                     Modifier.PUBLIC | Modifier.STATIC,
                     methodName,
                     new Class[]{},
-                    new Params(null, new Class[]{}, new Parameter[]{}),
+                    new Params(null, method.getParameterTypes(), method.getParameters()),
                     method,
-                    Long.TYPE)
-            );
-    Object sender = this;
-    Object target = null;
-    Object[] args = new Object[]{};
-    dispatchables.add(new DispatchArgs(ctx, sender, target, args));
+                    DoubleStream.class)
+    );
+
+    return new DispatchArgs(ctx, this, null, new Object[]{doubles});
+  }
+
+  /**
+   * Produces one {@link DispatchArgs} whose size category is chosen
+   * according to {@link #sizeDist}.
+   * <p>
+   * Four categories of variable size are used:
+   * <ol>
+   *   <li>micro: 0–256B</li>
+   *   <li>small: 257B–4KB</li>
+   *   <li>medium: 4KB-32KB</li>
+   *   <li>large: >32KB-64KB</li>
+   * </ol>
+   */
+  public DispatchArgs randomArgsAccordingToDist(Random rnd) throws NoSuchMethodException {
+    int p = rnd.nextInt(100);
+    int[] w = sizeDist;   // local alias
+    if (p < w[0]) {
+      return createTextDispatchable(   1,   256, rnd, "micro=");
+    }
+    else if (p < w[0] + w[1]) {
+      return createTextDispatchable( 257,  4096, rnd, "small=");
+    }
+    else if (p < w[0] + w[1] + w[2]) {
+      int size = 200 + rnd.nextInt(1401); return createArrayDispatchable(size, rnd);
+    } else {
+      return createTextDispatchable(32_769, 65_536, rnd, "large=");
+    }
+  }
+
+  /** Expose sizeDist */
+  public int[] sizeDistribution() {
+     return sizeDist;
   }
 
   /**
@@ -548,7 +668,7 @@ public class DispatchBenchmark {
      * Let the publisher flush everything it still has
      * ------------------------------------------------- */
 
-    // wait until the app’s own queue is empty
+    // wait until the PUB queue is empty
     while (!pubQueue.isEmpty()) {
       Thread.onSpinWait();
     }
@@ -714,6 +834,7 @@ public class DispatchBenchmark {
    * baseline and burst modes.
    *
    * @param plan the open-loop plan
+   * @param ts thread state instance - producer of dispatch args
    * @param bh the Blackhole instance that consumes values to prevent JIT optimizations.
    */
   @SuppressWarnings("unused")
@@ -721,7 +842,7 @@ public class DispatchBenchmark {
   @BenchmarkMode(Mode.SampleTime)                 // per-request latency
   @OutputTimeUnit(TimeUnit.NANOSECONDS)
   @Threads(Threads.MAX)
-  public void hotPathBurst(BurstPlan plan, Blackhole bh) {
+  public void hotPathBurst(BurstPlan plan, InputThreadState ts, Blackhole bh) {
 
     long now = System.nanoTime();
     plan.maybeFlipPhase(now);
@@ -729,14 +850,17 @@ public class DispatchBenchmark {
     // only run the hot path when the next synthetic request is due
     if (now >= plan.nextArrivalAt) {
 
-      DispatchArgs dispatchArgs = plan.takeDispatchable(next++);
+      DispatchArgs d;
+      while ((d = ts.take()) == null) {
+        // only Async mode may return null --> spin until producer refills
+        Thread.onSpinWait();
+      }
+
       Object returnVal;
       try {
-        returnVal = DispatchForwarder.nonVoidClassMethod(
-                dispatchArgs.ctx,
-                dispatchArgs.sender,
-                dispatchArgs.target,
-                dispatchArgs.args);
+        returnVal = (d.target() == null)
+                ? DispatchForwarder.nonVoidClassMethod(d.ctx(), d.sender(), null, d.args())
+                : DispatchForwarder.nonVoidInstanceMethod(d.ctx(), d.sender(), d.target(), d.args());
       } catch (Throwable t) {
         logger.error("Caught throwable in call to DispatchForwarder", t);
         // re-throw
@@ -744,11 +868,9 @@ public class DispatchBenchmark {
       }
       bh.consume(returnVal);
       callsMade.incrementAndGet();
-
       plan.nextArrivalAt = now + plan.pickIntervalNs();
     }
   }
-
 
   // ----------------------- Initialization helpers -----------------------
 
@@ -835,37 +957,6 @@ public class DispatchBenchmark {
     syncSocket.bind(props.getProperty("sync.ready"));
   }
 
-  /** Short string argument for messages. */
-  private final String shortLorem = """
-    Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-    Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-    Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
-    Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-    """;
-
-  /** Long string argument for messages. */
-  private final String longLorem = """
-    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet,
-    adipiscing nec, ultricies sed, dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper congue,
-    euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est eleifend mi, non fermentum diam nisl sit amet erat.
-    Duis semper. Duis arcu massa, scelerisque vitae, consequat in, pretium a, enim. Pellentesque congue. Ut in risus volutpat
-    libero pharetra tempor. Cras vestibulum bibendum augue. Praesent egestas leo in pede. Praesent blandit odio eu enim.
-    Pellentesque sed dui ut augue blandit sodales. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere
-    cubilia Curae; Aliquam nibh. Mauris ac mauris sed pede pellentesque fermentum. Maecenas adipiscing ante non diam sodales hendrerit.
-
-    Ut velit mauris, egestas sed, gravida nec, ornare ut, mi. Aenean ut orci vel massa suscipit pulvinar. Nulla sollicitudin.
-    Fusce varius, ligula non tempus aliquam, nunc turpis ullamcorper nibh, in tempus sapien eros vitae ligula. Pellentesque
-    rhoncus nunc et augue. Integer id felis. Curabitur aliquet pellentesque diam. Integer quis metus vitae elit lobortis egestas.
-    Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Morbi vel erat non mauris convallis vehicula. Nulla et sapien.
-    Integer tortor tellus, aliquam faucibus, convallis id, congue eu, quam. Mauris ullamcorper felis vitae erat. Proin feugiat,
-    augue non elementum posuere, metus purus iaculis lectus, et tristique ligula justo vitae magna.
-
-    Aliquam convallis sollicitudin purus. Praesent aliquam, enim at fermentum mollis, ligula massa adipiscing nisl, ac euismod
-    nibh nisl eu lectus. Fusce vulputate sem at sapien. Vivamus leo. Aliquam euismod libero eu enim. Nulla nec felis sed leo
-    placerat imperdiet. Aenean suscipit nulla in justo. Suspendisse cursus rutrum augue. Nulla tincidunt tincidunt mi.
-    Curabitur iaculis, lorem vel rhoncus faucibus, felis magna fermentum augue, et ultricies lacus lorem varius purus.
-    """;
-
   /** Schedules “open-loop” arrivals:  ↙ baseline  ↔ burst ↘ baseline … */
   @State(Scope.Benchmark)
   public static class BurstPlan {
@@ -893,9 +984,6 @@ public class DispatchBenchmark {
     /** handle to injected instance of {@link MessageBuilder} */
     MessageBuilder builder;
 
-    /** handle to pool of pre-created dispatchables */
-    List<DispatchArgs>  dispatchArgs;
-
     /* --- per-benchmark state --- */
 
     /** flag to flip between baseline and burst phase */
@@ -920,8 +1008,6 @@ public class DispatchBenchmark {
     public void init(DispatchBenchmark bench) {
       // re-use the message pool already built by the outer benchmark
       this.builder  = bench.injector.getInstance(MessageBuilder.class);
-      this.dispatchArgs  = bench.dispatchables;
-
       rnd           = new Random(rndSeed);
       inBurst       = false;
       long now      = System.nanoTime();
@@ -944,23 +1030,6 @@ public class DispatchBenchmark {
         phaseEndsAt = now + durNs;
       }
     }
-
-    /** Pick the next pre-fabricated dispatchable (cheap modulo). */
-    DispatchArgs takeDispatchable(int idx) {
-      return dispatchArgs.get(0);
-//      return dispatchArgs.get(idx & 1023);
-    }
-  }
-
-  /**
-   * Encapsulates the arguments for calls to {@link DispatchForwarder}
-   *
-   * @param ctx the execution context
-   * @param sender the object initiating the call
-   * @param target the target class on which the static method is invoked
-   * @param args the arguments for the method
-   */
-  public record DispatchArgs(Context ctx, Object sender, Object target, Object[] args) {
   }
 }
 
