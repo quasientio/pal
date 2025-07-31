@@ -22,6 +22,11 @@ import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import com.quasient.pal.core.internal.concurrent.MpscKind;
 import com.quasient.pal.core.runtime.objects.ConcurrentHashMapObjectLookupStore;
 import com.quasient.pal.core.runtime.objects.ObjectLookupStore;
+import com.quasient.pal.core.transport.WalType;
+import com.quasient.pal.core.transport.WalWriter;
+import com.quasient.pal.core.transport.chronicle.ChronicleQueueFactory;
+import com.quasient.pal.core.transport.chronicle.ChronicleWalWriter;
+import com.quasient.pal.core.transport.chronicle.DefaultChronicleQueueFactory;
 import com.quasient.pal.core.transport.kafka.KafkaWalWriter;
 import com.quasient.pal.core.transport.kafka.ProducerFactory;
 import com.quasient.pal.core.transport.zmq.publish.MessagePublisher;
@@ -30,6 +35,8 @@ import com.quasient.pal.core.transport.zmq.publish.PublishingDropPolicy;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.messages.OutboundMsg;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -159,6 +166,20 @@ public class PeerWiring extends AbstractModule {
     // bind implementations
     bind(ProxyDispatcher.class).to(AspectProxyDispatcher.class);
 
+    if (runOptions.contains(RunOptions.WITH_WAL)) {
+      WalType walType =
+          WalType.valueOf(properties.getProperty("wal.type").toUpperCase(Locale.ENGLISH));
+      switch (walType) {
+        case KAFKA -> bind(WalWriter.class).to(KafkaWalWriter.class);
+        case CHRONICLE -> {
+          bind(WalWriter.class).to(ChronicleWalWriter.class);
+          bind(ChronicleQueueFactory.class)
+              .to(DefaultChronicleQueueFactory.class)
+              .asEagerSingleton();
+        }
+      }
+    }
+
     // common and cxn library classes are not annotated with @Singleton
     bind(ObjectLookupStore.class).to(ConcurrentHashMapObjectLookupStore.class).asEagerSingleton();
     bind(MessageBuilder.class).asEagerSingleton();
@@ -191,6 +212,22 @@ public class PeerWiring extends AbstractModule {
   @Singleton
   ProducerFactory getProducerFactory() {
     return KafkaProducer::new;
+  }
+
+  /**
+   * Provides a {@link Path} to the base directory for Chronicle queue files.
+   *
+   * @return base dir path for Chronicle queues
+   */
+  @SuppressWarnings("unused")
+  @Provides
+  @Named("chronicleBaseDir")
+  Path provideChronicleBaseDir() {
+    String pathStr = properties.getProperty("wal.chronicle.base_dir");
+    if (pathStr == null) {
+      throw new IllegalStateException("Missing property: wal.chronicle.base_dir");
+    }
+    return Paths.get(pathStr);
   }
 
   /**
