@@ -321,6 +321,7 @@
                         <yaml>SCRIPT_STYLE</yaml>
                         <xml>XML_STYLE</xml>
                         <xml.example>XML_STYLE</xml.example>
+                        <sh.example>SCRIPT_STYLE</sh.example>
                     </mapping>
 
                     <properties>
