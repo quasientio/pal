@@ -73,6 +73,13 @@ PUB_DROP_POLICY=NONE
 PUB_DROP_HWM=97
 PUB_DROP_KEEP=92
 
+#-------- WAL params ---------
+WAL_TYPE=kafka
+WAL_KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+WAL_KAFKA_LINGER_MS=25
+WAL_KAFKA_BATCH_SIZE=128000
+WAL_KAFKA_COMPRESSION_TYPE=zstd
+WAL_KAFKA_BUFFER_MEMORY=128000000
 
 # full hot path
 java  -Dpeer.logging="$PAL_HOME/config/peer-logging.xml" \
@@ -86,8 +93,14 @@ java  -Dpeer.logging="$PAL_HOME/config/peer-logging.xml" \
       -Dpub.drop.hwm_pct="$PUB_DROP_HWM" \
       -Dpub.drop.keep_pct="$PUB_DROP_KEEP" \
       -Dpub.zmq.send_hwm="$PUB_SNDHWM" \
+      -Dwal.type="$WAL_TYPE" \
+      -Dwal.kafka.bootstrap_servers="$WAL_KAFKA_BOOTSTRAP_SERVERS" \
+      -Dwal.kafka.linger_ms="$WAL_KAFKA_LINGER_MS" \
+      -Dwal.kafka.batch_size="$WAL_KAFKA_BATCH_SIZE" \
+      -Dwal.kafka.compression_type="$WAL_KAFKA_COMPRESSION_TYPE" \
+      -Dwal.kafka.buffer_memory="$WAL_KAFKA_BUFFER_MEMORY" \
       -jar target/pal-benchmarks-1.0.0-SNAPSHOT.jar \
-      SendExecMessageUsingMPSCBenchmark \
+      DispatchBenchmark \
       -p variant="$VARIANT" \
       -p ioProfile="$IO_PROFILE" \
       -p pubQueueType="$PUB_QUEUE_TYPE" \

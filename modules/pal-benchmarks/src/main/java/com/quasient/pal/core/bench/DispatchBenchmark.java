@@ -36,6 +36,8 @@ import com.quasient.pal.core.service.PeerWiring;
 import com.quasient.pal.core.service.RunOptions;
 import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import com.quasient.pal.core.transport.gateway.OutboundMessageGatewayStats;
+import com.quasient.pal.core.transport.gateway.MessageQueueStats;
+import com.quasient.pal.core.transport.gateway.ThreadWaitSnapshot;
 import com.quasient.pal.core.transport.kafka.KafkaWalWriter;
 import com.quasient.pal.core.transport.WalWriterStats;
 import com.quasient.pal.core.transport.zmq.publish.MessagePublisher;
@@ -97,7 +99,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * If the chosen variant includes WAL, and 'ioProfile == REAL',
  * then a Kafka instance must be running. You may use the shipped
  * script that runs Kafka on docker, or the script that launches
- * a locall installed Kafka.
+ * a locally installed Kafka.
  * <pre>
  * >> start_kafka_docker.sh  # or start_kafka
  *</pre>
@@ -229,6 +231,9 @@ public class DispatchBenchmark {
   /** Handle to the injected MessagePublisher. */
   private MessagePublisher messagePublisher;
 
+  /** Handle to the injected OutboundMessageGateway. */
+  private OutboundMessageGateway messageGateway;
+
   /** MPSC queue for WAL .*/
   private HwmMessageQueue<OutboundMsg> walQueue;
 
@@ -346,6 +351,9 @@ public class DispatchBenchmark {
     }
     serviceManager = new ServiceManager(services);
 
+    // get handle to message gateway singleton
+    messageGateway = injector.getInstance(OutboundMessageGateway.class);
+
     // start all services
     serviceManager.startAsync();
 
@@ -379,11 +387,17 @@ public class DispatchBenchmark {
     props.setProperty("session.svc", "inproc://session");  // used by SessionService
     props.setProperty("intercepts.reg", "inproc://intercept_reg");  // used by InterceptMatcher
 
+    // WAL Writer
+    props.setProperty("wal.type", "kafka");
+
     // KafkaWalWriter params
     props.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
-            System.getProperty("wal.bootstrap_servers", DEF_KAFKA_BOOTSTRAP_SERVERS));
-    props.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,   "com.quasient.pal.serdes.kafka.KafkaKeySerializer");
-    props.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "com.quasient.pal.serdes.kafka.KafkaMessageSerializer");
+            System.getProperty("wal.kafka.bootstrap_servers", DEF_KAFKA_BOOTSTRAP_SERVERS));
+
+    props.setProperty("wal.kafka.linger_ms", System.getProperty("wal.kafka.linger_ms", null));
+    props.setProperty("wal.kafka.batch_size", System.getProperty("wal.kafka.batch_size", null));
+    props.setProperty("wal.kafka.compression_type", System.getProperty("wal.kafka.compression_type", null));
+    props.setProperty("wal.kafka.buffer_memory", System.getProperty("wal.kafka.buffer_memory", null));
 
     // WAL queue params
     props.setProperty("wal.queue.type",
@@ -538,6 +552,7 @@ public class DispatchBenchmark {
     while (!pubQueue.isEmpty()) {
       Thread.onSpinWait();
     }
+    logger.debug("PUB queue empty");
 
     if (runOpts.contains(RunOptions.WITH_TCP_PUB)) {
       // wait until the PUB socket itself reports “ready for output”
@@ -545,6 +560,7 @@ public class DispatchBenchmark {
       while (!pubFlushed(pubSocket)) {
         Thread.onSpinWait();
       }
+      logger.debug("PUB socket flushed");
 
       // stop the dummy subscriber *first* so it cannot race with ctx.close()
       if (WITH_DUMMY_SUB && dummySubThread != null) {
@@ -552,15 +568,20 @@ public class DispatchBenchmark {
         dummySubThread.interrupt();    // break a blocking recv()
         dummySubSocket.close();
         dummySubThread.join();
+        logger.debug("Dummy SUB thread finished");
       }
     }
 
     // now it is safe to shut everything else down
+
+    logger.debug("Stopping services...");
     if (serviceManager != null) {
       serviceManager.stopAsync().awaitStopped();
     }
+    logger.debug("All services stopped");
 
     zmqCtx.close();
+    logger.debug("ZMQ ctx closed");
 
     /* -------------------------------------------------
      * Print the parameters / config, to keep track
@@ -583,7 +604,9 @@ public class DispatchBenchmark {
     if (runOpts.contains(RunOptions.WITH_TCP_PUB)) {
       MessagePublisherStats publisherStats = messagePublisher.getEndStats();
 
-      System.out.println("----- Publisher counters -----");
+      System.out.println("-----------------------------");
+      System.out.println("-----  Publisher stats  -----");
+      System.out.println("-----------------------------");
       System.out.printf("received  : %,d%n", publisherStats.messagesReceived());
       System.out.printf("published : %,d%n", publisherStats.messagesPublished());
       System.out.printf("dropped new (SPSC)      : %,d%n", publisherStats.messagesDroppedUnforwarded());
@@ -591,48 +614,84 @@ public class DispatchBenchmark {
       System.out.printf("dropped(send fail) : %,d%n", publisherStats.messagesDroppedPubFail());
       System.out.printf("dropped(socket err): %,d%n", publisherStats.messagesDroppedSocketErr());
       System.out.printf("left in SPSC       : %,d%n", publisherStats.messagesInSpsc());
-      System.out.println("------------------------------");
+      System.out.println();
     }
 
     if (runOpts.contains(RunOptions.WITH_WAL)) {
       KafkaWalWriter walWriter = injector.getInstance(KafkaWalWriter.class);
       WalWriterStats walWriterStats = walWriter.getLiveStats();
 
-      System.out.println("----- WAL counters -----");
-      System.out.printf("received : %,d%n", walWriterStats.messagesReceived());
-      System.out.printf("written  : %,d%n", walWriterStats.messagesWritten());
-      System.out.printf("error    : %,d%n", walWriterStats.messagesDroppedError());
-      System.out.println("------------------------------");
+      System.out.println("-----------------------------");
+      System.out.println("-----  WALWriter stats  -----");
+      System.out.println("-----------------------------");
+      System.out.printf("received  : %,d%n", walWriterStats.messagesReceived());
+      System.out.printf("written   : %,d%n", walWriterStats.messagesWritten());
+      System.out.printf("in-flight : %,d%n", walWriterStats.messagesInFlight());
+      System.out.printf("error     : %,d%n", walWriterStats.messagesDroppedError());
+      System.out.println();
     }
 
-    System.out.println();
-    System.out.println("------ Benchmark Stats -------");
+    System.out.println("-----------------------------");
+    System.out.println("-----  Benchmark stats  -----");
+    System.out.println("-----------------------------");
     System.out.printf("hotPath() called %d times%n", callsMade.get());
-    if (runOpts.contains(RunOptions.WITH_TCP_PUB)) {
-      if (WITH_DUMMY_SUB) {
-        System.out.printf("Dummy subscriber received %d messages%n", dummyRcvs);
-      }
-      System.out.printf("Peak PUB queue depth (i.e. HWM): %,d%n", pubQueue.highWaterMark());
+    if (runOpts.contains(RunOptions.WITH_TCP_PUB) && WITH_DUMMY_SUB) {
+      System.out.printf("Dummy subscriber received %d messages%n", dummyRcvs);
     }
-    if (runOpts.contains(RunOptions.WITH_WAL)) {
-      System.out.printf("Peak WAL queue depth (i.e. HWM): %,d%n", walQueue.highWaterMark());
-    }
-    System.out.println("------------------------------");
-
     System.out.println();
-    System.out.println("--- MessageGateway stats ---");
-    OutboundMessageGatewayStats gatewayStats  = OutboundMessageGateway.getStats();
+
     if (runOpts.contains(RunOptions.WITH_TCP_PUB)) {
-      System.out.printf("Dropped %d messages due to PUB queue congestion%n", gatewayStats.messagesDroppedPub());
+      System.out.println("-----------------------------");
+      System.out.println("-----  PUB queue stats  -----");
+      System.out.println("-----------------------------");
+      System.out.printf("Peak PUB queue depth (i.e. HWM): %,d%n", pubQueue.highWaterMark());
+      MessageQueueStats s = messageGateway.getPubQueueStats();
+      long parkedUs = TimeUnit.NANOSECONDS.toMicros(s.totalParkedNanos());
+
+      System.out.printf("PUB: dropped=%d parks=%d parked=%dµs failedOffers=%d%n",
+              s.messagesDropped(), s.totalParks(), parkedUs, s.totalFailedOffers());
+      System.out.println();
+
+      for (ThreadWaitSnapshot tws : s.perThread()) {
+        System.out.printf("  T[%d:%s] parks=%d parked=%dµs failedOffers=%d%n",
+                tws.threadId(), tws.threadName(),
+                tws.parks(),
+                TimeUnit.NANOSECONDS.toMicros(tws.parkedNanos()),
+                tws.failedOffers());
+      }
+      System.out.println();
     }
-    System.out.println("----------------------------");
+
+    if (runOpts.contains(RunOptions.WITH_WAL)) {
+      System.out.println("-----------------------------");
+      System.out.println("-----  WAL queue stats  -----");
+      System.out.println("-----------------------------");
+      System.out.printf("Peak WAL queue depth (i.e. HWM): %,d%n", walQueue.highWaterMark());
+      MessageQueueStats s = messageGateway.getWalQueueStats();
+      long parkedUs = TimeUnit.NANOSECONDS.toMicros(s.totalParkedNanos());
+
+      System.out.printf("WAL: dropped=%d parks=%d parked=%dµs failedOffers=%d%n",
+              s.messagesDropped(), s.totalParks(), parkedUs, s.totalFailedOffers());
+      System.out.println();
+
+      for (ThreadWaitSnapshot tws : s.perThread()) {
+        System.out.printf("  T[%d:%s] parks=%d parked=%dµs failedOffers=%d%n",
+                tws.threadId(), tws.threadName(),
+                tws.parks(),
+                TimeUnit.NANOSECONDS.toMicros(tws.parkedNanos()),
+                tws.failedOffers());
+      }
+      System.out.println();
+    }
 
     /* -------------------------------------------------
      * House-keeping
      * ------------------------------------------------- */
     walQueue.clear();
     pubQueue.clear();
+    logger.debug("Queues cleared");
     customClassloader.shutdown();
+    logger.debug("Custom classloader shut down");
   }
 
   /**
