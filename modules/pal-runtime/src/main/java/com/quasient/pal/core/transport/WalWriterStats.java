@@ -15,6 +15,10 @@ package com.quasient.pal.core.transport;
  * @param messagesReceived number of messages received from the {@code walQueue}
  * @param messagesWritten number of messages published since the socket first failed
  * @param messagesDroppedError number of new messages not written due an error
+ * @param messagesInFlight number of new messages currently in-flight (sent/written but no ack)
  */
 public record WalWriterStats(
-    long messagesReceived, long messagesWritten, long messagesDroppedError) {}
+    long messagesReceived,
+    long messagesWritten,
+    long messagesDroppedError,
+    long messagesInFlight) {}

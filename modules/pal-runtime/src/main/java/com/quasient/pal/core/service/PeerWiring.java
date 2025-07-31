@@ -136,7 +136,7 @@ public class PeerWiring extends AbstractModule {
   private void addServiceNamesToProps() {
     // use underscore in names to better filter service-related traces
     properties.setProperty("LogReader.service", "Log_Reader");
-    properties.setProperty("KafkaWalWriter.service", "Log_Writer");
+    properties.setProperty("WalWriter.service", "WAL_Writer");
     properties.setProperty("ZmqRpcServer.service", "RPC_Request_Dispatcher");
     properties.setProperty("JsonRpcRequestServer.service", "JSONRPC_Request_Dispatcher");
     properties.setProperty("MessagePublisher.service", "Message_Publisher");

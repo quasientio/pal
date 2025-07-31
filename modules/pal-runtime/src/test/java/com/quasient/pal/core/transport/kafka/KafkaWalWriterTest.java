@@ -28,7 +28,6 @@ import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import com.quasient.pal.core.internal.concurrent.MpscKind;
 import com.quasient.pal.messages.OutboundMsg;
 import com.quasient.pal.messages.colfer.ExecMessage;
-import com.quasient.pal.messages.colfer.InternalHeader;
 import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.messages.types.MessageType;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
@@ -62,15 +61,14 @@ public class KafkaWalWriterTest extends ZmqEnabledTest {
   private static final UUID PEER_ID = UUID.randomUUID();
   private static final LogInfo WAL_INFO = new LogInfo("test_app", "localhost:9092");
 
-  private static OutboundMsg wrap(
-      MessageType type, ExecPhase phase, List<InternalHeader> hdrs, Message body) {
+  private static OutboundMsg wrap(MessageType type, ExecPhase phase, Message body) {
     String msgId =
         body.getExecMessage() != null
             ? body.getExecMessage().getMessageId()
             : body.getInterceptMessage().getMessageId();
     String respId = body.getExecMessage() != null ? body.getExecMessage().getResponseToId() : null;
 
-    return new OutboundMsg(type, phase, hdrs, msgId, respId, body);
+    return new OutboundMsg(type, phase, null, msgId, respId, body);
   }
 
   private static String idOf(Message m) {
@@ -115,6 +113,10 @@ public class KafkaWalWriterTest extends ZmqEnabledTest {
             walQueue,
             walFailed,
             /* offset.pub */ "inproc://offsets",
+            null, // use default
+            null, // use default
+            null, // use default
+            null, // use default
             props -> mockProducer);
 
     kafkaWalWriter.writeToLog(WAL_INFO, /* publishOffsets */ false);
@@ -168,7 +170,6 @@ public class KafkaWalWriterTest extends ZmqEnabledTest {
                         ? MessageType.EXEC_CONSTRUCTOR
                         : MessageType.INTERCEPT_MESSAGE,
                     m.getExecMessage() != null ? ExecPhase.BEFORE : ExecPhase.UNDEFINED,
-                    null,
                     m)));
 
     Thread.sleep(100);
@@ -186,36 +187,6 @@ public class KafkaWalWriterTest extends ZmqEnabledTest {
     List<String> sent = bodies.stream().map(KafkaWalWriterTest::idOf).collect(Collectors.toList());
 
     assertThat(mockProducer.history().size(), is(execCnt + interceptCnt));
-    assertThat(produced, is(sent));
-  }
-
-  @Test
-  public void publishedMessagesWithHeader() throws Exception {
-    int cnt = 5;
-    List<Message> bodies = new ArrayList<>();
-    for (int i = 0; i < cnt; i++) {
-      bodies.add(builder.wrap(builder.buildEmptyConstructor(PEER_ID, "java.lang.String")));
-    }
-
-    List<InternalHeader> hdrs = Collections.singletonList(builder.buildWriteAheadHeader(PEER_ID));
-    bodies.forEach(
-        m -> walQueue.offer(wrap(MessageType.EXEC_CONSTRUCTOR, ExecPhase.BEFORE, hdrs, m)));
-
-    Thread.sleep(100);
-
-    List<String> produced =
-        mockProducer.history().stream()
-            .map(
-                rec -> {
-                  Message m = new Message();
-                  m.unmarshal(rec.value(), 0);
-                  return idOf(m);
-                })
-            .collect(Collectors.toList());
-
-    List<String> sent = bodies.stream().map(KafkaWalWriterTest::idOf).collect(Collectors.toList());
-
-    assertThat(mockProducer.history().size(), is(cnt));
     assertThat(produced, is(sent));
   }
 
@@ -269,6 +240,10 @@ public class KafkaWalWriterTest extends ZmqEnabledTest {
             methodLocalQueue,
             methodLocalWalFailed,
             "inproc://offsets",
+            null, // use default
+            null, // use default
+            null, // use default
+            null, // use default
             p -> new FailingProducer());
     failingKafkaWalWriter.writeToLog(WAL_INFO, false);
 

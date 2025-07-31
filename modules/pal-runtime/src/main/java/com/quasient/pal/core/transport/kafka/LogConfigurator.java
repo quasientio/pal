@@ -163,7 +163,8 @@ public class LogConfigurator {
   /**
    * Initiates writing to the specified Write-Ahead Log.
    *
-   * <p>Acquires a KafkaWalWriter instance via dependency injection and sets up the Log writing process.
+   * <p>Acquires a KafkaWalWriter instance via dependency injection and sets up the Log writing
+   * process.
    *
    * @param writeAheadLog the LogInfo instance representing the write-ahead log
    */

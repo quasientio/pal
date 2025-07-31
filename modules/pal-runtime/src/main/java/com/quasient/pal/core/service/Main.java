@@ -1233,7 +1233,9 @@ public class Main implements Callable<Integer> {
       }
 
       // print aggregated stats
-      OutboundMessageGateway.printStats();
+      OutboundMessageGateway outboundMessageGateway =
+          injector.getInstance(OutboundMessageGateway.class);
+      outboundMessageGateway.printAggregateStats();
 
       // in case we're running asService and manager == null
       if (manager == null) {

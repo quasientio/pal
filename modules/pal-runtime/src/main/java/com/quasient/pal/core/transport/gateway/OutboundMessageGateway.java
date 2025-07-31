@@ -34,12 +34,16 @@ import com.quasient.pal.serdes.colfer.MessageBuilder;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.LockSupport;
@@ -123,6 +127,32 @@ public class OutboundMessageGateway {
 
   /** A per-thread counter of messages dropped without publishing, due to queue congestion. */
   private final ThreadLocal<Long> localDroppedPub = ThreadLocal.withInitial(() -> Long.valueOf(0));
+
+  /** Registry of per-thread WAL-queue wait stats. */
+  private static final ConcurrentMap<Long, WaitStats> WAL_Q_WAIT_REGISTRY =
+      new ConcurrentHashMap<>();
+
+  /** Per-thread Wait Stats for pushing messages into the WAL queue. */
+  private static final ThreadLocal<WaitStats> WAL_QUEUE_WAIT_STATS =
+      ThreadLocal.withInitial(
+          () -> {
+            WaitStats ws = new WaitStats();
+            WAL_Q_WAIT_REGISTRY.put(Thread.currentThread().getId(), ws);
+            return ws;
+          });
+
+  /** Registry of per-thread PUB-queue wait stats. */
+  private static final ConcurrentMap<Long, WaitStats> PUB_Q_WAIT_REGISTRY =
+      new ConcurrentHashMap<>();
+
+  /** Per-thread Wait Stats for pushing messages into the PUB queue. */
+  private static final ThreadLocal<WaitStats> PUB_QUEUE_WAIT_STATS =
+      ThreadLocal.withInitial(
+          () -> {
+            WaitStats ws = new WaitStats();
+            PUB_Q_WAIT_REGISTRY.put(Thread.currentThread().getId(), ws);
+            return ws;
+          });
 
   /** Set of runtime options that control behavior such as intercept handling and TCP publishing. */
   private final Set<RunOptions> runOptions;
@@ -414,17 +444,26 @@ public class OutboundMessageGateway {
   private void writeAhead(OutboundMsg message) throws IllegalStateException {
 
     if (walFailed.get()) { // WAL writer unavailable
-      // silently drop message (the WAL writer must have already logged the error when shutting
-      // down)
+      // silently drop (the WAL writer must have already logged the error when shutting down)
       return;
     }
 
     int spins = 0;
+    WaitStats ws = null; // <── delay ThreadLocal.get()
+
     while (!walQueue.offer(message)) {
+      if (ws == null) {
+        ws = WAL_QUEUE_WAIT_STATS.get(); // <-- only when we actually stall
+      }
+      ws.failedOffers++;
       // Lightweight back-off
       if ((++spins & 0xFF) == 0) {
+        long t0 = System.nanoTime();
         // after 256 failed offers, give scheduler a chance
         LockSupport.parkNanos(1_000); // 1 µs
+        long t1 = System.nanoTime();
+        ws.parks++;
+        ws.parkedNanos += (t1 - t0); // actual parked duration
         if (walFailed.get()) {
           return; // re-check failure flag
         }
@@ -600,16 +639,130 @@ public class OutboundMessageGateway {
     };
   }
 
-  /** Returns a consistent, side-effect-free view of the counters. */
-  public static OutboundMessageGatewayStats getStats() {
-    return new OutboundMessageGatewayStats(totalDroppedPub.sum());
+  /** Snapshot only the per-thread PUB wait stats (no aggregation). */
+  public List<ThreadWaitSnapshot> getPUBWaitSnapshot() {
+    List<ThreadWaitSnapshot> list = new ArrayList<>();
+    PUB_Q_WAIT_REGISTRY.forEach(
+        (id, ws) -> {
+          Thread t = findThread(id);
+          String name = (t != null) ? t.getName() : ("thread-" + id);
+          list.add(new ThreadWaitSnapshot(id, name, ws.parkedNanos, ws.parks, ws.failedOffers));
+        });
+    return List.copyOf(list); // immutable copy
+  }
+
+  /** Snapshot only the per-thread WAL wait stats (no aggregation). */
+  public List<ThreadWaitSnapshot> getWALWaitSnapshot() {
+    List<ThreadWaitSnapshot> list = new ArrayList<>();
+    WAL_Q_WAIT_REGISTRY.forEach(
+        (id, ws) -> {
+          Thread t = findThread(id);
+          String name = (t != null) ? t.getName() : ("thread-" + id);
+          list.add(new ThreadWaitSnapshot(id, name, ws.parkedNanos, ws.parks, ws.failedOffers));
+        });
+    return List.copyOf(list); // immutable copy
+  }
+
+  /** Returns a consistent, side-effect-free view of the PUB queue stats and counters. */
+  public MessageQueueStats getPubQueueStats() {
+
+    long totalParked = 0;
+    int totalParks = 0;
+    int totalFailed = 0;
+
+    List<ThreadWaitSnapshot> perThread = getPUBWaitSnapshot();
+
+    for (ThreadWaitSnapshot s : perThread) {
+      totalParked += s.parkedNanos();
+      totalParks += s.parks();
+      totalFailed += s.failedOffers();
+    }
+
+    return new MessageQueueStats(
+        totalDroppedPub.sum(), totalParked, totalParks, totalFailed, perThread);
+  }
+
+  /** Returns a consistent, side-effect-free view of the WAL queue stats and counters. */
+  public MessageQueueStats getWalQueueStats() {
+    long totalParked = 0;
+    int totalParks = 0;
+    int totalFailed = 0;
+
+    List<ThreadWaitSnapshot> perThread = getWALWaitSnapshot();
+
+    for (ThreadWaitSnapshot s : perThread) {
+      totalParked += s.parkedNanos();
+      totalParks += s.parks();
+      totalFailed += s.failedOffers();
+    }
+
+    return new MessageQueueStats(0, totalParked, totalParks, totalFailed, perThread);
+  }
+
+  /**
+   * Cheap-ish way to find a thread by id. Used to get its name for stats.
+   *
+   * @param id thread id to find on the stack traces
+   * @return the thread with the given id, or null if not found
+   */
+  private static Thread findThread(long id) {
+    // cheap-ish lookup
+    for (Thread t : Thread.getAllStackTraces().keySet()) {
+      if (t.getId() == id) return t;
+    }
+    return null;
   }
 
   /** Prints aggregated statistics regarding message write-ahead and publishing. */
-  public static void printStats() {
-    OutboundMessageGatewayStats s = getStats();
-    logger.info(
-        "Dropped {} messages unpublished due to PUB queue congestion", s.messagesDroppedPub());
+  public void printAggregateStats() {
+
+    if (runOptions.contains(RunOptions.WITH_TCP_PUB)) {
+      MessageQueueStats s = getPubQueueStats();
+      long parkedMicros = TimeUnit.NANOSECONDS.toMicros(s.totalParkedNanos());
+
+      logger.info(
+          "PUB Queue backpressure: parks={}, parked={}µs, failedOffers={}",
+          s.totalParks(),
+          parkedMicros,
+          s.totalFailedOffers());
+      logger.info(
+          "Dropped {} messages unpublished due to PUB queue congestion", s.messagesDropped());
+
+      if (logger.isDebugEnabled()) {
+        for (ThreadWaitSnapshot tws : s.perThread()) {
+          logger.debug(
+              "T[{}:{}] parks={}, parked={}µs, failedOffers={}",
+              tws.threadId(),
+              tws.threadName(),
+              tws.parks(),
+              TimeUnit.NANOSECONDS.toMicros(tws.parkedNanos()),
+              tws.failedOffers());
+        }
+      }
+    }
+
+    if (runOptions.contains(RunOptions.WITH_WAL)) {
+      MessageQueueStats s = getWalQueueStats();
+      long parkedMicros = TimeUnit.NANOSECONDS.toMicros(s.totalParkedNanos());
+
+      logger.info(
+          "WAL Queue backpressure: parks={}, parked={}µs, failedOffers={}",
+          s.totalParks(),
+          parkedMicros,
+          s.totalFailedOffers());
+
+      if (logger.isDebugEnabled()) {
+        for (ThreadWaitSnapshot tws : s.perThread()) {
+          logger.debug(
+              "T[{}:{}] parks={}, parked={}µs, failedOffers={}",
+              tws.threadId(),
+              tws.threadName(),
+              tws.parks(),
+              TimeUnit.NANOSECONDS.toMicros(tws.parkedNanos()),
+              tws.failedOffers());
+        }
+      }
+    }
   }
 
   /**

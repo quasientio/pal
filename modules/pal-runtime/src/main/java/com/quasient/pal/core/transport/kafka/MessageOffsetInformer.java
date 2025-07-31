@@ -67,12 +67,26 @@ class MessageOffsetInformer extends CompletableFuture<Void> implements Callback 
    */
   @Override
   public void onCompletion(RecordMetadata recordMetadata, Exception e) {
-    // publish new record offset
-    if (logger.isDebugEnabled()) {
-      logger.debug("New offset {} for message w/id: {}", recordMetadata.offset(), messageId);
+    try {
+      if (e != null) {
+        completeExceptionally(e);
+        return;
+      }
+      if (recordMetadata == null) { // defensive
+        completeExceptionally(new NullPointerException("RecordMetadata is null"));
+        return;
+      }
+      if (logger.isDebugEnabled()) {
+        logger.debug("New offset {} for message w/id: {}", recordMetadata.offset(), messageId);
+      }
+      if (offsetPubSocket != null) {
+        new PublishedOffsetMsg(recordMetadata.offset(), messageId).send(offsetPubSocket);
+      }
+      complete(null);
+    } catch (Throwable t) {
+      // make sure callers see the failure
+      completeExceptionally(t);
+      logger.error("Offset informer failed for message {}", messageId, t);
     }
-    PublishedOffsetMsg offsetMsg = new PublishedOffsetMsg(recordMetadata.offset(), messageId);
-    offsetMsg.send(offsetPubSocket);
-    complete(null);
   }
 }

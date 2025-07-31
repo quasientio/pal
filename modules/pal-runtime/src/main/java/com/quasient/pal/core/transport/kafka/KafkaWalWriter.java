@@ -10,64 +10,83 @@
 package com.quasient.pal.core.transport.kafka;
 
 import com.quasient.pal.common.directory.nodes.LogInfo;
-import com.quasient.pal.common.runtime.ExecPhase;
 import com.quasient.pal.common.util.UuidUtils;
-import com.quasient.pal.core.internal.concurrent.AdaptiveSpinParkWaitStrategy;
 import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
-import com.quasient.pal.core.service.ConnectedService;
-import com.quasient.pal.core.transport.WalWriterStats;
-import com.quasient.pal.core.transport.WalWriter;
-import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
+import com.quasient.pal.core.transport.AbstractWalWriter;
 import com.quasient.pal.messages.LogMessageHeader;
 import com.quasient.pal.messages.OutboundMsg;
-import com.quasient.pal.messages.colfer.ConstructorCall;
-import com.quasient.pal.messages.colfer.InternalHeader;
-import com.quasient.pal.messages.types.InternalHeaderType;
 import com.quasient.pal.messages.types.MessageFormatType;
 import com.quasient.pal.messages.types.MessageType;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nullable;
+import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.header.Header;
-import org.jctools.queues.MessagePassingQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
-import org.zeromq.ZMQ.Socket;
 
 /**
- * KafkaWalWriter is responsible for retrieving messages from a MPSC queue, transforming header
- * information if needed, and publishing the messages to a Kafka Log. It also optionally publishes
- * message offset information via a ZeroMQ publisher socket.
+ * <b>KafkaWalWriter</b> consumes {@link OutboundMsg} objects from a single-consumer queue and
+ * appends them to a Kafka log.
  *
- * <p>The class manages its own connections to ZeroMQ and Kafka, performing asynchronous checks on
- * message delivery and maintaining internal counters for sent messages.
+ * <h2>Responsibilities</h2>
+ *
+ * <ul>
+ *   <li>Drain a high-watermark MPSC queue using a non-blocking wait strategy.
+ *   <li>Convert optional internal headers into a compact persisted flag.
+ *   <li>Send the payload+metadata to a Kafka log.
+ *   <li>Optionally publish the resulting offset via a ZeroMQ PUB socket.
+ *   <li>Expose live stats via {@link #getLiveStats()}.
+ *   <li>Fail fast on unrecoverable Kafka errors, signalling producers via {@code walFailed} and a
+ *       poison pill.
+ * </ul>
  */
 @Singleton
-public class KafkaWalWriter extends ConnectedService implements WalWriter {
+public class KafkaWalWriter extends AbstractWalWriter {
 
   /** Logger instance. */
   private static final Logger logger = LoggerFactory.getLogger(KafkaWalWriter.class);
+
+  /** Default value for Kafka Producer's {@code linger.ms} value. */
+  private static final long DEF_LINGER_MS = 25;
+
+  /** Default value for Kafka Producer's {@code batch.size} value. */
+  private static final int DEF_BATCH_SIZE = 128000;
+
+  /** Default value for Kafka Producer's {@code compression.type} value. */
+  private static final String DEF_COMPRESSION_TYPE = "zstd";
+
+  /** Default value for Kafka Producer's {@code buffer.memory} value. */
+  private static final long DEF_BUFFER_MEMORY = 128_000_000;
+
+  /** Kafka Producer metrics we care about */
+  private static final Set<String> PRODUCER_KEY_METRICS =
+      Set.of(
+          "outgoing-byte-total",
+          "outgoing-byte-rate",
+          "record-send-rate",
+          "request-latency-avg",
+          "produce-throttle-time-avg",
+          "record-error-rate",
+          "record-retry-rate",
+          "batch-size-avg",
+          "compression-rate-avg",
+          "buffer-available-bytes",
+          "requests-in-flight");
 
   /** Factory that returns a {@link Producer} provided its properties. */
   private final ProducerFactory producerFactory;
@@ -81,66 +100,8 @@ public class KafkaWalWriter extends ConnectedService implements WalWriter {
   /** Properties used to configure the Kafka producer. */
   private final Properties producerProperties = new Properties();
 
-  /** Kafka key serializer for Wal messages. */
-  private final String KEY_SERIALIZER = "com.quasient.pal.serdes.kafka.KafkaKeySerializer";
-
-  /** Kafka value serializer for Wal messages. */
-  private final String VALUE_SERIALIZER = "com.quasient.pal.serdes.kafka.KafkaMessageSerializer";
-
-  /** Timeout duration for closing the Kafka producer. */
-  private static final Duration PRODUCER_CLOSE_TIMEOUT = Duration.of(300, ChronoUnit.MILLIS);
-
-  /**
-   * Executor service used to asynchronously verify that messages are successfully sent to Kafka.
-   */
-  private final ExecutorService producerCheckExecutorService = Executors.newSingleThreadExecutor();
-
-  /**
-   * A MPSC (Multiple Producer Single Consumer) queue holding the OutboundMessage's to be written.
-   */
-  private final MessagePassingQueue<OutboundMsg> walQueue;
-
-  /** Adaptive dynamic backoff strategy used by the queue drain operation. */
-  private static final MessagePassingQueue.WaitStrategy ADAPTIVE_100_MICROSECONDS =
-      new AdaptiveSpinParkWaitStrategy();
-
-  /** ZeroMQ publisher socket used to publish message offsets when enabled. */
-  private Socket offsetPublisherSocket;
-
-  /** ZeroMQ address to bind the offset publisher socket for delivering offset updates. */
-  private final String offsetPubAddress;
-
-  /** Flag indicating whether message offsets should be published. */
-  private boolean publishOffsets;
-
-  /** Information describing the Log to which messages are written. */
-  private LogInfo writeAheadLog;
-
-  /** Poison pill to enqueue for graceful self-shutdown, when writing to Kafka fails. */
-  private static final OutboundMsg POISON_PILL =
-      new OutboundMsg(
-          MessageType.UNKNOWN, ExecPhase.UNDEFINED, null, "POISON", null, new ConstructorCall());
-
-  /** Atomic guard to prevent to ensure the poison pill is just sent once. */
-  private final AtomicBoolean pillSent = new AtomicBoolean(false);
-
-  /**
-   * Global failure flag, used to let producer threads in {@link OutboundMessageGateway} know WAL is
-   * down.
-   */
-  private final AtomicBoolean walFailed;
-
-  /** Counter tracking total of messages received from the {@code walQueue} */
-  private long messagesReceived;
-
-  /** Counter tracking the number of messages successfully written to the Log. (acks received) */
-  private final AtomicInteger messagesWritten = new AtomicInteger(0);
-
-  /** total of messages dropped due to Kafka error */
-  private final AtomicInteger messagesDroppedKafkaError = new AtomicInteger(0);
-
-  /** Immutable headers used for marking messages as self-produced or dispatched. */
-  private static final Map<String, Header> SELF_HEADERS = new HashMap<>();
+  /** List of immutable headers to attach to every message. */
+  private final List<Header> logHeaders;
 
   /**
    * Constructs a new KafkaWalWriter instance with the required dependencies and configuration.
@@ -149,11 +110,15 @@ public class KafkaWalWriter extends ConnectedService implements WalWriter {
    * @param context ZeroMQ context for creating and managing socket connections.
    * @param syncSocketAddress address used for synchronizing service startup.
    * @param serviceThreadGroup thread group in which the service thread will be executed.
-   * @param serviceName logical name that identifies this Log writer service.
+   * @param serviceName logical name that identifies this WAL writer service.
    * @param walQueue initialized {@link OutboundMsg} queue instance from which to consume.
    * @param walFailed global flag that used to indicate failure when writing to Kafka so producers
    *     halt enqueuing.
    * @param offsetPubAddress ZeroMQ address for the message offset publisher connection.
+   * @param lingerMs value for Kafka Producer's {@code linger.ms}
+   * @param batchSize value for Kafka Producer's {@code batch.size}
+   * @param compressionType value for Kafka Producer's {@code compression.type}
+   * @param bufferMemory value for Kafka Producer's {@code buffer.memory}
    * @param producerFactory the factory used to get an initialized Producer
    */
   @Inject
@@ -162,22 +127,34 @@ public class KafkaWalWriter extends ConnectedService implements WalWriter {
       ZContext context,
       @Named("sync.ready") String syncSocketAddress,
       ThreadGroup serviceThreadGroup,
-      @Named("KafkaWalWriter.service") String serviceName,
+      @Named("WalWriter.service") String serviceName,
       @Named("wal_queue") HwmMessageQueue<OutboundMsg> walQueue,
       @Named("walFailed") AtomicBoolean walFailed,
       @Named("offset.pub") String offsetPubAddress,
+      @Named("wal.kafka.linger_ms") @Nullable String lingerMs,
+      @Named("wal.kafka.batch_size") @Nullable String batchSize,
+      @Named("wal.kafka.compression_type") @Nullable String compressionType,
+      @Named("wal.kafka.buffer_memory") @Nullable String bufferMemory,
       ProducerFactory producerFactory) {
-    super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
-    this.walQueue = walQueue;
-    this.walFailed = walFailed;
-    this.offsetPubAddress = offsetPubAddress;
-    this.producerFactory = producerFactory; // store for later
+    super(
+        peerUuid,
+        context,
+        syncSocketAddress,
+        serviceThreadGroup,
+        serviceName,
+        walQueue,
+        walFailed,
+        offsetPubAddress);
+    this.producerFactory = producerFactory;
+
+    // create and store immutable headers
+    logHeaders = List.of(new LogMessageHeader("producer-id", UuidUtils.toBytes(peerUuid)));
+
+    // set Kafka's Producer properties
+    setProducerProperties(lingerMs, batchSize, compressionType, bufferMemory);
   }
 
-  /**
-   * Opens ZeroMQ connections for the subscriber and (optionally) for the offset publisher.
-   * Additionally, initializes immutable header entries used for identifying message origins.
-   */
+  /** Optionally opens ZeroMQ connection for the offset publisher. */
   @Override
   protected void openConnections() {
 
@@ -187,13 +164,6 @@ public class KafkaWalWriter extends ConnectedService implements WalWriter {
       offsetPublisherSocket.bind(offsetPubAddress);
     }
     logger.info("connections open - except kafka producer");
-
-    // create and store immutable headers (instead of creating with every send)
-    SELF_HEADERS.put(
-        "SELF_PRODUCED_HEADER", new LogMessageHeader("producer-id", UuidUtils.toBytes(peerUuid)));
-    SELF_HEADERS.put(
-        "SELF_DISPATCHING_HEADER",
-        new LogMessageHeader("dispatcher-id", UuidUtils.toBytes(peerUuid)));
   }
 
   /**
@@ -205,16 +175,14 @@ public class KafkaWalWriter extends ConnectedService implements WalWriter {
    *     servers.
    * @param publishOffsets flag indicating whether message offsets should be published via ZeroMQ.
    */
+  @Override
   public void writeToLog(LogInfo writeAheadLog, boolean publishOffsets) {
     this.writeAheadLog = writeAheadLog;
     this.publishOffsets = publishOffsets;
 
+    // bootstrap servers are found in the LogInfo
     producerProperties.put(
         ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, writeAheadLog.getBootstrapServers());
-    producerProperties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KEY_SERIALIZER);
-    producerProperties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, VALUE_SERIALIZER);
-    producerProperties.put(ProducerConfig.LINGER_MS_CONFIG, "0");
-    producerProperties.put(ProducerConfig.ACKS_CONFIG, "all");
 
     // build the producer exactly once
     if (producer == null) {
@@ -227,8 +195,51 @@ public class KafkaWalWriter extends ConnectedService implements WalWriter {
   }
 
   /**
+   * Set Kafka's Producer properties from constructor parameters. If these are null, then the
+   * default values defined in this class are used.
+   *
+   * @param lingerMs value for Kafka Producer's {@code linger.ms}
+   * @param batchSize value for Kafka Producer's {@code batch.size}
+   * @param compressionType value for Kafka Producer's {@code compression.type}
+   * @param bufferMemory value for Kafka Producer's {@code buffer.memory}
+   */
+  private void setProducerProperties(
+      @Nullable String lingerMs,
+      @Nullable String batchSize,
+      @Nullable String compressionType,
+      @Nullable String bufferMemory) {
+
+    // Producer constants (hard-coded properties)
+    String KEY_SERIALIZER = "com.quasient.pal.serdes.kafka.KafkaKeySerializer";
+    String VALUE_SERIALIZER = "com.quasient.pal.serdes.kafka.KafkaMessageSerializer";
+
+    producerProperties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KEY_SERIALIZER);
+    producerProperties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, VALUE_SERIALIZER);
+    producerProperties.put(ProducerConfig.ACKS_CONFIG, "all");
+    producerProperties.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, 5);
+    producerProperties.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
+
+    // Producer props from CLI args / ENV vars
+    producerProperties.put(
+        ProducerConfig.LINGER_MS_CONFIG,
+        lingerMs != null ? Long.parseLong(lingerMs) : DEF_LINGER_MS);
+
+    producerProperties.put(
+        ProducerConfig.BATCH_SIZE_CONFIG,
+        batchSize != null ? Integer.parseInt(batchSize) : DEF_BATCH_SIZE);
+
+    producerProperties.put(
+        ProducerConfig.COMPRESSION_TYPE_CONFIG,
+        compressionType != null ? compressionType : DEF_COMPRESSION_TYPE);
+
+    producerProperties.put(
+        ProducerConfig.BUFFER_MEMORY_CONFIG,
+        bufferMemory != null ? Long.parseLong(bufferMemory) : DEF_BUFFER_MEMORY);
+  }
+
+  /**
    * Continuously receives messages from the WAL Queue and dispatches them to Kafka. The method
-   * processes messages until the thread is interrupted.
+   * processes messages until shutdown requested / the thread is interrupted.
    */
   @Override
   public void run() {
@@ -238,16 +249,16 @@ public class KafkaWalWriter extends ConnectedService implements WalWriter {
         ADAPTIVE_100_MICROSECONDS,
         () -> !(shutdownRequested || Thread.currentThread().isInterrupted()));
 
-    if (logger.isDebugEnabled()) {
-      logger.debug(
-          "Thread interrupted or shutdown requested, will process all remaining in queue...");
-    }
+    logger.debug(
+        "Thread interrupted or shutdown requested. Processing messages remaining in queue...");
 
-    OutboundMsg msg;
     // after shutdown request, drain queue until empty
+    OutboundMsg msg;
     while ((msg = walQueue.poll()) != null) {
       handleOutboundMessage(msg);
     }
+
+    logger.debug("Wal queue empty, shutting down...");
   }
 
   /**
@@ -267,8 +278,6 @@ public class KafkaWalWriter extends ConnectedService implements WalWriter {
    *       {@code run()} will reach the idle strategy, see that {@link Thread#isInterrupted() the
    *       interrupt flag} is now {@code true} (set elsewhere) and exit.
    *   <li><b>Normal publishing</b><br>
-   *       &nbsp;&nbsp;• Converts the optional internal headers to Kafka headers via {@link
-   *       #fromInternalToLog(List)}.<br>
    *       &nbsp;&nbsp;• Delegates to {@link #sendToKafka(MessageFormatType, MessageType, byte[],
    *       String, String, UUID, Iterable)}.<br>
    *       Any exception thrown by the Kafka client is caught by the <em>fatal&nbsp;path</em> below.
@@ -311,7 +320,7 @@ public class KafkaWalWriter extends ConnectedService implements WalWriter {
 
     try {
       // normal path
-      final List<Header> logHeaders = fromInternalToLog(msg.getHeaders());
+
       sendToKafka(
           MessageFormatType.BINARY,
           msg.getMessageType(),
@@ -323,7 +332,7 @@ public class KafkaWalWriter extends ConnectedService implements WalWriter {
 
     } catch (Exception ex) { // fatal path
 
-      messagesDroppedKafkaError.getAndIncrement();
+      messagesDroppedError.getAndIncrement();
       logger.error("Kafka failed sending message w/id {} → halting WAL", msg.getMessageId(), ex);
 
       if (walFailed.compareAndSet(false, true)) { // publish failure
@@ -337,54 +346,6 @@ public class KafkaWalWriter extends ConnectedService implements WalWriter {
         Thread.currentThread().interrupt(); // <─ stop after cleanup
       }
     }
-  }
-
-  /**
-   * Converts internal header representations into headers suitable for the Log message (i.e. Kafka
-   * record). The conversion checks if any header indicates a write-ahead and accordingly selects
-   * the corresponding self-header.
-   *
-   * @param internalHeaders list of internal headers to be converted; may be null.
-   * @return a list of headers appropriate for the Kafka Log message.
-   */
-  private List<Header> fromInternalToLog(@Nullable List<InternalHeader> internalHeaders) {
-    if (logger.isDebugEnabled()) {
-      StringBuilder logHeadersStr = new StringBuilder();
-      if (internalHeaders != null) {
-        for (InternalHeader ih : internalHeaders) {
-          logHeadersStr
-              .append("InternalHeader [type = ")
-              .append(InternalHeaderType.fromByte(ih.getHeaderType()).name())
-              .append(", value = ")
-              .append(ih.getValue())
-              .append("]")
-              .append("\n");
-        }
-      }
-      // remove the last \n
-      if (!logHeadersStr.isEmpty()) {
-        logHeadersStr.setLength(logHeadersStr.length() - 1);
-      }
-      logger.debug("Converting internal headers to log headers: {}", logHeadersStr);
-    }
-    List<Header> logHeaders = new ArrayList<>();
-    boolean isWriteAhead = false;
-    if (internalHeaders != null) {
-      for (InternalHeader ih : internalHeaders) {
-        if (ih.getHeaderType() == InternalHeaderType.WRITE_AHEAD.toByte()) {
-          isWriteAhead = true;
-          logHeaders.add(SELF_HEADERS.get("SELF_DISPATCHING_HEADER"));
-          break;
-        }
-      }
-    }
-    if (!isWriteAhead) { // if not write-ahead, we assume it's self-produced
-      logHeaders.add(SELF_HEADERS.get("SELF_PRODUCED_HEADER"));
-    }
-    if (logger.isDebugEnabled()) {
-      logger.debug("Returning log headers: {}", logHeaders);
-    }
-    return logHeaders;
   }
 
   /**
@@ -408,8 +369,9 @@ public class KafkaWalWriter extends ConnectedService implements WalWriter {
       String responseId,
       UUID fromPeer,
       @Nullable Iterable<Header> headers) {
-    if (logger.isDebugEnabled()) {
-      logger.debug("sending new message to kafka log with id: {}", messageId);
+
+    if (logger.isTraceEnabled()) {
+      logger.trace("sending new message to kafka log with id: {}", messageId);
     }
     ProducerRecord<String, byte[]> newRecord =
         new ProducerRecord<>(writeAheadLog.getName(), 0, fromPeer.toString(), message, headers);
@@ -418,44 +380,52 @@ public class KafkaWalWriter extends ConnectedService implements WalWriter {
     newRecord.headers().add("message-format", new byte[] {messageFormat.toByte()});
     newRecord.headers().add("message-type", new byte[] {messageType.getId()});
 
-    // send the message
-    Future<RecordMetadata> sendFuture;
-    if (publishOffsets) {
-      sendFuture =
-          producer.send(newRecord, new MessageOffsetInformer(messageId, offsetPublisherSocket));
-    } else {
-      sendFuture = producer.send(newRecord);
-    }
-
-    producerCheckExecutorService.execute(
-        () -> {
+    // compose callback
+    Callback baseCb =
+        (metadata, exception) -> {
           try {
-            RecordMetadata sentRecordMetadata = sendFuture.get();
-            messagesWritten.getAndIncrement();
-            if (logger.isDebugEnabled()) {
-              logger.debug(
-                  "new message written to log at offset: {}, w/id: {},"
-                      + " in response to message w/id: {} ({} bytes)",
-                  sentRecordMetadata.offset(),
+            if (exception != null) {
+              messagesDroppedError.incrementAndGet();
+              logger.error("Error sending message to log", exception);
+              return;
+            }
+            messagesWritten.incrementAndGet();
+            if (logger.isTraceEnabled()) {
+              logger.trace(
+                  "New message written to log at offset: {}, w/id: {}, in response to message w/id: {} ({} bytes)",
+                  metadata.offset(),
                   messageId,
                   responseId,
                   message.length);
             }
-          } catch (Exception e) {
-            messagesDroppedKafkaError.getAndIncrement();
-            logger.error("Error sending message to log", e);
+          } finally {
+            messagesInFlight.decrementAndGet();
           }
-        });
+        };
+
+    Callback callback = baseCb;
+
+    if (publishOffsets) {
+      Callback informer = new MessageOffsetInformer(messageId, offsetPublisherSocket);
+      callback =
+          (md, ex) -> {
+            try {
+              informer.onCompletion(md, ex);
+            } finally {
+              baseCb.onCompletion(md, ex);
+            }
+          };
+    }
+
+    messagesInFlight.incrementAndGet();
+    Future<RecordMetadata> unused = producer.send(newRecord, callback);
   }
 
-  /**
-   * Closes the Kafka producer using a predefined timeout to ensure graceful shutdown. Any exception
-   * encountered during closure is logged as a warning.
-   */
+  /** Closes the Kafka producer with no timeout, allowing for all sent requests to finish. */
   private void closeProducer() {
     if (producer != null) {
       try {
-        producer.close(PRODUCER_CLOSE_TIMEOUT);
+        producer.close();
       } catch (Exception e) {
         logger.warn("Error closing producer", e);
       }
@@ -463,47 +433,60 @@ public class KafkaWalWriter extends ConnectedService implements WalWriter {
   }
 
   /**
-   * Returns a consistent, side-effect-free view of the counters.
-   *
-   * @return snapshot of live stats
-   */
-  @Override
-  public WalWriterStats getLiveStats() {
-    return new WalWriterStats(
-        messagesReceived, messagesWritten.get(), messagesDroppedKafkaError.get());
-  }
-
-  /**
-   * Triggers a shutdown sequence for the service.
-   *
-   * <p>Override superclass because we don't want to interrupt the thread, causing in-flight sends
-   * to kafka to fail.
-   */
-  @Override
-  protected void triggerStop() {
-    shutdownRequested = true;
-  }
-
-  /**
-   * Closes all open connections and resources used by the KafkaWalWriter. This includes shutting down
-   * the executor service, closing the Kafka producer, and closing any ZeroMQ sockets.
+   * Closes all open connections and resources used by the KafkaWalWriter. This includes shutting
+   * down the executor service, closing the Kafka producer, and closing any ZeroMQ sockets.
    */
   @Override
   protected void closeConnections() {
-    // stop the producer async executor
-    producerCheckExecutorService.shutdown();
+
+    // make producer flush all outstanding sends (blocks until callbacks run)
     try {
-      if (!producerCheckExecutorService.awaitTermination(250, TimeUnit.MILLISECONDS)) {
-        producerCheckExecutorService.shutdownNow();
+      if (producer != null) {
+        logger.debug("Flusing producer...");
+        producer.flush();
+        logger.debug("Producer flushed");
       }
-    } catch (InterruptedException e) {
-      producerCheckExecutorService.shutdownNow();
+    } catch (Exception e) {
+      logger.warn("flush failed during close", e);
     }
+
+    // wait a little for any callbacks still running (defensive)
+    long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(500);
+    if (messagesInFlight.get() > 0) {
+      logger.debug("Waiting a little for callbacks still running");
+      while (messagesInFlight.get() > 0 && System.nanoTime() < deadline) {
+        Thread.onSpinWait();
+      }
+    }
+
+    if (messagesInFlight.get() > 0) {
+      logger.warn("{} in-flight messages remained after shut down", messagesInFlight.get());
+    }
+
+    // log Producer metrics
+    if (logger.isDebugEnabled()) {
+      logger.debug("PRODUCER METRICS:");
+      producer
+          .metrics()
+          .forEach(
+              (name, metric) -> {
+                if ("producer-metrics".equals(name.group())
+                    && PRODUCER_KEY_METRICS.contains(name.name())) {
+                  Object v = metric.metricValue(); // returns Double for built‑ins
+                  logger.debug("metric={} value={} tags={}", name.name(), v, name.tags());
+                }
+              });
+    }
+
     // close the producer
+    logger.debug("Closing producer");
     closeProducer();
 
     // close the offset publisher socket
-    closeConnection(offsetPublisherSocket, "Error closing offset publisher");
+    if (offsetPublisherSocket != null) {
+      logger.debug("Closing PUB socket");
+      closeConnection(offsetPublisherSocket, "Error closing offset publisher");
+    }
 
     logger.info("Closed connections");
   }
