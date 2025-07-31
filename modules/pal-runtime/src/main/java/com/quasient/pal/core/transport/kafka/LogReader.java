@@ -34,7 +34,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.stream.Stream;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -465,7 +464,7 @@ public class LogReader extends ConnectedService {
           continue;
         }
 
-        if (!recordProducedOrDispatchingBySelf(record.headers())) {
+        if (!recordProducedBySelf(record.headers())) {
           // send request to DEALER socket
           InboundLogMsg msg =
               new InboundLogMsg(messageOffset, messageFormat, record.headers(), record.value());
@@ -612,28 +611,21 @@ public class LogReader extends ConnectedService {
   }
 
   /**
-   * Checks if the provided message headers indicate that the message was produced or dispatched by
-   * the current peer. This method examines specific headers ("producer-id" and "dispatcher-id") to
-   * compare against the current peer's UUID.
+   * Checks if the provided message headers indicate that the message was produced by the current
+   * peer. This method examines specific headers (e.g. "producer-id") to compare against the current
+   * peer's UUID.
    *
    * @param headers Kafka message headers to inspect.
    * @return true if the message originated from the current peer, false otherwise.
    */
-  private boolean recordProducedOrDispatchingBySelf(Headers headers) {
-    return Stream.of("producer-id", "dispatcher-id")
-        .anyMatch(
-            hdrName -> {
-              for (Header header : headers.headers(hdrName)) {
-                UUID uuidInHeader = UuidUtils.fromBytes(header.value());
-                if (peerUuid.equals(uuidInHeader)) {
-                  if (logger.isDebugEnabled()) {
-                    logger.debug("Will skip message with self uuid in header {}", hdrName);
-                  }
-                  return true;
-                }
-              }
-              return false;
-            });
+  private boolean recordProducedBySelf(Headers headers) {
+    for (Header header : headers.headers("producer-id")) {
+      UUID uuidInHeader = UuidUtils.fromBytes(header.value());
+      if (peerUuid.equals(uuidInHeader)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
