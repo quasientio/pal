@@ -11,121 +11,138 @@ package com.quasient.pal.core.runtime.objects;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import com.quasient.pal.common.objects.ObjectRef;
-import java.util.ArrayList;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Stream;
 import org.junit.Test;
-import org.mockito.MockedStatic;
-import org.mockito.Mockito;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class ObjectLookupStoreBackgroundProcessorTest {
 
-  private static final int CLEANUP_INTERVAL_SECONDS = 1;
-  private static final int STATS_INTERVAL_SECONDS = 1;
-  private Logger mockedLogger;
-  private ConcurrentHashMapObjectLookupStore objectLookupStore;
-  private ObjectLookupStoreStats objectLookupStoreStats;
-  private ConcurrentHashMap<ObjectRef, IdentifiableObject> objects;
-
-  private MockedStatic<LoggerFactory> mockLoggerFactory(boolean loggingEnabled) {
-
-    // mock Logger to enable calls to logger.debug()
-    mockedLogger = mock(Logger.class);
-    when(mockedLogger.isTraceEnabled()).thenReturn(loggingEnabled);
-    MockedStatic<LoggerFactory> mockedLoggerFactory = mockStatic(LoggerFactory.class);
-    mockedLoggerFactory
-        .when(() -> LoggerFactory.getLogger(ObjectLookupStoreBackgroundProcessor.class))
-        .thenReturn(mockedLogger);
-    return mockedLoggerFactory;
-  }
-
-  private ObjectLookupStoreBackgroundProcessor initMockedObjectLookupStore() {
-    objects =
-        new ConcurrentHashMap<>(
-            ConcurrentHashMapObjectLookupStore.DEFAULT_INITIAL_CAPACITY,
-            ConcurrentHashMapObjectLookupStore.DEFAULT_LOAD_FACTOR);
-    objectLookupStore = mock(ConcurrentHashMapObjectLookupStore.class);
-    when(objectLookupStore.getObjects()).thenReturn(objects);
-    objectLookupStoreStats = new ObjectLookupStoreStats();
-    return new ObjectLookupStoreBackgroundProcessor(
-        objectLookupStore,
-        objectLookupStoreStats,
-        CLEANUP_INTERVAL_SECONDS,
-        STATS_INTERVAL_SECONDS);
-  }
-
-  private ObjectRef generateObjectRef(Object object) {
-    final int identHash = System.identityHashCode(object);
-    return ObjectRef.from(String.valueOf(identHash));
-  }
-
   @Test
-  public void run_withClearableEntries() {
-    Stream.of(true, false)
-        .forEach(
-            loggingEnabled -> {
-              MockedStatic<LoggerFactory> mockLoggerFactory = mockLoggerFactory(loggingEnabled);
-              ObjectLookupStoreBackgroundProcessor objectLookupStoreProcessor =
-                  initMockedObjectLookupStore();
+  public void removeClearedEntries_removesQueuedReferences() {
+    try (ConcurrentHashMapObjectLookupStore store =
+        ConcurrentHashMapObjectLookupStore.createUnmanaged()) {
+      ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
+      ObjectLookupStoreBackgroundProcessor proc =
+          new ObjectLookupStoreBackgroundProcessor(store, stats, 1, 60);
 
-              Object aString = new String("just a string");
-              Object aList = new ArrayList<>();
-              // add some entries to objects
-              objects.put(generateObjectRef(aString), new IdentifiableObject(aString));
-              objects.put(generateObjectRef(aList), new IdentifiableObject(aList));
-              assertThat(objects.mappingCount(), is(2L));
+      // 1. add an object to the store
+      Object bigObject = new byte[256];
+      ObjectRef ref = store.storeObject(bigObject);
 
-              // clear the references
-              aString = null;
-              aList = null;
-              System.gc();
+      // 2. simulate GC: clear & enqueue wrapper into the same queue
+      IdentifiableObject wrapper = store.getObjects().get(ref);
+      wrapper.clear(); // referent = null
+      wrapper.enqueue(); // place it on the store’s ReferenceQueue
 
-              ObjectLookupStoreBackgroundProcessor processorSpy =
-                  Mockito.spy(objectLookupStoreProcessor);
-              processorSpy.start();
-              // allow enough time for removeClearedEntries() to be called at least once
-              try {
-                Thread.sleep(CLEANUP_INTERVAL_SECONDS * 2 * 1000);
-              } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-              }
-              processorSpy.stop();
+      // 3. invoke the cleaner
+      proc.runOnce();
 
-              // verify removeClearedEntries called
-              verify(processorSpy, atLeastOnce()).removeClearedEntries();
-              verify(objectLookupStore, atLeastOnce()).getObjects();
+      // 4. verify the entry is gone and stats updated
+      assertThat(store.containsObjectRef(ref), is(false));
+      assertThat(stats.getTotalObjectsCleared().get(), is(1L));
 
-              // verify entries cleared
-              assertThat(objects.mappingCount(), is(0L));
+      // sanity-check: if we insert again, lookup works
+      ObjectRef newRef = store.storeObject("foo");
+      assertThat(store.lookupObject(newRef), is((Object) "foo"));
+    }
+  }
 
-              // verify stats
-              assertThat(objectLookupStoreStats.getTotalObjectsCleared().get(), is(2L));
+  /* ------------------------------------------------------------------ */
+  /* empty queue ⇒ cleaner is a no-op
+  /* ------------------------------------------------------------------ */
+  @Test
+  public void removeClearedEntries_whenQueueEmpty_doesNothing() {
+    try (ConcurrentHashMapObjectLookupStore store =
+        ConcurrentHashMapObjectLookupStore.createUnmanaged()) {
+      ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
+      ObjectLookupStoreBackgroundProcessor proc =
+          new ObjectLookupStoreBackgroundProcessor(store, stats, 1, 60);
 
-              // verify stats printed
-              if (loggingEnabled) {
-                verify(mockedLogger).trace("Starting OBJECTS stats");
-                verify(mockedLogger, atLeastOnce())
-                    .trace(eq("OBJECTS: max size={}"), (Object) any());
-                verify(mockedLogger, atLeastOnce())
-                    .trace(eq("OBJECTS: current size={}"), (Object) any());
-                verify(mockedLogger, atLeastOnce())
-                    .trace(eq("OBJECTS: successful lookups={}"), (Object) any());
-                verify(mockedLogger, atLeastOnce())
-                    .trace(eq("OBJECTS: total cleared={}"), (Object) any());
-              }
-              mockLoggerFactory.close();
-              Mockito.reset(mockedLogger, objectLookupStore);
-            });
+      // put one live object, don’t clear/enqueue anything
+      ObjectRef ref = store.storeObject("foo");
+
+      proc.runOnce(); // queue is empty
+
+      assertThat(store.containsObjectRef(ref), is(true)); // still there
+      assertThat(stats.getTotalObjectsCleared().get(), is(0L)); // counter unchanged
+    }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* many refs enqueued at once are all removed in one pass
+  /* ------------------------------------------------------------------ */
+  @Test
+  public void removeClearedEntries_bulkRemoval() {
+    try (ConcurrentHashMapObjectLookupStore store =
+        ConcurrentHashMapObjectLookupStore.createUnmanaged()) {
+      ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
+      ObjectLookupStoreBackgroundProcessor proc =
+          new ObjectLookupStoreBackgroundProcessor(store, stats, 1, 60);
+
+      int n = 25;
+      ObjectRef[] refs = new ObjectRef[n];
+      for (int i = 0; i < n; i++) {
+        refs[i] = store.storeObject(i);
+        IdentifiableObject w = store.getObjects().get(refs[i]);
+        w.clear();
+        w.enqueue();
+      }
+
+      proc.runOnce();
+
+      for (ObjectRef r : refs) {
+        assertThat(store.containsObjectRef(r), is(false));
+      }
+      assertThat(stats.getTotalObjectsCleared().get(), is((long) n));
+    }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* lookup counter increments only for live entries
+  /* ------------------------------------------------------------------ */
+  @Test
+  public void successfulLookupCounter_incrementsForLiveObject() {
+    try (ConcurrentHashMapObjectLookupStore store =
+        ConcurrentHashMapObjectLookupStore.createUnmanaged()) {
+
+      // manual cleaner bound to this store; not started
+      ObjectLookupStoreCleaner cleaner =
+          new ObjectLookupStoreBackgroundProcessor(store, store.getStats(), 0, 60);
+      store.attachCleaner(cleaner);
+
+      ObjectRef ref = store.storeObject("bar");
+      store.lookupObject(ref);
+      store.lookupObject(ref);
+      assertThat(store.getStats().getSuccessfulStoreLookups().get(), is(2L));
+
+      // simulate GC and drain deterministically
+      IdentifiableObject w = store.getObjects().get(ref);
+      w.clear();
+      w.enqueue();
+      cleaner.runOnce();
+
+      store.lookupObject(ref); // now null
+      assertThat(store.getStats().getSuccessfulStoreLookups().get(), is(2L));
+    }
+  }
+
+  /** maxSize tracks peak size correctly */
+  @Test
+  public void maxSizeTracking_recordsPeak() {
+    try (ConcurrentHashMapObjectLookupStore store =
+        ConcurrentHashMapObjectLookupStore.createUnmanaged()) {
+
+      // add 10 objects
+      for (int i = 0; i < 10; i++) store.storeObject(i);
+      assertThat(store.getStats().getMaxSize().get() >= 10, is(true));
+
+      // remove 9
+      for (int i = 1; i < 10; i++)
+        store.remove(ObjectRef.from(String.valueOf(System.identityHashCode(i))));
+
+      // add one more – peak should stay at least 10
+      store.storeObject("another");
+      assertThat(store.getStats().getMaxSize().get() >= 10, is(true));
+    }
   }
 }

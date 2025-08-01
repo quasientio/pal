@@ -10,6 +10,7 @@
 package com.quasient.pal.core.runtime.objects;
 
 import com.quasient.pal.common.objects.ObjectRef;
+import java.lang.ref.ReferenceQueue;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -18,44 +19,30 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Manages a thread-safe mapping between {@link ObjectRef} instances and locally instantiated
- * objects. This store utilizes a {@link ConcurrentHashMap} to ensure concurrent access and
- * modifications.
- *
- * <p>Key Features:
+ * Thread-safe implementation backed by a {@link ConcurrentHashMap} and a {@link
+ * java.lang.ref.ReferenceQueue}. Dead entries are removed by an {@link ObjectLookupStoreCleaner}
+ * that can run either:
  *
  * <ul>
- *   <li>Stores references to objects using {@link ObjectRef}, which wraps a unique {@link String}
- *       identifier.
- *   <li>Implements custom hashing for object references based on {@link
- *       System#identityHashCode(Object)} to ensure uniqueness.
- *   <li>Maintains statistics through {@link ObjectLookupStoreStats} and manages a background
- *       processing thread.
- *   <li>Provides functionalities to store, lookup, and remove objects efficiently in a concurrent
- *       environment.
+ *   <li>on a scheduled background thread (default factory), or
+ *   <li>manually, under test control (unmanaged factory).
  * </ul>
  *
- * <pre>
- * Contract:
- * --=====--
- * storeObject() creates and saves a WeakReference and returns an ObjectRef,
- * which is a plain wrapper around String.
+ * <h2>Contract</h2>
  *
- * We wrap objects before putting them in the map, so that the Map implementation
- * uses our overriden hashCode(), which delegates to the value's System.identityHashCode,
- * and not the normal hashCode.
+ * <ul>
+ *   <li>Each call to {@link #storeObject(Object)} returns an {@link ObjectRef} derived from {@code
+ *       System.identityHashCode(obj)}; collisions are possible but extremely rare.
+ *   <li>The wrapped object is held in a {@link java.lang.ref.WeakReference}; once the GC clears
+ *       that reference the cleaner will eventually remove the map entry.
+ *   <li>{@code equals}/{@code hashCode} deliberately break the normal Map contract so that distinct
+ *       but {@code .equals()} objects can coexist.
+ * </ul>
  *
- * This allows mapping values that are equal() -- This is OK because we don't care about
- * the general Map contract.
- *
- * <b>WARNING</b>: We assume System.identityHashCode will return distinct ints for different objects.
- * This may be the most probable, but is not guaranteed according to the JDK javadocs.
- * </pre>
- *
- * TODO: although unlikely, the identityHashCode may break this store. Find alternative. <br>
- * TODO: replace trace enter and exit stmts (see issue #5) <br>
+ * <b>WARNING</b>: {@code System.identityHashCode} is not guaranteed unique; if two live objects
+ * share the same code, the earlier entry will be replaced.
  */
-public final class ConcurrentHashMapObjectLookupStore implements ObjectLookupStore {
+public final class ConcurrentHashMapObjectLookupStore implements AutoCloseable, ObjectLookupStore {
 
   /** Logger instance for logging events and debug information. */
   private final Logger logger = LoggerFactory.getLogger(ConcurrentHashMapObjectLookupStore.class);
@@ -66,6 +53,12 @@ public final class ConcurrentHashMapObjectLookupStore implements ObjectLookupSto
   /** The default load factor for the underlying {@link ConcurrentHashMap}. */
   static final float DEFAULT_LOAD_FACTOR = 0.75f;
 
+  /**
+   * Optional cleaner. Non-null when this instance was built by {@link
+   * #createWithScheduledCleaner(int, float)}; may be {@code null} in unit tests.
+   */
+  private ObjectLookupStoreCleaner cleaner;
+
   /** Statistics tracker for monitoring the state and performance of the store. */
   private final ObjectLookupStoreStats objectLookupStoreStats = new ObjectLookupStoreStats();
 
@@ -74,6 +67,9 @@ public final class ConcurrentHashMapObjectLookupStore implements ObjectLookupSto
    * IdentifiableObject}.
    */
   private final ConcurrentHashMap<ObjectRef, IdentifiableObject> objects;
+
+  /** Reference queue for cleanup */
+  private final ReferenceQueue<Object> refQueue = new ReferenceQueue<>();
 
   /** Updates the maximum size recorded for the store based on the current size. */
   private void updateMaxSize() {
@@ -85,32 +81,59 @@ public final class ConcurrentHashMapObjectLookupStore implements ObjectLookupSto
   }
 
   /**
-   * Constructs a new {@code ConcurrentHashMapObjectLookupStore} with default initial capacity and
-   * load factor.
+   * Internal constructor: allocates the map but does NOT start a cleaner. Use the static factory
+   * methods instead.
    *
-   * <p>Initializes the underlying map and starts the background processor.
+   * @param initialCapacity initial capacity of object map
+   * @param loadFactor load factor of object map
    */
-  public ConcurrentHashMapObjectLookupStore() {
-    this(DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR);
+  private ConcurrentHashMapObjectLookupStore(int initialCapacity, float loadFactor) {
+    objects = new ConcurrentHashMap<>(initialCapacity, loadFactor);
   }
 
   /**
-   * Constructs a new {@code ConcurrentHashMapObjectLookupStore} with specified initial capacity and
-   * load factor.
+   * Return a store whose cleaner runs on its own daemon thread and removes cleared entries at a
+   * fixed cadence. Suitable for production use.
    *
    * @param initialCapacity the initial capacity of the underlying {@link ConcurrentHashMap}
    * @param loadFactor the load factor of the underlying {@link ConcurrentHashMap}
    */
-  public ConcurrentHashMapObjectLookupStore(int initialCapacity, float loadFactor) {
-    objects = new ConcurrentHashMap<>(initialCapacity, loadFactor);
-    startBackgroundProcessor();
+  public static ConcurrentHashMapObjectLookupStore createWithScheduledCleaner(
+      int initialCapacity, float loadFactor) {
+    ConcurrentHashMapObjectLookupStore store =
+        new ConcurrentHashMapObjectLookupStore(initialCapacity, loadFactor);
+    ObjectLookupStoreCleaner c =
+        new ObjectLookupStoreBackgroundProcessor(store, store.objectLookupStoreStats);
+    c.start();
+    store.cleaner = c;
+    return store;
   }
 
-  /** Starts the background processing thread responsible for managing store operations. */
-  private void startBackgroundProcessor() {
-    ObjectLookupStoreBackgroundProcessor processor =
-        new ObjectLookupStoreBackgroundProcessor(this, objectLookupStoreStats);
-    processor.start();
+  /**
+   * Shortcut for {@link #createWithScheduledCleaner(int, float)} using default capacity and load
+   * factor.
+   */
+  public static ConcurrentHashMapObjectLookupStore createWithScheduledCleaner() {
+    return createWithScheduledCleaner(DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR);
+  }
+
+  /**
+   * Creates a store without any automatic background cleaner. Intended for deterministic unit
+   * tests; callers must attach their own {@link ObjectLookupStoreCleaner} or call {@link
+   * ObjectLookupStoreCleaner#runOnce()}.
+   */
+  static ConcurrentHashMapObjectLookupStore createUnmanaged() {
+    return new ConcurrentHashMapObjectLookupStore(DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR);
+  }
+
+  /**
+   * Attaches a cleaner to this store. Idempotent; subsequent calls replace the previous cleaner
+   * reference but do NOT stop it.
+   *
+   * @param c cleaner instance (may be {@code null} to detach)
+   */
+  void attachCleaner(ObjectLookupStoreCleaner c) {
+    this.cleaner = c;
   }
 
   /**
@@ -135,10 +158,9 @@ public final class ConcurrentHashMapObjectLookupStore implements ObjectLookupSto
   }
 
   /**
-   * Stores the provided object in the lookup store and returns its corresponding {@link ObjectRef}.
-   *
-   * <p>If the object is already present, the existing {@link ObjectRef} is returned. Otherwise, a
-   * new reference is created, stored, and returned.
+   * Stores {@code object} in the map. If an entry with the same identity hash already exists and
+   * its referent is still alive, the existing {@link ObjectRef} is returned; otherwise a new
+   * wrapper is created.
    *
    * @param object the object to store; must not be {@code null}
    * @return the {@link ObjectRef} associated with the stored object
@@ -146,28 +168,23 @@ public final class ConcurrentHashMapObjectLookupStore implements ObjectLookupSto
    */
   @Override
   public ObjectRef storeObject(Object object) {
-    if (logger.isTraceEnabled()) {
-      logger.trace("in w/ object: {}", object);
-    }
+
     if (object == null) {
       throw new NullPointerException("object cannot be null");
     }
-    final ObjectRef objectRef = generateObjectRef(object);
-    final IdentifiableObject storedObject = objects.get(objectRef);
 
-    if (storedObject != null) {
-      objectLookupStoreStats.getSuccessfulStoreLookups().getAndIncrement();
-      if (logger.isTraceEnabled()) {
-        logger.trace("out w/ (pre-existing) objectRef: {}", objectRef);
-      }
-    } else {
-      objects.put(objectRef, new IdentifiableObject(object));
-      updateMaxSize();
-      if (logger.isTraceEnabled()) {
-        logger.trace("out w/ objectRef: {}", objectRef);
-      }
+    final ObjectRef key = generateObjectRef(object);
+    IdentifiableObject existing = objects.get(key);
+
+    if (existing != null && existing.get() != null) { // still alive
+      objectLookupStoreStats.getSuccessfulStoreLookups().incrementAndGet();
+      return key;
     }
-    return objectRef;
+
+    IdentifiableObject wrapper = new IdentifiableObject(object, key, refQueue);
+    objects.put(key, wrapper);
+    updateMaxSize();
+    return key;
   }
 
   /**
@@ -189,7 +206,7 @@ public final class ConcurrentHashMapObjectLookupStore implements ObjectLookupSto
     Object object = null;
     if (storedObject != null) {
       objectLookupStoreStats.getSuccessfulStoreLookups().getAndIncrement();
-      object = storedObject.getObject().get();
+      object = storedObject.get();
     }
     if (logger.isTraceEnabled()) {
       logger.trace("out w/ object: {}", object);
@@ -201,6 +218,11 @@ public final class ConcurrentHashMapObjectLookupStore implements ObjectLookupSto
   @Override
   public void clear() {
     objects.clear();
+  }
+
+  /** Returns the reference queue where {@link IdentifiableObject}'s register themselves */
+  ReferenceQueue<Object> getRefQueue() {
+    return refQueue;
   }
 
   /**
@@ -221,6 +243,12 @@ public final class ConcurrentHashMapObjectLookupStore implements ObjectLookupSto
   @Override
   public boolean isEmpty() {
     return objects.isEmpty();
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public ObjectLookupStoreStats getStats() {
+    return objectLookupStoreStats;
   }
 
   /**
@@ -255,7 +283,7 @@ public final class ConcurrentHashMapObjectLookupStore implements ObjectLookupSto
   public Object remove(@Nonnull ObjectRef objectRef) {
     final IdentifiableObject storedObject = objects.remove(objectRef);
     if (storedObject != null) {
-      return storedObject.getObject().get();
+      return storedObject.get();
     }
     return null;
   }
@@ -269,5 +297,16 @@ public final class ConcurrentHashMapObjectLookupStore implements ObjectLookupSto
   @Override
   public void removeAll(Collection<ObjectRef> objectRefs) {
     objectRefs.forEach(objects::remove);
+  }
+
+  /**
+   * Shuts down the cleaner (if present) and clears all internal data. Safe to call multiple times.
+   */
+  @Override
+  public void close() {
+    clear();
+    if (cleaner != null) {
+      cleaner.stop();
+    }
   }
 }

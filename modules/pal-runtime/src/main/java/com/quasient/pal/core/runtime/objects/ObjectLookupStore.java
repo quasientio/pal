@@ -13,11 +13,20 @@ import com.quasient.pal.common.objects.ObjectRef;
 import java.util.Collection;
 
 /**
- * Provides methods for storing and retrieving objects using unique references.
+ * A concurrent, in-memory directory that maps arbitrary objects to opaque {@link ObjectRef}
+ * handles.
  *
- * <p>This interface defines operations to add objects to the store, retrieve them by their {@link
- * ObjectRef} identifiers, check for their existence, remove them individually or in bulk, and query
- * the store's current size and emptiness status.
+ * <p>The contract is intentionally minimal:
+ *
+ * <ul>
+ *   <li>The implementation chooses how the reference is generated (e.g. {@code
+ *       System.identityHashCode}).
+ *   <li>The store may evict entries transparently once the payload object becomes unreachable.
+ *   <li>All operations are thread-safe and non-blocking.
+ * </ul>
+ *
+ * Implementations SHOULD expose operational metrics via {@link #getStats()} so callers can observe
+ * peak size, successful lookup count, and garbage-collection clean-ups.
  */
 public interface ObjectLookupStore {
 
@@ -78,4 +87,11 @@ public interface ObjectLookupStore {
    * @return {@code true} if there are no objects in the store, {@code false} otherwise
    */
   boolean isEmpty();
+
+  /**
+   * Returns a live view of the store’s internal statistics.
+   *
+   * @return an always-non-null, thread-safe {@link ObjectLookupStoreStats} instance
+   */
+  ObjectLookupStoreStats getStats();
 }

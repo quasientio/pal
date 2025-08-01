@@ -9,82 +9,63 @@
  */
 package com.quasient.pal.core.runtime.objects;
 
+import com.quasient.pal.common.objects.ObjectRef;
+import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 import java.util.Objects;
 
 /**
- * A wrapper for objects that provides identity-based hash code and maintains a weak reference,
- * facilitating storage and lookup operations within a map.
+ * A WeakReference that also remembers the {@link ObjectRef} key and the identity hash of its
+ * referent, allowing O(1) removal from the store when the payload is garbage-collected.
  */
-class IdentifiableObject {
+final class IdentifiableObject extends WeakReference<Object> {
 
-  /**
-   * Holds a weak reference to the encapsulated object, allowing it to be garbage collected when no
-   * longer in use.
-   */
-  private final WeakReference<Object> object;
+  /** Map key */
+  private final ObjectRef key;
 
-  /**
-   * Stores the identity-based hash code of the encapsulated object, ensuring consistent behavior in
-   * hash-based collections.
-   */
+  /** Cached identity hash of referent */
   private final int hash;
 
   /**
-   * Constructs an IdentifiableObject by encapsulating the provided object.
+   * Creates a new wrapper to identify an object within the system.
    *
-   * @param object the object to be wrapped; must not be null
-   * @throws NullPointerException if the provided object is null
+   * @param referent the object being identified
+   * @param key the object's {@link ObjectRef}
+   * @param queue reference queue in which to register the referent
    */
-  IdentifiableObject(Object object) {
-    this.object = new WeakReference<>(Objects.requireNonNull(object));
-    this.hash = System.identityHashCode(object);
+  IdentifiableObject(Object referent, ObjectRef key, ReferenceQueue<? super Object> queue) {
+    super(referent, queue);
+    Objects.requireNonNull(referent, "referent cannot be null");
+    Objects.requireNonNull(referent, "object ref cannot be null");
+    Objects.requireNonNull(referent, "ref queue cannot be null");
+    this.key = key;
+    this.hash = System.identityHashCode(referent);
   }
 
   /**
-   * Retrieves the weak reference to the encapsulated object.
+   * Plain getter for key
    *
-   * @return a WeakReference containing the encapsulated object
+   * @return the key
    */
-  public WeakReference<Object> getObject() {
-    return object;
+  ObjectRef getKey() {
+    return key;
   }
 
-  /**
-   * Returns the identity-based hash code of the encapsulated object.
-   *
-   * @return the hash code corresponding to the object's identity
-   */
-  public int getHash() {
+  /** {@inheritDoc} */
+  @Override
+  public int hashCode() {
     return hash;
   }
 
   /** {@inheritDoc} */
   @Override
-  public final int hashCode() {
-    return hash;
-  }
-
-  /**
-   * {@inheritDoc}
-   *
-   * <p>IdentifiableObject's equality is based on the identityHashCode of the encapsulated object.
-   */
-  @Override
-  @SuppressWarnings("EqualsUsingHashCode")
-  public final boolean equals(Object other) {
-    if (this == other) {
-      return true;
-    }
-    if (!(other instanceof IdentifiableObject)) {
-      return false;
-    }
-    return other.hashCode() == this.hashCode();
+  public boolean equals(Object other) {
+    return (other instanceof IdentifiableObject) && this.hash == ((IdentifiableObject) other).hash;
   }
 
   /** {@inheritDoc} */
   @Override
   public String toString() {
-    return "IdentifiableObject{" + "object=" + object.get() + ", hash=" + hash + '}';
+    return "IdentifiableObject{key=" + key + ", hash=" + hash + '}';
   }
 }

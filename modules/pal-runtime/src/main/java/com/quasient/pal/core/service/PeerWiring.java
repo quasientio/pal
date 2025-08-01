@@ -181,7 +181,9 @@ public class PeerWiring extends AbstractModule {
     }
 
     // common and cxn library classes are not annotated with @Singleton
-    bind(ObjectLookupStore.class).to(ConcurrentHashMapObjectLookupStore.class).asEagerSingleton();
+    bind(ObjectLookupStore.class)
+        .toProvider(ConcurrentHashMapObjectLookupStore::createWithScheduledCleaner)
+        .asEagerSingleton();
     bind(MessageBuilder.class).asEagerSingleton();
     bind(DirectoryConnectionProvider.class).asEagerSingleton();
 

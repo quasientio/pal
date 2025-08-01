@@ -32,7 +32,8 @@ public class InterceptRequestEntryTest {
 
   protected static final Logger logger = LoggerFactory.getLogger("tests");
   private final MessageBuilder msgBuilder = new MessageBuilder();
-  private final ObjectLookupStore objectLookupStore = new ConcurrentHashMapObjectLookupStore();
+  private final ObjectLookupStore objectLookupStore =
+      ConcurrentHashMapObjectLookupStore.createWithScheduledCleaner();
 
   @Test
   public void antPathMatcherTests() {

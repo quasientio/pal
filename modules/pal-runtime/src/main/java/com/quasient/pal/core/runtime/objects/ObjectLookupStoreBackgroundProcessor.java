@@ -9,13 +9,10 @@
  */
 package com.quasient.pal.core.runtime.objects;
 
-import com.quasient.pal.common.objects.ObjectRef;
-import java.time.Instant;
 import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nonnull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +23,7 @@ import org.slf4j.LoggerFactory;
  * <p>This processor schedules periodic tasks to remove cleared entries from the lookup store and to
  * log statistics about the store's usage and performance.
  */
-class ObjectLookupStoreBackgroundProcessor {
+class ObjectLookupStoreBackgroundProcessor implements ObjectLookupStoreCleaner {
 
   /** Logger instance for recording processor activities and errors. */
   private final Logger logger = LoggerFactory.getLogger(ObjectLookupStoreBackgroundProcessor.class);
@@ -106,13 +103,13 @@ class ObjectLookupStoreBackgroundProcessor {
    * and log relevant statistics at the configured intervals.
    */
   @SuppressWarnings("FutureReturnValueIgnored")
+  @Override
   public void start() {
     if (logger.isTraceEnabled()) {
       logger.trace("Starting OBJECTS stats");
     }
 
-    scheduler.scheduleAtFixedRate(
-        this::removeClearedEntries, 0, cleanupIntervalSecs, TimeUnit.SECONDS);
+    scheduler.scheduleAtFixedRate(this::runOnce, 0, cleanupIntervalSecs, TimeUnit.SECONDS);
     scheduler.scheduleAtFixedRate(this::printStats, 0, statsIntervalSecs, TimeUnit.SECONDS);
   }
 
@@ -141,29 +138,23 @@ class ObjectLookupStoreBackgroundProcessor {
    * Removes entries from the lookup store that have been cleared or are no longer valid.
    *
    * <p>This method scans the lookup store for entries whose associated objects have been cleared
-   * and removes them. It updates the statistics with the number of entries cleared and logs the
-   * cleanup duration.
+   * and removes them. It also updates the statistics with the number of entries cleared.
    */
-  void removeClearedEntries() {
+  @Override
+  public void runOnce() {
     try {
-      long cleanupStart = Instant.now().toEpochMilli();
-      final AtomicInteger clearedCount = new AtomicInteger();
-      objectLookupStore.getObjects().values().stream()
-          .filter(identObject -> identObject.getObject().get() == null)
-          .map(identObject -> ObjectRef.from(String.valueOf(identObject.getHash())))
-          .forEach(
-              objectRef -> {
-                objectLookupStore.getObjects().remove(objectRef);
-                clearedCount.getAndIncrement();
-              });
-      objectLookupStoreStats.getTotalObjectsCleared().addAndGet(clearedCount.get());
-      if (logger.isTraceEnabled()) {
-        long cleanupEnd = Instant.now().toEpochMilli();
-        logger.trace(
-            "Cleaned up {} object refs in {} ms", clearedCount.get(), cleanupEnd - cleanupStart);
+      int cleared = 0;
+      for (IdentifiableObject ref;
+          (ref = (IdentifiableObject) objectLookupStore.getRefQueue().poll()) != null; ) {
+        objectLookupStore.getObjects().remove(ref.getKey());
+        cleared++;
+      }
+      objectLookupStoreStats.getTotalObjectsCleared().addAndGet(cleared);
+      if (logger.isTraceEnabled() && cleared > 0) {
+        logger.trace("Cleaned up {} refs", cleared);
       }
     } catch (Exception e) {
-      logger.error("Error removing cleared entries", e);
+      logger.error("Error draining reference queue", e);
     }
   }
 
@@ -171,6 +162,7 @@ class ObjectLookupStoreBackgroundProcessor {
    * Terminates the background processing by shutting down the scheduler and stopping all scheduled
    * tasks.
    */
+  @Override
   public void stop() {
     scheduler.shutdownNow();
   }
