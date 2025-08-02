@@ -31,6 +31,11 @@ public class BurstPlan {
   /** Logger instance for this class. */
   private static final Logger logger = LoggerFactory.getLogger("benchmark");
 
+  /**
+   * for reproducible runs
+   */
+  private static final long RAND_SEED = 42;
+
   /** save last phase for logging */
   private Phase lastPhase;
 
@@ -61,11 +66,6 @@ public class BurstPlan {
    * seconds of linear ramp-up
    */
   @Param({"3"})      public double rampSec;
-
-  /**
-   * for reproducible runs
-   */
-  @Param({"42"})     public long   rndSeed;
 
   /* ---------- global timing anchor (shared by all iterations) ---------- */
 
@@ -108,7 +108,7 @@ public class BurstPlan {
       long burstNs = secsToNs(burstSec);
       cycleNs = baseNs + rampNs + burstNs;
     }
-    rnd = new Random(rndSeed);
+    rnd = new Random(RAND_SEED);
     nextArrivalAt = System.nanoTime();
   }
 
