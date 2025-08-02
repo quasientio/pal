@@ -62,16 +62,15 @@ BURST_SEC=10
 # EXAMPLE: “burst 5 % of every 5-minute window”, ie. 4 min 45 s baseline, 15 s burst
 # -p baseSec=285 -p burstSec=15
 
-#-------- Shared MPSC Queue params ---------
+
+#-------- PUB params ---------
+
 # One of: FIXED,CHUNKED,GROWABLE,UNBOUNDED
 PUB_QUEUE_TYPE=FIXED
-
 PUB_QUEUE_INITIAL=$((16 * 1024))
 PUB_QUEUE_MAX=$((1 * 1024 * 1024))
 PUB_QUEUE_CHUNK=$((8 * 1024))
 
-
-#-------- Publisher params ---------
 PUB_ENDPOINT=tcp://127.0.0.1:7899
 PUB_SPSC_SIZE=$((1 << 19))
 PUB_BATCH_SIZE=$((4 * 1024))
@@ -82,6 +81,13 @@ PUB_DROP_HWM=97
 PUB_DROP_KEEP=92
 
 #-------- WAL params ---------
+
+# One of: FIXED,CHUNKED,GROWABLE,UNBOUNDED
+WAL_QUEUE_TYPE=FIXED
+WAL_QUEUE_INITIAL=$((16 * 1024))
+WAL_QUEUE_MAX=$((1 * 1024 * 1024))
+WAL_QUEUE_CHUNK=$((8 * 1024))
+
 WAL_TYPE=kafka
 WAL_KAFKA_BOOTSTRAP_SERVERS=localhost:9092
 WAL_KAFKA_LINGER_MS=25
@@ -102,6 +108,9 @@ java  -Dpeer.logging="$PAL_HOME/config/peer-logging.xml" \
       -Dpub.drop.hwm_pct="$PUB_DROP_HWM" \
       -Dpub.drop.keep_pct="$PUB_DROP_KEEP" \
       -Dpub.zmq.send_hwm="$PUB_SNDHWM" \
+      -Dwal.queue.initial="$WAL_QUEUE_INITIAL" \
+      -Dwal.queue.max="$WAL_QUEUE_MAX" \
+      -Dwal.queue.chunk="$WAL_QUEUE_CHUNK" \
       -Dwal.type="$WAL_TYPE" \
       -Dwal.kafka.bootstrap_servers="$WAL_KAFKA_BOOTSTRAP_SERVERS" \
       -Dwal.kafka.linger_ms="$WAL_KAFKA_LINGER_MS" \
@@ -115,6 +124,7 @@ java  -Dpeer.logging="$PAL_HOME/config/peer-logging.xml" \
       -p inputMode="$INPUT_MODE" \
       -p sizeDistPct="$SIZE_DIST_PCT" \
       -p pubQueueType="$PUB_QUEUE_TYPE" \
+      -p walQueueType="$WAL_QUEUE_TYPE" \
       -p baseQps="$BASE_QPS" -p burstQps="$BURST_QPS"  \
       -p baseSec="$BASE_SEC" -p burstSec="$BURST_SEC"  \
       -t 8
