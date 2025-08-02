@@ -28,11 +28,11 @@ class ObjectLookupStoreBackgroundProcessor implements ObjectLookupStoreCleaner {
   /** Logger instance for recording processor activities and errors. */
   private final Logger logger = LoggerFactory.getLogger(ObjectLookupStoreBackgroundProcessor.class);
 
-  /** Default interval in seconds between cleanup operations. */
-  private static final int DEFAULT_CLEANUP_INTERVAL_SECS = 2;
+  /** Default interval in millis between cleanup operations. */
+  private static final int DEFAULT_CLEANUP_INTERVAL_MS = 50;
 
   /** Default interval in seconds between statistics logging operations. */
-  private static final int DEFAULT_STATS_INTERVAL_SECS = 30;
+  private static final int DEFAULT_STATS_INTERVAL_SECS = 6;
 
   /** Executor service responsible for scheduling and executing background tasks. */
   private final ScheduledExecutorService scheduler =
@@ -51,8 +51,8 @@ class ObjectLookupStoreBackgroundProcessor implements ObjectLookupStoreCleaner {
   /** Statistics tracker for monitoring the performance and usage of the lookup store. */
   @Nonnull private final ObjectLookupStoreStats objectLookupStoreStats;
 
-  /** Interval in seconds between consecutive cleanup operations. */
-  private final int cleanupIntervalSecs;
+  /** Interval in millis between consecutive cleanup operations. */
+  private final int cleanupIntervalMillis;
 
   /** Interval in seconds between consecutive statistics logging operations. */
   private final int statsIntervalSecs;
@@ -62,7 +62,7 @@ class ObjectLookupStoreBackgroundProcessor implements ObjectLookupStoreCleaner {
    *
    * @param objectLookupStore the store containing object references to process; must not be null
    * @param objectLookupStoreStats the statistics tracker for the lookup store; must not be null
-   * @param cleanupIntervalSecs interval in seconds for cleanup tasks; must be positive
+   * @param cleanupIntervalMillis interval in millis for cleanup tasks; must be positive
    * @param statsIntervalSecs interval in seconds for statistics logging; must be positive
    * @throws NullPointerException if {@code objectLookupStore} or {@code objectLookupStoreStats} is
    *     null
@@ -70,11 +70,11 @@ class ObjectLookupStoreBackgroundProcessor implements ObjectLookupStoreCleaner {
   ObjectLookupStoreBackgroundProcessor(
       @Nonnull ConcurrentHashMapObjectLookupStore objectLookupStore,
       @Nonnull ObjectLookupStoreStats objectLookupStoreStats,
-      int cleanupIntervalSecs,
+      int cleanupIntervalMillis,
       int statsIntervalSecs) {
     this.objectLookupStore = Objects.requireNonNull(objectLookupStore);
     this.objectLookupStoreStats = Objects.requireNonNull(objectLookupStoreStats);
-    this.cleanupIntervalSecs = cleanupIntervalSecs;
+    this.cleanupIntervalMillis = cleanupIntervalMillis;
     this.statsIntervalSecs = statsIntervalSecs;
   }
 
@@ -92,7 +92,7 @@ class ObjectLookupStoreBackgroundProcessor implements ObjectLookupStoreCleaner {
     this(
         objectLookupStore,
         objectLookupStoreStats,
-        DEFAULT_CLEANUP_INTERVAL_SECS,
+        DEFAULT_CLEANUP_INTERVAL_MS,
         DEFAULT_STATS_INTERVAL_SECS);
   }
 
@@ -109,7 +109,7 @@ class ObjectLookupStoreBackgroundProcessor implements ObjectLookupStoreCleaner {
       logger.trace("Starting OBJECTS stats");
     }
 
-    scheduler.scheduleAtFixedRate(this::runOnce, 0, cleanupIntervalSecs, TimeUnit.SECONDS);
+    scheduler.scheduleAtFixedRate(this::runOnce, 0, cleanupIntervalMillis, TimeUnit.MILLISECONDS);
     scheduler.scheduleAtFixedRate(this::printStats, 0, statsIntervalSecs, TimeUnit.SECONDS);
   }
 
