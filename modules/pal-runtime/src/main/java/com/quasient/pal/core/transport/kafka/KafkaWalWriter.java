@@ -380,6 +380,10 @@ public class KafkaWalWriter extends AbstractWalWriter {
     newRecord.headers().add("message-format", new byte[] {messageFormat.toByte()});
     newRecord.headers().add("message-type", new byte[] {messageType.getId()});
 
+    final String mid = messageId;
+    final String rid = responseId;
+    final int payloadSize = message.length;
+
     // compose callback
     Callback baseCb =
         (metadata, exception) -> {
@@ -394,9 +398,9 @@ public class KafkaWalWriter extends AbstractWalWriter {
               logger.trace(
                   "New message written to log at offset: {}, w/id: {}, in response to message w/id: {} ({} bytes)",
                   metadata.offset(),
-                  messageId,
-                  responseId,
-                  message.length);
+                  mid,
+                  rid,
+                  payloadSize);
             }
           } finally {
             messagesInFlight.decrementAndGet();
@@ -406,7 +410,7 @@ public class KafkaWalWriter extends AbstractWalWriter {
     Callback callback = baseCb;
 
     if (publishOffsets) {
-      Callback informer = new MessageOffsetInformer(messageId, offsetPublisherSocket);
+      Callback informer = new MessageOffsetInformer(mid, offsetPublisherSocket);
       callback =
           (md, ex) -> {
             try {
