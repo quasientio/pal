@@ -18,6 +18,9 @@ import java.util.EnumSet;
  * Which combination of subsystems the gateway should activate.
  */
 public enum FeatureSetVariant {
+  /** Call to non-woven method. */
+  NOWEAVE,
+
   /** No Intercepts, no WAL, no TCP-PUB.        */
   NOOP,
 

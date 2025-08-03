@@ -10,7 +10,7 @@
 package com.quasient.pal.core.bench.io;
 
 import com.quasient.pal.core.bench.DispatchBenchmark;
-import com.quasient.pal.core.bench.DispatchArgs;
+import com.quasient.pal.core.bench.InvocationArgs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,11 +18,11 @@ import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
- * <p>“On‑the‑fly” generator that fills a queue with {@link DispatchArgs}:</p>
+ * <p>“On‑the‑fly” generator that fills a queue with {@link InvocationArgs}:</p>
  *
  * <ul>
  *   <li>A <b>single daemon producer thread</b> keeps a ring‑buffer topped‑up with
- *       freshly generated {@link DispatchArgs}.</li>
+ *       freshly generated {@link InvocationArgs}.</li>
  *   <li>All JMH worker threads call {@link #next()} concurrently; the underlying
  *       queue is a lock‑free {@link ConcurrentLinkedQueue}.</li>
  *   <li>Payload size distribution is driven by {@link DispatchBenchmark#sizeDistribution()}.</li>
@@ -30,7 +30,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  *
  * <p>This implementation is chosen with {@code -p inputMode=ASYNC}.</p>
  */
-public final class AsyncDispatchArgsSource implements DispatchArgsSource {
+public final class AsyncDispatchArgsSource implements InvocationArgsSource {
 
   /** Logger instance for this class. */
   private static final Logger logger = LoggerFactory.getLogger("benchmark");
@@ -42,7 +42,7 @@ public final class AsyncDispatchArgsSource implements DispatchArgsSource {
   private static final int REFILL_THRESHOLD = BUFSIZE / 4;
 
   /** Thread‑safe queue shared by producer and all consumers. */
-  private final ConcurrentLinkedQueue<DispatchArgs> buf = new ConcurrentLinkedQueue<>();
+  private final ConcurrentLinkedQueue<InvocationArgs> buf = new ConcurrentLinkedQueue<>();
 
   /** Stops the producer loop when {@code true}. */
   private volatile boolean stop;
@@ -80,7 +80,7 @@ public final class AsyncDispatchArgsSource implements DispatchArgsSource {
 
   /** {@inheritDoc} */
   @Override
-  public DispatchArgs next() {
+  public InvocationArgs next() {
     return buf.poll();       // may return null for the consumer to spin on
   }
 

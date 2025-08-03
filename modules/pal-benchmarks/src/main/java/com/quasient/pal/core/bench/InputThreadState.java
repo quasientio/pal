@@ -14,13 +14,13 @@ import org.openjdk.jmh.annotations.*;
 
 /**
  * JMH {@code @State(Thread)} that delegates to the selected
- * {@link DispatchArgsSource}.
+ * {@link InvocationArgsSource}.
  */
 @State(Scope.Thread)
 public class InputThreadState {
 
-  /** Instance of {@link DispatchArgsSource} that we'll fetch from the bench */
-  private DispatchArgsSource source;
+  /** Instance of {@link InvocationArgsSource} that we'll fetch from the bench */
+  private InvocationArgsSource source;
 
   /**
    * Sets up the specific source for the selected {@link InputMode}
@@ -50,8 +50,8 @@ public class InputThreadState {
     source.stop();
   }
 
-  /** @return next {@link DispatchArgs} or {@code null} */
-  public DispatchArgs take() {
+  /** @return next {@link InvocationArgs} or {@code null} */
+  public InvocationArgs take() {
     return source.next();
   }
 }

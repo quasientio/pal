@@ -9,10 +9,10 @@
  */
 package com.quasient.pal.core.bench.io;
 
-import com.quasient.pal.core.bench.DispatchArgs;
+import com.quasient.pal.core.bench.InvocationArgs;
 
 /**
- * Supplies {@link DispatchArgs} to producer threads in a benchmark run.
+ * Supplies {@link InvocationArgs} to producer threads in a benchmark run.
  *
  * <p>A source is:
  * <ul>
@@ -24,7 +24,7 @@ import com.quasient.pal.core.bench.DispatchArgs;
  * <p>All implementations **must be thread‑safe**: multiple JMH worker threads call
  * {@link #next()} concurrently.
  */
-public interface DispatchArgsSource {
+public interface InvocationArgsSource {
 
   /** Prepare the source for a new trial. */
   void start();
@@ -36,9 +36,9 @@ public interface DispatchArgsSource {
   default void beforeIteration() { }
 
   /**
-   * @return the next {@link DispatchArgs} instance
+   * @return the next {@link InvocationArgs} instance
    */
-  DispatchArgs next();
+  InvocationArgs next();
 
   /** Release resources at the end of a trial. */
   void stop() throws InterruptedException;

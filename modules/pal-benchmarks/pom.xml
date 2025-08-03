@@ -33,6 +33,11 @@
       <artifactId>pal-runtime</artifactId>
     </dependency>
 
+    <dependency>
+      <groupId>com.quasient.pal</groupId>
+      <artifactId>itt-apps</artifactId>
+    </dependency>
+
     <!-- JMH itself -->
     <dependency>
       <groupId>org.openjdk.jmh</groupId>

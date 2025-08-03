@@ -9,16 +9,11 @@
  */
 package com.quasient.pal.core.bench;
 
-import com.quasient.pal.common.runtime.Context;
-import com.quasient.pal.common.runtime.DispatchForwarder;
-
 /**
- * Encapsulates the arguments for calls to {@link DispatchForwarder}
+ * Encapsulates the arguments for calls being benchmarked.
  *
- * @param ctx the execution context
- * @param sender the object initiating the call
  * @param target the target object on which the method is invoked; null for static method calls
  * @param args the arguments for the method
  */
-public record DispatchArgs(Context ctx, Object sender, Object target, Object[] args) {
+public record InvocationArgs(Object target, Object[] args) {
 }

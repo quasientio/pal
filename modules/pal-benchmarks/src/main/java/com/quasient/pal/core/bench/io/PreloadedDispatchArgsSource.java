@@ -10,7 +10,7 @@
 package com.quasient.pal.core.bench.io;
 
 import com.quasient.pal.core.bench.DispatchBenchmark;
-import com.quasient.pal.core.bench.DispatchArgs;
+import com.quasient.pal.core.bench.InvocationArgs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * <p>Generates a fixed batch of {@linkplain DispatchArgs messages} once per
+ * <p>Generates a fixed batch of {@linkplain InvocationArgs messages} once per
  * <b>JMH trial</b> and lets all worker threads pick randomly from that batch.</p>
  *
  * <h4>Behaviour</h4>
@@ -38,7 +38,7 @@ import java.util.Random;
  *
  * <p>This implementation is selected with {@code -p inputMode=PRELOADED}.</p>
  */
-public final class PreloadedDispatchArgsSource implements DispatchArgsSource {
+public final class PreloadedDispatchArgsSource implements InvocationArgsSource {
 
   /** Logger instance for this class. */
   private static final Logger logger = LoggerFactory.getLogger("benchmark");
@@ -50,12 +50,12 @@ public final class PreloadedDispatchArgsSource implements DispatchArgsSource {
   private final DispatchBenchmark bench;
 
   /** Immutable list of pre‑generated messages. */
-  private final List<DispatchArgs> batch = new ArrayList<>(BATCH_SIZE);
+  private final List<InvocationArgs> batch = new ArrayList<>(BATCH_SIZE);
 
   /**
    * Constructs a new preloaded source.
    *
-   * @param bench enclosing benchmark (used to build {@link DispatchArgs})
+   * @param bench enclosing benchmark (used to build {@link InvocationArgs})
    */
   public PreloadedDispatchArgsSource(final DispatchBenchmark bench) {
     this.bench = bench;
@@ -85,7 +85,7 @@ public final class PreloadedDispatchArgsSource implements DispatchArgsSource {
 
   /** {@inheritDoc} */
   @Override
-  public DispatchArgs next() {
+  public InvocationArgs next() {
     int idx = ThreadLocalRandom.current().nextInt(BATCH_SIZE);
     return batch.get(idx);
   }

@@ -22,11 +22,8 @@ import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 import com.google.inject.util.Modules;
 import com.quasient.pal.common.directory.nodes.LogInfo;
-import com.quasient.pal.common.lang.reflect.MethodSignature;
-import com.quasient.pal.common.lang.reflect.Params;
-import com.quasient.pal.common.runtime.Context;
-import com.quasient.pal.common.runtime.DispatchForwarder;
 import com.quasient.pal.core.bench.io.InputMode;
+import com.quasient.pal.core.bench.io.InvocationArgsSource;
 import com.quasient.pal.core.execution.java.CustomClassloader;
 import com.quasient.pal.core.intercept.InterceptMatcher;
 import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
@@ -59,8 +56,6 @@ import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 
 import java.io.InputStream;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -68,7 +63,6 @@ import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.DoubleStream;
 
 /**
  *
@@ -204,15 +198,15 @@ public class DispatchBenchmark {
   @Param({"CPU_ONLY", "MOCK", "REAL"})
   public IoProfile ioProfile;
 
-  /** Variant of call to sendExecMessage, parameterizes variations of RunOptions. */
-  @Param({"NOOP", "INTERCEPTS", "PUB", "WAL", "PUB_WAL", "INTERCEPTS_PUB", "INTERCEPTS_WAL", "INTERCEPTS_PUB_WAL"})
+  /** Variant of call to hot-path: parameterizes variations of RunOptions. */
+  @Param({"NOWEAVE", "NOOP", "INTERCEPTS", "PUB", "WAL", "PUB_WAL", "INTERCEPTS_PUB", "INTERCEPTS_WAL", "INTERCEPTS_PUB_WAL"})
   public FeatureSetVariant variant;
 
   /** Four comma‑separated percentages that must add up to 100, e.g. "40,35,20,5". */
   @Param({"40:35:20:5"})
   public String sizeDistPct;
 
-  /** Selects which {@link com.quasient.pal.core.bench.io.DispatchArgsSource} to use. */
+  /** Selects which {@link InvocationArgsSource} to use. */
   @Param({"ASYNC", "PRELOADED"})
   public InputMode inputMode;
 
@@ -565,67 +559,37 @@ public class DispatchBenchmark {
   }
 
   /**
-   * Using {@link #randomText}, creates a dispatchable that invokes {@link String#toUpperCase}
-   * on a new String with size > {@code minBytes} and < {@code maxBytes}
+   * Using {@link #randomText}, prepares a call with a new String of
+   * size > {@code minBytes} and < {@code maxBytes} as argument.
    *
    * @param minBytes lower bound for String object's length in chars
    * @param maxBytes upper bound for String object's length in chars
    * @param rnd a random generator
    * @param prefix a String that will be prefixed to the generated payload, so we can identify
    *               the messages in the logs
-   * @return the dispatch args
-   * @throws NoSuchMethodException if declared method not found
+   * @return the invocation args
    */
-  private DispatchArgs createTextDispatchable(int minBytes, int maxBytes, Random rnd, String prefix)
-          throws NoSuchMethodException {
+  private InvocationArgs createTextDispatchable(int minBytes, int maxBytes, Random rnd, String prefix) {
 
     String payload = randomText(minBytes, maxBytes, rnd, prefix);
-
-    Method method = String.class.getDeclaredMethod("toUpperCase");
-    Context ctx = new Context(
-            "DummyClassForContext.java", 0, DummyClassForContext.class,
-            new MethodSignature(String.class, String.class.getName(),
-                    Modifier.PUBLIC, "toUpperCase",
-                    new Class[]{}, new Params(null, method.getParameterTypes(), method.getParameters()),
-                    method, String.class));
-
-    return new DispatchArgs(ctx, this, payload, new Object[]{});
+    return new InvocationArgs(null, new Object[]{payload});
   }
 
   /**
-   * call {@link Arrays#stream(double[])} with an array of {@code size} random doubles
+   * Prepares a call with an array of {@code size} random doubles as argument.
    *
    * @param size number of doubles in the array
    * @param rnd random generator
-   * @return DispatchArgs instance
-   * @throws NoSuchMethodException if the method to be invoked is not found
+   * @return InvocationArgs instance
    */
-   private DispatchArgs createArrayDispatchable(int size, Random rnd) throws NoSuchMethodException {
+   private InvocationArgs createArrayDispatchable(int size, Random rnd) {
+
      double[] doubles = rnd.doubles(size).toArray();
-
-    Class<?> clzToInvoke = Arrays.class;
-    String methodName = "stream";
-    Method method = clzToInvoke.getDeclaredMethod(methodName, double[].class);
-    Context ctx = new Context(
-            "MyClass.java",
-            34,
-            DummyClassForContext.class,
-            new MethodSignature(
-                    clzToInvoke,
-                    clzToInvoke.getName(),
-                    Modifier.PUBLIC | Modifier.STATIC,
-                    methodName,
-                    new Class[]{},
-                    new Params(null, method.getParameterTypes(), method.getParameters()),
-                    method,
-                    DoubleStream.class)
-    );
-
-    return new DispatchArgs(ctx, this, null, new Object[]{doubles});
+    return new InvocationArgs(null, new Object[]{doubles});
   }
 
   /**
-   * Produces one {@link DispatchArgs} whose size category is chosen
+   * Produces one {@link InvocationArgs} whose size category is chosen
    * according to {@link #sizeDist}.
    * <p>
    * Four categories of variable size are used:
@@ -636,7 +600,7 @@ public class DispatchBenchmark {
    *   <li>large: >32KB-64KB</li>
    * </ol>
    */
-  public DispatchArgs randomArgsAccordingToDist(Random rnd) throws NoSuchMethodException {
+  public InvocationArgs randomArgsAccordingToDist(Random rnd) throws NoSuchMethodException {
     int p = rnd.nextInt(100);
     int[] w = sizeDist;   // local alias
     if (p < w[0]) {
@@ -841,24 +805,38 @@ public class DispatchBenchmark {
   @BenchmarkMode(Mode.SampleTime)                 // per-request latency
   @OutputTimeUnit(TimeUnit.NANOSECONDS)
   @Threads(Threads.MAX)
-  public void hotPathBurst(BurstPlan plan, InputThreadState ts, Blackhole bh) {
+  public void hotPath(BurstPlan plan, InputThreadState ts, Blackhole bh) {
 
     long now = System.nanoTime();
 
     // only run the hot path when the next synthetic request is due
     if (now >= plan.nextArrivalAt) {
 
-      DispatchArgs d;
-      while ((d = ts.take()) == null) {
+      InvocationArgs invocationArgs;
+      while ((invocationArgs = ts.take()) == null) {
         // only Async mode may return null --> spin until producer refills
         Thread.onSpinWait();
       }
 
-      Object returnVal;
+      Object returnVal = null;
       try {
-        returnVal = (d.target() == null)
-                ? DispatchForwarder.nonVoidClassMethod(d.ctx(), d.sender(), null, d.args())
-                : DispatchForwarder.nonVoidInstanceMethod(d.ctx(), d.sender(), d.target(), d.args());
+
+        if (invocationArgs.args()[0] instanceof double[] doubles) {        // if args[0] is a double array, call MockArrays.sort()
+          if (variant.equals(FeatureSetVariant.NOWEAVE)) {
+            com.quasient.pal.core.bench.dummies.MockArrays.sort(doubles);
+          } else {
+            com.quasient.pal.apps.woven.dummies.MockArrays.sort(doubles);
+          }
+        }
+        else if (invocationArgs.args()[0] instanceof String str) {     // if args[0] is a double array, call MockString.valueOf()
+          if (variant.equals(FeatureSetVariant.NOWEAVE)) {
+            returnVal = com.quasient.pal.core.bench.dummies.MockString.toUpperCase(str);
+          } else {
+            returnVal = com.quasient.pal.apps.woven.dummies.MockString.toUpperCase(str);
+          }
+        } else {
+          throw new RuntimeException("Unexpected type of argument: " + invocationArgs.args()[0].getClass().getName());
+        }
       } catch (Throwable t) {
         logger.error("Caught throwable in call to DispatchForwarder", t);
         // re-throw

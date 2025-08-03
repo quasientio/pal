@@ -9,7 +9,7 @@
  */
 package com.quasient.pal.core.bench.io;
 
-/** Which {@link DispatchArgsSource} to use. */
+/** Which {@link InvocationArgsSource} to use. */
 public enum InputMode {
   /** Asynchronous producer thread that refills a ring‑buffer on the fly. */
   ASYNC,
