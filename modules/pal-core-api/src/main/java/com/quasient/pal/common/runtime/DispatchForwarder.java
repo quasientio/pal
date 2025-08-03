@@ -48,14 +48,12 @@ public final class DispatchForwarder {
    *
    * @param ctxt the execution context
    * @param sender the object initiating the call
-   * @param target the target object on which the constructor is invoked
    * @param args the arguments for the constructor
    * @return the newly created object instance
    * @throws Throwable if dispatching the constructor fails
    */
-  public static Object constructor(Context ctxt, Object sender, Object target, Object[] args)
-      throws Throwable {
-    return dispatcher.constructor(ctxt, sender, target, args);
+  public static Object constructor(Context ctxt, Object sender, Object[] args) throws Throwable {
+    return dispatcher.constructor(ctxt, sender, args);
   }
 
   /**
@@ -77,13 +75,11 @@ public final class DispatchForwarder {
    *
    * @param ctxt the execution context
    * @param sender the object initiating the call
-   * @param target the target class on which the static method is invoked
    * @param args the arguments for the method
    * @throws Throwable if dispatching the method call fails
    */
-  public static void voidClassMethod(Context ctxt, Object sender, Object target, Object[] args)
-      throws Throwable {
-    dispatcher.voidClassMethod(ctxt, sender, target, args);
+  public static void voidClassMethod(Context ctxt, Object sender, Object[] args) throws Throwable {
+    dispatcher.voidClassMethod(ctxt, sender, args);
   }
 
   /**
@@ -106,14 +102,13 @@ public final class DispatchForwarder {
    *
    * @param ctxt the execution context
    * @param sender the object initiating the call
-   * @param target the target class on which the static method is invoked
    * @param args the arguments for the method
    * @return the result of the method invocation
    * @throws Throwable if dispatching the method call fails
    */
-  public static Object nonVoidClassMethod(Context ctxt, Object sender, Object target, Object[] args)
+  public static Object nonVoidClassMethod(Context ctxt, Object sender, Object[] args)
       throws Throwable {
-    return dispatcher.nonVoidClassMethod(ctxt, sender, target, args);
+    return dispatcher.nonVoidClassMethod(ctxt, sender, args);
   }
 
   /**
@@ -121,14 +116,12 @@ public final class DispatchForwarder {
    *
    * @param ctxt the execution context
    * @param sender the object initiating the call
-   * @param target the target class from which the static field is retrieved
    * @param args additional arguments if necessary
    * @return the value of the static field
    * @throws Throwable if dispatching the field retrieval fails
    */
-  public static Object getStatic(Context ctxt, Object sender, Object target, Object[] args)
-      throws Throwable {
-    return dispatcher.getStatic(ctxt, sender, target, args);
+  public static Object getStatic(Context ctxt, Object sender, Object[] args) throws Throwable {
+    return dispatcher.getStatic(ctxt, sender, args);
   }
 
   /**
@@ -151,13 +144,11 @@ public final class DispatchForwarder {
    *
    * @param ctxt the execution context
    * @param sender the object initiating the call
-   * @param target the target class on which the static field is set
    * @param args the value to assign to the static field
    * @throws Throwable if dispatching the field assignment fails
    */
-  public static void putStatic(Context ctxt, Object sender, Object target, Object[] args)
-      throws Throwable {
-    dispatcher.putStatic(ctxt, sender, target, args);
+  public static void putStatic(Context ctxt, Object sender, Object[] args) throws Throwable {
+    dispatcher.putStatic(ctxt, sender, args);
   }
 
   /**

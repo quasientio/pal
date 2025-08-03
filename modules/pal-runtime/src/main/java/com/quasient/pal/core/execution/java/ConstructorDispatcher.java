@@ -74,8 +74,8 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
    *
    * @param ctxt the current execution context containing invocation data
    * @param sender the object initiating the constructor call
-   * @param target the target on which the constructor is eventually invoked (unused in constructor
-   *     calls)
+   * @param target the target on which the constructor is eventually invoked (null and ignored in
+   *     constructor calls)
    * @param args the arguments to be passed to the constructor
    * @return an {@link ExecMessage} representing the constructor call request
    */

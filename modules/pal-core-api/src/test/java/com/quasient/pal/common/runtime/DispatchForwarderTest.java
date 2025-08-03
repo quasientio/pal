@@ -32,9 +32,9 @@ public class DispatchForwarderTest {
   @Test
   public void constructor() throws Throwable {
     Object valueToReturn = "constructor OK";
-    when(mockedDispatcher.constructor(any(), any(), any(), any())).thenReturn(valueToReturn);
-    Object ret = DispatchForwarder.constructor(mock(Context.class), null, null, new Object[0]);
-    verify(mockedDispatcher).constructor(any(), any(), any(), any());
+    when(mockedDispatcher.constructor(any(), any(), any())).thenReturn(valueToReturn);
+    Object ret = DispatchForwarder.constructor(mock(Context.class), null, new Object[0]);
+    verify(mockedDispatcher).constructor(any(), any(), any());
     assertThat(ret, is(valueToReturn));
   }
 
@@ -46,8 +46,8 @@ public class DispatchForwarderTest {
 
   @Test
   public void voidClassMethod() throws Throwable {
-    DispatchForwarder.voidClassMethod(mock(Context.class), null, null, new Object[0]);
-    verify(mockedDispatcher).voidClassMethod(any(), any(), any(), any());
+    DispatchForwarder.voidClassMethod(mock(Context.class), null, new Object[0]);
+    verify(mockedDispatcher).voidClassMethod(any(), any(), any());
   }
 
   @Test
@@ -64,19 +64,18 @@ public class DispatchForwarderTest {
   @Test
   public void nonVoidClassMethod() throws Throwable {
     Object valueToReturn = "class method OK";
-    when(mockedDispatcher.nonVoidClassMethod(any(), any(), any(), any())).thenReturn(valueToReturn);
-    Object ret =
-        DispatchForwarder.nonVoidClassMethod(mock(Context.class), null, null, new Object[0]);
-    verify(mockedDispatcher).nonVoidClassMethod(any(), any(), any(), any());
+    when(mockedDispatcher.nonVoidClassMethod(any(), any(), any())).thenReturn(valueToReturn);
+    Object ret = DispatchForwarder.nonVoidClassMethod(mock(Context.class), null, new Object[0]);
+    verify(mockedDispatcher).nonVoidClassMethod(any(), any(), any());
     assertThat(ret, is(valueToReturn));
   }
 
   @Test
   public void getStatic() throws Throwable {
     Object valueToReturn = "get static OK";
-    when(mockedDispatcher.getStatic(any(), any(), any(), any())).thenReturn(valueToReturn);
-    Object ret = DispatchForwarder.getStatic(mock(Context.class), null, null, new Object[0]);
-    verify(mockedDispatcher).getStatic(any(), any(), any(), any());
+    when(mockedDispatcher.getStatic(any(), any(), any())).thenReturn(valueToReturn);
+    Object ret = DispatchForwarder.getStatic(mock(Context.class), null, new Object[0]);
+    verify(mockedDispatcher).getStatic(any(), any(), any());
     assertThat(ret, is(valueToReturn));
   }
 
@@ -91,8 +90,8 @@ public class DispatchForwarderTest {
 
   @Test
   public void putStatic() throws Throwable {
-    DispatchForwarder.putStatic(mock(Context.class), null, null, new Object[0]);
-    verify(mockedDispatcher).putStatic(any(), any(), any(), any());
+    DispatchForwarder.putStatic(mock(Context.class), null, new Object[0]);
+    verify(mockedDispatcher).putStatic(any(), any(), any());
   }
 
   @Test

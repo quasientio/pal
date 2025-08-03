@@ -81,7 +81,6 @@ aspect FullQuantizeAspect {
 		DispatchForwarder.voidClassMethod(
 			Context.parseFrom(thisJoinPointStaticPart),
 			thisJoinPoint.getThis(),
-			thisJoinPoint.getTarget(),
 			thisJoinPoint.getArgs());
 	}
 
@@ -111,7 +110,6 @@ aspect FullQuantizeAspect {
 		return DispatchForwarder.nonVoidClassMethod(
 			Context.parseFrom(thisJoinPointStaticPart),
 			thisJoinPoint.getThis(),
-			thisJoinPoint.getTarget(),
 			thisJoinPoint.getArgs());
 	}
 
@@ -128,7 +126,6 @@ aspect FullQuantizeAspect {
 		return DispatchForwarder.constructor(
 			Context.parseFrom(thisJoinPointStaticPart),
 			thisJoinPoint.getThis(),
-			thisJoinPoint.getTarget(),
 			thisJoinPoint.getArgs());
 	}
 
@@ -144,7 +141,6 @@ aspect FullQuantizeAspect {
 		return DispatchForwarder.getStatic(
 			Context.parseFrom(thisJoinPointStaticPart),
 			thisJoinPoint.getThis(),
-			thisJoinPoint.getTarget(),
 			thisJoinPoint.getArgs());
 	}
 
@@ -172,7 +168,6 @@ aspect FullQuantizeAspect {
 		DispatchForwarder.putStatic(
 			Context.parseFrom(thisJoinPointStaticPart),
 			thisJoinPoint.getThis(),
-			thisJoinPoint.getTarget(),
 			thisJoinPoint.getArgs());
 	}
 

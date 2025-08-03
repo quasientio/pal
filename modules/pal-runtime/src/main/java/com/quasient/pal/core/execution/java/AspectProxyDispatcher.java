@@ -88,15 +88,13 @@ public class AspectProxyDispatcher implements ProxyDispatcher {
    *
    * @param ctxt the runtime execution context containing invocation metadata
    * @param sender the originating object triggering the constructor dispatch
-   * @param target the target class or object on which the constructor is invoked
    * @param args an array of arguments to be passed to the constructor
    * @return the newly created object instance as a result of the constructor invocation
    * @throws Throwable if an error occurs during constructor dispatch
    */
   @Override
-  public Object constructor(Context ctxt, Object sender, Object target, Object[] args)
-      throws Throwable {
-    return constructorDispatcher.dispatch(ctxt, sender, target, args);
+  public Object constructor(Context ctxt, Object sender, Object[] args) throws Throwable {
+    return constructorDispatcher.dispatch(ctxt, sender, null, args);
   }
 
   /**
@@ -125,14 +123,12 @@ public class AspectProxyDispatcher implements ProxyDispatcher {
    *
    * @param ctxt the runtime execution context containing invocation metadata
    * @param sender the originating object triggering the method call
-   * @param target the target class on which the static method is invoked
    * @param args an array of arguments to be passed to the method
    * @throws Throwable if an error occurs during class method dispatch
    */
   @Override
-  public void voidClassMethod(Context ctxt, Object sender, Object target, Object[] args)
-      throws Throwable {
-    classMethodDispatcher.dispatch(ctxt, sender, target, args);
+  public void voidClassMethod(Context ctxt, Object sender, Object[] args) throws Throwable {
+    classMethodDispatcher.dispatch(ctxt, sender, null, args);
   }
 
   /**
@@ -162,15 +158,13 @@ public class AspectProxyDispatcher implements ProxyDispatcher {
    *
    * @param ctxt the runtime execution context containing invocation metadata
    * @param sender the originating object triggering the method call
-   * @param target the target class on which the static method is invoked
    * @param args an array of arguments to be passed to the method
    * @return the result returned by the class method invocation
    * @throws Throwable if an error occurs during class method dispatch
    */
   @Override
-  public Object nonVoidClassMethod(Context ctxt, Object sender, Object target, Object[] args)
-      throws Throwable {
-    return classMethodDispatcher.dispatch(ctxt, sender, target, args);
+  public Object nonVoidClassMethod(Context ctxt, Object sender, Object[] args) throws Throwable {
+    return classMethodDispatcher.dispatch(ctxt, sender, null, args);
   }
 
   /**
@@ -181,15 +175,13 @@ public class AspectProxyDispatcher implements ProxyDispatcher {
    *
    * @param ctxt the runtime execution context containing invocation metadata
    * @param sender the originating object requesting the field value
-   * @param target the target class from which the field is retrieved
    * @param args an array of parameters to be used in retrieving the field value
    * @return the static field value obtained through dispatch
    * @throws Throwable if an error occurs during static field dispatch
    */
   @Override
-  public Object getStatic(Context ctxt, Object sender, Object target, Object[] args)
-      throws Throwable {
-    return getClassVariableDispatcher.dispatch(ctxt, sender, target, args);
+  public Object getStatic(Context ctxt, Object sender, Object[] args) throws Throwable {
+    return getClassVariableDispatcher.dispatch(ctxt, sender, null, args);
   }
 
   /**
@@ -219,14 +211,12 @@ public class AspectProxyDispatcher implements ProxyDispatcher {
    *
    * @param ctxt the runtime execution context containing invocation metadata
    * @param sender the originating object performing the field update
-   * @param target the target class on which the static field is updated
    * @param args an array of parameters representing the new field value
    * @throws Throwable if an error occurs during static field assignment dispatch
    */
   @Override
-  public void putStatic(Context ctxt, Object sender, Object target, Object[] args)
-      throws Throwable {
-    setClassVariableDispatcher.dispatch(ctxt, sender, target, args);
+  public void putStatic(Context ctxt, Object sender, Object[] args) throws Throwable {
+    setClassVariableDispatcher.dispatch(ctxt, sender, null, args);
   }
 
   /**
