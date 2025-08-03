@@ -55,7 +55,7 @@
         <errorprone.plugin.version>2.27.1</errorprone.plugin.version>
 
         <!-- DEPENDENCIES VERSIONS -->
-        <aspectj.version>1.9.22</aspectj.version>
+        <aspectj.version>1.9.24</aspectj.version>
         <junit.version>4.13.2</junit.version>
         <hamcrest.core.version>2.2</hamcrest.core.version>
         <guice.version>7.0.0</guice.version>
