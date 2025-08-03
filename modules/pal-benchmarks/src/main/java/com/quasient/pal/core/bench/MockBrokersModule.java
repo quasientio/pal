@@ -12,6 +12,7 @@ package com.quasient.pal.core.bench;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.quasient.pal.core.bench.dummies.DrainingMockProducer;
 import com.quasient.pal.core.transport.kafka.ProducerFactory;
 import com.quasient.pal.core.transport.zmq.publish.MessagePublisher;
 import org.apache.kafka.clients.producer.MockProducer;
@@ -28,13 +29,6 @@ public final class MockBrokersModule extends AbstractModule {
    */
   @Override protected void configure() {
     bind(MessagePublisher.class).to(DummyMessagePublisher.class).in(Singleton.class);
-
-    /*
-    // turn off ZMQ offset publishing by KafkaWalWriter
-    bind(Boolean.class)
-            .annotatedWith(com.google.inject.name.Names.named("publishOffsets"))
-            .toInstance(false);
-    */
   }
 
   /**
@@ -47,8 +41,7 @@ public final class MockBrokersModule extends AbstractModule {
   @Provides
   @Singleton
   ProducerFactory mockFactory() {
-    return props -> new MockProducer<>(
-            true,                      // auto-complete futures
+    return props -> new DrainingMockProducer<>(
             new StringSerializer(),
             new ByteArraySerializer());
   }
