@@ -7,18 +7,22 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
-package com.quasient.pal.core;
+package com.quasient.pal.weave;
 
 import com.quasient.pal.common.runtime.Context;
 import com.quasient.pal.common.runtime.DispatchForwarder;
+import com.quasient.pal.common.weave.Proceed;
 
 import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.JoinPoint.StaticPart;
+import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.CodeSignature;
 import org.aspectj.lang.reflect.FieldSignature;
 
-aspect FullQuantizeAspect {
-	//if false, no output at all
-	private static final boolean verbose=false;
+privileged aspect FullQuantizeAspect {
+
+	//if false, no debug output at all
+	private static final boolean verbose= Boolean.parseBoolean(System.getProperty("aspectj.debug", "false"));
 
 	//Exception softening of calls to DispatchForwarder
 	declare soft: Throwable : call (Object DispatchForwarder.constructor(..));
@@ -26,14 +30,13 @@ aspect FullQuantizeAspect {
 	declare soft: Throwable : call (Object DispatchForwarder.nonVoidInstanceMethod(..));
 	declare soft: Throwable : call (void DispatchForwarder.voidClassMethod(..));
 	declare soft: Throwable : call (Object DispatchForwarder.nonVoidClassMethod(..));
-	declare soft: Throwable : call (Object DispatchForwarder.getStatic(..));
-	declare soft: Throwable : call (Object DispatchForwarder.getObject(..));
-	declare soft: Throwable : call (void DispatchForwarder.putStatic(..));
-	declare soft: Throwable : call (void DispatchForwarder.putField(..));
 
 	/** POINTCUT DEFINITIONS **/
 
-	pointcut allClasses(): !within(FullQuantizeAspect) && !within(is(EnumType));
+	pointcut allClasses():
+	    !within(FullQuantizeAspect) &&
+	    !within(com.quasient.pal.core..*) &&
+	    !within(is(EnumType));
 
 	pointcut voidInstanceMethods(): allClasses() && call(!static void *(..));
 
@@ -49,140 +52,127 @@ aspect FullQuantizeAspect {
 
 	pointcut nonStaticGetfields(): allClasses() && get(!static * *);
 
-	pointcut staticPutfields(): allClasses() && set(static * *);
+	pointcut staticPutfields(): allClasses() && set(static !final * *);
 
-	pointcut nonStaticPutfields(): allClasses() && set(!static * *);
+	pointcut nonStaticPutfields(): allClasses() && set(!static !final * *);
 
 	/** ADVICE for Methods **/
 
 	void around(): voidInstanceMethods() {
-		if (verbose) {
-			print(" D --> void instance method: "+thisJoinPointStaticPart.getSignature().toShortString());
-			printStaticCtxt(thisJoinPointStaticPart);
-			printNonStaticCtxt(thisJoinPoint);
-			printParameters(thisJoinPoint);
-		}
 
-		DispatchForwarder.voidInstanceMethod(
-			Context.parseFrom(thisJoinPointStaticPart),
-			thisJoinPoint.getThis(),
-			thisJoinPoint.getTarget(),
-			thisJoinPoint.getArgs());
+		ProceedingJoinPoint pjp = (ProceedingJoinPoint) thisJoinPoint;
+	    if (verbose) {
+            print(" D --> void instance method: "+thisJoinPointStaticPart.getSignature().toShortString());
+            printStaticCtxt(thisJoinPointStaticPart);
+            printNonStaticCtxt(thisJoinPoint);
+            printParameters(thisJoinPoint);
+    	}
+
+		DispatchForwarder.voidInstanceMethod(Context.parseFrom(pjp.getStaticPart()), pjp, () -> proceed());
 	}
 
 	void around(): voidClassMethods() {
+
+		ProceedingJoinPoint pjp = (ProceedingJoinPoint) thisJoinPoint;
 		if (verbose) {
-			print(" D --> void class method: "+thisJoinPointStaticPart.getSignature().toShortString());
-			printStaticCtxt(thisJoinPointStaticPart);
-			printNonStaticCtxt(thisJoinPoint);
-			printParameters(thisJoinPoint);
+			print(" D --> void class method: "+pjp.getStaticPart().getSignature().toShortString());
+			printStaticCtxt(pjp.getStaticPart());
+			printNonStaticCtxt(pjp);
+			printParameters(pjp);
 		}
 
-		DispatchForwarder.voidClassMethod(
-			Context.parseFrom(thisJoinPointStaticPart),
-			thisJoinPoint.getThis(),
-			thisJoinPoint.getArgs());
+		DispatchForwarder.voidClassMethod(Context.parseFrom(pjp.getStaticPart()), pjp, () -> proceed());
 	}
 
 	Object around(): nonVoidInstanceMethods() {
+
+		ProceedingJoinPoint pjp = (ProceedingJoinPoint) thisJoinPoint;
 		if (verbose) {
-			print(" D --> non-void instance method: "+thisJoinPointStaticPart.getSignature().toShortString());
-			printStaticCtxt(thisJoinPointStaticPart);
-			printNonStaticCtxt(thisJoinPoint);
-			printParameters(thisJoinPoint);
+			print(" D --> non-void instance method: "+pjp.getStaticPart().getSignature().toShortString());
+			printStaticCtxt(pjp.getStaticPart());
+			printNonStaticCtxt(pjp);
+			printParameters(pjp);
 		}
 
-		return DispatchForwarder.nonVoidInstanceMethod(
-			Context.parseFrom(thisJoinPointStaticPart),
-			thisJoinPoint.getThis(),
-			thisJoinPoint.getTarget(),
-			thisJoinPoint.getArgs());
+		return DispatchForwarder.nonVoidInstanceMethod(Context.parseFrom(pjp.getStaticPart()), pjp, () -> proceed());
 	}
 
 	Object around(): nonVoidClassMethods() {
+
+		ProceedingJoinPoint pjp = (ProceedingJoinPoint) thisJoinPoint;
 		if (verbose) {
-			print(" D --> non-void class method: "+thisJoinPointStaticPart.getSignature().toShortString());
-			printStaticCtxt(thisJoinPointStaticPart);
-			printNonStaticCtxt(thisJoinPoint);
-			printParameters(thisJoinPoint);
+			print(" D --> non-void class method: "+pjp.getStaticPart().getSignature().toShortString());
+			printStaticCtxt(pjp.getStaticPart());
+			printNonStaticCtxt(pjp);
+			printParameters(pjp);
 		}
 
-		return DispatchForwarder.nonVoidClassMethod(
-			Context.parseFrom(thisJoinPointStaticPart),
-			thisJoinPoint.getThis(),
-			thisJoinPoint.getArgs());
+		return DispatchForwarder.nonVoidClassMethod(Context.parseFrom(pjp.getStaticPart()), pjp, () -> proceed());
 	}
 
 	/** ADVICE for Constructors **/
 
 	Object around(): constructors() {
+
+		ProceedingJoinPoint pjp = (ProceedingJoinPoint) thisJoinPoint;
 		if (verbose) {
-			print(" D --> constructor: "+thisJoinPoint);
-			printStaticCtxt(thisJoinPointStaticPart);
-			printNonStaticCtxt(thisJoinPoint);
-			printParameters(thisJoinPoint);
+			print(" D --> constructor: "+pjp);
+			printStaticCtxt(pjp.getStaticPart());
+			printNonStaticCtxt(pjp);
+			printParameters(pjp);
 		}
 
-		return DispatchForwarder.constructor(
-			Context.parseFrom(thisJoinPointStaticPart),
-			thisJoinPoint.getThis(),
-			thisJoinPoint.getArgs());
+		return DispatchForwarder.constructor(Context.parseFrom(pjp.getStaticPart()), pjp, () -> proceed());
 	}
 
 	/** ADVICE for Fields **/
 
 	Object around(): staticGetfields() {
+
+		ProceedingJoinPoint pjp = (ProceedingJoinPoint) thisJoinPoint;
 		if (verbose) {
-			print(" D --> get static: "+thisJoinPoint);
-			printStaticCtxt(thisJoinPointStaticPart);
-			printNonStaticCtxt(thisJoinPoint);
+			print(" D --> get static: "+pjp);
+			printStaticCtxt(pjp.getStaticPart());
+			printNonStaticCtxt(pjp);
 		}
 
-		return DispatchForwarder.getStatic(
-			Context.parseFrom(thisJoinPointStaticPart),
-			thisJoinPoint.getThis(),
-			thisJoinPoint.getArgs());
+		return DispatchForwarder.getStatic(Context.parseFrom(pjp.getStaticPart()), pjp, () -> proceed());
 	}
 
 	Object around(): nonStaticGetfields() {
+
+		ProceedingJoinPoint pjp = (ProceedingJoinPoint) thisJoinPoint;
 		if (verbose) {
-			print(" D --> get field: "+thisJoinPoint);
-			printStaticCtxt(thisJoinPointStaticPart);
-			printNonStaticCtxt(thisJoinPoint);
+			print(" D --> get field: "+pjp);
+			printStaticCtxt(pjp.getStaticPart());
+			printNonStaticCtxt(pjp);
 		}
 
-		return DispatchForwarder.getObject(
-			Context.parseFrom(thisJoinPointStaticPart),
-			thisJoinPoint.getThis(),
-			thisJoinPoint.getTarget(),
-			thisJoinPoint.getArgs());
+		return DispatchForwarder.getObject(Context.parseFrom(pjp.getStaticPart()), pjp, () -> proceed());
 	}
 
 	void around(): staticPutfields() {
+
+		ProceedingJoinPoint pjp = (ProceedingJoinPoint) thisJoinPoint;
 		if (verbose) {
-			print(" D --> put static: "+thisJoinPoint);
-			printStaticCtxt(thisJoinPointStaticPart);
-			printNonStaticCtxt(thisJoinPoint);
+			print(" D --> put static: "+pjp);
+			printStaticCtxt(pjp.getStaticPart());
+			printNonStaticCtxt(pjp);
 		}
 
-		DispatchForwarder.putStatic(
-			Context.parseFrom(thisJoinPointStaticPart),
-			thisJoinPoint.getThis(),
-			thisJoinPoint.getArgs());
+		DispatchForwarder.putStatic(Context.parseFrom(pjp.getStaticPart()), pjp, () -> proceed());
 	}
 
 	void around(): nonStaticPutfields() {
+
+		ProceedingJoinPoint pjp = (ProceedingJoinPoint) thisJoinPoint;
 		if (verbose) {
-			print(" D --> put field: "+thisJoinPoint);
-			printStaticCtxt(thisJoinPointStaticPart);
-			printNonStaticCtxt(thisJoinPoint);
+			print(" D --> put field: "+pjp);
+			printStaticCtxt(pjp.getStaticPart());
+			printNonStaticCtxt(pjp);
 		}
 
-		DispatchForwarder.putField(
-			Context.parseFrom(thisJoinPointStaticPart),
-			thisJoinPoint.getThis(),
-			thisJoinPoint.getTarget(),
-			thisJoinPoint.getArgs());
+		DispatchForwarder.putField(Context.parseFrom(pjp.getStaticPart()), pjp, () -> proceed());
 	}
 
 

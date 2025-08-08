@@ -28,6 +28,7 @@ import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.serdes.Unwrapper;
 import java.util.ArrayList;
 import java.util.List;
+import org.aspectj.lang.ProceedingJoinPoint;
 import org.hamcrest.Matchers;
 import org.junit.Before;
 import org.junit.Test;
@@ -60,25 +61,200 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
             objectLookupStore);
   }
 
-  @Override
+  /* --------------------------------------------*/
+  /*             Dispatcher interface            */
+  /* --------------------------------------------*/
+  /* ----------------------------------------------------------
+   * 1.  dispatch_primitive_ok
+   * ---------------------------------------------------------- */
   @Test
+  @Override
   public void dispatch_primitive_ok() throws Throwable {
 
-    // signature
     String fieldName = "someShort";
     Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
 
-    // ctxt
     Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
-    // dispatch
-    ClassForGetFieldTest target = new ClassForGetFieldTest();
-    Object returned = dispatcher.dispatch(ctxt, this, target, null);
+    ClassForGetFieldTest target = new ClassForGetFieldTest(); // ← real receiver
 
-    // expect
+    ProceedingJoinPoint pjp =
+        PjpBuilder.forContext(ctxt)
+            .sender(this) // test class doing the access
+            .target(target) // instance field ⇒ receiver
+            .args(new Object[0]) // field get ⇒ no args
+            .build();
+
+    Object returned = dispatcher.dispatch(ctxt, pjp, asProceed(() -> target.someShort));
+
     verifyDispatcherConnectorSendExecMessageCalledTwice();
     assertThat(returned, is(target.someShort));
   }
+
+  /* ----------------------------------------------------------
+   * 2.  dispatch_primitiveArray_ok
+   * ---------------------------------------------------------- */
+  @Test
+  @Override
+  public void dispatch_primitiveArray_ok() throws Throwable {
+
+    String fieldName = "bytes";
+    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
+
+    ClassForGetFieldTest target = new ClassForGetFieldTest();
+
+    ProceedingJoinPoint pjp =
+        PjpBuilder.forContext(ctxt).sender(this).target(target).args(new Object[0]).build();
+
+    Object returned = dispatcher.dispatch(ctxt, pjp, asProceed(() -> target.bytes));
+
+    verifyDispatcherConnectorSendExecMessageCalledTwice();
+    assertThat(returned, is(target.bytes));
+  }
+
+  /* ----------------------------------------------------------
+   * 3.  dispatch_wrapper_ok
+   * ---------------------------------------------------------- */
+  @Test
+  @Override
+  public void dispatch_wrapper_ok() throws Throwable {
+
+    String fieldName = "someInteger";
+    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
+
+    ClassForGetFieldTest target = new ClassForGetFieldTest();
+
+    ProceedingJoinPoint pjp =
+        PjpBuilder.forContext(ctxt).sender(this).target(target).args(new Object[0]).build();
+
+    Object returned = dispatcher.dispatch(ctxt, pjp, asProceed(() -> target.someInteger));
+
+    verifyDispatcherConnectorSendExecMessageCalledTwice();
+    assertThat(returned, is(target.someInteger));
+  }
+
+  /* ----------------------------------------------------------
+   * 4.  dispatch_string_ok
+   * ---------------------------------------------------------- */
+  @Test
+  @Override
+  public void dispatch_string_ok() throws Throwable {
+
+    String fieldName = "aString";
+    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
+
+    ClassForGetFieldTest target = new ClassForGetFieldTest();
+
+    ProceedingJoinPoint pjp =
+        PjpBuilder.forContext(ctxt).sender(this).target(target).args(new Object[0]).build();
+
+    Object returned = dispatcher.dispatch(ctxt, pjp, asProceed(() -> target.aString));
+
+    verifyDispatcherConnectorSendExecMessageCalledTwice();
+    assertThat(returned, is(target.aString));
+  }
+
+  /* ----------------------------------------------------------
+   * 5.  dispatch_object_ok
+   * ---------------------------------------------------------- */
+  @Test
+  @Override
+  public void dispatch_object_ok() throws Throwable {
+
+    String fieldName = "anObject";
+    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
+
+    ClassForGetFieldTest target = new ClassForGetFieldTest();
+
+    ProceedingJoinPoint pjp =
+        PjpBuilder.forContext(ctxt).sender(this).target(target).args(new Object[0]).build();
+
+    Object returned = dispatcher.dispatch(ctxt, pjp, asProceed(() -> target.anObject));
+
+    verifyDispatcherConnectorSendExecMessageCalledTwice();
+    assertThat(returned, is(target.anObject));
+  }
+
+  /* ----------------------------------------------------------
+   * 6.  dispatch_nullObject_ok
+   * ---------------------------------------------------------- */
+  @Test
+  @Override
+  public void dispatch_nullObject_ok() throws Throwable {
+
+    String fieldName = "aNullClass";
+    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
+
+    ClassForGetFieldTest target = new ClassForGetFieldTest();
+
+    ProceedingJoinPoint pjp =
+        PjpBuilder.forContext(ctxt).sender(this).target(target).args(new Object[0]).build();
+
+    Object returned = dispatcher.dispatch(ctxt, pjp, asProceed(() -> target.aNullClass));
+
+    verifyDispatcherConnectorSendExecMessageCalledTwice();
+    assertThat(returned, is(nullValue()));
+  }
+
+  /* ----------------------------------------------------------
+   * 7.  dispatch_objectArray_ok
+   * ---------------------------------------------------------- */
+  @Test
+  @Override
+  public void dispatch_objectArray_ok() throws Throwable {
+
+    String fieldName = "objects";
+    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
+
+    ClassForGetFieldTest target = new ClassForGetFieldTest();
+
+    ProceedingJoinPoint pjp =
+        PjpBuilder.forContext(ctxt).sender(this).target(target).args(new Object[0]).build();
+
+    Object returned = dispatcher.dispatch(ctxt, pjp, asProceed(() -> target.objects));
+
+    verifyDispatcherConnectorSendExecMessageCalledTwice();
+    assertThat(returned, is(target.objects));
+  }
+
+  /* ----------------------------------------------------------
+   * 8.  dispatch_throwable_ok
+   * ---------------------------------------------------------- */
+  @Test
+  @Override
+  public void dispatch_throwable_ok() throws Throwable {
+
+    String fieldName = "lastError";
+    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
+
+    ClassForGetFieldTest target = new ClassForGetFieldTest();
+
+    ProceedingJoinPoint pjp =
+        PjpBuilder.forContext(ctxt).sender(this).target(target).args(new Object[0]).build();
+
+    Object returned = dispatcher.dispatch(ctxt, pjp, asProceed(() -> target.lastError));
+
+    verifyDispatcherConnectorSendExecMessageCalledTwice();
+    assertThat(returned, is(target.lastError));
+  }
+
+  /* -------------------------------------------------------*/
+  /*             ExecMessageDispatcher interface            */
+  /* -------------------------------------------------------*/
 
   @Override
   @Test
@@ -113,26 +289,6 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
   @Override
   @Test
-  public void dispatch_primitiveArray_ok() throws Throwable {
-
-    // signature
-    String fieldName = "bytes";
-    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
-
-    // ctxt
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
-    // dispatch
-    ClassForGetFieldTest target = new ClassForGetFieldTest();
-    Object returned = dispatcher.dispatch(ctxt, this, target, null);
-
-    // expect
-    verifyDispatcherConnectorSendExecMessageCalledTwice();
-    assertThat(returned, is(target.bytes));
-  }
-
-  @Override
-  @Test
   public void dispatchIncoming_primitiveArray_ok() throws Exception {
 
     String fieldName = "bytes";
@@ -160,26 +316,6 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
         responseMessage.getReturnValue(),
         Matchers.allOf(
             ComesFromClass.comesFromClass(targetClass), ComesFromReflectable.comesFrom(fieldName)));
-  }
-
-  @Override
-  @Test
-  public void dispatch_wrapper_ok() throws Throwable {
-
-    // signature
-    String fieldName = "someInteger";
-    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
-
-    // ctxt
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
-    // dispatch
-    ClassForGetFieldTest target = new ClassForGetFieldTest();
-    Object returned = dispatcher.dispatch(ctxt, this, target, null);
-
-    // expect
-    verifyDispatcherConnectorSendExecMessageCalledTwice();
-    assertThat(returned, is(target.someInteger));
   }
 
   @Override
@@ -216,26 +352,6 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
   @Override
   @Test
-  public void dispatch_string_ok() throws Throwable {
-
-    // signature
-    String fieldName = "aString";
-    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
-
-    // ctxt
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
-    // dispatch
-    ClassForGetFieldTest target = new ClassForGetFieldTest();
-    Object returned = dispatcher.dispatch(ctxt, this, target, null);
-
-    // expect
-    verifyDispatcherConnectorSendExecMessageCalledTwice();
-    assertThat(returned, is(target.aString));
-  }
-
-  @Override
-  @Test
   public void dispatchIncoming_string_ok() throws Exception {
 
     String fieldName = "aString";
@@ -263,26 +379,6 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
         responseMessage.getReturnValue(),
         Matchers.allOf(
             ComesFromClass.comesFromClass(targetClass), ComesFromReflectable.comesFrom(fieldName)));
-  }
-
-  @Override
-  @Test
-  public void dispatch_object_ok() throws Throwable {
-
-    // signature
-    String fieldName = "anObject";
-    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
-
-    // ctxt
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
-    // dispatch
-    ClassForGetFieldTest target = new ClassForGetFieldTest();
-    Object returned = dispatcher.dispatch(ctxt, this, target, null);
-
-    // expect
-    verifyDispatcherConnectorSendExecMessageCalledTwice();
-    assertThat(returned, is(target.anObject));
   }
 
   @Override
@@ -320,26 +416,6 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
   @Override
   @Test
-  public void dispatch_nullObject_ok() throws Throwable {
-
-    // signature
-    String fieldName = "aNullClass";
-    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
-
-    // ctxt
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
-    // dispatch
-    ClassForGetFieldTest target = new ClassForGetFieldTest();
-    Object returned = dispatcher.dispatch(ctxt, this, target, null);
-
-    // expect
-    verifyDispatcherConnectorSendExecMessageCalledTwice();
-    assertThat(returned, is(nullValue()));
-  }
-
-  @Override
-  @Test
   public void dispatchIncoming_nullObject_ok() {
 
     String fieldName = "aNullClass";
@@ -366,26 +442,6 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
         responseMessage.getReturnValue(),
         Matchers.allOf(
             ComesFromClass.comesFromClass(targetClass), ComesFromReflectable.comesFrom(fieldName)));
-  }
-
-  @Override
-  @Test
-  public void dispatch_objectArray_ok() throws Throwable {
-
-    // signature
-    String fieldName = "objects";
-    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
-
-    // ctxt
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
-    // dispatch
-    ClassForGetFieldTest target = new ClassForGetFieldTest();
-    Object returned = dispatcher.dispatch(ctxt, this, target, null);
-
-    // expect
-    verifyDispatcherConnectorSendExecMessageCalledTwice();
-    assertThat(returned, is(target.objects));
   }
 
   @Override
@@ -419,26 +475,6 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
         responseMessage.getReturnValue(),
         Matchers.allOf(
             ComesFromClass.comesFromClass(targetClass), ComesFromReflectable.comesFrom(fieldName)));
-  }
-
-  @Override
-  @Test
-  public void dispatch_throwable_ok() throws Throwable {
-
-    // signature
-    String fieldName = "lastError";
-    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
-
-    // ctxt
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
-    // dispatch
-    ClassForGetFieldTest target = new ClassForGetFieldTest();
-    Object returned = dispatcher.dispatch(ctxt, this, target, null);
-
-    // expect
-    verifyDispatcherConnectorSendExecMessageCalledTwice();
-    assertThat(returned, is(target.lastError));
   }
 
   @Override

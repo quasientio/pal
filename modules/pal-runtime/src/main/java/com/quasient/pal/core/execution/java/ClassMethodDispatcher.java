@@ -27,13 +27,14 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import org.aspectj.lang.ProceedingJoinPoint;
 
 /**
- * Dispatcher for invoking static class methods via reflection.
+ * Dispatcher for invoking static class methods via reflection or a {@link ProceedingJoinPoint}
  *
  * <p>This dispatcher prepares and dispatches messages corresponding to class method executions. It
- * builds both pre- and post-execution messages and handles reflective invocation, including proper
- * handling of exceptions through wrapping.
+ * builds both pre- and post-execution messages and handles invocation via reflection or a
+ * JoinPoint's proceed() invocation, including proper handling of exceptions through wrapping.
  *
  * @see MethodDispatcher
  */
@@ -113,56 +114,11 @@ public class ClassMethodDispatcher extends MethodDispatcher {
 
     final AccessibleObject method = ((MethodSignature) ctxt.getSignature()).getMethod();
 
-    if (value instanceof InvocationExceptionWrapper) {
-      Exception invocationException = ((InvocationExceptionWrapper) value).exception();
-      return messageBuilder.buildAccessibleObjectThrowable(
-          peerUuid, method, invocationException, null);
+    if (value instanceof InvocationThrowableWrapper) {
+      Throwable invocationThr = ((InvocationThrowableWrapper) value).throwable();
+      return messageBuilder.buildAccessibleObjectThrowable(peerUuid, method, invocationThr, null);
     } else {
       return messageBuilder.buildReturnValue(peerUuid, value, method, objectRef, isVoid, null);
-    }
-  }
-
-  /**
-   * {@inheritDoc}
-   *
-   * <p>Invokes a static class method reflectively with the provided arguments. The method is made
-   * accessible prior to invocation. In case an exception is thrown, the exception is wrapped and
-   * returned as an {@link InvocationExceptionWrapper}. A singleton void instance is returned if the
-   * method is declared as void.
-   *
-   * @param ctxt the execution context containing the method signature.
-   * @param sender the object initiating the call.
-   * @param target the target instance (irrelevant for static methods).
-   * @param args the parameters to supply to the method invocation.
-   * @return the result of the invocation, an {@link InvocationExceptionWrapper} in case of error,
-   *     or a special void instance for methods with a void return type.
-   */
-  @Override
-  protected final Object invoke(Context ctxt, Object sender, Object target, Object[] args) {
-    if (logger.isTraceEnabled()) {
-      logger.trace(
-          "invoke w/ ctxt: {}, sender: {}, target: {}, args: {}",
-          ctxt,
-          sender,
-          target,
-          Arrays.toString(args));
-    }
-    final MethodSignature methodSignature = (MethodSignature) ctxt.getSignature();
-    Method method = methodSignature.getMethod();
-
-    Object returnValue;
-    method.setAccessible(true);
-    try {
-      returnValue = method.invoke(null, args);
-    } catch (Exception ex) {
-      logger.error("Caught exception while invoking class method. Will wrap and return it.", ex);
-      return new InvocationExceptionWrapper(ex);
-    }
-
-    if (method.getReturnType().equals(java.lang.Void.TYPE)) {
-      return Void.getInstance();
-    } else {
-      return returnValue;
     }
   }
 

@@ -29,13 +29,14 @@ import java.lang.reflect.Constructor;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import org.aspectj.lang.ProceedingJoinPoint;
 
 /**
  * Dispatcher responsible for handling execution messages for constructor calls.
  *
- * <p>This class utilizes reflection to look up and invoke constructors based on incoming execution
- * messages. It builds pre- and post-execution messages to encapsulate the invocation details and
- * any exceptions that may occur.
+ * <p>This class utilizes either a {@link ProceedingJoinPoint} or reflection to look up and invoke
+ * constructors based on incoming execution messages. It builds pre- and post-execution messages to
+ * encapsulate the invocation details and any exceptions that may occur.
  */
 @Singleton
 public class ConstructorDispatcher extends BaseExecMessageDispatcher {
@@ -114,10 +115,10 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
     final AccessibleObject constructor =
         ((ConstructorSignature) ctxt.getSignature()).getConstructor();
 
-    if (value instanceof InvocationExceptionWrapper) {
-      Exception invocationException = ((InvocationExceptionWrapper) value).exception();
+    if (value instanceof InvocationThrowableWrapper) {
+      Throwable invocationThr = ((InvocationThrowableWrapper) value).throwable();
       return messageBuilder.buildAccessibleObjectThrowable(
-          peerUuid, constructor, invocationException, null);
+          peerUuid, constructor, invocationThr, null);
     } else {
       return messageBuilder.buildReturnValue(peerUuid, value, constructor, objectRef, false, null);
     }
@@ -157,44 +158,6 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
 
     return messageBuilder.buildReturnValue(
         peerUuid, valueObject, accessibleObject, valueObjRef, false, messageId);
-  }
-
-  /**
-   * {@inheritDoc}
-   *
-   * <p>Invokes the target constructor using the provided context and parameters. Sets the
-   * constructor as accessible before invocation. Exceptions during instantiation are caught, logged
-   * and wrapped into an {@link InvocationExceptionWrapper}.
-   *
-   * @param ctxt the current execution context containing the constructor signature
-   * @param sender the object initiating the invocation
-   * @param target the target for the constructor invocation (unused for constructor calls)
-   * @param args the arguments to be passed to the constructor
-   * @return the new object instance created by the constructor, or an {@link
-   *     InvocationExceptionWrapper} if an error occurs
-   */
-  @Override
-  protected final Object invoke(Context ctxt, Object sender, Object target, Object[] args) {
-    if (logger.isTraceEnabled()) {
-      logger.trace(
-          "invoke w/ ctxt: {}, sender: {}, target: {}, args: {}",
-          ctxt,
-          sender,
-          target,
-          Arrays.toString(args));
-    }
-    final Constructor<?> constructor =
-        ((ConstructorSignature) ctxt.getSignature()).getConstructor();
-    Object newObject;
-    constructor.setAccessible(true);
-    try {
-      newObject = constructor.newInstance(args);
-    } catch (Exception ex) {
-      logger.error("Caught exception while invoking constructor. Will wrap and return it.", ex);
-      return new InvocationExceptionWrapper(ex);
-    }
-
-    return newObject;
   }
 
   /**

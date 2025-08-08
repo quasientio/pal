@@ -28,6 +28,7 @@ import com.quasient.pal.core.ExecMessageMatchers.ComesFromReflectable;
 import com.quasient.pal.core.transport.MessageChannelType;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import java.lang.reflect.Constructor;
+import org.aspectj.lang.ProceedingJoinPoint;
 import org.hamcrest.Matchers;
 import org.junit.Before;
 import org.junit.Test;
@@ -66,29 +67,151 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
             objectLookupStore);
   }
 
+  /* --------------------------------------------*/
+  /*             Dispatcher interface            */
+  /* --------------------------------------------*/
+
+  /* ----------------------------------------------------------
+   * 1.  dispatch_noArgs_ok
+   * ---------------------------------------------------------- */
   @Test
   @Override
   public void dispatch_noArgs_ok() throws Throwable {
 
-    // signature
     Class<?>[] parameterTypes = {};
     Constructor<?> constructor = targetClass.getDeclaredConstructor(parameterTypes);
     Signature signature = new ConstructorSignature(constructor);
 
-    // ctxt
     Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
-    // args
-    Object[] args = {};
+    Object[] args = {}; // no-arg ctor
 
-    // dispatch
-    Object returned = dispatcher.dispatch(ctxt, this, null, args);
+    ProceedingJoinPoint pjp =
+        PjpBuilder.forContext(ctxt)
+            .sender(this)
+            .target(null) // ctor ⇒ no target yet
+            .args(args)
+            .build();
 
-    // expect
+    Object returned = dispatcher.dispatch(ctxt, pjp, asProceed(constructor::newInstance));
+
     verifyDispatcherConnectorSendExecMessageCalledTwice();
     assertNotNull(returned);
     assertThat(returned, instanceOf(targetClass));
   }
+
+  /* ----------------------------------------------------------
+   * 2.  dispatch_withArgs_ok
+   * ---------------------------------------------------------- */
+  @Test
+  @Override
+  public void dispatch_withArgs_ok() throws Throwable {
+
+    Class<?>[] parameterTypes = {Integer.class};
+    Constructor<?> constructor = targetClass.getDeclaredConstructor(parameterTypes);
+    Signature signature = new ConstructorSignature(constructor);
+
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
+
+    Object[] args = {459};
+
+    ProceedingJoinPoint pjp =
+        PjpBuilder.forContext(ctxt).sender(this).target(null).args(args).build();
+
+    Object returned =
+        dispatcher.dispatch(ctxt, pjp, asProceed(() -> constructor.newInstance(args)));
+
+    verifyDispatcherConnectorSendExecMessageCalledTwice();
+    assertThat(returned, notNullValue());
+    assertThat(returned, instanceOf(targetClass));
+    assertThat(((ClassForConstructorTest) returned).someInteger, is(args[0]));
+  }
+
+  /* ----------------------------------------------------------
+   * 3.  dispatch_withPrimitiveArgs_ok
+   * ---------------------------------------------------------- */
+  @Test
+  @Override
+  public void dispatch_withPrimitiveArgs_ok() throws Throwable {
+
+    Class<?>[] parameterTypes = {boolean.class, long.class};
+    Constructor<?> constructor = targetClass.getDeclaredConstructor(parameterTypes);
+    Signature signature = new ConstructorSignature(constructor);
+
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
+
+    Object[] args = {true, 983309835L};
+
+    ProceedingJoinPoint pjp =
+        PjpBuilder.forContext(ctxt).sender(this).target(null).args(args).build();
+
+    Object returned =
+        dispatcher.dispatch(ctxt, pjp, asProceed(() -> constructor.newInstance(args)));
+
+    verifyDispatcherConnectorSendExecMessageCalledTwice();
+    assertThat(returned, notNullValue());
+    assertThat(returned, instanceOf(targetClass));
+    assertThat(((ClassForConstructorTest) returned).aLong, is((long) args[1] + 1));
+  }
+
+  /* ----------------------------------------------------------
+   * 4.  dispatch_varargs_ok
+   * ---------------------------------------------------------- */
+  @Test
+  @Override
+  public void dispatch_varargs_ok() throws Throwable {
+
+    Class<?>[] parameterTypes = {String[].class};
+    Constructor<?> constructor = targetClass.getDeclaredConstructor(parameterTypes);
+    Signature signature = new ConstructorSignature(constructor);
+
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
+
+    Object[] args = {new String[] {"hello ", "world", "!"}};
+
+    ProceedingJoinPoint pjp =
+        PjpBuilder.forContext(ctxt).sender(this).target(null).args(args).build();
+
+    Object returned =
+        dispatcher.dispatch(ctxt, pjp, asProceed(() -> constructor.newInstance(args)));
+
+    verifyDispatcherConnectorSendExecMessageCalledTwice();
+    assertThat(returned, notNullValue());
+    assertThat(returned, instanceOf(targetClass));
+    assertThat(((ClassForConstructorTest) returned).joinedVarArgs, is("hello world!"));
+  }
+
+  /* ----------------------------------------------------------
+   * 5.  dispatch_throwsException_exceptionThrown
+   * ---------------------------------------------------------- */
+  @Test
+  @Override
+  public void dispatch_throwsException_exceptionThrown() throws Throwable {
+
+    Class<?>[] parameterTypes = {String.class};
+    Constructor<?> constructor = targetClass.getDeclaredConstructor(parameterTypes);
+    Signature signature = new ConstructorSignature(constructor);
+
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
+
+    Object[] args = {"49385InvalidNumber1001"}; // will trigger NumberFormatException
+
+    ProceedingJoinPoint pjp =
+        PjpBuilder.forContext(ctxt).sender(this).target(null).args(args).build();
+
+    try {
+      dispatcher.dispatch(ctxt, pjp, asProceed(() -> constructor.newInstance(args)));
+      fail("Should have thrown a NumberFormatException");
+    } catch (NumberFormatException nfe) {
+      // expected
+    }
+
+    verifyDispatcherConnectorSendExecMessageCalledTwice();
+  }
+
+  /* -------------------------------------------------------*/
+  /*             ExecMessageDispatcher interface            */
+  /* -------------------------------------------------------*/
 
   @Test
   @Override
@@ -119,31 +242,6 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
         Matchers.allOf(
             ComesFromClass.comesFromClass(targetClass),
             ComesFromReflectable.comesFrom(targetClass.getName())));
-  }
-
-  @Test
-  @Override
-  public void dispatch_withArgs_ok() throws Throwable {
-
-    // signature
-    Class<?>[] parameterTypes = {Integer.class};
-    Constructor<?> constructor = targetClass.getDeclaredConstructor(parameterTypes);
-    Signature signature = new ConstructorSignature(constructor);
-
-    // ctxt
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
-    // args
-    Object[] args = {459};
-
-    // dispatch
-    Object returned = dispatcher.dispatch(ctxt, this, null, args);
-
-    // expect
-    verifyDispatcherConnectorSendExecMessageCalledTwice();
-    assertThat(returned, notNullValue());
-    assertThat(returned, instanceOf(targetClass));
-    assertThat(((ClassForConstructorTest) returned).someInteger, is(args[0]));
   }
 
   @Test
@@ -180,30 +278,6 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
         Matchers.allOf(
             ComesFromClass.comesFromClass(targetClass),
             ComesFromReflectable.comesFrom(targetClass.getName())));
-  }
-
-  @Test
-  @Override
-  public void dispatch_withPrimitiveArgs_ok() throws Throwable {
-    // signature
-    Class<?>[] parameterTypes = {boolean.class, long.class};
-    Constructor<?> constructor = targetClass.getDeclaredConstructor(parameterTypes);
-    Signature signature = new ConstructorSignature(constructor);
-
-    // ctxt
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
-    // args
-    Object[] args = {true, 983309835L};
-
-    // dispatch
-    Object returned = dispatcher.dispatch(ctxt, this, null, args);
-
-    // expect
-    verifyDispatcherConnectorSendExecMessageCalledTwice();
-    assertThat(returned, notNullValue());
-    assertThat(returned, instanceOf(targetClass));
-    assertThat(((ClassForConstructorTest) returned).aLong, is((long) args[1] + 1));
   }
 
   @Test
@@ -339,32 +413,6 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 
   @Test
   @Override
-  public void dispatch_varargs_ok() throws Throwable {
-    // signature
-    Class<?>[] parameterTypes = {String[].class};
-    Constructor<?> constructor = targetClass.getDeclaredConstructor(parameterTypes);
-    Signature signature = new ConstructorSignature(constructor);
-
-    // ctxt
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
-    // args
-    Object[] args = new Object[1];
-    args[0] =
-        new String[] {"hello ", "world", "!"}; // varargs must be wrapped in array of expected type
-
-    // dispatch
-    Object returned = dispatcher.dispatch(ctxt, this, null, args);
-
-    // expect
-    verifyDispatcherConnectorSendExecMessageCalledTwice();
-    assertThat(returned, notNullValue());
-    assertThat(returned, instanceOf(targetClass));
-    assertThat(((ClassForConstructorTest) returned).joinedVarArgs, is("hello world!"));
-  }
-
-  @Test
-  @Override
   public void dispatchIncoming_varargs_ok() {
 
     Class<?>[] parameterTypes = {String[].class};
@@ -394,32 +442,6 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
         Matchers.allOf(
             ComesFromClass.comesFromClass(targetClass),
             ComesFromReflectable.comesFrom(targetClass.getName())));
-  }
-
-  @Test
-  @Override
-  public void dispatch_throwsException_exceptionThrown() throws Throwable {
-    // signature
-    Class<?>[] parameterTypes = {String.class};
-    Constructor<?> constructor = targetClass.getDeclaredConstructor(parameterTypes);
-    Signature signature = new ConstructorSignature(constructor);
-
-    // ctxt
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
-    // args
-    Object[] args = {"49385InvalidNumber1001"};
-
-    // dispatch
-    try {
-      @SuppressWarnings("unused")
-      Object unused = dispatcher.dispatch(ctxt, this, null, args);
-      fail("Should have thrown a NumberFormatException");
-    } catch (NumberFormatException nfe) {
-      // all good
-    }
-
-    verifyDispatcherConnectorSendExecMessageCalledTwice();
   }
 
   @Test

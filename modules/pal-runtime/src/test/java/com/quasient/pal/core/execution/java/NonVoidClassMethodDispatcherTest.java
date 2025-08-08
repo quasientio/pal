@@ -22,6 +22,7 @@ import static org.junit.Assert.fail;
 
 import com.quasient.pal.common.lang.reflect.MethodSignature;
 import com.quasient.pal.common.lang.reflect.Signature;
+import com.quasient.pal.common.lang.reflect.Void;
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.common.runtime.Context;
 import com.quasient.pal.core.ExecMessageMatchers.ComesFromClass;
@@ -31,6 +32,7 @@ import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.serdes.Unwrapper;
 import java.util.Random;
 import java.util.stream.DoubleStream;
+import org.aspectj.lang.ProceedingJoinPoint;
 import org.hamcrest.Matchers;
 import org.junit.Before;
 import org.junit.Test;
@@ -65,30 +67,183 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
             objectLookupStore);
   }
 
+  /* --------------------------------------------*/
+  /*             Dispatcher interface            */
+  /* --------------------------------------------*/
+
+  /* ----------------------------------------------------------
+   * 1.  dispatch_noArgs_ok
+   * ---------------------------------------------------------- */
   @Test
   @Override
   public void dispatch_noArgs_ok() throws Throwable {
 
-    // signature
+    // ── signature ────────────────────────────────────────────
     String methodName = "getRandomMinute";
     Class<?>[] parameterTypes = {};
     Signature signature =
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
-    // ctxt
+    // ── ctxt ─────────────────────────────────────────────────
     Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
-    // args
+    // ── args ─────────────────────────────────────────────────
     Object[] args = {};
 
-    // dispatch
-    Object returned = dispatcher.dispatch(ctxt, this, null, args);
+    // ── PJP ──────────────────────────────────────────────────
+    ProceedingJoinPoint pjp =
+        PjpBuilder.forContext(ctxt)
+            .sender(this) // "caller"
+            .target(null) // static method
+            .args(args)
+            .build();
 
-    // expect
+    // ── dispatch ─────────────────────────────────────────────
+    Object returned =
+        dispatcher.dispatch(ctxt, pjp, asProceed(ClassForNonVoidClassMethodTest::getRandomMinute));
+
+    // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
     assertThat(returned, is(not(Void.getInstance())));
     assertTrue((short) returned >= 0 && (short) returned < 60);
   }
+
+  /* ----------------------------------------------------------
+   * 2.  dispatch_withArgs_ok
+   * ---------------------------------------------------------- */
+  @Test
+  @Override
+  public void dispatch_withArgs_ok() throws Throwable {
+
+    String methodName = "max";
+    Class<?>[] parameterTypes = {Double.class, Double.class};
+    Signature signature =
+        new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
+
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
+
+    double smallDouble = 8378d;
+    double bigDouble = 827193d;
+    Object[] args = {smallDouble, bigDouble};
+
+    ProceedingJoinPoint pjp =
+        PjpBuilder.forContext(ctxt).sender(this).target(null).args(args).build();
+
+    Object returned =
+        dispatcher.dispatch(
+            ctxt,
+            pjp,
+            asProceed(
+                () -> ClassForNonVoidClassMethodTest.max((Double) args[0], (Double) args[1])));
+
+    verifyDispatcherConnectorSendExecMessageCalledTwice();
+    assertThat(returned, is(bigDouble));
+  }
+
+  /* ----------------------------------------------------------
+   * 3.  dispatch_withPrimitiveArgs_ok
+   * ---------------------------------------------------------- */
+  @Test
+  @Override
+  public void dispatch_withPrimitiveArgs_ok() throws Throwable {
+
+    String methodName = "min";
+    Class<?>[] parameterTypes = {double.class, double.class};
+    Signature signature =
+        new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
+
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
+
+    double smallDouble = 8378;
+    double bigDouble = 827193;
+    Object[] args = {smallDouble, bigDouble};
+
+    ProceedingJoinPoint pjp =
+        PjpBuilder.forContext(ctxt).sender(this).target(null).args(args).build();
+
+    Object returned =
+        dispatcher.dispatch(
+            ctxt,
+            pjp,
+            asProceed(
+                () -> ClassForNonVoidClassMethodTest.min((double) args[0], (double) args[1])));
+
+    verifyDispatcherConnectorSendExecMessageCalledTwice();
+    assertThat(returned, is(smallDouble));
+  }
+
+  /* ----------------------------------------------------------
+   * 4.  dispatch_varargs_ok
+   * ---------------------------------------------------------- */
+  @Test
+  @Override
+  public void dispatch_varargs_ok() throws Throwable {
+
+    String methodName = "max";
+    Class<?>[] parameterTypes = {double[].class};
+    Signature signature =
+        new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
+
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
+
+    double d1 = 837;
+    double d2 = 8293;
+    double d3 = 137193;
+    double d4 = 8287193;
+    double[] varargs = {d1, d2, d3, d4};
+    Object[] args = {varargs};
+
+    ProceedingJoinPoint pjp =
+        PjpBuilder.forContext(ctxt).sender(this).target(null).args(args).build();
+
+    Object returned =
+        dispatcher.dispatch(
+            ctxt, pjp, asProceed(() -> ClassForNonVoidClassMethodTest.max(varargs)));
+
+    verifyDispatcherConnectorSendExecMessageCalledTwice();
+    assertThat(returned, is(d4));
+  }
+
+  /* ----------------------------------------------------------
+   * 5.  dispatch_throwsException_exceptionThrown
+   * ---------------------------------------------------------- */
+  @Test
+  @Override
+  public void dispatch_throwsException_exceptionThrown() throws Throwable {
+
+    String methodName = "divBy";
+    Class<?>[] parameterTypes = {int.class, int.class};
+    Signature signature =
+        new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
+
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
+
+    int number = 8378;
+    int divisor = 0;
+    Object[] args = {number, divisor};
+
+    ProceedingJoinPoint pjp =
+        PjpBuilder.forContext(ctxt).sender(this).target(null).args(args).build();
+
+    try {
+      dispatcher.dispatch(
+          ctxt,
+          pjp,
+          asProceed(
+              () -> {
+                throw new ArithmeticException("/ by zero");
+              }));
+      fail("Should have failed with a div by zero overflow");
+    } catch (ArithmeticException ae) {
+      // expected
+    }
+
+    verifyDispatcherConnectorSendExecMessageCalledTwice();
+  }
+
+  /* -------------------------------------------------------*/
+  /*             ExecMessageDispatcher interface            */
+  /* -------------------------------------------------------*/
 
   @Test
   @Override
@@ -131,32 +286,6 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 
   @Test
   @Override
-  public void dispatch_withArgs_ok() throws Throwable {
-
-    // signature
-    String methodName = "max";
-    Class<?>[] parameterTypes = {Double.class, Double.class};
-    Signature signature =
-        new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
-
-    // ctxt
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
-    // args
-    double smallDouble = 8378d;
-    double bigDouble = 827193d;
-    Object[] args = {smallDouble, bigDouble};
-
-    // dispatch
-    Object returned = dispatcher.dispatch(ctxt, this, null, args);
-
-    // expect
-    verifyDispatcherConnectorSendExecMessageCalledTwice();
-    assertThat(returned, is(bigDouble));
-  }
-
-  @Test
-  @Override
   public void dispatchIncoming_withArgs_ok() throws Exception {
 
     String methodName = "max";
@@ -194,31 +323,6 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
         Matchers.allOf(
             ComesFromClass.comesFromClass(targetClass),
             ComesFromReflectable.comesFrom(methodName)));
-  }
-
-  @Test
-  @Override
-  public void dispatch_withPrimitiveArgs_ok() throws Throwable {
-    // signature
-    String methodName = "min";
-    Class<?>[] parameterTypes = {double.class, double.class};
-    Signature signature =
-        new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
-
-    // ctxt
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
-    // args
-    double smallDouble = 8378;
-    double bigDouble = 827193;
-    Object[] args = {smallDouble, bigDouble};
-
-    // dispatch
-    Object returned = dispatcher.dispatch(ctxt, this, null, args);
-
-    // expect
-    verifyDispatcherConnectorSendExecMessageCalledTwice();
-    assertThat(returned, is(smallDouble));
   }
 
   @Test
@@ -347,34 +451,6 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 
   @Test
   @Override
-  public void dispatch_varargs_ok() throws Throwable {
-    // signature
-    String methodName = "max";
-    Class<?>[] parameterTypes = {double[].class};
-    Signature signature =
-        new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
-
-    // ctxt
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
-    // args
-    double d1 = 837;
-    double d2 = 8293;
-    double d3 = 137193;
-    double d4 = 8287193;
-    double[] varargs = {d1, d2, d3, d4};
-    Object[] args = {varargs};
-
-    // dispatch
-    Object returned = dispatcher.dispatch(ctxt, this, null, args);
-
-    // expect
-    verifyDispatcherConnectorSendExecMessageCalledTwice();
-    assertThat(returned, is(d4));
-  }
-
-  @Test
-  @Override
   public void dispatchIncoming_varargs_ok() throws Exception {
 
     String methodName = "max";
@@ -414,35 +490,6 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
         Matchers.allOf(
             ComesFromClass.comesFromClass(targetClass),
             ComesFromReflectable.comesFrom(methodName)));
-  }
-
-  @Test
-  @Override
-  public void dispatch_throwsException_exceptionThrown() throws Throwable {
-
-    // signature
-    String methodName = "divBy";
-    Class<?>[] parameterTypes = {int.class, int.class};
-    Signature signature =
-        new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
-
-    // ctxt
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
-    // args
-    int number = 8378;
-    int divisor = 0;
-    Object[] args = {number, divisor};
-
-    // dispatch
-    try {
-      @SuppressWarnings("unused")
-      Object unused = dispatcher.dispatch(ctxt, this, null, args);
-      fail("Should have failed with a div by zero overflow");
-    } catch (ArithmeticException ae) {
-      // all good
-    }
-    verifyDispatcherConnectorSendExecMessageCalledTwice();
   }
 
   @Test

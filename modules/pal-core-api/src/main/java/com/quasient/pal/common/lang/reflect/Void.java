@@ -7,7 +7,7 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
-package com.quasient.pal.core.execution.java;
+package com.quasient.pal.common.lang.reflect;
 
 /**
  * Singleton utility class representing an absence of value.
@@ -43,7 +43,7 @@ public class Void {
    *
    * @return the unique singleton instance of {@code Void}
    */
-  static Void getInstance() {
+  public static Void getInstance() {
     return instance;
   }
 }

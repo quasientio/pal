@@ -16,6 +16,8 @@ import com.quasient.pal.common.runtime.Context;
 import com.quasient.pal.common.runtime.Dispatcher;
 import com.quasient.pal.common.runtime.ExecPhase;
 import com.quasient.pal.common.util.Classes;
+import com.quasient.pal.common.weave.Proceed;
+import com.quasient.pal.common.weave.VoidProceed;
 import com.quasient.pal.core.internal.messages.SessionCommandMsg;
 import com.quasient.pal.core.transport.MessageChannelType;
 import com.quasient.pal.messages.colfer.ExecMessage;
@@ -31,6 +33,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import javax.annotation.Nonnull;
+import org.aspectj.lang.ProceedingJoinPoint;
 
 /**
  * Base dispatcher for execution messages, providing the common logic for handling local and RPC
@@ -51,18 +54,22 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
    * cause.
    *
    * @param ctxt the execution context providing metadata for the dispatch
-   * @param sender the originator of the execution request
-   * @param target the target object on which the execution is performed
-   * @param args the arguments to be supplied to the target accessible object
+   * @param pjp the {@link ProceedingJoinPoint} handle
+   * @param proceed the {@link Proceed} callback handle
    * @return the result of the executed operation, or a special void instance if no result is
    *     produced
    * @throws Throwable if an error occurs during invocation or processing phases
    */
   @Override
-  public final Object dispatch(Context ctxt, Object sender, Object target, Object[] args)
+  public final <T> T dispatch(Context ctxt, ProceedingJoinPoint pjp, Proceed<T> proceed)
       throws Throwable {
 
+    final Object sender = pjp.getThis();
+    final Object[] args = pjp.getArgs();
+    final Object target = pjp.getTarget();
+
     if (logger.isTraceEnabled()) {
+      logger.trace("JoinPoint: {}", pjp.toLongString());
       logger.trace(
           "dispatch:in w/ signature: {}, sender: {}, target: {}, args: {}",
           ctxt.getSignature(),
@@ -79,21 +86,23 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     final ExecMessage beforeExecResponseMsg =
         messageGateway.sendExecMessage(messageBuilder.wrap(beforeExecMsg), ExecPhase.BEFORE);
 
-    // TODO if beforeExecResponseMsg != beforeExecMsg, unpack and exec response msg
-
     // 3. Invoke
-    Object returnValue = invoke(ctxt, sender, target, args);
-    if (logger.isTraceEnabled()) {
-      logger.trace("invoke() returned: {}", returnValue);
+    T returnValue = null;
+    InvocationThrowableWrapper throwableWrapper = null;
+    try {
+      returnValue = invoke(ctxt, pjp, proceed, args);
+    } catch (Throwable th) {
+      logger.error("Caught throwable while invoking field operation. Will wrap and return it.", th);
+      throwableWrapper = new InvocationThrowableWrapper(th);
     }
 
     // 4. Store? object in object map
     ObjectRef objectRef = null;
-    boolean returnsVoid = returnValue == Void.getInstance();
-
-    if (!returnsVoid && returnValue != null) {
+    if (returnValue != null) {
       objectRef = storeObject(returnValue);
     }
+
+    boolean returnsVoid = proceed instanceof VoidProceed;
 
     // 5. Wrap object or exception
     final ExecMessage afterExecMsg =
@@ -104,23 +113,19 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     final ExecMessage afterExecResponseMsg =
         messageGateway.sendExecMessage(messageBuilder.wrap(afterExecMsg), ExecPhase.AFTER);
 
-    // TODO if afterExecResponseMsg != afterExecMsg, unpack exception or return value
-
     // 7. Return object or re-raise exception
-    if (returnValue instanceof InvocationExceptionWrapper) {
+    if (throwableWrapper != null) {
       if (logger.isTraceEnabled()) {
-        logger.trace("dispatch:out re-raising exception: {}", returnValue);
+        logger.trace("dispatch:out re-raising exception: {}", throwableWrapper);
       }
-      Exception invocationException = ((InvocationExceptionWrapper) returnValue).exception();
+      Throwable invocationThr = throwableWrapper.throwable();
       // we want to throw the cause exception
-      if (invocationException instanceof InvocationTargetException) {
-        throw invocationException.getCause();
+      if (invocationThr instanceof InvocationTargetException) {
+        throw invocationThr.getCause();
       } else {
-        throw invocationException;
+        throw invocationThr;
       }
     }
-
-    // TODO return Optional? for dispatch of voids, OR have our own Void class
 
     if (logger.isTraceEnabled()) {
       logger.trace("dispatch:out returning object: {}", returnValue);
@@ -486,16 +491,18 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
    * Invokes the target accessible object (e.g., constructor, method, or field) using the provided
    * parameters.
    *
-   * <p>This method delegates the actual invocation based on the supplied context, sender, target,
-   * and arguments, returning the result of the operation.
+   * <p>This method may be overridden by specialized dispatchers based on the type of the operation.
    *
-   * @param ctxt the execution context providing invocation metadata
-   * @param sender the originator of the invocation request
-   * @param target the target object on which the invocation is to be performed
+   * @param ctx the execution context providing metadata for the invocation
+   * @param pjp the proceeding join point
+   * @param proceed handle to the {@link Proceed} callback
    * @param args the arguments for the invocation
    * @return the result of the accessible object invocation
    */
-  protected abstract Object invoke(Context ctxt, Object sender, Object target, Object[] args);
+  protected <T> T invoke(Context ctx, ProceedingJoinPoint pjp, Proceed<T> proceed, Object[] args)
+      throws Throwable {
+    return proceed.call();
+  }
 
   /**
    * Invokes the loaded accessible object (constructor, method, or field) using the unwrapped

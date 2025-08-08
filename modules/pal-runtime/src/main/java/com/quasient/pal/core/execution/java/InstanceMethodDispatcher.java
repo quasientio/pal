@@ -24,19 +24,18 @@ import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.lang.reflect.AccessibleObject;
-import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import org.aspectj.lang.ProceedingJoinPoint;
 
 /**
- * InstanceMethodDispatcher dispatches and executes instance method calls via reflection within the
- * PAL runtime.
+ * Dispatcher for invoking instance method calls via reflection or a {@link ProceedingJoinPoint}.
  *
  * <p>It is responsible for constructing execution messages before and after the method invocation,
  * invoking the target method on instance objects, and handling any exceptions that occur during the
- * reflective call. The dispatcher integrates with the object lookup store and reflection helper to
- * resolve and execute instance methods.
+ * call. The dispatcher integrates with the object lookup store and reflection helper to resolve and
+ * execute instance methods.
  */
 @Singleton
 public class InstanceMethodDispatcher extends MethodDispatcher {
@@ -103,7 +102,7 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
    * encountered exception.
    *
    * @param ctxt the execution context carrying method signature information.
-   * @param value the result of the method invocation, or an InvocationExceptionWrapper in case of
+   * @param value the result of the method invocation, or an InvocationThrowableWrapper in case of
    *     error.
    * @param objectRef the object reference associated with the target, used for object management.
    * @param isVoid flag indicating whether the method's return type is void.
@@ -115,56 +114,11 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
 
     final AccessibleObject method = ((MethodSignature) ctxt.getSignature()).getMethod();
 
-    if (value instanceof InvocationExceptionWrapper) {
-      Exception invocationException = ((InvocationExceptionWrapper) value).exception();
-      return messageBuilder.buildAccessibleObjectThrowable(
-          peerUuid, method, invocationException, null);
+    if (value instanceof InvocationThrowableWrapper) {
+      Throwable invocationThr = ((InvocationThrowableWrapper) value).throwable();
+      return messageBuilder.buildAccessibleObjectThrowable(peerUuid, method, invocationThr, null);
     } else {
       return messageBuilder.buildReturnValue(peerUuid, value, method, objectRef, isVoid, null);
-    }
-  }
-
-  /**
-   * {@inheritDoc}
-   *
-   * <p>Invokes the target instance method on the provided object using reflection. The method
-   * ensures accessibility and handles exceptions by wrapping them into an
-   * InvocationExceptionWrapper. For methods with a void return type, a standard void instance is
-   * returned.
-   *
-   * @param ctxt the execution context containing method signature details.
-   * @param sender the calling object, provided for context and logging.
-   * @param target the target object on which the method is to be executed.
-   * @param args the arguments to be passed to the target method.
-   * @return the result of the method invocation, or an InvocationExceptionWrapper if an error
-   *     occurred.
-   */
-  @Override
-  protected final Object invoke(Context ctxt, Object sender, Object target, Object[] args) {
-    if (logger.isTraceEnabled()) {
-      logger.trace(
-          "invoke w/ ctxt: {}, sender: {}, target: {}, args: {}",
-          ctxt,
-          sender,
-          target,
-          Arrays.toString(args));
-    }
-    final MethodSignature methodSignature = (MethodSignature) ctxt.getSignature();
-    Method method = methodSignature.getMethod();
-
-    method.setAccessible(true);
-    Object returnValue;
-    try {
-      returnValue = method.invoke(target, args);
-    } catch (Exception ex) {
-      logger.error("Caught exception while invoking instance method. Will wrap and return it.", ex);
-      return new InvocationExceptionWrapper(ex);
-    }
-
-    if (method.getReturnType().equals(java.lang.Void.TYPE)) {
-      return Void.getInstance();
-    } else {
-      return returnValue;
     }
   }
 

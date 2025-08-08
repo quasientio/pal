@@ -9,20 +9,28 @@
  */
 package com.quasient.pal.common.runtime;
 
+import com.quasient.pal.common.weave.Proceed;
+import com.quasient.pal.common.weave.VoidProceed;
 import jakarta.inject.Inject;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Facilitates the decoupling of dispatching mechanisms from aspect implementations by forwarding
  * dispatch calls through a ProxyDispatcher interface.
  *
  * <p>This class serves as an intermediary between AspectProxyDispatcher and the core Dispatcher
- * classes, ensuring that the aspects module only depends on the common module. By delegating
+ * classes, ensuring that the aspects module only depends on the core-api module. By delegating
  * dispatch operations to the injected ProxyDispatcher, it avoids direct dependencies and prevents
  * circular dependency issues at runtime.
  *
  * <p>All dispatch methods are static and delegate to the configured ProxyDispatcher instance.
  */
 public final class DispatchForwarder {
+
+  /** Logger instance. */
+  private static final Logger logger = LoggerFactory.getLogger(DispatchForwarder.class);
 
   /**
    * The shared ProxyDispatcher used to forward dispatch calls. This dispatcher is injected and
@@ -47,121 +55,129 @@ public final class DispatchForwarder {
    * Dispatches a constructor call with the given context and arguments.
    *
    * @param ctxt the execution context
-   * @param sender the object initiating the call
-   * @param args the arguments for the constructor
+   * @param pjp the {@link ProceedingJoinPoint} handle
+   * @param proceed the {@link Proceed} callback handle
    * @return the newly created object instance
    * @throws Throwable if dispatching the constructor fails
    */
-  public static Object constructor(Context ctxt, Object sender, Object[] args) throws Throwable {
-    return dispatcher.constructor(ctxt, sender, args);
+  public static Object constructor(Context ctxt, ProceedingJoinPoint pjp, Proceed<Object> proceed)
+      throws Throwable {
+    return dispatcher.constructor(ctxt, pjp, proceed);
   }
 
   /**
    * Dispatches a void instance method call with the given context and arguments.
    *
    * @param ctxt the execution context
-   * @param sender the object initiating the call
-   * @param target the target instance on which the method is invoked
-   * @param args the arguments for the method
+   * @param pjp the {@link ProceedingJoinPoint} handle
+   * @param proceed the {@link VoidProceed} callback handle
    * @throws Throwable if dispatching the method call fails
    */
-  public static void voidInstanceMethod(Context ctxt, Object sender, Object target, Object[] args)
+  public static void voidInstanceMethod(Context ctxt, ProceedingJoinPoint pjp, VoidProceed proceed)
       throws Throwable {
-    dispatcher.voidInstanceMethod(ctxt, sender, target, args);
+    dispatcher.voidInstanceMethod(ctxt, pjp, proceed);
   }
 
   /**
    * Dispatches a void static class method call with the given context and arguments.
    *
    * @param ctxt the execution context
-   * @param sender the object initiating the call
-   * @param args the arguments for the method
+   * @param pjp the {@link ProceedingJoinPoint} handle
+   * @param proceed the {@link VoidProceed} callback handle
    * @throws Throwable if dispatching the method call fails
    */
-  public static void voidClassMethod(Context ctxt, Object sender, Object[] args) throws Throwable {
-    dispatcher.voidClassMethod(ctxt, sender, args);
+  public static void voidClassMethod(Context ctxt, ProceedingJoinPoint pjp, VoidProceed proceed)
+      throws Throwable {
+    dispatcher.voidClassMethod(ctxt, pjp, proceed);
   }
 
   /**
    * Dispatches a non-void instance method call with the given context and arguments.
    *
    * @param ctxt the execution context
-   * @param sender the object initiating the call
-   * @param target the target instance on which the method is invoked
-   * @param args the arguments for the method
+   * @param pjp the {@link ProceedingJoinPoint} handle
+   * @param proceed the {@link Proceed} callback handle
    * @return the result of the method invocation
    * @throws Throwable if dispatching the method call fails
    */
   public static Object nonVoidInstanceMethod(
-      Context ctxt, Object sender, Object target, Object[] args) throws Throwable {
-    return dispatcher.nonVoidInstanceMethod(ctxt, sender, target, args);
+      Context ctxt, ProceedingJoinPoint pjp, Proceed<Object> proceed) throws Throwable {
+    return dispatcher.nonVoidInstanceMethod(ctxt, pjp, proceed);
   }
 
   /**
    * Dispatches a non-void static class method call with the given context and arguments.
    *
    * @param ctxt the execution context
-   * @param sender the object initiating the call
-   * @param args the arguments for the method
+   * @param pjp the {@link ProceedingJoinPoint} handle
+   * @param proceed the {@link Proceed} callback handle
    * @return the result of the method invocation
    * @throws Throwable if dispatching the method call fails
    */
-  public static Object nonVoidClassMethod(Context ctxt, Object sender, Object[] args)
-      throws Throwable {
-    return dispatcher.nonVoidClassMethod(ctxt, sender, args);
+  public static Object nonVoidClassMethod(
+      Context ctxt, ProceedingJoinPoint pjp, Proceed<Object> proceed) throws Throwable {
+    return dispatcher.nonVoidClassMethod(ctxt, pjp, proceed);
   }
 
   /**
    * Dispatches a static field retrieval with the given context and arguments.
    *
    * @param ctxt the execution context
-   * @param sender the object initiating the call
-   * @param args additional arguments if necessary
+   * @param pjp the {@link ProceedingJoinPoint} handle
+   * @param proceed the {@link Proceed} callback handle
    * @return the value of the static field
-   * @throws Throwable if dispatching the field retrieval fails
    */
-  public static Object getStatic(Context ctxt, Object sender, Object[] args) throws Throwable {
-    return dispatcher.getStatic(ctxt, sender, args);
+  public static Object getStatic(Context ctxt, ProceedingJoinPoint pjp, Proceed<Object> proceed) {
+    try {
+      return dispatcher.getStatic(ctxt, pjp, proceed);
+    } catch (Throwable e) {
+      throw new RuntimeException(e);
+    }
   }
 
   /**
    * Dispatches an instance field retrieval with the given context and arguments.
    *
    * @param ctxt the execution context
-   * @param sender the object initiating the call
-   * @param target the target instance from which the field is retrieved
-   * @param args additional arguments if necessary
+   * @param pjp the {@link ProceedingJoinPoint} handle
+   * @param proceed the {@link Proceed} callback handle
    * @return the value of the instance field
-   * @throws Throwable if dispatching the field retrieval fails
    */
-  public static Object getObject(Context ctxt, Object sender, Object target, Object[] args)
-      throws Throwable {
-    return dispatcher.getObject(ctxt, sender, target, args);
+  public static Object getObject(Context ctxt, ProceedingJoinPoint pjp, Proceed<Object> proceed) {
+    try {
+      return dispatcher.getObject(ctxt, pjp, proceed);
+    } catch (Throwable e) {
+      throw new RuntimeException(e);
+    }
   }
 
   /**
    * Dispatches a static field assignment with the given context and arguments.
    *
    * @param ctxt the execution context
-   * @param sender the object initiating the call
-   * @param args the value to assign to the static field
-   * @throws Throwable if dispatching the field assignment fails
+   * @param pjp the {@link ProceedingJoinPoint} handle
+   * @param proceed the {@link VoidProceed} callback handle
    */
-  public static void putStatic(Context ctxt, Object sender, Object[] args) throws Throwable {
-    dispatcher.putStatic(ctxt, sender, args);
+  public static void putStatic(Context ctxt, ProceedingJoinPoint pjp, VoidProceed proceed) {
+    try {
+      dispatcher.putStatic(ctxt, pjp, proceed);
+    } catch (Throwable e) {
+      throw new RuntimeException(e);
+    }
   }
 
   /**
    * Dispatches an instance field assignment with the given context and arguments.
    *
    * @param ctxt the execution context
-   * @param sender the object initiating the call
-   * @param target the target instance on which the field is set
-   * @param args the value to assign to the instance field
-   * @throws Throwable if dispatching the field assignment fails
+   * @param pjp the {@link ProceedingJoinPoint} handle
+   * @param proceed the {@link VoidProceed} callback handle
    */
-  public static void putField(Context ctxt, Object sender, Object target, Object[] args)
-      throws Throwable {
-    dispatcher.putField(ctxt, sender, target, args);
+  public static void putField(Context ctxt, ProceedingJoinPoint pjp, VoidProceed proceed) {
+    try {
+      dispatcher.putField(ctxt, pjp, proceed);
+    } catch (Throwable e) {
+      throw new RuntimeException(e);
+    }
   }
 }

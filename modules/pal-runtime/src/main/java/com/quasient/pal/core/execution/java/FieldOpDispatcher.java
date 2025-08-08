@@ -79,10 +79,9 @@ public abstract class FieldOpDispatcher extends BaseExecMessageDispatcher {
 
     AccessibleObject field = ((FieldSignature) ctxt.getSignature()).getField();
 
-    if (value instanceof InvocationExceptionWrapper) {
-      Exception invocationException = ((InvocationExceptionWrapper) value).exception();
-      return messageBuilder.buildAccessibleObjectThrowable(
-          peerUuid, field, invocationException, null);
+    if (value instanceof InvocationThrowableWrapper) {
+      Throwable invocationThr = ((InvocationThrowableWrapper) value).throwable();
+      return messageBuilder.buildAccessibleObjectThrowable(peerUuid, field, invocationThr, null);
     } else {
       if (!returnsVoid()) {
         return messageBuilder.buildReturnValue(peerUuid, value, field, objectRef, false, null);

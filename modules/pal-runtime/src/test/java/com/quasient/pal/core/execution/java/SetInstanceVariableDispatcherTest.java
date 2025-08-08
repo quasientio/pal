@@ -30,6 +30,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import org.aspectj.lang.ProceedingJoinPoint;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -62,29 +63,240 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
             objectLookupStore);
   }
 
-  @Override
+  /* --------------------------------------------*/
+  /*             Dispatcher interface            */
+  /* --------------------------------------------*/
+
+  /* ----------------------------------------------------------
+   * 1.  dispatch_primitiveArray_ok
+   * ---------------------------------------------------------- */
   @Test
+  @Override
+  public void dispatch_primitiveArray_ok() throws Throwable {
+
+    String fieldName = "bytes";
+    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
+
+    byte[] newFieldValue = "bytes".getBytes(StandardCharsets.UTF_8);
+    Object[] args = {newFieldValue};
+
+    ClassForPutFieldTest target = new ClassForPutFieldTest();
+
+    ProceedingJoinPoint pjp =
+        PjpBuilder.forContext(ctxt)
+            .sender(this)
+            .target(target) // instance whose field we write
+            .args(args)
+            .build();
+
+    Object returned =
+        dispatcher.dispatch(ctxt, pjp, asVoidProceed(() -> target.bytes = newFieldValue));
+
+    verifyDispatcherConnectorSendExecMessageCalledTwice();
+    assertNull(returned);
+    assertThat(target.bytes, is(newFieldValue));
+  }
+
+  /* ----------------------------------------------------------
+   * 2.  dispatch_primitive_ok
+   * ---------------------------------------------------------- */
+  @Test
+  @Override
   public void dispatch_primitive_ok() throws Throwable {
 
-    // signature
     String fieldName = "someShort";
     Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
 
-    // ctxt
     Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
-    // dispatch
     short newFieldValue = 987;
     Object[] args = {newFieldValue};
-    ClassForPutFieldTest target = new ClassForPutFieldTest();
-    Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
-    // expect
+    ClassForPutFieldTest target = new ClassForPutFieldTest();
+
+    ProceedingJoinPoint pjp =
+        PjpBuilder.forContext(ctxt).sender(this).target(target).args(args).build();
+
+    Object returned =
+        dispatcher.dispatch(ctxt, pjp, asVoidProceed(() -> target.someShort = newFieldValue));
+
     verifyDispatcherConnectorSendExecMessageCalledTwice();
-    assertThat(returned, is(com.quasient.pal.core.execution.java.Void.getInstance()));
+    assertNull(returned);
     assertThat(target.someShort, is(newFieldValue));
   }
 
+  /* ----------------------------------------------------------
+   * 3.  dispatch_wrapper_ok
+   * ---------------------------------------------------------- */
+  @Test
+  @Override
+  public void dispatch_wrapper_ok() throws Throwable {
+
+    String fieldName = "aLong";
+    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
+
+    Long newFieldValue = 100000L;
+    Object[] args = {newFieldValue};
+
+    ClassForPutFieldTest target = new ClassForPutFieldTest();
+
+    ProceedingJoinPoint pjp =
+        PjpBuilder.forContext(ctxt).sender(this).target(target).args(args).build();
+
+    Object returned =
+        dispatcher.dispatch(ctxt, pjp, asVoidProceed(() -> target.aLong = newFieldValue));
+
+    verifyDispatcherConnectorSendExecMessageCalledTwice();
+    assertNull(returned);
+    assertThat(target.aLong, is(newFieldValue));
+  }
+
+  /* ----------------------------------------------------------
+   * 4.  dispatch_string_ok
+   * ---------------------------------------------------------- */
+  @Test
+  @Override
+  public void dispatch_string_ok() throws Throwable {
+
+    String fieldName = "aString";
+    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
+
+    String newFieldValue = "to string or not to";
+    Object[] args = {newFieldValue};
+
+    ClassForPutFieldTest target = new ClassForPutFieldTest();
+
+    ProceedingJoinPoint pjp =
+        PjpBuilder.forContext(ctxt).sender(this).target(target).args(args).build();
+
+    Object returned =
+        dispatcher.dispatch(ctxt, pjp, asVoidProceed(() -> target.aString = newFieldValue));
+
+    verifyDispatcherConnectorSendExecMessageCalledTwice();
+    assertNull(returned);
+    assertThat(target.aString, is(newFieldValue));
+  }
+
+  /* ----------------------------------------------------------
+   * 5.  dispatch_object_ok
+   * ---------------------------------------------------------- */
+  @Test
+  @Override
+  public void dispatch_object_ok() throws Throwable {
+
+    String fieldName = "aList";
+    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
+
+    List<?> newFieldValue = Arrays.asList(938, 3038, 948, 394);
+    Object[] args = {newFieldValue};
+
+    ClassForPutFieldTest target = new ClassForPutFieldTest();
+
+    ProceedingJoinPoint pjp =
+        PjpBuilder.forContext(ctxt).sender(this).target(target).args(args).build();
+
+    Object returned =
+        dispatcher.dispatch(ctxt, pjp, asVoidProceed(() -> target.aList = newFieldValue));
+
+    verifyDispatcherConnectorSendExecMessageCalledTwice();
+    assertNull(returned);
+    assertThat(target.aList, is(newFieldValue));
+  }
+
+  /* ----------------------------------------------------------
+   * 6.  dispatch_nullObject_ok
+   * ---------------------------------------------------------- */
+  @Test
+  @Override
+  public void dispatch_nullObject_ok() throws Throwable {
+
+    String fieldName = "aList";
+    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
+
+    ClassForPutFieldTest target = new ClassForPutFieldTest();
+    assertThat(target.aList, notNullValue());
+
+    Object[] args = {null};
+
+    ProceedingJoinPoint pjp =
+        PjpBuilder.forContext(ctxt).sender(this).target(target).args(args).build();
+
+    Object returned = dispatcher.dispatch(ctxt, pjp, asVoidProceed(() -> target.aList = null));
+
+    verifyDispatcherConnectorSendExecMessageCalledTwice();
+    assertNull(returned);
+    assertThat(target.aList, is(nullValue()));
+  }
+
+  /* ----------------------------------------------------------
+   * 7.  dispatch_objectArray_ok
+   * ---------------------------------------------------------- */
+  @Test
+  @Override
+  public void dispatch_objectArray_ok() throws Throwable {
+
+    String fieldName = "objects";
+    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
+
+    Object[] newFieldValue = {1, "a", false};
+    Object[] args = {newFieldValue};
+
+    ClassForPutFieldTest target = new ClassForPutFieldTest();
+
+    ProceedingJoinPoint pjp =
+        PjpBuilder.forContext(ctxt).sender(this).target(target).args(args).build();
+
+    Object returned =
+        dispatcher.dispatch(ctxt, pjp, asVoidProceed(() -> target.objects = newFieldValue));
+
+    verifyDispatcherConnectorSendExecMessageCalledTwice();
+    assertNull(returned);
+    assertThat(target.objects, is(newFieldValue));
+  }
+
+  /* ----------------------------------------------------------
+   * 8.  dispatch_throwable_ok
+   * ---------------------------------------------------------- */
+  @Test
+  @Override
+  public void dispatch_throwable_ok() throws Throwable {
+
+    String fieldName = "lastError";
+    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
+
+    Error newFieldValue = new Error("uuh ooooh");
+    Object[] args = {newFieldValue};
+
+    ClassForPutFieldTest target = new ClassForPutFieldTest();
+
+    ProceedingJoinPoint pjp =
+        PjpBuilder.forContext(ctxt).sender(this).target(target).args(args).build();
+
+    Object returned =
+        dispatcher.dispatch(ctxt, pjp, asVoidProceed(() -> target.lastError = newFieldValue));
+
+    verifyDispatcherConnectorSendExecMessageCalledTwice();
+    assertNull(returned);
+    assertThat(target.lastError, is(newFieldValue));
+  }
+
+  /* -------------------------------------------------------*/
+  /*             ExecMessageDispatcher interface            */
+  /* -------------------------------------------------------*/
   @Override
   @Test
   public void dispatchIncoming_primitive_ok() {
@@ -123,29 +335,6 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
         responseMessage.getInstanceFieldPutDone(),
         allOf(comesFromClass(targetClass), comesFrom(fieldName)));
     assertThat(responseMessage.getInstanceFieldPutDone().getInstanceFieldPutId(), notNullValue());
-  }
-
-  @Override
-  @Test
-  public void dispatch_primitiveArray_ok() throws Throwable {
-
-    // signature
-    String fieldName = "bytes";
-    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
-
-    // ctxt
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
-    // dispatch
-    byte[] newFieldValue = "bytes".getBytes(StandardCharsets.UTF_8);
-    Object[] args = {newFieldValue};
-    ClassForPutFieldTest target = new ClassForPutFieldTest();
-    Object returned = dispatcher.dispatch(ctxt, this, target, args);
-
-    // expect
-    verifyDispatcherConnectorSendExecMessageCalledTwice();
-    assertThat(returned, is(com.quasient.pal.core.execution.java.Void.getInstance()));
-    assertThat(target.bytes, is(newFieldValue));
   }
 
   @Override
@@ -190,29 +379,6 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
   @Override
   @Test
-  public void dispatch_wrapper_ok() throws Throwable {
-
-    // signature
-    String fieldName = "aLong";
-    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
-
-    // ctxt
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
-    // dispatch
-    Long newFieldValue = 100000L;
-    Object[] args = {newFieldValue};
-    ClassForPutFieldTest target = new ClassForPutFieldTest();
-    Object returned = dispatcher.dispatch(ctxt, this, target, args);
-
-    // expect
-    verifyDispatcherConnectorSendExecMessageCalledTwice();
-    assertThat(returned, is(com.quasient.pal.core.execution.java.Void.getInstance()));
-    assertThat(target.aLong, is(newFieldValue));
-  }
-
-  @Override
-  @Test
   public void dispatchIncoming_wrapper_ok() {
 
     String fieldName = "aLong";
@@ -249,29 +415,6 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
         responseMessage.getInstanceFieldPutDone(),
         allOf(comesFromClass(targetClass), comesFrom(fieldName)));
     assertThat(responseMessage.getInstanceFieldPutDone().getInstanceFieldPutId(), notNullValue());
-  }
-
-  @Override
-  @Test
-  public void dispatch_string_ok() throws Throwable {
-
-    // signature
-    String fieldName = "aString";
-    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
-
-    // ctxt
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
-    // dispatch
-    String newFieldValue = "to string or not to";
-    Object[] args = {newFieldValue};
-    ClassForPutFieldTest target = new ClassForPutFieldTest();
-    Object returned = dispatcher.dispatch(ctxt, this, target, args);
-
-    // expect
-    verifyDispatcherConnectorSendExecMessageCalledTwice();
-    assertThat(returned, is(com.quasient.pal.core.execution.java.Void.getInstance()));
-    assertThat(target.aString, is(newFieldValue));
   }
 
   @Override
@@ -316,29 +459,6 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
   @Override
   @Test
-  public void dispatch_object_ok() throws Throwable {
-
-    // signature
-    String fieldName = "aList";
-    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
-
-    // ctxt
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
-    // dispatch
-    List<?> newFieldValue = Arrays.asList(938, 3038, 948, 394);
-    Object[] args = {newFieldValue};
-    ClassForPutFieldTest target = new ClassForPutFieldTest();
-    Object returned = dispatcher.dispatch(ctxt, this, target, args);
-
-    // expect
-    verifyDispatcherConnectorSendExecMessageCalledTwice();
-    assertThat(returned, is(com.quasient.pal.core.execution.java.Void.getInstance()));
-    assertThat(target.aList, is(newFieldValue));
-  }
-
-  @Override
-  @Test
   public void dispatchIncoming_object_ok() {
 
     String fieldName = "aList";
@@ -371,29 +491,6 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
         responseMessage.getInstanceFieldPutDone(),
         allOf(comesFromClass(targetClass), comesFrom(fieldName)));
     assertThat(responseMessage.getInstanceFieldPutDone().getInstanceFieldPutId(), notNullValue());
-  }
-
-  @Override
-  @Test
-  public void dispatch_nullObject_ok() throws Throwable {
-
-    // signature
-    String fieldName = "aList";
-    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
-
-    // ctxt
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
-    // dispatch
-    ClassForPutFieldTest target = new ClassForPutFieldTest();
-    assertThat(target.aList, notNullValue());
-    Object[] args = {null};
-    Object returned = dispatcher.dispatch(ctxt, this, target, args);
-
-    // expect
-    verifyDispatcherConnectorSendExecMessageCalledTwice();
-    assertThat(returned, is(com.quasient.pal.core.execution.java.Void.getInstance()));
-    assertThat(target.aList, is(nullValue()));
   }
 
   @Override
@@ -432,29 +529,6 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
   @Override
   @Test
-  public void dispatch_objectArray_ok() throws Throwable {
-
-    // signature
-    String fieldName = "objects";
-    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
-
-    // ctxt
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
-    // dispatch
-    Object[] newFieldValue = {1, "a", false};
-    Object[] args = {newFieldValue};
-    ClassForPutFieldTest target = new ClassForPutFieldTest();
-    Object returned = dispatcher.dispatch(ctxt, this, target, args);
-
-    // expect
-    verifyDispatcherConnectorSendExecMessageCalledTwice();
-    assertThat(returned, is(com.quasient.pal.core.execution.java.Void.getInstance()));
-    assertThat(target.objects, is(newFieldValue));
-  }
-
-  @Override
-  @Test
   public void dispatchIncoming_objectArray_ok() {
 
     String fieldName = "objects";
@@ -486,29 +560,6 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
         responseMessage.getInstanceFieldPutDone(),
         allOf(comesFromClass(targetClass), comesFrom(fieldName)));
     assertThat(responseMessage.getInstanceFieldPutDone().getInstanceFieldPutId(), notNullValue());
-  }
-
-  @Override
-  @Test
-  public void dispatch_throwable_ok() throws Throwable {
-
-    // signature
-    String fieldName = "lastError";
-    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
-
-    // ctxt
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
-    // dispatch
-    Error newFieldValue = new Error("uuh ooooh");
-    Object[] args = {newFieldValue};
-    ClassForPutFieldTest target = new ClassForPutFieldTest();
-    Object returned = dispatcher.dispatch(ctxt, this, target, args);
-
-    // expect
-    verifyDispatcherConnectorSendExecMessageCalledTwice();
-    assertThat(returned, is(Void.getInstance()));
-    assertThat(target.lastError, is(newFieldValue));
   }
 
   @Override

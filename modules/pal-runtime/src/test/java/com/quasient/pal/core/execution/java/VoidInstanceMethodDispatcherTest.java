@@ -29,6 +29,7 @@ import com.quasient.pal.messages.colfer.ExecMessage;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import org.aspectj.lang.ProceedingJoinPoint;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -62,31 +63,162 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
             objectLookupStore);
   }
 
+  /* --------------------------------------------*/
+  /*             Dispatcher interface            */
+  /* --------------------------------------------*/
+
+  /* ----------------------------------------------------------
+   * 1.  dispatch_noArgs_ok
+   * ---------------------------------------------------------- */
   @Test
   @Override
   public void dispatch_noArgs_ok() throws Throwable {
 
-    // signature
     String methodName = "addHelloWorld";
     Class<?>[] parameterTypes = {};
     Signature signature =
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
-    // ctxt
     Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
-    // args
     Object[] args = {};
 
-    // dispatch
     ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
-    Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
-    // expect
+    ProceedingJoinPoint pjp =
+        PjpBuilder.forContext(ctxt).sender(this).target(target).args(args).build();
+
+    // real invocation
+    Object returned = dispatcher.dispatch(ctxt, pjp, asVoidProceed(target::addHelloWorld));
+
     verifyDispatcherConnectorSendExecMessageCalledTwice();
-    assertThat(returned, is(com.quasient.pal.core.execution.java.Void.getInstance()));
+    assertNull(returned);
     assertThat(target.wordsCollected.size(), is(2));
   }
+
+  /* ----------------------------------------------------------
+   * 2.  dispatch_withArgs_ok
+   * ---------------------------------------------------------- */
+  @Test
+  @Override
+  public void dispatch_withArgs_ok() throws Throwable {
+
+    String methodName = "addWord";
+    Class<?>[] parameterTypes = {String.class};
+    Signature signature =
+        new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
+
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
+
+    Object[] args = {"hello"};
+
+    ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
+
+    ProceedingJoinPoint pjp =
+        PjpBuilder.forContext(ctxt).sender(this).target(target).args(args).build();
+
+    Object returned =
+        dispatcher.dispatch(ctxt, pjp, asVoidProceed(() -> target.addWord((String) args[0])));
+
+    verifyDispatcherConnectorSendExecMessageCalledTwice();
+    assertNull(returned);
+    assertThat(target.wordsCollected.size(), is(1));
+  }
+
+  /* ----------------------------------------------------------
+   * 3.  dispatch_withPrimitiveArgs_ok
+   * ---------------------------------------------------------- */
+  @Test
+  @Override
+  public void dispatch_withPrimitiveArgs_ok() throws Throwable {
+
+    String methodName = "addWords";
+    Class<?>[] parameterTypes = {int.class};
+    Signature signature =
+        new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
+
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
+
+    int numberOfWordsToAdd = 5;
+    Object[] args = {numberOfWordsToAdd};
+
+    ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
+
+    ProceedingJoinPoint pjp =
+        PjpBuilder.forContext(ctxt).sender(this).target(target).args(args).build();
+
+    Object returned =
+        dispatcher.dispatch(ctxt, pjp, asVoidProceed(() -> target.addWords((int) args[0])));
+
+    verifyDispatcherConnectorSendExecMessageCalledTwice();
+    assertNull(returned);
+    assertThat(target.wordsCollected.size(), is(numberOfWordsToAdd));
+  }
+
+  /* ----------------------------------------------------------
+   * 4.  dispatch_varargs_ok
+   * ---------------------------------------------------------- */
+  @Test
+  @Override
+  public void dispatch_varargs_ok() throws Throwable {
+
+    String methodName = "addWords";
+    Class<?>[] parameterTypes = {String[].class};
+    Signature signature =
+        new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
+
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
+
+    String[] words = {"hey", "there", "!", "whats", "up", "?"};
+    Object[] args = {words};
+
+    ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
+
+    ProceedingJoinPoint pjp =
+        PjpBuilder.forContext(ctxt).sender(this).target(target).args(args).build();
+
+    Object returned =
+        dispatcher.dispatch(ctxt, pjp, asVoidProceed(() -> target.addWords((String[]) args[0])));
+
+    verifyDispatcherConnectorSendExecMessageCalledTwice();
+    assertNull(returned);
+    assertThat(target.wordsCollected.size(), is(4));
+  }
+
+  /* ----------------------------------------------------------
+   * 5.  dispatch_throwsException_exceptionThrown
+   * ---------------------------------------------------------- */
+  @Test
+  @Override
+  public void dispatch_throwsException_exceptionThrown() throws Throwable {
+
+    String methodName = "addWord";
+    Class<?>[] parameterTypes = {String.class};
+    Signature signature =
+        new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
+
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
+
+    Object[] args = {","}; // invalid word, will trigger IAE
+
+    ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
+
+    ProceedingJoinPoint pjp =
+        PjpBuilder.forContext(ctxt).sender(this).target(target).args(args).build();
+
+    try {
+      dispatcher.dispatch(ctxt, pjp, asVoidProceed(() -> target.addWord((String) args[0])));
+      fail("Should have failed with an IllegalArgumentException");
+    } catch (IllegalArgumentException iae) {
+      // expected
+    }
+
+    verifyDispatcherConnectorSendExecMessageCalledTwice();
+  }
+
+  /* -------------------------------------------------------*/
+  /*             ExecMessageDispatcher interface            */
+  /* -------------------------------------------------------*/
 
   @Test
   @Override
@@ -129,32 +261,6 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 
   @Test
   @Override
-  public void dispatch_withArgs_ok() throws Throwable {
-
-    // signature
-    String methodName = "addWord";
-    Class<?>[] parameterTypes = {String.class};
-    Signature signature =
-        new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
-
-    // ctxt
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
-    // args
-    Object[] args = {"hello"};
-
-    // dispatch
-    ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
-    Object returned = dispatcher.dispatch(ctxt, this, target, args);
-
-    // expect
-    verifyDispatcherConnectorSendExecMessageCalledTwice();
-    assertThat(returned, is(com.quasient.pal.core.execution.java.Void.getInstance()));
-    assertThat(target.wordsCollected.size(), is(1));
-  }
-
-  @Test
-  @Override
   public void dispatchIncoming_withArgs_ok() {
 
     // create and store new instance
@@ -191,32 +297,6 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     assertThat(
         responseMessage.getReturnValue(),
         allOf(comesFromClass(targetClass), comesFrom(methodName)));
-  }
-
-  @Test
-  @Override
-  public void dispatch_withPrimitiveArgs_ok() throws Throwable {
-    // signature
-    String methodName = "addWords";
-    Class<?>[] parameterTypes = {int.class};
-    Signature signature =
-        new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
-
-    // ctxt
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
-    // args
-    int numberOfWordsToAdd = 5;
-    Object[] args = {numberOfWordsToAdd};
-
-    // dispatch
-    ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
-    Object returned = dispatcher.dispatch(ctxt, this, target, args);
-
-    // expect
-    verifyDispatcherConnectorSendExecMessageCalledTwice();
-    assertThat(returned, is(com.quasient.pal.core.execution.java.Void.getInstance()));
-    assertThat(target.wordsCollected.size(), is(numberOfWordsToAdd));
   }
 
   @Test
@@ -339,33 +419,6 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 
   @Test
   @Override
-  public void dispatch_varargs_ok() throws Throwable {
-
-    // signature
-    String methodName = "addWords";
-    Class<?>[] parameterTypes = {String[].class};
-    Signature signature =
-        new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
-
-    // ctxt
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
-    // args
-    String[] words = {"hey", "there", "!", "whats", "up", "?"};
-    Object[] args = {words};
-
-    // dispatch
-    ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
-    Object returned = dispatcher.dispatch(ctxt, this, target, args);
-
-    // expect
-    verifyDispatcherConnectorSendExecMessageCalledTwice();
-    assertThat(returned, is(Void.getInstance()));
-    assertThat(target.wordsCollected.size(), is(4));
-  }
-
-  @Test
-  @Override
   public void dispatchIncoming_varargs_ok() {
 
     // create and store new instance
@@ -402,34 +455,6 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     assertThat(
         responseMessage.getReturnValue(),
         allOf(comesFromClass(targetClass), comesFrom(methodName)));
-  }
-
-  @Test
-  @Override
-  public void dispatch_throwsException_exceptionThrown() throws Throwable {
-
-    // signature
-    String methodName = "addWord";
-    Class<?>[] parameterTypes = {String.class};
-    Signature signature =
-        new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
-
-    // ctxt
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
-    // args
-    Object[] args = {","};
-
-    // dispatch
-    ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
-    try {
-      @SuppressWarnings("unused")
-      Object unused = dispatcher.dispatch(ctxt, this, target, args);
-      fail("Should have failed with an IllegalArgumentException");
-    } catch (IllegalArgumentException iae) {
-      // all good
-    }
-    verifyDispatcherConnectorSendExecMessageCalledTwice();
   }
 
   @Test

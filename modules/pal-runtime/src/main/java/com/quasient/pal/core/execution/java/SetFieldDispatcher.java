@@ -10,17 +10,22 @@
 package com.quasient.pal.core.execution.java;
 
 import com.quasient.pal.common.lang.reflect.FieldSignature;
+import com.quasient.pal.common.lang.reflect.Void;
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.common.runtime.Context;
+import com.quasient.pal.common.weave.Proceed;
 import com.quasient.pal.messages.colfer.Obj;
 import com.quasient.pal.serdes.Unwrapper;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.List;
 import javax.annotation.Nullable;
+import org.aspectj.lang.ProceedingJoinPoint;
 
 /**
- * An abstract dispatcher for setting a field value on a target object using reflection.
+ * Abstract dispatcher for setting a field value on a target object via reflection or a {@link
+ * ProceedingJoinPoint}.
  *
  * <p>This class provides the core functionality to update a field of an object by interpreting a
  * field signature from the runtime context and handling incoming messages to perform the update. It
@@ -28,38 +33,6 @@ import javax.annotation.Nullable;
  * operations.
  */
 public abstract class SetFieldDispatcher extends FieldOpDispatcher {
-
-  /**
-   * Sets a field value on the target object using the field specified in the provided context.
-   *
-   * <p>The method retrieves the {@link Field} from the {@link FieldSignature} contained in the
-   * context, makes it accessible, and attempts to assign the value (first element in {@code args})
-   * to the field of the target object. If an exception occurs during the assignment, it is caught,
-   * logged, and wrapped in an {@code InvocationExceptionWrapper}.
-   *
-   * @param ctxt the runtime context that holds the field signature for the target field.
-   * @param sender the entity initiating the field update.
-   * @param target the object whose field is to be updated.
-   * @param args an array whose first element is the value to assign to the field.
-   * @return a {@code Void} instance if the operation is successful, or an {@code
-   *     InvocationExceptionWrapper} if an exception is encountered.
-   */
-  @Override
-  protected final Object invoke(Context ctxt, Object sender, Object target, Object[] args) {
-
-    Field field = ((FieldSignature) ctxt.getSignature()).getField();
-    field.setAccessible(true);
-
-    Object fieldValue = args[0];
-    try {
-      field.set(target, fieldValue);
-    } catch (Exception ex) {
-      logger.error("Caught exception while invoking field operation. Will wrap and return it.", ex);
-      return new InvocationExceptionWrapper(ex);
-    }
-
-    return Void.getInstance();
-  }
 
   /**
    * Processes an incoming field update by setting the designated field on the target object.
@@ -138,6 +111,34 @@ public abstract class SetFieldDispatcher extends FieldOpDispatcher {
       }
       throw e;
     }
+  }
+
+  /**
+   * Invokes the target accessible object (e.g., constructor, method, or field) using the provided
+   * parameters.
+   *
+   * @param ctx the execution context providing metadata for the invocation
+   * @param pjp the proceeding join point
+   * @param proceed handle to the {@link Proceed} callback
+   * @param args the arguments for the invocation
+   * @return the result of the accessible object invocation
+   */
+  @Override
+  protected final <T> T invoke(
+      Context ctx, ProceedingJoinPoint pjp, Proceed<T> proceed, Object[] args) throws Throwable {
+
+    FieldSignature fieldSignature = (FieldSignature) ctx.getSignature();
+    Field field = fieldSignature.getField();
+    if (Modifier.isFinal(field.getModifiers())) {
+
+      // we're in a final field set, inside a constructor call
+      // final fields cannot be set outside <init> so we'll invoke by reflection
+      field.setAccessible(true);
+      Object fieldValue = args[0];
+      field.set(pjp.getTarget(), fieldValue);
+      return null;
+    }
+    return super.invoke(ctx, pjp, proceed, args);
   }
 
   /**

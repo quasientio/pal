@@ -9,6 +9,10 @@
  */
 package com.quasient.pal.common.runtime;
 
+import com.quasient.pal.common.weave.Proceed;
+import com.quasient.pal.common.weave.VoidProceed;
+import org.aspectj.lang.ProceedingJoinPoint;
+
 /**
  * Defines the contract for dispatching method invocations, including constructors, instance
  * methods, class methods, and field access operations.
@@ -19,100 +23,98 @@ public interface ProxyDispatcher {
    * Invokes a constructor on the target object with the specified arguments.
    *
    * @param ctxt the context in which the invocation occurs
-   * @param sender the originator of the invocation
-   * @param args the arguments to pass to the constructor
+   * @param pjp the {@link ProceedingJoinPoint} handle
+   * @param proceed the {@link Proceed} callback handle
    * @return the newly created object instance
    * @throws Throwable if an error occurs during constructor invocation
    */
-  Object constructor(Context ctxt, Object sender, Object[] args) throws Throwable;
+  Object constructor(Context ctxt, ProceedingJoinPoint pjp, Proceed<Object> proceed)
+      throws Throwable;
 
   /**
    * Executes a void instance method on the target object with the given arguments.
    *
    * @param ctxt the context in which the invocation occurs
-   * @param sender the originator of the invocation
-   * @param target the target object on which the method is invoked
-   * @param args the arguments to pass to the method
+   * @param pjp the {@link ProceedingJoinPoint} handle
+   * @param proceed the {@link VoidProceed} callback handle
    * @throws Throwable if an error occurs during method invocation
    */
-  void voidInstanceMethod(Context ctxt, Object sender, Object target, Object[] args)
+  void voidInstanceMethod(Context ctxt, ProceedingJoinPoint pjp, VoidProceed proceed)
       throws Throwable;
 
   /**
    * Executes a void class method with the specified arguments.
    *
    * @param ctxt the context in which the invocation occurs
-   * @param sender the originator of the invocation
-   * @param args the arguments to pass to the method
+   * @param pjp the {@link ProceedingJoinPoint} handle
+   * @param proceed the {@link VoidProceed} callback handle
    * @throws Throwable if an error occurs during method invocation
    */
-  void voidClassMethod(Context ctxt, Object sender, Object[] args) throws Throwable;
+  void voidClassMethod(Context ctxt, ProceedingJoinPoint pjp, VoidProceed proceed) throws Throwable;
 
   /**
    * Executes a non-void instance method on the target object with the given arguments.
    *
    * @param ctxt the context in which the invocation occurs
-   * @param sender the originator of the invocation
-   * @param target the target object on which the method is invoked
-   * @param args the arguments to pass to the method
+   * @param pjp the {@link ProceedingJoinPoint} handle
+   * @param proceed the {@link Proceed} callback handle
    * @return the result of the method invocation
    * @throws Throwable if an error occurs during method invocation
    */
-  Object nonVoidInstanceMethod(Context ctxt, Object sender, Object target, Object[] args)
+  Object nonVoidInstanceMethod(Context ctxt, ProceedingJoinPoint pjp, Proceed<Object> proceed)
       throws Throwable;
 
   /**
    * Executes a non-void class method with the specified arguments.
    *
    * @param ctxt the context in which the invocation occurs
-   * @param sender the originator of the invocation
-   * @param args the arguments to pass to the method
+   * @param pjp the {@link ProceedingJoinPoint} handle
+   * @param proceed the {@link Proceed} callback handle
    * @return the result of the method invocation
    * @throws Throwable if an error occurs during method invocation
    */
-  Object nonVoidClassMethod(Context ctxt, Object sender, Object[] args) throws Throwable;
+  Object nonVoidClassMethod(Context ctxt, ProceedingJoinPoint pjp, Proceed<Object> proceed)
+      throws Throwable;
 
   /**
    * Retrieves the value of a static field from the target class.
    *
    * @param ctxt the context in which the retrieval occurs
-   * @param sender the originator of the retrieval
-   * @param args the arguments specifying the field details
+   * @param pjp the {@link ProceedingJoinPoint} handle
+   * @param proceed the {@link Proceed} callback handle
    * @return the value of the static field
    * @throws Throwable if an error occurs during field access
    */
-  Object getStatic(Context ctxt, Object sender, Object[] args) throws Throwable;
+  Object getStatic(Context ctxt, ProceedingJoinPoint pjp, Proceed<Object> proceed) throws Throwable;
 
   /**
    * Retrieves the value of an instance field from the target object.
    *
    * @param ctxt the context in which the retrieval occurs
-   * @param sender the originator of the retrieval
-   * @param target the target object from which the field is retrieved
-   * @param args the arguments specifying the field details
+   * @param pjp the {@link ProceedingJoinPoint} handle
+   * @param proceed the {@link Proceed} callback handle
    * @return the value of the instance field
    * @throws Throwable if an error occurs during field access
    */
-  Object getObject(Context ctxt, Object sender, Object target, Object[] args) throws Throwable;
+  Object getObject(Context ctxt, ProceedingJoinPoint pjp, Proceed<Object> proceed) throws Throwable;
 
   /**
    * Sets the value of a static field on the target class.
    *
    * @param ctxt the context in which the modification occurs
-   * @param sender the originator of the modification
-   * @param args the arguments specifying the field details and new value
+   * @param pjp the {@link ProceedingJoinPoint} handle
+   * @param proceed the {@link VoidProceed} callback handle
    * @throws Throwable if an error occurs during field modification
    */
-  void putStatic(Context ctxt, Object sender, Object[] args) throws Throwable;
+  void putStatic(Context ctxt, ProceedingJoinPoint pjp, VoidProceed proceed) throws Throwable;
 
   /**
    * Sets the value of an instance field on the target object.
    *
    * @param ctxt the context in which the modification occurs
-   * @param sender the originator of the modification
-   * @param target the target object on which the field is modified
-   * @param args the arguments specifying the field details and new value
+   * @param pjp the {@link ProceedingJoinPoint} handle
+   * @param proceed the {@link VoidProceed} callback handle
    * @throws Throwable if an error occurs during field modification
    */
-  void putField(Context ctxt, Object sender, Object target, Object[] args) throws Throwable;
+  void putField(Context ctxt, ProceedingJoinPoint pjp, VoidProceed proceed) throws Throwable;
 }

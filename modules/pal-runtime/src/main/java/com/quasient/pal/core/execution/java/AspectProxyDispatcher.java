@@ -11,8 +11,11 @@ package com.quasient.pal.core.execution.java;
 
 import com.quasient.pal.common.runtime.Context;
 import com.quasient.pal.common.runtime.ProxyDispatcher;
+import com.quasient.pal.common.weave.Proceed;
+import com.quasient.pal.common.weave.VoidProceed;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import org.aspectj.lang.ProceedingJoinPoint;
 
 /**
  * A proxy dispatcher that delegates method invocations and field accesses to specialized dispatcher
@@ -87,14 +90,15 @@ public class AspectProxyDispatcher implements ProxyDispatcher {
    * <p>Delegates the constructor invocation to the injected {@link ConstructorDispatcher}.
    *
    * @param ctxt the runtime execution context containing invocation metadata
-   * @param sender the originating object triggering the constructor dispatch
-   * @param args an array of arguments to be passed to the constructor
+   * @param pjp the {@link ProceedingJoinPoint} handle
+   * @param proceed the {@link Proceed} callback handle
    * @return the newly created object instance as a result of the constructor invocation
    * @throws Throwable if an error occurs during constructor dispatch
    */
   @Override
-  public Object constructor(Context ctxt, Object sender, Object[] args) throws Throwable {
-    return constructorDispatcher.dispatch(ctxt, sender, null, args);
+  public Object constructor(Context ctxt, ProceedingJoinPoint pjp, Proceed<Object> proceed)
+      throws Throwable {
+    return constructorDispatcher.dispatch(ctxt, pjp, proceed);
   }
 
   /**
@@ -104,15 +108,14 @@ public class AspectProxyDispatcher implements ProxyDispatcher {
    * {@link InstanceMethodDispatcher}.
    *
    * @param ctxt the runtime execution context containing invocation metadata
-   * @param sender the originating object triggering the method call
-   * @param target the object instance on which the method is invoked
-   * @param args an array of arguments to be passed to the method
+   * @param pjp the {@link ProceedingJoinPoint} handle
+   * @param proceed the {@link VoidProceed} callback handle
    * @throws Throwable if an error occurs during instance method dispatch
    */
   @Override
-  public void voidInstanceMethod(Context ctxt, Object sender, Object target, Object[] args)
+  public void voidInstanceMethod(Context ctxt, ProceedingJoinPoint pjp, VoidProceed proceed)
       throws Throwable {
-    instanceMethodDispatcher.dispatch(ctxt, sender, target, args);
+    instanceMethodDispatcher.dispatch(ctxt, pjp, proceed);
   }
 
   /**
@@ -122,13 +125,14 @@ public class AspectProxyDispatcher implements ProxyDispatcher {
    * injected {@link ClassMethodDispatcher}.
    *
    * @param ctxt the runtime execution context containing invocation metadata
-   * @param sender the originating object triggering the method call
-   * @param args an array of arguments to be passed to the method
+   * @param pjp the {@link ProceedingJoinPoint} handle
+   * @param proceed the {@link VoidProceed} callback handle
    * @throws Throwable if an error occurs during class method dispatch
    */
   @Override
-  public void voidClassMethod(Context ctxt, Object sender, Object[] args) throws Throwable {
-    classMethodDispatcher.dispatch(ctxt, sender, null, args);
+  public void voidClassMethod(Context ctxt, ProceedingJoinPoint pjp, VoidProceed proceed)
+      throws Throwable {
+    classMethodDispatcher.dispatch(ctxt, pjp, proceed);
   }
 
   /**
@@ -138,16 +142,15 @@ public class AspectProxyDispatcher implements ProxyDispatcher {
    * InstanceMethodDispatcher}.
    *
    * @param ctxt the runtime execution context containing invocation metadata
-   * @param sender the originating object triggering the method call
-   * @param target the object instance on which the method is invoked
-   * @param args an array of arguments to be passed to the method
+   * @param pjp the {@link ProceedingJoinPoint} handle
+   * @param proceed the {@link Proceed} callback handle
    * @return the result returned by the instance method invocation
    * @throws Throwable if an error occurs during instance method dispatch
    */
   @Override
-  public Object nonVoidInstanceMethod(Context ctxt, Object sender, Object target, Object[] args)
-      throws Throwable {
-    return instanceMethodDispatcher.dispatch(ctxt, sender, target, args);
+  public Object nonVoidInstanceMethod(
+      Context ctxt, ProceedingJoinPoint pjp, Proceed<Object> proceed) throws Throwable {
+    return instanceMethodDispatcher.dispatch(ctxt, pjp, proceed);
   }
 
   /**
@@ -157,14 +160,15 @@ public class AspectProxyDispatcher implements ProxyDispatcher {
    * {@link ClassMethodDispatcher}.
    *
    * @param ctxt the runtime execution context containing invocation metadata
-   * @param sender the originating object triggering the method call
-   * @param args an array of arguments to be passed to the method
+   * @param pjp the {@link ProceedingJoinPoint} handle
+   * @param proceed the {@link Proceed} callback handle
    * @return the result returned by the class method invocation
    * @throws Throwable if an error occurs during class method dispatch
    */
   @Override
-  public Object nonVoidClassMethod(Context ctxt, Object sender, Object[] args) throws Throwable {
-    return classMethodDispatcher.dispatch(ctxt, sender, null, args);
+  public Object nonVoidClassMethod(Context ctxt, ProceedingJoinPoint pjp, Proceed<Object> proceed)
+      throws Throwable {
+    return classMethodDispatcher.dispatch(ctxt, pjp, proceed);
   }
 
   /**
@@ -174,14 +178,15 @@ public class AspectProxyDispatcher implements ProxyDispatcher {
    * GetClassVariableDispatcher}.
    *
    * @param ctxt the runtime execution context containing invocation metadata
-   * @param sender the originating object requesting the field value
-   * @param args an array of parameters to be used in retrieving the field value
+   * @param pjp the {@link ProceedingJoinPoint} handle
+   * @param proceed the {@link Proceed} callback handle
    * @return the static field value obtained through dispatch
    * @throws Throwable if an error occurs during static field dispatch
    */
   @Override
-  public Object getStatic(Context ctxt, Object sender, Object[] args) throws Throwable {
-    return getClassVariableDispatcher.dispatch(ctxt, sender, null, args);
+  public Object getStatic(Context ctxt, ProceedingJoinPoint pjp, Proceed<Object> proceed)
+      throws Throwable {
+    return getClassVariableDispatcher.dispatch(ctxt, pjp, proceed);
   }
 
   /**
@@ -191,16 +196,15 @@ public class AspectProxyDispatcher implements ProxyDispatcher {
    * GetInstanceVariableDispatcher}.
    *
    * @param ctxt the runtime execution context containing invocation metadata
-   * @param sender the originating object requesting the field value
-   * @param target the object instance from which the field is retrieved
-   * @param args an array of parameters to be used in retrieving the field value
+   * @param pjp the {@link ProceedingJoinPoint} handle
+   * @param proceed the {@link Proceed} callback handle
    * @return the instance field value obtained through dispatch
    * @throws Throwable if an error occurs during instance field dispatch
    */
   @Override
-  public Object getObject(Context ctxt, Object sender, Object target, Object[] args)
+  public Object getObject(Context ctxt, ProceedingJoinPoint pjp, Proceed<Object> proceed)
       throws Throwable {
-    return getInstanceVariableDispatcher.dispatch(ctxt, sender, target, args);
+    return getInstanceVariableDispatcher.dispatch(ctxt, pjp, proceed);
   }
 
   /**
@@ -210,13 +214,14 @@ public class AspectProxyDispatcher implements ProxyDispatcher {
    * SetClassVariableDispatcher}.
    *
    * @param ctxt the runtime execution context containing invocation metadata
-   * @param sender the originating object performing the field update
-   * @param args an array of parameters representing the new field value
+   * @param pjp the {@link ProceedingJoinPoint} handle
+   * @param proceed the {@link VoidProceed} callback handle
    * @throws Throwable if an error occurs during static field assignment dispatch
    */
   @Override
-  public void putStatic(Context ctxt, Object sender, Object[] args) throws Throwable {
-    setClassVariableDispatcher.dispatch(ctxt, sender, null, args);
+  public void putStatic(Context ctxt, ProceedingJoinPoint pjp, VoidProceed proceed)
+      throws Throwable {
+    setClassVariableDispatcher.dispatch(ctxt, pjp, proceed);
   }
 
   /**
@@ -226,13 +231,13 @@ public class AspectProxyDispatcher implements ProxyDispatcher {
    * SetInstanceVariableDispatcher}.
    *
    * @param ctxt the runtime execution context containing invocation metadata
-   * @param sender the originating object performing the field update
-   * @param target the object instance on which the field is updated
-   * @param args an array of parameters representing the new field value
+   * @param pjp the {@link ProceedingJoinPoint} handle
+   * @param proceed the {@link VoidProceed} callback handle
    * @throws Throwable if an error occurs during instance field assignment dispatch
    */
   @Override
-  public void putField(Context ctxt, Object sender, Object target, Object[] args) throws Throwable {
-    setInstanceVariableDispatcher.dispatch(ctxt, sender, target, args);
+  public void putField(Context ctxt, ProceedingJoinPoint pjp, VoidProceed proceed)
+      throws Throwable {
+    setInstanceVariableDispatcher.dispatch(ctxt, pjp, proceed);
   }
 }

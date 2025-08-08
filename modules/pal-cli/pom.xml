@@ -218,7 +218,7 @@
                         <filter>
                             <artifact>com.quasient.pal:pal-weave</artifact>
                             <includes>
-                                <include>com/quasient/pal/core/**</include>
+                                <include>com/quasient/pal/weave/**</include>
                             </includes>
                         </filter>
                         <filter>
