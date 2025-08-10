@@ -11,10 +11,14 @@
 
 
 #-------- Generic Benchmark Params ---------
-FORKS=5
+FORKS=3
 JVM_ARGS_APPEND="-Xms2g -Xmx2g"
 THREADS=8
-MODES=thrpt,avgt
+WARMUPS=10
+WARMUP_TIME=15s
+ITERATIONS=15
+ITER_TIME=25s
+MODES=avgt
 
 #-------- Variant & IoProfile ---------
 # One of: NOWEAVE,NOOP,INTERCEPTS,PUB,WAL,PUB_WAL,INTERCEPTS_PUB,INTERCEPTS_WAL,INTERCEPTS_PUB_WAL
@@ -125,6 +129,10 @@ java  -Dpeer.logging="$PAL_HOME/config/peer-logging.xml" \
       -f "$FORKS" \
       -jvmArgsAppend "$JVM_ARGS_APPEND" \
       -t "$THREADS" \
+      -wi "$WARMUPS" \
+      -w "$WARMUP_TIME" \
+      -i "$ITERATIONS" \
+      -r "$ITER_TIME" \
       -bm "$MODES" \
       -p variant="$VARIANT" \
       -p ioProfile="$IO_PROFILE" \

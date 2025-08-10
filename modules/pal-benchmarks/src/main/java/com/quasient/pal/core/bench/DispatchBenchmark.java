@@ -103,8 +103,6 @@ import java.util.concurrent.atomic.AtomicLong;
  * Use the <b>run.sh</b> script to configure and launch this benchmark.
  */
 
-@Warmup(iterations = 4,   time = 15, timeUnit = TimeUnit.SECONDS)
-@Measurement(iterations = 5, time = 15, timeUnit = TimeUnit.SECONDS)
 @Timeout(time = 10, timeUnit = TimeUnit.MINUTES)
 @State(Scope.Benchmark)
 public class DispatchBenchmark {
