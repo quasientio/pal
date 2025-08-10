@@ -7,21 +7,29 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
-package com.quasient.pal.core.bench.dummies;
+package com.quasient.pal.core.bench;
 
+import com.quasient.pal.bench.Calls;
+
+import java.util.Arrays;
 import java.util.Locale;
 
 /**
- * Simple wrapper around some calls to {@link String}.
+ * Simple wrapper around misc calls to JDK classes.
  */
-public class MockString {
+public class UnwovenCalls implements Calls {
 
   /**
-   * Delegates to {@link String#toUpperCase()}
-   *
-   * @return the argument to upper case
+   * {@inheritDoc}
    */
-  public static String toUpperCase(String str) {
+  public String toUpperCase(String str) {
     return str.toUpperCase(Locale.ENGLISH);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  public void sort(double[] doubles) {
+    Arrays.sort(doubles);
   }
 }

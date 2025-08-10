@@ -10,13 +10,18 @@
 #
 
 
+#-------- Generic Benchmark Params ---------
+FORKS=5
+JVM_ARGS_APPEND="-Xms2g -Xmx2g"
+THREADS=8
+MODES=thrpt,avgt
+
 #-------- Variant & IoProfile ---------
 # One of: NOWEAVE,NOOP,INTERCEPTS,PUB,WAL,PUB_WAL,INTERCEPTS_PUB,INTERCEPTS_WAL,INTERCEPTS_PUB_WAL
 VARIANT=NOOP
 
 # One of: CPU_ONLY, MOCK, REAL
 IO_PROFILE=CPU_ONLY
-
 
 # EXAMPLES:
 # --------
@@ -51,16 +56,13 @@ IO_PROFILE=CPU_ONLY
 SIZE_DIST_PCT=40:35:20:5
 
 # input generator mode: ASYNC | PRELOADED
-INPUT_MODE=ASYNC
+INPUT_MODE=PRELOADED
 
 #-------- Baseline and burst mode parameters ---------
 BASE_QPS=1000
 BURST_QPS=10000
 BASE_SEC=30
 BURST_SEC=10
-
-# EXAMPLE: “burst 5 % of every 5-minute window”, ie. 4 min 45 s baseline, 15 s burst
-# -p baseSec=285 -p burstSec=15
 
 
 #-------- PUB params ---------
@@ -117,8 +119,13 @@ java  -Dpeer.logging="$PAL_HOME/config/peer-logging.xml" \
       -Dwal.kafka.batch_size="$WAL_KAFKA_BATCH_SIZE" \
       -Dwal.kafka.compression_type="$WAL_KAFKA_COMPRESSION_TYPE" \
       -Dwal.kafka.buffer_memory="$WAL_KAFKA_BUFFER_MEMORY" \
+      -Xverify:none \
       -jar target/pal-benchmarks-1.0.0-SNAPSHOT.jar \
       DispatchBenchmark \
+      -f "$FORKS" \
+      -jvmArgsAppend "$JVM_ARGS_APPEND" \
+      -t "$THREADS" \
+      -bm "$MODES" \
       -p variant="$VARIANT" \
       -p ioProfile="$IO_PROFILE" \
       -p inputMode="$INPUT_MODE" \
@@ -126,5 +133,4 @@ java  -Dpeer.logging="$PAL_HOME/config/peer-logging.xml" \
       -p pubQueueType="$PUB_QUEUE_TYPE" \
       -p walQueueType="$WAL_QUEUE_TYPE" \
       -p baseQps="$BASE_QPS" -p burstQps="$BURST_QPS"  \
-      -p baseSec="$BASE_SEC" -p burstSec="$BURST_SEC"  \
-      -t 8
+      -p baseSec="$BASE_SEC" -p burstSec="$BURST_SEC"

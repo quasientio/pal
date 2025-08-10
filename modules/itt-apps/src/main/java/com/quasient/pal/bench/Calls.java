@@ -7,21 +7,24 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
-package com.quasient.pal.core.bench.dummies;
+package com.quasient.pal.bench;
 
 import java.util.Arrays;
 
-/**
- * Simple wrapper around some calls to {@link Arrays}.
- */
-public class MockArrays {
+/** Simple wrapper around misc calls to JDK classes. */
+public interface Calls {
+
+  /**
+   * Delegates to {@link String#toUpperCase()}
+   *
+   * @return the argument to upper case
+   */
+  String toUpperCase(String str);
 
   /**
    * Delegates to {@link Arrays#sort(double[])}
    *
    * @param doubles an array of doubles
    */
-  public static void sort(double[] doubles) {
-    Arrays.sort(doubles);
-  }
+  void sort(double[] doubles);
 }

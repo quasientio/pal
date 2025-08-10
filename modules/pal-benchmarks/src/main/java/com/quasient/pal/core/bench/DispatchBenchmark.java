@@ -21,6 +21,8 @@ import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 import com.google.inject.util.Modules;
+import com.quasient.pal.bench.Calls;
+import com.quasient.pal.bench.woven.QuantizedCalls;
 import com.quasient.pal.common.directory.nodes.LogInfo;
 import com.quasient.pal.core.bench.io.InputMode;
 import com.quasient.pal.core.bench.io.InvocationArgsSource;
@@ -101,11 +103,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * Use the <b>run.sh</b> script to configure and launch this benchmark.
  */
 
-@Fork(value = 5, jvmArgsAppend = { "-Xms2g", "-Xmx2g" })
 @Warmup(iterations = 4,   time = 15, timeUnit = TimeUnit.SECONDS)
 @Measurement(iterations = 5, time = 15, timeUnit = TimeUnit.SECONDS)
-@BenchmarkMode(Mode.Throughput)
-@OutputTimeUnit(TimeUnit.MILLISECONDS)
 @Timeout(time = 10, timeUnit = TimeUnit.MINUTES)
 @State(Scope.Benchmark)
 public class DispatchBenchmark {
@@ -261,6 +260,9 @@ public class DispatchBenchmark {
   /** parsed values from {@link #sizeDistPct} for [micro, small, medium, large] */
   private int[] sizeDist;
 
+  /** Target of calls made by threads in hotPath */
+  private Calls calls;
+
   /** Handle to the Guice's Injector. */
   private Injector injector;
 
@@ -383,6 +385,9 @@ public class DispatchBenchmark {
     walQueue = injector.getInstance(Key.get(new TypeLiteral<>() {}, Names.named("wal_queue")));
     pubQueue = injector.getInstance(Key.get(new TypeLiteral<>() {}, Names.named("pub_queue")));
     messagePublisherConfig = injector.getInstance(MessagePublisherConfig.class);
+
+    // configure destination of calls (quantized or unwoven)
+    calls = variant.equals(FeatureSetVariant.NOWEAVE) ? new UnwovenCalls() : new QuantizedCalls();
 
     logger.debug("setUp completed");
   }
@@ -802,7 +807,6 @@ public class DispatchBenchmark {
    */
   @SuppressWarnings("unused")
   @Benchmark
-  @BenchmarkMode(Mode.SampleTime)                 // per-request latency
   @OutputTimeUnit(TimeUnit.NANOSECONDS)
   @Threads(Threads.MAX)
   public void hotPath(BurstPlan plan, InputThreadState ts, Blackhole bh) {
@@ -821,19 +825,11 @@ public class DispatchBenchmark {
       Object returnVal = null;
       try {
 
-        if (invocationArgs.args()[0] instanceof double[] doubles) {        // if args[0] is a double array, call MockArrays.sort()
-          if (variant.equals(FeatureSetVariant.NOWEAVE)) {
-            com.quasient.pal.core.bench.dummies.MockArrays.sort(doubles);
-          } else {
-            com.quasient.pal.apps.woven.dummies.MockArrays.sort(doubles);
-          }
+        if (invocationArgs.args()[0] instanceof double[] doubles) {
+          calls.sort(doubles);
         }
-        else if (invocationArgs.args()[0] instanceof String str) {     // if args[0] is a double array, call MockString.valueOf()
-          if (variant.equals(FeatureSetVariant.NOWEAVE)) {
-            returnVal = com.quasient.pal.core.bench.dummies.MockString.toUpperCase(str);
-          } else {
-            returnVal = com.quasient.pal.apps.woven.dummies.MockString.toUpperCase(str);
-          }
+        else if (invocationArgs.args()[0] instanceof String str) {
+          returnVal = calls.toUpperCase(str);
         } else {
           throw new RuntimeException("Unexpected type of argument: " + invocationArgs.args()[0].getClass().getName());
         }
