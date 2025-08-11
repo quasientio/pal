@@ -24,8 +24,10 @@ import com.google.inject.util.Modules;
 import com.quasient.pal.bench.Calls;
 import com.quasient.pal.bench.woven.QuantizedCalls;
 import com.quasient.pal.common.directory.nodes.LogInfo;
+import com.quasient.pal.core.bench.io.AsyncDispatchArgsSource;
 import com.quasient.pal.core.bench.io.InputMode;
 import com.quasient.pal.core.bench.io.InvocationArgsSource;
+import com.quasient.pal.core.bench.io.PreloadedDispatchArgsSource;
 import com.quasient.pal.core.execution.java.CustomClassloader;
 import com.quasient.pal.core.intercept.InterceptMatcher;
 import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
@@ -112,6 +114,20 @@ public class DispatchBenchmark {
 
   /** Path to the default peer logging configuration file in the classpath. */
   private static final String LOGGING_CONFIG = "/peer-logging-fallback.xml";
+
+  // ---- Fixed Arg Size Defaults - Could be parameterized later on ------------
+
+  /** Fixed size of MICRO arg (text) in bytes. See {@link #sizeDist} */
+  private static final int MICRO_TXT_SIZE = 128;
+
+  /** Fixed size of SMALL arg (text) in bytes. See {@link #sizeDist} */
+  private static final int SMALL_TXT_SIZE = 2048;
+
+  /** Fixed size of MEDIUM arg (double[]) in # of doubles. See {@link #sizeDist} */
+  private static final int DOUBLE_ARRAY_SIZE = 2048;
+
+  /** Fixed size of LARGE arg (text) in bytes. See {@link #sizeDist} */
+  private static final int LARGE_TXT_SIZE = 49152;
 
   // ---- Queue Defaults -------------------------------------------------------
 
@@ -252,6 +268,9 @@ public class DispatchBenchmark {
 
   // ----------------------- Other required vars --------------------
 
+  /** Source of {@link InvocationArgs} */
+  private InvocationArgsSource argsSource;
+
   /** number of worker threads in this fork */
   int jmhThreads;
 
@@ -386,6 +405,13 @@ public class DispatchBenchmark {
 
     // configure destination of calls (quantized or unwoven)
     calls = variant.equals(FeatureSetVariant.NOWEAVE) ? new UnwovenCalls() : new QuantizedCalls();
+
+    // initialize args source
+    argsSource = switch (inputMode) {
+      case ASYNC     -> new AsyncDispatchArgsSource(this);
+      case PRELOADED -> new PreloadedDispatchArgsSource(this);
+    };
+    argsSource.start();
 
     logger.debug("setUp completed");
   }
@@ -543,16 +569,15 @@ public class DispatchBenchmark {
 
 
   /**
-   *  Creates a random chunk of text of length between {@code minBytes} and {@code maxBytes}.
+   *  Creates a random chunk of text of length {@code bytes}.
    *
-   * @param minBytes minimum size in bytes
-   * @param maxBytes maximum size in bytes
+   * @param bytes maximum size in bytes
    * @param rnd random generator instance
    * @param prefix some text to prepend to the generated chunk
-   * @return a random chunk of text with len > {@code minBytes} and < {@code maxBytes}
+   * @return a random chunk of text of len == {@code bytes}
    */
-  private static String randomText(int minBytes, int maxBytes, Random rnd, String prefix) {
-    int len = rnd.nextInt(maxBytes - minBytes + 1) + minBytes + prefix.length();
+  private static String randomText(int bytes, Random rnd, String prefix) {
+    int len = bytes + prefix.length();
     StringBuilder sb = new StringBuilder(len);
     sb.append(prefix);
     for (int i = 0; i < len; i++) {
@@ -562,19 +587,17 @@ public class DispatchBenchmark {
   }
 
   /**
-   * Using {@link #randomText}, prepares a call with a new String of
-   * size > {@code minBytes} and < {@code maxBytes} as argument.
+   * Using {@link #randomText}, prepares a call with a new String of size == {@code bytes}.
    *
-   * @param minBytes lower bound for String object's length in chars
-   * @param maxBytes upper bound for String object's length in chars
+   * @param bytes the String object's length in chars
    * @param rnd a random generator
    * @param prefix a String that will be prefixed to the generated payload, so we can identify
    *               the messages in the logs
    * @return the invocation args
    */
-  private InvocationArgs createTextDispatchable(int minBytes, int maxBytes, Random rnd, String prefix) {
+  private InvocationArgs createTextDispatchable(int bytes, Random rnd, String prefix) {
 
-    String payload = randomText(minBytes, maxBytes, rnd, prefix);
+    String payload = randomText(bytes, rnd, prefix);
     return new InvocationArgs(null, new Object[]{payload});
   }
 
@@ -595,27 +618,27 @@ public class DispatchBenchmark {
    * Produces one {@link InvocationArgs} whose size category is chosen
    * according to {@link #sizeDist}.
    * <p>
-   * Four categories of variable size are used:
+   * Four categories of fixed size are used:
    * <ol>
-   *   <li>micro: 0–256B</li>
-   *   <li>small: 257B–4KB</li>
-   *   <li>medium: 4KB-32KB</li>
-   *   <li>large: >32KB-64KB</li>
+   *   <li>{@link DispatchBenchmark#MICRO_TXT_SIZE}</li>
+   *   <li>{@link DispatchBenchmark#SMALL_TXT_SIZE}</li>
+   *   <li>{@link DispatchBenchmark#DOUBLE_ARRAY_SIZE} (i.e. medium)</li>
+   *   <li>{@link DispatchBenchmark#LARGE_TXT_SIZE}</li>
    * </ol>
    */
   public InvocationArgs randomArgsAccordingToDist(Random rnd) throws NoSuchMethodException {
     int p = rnd.nextInt(100);
     int[] w = sizeDist;   // local alias
     if (p < w[0]) {
-      return createTextDispatchable(   1,   256, rnd, "micro=");
+      return createTextDispatchable(MICRO_TXT_SIZE, rnd, "micro=");
     }
     else if (p < w[0] + w[1]) {
-      return createTextDispatchable( 257,  4096, rnd, "small=");
+      return createTextDispatchable(SMALL_TXT_SIZE, rnd, "small=");
     }
     else if (p < w[0] + w[1] + w[2]) {
-      int size = 200 + rnd.nextInt(1401); return createArrayDispatchable(size, rnd);
+      return createArrayDispatchable(DOUBLE_ARRAY_SIZE, rnd);
     } else {
-      return createTextDispatchable(32_769, 65_536, rnd, "large=");
+      return createTextDispatchable(LARGE_TXT_SIZE, rnd, "large=");
     }
   }
 
@@ -799,47 +822,27 @@ public class DispatchBenchmark {
    * Benchmark for a realistic workload, with an open-loop switching between
    * baseline and burst modes.
    *
-   * @param plan the open-loop plan
-   * @param ts thread state instance - producer of dispatch args
    * @param bh the Blackhole instance that consumes values to prevent JIT optimizations.
    */
   @SuppressWarnings("unused")
   @Benchmark
-  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
   @Threads(Threads.MAX)
-  public void hotPath(BurstPlan plan, InputThreadState ts, Blackhole bh) {
+  public void hotPath(Blackhole bh) {
 
-    long now = System.nanoTime();
-
-    // only run the hot path when the next synthetic request is due
-    if (now >= plan.nextArrivalAt) {
-
-      InvocationArgs invocationArgs;
-      while ((invocationArgs = ts.take()) == null) {
-        // only Async mode may return null --> spin until producer refills
-        Thread.onSpinWait();
-      }
-
-      Object returnVal = null;
-      try {
-
-        if (invocationArgs.args()[0] instanceof double[] doubles) {
-          calls.sort(doubles);
-        }
-        else if (invocationArgs.args()[0] instanceof String str) {
-          returnVal = calls.toUpperCase(str);
-        } else {
-          throw new RuntimeException("Unexpected type of argument: " + invocationArgs.args()[0].getClass().getName());
-        }
-      } catch (Throwable t) {
-        logger.error("Caught throwable in call to DispatchForwarder", t);
-        // re-throw
-        throw new RuntimeException(t);
-      }
-      bh.consume(returnVal);
-      callsMade.incrementAndGet();
-      plan.nextArrivalAt = now + plan.pickIntervalNs();
+    InvocationArgs ia = argsSource.next();
+    Object arg0 = ia.args()[0];
+    Object ret = null;
+    if (arg0 instanceof double[] doubles) {
+      calls.sort(doubles.clone());
+    } else if (arg0 instanceof String str) {
+      ret = calls.toUpperCase(str);
+    } else {
+      throw new IllegalStateException("Unexpected arg type: " + arg0.getClass().getName());
     }
+    bh.consume(ret);
+
+    callsMade.incrementAndGet();
   }
 
   // ----------------------- Initialization helpers -----------------------
