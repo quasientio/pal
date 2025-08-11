@@ -18,7 +18,9 @@ WARMUPS=10
 WARMUP_TIME=15s
 ITERATIONS=15
 ITER_TIME=25s
-MODES=avgt
+
+# thrpt,avgt,sample,all 
+MODES=avgt,sample
 
 #-------- Variant & IoProfile ---------
 # One of: NOWEAVE,NOOP,INTERCEPTS,PUB,WAL,PUB_WAL,INTERCEPTS_PUB,INTERCEPTS_WAL,INTERCEPTS_PUB_WAL
@@ -141,4 +143,5 @@ java  -Dpeer.logging="$PAL_HOME/config/peer-logging.xml" \
       -p pubQueueType="$PUB_QUEUE_TYPE" \
       -p walQueueType="$WAL_QUEUE_TYPE" \
       -p baseQps="$BASE_QPS" -p burstQps="$BURST_QPS"  \
-      -p baseSec="$BASE_SEC" -p burstSec="$BURST_SEC"
+      -p baseSec="$BASE_SEC" -p burstSec="$BURST_SEC" \
+      -rff out.json -rf json
