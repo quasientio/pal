@@ -19,7 +19,7 @@ fi
 source $PAL_HOME/venv/bin/activate
 
 # colf-linux must be run from the serdes root path (ie. $PAL_HOME/serdes)
-cd $PAL_HOME/serdes
+cd $PAL_HOME/modules/pal-serdes
 
 # re-compile all schemas
 colf-linux -f \
