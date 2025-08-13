@@ -51,10 +51,10 @@ public abstract class FieldOpDispatcher extends BaseExecMessageDispatcher {
         ctxt,
         getBeforeExecMessageType(),
         sender,
-        storeObject(sender),
-        storeObject(target),
+        generateObjectRef(sender),
+        generateObjectRef(target),
         parameter,
-        storeObject(parameter));
+        generateObjectRef(parameter));
   }
 
   /**

@@ -92,10 +92,10 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
         peerUuid,
         ctxt,
         sender,
-        storeObject(sender),
-        storeObject(target),
+        generateObjectRef(sender),
+        generateObjectRef(target),
         args,
-        Arrays.stream(args).map(this::storeObject).toArray(ObjectRef[]::new));
+        Arrays.stream(args).map(this::generateObjectRef).toArray(ObjectRef[]::new));
   }
 
   /**

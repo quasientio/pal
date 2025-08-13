@@ -107,7 +107,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       // 4. Store? object in object map
       ObjectRef objectRef = null;
       if (returnValue != null) {
-        objectRef = storeObject(returnValue);
+        objectRef = generateObjectRef(returnValue);
       }
 
       boolean returnsVoid = proceed instanceof VoidProceed;
@@ -274,6 +274,16 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
           "dispatchIncoming:out returning message: {}", ColferUtils.format(afterExecResponseMsg));
     }
     return afterExecResponseMsg;
+  }
+
+  /**
+   * Generates a unique {@link ObjectRef} for the given object based on its identity hash code.
+   *
+   * @param object the object for which to generate a reference
+   * @return a new {@link ObjectRef} instance encapsulating the object's identity
+   */
+  protected ObjectRef generateObjectRef(Object object) {
+    return ObjectRef.from(System.identityHashCode(object));
   }
 
   /**

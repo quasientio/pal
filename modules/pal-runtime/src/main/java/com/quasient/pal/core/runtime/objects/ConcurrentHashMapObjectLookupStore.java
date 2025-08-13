@@ -170,8 +170,7 @@ public final class ConcurrentHashMapObjectLookupStore implements AutoCloseable, 
    * @return a new {@link ObjectRef} instance encapsulating the object's identity
    */
   private ObjectRef generateObjectRef(Object object) {
-    final int identHash = System.identityHashCode(object);
-    return ObjectRef.from(String.valueOf(identHash));
+    return ObjectRef.from(System.identityHashCode(object));
   }
 
   /**

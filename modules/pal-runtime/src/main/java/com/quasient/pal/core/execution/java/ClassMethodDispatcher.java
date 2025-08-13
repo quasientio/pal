@@ -95,9 +95,9 @@ public class ClassMethodDispatcher extends MethodDispatcher {
         peerUuid,
         ctxt,
         sender,
-        storeObject(sender),
+        generateObjectRef(sender),
         args,
-        Arrays.stream(args).map(this::storeObject).toArray(ObjectRef[]::new));
+        Arrays.stream(args).map(this::generateObjectRef).toArray(ObjectRef[]::new));
   }
 
   /**
