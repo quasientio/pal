@@ -22,6 +22,7 @@ public class UnwovenCalls implements Calls {
   /**
    * {@inheritDoc}
    */
+  @Override
   public String toUpperCase(String str) {
     return str.toUpperCase(Locale.ENGLISH);
   }
@@ -29,6 +30,7 @@ public class UnwovenCalls implements Calls {
   /**
    * {@inheritDoc}
    */
+  @Override
   public void sort(double[] doubles) {
     Arrays.sort(doubles);
   }

@@ -17,11 +17,13 @@ import java.util.Locale;
 public class QuantizedCalls implements Calls {
 
   /** {@inheritDoc} */
+  @Override
   public String toUpperCase(String str) {
     return str.toUpperCase(Locale.ENGLISH);
   }
 
   /** {@inheritDoc} */
+  @Override
   public void sort(double[] doubles) {
     Arrays.sort(doubles);
   }
