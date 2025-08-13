@@ -10,40 +10,22 @@
 package com.quasient.pal.core.runtime.objects;
 
 import java.util.Objects;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Manages background processing tasks for the {@link ConcurrentHashMapObjectLookupStore}.
- *
- * <p>This processor schedules periodic tasks to remove cleared entries from the lookup store and to
- * log statistics about the store's usage and performance.
+ * Manages the background clearing of entries in {@link ConcurrentHashMapObjectLookupStore}'
+ * refQueue.
  */
 class ObjectLookupStoreBackgroundProcessor implements ObjectLookupStoreCleaner {
 
-  /** Logger instance for recording processor activities and errors. */
+  /** Logger instance. */
   private final Logger logger = LoggerFactory.getLogger(ObjectLookupStoreBackgroundProcessor.class);
 
-  /** Default interval in millis between cleanup operations. */
-  private static final int DEFAULT_CLEANUP_INTERVAL_MS = 50;
-
-  /** Default interval in seconds between statistics logging operations. */
-  private static final int DEFAULT_STATS_INTERVAL_SECS = 6;
-
-  /** Executor service responsible for scheduling and executing background tasks. */
-  private final ScheduledExecutorService scheduler =
-      Executors.newScheduledThreadPool(
-          1,
-          r -> {
-            Thread thread = new Thread(r);
-            thread.setName("ObjectLookupStoreBackgroundThread");
-            thread.setDaemon(true);
-            return thread;
-          });
+  /** Default timeout in millis for blocking cleanup. */
+  private static final int DEFAULT_CLEANUP_INTERVAL_MS = 5;
 
   /** The lookup store that holds object references for lookup operations. */
   @Nonnull final ConcurrentHashMapObjectLookupStore objectLookupStore;
@@ -51,35 +33,39 @@ class ObjectLookupStoreBackgroundProcessor implements ObjectLookupStoreCleaner {
   /** Statistics tracker for monitoring the performance and usage of the lookup store. */
   @Nonnull private final ObjectLookupStoreStats objectLookupStoreStats;
 
-  /** Interval in millis between consecutive cleanup operations. */
-  private final int cleanupIntervalMillis;
+  /** Timeout in millis for blocking cleanup. */
+  private final int cleanupTimeoutMs;
 
-  /** Interval in seconds between consecutive statistics logging operations. */
-  private final int statsIntervalSecs;
+  /** Flag to stop */
+  private volatile boolean running = false;
+
+  /** The cleanup worker thread */
+  private Thread worker;
 
   /**
-   * Constructs a background processor with specified intervals for cleanup and statistics logging.
+   * Constructs a background processor with specified stats and cleanup timeout parameter.
    *
    * @param objectLookupStore the store containing object references to process; must not be null
    * @param objectLookupStoreStats the statistics tracker for the lookup store; must not be null
-   * @param cleanupIntervalMillis interval in millis for cleanup tasks; must be positive
-   * @param statsIntervalSecs interval in seconds for statistics logging; must be positive
+   * @param cleanupTimeoutMs timeout in millis for blocking cleanup.
    * @throws NullPointerException if {@code objectLookupStore} or {@code objectLookupStoreStats} is
    *     null
    */
   ObjectLookupStoreBackgroundProcessor(
       @Nonnull ConcurrentHashMapObjectLookupStore objectLookupStore,
       @Nonnull ObjectLookupStoreStats objectLookupStoreStats,
-      int cleanupIntervalMillis,
-      int statsIntervalSecs) {
+      int cleanupTimeoutMs) {
     this.objectLookupStore = Objects.requireNonNull(objectLookupStore);
     this.objectLookupStoreStats = Objects.requireNonNull(objectLookupStoreStats);
-    this.cleanupIntervalMillis = cleanupIntervalMillis;
-    this.statsIntervalSecs = statsIntervalSecs;
+    this.cleanupTimeoutMs = cleanupTimeoutMs;
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          "Initialized object store processor with cleanupIntervalMillis: {}", cleanupTimeoutMs);
+    }
   }
 
   /**
-   * Constructs a background processor with default intervals for cleanup and statistics logging.
+   * Constructs a background processor with default interval for cleanup timeout.
    *
    * @param objectLookupStore the store containing object references to process; must not be null
    * @param objectLookupStoreStats the statistics tracker for the lookup store; must not be null
@@ -89,73 +75,86 @@ class ObjectLookupStoreBackgroundProcessor implements ObjectLookupStoreCleaner {
   ObjectLookupStoreBackgroundProcessor(
       ConcurrentHashMapObjectLookupStore objectLookupStore,
       ObjectLookupStoreStats objectLookupStoreStats) {
-    this(
-        objectLookupStore,
-        objectLookupStoreStats,
-        DEFAULT_CLEANUP_INTERVAL_MS,
-        DEFAULT_STATS_INTERVAL_SECS);
+    this(objectLookupStore, objectLookupStoreStats, DEFAULT_CLEANUP_INTERVAL_MS);
   }
 
   /**
-   * Initiates the background processing by scheduling cleanup and statistics logging tasks.
-   *
-   * <p>Once started, the processor will periodically remove cleared entries from the lookup store
-   * and log relevant statistics at the configured intervals.
+   * Initiates the thread which will continuously remove cleared entries from the lookup store's ref
+   * queue and update relevant statistics.
    */
   @SuppressWarnings("FutureReturnValueIgnored")
   @Override
   public void start() {
-    if (logger.isTraceEnabled()) {
-      logger.trace("Starting OBJECTS stats");
+    if (running) {
+      return;
     }
+    running = true;
 
-    scheduler.scheduleAtFixedRate(this::runOnce, 0, cleanupIntervalMillis, TimeUnit.MILLISECONDS);
-    scheduler.scheduleAtFixedRate(this::printStats, 0, statsIntervalSecs, TimeUnit.SECONDS);
+    worker =
+        new Thread(
+            () -> {
+              logger.info("Starting OBJECTS background cleanup loop");
+
+              while (running && !Thread.currentThread().isInterrupted()) {
+                int cleared = 0;
+                try {
+                  // Block briefly waiting for at least one reference; null on timeout.
+                  IdentifiableObject first =
+                      (IdentifiableObject) objectLookupStore.getRefQueue().remove(cleanupTimeoutMs);
+                  if (first != null) {
+                    objectLookupStore.getObjects().remove(first.getKey());
+                    cleared++;
+
+                    // Drain the rest without blocking.
+                    for (IdentifiableObject ref;
+                        (ref = (IdentifiableObject) objectLookupStore.getRefQueue().poll())
+                            != null; ) {
+                      objectLookupStore.getObjects().remove(ref.getKey());
+                      cleared++;
+                    }
+                  }
+
+                  if (cleared > 0) {
+                    objectLookupStoreStats.getTotalObjectsCleared().addAndGet(cleared);
+                    if (logger.isTraceEnabled()) {
+                      logger.trace("Cleaned up {} refs", cleared);
+                    }
+                  }
+
+                } catch (InterruptedException ie) {
+                  // Respect shutdown.
+                  Thread.currentThread().interrupt();
+                  break;
+                } catch (Exception e) {
+                  logger.error("Error draining reference queue", e);
+                }
+              }
+
+              logger.info("OBJECTS background cleanup loop stopped");
+            },
+            "ObjectLookupStoreBackgroundThread");
+
+    worker.setDaemon(true);
+    worker.start();
   }
 
   /**
-   * Logs current statistics about the lookup store.
+   * Calls the {@link ConcurrentHashMapObjectLookupStore#drainRefQueue()} once and returns the
+   * number of cleared entries. This method is meant to be called by non-started processors
+   * (normally for testing purposes).
    *
-   * <p>This method retrieves and logs metrics such as the maximum size, current size, number of
-   * successful lookups, and total objects cleared.
-   */
-  private void printStats() {
-    try {
-      if (logger.isTraceEnabled()) {
-        logger.trace("OBJECTS: max size={}", objectLookupStoreStats.getMaxSize());
-        logger.trace("OBJECTS: current size={}", objectLookupStore.size());
-        logger.trace(
-            "OBJECTS: successful lookups={}",
-            objectLookupStoreStats.getSuccessfulStoreLookups().get());
-        logger.trace("OBJECTS: total cleared={}", objectLookupStoreStats.getTotalObjectsCleared());
-      }
-    } catch (Exception e) {
-      logger.error("Error printing stats", e);
-    }
-  }
-
-  /**
-   * Removes entries from the lookup store that have been cleared or are no longer valid.
-   *
-   * <p>This method scans the lookup store for entries whose associated objects have been cleared
-   * and removes them. It also updates the statistics with the number of entries cleared.
+   * @return the number of cleared entries
+   * @throws IllegalStateException if this is called from a started processor.
    */
   @Override
-  public void runOnce() {
-    try {
-      int cleared = 0;
-      for (IdentifiableObject ref;
-          (ref = (IdentifiableObject) objectLookupStore.getRefQueue().poll()) != null; ) {
-        objectLookupStore.getObjects().remove(ref.getKey());
-        cleared++;
-      }
-      objectLookupStoreStats.getTotalObjectsCleared().addAndGet(cleared);
-      if (logger.isTraceEnabled() && cleared > 0) {
-        logger.trace("Cleaned up {} refs", cleared);
-      }
-    } catch (Exception e) {
-      logger.error("Error draining reference queue", e);
+  public int runOnce() {
+
+    if (running) {
+      throw new IllegalStateException(
+          "Background cleanup worker is running. Do not call runOnce() after start()");
     }
+
+    return objectLookupStore.drainRefQueue();
   }
 
   /**
@@ -164,6 +163,15 @@ class ObjectLookupStoreBackgroundProcessor implements ObjectLookupStoreCleaner {
    */
   @Override
   public void stop() {
-    scheduler.shutdownNow();
+    running = false;
+    if (worker != null) {
+      worker.interrupt();
+      try {
+        worker.join(TimeUnit.SECONDS.toMillis(2));
+      } catch (InterruptedException ignored) {
+        Thread.currentThread().interrupt();
+      }
+      worker = null;
+    }
   }
 }

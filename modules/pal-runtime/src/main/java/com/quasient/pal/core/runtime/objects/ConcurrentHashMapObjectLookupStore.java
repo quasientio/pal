@@ -20,12 +20,14 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Thread-safe implementation backed by a {@link ConcurrentHashMap} and a {@link
- * java.lang.ref.ReferenceQueue}. Dead entries are removed by an {@link ObjectLookupStoreCleaner}
- * that can run either:
+ * java.lang.ref.ReferenceQueue}. Dead entries are removed either:
  *
  * <ul>
- *   <li>on a scheduled background thread (default factory), or
- *   <li>manually, under test control (unmanaged factory).
+ *   <li>by a background thread in self-started {@link ObjectLookupStoreCleaner} (async-managed
+ *       mode),
+ *   <li>manually, under test control by an externally attached {@link ObjectLookupStoreCleaner}
+ *       (unmanaged mode),
+ *   <li>automatically by each thread calling {@link #storeObject(Object)}, in sync-managed mode.
  * </ul>
  *
  * <h2>Contract</h2>
@@ -54,13 +56,19 @@ public final class ConcurrentHashMapObjectLookupStore implements AutoCloseable, 
   static final float DEFAULT_LOAD_FACTOR = 0.75f;
 
   /**
-   * Optional cleaner. Non-null when this instance was built by {@link
-   * #createWithScheduledCleaner(int, float)}; may be {@code null} in unit tests.
+   * Optional cleaner. Non-null when this instance was built by {@link #createAsyncManaged(int,
+   * float)}; may be {@code null} in unit tests.
    */
   private ObjectLookupStoreCleaner cleaner;
 
   /** Statistics tracker for monitoring the state and performance of the store. */
-  private final ObjectLookupStoreStats objectLookupStoreStats = new ObjectLookupStoreStats();
+  private final ObjectLookupStoreStats objectLookupStoreStats;
+
+  /**
+   * Indicates sync-managed mode, where threads cleanup the ref queue during the call to {@link
+   * #storeObject(Object)}.
+   */
+  private final boolean syncManaged;
 
   /**
    * Concurrent map storing the association between {@link ObjectRef} and {@link
@@ -87,8 +95,15 @@ public final class ConcurrentHashMapObjectLookupStore implements AutoCloseable, 
    * @param initialCapacity initial capacity of object map
    * @param loadFactor load factor of object map
    */
-  private ConcurrentHashMapObjectLookupStore(int initialCapacity, float loadFactor) {
+  private ConcurrentHashMapObjectLookupStore(
+      int initialCapacity,
+      float loadFactor,
+      boolean syncManaged,
+      ObjectLookupStoreStats objectLookupStoreStats) {
     objects = new ConcurrentHashMap<>(initialCapacity, loadFactor);
+    this.syncManaged = syncManaged;
+    this.objectLookupStoreStats =
+        objectLookupStoreStats != null ? objectLookupStoreStats : new ObjectLookupStoreStats();
   }
 
   /**
@@ -98,10 +113,10 @@ public final class ConcurrentHashMapObjectLookupStore implements AutoCloseable, 
    * @param initialCapacity the initial capacity of the underlying {@link ConcurrentHashMap}
    * @param loadFactor the load factor of the underlying {@link ConcurrentHashMap}
    */
-  public static ConcurrentHashMapObjectLookupStore createWithScheduledCleaner(
+  public static ConcurrentHashMapObjectLookupStore createAsyncManaged(
       int initialCapacity, float loadFactor) {
     ConcurrentHashMapObjectLookupStore store =
-        new ConcurrentHashMapObjectLookupStore(initialCapacity, loadFactor);
+        new ConcurrentHashMapObjectLookupStore(initialCapacity, loadFactor, false, null);
     ObjectLookupStoreCleaner c =
         new ObjectLookupStoreBackgroundProcessor(store, store.objectLookupStoreStats);
     c.start();
@@ -110,20 +125,32 @@ public final class ConcurrentHashMapObjectLookupStore implements AutoCloseable, 
   }
 
   /**
-   * Shortcut for {@link #createWithScheduledCleaner(int, float)} using default capacity and load
+   * Shortcut for {@link #createAsyncManaged(int, float)} using default capacity and load factor.
+   */
+  public static ConcurrentHashMapObjectLookupStore createAsyncManaged() {
+    return createAsyncManaged(DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR);
+  }
+
+  /**
+   * Creates a store with a sync-managed cleanup policy, using the default store capacity and load
    * factor.
    */
-  public static ConcurrentHashMapObjectLookupStore createWithScheduledCleaner() {
-    return createWithScheduledCleaner(DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR);
+  public static ConcurrentHashMapObjectLookupStore createSyncManaged() {
+    return new ConcurrentHashMapObjectLookupStore(
+        DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR, true, null);
   }
 
   /**
    * Creates a store without any automatic background cleaner. Intended for deterministic unit
-   * tests; callers must attach their own {@link ObjectLookupStoreCleaner} or call {@link
+   * tests; callers must initialize and pass their {@link ObjectLookupStoreStats}, attach their own
+   * {@link ObjectLookupStoreCleaner}, starting it or calling {@link
    * ObjectLookupStoreCleaner#runOnce()}.
+   *
+   * @param stats an externally created ObjectLookupStoreStats instance
    */
-  static ConcurrentHashMapObjectLookupStore createUnmanaged() {
-    return new ConcurrentHashMapObjectLookupStore(DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR);
+  static ConcurrentHashMapObjectLookupStore createUnmanaged(ObjectLookupStoreStats stats) {
+    return new ConcurrentHashMapObjectLookupStore(
+        DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR, false, stats);
   }
 
   /**
@@ -183,6 +210,12 @@ public final class ConcurrentHashMapObjectLookupStore implements AutoCloseable, 
 
     IdentifiableObject wrapper = new IdentifiableObject(object, key, refQueue);
     objects.put(key, wrapper);
+
+    // if sync-managed perform queue cleanup
+    if (syncManaged) {
+      drainRefQueue();
+    }
+
     updateMaxSize();
     return key;
   }
@@ -233,6 +266,33 @@ public final class ConcurrentHashMapObjectLookupStore implements AutoCloseable, 
   @Override
   public long size() {
     return objects.mappingCount();
+  }
+
+  /**
+   * Removes entries from the lookup store that have been cleared or are no longer valid.
+   *
+   * <p>This method scans the lookup store for entries whose associated objects have been cleared
+   * and removes them. It also updates the statistics with the number of entries cleared.
+   *
+   * @return the number of cleared entries
+   */
+  int drainRefQueue() {
+
+    int cleared = 0;
+    // Drain without blocking.
+    for (IdentifiableObject ref; (ref = (IdentifiableObject) refQueue.poll()) != null; ) {
+      objects.remove(ref.getKey());
+      cleared++;
+    }
+
+    if (cleared > 0) {
+      objectLookupStoreStats.getTotalObjectsCleared().addAndGet(cleared);
+      if (logger.isTraceEnabled()) {
+        logger.trace("Cleaned up {} refs", cleared);
+      }
+    }
+
+    return cleared;
   }
 
   /**

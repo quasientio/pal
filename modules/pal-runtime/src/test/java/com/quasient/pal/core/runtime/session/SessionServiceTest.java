@@ -42,7 +42,7 @@ public class SessionServiceTest extends ZmqEnabledTest {
   private Socket socket;
   private ServiceManager manager;
   private final ObjectLookupStore objectLookupStore =
-      ConcurrentHashMapObjectLookupStore.createWithScheduledCleaner();
+      ConcurrentHashMapObjectLookupStore.createAsyncManaged();
   private final ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
 
   @Before

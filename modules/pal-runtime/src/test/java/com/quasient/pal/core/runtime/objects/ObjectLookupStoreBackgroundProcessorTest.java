@@ -19,11 +19,12 @@ public class ObjectLookupStoreBackgroundProcessorTest {
 
   @Test
   public void removeClearedEntries_removesQueuedReferences() {
+
+    ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
     try (ConcurrentHashMapObjectLookupStore store =
-        ConcurrentHashMapObjectLookupStore.createUnmanaged()) {
-      ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
+        ConcurrentHashMapObjectLookupStore.createUnmanaged(stats)) {
       ObjectLookupStoreBackgroundProcessor proc =
-          new ObjectLookupStoreBackgroundProcessor(store, stats, 1, 60);
+          new ObjectLookupStoreBackgroundProcessor(store, stats, 60);
 
       // 1. add an object to the store
       Object bigObject = new byte[256];
@@ -43,7 +44,7 @@ public class ObjectLookupStoreBackgroundProcessorTest {
 
       // sanity-check: if we insert again, lookup works
       ObjectRef newRef = store.storeObject("foo");
-      assertThat(store.lookupObject(newRef), is((Object) "foo"));
+      assertThat(store.lookupObject(newRef), is("foo"));
     }
   }
 
@@ -52,11 +53,12 @@ public class ObjectLookupStoreBackgroundProcessorTest {
   /* ------------------------------------------------------------------ */
   @Test
   public void removeClearedEntries_whenQueueEmpty_doesNothing() {
+
+    ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
     try (ConcurrentHashMapObjectLookupStore store =
-        ConcurrentHashMapObjectLookupStore.createUnmanaged()) {
-      ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
+        ConcurrentHashMapObjectLookupStore.createUnmanaged(stats)) {
       ObjectLookupStoreBackgroundProcessor proc =
-          new ObjectLookupStoreBackgroundProcessor(store, stats, 1, 60);
+          new ObjectLookupStoreBackgroundProcessor(store, stats, 60);
 
       // put one live object, don’t clear/enqueue anything
       ObjectRef ref = store.storeObject("foo");
@@ -73,11 +75,12 @@ public class ObjectLookupStoreBackgroundProcessorTest {
   /* ------------------------------------------------------------------ */
   @Test
   public void removeClearedEntries_bulkRemoval() {
+
+    ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
     try (ConcurrentHashMapObjectLookupStore store =
-        ConcurrentHashMapObjectLookupStore.createUnmanaged()) {
-      ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
+        ConcurrentHashMapObjectLookupStore.createUnmanaged(stats)) {
       ObjectLookupStoreBackgroundProcessor proc =
-          new ObjectLookupStoreBackgroundProcessor(store, stats, 1, 60);
+          new ObjectLookupStoreBackgroundProcessor(store, stats, 60);
 
       int n = 25;
       ObjectRef[] refs = new ObjectRef[n];
@@ -102,18 +105,19 @@ public class ObjectLookupStoreBackgroundProcessorTest {
   /* ------------------------------------------------------------------ */
   @Test
   public void successfulLookupCounter_incrementsForLiveObject() {
+
+    ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
     try (ConcurrentHashMapObjectLookupStore store =
-        ConcurrentHashMapObjectLookupStore.createUnmanaged()) {
+        ConcurrentHashMapObjectLookupStore.createUnmanaged(stats)) {
 
       // manual cleaner bound to this store; not started
-      ObjectLookupStoreCleaner cleaner =
-          new ObjectLookupStoreBackgroundProcessor(store, store.getStats(), 0, 60);
+      ObjectLookupStoreCleaner cleaner = new ObjectLookupStoreBackgroundProcessor(store, stats, 60);
       store.attachCleaner(cleaner);
 
       ObjectRef ref = store.storeObject("bar");
       store.lookupObject(ref);
       store.lookupObject(ref);
-      assertThat(store.getStats().getSuccessfulStoreLookups().get(), is(2L));
+      assertThat(stats.getSuccessfulStoreLookups().get(), is(2L));
 
       // simulate GC and drain deterministically
       IdentifiableObject w = store.getObjects().get(ref);
@@ -122,19 +126,21 @@ public class ObjectLookupStoreBackgroundProcessorTest {
       cleaner.runOnce();
 
       store.lookupObject(ref); // now null
-      assertThat(store.getStats().getSuccessfulStoreLookups().get(), is(2L));
+      assertThat(stats.getSuccessfulStoreLookups().get(), is(2L));
     }
   }
 
   /** maxSize tracks peak size correctly */
   @Test
   public void maxSizeTracking_recordsPeak() {
+
+    ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
     try (ConcurrentHashMapObjectLookupStore store =
-        ConcurrentHashMapObjectLookupStore.createUnmanaged()) {
+        ConcurrentHashMapObjectLookupStore.createUnmanaged(stats)) {
 
       // add 10 objects
       for (int i = 0; i < 10; i++) store.storeObject(i);
-      assertThat(store.getStats().getMaxSize().get() >= 10, is(true));
+      assertThat(stats.getMaxSize().get() >= 10, is(true));
 
       // remove 9
       for (int i = 1; i < 10; i++)
@@ -142,7 +148,7 @@ public class ObjectLookupStoreBackgroundProcessorTest {
 
       // add one more – peak should stay at least 10
       store.storeObject("another");
-      assertThat(store.getStats().getMaxSize().get() >= 10, is(true));
+      assertThat(stats.getMaxSize().get() >= 10, is(true));
     }
   }
 }

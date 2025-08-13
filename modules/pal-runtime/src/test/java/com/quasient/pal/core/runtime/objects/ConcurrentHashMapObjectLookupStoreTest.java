@@ -34,7 +34,7 @@ public class ConcurrentHashMapObjectLookupStoreTest {
   // <editor-fold desc="storeObject">
   @Test
   public void storeObject_nullObject_nullPointerException() {
-    objectLookupStore = ConcurrentHashMapObjectLookupStore.createWithScheduledCleaner();
+    objectLookupStore = ConcurrentHashMapObjectLookupStore.createAsyncManaged();
     try {
       objectLookupStore.storeObject(null);
       fail("Trying to store null should throw a NullPointerException");
@@ -46,7 +46,7 @@ public class ConcurrentHashMapObjectLookupStoreTest {
 
   @Test
   public void storeObject_newObject_objectRef() {
-    objectLookupStore = ConcurrentHashMapObjectLookupStore.createWithScheduledCleaner();
+    objectLookupStore = ConcurrentHashMapObjectLookupStore.createAsyncManaged();
     ObjectRef objRef = objectLookupStore.storeObject(new ArrayList<>());
     assertNotNull(objRef);
     assertThat(objectLookupStore.size(), is(1L));
@@ -54,7 +54,7 @@ public class ConcurrentHashMapObjectLookupStoreTest {
 
   @Test
   public void storeObject_sameObjectTwice_getExistingRef() {
-    objectLookupStore = ConcurrentHashMapObjectLookupStore.createWithScheduledCleaner();
+    objectLookupStore = ConcurrentHashMapObjectLookupStore.createAsyncManaged();
     ArrayList<Integer> listOfInts = new ArrayList<>();
     ObjectRef firstObjRef = objectLookupStore.storeObject(listOfInts);
     assertEquals(firstObjRef, objectLookupStore.storeObject(listOfInts));
@@ -63,7 +63,7 @@ public class ConcurrentHashMapObjectLookupStoreTest {
 
   @Test
   public void storeObject_differentObjsStored_sizeAsExpected() {
-    objectLookupStore = ConcurrentHashMapObjectLookupStore.createWithScheduledCleaner();
+    objectLookupStore = ConcurrentHashMapObjectLookupStore.createAsyncManaged();
     objectLookupStore.storeObject(new ArrayList<>());
     objectLookupStore.storeObject(34182);
     objectLookupStore.storeObject("some chars");
@@ -72,7 +72,7 @@ public class ConcurrentHashMapObjectLookupStoreTest {
 
   @Test
   public void storeObject_equalButNotSameObjectStored_noException() {
-    objectLookupStore = ConcurrentHashMapObjectLookupStore.createWithScheduledCleaner();
+    objectLookupStore = ConcurrentHashMapObjectLookupStore.createAsyncManaged();
     objectLookupStore.storeObject(new ArrayList<>());
     objectLookupStore.storeObject(new ArrayList<>());
     assertThat(objectLookupStore.size(), is(2L));
@@ -83,7 +83,7 @@ public class ConcurrentHashMapObjectLookupStoreTest {
   // <editor-fold desc="lookupObject">
   @Test
   public void lookupObject_nullObjectRefParam_nullPointerException() {
-    objectLookupStore = ConcurrentHashMapObjectLookupStore.createWithScheduledCleaner();
+    objectLookupStore = ConcurrentHashMapObjectLookupStore.createAsyncManaged();
     try {
       objectLookupStore.lookupObject(null);
       fail("Trying to look up a null objectRef should throw a NullPointerException");
@@ -94,7 +94,7 @@ public class ConcurrentHashMapObjectLookupStoreTest {
 
   @Test
   public void lookupObject_objectIsStored_object() {
-    objectLookupStore = ConcurrentHashMapObjectLookupStore.createWithScheduledCleaner();
+    objectLookupStore = ConcurrentHashMapObjectLookupStore.createAsyncManaged();
     ArrayList<Integer> listOfInts = new ArrayList<>();
     ObjectRef objRef = objectLookupStore.storeObject(listOfInts);
     assertThat(objectLookupStore.size(), is(1L));
@@ -103,7 +103,7 @@ public class ConcurrentHashMapObjectLookupStoreTest {
 
   @Test
   public void lookupObject_madeUpObjectRef_null() {
-    objectLookupStore = ConcurrentHashMapObjectLookupStore.createWithScheduledCleaner();
+    objectLookupStore = ConcurrentHashMapObjectLookupStore.createAsyncManaged();
     assertNull(objectLookupStore.lookupObject(ObjectRef.from("2323823")));
   }
 
@@ -112,7 +112,7 @@ public class ConcurrentHashMapObjectLookupStoreTest {
   // <editor-fold desc="containsObjectRef">
   @Test
   public void containsObjectRef_nullObjectRef_nullPointerException() {
-    objectLookupStore = ConcurrentHashMapObjectLookupStore.createWithScheduledCleaner();
+    objectLookupStore = ConcurrentHashMapObjectLookupStore.createAsyncManaged();
     try {
       objectLookupStore.containsObjectRef(null);
       fail("Checking for a null key should throw a NullPointerException");
@@ -123,7 +123,7 @@ public class ConcurrentHashMapObjectLookupStoreTest {
 
   @Test
   public void containsObjectRef_ofStoredObject_true() {
-    objectLookupStore = ConcurrentHashMapObjectLookupStore.createWithScheduledCleaner();
+    objectLookupStore = ConcurrentHashMapObjectLookupStore.createAsyncManaged();
     ObjectRef objectRef = objectLookupStore.storeObject(new ArrayList<>());
     assertThat(objectLookupStore.size(), is(1L));
     assertTrue(objectLookupStore.containsObjectRef(objectRef));
@@ -131,7 +131,7 @@ public class ConcurrentHashMapObjectLookupStoreTest {
 
   @Test
   public void containsObjectRef_fakeObjectRef_false() {
-    objectLookupStore = ConcurrentHashMapObjectLookupStore.createWithScheduledCleaner();
+    objectLookupStore = ConcurrentHashMapObjectLookupStore.createAsyncManaged();
     assertFalse(objectLookupStore.containsObjectRef(ObjectRef.from("2092373")));
   }
 
@@ -140,13 +140,13 @@ public class ConcurrentHashMapObjectLookupStoreTest {
   // <editor-fold desc="size">
   @Test
   public void size_noObjectsStored_sizeIsZero() {
-    objectLookupStore = ConcurrentHashMapObjectLookupStore.createWithScheduledCleaner();
+    objectLookupStore = ConcurrentHashMapObjectLookupStore.createAsyncManaged();
     assertThat(objectLookupStore.size(), is(0L));
   }
 
   @Test
   public void size_someObjectsStored_numberOfObjects() {
-    objectLookupStore = ConcurrentHashMapObjectLookupStore.createWithScheduledCleaner();
+    objectLookupStore = ConcurrentHashMapObjectLookupStore.createAsyncManaged();
     objectLookupStore.storeObject(new ArrayList<>());
     objectLookupStore.storeObject(new HashMap<>());
     assertThat(objectLookupStore.size(), is(2L));
@@ -157,7 +157,7 @@ public class ConcurrentHashMapObjectLookupStoreTest {
   // <editor-fold desc="clear">
   @Test
   public void clear_objectsStored_sizeIsZero() {
-    objectLookupStore = ConcurrentHashMapObjectLookupStore.createWithScheduledCleaner();
+    objectLookupStore = ConcurrentHashMapObjectLookupStore.createAsyncManaged();
 
     // store objects
     objectLookupStore.storeObject(new ArrayList<>());
@@ -172,14 +172,14 @@ public class ConcurrentHashMapObjectLookupStoreTest {
   // <editor-fold desc="isEmpty">
   @Test
   public void isEmpty_noObjectsStored_true() {
-    objectLookupStore = ConcurrentHashMapObjectLookupStore.createWithScheduledCleaner();
+    objectLookupStore = ConcurrentHashMapObjectLookupStore.createAsyncManaged();
     assertThat(objectLookupStore.size(), is(0L));
     assertTrue(objectLookupStore.isEmpty());
   }
 
   @Test
   public void isEmpty_someObjectsStored_false() {
-    objectLookupStore = ConcurrentHashMapObjectLookupStore.createWithScheduledCleaner();
+    objectLookupStore = ConcurrentHashMapObjectLookupStore.createAsyncManaged();
     objectLookupStore.storeObject(new ArrayList<>());
     assertThat(objectLookupStore.size(), is(1L));
     assertFalse(objectLookupStore.isEmpty());
@@ -190,7 +190,7 @@ public class ConcurrentHashMapObjectLookupStoreTest {
   // <editor-fold desc="getObjects">
   @Test
   public void getObjects_noObjectsStored_objectsEmpty() {
-    objectLookupStore = ConcurrentHashMapObjectLookupStore.createWithScheduledCleaner();
+    objectLookupStore = ConcurrentHashMapObjectLookupStore.createAsyncManaged();
 
     assertThat(objectLookupStore.getObjects(), is(anEmptyMap()));
     assertTrue(objectLookupStore.isEmpty());
@@ -198,7 +198,7 @@ public class ConcurrentHashMapObjectLookupStoreTest {
 
   @Test
   public void getObjects_someObjectsStored_objects() {
-    objectLookupStore = ConcurrentHashMapObjectLookupStore.createWithScheduledCleaner();
+    objectLookupStore = ConcurrentHashMapObjectLookupStore.createAsyncManaged();
 
     objectLookupStore.storeObject(new ArrayList<>());
     assertThat(objectLookupStore.getObjects(), is(aMapWithSize(1)));
@@ -209,7 +209,7 @@ public class ConcurrentHashMapObjectLookupStoreTest {
   // <editor-fold desc="removeObject">
   @Test
   public void remove_objectIsStored_objectRemoved() {
-    objectLookupStore = ConcurrentHashMapObjectLookupStore.createWithScheduledCleaner();
+    objectLookupStore = ConcurrentHashMapObjectLookupStore.createAsyncManaged();
     final ObjectRef objRef = objectLookupStore.storeObject(new ArrayList<>());
     assertTrue(objectLookupStore.containsObjectRef(objRef));
     assertFalse(objectLookupStore.isEmpty());
@@ -223,8 +223,8 @@ public class ConcurrentHashMapObjectLookupStoreTest {
   }
 
   @Test
-  public void removeAll_someOjectsStored_allRemoved() {
-    objectLookupStore = ConcurrentHashMapObjectLookupStore.createWithScheduledCleaner();
+  public void removeAll_someObjectsStored_allRemoved() {
+    objectLookupStore = ConcurrentHashMapObjectLookupStore.createAsyncManaged();
     List<ObjectRef> objectRefList = new ArrayList<>();
     objectRefList.add(objectLookupStore.storeObject(new ArrayList<>()));
     objectRefList.add(objectLookupStore.storeObject(new ArrayList<>()));

@@ -19,8 +19,7 @@ package com.quasient.pal.core.runtime.objects;
  *   <li><b>Manual / Deterministic mode</b> – call {@link #runOnce()} directly whenever the test or
  *       caller wishes to drain the queue.
  *   <li><b>Scheduled mode</b> – call {@link #start()} once; the cleaner will drain the queue on a
- *       background thread at a fixed cadence until {@link #stop()} (or {@link #close()}) is
- *       invoked.
+ *       background thread until {@link #stop()} (or {@link #close()}) is invoked.
  * </ul>
  *
  * <p>All methods are idempotent and thread-safe: starting an already-started cleaner or stopping an
@@ -29,7 +28,7 @@ package com.quasient.pal.core.runtime.objects;
  * <p>Typical production wiring:
  *
  * <pre>{@code
- * ObjectLookupStore store = ConcurrentHashMapObjectLookupStore.createWithScheduledCleaner();
+ * ObjectLookupStore store = ConcurrentHashMapObjectLookupStore.createAsyncManaged();
  * }</pre>
  *
  * <p>Typical unit-test wiring:
@@ -48,9 +47,10 @@ public interface ObjectLookupStoreCleaner extends AutoCloseable {
 
   /**
    * Drains the reference queue <em>exactly once</em>, removing every entry that is currently
-   * queued. Non-blocking; typically completes in micro- to low-millisecond time.
+   * queued. Non-blocking; typically completes in micro- to low-millisecond time. Returns the number
+   * of cleared entries.
    */
-  void runOnce();
+  int runOnce();
 
   /**
    * Starts periodic clean-up on a daemon thread. If the cleaner is already running, the call has no
