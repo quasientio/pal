@@ -22,99 +22,86 @@ public interface ProxyDispatcher {
   /**
    * Invokes a constructor on the target object with the specified arguments.
    *
-   * @param ctxt the context in which the invocation occurs
    * @param pjp the {@link ProceedingJoinPoint} handle
    * @param proceed the {@link Proceed} callback handle
    * @return the newly created object instance
    * @throws Throwable if an error occurs during constructor invocation
    */
-  Object constructor(Context ctxt, ProceedingJoinPoint pjp, Proceed<Object> proceed)
-      throws Throwable;
+  Object constructor(ProceedingJoinPoint pjp, Proceed<Object> proceed) throws Throwable;
 
   /**
    * Executes a void instance method on the target object with the given arguments.
    *
-   * @param ctxt the context in which the invocation occurs
    * @param pjp the {@link ProceedingJoinPoint} handle
    * @param proceed the {@link VoidProceed} callback handle
    * @throws Throwable if an error occurs during method invocation
    */
-  void voidInstanceMethod(Context ctxt, ProceedingJoinPoint pjp, VoidProceed proceed)
-      throws Throwable;
+  void voidInstanceMethod(ProceedingJoinPoint pjp, VoidProceed proceed) throws Throwable;
 
   /**
    * Executes a void class method with the specified arguments.
    *
-   * @param ctxt the context in which the invocation occurs
    * @param pjp the {@link ProceedingJoinPoint} handle
    * @param proceed the {@link VoidProceed} callback handle
    * @throws Throwable if an error occurs during method invocation
    */
-  void voidClassMethod(Context ctxt, ProceedingJoinPoint pjp, VoidProceed proceed) throws Throwable;
+  void voidClassMethod(ProceedingJoinPoint pjp, VoidProceed proceed) throws Throwable;
 
   /**
    * Executes a non-void instance method on the target object with the given arguments.
    *
-   * @param ctxt the context in which the invocation occurs
    * @param pjp the {@link ProceedingJoinPoint} handle
    * @param proceed the {@link Proceed} callback handle
    * @return the result of the method invocation
    * @throws Throwable if an error occurs during method invocation
    */
-  Object nonVoidInstanceMethod(Context ctxt, ProceedingJoinPoint pjp, Proceed<Object> proceed)
-      throws Throwable;
+  Object nonVoidInstanceMethod(ProceedingJoinPoint pjp, Proceed<Object> proceed) throws Throwable;
 
   /**
    * Executes a non-void class method with the specified arguments.
    *
-   * @param ctxt the context in which the invocation occurs
    * @param pjp the {@link ProceedingJoinPoint} handle
    * @param proceed the {@link Proceed} callback handle
    * @return the result of the method invocation
    * @throws Throwable if an error occurs during method invocation
    */
-  Object nonVoidClassMethod(Context ctxt, ProceedingJoinPoint pjp, Proceed<Object> proceed)
-      throws Throwable;
+  Object nonVoidClassMethod(ProceedingJoinPoint pjp, Proceed<Object> proceed) throws Throwable;
 
   /**
    * Retrieves the value of a static field from the target class.
    *
-   * @param ctxt the context in which the retrieval occurs
    * @param pjp the {@link ProceedingJoinPoint} handle
    * @param proceed the {@link Proceed} callback handle
    * @return the value of the static field
    * @throws Throwable if an error occurs during field access
    */
-  Object getStatic(Context ctxt, ProceedingJoinPoint pjp, Proceed<Object> proceed) throws Throwable;
+  Object getStatic(ProceedingJoinPoint pjp, Proceed<Object> proceed) throws Throwable;
 
   /**
    * Retrieves the value of an instance field from the target object.
    *
-   * @param ctxt the context in which the retrieval occurs
    * @param pjp the {@link ProceedingJoinPoint} handle
    * @param proceed the {@link Proceed} callback handle
    * @return the value of the instance field
    * @throws Throwable if an error occurs during field access
    */
-  Object getObject(Context ctxt, ProceedingJoinPoint pjp, Proceed<Object> proceed) throws Throwable;
+  Object getObject(ProceedingJoinPoint pjp, Proceed<Object> proceed) throws Throwable;
 
   /**
    * Sets the value of a static field on the target class.
    *
-   * @param ctxt the context in which the modification occurs
    * @param pjp the {@link ProceedingJoinPoint} handle
    * @param proceed the {@link VoidProceed} callback handle
    * @throws Throwable if an error occurs during field modification
    */
-  void putStatic(Context ctxt, ProceedingJoinPoint pjp, VoidProceed proceed) throws Throwable;
+  void putStatic(ProceedingJoinPoint pjp, VoidProceed proceed) throws Throwable;
 
   /**
    * Sets the value of an instance field on the target object.
    *
-   * @param ctxt the context in which the modification occurs
    * @param pjp the {@link ProceedingJoinPoint} handle
    * @param proceed the {@link VoidProceed} callback handle
    * @throws Throwable if an error occurs during field modification
    */
-  void putField(Context ctxt, ProceedingJoinPoint pjp, VoidProceed proceed) throws Throwable;
+  void putField(ProceedingJoinPoint pjp, VoidProceed proceed) throws Throwable;
 }

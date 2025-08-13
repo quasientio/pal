@@ -20,14 +20,14 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import com.quasient.pal.common.lang.reflect.MethodSignature;
-import com.quasient.pal.common.lang.reflect.Signature;
 import com.quasient.pal.common.objects.ObjectRef;
-import com.quasient.pal.common.runtime.Context;
+import com.quasient.pal.core.service.RunOptions;
 import com.quasient.pal.core.transport.MessageChannelType;
 import com.quasient.pal.messages.colfer.ExecMessage;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.junit.Before;
@@ -39,15 +39,15 @@ import org.mockito.junit.MockitoJUnitRunner;
 public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTest {
   private final Class<?> targetClass = ClassForVoidInstanceMethodTest.class;
 
-  private final String sourceFilename = "NotARealClass.java";
-
   @Before
   @Override
   public void setUp() {
     super.setUp();
+    runOptions = EnumSet.of(RunOptions.WITH_TCP_PUB);
     dispatcher =
         new InstanceMethodDispatcher(
             peerUuid,
+            runOptions,
             messageBuilder,
             outboundMessageGateway,
             Boolean.TRUE.toString(),
@@ -56,11 +56,25 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     onlyPublicDispatcher =
         new InstanceMethodDispatcher(
             peerUuid,
+            runOptions,
             messageBuilder,
             outboundMessageGateway,
             Boolean.FALSE.toString(),
             onlyPublicReflectionHelper,
             objectLookupStore);
+  }
+
+  private ProceedingJoinPoint createPjp(Method method, Object target, Object[] args)
+      throws Throwable {
+    String sourceFilename = "NotARealClass.java";
+    return PjpBuilder.create()
+        .kindMethodCall()
+        .methodExecutionSignature(method)
+        .source(/*file*/ sourceFilename, /*line*/ -1, /*within*/ this.getClass())
+        .sender(this)
+        .target(target)
+        .args(args)
+        .build();
   }
 
   /* --------------------------------------------*/
@@ -74,23 +88,24 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
   @Override
   public void dispatch_noArgs_ok() throws Throwable {
 
+    // ── signature ────────────────────────────────────────────
     String methodName = "addHelloWorld";
     Class<?>[] parameterTypes = {};
-    Signature signature =
-        new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
+    Method m = targetClass.getDeclaredMethod(methodName, parameterTypes);
 
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
+    // ── args ─────────────────────────────────────────────────
     Object[] args = {};
 
+    // ── target instance ─────────────────────────────────────
     ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
 
-    ProceedingJoinPoint pjp =
-        PjpBuilder.forContext(ctxt).sender(this).target(target).args(args).build();
+    // ── PJP ──────────────────────────────────────────────────
+    ProceedingJoinPoint pjp = createPjp(m, target, args);
 
-    // real invocation
-    Object returned = dispatcher.dispatch(ctxt, pjp, asVoidProceed(target::addHelloWorld));
+    // ── dispatch ─────────────────────────────────────────────
+    Object returned = dispatcher.dispatch(pjp, asVoidProceed(target::addHelloWorld));
 
+    // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
     assertNull(returned);
     assertThat(target.wordsCollected.size(), is(2));
@@ -103,23 +118,25 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
   @Override
   public void dispatch_withArgs_ok() throws Throwable {
 
+    // ── signature ────────────────────────────────────────────
     String methodName = "addWord";
     Class<?>[] parameterTypes = {String.class};
-    Signature signature =
-        new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
+    Method m = targetClass.getDeclaredMethod(methodName, parameterTypes);
 
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
+    // ── args ─────────────────────────────────────────────────
     Object[] args = {"hello"};
 
+    // ── target instance ─────────────────────────────────────
     ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
 
-    ProceedingJoinPoint pjp =
-        PjpBuilder.forContext(ctxt).sender(this).target(target).args(args).build();
+    // ── PJP ──────────────────────────────────────────────────
+    ProceedingJoinPoint pjp = createPjp(m, target, args);
 
+    // ── dispatch ─────────────────────────────────────────────
     Object returned =
-        dispatcher.dispatch(ctxt, pjp, asVoidProceed(() -> target.addWord((String) args[0])));
+        dispatcher.dispatch(pjp, asVoidProceed(() -> target.addWord((String) args[0])));
 
+    // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
     assertNull(returned);
     assertThat(target.wordsCollected.size(), is(1));
@@ -132,24 +149,25 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
   @Override
   public void dispatch_withPrimitiveArgs_ok() throws Throwable {
 
+    // ── signature ────────────────────────────────────────────
     String methodName = "addWords";
     Class<?>[] parameterTypes = {int.class};
-    Signature signature =
-        new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
+    Method m = targetClass.getDeclaredMethod(methodName, parameterTypes);
 
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
+    // ── args ─────────────────────────────────────────────────
     int numberOfWordsToAdd = 5;
     Object[] args = {numberOfWordsToAdd};
 
+    // ── target instance ─────────────────────────────────────
     ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
 
-    ProceedingJoinPoint pjp =
-        PjpBuilder.forContext(ctxt).sender(this).target(target).args(args).build();
+    // ── PJP ──────────────────────────────────────────────────
+    ProceedingJoinPoint pjp = createPjp(m, target, args);
 
-    Object returned =
-        dispatcher.dispatch(ctxt, pjp, asVoidProceed(() -> target.addWords((int) args[0])));
+    // ── dispatch ─────────────────────────────────────────────
+    Object returned = dispatcher.dispatch(pjp, asVoidProceed(() -> target.addWords((int) args[0])));
 
+    // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
     assertNull(returned);
     assertThat(target.wordsCollected.size(), is(numberOfWordsToAdd));
@@ -162,24 +180,26 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
   @Override
   public void dispatch_varargs_ok() throws Throwable {
 
+    // ── signature ────────────────────────────────────────────
     String methodName = "addWords";
     Class<?>[] parameterTypes = {String[].class};
-    Signature signature =
-        new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
+    Method m = targetClass.getDeclaredMethod(methodName, parameterTypes);
 
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
+    // ── args ─────────────────────────────────────────────────
     String[] words = {"hey", "there", "!", "whats", "up", "?"};
     Object[] args = {words};
 
+    // ── target instance ─────────────────────────────────────
     ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
 
-    ProceedingJoinPoint pjp =
-        PjpBuilder.forContext(ctxt).sender(this).target(target).args(args).build();
+    // ── PJP ──────────────────────────────────────────────────
+    ProceedingJoinPoint pjp = createPjp(m, target, args);
 
+    // ── dispatch ─────────────────────────────────────────────
     Object returned =
-        dispatcher.dispatch(ctxt, pjp, asVoidProceed(() -> target.addWords((String[]) args[0])));
+        dispatcher.dispatch(pjp, asVoidProceed(() -> target.addWords((String[]) args[0])));
 
+    // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
     assertNull(returned);
     assertThat(target.wordsCollected.size(), is(4));
@@ -192,27 +212,29 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
   @Override
   public void dispatch_throwsException_exceptionThrown() throws Throwable {
 
+    // ── signature ────────────────────────────────────────────
     String methodName = "addWord";
     Class<?>[] parameterTypes = {String.class};
-    Signature signature =
-        new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
+    Method m = targetClass.getDeclaredMethod(methodName, parameterTypes);
 
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
+    // ── args ─────────────────────────────────────────────────
     Object[] args = {","}; // invalid word, will trigger IAE
 
+    // ── target instance ─────────────────────────────────────
     ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
 
-    ProceedingJoinPoint pjp =
-        PjpBuilder.forContext(ctxt).sender(this).target(target).args(args).build();
+    // ── PJP ──────────────────────────────────────────────────
+    ProceedingJoinPoint pjp = createPjp(m, target, args);
 
+    // ── dispatch ─────────────────────────────────────────────
     try {
-      dispatcher.dispatch(ctxt, pjp, asVoidProceed(() -> target.addWord((String) args[0])));
+      dispatcher.dispatch(pjp, asVoidProceed(() -> target.addWord((String) args[0])));
       fail("Should have failed with an IllegalArgumentException");
     } catch (IllegalArgumentException iae) {
       // expected
     }
 
+    // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
   }
 

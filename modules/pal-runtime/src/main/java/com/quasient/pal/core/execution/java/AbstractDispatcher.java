@@ -11,10 +11,12 @@ package com.quasient.pal.core.execution.java;
 
 import com.quasient.pal.core.execution.java.reflect.ReflectionHelper;
 import com.quasient.pal.core.runtime.objects.ObjectLookupStore;
+import com.quasient.pal.core.service.RunOptions;
 import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
+import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +33,9 @@ abstract class AbstractDispatcher {
 
   /** Unique identifier for the peer involved in dispatch operations. */
   protected UUID peerUuid;
+
+  /** Set of runtime options that dictate behavior such as, PUB, WAL, intercepts, etc. */
+  protected Set<RunOptions> runOptions;
 
   /** Instance used to construct messages. */
   protected MessageBuilder messageBuilder;
@@ -57,6 +62,16 @@ abstract class AbstractDispatcher {
   @Inject
   final void setPeerUuid(UUID peerUuid) {
     this.peerUuid = peerUuid;
+  }
+
+  /**
+   * Sets the {@link RunOptions}.
+   *
+   * @param runOptions the run options.
+   */
+  @Inject
+  final void setRunOptions(Set<RunOptions> runOptions) {
+    this.runOptions = runOptions;
   }
 
   /**

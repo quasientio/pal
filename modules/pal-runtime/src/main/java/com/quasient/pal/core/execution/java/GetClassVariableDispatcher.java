@@ -10,6 +10,7 @@
 package com.quasient.pal.core.execution.java;
 
 import com.quasient.pal.core.runtime.objects.ObjectLookupStore;
+import com.quasient.pal.core.service.RunOptions;
 import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.types.MessageType;
@@ -19,6 +20,7 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.lang.reflect.AccessibleObject;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -39,6 +41,7 @@ public class GetClassVariableDispatcher extends GetFieldDispatcher {
    * permitted if a public field is unavailable.
    *
    * @param peerUuid a unique identifier for the peer
+   * @param runOptions the run options governing enabled features
    * @param messageBuilder the builder responsible for constructing execution messages
    * @param gateway instance of {@link OutboundMessageGateway} handling message routing
    * @param allowNonPublicAccess a configuration flag (as String) indicating if non-public fields
@@ -48,11 +51,13 @@ public class GetClassVariableDispatcher extends GetFieldDispatcher {
   @Inject
   public GetClassVariableDispatcher(
       UUID peerUuid,
+      Set<RunOptions> runOptions,
       MessageBuilder messageBuilder,
       OutboundMessageGateway gateway,
       @Named("rpc.allow_nonpublic") String allowNonPublicAccess,
       ObjectLookupStore objectLookupStore) {
     setPeerUuid(peerUuid);
+    setRunOptions(runOptions);
     setMessageBuilder(messageBuilder);
     setMessageGateway(gateway);
     setAllowNonPublicAccess(allowNonPublicAccess);

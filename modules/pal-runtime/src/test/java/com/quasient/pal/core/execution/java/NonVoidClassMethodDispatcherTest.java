@@ -20,16 +20,16 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import com.quasient.pal.common.lang.reflect.MethodSignature;
-import com.quasient.pal.common.lang.reflect.Signature;
 import com.quasient.pal.common.lang.reflect.Void;
 import com.quasient.pal.common.objects.ObjectRef;
-import com.quasient.pal.common.runtime.Context;
 import com.quasient.pal.core.ExecMessageMatchers.ComesFromClass;
 import com.quasient.pal.core.ExecMessageMatchers.ComesFromReflectable;
+import com.quasient.pal.core.service.RunOptions;
 import com.quasient.pal.core.transport.MessageChannelType;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.serdes.Unwrapper;
+import java.lang.reflect.Method;
+import java.util.EnumSet;
 import java.util.Random;
 import java.util.stream.DoubleStream;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -43,15 +43,15 @@ import org.mockito.junit.MockitoJUnitRunner;
 public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest {
   private final Class<?> targetClass = ClassForNonVoidClassMethodTest.class;
 
-  private final String sourceFilename = "NotARealClass.java";
-
   @Before
   @Override
   public void setUp() {
     super.setUp();
+    runOptions = EnumSet.of(RunOptions.WITH_TCP_PUB);
     dispatcher =
         new ClassMethodDispatcher(
             peerUuid,
+            runOptions,
             messageBuilder,
             outboundMessageGateway,
             Boolean.TRUE.toString(),
@@ -60,11 +60,24 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
     onlyPublicDispatcher =
         new ClassMethodDispatcher(
             peerUuid,
+            runOptions,
             messageBuilder,
             outboundMessageGateway,
             Boolean.FALSE.toString(),
             onlyPublicReflectionHelper,
             objectLookupStore);
+  }
+
+  private ProceedingJoinPoint createPjp(Method method, Object[] args) throws Throwable {
+    String sourceFilename = "NotARealClass.java";
+    return PjpBuilder.create()
+        .kindMethodCall()
+        .methodExecutionSignature(method)
+        .source(/*file*/ sourceFilename, /*line*/ -1, /*within*/ this.getClass())
+        .sender(this)
+        .target(null) // static method
+        .args(args)
+        .build();
   }
 
   /* --------------------------------------------*/
@@ -81,26 +94,17 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
     // ── signature ────────────────────────────────────────────
     String methodName = "getRandomMinute";
     Class<?>[] parameterTypes = {};
-    Signature signature =
-        new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
-
-    // ── ctxt ─────────────────────────────────────────────────
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
+    Method m = targetClass.getDeclaredMethod(methodName, parameterTypes);
 
     // ── args ─────────────────────────────────────────────────
     Object[] args = {};
 
     // ── PJP ──────────────────────────────────────────────────
-    ProceedingJoinPoint pjp =
-        PjpBuilder.forContext(ctxt)
-            .sender(this) // "caller"
-            .target(null) // static method
-            .args(args)
-            .build();
+    ProceedingJoinPoint pjp = createPjp(m, args);
 
     // ── dispatch ─────────────────────────────────────────────
     Object returned =
-        dispatcher.dispatch(ctxt, pjp, asProceed(ClassForNonVoidClassMethodTest::getRandomMinute));
+        dispatcher.dispatch(pjp, asProceed(ClassForNonVoidClassMethodTest::getRandomMinute));
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -115,27 +119,27 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
   @Override
   public void dispatch_withArgs_ok() throws Throwable {
 
+    // ── signature ────────────────────────────────────────────
     String methodName = "max";
     Class<?>[] parameterTypes = {Double.class, Double.class};
-    Signature signature =
-        new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
+    Method m = targetClass.getDeclaredMethod(methodName, parameterTypes);
 
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
+    // ── args ──────────────────────────────────────────────────
     double smallDouble = 8378d;
     double bigDouble = 827193d;
     Object[] args = {smallDouble, bigDouble};
 
-    ProceedingJoinPoint pjp =
-        PjpBuilder.forContext(ctxt).sender(this).target(null).args(args).build();
+    // ── PJP ──────────────────────────────────────────────────
+    ProceedingJoinPoint pjp = createPjp(m, args);
 
+    // ── dispatch ─────────────────────────────────────────────
     Object returned =
         dispatcher.dispatch(
-            ctxt,
             pjp,
             asProceed(
                 () -> ClassForNonVoidClassMethodTest.max((Double) args[0], (Double) args[1])));
 
+    // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
     assertThat(returned, is(bigDouble));
   }
@@ -147,27 +151,27 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
   @Override
   public void dispatch_withPrimitiveArgs_ok() throws Throwable {
 
+    // ── signature ────────────────────────────────────────────
     String methodName = "min";
     Class<?>[] parameterTypes = {double.class, double.class};
-    Signature signature =
-        new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
+    Method m = targetClass.getDeclaredMethod(methodName, parameterTypes);
 
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
+    // ── args ──────────────────────────────────────────────────
     double smallDouble = 8378;
     double bigDouble = 827193;
     Object[] args = {smallDouble, bigDouble};
 
-    ProceedingJoinPoint pjp =
-        PjpBuilder.forContext(ctxt).sender(this).target(null).args(args).build();
+    // ── PJP ──────────────────────────────────────────────────
+    ProceedingJoinPoint pjp = createPjp(m, args);
 
+    // ── dispatch ─────────────────────────────────────────────
     Object returned =
         dispatcher.dispatch(
-            ctxt,
             pjp,
             asProceed(
                 () -> ClassForNonVoidClassMethodTest.min((double) args[0], (double) args[1])));
 
+    // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
     assertThat(returned, is(smallDouble));
   }
@@ -179,13 +183,12 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
   @Override
   public void dispatch_varargs_ok() throws Throwable {
 
+    // ── signature ────────────────────────────────────────────
     String methodName = "max";
     Class<?>[] parameterTypes = {double[].class};
-    Signature signature =
-        new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
+    Method m = targetClass.getDeclaredMethod(methodName, parameterTypes);
 
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
+    // ── args ──────────────────────────────────────────────────
     double d1 = 837;
     double d2 = 8293;
     double d3 = 137193;
@@ -193,13 +196,14 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
     double[] varargs = {d1, d2, d3, d4};
     Object[] args = {varargs};
 
-    ProceedingJoinPoint pjp =
-        PjpBuilder.forContext(ctxt).sender(this).target(null).args(args).build();
+    // ── PJP ──────────────────────────────────────────────────
+    ProceedingJoinPoint pjp = createPjp(m, args);
 
+    // ── dispatch ─────────────────────────────────────────────
     Object returned =
-        dispatcher.dispatch(
-            ctxt, pjp, asProceed(() -> ClassForNonVoidClassMethodTest.max(varargs)));
+        dispatcher.dispatch(pjp, asProceed(() -> ClassForNonVoidClassMethodTest.max(varargs)));
 
+    // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
     assertThat(returned, is(d4));
   }
@@ -211,23 +215,22 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
   @Override
   public void dispatch_throwsException_exceptionThrown() throws Throwable {
 
+    // ── signature ────────────────────────────────────────────
     String methodName = "divBy";
     Class<?>[] parameterTypes = {int.class, int.class};
-    Signature signature =
-        new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
+    Method m = targetClass.getDeclaredMethod(methodName, parameterTypes);
 
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
+    // ── args ──────────────────────────────────────────────────
     int number = 8378;
     int divisor = 0;
     Object[] args = {number, divisor};
 
-    ProceedingJoinPoint pjp =
-        PjpBuilder.forContext(ctxt).sender(this).target(null).args(args).build();
+    // ── PJP ──────────────────────────────────────────────────
+    ProceedingJoinPoint pjp = createPjp(m, args);
 
+    // ── dispatch ─────────────────────────────────────────────
     try {
       dispatcher.dispatch(
-          ctxt,
           pjp,
           asProceed(
               () -> {
@@ -238,6 +241,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
       // expected
     }
 
+    // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
   }
 

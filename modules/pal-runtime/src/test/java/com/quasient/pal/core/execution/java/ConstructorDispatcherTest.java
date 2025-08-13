@@ -19,15 +19,14 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import com.quasient.pal.common.lang.reflect.ConstructorSignature;
-import com.quasient.pal.common.lang.reflect.Signature;
 import com.quasient.pal.common.objects.ObjectRef;
-import com.quasient.pal.common.runtime.Context;
 import com.quasient.pal.core.ExecMessageMatchers.ComesFromClass;
 import com.quasient.pal.core.ExecMessageMatchers.ComesFromReflectable;
+import com.quasient.pal.core.service.RunOptions;
 import com.quasient.pal.core.transport.MessageChannelType;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import java.lang.reflect.Constructor;
+import java.util.EnumSet;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.hamcrest.Matchers;
 import org.junit.Before;
@@ -43,15 +42,15 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 
   private final Class<?> targetClass = ClassForConstructorTest.class;
 
-  private final String sourceFilename = "NotARealClass.java";
-
   @Before
   @Override
   public void setUp() {
     super.setUp();
+    runOptions = EnumSet.of(RunOptions.WITH_TCP_PUB);
     dispatcher =
         new ConstructorDispatcher(
             peerUuid,
+            runOptions,
             messageBuilder,
             outboundMessageGateway,
             Boolean.TRUE.toString(),
@@ -60,11 +59,25 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
     onlyPublicDispatcher =
         new ConstructorDispatcher(
             peerUuid,
+            runOptions,
             messageBuilder,
             outboundMessageGateway,
             Boolean.FALSE.toString(),
             onlyPublicReflectionHelper,
             objectLookupStore);
+  }
+
+  private ProceedingJoinPoint createPjp(Constructor<?> constructor, Object[] args)
+      throws Throwable {
+    String sourceFilename = "NotARealClass.java";
+    return PjpBuilder.create()
+        .kindConstructorCall()
+        .constructorExecutionSignature(constructor)
+        .source(/*file*/ sourceFilename, /*line*/ -1, /*within*/ this.getClass())
+        .sender(this)
+        .target(null) // ctor ⇒ no target yet
+        .args(args)
+        .build();
   }
 
   /* --------------------------------------------*/
@@ -78,23 +91,20 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
   @Override
   public void dispatch_noArgs_ok() throws Throwable {
 
+    // ── signature ────────────────────────────────────────────
     Class<?>[] parameterTypes = {};
     Constructor<?> constructor = targetClass.getDeclaredConstructor(parameterTypes);
-    Signature signature = new ConstructorSignature(constructor);
 
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
+    // ── args ──────────────────────────────────────────────────
     Object[] args = {}; // no-arg ctor
 
-    ProceedingJoinPoint pjp =
-        PjpBuilder.forContext(ctxt)
-            .sender(this)
-            .target(null) // ctor ⇒ no target yet
-            .args(args)
-            .build();
+    // ── PJP ──────────────────────────────────────────────────
+    ProceedingJoinPoint pjp = createPjp(constructor, args);
 
-    Object returned = dispatcher.dispatch(ctxt, pjp, asProceed(constructor::newInstance));
+    // ── dispatch ─────────────────────────────────────────────
+    Object returned = dispatcher.dispatch(pjp, asProceed(constructor::newInstance));
 
+    // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
     assertNotNull(returned);
     assertThat(returned, instanceOf(targetClass));
@@ -107,20 +117,20 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
   @Override
   public void dispatch_withArgs_ok() throws Throwable {
 
+    // ── signature ────────────────────────────────────────────
     Class<?>[] parameterTypes = {Integer.class};
     Constructor<?> constructor = targetClass.getDeclaredConstructor(parameterTypes);
-    Signature signature = new ConstructorSignature(constructor);
 
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
+    // ── args ──────────────────────────────────────────────────
     Object[] args = {459};
 
-    ProceedingJoinPoint pjp =
-        PjpBuilder.forContext(ctxt).sender(this).target(null).args(args).build();
+    // ── PJP ──────────────────────────────────────────────────
+    ProceedingJoinPoint pjp = createPjp(constructor, args);
 
-    Object returned =
-        dispatcher.dispatch(ctxt, pjp, asProceed(() -> constructor.newInstance(args)));
+    // ── dispatch ─────────────────────────────────────────────
+    Object returned = dispatcher.dispatch(pjp, asProceed(() -> constructor.newInstance(args)));
 
+    // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
     assertThat(returned, notNullValue());
     assertThat(returned, instanceOf(targetClass));
@@ -134,20 +144,20 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
   @Override
   public void dispatch_withPrimitiveArgs_ok() throws Throwable {
 
+    // ── signature ────────────────────────────────────────────
     Class<?>[] parameterTypes = {boolean.class, long.class};
     Constructor<?> constructor = targetClass.getDeclaredConstructor(parameterTypes);
-    Signature signature = new ConstructorSignature(constructor);
 
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
+    // ── args ──────────────────────────────────────────────────
     Object[] args = {true, 983309835L};
 
-    ProceedingJoinPoint pjp =
-        PjpBuilder.forContext(ctxt).sender(this).target(null).args(args).build();
+    // ── PJP ──────────────────────────────────────────────────
+    ProceedingJoinPoint pjp = createPjp(constructor, args);
 
-    Object returned =
-        dispatcher.dispatch(ctxt, pjp, asProceed(() -> constructor.newInstance(args)));
+    // ── dispatch ─────────────────────────────────────────────
+    Object returned = dispatcher.dispatch(pjp, asProceed(() -> constructor.newInstance(args)));
 
+    // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
     assertThat(returned, notNullValue());
     assertThat(returned, instanceOf(targetClass));
@@ -161,20 +171,20 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
   @Override
   public void dispatch_varargs_ok() throws Throwable {
 
+    // ── signature ────────────────────────────────────────────
     Class<?>[] parameterTypes = {String[].class};
     Constructor<?> constructor = targetClass.getDeclaredConstructor(parameterTypes);
-    Signature signature = new ConstructorSignature(constructor);
 
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
+    // ── args ──────────────────────────────────────────────────
     Object[] args = {new String[] {"hello ", "world", "!"}};
 
-    ProceedingJoinPoint pjp =
-        PjpBuilder.forContext(ctxt).sender(this).target(null).args(args).build();
+    // ── PJP ──────────────────────────────────────────────────
+    ProceedingJoinPoint pjp = createPjp(constructor, args);
 
-    Object returned =
-        dispatcher.dispatch(ctxt, pjp, asProceed(() -> constructor.newInstance(args)));
+    // ── dispatch ─────────────────────────────────────────────
+    Object returned = dispatcher.dispatch(pjp, asProceed(() -> constructor.newInstance(args)));
 
+    // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
     assertThat(returned, notNullValue());
     assertThat(returned, instanceOf(targetClass));
@@ -188,24 +198,25 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
   @Override
   public void dispatch_throwsException_exceptionThrown() throws Throwable {
 
+    // ── signature ────────────────────────────────────────────
     Class<?>[] parameterTypes = {String.class};
     Constructor<?> constructor = targetClass.getDeclaredConstructor(parameterTypes);
-    Signature signature = new ConstructorSignature(constructor);
 
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
+    // ── args ──────────────────────────────────────────────────
     Object[] args = {"49385InvalidNumber1001"}; // will trigger NumberFormatException
 
-    ProceedingJoinPoint pjp =
-        PjpBuilder.forContext(ctxt).sender(this).target(null).args(args).build();
+    // ── PJP ──────────────────────────────────────────────────
+    ProceedingJoinPoint pjp = createPjp(constructor, args);
 
+    // ── dispatch ─────────────────────────────────────────────
     try {
-      dispatcher.dispatch(ctxt, pjp, asProceed(() -> constructor.newInstance(args)));
+      dispatcher.dispatch(pjp, asProceed(() -> constructor.newInstance(args)));
       fail("Should have thrown a NumberFormatException");
     } catch (NumberFormatException nfe) {
       // expected
     }
 
+    // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
   }
 

@@ -15,6 +15,7 @@ import com.quasient.pal.common.runtime.Context;
 import com.quasient.pal.core.execution.java.reflect.ReflectionHelper;
 import com.quasient.pal.core.runtime.objects.ObjectLookupStore;
 import com.quasient.pal.core.runtime.objects.ObjectNotFoundException;
+import com.quasient.pal.core.service.RunOptions;
 import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.Parameter;
@@ -26,6 +27,7 @@ import jakarta.inject.Singleton;
 import java.lang.reflect.AccessibleObject;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.aspectj.lang.ProceedingJoinPoint;
 
@@ -44,6 +46,7 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
    * Constructs a new InstanceMethodDispatcher configured to dispatch instance method calls.
    *
    * @param peerUuid a unique identifier representing the peer.
+   * @param runOptions the run options governing enabled features
    * @param messageBuilder a builder for constructing execution messages.
    * @param gateway the gateway used for message routing.
    * @param allowNonPublicAccess string flag controlling non-public method access (e.g., "true" or
@@ -54,12 +57,14 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
   @Inject
   public InstanceMethodDispatcher(
       UUID peerUuid,
+      Set<RunOptions> runOptions,
       MessageBuilder messageBuilder,
       OutboundMessageGateway gateway,
       @Named("rpc.allow_nonpublic") String allowNonPublicAccess,
       ReflectionHelper reflectionHelper,
       ObjectLookupStore objectLookupStore) {
     setPeerUuid(peerUuid);
+    setRunOptions(runOptions);
     setMessageBuilder(messageBuilder);
     setMessageGateway(gateway);
     setAllowNonPublicAccess(allowNonPublicAccess);

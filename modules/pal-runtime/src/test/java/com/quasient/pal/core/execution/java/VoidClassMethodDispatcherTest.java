@@ -22,13 +22,13 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import com.quasient.pal.common.lang.reflect.MethodSignature;
-import com.quasient.pal.common.lang.reflect.Signature;
 import com.quasient.pal.common.objects.ObjectRef;
-import com.quasient.pal.common.runtime.Context;
+import com.quasient.pal.core.service.RunOptions;
 import com.quasient.pal.core.transport.MessageChannelType;
 import com.quasient.pal.messages.colfer.ExecMessage;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.stream.LongStream;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -47,15 +47,15 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
     ClassForVoidClassMethodTest.resetStaticVars();
   }
 
-  private final String sourceFilename = "NotARealClass.java";
-
   @Before
   @Override
   public void setUp() {
     super.setUp();
+    runOptions = EnumSet.of(RunOptions.WITH_TCP_PUB);
     dispatcher =
         new ClassMethodDispatcher(
             peerUuid,
+            runOptions,
             messageBuilder,
             outboundMessageGateway,
             Boolean.TRUE.toString(),
@@ -64,11 +64,24 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
     onlyPublicDispatcher =
         new ClassMethodDispatcher(
             peerUuid,
+            runOptions,
             messageBuilder,
             outboundMessageGateway,
             Boolean.FALSE.toString(),
             onlyPublicReflectionHelper,
             objectLookupStore);
+  }
+
+  private ProceedingJoinPoint createPjp(Method method, Object[] args) throws Throwable {
+    String sourceFilename = "NotARealClass.java";
+    return PjpBuilder.create()
+        .kindMethodCall()
+        .methodExecutionSignature(method)
+        .source(/*file*/ sourceFilename, /*line*/ -1, /*within*/ this.getClass())
+        .sender(this)
+        .target(null) // static method
+        .args(args)
+        .build();
   }
 
   /* --------------------------------------------*/
@@ -84,28 +97,19 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
     // ── signature ────────────────────────────────────────────
     String methodName = "sleep";
     Class<?>[] parameterTypes = {};
-    Signature signature =
-        new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
+    Method m = targetClass.getDeclaredMethod(methodName, parameterTypes);
 
-    // ── ctxt ─────────────────────────────────────────────────
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
+    // ── args ──────────────────────────────────────────────────
     Object[] args = {};
 
-    // ── pre-assertion ────────────────────────────────────────
+    // ── pre-assertions ────────────────────────────────────────
     assertFalse(ClassForVoidClassMethodTest.slept);
 
     // ── PJP ──────────────────────────────────────────────────
-    ProceedingJoinPoint pjp =
-        PjpBuilder.forContext(ctxt)
-            .sender(this)
-            .target(null) // static
-            .args(args)
-            .build();
+    ProceedingJoinPoint pjp = createPjp(m, args);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned =
-        dispatcher.dispatch(ctxt, pjp, asVoidProceed(ClassForVoidClassMethodTest::sleep));
+    Object returned = dispatcher.dispatch(pjp, asVoidProceed(ClassForVoidClassMethodTest::sleep));
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -120,25 +124,27 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
   @Override
   public void dispatch_withArgs_ok() throws Throwable {
 
+    // ── signature ────────────────────────────────────────────
     String methodName = "sleep";
     Class<?>[] parameterTypes = {Long.class};
-    Signature signature =
-        new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
+    Method m = targetClass.getDeclaredMethod(methodName, parameterTypes);
 
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
+    // ── args ─────────────────────────────────────────────────
     Long millisToSleep = 5L;
     Object[] args = {millisToSleep};
 
+    // ── pre-assertions ─────────────────────────────────────────────
     assertThat(ClassForVoidClassMethodTest.millisSlept, is(0L));
 
-    ProceedingJoinPoint pjp =
-        PjpBuilder.forContext(ctxt).sender(this).target(null).args(args).build();
+    // ── PJP ──────────────────────────────────────────────────
+    ProceedingJoinPoint pjp = createPjp(m, args);
 
+    // ── dispatch ─────────────────────────────────────────────
     Object returned =
         dispatcher.dispatch(
-            ctxt, pjp, asVoidProceed(() -> ClassForVoidClassMethodTest.sleep(millisToSleep)));
+            pjp, asVoidProceed(() -> ClassForVoidClassMethodTest.sleep(millisToSleep)));
 
+    // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
     assertNull(returned);
     assertThat(ClassForVoidClassMethodTest.millisSlept, is(millisToSleep));
@@ -151,27 +157,27 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
   @Override
   public void dispatch_withPrimitiveArgs_ok() throws Throwable {
 
+    // ── signature ────────────────────────────────────────────
     String methodName = "sleepUnboxed";
     Class<?>[] parameterTypes = {long.class};
-    Signature signature =
-        new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
+    Method m = targetClass.getDeclaredMethod(methodName, parameterTypes);
 
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
+    // ── args ──────────────────────────────────────────────────
     long millisToSleep = 5;
     Object[] args = {millisToSleep};
 
+    // ── pre-assertions ────────────────────────────────────────
     assertThat(ClassForVoidClassMethodTest.millisSlept, is(0L));
 
-    ProceedingJoinPoint pjp =
-        PjpBuilder.forContext(ctxt).sender(this).target(null).args(args).build();
+    // ── PJP ──────────────────────────────────────────────────
+    ProceedingJoinPoint pjp = createPjp(m, args);
 
+    // ── dispatch ─────────────────────────────────────────────
     Object returned =
         dispatcher.dispatch(
-            ctxt,
-            pjp,
-            asVoidProceed(() -> ClassForVoidClassMethodTest.sleepUnboxed(millisToSleep)));
+            pjp, asVoidProceed(() -> ClassForVoidClassMethodTest.sleepUnboxed(millisToSleep)));
 
+    // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
     assertNull(returned);
     assertThat(ClassForVoidClassMethodTest.millisSlept, is(millisToSleep));
@@ -184,26 +190,25 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
   @Override
   public void dispatch_varargs_ok() throws Throwable {
 
+    // ── signature ────────────────────────────────────────────
     String methodName = "add";
     Class<?>[] parameterTypes = {List.class, long[].class};
-    Signature signature =
-        new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
+    Method m = targetClass.getDeclaredMethod(methodName, parameterTypes);
 
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
+    // ── args ──────────────────────────────────────────────────
     long[] someNumbers = {10L, 20L, 30L};
     List<Long> sumContainer = new ArrayList<>();
     Object[] args = {sumContainer, someNumbers};
 
-    ProceedingJoinPoint pjp =
-        PjpBuilder.forContext(ctxt).sender(this).target(null).args(args).build();
+    // ── PJP ──────────────────────────────────────────────────
+    ProceedingJoinPoint pjp = createPjp(m, args);
 
+    // ── dispatch ─────────────────────────────────────────────
     Object returned =
         dispatcher.dispatch(
-            ctxt,
-            pjp,
-            asVoidProceed(() -> ClassForVoidClassMethodTest.add(sumContainer, someNumbers)));
+            pjp, asVoidProceed(() -> ClassForVoidClassMethodTest.add(sumContainer, someNumbers)));
 
+    // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
     assertNull(returned);
     assertThat(sumContainer.size(), is(1));
@@ -217,26 +222,27 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
   @Override
   public void dispatch_throwsException_exceptionThrown() throws Throwable {
 
+    // ── signature ────────────────────────────────────────────
     String methodName = "addPositive";
     Class<?>[] parameterTypes = {List.class, long.class};
-    Signature signature =
-        new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
+    Method m = targetClass.getDeclaredMethod(methodName, parameterTypes);
 
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
+    // ── args ──────────────────────────────────────────────────
     Object[] args = {null, 2L}; // will trigger NPE in method
 
-    ProceedingJoinPoint pjp =
-        PjpBuilder.forContext(ctxt).sender(this).target(null).args(args).build();
+    // ── PJP ──────────────────────────────────────────────────
+    ProceedingJoinPoint pjp = createPjp(m, args);
 
+    // ── dispatch ─────────────────────────────────────────────
     try {
       dispatcher.dispatch(
-          ctxt, pjp, asVoidProceed(() -> ClassForVoidClassMethodTest.addPositive(null, 2L)));
+          pjp, asVoidProceed(() -> ClassForVoidClassMethodTest.addPositive(null, 2L)));
       fail("Should have thrown a NPE");
     } catch (NullPointerException npe) {
       // expected
     }
 
+    // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
   }
 

@@ -13,20 +13,20 @@ import com.quasient.pal.common.weave.Proceed;
 import org.aspectj.lang.ProceedingJoinPoint;
 
 /**
- * Represents a dispatcher responsible for executing operations within a specific runtime context.
+ * Represents a dispatcher responsible for executing operations from a quantized context.
  *
  * @see Context
  */
 public interface Dispatcher {
 
   /**
-   * Dispatches an operation within the given context.
+   * Entry point for the hot-path, i.e. execution of quantized operations (constructor/method calls
+   * and field ops)
    *
-   * @param ctxt the runtime context in which the dispatch is executed
    * @param pjp the {@link ProceedingJoinPoint} handle
    * @param proceed the {@link Proceed} callback handle
    * @return the result of the dispatch operation
    * @throws Throwable if an error occurs during the dispatch process
    */
-  <T> T dispatch(Context ctxt, ProceedingJoinPoint pjp, Proceed<T> proceed) throws Throwable;
+  <T> T dispatch(ProceedingJoinPoint pjp, Proceed<T> proceed) throws Throwable;
 }

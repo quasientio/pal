@@ -35,73 +35,69 @@ public class DispatchForwarderTest {
   @Test
   public void constructor() throws Throwable {
     Object valueToReturn = "constructor OK";
-    when(mockedDispatcher.constructor(any(), any(), any())).thenReturn(valueToReturn);
-    Object ret =
-        DispatchForwarder.constructor(mock(Context.class), proceedingJoinPoint, () -> null);
-    verify(mockedDispatcher).constructor(any(), any(), any());
+    when(mockedDispatcher.constructor(any(), any())).thenReturn(valueToReturn);
+    Object ret = DispatchForwarder.constructor(proceedingJoinPoint, () -> null);
+    verify(mockedDispatcher).constructor(any(), any());
     assertThat(ret, is(valueToReturn));
   }
 
   @Test
   public void voidInstanceMethod() throws Throwable {
-    DispatchForwarder.voidInstanceMethod(mock(Context.class), proceedingJoinPoint, () -> {});
-    verify(mockedDispatcher).voidInstanceMethod(any(), any(), any());
+    DispatchForwarder.voidInstanceMethod(proceedingJoinPoint, () -> {});
+    verify(mockedDispatcher).voidInstanceMethod(any(), any());
   }
 
   @Test
   public void voidClassMethod() throws Throwable {
-    DispatchForwarder.voidClassMethod(mock(Context.class), proceedingJoinPoint, () -> {});
-    verify(mockedDispatcher).voidClassMethod(any(), any(), any());
+    DispatchForwarder.voidClassMethod(proceedingJoinPoint, () -> {});
+    verify(mockedDispatcher).voidClassMethod(any(), any());
   }
 
   @Test
   public void nonVoidInstanceMethod() throws Throwable {
     Object valueToReturn = "instance method OK";
-    when(mockedDispatcher.nonVoidInstanceMethod(any(), any(), any())).thenReturn(valueToReturn);
-    Object ret =
-        DispatchForwarder.nonVoidInstanceMethod(
-            mock(Context.class), proceedingJoinPoint, () -> null);
-    verify(mockedDispatcher).nonVoidInstanceMethod(any(), any(), any());
+    when(mockedDispatcher.nonVoidInstanceMethod(any(), any())).thenReturn(valueToReturn);
+    Object ret = DispatchForwarder.nonVoidInstanceMethod(proceedingJoinPoint, () -> null);
+    verify(mockedDispatcher).nonVoidInstanceMethod(any(), any());
     assertThat(ret, is(valueToReturn));
   }
 
   @Test
   public void nonVoidClassMethod() throws Throwable {
     Object valueToReturn = "class method OK";
-    when(mockedDispatcher.nonVoidClassMethod(any(), any(), any())).thenReturn(valueToReturn);
-    Object ret =
-        DispatchForwarder.nonVoidClassMethod(mock(Context.class), proceedingJoinPoint, () -> null);
-    verify(mockedDispatcher).nonVoidClassMethod(any(), any(), any());
+    when(mockedDispatcher.nonVoidClassMethod(any(), any())).thenReturn(valueToReturn);
+    Object ret = DispatchForwarder.nonVoidClassMethod(proceedingJoinPoint, () -> null);
+    verify(mockedDispatcher).nonVoidClassMethod(any(), any());
     assertThat(ret, is(valueToReturn));
   }
 
   @Test
   public void getStatic() throws Throwable {
     Object valueToReturn = "get static OK";
-    when(mockedDispatcher.getStatic(any(), any(), any())).thenReturn(valueToReturn);
-    Object ret = DispatchForwarder.getStatic(mock(Context.class), proceedingJoinPoint, () -> null);
-    verify(mockedDispatcher).getStatic(any(), any(), any());
+    when(mockedDispatcher.getStatic(any(), any())).thenReturn(valueToReturn);
+    Object ret = DispatchForwarder.getStatic(proceedingJoinPoint, () -> null);
+    verify(mockedDispatcher).getStatic(any(), any());
     assertThat(ret, is(valueToReturn));
   }
 
   @Test
   public void getObject() throws Throwable {
     Object valueToReturn = "get object OK";
-    when(mockedDispatcher.getObject(any(), any(), any())).thenReturn(valueToReturn);
-    Object ret = DispatchForwarder.getObject(mock(Context.class), proceedingJoinPoint, () -> null);
-    verify(mockedDispatcher).getObject(any(), any(), any());
+    when(mockedDispatcher.getObject(any(), any())).thenReturn(valueToReturn);
+    Object ret = DispatchForwarder.getObject(proceedingJoinPoint, () -> null);
+    verify(mockedDispatcher).getObject(any(), any());
     assertThat(ret, is(valueToReturn));
   }
 
   @Test
   public void putStatic() throws Throwable {
-    DispatchForwarder.putStatic(mock(Context.class), proceedingJoinPoint, () -> {});
-    verify(mockedDispatcher).putStatic(any(), any(), any());
+    DispatchForwarder.putStatic(proceedingJoinPoint, () -> {});
+    verify(mockedDispatcher).putStatic(any(), any());
   }
 
   @Test
   public void putField() throws Throwable {
-    DispatchForwarder.putField(mock(Context.class), proceedingJoinPoint, () -> {});
-    verify(mockedDispatcher).putField(any(), any(), any());
+    DispatchForwarder.putField(proceedingJoinPoint, () -> {});
+    verify(mockedDispatcher).putField(any(), any());
   }
 }

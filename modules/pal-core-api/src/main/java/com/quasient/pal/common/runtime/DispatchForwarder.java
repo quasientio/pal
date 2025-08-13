@@ -13,8 +13,6 @@ import com.quasient.pal.common.weave.Proceed;
 import com.quasient.pal.common.weave.VoidProceed;
 import jakarta.inject.Inject;
 import org.aspectj.lang.ProceedingJoinPoint;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Facilitates the decoupling of dispatching mechanisms from aspect implementations by forwarding
@@ -28,9 +26,6 @@ import org.slf4j.LoggerFactory;
  * <p>All dispatch methods are static and delegate to the configured ProxyDispatcher instance.
  */
 public final class DispatchForwarder {
-
-  /** Logger instance. */
-  private static final Logger logger = LoggerFactory.getLogger(DispatchForwarder.class);
 
   /**
    * The shared ProxyDispatcher used to forward dispatch calls. This dispatcher is injected and
@@ -52,130 +47,121 @@ public final class DispatchForwarder {
   }
 
   /**
-   * Dispatches a constructor call with the given context and arguments.
+   * Dispatches a constructor call with the given join point and arguments.
    *
-   * @param ctxt the execution context
    * @param pjp the {@link ProceedingJoinPoint} handle
    * @param proceed the {@link Proceed} callback handle
    * @return the newly created object instance
    * @throws Throwable if dispatching the constructor fails
    */
-  public static Object constructor(Context ctxt, ProceedingJoinPoint pjp, Proceed<Object> proceed)
+  public static Object constructor(ProceedingJoinPoint pjp, Proceed<Object> proceed)
       throws Throwable {
-    return dispatcher.constructor(ctxt, pjp, proceed);
+    return dispatcher.constructor(pjp, proceed);
   }
 
   /**
-   * Dispatches a void instance method call with the given context and arguments.
+   * Dispatches a void instance method call with the given join point and arguments.
    *
-   * @param ctxt the execution context
    * @param pjp the {@link ProceedingJoinPoint} handle
    * @param proceed the {@link VoidProceed} callback handle
    * @throws Throwable if dispatching the method call fails
    */
-  public static void voidInstanceMethod(Context ctxt, ProceedingJoinPoint pjp, VoidProceed proceed)
+  public static void voidInstanceMethod(ProceedingJoinPoint pjp, VoidProceed proceed)
       throws Throwable {
-    dispatcher.voidInstanceMethod(ctxt, pjp, proceed);
+    dispatcher.voidInstanceMethod(pjp, proceed);
   }
 
   /**
-   * Dispatches a void static class method call with the given context and arguments.
+   * Dispatches a void static class method call with the given join point and arguments.
    *
-   * @param ctxt the execution context
    * @param pjp the {@link ProceedingJoinPoint} handle
    * @param proceed the {@link VoidProceed} callback handle
    * @throws Throwable if dispatching the method call fails
    */
-  public static void voidClassMethod(Context ctxt, ProceedingJoinPoint pjp, VoidProceed proceed)
+  public static void voidClassMethod(ProceedingJoinPoint pjp, VoidProceed proceed)
       throws Throwable {
-    dispatcher.voidClassMethod(ctxt, pjp, proceed);
+    dispatcher.voidClassMethod(pjp, proceed);
   }
 
   /**
-   * Dispatches a non-void instance method call with the given context and arguments.
+   * Dispatches a non-void instance method call with the given join point and arguments.
    *
-   * @param ctxt the execution context
    * @param pjp the {@link ProceedingJoinPoint} handle
    * @param proceed the {@link Proceed} callback handle
    * @return the result of the method invocation
    * @throws Throwable if dispatching the method call fails
    */
-  public static Object nonVoidInstanceMethod(
-      Context ctxt, ProceedingJoinPoint pjp, Proceed<Object> proceed) throws Throwable {
-    return dispatcher.nonVoidInstanceMethod(ctxt, pjp, proceed);
+  public static Object nonVoidInstanceMethod(ProceedingJoinPoint pjp, Proceed<Object> proceed)
+      throws Throwable {
+    return dispatcher.nonVoidInstanceMethod(pjp, proceed);
   }
 
   /**
-   * Dispatches a non-void static class method call with the given context and arguments.
+   * Dispatches a non-void static class method call with the given join point and arguments.
    *
-   * @param ctxt the execution context
    * @param pjp the {@link ProceedingJoinPoint} handle
    * @param proceed the {@link Proceed} callback handle
    * @return the result of the method invocation
    * @throws Throwable if dispatching the method call fails
    */
-  public static Object nonVoidClassMethod(
-      Context ctxt, ProceedingJoinPoint pjp, Proceed<Object> proceed) throws Throwable {
-    return dispatcher.nonVoidClassMethod(ctxt, pjp, proceed);
+  public static Object nonVoidClassMethod(ProceedingJoinPoint pjp, Proceed<Object> proceed)
+      throws Throwable {
+    return dispatcher.nonVoidClassMethod(pjp, proceed);
   }
 
   /**
-   * Dispatches a static field retrieval with the given context and arguments.
+   * Dispatches a static field retrieval with the given join point and arguments.
    *
-   * @param ctxt the execution context
    * @param pjp the {@link ProceedingJoinPoint} handle
    * @param proceed the {@link Proceed} callback handle
    * @return the value of the static field
    */
-  public static Object getStatic(Context ctxt, ProceedingJoinPoint pjp, Proceed<Object> proceed) {
+  public static Object getStatic(ProceedingJoinPoint pjp, Proceed<Object> proceed) {
     try {
-      return dispatcher.getStatic(ctxt, pjp, proceed);
+      return dispatcher.getStatic(pjp, proceed);
     } catch (Throwable e) {
       throw new RuntimeException(e);
     }
   }
 
   /**
-   * Dispatches an instance field retrieval with the given context and arguments.
+   * Dispatches an instance field retrieval with the given join point and arguments.
    *
-   * @param ctxt the execution context
    * @param pjp the {@link ProceedingJoinPoint} handle
    * @param proceed the {@link Proceed} callback handle
    * @return the value of the instance field
    */
-  public static Object getObject(Context ctxt, ProceedingJoinPoint pjp, Proceed<Object> proceed) {
+  public static Object getObject(ProceedingJoinPoint pjp, Proceed<Object> proceed) {
     try {
-      return dispatcher.getObject(ctxt, pjp, proceed);
+      return dispatcher.getObject(pjp, proceed);
     } catch (Throwable e) {
       throw new RuntimeException(e);
     }
   }
 
   /**
-   * Dispatches a static field assignment with the given context and arguments.
+   * Dispatches a static field assignment with the given join point and arguments.
    *
-   * @param ctxt the execution context
    * @param pjp the {@link ProceedingJoinPoint} handle
    * @param proceed the {@link VoidProceed} callback handle
    */
-  public static void putStatic(Context ctxt, ProceedingJoinPoint pjp, VoidProceed proceed) {
+  public static void putStatic(ProceedingJoinPoint pjp, VoidProceed proceed) {
     try {
-      dispatcher.putStatic(ctxt, pjp, proceed);
+      dispatcher.putStatic(pjp, proceed);
     } catch (Throwable e) {
       throw new RuntimeException(e);
     }
   }
 
   /**
-   * Dispatches an instance field assignment with the given context and arguments.
+   * Dispatches an instance field assignment with the given join point and arguments.
    *
-   * @param ctxt the execution context
    * @param pjp the {@link ProceedingJoinPoint} handle
    * @param proceed the {@link VoidProceed} callback handle
    */
-  public static void putField(Context ctxt, ProceedingJoinPoint pjp, VoidProceed proceed) {
+  public static void putField(ProceedingJoinPoint pjp, VoidProceed proceed) {
     try {
-      dispatcher.putField(ctxt, pjp, proceed);
+      dispatcher.putField(pjp, proceed);
     } catch (Throwable e) {
       throw new RuntimeException(e);
     }

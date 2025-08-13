@@ -13,12 +13,14 @@ import static com.quasient.pal.serdes.colfer.ExecMessageUtils.getMessageTypeOf;
 
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.common.runtime.Context;
+import com.quasient.pal.common.runtime.ContextFactory;
 import com.quasient.pal.common.runtime.Dispatcher;
 import com.quasient.pal.common.runtime.ExecPhase;
 import com.quasient.pal.common.util.Classes;
 import com.quasient.pal.common.weave.Proceed;
 import com.quasient.pal.common.weave.VoidProceed;
 import com.quasient.pal.core.internal.messages.SessionCommandMsg;
+import com.quasient.pal.core.service.RunOptions;
 import com.quasient.pal.core.transport.MessageChannelType;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.Obj;
@@ -53,7 +55,6 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
    * message. In case an invocation exception is encountered, this method rethrows the underlying
    * cause.
    *
-   * @param ctxt the execution context providing metadata for the dispatch
    * @param pjp the {@link ProceedingJoinPoint} handle
    * @param proceed the {@link Proceed} callback handle
    * @return the result of the executed operation, or a special void instance if no result is
@@ -61,8 +62,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
    * @throws Throwable if an error occurs during invocation or processing phases
    */
   @Override
-  public final <T> T dispatch(Context ctxt, ProceedingJoinPoint pjp, Proceed<T> proceed)
-      throws Throwable {
+  public final <T> T dispatch(ProceedingJoinPoint pjp, Proceed<T> proceed) throws Throwable {
 
     final Object sender = pjp.getThis();
     final Object[] args = pjp.getArgs();
@@ -70,48 +70,57 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
     if (logger.isTraceEnabled()) {
       logger.trace("JoinPoint: {}", pjp.toLongString());
-      logger.trace(
-          "dispatch:in w/ signature: {}, sender: {}, target: {}, args: {}",
-          ctxt.getSignature(),
-          sender,
-          target,
-          args);
+      logger.trace("dispatch:in w/sender: {}, target: {}, args: {}", sender, target, args);
     }
 
-    // 1. Wrap message
-    final ExecMessage beforeExecMsg = createBeforeExecMessage(ctxt, sender, target, args);
+    boolean withPubOrWal =
+        runOptions.contains(RunOptions.WITH_WAL) || runOptions.contains(RunOptions.WITH_TCP_PUB);
 
-    // 2. Send message
-    @SuppressWarnings("unused")
-    final ExecMessage beforeExecResponseMsg =
-        messageGateway.sendExecMessage(messageBuilder.wrap(beforeExecMsg), ExecPhase.BEFORE);
+    Context ctx = null;
+
+    if (withPubOrWal) {
+
+      // create (or get cached) context instance from join point
+      ctx = ContextFactory.forJoinPoint(pjp.getStaticPart());
+
+      // 1. Wrap message
+      final ExecMessage beforeExecMsg = createBeforeExecMessage(ctx, sender, target, args);
+
+      // 2. Send message
+      @SuppressWarnings("unused")
+      final ExecMessage beforeExecResponseMsg =
+          messageGateway.sendExecMessage(messageBuilder.wrap(beforeExecMsg), ExecPhase.BEFORE);
+    }
 
     // 3. Invoke
     T returnValue = null;
     InvocationThrowableWrapper throwableWrapper = null;
     try {
-      returnValue = invoke(ctxt, pjp, proceed, args);
+      returnValue = invoke(pjp, proceed, args);
     } catch (Throwable th) {
       logger.error("Caught throwable while invoking field operation. Will wrap and return it.", th);
       throwableWrapper = new InvocationThrowableWrapper(th);
     }
 
-    // 4. Store? object in object map
-    ObjectRef objectRef = null;
-    if (returnValue != null) {
-      objectRef = storeObject(returnValue);
+    if (withPubOrWal) {
+
+      // 4. Store? object in object map
+      ObjectRef objectRef = null;
+      if (returnValue != null) {
+        objectRef = storeObject(returnValue);
+      }
+
+      boolean returnsVoid = proceed instanceof VoidProceed;
+
+      // 5. Wrap object or exception
+      final ExecMessage afterExecMsg =
+          createAfterExecMessage(ctx, returnValue, objectRef, returnsVoid);
+
+      // 6. Send object or exception
+      @SuppressWarnings("unused")
+      final ExecMessage afterExecResponseMsg =
+          messageGateway.sendExecMessage(messageBuilder.wrap(afterExecMsg), ExecPhase.AFTER);
     }
-
-    boolean returnsVoid = proceed instanceof VoidProceed;
-
-    // 5. Wrap object or exception
-    final ExecMessage afterExecMsg =
-        createAfterExecMessage(ctxt, returnValue, objectRef, returnsVoid);
-
-    // 6. Send object or exception
-    @SuppressWarnings("unused")
-    final ExecMessage afterExecResponseMsg =
-        messageGateway.sendExecMessage(messageBuilder.wrap(afterExecMsg), ExecPhase.AFTER);
 
     // 7. Return object or re-raise exception
     if (throwableWrapper != null) {
@@ -493,13 +502,13 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
    *
    * <p>This method may be overridden by specialized dispatchers based on the type of the operation.
    *
-   * @param ctx the execution context providing metadata for the invocation
    * @param pjp the proceeding join point
    * @param proceed handle to the {@link Proceed} callback
    * @param args the arguments for the invocation
-   * @return the result of the accessible object invocation
+   * @return the result of the accessible object invocation, null if the operation is a setter or
+   *     void call
    */
-  protected <T> T invoke(Context ctx, ProceedingJoinPoint pjp, Proceed<T> proceed, Object[] args)
+  protected <T> T invoke(ProceedingJoinPoint pjp, Proceed<T> proceed, Object[] args)
       throws Throwable {
     return proceed.call();
   }

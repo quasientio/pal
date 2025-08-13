@@ -9,10 +9,8 @@
  */
 package com.quasient.pal.core.execution.java;
 
-import com.quasient.pal.common.lang.reflect.FieldSignature;
 import com.quasient.pal.common.lang.reflect.Void;
 import com.quasient.pal.common.objects.ObjectRef;
-import com.quasient.pal.common.runtime.Context;
 import com.quasient.pal.common.weave.Proceed;
 import com.quasient.pal.messages.colfer.Obj;
 import com.quasient.pal.serdes.Unwrapper;
@@ -22,6 +20,7 @@ import java.lang.reflect.Modifier;
 import java.util.List;
 import javax.annotation.Nullable;
 import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.reflect.FieldSignature;
 
 /**
  * Abstract dispatcher for setting a field value on a target object via reflection or a {@link
@@ -117,17 +116,16 @@ public abstract class SetFieldDispatcher extends FieldOpDispatcher {
    * Invokes the target accessible object (e.g., constructor, method, or field) using the provided
    * parameters.
    *
-   * @param ctx the execution context providing metadata for the invocation
    * @param pjp the proceeding join point
    * @param proceed handle to the {@link Proceed} callback
    * @param args the arguments for the invocation
-   * @return the result of the accessible object invocation
+   * @return always null
    */
   @Override
-  protected final <T> T invoke(
-      Context ctx, ProceedingJoinPoint pjp, Proceed<T> proceed, Object[] args) throws Throwable {
+  protected final <T> T invoke(ProceedingJoinPoint pjp, Proceed<T> proceed, Object[] args)
+      throws Throwable {
 
-    FieldSignature fieldSignature = (FieldSignature) ctx.getSignature();
+    FieldSignature fieldSignature = (FieldSignature) pjp.getStaticPart().getSignature();
     Field field = fieldSignature.getField();
     if (Modifier.isFinal(field.getModifiers())) {
 
@@ -138,7 +136,7 @@ public abstract class SetFieldDispatcher extends FieldOpDispatcher {
       field.set(pjp.getTarget(), fieldValue);
       return null;
     }
-    return super.invoke(ctx, pjp, proceed, args);
+    return super.invoke(pjp, proceed, args);
   }
 
   /**

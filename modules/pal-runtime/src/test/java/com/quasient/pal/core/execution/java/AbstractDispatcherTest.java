@@ -23,10 +23,13 @@ import com.quasient.pal.common.weave.VoidProceed;
 import com.quasient.pal.core.execution.java.reflect.ReflectionHelper;
 import com.quasient.pal.core.runtime.objects.ConcurrentHashMapObjectLookupStore;
 import com.quasient.pal.core.runtime.objects.ObjectLookupStore;
+import com.quasient.pal.core.service.RunOptions;
 import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
 import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import org.junit.After;
@@ -47,6 +50,7 @@ public abstract class AbstractDispatcherTest {
 
   protected ReflectionHelper onlyPublicReflectionHelper = new ReflectionHelper();
 
+  protected Set<RunOptions> runOptions = EnumSet.noneOf(RunOptions.class);
   protected OutboundMessageGateway outboundMessageGateway;
   protected Dispatcher dispatcher;
   protected Dispatcher onlyPublicDispatcher;

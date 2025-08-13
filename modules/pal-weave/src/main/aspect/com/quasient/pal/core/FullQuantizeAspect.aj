@@ -9,7 +9,6 @@
  */
 package com.quasient.pal.weave;
 
-import com.quasient.pal.common.runtime.Context;
 import com.quasient.pal.common.runtime.DispatchForwarder;
 import com.quasient.pal.common.weave.Proceed;
 
@@ -68,7 +67,7 @@ privileged aspect FullQuantizeAspect {
             printParameters(thisJoinPoint);
       }
 
-    DispatchForwarder.voidInstanceMethod(Context.parseFrom(pjp.getStaticPart()), pjp, () -> proceed());
+    DispatchForwarder.voidInstanceMethod(pjp, () -> proceed());
   }
 
   void around(): voidClassMethods() {
@@ -81,7 +80,7 @@ privileged aspect FullQuantizeAspect {
       printParameters(pjp);
     }
 
-    DispatchForwarder.voidClassMethod(Context.parseFrom(pjp.getStaticPart()), pjp, () -> proceed());
+    DispatchForwarder.voidClassMethod(pjp, () -> proceed());
   }
 
   Object around(): nonVoidInstanceMethods() {
@@ -94,7 +93,7 @@ privileged aspect FullQuantizeAspect {
       printParameters(pjp);
     }
 
-    return DispatchForwarder.nonVoidInstanceMethod(Context.parseFrom(pjp.getStaticPart()), pjp, () -> proceed());
+    return DispatchForwarder.nonVoidInstanceMethod(pjp, () -> proceed());
   }
 
   Object around(): nonVoidClassMethods() {
@@ -107,7 +106,7 @@ privileged aspect FullQuantizeAspect {
       printParameters(pjp);
     }
 
-    return DispatchForwarder.nonVoidClassMethod(Context.parseFrom(pjp.getStaticPart()), pjp, () -> proceed());
+    return DispatchForwarder.nonVoidClassMethod(pjp, () -> proceed());
   }
 
   /** ADVICE for Constructors **/
@@ -122,7 +121,7 @@ privileged aspect FullQuantizeAspect {
       printParameters(pjp);
     }
 
-    return DispatchForwarder.constructor(Context.parseFrom(pjp.getStaticPart()), pjp, () -> proceed());
+    return DispatchForwarder.constructor(pjp, () -> proceed());
   }
 
   /** ADVICE for Fields **/
@@ -136,7 +135,7 @@ privileged aspect FullQuantizeAspect {
       printNonStaticCtxt(pjp);
     }
 
-    return DispatchForwarder.getStatic(Context.parseFrom(pjp.getStaticPart()), pjp, () -> proceed());
+    return DispatchForwarder.getStatic(pjp, () -> proceed());
   }
 
   Object around(): nonStaticGetfields() {
@@ -148,7 +147,7 @@ privileged aspect FullQuantizeAspect {
       printNonStaticCtxt(pjp);
     }
 
-    return DispatchForwarder.getObject(Context.parseFrom(pjp.getStaticPart()), pjp, () -> proceed());
+    return DispatchForwarder.getObject(pjp, () -> proceed());
   }
 
   void around(): staticPutfields() {
@@ -160,7 +159,7 @@ privileged aspect FullQuantizeAspect {
       printNonStaticCtxt(pjp);
     }
 
-    DispatchForwarder.putStatic(Context.parseFrom(pjp.getStaticPart()), pjp, () -> proceed());
+    DispatchForwarder.putStatic(pjp, () -> proceed());
   }
 
   void around(): nonStaticPutfields() {
@@ -172,7 +171,7 @@ privileged aspect FullQuantizeAspect {
       printNonStaticCtxt(pjp);
     }
 
-    DispatchForwarder.putField(Context.parseFrom(pjp.getStaticPart()), pjp, () -> proceed());
+    DispatchForwarder.putField(pjp, () -> proceed());
   }
 
 

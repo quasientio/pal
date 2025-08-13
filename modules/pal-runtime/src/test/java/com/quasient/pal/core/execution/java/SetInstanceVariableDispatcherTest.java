@@ -20,15 +20,15 @@ import static org.hamcrest.Matchers.sameInstance;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
-import com.quasient.pal.common.lang.reflect.FieldSignature;
-import com.quasient.pal.common.lang.reflect.Signature;
 import com.quasient.pal.common.objects.ObjectRef;
-import com.quasient.pal.common.runtime.Context;
+import com.quasient.pal.core.service.RunOptions;
 import com.quasient.pal.core.transport.MessageChannelType;
 import com.quasient.pal.messages.colfer.ExecMessage;
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.junit.Before;
@@ -41,15 +41,15 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
   private final Class<?> targetClass = ClassForPutFieldTest.class;
 
-  private final String sourceFilename = "NotARealClass.java";
-
   @Before
   @Override
   public void setUp() {
     super.setUp();
+    runOptions = EnumSet.of(RunOptions.WITH_TCP_PUB);
     dispatcher =
         new SetInstanceVariableDispatcher(
             peerUuid,
+            runOptions,
             messageBuilder,
             outboundMessageGateway,
             Boolean.TRUE.toString(),
@@ -57,10 +57,23 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     onlyPublicDispatcher =
         new SetInstanceVariableDispatcher(
             peerUuid,
+            runOptions,
             messageBuilder,
             outboundMessageGateway,
             Boolean.FALSE.toString(),
             objectLookupStore);
+  }
+
+  private ProceedingJoinPoint createPjp(Field field, Object target, Object value) throws Throwable {
+    String sourceFilename = "NotARealClass.java";
+    return PjpBuilder.create()
+        .kindFieldSet()
+        .fieldExecutionSignature(field)
+        .source(/*file*/ sourceFilename, /*line*/ -1, /*within*/ this.getClass())
+        .sender(this)
+        .target(target)
+        .args(new Object[] {value})
+        .build();
   }
 
   /* --------------------------------------------*/
@@ -74,26 +87,23 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
   @Override
   public void dispatch_primitiveArray_ok() throws Throwable {
 
+    // ── signature ────────────────────────────────────────────
     String fieldName = "bytes";
-    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+    Field field = targetClass.getDeclaredField(fieldName);
 
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
+    // ── value ──────────────────────────────────────────────────
     byte[] newFieldValue = "bytes".getBytes(StandardCharsets.UTF_8);
-    Object[] args = {newFieldValue};
 
+    // ── target ─────────────────────────────────────────────────
     ClassForPutFieldTest target = new ClassForPutFieldTest();
 
-    ProceedingJoinPoint pjp =
-        PjpBuilder.forContext(ctxt)
-            .sender(this)
-            .target(target) // instance whose field we write
-            .args(args)
-            .build();
+    // ── PJP ──────────────────────────────────────────────────
+    ProceedingJoinPoint pjp = createPjp(field, target, newFieldValue);
 
-    Object returned =
-        dispatcher.dispatch(ctxt, pjp, asVoidProceed(() -> target.bytes = newFieldValue));
+    // ── dispatch ─────────────────────────────────────────────
+    Object returned = dispatcher.dispatch(pjp, asVoidProceed(() -> target.bytes = newFieldValue));
 
+    // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
     assertNull(returned);
     assertThat(target.bytes, is(newFieldValue));
@@ -106,22 +116,24 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
   @Override
   public void dispatch_primitive_ok() throws Throwable {
 
+    // ── signature ────────────────────────────────────────────
     String fieldName = "someShort";
-    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+    Field field = targetClass.getDeclaredField(fieldName);
 
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
+    // ── value ──────────────────────────────────────────────────
     short newFieldValue = 987;
-    Object[] args = {newFieldValue};
 
+    // ── target ─────────────────────────────────────────────────
     ClassForPutFieldTest target = new ClassForPutFieldTest();
 
-    ProceedingJoinPoint pjp =
-        PjpBuilder.forContext(ctxt).sender(this).target(target).args(args).build();
+    // ── PJP ──────────────────────────────────────────────────
+    ProceedingJoinPoint pjp = createPjp(field, target, newFieldValue);
 
+    // ── dispatch ─────────────────────────────────────────────
     Object returned =
-        dispatcher.dispatch(ctxt, pjp, asVoidProceed(() -> target.someShort = newFieldValue));
+        dispatcher.dispatch(pjp, asVoidProceed(() -> target.someShort = newFieldValue));
 
+    // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
     assertNull(returned);
     assertThat(target.someShort, is(newFieldValue));
@@ -134,22 +146,23 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
   @Override
   public void dispatch_wrapper_ok() throws Throwable {
 
+    // ── signature ────────────────────────────────────────────
     String fieldName = "aLong";
-    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+    Field field = targetClass.getDeclaredField(fieldName);
 
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
+    // ── value ──────────────────────────────────────────────────
     Long newFieldValue = 100000L;
-    Object[] args = {newFieldValue};
 
+    // ── target ─────────────────────────────────────────────────
     ClassForPutFieldTest target = new ClassForPutFieldTest();
 
-    ProceedingJoinPoint pjp =
-        PjpBuilder.forContext(ctxt).sender(this).target(target).args(args).build();
+    // ── PJP ──────────────────────────────────────────────────
+    ProceedingJoinPoint pjp = createPjp(field, target, newFieldValue);
 
-    Object returned =
-        dispatcher.dispatch(ctxt, pjp, asVoidProceed(() -> target.aLong = newFieldValue));
+    // ── dispatch ─────────────────────────────────────────────
+    Object returned = dispatcher.dispatch(pjp, asVoidProceed(() -> target.aLong = newFieldValue));
 
+    // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
     assertNull(returned);
     assertThat(target.aLong, is(newFieldValue));
@@ -162,22 +175,23 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
   @Override
   public void dispatch_string_ok() throws Throwable {
 
+    // ── signature ────────────────────────────────────────────
     String fieldName = "aString";
-    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+    Field field = targetClass.getDeclaredField(fieldName);
 
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
+    // ── value ──────────────────────────────────────────────────
     String newFieldValue = "to string or not to";
-    Object[] args = {newFieldValue};
 
+    // ── target ─────────────────────────────────────────────────
     ClassForPutFieldTest target = new ClassForPutFieldTest();
 
-    ProceedingJoinPoint pjp =
-        PjpBuilder.forContext(ctxt).sender(this).target(target).args(args).build();
+    // ── PJP ──────────────────────────────────────────────────
+    ProceedingJoinPoint pjp = createPjp(field, target, newFieldValue);
 
-    Object returned =
-        dispatcher.dispatch(ctxt, pjp, asVoidProceed(() -> target.aString = newFieldValue));
+    // ── dispatch ─────────────────────────────────────────────
+    Object returned = dispatcher.dispatch(pjp, asVoidProceed(() -> target.aString = newFieldValue));
 
+    // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
     assertNull(returned);
     assertThat(target.aString, is(newFieldValue));
@@ -190,22 +204,23 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
   @Override
   public void dispatch_object_ok() throws Throwable {
 
+    // ── signature ────────────────────────────────────────────
     String fieldName = "aList";
-    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+    Field field = targetClass.getDeclaredField(fieldName);
 
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
+    // ── value ──────────────────────────────────────────────────
     List<?> newFieldValue = Arrays.asList(938, 3038, 948, 394);
-    Object[] args = {newFieldValue};
 
+    // ── target ─────────────────────────────────────────────────
     ClassForPutFieldTest target = new ClassForPutFieldTest();
 
-    ProceedingJoinPoint pjp =
-        PjpBuilder.forContext(ctxt).sender(this).target(target).args(args).build();
+    // ── PJP ──────────────────────────────────────────────────
+    ProceedingJoinPoint pjp = createPjp(field, target, newFieldValue);
 
-    Object returned =
-        dispatcher.dispatch(ctxt, pjp, asVoidProceed(() -> target.aList = newFieldValue));
+    // ── dispatch ─────────────────────────────────────────────
+    Object returned = dispatcher.dispatch(pjp, asVoidProceed(() -> target.aList = newFieldValue));
 
+    // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
     assertNull(returned);
     assertThat(target.aList, is(newFieldValue));
@@ -218,21 +233,26 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
   @Override
   public void dispatch_nullObject_ok() throws Throwable {
 
+    // ── signature ────────────────────────────────────────────
     String fieldName = "aList";
-    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+    Field field = targetClass.getDeclaredField(fieldName);
 
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
+    // ── value ──────────────────────────────────────────────────
+    Object newFieldValue = null;
 
+    // ── target ─────────────────────────────────────────────────
     ClassForPutFieldTest target = new ClassForPutFieldTest();
+
+    // ── pre-assertions ─────────────────────────────────────────
     assertThat(target.aList, notNullValue());
 
-    Object[] args = {null};
+    // ── PJP ──────────────────────────────────────────────────
+    ProceedingJoinPoint pjp = createPjp(field, target, newFieldValue);
 
-    ProceedingJoinPoint pjp =
-        PjpBuilder.forContext(ctxt).sender(this).target(target).args(args).build();
+    // ── dispatch ─────────────────────────────────────────────
+    Object returned = dispatcher.dispatch(pjp, asVoidProceed(() -> target.aList = null));
 
-    Object returned = dispatcher.dispatch(ctxt, pjp, asVoidProceed(() -> target.aList = null));
-
+    // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
     assertNull(returned);
     assertThat(target.aList, is(nullValue()));
@@ -245,22 +265,23 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
   @Override
   public void dispatch_objectArray_ok() throws Throwable {
 
+    // ── signature ────────────────────────────────────────────
     String fieldName = "objects";
-    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+    Field field = targetClass.getDeclaredField(fieldName);
 
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
+    // ── value ──────────────────────────────────────────────────
     Object[] newFieldValue = {1, "a", false};
-    Object[] args = {newFieldValue};
 
+    // ── target ─────────────────────────────────────────────────
     ClassForPutFieldTest target = new ClassForPutFieldTest();
 
-    ProceedingJoinPoint pjp =
-        PjpBuilder.forContext(ctxt).sender(this).target(target).args(args).build();
+    // ── PJP ──────────────────────────────────────────────────
+    ProceedingJoinPoint pjp = createPjp(field, target, newFieldValue);
 
-    Object returned =
-        dispatcher.dispatch(ctxt, pjp, asVoidProceed(() -> target.objects = newFieldValue));
+    // ── dispatch ─────────────────────────────────────────────
+    Object returned = dispatcher.dispatch(pjp, asVoidProceed(() -> target.objects = newFieldValue));
 
+    // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
     assertNull(returned);
     assertThat(target.objects, is(newFieldValue));
@@ -273,22 +294,24 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
   @Override
   public void dispatch_throwable_ok() throws Throwable {
 
+    // ── signature ────────────────────────────────────────────
     String fieldName = "lastError";
-    Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+    Field field = targetClass.getDeclaredField(fieldName);
 
-    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
-
+    // ── value ──────────────────────────────────────────────────
     Error newFieldValue = new Error("uuh ooooh");
-    Object[] args = {newFieldValue};
 
+    // ── target ─────────────────────────────────────────────────
     ClassForPutFieldTest target = new ClassForPutFieldTest();
 
-    ProceedingJoinPoint pjp =
-        PjpBuilder.forContext(ctxt).sender(this).target(target).args(args).build();
+    // ── PJP ──────────────────────────────────────────────────
+    ProceedingJoinPoint pjp = createPjp(field, target, newFieldValue);
 
+    // ── dispatch ─────────────────────────────────────────────
     Object returned =
-        dispatcher.dispatch(ctxt, pjp, asVoidProceed(() -> target.lastError = newFieldValue));
+        dispatcher.dispatch(pjp, asVoidProceed(() -> target.lastError = newFieldValue));
 
+    // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
     assertNull(returned);
     assertThat(target.lastError, is(newFieldValue));
