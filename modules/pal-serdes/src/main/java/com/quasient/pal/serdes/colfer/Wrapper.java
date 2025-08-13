@@ -18,7 +18,6 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.Map;
-import java.util.Objects;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +37,40 @@ public final class Wrapper {
 
   /** Maximum number of elements allowed in a collection to be considered wrappable. */
   private static final int MAX_WRAPPABLE_COLLECTION_SIZE = 1000;
+
+  /** Per-type cache of Colfer {@code Class} wrappers keyed by Java {@link Class}. */
+  private static final ClassValue<com.quasient.pal.messages.colfer.Class> WRAPPED_CLASS_BY_TYPE =
+      new ClassValue<>() {
+        @Override
+        protected com.quasient.pal.messages.colfer.Class computeValue(Class<?> type) {
+          com.quasient.pal.messages.colfer.Class c = new com.quasient.pal.messages.colfer.Class();
+          c.setName(type == null ? "" : type.getName());
+          return c;
+        }
+      };
+
+  /** Intern table of Colfer {@code Class} by fully qualified class name. */
+  private static final java.util.concurrent.ConcurrentHashMap<
+          String, com.quasient.pal.messages.colfer.Class>
+      WRAPPED_CLASS_BY_NAME = new java.util.concurrent.ConcurrentHashMap<>();
+
+  /** Per-declaring-class cache of wrapped fields keyed by {@link Field}. */
+  private static final ClassValue<
+          java.util.concurrent.ConcurrentHashMap<Field, com.quasient.pal.messages.colfer.Field>>
+      WRAPPED_FIELD_BY_DECL_CLASS =
+          new ClassValue<>() {
+            @Override
+            protected java.util.concurrent.ConcurrentHashMap<
+                    Field, com.quasient.pal.messages.colfer.Field>
+                computeValue(Class<?> type) {
+              return new java.util.concurrent.ConcurrentHashMap<>();
+            }
+          };
+
+  /** Intern table of wrapped fields keyed by {@code "class#name#mod"}. */
+  private static final java.util.concurrent.ConcurrentHashMap<
+          String, com.quasient.pal.messages.colfer.Field>
+      WRAPPED_FIELD_BY_TRIPLE = new java.util.concurrent.ConcurrentHashMap<>();
 
   /** Private constructor to prevent instantiation of the Wrapper class. */
   private Wrapper() {
@@ -321,16 +354,30 @@ public final class Wrapper {
   }
 
   /**
+   * Returns an interned Colfer {@code Class} by name, creating it if absent.
+   *
+   * @param name fully qualified class name; {@code null} becomes {@code ""}.
+   * @return the interned {@code Class} wrapper
+   */
+  private static com.quasient.pal.messages.colfer.Class internClassByName(String name) {
+    String n = (name == null ? "" : name);
+    return WRAPPED_CLASS_BY_NAME.computeIfAbsent(
+        n,
+        k -> {
+          com.quasient.pal.messages.colfer.Class c = new com.quasient.pal.messages.colfer.Class();
+          c.setName(k);
+          return c;
+        });
+  }
+
+  /**
    * Creates a Colfer {@code Class} instance representing the specified class name.
    *
    * @param className the name of the class to wrap
    * @return a Colfer {@code Class} instance with the provided class name
    */
   static com.quasient.pal.messages.colfer.Class getWrappedClass(String className) {
-    final com.quasient.pal.messages.colfer.Class wrappedClass =
-        new com.quasient.pal.messages.colfer.Class();
-    wrappedClass.setName(Objects.requireNonNullElse(className, ""));
-    return wrappedClass;
+    return internClassByName(className);
   }
 
   /**
@@ -340,15 +387,8 @@ public final class Wrapper {
    * @return a Colfer {@code Class} instance with the name of the provided class, or an empty string
    *     if {@code clazz} is {@code null}
    */
-  static com.quasient.pal.messages.colfer.Class getWrappedClass(Class<?> clazz) {
-    final com.quasient.pal.messages.colfer.Class wrappedClass =
-        new com.quasient.pal.messages.colfer.Class();
-    if (clazz == null) {
-      wrappedClass.setName("");
-    } else {
-      wrappedClass.setName(clazz.getName());
-    }
-    return wrappedClass;
+  static com.quasient.pal.messages.colfer.Class getWrappedClass(@Nullable Class<?> clazz) {
+    return (clazz == null) ? internClassByName("") : WRAPPED_CLASS_BY_TYPE.get(clazz);
   }
 
   /**
@@ -358,12 +398,42 @@ public final class Wrapper {
    * @return a Colfer {@code Field} instance containing the field's name, class, and modifiers
    */
   static com.quasient.pal.messages.colfer.Field getWrappedField(Field field) {
-    final com.quasient.pal.messages.colfer.Field wrappedField =
-        new com.quasient.pal.messages.colfer.Field();
-    wrappedField.setName(field.getName());
-    wrappedField.setClazz(getWrappedClass(field.getDeclaringClass()));
-    wrappedField.setModifiers(field.getModifiers());
-    return wrappedField;
+    return WRAPPED_FIELD_BY_DECL_CLASS
+        .get(field.getDeclaringClass())
+        .computeIfAbsent(
+            field,
+            f -> {
+              com.quasient.pal.messages.colfer.Field wrapped =
+                  new com.quasient.pal.messages.colfer.Field();
+              wrapped.setName(f.getName());
+              wrapped.setClazz(getWrappedClass(f.getDeclaringClass()));
+              wrapped.setModifiers(f.getModifiers());
+              return wrapped;
+            });
+  }
+
+  /**
+   * Builds a stable key for a field.
+   *
+   * @param c declaring class
+   * @param name field name
+   * @param mod modifiers bitmask
+   * @return key in the form {@code class#name#mod}
+   */
+  private static String key(Class<?> c, String name, int mod) {
+    return c.getName() + '#' + name + '#' + mod;
+  }
+
+  /**
+   * Builds a stable key for a field using a class name.
+   *
+   * @param cn declaring class name, {@code null} treated as {@code ""}
+   * @param name field name
+   * @param mod modifiers bitmask
+   * @return key in the form {@code class#name#mod}
+   */
+  private static String key(String cn, String name, int mod) {
+    return (cn == null ? "" : cn) + '#' + name + '#' + mod;
   }
 
   /**
@@ -376,12 +446,15 @@ public final class Wrapper {
    */
   static com.quasient.pal.messages.colfer.Field getWrappedField(
       Class<?> clazz, String fieldName, int modifiers) {
-    final com.quasient.pal.messages.colfer.Field wrappedField =
-        new com.quasient.pal.messages.colfer.Field();
-    wrappedField.setName(fieldName);
-    wrappedField.setClazz(getWrappedClass(clazz));
-    wrappedField.setModifiers(modifiers);
-    return wrappedField;
+    return WRAPPED_FIELD_BY_TRIPLE.computeIfAbsent(
+        key(clazz, fieldName, modifiers),
+        k -> {
+          com.quasient.pal.messages.colfer.Field f = new com.quasient.pal.messages.colfer.Field();
+          f.setName(fieldName);
+          f.setClazz(getWrappedClass(clazz));
+          f.setModifiers(modifiers);
+          return f;
+        });
   }
 
   /**
@@ -395,12 +468,15 @@ public final class Wrapper {
    */
   static com.quasient.pal.messages.colfer.Field getWrappedField(
       String className, String fieldName, int modifiers) {
-    final com.quasient.pal.messages.colfer.Field wrappedField =
-        new com.quasient.pal.messages.colfer.Field();
-    wrappedField.setName(fieldName);
-    wrappedField.setClazz(getWrappedClass(className));
-    wrappedField.setModifiers(modifiers);
-    return wrappedField;
+    return WRAPPED_FIELD_BY_TRIPLE.computeIfAbsent(
+        key(className, fieldName, modifiers),
+        k -> {
+          com.quasient.pal.messages.colfer.Field f = new com.quasient.pal.messages.colfer.Field();
+          f.setName(fieldName);
+          f.setClazz(getWrappedClass(className));
+          f.setModifiers(modifiers);
+          return f;
+        });
   }
 
   /**
