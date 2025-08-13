@@ -154,7 +154,7 @@ public class OutboundMessageGateway {
             return ws;
           });
 
-  /** Set of runtime options that control behavior such as intercept handling and TCP publishing. */
+  /** Set of runtime options that dictate behavior such as, PUB, WAL, intercepts, etc. */
   private final Set<RunOptions> runOptions;
 
   /**
