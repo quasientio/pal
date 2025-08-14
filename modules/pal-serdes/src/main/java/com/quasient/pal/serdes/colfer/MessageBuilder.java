@@ -37,7 +37,7 @@ import com.quasient.pal.common.lang.reflect.FieldSignature;
 import com.quasient.pal.common.lang.reflect.MethodSignature;
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.common.runtime.Context;
-import com.quasient.pal.common.util.Base62UuidGenerator;
+import com.quasient.pal.common.util.FastIdGeneratorNonCrypto;
 import com.quasient.pal.common.util.IdGenerator;
 import com.quasient.pal.messages.colfer.ClassMethodCall;
 import com.quasient.pal.messages.colfer.ConstructorCall;
@@ -90,15 +90,12 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -117,22 +114,23 @@ public final class MessageBuilder {
   /** Logger instance for logging message building operations. */
   private static final Logger logger = LoggerFactory.getLogger(MessageBuilder.class);
 
-  /** Formats date and time in ISO 8601 format with milliseconds and timezone offset. */
-  private final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
-
   /** Thread-local counter for dispatch sequencing of messages per thread. */
-  private final ThreadLocal<AtomicInteger> threadDispatchSequence =
-      ThreadLocal.withInitial(() -> new AtomicInteger(1));
+  private final ThreadLocal<int[]> threadDispatchSequence =
+      ThreadLocal.withInitial(() -> new int[] {1});
 
   /** Thread-local counter for builder sequencing of messages per thread. */
-  private final ThreadLocal<AtomicInteger> threadBuilderSequence =
-      ThreadLocal.withInitial(() -> new AtomicInteger(1));
+  private final ThreadLocal<int[]> threadBuilderSequence =
+      ThreadLocal.withInitial(() -> new int[] {1});
+
+  /** Thread name (cached for efficiency). */
+  private final ThreadLocal<String> tlThreadName =
+      ThreadLocal.withInitial(() -> Thread.currentThread().getName());
 
   /** Flag indicating whether to include source context information in the built messages. */
   private boolean includeSourceContext;
 
   /** Generator for unique message identifiers. */
-  private final IdGenerator idGenerator = new Base62UuidGenerator();
+  private final IdGenerator idGenerator = new FastIdGeneratorNonCrypto();
 
   /**
    * Constructs a new {@code MessageBuilder} with default configuration.
@@ -162,8 +160,8 @@ public final class MessageBuilder {
    * message builds.
    */
   public void resetThreadLocalSequence() {
-    threadBuilderSequence.set(new AtomicInteger(1));
-    threadDispatchSequence.get().getAndIncrement();
+    threadBuilderSequence.set(new int[] {1});
+    threadDispatchSequence.get()[0]++;
   }
 
   // </editor-fold>
@@ -321,10 +319,10 @@ public final class MessageBuilder {
         new ExecMessage()
             .withPeerUuid(peerUuid.toString())
             .withMessageId(nextId())
-            .withThreadName(Thread.currentThread().getName())
-            .withDispatchSeq(threadDispatchSequence.get().intValue())
-            .withBuilderSeq(threadBuilderSequence.get().getAndIncrement())
-            .withCurrentTime(dtf.format(ZonedDateTime.now(ZoneOffset.UTC)));
+            .withThreadName(tlThreadName.get())
+            .withDispatchSeq(threadDispatchSequence.get()[0])
+            .withBuilderSeq(threadBuilderSequence.get()[0]++)
+            .withCurrentTime(Instant.now().toString());
 
     if (responseToId != null && !responseToId.isEmpty()) {
       msgWrapper.setResponseToId(responseToId);
@@ -1705,7 +1703,7 @@ public final class MessageBuilder {
 
     // currentTime is meant for the client to indicate when then message is sent; as we don't have
     // it in a JSON-RPC request, we set it here to the time the message is received
-    execMessage.setCurrentTime(dtf.format(ZonedDateTime.now(ZoneOffset.UTC)));
+    execMessage.setCurrentTime(Instant.now().toString());
 
     // Create the appropriate ExecMessage call object based on the ExecMessageType
     switch (messageType) {
