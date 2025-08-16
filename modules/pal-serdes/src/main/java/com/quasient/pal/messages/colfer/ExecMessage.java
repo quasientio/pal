@@ -1605,4 +1605,26 @@ public class ExecMessage implements Serializable, com.quasient.pal.messages.Mars
     }
     return this;
   }
+
+  /**
+   * Resets this Colfer message to its zero state for reuse on the hot path. Calls init(), then
+   * zeros primitives and nulls nested messages.
+   */
+  public void reset() {
+    init();
+    this.dispatchSeq = 0;
+    this.builderSeq = 0;
+    this.constructorCall = null;
+    this.instanceMethodCall = null;
+    this.classMethodCall = null;
+    this.clinitCall = null;
+    this.staticFieldGet = null;
+    this.staticFieldPut = null;
+    this.instanceFieldGet = null;
+    this.instanceFieldPut = null;
+    this.staticFieldPutDone = null;
+    this.instanceFieldPutDone = null;
+    this.raisedThrowable = null;
+    this.returnValue = null;
+  }
 }

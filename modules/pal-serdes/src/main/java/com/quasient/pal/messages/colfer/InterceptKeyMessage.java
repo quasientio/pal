@@ -725,4 +725,13 @@ public class InterceptKeyMessage implements Serializable, com.quasient.pal.messa
     }
     return this;
   }
+
+  /**
+   * Resets this Colfer message to its zero state for reuse on the hot path. Calls init(), then
+   * zeros primitives and nulls nested messages.
+   */
+  public void reset() {
+    init();
+    this.execMsgType = (byte) 0;
+  }
 }

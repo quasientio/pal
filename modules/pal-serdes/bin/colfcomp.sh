@@ -29,4 +29,4 @@ colf-linux -f \
   Java src/main/colfer/*.colf
 
 # add the fromJson() method to all generated classes
-bin/generate_fromjson.py
+bin/generate_fromjson_reset.py
