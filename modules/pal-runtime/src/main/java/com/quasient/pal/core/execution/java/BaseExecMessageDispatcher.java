@@ -368,8 +368,8 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
           args.add(new MessageArgument(null, true));
         } else {
           Object lookedUpObj = null;
-          final String objRef = obj.getRef();
-          if (objRef != null && !objRef.isEmpty()) {
+          final int objRef = obj.getRef();
+          if (objRef != 0) {
             // First try to fetch object by reference (works only with locally-instantiated/stored
             // objects)
             lookedUpObj = objectLookupStore.lookupObject(ObjectRef.from(objRef));

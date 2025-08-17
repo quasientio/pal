@@ -300,14 +300,14 @@ public class CallMessageIT extends AbstractColferRpcMessageIT {
             CLASS_NAME, methodName, EMPTY_STRING_ARRAY, EMPTY_OBJECT_ARRAY, new ObjectRef[0]);
 
     assertValueIsObjectRefOfType(retValue, "java.lang.Thread");
-    String firstRef = retValue.getObject().getRef();
+    int firstRef = retValue.getObject().getRef();
 
     retValue =
         callClassMethod(
             CLASS_NAME, methodName, EMPTY_STRING_ARRAY, EMPTY_OBJECT_ARRAY, new ObjectRef[0]);
 
     assertValueIsObjectRefOfType(retValue, "java.lang.Thread");
-    String secondRef = retValue.getObject().getRef();
+    int secondRef = retValue.getObject().getRef();
     assertEquals(firstRef, secondRef);
   }
 

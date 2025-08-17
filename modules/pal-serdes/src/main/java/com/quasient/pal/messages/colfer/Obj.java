@@ -45,7 +45,7 @@ public class Obj implements Serializable, com.quasient.pal.messages.Marshallable
 
   public Class clazz;
 
-  public String ref;
+  public int ref;
 
   public boolean isNull;
 
@@ -57,7 +57,6 @@ public class Obj implements Serializable, com.quasient.pal.messages.Marshallable
   /** Colfer zero values. */
   private void init() {
     value = "";
-    ref = "";
   }
 
   /** {@link #reset(InputStream) Reusable} deserialization of Colfer streams. */
@@ -151,7 +150,7 @@ public class Obj implements Serializable, com.quasient.pal.messages.Marshallable
    * @return the number of bytes.
    */
   public int marshalFit() {
-    long n = 1L + 6 + (long) this.value.length() * 3 + 6 + (long) this.ref.length() * 3 + 1;
+    long n = 1L + 6 + (long) this.value.length() * 3 + 5 + 1;
     if (this.clazz != null) n += 1 + (long) this.clazz.marshalFit();
     if (n < 0 || n > (long) Obj.colferSizeMax) return Obj.colferSizeMax;
     return (int) n;
@@ -248,52 +247,21 @@ public class Obj implements Serializable, com.quasient.pal.messages.Marshallable
         i = this.clazz.marshal(buf, i);
       }
 
-      if (!this.ref.isEmpty()) {
-        buf[i++] = (byte) 2;
-        int start = ++i;
-
-        String s = this.ref;
-        for (int sIndex = 0, sLength = s.length(); sIndex < sLength; sIndex++) {
-          char c = s.charAt(sIndex);
-          if (c < '\u0080') {
-            buf[i++] = (byte) c;
-          } else if (c < '\u0800') {
-            buf[i++] = (byte) (192 | c >>> 6);
-            buf[i++] = (byte) (128 | c & 63);
-          } else if (c < '\ud800' || c > '\udfff') {
-            buf[i++] = (byte) (224 | c >>> 12);
-            buf[i++] = (byte) (128 | c >>> 6 & 63);
-            buf[i++] = (byte) (128 | c & 63);
-          } else {
-            int cp = 0;
-            if (++sIndex < sLength) cp = Character.toCodePoint(c, s.charAt(sIndex));
-            if ((cp >= 1 << 16) && (cp < 1 << 21)) {
-              buf[i++] = (byte) (240 | cp >>> 18);
-              buf[i++] = (byte) (128 | cp >>> 12 & 63);
-              buf[i++] = (byte) (128 | cp >>> 6 & 63);
-              buf[i++] = (byte) (128 | cp & 63);
-            } else buf[i++] = (byte) '?';
+      if (this.ref != 0) {
+        int x = this.ref;
+        if ((x & ~((1 << 21) - 1)) != 0) {
+          buf[i++] = (byte) (2 | 0x80);
+          buf[i++] = (byte) (x >>> 24);
+          buf[i++] = (byte) (x >>> 16);
+          buf[i++] = (byte) (x >>> 8);
+        } else {
+          buf[i++] = (byte) 2;
+          while (x > 0x7f) {
+            buf[i++] = (byte) (x | 0x80);
+            x >>>= 7;
           }
         }
-        int size = i - start;
-        if (size > Obj.colferSizeMax)
-          throw new IllegalStateException(
-              format(
-                  "colfer: com.quasient.pal.messages/colfer.Obj.ref size %d exceeds %d UTF-8 bytes",
-                  size, Obj.colferSizeMax));
-
-        int ii = start - 1;
-        if (size > 0x7f) {
-          i++;
-          for (int x = size; x >= 1 << 14; x >>>= 7) i++;
-          System.arraycopy(buf, start, buf, i - size, size);
-
-          do {
-            buf[ii++] = (byte) (size | 0x80);
-            size >>>= 7;
-          } while (size > 0x7f);
-        }
-        buf[ii] = (byte) size;
+        buf[i++] = (byte) x;
       }
 
       if (this.isNull) {
@@ -371,21 +339,20 @@ public class Obj implements Serializable, com.quasient.pal.messages.Marshallable
       }
 
       if (header == (byte) 2) {
-        int size = 0;
+        int x = 0;
         for (int shift = 0; true; shift += 7) {
           byte b = buf[i++];
-          size |= (b & 0x7f) << shift;
+          x |= (b & 0x7f) << shift;
           if (shift == 28 || b >= 0) break;
         }
-        if (size < 0 || size > Obj.colferSizeMax)
-          throw new SecurityException(
-              format(
-                  "colfer: com.quasient.pal.messages/colfer.Obj.ref size %d exceeds %d UTF-8 bytes",
-                  size, Obj.colferSizeMax));
-
-        int start = i;
-        i += size;
-        this.ref = new String(buf, start, size, StandardCharsets.UTF_8);
+        this.ref = x;
+        header = buf[i++];
+      } else if (header == (byte) (2 | 0x80)) {
+        this.ref =
+            (buf[i++] & 0xff) << 24
+                | (buf[i++] & 0xff) << 16
+                | (buf[i++] & 0xff) << 8
+                | (buf[i++] & 0xff);
         header = buf[i++];
       }
 
@@ -498,7 +465,7 @@ public class Obj implements Serializable, com.quasient.pal.messages.Marshallable
    *
    * @return the value.
    */
-  public String getRef() {
+  public int getRef() {
     return this.ref;
   }
 
@@ -507,7 +474,7 @@ public class Obj implements Serializable, com.quasient.pal.messages.Marshallable
    *
    * @param value the replacement.
    */
-  public void setRef(String value) {
+  public void setRef(int value) {
     this.ref = value;
   }
 
@@ -517,7 +484,7 @@ public class Obj implements Serializable, com.quasient.pal.messages.Marshallable
    * @param value the replacement.
    * @return {@code this}.
    */
-  public Obj withRef(String value) {
+  public Obj withRef(int value) {
     this.ref = value;
     return this;
   }
@@ -556,7 +523,7 @@ public class Obj implements Serializable, com.quasient.pal.messages.Marshallable
     int h = 1;
     if (this.value != null) h = 31 * h + this.value.hashCode();
     if (this.clazz != null) h = 31 * h + this.clazz.hashCode();
-    if (this.ref != null) h = 31 * h + this.ref.hashCode();
+    h = 31 * h + this.ref;
     h = 31 * h + (this.isNull ? 1231 : 1237);
     return h;
   }
@@ -572,7 +539,7 @@ public class Obj implements Serializable, com.quasient.pal.messages.Marshallable
 
     return (this.value == null ? o.value == null : this.value.equals(o.value))
         && (this.clazz == null ? o.clazz == null : this.clazz.equals(o.clazz))
-        && (this.ref == null ? o.ref == null : this.ref.equals(o.ref))
+        && this.ref == o.ref
         && this.isNull == o.isNull;
   }
 
@@ -589,7 +556,7 @@ public class Obj implements Serializable, com.quasient.pal.messages.Marshallable
       }
 
       if (json.has("ref")) {
-        this.ref = json.get("ref").getAsString();
+        this.ref = json.get("ref").getAsInt();
       }
 
       if (json.has("isNull")) {
@@ -609,6 +576,7 @@ public class Obj implements Serializable, com.quasient.pal.messages.Marshallable
   public void reset() {
     init();
     this.clazz = null;
+    this.ref = 0;
     this.isNull = false;
   }
 }

@@ -11,6 +11,7 @@ package com.quasient.pal.serdes.colfer;
 
 import com.quasient.pal.messages.colfer.Obj;
 import com.quasient.pal.serdes.Unwrappable;
+import com.quasient.pal.serdes.Unwrapper;
 
 /**
  * Adapts an {@link Obj} instance to the {@link Unwrappable} interface.
@@ -51,20 +52,12 @@ public class ObjUnwrappableAdapter implements Unwrappable {
     return obj.getClazz() != null ? obj.getClazz().getName() : null;
   }
 
-  /**
-   * {@inheritDoc}
-   *
-   * <p>Parses the {@code ref} property of the underlying {@code Obj} as an {@code Integer}. If
-   * {@code ref} is {@code null} or empty, {@code null} is returned.
-   *
-   * @return the integer value of {@code ref}, or {@code null} if {@code ref} is {@code null} or
-   *     empty
-   */
+  /** {@inheritDoc} */
   @Override
   public Integer getRef() {
-    if (obj.getRef() == null || obj.getRef().isEmpty()) {
+    if (obj.getRef() == 0) {
       return null;
     }
-    return Integer.parseInt(obj.getRef());
+    return obj.getRef();
   }
 }

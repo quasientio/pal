@@ -67,8 +67,8 @@ public class ConversionUtils {
     responseObject.setType(object.getClazz().getName());
     responseObject.setIsNull(object.getIsNull());
     responseObject.setValue(object.getValue());
-    if (object.getRef() != null && !object.getRef().isEmpty()) {
-      responseObject.setRef(Integer.parseInt(object.getRef()));
+    if (object.getRef() != 0) {
+      responseObject.setRef(object.getRef());
     }
     return responseObject;
   }

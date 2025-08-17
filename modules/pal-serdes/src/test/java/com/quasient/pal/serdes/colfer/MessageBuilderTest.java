@@ -752,9 +752,7 @@ public class MessageBuilderTest {
     assertNotNull(execMessage.getStaticFieldPut());
     assertEquals(className, execMessage.getStaticFieldPut().getClazz().getName());
     assertEquals(fieldName, execMessage.getStaticFieldPut().getField().getName());
-    assertEquals(
-        valueObjectRef.getRef(),
-        Integer.parseInt(execMessage.getStaticFieldPut().getValueObjectRef()));
+    assertEquals(valueObjectRef.getRef(), execMessage.getStaticFieldPut().getValueObjectRef());
     assertNull(execMessage.getStaticFieldPut().getContext());
   }
 
@@ -829,9 +827,7 @@ public class MessageBuilderTest {
     assertEquals(className, execMessage.getInstanceFieldPut().getClazz().getName());
     assertEquals(fieldName, execMessage.getInstanceFieldPut().getField().getName());
     assertEquals(targetObjRef, ObjectRef.from(execMessage.getInstanceFieldPut().getObjectRef()));
-    assertEquals(
-        valueObjectRef.getRef(),
-        Integer.parseInt(execMessage.getInstanceFieldPut().getValueObjectRef()));
+    assertEquals(valueObjectRef.getRef(), execMessage.getInstanceFieldPut().getValueObjectRef());
     assertNull(execMessage.getInstanceFieldPut().getContext());
   }
 
@@ -1518,9 +1514,7 @@ public class MessageBuilderTest {
     assertEquals(
         returnValue.getClass().getName(),
         execMessage.getReturnValue().getObject().getClazz().getName());
-    assertEquals(
-        returnValueObjRef.getRef(),
-        Integer.parseInt(execMessage.getReturnValue().getObject().getRef()));
+    assertEquals(returnValueObjRef.getRef(), execMessage.getReturnValue().getObject().getRef());
     assertEquals(responseToId, execMessage.getResponseToId());
   }
 
@@ -1545,9 +1539,7 @@ public class MessageBuilderTest {
     assertNotNull(execMessage.getReturnValue());
     assertEquals(method.getName(), execMessage.getReturnValue().getFrom().getMethod().getName());
     assertEquals("int", execMessage.getReturnValue().getObject().getClazz().getName());
-    assertEquals(
-        returnValueObjRef.getRef(),
-        Integer.parseInt(execMessage.getReturnValue().getObject().getRef()));
+    assertEquals(returnValueObjRef.getRef(), execMessage.getReturnValue().getObject().getRef());
     assertEquals(responseToId, execMessage.getResponseToId());
   }
 
@@ -1569,9 +1561,7 @@ public class MessageBuilderTest {
     assertEquals(
         returnValue.getClass().getName(),
         execMessage.getReturnValue().getObject().getClazz().getName());
-    assertEquals(
-        returnValueObjRef.getRef(),
-        Integer.parseInt(execMessage.getReturnValue().getObject().getRef()));
+    assertEquals(returnValueObjRef.getRef(), execMessage.getReturnValue().getObject().getRef());
     assertEquals(responseToId, execMessage.getResponseToId());
   }
 
@@ -1588,7 +1578,7 @@ public class MessageBuilderTest {
     assertNotNull(controlMessage);
     assertNotNull(controlMessage.getMessageId());
     assertEquals(fromPeer.toString(), controlMessage.getFromPeer());
-    assertEquals(objectRef.asString(), controlMessage.getParams()[0].getValue().getRef());
+    assertEquals(objectRef.getRef(), controlMessage.getParams()[0].getValue().getRef());
     assertEquals(ControlCommandType.DELETE_OBJECT.getId(), controlMessage.getCommand());
   }
 

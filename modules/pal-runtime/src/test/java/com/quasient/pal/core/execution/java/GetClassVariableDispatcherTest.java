@@ -11,6 +11,7 @@ package com.quasient.pal.core.execution.java;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.sameInstance;
 import static org.junit.Assert.assertFalse;
@@ -441,7 +442,7 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
     assertFalse(responseMessage.getReturnValue().getIsVoid());
-    assertNotNull(responseMessage.getReturnValue().getObject().getRef());
+    assertThat(responseMessage.getReturnValue().getObject().getRef(), is(not(0)));
     Object returned =
         objectLookupStore.lookupObject(
             ObjectRef.from(responseMessage.getReturnValue().getObject().getRef()));
@@ -471,7 +472,7 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
     assertFalse(responseMessage.getReturnValue().getIsVoid());
-    assertNotNull(responseMessage.getReturnValue().getObject().getRef());
+    assertThat(responseMessage.getReturnValue().getObject().getRef(), is(not(0)));
     Throwable returned =
         (Throwable)
             objectLookupStore.lookupObject(

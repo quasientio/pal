@@ -244,7 +244,7 @@ public class WrapperTest extends WrappingTestBase {
     assertNotNull(wrapped);
     assertTrue(wrapped.isNull);
     assertThat(wrapped.getValue(), is(emptyString()));
-    assertThat(wrapped.getRef(), is(emptyString()));
+    assertThat(wrapped.getRef(), is(0));
   }
 
   @Test
@@ -256,7 +256,7 @@ public class WrapperTest extends WrappingTestBase {
     assertNotNull(wrapped);
     assertFalse(wrapped.isNull);
     assertThat(wrapped.getValue(), is("[1,2,3]"));
-    assertThat(wrapped.getRef(), is(not(emptyString())));
+    assertThat(wrapped.getRef(), is(not(0)));
   }
 
   @Test
@@ -272,7 +272,7 @@ public class WrapperTest extends WrappingTestBase {
     assertNotNull(wrapped);
     assertFalse(wrapped.isNull);
     assertThat(wrapped.getValue(), is(emptyString()));
-    assertThat(wrapped.getRef(), is(not(emptyString())));
+    assertThat(wrapped.getRef(), is(not(0)));
   }
 
   @Test
@@ -315,7 +315,7 @@ public class WrapperTest extends WrappingTestBase {
       assertNotNull(wrappedObj.getClazz());
       assertNotNull(wrappedObj.getClazz().getName());
 
-      assertThat(wrappedObj.getRef(), is(emptyString()));
+      assertThat(wrappedObj.getRef(), is(0));
       assertFalse(wrappedObj.getIsNull());
       assertThat(wrappedObj.getValue(), is(not(emptyString())));
     }
@@ -331,7 +331,7 @@ public class WrapperTest extends WrappingTestBase {
     assertNotNull(wrappedObj.getClazz());
     assertNotNull(wrappedObj.getClazz().getName());
 
-    assertThat(wrappedObj.getRef(), is(emptyString()));
+    assertThat(wrappedObj.getRef(), is(0));
     assertTrue(wrappedObj.getIsNull());
     assertThat(wrappedObj.getValue(), is(emptyString()));
   }
@@ -344,7 +344,7 @@ public class WrapperTest extends WrappingTestBase {
         Wrapper.getWrappedObject(
             object, object.getClass().getName(), objectRef, WrapPolicy.PREFER_REFERENCE);
     assertNotNull(wrapped);
-    assertEquals(String.valueOf(objectRef.getRef()), wrapped.getRef());
+    assertEquals(objectRef.getRef(), wrapped.getRef());
   }
 
   // </editor-fold>

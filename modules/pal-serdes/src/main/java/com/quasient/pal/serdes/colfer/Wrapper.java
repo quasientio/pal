@@ -129,7 +129,7 @@ public final class Wrapper {
 
     // set ref
     if (objectRef != null) {
-      wrappedObject.setRef(String.valueOf(objectRef.getRef()));
+      wrappedObject.setRef(objectRef.getRef());
     }
 
     // determine and set class name

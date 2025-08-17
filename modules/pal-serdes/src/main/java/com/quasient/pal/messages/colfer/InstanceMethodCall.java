@@ -51,7 +51,7 @@ public class InstanceMethodCall implements Serializable, com.quasient.pal.messag
   public String name;
 
   /** target */
-  public String objectRef;
+  public int objectRef;
 
   public int modifiers;
 
@@ -69,7 +69,6 @@ public class InstanceMethodCall implements Serializable, com.quasient.pal.messag
   /** Colfer zero values. */
   private void init() {
     name = "";
-    objectRef = "";
     parameters = _zeroParameters;
   }
 
@@ -167,8 +166,7 @@ public class InstanceMethodCall implements Serializable, com.quasient.pal.messag
    * @return the number of bytes.
    */
   public int marshalFit() {
-    long n =
-        1L + 6 + (long) this.name.length() * 3 + 6 + (long) this.objectRef.length() * 3 + 5 + 6;
+    long n = 1L + 6 + (long) this.name.length() * 3 + 5 + 5 + 6;
     if (this.clazz != null) n += 1 + (long) this.clazz.marshalFit();
     for (Parameter o : this.parameters) {
       if (o == null) n++;
@@ -275,52 +273,21 @@ public class InstanceMethodCall implements Serializable, com.quasient.pal.messag
         buf[ii] = (byte) size;
       }
 
-      if (!this.objectRef.isEmpty()) {
-        buf[i++] = (byte) 2;
-        int start = ++i;
-
-        String s = this.objectRef;
-        for (int sIndex = 0, sLength = s.length(); sIndex < sLength; sIndex++) {
-          char c = s.charAt(sIndex);
-          if (c < '\u0080') {
-            buf[i++] = (byte) c;
-          } else if (c < '\u0800') {
-            buf[i++] = (byte) (192 | c >>> 6);
-            buf[i++] = (byte) (128 | c & 63);
-          } else if (c < '\ud800' || c > '\udfff') {
-            buf[i++] = (byte) (224 | c >>> 12);
-            buf[i++] = (byte) (128 | c >>> 6 & 63);
-            buf[i++] = (byte) (128 | c & 63);
-          } else {
-            int cp = 0;
-            if (++sIndex < sLength) cp = Character.toCodePoint(c, s.charAt(sIndex));
-            if ((cp >= 1 << 16) && (cp < 1 << 21)) {
-              buf[i++] = (byte) (240 | cp >>> 18);
-              buf[i++] = (byte) (128 | cp >>> 12 & 63);
-              buf[i++] = (byte) (128 | cp >>> 6 & 63);
-              buf[i++] = (byte) (128 | cp & 63);
-            } else buf[i++] = (byte) '?';
+      if (this.objectRef != 0) {
+        int x = this.objectRef;
+        if ((x & ~((1 << 21) - 1)) != 0) {
+          buf[i++] = (byte) (2 | 0x80);
+          buf[i++] = (byte) (x >>> 24);
+          buf[i++] = (byte) (x >>> 16);
+          buf[i++] = (byte) (x >>> 8);
+        } else {
+          buf[i++] = (byte) 2;
+          while (x > 0x7f) {
+            buf[i++] = (byte) (x | 0x80);
+            x >>>= 7;
           }
         }
-        int size = i - start;
-        if (size > InstanceMethodCall.colferSizeMax)
-          throw new IllegalStateException(
-              format(
-                  "colfer: com.quasient.pal.messages/colfer.InstanceMethodCall.objectRef size %d exceeds %d UTF-8 bytes",
-                  size, InstanceMethodCall.colferSizeMax));
-
-        int ii = start - 1;
-        if (size > 0x7f) {
-          i++;
-          for (int x = size; x >= 1 << 14; x >>>= 7) i++;
-          System.arraycopy(buf, start, buf, i - size, size);
-
-          do {
-            buf[ii++] = (byte) (size | 0x80);
-            size >>>= 7;
-          } while (size > 0x7f);
-        }
-        buf[ii] = (byte) size;
+        buf[i++] = (byte) x;
       }
 
       if (this.modifiers != 0) {
@@ -444,21 +411,20 @@ public class InstanceMethodCall implements Serializable, com.quasient.pal.messag
       }
 
       if (header == (byte) 2) {
-        int size = 0;
+        int x = 0;
         for (int shift = 0; true; shift += 7) {
           byte b = buf[i++];
-          size |= (b & 0x7f) << shift;
+          x |= (b & 0x7f) << shift;
           if (shift == 28 || b >= 0) break;
         }
-        if (size < 0 || size > InstanceMethodCall.colferSizeMax)
-          throw new SecurityException(
-              format(
-                  "colfer: com.quasient.pal.messages/colfer.InstanceMethodCall.objectRef size %d exceeds %d UTF-8 bytes",
-                  size, InstanceMethodCall.colferSizeMax));
-
-        int start = i;
-        i += size;
-        this.objectRef = new String(buf, start, size, StandardCharsets.UTF_8);
+        this.objectRef = x;
+        header = buf[i++];
+      } else if (header == (byte) (2 | 0x80)) {
+        this.objectRef =
+            (buf[i++] & 0xff) << 24
+                | (buf[i++] & 0xff) << 16
+                | (buf[i++] & 0xff) << 8
+                | (buf[i++] & 0xff);
         header = buf[i++];
       }
 
@@ -614,7 +580,7 @@ public class InstanceMethodCall implements Serializable, com.quasient.pal.messag
    *
    * @return the value.
    */
-  public String getObjectRef() {
+  public int getObjectRef() {
     return this.objectRef;
   }
 
@@ -623,7 +589,7 @@ public class InstanceMethodCall implements Serializable, com.quasient.pal.messag
    *
    * @param value the replacement.
    */
-  public void setObjectRef(String value) {
+  public void setObjectRef(int value) {
     this.objectRef = value;
   }
 
@@ -633,7 +599,7 @@ public class InstanceMethodCall implements Serializable, com.quasient.pal.messag
    * @param value the replacement.
    * @return {@code this}.
    */
-  public InstanceMethodCall withObjectRef(String value) {
+  public InstanceMethodCall withObjectRef(int value) {
     this.objectRef = value;
     return this;
   }
@@ -730,7 +696,7 @@ public class InstanceMethodCall implements Serializable, com.quasient.pal.messag
     int h = 1;
     if (this.clazz != null) h = 31 * h + this.clazz.hashCode();
     if (this.name != null) h = 31 * h + this.name.hashCode();
-    if (this.objectRef != null) h = 31 * h + this.objectRef.hashCode();
+    h = 31 * h + this.objectRef;
     h = 31 * h + this.modifiers;
     for (Parameter o : this.parameters) h = 31 * h + (o == null ? 0 : o.hashCode());
     if (this.context != null) h = 31 * h + this.context.hashCode();
@@ -748,7 +714,7 @@ public class InstanceMethodCall implements Serializable, com.quasient.pal.messag
 
     return (this.clazz == null ? o.clazz == null : this.clazz.equals(o.clazz))
         && (this.name == null ? o.name == null : this.name.equals(o.name))
-        && (this.objectRef == null ? o.objectRef == null : this.objectRef.equals(o.objectRef))
+        && this.objectRef == o.objectRef
         && this.modifiers == o.modifiers
         && java.util.Arrays.equals(this.parameters, o.parameters)
         && (this.context == null ? o.context == null : this.context.equals(o.context));
@@ -767,7 +733,7 @@ public class InstanceMethodCall implements Serializable, com.quasient.pal.messag
       }
 
       if (json.has("objectRef")) {
-        this.objectRef = json.get("objectRef").getAsString();
+        this.objectRef = json.get("objectRef").getAsInt();
       }
 
       if (json.has("modifiers")) {
@@ -800,6 +766,7 @@ public class InstanceMethodCall implements Serializable, com.quasient.pal.messag
   public void reset() {
     init();
     this.clazz = null;
+    this.objectRef = 0;
     this.modifiers = 0;
     this.context = null;
   }

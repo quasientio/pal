@@ -36,7 +36,7 @@ public class ExecMessageSummaryUtil extends RpcMessageSummaryUtil {
    * @param objectRef the reference identifier of the object, may be {@code null}.
    * @return a string representation based on the object's state and reference.
    */
-  private static String getObjRepr(Obj obj, String objectRef) {
+  private static String getObjRepr(Obj obj, int objectRef) {
     return getObjRepr(
         obj == null ? null : obj.isNull,
         obj == null ? null : obj.value == null ? null : obj.value,

@@ -148,13 +148,13 @@ public abstract class SetFieldDispatcher extends FieldOpDispatcher {
    *
    * @param valueObject the message object that may encapsulate the field value; may be {@code
    *     null}.
-   * @param objectRef a string reference used for object lookup when the message object is
+   * @param objectRef the int reference used for object lookup when the message object is
    *     unavailable.
    * @param accessibleObject the reflective field object used to determine the type for unwrapping.
    * @return the unwrapped field value, or {@code null} if not available.
    */
   protected final @Nullable Object getValueFromMessage(
-      Obj valueObject, String objectRef, final AccessibleObject accessibleObject) {
+      Obj valueObject, int objectRef, final AccessibleObject accessibleObject) {
 
     final Object value;
     final Field field = (Field) accessibleObject;

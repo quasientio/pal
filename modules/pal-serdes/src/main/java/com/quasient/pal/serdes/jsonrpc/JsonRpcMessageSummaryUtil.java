@@ -163,7 +163,7 @@ public class JsonRpcMessageSummaryUtil extends RpcMessageSummaryUtil {
    * @return a string representation of the response object
    */
   private static String getObjRepr(ResponseObject obj) {
-    return getObjRepr(obj.isNull(), obj.getValue(), String.valueOf(obj.getRef()));
+    return getObjRepr(obj.isNull(), obj.getValue(), obj.getRef() != null ? obj.getRef() : 0);
   }
 
   /**
@@ -174,6 +174,7 @@ public class JsonRpcMessageSummaryUtil extends RpcMessageSummaryUtil {
    */
   private static String getObjRepr(Argument argument) {
     String argValue = argument.getValue() == null ? null : argument.getValue().toString();
-    return getObjRepr(argument.isNull(), argValue, String.valueOf(argument.getRef()));
+    return getObjRepr(
+        argument.isNull(), argValue, argument.getRef() != null ? argument.getRef() : 0);
   }
 }

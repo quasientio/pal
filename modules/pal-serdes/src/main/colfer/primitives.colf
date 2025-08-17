@@ -23,7 +23,7 @@ type Class struct {
 type Obj struct {
 	value  text
 	clazz  Class
-	ref    text
+	ref    uint32
 	isNull bool
 }
 

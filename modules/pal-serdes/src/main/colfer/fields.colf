@@ -19,7 +19,7 @@ type StaticFieldPut struct {
 	clazz          Class
 	field          Field
 	valueObject    Obj
-	valueObjectRef text
+	valueObjectRef uint32
 	context        Context
 }
 
@@ -35,17 +35,17 @@ type StaticFieldPutDone struct {
 
 type InstanceFieldGet struct {
 	clazz     Class
-	objectRef text
+	objectRef uint32
 	field     Field
 	context   Context
 }
 
 type InstanceFieldPut struct {
 	clazz          Class
-	objectRef      text
+	objectRef      uint32
 	field          Field
 	valueObject    Obj
-	valueObjectRef text
+	valueObjectRef uint32
 	context        Context
 }
 

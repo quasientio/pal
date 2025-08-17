@@ -27,7 +27,6 @@ import java.io.OutputStream;
 import java.io.Serializable;
 import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
-import java.nio.charset.StandardCharsets;
 import java.util.InputMismatchException;
 
 /**
@@ -43,7 +42,7 @@ public class InstanceFieldGet implements Serializable, com.quasient.pal.messages
 
   public Class clazz;
 
-  public String objectRef;
+  public int objectRef;
 
   public Field field;
 
@@ -55,9 +54,7 @@ public class InstanceFieldGet implements Serializable, com.quasient.pal.messages
   }
 
   /** Colfer zero values. */
-  private void init() {
-    objectRef = "";
-  }
+  private void init() {}
 
   /** {@link #reset(InputStream) Reusable} deserialization of Colfer streams. */
   public static class Unmarshaller {
@@ -152,7 +149,7 @@ public class InstanceFieldGet implements Serializable, com.quasient.pal.messages
    * @return the number of bytes.
    */
   public int marshalFit() {
-    long n = 1L + 6 + (long) this.objectRef.length() * 3;
+    long n = 1L + 5;
     if (this.clazz != null) n += 1 + (long) this.clazz.marshalFit();
     if (this.field != null) n += 1 + (long) this.field.marshalFit();
     if (this.context != null) n += 1 + (long) this.context.marshalFit();
@@ -203,52 +200,21 @@ public class InstanceFieldGet implements Serializable, com.quasient.pal.messages
         i = this.clazz.marshal(buf, i);
       }
 
-      if (!this.objectRef.isEmpty()) {
-        buf[i++] = (byte) 1;
-        int start = ++i;
-
-        String s = this.objectRef;
-        for (int sIndex = 0, sLength = s.length(); sIndex < sLength; sIndex++) {
-          char c = s.charAt(sIndex);
-          if (c < '\u0080') {
-            buf[i++] = (byte) c;
-          } else if (c < '\u0800') {
-            buf[i++] = (byte) (192 | c >>> 6);
-            buf[i++] = (byte) (128 | c & 63);
-          } else if (c < '\ud800' || c > '\udfff') {
-            buf[i++] = (byte) (224 | c >>> 12);
-            buf[i++] = (byte) (128 | c >>> 6 & 63);
-            buf[i++] = (byte) (128 | c & 63);
-          } else {
-            int cp = 0;
-            if (++sIndex < sLength) cp = Character.toCodePoint(c, s.charAt(sIndex));
-            if ((cp >= 1 << 16) && (cp < 1 << 21)) {
-              buf[i++] = (byte) (240 | cp >>> 18);
-              buf[i++] = (byte) (128 | cp >>> 12 & 63);
-              buf[i++] = (byte) (128 | cp >>> 6 & 63);
-              buf[i++] = (byte) (128 | cp & 63);
-            } else buf[i++] = (byte) '?';
+      if (this.objectRef != 0) {
+        int x = this.objectRef;
+        if ((x & ~((1 << 21) - 1)) != 0) {
+          buf[i++] = (byte) (1 | 0x80);
+          buf[i++] = (byte) (x >>> 24);
+          buf[i++] = (byte) (x >>> 16);
+          buf[i++] = (byte) (x >>> 8);
+        } else {
+          buf[i++] = (byte) 1;
+          while (x > 0x7f) {
+            buf[i++] = (byte) (x | 0x80);
+            x >>>= 7;
           }
         }
-        int size = i - start;
-        if (size > InstanceFieldGet.colferSizeMax)
-          throw new IllegalStateException(
-              format(
-                  "colfer: com.quasient.pal.messages/colfer.InstanceFieldGet.objectRef size %d exceeds %d UTF-8 bytes",
-                  size, InstanceFieldGet.colferSizeMax));
-
-        int ii = start - 1;
-        if (size > 0x7f) {
-          i++;
-          for (int x = size; x >= 1 << 14; x >>>= 7) i++;
-          System.arraycopy(buf, start, buf, i - size, size);
-
-          do {
-            buf[ii++] = (byte) (size | 0x80);
-            size >>>= 7;
-          } while (size > 0x7f);
-        }
-        buf[ii] = (byte) size;
+        buf[i++] = (byte) x;
       }
 
       if (this.field != null) {
@@ -313,21 +279,20 @@ public class InstanceFieldGet implements Serializable, com.quasient.pal.messages
       }
 
       if (header == (byte) 1) {
-        int size = 0;
+        int x = 0;
         for (int shift = 0; true; shift += 7) {
           byte b = buf[i++];
-          size |= (b & 0x7f) << shift;
+          x |= (b & 0x7f) << shift;
           if (shift == 28 || b >= 0) break;
         }
-        if (size < 0 || size > InstanceFieldGet.colferSizeMax)
-          throw new SecurityException(
-              format(
-                  "colfer: com.quasient.pal.messages/colfer.InstanceFieldGet.objectRef size %d exceeds %d UTF-8 bytes",
-                  size, InstanceFieldGet.colferSizeMax));
-
-        int start = i;
-        i += size;
-        this.objectRef = new String(buf, start, size, StandardCharsets.UTF_8);
+        this.objectRef = x;
+        header = buf[i++];
+      } else if (header == (byte) (1 | 0x80)) {
+        this.objectRef =
+            (buf[i++] & 0xff) << 24
+                | (buf[i++] & 0xff) << 16
+                | (buf[i++] & 0xff) << 8
+                | (buf[i++] & 0xff);
         header = buf[i++];
       }
 
@@ -419,7 +384,7 @@ public class InstanceFieldGet implements Serializable, com.quasient.pal.messages
    *
    * @return the value.
    */
-  public String getObjectRef() {
+  public int getObjectRef() {
     return this.objectRef;
   }
 
@@ -428,7 +393,7 @@ public class InstanceFieldGet implements Serializable, com.quasient.pal.messages
    *
    * @param value the replacement.
    */
-  public void setObjectRef(String value) {
+  public void setObjectRef(int value) {
     this.objectRef = value;
   }
 
@@ -438,7 +403,7 @@ public class InstanceFieldGet implements Serializable, com.quasient.pal.messages
    * @param value the replacement.
    * @return {@code this}.
    */
-  public InstanceFieldGet withObjectRef(String value) {
+  public InstanceFieldGet withObjectRef(int value) {
     this.objectRef = value;
     return this;
   }
@@ -505,7 +470,7 @@ public class InstanceFieldGet implements Serializable, com.quasient.pal.messages
   public final int hashCode() {
     int h = 1;
     if (this.clazz != null) h = 31 * h + this.clazz.hashCode();
-    if (this.objectRef != null) h = 31 * h + this.objectRef.hashCode();
+    h = 31 * h + this.objectRef;
     if (this.field != null) h = 31 * h + this.field.hashCode();
     if (this.context != null) h = 31 * h + this.context.hashCode();
     return h;
@@ -521,7 +486,7 @@ public class InstanceFieldGet implements Serializable, com.quasient.pal.messages
     if (o == this) return true;
 
     return (this.clazz == null ? o.clazz == null : this.clazz.equals(o.clazz))
-        && (this.objectRef == null ? o.objectRef == null : this.objectRef.equals(o.objectRef))
+        && this.objectRef == o.objectRef
         && (this.field == null ? o.field == null : this.field.equals(o.field))
         && (this.context == null ? o.context == null : this.context.equals(o.context));
   }
@@ -535,7 +500,7 @@ public class InstanceFieldGet implements Serializable, com.quasient.pal.messages
       }
 
       if (json.has("objectRef")) {
-        this.objectRef = json.get("objectRef").getAsString();
+        this.objectRef = json.get("objectRef").getAsInt();
       }
 
       if (json.has("field")) {
@@ -561,6 +526,7 @@ public class InstanceFieldGet implements Serializable, com.quasient.pal.messages
   public void reset() {
     init();
     this.clazz = null;
+    this.objectRef = 0;
     this.field = null;
     this.context = null;
   }

@@ -714,7 +714,7 @@ public final class MessageBuilder {
     call.clazz = stat.clazz;
     call.name = stat.name;
     call.modifiers = stat.modifiers;
-    call.objectRef = targetObjRef.asString();
+    call.objectRef = targetObjRef.getRef();
 
     // Parameters: reuse Parameter[] + Parameter + Obj elements
     final int n = (args == null) ? 0 : args.length;
@@ -844,7 +844,7 @@ public final class MessageBuilder {
         {
           final InstanceFieldGet ifg = TlScratchHolder.ifg();
           ifg.clazz = clazzFly;
-          ifg.objectRef = (targetObjRef != null) ? targetObjRef.asString() : "";
+          ifg.objectRef = (targetObjRef != null) ? targetObjRef.getRef() : 0;
           ifg.field = fieldFly;
           ifg.context = cctxBean;
           m.instanceFieldGet = ifg;
@@ -854,7 +854,7 @@ public final class MessageBuilder {
         {
           final InstanceFieldPut ifp = TlScratchHolder.ifp();
           ifp.clazz = clazzFly;
-          ifp.objectRef = (targetObjRef != null) ? targetObjRef.asString() : "";
+          ifp.objectRef = (targetObjRef != null) ? targetObjRef.getRef() : 0;
           ifp.field = fieldFly;
           // reuse one Obj holder; prefer reference to avoid JSON
           Obj valObj = TlScratchHolder.valObj();
@@ -1250,7 +1250,7 @@ public final class MessageBuilder {
                 .withParameters(createNamedParameters(parameterTypes, args, argObjRefs))
                 .withClazz(getWrappedClass(className))
                 .withName(methodName)
-                .withObjectRef(String.valueOf(targetObjRef.getRef())));
+                .withObjectRef(targetObjRef.getRef()));
   }
 
   // </editor-fold>
@@ -1522,7 +1522,7 @@ public final class MessageBuilder {
     final MessageType otherMessageType = getMessageTypeOf(otherMessage);
 
     Obj valueObj;
-    String valueObjectRef;
+    int valueObjectRef;
     switch (otherMessageType) {
       case EXEC_CONSTRUCTOR:
         classMethodCall.setParameters(otherMessage.getConstructorCall().getParameters());
@@ -1536,7 +1536,7 @@ public final class MessageBuilder {
       case EXEC_PUT_STATIC:
         fieldParamType = otherMessage.getStaticFieldPut().getField().getClazz().getName();
         valueObj = otherMessage.getStaticFieldPut().getValueObject();
-        if (valueObj != null && !valueObj.getRef().isEmpty()) {
+        if (valueObj != null && valueObj.getRef() != 0) {
           valueObjectRef = valueObj.getRef();
         } else {
           // fallback to the ObjectRef set in the message
@@ -1550,7 +1550,7 @@ public final class MessageBuilder {
       case EXEC_PUT_FIELD:
         fieldParamType = otherMessage.getInstanceFieldPut().getField().getClazz().getName();
         valueObj = otherMessage.getInstanceFieldPut().getValueObject();
-        if (valueObj != null && !valueObj.getRef().isEmpty()) {
+        if (valueObj != null && valueObj.getRef() != 0) {
           valueObjectRef = valueObj.getRef();
         } else {
           // fallback to the ObjectRef set in the message
@@ -1621,7 +1621,7 @@ public final class MessageBuilder {
         execMessage.setInstanceFieldGet(
             new InstanceFieldGet()
                 .withClazz(clazz)
-                .withObjectRef(String.valueOf(targetObjRef.getRef()))
+                .withObjectRef(targetObjRef.getRef())
                 .withField(field)
                 .withContext(ctxt));
         break;
@@ -1629,7 +1629,7 @@ public final class MessageBuilder {
         execMessage.setInstanceFieldPut(
             new InstanceFieldPut()
                 .withClazz(clazz)
-                .withObjectRef(String.valueOf(targetObjRef.getRef()))
+                .withObjectRef(targetObjRef.getRef())
                 .withField(field)
                 .withValueObject(
                     getWrappedObject(arg, null, argObjRef, WrapPolicy.PREFER_REFERENCE))
@@ -1772,7 +1772,7 @@ public final class MessageBuilder {
         .withInstanceFieldGet(
             new InstanceFieldGet()
                 .withClazz(getWrappedClass(className))
-                .withObjectRef(String.valueOf(targetObjRef.getRef()))
+                .withObjectRef(targetObjRef.getRef())
                 .withField(getWrappedField((String) null, fieldName, unknownModifiers)));
   }
 
@@ -1820,7 +1820,7 @@ public final class MessageBuilder {
             new StaticFieldPut()
                 .withClazz(getWrappedClass(className))
                 .withField(getWrappedField((String) null, fieldName, unknownModifiers))
-                .withValueObjectRef(String.valueOf(valueObjectRef.getRef())));
+                .withValueObjectRef(valueObjectRef.getRef()));
   }
 
   // </editor-fold>
@@ -1850,7 +1850,7 @@ public final class MessageBuilder {
         .withInstanceFieldPut(
             new InstanceFieldPut()
                 .withClazz(getWrappedClass(className))
-                .withObjectRef(String.valueOf(targetObjRef.getRef()))
+                .withObjectRef(targetObjRef.getRef())
                 .withField(getWrappedField((String) null, fieldName, unknownModifiers))
                 .withValueObject(
                     getWrappedObject(value, valueClassName, null, WrapPolicy.PREFER_REFERENCE)));
@@ -1878,9 +1878,9 @@ public final class MessageBuilder {
         .withInstanceFieldPut(
             new InstanceFieldPut()
                 .withClazz(getWrappedClass(className))
-                .withObjectRef(String.valueOf(targetObjRef.getRef()))
+                .withObjectRef(targetObjRef.getRef())
                 .withField(getWrappedField((String) null, fieldName, unknownModifiers))
-                .withValueObjectRef(String.valueOf(valueObjectRef.getRef())));
+                .withValueObjectRef(valueObjectRef.getRef()));
   }
 
   // </editor-fold>
@@ -2077,7 +2077,7 @@ public final class MessageBuilder {
       Obj valueObj;
       if (arg.getRef() != null) {
         ObjectRef objectRef = ObjectRef.from(arg.getRef());
-        valueObj = new Obj().withRef(String.valueOf(arg.getRef()));
+        valueObj = new Obj().withRef(arg.getRef());
         getWrappedObject(null, null, objectRef, WrapPolicy.FORCE_BY_VALUE);
       } else {
         valueObj = getWrappedObject(arg.getValue(), arg.getType(), null, WrapPolicy.FORCE_BY_VALUE);
@@ -2108,7 +2108,9 @@ public final class MessageBuilder {
     InstanceMethodCall instanceMethodCall = new InstanceMethodCall();
     instanceMethodCall.setClazz(getWrappedClass(className));
     instanceMethodCall.setName(callParams.getMethod());
-    instanceMethodCall.setObjectRef(String.valueOf(callParams.getInstance()));
+    if (callParams.getInstance() != null) {
+      instanceMethodCall.setObjectRef(callParams.getInstance());
+    }
     instanceMethodCall.setParameters(jsonRpcParamsToColferParams(callParams.getArgs()));
     return instanceMethodCall;
   }
@@ -2145,11 +2147,13 @@ public final class MessageBuilder {
     InstanceFieldPut instanceFieldPut = new InstanceFieldPut();
     instanceFieldPut.setClazz(getWrappedClass(className));
     instanceFieldPut.setField(getWrappedField(className, fieldName, unknownModifiers));
-    instanceFieldPut.setObjectRef(String.valueOf(putParams.getInstance()));
+    if (putParams.getInstance() != null) {
+      instanceFieldPut.setObjectRef(putParams.getInstance());
+    }
     Argument value = putParams.getValue();
     assert value != null;
     if (value.getRef() != null) { // value is an object reference
-      instanceFieldPut.setValueObjectRef(value.getRef().toString());
+      instanceFieldPut.setValueObjectRef(value.getRef());
     } else {
       instanceFieldPut.setValueObject(
           getWrappedObject(value.getValue(), value.getType(), null, WrapPolicy.FORCE_BY_VALUE));
@@ -2175,7 +2179,7 @@ public final class MessageBuilder {
     Argument value = putParams.getValue();
     assert value != null;
     if (value.getRef() != null) { // value is an object reference
-      staticFieldPut.setValueObjectRef(value.getRef().toString());
+      staticFieldPut.setValueObjectRef(value.getRef());
     } else {
       staticFieldPut.setValueObject(
           getWrappedObject(value.getValue(), value.getType(), null, WrapPolicy.FORCE_BY_VALUE));
@@ -2197,7 +2201,9 @@ public final class MessageBuilder {
     InstanceFieldGet instanceFieldGet = new InstanceFieldGet();
     instanceFieldGet.setClazz(new com.quasient.pal.messages.colfer.Class().withName(className));
     instanceFieldGet.setField(new com.quasient.pal.messages.colfer.Field().withName(fieldName));
-    instanceFieldGet.setObjectRef(String.valueOf(getParams.getInstance()));
+    if (getParams.getInstance() != null) {
+      instanceFieldGet.setObjectRef(getParams.getInstance());
+    }
     return instanceFieldGet;
   }
 
@@ -2685,7 +2691,7 @@ public final class MessageBuilder {
    */
   public ControlMessage buildDeleteObjectCommandMessage(UUID fromPeer, ObjectRef objectRef) {
     Parameter[] params =
-        new Parameter[] {new Parameter().withValue(new Obj().withRef(objectRef.asString()))};
+        new Parameter[] {new Parameter().withValue(new Obj().withRef(objectRef.getRef()))};
     return buildControlCommandMessage(fromPeer, ControlCommandType.DELETE_OBJECT, params);
   }
 

@@ -48,7 +48,7 @@ public interface ExecMessageAssertions {
     Obj retObj = returnValue.getObject();
     assertEquals(isArray, isArrayClassName(retObj.getClazz().getName()));
     assertEquals(isNull, retObj.getIsNull());
-    assertEquals(hasObjRef, retObj.getRef() != null && !retObj.getRef().isEmpty());
+    assertEquals(hasObjRef, retObj.getRef() != 0);
     assertThat(retObj.getClazz(), is(not(nullValue())));
 
     // className can be equal or represent a class that is a superclass of the actual class

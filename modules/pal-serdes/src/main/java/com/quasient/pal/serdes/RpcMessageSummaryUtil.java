@@ -46,13 +46,13 @@ public abstract class RpcMessageSummaryUtil {
    * @param objectRef the reference identifier of the object
    * @return a formatted string representing the object's state
    */
-  protected static String getObjRepr(Boolean isNull, String value, String objectRef) {
+  protected static String getObjRepr(Boolean isNull, String value, int objectRef) {
     if (isNull != null && isNull) {
       return "=NULL";
     }
 
     String repr = "";
-    if (objectRef != null && !objectRef.isEmpty()) {
+    if (objectRef != 0) {
       repr = "@" + objectRef;
     }
     if (value != null && !value.isEmpty()) {
