@@ -11,15 +11,15 @@ package com.quasient.pal.bench.woven;
 
 import com.quasient.pal.bench.Calls;
 import java.util.Arrays;
-import java.util.Locale;
 
 /** Simple wrapper around misc calls to JDK classes. */
 public class QuantizedCalls implements Calls {
 
   /** {@inheritDoc} */
   @Override
+  @SuppressWarnings("StringCaseLocaleUsage")
   public String toUpperCase(String str) {
-    return str.toUpperCase(Locale.ENGLISH);
+    return str.toUpperCase();
   }
 
   /** {@inheritDoc} */

@@ -23,6 +23,7 @@ public class UnwovenCalls implements Calls {
    * {@inheritDoc}
    */
   @Override
+  @SuppressWarnings("StringCaseLocaleUsage")
   public String toUpperCase(String str) {
     return str.toUpperCase();
   }
