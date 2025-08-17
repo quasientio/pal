@@ -62,7 +62,7 @@ public class SocketRpcInvokerTest extends ZmqEnabledTest {
   private ExecutorService execService;
   private SocketRpcInvoker socketRpcInvoker;
   private IncomingMessageDispatcher incomingMessageDispatcher;
-  private final MessageBuilder msgBuilder = new MessageBuilder();
+  private final MessageBuilder msgBuilder = new MessageBuilder(peerUuid);
 
   @Before
   public void setup() throws Exception {
@@ -92,7 +92,7 @@ public class SocketRpcInvokerTest extends ZmqEnabledTest {
                     logger.error("Error getting constructor", e);
                   }
                   return msgBuilder.buildReturnValue(
-                      peerUuid, "", constructor, null, false, incomingMsg.getMessageId());
+                      "", constructor, null, false, incomingMsg.getMessageId());
                 });
 
     this.socketRpcInvoker =

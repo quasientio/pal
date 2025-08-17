@@ -91,8 +91,7 @@ public class ClassMethodDispatcher extends MethodDispatcher {
   @Override
   protected final ExecMessage createBeforeExecMessage(
       Context ctxt, Object sender, Object target, Object[] args) {
-    return messageBuilder.buildClassMethod(
-        peerUuid,
+    return messageBuilder.buildClassMethodMessageEphemeral(
         ctxt,
         sender,
         generateObjectRef(sender),
@@ -121,9 +120,9 @@ public class ClassMethodDispatcher extends MethodDispatcher {
 
     if (value instanceof InvocationThrowableWrapper) {
       Throwable invocationThr = ((InvocationThrowableWrapper) value).throwable();
-      return messageBuilder.buildAccessibleObjectThrowable(peerUuid, method, invocationThr, null);
+      return messageBuilder.buildAccessibleObjectThrowableEphemeral(method, invocationThr, null);
     } else {
-      return messageBuilder.buildReturnValue(peerUuid, value, method, objectRef, isVoid, null);
+      return messageBuilder.buildReturnValueEphemeral(value, method, objectRef, isVoid, null);
     }
   }
 

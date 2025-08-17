@@ -25,7 +25,8 @@ import org.junit.Test;
 
 public class JsonRpcMessageSummaryUtilTest {
 
-  private final MessageBuilder messageBuilder = new MessageBuilder();
+  private final UUID peerId = UUID.randomUUID();
+  private final MessageBuilder messageBuilder = new MessageBuilder(peerId);
 
   private static String getClassnameWithoutPackage(String className) {
     if (className.contains(".")) {
@@ -145,7 +146,6 @@ public class JsonRpcMessageSummaryUtilTest {
       Object myField;
     }
 
-    UUID peerUuid = UUID.randomUUID();
     var targetClass = DummyClass.class;
     String fieldName = "myField";
     String instanceFieldPutUuid = UUID.randomUUID().toString();
@@ -154,7 +154,7 @@ public class JsonRpcMessageSummaryUtilTest {
 
     ExecMessage execMessage =
         messageBuilder.buildPutObjectDone(
-            peerUuid, accessibleObject, instanceFieldPutUuid, responseToId);
+            peerId, accessibleObject, instanceFieldPutUuid, responseToId);
     JsonRpcResponse jsonRpcResponse =
         messageBuilder.jsonRpcResponseFromExecMessageResponse(execMessage);
     assertEquals(
@@ -170,7 +170,6 @@ public class JsonRpcMessageSummaryUtilTest {
     }
 
     var targetClass = DummyClass.class;
-    UUID peerUuid = UUID.randomUUID();
     String fieldName = "aStaticField";
     String staticFieldPutUuid = UUID.randomUUID().toString();
     AccessibleObject accessibleObject = targetClass.getDeclaredField(fieldName);
@@ -178,7 +177,7 @@ public class JsonRpcMessageSummaryUtilTest {
 
     ExecMessage execMessage =
         messageBuilder.buildPutStaticDone(
-            peerUuid, accessibleObject, staticFieldPutUuid, responseToId);
+            peerId, accessibleObject, staticFieldPutUuid, responseToId);
     JsonRpcResponse jsonRpcResponse =
         messageBuilder.jsonRpcResponseFromExecMessageResponse(execMessage);
     assertEquals(
@@ -218,19 +217,13 @@ public class JsonRpcMessageSummaryUtilTest {
       public void addInts(int a, int b) {}
     }
 
-    UUID peerUuid = UUID.randomUUID();
     Method method = DummyClass.class.getMethod("addInts", int.class, int.class);
     ObjectRef returnValueObjRef = ObjectRef.randomRef();
     String responseToId = UUID.randomUUID().toString();
 
     ExecMessage execMessage =
         messageBuilder.buildReturnValue(
-            peerUuid,
-            null,
-            method,
-            returnValueObjRef,
-            method.getReturnType() == void.class,
-            responseToId);
+            null, method, returnValueObjRef, method.getReturnType() == void.class, responseToId);
 
     JsonRpcResponse jsonRpcResponse =
         messageBuilder.jsonRpcResponseFromExecMessageResponse(execMessage);
@@ -246,7 +239,6 @@ public class JsonRpcMessageSummaryUtilTest {
       }
     }
 
-    UUID peerUuid = UUID.randomUUID();
     Class<?> targetClass = DummyClass.class;
     Method method = targetClass.getMethod("addInts", int.class, int.class);
     ObjectRef returnValueObjRef = ObjectRef.randomRef();
@@ -255,7 +247,6 @@ public class JsonRpcMessageSummaryUtilTest {
 
     ExecMessage execMessage =
         messageBuilder.buildReturnValue(
-            peerUuid,
             returnValue,
             method,
             returnValueObjRef,

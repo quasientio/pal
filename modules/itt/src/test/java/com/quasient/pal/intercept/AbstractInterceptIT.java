@@ -132,7 +132,7 @@ public class AbstractInterceptIT extends AbstractIntegrationTest implements Exec
             .withInitialPeer(interceptablePeer)
             .withDirectoryProvider(directoryConnectionProvider)
             .init();
-    this.messageBuilder = new MessageBuilder();
+    this.messageBuilder = new MessageBuilder(myPeerUuid);
     zmqContext = createZmqContext();
     this.executor = Executors.newFixedThreadPool(1, new ExceptionCatchingThreadFactory());
   }
@@ -157,8 +157,7 @@ public class AbstractInterceptIT extends AbstractIntegrationTest implements Exec
       logger.error("Method not found", e);
     }
     ExecMessage returnValue =
-        messageBuilder.buildReturnValue(
-            myPeerUuid, "dummy return value", dummyMethod, null, true, null);
+        messageBuilder.buildReturnValue("dummy return value", dummyMethod, null, true, null);
     Message wrappedMessage = messageBuilder.wrap(returnValue);
     byte[] messageAsBytes = ColferUtils.toBytes(wrappedMessage);
     callbackSocket.send(messageAsBytes);

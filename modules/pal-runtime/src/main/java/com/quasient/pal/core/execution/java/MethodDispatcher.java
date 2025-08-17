@@ -111,12 +111,7 @@ public abstract class MethodDispatcher extends BaseExecMessageDispatcher {
     }
 
     return messageBuilder.buildReturnValue(
-        peerUuid,
-        valueObject,
-        accessibleObject,
-        valueObjRef,
-        returnsVoid(accessibleObject),
-        messageId);
+        valueObject, accessibleObject, valueObjRef, returnsVoid(accessibleObject), messageId);
   }
 
   /**

@@ -184,7 +184,7 @@ public class PeerWiring extends AbstractModule {
     bind(ObjectLookupStore.class)
         .toProvider(ConcurrentHashMapObjectLookupStore::createSyncManaged)
         .asEagerSingleton();
-    bind(MessageBuilder.class).asEagerSingleton();
+    bind(MessageBuilder.class).toProvider(() -> new MessageBuilder(peerUuid)).asEagerSingleton();
     bind(DirectoryConnectionProvider.class).asEagerSingleton();
 
     // AspectProxy and DispatchForwarder's fields are static

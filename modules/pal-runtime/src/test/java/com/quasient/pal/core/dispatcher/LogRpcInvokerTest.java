@@ -52,7 +52,7 @@ public class LogRpcInvokerTest extends ZmqEnabledTest {
   private ExecutorService execService;
   private LogRpcInvoker logRpcInvoker;
   private IncomingMessageDispatcher incomingMessageDispatcher;
-  private final MessageBuilder msgBuilder = new MessageBuilder();
+  private final MessageBuilder msgBuilder = new MessageBuilder(peerUuid);
   private final List<ExecMessage> execMessageReplies = new ArrayList<>();
 
   @Before
@@ -81,7 +81,7 @@ public class LogRpcInvokerTest extends ZmqEnabledTest {
                   }
                   ExecMessage response =
                       msgBuilder.buildReturnValue(
-                          peerUuid, "", constructor, null, false, incomingMsg.getMessageId());
+                          "", constructor, null, false, incomingMsg.getMessageId());
                   execMessageReplies.add(response);
                   return response;
                 });

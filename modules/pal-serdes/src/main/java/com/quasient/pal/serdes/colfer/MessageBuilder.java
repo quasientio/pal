@@ -34,7 +34,6 @@ import com.quasient.pal.common.lang.intercept.InterceptableMethodCall;
 import com.quasient.pal.common.lang.reflect.CodeSignature;
 import com.quasient.pal.common.lang.reflect.ConstructorSignature;
 import com.quasient.pal.common.lang.reflect.FieldSignature;
-import com.quasient.pal.common.lang.reflect.MethodSignature;
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.common.runtime.Context;
 import com.quasient.pal.common.util.FastIdGeneratorNonCrypto;
@@ -79,6 +78,8 @@ import com.quasient.pal.messages.types.MessageType;
 import com.quasient.pal.messages.types.MetaServiceType;
 import com.quasient.pal.messages.types.MetaStatusType;
 import com.quasient.pal.serdes.ConversionUtils;
+import com.quasient.pal.serdes.colfer.scratches.TlMsgScratch;
+import com.quasient.pal.serdes.colfer.scratches.TlScratchHolder;
 import com.quasient.pal.serdes.jsonrpc.InvalidJsonRpcParamsException;
 import com.quasient.pal.serdes.jsonrpc.InvalidJsonRpcRequestException;
 import com.quasient.pal.serdes.jsonrpc.JsonRpcMessageUtils;
@@ -90,6 +91,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -102,17 +104,36 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Constructs and serializes various types of PAL runtime messages using the Colfer serialization
- * format.
+ * format, and performs conversion to and from the JSON-RPC format.
  *
- * <p>This class provides methods to build executable messages, control messages, meta messages, and
- * intercept messages, among others. It handles the conversion between JSON-RPC requests/responses
- * and the internal message representations, ensuring proper formatting and context inclusion as
- * configured.
+ * <p>A number of methods which create the main {@link ExecMessage} instances exist with two
+ * variants, one with the 'Ephemeral' suffix, and the other without. The difference between these
+ * two are:
+ *
+ * <ul>
+ *   <li>The *Ephemeral methods build messages by filling up existing instances inside the {@link
+ *       TlMsgScratch} through the {@link TlScratchHolder} utility, avoiding allocation and GC
+ *       costs. These are only to be called from the hot-path, i.e. the methods invoked through the
+ *       {@link com.quasient.pal.common.runtime.Dispatcher} interface entry point. Usage of these
+ *       methods assumes that one thread will build a message, marshall it (usually by calling
+ *       {@code OutboundMsg#new}) and neither share it nor make any more use of it.
+ *   <li>The non-ephemeral method variants make no such assumptions about usage and always allocate
+ *       new instances of the colfer beans, making them safe for use in unrestricted ways. These are
+ *       to be invoked from outside the hot-path, such as in methods invoked through the {@code
+ *       ExecMessageDispatcher} interface entry point, from tests and from external integrations
+ *       through the API.
+ * </ul>
  */
 public final class MessageBuilder {
 
   /** Logger instance for logging message building operations. */
   private static final Logger logger = LoggerFactory.getLogger(MessageBuilder.class);
+
+  /** Instance of UTC clock for timestamps */
+  private static final Clock utcClock = Clock.systemUTC();
+
+  /** ID of this peer (required through constructor for methods in hot-path) */
+  private String peerId;
 
   /** Thread-local counter for dispatch sequencing of messages per thread. */
   private final ThreadLocal<int[]> threadDispatchSequence =
@@ -137,16 +158,33 @@ public final class MessageBuilder {
    *
    * <p>Source context inclusion is disabled by default.
    */
+  @Inject
   public MessageBuilder() {}
+
+  /**
+   * Constructs a new {@code MessageBuilder} with default configuration, and a reference to this
+   * Peer's ID.
+   *
+   * <p>Source context inclusion is disabled by default.
+   *
+   * @param peerId ID of this peer, to avoid passing in every call.
+   */
+  public MessageBuilder(UUID peerId) {
+    this.peerId = peerId.toString();
+  }
 
   /**
    * Constructs a new {@code MessageBuilder} with source context configuration.
    *
+   * @param peerId ID of this peer, to avoid passing in every call. May be null.
    * @param includeSourceContextStr a string representing whether to include source context
    *     information in the built messages. Expected values are "true" or "false".
    */
-  @Inject
-  public MessageBuilder(@Named("messages.with_src_context") String includeSourceContextStr) {
+  public MessageBuilder(
+      @Nullable UUID peerId, @Named("messages.with_src_context") String includeSourceContextStr) {
+    if (peerId != null) {
+      this.peerId = peerId.toString();
+    }
     this.includeSourceContext = Boolean.parseBoolean(includeSourceContextStr);
   }
 
@@ -307,17 +345,17 @@ public final class MessageBuilder {
   }
 
   /**
-   * Creates a new {@link ExecMessage} with the specified peer UUID and response ID.
+   * Creates a new {@link ExecMessage} with the specified peer ID and response ID.
    *
-   * @param peerUuid the UUID of the peer sending the message
+   * @param peerId the ID of the peer sending the message
    * @param responseToId the message ID this {@code ExecMessage} is responding to, or {@code null}
    *     if not applicable
    * @return a new {@code ExecMessage} instance with initialized fields
    */
-  private ExecMessage newExecMessage(UUID peerUuid, String responseToId) {
+  private ExecMessage newExecMessage(String peerId, String responseToId) {
     ExecMessage msgWrapper =
         new ExecMessage()
-            .withPeerUuid(peerUuid.toString())
+            .withPeerUuid(peerId)
             .withMessageId(nextId())
             .withThreadName(tlThreadName.get())
             .withDispatchSeq(threadDispatchSequence.get()[0])
@@ -329,6 +367,18 @@ public final class MessageBuilder {
     }
 
     return msgWrapper;
+  }
+
+  /**
+   * Creates a new {@link ExecMessage} with the specified peer UUID and response ID.
+   *
+   * @param peerUuid the UUID of the peer sending the message
+   * @param responseToId the message ID this {@code ExecMessage} is responding to, or {@code null}
+   *     if not applicable
+   * @return a new {@code ExecMessage} instance with initialized fields
+   */
+  private ExecMessage newExecMessage(UUID peerUuid, String responseToId) {
+    return newExecMessage(peerUuid.toString(), responseToId);
   }
 
   /**
@@ -399,22 +449,18 @@ public final class MessageBuilder {
 
   // </editor-fold>
 
-  // <editor-fold desc="Hot-path message builder methods">
+  // <editor-fold desc="Constructor methods">
 
   /**
-   * Constructs an {@link ExecMessage} for invoking a constructor.
+   * Builds an {@link ExecMessage} for invoking a class (static) method with specified arguments and
+   * object references.
    *
-   * @param peerUuid the UUID of the peer invoking the constructor
-   * @param className the name of the class whose constructor is being invoked, or {@code null} if
-   *     using context
-   * @param context the execution context containing signature information, or {@code null}
-   * @param sender the object sending the message, or {@code null}
-   * @param senderObjRef the reference to the sender object, or {@code null}
-   * @param parameterTypes the array of parameter type names, or {@code null} if using context
-   * @param args the array of argument values, or {@code null}
-   * @param argObjRefs the array of object references corresponding to the arguments, or {@code
-   *     null}
-   * @return an {@code ExecMessage} representing the constructor invocation
+   * @param context the execution context containing method signature information
+   * @param sender the object sending the message
+   * @param senderObjRef the reference to the sender object
+   * @param args the array of argument values corresponding to the parameters
+   * @param argObjRefs the array of object references corresponding to the arguments
+   * @return an {@code ExecMessage} representing the class method invocation with context
    */
   private ExecMessage buildConstructorMessage(
       UUID peerUuid,
@@ -425,7 +471,6 @@ public final class MessageBuilder {
       String[] parameterTypes,
       Object[] args,
       ObjectRef[] argObjRefs) {
-
     final ConstructorCall constructorCall = new ConstructorCall();
     if (context != null) {
       final ConstructorSignature codeSignature = (ConstructorSignature) context.getSignature();
@@ -439,7 +484,6 @@ public final class MessageBuilder {
       constructorCall.setParameters(createNamedParameters(parameterTypes, args, argObjRefs));
       constructorCall.setClazz(getWrappedClass(className));
     }
-
     return newExecMessage(peerUuid).withConstructorCall(constructorCall);
   }
 
@@ -454,7 +498,7 @@ public final class MessageBuilder {
    * @param argObjRefs the array of object references corresponding to the arguments
    * @return an {@code ExecMessage} representing the constructor invocation with execution context
    */
-  public ExecMessage buildConstructor(
+  ExecMessage buildConstructor(
       UUID peerUuid,
       Context context,
       Object sender,
@@ -466,11 +510,100 @@ public final class MessageBuilder {
         peerUuid, null, context, sender, senderObjRef, null, args, argObjRefs);
   }
 
+  // </editor-fold>
+
+  // <editor-fold desc="Hot-path message builder methods">
+
+  /**
+   * Constructs an {@link ExecMessage} for invoking a constructor.
+   *
+   * @param context the execution context containing signature information
+   * @param sender the object sending the message, or {@code null}
+   * @param senderObjRef the reference to the sender object, or {@code null}
+   * @param args the array of argument values, or {@code null}
+   * @param argObjRefs the array of object references corresponding to the arguments, or {@code
+   *     null}
+   * @return an {@code ExecMessage} representing the constructor invocation
+   */
+  public ExecMessage buildConstructorMessageEphemeral(
+      Context context,
+      Object sender,
+      ObjectRef senderObjRef,
+      Object[] args,
+      ObjectRef[] argObjRefs) {
+
+    final ConstructorCall cc = TlScratchHolder.cc();
+
+    // ----- payload (reuse) -----
+    final ConstructorSignature sig = (ConstructorSignature) context.getSignature();
+    // clazz + modifiers
+    cc.clazz = Wrapper.getWrappedClass(sig.getDeclaringTypeName());
+    cc.modifiers = sig.getModifiers();
+
+    // parameters from context statics
+    final MessageStatics stat = MessageStaticsFactory.forConstructor(context);
+    final int n = (args == null) ? 0 : args.length;
+    TlScratchHolder.ensureParamCapacity(n);
+    final Parameter[] params = TlScratchHolder.paramsOut(n); // exact-length array for this arity
+    for (int i = 0; i < n; i++) {
+      final Parameter p = TlScratchHolder.paramAt(i);
+      final Obj v = TlScratchHolder.valueAt(i);
+
+      final String ptype =
+          (stat.paramTypeNames != null && i < stat.paramTypeNames.length)
+              ? stat.paramTypeNames[i]
+              : null;
+      final ObjectRef pref = (argObjRefs != null && i < argObjRefs.length) ? argObjRefs[i] : null;
+
+      Wrapper.wrapInto(v, args[i], ptype, pref, WrapPolicy.PREFER_REFERENCE);
+
+      p.name = ""; // no param name in the hot-path
+      p.value = v;
+
+      params[i] = p;
+    }
+    if (n != 0) {
+      cc.parameters = params;
+    }
+
+    // optional source context
+    if (includeSourceContext) {
+      final com.quasient.pal.messages.colfer.Context cctx = TlScratchHolder.cctx();
+      cctx.sourceLocationFile = context.getSourceFilename();
+      cctx.sourceLocationLine = context.getSourceLine();
+      cctx.sourceLocationType = context.getWithinType().getName();
+      if (sender != null) {
+        cctx.senderClass = Wrapper.getWrappedClass(sender.getClass());
+        Obj senderObj = TlScratchHolder.senderObj();
+        Wrapper.wrapInto(
+            senderObj,
+            sender,
+            sender.getClass().getName(),
+            senderObjRef,
+            WrapPolicy.PREFER_REFERENCE);
+        cctx.sender = senderObj;
+      }
+      cc.context = cctx;
+    }
+
+    // ----- ExecMessage header (reuse) -----
+    final ExecMessage m = TlScratchHolder.exec();
+
+    m.peerUuid = peerId;
+    m.messageId = idGenerator.nextId();
+    m.threadName = tlThreadName.get();
+    m.dispatchSeq = threadDispatchSequence.get()[0];
+    m.builderSeq = threadBuilderSequence.get()[0]++;
+    m.currentTime = Instant.now(utcClock).toString();
+
+    m.constructorCall = cc;
+    return m;
+  }
+
   /**
    * Builds an {@link ExecMessage} for invoking a class (static) method with specified arguments and
    * object references.
    *
-   * @param peerUuid the UUID of this peer
    * @param context the execution context containing method signature information
    * @param sender the object sending the message
    * @param senderObjRef the reference to the sender object
@@ -478,33 +611,85 @@ public final class MessageBuilder {
    * @param argObjRefs the array of object references corresponding to the arguments
    * @return an {@code ExecMessage} representing the class method invocation with context
    */
-  public ExecMessage buildClassMethod(
-      UUID peerUuid,
+  public ExecMessage buildClassMethodMessageEphemeral(
       Context context,
       Object sender,
       ObjectRef senderObjRef,
       Object[] args,
       ObjectRef[] argObjRefs) {
 
-    final MethodSignature codeSignature = (MethodSignature) context.getSignature();
-    final ClassMethodCall classMethodCall =
-        new ClassMethodCall()
-            .withParameters(createNamedParameters(context, args, argObjRefs))
-            .withClazz(getWrappedClass(codeSignature.getDeclaringTypeName()))
-            .withName(codeSignature.getName())
-            .withModifiers(codeSignature.getModifiers());
+    // precomputed statics (no alloc)
+    final MessageStatics stat = MessageStaticsFactory.forMethod(context);
 
-    if (includeSourceContext) {
-      classMethodCall.setContext(getWrappedContext(context, sender, senderObjRef));
+    // ---- Fill the inner message in-place (no new) ----
+    final ClassMethodCall call = TlScratchHolder.cmc();
+    call.clazz = stat.clazz;
+    call.name = stat.name;
+    call.modifiers = stat.modifiers;
+
+    // Parameters: reuse Parameter[] + Parameter + Obj elements
+    final int n = (args == null) ? 0 : args.length;
+    TlScratchHolder.ensureParamCapacity(n);
+    Parameter[] params = TlScratchHolder.paramsOut(n);
+    for (int i = 0; i < n; i++) {
+      final Parameter p = TlScratchHolder.paramAt(i);
+      final Obj v = TlScratchHolder.valueAt(i);
+
+      final String ptype =
+          (stat.paramTypeNames != null && i < stat.paramTypeNames.length)
+              ? stat.paramTypeNames[i]
+              : null;
+      final ObjectRef pref = (argObjRefs != null && i < argObjRefs.length) ? argObjRefs[i] : null;
+
+      // reuse Obj value holder
+      Wrapper.wrapInto(v, args[i], ptype, pref, WrapPolicy.PREFER_REFERENCE);
+
+      // reuse Parameter object and set fields
+      p.name = ""; // hot path: no names
+      p.value = v;
+
+      params[i] = p;
+    }
+    if (n != 0) {
+      call.parameters = params;
     }
 
-    return newExecMessage(peerUuid).withClassMethodCall(classMethodCall);
+    if (includeSourceContext) {
+      final com.quasient.pal.messages.colfer.Context c = TlScratchHolder.cctx();
+      c.sourceLocationFile = context.getSourceFilename();
+      c.sourceLocationLine = context.getSourceLine();
+      c.sourceLocationType = context.getWithinType().getName();
+      if (sender != null) {
+        c.senderClass = Wrapper.getWrappedClass(sender.getClass());
+        Obj senderObj = TlScratchHolder.senderObj();
+        Wrapper.wrapInto(
+            senderObj,
+            sender,
+            sender.getClass().getName(),
+            senderObjRef,
+            WrapPolicy.PREFER_REFERENCE);
+        c.sender = senderObj;
+      }
+      call.context = c;
+    }
+
+    // ---- Build the outer ExecMessage in-place (no new) ----
+    final ExecMessage m = TlScratchHolder.exec();
+
+    m.peerUuid = peerId;
+    m.messageId = idGenerator.nextId();
+    m.threadName = tlThreadName.get();
+    m.currentTime = Instant.now(utcClock).toString();
+    m.dispatchSeq = threadDispatchSequence.get()[0];
+    m.builderSeq = threadBuilderSequence.get()[0]++;
+    m.classMethodCall = call;
+
+    return m;
   }
 
   /**
    * Builds an {@link ExecMessage} for invoking an instance method using execution context.
    *
-   * @param peerUuid the UUID of this peer
    * @param context the execution context containing method signature information
    * @param sender the object sending the message
    * @param senderObjRef the reference to the sender object
@@ -513,8 +698,7 @@ public final class MessageBuilder {
    * @param argObjRefs the array of object references corresponding to the arguments
    * @return an {@code ExecMessage} representing the instance method invocation with context
    */
-  public ExecMessage buildInstanceMethod(
-      UUID peerUuid,
+  public ExecMessage buildInstanceMethodMessageEphemeral(
       Context context,
       Object sender,
       ObjectRef senderObjRef,
@@ -522,27 +706,79 @@ public final class MessageBuilder {
       Object[] args,
       ObjectRef[] argObjRefs) {
 
-    final MethodSignature codeSignature = (MethodSignature) context.getSignature();
+    // precomputed statics (no alloc)
+    final MessageStatics stat = MessageStaticsFactory.forMethod(context);
 
-    final InstanceMethodCall instanceMethodCall =
-        new InstanceMethodCall()
-            .withParameters(createNamedParameters(context, args, argObjRefs))
-            .withClazz(getWrappedClass(codeSignature.getDeclaringTypeName()))
-            .withName(codeSignature.getName())
-            .withObjectRef(targetObjRef.asString())
-            .withModifiers(codeSignature.getModifiers());
+    // ---- Fill the inner message in-place (no new) ----
+    final InstanceMethodCall call = TlScratchHolder.imc();
+    call.clazz = stat.clazz;
+    call.name = stat.name;
+    call.modifiers = stat.modifiers;
+    call.objectRef = targetObjRef.asString();
 
-    if (includeSourceContext) {
-      instanceMethodCall.setContext(getWrappedContext(context, sender, senderObjRef));
+    // Parameters: reuse Parameter[] + Parameter + Obj elements
+    final int n = (args == null) ? 0 : args.length;
+    TlScratchHolder.ensureParamCapacity(n);
+    Parameter[] params = TlScratchHolder.paramsOut(n);
+    for (int i = 0; i < n; i++) {
+      final Parameter p = TlScratchHolder.paramAt(i);
+      final Obj v = TlScratchHolder.valueAt(i);
+
+      final String ptype =
+          (stat.paramTypeNames != null && i < stat.paramTypeNames.length)
+              ? stat.paramTypeNames[i]
+              : null;
+      final ObjectRef pref = (argObjRefs != null && i < argObjRefs.length) ? argObjRefs[i] : null;
+
+      // reuse Obj value holder
+      Wrapper.wrapInto(v, args[i], ptype, pref, WrapPolicy.PREFER_REFERENCE);
+
+      // reuse Parameter object and set fields
+      p.name = ""; // hot path: no names
+      p.value = v;
+
+      params[i] = p;
+    }
+    if (n != 0) {
+      call.parameters = params;
     }
 
-    return newExecMessage(peerUuid).withInstanceMethodCall(instanceMethodCall);
+    if (includeSourceContext) {
+      final com.quasient.pal.messages.colfer.Context c = TlScratchHolder.cctx();
+      c.sourceLocationFile = context.getSourceFilename();
+      c.sourceLocationLine = context.getSourceLine();
+      c.sourceLocationType = context.getWithinType().getName();
+      if (sender != null) {
+        c.senderClass = Wrapper.getWrappedClass(sender.getClass());
+        Obj senderObj = TlScratchHolder.senderObj();
+        Wrapper.wrapInto(
+            senderObj,
+            sender,
+            sender.getClass().getName(),
+            senderObjRef,
+            WrapPolicy.PREFER_REFERENCE);
+        c.sender = senderObj;
+      }
+      call.context = c;
+    }
+
+    // ---- Build the outer ExecMessage in-place (no new) ----
+    final ExecMessage m = TlScratchHolder.exec();
+
+    m.peerUuid = peerId;
+    m.messageId = idGenerator.nextId();
+    m.threadName = tlThreadName.get();
+    m.currentTime = Instant.now(utcClock).toString();
+    m.dispatchSeq = threadDispatchSequence.get()[0];
+    m.builderSeq = threadBuilderSequence.get()[0]++;
+    m.instanceMethodCall = call;
+
+    return m;
   }
 
   /**
    * Builds an {@link ExecMessage} for performing a field operation.
    *
-   * @param peerUuid the UUID of the peer performing the operation
    * @param context the execution context containing field signature information
    * @param messageType the type of field operation message to build
    * @param sender the object sending the message
@@ -553,8 +789,7 @@ public final class MessageBuilder {
    * @return an {@code ExecMessage} representing the field operation
    * @throws IllegalArgumentException if the message type is unexpected
    */
-  public ExecMessage buildFieldOp(
-      UUID peerUuid,
+  public ExecMessage buildFieldOpEphemeral(
       Context context,
       MessageType messageType,
       Object sender,
@@ -563,61 +798,118 @@ public final class MessageBuilder {
       Object arg,
       ObjectRef argObjRef) {
 
-    final FieldSignature fieldSignature = (FieldSignature) context.getSignature();
+    final FieldSignature fs = (FieldSignature) context.getSignature();
 
-    com.quasient.pal.messages.colfer.Class clazz =
-        getWrappedClass(fieldSignature.getDeclaringType());
-    com.quasient.pal.messages.colfer.Field field =
-        getWrappedField(
-            fieldSignature.getFieldType(), fieldSignature.getName(), fieldSignature.getModifiers());
-    com.quasient.pal.messages.colfer.Context ctxt =
-        includeSourceContext ? getWrappedContext(context, sender, senderObjRef) : null;
+    // ---- cached flyweights (no alloc) ----
+    // Prefer the actual Field for stronger cache hit; fall back to (clazz,name,modifiers).
+    com.quasient.pal.messages.colfer.Class clazzFly =
+        Wrapper.getWrappedClass(fs.getDeclaringType());
+    com.quasient.pal.messages.colfer.Field fieldFly =
+        (fs.getField() != null)
+            ? Wrapper.getWrappedField(fs.getField())
+            : Wrapper.getWrappedField(fs.getDeclaringType(), fs.getName(), fs.getModifiers());
 
-    final ExecMessage execMessage = newExecMessage(peerUuid);
+    // ---- optional source context (reuse sc.cctx + sc.senderObj) ----
+    com.quasient.pal.messages.colfer.Context cctxBean = TlScratchHolder.cctx();
+    if (includeSourceContext) {
+      cctxBean.sourceLocationFile = context.getSourceFilename();
+      cctxBean.sourceLocationLine = context.getSourceLine();
+      cctxBean.sourceLocationType = context.getWithinType().getName();
+      if (sender != null) {
+        cctxBean.senderClass = Wrapper.getWrappedClass(sender.getClass());
+        Obj senderObj = TlScratchHolder.senderObj();
+        Wrapper.wrapInto(
+            senderObj,
+            sender,
+            sender.getClass().getName(),
+            senderObjRef,
+            WrapPolicy.PREFER_REFERENCE);
+        cctxBean.sender = senderObj;
+      }
+    }
 
+    // ---- ExecMessage header (reuse) ----
+    final ExecMessage m = TlScratchHolder.exec();
+
+    m.peerUuid = peerId;
+    m.messageId = idGenerator.nextId();
+    m.threadName = tlThreadName.get();
+    m.dispatchSeq = threadDispatchSequence.get()[0];
+    m.builderSeq = threadBuilderSequence.get()[0]++;
+    m.currentTime = Instant.now(utcClock).toString();
+
+    // ---- payload (reuse) ----
     switch (messageType) {
       case EXEC_GET_FIELD:
-        execMessage.setInstanceFieldGet(
-            new InstanceFieldGet()
-                .withClazz(clazz)
-                .withObjectRef(String.valueOf(targetObjRef.getRef()))
-                .withField(field)
-                .withContext(ctxt));
-        break;
+        {
+          final InstanceFieldGet ifg = TlScratchHolder.ifg();
+          ifg.clazz = clazzFly;
+          ifg.objectRef = (targetObjRef != null) ? targetObjRef.asString() : "";
+          ifg.field = fieldFly;
+          ifg.context = cctxBean;
+          m.instanceFieldGet = ifg;
+          break;
+        }
       case EXEC_PUT_FIELD:
-        execMessage.setInstanceFieldPut(
-            new InstanceFieldPut()
-                .withClazz(clazz)
-                .withObjectRef(String.valueOf(targetObjRef.getRef()))
-                .withField(field)
-                .withValueObject(
-                    getWrappedObject(arg, null, argObjRef, WrapPolicy.PREFER_REFERENCE))
-                .withContext(ctxt));
-        break;
+        {
+          final InstanceFieldPut ifp = TlScratchHolder.ifp();
+          ifp.clazz = clazzFly;
+          ifp.objectRef = (targetObjRef != null) ? targetObjRef.asString() : "";
+          ifp.field = fieldFly;
+          // reuse one Obj holder; prefer reference to avoid JSON
+          Obj valObj = TlScratchHolder.valObj();
+          Wrapper.wrapInto(valObj, arg, null, argObjRef, WrapPolicy.PREFER_REFERENCE);
+          ifp.valueObject = valObj;
+          ifp.context = cctxBean;
+          m.instanceFieldPut = ifp;
+          break;
+        }
       case EXEC_GET_STATIC:
-        execMessage.setStaticFieldGet(
-            new StaticFieldGet().withClazz(clazz).withField(field).withContext(ctxt));
-        break;
+        {
+          final StaticFieldGet sfg = TlScratchHolder.sfg();
+          sfg.clazz = clazzFly;
+          sfg.field = fieldFly;
+          sfg.context = cctxBean;
+          m.staticFieldGet = sfg;
+          break;
+        }
       case EXEC_PUT_STATIC:
-        execMessage.setStaticFieldPut(
-            new StaticFieldPut()
-                .withClazz(clazz)
-                .withValueObject(
-                    getWrappedObject(arg, null, argObjRef, WrapPolicy.PREFER_REFERENCE))
-                .withField(field)
-                .withContext(ctxt));
-        break;
+        {
+          final StaticFieldPut sfp = TlScratchHolder.sfp();
+          sfp.clazz = clazzFly;
+          sfp.field = fieldFly;
+          Obj valObj = TlScratchHolder.valObj();
+          Wrapper.wrapInto(valObj, arg, null, argObjRef, WrapPolicy.PREFER_REFERENCE);
+          sfp.valueObject = valObj;
+          sfp.context = cctxBean;
+          m.staticFieldPut = sfp;
+          break;
+        }
       default:
         throw new IllegalArgumentException("Unexpected field op type: " + messageType);
     }
 
-    return execMessage;
+    return m;
+  }
+
+  /**
+   * Helps resolve the class name for the return value based on the AccessibleObject
+   *
+   * @param ao the accessible object
+   * @return the class name of the returned type
+   */
+  private static String classNameForReturn(AccessibleObject ao) {
+    if (ao instanceof Method m) return m.getReturnType().getName();
+    if (ao instanceof Constructor<?> c) return c.getDeclaringClass().getName();
+    if (ao instanceof Field f) return f.getType().getName();
+    return "";
   }
 
   /**
    * Builds an {@link ExecMessage} representing the return value of an accessible object operation.
+   * The message is built by resetting and reusing a {@link TlMsgScratch}, instead of using
+   * allocation.
    *
-   * @param peerUuid the UUID of the peer involved in the operation
    * @param object the return value object, or {@code null} if the method is void
    * @param accessibleObject the accessible object involved in the operation
    * @param objectRef the reference to the returned object, if applicable
@@ -625,156 +917,178 @@ public final class MessageBuilder {
    * @param responseToId the message ID this {@code ExecMessage} is responding to
    * @return an {@code ExecMessage} representing the return value
    */
-  public ExecMessage buildReturnValue(
-      UUID peerUuid,
+  public ExecMessage buildReturnValueEphemeral(
       Object object,
       AccessibleObject accessibleObject,
       ObjectRef objectRef,
       boolean isVoid,
       String responseToId) {
 
-    final ReturnValue valueMessage = new ReturnValue();
+    // ----- ReturnValue payload (reuse) -----
+    final ReturnValue rv = TlScratchHolder.rv();
 
-    Class<?> declaringClass = ((Member) accessibleObject).getDeclaringClass();
-
-    // set 'object'
     if (!isVoid) {
-      Class<?> objectClass = getClassOfAccessible(accessibleObject, declaringClass);
-      if (logger.isTraceEnabled()) {
-        if (object != null) {
-          logger.trace("object is of class: {}", object.getClass().getName());
-        }
-        logger.trace("objectClass.getName: {}", objectClass.getName());
-      }
-      valueMessage.setObject(
-          getWrappedObject(object, objectClass.getName(), objectRef, WrapPolicy.PREFER_REFERENCE));
+      final String clazzName = classNameForReturn(accessibleObject);
+      // Reuse the Obj holder and prefer reference to avoid JSON work
+      Obj retObj = TlScratchHolder.retObj();
+      Wrapper.wrapInto(retObj, object, clazzName, objectRef, WrapPolicy.PREFER_REFERENCE);
+      rv.object = retObj;
     }
+    rv.isVoid = isVoid;
 
-    // set 'from'
-    if (accessibleObject instanceof Constructor) {
-      valueMessage.setFrom(
-          new Reflectable()
-              .withConstructor(
-                  new com.quasient.pal.messages.colfer.Constructor()
-                      .withClazz(getWrappedClass(declaringClass.getName()))));
-    } else if (accessibleObject instanceof Method) {
-      valueMessage.setFrom(
-          new Reflectable()
-              .withMethod(
-                  new com.quasient.pal.messages.colfer.Method()
-                      .withClazz(getWrappedClass(declaringClass.getName()))
-                      .withName(((Method) accessibleObject).getName())
-                      .withModifiers(((Method) accessibleObject).getModifiers())));
-    } else if (accessibleObject instanceof Field) {
-      valueMessage.setFrom(
-          new Reflectable()
-              .withField(
-                  new com.quasient.pal.messages.colfer.Field()
-                      .withClazz(getWrappedClass(declaringClass.getName()))
-                      .withName(((Field) accessibleObject).getName())));
+    // Build the "from" reflectable using reusable nested beans
+    final Reflectable refl = TlScratchHolder.refl();
+
+    if (accessibleObject instanceof Constructor<?> c) {
+      var constructor = TlScratchHolder.rc();
+      constructor.clazz = Wrapper.getWrappedClass(c.getDeclaringClass());
+      refl.constructor = constructor;
+    } else if (accessibleObject instanceof Method m) {
+      var method = TlScratchHolder.rm();
+      method.clazz = Wrapper.getWrappedClass(m.getDeclaringClass());
+      method.name = m.getName();
+      method.modifiers = m.getModifiers();
+      refl.method = method;
+    } else if (accessibleObject instanceof Field f) {
+      var field = TlScratchHolder.rf();
+      field.clazz = Wrapper.getWrappedClass(f.getDeclaringClass());
+      field.name = f.getName();
+      field.modifiers = f.getModifiers();
+      refl.field = field;
     } else {
-      throw new RuntimeException(
-          String.format("Unable to handle accessible object of type: %s", accessibleObject));
+      throw new RuntimeException("Unsupported AccessibleObject: " + accessibleObject);
     }
 
-    // set class and getIsVoid
-    return newExecMessage(peerUuid, responseToId).withReturnValue(valueMessage.withIsVoid(isVoid));
+    rv.from = refl;
+
+    // ----- ExecMessage header (reuse) -----
+    final ExecMessage m = TlScratchHolder.exec();
+
+    m.peerUuid = peerId;
+    m.messageId = idGenerator.nextId();
+    m.threadName = tlThreadName.get();
+    m.dispatchSeq = threadDispatchSequence.get()[0];
+    m.builderSeq = threadBuilderSequence.get()[0]++;
+    m.currentTime = Instant.now(utcClock).toString();
+    if (responseToId != null) {
+      m.responseToId = responseToId;
+    }
+
+    // attach payload
+    m.returnValue = rv;
+
+    return m;
   }
 
   /**
    * Builds an {@link ExecMessage} representing a throwable thrown during an accessible object
    * operation.
    *
-   * @param peerUuid the UUID of the peer involved in the operation
    * @param accessibleObject the accessible object involved in the operation, or {@code null}
    * @param exception the {@code Throwable} that was thrown
    * @param responseToId the message ID this {@code ExecMessage} is responding to
    * @return an {@code ExecMessage} representing the raised throwable
    */
-  public ExecMessage buildAccessibleObjectThrowable(
-      UUID peerUuid,
-      @Nullable AccessibleObject accessibleObject,
-      Throwable exception,
-      String responseToId) {
+  public ExecMessage buildAccessibleObjectThrowableEphemeral(
+      @Nullable AccessibleObject accessibleObject, Throwable exception, String responseToId) {
 
-    final RaisedThrowable raisedThrowable = new RaisedThrowable();
-    if (accessibleObject != null) {
-      if (accessibleObject instanceof Constructor) {
-        raisedThrowable.setFrom(
-            new Reflectable()
-                .withConstructor(
-                    new com.quasient.pal.messages.colfer.Constructor()
-                        .withClazz(
-                            getWrappedClass(
-                                ((Constructor<?>) accessibleObject)
-                                    .getDeclaringClass()
-                                    .getName()))));
-        raisedThrowable.setModifiers(((Constructor<?>) accessibleObject).getModifiers());
-      } else if (accessibleObject instanceof Method) {
-        raisedThrowable.setFrom(
-            new Reflectable()
-                .withMethod(
-                    new com.quasient.pal.messages.colfer.Method()
-                        .withClazz(
-                            getWrappedClass(
-                                ((Method) accessibleObject).getDeclaringClass().getName()))
-                        .withName(((Method) accessibleObject).getName())
-                        .withModifiers(((Method) accessibleObject).getModifiers())));
-        raisedThrowable.setModifiers(((Method) accessibleObject).getModifiers());
-      } else if (accessibleObject instanceof Field) {
-        raisedThrowable.setFrom(
-            new Reflectable()
-                .withField(
-                    new com.quasient.pal.messages.colfer.Field()
-                        .withClazz(
-                            getWrappedClass(
-                                ((Field) accessibleObject).getDeclaringClass().getName()))
-                        .withName(((Field) accessibleObject).getName())));
-        raisedThrowable.setModifiers(((Field) accessibleObject).getModifiers());
-      } else {
-        throw new UnsupportedOperationException(
-            String.format(
-                "Unsupported accessibleObject type: %s", accessibleObject.getClass().getName()));
-      }
+    // ----- payload (reuse) -----
+    final RaisedThrowable rt = TlScratchHolder.rt();
+
+    // Clear previous 'from' branch
+    final Reflectable refl = TlScratchHolder.refl();
+
+    // Set 'from' + modifiers when we know the accessible
+    if (accessibleObject instanceof Constructor<?> c) {
+      var constructor = TlScratchHolder.rc();
+      constructor.clazz = Wrapper.getWrappedClass(c.getDeclaringClass());
+      refl.constructor = constructor;
+      rt.modifiers = c.getModifiers();
+    } else if (accessibleObject instanceof Method m) {
+      var method = TlScratchHolder.rm();
+      method.clazz = Wrapper.getWrappedClass(m.getDeclaringClass());
+      method.name = m.getName();
+      method.modifiers = m.getModifiers();
+      refl.method = method;
+      rt.modifiers = m.getModifiers();
+    } else if (accessibleObject instanceof Field f) {
+      var field = TlScratchHolder.rf();
+      field.clazz = Wrapper.getWrappedClass(f.getDeclaringClass());
+      field.name = f.getName();
+      field.modifiers = f.getModifiers();
+      refl.field = field;
+      rt.modifiers = f.getModifiers();
+    } else {
+      // Unknown or null: no 'from', zero modifiers
+      rt.modifiers = 0;
     }
 
-    return newExecMessage(peerUuid, responseToId)
-        .withRaisedThrowable(raisedThrowable.withThrowable(buildThrowableMessage(exception)));
+    rt.from = (accessibleObject != null) ? refl : null;
+    rt.throwable = buildThrowableMessage(exception);
+
+    // ----- ExecMessage header (reuse) -----
+    final ExecMessage m = TlScratchHolder.exec();
+
+    m.peerUuid = peerId;
+    m.messageId = idGenerator.nextId();
+    m.threadName = tlThreadName.get();
+    m.dispatchSeq = threadDispatchSequence.get()[0];
+    m.builderSeq = threadBuilderSequence.get()[0]++;
+    m.currentTime = Instant.now(utcClock).toString();
+    if (responseToId != null) {
+      m.responseToId = responseToId;
+    }
+
+    // attach payload
+    m.raisedThrowable = rt;
+
+    return m;
   }
 
   /**
    * Builds an {@link ExecMessage} indicating the completion of a field operation.
    *
-   * @param peerUuid the UUID of the peer indicating the operation completion
    * @param accessibleObject the accessible object involved in the field operation
    * @param context the execution context containing field signature information
    * @param type the type of field operation completion message to build
    * @return an {@code ExecMessage} representing the field operation completion
    * @throws IllegalArgumentException if the completion type is unexpected
    */
-  public ExecMessage buildFieldOpDone(
-      UUID peerUuid, AccessibleObject accessibleObject, Context context, MessageType type) {
+  public ExecMessage buildFieldOpDoneEphemeral(
+      AccessibleObject accessibleObject, Context context, MessageType type) {
 
-    final FieldSignature fieldSignature = (FieldSignature) context.getSignature();
-    final ExecMessage execMessage = newExecMessage(peerUuid);
+    final ExecMessage m = TlScratchHolder.exec();
+
+    m.peerUuid = peerId;
+    m.messageId = idGenerator.nextId();
+    m.threadName = tlThreadName.get();
+    m.dispatchSeq = threadDispatchSequence.get()[0];
+    m.builderSeq = threadBuilderSequence.get()[0]++;
+    m.currentTime = Instant.now(utcClock).toString();
+
+    final FieldSignature fs = (FieldSignature) context.getSignature();
     switch (type) {
       case EXEC_PUT_FIELD_DONE:
-        execMessage.setInstanceFieldPutDone(
-            new InstanceFieldPutDone()
-                .withClazz(getWrappedClass(fieldSignature.getDeclaringType()))
-                .withField(getWrappedField((Field) accessibleObject)));
-        break;
+        {
+          final InstanceFieldPutDone ifpd = TlScratchHolder.ifpd();
+          ifpd.clazz = Wrapper.getWrappedClass(fs.getDeclaringType());
+          ifpd.field = Wrapper.getWrappedField((Field) accessibleObject); // java.lang.reflect.Field
+          m.instanceFieldPutDone = ifpd;
+          break;
+        }
       case EXEC_PUT_STATIC_DONE:
-        execMessage.setStaticFieldPutDone(
-            new StaticFieldPutDone()
-                .withClazz(getWrappedClass(fieldSignature.getDeclaringType()))
-                .withField(getWrappedField((Field) accessibleObject)));
-        break;
+        {
+          final StaticFieldPutDone sfpd = TlScratchHolder.sfpd();
+          sfpd.clazz = Wrapper.getWrappedClass(fs.getDeclaringType());
+          sfpd.field = Wrapper.getWrappedField((Field) accessibleObject);
+          m.staticFieldPutDone = sfpd;
+          break;
+        }
       default:
         throw new IllegalArgumentException("Unexpected field op done type: " + type);
     }
 
-    return execMessage;
+    return m;
   }
 
   // </editor-fold>
@@ -937,6 +1251,163 @@ public final class MessageBuilder {
                 .withClazz(getWrappedClass(className))
                 .withName(methodName)
                 .withObjectRef(String.valueOf(targetObjRef.getRef())));
+  }
+
+  // </editor-fold>
+
+  // <editor-fold desc="Return value messages">
+
+  /**
+   * Determines the class of the object associated with an accessible object.
+   *
+   * @param accessibleObject the accessible object involved in the operation
+   * @param declaringClass the declaring class of the accessible object
+   * @return the {@link Class} of the object associated with the accessible object
+   * @throws RuntimeException if the accessible object type is unsupported
+   */
+  private static Class<?> getClassOfAccessible(
+      AccessibleObject accessibleObject, Class<?> declaringClass) {
+    Class<?> objectClass;
+    if (accessibleObject instanceof Constructor) {
+      objectClass = declaringClass;
+    } else if (accessibleObject instanceof Method) {
+      objectClass = ((Method) accessibleObject).getReturnType();
+    } else if (accessibleObject instanceof Field) {
+      objectClass = ((Field) accessibleObject).getType();
+    } else {
+      throw new RuntimeException(
+          String.format("Unable to handle accessible object of type: %s", accessibleObject));
+    }
+    return objectClass;
+  }
+
+  /**
+   * Builds an {@link ExecMessage} representing the return value of an accessible object operation.
+   * The message is built anew, using allocation.
+   *
+   * @param object the return value object, or {@code null} if the method is void
+   * @param accessibleObject the accessible object involved in the operation
+   * @param objectRef the reference to the returned object, if applicable
+   * @param isVoid {@code true} if the method has a void return type, otherwise {@code false}
+   * @param responseToId the message ID this {@code ExecMessage} is responding to
+   * @return an {@code ExecMessage} representing the return value
+   */
+  public ExecMessage buildReturnValue(
+      Object object,
+      AccessibleObject accessibleObject,
+      ObjectRef objectRef,
+      boolean isVoid,
+      String responseToId) {
+
+    final ReturnValue valueMessage = new ReturnValue();
+
+    Class<?> declaringClass = ((Member) accessibleObject).getDeclaringClass();
+
+    // set 'object'
+    if (!isVoid) {
+      Class<?> objectClass = getClassOfAccessible(accessibleObject, declaringClass);
+      if (logger.isTraceEnabled()) {
+        if (object != null) {
+          logger.trace("object is of class: {}", object.getClass().getName());
+        }
+        logger.trace("objectClass.getName: {}", objectClass.getName());
+      }
+      valueMessage.setObject(
+          getWrappedObject(object, objectClass.getName(), objectRef, WrapPolicy.PREFER_REFERENCE));
+    }
+
+    // set 'from'
+    if (accessibleObject instanceof Constructor) {
+      valueMessage.setFrom(
+          new Reflectable()
+              .withConstructor(
+                  new com.quasient.pal.messages.colfer.Constructor()
+                      .withClazz(getWrappedClass(declaringClass.getName()))));
+    } else if (accessibleObject instanceof Method) {
+      valueMessage.setFrom(
+          new Reflectable()
+              .withMethod(
+                  new com.quasient.pal.messages.colfer.Method()
+                      .withClazz(getWrappedClass(declaringClass.getName()))
+                      .withName(((Method) accessibleObject).getName())
+                      .withModifiers(((Method) accessibleObject).getModifiers())));
+    } else if (accessibleObject instanceof Field) {
+      valueMessage.setFrom(
+          new Reflectable()
+              .withField(
+                  new com.quasient.pal.messages.colfer.Field()
+                      .withClazz(getWrappedClass(declaringClass.getName()))
+                      .withName(((Field) accessibleObject).getName())));
+    } else {
+      throw new RuntimeException(
+          String.format("Unable to handle accessible object of type: %s", accessibleObject));
+    }
+
+    // set class and getIsVoid
+    return newExecMessage(peerId, responseToId).withReturnValue(valueMessage.withIsVoid(isVoid));
+  }
+
+  // </editor-fold>
+
+  // <editor-fold desc="Throwable messages">
+
+  /**
+   * Builds an {@link ExecMessage} representing a throwable thrown during an accessible object
+   * operation.
+   *
+   * @param peerUuid the UUID of the peer involved in the operation
+   * @param accessibleObject the accessible object involved in the operation, or {@code null}
+   * @param exception the {@code Throwable} that was thrown
+   * @param responseToId the message ID this {@code ExecMessage} is responding to
+   * @return an {@code ExecMessage} representing the raised throwable
+   */
+  public ExecMessage buildAccessibleObjectThrowable(
+      UUID peerUuid,
+      @Nullable AccessibleObject accessibleObject,
+      Throwable exception,
+      String responseToId) {
+    final RaisedThrowable raisedThrowable = new RaisedThrowable();
+    if (accessibleObject != null) {
+      if (accessibleObject instanceof Constructor) {
+        raisedThrowable.setFrom(
+            new Reflectable()
+                .withConstructor(
+                    new com.quasient.pal.messages.colfer.Constructor()
+                        .withClazz(
+                            getWrappedClass(
+                                ((Constructor<?>) accessibleObject)
+                                    .getDeclaringClass()
+                                    .getName()))));
+        raisedThrowable.setModifiers(((Constructor<?>) accessibleObject).getModifiers());
+      } else if (accessibleObject instanceof Method) {
+        raisedThrowable.setFrom(
+            new Reflectable()
+                .withMethod(
+                    new com.quasient.pal.messages.colfer.Method()
+                        .withClazz(
+                            getWrappedClass(
+                                ((Method) accessibleObject).getDeclaringClass().getName()))
+                        .withName(((Method) accessibleObject).getName())
+                        .withModifiers(((Method) accessibleObject).getModifiers())));
+        raisedThrowable.setModifiers(((Method) accessibleObject).getModifiers());
+      } else if (accessibleObject instanceof Field) {
+        raisedThrowable.setFrom(
+            new Reflectable()
+                .withField(
+                    new com.quasient.pal.messages.colfer.Field()
+                        .withClazz(
+                            getWrappedClass(
+                                ((Field) accessibleObject).getDeclaringClass().getName()))
+                        .withName(((Field) accessibleObject).getName())));
+        raisedThrowable.setModifiers(((Field) accessibleObject).getModifiers());
+      } else {
+        throw new UnsupportedOperationException(
+            String.format(
+                "Unsupported accessibleObject type: %s", accessibleObject.getClass().getName()));
+      }
+    }
+    return newExecMessage(peerUuid, responseToId)
+        .withRaisedThrowable(raisedThrowable.withThrowable(buildThrowableMessage(exception)));
   }
 
   // </editor-fold>
@@ -1111,6 +1582,157 @@ public final class MessageBuilder {
 
   // </editor-fold>
 
+  // <editor-fold desc="Field op messages">
+
+  /**
+   * Builds an {@link ExecMessage} for performing a field operation.
+   *
+   * @param peerUuid the UUID of the peer performing the operation
+   * @param context the execution context containing field signature information
+   * @param messageType the type of field operation message to build
+   * @param sender the object sending the message
+   * @param senderObjRef the reference to the sender object
+   * @param targetObjRef the reference to the target object for instance field operations
+   * @param arg the argument value for the field operation, if applicable
+   * @param argObjRef the object reference for the argument, if applicable
+   * @return an {@code ExecMessage} representing the field operation
+   * @throws IllegalArgumentException if the message type is unexpected
+   */
+  public ExecMessage buildFieldOp(
+      UUID peerUuid,
+      Context context,
+      MessageType messageType,
+      Object sender,
+      ObjectRef senderObjRef,
+      ObjectRef targetObjRef,
+      Object arg,
+      ObjectRef argObjRef) {
+    final FieldSignature fieldSignature = (FieldSignature) context.getSignature();
+    com.quasient.pal.messages.colfer.Class clazz =
+        getWrappedClass(fieldSignature.getDeclaringType());
+    com.quasient.pal.messages.colfer.Field field =
+        getWrappedField(
+            fieldSignature.getFieldType(), fieldSignature.getName(), fieldSignature.getModifiers());
+    com.quasient.pal.messages.colfer.Context ctxt =
+        includeSourceContext ? getWrappedContext(context, sender, senderObjRef) : null;
+    final ExecMessage execMessage = newExecMessage(peerUuid);
+    switch (messageType) {
+      case EXEC_GET_FIELD:
+        execMessage.setInstanceFieldGet(
+            new InstanceFieldGet()
+                .withClazz(clazz)
+                .withObjectRef(String.valueOf(targetObjRef.getRef()))
+                .withField(field)
+                .withContext(ctxt));
+        break;
+      case EXEC_PUT_FIELD:
+        execMessage.setInstanceFieldPut(
+            new InstanceFieldPut()
+                .withClazz(clazz)
+                .withObjectRef(String.valueOf(targetObjRef.getRef()))
+                .withField(field)
+                .withValueObject(
+                    getWrappedObject(arg, null, argObjRef, WrapPolicy.PREFER_REFERENCE))
+                .withContext(ctxt));
+        break;
+      case EXEC_GET_STATIC:
+        execMessage.setStaticFieldGet(
+            new StaticFieldGet().withClazz(clazz).withField(field).withContext(ctxt));
+        break;
+      case EXEC_PUT_STATIC:
+        execMessage.setStaticFieldPut(
+            new StaticFieldPut()
+                .withClazz(clazz)
+                .withValueObject(
+                    getWrappedObject(arg, null, argObjRef, WrapPolicy.PREFER_REFERENCE))
+                .withField(field)
+                .withContext(ctxt));
+        break;
+      default:
+        throw new IllegalArgumentException("Unexpected field op type: " + messageType);
+    }
+    return execMessage;
+  }
+
+  /**
+   * Builds an {@link ExecMessage} indicating the completion of a field operation.
+   *
+   * @param peerUuid the UUID of the peer indicating the operation completion
+   * @param accessibleObject the accessible object involved in the field operation
+   * @param context the execution context containing field signature information
+   * @param type the type of field operation completion message to build
+   * @return an {@code ExecMessage} representing the field operation completion
+   * @throws IllegalArgumentException if the completion type is unexpected
+   */
+  public ExecMessage buildFieldOpDone(
+      UUID peerUuid, AccessibleObject accessibleObject, Context context, MessageType type) {
+    final FieldSignature fieldSignature = (FieldSignature) context.getSignature();
+    final ExecMessage execMessage = newExecMessage(peerUuid);
+    switch (type) {
+      case EXEC_PUT_FIELD_DONE:
+        execMessage.setInstanceFieldPutDone(
+            new InstanceFieldPutDone()
+                .withClazz(getWrappedClass(fieldSignature.getDeclaringType()))
+                .withField(getWrappedField((Field) accessibleObject)));
+        break;
+      case EXEC_PUT_STATIC_DONE:
+        execMessage.setStaticFieldPutDone(
+            new StaticFieldPutDone()
+                .withClazz(getWrappedClass(fieldSignature.getDeclaringType()))
+                .withField(getWrappedField((Field) accessibleObject)));
+        break;
+      default:
+        throw new IllegalArgumentException("Unexpected field op done type: " + type);
+    }
+    return execMessage;
+  }
+
+  /**
+   * Builds an {@link ExecMessage} indicating the completion of an instance field put operation.
+   *
+   * @param peerUuid the UUID of the peer indicating the operation completion
+   * @param accessibleObject the accessible object involved in the field operation
+   * @param instanceFieldPutId the ID of the instance field put operation
+   * @param responseToId the message ID this {@code ExecMessage} is responding to
+   * @return an {@code ExecMessage} representing the completion of the instance field put operation
+   */
+  public ExecMessage buildPutObjectDone(
+      UUID peerUuid,
+      AccessibleObject accessibleObject,
+      String instanceFieldPutId,
+      String responseToId) {
+    return newExecMessage(peerUuid, responseToId)
+        .withInstanceFieldPutDone(
+            new InstanceFieldPutDone()
+                .withClazz(getWrappedClass(((Field) accessibleObject).getDeclaringClass()))
+                .withField(getWrappedField((Field) accessibleObject))
+                .withInstanceFieldPutId(instanceFieldPutId));
+  }
+
+  /**
+   * Builds an {@link ExecMessage} indicating the completion of a static field put operation.
+   *
+   * @param peerUuid the UUID of the peer indicating the operation completion
+   * @param accessibleObject the accessible object involved in the field operation
+   * @param staticFieldPutId the ID of the static field put operation
+   * @param responseToId the message ID this {@code ExecMessage} is responding to
+   * @return an {@code ExecMessage} representing the completion of the static field put operation
+   */
+  public ExecMessage buildPutStaticDone(
+      UUID peerUuid,
+      AccessibleObject accessibleObject,
+      String staticFieldPutId,
+      String responseToId) {
+    return newExecMessage(peerUuid, responseToId)
+        .withStaticFieldPutDone(
+            new StaticFieldPutDone()
+                .withClazz(getWrappedClass(((Field) accessibleObject).getDeclaringClass()))
+                .withField(getWrappedField((Field) accessibleObject))
+                .withStaticFieldPutId(staticFieldPutId));
+  }
+
+  // </editor-fold>
+
   // <editor-fold desc="Static field get messages">
 
   /**
@@ -1201,28 +1823,6 @@ public final class MessageBuilder {
                 .withValueObjectRef(String.valueOf(valueObjectRef.getRef())));
   }
 
-  /**
-   * Builds an {@link ExecMessage} indicating the completion of a static field put operation.
-   *
-   * @param peerUuid the UUID of the peer indicating the operation completion
-   * @param accessibleObject the accessible object involved in the field operation
-   * @param staticFieldPutId the ID of the static field put operation
-   * @param responseToId the message ID this {@code ExecMessage} is responding to
-   * @return an {@code ExecMessage} representing the completion of the static field put operation
-   */
-  public ExecMessage buildPutStaticDone(
-      UUID peerUuid,
-      AccessibleObject accessibleObject,
-      String staticFieldPutId,
-      String responseToId) {
-    return newExecMessage(peerUuid, responseToId)
-        .withStaticFieldPutDone(
-            new StaticFieldPutDone()
-                .withClazz(getWrappedClass(((Field) accessibleObject).getDeclaringClass()))
-                .withField(getWrappedField((Field) accessibleObject))
-                .withStaticFieldPutId(staticFieldPutId));
-  }
-
   // </editor-fold>
 
   // <editor-fold desc="Instance field put messages">
@@ -1281,56 +1881,6 @@ public final class MessageBuilder {
                 .withObjectRef(String.valueOf(targetObjRef.getRef()))
                 .withField(getWrappedField((String) null, fieldName, unknownModifiers))
                 .withValueObjectRef(String.valueOf(valueObjectRef.getRef())));
-  }
-
-  /**
-   * Builds an {@link ExecMessage} indicating the completion of an instance field put operation.
-   *
-   * @param peerUuid the UUID of the peer indicating the operation completion
-   * @param accessibleObject the accessible object involved in the field operation
-   * @param instanceFieldPutId the ID of the instance field put operation
-   * @param responseToId the message ID this {@code ExecMessage} is responding to
-   * @return an {@code ExecMessage} representing the completion of the instance field put operation
-   */
-  public ExecMessage buildPutObjectDone(
-      UUID peerUuid,
-      AccessibleObject accessibleObject,
-      String instanceFieldPutId,
-      String responseToId) {
-    return newExecMessage(peerUuid, responseToId)
-        .withInstanceFieldPutDone(
-            new InstanceFieldPutDone()
-                .withClazz(getWrappedClass(((Field) accessibleObject).getDeclaringClass()))
-                .withField(getWrappedField((Field) accessibleObject))
-                .withInstanceFieldPutId(instanceFieldPutId));
-  }
-
-  // </editor-fold>
-
-  // <editor-fold desc="Return value messages">
-
-  /**
-   * Determines the class of the object associated with an accessible object.
-   *
-   * @param accessibleObject the accessible object involved in the operation
-   * @param declaringClass the declaring class of the accessible object
-   * @return the {@link Class} of the object associated with the accessible object
-   * @throws RuntimeException if the accessible object type is unsupported
-   */
-  private static Class<?> getClassOfAccessible(
-      AccessibleObject accessibleObject, Class<?> declaringClass) {
-    Class<?> objectClass;
-    if (accessibleObject instanceof Constructor) {
-      objectClass = declaringClass;
-    } else if (accessibleObject instanceof Method) {
-      objectClass = ((Method) accessibleObject).getReturnType();
-    } else if (accessibleObject instanceof Field) {
-      objectClass = ((Field) accessibleObject).getType();
-    } else {
-      throw new RuntimeException(
-          String.format("Unable to handle accessible object of type: %s", accessibleObject));
-    }
-    return objectClass;
   }
 
   // </editor-fold>

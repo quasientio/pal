@@ -89,8 +89,7 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
   protected final ExecMessage createBeforeExecMessage(
       Context ctxt, Object sender, Object target, Object[] args) {
 
-    return messageBuilder.buildConstructor(
-        peerUuid,
+    return messageBuilder.buildConstructorMessageEphemeral(
         ctxt,
         sender,
         generateObjectRef(sender),
@@ -122,10 +121,10 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
 
     if (value instanceof InvocationThrowableWrapper) {
       Throwable invocationThr = ((InvocationThrowableWrapper) value).throwable();
-      return messageBuilder.buildAccessibleObjectThrowable(
-          peerUuid, constructor, invocationThr, null);
+      return messageBuilder.buildAccessibleObjectThrowableEphemeral(
+          constructor, invocationThr, null);
     } else {
-      return messageBuilder.buildReturnValue(peerUuid, value, constructor, objectRef, false, null);
+      return messageBuilder.buildReturnValueEphemeral(value, constructor, objectRef, false, null);
     }
   }
 
@@ -162,7 +161,7 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
     }
 
     return messageBuilder.buildReturnValue(
-        peerUuid, valueObject, accessibleObject, valueObjRef, false, messageId);
+        valueObject, accessibleObject, valueObjRef, false, messageId);
   }
 
   /**

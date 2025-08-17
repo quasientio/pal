@@ -40,8 +40,8 @@ import org.zeromq.ZMQ;
 public class MessageOffsetInformerTest extends ZmqEnabledTest {
 
   protected static final Logger logger = LoggerFactory.getLogger("tests");
-  private final MessageBuilder messageBuilder = new MessageBuilder();
   private static final UUID peerUuid = UUID.randomUUID();
+  private final MessageBuilder messageBuilder = new MessageBuilder(peerUuid);
   private MockProducer<String, byte[]> producer;
   private ZMQ.Socket offsetPublisher;
   private ZContext zmqContext;
@@ -81,8 +81,7 @@ public class MessageOffsetInformerTest extends ZmqEnabledTest {
 
     AccessibleObject from = this.getClass().getDeclaredMethod("publishOffsets", (Class<?>[]) null);
     ExecMessage responseMessage =
-        messageBuilder.buildReturnValue(
-            peerUuid, null, from, null, false, UUID.randomUUID().toString());
+        messageBuilder.buildReturnValue(null, from, null, false, UUID.randomUUID().toString());
 
     // create and send ProducerRecord w/ MessageOffsetInformer callback
     ProducerRecord<String, byte[]> newRecord =

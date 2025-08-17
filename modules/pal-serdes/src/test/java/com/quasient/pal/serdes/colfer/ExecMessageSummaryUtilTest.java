@@ -20,7 +20,8 @@ import org.junit.Test;
 
 public class ExecMessageSummaryUtilTest {
 
-  private final MessageBuilder messageBuilder = new MessageBuilder();
+  private final UUID peerId = UUID.randomUUID();
+  private final MessageBuilder messageBuilder = new MessageBuilder(peerId);
 
   private static String getClassnameWithoutPackage(String className) {
     if (className.contains(".")) {
@@ -32,21 +33,19 @@ public class ExecMessageSummaryUtilTest {
 
   @Test
   public void getOneLinerSummary_constructor() {
-    UUID peerUuid = UUID.randomUUID();
     String className = "org.cometera.example.ExampleClass";
-    ExecMessage execMessage = messageBuilder.buildEmptyConstructor(peerUuid, className);
+    ExecMessage execMessage = messageBuilder.buildEmptyConstructor(peerId, className);
     assertEquals("new ExampleClass", ExecMessageSummaryUtil.getOneLinerSummary(execMessage));
   }
 
   @Test
   public void getOneLinerSummary_instanceMethod() {
-    UUID peerUuid = UUID.randomUUID();
     String className = "org.cometera.example.ExampleClass";
     String methodName = "testMethod";
     String ref = "9237239";
     ExecMessage execMessage =
         messageBuilder.buildInstanceMethod(
-            peerUuid,
+            peerId,
             className,
             methodName,
             ObjectRef.from(ref),
@@ -60,14 +59,13 @@ public class ExecMessageSummaryUtilTest {
 
   @Test
   public void getOneLinerSummary_staticMethod() {
-    UUID peerUuid = UUID.randomUUID();
     Object sender = this;
     ObjectRef senderObjRef = ObjectRef.randomRef();
     String className = "org.cometera.example.ExampleClass";
     String methodName = "testMethod";
     ExecMessage execMessage =
         messageBuilder.buildClassMethod(
-            peerUuid,
+            peerId,
             className,
             methodName,
             new String[] {"String"},
@@ -80,23 +78,21 @@ public class ExecMessageSummaryUtilTest {
 
   @Test
   public void getOneLinerSummary_getStatic() {
-    UUID peerUuid = UUID.randomUUID();
     String className = "org.cometera.example.ExampleClass";
     String fieldName = "aStaticField";
-    ExecMessage execMessage = messageBuilder.buildGetStatic(peerUuid, className, fieldName);
+    ExecMessage execMessage = messageBuilder.buildGetStatic(peerId, className, fieldName);
     assertEquals(
         "get ExampleClass." + fieldName, ExecMessageSummaryUtil.getOneLinerSummary(execMessage));
   }
 
   @Test
   public void getOneLinerSummary_putStatic() {
-    UUID peerUuid = UUID.randomUUID();
     String className = "org.cometera.example.ExampleClass";
     String fieldName = "aStaticField";
     ObjectRef valueObjectRef = ObjectRef.randomRef();
 
     ExecMessage execMessage =
-        messageBuilder.buildPutStatic(peerUuid, className, fieldName, valueObjectRef);
+        messageBuilder.buildPutStatic(peerId, className, fieldName, valueObjectRef);
     assertEquals(
         "put ExampleClass." + fieldName + " ⇦ " + "@" + valueObjectRef.getRef(),
         ExecMessageSummaryUtil.getOneLinerSummary(execMessage));
@@ -104,13 +100,12 @@ public class ExecMessageSummaryUtilTest {
 
   @Test
   public void getOneLinerSummary_getField() {
-    UUID peerUuid = UUID.randomUUID();
     String className = "org.cometera.example.ExampleClass";
     String fieldName = "aField";
     ObjectRef targetObjRef = ObjectRef.randomRef();
 
     ExecMessage execMessage =
-        messageBuilder.buildGetObject(peerUuid, className, fieldName, targetObjRef);
+        messageBuilder.buildGetObject(peerId, className, fieldName, targetObjRef);
     assertEquals(
         "get ExampleClass." + fieldName + "@" + targetObjRef.getRef(),
         ExecMessageSummaryUtil.getOneLinerSummary(execMessage));
@@ -118,14 +113,13 @@ public class ExecMessageSummaryUtilTest {
 
   @Test
   public void getOneLinerSummary_putField() {
-    UUID peerUuid = UUID.randomUUID();
     String className = "org.cometera.example.ExampleClass";
     String fieldName = "aField";
     ObjectRef targetObjRef = ObjectRef.randomRef();
     ObjectRef valueObjectRef = ObjectRef.randomRef();
 
     ExecMessage execMessage =
-        messageBuilder.buildPutObject(peerUuid, className, fieldName, targetObjRef, valueObjectRef);
+        messageBuilder.buildPutObject(peerId, className, fieldName, targetObjRef, valueObjectRef);
     assertEquals(
         "put ExampleClass."
             + fieldName
@@ -145,7 +139,6 @@ public class ExecMessageSummaryUtilTest {
     }
 
     var targetClass = DummyClass.class;
-    UUID peerUuid = UUID.randomUUID();
     String fieldName = "myField";
     String instanceFieldPutUuid = UUID.randomUUID().toString();
     AccessibleObject accessibleObject = targetClass.getDeclaredField(fieldName);
@@ -153,7 +146,7 @@ public class ExecMessageSummaryUtilTest {
 
     ExecMessage execMessage =
         messageBuilder.buildPutObjectDone(
-            peerUuid, accessibleObject, instanceFieldPutUuid, responseToId);
+            peerId, accessibleObject, instanceFieldPutUuid, responseToId);
     assertEquals(
         "put_done " + getClassnameWithoutPackage(targetClass.getName()) + "." + fieldName,
         ExecMessageSummaryUtil.getOneLinerSummary(execMessage));
@@ -167,7 +160,6 @@ public class ExecMessageSummaryUtilTest {
     }
 
     var targetClass = DummyClass.class;
-    UUID peerUuid = UUID.randomUUID();
     String fieldName = "aStaticField";
     String staticFieldPutUuid = UUID.randomUUID().toString();
     AccessibleObject accessibleObject = targetClass.getDeclaredField(fieldName);
@@ -175,7 +167,7 @@ public class ExecMessageSummaryUtilTest {
 
     ExecMessage execMessage =
         messageBuilder.buildPutStaticDone(
-            peerUuid, accessibleObject, staticFieldPutUuid, responseToId);
+            peerId, accessibleObject, staticFieldPutUuid, responseToId);
     assertEquals(
         "put_done " + getClassnameWithoutPackage(targetClass.getName()) + "." + fieldName,
         ExecMessageSummaryUtil.getOneLinerSummary(execMessage));
@@ -211,19 +203,13 @@ public class ExecMessageSummaryUtilTest {
       public void addInts(int a, int b) {}
     }
 
-    UUID peerUuid = UUID.randomUUID();
     Method method = DummyClass.class.getMethod("addInts", int.class, int.class);
     ObjectRef returnValueObjRef = ObjectRef.randomRef();
     String responseToId = UUID.randomUUID().toString();
 
     ExecMessage execMessage =
         messageBuilder.buildReturnValue(
-            peerUuid,
-            null,
-            method,
-            returnValueObjRef,
-            method.getReturnType() == void.class,
-            responseToId);
+            null, method, returnValueObjRef, method.getReturnType() == void.class, responseToId);
 
     assertEquals("return void", ExecMessageSummaryUtil.getOneLinerSummary(execMessage));
   }
@@ -237,7 +223,6 @@ public class ExecMessageSummaryUtilTest {
       }
     }
 
-    UUID peerUuid = UUID.randomUUID();
     Class<?> targetClass = DummyClass.class;
     Method method = targetClass.getMethod("addInts", int.class, int.class);
     ObjectRef returnValueObjRef = ObjectRef.randomRef();
@@ -246,7 +231,6 @@ public class ExecMessageSummaryUtilTest {
 
     ExecMessage execMessage =
         messageBuilder.buildReturnValue(
-            peerUuid,
             returnValue,
             method,
             returnValueObjRef,

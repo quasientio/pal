@@ -24,7 +24,7 @@ public class UnwovenCalls implements Calls {
    */
   @Override
   public String toUpperCase(String str) {
-    return str.toUpperCase(Locale.ENGLISH);
+    return str.toUpperCase();
   }
 
   /**

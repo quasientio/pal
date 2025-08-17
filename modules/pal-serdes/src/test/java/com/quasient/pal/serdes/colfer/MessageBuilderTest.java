@@ -116,14 +116,6 @@ public class MessageBuilderTest {
     return new Context(sourceFile, lineNumber, clazz, methodSignature);
   }
 
-  private Context createContextForClassMethod(MethodSignature methodSignature) {
-
-    String sourceFile = "Arrays.java";
-    int lineNumber = 2000;
-    Class<?> withinType = Arrays.class;
-    return new Context(sourceFile, lineNumber, withinType, methodSignature);
-  }
-
   private Context createContextForFieldOp(Class<?> clazz, String fieldName) throws Exception {
     FieldSignature fieldSignature = new FieldSignature(clazz.getDeclaredField(fieldName));
     String sourceFile = "MessageBuilderTest.java";
@@ -194,13 +186,14 @@ public class MessageBuilderTest {
 
   // </editor-fold>
 
+  private final UUID peerId = UUID.randomUUID();
   private MessageBuilder messageBuilder;
   private MessageBuilder messageBuilderWithContext;
 
   @Before
   public void setUp() throws Exception {
-    messageBuilder = new MessageBuilder();
-    messageBuilderWithContext = new MessageBuilder(Boolean.toString(true));
+    messageBuilder = new MessageBuilder(peerId);
+    messageBuilderWithContext = new MessageBuilder(peerId, Boolean.toString(true));
   }
 
   @Test
@@ -211,24 +204,23 @@ public class MessageBuilderTest {
 
   @Test
   public void messageBuilder_withIncludeSourceContextStr_newMessageBuilder() {
-    MessageBuilder messageBuilder = new MessageBuilder(Boolean.toString(false));
+    MessageBuilder messageBuilder = new MessageBuilder(peerId, Boolean.toString(false));
     assertNotNull(messageBuilder);
   }
 
   // <editor-fold desc="Thread-local sequence stamping methods">
   @Test
   public void resetThreadLocalSequence() {
-    UUID peerUuid = UUID.randomUUID();
     String className = this.getClass().getName();
     int expectedDispatchSeq = 1;
     int expectedBuilderSeq = 1;
 
     // create 2 messages, and assert that only builder sequence is incremented
-    ExecMessage execMessage = messageBuilder.buildEmptyConstructor(peerUuid, className);
+    ExecMessage execMessage = messageBuilder.buildEmptyConstructor(peerId, className);
     assertEquals(expectedBuilderSeq++, execMessage.getBuilderSeq());
     assertEquals(expectedDispatchSeq, execMessage.getDispatchSeq());
 
-    execMessage = messageBuilder.buildEmptyConstructor(peerUuid, className);
+    execMessage = messageBuilder.buildEmptyConstructor(peerId, className);
     assertEquals(expectedBuilderSeq, execMessage.getBuilderSeq());
     assertEquals(expectedDispatchSeq, execMessage.getDispatchSeq());
 
@@ -236,7 +228,7 @@ public class MessageBuilderTest {
     expectedDispatchSeq += 1;
     expectedBuilderSeq = 1;
 
-    execMessage = messageBuilder.buildEmptyConstructor(peerUuid, className);
+    execMessage = messageBuilder.buildEmptyConstructor(peerId, className);
     assertEquals(expectedBuilderSeq, execMessage.getBuilderSeq());
     assertEquals(expectedDispatchSeq, execMessage.getDispatchSeq());
   }
@@ -246,10 +238,9 @@ public class MessageBuilderTest {
   // <editor-fold desc="Header messages">
   @Test
   public void buildWriteAheadHeader_validUuid_writeAheadHeader() {
-    UUID peerUuid = UUID.randomUUID();
-    InternalHeader header = messageBuilder.buildWriteAheadHeader(peerUuid);
+    InternalHeader header = messageBuilder.buildWriteAheadHeader(peerId);
     assertNotNull(header);
-    assertEquals(peerUuid.toString(), header.getValue());
+    assertEquals(peerId.toString(), header.getValue());
     assertEquals(InternalHeaderType.WRITE_AHEAD.toByte(), header.getHeaderType());
   }
 
@@ -258,39 +249,36 @@ public class MessageBuilderTest {
   // <editor-fold desc="Constructor messages">
   @Test
   public void buildEmptyConstructor_noArguments_constructorMessage() {
-    UUID peerUuid = UUID.randomUUID();
     String className = this.getClass().getName();
-    ExecMessage execMessage = messageBuilder.buildEmptyConstructor(peerUuid, className);
+    ExecMessage execMessage = messageBuilder.buildEmptyConstructor(peerId, className);
     assertNotNull(execMessage);
     assertEquals(MessageType.EXEC_CONSTRUCTOR, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getConstructorCall());
-    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals(peerId.toString(), execMessage.getPeerUuid());
     assertEquals(className, execMessage.constructorCall.getClazz().getName());
     assertNull(execMessage.getConstructorCall().getContext());
   }
 
   @Test
   public void buildNonEmptyConstructor_primitiveArguments_constructorMessage() {
-    UUID peerUuid = UUID.randomUUID();
     String className = this.getClass().getName();
     String[] parameterTypes = {"String", "int"};
     Object[] args = {"test", 123};
     ObjectRef[] argObjRefs = {null, null};
     ExecMessage execMessage =
         messageBuilder.buildNonEmptyConstructor(
-            peerUuid, className, parameterTypes, args, argObjRefs);
+            peerId, className, parameterTypes, args, argObjRefs);
     assertNotNull(execMessage);
     assertEquals(MessageType.EXEC_CONSTRUCTOR, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getConstructorCall());
-    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals(peerId.toString(), execMessage.getPeerUuid());
     assertEquals(className, execMessage.constructorCall.getClazz().getName());
     assertNull(execMessage.getConstructorCall().getContext());
     assertEquals(parameterTypes.length, execMessage.getConstructorCall().getParameters().length);
   }
 
   @Test
-  public void buildConstructor_withContext_constructorMessage() throws Exception {
-    UUID peerUuid = UUID.randomUUID();
+  public void buildConstructorEphemeral_withArgs_constructorMessage() throws Exception {
     var clazz = DummyClassForTest.class;
     Object sender = this;
     ObjectRef senderObjRef = ObjectRef.randomRef();
@@ -298,12 +286,12 @@ public class MessageBuilderTest {
     ObjectRef[] argObjRefs = {null, null};
     Context constructorContext = createContextForConstructor(clazz, String.class, int.class);
     ExecMessage execMessage =
-        messageBuilderWithContext.buildConstructor(
-            peerUuid, constructorContext, sender, senderObjRef, args, argObjRefs);
+        messageBuilderWithContext.buildConstructorMessageEphemeral(
+            constructorContext, sender, senderObjRef, args, argObjRefs);
     assertNotNull(execMessage);
     assertEquals(MessageType.EXEC_CONSTRUCTOR, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getConstructorCall());
-    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals(peerId.toString(), execMessage.getPeerUuid());
     assertEquals(clazz.getName(), execMessage.getConstructorCall().getClazz().getName());
     assertNotNull(execMessage.getConstructorCall().getContext());
 
@@ -323,7 +311,6 @@ public class MessageBuilderTest {
 
   @Test
   public void buildConstructor_withMixedArgs_constructorMessage() throws ClassNotFoundException {
-    UUID peerUuid = UUID.randomUUID();
     Object sender = this;
     ObjectRef senderObjRef = ObjectRef.randomRef();
     var clazz = ArrayList.class;
@@ -332,12 +319,12 @@ public class MessageBuilderTest {
     Object[] args = {arrayListInitialCapacity};
     ExecMessage execMessage =
         messageBuilder.buildConstructor(
-            peerUuid, clazz.getName(), parameterTypes, args, sender, senderObjRef);
+            peerId, clazz.getName(), parameterTypes, args, sender, senderObjRef);
 
     assertNotNull(execMessage);
     assertEquals(MessageType.EXEC_CONSTRUCTOR, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getConstructorCall());
-    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals(peerId.toString(), execMessage.getPeerUuid());
     assertEquals(clazz.getName(), execMessage.getConstructorCall().getClazz().getName());
     assertNull(execMessage.getConstructorCall().getContext());
     assertEquals(args.length, execMessage.getConstructorCall().getParameters().length);
@@ -355,7 +342,6 @@ public class MessageBuilderTest {
 
   @Test
   public void buildInstanceMethod_classNameMethodName_instanceMethodCallMessage() {
-    UUID peerUuid = UUID.randomUUID();
     String className = "TestClassName";
     String methodName = "testMethod";
     ObjectRef targetObjRef = ObjectRef.randomRef();
@@ -364,11 +350,11 @@ public class MessageBuilderTest {
     ObjectRef[] argObjRefs = {null, null};
     ExecMessage execMessage =
         messageBuilder.buildInstanceMethod(
-            peerUuid, className, methodName, targetObjRef, parameterTypes, args, argObjRefs);
+            peerId, className, methodName, targetObjRef, parameterTypes, args, argObjRefs);
     assertNotNull(execMessage);
     assertEquals(MessageType.EXEC_INSTANCE_METHOD, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getInstanceMethodCall());
-    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals(peerId.toString(), execMessage.getPeerUuid());
     assertEquals(className, execMessage.getInstanceMethodCall().getClazz().getName());
     assertEquals(methodName, execMessage.getInstanceMethodCall().getName());
     assertNull(execMessage.getInstanceMethodCall().getContext());
@@ -376,8 +362,7 @@ public class MessageBuilderTest {
   }
 
   @Test
-  public void buildInstanceMethod_withContext_instanceMethodCallMessage() throws Exception {
-    UUID peerUuid = UUID.randomUUID();
+  public void buildInstanceMethodEphemeral_withArgs_instanceMethodCallMessage() throws Exception {
     Object sender = this;
     ObjectRef senderObjRef = ObjectRef.randomRef();
     var clazz = DummyClassForTest.class;
@@ -388,12 +373,12 @@ public class MessageBuilderTest {
     Context instanceMethodContext =
         createContextForInstanceMethod(clazz, methodName, String.class, int.class, List.class);
     ExecMessage execMessage =
-        messageBuilderWithContext.buildInstanceMethod(
-            peerUuid, instanceMethodContext, sender, senderObjRef, targetObjRef, args, argObjRefs);
+        messageBuilderWithContext.buildInstanceMethodMessageEphemeral(
+            instanceMethodContext, sender, senderObjRef, targetObjRef, args, argObjRefs);
     assertNotNull(execMessage);
     assertEquals(MessageType.EXEC_INSTANCE_METHOD, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getInstanceMethodCall());
-    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals(peerId.toString(), execMessage.getPeerUuid());
     assertEquals(
         DummyClassForTest.class.getName(),
         execMessage.getInstanceMethodCall().getClazz().getName());
@@ -411,13 +396,12 @@ public class MessageBuilderTest {
   @Test
   public void buildInstanceMethod_mixedArgs_instanceMethodCallMessage()
       throws ClassNotFoundException {
-    UUID peerUuid = UUID.randomUUID();
     final String methodToCall = "dummyMethodJustPrimitiveArgs";
     String[] parameterTypes = new String[] {"java.lang.String", "int", "java.lang.Boolean"};
     Object[] args = new Object[] {"test", 123, Boolean.FALSE};
     ExecMessage execMessage =
         messageBuilder.buildInstanceMethod(
-            peerUuid,
+            peerId,
             DummyClassForTest.class.getName(),
             methodToCall,
             ObjectRef.randomRef(),
@@ -427,7 +411,7 @@ public class MessageBuilderTest {
     assertNotNull(execMessage);
     assertEquals(MessageType.EXEC_INSTANCE_METHOD, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getInstanceMethodCall());
-    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals(peerId.toString(), execMessage.getPeerUuid());
     assertEquals(
         DummyClassForTest.class.getName(),
         execMessage.getInstanceMethodCall().getClazz().getName());
@@ -448,7 +432,6 @@ public class MessageBuilderTest {
   @Test
   public void buildClassMethod_withArgsAndNullObjectRefs_classMethodMessage()
       throws ClassNotFoundException {
-    UUID peerUuid = UUID.randomUUID();
     String className = "java.util.Arrays";
     String methodName = "binarySearch"; // binarySearch(float[] a, float key)
     String[] parameterTypes = new String[] {"[F", "float"};
@@ -459,19 +442,12 @@ public class MessageBuilderTest {
 
     ExecMessage execMessage =
         messageBuilder.buildClassMethod(
-            peerUuid,
-            className,
-            methodName,
-            parameterTypes,
-            sender,
-            senderObjRef,
-            args,
-            argObjRefs);
+            peerId, className, methodName, parameterTypes, sender, senderObjRef, args, argObjRefs);
 
     assertNotNull(execMessage);
     assertEquals(EXEC_CLASS_METHOD, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getClassMethodCall());
-    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals(peerId.toString(), execMessage.getPeerUuid());
     assertEquals(className, execMessage.getClassMethodCall().getClazz().getName());
     assertEquals(methodName, execMessage.getClassMethodCall().getName());
     assertNull(execMessage.getClassMethodCall().getContext());
@@ -496,20 +472,26 @@ public class MessageBuilderTest {
   }
 
   @Test
-  public void buildClassMethod_withContextAndPrimitiveArgs_classMethodMessage() throws Exception {
+  public void buildClassMethod_withPrimitiveArgs_classMethodMessage() {
     UUID peerUuid = UUID.randomUUID();
-    Context context =
-        createContextForClassMethod(
-            new MethodSignature(
-                DummyClassForTest.class.getDeclaredMethod(
-                    "dummyStaticMethod", String.class, String.class, boolean.class)));
+    Class<?> clazz = DummyClassForTest.class;
+    String methodName = "dummyStaticMethod";
     Object sender = this;
     ObjectRef senderObjRef = ObjectRef.randomRef();
+    String[] paramTypeNames =
+        new String[] {String.class.getName(), String.class.getName(), boolean.class.getName()};
     Object[] args = new Object[] {"arg1", "arg2", true};
     ObjectRef[] argObjRefs = new ObjectRef[] {null, null, null};
     ExecMessage execMessage =
         messageBuilderWithContext.buildClassMethod(
-            peerUuid, context, sender, senderObjRef, args, argObjRefs);
+            peerUuid,
+            clazz.getName(),
+            methodName,
+            paramTypeNames,
+            sender,
+            senderObjRef,
+            args,
+            argObjRefs);
 
     // assert expected values of ExecMessage
     assertNotNull(execMessage);
@@ -524,7 +506,6 @@ public class MessageBuilderTest {
 
   @Test
   public void buildClassMethod_staticMethodCall_classMethodMessage() throws ClassNotFoundException {
-    UUID peerUuid = UUID.randomUUID();
     Object sender = this;
     ObjectRef senderObjRef = ObjectRef.randomRef();
     // Arrays.fill(boolean[] a, boolean val)
@@ -535,13 +516,13 @@ public class MessageBuilderTest {
 
     ExecMessage execMessage =
         messageBuilder.buildClassMethod(
-            peerUuid, clazz.getName(), method, parameterTypes, sender, senderObjRef, args);
+            peerId, clazz.getName(), method, parameterTypes, sender, senderObjRef, args);
 
     // assert expected values of ExecMessage
     assertNotNull(execMessage);
     assertEquals(EXEC_CLASS_METHOD, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getClassMethodCall());
-    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals(peerId.toString(), execMessage.getPeerUuid());
     assertEquals(clazz.getName(), execMessage.getClassMethodCall().getClazz().getName());
     assertEquals(method, execMessage.getClassMethodCall().getName());
     assertNull(execMessage.getClassMethodCall().getContext());
@@ -691,15 +672,14 @@ public class MessageBuilderTest {
   // <editor-fold desc="Static field get messages">
   @Test
   public void buildGetStatic_withClassNameAndFieldName_staticFieldGetMessage() {
-    UUID peerUuid = UUID.randomUUID();
     String className = DummyClassForTest.class.getName();
     String fieldName = "aStaticField";
 
-    ExecMessage execMessage = messageBuilder.buildGetStatic(peerUuid, className, fieldName);
+    ExecMessage execMessage = messageBuilder.buildGetStatic(peerId, className, fieldName);
 
     // assert expected values of ExecMessage
     assertNotNull(execMessage);
-    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals(peerId.toString(), execMessage.getPeerUuid());
     assertEquals(EXEC_GET_STATIC, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getStaticFieldGet());
     assertEquals(className, execMessage.getStaticFieldGet().getClazz().getName());
@@ -712,17 +692,16 @@ public class MessageBuilderTest {
   // <editor-fold desc="Instance field get messages">
   @Test
   public void buildGetObject_withInstanceObjRef_instanceFieldGetMessage() {
-    UUID peerUuid = UUID.randomUUID();
     String className = DummyClassForTest.class.getName();
     String fieldName = "anInt";
     ObjectRef targetObjRef = ObjectRef.randomRef();
 
     ExecMessage execMessage =
-        messageBuilder.buildGetObject(peerUuid, className, fieldName, targetObjRef);
+        messageBuilder.buildGetObject(peerId, className, fieldName, targetObjRef);
 
     // assert expected values of ExecMessage
     assertNotNull(execMessage);
-    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals(peerId.toString(), execMessage.getPeerUuid());
     assertEquals(EXEC_GET_FIELD, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getInstanceFieldGet());
     assertEquals(className, execMessage.getInstanceFieldGet().getClazz().getName());
@@ -736,18 +715,17 @@ public class MessageBuilderTest {
   // <editor-fold desc="Static field put messages">
   @Test
   public void buildPutStatic_withClassAndValue_staticFieldPutMessage() {
-    UUID peerUuid = UUID.randomUUID();
     String className = DummyClassForTest.class.getName();
     String fieldName = "aStaticField";
     String valueClassName = String.class.getName();
     Object value = "a str value";
 
     ExecMessage execMessage =
-        messageBuilder.buildPutStatic(peerUuid, className, fieldName, valueClassName, value);
+        messageBuilder.buildPutStatic(peerId, className, fieldName, valueClassName, value);
 
     // assert expected values of ExecMessage
     assertNotNull(execMessage);
-    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals(peerId.toString(), execMessage.getPeerUuid());
     assertEquals(EXEC_PUT_STATIC, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getStaticFieldPut());
     assertEquals(className, execMessage.getStaticFieldPut().getClazz().getName());
@@ -760,17 +738,16 @@ public class MessageBuilderTest {
 
   @Test
   public void buildPutStatic_withObjectRefValue_staticFieldPutMessage() {
-    UUID peerUuid = UUID.randomUUID();
     String className = DummyClassForTest.class.getName();
     String fieldName = "aStaticField";
     ObjectRef valueObjectRef = ObjectRef.randomRef();
 
     ExecMessage execMessage =
-        messageBuilder.buildPutStatic(peerUuid, className, fieldName, valueObjectRef);
+        messageBuilder.buildPutStatic(peerId, className, fieldName, valueObjectRef);
 
     // assert expected values of ExecMessage
     assertNotNull(execMessage);
-    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals(peerId.toString(), execMessage.getPeerUuid());
     assertEquals(EXEC_PUT_STATIC, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getStaticFieldPut());
     assertEquals(className, execMessage.getStaticFieldPut().getClazz().getName());
@@ -784,7 +761,6 @@ public class MessageBuilderTest {
   @Test
   public void buildPutStaticDone_withAccessibleObject_staticFieldPutDoneMessage()
       throws NoSuchFieldException {
-    UUID peerUuid = UUID.randomUUID();
     var targetClass = DummyClassForTest.class;
     String fieldName = "aStaticField";
     AccessibleObject accessibleObject = targetClass.getDeclaredField(fieldName);
@@ -792,12 +768,11 @@ public class MessageBuilderTest {
     String responseToId = UUID.randomUUID().toString();
 
     ExecMessage execMessage =
-        messageBuilder.buildPutStaticDone(
-            peerUuid, accessibleObject, staticFieldPutId, responseToId);
+        messageBuilder.buildPutStaticDone(peerId, accessibleObject, staticFieldPutId, responseToId);
 
     // assert expected values of ExecMessage
     assertNotNull(execMessage);
-    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals(peerId.toString(), execMessage.getPeerUuid());
     assertEquals(EXEC_PUT_STATIC_DONE, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getStaticFieldPutDone());
     assertEquals(targetClass.getName(), execMessage.getStaticFieldPutDone().getClazz().getName());
@@ -812,7 +787,6 @@ public class MessageBuilderTest {
   @Test
   public void buildPutObject_withObjectValue_instanceFieldPutMessage()
       throws ClassNotFoundException {
-    UUID peerUuid = UUID.randomUUID();
     String className = DummyClassForTest.class.getName();
     String fieldName = "anInt";
     ObjectRef targetObjRef = ObjectRef.randomRef();
@@ -821,11 +795,11 @@ public class MessageBuilderTest {
 
     ExecMessage execMessage =
         messageBuilder.buildPutObject(
-            peerUuid, className, fieldName, targetObjRef, valueClassName, value);
+            peerId, className, fieldName, targetObjRef, valueClassName, value);
 
     // assert expected values of ExecMessage
     assertNotNull(execMessage);
-    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals(peerId.toString(), execMessage.getPeerUuid());
     assertEquals(EXEC_PUT_FIELD, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getInstanceFieldPut());
     assertEquals(className, execMessage.getInstanceFieldPut().getClazz().getName());
@@ -839,18 +813,17 @@ public class MessageBuilderTest {
 
   @Test
   public void buildPutObject_withObjectRefValue_instanceFieldPutMessage() {
-    UUID peerUuid = UUID.randomUUID();
     String className = DummyClassForTest.class.getName();
     String fieldName = "anObject";
     ObjectRef targetObjRef = ObjectRef.randomRef();
     ObjectRef valueObjectRef = ObjectRef.randomRef();
 
     ExecMessage execMessage =
-        messageBuilder.buildPutObject(peerUuid, className, fieldName, targetObjRef, valueObjectRef);
+        messageBuilder.buildPutObject(peerId, className, fieldName, targetObjRef, valueObjectRef);
 
     // assert expected values of ExecMessage
     assertNotNull(execMessage);
-    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals(peerId.toString(), execMessage.getPeerUuid());
     assertEquals(EXEC_PUT_FIELD, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getInstanceFieldPut());
     assertEquals(className, execMessage.getInstanceFieldPut().getClazz().getName());
@@ -865,8 +838,7 @@ public class MessageBuilderTest {
   @Test
   public void buildPutObjectDone_withAccessibleAndInstanceFieldPutId_instanceFieldPutDoneMessage()
       throws NoSuchFieldException {
-    MessageBuilder builder = new MessageBuilder(Boolean.toString(false));
-    UUID peerUuid = UUID.randomUUID();
+    MessageBuilder builder = new MessageBuilder(peerId, Boolean.toString(false));
     var targetClass = DummyClassForTest.class;
     String fieldName = "anObject";
     AccessibleObject accessibleObject = targetClass.getDeclaredField(fieldName);
@@ -874,11 +846,11 @@ public class MessageBuilderTest {
     String responseToId = UUID.randomUUID().toString();
 
     ExecMessage execMessage =
-        builder.buildPutObjectDone(peerUuid, accessibleObject, instanceFieldPutId, responseToId);
+        builder.buildPutObjectDone(peerId, accessibleObject, instanceFieldPutId, responseToId);
 
     // assert expected values of ExecMessage
     assertNotNull(execMessage);
-    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals(peerId.toString(), execMessage.getPeerUuid());
     assertEquals(EXEC_PUT_FIELD_DONE, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getInstanceFieldPutDone());
     assertEquals(targetClass.getName(), execMessage.getInstanceFieldPutDone().getClazz().getName());
@@ -892,7 +864,6 @@ public class MessageBuilderTest {
   // <editor-fold desc="Intercept messages">
   @Test
   public void buildInterceptMessage_forMethod_interceptMessage() {
-    UUID peerUuid = UUID.randomUUID();
     InterceptType type = InterceptType.BEFORE;
     String className = DummyClassForTest.class.getName();
     String methodName = "dummyMethod";
@@ -902,7 +873,7 @@ public class MessageBuilderTest {
 
     InterceptMessage interceptMessage =
         messageBuilder.buildInterceptMessage(
-            peerUuid,
+            peerId,
             type,
             className,
             methodName,
@@ -911,7 +882,7 @@ public class MessageBuilderTest {
             callbackMethodName);
 
     assertNotNull(interceptMessage);
-    assertEquals(peerUuid.toString(), interceptMessage.getPeerUuid());
+    assertEquals(peerId.toString(), interceptMessage.getPeerUuid());
     assertNotNull(interceptMessage.getMessageId());
     assertEquals(type.toByte(), interceptMessage.interceptType);
     assertEquals(className, interceptMessage.getClazz());
@@ -926,7 +897,6 @@ public class MessageBuilderTest {
 
   @Test
   public void buildInterceptMessage_forField_interceptMessage() {
-    UUID peerUuid = UUID.randomUUID();
     InterceptType type = InterceptType.AFTER;
     String className = DummyClassForTest.class.getName();
     String fieldName = "anInt";
@@ -936,16 +906,10 @@ public class MessageBuilderTest {
 
     InterceptMessage interceptMessage =
         messageBuilder.buildInterceptMessage(
-            peerUuid,
-            type,
-            className,
-            fieldName,
-            fieldOpType,
-            callbackClassName,
-            callbackMethodName);
+            peerId, type, className, fieldName, fieldOpType, callbackClassName, callbackMethodName);
 
     assertNotNull(interceptMessage);
-    assertEquals(peerUuid.toString(), interceptMessage.getPeerUuid());
+    assertEquals(peerId.toString(), interceptMessage.getPeerUuid());
     assertNotNull(interceptMessage.getMessageId());
     assertEquals(type.toByte(), interceptMessage.interceptType);
     assertEquals(className, interceptMessage.getClazz());
@@ -959,7 +923,6 @@ public class MessageBuilderTest {
   @Test
   public void buildInterceptMessage_afterFieldGetInterceptRequest_interceptMessage() {
     UUID interceptRequestUuid = UUID.randomUUID();
-    UUID peer = UUID.randomUUID();
     InterceptType type = InterceptType.AFTER;
     var clazz = DummyClassForTest.class;
     var callbackClass = this.getClass();
@@ -970,7 +933,7 @@ public class MessageBuilderTest {
     var interceptRequest =
         new InterceptRequest<>(
             interceptRequestUuid,
-            peer,
+            peerId,
             type,
             clazz.getName(),
             callbackClass.getName(),
@@ -979,7 +942,7 @@ public class MessageBuilderTest {
     InterceptMessage interceptMessage = messageBuilder.buildInterceptMessage(interceptRequest);
 
     assertNotNull(interceptMessage);
-    assertEquals(peer.toString(), interceptMessage.getPeerUuid());
+    assertEquals(peerId.toString(), interceptMessage.getPeerUuid());
     assertEquals(interceptRequestUuid.toString(), interceptMessage.getMessageId());
     assertEquals(type.toByte(), interceptMessage.interceptType);
     assertEquals(clazz.getName(), interceptMessage.getClazz());
@@ -995,7 +958,6 @@ public class MessageBuilderTest {
   @Test
   public void buildInterceptMessage_beforeMethodCallInterceptRequest_interceptMessage() {
     UUID interceptRequestUuid = UUID.randomUUID();
-    UUID peer = UUID.randomUUID();
     InterceptType type = InterceptType.BEFORE;
     var clazz = DummyClassForTest.class;
     var callbackClass = this.getClass();
@@ -1007,7 +969,7 @@ public class MessageBuilderTest {
     var interceptRequest =
         new InterceptRequest<>(
             interceptRequestUuid,
-            peer,
+            peerId,
             type,
             clazz.getName(),
             callbackClass.getName(),
@@ -1016,7 +978,7 @@ public class MessageBuilderTest {
     InterceptMessage interceptMessage = messageBuilder.buildInterceptMessage(interceptRequest);
 
     assertNotNull(interceptMessage);
-    assertEquals(peer.toString(), interceptMessage.getPeerUuid());
+    assertEquals(peerId.toString(), interceptMessage.getPeerUuid());
     assertEquals(interceptRequestUuid.toString(), interceptMessage.getMessageId());
     assertEquals(type.toByte(), interceptMessage.interceptType);
     assertEquals(clazz.getName(), interceptMessage.getClazz());
@@ -1032,36 +994,34 @@ public class MessageBuilderTest {
 
   @Test
   public void buildInterceptResponse_uuidResponseToIdResult_validInterceptResponse() {
-    UUID peerUuid = UUID.randomUUID();
     UUID responseToId = UUID.randomUUID();
     boolean result = true;
 
     InterceptResponse interceptResponse =
-        messageBuilder.buildInterceptResponse(peerUuid, responseToId.toString(), result);
+        messageBuilder.buildInterceptResponse(peerId, responseToId.toString(), result);
 
     assertNotNull(interceptResponse);
-    assertEquals(peerUuid.toString(), interceptResponse.getPeerUuid());
+    assertEquals(peerId.toString(), interceptResponse.getPeerUuid());
     assertEquals(responseToId.toString(), interceptResponse.getResponseToId());
     assertEquals(result, interceptResponse.getResult());
   }
 
   @Test
-  public void buildInterceptKey_instanceMethodCall_interceptKeyMessage() throws Exception {
+  public void buildInterceptKey_instanceMethodCall_interceptKeyMessage() {
 
     // create an ExecMessage that we can use to build an InterceptKeyMessage
     UUID peerUuid = UUID.randomUUID();
-    Object sender = this;
-    ObjectRef senderObjRef = ObjectRef.randomRef();
     var clazz = DummyClassForTest.class;
+    String methodName = "dummyMethod";
     Object target = new DummyClassForTest();
     ObjectRef targetObjRef = ObjectRef.randomRef();
     Object[] args = {"test", 123, new ArrayList<>()};
     ObjectRef[] argObjRefs = {null, null, ObjectRef.randomRef()};
-    Context instanceMethodContext =
-        createContextForInstanceMethod(clazz, "dummyMethod", String.class, int.class, List.class);
+    String[] paramTypes =
+        new String[] {String.class.getName(), int.class.getName(), List.class.getName()};
     ExecMessage execMessage =
         messageBuilderWithContext.buildInstanceMethod(
-            peerUuid, instanceMethodContext, sender, senderObjRef, targetObjRef, args, argObjRefs);
+            peerUuid, clazz.getName(), methodName, targetObjRef, paramTypes, args, argObjRefs);
     InterceptKeyMessage interceptKeyMessage = messageBuilder.buildInterceptKey(execMessage);
 
     assertNotNull(interceptKeyMessage);
@@ -1089,7 +1049,6 @@ public class MessageBuilderTest {
   public void buildCallbackForInterceptRequest_constructorToBeIntercepted_callbackExecMessage()
       throws Exception {
     // create an ExecMessage out of a Constructor that we can use as interceptedMessage
-    UUID peerUuid = UUID.randomUUID();
     Object sender = this;
     ObjectRef senderObjRef = ObjectRef.randomRef();
     Object target = new DummyClassForTest();
@@ -1097,14 +1056,14 @@ public class MessageBuilderTest {
     ObjectRef[] argObjRefs = {null, null};
     Context context = createContextForConstructor(target.getClass(), String.class, int.class);
     ExecMessage interceptedExecMessage =
-        messageBuilder.buildConstructor(peerUuid, context, sender, senderObjRef, args, argObjRefs);
+        messageBuilder.buildConstructor(peerId, context, sender, senderObjRef, args, argObjRefs);
 
     // create an InterceptMessage from which the callback will be built
     String callbackClassName = "SomeClassWithCallbackMethod";
     String callbackMethodName = "callbackMethod";
     InterceptMessage interceptMessage =
         messageBuilder.buildInterceptMessage(
-            peerUuid,
+            peerId,
             InterceptType.AFTER,
             target.getClass().getName(),
             "new",
@@ -1114,10 +1073,10 @@ public class MessageBuilderTest {
 
     ExecMessage callbackExecMessage =
         messageBuilder.buildCallbackForInterceptRequest(
-            peerUuid, interceptedExecMessage, interceptMessage);
+            peerId, interceptedExecMessage, interceptMessage);
 
     assertNotNull(callbackExecMessage);
-    assertEquals(peerUuid.toString(), callbackExecMessage.getPeerUuid());
+    assertEquals(peerId.toString(), callbackExecMessage.getPeerUuid());
     assertEquals(EXEC_CLASS_METHOD, getMessageTypeOf(callbackExecMessage));
     assertNotNull(callbackExecMessage.getClassMethodCall());
     assertEquals(callbackClassName, callbackExecMessage.getClassMethodCall().getClazz().getName());
@@ -1156,7 +1115,6 @@ public class MessageBuilderTest {
   @Test
   public void buildCallbackForInterceptRequest_classMethodToBeIntercepted_callbackExecMessage() {
     // create an ExecMessage out of a ClassMethod that we can use as interceptedMessage
-    UUID peerUuid = UUID.randomUUID();
     Object sender = this;
     ObjectRef senderObjRef = ObjectRef.randomRef();
     Object target = new DummyClassForTest();
@@ -1166,7 +1124,7 @@ public class MessageBuilderTest {
     ObjectRef[] argObjRefs = {null, null, null};
     ExecMessage interceptedExecMessage =
         messageBuilder.buildClassMethod(
-            peerUuid,
+            peerId,
             target.getClass().getName(),
             methodName,
             parameterTypes,
@@ -1180,7 +1138,7 @@ public class MessageBuilderTest {
     String callbackMethodName = "callbackMethod";
     InterceptMessage interceptMessage =
         messageBuilder.buildInterceptMessage(
-            peerUuid,
+            peerId,
             InterceptType.AFTER,
             target.getClass().getName(),
             methodName,
@@ -1190,10 +1148,10 @@ public class MessageBuilderTest {
 
     ExecMessage callbackExecMessage =
         messageBuilder.buildCallbackForInterceptRequest(
-            peerUuid, interceptedExecMessage, interceptMessage);
+            peerId, interceptedExecMessage, interceptMessage);
 
     assertNotNull(callbackExecMessage);
-    assertEquals(peerUuid.toString(), callbackExecMessage.getPeerUuid());
+    assertEquals(peerId.toString(), callbackExecMessage.getPeerUuid());
     assertEquals(EXEC_CLASS_METHOD, getMessageTypeOf(callbackExecMessage));
     assertNotNull(callbackExecMessage.getClassMethodCall());
     assertEquals(callbackClassName, callbackExecMessage.getClassMethodCall().getClazz().getName());
@@ -1230,30 +1188,32 @@ public class MessageBuilderTest {
   }
 
   @Test
-  public void buildCallbackForInterceptRequest_instanceMethodToBeIntercepted_callbackExecMessage()
-      throws Exception {
+  public void buildCallbackForInterceptRequest_instanceMethodToBeIntercepted_callbackExecMessage() {
     // create an ExecMessage out of an InstanceMethod that we can use as interceptedMessage
     UUID peerUuid = UUID.randomUUID();
-    Object sender = this;
-    ObjectRef senderObjRef = ObjectRef.randomRef();
     Object target = new DummyClassForTest();
     ObjectRef targetObjRef = ObjectRef.randomRef();
     String methodName = "dummyMethod";
     Object[] args = {"test", 123, new ArrayList<>()};
     ObjectRef[] argObjRefs = {null, null, ObjectRef.randomRef()};
-    Context context =
-        createContextForInstanceMethod(
-            target.getClass(), methodName, String.class, int.class, List.class);
+    String[] paramTypes =
+        new String[] {String.class.getName(), int.class.getName(), List.class.getName()};
     ExecMessage interceptedExecMessage =
         messageBuilder.buildInstanceMethod(
-            peerUuid, context, sender, senderObjRef, targetObjRef, args, argObjRefs);
+            peerUuid,
+            target.getClass().getName(),
+            methodName,
+            targetObjRef,
+            paramTypes,
+            args,
+            argObjRefs);
 
     // create an InterceptMessage from which the callback will be built
     String callbackClassName = "SomeClassWithCallbackMethod";
     String callbackMethodName = "callbackMethod";
     InterceptMessage interceptMessage =
         messageBuilder.buildInterceptMessage(
-            peerUuid,
+            peerId,
             InterceptType.AFTER,
             target.getClass().getName(),
             methodName,
@@ -1263,10 +1223,10 @@ public class MessageBuilderTest {
 
     ExecMessage callbackExecMessage =
         messageBuilder.buildCallbackForInterceptRequest(
-            peerUuid, interceptedExecMessage, interceptMessage);
+            peerId, interceptedExecMessage, interceptMessage);
 
     assertNotNull(callbackExecMessage);
-    assertEquals(peerUuid.toString(), callbackExecMessage.getPeerUuid());
+    assertEquals(peerId.toString(), callbackExecMessage.getPeerUuid());
     assertEquals(EXEC_CLASS_METHOD, getMessageTypeOf(callbackExecMessage));
     assertNotNull(callbackExecMessage.getClassMethodCall());
     assertEquals(callbackClassName, callbackExecMessage.getClassMethodCall().getClazz().getName());
@@ -1380,7 +1340,7 @@ public class MessageBuilderTest {
       String callbackMethodName = "callbackMethod";
       InterceptMessage interceptMessage =
           messageBuilder.buildInterceptMessage(
-              peerUuid,
+              peerId,
               InterceptType.AFTER,
               targetClass.getName(),
               fieldName,
@@ -1390,10 +1350,10 @@ public class MessageBuilderTest {
 
       ExecMessage callbackExecMessage =
           messageBuilder.buildCallbackForInterceptRequest(
-              peerUuid, interceptedExecMessage, interceptMessage);
+              peerId, interceptedExecMessage, interceptMessage);
 
       assertNotNull(callbackExecMessage);
-      assertEquals(peerUuid.toString(), callbackExecMessage.getPeerUuid());
+      assertEquals(peerId.toString(), callbackExecMessage.getPeerUuid());
       assertEquals(EXEC_CLASS_METHOD, getMessageTypeOf(callbackExecMessage));
       assertNotNull(callbackExecMessage.getClassMethodCall());
       assertEquals(
@@ -1539,7 +1499,6 @@ public class MessageBuilderTest {
   // <editor-fold desc="Return value messages">
   @Test
   public void buildReturnValue_withConstructor_returnValueMessage() {
-    UUID peerUuid = UUID.randomUUID();
     var constructor = DummyClassForTest.class.getConstructors()[0];
     Object returnValue = new DummyClassForTest();
     ObjectRef returnValueObjRef = ObjectRef.randomRef();
@@ -1547,10 +1506,10 @@ public class MessageBuilderTest {
 
     ExecMessage execMessage =
         messageBuilder.buildReturnValue(
-            peerUuid, returnValue, constructor, returnValueObjRef, false, responseToId);
+            returnValue, constructor, returnValueObjRef, false, responseToId);
 
     assertNotNull(execMessage);
-    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals(peerId.toString(), execMessage.getPeerUuid());
     assertEquals(EXEC_RETURN_VALUE, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getReturnValue());
     assertEquals(
@@ -1567,7 +1526,6 @@ public class MessageBuilderTest {
 
   @Test
   public void buildReturnValue_withMethod_returnValueMessage() throws NoSuchMethodException {
-    UUID peerUuid = UUID.randomUUID();
     Method method = DummyClassForTest.class.getMethod("addInts", int.class, int.class);
     ObjectRef returnValueObjRef = ObjectRef.randomRef();
     int returnValue = 4;
@@ -1575,7 +1533,6 @@ public class MessageBuilderTest {
 
     ExecMessage execMessage =
         messageBuilder.buildReturnValue(
-            peerUuid,
             returnValue,
             method,
             returnValueObjRef,
@@ -1583,7 +1540,7 @@ public class MessageBuilderTest {
             responseToId);
 
     assertNotNull(execMessage);
-    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals(peerId.toString(), execMessage.getPeerUuid());
     assertEquals(EXEC_RETURN_VALUE, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getReturnValue());
     assertEquals(method.getName(), execMessage.getReturnValue().getFrom().getMethod().getName());
@@ -1596,18 +1553,16 @@ public class MessageBuilderTest {
 
   @Test
   public void buildReturnValue_withGetField_returnValueMessage() throws NoSuchFieldException {
-    UUID peerUuid = UUID.randomUUID();
     Field field = DummyClassForTest.class.getDeclaredField("anObject");
     ObjectRef returnValueObjRef = ObjectRef.randomRef();
     Object returnValue = new Object();
     String responseToId = UUID.randomUUID().toString();
 
     ExecMessage execMessage =
-        messageBuilder.buildReturnValue(
-            peerUuid, returnValue, field, returnValueObjRef, false, responseToId);
+        messageBuilder.buildReturnValue(returnValue, field, returnValueObjRef, false, responseToId);
 
     assertNotNull(execMessage);
-    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals(peerId.toString(), execMessage.getPeerUuid());
     assertEquals(EXEC_RETURN_VALUE, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getReturnValue());
     assertEquals(field.getName(), execMessage.getReturnValue().getFrom().getField().getName());
@@ -1625,7 +1580,7 @@ public class MessageBuilderTest {
   // <editor-fold desc="Control messages">
   @Test
   public void buildDeleteObjectControlMessage_withBody_deleteCommandMessage() {
-    MessageBuilder builder = new MessageBuilder(Boolean.toString(false));
+    MessageBuilder builder = new MessageBuilder(peerId, Boolean.toString(false));
     UUID fromPeer = UUID.randomUUID();
     ObjectRef objectRef = ObjectRef.randomRef();
     ControlMessage controlMessage = builder.buildDeleteObjectCommandMessage(fromPeer, objectRef);
@@ -1639,7 +1594,7 @@ public class MessageBuilderTest {
 
   @Test
   public void buildDeleteSessionControlMessage_fromPeer_deleteSessionCommandMessage() {
-    MessageBuilder builder = new MessageBuilder(Boolean.toString(false));
+    MessageBuilder builder = new MessageBuilder(peerId, Boolean.toString(false));
     UUID fromPeer = UUID.randomUUID();
 
     ControlMessage controlMessage = builder.buildDeleteSessionCommandMessage(fromPeer);
@@ -1653,7 +1608,7 @@ public class MessageBuilderTest {
 
   @Test
   public void buildControlMessage_withStatusTypeAndBody_controlStatusMessage() {
-    MessageBuilder builder = new MessageBuilder(Boolean.toString(false));
+    MessageBuilder builder = new MessageBuilder(peerId, Boolean.toString(false));
     String requestId = UUID.randomUUID().toString();
     UUID fromPeerUuid = UUID.randomUUID();
     ControlStatusType statusType = ControlStatusType.OK;
@@ -1672,7 +1627,7 @@ public class MessageBuilderTest {
 
   @Test
   public void buildControlMessage_withStatusTypeAndNoBody_controlStatusMessage() {
-    MessageBuilder builder = new MessageBuilder(Boolean.toString(false));
+    MessageBuilder builder = new MessageBuilder(peerId, Boolean.toString(false));
     String requestId = UUID.randomUUID().toString();
     UUID fromPeerUuid = UUID.randomUUID();
     ControlStatusType statusType = ControlStatusType.NO_SUCH_SESSION;
@@ -1693,9 +1648,8 @@ public class MessageBuilderTest {
   // <editor-fold desc="Message Wrapper">
   @Test
   public void wrap_execMessage_wrappedExecMessage() {
-    UUID peerUuid = UUID.randomUUID();
     String className = DummyClassForTest.class.getName();
-    ExecMessage execMessage = messageBuilder.buildEmptyConstructor(peerUuid, className);
+    ExecMessage execMessage = messageBuilder.buildEmptyConstructor(peerId, className);
 
     Message wrappedMessage = messageBuilder.wrap(execMessage);
 
@@ -1706,14 +1660,13 @@ public class MessageBuilderTest {
 
   @Test
   public void wrap_interceptMessage_wrappedInterceptMessage() {
-    UUID peerUuid = UUID.randomUUID();
     String className = DummyClassForTest.class.getName();
     String fieldName = "anInt";
     String callbackClass = this.getClass().getName();
     String callbackMethod = "callbackMethod";
     InterceptMessage interceptMessage =
         messageBuilder.buildInterceptMessage(
-            peerUuid,
+            peerId,
             InterceptType.BEFORE,
             className,
             fieldName,
@@ -1731,9 +1684,8 @@ public class MessageBuilderTest {
 
   @Test
   public void wrap_interceptKeyMessage_wrappedInterceptKeyMessage() {
-    UUID peerUuid = UUID.randomUUID();
     String className = DummyClassForTest.class.getName();
-    ExecMessage execMessage = messageBuilder.buildEmptyConstructor(peerUuid, className);
+    ExecMessage execMessage = messageBuilder.buildEmptyConstructor(peerId, className);
 
     InterceptKeyMessage interceptKeyMessage = messageBuilder.buildInterceptKey(execMessage);
 
@@ -1746,12 +1698,11 @@ public class MessageBuilderTest {
 
   @Test
   public void wrap_interceptResponse_wrappedInterceptResponse() {
-    UUID peerUuid = UUID.randomUUID();
     UUID responseToId = UUID.randomUUID();
     boolean result = true;
 
     InterceptResponse interceptResponse =
-        messageBuilder.buildInterceptResponse(peerUuid, responseToId.toString(), result);
+        messageBuilder.buildInterceptResponse(peerId, responseToId.toString(), result);
 
     Message wrappedInterceptResponse = messageBuilder.wrap(interceptResponse);
 

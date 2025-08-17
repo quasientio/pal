@@ -25,7 +25,9 @@ import java.util.UUID;
 import org.junit.Test;
 
 public class ExecMessageUtilsTest {
-  private final MessageBuilder messageBuilder = new MessageBuilder();
+
+  private final UUID peerId = UUID.randomUUID();
+  private final MessageBuilder messageBuilder = new MessageBuilder(peerId);
 
   @SuppressWarnings("unused")
   static class ClassForTest {
@@ -108,12 +110,7 @@ public class ExecMessageUtilsTest {
     Method method = ClassForTest.class.getMethod("nonVoidTestMethod");
     ExecMessage execMessage =
         messageBuilder.buildReturnValue(
-            UUID.randomUUID(),
-            "test",
-            method,
-            ObjectRef.randomRef(),
-            false,
-            UUID.randomUUID().toString());
+            "test", method, ObjectRef.randomRef(), false, UUID.randomUUID().toString());
     assertEquals(method.getReturnType().getName(), ExecMessageUtils.getClassname(execMessage));
   }
 
@@ -219,12 +216,7 @@ public class ExecMessageUtilsTest {
     Method method = ClassForTest.class.getMethod("testMethod");
     ExecMessage execMessage =
         messageBuilder.buildReturnValue(
-            UUID.randomUUID(),
-            "test",
-            method,
-            ObjectRef.randomRef(),
-            false,
-            UUID.randomUUID().toString());
+            "test", method, ObjectRef.randomRef(), false, UUID.randomUUID().toString());
     ExecMessageUtils.getExecutableName(execMessage);
   }
 
@@ -289,12 +281,7 @@ public class ExecMessageUtilsTest {
     Method method = ClassForTest.class.getMethod("testMethod");
     ExecMessage execMessage =
         messageBuilder.buildReturnValue(
-            UUID.randomUUID(),
-            "test",
-            method,
-            ObjectRef.randomRef(),
-            false,
-            UUID.randomUUID().toString());
+            "test", method, ObjectRef.randomRef(), false, UUID.randomUUID().toString());
     assertEquals(method.getName(), ExecMessageUtils.getFromExecutableName(execMessage));
   }
 
@@ -494,12 +481,7 @@ public class ExecMessageUtilsTest {
     AccessibleObject accessibleObject = ClassForTest.class.getMethod("testMethod");
     ExecMessage execMessage =
         messageBuilder.buildReturnValue(
-            UUID.randomUUID(),
-            "test",
-            accessibleObject,
-            ObjectRef.randomRef(),
-            false,
-            UUID.randomUUID().toString());
+            "test", accessibleObject, ObjectRef.randomRef(), false, UUID.randomUUID().toString());
     assertNull(ExecMessageUtils.getParameterTypes(execMessage));
   }
   // </editor-fold>

@@ -14,7 +14,6 @@ import static org.junit.Assert.assertNotNull;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.google.inject.name.Names;
 import com.quasient.pal.common.directory.nodes.PeerInfo;
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.cxn.ThinPeer;
@@ -55,9 +54,6 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractRpcMessageIT
         new AbstractModule() {
           @Override
           protected void configure() {
-            final Properties appProperties = new Properties();
-            appProperties.setProperty("messages.with_src_context", Boolean.toString(false));
-            Names.bindProperties(binder(), appProperties);
             bind(MessageBuilder.class).asEagerSingleton();
           }
         };

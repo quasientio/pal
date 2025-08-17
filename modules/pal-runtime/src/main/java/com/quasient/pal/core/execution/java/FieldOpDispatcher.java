@@ -46,8 +46,7 @@ public abstract class FieldOpDispatcher extends BaseExecMessageDispatcher {
   protected final ExecMessage createBeforeExecMessage(
       Context ctxt, Object sender, Object target, Object[] args) {
     Object parameter = (args == null || args.length == 0) ? null : args[0];
-    return messageBuilder.buildFieldOp(
-        peerUuid,
+    return messageBuilder.buildFieldOpEphemeral(
         ctxt,
         getBeforeExecMessageType(),
         sender,
@@ -81,12 +80,12 @@ public abstract class FieldOpDispatcher extends BaseExecMessageDispatcher {
 
     if (value instanceof InvocationThrowableWrapper) {
       Throwable invocationThr = ((InvocationThrowableWrapper) value).throwable();
-      return messageBuilder.buildAccessibleObjectThrowable(peerUuid, field, invocationThr, null);
+      return messageBuilder.buildAccessibleObjectThrowableEphemeral(field, invocationThr, null);
     } else {
       if (!returnsVoid()) {
-        return messageBuilder.buildReturnValue(peerUuid, value, field, objectRef, false, null);
+        return messageBuilder.buildReturnValueEphemeral(value, field, objectRef, false, null);
       } else {
-        return messageBuilder.buildFieldOpDone(peerUuid, field, ctxt, getAfterExecMessageType());
+        return messageBuilder.buildFieldOpDoneEphemeral(field, ctxt, getAfterExecMessageType());
       }
     }
   }

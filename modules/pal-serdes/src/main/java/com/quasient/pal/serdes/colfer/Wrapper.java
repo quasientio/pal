@@ -78,6 +78,26 @@ public final class Wrapper {
   }
 
   /**
+   * Public adapter around getWrappedObjectAux
+   *
+   * @param dst the Colfer Obj instance to populate with wrapped data
+   * @param object the object to be wrapped
+   * @param classname the class name of the object to wrap
+   * @param objectRef the reference to the object, if any
+   * @param wrapPolicy the policy that dictates how the object should be wrapped
+   * @return the populated Colfer Obj instance representing the wrapped object
+   */
+  public static Obj wrapInto(
+      Obj dst,
+      @Nullable Object object,
+      @Nullable String classname,
+      @Nullable ObjectRef objectRef,
+      @Nullable WrapPolicy wrapPolicy) {
+    return getWrappedObjectAux(
+        dst, object, classname, objectRef, wrapPolicy != null ? wrapPolicy : WrapPolicy.DETECT);
+  }
+
+  /**
    * Wraps the provided object into the specified wrappedObject based on the given parameters.
    * Determines whether the object should be serialized or referenced according to the wrap policy.
    *

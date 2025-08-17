@@ -103,7 +103,7 @@ public abstract class GetFieldDispatcher extends FieldOpDispatcher {
     }
 
     return messageBuilder.buildReturnValue(
-        peerUuid, valueObject, accessibleObject, valueObjRef, returnsVoid(), messageId);
+        valueObject, accessibleObject, valueObjRef, returnsVoid(), messageId);
   }
 
   /**
