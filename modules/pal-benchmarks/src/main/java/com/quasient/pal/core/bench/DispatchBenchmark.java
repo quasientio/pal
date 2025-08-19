@@ -271,6 +271,18 @@ public class DispatchBenchmark {
   /** Source of {@link InvocationArgs} */
   private InvocationArgsSource argsSource;
 
+  /** Number of chars in micro-sized text arguments */
+  private int microTextSize;
+
+  /** Number of chars in small-sized text arguments */
+  private int smallTextSize;
+
+  /** Number of chars in large-sized text arguments */
+  private int largeTextSize;
+
+  /** Number of doubles in double array arguments */
+  private int doubleArraySize;
+
   /** number of worker threads in this fork */
   int jmhThreads;
 
@@ -324,6 +336,7 @@ public class DispatchBenchmark {
 
     // load and set the running properties
     setWiringProperties();
+    setTestProperties();
 
     // get the RunOptions based on the selected Variant
     runOpts = variant.toRunOptions();
@@ -435,6 +448,32 @@ public class DispatchBenchmark {
     if (sum != 100) {
       throw new IllegalArgumentException("sizeDistPct values must add up to 100 (was " + sum + ')');
     }
+  }
+
+  /**
+   * Parses a System property as an integer, if available and correct, otherwise returns default.
+   *
+   * @param key the property key to parse
+   * @param def the default value to return
+   * @return parsed value or default
+   */
+  private int parseArgSizeProperty(String key, int def) {
+    Properties sysProps = System.getProperties();
+    String val = sysProps.getProperty(key);
+    if (val != null && !val.isBlank()) {
+      return Integer.parseInt(val);
+    }
+    return def;
+  }
+
+  /**
+   * Sets several variables for the test from properties, falling back to defaults.
+   */
+  private void setTestProperties() {
+    microTextSize = parseArgSizeProperty("bench.size.micro", MICRO_TXT_SIZE);
+    smallTextSize = parseArgSizeProperty("bench.size.small", SMALL_TXT_SIZE);
+    largeTextSize = parseArgSizeProperty("bench.size.large", LARGE_TXT_SIZE);
+    doubleArraySize = parseArgSizeProperty("bench.size.array", DOUBLE_ARRAY_SIZE);
   }
 
   /**
@@ -630,15 +669,15 @@ public class DispatchBenchmark {
     int p = rnd.nextInt(100);
     int[] w = sizeDist;   // local alias
     if (p < w[0]) {
-      return createTextDispatchable(MICRO_TXT_SIZE, rnd, "micro=");
+      return createTextDispatchable(microTextSize, rnd, "micro=");
     }
     else if (p < w[0] + w[1]) {
-      return createTextDispatchable(SMALL_TXT_SIZE, rnd, "small=");
+      return createTextDispatchable(smallTextSize, rnd, "small=");
     }
     else if (p < w[0] + w[1] + w[2]) {
-      return createArrayDispatchable(DOUBLE_ARRAY_SIZE, rnd);
+      return createArrayDispatchable(doubleArraySize, rnd);
     } else {
-      return createTextDispatchable(LARGE_TXT_SIZE, rnd, "large=");
+      return createTextDispatchable(largeTextSize, rnd, "large=");
     }
   }
 

@@ -61,6 +61,20 @@ IO_PROFILE=CPU_ONLY
 # tunable payload mix: micro,small,medium,large (sum should == 100)
 SIZE_DIST_PCT=40:35:20:5
 
+# Size of payload types
+
+# bytes in micro txt argument (default = 128)
+#SIZE_MICRO_TXT=
+
+# bytes in small txt argument (default = 2048)
+#SIZE_SMALL_TXT=
+
+# bytes in large txt argument (default = 49152)
+#SIZE_LARGE_TXT=
+
+# elements in double array argument (default = 2048)
+#SIZE_ARRAY_DBL=
+
 # input generator mode: ASYNC | PRELOADED
 INPUT_MODE=PRELOADED
 
@@ -105,6 +119,10 @@ WAL_KAFKA_BUFFER_MEMORY=128000000
 
 # full hot path
 java  -Dpeer.logging="$PAL_HOME/config/peer-logging.xml" \
+      -Dbench.size.micro="$SIZE_MICRO_TXT" \
+      -Dbench.size.small="$SIZE_SMALL_TXT" \
+      -Dbench.size.large="$SIZE_LARGE_TXT" \
+      -Dbench.size.array="$SIZE_ARRAY_DBL" \
       -Dpub.queue.initial="$PUB_QUEUE_INITIAL" \
       -Dpub.queue.max="$PUB_QUEUE_MAX" \
       -Dpub.queue.chunk="$PUB_QUEUE_CHUNK" \
