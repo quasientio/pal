@@ -219,7 +219,7 @@ public class LogConfigurator {
       readFromLog(sourceLog, Objects.equals(sourceLog, writeAheadLog), sourceLogOffset);
     }
 
-    // init Log writer
+    // init WAL writer
     if (writeAheadLog != null) {
       writeToLog(writeAheadLog);
     }

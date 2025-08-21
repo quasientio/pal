@@ -171,9 +171,8 @@ public class KafkaWalWriter extends WalWriter {
   }
 
   /**
-   * Configures the Log writer with the designated Log information and offset publishing preference.
-   * Sets Kafka producer properties based on the provided Log details and creates the producer if
-   * necessary.
+   * Configures the Kafka producer with the designated Log information and offset publishing
+   * preference.
    *
    * @param writeAheadLog log information containing details such as the Log name and bootstrap
    *     servers.
