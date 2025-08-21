@@ -11,6 +11,7 @@ package com.quasient.pal.core.transport.kafka;
 
 import com.google.inject.Injector;
 import com.quasient.pal.common.directory.nodes.LogInfo;
+import com.quasient.pal.core.transport.WalWriter;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
 import java.util.Objects;
@@ -163,13 +164,12 @@ public class LogConfigurator {
   /**
    * Initiates writing to the specified Write-Ahead Log.
    *
-   * <p>Acquires a KafkaWalWriter instance via dependency injection and sets up the Log writing
-   * process.
+   * <p>Acquires a WalWriter instance via dependency injection and sets up the Log writing process.
    *
    * @param writeAheadLog the LogInfo instance representing the write-ahead log
    */
   private void writeToLog(LogInfo writeAheadLog) {
-    KafkaWalWriter logMessageWriter = injector.getInstance(KafkaWalWriter.class);
+    WalWriter logMessageWriter = injector.getInstance(WalWriter.class);
     logMessageWriter.writeToLog(writeAheadLog, true);
   }
 

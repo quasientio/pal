@@ -20,6 +20,11 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.core.io.IORuntimeException;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.wire.DocumentContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.ZMQ;
@@ -32,8 +37,8 @@ import org.zeromq.ZMQException;
  * encapsulates the message type, execution phase, headers, identifiers, and body.
  *
  * <pre>
- * FRAMES:
- * -------
+ * ZMQ FRAMES:
+ * ----------
  * 1. type of message    : int (MessageType)
  * 2. [execution phase]  : int (ExecPhase: Undefined if MessageType != ExecMessage)
  * 3. headers to follow  : int
@@ -41,6 +46,14 @@ import org.zeromq.ZMQException;
  * 5. message id         : byte[]
  * 6. responseToId       : byte[]
  * 7. message body       : byte[]
+ * </pre>
+ *
+ * <pre>
+ * Chronicle Queue binary format:
+ * -----------------------------
+ *  0. type          : byte
+ *  1. bodyLen       : int
+ *  2. body          : byte[]
  * </pre>
  */
 public class OutboundMsg extends BaseMsg {
@@ -52,13 +65,13 @@ public class OutboundMsg extends BaseMsg {
   private final MessageType messageType;
 
   /** The execution phase associated with the message. */
-  private final ExecPhase execPhase;
+  @Nullable private final ExecPhase execPhase;
 
   /** The list of headers associated with the message. */
   @Nullable private final List<InternalHeader> headers;
 
   /** The unique identifier for this message. */
-  private final String messageId;
+  @Nullable private final String messageId;
 
   /** The identifier of the message to which this message is a response. */
   @Nullable private final String responseToId;
@@ -82,13 +95,14 @@ public class OutboundMsg extends BaseMsg {
    */
   OutboundMsg(
       MessageType messageType,
-      ExecPhase execPhase,
+      @Nullable ExecPhase execPhase,
       @Nullable List<InternalHeader> headers,
-      String messageId,
+      @Nullable String messageId,
       @Nullable String responseToId,
       byte[] body) {
 
-    Stream.of(messageType, execPhase, messageId, body).forEach(Objects::requireNonNull);
+    Objects.requireNonNull(messageType);
+    Objects.requireNonNull(body);
     this.messageType = messageType;
     this.execPhase = execPhase;
     this.headers = headers;
@@ -153,6 +167,17 @@ public class OutboundMsg extends BaseMsg {
   }
 
   /**
+   * Constructs an OutboundMsg instance with the specified type and body. This constructor is used
+   * for re-creating messages read from Chronicle queue.
+   *
+   * @param messageType the type of the message
+   * @param body the body of the message as a byte array
+   */
+  OutboundMsg(MessageType messageType, byte[] body) {
+    this(messageType, null, null, null, null, body, body.length + 1);
+  }
+
+  /**
    * Sends the outbound message through the specified ZeroMQ socket.
    *
    * @param socket the ZeroMQ socket to send the message through, must not be {@code null}
@@ -164,6 +189,10 @@ public class OutboundMsg extends BaseMsg {
     if (socket == null) {
       throw new IllegalArgumentException("Socket is null");
     }
+
+    // assert nullable fields be present for zmq send
+    Objects.requireNonNull(execPhase);
+    Objects.requireNonNull(messageId);
 
     // type of message
     byte[] buff = new byte[] {messageType.getId()};
@@ -233,6 +262,10 @@ public class OutboundMsg extends BaseMsg {
    */
   public boolean send(ZMQ.Socket socket, int flags) throws IllegalArgumentException, ZMQException {
     if (socket == null) throw new IllegalArgumentException("Socket is null");
+
+    // assert nullable fields be present for zmq send
+    Objects.requireNonNull(execPhase);
+    Objects.requireNonNull(messageId);
 
     int more = flags | ZMQ.SNDMORE; // convenience
 
@@ -347,6 +380,86 @@ public class OutboundMsg extends BaseMsg {
   }
 
   /**
+   * Write this message directly into Chronicle using a single document.
+   *
+   * @param appender the excerpt appender
+   * @return the index of the newly written message
+   */
+  public long appendTo(ExcerptAppender appender) {
+    final DocumentContext dc =
+        appender.writingDocument(); // don't use try-with-resources: we may need rollback
+    try {
+      final Bytes<?> out = dc.wire().bytes(); // direct view on the mapped region
+
+      // [0] type          : byte
+      out.writeByte(messageType.getId());
+
+      // [..] bodyLen : int, then body : bytes
+      out.writeInt(body.length);
+      out.write(body);
+
+      // commit by closing
+    } catch (Throwable t) {
+      dc.rollbackOnClose(); // ensure partial writes are discarded
+      throw t;
+    } finally {
+      dc.close();
+    }
+
+    // safe after commit
+    return appender.lastIndexAppended();
+  }
+
+  /**
+   * Low-level: write just the payload to an existing Bytes (useful for tests).
+   *
+   * @param out the Bytes sinc
+   */
+  public void writeTo(Bytes<?> out) {
+    out.writeByte(messageType.getId());
+    out.writeInt(body.length);
+    out.write(body);
+  }
+
+  /**
+   * Read the next Chronicle document and build an OutboundMsg (returns null if none present).
+   *
+   * @param tailer the queue tailer/reader
+   * @return a new {@link OutboundMsg} or null if none available
+   */
+  @Nullable
+  public static OutboundMsg readNext(ExcerptTailer tailer) {
+    try (DocumentContext dc = tailer.readingDocument()) {
+      if (!dc.isPresent()) return null;
+
+      final Bytes<?> in = dc.wire().bytes();
+
+      // [0] type
+      final byte typeId = in.readByte();
+      final MessageType msgType = MessageType.fromId(typeId);
+
+      // [..] bodyLen
+      final int bodyLen = in.readInt();
+      if (bodyLen < 0) {
+        throw new IORuntimeException("Negative body length: " + bodyLen);
+      }
+
+      // Ensure we actually have that many bytes in this doc
+      final long remaining = in.readRemaining();
+      if (remaining < bodyLen) {
+        throw new IORuntimeException(
+            "Truncated body: expected " + bodyLen + " bytes, remaining " + remaining);
+      }
+
+      // [..] body
+      final byte[] body = new byte[bodyLen];
+      in.read(body, 0, bodyLen);
+
+      return new OutboundMsg(msgType, body);
+    }
+  }
+
+  /**
    * Receives an outbound message from the specified ZeroMQ socket in a non-blocking manner.
    *
    * @param socket the ZeroMQ socket to receive the message from, must not be {@code null}
@@ -370,9 +483,9 @@ public class OutboundMsg extends BaseMsg {
     }
     OutboundMsg that = (OutboundMsg) o;
     return messageType == that.messageType
-        && execPhase.equals(that.execPhase)
+        && Objects.equals(execPhase, that.execPhase)
         && Objects.equals(headers, that.headers)
-        && messageId.equals(that.messageId)
+        && Objects.equals(messageId, that.messageId)
         && Objects.equals(responseToId, that.responseToId)
         && Arrays.equals(body, that.body);
   }
@@ -440,6 +553,7 @@ public class OutboundMsg extends BaseMsg {
    *
    * @return the message identifier
    */
+  @Nullable
   public String getMessageId() {
     return messageId;
   }

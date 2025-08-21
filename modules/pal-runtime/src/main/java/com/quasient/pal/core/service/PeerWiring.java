@@ -170,9 +170,9 @@ public class PeerWiring extends AbstractModule {
       WalType walType =
           WalType.valueOf(properties.getProperty("wal.type").toUpperCase(Locale.ENGLISH));
       switch (walType) {
-        case KAFKA -> bind(WalWriter.class).to(KafkaWalWriter.class);
+        case KAFKA -> bind(WalWriter.class).to(KafkaWalWriter.class).asEagerSingleton();
         case CHRONICLE -> {
-          bind(WalWriter.class).to(ChronicleWalWriter.class);
+          bind(WalWriter.class).to(ChronicleWalWriter.class).asEagerSingleton();
           bind(ChronicleQueueFactory.class)
               .to(DefaultChronicleQueueFactory.class)
               .asEagerSingleton();

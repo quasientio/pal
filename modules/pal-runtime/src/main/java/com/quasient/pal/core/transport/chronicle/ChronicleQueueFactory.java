@@ -21,8 +21,9 @@ public interface ChronicleQueueFactory {
    *
    * @param path directory where to create file(s)
    * @param rollCycle roll cycle to use
+   * @param indexSpacing index spacing to use (higher to lower index writes)
    * @param blockSize block size to use
    * @return the created chronicle queue
    */
-  ChronicleQueue create(Path path, RollCycle rollCycle, int blockSize);
+  ChronicleQueue create(Path path, RollCycle rollCycle, int indexSpacing, int blockSize);
 }

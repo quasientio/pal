@@ -36,6 +36,7 @@ import com.quasient.pal.core.runtime.session.SessionService;
 import com.quasient.pal.core.service.Main;
 import com.quasient.pal.core.service.PeerWiring;
 import com.quasient.pal.core.service.RunOptions;
+import com.quasient.pal.core.transport.WalWriter;
 import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import com.quasient.pal.core.transport.gateway.MessageQueueStats;
 import com.quasient.pal.core.transport.gateway.ThreadWaitSnapshot;
@@ -59,9 +60,11 @@ import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
@@ -292,6 +295,9 @@ public class DispatchBenchmark {
   /** parsed values from {@link #sizeDistPct} for [micro, small, medium, large] */
   private int[] sizeDist;
 
+  /** Chronicle's configured base dir, needed to empty it before each run to avoid filling disk */
+  private Path chronicleBaseDir;
+
   /** Target of calls made by threads in hotPath */
   private Calls calls;
 
@@ -394,9 +400,21 @@ public class DispatchBenchmark {
       pubSocket = (ZMQ.Socket) FieldUtils.readField(messagePublisher, "pubSocket", true);
     }
     if (runOpts.contains(RunOptions.WITH_WAL)) {
-      KafkaWalWriter walWriter = injector.getInstance(KafkaWalWriter.class);
+
+      // if Chronicle, empty dir before run
+      if (chronicleBaseDir != null) {
+        try {
+          MoreFiles.deleteDirectoryContents(chronicleBaseDir);
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }
+
+      // add WalWriter service
+      WalWriter walWriter = injector.getInstance(WalWriter.class);
       services.add(walWriter);
-      // tell KafkaWalWriter which log to write
+
+      // tell WalWriter which log to write
       LogInfo writeAheadLog = new LogInfo(DEF_WAL_LOG_NAME, props.getProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG));
       walWriter.writeToLog(writeAheadLog, false);
     }
@@ -495,16 +513,7 @@ public class DispatchBenchmark {
     props.setProperty("intercepts.reg", "inproc://intercept_reg");  // used by InterceptMatcher
 
     // WAL Writer
-    props.setProperty("wal.type", "kafka");
-
-    // KafkaWalWriter params
-    props.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
-            System.getProperty("wal.kafka.bootstrap_servers", DEF_KAFKA_BOOTSTRAP_SERVERS));
-
-    props.setProperty("wal.kafka.linger_ms", System.getProperty("wal.kafka.linger_ms", null));
-    props.setProperty("wal.kafka.batch_size", System.getProperty("wal.kafka.batch_size", null));
-    props.setProperty("wal.kafka.compression_type", System.getProperty("wal.kafka.compression_type", null));
-    props.setProperty("wal.kafka.buffer_memory", System.getProperty("wal.kafka.buffer_memory", null));
+    props.setProperty("wal.type", System.getProperty("wal.type", "kafka"));
 
     // WAL queue params
     props.setProperty("wal.queue.type", walQueueType.name());
@@ -517,6 +526,31 @@ public class DispatchBenchmark {
 
       default -> throw new IllegalArgumentException("Unsupported wal.queue.type=" + walQueueType);
     }
+
+    // ChronicleWalWriter params
+    props.setProperty("wal.chronicle.base_dir", System.getProperty("wal.chronicle.base_dir", ""));
+    props.setProperty("wal.chronicle.roll_cycle", System.getProperty("wal.chronicle.roll_cycle", ""));
+    props.setProperty("wal.chronicle.block_size", System.getProperty("wal.chronicle.block_size", ""));
+
+    // save the chronicle path, needed later in setUp()
+    if (props.getProperty("wal.type").equalsIgnoreCase("chronicle")) {
+      String chBaseDir = props.getProperty("wal.chronicle.base_dir");
+      if (chBaseDir != null && !chBaseDir.isBlank()) {
+        chronicleBaseDir = Path.of(chBaseDir);
+      }
+    }
+
+    // KafkaWalWriter params
+    props.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
+            System.getProperty("wal.kafka.bootstrap_servers", DEF_KAFKA_BOOTSTRAP_SERVERS));
+
+    props.setProperty("wal.kafka.linger_ms", System.getProperty("wal.kafka.linger_ms", ""));
+    props.setProperty("wal.kafka.batch_size", System.getProperty("wal.kafka.batch_size", ""));
+    props.setProperty("wal.kafka.compression_type", System.getProperty("wal.kafka.compression_type", ""));
+    props.setProperty("wal.kafka.buffer_memory", System.getProperty("wal.kafka.buffer_memory", ""));
+
+    // other WAL params
+    props.setProperty("wal.flush_on_close", System.getProperty("wal.flush_on_close", ""));
 
     // PUB queue params
     props.setProperty("pub.queue.type", pubQueueType.name());

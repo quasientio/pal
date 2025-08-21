@@ -10,11 +10,9 @@
 package com.quasient.pal.core.transport.chronicle;
 
 import com.quasient.pal.common.directory.nodes.LogInfo;
-import com.quasient.pal.common.util.UuidUtils;
 import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
-import com.quasient.pal.core.transport.AbstractWalWriter;
+import com.quasient.pal.core.transport.WalWriter;
 import com.quasient.pal.messages.OutboundMsg;
-import com.quasient.pal.messages.types.MessageFormatType;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -22,7 +20,6 @@ import java.nio.file.Path;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
-import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.RollCycle;
@@ -54,21 +51,23 @@ import org.zeromq.ZContext;
  * <ul>
  *   <li>SCQ (single file per cycle) is used; we avoid higher-level Wire APIs for best throughput.
  *   <li>Roll cycle and block size are injected so they can be tuned without code changes.
- *   <li>A simple binary layout is written (see {@link #appendToChronicle(byte, byte, byte[],
- *       String, String, UUID)}).
+ *   <li>A simple binary layout is written (see {@link OutboundMsg}).
  * </ul>
  */
 @Singleton
-public class ChronicleWalWriter extends AbstractWalWriter {
+public class ChronicleWalWriter extends WalWriter {
 
   /** Logger instance. */
   private static final Logger logger = LoggerFactory.getLogger(ChronicleWalWriter.class);
 
-  /** Reasonable default roll cycle if none provided. */
+  /** Default roll cycle if none provided. */
   private static final RollCycle DEFAULT_ROLL_CYCLE = RollCycles.TEN_MINUTELY;
 
-  /** Reasonable default block size (bytes) if none provided. */
+  /** Default block size (bytes) if none provided. */
   private static final int DEFAULT_BLOCK_SIZE = 128 * 1024 * 1024; // 128 MiB
+
+  /** Default index spacing if none provided. */
+  private static final int DEFAULT_INDEX_SPACING = 256;
 
   // ─────────────────────────────── Injected collaborators & config ───────────────────────────────
 
@@ -119,6 +118,7 @@ public class ChronicleWalWriter extends AbstractWalWriter {
       @Named("wal_queue") HwmMessageQueue<OutboundMsg> walQueue,
       @Named("walFailed") AtomicBoolean walFailed,
       @Named("offset.pub") String offsetPubAddress,
+      @Named("wal.flush_on_close") @Nullable String flushOnClose,
       @Named("chronicleBaseDir") Path baseDir,
       @Named("wal.chronicle.roll_cycle") @Nullable String rollCycle,
       @Named("wal.chronicle.block_size") @Nullable String blockSize,
@@ -131,10 +131,18 @@ public class ChronicleWalWriter extends AbstractWalWriter {
         serviceName,
         walQueue,
         walFailed,
-        offsetPubAddress);
+        offsetPubAddress,
+        flushOnClose);
+
     this.baseDir = baseDir;
-    this.rollCycle = rollCycle != null ? RollCycles.valueOf(rollCycle) : DEFAULT_ROLL_CYCLE;
-    this.blockSize = blockSize != null ? Integer.parseInt(blockSize) : DEFAULT_BLOCK_SIZE;
+    this.rollCycle =
+        rollCycle != null && !rollCycle.isBlank()
+            ? RollCycles.valueOf(rollCycle)
+            : DEFAULT_ROLL_CYCLE;
+    this.blockSize =
+        blockSize != null && !blockSize.isBlank()
+            ? Integer.parseInt(blockSize)
+            : DEFAULT_BLOCK_SIZE;
     this.queueFactory = queueFactory;
   }
 
@@ -162,7 +170,7 @@ public class ChronicleWalWriter extends AbstractWalWriter {
     Path queuePath = baseDir.resolve(writeAheadLog.getName());
 
     if (chronicleQueue == null) {
-      chronicleQueue = queueFactory.create(queuePath, rollCycle, blockSize);
+      chronicleQueue = queueFactory.create(queuePath, rollCycle, DEFAULT_INDEX_SPACING, blockSize);
       appender = chronicleQueue.createAppender();
     }
     logger.info(
@@ -184,15 +192,21 @@ public class ChronicleWalWriter extends AbstractWalWriter {
         ADAPTIVE_100_MICROSECONDS,
         () -> !(shutdownRequested || Thread.currentThread().isInterrupted()));
 
-    if (logger.isDebugEnabled()) {
-      logger.debug(
-          "Thread interrupted or shutdown requested, will process all remaining in queue...");
+    logger.debug("Thread interrupted or shutdown requested.");
+
+    if (!isFlushOnClose) {
+      logger.debug("Shutting down immediately...");
+      return;
     }
 
+    // after shutdown request, drain queue until empty
+    logger.debug("Processing messages remaining in queue...");
     OutboundMsg msg;
     while ((msg = walQueue.poll()) != null) {
       handleOutboundMessage(msg);
     }
+
+    logger.debug("Wal queue empty, shutting down...");
   }
 
   /**
@@ -212,12 +226,11 @@ public class ChronicleWalWriter extends AbstractWalWriter {
    *       {@code run()} will reach the idle strategy, see that {@link Thread#isInterrupted() the
    *       interrupt flag} is now {@code true} (set elsewhere) and exit.
    *   <li><b>Normal publishing</b><br>
-   *       &nbsp;&nbsp;• Delegates to {@link #appendToChronicle(byte, byte, byte[], String, String,
-   *       UUID)}.<br>
+   *       &nbsp;&nbsp;• Delegates to {@link OutboundMsg#appendTo(ExcerptAppender)}.<br>
    *       Any exception thrown by the chronicle appender is caught by the <em>fatal&nbsp;path</em>
    *       below.
    *   <li><b>Fatal path&nbsp;⟶&nbsp;Chronicle error</b><br>
-   *       When <code>appendToChronicle</code> throws, we:
+   *       When <code>OutboundMsg.appendTo</code> throws, we:
    *       <ol type="a">
    *         <li>Log the failure.
    *         <li>Atomically flip the shared {@code walFailed} flag (<em>first</em> thread wins), so
@@ -246,24 +259,24 @@ public class ChronicleWalWriter extends AbstractWalWriter {
    * @param msg the dequeued message; never {@code null}. May be the special {@link #POISON_PILL}
    *     sentinel to signal shutdown.
    */
-  private void handleOutboundMessage(OutboundMsg msg) {
+  @Override
+  protected void handleOutboundMessage(OutboundMsg msg) {
     if (POISON_PILL.equals(msg)) {
       return; // graceful exit
     }
     messagesReceived++;
     try {
-      appendToChronicle(
-          MessageFormatType.BINARY.toByte(),
-          msg.getMessageType().getId(),
-          msg.getBody(),
-          msg.getMessageId(),
-          msg.getResponseToId(),
-          peerUuid);
+      long index = msg.appendTo(appender);
+      messagesWritten.incrementAndGet();
+
+      if (publishOffsets && offsetPublisherSocket != null) {
+        offsetPublisherSocket.sendMore(msg.getMessageId());
+        offsetPublisherSocket.send(Long.toString(index));
+      }
     } catch (Exception ex) {
-      messagesDroppedError.getAndIncrement();
+      messagesDroppedError.incrementAndGet();
       logger.error(
           "Chronicle failed appending message w/id {} → halting WAL", msg.getMessageId(), ex);
-
       if (walFailed.compareAndSet(false, true)) {
         walQueue.clear();
         if (pillSent.compareAndSet(false, true)) {
@@ -274,74 +287,6 @@ public class ChronicleWalWriter extends AbstractWalWriter {
         Thread.currentThread().interrupt();
       }
     }
-  }
-
-  /**
-   * Append message to Chronicle Queue using a compact binary layout.
-   *
-   * <pre>
-   *  [0]   format        : byte
-   *  [1]   type          : byte
-   *  [2..18) fromPeer    : 16 bytes (UUID)
-   *  [..]  msgIdLen      : unsigned short (UTF-8 byte length)
-   *  [..]  msgId         : bytes
-   *  [..]  respIdLen     : unsigned short (0 if none)
-   *  [..]  respId        : bytes
-   *  [..]  bodyLen       : int
-   *  [..]  body          : bytes
-   * </pre>
-   */
-  private void appendToChronicle(
-      byte messageFormat,
-      byte messageType,
-      byte[] body,
-      String messageId,
-      @Nullable String responseId,
-      UUID fromPeer) {
-
-    if (logger.isDebugEnabled()) {
-      logger.debug("appending new message to chronicle queue with id: {}", messageId);
-    }
-
-    Bytes<?> bytes = Bytes.elasticByteBuffer(body.length + 64);
-    try {
-      bytes.writeByte(messageFormat);
-      bytes.writeByte(messageType);
-      bytes.write(UuidUtils.toBytes(fromPeer));
-
-      writeUtf8WithLen(bytes, messageId);
-      writeUtf8WithLen(bytes, responseId == null ? "" : responseId);
-
-      bytes.writeInt(body.length);
-      bytes.write(body);
-
-      appender.writeBytes(bytes);
-      long index = appender.lastIndexAppended();
-      messagesWritten.incrementAndGet();
-
-      if (publishOffsets && offsetPublisherSocket != null) {
-        offsetPublisherSocket.sendMore(messageId);
-        offsetPublisherSocket.send(Long.toString(index));
-      }
-    } finally {
-      bytes.releaseLast();
-    }
-  }
-
-  /**
-   * Utility to append a variable-length UTF string and its size to a {@link Bytes} (byte buffer).
-   *
-   * @param bytes the buffer where we append
-   * @param s the string to write as UTF-8
-   */
-  private static void writeUtf8WithLen(Bytes<?> bytes, String s) {
-    long lenPos = bytes.writePosition();
-    bytes.writeUnsignedShort(0); // placeholder
-    long start = bytes.writePosition();
-    bytes.writeUtf8(s);
-    long end = bytes.writePosition();
-    int len = (int) (end - start);
-    bytes.writeUnsignedShort(lenPos, len); // backfill length
   }
 
   /** Closes all open connections and resources used by the ZMQ socket and Chronicle queue. */

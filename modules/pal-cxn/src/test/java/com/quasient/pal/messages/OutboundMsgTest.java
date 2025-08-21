@@ -22,10 +22,20 @@ import com.quasient.pal.messages.colfer.InternalHeader;
 import com.quasient.pal.messages.types.MessageType;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
 import java.io.UnsupportedEncodingException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.core.io.IORuntimeException;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.WireType;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -145,23 +155,6 @@ public class OutboundMsgTest {
       // ok then
     }
 
-    // null execPhase
-    try {
-      new OutboundMsg(MessageType.INTERCEPT_MESSAGE, null, headers, messageId, responseToId, body);
-      fail("Should have thrown NPE");
-    } catch (NullPointerException e) {
-      // ok then
-    }
-
-    // null messageId
-    try {
-      new OutboundMsg(
-          MessageType.INTERCEPT_MESSAGE, ExecPhase.UNDEFINED, headers, null, responseToId, body);
-      fail("Should have thrown NPE");
-    } catch (NullPointerException e) {
-      // ok then
-    }
-
     // null body
     try {
       new OutboundMsg(
@@ -261,5 +254,160 @@ public class OutboundMsgTest {
             responseToMessageId,
             "whatevah".getBytes(UTF_8)),
         is(not(msg1)));
+  }
+
+  @Test
+  public void chronicle_roundTrip_basic() throws Exception {
+    Path dir = Files.createTempDirectory("cq-basic");
+    try (ChronicleQueue q =
+        SingleChronicleQueueBuilder.single(dir.toFile()).wireType(WireType.BINARY_LIGHT).build()) {
+      ExcerptAppender app = q.createAppender();
+      ExcerptTailer tailer = q.createTailer();
+
+      byte[] body = "hello".getBytes(UTF_8);
+      OutboundMsg out = new OutboundMsg(MessageType.EXEC_CLASS_METHOD, body);
+
+      long idx = out.appendTo(app);
+
+      OutboundMsg in = OutboundMsg.readNext(tailer);
+      assertThat(in, is(notNullValue()));
+      assertThat(in.getMessageType(), is(out.getMessageType()));
+      assertThat(in.getBody(), is(out.getBody()));
+
+      // No extra docs
+      assertThat(OutboundMsg.readNext(tailer), is(nullValue()));
+
+      // Index should be >= 0 (sanity)
+      assertThat(idx >= 0, is(true));
+    }
+  }
+
+  @Test
+  public void chronicle_roundTrip_zeroLengthBody() throws Exception {
+    Path dir = Files.createTempDirectory("cq-zero");
+    try (ChronicleQueue q =
+        SingleChronicleQueueBuilder.single(dir.toFile()).wireType(WireType.BINARY_LIGHT).build()) {
+      ExcerptAppender app = q.createAppender();
+      ExcerptTailer tailer = q.createTailer();
+
+      byte[] body = new byte[0];
+      OutboundMsg out = new OutboundMsg(MessageType.EXEC_CONSTRUCTOR, body);
+
+      out.appendTo(app);
+
+      OutboundMsg in = OutboundMsg.readNext(tailer);
+      assertThat(in, is(notNullValue()));
+      assertThat(in.getMessageType(), is(MessageType.EXEC_CONSTRUCTOR));
+      assertThat(in.getBody(), is(body));
+    }
+  }
+
+  @Test
+  public void chronicle_roundTrip_multipleInOrder() throws Exception {
+    Path dir = Files.createTempDirectory("cq-multi");
+    try (ChronicleQueue q =
+        SingleChronicleQueueBuilder.single(dir.toFile()).wireType(WireType.BINARY_LIGHT).build()) {
+      ExcerptAppender app = q.createAppender();
+      ExcerptTailer tailer = q.createTailer();
+
+      OutboundMsg m1 = new OutboundMsg(MessageType.EXEC_GET_FIELD, "A".getBytes(UTF_8));
+      OutboundMsg m2 = new OutboundMsg(MessageType.EXEC_CONSTRUCTOR, "BB".getBytes(UTF_8));
+      OutboundMsg m3 = new OutboundMsg(MessageType.EXEC_INSTANCE_METHOD, "CCC".getBytes(UTF_8));
+
+      long i1 = m1.appendTo(app);
+      long i2 = m2.appendTo(app);
+      long i3 = m3.appendTo(app);
+
+      OutboundMsg r1 = OutboundMsg.readNext(tailer);
+      OutboundMsg r2 = OutboundMsg.readNext(tailer);
+      OutboundMsg r3 = OutboundMsg.readNext(tailer);
+      OutboundMsg r4 = OutboundMsg.readNext(tailer);
+
+      assertThat(r1.getBody(), is("A".getBytes(UTF_8)));
+      assertThat(r2.getBody(), is("BB".getBytes(UTF_8)));
+      assertThat(r3.getBody(), is("CCC".getBytes(UTF_8)));
+      assertThat(r4, is(nullValue()));
+
+      // monotonic indices (from appendTo returns)
+      assertThat(i1 < i2 && i2 < i3, is(true));
+    }
+  }
+
+  @Test
+  public void chronicle_readNext_returnsNullWhenNoDoc() throws Exception {
+    Path dir = Files.createTempDirectory("cq-empty");
+    try (ChronicleQueue q =
+        SingleChronicleQueueBuilder.single(dir.toFile()).wireType(WireType.BINARY_LIGHT).build()) {
+      ExcerptTailer tailer = q.createTailer();
+      assertThat(OutboundMsg.readNext(tailer), is(nullValue()));
+    }
+  }
+
+  /**
+   * Write a deliberately truncated document: length says N, but fewer than N bytes are present.
+   * readNext should throw (Bytes underflow).
+   */
+  @Test
+  public void chronicle_readNext_truncatedBody_throws() throws Exception {
+    Path dir = Files.createTempDirectory("cq-trunc");
+    try (ChronicleQueue q =
+        SingleChronicleQueueBuilder.single(dir.toFile()).wireType(WireType.BINARY_LIGHT).build()) {
+      ExcerptAppender app = q.createAppender();
+
+      // valid doc first
+      new OutboundMsg(
+              MessageType.EXEC_GET_STATIC,
+              ExecPhase.UNDEFINED,
+              null,
+              "ok",
+              null,
+              "OK".getBytes(UTF_8))
+          .appendTo(app);
+
+      // craft a corrupted doc
+      try (DocumentContext dc = app.writingDocument()) {
+        Bytes<?> out = dc.wire().bytes();
+        out.writeByte(MessageType.EXEC_PUT_FIELD.getId()); // type
+        out.writeInt(4); // claims length=4
+        out.write(new byte[] {1, 2}); // but only 2 bytes provided
+      }
+
+      ExcerptTailer tailer = q.createTailer();
+      // consume the valid one
+      OutboundMsg first = OutboundMsg.readNext(tailer);
+      assertThat(first, is(notNullValue()));
+
+      // now the broken one must throw
+      try {
+        OutboundMsg.readNext(tailer);
+        fail("Expected IORuntimeException for truncated body");
+      } catch (IORuntimeException expected) {
+        // expected
+      }
+    }
+  }
+
+  @Test
+  public void chronicle_readNext_negativeBodyLen_throws() throws Exception {
+    Path dir = Files.createTempDirectory("cq-neg");
+    try (ChronicleQueue q =
+        SingleChronicleQueueBuilder.single(dir.toFile()).wireType(WireType.BINARY_LIGHT).build()) {
+      ExcerptAppender app = q.createAppender();
+
+      try (DocumentContext dc = app.writingDocument()) {
+        Bytes<?> out = dc.wire().bytes();
+        out.writeByte(MessageType.EXEC_CONSTRUCTOR.getId());
+        out.writeInt(-1); // invalid
+      }
+
+      ExcerptTailer tailer = q.createTailer();
+
+      try {
+        OutboundMsg.readNext(tailer);
+        fail("Expected IORuntimeException for negative body length");
+      } catch (IORuntimeException expected) {
+        // pass
+      }
+    }
   }
 }

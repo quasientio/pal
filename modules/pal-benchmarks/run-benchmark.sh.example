@@ -12,7 +12,16 @@
 
 #-------- Generic Benchmark Params ---------
 FORKS=3
-JVM_ARGS_APPEND="-Xms2g -Xmx2g"
+JVM_ARGS_APPEND="-Xms2g -Xmx2g \
+            --add-exports=java.base/jdk.internal.ref=ALL-UNNAMED \
+            --add-exports=java.base/sun.nio.ch=ALL-UNNAMED \
+            --add-exports=jdk.unsupported/sun.misc=ALL-UNNAMED \
+            --add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED \
+            --add-opens=jdk.compiler/com.sun.tools.javac=ALL-UNNAMED \
+            --add-opens=java.base/java.lang=ALL-UNNAMED \
+            --add-opens=java.base/java.lang.reflect=ALL-UNNAMED \
+            --add-opens=java.base/java.io=ALL-UNNAMED \
+            --add-opens=java.base/java.util=ALL-UNNAMED"
 THREADS=8
 WARMUPS=10
 WARMUP_TIME=15s
@@ -117,6 +126,11 @@ WAL_KAFKA_BATCH_SIZE=128000
 WAL_KAFKA_COMPRESSION_TYPE=zstd
 WAL_KAFKA_BUFFER_MEMORY=128000000
 
+#WAL_TYPE=chronicle
+#WAL_CHRONICLE_BASE_DIR=/data/chronicle
+#WAL_CHRONICLE_ROLL_CYCLE=
+#WAL_CHRONICLE_BLOCK_SIZE=
+
 # full hot path
 java  -Dpeer.logging="$PAL_HOME/config/peer-logging.xml" \
       -Dbench.size.micro="$SIZE_MICRO_TXT" \
@@ -143,6 +157,7 @@ java  -Dpeer.logging="$PAL_HOME/config/peer-logging.xml" \
       -Dwal.kafka.batch_size="$WAL_KAFKA_BATCH_SIZE" \
       -Dwal.kafka.compression_type="$WAL_KAFKA_COMPRESSION_TYPE" \
       -Dwal.kafka.buffer_memory="$WAL_KAFKA_BUFFER_MEMORY" \
+      -Dwal.chronicle.base_dir="$WAL_CHRONICLE_BASE_DIR" \
       -Xverify:none \
       -jar target/pal-benchmarks-1.0.0-SNAPSHOT.jar \
       DispatchBenchmark \

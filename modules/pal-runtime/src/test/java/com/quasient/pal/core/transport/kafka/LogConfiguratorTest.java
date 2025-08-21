@@ -22,6 +22,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.inject.Injector;
 import com.quasient.pal.common.directory.nodes.LogInfo;
+import com.quasient.pal.core.transport.WalWriter;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
 import java.util.Optional;
@@ -58,7 +59,7 @@ public class LogConfiguratorTest {
     when(mockedInjector.getInstance(DirectoryConnectionProvider.class))
         .thenReturn(mockedDirectoryConnectionProvider);
     when(mockedInjector.getInstance(LogReader.class)).thenReturn(mockedLogReader);
-    when(mockedInjector.getInstance(KafkaWalWriter.class)).thenReturn(mockedKafkaWalWriter);
+    when(mockedInjector.getInstance(WalWriter.class)).thenReturn(mockedKafkaWalWriter);
   }
 
   @After

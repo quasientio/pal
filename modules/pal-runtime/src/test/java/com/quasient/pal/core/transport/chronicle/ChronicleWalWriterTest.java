@@ -28,7 +28,6 @@ import com.quasient.pal.messages.colfer.InternalHeader;
 import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.messages.types.MessageType;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -39,7 +38,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
-import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -109,6 +107,7 @@ public class ChronicleWalWriterTest extends ZmqEnabledTest {
             walQueue,
             walFailed,
             /* offset.pub */ "inproc://offsets",
+            null, // use default
             baseDir,
             "TEN_MINUTELY",
             null,
@@ -189,11 +188,11 @@ public class ChronicleWalWriterTest extends ZmqEnabledTest {
 
       FailingFactory() {
         when(queue.createAppender()).thenReturn(appender);
-        doThrow(new RuntimeException("boom")).when(appender).writeBytes(any(Bytes.class));
+        doThrow(new RuntimeException("boom")).when(appender).writingDocument();
       }
 
       @Override
-      public ChronicleQueue create(Path path, RollCycle rc, int blockSize) {
+      public ChronicleQueue create(Path path, RollCycle rc, int indexSpacing, int blockSize) {
         return queue;
       }
     }
@@ -213,6 +212,7 @@ public class ChronicleWalWriterTest extends ZmqEnabledTest {
             localQueue,
             localWalFailed,
             "inproc://offsets",
+            null, // use default
             tmpDir,
             "TEN_MINUTELY",
             null,
@@ -253,47 +253,21 @@ public class ChronicleWalWriterTest extends ZmqEnabledTest {
     Path qPath = baseDir.resolve(WAL_INFO.getName());
     try (var queue =
             new DefaultChronicleQueueFactory()
-                .create(qPath, RollCycles.TEN_MINUTELY, 128 * 1024 * 1024);
+                .create(qPath, RollCycles.TEN_MINUTELY, 256, 128 * 1024 * 1024);
         ExcerptTailer tailer = queue.createTailer()) {
 
       List<String> ids = new ArrayList<>();
-      Bytes<?> dst = Bytes.elasticByteBuffer();
-      try {
-        while (tailer.readBytes(dst)) {
-          dst.readPosition(0);
-
-          dst.readByte(); // read format
-          dst.readByte(); // read type
-          // fromPeer (16 bytes)
-          dst.readSkip(16);
-
-          readUtf8WithLen(dst); // read msgId
-          readUtf8WithLen(dst); // read respId
-
-          int bodyLen = dst.readInt();
-          byte[] body = new byte[bodyLen];
-          dst.read(body);
-
-          Message m = new Message();
-          m.unmarshal(body, 0);
-          ids.add(idOf(m));
-
-          dst.clear();
-        }
-      } finally {
-        dst.releaseLast();
+      while (true) {
+        OutboundMsg om = OutboundMsg.readNext(tailer);
+        if (om == null) break;
+        // WAL now stores: [type][bodyLen][body]; ID is inside the body
+        Message m = new Message();
+        m.unmarshal(om.getBody(), 0);
+        ids.add(idOf(m));
       }
       return ids;
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
-  }
-
-  private static String readUtf8WithLen(Bytes<?> b) {
-    int len = b.readUnsignedShort();
-    if (len == 0) return "";
-    byte[] tmp = new byte[len];
-    b.read(tmp);
-    return new String(tmp, StandardCharsets.UTF_8);
   }
 }

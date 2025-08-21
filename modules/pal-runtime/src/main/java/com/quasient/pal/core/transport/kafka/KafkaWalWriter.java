@@ -12,14 +12,13 @@ package com.quasient.pal.core.transport.kafka;
 import com.quasient.pal.common.directory.nodes.LogInfo;
 import com.quasient.pal.common.util.UuidUtils;
 import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
-import com.quasient.pal.core.transport.AbstractWalWriter;
+import com.quasient.pal.core.transport.WalWriter;
 import com.quasient.pal.messages.LogMessageHeader;
 import com.quasient.pal.messages.OutboundMsg;
 import com.quasient.pal.messages.types.MessageFormatType;
 import com.quasient.pal.messages.types.MessageType;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
-import jakarta.inject.Singleton;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -55,8 +54,7 @@ import org.zeromq.ZContext;
  *       poison pill.
  * </ul>
  */
-@Singleton
-public class KafkaWalWriter extends AbstractWalWriter {
+public class KafkaWalWriter extends WalWriter {
 
   /** Logger instance. */
   private static final Logger logger = LoggerFactory.getLogger(KafkaWalWriter.class);
@@ -112,8 +110,10 @@ public class KafkaWalWriter extends AbstractWalWriter {
    * @param serviceThreadGroup thread group in which the service thread will be executed.
    * @param serviceName logical name that identifies this WAL writer service.
    * @param walQueue initialized {@link OutboundMsg} queue instance from which to consume.
-   * @param walFailed global flag that used to indicate failure when writing to Kafka so producers
-   *     halt enqueuing.
+   * @param walFailed global flag used to indicate failure when writing to Kafka so producers halt
+   *     enqueuing.
+   * @param flushOnClose flag used to indicate whether we should flush on close, waiting for queued
+   *     and in-flight messages to be ack-ed, or if we shut down immediately.
    * @param offsetPubAddress ZeroMQ address for the message offset publisher connection.
    * @param lingerMs value for Kafka Producer's {@code linger.ms}
    * @param batchSize value for Kafka Producer's {@code batch.size}
@@ -131,6 +131,7 @@ public class KafkaWalWriter extends AbstractWalWriter {
       @Named("wal_queue") HwmMessageQueue<OutboundMsg> walQueue,
       @Named("walFailed") AtomicBoolean walFailed,
       @Named("offset.pub") String offsetPubAddress,
+      @Named("wal.flush_on_close") @Nullable String flushOnClose,
       @Named("wal.kafka.linger_ms") @Nullable String lingerMs,
       @Named("wal.kafka.batch_size") @Nullable String batchSize,
       @Named("wal.kafka.compression_type") @Nullable String compressionType,
@@ -144,7 +145,10 @@ public class KafkaWalWriter extends AbstractWalWriter {
         serviceName,
         walQueue,
         walFailed,
-        offsetPubAddress);
+        offsetPubAddress,
+        flushOnClose);
+
+    logger.debug("new KafkaWalWriter created");
     this.producerFactory = producerFactory;
 
     // create and store immutable headers
@@ -222,43 +226,23 @@ public class KafkaWalWriter extends AbstractWalWriter {
     // Producer props from CLI args / ENV vars
     producerProperties.put(
         ProducerConfig.LINGER_MS_CONFIG,
-        lingerMs != null ? Long.parseLong(lingerMs) : DEF_LINGER_MS);
+        lingerMs != null && !lingerMs.isBlank() ? Long.parseLong(lingerMs) : DEF_LINGER_MS);
 
     producerProperties.put(
         ProducerConfig.BATCH_SIZE_CONFIG,
-        batchSize != null ? Integer.parseInt(batchSize) : DEF_BATCH_SIZE);
+        batchSize != null && !batchSize.isBlank() ? Integer.parseInt(batchSize) : DEF_BATCH_SIZE);
 
     producerProperties.put(
         ProducerConfig.COMPRESSION_TYPE_CONFIG,
-        compressionType != null ? compressionType : DEF_COMPRESSION_TYPE);
+        compressionType != null && !compressionType.isBlank()
+            ? compressionType
+            : DEF_COMPRESSION_TYPE);
 
     producerProperties.put(
         ProducerConfig.BUFFER_MEMORY_CONFIG,
-        bufferMemory != null ? Long.parseLong(bufferMemory) : DEF_BUFFER_MEMORY);
-  }
-
-  /**
-   * Continuously receives messages from the WAL Queue and dispatches them to Kafka. The method
-   * processes messages until shutdown requested / the thread is interrupted.
-   */
-  @Override
-  public void run() {
-
-    walQueue.drain(
-        this::handleOutboundMessage,
-        ADAPTIVE_100_MICROSECONDS,
-        () -> !(shutdownRequested || Thread.currentThread().isInterrupted()));
-
-    logger.debug(
-        "Thread interrupted or shutdown requested. Processing messages remaining in queue...");
-
-    // after shutdown request, drain queue until empty
-    OutboundMsg msg;
-    while ((msg = walQueue.poll()) != null) {
-      handleOutboundMessage(msg);
-    }
-
-    logger.debug("Wal queue empty, shutting down...");
+        bufferMemory != null && !bufferMemory.isBlank()
+            ? Long.parseLong(bufferMemory)
+            : DEF_BUFFER_MEMORY);
   }
 
   /**
@@ -311,7 +295,8 @@ public class KafkaWalWriter extends AbstractWalWriter {
    * @param msg the dequeued message; never {@code null}. May be the special {@link #POISON_PILL}
    *     sentinel to signal shutdown.
    */
-  private void handleOutboundMessage(OutboundMsg msg) {
+  @Override
+  protected void handleOutboundMessage(OutboundMsg msg) {
     if (POISON_PILL.equals(msg)) { // graceful exit branch
       return;
     }
@@ -443,28 +428,33 @@ public class KafkaWalWriter extends AbstractWalWriter {
   @Override
   protected void closeConnections() {
 
-    // make producer flush all outstanding sends (blocks until callbacks run)
-    try {
-      if (producer != null) {
-        logger.debug("Flusing producer...");
-        producer.flush();
-        logger.debug("Producer flushed");
+    if (isFlushOnClose) {
+      // make producer flush all outstanding sends (blocks until callbacks run)
+      try {
+        if (producer != null) {
+          logger.debug("Flushing producer...");
+          producer.flush();
+          logger.debug("Producer flushed");
+        }
+      } catch (Exception e) {
+        logger.warn("flush failed during close", e);
       }
-    } catch (Exception e) {
-      logger.warn("flush failed during close", e);
+
+      // wait a little for any callbacks still running (defensive)
+      long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(500);
+      if (messagesInFlight.get() > 0) {
+        logger.debug("Waiting a little for callbacks still running");
+        while (messagesInFlight.get() > 0 && System.nanoTime() < deadline) {
+          Thread.onSpinWait();
+        }
+      }
     }
 
-    // wait a little for any callbacks still running (defensive)
-    long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(500);
     if (messagesInFlight.get() > 0) {
-      logger.debug("Waiting a little for callbacks still running");
-      while (messagesInFlight.get() > 0 && System.nanoTime() < deadline) {
-        Thread.onSpinWait();
-      }
-    }
-
-    if (messagesInFlight.get() > 0) {
-      logger.warn("{} in-flight messages remained after shut down", messagesInFlight.get());
+      logger.warn(
+          "{} enqueued messages and {} in-flight messages remained after shut down",
+          walQueue.size(),
+          messagesInFlight.get());
     }
 
     // log Producer metrics

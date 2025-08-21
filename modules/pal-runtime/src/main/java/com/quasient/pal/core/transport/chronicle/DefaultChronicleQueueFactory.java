@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.wire.WireType;
 
 /** Default implementation which creates instances of {@link SingleChronicleQueueBuilder}. */
 public class DefaultChronicleQueueFactory implements ChronicleQueueFactory {
@@ -23,10 +24,12 @@ public class DefaultChronicleQueueFactory implements ChronicleQueueFactory {
    * <p>{@inheritDoc}
    */
   @Override
-  public ChronicleQueue create(Path path, RollCycle rollCycle, int blockSize) {
+  public ChronicleQueue create(Path path, RollCycle rollCycle, int indexSpacing, int blockSize) {
     return SingleChronicleQueueBuilder.single(path.toFile())
         .rollCycle(rollCycle)
+        .indexSpacing(indexSpacing)
         .blockSize(blockSize)
+        .wireType(WireType.BINARY_LIGHT)
         .build();
   }
 }
