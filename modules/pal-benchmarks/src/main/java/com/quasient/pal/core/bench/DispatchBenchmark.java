@@ -115,7 +115,10 @@ public class DispatchBenchmark {
   /** Path to the default peer logging configuration file in the classpath. */
   private static final String LOGGING_CONFIG = "/peer-logging-fallback.xml";
 
-  // ---- Fixed Arg Size Defaults - Could be parameterized later on ------------
+  // ---- Test parameter defaults -------------
+
+  /** Number of operations (calls) per invocation */
+  private static final int OPS = 1024;
 
   /** Fixed size of MICRO arg (text) in bytes. See {@link #sizeDist} */
   private static final int MICRO_TXT_SIZE = 128;
@@ -782,7 +785,7 @@ public class DispatchBenchmark {
     System.out.println("-----------------------------");
     System.out.println("-----  Benchmark stats  -----");
     System.out.println("-----------------------------");
-    System.out.printf("hotPath() called %d times%n", callsMade.get());
+    System.out.printf("calls made from hotPath(): %d%n", callsMade.get());
     if (runOpts.contains(RunOptions.WITH_TCP_PUB) && WITH_DUMMY_SUB) {
       System.out.printf("Dummy subscriber received %d messages%n", dummyRcvs);
     }
@@ -867,21 +870,24 @@ public class DispatchBenchmark {
   @Benchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   @Threads(Threads.MAX)
+  @OperationsPerInvocation(OPS)
   public void hotPath(Blackhole bh) {
 
-    InvocationArgs ia = argsSource.next();
-    Object arg0 = ia.args()[0];
-    Object ret = null;
-    if (arg0 instanceof double[] doubles) {
-      calls.sort(doubles.clone());
-    } else if (arg0 instanceof String str) {
-      ret = calls.toUpperCase(str);
-    } else {
-      throw new IllegalStateException("Unexpected arg type: " + arg0.getClass().getName());
-    }
-    bh.consume(ret);
+    for (int i=0; i<OPS; i++) {
+      InvocationArgs ia = argsSource.next();
+      Object arg0 = ia.args()[0];
+      Object ret = null;
+      if (arg0 instanceof double[] doubles) {
+        calls.sort(doubles.clone());
+      } else if (arg0 instanceof String str) {
+        ret = calls.toUpperCase(str);
+      } else {
+        throw new IllegalStateException("Unexpected arg type: " + arg0.getClass().getName());
+      }
+      bh.consume(ret);
 
-    callsMade.incrementAndGet();
+      callsMade.incrementAndGet();
+    }
   }
 
   // ----------------------- Initialization helpers -----------------------
