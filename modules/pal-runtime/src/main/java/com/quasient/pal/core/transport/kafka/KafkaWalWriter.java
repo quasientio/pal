@@ -172,14 +172,21 @@ public class KafkaWalWriter extends WalWriter {
 
   /**
    * Configures the Kafka producer with the designated Log information and offset publishing
-   * preference.
+   * preference. This method is intended to be called just once before starting the service.
    *
    * @param writeAheadLog log information containing details such as the Log name and bootstrap
    *     servers.
    * @param publishOffsets flag indicating whether message offsets should be published via ZeroMQ.
+   * @throws IllegalStateException if the method is called more than once
    */
   @Override
   public void writeToLog(LogInfo writeAheadLog, boolean publishOffsets) {
+
+    if (this.writeAheadLog != null) {
+      throw new IllegalStateException(
+          "writeAheadLog already set. This method can only be called once!");
+    }
+
     this.writeAheadLog = writeAheadLog;
     this.publishOffsets = publishOffsets;
 

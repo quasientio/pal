@@ -17,6 +17,7 @@ package com.quasient.pal.core.transport.kafka;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.fail;
 
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
@@ -132,6 +133,39 @@ public class KafkaWalWriterTest extends ZmqEnabledTest {
   public void tearDown() throws InterruptedException {
     closeContext(zmqCtx);
     manager.stopAsync().awaitStopped();
+  }
+
+  @Test
+  public void writeToLog_calledTwice_illegalStateException() {
+
+    LogInfo WAL_INFO1 = new LogInfo("test_app", "localhost:9092");
+    LogInfo WAL_INFO2 = new LogInfo("test_app", "localhost:9092");
+
+    KafkaWalWriter walWriter =
+        new KafkaWalWriter(
+            UUID.randomUUID(),
+            zmqCtx,
+            SYNC_SOCKET_ADDRESS,
+            threadGroup,
+            "KafkaWalWriterTest-Service",
+            walQueue,
+            new AtomicBoolean(false),
+            /* offset.pub */ "inproc://offsets",
+            null, // use default
+            null, // use default
+            null, // use default
+            null, // use default
+            null, // use default
+            props -> mockProducer);
+
+    walWriter.writeToLog(WAL_INFO1, /* publishOffsets */ false);
+    try {
+      // cannot call twice
+      walWriter.writeToLog(WAL_INFO2, /* publishOffsets */ false);
+      fail("Should have thrown a IllegalStateException");
+    } catch (IllegalStateException e) {
+      // expected
+    }
   }
 
   @Test

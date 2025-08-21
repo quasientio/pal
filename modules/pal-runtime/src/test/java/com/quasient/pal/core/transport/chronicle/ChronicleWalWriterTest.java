@@ -12,6 +12,7 @@ package com.quasient.pal.core.transport.chronicle;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.*;
 
 import com.google.common.util.concurrent.Service;
@@ -127,6 +128,38 @@ public class ChronicleWalWriterTest extends ZmqEnabledTest {
       manager.stopAsync().awaitStopped();
     }
     closeContext(zmqCtx);
+  }
+
+  @Test
+  public void writeToLog_calledTwice_illegalStateException() {
+
+    LogInfo WAL_INFO1 = new LogInfo("test_app", "n/a");
+    LogInfo WAL_INFO2 = new LogInfo("test_app", "n/a");
+
+    ChronicleWalWriter walWriter =
+        new ChronicleWalWriter(
+            PEER_ID,
+            zmqCtx,
+            SYNC_SOCKET_ADDRESS,
+            threadGroup,
+            "ChronicleWalWriterTest-Service",
+            walQueue,
+            new AtomicBoolean(false),
+            /* offset.pub */ "inproc://offsets",
+            null, // use default
+            baseDir,
+            "TEN_MINUTELY",
+            null,
+            new DefaultChronicleQueueFactory());
+
+    walWriter.writeToLog(WAL_INFO1, /* publishOffsets */ false);
+    try {
+      // cannot call twice
+      walWriter.writeToLog(WAL_INFO2, /* publishOffsets */ false);
+      fail("Should have thrown a IllegalStateException");
+    } catch (IllegalStateException e) {
+      // expected
+    }
   }
 
   @Test
