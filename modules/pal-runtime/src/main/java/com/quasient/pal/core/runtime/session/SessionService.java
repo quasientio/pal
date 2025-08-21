@@ -26,6 +26,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
@@ -84,7 +85,7 @@ public class SessionService extends ConnectedService {
       @Named("sync.ready") String syncSocketAddress,
       ThreadGroup serviceThreadGroup,
       @Named("Session.service") String serviceName,
-      @Named("session.svc") String repAddress,
+      @Named("sessionServiceEndpoint") @Nullable String repAddress,
       ObjectLookupStore objectLookupStore) {
     super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
     this.repAddress = repAddress;
@@ -321,6 +322,7 @@ public class SessionService extends ConnectedService {
   @Override
   protected void openConnections() {
     repSocket = zmqContext.createSocket(SocketType.REP);
+    Objects.requireNonNull(repAddress, "Session service endpoint not set");
     repSocket.bind(repAddress);
   }
 

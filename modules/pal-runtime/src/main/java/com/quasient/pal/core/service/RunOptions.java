@@ -59,4 +59,7 @@ public enum RunOptions {
 
   /** Enables write-ahead publishing of messages to the Log. */
   WITH_WAL,
+
+  /** Enables sessions - automatically set if any RPC interface is enabled */
+  WITH_SESSIONS
 }

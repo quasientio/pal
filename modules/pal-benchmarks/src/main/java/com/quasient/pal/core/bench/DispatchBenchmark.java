@@ -32,7 +32,6 @@ import com.quasient.pal.core.execution.java.CustomClassloader;
 import com.quasient.pal.core.intercept.InterceptMatcher;
 import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import com.quasient.pal.core.internal.concurrent.MpscKind;
-import com.quasient.pal.core.runtime.session.SessionService;
 import com.quasient.pal.core.service.Main;
 import com.quasient.pal.core.service.PeerWiring;
 import com.quasient.pal.core.service.RunOptions;
@@ -389,10 +388,9 @@ public class DispatchBenchmark {
                       .with(brokersModule));
     }
 
-    // ----- start consumer services (WAL, PUB, Sessions), collecting required handles
+    // ----- start consumer services (WAL, PUB), collecting required handles
     final Set<Service> services = new HashSet<>();
     services.add(injector.getInstance(InterceptMatcher.class));
-    services.add(injector.getInstance(SessionService.class));
 
     if (runOpts.contains(RunOptions.WITH_TCP_PUB)) {
       messagePublisher = injector.getInstance(MessagePublisher.class);
@@ -509,7 +507,6 @@ public class DispatchBenchmark {
     props.setProperty("sync.ready", "inproc://sync_ready");  // used by all services
     props.setProperty("offset.pub",   "inproc://offsets");  // used by KafkaWalWriter
     props.setProperty("out.pub", System.getProperty("pub.endpoint", DEF_PUB_ENDPOINT));  // used by MessagePublisher
-    props.setProperty("session.svc", "inproc://session");  // used by SessionService
     props.setProperty("intercepts.reg", "inproc://intercept_reg");  // used by InterceptMatcher
 
     // WAL Writer

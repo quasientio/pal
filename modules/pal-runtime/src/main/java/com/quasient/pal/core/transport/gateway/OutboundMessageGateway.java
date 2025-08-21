@@ -219,7 +219,7 @@ public class OutboundMessageGateway {
       @Named("walFailed") AtomicBoolean walFailed,
       @Named("pub_queue") HwmMessageQueue<OutboundMsg> pubQueue,
       PublishingDropPolicy publishingDropPolicy,
-      @Named("session.svc") String sessionServiceAddress) {
+      @Named("sessionServiceEndpoint") @Nullable String sessionServiceAddress) {
     this.zmqContext = zmqContext;
     this.peerUuid = peerUuid;
     this.messageBuilder = messageBuilder;
@@ -557,6 +557,11 @@ public class OutboundMessageGateway {
    *     not sent successfully
    */
   public SessionResponseMsg sendMessageToSessionService(SessionCommandMsg sessionCommandMsg) {
+
+    if (!runOptions.contains(RunOptions.WITH_SESSIONS) || sessionServiceAddress == null) {
+      throw new RuntimeException("Session service not available, or endpoint not set");
+    }
+
     SessionResponseMsg responseMessage = null;
     final Socket sessionServiceSocket = threadSessionsSocket.get();
     final boolean msgSent = sessionCommandMsg.send(sessionServiceSocket);

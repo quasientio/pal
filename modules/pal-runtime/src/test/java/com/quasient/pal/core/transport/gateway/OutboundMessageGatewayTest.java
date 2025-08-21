@@ -12,6 +12,7 @@ package com.quasient.pal.core.transport.gateway;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -178,25 +179,19 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
   // session-service passthrough
   // --------------------------------------------------------------------
   @Test
-  public void sendMessagesToSessionService() {
+  public void sendMessagesToSessionService_noSessionOption_exception() {
     initGateway(false, false, false);
 
     SessionCommandMsg cmd1 =
         new SessionCommandMsg(
             SessionCommandType.STORE_OBJECT, UUID.randomUUID(), ObjectRef.from("123"));
-    SessionResponseMsg resp1 = gateway.sendMessageToSessionService(cmd1);
 
-    SessionCommandMsg cmd2 =
-        new SessionCommandMsg(
-            SessionCommandType.STORE_OBJECT, UUID.randomUUID(), ObjectRef.from("456"));
-    SessionResponseMsg resp2 = gateway.sendMessageToSessionService(cmd2);
-
-    // gateway got OK back
-    assertThat(resp1.getStatus(), is(SessionStatusType.OK));
-    assertThat(resp2.getStatus(), is(SessionStatusType.OK));
-
-    // stub recorded the calls
-    assertThat(sessionStub.messagesReceived, is(List.of(cmd1, cmd2)));
+    try {
+      gateway.sendMessageToSessionService(cmd1);
+      fail("Should fail since no sessions in run options");
+    } catch (Exception e) {
+      // expected
+    }
   }
 
   // --------------------------------------------------------------------

@@ -765,6 +765,13 @@ public class Main implements Callable<Integer> {
       runOptions.add(RunOptions.WITH_JSONRPC);
     }
 
+    // enable sessions if any RPC interface is enabled
+    if (runOptions.contains(RunOptions.WITH_RPC)
+        || runOptions.contains(RunOptions.WITH_JSONRPC)
+        || runOptions.contains(RunOptions.WITH_SOURCE_LOG)) {
+      runOptions.add(RunOptions.WITH_SESSIONS);
+    }
+
     logger.info("Running with options: {}", runOptions);
   }
 
@@ -1074,11 +1081,11 @@ public class Main implements Callable<Integer> {
    */
   private Set<Service> createManagedServices(Injector injector) {
     final Set<Service> services = new HashSet<>();
-    boolean sessionRequired = false;
+    boolean sessionsRequired = false;
 
     if (runOptions.contains(RunOptions.WITH_SOURCE_LOG)) {
       services.add(injector.getInstance(LogReader.class));
-      sessionRequired = true;
+      sessionsRequired = true;
     }
     if (runOptions.contains(RunOptions.WITH_WAL)) {
       services.add(injector.getInstance(WalWriter.class));
@@ -1088,16 +1095,16 @@ public class Main implements Callable<Integer> {
     }
     if (runOptions.contains(RunOptions.WITH_RPC)) {
       services.add(injector.getInstance(ZmqRpcServer.class));
-      sessionRequired = true;
+      sessionsRequired = true;
     }
     if (runOptions.contains(RunOptions.WITH_JSONRPC)) {
       services.add(injector.getInstance(JsonRpcRequestServer.class));
-      sessionRequired = true;
+      sessionsRequired = true;
     }
     if (runOptions.contains(RunOptions.WITH_INTERCEPTS)) {
       services.add(injector.getInstance(InterceptMatcher.class));
     }
-    if (sessionRequired) {
+    if (sessionsRequired) {
       services.add(injector.getInstance(SessionService.class));
     }
     return services;

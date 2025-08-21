@@ -45,6 +45,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javax.annotation.Nullable;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -289,6 +290,22 @@ public class PeerWiring extends AbstractModule {
   @Named("walFailed")
   public AtomicBoolean provideWalFailedFlag() {
     return new AtomicBoolean(false);
+  }
+
+  /**
+   * Returns ZMQ endpoint of sessions service
+   *
+   * @return zmq endpoint (address) if sessions option is enabled, otherwise null.
+   */
+  @SuppressWarnings("unused")
+  @Provides
+  @Named("sessionServiceEndpoint")
+  @Nullable
+  public String provideSessionServiceEndpoint() {
+    if (runOptions.contains(RunOptions.WITH_SESSIONS)) {
+      return properties.getProperty("session.svc");
+    }
+    return null;
   }
 
   /**
