@@ -895,8 +895,7 @@ public class DispatchBenchmark {
   // ----------------------- Actual benchmark method -----------------------
 
   /**
-   * Benchmark for a realistic workload, with an open-loop switching between
-   * baseline and burst modes.
+   * Benchmark method that invokes Pal's hot-path in a closed-loop.
    *
    * @param bh the Blackhole instance that consumes values to prevent JIT optimizations.
    */

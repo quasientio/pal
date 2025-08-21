@@ -87,13 +87,6 @@ SIZE_DIST_PCT=40:35:20:5
 # input generator mode: ASYNC | PRELOADED
 INPUT_MODE=PRELOADED
 
-#-------- Baseline and burst mode parameters ---------
-BASE_QPS=1000
-BURST_QPS=10000
-BASE_SEC=30
-BURST_SEC=10
-
-
 #-------- PUB params ---------
 
 # One of: FIXED,CHUNKED,GROWABLE,UNBOUNDED
@@ -175,6 +168,4 @@ java  -Dpeer.logging="$PAL_HOME/config/peer-logging.xml" \
       -p sizeDistPct="$SIZE_DIST_PCT" \
       -p pubQueueType="$PUB_QUEUE_TYPE" \
       -p walQueueType="$WAL_QUEUE_TYPE" \
-      -p baseQps="$BASE_QPS" -p burstQps="$BURST_QPS"  \
-      -p baseSec="$BASE_SEC" -p burstSec="$BURST_SEC" \
       -rff out.json -rf json
