@@ -18,6 +18,7 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.nio.file.Path;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -67,7 +68,13 @@ public class ChronicleWalWriter extends WalWriter {
   private static final int DEFAULT_BLOCK_SIZE = 128 * 1024 * 1024; // 128 MiB
 
   /** Default index spacing if none provided. */
-  private static final int DEFAULT_INDEX_SPACING = 256;
+  private static final int DEFAULT_INDEX_SPACING = 1000;
+
+  /**
+   * Time cap for syncs: if this much time passes without a sync (even if count not reached), force
+   * one.
+   */
+  private static final long SYNC_MAX_ELAPSED_NS = TimeUnit.MILLISECONDS.toNanos(2);
 
   // ─────────────────────────────── Injected collaborators & config ───────────────────────────────
 
@@ -80,6 +87,9 @@ public class ChronicleWalWriter extends WalWriter {
   /** Block size to use for the {@link ChronicleQueue}. */
   private final int blockSize;
 
+  /** Sync policy: -1 disables explicit syncs; >0 means sync every N messages or after time cap. */
+  private final int syncEvery;
+
   /** Factory to create instances of {@link ChronicleQueue}. */
   private final ChronicleQueueFactory queueFactory;
 
@@ -90,6 +100,12 @@ public class ChronicleWalWriter extends WalWriter {
 
   /** Appender instance */
   private ExcerptAppender appender;
+
+  /** Messages written since last explicit sync (when syncEvery > 0). */
+  private int msgsSinceLastSync = 0;
+
+  /** NanoTime of last explicit sync (when syncEvery > 0). */
+  private long lastSyncNs = 0L;
 
   /**
    * Constructs a new ChronicleWalWriter instance with the required dependencies and configuration.
@@ -106,6 +122,7 @@ public class ChronicleWalWriter extends WalWriter {
    * @param baseDir base directory path for creating Chronicle queue files
    * @param rollCycle the roll cycle to use for the {@link ChronicleQueue}
    * @param blockSize the block size to use for the {@link ChronicleQueue}
+   * @param syncEvery explicit sync every N messages; -1 disables explicit syncs
    * @param queueFactory used to create queue instances for appending messages
    */
   @Inject
@@ -122,6 +139,7 @@ public class ChronicleWalWriter extends WalWriter {
       @Named("chronicleBaseDir") Path baseDir,
       @Named("wal.chronicle.roll_cycle") @Nullable String rollCycle,
       @Named("wal.chronicle.block_size") @Nullable String blockSize,
+      @Named("wal.chronicle.sync_every") @Nullable String syncEvery,
       ChronicleQueueFactory queueFactory) {
     super(
         peerUuid,
@@ -143,6 +161,7 @@ public class ChronicleWalWriter extends WalWriter {
         blockSize != null && !blockSize.isBlank()
             ? Integer.parseInt(blockSize)
             : DEFAULT_BLOCK_SIZE;
+    this.syncEvery = (syncEvery != null && !syncEvery.isBlank()) ? Integer.parseInt(syncEvery) : -1;
     this.queueFactory = queueFactory;
   }
 
@@ -185,6 +204,11 @@ public class ChronicleWalWriter extends WalWriter {
       chronicleQueue = queueFactory.create(queuePath, rollCycle, DEFAULT_INDEX_SPACING, blockSize);
       appender = chronicleQueue.createAppender();
     }
+
+    // initialise sync bookkeeping
+    lastSyncNs = System.nanoTime();
+    msgsSinceLastSync = 0;
+
     logger.info(
         "Writing to chronicle queue at: {} (rollCycle={}, blockSize={})",
         queuePath,
@@ -285,6 +309,16 @@ public class ChronicleWalWriter extends WalWriter {
         offsetPublisherSocket.sendMore(msg.getMessageId());
         offsetPublisherSocket.send(Long.toString(index));
       }
+
+      if (syncEvery > 0) {
+        msgsSinceLastSync++;
+        long now = System.nanoTime();
+        if (msgsSinceLastSync >= syncEvery || (now - lastSyncNs) >= SYNC_MAX_ELAPSED_NS) {
+          appender.sync(); // fsync-like durability fence
+          msgsSinceLastSync = 0;
+          lastSyncNs = now;
+        }
+      }
     } catch (Exception ex) {
       messagesDroppedError.incrementAndGet();
       logger.error(
@@ -304,6 +338,17 @@ public class ChronicleWalWriter extends WalWriter {
   /** Closes all open connections and resources used by the ZMQ socket and Chronicle queue. */
   @Override
   protected void closeConnections() {
+
+    // If configured to flush on close, do a final sync before closing the queue.
+    if (isFlushOnClose && appender != null) {
+      try {
+        appender.sync();
+      } catch (Exception e) {
+        logger.warn("Final sync on close failed", e);
+      }
+    }
+
+    closeConnection(appender, "Error closing appender");
     closeConnection(offsetPublisherSocket, "Error closing offset publisher");
     closeConnection(chronicleQueue, "Error closing chronicle queue");
     logger.info("Closed connections");

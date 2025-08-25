@@ -123,6 +123,7 @@ WAL_KAFKA_BUFFER_MEMORY=128000000
 #WAL_CHRONICLE_BASE_DIR=/data/chronicle
 #WAL_CHRONICLE_ROLL_CYCLE=
 #WAL_CHRONICLE_BLOCK_SIZE=
+#WAL_CHRONICLE_SYNC_EVERY=
 
 # full hot path
 java  -Dpeer.logging="$PAL_HOME/config/peer-logging.xml" \
@@ -151,6 +152,7 @@ java  -Dpeer.logging="$PAL_HOME/config/peer-logging.xml" \
       -Dwal.kafka.compression_type="$WAL_KAFKA_COMPRESSION_TYPE" \
       -Dwal.kafka.buffer_memory="$WAL_KAFKA_BUFFER_MEMORY" \
       -Dwal.chronicle.base_dir="$WAL_CHRONICLE_BASE_DIR" \
+      -Dwal.chronicle.sync_every="$WAL_CHRONICLE_SYNC_EVERY" \
       -Xverify:none \
       -jar target/pal-benchmarks-1.0.0-SNAPSHOT.jar \
       DispatchBenchmark \

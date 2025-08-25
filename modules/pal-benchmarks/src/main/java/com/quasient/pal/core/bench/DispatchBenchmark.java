@@ -528,6 +528,8 @@ public class DispatchBenchmark {
     props.setProperty("wal.chronicle.base_dir", System.getProperty("wal.chronicle.base_dir", ""));
     props.setProperty("wal.chronicle.roll_cycle", System.getProperty("wal.chronicle.roll_cycle", ""));
     props.setProperty("wal.chronicle.block_size", System.getProperty("wal.chronicle.block_size", ""));
+    props.setProperty("wal.chronicle.sync_every", System.getProperty("wal.chronicle.sync_every", "-1"));
+
 
     // save the chronicle path, needed later in setUp()
     if (props.getProperty("wal.type").equalsIgnoreCase("chronicle")) {

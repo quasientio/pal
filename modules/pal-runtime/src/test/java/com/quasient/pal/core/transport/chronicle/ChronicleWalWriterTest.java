@@ -111,7 +111,8 @@ public class ChronicleWalWriterTest extends ZmqEnabledTest {
             null, // use default
             baseDir,
             "TEN_MINUTELY",
-            null,
+            null, // use default
+            null, // use default
             factory);
 
     chronicleWalWriter.writeToLog(WAL_INFO, /* publishOffsets */ false);
@@ -149,7 +150,8 @@ public class ChronicleWalWriterTest extends ZmqEnabledTest {
             null, // use default
             baseDir,
             "TEN_MINUTELY",
-            null,
+            null, // use default
+            null, // use default
             new DefaultChronicleQueueFactory());
 
     walWriter.writeToLog(WAL_INFO1, /* publishOffsets */ false);
@@ -248,7 +250,8 @@ public class ChronicleWalWriterTest extends ZmqEnabledTest {
             null, // use default
             tmpDir,
             "TEN_MINUTELY",
-            null,
+            null, // use default
+            null, // use default
             new FailingFactory());
 
     failingWriter.writeToLog(WAL_INFO, false);
