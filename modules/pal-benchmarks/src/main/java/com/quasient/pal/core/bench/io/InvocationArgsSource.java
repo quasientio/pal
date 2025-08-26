@@ -36,6 +36,7 @@ public interface InvocationArgsSource {
   default void beforeIteration() { }
 
   /**
+   * Gets the next args.
    * @return the next {@link InvocationArgs} instance
    */
   InvocationArgs next();

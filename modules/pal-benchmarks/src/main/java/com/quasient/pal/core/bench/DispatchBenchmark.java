@@ -12,6 +12,7 @@ package com.quasient.pal.core.bench;
 
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.joran.JoranConfigurator;
+import com.google.common.base.Splitter;
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 import com.google.inject.Guice;
@@ -453,14 +454,15 @@ public class DispatchBenchmark {
    * @throws IllegalArgumentException if missing values or sum does not equal 100
    */
   private void parseSizeDist() {
-    String[] parts = sizeDistPct.split("\\s*:\\s*");
-    if (parts.length != 4) {
+    Splitter splitter = Splitter.on(":").omitEmptyStrings().trimResults();
+    List<String> parts = splitter.splitToList(sizeDistPct);
+    if (parts.size() != 4) {
       throw new IllegalArgumentException("sizeDistPct must have 4 numbers");
     }
     sizeDist = new int[4];
     int sum = 0;
     for (int i = 0; i < 4; i++) {
-      sizeDist[i] = Integer.parseInt(parts[i]);
+      sizeDist[i] = Integer.parseInt(parts.get(i));
       sum += sizeDist[i];
     }
     if (sum != 100) {

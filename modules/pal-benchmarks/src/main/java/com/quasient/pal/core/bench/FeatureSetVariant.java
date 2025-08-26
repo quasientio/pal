@@ -73,6 +73,7 @@ public enum FeatureSetVariant {
         runOpts.add(RunOptions.WITH_TCP_PUB);
         runOpts.add(RunOptions.WITH_WAL);
       }
+      case NOOP, NOWEAVE -> {}
     }
     return runOpts;
   }
