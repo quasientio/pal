@@ -254,12 +254,6 @@ public class PeerWiring extends AbstractModule {
     }
 
     int initial = Integer.parseInt(properties.getProperty("wal.queue.initial", "1024"));
-
-    if (kind == MpscKind.UNBOUNDED) {
-      int chunk = Integer.parseInt(properties.getProperty("wal.queue.chunk", "1024"));
-      return HwmMessageQueue.createQueue(kind, initial, chunk);
-    }
-
     int max = Integer.parseInt(properties.getProperty("wal.queue.max", "2048"));
     return HwmMessageQueue.createQueue(kind, initial, max);
   }
@@ -268,7 +262,7 @@ public class PeerWiring extends AbstractModule {
    * Provides the PUB Queue singleton, initialized with the values given by the corresponding {@code
    * "pub.queue.*"} parameters.
    *
-   * @return the initialized bounded or unbounded PUB queue instance
+   * @return the initialized PUB queue instance
    */
   @SuppressWarnings("unused")
   @Provides
@@ -284,12 +278,6 @@ public class PeerWiring extends AbstractModule {
     }
 
     int initial = Integer.parseInt(properties.getProperty("pub.queue.initial", "1024"));
-
-    if (kind == MpscKind.UNBOUNDED) {
-      int chunk = Integer.parseInt(properties.getProperty("pub.queue.chunk", "1024"));
-      return HwmMessageQueue.createQueue(kind, initial, chunk);
-    }
-
     int max = Integer.parseInt(properties.getProperty("pub.queue.max", "2048"));
     return HwmMessageQueue.createQueue(kind, initial, max);
   }

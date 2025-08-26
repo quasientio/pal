@@ -143,17 +143,11 @@ public class DispatchBenchmark {
   /** Default max size of the Wal queue. */
   private static final int    DEF_WAL_QUEUE_MAX    = 1_048_576; //  1 << 20
 
-  /** Default chunk size of the Wal queue, for growable types. */
-  private static final int    DEF_WAL_QUEUE_CHUNK  = 4_096;     //  1 << 12
-
   /** Default initial size of the Pub queue. */
   private static final int    DEF_PUB_QUEUE_INITIAL= 16_384;    //  1 << 14
 
   /** Default max size of the Pub queue. */
   private static final int    DEF_PUB_QUEUE_MAX    = 1_048_576; // 1 << 20
-
-  /** Default chunk size of the Pub queue, for growable types. */
-  private static final int    DEF_PUB_QUEUE_CHUNK  = 8_192;     //  1 << 13
 
   // ---- MessagePublisher Defaults --------------------------------------------
 
@@ -228,12 +222,12 @@ public class DispatchBenchmark {
   @Param({"ASYNC", "PRELOADED"})
   public InputMode inputMode;
 
-  /** Pub Queue type: FIXED, CHUNKED, GROWABLE, UNBOUNDED */
-  @Param({"NONE", "FIXED", "CHUNKED", "GROWABLE", "UNBOUNDED"})
+  /** Pub Queue type: FIXED, CHUNKED, GROWABLE */
+  @Param({"NONE", "FIXED", "CHUNKED", "GROWABLE"})
   public MpscKind pubQueueType;
 
-  /** WAL Queue type: FIXED, CHUNKED, GROWABLE, UNBOUNDED */
-  @Param({"NONE", "FIXED", "CHUNKED", "GROWABLE", "UNBOUNDED"})
+  /** WAL Queue type: FIXED, CHUNKED, GROWABLE */
+  @Param({"NONE", "FIXED", "CHUNKED", "GROWABLE"})
   public MpscKind walQueueType;
 
   // ----------------------- Dependency-injected runtime --------------------
@@ -521,9 +515,6 @@ public class DispatchBenchmark {
           props.setProperty("wal.queue.initial", System.getProperty("wal.queue.initial", String.valueOf(DEF_WAL_QUEUE_INITIAL)));
           props.setProperty("wal.queue.max", System.getProperty("wal.queue.max", String.valueOf(DEF_WAL_QUEUE_MAX)));
         }
-        case UNBOUNDED ->
-                props.setProperty("wal.queue.chunk", System.getProperty("wal.queue.chunk", String.valueOf(DEF_WAL_QUEUE_CHUNK)));
-
         default -> throw new IllegalArgumentException("Unsupported wal.queue.type=" + walQueueType);
       }
     }
@@ -562,8 +553,6 @@ public class DispatchBenchmark {
         props.setProperty("pub.queue.initial", System.getProperty("pub.queue.initial", String.valueOf(DEF_PUB_QUEUE_INITIAL)));
         props.setProperty("pub.queue.max", System.getProperty("pub.queue.max", String.valueOf(DEF_PUB_QUEUE_MAX)));
       }
-      case UNBOUNDED -> props.setProperty("pub.queue.chunk", System.getProperty("pub.queue.chunk", String.valueOf(DEF_PUB_QUEUE_CHUNK)));
-
       default -> throw new IllegalArgumentException("Unsupported pub.queue.type=" + pubQueueType);
     }
 

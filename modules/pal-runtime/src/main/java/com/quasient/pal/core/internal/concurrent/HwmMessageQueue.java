@@ -30,7 +30,7 @@ import org.jctools.queues.MpscUnboundedArrayQueue;
  */
 public final class HwmMessageQueue<E> implements MessagePassingQueue<E> {
 
-  /** Underlying unbounded multi-producer, single-consumer queue. */
+  /** Underlying multi-producer, single-consumer queue. */
   private final MessagePassingQueue<E> delegate;
 
   /** Tracks the current number of elements in the queue. */
@@ -55,20 +55,18 @@ public final class HwmMessageQueue<E> implements MessagePassingQueue<E> {
    *
    * @param kind see {@link MpscKind} for options
    * @param initial initial size of queue
-   * @param maxOrChunk max capacity for bounded types, chunk for unbounded. The maximum capacity
-   *     will be rounded up to the closest power of 2 and will be the upper limit of number of
-   *     elements in this queue. Must be 4 or more and round up to a larger power of 2 than
-   *     initialCapacity.
+   * @param max max capacity for bounded variable-sized types. The maximum capacity will be rounded
+   *     up to the closest power of 2 and will be the upper limit of number of elements in this
+   *     queue. Must be 4 or more and round up to a larger power of 2 than initialCapacity.
    * @return the initialized and wrapped queue, null if kind is {@link MpscKind#NONE}
    * @param <E> the type of the queue elements
    */
-  public static <E> HwmMessageQueue<E> createQueue(MpscKind kind, int initial, int maxOrChunk) {
+  public static <E> HwmMessageQueue<E> createQueue(MpscKind kind, int initial, int max) {
     return switch (kind) {
       case NONE -> null;
       case FIXED -> new HwmMessageQueue<>(new MpscArrayQueue<>(initial));
-      case CHUNKED -> new HwmMessageQueue<>(new MpscChunkedArrayQueue<>(initial, maxOrChunk));
-      case GROWABLE -> new HwmMessageQueue<>(new MpscGrowableArrayQueue<>(initial, maxOrChunk));
-      case UNBOUNDED -> new HwmMessageQueue<>(new MpscUnboundedArrayQueue<>(maxOrChunk));
+      case CHUNKED -> new HwmMessageQueue<>(new MpscChunkedArrayQueue<>(initial, max));
+      case GROWABLE -> new HwmMessageQueue<>(new MpscGrowableArrayQueue<>(initial, max));
     };
   }
 

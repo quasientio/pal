@@ -24,9 +24,4 @@ public enum MpscKind {
   CHUNKED,
   /** MpscGrowableArrayQueue - Few big bursts; better cache locality and less GC than chunked. */
   GROWABLE,
-  /**
-   * MpscUnboundedArrayQueue - “Fire-and-forget” path when you really cannot drop but also cannot
-   * pre-size.
-   */
-  UNBOUNDED
 }

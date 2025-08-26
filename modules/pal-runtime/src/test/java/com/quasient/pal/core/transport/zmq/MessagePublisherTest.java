@@ -63,7 +63,7 @@ public class MessagePublisherTest extends ZmqEnabledTest {
     context = createContext();
 
     // shared producer→consumer queue
-    pubQueue = HwmMessageQueue.createQueue(MpscKind.UNBOUNDED, 0, 1 << 10);
+    pubQueue = HwmMessageQueue.createQueue(MpscKind.CHUNKED, 100, 1 << 10);
 
     MessagePublisher publisher = getMessagePublisher();
 
