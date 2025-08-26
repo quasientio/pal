@@ -9,6 +9,9 @@
  */
 package com.quasient.pal.core.transport.chronicle;
 
+import com.lmax.disruptor.BusySpinWaitStrategy;
+import com.lmax.disruptor.dsl.Disruptor;
+import com.lmax.disruptor.dsl.ProducerType;
 import com.quasient.pal.common.directory.nodes.LogInfo;
 import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import com.quasient.pal.core.transport.WalWriter;
@@ -17,9 +20,13 @@ import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.nio.file.Path;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import javax.annotation.Nullable;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -29,6 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
+import zmq.ZMQ;
 
 /**
  * <b>ChronicleWalWriter</b> consumes {@link OutboundMsg} objects from a single-consumer queue and
@@ -98,14 +106,23 @@ public class ChronicleWalWriter extends WalWriter {
   /** The chronicle queue instance where messages are written. */
   private ChronicleQueue chronicleQueue;
 
-  /** Appender instance */
-  private ExcerptAppender appender;
+  /** Appender instance used for writing messages read from the queue - single thread */
+  private ExcerptAppender queueAppender;
+
+  /** Per-thread appender instance used in direct-write mode (i.e. when running queueless) */
+  private ThreadLocal<ExcerptAppender> tlAppender;
+
+  /** Set of per-thread appenders, required for proper closing on shutdown. */
+  private final Set<ExcerptAppender> perThreadAppenders = ConcurrentHashMap.newKeySet();
 
   /** Messages written since last explicit sync (when syncEvery > 0). */
-  private int msgsSinceLastSync = 0;
+  private final AtomicInteger msgsSinceLastSync = new AtomicInteger(0);
 
   /** NanoTime of last explicit sync (when syncEvery > 0). */
-  private long lastSyncNs = 0L;
+  private final AtomicLong lastSyncNs = new AtomicLong(0);
+
+  /** Offsets handler-thread reuse for converting long to byte[] */
+  private static final ThreadLocal<byte[]> TL8 = ThreadLocal.withInitial(() -> new byte[8]);
 
   /**
    * Constructs a new ChronicleWalWriter instance with the required dependencies and configuration.
@@ -132,7 +149,7 @@ public class ChronicleWalWriter extends WalWriter {
       @Named("sync.ready") String syncSocketAddress,
       ThreadGroup serviceThreadGroup,
       @Named("WalWriter.service") String serviceName,
-      @Named("wal_queue") HwmMessageQueue<OutboundMsg> walQueue,
+      @Named("wal_queue") @Nullable HwmMessageQueue<OutboundMsg> walQueue,
       @Named("walFailed") AtomicBoolean walFailed,
       @Named("offset.pub") String offsetPubAddress,
       @Named("wal.flush_on_close") @Nullable String flushOnClose,
@@ -163,6 +180,13 @@ public class ChronicleWalWriter extends WalWriter {
             : DEFAULT_BLOCK_SIZE;
     this.syncEvery = (syncEvery != null && !syncEvery.isBlank()) ? Integer.parseInt(syncEvery) : -1;
     this.queueFactory = queueFactory;
+    logger.debug(
+        "new ChronicleWalWriter initialized w/offsetPubAddress={}, flushOnClose={}, baseDir={}, rollCycle={}, and syncEvery={}",
+        offsetPubAddress,
+        flushOnClose,
+        baseDir,
+        rollCycle,
+        syncEvery);
   }
 
   // ─────────────────────────────── Lifecycle ───────────────────────────────
@@ -172,7 +196,32 @@ public class ChronicleWalWriter extends WalWriter {
     if (publishOffsets) {
       this.offsetPublisherSocket = zmqContext.createSocket(SocketType.PUB);
       offsetPublisherSocket.bind(offsetPubAddress);
+
+      offsetsDisruptor =
+          new Disruptor<>(
+              OffsetEvent::new,
+              OFFSETS_RING_SIZE,
+              r -> {
+                Thread t = new Thread(r, serviceName + "-offset-publisher");
+                t.setDaemon(true);
+                return t;
+              },
+              ProducerType.MULTI,
+              new BusySpinWaitStrategy()); // ultra-low latency
+
+      // single owner thread of the PUB socket here => thread-safe
+      offsetsDisruptor.handleEventsWith(
+          (evt, sequence, endOfBatch) -> {
+            // two frames: index (as 8 bytes), msgId (String)
+            offsetPublisherSocket.sendMore(longToBytes(evt.index));
+            offsetPublisherSocket.send(evt.msgId.getBytes(ZMQ.CHARSET));
+            evt.clear();
+          });
+
+      offsetsDisruptor.start();
+      offsetsRing = offsetsDisruptor.getRingBuffer();
     }
+
     logger.info("connections open - except chronicle queue");
   }
 
@@ -202,12 +251,23 @@ public class ChronicleWalWriter extends WalWriter {
 
     if (chronicleQueue == null) {
       chronicleQueue = queueFactory.create(queuePath, rollCycle, DEFAULT_INDEX_SPACING, blockSize);
-      appender = chronicleQueue.createAppender();
+    }
+
+    if (queueless) {
+      tlAppender =
+          ThreadLocal.withInitial(
+              () -> {
+                ExcerptAppender a = chronicleQueue.createAppender();
+                perThreadAppenders.add(a);
+                return a;
+              });
+    } else {
+      queueAppender = chronicleQueue.createAppender();
     }
 
     // initialise sync bookkeeping
-    lastSyncNs = System.nanoTime();
-    msgsSinceLastSync = 0;
+    lastSyncNs.set(System.nanoTime());
+    msgsSinceLastSync.set(0);
 
     logger.info(
         "Writing to chronicle queue at: {} (rollCycle={}, blockSize={})",
@@ -223,36 +283,58 @@ public class ChronicleWalWriter extends WalWriter {
    */
   @Override
   public void run() {
-    walQueue.drain(
-        this::handleOutboundMessage,
-        ADAPTIVE_100_MICROSECONDS,
-        () -> !(shutdownRequested || Thread.currentThread().isInterrupted()));
 
-    logger.debug("Thread interrupted or shutdown requested.");
+    if (!queueless) {
+      walQueue.drain(
+          m -> writeMessageUsingAppender(m, queueAppender),
+          ADAPTIVE_100_MICROSECONDS,
+          () -> !(shutdownRequested || Thread.currentThread().isInterrupted()));
 
-    if (!isFlushOnClose) {
-      logger.debug("Shutting down immediately...");
+      logger.debug("Thread interrupted or shutdown requested.");
+
+      if (!isFlushOnClose) {
+        logger.debug("Shutting down immediately...");
+        return;
+      }
+
+      // after shutdown request, drain queue until empty
+      logger.debug("Processing messages remaining in queue...");
+      OutboundMsg msg;
+      while ((msg = walQueue.poll()) != null) {
+        writeMessageUsingAppender(msg, queueAppender);
+      }
+
+      logger.debug("Wal queue empty, shutting down...");
       return;
     }
 
-    // after shutdown request, drain queue until empty
-    logger.debug("Processing messages remaining in queue...");
-    OutboundMsg msg;
-    while ((msg = walQueue.poll()) != null) {
-      handleOutboundMessage(msg);
+    // ───────────── Direct-write mode: don't drain, just wait for shutdown ─────────────
+    logger.info("Direct-write mode enabled: queue draining is disabled; waiting for shutdown...");
+    synchronized (shutdownMonitor) {
+      while (!(shutdownRequested || Thread.currentThread().isInterrupted())) {
+        try {
+          shutdownMonitor.wait(0L); // wait indefinitely; we'll be notified on stop()
+        } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
+          break;
+        }
+      }
     }
-
-    logger.debug("Wal queue empty, shutting down...");
+    logger.debug("Thread interrupted or shutdown requested.");
   }
 
   /**
-   * Handles a single {@link OutboundMsg} taken from the WAL queue and—under normal
-   * circumstances—appends it to Chronicle queue.
+   * Handles a single {@link OutboundMsg} from the WAL queue or a direct producer thread and—under
+   * normal circumstances—appends it to Chronicle queue.
    *
-   * <p>This method is invoked by {@code walQueue.drain(…)} from the {@code run()} loop,
-   * i.e.&nbsp;always on the <em>single</em> consumer thread. It must be
-   * <strong>non-blocking</strong> and <strong>exception-free</strong>; all error handling is done
-   * inside the method so that the queue’s drain loop can continue (or terminate) deterministically.
+   * <p>This method is invoked by {@code walQueue.drain(…)} from the {@code run()} loop, or from
+   * {@link com.quasient.pal.core.transport.gateway.OutboundMessageGateway} directly by the producer
+   * threads. In the first case, the {@link #queueAppender} is used since it's used by a single
+   * thread. In the second scenario, thread-local appender is used.
+   *
+   * <p>It must be <strong>non-blocking</strong> and <strong>exception-free</strong>; all error
+   * handling is done inside the method so that the queue’s drain loop can continue (or terminate)
+   * deterministically.
    *
    * <h3>Control paths</h3>
    *
@@ -285,38 +367,54 @@ public class ChronicleWalWriter extends WalWriter {
    * <h3>Thread-safety &amp; memory</h3>
    *
    * <ul>
-   *   <li>Called only from the consumer thread; no external synchronisation required.
+   *   <li>Called from the consumer thread or a per-thread local; no external synchronisation
+   *       required.
    *   <li>Uses {@link java.util.concurrent.atomic.AtomicBoolean AtomicBoolean}s (`walFailed`,
    *       `pillSent`) for single-execution guarantees across possible future callers.
    *   <li>The queue is fully drained or cleared before the thread exits, so no user payload is left
    *       reachable.
    * </ul>
    *
-   * @param msg the dequeued message; never {@code null}. May be the special {@link #POISON_PILL}
-   *     sentinel to signal shutdown.
+   * @param msg the message to be written; never {@code null}. May be the special {@link
+   *     #POISON_PILL} sentinel to signal shutdown.
    */
-  @Override
-  protected void handleOutboundMessage(OutboundMsg msg) {
+  public void writeMessageUsingAppender(OutboundMsg msg, ExcerptAppender appender) {
+
+    if (shutdownRequested) {
+      logger.warn(
+          "Shutdown in progress, cannot append. Message w/id: {} will be discarded",
+          msg.getMessageId());
+      return;
+    }
+
     if (POISON_PILL.equals(msg)) {
       return; // graceful exit
     }
-    messagesReceived++;
+
+    messagesReceived.getAndIncrement();
+
     try {
       long index = msg.appendTo(appender);
       messagesWritten.incrementAndGet();
 
-      if (publishOffsets && offsetPublisherSocket != null) {
-        offsetPublisherSocket.sendMore(msg.getMessageId());
-        offsetPublisherSocket.send(Long.toString(index));
+      if (publishOffsets) {
+        long seq = offsetsRing.next(); // or tryNext() with drop/backpressure
+        try {
+          OffsetEvent e = offsetsRing.get(seq);
+          e.set(msg.getMessageId(), index);
+        } finally {
+          offsetsRing.publish(seq);
+        }
       }
 
       if (syncEvery > 0) {
-        msgsSinceLastSync++;
+        msgsSinceLastSync.getAndIncrement();
         long now = System.nanoTime();
-        if (msgsSinceLastSync >= syncEvery || (now - lastSyncNs) >= SYNC_MAX_ELAPSED_NS) {
+        if (msgsSinceLastSync.get() >= syncEvery
+            || (now - lastSyncNs.get()) >= SYNC_MAX_ELAPSED_NS) {
           appender.sync(); // fsync-like durability fence
-          msgsSinceLastSync = 0;
-          lastSyncNs = now;
+          msgsSinceLastSync.set(0);
+          lastSyncNs.set(now);
         }
       }
     } catch (Exception ex) {
@@ -324,10 +422,12 @@ public class ChronicleWalWriter extends WalWriter {
       logger.error(
           "Chronicle failed appending message w/id {} → halting WAL", msg.getMessageId(), ex);
       if (walFailed.compareAndSet(false, true)) {
-        walQueue.clear();
-        if (pillSent.compareAndSet(false, true)) {
-          while (!walQueue.offer(POISON_PILL)) {
-            Thread.onSpinWait();
+        if (!queueless) {
+          walQueue.clear();
+          if (pillSent.compareAndSet(false, true)) {
+            while (!walQueue.offer(POISON_PILL)) {
+              Thread.onSpinWait();
+            }
           }
         }
         Thread.currentThread().interrupt();
@@ -335,22 +435,73 @@ public class ChronicleWalWriter extends WalWriter {
     }
   }
 
+  /**
+   * {@inheritDoc} This method is intended to be called exclusively from producer threads through
+   * {@link com.quasient.pal.core.transport.gateway.OutboundMessageGateway} and will use a
+   * Thread-local appender.
+   */
+  @Override
+  public void writeMessage(OutboundMsg msg) {
+    writeMessageUsingAppender(msg, tlAppender.get());
+  }
+
   /** Closes all open connections and resources used by the ZMQ socket and Chronicle queue. */
   @Override
   protected void closeConnections() {
 
     // If configured to flush on close, do a final sync before closing the queue.
-    if (isFlushOnClose && appender != null) {
+    if (isFlushOnClose && queueAppender != null) {
       try {
-        appender.sync();
+        queueAppender.sync();
       } catch (Exception e) {
         logger.warn("Final sync on close failed", e);
       }
     }
 
-    closeConnection(appender, "Error closing appender");
+    // close thread-local appenders
+    if (queueless) {
+      for (ExcerptAppender a : perThreadAppenders) {
+        try {
+          a.sync();
+        } catch (Exception e) {
+          logger.warn("Final per-thread sync failed", e);
+        }
+        try {
+          a.close();
+        } catch (Exception e) {
+          logger.warn("Closing per-thread appender failed", e);
+        }
+      }
+      perThreadAppenders.clear();
+    }
+
+    if (publishOffsets && offsetsDisruptor != null) {
+      offsetsDisruptor.shutdown(); // waits for consumer to drain
+    }
+
+    closeConnection(queueAppender, "Error closing appender");
     closeConnection(offsetPublisherSocket, "Error closing offset publisher");
     closeConnection(chronicleQueue, "Error closing chronicle queue");
     logger.info("Closed connections");
+  }
+
+  /**
+   * Returns a byte array representation of a long reusing a thread-local array - avoids allocations
+   *
+   * @param v the long value
+   * @return the byte array
+   */
+  private static byte[] longToBytes(long v) {
+    byte[] b = TL8.get();
+    // big-endian
+    b[0] = (byte) (v >>> 56);
+    b[1] = (byte) (v >>> 48);
+    b[2] = (byte) (v >>> 40);
+    b[3] = (byte) (v >>> 32);
+    b[4] = (byte) (v >>> 24);
+    b[5] = (byte) (v >>> 16);
+    b[6] = (byte) (v >>> 8);
+    b[7] = (byte) v;
+    return b;
   }
 }

@@ -24,6 +24,7 @@ import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import com.quasient.pal.core.internal.messages.SessionCommandMsg;
 import com.quasient.pal.core.internal.messages.SessionResponseMsg;
 import com.quasient.pal.core.service.RunOptions;
+import com.quasient.pal.core.transport.WalWriter;
 import com.quasient.pal.core.transport.zmq.publish.PublishingDropPolicy;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
@@ -72,6 +73,7 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
   private DirectoryConnectionProvider dirProvider;
   private InterceptMatcher matcher;
 
+  private WalWriter walWriterMock;
   private HwmMessageQueue<OutboundMsg> walQueueMock;
   private HwmMessageQueue<OutboundMsg> pubQueueMock;
   private AtomicBoolean walFailed;
@@ -102,6 +104,9 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
                   msgsSeenByMatcher.add((ExecMessage) inv.getArguments()[0]);
                   return Collections.emptyList(); // no intercepts
                 });
+
+    // Wal Writer mock
+    walWriterMock = mock(WalWriter.class);
 
     // ── JCTools queue mocks
     walQueueMock = mock(HwmMessageQueue.class);
@@ -142,6 +147,7 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
             dirProvider,
             opts,
             matcher,
+            walWriterMock,
             walQueueMock,
             walFailed,
             pubQueueMock,

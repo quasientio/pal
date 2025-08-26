@@ -9,6 +9,8 @@
  */
 package com.quasient.pal.core.transport;
 
+import com.lmax.disruptor.RingBuffer;
+import com.lmax.disruptor.dsl.Disruptor;
 import com.quasient.pal.common.directory.nodes.LogInfo;
 import com.quasient.pal.common.runtime.ExecPhase;
 import com.quasient.pal.core.internal.concurrent.AdaptiveSpinParkWaitStrategy;
@@ -18,22 +20,16 @@ import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import com.quasient.pal.messages.OutboundMsg;
 import com.quasient.pal.messages.colfer.ConstructorCall;
 import com.quasient.pal.messages.types.MessageType;
-import jakarta.inject.Named;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nullable;
 import org.jctools.queues.MessagePassingQueue;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 
 /** Base abstract implementation of WalWriter containing common functionality. */
 public abstract class WalWriter extends ConnectedService {
-
-  /** Logger instance. */
-  private static final Logger logger = LoggerFactory.getLogger(WalWriter.class);
 
   /**
    * A MPSC (Multiple Producer Single Consumer) queue holding the OutboundMessage's to be written.
@@ -46,6 +42,9 @@ public abstract class WalWriter extends ConnectedService {
   /** Adaptive dynamic backoff strategy used by the queue drain operation. */
   protected static final MessagePassingQueue.WaitStrategy ADAPTIVE_100_MICROSECONDS =
       new AdaptiveSpinParkWaitStrategy();
+
+  /** Offset events ring size */
+  protected static final int OFFSETS_RING_SIZE = 1 << 16; // power of two
 
   /** ZeroMQ publisher socket used to publish message offsets when enabled. */
   protected ZMQ.Socket offsetPublisherSocket;
@@ -66,6 +65,15 @@ public abstract class WalWriter extends ConnectedService {
    */
   protected final boolean isFlushOnClose;
 
+  /**
+   * Indicates whether we are draining from the WAL queue inside run(), or if producers are writing
+   * directly to the WAL using {@link #writeMessage(OutboundMsg)}
+   */
+  protected final boolean queueless;
+
+  /** Monitor used to park the run() thread in direct-write mode. */
+  protected final Object shutdownMonitor = new Object();
+
   /** Poison pill to enqueue for graceful self-shutdown, when writing/appending fails. */
   protected static final OutboundMsg POISON_PILL =
       new OutboundMsg(
@@ -80,8 +88,8 @@ public abstract class WalWriter extends ConnectedService {
    */
   protected final AtomicBoolean walFailed;
 
-  /** Counter tracking total of messages received from the {@code walQueue} */
-  protected long messagesReceived;
+  /** Counter tracking total of messages received for writing */
+  protected final AtomicInteger messagesReceived = new AtomicInteger(0);
 
   /** Counter of in-flight messages. */
   protected final AtomicInteger messagesInFlight = new AtomicInteger(0);
@@ -91,6 +99,12 @@ public abstract class WalWriter extends ConnectedService {
 
   /** Total of messages dropped due to write/append error */
   protected final AtomicInteger messagesDroppedError = new AtomicInteger(0);
+
+  /** Disruptor used for publishing offsets without allocations */
+  protected Disruptor<OffsetEvent> offsetsDisruptor;
+
+  /** Ring buffer used to publish the offset events */
+  protected RingBuffer<OffsetEvent> offsetsRing;
 
   /**
    * Constructs a new WalWriter instance with the required dependencies and configuration.
@@ -108,13 +122,13 @@ public abstract class WalWriter extends ConnectedService {
   protected WalWriter(
       UUID peerUuid,
       ZContext context,
-      @Named("sync.ready") String syncSocketAddress,
+      String syncSocketAddress,
       ThreadGroup serviceThreadGroup,
-      @Named("WalWriter.service") String serviceName,
-      @Named("wal_queue") HwmMessageQueue<OutboundMsg> walQueue,
-      @Named("walFailed") AtomicBoolean walFailed,
-      @Named("offset.pub") String offsetPubAddress,
-      @Named("wal.flush_on_close") @Nullable String flushOnClose) {
+      String serviceName,
+      @Nullable HwmMessageQueue<OutboundMsg> walQueue,
+      AtomicBoolean walFailed,
+      String offsetPubAddress,
+      @Nullable String flushOnClose) {
     super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
     this.walQueue = walQueue;
     this.walFailed = walFailed;
@@ -126,6 +140,7 @@ public abstract class WalWriter extends ConnectedService {
     } else {
       isFlushOnClose = DEF_FLUSH_ON_CLOSE;
     }
+    queueless = walQueue == null;
   }
 
   /**
@@ -135,48 +150,26 @@ public abstract class WalWriter extends ConnectedService {
    */
   public WalWriterStats getLiveStats() {
     return new WalWriterStats(
-        messagesReceived,
+        messagesReceived.get(),
         messagesWritten.get(),
         messagesDroppedError.get(),
         messagesInFlight.get());
   }
 
   /**
-   * Continuously receives messages from the WAL Queue and writes them to either the implemented
-   * queue. The method processes messages until shutdown is requested / the thread is interrupted,
-   * and may or not flush the queue before shutdown depending on the .
+   * Continuously receives messages from the WAL Queue and writes them to the implemented queue. The
+   * method processes messages until shutdown is requested / the thread is interrupted, and may or
+   * not flush the queue before shutdown depending on the value of {@link #isFlushOnClose}.
    */
   @Override
-  public void run() {
-    walQueue.drain(
-        this::handleOutboundMessage,
-        ADAPTIVE_100_MICROSECONDS,
-        () -> !(shutdownRequested || Thread.currentThread().isInterrupted()));
-
-    logger.debug("Thread interrupted or shutdown requested.");
-
-    if (!isFlushOnClose) {
-      logger.debug("Shutting down immediately...");
-      return;
-    }
-
-    // after shutdown request, drain queue until empty
-    logger.debug("Processing messages remaining in queue...");
-    OutboundMsg msg;
-    while ((msg = walQueue.poll()) != null) {
-      handleOutboundMessage(msg);
-    }
-
-    logger.debug("Wal queue empty, shutting down...");
-  }
+  public abstract void run();
 
   /**
-   * Process an {@link OutboundMsg} from the queue, by publishing/writing it to the configured
-   * target.
+   * Process an {@link OutboundMsg}, by writing it to the configured WAL.
    *
    * @param msg the WAL message to send/serialize.
    */
-  protected abstract void handleOutboundMessage(OutboundMsg msg);
+  public abstract void writeMessage(OutboundMsg msg);
 
   /**
    * Triggers a shutdown sequence for the service.
@@ -187,15 +180,9 @@ public abstract class WalWriter extends ConnectedService {
   @Override
   protected void triggerStop() {
     shutdownRequested = true;
-  }
-
-  /**
-   * Returns the destination {@link LogInfo}, where WAL messages are being written.
-   *
-   * @return the current LogInfo object
-   */
-  public LogInfo getCurrentWal() {
-    return writeAheadLog;
+    synchronized (shutdownMonitor) {
+      shutdownMonitor.notifyAll();
+    }
   }
 
   /**
@@ -206,4 +193,27 @@ public abstract class WalWriter extends ConnectedService {
    *     ZeroMQ.
    */
   public abstract void writeToLog(LogInfo writeAheadLog, boolean publishOffsets);
+
+  /** Simple bean holding offset publishing data */
+  protected static final class OffsetEvent {
+    /** The ID of the message written */
+    public String msgId;
+
+    /** The index where it was written */
+    public long index;
+
+    /** Required constructor */
+    public OffsetEvent() {}
+
+    /** sets both msg ID and index */
+    public void set(String msgId, long index) {
+      this.msgId = msgId;
+      this.index = index;
+    }
+
+    /** clear to avoid retaining strings */
+    public void clear() {
+      this.msgId = null;
+    }
+  }
 }

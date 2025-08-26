@@ -9,6 +9,9 @@
  */
 package com.quasient.pal.core.transport.kafka;
 
+import com.lmax.disruptor.BusySpinWaitStrategy;
+import com.lmax.disruptor.dsl.Disruptor;
+import com.lmax.disruptor.dsl.ProducerType;
 import com.quasient.pal.common.directory.nodes.LogInfo;
 import com.quasient.pal.common.util.UuidUtils;
 import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
@@ -19,24 +22,24 @@ import com.quasient.pal.messages.types.MessageFormatType;
 import com.quasient.pal.messages.types.MessageType;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
+import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
-import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.header.Header;
+import org.apache.kafka.common.header.internals.RecordHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
+import zmq.ZMQ;
 
 /**
  * <b>KafkaWalWriter</b> consumes {@link OutboundMsg} objects from a single-consumer queue and
@@ -86,6 +89,22 @@ public class KafkaWalWriter extends WalWriter {
           "buffer-available-bytes",
           "requests-in-flight");
 
+  /** Constant byte[] for the MessageFormat byte */
+  private static final byte[] FORMAT_BINARY = {MessageFormatType.BINARY.toByte()};
+
+  /** 1-byte array cache for MessageType IDs */
+  private static final byte[][] TYPE_ID_BYTES = new byte[256][];
+
+  static {
+    for (int i = 0; i < TYPE_ID_BYTES.length; i++) TYPE_ID_BYTES[i] = new byte[] {(byte) i};
+  }
+
+  /** Thread-local reusable byte buffer for writing the index during offset publishing */
+  private static final ThreadLocal<byte[]> INDEX_BUF = ThreadLocal.withInitial(() -> new byte[8]);
+
+  /** Prebuilt immutable headers we always attach */
+  private final List<Header> baseHeaders; // producer-id + message-format
+
   /** Factory that returns a {@link Producer} provided its properties. */
   private final ProducerFactory producerFactory;
 
@@ -98,8 +117,14 @@ public class KafkaWalWriter extends WalWriter {
   /** Properties used to configure the Kafka producer. */
   private final Properties producerProperties = new Properties();
 
-  /** List of immutable headers to attach to every message. */
-  private final List<Header> logHeaders;
+  /** Kafka topic corresponding to WAL */
+  private String topic;
+
+  /** Cached copy of peerUuid.toString() */
+  private final String producerKeyStr;
+
+  /** Per-thread Callback pool to avoid allocation of new Callback objects per each message */
+  private final ThreadLocal<ArrayDeque<SendCb>> cbPool = ThreadLocal.withInitial(ArrayDeque::new);
 
   /**
    * Constructs a new KafkaWalWriter instance with the required dependencies and configuration.
@@ -128,7 +153,7 @@ public class KafkaWalWriter extends WalWriter {
       @Named("sync.ready") String syncSocketAddress,
       ThreadGroup serviceThreadGroup,
       @Named("WalWriter.service") String serviceName,
-      @Named("wal_queue") HwmMessageQueue<OutboundMsg> walQueue,
+      @Named("wal_queue") @Nullable HwmMessageQueue<OutboundMsg> walQueue,
       @Named("walFailed") AtomicBoolean walFailed,
       @Named("offset.pub") String offsetPubAddress,
       @Named("wal.flush_on_close") @Nullable String flushOnClose,
@@ -148,14 +173,22 @@ public class KafkaWalWriter extends WalWriter {
         offsetPubAddress,
         flushOnClose);
 
-    logger.debug("new KafkaWalWriter created");
     this.producerFactory = producerFactory;
+    this.producerKeyStr = peerUuid.toString();
 
     // create and store immutable headers
-    logHeaders = List.of(new LogMessageHeader("producer-id", UuidUtils.toBytes(peerUuid)));
+    this.baseHeaders =
+        List.of(
+            new LogMessageHeader("producer-id", UuidUtils.toBytes(peerUuid)),
+            new RecordHeader("message-format", FORMAT_BINARY));
 
     // set Kafka's Producer properties
     setProducerProperties(lingerMs, batchSize, compressionType, bufferMemory);
+
+    logger.debug(
+        "new KafkaLogWriter initialized w/offsetPubAddress={}, flushOnClose={}",
+        offsetPubAddress,
+        flushOnClose);
   }
 
   /** Optionally opens ZeroMQ connection for the offset publisher. */
@@ -164,8 +197,36 @@ public class KafkaWalWriter extends WalWriter {
 
     // start offsets publisher
     if (publishOffsets) {
+      // PUB socket is created and used ONLY by this publisher thread
       this.offsetPublisherSocket = zmqContext.createSocket(SocketType.PUB);
       offsetPublisherSocket.bind(offsetPubAddress);
+
+      // create and start disruptor thread
+      offsetsDisruptor =
+          new Disruptor<>(
+              OffsetEvent::new,
+              OFFSETS_RING_SIZE,
+              r -> {
+                Thread t = new Thread(threadGroup, r, serviceName + "-offset-publisher");
+                t.setDaemon(true);
+                return t;
+              },
+              ProducerType.MULTI,
+              new BusySpinWaitStrategy());
+
+      // single owner thread of the PUB socket here => thread-safe
+      offsetsDisruptor.handleEventsWith(
+          (e, seq, end) -> {
+            // two frames: index (as 8 bytes), msgId (String)
+            byte[] b = INDEX_BUF.get();
+            putLongBE(b, e.index);
+            offsetPublisherSocket.sendMore(b);
+            offsetPublisherSocket.send(e.msgId.getBytes(ZMQ.CHARSET));
+            e.clear();
+          });
+
+      offsetsDisruptor.start();
+      offsetsRing = offsetsDisruptor.getRingBuffer();
     }
     logger.info("connections open - except kafka producer");
   }
@@ -188,6 +249,7 @@ public class KafkaWalWriter extends WalWriter {
     }
 
     this.writeAheadLog = writeAheadLog;
+    this.topic = writeAheadLog.getName();
     this.publishOffsets = publishOffsets;
 
     // bootstrap servers are found in the LogInfo
@@ -202,6 +264,54 @@ public class KafkaWalWriter extends WalWriter {
         "Writing to log: {}, w/ bootstrapServers: {}",
         writeAheadLog.getName(),
         writeAheadLog.getBootstrapServers());
+  }
+
+  /**
+   * Continuously receives messages from the WAL Queue and writes them to Kafka using the configured
+   * producer. The method processes messages until shutdown is requested / the thread is
+   * interrupted, and may or not flush the queue before shutdown depending on the value of {@link
+   * #isFlushOnClose}.
+   */
+  @Override
+  public void run() {
+
+    if (!queueless) {
+      walQueue.drain(
+          this::writeMessage,
+          ADAPTIVE_100_MICROSECONDS,
+          () -> !(shutdownRequested || Thread.currentThread().isInterrupted()));
+
+      logger.debug("Thread interrupted or shutdown requested.");
+
+      if (!isFlushOnClose) {
+        logger.debug("Shutting down immediately...");
+        return;
+      }
+
+      // after shutdown request, drain queue until empty
+      logger.debug("Processing messages remaining in queue...");
+      OutboundMsg msg;
+      while ((msg = walQueue.poll()) != null) {
+        writeMessage(msg);
+      }
+
+      logger.debug("Wal queue empty, shutting down...");
+      return;
+    }
+
+    // ───────────── Direct-write mode: don't drain, just wait for shutdown ─────────────
+    logger.info("Direct-write mode enabled: queue draining is disabled; waiting for shutdown...");
+    synchronized (shutdownMonitor) {
+      while (!(shutdownRequested || Thread.currentThread().isInterrupted())) {
+        try {
+          shutdownMonitor.wait(0L); // wait indefinitely; we'll be notified on stop()
+        } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
+          break;
+        }
+      }
+    }
+    logger.debug("Thread interrupted or shutdown requested.");
   }
 
   /**
@@ -268,8 +378,7 @@ public class KafkaWalWriter extends WalWriter {
    *       {@code run()} will reach the idle strategy, see that {@link Thread#isInterrupted() the
    *       interrupt flag} is now {@code true} (set elsewhere) and exit.
    *   <li><b>Normal publishing</b><br>
-   *       &nbsp;&nbsp;• Delegates to {@link #sendToKafka(MessageFormatType, MessageType, byte[],
-   *       String, String, UUID, Iterable)}.<br>
+   *       &nbsp;&nbsp;• Delegates to {@link #sendToKafka(MessageType, byte[], String)}.<br>
    *       Any exception thrown by the Kafka client is caught by the <em>fatal&nbsp;path</em> below.
    *   <li><b>Fatal path&nbsp;⟶&nbsp;Kafka error</b><br>
    *       When <code>sendToKafka</code> throws, we:
@@ -302,24 +411,16 @@ public class KafkaWalWriter extends WalWriter {
    *     sentinel to signal shutdown.
    */
   @Override
-  protected void handleOutboundMessage(OutboundMsg msg) {
+  public void writeMessage(OutboundMsg msg) {
     if (POISON_PILL.equals(msg)) { // graceful exit branch
       return;
     }
 
-    messagesReceived++;
+    messagesReceived.getAndIncrement();
 
     try {
       // normal path
-
-      sendToKafka(
-          MessageFormatType.BINARY,
-          msg.getMessageType(),
-          msg.getBody(),
-          msg.getMessageId(),
-          msg.getResponseToId(),
-          peerUuid,
-          logHeaders);
+      sendToKafka(msg.getMessageType(), msg.getBody(), msg.getMessageId());
 
     } catch (Exception ex) { // fatal path
 
@@ -327,11 +428,13 @@ public class KafkaWalWriter extends WalWriter {
       logger.error("Kafka failed sending message w/id {} → halting WAL", msg.getMessageId(), ex);
 
       if (walFailed.compareAndSet(false, true)) { // publish failure
-        walQueue.clear(); // free memory
+        if (!queueless) {
+          walQueue.clear(); // free memory
 
-        if (pillSent.compareAndSet(false, true)) {
-          while (!walQueue.offer(POISON_PILL)) {
-            Thread.onSpinWait();
+          if (pillSent.compareAndSet(false, true)) {
+            while (!walQueue.offer(POISON_PILL)) {
+              Thread.onSpinWait();
+            }
           }
         }
         Thread.currentThread().interrupt(); // <─ stop after cleanup
@@ -344,76 +447,37 @@ public class KafkaWalWriter extends WalWriter {
    * appends necessary headers, and dispatches it asynchronously using the Kafka producer. An
    * executor service monitors the send operation and logs confirmation or errors.
    *
-   * @param messageFormat the format of the message payload.
    * @param messageType the type identifier for the message.
    * @param message the byte array payload of the message.
    * @param messageId unique identifier for the message.
-   * @param responseId identifier of the message to which this is a response.
-   * @param fromPeer UUID of this peer.
-   * @param headers optional iterable of additional headers; may be null.
    */
-  private void sendToKafka(
-      MessageFormatType messageFormat,
-      MessageType messageType,
-      byte[] message,
-      String messageId,
-      String responseId,
-      UUID fromPeer,
-      @Nullable Iterable<Header> headers) {
+  private void sendToKafka(MessageType messageType, byte[] message, String messageId) {
 
-    if (logger.isTraceEnabled()) {
-      logger.trace("sending new message to kafka log with id: {}", messageId);
-    }
+    // Build record with immutable base headers; Kafka will copy them into a RecordHeaders
     ProducerRecord<String, byte[]> newRecord =
-        new ProducerRecord<>(writeAheadLog.getName(), 0, fromPeer.toString(), message, headers);
+        new ProducerRecord<>(topic, 0, producerKeyStr, message, baseHeaders);
 
-    // add message description headers
-    newRecord.headers().add("message-format", new byte[] {messageFormat.toByte()});
-    newRecord.headers().add("message-type", new byte[] {messageType.getId()});
+    // Add the changing header using a cached one-byte array
+    int typeId = messageType.getId() & 0xFF;
+    newRecord.headers().add("message-type", TYPE_ID_BYTES[typeId]);
 
-    final String mid = messageId;
-    final String rid = responseId;
-    final int payloadSize = message.length;
-
-    // compose callback
-    Callback baseCb =
-        (metadata, exception) -> {
-          try {
-            if (exception != null) {
-              messagesDroppedError.incrementAndGet();
-              logger.error("Error sending message to log", exception);
-              return;
-            }
-            messagesWritten.incrementAndGet();
-            if (logger.isTraceEnabled()) {
-              logger.trace(
-                  "New message written to log at offset: {}, w/id: {}, in response to message w/id: {} ({} bytes)",
-                  metadata.offset(),
-                  mid,
-                  rid,
-                  payloadSize);
-            }
-          } finally {
-            messagesInFlight.decrementAndGet();
-          }
-        };
-
-    Callback callback = baseCb;
-
-    if (publishOffsets) {
-      Callback informer = new MessageOffsetInformer(mid, offsetPublisherSocket);
-      callback =
-          (md, ex) -> {
-            try {
-              informer.onCompletion(md, ex);
-            } finally {
-              baseCb.onCompletion(md, ex);
-            }
-          };
-    }
+    // Borrow a pooled callback (carries mid & size)
+    SendCb cb = borrowCb(messageId);
 
     messagesInFlight.incrementAndGet();
-    Future<RecordMetadata> unused = producer.send(newRecord, callback);
+    var unused = producer.send(newRecord, cb);
+  }
+
+  /** Helper for writing a long to a reusable byte buffer, for offset publishing */
+  private static void putLongBE(byte[] a, long v) {
+    a[0] = (byte) (v >>> 56);
+    a[1] = (byte) (v >>> 48);
+    a[2] = (byte) (v >>> 40);
+    a[3] = (byte) (v >>> 32);
+    a[4] = (byte) (v >>> 24);
+    a[5] = (byte) (v >>> 16);
+    a[6] = (byte) (v >>> 8);
+    a[7] = (byte) v;
   }
 
   /** Closes the Kafka producer with no timeout, allowing for all sent requests to finish. */
@@ -456,11 +520,16 @@ public class KafkaWalWriter extends WalWriter {
       }
     }
 
+    if (publishOffsets && offsetsDisruptor != null) {
+      offsetsDisruptor.shutdown(); // waits for consumer to drain
+    }
+
+    if (walQueue != null && !walQueue.isEmpty()) {
+      logger.warn("{} enqueued messages remained after shut down", walQueue.size());
+    }
+
     if (messagesInFlight.get() > 0) {
-      logger.warn(
-          "{} enqueued messages and {} in-flight messages remained after shut down",
-          walQueue.size(),
-          messagesInFlight.get());
+      logger.warn("{} in-flight messages remained after shut down", messagesInFlight.get());
     }
 
     // log Producer metrics
@@ -489,5 +558,60 @@ public class KafkaWalWriter extends WalWriter {
     }
 
     logger.info("Closed connections");
+  }
+
+  /** Gets a reusable callback from the pool */
+  private SendCb borrowCb(String mid) {
+    var q = cbPool.get();
+    var cb = q.pollFirst();
+    if (cb == null) {
+      cb = new SendCb();
+    }
+    cb.mid = mid;
+    return cb;
+  }
+
+  /** Resets a callback buffer for future reuse */
+  private void recycleCb(SendCb cb) {
+    cb.mid = null;
+    cbPool.get().offerFirst(cb);
+  }
+
+  /** Implements a Kafka producer callback which publishes the returned offset */
+  private final class SendCb implements org.apache.kafka.clients.producer.Callback {
+
+    /** Message ID field */
+    String mid;
+
+    /** {@inheritDoc} */
+    @Override
+    public void onCompletion(org.apache.kafka.clients.producer.RecordMetadata md, Exception ex) {
+      try {
+        if (ex != null) {
+          messagesDroppedError.incrementAndGet();
+          logger.error("Error sending message to log", ex);
+          return;
+        }
+        messagesWritten.incrementAndGet();
+        if (logger.isTraceEnabled()) {
+          logger.trace("New message at offset {} (id={})", md.offset(), mid);
+        }
+
+        if (publishOffsets && offsetsRing != null) {
+          // Never drop: block here until a slot is available
+          long seq = offsetsRing.next();
+          try {
+            OffsetEvent e = offsetsRing.get(seq);
+            e.msgId = mid;
+            e.index = md.offset();
+          } finally {
+            offsetsRing.publish(seq);
+          }
+        }
+      } finally {
+        messagesInFlight.decrementAndGet();
+        recycleCb(this);
+      }
+    }
   }
 }

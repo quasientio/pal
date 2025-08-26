@@ -77,6 +77,7 @@
         <antpath.matcher>1.0.0</antpath.matcher>
         <unirest.version>3.14.5</unirest.version>
         <chronicle.version>5.27ea7</chronicle.version>
+        <disruptor.version>4.0.0</disruptor.version>
         <equalsverifier.version>3.16.1</equalsverifier.version>
         <jsr305.version>3.0.2</jsr305.version>
         <java-websocket.version>1.5.7</java-websocket.version>
@@ -554,6 +555,13 @@
                 <groupId>net.openhft</groupId>
                 <artifactId>chronicle-queue</artifactId>
                 <version>${chronicle.version}</version>
+            </dependency>
+
+            <!-- lmax disruptor -->
+            <dependency>
+                <groupId>com.lmax</groupId>
+                <artifactId>disruptor</artifactId>
+                <version>${disruptor.version}</version>
             </dependency>
 
             <!-- errorprone -->

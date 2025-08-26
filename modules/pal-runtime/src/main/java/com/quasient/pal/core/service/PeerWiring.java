@@ -237,9 +237,10 @@ public class PeerWiring extends AbstractModule {
    * Provides the WAL Queue singleton, initialized with the values given by the corresponding {@code
    * "wal.queue.*"} parameters.
    *
-   * @return the initialized bounded or unbounded WAL queue instance
+   * @return the initialized WAL queue instance, or null if type is {@link MpscKind#NONE}.
    */
   @Provides
+  @Nullable
   @Singleton
   @Named("wal_queue")
   @SuppressWarnings("unused")
@@ -247,6 +248,11 @@ public class PeerWiring extends AbstractModule {
     MpscKind kind =
         MpscKind.valueOf(
             properties.getProperty("wal.queue.type", "CHUNKED").toUpperCase(Locale.ENGLISH));
+
+    if (MpscKind.NONE.equals(kind)) {
+      return null;
+    }
+
     int initial = Integer.parseInt(properties.getProperty("wal.queue.initial", "1024"));
 
     if (kind == MpscKind.UNBOUNDED) {
@@ -272,6 +278,11 @@ public class PeerWiring extends AbstractModule {
     MpscKind kind =
         MpscKind.valueOf(
             properties.getProperty("pub.queue.type", "CHUNKED").toUpperCase(Locale.ENGLISH));
+
+    if (MpscKind.NONE.equals(kind)) {
+      throw new IllegalArgumentException("PUB queue type cannot be 'NONE'");
+    }
+
     int initial = Integer.parseInt(properties.getProperty("pub.queue.initial", "1024"));
 
     if (kind == MpscKind.UNBOUNDED) {

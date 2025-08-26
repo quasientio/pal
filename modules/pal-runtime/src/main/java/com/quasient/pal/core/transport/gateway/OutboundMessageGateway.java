@@ -19,6 +19,7 @@ import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import com.quasient.pal.core.internal.messages.SessionCommandMsg;
 import com.quasient.pal.core.internal.messages.SessionResponseMsg;
 import com.quasient.pal.core.service.RunOptions;
+import com.quasient.pal.core.transport.WalWriter;
 import com.quasient.pal.core.transport.zmq.publish.MessagePublisher;
 import com.quasient.pal.core.transport.zmq.publish.PublishingDropPolicy;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
@@ -111,6 +112,12 @@ public class OutboundMessageGateway {
    */
   private final MessagePassingQueue<OutboundMsg> walQueue;
 
+  /**
+   * Instance of the configured WAL Writer implementation, to directly send messages to WAL when not
+   * using the {@link #walQueue}.
+   */
+  private final WalWriter walWriter;
+
   /** Required handle to the {@link PublishingDropPolicy}. */
   final PublishingDropPolicy publishingDropPolicy;
 
@@ -202,6 +209,7 @@ public class OutboundMessageGateway {
    * @param directoryConnectionProvider provider for retrieving peer connection details
    * @param runOptions the set of runtime options that influence message processing behavior
    * @param interceptMatcher matcher used for determining applicable intercepts for messages
+   * @param walWriter the configured {@link WalWriter} instance
    * @param walQueue shared queue to put/offer outbound messages to write-ahead
    * @param walFailed global flag used by the KafkaWalWriter to inform of failure and WAL halting
    * @param pubQueue where to enqueue outbound messages to publish
@@ -215,7 +223,8 @@ public class OutboundMessageGateway {
       DirectoryConnectionProvider directoryConnectionProvider,
       Set<RunOptions> runOptions,
       InterceptMatcher interceptMatcher,
-      @Named("wal_queue") HwmMessageQueue<OutboundMsg> walQueue,
+      WalWriter walWriter,
+      @Named("wal_queue") @Nullable HwmMessageQueue<OutboundMsg> walQueue,
       @Named("walFailed") AtomicBoolean walFailed,
       @Named("pub_queue") HwmMessageQueue<OutboundMsg> pubQueue,
       PublishingDropPolicy publishingDropPolicy,
@@ -226,6 +235,7 @@ public class OutboundMessageGateway {
     this.directoryConnectionProvider = directoryConnectionProvider;
     this.runOptions = runOptions;
     this.interceptMatcher = interceptMatcher;
+    this.walWriter = walWriter;
     this.walQueue = walQueue;
     this.walFailed = walFailed;
     this.pubQueue = pubQueue;
@@ -445,6 +455,12 @@ public class OutboundMessageGateway {
 
     if (walFailed.get()) { // WAL writer unavailable
       // silently drop (the WAL writer must have already logged the error when shutting down)
+      return;
+    }
+
+    // direct-write mode
+    if (walQueue == null) {
+      walWriter.writeMessage(message);
       return;
     }
 

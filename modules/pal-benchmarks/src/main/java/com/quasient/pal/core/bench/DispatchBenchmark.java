@@ -39,7 +39,6 @@ import com.quasient.pal.core.transport.WalWriter;
 import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import com.quasient.pal.core.transport.gateway.MessageQueueStats;
 import com.quasient.pal.core.transport.gateway.ThreadWaitSnapshot;
-import com.quasient.pal.core.transport.kafka.KafkaWalWriter;
 import com.quasient.pal.core.transport.WalWriterStats;
 import com.quasient.pal.core.transport.zmq.publish.MessagePublisher;
 import com.quasient.pal.core.transport.zmq.publish.MessagePublisherConfig;
@@ -229,11 +228,11 @@ public class DispatchBenchmark {
   public InputMode inputMode;
 
   /** Pub Queue type: FIXED, CHUNKED, GROWABLE, UNBOUNDED */
-  @Param({"FIXED", "CHUNKED", "GROWABLE", "UNBOUNDED"})
+  @Param({"NONE", "FIXED", "CHUNKED", "GROWABLE", "UNBOUNDED"})
   public MpscKind pubQueueType;
 
   /** WAL Queue type: FIXED, CHUNKED, GROWABLE, UNBOUNDED */
-  @Param({"FIXED", "CHUNKED", "GROWABLE", "UNBOUNDED"})
+  @Param({"NONE", "FIXED", "CHUNKED", "GROWABLE", "UNBOUNDED"})
   public MpscKind walQueueType;
 
   // ----------------------- Dependency-injected runtime --------------------
@@ -377,7 +376,7 @@ public class DispatchBenchmark {
     switch (ioProfile) {
       case MOCK -> brokersModule = new MockBrokersModule();   // MockProducer + DummyPublisher
       case REAL -> brokersModule = new RealBrokersModule();   // KafkaProducer provider, etc.
-      // CPU_ONLY: nothing extra
+      default -> {}
     }
 
     if (brokersModule == null) {
@@ -514,14 +513,17 @@ public class DispatchBenchmark {
 
     // WAL queue params
     props.setProperty("wal.queue.type", walQueueType.name());
-    switch (walQueueType) {
-      case FIXED, CHUNKED, GROWABLE -> {
-        props.setProperty("wal.queue.initial", System.getProperty("wal.queue.initial", String.valueOf(DEF_WAL_QUEUE_INITIAL)));
-        props.setProperty("wal.queue.max", System.getProperty("wal.queue.max", String.valueOf(DEF_WAL_QUEUE_MAX)));
-      }
-      case UNBOUNDED -> props.setProperty("wal.queue.chunk", System.getProperty("wal.queue.chunk", String.valueOf(DEF_WAL_QUEUE_CHUNK)));
+    if (!walQueueType.equals(MpscKind.NONE)) {
+      switch (walQueueType) {
+        case FIXED, CHUNKED, GROWABLE -> {
+          props.setProperty("wal.queue.initial", System.getProperty("wal.queue.initial", String.valueOf(DEF_WAL_QUEUE_INITIAL)));
+          props.setProperty("wal.queue.max", System.getProperty("wal.queue.max", String.valueOf(DEF_WAL_QUEUE_MAX)));
+        }
+        case UNBOUNDED ->
+                props.setProperty("wal.queue.chunk", System.getProperty("wal.queue.chunk", String.valueOf(DEF_WAL_QUEUE_CHUNK)));
 
-      default -> throw new IllegalArgumentException("Unsupported wal.queue.type=" + walQueueType);
+        default -> throw new IllegalArgumentException("Unsupported wal.queue.type=" + walQueueType);
+      }
     }
 
     // ChronicleWalWriter params
@@ -802,7 +804,7 @@ public class DispatchBenchmark {
     }
 
     if (runOpts.contains(RunOptions.WITH_WAL)) {
-      KafkaWalWriter walWriter = injector.getInstance(KafkaWalWriter.class);
+      WalWriter walWriter = injector.getInstance(WalWriter.class);
       WalWriterStats walWriterStats = walWriter.getLiveStats();
 
       System.out.println("-----------------------------");
@@ -847,35 +849,37 @@ public class DispatchBenchmark {
     }
 
     if (runOpts.contains(RunOptions.WITH_WAL)) {
-      System.out.println("-----------------------------");
-      System.out.println("-----  WAL queue stats  -----");
-      System.out.println("-----------------------------");
-      System.out.printf("Peak WAL queue depth (i.e. HWM): %,d%n", walQueue.highWaterMark());
-      MessageQueueStats s = messageGateway.getWalQueueStats();
-      long parkedUs = TimeUnit.NANOSECONDS.toMicros(s.totalParkedNanos());
+      if (walQueue != null) {
+        System.out.println("-----------------------------");
+        System.out.println("-----  WAL queue stats  -----");
+        System.out.println("-----------------------------");
+        System.out.printf("Peak WAL queue depth (i.e. HWM): %,d%n", walQueue.highWaterMark());
+        MessageQueueStats s = messageGateway.getWalQueueStats();
+        long parkedUs = TimeUnit.NANOSECONDS.toMicros(s.totalParkedNanos());
 
-      System.out.printf("WAL: dropped=%d parks=%d parked=%dµs failedOffers=%d%n",
-              s.messagesDropped(), s.totalParks(), parkedUs, s.totalFailedOffers());
-      System.out.println();
+        System.out.printf("WAL: dropped=%d parks=%d parked=%dµs failedOffers=%d%n",
+                s.messagesDropped(), s.totalParks(), parkedUs, s.totalFailedOffers());
+        System.out.println();
 
-      for (ThreadWaitSnapshot tws : s.perThread()) {
-        System.out.printf("  T[%d:%s] parks=%d parked=%dµs failedOffers=%d%n",
-                tws.threadId(), tws.threadName(),
-                tws.parks(),
-                TimeUnit.NANOSECONDS.toMicros(tws.parkedNanos()),
-                tws.failedOffers());
+        for (ThreadWaitSnapshot tws : s.perThread()) {
+          System.out.printf("  T[%d:%s] parks=%d parked=%dµs failedOffers=%d%n",
+                  tws.threadId(), tws.threadName(),
+                  tws.parks(),
+                  TimeUnit.NANOSECONDS.toMicros(tws.parkedNanos()),
+                  tws.failedOffers());
+        }
+        System.out.println();
       }
-      System.out.println();
     }
 
     /* -------------------------------------------------
      * House-keeping
      * ------------------------------------------------- */
-    walQueue.clear();
+    if (walQueue != null) {
+      walQueue.clear();
+    }
     pubQueue.clear();
-    logger.debug("Queues cleared");
     customClassloader.shutdown();
-    logger.debug("Custom classloader shut down");
   }
 
   /**

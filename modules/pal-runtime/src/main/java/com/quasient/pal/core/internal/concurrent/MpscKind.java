@@ -11,6 +11,8 @@ package com.quasient.pal.core.internal.concurrent;
 
 /** Enum to represent the possible variants of MPSC implementations available. */
 public enum MpscKind {
+  /** No queue. */
+  NONE,
   /**
    * MpscArrayQueue - Small, predictable bursts; lowest per-offer cost; no copying / extra objects.
    */

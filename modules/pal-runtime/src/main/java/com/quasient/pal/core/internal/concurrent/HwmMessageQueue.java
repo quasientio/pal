@@ -59,11 +59,12 @@ public final class HwmMessageQueue<E> implements MessagePassingQueue<E> {
    *     will be rounded up to the closest power of 2 and will be the upper limit of number of
    *     elements in this queue. Must be 4 or more and round up to a larger power of 2 than
    *     initialCapacity.
-   * @return the initialized and wrapped queue
+   * @return the initialized and wrapped queue, null if kind is {@link MpscKind#NONE}
    * @param <E> the type of the queue elements
    */
   public static <E> HwmMessageQueue<E> createQueue(MpscKind kind, int initial, int maxOrChunk) {
     return switch (kind) {
+      case NONE -> null;
       case FIXED -> new HwmMessageQueue<>(new MpscArrayQueue<>(initial));
       case CHUNKED -> new HwmMessageQueue<>(new MpscChunkedArrayQueue<>(initial, maxOrChunk));
       case GROWABLE -> new HwmMessageQueue<>(new MpscGrowableArrayQueue<>(initial, maxOrChunk));
