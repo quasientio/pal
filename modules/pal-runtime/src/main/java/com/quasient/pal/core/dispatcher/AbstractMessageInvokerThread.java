@@ -250,9 +250,7 @@ public abstract class AbstractMessageInvokerThread extends Thread {
   }
 
   /**
-   * Dispatches the given ExecMessage by delegating to the incoming message dispatcher. It
-   * determines whether the call is direct based on the provided record offset, updates dispatch
-   * metrics, and logs dispatch details.
+   * Dispatches the given ExecMessage by delegating to the incoming message dispatcher.
    *
    * @param requestMsg the ExecMessage to be dispatched
    * @param messageType the type of the message derived from the message's type identifier
