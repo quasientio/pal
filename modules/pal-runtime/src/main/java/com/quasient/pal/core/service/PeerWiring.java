@@ -12,10 +12,13 @@ package com.quasient.pal.core.service;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import com.quasient.pal.common.runtime.DispatchForwarder;
 import com.quasient.pal.common.runtime.ProxyDispatcher;
+import com.quasient.pal.core.annotations.AnnotationProcessor;
+import com.quasient.pal.core.annotations.AnnotationsProcessor;
 import com.quasient.pal.core.execution.java.AspectProxyDispatcher;
 import com.quasient.pal.core.execution.java.CustomClassloader;
 import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
@@ -179,6 +182,15 @@ public class PeerWiring extends AbstractModule {
               .asEagerSingleton();
         }
       }
+
+      // Ensure AnnotationsProcessor is a singleton (in addition to any annotation used).
+      bind(AnnotationsProcessor.class).asEagerSingleton();
+
+      // Contribute implementations to the AnnotationProcessor set. Example:
+      Multibinder<AnnotationProcessor> setBinder =
+          Multibinder.newSetBinder(binder(), AnnotationProcessor.class);
+      // Register an existing processor:
+      // setBinder.addBinding().to(InterceptAnnotationProcessor.class);
     }
 
     // common and cxn library classes are not annotated with @Singleton

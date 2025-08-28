@@ -10,7 +10,7 @@
         <option name="ENABLED" value="true" />
       </pattern>
       <pattern>
-        <option name="PATTERN" value="com.quasient.pal.core.intercept.*" />
+        <option name="PATTERN" value="com.quasient.pal.core.annotations.*" />
         <option name="ENABLED" value="true" />
       </pattern>
     </extension>
