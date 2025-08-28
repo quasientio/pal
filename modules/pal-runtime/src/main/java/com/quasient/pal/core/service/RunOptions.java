@@ -30,7 +30,7 @@ public enum RunOptions {
    * <p>This option configures the system to listen for and process remote procedure call requests
    * over a ZMQ socket.
    */
-  WITH_RPC,
+  WITH_ZMQ_RPC,
 
   /**
    * Enables handling of JSON-RPC requests.
@@ -38,7 +38,7 @@ public enum RunOptions {
    * <p>Activating this option allows the system to receive and process JSON-formatted RPC requests
    * over Websocket.
    */
-  WITH_JSONRPC,
+  WITH_JSON_RPC,
 
   /**
    * Enables publishing messages via TCP.

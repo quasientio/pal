@@ -239,21 +239,21 @@ public class Main implements Callable<Integer> {
   private String tcpPub; // corresponding ENV var: TCP_PUB
 
   /**
-   * Configuration for the BIN-RPC listener over ZeroMQ. Accepts "[HOST:]PORT" or "auto" and
-   * corresponds to the RPC environment variable.
+   * Configuration for the ZMQ-RPC listener over ZeroMQ. Accepts "[HOST:]PORT" or "auto" and
+   * corresponds to the ZMQ_RPC environment variable.
    */
   @Option(
-      names = {"-r", "--rpc"},
+      names = {"-r", "--zmq-rpc"},
       paramLabel = "[HOST:]PORT|auto",
       description = "listen for RPC requests on ZeroMQ socket (auto = localhost:random_port)")
-  private String rpc; // corresponding ENV var: RPC
+  private String zmqRpc; // corresponding ENV var: ZMQ_RPC
 
   /**
    * Configuration for the JSON-RPC listener over WebSocket. Accepts "[HOST:]PORT" or "auto" and
    * corresponds to the JSON_RPC environment variable.
    */
   @Option(
-      names = {"-j", "--jsonrpc"},
+      names = {"-j", "--json-rpc"},
       paramLabel = "[HOST:]PORT|auto",
       description = "listen for JSON-RPC requests on WebSocket (auto = localhost:random_port)")
   private String jsonRpc; // corresponding ENV var: JSON_RPC
@@ -400,8 +400,8 @@ public class Main implements Callable<Integer> {
     /** Default hostname for TCP PUB interface when auto-assigned. */
     private static final String DEFAULT_PUB_HOSTNAME = "localhost";
 
-    /** Default hostname for the RPC listener when auto-assigned. */
-    private static final String DEFAULT_RPC_HOSTNAME = "localhost";
+    /** Default hostname for the ZMQ-RPC listener when auto-assigned. */
+    private static final String DEFAULT_ZMQ_RPC_HOSTNAME = "localhost";
 
     /** Default hostname for the JSON-RPC listener when auto-assigned. */
     private static final String DEFAULT_JSONRPC_HOSTNAME = "localhost";
@@ -411,8 +411,8 @@ public class Main implements Callable<Integer> {
 
     static {
       inprocEndpoints.put("source.log", "inproc://source_log");
-      inprocEndpoints.put("in.dealer", "inproc://deal_rpc");
-      inprocEndpoints.put("json.in.dealer", "inproc://deal_jsonrpc");
+      inprocEndpoints.put("in.dealer", "inproc://deal_zmq_rpc");
+      inprocEndpoints.put("json.in.dealer", "inproc://deal_json_rpc");
       inprocEndpoints.put("out.cell", "inproc://cell");
       inprocEndpoints.put("out.pub.inproc", "inproc://pub");
       inprocEndpoints.put("offset.pub", "inproc://offsets");
@@ -662,7 +662,7 @@ public class Main implements Callable<Integer> {
     sourceLog = getParameter("SOURCE_LOG", sourceLog);
     wal = getParameter("WAL", wal);
     logPrefix = getParameter("LOG_PREFIX", logPrefix);
-    rpc = getParameter("RPC", rpc);
+    zmqRpc = getParameter("ZMQ_RPC", zmqRpc);
     jsonRpc = getParameter("JSON_RPC", jsonRpc);
     tcpPub = getParameter("TCP_PUB", tcpPub);
 
@@ -757,17 +757,17 @@ public class Main implements Callable<Integer> {
       runOptions.add(RunOptions.WITH_INTERCEPTS);
     }
 
-    if (rpc != null) {
-      runOptions.add(RunOptions.WITH_RPC);
+    if (zmqRpc != null) {
+      runOptions.add(RunOptions.WITH_ZMQ_RPC);
     }
 
     if (jsonRpc != null) {
-      runOptions.add(RunOptions.WITH_JSONRPC);
+      runOptions.add(RunOptions.WITH_JSON_RPC);
     }
 
     // enable sessions if any RPC interface is enabled
-    if (runOptions.contains(RunOptions.WITH_RPC)
-        || runOptions.contains(RunOptions.WITH_JSONRPC)
+    if (runOptions.contains(RunOptions.WITH_ZMQ_RPC)
+        || runOptions.contains(RunOptions.WITH_JSON_RPC)
         || runOptions.contains(RunOptions.WITH_SOURCE_LOG)) {
       runOptions.add(RunOptions.WITH_SESSIONS);
     }
@@ -849,33 +849,33 @@ public class Main implements Callable<Integer> {
     }
 
     // are we listening for RPC requests
-    if (rpc != null) {
-      String hostname = ZmqProperties.DEFAULT_RPC_HOSTNAME;
+    if (zmqRpc != null) {
+      String hostname = ZmqProperties.DEFAULT_ZMQ_RPC_HOSTNAME;
       int port = 0;
-      if (rpc.equalsIgnoreCase("auto")) {
+      if (zmqRpc.equalsIgnoreCase("auto")) {
         try {
           port = findOpenPort();
         } catch (IOException e) {
           fatalExit(
               null,
               PeerException.FatalCode.ERROR_FINDING_RND_PORT,
-              "Could not find random port for RPC");
+              "Could not find random port for ZMQ-RPC");
         }
       } else {
         final String portStr;
-        if (rpc.contains(":")) {
-          hostname = Strings.stringBefore(rpc, ":");
-          portStr = Strings.stringAfter(rpc, ":");
+        if (zmqRpc.contains(":")) {
+          hostname = Strings.stringBefore(zmqRpc, ":");
+          portStr = Strings.stringAfter(zmqRpc, ":");
         } else {
-          portStr = rpc;
+          portStr = zmqRpc;
         }
         try {
           port = Integer.parseInt(portStr);
         } catch (NumberFormatException e) {
-          fatalExit(e, PeerException.FatalCode.ERROR_PARSING_RPC_PORT_NUMBER);
+          fatalExit(e, PeerException.FatalCode.ERROR_PARSING_ZMQ_RPC_PORT_NUMBER);
         }
       }
-      properties.setProperty("in.rpc", format("tcp://%s:%d", hostname, port));
+      properties.setProperty("in.zmq.rpc", format("tcp://%s:%d", hostname, port));
       properties.setProperty("rpc.threadPoolSize", String.valueOf(rpcThreads));
     }
 
@@ -890,7 +890,7 @@ public class Main implements Callable<Integer> {
           fatalExit(
               null,
               PeerException.FatalCode.ERROR_FINDING_RND_PORT,
-              "Could not find random port for JSONRPC");
+              "Could not find random port for JSON-RPC");
         }
       } else {
         final String portStr;
@@ -903,10 +903,10 @@ public class Main implements Callable<Integer> {
         try {
           port = Integer.parseInt(portStr);
         } catch (NumberFormatException e) {
-          fatalExit(e, PeerException.FatalCode.ERROR_PARSING_JSONRPC_PORT_NUMBER);
+          fatalExit(e, PeerException.FatalCode.ERROR_PARSING_JSON_RPC_PORT_NUMBER);
         }
       }
-      properties.setProperty("in.jsonrpc", format("ws://%s:%d", hostname, port));
+      properties.setProperty("in.json.rpc", format("ws://%s:%d", hostname, port));
       properties.setProperty("rpc.threadPoolSize", String.valueOf(rpcThreads));
     }
 
@@ -1042,11 +1042,11 @@ public class Main implements Callable<Integer> {
     try {
       self = new PeerInfo(uuid);
       // public listening interfaces
-      if (runOptions.contains(RunOptions.WITH_RPC)) {
-        self.setZmqRpcAddress(properties.getProperty("in.rpc"));
+      if (runOptions.contains(RunOptions.WITH_ZMQ_RPC)) {
+        self.setZmqRpcAddress(properties.getProperty("in.zmq.rpc"));
       }
-      if (runOptions.contains(RunOptions.WITH_JSONRPC)) {
-        self.setJsonrpcAddress(properties.getProperty("in.jsonrpc"));
+      if (runOptions.contains(RunOptions.WITH_JSON_RPC)) {
+        self.setJsonrpcAddress(properties.getProperty("in.json.rpc"));
       }
       if (properties
           .getProperty(ZmqProperties.OUT_PUB_CHANNEL)
@@ -1093,11 +1093,11 @@ public class Main implements Callable<Integer> {
     if (runOptions.contains(RunOptions.WITH_TCP_PUB)) {
       services.add(injector.getInstance(MessagePublisher.class));
     }
-    if (runOptions.contains(RunOptions.WITH_RPC)) {
+    if (runOptions.contains(RunOptions.WITH_ZMQ_RPC)) {
       services.add(injector.getInstance(ZmqRpcServer.class));
       sessionsRequired = true;
     }
-    if (runOptions.contains(RunOptions.WITH_JSONRPC)) {
+    if (runOptions.contains(RunOptions.WITH_JSON_RPC)) {
       services.add(injector.getInstance(JsonRpcRequestServer.class));
       sessionsRequired = true;
     }
@@ -1166,8 +1166,8 @@ public class Main implements Callable<Integer> {
       }
 
       // stop peer executor (interrupts all peer exec threads)
-      if (runOptions.contains(RunOptions.WITH_RPC)
-          || runOptions.contains(RunOptions.WITH_JSONRPC)) {
+      if (runOptions.contains(RunOptions.WITH_ZMQ_RPC)
+          || runOptions.contains(RunOptions.WITH_JSON_RPC)) {
         final ThreadPool rpcMessageExecutor = injector.getInstance(SocketRpcExecutor.class);
         rpcMessageExecutor.shutdown();
         logger.info("Done shutting down peer threads");
@@ -1420,7 +1420,8 @@ public class Main implements Callable<Integer> {
     }
 
     // pre-start threads to create the REP sockets; this must be done after DEALER
-    if (runOptions.contains(RunOptions.WITH_RPC) || runOptions.contains(RunOptions.WITH_JSONRPC)) {
+    if (runOptions.contains(RunOptions.WITH_ZMQ_RPC)
+        || runOptions.contains(RunOptions.WITH_JSON_RPC)) {
       injector.getInstance(SocketRpcExecutor.class).startAllThreads();
     }
 

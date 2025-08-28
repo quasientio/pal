@@ -89,7 +89,7 @@ public class JsonRpcRequestServer extends ConnectedService {
       @Named("sync.ready") String syncSocketAddress,
       ThreadGroup serviceThreadGroup,
       @Named("JsonRpcRequestServer.service") String serviceName,
-      @Named("in.jsonrpc") String websocketAddress,
+      @Named("in.json.rpc") String websocketAddress,
       @Named("json.in.dealer") String dealerAddress) {
     super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
     this.websocketAddress = websocketAddress;

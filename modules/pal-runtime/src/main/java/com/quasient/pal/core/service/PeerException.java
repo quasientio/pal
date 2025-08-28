@@ -60,11 +60,11 @@ public class PeerException extends Exception {
     /** Could not find a free random port for socket binding. */
     ERROR_FINDING_RND_PORT("Error finding local random port for socket"),
 
-    /** Invalid or non-numeric RPC port value provided. */
-    ERROR_PARSING_RPC_PORT_NUMBER("Invalid RPC port"),
+    /** Invalid or non-numeric ZMQ-RPC port value provided. */
+    ERROR_PARSING_ZMQ_RPC_PORT_NUMBER("Invalid ZMQ-RPC port"),
 
     /** Invalid or non-numeric JSON-RPC port value provided. */
-    ERROR_PARSING_JSONRPC_PORT_NUMBER("Invalid JSONRPC port");
+    ERROR_PARSING_JSON_RPC_PORT_NUMBER("Invalid JSON-RPC port");
 
     /** Unique numeric code representing the fatal error condition. */
     private final int code;

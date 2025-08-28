@@ -53,10 +53,10 @@ import org.zeromq.ZMQ.Socket;
 public class SocketRpcInvokerTest extends ZmqEnabledTest {
   private static final Logger logger = LoggerFactory.getLogger("tests");
   private final UUID peerUuid = UUID.randomUUID();
-  private static final String RPC_DEALER_ADDRESS = "inproc://deal";
+  private static final String ZMQRPC_DEALER_ADDRESS = "inproc://zmq.deal";
   private static final String JSONRPC_DEALER_ADDRESS = "inproc://json.deal";
   private ZContext context;
-  private Socket rpcDealerSocket;
+  private Socket zmqRpcDealerSocket;
   private Socket jsonRpcDealerSocket;
   private static final Gson gson = new Gson();
   private ExecutorService execService;
@@ -69,8 +69,8 @@ public class SocketRpcInvokerTest extends ZmqEnabledTest {
     this.context = createContext();
     this.execService = Executors.newCachedThreadPool();
     // simulate RPCRequestDispatcher's DEALER socket
-    this.rpcDealerSocket = context.createSocket(SocketType.DEALER);
-    rpcDealerSocket.bind(RPC_DEALER_ADDRESS);
+    this.zmqRpcDealerSocket = context.createSocket(SocketType.DEALER);
+    zmqRpcDealerSocket.bind(ZMQRPC_DEALER_ADDRESS);
     // simulate JSONRPCRequestDispatcher's DEALER socket
     this.jsonRpcDealerSocket = context.createSocket(SocketType.DEALER);
     jsonRpcDealerSocket.bind(JSONRPC_DEALER_ADDRESS);
@@ -99,8 +99,8 @@ public class SocketRpcInvokerTest extends ZmqEnabledTest {
         new SocketRpcInvoker(
             context,
             msgBuilder,
-            new HashSet<>(Arrays.asList(RunOptions.WITH_RPC, RunOptions.WITH_JSONRPC)),
-            RPC_DEALER_ADDRESS,
+            new HashSet<>(Arrays.asList(RunOptions.WITH_ZMQ_RPC, RunOptions.WITH_JSON_RPC)),
+            ZMQRPC_DEALER_ADDRESS,
             JSONRPC_DEALER_ADDRESS,
             incomingMessageDispatcher,
             peerUuid);
@@ -129,12 +129,12 @@ public class SocketRpcInvokerTest extends ZmqEnabledTest {
     // deal msg
     ExecMessage invokable = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
     Message wrapper = msgBuilder.wrap(invokable);
-    rpcDealerSocket.send("", ZMQ.SNDMORE); // 1st frame empty to emulate REQ envelope
-    rpcDealerSocket.send(ColferUtils.toBytes(wrapper), 0);
+    zmqRpcDealerSocket.send("", ZMQ.SNDMORE); // 1st frame empty to emulate REQ envelope
+    zmqRpcDealerSocket.send(ColferUtils.toBytes(wrapper), 0);
     // get response
-    rpcDealerSocket.recv(); // 1st frame empty to emulate REP envelope
+    zmqRpcDealerSocket.recv(); // 1st frame empty to emulate REP envelope
     Message responseMessage = new Message();
-    responseMessage.unmarshal(rpcDealerSocket.recv(), 0);
+    responseMessage.unmarshal(zmqRpcDealerSocket.recv(), 0);
 
     assertThat(socketRpcInvoker.getExecRequestsDispatched(), is(1L));
     assertThat(socketRpcInvoker.getRequestsDispatched(), is(1L));
@@ -212,13 +212,13 @@ public class SocketRpcInvokerTest extends ZmqEnabledTest {
       // deal msg
       ExecMessage invokable = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
       Message wrapper = msgBuilder.wrap(invokable);
-      rpcDealerSocket.send("", ZMQ.SNDMORE); // 1st frame empty to emulate REQ envelope
-      rpcDealerSocket.send(ColferUtils.toBytes(wrapper), 0);
+      zmqRpcDealerSocket.send("", ZMQ.SNDMORE); // 1st frame empty to emulate REQ envelope
+      zmqRpcDealerSocket.send(ColferUtils.toBytes(wrapper), 0);
       messagesToInvoke.add(invokable);
       // get response
-      rpcDealerSocket.recv(); // 1st frame empty to emulate REP envelope
+      zmqRpcDealerSocket.recv(); // 1st frame empty to emulate REP envelope
       Message msg = new Message();
-      msg.unmarshal(rpcDealerSocket.recv(), 0);
+      msg.unmarshal(zmqRpcDealerSocket.recv(), 0);
       ExecMessage response = msg.getExecMessage();
       responseMessages.add(response);
     }

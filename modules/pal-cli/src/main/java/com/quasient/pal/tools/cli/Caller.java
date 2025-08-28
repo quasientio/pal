@@ -159,7 +159,7 @@ public class Caller extends AbstractPalSubcommand {
   /** Specifies the type of RPC to use for communication. */
   @Option(
       names = {"-r", "--rpc-type"},
-      paramLabel = "BIN_RPC|JSON_RPC",
+      paramLabel = "ZMQ_RPC|JSON_RPC",
       description = "the RPC type to use")
   private String rpcType;
 
@@ -272,8 +272,11 @@ public class Caller extends AbstractPalSubcommand {
 
     // validate RPC type and endpoint
     if (optionGiven(rpcType)) {
-      if (!rpcType.equals(RpcType.BIN_RPC.name()) && !rpcType.equals(RpcType.JSON_RPC.name())) {
-        throw new RuntimeException("Invalid RPC type. Must be RPC or JSONRPC.");
+      if (!rpcType.equals(RpcType.ZMQ_RPC.name()) && !rpcType.equals(RpcType.JSON_RPC.name())) {
+        throw new RuntimeException(
+            String.format(
+                "Invalid RPC type. Must be %s or %s.",
+                RpcType.ZMQ_RPC.name(), RpcType.JSON_RPC.name()));
       }
       if (rpcType.equals(RpcType.JSON_RPC.name())) {
         if (!optionGiven(peerIdentifier)) {
@@ -399,7 +402,7 @@ public class Caller extends AbstractPalSubcommand {
         peerInfo = new PeerInfo();
         if (peerAddress.startsWith("tcp://")) {
           peerInfo.setZmqRpcAddress(peerAddress);
-          inferredRpcType = RpcType.BIN_RPC;
+          inferredRpcType = RpcType.ZMQ_RPC;
         } else if (peerAddress.startsWith("ws://")) {
           peerInfo.setJsonrpcAddress(peerAddress);
           inferredRpcType = RpcType.JSON_RPC;
@@ -656,14 +659,14 @@ public class Caller extends AbstractPalSubcommand {
     if (listensToRpc && listensToJsonRpc) {
       if (!optionGiven(rpcType)) {
         throw new RuntimeException(
-            "Peer listens to both RPC and JSON-RPC. "
+            "Peer listens to both ZMQ-RPC and JSON-RPC. "
                 + "Please specify the RPC type with -t or --rpc-type");
       } else {
         return RpcType.valueOf(rpcType);
       }
     }
     if (listensToRpc) {
-      return RpcType.BIN_RPC;
+      return RpcType.ZMQ_RPC;
     }
     if (listensToJsonRpc) {
       return RpcType.JSON_RPC;

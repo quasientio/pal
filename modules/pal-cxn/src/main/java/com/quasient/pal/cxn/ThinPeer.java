@@ -192,11 +192,11 @@ public class ThinPeer implements AutoCloseable {
    */
   private Integer websocketConnectionLostTimeout;
 
-  /** RPC address for this peer. */
-  private String rpcAddress;
+  /** ZMQ RPC address for this peer. */
+  private String zmqRpcAddress;
 
-  /** Type of outbound RPC mechanism used (binary or JSON). */
-  private RpcType outboundRpcType = RpcType.BIN_RPC;
+  /** Type of outbound RPC mechanism used (ZMQ-RPC or JSON-RPC). */
+  private RpcType outboundRpcType = RpcType.ZMQ_RPC;
 
   /** PeerInfo of initial peer to talk to. */
   private PeerInfo initialPeer;
@@ -254,13 +254,13 @@ public class ThinPeer implements AutoCloseable {
   }
 
   /**
-   * Sets the RPC address for this peer.
+   * Sets the ZMQ-RPC address for this peer.
    *
-   * @param rpcAddress the RPC address to assign to this peer
+   * @param zmqRpcAddress the ZMQ-RPC address to assign to this peer
    * @return the current ThinPeer instance for method chaining
    */
-  public ThinPeer withRpcAddress(String rpcAddress) {
-    this.rpcAddress = rpcAddress;
+  public ThinPeer withZmqRpcAddress(String zmqRpcAddress) {
+    this.zmqRpcAddress = zmqRpcAddress;
     return this;
   }
 
@@ -499,8 +499,8 @@ public class ThinPeer implements AutoCloseable {
         if (this.peerName != null) {
           self.setName(peerName);
         }
-        if (this.rpcAddress != null) {
-          self.setZmqRpcAddress(rpcAddress);
+        if (this.zmqRpcAddress != null) {
+          self.setZmqRpcAddress(zmqRpcAddress);
         }
         getPalDirectory().createPeer(self);
         peerLease = getPalDirectory().createPeerLease(self.getUuid(), PEER_KA_SECS);
@@ -595,7 +595,7 @@ public class ThinPeer implements AutoCloseable {
     }
 
     // configure RPC and connect to initial peer if given
-    if (outboundRpcType == RpcType.BIN_RPC) {
+    if (outboundRpcType == RpcType.ZMQ_RPC) {
       if (zmqContextGiven) {
         logger.info("Using given ZMQ context");
       } else {
@@ -632,7 +632,7 @@ public class ThinPeer implements AutoCloseable {
         """,
         peerUuid,
         peerName,
-        rpcAddress,
+        zmqRpcAddress,
         palDirectoryUrl,
         initialPeer,
         outboundRpcType,
@@ -1311,7 +1311,7 @@ public class ThinPeer implements AutoCloseable {
     }
 
     boolean connected = true;
-    if (outboundRpcType == RpcType.BIN_RPC) {
+    if (outboundRpcType == RpcType.ZMQ_RPC) {
       if (timeout != null) {
         connected = connectZmqSocketWithTimeout(peer, timeout);
       } else {
@@ -1776,12 +1776,12 @@ public class ThinPeer implements AutoCloseable {
   }
 
   /**
-   * Retrieves the Binary-RPC address of this peer.
+   * Retrieves the ZMQ-RPC address of this peer.
    *
-   * @return the Binary-RPC address
+   * @return the ZMQ-RPC address
    */
-  public String getRpcAddress() {
-    return rpcAddress;
+  public String getZmqRpcAddress() {
+    return zmqRpcAddress;
   }
 
   /**

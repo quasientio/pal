@@ -13,15 +13,15 @@
 # palind – run “pal run …” inside a Docker container
 #
 # Supports both class-path (-c / -cp / --classpath) and runnable jars (-jar <file>),
-# and automatically maps ports specified via -p/--tcp-pub, -r/--rpc, -j/--jsonrpc.
+# and automatically maps ports specified via -p/--tcp-pub, -r/--zmq-rpc, -j/--json-rpc.
 #
 # Example:
 #   palind run \
 #          --dir etcd:2379 \
 #          --kafka-servers kafka:9092 \
 #          --name peer_one \
-#          --rpc 6678 \
-#          --jsonrpc 6679 \
+#          --zmq-rpc 6678 \
+#          --json-rpc 6679 \
 #          -cp "$(pwd)/target/classes" \
 #          com.quasient.pal.examples.HelloWorld
 
@@ -92,7 +92,7 @@ while (( i <= $# )); do
       fi
       ;;
 
-    -p|--tcp-pub|-r|--rpc|-j|--jsonrpc)
+    -p|--tcp-pub|-r|--zmq-rpc|-j|--json-rpc)
       flag="$arg"
       (( i++ )); endpoint="${!i}"
       NEW_ARGS+=("$flag" "$endpoint")

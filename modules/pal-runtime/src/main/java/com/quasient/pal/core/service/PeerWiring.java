@@ -145,8 +145,8 @@ public class PeerWiring extends AbstractModule {
     // use underscore in names to better filter service-related traces
     properties.setProperty("LogReader.service", "Log_Reader");
     properties.setProperty("WalWriter.service", "WAL_Writer");
-    properties.setProperty("ZmqRpcServer.service", "RPC_Request_Dispatcher");
-    properties.setProperty("JsonRpcRequestServer.service", "JSONRPC_Request_Dispatcher");
+    properties.setProperty("ZmqRpcServer.service", "ZMQ_RPC_Request_Dispatcher");
+    properties.setProperty("JsonRpcRequestServer.service", "JSON_RPC_Request_Dispatcher");
     properties.setProperty("MessagePublisher.service", "Message_Publisher");
     properties.setProperty("Intercepts.service", "Intercepts_Processor");
     properties.setProperty("Session.service", "Session_Service");

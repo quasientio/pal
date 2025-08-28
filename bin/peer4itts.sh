@@ -29,9 +29,9 @@ export PAL_PEER_LOGGING_CONFIG="${PAL_PEER_LOGGING_CONFIG:-"$PAL_HOME/config/pee
 pal.sh run \
   --dir $PAL_DIRECTORY \
   --name peer-for-itt \
-  --rpc 5656 \
+  --zmq-rpc 5656 \
   --tcp-pub 8876 \
-  --jsonrpc 7789 \
+  --json-rpc 7789 \
   --rpc-threads 3 \
   --rpc-allow-nonpublic \
   --log auto \

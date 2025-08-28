@@ -43,7 +43,7 @@ import org.zeromq.ZMQException;
 import zmq.ZError;
 
 /**
- * SocketRpcInvoker is responsible for receiving and dispatching BIN-RPC and JSON-RPC messages over
+ * SocketRpcInvoker is responsible for receiving and dispatching ZMQ-RPC and JSON-RPC messages over
  * ZeroMQ sockets.
  *
  * <p>It creates and manages two separate REP sockets for handling binary (colfer) RPC messages and
@@ -54,15 +54,15 @@ import zmq.ZError;
 class SocketRpcInvoker extends AbstractMessageInvokerThread {
 
   /**
-   * Runtime options controlling behavior (e.g. enabling/disabling BIN-RPC or JSON-RPC features).
+   * Runtime options controlling behavior (e.g. enabling/disabling ZMQ-RPC or JSON-RPC features).
    */
   private final Set<RunOptions> runOptions;
 
-  /** The endpoint address for connecting to the BIN-RPC dealer. */
+  /** The endpoint address for connecting to the ZMQ-RPC dealer. */
   private final String rpcDealerAddress;
 
-  /** ZeroMQ socket used for handling BIN-RPC messages. */
-  private ZMQ.Socket rpcSocket;
+  /** ZeroMQ socket used for handling ZMQ-RPC messages. */
+  private ZMQ.Socket zmqRpcSocket;
 
   /** The endpoint address for connecting to the JSON-RPC dealer. */
   private final String jsonrpcDealerAddress;
@@ -73,11 +73,11 @@ class SocketRpcInvoker extends AbstractMessageInvokerThread {
   /** The ZeroMQ Poller instance used to monitor sockets for incoming events. */
   private Poller poller;
 
-  /** Poller index for the BIN-RPC socket. A value of -1 indicates the socket is not registered. */
-  private int rpcSocketIndex = -1;
+  /** Poller index for the ZMQ-RPC socket. A value of -1 indicates the socket is not registered. */
+  private int zmqRpcSocketIndex = -1;
 
   /** Poller index for the JSON-RPC socket. A value of -1 indicates the socket is not registered. */
-  private int jsonrpcSocketIndex = -1;
+  private int jsonRpcSocketIndex = -1;
 
   /**
    * Constructs a new SocketRpcInvoker with the specified parameters.
@@ -87,7 +87,7 @@ class SocketRpcInvoker extends AbstractMessageInvokerThread {
    * @param zmqContext the ZeroMQ context for socket creation
    * @param messageBuilder the builder used to convert and construct messages
    * @param runOptions the set of runtime options controlling enabled features
-   * @param rpcDealerAddress the address of the BIN-RPC dealer for socket connection
+   * @param rpcDealerAddress the address of the ZMQ-RPC dealer for socket connection
    * @param jsonrpcDealerAddress the address of the JSON-RPC dealer for socket connection
    * @param incomingMessageDispatcher the dispatcher used for routing incoming messages
    * @param outboundMessageGateway the gateway instance for routing outgoing messages
@@ -146,7 +146,7 @@ class SocketRpcInvoker extends AbstractMessageInvokerThread {
    * Main execution loop that monitors RPC and JSON-RPC sockets for incoming messages.
    *
    * <p>The method initializes the poller, then continuously polls the registered sockets, handles
-   * any incoming BIN-RPC/JSON-RPC requests, and gracefully handles socket exceptions. The loop
+   * any incoming ZMQ-RPC/JSON-RPC requests, and gracefully handles socket exceptions. The loop
    * terminates when the thread is interrupted or a fatal socket error occurs.
    */
   @Override
@@ -179,7 +179,7 @@ class SocketRpcInvoker extends AbstractMessageInvokerThread {
   }
 
   /**
-   * Sets up the ZeroMQ Poller by creating and registering sockets for BIN-RPC and JSON-RPC.
+   * Sets up the ZeroMQ Poller by creating and registering sockets for ZMQ-RPC and JSON-RPC.
    *
    * @return the configured Poller instance ready for monitoring socket events
    */
@@ -217,22 +217,22 @@ class SocketRpcInvoker extends AbstractMessageInvokerThread {
   }
 
   /**
-   * Configures the BIN-RPC socket if enabled by {@code runOptions}.
+   * Configures the ZMQ-RPC socket if enabled by {@code runOptions}.
    *
-   * <p>A REP socket is created, connected to the BIN-RPC dealer address, and registered with the
+   * <p>A REP socket is created, connected to the ZMQ-RPC dealer address, and registered with the
    * poller.
    *
-   * @param poller the Poller with which the BIN-RPC socket is to be registered
+   * @param poller the Poller with which the ZMQ-RPC socket is to be registered
    */
   private void setupRpcSocket(Poller poller) {
-    if (runOptions.contains(RunOptions.WITH_RPC)) {
-      rpcSocket = zmqContext.createSocket(SocketType.REP);
-      boolean rpcSocketConnected = rpcSocket.connect(rpcDealerAddress);
+    if (runOptions.contains(RunOptions.WITH_ZMQ_RPC)) {
+      zmqRpcSocket = zmqContext.createSocket(SocketType.REP);
+      boolean rpcSocketConnected = zmqRpcSocket.connect(rpcDealerAddress);
       if (rpcSocketConnected) {
         if (logger.isDebugEnabled()) {
           logger.debug("Connected to RPC dealer at {}", rpcDealerAddress);
         }
-        rpcSocketIndex = poller.register(rpcSocket, Poller.POLLIN);
+        zmqRpcSocketIndex = poller.register(zmqRpcSocket, Poller.POLLIN);
       } else {
         logger.error("Failed to connect to RPC dealer at {}", rpcDealerAddress);
       }
@@ -248,14 +248,14 @@ class SocketRpcInvoker extends AbstractMessageInvokerThread {
    * @param poller the Poller with which the JSON-RPC socket is to be registered
    */
   private void setupJsonRpcSocket(Poller poller) {
-    if (runOptions.contains(RunOptions.WITH_JSONRPC)) {
+    if (runOptions.contains(RunOptions.WITH_JSON_RPC)) {
       jsonrpcSocket = zmqContext.createSocket(SocketType.REP);
       boolean jsonrpcSocketConnected = jsonrpcSocket.connect(jsonrpcDealerAddress);
       if (jsonrpcSocketConnected) {
         if (logger.isDebugEnabled()) {
           logger.debug("Connected to JSON-RPC dealer at {}", jsonrpcDealerAddress);
         }
-        jsonrpcSocketIndex = poller.register(jsonrpcSocket, Poller.POLLIN);
+        jsonRpcSocketIndex = poller.register(jsonrpcSocket, Poller.POLLIN);
       } else {
         logger.error("Failed to connect to JSON-RPC dealer at {}", jsonrpcDealerAddress);
       }
@@ -263,14 +263,14 @@ class SocketRpcInvoker extends AbstractMessageInvokerThread {
   }
 
   /**
-   * Checks and processes an incoming BIN-RPC request if the BIN-RPC socket is ready.
+   * Checks and processes an incoming BIN-RPC request if the ZMQ-RPC socket is ready.
    *
    * <p>The method receives the BIN-RPC message bytes and, if a message is present, dispatches it
    * for further processing.
    */
   private void handleRpcRequest() {
-    if (rpcSocketIndex != -1 && poller.pollin(rpcSocketIndex)) {
-      byte[] rpcReq = rpcSocket.recv(0);
+    if (zmqRpcSocketIndex != -1 && poller.pollin(zmqRpcSocketIndex)) {
+      byte[] rpcReq = zmqRpcSocket.recv(0);
       if (rpcReq != null) {
         dispatchRpcRequest(rpcReq);
       }
@@ -305,7 +305,7 @@ class SocketRpcInvoker extends AbstractMessageInvokerThread {
         final Message responseMessage = dispatch(requestMsg, MessageChannelType.ZMQ_SOCKET_RPC);
 
         // send response
-        rpcSocket.send(ColferUtils.toBytes(responseMessage));
+        zmqRpcSocket.send(ColferUtils.toBytes(responseMessage));
         if (logger.isDebugEnabled()) {
           final long took = System.currentTimeMillis() - started;
           if (logger.isDebugEnabled()) {
@@ -330,7 +330,7 @@ class SocketRpcInvoker extends AbstractMessageInvokerThread {
    * dispatches it.
    */
   private void handleJsonRpcRequest() {
-    if (jsonrpcSocketIndex != -1 && poller.pollin(jsonrpcSocketIndex)) {
+    if (jsonRpcSocketIndex != -1 && poller.pollin(jsonRpcSocketIndex)) {
       InboundJsonRpcRequestMsg jsonrpcMsg = InboundJsonRpcRequestMsg.receive(jsonrpcSocket, true);
       if (jsonrpcMsg != null) {
         dispatchJsonRpcRequest(jsonrpcMsg);
@@ -519,13 +519,13 @@ class SocketRpcInvoker extends AbstractMessageInvokerThread {
   }
 
   /**
-   * Closes the BIN-RPC and JSON-RPC sockets and invokes the superclass connection closure.
+   * Closes the ZMQ-RPC and JSON-RPC sockets and invokes the superclass connection closure.
    *
    * <p>This method ensures that all socket resources are released gracefully.
    */
   @Override
   protected void closeConnections() {
-    Arrays.stream(new ZMQ.Socket[] {rpcSocket, jsonrpcSocket})
+    Arrays.stream(new ZMQ.Socket[] {zmqRpcSocket, jsonrpcSocket})
         .forEach(
             s -> {
               if (s != null) {

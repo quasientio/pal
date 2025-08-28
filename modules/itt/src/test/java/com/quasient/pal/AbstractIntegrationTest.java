@@ -79,7 +79,7 @@ public abstract class AbstractIntegrationTest {
       throws ExecutionException, InterruptedException {
     Predicate<PeerInfo> hasRpcType =
         peerInfo -> {
-          if (rpcType == RpcType.BIN_RPC) {
+          if (rpcType == RpcType.ZMQ_RPC) {
             return peerInfo.getZmqRpcAddress() != null;
           } else {
             return peerInfo.getJsonrpcAddress() != null;

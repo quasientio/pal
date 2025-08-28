@@ -70,7 +70,7 @@ public class ZmqRpcServer extends ConnectedService {
       @Named("sync.ready") String syncSocketAddress,
       ThreadGroup serviceThreadGroup,
       @Named("ZmqRpcServer.service") String serviceName,
-      @Named("in.rpc") String routerAddress,
+      @Named("in.zmq.rpc") String routerAddress,
       @Named("in.dealer") String dealerAddress) {
     super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
     this.routerAddress = routerAddress;
@@ -125,8 +125,8 @@ public class ZmqRpcServer extends ConnectedService {
    */
   @Override
   protected void closeConnections() {
-    closeConnection(rpcRouterSocket, "Error closing RPC router socket");
-    closeConnection(dealerSocket, "Error closing RPC dealer socket");
+    closeConnection(rpcRouterSocket, "Error closing ZMQ-RPC router socket");
+    closeConnection(dealerSocket, "Error closing ZMQ-RPC dealer socket");
     closeConnection(ctrlSocket, "Error closing RPC ctrl socket");
   }
 

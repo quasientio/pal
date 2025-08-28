@@ -77,10 +77,10 @@ public abstract class AbstractColferRpcMessageIT extends AbstractRpcMessageIT
     final Properties consumerProperties = getKafkaConsumerProperties();
     final Properties producerProperties = getKafkaProducerProperties();
 
-    // find a peer listening with BINARY-RPC enabled
+    // find a peer listening with ZMQ-RPC enabled
     PeerInfo rpcPeer =
-        findRpcPeer(RpcType.BIN_RPC, directoryConnectionProvider)
-            .orElseThrow(() -> new RuntimeException("No peer found with BINARY-RPC enabled"));
+        findRpcPeer(RpcType.ZMQ_RPC, directoryConnectionProvider)
+            .orElseThrow(() -> new RuntimeException("No peer found with ZMQ-RPC enabled"));
     thinPeer =
         new ThinPeer()
             .withUuid(clientId)
@@ -89,7 +89,7 @@ public abstract class AbstractColferRpcMessageIT extends AbstractRpcMessageIT
             .withProducerProperties(producerProperties)
             .withLogPrefix("itt")
             .withInitialPeer(rpcPeer)
-            .withOutboundRpcType(RpcType.BIN_RPC)
+            .withOutboundRpcType(RpcType.ZMQ_RPC)
             .init();
   }
 

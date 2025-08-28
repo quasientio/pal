@@ -121,7 +121,7 @@ public class AbstractInterceptIT extends AbstractIntegrationTest implements Exec
             .withUuid(myPeerUuid)
             .withName("InterceptTestClient")
             .withSelfRegistration(true)
-            .withRpcAddress(RPC_ADDRESS)
+            .withZmqRpcAddress(RPC_ADDRESS)
             .withInitialPeer(interceptablePeer)
             .withDirectoryProvider(directoryConnectionProvider)
             .init();

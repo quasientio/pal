@@ -21,7 +21,7 @@ import org.slf4j.LoggerFactory;
  * Deserializes byte arrays from Kafka into {@link LogMessage} instances.
  *
  * <p>This deserializer converts Kafka message bytes into {@code LogMessage<?>} objects, handling
- * both standard and JSON-RPC message content types.
+ * both Binary (colfer) RPC and JSON-RPC message content types.
  */
 public class KafkaLogMessageDeserializer implements Deserializer<LogMessage<?>> {
 

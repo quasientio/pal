@@ -16,10 +16,10 @@ package com.quasient.pal.messages.types;
  */
 public enum RpcType {
 
-  /** Represents a binary RPC type with byte identifier 1. */
-  BIN_RPC((byte) 1),
+  /** Represents the binary ZMQ RPC type with byte identifier 1. */
+  ZMQ_RPC((byte) 1),
 
-  /** Represents a JSON RPC type with byte identifier 2. */
+  /** Represents the JSON RPC type with byte identifier 2. */
   JSON_RPC((byte) 2);
 
   /** The byte identifier associated with the RPC type. */
@@ -43,7 +43,7 @@ public enum RpcType {
    */
   public static RpcType fromByte(byte typeAsByte) {
     return switch (typeAsByte) {
-      case 1 -> BIN_RPC;
+      case 1 -> ZMQ_RPC;
       case 2 -> JSON_RPC;
       default -> throw new IllegalArgumentException("Unknown RPC type: " + typeAsByte);
     };

@@ -552,7 +552,14 @@ public class List extends AbstractPalSubcommand {
         out.printf("total %d%n", peers.size());
         if (!peers.isEmpty()) {
           out.printf(
-              PEERS_LONG_FORMAT + "%n", "UUID", "Name", "RPC", "JSON-RPC", "PUB", "JMX", "Uptime");
+              PEERS_LONG_FORMAT + "%n",
+              "UUID",
+              "Name",
+              "ZMQ-RPC",
+              "JSON-RPC",
+              "PUB",
+              "JMX",
+              "Uptime");
         }
       }
       printPeers(peers);

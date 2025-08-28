@@ -269,8 +269,8 @@ public class ThinPeerIT extends AbstractIntegrationTest {
             .withUuid(peerUuid)
             .withProducerProperties(producerProperties)
             .withConsumerProperties(consumerProperties)
-            .withRpcAddress("tcp://localhost:1234")
-            .withOutboundRpcType(RpcType.BIN_RPC)
+            .withZmqRpcAddress("tcp://localhost:1234")
+            .withOutboundRpcType(RpcType.ZMQ_RPC)
             .withInitialPeer(initialPeer)
             .withSelfRegistration(false)
             .init();
@@ -287,8 +287,8 @@ public class ThinPeerIT extends AbstractIntegrationTest {
     assertThat(thinPeer.isLogIOEnabled(), is(true));
     assertThat(thinPeer.isConsuming(), is(true));
     assertThat(thinPeer.isProducing(), is(true));
-    assertThat(thinPeer.getRpcAddress(), is("tcp://localhost:1234"));
-    assertThat(thinPeer.getOutboundRpcType(), is(RpcType.BIN_RPC));
+    assertThat(thinPeer.getZmqRpcAddress(), is("tcp://localhost:1234"));
+    assertThat(thinPeer.getOutboundRpcType(), is(RpcType.ZMQ_RPC));
     assertThat(thinPeer.getInitialPeer(), is(initialPeer));
     assertThat(thinPeer.isSelfRegistering(), is(false));
     assertThat(thinPeer.isTalkingToPeer(), is(true));
@@ -330,11 +330,11 @@ public class ThinPeerIT extends AbstractIntegrationTest {
     thinPeer =
         new ThinPeer()
             .withDirectoryProvider(directoryConnectionProvider)
-            .withOutboundRpcType(RpcType.BIN_RPC)
+            .withOutboundRpcType(RpcType.ZMQ_RPC)
             .withSelfRegistration(false)
             .init();
 
-    PeerInfo peer = findRpcPeer(RpcType.BIN_RPC, directoryConnectionProvider).orElseThrow();
+    PeerInfo peer = findRpcPeer(RpcType.ZMQ_RPC, directoryConnectionProvider).orElseThrow();
     boolean connected = thinPeer.connectToPeer(peer, Duration.ofMinutes(2));
     assertTrue(connected);
   }

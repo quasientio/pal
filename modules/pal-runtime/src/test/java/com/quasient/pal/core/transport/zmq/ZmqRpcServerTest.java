@@ -140,7 +140,7 @@ public class ZmqRpcServerTest extends ZmqEnabledTest {
   }
 
   private static final short NUMBER_OF_WORKERS = 3;
-  private static final String RPC_ROUTER_ADDRESS = "tcp://0.0.0.0:5671";
+  private static final String ZMQ_RPC_ROUTER_ADDRESS = "tcp://0.0.0.0:5671";
   private static final String DEALER_ADDRESS = "inproc://deal";
   private ZContext context;
   private ServiceManager manager;
@@ -158,8 +158,8 @@ public class ZmqRpcServerTest extends ZmqEnabledTest {
             context,
             SYNC_SOCKET_ADDRESS,
             servicesThreadGroup,
-            "RPCRequestTest-Service",
-            RPC_ROUTER_ADDRESS,
+            "ZMQ_RPC_RequestTest-Service",
+            ZMQ_RPC_ROUTER_ADDRESS,
             DEALER_ADDRESS);
     initWorkers();
 
@@ -199,7 +199,10 @@ public class ZmqRpcServerTest extends ZmqEnabledTest {
     for (int i = 0; i < numberOfClients; i++) {
       clients.add(
           new Client(
-              remoteCtxt, RPC_ROUTER_ADDRESS, Arrays.asList("Hello", "World", "!"), shutdownLatch));
+              remoteCtxt,
+              ZMQ_RPC_ROUTER_ADDRESS,
+              Arrays.asList("Hello", "World", "!"),
+              shutdownLatch));
     }
 
     // run clients and store Future replies
@@ -216,7 +219,7 @@ public class ZmqRpcServerTest extends ZmqEnabledTest {
     // assert Future replies contain the client (i.e. sender) UUID as returned by the worker
     futureReplies.forEach(
         (cli, value) -> {
-          List<String> replies = null;
+          List<String> replies;
           try {
             replies = value.get();
           } catch (Exception e) {
