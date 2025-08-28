@@ -798,8 +798,8 @@ public class ThinPeer implements AutoCloseable {
       if (jsonRpc instanceof JsonRpcRequest jsonRpcRequest) {
         rpcMessage = JsonRpcSerializer.toJson(jsonRpcRequest);
         return wsClient.sendAsync(rpcMessage, jsonRpcRequest.getId());
-      } else if (jsonRpc instanceof String) {
-        rpcMessage = (String) jsonRpc;
+      } else if (jsonRpc instanceof String jsonRpcStr) {
+        rpcMessage = jsonRpcStr;
         return wsClient.sendAsync(rpcMessage, messageId);
       } else {
         throw new IllegalArgumentException("Unsupported type for jsonRpc");
@@ -1072,10 +1072,10 @@ public class ThinPeer implements AutoCloseable {
     }
 
     JsonRpcMessage jsonRpcMessage;
-    if (jsonRpcRequest instanceof JsonRpcRequest) {
-      jsonRpcMessage = (JsonRpcRequest) jsonRpcRequest;
-    } else if (jsonRpcRequest instanceof String) {
-      jsonRpcMessage = JsonRpcSerializer.fromJson((String) jsonRpcRequest, JsonRpcRequest.class);
+    if (jsonRpcRequest instanceof JsonRpcRequest rpcRequest) {
+      jsonRpcMessage = rpcRequest;
+    } else if (jsonRpcRequest instanceof String rpcMessage) {
+      jsonRpcMessage = JsonRpcSerializer.fromJson(rpcMessage, JsonRpcRequest.class);
     } else {
       throw new IllegalArgumentException("Unsupported type for jsonRpc");
     }
@@ -1116,10 +1116,10 @@ public class ThinPeer implements AutoCloseable {
     }
 
     JsonRpcMessage jsonRpcMessage;
-    if (jsonRpcRequest instanceof JsonRpcRequest) {
-      jsonRpcMessage = (JsonRpcRequest) jsonRpcRequest;
-    } else if (jsonRpcRequest instanceof String) {
-      jsonRpcMessage = JsonRpcSerializer.fromJson((String) jsonRpcRequest, JsonRpcRequest.class);
+    if (jsonRpcRequest instanceof JsonRpcRequest rpcRequest) {
+      jsonRpcMessage = rpcRequest;
+    } else if (jsonRpcRequest instanceof String rpcMessage) {
+      jsonRpcMessage = JsonRpcSerializer.fromJson(rpcMessage, JsonRpcRequest.class);
     } else {
       throw new IllegalArgumentException("Unsupported type for jsonRpc");
     }

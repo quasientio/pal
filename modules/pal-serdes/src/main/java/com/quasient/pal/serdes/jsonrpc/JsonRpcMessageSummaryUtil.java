@@ -117,10 +117,10 @@ public class JsonRpcMessageSummaryUtil extends RpcMessageSummaryUtil {
   public static String getOneLinerSummary(JsonRpcResponse msg) {
     MessageType responseType = getMessageType(msg);
     switch (responseType) {
-      case EXEC_PUT_STATIC_DONE:
-      case EXEC_PUT_FIELD_DONE:
+      case EXEC_PUT_STATIC_DONE, EXEC_PUT_FIELD_DONE -> {
         return String.format("put_done %s.%s", classname(msg), getFieldName(msg).orElse(""));
-      case EXEC_RETURN_VALUE:
+      }
+      case EXEC_RETURN_VALUE -> {
         assert msg.getResult() != null;
         if (msg.getResult().getIsVoid()) {
           return "return void";
@@ -145,14 +145,15 @@ public class JsonRpcMessageSummaryUtil extends RpcMessageSummaryUtil {
           return String.format(
               "return %s%s", classname(msg), getObjRepr(msg.getResult().getValue()));
         }
-      case EXEC_THROWABLE:
+      }
+      case EXEC_THROWABLE -> {
         String message =
             msg.getError() == null
                 ? ""
                 : msg.getError().getData() == null ? "" : msg.getError().getData().getMessage();
         return String.format("throw %s: \"%s\"", classname(msg), message);
-      default:
-        throw new IllegalArgumentException("Unsupported response type: " + responseType);
+      }
+      default -> throw new IllegalArgumentException("Unsupported response type: " + responseType);
     }
   }
 

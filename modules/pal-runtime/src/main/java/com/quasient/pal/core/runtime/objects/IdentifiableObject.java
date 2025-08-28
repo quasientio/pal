@@ -60,7 +60,7 @@ final class IdentifiableObject extends WeakReference<Object> {
   /** {@inheritDoc} */
   @Override
   public boolean equals(Object other) {
-    return (other instanceof IdentifiableObject) && this.hash == ((IdentifiableObject) other).hash;
+    return (other instanceof IdentifiableObject idObj) && this.hash == idObj.hash;
   }
 
   /** {@inheritDoc} */

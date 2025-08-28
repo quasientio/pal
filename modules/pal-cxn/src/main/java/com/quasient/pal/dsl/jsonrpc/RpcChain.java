@@ -328,34 +328,41 @@ public class RpcChain {
     ObjectRef ref;
 
     switch (op.getOpType()) {
-      case NEW_INSTANCE:
+      case NEW_INSTANCE -> {
         return JsonRpcMessageFactory.buildConstructorCall(id, op.getClassName(), argumentList);
-      case STATIC_METHOD:
+      }
+      case STATIC_METHOD -> {
         return JsonRpcMessageFactory.buildClassMethodCall(
             id, op.getClassName(), op.getMethodName(), argumentList);
-      case INSTANCE_METHOD:
+      }
+      case INSTANCE_METHOD -> {
         ref = resolveInstanceRef(op.getInstanceVarName(), op.getDirectInstanceRef());
         return JsonRpcMessageFactory.buildInstanceMethodCall(
             id, op.getClassName(), op.getMethodName(), ref.getRef(), argumentList);
-      case STATIC_FIELD_GET:
+      }
+      case STATIC_FIELD_GET -> {
         return JsonRpcMessageFactory.buildStaticFieldGet(id, op.getClassName(), op.getFieldName());
-      case STATIC_FIELD_PUT:
+      }
+      case STATIC_FIELD_PUT -> {
         assert rawArgs != null && rawArgs.length == 1;
         Argument valArg = resolveArgument(rawArgs[0]);
         return JsonRpcMessageFactory.buildStaticFieldPut(
             id, op.getClassName(), op.getFieldName(), valArg);
-      case INSTANCE_FIELD_GET:
+      }
+      case INSTANCE_FIELD_GET -> {
         ref = resolveInstanceRef(op.getInstanceVarName(), op.getDirectInstanceRef());
         return JsonRpcMessageFactory.buildInstanceFieldGet(
             id, op.getClassName(), ref.getRef(), op.getFieldName());
-      case INSTANCE_FIELD_PUT:
+      }
+      case INSTANCE_FIELD_PUT -> {
         ref = resolveInstanceRef(op.getInstanceVarName(), op.getDirectInstanceRef());
         assert rawArgs != null && rawArgs.length == 1;
         Argument valueArg = resolveArgument(rawArgs[0]);
         return JsonRpcMessageFactory.buildInstanceFieldPut(
             id, op.getClassName(), ref.getRef(), op.getFieldName(), valueArg);
-      default:
-        throw new IllegalArgumentException("Unsupported operation type: " + op.getOpType());
+      }
+      default ->
+          throw new IllegalArgumentException("Unsupported operation type: " + op.getOpType());
     }
   }
 

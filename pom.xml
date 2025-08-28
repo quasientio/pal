@@ -52,7 +52,7 @@
         <aspectj.plugin.version>1.15.0</aspectj.plugin.version>
         <google.format.plugin.version>2.23</google.format.plugin.version>
         <jacoco.plugin.version>0.8.12</jacoco.plugin.version>
-        <errorprone.plugin.version>2.27.1</errorprone.plugin.version>
+        <errorprone.plugin.version>2.38.0</errorprone.plugin.version>
 
         <!-- DEPENDENCIES VERSIONS -->
         <aspectj.version>1.9.24</aspectj.version>
@@ -123,6 +123,7 @@
                             <arg>-Xlint:deprecation</arg>
                             <arg>-Xlint:unchecked</arg>
                             <arg>-XDcompilePolicy=simple</arg>
+                            <arg>--should-stop=ifError=FLOW</arg>
                             <arg>
                                 -Xplugin:ErrorProne \
                                 -Xep:JUnitIncompatibleType:OFF \

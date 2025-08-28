@@ -352,28 +352,28 @@ public abstract class AbstractMessageInvokerThread extends Thread {
    */
   private void endDispatch(MessageFamily dispatchedMessageType, DispatchResultType resultType) {
     switch (dispatchedMessageType) {
-      case EXEC:
+      case EXEC -> {
         if (resultType.equals(DispatchResultType.OK)) {
           execRequestsDispatched.getAndIncrement();
         } else {
           execRequestErrors.getAndIncrement();
         }
-        break;
-      case CONTROL:
+      }
+      case CONTROL -> {
         if (resultType.equals(DispatchResultType.OK)) {
           controlRequestsDispatched.getAndIncrement();
         } else {
           controlRequestErrors.getAndIncrement();
         }
-        break;
-      case META:
+      }
+      case META -> {
         if (resultType.equals(DispatchResultType.OK)) {
           metaRequestsDispatched.getAndIncrement();
         } else {
           metaRequestErrors.getAndIncrement();
         }
-        break;
-      default:
+      }
+      default -> {}
     }
 
     // reset MessageBuilder's dispatch sequence

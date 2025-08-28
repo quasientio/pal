@@ -171,7 +171,7 @@ public class InterceptInformer implements InterceptNodeListener {
 
     InterceptEventMsg interceptEventMsg;
     switch (event.type()) {
-      case INTERCEPT_ADDED:
+      case INTERCEPT_ADDED -> {
         final InterceptRequest<?> interceptRequest = event.interceptRequest();
         if (event.peerUuid().equals(peerUuid)) {
           if (logger.isDebugEnabled()) {
@@ -182,8 +182,8 @@ public class InterceptInformer implements InterceptNodeListener {
         Objects.requireNonNull(interceptRequest);
         InterceptMessage interceptMessage = messageBuilder.buildInterceptMessage(interceptRequest);
         interceptEventMsg = new InterceptEventMsg(ColferUtils.toBytes(interceptMessage));
-        break;
-      case INTERCEPT_REMOVED:
+      }
+      case INTERCEPT_REMOVED -> {
         if (event.peerUuid().equals(peerUuid)) {
           if (logger.isDebugEnabled()) {
             logger.debug(
@@ -194,9 +194,9 @@ public class InterceptInformer implements InterceptNodeListener {
         }
         String interceptMsgId = event.interceptId();
         interceptEventMsg = new InterceptEventMsg(interceptMsgId);
-        break;
-      default:
-        throw new IllegalStateException("Unexpected intercept event type: " + event.type());
+      }
+      default ->
+          throw new IllegalStateException("Unexpected intercept event type: " + event.type());
     }
 
     sendInterceptEventMsg(interceptEventMsg);

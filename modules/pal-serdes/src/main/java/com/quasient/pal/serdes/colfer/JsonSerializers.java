@@ -191,55 +191,46 @@ public class JsonSerializers {
 
       MessageType execMessageType = getMessageTypeOf(message);
       switch (execMessageType) {
-        case EXEC_CONSTRUCTOR:
-          jsonElement.add(
-              "constructor_call", jsonSerializationContext.serialize(message.constructorCall));
-          break;
-        case EXEC_INSTANCE_METHOD:
-          jsonElement.add(
-              "instance_method_call",
-              jsonSerializationContext.serialize(message.instanceMethodCall));
-          break;
-        case EXEC_CLASS_METHOD:
-          jsonElement.add(
-              "class_method_call", jsonSerializationContext.serialize(message.classMethodCall));
-          break;
-        case EXEC_GET_STATIC:
-          jsonElement.add(
-              "static_field_get", jsonSerializationContext.serialize(message.staticFieldGet));
-          break;
-        case EXEC_GET_FIELD:
-          jsonElement.add(
-              "instance_field_get", jsonSerializationContext.serialize(message.instanceFieldGet));
-          break;
-        case EXEC_PUT_STATIC:
-          jsonElement.add(
-              "static_field_put", jsonSerializationContext.serialize(message.staticFieldPut));
-          break;
-        case EXEC_PUT_FIELD:
-          jsonElement.add(
-              "instance_field_put", jsonSerializationContext.serialize(message.instanceFieldPut));
-          break;
-        case EXEC_PUT_STATIC_DONE:
-          jsonElement.add(
-              "static_field_put_done",
-              jsonSerializationContext.serialize(message.staticFieldPutDone));
-          break;
-        case EXEC_PUT_FIELD_DONE:
-          jsonElement.add(
-              "instance_field_put_done",
-              jsonSerializationContext.serialize(message.instanceFieldPutDone));
-          break;
-        case EXEC_THROWABLE:
-          jsonElement.add(
-              "raised_throwable", jsonSerializationContext.serialize(message.raisedThrowable));
-          break;
-        case EXEC_RETURN_VALUE:
-          jsonElement.add("return_value", jsonSerializationContext.serialize(message.returnValue));
-          break;
-        default:
+        case EXEC_CONSTRUCTOR ->
+            jsonElement.add(
+                "constructor_call", jsonSerializationContext.serialize(message.constructorCall));
+        case EXEC_INSTANCE_METHOD ->
+            jsonElement.add(
+                "instance_method_call",
+                jsonSerializationContext.serialize(message.instanceMethodCall));
+        case EXEC_CLASS_METHOD ->
+            jsonElement.add(
+                "class_method_call", jsonSerializationContext.serialize(message.classMethodCall));
+        case EXEC_GET_STATIC ->
+            jsonElement.add(
+                "static_field_get", jsonSerializationContext.serialize(message.staticFieldGet));
+        case EXEC_GET_FIELD ->
+            jsonElement.add(
+                "instance_field_get", jsonSerializationContext.serialize(message.instanceFieldGet));
+        case EXEC_PUT_STATIC ->
+            jsonElement.add(
+                "static_field_put", jsonSerializationContext.serialize(message.staticFieldPut));
+        case EXEC_PUT_FIELD ->
+            jsonElement.add(
+                "instance_field_put", jsonSerializationContext.serialize(message.instanceFieldPut));
+        case EXEC_PUT_STATIC_DONE ->
+            jsonElement.add(
+                "static_field_put_done",
+                jsonSerializationContext.serialize(message.staticFieldPutDone));
+        case EXEC_PUT_FIELD_DONE ->
+            jsonElement.add(
+                "instance_field_put_done",
+                jsonSerializationContext.serialize(message.instanceFieldPutDone));
+        case EXEC_THROWABLE ->
+            jsonElement.add(
+                "raised_throwable", jsonSerializationContext.serialize(message.raisedThrowable));
+        case EXEC_RETURN_VALUE ->
+            jsonElement.add(
+                "return_value", jsonSerializationContext.serialize(message.returnValue));
+        default -> {
           logger.warn("Unsupported message of type: {}", execMessageType.name());
           jsonElement.addProperty("ERROR: Unsupported message of type", execMessageType.name());
+        }
       }
       return jsonElement;
     }
@@ -1220,14 +1211,13 @@ public class JsonSerializers {
       final MessageType messageType = MessageType.fromId(message.messageType);
       jsonElement.addProperty("type", messageType.name());
       switch (messageType.getFamily()) {
-        case CONTROL:
-          jsonElement.add(
-              "control_message", jsonSerializationContext.serialize(message.controlMessage));
-          break;
-        case EXEC:
-          jsonElement.add("exec_message", jsonSerializationContext.serialize(message.execMessage));
-          break;
-        case INTERCEPT:
+        case CONTROL ->
+            jsonElement.add(
+                "control_message", jsonSerializationContext.serialize(message.controlMessage));
+        case EXEC ->
+            jsonElement.add(
+                "exec_message", jsonSerializationContext.serialize(message.execMessage));
+        case INTERCEPT -> {
           switch (messageType) {
             case INTERCEPT_MESSAGE:
               jsonElement.add(
@@ -1247,9 +1237,8 @@ public class JsonSerializers {
             default:
               logger.error("Unable to serialize message of type: {}", messageType);
           }
-          break;
-        default:
-          logger.error("Unable to serialize message of type: {}", messageType);
+        }
+        default -> logger.error("Unable to serialize message of type: {}", messageType);
       }
       return jsonElement;
     }

@@ -81,8 +81,8 @@ public abstract class AbstractDispatcherTest {
         .thenAnswer(
             invocation -> {
               Object arg = invocation.getArgument(0);
-              if (arg instanceof Message) {
-                return ((Message) arg).getExecMessage();
+              if (arg instanceof Message messageArg) {
+                return messageArg.getExecMessage();
               } else {
                 throw new IllegalArgumentException(
                     "Expected Message, got " + arg.getClass().getName());

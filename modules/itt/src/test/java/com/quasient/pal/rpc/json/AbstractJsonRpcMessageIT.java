@@ -375,8 +375,8 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractRpcMessageIT
     if (array == null) {
       return null;
     }
-    if (array instanceof Object[]) {
-      return (Object[]) array;
+    if (array instanceof Object[] objArray) {
+      return objArray;
     } else if (array instanceof boolean[] primitiveArray) {
       Boolean[] wrapperArray = new Boolean[primitiveArray.length];
       for (int i = 0; i < primitiveArray.length; i++) {

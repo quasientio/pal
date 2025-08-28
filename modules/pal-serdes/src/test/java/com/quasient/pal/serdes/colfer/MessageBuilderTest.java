@@ -128,7 +128,7 @@ public class MessageBuilderTest {
     ExtractedFieldOpMessageInfo extractedFieldOpMessageInfo = new ExtractedFieldOpMessageInfo();
     MessageType execMessageType = getMessageTypeOf(fieldOpMessage);
     switch (execMessageType) {
-      case EXEC_GET_FIELD:
+      case EXEC_GET_FIELD -> {
         assertNotNull(fieldOpMessage.getInstanceFieldGet());
         extractedFieldOpMessageInfo.targetObjectRef =
             ObjectRef.from(fieldOpMessage.getInstanceFieldGet().getObjectRef());
@@ -137,8 +137,8 @@ public class MessageBuilderTest {
             fieldOpMessage.getInstanceFieldGet().getField().getName();
         extractedFieldOpMessageInfo.className =
             fieldOpMessage.getInstanceFieldGet().getClazz().getName();
-        break;
-      case EXEC_PUT_FIELD:
+      }
+      case EXEC_PUT_FIELD -> {
         assertNotNull(fieldOpMessage.getInstanceFieldPut());
         extractedFieldOpMessageInfo.targetObjectRef =
             ObjectRef.from(fieldOpMessage.getInstanceFieldPut().getObjectRef());
@@ -147,39 +147,38 @@ public class MessageBuilderTest {
             fieldOpMessage.getInstanceFieldPut().getField().getName();
         extractedFieldOpMessageInfo.className =
             fieldOpMessage.getInstanceFieldPut().getClazz().getName();
-        break;
-      case EXEC_GET_STATIC:
+      }
+      case EXEC_GET_STATIC -> {
         assertNotNull(fieldOpMessage.getStaticFieldGet());
         extractedFieldOpMessageInfo.context = fieldOpMessage.getStaticFieldGet().getContext();
         extractedFieldOpMessageInfo.fieldName =
             fieldOpMessage.getStaticFieldGet().getField().getName();
         extractedFieldOpMessageInfo.className =
             fieldOpMessage.getStaticFieldGet().getClazz().getName();
-        break;
-      case EXEC_PUT_STATIC:
+      }
+      case EXEC_PUT_STATIC -> {
         assertNotNull(fieldOpMessage.getStaticFieldPut());
         extractedFieldOpMessageInfo.context = fieldOpMessage.getStaticFieldPut().getContext();
         extractedFieldOpMessageInfo.fieldName =
             fieldOpMessage.getStaticFieldPut().getField().getName();
         extractedFieldOpMessageInfo.className =
             fieldOpMessage.getStaticFieldPut().getClazz().getName();
-        break;
-      case EXEC_PUT_FIELD_DONE:
+      }
+      case EXEC_PUT_FIELD_DONE -> {
         assertNotNull(fieldOpMessage.getInstanceFieldPutDone());
         extractedFieldOpMessageInfo.fieldName =
             fieldOpMessage.getInstanceFieldPutDone().getField().getName();
         extractedFieldOpMessageInfo.className =
             fieldOpMessage.getInstanceFieldPutDone().getClazz().getName();
-        break;
-      case EXEC_PUT_STATIC_DONE:
+      }
+      case EXEC_PUT_STATIC_DONE -> {
         assertNotNull(fieldOpMessage.getStaticFieldPutDone());
         extractedFieldOpMessageInfo.fieldName =
             fieldOpMessage.getStaticFieldPutDone().getField().getName();
         extractedFieldOpMessageInfo.className =
             fieldOpMessage.getStaticFieldPutDone().getClazz().getName();
-        break;
-      default:
-        fail("Unexpected exec MessageType: " + execMessageType.name());
+      }
+      default -> fail("Unexpected exec MessageType: " + execMessageType.name());
     }
     return extractedFieldOpMessageInfo;
   }
@@ -1358,21 +1357,18 @@ public class MessageBuilderTest {
 
       // compare argument values
       switch (execMessageType) {
-        case EXEC_GET_FIELD, EXEC_GET_STATIC:
-          break;
-        case EXEC_PUT_FIELD:
-          assertEquals(
-              Unwrapper.unwrapObject(interceptedExecMessage.getInstanceFieldPut().getValueObject()),
-              Unwrapper.unwrapObject(
-                  callbackExecMessage.getClassMethodCall().getParameters()[0].getValue()));
-          break;
-        case EXEC_PUT_STATIC:
-          assertEquals(
-              interceptedExecMessage.getStaticFieldPut().getValueObject().getValue(),
-              callbackExecMessage.getClassMethodCall().getParameters()[0].getValue().getValue());
-          break;
-        default:
-          fail("Unexpected ExecMessageType: " + execMessageType);
+        case EXEC_GET_FIELD, EXEC_GET_STATIC -> {}
+        case EXEC_PUT_FIELD ->
+            assertEquals(
+                Unwrapper.unwrapObject(
+                    interceptedExecMessage.getInstanceFieldPut().getValueObject()),
+                Unwrapper.unwrapObject(
+                    callbackExecMessage.getClassMethodCall().getParameters()[0].getValue()));
+        case EXEC_PUT_STATIC ->
+            assertEquals(
+                interceptedExecMessage.getStaticFieldPut().getValueObject().getValue(),
+                callbackExecMessage.getClassMethodCall().getParameters()[0].getValue().getValue());
+        default -> fail("Unexpected ExecMessageType: " + execMessageType);
       }
     }
   }
@@ -1411,27 +1407,19 @@ public class MessageBuilderTest {
       assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
       assertEquals(EXEC_THROWABLE, getMessageTypeOf(execMessage));
       assertNotNull(execMessage.getRaisedThrowable());
-      if (accessibleObject instanceof Method) {
+      if (accessibleObject instanceof Method method) {
+        assertEquals(method.getModifiers(), execMessage.getRaisedThrowable().getModifiers());
         assertEquals(
-            ((Method) accessibleObject).getModifiers(),
-            execMessage.getRaisedThrowable().getModifiers());
+            method.getName(), execMessage.getRaisedThrowable().getFrom().getMethod().getName());
+      } else if (accessibleObject instanceof Constructor<?> ctor) {
+        assertEquals(ctor.getModifiers(), execMessage.getRaisedThrowable().getModifiers());
         assertEquals(
-            ((Method) accessibleObject).getName(),
-            execMessage.getRaisedThrowable().getFrom().getMethod().getName());
-      } else if (accessibleObject instanceof Constructor) {
-        assertEquals(
-            ((Constructor<?>) accessibleObject).getModifiers(),
-            execMessage.getRaisedThrowable().getModifiers());
-        assertEquals(
-            ((Constructor<?>) accessibleObject).getDeclaringClass().getName(),
+            ctor.getDeclaringClass().getName(),
             execMessage.getRaisedThrowable().getFrom().getConstructor().getClazz().getName());
-      } else if (accessibleObject instanceof Field) {
+      } else if (accessibleObject instanceof Field field) {
+        assertEquals(field.getModifiers(), execMessage.getRaisedThrowable().getModifiers());
         assertEquals(
-            ((Field) accessibleObject).getModifiers(),
-            execMessage.getRaisedThrowable().getModifiers());
-        assertEquals(
-            ((Field) accessibleObject).getName(),
-            execMessage.getRaisedThrowable().getFrom().getField().getName());
+            field.getName(), execMessage.getRaisedThrowable().getFrom().getField().getName());
       } else {
         fail("Unexpected AccessibleObject: " + accessibleObject);
       }
@@ -1469,13 +1457,9 @@ public class MessageBuilderTest {
               assertEquals(EXEC_THROWABLE, getMessageTypeOf(execMessage));
               assertNotNull(execMessage.getRaisedThrowable());
               switch (executableObjectType) {
-                case METHOD:
-                case CONSTRUCTOR:
-                case FIELD:
-                  assertNull(execMessage.getRaisedThrowable().getFrom());
-                  break;
-                default:
-                  fail("Unexpected ExecutableObjectType: " + executableObjectType);
+                case METHOD, CONSTRUCTOR, FIELD ->
+                    assertNull(execMessage.getRaisedThrowable().getFrom());
+                default -> fail("Unexpected ExecutableObjectType: " + executableObjectType);
               }
               assertNotNull(execMessage.getRaisedThrowable().getThrowable());
               assertEquals(

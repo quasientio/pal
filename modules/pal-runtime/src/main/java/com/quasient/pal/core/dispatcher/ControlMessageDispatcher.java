@@ -100,7 +100,7 @@ public class ControlMessageDispatcher {
     final ControlCommandType commandType = ControlCommandType.fromId(controlMessage.getCommand());
     SessionResponseMsg sessionResponseMsg;
     switch (commandType) {
-      case DELETE_OBJECT:
+      case DELETE_OBJECT -> {
         // delete object from peer's session
         // NOTE: the remotePeerUuid is the session id of the peer
         final ObjectRef objectRef =
@@ -113,7 +113,8 @@ public class ControlMessageDispatcher {
         objectLookupStore.remove(objectRef);
         logger.info("Object {} deleted for peer w/uuid: {}", objectRef, remotePeerUuid);
         return sessionResponseMessageToControlMessage(sessionResponseMsg, controlMessageId);
-      case DELETE_SESSION:
+      }
+      case DELETE_SESSION -> {
         // delete session
         sessionResponseMsg =
             outboundMessageGateway.sendMessageToSessionService(
@@ -124,14 +125,17 @@ public class ControlMessageDispatcher {
           objectLookupStore.removeAll(objectRefsInSession);
         }
         return sessionResponseMessageToControlMessage(sessionResponseMsg, controlMessageId);
-      case GC:
+      }
+      case GC -> {
         ControlStatusType status =
             invokeGCReflectively() ? ControlStatusType.OK : ControlStatusType.ERROR;
         return messageBuilder.buildControlStatusMessage(peerUuid, status, controlMessageId);
-      case PING:
+      }
+      case PING -> {
         return messageBuilder.buildControlStatusMessage(
             peerUuid, ControlStatusType.OK, controlMessageId);
-      default:
+      }
+      default -> {
         String errorMessage =
             String.format(
                 "Incoming Control message w/id %s ignored - no handler:%n%s",
@@ -139,6 +143,7 @@ public class ControlMessageDispatcher {
         logger.error(errorMessage);
         return messageBuilder.buildControlStatusMessage(
             peerUuid, ControlStatusType.UNSUPPORTED, controlMessageId, errorMessage);
+      }
     }
   }
 

@@ -188,17 +188,12 @@ public class ExecMessageUtils {
     final MessageType execMessageType = getMessageTypeOf(execMessage);
     Parameter[] params;
     switch (execMessageType) {
-      case EXEC_CONSTRUCTOR:
-        params = execMessage.getConstructorCall().getParameters();
-        break;
-      case EXEC_INSTANCE_METHOD:
-        params = execMessage.getInstanceMethodCall().getParameters();
-        break;
-      case EXEC_CLASS_METHOD:
-        params = execMessage.getClassMethodCall().getParameters();
-        break;
-      default:
+      case EXEC_CONSTRUCTOR -> params = execMessage.getConstructorCall().getParameters();
+      case EXEC_INSTANCE_METHOD -> params = execMessage.getInstanceMethodCall().getParameters();
+      case EXEC_CLASS_METHOD -> params = execMessage.getClassMethodCall().getParameters();
+      default -> {
         return null;
+      }
     }
 
     if (params != null && params.length > 0) {

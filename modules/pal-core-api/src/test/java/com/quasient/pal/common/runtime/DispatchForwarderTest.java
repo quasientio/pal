@@ -16,6 +16,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.inject.Guice;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.junit.Before;
 import org.junit.Test;
@@ -29,7 +30,12 @@ public class DispatchForwarderTest {
   public void setUp() throws Throwable {
     mockedDispatcher = mock(ProxyDispatcher.class);
     proceedingJoinPoint = mock(ProceedingJoinPoint.class);
-    DispatchForwarder.setDispatcher(mockedDispatcher);
+
+    Guice.createInjector(
+        binder -> {
+          binder.bind(ProxyDispatcher.class).toInstance(mockedDispatcher);
+          binder.requestStaticInjection(DispatchForwarder.class);
+        });
   }
 
   @Test

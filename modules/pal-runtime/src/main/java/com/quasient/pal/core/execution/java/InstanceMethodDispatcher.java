@@ -118,8 +118,8 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
 
     final AccessibleObject method = ((MethodSignature) ctxt.getSignature()).getMethod();
 
-    if (value instanceof InvocationThrowableWrapper) {
-      Throwable invocationThr = ((InvocationThrowableWrapper) value).throwable();
+    if (value instanceof InvocationThrowableWrapper throwableWrapper) {
+      Throwable invocationThr = throwableWrapper.throwable();
       return messageBuilder.buildAccessibleObjectThrowableEphemeral(method, invocationThr, null);
     } else {
       return messageBuilder.buildReturnValueEphemeral(value, method, objectRef, isVoid, null);

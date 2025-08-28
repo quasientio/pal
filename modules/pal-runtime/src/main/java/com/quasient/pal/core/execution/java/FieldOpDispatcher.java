@@ -78,8 +78,8 @@ public abstract class FieldOpDispatcher extends BaseExecMessageDispatcher {
 
     AccessibleObject field = ((FieldSignature) ctxt.getSignature()).getField();
 
-    if (value instanceof InvocationThrowableWrapper) {
-      Throwable invocationThr = ((InvocationThrowableWrapper) value).throwable();
+    if (value instanceof InvocationThrowableWrapper throwableWrapper) {
+      Throwable invocationThr = throwableWrapper.throwable();
       return messageBuilder.buildAccessibleObjectThrowableEphemeral(field, invocationThr, null);
     } else {
       if (!returnsVoid()) {

@@ -119,8 +119,8 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
     final AccessibleObject constructor =
         ((ConstructorSignature) ctxt.getSignature()).getConstructor();
 
-    if (value instanceof InvocationThrowableWrapper) {
-      Throwable invocationThr = ((InvocationThrowableWrapper) value).throwable();
+    if (value instanceof InvocationThrowableWrapper throwableWrapper) {
+      Throwable invocationThr = throwableWrapper.throwable();
       return messageBuilder.buildAccessibleObjectThrowableEphemeral(
           constructor, invocationThr, null);
     } else {

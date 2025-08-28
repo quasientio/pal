@@ -457,25 +457,25 @@ class SocketRpcInvoker extends AbstractMessageInvokerThread {
     // create JSON-RPC response from MetaMessage / ExecMessage response
     MessageType responseMessageType;
     switch (requestMessageType.getFamily()) {
-      case EXEC:
+      case EXEC -> {
         jsonRpcResponse =
             messageBuilder.jsonRpcResponseFromExecMessageResponse(responseMessage.getExecMessage());
         responseMessageType = getMessageTypeOf(responseMessage.getExecMessage());
-        break;
-      case META:
+      }
+      case META -> {
         jsonRpcResponse =
             messageBuilder.jsonRpcResponseFromMetaMessageResponse(responseMessage.getMetaMessage());
         responseMessageType = getMessageTypeOf(responseMessage.getMetaMessage());
-        break;
-      case CONTROL:
+      }
+      case CONTROL -> {
         jsonRpcResponse =
             messageBuilder.jsonRpcResponseFromControlMessageResponse(
                 responseMessage.getControlMessage());
         responseMessageType = getMessageTypeOf(responseMessage.getControlMessage());
-        break;
-      default:
-        // we cannot get here: other branches ruled out in pre-dispatch switch
-        responseMessageType = MessageType.UNKNOWN;
+      }
+      default ->
+          // we cannot get here: other branches ruled out in pre-dispatch switch
+          responseMessageType = MessageType.UNKNOWN;
     }
 
     // send response

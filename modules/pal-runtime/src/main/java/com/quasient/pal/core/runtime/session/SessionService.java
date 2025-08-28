@@ -239,7 +239,7 @@ public class SessionService extends ConnectedService {
       final SessionResponseMsg responseMessage;
       SessionStatusType status;
       switch (cmdMsg.getCommand()) {
-        case STORE_OBJECT:
+        case STORE_OBJECT -> {
           Objects.requireNonNull(cmdMsg.getSessionId());
           Objects.requireNonNull(cmdMsg.getObjectRef());
           boolean stored = false;
@@ -250,8 +250,8 @@ public class SessionService extends ConnectedService {
           }
           status = stored ? SessionStatusType.OK : SessionStatusType.ERROR;
           responseMessage = new SessionResponseMsg(status);
-          break;
-        case DELETE_OBJECT:
+        }
+        case DELETE_OBJECT -> {
           Objects.requireNonNull(cmdMsg.getSessionId());
           Objects.requireNonNull(cmdMsg.getObjectRef());
           boolean objectDeleted;
@@ -275,8 +275,8 @@ public class SessionService extends ConnectedService {
             status = SessionStatusType.ERROR;
           }
           responseMessage = new SessionResponseMsg(status);
-          break;
-        case DELETE_SESSION:
+        }
+        case DELETE_SESSION -> {
           Objects.requireNonNull(cmdMsg.getSessionId());
           Set<ObjectRef> objectsInSession = null;
           try {
@@ -296,15 +296,15 @@ public class SessionService extends ConnectedService {
           responseMessage =
               new SessionResponseMsg(
                   status, objectsInSession != null ? objectsInSession : new HashSet<>());
-          break;
-        case CLEAR_SESSIONS:
+        }
+        case CLEAR_SESSIONS -> {
           sessionsMap.clear();
           logger.info("All sessions cleared.");
           status = SessionStatusType.OK;
           responseMessage = new SessionResponseMsg(status);
-          break;
-        default:
-          responseMessage = new SessionResponseMsg(SessionStatusType.UNSUPPORTED_SESSION_CMD);
+        }
+        default ->
+            responseMessage = new SessionResponseMsg(SessionStatusType.UNSUPPORTED_SESSION_CMD);
       }
       if (logger.isDebugEnabled()) {
         logger.debug("Sending back response: {}", responseMessage);

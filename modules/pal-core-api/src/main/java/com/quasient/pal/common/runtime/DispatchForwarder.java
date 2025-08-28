@@ -37,16 +37,6 @@ public final class DispatchForwarder {
   private DispatchForwarder() {}
 
   /**
-   * Assigns a ProxyDispatcher to be used by the DispatchForwarder. This method allows dynamic
-   * configuration of the dispatching mechanism.
-   *
-   * @param proxyDispatcher the ProxyDispatcher implementation to assign
-   */
-  static void setDispatcher(ProxyDispatcher proxyDispatcher) {
-    dispatcher = proxyDispatcher;
-  }
-
-  /**
    * Dispatches a constructor call with the given join point and arguments.
    *
    * @param pjp the {@link ProceedingJoinPoint} handle

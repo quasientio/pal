@@ -37,7 +37,6 @@ import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.apache.kafka.common.record.TimestampType;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -50,9 +49,6 @@ public class KafkaLogMessageSerdeTest {
   public void setUp() {
     messageBuilder = new MessageBuilder();
   }
-
-  @After
-  public void tearDown() {}
 
   @Test
   public void testColferMessageSerialization() {

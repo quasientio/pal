@@ -180,21 +180,20 @@ public class JsonRpcRequestValidator {
 
     /* 4.2 check specific fields that **should be set** based on the method */
     switch (request.getMethod()) {
-      case "new":
-        break;
-      case "call":
+      case "new" -> {}
+      case "call" -> {
         String method = params.getMethod();
         if (method == null || method.isEmpty()) {
           throw new InvalidJsonRpcParamsException("Method is missing in 'call' request", requestId);
         }
-        break;
-      case "get":
+      }
+      case "get" -> {
         String getField = params.getField();
         if (getField == null || getField.isEmpty()) {
           throw new InvalidJsonRpcParamsException("Field is missing in 'get' request", requestId);
         }
-        break;
-      case "put":
+      }
+      case "put" -> {
         String putField = params.getField();
         if (putField == null || putField.isEmpty()) {
           throw new InvalidJsonRpcParamsException("Field is missing in 'put' request", requestId);
@@ -202,15 +201,15 @@ public class JsonRpcRequestValidator {
         if (params.getValue() == null) {
           throw new InvalidJsonRpcParamsException("Value is missing in 'put' request", requestId);
         }
-        break;
-      default:
-        throw new InvalidJsonRpcRequestException(
-            "Invalid method: " + request.getMethod(), requestId);
+      }
+      default ->
+          throw new InvalidJsonRpcRequestException(
+              "Invalid method: " + request.getMethod(), requestId);
     }
 
     /* 4.3 check specific fields that **should NOT be set** based on the method */
     switch (request.getMethod()) {
-      case "new":
+      case "new" -> {
         if (params.getInstance() != null) {
           throw new InvalidJsonRpcParamsException(
               "Params:Instance should be null for 'new' request", requestId);
@@ -227,8 +226,8 @@ public class JsonRpcRequestValidator {
           throw new InvalidJsonRpcParamsException(
               "Params:Value should be null for 'new' request", requestId);
         }
-        break;
-      case "call":
+      }
+      case "call" -> {
         if (params.getField() != null) {
           throw new InvalidJsonRpcParamsException(
               "Params:Field should be null for 'call' request", requestId);
@@ -237,8 +236,8 @@ public class JsonRpcRequestValidator {
           throw new InvalidJsonRpcParamsException(
               "Params:Value should be null for 'call' request", requestId);
         }
-        break;
-      case "get":
+      }
+      case "get" -> {
         if (params.getMethod() != null) {
           throw new InvalidJsonRpcParamsException(
               "Params:Method should be null for 'get' request", requestId);
@@ -251,8 +250,8 @@ public class JsonRpcRequestValidator {
           throw new InvalidJsonRpcParamsException(
               "Params:Value should be null for 'get' request", requestId);
         }
-        break;
-      case "put":
+      }
+      case "put" -> {
         if (params.getMethod() != null) {
           throw new InvalidJsonRpcParamsException(
               "Params:Method should be null for 'put' request", requestId);
@@ -261,10 +260,10 @@ public class JsonRpcRequestValidator {
           throw new InvalidJsonRpcParamsException(
               "Args should be null/empty for 'put' request", requestId);
         }
-        break;
-      default:
-        throw new InvalidJsonRpcRequestException(
-            "Invalid method: " + request.getMethod(), requestId);
+      }
+      default ->
+          throw new InvalidJsonRpcRequestException(
+              "Invalid method: " + request.getMethod(), requestId);
     }
 
     /* 4.4 check consistency of args when present

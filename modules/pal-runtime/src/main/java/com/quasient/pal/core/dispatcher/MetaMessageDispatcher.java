@@ -139,7 +139,7 @@ public class MetaMessageDispatcher {
     }
 
     switch (serviceType) {
-      case FETCH_CLASSES_INFO:
+      case FETCH_CLASSES_INFO -> {
         try {
           Path scanResultPath =
               classMetadataSerializer.scannedClasspathToJson(
@@ -159,7 +159,8 @@ public class MetaMessageDispatcher {
               e.getMessage(),
               metaMessage.getMessageId());
         }
-      default:
+      }
+      default -> {
         String errorMessage =
             String.format(
                 "Incoming Meta message w/id=%s from peer=%s ignored - no handler for service: %s",
@@ -171,6 +172,7 @@ public class MetaMessageDispatcher {
             MetaStatusType.UNSUPPORTED,
             errorMessage,
             metaMessage.getMessageId());
+      }
     }
   }
 }

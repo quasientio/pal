@@ -35,12 +35,11 @@ public abstract class AbstractReflectionHelperTestBase {
       }
     }
 
-    if (executable instanceof Method) {
-      return ((Method) executable)
-          .invoke(getTestClass().getDeclaredConstructor().newInstance(), args);
-    } else if (executable instanceof Constructor) {
+    if (executable instanceof Method method) {
+      return method.invoke(getTestClass().getDeclaredConstructor().newInstance(), args);
+    } else if (executable instanceof Constructor<?> ctor) {
       executable.setAccessible(true);
-      return ((Constructor<?>) executable).newInstance(args);
+      return ctor.newInstance(args);
     } else {
       throw new IllegalArgumentException("Unsupported Executable type");
     }

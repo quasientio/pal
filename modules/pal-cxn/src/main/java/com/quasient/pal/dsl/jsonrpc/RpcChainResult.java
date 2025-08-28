@@ -83,8 +83,8 @@ public class RpcChainResult {
     for (Map<String, Object> entry : this.chainValues) {
       String varName = (String) entry.get("varName");
       Object value = entry.get("ref");
-      if (varName != null && !varName.isEmpty() && value instanceof ObjectRef) {
-        varNameToRefMap.put(varName, (ObjectRef) value);
+      if (varName != null && !varName.isEmpty() && value instanceof ObjectRef valObjRef) {
+        varNameToRefMap.put(varName, valObjRef);
       }
     }
   }

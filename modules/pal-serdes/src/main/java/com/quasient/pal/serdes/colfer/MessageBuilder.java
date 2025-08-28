@@ -840,53 +840,44 @@ public final class MessageBuilder {
 
     // ---- payload (reuse) ----
     switch (messageType) {
-      case EXEC_GET_FIELD:
-        {
-          final InstanceFieldGet ifg = TlScratchHolder.ifg();
-          ifg.clazz = clazzFly;
-          ifg.objectRef = (targetObjRef != null) ? targetObjRef.getRef() : 0;
-          ifg.field = fieldFly;
-          ifg.context = cctxBean;
-          m.instanceFieldGet = ifg;
-          break;
-        }
-      case EXEC_PUT_FIELD:
-        {
-          final InstanceFieldPut ifp = TlScratchHolder.ifp();
-          ifp.clazz = clazzFly;
-          ifp.objectRef = (targetObjRef != null) ? targetObjRef.getRef() : 0;
-          ifp.field = fieldFly;
-          // reuse one Obj holder; prefer reference to avoid JSON
-          Obj valObj = TlScratchHolder.valObj();
-          Wrapper.wrapInto(valObj, arg, null, argObjRef, WrapPolicy.PREFER_REFERENCE);
-          ifp.valueObject = valObj;
-          ifp.context = cctxBean;
-          m.instanceFieldPut = ifp;
-          break;
-        }
-      case EXEC_GET_STATIC:
-        {
-          final StaticFieldGet sfg = TlScratchHolder.sfg();
-          sfg.clazz = clazzFly;
-          sfg.field = fieldFly;
-          sfg.context = cctxBean;
-          m.staticFieldGet = sfg;
-          break;
-        }
-      case EXEC_PUT_STATIC:
-        {
-          final StaticFieldPut sfp = TlScratchHolder.sfp();
-          sfp.clazz = clazzFly;
-          sfp.field = fieldFly;
-          Obj valObj = TlScratchHolder.valObj();
-          Wrapper.wrapInto(valObj, arg, null, argObjRef, WrapPolicy.PREFER_REFERENCE);
-          sfp.valueObject = valObj;
-          sfp.context = cctxBean;
-          m.staticFieldPut = sfp;
-          break;
-        }
-      default:
-        throw new IllegalArgumentException("Unexpected field op type: " + messageType);
+      case EXEC_GET_FIELD -> {
+        final InstanceFieldGet ifg = TlScratchHolder.ifg();
+        ifg.clazz = clazzFly;
+        ifg.objectRef = (targetObjRef != null) ? targetObjRef.getRef() : 0;
+        ifg.field = fieldFly;
+        ifg.context = cctxBean;
+        m.instanceFieldGet = ifg;
+      }
+      case EXEC_PUT_FIELD -> {
+        final InstanceFieldPut ifp = TlScratchHolder.ifp();
+        ifp.clazz = clazzFly;
+        ifp.objectRef = (targetObjRef != null) ? targetObjRef.getRef() : 0;
+        ifp.field = fieldFly;
+        // reuse one Obj holder; prefer reference to avoid JSON
+        Obj valObj = TlScratchHolder.valObj();
+        Wrapper.wrapInto(valObj, arg, null, argObjRef, WrapPolicy.PREFER_REFERENCE);
+        ifp.valueObject = valObj;
+        ifp.context = cctxBean;
+        m.instanceFieldPut = ifp;
+      }
+      case EXEC_GET_STATIC -> {
+        final StaticFieldGet sfg = TlScratchHolder.sfg();
+        sfg.clazz = clazzFly;
+        sfg.field = fieldFly;
+        sfg.context = cctxBean;
+        m.staticFieldGet = sfg;
+      }
+      case EXEC_PUT_STATIC -> {
+        final StaticFieldPut sfp = TlScratchHolder.sfp();
+        sfp.clazz = clazzFly;
+        sfp.field = fieldFly;
+        Obj valObj = TlScratchHolder.valObj();
+        Wrapper.wrapInto(valObj, arg, null, argObjRef, WrapPolicy.PREFER_REFERENCE);
+        sfp.valueObject = valObj;
+        sfp.context = cctxBean;
+        m.staticFieldPut = sfp;
+      }
+      default -> throw new IllegalArgumentException("Unexpected field op type: " + messageType);
     }
 
     return m;
@@ -1068,24 +1059,19 @@ public final class MessageBuilder {
 
     final FieldSignature fs = (FieldSignature) context.getSignature();
     switch (type) {
-      case EXEC_PUT_FIELD_DONE:
-        {
-          final InstanceFieldPutDone ifpd = TlScratchHolder.ifpd();
-          ifpd.clazz = Wrapper.getWrappedClass(fs.getDeclaringType());
-          ifpd.field = Wrapper.getWrappedField((Field) accessibleObject); // java.lang.reflect.Field
-          m.instanceFieldPutDone = ifpd;
-          break;
-        }
-      case EXEC_PUT_STATIC_DONE:
-        {
-          final StaticFieldPutDone sfpd = TlScratchHolder.sfpd();
-          sfpd.clazz = Wrapper.getWrappedClass(fs.getDeclaringType());
-          sfpd.field = Wrapper.getWrappedField((Field) accessibleObject);
-          m.staticFieldPutDone = sfpd;
-          break;
-        }
-      default:
-        throw new IllegalArgumentException("Unexpected field op done type: " + type);
+      case EXEC_PUT_FIELD_DONE -> {
+        final InstanceFieldPutDone ifpd = TlScratchHolder.ifpd();
+        ifpd.clazz = Wrapper.getWrappedClass(fs.getDeclaringType());
+        ifpd.field = Wrapper.getWrappedField((Field) accessibleObject); // java.lang.reflect.Field
+        m.instanceFieldPutDone = ifpd;
+      }
+      case EXEC_PUT_STATIC_DONE -> {
+        final StaticFieldPutDone sfpd = TlScratchHolder.sfpd();
+        sfpd.clazz = Wrapper.getWrappedClass(fs.getDeclaringType());
+        sfpd.field = Wrapper.getWrappedField((Field) accessibleObject);
+        m.staticFieldPutDone = sfpd;
+      }
+      default -> throw new IllegalArgumentException("Unexpected field op done type: " + type);
     }
 
     return m;
@@ -1162,8 +1148,8 @@ public final class MessageBuilder {
       objRefArgs = new ObjectRef[args.length];
       for (int i = 0; i < args.length; i++) {
         Object arg = args[i];
-        if (arg instanceof ObjectRef) {
-          objRefArgs[i] = (ObjectRef) arg;
+        if (arg instanceof ObjectRef objRefArg) {
+          objRefArgs[i] = objRefArg;
         } else {
           nonObjRefArgs[i] = arg;
         }
@@ -1210,8 +1196,8 @@ public final class MessageBuilder {
       objRefArgs = new ObjectRef[args.length];
       for (int i = 0; i < args.length; i++) {
         Object arg = args[i];
-        if (arg instanceof ObjectRef) {
-          objRefArgs[i] = (ObjectRef) arg;
+        if (arg instanceof ObjectRef objRefArg) {
+          objRefArgs[i] = objRefArg;
         } else {
           nonObjRefArgs[i] = arg;
         }
@@ -1270,10 +1256,10 @@ public final class MessageBuilder {
     Class<?> objectClass;
     if (accessibleObject instanceof Constructor) {
       objectClass = declaringClass;
-    } else if (accessibleObject instanceof Method) {
-      objectClass = ((Method) accessibleObject).getReturnType();
-    } else if (accessibleObject instanceof Field) {
-      objectClass = ((Field) accessibleObject).getType();
+    } else if (accessibleObject instanceof Method method) {
+      objectClass = method.getReturnType();
+    } else if (accessibleObject instanceof Field field) {
+      objectClass = field.getType();
     } else {
       throw new RuntimeException(
           String.format("Unable to handle accessible object of type: %s", accessibleObject));
@@ -1323,21 +1309,21 @@ public final class MessageBuilder {
               .withConstructor(
                   new com.quasient.pal.messages.colfer.Constructor()
                       .withClazz(getWrappedClass(declaringClass.getName()))));
-    } else if (accessibleObject instanceof Method) {
+    } else if (accessibleObject instanceof Method method) {
       valueMessage.setFrom(
           new Reflectable()
               .withMethod(
                   new com.quasient.pal.messages.colfer.Method()
                       .withClazz(getWrappedClass(declaringClass.getName()))
-                      .withName(((Method) accessibleObject).getName())
-                      .withModifiers(((Method) accessibleObject).getModifiers())));
-    } else if (accessibleObject instanceof Field) {
+                      .withName(method.getName())
+                      .withModifiers(method.getModifiers())));
+    } else if (accessibleObject instanceof Field field) {
       valueMessage.setFrom(
           new Reflectable()
               .withField(
                   new com.quasient.pal.messages.colfer.Field()
                       .withClazz(getWrappedClass(declaringClass.getName()))
-                      .withName(((Field) accessibleObject).getName())));
+                      .withName(field.getName())));
     } else {
       throw new RuntimeException(
           String.format("Unable to handle accessible object of type: %s", accessibleObject));
@@ -1379,27 +1365,23 @@ public final class MessageBuilder {
                                     .getDeclaringClass()
                                     .getName()))));
         raisedThrowable.setModifiers(((Constructor<?>) accessibleObject).getModifiers());
-      } else if (accessibleObject instanceof Method) {
+      } else if (accessibleObject instanceof Method method) {
         raisedThrowable.setFrom(
             new Reflectable()
                 .withMethod(
                     new com.quasient.pal.messages.colfer.Method()
-                        .withClazz(
-                            getWrappedClass(
-                                ((Method) accessibleObject).getDeclaringClass().getName()))
-                        .withName(((Method) accessibleObject).getName())
-                        .withModifiers(((Method) accessibleObject).getModifiers())));
-        raisedThrowable.setModifiers(((Method) accessibleObject).getModifiers());
-      } else if (accessibleObject instanceof Field) {
+                        .withClazz(getWrappedClass(method.getDeclaringClass().getName()))
+                        .withName(method.getName())
+                        .withModifiers(method.getModifiers())));
+        raisedThrowable.setModifiers(method.getModifiers());
+      } else if (accessibleObject instanceof Field field) {
         raisedThrowable.setFrom(
             new Reflectable()
                 .withField(
                     new com.quasient.pal.messages.colfer.Field()
-                        .withClazz(
-                            getWrappedClass(
-                                ((Field) accessibleObject).getDeclaringClass().getName()))
-                        .withName(((Field) accessibleObject).getName())));
-        raisedThrowable.setModifiers(((Field) accessibleObject).getModifiers());
+                        .withClazz(getWrappedClass(field.getDeclaringClass().getName()))
+                        .withName(field.getName())));
+        raisedThrowable.setModifiers(field.getModifiers());
       } else {
         throw new UnsupportedOperationException(
             String.format(
@@ -1483,8 +1465,8 @@ public final class MessageBuilder {
       objectRefArgs = new ObjectRef[args.length];
       for (int i = 0; i < args.length; i++) {
         Object arg = args[i];
-        if (arg instanceof ObjectRef) {
-          objectRefArgs[i] = (ObjectRef) arg;
+        if (arg instanceof ObjectRef objRefArg) {
+          objectRefArgs[i] = objRefArg;
         } else {
           noObjRefArgs[i] = arg;
         }
@@ -1524,16 +1506,13 @@ public final class MessageBuilder {
     Obj valueObj;
     int valueObjectRef;
     switch (otherMessageType) {
-      case EXEC_CONSTRUCTOR:
-        classMethodCall.setParameters(otherMessage.getConstructorCall().getParameters());
-        break;
-      case EXEC_INSTANCE_METHOD:
-        classMethodCall.setParameters(otherMessage.getInstanceMethodCall().getParameters());
-        break;
-      case EXEC_CLASS_METHOD:
-        classMethodCall.setParameters(otherMessage.getClassMethodCall().getParameters());
-        break;
-      case EXEC_PUT_STATIC:
+      case EXEC_CONSTRUCTOR ->
+          classMethodCall.setParameters(otherMessage.getConstructorCall().getParameters());
+      case EXEC_INSTANCE_METHOD ->
+          classMethodCall.setParameters(otherMessage.getInstanceMethodCall().getParameters());
+      case EXEC_CLASS_METHOD ->
+          classMethodCall.setParameters(otherMessage.getClassMethodCall().getParameters());
+      case EXEC_PUT_STATIC -> {
         fieldParamType = otherMessage.getStaticFieldPut().getField().getClazz().getName();
         valueObj = otherMessage.getStaticFieldPut().getValueObject();
         if (valueObj != null && valueObj.getRef() != 0) {
@@ -1546,8 +1525,8 @@ public final class MessageBuilder {
             new Parameter[] {
               createParameter(fieldParamType, valueObj, ObjectRef.from(valueObjectRef))
             });
-        break;
-      case EXEC_PUT_FIELD:
+      }
+      case EXEC_PUT_FIELD -> {
         fieldParamType = otherMessage.getInstanceFieldPut().getField().getClazz().getName();
         valueObj = otherMessage.getInstanceFieldPut().getValueObject();
         if (valueObj != null && valueObj.getRef() != 0) {
@@ -1560,19 +1539,18 @@ public final class MessageBuilder {
             new Parameter[] {
               createParameter(fieldParamType, valueObj, ObjectRef.from(valueObjectRef))
             });
-        break;
-      case EXEC_GET_STATIC:
+      }
+      case EXEC_GET_STATIC -> {
         fieldParamType = otherMessage.getStaticFieldGet().getField().getClazz().getName();
         classMethodCall.setParameters(
             new Parameter[] {createParameter(fieldParamType, null, null)});
-        break;
-      case EXEC_GET_FIELD:
+      }
+      case EXEC_GET_FIELD -> {
         fieldParamType = otherMessage.getInstanceFieldGet().getField().getClazz().getName();
         classMethodCall.setParameters(
             new Parameter[] {createParameter(fieldParamType, null, null)});
-        break;
-      default:
-        logger.error("Unsupported msg type: {}", otherMessageType);
+      }
+      default -> logger.error("Unsupported msg type: {}", otherMessageType);
     }
 
     return newExecMessage(peerUuid)
@@ -1617,39 +1595,34 @@ public final class MessageBuilder {
         includeSourceContext ? getWrappedContext(context, sender, senderObjRef) : null;
     final ExecMessage execMessage = newExecMessage(peerUuid);
     switch (messageType) {
-      case EXEC_GET_FIELD:
-        execMessage.setInstanceFieldGet(
-            new InstanceFieldGet()
-                .withClazz(clazz)
-                .withObjectRef(targetObjRef.getRef())
-                .withField(field)
-                .withContext(ctxt));
-        break;
-      case EXEC_PUT_FIELD:
-        execMessage.setInstanceFieldPut(
-            new InstanceFieldPut()
-                .withClazz(clazz)
-                .withObjectRef(targetObjRef.getRef())
-                .withField(field)
-                .withValueObject(
-                    getWrappedObject(arg, null, argObjRef, WrapPolicy.PREFER_REFERENCE))
-                .withContext(ctxt));
-        break;
-      case EXEC_GET_STATIC:
-        execMessage.setStaticFieldGet(
-            new StaticFieldGet().withClazz(clazz).withField(field).withContext(ctxt));
-        break;
-      case EXEC_PUT_STATIC:
-        execMessage.setStaticFieldPut(
-            new StaticFieldPut()
-                .withClazz(clazz)
-                .withValueObject(
-                    getWrappedObject(arg, null, argObjRef, WrapPolicy.PREFER_REFERENCE))
-                .withField(field)
-                .withContext(ctxt));
-        break;
-      default:
-        throw new IllegalArgumentException("Unexpected field op type: " + messageType);
+      case EXEC_GET_FIELD ->
+          execMessage.setInstanceFieldGet(
+              new InstanceFieldGet()
+                  .withClazz(clazz)
+                  .withObjectRef(targetObjRef.getRef())
+                  .withField(field)
+                  .withContext(ctxt));
+      case EXEC_PUT_FIELD ->
+          execMessage.setInstanceFieldPut(
+              new InstanceFieldPut()
+                  .withClazz(clazz)
+                  .withObjectRef(targetObjRef.getRef())
+                  .withField(field)
+                  .withValueObject(
+                      getWrappedObject(arg, null, argObjRef, WrapPolicy.PREFER_REFERENCE))
+                  .withContext(ctxt));
+      case EXEC_GET_STATIC ->
+          execMessage.setStaticFieldGet(
+              new StaticFieldGet().withClazz(clazz).withField(field).withContext(ctxt));
+      case EXEC_PUT_STATIC ->
+          execMessage.setStaticFieldPut(
+              new StaticFieldPut()
+                  .withClazz(clazz)
+                  .withValueObject(
+                      getWrappedObject(arg, null, argObjRef, WrapPolicy.PREFER_REFERENCE))
+                  .withField(field)
+                  .withContext(ctxt));
+      default -> throw new IllegalArgumentException("Unexpected field op type: " + messageType);
     }
     return execMessage;
   }
@@ -1669,20 +1642,17 @@ public final class MessageBuilder {
     final FieldSignature fieldSignature = (FieldSignature) context.getSignature();
     final ExecMessage execMessage = newExecMessage(peerUuid);
     switch (type) {
-      case EXEC_PUT_FIELD_DONE:
-        execMessage.setInstanceFieldPutDone(
-            new InstanceFieldPutDone()
-                .withClazz(getWrappedClass(fieldSignature.getDeclaringType()))
-                .withField(getWrappedField((Field) accessibleObject)));
-        break;
-      case EXEC_PUT_STATIC_DONE:
-        execMessage.setStaticFieldPutDone(
-            new StaticFieldPutDone()
-                .withClazz(getWrappedClass(fieldSignature.getDeclaringType()))
-                .withField(getWrappedField((Field) accessibleObject)));
-        break;
-      default:
-        throw new IllegalArgumentException("Unexpected field op done type: " + type);
+      case EXEC_PUT_FIELD_DONE ->
+          execMessage.setInstanceFieldPutDone(
+              new InstanceFieldPutDone()
+                  .withClazz(getWrappedClass(fieldSignature.getDeclaringType()))
+                  .withField(getWrappedField((Field) accessibleObject)));
+      case EXEC_PUT_STATIC_DONE ->
+          execMessage.setStaticFieldPutDone(
+              new StaticFieldPutDone()
+                  .withClazz(getWrappedClass(fieldSignature.getDeclaringType()))
+                  .withField(getWrappedField((Field) accessibleObject)));
+      default -> throw new IllegalArgumentException("Unexpected field op done type: " + type);
     }
     return execMessage;
   }
@@ -2263,29 +2233,19 @@ public final class MessageBuilder {
 
     // Create the appropriate ExecMessage call object based on the ExecMessageType
     switch (messageType) {
-      case EXEC_CONSTRUCTOR:
-        execMessage.setConstructorCall(createConstructorCall(jsonRpcRequest));
-        break;
-      case EXEC_GET_STATIC:
-        execMessage.setStaticFieldGet(createStaticFieldGet(jsonRpcRequest));
-        break;
-      case EXEC_GET_FIELD:
-        execMessage.setInstanceFieldGet(createInstanceFieldGet(jsonRpcRequest));
-        break;
-      case EXEC_PUT_STATIC:
-        execMessage.setStaticFieldPut(createStaticFieldPut(jsonRpcRequest));
-        break;
-      case EXEC_PUT_FIELD:
-        execMessage.setInstanceFieldPut(createInstanceFieldPut(jsonRpcRequest));
-        break;
-      case EXEC_CLASS_METHOD:
-        execMessage.setClassMethodCall(createClassMethodCall(jsonRpcRequest));
-        break;
-      case EXEC_INSTANCE_METHOD:
-        execMessage.setInstanceMethodCall(createInstanceMethodCall(jsonRpcRequest));
-        break;
-      default:
-        throw new IllegalArgumentException("Unsupported ExecMessageType: " + messageType);
+      case EXEC_CONSTRUCTOR ->
+          execMessage.setConstructorCall(createConstructorCall(jsonRpcRequest));
+      case EXEC_GET_STATIC -> execMessage.setStaticFieldGet(createStaticFieldGet(jsonRpcRequest));
+      case EXEC_GET_FIELD ->
+          execMessage.setInstanceFieldGet(createInstanceFieldGet(jsonRpcRequest));
+      case EXEC_PUT_STATIC -> execMessage.setStaticFieldPut(createStaticFieldPut(jsonRpcRequest));
+      case EXEC_PUT_FIELD ->
+          execMessage.setInstanceFieldPut(createInstanceFieldPut(jsonRpcRequest));
+      case EXEC_CLASS_METHOD ->
+          execMessage.setClassMethodCall(createClassMethodCall(jsonRpcRequest));
+      case EXEC_INSTANCE_METHOD ->
+          execMessage.setInstanceMethodCall(createInstanceMethodCall(jsonRpcRequest));
+      default -> throw new IllegalArgumentException("Unsupported ExecMessageType: " + messageType);
     }
     return wrap(execMessage);
   }
@@ -2372,49 +2332,49 @@ public final class MessageBuilder {
     MessageType responseMessageType = getMessageTypeOf(execMessageResponse);
 
     switch (responseMessageType) {
-      case EXEC_PUT_STATIC_DONE:
-        jsonRpcResponse.setResult(
-            new JsonRpcResponseReturnValue.Builder()
-                .withIsVoid(true)
-                .withFrom(
-                    new Executable.Builder()
-                        .withClassName(
-                            execMessageResponse
-                                .getStaticFieldPutDone()
-                                .getField()
-                                .getClazz()
-                                .getName())
-                        .withFieldName(
-                            execMessageResponse.getStaticFieldPutDone().getField().getName())
-                        .withModifiers(
-                            execMessageResponse.getStaticFieldPutDone().getField().getModifiers())
-                        .build())
-                .build());
-        break;
-      case EXEC_PUT_FIELD_DONE:
-        jsonRpcResponse.setResult(
-            new JsonRpcResponseReturnValue.Builder()
-                .withIsVoid(true)
-                .withFrom(
-                    new Executable.Builder()
-                        .withClassName(
-                            execMessageResponse
-                                .getInstanceFieldPutDone()
-                                .getField()
-                                .getClazz()
-                                .getName())
-                        .withFieldName(
-                            execMessageResponse.getInstanceFieldPutDone().getField().getName())
-                        .withModifiers(
-                            execMessageResponse.getInstanceFieldPutDone().getField().getModifiers())
-                        .build())
-                .build());
-        break;
-      case EXEC_RETURN_VALUE:
-        jsonRpcResponse.setResult(
-            ConversionUtils.toResponseReturnValue(execMessageResponse.getReturnValue()));
-        break;
-      case EXEC_THROWABLE:
+      case EXEC_PUT_STATIC_DONE ->
+          jsonRpcResponse.setResult(
+              new JsonRpcResponseReturnValue.Builder()
+                  .withIsVoid(true)
+                  .withFrom(
+                      new Executable.Builder()
+                          .withClassName(
+                              execMessageResponse
+                                  .getStaticFieldPutDone()
+                                  .getField()
+                                  .getClazz()
+                                  .getName())
+                          .withFieldName(
+                              execMessageResponse.getStaticFieldPutDone().getField().getName())
+                          .withModifiers(
+                              execMessageResponse.getStaticFieldPutDone().getField().getModifiers())
+                          .build())
+                  .build());
+      case EXEC_PUT_FIELD_DONE ->
+          jsonRpcResponse.setResult(
+              new JsonRpcResponseReturnValue.Builder()
+                  .withIsVoid(true)
+                  .withFrom(
+                      new Executable.Builder()
+                          .withClassName(
+                              execMessageResponse
+                                  .getInstanceFieldPutDone()
+                                  .getField()
+                                  .getClazz()
+                                  .getName())
+                          .withFieldName(
+                              execMessageResponse.getInstanceFieldPutDone().getField().getName())
+                          .withModifiers(
+                              execMessageResponse
+                                  .getInstanceFieldPutDone()
+                                  .getField()
+                                  .getModifiers())
+                          .build())
+                  .build());
+      case EXEC_RETURN_VALUE ->
+          jsonRpcResponse.setResult(
+              ConversionUtils.toResponseReturnValue(execMessageResponse.getReturnValue()));
+      case EXEC_THROWABLE -> {
         RaisedThrowable raisedThrowable = execMessageResponse.getRaisedThrowable();
         com.quasient.pal.messages.colfer.Throwable throwable = raisedThrowable.getThrowable();
         Reflectable fromAccessible = raisedThrowable.getFrom();
@@ -2442,10 +2402,10 @@ public final class MessageBuilder {
                   JsonRpcErrorCode.SERVER_ERROR.getMessage(),
                   errorData));
         }
-        break;
-      default:
-        throw new RuntimeException(
-            "Unexpected response message type: " + responseMessageType.name());
+      }
+      default ->
+          throw new RuntimeException(
+              "Unexpected response message type: " + responseMessageType.name());
     }
     return jsonRpcResponse;
   }

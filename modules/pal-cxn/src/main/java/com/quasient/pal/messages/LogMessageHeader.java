@@ -9,15 +9,59 @@
  */
 package com.quasient.pal.messages;
 
+import java.util.Arrays;
+import java.util.Objects;
 import org.apache.kafka.common.header.Header;
 
 /**
  * Represents a header in log messages, implementing the {@link Header} interface from Apache Kafka.
  *
- * <p>This record-class encapsulates a key-value pair used to store header information associated
- * with log messages.
- *
- * @param key the key of the header, must not be {@code null} or empty
- * @param value the value of the header as a byte array, may be {@code null} or empty
+ * <p>This class encapsulates a key-value pair used to store header information associated with log
+ * messages.
  */
-public record LogMessageHeader(String key, byte[] value) implements Header {}
+public class LogMessageHeader implements Header {
+  /** the key of the header */
+  private final String key;
+
+  /** the value of the header as a byte array */
+  private final byte[] value;
+
+  /**
+   * Simple two-arg constructor
+   *
+   * @param key the key of the header, must not be {@code null} or empty
+   * @param value the value of the header as a byte array, may be {@code null} or empty
+   */
+  public LogMessageHeader(String key, byte[] value) {
+    this.key = key;
+    this.value = value;
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public String key() {
+    return key;
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public byte[] value() {
+    return value;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (!(o instanceof LogMessageHeader that)) return false;
+    return Objects.equals(key, that.key) && Objects.deepEquals(value, that.value);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(key, Arrays.hashCode(value));
+  }
+
+  @Override
+  public String toString() {
+    return "LogMessageHeader{" + "key='" + key + '\'' + ", value=" + Arrays.toString(value) + '}';
+  }
+}

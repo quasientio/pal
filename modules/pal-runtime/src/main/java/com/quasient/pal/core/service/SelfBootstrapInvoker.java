@@ -264,9 +264,7 @@ public class SelfBootstrapInvoker {
     return switch (messageType) {
       case EXEC_RETURN_VALUE, EXEC_GET_STATIC, EXEC_GET_FIELD ->
           getIntFromReturnValue(mainResponseMessage);
-      case EXEC_THROWABLE -> {
-        yield DEFAULT_ERROR_EXIT_VALUE;
-      }
+      case EXEC_THROWABLE -> DEFAULT_ERROR_EXIT_VALUE;
       default -> {
         logger.error("Unexpected message type: {}", messageType);
         yield DEFAULT_EXIT_VALUE;
@@ -293,8 +291,8 @@ public class SelfBootstrapInvoker {
         logger.error("Error unwrapping object", e);
         return DEFAULT_EXIT_VALUE;
       }
-      if (returnedObject instanceof Integer) {
-        return (Integer) returnedObject;
+      if (returnedObject instanceof Integer intObj) {
+        return intObj;
       } else {
         logger.error("Unsupported return value type: {}", returnedObject.getClass().getName());
       }

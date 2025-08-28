@@ -76,58 +76,48 @@ public class ExecMessageSummaryUtil extends RpcMessageSummaryUtil {
     final MessageType execMessageType = getMessageTypeOf(msg);
     final String summary;
     switch (execMessageType) {
-      case EXEC_CONSTRUCTOR:
-        summary = "new " + classname(msg);
-        break;
-      case EXEC_INSTANCE_METHOD:
-        summary =
-            String.format(
-                "call %s.%s@%s",
-                classname(msg), msg.instanceMethodCall.name, msg.instanceMethodCall.objectRef);
-        break;
-      case EXEC_CLASS_METHOD:
-        summary = String.format("call %s.%s", classname(msg), msg.classMethodCall.name);
-        break;
-      case EXEC_GET_STATIC:
-        summary = String.format("get %s.%s", classname(msg), msg.staticFieldGet.field.name);
-        break;
-      case EXEC_GET_FIELD:
-        summary =
-            String.format(
-                "get %s.%s@%s",
-                classname(msg), msg.instanceFieldGet.field.name, msg.instanceFieldGet.objectRef);
-        break;
-      case EXEC_PUT_STATIC:
-        summary =
-            String.format(
-                "put %s.%s ⇦ %s",
-                classname(msg),
-                msg.staticFieldPut.field.name,
-                getObjRepr(msg.staticFieldPut.valueObject, msg.staticFieldPut.valueObjectRef));
-        break;
-      case EXEC_PUT_FIELD:
-        summary =
-            String.format(
-                "put %s.%s@%s ⇦ %s",
-                classname(msg),
-                msg.instanceFieldPut.field.name,
-                msg.instanceFieldPut.objectRef,
-                getObjRepr(msg.instanceFieldPut.valueObject, msg.instanceFieldPut.valueObjectRef));
-        break;
-      case EXEC_PUT_STATIC_DONE:
-        summary =
-            String.format("put_done %s.%s", classname(msg), msg.staticFieldPutDone.field.name);
-        break;
-      case EXEC_PUT_FIELD_DONE:
-        summary =
-            String.format("put_done %s.%s", classname(msg), msg.instanceFieldPutDone.field.name);
-        break;
-      case EXEC_THROWABLE:
-        summary =
-            String.format(
-                "throw %s: \"%s\"", classname(msg), msg.raisedThrowable.throwable.message);
-        break;
-      case EXEC_RETURN_VALUE:
+      case EXEC_CONSTRUCTOR -> summary = "new " + classname(msg);
+      case EXEC_INSTANCE_METHOD ->
+          summary =
+              String.format(
+                  "call %s.%s@%s",
+                  classname(msg), msg.instanceMethodCall.name, msg.instanceMethodCall.objectRef);
+      case EXEC_CLASS_METHOD ->
+          summary = String.format("call %s.%s", classname(msg), msg.classMethodCall.name);
+      case EXEC_GET_STATIC ->
+          summary = String.format("get %s.%s", classname(msg), msg.staticFieldGet.field.name);
+      case EXEC_GET_FIELD ->
+          summary =
+              String.format(
+                  "get %s.%s@%s",
+                  classname(msg), msg.instanceFieldGet.field.name, msg.instanceFieldGet.objectRef);
+      case EXEC_PUT_STATIC ->
+          summary =
+              String.format(
+                  "put %s.%s ⇦ %s",
+                  classname(msg),
+                  msg.staticFieldPut.field.name,
+                  getObjRepr(msg.staticFieldPut.valueObject, msg.staticFieldPut.valueObjectRef));
+      case EXEC_PUT_FIELD ->
+          summary =
+              String.format(
+                  "put %s.%s@%s ⇦ %s",
+                  classname(msg),
+                  msg.instanceFieldPut.field.name,
+                  msg.instanceFieldPut.objectRef,
+                  getObjRepr(
+                      msg.instanceFieldPut.valueObject, msg.instanceFieldPut.valueObjectRef));
+      case EXEC_PUT_STATIC_DONE ->
+          summary =
+              String.format("put_done %s.%s", classname(msg), msg.staticFieldPutDone.field.name);
+      case EXEC_PUT_FIELD_DONE ->
+          summary =
+              String.format("put_done %s.%s", classname(msg), msg.instanceFieldPutDone.field.name);
+      case EXEC_THROWABLE ->
+          summary =
+              String.format(
+                  "throw %s: \"%s\"", classname(msg), msg.raisedThrowable.throwable.message);
+      case EXEC_RETURN_VALUE -> {
         if (msg.returnValue.isVoid) {
           summary = "return void";
         } else {
@@ -153,9 +143,8 @@ public class ExecMessageSummaryUtil extends RpcMessageSummaryUtil {
                 String.format("return %s%s", classname(msg), getObjRepr(msg.returnValue.object));
           }
         }
-        break;
-      default:
-        summary = "UNKNOWN MESSAGE TYPE";
+      }
+      default -> summary = "UNKNOWN MESSAGE TYPE";
     }
 
     // escape EOL chars

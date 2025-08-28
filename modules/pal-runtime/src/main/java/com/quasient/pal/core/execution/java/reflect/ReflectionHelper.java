@@ -504,10 +504,10 @@ public class ReflectionHelper {
   private void cache(
       Class<?> clazz, String memberName, List<Class<?>> parameterTypes, Member member) {
     String key = buildKey(clazz, memberName, parameterTypes);
-    if (member instanceof Method) {
-      matchedMethodsCache.put(key, (Method) member);
-    } else if (member instanceof Constructor) {
-      matchedConstructorsCache.put(key, (Constructor<?>) member);
+    if (member instanceof Method method) {
+      matchedMethodsCache.put(key, method);
+    } else if (member instanceof Constructor<?> ctor) {
+      matchedConstructorsCache.put(key, ctor);
     }
   }
 

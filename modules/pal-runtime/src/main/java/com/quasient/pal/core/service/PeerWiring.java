@@ -187,7 +187,7 @@ public class PeerWiring extends AbstractModule {
       bind(AnnotationsProcessor.class).asEagerSingleton();
 
       // Contribute implementations to the AnnotationProcessor set. Example:
-      Multibinder<AnnotationProcessor> setBinder =
+      Multibinder<AnnotationProcessor> unused =
           Multibinder.newSetBinder(binder(), AnnotationProcessor.class);
       // Register an existing processor:
       // setBinder.addBinding().to(InterceptAnnotationProcessor.class);

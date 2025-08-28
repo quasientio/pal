@@ -100,7 +100,7 @@ public class MethodInterceptIT extends AbstractInterceptIT {
                           logger.error("Error unwrapping object", e);
                           return new AssertionError("Error unwrapping object");
                         }
-                        if (!(unwrappedObj instanceof Integer) || ((Integer) unwrappedObj) != 1) {
+                        if (!(unwrappedObj instanceof Integer intObj) || intObj != 1) {
                           return new AssertionError("Expected Integer value = 1");
                         }
                         return null;
@@ -133,7 +133,7 @@ public class MethodInterceptIT extends AbstractInterceptIT {
                           logger.error("Error unwrapping object", e);
                           return new AssertionError("Error unwrapping object");
                         }
-                        if (!(unwrappedObj instanceof Integer) || ((Integer) unwrappedObj) != 5) {
+                        if (!(unwrappedObj instanceof Integer intObj) || intObj != 5) {
                           return new AssertionError("Expected Integer value = 5");
                         }
                         return null;

@@ -172,14 +172,15 @@ public class JsonRpcMessageUtils {
     MessageType jsonRpcResponseType = getJsonRpcResponseType(jsonRpcResponse);
     JsonRpcResponseReturnValue returnValue = jsonRpcResponse.getResult();
     switch (jsonRpcResponseType) {
-      case EXEC_PUT_STATIC_DONE:
-      case EXEC_PUT_FIELD_DONE:
+      case EXEC_PUT_STATIC_DONE, EXEC_PUT_FIELD_DONE -> {
         if (returnValue == null || returnValue.getFrom() == null) {
           return Optional.empty();
         }
         return Optional.ofNullable(returnValue.getFrom().getFieldName());
-      default:
+      }
+      default -> {
         return Optional.empty();
+      }
     }
   }
 

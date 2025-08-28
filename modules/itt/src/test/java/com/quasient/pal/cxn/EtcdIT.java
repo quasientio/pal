@@ -180,14 +180,10 @@ public class EtcdIT extends AbstractIntegrationTest {
         watchResponse -> {
           for (WatchEvent event : watchResponse.getEvents()) {
             switch (event.getEventType()) {
-              case PUT:
-                countDownLatch.countDown();
-                break;
-              case DELETE:
-              case UNRECOGNIZED:
-                break;
-              default:
-                throw new IllegalStateException("Unexpected value: " + event.getEventType());
+              case PUT -> countDownLatch.countDown();
+              case DELETE, UNRECOGNIZED -> {}
+              default ->
+                  throw new IllegalStateException("Unexpected value: " + event.getEventType());
             }
           }
         });

@@ -134,8 +134,8 @@ public class LogRpcInvokerTest extends ZmqEnabledTest {
     verify(incomingMessageDispatcher, times(1)).incomingCall(any(), any(), any());
 
     assertThat(execMessageReplies.size(), is(1));
-    assertThat(logRpcInvoker.getExecRequestsDispatched(), is((long) 1));
-    assertThat(logRpcInvoker.getRequestsDispatched(), is((long) 1));
+    assertThat(logRpcInvoker.getExecRequestsDispatched(), is(1L));
+    assertThat(logRpcInvoker.getRequestsDispatched(), is(1L));
 
     // assert response msg is response to original
     assertThat(execMessageReplies.get(0).getResponseToId(), is(invokable.getMessageId()));

@@ -27,43 +27,20 @@ public class ExecMessageMatchers {
 
     @Override
     protected boolean matchesSafely(Object returnValue) {
-      if (returnValue instanceof ReturnValue) {
-        if (((ReturnValue) returnValue).getFrom().getField() != null) {
-          return ((ReturnValue) returnValue)
-              .getFrom()
-              .getField()
-              .getClazz()
-              .getName()
-              .equals(clazz.getName());
-        } else if (((ReturnValue) returnValue).getFrom().getConstructor() != null) {
-          return ((ReturnValue) returnValue)
-              .getFrom()
-              .getConstructor()
-              .getClazz()
-              .getName()
-              .equals(clazz.getName());
-        } else if (((ReturnValue) returnValue).getFrom().getMethod() != null) {
-          return ((ReturnValue) returnValue)
-              .getFrom()
-              .getMethod()
-              .getClazz()
-              .getName()
-              .equals(clazz.getName());
+      if (returnValue instanceof ReturnValue retValue) {
+        if (retValue.getFrom().getField() != null) {
+          return retValue.getFrom().getField().getClazz().getName().equals(clazz.getName());
+        } else if (retValue.getFrom().getConstructor() != null) {
+          return retValue.getFrom().getConstructor().getClazz().getName().equals(clazz.getName());
+        } else if (retValue.getFrom().getMethod() != null) {
+          return retValue.getFrom().getMethod().getClazz().getName().equals(clazz.getName());
         } else {
           return false;
         }
-      } else if (returnValue instanceof StaticFieldPutDone) {
-        return ((StaticFieldPutDone) returnValue)
-            .getField()
-            .getClazz()
-            .getName()
-            .equals(clazz.getName());
-      } else if (returnValue instanceof InstanceFieldPutDone) {
-        return ((InstanceFieldPutDone) returnValue)
-            .getField()
-            .getClazz()
-            .getName()
-            .equals(clazz.getName());
+      } else if (returnValue instanceof StaticFieldPutDone stPutDone) {
+        return stPutDone.getField().getClazz().getName().equals(clazz.getName());
+      } else if (returnValue instanceof InstanceFieldPutDone instPutDone) {
+        return instPutDone.getField().getClazz().getName().equals(clazz.getName());
       } else {
         return false;
       }
@@ -88,29 +65,20 @@ public class ExecMessageMatchers {
 
     @Override
     protected boolean matchesSafely(Object returnValue) {
-      if (returnValue instanceof ReturnValue) {
-        if (((ReturnValue) returnValue).getFrom().getField() != null) {
-          return ((ReturnValue) returnValue).getFrom().getField().getName().equals(reflectableName);
-        } else if (((ReturnValue) returnValue).getFrom().getConstructor() != null) {
-          return ((ReturnValue) returnValue)
-              .getFrom()
-              .getConstructor()
-              .getClazz()
-              .getName()
-              .equals(reflectableName);
-        } else if (((ReturnValue) returnValue).getFrom().getMethod() != null) {
-          return ((ReturnValue) returnValue)
-              .getFrom()
-              .getMethod()
-              .getName()
-              .equals(reflectableName);
+      if (returnValue instanceof ReturnValue retValue) {
+        if (retValue.getFrom().getField() != null) {
+          return retValue.getFrom().getField().getName().equals(reflectableName);
+        } else if (retValue.getFrom().getConstructor() != null) {
+          return retValue.getFrom().getConstructor().getClazz().getName().equals(reflectableName);
+        } else if (retValue.getFrom().getMethod() != null) {
+          return retValue.getFrom().getMethod().getName().equals(reflectableName);
         } else {
           return false;
         }
-      } else if (returnValue instanceof StaticFieldPutDone) {
-        return ((StaticFieldPutDone) returnValue).getField().getName().equals(reflectableName);
-      } else if (returnValue instanceof InstanceFieldPutDone) {
-        return ((InstanceFieldPutDone) returnValue).getField().getName().equals(reflectableName);
+      } else if (returnValue instanceof StaticFieldPutDone stPutDone) {
+        return stPutDone.getField().getName().equals(reflectableName);
+      } else if (returnValue instanceof InstanceFieldPutDone instPutDone) {
+        return instPutDone.getField().getName().equals(reflectableName);
       } else {
         return false;
       }

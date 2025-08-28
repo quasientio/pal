@@ -260,13 +260,13 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
     // If givenType not recognized, throw exception.
 
     switch (givenType) {
-      case "java.lang.String", "String":
+      case "java.lang.String", "String" -> {
         if (!p.isString()) {
           throw new JsonParseException("Expected a string for type: " + givenType);
         }
         return p.getAsString();
-
-      case "java.lang.Boolean", "boolean":
+      }
+      case "java.lang.Boolean", "boolean" -> {
         if (p.isBoolean()) {
           return p.getAsBoolean();
         } else if (p.isString()) {
@@ -281,8 +281,8 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
         } else {
           throw new JsonParseException("Expected boolean/string-boolean for type: " + givenType);
         }
-
-      case "java.lang.Integer", "int":
+      }
+      case "java.lang.Integer", "int" -> {
         if (p.isNumber()) {
           double num = p.getAsDouble();
           if (num == (int) num) {
@@ -301,8 +301,8 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
           throw new JsonParseException(
               "Expected a number or numeric string for type: " + givenType);
         }
-
-      case "java.lang.Double", "double":
+      }
+      case "java.lang.Double", "double" -> {
         if (p.isNumber()) {
           try {
             return p.getAsDouble();
@@ -326,8 +326,8 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
           }
         }
         throw new JsonParseException("Expected a number or numeric string for type: " + givenType);
-
-      case "java.lang.Long", "long":
+      }
+      case "java.lang.Long", "long" -> {
         if (p.isNumber()) {
           try {
             return p.getAsNumber().longValue();
@@ -351,8 +351,8 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
           }
         }
         throw new JsonParseException("Expected a number or numeric string for type: " + givenType);
-
-      case "java.lang.Float", "float":
+      }
+      case "java.lang.Float", "float" -> {
         if (p.isNumber()) {
           try {
             return p.getAsNumber().floatValue();
@@ -376,8 +376,8 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
           }
         }
         throw new JsonParseException("Expected a number or numeric string for type: " + givenType);
-
-      case "java.lang.Short", "short":
+      }
+      case "java.lang.Short", "short" -> {
         if (p.isNumber()) {
           int iv = p.getAsNumber().intValue();
           if (iv < Short.MIN_VALUE || iv > Short.MAX_VALUE) {
@@ -399,8 +399,8 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
           throw new JsonParseException(
               "Expected a number or numeric string for type: " + givenType);
         }
-
-      case "java.lang.Byte", "byte":
+      }
+      case "java.lang.Byte", "byte" -> {
         if (p.isNumber()) {
           int bv = p.getAsNumber().intValue();
           if (bv < Byte.MIN_VALUE || bv > Byte.MAX_VALUE) {
@@ -422,8 +422,8 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
           throw new JsonParseException(
               "Expected a number or numeric string for type: " + givenType);
         }
-
-      case "java.lang.Character", "char":
+      }
+      case "java.lang.Character", "char" -> {
         if (p.isString()) {
           String s = p.getAsString();
           if (s.length() == 1) {
@@ -434,9 +434,8 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
         } else {
           throw new JsonParseException("Expected a string for Character type");
         }
-
-      default:
-        throw new JsonParseException("Unsupported single type: " + givenType);
+      }
+      default -> throw new JsonParseException("Unsupported single type: " + givenType);
     }
   }
 

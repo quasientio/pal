@@ -15,5 +15,6 @@ package com.quasient.pal.core.bench;
  * @param target the target object on which the method is invoked; null for static method calls
  * @param args the arguments for the method
  */
+@SuppressWarnings("ArrayRecordComponent")
 public record InvocationArgs(Object target, Object[] args) {
 }
