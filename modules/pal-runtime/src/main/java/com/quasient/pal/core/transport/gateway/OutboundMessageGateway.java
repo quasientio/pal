@@ -401,40 +401,52 @@ public class OutboundMessageGateway {
       final int softCap = pubQueue.capacity() * 95 / 100;
 
       int spins = 0;
+      WaitStats ws = null; // <── delay ThreadLocal.get()
+
+      // Wait under the soft cap. We don't "offer" here, so only parks/parkedNanos are recorded.
       while (pubQueue.currentSize() >= softCap) {
         // 256 tight spins ≈ 100–150 ns on modern CPUs
         if ((++spins & 0xFF) != 0) {
           Thread.onSpinWait();
         } else {
-          // after 256 spins, yield for 1 µs to let network thread drain
-          LockSupport.parkNanos(1_000);
-          // TODO: break early if the publisher has failed - requires pubFailed flag, similar to
-          // walFailed
-          // if (pubFailed.get()) break;
+          if (ws == null) {
+            ws = PUB_QUEUE_WAIT_STATS.get(); // <-- first actual stall, start tracking
+          }
+          long t0 = System.nanoTime();
+          LockSupport.parkNanos(1_000); // 1 µs
+          long t1 = System.nanoTime();
+          ws.parks++;
+          ws.parkedNanos += (t1 - t0);
         }
       }
 
-      // hard guarantee: enqueue or wait until it fits
+      // hard guarantee: enqueue or wait until it fits (stats recorded inside)
       blockUntilEnqueued(message);
       return;
     }
 
     /* ---------- DROP_NEW / DROP_OLD path -------------------- */
     if (!pubQueue.offer(message)) {
-      localDroppedPub.set(localDroppedPub.get() + 1); // increment thread counter
-      totalDroppedPub.increment(); // increment global counter
+      PUB_QUEUE_WAIT_STATS.get().failedOffers++;
+      localDroppedPub.set(localDroppedPub.get() + 1);
+      totalDroppedPub.increment();
     }
   }
 
   /**
-   * Spin/park helper to do a blocking-enqueue msg into the Pub queue. TODO spin threshold or park
-   * duration after profiling
+   * Spin/park helper to do a blocking-enqueue msg into the Pub queue.
    *
    * @param msg message to enqueue
    */
   private void blockUntilEnqueued(OutboundMsg msg) {
     int spins = 0;
+    WaitStats ws = null; // <── delay ThreadLocal.get()
+
     while (!pubQueue.offer(msg)) {
+      if (ws == null) {
+        ws = PUB_QUEUE_WAIT_STATS.get(); // <-- only when we actually stall
+      }
+      ws.failedOffers++; // count every failed offer
 
       // 256 tight spins ≈ 100–150 ns on modern CPU
       if ((++spins & 0xFF) != 0) {
@@ -443,7 +455,11 @@ public class OutboundMessageGateway {
       }
 
       // Every 256 failed attempts, give the scheduler a chance
+      long t0 = System.nanoTime();
       LockSupport.parkNanos(1_000); // 1 µs
+      long t1 = System.nanoTime();
+      ws.parks++;
+      ws.parkedNanos += (t1 - t0);
       spins = 0; // reset counter
     }
   }
