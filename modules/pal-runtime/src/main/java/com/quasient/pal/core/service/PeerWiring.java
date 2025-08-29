@@ -10,6 +10,7 @@
 package com.quasient.pal.core.service;
 
 import com.google.inject.AbstractModule;
+import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
@@ -170,28 +171,17 @@ public class PeerWiring extends AbstractModule {
     // bind implementations
     bind(ProxyDispatcher.class).to(AspectProxyDispatcher.class);
 
-    if (runOptions.contains(RunOptions.WITH_WAL)) {
-      WalType walType =
-          WalType.valueOf(properties.getProperty("wal.type").toUpperCase(Locale.ENGLISH));
-      switch (walType) {
-        case KAFKA -> bind(WalWriter.class).to(KafkaWalWriter.class).asEagerSingleton();
-        case CHRONICLE -> {
-          bind(WalWriter.class).to(ChronicleWalWriter.class).asEagerSingleton();
-          bind(ChronicleQueueFactory.class)
-              .to(DefaultChronicleQueueFactory.class)
-              .asEagerSingleton();
-        }
-      }
+    // Chronicle path may be chosen in the @Provides method; make sure its interface is bound.
+    bind(ChronicleQueueFactory.class).to(DefaultChronicleQueueFactory.class);
 
-      // Ensure AnnotationsProcessor is a singleton (in addition to any annotation used).
-      bind(AnnotationsProcessor.class).asEagerSingleton();
+    // Ensure AnnotationsProcessor is a singleton (in addition to any annotation used).
+    bind(AnnotationsProcessor.class).asEagerSingleton();
 
-      // Contribute implementations to the AnnotationProcessor set. Example:
-      Multibinder<AnnotationProcessor> unused =
-          Multibinder.newSetBinder(binder(), AnnotationProcessor.class);
-      // Register an existing processor:
-      // setBinder.addBinding().to(InterceptAnnotationProcessor.class);
-    }
+    // Contribute implementations to the AnnotationProcessor set. Example:
+    Multibinder<AnnotationProcessor> unused =
+        Multibinder.newSetBinder(binder(), AnnotationProcessor.class);
+    // Register an existing processor:
+    // setBinder.addBinding().to(InterceptAnnotationProcessor.class);
 
     // common and cxn library classes are not annotated with @Singleton
     bind(ObjectLookupStore.class)
@@ -243,6 +233,33 @@ public class PeerWiring extends AbstractModule {
       throw new IllegalStateException("Missing property: wal.chronicle.base_dir");
     }
     return Paths.get(pathStr);
+  }
+
+  /**
+   * Provides the nullable, configured WAL Writer.
+   *
+   * @param kafka guice-created provider for {@link KafkaWalWriter}
+   * @param chronicle guice-created provider for {@link ChronicleWalWriter}
+   * @return the configured WAL writer; null if run options don't contain {@code WITH_WAL}
+   */
+  @SuppressWarnings("unused")
+  @Provides
+  @Singleton
+  @Nullable
+  WalWriter provideWalWriter(
+      Provider<KafkaWalWriter> kafka, Provider<ChronicleWalWriter> chronicle) {
+
+    if (!runOptions.contains(RunOptions.WITH_WAL)) {
+      return null;
+    }
+
+    WalType walType =
+        WalType.valueOf(properties.getProperty("wal.type").toUpperCase(java.util.Locale.ENGLISH));
+
+    return switch (walType) {
+      case KAFKA -> kafka.get();
+      case CHRONICLE -> chronicle.get();
+    };
   }
 
   /**

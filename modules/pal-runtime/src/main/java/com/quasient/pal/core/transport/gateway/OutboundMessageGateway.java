@@ -223,12 +223,16 @@ public class OutboundMessageGateway {
       DirectoryConnectionProvider directoryConnectionProvider,
       Set<RunOptions> runOptions,
       InterceptMatcher interceptMatcher,
-      WalWriter walWriter,
+      @Nullable WalWriter walWriter,
       @Named("wal_queue") @Nullable HwmMessageQueue<OutboundMsg> walQueue,
       @Named("walFailed") AtomicBoolean walFailed,
       @Named("pub_queue") HwmMessageQueue<OutboundMsg> pubQueue,
       PublishingDropPolicy publishingDropPolicy,
       @Named("sessionServiceEndpoint") @Nullable String sessionServiceAddress) {
+
+    if (runOptions.contains(RunOptions.WITH_WAL) && (walWriter == null && walQueue == null)) {
+      throw new IllegalStateException("WAL configured but both WAL writer and WAL queue are null");
+    }
     this.zmqContext = zmqContext;
     this.peerUuid = peerUuid;
     this.messageBuilder = messageBuilder;
