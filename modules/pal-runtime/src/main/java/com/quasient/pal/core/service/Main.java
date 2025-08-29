@@ -1154,6 +1154,7 @@ public class Main implements Callable<Integer> {
    * @param manager the ServiceManager instance managing the services (can be null)
    * @param injector the Guice injector used to obtain service instances for shutdown procedures
    */
+  @SuppressWarnings("UnsafeWildcard")
   private void shutdown(ServiceManager manager, Injector injector) {
     if (logger.isInfoEnabled()) {
       logger.info("Shutting down...");
