@@ -1224,20 +1224,20 @@ public class Main implements Callable<Integer> {
 
       // clear queues - just to be nice
       if (runOptions.contains(RunOptions.WITH_WAL)) {
-        HwmMessageQueue<OutboundMsg> walQueue =
-            injector.getInstance(Key.get(new TypeLiteral<>() {}, Names.named("wal_queue")));
+        // NOTE: explicit type required for errorprone (do not replace by <>)
+        Key<HwmMessageQueue<OutboundMsg>> walKey =
+            Key.get(new TypeLiteral<HwmMessageQueue<OutboundMsg>>() {}, Names.named("wal_queue"));
+        HwmMessageQueue<OutboundMsg> walQueue = injector.getInstance(walKey);
         walQueue.clear();
-        if (logger.isDebugEnabled()) {
-          logger.debug("Cleared internal WAL queue");
-        }
+        logger.debug("Cleared internal WAL queue");
       }
       if (runOptions.contains(RunOptions.WITH_TCP_PUB)) {
-        HwmMessageQueue<OutboundMsg> pubQueue =
-            injector.getInstance(Key.get(new TypeLiteral<>() {}, Names.named("pub_queue")));
+        // NOTE: explicit type required for errorprone (do not replace by <>)
+        Key<HwmMessageQueue<OutboundMsg>> pubKey =
+            Key.get(new TypeLiteral<HwmMessageQueue<OutboundMsg>>() {}, Names.named("pub_queue"));
+        HwmMessageQueue<OutboundMsg> pubQueue = injector.getInstance(pubKey);
         pubQueue.clear();
-        if (logger.isDebugEnabled()) {
-          logger.debug("Cleared internal PUB queue");
-        }
+        logger.debug("Cleared internal PUB queue");
       }
 
       // print aggregated stats

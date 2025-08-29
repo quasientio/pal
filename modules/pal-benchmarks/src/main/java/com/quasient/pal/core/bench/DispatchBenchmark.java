@@ -425,8 +425,14 @@ public class DispatchBenchmark {
     serviceManager.awaitHealthy();
 
     // collect injected handles required in benchmark
-    walQueue = injector.getInstance(Key.get(new TypeLiteral<>() {}, Names.named("wal_queue")));
-    pubQueue = injector.getInstance(Key.get(new TypeLiteral<>() {}, Names.named("pub_queue")));
+    // NOTE: explicit type required for errorprone (do not replace by <>)
+    Key<HwmMessageQueue<OutboundMsg>> walKey =
+            Key.get(new TypeLiteral<HwmMessageQueue<OutboundMsg>>() {}, Names.named("wal_queue"));
+    walQueue = injector.getInstance(walKey);
+    // NOTE: explicit type required for errorprone (do not replace by <>)
+    Key<HwmMessageQueue<OutboundMsg>> pubKey =
+            Key.get(new TypeLiteral<HwmMessageQueue<OutboundMsg>>() {}, Names.named("pub_queue"));
+    pubQueue = injector.getInstance(pubKey);
     messagePublisherConfig = injector.getInstance(MessagePublisherConfig.class);
 
     // configure destination of calls (quantized or unwoven)
