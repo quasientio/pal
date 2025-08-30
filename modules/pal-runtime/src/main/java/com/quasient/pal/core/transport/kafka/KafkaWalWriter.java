@@ -30,9 +30,11 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
+import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.internals.RecordHeader;
 import org.slf4j.Logger;
@@ -92,15 +94,17 @@ public class KafkaWalWriter extends WalWriter {
   /** Constant byte[] for the MessageFormat byte */
   private static final byte[] FORMAT_BINARY = {MessageFormatType.BINARY.toByte()};
 
-  /** 1-byte array cache for MessageType IDs */
-  private static final byte[][] TYPE_ID_BYTES = new byte[256][];
-
-  static {
-    for (int i = 0; i < TYPE_ID_BYTES.length; i++) TYPE_ID_BYTES[i] = new byte[] {(byte) i};
-  }
-
   /** Thread-local reusable byte buffer for writing the index during offset publishing */
   private static final ThreadLocal<byte[]> INDEX_BUF = ThreadLocal.withInitial(() -> new byte[8]);
+
+  /** Reusable pre-built headers for message type */
+  private static final Header[] MESSAGE_TYPE_HEADERS = new Header[256];
+
+  static {
+    for (int i = 0; i < 256; i++) {
+      MESSAGE_TYPE_HEADERS[i] = new RecordHeader("message-type", new byte[] {(byte) i});
+    }
+  }
 
   /** Prebuilt immutable headers we always attach */
   private final List<Header> baseHeaders; // producer-id + message-format
@@ -459,7 +463,7 @@ public class KafkaWalWriter extends WalWriter {
 
     // Add the changing header using a cached one-byte array
     int typeId = messageType.getId() & 0xFF;
-    newRecord.headers().add("message-type", TYPE_ID_BYTES[typeId]);
+    newRecord.headers().add(MESSAGE_TYPE_HEADERS[typeId]);
 
     // Borrow a pooled callback (carries mid & size)
     SendCb cb = borrowCb(messageId);
@@ -578,14 +582,14 @@ public class KafkaWalWriter extends WalWriter {
   }
 
   /** Implements a Kafka producer callback which publishes the returned offset */
-  private final class SendCb implements org.apache.kafka.clients.producer.Callback {
+  private final class SendCb implements Callback {
 
     /** Message ID field */
     String mid;
 
     /** {@inheritDoc} */
     @Override
-    public void onCompletion(org.apache.kafka.clients.producer.RecordMetadata md, Exception ex) {
+    public void onCompletion(RecordMetadata md, Exception ex) {
       try {
         if (ex != null) {
           messagesDroppedError.incrementAndGet();

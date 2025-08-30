@@ -179,8 +179,8 @@ public class LogMessage<T> {
    */
   private static MessageType getMessageTypeFromHeader(Headers headers) {
     for (Header header : headers.headers("message-type")) {
-      byte typeByte = header.value()[0];
-      return MessageType.fromId(typeByte);
+      int typeId = header.value()[0] & 0xFF; // treat as unsigned
+      return MessageType.fromId((byte) typeId);
     }
     return null;
   }

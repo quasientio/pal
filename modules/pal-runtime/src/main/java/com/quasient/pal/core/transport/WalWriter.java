@@ -214,6 +214,7 @@ public abstract class WalWriter extends ConnectedService {
     /** clear to avoid retaining strings */
     public void clear() {
       this.msgId = null;
+      this.index = 0;
     }
   }
 }

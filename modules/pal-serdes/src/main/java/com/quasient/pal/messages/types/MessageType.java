@@ -125,6 +125,7 @@ public enum MessageType {
    *     matching type is found
    */
   public static MessageType fromId(byte id) {
-    return LOOKUP[id & 0xFF];
+    MessageType t = LOOKUP[id & 0xFF];
+    return t != null ? t : UNKNOWN;
   }
 }
