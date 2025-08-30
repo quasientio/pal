@@ -47,10 +47,10 @@ cache:
 
 build-and-unit:
   stage: build
-  timeout: 30m
+  timeout: 45m
   variables:
-    RUNNER_SCRIPT_TIMEOUT: 20m
-    RUNNER_AFTER_SCRIPT_TIMEOUT: 10m
+    RUNNER_SCRIPT_TIMEOUT: 30m
+    RUNNER_AFTER_SCRIPT_TIMEOUT: 15m
   script:
     - mvn $MAVEN_CLI_OPTS clean install -DskipITs | tee mvn.log
   after_script:
@@ -71,8 +71,8 @@ build-and-unit:
 integration-tests:
   stage: integration-tests
   variables:
-    RUNNER_SCRIPT_TIMEOUT: 20m
-    RUNNER_AFTER_SCRIPT_TIMEOUT: 10m
+    RUNNER_SCRIPT_TIMEOUT: 30m
+    RUNNER_AFTER_SCRIPT_TIMEOUT: 15m
     FF_NETWORK_PER_BUILD: 1
     PAL_DIRECTORY: 'etcd:2379'
     KAFKA_SERVERS: 'kafka:9092'
