@@ -207,6 +207,25 @@ public class MessageBuilderTest {
     assertNotNull(messageBuilder);
   }
 
+  @Test
+  public void messageBuilder_nullPeerId_includeSrcContextTrue_contextIncludedOnClassMethod() {
+    MessageBuilder b = new MessageBuilder(null, Boolean.toString(true));
+    String[] parameterTypes = null;
+    Object[] args = null;
+    ObjectRef[] argRefs = null;
+    ExecMessage em =
+        b.buildClassMethod(
+            peerId,
+            DummyClassForTest.class.getName(),
+            "dummyStaticMethod",
+            parameterTypes,
+            this,
+            ObjectRef.randomRef(),
+            args,
+            argRefs);
+    assertNotNull(em.getClassMethodCall().getContext());
+  }
+
   // <editor-fold desc="Thread-local sequence stamping methods">
   @Test
   public void resetThreadLocalSequence() {
@@ -333,6 +352,25 @@ public class MessageBuilderTest {
       assertEquals(parameterTypes[i], parameter.getValue().getClazz().getName());
       assertEquals(args[i], Unwrapper.unwrapObject(parameter.getValue()));
     }
+  }
+
+  @Test
+  public void buildConstructor_withContext_zeroArgs_usesNamedParametersFromContext()
+      throws Exception {
+    // use context-based constructor with zero args to exercise createNamedParameters(Context,...)
+    var clazz = DummyClassForTest.class;
+    Context ctx = createContextForConstructor(clazz);
+    Object sender = this;
+    ObjectRef senderRef = ObjectRef.randomRef();
+    ExecMessage em =
+        messageBuilderWithContext.buildConstructor(
+            peerId, ctx, sender, senderRef, new Object[0], new ObjectRef[0]);
+
+    assertNotNull(em.getConstructorCall());
+    assertEquals(clazz.getName(), em.getConstructorCall().getClazz().getName());
+    assertNotNull(em.getConstructorCall().getContext());
+    assertNotNull(em.getConstructorCall().getParameters());
+    assertEquals(0, em.getConstructorCall().getParameters().length);
   }
 
   // </editor-fold>
@@ -539,6 +577,49 @@ public class MessageBuilderTest {
     assertEquals(
         args[1],
         Unwrapper.unwrapObject(execMessage.getClassMethodCall().getParameters()[1].getValue()));
+  }
+
+  @Test
+  public void buildClassMethod_nullArgsAndRefs_createsNullParameterValue() {
+    Object sender = this;
+    ObjectRef senderObjRef = ObjectRef.randomRef();
+    String[] parameterTypes = new String[] {"int"};
+    Object[] args = new Object[] {null};
+    ObjectRef[] argObjRefs = new ObjectRef[] {null};
+
+    ExecMessage em =
+        messageBuilder.buildClassMethod(
+            peerId,
+            DummyClassForTest.class.getName(),
+            "dummyStaticMethod",
+            parameterTypes,
+            sender,
+            senderObjRef,
+            args,
+            argObjRefs);
+
+    assertNotNull(em.getClassMethodCall().getParameters());
+    assertEquals(1, em.getClassMethodCall().getParameters().length);
+    assertTrue(em.getClassMethodCall().getParameters()[0].getValue().getIsNull());
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void buildClassMethod_mismatchedArgs_throwsIAE() {
+    Object sender = this;
+    ObjectRef senderObjRef = ObjectRef.randomRef();
+    String[] parameterTypes = new String[] {"int"};
+    Object[] args = new Object[] {1, 2}; // longer than parameterTypes
+    ObjectRef[] argObjRefs = new ObjectRef[] {null, null};
+
+    messageBuilder.buildClassMethod(
+        peerId,
+        DummyClassForTest.class.getName(),
+        "dummyStaticMethod",
+        parameterTypes,
+        sender,
+        senderObjRef,
+        args,
+        argObjRefs);
   }
 
   // </editor-fold>
@@ -1547,6 +1628,62 @@ public class MessageBuilderTest {
         execMessage.getReturnValue().getObject().getClazz().getName());
     assertEquals(returnValueObjRef.getRef(), execMessage.getReturnValue().getObject().getRef());
     assertEquals(responseToId, execMessage.getResponseToId());
+  }
+
+  @Test
+  public void buildReturnValue_emptyResponseId_notSetOnMessage() throws NoSuchMethodException {
+    Method method = DummyClassForTest.class.getMethod("addInts", int.class, int.class);
+    ObjectRef returnValueObjRef = ObjectRef.randomRef();
+    int returnValue = 4;
+
+    ExecMessage execMessage =
+        messageBuilder.buildReturnValue(returnValue, method, returnValueObjRef, false, "");
+
+    assertNotNull(execMessage);
+    assertEquals(EXEC_RETURN_VALUE, getMessageTypeOf(execMessage));
+    assertEquals("", execMessage.getResponseToId());
+  }
+
+  @Test
+  public void buildAccessibleObjectThrowable_withCause_andNullMessage_setsCauseRecursively()
+      throws NoSuchMethodException {
+    Method method = DummyClassForTest.class.getMethod("addInts", int.class, int.class);
+    Throwable cause = new RuntimeException("cause");
+    Throwable ex = new RuntimeException(null, cause);
+    String rid = UUID.randomUUID().toString();
+
+    ExecMessage em = messageBuilder.buildAccessibleObjectThrowable(peerId, method, ex, rid);
+    assertEquals(EXEC_THROWABLE, getMessageTypeOf(em));
+    com.quasient.pal.messages.colfer.Throwable t = em.getRaisedThrowable().getThrowable();
+    assertNotNull(t);
+    // message is null when exception message is null
+    // message may be empty when not provided
+    assertTrue(t.getMessage() == null || t.getMessage().isEmpty());
+    // cause is present and has a type
+    assertNotNull(t.getCause());
+    assertEquals("java.lang.RuntimeException", t.getCause().getType());
+  }
+
+  @Test
+  public void buildAccessibleObjectThrowable_nullAccessible_withMessage_setsMessageOnly() {
+    String rid = UUID.randomUUID().toString();
+    RuntimeException ex = new RuntimeException("oops");
+    ExecMessage em = messageBuilder.buildAccessibleObjectThrowable(peerId, null, ex, rid);
+    assertEquals(EXEC_THROWABLE, getMessageTypeOf(em));
+    com.quasient.pal.messages.colfer.Throwable t = em.getRaisedThrowable().getThrowable();
+    assertEquals("oops", t.getMessage());
+    // from is absent when accessible is null
+    assertNull(em.getRaisedThrowable().getFrom());
+  }
+
+  @Test
+  public void messageBuilder_includeSourceContext_nullString_defaultsFalse() {
+    MessageBuilder mb = new MessageBuilder(peerId, null);
+    // build something that would include context when true; here it should not
+    String className = this.getClass().getName();
+    ExecMessage em = mb.buildEmptyConstructor(peerId, className);
+    assertNotNull(em);
+    assertNull(em.getConstructorCall().getContext());
   }
 
   // </editor-fold>

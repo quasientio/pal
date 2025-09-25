@@ -11,11 +11,11 @@ package com.quasient.pal.common.lang.reflect;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.fail;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
-import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -80,12 +80,17 @@ public class ParamsTest {
 
   @Test
   public void equalsContract() throws NoSuchMethodException {
-    // EqualsVerifier requires prefabValues with actual instances of Parameter.
-    // Since we can't instantiate Parameter, we use our DummyClass and reflection to get them.
-    Method method = DummyClass.class.getDeclaredMethod("increment", int.class, int.class);
-    EqualsVerifier.forClass(Params.class)
-        .withPrefabValues(Parameter.class, method.getParameters()[0], method.getParameters()[1])
-        .usingGetClass()
-        .verify();
+    Params a = new Params(parameterNames, parameterTypes, parameters);
+    Params b = new Params(parameterNames, parameterTypes, parameters);
+    Params c = new Params(parameterNames, parameterTypes, parameters);
+    Params different = new Params(new String[] {"x", "y"}, parameterTypes, parameters);
+
+    assertThat(a, is(b));
+    assertThat(b, is(c));
+    assertThat(a.hashCode(), is(b.hashCode()));
+    assertThat(b.hashCode(), is(c.hashCode()));
+    assertNotEquals(a, different);
+    assertNotEquals(a, null);
+    assertNotEquals(a, new Object());
   }
 }

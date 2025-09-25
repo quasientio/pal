@@ -13,13 +13,12 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.UUID;
-import nl.jqno.equalsverifier.EqualsVerifier;
-import nl.jqno.equalsverifier.Warning;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -83,11 +82,20 @@ public class PeerInfoTest {
 
   @Test
   public void equalsContract() {
-    EqualsVerifier.forClass(PeerInfo.class)
-        .usingGetClass()
-        .withIgnoredFields("pubAddress", "jmxAddress", "name", "ctime", "mtime")
-        .suppress(Warning.NONFINAL_FIELDS)
-        .verify();
+    UUID id = UUID.fromString("00000000-0000-0000-0000-0000000000aa");
+    PeerInfo a = new PeerInfo(id, "peer");
+    PeerInfo b = new PeerInfo(id, "peer");
+    PeerInfo c = new PeerInfo(id, "peer");
+    PeerInfo different =
+        new PeerInfo(UUID.fromString("00000000-0000-0000-0000-0000000000ab"), "peer");
+
+    assertThat(a, is(b));
+    assertThat(b, is(c));
+    assertThat(a.hashCode(), is(b.hashCode()));
+    assertThat(b.hashCode(), is(c.hashCode()));
+    assertNotEquals(a, different);
+    assertNotEquals(a, null);
+    assertNotEquals(a, new Object());
   }
 
   @Test

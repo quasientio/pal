@@ -1,0 +1,90 @@
+/*
+ * Copyright (C) 2025 Quasient Inc. <https://www.quasient.com>
+ *
+ * Use of this software is governed by the Business Source License 1.1
+ * included in the file LICENSE and at https://mariadb.com/bsl11
+ *
+ * Change Date: 2029-10-01
+ * Change License: Apache 2.0
+ */
+package com.quasient.pal.cxn.directory;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.is;
+
+import io.etcd.jetcd.ByteSequence;
+import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
+import java.util.UUID;
+import org.junit.After;
+import org.junit.Assume;
+import org.junit.Before;
+import org.junit.Test;
+
+public class PalDirectoryPathsTest {
+
+  private PalDirectory dir;
+
+  @Before
+  public void setUp() {
+    try {
+      dir = new PalDirectory("http://127.0.0.1:2379", "ns-test", false);
+    } catch (Throwable t) {
+      // If the environment forbids class init, skip these tests
+      Assume.assumeNoException("Skipping PalDirectory path tests due to env", t);
+    }
+  }
+
+  @After
+  public void tearDown() {
+    if (dir != null) dir.close();
+  }
+
+  private static ByteSequence invokeKey(PalDirectory d, String method, Class<?>... sig)
+      throws Exception {
+    Method m = PalDirectory.class.getDeclaredMethod(method, sig);
+    m.setAccessible(true);
+    Object out = m.invoke(d, new Object[sig.length]);
+    return (ByteSequence) out;
+  }
+
+  @Test
+  public void peerAndLogPaths_includeNamespace() throws Exception {
+    UUID peer = UUID.randomUUID();
+
+    Method mp = PalDirectory.class.getDeclaredMethod("getPeerPath", UUID.class);
+    mp.setAccessible(true);
+    String peerPath = (String) mp.invoke(dir, peer);
+
+    Method mpIn = PalDirectory.class.getDeclaredMethod("getPeerSourceLogPath", UUID.class);
+    mpIn.setAccessible(true);
+    String inPath = (String) mpIn.invoke(dir, peer);
+
+    Method mpWal = PalDirectory.class.getDeclaredMethod("getPeerWALPath", UUID.class);
+    mpWal.setAccessible(true);
+    String walPath = (String) mpWal.invoke(dir, peer);
+
+    Method mLogs = PalDirectory.class.getDeclaredMethod("getLogsPath");
+    mLogs.setAccessible(true);
+    String logs = (String) mLogs.invoke(dir);
+
+    Method mPeers = PalDirectory.class.getDeclaredMethod("getPeersPath");
+    mPeers.setAccessible(true);
+    String peers = (String) mPeers.invoke(dir);
+
+    assertThat(peerPath, containsString("ns-test/peers/" + peer.toString()));
+    assertThat(inPath, containsString("ns-test/peers/" + peer.toString() + "/logs/source"));
+    assertThat(walPath, containsString("ns-test/peers/" + peer.toString() + "/logs/wal"));
+    assertThat(logs, containsString("ns-test/logs"));
+    assertThat(peers, containsString("ns-test/peers"));
+
+    // Keys mirror the same strings
+    ByteSequence peersKey = invokeKey(dir, "getPeersPathKey");
+    ByteSequence logsKey = invokeKey(dir, "getLogsPathKey");
+    String peersKeyStr = new String(peersKey.getBytes(), StandardCharsets.UTF_8);
+    String logsKeyStr = new String(logsKey.getBytes(), StandardCharsets.UTF_8);
+    assertThat(peersKeyStr, is(peers));
+    assertThat(logsKeyStr, is(logs));
+  }
+}

@@ -281,4 +281,39 @@ public class SocketRpcInvokerTest extends ZmqEnabledTest {
     assertThat(listenerReceived.get(), is(msgCount));
     verify(incomingMessageDispatcher, times(msgCount)).incomingCall(any(), any(), any());
   }
+
+  @Test
+  public void jsonRpc_invalidJson_returnsError_noDispatch() {
+    execService.execute(socketRpcInvoker);
+    // malformed json (id present to test id extraction path)
+    String badJson =
+        "{\"jsonrpc\":\"2.0\",\"id\":\"123\",\"method\":\"new\""; // missing closing brace
+    InboundJsonRpcRequestMsg inbound = new InboundJsonRpcRequestMsg(UUID.randomUUID(), badJson);
+    inbound.send(jsonRpcDealerSocket);
+
+    OutboundJsonRpcResponseMsg resp = OutboundJsonRpcResponseMsg.receive(jsonRpcDealerSocket, true);
+    assert resp != null;
+    JsonRpcResponse json = gson.fromJson(resp.getJsonMessage(), JsonRpcResponse.class);
+    // error present, result null, and dispatcher not called
+    assertThat(json.getError() != null, is(true));
+    verify(incomingMessageDispatcher, times(0)).incomingCall(any(), any(), any());
+  }
+
+  @Test
+  public void jsonRpc_unsupportedMethod_returnsError_noDispatch() {
+    execService.execute(socketRpcInvoker);
+    // send raw JSON with unsupported method (bypass builder validation)
+    String raw =
+        String.format(
+            "{\"jsonrpc\":\"2.0\",\"id\":\"%s\",\"method\":\"unknown\",\"params\":{\"type\":\"java.lang.String\"}}",
+            UUID.randomUUID());
+    InboundJsonRpcRequestMsg inbound = new InboundJsonRpcRequestMsg(UUID.randomUUID(), raw);
+    inbound.send(jsonRpcDealerSocket);
+
+    OutboundJsonRpcResponseMsg resp = OutboundJsonRpcResponseMsg.receive(jsonRpcDealerSocket, true);
+    assert resp != null;
+    JsonRpcResponse json = gson.fromJson(resp.getJsonMessage(), JsonRpcResponse.class);
+    assertThat(json.getError() != null, is(true));
+    verify(incomingMessageDispatcher, times(0)).incomingCall(any(), any(), any());
+  }
 }

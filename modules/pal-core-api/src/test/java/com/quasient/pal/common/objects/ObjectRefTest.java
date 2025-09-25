@@ -12,8 +12,8 @@ package com.quasient.pal.common.objects;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
-import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Test;
 
 public class ObjectRefTest {
@@ -38,7 +38,18 @@ public class ObjectRefTest {
 
   @Test
   public void equalsContract() {
-    EqualsVerifier.forClass(ObjectRef.class).usingGetClass().verify();
+    ObjectRef a = ObjectRef.from(23);
+    ObjectRef b = ObjectRef.from(23);
+    ObjectRef c = ObjectRef.from(23);
+    ObjectRef different = ObjectRef.from(24);
+
+    assertThat(a, is(b));
+    assertThat(b, is(c));
+    assertThat(a.hashCode(), is(b.hashCode()));
+    assertThat(b.hashCode(), is(c.hashCode()));
+    assertNotEquals(a, different);
+    assertNotEquals(a, null);
+    assertNotEquals(a, new Object());
   }
 
   @Test

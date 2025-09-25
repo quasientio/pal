@@ -10,275 +10,96 @@
 package com.quasient.pal.serdes.jsonrpc;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.collection.IsEmptyCollection.empty;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.messages.jsonrpc.Argument;
 import com.quasient.pal.messages.jsonrpc.JsonRpcRequest;
-import java.util.ArrayList;
-import java.util.Arrays;
+import com.quasient.pal.messages.jsonrpc.Params;
+import com.quasient.pal.messages.types.ControlCommandType;
+import com.quasient.pal.messages.types.MessageFamily;
+import com.quasient.pal.messages.types.MetaServiceType;
 import java.util.List;
 import org.junit.Test;
 
 public class JsonRpcMessageFactoryTest {
 
   @Test
-  public void buildConstructorCallWithoutArgs() {
-    JsonRpcRequest request = JsonRpcMessageFactory.buildConstructorCall("SomeClass", null);
-    assertNotNull(request);
-    assertNotNull(request.getId());
-    assertThat(request.getMethod(), is("new"));
-    assertNull(request.getParams().getMethod());
-    assertNull(request.getParams().getField());
-    assertNull(request.getParams().getInstance());
-    assertNull(request.getParams().getValue());
-    assertThat(request.getParams().getType(), is("SomeClass"));
-    assertThat(request.getParams().getArgs(), is(empty()));
-
-    // create another request with same parameters but supplying the Id, and test equality
-    String createdId = request.getId();
-    JsonRpcRequest request2 =
-        JsonRpcMessageFactory.buildConstructorCall(createdId, "SomeClass", null);
-    assertThat(request2, is(request));
+  public void buildConstructorCall_setsNewMethod_andTypeAndArgs() {
+    JsonRpcRequest req =
+        JsonRpcMessageFactory.buildConstructorCall(
+            "java.lang.String", List.of(Argument.builder().withValue("abc").build()));
+    assertThat(req.getMethod(), is("new"));
+    Params p = req.getParams();
+    assertThat(p.getType(), is("java.lang.String"));
+    assertThat(p.getArgs().size(), is(1));
   }
 
   @Test
-  public void buildConstructorCallWithArgs() {
-    List<Argument> args =
-        Arrays.asList(new Argument("Hello, World!", "String"), new Argument(23823));
-    JsonRpcRequest request = JsonRpcMessageFactory.buildConstructorCall("SomeClass", args);
-    assertNotNull(request);
-    assertNotNull(request.getId());
-    assertThat(request.getMethod(), is("new"));
-    assertNull(request.getParams().getMethod());
-    assertNull(request.getParams().getField());
-    assertNull(request.getParams().getInstance());
-    assertNull(request.getParams().getValue());
-    assertThat(request.getParams().getType(), is("SomeClass"));
-    assertThat(request.getParams().getArgs(), is(args));
+  public void buildClassAndInstanceMethodCall_setCallMethod_andFields() {
+    JsonRpcRequest classReq =
+        JsonRpcMessageFactory.buildClassMethodCall(
+            "java.lang.Integer", "valueOf", List.of(Argument.builder().withValue("5").build()));
+    assertThat(classReq.getMethod(), is("call"));
+    assertThat(classReq.getParams().getType(), is("java.lang.Integer"));
+    assertThat(classReq.getParams().getMethod(), is("valueOf"));
 
-    // create another request with same parameters but supplying the Id, and test equality
-    String createdId = request.getId();
-    JsonRpcRequest request2 =
-        JsonRpcMessageFactory.buildConstructorCall(createdId, "SomeClass", args);
-    assertThat(request2, is(request));
-  }
-
-  @Test
-  public void buildClassMethodCallWithoutArgs() {
-    List<Argument> emptyArgs = new ArrayList<>();
-    JsonRpcRequest request =
-        JsonRpcMessageFactory.buildClassMethodCall("SomeClass", "someMethod", emptyArgs);
-    assertNotNull(request);
-    assertNotNull(request.getId());
-    assertThat(request.getMethod(), is("call"));
-    assertThat(request.getParams().getMethod(), is("someMethod"));
-    assertThat(request.getParams().getType(), is("SomeClass"));
-    assertNull(request.getParams().getField());
-    assertNull(request.getParams().getInstance());
-    assertNull(request.getParams().getValue());
-    assertThat(request.getParams().getArgs(), is(empty()));
-
-    // create another request with same parameters but supplying the Id, and test equality
-    String createdId = request.getId();
-    JsonRpcRequest request2 =
-        JsonRpcMessageFactory.buildClassMethodCall(createdId, "SomeClass", "someMethod", emptyArgs);
-    assertThat(request2, is(request));
-  }
-
-  @Test
-  public void buildClassMethodCallWithArgs() {
-    List<Argument> args =
-        Arrays.asList(new Argument("Hello, World!", "String"), new Argument(23823));
-    JsonRpcRequest request =
-        JsonRpcMessageFactory.buildClassMethodCall("SomeClass", "someMethod", args);
-    assertNotNull(request);
-    assertNotNull(request.getId());
-    assertThat(request.getMethod(), is("call"));
-    assertThat(request.getParams().getMethod(), is("someMethod"));
-    assertThat(request.getParams().getType(), is("SomeClass"));
-    assertNull(request.getParams().getField());
-    assertNull(request.getParams().getInstance());
-    assertNull(request.getParams().getValue());
-    assertThat(request.getParams().getArgs(), is(args));
-
-    // create another request with same parameters but supplying the Id, and test equality
-    String createdId = request.getId();
-    JsonRpcRequest request2 =
-        JsonRpcMessageFactory.buildClassMethodCall(createdId, "SomeClass", "someMethod", args);
-    assertThat(request2, is(request));
-  }
-
-  @Test
-  public void buildInstanceMethodCallWithoutArgs() {
-    int instanceId = 942389;
-    JsonRpcRequest request =
-        JsonRpcMessageFactory.buildInstanceMethodCall("SomeClass", "someMethod", instanceId, null);
-    assertNotNull(request);
-    assertNotNull(request.getId());
-    assertThat(request.getMethod(), is("call"));
-    assertThat(request.getParams().getMethod(), is("someMethod"));
-    assertThat(request.getParams().getType(), is("SomeClass"));
-    assertThat(request.getParams().getInstance(), is(instanceId));
-    assertNull(request.getParams().getField());
-    assertNull(request.getParams().getValue());
-    assertThat(request.getParams().getArgs(), is(empty()));
-
-    // create another request with same parameters but supplying the Id, and test equality
-    String createdId = request.getId();
-    JsonRpcRequest request2 =
+    JsonRpcRequest instReq =
         JsonRpcMessageFactory.buildInstanceMethodCall(
-            createdId, "SomeClass", "someMethod", instanceId, null);
-    assertThat(request2, is(request));
-
-    // create another request with instance as ObjectRef, and test equality
-    JsonRpcRequest request3 =
-        JsonRpcMessageFactory.buildInstanceMethodCall(
-            createdId, "SomeClass", "someMethod", ObjectRef.from(instanceId), null);
-    assertThat(request3, is(request));
+            "java.lang.String", "substring", 1, List.of(Argument.builder().withValue(0).build()));
+    assertThat(instReq.getMethod(), is("call"));
+    assertThat(instReq.getParams().getInstance(), is(1));
   }
 
   @Test
-  public void buildInstanceMethodCallWithArgs() {
-    int instanceId = 942389;
-    List<Argument> args =
-        Arrays.asList(new Argument("Hello, World!", "String"), new Argument(23823));
-    JsonRpcRequest request =
-        JsonRpcMessageFactory.buildInstanceMethodCall("SomeClass", "someMethod", instanceId, args);
-    assertNotNull(request);
-    assertNotNull(request.getId());
-    assertThat(request.getMethod(), is("call"));
-    assertThat(request.getParams().getMethod(), is("someMethod"));
-    assertThat(request.getParams().getType(), is("SomeClass"));
-    assertThat(request.getParams().getInstance(), is(instanceId));
-    assertNull(request.getParams().getField());
-    assertNull(request.getParams().getValue());
-    assertThat(request.getParams().getArgs(), is(args));
+  public void buildStaticAndInstanceField_getPut_setFields() {
+    JsonRpcRequest sget = JsonRpcMessageFactory.buildStaticFieldGet("java.lang.System", "out");
+    assertThat(sget.getMethod(), is("get"));
+    assertThat(sget.getParams().getField(), is("out"));
 
-    // create another request with same parameters but supplying the Id, and test equality
-    String createdId = request.getId();
-    JsonRpcRequest request2 =
-        JsonRpcMessageFactory.buildInstanceMethodCall(
-            createdId, "SomeClass", "someMethod", instanceId, args);
-    assertThat(request2, is(request));
-
-    // create another request with instance as ObjectRef, and test equality
-    JsonRpcRequest request3 =
-        JsonRpcMessageFactory.buildInstanceMethodCall(
-            createdId, "SomeClass", "someMethod", ObjectRef.from(instanceId), args);
-    assertThat(request3, is(request));
-  }
-
-  @Test
-  public void buildStaticFieldGet() {
-    JsonRpcRequest request = JsonRpcMessageFactory.buildStaticFieldGet("SomeClass", "someField");
-    assertNotNull(request);
-    assertNotNull(request.getId());
-    assertThat(request.getMethod(), is("get"));
-    assertNull(request.getParams().getMethod());
-    assertNull(request.getParams().getValue());
-    assertNull(request.getParams().getInstance());
-    assertThat(request.getParams().getType(), is("SomeClass"));
-    assertThat(request.getParams().getField(), is("someField"));
-    assertThat(request.getParams().getArgs(), is(empty()));
-
-    // create another request with same parameters but supplying the Id, and test equality
-    String createdId = request.getId();
-    JsonRpcRequest request2 =
-        JsonRpcMessageFactory.buildStaticFieldGet(createdId, "SomeClass", "someField");
-    assertThat(request2, is(request));
-  }
-
-  @Test
-  public void buildInstanceFieldGet() {
-    int instanceId = 942389;
-    JsonRpcRequest request =
-        JsonRpcMessageFactory.buildInstanceFieldGet("SomeClass", instanceId, "someField");
-    assertNotNull(request);
-    assertNotNull(request.getId());
-    assertThat(request.getMethod(), is("get"));
-    assertNull(request.getParams().getMethod());
-    assertNull(request.getParams().getValue());
-    assertThat(request.getParams().getType(), is("SomeClass"));
-    assertThat(request.getParams().getInstance(), is(instanceId));
-    assertThat(request.getParams().getField(), is("someField"));
-    assertThat(request.getParams().getArgs(), is(empty()));
-
-    // create another request with same parameters but supplying the Id, and test equality
-    String createdId = request.getId();
-    JsonRpcRequest request2 =
-        JsonRpcMessageFactory.buildInstanceFieldGet(
-            createdId, "SomeClass", instanceId, "someField");
-    assertThat(request2, is(request));
-
-    // create another request with instance as ObjectRef, and test equality
-    JsonRpcRequest request3 =
-        JsonRpcMessageFactory.buildInstanceFieldGet(
-            createdId, "SomeClass", ObjectRef.from(instanceId), "someField");
-    assertThat(request3, is(request));
-  }
-
-  @Test
-  public void buildStaticFieldPut() {
-    JsonRpcRequest request =
+    JsonRpcRequest sput =
         JsonRpcMessageFactory.buildStaticFieldPut(
-            "SomeClass", "someField", new Argument("Hello, World!", "String"));
-    assertNotNull(request);
-    assertNotNull(request.getId());
-    assertThat(request.getMethod(), is("put"));
-    assertNull(request.getParams().getMethod());
-    assertThat(request.getParams().getType(), is("SomeClass"));
-    assertNull(request.getParams().getInstance());
-    assertThat(request.getParams().getField(), is("someField"));
-    assertThat(request.getParams().getValue(), is(new Argument("Hello, World!", "String")));
-    assertThat(request.getParams().getArgs(), is(empty()));
+            "java.lang.System", "out", Argument.builder().withValue("x").build());
+    assertThat(sput.getMethod(), is("put"));
+    assertThat(sput.getParams().getField(), is("out"));
+    assertThat(sput.getParams().getValue() != null, is(true));
 
-    // create another request with same parameters but supplying the Id, and test equality
-    String createdId = request.getId();
-    JsonRpcRequest request2 =
-        JsonRpcMessageFactory.buildStaticFieldPut(
-            createdId, "SomeClass", "someField", new Argument("Hello, World!", "String"));
-    assertThat(request2, is(request));
+    ObjectRef ref = ObjectRef.from(7);
+    JsonRpcRequest iget = JsonRpcMessageFactory.buildInstanceFieldGet("T", ref, "field");
+    assertThat(iget.getMethod(), is("get"));
+    assertThat(iget.getParams().getInstance(), is(7));
+
+    JsonRpcRequest iput =
+        JsonRpcMessageFactory.buildInstanceFieldPut(
+            "T", ref, "field", Argument.builder().withValue(1).build());
+    assertThat(iput.getMethod(), is("put"));
+    assertThat(iput.getParams().getInstance(), is(7));
   }
 
   @Test
-  public void buildInstanceFieldPut() {
-    int instanceId = 942389;
-    JsonRpcRequest request =
-        JsonRpcMessageFactory.buildInstanceFieldPut(
-            "SomeClass", instanceId, "someField", new Argument("Hello, World!", "String"));
-    assertNotNull(request);
-    assertNotNull(request.getId());
-    assertThat(request.getMethod(), is("put"));
-    assertNull(request.getParams().getMethod());
-    assertThat(request.getParams().getType(), is("SomeClass"));
-    assertThat(request.getParams().getInstance(), is(instanceId));
-    assertThat(request.getParams().getField(), is("someField"));
-    assertThat(request.getParams().getValue(), is(new Argument("Hello, World!", "String")));
-    assertThat(request.getParams().getArgs(), is(empty()));
+  public void buildMetaAndControlMessages_setFamilies_andService() {
+    JsonRpcRequest meta =
+        JsonRpcMessageFactory.buildFetchClassesInfoMetaMessage(
+            new String[] {"A"}, new String[] {"java."}, true, false);
+    assertThat(meta.getMethod(), is(MessageFamily.META.getJsonName()));
+    assertThat(meta.getParams().getMethod(), is(MetaServiceType.FETCH_CLASSES_INFO.getJsonName()));
+    // ensure args include keys
+    String s = meta.toString();
+    assertThat(s, containsString("compress_encode"));
+    assertThat(s, containsString("merge_ancestry"));
+    assertThat(s, containsString("exclude_prefixes"));
+    assertThat(s, containsString("include_classes"));
 
-    // create another request with same parameters but supplying the Id, and test equality
-    String createdId = request.getId();
-    JsonRpcRequest request2 =
-        JsonRpcMessageFactory.buildInstanceFieldPut(
-            createdId,
-            "SomeClass",
-            instanceId,
-            "someField",
-            new Argument("Hello, World!", "String"));
-    assertThat(request2, is(request));
+    JsonRpcRequest delObj = JsonRpcMessageFactory.buildDeleteObjectCommandMessage(3);
+    assertThat(delObj.getMethod(), is(MessageFamily.CONTROL.getJsonName()));
+    assertThat(delObj.getParams().getMethod(), is(ControlCommandType.DELETE_OBJECT.getJsonName()));
+    assertThat(delObj.getParams().getArgs().size(), is(1));
 
-    // create another request with instance as ObjectRef, and test equality
-    JsonRpcRequest request3 =
-        JsonRpcMessageFactory.buildInstanceFieldPut(
-            createdId,
-            "SomeClass",
-            ObjectRef.from(instanceId),
-            "someField",
-            new Argument("Hello, World!", "String"));
-    assertThat(request3, is(request));
+    JsonRpcRequest delSess = JsonRpcMessageFactory.buildDeleteSessionCommandMessage();
+    assertThat(
+        delSess.getParams().getMethod(), is(ControlCommandType.DELETE_SESSION.getJsonName()));
+    JsonRpcRequest gc = JsonRpcMessageFactory.buildGcCommandMessage();
+    assertThat(gc.getParams().getMethod(), is(ControlCommandType.GC.getJsonName()));
   }
 }

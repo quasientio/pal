@@ -9,11 +9,13 @@
  */
 package com.quasient.pal.common.lang.reflect;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertNotEquals;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
-import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -29,6 +31,18 @@ public class CodeSignatureTest extends SignatureTest {
   protected Parameter[] parameters;
   private CodeSignature codeSignature;
 
+  private static class TestCodeSignature extends CodeSignature {
+    public TestCodeSignature(
+        Class<?> declaringType,
+        String declaringTypeName,
+        int modifiers,
+        String name,
+        Class<?>[] exceptionTypes,
+        Params params) {
+      super(declaringType, declaringTypeName, modifiers, name, exceptionTypes, params);
+    }
+  }
+
   @Override
   @Before
   public void setUp() throws Exception {
@@ -39,13 +53,13 @@ public class CodeSignatureTest extends SignatureTest {
     Method method = DummyClass.class.getDeclaredMethod("increment", int.class, int.class);
     parameters = method.getParameters();
     codeSignature =
-        new CodeSignature(
+        new TestCodeSignature(
             declaringType,
             declaringTypeName,
             modifiers,
             name,
             exceptionTypes,
-            new Params(parameterNames, parameterTypes, parameters)) {};
+            new Params(parameterNames, parameterTypes, parameters));
   }
 
   @Test
@@ -71,12 +85,45 @@ public class CodeSignatureTest extends SignatureTest {
   @Test
   @Override
   public void equalsContract() throws NoSuchMethodException {
-    // EqualsVerifier requires prefabValues with actual instances of Parameter.
-    // Since we can't instantiate Parameter, we use our DummyClass and reflection to get them.
-    Method method = DummyClass.class.getDeclaredMethod("increment", int.class, int.class);
-    EqualsVerifier.forClass(CodeSignature.class)
-        .withPrefabValues(Parameter.class, method.getParameters()[0], method.getParameters()[1])
-        .usingGetClass()
-        .verify();
+    CodeSignature a =
+        new TestCodeSignature(
+            declaringType,
+            declaringTypeName,
+            modifiers,
+            name,
+            exceptionTypes,
+            new Params(parameterNames, parameterTypes, parameters));
+    CodeSignature b =
+        new TestCodeSignature(
+            declaringType,
+            declaringTypeName,
+            modifiers,
+            name,
+            exceptionTypes,
+            new Params(parameterNames, parameterTypes, parameters));
+    CodeSignature c =
+        new TestCodeSignature(
+            declaringType,
+            declaringTypeName,
+            modifiers,
+            name,
+            exceptionTypes,
+            new Params(parameterNames, parameterTypes, parameters));
+    CodeSignature different =
+        new TestCodeSignature(
+            declaringType,
+            declaringTypeName,
+            modifiers,
+            name + "x",
+            exceptionTypes,
+            new Params(parameterNames, parameterTypes, parameters));
+
+    assertThat(a, is(b));
+    assertThat(b, is(c));
+    assertThat(a.hashCode(), is(b.hashCode()));
+    assertThat(b.hashCode(), is(c.hashCode()));
+    assertNotEquals(a, different);
+    assertNotEquals(a, null);
+    assertNotEquals(a, new Object());
   }
 }

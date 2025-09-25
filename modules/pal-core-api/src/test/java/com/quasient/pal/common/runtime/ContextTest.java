@@ -12,6 +12,7 @@ package com.quasient.pal.common.runtime;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -26,7 +27,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.stream.Stream;
-import nl.jqno.equalsverifier.EqualsVerifier;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.reflect.SourceLocation;
 import org.junit.Before;
@@ -311,7 +311,38 @@ public class ContextTest {
 
   @Test
   public void equalsContract() {
-    EqualsVerifier.forClass(Context.class).usingGetClass().verify();
+    Context a =
+        new Context(
+            constructorArgs.sourceFilename,
+            constructorArgs.sourceLine,
+            constructorArgs.withinType,
+            constructorArgs.signature);
+    Context b =
+        new Context(
+            constructorArgs.sourceFilename,
+            constructorArgs.sourceLine,
+            constructorArgs.withinType,
+            constructorArgs.signature);
+    Context c =
+        new Context(
+            constructorArgs.sourceFilename,
+            constructorArgs.sourceLine,
+            constructorArgs.withinType,
+            constructorArgs.signature);
+    Context different =
+        new Context(
+            methodArgs.sourceFilename,
+            methodArgs.sourceLine,
+            methodArgs.withinType,
+            methodArgs.signature);
+
+    assertThat(a, is(b));
+    assertThat(b, is(c));
+    assertThat(a.hashCode(), is(b.hashCode()));
+    assertThat(b.hashCode(), is(c.hashCode()));
+    assertNotEquals(a, different);
+    assertNotEquals(a, null);
+    assertNotEquals(a, new Object());
   }
 
   @Test

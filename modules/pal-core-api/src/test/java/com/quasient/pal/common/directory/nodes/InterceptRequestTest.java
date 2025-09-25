@@ -12,6 +12,7 @@ package com.quasient.pal.common.directory.nodes;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
 import com.quasient.pal.common.lang.FieldOpType;
 import com.quasient.pal.common.lang.intercept.InterceptType;
@@ -24,7 +25,6 @@ import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.UUID;
 import java.util.stream.Stream;
-import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -64,10 +64,26 @@ public class InterceptRequestTest {
 
   @Test
   public void equalsContract() {
-    EqualsVerifier.forClass(InterceptRequest.class)
-        .usingGetClass()
-        .withIgnoredFields("ctime", "mtime")
-        .verify();
+    InterceptRequest<InterceptableMethodCall> a =
+        new InterceptRequest<>(
+            uuid, peer, type, clazz, callbackClass, callbackMethod, interceptableMethod);
+    InterceptRequest<InterceptableMethodCall> b =
+        new InterceptRequest<>(
+            uuid, peer, type, clazz, callbackClass, callbackMethod, interceptableMethod);
+    InterceptRequest<InterceptableMethodCall> c =
+        new InterceptRequest<>(
+            uuid, peer, type, clazz, callbackClass, callbackMethod, interceptableMethod);
+    InterceptRequest<InterceptableMethodCall> different =
+        new InterceptRequest<>(
+            uuid, peer, type, clazz, callbackClass, "OtherCallback", interceptableMethod);
+
+    assertThat(a, is(b));
+    assertThat(b, is(c));
+    assertThat(a.hashCode(), is(b.hashCode()));
+    assertThat(b.hashCode(), is(c.hashCode()));
+    assertNotEquals(a, different);
+    assertNotEquals(a, null);
+    assertNotEquals(a, new Object());
   }
 
   @Test

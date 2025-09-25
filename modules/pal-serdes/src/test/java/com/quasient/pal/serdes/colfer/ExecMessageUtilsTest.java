@@ -413,6 +413,32 @@ public class ExecMessageUtilsTest {
   }
 
   @Test
+  public void getParameterTypes_classMethod_withRefParam_hasDeclaredType() {
+    String className = "TestClass";
+    String[] parameterTypes = new String[] {String.class.getName(), Object.class.getName()};
+    Object[] args = new Object[] {"x", null};
+    ObjectRef[] argRefs = new ObjectRef[] {null, ObjectRef.randomRef()};
+
+    ExecMessage execMessage =
+        messageBuilder.buildClassMethod(
+            UUID.randomUUID(),
+            className,
+            "testMethod",
+            parameterTypes,
+            this,
+            ObjectRef.randomRef(),
+            args,
+            argRefs);
+
+    List<String> types = ExecMessageUtils.getParameterTypes(execMessage);
+    assertNotNull(types);
+    assertEquals(2, types.size());
+    // by-value retains type; by-ref retains declared parameter type for builder methods
+    assertTrue(types.contains(String.class.getName()));
+    assertTrue(types.contains(Object.class.getName()));
+  }
+
+  @Test
   public void getParameterTypes_returnsEmptyListForEmptyConstructor() {
     String className = "TestClass";
     ExecMessage execMessage = messageBuilder.buildEmptyConstructor(UUID.randomUUID(), className);

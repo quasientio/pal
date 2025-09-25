@@ -9,9 +9,11 @@
  */
 package com.quasient.pal.common.lang.reflect;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
-import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -27,13 +29,20 @@ public class SignatureTest {
   protected String name;
   private Signature signature;
 
+  private static class TestSignature extends Signature {
+    public TestSignature(
+        Class<?> declaringType, String declaringTypeName, int modifiers, String name) {
+      super(declaringType, declaringTypeName, modifiers, name);
+    }
+  }
+
   @Before
   public void setUp() throws Exception {
     declaringType = DummyClassForSignatureTest.class;
     declaringTypeName = "DummyClassForSignatureTest";
     modifiers = 0;
     name = "DummyClassForSignatureTest";
-    signature = new Signature(declaringType, declaringTypeName, modifiers, name) {};
+    signature = new TestSignature(declaringType, declaringTypeName, modifiers, name);
   }
 
   @Test
@@ -58,6 +67,18 @@ public class SignatureTest {
 
   @Test
   public void equalsContract() throws Exception {
-    EqualsVerifier.forClass(Signature.class).usingGetClass().verify();
+    Signature a = new TestSignature(declaringType, declaringTypeName, modifiers, name);
+    Signature b = new TestSignature(declaringType, declaringTypeName, modifiers, name);
+    Signature c = new TestSignature(declaringType, declaringTypeName, modifiers, name);
+    Signature different =
+        new TestSignature(declaringType, declaringTypeName, modifiers, name + "x");
+
+    assertThat(a, is(b));
+    assertThat(b, is(c));
+    assertThat(a.hashCode(), is(b.hashCode()));
+    assertThat(b.hashCode(), is(c.hashCode()));
+    assertNotEquals(a, different);
+    assertNotEquals(a, null);
+    assertNotEquals(a, new Object());
   }
 }

@@ -11,99 +11,105 @@ package com.quasient.pal.common.runtime;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.junit.Assert.assertThrows;
 
-import com.google.inject.Guice;
+import com.quasient.pal.common.weave.Proceed;
+import com.quasient.pal.common.weave.VoidProceed;
+import java.lang.reflect.Field;
 import org.aspectj.lang.ProceedingJoinPoint;
-import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class DispatchForwarderTest {
 
-  private static ProxyDispatcher mockedDispatcher;
-  private static ProceedingJoinPoint proceedingJoinPoint;
+  private static class DummyDispatcher implements ProxyDispatcher {
+    Object ret;
+    boolean throwOnGetStatic;
+    boolean throwOnGetObject;
+    boolean throwOnPutStatic;
+    boolean throwOnPutField;
 
-  @Before
-  public void setUp() throws Throwable {
-    mockedDispatcher = mock(ProxyDispatcher.class);
-    proceedingJoinPoint = mock(ProceedingJoinPoint.class);
+    @Override
+    public Object constructor(ProceedingJoinPoint pjp, Proceed<Object> proceed) throws Throwable {
+      return ret;
+    }
 
-    Guice.createInjector(
-        binder -> {
-          binder.bind(ProxyDispatcher.class).toInstance(mockedDispatcher);
-          binder.requestStaticInjection(DispatchForwarder.class);
-        });
+    @Override
+    public void voidInstanceMethod(ProceedingJoinPoint pjp, VoidProceed proceed) throws Throwable {}
+
+    @Override
+    public void voidClassMethod(ProceedingJoinPoint pjp, VoidProceed proceed) throws Throwable {}
+
+    @Override
+    public Object nonVoidInstanceMethod(ProceedingJoinPoint pjp, Proceed<Object> proceed)
+        throws Throwable {
+      return ret;
+    }
+
+    @Override
+    public Object nonVoidClassMethod(ProceedingJoinPoint pjp, Proceed<Object> proceed)
+        throws Throwable {
+      return ret;
+    }
+
+    @Override
+    public Object getStatic(ProceedingJoinPoint pjp, Proceed<Object> proceed) throws Throwable {
+      if (throwOnGetStatic) throw new Exception("x");
+      return ret;
+    }
+
+    @Override
+    public Object getObject(ProceedingJoinPoint pjp, Proceed<Object> proceed) throws Throwable {
+      if (throwOnGetObject) throw new Exception("x");
+      return ret;
+    }
+
+    @Override
+    public void putStatic(ProceedingJoinPoint pjp, VoidProceed proceed) throws Throwable {
+      if (throwOnPutStatic) throw new Exception("x");
+    }
+
+    @Override
+    public void putField(ProceedingJoinPoint pjp, VoidProceed proceed) throws Throwable {
+      if (throwOnPutField) throw new Exception("x");
+    }
+  }
+
+  @BeforeClass
+  public static void injectDummyDispatcher() throws Exception {
+    Field f = DispatchForwarder.class.getDeclaredField("dispatcher");
+    f.setAccessible(true);
+    DummyDispatcher dd = new DummyDispatcher();
+    dd.ret = "R";
+    f.set(null, dd);
   }
 
   @Test
-  public void constructor() throws Throwable {
-    Object valueToReturn = "constructor OK";
-    when(mockedDispatcher.constructor(any(), any())).thenReturn(valueToReturn);
-    Object ret = DispatchForwarder.constructor(proceedingJoinPoint, () -> null);
-    verify(mockedDispatcher).constructor(any(), any());
-    assertThat(ret, is(valueToReturn));
+  public void forwards_constructor_and_nonVoid_calls() throws Throwable {
+    assertThat(DispatchForwarder.constructor(null, () -> "X"), is("R"));
+    assertThat(DispatchForwarder.nonVoidInstanceMethod(null, () -> "X"), is("R"));
+    assertThat(DispatchForwarder.nonVoidClassMethod(null, () -> "X"), is("R"));
   }
 
   @Test
-  public void voidInstanceMethod() throws Throwable {
-    DispatchForwarder.voidInstanceMethod(proceedingJoinPoint, () -> {});
-    verify(mockedDispatcher).voidInstanceMethod(any(), any());
+  public void forwards_void_calls() throws Throwable {
+    DispatchForwarder.voidInstanceMethod(null, () -> {});
+    DispatchForwarder.voidClassMethod(null, () -> {});
   }
 
   @Test
-  public void voidClassMethod() throws Throwable {
-    DispatchForwarder.voidClassMethod(proceedingJoinPoint, () -> {});
-    verify(mockedDispatcher).voidClassMethod(any(), any());
-  }
+  public void wrappers_convert_checked_exceptions_to_Runtime_for_field_ops() throws Exception {
+    Field f = DispatchForwarder.class.getDeclaredField("dispatcher");
+    f.setAccessible(true);
+    DummyDispatcher dd = (DummyDispatcher) f.get(null);
+    dd.throwOnGetStatic = true;
+    dd.throwOnGetObject = true;
+    dd.throwOnPutStatic = true;
+    dd.throwOnPutField = true;
 
-  @Test
-  public void nonVoidInstanceMethod() throws Throwable {
-    Object valueToReturn = "instance method OK";
-    when(mockedDispatcher.nonVoidInstanceMethod(any(), any())).thenReturn(valueToReturn);
-    Object ret = DispatchForwarder.nonVoidInstanceMethod(proceedingJoinPoint, () -> null);
-    verify(mockedDispatcher).nonVoidInstanceMethod(any(), any());
-    assertThat(ret, is(valueToReturn));
-  }
-
-  @Test
-  public void nonVoidClassMethod() throws Throwable {
-    Object valueToReturn = "class method OK";
-    when(mockedDispatcher.nonVoidClassMethod(any(), any())).thenReturn(valueToReturn);
-    Object ret = DispatchForwarder.nonVoidClassMethod(proceedingJoinPoint, () -> null);
-    verify(mockedDispatcher).nonVoidClassMethod(any(), any());
-    assertThat(ret, is(valueToReturn));
-  }
-
-  @Test
-  public void getStatic() throws Throwable {
-    Object valueToReturn = "get static OK";
-    when(mockedDispatcher.getStatic(any(), any())).thenReturn(valueToReturn);
-    Object ret = DispatchForwarder.getStatic(proceedingJoinPoint, () -> null);
-    verify(mockedDispatcher).getStatic(any(), any());
-    assertThat(ret, is(valueToReturn));
-  }
-
-  @Test
-  public void getObject() throws Throwable {
-    Object valueToReturn = "get object OK";
-    when(mockedDispatcher.getObject(any(), any())).thenReturn(valueToReturn);
-    Object ret = DispatchForwarder.getObject(proceedingJoinPoint, () -> null);
-    verify(mockedDispatcher).getObject(any(), any());
-    assertThat(ret, is(valueToReturn));
-  }
-
-  @Test
-  public void putStatic() throws Throwable {
-    DispatchForwarder.putStatic(proceedingJoinPoint, () -> {});
-    verify(mockedDispatcher).putStatic(any(), any());
-  }
-
-  @Test
-  public void putField() throws Throwable {
-    DispatchForwarder.putField(proceedingJoinPoint, () -> {});
-    verify(mockedDispatcher).putField(any(), any());
+    assertThrows(RuntimeException.class, () -> DispatchForwarder.getStatic(null, () -> null));
+    assertThrows(RuntimeException.class, () -> DispatchForwarder.getObject(null, () -> null));
+    assertThrows(RuntimeException.class, () -> DispatchForwarder.putStatic(null, () -> {}));
+    assertThrows(RuntimeException.class, () -> DispatchForwarder.putField(null, () -> {}));
   }
 }

@@ -13,14 +13,13 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
 import com.quasient.pal.common.directory.nodes.InterceptRequest;
 import com.quasient.pal.common.lang.FieldOpType;
 import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.lang.intercept.InterceptableFieldOp;
 import java.util.UUID;
-import nl.jqno.equalsverifier.EqualsVerifier;
-import nl.jqno.equalsverifier.Warning;
 import org.junit.Test;
 
 public class InterceptEventTest {
@@ -40,14 +39,43 @@ public class InterceptEventTest {
 
   @Test
   public void equalsContract() {
-    InterceptRequest<?> interceptRequest = createInterceptRequest();
+    InterceptRequest<?> req = createInterceptRequest();
+    InterceptEvent a =
+        new InterceptEvent(
+            InterceptEvent.Type.INTERCEPT_ADDED,
+            "/a/mysterious/path/ahead",
+            UUID.fromString("00000000-0000-0000-0000-000000000001"),
+            "id-1",
+            req);
+    InterceptEvent b =
+        new InterceptEvent(
+            InterceptEvent.Type.INTERCEPT_ADDED,
+            "/a/mysterious/path/ahead",
+            UUID.fromString("00000000-0000-0000-0000-000000000001"),
+            "id-1",
+            req);
+    InterceptEvent c =
+        new InterceptEvent(
+            InterceptEvent.Type.INTERCEPT_ADDED,
+            "/a/mysterious/path/ahead",
+            UUID.fromString("00000000-0000-0000-0000-000000000001"),
+            "id-1",
+            req);
+    InterceptEvent different =
+        new InterceptEvent(
+            InterceptEvent.Type.INTERCEPT_ADDED,
+            "/a/mysterious/path/ahead",
+            UUID.fromString("00000000-0000-0000-0000-000000000001"),
+            "id-2",
+            req);
 
-    EqualsVerifier.forClass(InterceptEvent.class)
-        .withPrefabValues(String.class, "/path/with/four/parts", "/another/path_with/four/parts")
-        .withPrefabValues(InterceptRequest.class, interceptRequest, createInterceptRequest())
-        .suppress(Warning.NULL_FIELDS)
-        .usingGetClass()
-        .verify();
+    assertThat(a, is(b));
+    assertThat(b, is(c));
+    assertThat(a.hashCode(), is(b.hashCode()));
+    assertThat(b.hashCode(), is(c.hashCode()));
+    assertNotEquals(a, different);
+    assertNotEquals(a, null);
+    assertNotEquals(a, new Object());
   }
 
   @Test

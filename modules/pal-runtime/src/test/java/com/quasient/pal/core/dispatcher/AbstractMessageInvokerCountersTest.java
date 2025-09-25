@@ -1,0 +1,116 @@
+/*
+ * Copyright (C) 2025 Quasient Inc. <https://www.quasient.com>
+ *
+ * Use of this software is governed by the Business Source License 1.1
+ * included in the file LICENSE and at https://mariadb.com/bsl11
+ *
+ * Change Date: 2029-10-01
+ * Change License: Apache 2.0
+ */
+package com.quasient.pal.core.dispatcher;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThrows;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import com.quasient.pal.core.transport.MessageChannelType;
+import com.quasient.pal.messages.colfer.ControlMessage;
+import com.quasient.pal.messages.colfer.Message;
+import com.quasient.pal.messages.colfer.MetaMessage;
+import com.quasient.pal.messages.types.ControlCommandType;
+import com.quasient.pal.messages.types.MetaServiceType;
+import com.quasient.pal.serdes.colfer.MessageBuilder;
+import java.util.UUID;
+import org.junit.Before;
+import org.junit.Test;
+import org.zeromq.ZContext;
+
+/**
+ * Unit tests for dispatch counters in AbstractMessageInvokerThread across EXEC/CONTROL/META,
+ * exercising both OK and DISPATCH_ERROR paths using a lightweight subclass without threads.
+ */
+public class AbstractMessageInvokerCountersTest {
+
+  private UUID peerUuid;
+  private ZContext ctx;
+  private MessageBuilder builder;
+  private IncomingMessageDispatcher dispatcher;
+
+  private static class TestInvoker extends AbstractMessageInvokerThread {
+    TestInvoker(
+        ZContext zmqContext,
+        MessageBuilder messageBuilder,
+        IncomingMessageDispatcher incomingMessageDispatcher,
+        UUID peerUuid) {
+      super(zmqContext, messageBuilder, incomingMessageDispatcher, peerUuid);
+    }
+
+    @Override
+    public void run() {}
+
+    public Message dispatchMsg(Message m) {
+      return dispatch(m, MessageChannelType.ZMQ_SOCKET_RPC);
+    }
+  }
+
+  @Before
+  public void setup() {
+    peerUuid = UUID.randomUUID();
+    ctx = new ZContext(1);
+    builder = new MessageBuilder(peerUuid);
+    dispatcher = mock(IncomingMessageDispatcher.class);
+  }
+
+  @Test
+  public void controlAndMeta_okAndErrorCounters() throws Exception {
+    // Prepare control OK path
+    ControlMessage ctrlReq = builder.buildControlCommandMessage(peerUuid, ControlCommandType.GC);
+    ControlMessage ctrlResp =
+        builder.buildControlStatusMessage(
+            peerUuid, com.quasient.pal.messages.types.ControlStatusType.OK, ctrlReq.getMessageId());
+    when(dispatcher.incomingControlMessage(any(ControlMessage.class))).thenReturn(ctrlResp);
+
+    // Prepare meta OK path
+    MetaMessage metaReq =
+        builder.buildMetaMessageRequest(
+            peerUuid, ctrlReq.getMessageId(), MetaServiceType.FETCH_CLASSES_INFO);
+    MetaMessage metaResp =
+        builder.buildMetaMessageResponse(
+            peerUuid,
+            MetaServiceType.FETCH_CLASSES_INFO,
+            com.quasient.pal.messages.types.MetaStatusType.OK,
+            null,
+            metaReq.getMessageId());
+    when(dispatcher.incomingMetaMessage(any(MetaMessage.class))).thenReturn(metaResp);
+
+    TestInvoker inv = new TestInvoker(ctx, builder, dispatcher, peerUuid);
+
+    // Dispatch control OK
+    inv.dispatchMsg(builder.wrap(ctrlReq));
+    assertThat(inv.getControlRequestsDispatched(), is(1L));
+    assertThat(inv.getControlRequestErrors(), is(0L));
+
+    // Dispatch meta OK
+    inv.dispatchMsg(builder.wrap(metaReq));
+    assertThat(inv.getMetaRequestsDispatched(), is(1L));
+    assertThat(inv.getMetaRequestErrors(), is(0L));
+
+    // Now force errors
+    doThrow(new RuntimeException("boom"))
+        .when(dispatcher)
+        .incomingControlMessage(any(ControlMessage.class));
+    doThrow(new RuntimeException("boom2"))
+        .when(dispatcher)
+        .incomingMetaMessage(any(MetaMessage.class));
+
+    assertThrows(RuntimeException.class, () -> inv.dispatchMsg(builder.wrap(ctrlReq)));
+    assertThrows(RuntimeException.class, () -> inv.dispatchMsg(builder.wrap(metaReq)));
+
+    assertThat(inv.getControlRequestErrors(), is(1L));
+    assertThat(inv.getMetaRequestErrors(), is(1L));
+  }
+}

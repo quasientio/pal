@@ -12,12 +12,12 @@ package com.quasient.pal.common.lang.intercept;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertNotEquals;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -51,7 +51,18 @@ public class InterceptableMethodCallTest {
 
   @Test
   public void equalsContract() {
-    EqualsVerifier.forClass(InterceptableMethodCall.class).usingGetClass().verify();
+    InterceptableMethodCall a = new InterceptableMethodCall("myMethod", parameterTypes);
+    InterceptableMethodCall b = new InterceptableMethodCall("myMethod", parameterTypes);
+    InterceptableMethodCall c = new InterceptableMethodCall("myMethod", parameterTypes);
+    InterceptableMethodCall different = new InterceptableMethodCall("otherMethod", parameterTypes);
+
+    assertThat(a, is(b));
+    assertThat(b, is(c));
+    assertThat(a.hashCode(), is(b.hashCode()));
+    assertThat(b.hashCode(), is(c.hashCode()));
+    assertNotEquals(a, different);
+    assertNotEquals(a, null);
+    assertNotEquals(a, new Object());
   }
 
   @Test

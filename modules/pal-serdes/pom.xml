@@ -44,6 +44,12 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>${jacoco.plugin.version}</version>
+                <configuration>
+                    <!-- Exclude auto-generated Colfer message classes from coverage -->
+                    <excludes>
+                        <exclude>com/quasient/pal/messages/colfer/**</exclude>
+                    </excludes>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>

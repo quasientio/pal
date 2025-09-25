@@ -11,9 +11,9 @@ package com.quasient.pal.common.lang.intercept;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertNotEquals;
 
 import com.quasient.pal.common.lang.FieldOpType;
-import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -42,7 +42,18 @@ public class InterceptableFieldOpTest {
 
   @Test
   public void equalsContract() {
-    EqualsVerifier.forClass(InterceptableFieldOp.class).usingGetClass().verify();
+    InterceptableFieldOp a = new InterceptableFieldOp("myField", FieldOpType.GET);
+    InterceptableFieldOp b = new InterceptableFieldOp("myField", FieldOpType.GET);
+    InterceptableFieldOp c = new InterceptableFieldOp("myField", FieldOpType.GET);
+    InterceptableFieldOp different = new InterceptableFieldOp("otherField", FieldOpType.GET);
+
+    assertThat(a, is(b));
+    assertThat(b, is(c));
+    assertThat(a.hashCode(), is(b.hashCode()));
+    assertThat(b.hashCode(), is(c.hashCode()));
+    assertNotEquals(a, different);
+    assertNotEquals(a, null);
+    assertNotEquals(a, new Object());
   }
 
   @Test

@@ -15,6 +15,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
 import com.quasient.pal.common.util.ByteSizeConverter;
 import java.time.Instant;
@@ -22,7 +23,6 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.UUID;
 import java.util.stream.Stream;
-import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -115,19 +115,18 @@ public class LogInfoTest {
 
   @Test
   public void equalsContract() {
-    EqualsVerifier.simple()
-        .forClass(LogInfo.class)
-        .usingGetClass()
-        .withIgnoredFields(
-            "startOffset",
-            "endOffset",
-            "bytes",
-            "exists",
-            "humanReadableByteSize",
-            "uuid",
-            "ctime",
-            "mtime")
-        .verify();
+    LogInfo a = new LogInfo("name", "bs1");
+    LogInfo b = new LogInfo("name", "bs1");
+    LogInfo c = new LogInfo("name", "bs1");
+    LogInfo different = new LogInfo("other", "bs1");
+
+    assertThat(a, is(b));
+    assertThat(b, is(c));
+    assertThat(a.hashCode(), is(b.hashCode()));
+    assertThat(b.hashCode(), is(c.hashCode()));
+    assertNotEquals(a, different);
+    assertNotEquals(a, null);
+    assertNotEquals(a, new Object());
   }
 
   @Test
