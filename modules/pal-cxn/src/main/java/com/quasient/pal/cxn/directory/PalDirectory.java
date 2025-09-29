@@ -106,6 +106,12 @@ public class PalDirectory implements AutoCloseable {
   /** Key-Value client for etcd operations. */
   private final KV kvClient;
 
+  /** Watch client for etcd KVs. */
+  private final Watch watchClient;
+
+  /** Intercepts etcd watcher subscription that must be closed on shutdown. Lazily instantiated. */
+  @Nullable private Watch.Watcher interceptsWatcher;
+
   /** Flag for idempotent close(). */
   private final AtomicBoolean closed = new AtomicBoolean();
 
@@ -166,7 +172,10 @@ public class PalDirectory implements AutoCloseable {
    */
   public PalDirectory(String endpoints, String namespace, boolean blocking) {
     this.directoryUrl = endpoints;
-    logger.info("Will connect to etcd endpoints: {}", endpoints);
+    logger.info(
+        "Will connect to etcd endpoints: {} in {} mode",
+        endpoints,
+        blocking ? "blocking" : "non-blocking");
     this.client =
         Client.builder()
             .target(endpoints)
@@ -199,13 +208,8 @@ public class PalDirectory implements AutoCloseable {
             });
 
     this.kvClient = client.getKVClient();
-    Watch watchClient = client.getWatchClient();
+    this.watchClient = client.getWatchClient();
     this.namespace = namespace != null ? namespace : DEFAULT_PAL_NAMESPACE;
-
-    watchClient.watch(
-        getInterceptsPathKey(),
-        WatchOption.builder().isPrefix(true).build(),
-        this::interceptEventConsumer);
   }
 
   /**
@@ -928,6 +932,17 @@ public class PalDirectory implements AutoCloseable {
    * @param listener the {@link InterceptNodeListener} to add
    */
   public void addInterceptListener(InterceptNodeListener listener) {
+
+    // with the first intercept listener, start the lazy interceptsClient
+    if (interceptsWatcher == null) {
+      // Save the watcher so we can close it explicitly during shutdown.
+      this.interceptsWatcher =
+          watchClient.watch(
+              getInterceptsPathKey(),
+              WatchOption.builder().isPrefix(true).build(),
+              this::interceptEventConsumer);
+    }
+
     interceptListeners.add(listener);
     if (logger.isDebugEnabled()) {
       logger.debug("Added intercept node listener of class: {}", listener.getClass().getName());
@@ -1408,7 +1423,21 @@ public class PalDirectory implements AutoCloseable {
 
     RuntimeException firstError = null;
 
-    // 1) Stop keep-alive executor *before* we close the etcd client
+    // 1) Stop watch(es) first so no more callbacks hit a closing gRPC loop.
+    try {
+      if (interceptsWatcher != null) {
+        interceptsWatcher.close();
+      }
+    } catch (RuntimeException e) {
+      if (firstError == null) {
+        firstError = e;
+      } else {
+        firstError.addSuppressed(e);
+      }
+      logger.warn("Failed to close intercepts watcher", e);
+    }
+
+    // 2) Stop keep-alive executor *before* we close the etcd client
     try {
       leasePool.shutdownNow(); // cancels KA tasks immediately
       if (!leasePool.awaitTermination(5, TimeUnit.SECONDS) && logger.isDebugEnabled()) {
@@ -1416,41 +1445,50 @@ public class PalDirectory implements AutoCloseable {
       }
     } catch (InterruptedException ie) {
       Thread.currentThread().interrupt();
-      firstError = new RuntimeException("Interrupted while shutting down leasePool", ie);
+      RuntimeException e = new RuntimeException("Interrupted while shutting down leasePool", ie);
+      if (firstError == null) {
+        firstError = e;
+      } else {
+        firstError.addSuppressed(e);
+      }
     } catch (RuntimeException e) {
-      firstError = e;
+      if (firstError == null) {
+        firstError = e;
+      } else {
+        firstError.addSuppressed(e);
+      }
       logger.warn("Failed to shut down leasePool", e);
     }
 
-    // 2) Child resources
+    // 3) Child resources
     try {
       if (kvClient != null) {
         kvClient.close();
       }
     } catch (RuntimeException e) {
-      if (firstError != null) {
-        firstError.addSuppressed(e);
-      } else {
+      if (firstError == null) {
         firstError = e;
+      } else {
+        firstError.addSuppressed(e);
       }
       logger.warn("Failed to close KV client", e);
     }
 
-    // 3) Parent client
+    // 4) Parent client
     try {
       if (client != null) {
         client.close(); // safe even if kvClient.close() already did it
       }
     } catch (RuntimeException e) {
-      if (firstError != null) {
-        firstError.addSuppressed(e);
-      } else {
+      if (firstError == null) {
         firstError = e;
+      } else {
+        firstError.addSuppressed(e);
       }
       logger.warn("Failed to close etcd client", e);
     }
 
-    // 4) Propagate aggregated failure (if any)
+    // 5) Propagate aggregated failure (if any)
     if (firstError != null) {
       throw firstError; // AutoCloseable allows unchecked exceptions
     }
