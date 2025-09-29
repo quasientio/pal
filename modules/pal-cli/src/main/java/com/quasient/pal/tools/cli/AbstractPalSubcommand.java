@@ -61,7 +61,7 @@ public abstract class AbstractPalSubcommand extends AbstractTool implements Call
    */
   protected final void initializeDirectoryConnectionProvider(String paldirConnectionString) {
     this.directoryConnectionProvider =
-        new DirectoryConnectionProvider(paldirConnectionString, null);
+        new DirectoryConnectionProvider(paldirConnectionString, null, true);
   }
 
   /**

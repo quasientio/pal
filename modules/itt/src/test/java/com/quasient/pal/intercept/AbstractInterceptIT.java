@@ -108,7 +108,7 @@ public class AbstractInterceptIT extends AbstractIntegrationTest implements Exec
   @Before
   public void setUp() throws Exception {
     DirectoryConnectionProvider directoryConnectionProvider =
-        new DirectoryConnectionProvider(getPalDirectoryUrl(), null);
+        new DirectoryConnectionProvider(getPalDirectoryUrl(), null, true);
     this.palDirectory =
         directoryConnectionProvider
             .get()

@@ -21,7 +21,7 @@ public class DirectoryConnectionProviderTest {
   @Test
   public void get_returnsEmpty_whenNoUrl() {
     DirectoryConnectionProvider p =
-        new DirectoryConnectionProvider(PalDirectory.NO_URL, /*namespace*/ null);
+        new DirectoryConnectionProvider(PalDirectory.NO_URL, /*namespace*/ null, false);
     Optional<PalDirectory> got = p.get();
     assertThat(got.isPresent(), is(false));
     assertThat(p.getConnectionString(), is(PalDirectory.NO_URL));
@@ -31,7 +31,7 @@ public class DirectoryConnectionProviderTest {
   public void get_returnsCachedInstance_whenUrlGiven() {
     // Use a dummy URL; constructor should not block because we don't pass 'blocking=true'.
     DirectoryConnectionProvider p =
-        new DirectoryConnectionProvider("http://127.0.0.1:2379", /*namespace*/ "testns");
+        new DirectoryConnectionProvider("http://127.0.0.1:2379", /*namespace*/ "testns", false);
     Optional<PalDirectory> first = p.get();
     Optional<PalDirectory> second = p.get();
     assertTrue(first.isPresent());

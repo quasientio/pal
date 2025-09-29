@@ -38,6 +38,12 @@ public class DirectoryConnectionProvider implements Provider<Optional<PalDirecto
   private final String connectionString;
 
   /**
+   * Whether we should establish a blocking-connection with the {@link PalDirectory}. Defaults to
+   * false.
+   */
+  private final boolean blockingConnect;
+
+  /**
    * The namespace within the {@link PalDirectory} context.
    *
    * <p>This parameter allows for setting a custom PalDirectory namespace.
@@ -63,21 +69,24 @@ public class DirectoryConnectionProvider implements Provider<Optional<PalDirecto
    */
   @Inject
   public DirectoryConnectionProvider(@Named("paldir_url") String connectionString) {
-    this(connectionString, null);
+    this(connectionString, null, false);
   }
 
   /**
    * Constructs a {@code DirectoryConnectionProvider} with the specified connection string and
-   * namespace.
+   * namespace, and blockingConnect flag.
    *
    * @param connectionString the connection string for the {@link PalDirectory}; must not be null or
    *     empty
    * @param namespace the namespace for scoping {@link PalDirectory} operations; may be {@code null}
    *     if no custom namespace is required
+   * @param blockingConnect whether to establish the connection to Pal Directory in blocking mode
    */
-  public DirectoryConnectionProvider(String connectionString, String namespace) {
+  public DirectoryConnectionProvider(
+      String connectionString, String namespace, boolean blockingConnect) {
     this.connectionString = connectionString;
     this.namespace = namespace;
+    this.blockingConnect = blockingConnect;
   }
 
   /**
@@ -97,7 +106,7 @@ public class DirectoryConnectionProvider implements Provider<Optional<PalDirecto
     }
 
     if (palDirectoryInstance == null) {
-      palDirectoryInstance = new PalDirectory(connectionString, namespace);
+      palDirectoryInstance = new PalDirectory(connectionString, namespace, blockingConnect);
     }
 
     return Optional.of(palDirectoryInstance);
