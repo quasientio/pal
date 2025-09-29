@@ -106,10 +106,10 @@ public class ThinPeer implements AutoCloseable {
   private boolean isWsClientConnected = false;
 
   /** Indicates whether this ThinPeer instance has been closed. */
-  private boolean closed;
+  private boolean closed = false;
 
   /** Indicates whether this ThinPeer instance has been initialized. */
-  private boolean initialized;
+  private boolean initialized = false;
 
   /** Builder utility for constructing various message types. */
   private final MessageBuilder msgBuilder = new MessageBuilder();
@@ -310,9 +310,13 @@ public class ThinPeer implements AutoCloseable {
   }
 
   /**
-   * Sets the prefix used for Kafka log topics.
+   * Sets the prefix used for looking up and using the latest Kafka topic with said prefix. See
+   * {@link PalDirectory#getLatestLogWithPrefix(String)}
    *
-   * @param logPrefix the prefix to assign to log topics
+   * <p>Use of this method is incompatible with {@link #withLog(LogInfo)}, which assigns {@code
+   * logInfo} to both input and output Logs, regardless of the configured log prefix.
+   *
+   * @param logPrefix the prefix for finding the Kafka log
    * @return the current ThinPeer instance for method chaining
    */
   public ThinPeer withLogPrefix(String logPrefix) {
@@ -463,12 +467,17 @@ public class ThinPeer implements AutoCloseable {
    * Kafka producers and consumers, and establishing RPC connections to the initial peer if
    * provided.
    *
-   * <p>This method must be called before using the ThinPeer.
+   * <p>This method must be called before using the ThinPeer. This method is idempotent: calls to
+   * init() after the 1st call are ignored.
    *
    * @return the initialized ThinPeer instance
    * @throws Exception if initialization fails due to invalid configurations or connection issues
    */
   public ThinPeer init() throws Exception {
+    if (isInitialized()) {
+      return this;
+    }
+
     // if not given, create random UUID for this peer
     if (this.peerUuid == null) {
       this.peerUuid = UUID.randomUUID();
@@ -1609,6 +1618,10 @@ public class ThinPeer implements AutoCloseable {
    */
   @Override
   public void close() {
+    if (isClosed()) {
+      return;
+    }
+
     assertInitializedAndActive();
 
     if (currentPeer != null && (isZmqSocketConnected || isWsClientConnected)) {
