@@ -2,6 +2,7 @@ target/
 lib/
 logs/
 .idea/
+.vscode/
 .local/
 .project
 .classpath
