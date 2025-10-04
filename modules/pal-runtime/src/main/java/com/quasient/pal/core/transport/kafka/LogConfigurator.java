@@ -54,6 +54,9 @@ public class LogConfigurator {
   /** Kafka server endpoints derived from the application properties. */
   private final String kafkaServers;
 
+  /** Flag indicating whether to perform Kafka health check during initialization. */
+  private final boolean performHealthCheck;
+
   /** LogInfo instance for the source Log after initialization; may be null if not configured. */
   private LogInfo sourceLog;
 
@@ -74,6 +77,7 @@ public class LogConfigurator {
    * @param appProps the configuration properties including keys like kafka consumer/producer
    *     properties
    * @param injector the dependency injection container providing required service instances
+   * @param performHealthCheck whether to perform Kafka connectivity health check during init()
    * @throws IllegalArgumentException if the required Kafka servers property
    *     ("kafka.bootstrap.servers") is missing
    */
@@ -82,12 +86,14 @@ public class LogConfigurator {
       Long sourceLogOffset,
       String writeAheadLogName,
       Properties appProps,
-      Injector injector) {
+      Injector injector,
+      boolean performHealthCheck) {
     this.sourceLogName = sourceLogName;
     this.sourceLogOffset = sourceLogOffset;
     this.writeAheadLogName = writeAheadLogName;
     this.appProps = appProps;
     this.injector = injector;
+    this.performHealthCheck = performHealthCheck;
     final String givenPaldirUrl = appProps.getProperty("paldir_url");
     noPaldir = givenPaldirUrl == null || givenPaldirUrl.equals(PalDirectory.NO_URL);
     kafkaServers = appProps.getProperty("kafka.bootstrap.servers");
@@ -174,6 +180,50 @@ public class LogConfigurator {
   }
 
   /**
+   * Performs a health check on the Kafka cluster by attempting to list topics with a timeout.
+   *
+   * <p>This method creates a temporary AdminClient to verify Kafka connectivity before initializing
+   * log operations. If Kafka is not reachable within the configured timeout, an exception is
+   * thrown.
+   *
+   * @throws Exception if Kafka is not reachable or the health check times out
+   */
+  private void performKafkaHealthCheck() throws Exception {
+    int timeoutMs = Integer.parseInt(appProps.getProperty("kafka.connection.timeout.ms", "5000"));
+
+    logger.info("Performing Kafka health check with timeout {}ms...", timeoutMs);
+
+    java.util.Properties adminProps = new java.util.Properties();
+    adminProps.put("bootstrap.servers", kafkaServers);
+    adminProps.put("request.timeout.ms", String.valueOf(timeoutMs));
+    adminProps.put("connections.max.idle.ms", String.valueOf(timeoutMs));
+
+    try (org.apache.kafka.clients.admin.AdminClient adminClient =
+        org.apache.kafka.clients.admin.AdminClient.create(adminProps)) {
+
+      // Attempt to list topics as a health check
+      adminClient.listTopics().names().get(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS);
+
+      logger.info("Kafka health check passed - cluster is reachable at {}", kafkaServers);
+
+    } catch (java.util.concurrent.TimeoutException e) {
+      String msg =
+          String.format(
+              "Kafka health check failed: timeout after %dms trying to connect to %s",
+              timeoutMs, kafkaServers);
+      logger.error(msg);
+      throw new Exception(msg, e);
+    } catch (Exception e) {
+      String msg =
+          String.format(
+              "Kafka health check failed: unable to connect to %s - %s",
+              kafkaServers, e.getMessage());
+      logger.error(msg);
+      throw new Exception(msg, e);
+    }
+  }
+
+  /**
    * Initializes the Log configuration for input and output operations.
    *
    * <p>Based on the provided Log names and the presence (or absence) of a PalDirectory URL, this
@@ -183,6 +233,11 @@ public class LogConfigurator {
    * @throws Exception if Log retrieval, registration, or read/write operations fail
    */
   public void init() throws Exception {
+
+    // Perform Kafka health check before initializing logs (if enabled)
+    if (performHealthCheck) {
+      performKafkaHealthCheck();
+    }
 
     // register Log(s)
     LogInfo newLog = null;

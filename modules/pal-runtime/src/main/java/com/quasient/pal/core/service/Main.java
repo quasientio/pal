@@ -229,6 +229,18 @@ public class Main implements Callable<Integer> {
   private String logPrefix; // corresponding ENV var: LOG_PREFIX
 
   /**
+   * Timeout in milliseconds for Kafka connection health check during initialization. If Kafka
+   * doesn't respond within this time, the peer will fail to start.
+   */
+  @Option(
+      names = {"--kafka-timeout"},
+      paramLabel = "milliseconds",
+      description =
+          "timeout for Kafka connection health check in milliseconds (default: ${DEFAULT-VALUE})",
+      defaultValue = "5000")
+  private Integer kafkaTimeout;
+
+  /**
    * Configuration for TCP-based message publication via ZeroMQ. It accepts a format of
    * "[HOST:]PORT" or "auto" for automatic assignment. Mapped from the TCP_PUB environment variable.
    */
@@ -817,6 +829,11 @@ public class Main implements Callable<Integer> {
       properties.setProperty("kafka.bootstrap.servers", kafkaServers);
     }
 
+    // add kafka connection timeout
+    if (kafkaTimeout != null) {
+      properties.setProperty("kafka.connection.timeout.ms", String.valueOf(kafkaTimeout));
+    }
+
     // add log (kafka topic) prefix
     if (logPrefix != null && !logPrefix.isBlank()) {
       properties.setProperty("logPrefix", logPrefix);
@@ -1348,7 +1365,8 @@ public class Main implements Callable<Integer> {
     if (runOptions.contains(RunOptions.WITH_SOURCE_LOG)
         || runOptions.contains(RunOptions.WITH_WAL)) {
       try {
-        logConfigurator = new LogConfigurator(sourceLog, startOffset, wal, properties, injector);
+        logConfigurator =
+            new LogConfigurator(sourceLog, startOffset, wal, properties, injector, true);
         logConfigurator.init();
       } catch (Exception ex) {
         fatalExit(ex, PeerException.FatalCode.ERROR_INITIALIZING_LOGS);

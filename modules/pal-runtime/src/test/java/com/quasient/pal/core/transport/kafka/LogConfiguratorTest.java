@@ -74,7 +74,7 @@ public class LogConfiguratorTest {
 
     // call init()
     try {
-      new LogConfigurator(sourceLogName, null, null, emptyProps, mockedInjector);
+      new LogConfigurator(sourceLogName, null, null, emptyProps, mockedInjector, false);
       fail("Should have raised IllegalArgumentException");
     } catch (IllegalArgumentException iae) {
       // ok
@@ -87,7 +87,7 @@ public class LogConfiguratorTest {
     String sourceLogName = "app_log_in";
 
     // call init()
-    new LogConfigurator(sourceLogName, null, null, appProps, mockedInjector).init();
+    new LogConfigurator(sourceLogName, null, null, appProps, mockedInjector, false).init();
 
     // verify interactions
     verify(mockedPalDirectory, never()).logExists(sourceLogName);
@@ -104,7 +104,8 @@ public class LogConfiguratorTest {
     String writeAheadLogName = "auto";
 
     // call init()
-    new LogConfigurator(sourceLogName, null, writeAheadLogName, appProps, mockedInjector).init();
+    new LogConfigurator(sourceLogName, null, writeAheadLogName, appProps, mockedInjector, false)
+        .init();
 
     // verify interactions
     verify(mockedPalDirectory, never()).logExists(sourceLogName);
@@ -122,7 +123,8 @@ public class LogConfiguratorTest {
     String writeAheadLogName = "auto";
 
     // call init()
-    new LogConfigurator(sourceLogName, null, writeAheadLogName, appProps, mockedInjector).init();
+    new LogConfigurator(sourceLogName, null, writeAheadLogName, appProps, mockedInjector, false)
+        .init();
 
     // verify interactions
     verify(mockedPalDirectory, never()).logExists(sourceLogName);
@@ -141,7 +143,8 @@ public class LogConfiguratorTest {
     String writeAheadLogName = "auto";
 
     // call init()
-    new LogConfigurator(sourceLogName, null, writeAheadLogName, appProps, mockedInjector).init();
+    new LogConfigurator(sourceLogName, null, writeAheadLogName, appProps, mockedInjector, false)
+        .init();
 
     // verify interactions
     verify(mockedPalDirectory, never()).logExists(sourceLogName);
@@ -161,7 +164,8 @@ public class LogConfiguratorTest {
     String writeAheadLogName = "app_log_out";
 
     // call init()
-    new LogConfigurator(sourceLogName, null, writeAheadLogName, appProps, mockedInjector).init();
+    new LogConfigurator(sourceLogName, null, writeAheadLogName, appProps, mockedInjector, false)
+        .init();
 
     // verify interactions
     verify(mockedPalDirectory, never()).logExists(sourceLogName);
@@ -181,7 +185,7 @@ public class LogConfiguratorTest {
     String logName = "app_log_10";
 
     // call init()
-    new LogConfigurator(logName, null, logName, appProps, mockedInjector).init();
+    new LogConfigurator(logName, null, logName, appProps, mockedInjector, false).init();
 
     // verify interactions
     verify(mockedPalDirectory, never()).logExists(logName);
@@ -199,7 +203,7 @@ public class LogConfiguratorTest {
     String writeAheadLogName = "app_log_out";
 
     // call init()
-    new LogConfigurator(null, null, writeAheadLogName, appProps, mockedInjector).init();
+    new LogConfigurator(null, null, writeAheadLogName, appProps, mockedInjector, false).init();
 
     // verify interactions
     verify(mockedPalDirectory, never()).logExists(writeAheadLogName);

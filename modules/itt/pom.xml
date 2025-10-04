@@ -98,6 +98,10 @@
             <groupId>com.quasient.pal</groupId>
             <artifactId>itt-apps</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.quasient.pal</groupId>
+            <artifactId>pal-runtime</artifactId>
+        </dependency>
 
         <!-- OTHER DEPENDENCIES -->
         <dependency>
@@ -111,6 +115,14 @@
         <dependency>
             <groupId>com.google.inject</groupId>
             <artifactId>guice</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>info.picocli</groupId>
+            <artifactId>picocli</artifactId>
         </dependency>
     </dependencies>
 </project>

@@ -422,7 +422,6 @@
                 <version>${equalsverifier.version}</version>
                 <scope>test</scope>
             </dependency>
-
             <!-- commons -->
             <dependency>
                 <groupId>org.apache.commons</groupId>

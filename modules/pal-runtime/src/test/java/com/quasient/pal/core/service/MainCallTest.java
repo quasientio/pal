@@ -13,12 +13,32 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertNotNull;
 
+import ch.qos.logback.classic.LoggerContext;
 import com.quasient.pal.common.cli.PalCommand;
 import java.lang.reflect.Field;
+import org.junit.After;
 import org.junit.Test;
+import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 
 public class MainCallTest {
+
+  @After
+  public void resetLogback() {
+    // Reset Logback to prevent state pollution across tests
+    // Main.call() reconfigures Logback, which affects subsequent tests
+    LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
+    context.reset();
+    // Reinitialize with default configuration
+    ch.qos.logback.classic.util.ContextInitializer ci =
+        new ch.qos.logback.classic.util.ContextInitializer(context);
+    try {
+      ci.autoConfig();
+    } catch (Exception e) {
+      // If auto-config fails, just leave it reset
+      // This is better than polluting other tests
+    }
+  }
 
   @Test
   public void call_withDummyMainClass_returnsDefaultExit() throws Exception {

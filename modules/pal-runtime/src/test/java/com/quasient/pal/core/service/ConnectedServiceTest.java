@@ -39,7 +39,6 @@ public class ConnectedServiceTest extends ZmqEnabledTest {
           try {
             Thread.sleep(300);
           } catch (InterruptedException e) {
-            logger.error("Interrupted", e);
             Thread.currentThread().interrupt();
           }
         }
