@@ -13,12 +13,6 @@
 <configuration debug="false" scan="false">
 
 	<!-- APPENDERS -->
-	<appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
-		<encoder>
-			<pattern>%date %level [%thread] %logger{10} %msg%n</pattern>
-		</encoder>
-	</appender>
-
 	<appender name="tests" class="ch.qos.logback.core.FileAppender">
 		<file>${logs.dir}/tests.log</file>
 		<encoder>
@@ -59,8 +53,6 @@
 		<appender-ref ref="etcd"/>
 	</logger>
 
-	<root level="warn">
-		<appender-ref ref="stdout"/>
-	</root>
+	<root level="OFF"/>
 
 </configuration>
