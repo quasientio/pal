@@ -16,14 +16,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-/**
- * Naming convention to use: methodName_stateUnderTest_expectedBehavior
- *
- * <p>TODO: - varargs constructor - constructor that takes Object, passing a Constructors instance.
- * This will test ReflectionHelper, as it should invoke the more specific constructor (the one
- * taking Constructors type, not Object type) - invoke constructor using constructor-ref (requires
- * [ticket:15]) - inner constructor (commented out below), if it makes sense
- */
+/** Naming convention to use: methodName_stateUnderTest_expectedBehavior */
 @RunWith(Parameterized.class)
 public class ConstructorMessageIT extends AbstractColferRpcMessageIT {
 

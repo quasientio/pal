@@ -173,9 +173,6 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
           "Unsupported message type: " + messageType + " for dispatcher: " + this.getClass());
     }
 
-    // TODO: Verify that message is invokable:- Class can be loaded/found - Method or field can be
-    // found in class - Params can be unwrapped or loaded (if refs). What if they are remote?
-
     Throwable exceptionWhileLoading = null;
     Throwable exceptionWhileInvoking = null;
     AccessibleObject accessibleObject = null;

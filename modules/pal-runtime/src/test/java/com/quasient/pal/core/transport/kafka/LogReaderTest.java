@@ -50,7 +50,7 @@ import org.zeromq.ZMQ;
 import org.zeromq.ZMQException;
 import zmq.ZError;
 
-// TODO - CAVEAT: this test doesn't cover Headers as they're not supported by MockConsumer
+// CAVEAT: this test doesn't cover Headers as they're not supported by MockConsumer
 public class LogReaderTest extends ZmqEnabledTest {
 
   /*

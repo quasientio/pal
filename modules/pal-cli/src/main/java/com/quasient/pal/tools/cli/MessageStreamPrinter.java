@@ -151,7 +151,6 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
    * <p>Supported types include: CONSTRUCTOR, INSTANCE_METHOD, CLASS_METHOD, GET_STATIC, GET_FIELD,
    * PUT_STATIC, PUT_FIELD, PUT_STATIC_DONE, PUT_FIELD_DONE, RETURN_VALUE, THROWABLE.
    */
-  // TODO consider using EnumSet for better type safety.
   @Option(
       names = {"--types"},
       arity = "0..*",

@@ -22,16 +22,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-/**
- * Naming convention to use: methodName_stateUnderTest_expectedBehavior.
- *
- * <pre>
- *  TODO:
- *   - null value
- *   - private, protected, package-visible
- *   - primitives - arrays - objectrefs
- * </pre>
- */
+/** Naming convention to use: methodName_stateUnderTest_expectedBehavior. */
 @RunWith(Parameterized.class)
 public class PutMessageIT extends AbstractColferRpcMessageIT {
 

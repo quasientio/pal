@@ -219,7 +219,6 @@ public class AbstractTool {
       if (messageType.getFamily().equals(MessageFamily.EXEC)) {
         return getOneLinerSummary(message.getExecMessage());
       }
-      // TODO: Add support for other message types; for now we return the 1-line Json representation
       return ColferUtils.toJson((Message) logMessage.getContent(), false);
     } else if (isJsonRpc(logMessage)) {
       return getOneLinerSummary((JsonRpcMessage) logMessage.getContent());

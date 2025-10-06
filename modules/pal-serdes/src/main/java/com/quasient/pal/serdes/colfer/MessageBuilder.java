@@ -327,7 +327,6 @@ public final class MessageBuilder {
       throw new IllegalArgumentException(
           "parameterTypes must be of same length as args and argObjRefs");
     }
-    // TODO we should be calling createNamedParameter instead of createParameter
     final Parameter[] params = new Parameter[paramsTypesLength];
     for (int i = 0; i < paramsTypesLength; i++) {
       assert argObjRefs != null;
@@ -1121,9 +1120,6 @@ public final class MessageBuilder {
    * Convenience method for building a constructor method message packing all arguments in a single
    * array, regardless of type (ObjectRef or not).
    *
-   * <p>TODO: other build methods should pack all arguments and object references in a single array
-   * as well.
-   *
    * @param peerUuid the UUID of this peer
    * @param className the name of the class whose constructor is being invoked
    * @param parameterTypes the array of parameter type names
@@ -1169,9 +1165,6 @@ public final class MessageBuilder {
    *
    * <p>Convenience method for building an instance method message packing all arguments in a single
    * array, regardless of type (ObjectRef or not).
-   *
-   * <p>TODO: other build methods should pack all arguments and object references in a single array
-   * as well.
    *
    * @param peerUuid the UUID of this peer
    * @param className the name of the class containing the method
@@ -1436,9 +1429,6 @@ public final class MessageBuilder {
    *
    * <p>Convenience method for building a class method message packing all arguments in a single
    * array, regardless of type (ObjectRef or not).
-   *
-   * <p>TODO: other build methods should pack all arguments and object references in a single array
-   * as well.
    *
    * @param peerUuid the UUID of this peer
    * @param className the name of the class containing the method

@@ -34,9 +34,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
 
-// TODO: with remoteArgs
-// TODO: with objectRefs
-// TODO: use ExecMessageAssertions for dispatchIncoming tests
 @RunWith(MockitoJUnitRunner.class)
 public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 

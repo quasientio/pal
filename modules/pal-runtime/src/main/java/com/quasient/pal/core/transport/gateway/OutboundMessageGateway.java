@@ -318,12 +318,10 @@ public class OutboundMessageGateway {
               execMessage.getResponseToId(),
               message);
 
-      // write-ahead execMessage -- TODO should we in case of intercepts write-ahead it after?
       if (runOptions.contains(RunOptions.WITH_WAL)) {
         writeAhead(outboundMsg);
       }
 
-      // publish execMessage -- TODO should we in case of intercepts publish it after?
       if (runOptions.contains(RunOptions.WITH_TCP_PUB)) {
         publishMessage(outboundMsg);
       }
@@ -343,7 +341,6 @@ public class OutboundMessageGateway {
 
     // deal with intercepts
     final ExecMessage returnValue;
-    // TODO: deal with all possible intercepts (now we only care about the first intercept request)
     InterceptMessage interceptMessage = matchingIntercepts.get(0);
     ExecMessage callbackMessage =
         messageBuilder.buildCallbackForInterceptRequest(peerUuid, execMessage, interceptMessage);
@@ -370,16 +367,7 @@ public class OutboundMessageGateway {
           ex);
     }
 
-    //      if (interceptMessage.getType().equals(Intercepts.InterceptType.AROUND)) {
-    // TODO in case of AROUND we should return the execMessage returned by callback only in
-    // ExecPhase.After
-    // response = sendCallbackToPeer(interceptor, callbackMessage);
-    // only parse execMessage when needed
-    // final ExecMessage responseMessage = ExecMessage.parseFrom(response);
-    // returnValue = responseMessage;
-    //      } else {
     returnValue = execMessage;
-    //    }
 
     if (logger.isTraceEnabled()) {
       logger.trace("out w/ {}", ColferUtils.format(returnValue));
@@ -568,7 +556,6 @@ public class OutboundMessageGateway {
         }
       }
     }
-    // TODO getResponse  == false --> we still have to receive() !!
     return response;
   }
 

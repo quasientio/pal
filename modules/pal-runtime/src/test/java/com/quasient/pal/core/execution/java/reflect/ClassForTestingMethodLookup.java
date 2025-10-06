@@ -9,7 +9,7 @@
  */
 package com.quasient.pal.core.execution.java.reflect;
 
-/** This class is used for testing ReflectionHelper.lookupMethod() TODO: add tests for generics */
+/** This class is used for testing ReflectionHelper.lookupMethod() */
 @SuppressWarnings("unused")
 public class ClassForTestingMethodLookup {
 

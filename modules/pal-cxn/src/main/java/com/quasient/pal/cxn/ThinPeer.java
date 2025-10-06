@@ -222,14 +222,8 @@ public class ThinPeer implements AutoCloseable {
   /** Flag indicating whether this peer should register itself with the PAL directory. */
   private boolean registerSelf = false;
 
-  /**
-   * Constructs a new ThinPeer instance with default settings.
-   *
-   * <p>Note: Consider using factory methods for better configuration.
-   */
-  public ThinPeer() {
-    // TODO use factory method instead of empty constructor
-  }
+  /** Constructs a new ThinPeer instance with default settings. */
+  public ThinPeer() {}
 
   /**
    * Sets the UUID for this peer.

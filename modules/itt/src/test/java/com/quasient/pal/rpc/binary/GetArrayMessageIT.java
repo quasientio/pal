@@ -29,8 +29,6 @@ import org.junit.runners.Parameterized;
  *   - an empty array
  *   - an array populated with some values
  * </pre>
- *
- * <p>TODO: introduce null values
  */
 @RunWith(Parameterized.class)
 public class GetArrayMessageIT extends AbstractColferRpcMessageIT {

@@ -124,22 +124,4 @@ public class MainIT extends AbstractMainIT {
 
     return tempJar;
   }
-
-  // NOTE: The following error conditions require more complex setup and are documented
-  // for future implementation:
-  //
-  // TODO: ERROR_LOADING_PROPERTIES - Create custom JAR with missing/corrupted peer.properties
-  // TODO: ERROR_VALIDATING_PROPERTIES - Create custom properties with invalid power-of-2 values
-  // TODO: ERROR_REGISTERING_SELF - Launch with PAL_DIRECTORY pointing to non-existent/rejecting
-  // etcd
-  // TODO: ERROR_REGISTERING_SELF_LOGS - Launch with PAL_DIRECTORY that rejects log registration
-  // TODO: ERROR_INITIALIZING_LOGS - Launch with KAFKA_SERVERS pointing to
-  // non-existent/misconfigured Kafka
-  // TODO: ERROR_SERVICE_MANAGER_FAILED - Requires service startup failure simulation
-  // TODO: ERROR_FINDING_RND_PORT - Launch with all ports in range occupied (unreliable to test)
-  //
-  // These could be implemented by:
-  // 1. Creating custom scripts similar to peer4itts.sh with different configurations
-  // 2. Using Docker containers with specific failure scenarios
-  // 3. Setting up mock services that simulate failure conditions
 }

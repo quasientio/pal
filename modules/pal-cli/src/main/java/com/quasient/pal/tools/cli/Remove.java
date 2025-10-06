@@ -361,7 +361,6 @@ public class Remove extends AbstractPalSubcommand {
       if (deleteAll) {
         deleteAllLogs();
       } else if (argList != null && !argList.isEmpty()) {
-        // TODO group all logs with same bootstrap servers and remove in batch
         for (String arg : argList) {
           // try to parse arg as UUID
           UUID logUuid = null;

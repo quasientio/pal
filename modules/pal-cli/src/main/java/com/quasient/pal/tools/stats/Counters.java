@@ -52,12 +52,6 @@ public class Counters {
   /** Maps each thread name to the number of unique dispatches performed by that thread. */
   private final Map<String, AtomicLong> dispatchesByThread = new HashMap<>();
 
-  /*
-  TODO:
-  - messages / sec(min,hour)
-  - calls by visibility (public, private, etc. ie, modifiers)
-   */
-
   /** Constructs a new Counters instance with all counts initialized to zero. */
   public Counters() {}
 

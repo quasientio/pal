@@ -25,8 +25,6 @@ public class PeerException extends Exception {
    */
   public enum FatalCode {
 
-    // TODO use i18n resources for messages
-
     /** Error loading application properties from file or resource. */
     ERROR_LOADING_PROPERTIES("Error loading application properties"),
 

@@ -34,8 +34,6 @@ import org.junit.runners.Parameterized.Parameters;
  *   - an empty array
  *   - an array populated with some values
  * </pre>
- *
- * <p>TODO: introduce null values
  */
 @RunWith(Parameterized.class)
 public class GetArrayMessageIT extends AbstractJsonRpcMessageIT {

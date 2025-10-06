@@ -56,8 +56,7 @@ import zmq.ZError;
  * ZeroMQ DEALER socket. It manages Kafka consumer configuration and offset skipping using offset
  * updates received over a ZMQ SUB socket. The class continuously polls for messages, processes them
  * based on their headers (e.g. message format and origin), and then forwards valid messages for
- * dispatching. TODO: Optimize - sampling with visualvm shows this class as the one with highest
- * memory allocation per thread.
+ * dispatching.
  */
 @Singleton
 public class LogReader extends ConnectedService {
@@ -147,8 +146,6 @@ public class LogReader extends ConnectedService {
    * Provider to obtain a connection with the Pal directory service for Log configuration retrieval.
    */
   private final DirectoryConnectionProvider directoryConnectionProvider;
-
-  // shared by threads OffsetUpdater and LogReader: TODO avoid sharing
 
   /**
    * Queue of Kafka offsets to skip, shared between the OffsetUpdater thread and the main LogReader.
@@ -607,7 +604,6 @@ public class LogReader extends ConnectedService {
     closeConsumer();
     closeConnection(logDealerSocket, "Error closing dealer");
     closeConnection(offsetSubscriberSocket, "Error closing offset subscriber");
-    // TODO: send uncommitted offset, etc.
   }
 
   /**

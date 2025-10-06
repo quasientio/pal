@@ -144,7 +144,6 @@ public class InterceptRequestEntry {
     }
 
     // match parameter types
-    // TODO it won't be this simple; we'll need to take extends and impl into account
     if (paramTypes == null) {
       return parameterTypes == null;
     }

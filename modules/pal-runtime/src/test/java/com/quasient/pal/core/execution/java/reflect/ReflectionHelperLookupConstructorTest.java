@@ -51,10 +51,6 @@ import org.junit.Test;
  * - one test with the primitive type
  * - one test with the wrapper type
  * </pre>
- *
- * <p>TODO: add tests for generics
- *
- * <p>TODO Test ambiguous calls -> also in corresponding Dispatcher class
  */
 public class ReflectionHelperLookupConstructorTest extends AbstractReflectionHelperTestBase {
 

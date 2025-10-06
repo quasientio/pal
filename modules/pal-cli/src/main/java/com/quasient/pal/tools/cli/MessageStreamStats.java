@@ -69,7 +69,6 @@ import picocli.CommandLine.Command;
  *
  * <p>Options allow filtering by message types, peer UUID or address, and thread name.
  */
-// TODO This class and MessageStreamPrinter should inherit from base class w/ common logic
 @Command(name = "stats")
 public class MessageStreamStats extends AbstractTool implements Callable<Integer> {
 
@@ -155,7 +154,6 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
    * STATIC_CONSTRUCTOR, RETURN_CLASS, CONSTRUCTOR, INSTANCE_METHOD, CLASS_METHOD, GET_STATIC,
    * GET_FIELD, PUT_STATIC, PUT_FIELD, PUT_STATIC_DONE, PUT_FIELD_DONE, THROWABLE, RETURN_VALUE.
    */
-  // TODO consider using EnumSet for better type safety.
   @Option(
       names = {"-t", "--types"},
       arity = "0..*",

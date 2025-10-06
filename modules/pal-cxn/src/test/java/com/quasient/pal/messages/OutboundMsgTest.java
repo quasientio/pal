@@ -43,7 +43,6 @@ import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 
-// TODO: call constructor with marshallable instead of body (byte[])
 public class OutboundMsgTest {
   private final MessageBuilder messageBuilder = new MessageBuilder();
   private static final Logger logger = LoggerFactory.getLogger("tests");
