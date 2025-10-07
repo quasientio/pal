@@ -25,10 +25,10 @@ public class MainInvalidInputIT extends AbstractMainIT {
     assertEquals(
         "Expected fatal exit for start-offset without log",
         PeerException.FatalCode.ERROR_NO_LOG_GIVEN.getCode(),
-        result.exitCode);
+        result.exitCode());
     assertThat(
         "Expected error message in stderr",
-        result.stderr,
+        result.stderr(),
         containsString(PeerException.FatalCode.ERROR_NO_LOG_GIVEN.getMessage()));
   }
 
@@ -39,10 +39,10 @@ public class MainInvalidInputIT extends AbstractMainIT {
     assertEquals(
         "Expected fatal exit for invalid ZMQ RPC port",
         PeerException.FatalCode.ERROR_PARSING_ZMQ_RPC_PORT_NUMBER.getCode(),
-        result.exitCode);
+        result.exitCode());
     assertThat(
         "Expected error message in stderr",
-        result.stderr,
+        result.stderr(),
         containsString(PeerException.FatalCode.ERROR_PARSING_ZMQ_RPC_PORT_NUMBER.getMessage()));
   }
 
@@ -53,10 +53,10 @@ public class MainInvalidInputIT extends AbstractMainIT {
     assertEquals(
         "Expected fatal exit for invalid JSON RPC port",
         PeerException.FatalCode.ERROR_PARSING_JSON_RPC_PORT_NUMBER.getCode(),
-        result.exitCode);
+        result.exitCode());
     assertThat(
         "Expected error message in stderr",
-        result.stderr,
+        result.stderr(),
         containsString(PeerException.FatalCode.ERROR_PARSING_JSON_RPC_PORT_NUMBER.getMessage()));
   }
 }

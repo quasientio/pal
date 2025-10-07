@@ -29,10 +29,10 @@ public class MainInvalidCombosIT extends AbstractMainIT {
     assertEquals(
         "Expected fatal exit for source-log without Kafka servers",
         PeerException.FatalCode.ERROR_NO_KAFKA_SERVERS_GIVEN.getCode(),
-        result.exitCode);
+        result.exitCode());
     assertThat(
         "Expected error message in stderr",
-        result.stderr,
+        result.stderr(),
         containsString(PeerException.FatalCode.ERROR_NO_KAFKA_SERVERS_GIVEN.getMessage()));
   }
 }

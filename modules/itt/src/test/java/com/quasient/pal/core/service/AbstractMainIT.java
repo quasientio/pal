@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
@@ -45,6 +46,20 @@ public abstract class AbstractMainIT extends AbstractIntegrationTest {
    * @throws InterruptedException if the process is interrupted
    */
   protected ProcessResult runPalCommand(String... args) throws IOException, InterruptedException {
+    return runPalCommandWithEnv(null, args);
+  }
+
+  /**
+   * Runs a pal command with custom environment variables.
+   *
+   * @param palDirectory the PAL_DIRECTORY value to set, or null to remove it
+   * @param args the command-line arguments to pass to pal.sh run
+   * @return ProcessResult containing exit code, stdout, and stderr
+   * @throws IOException if process execution fails
+   * @throws InterruptedException if the process is interrupted
+   */
+  protected ProcessResult runPalCommandWithEnv(String palDirectory, String... args)
+      throws IOException, InterruptedException {
     String palHome = System.getenv("PAL_HOME");
     if (palHome == null) {
       throw new RuntimeException("PAL_HOME environment variable is not set");
@@ -55,17 +70,21 @@ public abstract class AbstractMainIT extends AbstractIntegrationTest {
     command.add("run");
 
     // Add the test arguments
-    for (String arg : args) {
-      command.add(arg);
-    }
+    command.addAll(Arrays.asList(args));
 
     logger.info("Running command: {}", String.join(" ", command));
 
     ProcessBuilder pb = new ProcessBuilder(command);
     pb.environment().put("PAL_HOME", palHome);
-    // Don't set PAL_DIRECTORY or KAFKA_SERVERS to test the missing configuration scenarios
-    // Remove environment variables that would interfere with tests
-    pb.environment().remove("PAL_DIRECTORY");
+
+    // Set or remove PAL_DIRECTORY based on parameter
+    if (palDirectory != null) {
+      pb.environment().put("PAL_DIRECTORY", palDirectory);
+    } else {
+      pb.environment().remove("PAL_DIRECTORY");
+    }
+
+    // Remove other environment variables that would interfere with tests
     pb.environment().remove("KAFKA_SERVERS");
     pb.environment().remove("PAL_JMX_HOST");
     pb.environment().remove("PAL_JMX_PORT");
@@ -132,15 +151,5 @@ public abstract class AbstractMainIT extends AbstractIntegrationTest {
   }
 
   /** Container for process execution results. */
-  protected static class ProcessResult {
-    public final int exitCode;
-    public final String stdout;
-    public final String stderr;
-
-    public ProcessResult(int exitCode, String stdout, String stderr) {
-      this.exitCode = exitCode;
-      this.stdout = stdout;
-      this.stderr = stderr;
-    }
-  }
+  protected record ProcessResult(int exitCode, String stdout, String stderr) {}
 }

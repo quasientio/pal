@@ -11,6 +11,7 @@ package com.quasient.pal.cxn.directory;
 
 import static java.lang.String.format;
 
+import com.google.common.base.Splitter;
 import com.google.gson.Gson;
 import com.quasient.pal.common.directory.events.InterceptEvent;
 import com.quasient.pal.common.directory.events.InterceptNodeListener;
@@ -57,6 +58,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
@@ -78,6 +80,9 @@ public class PalDirectory implements AutoCloseable {
 
   /** Duration specifying the timeout for etcd client keepalive messages. */
   private static final Duration ETCD_KEEP_ALIVE_TIMEOUT = Duration.ofSeconds(20);
+
+  /** Duration specifying the timeout for etcd connection attempts. */
+  private static final Duration ETCD_CONNECTION_TIMEOUT = Duration.ofSeconds(5);
 
   /** Constant indicating that no directory URL has been provided. */
   public static final String NO_URL = "<none>";
@@ -176,25 +181,51 @@ public class PalDirectory implements AutoCloseable {
         "Will connect to etcd endpoints: {} in {} mode",
         endpoints,
         blocking ? "blocking" : "non-blocking");
+
+    if (blocking) {
+      // Perform preflight health check to fail fast if etcd is unreachable
+      // This works around jetcd's gRPC connection logic which can hang indefinitely
+      try {
+        List<String> endpointList = Splitter.on(',').splitToList(endpoints);
+        EtcdHealthCheck.assertReachable(endpointList, (int) ETCD_CONNECTION_TIMEOUT.toMillis());
+        logger.info("Preflight health check passed for etcd endpoints: {}", endpoints);
+      } catch (IllegalStateException e) {
+        throw new EtcdUnavailableException(
+            "Failed to connect to etcd cluster: " + e.getMessage(), e);
+      }
+    }
+
     this.client =
         Client.builder()
             .target(endpoints)
+            .connectTimeout(ETCD_CONNECTION_TIMEOUT)
             .keepaliveTime(ETCD_KEEP_ALIVE_TIME)
             .keepaliveTimeout(ETCD_KEEP_ALIVE_TIMEOUT)
             .keepaliveWithoutCalls(false)
             .build();
 
     if (blocking) {
-      // perform a status check to block until connected
+      // Verify connection with a status check
       try {
-        // block until the etcd cluster responds with status
-        StatusResponse status = client.getMaintenanceClient().statusMember(endpoints).get();
+        StatusResponse status =
+            client
+                .getMaintenanceClient()
+                .statusMember(endpoints)
+                .get(ETCD_CONNECTION_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
         logger.info("Connected to etcd cluster: {}", status);
       } catch (InterruptedException e) {
-        Thread.currentThread().interrupt(); // Restore the interrupted status
-        throw new RuntimeException("Thread was interrupted while connecting to etcd", e);
+        Thread.currentThread().interrupt();
+        throw new EtcdUnavailableException("Thread was interrupted while connecting to etcd", e);
+      } catch (TimeoutException e) {
+        throw new EtcdUnavailableException(
+            "Failed to connect to etcd cluster at "
+                + endpoints
+                + " within "
+                + ETCD_CONNECTION_TIMEOUT.toSeconds()
+                + " seconds",
+            e);
       } catch (ExecutionException e) {
-        throw new RuntimeException("Failed to connect to etcd cluster", e.getCause());
+        throw new EtcdUnavailableException("Failed to connect to etcd cluster", e.getCause());
       }
     }
 

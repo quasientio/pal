@@ -20,7 +20,7 @@ import org.junit.Test;
 
 /**
  * Integration tests for `com.quasient.pal.core.service.Main` that test fatal exit conditions by
- * launching the peer process and checking exit codes and log output.
+ * launching the peer process and checking exit codes and stderr.
  */
 public class MainIT extends AbstractMainIT {
 
@@ -31,11 +31,34 @@ public class MainIT extends AbstractMainIT {
     assertEquals(
         "Expected fatal exit for missing Kafka servers",
         PeerException.FatalCode.ERROR_NO_KAFKA_SERVERS_GIVEN.getCode(),
-        result.exitCode);
+        result.exitCode());
     assertThat(
         "Expected error message in stderr",
-        result.stderr,
+        result.stderr(),
         containsString(PeerException.FatalCode.ERROR_NO_KAFKA_SERVERS_GIVEN.getMessage()));
+  }
+
+  @Test
+  public void testInitLogsWithUnreachableKafka_fatalExitInitializingLogs() throws Exception {
+    // Use localhost:1 to simulate fast unreachable Kafka and reduce kafka-timeout to 3s
+    ProcessResult result =
+        runPalCommand(
+            "--log",
+            "test-log",
+            "--kafka-servers",
+            "localhost:1",
+            "--kafka-timeout",
+            "3000",
+            "com.example.DummyMain");
+
+    assertEquals(
+        "Expected fatal exit for Kafka initialization failure",
+        PeerException.FatalCode.ERROR_INITIALIZING_LOGS.getCode(),
+        result.exitCode());
+    assertThat(
+        "Expected error message in stderr",
+        result.stderr(),
+        containsString(PeerException.FatalCode.ERROR_INITIALIZING_LOGS.getMessage()));
   }
 
   @Test
@@ -45,10 +68,10 @@ public class MainIT extends AbstractMainIT {
     assertEquals(
         "Expected fatal exit for missing Kafka servers",
         PeerException.FatalCode.ERROR_NO_KAFKA_SERVERS_GIVEN.getCode(),
-        result.exitCode);
+        result.exitCode());
     assertThat(
         "Expected error message in stderr",
-        result.stderr,
+        result.stderr(),
         containsString(PeerException.FatalCode.ERROR_NO_KAFKA_SERVERS_GIVEN.getMessage()));
   }
 
@@ -59,10 +82,10 @@ public class MainIT extends AbstractMainIT {
     assertEquals(
         "Expected fatal exit for missing Kafka servers",
         PeerException.FatalCode.ERROR_NO_KAFKA_SERVERS_GIVEN.getCode(),
-        result.exitCode);
+        result.exitCode());
     assertThat(
         "Expected error message in stderr",
-        result.stderr,
+        result.stderr(),
         containsString(PeerException.FatalCode.ERROR_NO_KAFKA_SERVERS_GIVEN.getMessage()));
   }
 
@@ -73,30 +96,30 @@ public class MainIT extends AbstractMainIT {
     assertEquals(
         "Expected fatal exit for non-existent JAR",
         PeerException.FatalCode.ERROR_JAR_NOT_FOUND_OR_MISSING_MANIFEST.getCode(),
-        result.exitCode);
+        result.exitCode());
     assertThat(
         "Expected error message in stderr",
-        result.stderr,
+        result.stderr(),
         containsString(
             PeerException.FatalCode.ERROR_JAR_NOT_FOUND_OR_MISSING_MANIFEST.getMessage()));
   }
 
   @Test
   public void testInvalidJarFile_fatalExitJarNotFoundOrMissingManifest() throws Exception {
-    // Create an invalid/empty JAR file to trigger ERROR_JAR_NOT_FOUND_OR_MISSING_MANIFEST
-    Path tempJar = createTempJarWithoutMainClass();
+    // Create a JAR with a MANIFEST that lacks Main-Class to deterministically trigger
+    // ERROR_NO_MAIN_CLASS_IN_JAR_MANIFEST across environments
+    Path tempJar = createJarWithManifestWithoutMainClass();
 
     try {
       ProcessResult result = runPalCommand("-jar", tempJar.toString());
 
       assertEquals(
-          "Expected fatal exit for invalid JAR",
-          PeerException.FatalCode.ERROR_JAR_NOT_FOUND_OR_MISSING_MANIFEST.getCode(),
-          result.exitCode);
+          "Expected fatal exit for JAR without Main-Class in MANIFEST",
+          PeerException.FatalCode.ERROR_NO_MAIN_CLASS_IN_JAR_MANIFEST.getCode(),
+          result.exitCode());
       assertThat(
-          result.stderr,
-          containsString(
-              PeerException.FatalCode.ERROR_JAR_NOT_FOUND_OR_MISSING_MANIFEST.getMessage()));
+          result.stderr(),
+          containsString(PeerException.FatalCode.ERROR_NO_MAIN_CLASS_IN_JAR_MANIFEST.getMessage()));
     } finally {
       Files.deleteIfExists(tempJar);
     }
@@ -106,20 +129,37 @@ public class MainIT extends AbstractMainIT {
    * Creates a temporary JAR file without a Main-Class entry in MANIFEST.MF to test
    * ERROR_NO_MAIN_CLASS_IN_JAR_MANIFEST.
    */
-  private Path createTempJarWithoutMainClass() throws IOException {
-    Path tempJar = Files.createTempFile("test", ".jar");
+  private Path createJarWithManifestWithoutMainClass() throws IOException {
+    Path tempDir = Files.createTempDirectory("jar-no-main");
+    Path manifest = Files.createDirectories(tempDir.resolve("META-INF")).resolve("MANIFEST.MF");
+    Files.writeString(manifest, "Manifest-Version: 1.0\n");
 
-    // Create a minimal JAR file with MANIFEST.MF but no Main-Class entry
+    Path tempJar = Files.createTempFile("test", ".jar");
     ProcessBuilder pb =
         new ProcessBuilder(
-            "jar", "cf", tempJar.toString(), "-C", System.getProperty("java.io.tmpdir"), ".");
-
+            "jar", "cfm", tempJar.toString(), manifest.toString(), "-C", tempDir.toString(), ".");
     try {
       Process process = pb.start();
-      process.waitFor();
+      if (process.waitFor() != 0) {
+        throw new IOException("Failed to create test jar: jar tool returned non-zero exit code");
+      }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       throw new IOException("Interrupted while creating test JAR", e);
+    }
+
+    // Cleanup temp dir; jar has already been created
+    try {
+      Files.walk(tempDir)
+          .sorted((a, b) -> b.getNameCount() - a.getNameCount())
+          .forEach(
+              p -> {
+                try {
+                  Files.deleteIfExists(p);
+                } catch (IOException ignored) {
+                }
+              });
+    } catch (Exception ignored) {
     }
 
     return tempJar;

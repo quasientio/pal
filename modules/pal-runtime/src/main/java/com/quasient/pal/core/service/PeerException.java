@@ -16,9 +16,6 @@ package com.quasient.pal.core.service;
  */
 public class PeerException extends Exception {
 
-  /** Static counter used to generate unique numeric codes for each {@link FatalCode} instance. */
-  private static int counter = 1;
-
   /**
    * Enumerates fatal error codes encountered during peer operations. Each constant holds a unique
    * numeric identifier and an associated descriptive message.
@@ -26,43 +23,46 @@ public class PeerException extends Exception {
   public enum FatalCode {
 
     /** Error loading application properties from file or resource. */
-    ERROR_LOADING_PROPERTIES("Error loading application properties"),
+    ERROR_LOADING_PROPERTIES(1, "Error loading application properties"),
 
     /** Error validating application properties. */
-    ERROR_VALIDATING_PROPERTIES("Error validating application properties"),
+    ERROR_VALIDATING_PROPERTIES(2, "Error validating application properties"),
 
     /** Failure when registering this peer in the Pal Directory. */
-    ERROR_REGISTERING_SELF("Error registering self as peer"),
+    ERROR_REGISTERING_SELF(3, "Error registering self as peer"),
 
     /** Failure when registering the logs used by this peer. */
-    ERROR_REGISTERING_SELF_LOGS("Error registering logs used by self"),
+    ERROR_REGISTERING_SELF_LOGS(4, "Error registering logs used by self"),
 
     /** Offset was provided but no log was specified to read from. */
-    ERROR_NO_LOG_GIVEN("Offset given but no log to read from"),
+    ERROR_NO_LOG_GIVEN(5, "Offset given but no log to read from"),
 
     /** No Kafka bootstrap servers configured, required for Source/Write-Ahead logs. */
-    ERROR_NO_KAFKA_SERVERS_GIVEN("No kafka servers given, required for Source/Write-Ahead logs"),
+    ERROR_NO_KAFKA_SERVERS_GIVEN(6, "No kafka servers given, required for Source/Write-Ahead logs"),
 
     /** Error initializing Source and/or Write-Ahead logs. */
-    ERROR_INITIALIZING_LOGS("Error initializing Source/Write-Ahead logs"),
+    ERROR_INITIALIZING_LOGS(7, "Error initializing Source/Write-Ahead logs"),
 
     /** Service manager reported a failure during startup or shutdown. */
-    ERROR_SERVICE_MANAGER_FAILED("Service manager failure"),
+    ERROR_SERVICE_MANAGER_FAILED(8, "Service manager failure"),
 
     /** JAR file not found or missing its MANIFEST file. */
-    ERROR_JAR_NOT_FOUND_OR_MISSING_MANIFEST("JAR not found or missing MANIFEST"),
+    ERROR_JAR_NOT_FOUND_OR_MISSING_MANIFEST(9, "JAR not found or missing MANIFEST"),
 
     /** No Main-Class entry defined in the JAR’s MANIFEST. */
-    ERROR_NO_MAIN_CLASS_IN_JAR_MANIFEST("No Main-Class in MANIFEST"),
+    ERROR_NO_MAIN_CLASS_IN_JAR_MANIFEST(10, "No Main-Class in MANIFEST"),
 
     /** Could not find a free random port for socket binding. */
-    ERROR_FINDING_RND_PORT("Error finding local random port for socket"),
+    ERROR_FINDING_RND_PORT(11, "Error finding local random port for socket"),
 
     /** Invalid or non-numeric ZMQ-RPC port value provided. */
-    ERROR_PARSING_ZMQ_RPC_PORT_NUMBER("Invalid ZMQ-RPC port"),
+    ERROR_PARSING_ZMQ_RPC_PORT_NUMBER(12, "Invalid ZMQ-RPC port"),
 
     /** Invalid or non-numeric JSON-RPC port value provided. */
-    ERROR_PARSING_JSON_RPC_PORT_NUMBER("Invalid JSON-RPC port");
+    ERROR_PARSING_JSON_RPC_PORT_NUMBER(13, "Invalid JSON-RPC port"),
+
+    /** PAL Directory (etcd) is unreachable or unhealthy. */
+    ERROR_UNREACHABLE_ETCD(14, "PAL directory unreachable");
 
     /** Unique numeric code representing the fatal error condition. */
     private final int code;
@@ -71,13 +71,14 @@ public class PeerException extends Exception {
     private final String message;
 
     /**
-     * Initializes a fatal error code with its corresponding error message. A unique numeric code is
-     * automatically assigned based on a static counter.
+     * Initializes a fatal error code with its corresponding error message and explicit numeric
+     * code.
      *
+     * @param code the stable numeric code for this fatal error
      * @param message the descriptive error message for this fatal error.
      */
-    FatalCode(String message) {
-      this.code = counter++;
+    FatalCode(int code, String message) {
+      this.code = code;
       this.message = message;
     }
 

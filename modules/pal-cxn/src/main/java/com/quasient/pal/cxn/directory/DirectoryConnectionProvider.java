@@ -64,12 +64,15 @@ public class DirectoryConnectionProvider implements Provider<Optional<PalDirecto
    * <p>This constructor is used for dependency injection, with the connection string typically
    * provided via the {@code paldir_url} configuration parameter.
    *
+   * <p>Uses blocking mode by default to fail fast if etcd is unreachable, providing better error
+   * messages and preventing indefinite hangs.
+   *
    * @param connectionString the connection string for the {@link PalDirectory}; must not be null or
    *     empty
    */
   @Inject
   public DirectoryConnectionProvider(@Named("paldir_url") String connectionString) {
-    this(connectionString, null, false);
+    this(connectionString, null, true);
   }
 
   /**

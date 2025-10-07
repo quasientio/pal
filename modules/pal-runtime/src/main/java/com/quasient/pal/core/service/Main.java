@@ -44,6 +44,7 @@ import com.quasient.pal.core.transport.websocket.JsonRpcRequestServer;
 import com.quasient.pal.core.transport.zmq.ZmqRpcServer;
 import com.quasient.pal.core.transport.zmq.publish.MessagePublisher;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
+import com.quasient.pal.cxn.directory.EtcdUnavailableException;
 import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.cxn.directory.PeerLease;
 import com.quasient.pal.messages.OutboundMsg;
@@ -1032,6 +1033,8 @@ public class Main implements Callable<Integer> {
       if (writeAheadLog != null) {
         palDirectory.setWalLog(self, writeAheadLog, peerLease);
       }
+    } catch (EtcdUnavailableException ex) {
+      fatalExit(ex, PeerException.FatalCode.ERROR_UNREACHABLE_ETCD);
     } catch (Exception ex) {
       fatalExit(ex, PeerException.FatalCode.ERROR_REGISTERING_SELF_LOGS);
     }
@@ -1047,16 +1050,15 @@ public class Main implements Callable<Integer> {
    * @return the registered PeerInfo instance representing this peer
    */
   private PeerInfo registerSelfAsPeer(Injector injector) {
-
-    final PalDirectory palDirectory =
-        injector
-            .getInstance(DirectoryConnectionProvider.class)
-            .get()
-            .orElseThrow(RuntimeException::new);
     PeerInfo self = null;
 
     // register self as new peer
     try {
+      final PalDirectory palDirectory =
+          injector
+              .getInstance(DirectoryConnectionProvider.class)
+              .get()
+              .orElseThrow(RuntimeException::new);
       self = new PeerInfo(uuid);
       // public listening interfaces
       if (runOptions.contains(RunOptions.WITH_ZMQ_RPC)) {
@@ -1080,6 +1082,8 @@ public class Main implements Callable<Integer> {
       }
       palDirectory.createPeer(self);
       peerLease = palDirectory.createPeerLease(self.getUuid(), PEER_KA_SECS);
+    } catch (EtcdUnavailableException ex) {
+      fatalExit(ex, PeerException.FatalCode.ERROR_UNREACHABLE_ETCD);
     } catch (Exception ex) {
       fatalExit(ex, PeerException.FatalCode.ERROR_REGISTERING_SELF);
     }
@@ -1360,6 +1364,21 @@ public class Main implements Callable<Integer> {
       customClassloader.addClassLoadListener(injector.getInstance(AnnotationsProcessor.class));
     }
 
+    // preflight PAL directory connectivity (if configured) BEFORE Kafka/log initialization
+    if (runOptions.contains(RunOptions.WITH_PALDIR)) {
+      try {
+        var unused =
+            injector
+                .getInstance(DirectoryConnectionProvider.class)
+                .get()
+                .orElseThrow(RuntimeException::new);
+      } catch (EtcdUnavailableException ex) {
+        fatalExit(ex, PeerException.FatalCode.ERROR_UNREACHABLE_ETCD);
+      } catch (Exception ex) {
+        fatalExit(ex, PeerException.FatalCode.ERROR_UNREACHABLE_ETCD);
+      }
+    }
+
     // init logs IO
     LogConfigurator logConfigurator = null;
     if (runOptions.contains(RunOptions.WITH_SOURCE_LOG)
@@ -1368,6 +1387,10 @@ public class Main implements Callable<Integer> {
         logConfigurator =
             new LogConfigurator(sourceLog, startOffset, wal, properties, injector, true);
         logConfigurator.init();
+      } catch (EtcdUnavailableException ex) {
+        // If etcd is unreachable during log registration (e.g., when using --dir),
+        // report the dedicated etcd error code instead of a generic logs init error.
+        fatalExit(ex, PeerException.FatalCode.ERROR_UNREACHABLE_ETCD);
       } catch (Exception ex) {
         fatalExit(ex, PeerException.FatalCode.ERROR_INITIALIZING_LOGS);
       }

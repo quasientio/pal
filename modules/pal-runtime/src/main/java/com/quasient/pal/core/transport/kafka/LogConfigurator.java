@@ -9,6 +9,8 @@
  */
 package com.quasient.pal.core.transport.kafka;
 
+import com.google.common.base.Splitter;
+import com.google.common.collect.Iterables;
 import com.google.inject.Injector;
 import com.quasient.pal.common.directory.nodes.LogInfo;
 import com.quasient.pal.core.transport.WalWriter;
@@ -193,10 +195,27 @@ public class LogConfigurator {
 
     logger.info("Performing Kafka health check with timeout {}ms...", timeoutMs);
 
-    java.util.Properties adminProps = new java.util.Properties();
-    adminProps.put("bootstrap.servers", kafkaServers);
-    adminProps.put("request.timeout.ms", String.valueOf(timeoutMs));
-    adminProps.put("connections.max.idle.ms", String.valueOf(timeoutMs));
+    // Fast TCP connectivity pre-check against the first bootstrap server
+    try {
+      String first =
+          Iterables.get(Splitter.on(',').trimResults().omitEmptyStrings().split(kafkaServers), 0);
+      int idx = first.lastIndexOf(':');
+      if (idx > 0 && idx < first.length() - 1) {
+        String host = first.substring(0, idx);
+        int port = Integer.parseInt(first.substring(idx + 1));
+        try (java.net.Socket s = new java.net.Socket()) {
+          s.connect(new java.net.InetSocketAddress(host, port), timeoutMs);
+        }
+      }
+    } catch (Exception e) {
+      String msg =
+          String.format(
+              "Kafka health check failed: TCP connect to %s within %dms", kafkaServers, timeoutMs);
+      logger.error(msg);
+      throw new Exception(msg, e);
+    }
+
+    Properties adminProps = getKafkaAdminProperties(timeoutMs);
 
     try (org.apache.kafka.clients.admin.AdminClient adminClient =
         org.apache.kafka.clients.admin.AdminClient.create(adminProps)) {
@@ -221,6 +240,26 @@ public class LogConfigurator {
       logger.error(msg);
       throw new Exception(msg, e);
     }
+  }
+
+  /**
+   * Initializes a set of properties to use by the Kafka admin client performing the health-check at
+   * startup.
+   *
+   * @param timeoutMs value of timeout, in millis, to use in several properties
+   * @return the created {@link Properties}
+   */
+  private Properties getKafkaAdminProperties(int timeoutMs) {
+    Properties adminProps = new Properties();
+    adminProps.put("bootstrap.servers", kafkaServers);
+    adminProps.put("request.timeout.ms", String.valueOf(timeoutMs));
+    adminProps.put("connections.max.idle.ms", String.valueOf(timeoutMs));
+    // Ensure fast failure on unreachable brokers across Kafka client layers
+    adminProps.put("default.api.timeout.ms", String.valueOf(timeoutMs));
+    adminProps.put("socket.connection.setup.timeout.ms", String.valueOf(timeoutMs));
+    adminProps.put("socket.connection.setup.timeout.max.ms", String.valueOf(timeoutMs));
+    adminProps.put("retry.backoff.ms", "250");
+    return adminProps;
   }
 
   /**
