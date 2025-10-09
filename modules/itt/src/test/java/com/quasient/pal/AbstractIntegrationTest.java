@@ -29,7 +29,6 @@ public abstract class AbstractIntegrationTest {
   private static final String PRODUCER_PROPERTIES_PATH = "/producer.properties";
 
   private static String PAL_DIRECTORY_URL;
-  private static String KAFKA_SERVERS;
   private static final IdGenerator idGenerator = new Base62UuidGenerator();
 
   protected static Properties getKafkaConsumerProperties() throws IOException {
@@ -63,15 +62,16 @@ public abstract class AbstractIntegrationTest {
   }
 
   protected static String getKafkaServers() {
-    if (KAFKA_SERVERS == null) {
-      final String kafkaServers = System.getenv("KAFKA_SERVERS");
-      if (kafkaServers == null || kafkaServers.isEmpty()) {
-        throw new RuntimeException(
-            "Please set the environment variable KAFKA_SERVERS (eg. KAFKA_SERVERS=localhost:9092)");
-      }
-      KAFKA_SERVERS = kafkaServers;
+    final String kafkaServers = System.getenv("KAFKA_SERVERS");
+    if (kafkaServers == null || kafkaServers.isEmpty()) {
+      throw new RuntimeException(
+          "Please set the environment variable KAFKA_SERVERS (eg. KAFKA_SERVERS=localhost:9092)");
     }
-    return KAFKA_SERVERS;
+    return kafkaServers;
+  }
+
+  protected static String getKafkaServersOrDefault(String defaultServers) {
+    return System.getenv().getOrDefault("KAFKA_SERVERS", defaultServers);
   }
 
   protected static Optional<PeerInfo> findRpcPeer(

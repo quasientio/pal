@@ -48,7 +48,7 @@ public class MainEtcdRegistrationIT extends AbstractMainIT {
     // Run with --dir pointing to unreachable etcd, and valid Kafka servers
     // Use 192.0.2.1 (TEST-NET-1, non-routable) to simulate truly unreachable etcd
     String unreachableEtcd = "192.0.2.1:2379";
-    String kafka = System.getenv().getOrDefault("KAFKA_SERVERS", "kafka:9092");
+    String kafka = getKafkaServersOrDefault("kafka:9092");
     ProcessResult result =
         runPalCommandWithEnv(
             unreachableEtcd,
