@@ -16,6 +16,7 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.stream.Stream;
 import org.junit.Test;
 
 /**
@@ -149,17 +150,19 @@ public class MainIT extends AbstractMainIT {
     }
 
     // Cleanup temp dir; jar has already been created
-    try {
-      Files.walk(tempDir)
+    try (Stream<Path> files = Files.walk(tempDir)) {
+      files
           .sorted((a, b) -> b.getNameCount() - a.getNameCount())
           .forEach(
               p -> {
                 try {
                   Files.deleteIfExists(p);
                 } catch (IOException ignored) {
+                  // fine then, keep going
                 }
               });
     } catch (Exception ignored) {
+      // not an issue
     }
 
     return tempJar;
