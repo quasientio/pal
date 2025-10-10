@@ -198,6 +198,7 @@
                       </execution>
                   </executions>
                   <configuration>
+                      <skipAfterFailureCount>1</skipAfterFailureCount>
                       <skipTests>${skipTests}</skipTests>
                       <skipITs>${skipITs}</skipITs>
                   </configuration>
