@@ -58,8 +58,6 @@ public class MainEtcdRegistrationIT extends AbstractMainIT {
             "test-log",
             "--kafka-servers",
             kafka,
-            "--kafka-timeout",
-            "3000",
             "com.example.DummyMain");
 
     // Expect etcd preflight to fail and terminate with ERROR_UNREACHABLE_ETCD
