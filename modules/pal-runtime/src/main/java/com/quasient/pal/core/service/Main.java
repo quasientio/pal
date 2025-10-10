@@ -82,8 +82,10 @@ import org.zeromq.ZContext;
 import org.zeromq.ZMQ.Socket;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Parameters;
 import picocli.CommandLine.ParentCommand;
+import picocli.CommandLine.Spec;
 
 /**
  * Entry point for a Pal peer execution (i.e. pal run).
@@ -113,6 +115,9 @@ public class Main implements Callable<Integer> {
   @SuppressWarnings("unused")
   @ParentCommand
   private PalCommand palCommand;
+
+  /** injected by picocli, allows us to access cmd-line as typed */
+  @Spec CommandSpec spec;
 
   /**
    * Classpath configuration for the peer. Specifies folders or JAR files to load classes from.
@@ -1328,6 +1333,12 @@ public class Main implements Callable<Integer> {
   public Integer call() throws InterruptedException {
 
     initLogging();
+    if (logger.isDebugEnabled()) {
+      List<String> rawArgs = spec.commandLine().getParseResult().originalArgs();
+      // print all args excluding the 'run' subcommand
+      logger.debug("Starting peer with args: {}", rawArgs.subList(1, rawArgs.size()));
+    }
+
     // for async calls
     final ExecutorService singleExecutor = Executors.newSingleThreadExecutor();
 
