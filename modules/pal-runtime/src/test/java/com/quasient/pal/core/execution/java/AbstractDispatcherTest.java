@@ -41,7 +41,7 @@ public abstract class AbstractDispatcherTest {
   protected UUID peerUuid = UUID.randomUUID();
 
   protected ObjectLookupStore objectLookupStore =
-      ConcurrentHashMapObjectLookupStore.createAsyncManaged();
+      ConcurrentHashMapObjectLookupStore.createSyncManaged();
 
   protected MessageBuilder messageBuilder = new MessageBuilder();
 
