@@ -48,7 +48,7 @@ images, in which case you may need to modify the parameters or variables in the 
 4. In a new terminal, export the ENV variables and run the integration tests
     ```bash
     source export_env
-    cd itt; mvn verify
+    mvn -pl modules/itt verify
     ```
 5. Stop the running peer (launched with `bin/peer4itts`) typing Ctrl-C
 6. Stop the etcd and kafka containers.
