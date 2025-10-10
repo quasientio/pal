@@ -77,6 +77,12 @@ public abstract class AbstractMainIT extends AbstractIntegrationTest {
     ProcessBuilder pb = new ProcessBuilder(command);
     pb.environment().put("PAL_HOME", palHome);
 
+    // Configure logging
+    pb.environment()
+        .put(
+            "PAL_PEER_LOGGING_CONFIG",
+            Paths.get(palHome, "config", "transient-peer-logging.xml").toString());
+
     // Set or remove PAL_DIRECTORY based on parameter
     if (palDirectory != null) {
       pb.environment().put("PAL_DIRECTORY", palDirectory);
