@@ -350,13 +350,11 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-loader</artifactId>
-            <version>${spring-boot-loader.version}</version>
         </dependency>
         <!-- explicit import of slf4j-api, since otherwise it pulls in older version from kafka-streams -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <version>${slf4j.version}</version>
         </dependency>
     </dependencies>
 </project>
