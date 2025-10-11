@@ -145,6 +145,17 @@ public class PalDirectory implements AutoCloseable {
   }
 
   /**
+   * Ensures the etcd endpoint has a URL scheme. jetcd requires endpoints like "http://host:port" or
+   * "https://host:port".
+   */
+  private static String normalizeEndpoint(String endpoint) {
+    if (endpoint.startsWith("http://") || endpoint.startsWith("https://")) {
+      return endpoint;
+    }
+    return "http://" + endpoint;
+  }
+
+  /**
    * Constructs a PalDirectory instance with the specified etcd connection string and blocking
    * behavior.
    *
@@ -195,9 +206,15 @@ public class PalDirectory implements AutoCloseable {
       }
     }
 
+    // Build jetcd client with proper endpoints (do not use a single comma-separated target)
+    List<String> endpointListRaw =
+        Splitter.on(',').trimResults().omitEmptyStrings().splitToList(endpoints);
+    List<String> endpointListNorm =
+        endpointListRaw.stream().map(PalDirectory::normalizeEndpoint).collect(Collectors.toList());
+    String[] endpointArray = endpointListNorm.toArray(new String[0]);
     this.client =
         Client.builder()
-            .target(endpoints)
+            .endpoints(endpointArray)
             .connectTimeout(ETCD_CONNECTION_TIMEOUT)
             .keepaliveTime(ETCD_KEEP_ALIVE_TIME)
             .keepaliveTimeout(ETCD_KEEP_ALIVE_TIMEOUT)
@@ -205,27 +222,37 @@ public class PalDirectory implements AutoCloseable {
             .build();
 
     if (blocking) {
-      // Verify connection with a status check
-      try {
-        StatusResponse status =
-            client
-                .getMaintenanceClient()
-                .statusMember(endpoints)
-                .get(ETCD_CONNECTION_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
-        logger.info("Connected to etcd cluster: {}", status);
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new EtcdUnavailableException("Thread was interrupted while connecting to etcd", e);
-      } catch (TimeoutException e) {
+      // Verify connection with a per-endpoint status check to avoid hangs
+      List<String> endpointList = endpointListNorm; // already normalized with scheme
+      boolean connected = false;
+      for (String ep : endpointList) {
+        try {
+          StatusResponse status =
+              client
+                  .getMaintenanceClient()
+                  .statusMember(ep)
+                  .get(ETCD_CONNECTION_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+          logger.info("Connected to etcd endpoint: {} -> {}", ep, status);
+          connected = true;
+          break;
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          throw new EtcdUnavailableException("Thread was interrupted while connecting to etcd", e);
+        } catch (TimeoutException | ExecutionException e) {
+          logger.warn(
+              "Status check to etcd endpoint {} failed within {}s: {}",
+              ep,
+              ETCD_CONNECTION_TIMEOUT.toSeconds(),
+              e.getMessage());
+          // try next endpoint
+        }
+      }
+      if (!connected) {
         throw new EtcdUnavailableException(
-            "Failed to connect to etcd cluster at "
-                + endpoints
-                + " within "
+            "Failed to connect to any etcd endpoint within "
                 + ETCD_CONNECTION_TIMEOUT.toSeconds()
-                + " seconds",
-            e);
-      } catch (ExecutionException e) {
-        throw new EtcdUnavailableException("Failed to connect to etcd cluster", e.getCause());
+                + " seconds: "
+                + endpoints);
       }
     }
 
