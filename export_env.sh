@@ -12,7 +12,7 @@
 # Source this file
 
 # Must for running Pal
-export PAL_HOME=`pwd`
+export PAL_HOME="$(pwd)"
 export PATH=$PAL_HOME/bin:$PAL_HOME/infra/bin:$PATH
 
 # Optional
