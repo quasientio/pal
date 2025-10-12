@@ -239,12 +239,24 @@ public class Main implements Callable<Integer> {
    * doesn't respond within this time, the peer will fail to start.
    */
   @Option(
-      names = {"--kafka-timeout"},
+      names = {"--kafka-connect-timeout", "--kafka-timeout"},
       paramLabel = "milliseconds",
       description =
           "timeout for Kafka connection health check in milliseconds (default: ${DEFAULT-VALUE})",
       defaultValue = "5000")
   private Integer kafkaTimeout;
+
+  /**
+   * Timeout in milliseconds for etcd connection health check during initialization when using a PAL
+   * directory. Applied to preflight TCP/HTTP checks and jetcd status check.
+   */
+  @Option(
+      names = {"--etcd-connect-timeout"},
+      paramLabel = "milliseconds",
+      description =
+          "timeout for etcd connection health check in milliseconds (default: ${DEFAULT-VALUE})",
+      defaultValue = "5000")
+  private Integer etcdConnectTimeout;
 
   /**
    * Configuration for TCP-based message publication via ZeroMQ. It accepts a format of
@@ -684,8 +696,32 @@ public class Main implements Callable<Integer> {
     jsonRpc = getParameter("JSON_RPC", jsonRpc);
     tcpPub = getParameter("TCP_PUB", tcpPub);
 
-    // if not given as option to this CMD, check if it was given as option to parent (Pal) command
-    // else, set it from ENV if present
+    // timeouts via env override if CLI not provided
+    if (kafkaTimeout == null) {
+      String kt = System.getenv("KAFKA_CONNECT_TIMEOUT_MS");
+      if (kt == null) {
+        kt = System.getenv("KAFKA_TIMEOUT_MS");
+      }
+      if (kt != null && !kt.isBlank()) {
+        try {
+          kafkaTimeout = Integer.parseInt(kt.trim());
+        } catch (NumberFormatException ignored) {
+          // keep CLI/default
+        }
+      }
+    }
+    if (etcdConnectTimeout == null) {
+      String et = System.getenv("ETCD_CONNECT_TIMEOUT_MS");
+      if (et != null && !et.isBlank()) {
+        try {
+          etcdConnectTimeout = Integer.parseInt(et.trim());
+        } catch (NumberFormatException ignored) {
+          // keep CLI/default
+        }
+      }
+    }
+
+    // if not given as option to this CMD, check if it was given to parent (Pal) or ENV
     if (palDirectoryUrl == null || palDirectoryUrl.trim().isEmpty()) {
       // check ENV variable
       String palDirectoryEnvVar = System.getenv("PAL_DIRECTORY");
@@ -837,7 +873,12 @@ public class Main implements Callable<Integer> {
 
     // add kafka connection timeout
     if (kafkaTimeout != null) {
-      properties.setProperty("kafka.connection.timeout.ms", String.valueOf(kafkaTimeout));
+      properties.setProperty("kafka.connect.timeout.ms", String.valueOf(kafkaTimeout));
+    }
+
+    // add etcd connect timeout for DirectoryConnectionProvider injection
+    if (etcdConnectTimeout != null) {
+      properties.setProperty("etcd.connect.timeout.ms", String.valueOf(etcdConnectTimeout));
     }
 
     // add log (kafka topic) prefix
@@ -1382,7 +1423,7 @@ public class Main implements Callable<Integer> {
             injector
                 .getInstance(DirectoryConnectionProvider.class)
                 .get()
-                .orElseThrow(RuntimeException::new);
+                .orElseThrow(() -> new RuntimeException("Failed to get PAL directory connection"));
       } catch (EtcdUnavailableException ex) {
         fatalExit(ex, PeerException.FatalCode.ERROR_UNREACHABLE_ETCD);
       } catch (Exception ex) {

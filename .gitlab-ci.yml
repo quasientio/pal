@@ -76,6 +76,9 @@ integration-tests:
     FF_NETWORK_PER_BUILD: 1
     PAL_DIRECTORY: 'etcd:2379'
     KAFKA_SERVERS: 'kafka:9092'
+    # Use short connect timeouts so peer fails fast when dependencies are unreachable
+    ETCD_CONNECT_TIMEOUT_MS: "3000"
+    KAFKA_CONNECT_TIMEOUT_MS: "3000"
 
     # etcd env variables
     NAME: default

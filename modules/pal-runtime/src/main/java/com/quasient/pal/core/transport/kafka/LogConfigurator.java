@@ -191,7 +191,7 @@ public class LogConfigurator {
    * @throws Exception if Kafka is not reachable or the health check times out
    */
   private void performKafkaHealthCheck() throws Exception {
-    int timeoutMs = Integer.parseInt(appProps.getProperty("kafka.connection.timeout.ms", "5000"));
+    int timeoutMs = Integer.parseInt(appProps.getProperty("kafka.connect.timeout.ms", "5000"));
 
     logger.info("Performing Kafka health check with timeout {}ms...", timeoutMs);
 

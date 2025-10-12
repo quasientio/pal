@@ -12,6 +12,7 @@ package com.quasient.pal.cxn.directory;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Provider;
+import java.time.Duration;
 import java.util.Optional;
 
 /**
@@ -50,6 +51,9 @@ public class DirectoryConnectionProvider implements Provider<Optional<PalDirecto
    */
   private final String namespace;
 
+  /** Etcd connect timeout used for preflight and status checks. */
+  private final Duration connectTimeout;
+
   /**
    * Cached instance of the {@link PalDirectory}.
    *
@@ -71,8 +75,19 @@ public class DirectoryConnectionProvider implements Provider<Optional<PalDirecto
    *     empty
    */
   @Inject
-  public DirectoryConnectionProvider(@Named("paldir_url") String connectionString) {
-    this(connectionString, null, true);
+  public DirectoryConnectionProvider(
+      @Named("paldir_url") String connectionString,
+      @Named("etcd.connect.timeout.ms") String connectTimeoutMs) {
+    this(
+        connectionString,
+        null,
+        true,
+        parseTimeout(connectTimeoutMs, PalDirectory::getDefaultConnectionTimeout));
+  }
+
+  /** Backward-compatible constructor used in tests and non-Guice contexts. */
+  public DirectoryConnectionProvider(String connectionString) {
+    this(connectionString, null, true, PalDirectory.getDefaultConnectionTimeout());
   }
 
   /**
@@ -87,9 +102,17 @@ public class DirectoryConnectionProvider implements Provider<Optional<PalDirecto
    */
   public DirectoryConnectionProvider(
       String connectionString, String namespace, boolean blockingConnect) {
+    this(connectionString, namespace, blockingConnect, PalDirectory.getDefaultConnectionTimeout());
+  }
+
+  /** Full constructor allowing to specify connect timeout. */
+  public DirectoryConnectionProvider(
+      String connectionString, String namespace, boolean blockingConnect, Duration connectTimeout) {
     this.connectionString = connectionString;
     this.namespace = namespace;
     this.blockingConnect = blockingConnect;
+    this.connectTimeout =
+        connectTimeout == null ? PalDirectory.getDefaultConnectionTimeout() : connectTimeout;
   }
 
   /**
@@ -109,7 +132,8 @@ public class DirectoryConnectionProvider implements Provider<Optional<PalDirecto
     }
 
     if (palDirectoryInstance == null) {
-      palDirectoryInstance = new PalDirectory(connectionString, namespace, blockingConnect);
+      palDirectoryInstance =
+          new PalDirectory(connectionString, namespace, blockingConnect, connectTimeout);
     }
 
     return Optional.of(palDirectoryInstance);
@@ -122,5 +146,39 @@ public class DirectoryConnectionProvider implements Provider<Optional<PalDirecto
    */
   public String getConnectionString() {
     return connectionString;
+  }
+
+  /**
+   * Parses a timeout value expressed in milliseconds from a string.
+   *
+   * <p>If the provided string is null, blank, non-numeric, or not a positive value, the {@code
+   * defaultSupplier} is used to provide a fallback {@link Duration}.
+   *
+   * @param millisStr the timeout in milliseconds as a string; may be null or blank
+   * @param defaultSupplier supplier of the default {@link Duration} if parsing fails or value is
+   *     not positive
+   * @return the parsed positive {@link Duration} in milliseconds, or the supplied default duration
+   */
+  private static Duration parseTimeout(String millisStr, DurationSupplier defaultSupplier) {
+    try {
+      if (millisStr != null && !millisStr.isBlank()) {
+        long ms = Long.parseLong(millisStr.trim());
+        if (ms > 0) return Duration.ofMillis(ms);
+      }
+    } catch (Exception ignored) {
+      // fall back to default
+    }
+    return defaultSupplier.get();
+  }
+
+  /** Supplier interface for providing a default {@link Duration} value. */
+  @FunctionalInterface
+  private interface DurationSupplier {
+    /**
+     * Returns a default {@link Duration} value.
+     *
+     * @return the default duration
+     */
+    Duration get();
   }
 }

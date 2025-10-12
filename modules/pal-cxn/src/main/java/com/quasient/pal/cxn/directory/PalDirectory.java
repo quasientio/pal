@@ -81,8 +81,11 @@ public class PalDirectory implements AutoCloseable {
   /** Duration specifying the timeout for etcd client keepalive messages. */
   private static final Duration ETCD_KEEP_ALIVE_TIMEOUT = Duration.ofSeconds(20);
 
-  /** Duration specifying the timeout for etcd connection attempts. */
-  private static final Duration ETCD_CONNECTION_TIMEOUT = Duration.ofSeconds(5);
+  /** Default duration specifying the timeout for etcd connection attempts. */
+  private static final Duration DEFAULT_ETCD_CONNECTION_TIMEOUT = Duration.ofSeconds(5);
+
+  /** Instance etcd connection timeout used for health checks and client connect timeout. */
+  private final Duration etcdConnectionTimeout;
 
   /** Constant indicating that no directory URL has been provided. */
   public static final String NO_URL = "<none>";
@@ -141,7 +144,7 @@ public class PalDirectory implements AutoCloseable {
    * @param connectionString the etcd connection string in the format "host:port"
    */
   public PalDirectory(String connectionString) {
-    this(connectionString, null, false);
+    this(connectionString, null, false, DEFAULT_ETCD_CONNECTION_TIMEOUT);
   }
 
   /**
@@ -155,6 +158,11 @@ public class PalDirectory implements AutoCloseable {
     return "http://" + endpoint;
   }
 
+  /** Returns the library default etcd connection timeout. */
+  public static Duration getDefaultConnectionTimeout() {
+    return DEFAULT_ETCD_CONNECTION_TIMEOUT;
+  }
+
   /**
    * Constructs a PalDirectory instance with the specified etcd connection string and blocking
    * behavior.
@@ -163,7 +171,7 @@ public class PalDirectory implements AutoCloseable {
    * @param blocking if true, the constructor will block until a connection to etcd is established
    */
   public PalDirectory(String connectionString, boolean blocking) {
-    this(connectionString, null, blocking);
+    this(connectionString, null, blocking, DEFAULT_ETCD_CONNECTION_TIMEOUT);
   }
 
   /**
@@ -172,7 +180,11 @@ public class PalDirectory implements AutoCloseable {
    * @param endpoints list of etcd endpoint URIs
    */
   public PalDirectory(List<URI> endpoints) {
-    this(endpoints.stream().map(URI::toString).collect(Collectors.joining(",")), null);
+    this(
+        endpoints.stream().map(URI::toString).collect(Collectors.joining(",")),
+        null,
+        false,
+        DEFAULT_ETCD_CONNECTION_TIMEOUT);
   }
 
   /**
@@ -187,7 +199,15 @@ public class PalDirectory implements AutoCloseable {
    *     is true
    */
   public PalDirectory(String endpoints, String namespace, boolean blocking) {
+    this(endpoints, namespace, blocking, DEFAULT_ETCD_CONNECTION_TIMEOUT);
+  }
+
+  /** Full constructor with configurable connection timeout. */
+  public PalDirectory(
+      String endpoints, String namespace, boolean blocking, Duration connectionTimeout) {
     this.directoryUrl = endpoints;
+    this.etcdConnectionTimeout =
+        connectionTimeout == null ? DEFAULT_ETCD_CONNECTION_TIMEOUT : connectionTimeout;
     logger.info(
         "Will connect to etcd endpoints: {} in {} mode",
         endpoints,
@@ -198,7 +218,7 @@ public class PalDirectory implements AutoCloseable {
       // This works around jetcd's gRPC connection logic which can hang indefinitely
       try {
         List<String> endpointList = Splitter.on(',').splitToList(endpoints);
-        EtcdHealthCheck.assertReachable(endpointList, (int) ETCD_CONNECTION_TIMEOUT.toMillis());
+        EtcdHealthCheck.assertReachable(endpointList, (int) etcdConnectionTimeout.toMillis());
         logger.info("Preflight health check passed for etcd endpoints: {}", endpoints);
       } catch (IllegalStateException e) {
         throw new EtcdUnavailableException(
@@ -215,7 +235,7 @@ public class PalDirectory implements AutoCloseable {
     this.client =
         Client.builder()
             .endpoints(endpointArray)
-            .connectTimeout(ETCD_CONNECTION_TIMEOUT)
+            .connectTimeout(etcdConnectionTimeout)
             .keepaliveTime(ETCD_KEEP_ALIVE_TIME)
             .keepaliveTimeout(ETCD_KEEP_ALIVE_TIMEOUT)
             .keepaliveWithoutCalls(false)
@@ -231,7 +251,7 @@ public class PalDirectory implements AutoCloseable {
               client
                   .getMaintenanceClient()
                   .statusMember(ep)
-                  .get(ETCD_CONNECTION_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+                  .get(etcdConnectionTimeout.toMillis(), TimeUnit.MILLISECONDS);
           logger.info("Connected to etcd endpoint: {} -> {}", ep, status);
           connected = true;
           break;
@@ -242,7 +262,7 @@ public class PalDirectory implements AutoCloseable {
           logger.warn(
               "Status check to etcd endpoint {} failed within {}s: {}",
               ep,
-              ETCD_CONNECTION_TIMEOUT.toSeconds(),
+              etcdConnectionTimeout.toSeconds(),
               e.getMessage());
           // try next endpoint
         }
@@ -250,7 +270,7 @@ public class PalDirectory implements AutoCloseable {
       if (!connected) {
         throw new EtcdUnavailableException(
             "Failed to connect to any etcd endpoint within "
-                + ETCD_CONNECTION_TIMEOUT.toSeconds()
+                + etcdConnectionTimeout.toSeconds()
                 + " seconds: "
                 + endpoints);
       }
