@@ -15,18 +15,17 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.EnumSet;
 
 /**
- * Helper that uses {@link Files} to implement recursive deletion of all
- * contents within a directory.
+ * Helper that uses {@link Files} to implement recursive deletion of all contents within a
+ * directory.
  */
 public final class MoreFiles {
 
   /** Avoid instantiation of utility class */
-  private MoreFiles() {
-  }
+  private MoreFiles() {}
 
   /**
-   * Deletes all entries inside {@code dir} but leaves {@code dir} itself.
-   * Does not follow symlinks; symlinks in {@code dir} are deleted as links.
+   * Deletes all entries inside {@code dir} but leaves {@code dir} itself. Does not follow symlinks;
+   * symlinks in {@code dir} are deleted as links.
    *
    * @param dir the target path
    */
@@ -36,23 +35,28 @@ public final class MoreFiles {
       throw new NotDirectoryException(dir.toString());
     }
 
-    Files.walkFileTree(dir, EnumSet.noneOf(FileVisitOption.class), Integer.MAX_VALUE,
-            new SimpleFileVisitor<>() {
-              @Override
-              public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                Files.deleteIfExists(file);
-                return FileVisitResult.CONTINUE;
-              }
+    Files.walkFileTree(
+        dir,
+        EnumSet.noneOf(FileVisitOption.class),
+        Integer.MAX_VALUE,
+        new SimpleFileVisitor<>() {
+          @Override
+          public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
+              throws IOException {
+            Files.deleteIfExists(file);
+            return FileVisitResult.CONTINUE;
+          }
 
-              @Override
-              public FileVisitResult postVisitDirectory(Path directory, IOException exc) throws IOException {
-                if (exc != null) throw exc;
-                // Delete child directories, but keep the root 'dir' itself.
-                if (!directory.equals(dir)) {
-                  Files.deleteIfExists(directory);
-                }
-                return FileVisitResult.CONTINUE;
-              }
-            });
+          @Override
+          public FileVisitResult postVisitDirectory(Path directory, IOException exc)
+              throws IOException {
+            if (exc != null) throw exc;
+            // Delete child directories, but keep the root 'dir' itself.
+            if (!directory.equals(dir)) {
+              Files.deleteIfExists(directory);
+            }
+            return FileVisitResult.CONTINUE;
+          }
+        });
   }
 }

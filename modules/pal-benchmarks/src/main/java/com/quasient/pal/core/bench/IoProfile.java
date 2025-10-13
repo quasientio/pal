@@ -9,18 +9,17 @@
  */
 package com.quasient.pal.core.bench;
 
-/**
- * Enumerates IO profile types for a benchmark run.
- */
+/** Enumerates IO profile types for a benchmark run. */
 public enum IoProfile {
   /** Used to measure that is quantisation overhead only. */
   CPU_ONLY,
 
-  /** Measure quantisation cost, header conversion, matching, etc. but
-   * mock Kafka and PUBlishing. That is, measure Pal CPU cost without network.
+  /**
+   * Measure quantisation cost, header conversion, matching, etc. but mock Kafka and PUBlishing.
+   * That is, measure Pal CPU cost without network.
    */
   MOCK,
 
-  /** Measure end to end cost, including real Kafka producer, real ZMQ PUB, etc.*/
+  /** Measure end to end cost, including real Kafka producer, real ZMQ PUB, etc. */
   REAL
 }

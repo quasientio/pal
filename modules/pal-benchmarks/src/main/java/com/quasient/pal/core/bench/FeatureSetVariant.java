@@ -11,35 +11,32 @@
 package com.quasient.pal.core.bench;
 
 import com.quasient.pal.core.service.RunOptions;
-
 import java.util.EnumSet;
 
-/**
- * Which combination of subsystems the gateway should activate.
- */
+/** Which combination of subsystems the gateway should activate. */
 public enum FeatureSetVariant {
   /** Call to non-woven method. */
   NOWEAVE,
 
-  /** No Intercepts, no WAL, no TCP-PUB.        */
+  /** No Intercepts, no WAL, no TCP-PUB. */
   NOOP,
 
-  /** Intercepts only.      */
+  /** Intercepts only. */
   INTERCEPTS,
 
-  /** PUB only.      */
+  /** PUB only. */
   PUB,
 
-  /** WAL only.      */
+  /** WAL only. */
   WAL,
 
-  /** PUB + WAL.      */
+  /** PUB + WAL. */
   PUB_WAL,
 
-  /** Intercepts + TCP-PUB.            */
+  /** Intercepts + TCP-PUB. */
   INTERCEPTS_PUB,
 
-  /** Intercepts + WAL.            */
+  /** Intercepts + WAL. */
   INTERCEPTS_WAL,
 
   /** Intercepts + TCP-PUB + WAL (full hot path). */

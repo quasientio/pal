@@ -15,14 +15,15 @@ import com.quasient.pal.core.bench.InvocationArgs;
  * Supplies {@link InvocationArgs} to producer threads in a benchmark run.
  *
  * <p>A source is:
+ *
  * <ul>
- *   <li>created once per JMH <b>trial</b> (<code>@Setup(Level.Trial)</code>)</li>
- *   <li>optionally reshuffled once per <b>iteration</b></li>
- *   <li>closed once per <b>trial</b></li>
+ *   <li>created once per JMH <b>trial</b> (<code>@Setup(Level.Trial)</code>)
+ *   <li>optionally reshuffled once per <b>iteration</b>
+ *   <li>closed once per <b>trial</b>
  * </ul>
  *
- * <p>All implementations **must be thread‑safe**: multiple JMH worker threads call
- * {@link #next()} concurrently.
+ * <p>All implementations **must be thread‑safe**: multiple JMH worker threads call {@link #next()}
+ * concurrently.
  */
 public interface InvocationArgsSource {
 
@@ -30,13 +31,14 @@ public interface InvocationArgsSource {
   void start();
 
   /**
-   * Optionally reset / reshuffle internal state at the beginning of an iteration.
-   * Default implementation is a no‑op.
+   * Optionally reset / reshuffle internal state at the beginning of an iteration. Default
+   * implementation is a no‑op.
    */
-  default void beforeIteration() { }
+  default void beforeIteration() {}
 
   /**
    * Gets the next args.
+   *
    * @return the next {@link InvocationArgs} instance
    */
   InvocationArgs next();
@@ -44,4 +46,3 @@ public interface InvocationArgsSource {
   /** Release resources at the end of a trial. */
   void stop() throws InterruptedException;
 }
-

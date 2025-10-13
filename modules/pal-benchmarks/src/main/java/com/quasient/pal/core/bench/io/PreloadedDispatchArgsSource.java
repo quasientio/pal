@@ -11,32 +11,30 @@ package com.quasient.pal.core.bench.io;
 
 import com.quasient.pal.core.bench.DispatchBenchmark;
 import com.quasient.pal.core.bench.InvocationArgs;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.concurrent.ThreadLocalRandom;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * <p>Generates a fixed batch of {@linkplain InvocationArgs messages} once per
- * <b>JMH trial</b> and lets all worker threads pick randomly from that batch.</p>
+ * Generates a fixed batch of {@linkplain InvocationArgs messages} once per <b>JMH trial</b> and
+ * lets all worker threads pick randomly from that batch.
  *
  * <h4>Behaviour</h4>
+ *
  * <ul>
- *   <li>Batch size is {@value #BATCH_SIZE}.</li>
- *   <li>The payload size mix follows {@link DispatchBenchmark#sizeDistribution()}.</li>
- *   <li>The list is {@linkplain Collections#shuffle(List) reshuffled} at the
- *       beginning of every <b>iteration</b> to avoid run‑to‑run correlation.</li>
- *   <li>Each {@link #next()} call chooses an element with
- *       {@link ThreadLocalRandom#nextInt(int)} – hence multiple consumers read
- *       concurrently without coordination.</li>
+ *   <li>Batch size is {@value #BATCH_SIZE}.
+ *   <li>The payload size mix follows {@link DispatchBenchmark#sizeDistribution()}.
+ *   <li>The list is {@linkplain Collections#shuffle(List) reshuffled} at the beginning of every
+ *       <b>iteration</b> to avoid run‑to‑run correlation.
+ *   <li>Each {@link #next()} call chooses an element with {@link ThreadLocalRandom#nextInt(int)} –
+ *       hence multiple consumers read concurrently without coordination.
  * </ul>
  *
- * <p>This implementation is selected with {@code -p inputMode=PRELOADED}.</p>
+ * <p>This implementation is selected with {@code -p inputMode=PRELOADED}.
  */
 public final class PreloadedDispatchArgsSource implements InvocationArgsSource {
 

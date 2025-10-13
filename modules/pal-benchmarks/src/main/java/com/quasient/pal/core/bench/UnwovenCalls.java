@@ -10,27 +10,19 @@
 package com.quasient.pal.core.bench;
 
 import com.quasient.pal.bench.Calls;
-
 import java.util.Arrays;
-import java.util.Locale;
 
-/**
- * Simple wrapper around misc calls to JDK classes.
- */
+/** Simple wrapper around misc calls to JDK classes. */
 public class UnwovenCalls implements Calls {
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   @SuppressWarnings("StringCaseLocaleUsage")
   public String toUpperCase(String str) {
     return str.toUpperCase();
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   public void sort(double[] doubles) {
     Arrays.sort(doubles);

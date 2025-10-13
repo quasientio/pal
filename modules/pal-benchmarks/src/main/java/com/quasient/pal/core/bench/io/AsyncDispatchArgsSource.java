@@ -11,24 +11,23 @@ package com.quasient.pal.core.bench.io;
 
 import com.quasient.pal.core.bench.DispatchBenchmark;
 import com.quasient.pal.core.bench.InvocationArgs;
+import java.util.Random;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Random;
-import java.util.concurrent.ConcurrentLinkedQueue;
-
 /**
- * <p>“On‑the‑fly” generator that fills a queue with {@link InvocationArgs}:</p>
+ * “On‑the‑fly” generator that fills a queue with {@link InvocationArgs}:
  *
  * <ul>
- *   <li>A <b>single daemon producer thread</b> keeps a ring‑buffer topped‑up with
- *       freshly generated {@link InvocationArgs}.</li>
- *   <li>All JMH worker threads call {@link #next()} concurrently; the underlying
- *       queue is a lock‑free {@link ConcurrentLinkedQueue}.</li>
- *   <li>Payload size distribution is driven by {@link DispatchBenchmark#sizeDistribution()}.</li>
+ *   <li>A <b>single daemon producer thread</b> keeps a ring‑buffer topped‑up with freshly generated
+ *       {@link InvocationArgs}.
+ *   <li>All JMH worker threads call {@link #next()} concurrently; the underlying queue is a
+ *       lock‑free {@link ConcurrentLinkedQueue}.
+ *   <li>Payload size distribution is driven by {@link DispatchBenchmark#sizeDistribution()}.
  * </ul>
  *
- * <p>This implementation is chosen with {@code -p inputMode=ASYNC}.</p>
+ * <p>This implementation is chosen with {@code -p inputMode=ASYNC}.
  */
 public final class AsyncDispatchArgsSource implements InvocationArgsSource {
 
@@ -76,12 +75,14 @@ public final class AsyncDispatchArgsSource implements InvocationArgsSource {
 
   /** {@inheritDoc} (no iteration‑level work required here) */
   @Override
-  public void beforeIteration() { /* no‑op */ }
+  public void beforeIteration() {
+    /* no‑op */
+  }
 
   /** {@inheritDoc} */
   @Override
   public InvocationArgs next() {
-    return buf.poll();       // may return null for the consumer to spin on
+    return buf.poll(); // may return null for the consumer to spin on
   }
 
   /** {@inheritDoc} */

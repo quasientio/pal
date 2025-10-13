@@ -37,16 +37,26 @@ import com.quasient.pal.core.service.Main;
 import com.quasient.pal.core.service.PeerWiring;
 import com.quasient.pal.core.service.RunOptions;
 import com.quasient.pal.core.transport.WalWriter;
-import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
-import com.quasient.pal.core.transport.gateway.MessageQueueStats;
-import com.quasient.pal.core.transport.gateway.ThreadWaitSnapshot;
 import com.quasient.pal.core.transport.WalWriterStats;
+import com.quasient.pal.core.transport.gateway.MessageQueueStats;
+import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
+import com.quasient.pal.core.transport.gateway.ThreadWaitSnapshot;
 import com.quasient.pal.core.transport.zmq.publish.MessagePublisher;
 import com.quasient.pal.core.transport.zmq.publish.MessagePublisherConfig;
 import com.quasient.pal.core.transport.zmq.publish.MessagePublisherStats;
 import com.quasient.pal.core.transport.zmq.publish.PublishingDropPolicy;
 import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.messages.OutboundMsg;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.openjdk.jmh.annotations.*;
@@ -59,54 +69,41 @@ import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.*;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
-
 /**
- *
  * Benchmark for the *hot* dispatch path.
  *
- * <p>
- * Driven by two main params/axis: variant and ioProfile
- * Each axis answers a different question:
+ * <p>Driven by two main params/axis: variant and ioProfile Each axis answers a different question:
+ *
  * <ul>
- *   <li>variant → “Which Pal features?”</li>
- *   <li>ioProfile →  “How realistic is the transport?”</li>
+ *   <li>variant → “Which Pal features?”
+ *   <li>ioProfile → “How realistic is the transport?”
  * </ul>
  *
- * <hr>
- * You can bisect a regression quickly:
+ * <hr> You can bisect a regression quickly:
+ *
  * <ul>
- *   <li>Slow only when ioProfile==REAL ⇒ broker tuning;</li>
- *   <li>slow already at MOCK ⇒ serialisation/callbacks;</li>
- *   <li>slow even at CPU_ONLY ⇒ quantiser or matcher.</li>
+ *   <li>Slow only when ioProfile==REAL ⇒ broker tuning;
+ *   <li>slow already at MOCK ⇒ serialisation/callbacks;
+ *   <li>slow even at CPU_ONLY ⇒ quantiser or matcher.
  * </ul>
  *
  * Variants may include networking features, like WAL and PUB
+ *
  * <pre>
  *  producers  → walQueue → KafkaWalWriter  (Kafka)
  *             ↘ pubQueue → MessagePublisher (ZMQ)
  * </pre>
  *
- * If the chosen variant includes WAL, and 'ioProfile == REAL',
- * then a Kafka instance must be running. You may use the shipped
- * script that runs Kafka on docker, or the script that launches
- * a locally installed Kafka.
+ * If the chosen variant includes WAL, and 'ioProfile == REAL', then a Kafka instance must be
+ * running. You may use the shipped script that runs Kafka on docker, or the script that launches a
+ * locally installed Kafka.
+ *
  * <pre>
  * >> start_kafka_docker.sh  # or start_kafka
- *</pre>
+ * </pre>
  *
  * Use the <b>run.sh</b> script to configure and launch this benchmark.
  */
-
 @Timeout(time = 10, timeUnit = TimeUnit.MINUTES)
 @State(Scope.Benchmark)
 public class DispatchBenchmark {
@@ -136,18 +133,17 @@ public class DispatchBenchmark {
 
   // ---- Queue Defaults -------------------------------------------------------
 
-
   /** Default initial size of the WAL queue. */
-  private static final int    DEF_WAL_QUEUE_INITIAL= 16_384;    //  1 << 14
+  private static final int DEF_WAL_QUEUE_INITIAL = 16_384; //  1 << 14
 
   /** Default max size of the Wal queue. */
-  private static final int    DEF_WAL_QUEUE_MAX    = 1_048_576; //  1 << 20
+  private static final int DEF_WAL_QUEUE_MAX = 1_048_576; //  1 << 20
 
   /** Default initial size of the Pub queue. */
-  private static final int    DEF_PUB_QUEUE_INITIAL= 16_384;    //  1 << 14
+  private static final int DEF_PUB_QUEUE_INITIAL = 16_384; //  1 << 14
 
   /** Default max size of the Pub queue. */
-  private static final int    DEF_PUB_QUEUE_MAX    = 1_048_576; // 1 << 20
+  private static final int DEF_PUB_QUEUE_MAX = 1_048_576; // 1 << 20
 
   // ---- MessagePublisher Defaults --------------------------------------------
 
@@ -155,31 +151,34 @@ public class DispatchBenchmark {
   private static final String DEF_PUB_ENDPOINT = "tcp://127.0.0.1:8788";
 
   /** Default size for the MessagePublisher's SPSC queue. */
-  private static final int    DEF_SPSC_SIZE        = 524_288;   //  1 << 19
+  private static final int DEF_SPSC_SIZE = 524_288; //  1 << 19
 
   /** Default size for MessagePublisher's send() batch. */
-  private static final int    DEF_BATCH_SIZE       = 4_096;     //  1 << 12
+  private static final int DEF_BATCH_SIZE = 4_096; //  1 << 12
 
-  /** Default flush-on-close policy (whether messages left in the SPSC queue should be flushed on close). */
-  private static final String DEF_FLUSH_ON_CLOSE       = "false";
+  /**
+   * Default flush-on-close policy (whether messages left in the SPSC queue should be flushed on
+   * close).
+   */
+  private static final String DEF_FLUSH_ON_CLOSE = "false";
 
   /** Default ZMQ linger value for PUB socket. */
-  private static final int DEF_ZMQ_LINGER           = 0;
+  private static final int DEF_ZMQ_LINGER = 0;
 
   /** Default ZMQ send timeout value for PUB socket. */
-  private static final int DEF_ZMQ_SEND_TIMEOUT     = 0;
+  private static final int DEF_ZMQ_SEND_TIMEOUT = 0;
 
   /** Default ZMQ send HWM value for PUB socket. */
-  private static final int DEF_ZMQ_SEND_HWM         = 10_000;
+  private static final int DEF_ZMQ_SEND_HWM = 10_000;
 
   /** Default drop policy for messages enqueued for publishing. */
-  private static final PublishingDropPolicy DEF_DROP_POLICY  = PublishingDropPolicy.DROP_OLD;
+  private static final PublishingDropPolicy DEF_DROP_POLICY = PublishingDropPolicy.DROP_OLD;
 
   /** Default HWM value indicating when to start trimming the queue - applies to DROP_OLD. */
-  private static final int DEF_DROP_HWM_PCT         = 97;
+  private static final int DEF_DROP_HWM_PCT = 97;
 
   /** Default % of queue to keep when trimming old messages - applies to DROP_OLD. */
-  private static final int DEF_DROP_KEEP_PCT        = 92;
+  private static final int DEF_DROP_KEEP_PCT = 92;
 
   // ---- KafkaWalWriter Defaults --------------------------------------------
 
@@ -192,26 +191,38 @@ public class DispatchBenchmark {
   // ---- Dispatcher Defaults --------------------------------------------
 
   /**
-   * Default value for the "messages.with_src_context", which indicates whether to include source context details
-   * in serializing messages sourced from quantization.
+   * Default value for the "messages.with_src_context", which indicates whether to include source
+   * context details in serializing messages sourced from quantization.
    */
   private static final boolean DEF_WITH_SRC_CONTEXT = false;
 
   /** Whether we should register a dummy SUB socket. */
   private static final boolean WITH_DUMMY_SUB = false;
 
-
   // ----------------------- Tunables from the command line -----------------
-  /** Unused (otherwise, rename to parallelThreads). Parallel producer threads JMH should use.  Set with -t <n> on CLI. */
+  /**
+   * Unused (otherwise, rename to parallelThreads). Parallel producer threads JMH should use. Set
+   * with -t <n> on CLI.
+   */
   @Param({"1"})
-  public int unused;                 // (value unused; @Threads controls parallelism)
+  public int unused; // (value unused; @Threads controls parallelism)
 
   /** Type of {@link IoProfile} to run in relation to IO (networking). */
   @Param({"CPU_ONLY", "MOCK", "REAL"})
   public IoProfile ioProfile;
 
   /** Variant of call to hot-path: parameterizes variations of RunOptions. */
-  @Param({"NOWEAVE", "NOOP", "INTERCEPTS", "PUB", "WAL", "PUB_WAL", "INTERCEPTS_PUB", "INTERCEPTS_WAL", "INTERCEPTS_PUB_WAL"})
+  @Param({
+    "NOWEAVE",
+    "NOOP",
+    "INTERCEPTS",
+    "PUB",
+    "WAL",
+    "PUB_WAL",
+    "INTERCEPTS_PUB",
+    "INTERCEPTS_WAL",
+    "INTERCEPTS_PUB_WAL"
+  })
   public FeatureSetVariant variant;
 
   /** Four comma‑separated percentages that must add up to 100, e.g. "40,35,20,5". */
@@ -239,13 +250,13 @@ public class DispatchBenchmark {
   private EnumSet<RunOptions> runOpts;
 
   /** Shared Zmq context. */
-  private ZContext               zmqCtx;
+  private ZContext zmqCtx;
 
   /** Inproc socket used for synchronizing managed services startup. */
-  private Socket                 syncSocket;
+  private Socket syncSocket;
 
   /** Manager for all required services. */
-  private ServiceManager         serviceManager;
+  private ServiceManager serviceManager;
 
   /** Handle to the injected MessagePublisher. */
   private MessagePublisher messagePublisher;
@@ -253,10 +264,10 @@ public class DispatchBenchmark {
   /** Handle to the injected OutboundMessageGateway. */
   private OutboundMessageGateway messageGateway;
 
-  /** MPSC queue for WAL .*/
+  /** MPSC queue for WAL . */
   private HwmMessageQueue<OutboundMsg> walQueue;
 
-  /** MPSC queue for PUB .*/
+  /** MPSC queue for PUB . */
   private HwmMessageQueue<OutboundMsg> pubQueue;
 
   /** Custom classloader. */
@@ -306,21 +317,20 @@ public class DispatchBenchmark {
   /** Dummy subscriber socket to attach when using PUB. */
   private Socket dummySubSocket;
 
-  /** Number of messages received by dummy subscriber .*/
+  /** Number of messages received by dummy subscriber . */
   private long dummyRcvs;
 
   /** Dummy subscriber's thread for continuous recv(). */
-  private Thread    dummySubThread;
+  private Thread dummySubThread;
 
   /** Flag to let the dummy thread know it's done. */
   private volatile boolean stopDummy;
 
   /** Sequence of chars to create random chunks of text. */
-  private static final char[] ALPHA = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ".toCharArray();
+  private static final char[] ALPHA =
+      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ".toCharArray();
 
-  /**
-   * Set up the benchmark run.
-   */
+  /** Set up the benchmark run. */
   @Setup(Level.Trial)
   public void setUp(BenchmarkParams bmParams) throws IllegalAccessException, InterruptedException {
 
@@ -344,9 +354,10 @@ public class DispatchBenchmark {
     runOpts = variant.toRunOptions();
 
     // assert variant <--> ioProfile compatibility
-    if (ioProfile == IoProfile.CPU_ONLY &&
-            (runOpts.contains(RunOptions.WITH_WAL) || runOpts.contains(RunOptions.WITH_TCP_PUB)))  {
-      throw new IllegalArgumentException("CPU_ONLY profile cannot be combined with WAL/PUB variants");
+    if (ioProfile == IoProfile.CPU_ONLY
+        && (runOpts.contains(RunOptions.WITH_WAL) || runOpts.contains(RunOptions.WITH_TCP_PUB))) {
+      throw new IllegalArgumentException(
+          "CPU_ONLY profile cannot be combined with WAL/PUB variants");
     }
 
     if (ioProfile == IoProfile.CPU_ONLY) {
@@ -355,7 +366,7 @@ public class DispatchBenchmark {
       runOpts.remove(RunOptions.WITH_TCP_PUB);
     }
 
-   // initialize ZMQ context   - shared across services
+    // initialize ZMQ context   - shared across services
     initZmqContextAndGetReady();
 
     // if PUB, attach a dummy subscriber
@@ -364,22 +375,24 @@ public class DispatchBenchmark {
     }
 
     // create CustomClassLoader (with no URL's in path)
-    customClassloader = new CustomClassloader(new URL[]{}, Thread.currentThread().getContextClassLoader());
+    customClassloader =
+        new CustomClassloader(new URL[] {}, Thread.currentThread().getContextClassLoader());
 
     // create DI injector
     Module brokersModule = null;
     switch (ioProfile) {
-      case MOCK -> brokersModule = new MockBrokersModule();   // MockProducer + DummyPublisher
-      case REAL -> brokersModule = new RealBrokersModule();   // KafkaProducer provider, etc.
+      case MOCK -> brokersModule = new MockBrokersModule(); // MockProducer + DummyPublisher
+      case REAL -> brokersModule = new RealBrokersModule(); // KafkaProducer provider, etc.
       default -> {}
     }
 
     if (brokersModule == null) {
       injector = Guice.createInjector(new PeerWiring(props, runOpts, zmqCtx, customClassloader));
     } else {
-      injector = Guice.createInjector(
+      injector =
+          Guice.createInjector(
               Modules.override(new PeerWiring(props, runOpts, zmqCtx, customClassloader))
-                      .with(brokersModule));
+                  .with(brokersModule));
     }
 
     // ----- start consumer services (WAL, PUB), collecting required handles
@@ -407,7 +420,8 @@ public class DispatchBenchmark {
       services.add(walWriter);
 
       // tell WalWriter which log to write
-      LogInfo writeAheadLog = new LogInfo(DEF_WAL_LOG_NAME, props.getProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG));
+      LogInfo writeAheadLog =
+          new LogInfo(DEF_WAL_LOG_NAME, props.getProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG));
       walWriter.writeToLog(writeAheadLog, false);
     }
     serviceManager = new ServiceManager(services);
@@ -427,11 +441,11 @@ public class DispatchBenchmark {
     // collect injected handles required in benchmark
     // NOTE: explicit type required for errorprone (do not replace by <>)
     Key<HwmMessageQueue<OutboundMsg>> walKey =
-            Key.get(new TypeLiteral<HwmMessageQueue<OutboundMsg>>() {}, Names.named("wal_queue"));
+        Key.get(new TypeLiteral<HwmMessageQueue<OutboundMsg>>() {}, Names.named("wal_queue"));
     walQueue = injector.getInstance(walKey);
     // NOTE: explicit type required for errorprone (do not replace by <>)
     Key<HwmMessageQueue<OutboundMsg>> pubKey =
-            Key.get(new TypeLiteral<HwmMessageQueue<OutboundMsg>>() {}, Names.named("pub_queue"));
+        Key.get(new TypeLiteral<HwmMessageQueue<OutboundMsg>>() {}, Names.named("pub_queue"));
     pubQueue = injector.getInstance(pubKey);
     messagePublisherConfig = injector.getInstance(MessagePublisherConfig.class);
 
@@ -439,10 +453,11 @@ public class DispatchBenchmark {
     calls = variant.equals(FeatureSetVariant.NOWEAVE) ? new UnwovenCalls() : new QuantizedCalls();
 
     // initialize args source
-    argsSource = switch (inputMode) {
-      case ASYNC     -> new AsyncDispatchArgsSource(this);
-      case PRELOADED -> new PreloadedDispatchArgsSource(this);
-    };
+    argsSource =
+        switch (inputMode) {
+          case ASYNC -> new AsyncDispatchArgsSource(this);
+          case PRELOADED -> new PreloadedDispatchArgsSource(this);
+        };
     argsSource.start();
 
     logger.debug("setUp completed");
@@ -486,9 +501,7 @@ public class DispatchBenchmark {
     return def;
   }
 
-  /**
-   * Sets several variables for the test from properties, falling back to defaults.
-   */
+  /** Sets several variables for the test from properties, falling back to defaults. */
   private void setTestProperties() {
     microTextSize = parseArgSizeProperty("bench.size.micro", MICRO_TXT_SIZE);
     smallTextSize = parseArgSizeProperty("bench.size.small", SMALL_TXT_SIZE);
@@ -497,18 +510,21 @@ public class DispatchBenchmark {
   }
 
   /**
-   * Sets the running properties, reading them from -D... args if available, falling back to defaults.
+   * Sets the running properties, reading them from -D... args if available, falling back to
+   * defaults.
    */
   private void setWiringProperties() {
 
     // peer ID
-    props.setProperty("id",  UUID.randomUUID().toString());
+    props.setProperty("id", UUID.randomUUID().toString());
 
     // ZMQ socket endpoints
-    props.setProperty("sync.ready", "inproc://sync_ready");  // used by all services
-    props.setProperty("offset.pub",   "inproc://offsets");  // used by KafkaWalWriter
-    props.setProperty("out.pub", System.getProperty("pub.endpoint", DEF_PUB_ENDPOINT));  // used by MessagePublisher
-    props.setProperty("intercepts.reg", "inproc://intercept_reg");  // used by InterceptMatcher
+    props.setProperty("sync.ready", "inproc://sync_ready"); // used by all services
+    props.setProperty("offset.pub", "inproc://offsets"); // used by KafkaWalWriter
+    props.setProperty(
+        "out.pub",
+        System.getProperty("pub.endpoint", DEF_PUB_ENDPOINT)); // used by MessagePublisher
+    props.setProperty("intercepts.reg", "inproc://intercept_reg"); // used by InterceptMatcher
 
     // WAL Writer
     props.setProperty("wal.type", System.getProperty("wal.type", "kafka"));
@@ -518,8 +534,12 @@ public class DispatchBenchmark {
     if (!walQueueType.equals(MpscKind.NONE)) {
       switch (walQueueType) {
         case FIXED, CHUNKED, GROWABLE -> {
-          props.setProperty("wal.queue.initial", System.getProperty("wal.queue.initial", String.valueOf(DEF_WAL_QUEUE_INITIAL)));
-          props.setProperty("wal.queue.max", System.getProperty("wal.queue.max", String.valueOf(DEF_WAL_QUEUE_MAX)));
+          props.setProperty(
+              "wal.queue.initial",
+              System.getProperty("wal.queue.initial", String.valueOf(DEF_WAL_QUEUE_INITIAL)));
+          props.setProperty(
+              "wal.queue.max",
+              System.getProperty("wal.queue.max", String.valueOf(DEF_WAL_QUEUE_MAX)));
         }
         default -> throw new IllegalArgumentException("Unsupported wal.queue.type=" + walQueueType);
       }
@@ -527,10 +547,12 @@ public class DispatchBenchmark {
 
     // ChronicleWalWriter params
     props.setProperty("wal.chronicle.base_dir", System.getProperty("wal.chronicle.base_dir", ""));
-    props.setProperty("wal.chronicle.roll_cycle", System.getProperty("wal.chronicle.roll_cycle", ""));
-    props.setProperty("wal.chronicle.block_size", System.getProperty("wal.chronicle.block_size", ""));
-    props.setProperty("wal.chronicle.sync_every", System.getProperty("wal.chronicle.sync_every", "-1"));
-
+    props.setProperty(
+        "wal.chronicle.roll_cycle", System.getProperty("wal.chronicle.roll_cycle", ""));
+    props.setProperty(
+        "wal.chronicle.block_size", System.getProperty("wal.chronicle.block_size", ""));
+    props.setProperty(
+        "wal.chronicle.sync_every", System.getProperty("wal.chronicle.sync_every", "-1"));
 
     // save the chronicle path, needed later in setUp()
     if (props.getProperty("wal.type").equalsIgnoreCase("chronicle")) {
@@ -541,12 +563,14 @@ public class DispatchBenchmark {
     }
 
     // KafkaWalWriter params
-    props.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
-            System.getProperty("wal.kafka.bootstrap_servers", DEF_KAFKA_BOOTSTRAP_SERVERS));
+    props.setProperty(
+        ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
+        System.getProperty("wal.kafka.bootstrap_servers", DEF_KAFKA_BOOTSTRAP_SERVERS));
 
     props.setProperty("wal.kafka.linger_ms", System.getProperty("wal.kafka.linger_ms", ""));
     props.setProperty("wal.kafka.batch_size", System.getProperty("wal.kafka.batch_size", ""));
-    props.setProperty("wal.kafka.compression_type", System.getProperty("wal.kafka.compression_type", ""));
+    props.setProperty(
+        "wal.kafka.compression_type", System.getProperty("wal.kafka.compression_type", ""));
     props.setProperty("wal.kafka.buffer_memory", System.getProperty("wal.kafka.buffer_memory", ""));
 
     // other WAL params
@@ -556,52 +580,52 @@ public class DispatchBenchmark {
     props.setProperty("pub.queue.type", pubQueueType.name());
     switch (pubQueueType) {
       case FIXED, CHUNKED, GROWABLE -> {
-        props.setProperty("pub.queue.initial", System.getProperty("pub.queue.initial", String.valueOf(DEF_PUB_QUEUE_INITIAL)));
-        props.setProperty("pub.queue.max", System.getProperty("pub.queue.max", String.valueOf(DEF_PUB_QUEUE_MAX)));
+        props.setProperty(
+            "pub.queue.initial",
+            System.getProperty("pub.queue.initial", String.valueOf(DEF_PUB_QUEUE_INITIAL)));
+        props.setProperty(
+            "pub.queue.max",
+            System.getProperty("pub.queue.max", String.valueOf(DEF_PUB_QUEUE_MAX)));
       }
       default -> throw new IllegalArgumentException("Unsupported pub.queue.type=" + pubQueueType);
     }
 
     // MessagePublisher params
-    props.setProperty("pub.spsc_size",
-            System.getProperty("pub.spsc_size",
-                    String.valueOf(DEF_SPSC_SIZE)));
+    props.setProperty(
+        "pub.spsc_size", System.getProperty("pub.spsc_size", String.valueOf(DEF_SPSC_SIZE)));
 
-    props.setProperty("pub.batch_size",
-            System.getProperty("pub.batch_size",
-                    String.valueOf(DEF_BATCH_SIZE)));
+    props.setProperty(
+        "pub.batch_size", System.getProperty("pub.batch_size", String.valueOf(DEF_BATCH_SIZE)));
 
-    props.setProperty("pub.flush_on_close",
-            System.getProperty("pub.flush_on_close",
-                    DEF_FLUSH_ON_CLOSE));
+    props.setProperty(
+        "pub.flush_on_close", System.getProperty("pub.flush_on_close", DEF_FLUSH_ON_CLOSE));
 
-    props.setProperty("pub.zmq.linger",
-            System.getProperty("pub.zmq.linger",
-                    String.valueOf(DEF_ZMQ_LINGER)));
+    props.setProperty(
+        "pub.zmq.linger", System.getProperty("pub.zmq.linger", String.valueOf(DEF_ZMQ_LINGER)));
 
-    props.setProperty("pub.zmq.send_timeout",
-            System.getProperty("pub.zmq.send_timeout",
-                    String.valueOf(DEF_ZMQ_SEND_TIMEOUT)));
+    props.setProperty(
+        "pub.zmq.send_timeout",
+        System.getProperty("pub.zmq.send_timeout", String.valueOf(DEF_ZMQ_SEND_TIMEOUT)));
 
-    props.setProperty("pub.zmq.send_hwm",
-            System.getProperty("pub.zmq.send_hwm",
-                    String.valueOf(DEF_ZMQ_SEND_HWM)));
+    props.setProperty(
+        "pub.zmq.send_hwm",
+        System.getProperty("pub.zmq.send_hwm", String.valueOf(DEF_ZMQ_SEND_HWM)));
 
-    props.setProperty("pub.drop.policy",
-            System.getProperty("pub.drop.policy",
-                    DEF_DROP_POLICY.name()));
+    props.setProperty(
+        "pub.drop.policy", System.getProperty("pub.drop.policy", DEF_DROP_POLICY.name()));
 
-    props.setProperty("pub.drop.hwm_pct",
-            System.getProperty("pub.drop.hwm_pct",
-                    String.valueOf(DEF_DROP_HWM_PCT)));
+    props.setProperty(
+        "pub.drop.hwm_pct",
+        System.getProperty("pub.drop.hwm_pct", String.valueOf(DEF_DROP_HWM_PCT)));
 
-    props.setProperty("pub.drop.keep_pct",
-            System.getProperty("pub.drop.keep_pct",
-                    String.valueOf(DEF_DROP_KEEP_PCT)));
+    props.setProperty(
+        "pub.drop.keep_pct",
+        System.getProperty("pub.drop.keep_pct", String.valueOf(DEF_DROP_KEEP_PCT)));
 
     // Params required by other classes (execution.java/*)
-    props.setProperty("messages.with_src_context",
-            System.getProperty("messages.with_src_context", String.valueOf(DEF_WITH_SRC_CONTEXT)));
+    props.setProperty(
+        "messages.with_src_context",
+        System.getProperty("messages.with_src_context", String.valueOf(DEF_WITH_SRC_CONTEXT)));
     props.setProperty("rpc.allow_nonpublic", "false");
     props.setProperty("paldir_url", PalDirectory.NO_URL);
   }
@@ -617,33 +641,35 @@ public class DispatchBenchmark {
     ZMQ.Poller poller = zmqCtx.createPoller(1);
     poller.register(dummySubSocket, ZMQ.Poller.POLLIN);
 
-    dummySubThread = new Thread(() -> {
-      while (!stopDummy && !Thread.currentThread().isInterrupted()) {
+    dummySubThread =
+        new Thread(
+            () -> {
+              while (!stopDummy && !Thread.currentThread().isInterrupted()) {
 
-        // wait max 10 ms for the first frame of a message
-        if (poller.poll(10) == 0) {
-          Thread.onSpinWait();          // nothing yet
-          continue;
-        }
+                // wait max 10 ms for the first frame of a message
+                if (poller.poll(10) == 0) {
+                  Thread.onSpinWait(); // nothing yet
+                  continue;
+                }
 
-        if (poller.pollin(0)) {           // data ready
-          try {
-            OutboundMsg unused = OutboundMsg.receive(dummySubSocket, true);
-            dummyRcvs++;
-          } catch (Exception ignore) {
-            // ignore malformed / partially received messages – rare on inproc
-          }
-        }
-      }
-    }, "dummy-sub");
-    dummySubThread.setDaemon(true);     // JVM can exit even if we forget to stop it
+                if (poller.pollin(0)) { // data ready
+                  try {
+                    OutboundMsg unused = OutboundMsg.receive(dummySubSocket, true);
+                    dummyRcvs++;
+                  } catch (Exception ignore) {
+                    // ignore malformed / partially received messages – rare on inproc
+                  }
+                }
+              }
+            },
+            "dummy-sub");
+    dummySubThread.setDaemon(true); // JVM can exit even if we forget to stop it
     dummySubThread.start();
-    Thread.sleep(200);  // give time for the handshake once publisher starts
+    Thread.sleep(200); // give time for the handshake once publisher starts
   }
 
-
   /**
-   *  Creates a random chunk of text of length {@code bytes}.
+   * Creates a random chunk of text of length {@code bytes}.
    *
    * @param bytes maximum size in bytes
    * @param rnd random generator instance
@@ -665,14 +691,14 @@ public class DispatchBenchmark {
    *
    * @param bytes the String object's length in chars
    * @param rnd a random generator
-   * @param prefix a String that will be prefixed to the generated payload, so we can identify
-   *               the messages in the logs
+   * @param prefix a String that will be prefixed to the generated payload, so we can identify the
+   *     messages in the logs
    * @return the invocation args
    */
   private InvocationArgs createTextDispatchable(int bytes, Random rnd, String prefix) {
 
     String payload = randomText(bytes, rnd, prefix);
-    return new InvocationArgs(null, new Object[]{payload});
+    return new InvocationArgs(null, new Object[] {payload});
   }
 
   /**
@@ -682,34 +708,33 @@ public class DispatchBenchmark {
    * @param rnd random generator
    * @return InvocationArgs instance
    */
-   private InvocationArgs createArrayDispatchable(int size, Random rnd) {
+  private InvocationArgs createArrayDispatchable(int size, Random rnd) {
 
-     double[] doubles = rnd.doubles(size).toArray();
-    return new InvocationArgs(null, new Object[]{doubles});
+    double[] doubles = rnd.doubles(size).toArray();
+    return new InvocationArgs(null, new Object[] {doubles});
   }
 
   /**
-   * Produces one {@link InvocationArgs} whose size category is chosen
-   * according to {@link #sizeDist}.
-   * <p>
-   * Four categories of fixed size are used:
+   * Produces one {@link InvocationArgs} whose size category is chosen according to {@link
+   * #sizeDist}.
+   *
+   * <p>Four categories of fixed size are used:
+   *
    * <ol>
-   *   <li>{@link DispatchBenchmark#MICRO_TXT_SIZE}</li>
-   *   <li>{@link DispatchBenchmark#SMALL_TXT_SIZE}</li>
-   *   <li>{@link DispatchBenchmark#DOUBLE_ARRAY_SIZE} (i.e. medium)</li>
-   *   <li>{@link DispatchBenchmark#LARGE_TXT_SIZE}</li>
+   *   <li>{@link DispatchBenchmark#MICRO_TXT_SIZE}
+   *   <li>{@link DispatchBenchmark#SMALL_TXT_SIZE}
+   *   <li>{@link DispatchBenchmark#DOUBLE_ARRAY_SIZE} (i.e. medium)
+   *   <li>{@link DispatchBenchmark#LARGE_TXT_SIZE}
    * </ol>
    */
   public InvocationArgs randomArgsAccordingToDist(Random rnd) throws NoSuchMethodException {
     int p = rnd.nextInt(100);
-    int[] w = sizeDist;   // local alias
+    int[] w = sizeDist; // local alias
     if (p < w[0]) {
       return createTextDispatchable(microTextSize, rnd, "micro=");
-    }
-    else if (p < w[0] + w[1]) {
+    } else if (p < w[0] + w[1]) {
       return createTextDispatchable(smallTextSize, rnd, "small=");
-    }
-    else if (p < w[0] + w[1] + w[2]) {
+    } else if (p < w[0] + w[1] + w[2]) {
       return createArrayDispatchable(doubleArraySize, rnd);
     } else {
       return createTextDispatchable(largeTextSize, rnd, "large=");
@@ -718,12 +743,10 @@ public class DispatchBenchmark {
 
   /** Expose sizeDist */
   public int[] sizeDistribution() {
-     return sizeDist;
+    return sizeDist;
   }
 
-  /**
-   * Tear down the benchmark run.
-   */
+  /** Tear down the benchmark run. */
   @TearDown(Level.Trial)
   public void tearDown() throws InterruptedException {
 
@@ -747,8 +770,8 @@ public class DispatchBenchmark {
 
       // stop the dummy subscriber *first* so it cannot race with ctx.close()
       if (WITH_DUMMY_SUB && dummySubThread != null) {
-        stopDummy = true;              // let the loop exit
-        dummySubThread.interrupt();    // break a blocking recv()
+        stopDummy = true; // let the loop exit
+        dummySubThread.interrupt(); // break a blocking recv()
         dummySubSocket.close();
         dummySubThread.join();
         logger.debug("Dummy SUB thread finished");
@@ -792,7 +815,8 @@ public class DispatchBenchmark {
       System.out.println("-----------------------------");
       System.out.printf("received  : %,d%n", publisherStats.messagesReceived());
       System.out.printf("published : %,d%n", publisherStats.messagesPublished());
-      System.out.printf("dropped new (SPSC)      : %,d%n", publisherStats.messagesDroppedUnforwarded());
+      System.out.printf(
+          "dropped new (SPSC)      : %,d%n", publisherStats.messagesDroppedUnforwarded());
       System.out.printf("dropped old (SPSC)      : %,d%n", publisherStats.messagesDroppedEvicted());
       System.out.printf("dropped(send fail) : %,d%n", publisherStats.messagesDroppedPubFail());
       System.out.printf("dropped(socket err): %,d%n", publisherStats.messagesDroppedSocketErr());
@@ -831,16 +855,19 @@ public class DispatchBenchmark {
       MessageQueueStats s = messageGateway.getPubQueueStats();
       long parkedUs = TimeUnit.NANOSECONDS.toMicros(s.totalParkedNanos());
 
-      System.out.printf("PUB: dropped=%d parks=%d parked=%dµs failedOffers=%d%n",
-              s.messagesDropped(), s.totalParks(), parkedUs, s.totalFailedOffers());
+      System.out.printf(
+          "PUB: dropped=%d parks=%d parked=%dµs failedOffers=%d%n",
+          s.messagesDropped(), s.totalParks(), parkedUs, s.totalFailedOffers());
       System.out.println();
 
       for (ThreadWaitSnapshot tws : s.perThread()) {
-        System.out.printf("  T[%d:%s] parks=%d parked=%dµs failedOffers=%d%n",
-                tws.threadId(), tws.threadName(),
-                tws.parks(),
-                TimeUnit.NANOSECONDS.toMicros(tws.parkedNanos()),
-                tws.failedOffers());
+        System.out.printf(
+            "  T[%d:%s] parks=%d parked=%dµs failedOffers=%d%n",
+            tws.threadId(),
+            tws.threadName(),
+            tws.parks(),
+            TimeUnit.NANOSECONDS.toMicros(tws.parkedNanos()),
+            tws.failedOffers());
       }
       System.out.println();
     }
@@ -854,16 +881,19 @@ public class DispatchBenchmark {
         MessageQueueStats s = messageGateway.getWalQueueStats();
         long parkedUs = TimeUnit.NANOSECONDS.toMicros(s.totalParkedNanos());
 
-        System.out.printf("WAL: dropped=%d parks=%d parked=%dµs failedOffers=%d%n",
-                s.messagesDropped(), s.totalParks(), parkedUs, s.totalFailedOffers());
+        System.out.printf(
+            "WAL: dropped=%d parks=%d parked=%dµs failedOffers=%d%n",
+            s.messagesDropped(), s.totalParks(), parkedUs, s.totalFailedOffers());
         System.out.println();
 
         for (ThreadWaitSnapshot tws : s.perThread()) {
-          System.out.printf("  T[%d:%s] parks=%d parked=%dµs failedOffers=%d%n",
-                  tws.threadId(), tws.threadName(),
-                  tws.parks(),
-                  TimeUnit.NANOSECONDS.toMicros(tws.parkedNanos()),
-                  tws.failedOffers());
+          System.out.printf(
+              "  T[%d:%s] parks=%d parked=%dµs failedOffers=%d%n",
+              tws.threadId(),
+              tws.threadName(),
+              tws.parks(),
+              TimeUnit.NANOSECONDS.toMicros(tws.parkedNanos()),
+              tws.failedOffers());
         }
         System.out.println();
       }
@@ -880,7 +910,8 @@ public class DispatchBenchmark {
   }
 
   /**
-   *  helper: returns true once the PUB socket is completely flushed
+   * helper: returns true once the PUB socket is completely flushed
+   *
    * @param pubSocket the socket to wait on until flushed
    * @return true once the PUB socket is completely flushed
    */
@@ -888,7 +919,7 @@ public class DispatchBenchmark {
     try {
       return pubSocket == null || (pubSocket.getEvents() & ZMQ.Poller.POLLOUT) != 0;
     } catch (Exception e) {
-      return true;           // socket/context already closed ⇒ treat as flushed
+      return true; // socket/context already closed ⇒ treat as flushed
     }
   }
 
@@ -906,7 +937,7 @@ public class DispatchBenchmark {
   @OperationsPerInvocation(OPS)
   public void hotPath(Blackhole bh) {
 
-    for (int i=0; i<OPS; i++) {
+    for (int i = 0; i < OPS; i++) {
       InvocationArgs ia = argsSource.next();
       Object arg0 = ia.args()[0];
       Object ret = null;
@@ -994,9 +1025,7 @@ public class DispatchBenchmark {
     syncSocket.close();
   }
 
-  /**
-   * Initialize ZMQ Context and bind Sync-Ready socket.
-   */
+  /** Initialize ZMQ Context and bind Sync-Ready socket. */
   private void initZmqContextAndGetReady() {
     zmqCtx = new ZContext();
     zmqCtx.setLinger(1000);
@@ -1007,6 +1036,4 @@ public class DispatchBenchmark {
     syncSocket = zmqCtx.createSocket(SocketType.PULL);
     syncSocket.bind(props.getProperty("sync.ready"));
   }
-
 }
-

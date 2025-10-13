@@ -15,11 +15,8 @@ import com.google.inject.Singleton;
 import com.quasient.pal.core.transport.kafka.ProducerFactory;
 import org.apache.kafka.clients.producer.KafkaProducer;
 
-/**
- * Guice wiring module for benchmark runs in {@link IoProfile#REAL} mode.
- */
+/** Guice wiring module for benchmark runs in {@link IoProfile#REAL} mode. */
 public final class RealBrokersModule extends AbstractModule {
-
 
   /**
    * Provides a {@link ProducerFactory} that returns a real Kafka Producer.
@@ -30,6 +27,6 @@ public final class RealBrokersModule extends AbstractModule {
   @Provides
   @Singleton
   ProducerFactory realFactory() {
-    return KafkaProducer::new;   // real network client
+    return KafkaProducer::new; // real network client
   }
 }

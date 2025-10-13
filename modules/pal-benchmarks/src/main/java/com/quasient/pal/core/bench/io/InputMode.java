@@ -16,4 +16,3 @@ public enum InputMode {
   /** One big pre‑generated batch that every worker thread samples from. */
   PRELOADED
 }
-

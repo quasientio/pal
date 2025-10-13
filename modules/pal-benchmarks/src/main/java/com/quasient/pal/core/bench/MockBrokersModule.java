@@ -16,24 +16,21 @@ import com.quasient.pal.core.bench.dummies.DrainingMockProducer;
 import com.quasient.pal.core.transport.kafka.ProducerFactory;
 import com.quasient.pal.core.transport.zmq.publish.MessagePublisher;
 import org.apache.kafka.clients.producer.MockProducer;
-import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
+import org.apache.kafka.common.serialization.StringSerializer;
 
-/**
- * Guice wiring module for running the benchmark in {@link IoProfile#MOCK}.
- */
+/** Guice wiring module for running the benchmark in {@link IoProfile#MOCK}. */
 public final class MockBrokersModule extends AbstractModule {
 
-  /**
-   * Configures dependency injection.
-   */
-  @Override protected void configure() {
+  /** Configures dependency injection. */
+  @Override
+  protected void configure() {
     bind(MessagePublisher.class).to(DummyMessagePublisher.class).in(Singleton.class);
   }
 
   /**
-   * Provides a {@link ProducerFactory} that returns a mock producer
-   * for {@link IoProfile#MOCK} runs, which measure CPU, not the broker/network.
+   * Provides a {@link ProducerFactory} that returns a mock producer for {@link IoProfile#MOCK}
+   * runs, which measure CPU, not the broker/network.
    *
    * @return an instance of {@link MockProducer}
    */
@@ -41,8 +38,6 @@ public final class MockBrokersModule extends AbstractModule {
   @Provides
   @Singleton
   ProducerFactory mockFactory() {
-    return props -> new DrainingMockProducer<>(
-            new StringSerializer(),
-            new ByteArraySerializer());
+    return props -> new DrainingMockProducer<>(new StringSerializer(), new ByteArraySerializer());
   }
 }

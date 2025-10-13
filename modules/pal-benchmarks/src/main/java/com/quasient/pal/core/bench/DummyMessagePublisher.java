@@ -9,19 +9,19 @@
  */
 package com.quasient.pal.core.bench;
 
+import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import com.quasient.pal.core.transport.zmq.publish.MessagePublisher;
 import com.quasient.pal.core.transport.zmq.publish.MessagePublisherConfig;
-import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import com.quasient.pal.messages.OutboundMsg;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import java.util.UUID;
-import org.zeromq.ZContext;
 import org.jctools.queues.MessagePassingQueue;
+import org.zeromq.ZContext;
 
 /**
- * Same queues, same batching, same network thread – but the final
- * ZMQ send() is replaced by a no-op, so no system calls occur.
+ * Same queues, same batching, same network thread – but the final ZMQ send() is replaced by a
+ * no-op, so no system calls occur.
  */
 public final class DummyMessagePublisher extends MessagePublisher {
 
@@ -38,19 +38,20 @@ public final class DummyMessagePublisher extends MessagePublisher {
    */
   @Inject
   public DummyMessagePublisher(
-          UUID peerUuid,
-          ZContext context,
-          @Named("sync.ready") String syncSocketAddress,
-          ThreadGroup serviceThreadGroup,
-          @Named("MessagePublisher.service") String serviceName,
-          @Named("pub_queue") HwmMessageQueue<OutboundMsg> pubQueue,
-          MessagePublisherConfig config) {
+      UUID peerUuid,
+      ZContext context,
+      @Named("sync.ready") String syncSocketAddress,
+      ThreadGroup serviceThreadGroup,
+      @Named("MessagePublisher.service") String serviceName,
+      @Named("pub_queue") HwmMessageQueue<OutboundMsg> pubQueue,
+      MessagePublisherConfig config) {
 
     super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName, pubQueue, config);
   }
 
   /** Don’t create a real socket; just start the network thread. */
-  @Override protected void openConnections() {
+  @Override
+  protected void openConnections() {
     // no socket, but start the same network thread
     networkThread = new Thread(this::networkLoop, serviceName + "-net");
     networkThread.setDaemon(false);
@@ -60,7 +61,7 @@ public final class DummyMessagePublisher extends MessagePublisher {
   /** No socket to close. Stats snapshot is still handled in super.closeConnections(). */
   @Override
   protected void closeConnections() {
-    super.closeConnections();   // handles interrupt, stats, SPSC clear
+    super.closeConnections(); // handles interrupt, stats, SPSC clear
   }
 
   /* ─────────────── Override the actual send ─────────────── */
@@ -68,9 +69,9 @@ public final class DummyMessagePublisher extends MessagePublisher {
   @Override
   protected void flushBurst(OutboundMsg[] batch, int size) {
     // Same accounting as the original, minus the ZMQ send
-    messagesPublished += size;          // pretend all sends succeeded
+    messagesPublished += size; // pretend all sends succeeded
     for (int i = 0; i < size; i++) {
-      batch[i] = null;                 // help GC
+      batch[i] = null; // help GC
     }
   }
 
@@ -79,8 +80,8 @@ public final class DummyMessagePublisher extends MessagePublisher {
   public void run() {
     final MessagePassingQueue.WaitStrategy NO_WAIT = idle -> idle;
     pubQueue.drain(
-            this::forwardToNetworkThread,  // use super’s method
-            NO_WAIT,
-            () -> !(Thread.currentThread().isInterrupted() || shutdownRequested));
+        this::forwardToNetworkThread, // use super’s method
+        NO_WAIT,
+        () -> !(Thread.currentThread().isInterrupted() || shutdownRequested));
   }
 }

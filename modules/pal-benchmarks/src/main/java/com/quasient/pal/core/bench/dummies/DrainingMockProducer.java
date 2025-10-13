@@ -19,18 +19,16 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.serialization.Serializer;
 
 /**
- * A MockProducer variant that invokes the normal callbacks/futures but
- * immediately discards every {@link ProducerRecord}, so its internal
- * {@code history()} list never grows and no payloads are retained on the heap.
+ * A MockProducer variant that invokes the normal callbacks/futures but immediately discards every
+ * {@link ProducerRecord}, so its internal {@code history()} list never grows and no payloads are
+ * retained on the heap.
  *
- * <p>Intended for soak / load tests where we care about the end-to-end
- * behaviour of our pipeline, not about inspecting every record afterwards.
+ * <p>Intended for soak / load tests where we care about the end-to-end behaviour of our pipeline,
+ * not about inspecting every record afterwards.
  *
- * <p><b>Important:</b> this class is created with
- * {@code autoComplete=true}.  Each {@code send} therefore <em>immediately</em>
- * completes the returned future and invokes the callback on the calling
- * thread – exactly what the default MockProducer does when
- * {@code autoComplete} is enabled.</p>
+ * <p><b>Important:</b> this class is created with {@code autoComplete=true}. Each {@code send}
+ * therefore <em>immediately</em> completes the returned future and invokes the callback on the
+ * calling thread – exactly what the default MockProducer does when {@code autoComplete} is enabled.
  *
  * @param <K> type of Key
  * @param <V> type of Value
@@ -38,12 +36,11 @@ import org.apache.kafka.common.serialization.Serializer;
 public class DrainingMockProducer<K, V> extends MockProducer<K, V> {
 
   /** Convenience constructor with custom serializers. */
-  public DrainingMockProducer(
-          Serializer<K> keySerializer, Serializer<V> valueSerializer) {
+  public DrainingMockProducer(Serializer<K> keySerializer, Serializer<V> valueSerializer) {
 
     /* autoComplete = true ⇒ MockProducer will run the callback
-       immediately inside {@link #send}. */
-    super(/* autoComplete = */ true, keySerializer, valueSerializer);
+    immediately inside {@link #send}. */
+    super(/* autoComplete= */ true, keySerializer, valueSerializer);
   }
 
   /* -----------------------------------------------------------------------
@@ -52,18 +49,19 @@ public class DrainingMockProducer<K, V> extends MockProducer<K, V> {
 
   /** Discard the record right after MockProducer has fired the callback. */
   @Override
-  public synchronized Future<RecordMetadata> send(
-          ProducerRecord<K, V> record, Callback callback) {
+  public synchronized Future<RecordMetadata> send(ProducerRecord<K, V> record, Callback callback) {
 
     // Let the parent do normal validation + callback invocation
     Future<RecordMetadata> f = super.send(record, callback);
 
     // Immediately wipe internal state so nothing is retained
-    super.clear();               // clears history + pendingCompletion lists
+    super.clear(); // clears history + pendingCompletion lists
     return f;
   }
 
-  /** @return an immutable empty list – nothing is stored. */
+  /**
+   * @return an immutable empty list – nothing is stored.
+   */
   @Override
   public synchronized List<ProducerRecord<K, V>> history() {
     return Collections.emptyList();

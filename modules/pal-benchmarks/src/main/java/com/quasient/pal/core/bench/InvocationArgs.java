@@ -16,5 +16,4 @@ package com.quasient.pal.core.bench;
  * @param args the arguments for the method
  */
 @SuppressWarnings("ArrayRecordComponent")
-public record InvocationArgs(Object target, Object[] args) {
-}
+public record InvocationArgs(Object target, Object[] args) {}
