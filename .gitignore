@@ -9,3 +9,4 @@ logs/
 .settings/
 venv/
 *.iml
+*.local.md
