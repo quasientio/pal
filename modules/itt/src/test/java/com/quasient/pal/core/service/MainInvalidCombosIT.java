@@ -13,14 +13,11 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 
+import com.quasient.pal.AbstractIntegrationTest;
 import org.junit.Test;
 
-/**
- * Integration tests for invalid CLI option combinations.
- *
- * <p>Replaces MainInvalidCombosTest with simpler process execution using AbstractMainIT.
- */
-public class MainInvalidCombosIT extends AbstractMainIT {
+/** Integration tests for invalid CLI option combinations. */
+public class MainInvalidCombosIT extends AbstractIntegrationTest {
 
   @Test
   public void testSourceLogWithoutKafkaServers_fatalExitNoKafkaServers() throws Exception {

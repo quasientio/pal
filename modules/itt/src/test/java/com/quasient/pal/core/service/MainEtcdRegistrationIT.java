@@ -13,6 +13,7 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 
+import com.quasient.pal.AbstractIntegrationTest;
 import org.junit.Test;
 
 /**
@@ -25,12 +26,12 @@ import org.junit.Test;
  * <p>Note: The preflight health check is tested directly in {@link
  * com.quasient.pal.cxn.directory.PalDirectoryConnectionIT}.
  */
-public class MainEtcdRegistrationIT extends AbstractMainIT {
+public class MainEtcdRegistrationIT extends AbstractIntegrationTest {
 
   @Test
   public void testRegisterSelfWithUnreachableEtcd_fatalExitUnreachableEtcd() throws Exception {
     String unreachableEtcd = "192.0.2.1:2379";
-    ProcessResult result =
+    AbstractIntegrationTest.ProcessResult result =
         runPalCommandWithEnv(unreachableEtcd, "--dir", unreachableEtcd, "com.example.DummyMain");
 
     assertEquals(

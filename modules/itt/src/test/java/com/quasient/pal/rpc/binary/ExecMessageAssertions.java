@@ -28,12 +28,12 @@ import org.slf4j.LoggerFactory;
 // Helper assertion methods. Encapsulates details of serialization.
 public interface ExecMessageAssertions {
 
-  Logger logger = LoggerFactory.getLogger("tests");
+  Logger stLogger = LoggerFactory.getLogger("tests");
 
   default void assertIsObjectOfType(
       ReturnValue returnValue, String className, boolean hasObjRef, boolean isNull, boolean isArray)
       throws ClassNotFoundException {
-    logger.trace(
+    stLogger.trace(
         "in assertIsObjectOfType w/: returnValue:\n{}"
             + ", className: {}, hasObjRef: {}, getIsNull: {}, isArray: {}",
         returnValue,
@@ -92,7 +92,7 @@ public interface ExecMessageAssertions {
 
   @SuppressWarnings("unchecked")
   default <T> void assertValueEqualsArray(T[] actualArray, ReturnValue retValue) throws Exception {
-    logger.trace(
+    stLogger.trace(
         "in assertValueEqualsArray w/: actualArray: {}, retValue:\n{}", actualArray, retValue);
 
     // check array type
@@ -110,7 +110,7 @@ public interface ExecMessageAssertions {
   }
 
   default void assertHasThrowableOfType(ExecMessage msg, String throwableType) {
-    logger.trace(
+    stLogger.trace(
         "in assertHasThrowableOfType w/: msg:\n{}, throwableType: {}",
         ColferUtils.format(msg),
         throwableType);

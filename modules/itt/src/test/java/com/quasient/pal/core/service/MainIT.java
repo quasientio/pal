@@ -13,6 +13,7 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 
+import com.quasient.pal.AbstractIntegrationTest;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -23,7 +24,7 @@ import org.junit.Test;
  * Integration tests for `com.quasient.pal.core.service.Main` that test fatal exit conditions by
  * launching the peer process and checking exit codes and stderr.
  */
-public class MainIT extends AbstractMainIT {
+public class MainIT extends AbstractIntegrationTest {
 
   @Test
   public void testLogWithoutKafkaServers_fatalExitNoKafkaServers() throws Exception {

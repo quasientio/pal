@@ -13,10 +13,11 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 
+import com.quasient.pal.AbstractIntegrationTest;
 import org.junit.Test;
 
 /** Integration tests for invalid CLI input combinations that trigger fatal exits. */
-public class MainInvalidInputIT extends AbstractMainIT {
+public class MainInvalidInputIT extends AbstractIntegrationTest {
 
   @Test
   public void testStartOffsetWithoutLog_fatalExitNoLogGiven() throws Exception {

@@ -22,12 +22,8 @@ import com.quasient.pal.messages.jsonrpc.JsonRpcResponse;
 import com.quasient.pal.messages.types.JsonRpcErrorCode;
 import com.quasient.pal.serdes.Unwrapper;
 import javax.annotation.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public interface JsonRpcMessageAssertions {
-
-  Logger logger = LoggerFactory.getLogger("tests");
 
   default void assertErrorResponse(
       Integer requestId,
