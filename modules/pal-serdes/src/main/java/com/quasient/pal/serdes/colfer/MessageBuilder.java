@@ -291,16 +291,29 @@ public final class MessageBuilder {
   private Parameter[] createNamedParameters(
       Context context, Object[] args, ObjectRef[] argObjRefs) {
     final CodeSignature codeSignature = (CodeSignature) context.getSignature();
-    final int paramsLen = codeSignature.getParameterTypes() == null ? 0 : args.length;
-    final Parameter[] params = new Parameter[paramsLen];
-    String paramName;
-    String paramTypeName;
-    for (int i = 0; i < paramsLen; i++) {
-      paramName = codeSignature.getParameterNames()[i];
-      paramTypeName = codeSignature.getParameterTypes()[i].getName();
-      params[i] =
-          createNamedParameter(
-              codeSignature.getParameters()[i], paramName, paramTypeName, args[i], argObjRefs[i]);
+    final Class<?>[] paramTypes = codeSignature.getParameterTypes();
+    final int paramCount = (paramTypes == null) ? 0 : paramTypes.length;
+    final Parameter[] params = new Parameter[paramCount];
+    final String[] paramNames = codeSignature.getParameterNames();
+    final java.lang.reflect.Parameter[] reflParams = codeSignature.getParameters();
+
+    for (int i = 0; i < paramCount; i++) {
+      final String paramName = (paramNames != null && i < paramNames.length) ? paramNames[i] : null;
+      final String paramTypeName = paramTypes[i].getName();
+      final Object a = (args != null && i < args.length) ? args[i] : null;
+      final ObjectRef r = (argObjRefs != null && i < argObjRefs.length) ? argObjRefs[i] : null;
+      final java.lang.reflect.Parameter rp =
+          (reflParams != null && i < reflParams.length) ? reflParams[i] : null;
+
+      if (rp != null) {
+        params[i] = createNamedParameter(rp, paramName, paramTypeName, a, r);
+      } else {
+        // Fallback if reflective parameter metadata is unavailable
+        params[i] =
+            new Parameter()
+                .withName(paramName == null ? "" : paramName)
+                .withValue(getWrappedObject(a, paramTypeName, r, WrapPolicy.PREFER_REFERENCE));
+      }
     }
     return params;
   }
@@ -308,29 +321,28 @@ public final class MessageBuilder {
   /**
    * Creates an array of named {@link Parameter} objects based on parameter types and arguments.
    *
-   * <p>Args must be set either in {@code args} or {@code argObjRefs}. If {@code null} in both, the
-   * value is assumed to be {@code null}.
+   * <p>All arrays must be non-null and of equal length.
    *
    * @param parameterTypes the array of parameter type names
    * @param args the array of argument values, corresponding to {@code parameterTypes}
    * @param argObjRefs the array of object references corresponding to {@code parameterTypes}
    * @return an array of {@code Parameter} objects representing the named parameters
-   * @throws IllegalArgumentException if the lengths of {@code parameterTypes}, {@code args}, and
-   *     {@code argObjRefs} are inconsistent
+   * @throws IllegalArgumentException if any array is {@code null} or their lengths differ
    */
   private Parameter[] createNamedParameters(
       String[] parameterTypes, Object[] args, ObjectRef[] argObjRefs) {
-    final int paramsTypesLength = parameterTypes == null ? 0 : parameterTypes.length;
-    final int argsLength = args == null ? 0 : args.length;
-    final int argsObjRefsLength = argObjRefs == null ? 0 : argObjRefs.length;
-    if (paramsTypesLength < argsLength || paramsTypesLength < argsObjRefsLength) {
+    if (parameterTypes == null || args == null || argObjRefs == null) {
       throw new IllegalArgumentException(
-          "parameterTypes must be of same length as args and argObjRefs");
+          "parameterTypes, args and argObjRefs must be non-null and of equal length");
     }
-    final Parameter[] params = new Parameter[paramsTypesLength];
-    for (int i = 0; i < paramsTypesLength; i++) {
-      assert argObjRefs != null;
-      assert args != null;
+    final int n = parameterTypes.length;
+    if (args.length != n || argObjRefs.length != n) {
+      throw new IllegalArgumentException(
+          "parameterTypes, args and argObjRefs must be non-null and of equal length");
+    }
+
+    final Parameter[] params = new Parameter[n];
+    for (int i = 0; i < n; i++) {
       if (argObjRefs[i] != null) { // parameter is an objectref
         params[i] = createParameter(parameterTypes[i], null, argObjRefs[i]);
       } else if (args[i] != null) { // parameter is string, primitive or wrapper
@@ -480,7 +492,10 @@ public final class MessageBuilder {
       }
       constructorCall.setClazz(getWrappedClass(codeSignature.getDeclaringTypeName()));
     } else {
-      constructorCall.setParameters(createNamedParameters(parameterTypes, args, argObjRefs));
+      // Only set parameters when all arrays are provided (strict contract); otherwise, omit.
+      if (parameterTypes != null && args != null && argObjRefs != null) {
+        constructorCall.setParameters(createNamedParameters(parameterTypes, args, argObjRefs));
+      }
       constructorCall.setClazz(getWrappedClass(className));
     }
     return newExecMessage(peerUuid).withConstructorCall(constructorCall);
@@ -1111,9 +1126,24 @@ public final class MessageBuilder {
       String[] parameterTypes,
       Object[] args,
       ObjectRef[] argObjRefs) {
+    // Normalize arrays to strict contract: non-null and equal length
+    if (parameterTypes == null) {
+      parameterTypes = new String[0];
+    }
+    final int n = parameterTypes.length;
+    Object[] normArgs = new Object[n];
+    ObjectRef[] normArgRefs = new ObjectRef[n];
+    if (args != null) {
+      int copyLen = Math.min(args.length, n);
+      System.arraycopy(args, 0, normArgs, 0, copyLen);
+    }
+    if (argObjRefs != null) {
+      int copyLen = Math.min(argObjRefs.length, n);
+      System.arraycopy(argObjRefs, 0, normArgRefs, 0, copyLen);
+    }
 
     return buildConstructorMessage(
-        peerUuid, className, null, null, null, parameterTypes, args, argObjRefs);
+        peerUuid, className, null, null, null, parameterTypes, normArgs, normArgRefs);
   }
 
   /**
@@ -1222,14 +1252,15 @@ public final class MessageBuilder {
       String[] parameterTypes,
       Object[] args,
       ObjectRef[] argObjRefs) {
-
-    return newExecMessage(peerUuid)
-        .withInstanceMethodCall(
-            new InstanceMethodCall()
-                .withParameters(createNamedParameters(parameterTypes, args, argObjRefs))
-                .withClazz(getWrappedClass(className))
-                .withName(methodName)
-                .withObjectRef(targetObjRef.getRef()));
+    final InstanceMethodCall call =
+        new InstanceMethodCall()
+            .withClazz(getWrappedClass(className))
+            .withName(methodName)
+            .withObjectRef(targetObjRef.getRef());
+    if (parameterTypes != null && args != null && argObjRefs != null) {
+      call.setParameters(createNamedParameters(parameterTypes, args, argObjRefs));
+    }
+    return newExecMessage(peerUuid).withInstanceMethodCall(call);
   }
 
   // </editor-fold>
@@ -1413,10 +1444,10 @@ public final class MessageBuilder {
       ObjectRef[] argObjRefs) {
 
     final ClassMethodCall classMethodCall =
-        new ClassMethodCall()
-            .withParameters(createNamedParameters(parameterTypes, args, argObjRefs))
-            .withClazz(getWrappedClass(className))
-            .withName(methodName);
+        new ClassMethodCall().withClazz(getWrappedClass(className)).withName(methodName);
+    if (parameterTypes != null && args != null && argObjRefs != null) {
+      classMethodCall.setParameters(createNamedParameters(parameterTypes, args, argObjRefs));
+    }
 
     if (includeSourceContext) {
       classMethodCall.setContext(getWrappedContext(null, sender, senderObjRef));

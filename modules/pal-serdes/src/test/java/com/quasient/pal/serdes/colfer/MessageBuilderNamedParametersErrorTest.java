@@ -27,10 +27,9 @@ public class MessageBuilderNamedParametersErrorTest {
     Object[] args = new Object[] {1}; // fewer args than paramTypes
     ObjectRef[] argRefs = new ObjectRef[] {null, null};
 
-    // Current behavior throws ArrayIndexOutOfBoundsException instead of validating lengths.
-    // This likely indicates a bug in createNamedParameters length checks.
+    // With strict validation, mismatched lengths should cause IllegalArgumentException.
     assertThrows(
-        ArrayIndexOutOfBoundsException.class,
+        IllegalArgumentException.class,
         () ->
             b.buildClassMethod(
                 UUID.randomUUID(),
