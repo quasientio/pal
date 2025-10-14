@@ -1523,6 +1523,15 @@ public class Main implements Callable<Integer> {
     boolean mainCalled = false;
     int returnValue = 0;
     if (className != null) {
+      // Proactively check class presence to mimic `java` behavior for CNFE
+      try {
+        Class.forName(className, /* initialize= */ false, customClassloader);
+      } catch (ClassNotFoundException e) {
+        // Match the standard java launcher error format
+        logger.error("Could not find or load main class {}", className, e);
+        System.err.printf("Error: Could not find or load main class %s%n", className);
+        return 1;
+      }
       // self-call className.main() if given, and then we're done
       returnValue = injector.getInstance(SelfBootstrapInvoker.class).callMain(className, argList);
       mainCalled = true;
