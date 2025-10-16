@@ -126,20 +126,44 @@ public class ChronicleSourceLogReader extends SourceLogReader {
     // Resolve queue path: baseDir / queueName
     Path queuePath = baseDir.resolve(queueName);
 
+    logger.info("Opening Chronicle log at: {}", queuePath);
+
     // Create Chronicle queue (read-only)
-    chronicleQueue = queueFactory.createReadOnly(queuePath);
+    try {
+      chronicleQueue = queueFactory.createReadOnly(queuePath);
+    } catch (Exception e) {
+      logger.error("Failed to open Chronicle log at {}: {}", queuePath, e.getMessage());
+      throw new IllegalStateException(
+          "Cannot open Chronicle log at "
+              + queuePath
+              + ". Ensure the log exists and was previously written to.",
+          e);
+    }
 
     // Create tailer
     tailer = chronicleQueue.createTailer();
 
     // Seek to initial index if specified
     if (initialOffset != null) {
-      tailer.moveToIndex(initialOffset);
+      if (!tailer.moveToIndex(initialOffset)) {
+        logger.warn(
+            "Could not move to requested index {}. Log may not contain that index yet.",
+            initialOffset);
+      }
       logger.info("Tailer positioned at index: {}", initialOffset);
     } else {
       tailer.toStart();
       logger.info("Tailer positioned at start of log");
     }
+
+    // Log queue info
+    long firstIndex = chronicleQueue.firstIndex();
+    long lastIndex = chronicleQueue.lastIndex();
+    logger.info(
+        "Chronicle log open: firstIndex={}, lastIndex={}, file={}",
+        firstIndex,
+        lastIndex,
+        chronicleQueue.file());
 
     // Create ZMQ DEALER socket
     this.logDealerSocket = zmqContext.createSocket(SocketType.DEALER);

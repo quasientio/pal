@@ -98,14 +98,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
         is(true));
 
     // Verify no fatal errors in output
-    assertThat(
-        "Should not contain ERROR_UNREACHABLE_ETCD",
-        result.stderr().contains("ERROR_UNREACHABLE_ETCD"),
-        is(false));
-    assertThat(
-        "Should not contain ERROR_NO_KAFKA_SERVERS_GIVEN",
-        result.stderr().contains("ERROR_NO_KAFKA_SERVERS_GIVEN"),
-        is(false));
+    assertThat("Should not contain any error", result.stderr().contains("ERROR"), is(false));
   }
 
   /**
@@ -153,10 +146,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
     assertThat("Reader process should exit with code 0", readResult.exitCode(), is(0));
 
     // Verify no errors
-    assertThat(
-        "Reader should not have Kafka errors",
-        readResult.stderr().contains("ERROR_NO_KAFKA_SERVERS_GIVEN"),
-        is(false));
+    assertThat("Reader should not have errors", readResult.stderr().contains("ERROR"), is(false));
   }
 
   /**
@@ -183,11 +173,8 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
 
     assertThat("Process should exit with code 0", result.exitCode(), is(0));
 
-    // Verify NO Kafka error occurred
-    assertThat(
-        "Should not require Kafka servers when using Chronicle",
-        result.stderr().contains("ERROR_NO_KAFKA_SERVERS_GIVEN"),
-        is(false));
+    // Verify NO error occurred
+    assertThat("Should not have errors", result.stderr().contains("ERROR"), is(false));
   }
 
   /**
@@ -226,11 +213,8 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
     assertThat(
         "Chronicle WAL should be created", Files.exists(walPath.resolve("test-wal")), is(true));
 
-    // Verify Kafka was also configured (no error about missing servers)
-    assertThat(
-        "Should not have Kafka configuration errors",
-        result.stderr().contains("ERROR_NO_KAFKA_SERVERS_GIVEN"),
-        is(false));
+    // Verify no errors
+    assertThat("Should not have errors", result.stderr().contains("ERROR"), is(false));
   }
 
   /**
@@ -268,8 +252,54 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
 
     assertThat("Reader should exit successfully", readResult.exitCode(), is(0));
 
-    // Verify output indicates starting from offset
     // (Note: actual verification would depend on log output format)
-    assertThat("Process should complete without errors", readResult.stderr(), containsString(""));
+    // Verify no errors
+    assertThat("Should not have errors", readResult.stderr().contains("ERROR"), is(false));
+  }
+
+  /**
+   * Tests that PAL fails gracefully with ERROR_INITIALIZING_LOGS when trying to read from a
+   * non-existent Chronicle queue.
+   *
+   * <p>This test verifies:
+   *
+   * <ul>
+   *   <li>Attempting to read from a non-existent Chronicle queue fails
+   *   <li>The process exits with code 7 (ERROR_INITIALIZING_LOGS)
+   *   <li>A clear error message is provided
+   * </ul>
+   */
+  @Test
+  public void chronicleSourceLogNotFound_failsWithErrorInitializingLogs()
+      throws IOException, InterruptedException {
+    logger.info("Testing Chronicle source log not found error handling");
+
+    // Create a path for a queue that doesn't exist
+    Path nonExistentQueue = tempDir.resolve("non-existent-log");
+
+    // Try to read from a non-existent Chronicle queue
+    ProcessResult result =
+        runPalCommandWithEnv(
+            null, // No PAL_DIRECTORY
+            "--source-log",
+            "file:" + nonExistentQueue.toAbsolutePath(),
+            "-cp",
+            "target/classes",
+            "-m",
+            "com.quasient.pal.itt.apps.Methods");
+
+    // Verify the process exits with ERROR_INITIALIZING_LOGS (exit code 7)
+    assertThat(
+        "Process should exit with ERROR_INITIALIZING_LOGS (code 7)", result.exitCode(), is(7));
+
+    // Verify error message indicates the problem
+    assertThat(
+        "Error output should mention the queue path",
+        result.stderr(),
+        containsString(nonExistentQueue.toString()));
+    assertThat(
+        "Error output should mention Chronicle queue issue",
+        result.stderr(),
+        containsString("Chronicle"));
   }
 }
