@@ -35,8 +35,8 @@ public class LogReaderNoFinalCommitOnCloseTest {
     @SuppressWarnings("unchecked")
     Consumer<String, byte[]> consumer = mock(Consumer.class);
     DirectoryConnectionProvider dcp = new DirectoryConnectionProvider(PalDirectory.NO_URL);
-    LogReader r =
-        new LogReader(
+    KafkaSourceLogReader r =
+        new KafkaSourceLogReader(
             UUID.randomUUID(),
             new ZContext(1),
             "inproc://sync",
@@ -50,10 +50,10 @@ public class LogReaderNoFinalCommitOnCloseTest {
             /* pollDurationMs */ 10);
 
     // Simulate processed offsets <= committed so close will NOT attempt commitSync
-    Field fProcessed = LogReader.class.getDeclaredField("lastOffsetRead");
+    Field fProcessed = KafkaSourceLogReader.class.getDeclaredField("lastOffsetRead");
     fProcessed.setAccessible(true);
     fProcessed.setLong(r, 10L);
-    Field fCommitted = LogReader.class.getDeclaredField("lastCommittedOffset");
+    Field fCommitted = KafkaSourceLogReader.class.getDeclaredField("lastCommittedOffset");
     fCommitted.setAccessible(true);
     ((AtomicLong) fCommitted.get(r)).set(10L);
 

@@ -62,13 +62,13 @@ public class LogReaderOffsetUpdaterTerminationTest {
     ZMQ.Socket pub = ctx.createSocket(SocketType.PUB);
     pub.bind(pubAddr);
 
-    LogReader lr =
-        new LogReader(
+    KafkaSourceLogReader lr =
+        new KafkaSourceLogReader(
             UUID.randomUUID(),
             ctx,
             "inproc://sync",
             new ThreadGroup("svc"),
-            "LogReader.service",
+            "KafkaSourceLogReader.service",
             dealerAddr,
             pubAddr,
             dcp,
@@ -77,7 +77,7 @@ public class LogReaderOffsetUpdaterTerminationTest {
             /*pollMs*/ 5);
 
     // Enable skipping offsets (so SUB and offsetUpdater are started)
-    Field fSkip = LogReader.class.getDeclaredField("skipWrittenOffsets");
+    Field fSkip = KafkaSourceLogReader.class.getSuperclass().getDeclaredField("skipWrittenOffsets");
     fSkip.setAccessible(true);
     fSkip.setBoolean(lr, true);
 

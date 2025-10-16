@@ -26,4 +26,12 @@ public interface ChronicleQueueFactory {
    * @return the created chronicle queue
    */
   ChronicleQueue create(Path path, RollCycle rollCycle, int indexSpacing, int blockSize);
+
+  /**
+   * Creates a read-only {@link ChronicleQueue} instance.
+   *
+   * @param path directory where queue files are located
+   * @return the created read-only chronicle queue
+   */
+  ChronicleQueue createReadOnly(Path path);
 }

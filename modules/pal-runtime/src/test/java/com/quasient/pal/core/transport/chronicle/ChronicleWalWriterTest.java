@@ -51,7 +51,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.zeromq.ZContext;
 
-/** Queue-based tests for {@link ChronicleWalWriter}. */
+/** ChronicleQueue-based tests for {@link ChronicleWalWriter}. */
 public class ChronicleWalWriterTest extends ZmqEnabledTest {
 
   private static final UUID PEER_ID = UUID.randomUUID();
@@ -228,6 +228,11 @@ public class ChronicleWalWriterTest extends ZmqEnabledTest {
 
       @Override
       public ChronicleQueue create(Path path, RollCycle rc, int indexSpacing, int blockSize) {
+        return queue;
+      }
+
+      @Override
+      public ChronicleQueue createReadOnly(Path path) {
         return queue;
       }
     }

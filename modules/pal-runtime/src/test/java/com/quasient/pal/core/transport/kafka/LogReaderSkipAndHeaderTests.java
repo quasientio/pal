@@ -46,8 +46,8 @@ import org.zeromq.ZMQException;
 import zmq.ZError;
 
 /**
- * Additional LogReader tests for header-driven branches: missing message-format and self-produced
- * record suppression.
+ * Additional KafkaSourceLogReader tests for header-driven branches: missing message-format and
+ * self-produced record suppression.
  */
 public class LogReaderSkipAndHeaderTests extends ZmqEnabledTest {
 
@@ -98,7 +98,7 @@ public class LogReaderSkipAndHeaderTests extends ZmqEnabledTest {
 
   private ExecutorService execService;
   private ZContext zmqContext;
-  private LogReader logReader;
+  private KafkaSourceLogReader logReader;
   private final UUID peerUuid = UUID.randomUUID();
   private ServiceManager manager;
   private MockConsumer<String, byte[]> consumer;
@@ -118,7 +118,7 @@ public class LogReaderSkipAndHeaderTests extends ZmqEnabledTest {
     consumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
     boolean autoCommit = true;
     logReader =
-        new LogReader(
+        new KafkaSourceLogReader(
             peerUuid,
             zmqContext,
             SYNC_SOCKET_ADDRESS,

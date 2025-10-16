@@ -27,6 +27,7 @@ import java.time.Duration;
 import java.util.AbstractQueue;
 import java.util.UUID;
 import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.junit.After;
 import org.junit.Before;
@@ -36,7 +37,7 @@ import org.zeromq.ZContext;
 public class LogReaderHelpersTest extends ZmqEnabledTest {
 
   private ZContext ctx;
-  private LogReader reader;
+  private KafkaSourceLogReader reader;
   private UUID peerId;
 
   @Before
@@ -47,7 +48,7 @@ public class LogReaderHelpersTest extends ZmqEnabledTest {
     Consumer<String, byte[]> consumer = (Consumer<String, byte[]>) mock(Consumer.class);
     DirectoryConnectionProvider dcp = new DirectoryConnectionProvider(PalDirectory.NO_URL);
     reader =
-        new LogReader(
+        new KafkaSourceLogReader(
             peerId,
             ctx,
             SYNC_SOCKET_ADDRESS,
@@ -71,8 +72,7 @@ public class LogReaderHelpersTest extends ZmqEnabledTest {
     RecordHeaders headers = new RecordHeaders();
     headers.add("message-format", new byte[] {MessageFormatType.BINARY.toByte()});
     Method m =
-        LogReader.class.getDeclaredMethod(
-            "getMessageFormatFromHeader", org.apache.kafka.common.header.Headers.class);
+        KafkaSourceLogReader.class.getDeclaredMethod("getMessageFormatFromHeader", Headers.class);
     m.setAccessible(true);
     MessageFormatType fmt = (MessageFormatType) m.invoke(reader, headers);
     assertThat(fmt, is(MessageFormatType.BINARY));
@@ -82,8 +82,7 @@ public class LogReaderHelpersTest extends ZmqEnabledTest {
   public void getMessageFormatFromHeader_missing_isNull() throws Exception {
     RecordHeaders headers = new RecordHeaders();
     Method m =
-        LogReader.class.getDeclaredMethod(
-            "getMessageFormatFromHeader", org.apache.kafka.common.header.Headers.class);
+        KafkaSourceLogReader.class.getDeclaredMethod("getMessageFormatFromHeader", Headers.class);
     m.setAccessible(true);
     Object fmt = m.invoke(reader, headers);
     assertThat(fmt == null, is(true));
@@ -93,9 +92,7 @@ public class LogReaderHelpersTest extends ZmqEnabledTest {
   public void recordProducedBySelf_trueAndFalse() throws Exception {
     RecordHeaders headers = new RecordHeaders();
     headers.add("producer-id", UuidUtils.toBytes(peerId));
-    Method m =
-        LogReader.class.getDeclaredMethod(
-            "recordProducedBySelf", org.apache.kafka.common.header.Headers.class);
+    Method m = KafkaSourceLogReader.class.getDeclaredMethod("recordProducedBySelf", Headers.class);
     m.setAccessible(true);
     boolean isSelf = (boolean) m.invoke(reader, headers);
     assertThat(isSelf, is(true));
@@ -111,9 +108,7 @@ public class LogReaderHelpersTest extends ZmqEnabledTest {
     RecordHeaders headers = new RecordHeaders();
     headers.add("producer-id", UuidUtils.toBytes(UUID.randomUUID()));
     headers.add("producer-id", UuidUtils.toBytes(peerId));
-    Method m =
-        LogReader.class.getDeclaredMethod(
-            "recordProducedBySelf", org.apache.kafka.common.header.Headers.class);
+    Method m = KafkaSourceLogReader.class.getDeclaredMethod("recordProducedBySelf", Headers.class);
     m.setAccessible(true);
     boolean isSelf = (boolean) m.invoke(reader, headers);
     assertThat(isSelf, is(true));
@@ -122,12 +117,12 @@ public class LogReaderHelpersTest extends ZmqEnabledTest {
   @Test
   public void nextOffset_skipsQueuedOffsets() throws Exception {
     // set lastOffsetRead = 4
-    Field fLast = LogReader.class.getDeclaredField("lastOffsetRead");
+    Field fLast = KafkaSourceLogReader.class.getDeclaredField("lastOffsetRead");
     fLast.setAccessible(true);
     fLast.setLong(reader, 4L);
 
     // fill skipOffsets with [2, 4, 5, 7]
-    Field fQueue = LogReader.class.getDeclaredField("skipOffsets");
+    Field fQueue = KafkaSourceLogReader.class.getDeclaredField("skipOffsets");
     fQueue.setAccessible(true);
     @SuppressWarnings("unchecked")
     AbstractQueue<Long> q = (AbstractQueue<Long>) fQueue.get(reader);
@@ -137,7 +132,7 @@ public class LogReaderHelpersTest extends ZmqEnabledTest {
     q.add(5L);
     q.add(7L);
 
-    Method m = LogReader.class.getDeclaredMethod("nextOffset");
+    Method m = KafkaSourceLogReader.class.getDeclaredMethod("nextOffset");
     m.setAccessible(true);
     Long next = (Long) m.invoke(reader);
     // 4 -> candidate 5; 5 is queued, so skip to 6
@@ -150,8 +145,8 @@ public class LogReaderHelpersTest extends ZmqEnabledTest {
     @SuppressWarnings("unchecked")
     Consumer<String, byte[]> consumer = (Consumer<String, byte[]>) mock(Consumer.class);
     DirectoryConnectionProvider dcp = new DirectoryConnectionProvider(PalDirectory.NO_URL);
-    LogReader r =
-        new LogReader(
+    KafkaSourceLogReader r =
+        new KafkaSourceLogReader(
             UUID.randomUUID(),
             ctx,
             SYNC_SOCKET_ADDRESS,

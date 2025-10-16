@@ -16,13 +16,21 @@ import java.util.UUID;
 import javax.annotation.Nonnull;
 
 /**
- * Represents detailed information about a (Kafka) log within Pal. This class includes metadata such
- * as the log's name, UUID, offsets, byte size, existence status, and associated bootstrap servers.
- * It serves as a unique identifier for logs registered in the Pal Directory (etcd store).
+ * Represents detailed information about a log within Pal (Kafka or Chronicle). This class includes
+ * metadata such as the log's name, UUID, offsets, byte size, existence status, and associated
+ * bootstrap servers (for Kafka) or path (for Chronicle).
  *
  * @see InfoNode
  */
 public final class LogInfo extends InfoNode implements Comparable<LogInfo> {
+
+  /** Enum representing the type of log backend. */
+  public enum LogType {
+    /** Kafka-based log using Kafka topics. */
+    KAFKA,
+    /** Chronicle Queue-based log using memory-mapped files. */
+    CHRONICLE
+  }
 
   /**
    * The name of the log, which acts as the unique key in etcd. This field is non-null and serves as
@@ -64,6 +72,9 @@ public final class LogInfo extends InfoNode implements Comparable<LogInfo> {
    * Log services.
    */
   private String bootstrapServers;
+
+  /** The type of log backend (KAFKA or CHRONICLE). */
+  @Nonnull private LogType logType = LogType.KAFKA;
 
   /**
    * Constructs a new LogInfo instance with the specified name.
@@ -241,6 +252,26 @@ public final class LogInfo extends InfoNode implements Comparable<LogInfo> {
   }
 
   /**
+   * Retrieves the type of log backend.
+   *
+   * @return the log type (KAFKA or CHRONICLE), never null.
+   */
+  @Nonnull
+  public LogType getLogType() {
+    return logType;
+  }
+
+  /**
+   * Sets the type of log backend.
+   *
+   * @param logType the log type to set (KAFKA or CHRONICLE). Must not be null.
+   * @throws NullPointerException if logType is null.
+   */
+  public void setLogType(@Nonnull LogType logType) {
+    this.logType = Objects.requireNonNull(logType);
+  }
+
+  /**
    * {@inheritDoc}
    *
    * <p>Compares this LogInfo with the specified LogInfo for order based on the log name.
@@ -301,6 +332,8 @@ public final class LogInfo extends InfoNode implements Comparable<LogInfo> {
         + "name='"
         + name
         + '\''
+        + ", logType="
+        + logType
         + ", uuid="
         + uuid
         + ", bootstrapServers='"

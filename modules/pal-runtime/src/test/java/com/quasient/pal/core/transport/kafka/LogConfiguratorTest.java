@@ -9,7 +9,6 @@
  */
 package com.quasient.pal.core.transport.kafka;
 
-import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
@@ -22,6 +21,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.inject.Injector;
 import com.quasient.pal.common.directory.nodes.LogInfo;
+import com.quasient.pal.core.transport.SourceLogReader;
 import com.quasient.pal.core.transport.WalWriter;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
@@ -37,7 +37,7 @@ import org.mockito.Mockito;
 public class LogConfiguratorTest {
 
   private PalDirectory mockedPalDirectory;
-  private LogReader mockedLogReader;
+  private SourceLogReader mockedLogReader;
   private KafkaWalWriter mockedKafkaWalWriter;
   private Injector mockedInjector;
   private Properties appProps;
@@ -51,14 +51,14 @@ public class LogConfiguratorTest {
     appProps.setProperty("logPrefix", LOG_PREFIX);
 
     mockedPalDirectory = mock(PalDirectory.class);
-    mockedLogReader = mock(LogReader.class);
+    mockedLogReader = mock(SourceLogReader.class);
     mockedKafkaWalWriter = mock(KafkaWalWriter.class);
     mockedInjector = mock(Injector.class);
     var mockedDirectoryConnectionProvider = mock(DirectoryConnectionProvider.class);
     when(mockedDirectoryConnectionProvider.get()).thenReturn(Optional.of(mockedPalDirectory));
     when(mockedInjector.getInstance(DirectoryConnectionProvider.class))
         .thenReturn(mockedDirectoryConnectionProvider);
-    when(mockedInjector.getInstance(LogReader.class)).thenReturn(mockedLogReader);
+    when(mockedInjector.getInstance(SourceLogReader.class)).thenReturn(mockedLogReader);
     when(mockedInjector.getInstance(WalWriter.class)).thenReturn(mockedKafkaWalWriter);
   }
 
@@ -68,17 +68,24 @@ public class LogConfiguratorTest {
   }
 
   @Test
-  public void init_missingKafkaServersInProperties_illegalArgumentException() {
-    String sourceLogName = "app_log_in";
+  public void init_missingKafkaServersWithChronicleQueue_ok() throws Exception {
+    String sourceLogName = "file:/tmp/chronicle-queue";
     Properties emptyProps = new Properties();
 
-    // call init()
-    try {
-      new LogConfigurator(sourceLogName, null, null, emptyProps, mockedInjector, false);
-      fail("Should have raised IllegalArgumentException");
-    } catch (IllegalArgumentException iae) {
-      // ok
-    }
+    // With Chronicle queues (file:/ prefix), Kafka servers are not required
+    LogConfigurator configurator =
+        new LogConfigurator(sourceLogName, null, null, emptyProps, mockedInjector, false);
+    configurator.init();
+
+    // verify that log reader was called with Chronicle queue
+    verify(mockedLogReader)
+        .readFromLog(
+            argThat(
+                logInfo ->
+                    logInfo.getName().equals("tmp/chronicle-queue")
+                        && logInfo.getLogType() == LogInfo.LogType.CHRONICLE),
+            eq(false),
+            eq(null));
   }
 
   @Test

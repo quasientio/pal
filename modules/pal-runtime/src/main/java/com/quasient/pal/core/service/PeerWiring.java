@@ -26,11 +26,14 @@ import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import com.quasient.pal.core.internal.concurrent.MpscKind;
 import com.quasient.pal.core.runtime.objects.ConcurrentHashMapObjectLookupStore;
 import com.quasient.pal.core.runtime.objects.ObjectLookupStore;
+import com.quasient.pal.core.transport.SourceLogReader;
 import com.quasient.pal.core.transport.WalType;
 import com.quasient.pal.core.transport.WalWriter;
 import com.quasient.pal.core.transport.chronicle.ChronicleQueueFactory;
+import com.quasient.pal.core.transport.chronicle.ChronicleSourceLogReader;
 import com.quasient.pal.core.transport.chronicle.ChronicleWalWriter;
 import com.quasient.pal.core.transport.chronicle.DefaultChronicleQueueFactory;
+import com.quasient.pal.core.transport.kafka.KafkaSourceLogReader;
 import com.quasient.pal.core.transport.kafka.KafkaWalWriter;
 import com.quasient.pal.core.transport.kafka.ProducerFactory;
 import com.quasient.pal.core.transport.zmq.publish.MessagePublisher;
@@ -259,6 +262,34 @@ public class PeerWiring extends AbstractModule {
     return switch (walType) {
       case KAFKA -> kafka.get();
       case CHRONICLE -> chronicle.get();
+    };
+  }
+
+  /**
+   * Provides the nullable, configured Source Log Reader.
+   *
+   * @param kafka guice-created provider for {@link KafkaSourceLogReader}
+   * @param chronicle guice-created provider for {@link ChronicleSourceLogReader}
+   * @return the configured source log reader; null if run options don't contain {@code
+   *     WITH_SOURCE_LOG}
+   */
+  @SuppressWarnings("unused")
+  @Provides
+  @Singleton
+  @Nullable
+  SourceLogReader provideSourceLogReader(
+      Provider<KafkaSourceLogReader> kafka, Provider<ChronicleSourceLogReader> chronicle) {
+
+    if (!runOptions.contains(RunOptions.WITH_SOURCE_LOG)) {
+      return null;
+    }
+
+    String logType = properties.getProperty("source_log.type", "KAFKA");
+
+    return switch (logType.toUpperCase(java.util.Locale.ENGLISH)) {
+      case "KAFKA" -> kafka.get();
+      case "CHRONICLE" -> chronicle.get();
+      default -> throw new IllegalStateException("Unknown source log type: " + logType);
     };
   }
 

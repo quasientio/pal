@@ -40,13 +40,13 @@ public class LogReaderRunInterruptTest {
     DirectoryConnectionProvider dcp =
         new DirectoryConnectionProvider(com.quasient.pal.cxn.directory.PalDirectory.NO_URL);
 
-    LogReader lr =
-        new LogReader(
+    KafkaSourceLogReader lr =
+        new KafkaSourceLogReader(
             UUID.randomUUID(),
             ctx,
             "inproc://sync",
             new ThreadGroup("svc"),
-            "LogReader.service",
+            "KafkaSourceLogReader.service",
             "inproc://dealer." + UUID.randomUUID(),
             "inproc://offs." + UUID.randomUUID(),
             dcp,

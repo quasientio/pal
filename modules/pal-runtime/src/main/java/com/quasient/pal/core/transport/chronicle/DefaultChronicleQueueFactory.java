@@ -32,4 +32,17 @@ public class DefaultChronicleQueueFactory implements ChronicleQueueFactory {
         .wireType(WireType.BINARY_LIGHT)
         .build();
   }
+
+  /**
+   * Creates and returns a read-only {@link SingleChronicleQueueBuilder}
+   *
+   * <p>{@inheritDoc}
+   */
+  @Override
+  public ChronicleQueue createReadOnly(Path path) {
+    return SingleChronicleQueueBuilder.single(path.toFile())
+        .readOnly(true)
+        .wireType(WireType.BINARY_LIGHT)
+        .build();
+  }
 }

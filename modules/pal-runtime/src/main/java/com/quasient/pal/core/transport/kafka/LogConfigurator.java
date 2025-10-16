@@ -13,6 +13,7 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 import com.google.inject.Injector;
 import com.quasient.pal.common.directory.nodes.LogInfo;
+import com.quasient.pal.core.transport.SourceLogReader;
 import com.quasient.pal.core.transport.WalWriter;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
@@ -34,6 +35,29 @@ public class LogConfigurator {
 
   /** Logger instance. */
   protected static final Logger logger = LoggerFactory.getLogger(LogConfigurator.class);
+
+  /**
+   * Determines if a log specification refers to a Chronicle queue.
+   *
+   * @param logSpec the log specification (e.g., "file:/tmp/mylog" or "my-kafka-topic")
+   * @return true if it's a Chronicle queue (starts with "file:/"), false otherwise
+   */
+  private static boolean isChronicleLog(String logSpec) {
+    return logSpec != null && logSpec.startsWith("file:/");
+  }
+
+  /**
+   * Extracts the actual path/name from a log specification.
+   *
+   * @param logSpec the log specification
+   * @return the path for Chronicle (without "file:/") or the topic name for Kafka
+   */
+  private static String extractLogName(String logSpec) {
+    if (isChronicleLog(logSpec)) {
+      return logSpec.substring("file:/".length());
+    }
+    return logSpec;
+  }
 
   /** Configured name for the source Log; may be set to "auto" for automatic registration. */
   private final String sourceLogName;
@@ -99,9 +123,7 @@ public class LogConfigurator {
     final String givenPaldirUrl = appProps.getProperty("paldir_url");
     noPaldir = givenPaldirUrl == null || givenPaldirUrl.equals(PalDirectory.NO_URL);
     kafkaServers = appProps.getProperty("kafka.bootstrap.servers");
-    if (kafkaServers == null) {
-      throw new IllegalArgumentException("No kafka servers given.");
-    }
+    // Note: kafkaServers may be null if only using Chronicle queues
   }
 
   /**
@@ -155,7 +177,7 @@ public class LogConfigurator {
   /**
    * Initiates reading from the specified source Log starting at the provided offset.
    *
-   * <p>Obtains a LogReader instance via dependency injection and begins reading Log entries.
+   * <p>Obtains a SourceLogReader instance via dependency injection and begins reading Log entries.
    *
    * @param sourceLog the LogInfo instance representing the source Log
    * @param sourceAndWalAreSameLog flag indicating whether the source and write-ahead logs are the
@@ -165,7 +187,7 @@ public class LogConfigurator {
    */
   private void readFromLog(LogInfo sourceLog, boolean sourceAndWalAreSameLog, Long initialOffset)
       throws Exception {
-    LogReader logMessageReader = injector.getInstance(LogReader.class);
+    var logMessageReader = injector.getInstance(SourceLogReader.class);
     logMessageReader.readFromLog(sourceLog, sourceAndWalAreSameLog, initialOffset);
   }
 
@@ -273,8 +295,13 @@ public class LogConfigurator {
    */
   public void init() throws Exception {
 
-    // Perform Kafka health check before initializing logs (if enabled)
-    if (performHealthCheck) {
+    // Determine if we're using Kafka or Chronicle
+    boolean usesKafka =
+        (sourceLogName != null && !isChronicleLog(sourceLogName))
+            || (writeAheadLogName != null && !isChronicleLog(writeAheadLogName));
+
+    // Perform Kafka health check before initializing logs (if enabled and using Kafka)
+    if (performHealthCheck && usesKafka && kafkaServers != null) {
       performKafkaHealthCheck();
     }
 
@@ -289,10 +316,18 @@ public class LogConfigurator {
         newLog = sourceLog;
       }
     } else if (sourceLogName != null) {
-      sourceLog =
-          noPaldir
-              ? new LogInfo(sourceLogName, kafkaServers)
-              : getOrRegisterGivenLog(sourceLogName);
+      if (isChronicleLog(sourceLogName)) {
+        // Chronicle queue specification
+        String queuePath = extractLogName(sourceLogName);
+        sourceLog = new LogInfo(queuePath);
+        sourceLog.setLogType(LogInfo.LogType.CHRONICLE);
+      } else {
+        // Kafka topic
+        sourceLog =
+            noPaldir
+                ? new LogInfo(sourceLogName, kafkaServers)
+                : getOrRegisterGivenLog(sourceLogName);
+      }
     }
 
     if ("auto".equalsIgnoreCase(writeAheadLogName)) {
@@ -302,10 +337,18 @@ public class LogConfigurator {
         writeAheadLog = newLog != null ? newLog : registerNewLog();
       }
     } else if (writeAheadLogName != null) {
-      writeAheadLog =
-          noPaldir
-              ? new LogInfo(writeAheadLogName, kafkaServers)
-              : getOrRegisterGivenLog(writeAheadLogName);
+      if (isChronicleLog(writeAheadLogName)) {
+        // Chronicle queue specification
+        String queuePath = extractLogName(writeAheadLogName);
+        writeAheadLog = new LogInfo(queuePath);
+        writeAheadLog.setLogType(LogInfo.LogType.CHRONICLE);
+      } else {
+        // Kafka topic
+        writeAheadLog =
+            noPaldir
+                ? new LogInfo(writeAheadLogName, kafkaServers)
+                : getOrRegisterGivenLog(writeAheadLogName);
+      }
     }
 
     // init Log reader

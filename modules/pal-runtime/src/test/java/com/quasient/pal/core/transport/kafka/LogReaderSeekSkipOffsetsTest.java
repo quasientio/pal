@@ -34,13 +34,13 @@ import org.junit.Test;
 import org.zeromq.ZContext;
 
 /**
- * Verifies that when skipWrittenOffsets is enabled and nextOffset jumps ahead, LogReader seeks the
- * consumer to the computed next offset.
+ * Verifies that when skipWrittenOffsets is enabled and nextOffset jumps ahead, KafkaSourceLogReader
+ * seeks the consumer to the computed next offset.
  */
 public class LogReaderSeekSkipOffsetsTest extends ZmqEnabledTest {
 
   private ZContext ctx;
-  private LogReader reader;
+  private KafkaSourceLogReader reader;
   private ServiceManager manager;
   private Consumer<String, byte[]> mockConsumer;
   private final ThreadGroup servicesThreadGroup = new ThreadGroup("services");
@@ -56,7 +56,7 @@ public class LogReaderSeekSkipOffsetsTest extends ZmqEnabledTest {
 
     DirectoryConnectionProvider dcp = new DirectoryConnectionProvider(PalDirectory.NO_URL);
     reader =
-        new LogReader(
+        new KafkaSourceLogReader(
             UUID.randomUUID(),
             ctx,
             SYNC_SOCKET_ADDRESS,
@@ -88,21 +88,21 @@ public class LogReaderSeekSkipOffsetsTest extends ZmqEnabledTest {
 
     // Configure internal fields via reflection before accepting requests
     TopicPartition tp = new TopicPartition(new LogInfo("seek_app").getName(), 0);
-    Field fTp = LogReader.class.getDeclaredField("topicPartition");
+    Field fTp = KafkaSourceLogReader.class.getDeclaredField("topicPartition");
     fTp.setAccessible(true);
     fTp.set(reader, tp);
 
     // Enable skip and set lastOffsetRead=4
-    Field fSkip = LogReader.class.getDeclaredField("skipWrittenOffsets");
+    Field fSkip = KafkaSourceLogReader.class.getSuperclass().getDeclaredField("skipWrittenOffsets");
     fSkip.setAccessible(true);
     fSkip.setBoolean(reader, true);
 
-    Field fLast = LogReader.class.getDeclaredField("lastOffsetRead");
+    Field fLast = KafkaSourceLogReader.class.getDeclaredField("lastOffsetRead");
     fLast.setAccessible(true);
     fLast.setLong(reader, 4L);
 
     // Populate skipOffsets queue so nextOffset() returns 10 (simulate big jump)
-    Field fQueue = LogReader.class.getDeclaredField("skipOffsets");
+    Field fQueue = KafkaSourceLogReader.class.getDeclaredField("skipOffsets");
     fQueue.setAccessible(true);
     @SuppressWarnings("unchecked")
     java.util.AbstractQueue<Long> q = (java.util.AbstractQueue<Long>) fQueue.get(reader);

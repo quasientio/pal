@@ -145,6 +145,8 @@ public class LogInfoTest {
                 + "'"
                 + logInfo.getName()
                 + "'"
+                + ", logType="
+                + logInfo.getLogType()
                 + ", uuid=null"
                 + ", bootstrapServers="
                 + "'"

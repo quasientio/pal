@@ -13,7 +13,7 @@ import com.quasient.pal.common.directory.nodes.LogInfo;
 import com.quasient.pal.common.util.UuidUtils;
 import com.quasient.pal.core.internal.messages.InboundLogMsg;
 import com.quasient.pal.core.internal.messages.PublishedOffsetMsg;
-import com.quasient.pal.core.service.ConnectedService;
+import com.quasient.pal.core.transport.SourceLogReader;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.messages.types.MessageFormatType;
@@ -30,10 +30,8 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.ReentrantLock;
+import javax.annotation.Nullable;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -52,63 +50,22 @@ import org.zeromq.ZMQException;
 import zmq.ZError;
 
 /**
- * LogReader is responsible for reading messages from a Kafka topic and dispatching them via a
- * ZeroMQ DEALER socket. It manages Kafka consumer configuration and offset skipping using offset
- * updates received over a ZMQ SUB socket. The class continuously polls for messages, processes them
- * based on their headers (e.g. message format and origin), and then forwards valid messages for
- * dispatching.
+ * KafkaSourceLogReader is responsible for reading messages from a Kafka topic and dispatching them
+ * via a ZeroMQ DEALER socket. It manages Kafka consumer configuration and offset skipping using
+ * offset updates received over a ZMQ SUB socket. The class continuously polls for messages,
+ * processes them based on their headers (e.g. message format and origin), and then forwards valid
+ * messages for dispatching.
  */
 @Singleton
-public class LogReader extends ConnectedService {
+public class KafkaSourceLogReader extends SourceLogReader {
 
   /** Logger instance. */
-  private static final Logger logger = LoggerFactory.getLogger(LogReader.class);
+  private static final Logger logger = LoggerFactory.getLogger(KafkaSourceLogReader.class);
 
-  /**
-   * Indicates whether the LogReader is currently accepting Log requests. Volatile ensures thread
-   * visibility.
-   */
-  private volatile boolean acceptingRequests = false;
-
-  /*----- ZMQ stuff ------*/
-
-  /** ZMQ DEALER socket used for sending inbound Log messages to connected consumers. */
-  private Socket logDealerSocket;
-
-  /** ZMQ SUB socket used for receiving published offset updates when skipping written messages. */
-  private Socket offsetSubscriberSocket;
-
-  /** ZMQ address for binding the Log message receiving socket. */
-  private final String sourceLogAddress;
-
-  /** ZMQ address used to connect for receiving offset update messages. */
-  private final String offsetPubAddress;
-
-  /*----- Counters ------*/
-
-  /** Cumulative nanoseconds spent polling Kafka for performance monitoring. */
-  private final AtomicLong totalPollingNanos = new AtomicLong(0);
-
-  /** Count of total Kafka poll operations performed. */
-  private final AtomicInteger totalPolls = new AtomicInteger(0);
-
-  /** Count of total messages received from Kafka. */
-  private final AtomicInteger messagesReceived = new AtomicInteger(0);
-
-  /*----- Kafka stuff ------*/
-
-  /**
-   * Flag to indicate if offsets that have already been written should be skipped during processing.
-   */
-  private boolean skipWrittenOffsets;
+  /*----- Kafka-specific fields ------*/
 
   /** Duration to use for each Kafka poll operation. */
   private final Duration pollDuration;
-
-  /**
-   * Initial Kafka offset from which to start reading; if null, reading starts from the beginning.
-   */
-  private Long initialOffset;
 
   /** Highest offset we know was *successfully* committed on the broker (-1 = none). */
   private final AtomicLong lastCommittedOffset = new AtomicLong(-1);
@@ -133,14 +90,6 @@ public class LogReader extends ConnectedService {
 
   /** Timeout duration for gracefully closing the Kafka consumer. */
   private static final Duration CONSUMER_CLOSE_TIMEOUT = Duration.of(10, ChronoUnit.SECONDS);
-
-  // synchronization to avoid busy-waiting before acceptingRequests
-
-  /** Lock for synchronizing the acceptance of Log requests. */
-  private final ReentrantLock lock = new ReentrantLock();
-
-  /** Condition variable for signaling when the LogReader starts accepting requests. */
-  private final Condition acceptingRequestsCondition = lock.newCondition();
 
   /**
    * Provider to obtain a connection with the Pal directory service for Log configuration retrieval.
@@ -222,8 +171,8 @@ public class LogReader extends ConnectedService {
   }
 
   /**
-   * Constructs a new LogReader with the required configurations for Kafka consumer and ZMQ sockets,
-   * using the provided parameters.
+   * Constructs a new KafkaSourceLogReader with the required configurations for Kafka consumer and
+   * ZMQ sockets, using the provided parameters.
    *
    * @param peerUuid Unique identifier for this peer.
    * @param context ZMQ context used for socket creation.
@@ -244,8 +193,9 @@ public class LogReader extends ConnectedService {
    * @param directoryConnectionProvider Provider for connecting to the Pal directory service to
    *     retrieve log info.
    */
+  @SuppressWarnings("unused")
   @Inject
-  public LogReader(
+  public KafkaSourceLogReader(
       UUID peerUuid,
       ZContext context,
       @Named("sync.ready") String syncSocketAddress,
@@ -262,11 +212,15 @@ public class LogReader extends ConnectedService {
       @Named("source.log") String sourceLogAddress,
       @Named("offset.pub") String offsetPubAddress,
       DirectoryConnectionProvider directoryConnectionProvider) {
-    super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
+    super(
+        peerUuid,
+        context,
+        syncSocketAddress,
+        serviceThreadGroup,
+        serviceName,
+        sourceLogAddress,
+        offsetPubAddress);
     this.directoryConnectionProvider = directoryConnectionProvider;
-    // zmq addresses
-    this.sourceLogAddress = sourceLogAddress;
-    this.offsetPubAddress = offsetPubAddress;
     // prepare Kafka consumer
     this.pollDuration = Duration.of(Long.parseLong(pollDuration), ChronoUnit.MILLIS);
     consumerProperties.put("group.id", peerId);
@@ -292,8 +246,9 @@ public class LogReader extends ConnectedService {
   }
 
   /**
-   * Constructs a LogReader for testing purposes with a pre-configured Kafka consumer. This
-   * constructor is primarily used for unit tests, allowing the injection of a mock Kafka consumer.
+   * Constructs a KafkaSourceLogReader for testing purposes with a pre-configured Kafka consumer.
+   * This constructor is primarily used for unit tests, allowing the injection of a mock Kafka
+   * consumer.
    *
    * @param peerUuid Unique identifier for this peer.
    * @param context ZMQ context used for socket operations.
@@ -306,7 +261,7 @@ public class LogReader extends ConnectedService {
    * @param consumer A Kafka consumer instance for reading messages.
    * @param pollDuration Polling duration in milliseconds.
    */
-  LogReader(
+  KafkaSourceLogReader(
       UUID peerUuid,
       ZContext context,
       @Named("sync.ready") String syncSocketAddress,
@@ -318,20 +273,25 @@ public class LogReader extends ConnectedService {
       Consumer<String, byte[]> consumer,
       boolean autoCommit,
       long pollDuration) {
-    super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
-    this.sourceLogAddress = sourceLogAddress;
-    this.offsetPubAddress = offsetPubAddress;
+    super(
+        peerUuid,
+        context,
+        syncSocketAddress,
+        serviceThreadGroup,
+        serviceName,
+        sourceLogAddress,
+        offsetPubAddress);
     this.directoryConnectionProvider = directoryConnectionProvider;
     this.consumer = consumer;
     this.autoCommitEnabled = autoCommit;
     this.pollDuration = Duration.of(pollDuration, ChronoUnit.MILLIS);
-    logger.info("Created log reader for peer with id '{}'", peerUuid);
+    logger.info("Created Kafka source log reader for peer with id '{}'", peerUuid);
   }
 
   /**
-   * Configures the LogReader to start reading from a specified Log. This method sets the Kafka
-   * topic, determines whether to skip externally written offsets, and configures the Kafka consumer
-   * with the bootstrap servers from the Log information.
+   * Configures the KafkaSourceLogReader to start reading from a specified Log. This method sets the
+   * Kafka topic, determines whether to skip externally written offsets, and configures the Kafka
+   * consumer with the bootstrap servers from the Log information.
    *
    * @param log The Log information containing Log name and server details.
    * @param skipWrittenOffsets Flag indicating if already written offsets should be skipped.
@@ -339,7 +299,8 @@ public class LogReader extends ConnectedService {
    *     starts from the beginning.
    * @throws Exception if an error occurs during Log configuration.
    */
-  public void readFromLog(LogInfo log, boolean skipWrittenOffsets, Long initialOffset)
+  @Override
+  public void readFromLog(LogInfo log, boolean skipWrittenOffsets, @Nullable Long initialOffset)
       throws Exception {
     this.kafkaTopic = log.getName();
     this.skipWrittenOffsets = skipWrittenOffsets;
@@ -679,57 +640,13 @@ public class LogReader extends ConnectedService {
   /**
    * {@inheritDoc}
    *
-   * <p>Initiates the shutdown process for the LogReader, including stopping the acceptance of new
-   * Log requests.
+   * <p>Triggers shutdown and stops the offset updater thread if running.
    */
   @Override
   protected void triggerStop() {
     super.triggerStop();
-    acceptingRequests = false;
     if (offsetUpdater != null) {
       offsetUpdater.interrupt();
-    }
-  }
-
-  /**
-   * Logs debug-level statistics including messages received, total polling duration, and poll
-   * count.
-   */
-  @SuppressWarnings("unused")
-  protected void logDebugStats() {
-    if (logger.isDebugEnabled()) {
-      logger.debug("--------STATS--------");
-      logger.debug("# of messages received from k-log: {}", messagesReceived.get());
-      logger.debug("# polling nanoseconds: {}", totalPollingNanos.get());
-      logger.debug("# polls: {}", totalPolls.get());
-      logger.debug("-----END OF STATS-----");
-    }
-  }
-
-  /**
-   * Checks whether the LogReader is currently accepting incoming Log requests.
-   *
-   * @return true if the LogReader is accepting requests, false otherwise.
-   */
-  public boolean isAcceptingRequests() {
-    return acceptingRequests;
-  }
-
-  /**
-   * Enables or disables the acceptance of incoming Log requests. If accepting requests, signals any
-   * waiting threads that the reader is ready.
-   *
-   * @param acceptRequests true to start accepting Log requests; false to stop.
-   */
-  public void acceptRequests(boolean acceptRequests) {
-    lock.lock();
-    try {
-      this.acceptingRequests = acceptRequests;
-      if (acceptRequests) {
-        acceptingRequestsCondition.signalAll();
-      }
-    } finally {
-      lock.unlock();
     }
   }
 }

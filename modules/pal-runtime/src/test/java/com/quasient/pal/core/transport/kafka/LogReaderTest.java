@@ -120,7 +120,7 @@ public class LogReaderTest extends ZmqEnabledTest {
   private static final Logger logger = LoggerFactory.getLogger("tests");
   private ExecutorService execService;
   private ZContext zmqContext;
-  private LogReader logReader;
+  private KafkaSourceLogReader logReader;
   private final UUID peerUuid = UUID.randomUUID();
   private ServiceManager manager;
   private MockConsumer<String, byte[]> consumer;
@@ -148,7 +148,7 @@ public class LogReaderTest extends ZmqEnabledTest {
     consumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
     boolean autoCommit = true;
     logReader =
-        new LogReader(
+        new KafkaSourceLogReader(
             UUID.randomUUID(),
             zmqContext,
             SYNC_SOCKET_ADDRESS,

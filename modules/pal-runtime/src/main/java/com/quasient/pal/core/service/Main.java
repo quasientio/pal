@@ -36,10 +36,10 @@ import com.quasient.pal.core.intercept.InterceptInformer;
 import com.quasient.pal.core.intercept.InterceptMatcher;
 import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import com.quasient.pal.core.runtime.session.SessionService;
+import com.quasient.pal.core.transport.SourceLogReader;
 import com.quasient.pal.core.transport.WalWriter;
 import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import com.quasient.pal.core.transport.kafka.LogConfigurator;
-import com.quasient.pal.core.transport.kafka.LogReader;
 import com.quasient.pal.core.transport.websocket.JsonRpcRequestServer;
 import com.quasient.pal.core.transport.zmq.ZmqRpcServer;
 import com.quasient.pal.core.transport.zmq.publish.MessagePublisher;
@@ -174,17 +174,22 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"-s", "--source-log"},
-      paramLabel = "name|auto",
+      paramLabel = "name|auto|file:/path",
       description =
-          "Topic to consume messages from. Use auto to let Pal generate a name"
-              + " with the configured --log-prefix. ('auto' works only with <pal_directory>)")
+          "Kafka topic or Chronicle queue to consume messages from. Use 'auto' to let Pal generate"
+              + " a Kafka topic name with --log-prefix ('auto' works only with <pal_directory>)."
+              + " Use 'file:/path' for Chronicle queue (absolute or relative path).")
   private String sourceLog; // corresponding ENV var: SOURCE_LOG
 
-  /** Specifies the starting offset for reading messages from the source-log. */
+  /**
+   * Specifies the starting offset/index for reading messages from the source-log. For Kafka, this
+   * is the offset; for Chronicle, this is the queue index.
+   */
   @Option(
       names = {"-O", "--start-offset"},
       paramLabel = "offset",
-      description = "seek the source-log to this offset before reading")
+      description =
+          "seek the source-log to this offset/index before reading (Kafka offset or Chronicle index)")
   private Long startOffset;
 
   /**
@@ -193,10 +198,11 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"-w", "--wal"},
-      paramLabel = "name|auto",
+      paramLabel = "name|auto|file:/path",
       description =
-          "Topic where Pal writes its write-ahead log. Use auto to let Pal generate a name"
-              + " with the configured --log-prefix. ('auto' works only with <pal_directory>)")
+          "Kafka topic or Chronicle queue where Pal writes its write-ahead log. Use 'auto' to let"
+              + " Pal generate a Kafka topic name with --log-prefix ('auto' works only with"
+              + " <pal_directory>). Use 'file:/path' for Chronicle queue (absolute or relative path).")
   private String wal; // corresponding ENV var: WAL
 
   /**
@@ -205,10 +211,11 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"-l", "--log"},
-      paramLabel = "name|auto",
+      paramLabel = "name|auto|file:/path",
       description =
-          "Shorthand: use the same topic for both source and wal. Use auto to let Pal"
-              + " generate a name with the configured --log-prefix. ('auto' works only with <pal_directory>)")
+          "Shorthand: use the same Kafka topic or Chronicle queue for both source and wal. Use 'auto'"
+              + " to let Pal generate a Kafka topic name with --log-prefix ('auto' works only with"
+              + " <pal_directory>). Use 'file:/path' for Chronicle queue (absolute or relative path).")
   private String log; // corresponding ENV var: LOG
 
   /**
@@ -776,8 +783,16 @@ public class Main implements Callable<Integer> {
       runOptions.add(RunOptions.WITH_PALDIR);
     }
 
+    // Only require Kafka servers if we're actually using Kafka (not Chronicle queues)
     if (kafkaServers == null && (log != null || sourceLog != null || wal != null)) {
-      fatalExit(null, PeerException.FatalCode.ERROR_NO_KAFKA_SERVERS_GIVEN);
+      boolean usesKafka =
+          (log != null && !isChronicleLog(log))
+              || (sourceLog != null && !isChronicleLog(sourceLog))
+              || (wal != null && !isChronicleLog(wal));
+
+      if (usesKafka) {
+        fatalExit(null, PeerException.FatalCode.ERROR_NO_KAFKA_SERVERS_GIVEN);
+      }
     }
 
     if (log != null) {
@@ -842,6 +857,29 @@ public class Main implements Callable<Integer> {
   }
 
   /**
+   * Determines if a log specification refers to a Chronicle queue.
+   *
+   * @param logSpec the log specification (e.g., "file:/tmp/mylog" or "my-kafka-topic")
+   * @return true if it's a Chronicle queue (starts with "file:/"), false otherwise
+   */
+  private static boolean isChronicleLog(@Nullable String logSpec) {
+    return logSpec != null && logSpec.startsWith("file:/");
+  }
+
+  /**
+   * Extracts the actual path/name from a log specification.
+   *
+   * @param logSpec the log specification
+   * @return the path for Chronicle (without "file:/") or the topic name for Kafka
+   */
+  private static String extractLogName(String logSpec) {
+    if (isChronicleLog(logSpec)) {
+      return logSpec.substring("file:/".length());
+    }
+    return logSpec;
+  }
+
+  /**
    * Adds miscellaneous properties to the application configuration.
    *
    * <p>This method sets the peer's UUID, directory URL, Kafka servers, and messaging addresses (TCP
@@ -884,6 +922,42 @@ public class Main implements Callable<Integer> {
     // add log (kafka topic) prefix
     if (logPrefix != null && !logPrefix.isBlank()) {
       properties.setProperty("logPrefix", logPrefix);
+    }
+
+    // Determine and set source log type (KAFKA or CHRONICLE)
+    if (sourceLog != null) {
+      if (isChronicleLog(sourceLog)) {
+        properties.setProperty("source_log.type", "CHRONICLE");
+        String sourcePath = extractLogName(sourceLog);
+        // For Chronicle queues, store the path for use by ChronicleSourceLogReader
+        if (!sourcePath.startsWith("/")) {
+          // Relative path - use base_dir if configured
+          if (!properties.containsKey("wal.chronicle.base_dir")) {
+            logger.warn(
+                "Chronicle source log uses relative path but wal.chronicle.base_dir not set");
+          }
+        }
+      } else {
+        properties.setProperty("source_log.type", "KAFKA");
+      }
+    }
+
+    // Determine and set WAL type (KAFKA or CHRONICLE)
+    if (wal != null) {
+      if (isChronicleLog(wal)) {
+        properties.setProperty("wal.type", "CHRONICLE");
+        String walPath = extractLogName(wal);
+        // For absolute paths, extract base directory
+        if (walPath.startsWith("/")) {
+          java.nio.file.Path p = Paths.get(walPath);
+          // Only set base_dir if not already configured
+          if (!properties.containsKey("wal.chronicle.base_dir")) {
+            properties.setProperty("wal.chronicle.base_dir", p.getParent().toString());
+          }
+        }
+      } else {
+        properties.setProperty("wal.type", "KAFKA");
+      }
     }
 
     // are we publishing via TCP, or just internally
@@ -1151,7 +1225,7 @@ public class Main implements Callable<Integer> {
     boolean sessionsRequired = false;
 
     if (runOptions.contains(RunOptions.WITH_SOURCE_LOG)) {
-      services.add(injector.getInstance(LogReader.class));
+      services.add(injector.getInstance(SourceLogReader.class));
       sessionsRequired = true;
     }
     if (runOptions.contains(RunOptions.WITH_WAL)) {
@@ -1424,8 +1498,6 @@ public class Main implements Callable<Integer> {
                 .getInstance(DirectoryConnectionProvider.class)
                 .get()
                 .orElseThrow(() -> new RuntimeException("Failed to get PAL directory connection"));
-      } catch (EtcdUnavailableException ex) {
-        fatalExit(ex, PeerException.FatalCode.ERROR_UNREACHABLE_ETCD);
       } catch (Exception ex) {
         fatalExit(ex, PeerException.FatalCode.ERROR_UNREACHABLE_ETCD);
       }
@@ -1508,7 +1580,7 @@ public class Main implements Callable<Integer> {
 
     // start accepting Log requests
     if (runOptions.contains(RunOptions.WITH_SOURCE_LOG)) {
-      LogReader logMessageReader = injector.getInstance(LogReader.class);
+      SourceLogReader logMessageReader = injector.getInstance(SourceLogReader.class);
       logMessageReader.acceptRequests(true);
       injector.getInstance(LogRpcExecutor.class).startAllThreads();
     }
