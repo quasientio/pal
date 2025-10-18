@@ -247,7 +247,10 @@ public class ChronicleWalWriter extends WalWriter {
     this.writeAheadLog = writeAheadLog;
     this.publishOffsets = publishOffsets;
 
-    Path queuePath = baseDir.resolve(writeAheadLog.getName());
+    // If the log name is an absolute path, use it directly; otherwise resolve against baseDir
+    Path logNamePath = Path.of(writeAheadLog.getName());
+    Path queuePath =
+        logNamePath.isAbsolute() ? logNamePath : baseDir.resolve(writeAheadLog.getName());
 
     if (chronicleQueue == null) {
       chronicleQueue = queueFactory.create(queuePath, rollCycle, DEFAULT_INDEX_SPACING, blockSize);

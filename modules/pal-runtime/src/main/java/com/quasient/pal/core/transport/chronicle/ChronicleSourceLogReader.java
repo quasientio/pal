@@ -123,8 +123,9 @@ public class ChronicleSourceLogReader extends SourceLogReader {
    */
   @Override
   protected void openConnections() {
-    // Resolve queue path: baseDir / queueName
-    Path queuePath = baseDir.resolve(queueName);
+    // If the queue name is an absolute path, use it directly; otherwise resolve against baseDir
+    Path queueNamePath = Path.of(queueName);
+    Path queuePath = queueNamePath.isAbsolute() ? queueNamePath : baseDir.resolve(queueName);
 
     logger.info("Opening Chronicle log at: {}", queuePath);
 

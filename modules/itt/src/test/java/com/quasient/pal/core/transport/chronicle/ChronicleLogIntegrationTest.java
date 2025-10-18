@@ -70,35 +70,41 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
    *   <li>The peer starts successfully
    *   <li>The Chronicle queue directory is created
    *   <li>No errors occur during startup
+   *   <li>Messages were actually written to the queue
    * </ul>
    */
   @Test
   public void chronicleWalCreation() throws IOException, InterruptedException {
     logger.info("Testing Chronicle WAL creation with file:/ prefix");
 
-    // Run PAL with Chronicle WAL
+    // Run PAL with Chronicle WAL (without PAL directory since Chronicle doesn't need it)
     ProcessResult result =
-        runPalCommand(
+        runPalCommandWithEnv(
+            null, // No PAL_DIRECTORY
             "--wal",
             "file:" + walPath.toAbsolutePath(),
             "-cp",
             "target/classes",
-            "--rpc",
+            "-r",
             "12345", // Use a specific port to avoid conflicts
-            "-m",
             "com.quasient.pal.itt.apps.Methods");
 
     // Verify the process started and completed successfully
     assertThat("Process should exit with code 0", result.exitCode(), is(0));
 
     // Verify the Chronicle queue was created
-    assertThat(
-        "Chronicle queue directory should exist",
-        Files.exists(walPath.resolve("test-wal")),
-        is(true));
+    // walPath already contains the queue name, no need to resolve again
+    assertThat("Chronicle queue directory should exist", Files.exists(walPath), is(true));
 
     // Verify no fatal errors in output
     assertThat("Should not contain any error", result.stderr().contains("ERROR"), is(false));
+
+    // Verify messages were actually written to the queue
+    assertThat(
+        "Queue should not be empty", ChronicleQueueTestUtil.isQueueEmpty(walPath), is(false));
+    int messageCount = ChronicleQueueTestUtil.countMessages(walPath);
+    assertThat("Queue should contain at least one message", messageCount > 0, is(true));
+    logger.info("Verified {} messages written to Chronicle queue", messageCount);
   }
 
   /**
@@ -109,6 +115,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
    * <ul>
    *   <li>Starts a peer that writes messages to a Chronicle queue
    *   <li>Stops the writer peer
+   *   <li>Verifies messages were written
    *   <li>Starts a reader peer that reads from the same Chronicle queue
    *   <li>Verifies messages are successfully read
    * </ul>
@@ -119,41 +126,50 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
 
     // First, write some messages to the Chronicle queue
     ProcessResult writeResult =
-        runPalCommand(
+        runPalCommandWithEnv(
+            null, // No PAL_DIRECTORY
             "--wal",
             "file:" + walPath.toAbsolutePath(),
             "-cp",
             "target/classes",
-            "-m",
             "com.quasient.pal.itt.apps.Methods");
 
     assertThat("Writer process should exit with code 0", writeResult.exitCode(), is(0));
-    assertThat(
-        "Chronicle queue should have been created",
-        Files.exists(walPath.resolve("test-wal")),
-        is(true));
 
-    // Now read from the same queue
+    // walPath already contains the queue name
+    assertThat("Chronicle queue should have been created", Files.exists(walPath), is(true));
+
+    // Verify messages were written
+    int messagesWritten = ChronicleQueueTestUtil.countMessages(walPath);
+    assertThat("Queue should contain messages after write", messagesWritten > 0, is(true));
+    logger.info("Writer peer wrote {} messages to Chronicle queue", messagesWritten);
+
+    // Now read from the same queue - need to specify the full path
     ProcessResult readResult =
-        runPalCommand(
+        runPalCommandWithEnv(
+            null, // No PAL_DIRECTORY
             "--source-log",
-            "file:" + walPath.toAbsolutePath() + "/test-wal",
+            "file:" + walPath.toAbsolutePath(),
             "-cp",
             "target/classes",
-            "-m",
             "com.quasient.pal.itt.apps.Methods");
 
     assertThat("Reader process should exit with code 0", readResult.exitCode(), is(0));
 
     // Verify no errors
     assertThat("Reader should not have errors", readResult.stderr().contains("ERROR"), is(false));
+
+    // Verify messages are still in the queue (reading doesn't consume)
+    int messagesAfterRead = ChronicleQueueTestUtil.countMessages(walPath);
+    assertThat(
+        "Message count should remain the same after read", messagesAfterRead, is(messagesWritten));
   }
 
   /**
    * Tests that using file:/ prefix doesn't require Kafka configuration.
    *
    * <p>This test verifies that when using Chronicle queues (file:/ prefix), PAL doesn't require
-   * KAFKA_SERVERS or --kafka-servers to be set.
+   * KAFKA_SERVERS or --kafka-servers to be set, and messages are still written.
    */
   @Test
   public void chronicleDoesNotRequireKafka() throws IOException, InterruptedException {
@@ -168,13 +184,18 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
             "file:" + walPath.toAbsolutePath(),
             "-cp",
             "target/classes",
-            "-m",
             "com.quasient.pal.itt.apps.Methods");
 
     assertThat("Process should exit with code 0", result.exitCode(), is(0));
 
     // Verify NO error occurred
     assertThat("Should not have errors", result.stderr().contains("ERROR"), is(false));
+
+    // Verify messages were written even without Kafka
+    int messageCount = ChronicleQueueTestUtil.countMessages(walPath);
+    assertThat(
+        "Queue should contain messages without Kafka configuration", messageCount > 0, is(true));
+    logger.info("Verified {} messages written without Kafka configuration", messageCount);
   }
 
   /**
@@ -185,6 +206,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
    * <ul>
    *   <li>WAL is Chronicle (file:/)
    *   <li>Source log is Kafka (regular topic name)
+   *   <li>Messages are written to Chronicle WAL
    * </ul>
    */
   @Test
@@ -204,23 +226,27 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
             kafkaServers,
             "-cp",
             "target/classes",
-            "-m",
             "com.quasient.pal.itt.apps.Methods");
 
     assertThat("Process should exit with code 0", result.exitCode(), is(0));
 
     // Verify Chronicle queue was created
-    assertThat(
-        "Chronicle WAL should be created", Files.exists(walPath.resolve("test-wal")), is(true));
+    assertThat("Chronicle WAL should be created", Files.exists(walPath), is(true));
 
     // Verify no errors
     assertThat("Should not have errors", result.stderr().contains("ERROR"), is(false));
+
+    // Verify messages were written to Chronicle WAL
+    int messageCount = ChronicleQueueTestUtil.countMessages(walPath);
+    assertThat("Chronicle WAL should contain messages in mixed mode", messageCount > 0, is(true));
+    logger.info("Verified {} messages written to Chronicle WAL in mixed mode", messageCount);
   }
 
   /**
    * Tests reading from a Chronicle queue starting at a specific index.
    *
-   * <p>This test verifies the --start-offset option works with Chronicle queues.
+   * <p>This test verifies the --start-offset option works with Chronicle queues and that messages
+   * exist at various indices.
    */
   @Test
   public void chronicleReadFromOffset() throws IOException, InterruptedException {
@@ -228,33 +254,54 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
 
     // First, write some messages
     ProcessResult writeResult =
-        runPalCommand(
+        runPalCommandWithEnv(
+            null, // No PAL_DIRECTORY
             "--wal",
             "file:" + walPath.toAbsolutePath(),
             "-cp",
             "target/classes",
-            "-m",
             "com.quasient.pal.itt.apps.Methods");
 
     assertThat("Writer should exit successfully", writeResult.exitCode(), is(0));
 
-    // Now read starting from offset 5
+    int totalMessages = ChronicleQueueTestUtil.countMessages(walPath);
+    assertThat(
+        "Queue should have messages before reading with offset", totalMessages > 0, is(true));
+    logger.info("Queue contains {} messages total", totalMessages);
+
+    // Get queue index info
+    ChronicleQueueTestUtil.QueueIndexInfo indexInfo =
+        ChronicleQueueTestUtil.getQueueIndexInfo(walPath);
+    assertThat("Queue index info should be available", indexInfo != null, is(true));
+    logger.info("Queue index info: {}", indexInfo);
+
+    // Calculate a valid offset to read from (somewhere in the middle if possible)
+    long startOffset =
+        totalMessages > 5 ? indexInfo.getFirstIndex() + 5 : indexInfo.getFirstIndex();
+
+    // Now read starting from calculated offset - need to specify the full path
     ProcessResult readResult =
-        runPalCommand(
+        runPalCommandWithEnv(
+            null, // No PAL_DIRECTORY
             "--source-log",
-            "file:" + walPath.toAbsolutePath() + "/test-wal",
+            "file:" + walPath.toAbsolutePath(),
             "--start-offset",
-            "5",
+            String.valueOf(startOffset),
             "-cp",
             "target/classes",
-            "-m",
             "com.quasient.pal.itt.apps.Methods");
 
     assertThat("Reader should exit successfully", readResult.exitCode(), is(0));
 
-    // (Note: actual verification would depend on log output format)
     // Verify no errors
     assertThat("Should not have errors", readResult.stderr().contains("ERROR"), is(false));
+
+    // Verify messages are still accessible (reading doesn't consume)
+    int messagesAfterRead = ChronicleQueueTestUtil.countMessages(walPath);
+    assertThat(
+        "Message count should remain the same after offset read",
+        messagesAfterRead,
+        is(totalMessages));
   }
 
   /**
@@ -285,7 +332,6 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
             "file:" + nonExistentQueue.toAbsolutePath(),
             "-cp",
             "target/classes",
-            "-m",
             "com.quasient.pal.itt.apps.Methods");
 
     // Verify the process exits with ERROR_INITIALIZING_LOGS (exit code 7)
