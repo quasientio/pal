@@ -23,6 +23,7 @@ import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.messages.jsonrpc.JsonRpcRequest;
 import com.quasient.pal.messages.jsonrpc.JsonRpcResponse;
+import com.quasient.pal.messages.types.MessageFamily;
 import com.quasient.pal.messages.types.MessageType;
 import com.quasient.pal.serdes.colfer.ColferUtils;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
@@ -392,24 +393,32 @@ class SocketRpcInvoker extends AbstractMessageInvokerThread {
     Exception invalidRequestException = null;
     // create ExecMessage from JSON-RPC request message
     MessageType requestMessageType = null;
+    MessageFamily requestFamily = null;
     try {
       requestMessageType = JsonRpcMessageUtils.getMessageType(jsonRpcRequest);
-      switch (requestMessageType.getFamily()) {
-        case EXEC:
-          requestMsg =
-              messageBuilder.jsonRpcRequestToExecMessage(jsonRpcRequest, jsonrpcMsg.getPeerId());
-          break;
-        case META:
-          requestMsg =
-              messageBuilder.jsonRpcRequestToMetaMessage(jsonRpcRequest, jsonrpcMsg.getPeerId());
-          break;
-        case CONTROL:
-          requestMsg =
-              messageBuilder.jsonRpcRequestToControlMessage(jsonRpcRequest, jsonrpcMsg.getPeerId());
-          break;
-        case INTERCEPT:
-        default:
-          invalidRequestException = new InvalidJsonRpcRequestException("Unsupported request type");
+      if (requestMessageType == null) {
+        invalidRequestException = new InvalidJsonRpcRequestException("Unsupported request type");
+      } else {
+        requestFamily = requestMessageType.getFamily();
+        switch (requestFamily) {
+          case EXEC:
+            requestMsg =
+                messageBuilder.jsonRpcRequestToExecMessage(jsonRpcRequest, jsonrpcMsg.getPeerId());
+            break;
+          case META:
+            requestMsg =
+                messageBuilder.jsonRpcRequestToMetaMessage(jsonRpcRequest, jsonrpcMsg.getPeerId());
+            break;
+          case CONTROL:
+            requestMsg =
+                messageBuilder.jsonRpcRequestToControlMessage(
+                    jsonRpcRequest, jsonrpcMsg.getPeerId());
+            break;
+          case INTERCEPT:
+          default:
+            invalidRequestException =
+                new InvalidJsonRpcRequestException("Unsupported request type");
+        }
       }
     } catch (Exception e) {
       invalidRequestException = new InvalidJsonRpcRequestException(e.getMessage());
@@ -456,7 +465,23 @@ class SocketRpcInvoker extends AbstractMessageInvokerThread {
 
     // create JSON-RPC response from MetaMessage / ExecMessage response
     MessageType responseMessageType;
-    switch (requestMessageType.getFamily()) {
+    if (requestFamily == null) {
+      jsonRpcResponse =
+          messageBuilder.jsonRpcResponseFromError(
+              new InvalidJsonRpcRequestException("Unsupported request type"), requestId);
+      try {
+        new OutboundJsonRpcResponseMsg(
+                jsonrpcMsg.getPeerId(),
+                JsonRpcSerializer.toJson(jsonRpcResponse),
+                MessageType.UNKNOWN)
+            .send(jsonrpcSocket);
+      } catch (JsonSerializationException ex) {
+        logger.error("Error sending JSON-RPC response", ex);
+      }
+      logMessageDispatch(requestId, null, started);
+      return;
+    }
+    switch (requestFamily) {
       case EXEC -> {
         jsonRpcResponse =
             messageBuilder.jsonRpcResponseFromExecMessageResponse(responseMessage.getExecMessage());

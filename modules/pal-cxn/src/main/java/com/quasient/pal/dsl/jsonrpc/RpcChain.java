@@ -344,7 +344,9 @@ public class RpcChain {
         return JsonRpcMessageFactory.buildStaticFieldGet(id, op.getClassName(), op.getFieldName());
       }
       case STATIC_FIELD_PUT -> {
-        assert rawArgs != null && rawArgs.length == 1;
+        if (rawArgs == null || rawArgs.length != 1) {
+          throw new IllegalArgumentException("STATIC_FIELD_PUT requires exactly 1 argument");
+        }
         Argument valArg = resolveArgument(rawArgs[0]);
         return JsonRpcMessageFactory.buildStaticFieldPut(
             id, op.getClassName(), op.getFieldName(), valArg);
@@ -356,7 +358,9 @@ public class RpcChain {
       }
       case INSTANCE_FIELD_PUT -> {
         ref = resolveInstanceRef(op.getInstanceVarName(), op.getDirectInstanceRef());
-        assert rawArgs != null && rawArgs.length == 1;
+        if (rawArgs == null || rawArgs.length != 1) {
+          throw new IllegalArgumentException("INSTANCE_FIELD_PUT requires exactly 1 argument");
+        }
         Argument valueArg = resolveArgument(rawArgs[0]);
         return JsonRpcMessageFactory.buildInstanceFieldPut(
             id, op.getClassName(), ref.getRef(), op.getFieldName(), valueArg);
@@ -399,10 +403,11 @@ public class RpcChain {
    * @throws IllegalStateException if the response lacks both a result and an error
    */
   protected void processResponse(JsonRpcRequest request, JsonRpcResponse response) {
-    if (response.getError() != null) {
-      requestIdToError.put(request.getId(), response.getError());
-      logger.error("Error returned in response: {}", response.getError());
-      throw new RuntimeException("Error returned in response: " + response.getError().toString());
+    JsonRpcError err = response.getError();
+    if (err != null) {
+      requestIdToError.put(request.getId(), err);
+      logger.error("Error returned in response: {}", err);
+      throw new RuntimeException("Error returned in response: " + err.toString());
     }
 
     JsonRpcResponseReturnValue responseValue = response.getResult();
@@ -411,7 +416,7 @@ public class RpcChain {
       throw new IllegalStateException("Response has no error and no result");
     }
 
-    if (responseValue.getIsVoid()) {
+    if (Boolean.TRUE.equals(responseValue.getIsVoid())) {
       // void method, nothing to do
       return;
     }
@@ -428,10 +433,13 @@ public class RpcChain {
 
     // get the returned ref if any
     ObjectRef valueRef = null;
-    if (responseObject.getRef() != null) {
-      valueRef = ObjectRef.from(responseObject.getRef());
-      // Store the ref or value in the requestId -> ref map
-      requestIdToRefMap.put(request.getId(), valueRef);
+    if (responseObject != null) {
+      Integer refInt = responseObject.getRef();
+      if (refInt != null) {
+        valueRef = ObjectRef.from(refInt.intValue());
+        // Store the ref or value in the requestId -> ref map
+        requestIdToRefMap.put(request.getId(), valueRef);
+      }
     }
 
     // If varName associated with this requestId, store accordingly

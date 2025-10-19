@@ -41,7 +41,7 @@ public class JsonRpcResponseReturnValue {
    * @return {@code true} if the response is void, {@code false} otherwise.
    */
   public boolean getIsVoid() {
-    return isVoid;
+    return Boolean.TRUE.equals(isVoid);
   }
 
   /**

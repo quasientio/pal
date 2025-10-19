@@ -14,9 +14,12 @@ import static com.quasient.pal.serdes.jsonrpc.JsonRpcMessageUtils.getFieldName;
 import static com.quasient.pal.serdes.jsonrpc.JsonRpcMessageUtils.getMessageType;
 
 import com.quasient.pal.messages.jsonrpc.Argument;
+import com.quasient.pal.messages.jsonrpc.JsonRpcError;
+import com.quasient.pal.messages.jsonrpc.JsonRpcErrorData;
 import com.quasient.pal.messages.jsonrpc.JsonRpcMessage;
 import com.quasient.pal.messages.jsonrpc.JsonRpcRequest;
 import com.quasient.pal.messages.jsonrpc.JsonRpcResponse;
+import com.quasient.pal.messages.jsonrpc.JsonRpcResponseReturnValue;
 import com.quasient.pal.messages.jsonrpc.ResponseObject;
 import com.quasient.pal.messages.types.MessageType;
 import com.quasient.pal.serdes.RpcMessageSummaryUtil;
@@ -121,36 +124,42 @@ public class JsonRpcMessageSummaryUtil extends RpcMessageSummaryUtil {
         return String.format("put_done %s.%s", classname(msg), getFieldName(msg).orElse(""));
       }
       case EXEC_RETURN_VALUE -> {
-        assert msg.getResult() != null;
-        if (msg.getResult().getIsVoid()) {
+        JsonRpcResponseReturnValue retVal = msg.getResult();
+        if (retVal == null) {
+          throw new IllegalArgumentException("Result cannot be null");
+        }
+
+        if (retVal.getIsVoid()) {
           return "return void";
         } else {
-          assert msg.getResult().getValue() != null;
-          if (msg.getResult().getFrom().isConstructor()) {
-            return String.format(
-                "return new %s%s", classname(msg), getObjRepr(msg.getResult().getValue()));
-          } else if (msg.getResult().getFrom().getFieldName() != null) {
-            String fieldName = msg.getResult().getFrom().getFieldName();
+          if (retVal.getValue() == null) {
+            throw new IllegalArgumentException("Value cannot be null");
+          }
+          if (retVal.getFrom().isConstructor()) {
+            return String.format("return new %s%s", classname(msg), getObjRepr(retVal.getValue()));
+          } else if (retVal.getFrom().getFieldName() != null) {
+            String fieldName = retVal.getFrom().getFieldName();
             if (fieldName != null && !fieldName.isEmpty()) {
               fieldName = "(" + fieldName + ")";
             }
             return String.format(
                     "return %s%s (%s)",
                     classname(msg),
-                    getObjRepr(msg.getResult().getValue()),
+                    getObjRepr(retVal.getValue()),
                     fieldName != null ? fieldName : "")
                 .trim();
           }
           // default (return value from method)
-          return String.format(
-              "return %s%s", classname(msg), getObjRepr(msg.getResult().getValue()));
+          return String.format("return %s%s", classname(msg), getObjRepr(retVal.getValue()));
         }
       }
       case EXEC_THROWABLE -> {
-        String message =
-            msg.getError() == null
-                ? ""
-                : msg.getError().getData() == null ? "" : msg.getError().getData().getMessage();
+        JsonRpcError error = msg.getError();
+        if (error == null) {
+          throw new IllegalArgumentException("Error cannot be null");
+        }
+        JsonRpcErrorData data = error.getData();
+        String message = data != null ? data.getMessage() : "";
         return String.format("throw %s: \"%s\"", classname(msg), message);
       }
       default -> throw new IllegalArgumentException("Unsupported response type: " + responseType);
@@ -164,7 +173,8 @@ public class JsonRpcMessageSummaryUtil extends RpcMessageSummaryUtil {
    * @return a string representation of the response object
    */
   private static String getObjRepr(ResponseObject obj) {
-    return getObjRepr(obj.isNull(), obj.getValue(), obj.getRef() != null ? obj.getRef() : 0);
+    Integer ref = obj.getRef();
+    return getObjRepr(obj.isNull(), obj.getValue(), ref != null ? ref : 0);
   }
 
   /**
@@ -174,8 +184,9 @@ public class JsonRpcMessageSummaryUtil extends RpcMessageSummaryUtil {
    * @return a string representation of the argument
    */
   private static String getObjRepr(Argument argument) {
-    String argValue = argument.getValue() == null ? null : argument.getValue().toString();
-    return getObjRepr(
-        argument.isNull(), argValue, argument.getRef() != null ? argument.getRef() : 0);
+    Object value = argument.getValue();
+    String argValue = value == null ? null : value.toString();
+    Integer ref = argument.getRef();
+    return getObjRepr(argument.isNull(), argValue, ref != null ? ref : 0);
   }
 }

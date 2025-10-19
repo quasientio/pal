@@ -244,7 +244,16 @@ public class SessionService extends ConnectedService {
           Objects.requireNonNull(cmdMsg.getObjectRef());
           boolean stored = false;
           try {
-            stored = storeInSession(cmdMsg.getSessionId(), cmdMsg.getObjectRef());
+            ObjectRef objRef = cmdMsg.getObjectRef();
+            if (objRef == null) {
+              throw new IllegalArgumentException("ObjectRef cannot be null");
+            }
+            UUID sessionId = cmdMsg.getSessionId();
+            if (sessionId == null) {
+              throw new IllegalArgumentException("SessionId cannot be null");
+            }
+
+            stored = storeInSession(sessionId, objRef);
           } catch (Exception e) {
             logger.error("Error storing object in session w/uuid: {}", cmdMsg.getSessionId(), e);
           }
@@ -252,24 +261,27 @@ public class SessionService extends ConnectedService {
           responseMessage = new SessionResponseMsg(status);
         }
         case DELETE_OBJECT -> {
-          Objects.requireNonNull(cmdMsg.getSessionId());
-          Objects.requireNonNull(cmdMsg.getObjectRef());
           boolean objectDeleted;
           try {
-            objectDeleted = deleteObject(cmdMsg.getSessionId(), cmdMsg.getObjectRef());
+            objectDeleted =
+                deleteObject(
+                    Objects.requireNonNull(cmdMsg.getSessionId()),
+                    Objects.requireNonNull(cmdMsg.getObjectRef()));
             status = objectDeleted ? SessionStatusType.OK : SessionStatusType.NO_SUCH_OBJECT;
           } catch (NoSuchSessionException e) {
             if (logger.isDebugEnabled()) {
               logger.debug(
                   "No session found w/uuid: {} while deleting object w/objectRef: {}",
                   cmdMsg.getSessionId(),
-                  cmdMsg.getObjectRef().asString());
+                  Objects.requireNonNull(cmdMsg.getObjectRef()).asString());
             }
             status = SessionStatusType.NO_SUCH_SESSION;
           } catch (Exception e) {
             logger.error(
                 "Unexpected error deleting object w/objectRef: {} from session w/uuid: {}",
-                cmdMsg.getObjectRef() == null ? "<null>" : cmdMsg.getObjectRef().asString(),
+                cmdMsg.getObjectRef() == null
+                    ? "<null>"
+                    : Objects.requireNonNull(cmdMsg.getObjectRef()).asString(),
                 cmdMsg.getSessionId(),
                 e);
             status = SessionStatusType.ERROR;
@@ -281,8 +293,10 @@ public class SessionService extends ConnectedService {
           Set<ObjectRef> objectsInSession = null;
           try {
             // make a copy since the keySet returned will be empty after deleteSession()
-            objectsInSession = new HashSet<>(getObjectRefsInSession(cmdMsg.getSessionId()));
-            deleteSession(cmdMsg.getSessionId());
+            objectsInSession =
+                new HashSet<>(
+                    getObjectRefsInSession(Objects.requireNonNull(cmdMsg.getSessionId())));
+            deleteSession(Objects.requireNonNull(cmdMsg.getSessionId()));
             status = SessionStatusType.OK;
           } catch (NoSuchSessionException e) {
             if (logger.isDebugEnabled()) {

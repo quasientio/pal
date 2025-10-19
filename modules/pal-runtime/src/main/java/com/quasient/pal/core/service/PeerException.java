@@ -62,7 +62,10 @@ public class PeerException extends Exception {
     ERROR_PARSING_JSON_RPC_PORT_NUMBER(13, "Invalid JSON-RPC port"),
 
     /** PAL Directory (etcd) is unreachable or unhealthy. */
-    ERROR_UNREACHABLE_ETCD(14, "PAL directory unreachable");
+    ERROR_UNREACHABLE_ETCD(14, "PAL directory unreachable"),
+
+    /** Unexpected failure while launching the requested main entry point. */
+    UNEXPECTED_ERROR_LAUNCHING_MAIN(15, "Unexpected error launching main");
 
     /** Unique numeric code representing the fatal error condition. */
     private final int code;

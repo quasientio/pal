@@ -197,7 +197,7 @@ public class DispatchBenchmark {
   private static final boolean DEF_WITH_SRC_CONTEXT = false;
 
   /** Whether we should register a dummy SUB socket. */
-  private static final boolean WITH_DUMMY_SUB = false;
+  private static final boolean WITH_DUMMY_SUB = Boolean.getBoolean("bench.with_dummy_sub");
 
   // ----------------------- Tunables from the command line -----------------
   /**
@@ -654,6 +654,7 @@ public class DispatchBenchmark {
 
                 if (poller.pollin(0)) { // data ready
                   try {
+                    @SuppressWarnings("unused")
                     OutboundMsg unused = OutboundMsg.receive(dummySubSocket, true);
                     dummyRcvs++;
                   } catch (Exception ignore) {

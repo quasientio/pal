@@ -11,6 +11,7 @@ package com.quasient.pal.core.transport.websocket;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.module.SimpleModule;
@@ -148,11 +149,11 @@ class JsonRpcWebSocketServer extends WebSocketServer {
         JsonRpcResponse jsonRpcResponse =
             JsonRpcSerializer.fromJson(response, JsonRpcResponse.class);
         if (isClassMetadataResponse(jsonRpcResponse)) {
-          Objects.requireNonNull(jsonRpcResponse.getResult());
-          ResponseObject responseObj = jsonRpcResponse.getResult().getValue();
-          @SuppressWarnings("unchecked")
+          JsonRpcResponseReturnValue result = Objects.requireNonNull(jsonRpcResponse.getResult());
+          ResponseObject responseObj = Objects.requireNonNull(result.getValue());
           Map<String, String> responseMap =
-              responseObjectMapper.readValue(responseObj.getValue(), Map.class);
+              responseObjectMapper.readValue(
+                  responseObj.getValue(), new TypeReference<Map<String, String>>() {});
           Path metadataFilePath = Path.of(responseMap.get("response"));
           sendStreamingResponse(connSocket, jsonRpcResponse.getId(), metadataFilePath);
           // delete metadata file
@@ -187,13 +188,14 @@ class JsonRpcWebSocketServer extends WebSocketServer {
    * @return true if the response is recognized as a class metadata response; false otherwise
    */
   private boolean isClassMetadataResponse(JsonRpcResponse jsonRpcResponse) {
-    if (jsonRpcResponse.getResult() != null) {
-      ResponseObject responseObj = jsonRpcResponse.getResult().getValue();
+    JsonRpcResponseReturnValue result = jsonRpcResponse.getResult();
+    if (result != null) {
+      ResponseObject responseObj = result.getValue();
       if (responseObj != null) {
         try {
-          @SuppressWarnings("unchecked")
           Map<String, String> responseMap =
-              responseObjectMapper.readValue(responseObj.getValue(), Map.class);
+              responseObjectMapper.readValue(
+                  responseObj.getValue(), new TypeReference<Map<String, String>>() {});
           return MetaServiceType.FETCH_CLASSES_INFO
               .getJsonName()
               .equals(responseMap.get("service"));

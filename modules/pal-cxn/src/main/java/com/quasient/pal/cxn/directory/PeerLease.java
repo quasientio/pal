@@ -56,6 +56,7 @@ public class PeerLease implements AutoCloseable {
 
     // Attempt to revoke the lease, ignoring any failures
     try {
+      @SuppressWarnings("unused")
       var unused = leaseClient.revoke(leaseId);
     } catch (Exception ignored) {
       // Intentionally ignored

@@ -57,8 +57,9 @@ public class ResponseObjectSerializer extends JsonSerializer<ResponseObject> {
     }
     gen.writeBooleanField("null", responseObject.getIsNull());
 
-    if (responseObject.getRef() != null) {
-      gen.writeNumberField("ref", responseObject.getRef());
+    Integer ref = responseObject.getRef();
+    if (ref != null) {
+      gen.writeNumberField("ref", ref.intValue());
     }
 
     // Handle the 'value' field

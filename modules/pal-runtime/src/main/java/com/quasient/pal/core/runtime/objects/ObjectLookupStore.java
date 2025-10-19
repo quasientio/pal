@@ -11,6 +11,7 @@ package com.quasient.pal.core.runtime.objects;
 
 import com.quasient.pal.common.objects.ObjectRef;
 import java.util.Collection;
+import javax.annotation.Nonnull;
 
 /**
  * A concurrent, in-memory directory that maps arbitrary objects to opaque {@link ObjectRef}
@@ -61,7 +62,7 @@ public interface ObjectLookupStore {
    * @param objectRef the reference of the object to remove; must not be null
    * @return the removed object, or {@code null} if no object was associated with {@code objectRef}
    */
-  Object remove(ObjectRef objectRef);
+  Object remove(@Nonnull ObjectRef objectRef);
 
   /**
    * Removes all objects associated with the provided collection of references from the store.

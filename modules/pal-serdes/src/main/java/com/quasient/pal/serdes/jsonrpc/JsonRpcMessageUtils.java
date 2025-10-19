@@ -13,10 +13,12 @@ import com.google.gson.Strictness;
 import com.google.gson.stream.JsonReader;
 import com.quasient.pal.messages.jsonrpc.Executable;
 import com.quasient.pal.messages.jsonrpc.JsonRpcError;
+import com.quasient.pal.messages.jsonrpc.JsonRpcErrorData;
 import com.quasient.pal.messages.jsonrpc.JsonRpcMessage;
 import com.quasient.pal.messages.jsonrpc.JsonRpcRequest;
 import com.quasient.pal.messages.jsonrpc.JsonRpcResponse;
 import com.quasient.pal.messages.jsonrpc.JsonRpcResponseReturnValue;
+import com.quasient.pal.messages.jsonrpc.ResponseObject;
 import com.quasient.pal.messages.types.JsonRpcType;
 import com.quasient.pal.messages.types.MessageType;
 import java.io.StringReader;
@@ -24,6 +26,7 @@ import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import javax.annotation.Nullable;
 
 /**
  * Utility class for handling JSON-RPC messages, including parsing, validation, and extracting
@@ -133,10 +136,14 @@ public class JsonRpcMessageUtils {
     switch (jsonRpcResponseType) {
       case EXEC_THROWABLE:
         JsonRpcError error = jsonRpcResponse.getError();
-        if (error == null || error.getData() == null) {
+        if (error == null) {
           return Optional.empty();
         }
-        return Optional.of(error.getData().getThrowableType());
+        JsonRpcErrorData errorData = error.getData();
+        if (errorData == null) {
+          return Optional.empty();
+        }
+        return Optional.ofNullable(errorData.getThrowableType());
       case EXEC_PUT_STATIC_DONE:
       case EXEC_PUT_FIELD_DONE:
         isFieldPutDone = true;
@@ -150,8 +157,8 @@ public class JsonRpcMessageUtils {
         if (isFieldPutDone) {
           valueType = returnValue.getFrom().getClassName();
         } else {
-          valueType =
-              returnValue.getValue() != null ? returnValue.getValue().getType() : "<unknown>";
+          ResponseObject valueObj = returnValue.getValue();
+          valueType = valueObj != null ? valueObj.getType() : "<unknown>";
         }
         return Optional.ofNullable(valueType);
       default:
@@ -312,23 +319,32 @@ public class JsonRpcMessageUtils {
    * @throws IllegalArgumentException if the response type is unsupported or cannot be determined
    */
   private static MessageType getJsonRpcResponseType(JsonRpcResponse jsonRpcResponse) {
-    if (jsonRpcResponse.getError() != null) {
+    JsonRpcError err = jsonRpcResponse.getError();
+    if (err != null) {
       return MessageType.EXEC_THROWABLE;
-    } else if (jsonRpcResponse.getResult() != null) {
-      JsonRpcResponseReturnValue returnValue = jsonRpcResponse.getResult();
-      Executable from = returnValue.getFrom();
-      boolean isVoid = returnValue.getIsVoid();
+    } else {
+      JsonRpcResponseReturnValue tempResult = jsonRpcResponse.getResult();
+      if (tempResult == null) {
+        throw new IllegalArgumentException("Unsupported JSON-RPC response type");
+      }
+      final JsonRpcResponseReturnValue result = tempResult;
+      Executable from = result.getFrom();
       // a void, field operation can only be the result of a field put
-      if (isVoid && from.getFieldName() != null && !from.getFieldName().isEmpty()) {
-        int fieldModifiers = from.getModifiers();
-        return Modifier.isStatic(fieldModifiers)
-            ? MessageType.EXEC_PUT_STATIC_DONE
-            : MessageType.EXEC_PUT_FIELD_DONE;
-      } else {
+      if (from == null) {
         return MessageType.EXEC_RETURN_VALUE;
       }
-    } else {
-      throw new IllegalArgumentException("Unsupported JSON-RPC response type");
+      if (!result.getIsVoid()) {
+        return MessageType.EXEC_RETURN_VALUE;
+      }
+      @Nullable String fieldName = from.getFieldName();
+      if (fieldName == null || fieldName.isEmpty()) {
+        return MessageType.EXEC_RETURN_VALUE;
+      }
+      Integer modifiers = from.getModifiers();
+      int fieldModifiers = modifiers != null ? modifiers : 0;
+      return Modifier.isStatic(fieldModifiers)
+          ? MessageType.EXEC_PUT_STATIC_DONE
+          : MessageType.EXEC_PUT_FIELD_DONE;
     }
   }
 

@@ -530,7 +530,7 @@ public class Caller extends AbstractPalSubcommand {
 
     // create ThinPeer
     final UUID thinPeerUuid = UUID.randomUUID();
-    try (ThinPeer thinPeer =
+    ThinPeer thinPeer =
         new ThinPeer()
             .withUuid(thinPeerUuid)
             .withDirectoryUrl(palDirectoryUrl)
@@ -538,7 +538,8 @@ public class Caller extends AbstractPalSubcommand {
             .withInputLog(inputLog)
             .withOutputLog(outputLog)
             .withConsumerProperties(consumerProperties)
-            .withProducerProperties(producerProperties)) {
+            .withProducerProperties(producerProperties);
+    try {
       if (pollDuration != null) {
         thinPeer.withPollingDuration(pollDuration);
       }
@@ -546,6 +547,7 @@ public class Caller extends AbstractPalSubcommand {
 
       // send message(s)
       long start = System.currentTimeMillis();
+      @SuppressWarnings("unused")
       var unused = thinPeer.sendExecMessageToLog(mainMethodCallBuilder.buildExecMessage());
       int requestsSent = 1;
 
@@ -556,6 +558,8 @@ public class Caller extends AbstractPalSubcommand {
       }
 
       return requestsSent;
+    } finally {
+      thinPeer.close();
     }
   }
 

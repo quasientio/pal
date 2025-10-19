@@ -208,7 +208,6 @@ public class InterceptRequests {
       return list;
     }
 
-    @SuppressWarnings("unchecked")
     var clonedList = (ArrayList<InterceptRequestEntry>) ((ArrayList) list).clone();
     occurrences.forEach(i -> clonedList.remove(i.intValue()));
     return clonedList;

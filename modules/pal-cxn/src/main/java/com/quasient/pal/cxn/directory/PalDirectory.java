@@ -748,6 +748,7 @@ public class PalDirectory implements AutoCloseable {
         leasePool.scheduleAtFixedRate(
             () -> {
               try {
+                @SuppressWarnings("unused")
                 var unused = leaseClient.keepAliveOnce(leaseId);
               } catch (Exception e) {
                 logger.warn("Lease keep-alive failed for peer {}", peerUuid, e);
@@ -1507,11 +1508,7 @@ public class PalDirectory implements AutoCloseable {
         interceptsWatcher.close();
       }
     } catch (RuntimeException e) {
-      if (firstError == null) {
-        firstError = e;
-      } else {
-        firstError.addSuppressed(e);
-      }
+      firstError = e;
       logger.warn("Failed to close intercepts watcher", e);
     }
 

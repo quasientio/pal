@@ -43,7 +43,7 @@ package com.quasient.pal.core.runtime.objects;
  * cleaner.runOnce();   // deterministic drain
  * }</pre>
  */
-public interface ObjectLookupStoreCleaner extends AutoCloseable {
+public interface ObjectLookupStoreCleaner {
 
   /**
    * Drains the reference queue <em>exactly once</em>, removing every entry that is currently
@@ -64,8 +64,7 @@ public interface ObjectLookupStoreCleaner extends AutoCloseable {
    */
   void stop();
 
-  /** Delegates to {@link #stop()}; satisfies {@link AutoCloseable}. */
-  @Override
+  /** Delegates to {@link #stop()}. */
   default void close() {
     stop();
   }

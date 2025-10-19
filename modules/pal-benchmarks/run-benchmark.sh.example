@@ -125,12 +125,18 @@ WAL_KAFKA_BUFFER_MEMORY=128000000
 #WAL_CHRONICLE_BLOCK_SIZE=
 #WAL_CHRONICLE_SYNC_EVERY=
 
+#-------- Other params ---------
+
+WITH_DUMMY_SUB=false
+
+
 # full hot path
 java  -Dpeer.logging="$PAL_HOME/config/peer-logging.xml" \
       -Dbench.size.micro="$SIZE_MICRO_TXT" \
       -Dbench.size.small="$SIZE_SMALL_TXT" \
       -Dbench.size.large="$SIZE_LARGE_TXT" \
       -Dbench.size.array="$SIZE_ARRAY_DBL" \
+      -Dbench.with_dummy_sub="$WITH_DUMMY_SUB" \
       -Dpub.queue.initial="$PUB_QUEUE_INITIAL" \
       -Dpub.queue.max="$PUB_QUEUE_MAX" \
       -Dpub.queue.chunk="$PUB_QUEUE_CHUNK" \

@@ -12,7 +12,6 @@ package com.quasient.pal.common.directory.nodes;
 import com.alibaba.fastjson.JSON;
 import java.util.Objects;
 import java.util.UUID;
-import javax.annotation.Nonnull;
 
 /**
  * Represents information about a peer within the PAL directory.
@@ -225,7 +224,8 @@ public final class PeerInfo extends InfoNode implements Comparable<PeerInfo> {
    * @throws NullPointerException if {@code o} is {@code null}
    */
   @Override
-  public int compareTo(@Nonnull PeerInfo o) {
+  public int compareTo(PeerInfo o) {
+    Objects.requireNonNull(o);
     return getUuid().compareTo(o.getUuid());
   }
 

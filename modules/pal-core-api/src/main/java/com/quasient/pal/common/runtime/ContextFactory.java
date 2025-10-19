@@ -13,7 +13,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.concurrent.ConcurrentHashMap;
-import javax.annotation.Nonnull;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.Signature;
 import org.aspectj.lang.reflect.ConstructorSignature;
@@ -30,7 +29,7 @@ public final class ContextFactory {
   private static final ClassValue<ConcurrentHashMap<Object, Context>> PER_DECLARING_CLASS =
       new ClassValue<>() {
         @Override
-        protected ConcurrentHashMap<Object, Context> computeValue(@Nonnull Class<?> type) {
+        protected ConcurrentHashMap<Object, Context> computeValue(Class<?> type) {
           return new ConcurrentHashMap<>();
         }
       };
@@ -41,7 +40,7 @@ public final class ContextFactory {
           new ClassValue<>() {
             @Override
             protected ConcurrentHashMap<JoinPoint.StaticPart, Context> computeValue(
-                @Nonnull Class<?> within) {
+                Class<?> within) {
               return new ConcurrentHashMap<>();
             }
           };

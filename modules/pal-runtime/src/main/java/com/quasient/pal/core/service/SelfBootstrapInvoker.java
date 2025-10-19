@@ -118,7 +118,7 @@ public class SelfBootstrapInvoker {
    *     arguments.
    * @return the exit code resulting from the main method execution.
    */
-  public int callMain(String className, List<String> argList) {
+  public int callMain(String className, List<String> argList) throws PeerException {
     if (logger.isDebugEnabled()) {
       logger.debug(
           "Preparing message to call {}.main() with args: [{}]",
@@ -188,17 +188,24 @@ public class SelfBootstrapInvoker {
       boolean offsetPublished = false;
       long offset = -1;
       String msgId = null;
-      while (!offsetPublished) {
-        assert offsetSubscriber != null;
-        PublishedOffsetMsg publishedOffsetMsg = PublishedOffsetMsg.receive(offsetSubscriber, true);
-        offset = publishedOffsetMsg.getOffset();
-        msgId = publishedOffsetMsg.getMessageId();
-        if (response.getMessageId().equalsIgnoreCase(msgId)) {
-          offsetPublished = true;
+      try {
+        while (!offsetPublished) {
+          if (offsetSubscriber == null) {
+            throw new PeerException(PeerException.FatalCode.UNEXPECTED_ERROR_LAUNCHING_MAIN);
+          }
+          PublishedOffsetMsg publishedOffsetMsg =
+              PublishedOffsetMsg.receive(offsetSubscriber, true);
+          offset = publishedOffsetMsg.getOffset();
+          msgId = publishedOffsetMsg.getMessageId();
+          if (response.getMessageId().equalsIgnoreCase(msgId)) {
+            offsetPublished = true;
+          }
+        }
+      } finally {
+        if (offsetSubscriber != null) {
+          offsetSubscriber.close();
         }
       }
-      // close socket
-      offsetSubscriber.close();
       if (logger.isDebugEnabled()) {
         logger.debug("Returned response message with offset={} and id={}", offset, msgId);
       }

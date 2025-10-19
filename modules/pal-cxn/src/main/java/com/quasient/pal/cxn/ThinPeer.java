@@ -80,7 +80,7 @@ import org.zeromq.ZMQ.Socket;
  * <p>Use {@link #init()} to initialize the peer before using it, and {@link #close()} to release
  * resources. Configure the peer using the provided builder methods before initialization.
  */
-public class ThinPeer implements AutoCloseable {
+public class ThinPeer {
   /** Logger instance for ThinPeer class. */
   private static final Logger logger = LoggerFactory.getLogger(ThinPeer.class);
 
@@ -1610,7 +1610,6 @@ public class ThinPeer implements AutoCloseable {
    *
    * <p>This method is idempotent and safe to call multiple times.
    */
-  @Override
   public void close() {
     if (isClosed()) {
       return;

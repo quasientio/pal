@@ -469,6 +469,7 @@ public class KafkaWalWriter extends WalWriter {
     SendCb cb = borrowCb(messageId);
 
     messagesInFlight.incrementAndGet();
+    @SuppressWarnings("unused")
     var unused = producer.send(newRecord, cb);
   }
 

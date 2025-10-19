@@ -1511,6 +1511,7 @@ public class Main implements Callable<Integer> {
     // preflight PAL directory connectivity (if configured) BEFORE Kafka/log initialization
     if (runOptions.contains(RunOptions.WITH_PALDIR)) {
       try {
+        @SuppressWarnings("unused")
         var unused =
             injector
                 .getInstance(DirectoryConnectionProvider.class)
@@ -1623,7 +1624,11 @@ public class Main implements Callable<Integer> {
         return 1;
       }
       // self-call className.main() if given, and then we're done
-      returnValue = injector.getInstance(SelfBootstrapInvoker.class).callMain(className, argList);
+      try {
+        returnValue = injector.getInstance(SelfBootstrapInvoker.class).callMain(className, argList);
+      } catch (PeerException e) {
+        fatalExit(e);
+      }
       mainCalled = true;
     } else if (jarFile != null) { // NOTE: jarFile was previously added to classpath
       // self-call Main-Class found in manifest

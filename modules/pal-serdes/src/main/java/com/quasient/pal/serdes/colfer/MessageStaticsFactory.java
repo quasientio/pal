@@ -58,7 +58,7 @@ public final class MessageStaticsFactory {
           var clazzMsg =
               com.quasient.pal.serdes.colfer.Wrapper.getWrappedClass(ms.getDeclaringTypeName());
           String[] pNames = ms.getParameterNames(); // nullable OK
-          Class[] pTypes = ms.getParameterTypes();
+          Class<?>[] pTypes = ms.getParameterTypes();
           String[] pTypeNames =
               (pTypes == null)
                   ? null
@@ -86,7 +86,7 @@ public final class MessageStaticsFactory {
           var clazzMsg =
               com.quasient.pal.serdes.colfer.Wrapper.getWrappedClass(cs.getDeclaringTypeName());
           String[] pNames = cs.getParameterNames();
-          Class[] pTypes = cs.getParameterTypes();
+          Class<?>[] pTypes = cs.getParameterTypes();
           String[] pTypeNames =
               (pTypes == null)
                   ? null

@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
  * <b>WARNING</b>: {@code System.identityHashCode} is not guaranteed unique; if two live objects
  * share the same code, the earlier entry will be replaced.
  */
-public final class ConcurrentHashMapObjectLookupStore implements AutoCloseable, ObjectLookupStore {
+public final class ConcurrentHashMapObjectLookupStore implements ObjectLookupStore {
 
   /** Logger instance for logging events and debug information. */
   private final Logger logger = LoggerFactory.getLogger(ConcurrentHashMapObjectLookupStore.class);
@@ -361,7 +361,6 @@ public final class ConcurrentHashMapObjectLookupStore implements AutoCloseable, 
   /**
    * Shuts down the cleaner (if present) and clears all internal data. Safe to call multiple times.
    */
-  @Override
   public void close() {
     clear();
     if (cleaner != null) {

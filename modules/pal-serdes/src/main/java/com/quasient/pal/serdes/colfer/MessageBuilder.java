@@ -299,7 +299,11 @@ public final class MessageBuilder {
 
     for (int i = 0; i < paramCount; i++) {
       final String paramName = (paramNames != null && i < paramNames.length) ? paramNames[i] : null;
-      final String paramTypeName = paramTypes[i].getName();
+      // null-safe local var to silence static analysis warnings
+      final String paramTypeName =
+          (paramTypes != null && i < paramTypes.length && paramTypes[i] != null)
+              ? paramTypes[i].getName()
+              : null;
       final Object a = (args != null && i < args.length) ? args[i] : null;
       final ObjectRef r = (argObjRefs != null && i < argObjRefs.length) ? argObjRefs[i] : null;
       final java.lang.reflect.Parameter rp =
@@ -569,7 +573,9 @@ public final class MessageBuilder {
               : null;
       final ObjectRef pref = (argObjRefs != null && i < argObjRefs.length) ? argObjRefs[i] : null;
 
-      Wrapper.wrapInto(v, args[i], ptype, pref, WrapPolicy.PREFER_REFERENCE);
+      // null-safe local var to silence static analysis warnings
+      final Object a = (args != null && i < args.length) ? args[i] : null;
+      Wrapper.wrapInto(v, a, ptype, pref, WrapPolicy.PREFER_REFERENCE);
 
       p.name = ""; // no param name in the hot-path
       p.value = v;
@@ -656,7 +662,9 @@ public final class MessageBuilder {
       final ObjectRef pref = (argObjRefs != null && i < argObjRefs.length) ? argObjRefs[i] : null;
 
       // reuse Obj value holder
-      Wrapper.wrapInto(v, args[i], ptype, pref, WrapPolicy.PREFER_REFERENCE);
+      // null-safe local var to silence static analysis warnings
+      final Object a = (args != null && i < args.length) ? args[i] : null;
+      Wrapper.wrapInto(v, a, ptype, pref, WrapPolicy.PREFER_REFERENCE);
 
       // reuse Parameter object and set fields
       p.name = ""; // hot path: no names
@@ -745,7 +753,9 @@ public final class MessageBuilder {
       final ObjectRef pref = (argObjRefs != null && i < argObjRefs.length) ? argObjRefs[i] : null;
 
       // reuse Obj value holder
-      Wrapper.wrapInto(v, args[i], ptype, pref, WrapPolicy.PREFER_REFERENCE);
+      // null-safe local var to silence static analysis warnings
+      final Object a = (args != null && i < args.length) ? args[i] : null;
+      Wrapper.wrapInto(v, a, ptype, pref, WrapPolicy.PREFER_REFERENCE);
 
       // reuse Parameter object and set fields
       p.name = ""; // hot path: no names
@@ -2066,9 +2076,12 @@ public final class MessageBuilder {
     for (int i = 0; i < jsonArgs.size(); i++) {
       Argument arg = jsonArgs.get(i);
       Obj valueObj;
-      if (arg.getRef() != null) {
-        ObjectRef objectRef = ObjectRef.from(arg.getRef());
-        valueObj = new Obj().withRef(arg.getRef());
+      // null-safe local var to silence static analysis warnings
+      Integer ref = arg.getRef();
+      if (ref != null) {
+        int refInt = ref.intValue();
+        ObjectRef objectRef = ObjectRef.from(refInt);
+        valueObj = new Obj().withRef(refInt);
         getWrappedObject(null, null, objectRef, WrapPolicy.FORCE_BY_VALUE);
       } else {
         valueObj = getWrappedObject(arg.getValue(), arg.getType(), null, WrapPolicy.FORCE_BY_VALUE);
@@ -2099,8 +2112,10 @@ public final class MessageBuilder {
     InstanceMethodCall instanceMethodCall = new InstanceMethodCall();
     instanceMethodCall.setClazz(getWrappedClass(className));
     instanceMethodCall.setName(callParams.getMethod());
-    if (callParams.getInstance() != null) {
-      instanceMethodCall.setObjectRef(callParams.getInstance());
+    // null-safe local var to silence static analysis warnings
+    Integer inst = callParams.getInstance();
+    if (inst != null) {
+      instanceMethodCall.setObjectRef(inst.intValue());
     }
     instanceMethodCall.setParameters(jsonRpcParamsToColferParams(callParams.getArgs()));
     return instanceMethodCall;
@@ -2138,16 +2153,23 @@ public final class MessageBuilder {
     InstanceFieldPut instanceFieldPut = new InstanceFieldPut();
     instanceFieldPut.setClazz(getWrappedClass(className));
     instanceFieldPut.setField(getWrappedField(className, fieldName, unknownModifiers));
-    if (putParams.getInstance() != null) {
-      instanceFieldPut.setObjectRef(putParams.getInstance());
+    // null-safe local var to silence static analysis warnings
+    Integer inst = putParams.getInstance();
+    if (inst != null) {
+      instanceFieldPut.setObjectRef(inst.intValue());
     }
     Argument value = putParams.getValue();
-    assert value != null;
-    if (value.getRef() != null) { // value is an object reference
-      instanceFieldPut.setValueObjectRef(value.getRef());
+    // null-safe local var to silence static analysis warnings
+    Integer ref = (value != null) ? value.getRef() : null;
+    if (ref != null) { // value is an object reference
+      instanceFieldPut.setValueObjectRef(ref.intValue());
     } else {
       instanceFieldPut.setValueObject(
-          getWrappedObject(value.getValue(), value.getType(), null, WrapPolicy.FORCE_BY_VALUE));
+          getWrappedObject(
+              value != null ? value.getValue() : null,
+              value != null ? value.getType() : null,
+              null,
+              WrapPolicy.FORCE_BY_VALUE));
     }
     return instanceFieldPut;
   }
@@ -2168,12 +2190,17 @@ public final class MessageBuilder {
     staticFieldPut.setClazz(getWrappedClass(className));
     staticFieldPut.setField(getWrappedField(className, fieldName, unknownModifiers));
     Argument value = putParams.getValue();
-    assert value != null;
-    if (value.getRef() != null) { // value is an object reference
-      staticFieldPut.setValueObjectRef(value.getRef());
+    // null-safe local var to silence static analysis warnings
+    Integer ref = (value != null) ? value.getRef() : null;
+    if (ref != null) { // value is an object reference
+      staticFieldPut.setValueObjectRef(ref.intValue());
     } else {
       staticFieldPut.setValueObject(
-          getWrappedObject(value.getValue(), value.getType(), null, WrapPolicy.FORCE_BY_VALUE));
+          getWrappedObject(
+              value != null ? value.getValue() : null,
+              value != null ? value.getType() : null,
+              null,
+              WrapPolicy.FORCE_BY_VALUE));
     }
     return staticFieldPut;
   }
@@ -2192,8 +2219,10 @@ public final class MessageBuilder {
     InstanceFieldGet instanceFieldGet = new InstanceFieldGet();
     instanceFieldGet.setClazz(new com.quasient.pal.messages.colfer.Class().withName(className));
     instanceFieldGet.setField(new com.quasient.pal.messages.colfer.Field().withName(fieldName));
-    if (getParams.getInstance() != null) {
-      instanceFieldGet.setObjectRef(getParams.getInstance());
+    // null-safe local var to silence static analysis warnings
+    Integer inst = getParams.getInstance();
+    if (inst != null) {
+      instanceFieldGet.setObjectRef(inst.intValue());
     }
     return instanceFieldGet;
   }

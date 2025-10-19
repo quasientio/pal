@@ -278,7 +278,8 @@ public class JsonRpcRequestValidator {
                       if (arg != null) {
                         if (arg.getRef() != null) {
                           // for ref arguments: type and value should be empty
-                          if (arg.getType() != null && !arg.getType().isEmpty()) {
+                          String argType = arg.getType();
+                          if (argType != null && !argType.isEmpty()) {
                             throw new InvalidJsonRpcParamsException(
                                 "Type should be null/empty for Ref argument", requestId);
                           }

@@ -73,14 +73,14 @@ public class InterceptRequestEntry {
   public InterceptRequestEntry(InterceptMessage interceptMessage) {
     InterceptableMethod interceptableMethod = interceptMessage.getMethod();
     this.isMethod = interceptableMethod != null;
+    final String elementName =
+        (interceptableMethod != null)
+            ? interceptableMethod.getName()
+            : interceptMessage.getField().getName();
     // create executable pattern to match
-    this.pattern =
-        format(
-            "%s.%s",
-            interceptMessage.getClazz(),
-            isMethod ? interceptableMethod.getName() : interceptMessage.getField().getName());
+    this.pattern = format("%s.%s", interceptMessage.getClazz(), elementName);
     // add param info
-    if (isMethod) {
+    if (interceptableMethod != null) {
       String[] parameterTypes = interceptableMethod.getParameterTypes();
       this.numberOfParams = parameterTypes.length;
       if (numberOfParams > 0) {

@@ -41,7 +41,7 @@ public class SelfBootstrapInvokerSmokeTest {
   }
 
   @Test
-  public void callMain_returnsExitCodeFromResponse() {
+  public void callMain_returnsExitCodeFromResponse() throws Exception {
     UUID peer = UUID.randomUUID();
     IncomingMessageDispatcher dispatcher = mock(IncomingMessageDispatcher.class);
     MessageBuilder mb = new MessageBuilder(peer);
