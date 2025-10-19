@@ -17,6 +17,7 @@ import com.quasient.pal.AbstractIntegrationTest;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Locale;
 import java.util.stream.Stream;
 import org.junit.After;
 import org.junit.Before;
@@ -84,10 +85,10 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
             "--wal",
             "file:" + walPath.toAbsolutePath(),
             "-cp",
-            "target/classes",
+            "modules/itt-apps/target/classes",
             "-r",
             "12345", // Use a specific port to avoid conflicts
-            "com.quasient.pal.itt.apps.Methods");
+            "com.quasient.pal.apps.rpc.Methods");
 
     // Verify the process started and completed successfully
     assertThat("Process should exit with code 0", result.exitCode(), is(0));
@@ -96,8 +97,10 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
     // walPath already contains the queue name, no need to resolve again
     assertThat("Chronicle queue directory should exist", Files.exists(walPath), is(true));
 
-    // Verify no fatal errors in output
-    assertThat("Should not contain any error", result.stderr().contains("ERROR"), is(false));
+    // Verify no fatal errors in output (case-insensitive check for 'error' and 'exception')
+    String stderrLower = result.stderr().toLowerCase(Locale.ROOT);
+    assertThat("Should not contain 'error'", stderrLower.contains("error"), is(false));
+    assertThat("Should not contain 'exception'", stderrLower.contains("exception"), is(false));
 
     // Verify messages were actually written to the queue
     assertThat(
@@ -131,8 +134,8 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
             "--wal",
             "file:" + walPath.toAbsolutePath(),
             "-cp",
-            "target/classes",
-            "com.quasient.pal.itt.apps.Methods");
+            "modules/itt-apps/target/classes",
+            "com.quasient.pal.apps.rpc.Methods");
 
     assertThat("Writer process should exit with code 0", writeResult.exitCode(), is(0));
 
@@ -151,13 +154,16 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
             "--source-log",
             "file:" + walPath.toAbsolutePath(),
             "-cp",
-            "target/classes",
-            "com.quasient.pal.itt.apps.Methods");
+            "modules/itt-apps/target/classes",
+            "com.quasient.pal.apps.rpc.Methods");
 
     assertThat("Reader process should exit with code 0", readResult.exitCode(), is(0));
 
-    // Verify no errors
-    assertThat("Reader should not have errors", readResult.stderr().contains("ERROR"), is(false));
+    // Verify no errors (case-insensitive check for 'error' and 'exception')
+    String readStderrLower = readResult.stderr().toLowerCase(Locale.ROOT);
+    assertThat("Reader should not have 'error'", readStderrLower.contains("error"), is(false));
+    assertThat(
+        "Reader should not have 'exception'", readStderrLower.contains("exception"), is(false));
 
     // Verify messages are still in the queue (reading doesn't consume)
     int messagesAfterRead = ChronicleQueueTestUtil.countMessages(walPath);
@@ -183,13 +189,15 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
             "--wal",
             "file:" + walPath.toAbsolutePath(),
             "-cp",
-            "target/classes",
-            "com.quasient.pal.itt.apps.Methods");
+            "modules/itt-apps/target/classes",
+            "com.quasient.pal.apps.rpc.Methods");
 
     assertThat("Process should exit with code 0", result.exitCode(), is(0));
 
-    // Verify NO error occurred
-    assertThat("Should not have errors", result.stderr().contains("ERROR"), is(false));
+    // Verify NO error occurred (case-insensitive check for 'error' and 'exception')
+    String noKafkaStderrLower = result.stderr().toLowerCase(Locale.ROOT);
+    assertThat("Should not have 'error'", noKafkaStderrLower.contains("error"), is(false));
+    assertThat("Should not have 'exception'", noKafkaStderrLower.contains("exception"), is(false));
 
     // Verify messages were written even without Kafka
     int messageCount = ChronicleQueueTestUtil.countMessages(walPath);
@@ -225,16 +233,18 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
             "-k",
             kafkaServers,
             "-cp",
-            "target/classes",
-            "com.quasient.pal.itt.apps.Methods");
+            "modules/itt-apps/target/classes",
+            "com.quasient.pal.apps.rpc.Methods");
 
     assertThat("Process should exit with code 0", result.exitCode(), is(0));
 
     // Verify Chronicle queue was created
     assertThat("Chronicle WAL should be created", Files.exists(walPath), is(true));
 
-    // Verify no errors
-    assertThat("Should not have errors", result.stderr().contains("ERROR"), is(false));
+    // Verify no errors (case-insensitive check for 'error' and 'exception')
+    String mixedStderrLower = result.stderr().toLowerCase(Locale.ROOT);
+    assertThat("Should not have 'error'", mixedStderrLower.contains("error"), is(false));
+    assertThat("Should not have 'exception'", mixedStderrLower.contains("exception"), is(false));
 
     // Verify messages were written to Chronicle WAL
     int messageCount = ChronicleQueueTestUtil.countMessages(walPath);
@@ -259,8 +269,8 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
             "--wal",
             "file:" + walPath.toAbsolutePath(),
             "-cp",
-            "target/classes",
-            "com.quasient.pal.itt.apps.Methods");
+            "modules/itt-apps/target/classes",
+            "com.quasient.pal.apps.rpc.Methods");
 
     assertThat("Writer should exit successfully", writeResult.exitCode(), is(0));
 
@@ -288,13 +298,16 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
             "--start-offset",
             String.valueOf(startOffset),
             "-cp",
-            "target/classes",
-            "com.quasient.pal.itt.apps.Methods");
+            "modules/itt-apps/target/classes",
+            "com.quasient.pal.apps.rpc.Methods");
 
     assertThat("Reader should exit successfully", readResult.exitCode(), is(0));
 
-    // Verify no errors
-    assertThat("Should not have errors", readResult.stderr().contains("ERROR"), is(false));
+    // Verify no errors (case-insensitive check for 'error' and 'exception')
+    String offsetReadStderrLower = readResult.stderr().toLowerCase(Locale.ROOT);
+    assertThat("Should not have 'error'", offsetReadStderrLower.contains("error"), is(false));
+    assertThat(
+        "Should not have 'exception'", offsetReadStderrLower.contains("exception"), is(false));
 
     // Verify messages are still accessible (reading doesn't consume)
     int messagesAfterRead = ChronicleQueueTestUtil.countMessages(walPath);
@@ -306,7 +319,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
 
   /**
    * Tests that PAL fails gracefully with ERROR_INITIALIZING_LOGS when trying to read from a
-   * non-existent Chronicle queue.
+   * non-existent Chronicle queue using --source-log.
    *
    * <p>This test verifies:
    *
@@ -324,15 +337,15 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
     // Create a path for a queue that doesn't exist
     Path nonExistentQueue = tempDir.resolve("non-existent-log");
 
-    // Try to read from a non-existent Chronicle queue
+    // Try to read from a non-existent Chronicle queue with --source-log
     ProcessResult result =
         runPalCommandWithEnv(
             null, // No PAL_DIRECTORY
             "--source-log",
             "file:" + nonExistentQueue.toAbsolutePath(),
             "-cp",
-            "target/classes",
-            "com.quasient.pal.itt.apps.Methods");
+            "modules/itt-apps/target/classes",
+            "com.quasient.pal.apps.rpc.Methods");
 
     // Verify the process exits with ERROR_INITIALIZING_LOGS (exit code 7)
     assertThat(
@@ -347,5 +360,107 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
         "Error output should mention Chronicle queue issue",
         result.stderr(),
         containsString("Chronicle"));
+  }
+
+  /**
+   * Tests that PAL succeeds when using -l/--log with a non-existent Chronicle queue.
+   *
+   * <p>This test verifies:
+   *
+   * <ul>
+   *   <li>Using -l creates the Chronicle queue if it doesn't exist (WAL writer creates it)
+   *   <li>The process exits successfully (exit code 0)
+   *   <li>Messages are written to the newly created queue
+   *   <li>No errors are reported
+   * </ul>
+   */
+  @Test
+  public void chronicleLogOptionCreatesQueueIfNotExists() throws IOException, InterruptedException {
+    logger.info("Testing Chronicle -l option creates queue if it doesn't exist");
+
+    // Create a path for a queue that doesn't exist yet
+    Path newQueue = tempDir.resolve("new-queue-via-log-option");
+
+    // Verify it doesn't exist before running
+    assertThat("Queue should not exist initially", Files.exists(newQueue), is(false));
+
+    // Run with -l option (same log for reading and writing)
+    ProcessResult result =
+        runPalCommandWithEnv(
+            null, // No PAL_DIRECTORY
+            "-l",
+            "file:" + newQueue.toAbsolutePath(),
+            "-cp",
+            "modules/itt-apps/target/classes",
+            "com.quasient.pal.apps.rpc.Methods");
+
+    // Verify the process exits successfully
+    assertThat("Process should exit with code 0", result.exitCode(), is(0));
+
+    // Verify the Chronicle queue was created
+    assertThat("Chronicle queue should be created", Files.exists(newQueue), is(true));
+
+    // Verify no errors (case-insensitive check for 'error' and 'exception')
+    String stderrLower = result.stderr().toLowerCase(Locale.ROOT);
+    assertThat("Should not contain 'error'", stderrLower.contains("error"), is(false));
+    assertThat("Should not contain 'exception'", stderrLower.contains("exception"), is(false));
+
+    // Verify messages were written to the queue
+    int messageCount = ChronicleQueueTestUtil.countMessages(newQueue);
+    assertThat(
+        "Chronicle queue should contain messages created via -l option",
+        messageCount > 0,
+        is(true));
+  }
+
+  /**
+   * Tests that PAL correctly handles relative Chronicle paths (file:mylog).
+   *
+   * <p>This test verifies:
+   *
+   * <ul>
+   *   <li>Relative paths without leading slash work correctly
+   *   <li>The queue is created relative to CWD (or --chronicle-base-dir if specified)
+   *   <li>Messages are written and can be read back
+   * </ul>
+   */
+  @Test
+  public void chronicleRelativePathHandling() throws IOException, InterruptedException {
+    logger.info("Testing Chronicle relative path handling (file:mylog)");
+
+    // Use a simple relative name
+    String relativeName = "relative-test-queue";
+    Path expectedPath = tempDir.resolve(relativeName);
+
+    // Run with relative path and --chronicle-base-dir
+    ProcessResult result =
+        runPalCommandWithEnv(
+            null, // No PAL_DIRECTORY
+            "--chronicle-base-dir",
+            tempDir.toAbsolutePath().toString(),
+            "-l",
+            "file:" + relativeName, // Relative path (no leading slash)
+            "-cp",
+            "modules/itt-apps/target/classes",
+            "com.quasient.pal.apps.rpc.Methods");
+
+    // Verify the process exits successfully
+    assertThat("Process should exit with code 0", result.exitCode(), is(0));
+
+    // Verify the Chronicle queue was created at the expected location
+    assertThat(
+        "Chronicle queue should be created at base_dir/relative-name",
+        Files.exists(expectedPath),
+        is(true));
+
+    // Verify no errors (case-insensitive check for 'error' and 'exception')
+    String stderrLower = result.stderr().toLowerCase(Locale.ROOT);
+    assertThat("Should not contain 'error'", stderrLower.contains("error"), is(false));
+    assertThat("Should not contain 'exception'", stderrLower.contains("exception"), is(false));
+
+    // Verify messages were written
+    int messageCount = ChronicleQueueTestUtil.countMessages(expectedPath);
+    assertThat(
+        "Chronicle queue should contain messages with relative path", messageCount > 0, is(true));
   }
 }

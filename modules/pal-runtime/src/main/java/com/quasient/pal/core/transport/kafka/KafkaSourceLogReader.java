@@ -300,7 +300,11 @@ public class KafkaSourceLogReader extends SourceLogReader {
    * @throws Exception if an error occurs during Log configuration.
    */
   @Override
-  public void readFromLog(LogInfo log, boolean skipWrittenOffsets, @Nullable Long initialOffset)
+  public void readFromLog(
+      LogInfo log,
+      boolean skipWrittenOffsets,
+      @Nullable Long initialOffset,
+      boolean sourceLogWillBeCreated)
       throws Exception {
     this.kafkaTopic = log.getName();
     this.skipWrittenOffsets = skipWrittenOffsets;
@@ -316,6 +320,7 @@ public class KafkaSourceLogReader extends SourceLogReader {
         logInfo.getBootstrapServers(),
         initialOffset,
         skipWrittenOffsets ? "" : "NOT ");
+    // Note: sourceLogWillBeCreated not used for Kafka - topics can be auto-created
   }
 
   /**

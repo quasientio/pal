@@ -82,10 +82,11 @@ public class LogConfiguratorTest {
         .readFromLog(
             argThat(
                 logInfo ->
-                    logInfo.getName().equals("tmp/chronicle-queue")
+                    logInfo.getName().equals("/tmp/chronicle-queue")
                         && logInfo.getLogType() == LogInfo.LogType.CHRONICLE),
             eq(false),
-            eq(null));
+            eq(null),
+            eq(false)); // sourceLogWillBeCreated = false (no WAL specified)
   }
 
   @Test
@@ -100,7 +101,11 @@ public class LogConfiguratorTest {
     verify(mockedPalDirectory, never()).logExists(sourceLogName);
     verify(mockedPalDirectory, never()).getLogInfo(sourceLogName);
     verify(mockedLogReader)
-        .readFromLog(argThat(new LogInfoMatcher(new LogInfo(sourceLogName))), eq(false), eq(null));
+        .readFromLog(
+            argThat(new LogInfoMatcher(new LogInfo(sourceLogName))),
+            eq(false),
+            eq(null),
+            eq(false)); // sourceLogWillBeCreated = false (no WAL specified)
     verify(mockedKafkaWalWriter, never()).writeToLog(any(), anyBoolean());
   }
 
@@ -119,7 +124,11 @@ public class LogConfiguratorTest {
     verify(mockedPalDirectory, never()).getLogInfo(sourceLogName);
     verify(mockedPalDirectory, never()).createAutoLog(any(), any());
     verify(mockedLogReader)
-        .readFromLog(argThat(new LogInfoMatcher(new LogInfo(sourceLogName))), eq(false), eq(null));
+        .readFromLog(
+            argThat(new LogInfoMatcher(new LogInfo(sourceLogName))),
+            eq(false),
+            eq(null),
+            eq(false)); // sourceLogWillBeCreated = false (no WAL specified)
     verify(mockedKafkaWalWriter, never()).writeToLog(eq(new LogInfo("app_random1")), anyBoolean());
   }
 
@@ -138,7 +147,11 @@ public class LogConfiguratorTest {
     verify(mockedPalDirectory, never()).getLogInfo(sourceLogName);
     verify(mockedPalDirectory, never()).createAutoLog(any(), any());
     verify(mockedLogReader)
-        .readFromLog(argThat(new LogInfoMatcher(new LogInfo("auto"))), eq(true), eq(null));
+        .readFromLog(
+            argThat(new LogInfoMatcher(new LogInfo("auto"))),
+            eq(true),
+            eq(null),
+            eq(true)); // sourceLogWillBeCreated = true (same log for source and WAL)
     verify(mockedKafkaWalWriter)
         .writeToLog(argThat(new LogInfoMatcher(new LogInfo("auto"))), anyBoolean());
   }
@@ -159,7 +172,11 @@ public class LogConfiguratorTest {
     verify(mockedPalDirectory, never()).createLog(any(LogInfo.class));
     verify(mockedPalDirectory, never()).createAutoLog(any(), any());
     verify(mockedLogReader)
-        .readFromLog(argThat(new LogInfoMatcher(new LogInfo(sourceLogName))), eq(false), eq(null));
+        .readFromLog(
+            argThat(new LogInfoMatcher(new LogInfo(sourceLogName))),
+            eq(false),
+            eq(null),
+            eq(false)); // sourceLogWillBeCreated = false (no WAL specified)
     verify(mockedKafkaWalWriter)
         .writeToLog(argThat(new LogInfoMatcher(new LogInfo("auto"))), anyBoolean());
   }
@@ -181,7 +198,11 @@ public class LogConfiguratorTest {
     verify(mockedPalDirectory, never()).getLogInfo(writeAheadLogName);
     verify(mockedPalDirectory, never()).createAutoLog(any(), any());
     verify(mockedLogReader)
-        .readFromLog(argThat(new LogInfoMatcher(new LogInfo(sourceLogName))), eq(false), eq(null));
+        .readFromLog(
+            argThat(new LogInfoMatcher(new LogInfo(sourceLogName))),
+            eq(false),
+            eq(null),
+            eq(false)); // sourceLogWillBeCreated = false (no WAL specified)
     verify(mockedKafkaWalWriter)
         .writeToLog(argThat(new LogInfoMatcher(new LogInfo(writeAheadLogName))), anyBoolean());
   }
@@ -199,7 +220,11 @@ public class LogConfiguratorTest {
     verify(mockedPalDirectory, never()).getLogInfo(logName);
     verify(mockedPalDirectory, never()).createAutoLog(any(), any());
     verify(mockedLogReader)
-        .readFromLog(argThat(new LogInfoMatcher(new LogInfo(logName))), eq(true), eq(null));
+        .readFromLog(
+            argThat(new LogInfoMatcher(new LogInfo(logName))),
+            eq(true),
+            eq(null),
+            eq(true)); // sourceLogWillBeCreated = true (same log for source and WAL)
     verify(mockedKafkaWalWriter)
         .writeToLog(argThat(new LogInfoMatcher(new LogInfo(logName))), anyBoolean());
   }
@@ -216,7 +241,7 @@ public class LogConfiguratorTest {
     verify(mockedPalDirectory, never()).logExists(writeAheadLogName);
     verify(mockedPalDirectory, never()).getLogInfo(writeAheadLogName);
     verify(mockedPalDirectory, never()).createAutoLog(any(), any());
-    verify(mockedLogReader, never()).readFromLog(any(), anyBoolean(), anyLong());
+    verify(mockedLogReader, never()).readFromLog(any(), anyBoolean(), anyLong(), anyBoolean());
     verify(mockedKafkaWalWriter)
         .writeToLog(argThat(new LogInfoMatcher(new LogInfo(writeAheadLogName))), anyBoolean());
   }

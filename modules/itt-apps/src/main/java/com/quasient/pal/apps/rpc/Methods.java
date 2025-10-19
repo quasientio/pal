@@ -170,5 +170,33 @@ public class Methods {
     return threads;
   }
 
-  public static void main(String[] args) {}
+  public static void main(String[] args) {
+    // Create instance and call some random methods
+    Methods m = new Methods();
+
+    // Test instance methods
+    m.giveMeX();
+    m.getListOfStrings();
+    m.getListOfStringsShorthand();
+    m.doSomething();
+    m.printDate();
+
+    // Test instance method with parameters
+    List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5);
+    m.addOffsetToListAndSumUp(10, numbers);
+
+    // Test static methods
+    doSomethingStatically();
+    highFive();
+    sumUpList(Arrays.asList(10, 20, 30));
+    nonVoidSumUpList(Arrays.asList(5, 15, 25));
+
+    // Test field access
+    Integer x = m.anInt;
+
+    // Test array methods
+    toCharArray("test");
+    giveMeAnEmptyLongArray();
+    getThreadArray();
+  }
 }

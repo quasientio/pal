@@ -110,10 +110,16 @@ public abstract class SourceLogReader extends ConnectedService {
    * @param skipWrittenOffsets Flag indicating if already written offsets should be skipped.
    * @param initialOffset The initial offset/index from which to start reading; if null, processing
    *     starts from the beginning.
+   * @param sourceLogWillBeCreated Flag indicating whether this source log will also be written to
+   *     (i.e., it's also used as a WAL). When true, the log doesn't need to exist yet.
    * @throws Exception if an error occurs during Log configuration.
    */
   public abstract void readFromLog(
-      LogInfo log, boolean skipWrittenOffsets, @Nullable Long initialOffset) throws Exception;
+      LogInfo log,
+      boolean skipWrittenOffsets,
+      @Nullable Long initialOffset,
+      boolean sourceLogWillBeCreated)
+      throws Exception;
 
   /**
    * Checks whether the SourceLogReader is currently accepting incoming Log requests.

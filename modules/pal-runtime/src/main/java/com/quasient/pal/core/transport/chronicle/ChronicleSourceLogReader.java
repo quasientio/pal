@@ -95,19 +95,45 @@ public class ChronicleSourceLogReader extends SourceLogReader {
 
   /**
    * Configures the ChronicleSourceLogReader to start reading from a specified Chronicle queue. This
-   * method sets the queue path and initial index.
+   * method sets the queue path and initial index, and verifies the queue exists if necessary.
    *
    * @param log The Log information containing the queue name/path.
    * @param skipWrittenOffsets Flag indicating if already written offsets should be skipped (not
    *     applicable for Chronicle but kept for interface consistency).
    * @param initialOffset The initial Chronicle index from which to start reading; if null,
    *     processing starts from the beginning.
+   * @param sourceLogWillBeCreated Flag indicating whether this source log will also be written to
+   *     (i.e., used with --log option). When true, the queue doesn't need to exist yet.
+   * @throws IllegalStateException if the Chronicle queue does not exist and sourceLogWillBeCreated
+   *     is false
    */
   @Override
-  public void readFromLog(LogInfo log, boolean skipWrittenOffsets, @Nullable Long initialOffset) {
+  public void readFromLog(
+      LogInfo log,
+      boolean skipWrittenOffsets,
+      @Nullable Long initialOffset,
+      boolean sourceLogWillBeCreated) {
     this.queueName = log.getName();
     this.skipWrittenOffsets = skipWrittenOffsets;
     this.initialOffset = initialOffset;
+
+    // Verify the Chronicle queue exists before proceeding, but only if this source log won't be
+    // created by a WAL writer. When sourceLogWillBeCreated is true (e.g., --log option), the WAL
+    // writer will create the queue if it doesn't exist.
+    if (!sourceLogWillBeCreated) {
+      // If the queue name is an absolute path, use it directly; otherwise resolve against baseDir
+      Path queueNamePath = Path.of(queueName);
+      Path queuePath = queueNamePath.isAbsolute() ? queueNamePath : baseDir.resolve(queueName);
+
+      if (!java.nio.file.Files.exists(queuePath)) {
+        String errorMsg =
+            String.format(
+                "Chronicle source log does not exist: %s%nEnsure the log was previously written to via --wal option.",
+                queuePath);
+        logger.error(errorMsg);
+        throw new IllegalStateException(errorMsg);
+      }
+    }
 
     logger.info(
         "Reading from Chronicle log: {}, starting at index: {}, {}skipping written offsets",
@@ -130,6 +156,7 @@ public class ChronicleSourceLogReader extends SourceLogReader {
     logger.info("Opening Chronicle log at: {}", queuePath);
 
     // Create Chronicle queue (read-only)
+    // Note: existence check is performed earlier in readFromLog()
     try {
       chronicleQueue = queueFactory.createReadOnly(queuePath);
     } catch (Exception e) {

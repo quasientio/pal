@@ -241,6 +241,15 @@ public class Main implements Callable<Integer> {
       showDefaultValue = CommandLine.Help.Visibility.ALWAYS)
   private String logPrefix; // corresponding ENV var: LOG_PREFIX
 
+  /** Base directory for Chronicle queues when using relative paths with file: prefix. */
+  @Option(
+      names = {"--chronicle-base-dir"},
+      paramLabel = "path",
+      description =
+          "base directory for relative Chronicle paths (file:mylog). Absolute paths (file:/path)"
+              + " ignore this. Default: current working directory")
+  private String chronicleBaseDir; // corresponding ENV var: CHRONICLE_BASE_DIR
+
   /**
    * Timeout in milliseconds for Kafka connection health check during initialization. If Kafka
    * doesn't respond within this time, the peer will fail to start.
@@ -699,6 +708,7 @@ public class Main implements Callable<Integer> {
     sourceLog = getParameter("SOURCE_LOG", sourceLog);
     wal = getParameter("WAL", wal);
     logPrefix = getParameter("LOG_PREFIX", logPrefix);
+    chronicleBaseDir = getParameter("CHRONICLE_BASE_DIR", chronicleBaseDir);
     zmqRpc = getParameter("ZMQ_RPC", zmqRpc);
     jsonRpc = getParameter("JSON_RPC", jsonRpc);
     tcpPub = getParameter("TCP_PUB", tcpPub);
@@ -859,22 +869,24 @@ public class Main implements Callable<Integer> {
   /**
    * Determines if a log specification refers to a Chronicle queue.
    *
-   * @param logSpec the log specification (e.g., "file:/tmp/mylog" or "my-kafka-topic")
-   * @return true if it's a Chronicle queue (starts with "file:/"), false otherwise
+   * @param logSpec the log specification (e.g., "file:/tmp/mylog", "file:mylog", or
+   *     "my-kafka-topic")
+   * @return true if it's a Chronicle queue (starts with "file:"), false otherwise
    */
   private static boolean isChronicleLog(@Nullable String logSpec) {
-    return logSpec != null && logSpec.startsWith("file:/");
+    return logSpec != null && logSpec.startsWith("file:");
   }
 
   /**
    * Extracts the actual path/name from a log specification.
    *
    * @param logSpec the log specification
-   * @return the path for Chronicle (without "file:/") or the topic name for Kafka
+   * @return the path for Chronicle (without "file:" prefix, preserving leading slash) or the topic
+   *     name for Kafka
    */
   private static String extractLogName(String logSpec) {
     if (isChronicleLog(logSpec)) {
-      return logSpec.substring("file:/".length());
+      return logSpec.substring("file:".length());
     }
     return logSpec;
   }
@@ -923,6 +935,12 @@ public class Main implements Callable<Integer> {
     if (logPrefix != null && !logPrefix.isBlank()) {
       properties.setProperty("logPrefix", logPrefix);
     }
+
+    // add chronicle base directory (only if explicitly provided via CLI or ENV)
+    if (chronicleBaseDir != null && !chronicleBaseDir.isBlank()) {
+      properties.setProperty("wal.chronicle.base_dir", chronicleBaseDir);
+    }
+    // If not set, ChronicleSourceLogReader and ChronicleWalWriter will use CWD for relative paths
 
     // Determine and set source log type (KAFKA or CHRONICLE)
     if (sourceLog != null) {

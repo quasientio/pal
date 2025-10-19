@@ -225,6 +225,11 @@ public class PeerWiring extends AbstractModule {
   /**
    * Provides a {@link Path} to the base directory for Chronicle queue files.
    *
+   * <p>The base directory is determined from the "wal.chronicle.base_dir" property, which can be
+   * set via the --chronicle-base-dir CLI option or CHRONICLE_BASE_DIR environment variable. If not
+   * specified, defaults to the current working directory. This is only used for relative Chronicle
+   * paths (file:mylog); absolute paths (file:/path/mylog) ignore this setting.
+   *
    * @return base dir path for Chronicle queues
    */
   @SuppressWarnings("unused")
@@ -232,8 +237,9 @@ public class PeerWiring extends AbstractModule {
   @Named("chronicleBaseDir")
   Path provideChronicleBaseDir() {
     String pathStr = properties.getProperty("wal.chronicle.base_dir");
-    if (pathStr == null) {
-      throw new IllegalStateException("Missing property: wal.chronicle.base_dir");
+    if (pathStr == null || pathStr.isBlank()) {
+      // Default to current working directory for relative paths
+      return Paths.get(".");
     }
     return Paths.get(pathStr);
   }

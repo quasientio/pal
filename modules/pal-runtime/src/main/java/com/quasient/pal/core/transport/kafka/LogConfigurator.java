@@ -39,22 +39,24 @@ public class LogConfigurator {
   /**
    * Determines if a log specification refers to a Chronicle queue.
    *
-   * @param logSpec the log specification (e.g., "file:/tmp/mylog" or "my-kafka-topic")
-   * @return true if it's a Chronicle queue (starts with "file:/"), false otherwise
+   * @param logSpec the log specification (e.g., "file:/tmp/mylog", "file:mylog", or
+   *     "my-kafka-topic")
+   * @return true if it's a Chronicle queue (starts with "file:"), false otherwise
    */
   private static boolean isChronicleLog(String logSpec) {
-    return logSpec != null && logSpec.startsWith("file:/");
+    return logSpec != null && logSpec.startsWith("file:");
   }
 
   /**
    * Extracts the actual path/name from a log specification.
    *
    * @param logSpec the log specification
-   * @return the path for Chronicle (without "file:/") or the topic name for Kafka
+   * @return the path for Chronicle (without "file:" prefix, preserving leading slash) or the topic
+   *     name for Kafka
    */
   private static String extractLogName(String logSpec) {
     if (isChronicleLog(logSpec)) {
-      return logSpec.substring("file:/".length());
+      return logSpec.substring("file:".length());
     }
     return logSpec;
   }
@@ -188,7 +190,8 @@ public class LogConfigurator {
   private void readFromLog(LogInfo sourceLog, boolean sourceAndWalAreSameLog, Long initialOffset)
       throws Exception {
     var logMessageReader = injector.getInstance(SourceLogReader.class);
-    logMessageReader.readFromLog(sourceLog, sourceAndWalAreSameLog, initialOffset);
+    logMessageReader.readFromLog(
+        sourceLog, sourceAndWalAreSameLog, initialOffset, sourceAndWalAreSameLog);
   }
 
   /**
@@ -321,6 +324,7 @@ public class LogConfigurator {
         String queuePath = extractLogName(sourceLogName);
         sourceLog = new LogInfo(queuePath);
         sourceLog.setLogType(LogInfo.LogType.CHRONICLE);
+        sourceLog.setUuid(java.util.UUID.randomUUID());
       } else {
         // Kafka topic
         sourceLog =
@@ -342,6 +346,7 @@ public class LogConfigurator {
         String queuePath = extractLogName(writeAheadLogName);
         writeAheadLog = new LogInfo(queuePath);
         writeAheadLog.setLogType(LogInfo.LogType.CHRONICLE);
+        writeAheadLog.setUuid(java.util.UUID.randomUUID());
       } else {
         // Kafka topic
         writeAheadLog =
