@@ -13,9 +13,13 @@ import static java.lang.String.format;
 
 import com.quasient.pal.common.cli.PalCommand;
 import com.quasient.pal.common.directory.nodes.LogInfo;
+import com.quasient.pal.common.directory.nodes.LogInfo.LogType;
 import com.quasient.pal.common.directory.nodes.PeerInfo;
 import com.quasient.pal.common.util.Strings;
+import com.quasient.pal.cxn.chronicle.ChronicleLogUtil;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -120,6 +124,9 @@ public class List extends AbstractPalSubcommand {
   /** Mapping of server addresses to their respective Kafka admin clients. */
   private final Map<String, Admin> adminClientsPerServer = new HashMap<>();
 
+  /** Base directory for Chronicle queue files. */
+  private Path chronicleBaseDir;
+
   /*---------------------------------------------------------------------------------------------------
    * Column widths for variable-length fields. Adjust these values, not the format strings that follow.
    *--------------------------------------------------------------------------------------------------*/
@@ -177,6 +184,15 @@ public class List extends AbstractPalSubcommand {
           "A PalDirectory is required. Run with -d (--dir) or set the ENV variable PAL_DIRECTORY.");
       System.exit(1);
     }
+
+    // Initialize Chronicle base directory from system property or environment variable
+    String baseDirStr =
+        System.getProperty("wal.chronicle.base_dir", System.getenv("CHRONICLE_BASE_DIR"));
+    if (baseDirStr == null || baseDirStr.isBlank()) {
+      chronicleBaseDir = Paths.get(".");
+    } else {
+      chronicleBaseDir = Paths.get(baseDirStr);
+    }
   }
 
   /**
@@ -229,6 +245,43 @@ public class List extends AbstractPalSubcommand {
       logger.error("Error listing logs in kafka", e);
     }
     return logsInServers;
+  }
+
+  /**
+   * Checks if the Chronicle log exists on disk and returns true if it does.
+   *
+   * @param logInfo the LogInfo representing the Chronicle log
+   * @return true if the Chronicle queue exists, false otherwise
+   */
+  private boolean chronicleLogExists(LogInfo logInfo) {
+    Path queuePath = ChronicleLogUtil.resolveQueuePath(logInfo.getName(), chronicleBaseDir);
+    return ChronicleLogUtil.queueExists(queuePath);
+  }
+
+  /**
+   * Fills in the offsets (indices) for a Chronicle log.
+   *
+   * @param logInfo the LogInfo to populate with offset information
+   */
+  private void fillChronicleLogOffsets(LogInfo logInfo) {
+    Path queuePath = ChronicleLogUtil.resolveQueuePath(logInfo.getName(), chronicleBaseDir);
+    ChronicleLogUtil.QueueIndexInfo indexInfo = ChronicleLogUtil.getQueueIndexInfo(queuePath);
+
+    if (indexInfo != null) {
+      logInfo.setStartOffset(indexInfo.getFirstIndex());
+      logInfo.setEndOffset(indexInfo.getLastIndex());
+    }
+  }
+
+  /**
+   * Fills in the size information for a Chronicle log.
+   *
+   * @param logInfo the LogInfo to populate with size information
+   */
+  private void fillChronicleLogSize(LogInfo logInfo) {
+    Path queuePath = ChronicleLogUtil.resolveQueuePath(logInfo.getName(), chronicleBaseDir);
+    long sizeInBytes = ChronicleLogUtil.getQueueSizeInBytes(queuePath);
+    logInfo.setBytes(sizeInBytes);
   }
 
   /**
@@ -520,29 +573,65 @@ public class List extends AbstractPalSubcommand {
       // get all logs in directory
       Set<LogInfo> logsInDirectory = getPalDirectory().listAllLogs();
 
-      // get logs from all different kafka servers
-      Set<LogInfo> logsInKafka = new HashSet<>();
-      logsInDirectory.stream()
-          .map(LogInfo::getBootstrapServers)
-          .distinct()
-          .forEach(s -> logsInKafka.addAll(this.getLogsInKafkaServers(s)));
+      // Separate Kafka and Chronicle logs
+      Set<LogInfo> kafkaLogs =
+          logsInDirectory.stream()
+              .filter(log -> log.getLogType() == LogType.KAFKA)
+              .collect(Collectors.toSet());
 
-      // filter out logs that are not in kafka
-      logsInDirectory.retainAll(logsInKafka);
+      Set<LogInfo> chronicleLogs =
+          logsInDirectory.stream()
+              .filter(log -> log.getLogType() == LogType.CHRONICLE)
+              .collect(Collectors.toSet());
 
-      // fill offsets of all logs using kafka admin client
-      fillLogInfosWithOffsets(logsInDirectory);
+      // Process Kafka logs
+      Set<LogInfo> existingKafkaLogs = new HashSet<>();
+      if (!kafkaLogs.isEmpty()) {
+        // get logs from all different kafka servers
+        Set<LogInfo> logsInKafka = new HashSet<>();
+        kafkaLogs.stream()
+            .map(LogInfo::getBootstrapServers)
+            .distinct()
+            .forEach(s -> logsInKafka.addAll(this.getLogsInKafkaServers(s)));
 
-      // fill byte size of all logs using kafka admin client
-      logsInDirectory.forEach(this::fillLogInfoSize);
+        // filter out logs that are not in kafka
+        kafkaLogs.retainAll(logsInKafka);
+        existingKafkaLogs.addAll(kafkaLogs);
+
+        // fill offsets of all Kafka logs using kafka admin client
+        fillLogInfosWithOffsets(existingKafkaLogs);
+
+        // fill byte size of all Kafka logs using kafka admin client
+        existingKafkaLogs.forEach(this::fillLogInfoSize);
+      }
+
+      // Process Chronicle logs
+      Set<LogInfo> existingChronicleLogs = new HashSet<>();
+      if (!chronicleLogs.isEmpty()) {
+        // filter out Chronicle logs that don't exist on disk
+        chronicleLogs.stream()
+            .filter(this::chronicleLogExists)
+            .forEach(
+                log -> {
+                  existingChronicleLogs.add(log);
+                  // fill offsets and size for Chronicle logs
+                  fillChronicleLogOffsets(log);
+                  fillChronicleLogSize(log);
+                });
+      }
+
+      // Combine all existing logs
+      Set<LogInfo> allExistingLogs = new HashSet<>();
+      allExistingLogs.addAll(existingKafkaLogs);
+      allExistingLogs.addAll(existingChronicleLogs);
 
       if (longListing) {
-        out.printf("total %d%n", logsInDirectory.size());
-        if (!logsInDirectory.isEmpty()) {
+        out.printf("total %d%n", allExistingLogs.size());
+        if (!allExistingLogs.isEmpty()) {
           out.printf(LOGS_LONG_FORMAT + "%n", "Name", "UUID", "Size", "Start", "End", "Created");
         }
       }
-      printLogs(logsInDirectory);
+      printLogs(allExistingLogs);
     }
 
     if (listPeers) {

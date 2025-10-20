@@ -14,6 +14,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 
 import com.quasient.pal.AbstractIntegrationTest;
+import com.quasient.pal.cxn.chronicle.ChronicleLogUtil;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -103,9 +104,8 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
     assertThat("Should not contain 'exception'", stderrLower.contains("exception"), is(false));
 
     // Verify messages were actually written to the queue
-    assertThat(
-        "Queue should not be empty", ChronicleQueueTestUtil.isQueueEmpty(walPath), is(false));
-    int messageCount = ChronicleQueueTestUtil.countMessages(walPath);
+    assertThat("Queue should not be empty", ChronicleLogUtil.isQueueEmpty(walPath), is(false));
+    int messageCount = ChronicleLogUtil.countMessages(walPath);
     assertThat("Queue should contain at least one message", messageCount > 0, is(true));
     logger.info("Verified {} messages written to Chronicle queue", messageCount);
   }
@@ -143,7 +143,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
     assertThat("Chronicle queue should have been created", Files.exists(walPath), is(true));
 
     // Verify messages were written
-    int messagesWritten = ChronicleQueueTestUtil.countMessages(walPath);
+    int messagesWritten = ChronicleLogUtil.countMessages(walPath);
     assertThat("Queue should contain messages after write", messagesWritten > 0, is(true));
     logger.info("Writer peer wrote {} messages to Chronicle queue", messagesWritten);
 
@@ -166,7 +166,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
         "Reader should not have 'exception'", readStderrLower.contains("exception"), is(false));
 
     // Verify messages are still in the queue (reading doesn't consume)
-    int messagesAfterRead = ChronicleQueueTestUtil.countMessages(walPath);
+    int messagesAfterRead = ChronicleLogUtil.countMessages(walPath);
     assertThat(
         "Message count should remain the same after read", messagesAfterRead, is(messagesWritten));
   }
@@ -200,7 +200,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
     assertThat("Should not have 'exception'", noKafkaStderrLower.contains("exception"), is(false));
 
     // Verify messages were written even without Kafka
-    int messageCount = ChronicleQueueTestUtil.countMessages(walPath);
+    int messageCount = ChronicleLogUtil.countMessages(walPath);
     assertThat(
         "Queue should contain messages without Kafka configuration", messageCount > 0, is(true));
     logger.info("Verified {} messages written without Kafka configuration", messageCount);
@@ -247,7 +247,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
     assertThat("Should not have 'exception'", mixedStderrLower.contains("exception"), is(false));
 
     // Verify messages were written to Chronicle WAL
-    int messageCount = ChronicleQueueTestUtil.countMessages(walPath);
+    int messageCount = ChronicleLogUtil.countMessages(walPath);
     assertThat("Chronicle WAL should contain messages in mixed mode", messageCount > 0, is(true));
     logger.info("Verified {} messages written to Chronicle WAL in mixed mode", messageCount);
   }
@@ -274,14 +274,13 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
 
     assertThat("Writer should exit successfully", writeResult.exitCode(), is(0));
 
-    int totalMessages = ChronicleQueueTestUtil.countMessages(walPath);
+    int totalMessages = ChronicleLogUtil.countMessages(walPath);
     assertThat(
         "Queue should have messages before reading with offset", totalMessages > 0, is(true));
     logger.info("Queue contains {} messages total", totalMessages);
 
     // Get queue index info
-    ChronicleQueueTestUtil.QueueIndexInfo indexInfo =
-        ChronicleQueueTestUtil.getQueueIndexInfo(walPath);
+    ChronicleLogUtil.QueueIndexInfo indexInfo = ChronicleLogUtil.getQueueIndexInfo(walPath);
     assertThat("Queue index info should be available", indexInfo != null, is(true));
     logger.info("Queue index info: {}", indexInfo);
 
@@ -310,7 +309,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
         "Should not have 'exception'", offsetReadStderrLower.contains("exception"), is(false));
 
     // Verify messages are still accessible (reading doesn't consume)
-    int messagesAfterRead = ChronicleQueueTestUtil.countMessages(walPath);
+    int messagesAfterRead = ChronicleLogUtil.countMessages(walPath);
     assertThat(
         "Message count should remain the same after offset read",
         messagesAfterRead,
@@ -406,7 +405,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
     assertThat("Should not contain 'exception'", stderrLower.contains("exception"), is(false));
 
     // Verify messages were written to the queue
-    int messageCount = ChronicleQueueTestUtil.countMessages(newQueue);
+    int messageCount = ChronicleLogUtil.countMessages(newQueue);
     assertThat(
         "Chronicle queue should contain messages created via -l option",
         messageCount > 0,
@@ -459,7 +458,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
     assertThat("Should not contain 'exception'", stderrLower.contains("exception"), is(false));
 
     // Verify messages were written
-    int messageCount = ChronicleQueueTestUtil.countMessages(expectedPath);
+    int messageCount = ChronicleLogUtil.countMessages(expectedPath);
     assertThat(
         "Chronicle queue should contain messages with relative path", messageCount > 0, is(true));
   }

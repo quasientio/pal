@@ -10,12 +10,15 @@
 package com.quasient.pal.cxn;
 
 import com.quasient.pal.common.directory.nodes.LogInfo;
+import com.quasient.pal.common.directory.nodes.LogInfo.LogType;
 import com.quasient.pal.common.directory.nodes.PeerInfo;
 import com.quasient.pal.common.util.UuidUtils;
+import com.quasient.pal.cxn.chronicle.ChronicleLogUtil;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.cxn.directory.PeerLease;
 import com.quasient.pal.messages.LogMessage;
+import com.quasient.pal.messages.OutboundMsg;
 import com.quasient.pal.messages.colfer.ControlMessage;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.Message;
@@ -25,8 +28,10 @@ import com.quasient.pal.messages.jsonrpc.JsonRpcRequest;
 import com.quasient.pal.messages.jsonrpc.JsonRpcResponse;
 import com.quasient.pal.messages.types.ControlCommandType;
 import com.quasient.pal.messages.types.ControlStatusType;
+import com.quasient.pal.messages.types.MessageType;
 import com.quasient.pal.messages.types.RpcType;
 import com.quasient.pal.serdes.colfer.ColferUtils;
+import com.quasient.pal.serdes.colfer.ExecMessageUtils;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
 import com.quasient.pal.serdes.jsonrpc.JsonRpcMessageFactory;
 import com.quasient.pal.serdes.jsonrpc.JsonRpcSerializer;
@@ -34,6 +39,8 @@ import com.quasient.pal.serdes.jsonrpc.JsonSerializationException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -50,6 +57,10 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import javax.annotation.Nullable;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -176,6 +187,15 @@ public class ThinPeer {
 
   /** Cache of the last records read from Kafka, mapped by their offsets. */
   private Map<Long, ConsumerRecord<String, LogMessage<?>>> lastRecordsRead = new HashMap<>();
+
+  /** Chronicle queue for writing messages (when using Chronicle output log). */
+  private ChronicleQueue chronicleOutputQueue;
+
+  /** Chronicle queue for reading messages (when using Chronicle input log). */
+  private ChronicleQueue chronicleInputQueue;
+
+  /** Base directory for Chronicle queue files. */
+  private Path chronicleBaseDir;
 
   /** ZeroMQ context for managing ZMQ sockets. */
   private ZContext zmqContext;
@@ -516,6 +536,15 @@ public class ThinPeer {
     final boolean withConsumer = consumer != null || consumerProperties != null;
     final boolean logless = !withProducer && !withConsumer;
 
+    // Initialize Chronicle base directory
+    String baseDirStr =
+        System.getProperty("wal.chronicle.base_dir", System.getenv("CHRONICLE_BASE_DIR"));
+    if (baseDirStr == null || baseDirStr.isBlank()) {
+      chronicleBaseDir = Paths.get(".");
+    } else {
+      chronicleBaseDir = Paths.get(baseDirStr);
+    }
+
     if (!logless) {
       // get last log with prefix from PAL directory
       LogInfo lastLog =
@@ -536,28 +565,44 @@ public class ThinPeer {
             this.inputLog.setBootstrapServers(bootstrapServers);
           }
         }
-        // configure kafka consumer
-        if (consumer == null) {
-          if (consumerProperties == null) {
-            throw new RuntimeException("You must supply either Consumer or ConsumerProperties");
+        // configure kafka consumer or Chronicle input queue
+        if (this.inputLog.getLogType() == LogType.CHRONICLE) {
+          // Initialize Chronicle input queue
+          Path queuePath =
+              ChronicleLogUtil.resolveQueuePath(this.inputLog.getName(), chronicleBaseDir);
+          if (!ChronicleLogUtil.queueExists(queuePath)) {
+            throw new RuntimeException(
+                "Chronicle input log does not exist at path: "
+                    + queuePath
+                    + ". Ensure the log was previously created.");
           }
-          consumerProperties.put("group.id", peerUuid.toString());
-          final String bootstrapServers = this.inputLog.getBootstrapServers();
-          consumerProperties.put("bootstrap.servers", bootstrapServers);
-          this.consumer = new KafkaConsumer<>(consumerProperties);
-          logger.info(
-              "Kafka consumer initialized. Will connect to bootstrap servers: {}",
-              bootstrapServers);
-        }
+          this.chronicleInputQueue =
+              SingleChronicleQueueBuilder.binary(queuePath.toFile()).readOnly(true).build();
+          logger.info("Chronicle input queue initialized at: {}", queuePath);
+        } else {
+          // Kafka consumer
+          if (consumer == null) {
+            if (consumerProperties == null) {
+              throw new RuntimeException("You must supply either Consumer or ConsumerProperties");
+            }
+            consumerProperties.put("group.id", peerUuid.toString());
+            final String bootstrapServers = this.inputLog.getBootstrapServers();
+            consumerProperties.put("bootstrap.servers", bootstrapServers);
+            this.consumer = new KafkaConsumer<>(consumerProperties);
+            logger.info(
+                "Kafka consumer initialized. Will connect to bootstrap servers: {}",
+                bootstrapServers);
+          }
 
-        // set polling duration
-        if (pollingDuration == null) {
-          pollingDuration = Duration.of(DEFAULT_POLLING_DURATION_MILLIS, ChronoUnit.MILLIS);
-        }
+          // set polling duration
+          if (pollingDuration == null) {
+            pollingDuration = Duration.of(DEFAULT_POLLING_DURATION_MILLIS, ChronoUnit.MILLIS);
+          }
 
-        // manual assignment of partition so we can control offset seek
-        inTopicPartition = new TopicPartition(this.inputLog.getName(), 0);
-        consumer.assign(Collections.singletonList(inTopicPartition));
+          // manual assignment of partition so we can control offset seek
+          inTopicPartition = new TopicPartition(this.inputLog.getName(), 0);
+          consumer.assign(Collections.singletonList(inTopicPartition));
+        }
 
         consuming = true;
         logger.info("Will read from log: {}", this.inputLog);
@@ -576,18 +621,29 @@ public class ThinPeer {
           }
         }
 
-        // configure kafka producer
-        if (producer == null) {
-          if (producerProperties == null) {
-            throw new RuntimeException("You must supply either Producer or ProducerProperties");
+        // configure kafka producer or Chronicle output queue
+        if (this.outputLog.getLogType() == LogType.CHRONICLE) {
+          // Initialize Chronicle output queue
+          Path queuePath =
+              ChronicleLogUtil.resolveQueuePath(this.outputLog.getName(), chronicleBaseDir);
+          // Create the queue if it doesn't exist (for output, we can create it)
+          this.chronicleOutputQueue =
+              SingleChronicleQueueBuilder.binary(queuePath.toFile()).build();
+          logger.info("Chronicle output queue initialized at: {}", queuePath);
+        } else {
+          // Kafka producer
+          if (producer == null) {
+            if (producerProperties == null) {
+              throw new RuntimeException("You must supply either Producer or ProducerProperties");
+            }
+            producerProperties.put("client.id", peerUuid.toString());
+            final String bootstrapServers = this.outputLog.getBootstrapServers();
+            producerProperties.put("bootstrap.servers", bootstrapServers);
+            this.producer = new KafkaProducer<>(producerProperties);
+            logger.info(
+                "Kafka producer initialized. Will connect to bootstrap servers: {}",
+                bootstrapServers);
           }
-          producerProperties.put("client.id", peerUuid.toString());
-          final String bootstrapServers = this.outputLog.getBootstrapServers();
-          producerProperties.put("bootstrap.servers", bootstrapServers);
-          this.producer = new KafkaProducer<>(producerProperties);
-          logger.info(
-              "Kafka producer initialized. Will connect to bootstrap servers: {}",
-              bootstrapServers);
         }
 
         producing = true;
@@ -1036,6 +1092,21 @@ public class ThinPeer {
           "ThinPeer log producer not configured. Cannot send messages.");
     }
 
+    // Branch based on log type
+    if (outputLog.getLogType() == LogType.CHRONICLE) {
+      return sendExecMessageToChronicleLog(message);
+    } else {
+      return sendExecMessageToKafkaLog(message);
+    }
+  }
+
+  /**
+   * Sends an ExecMessage to a Kafka log.
+   *
+   * @param message the ExecMessage to send
+   * @return a Future representing the result of the send operation
+   */
+  private Future<RecordMetadata> sendExecMessageToKafkaLog(ExecMessage message) {
     // wrap in LogMessage
     var headers = Map.of("producer-id", peerUuid.toString());
     LogMessage<Message> logMessage =
@@ -1049,9 +1120,51 @@ public class ThinPeer {
     // send and return future
     var sendFuture = producer.send(record);
     if (logger.isDebugEnabled()) {
-      logger.debug("Message sent to log:\n{}", logMessage);
+      logger.debug("Message sent to Kafka log:\n{}", logMessage);
     }
     return sendFuture;
+  }
+
+  /**
+   * Sends an ExecMessage to a Chronicle queue.
+   *
+   * @param message the ExecMessage to send
+   * @return a CompletableFuture that completes immediately (Chronicle writes are synchronous)
+   */
+  private Future<RecordMetadata> sendExecMessageToChronicleLog(ExecMessage message) {
+    try {
+      // Create OutboundMsg from ExecMessage
+      Message wrappedMessage = msgBuilder.wrap(message);
+
+      // Determine message type from the ExecMessage
+      MessageType messageType = ExecMessageUtils.getMessageTypeOf(message);
+
+      OutboundMsg outboundMsg =
+          new OutboundMsg(
+              messageType,
+              null, // phase can be null for log messages
+              null, // no internal headers for now
+              message.getMessageId(),
+              message.getResponseToId(),
+              wrappedMessage);
+
+      // Write to Chronicle queue
+      ExcerptAppender appender = chronicleOutputQueue.createAppender();
+      outboundMsg.appendTo(appender);
+
+      if (logger.isDebugEnabled()) {
+        logger.debug("Message written to Chronicle queue: {}", message.getMessageId());
+      }
+
+      // Chronicle writes are synchronous, so return completed future
+      // We create a fake RecordMetadata-like result
+      return CompletableFuture.completedFuture(null);
+    } catch (Exception e) {
+      logger.error("Error writing to Chronicle queue", e);
+      CompletableFuture<RecordMetadata> future = new CompletableFuture<>();
+      future.completeExceptionally(e);
+      return future;
+    }
   }
 
   /**
@@ -1186,6 +1299,21 @@ public class ThinPeer {
       throw new IllegalStateException("ThinPeer log consumer not configured. Cannot get messages.");
     }
 
+    // Branch based on log type
+    if (outputLog.getLogType() == LogType.CHRONICLE && inputLog.getLogType() == LogType.CHRONICLE) {
+      return sendExecMessageToChronicleLogAndReceive(message);
+    } else {
+      return sendExecMessageToKafkaLogAndReceive(message);
+    }
+  }
+
+  /**
+   * Sends an ExecMessage to the configured Kafka log and awaits the corresponding response.
+   *
+   * @param message the ExecMessage to send
+   * @return a LogMessage containing the response ExecMessage
+   */
+  private LogMessage<Message> sendExecMessageToKafkaLogAndReceive(ExecMessage message) {
     // wrap in LogMessage
     var headers = Map.of("producer-id", peerUuid.toString());
     LogMessage<Message> logMessage =
@@ -1211,6 +1339,47 @@ public class ThinPeer {
     }
 
     return pollForResponseToRequestFromOffset(sentRecordOffset + 1, message.getMessageId());
+  }
+
+  /**
+   * Sends an ExecMessage to a Chronicle queue and awaits the corresponding response.
+   *
+   * @param message the ExecMessage to send
+   * @return a LogMessage containing the response ExecMessage
+   */
+  private LogMessage<Message> sendExecMessageToChronicleLogAndReceive(ExecMessage message) {
+    try {
+      // Write request to output queue
+      Message wrappedMessage = msgBuilder.wrap(message);
+
+      // Determine message type from the ExecMessage
+      MessageType messageType = ExecMessageUtils.getMessageTypeOf(message);
+
+      OutboundMsg outboundMsg =
+          new OutboundMsg(
+              messageType,
+              null, // phase can be null for log messages
+              null, // no internal headers for now
+              message.getMessageId(),
+              message.getResponseToId(),
+              wrappedMessage);
+
+      ExcerptAppender appender = chronicleOutputQueue.createAppender();
+      long writeIndex = outboundMsg.appendTo(appender);
+
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            "Message written to Chronicle queue at index {}: {}",
+            writeIndex,
+            message.getMessageId());
+      }
+
+      // Read response from input queue (start reading from next index)
+      return pollForChronicleResponseToRequest(writeIndex + 1, message.getMessageId());
+    } catch (Exception e) {
+      logger.error("Error in Chronicle send-and-receive", e);
+      return null;
+    }
   }
 
   /**
@@ -1267,6 +1436,70 @@ public class ThinPeer {
             logger.debug("Skipping record with offset {}", receivedMsgOffset);
           }
         }
+      }
+    }
+  }
+
+  /**
+   * Polls the Chronicle queue for a response message corresponding to the specified request ID,
+   * starting from the given index.
+   *
+   * @param startIndex the starting Chronicle index to read from
+   * @param requestId the ID of the request to match responses
+   * @return the LogMessage containing the response
+   */
+  private LogMessage<Message> pollForChronicleResponseToRequest(long startIndex, String requestId) {
+    if (logger.isDebugEnabled()) {
+      logger.debug("Chronicle tailer seeking to index: {}", startIndex);
+    }
+
+    ExcerptTailer tailer = chronicleInputQueue.createTailer();
+    if (!tailer.moveToIndex(startIndex)) {
+      logger.error("Failed to move tailer to index: {}", startIndex);
+      return null;
+    }
+
+    // Poll for response message
+    while (true) {
+      OutboundMsg outboundMsg = OutboundMsg.readNext(tailer);
+      if (outboundMsg == null) {
+        // No message available, wait briefly and retry
+        try {
+          Thread.sleep(100);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          logger.error("Interrupted while waiting for Chronicle response", e);
+          return null;
+        }
+        continue;
+      }
+
+      long currentIndex = tailer.index();
+
+      // Deserialize the message body to check if it's a response to our request
+      try {
+        byte[] body = outboundMsg.getBody();
+        Message message = new Message();
+        message.unmarshal(body, 0);
+
+        ExecMessage execMessage = message.getExecMessage();
+        if (execMessage != null) {
+          String responseToId = execMessage.getResponseToId();
+          if (requestId.equals(responseToId)) {
+            if (logger.isDebugEnabled()) {
+              logger.debug(
+                  "Got Chronicle response at index {} for request id {}", currentIndex, requestId);
+            }
+            // Create LogMessage wrapper for consistency with Kafka path
+            return new LogMessage<>(inputLog.getName(), currentIndex, Map.of(), message);
+          } else {
+            if (logger.isDebugEnabled()) {
+              logger.debug("Skipping Chronicle message at index {}", currentIndex);
+            }
+          }
+        }
+      } catch (Exception e) {
+        logger.error("Error deserializing Chronicle message at index {}", currentIndex, e);
       }
     }
   }

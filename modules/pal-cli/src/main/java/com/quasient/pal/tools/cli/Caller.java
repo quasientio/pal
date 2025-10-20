@@ -423,8 +423,25 @@ public class Caller extends AbstractPalSubcommand {
       if (logName != null) {
         inputLogName = outputLogName = logName;
       }
-      LogInfo inputLog = inputLogName == null ? null : new LogInfo(inputLogName);
-      LogInfo outputLog = outputLogName == null ? null : new LogInfo(outputLogName);
+
+      // Fetch log information from directory if available
+      LogInfo inputLog = null;
+      LogInfo outputLog = null;
+
+      if (inputLogName != null) {
+        inputLog = getPalDirectory().getLogInfo(inputLogName);
+        if (inputLog == null) {
+          inputLog = new LogInfo(inputLogName);
+        }
+      }
+
+      if (outputLogName != null) {
+        outputLog = getPalDirectory().getLogInfo(outputLogName);
+        if (outputLog == null) {
+          outputLog = new LogInfo(outputLogName);
+        }
+      }
+
       thinPeer =
           new ThinPeer()
               .withUuid(thinPeerUuid)
@@ -525,8 +542,24 @@ public class Caller extends AbstractPalSubcommand {
     if (logName != null) {
       inputLogName = outputLogName = logName;
     }
-    LogInfo inputLog = inputLogName == null ? null : new LogInfo(inputLogName);
-    LogInfo outputLog = outputLogName == null ? null : new LogInfo(outputLogName);
+
+    // Fetch log information from directory if available
+    LogInfo inputLog = null;
+    LogInfo outputLog = null;
+
+    if (inputLogName != null) {
+      inputLog = getPalDirectory().getLogInfo(inputLogName);
+      if (inputLog == null) {
+        inputLog = new LogInfo(inputLogName);
+      }
+    }
+
+    if (outputLogName != null) {
+      outputLog = getPalDirectory().getLogInfo(outputLogName);
+      if (outputLog == null) {
+        outputLog = new LogInfo(outputLogName);
+      }
+    }
 
     // create ThinPeer
     final UUID thinPeerUuid = UUID.randomUUID();

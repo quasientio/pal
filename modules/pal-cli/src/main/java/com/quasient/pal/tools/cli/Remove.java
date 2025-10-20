@@ -11,9 +11,13 @@ package com.quasient.pal.tools.cli;
 
 import com.quasient.pal.common.cli.PalCommand;
 import com.quasient.pal.common.directory.nodes.LogInfo;
+import com.quasient.pal.common.directory.nodes.LogInfo.LogType;
 import com.quasient.pal.common.directory.nodes.PeerInfo;
+import com.quasient.pal.cxn.chronicle.ChronicleLogUtil;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
@@ -107,6 +111,9 @@ public class Remove extends AbstractPalSubcommand {
   /** Counter for the number of errors encountered during command execution. */
   private int errors = 0;
 
+  /** Base directory for Chronicle queue files. */
+  private Path chronicleBaseDir;
+
   /** Validates user input. (Currently no validation is performed.) */
   @Override
   public void validateInput() {}
@@ -118,6 +125,15 @@ public class Remove extends AbstractPalSubcommand {
   @Override
   protected void initialize() {
     initializeDirectoryConnectionProvider(palCommand.getPalDirectoryConnectionString());
+
+    // Initialize Chronicle base directory from system property or environment variable
+    String baseDirStr =
+        System.getProperty("wal.chronicle.base_dir", System.getenv("CHRONICLE_BASE_DIR"));
+    if (baseDirStr == null || baseDirStr.isBlank()) {
+      chronicleBaseDir = Paths.get(".");
+    } else {
+      chronicleBaseDir = Paths.get(baseDirStr);
+    }
   }
 
   /**
@@ -167,7 +183,34 @@ public class Remove extends AbstractPalSubcommand {
   }
 
   /**
-   * Deletes the specified log from the PAL directory and removes its corresponding Kafka topic.
+   * Deletes a Chronicle queue by removing all files in the queue directory.
+   *
+   * @param logInfo the LogInfo representing the Chronicle log to delete
+   */
+  private void removeChronicleLog(LogInfo logInfo) {
+    if (logger.isDebugEnabled()) {
+      logger.debug("Attempting to remove Chronicle log '{}'", logInfo.getName());
+    }
+
+    Path queuePath = ChronicleLogUtil.resolveQueuePath(logInfo.getName(), chronicleBaseDir);
+
+    if (!ChronicleLogUtil.queueExists(queuePath)) {
+      logger.warn("Chronicle log '{}' does not exist at path: {}", logInfo.getName(), queuePath);
+      return;
+    }
+
+    boolean deleted = ChronicleLogUtil.deleteQueue(queuePath);
+    if (!deleted) {
+      logger.error("Failed to delete Chronicle log '{}' at path: {}", logInfo.getName(), queuePath);
+      errors++;
+    } else {
+      logger.debug("Successfully deleted Chronicle log files at: {}", queuePath);
+    }
+  }
+
+  /**
+   * Deletes the specified log from the PAL directory and removes its backing store (Kafka topic or
+   * Chronicle queue).
    *
    * @param logInfo the LogInfo representing the log to delete
    */
@@ -179,8 +222,13 @@ public class Remove extends AbstractPalSubcommand {
       errors++;
     }
 
-    // remove from kafka
-    removeFromKafka(logInfo);
+    // Remove from backing store based on log type
+    if (logInfo.getLogType() == LogType.CHRONICLE) {
+      removeChronicleLog(logInfo);
+    } else {
+      // Default to Kafka for backward compatibility
+      removeFromKafka(logInfo);
+    }
 
     logger.info("Log '{}' (UUID: {}) removed", logInfo.getName(), logInfo.getUuid());
   }

@@ -15,15 +15,21 @@ import static picocli.CommandLine.Option;
 
 import com.quasient.pal.common.cli.PalCommand;
 import com.quasient.pal.common.directory.nodes.LogInfo;
+import com.quasient.pal.common.directory.nodes.LogInfo.LogType;
+import com.quasient.pal.cxn.chronicle.ChronicleLogUtil;
 import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.messages.LogMessage;
 import com.quasient.pal.messages.MessageStreamer;
+import com.quasient.pal.messages.OutboundMsg;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.serdes.colfer.ColferUtils;
 import com.quasient.pal.serdes.kafka.typed.KafkaLogMessageDeserializer;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -34,6 +40,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.OffsetSpec;
@@ -241,6 +250,9 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
       description = "Display this help message")
   private boolean helpRequested = false;
 
+  /** Base directory for Chronicle queue files. */
+  private Path chronicleBaseDir;
+
   /**
    * {@inheritDoc}
    *
@@ -250,11 +262,19 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
   @Override
   protected void initialize() {
     initializeDirectoryConnectionProvider(palCommand.getPalDirectoryConnectionString());
+
+    // Initialize Chronicle base directory from system property or environment variable
+    String baseDirStr =
+        System.getProperty("wal.chronicle.base_dir", System.getenv("CHRONICLE_BASE_DIR"));
+    if (baseDirStr == null || baseDirStr.isBlank()) {
+      chronicleBaseDir = Paths.get(".");
+    } else {
+      chronicleBaseDir = Paths.get(baseDirStr);
+    }
   }
 
   /**
-   * Initiates the printing of log messages by setting up and configuring a Kafka consumer to read
-   * messages from the specified log.
+   * Initiates the printing of log messages by routing to the appropriate method based on log type.
    *
    * @return 0 if the operation is successful, 1 if no log is found for the given identifier.
    * @throws Exception if an error occurs while consuming messages.
@@ -270,6 +290,23 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
       logger.error("No Log found for identifier: {}", logIdentifier);
       return 1;
     }
+
+    // 2) Route based on log type
+    if (log.getLogType() == LogType.CHRONICLE) {
+      return printChronicleLogMessages(log);
+    } else {
+      return printKafkaLogMessages(log);
+    }
+  }
+
+  /**
+   * Prints messages from a Kafka log.
+   *
+   * @param log the LogInfo for the Kafka log
+   * @return 0 if the operation is successful
+   * @throws Exception if an error occurs while consuming messages
+   */
+  private int printKafkaLogMessages(LogInfo log) throws Exception {
 
     final String topic = log.getName();
     final String bootstrapServers = log.getBootstrapServers();
@@ -398,6 +435,160 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
   }
 
   /**
+   * Prints messages from a Chronicle log.
+   *
+   * @param log the LogInfo for the Chronicle log
+   * @return 0 if the operation is successful
+   * @throws Exception if an error occurs while reading messages
+   */
+  private int printChronicleLogMessages(LogInfo log) throws Exception {
+    final String queueName = log.getName();
+    Path queuePath = ChronicleLogUtil.resolveQueuePath(queueName, chronicleBaseDir);
+
+    // Verify the queue exists
+    if (!ChronicleLogUtil.queueExists(queuePath)) {
+      logger.error("Chronicle log does not exist at path: {}", queuePath);
+      return 1;
+    }
+
+    // Print config and filters
+    if (verbose) {
+      System.out.printf("Chronicle queue: path=%s%n", queuePath);
+      if (msgFormats != null) {
+        System.out.printf("Filtering by format(s): %s%n", String.join(",", msgFormats));
+      }
+      if (msgTypes != null) {
+        System.out.printf("Filtering by type(s): %s%n", String.join(",", msgTypes));
+      }
+      if (fromPeer != null) {
+        System.out.printf("Filtering by peer: %s%n", fromPeer);
+      }
+      if (threadName != null) {
+        System.out.printf("Filtering by thread: %s%n", threadName);
+      }
+      if (id != null) {
+        System.out.printf("Filtering by message id: %s%n", id);
+      }
+      if (offset != null) {
+        System.out.printf("Will print message with offset/index: %s and then exit%n", offset);
+      }
+    }
+
+    try (ChronicleQueue queue =
+        SingleChronicleQueueBuilder.binary(queuePath.toFile()).readOnly(true).build()) {
+
+      ExcerptTailer tailer = queue.createTailer();
+
+      // Get queue index info
+      ChronicleLogUtil.QueueIndexInfo indexInfo = ChronicleLogUtil.getQueueIndexInfo(queuePath);
+      if (indexInfo == null) {
+        logger.error("Failed to get index info for Chronicle queue at: {}", queuePath);
+        return 1;
+      }
+
+      long firstIndex = indexInfo.getFirstIndex();
+      long lastIndex = indexInfo.getLastIndex();
+
+      if (verbose) {
+        System.out.printf(
+            "Queue index range: %d to %d (count: %d)%n",
+            firstIndex, lastIndex, indexInfo.getMessageCount());
+      }
+
+      // Position the tailer based on offset parameter
+      if (offset != null) {
+        if (offset <= lastIndex) {
+          // Seek to the given offset if it exists
+          if (verbose) {
+            System.out.printf("Seeking to index %d%n", offset);
+          }
+          if (!tailer.moveToIndex(offset)) {
+            logger.error("Failed to seek to index: {}", offset);
+            return 1;
+          }
+        } else {
+          // offset is yet to come, so seek to end
+          if (verbose) {
+            System.out.printf("Seeking to latest index: %d%n", lastIndex);
+          }
+          tailer.toEnd();
+        }
+      } else {
+        // Start from the beginning
+        tailer.toStart();
+        if (verbose) {
+          System.out.printf("Starting from first index: %d%n", firstIndex);
+        }
+      }
+
+      // Read and print messages
+      boolean messageFound = false;
+      while (true) {
+        long currentIndex = tailer.index();
+        OutboundMsg outboundMsg = OutboundMsg.readNext(tailer);
+
+        if (outboundMsg == null) {
+          // No more messages
+          if (follow) {
+            // In follow mode, wait a bit and try again
+            if (verbose && !messageFound) {
+              System.out.println("Waiting for messages...");
+            }
+            Thread.sleep(100);
+            continue;
+          } else {
+            // Not in follow mode, we're done
+            break;
+          }
+        }
+
+        messageFound = true;
+
+        // Reconstruct LogMessage from OutboundMsg for Chronicle messages
+        // Unmarshal the body bytes into a Message instance
+        Message message = new Message();
+        message.unmarshal(outboundMsg.getBody(), 0);
+
+        // Create headers map from OutboundMsg metadata
+        Map<String, String> headers = new HashMap<>();
+        headers.put("message-type", outboundMsg.getMessageType().name());
+        headers.put("message-format", "BINARY"); // Chronicle currently only writes binary messages
+        if (outboundMsg.getMessageId() != null) {
+          headers.put("message-id", outboundMsg.getMessageId());
+        }
+        if (outboundMsg.getResponseToId() != null) {
+          headers.put("response-to-id", outboundMsg.getResponseToId());
+        }
+
+        // Create LogMessage using Chronicle constructor (no topic)
+        LogMessage<Message> logMessage = new LogMessage<>(currentIndex, headers, message);
+
+        // If user requested a specific offset/index, print it and exit
+        if (offset != null && offset.equals(currentIndex)) {
+          printRecord(logMessage, currentIndex);
+          break;
+        } else {
+          // Apply filters and print if it passes
+          if (shouldPrint(currentIndex, null, logMessage)) {
+            printRecord(logMessage, currentIndex);
+          }
+        }
+
+        // If offset was specified and we've printed it, we're done
+        if (offset != null && currentIndex >= offset) {
+          break;
+        }
+      }
+
+      if (verbose) {
+        System.out.println("Done reading Chronicle queue messages.");
+      }
+    }
+
+    return 0;
+  }
+
+  /**
    * Determines whether a message should be printed based on the current filters and offset.
    *
    * @param recOffset the offset of the current record
@@ -482,6 +673,16 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
               "offset=%d id=%s message=%s%n", offset, getId(msg), getMessageOneLiner(msg));
       default -> throw new IllegalStateException("Unexpected value: " + format);
     }
+  }
+
+  /**
+   * Prints a single record to the standard output without a key (for Chronicle messages).
+   *
+   * @param msg the log message to print
+   * @param offset the offset/index of the message
+   */
+  private void printRecord(LogMessage<?> msg, long offset) {
+    printRecord(null, msg, offset);
   }
 
   /**

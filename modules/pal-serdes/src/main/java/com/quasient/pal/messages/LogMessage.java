@@ -28,20 +28,35 @@ import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
 
 /**
- * Encapsulates a log message with associated metadata and content retrieved from a Kafka topic. The
- * content can be either a binary {@link Message} or a {@link JsonRpcMessage}.
+ * Encapsulates a log message with associated metadata and content retrieved from a log backend
+ * (either Kafka topic or Chronicle queue). The content can be either a binary {@link Message} or a
+ * {@link JsonRpcMessage}.
  *
  * @param <T> the type of the message content
  */
 public class LogMessage<T> {
 
-  /** The Kafka topic from which the message was consumed. */
+  /** The type of log backend from which the message was retrieved. */
+  public enum LogBackendType {
+    /** Message retrieved from a Kafka topic. */
+    KAFKA,
+    /** Message retrieved from a Chronicle queue. */
+    CHRONICLE
+  }
+
+  /** The type of log backend from which this message was retrieved. */
+  private final LogBackendType backendType;
+
+  /** The Kafka topic from which the message was consumed. Null for Chronicle messages. */
   private final String topic;
 
-  /** The offset of the message within the Kafka topic. */
+  /**
+   * The offset/index of the message within the log backend. For Kafka: the partition offset. For
+   * Chronicle: the queue index.
+   */
   private Long offset;
 
-  /** The headers associated with the Kafka message, represented as key-value pairs. */
+  /** The headers associated with the message, represented as key-value pairs. */
   private final Map<String, String> headers;
 
   /**
@@ -51,6 +66,7 @@ public class LogMessage<T> {
 
   /**
    * Constructs a new {@code LogMessage} with the specified topic, offset, headers, and content.
+   * This constructor is used for Kafka-based messages.
    *
    * @param topic the Kafka topic from which the message was consumed; may be {@code null}
    * @param offset the offset of the message within the topic; may be {@code null}
@@ -65,7 +81,32 @@ public class LogMessage<T> {
     if (!(content instanceof Message || content instanceof JsonRpcMessage)) {
       throw new IllegalArgumentException("content must be a Message or JsonRpcMessage");
     }
+    this.backendType = LogBackendType.KAFKA;
     this.topic = topic;
+    this.offset = offset;
+    this.headers = headers;
+    this.content = content;
+  }
+
+  /**
+   * Constructs a new {@code LogMessage} for Chronicle-based messages without Kafka-specific fields.
+   *
+   * <p>This constructor is specifically for messages read from Chronicle queues, which don't have a
+   * topic concept. The offset represents the Chronicle queue index.
+   *
+   * @param offset the Chronicle queue index; may be {@code null}
+   * @param headers the headers associated with the message; must not be {@code null}
+   * @param content the content of the message, which must be an instance of {@link Message} or
+   *     {@link JsonRpcMessage}
+   * @throws IllegalArgumentException if {@code content} is not a {@link Message} or {@link
+   *     JsonRpcMessage}
+   */
+  public LogMessage(@Nullable Long offset, Map<String, String> headers, T content) {
+    if (!(content instanceof Message || content instanceof JsonRpcMessage)) {
+      throw new IllegalArgumentException("content must be a Message or JsonRpcMessage");
+    }
+    this.backendType = LogBackendType.CHRONICLE;
+    this.topic = null; // Chronicle messages don't have topics
     this.offset = offset;
     this.headers = headers;
     this.content = content;
@@ -227,18 +268,28 @@ public class LogMessage<T> {
   }
 
   /**
+   * Retrieves the log backend type for this message.
+   *
+   * @return the backend type (KAFKA or CHRONICLE)
+   */
+  public LogBackendType getBackendType() {
+    return backendType;
+  }
+
+  /**
    * Retrieves the Kafka topic associated with this log message.
    *
-   * @return the Kafka topic, or {@code null} if not specified
+   * @return the Kafka topic, or {@code null} if not specified or if this is a Chronicle message
    */
   public String getTopic() {
     return topic;
   }
 
   /**
-   * Retrieves the offset of this log message within the Kafka topic.
+   * Retrieves the offset of this log message within the log backend. For Kafka: the partition
+   * offset. For Chronicle: the queue index.
    *
-   * @return the offset, or {@code null} if not specified
+   * @return the offset/index, or {@code null} if not specified
    */
   public Long getOffset() {
     return offset;
@@ -275,9 +326,11 @@ public class LogMessage<T> {
   @Override
   public String toString() {
     return "LogMessage{"
-        + "topic='"
+        + "backendType="
+        + backendType
+        + ", topic='"
         + topic
-        + ",offset="
+        + "', offset="
         + offset
         + ", headers="
         + headers
