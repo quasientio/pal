@@ -116,9 +116,6 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
       npe.initCause(objectNotFoundException);
       throw npe;
     }
-    if (logger.isTraceEnabled()) {
-      logger.trace("Loaded target: {}", target);
-    }
     return target;
   }
 

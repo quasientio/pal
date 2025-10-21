@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.commons.lang3.ClassUtils;
@@ -131,33 +132,10 @@ public class ReflectionHelper {
     Objects.requireNonNull(methodName, "method name cannot be null");
 
     if (logger.isTraceEnabled()) {
-      logger.trace("in w/ class:{} and method:{}", clazz.getName(), methodName);
+      logger.trace("in lookupMethod w/ class:{} and method: {}", clazz.getName(), methodName);
     }
-    if (knownParameterTypes.size() != parameters.length) {
-      throw new IllegalArgumentException(
-          String.format(
-              "Parameters length=%s, different from parameter types length=%s",
-              parameters.length, knownParameterTypes.size()));
-    }
-
-    // trace params
-    if (logger.isTraceEnabled()) {
-      traceParameters(parameters, knownParameterTypes);
-    }
-
     // replace null parameter types with actual parameter types
-    final List<Class<?>> parameterTypes = new ArrayList<>();
-    for (int i = 0; i < knownParameterTypes.size(); i++) {
-      if (knownParameterTypes.get(i) != null) {
-        parameterTypes.add(knownParameterTypes.get(i));
-      } else {
-        if (parameters[i] == null) {
-          parameterTypes.add(null);
-        } else {
-          parameterTypes.add(parameters[i].getClass());
-        }
-      }
-    }
+    final List<Class<?>> parameterTypes = resolveParameterTypes(parameters, knownParameterTypes);
 
     // lookup in cache
     Method cached = (Method) lookupInCache(clazz, methodName, parameterTypes, Method.class);
@@ -195,95 +173,39 @@ public class ReflectionHelper {
 
     // scan public methods that are assignable from the parameters
     List<Method> matchingMethods =
-        Arrays.stream(clazz.getMethods())
-            .filter(m -> methodName.equals(m.getName()))
-            .filter(m -> m.getParameterTypes().length == parameters.length)
-            .filter(
-                candidate -> {
-                  final Class<?>[] candidateParameterTypes = candidate.getParameterTypes();
-                  boolean methodIsVarargs = candidate.isVarArgs();
-                  for (int i = 0; i < candidateParameterTypes.length; i++) {
-                    boolean paramIsVarargs =
-                        methodIsVarargs && i == candidateParameterTypes.length - 1;
-                    if (!isAssignable(
-                        parameters[i],
-                        parameterTypesArray[i],
-                        candidateParameterTypes[i],
-                        paramIsVarargs)) {
-                      return false;
-                    }
-                  }
-                  return true;
-                })
-            .collect(Collectors.toList());
+        collectMatchingMethods(
+            Arrays.stream(clazz.getMethods()), parameters, parameterTypesArray, methodName);
 
-    if (!matchingMethods.isEmpty()) {
-      final Method matchingMethod;
-      if (matchingMethods.size() > 1) {
-        final List<Method> narrowedDownMatches =
-            narrowDownMethodMatches(parameterTypesArray, matchingMethods);
-        if (narrowedDownMatches.size() != 1) {
-          throw new AmbiguousCallException(
-              clazz.getName(), methodName, parameterTypes, matchingMethods);
-        } else {
-          matchingMethod = narrowedDownMatches.get(0);
-        }
-      } else {
-        matchingMethod = matchingMethods.get(0);
-      }
-      cache(clazz, methodName, parameterTypes, matchingMethod);
+    Method methodPicked =
+        pickMethodOrThrow(clazz, methodName, parameterTypes, parameterTypesArray, matchingMethods);
+    if (methodPicked != null) {
       if (logger.isDebugEnabled()) {
-        logger.debug("Got method with signature in step2: {}", matchingMethod.toGenericString());
+        logger.debug("Got method with signature in step2: {}", methodPicked.toGenericString());
       }
-      return matchingMethod;
+      return methodPicked;
     }
 
     // now scan other (i.e. non-public) methods
     if (allowNonPublic) {
       matchingMethods =
-          Arrays.stream(clazz.getDeclaredMethods())
-              .filter(m -> methodName.equals(m.getName()))
-              .filter(
-                  m -> !Modifier.isPublic(m.getModifiers())) // we already checked the public ones
-              .filter(m -> m.getParameterTypes().length == parameters.length)
-              .filter(
-                  candidate -> {
-                    boolean methodIsVarargs = candidate.isVarArgs();
-                    final Class<?>[] candidateParameterTypes = candidate.getParameterTypes();
-                    for (int i = 0; i < candidateParameterTypes.length; i++) {
-                      boolean paramIsVarargs =
-                          methodIsVarargs && i == candidateParameterTypes.length - 1;
-                      if (!isAssignable(
-                          parameters[i],
-                          parameterTypesArray[i],
-                          candidateParameterTypes[i],
-                          paramIsVarargs)) {
-                        return false;
-                      }
-                    }
-                    return true;
-                  })
-              .collect(Collectors.toList());
+          collectMatchingMethods(
+              Arrays.stream(clazz.getDeclaredMethods())
+                  .filter(
+                      m ->
+                          !Modifier.isPublic(
+                              m.getModifiers())), // we already checked the public ones
+              parameters,
+              parameterTypesArray,
+              methodName);
 
-      if (!matchingMethods.isEmpty()) {
-        final Method matchingMethod;
-        if (matchingMethods.size() > 1) {
-          final List<Method> narrowedDownMatches =
-              narrowDownMethodMatches(parameterTypesArray, matchingMethods);
-          if (narrowedDownMatches.size() != 1) {
-            throw new AmbiguousCallException(
-                clazz.getName(), methodName, parameterTypes, matchingMethods);
-          } else {
-            matchingMethod = narrowedDownMatches.get(0);
-          }
-        } else {
-          matchingMethod = matchingMethods.get(0);
-        }
-        cache(clazz, methodName, parameterTypes, matchingMethod);
+      methodPicked =
+          pickMethodOrThrow(
+              clazz, methodName, parameterTypes, parameterTypesArray, matchingMethods);
+      if (methodPicked != null) {
         if (logger.isDebugEnabled()) {
-          logger.debug("Got method with signature in step3: {}", matchingMethod.toGenericString());
+          logger.debug("Got method with signature in step3: {}", methodPicked.toGenericString());
         }
-        return matchingMethod;
+        return methodPicked;
       }
     }
     throw new NoSuchMethodException(
@@ -327,34 +249,11 @@ public class ReflectionHelper {
     Objects.requireNonNull(knownParameterTypes, "the list of parameter types cannot be null");
 
     if (logger.isTraceEnabled()) {
-      logger.trace("in w/ class:{} and parameters", clazz.getName());
-    }
-
-    if (knownParameterTypes.size() != parameters.length) {
-      throw new IllegalArgumentException(
-          String.format(
-              "Parameters length=%s, different from parameter types length=%s",
-              parameters.length, knownParameterTypes.size()));
-    }
-
-    // trace params
-    if (logger.isTraceEnabled()) {
-      traceParameters(parameters, knownParameterTypes);
+      logger.trace("in lookupConstructor w/ class: {}", clazz.getName());
     }
 
     // replace null parameter types with actual parameter types
-    final List<Class<?>> parameterTypes = new ArrayList<>();
-    for (int i = 0; i < knownParameterTypes.size(); i++) {
-      if (knownParameterTypes.get(i) != null) {
-        parameterTypes.add(knownParameterTypes.get(i));
-      } else {
-        if (parameters[i] == null) {
-          throw new IllegalArgumentException(
-              "Cannot determine parameter type for null parameter at index " + i);
-        }
-        parameterTypes.add(parameters[i].getClass());
-      }
-    }
+    final List<Class<?>> parameterTypes = resolveParameterTypes(parameters, knownParameterTypes);
 
     // lookup in cache
     Constructor<?> cached =
@@ -394,93 +293,37 @@ public class ReflectionHelper {
 
     // scan public constructors that are assignable from the parameters
     List<Constructor<?>> matchingConstructors =
-        Arrays.stream(clazz.getConstructors())
-            .filter(constructor -> constructor.getParameterTypes().length == parameters.length)
-            .filter(
-                candidate -> {
-                  boolean methodIsVarargs = candidate.isVarArgs();
-                  final Class<?>[] candidateParameterTypes = candidate.getParameterTypes();
-                  for (int i = 0; i < candidateParameterTypes.length; i++) {
-                    boolean paramIsVarargs =
-                        methodIsVarargs && i == candidateParameterTypes.length - 1;
-                    if (!isAssignable(
-                        parameters[i],
-                        parameterTypesArray[i],
-                        candidateParameterTypes[i],
-                        paramIsVarargs)) {
-                      return false;
-                    }
-                  }
-                  return true;
-                })
-            .collect(Collectors.toList());
+        collectMatchingConstructors(
+            Arrays.stream(clazz.getConstructors()), parameters, parameterTypesArray);
 
-    if (!matchingConstructors.isEmpty()) {
-      final Constructor<?> matchingConstructor;
-      if (matchingConstructors.size() > 1) {
-        final List<Constructor<?>> narrowedDownMatches =
-            narrowDownConstructorMatches(parameterTypesArray, matchingConstructors);
-        if (narrowedDownMatches.size() != 1) {
-          throw new AmbiguousCallException(clazz.getName(), parameterTypes, matchingConstructors);
-        } else {
-          matchingConstructor = narrowedDownMatches.get(0);
-        }
-      } else {
-        matchingConstructor = matchingConstructors.get(0);
-      }
-      cache(clazz, null, parameterTypes, matchingConstructor);
+    Constructor<?> picked =
+        pickConstructorOrThrow(clazz, parameterTypes, parameterTypesArray, matchingConstructors);
+    if (picked != null) {
       if (logger.isDebugEnabled()) {
-        logger.debug(
-            "Got constructor with signature in step2: {}", matchingConstructor.toGenericString());
+        logger.debug("Got constructor with signature in step2: {}", picked.toGenericString());
       }
-      return matchingConstructor;
+      return picked;
     }
 
     // now scan other (i.e. non-public) constructors
     if (allowNonPublic) {
       matchingConstructors =
-          Arrays.stream(clazz.getDeclaredConstructors())
-              .filter(
-                  m -> !Modifier.isPublic(m.getModifiers())) // we already checked the public ones
-              .filter(m -> m.getParameterTypes().length == parameters.length)
-              .filter(
-                  candidate -> {
-                    boolean methodIsVarargs = candidate.isVarArgs();
-                    final Class<?>[] candidateParameterTypes = candidate.getParameterTypes();
-                    for (int i = 0; i < candidateParameterTypes.length; i++) {
-                      boolean paramIsVarargs =
-                          methodIsVarargs && i == candidateParameterTypes.length - 1;
-                      if (!isAssignable(
-                          parameters[i],
-                          parameterTypesArray[i],
-                          candidateParameterTypes[i],
-                          paramIsVarargs)) {
-                        return false;
-                      }
-                    }
-                    return true;
-                  })
-              .collect(Collectors.toList());
+          collectMatchingConstructors(
+              Arrays.stream(clazz.getDeclaredConstructors())
+                  .filter(
+                      m ->
+                          !Modifier.isPublic(
+                              m.getModifiers())), // we already checked the public ones
+              parameters,
+              parameterTypesArray);
 
-      if (!matchingConstructors.isEmpty()) {
-        final Constructor<?> matchingConstructor;
-        if (matchingConstructors.size() > 1) {
-          final List<Constructor<?>> narrowedDownMatches =
-              narrowDownConstructorMatches(parameterTypesArray, matchingConstructors);
-          if (narrowedDownMatches.size() != 1) {
-            throw new AmbiguousCallException(clazz.getName(), parameterTypes, matchingConstructors);
-          } else {
-            matchingConstructor = narrowedDownMatches.get(0);
-          }
-        } else {
-          matchingConstructor = matchingConstructors.get(0);
-        }
-        cache(clazz, null, parameterTypes, matchingConstructor);
+      picked =
+          pickConstructorOrThrow(clazz, parameterTypes, parameterTypesArray, matchingConstructors);
+      if (picked != null) {
         if (logger.isDebugEnabled()) {
-          logger.debug(
-              "Got constructor with signature in step3: {}", matchingConstructor.toGenericString());
+          logger.debug("Got constructor with signature in step3: {}", picked.toGenericString());
         }
-        return matchingConstructor;
+        return picked;
       }
     }
     throw new NoSuchMethodException(
@@ -509,6 +352,46 @@ public class ReflectionHelper {
     } else if (member instanceof Constructor<?> ctor) {
       matchedConstructorsCache.put(key, ctor);
     }
+  }
+
+  /**
+   * Resolves the effective parameter types by validating length equality and replacing null entries
+   * in the provided list of known parameter types with the corresponding runtime types from the
+   * parameters array.
+   *
+   * <p>If a parameter type is unknown (null in {@code knownParameterTypes}) and the corresponding
+   * runtime parameter is also null, this method cannot infer the type and throws an {@link
+   * IllegalArgumentException}.
+   *
+   * @param parameters the runtime parameter values; must be non-null
+   * @param knownParameterTypes the list of known parameter types aligned with {@code parameters};
+   *     must be non-null. Null entries indicate the type should be inferred from the runtime value.
+   * @return a list containing the resolved parameter types for the invocation
+   * @throws IllegalArgumentException if the number of parameters and known parameter types differ,
+   *     or if a null parameter is encountered where the type must be inferred
+   */
+  private List<Class<?>> resolveParameterTypes(
+      Object[] parameters, List<Class<?>> knownParameterTypes) {
+    if (knownParameterTypes.size() != parameters.length) {
+      throw new IllegalArgumentException(
+          String.format(
+              "Parameters length=%s, different from parameter types length=%s",
+              parameters.length, knownParameterTypes.size()));
+    }
+
+    final List<Class<?>> parameterTypes = new ArrayList<>();
+    for (int i = 0; i < knownParameterTypes.size(); i++) {
+      if (knownParameterTypes.get(i) != null) {
+        parameterTypes.add(knownParameterTypes.get(i));
+      } else {
+        if (parameters[i] == null) {
+          throw new IllegalArgumentException(
+              "Cannot determine parameter type for null parameter at index " + i);
+        }
+        parameterTypes.add(parameters[i].getClass());
+      }
+    }
+    return parameterTypes;
   }
 
   /**
@@ -587,6 +470,149 @@ public class ReflectionHelper {
     }
 
     return ClassUtils.isAssignable(paramType, clazz);
+  }
+
+  /**
+   * Collects constructors whose parameter list is assignable from the provided runtime parameters.
+   *
+   * @param constructors stream of constructors to evaluate
+   * @param parameters runtime parameter values to match
+   * @param parameterTypesArray array of expected parameter types aligned with parameters
+   * @return list of constructors assignable from the provided parameters
+   */
+  private List<Constructor<?>> collectMatchingConstructors(
+      Stream<Constructor<?>> constructors, Object[] parameters, Class<?>[] parameterTypesArray) {
+    return constructors
+        .filter(constructor -> constructor.getParameterTypes().length == parameters.length)
+        .filter(
+            candidate -> {
+              boolean methodIsVarargs = candidate.isVarArgs();
+              final Class<?>[] candidateParameterTypes = candidate.getParameterTypes();
+              for (int i = 0; i < candidateParameterTypes.length; i++) {
+                boolean paramIsVarargs = methodIsVarargs && i == candidateParameterTypes.length - 1;
+                if (!isAssignable(
+                    parameters[i],
+                    parameterTypesArray[i],
+                    candidateParameterTypes[i],
+                    paramIsVarargs)) {
+                  return false;
+                }
+              }
+              return true;
+            })
+        .collect(Collectors.toList());
+  }
+
+  /**
+   * Picks a single matching constructor or throws if ambiguity persists, and caches the result.
+   *
+   * @param clazz target class being inspected
+   * @param parameterTypes list of parameter types used for lookup and caching
+   * @param parameterTypesArray array form of parameter types used for narrowing matches
+   * @param matchingConstructors list of candidate constructors after initial filtering
+   * @return the selected constructor, or {@code null} if no candidates are present
+   * @throws AmbiguousCallException if multiple constructors remain after narrowing
+   */
+  @Nullable
+  private Constructor<?> pickConstructorOrThrow(
+      Class<?> clazz,
+      List<Class<?>> parameterTypes,
+      Class<?>[] parameterTypesArray,
+      List<Constructor<?>> matchingConstructors)
+      throws AmbiguousCallException {
+    if (!matchingConstructors.isEmpty()) {
+      final Constructor<?> matchingConstructor;
+      if (matchingConstructors.size() > 1) {
+        final List<Constructor<?>> narrowedDownMatches =
+            narrowDownConstructorMatches(parameterTypesArray, matchingConstructors);
+        if (narrowedDownMatches.size() != 1) {
+          throw new AmbiguousCallException(clazz.getName(), parameterTypes, matchingConstructors);
+        } else {
+          matchingConstructor = narrowedDownMatches.get(0);
+        }
+      } else {
+        matchingConstructor = matchingConstructors.get(0);
+      }
+      cache(clazz, null, parameterTypes, matchingConstructor);
+      return matchingConstructor;
+    }
+    return null;
+  }
+
+  /**
+   * Collects methods with the given name whose parameter list is assignable from the provided
+   * runtime parameters.
+   *
+   * @param methods stream of methods to evaluate
+   * @param parameters runtime parameter values to match
+   * @param parameterTypesArray array of expected parameter types aligned with parameters
+   * @param methodName the method name to match
+   * @return list of methods assignable from the provided parameters and name
+   */
+  private List<Method> collectMatchingMethods(
+      Stream<Method> methods,
+      Object[] parameters,
+      Class<?>[] parameterTypesArray,
+      String methodName) {
+    return methods
+        .filter(m -> methodName.equals(m.getName()))
+        .filter(m -> m.getParameterTypes().length == parameters.length)
+        .filter(
+            candidate -> {
+              final Class<?>[] candidateParameterTypes = candidate.getParameterTypes();
+              boolean methodIsVarargs = candidate.isVarArgs();
+              for (int i = 0; i < candidateParameterTypes.length; i++) {
+                boolean paramIsVarargs = methodIsVarargs && i == candidateParameterTypes.length - 1;
+                if (!isAssignable(
+                    parameters[i],
+                    parameterTypesArray[i],
+                    candidateParameterTypes[i],
+                    paramIsVarargs)) {
+                  return false;
+                }
+              }
+              return true;
+            })
+        .collect(Collectors.toList());
+  }
+
+  /**
+   * Picks a single matching method or throws if ambiguity persists, and caches the result.
+   *
+   * @param clazz target class being inspected
+   * @param methodName the method name used for lookup and error reporting
+   * @param parameterTypes list of parameter types used for lookup and caching
+   * @param parameterTypesArray array form of parameter types used for narrowing matches
+   * @param matchingMethods list of candidate methods after initial filtering
+   * @return the selected method, or {@code null} if no candidates are present
+   * @throws AmbiguousCallException if multiple methods remain after narrowing
+   */
+  @Nullable
+  private Method pickMethodOrThrow(
+      Class<?> clazz,
+      String methodName,
+      List<Class<?>> parameterTypes,
+      Class<?>[] parameterTypesArray,
+      List<Method> matchingMethods)
+      throws AmbiguousCallException {
+    if (!matchingMethods.isEmpty()) {
+      final Method matchingMethod;
+      if (matchingMethods.size() > 1) {
+        final List<Method> narrowedDownMatches =
+            narrowDownMethodMatches(parameterTypesArray, matchingMethods);
+        if (narrowedDownMatches.size() != 1) {
+          throw new AmbiguousCallException(
+              clazz.getName(), methodName, parameterTypes, matchingMethods);
+        } else {
+          matchingMethod = narrowedDownMatches.get(0);
+        }
+      } else {
+        matchingMethod = matchingMethods.get(0);
+      }
+      cache(clazz, methodName, parameterTypes, matchingMethod);
+      return matchingMethod;
+    }
+    return null;
   }
 
   /**
@@ -688,39 +714,5 @@ public class ReflectionHelper {
       }
     }
     return exactMatches;
-  }
-
-  /**
-   * Logs the parameter values and their corresponding types at the trace level.
-   *
-   * <p>This method is used for debugging purposes and provides detailed information when tracing is
-   * enabled.
-   *
-   * @param parameters the array of parameter objects.
-   * @param parameterTypes the list of expected parameter types; may be null.
-   */
-  private void traceParameters(Object[] parameters, @Nullable List<Class<?>> parameterTypes) {
-    if (parameters.length == 0) {
-      logger.trace("params of length=0");
-    } else {
-      final StringBuilder stringBuilder = new StringBuilder();
-      for (int i = 0; i < parameters.length; i++) {
-        String parameterType = "?";
-        if (parameterTypes != null) {
-          if (parameterTypes.get(i) != null) {
-            parameterType = parameterTypes.get(i).getName();
-          }
-        }
-        stringBuilder
-            .append("params[")
-            .append(i)
-            .append("]=")
-            .append(parameters[i])
-            .append(" type:")
-            .append(parameterType)
-            .append('\n');
-      }
-      logger.trace(stringBuilder.toString());
-    }
   }
 }

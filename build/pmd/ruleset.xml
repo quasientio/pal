@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Copyright (C) 2025 Quasient Inc. <https://www.quasient.com>
+
+    Use of this software is governed by the Business Source License 1.1
+    included in the file LICENSE and at https://mariadb.com/bsl11
+
+    Change Date: 2029-10-01
+    Change License: Apache 2.0
+
+-->
+<ruleset name="no-fqns"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0
+                             https://pmd.github.io/pmd-7.0.0/ruleset_2_0_0.xsd">
+
+  <description>
+    Disallow unnecessary fully qualified class names in Java code.
+    Developers should use imports instead, unless there is a name clash.
+  </description>
+  <rule ref="category/java/codestyle.xml/UnnecessaryFullyQualifiedName"/>
+
+</ruleset>

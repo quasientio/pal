@@ -436,6 +436,92 @@ public final class MessageBuilder {
     return throwableMsg;
   }
 
+  /**
+   * Builds a {@link Parameter} array in-place using thread-local scratch holders.
+   *
+   * <p>Reuses {@link TlScratchHolder} Parameter/Obj flyweights and avoids allocations.
+   *
+   * @param stat precomputed message statics containing parameter type names
+   * @param args argument values for wrapping; may be {@code null}
+   * @param argObjRefs argument object references corresponding to {@code args}; may be {@code null}
+   * @return the reused {@link Parameter} array for non-zero arity, or {@code null} if there are no
+   *     parameters
+   */
+  private static Parameter[] buildParamsFlyweight(
+      MessageStatics stat, Object[] args, ObjectRef[] argObjRefs) {
+    final int n = (args == null) ? 0 : args.length;
+    TlScratchHolder.ensureParamCapacity(n);
+    final Parameter[] params = TlScratchHolder.paramsOut(n);
+    for (int i = 0; i < n; i++) {
+      final Parameter p = TlScratchHolder.paramAt(i);
+      final Obj v = TlScratchHolder.valueAt(i);
+
+      final String ptype =
+          (stat.paramTypeNames != null && i < stat.paramTypeNames.length)
+              ? stat.paramTypeNames[i]
+              : null;
+      final ObjectRef pref = (argObjRefs != null && i < argObjRefs.length) ? argObjRefs[i] : null;
+
+      final Object a = (args != null && i < args.length) ? args[i] : null;
+      Wrapper.wrapInto(v, a, ptype, pref, WrapPolicy.PREFER_REFERENCE);
+
+      p.name = "";
+      p.value = v;
+
+      params[i] = p;
+    }
+    return n == 0 ? null : params;
+  }
+
+  /**
+   * Builds and returns a reusable {@link com.quasient.pal.messages.colfer.Context} when source
+   * context is enabled.
+   *
+   * <p>Fills fields from the provided {@link Context} and optional sender, otherwise returns {@code
+   * null} if source context inclusion is disabled.
+   *
+   * @param context the execution context providing source location details
+   * @param sender the sender instance, or {@code null}
+   * @param senderObjRef the sender's object reference, or {@code null}
+   * @return the thread-local context bean when enabled; {@code null} otherwise
+   */
+  private com.quasient.pal.messages.colfer.Context buildContextIfEnabled(
+      Context context, Object sender, ObjectRef senderObjRef) {
+    if (!includeSourceContext) {
+      return null;
+    }
+    final com.quasient.pal.messages.colfer.Context c = TlScratchHolder.cctx();
+    c.sourceLocationFile = context.getSourceFilename();
+    c.sourceLocationLine = context.getSourceLine();
+    c.sourceLocationType = context.getWithinType().getName();
+    if (sender != null) {
+      c.senderClass = getWrappedClass(sender.getClass());
+      Obj senderObj = TlScratchHolder.senderObj();
+      Wrapper.wrapInto(
+          senderObj,
+          sender,
+          sender.getClass().getName(),
+          senderObjRef,
+          WrapPolicy.PREFER_REFERENCE);
+      c.sender = senderObj;
+    }
+    return c;
+  }
+
+  /**
+   * Stamps common header fields onto an {@link ExecMessage} using thread-local state.
+   *
+   * @param m the {@link ExecMessage} to fill
+   */
+  private void fillExecHeader(ExecMessage m) {
+    m.peerUuid = peerId;
+    m.messageId = idGenerator.nextId();
+    m.threadName = tlThreadName.get();
+    m.dispatchSeq = threadDispatchSequence.get()[0];
+    m.builderSeq = threadBuilderSequence.get()[0]++;
+    m.currentTime = Instant.now(utcClock).toString();
+  }
+
   // </editor-fold>
 
   // <editor-fold desc="Header messages">
@@ -555,66 +641,29 @@ public final class MessageBuilder {
     // ----- payload (reuse) -----
     final ConstructorSignature sig = (ConstructorSignature) context.getSignature();
     // clazz + modifiers
-    cc.clazz = Wrapper.getWrappedClass(sig.getDeclaringTypeName());
+    cc.clazz = getWrappedClass(sig.getDeclaringTypeName());
     cc.modifiers = sig.getModifiers();
 
     // parameters from context statics
     final MessageStatics stat = MessageStaticsFactory.forConstructor(context);
-    final int n = (args == null) ? 0 : args.length;
-    TlScratchHolder.ensureParamCapacity(n);
-    final Parameter[] params = TlScratchHolder.paramsOut(n); // exact-length array for this arity
-    for (int i = 0; i < n; i++) {
-      final Parameter p = TlScratchHolder.paramAt(i);
-      final Obj v = TlScratchHolder.valueAt(i);
-
-      final String ptype =
-          (stat.paramTypeNames != null && i < stat.paramTypeNames.length)
-              ? stat.paramTypeNames[i]
-              : null;
-      final ObjectRef pref = (argObjRefs != null && i < argObjRefs.length) ? argObjRefs[i] : null;
-
-      // null-safe local var to silence static analysis warnings
-      final Object a = (args != null && i < args.length) ? args[i] : null;
-      Wrapper.wrapInto(v, a, ptype, pref, WrapPolicy.PREFER_REFERENCE);
-
-      p.name = ""; // no param name in the hot-path
-      p.value = v;
-
-      params[i] = p;
-    }
-    if (n != 0) {
+    final Parameter[] params = buildParamsFlyweight(stat, args, argObjRefs);
+    if (params != null) {
       cc.parameters = params;
     }
 
     // optional source context
-    if (includeSourceContext) {
-      final com.quasient.pal.messages.colfer.Context cctx = TlScratchHolder.cctx();
-      cctx.sourceLocationFile = context.getSourceFilename();
-      cctx.sourceLocationLine = context.getSourceLine();
-      cctx.sourceLocationType = context.getWithinType().getName();
-      if (sender != null) {
-        cctx.senderClass = Wrapper.getWrappedClass(sender.getClass());
-        Obj senderObj = TlScratchHolder.senderObj();
-        Wrapper.wrapInto(
-            senderObj,
-            sender,
-            sender.getClass().getName(),
-            senderObjRef,
-            WrapPolicy.PREFER_REFERENCE);
-        cctx.sender = senderObj;
+    {
+      final com.quasient.pal.messages.colfer.Context c =
+          buildContextIfEnabled(context, sender, senderObjRef);
+      if (c != null) {
+        cc.context = c;
       }
-      cc.context = cctx;
     }
 
     // ----- ExecMessage header (reuse) -----
     final ExecMessage m = TlScratchHolder.exec();
 
-    m.peerUuid = peerId;
-    m.messageId = idGenerator.nextId();
-    m.threadName = tlThreadName.get();
-    m.dispatchSeq = threadDispatchSequence.get()[0];
-    m.builderSeq = threadBuilderSequence.get()[0]++;
-    m.currentTime = Instant.now(utcClock).toString();
+    fillExecHeader(m);
 
     m.constructorCall = cc;
     return m;
@@ -648,62 +697,23 @@ public final class MessageBuilder {
     call.modifiers = stat.modifiers;
 
     // Parameters: reuse Parameter[] + Parameter + Obj elements
-    final int n = (args == null) ? 0 : args.length;
-    TlScratchHolder.ensureParamCapacity(n);
-    Parameter[] params = TlScratchHolder.paramsOut(n);
-    for (int i = 0; i < n; i++) {
-      final Parameter p = TlScratchHolder.paramAt(i);
-      final Obj v = TlScratchHolder.valueAt(i);
-
-      final String ptype =
-          (stat.paramTypeNames != null && i < stat.paramTypeNames.length)
-              ? stat.paramTypeNames[i]
-              : null;
-      final ObjectRef pref = (argObjRefs != null && i < argObjRefs.length) ? argObjRefs[i] : null;
-
-      // reuse Obj value holder
-      // null-safe local var to silence static analysis warnings
-      final Object a = (args != null && i < args.length) ? args[i] : null;
-      Wrapper.wrapInto(v, a, ptype, pref, WrapPolicy.PREFER_REFERENCE);
-
-      // reuse Parameter object and set fields
-      p.name = ""; // hot path: no names
-      p.value = v;
-
-      params[i] = p;
-    }
-    if (n != 0) {
+    final Parameter[] params = buildParamsFlyweight(stat, args, argObjRefs);
+    if (params != null) {
       call.parameters = params;
     }
 
-    if (includeSourceContext) {
-      final com.quasient.pal.messages.colfer.Context c = TlScratchHolder.cctx();
-      c.sourceLocationFile = context.getSourceFilename();
-      c.sourceLocationLine = context.getSourceLine();
-      c.sourceLocationType = context.getWithinType().getName();
-      if (sender != null) {
-        c.senderClass = Wrapper.getWrappedClass(sender.getClass());
-        Obj senderObj = TlScratchHolder.senderObj();
-        Wrapper.wrapInto(
-            senderObj,
-            sender,
-            sender.getClass().getName(),
-            senderObjRef,
-            WrapPolicy.PREFER_REFERENCE);
-        c.sender = senderObj;
+    {
+      final com.quasient.pal.messages.colfer.Context c =
+          buildContextIfEnabled(context, sender, senderObjRef);
+      if (c != null) {
+        call.context = c;
       }
-      call.context = c;
     }
 
     // ---- Build the outer ExecMessage in-place (no new) ----
     final ExecMessage m = TlScratchHolder.exec();
 
-    m.peerUuid = peerId;
-    m.messageId = idGenerator.nextId();
-    m.threadName = tlThreadName.get();
-    m.currentTime = Instant.now(utcClock).toString();
-    m.dispatchSeq = threadDispatchSequence.get()[0];
-    m.builderSeq = threadBuilderSequence.get()[0]++;
+    fillExecHeader(m);
     m.classMethodCall = call;
 
     return m;
@@ -739,62 +749,22 @@ public final class MessageBuilder {
     call.objectRef = targetObjRef.getRef();
 
     // Parameters: reuse Parameter[] + Parameter + Obj elements
-    final int n = (args == null) ? 0 : args.length;
-    TlScratchHolder.ensureParamCapacity(n);
-    Parameter[] params = TlScratchHolder.paramsOut(n);
-    for (int i = 0; i < n; i++) {
-      final Parameter p = TlScratchHolder.paramAt(i);
-      final Obj v = TlScratchHolder.valueAt(i);
-
-      final String ptype =
-          (stat.paramTypeNames != null && i < stat.paramTypeNames.length)
-              ? stat.paramTypeNames[i]
-              : null;
-      final ObjectRef pref = (argObjRefs != null && i < argObjRefs.length) ? argObjRefs[i] : null;
-
-      // reuse Obj value holder
-      // null-safe local var to silence static analysis warnings
-      final Object a = (args != null && i < args.length) ? args[i] : null;
-      Wrapper.wrapInto(v, a, ptype, pref, WrapPolicy.PREFER_REFERENCE);
-
-      // reuse Parameter object and set fields
-      p.name = ""; // hot path: no names
-      p.value = v;
-
-      params[i] = p;
-    }
-    if (n != 0) {
+    final Parameter[] params = buildParamsFlyweight(stat, args, argObjRefs);
+    if (params != null) {
       call.parameters = params;
     }
 
-    if (includeSourceContext) {
-      final com.quasient.pal.messages.colfer.Context c = TlScratchHolder.cctx();
-      c.sourceLocationFile = context.getSourceFilename();
-      c.sourceLocationLine = context.getSourceLine();
-      c.sourceLocationType = context.getWithinType().getName();
-      if (sender != null) {
-        c.senderClass = Wrapper.getWrappedClass(sender.getClass());
-        Obj senderObj = TlScratchHolder.senderObj();
-        Wrapper.wrapInto(
-            senderObj,
-            sender,
-            sender.getClass().getName(),
-            senderObjRef,
-            WrapPolicy.PREFER_REFERENCE);
-        c.sender = senderObj;
+    {
+      final com.quasient.pal.messages.colfer.Context c =
+          buildContextIfEnabled(context, sender, senderObjRef);
+      if (c != null) {
+        call.context = c;
       }
-      call.context = c;
     }
 
     // ---- Build the outer ExecMessage in-place (no new) ----
     final ExecMessage m = TlScratchHolder.exec();
-
-    m.peerUuid = peerId;
-    m.messageId = idGenerator.nextId();
-    m.threadName = tlThreadName.get();
-    m.currentTime = Instant.now(utcClock).toString();
-    m.dispatchSeq = threadDispatchSequence.get()[0];
-    m.builderSeq = threadBuilderSequence.get()[0]++;
+    fillExecHeader(m);
     m.instanceMethodCall = call;
 
     return m;
@@ -826,12 +796,11 @@ public final class MessageBuilder {
 
     // ---- cached flyweights (no alloc) ----
     // Prefer the actual Field for stronger cache hit; fall back to (clazz,name,modifiers).
-    com.quasient.pal.messages.colfer.Class clazzFly =
-        Wrapper.getWrappedClass(fs.getDeclaringType());
+    com.quasient.pal.messages.colfer.Class clazzFly = getWrappedClass(fs.getDeclaringType());
     com.quasient.pal.messages.colfer.Field fieldFly =
         (fs.getField() != null)
-            ? Wrapper.getWrappedField(fs.getField())
-            : Wrapper.getWrappedField(fs.getDeclaringType(), fs.getName(), fs.getModifiers());
+            ? getWrappedField(fs.getField())
+            : getWrappedField(fs.getDeclaringType(), fs.getName(), fs.getModifiers());
 
     // ---- optional source context (reuse sc.cctx + sc.senderObj) ----
     com.quasient.pal.messages.colfer.Context cctxBean = TlScratchHolder.cctx();
@@ -840,7 +809,7 @@ public final class MessageBuilder {
       cctxBean.sourceLocationLine = context.getSourceLine();
       cctxBean.sourceLocationType = context.getWithinType().getName();
       if (sender != null) {
-        cctxBean.senderClass = Wrapper.getWrappedClass(sender.getClass());
+        cctxBean.senderClass = getWrappedClass(sender.getClass());
         Obj senderObj = TlScratchHolder.senderObj();
         Wrapper.wrapInto(
             senderObj,
@@ -854,13 +823,7 @@ public final class MessageBuilder {
 
     // ---- ExecMessage header (reuse) ----
     final ExecMessage m = TlScratchHolder.exec();
-
-    m.peerUuid = peerId;
-    m.messageId = idGenerator.nextId();
-    m.threadName = tlThreadName.get();
-    m.dispatchSeq = threadDispatchSequence.get()[0];
-    m.builderSeq = threadBuilderSequence.get()[0]++;
-    m.currentTime = Instant.now(utcClock).toString();
+    fillExecHeader(m);
 
     // ---- payload (reuse) ----
     switch (messageType) {
@@ -956,17 +919,17 @@ public final class MessageBuilder {
 
     if (accessibleObject instanceof Constructor<?> c) {
       var constructor = TlScratchHolder.rc();
-      constructor.clazz = Wrapper.getWrappedClass(c.getDeclaringClass());
+      constructor.clazz = getWrappedClass(c.getDeclaringClass());
       refl.constructor = constructor;
     } else if (accessibleObject instanceof Method m) {
       var method = TlScratchHolder.rm();
-      method.clazz = Wrapper.getWrappedClass(m.getDeclaringClass());
+      method.clazz = getWrappedClass(m.getDeclaringClass());
       method.name = m.getName();
       method.modifiers = m.getModifiers();
       refl.method = method;
     } else if (accessibleObject instanceof Field f) {
       var field = TlScratchHolder.rf();
-      field.clazz = Wrapper.getWrappedClass(f.getDeclaringClass());
+      field.clazz = getWrappedClass(f.getDeclaringClass());
       field.name = f.getName();
       field.modifiers = f.getModifiers();
       refl.field = field;
@@ -978,13 +941,7 @@ public final class MessageBuilder {
 
     // ----- ExecMessage header (reuse) -----
     final ExecMessage m = TlScratchHolder.exec();
-
-    m.peerUuid = peerId;
-    m.messageId = idGenerator.nextId();
-    m.threadName = tlThreadName.get();
-    m.dispatchSeq = threadDispatchSequence.get()[0];
-    m.builderSeq = threadBuilderSequence.get()[0]++;
-    m.currentTime = Instant.now(utcClock).toString();
+    fillExecHeader(m);
     if (responseToId != null) {
       m.responseToId = responseToId;
     }
@@ -1016,19 +973,19 @@ public final class MessageBuilder {
     // Set 'from' + modifiers when we know the accessible
     if (accessibleObject instanceof Constructor<?> c) {
       var constructor = TlScratchHolder.rc();
-      constructor.clazz = Wrapper.getWrappedClass(c.getDeclaringClass());
+      constructor.clazz = getWrappedClass(c.getDeclaringClass());
       refl.constructor = constructor;
       rt.modifiers = c.getModifiers();
     } else if (accessibleObject instanceof Method m) {
       var method = TlScratchHolder.rm();
-      method.clazz = Wrapper.getWrappedClass(m.getDeclaringClass());
+      method.clazz = getWrappedClass(m.getDeclaringClass());
       method.name = m.getName();
       method.modifiers = m.getModifiers();
       refl.method = method;
       rt.modifiers = m.getModifiers();
     } else if (accessibleObject instanceof Field f) {
       var field = TlScratchHolder.rf();
-      field.clazz = Wrapper.getWrappedClass(f.getDeclaringClass());
+      field.clazz = getWrappedClass(f.getDeclaringClass());
       field.name = f.getName();
       field.modifiers = f.getModifiers();
       refl.field = field;
@@ -1043,13 +1000,7 @@ public final class MessageBuilder {
 
     // ----- ExecMessage header (reuse) -----
     final ExecMessage m = TlScratchHolder.exec();
-
-    m.peerUuid = peerId;
-    m.messageId = idGenerator.nextId();
-    m.threadName = tlThreadName.get();
-    m.dispatchSeq = threadDispatchSequence.get()[0];
-    m.builderSeq = threadBuilderSequence.get()[0]++;
-    m.currentTime = Instant.now(utcClock).toString();
+    fillExecHeader(m);
     if (responseToId != null) {
       m.responseToId = responseToId;
     }
@@ -1073,26 +1024,20 @@ public final class MessageBuilder {
       AccessibleObject accessibleObject, Context context, MessageType type) {
 
     final ExecMessage m = TlScratchHolder.exec();
-
-    m.peerUuid = peerId;
-    m.messageId = idGenerator.nextId();
-    m.threadName = tlThreadName.get();
-    m.dispatchSeq = threadDispatchSequence.get()[0];
-    m.builderSeq = threadBuilderSequence.get()[0]++;
-    m.currentTime = Instant.now(utcClock).toString();
+    fillExecHeader(m);
 
     final FieldSignature fs = (FieldSignature) context.getSignature();
     switch (type) {
       case EXEC_PUT_FIELD_DONE -> {
         final InstanceFieldPutDone ifpd = TlScratchHolder.ifpd();
-        ifpd.clazz = Wrapper.getWrappedClass(fs.getDeclaringType());
-        ifpd.field = Wrapper.getWrappedField((Field) accessibleObject); // java.lang.reflect.Field
+        ifpd.clazz = getWrappedClass(fs.getDeclaringType());
+        ifpd.field = getWrappedField((Field) accessibleObject); // java.lang.reflect.Field
         m.instanceFieldPutDone = ifpd;
       }
       case EXEC_PUT_STATIC_DONE -> {
         final StaticFieldPutDone sfpd = TlScratchHolder.sfpd();
-        sfpd.clazz = Wrapper.getWrappedClass(fs.getDeclaringType());
-        sfpd.field = Wrapper.getWrappedField((Field) accessibleObject);
+        sfpd.clazz = getWrappedClass(fs.getDeclaringType());
+        sfpd.field = getWrappedField((Field) accessibleObject);
         m.staticFieldPutDone = sfpd;
       }
       default -> throw new IllegalArgumentException("Unexpected field op done type: " + type);
@@ -2079,7 +2024,7 @@ public final class MessageBuilder {
       // null-safe local var to silence static analysis warnings
       Integer ref = arg.getRef();
       if (ref != null) {
-        int refInt = ref.intValue();
+        int refInt = ref;
         ObjectRef objectRef = ObjectRef.from(refInt);
         valueObj = new Obj().withRef(refInt);
         getWrappedObject(null, null, objectRef, WrapPolicy.FORCE_BY_VALUE);
@@ -2115,7 +2060,7 @@ public final class MessageBuilder {
     // null-safe local var to silence static analysis warnings
     Integer inst = callParams.getInstance();
     if (inst != null) {
-      instanceMethodCall.setObjectRef(inst.intValue());
+      instanceMethodCall.setObjectRef(inst);
     }
     instanceMethodCall.setParameters(jsonRpcParamsToColferParams(callParams.getArgs()));
     return instanceMethodCall;
@@ -2156,13 +2101,13 @@ public final class MessageBuilder {
     // null-safe local var to silence static analysis warnings
     Integer inst = putParams.getInstance();
     if (inst != null) {
-      instanceFieldPut.setObjectRef(inst.intValue());
+      instanceFieldPut.setObjectRef(inst);
     }
     Argument value = putParams.getValue();
     // null-safe local var to silence static analysis warnings
     Integer ref = (value != null) ? value.getRef() : null;
     if (ref != null) { // value is an object reference
-      instanceFieldPut.setValueObjectRef(ref.intValue());
+      instanceFieldPut.setValueObjectRef(ref);
     } else {
       instanceFieldPut.setValueObject(
           getWrappedObject(
@@ -2193,7 +2138,7 @@ public final class MessageBuilder {
     // null-safe local var to silence static analysis warnings
     Integer ref = (value != null) ? value.getRef() : null;
     if (ref != null) { // value is an object reference
-      staticFieldPut.setValueObjectRef(ref.intValue());
+      staticFieldPut.setValueObjectRef(ref);
     } else {
       staticFieldPut.setValueObject(
           getWrappedObject(
@@ -2222,7 +2167,7 @@ public final class MessageBuilder {
     // null-safe local var to silence static analysis warnings
     Integer inst = getParams.getInstance();
     if (inst != null) {
-      instanceFieldGet.setObjectRef(inst.intValue());
+      instanceFieldGet.setObjectRef(inst);
     }
     return instanceFieldGet;
   }

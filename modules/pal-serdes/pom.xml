@@ -65,7 +65,21 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <!-- Override PMD configuration to exclude Colfer-generated classes -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-pmd-plugin</artifactId>
+                <configuration>
+
+                    <!-- Append to parent's excludes instead of replacing -->
+                    <excludes combine.children="append">
+                        <exclude>com/quasient/pal/messages/colfer/**/*.java</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
         </plugins>
+
         <resources>
             <resource>
                 <directory>src/main/resources</directory>

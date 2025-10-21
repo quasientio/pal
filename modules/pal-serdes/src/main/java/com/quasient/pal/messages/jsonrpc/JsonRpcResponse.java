@@ -35,7 +35,7 @@ public class JsonRpcResponse extends JsonRpcMessage {
 
   /** Constructs a new {@code JsonRpcResponse} with the default JSON-RPC version. */
   public JsonRpcResponse() {
-    setJsonrpc(JsonRpcMessage.JSON_RPC_VERSION);
+    setJsonrpc(JSON_RPC_VERSION);
   }
 
   /**
@@ -187,7 +187,7 @@ public class JsonRpcResponse extends JsonRpcMessage {
      */
     public JsonRpcResponse build() {
       if (response.getJsonrpc() == null) {
-        response.setJsonrpc(JsonRpcMessage.JSON_RPC_VERSION);
+        response.setJsonrpc(JSON_RPC_VERSION);
       }
       return response;
     }

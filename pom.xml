@@ -56,6 +56,8 @@
         <google.format.plugin.version>2.23</google.format.plugin.version>
         <jacoco.plugin.version>0.8.12</jacoco.plugin.version>
         <errorprone.plugin.version>2.38.0</errorprone.plugin.version>
+        <pmd.plugin.version>3.28.0</pmd.plugin.version>
+        <jxr.plugin.version>3.6.0</jxr.plugin.version>
 
         <!-- DEPENDENCIES VERSIONS -->
         <aspectj.version>1.9.24</aspectj.version>
@@ -421,6 +423,55 @@
                             </rules>
                             <fail>true</fail>
                         </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- JXR: generate xref under target/reports so PMD can link to it -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jxr-plugin</artifactId>
+                <version>${jxr.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>main-xref</id>
+                        <phase>package</phase>
+                        <goals><goal>jxr</goal></goals>
+                        <configuration>
+                            <!-- base site folder -->
+                            <outputDirectory>${project.build.directory}/reports</outputDirectory>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>test-xref</id>
+                        <phase>package</phase>
+                        <goals><goal>test-jxr</goal></goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/reports</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- PMD rules -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-pmd-plugin</artifactId>
+                <version>${pmd.plugin.version}</version>
+                <configuration>
+                    <rulesets>
+                        <!-- path relative to the multi-module root -->
+                        <ruleset>${maven.multiModuleProjectDirectory}/build/pmd/ruleset.xml</ruleset>
+                    </rulesets>
+                    <failOnViolation>true</failOnViolation>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>check</goal>
+                            <goal>cpd-check</goal>
+                        </goals>
+                        <phase>verify</phase>
                     </execution>
                 </executions>
             </plugin>

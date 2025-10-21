@@ -114,6 +114,30 @@
           </execution>
         </executions>
       </plugin>
+
+        <!-- Override Checkstyle configuration to exclude jmh-generated classes -->
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-checkstyle-plugin</artifactId>
+            <configuration>
+                <excludes>
+                    **/jmh_generated/**
+                </excludes>
+            </configuration>
+        </plugin>
+
+        <!-- Override PMD configuration to exclude jmh-generated classes -->
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-pmd-plugin</artifactId>
+            <configuration>
+
+                <!-- Append to parent's excludes instead of replacing -->
+                <excludes combine.children="append">
+                    <exclude>**/jmh_generated/*.java</exclude>
+                </excludes>
+            </configuration>
+        </plugin>
     </plugins>
   </build>
 </project>

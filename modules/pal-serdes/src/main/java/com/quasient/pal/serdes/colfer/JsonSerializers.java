@@ -145,6 +145,53 @@ public class JsonSerializers {
     return value;
   }
 
+  // Internal helpers to reduce duplication in serializers (non hot-path)
+  /**
+   * Adds a string property to the provided JSON object if the value is not empty.
+   *
+   * @param json the target {@link JsonObject}
+   * @param key the property name
+   * @param value the string value to add when not empty
+   */
+  private static void addProp(JsonObject json, String key, String value) {
+    if (notEmpty(value)) json.addProperty(key, value);
+  }
+
+  /**
+   * Adds an integer property to the provided JSON object if the value is non-zero.
+   *
+   * @param json the target {@link JsonObject}
+   * @param key the property name
+   * @param value the integer value to add when non-zero
+   */
+  private static void addProp(JsonObject json, String key, int value) {
+    if (notEmpty(value)) json.addProperty(key, value);
+  }
+
+  /**
+   * Adds a boolean property to the provided JSON object if the value is {@code true}.
+   *
+   * @param json the target {@link JsonObject}
+   * @param key the property name
+   * @param value the boolean value to add when {@code true}
+   */
+  private static void addProp(JsonObject json, String key, boolean value) {
+    if (notEmpty(value)) json.addProperty(key, value);
+  }
+
+  /**
+   * Serializes the given value and adds it under the provided key if the value is not {@code null}.
+   *
+   * @param json the target {@link JsonObject}
+   * @param key the member name
+   * @param value the object to serialize when non-null
+   * @param ctx the {@link JsonSerializationContext} used for serialization
+   */
+  private static void addSer(
+      JsonObject json, String key, Object value, JsonSerializationContext ctx) {
+    if (notEmpty(value)) json.add(key, ctx.serialize(value));
+  }
+
   /** Serializes {@link ExecMessage} objects to JSON. */
   public static class ExecMessageSerializer implements JsonSerializer<ExecMessage> {
 
@@ -161,33 +208,13 @@ public class JsonSerializers {
         ExecMessage message, Type type, JsonSerializationContext jsonSerializationContext) {
       final JsonObject jsonElement = new JsonObject();
 
-      if (notEmpty(message.peerUuid)) {
-        jsonElement.addProperty("peer_uuid", message.peerUuid);
-      }
-
-      if (notEmpty(message.messageId)) {
-        jsonElement.addProperty("message_id", message.messageId);
-      }
-
-      if (notEmpty(message.threadName)) {
-        jsonElement.addProperty("thread_name", message.threadName);
-      }
-
-      if (notEmpty(message.currentTime)) {
-        jsonElement.addProperty("current_time", message.currentTime);
-      }
-
-      if (notEmpty(message.dispatchSeq)) {
-        jsonElement.addProperty("dispatch_seq", message.dispatchSeq);
-      }
-
-      if (notEmpty(message.builderSeq)) {
-        jsonElement.addProperty("builder_seq", message.builderSeq);
-      }
-
-      if (notEmpty(message.responseToId)) {
-        jsonElement.addProperty("response_to", message.responseToId);
-      }
+      addProp(jsonElement, "peer_uuid", message.peerUuid);
+      addProp(jsonElement, "message_id", message.messageId);
+      addProp(jsonElement, "thread_name", message.threadName);
+      addProp(jsonElement, "current_time", message.currentTime);
+      addProp(jsonElement, "dispatch_seq", message.dispatchSeq);
+      addProp(jsonElement, "builder_seq", message.builderSeq);
+      addProp(jsonElement, "response_to", message.responseToId);
 
       MessageType execMessageType = getMessageTypeOf(message);
       switch (execMessageType) {
@@ -444,9 +471,7 @@ public class JsonSerializers {
     public JsonElement serialize(
         RaisedThrowable message, Type type, JsonSerializationContext jsonSerializationContext) {
       final JsonObject jsonElement = new JsonObject();
-      if (notEmpty(message.inInitializer)) {
-        jsonElement.addProperty("in_initializer", true);
-      }
+      addProp(jsonElement, "in_initializer", message.inInitializer);
       if (notEmpty(message.from)) {
         jsonElement.add("from", jsonSerializationContext.serialize(message.from));
       }
@@ -503,21 +528,11 @@ public class JsonSerializers {
     public JsonElement serialize(
         StaticFieldPut message, Type type, JsonSerializationContext jsonSerializationContext) {
       final JsonObject jsonElement = new JsonObject();
-      if (notEmpty(message.clazz)) {
-        jsonElement.add("class", jsonSerializationContext.serialize(message.clazz));
-      }
-      if (notEmpty(message.field)) {
-        jsonElement.add("field", jsonSerializationContext.serialize(message.field));
-      }
-      if (notEmpty(message.valueObject)) {
-        jsonElement.add("value_object", jsonSerializationContext.serialize(message.valueObject));
-      }
-      if (notEmpty(message.valueObjectRef)) {
-        jsonElement.addProperty("value_objectref", message.valueObjectRef);
-      }
-      if (notEmpty(message.context)) {
-        jsonElement.add("context", jsonSerializationContext.serialize(message.context));
-      }
+      addSer(jsonElement, "class", message.clazz, jsonSerializationContext);
+      addSer(jsonElement, "field", message.field, jsonSerializationContext);
+      addSer(jsonElement, "value_object", message.valueObject, jsonSerializationContext);
+      addProp(jsonElement, "value_objectref", message.valueObjectRef);
+      addSer(jsonElement, "context", message.context, jsonSerializationContext);
 
       return jsonElement;
     }
@@ -626,24 +641,12 @@ public class JsonSerializers {
     public JsonElement serialize(
         InstanceFieldPut message, Type type, JsonSerializationContext jsonSerializationContext) {
       final JsonObject jsonElement = new JsonObject();
-      if (notEmpty(message.clazz)) {
-        jsonElement.add("class", jsonSerializationContext.serialize(message.clazz));
-      }
-      if (notEmpty(message.objectRef)) {
-        jsonElement.addProperty("objectref", message.objectRef);
-      }
-      if (notEmpty(message.field)) {
-        jsonElement.add("field", jsonSerializationContext.serialize(message.field));
-      }
-      if (notEmpty(message.valueObject)) {
-        jsonElement.add("value_object", jsonSerializationContext.serialize(message.valueObject));
-      }
-      if (notEmpty(message.valueObjectRef)) {
-        jsonElement.addProperty("value_objectref", message.valueObjectRef);
-      }
-      if (notEmpty(message.context)) {
-        jsonElement.add("context", jsonSerializationContext.serialize(message.context));
-      }
+      addSer(jsonElement, "class", message.clazz, jsonSerializationContext);
+      addProp(jsonElement, "objectref", message.objectRef);
+      addSer(jsonElement, "field", message.field, jsonSerializationContext);
+      addSer(jsonElement, "value_object", message.valueObject, jsonSerializationContext);
+      addProp(jsonElement, "value_objectref", message.valueObjectRef);
+      addSer(jsonElement, "context", message.context, jsonSerializationContext);
 
       return jsonElement;
     }

@@ -230,7 +230,7 @@ public class PalDirectory implements AutoCloseable {
     List<String> endpointListRaw =
         Splitter.on(',').trimResults().omitEmptyStrings().splitToList(endpoints);
     List<String> endpointListNorm =
-        endpointListRaw.stream().map(PalDirectory::normalizeEndpoint).collect(Collectors.toList());
+        endpointListRaw.stream().map(PalDirectory::normalizeEndpoint).toList();
     String[] endpointArray = endpointListNorm.toArray(new String[0]);
     this.client =
         Client.builder()
@@ -243,9 +243,9 @@ public class PalDirectory implements AutoCloseable {
 
     if (blocking) {
       // Verify connection with a per-endpoint status check to avoid hangs
-      List<String> endpointList = endpointListNorm; // already normalized with scheme
+      // already normalized with scheme
       boolean connected = false;
-      for (String ep : endpointList) {
+      for (String ep : endpointListNorm) {
         try {
           StatusResponse status =
               client
@@ -1150,7 +1150,7 @@ public class PalDirectory implements AutoCloseable {
 
     // 1) Atomically increment /<ns>/logs/counters/<prefix>
     ByteSequence counterKey =
-        ByteSequence.from(String.format("%s/counters/%s", getLogsPath(), logNamePrefix), UTF8);
+        ByteSequence.from(format("%s/counters/%s", getLogsPath(), logNamePrefix), UTF8);
 
     long nextIdx;
     while (true) {
@@ -1175,7 +1175,7 @@ public class PalDirectory implements AutoCloseable {
       if (tx.isSucceeded()) break; // someone else updated? retry
     }
 
-    String logName = String.format("%s%010d", logNamePrefix, nextIdx);
+    String logName = format("%s%010d", logNamePrefix, nextIdx);
 
     // 2) Create the actual log node (guaranteed unique now)
     return writeLogInfo(logName, logServers); // helper below
@@ -1318,8 +1318,7 @@ public class PalDirectory implements AutoCloseable {
     GetResponse resp =
         kvClient
             .get(
-                ByteSequence.from(
-                    String.format("%s/%s", getLogsPath(), logNamePrefix).getBytes(UTF8)),
+                ByteSequence.from(format("%s/%s", getLogsPath(), logNamePrefix).getBytes(UTF8)),
                 GetOption.builder()
                     .withSortField(GetOption.SortTarget.KEY)
                     .withSortOrder(GetOption.SortOrder.DESCEND)
@@ -1427,8 +1426,7 @@ public class PalDirectory implements AutoCloseable {
    */
   long deleteLogsWithPrefix(String logNamePrefix) throws ExecutionException, InterruptedException {
 
-    ByteSequence prefixKey =
-        ByteSequence.from(String.format("%s/%s", getLogsPath(), logNamePrefix), UTF8);
+    ByteSequence prefixKey = ByteSequence.from(format("%s/%s", getLogsPath(), logNamePrefix), UTF8);
 
     DeleteResponse del =
         kvClient.delete(prefixKey, DeleteOption.builder().isPrefix(true).build()).get();

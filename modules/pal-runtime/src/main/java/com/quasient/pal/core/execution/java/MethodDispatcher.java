@@ -9,7 +9,9 @@
  */
 package com.quasient.pal.core.execution.java;
 
+import com.quasient.pal.common.lang.reflect.MethodSignature;
 import com.quasient.pal.common.objects.ObjectRef;
+import com.quasient.pal.common.runtime.Context;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Method;
@@ -78,6 +80,20 @@ public abstract class MethodDispatcher extends BaseExecMessageDispatcher {
     return method.invoke(target, args);
   }
 
+  @Override
+  protected ExecMessage createAfterExecMessage(
+      Context ctxt, Object value, ObjectRef objectRef, boolean isVoid) {
+
+    final AccessibleObject method = ((MethodSignature) ctxt.getSignature()).getMethod();
+
+    if (value instanceof InvocationThrowableWrapper throwableWrapper) {
+      Throwable invocationThr = throwableWrapper.throwable();
+      return messageBuilder.buildAccessibleObjectThrowableEphemeral(method, invocationThr, null);
+    } else {
+      return messageBuilder.buildReturnValueEphemeral(value, method, objectRef, isVoid, null);
+    }
+  }
+
   /**
    * {@inheritDoc}
    *
@@ -126,6 +142,6 @@ public abstract class MethodDispatcher extends BaseExecMessageDispatcher {
    */
   @Override
   protected boolean returnsVoid(AccessibleObject accessibleObject) {
-    return ((Method) accessibleObject).getReturnType().equals(java.lang.Void.TYPE);
+    return ((Method) accessibleObject).getReturnType().equals(Void.TYPE);
   }
 }

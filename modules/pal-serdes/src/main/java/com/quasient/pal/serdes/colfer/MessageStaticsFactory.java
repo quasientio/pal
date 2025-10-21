@@ -9,9 +9,13 @@
  */
 package com.quasient.pal.serdes.colfer;
 
+import com.quasient.pal.common.lang.reflect.ConstructorSignature;
+import com.quasient.pal.common.lang.reflect.MethodSignature;
+import com.quasient.pal.common.runtime.Context;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Factory for creating and caching {@link MessageStatics} instances.
@@ -28,15 +32,13 @@ public final class MessageStaticsFactory {
    * Method}, {@link Constructor}, {@link Field}) or the signature's string form when the reflective
    * member is unavailable.
    */
-  private static final ClassValue<java.util.concurrent.ConcurrentHashMap<Object, MessageStatics>>
-      PER_CLASS =
-          new ClassValue<>() {
-            @Override
-            protected java.util.concurrent.ConcurrentHashMap<Object, MessageStatics> computeValue(
-                Class<?> type) {
-              return new java.util.concurrent.ConcurrentHashMap<>();
-            }
-          };
+  private static final ClassValue<ConcurrentHashMap<Object, MessageStatics>> PER_CLASS =
+      new ClassValue<>() {
+        @Override
+        protected ConcurrentHashMap<Object, MessageStatics> computeValue(Class<?> type) {
+          return new ConcurrentHashMap<>();
+        }
+      };
 
   /**
    * Returns cached or newly created {@link MessageStatics} for a method signature.
@@ -46,17 +48,15 @@ public final class MessageStaticsFactory {
    * @implNote Uses the {@link Method} as the cache key if present, otherwise the signature's {@code
    *     toString()}.
    */
-  public static MessageStatics forMethod(com.quasient.pal.common.runtime.Context ctx) {
-    var ms = (com.quasient.pal.common.lang.reflect.MethodSignature) ctx.getSignature();
-    Method m = ms.getMethod();
+  public static MessageStatics forMethod(Context ctx) {
+    var ms = (MethodSignature) ctx.getSignature();
 
-    Object key = (m != null ? m : ms.toString());
+    Object key = ms.getMethod();
     var map = PER_CLASS.get(ms.getDeclaringType());
     return map.computeIfAbsent(
         key,
         k -> {
-          var clazzMsg =
-              com.quasient.pal.serdes.colfer.Wrapper.getWrappedClass(ms.getDeclaringTypeName());
+          var clazzMsg = Wrapper.getWrappedClass(ms.getDeclaringTypeName());
           String[] pNames = ms.getParameterNames(); // nullable OK
           Class<?>[] pTypes = ms.getParameterTypes();
           String[] pTypeNames =
@@ -75,16 +75,14 @@ public final class MessageStaticsFactory {
    * @implNote Uses the {@link Constructor} as the cache key if present, otherwise the signature's
    *     {@code toString()}. The stored name is {@code "<init>"}.
    */
-  public static MessageStatics forConstructor(com.quasient.pal.common.runtime.Context ctx) {
-    var cs = (com.quasient.pal.common.lang.reflect.ConstructorSignature) ctx.getSignature();
-    Constructor<?> c = cs.getConstructor();
-    Object key = (c != null ? c : cs.toString());
+  public static MessageStatics forConstructor(Context ctx) {
+    var cs = (ConstructorSignature) ctx.getSignature();
+    Object key = (Constructor<?>) cs.getConstructor();
     var map = PER_CLASS.get(cs.getDeclaringType());
     return map.computeIfAbsent(
         key,
         k -> {
-          var clazzMsg =
-              com.quasient.pal.serdes.colfer.Wrapper.getWrappedClass(cs.getDeclaringTypeName());
+          var clazzMsg = Wrapper.getWrappedClass(cs.getDeclaringTypeName());
           String[] pNames = cs.getParameterNames();
           Class<?>[] pTypes = cs.getParameterTypes();
           String[] pTypeNames =
@@ -93,28 +91,6 @@ public final class MessageStaticsFactory {
                   : java.util.Arrays.stream(pTypes).map(Class::getName).toArray(String[]::new);
           return new MessageStatics(
               clazzMsg, /*name not used for ctor*/ "<init>", cs.getModifiers(), pNames, pTypeNames);
-        });
-  }
-
-  /**
-   * Returns cached or newly created {@link MessageStatics} for a field signature.
-   *
-   * @param ctx runtime context providing a {@code FieldSignature}
-   * @return the corresponding {@code MessageStatics}
-   * @implNote Uses the {@link Field} as the cache key if present, otherwise the signature's {@code
-   *     toString()}.
-   */
-  public static MessageStatics forField(com.quasient.pal.common.runtime.Context ctx) {
-    var fs = (com.quasient.pal.common.lang.reflect.FieldSignature) ctx.getSignature();
-    Field f = fs.getField();
-    Object key = (f != null ? f : fs.toString());
-    var map = PER_CLASS.get(fs.getDeclaringType());
-    return map.computeIfAbsent(
-        key,
-        k -> {
-          var clazzMsg =
-              com.quasient.pal.serdes.colfer.Wrapper.getWrappedClass(fs.getDeclaringTypeName());
-          return new MessageStatics(clazzMsg, fs.getName(), fs.getModifiers(), null, null);
         });
   }
 }

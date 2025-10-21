@@ -134,7 +134,7 @@ public class KafkaSourceLogReader extends SourceLogReader {
         logger.debug("OffsetUpdater running");
       }
       boolean socketError = false;
-      while (!shutdownRequested && !Thread.interrupted() && !socketError) {
+      while (!shutdownRequested && !interrupted() && !socketError) {
         try {
           PublishedOffsetMsg msg = PublishedOffsetMsg.receive(offsetSubscriber, true);
           assert msg != null;

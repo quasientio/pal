@@ -9,7 +9,6 @@
  */
 package com.quasient.pal.core.execution.java;
 
-import com.quasient.pal.common.lang.reflect.MethodSignature;
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.common.runtime.Context;
 import com.quasient.pal.core.execution.java.reflect.ReflectionHelper;
@@ -24,7 +23,6 @@ import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.lang.reflect.AccessibleObject;
-import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -115,15 +113,7 @@ public class ClassMethodDispatcher extends MethodDispatcher {
   @Override
   protected ExecMessage createAfterExecMessage(
       Context ctxt, Object value, ObjectRef objectRef, boolean isVoid) {
-
-    final AccessibleObject method = ((MethodSignature) ctxt.getSignature()).getMethod();
-
-    if (value instanceof InvocationThrowableWrapper throwableWrapper) {
-      Throwable invocationThr = throwableWrapper.throwable();
-      return messageBuilder.buildAccessibleObjectThrowableEphemeral(method, invocationThr, null);
-    } else {
-      return messageBuilder.buildReturnValueEphemeral(value, method, objectRef, isVoid, null);
-    }
+    return super.createAfterExecMessage(ctxt, value, objectRef, isVoid);
   }
 
   /**
@@ -155,9 +145,9 @@ public class ClassMethodDispatcher extends MethodDispatcher {
   /**
    * {@inheritDoc}
    *
-   * <p>Retrieves the {@link AccessibleObject} (typically a {@link Method}) corresponding to the
-   * invoked class method. It dynamically loads the target class and uses reflection to locate the
-   * method matching the provided name, parameter types, and arguments.
+   * <p>Retrieves the {@link AccessibleObject} (typically a {@link java.lang.reflect.Method})
+   * corresponding to the invoked class method. It dynamically loads the target class and uses
+   * reflection to locate the method matching the provided name, parameter types, and arguments.
    *
    * @param execMessage the execution message containing class method call information.
    * @param parameterTypes the expected parameter types for the method.

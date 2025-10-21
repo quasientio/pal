@@ -322,25 +322,9 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
 
     // print config and filters
     if (verbose) {
-      System.out.printf("Kafka config: topic=%s, bootstrap=%s%n", topic, bootstrapServers);
-      if (msgFormats != null) {
-        System.out.printf("Filtering by format(s): %s%n", String.join(",", msgFormats));
-      }
-      if (msgTypes != null) {
-        System.out.printf("Filtering by type(s): %s%n", String.join(",", msgTypes));
-      }
-      if (fromPeer != null) {
-        System.out.printf("Filtering by peer: %s%n", fromPeer);
-      }
-      if (threadName != null) {
-        System.out.printf("Filtering by thread: %s%n", threadName);
-      }
-      if (id != null) {
-        System.out.printf("Filtering by message id: %s%n", id);
-      }
-      if (offset != null) {
-        System.out.printf("Will print message with offset id: %s and then exit%n", offset);
-      }
+      printVerboseFilters(
+          String.format("Kafka config: topic=%s, bootstrap=%s", topic, bootstrapServers),
+          "offset id");
     }
 
     // 3) Create the Consumer
@@ -435,6 +419,36 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
   }
 
   /**
+   * Prints the verbose header line and common filter details used in both Kafka and Chronicle
+   * paths.
+   *
+   * @param headerLine the first line describing the source/context (already formatted)
+   * @param offsetDescriptor the label to use for the offset line (e.g., "offset id",
+   *     "offset/index")
+   */
+  private void printVerboseFilters(String headerLine, String offsetDescriptor) {
+    System.out.println(headerLine);
+    if (msgFormats != null) {
+      System.out.printf("Filtering by format(s): %s%n", String.join(",", msgFormats));
+    }
+    if (msgTypes != null) {
+      System.out.printf("Filtering by type(s): %s%n", String.join(",", msgTypes));
+    }
+    if (fromPeer != null) {
+      System.out.printf("Filtering by peer: %s%n", fromPeer);
+    }
+    if (threadName != null) {
+      System.out.printf("Filtering by thread: %s%n", threadName);
+    }
+    if (id != null) {
+      System.out.printf("Filtering by message id: %s%n", id);
+    }
+    if (offset != null) {
+      System.out.printf("Will print message with %s: %s and then exit%n", offsetDescriptor, offset);
+    }
+  }
+
+  /**
    * Prints messages from a Chronicle log.
    *
    * @param log the LogInfo for the Chronicle log
@@ -453,25 +467,7 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
 
     // Print config and filters
     if (verbose) {
-      System.out.printf("Chronicle queue: path=%s%n", queuePath);
-      if (msgFormats != null) {
-        System.out.printf("Filtering by format(s): %s%n", String.join(",", msgFormats));
-      }
-      if (msgTypes != null) {
-        System.out.printf("Filtering by type(s): %s%n", String.join(",", msgTypes));
-      }
-      if (fromPeer != null) {
-        System.out.printf("Filtering by peer: %s%n", fromPeer);
-      }
-      if (threadName != null) {
-        System.out.printf("Filtering by thread: %s%n", threadName);
-      }
-      if (id != null) {
-        System.out.printf("Filtering by message id: %s%n", id);
-      }
-      if (offset != null) {
-        System.out.printf("Will print message with offset/index: %s and then exit%n", offset);
-      }
+      printVerboseFilters(String.format("Chronicle queue: path=%s", queuePath), "offset/index");
     }
 
     try (ChronicleQueue queue =
@@ -550,18 +546,7 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
         message.unmarshal(outboundMsg.getBody(), 0);
 
         // Create headers map from OutboundMsg metadata
-        Map<String, String> headers = new HashMap<>();
-        headers.put("message-type", outboundMsg.getMessageType().name());
-        headers.put("message-format", "BINARY"); // Chronicle currently only writes binary messages
-        if (outboundMsg.getMessageId() != null) {
-          headers.put("message-id", outboundMsg.getMessageId());
-        }
-        if (outboundMsg.getResponseToId() != null) {
-          headers.put("response-to-id", outboundMsg.getResponseToId());
-        }
-
-        // Create LogMessage using Chronicle constructor (no topic)
-        LogMessage<Message> logMessage = new LogMessage<>(currentIndex, headers, message);
+        LogMessage<Message> logMessage = getLogMessage(outboundMsg, currentIndex, message);
 
         // If user requested a specific offset/index, print it and exit
         if (offset != null && offset.equals(currentIndex)) {
@@ -586,6 +571,30 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
     }
 
     return 0;
+  }
+
+  /**
+   * Creates a LogMessage from an OutboundMsg for Chronicle messages.
+   *
+   * @param outboundMsg the OutboundMsg to convert
+   * @param currentIndex the current index of the message
+   * @param message the Message instance to include in the LogMessage
+   * @return a LogMessage containing the message and its metadata
+   */
+  private static LogMessage<Message> getLogMessage(
+      OutboundMsg outboundMsg, long currentIndex, Message message) {
+    Map<String, String> headers = new HashMap<>();
+    headers.put("message-type", outboundMsg.getMessageType().name());
+    headers.put("message-format", "BINARY"); // Chronicle currently only writes binary messages
+    if (outboundMsg.getMessageId() != null) {
+      headers.put("message-id", outboundMsg.getMessageId());
+    }
+    if (outboundMsg.getResponseToId() != null) {
+      headers.put("response-to-id", outboundMsg.getResponseToId());
+    }
+
+    // return new LogMessage using Chronicle constructor (no topic)
+    return new LogMessage<>(currentIndex, headers, message);
   }
 
   /**
@@ -626,8 +635,7 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
     // 3) fromPeer
     if (fromPeer != null) {
       // the message Key is the peer's UUID
-      String peer = key;
-      if (!fromPeer.equalsIgnoreCase(peer)) {
+      if (!fromPeer.equalsIgnoreCase(key)) {
         return false;
       }
     }
@@ -646,9 +654,7 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
     // 5) messageId
     if (id != null) {
       String msgId = getId(msg);
-      if (!id.equalsIgnoreCase(msgId)) {
-        return false;
-      }
+      return id.equalsIgnoreCase(msgId);
     }
     return true;
   }

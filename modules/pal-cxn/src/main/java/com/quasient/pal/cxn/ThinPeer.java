@@ -194,9 +194,6 @@ public class ThinPeer {
   /** Chronicle queue for reading messages (when using Chronicle input log). */
   private ChronicleQueue chronicleInputQueue;
 
-  /** Base directory for Chronicle queue files. */
-  private Path chronicleBaseDir;
-
   /** ZeroMQ context for managing ZMQ sockets. */
   private ZContext zmqContext;
 
@@ -539,6 +536,9 @@ public class ThinPeer {
     // Initialize Chronicle base directory
     String baseDirStr =
         System.getProperty("wal.chronicle.base_dir", System.getenv("CHRONICLE_BASE_DIR"));
+
+    // Base directory for Chronicle queue files
+    Path chronicleBaseDir;
     if (baseDirStr == null || baseDirStr.isBlank()) {
       chronicleBaseDir = Paths.get(".");
     } else {
@@ -1231,30 +1231,27 @@ public class ThinPeer {
           "ThinPeer log producer not configured. Cannot send messages.");
     }
 
-    JsonRpcMessage jsonRpcMessage;
+    // determine JSON-RPC id for correlation and normalize request type
+    String jsonRpcId;
+    Object requestToSend;
     if (jsonRpcRequest instanceof JsonRpcRequest rpcRequest) {
-      jsonRpcMessage = rpcRequest;
+      jsonRpcId = rpcRequest.getId();
+      requestToSend = rpcRequest;
     } else if (jsonRpcRequest instanceof String rpcMessage) {
-      jsonRpcMessage = JsonRpcSerializer.fromJson(rpcMessage, JsonRpcRequest.class);
+      JsonRpcRequest parsed = JsonRpcSerializer.fromJson(rpcMessage, JsonRpcRequest.class);
+      jsonRpcId = parsed.getId();
+      requestToSend = parsed;
     } else {
       throw new IllegalArgumentException("Unsupported type for jsonRpc");
     }
 
-    // create kafka record
-    var headers = Map.of("producer-id", peerUuid.toString());
-    LogMessage<JsonRpcMessage> logMessage =
-        new LogMessage<>(outputLog.getName(), null, headers, jsonRpcMessage);
-    final ProducerRecord<String, LogMessage<?>> newRecord =
-        new ProducerRecord<>(
-            outputLog.getName(), PRODUCER_PARTITION, UUID.randomUUID().toString(), logMessage);
-
-    // send and get offset
+    // delegate actual send to the existing method to avoid duplication
     long sentRecordOffset;
-    Future<RecordMetadata> recordMetadataFuture = producer.send(newRecord);
+    Future<RecordMetadata> recordMetadataFuture = sendJsonRpcRequestToLog(requestToSend);
     try {
       RecordMetadata recordMetadata = recordMetadataFuture.get();
       if (logger.isDebugEnabled()) {
-        logger.debug("Message sent:\n {}", logMessage);
+        logger.debug("Message sent for JSON-RPC id: {}", jsonRpcId);
       }
       sentRecordOffset = recordMetadata.offset();
     } catch (Exception e) {
@@ -1265,7 +1262,7 @@ public class ThinPeer {
     // even if we send the request as a JsonRpc message, the peer's response is written as
     // ExecMessage
     LogMessage<Message> responseMessage =
-        pollForResponseToRequestFromOffset(sentRecordOffset + 1, jsonRpcMessage.getId());
+        pollForResponseToRequestFromOffset(sentRecordOffset + 1, jsonRpcId);
     // convert the ExecMessage response into a JsonRpc response
     JsonRpcResponse responseAsJsonRpc =
         msgBuilder.jsonRpcResponseFromExecMessageResponse(

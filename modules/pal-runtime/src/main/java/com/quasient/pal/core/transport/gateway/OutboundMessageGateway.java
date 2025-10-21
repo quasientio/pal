@@ -9,7 +9,6 @@
  */
 package com.quasient.pal.core.transport.gateway;
 
-import static com.quasient.pal.serdes.colfer.ColferUtils.format;
 import static com.quasient.pal.serdes.colfer.ColferUtils.toBytes;
 
 import com.quasient.pal.common.lang.intercept.InterceptType;
@@ -281,7 +280,7 @@ public class OutboundMessageGateway {
     if (logger.isTraceEnabled()) {
       logger.trace(
           "sendExecMessage:in w/ execMessage: {}, execPhase: {}\n, headers: {}",
-          format(execMessage),
+          ColferUtils.format(execMessage),
           execPhase,
           headers);
     }
@@ -354,8 +353,7 @@ public class OutboundMessageGateway {
       } else if (interceptType.equals(InterceptType.BEFORE)
           || interceptType.equals(InterceptType.AFTER)) {
         @SuppressWarnings("unused")
-        final byte[] unusedResponse;
-        unusedResponse = sendCallbackToPeer(interceptor, callbackMessage);
+        final byte[] unusedResponse = sendCallbackToPeer(interceptor, callbackMessage);
       } else {
         logger.error("Unsupported callback type: {}", interceptType);
       }

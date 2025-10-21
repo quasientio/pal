@@ -117,7 +117,7 @@ class LogRpcInvoker extends AbstractMessageInvokerThread {
     if (logger.isDebugEnabled()) {
       logger.debug("Start getting requests from socket");
     }
-    while (!Thread.interrupted()) {
+    while (!interrupted()) {
       // receive message
       InboundLogMsg msg = null;
       try {

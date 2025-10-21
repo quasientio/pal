@@ -264,7 +264,7 @@ public class PeerWiring extends AbstractModule {
     }
 
     WalType walType =
-        WalType.valueOf(properties.getProperty("wal.type").toUpperCase(java.util.Locale.ENGLISH));
+        WalType.valueOf(properties.getProperty("wal.type").toUpperCase(Locale.ENGLISH));
 
     return switch (walType) {
       case KAFKA -> kafka.get();
@@ -293,7 +293,7 @@ public class PeerWiring extends AbstractModule {
 
     String logType = properties.getProperty("source_log.type", "KAFKA");
 
-    return switch (logType.toUpperCase(java.util.Locale.ENGLISH)) {
+    return switch (logType.toUpperCase(Locale.ENGLISH)) {
       case "KAFKA" -> kafka.get();
       case "CHRONICLE" -> chronicle.get();
       default -> throw new IllegalStateException("Unknown source log type: " + logType);

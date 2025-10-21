@@ -329,7 +329,7 @@ public final class Wrapper {
    * @throws NonWrappableObjectException if the object cannot be wrapped according to the policy
    */
   static Obj getWrappedObject(
-      @Nullable java.lang.Object object,
+      @Nullable Object object,
       @Nullable String classname,
       @Nullable ObjectRef objectRef,
       @Nullable WrapPolicy wrapPolicy) {
@@ -510,7 +510,7 @@ public final class Wrapper {
    *     information
    */
   static com.quasient.pal.messages.colfer.Context getWrappedContext(
-      @Nullable Context context, java.lang.Object sender, ObjectRef senderObjRef) {
+      @Nullable Context context, Object sender, ObjectRef senderObjRef) {
 
     final com.quasient.pal.messages.colfer.Context wrappedCtxt =
         new com.quasient.pal.messages.colfer.Context();

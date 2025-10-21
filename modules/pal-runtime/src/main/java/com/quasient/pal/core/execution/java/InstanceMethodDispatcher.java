@@ -9,7 +9,6 @@
  */
 package com.quasient.pal.core.execution.java;
 
-import com.quasient.pal.common.lang.reflect.MethodSignature;
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.common.runtime.Context;
 import com.quasient.pal.core.execution.java.reflect.ReflectionHelper;
@@ -115,15 +114,7 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
   @Override
   protected ExecMessage createAfterExecMessage(
       Context ctxt, Object value, ObjectRef objectRef, boolean isVoid) {
-
-    final AccessibleObject method = ((MethodSignature) ctxt.getSignature()).getMethod();
-
-    if (value instanceof InvocationThrowableWrapper throwableWrapper) {
-      Throwable invocationThr = throwableWrapper.throwable();
-      return messageBuilder.buildAccessibleObjectThrowableEphemeral(method, invocationThr, null);
-    } else {
-      return messageBuilder.buildReturnValueEphemeral(value, method, objectRef, isVoid, null);
-    }
+    return super.createAfterExecMessage(ctxt, value, objectRef, isVoid);
   }
 
   /**

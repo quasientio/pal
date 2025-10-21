@@ -28,7 +28,7 @@ public class JsonRpcRequest extends JsonRpcMessage {
 
   /** Constructs a new {@code JsonRpcRequest} with the default JSON-RPC version. */
   public JsonRpcRequest() {
-    setJsonrpc(JsonRpcMessage.JSON_RPC_VERSION);
+    setJsonrpc(JSON_RPC_VERSION);
   }
 
   /**
@@ -180,7 +180,7 @@ public class JsonRpcRequest extends JsonRpcMessage {
      */
     public JsonRpcRequest build() {
       if (request.getJsonrpc() == null) {
-        request.setJsonrpc(JsonRpcMessage.JSON_RPC_VERSION);
+        request.setJsonrpc(JSON_RPC_VERSION);
       }
       JsonRpcRequestValidator.validate(request);
       return request;
