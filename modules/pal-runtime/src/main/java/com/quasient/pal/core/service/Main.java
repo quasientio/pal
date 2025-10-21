@@ -483,6 +483,7 @@ public class Main implements Callable<Integer> {
 
     // look for a property named peer.logging in the System properties
     final String palLogging = System.getProperty("peer.logging");
+    System.out.println("DEBUG: peer.logging property value: " + palLogging);
     if (palLogging != null && !palLogging.trim().isEmpty()) {
       boolean givenFileExists = false;
       try {

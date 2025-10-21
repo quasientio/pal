@@ -198,15 +198,15 @@ public class List extends AbstractPalSubcommand {
   /**
    * Validates the input options for the subcommand.
    *
-   * <p>Ensures that either logs or peers are specified for listing, but not both simultaneously.
+   * <p>When neither -L nor -P is specified, both logs and peers will be listed. When both flags are
+   * specified, this is an error.
    *
    * @throws RuntimeException if the input options are invalid
    */
   @Override
   public void validateInput() {
-    if (!(listLogs || listPeers)) {
-      throw new RuntimeException("Use -L (--logs) to list logs, or -P (--peers) to list peers.");
-    }
+    // When neither flag is specified, we'll list both (handled in runCommand)
+    // Only error if BOTH flags are specified
     if (listLogs && listPeers) {
       throw new RuntimeException("Use either -L (--logs) or -P (--peers), but not both.");
     }
@@ -223,6 +223,8 @@ public class List extends AbstractPalSubcommand {
       Properties props = new Properties();
       props.setProperty("bootstrap.servers", bootstrapServers);
       props.setProperty("client.id", KAFKA_CLIENT_ID.toString());
+      props.setProperty("request.timeout.ms", "5000");
+      props.setProperty("default.api.timeout.ms", "10000");
       adminClientsPerServer.put(bootstrapServers, Admin.create(props));
     }
     return adminClientsPerServer.get(bootstrapServers);
@@ -490,7 +492,12 @@ public class List extends AbstractPalSubcommand {
               : trimTo(peerInfo.getJmxAddress(), MAX_ENDPOINT_LEN),
           getFormattedUptime(peerInfo.getCTime()));
     } else {
-      out.printf("%s%n", peerInfo.getUuid());
+      // Short format: show name if present, otherwise UUID
+      String displayValue =
+          (peerInfo.getName() != null && !peerInfo.getName().isEmpty())
+              ? peerInfo.getName()
+              : peerInfo.getUuid().toString();
+      out.printf("%s%n", displayValue);
     }
   }
 
@@ -562,14 +569,19 @@ public class List extends AbstractPalSubcommand {
    *
    * <p>If listing logs is requested, it retrieves logs from the directory and Kafka servers, fills
    * in their offsets and sizes, and prints them. If listing peers is requested, it retrieves peers
-   * from the directory and prints them.
+   * from the directory and prints them. If neither flag is specified, both logs and peers are
+   * listed.
    *
    * @return the exit code of the command execution
    * @throws Exception if an error occurs during command execution
    */
   @Override
   protected int runCommand() throws Exception {
-    if (listLogs) {
+    // When neither flag is specified, list both
+    boolean shouldListLogs = listLogs || (!listLogs && !listPeers);
+    boolean shouldListPeers = listPeers || (!listLogs && !listPeers);
+
+    if (shouldListLogs) {
       // get all logs in directory
       Set<LogInfo> logsInDirectory = getPalDirectory().listAllLogs();
 
@@ -634,7 +646,7 @@ public class List extends AbstractPalSubcommand {
       printLogs(allExistingLogs);
     }
 
-    if (listPeers) {
+    if (shouldListPeers) {
       Set<PeerInfo> peers = getPalDirectory().listPeers();
       logger.debug("{} peers found in directory", peers.size());
       if (longListing) {

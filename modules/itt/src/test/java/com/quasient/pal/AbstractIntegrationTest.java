@@ -21,6 +21,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -51,6 +52,9 @@ public abstract class AbstractIntegrationTest {
 
   protected static final int PROCESS_TIMEOUT_SECONDS =
       15; // Increased to allow for Kafka health check timeout
+
+  /** Timeout in seconds to wait for a transient peer to become ready. */
+  private static final int PEER_READY_TIMEOUT_SECONDS = 10;
 
   protected static Properties getKafkaConsumerProperties() throws IOException {
     var properties = new Properties();
@@ -241,6 +245,242 @@ public abstract class AbstractIntegrationTest {
     }
 
     return new ProcessResult(exitCode, stdoutStr, stderrStr);
+  }
+
+  /**
+   * Parses a logback XML configuration file to extract the log file path from the first
+   * FileAppender.
+   *
+   * <p>This method uses a simple XML parsing approach to find the {@code <file>} element within the
+   * first {@code <appender>} that has a {@code class} attribute containing "FileAppender". The path
+   * is resolved relative to PAL_HOME if it's not absolute.
+   *
+   * @param logbackConfigPath path to the logback XML configuration file
+   * @return absolute path to the log file
+   * @throws IOException if the config file cannot be read or parsed
+   */
+  private static Path parseLogbackLogFilePath(Path logbackConfigPath) throws IOException {
+    String palHome = System.getenv("PAL_HOME");
+    if (palHome == null) {
+      throw new RuntimeException("PAL_HOME environment variable is not set");
+    }
+
+    try {
+      // Read the entire XML file
+      String xmlContent = java.nio.file.Files.readString(logbackConfigPath);
+
+      // Find the first appender with FileAppender class
+      int appenderStart = 0;
+      while ((appenderStart = xmlContent.indexOf("<appender", appenderStart)) != -1) {
+        int appenderEnd = xmlContent.indexOf("</appender>", appenderStart);
+        if (appenderEnd == -1) break;
+
+        String appenderBlock = xmlContent.substring(appenderStart, appenderEnd);
+
+        // Check if this appender is a FileAppender
+        if (appenderBlock.contains("FileAppender")) {
+          // Extract the <file> tag content
+          int fileStart = appenderBlock.indexOf("<file>");
+          int fileEnd = appenderBlock.indexOf("</file>");
+
+          if (fileStart != -1 && fileEnd != -1) {
+            String logFile = appenderBlock.substring(fileStart + 6, fileEnd).trim();
+
+            // Resolve the path relative to PAL_HOME if not absolute
+            Path logPath = Paths.get(logFile);
+            if (!logPath.isAbsolute()) {
+              logPath = Paths.get(palHome, logFile);
+            }
+
+            return logPath;
+          }
+        }
+
+        appenderStart = appenderEnd;
+      }
+
+      throw new IOException("No FileAppender with <file> element found in " + logbackConfigPath);
+
+    } catch (IOException e) {
+      throw new IOException("Failed to parse logback config: " + logbackConfigPath, e);
+    }
+  }
+
+  /**
+   * Launches a transient peer in the background and waits for it to be ready.
+   *
+   * <p>This method starts a peer process in the background, polls the peer log file for the
+   * "Managed services ready" line (indicating the peer is ready to accept requests), and returns
+   * the Process handle.
+   *
+   * <p>The peer log is configured to write to {@code logs/peer.log} relative to PAL_HOME.
+   *
+   * <p>The caller is responsible for stopping the peer via {@link Process#destroy()} or {@link
+   * Process#destroyForcibly()}.
+   *
+   * @param args command-line arguments to pass to {@code pal run}
+   * @return Process handle for the running peer
+   * @throws IOException if process execution fails
+   * @throws InterruptedException if interrupted while waiting for peer to be ready
+   * @throws IllegalStateException if peer does not become ready within the timeout period
+   */
+  protected Process launchTransientPeer(String... args) throws IOException, InterruptedException {
+    String palHome = System.getenv("PAL_HOME");
+    if (palHome == null) {
+      throw new RuntimeException("PAL_HOME environment variable is not set");
+    }
+
+    List<String> command = new ArrayList<>();
+    command.add(Paths.get(palHome, "bin", "pal.sh").toString());
+    command.add("run");
+    // Add increased Kafka timeout for slow/loaded test environments
+    command.add("--kafka-timeout");
+    command.add("20000");
+    command.addAll(Arrays.asList(args));
+
+    logger.info("Launching transient peer: {}", String.join(" ", command));
+
+    ProcessBuilder pb = new ProcessBuilder(command);
+    pb.directory(new java.io.File(palHome));
+    pb.environment().put("PAL_HOME", palHome);
+
+    // Configure logging - CRITICAL for debugging test failures
+    pb.environment()
+        .put(
+            "PAL_PEER_LOGGING_CONFIG",
+            Paths.get(palHome, "config", "transient-peer-logging.xml").toString());
+
+    // Remove environment variables that would interfere with tests
+    pb.environment().remove("KAFKA_SERVERS");
+    pb.environment().remove("PAL_JMX_HOST");
+    pb.environment().remove("PAL_JMX_PORT");
+
+    // Don't redirect output - we need to capture it for debugging
+    Process process = pb.start();
+
+    // Start capturing stdout/stderr in background threads
+    StringBuilder stdout = new StringBuilder();
+    StringBuilder stderr = new StringBuilder();
+
+    Thread stdoutReader =
+        new Thread(
+            () -> {
+              try (BufferedReader reader =
+                  new BufferedReader(new InputStreamReader(process.getInputStream(), UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                  stdout.append(line).append("\n");
+                }
+              } catch (IOException e) {
+                logger.warn("Error reading stdout from transient peer", e);
+              }
+            });
+
+    Thread stderrReader =
+        new Thread(
+            () -> {
+              try (BufferedReader reader =
+                  new BufferedReader(new InputStreamReader(process.getErrorStream(), UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                  stderr.append(line).append("\n");
+                }
+              } catch (IOException e) {
+                logger.warn("Error reading stderr from transient peer", e);
+              }
+            });
+
+    stdoutReader.start();
+    stderrReader.start();
+
+    // Wait for peer to be ready by polling log file
+    // Parse the logback config to find the actual log file path
+    Path loggingConfigPath = Paths.get(palHome, "config", "transient-peer-logging.xml");
+    Path logPath;
+    try {
+      logPath = parseLogbackLogFilePath(loggingConfigPath);
+      logger.info("Parsed log file path from {}: {}", loggingConfigPath, logPath);
+    } catch (IOException e) {
+      // Fall back to default if parsing fails
+      logger.warn("Failed to parse log file path from {}, using default", loggingConfigPath, e);
+      logPath = Paths.get(palHome, "logs", "peer.log");
+    }
+
+    boolean ready = waitForPeerReady(logPath, PEER_READY_TIMEOUT_SECONDS);
+
+    if (!ready) {
+      // Capture any available output before killing the process
+      process.destroy();
+      boolean exited = process.waitFor(5, TimeUnit.SECONDS);
+      if (!exited) {
+        process.destroyForcibly();
+      }
+
+      // Wait for output capture threads to finish (with timeout)
+      try {
+        stdoutReader.join(2000);
+        stderrReader.join(2000);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+
+      // Log captured output for debugging
+      String capturedStdout = stdout.toString();
+      String capturedStderr = stderr.toString();
+
+      if (!capturedStdout.isEmpty()) {
+        logger.error("Transient peer stdout:\n{}", capturedStdout);
+      }
+      if (!capturedStderr.isEmpty()) {
+        logger.error("Transient peer stderr:\n{}", capturedStderr);
+      }
+
+      throw new IllegalStateException(
+          String.format(
+              "Peer did not become ready within %d seconds. Check logs above for peer output.",
+              PEER_READY_TIMEOUT_SECONDS));
+    }
+
+    logger.info("Transient peer is ready");
+    return process;
+  }
+
+  /**
+   * Waits for peer to be ready by polling log file for the "Managed services ready" line.
+   *
+   * @param logPath path to peer log file
+   * @param timeoutSeconds timeout in seconds
+   * @return true if ready line found, false if timeout exceeded
+   */
+  private boolean waitForPeerReady(Path logPath, int timeoutSeconds) {
+    long startTime = System.currentTimeMillis();
+    long timeoutMillis = timeoutSeconds * 1000L;
+    String readyLine = "Managed services ready";
+
+    while (System.currentTimeMillis() - startTime < timeoutMillis) {
+      if (java.nio.file.Files.exists(logPath)) {
+        try {
+          List<String> lines = java.nio.file.Files.readAllLines(logPath, UTF_8);
+          for (String line : lines) {
+            if (line.contains(readyLine)) {
+              return true;
+            }
+          }
+        } catch (IOException e) {
+          logger.warn("Error reading log file: {}", logPath, e);
+        }
+      }
+
+      // Sleep briefly before checking again
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        return false;
+      }
+    }
+
+    return false;
   }
 
   /** Container for process execution results. */
