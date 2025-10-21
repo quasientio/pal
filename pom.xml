@@ -232,12 +232,6 @@
                   <configuration>
                       <skipTests>${skipTests}</skipTests>
                       <skipITs>${skipITs}</skipITs>
-
-                      <!-- fail-fast -->
-                      <skipAfterFailureCount>1</skipAfterFailureCount>
-                      <forkCount>1</forkCount>
-                      <reuseForks>false</reuseForks>
-                      <parallel>none</parallel>
                   </configuration>
                 </plugin>
                 <!-- maven-dependency -->
