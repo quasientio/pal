@@ -362,12 +362,12 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
   }
 
   /**
-   * Tests that PAL succeeds when using -l/--log with a non-existent Chronicle queue.
+   * Tests that PAL succeeds when using --wal with a non-existent Chronicle queue.
    *
    * <p>This test verifies:
    *
    * <ul>
-   *   <li>Using -l creates the Chronicle queue if it doesn't exist (WAL writer creates it)
+   *   <li>Using --wal creates the Chronicle queue if it doesn't exist (WAL writer creates it)
    *   <li>The process exits successfully (exit code 0)
    *   <li>Messages are written to the newly created queue
    *   <li>No errors are reported
@@ -375,7 +375,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
    */
   @Test
   public void chronicleLogOptionCreatesQueueIfNotExists() throws IOException, InterruptedException {
-    logger.info("Testing Chronicle -l option creates queue if it doesn't exist");
+    logger.info("Testing Chronicle --wal option creates queue if it doesn't exist");
 
     // Create a path for a queue that doesn't exist yet
     Path newQueue = tempDir.resolve("new-queue-via-log-option");
@@ -387,7 +387,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
     ProcessResult result =
         runPalCommandWithEnv(
             null, // No PAL_DIRECTORY
-            "-l",
+            "--wal",
             "file:" + newQueue.toAbsolutePath(),
             "-cp",
             "modules/itt-apps/target/classes",
@@ -407,7 +407,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
     // Verify messages were written to the queue
     int messageCount = ChronicleLogUtil.countMessages(newQueue);
     assertThat(
-        "Chronicle queue should contain messages created via -l option",
+        "Chronicle queue should contain messages created via --wal option",
         messageCount > 0,
         is(true));
   }
@@ -437,7 +437,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
             null, // No PAL_DIRECTORY
             "--chronicle-base-dir",
             tempDir.toAbsolutePath().toString(),
-            "-l",
+            "--wal",
             "file:" + relativeName, // Relative path (no leading slash)
             "-cp",
             "modules/itt-apps/target/classes",

@@ -13,10 +13,17 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -38,14 +45,14 @@ public class RemoveIT extends AbstractCliIT {
   /** Peer process launched for testing, or null if not launched. */
   private Process peerProcess;
 
-  /**
-   * Sets up test environment before each test.
-   *
-   * @throws Exception if setup fails
-   */
+  /** List of Chronicle queue directories created during tests that need cleanup. */
+  private List<Path> chronicleDirectoriesToCleanup;
+
+  /** Sets up test environment before each test. */
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     peerProcess = null;
+    chronicleDirectoriesToCleanup = new ArrayList<>();
   }
 
   /**
@@ -59,6 +66,45 @@ public class RemoveIT extends AbstractCliIT {
       stopPeer(peerProcess);
       peerProcess = null;
     }
+
+    // Clean up Chronicle queue directories created during the test
+    for (Path chronicleDir : chronicleDirectoriesToCleanup) {
+      if (chronicleDir != null && Files.exists(chronicleDir)) {
+        try (Stream<Path> files = Files.walk(chronicleDir)) {
+          files
+              .sorted(Comparator.reverseOrder())
+              .forEach(
+                  path -> {
+                    try {
+                      Files.delete(path);
+                    } catch (IOException e) {
+                      logger.warn("Failed to delete Chronicle queue file: {}", path, e);
+                    }
+                  });
+        } catch (IOException e) {
+          logger.warn("Failed to clean up Chronicle queue directory: {}", chronicleDir, e);
+        }
+      }
+    }
+    chronicleDirectoriesToCleanup.clear();
+  }
+
+  /**
+   * Tracks a Chronicle queue directory for cleanup after the test.
+   *
+   * <p>The Chronicle queue will be created in PAL_HOME (where the peer process runs), so we need to
+   * construct the full path using PAL_HOME.
+   *
+   * @param queueName the name of the Chronicle queue directory (relative to PAL_HOME)
+   */
+  private void trackChronicleDirectory(String queueName) {
+    String palHome = System.getenv("PAL_HOME");
+    if (palHome != null) {
+      chronicleDirectoriesToCleanup.add(Paths.get(palHome, queueName));
+    } else {
+      // Fallback to current directory if PAL_HOME is not set
+      chronicleDirectoriesToCleanup.add(Paths.get(queueName));
+    }
   }
 
   /**
@@ -71,16 +117,15 @@ public class RemoveIT extends AbstractCliIT {
   @Test
   public void testRemovePeer_unregistersPeer() throws Exception {
     String palDirectory = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
 
     // Launch a peer
     String peerName = "test-peer-remove-" + generateId();
+    UUID peerId = UUID.randomUUID();
     peerProcess =
         launchTransientPeer(
+            peerId,
             "-d",
             palDirectory,
-            "-k",
-            kafkaServers,
             "-n",
             peerName,
             "--zmq-rpc",
@@ -88,18 +133,38 @@ public class RemoveIT extends AbstractCliIT {
             "-cp",
             getIttAppsClasspath());
 
-    // First, list to get the peer UUID
+    // Give peer a moment to fully register with its lease
+    Thread.sleep(1000);
+
+    // Verify peer is registered and alive
     AbstractCliIT.CliProcessResult listResult = runLs("-d", palDirectory, "-P");
     assertEquals("Expected successful list", 0, listResult.exitCode());
     assertThat("Expected peer in listing", listResult.stdout(), containsString(peerName));
 
-    // Stop the peer before removing (peers should be stopped before removal)
+    // Try to remove the live peer without --force - should fail
+    AbstractCliIT.CliProcessResult removeWithoutForce = runRm("-d", palDirectory, "-P", peerName);
+    assertTrue(
+        "Expected removal to fail for live peer without --force",
+        removeWithoutForce.exitCode() != 0);
+    assertThat(
+        "Expected error message about active lease",
+        removeWithoutForce.stdout(),
+        containsString("active lease"));
+
+    // Verify peer is still listed (wasn't removed)
+    AbstractCliIT.CliProcessResult listAfterFailedRemove = runLs("-d", palDirectory, "-P");
+    assertEquals("Expected successful list", 0, listAfterFailedRemove.exitCode());
+    assertThat(
+        "Expected peer still in listing", listAfterFailedRemove.stdout(), containsString(peerName));
+
+    // Now remove with --force - should succeed
+    AbstractCliIT.CliProcessResult removeWithForce =
+        runRm("-d", palDirectory, "-P", peerName, "--force");
+    assertEquals("Expected successful removal with --force", 0, removeWithForce.exitCode());
+
+    // Stop the peer process
     stopPeer(peerProcess);
     peerProcess = null;
-
-    // Remove the peer by name
-    AbstractCliIT.CliProcessResult removeResult = runRm("-d", palDirectory, "-P", peerName);
-    assertEquals("Expected successful removal", 0, removeResult.exitCode());
 
     // Verify peer is no longer listed
     AbstractCliIT.CliProcessResult listAfterRemove = runLs("-d", palDirectory, "-P");
@@ -124,31 +189,38 @@ public class RemoveIT extends AbstractCliIT {
 
     // Launch a peer with a WAL to create a Kafka topic
     String walName = "test-wal-remove-" + generateId();
+    UUID peerId = UUID.randomUUID();
+
+    // we need to run something for messages to be written to the WAL, which actually
+    // creates the Log in Kafka
+    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+
     peerProcess =
         launchTransientPeer(
+            peerId,
             "-d",
             palDirectory,
             "-k",
             kafkaServers,
             "--wal",
             walName,
-            "--zmq-rpc",
-            "auto",
             "-cp",
-            getIttAppsClasspath());
+            getIttAppsClasspath(),
+            classToRun);
+
+    // Wait for the process to complete and create the log
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
+    peerProcess = null;
 
     // Verify log exists
     AbstractCliIT.CliProcessResult listResult = runLs("-d", palDirectory, "-L");
     assertEquals("Expected successful list", 0, listResult.exitCode());
     assertThat("Expected log in listing", listResult.stdout(), containsString(walName));
 
-    // Stop peer before removing log
-    stopPeer(peerProcess);
-    peerProcess = null;
-
-    // Remove the log
+    // Remove the log with --force flag to skip confirmation prompts
     AbstractCliIT.CliProcessResult removeResult =
-        runRm("-d", palDirectory, "-k", kafkaServers, "-L", walName);
+        runRm("-d", palDirectory, "-L", walName, "--force");
     assertEquals("Expected successful removal", 0, removeResult.exitCode());
 
     // Verify log is no longer listed
@@ -173,30 +245,43 @@ public class RemoveIT extends AbstractCliIT {
 
     // Create a Chronicle WAL
     String walName = "test-chronicle-remove-" + generateId();
+    trackChronicleDirectory(walName);
     String walPath = "file:" + walName;
+
+    UUID peerId = UUID.randomUUID();
+
+    // we need to run something for messages to be written to the WAL, which actually
+    // creates the Chronicle queue files
+    String classToRun = "com.quasient.pal.apps.rpc.Methods";
 
     peerProcess =
         launchTransientPeer(
-            "-d", palDirectory, "--wal", walPath, "--rpc", "auto", "-cp", getIttAppsClasspath());
+            peerId, "-d", palDirectory, "--wal", walPath, "-cp", getIttAppsClasspath(), classToRun);
+
+    // Wait for the process to complete and create the log
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
+    peerProcess = null;
 
     // Verify log exists in directory
     AbstractCliIT.CliProcessResult listResult = runLs("-d", palDirectory, "-L");
     assertEquals("Expected successful list", 0, listResult.exitCode());
     assertThat("Expected log in listing", listResult.stdout(), containsString(walName));
 
-    // Get base directory for Chronicle logs
+    // Chronicle queues are created in PAL_HOME by default when peers are launched via pal.sh
+    // (unless wal.chronicle.base_dir is configured)
     String palHome = System.getenv("PAL_HOME");
-    Path chroniclePath = Paths.get(palHome, "wal", walName);
+    if (palHome == null) {
+      palHome = System.getProperty("user.dir");
+    }
+    Path chroniclePath = Paths.get(palHome, walName);
 
     // Verify Chronicle queue files exist
     assertThat("Expected Chronicle queue directory to exist", Files.exists(chroniclePath));
 
-    // Stop peer before removing log
-    stopPeer(peerProcess);
-    peerProcess = null;
-
-    // Remove the log
-    AbstractCliIT.CliProcessResult removeResult = runRm("-d", palDirectory, "-L", walName);
+    // Remove the log with --force flag to skip confirmation prompts
+    AbstractCliIT.CliProcessResult removeResult =
+        runRm("-d", palDirectory, "-L", walName, "--force");
     assertEquals("Expected successful removal", 0, removeResult.exitCode());
 
     // Verify log is no longer listed
@@ -224,54 +309,60 @@ public class RemoveIT extends AbstractCliIT {
     String kafkaServers = getKafkaServers();
 
     // Create multiple logs with the same prefix
-    // Note: We keep peers running so logs stay registered in directory
     String prefix = "test-prefix-" + generateId();
     String walName1 = prefix + "-log1";
     String walName2 = prefix + "-log2";
 
+    // we need to run something for messages to be written to the WAL, which actually
+    // creates the Log in Kafka
+    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+
+    UUID peerId1 = UUID.randomUUID();
     Process peer1 =
         launchTransientPeer(
+            peerId1,
             "-d",
             palDirectory,
             "-k",
             kafkaServers,
             "--wal",
             walName1,
-            "--zmq-rpc",
-            "auto",
             "-cp",
-            getIttAppsClasspath());
+            getIttAppsClasspath(),
+            classToRun);
 
+    // Wait for first peer to complete and create its log
+    int peer1ExitCode = joinPeer(peer1, 10);
+    assertEquals("Expected successful peer1 exit code", 0, peer1ExitCode);
+
+    UUID peerId2 = UUID.randomUUID();
     Process peer2 =
         launchTransientPeer(
+            peerId2,
             "-d",
             palDirectory,
             "-k",
             kafkaServers,
             "--wal",
             walName2,
-            "--zmq-rpc",
-            "auto",
             "-cp",
-            getIttAppsClasspath());
+            getIttAppsClasspath(),
+            classToRun);
 
-    // Give peers a moment to fully register their logs in the directory
-    Thread.sleep(500);
+    // Wait for second peer to complete and create its log
+    int peer2ExitCode = joinPeer(peer2, 10);
+    assertEquals("Expected successful peer2 exit code", 0, peer2ExitCode);
+    peerProcess = null;
 
-    // Verify both logs exist (while peers are running)
+    // Verify both logs exist
     AbstractCliIT.CliProcessResult listResult = runLs("-d", palDirectory, "-L");
     assertEquals("Expected successful list", 0, listResult.exitCode());
     assertThat("Expected log1 in listing", listResult.stdout(), containsString(walName1));
     assertThat("Expected log2 in listing", listResult.stdout(), containsString(walName2));
 
-    // Stop peers before removing (logs should remain in Kafka)
-    stopPeer(peer1);
-    stopPeer(peer2);
-    peerProcess = null;
-
-    // Remove logs with prefix (using -a to auto-confirm)
+    // Remove logs with prefix (using --force to skip confirmation prompts)
     AbstractCliIT.CliProcessResult removeResult =
-        runRm("-d", palDirectory, "-k", kafkaServers, "-L", "-s", prefix, "-a");
+        runRm("-d", palDirectory, "-L", "-s", prefix, "--force");
     assertEquals("Expected successful removal", 0, removeResult.exitCode());
 
     // Verify logs are no longer listed
@@ -300,52 +391,75 @@ public class RemoveIT extends AbstractCliIT {
   @Test
   public void testRemovePeers_withAll() throws Exception {
     String palDirectory = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
 
     // Create multiple peers with a unique prefix to avoid interfering with other tests
     String prefix = "test-removeall-" + generateId();
     String peerName1 = prefix + "-peer1";
     String peerName2 = prefix + "-peer2";
 
-    peerProcess =
+    UUID peerId1 = UUID.randomUUID();
+    Process peer1 =
         launchTransientPeer(
+            peerId1,
             "-d",
             palDirectory,
-            "-k",
-            kafkaServers,
             "-n",
             peerName1,
             "--zmq-rpc",
             "auto",
             "-cp",
             getIttAppsClasspath());
-    stopPeer(peerProcess);
 
+    UUID peerId2 = UUID.randomUUID();
     peerProcess =
         launchTransientPeer(
+            peerId2,
             "-d",
             palDirectory,
-            "-k",
-            kafkaServers,
             "-n",
             peerName2,
             "--zmq-rpc",
             "auto",
             "-cp",
             getIttAppsClasspath());
-    stopPeer(peerProcess);
-    peerProcess = null;
 
-    // Verify both peers exist
+    // Give peers a moment to fully register in the directory with their leases
+    Thread.sleep(1000);
+
+    // Verify both peers exist (while they're still running)
     AbstractCliIT.CliProcessResult listResult = runLs("-d", palDirectory, "-P");
     assertEquals("Expected successful list", 0, listResult.exitCode());
     assertThat("Expected peer1 in listing", listResult.stdout(), containsString(peerName1));
     assertThat("Expected peer2 in listing", listResult.stdout(), containsString(peerName2));
 
-    // Remove peers with prefix using -a flag
-    AbstractCliIT.CliProcessResult removeResult =
-        runRm("-d", palDirectory, "-P", "-s", prefix, "-a");
-    assertEquals("Expected successful removal", 0, removeResult.exitCode());
+    // Try to remove live peers without --force - should fail
+    AbstractCliIT.CliProcessResult removeWithoutForce =
+        runRm("-d", palDirectory, "-P", "-s", prefix);
+    assertTrue(
+        "Expected removal to fail for live peers without --force",
+        removeWithoutForce.exitCode() != 0);
+
+    // Verify peers are still listed (weren't removed)
+    AbstractCliIT.CliProcessResult listAfterFailedRemove = runLs("-d", palDirectory, "-P");
+    assertEquals("Expected successful list", 0, listAfterFailedRemove.exitCode());
+    assertThat(
+        "Expected peer1 still in listing",
+        listAfterFailedRemove.stdout(),
+        containsString(peerName1));
+    assertThat(
+        "Expected peer2 still in listing",
+        listAfterFailedRemove.stdout(),
+        containsString(peerName2));
+
+    // Now remove with --force - should succeed
+    AbstractCliIT.CliProcessResult removeWithForce =
+        runRm("-d", palDirectory, "-P", "-s", prefix, "--force");
+    assertEquals("Expected successful removal with --force", 0, removeWithForce.exitCode());
+
+    // Stop the peer processes
+    stopPeer(peer1);
+    stopPeer(peerProcess);
+    peerProcess = null;
 
     // Verify peers are no longer listed
     AbstractCliIT.CliProcessResult listAfterRemove = runLs("-d", palDirectory, "-P");

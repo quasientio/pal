@@ -12,6 +12,15 @@ package com.quasient.pal.cli;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -33,14 +42,14 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
   /** Peer process launched for testing, or null if not launched. */
   private Process peerProcess;
 
-  /**
-   * Sets up test environment before each test.
-   *
-   * @throws Exception if setup fails
-   */
+  /** List of Chronicle queue directories created during tests that need cleanup. */
+  private List<Path> chronicleDirectoriesToCleanup;
+
+  /** Sets up test environment before each test. */
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     peerProcess = null;
+    chronicleDirectoriesToCleanup = new ArrayList<>();
   }
 
   /**
@@ -53,6 +62,52 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
     if (peerProcess != null) {
       stopPeer(peerProcess);
       peerProcess = null;
+    }
+
+    // Clean up Chronicle queue directories created during the test
+    logger.info("Cleaning up {} Chronicle queue directories", chronicleDirectoriesToCleanup.size());
+    for (Path chronicleDir : chronicleDirectoriesToCleanup) {
+      if (chronicleDir != null && Files.exists(chronicleDir)) {
+        logger.info("Deleting Chronicle queue directory: {}", chronicleDir);
+        try (Stream<Path> files = Files.walk(chronicleDir)) {
+          files
+              .sorted(Comparator.reverseOrder())
+              .forEach(
+                  path -> {
+                    try {
+                      Files.delete(path);
+                    } catch (IOException e) {
+                      logger.warn("Failed to delete Chronicle queue file: {}", path, e);
+                    }
+                  });
+          logger.info("Successfully deleted Chronicle queue directory: {}", chronicleDir);
+        } catch (IOException e) {
+          logger.warn("Failed to clean up Chronicle queue directory: {}", chronicleDir, e);
+        }
+      } else {
+        logger.debug(
+            "Chronicle queue directory does not exist or is null: {}",
+            chronicleDir != null ? chronicleDir : "null");
+      }
+    }
+    chronicleDirectoriesToCleanup.clear();
+  }
+
+  /**
+   * Tracks a Chronicle queue directory for cleanup after the test.
+   *
+   * <p>The Chronicle queue will be created in PAL_HOME (where the peer process runs), so we need to
+   * construct the full path using PAL_HOME.
+   *
+   * @param queueName the name of the Chronicle queue directory (relative to PAL_HOME)
+   */
+  private void trackChronicleDirectory(String queueName) {
+    String palHome = System.getenv("PAL_HOME");
+    if (palHome != null) {
+      chronicleDirectoriesToCleanup.add(Paths.get(palHome, queueName));
+    } else {
+      // Fallback to current directory if PAL_HOME is not set
+      chronicleDirectoriesToCleanup.add(Paths.get(queueName));
     }
   }
 
@@ -71,8 +126,15 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     // Create a WAL by launching a peer - this will write some messages to the WAL
     String walName = "test-print-kafka-full-" + generateId();
+    UUID peerId = UUID.randomUUID();
+
+    // we need to run something for messages to be written to the WAL, which actually
+    // creates the Log in Kafka
+    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+
     peerProcess =
         launchTransientPeer(
+            peerId,
             "-d",
             palDirectory,
             "-k",
@@ -82,19 +144,21 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
             "--zmq-rpc",
             "auto",
             "-cp",
-            getIttAppsClasspath());
+            getIttAppsClasspath(),
+            classToRun);
 
-    // Stop peer to ensure messages are flushed
-    stopPeer(peerProcess);
+    // Wait for the process to complete and create the log
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
     peerProcess = null;
 
     // Print messages from the log in FULL format
     AbstractCliIT.CliProcessResult printResult =
-        runPrint("-d", palDirectory, "-k", kafkaServers, "-l", walName, "--output-format", "FULL");
+        runPrint("-d", palDirectory, "-l", walName, "--output-format", "FULL");
 
     assertEquals("Expected successful print", 0, printResult.exitCode());
     // Verify output is not empty (peer wrote some messages)
-    assertThat("Expected non-empty output", printResult.stdout().length() > 0);
+    assertThat("Expected non-empty output", !printResult.stdout().isEmpty());
 
     logger.info("Successfully printed messages from Kafka log in FULL format");
   }
@@ -111,8 +175,15 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     // Create a WAL by launching a peer
     String walName = "test-print-kafka-json-" + generateId();
+    UUID peerId = UUID.randomUUID();
+
+    // we need to run something for messages to be written to the WAL, which actually
+    // creates the Log in Kafka
+    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+
     peerProcess =
         launchTransientPeer(
+            peerId,
             "-d",
             palDirectory,
             "-k",
@@ -122,18 +193,21 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
             "--zmq-rpc",
             "auto",
             "-cp",
-            getIttAppsClasspath());
+            getIttAppsClasspath(),
+            classToRun);
 
-    stopPeer(peerProcess);
+    // Wait for the process to complete and create the log
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
     peerProcess = null;
 
     // Print messages in JSON format
     AbstractCliIT.CliProcessResult printResult =
-        runPrint("-d", palDirectory, "-k", kafkaServers, "-l", walName, "--output-format", "JSON");
+        runPrint("-d", palDirectory, "-l", walName, "--output-format", "JSON");
 
     assertEquals("Expected successful print", 0, printResult.exitCode());
     // JSON format should have JSON structure markers
-    assertThat("Expected JSON in output", printResult.stdout().length() > 0);
+    assertThat("Expected JSON in output", !printResult.stdout().isEmpty());
 
     logger.info("Successfully printed messages from Kafka log in JSON format");
   }
@@ -150,8 +224,15 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     // Create a WAL by launching a peer
     String walName = "test-print-kafka-compact-" + generateId();
+    UUID peerId = UUID.randomUUID();
+
+    // we need to run something for messages to be written to the WAL, which actually
+    // creates the Log in Kafka
+    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+
     peerProcess =
         launchTransientPeer(
+            peerId,
             "-d",
             palDirectory,
             "-k",
@@ -161,24 +242,29 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
             "--zmq-rpc",
             "auto",
             "-cp",
-            getIttAppsClasspath());
+            getIttAppsClasspath(),
+            classToRun);
 
-    stopPeer(peerProcess);
+    // Wait for the process to complete and create the log
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
     peerProcess = null;
 
     // Print messages in COMPACT format
     AbstractCliIT.CliProcessResult printResult =
-        runPrint(
-            "-d", palDirectory, "-k", kafkaServers, "-l", walName, "--output-format", "COMPACT");
+        runPrint("-d", palDirectory, "-l", walName, "--output-format", "COMPACT");
 
     assertEquals("Expected successful print", 0, printResult.exitCode());
-    assertThat("Expected content in output", printResult.stdout().length() > 0);
+    assertThat("Expected content in output", !printResult.stdout().isEmpty());
 
     logger.info("Successfully printed messages from Kafka log in COMPACT format");
   }
 
   /**
    * Tests that `pal print` can print messages from a Chronicle log in FULL format.
+   *
+   * <p>Creates a Chronicle WAL by launching a peer, which causes the peer to write internal
+   * messages to the WAL. We then verify we can print those messages.
    *
    * @throws Exception if test execution fails
    */
@@ -188,13 +274,31 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     // Create a Chronicle WAL by launching a peer
     String walName = "test-print-chronicle-" + generateId();
+    trackChronicleDirectory(walName);
     String walPath = "file:" + walName;
+
+    UUID peerId = UUID.randomUUID();
+
+    // we need to run something for messages to be written to the WAL, which actually
+    // creates the Chronicle queue files
+    String classToRun = "com.quasient.pal.apps.rpc.Methods";
 
     peerProcess =
         launchTransientPeer(
-            "-d", palDirectory, "--wal", walPath, "--rpc", "auto", "-cp", getIttAppsClasspath());
+            peerId,
+            "-d",
+            palDirectory,
+            "--wal",
+            walPath,
+            "--zmq-rpc",
+            "auto",
+            "-cp",
+            getIttAppsClasspath(),
+            classToRun);
 
-    stopPeer(peerProcess);
+    // Wait for the process to complete and create the log
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
     peerProcess = null;
 
     // Print messages from Chronicle log
@@ -202,9 +306,106 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
         runPrint("-d", palDirectory, "-l", walName, "--output-format", "FULL");
 
     assertEquals("Expected successful print", 0, printResult.exitCode());
-    assertThat("Expected content in output", printResult.stdout().length() > 0);
+    assertThat("Expected content in output", !printResult.stdout().isEmpty());
 
-    logger.info("Successfully printed messages from Chronicle log");
+    logger.info("Successfully printed messages from Chronicle log in FULL format");
+  }
+
+  /**
+   * Tests that `pal print` can print messages from a Chronicle log in COMPACT format.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testPrint_chronicleLog_compactFormat() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+
+    // Create a Chronicle WAL by launching a peer
+    String walName = "test-print-chronicle-compact-" + generateId();
+    trackChronicleDirectory(walName);
+    String walPath = "file:" + walName;
+
+    UUID peerId = UUID.randomUUID();
+
+    // we need to run something for messages to be written to the WAL, which actually
+    // creates the Chronicle queue files
+    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+
+    peerProcess =
+        launchTransientPeer(
+            peerId,
+            "-d",
+            palDirectory,
+            "--wal",
+            walPath,
+            "--zmq-rpc",
+            "auto",
+            "-cp",
+            getIttAppsClasspath(),
+            classToRun);
+
+    // Wait for the process to complete and create the log
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
+    peerProcess = null;
+
+    // Print messages in COMPACT format
+    AbstractCliIT.CliProcessResult printResult =
+        runPrint("-d", palDirectory, "-l", walName, "--output-format", "COMPACT");
+
+    assertEquals("Expected successful print", 0, printResult.exitCode());
+    assertThat("Expected content in output", !printResult.stdout().isEmpty());
+
+    logger.info("Successfully printed messages from Chronicle log in COMPACT format");
+  }
+
+  /**
+   * Tests that `pal print` can print messages from a Chronicle log in JSON format.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testPrint_chronicleLog_jsonFormat() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+
+    // Create a Chronicle WAL by launching a peer
+    String walName = "test-print-chronicle-json-" + generateId();
+    trackChronicleDirectory(walName);
+    String walPath = "file:" + walName;
+
+    UUID peerId = UUID.randomUUID();
+
+    // we need to run something for messages to be written to the WAL, which actually
+    // creates the Chronicle queue files
+    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+
+    peerProcess =
+        launchTransientPeer(
+            peerId,
+            "-d",
+            palDirectory,
+            "--wal",
+            walPath,
+            "--zmq-rpc",
+            "auto",
+            "-cp",
+            getIttAppsClasspath(),
+            classToRun);
+
+    // Wait for the process to complete and create the log
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
+    peerProcess = null;
+
+    // Print messages in JSON format
+    AbstractCliIT.CliProcessResult printResult =
+        runPrint("-d", palDirectory, "-l", walName, "--output-format", "JSON");
+
+    assertEquals("Expected successful print", 0, printResult.exitCode());
+    // JSON format should have JSON structure markers
+    assertThat("Expected JSON in output", !printResult.stdout().isEmpty());
+
+    logger.info("Successfully printed messages from Chronicle log in JSON format");
   }
 
   /**
@@ -222,8 +423,15 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     // Create a WAL with some messages
     String walName = "test-print-offset-" + generateId();
+    UUID peerId = UUID.randomUUID();
+
+    // we need to run something for messages to be written to the WAL, which actually
+    // creates the Log in Kafka
+    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+
     peerProcess =
         launchTransientPeer(
+            peerId,
             "-d",
             palDirectory,
             "-k",
@@ -233,27 +441,20 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
             "--zmq-rpc",
             "auto",
             "-cp",
-            getIttAppsClasspath());
+            getIttAppsClasspath(),
+            classToRun);
 
-    stopPeer(peerProcess);
+    // Wait for the process to complete and create the log
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
     peerProcess = null;
 
     // Print starting from offset 0
     AbstractCliIT.CliProcessResult printResult =
-        runPrint(
-            "-d",
-            palDirectory,
-            "-k",
-            kafkaServers,
-            "-l",
-            walName,
-            "-o",
-            "0",
-            "--output-format",
-            "FULL");
+        runPrint("-d", palDirectory, "-l", walName, "-o", "0", "--output-format", "FULL");
 
     assertEquals("Expected successful print with offset", 0, printResult.exitCode());
-    assertThat("Expected content in output", printResult.stdout().length() > 0);
+    assertThat("Expected content in output", !printResult.stdout().isEmpty());
 
     logger.info("Successfully printed messages from specified offset");
   }
@@ -272,8 +473,15 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     // Create a WAL
     String walName = "test-print-filter-" + generateId();
+    UUID peerId = UUID.randomUUID();
+
+    // we need to run something for messages to be written to the WAL, which actually
+    // creates the Log in Kafka
+    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+
     peerProcess =
         launchTransientPeer(
+            peerId,
             "-d",
             palDirectory,
             "-k",
@@ -283,9 +491,12 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
             "--zmq-rpc",
             "auto",
             "-cp",
-            getIttAppsClasspath());
+            getIttAppsClasspath(),
+            classToRun);
 
-    stopPeer(peerProcess);
+    // Wait for the process to complete and create the log
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
     peerProcess = null;
 
     // Print with message type filter
@@ -293,8 +504,6 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
         runPrint(
             "-d",
             palDirectory,
-            "-k",
-            kafkaServers,
             "-l",
             walName,
             "--types",
@@ -306,6 +515,116 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
     assertEquals("Expected successful print (may have no output)", 0, printResult.exitCode());
 
     logger.info("Successfully executed print with message type filter");
+  }
+
+  /**
+   * Tests that `pal print -o` works with Chronicle logs.
+   *
+   * <p>Note: This test verifies the command accepts the -o parameter and runs successfully with
+   * Chronicle logs. The offset for Chronicle refers to the queue index.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testPrint_chronicleLog_withStartOffset() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+
+    // Create a Chronicle WAL with some messages
+    String walName = "test-print-chronicle-offset-" + generateId();
+    trackChronicleDirectory(walName);
+    String walPath = "file:" + walName;
+
+    UUID peerId = UUID.randomUUID();
+
+    // we need to run something for messages to be written to the WAL, which actually
+    // creates the Chronicle queue files
+    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+
+    peerProcess =
+        launchTransientPeer(
+            peerId,
+            "-d",
+            palDirectory,
+            "--wal",
+            walPath,
+            "--zmq-rpc",
+            "auto",
+            "-cp",
+            getIttAppsClasspath(),
+            classToRun);
+
+    // Wait for the process to complete and create the log
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
+    peerProcess = null;
+
+    // Print starting from offset 0
+    AbstractCliIT.CliProcessResult printResult =
+        runPrint("-d", palDirectory, "-l", walName, "-o", "0", "--output-format", "FULL");
+
+    assertEquals("Expected successful print with offset", 0, printResult.exitCode());
+    assertThat("Expected content in output", !printResult.stdout().isEmpty());
+
+    logger.info("Successfully printed messages from Chronicle log with start offset");
+  }
+
+  /**
+   * Tests that `pal print` can filter messages by type from Chronicle logs.
+   *
+   * <p>This test verifies the --types filter parameter is accepted and the command runs with
+   * Chronicle logs.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testPrint_chronicleLog_filterByMessageType() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+
+    // Create a Chronicle WAL
+    String walName = "test-print-chronicle-filter-" + generateId();
+    trackChronicleDirectory(walName);
+    String walPath = "file:" + walName;
+
+    UUID peerId = UUID.randomUUID();
+
+    // we need to run something for messages to be written to the WAL, which actually
+    // creates the Chronicle queue files
+    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+
+    peerProcess =
+        launchTransientPeer(
+            peerId,
+            "-d",
+            palDirectory,
+            "--wal",
+            walPath,
+            "--zmq-rpc",
+            "auto",
+            "-cp",
+            getIttAppsClasspath(),
+            classToRun);
+
+    // Wait for the process to complete and create the log
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
+    peerProcess = null;
+
+    // Print with message type filter
+    AbstractCliIT.CliProcessResult printResult =
+        runPrint(
+            "-d",
+            palDirectory,
+            "-l",
+            walName,
+            "--types",
+            "CLASS_METHOD",
+            "--output-format",
+            "FULL");
+
+    // Command should execute successfully even if no CLASS_METHOD messages exist
+    assertEquals("Expected successful print (may have no output)", 0, printResult.exitCode());
+
+    logger.info("Successfully executed print with message type filter on Chronicle log");
   }
 
   /**

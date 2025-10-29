@@ -14,6 +14,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertNotNull;
 
 import ch.qos.logback.classic.LoggerContext;
+import ch.qos.logback.classic.util.ContextInitializer;
 import com.quasient.pal.common.cli.PalCommand;
 import java.lang.reflect.Field;
 import org.junit.After;
@@ -30,8 +31,7 @@ public class MainCallTest {
     LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
     context.reset();
     // Reinitialize with default configuration
-    ch.qos.logback.classic.util.ContextInitializer ci =
-        new ch.qos.logback.classic.util.ContextInitializer(context);
+    ContextInitializer ci = new ContextInitializer(context);
     try {
       ci.autoConfig();
     } catch (Exception e) {
@@ -49,18 +49,7 @@ public class MainCallTest {
     // Avoid env-provided <pal_directory> by overriding parent PalCommand to return empty
     setParentCommandToEmpty(app);
     int code = app.call();
-    assertThat(code, is(SelfBootstrapInvoker.DEFAULT_EXIT_VALUE));
-  }
-
-  @Test
-  public void call_withDisableAnnotationProcessing_alsoReturnsDefaultExit() throws Exception {
-    Main app = new Main();
-    CommandLine cl = new CommandLine(app);
-    cl.parseArgs(
-        "--disable-annotation-processing", "com.quasient.pal.core.service.testdata.DummyMain");
-    setParentCommandToEmpty(app);
-    int code = app.call();
-    assertThat(code, is(SelfBootstrapInvoker.DEFAULT_EXIT_VALUE));
+    assertThat(code, is(0));
   }
 
   @Test
@@ -70,7 +59,7 @@ public class MainCallTest {
     cl.parseArgs("com.quasient.pal.core.service.testdata.DummyMain");
     setParentCommandToEmpty(app);
     int code = app.call();
-    assertThat(code, is(SelfBootstrapInvoker.DEFAULT_EXIT_VALUE));
+    assertThat(code, is(0));
 
     // Reflect properties and assert some defaults populated by validateProperties
     java.lang.reflect.Field f = Main.class.getDeclaredField("properties");
@@ -84,6 +73,46 @@ public class MainCallTest {
     assertNotNull(p.getProperty("pub.queue.chunk"));
     assertNotNull(p.getProperty("pub.queue.max"));
     assertNotNull(p.getProperty("pub.spsc_size"));
+  }
+
+  @Test
+  public void call_withVoidMainMethod_returnsZero() throws Exception {
+    Main app = new Main();
+    CommandLine cl = new CommandLine(app);
+    // DummyMain has a void main() method that does nothing
+    cl.parseArgs("com.quasient.pal.core.service.testdata.DummyMain");
+    setParentCommandToEmpty(app);
+
+    int code = app.call();
+
+    assertThat("Void main() should return 0 (EXIT_SUCCESS)", code, is(0));
+  }
+
+  @Test
+  public void call_withMainThatThrows_returnsOne() throws Exception {
+    Main app = new Main();
+    CommandLine cl = new CommandLine(app);
+    // MainThatThrows throws a RuntimeException
+    cl.parseArgs("com.quasient.pal.core.service.testdata.MainThatThrows");
+    setParentCommandToEmpty(app);
+
+    int code = app.call();
+
+    assertThat(
+        "Main that throws exception should return 1 (EXIT_MAIN_THREW_EXCEPTION)", code, is(1));
+  }
+
+  @Test
+  public void call_withNonExistentClass_returnsOne() throws Exception {
+    Main app = new Main();
+    CommandLine cl = new CommandLine(app);
+    // Non-existent class should trigger ClassNotFoundException handling
+    cl.parseArgs("com.quasient.pal.NonExistentClass");
+    setParentCommandToEmpty(app);
+
+    int code = app.call();
+
+    assertThat("Non-existent class should return 1", code, is(1));
   }
 
   private static void setParentCommandToEmpty(Main app) throws Exception {

@@ -1096,14 +1096,28 @@ public class PalDirectory implements AutoCloseable {
    * Creates a new log in the directory. If the log already exists (key = name), creation is
    * skipped.
    *
+   * <p>For Kafka logs, bootstrap servers must be provided. For Chronicle logs, bootstrap servers
+   * should be null or empty.
+   *
    * @param logInfo the information of the log to create
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
+   * @throws IllegalArgumentException if a Kafka log is missing bootstrap servers or a Chronicle log
+   *     has bootstrap servers set
    */
   public void createLog(LogInfo logInfo) throws ExecutionException, InterruptedException {
     Objects.requireNonNull(logInfo, "logInfo cannot be null");
-    Objects.requireNonNull(
-        logInfo.getBootstrapServers(), "logInfo.bootstrapServers cannot be null");
+
+    // Validate bootstrapServers based on log type
+    if (logInfo.getLogType() == LogInfo.LogType.KAFKA) {
+      Objects.requireNonNull(
+          logInfo.getBootstrapServers(), "logInfo.bootstrapServers cannot be null for Kafka logs");
+    } else if (logInfo.getLogType() == LogInfo.LogType.CHRONICLE) {
+      if (logInfo.getBootstrapServers() != null && !logInfo.getBootstrapServers().isEmpty()) {
+        throw new IllegalArgumentException(
+            "logInfo.bootstrapServers must be null or empty for Chronicle logs");
+      }
+    }
 
     if (logInfo.getUuid() == null) {
       logInfo.setUuid(UUID.randomUUID());
@@ -1748,6 +1762,35 @@ public class PalDirectory implements AutoCloseable {
     }
     // cache hit
     return leaseId;
+  }
+
+  /**
+   * Checks if a peer has an active (non-expired) lease. A peer with an active lease is considered
+   * "alive" and should not be removed under normal circumstances.
+   *
+   * @param peerUuid the UUID of the peer to check
+   * @return true if the peer has an active lease with TTL &gt; 0, false otherwise
+   * @throws ExecutionException on etcd errors
+   * @throws InterruptedException if the thread is interrupted while waiting
+   */
+  public boolean isPeerAlive(UUID peerUuid) throws ExecutionException, InterruptedException {
+    // First check if the peer's /state key still exists with a lease
+    GetResponse resp = kvClient.get(peerStateKey(peerUuid)).get();
+    if (resp.getCount() == 0) {
+      // No /state key means peer doesn't exist or has been removed
+      return false;
+    }
+
+    long leaseId = resp.getKvs().get(0).getLease();
+    if (leaseId == 0) {
+      // No lease attached means peer is not alive
+      return false;
+    }
+
+    // The peer has a lease attached; verify it's still active
+    // If the lease expired, etcd would have already deleted the /state key,
+    // so if we got here, the lease is active
+    return true;
   }
 
   // </editor-fold>

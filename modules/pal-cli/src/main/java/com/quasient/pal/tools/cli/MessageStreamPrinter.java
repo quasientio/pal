@@ -493,7 +493,15 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
 
       // Position the tailer based on offset parameter
       if (offset != null) {
-        if (offset <= lastIndex) {
+        if (offset < firstIndex) {
+          // Offset is before the first available index, so start from beginning
+          if (verbose) {
+            System.out.printf(
+                "Requested offset %d is before first index %d, starting from first index%n",
+                offset, firstIndex);
+          }
+          tailer.toStart();
+        } else if (offset <= lastIndex) {
           // Seek to the given offset if it exists
           if (verbose) {
             System.out.printf("Seeking to index %d%n", offset);
@@ -559,7 +567,7 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
           }
         }
 
-        // If offset was specified and we've printed it, we're done
+        // If offset was specified, and we've printed it, we're done
         if (offset != null && currentIndex >= offset) {
           break;
         }

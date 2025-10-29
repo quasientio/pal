@@ -27,6 +27,7 @@ import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class CallerTest {
@@ -86,11 +87,12 @@ public class CallerTest {
     UUID peer = UUID.randomUUID();
     Class<?> inner = null;
     for (Class<?> cl : Caller.class.getDeclaredClasses()) {
-      if (cl.getSimpleName().equals("MainMethodCallBuilder")) {
+      if (cl.getSimpleName().equals("StaticMethodCallBuilder")) {
         inner = cl;
         break;
       }
     }
+    Assert.assertNotNull(inner);
     Constructor<?> cons =
         inner.getDeclaredConstructor(
             Caller.class, UUID.class, String.class, String.class, List.class);

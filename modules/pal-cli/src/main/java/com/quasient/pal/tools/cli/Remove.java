@@ -85,6 +85,12 @@ public class Remove extends AbstractPalSubcommand {
       description = "delete all")
   private boolean deleteAll;
 
+  /** Flag indicating whether to skip confirmation prompts. */
+  @Option(
+      names = {"--force", "-f"},
+      description = "skip confirmation prompts")
+  private boolean force;
+
   /** Flag indicating whether the help message was requested. */
   @SuppressWarnings("unused")
   @Option(
@@ -252,7 +258,7 @@ public class Remove extends AbstractPalSubcommand {
       return;
     }
     // request confirmation
-    if (matchingLogs.size() > 1) {
+    if (matchingLogs.size() > 1 && !force) {
       String answer = null;
       while (answer == null || !(answer.equalsIgnoreCase("y") || answer.equalsIgnoreCase("n"))) {
         out.printf(
@@ -291,6 +297,15 @@ public class Remove extends AbstractPalSubcommand {
    */
   private void deletePeer(UUID peerUuid) {
     try {
+      // Check if peer has an active lease (is alive)
+      boolean isAlive = getPalDirectory().isPeerAlive(peerUuid);
+      if (isAlive && !force) {
+        out.printf(
+            "Cannot remove peer %s: peer is alive (has active lease). Use --force to remove anyway.%n",
+            peerUuid);
+        errors++;
+        return;
+      }
       getPalDirectory().deletePeer(peerUuid);
     } catch (Exception e) {
       errors++;
@@ -311,7 +326,7 @@ public class Remove extends AbstractPalSubcommand {
             .collect(Collectors.toSet());
 
     // request confirmation
-    if (matchingPeers.size() > 1) {
+    if (matchingPeers.size() > 1 && !force) {
       String answer = null;
       while (answer == null || !(answer.equalsIgnoreCase("y") || answer.equalsIgnoreCase("n"))) {
         out.printf(
@@ -328,6 +343,15 @@ public class Remove extends AbstractPalSubcommand {
     // delete
     for (PeerInfo peer : matchingPeers) {
       try {
+        // Check if peer has an active lease (is alive)
+        boolean isAlive = getPalDirectory().isPeerAlive(peer.getUuid());
+        if (isAlive && !force) {
+          out.printf(
+              "Cannot remove peer '%s' (%s): peer is alive (has active lease). Use --force to remove anyway.%n",
+              peer.getName() != null ? peer.getName() : peer.getUuid(), peer.getUuid());
+          errors++;
+          continue;
+        }
         getPalDirectory().deletePeer(peer.getUuid());
       } catch (Exception e) {
         logger.error("Error unregistering peer UUID '{}' from directory", peer.getUuid(), e);

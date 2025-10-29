@@ -177,6 +177,51 @@ public class LogConfigurator {
   }
 
   /**
+   * Creates a LogInfo instance for a Chronicle queue without registering it in PalDirectory.
+   *
+   * <p>This is used when running without a directory (noPaldir=true).
+   *
+   * @param queuePath the path to the Chronicle queue
+   * @return a new LogInfo instance configured for Chronicle queue
+   */
+  private LogInfo createChronicleLogInfo(String queuePath) {
+    LogInfo logInfo = new LogInfo(queuePath);
+    logInfo.setLogType(LogInfo.LogType.CHRONICLE);
+    logInfo.setUuid(java.util.UUID.randomUUID());
+    return logInfo;
+  }
+
+  /**
+   * Retrieves or registers a Chronicle log with the specified path using the PalDirectory service.
+   *
+   * <p>If the Log entry already exists in the directory, its associated LogInfo is returned.
+   * Otherwise, a new LogInfo is created and registered.
+   *
+   * @param queuePath the path to the Chronicle queue
+   * @return the LogInfo corresponding to the provided Chronicle queue path
+   * @throws Exception if the directory connection fails or Log registration encounters an error
+   */
+  private LogInfo getOrRegisterGivenChronicleLog(String queuePath) throws Exception {
+
+    final PalDirectory palDirectory =
+        injector
+            .getInstance(DirectoryConnectionProvider.class)
+            .get()
+            .orElseThrow(RuntimeException::new);
+    final LogInfo logInfo;
+
+    // register given Chronicle log if not registered
+    if (palDirectory.logExists(queuePath)) {
+      logInfo = palDirectory.getLogInfo(queuePath);
+    } else {
+      logInfo = createChronicleLogInfo(queuePath);
+      palDirectory.createLog(logInfo);
+    }
+
+    return logInfo;
+  }
+
+  /**
    * Initiates reading from the specified source Log starting at the provided offset.
    *
    * <p>Obtains a SourceLogReader instance via dependency injection and begins reading Log entries.
@@ -322,9 +367,10 @@ public class LogConfigurator {
       if (isChronicleLog(sourceLogName)) {
         // Chronicle queue specification
         String queuePath = extractLogName(sourceLogName);
-        sourceLog = new LogInfo(queuePath);
-        sourceLog.setLogType(LogInfo.LogType.CHRONICLE);
-        sourceLog.setUuid(java.util.UUID.randomUUID());
+        sourceLog =
+            noPaldir
+                ? createChronicleLogInfo(queuePath)
+                : getOrRegisterGivenChronicleLog(queuePath);
       } else {
         // Kafka topic
         sourceLog =
@@ -344,9 +390,10 @@ public class LogConfigurator {
       if (isChronicleLog(writeAheadLogName)) {
         // Chronicle queue specification
         String queuePath = extractLogName(writeAheadLogName);
-        writeAheadLog = new LogInfo(queuePath);
-        writeAheadLog.setLogType(LogInfo.LogType.CHRONICLE);
-        writeAheadLog.setUuid(java.util.UUID.randomUUID());
+        writeAheadLog =
+            noPaldir
+                ? createChronicleLogInfo(queuePath)
+                : getOrRegisterGivenChronicleLog(queuePath);
       } else {
         // Kafka topic
         writeAheadLog =

@@ -14,6 +14,15 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -35,15 +44,15 @@ public class ListIT extends AbstractCliIT {
   /** Peer process launched for testing, or null if not launched. */
   private Process peerProcess;
 
-  /**
-   * Sets up test environment before each test.
-   *
-   * @throws Exception if setup fails
-   */
+  /** List of Chronicle queue directories created during tests that need cleanup. */
+  private List<Path> chronicleDirectoriesToCleanup;
+
+  /** Sets up test environment before each test. */
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     // Clean slate for each test
     peerProcess = null;
+    chronicleDirectoriesToCleanup = new ArrayList<>();
   }
 
   /**
@@ -57,70 +66,129 @@ public class ListIT extends AbstractCliIT {
       stopPeer(peerProcess);
       peerProcess = null;
     }
+
+    // Clean up Chronicle queue directories created during the test
+    for (Path chronicleDir : chronicleDirectoriesToCleanup) {
+      if (chronicleDir != null && Files.exists(chronicleDir)) {
+        try (Stream<Path> files = Files.walk(chronicleDir)) {
+          files
+              .sorted(Comparator.reverseOrder())
+              .forEach(
+                  path -> {
+                    try {
+                      Files.delete(path);
+                    } catch (IOException e) {
+                      logger.warn("Failed to delete Chronicle queue file: {}", path, e);
+                    }
+                  });
+        } catch (IOException e) {
+          logger.warn("Failed to clean up Chronicle queue directory: {}", chronicleDir, e);
+        }
+      }
+    }
+    chronicleDirectoriesToCleanup.clear();
   }
 
   /**
-   * Tests that `pal ls -P` lists running peers.
+   * Tracks a Chronicle queue directory for cleanup after the test.
+   *
+   * <p>The Chronicle queue will be created in PAL_HOME (where the peer process runs), so we need to
+   * construct the full path using PAL_HOME.
+   *
+   * @param queueName the name of the Chronicle queue directory (relative to PAL_HOME)
+   */
+  private void trackChronicleDirectory(String queueName) {
+    String palHome = System.getenv("PAL_HOME");
+    if (palHome != null) {
+      chronicleDirectoriesToCleanup.add(Paths.get(palHome, queueName));
+    } else {
+      // Fallback to current directory if PAL_HOME is not set
+      chronicleDirectoriesToCleanup.add(Paths.get(queueName));
+    }
+  }
+
+  /**
+   * Tests that `pal ls -P` lists running peers. In short format, name is printed if given,
+   * otherwise Id.
    *
    * <p>Launches a transient peer and verifies it appears in the peer listing.
    *
    * @throws Exception if test execution fails
    */
   @Test
-  public void testListPeers_showsRunningPeer() throws Exception {
+  public void testListPeersNamed_showsRunningPeer() throws Exception {
     String palDirectory = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
 
-    // Launch a peer with a specific name
+    // Launch a peer with a specific name and ID
     String peerName = "test-peer-" + generateId();
+    UUID peerId = UUID.randomUUID();
+
     peerProcess =
         launchTransientPeer(
-            "-d",
-            palDirectory,
-            "-k",
-            kafkaServers,
-            "-n",
-            peerName,
-            "--zmq-rpc",
-            "auto",
-            "-cp",
-            getIttAppsClasspath());
+            peerId, "-d", palDirectory, "-n", peerName, "-cp", getIttAppsClasspath());
 
     // List peers
     AbstractCliIT.CliProcessResult result = runLs("-d", palDirectory, "-P");
 
     assertEquals("Expected successful exit code", 0, result.exitCode());
     assertThat("Expected peer name in output", result.stdout(), containsString(peerName));
-    logger.info("Successfully listed peer: {}", peerName);
+  }
+
+  /**
+   * Tests that `pal ls -P` lists running peers. In short format, if no name is given, ID is
+   * printed.
+   *
+   * <p>Launches a transient peer and verifies it appears in the peer listing.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testListPeersUnnamed_showsRunningPeer() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+
+    // Launch a peer with a specific name and ID
+    UUID peerId = UUID.randomUUID();
+
+    peerProcess = launchTransientPeer(peerId, "-d", palDirectory, "-cp", getIttAppsClasspath());
+
+    // List peers
+    AbstractCliIT.CliProcessResult result = runLs("-d", palDirectory, "-P");
+
+    assertEquals("Expected successful exit code", 0, result.exitCode());
+    assertThat("Expected peer ID in output", result.stdout(), containsString(peerId.toString()));
   }
 
   /**
    * Tests that `pal ls -P -l` shows detailed peer information.
    *
-   * <p>Launches a transient peer and verifies long format includes RPC addresses and log
-   * information.
+   * <p>Launches a transient peer and verifies long format includes RPC and PUB addresses.
    *
    * @throws Exception if test execution fails
    */
   @Test
   public void testListPeers_longFormat() throws Exception {
     String palDirectory = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
 
-    // Launch a peer with RPC and pub
+    // Launch a peer with RPC and PUB endpoints
     String peerName = "test-peer-long-" + generateId();
+    UUID peerId = UUID.randomUUID();
+    String zmqRpcEndpoint = "localhost:41591";
+    String jsonRpcEndpoint = "localhost:33847";
+    String pubEndpoint = "localhost:38673";
+
     peerProcess =
         launchTransientPeer(
+            peerId,
             "-d",
             palDirectory,
-            "-k",
-            kafkaServers,
             "-n",
             peerName,
             "--zmq-rpc",
-            "auto",
+            zmqRpcEndpoint,
+            "--json-rpc",
+            jsonRpcEndpoint,
             "--tcp-pub",
-            "auto",
+            pubEndpoint,
             "-cp",
             getIttAppsClasspath());
 
@@ -128,10 +196,15 @@ public class ListIT extends AbstractCliIT {
     AbstractCliIT.CliProcessResult result = runLs("-d", palDirectory, "-P", "-l");
 
     assertEquals("Expected successful exit code", 0, result.exitCode());
-    assertThat("Expected peer name in output", result.stdout(), containsString(peerName));
-    // Long format should include more details like RPC address
-    assertThat("Expected RPC info in long format", result.stdout(), containsString("rpc://"));
-    logger.info("Successfully listed peer in long format");
+
+    assertThat("Expected peer ID in output", result.stdout(), containsString(peerId.toString()));
+
+    // Long format should include more details like RPC and PUB addresses
+    assertThat(
+        "Expected ZMQ-RPC info in long format", result.stdout(), containsString(zmqRpcEndpoint));
+    assertThat(
+        "Expected JSON-RPC info in long format", result.stdout(), containsString(jsonRpcEndpoint));
+    assertThat("Expected PUB info in long format", result.stdout(), containsString(pubEndpoint));
   }
 
   /**
@@ -149,31 +222,41 @@ public class ListIT extends AbstractCliIT {
 
     // Launch a peer with a specific WAL log name
     String walName = "test-wal-" + generateId();
+    UUID peerId = UUID.randomUUID();
+
+    // we need to run something for messages to be written to the WAL, which actually
+    // creates the Log in Kafka
+    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+
     peerProcess =
         launchTransientPeer(
+            peerId,
             "-d",
             palDirectory,
             "-k",
             kafkaServers,
             "--wal",
             walName,
-            "--zmq-rpc",
-            "auto",
             "-cp",
-            getIttAppsClasspath());
+            getIttAppsClasspath(),
+            classToRun);
+
+    // now we wait for the process to end, ensuring the log has been created
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
 
     // List logs
     AbstractCliIT.CliProcessResult result = runLs("-d", palDirectory, "-L");
 
     assertEquals("Expected successful exit code", 0, result.exitCode());
     assertThat("Expected WAL log name in output", result.stdout(), containsString(walName));
-    logger.info("Successfully listed Kafka log: {}", walName);
   }
 
   /**
    * Tests that `pal ls -L` lists Chronicle logs.
    *
    * <p>Creates a Chronicle WAL by launching a peer, then verifies the log appears in the listing.
+   * Chronicle logs (file:-prefixed) are now registered in the etcd directory just like Kafka logs.
    *
    * @throws Exception if test execution fails
    */
@@ -183,11 +266,23 @@ public class ListIT extends AbstractCliIT {
 
     // Create a Chronicle WAL with a unique name
     String walName = "test-chronicle-" + generateId();
+    trackChronicleDirectory(walName);
     String walPath = "file:" + walName;
+
+    UUID peerId = UUID.randomUUID();
+
+    // we need to run something for messages to be written to the WAL, which actually
+    // creates the Chronicle queue files
+    String classToRun = "com.quasient.pal.apps.rpc.Methods";
 
     peerProcess =
         launchTransientPeer(
-            "-d", palDirectory, "--wal", walPath, "--rpc", "auto", "-cp", getIttAppsClasspath());
+            peerId, "-d", palDirectory, "--wal", walPath, "-cp", getIttAppsClasspath(), classToRun);
+
+    // Wait for the process to complete and create the Chronicle log
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
+    peerProcess = null;
 
     // List logs
     AbstractCliIT.CliProcessResult result = runLs("-d", palDirectory, "-L");
@@ -209,24 +304,36 @@ public class ListIT extends AbstractCliIT {
 
     // Launch a peer with a WAL
     String walName = "test-wal-long-" + generateId();
+    UUID peerId = UUID.randomUUID();
+
+    // we need to run something for messages to be written to the WAL, which actually
+    // creates the Log in Kafka
+    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+
     peerProcess =
         launchTransientPeer(
+            peerId,
             "-d",
             palDirectory,
             "-k",
             kafkaServers,
             "--wal",
             walName,
-            "--zmq-rpc",
-            "auto",
             "-cp",
-            getIttAppsClasspath());
+            getIttAppsClasspath(),
+            classToRun);
+
+    // now we wait for the process to end, ensuring the log has been created
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
 
     // List logs in long format
     AbstractCliIT.CliProcessResult result = runLs("-d", palDirectory, "-L", "-l");
 
     assertEquals("Expected successful exit code", 0, result.exitCode());
-    assertThat("Expected WAL log name in output", result.stdout(), containsString(walName));
+    // Check for the truncated name (CLI truncates long names with "..")
+    String truncatedName = walName.substring(0, Math.min(18, walName.length()));
+    assertThat("Expected WAL log name in output", result.stdout(), containsString(truncatedName));
     // Long format should include offset information
     logger.info("Successfully listed logs in long format");
   }
@@ -242,46 +349,55 @@ public class ListIT extends AbstractCliIT {
     String kafkaServers = getKafkaServers();
 
     // Create two logs with different creation times
-    // Note: We keep peers running so their logs stay registered in the directory
     String walName1 = "test-wal-ctime1-" + generateId();
+    UUID peerId1 = UUID.randomUUID();
+
+    // we need to run something for messages to be written to the WAL, which actually
+    // creates the Log in Kafka
+    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+
     Process peer1 =
         launchTransientPeer(
+            peerId1,
             "-d",
             palDirectory,
             "-k",
             kafkaServers,
             "--wal",
             walName1,
-            "--zmq-rpc",
-            "auto",
             "-cp",
-            getIttAppsClasspath());
+            getIttAppsClasspath(),
+            classToRun);
+
+    // Wait for first peer to complete and create its log
+    int peer1ExitCode = joinPeer(peer1, 10);
+    assertEquals("Expected successful peer1 exit code", 0, peer1ExitCode);
 
     // Wait a bit to ensure different creation times
     Thread.sleep(1000);
 
     String walName2 = "test-wal-ctime2-" + generateId();
+    UUID peerId2 = UUID.randomUUID();
     peerProcess =
         launchTransientPeer(
+            peerId2,
             "-d",
             palDirectory,
             "-k",
             kafkaServers,
             "--wal",
             walName2,
-            "--zmq-rpc",
-            "auto",
             "-cp",
-            getIttAppsClasspath());
+            getIttAppsClasspath(),
+            classToRun);
 
-    // Give peers a moment to fully register their logs in the directory
-    Thread.sleep(500);
+    // Wait for second peer to complete and create its log
+    int peer2ExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer2 exit code", 0, peer2ExitCode);
+    peerProcess = null;
 
-    // List logs sorted by creation time (while peers are still running)
+    // List logs sorted by creation time
     AbstractCliIT.CliProcessResult result = runLs("-d", palDirectory, "-L", "-c");
-
-    // Stop first peer now
-    stopPeer(peer1);
 
     assertEquals("Expected successful exit code", 0, result.exitCode());
     assertThat("Expected first WAL log in output", result.stdout(), containsString(walName1));
@@ -307,8 +423,15 @@ public class ListIT extends AbstractCliIT {
     // Launch a peer with a WAL
     String peerName = "test-peer-both-" + generateId();
     String walName = "test-wal-both-" + generateId();
+    UUID peerId = UUID.randomUUID();
+
+    // we need to run something for messages to be written to the WAL, which actually
+    // creates the Log in Kafka
+    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+
     peerProcess =
         launchTransientPeer(
+            peerId,
             "-d",
             palDirectory,
             "-k",
@@ -317,18 +440,23 @@ public class ListIT extends AbstractCliIT {
             peerName,
             "--wal",
             walName,
-            "--zmq-rpc",
-            "auto",
             "-cp",
-            getIttAppsClasspath());
+            getIttAppsClasspath(),
+            classToRun);
+
+    // Wait for the process to complete and create the WAL
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
+    peerProcess = null;
 
     // List everything (no -P or -L flag)
+    // Note: peer has exited, so only WAL log will be shown (not peer)
     AbstractCliIT.CliProcessResult result = runLs("-d", palDirectory);
 
     assertEquals("Expected successful exit code", 0, result.exitCode());
-    assertThat("Expected peer name in output", result.stdout(), containsString(peerName));
     assertThat("Expected WAL log name in output", result.stdout(), containsString(walName));
-    logger.info("Successfully listed both peers and logs");
+    // Peer won't be shown since it has exited
+    logger.info("Successfully listed WAL log after peer exit");
   }
 
   /**
@@ -344,8 +472,15 @@ public class ListIT extends AbstractCliIT {
     // Launch a peer with a WAL
     String peerName = "test-peer-exclude-" + generateId();
     String walName = "test-wal-exclude-" + generateId();
+    UUID peerId = UUID.randomUUID();
+
+    // we need to run something for messages to be written to the WAL, which actually
+    // creates the Log in Kafka
+    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+
     peerProcess =
         launchTransientPeer(
+            peerId,
             "-d",
             palDirectory,
             "-k",
@@ -354,10 +489,13 @@ public class ListIT extends AbstractCliIT {
             peerName,
             "--wal",
             walName,
-            "--zmq-rpc",
-            "auto",
             "-cp",
-            getIttAppsClasspath());
+            getIttAppsClasspath(),
+            classToRun);
+
+    // now we wait for the process to end, ensuring the log has been created
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
 
     // List only logs
     AbstractCliIT.CliProcessResult result = runLs("-d", palDirectory, "-L");

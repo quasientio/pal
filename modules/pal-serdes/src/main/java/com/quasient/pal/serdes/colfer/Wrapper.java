@@ -154,11 +154,6 @@ public final class Wrapper {
     boolean isSimpleType = isSimpleType(object);
     boolean isSimpleTypeArray = isSimpleTypeArray(object);
 
-    if (logger.isDebugEnabled()) {
-      logger.debug("wrapValue = {}", wrapValue);
-      logger.debug("isSimpleType = {}", isSimpleType);
-      logger.debug("isSimpleTypeArray = {}", isSimpleTypeArray);
-    }
     if (isSimpleType || isSimpleTypeArray) {
       wrapValue = true;
     }

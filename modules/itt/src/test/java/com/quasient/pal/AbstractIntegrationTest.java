@@ -21,6 +21,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -28,6 +29,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
@@ -55,6 +57,9 @@ public abstract class AbstractIntegrationTest {
 
   /** Timeout in seconds to wait for a transient peer to become ready. */
   private static final int PEER_READY_TIMEOUT_SECONDS = 10;
+
+  /** Peer ready line - expected in peer log at level INFO when */
+  private static final String READY_LINE_TMPL = "Peer %s up and running";
 
   protected static Properties getKafkaConsumerProperties() throws IOException {
     var properties = new Properties();
@@ -128,6 +133,31 @@ public abstract class AbstractIntegrationTest {
   }
 
   /**
+   * Gets the JSON-RPC WebSocket address for a peer from the directory.
+   *
+   * <p>Looks up the peer by UUID in the PAL directory and returns its JSON-RPC address (format:
+   * "ws://host:port").
+   *
+   * @param peerUuid the UUID of the peer to look up
+   * @return the JSON-RPC WebSocket address (e.g., "ws://localhost:9001"), or null if peer not found
+   *     or has no JSON-RPC address
+   * @throws Exception if directory access fails
+   */
+  protected static String getPeerJsonRpcAddress(UUID peerUuid) throws Exception {
+    DirectoryConnectionProvider directoryConnectionProvider =
+        new DirectoryConnectionProvider(getPalDirectoryUrl());
+    try (PalDirectory palDirectory =
+        directoryConnectionProvider.get().orElseThrow(RuntimeException::new)) {
+      PeerInfo peerInfo = palDirectory.getPeer(peerUuid);
+      if (peerInfo == null) {
+        logger.warn("Peer with UUID {} not found in directory", peerUuid);
+        return null;
+      }
+      return peerInfo.getJsonrpcAddress();
+    }
+  }
+
+  /**
    * Runs a pal command with the given arguments and returns the process result. Uses different
    * ports than peer4itts.sh to avoid conflicts.
    *
@@ -166,6 +196,7 @@ public abstract class AbstractIntegrationTest {
     logger.info("Running command: {}", String.join(" ", command));
 
     ProcessBuilder pb = new ProcessBuilder(command);
+    pb.directory(new java.io.File(palHome));
     pb.environment().put("PAL_HOME", palHome);
 
     // Configure logging
@@ -267,7 +298,7 @@ public abstract class AbstractIntegrationTest {
 
     try {
       // Read the entire XML file
-      String xmlContent = java.nio.file.Files.readString(logbackConfigPath);
+      String xmlContent = Files.readString(logbackConfigPath);
 
       // Find the first appender with FileAppender class
       int appenderStart = 0;
@@ -324,7 +355,8 @@ public abstract class AbstractIntegrationTest {
    * @throws InterruptedException if interrupted while waiting for peer to be ready
    * @throws IllegalStateException if peer does not become ready within the timeout period
    */
-  protected Process launchTransientPeer(String... args) throws IOException, InterruptedException {
+  protected Process launchTransientPeer(UUID peerId, String... args)
+      throws IOException, InterruptedException {
     String palHome = System.getenv("PAL_HOME");
     if (palHome == null) {
       throw new RuntimeException("PAL_HOME environment variable is not set");
@@ -333,9 +365,16 @@ public abstract class AbstractIntegrationTest {
     List<String> command = new ArrayList<>();
     command.add(Paths.get(palHome, "bin", "pal.sh").toString());
     command.add("run");
+
+    // Set the peer Id so we can identify it in the logs
+    command.add("--uuid");
+    command.add(peerId.toString());
+
     // Add increased Kafka timeout for slow/loaded test environments
     command.add("--kafka-timeout");
     command.add("20000");
+
+    // Add given args
     command.addAll(Arrays.asList(args));
 
     logger.info("Launching transient peer: {}", String.join(" ", command));
@@ -393,7 +432,6 @@ public abstract class AbstractIntegrationTest {
     stdoutReader.start();
     stderrReader.start();
 
-    // Wait for peer to be ready by polling log file
     // Parse the logback config to find the actual log file path
     Path loggingConfigPath = Paths.get(palHome, "config", "transient-peer-logging.xml");
     Path logPath;
@@ -406,7 +444,8 @@ public abstract class AbstractIntegrationTest {
       logPath = Paths.get(palHome, "logs", "peer.log");
     }
 
-    boolean ready = waitForPeerReady(logPath, PEER_READY_TIMEOUT_SECONDS);
+    // Wait for peer to be ready by polling log file
+    boolean ready = waitForPeerReady(logPath, peerId, PEER_READY_TIMEOUT_SECONDS);
 
     if (!ready) {
       // Capture any available output before killing the process
@@ -449,20 +488,20 @@ public abstract class AbstractIntegrationTest {
    * Waits for peer to be ready by polling log file for the "Managed services ready" line.
    *
    * @param logPath path to peer log file
+   * @param peerId ID of peer, needed to identify READY line among similar lines of older peers
    * @param timeoutSeconds timeout in seconds
    * @return true if ready line found, false if timeout exceeded
    */
-  private boolean waitForPeerReady(Path logPath, int timeoutSeconds) {
+  private boolean waitForPeerReady(Path logPath, UUID peerId, int timeoutSeconds) {
     long startTime = System.currentTimeMillis();
     long timeoutMillis = timeoutSeconds * 1000L;
-    String readyLine = "Managed services ready";
 
     while (System.currentTimeMillis() - startTime < timeoutMillis) {
-      if (java.nio.file.Files.exists(logPath)) {
+      if (Files.exists(logPath)) {
         try {
-          List<String> lines = java.nio.file.Files.readAllLines(logPath, UTF_8);
+          List<String> lines = Files.readAllLines(logPath, UTF_8);
           for (String line : lines) {
-            if (line.contains(readyLine)) {
+            if (line.contains(READY_LINE_TMPL.formatted(peerId))) {
               return true;
             }
           }
@@ -481,6 +520,69 @@ public abstract class AbstractIntegrationTest {
     }
 
     return false;
+  }
+
+  /**
+   * Waits for a peer process to complete naturally.
+   *
+   * <p>This method blocks until the peer process exits on its own or the timeout is reached. If the
+   * timeout is reached, the process is forcibly terminated.
+   *
+   * <p>Use this method when you need to wait for the peer to finish its work before making
+   * assertions (e.g., checking logs after peer has completed).
+   *
+   * @param process the peer process to wait for
+   * @param timeoutSeconds maximum time to wait for the process to complete, in seconds
+   * @return the exit code of the process
+   * @throws InterruptedException if interrupted while waiting for process termination
+   * @throws IllegalStateException if the process does not complete within the timeout
+   */
+  protected int joinPeer(Process process, int timeoutSeconds) throws InterruptedException {
+    if (process == null || !process.isAlive()) {
+      return process != null ? process.exitValue() : 0;
+    }
+
+    logger.info("Waiting for peer process to complete (timeout: {} seconds)", timeoutSeconds);
+    boolean exited = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
+
+    if (!exited) {
+      logger.warn("Peer did not complete within {} seconds, force killing", timeoutSeconds);
+      process.destroyForcibly();
+      process.waitFor(2, TimeUnit.SECONDS);
+      throw new IllegalStateException(
+          String.format("Peer process did not complete within %d seconds", timeoutSeconds));
+    }
+
+    int exitCode = process.exitValue();
+    logger.info("Peer process completed with exit code: {}", exitCode);
+    return exitCode;
+  }
+
+  /**
+   * Stops a running peer gracefully.
+   *
+   * <p>Destroys the process and waits up to 5 seconds for it to terminate. If still alive, force
+   * kills it.
+   *
+   * @param process the peer process to stop
+   * @throws InterruptedException if interrupted while waiting for process termination
+   */
+  protected void stopPeer(Process process) throws InterruptedException {
+    if (process == null || !process.isAlive()) {
+      return;
+    }
+
+    logger.info("Stopping peer process");
+    process.destroy();
+    boolean exited = process.waitFor(5, TimeUnit.SECONDS);
+
+    if (!exited) {
+      logger.warn("Peer did not exit gracefully, force killing");
+      process.destroyForcibly();
+      process.waitFor(2, TimeUnit.SECONDS);
+    }
+
+    logger.info("Peer stopped");
   }
 
   /** Container for process execution results. */

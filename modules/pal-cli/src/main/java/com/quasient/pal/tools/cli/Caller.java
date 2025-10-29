@@ -12,7 +12,6 @@ package com.quasient.pal.tools.cli;
 import static picocli.CommandLine.Option;
 import static picocli.CommandLine.Parameters;
 
-import com.google.gson.Gson;
 import com.quasient.pal.common.cli.PalCommand;
 import com.quasient.pal.common.directory.nodes.LogInfo;
 import com.quasient.pal.common.directory.nodes.PeerInfo;
@@ -106,7 +105,7 @@ public class Caller extends AbstractPalSubcommand {
   private String palDirectoryUrl;
 
   /** Builder for constructing main method call messages. */
-  private MainMethodCallBuilder mainMethodCallBuilder;
+  private StaticMethodCallBuilder staticMethodCallBuilder;
 
   /** UUID of the target peer. */
   private UUID peerUuid;
@@ -114,8 +113,8 @@ public class Caller extends AbstractPalSubcommand {
   /** Address of the target peer. */
   private String peerAddress;
 
-  /** Gson instance for JSON processing. */
-  private final Gson gson = new Gson();
+  /** Name of the target peer. */
+  private String peerName;
 
   /** List of JSON-RPC requests read from standard input. */
   private List<String> stdinRequests = new ArrayList<>();
@@ -186,7 +185,8 @@ public class Caller extends AbstractPalSubcommand {
   /** Specifies whether to print response messages received from peers or logs. */
   @Option(
       names = {"--print-responses"},
-      description = "print response messages (default: false)")
+      defaultValue = "true",
+      description = "print response messages (default: true)")
   private boolean printResponses;
 
   /** Specifies the number of threads (clients) to use for sending requests. */
@@ -254,13 +254,15 @@ public class Caller extends AbstractPalSubcommand {
       } finally {
         peerUuid = parsedUuid;
       }
-      // not a valid UUID, must be an address then
+      // not a valid UUID, check if it's an address or name
       if (peerUuid == null) {
-        if (!peerIdentifier.startsWith("tcp://") && !peerIdentifier.startsWith("ws://")) {
-          throw new RuntimeException(
-              "Peer address must start with tcp:// (for ZMQ-RPC) or ws:// (for JSON-RPC)");
+        if (peerIdentifier.startsWith("tcp://") || peerIdentifier.startsWith("ws://")) {
+          // It's an address
+          peerAddress = peerIdentifier;
+        } else {
+          // It's a peer name - will be resolved later via directory lookup
+          peerName = peerIdentifier;
         }
-        peerAddress = peerIdentifier;
       }
     }
 
@@ -384,7 +386,8 @@ public class Caller extends AbstractPalSubcommand {
   private int sendRequestsWithSingleClient() throws Exception {
 
     long start;
-    final boolean sendToPeer = Stream.of(peerAddress, peerUuid).anyMatch(Objects::nonNull);
+    final boolean sendToPeer =
+        Stream.of(peerAddress, peerUuid, peerName).anyMatch(Objects::nonNull);
 
     RpcType inferredRpcType = optionGiven(rpcType) ? RpcType.valueOf(rpcType) : null;
 
@@ -397,6 +400,14 @@ public class Caller extends AbstractPalSubcommand {
         peerInfo = new PeerInfo(peerUuid);
         if (inferredRpcType == null) {
           inferredRpcType = getRpcTypeForPeer(peerUuid);
+        }
+      } else if (peerName != null) {
+        // Resolve peer name to UUID via directory lookup
+        UUID resolvedUuid = lookupPeerByName(peerName);
+        // Fetch full PeerInfo from directory to get RPC addresses
+        peerInfo = getPalDirectory().getPeer(resolvedUuid);
+        if (inferredRpcType == null) {
+          inferredRpcType = getRpcTypeForPeer(resolvedUuid);
         }
       } else {
         peerInfo = new PeerInfo();
@@ -459,8 +470,8 @@ public class Caller extends AbstractPalSubcommand {
 
     // init call builder
     if (className != null) {
-      mainMethodCallBuilder =
-          new MainMethodCallBuilder(thinPeerUuid, className, methodName, argList);
+      staticMethodCallBuilder =
+          new StaticMethodCallBuilder(thinPeerUuid, className, methodName, argList);
     }
 
     // callback list and executor for async response completion
@@ -474,7 +485,7 @@ public class Caller extends AbstractPalSubcommand {
     if (inferredRpcType == RpcType.JSON_RPC) {
       if (stdinRequests == null || stdinRequests.isEmpty()) {
         // build and send 1 JSON-RPC request from cmd line args
-        responseFuture = thinPeer.sendJsonRpcRequestToPeer(mainMethodCallBuilder.buildJsonRpc());
+        responseFuture = thinPeer.sendJsonRpcRequestToPeer(staticMethodCallBuilder.buildJsonRpc());
         CompletableFuture<Void> callback =
             responseFuture.thenAcceptAsync(this::printIfRequired, onResponseExecutor);
         callbacks.add(callback);
@@ -482,8 +493,9 @@ public class Caller extends AbstractPalSubcommand {
       } else {
         // send N JSON-RPC request(s) read from stdin
         for (String jsonRpc : stdinRequests) {
+          logger.debug("will now parse json-rpc request:{BEGIN}{}{END}", jsonRpc);
           if (autoIds) { // generate missing JSON-RPC request IDs
-            JsonRpcRequest request = gson.fromJson(jsonRpc, JsonRpcRequest.class);
+            JsonRpcRequest request = JsonRpcSerializer.fromJson(jsonRpc, JsonRpcRequest.class);
             if (request.getId() == null || request.getId().isEmpty()) {
               request.setId(idGenerator.nextId());
             }
@@ -503,10 +515,10 @@ public class Caller extends AbstractPalSubcommand {
     } else {
       // build and send 1 ExecMessage from cmd line args
       if (sendToPeer) {
-        printIfRequired(thinPeer.sendToPeer(mainMethodCallBuilder.buildExecMessage()));
+        printIfRequired(thinPeer.sendToPeer(staticMethodCallBuilder.buildExecMessage()));
       } else {
         LogMessage<Message> responseLogMessage =
-            thinPeer.sendExecMessageToLogAndReceive(mainMethodCallBuilder.buildExecMessage());
+            thinPeer.sendExecMessageToLogAndReceive(staticMethodCallBuilder.buildExecMessage());
         printIfRequired(responseLogMessage.getContent().getExecMessage());
       }
       requestsSent++;
@@ -578,10 +590,16 @@ public class Caller extends AbstractPalSubcommand {
       }
       thinPeer.init();
 
+      // init call builder
+      if (className != null) {
+        staticMethodCallBuilder =
+            new StaticMethodCallBuilder(thinPeerUuid, className, methodName, argList);
+      }
+
       // send message(s)
       long start = System.currentTimeMillis();
       @SuppressWarnings("unused")
-      var unused = thinPeer.sendExecMessageToLog(mainMethodCallBuilder.buildExecMessage());
+      var unused = thinPeer.sendExecMessageToLog(staticMethodCallBuilder.buildExecMessage());
       int requestsSent = 1;
 
       if (verbose) {
@@ -682,6 +700,25 @@ public class Caller extends AbstractPalSubcommand {
   }
 
   /**
+   * Looks up a peer UUID by its name in the directory.
+   *
+   * @param peerName the name of the peer to look up.
+   * @return the UUID of the peer with the given name.
+   * @throws RuntimeException if no peer with the given name exists.
+   * @throws ExecutionException if an error occurs while fetching peer information.
+   * @throws InterruptedException if the operation is interrupted.
+   */
+  private UUID lookupPeerByName(String peerName) throws ExecutionException, InterruptedException {
+    var peers = getPalDirectory().listPeers();
+    for (PeerInfo peer : peers) {
+      if (peerName.equals(peer.getName())) {
+        return peer.getUuid();
+      }
+    }
+    throw new RuntimeException("No peer found with name: " + peerName);
+  }
+
+  /**
    * Retrieves the RPC type supported by the specified peer.
    *
    * @param peerUuid the UUID of the peer.
@@ -778,7 +815,7 @@ public class Caller extends AbstractPalSubcommand {
    * Builder class for constructing execution messages and JSON-RPC requests for the main method
    * call.
    */
-  private class MainMethodCallBuilder {
+  private class StaticMethodCallBuilder {
     /** The UUID of the ThinPeer initiating the call. */
     private final UUID thinPeerUuid;
 
@@ -801,14 +838,14 @@ public class Caller extends AbstractPalSubcommand {
     private final ObjectRef[] argObjRefs;
 
     /**
-     * Constructs a new {@code MainMethodCallBuilder} with the specified parameters.
+     * Constructs a new {@code StaticMethodCallBuilder} with the specified parameters.
      *
      * @param thinPeerUuid the UUID of the ThinPeer.
      * @param className the name of the class whose method is to be called.
      * @param methodName the name of the method to call.
      * @param argList the list of arguments to pass to the method.
      */
-    public MainMethodCallBuilder(
+    public StaticMethodCallBuilder(
         UUID thinPeerUuid, String className, String methodName, List<String> argList) {
       // create reusable arrays for message construction
       parameterTypesNamesArray = new String[parameterTypes.length];

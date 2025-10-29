@@ -49,11 +49,35 @@ public class SelfBootstrapInvoker {
   /** Logger instance. */
   private static final Logger logger = LoggerFactory.getLogger(SelfBootstrapInvoker.class);
 
-  /** Default exit value used when an unexpected response is received. */
-  static final int DEFAULT_EXIT_VALUE = -9999;
+  /**
+   * Exit code when main method completes successfully (void return or explicit 0).
+   *
+   * <p>Matches standard Unix/Java convention for success.
+   */
+  static final int EXIT_SUCCESS = 0;
 
-  /** Default exit value used when the response indicates an error condition. */
-  static final int DEFAULT_ERROR_EXIT_VALUE = -8888;
+  /**
+   * Exit code when main method throws an exception.
+   *
+   * <p>Indicates the invoked main method threw an uncaught exception.
+   */
+  static final int EXIT_MAIN_THREW_EXCEPTION = 1;
+
+  /**
+   * Exit code when the response message type is unexpected.
+   *
+   * <p>Indicates an internal error in message handling - the response from the main method
+   * invocation was not of an expected type (EXEC_RETURN_VALUE, EXEC_THROWABLE, etc.).
+   */
+  static final int EXIT_UNEXPECTED_RESPONSE_TYPE = 125;
+
+  /**
+   * Exit code when the return value cannot be unwrapped or converted to an integer.
+   *
+   * <p>Indicates the main method returned a non-void, non-Integer value that cannot be interpreted
+   * as an exit code, or there was an error during deserialization.
+   */
+  static final int EXIT_INVALID_RETURN_VALUE = 126;
 
   /** The unique identifier representing the current peer. */
   private final UUID peerUuid;
@@ -260,8 +284,8 @@ public class SelfBootstrapInvoker {
    *
    * <p>This method inspects the message type of the response. For types that represent a return
    * value or static/field access, it extracts the integer exit value; for throwable messages, it
-   * returns a predefined error exit value; and for unexpected types, it returns a default exit
-   * code.
+   * returns an error exit code; and for unexpected types, it returns a special exit code indicating
+   * an internal error.
    *
    * @param mainResponseMessage the response message containing the outcome of the execution.
    * @return the exit code as determined by the content and type of the response message.
@@ -271,10 +295,10 @@ public class SelfBootstrapInvoker {
     return switch (messageType) {
       case EXEC_RETURN_VALUE, EXEC_GET_STATIC, EXEC_GET_FIELD ->
           getIntFromReturnValue(mainResponseMessage);
-      case EXEC_THROWABLE -> DEFAULT_ERROR_EXIT_VALUE;
+      case EXEC_THROWABLE -> EXIT_MAIN_THREW_EXCEPTION;
       default -> {
         logger.error("Unexpected message type: {}", messageType);
-        yield DEFAULT_EXIT_VALUE;
+        yield EXIT_UNEXPECTED_RESPONSE_TYPE;
       }
     };
   }
@@ -284,10 +308,12 @@ public class SelfBootstrapInvoker {
    *
    * <p>If the message contains a non-null return object, this method attempts to unwrap it to an
    * Integer. In case of a failure during unwrapping or if the object is not an Integer, it returns
-   * a default exit code.
+   * an error exit code. If the return value is null (void return from main method), it returns 0 to
+   * indicate success, matching standard Java behavior.
    *
    * @param message the execution message from which to obtain the return value.
-   * @return the integer value of the return object, or a default exit value if extraction fails.
+   * @return the integer value of the return object, 0 for void returns, or an error exit code if
+   *     extraction fails.
    */
   private int getIntFromReturnValue(ExecMessage message) {
     if (message.getReturnValue().getObject() != null) {
@@ -295,15 +321,22 @@ public class SelfBootstrapInvoker {
       try {
         returnedObject = Unwrapper.unwrapObject(message.getReturnValue().getObject());
       } catch (ClassNotFoundException e) {
-        logger.error("Error unwrapping object", e);
-        return DEFAULT_EXIT_VALUE;
+        logger.error("Error unwrapping return value object", e);
+        return EXIT_INVALID_RETURN_VALUE;
       }
-      if (returnedObject instanceof Integer intObj) {
+      if (returnedObject == null) {
+        // Unwrapped to null (void return) - treat as success
+        return EXIT_SUCCESS;
+      } else if (returnedObject instanceof Integer intObj) {
         return intObj;
       } else {
-        logger.error("Unsupported return value type: {}", returnedObject.getClass().getName());
+        logger.error(
+            "Main method returned non-Integer type: {} (cannot be used as exit code)",
+            returnedObject.getClass().getName());
+        return EXIT_INVALID_RETURN_VALUE;
       }
     }
-    return DEFAULT_EXIT_VALUE;
+    // Null return value (void) from main method should be treated as success
+    return EXIT_SUCCESS;
   }
 }

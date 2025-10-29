@@ -483,7 +483,6 @@ public class Main implements Callable<Integer> {
 
     // look for a property named peer.logging in the System properties
     final String palLogging = System.getProperty("peer.logging");
-    System.out.println("DEBUG: peer.logging property value: " + palLogging);
     if (palLogging != null && !palLogging.trim().isEmpty()) {
       boolean givenFileExists = false;
       try {
@@ -1536,7 +1535,7 @@ public class Main implements Callable<Integer> {
         // report the dedicated etcd error code instead of a generic logs init error.
         fatalExit(ex, PeerException.FatalCode.ERROR_UNREACHABLE_ETCD);
       } catch (Exception ex) {
-        fatalExit(ex, PeerException.FatalCode.ERROR_INITIALIZING_LOGS);
+        fatalExit(ex, PeerException.FatalCode.ERROR_INITIALIZING_LOGS, ex.getMessage());
       }
     }
 
@@ -1583,6 +1582,8 @@ public class Main implements Callable<Integer> {
         singleExecutor.shutdownNow();
       }
     }
+
+    logger.info("Peer {} up and running", uuid);
 
     // start listening to intercept requests
     if (runOptions.contains(RunOptions.WITH_INTERCEPTS)) {

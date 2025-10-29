@@ -127,6 +127,26 @@ public class Methods {
     return arg.toLowerCase(Locale.getDefault());
   }
 
+  public static String staticStringWithStringArg(String input) {
+    return "RESULT: " + input;
+  }
+
+  /**
+   * Test method that takes String[] parameter (like main).
+   *
+   * <p>Used to verify that StaticMethodCallBuilder works with non-main methods that have String[]
+   * signature.
+   *
+   * @param args array of string arguments
+   * @return concatenated string of all arguments
+   */
+  public static String processArgs(String[] args) {
+    if (args == null || args.length == 0) {
+      return "NO_ARGS";
+    }
+    return "PROCESSED: " + String.join(",", args);
+  }
+
   protected static Integer highFive() {
     return 5;
   }
