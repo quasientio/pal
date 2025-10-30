@@ -10,6 +10,7 @@
 package com.quasient.pal.intercept;
 
 import com.quasient.pal.AbstractIntegrationTest;
+import com.quasient.pal.InterceptTestSuite;
 import com.quasient.pal.common.directory.nodes.InterceptRequest;
 import com.quasient.pal.common.directory.nodes.PeerInfo;
 import com.quasient.pal.common.lang.intercept.InterceptType;
@@ -23,7 +24,6 @@ import com.quasient.pal.rpc.binary.ExecMessageAssertions;
 import com.quasient.pal.serdes.colfer.ColferUtils;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
 import java.lang.reflect.Method;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -113,9 +113,22 @@ public class AbstractInterceptIT extends AbstractIntegrationTest implements Exec
         directoryConnectionProvider
             .get()
             .orElseThrow(() -> new RuntimeException("No connection for PalDirectory"));
-    PeerInfo interceptablePeer =
-        findRegisteredPeerListening()
-            .orElseThrow(() -> new RuntimeException("No registered peer listening for requests"));
+    // Peer launched by InterceptTestSuite
+    // Use the well-known shared peer UUID instead of searching for a peer
+    // Retry a few times to allow for directory registration delay
+    PeerInfo interceptablePeer = null;
+    for (int i = 0; i < 10; i++) {
+      interceptablePeer = palDirectory.getPeer(InterceptTestSuite.SHARED_PEER_UUID);
+      if (interceptablePeer != null) {
+        break;
+      }
+      logger.debug("Waiting for peer to register in directory (attempt {})", i + 1);
+      Thread.sleep(500);
+    }
+    if (interceptablePeer == null) {
+      throw new RuntimeException(
+          "Shared intercept test peer not found in directory after 5 seconds");
+    }
     this.thinPeer =
         new ThinPeer()
             .withUuid(myPeerUuid)
@@ -180,12 +193,6 @@ public class AbstractInterceptIT extends AbstractIntegrationTest implements Exec
     palDirectory.createIntercept(interceptRequest);
   }
 
-  private Optional<PeerInfo> findRegisteredPeerListening() throws Exception {
-    return palDirectory.listPeers().stream()
-        .filter(peer -> !myPeerUuid.equals(peer.getUuid()) && peer.getZmqRpcAddress() != null)
-        .findFirst();
-  }
-
   protected ExecMessage invoke(ExecMessage execMessage) {
     return thinPeer.sendToPeer(execMessage);
   }
@@ -209,19 +216,29 @@ public class AbstractInterceptIT extends AbstractIntegrationTest implements Exec
 
   @After
   public void tearDown() throws Exception {
+    logger.info("===== AbstractInterceptIT.tearDown: STARTING =====");
+    logger.info("Deleting intercepts for peer: {}", myPeerUuid);
     palDirectory.deleteInterceptsForPeer(myPeerUuid);
     assertionError = null;
     if (threadRepSocketCreated.get()) {
+      logger.info("Closing threadRepSocket");
       Socket socket = threadRepSocket.get();
       if (socket != null) {
         socket.close();
       }
       threadRepSocket.remove();
+      logger.info("threadRepSocket closed");
     }
+    logger.info("Closing zmq context");
     closeContext();
+    logger.info("Closing thinPeer");
     thinPeer.close();
+    logger.info("Closing verifierThinPeer");
     verifierThinPeer.close();
+    logger.info("Closing palDirectory");
     palDirectory.close();
+    logger.info("Shutting down executor");
     executor.shutdownNow();
+    logger.info("===== AbstractInterceptIT.tearDown: COMPLETED =====");
   }
 }

@@ -118,9 +118,6 @@ integration-tests:
     - cp config/peer-logging.xml.example config/peer-logging.xml
     - sed 's/logs/logs\/transient/' config/peer-logging.xml.example > config/transient-peer-logging.xml
     - sed -i 's/info/debug/' config/peer-logging.xml config/transient-peer-logging.xml
-
-    # launch peer in the background
-    - peer4itts.sh &
   script:
     - mvn $MAVEN_CLI_OPTS verify -DskipUTs
   after_script:

@@ -40,6 +40,43 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+
+                <executions>
+                    <!-- Disable the normal compile/testCompile from parent -->
+                    <execution>
+                        <id>default-compile</id>
+                        <phase>none</phase>
+                    </execution>
+                    <execution>
+                        <id>default-testCompile</id>
+                        <phase>none</phase>
+                    </execution>
+
+                    <!-- Re-enable a targeted javac compile for excluded files -->
+                    <execution>
+                        <id>compile-excluded-with-javac</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                        <configuration>
+                            <release>${java.version}</release>
+                            <includes>
+                                <include>com/quasient/pal/apps/rpc/ArrayVars.java</include>
+                                <include>com/quasient/pal/apps/rpc/StaticArrayVars.java</include>
+                                <include>com/quasient/pal/apps/rpc/Variables.java</include>
+                            </includes>
+                            <compilerArgs>
+                                <arg>-proc:none</arg>
+                            </compilerArgs>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
             <!-- aspectj compiler -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
@@ -64,9 +101,14 @@
                 </configuration>
                 <executions>
                     <execution>
-                        <goals>
-                            <goal>compile</goal>
-                        </goals>
+                        <id>ajc-compile</id>
+                        <phase>compile</phase>
+                        <goals><goal>compile</goal></goals>
+                    </execution>
+                    <execution>
+                        <id>ajc-test-compile</id>
+                        <phase>test-compile</phase>
+                        <goals><goal>test-compile</goal></goals>
                     </execution>
                 </executions>
                 <dependencies>

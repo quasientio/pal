@@ -62,6 +62,7 @@
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <version>${maven.failsafe.version}</version>
                 <configuration>
+                    <reuseForks>false</reuseForks>
                     <argLine>
                         --add-exports=java.base/jdk.internal.ref=ALL-UNNAMED
                         --add-exports=java.base/sun.nio.ch=ALL-UNNAMED
@@ -72,9 +73,27 @@
                         --add-opens=java.base/java.util=ALL-UNNAMED
                         --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
                     </argLine>
+
+                    <!-- Only discover the suites + truly-standalone ITs -->
+                    <includes>
+                        <include>**/RpcTestSuite.java</include>
+                        <!--include>**/InterceptTestSuite.java</include-->
+
+                        <!-- keep only directories that are NOT covered by suites -->
+                        <include>**/cli/**/*IT.java</include>
+                        <include>**/cxn/directory/*IT.java</include>
+                        <include>**/cxn/EtcdIT.java</include>
+                        <include>**/cxn/ThinPeerIT.java</include>
+                    </includes>
+
+                    <!-- exclude ITs that are already executed via the suites -->
+                    <excludes>
+                        <exclude>**/core/**/*IT.java</exclude>
+                    </excludes>
                 </configuration>
                 <executions>
                     <execution>
+                        <id>run-integration-tests</id>
                         <goals>
                             <goal>integration-test</goal>
                             <goal>verify</goal>

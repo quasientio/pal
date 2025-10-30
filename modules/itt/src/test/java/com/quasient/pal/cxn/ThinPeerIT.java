@@ -42,7 +42,9 @@ import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.common.Cluster;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,6 +66,117 @@ public class ThinPeerIT extends AbstractIntegrationTest {
 
   private static final Set<LogInfo> createdLogs = new HashSet<>();
   private ThinPeer thinPeer;
+
+  /** Well-known UUID for the shared ThinPeer test peer. */
+  public static final UUID SHARED_PEER_UUID =
+      UUID.fromString("00000000-0000-0000-0000-000000000004");
+
+  /** Shared peer process for tests that need RPC peers. */
+  private static Process sharedPeerProcess;
+
+  /** Helper instance to access non-static methods. */
+  private static ThinPeerIT instance;
+
+  /**
+   * Launches a shared peer before any tests run. This peer provides RPC endpoints for tests that
+   * need to connect to a peer.
+   */
+  @BeforeClass
+  public static void launchSharedPeer() throws Exception {
+    logger.info("============================================================");
+    logger.info("Launching shared ThinPeer test peer with UUID: {}", SHARED_PEER_UUID);
+    logger.info("============================================================");
+
+    instance = new ThinPeerIT();
+
+    String palHome = System.getenv("PAL_HOME");
+    if (palHome == null) {
+      throw new RuntimeException("PAL_HOME environment variable is not set");
+    }
+
+    String palDirectory = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+
+    String ittAppsClasspath =
+        String.format(
+            "%s/modules/itt-apps/target/classes:%s/modules/itt-apps/target/classes",
+            palHome, palHome);
+
+    sharedPeerProcess =
+        instance.launchTransientPeer(
+            SHARED_PEER_UUID,
+            "-d",
+            palDirectory,
+            "-k",
+            kafkaServers,
+            "-n",
+            "peer-for-thinpeer-tests",
+            "--zmq-rpc",
+            "5659",
+            "--json-rpc",
+            "7792",
+            "--rpc-threads",
+            "3",
+            "--rpc-allow-nonpublic",
+            "--log",
+            "auto",
+            "--log-prefix",
+            "itt",
+            "-cp",
+            ittAppsClasspath);
+
+    logger.info("Shared ThinPeer test peer launched successfully");
+  }
+
+  /** Stops the shared peer after all tests complete. */
+  @AfterClass
+  public static void stopSharedPeer() throws Exception {
+    logger.info("============================================================");
+    logger.info("Stopping shared ThinPeer test peer");
+    logger.info("============================================================");
+
+    if (sharedPeerProcess != null && instance != null) {
+      instance.stopPeer(sharedPeerProcess);
+      sharedPeerProcess = null;
+      logger.info("Shared ThinPeer test peer process stopped");
+
+      // Unregister peer and clean up logs
+      PalDirectory palDirectory = null;
+      try {
+        DirectoryConnectionProvider directoryConnectionProvider =
+            new DirectoryConnectionProvider(getPalDirectoryUrl(), null, true);
+        palDirectory =
+            directoryConnectionProvider
+                .get()
+                .orElseThrow(() -> new RuntimeException("No connection for PalDirectory"));
+        logger.info("Unregistering peer {} from directory", SHARED_PEER_UUID);
+        palDirectory.deletePeer(SHARED_PEER_UUID);
+        logger.info("Peer unregistered from directory");
+
+        // Delete logs created by this peer
+        logger.info("Deleting logs created by ThinPeer test peer");
+        for (LogInfo log : palDirectory.listAllLogs()) {
+          if (log.getName().startsWith("itt")) {
+            logger.info("Deleting log: {}", log.getName());
+            palDirectory.deleteLog(log.getName());
+          }
+        }
+        logger.info("Logs cleaned up");
+      } catch (Exception e) {
+        logger.warn("Failed to clean up peer/logs from directory", e);
+      } finally {
+        if (palDirectory != null) {
+          try {
+            palDirectory.close();
+          } catch (Exception e) {
+            logger.warn("Error closing palDirectory", e);
+          }
+        }
+      }
+
+      logger.info("Shared ThinPeer test peer stopped and cleaned up successfully");
+    }
+  }
 
   @Before
   public void setUp() {
@@ -94,7 +207,9 @@ public class ThinPeerIT extends AbstractIntegrationTest {
   }
 
   private LogInfo createTestLog() throws Exception {
-    LogInfo log = new LogInfo("test_log", getKafkaServers());
+    // Use unique log name for each invocation to avoid conflicts
+    String logName = "test_log_" + UUID.randomUUID().toString().substring(0, 8);
+    LogInfo log = new LogInfo(logName, getKafkaServers());
     palDirectory.createLog(log);
     createdLogs.add(log);
     return log;
@@ -346,7 +461,22 @@ public class ThinPeerIT extends AbstractIntegrationTest {
             .withSelfRegistration(false)
             .init();
 
-    PeerInfo peer = findRpcPeer(RpcType.ZMQ_RPC, directoryConnectionProvider).orElseThrow();
+    // Retry finding the peer to handle directory registration timing
+    PeerInfo peer = null;
+    for (int i = 0; i < 10; i++) {
+      peer = findRpcPeer(RpcType.ZMQ_RPC, directoryConnectionProvider).orElse(null);
+      if (peer != null) {
+        break;
+      }
+      logger.debug("Waiting for ZMQ RPC peer to register in directory (attempt {})", i + 1);
+      Thread.sleep(500);
+    }
+    if (peer == null) {
+      throw new RuntimeException(
+          "No ZMQ RPC peer found in directory after 5 seconds. "
+              + "Ensure ThinPeerTestSuite's shared peer is running.");
+    }
+
     boolean connected = thinPeer.connectToPeer(peer, Duration.ofMinutes(2));
     assertTrue(connected);
   }
@@ -385,10 +515,19 @@ public class ThinPeerIT extends AbstractIntegrationTest {
     }
   }
 
+  /**
+   * Tests sending an ExecMessage to a log and receiving the response from a peer that reads from
+   * that log. Uses the shared peer's log (with prefix "itt") that the peer is already reading from.
+   */
   @Test
   public void testSendExecMessageToLogAndReceive() throws Exception {
     Properties consumerProperties = getKafkaConsumerProperties();
     Properties producerProperties = getKafkaProducerProperties();
+
+    // Find the shared peer's log (created with prefix "itt")
+    LogInfo sharedPeerLog = palDirectory.getLatestLogWithPrefix("itt");
+    assertNotNull("Shared peer log should exist", sharedPeerLog);
+    logger.info("Using shared peer log: {}", sharedPeerLog.getName());
 
     ThinPeer tp = null;
     try {
@@ -397,23 +536,24 @@ public class ThinPeerIT extends AbstractIntegrationTest {
               .withDirectoryProvider(directoryConnectionProvider)
               .withConsumerProperties(consumerProperties)
               .withProducerProperties(producerProperties)
-              .withLogPrefix("itt")
+              .withLog(sharedPeerLog)
               .withOutboundRpcType(RpcType.ZMQ_RPC)
               .init();
 
-      // Test - use a simple method call without parameters
+      // Test - use a simple static method that returns a value
       ExecMessage execMsg =
           msgBuilder.buildClassMethod(
               tp.getPeerUuid(),
               "com.quasient.pal.apps.rpc.Methods",
-              "testVoidMethod",
-              new String[] {},
-              this,
+              "staticStringWithStringArg",
+              new String[] {"java.lang.String"},
               null,
-              new Object[] {},
+              null,
+              new Object[] {"test-input"},
               null);
 
       LogMessage<Message> response = tp.sendExecMessageToLogAndReceive(execMsg);
+
       // Verify
       assertNotNull("Response should not be null", response);
       assertNotNull("Response content should not be null", response.getContent());

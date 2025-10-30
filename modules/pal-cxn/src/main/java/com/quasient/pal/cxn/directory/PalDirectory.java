@@ -43,6 +43,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -1463,28 +1464,35 @@ public class PalDirectory implements AutoCloseable {
    */
   long purgeLogsExcept(@Nullable Set<UUID> excludeLogs)
       throws ExecutionException, InterruptedException {
-    long deleted = 0;
-
+    /* Gather logs we *can* delete */
+    List<LogInfo> toDelete;
     if (excludeLogs != null && !excludeLogs.isEmpty()) {
-      /* Gather logs we *can* delete */
-      List<LogInfo> toDelete =
-          listAllLogs().stream().filter(l -> !excludeLogs.contains(l.getUuid())).toList();
-
-      /* One Txn per key (keeps code simple & safe) */
-      for (LogInfo log : toDelete) {
-        deleteLog(log.getName()); // re-use the atomic delete above
-        deleted++;
-      }
+      toDelete = listAllLogs().stream().filter(l -> !excludeLogs.contains(l.getUuid())).toList();
     } else {
-      /* Fast-path: wipe the entire logs subtree */
-      DeleteResponse del =
-          kvClient.delete(getLogsPathKey(), DeleteOption.builder().isPrefix(true).build()).get();
-
-      deleted = del.getDeleted();
+      toDelete = new ArrayList<>(listAllLogs());
     }
 
-    if (deleted == 0) {
+    if (toDelete.isEmpty()) {
       logger.warn("No logs deleted");
+      return 0;
+    }
+
+    /* Build a single transaction with all delete operations */
+    io.etcd.jetcd.Txn txn = kvClient.txn();
+
+    // Add delete operations for each log
+    Op[] deleteOps = new Op[toDelete.size()];
+    for (int i = 0; i < toDelete.size(); i++) {
+      ByteSequence logKey = ByteSequence.from(getLogPath(toDelete.get(i).getName()), UTF8);
+      deleteOps[i] = Op.delete(logKey, DeleteOption.DEFAULT);
+    }
+
+    // Execute all deletes in a single transaction
+    TxnResponse tx = txn.Then(deleteOps).commit().get();
+
+    long deleted = toDelete.size();
+    if (!tx.isSucceeded()) {
+      logger.warn("Transaction failed while deleting logs");
     } else {
       logger.info("Deleted {} log(s)", deleted);
     }

@@ -27,17 +27,18 @@ docker pull apache/kafka:3.8.0 && docker tag apache/kafka:3.8.0 kafka:latest
     infra/bin/start_etcd_and_kafka_docker.sh
     ```
    NOTE: If you're using a local installation of etcd and kafka, then replace the above by `start_etcd.sh && start_kafka.sh` (scripts found under the bin/ folder).
-3. Launch a peer loading the classes in itt-apps
+3. Run the integration tests
     ```bash
-   bin/peer4itts.sh
-    ```
-4. In a new terminal, export the ENV variables and run the integration tests
-    ```bash
-    source export_env
     mvn -pl modules/itt verify
     ```
-5. Stop the running peer (launched via peer4itts.sh) typing Ctrl-C
-6. Stop the etcd and kafka containers.
+   NOTE: Tests that require a peer automatically launch and manage their own peer processes via test suites:
+   - `RpcTestSuite`: Manages a peer for all RPC tests (binary and JSON) on ports 5656/7789
+   - `InterceptTestSuite`: Manages a separate peer with `--interceptable` flag for intercept tests on ports 5657/7790
+   - `ThinPeerTestSuite`: Manages a peer for ThinPeer connection tests on ports 5658/7791
+
+   Other tests (CLI, directory) run independently without requiring a peer.
+
+4. Stop the etcd and kafka containers.
     ```bash
     infra/bin/stop_etcd_and_kafka_docker.sh
     ```

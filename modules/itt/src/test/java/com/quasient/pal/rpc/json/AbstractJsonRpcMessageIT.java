@@ -64,10 +64,25 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractRpcMessageIT
     final Properties consumerProperties = getKafkaConsumerProperties();
     final Properties producerProperties = getKafkaProducerProperties();
 
-    // find a peer listening with JSON-RPC enabled
-    PeerInfo jsonRpcPeer =
-        findRpcPeer(RpcType.JSON_RPC, directoryConnectionProvider)
-            .orElseThrow(() -> new RuntimeException("No peer found with JSON-RPC enabled"));
+    // Peer launched by RpcTestSuite
+    // Use the well-known shared peer UUID instead of searching for a peer
+    // Retry a few times to allow for directory registration delay
+    PeerInfo jsonRpcPeer = null;
+    for (int i = 0; i < 10; i++) {
+      jsonRpcPeer =
+          directoryConnectionProvider
+              .get()
+              .orElseThrow(() -> new RuntimeException("Could not connect to directory"))
+              .getPeer(com.quasient.pal.RpcTestSuite.SHARED_PEER_UUID);
+      if (jsonRpcPeer != null) {
+        break;
+      }
+      logger.debug("Waiting for peer to register in directory (attempt {})", i + 1);
+      Thread.sleep(500);
+    }
+    if (jsonRpcPeer == null) {
+      throw new RuntimeException("Shared RPC test peer not found in directory after 5 seconds");
+    }
     thinPeer =
         new ThinPeer()
             .withUuid(clientId)

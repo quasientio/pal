@@ -38,7 +38,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -51,36 +50,80 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   protected static final Logger logger = LoggerFactory.getLogger("tests");
   private static final Set<UUID> createdPeers = new HashSet<>();
   private static final Set<String> createdLogs = new HashSet<>();
-  private static Set<UUID> preExistingPeers;
-  private static Set<UUID> preExistingLogs;
   private static final Map<UUID, List<UUID>> createdInterceptRequests = new HashMap<>();
   private PalDirectory palDirectory;
 
   @Before
   public void setup() throws Exception {
     palDirectory = new PalDirectory(getPalDirectoryUrl());
-    preExistingPeers =
-        palDirectory.listPeers().stream().map(PeerInfo::getUuid).collect(Collectors.toSet());
-    preExistingLogs =
-        palDirectory.listAllLogs().stream().map(LogInfo::getUuid).collect(Collectors.toSet());
+
+    // Fail-fast: Ensure clean state before running tests
+    // All test peers and logs should be cleaned up after each test
+    Set<PeerInfo> existingPeers = palDirectory.listPeers();
+    Set<LogInfo> existingLogs = palDirectory.listAllLogs();
+
+    if (!existingPeers.isEmpty()) {
+      logger.error(
+          "Found {} existing peers in directory before test. Peers must be cleaned up after each test!",
+          existingPeers.size());
+      for (PeerInfo peer : existingPeers) {
+        logger.error(
+            "  - Peer: {} (UUID: {}, Name: {})", peer.getUuid(), peer.getUuid(), peer.getName());
+      }
+      throw new IllegalStateException(
+          "Directory not clean: Found "
+              + existingPeers.size()
+              + " existing peers. "
+              + "All tests must clean up their peers in @After tearDown()");
+    }
+
+    if (!existingLogs.isEmpty()) {
+      logger.error(
+          "Found {} existing logs in directory before test. Logs must be cleaned up after each test!",
+          existingLogs.size());
+      for (LogInfo log : existingLogs) {
+        logger.error("  - Log: {} (UUID: {})", log.getName(), log.getUuid());
+      }
+      throw new IllegalStateException(
+          "Directory not clean: Found "
+              + existingLogs.size()
+              + " existing logs. "
+              + "All tests must clean up their logs in @After tearDown()");
+    }
   }
 
   @After
-  public void cleanup() throws Exception {
+  public void cleanup() {
     for (UUID peer : createdPeers) {
-      palDirectory.deletePeer(peer);
-      logger.info("Cleaned up created peer: {}", peer);
+      try {
+        palDirectory.deletePeer(peer);
+        logger.info("Cleaned up created peer: {}", peer);
+      } catch (Exception e) {
+        logger.warn("Failed to delete peer {} during cleanup: {}", peer, e.getMessage());
+      }
     }
     for (String log : createdLogs) {
-      palDirectory.deleteLog(log);
-      logger.info("Cleaned up created log: {}", log);
+      try {
+        palDirectory.deleteLog(log);
+        logger.info("Cleaned up created log: {}", log);
+      } catch (Exception e) {
+        logger.warn("Failed to delete log {} during cleanup: {}", log, e.getMessage());
+      }
     }
     for (Map.Entry<UUID, List<UUID>> entry : createdInterceptRequests.entrySet()) {
       UUID peerUuid = entry.getKey();
       List<UUID> peerIntercepts = entry.getValue();
       for (UUID interceptReq : peerIntercepts) {
-        palDirectory.deleteIntercept(peerUuid, interceptReq);
-        logger.info("Cleaned up created intercept request: {}", interceptReq);
+        try {
+          palDirectory.deleteIntercept(peerUuid, interceptReq);
+          logger.info("Cleaned up created intercept request: {}", interceptReq);
+        } catch (Exception e) {
+          logger.warn(
+              "Failed to delete intercept {} for peer {} during cleanup: {}",
+              interceptReq,
+              peerUuid,
+              e.getMessage());
+        }
       }
     }
     palDirectory.close();
@@ -211,28 +254,19 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     }
 
     // verify
-    assertEquals(
-        peersToCreate,
-        palDirectory.listPeers().stream()
-            .filter(p -> !preExistingPeers.contains(p.getUuid()))
-            .collect(Collectors.toSet())
-            .size());
+    assertEquals(peersToCreate, palDirectory.listPeers().size());
 
-    // delete all - exclude pre-existing
-    palDirectory.purgePeersExcept(preExistingPeers);
+    // delete all
+    palDirectory.purgePeersExcept(new HashSet<>());
 
-    assertEquals(preExistingPeers.size(), palDirectory.listPeers().size());
+    assertEquals(0, palDirectory.listPeers().size());
   }
 
   @Test
   public void listPeers_noPeers_emptySet() throws Exception {
     Set<PeerInfo> allPeers = palDirectory.listPeers();
     // verify
-    assertTrue(
-        allPeers.stream()
-            .filter(p -> !preExistingPeers.contains(p.getUuid()))
-            .collect(Collectors.toSet())
-            .isEmpty());
+    assertTrue(allPeers.isEmpty());
   }
 
   @Test
@@ -247,12 +281,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     }
 
     // verify
-    assertEquals(
-        peersToCreate,
-        palDirectory.listPeers().stream()
-            .filter(p -> !preExistingPeers.contains(p.getUuid()))
-            .collect(Collectors.toSet())
-            .size());
+    assertEquals(peersToCreate, palDirectory.listPeers().size());
   }
 
   @Test
@@ -297,6 +326,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     Set<String> names = ConcurrentHashMap.newKeySet();
 
     for (int i = 0; i < writers; i++) {
+      @SuppressWarnings("unused")
       var unused =
           pool.submit(
               () -> {
@@ -374,8 +404,8 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     createdLogs.add(sourceLogInfo.getName());
     createdLogs.add(writeAheadLogInfo.getName());
 
-    assertEquals(1, palDirectory.listPeers().size() - preExistingPeers.size());
-    assertEquals(2, palDirectory.listAllLogs().size() - preExistingLogs.size());
+    assertEquals(1, palDirectory.listPeers().size());
+    assertEquals(2, palDirectory.listAllLogs().size());
 
     // load them
     UUID peerSourceLog = palDirectory.getSourceLogId(peerInfo.getUuid());
@@ -443,7 +473,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     }
 
     // verify
-    assertEquals(preExistingLogs.size() + logsToCreate, palDirectory.listAllLogs().size());
+    assertEquals(logsToCreate, palDirectory.listAllLogs().size());
   }
 
   @Test
@@ -525,7 +555,6 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
 
   @Test
   public void deleteAllLogs_existingLogs_allLogsDeleted() throws Exception {
-    Set<LogInfo> preExistingLogs = palDirectory.listAllLogs();
     String logNamePrefix = "test.topic";
 
     // create a few with the prefix
@@ -536,16 +565,14 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     }
 
     // pre-assertions
-    assertEquals(preExistingLogs.size() + logsToCreate, palDirectory.listAllLogs().size());
+    assertEquals(logsToCreate, palDirectory.listAllLogs().size());
 
     // delete all
-    long deletedLogs =
-        palDirectory.purgeLogsExcept(
-            preExistingLogs.stream().map(LogInfo::getUuid).collect(Collectors.toSet()));
+    long deletedLogs = palDirectory.purgeLogsExcept(new HashSet<>());
     assertEquals(logsToCreate, deletedLogs);
 
     // verify
-    assertEquals(preExistingLogs.size(), palDirectory.listAllLogs().size());
+    assertEquals(0, palDirectory.listAllLogs().size());
   }
 
   @Test

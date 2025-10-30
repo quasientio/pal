@@ -39,8 +39,8 @@ import org.zeromq.ZContext;
 
 /**
  * This class provides infrastructure for loading environment variables and configuration properties
- * for PalDirectory and Kafka. It also provides utility methods for launching transient peers that
- * don't conflict with peer4itts.sh by using different ports and logging configurations.
+ * for PalDirectory and Kafka. It also provides utility methods for launching transient peers with
+ * different flags, ports and logging configurations.
  */
 public abstract class AbstractIntegrationTest {
 
@@ -158,8 +158,7 @@ public abstract class AbstractIntegrationTest {
   }
 
   /**
-   * Runs a pal command with the given arguments and returns the process result. Uses different
-   * ports than peer4itts.sh to avoid conflicts.
+   * Runs a pal command with the given arguments and returns the process result.
    *
    * @param args the command-line arguments to pass to pal.sh run
    * @return ProcessResult containing exit code, stdout, and stderr
@@ -308,8 +307,8 @@ public abstract class AbstractIntegrationTest {
 
         String appenderBlock = xmlContent.substring(appenderStart, appenderEnd);
 
-        // Check if this appender is a FileAppender
-        if (appenderBlock.contains("FileAppender")) {
+        // Check if this appender is a FileAppender or PeerFileAppender
+        if (appenderBlock.contains("FileAppender") || appenderBlock.contains("PeerFileAppender")) {
           // Extract the <file> tag content
           int fileStart = appenderBlock.indexOf("<file>");
           int fileEnd = appenderBlock.indexOf("</file>");
@@ -569,17 +568,22 @@ public abstract class AbstractIntegrationTest {
    */
   protected void stopPeer(Process process) throws InterruptedException {
     if (process == null || !process.isAlive()) {
+      logger.info("Process is null or not alive, nothing to stop");
       return;
     }
 
-    logger.info("Stopping peer process");
+    logger.info("Stopping peer process, calling destroy()");
     process.destroy();
+    logger.info("destroy() called, now waiting for exit (5s timeout)");
     boolean exited = process.waitFor(5, TimeUnit.SECONDS);
+    logger.info("waitFor returned, exited={}", exited);
 
     if (!exited) {
       logger.warn("Peer did not exit gracefully, force killing");
       process.destroyForcibly();
+      logger.info("destroyForcibly() called, waiting for exit (2s timeout)");
       process.waitFor(2, TimeUnit.SECONDS);
+      logger.info("Second waitFor returned after destroyForcibly");
     }
 
     logger.info("Peer stopped");
