@@ -67,72 +67,8 @@ public class KafkaLogMessageSerdeTest {
     // Create headers for the ProducerRecord
     Headers headers = new RecordHeaders();
 
-    // Create the Serializer
-    KafkaLogMessageSerializer serializer = new KafkaLogMessageSerializer();
-
-    // Serialize the LogMessage
-    byte[] serializedValue = serializer.serialize(topic, headers, logMessage);
-
-    // Now, set up a MockConsumer to consume the message
-    MockConsumer<byte[], byte[]> mockConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
-
-    // Assign the topic partition and set the starting offset
-    TopicPartition partition = new TopicPartition(topic, 0);
-    mockConsumer.assign(List.of(partition));
-    mockConsumer.updateBeginningOffsets(Map.of(partition, 0L));
-
-    // Prepare the ConsumerRecord with serialized bytes
-    ConsumerRecord<byte[], byte[]> consumerRecord =
-        new ConsumerRecord<>(
-            topic,
-            partition.partition(),
-            0L, // offset
-            System.currentTimeMillis(), // timestamp
-            TimestampType.CREATE_TIME, // timestamp type
-            -1, // serialized key size (key is null)
-            serializedValue.length, // serialized value size
-            null, // key (null in this test)
-            serializedValue, // serialized value
-            headers, // headers
-            Optional.empty());
-
-    // Add the record to the mock consumer
-    mockConsumer.addRecord(consumerRecord);
-
-    // Poll the consumer to get the records
-    ConsumerRecords<byte[], byte[]> consumerRecords = mockConsumer.poll(java.time.Duration.ZERO);
-
-    // Deserialize the records
-    List<ConsumerRecord<String, LogMessage<?>>> records = new ArrayList<>();
-    for (ConsumerRecord<byte[], byte[]> record : consumerRecords.records(topic)) {
-      String deserializedKey = null;
-      var deserializer = new KafkaLogMessageDeserializer();
-      LogMessage<?> deserializedValue =
-          deserializer.deserialize(record.topic(), record.headers(), record.value());
-
-      ConsumerRecord<String, LogMessage<?>> deserializedRecord =
-          new ConsumerRecord<>(
-              record.topic(),
-              record.partition(),
-              record.offset(),
-              record.timestamp(),
-              record.timestampType(),
-              -1, // serialized key size
-              -1, // serialized value size
-              deserializedKey,
-              deserializedValue,
-              record.headers(),
-              Optional.empty());
-
-      records.add(deserializedRecord);
-    }
-
-    // assertions
-    assertThat(records.size(), is(1));
-    LogMessage<?> consumedLogMessage = records.get(0).value();
-
-    assertThat(consumedLogMessage.getTopic(), is(logMessage.getTopic()));
-    assertThat(consumedLogMessage.getContent().getClass(), is(logMessage.getContent().getClass()));
+    // Serialize, deserialize and verify basic expectations
+    LogMessage<?> consumedLogMessage = serializeAndDeserialize(topic, headers, logMessage);
 
     // Cast the content to Message to compare fields
     Message producedContent = logMessage.getContent();
@@ -162,18 +98,68 @@ public class KafkaLogMessageSerdeTest {
     // Create headers for the ProducerRecord
     Headers headers = new RecordHeaders();
 
-    var serializer = new KafkaLogMessageSerializer();
+    // Serialize, deserialize and verify basic expectations
+    LogMessage<?> consumedLogMessage = serializeAndDeserialize(topic, headers, logMessage);
+
+    // Cast the content to JsonRpcRequest to compare fields
+    JsonRpcRequest producedContent = logMessage.getContent();
+    JsonRpcRequest consumedContent = (JsonRpcRequest) consumedLogMessage.getContent();
+
+    assertThat(consumedContent.getId(), is(producedContent.getId()));
+    assertThat(consumedContent.getMethod(), is(producedContent.getMethod()));
+    assertThat(consumedContent.getParams(), is(producedContent.getParams()));
+  }
+
+  /**
+   * Helper method to serialize a LogMessage, deserialize it, and verify basic expectations.
+   *
+   * @param topic the topic name
+   * @param headers the Kafka headers
+   * @param logMessage the log message to serialize and deserialize
+   * @return the consumed/deserialized LogMessage
+   */
+  private LogMessage<?> serializeAndDeserialize(
+      String topic, Headers headers, LogMessage<?> logMessage) {
+    // Create the Serializer
+    KafkaLogMessageSerializer serializer = new KafkaLogMessageSerializer();
+
+    // Serialize the LogMessage
     byte[] serializedValue = serializer.serialize(topic, headers, logMessage);
 
-    // set up a MockConsumer to consume the message
+    // Set up mock consumer and poll for records
+    ConsumerRecords<byte[], byte[]> consumerRecords =
+        pollMockConsumer(topic, serializedValue, headers);
+
+    // Deserialize the records
+    List<ConsumerRecord<String, LogMessage<?>>> records =
+        deserializeRecords(consumerRecords, topic);
+
+    // Verify basic expectations
+    assertThat(records.size(), is(1));
+    LogMessage<?> consumedLogMessage = records.get(0).value();
+
+    assertThat(consumedLogMessage.getTopic(), is(logMessage.getTopic()));
+    assertThat(consumedLogMessage.getContent().getClass(), is(logMessage.getContent().getClass()));
+
+    return consumedLogMessage;
+  }
+
+  /**
+   * Helper method to set up a MockConsumer, add a record with serialized data, and poll.
+   *
+   * @param topic the topic name
+   * @param serializedValue the serialized message bytes
+   * @param headers the Kafka headers
+   * @return the polled consumer records
+   */
+  private ConsumerRecords<byte[], byte[]> pollMockConsumer(
+      String topic, byte[] serializedValue, Headers headers) {
     MockConsumer<byte[], byte[]> mockConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
 
-    // Assign the topic partition and set the starting offset
     TopicPartition partition = new TopicPartition(topic, 0);
     mockConsumer.assign(List.of(partition));
     mockConsumer.updateBeginningOffsets(Map.of(partition, 0L));
 
-    // Prepare the ConsumerRecord with serialized bytes
     ConsumerRecord<byte[], byte[]> consumerRecord =
         new ConsumerRecord<>(
             topic,
@@ -188,21 +174,27 @@ public class KafkaLogMessageSerdeTest {
             headers, // headers
             Optional.empty());
 
-    // Add the record to the mock consumer
     mockConsumer.addRecord(consumerRecord);
+    return mockConsumer.poll(java.time.Duration.ZERO);
+  }
 
-    // Poll the consumer to get the records
-    ConsumerRecords<byte[], byte[]> consumerRecords = mockConsumer.poll(java.time.Duration.ZERO);
-
-    // Deserialize the records
-    var deserializer = new KafkaLogMessageDeserializer();
+  /**
+   * Helper method to deserialize Kafka consumer records into LogMessage records.
+   *
+   * @param consumerRecords the raw consumer records to deserialize
+   * @param topic the topic name
+   * @return list of deserialized consumer records
+   */
+  private List<ConsumerRecord<String, LogMessage<?>>> deserializeRecords(
+      ConsumerRecords<byte[], byte[]> consumerRecords, String topic) {
     List<ConsumerRecord<String, LogMessage<?>>> records = new ArrayList<>();
+    var deserializer = new KafkaLogMessageDeserializer();
+
     for (ConsumerRecord<byte[], byte[]> record : consumerRecords.records(topic)) {
       String deserializedKey = null;
       LogMessage<?> deserializedValue =
           deserializer.deserialize(record.topic(), record.headers(), record.value());
 
-      // Create a new ConsumerRecord with deserialized key and value
       ConsumerRecord<String, LogMessage<?>> deserializedRecord =
           new ConsumerRecord<>(
               record.topic(),
@@ -220,20 +212,7 @@ public class KafkaLogMessageSerdeTest {
       records.add(deserializedRecord);
     }
 
-    // assertions
-    assertThat(records.size(), is(1));
-    LogMessage<?> consumedLogMessage = records.get(0).value();
-
-    assertThat(consumedLogMessage.getTopic(), is(logMessage.getTopic()));
-    assertThat(consumedLogMessage.getContent().getClass(), is(logMessage.getContent().getClass()));
-
-    // Cast the content to JsonRpcRequest to compare fields
-    JsonRpcRequest producedContent = logMessage.getContent();
-    JsonRpcRequest consumedContent = (JsonRpcRequest) consumedLogMessage.getContent();
-
-    assertThat(consumedContent.getId(), is(producedContent.getId()));
-    assertThat(consumedContent.getMethod(), is(producedContent.getMethod()));
-    assertThat(consumedContent.getParams(), is(producedContent.getParams()));
+    return records;
   }
 
   public static Params createCallParams(String methodName, List<String> stringList) {

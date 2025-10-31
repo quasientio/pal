@@ -459,20 +459,41 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-pmd-plugin</artifactId>
                 <version>${pmd.plugin.version}</version>
+
+                <!-- default: main sources only -->
                 <configuration>
                     <rulesets>
-                        <!-- path relative to the multi-module root -->
                         <ruleset>${maven.multiModuleProjectDirectory}/build/pmd/ruleset.xml</ruleset>
                     </rulesets>
+                    <includeTests>false</includeTests>
                     <failOnViolation>true</failOnViolation>
                 </configuration>
+
                 <executions>
+                    <!-- 1) MAIN sources: PMD + CPD -->
                     <execution>
+                        <id>pmd-main-and-cpd</id>
+                        <phase>verify</phase>
                         <goals>
                             <goal>check</goal>
                             <goal>cpd-check</goal>
                         </goals>
+                    </execution>
+
+                    <!-- 2) ALL sources (main + tests): PMD only -->
+                    <execution>
+                        <id>pmd-all</id>
                         <phase>verify</phase>
+                        <goals>
+                            <!-- call pmd first so check has a report to read -->
+                            <goal>pmd</goal>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <includeTests>true</includeTests>
+                            <!-- keep its XML separate from the main-only run -->
+                            <targetDirectory>${project.build.directory}/pmdAll</targetDirectory>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

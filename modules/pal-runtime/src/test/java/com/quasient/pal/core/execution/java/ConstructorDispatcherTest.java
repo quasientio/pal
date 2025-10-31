@@ -481,7 +481,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
   @Override
   @Test
   public void dispatchIncoming_throwsNoSuchMethodException_exceptionThrown() {
-    Class<?>[] parameterTypes = {java.lang.String.class, Boolean.TYPE, java.lang.Integer.class};
+    Class<?>[] parameterTypes = {String.class, Boolean.TYPE, Integer.class};
     Object[] args = {"woiwefoj", true, 459};
     ObjectRef[] argRefs = {null, null, null};
 

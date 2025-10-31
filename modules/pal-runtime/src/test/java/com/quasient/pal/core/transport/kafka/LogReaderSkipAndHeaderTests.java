@@ -12,6 +12,7 @@ package com.quasient.pal.core.transport.kafka;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
+import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 import com.quasient.pal.common.directory.nodes.LogInfo;
 import com.quasient.pal.core.ZmqEnabledTest;
@@ -107,7 +108,7 @@ public class LogReaderSkipAndHeaderTests extends ZmqEnabledTest {
   private final ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
   private static final String DEALER_ADDRESS = "inproc://source_log_hdr";
   private static final String OFFSET_PUB_ADDRESS = "inproc://offsets_hdr";
-  private java.util.Set<com.google.common.util.concurrent.Service> services;
+  private Set<Service> services;
 
   @Before
   public void setup() throws Exception {

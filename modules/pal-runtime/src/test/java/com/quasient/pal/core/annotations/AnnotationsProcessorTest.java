@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import org.example.paltest.GenericMethods;
 import org.junit.Test;
 
 public class AnnotationsProcessorTest {
@@ -69,13 +70,13 @@ public class AnnotationsProcessorTest {
     assertThat(calls.isEmpty(), is(true));
 
     // Skip Pal core
-    ap.classLoaded(com.quasient.pal.core.annotations.AnnotationProcessor.class);
+    ap.classLoaded(AnnotationProcessor.class);
     assertThat(calls.isEmpty(), is(true));
 
     // Process non-core, non-pal
-    ap.classLoaded(org.example.paltest.GenericMethods.class);
+    ap.classLoaded(GenericMethods.class);
     // Expect order p1 then p2 due to order value
-    String n = org.example.paltest.GenericMethods.class.getName();
+    String n = GenericMethods.class.getName();
     assertThat(calls, contains("p1:" + n, "p2:" + n));
   }
 }

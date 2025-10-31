@@ -58,7 +58,7 @@ public class SelfBootstrapInvokerSmokeTest {
 
     SelfBootstrapInvoker invoker =
         new SelfBootstrapInvoker(
-            peer, dispatcher, mb, cl, ctx, "inproc://offs", java.util.Collections.emptySet());
+            peer, dispatcher, mb, cl, ctx, "inproc://offs", Collections.emptySet());
 
     int rc = invoker.callMain("java.lang.String", Collections.emptyList());
     assertThat(rc, is(7));

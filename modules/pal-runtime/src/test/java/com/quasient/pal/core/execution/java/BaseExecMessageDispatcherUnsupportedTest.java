@@ -13,10 +13,13 @@ import static org.junit.Assert.assertThrows;
 
 import com.quasient.pal.common.runtime.Context;
 import com.quasient.pal.common.weave.Proceed;
+import com.quasient.pal.core.transport.MessageChannelType;
 import com.quasient.pal.messages.colfer.ExecMessage;
+import com.quasient.pal.messages.colfer.Parameter;
 import com.quasient.pal.messages.types.MessageType;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
 import java.lang.reflect.AccessibleObject;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -60,7 +63,7 @@ public class BaseExecMessageDispatcherUnsupportedTest {
     protected Object invokeIncoming(
         AccessibleObject accessibleObject,
         Object target,
-        java.util.List<MessageArgument> args,
+        List<MessageArgument> args,
         Object value) {
       return null;
     }
@@ -76,9 +79,8 @@ public class BaseExecMessageDispatcherUnsupportedTest {
     }
 
     @Override
-    protected java.util.List<com.quasient.pal.messages.colfer.Parameter> getParameterList(
-        ExecMessage execMessage) {
-      return java.util.Collections.emptyList();
+    protected List<Parameter> getParameterList(ExecMessage execMessage) {
+      return Collections.emptyList();
     }
 
     @Override
@@ -100,8 +102,6 @@ public class BaseExecMessageDispatcherUnsupportedTest {
     ExecMessage ctorMsg = mb.buildEmptyConstructor(UUID.randomUUID(), "java.lang.String");
     assertThrows(
         IllegalArgumentException.class,
-        () ->
-            d.dispatchIncoming(
-                ctorMsg, com.quasient.pal.core.transport.MessageChannelType.LOG_RPC));
+        () -> d.dispatchIncoming(ctorMsg, MessageChannelType.LOG_RPC));
   }
 }

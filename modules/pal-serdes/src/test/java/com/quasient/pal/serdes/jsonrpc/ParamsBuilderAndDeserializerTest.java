@@ -11,10 +11,12 @@ package com.quasient.pal.serdes.jsonrpc;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.fail;
 
 import com.quasient.pal.messages.jsonrpc.Argument;
 import com.quasient.pal.messages.jsonrpc.JsonRpcRequest;
 import com.quasient.pal.messages.jsonrpc.Params;
+import java.lang.reflect.Array;
 import java.util.List;
 import org.junit.Test;
 
@@ -50,12 +52,12 @@ public class ParamsBuilderAndDeserializerTest {
 
     // Validate the array value was preserved (as List or as array depending on type hints)
     Object arrayParsed = parsed.getParams().getArgs().get(0).getValue();
-    if (arrayParsed instanceof java.util.List) {
-      assertThat(((java.util.List<?>) arrayParsed).size(), is(3));
+    if (arrayParsed instanceof List) {
+      assertThat(((List<?>) arrayParsed).size(), is(3));
     } else if (arrayParsed != null && arrayParsed.getClass().isArray()) {
-      assertThat(java.lang.reflect.Array.getLength(arrayParsed), is(3));
+      assertThat(Array.getLength(arrayParsed), is(3));
     } else {
-      org.junit.Assert.fail("Expected list or array for first argument value");
+      fail("Expected list or array for first argument value");
     }
   }
 }

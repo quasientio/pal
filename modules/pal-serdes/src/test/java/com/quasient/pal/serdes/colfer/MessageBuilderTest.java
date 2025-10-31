@@ -13,6 +13,7 @@ import static com.quasient.pal.messages.types.MessageType.EXEC_CLASS_METHOD;
 import static com.quasient.pal.messages.types.MessageType.EXEC_CONSTRUCTOR;
 import static com.quasient.pal.messages.types.MessageType.EXEC_GET_FIELD;
 import static com.quasient.pal.messages.types.MessageType.EXEC_GET_STATIC;
+import static com.quasient.pal.messages.types.MessageType.EXEC_INSTANCE_METHOD;
 import static com.quasient.pal.messages.types.MessageType.EXEC_PUT_FIELD;
 import static com.quasient.pal.messages.types.MessageType.EXEC_PUT_FIELD_DONE;
 import static com.quasient.pal.messages.types.MessageType.EXEC_PUT_STATIC;
@@ -185,6 +186,37 @@ public class MessageBuilderTest {
 
   // </editor-fold>
 
+  private void assertClassMethodParameters(
+      ExecMessage execMessage, String[] parameterTypes, Object[] args)
+      throws ClassNotFoundException {
+    assertEquals(parameterTypes.length, execMessage.getClassMethodCall().getParameters().length);
+    for (int i = 0; i < execMessage.getClassMethodCall().getParameters().length; i++) {
+      Parameter parameter = execMessage.getClassMethodCall().getParameters()[i];
+      assertEquals(parameterTypes[i], parameter.getValue().getClazz().getName());
+
+      Object unwrapped = Unwrapper.unwrapObject(parameter.getValue());
+      Object expected = args[i];
+
+      if (expected instanceof float[] expectedArray
+          && unwrapped instanceof float[] unwrappedArray) {
+        assertArrayEquals(expectedArray, unwrappedArray, 0f);
+      } else if (expected instanceof boolean[] expectedArray
+          && unwrapped instanceof boolean[] unwrappedArray) {
+        assertArrayEquals(expectedArray, unwrappedArray);
+      } else if (expected instanceof Number e && unwrapped instanceof Number u) {
+        if (e instanceof Float || u instanceof Float) {
+          assertEquals(e.floatValue(), u.floatValue(), 0f);
+        } else if (e instanceof Double || u instanceof Double) {
+          assertEquals(e.doubleValue(), u.doubleValue(), 0d);
+        } else {
+          assertEquals(e.longValue(), u.longValue());
+        }
+      } else {
+        assertEquals(expected, unwrapped);
+      }
+    }
+  }
+
   private final UUID peerId = UUID.randomUUID();
   private MessageBuilder messageBuilder;
   private MessageBuilder messageBuilderWithContext;
@@ -270,7 +302,7 @@ public class MessageBuilderTest {
     String className = this.getClass().getName();
     ExecMessage execMessage = messageBuilder.buildEmptyConstructor(peerId, className);
     assertNotNull(execMessage);
-    assertEquals(MessageType.EXEC_CONSTRUCTOR, getMessageTypeOf(execMessage));
+    assertEquals(EXEC_CONSTRUCTOR, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getConstructorCall());
     assertEquals(peerId.toString(), execMessage.getPeerUuid());
     assertEquals(className, execMessage.constructorCall.getClazz().getName());
@@ -287,7 +319,7 @@ public class MessageBuilderTest {
         messageBuilder.buildNonEmptyConstructor(
             peerId, className, parameterTypes, args, argObjRefs);
     assertNotNull(execMessage);
-    assertEquals(MessageType.EXEC_CONSTRUCTOR, getMessageTypeOf(execMessage));
+    assertEquals(EXEC_CONSTRUCTOR, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getConstructorCall());
     assertEquals(peerId.toString(), execMessage.getPeerUuid());
     assertEquals(className, execMessage.constructorCall.getClazz().getName());
@@ -307,7 +339,7 @@ public class MessageBuilderTest {
         messageBuilderWithContext.buildConstructorMessageEphemeral(
             constructorContext, sender, senderObjRef, args, argObjRefs);
     assertNotNull(execMessage);
-    assertEquals(MessageType.EXEC_CONSTRUCTOR, getMessageTypeOf(execMessage));
+    assertEquals(EXEC_CONSTRUCTOR, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getConstructorCall());
     assertEquals(peerId.toString(), execMessage.getPeerUuid());
     assertEquals(clazz.getName(), execMessage.getConstructorCall().getClazz().getName());
@@ -340,7 +372,7 @@ public class MessageBuilderTest {
             peerId, clazz.getName(), parameterTypes, args, sender, senderObjRef);
 
     assertNotNull(execMessage);
-    assertEquals(MessageType.EXEC_CONSTRUCTOR, getMessageTypeOf(execMessage));
+    assertEquals(EXEC_CONSTRUCTOR, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getConstructorCall());
     assertEquals(peerId.toString(), execMessage.getPeerUuid());
     assertEquals(clazz.getName(), execMessage.getConstructorCall().getClazz().getName());
@@ -389,7 +421,7 @@ public class MessageBuilderTest {
         messageBuilder.buildInstanceMethod(
             peerId, className, methodName, targetObjRef, parameterTypes, args, argObjRefs);
     assertNotNull(execMessage);
-    assertEquals(MessageType.EXEC_INSTANCE_METHOD, getMessageTypeOf(execMessage));
+    assertEquals(EXEC_INSTANCE_METHOD, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getInstanceMethodCall());
     assertEquals(peerId.toString(), execMessage.getPeerUuid());
     assertEquals(className, execMessage.getInstanceMethodCall().getClazz().getName());
@@ -413,7 +445,7 @@ public class MessageBuilderTest {
         messageBuilderWithContext.buildInstanceMethodMessageEphemeral(
             instanceMethodContext, sender, senderObjRef, targetObjRef, args, argObjRefs);
     assertNotNull(execMessage);
-    assertEquals(MessageType.EXEC_INSTANCE_METHOD, getMessageTypeOf(execMessage));
+    assertEquals(EXEC_INSTANCE_METHOD, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getInstanceMethodCall());
     assertEquals(peerId.toString(), execMessage.getPeerUuid());
     assertEquals(
@@ -446,7 +478,7 @@ public class MessageBuilderTest {
             args);
 
     assertNotNull(execMessage);
-    assertEquals(MessageType.EXEC_INSTANCE_METHOD, getMessageTypeOf(execMessage));
+    assertEquals(EXEC_INSTANCE_METHOD, getMessageTypeOf(execMessage));
     assertNotNull(execMessage.getInstanceMethodCall());
     assertEquals(peerId.toString(), execMessage.getPeerUuid());
     assertEquals(
@@ -488,24 +520,7 @@ public class MessageBuilderTest {
     assertEquals(className, execMessage.getClassMethodCall().getClazz().getName());
     assertEquals(methodName, execMessage.getClassMethodCall().getName());
     assertNull(execMessage.getClassMethodCall().getContext());
-    assertEquals(parameterTypes.length, execMessage.getClassMethodCall().getParameters().length);
-
-    // compare parameter types
-    for (int i = 0; i < execMessage.getClassMethodCall().getParameters().length; i++) {
-      Parameter parameter = execMessage.getClassMethodCall().getParameters()[i];
-      assertEquals(parameterTypes[i], parameter.getValue().getClazz().getName());
-    }
-    // compare parameter values
-    assertArrayEquals(
-        (float[]) args[0],
-        (float[])
-            Unwrapper.unwrapObject(execMessage.getClassMethodCall().getParameters()[0].getValue()),
-        0f);
-    assertEquals(
-        (float) args[1],
-        (float)
-            Unwrapper.unwrapObject(execMessage.getClassMethodCall().getParameters()[1].getValue()),
-        0f);
+    assertClassMethodParameters(execMessage, parameterTypes, args);
   }
 
   @Test
@@ -563,20 +578,7 @@ public class MessageBuilderTest {
     assertEquals(clazz.getName(), execMessage.getClassMethodCall().getClazz().getName());
     assertEquals(method, execMessage.getClassMethodCall().getName());
     assertNull(execMessage.getClassMethodCall().getContext());
-    assertEquals(parameterTypes.length, execMessage.getClassMethodCall().getParameters().length);
-    // compare parameter types and values
-    for (int i = 0; i < execMessage.getClassMethodCall().getParameters().length; i++) {
-      Parameter parameter = execMessage.getClassMethodCall().getParameters()[i];
-      assertEquals(parameterTypes[i], parameter.getValue().getClazz().getName());
-    }
-    // compare parameter values
-    assertArrayEquals(
-        (boolean[]) args[0],
-        (boolean[])
-            Unwrapper.unwrapObject(execMessage.getClassMethodCall().getParameters()[0].getValue()));
-    assertEquals(
-        args[1],
-        Unwrapper.unwrapObject(execMessage.getClassMethodCall().getParameters()[1].getValue()));
+    assertClassMethodParameters(execMessage, parameterTypes, args);
   }
 
   @Test

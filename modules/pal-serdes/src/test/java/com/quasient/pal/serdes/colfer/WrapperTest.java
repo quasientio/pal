@@ -352,10 +352,10 @@ public class WrapperTest extends WrappingTestBase {
   // <editor-fold defaultstate="collapsed" desc="getWrappedContext tests">
   @Test
   public void wrapContext_VariousContexts_wrappedContext() throws NoSuchFieldException {
-    Signature signature = new FieldSignature(java.awt.Dimension.class.getDeclaredField("width"));
+    Signature signature = new FieldSignature(Dimension.class.getDeclaredField("width"));
     String sourceFile = "SomeJavaClass.java";
     int lineNumber = 16;
-    var withinType = java.awt.Dimension.class;
+    var withinType = Dimension.class;
     Context context = new Context(sourceFile, lineNumber, withinType, signature);
     com.quasient.pal.messages.colfer.Context wrappedContext =
         Wrapper.getWrappedContext(context, this, ObjectRef.randomRef());

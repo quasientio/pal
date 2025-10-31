@@ -101,7 +101,7 @@ public class JsonRpcWebSocketServerUnitTest {
 
     WebSocket socket = mock(WebSocket.class);
     when(socket.getRemoteSocketAddress())
-        .thenReturn(new java.net.InetSocketAddress(InetAddress.getLoopbackAddress(), 12345));
+        .thenReturn(new InetSocketAddress(InetAddress.getLoopbackAddress(), 12345));
     ClientHandshake hs = mock(ClientHandshake.class);
     when(hs.hasFieldValue("peer-id")).thenReturn(true);
     when(hs.getFieldValue("peer-id")).thenReturn(UUID.randomUUID().toString());

@@ -90,7 +90,7 @@ public class MessageBuilderJsonRpcRequestToExecTest {
     assertEquals(2, types.size());
     // first one is declared type, second one is null (no clazz set for JSON-RPC ref arg)
     assertEquals("int", types.get(0));
-    org.junit.Assert.assertNull(types.get(1));
+    assertNull(types.get(1));
   }
 
   @Test

@@ -17,6 +17,7 @@ import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.util.ContextInitializer;
 import com.quasient.pal.common.cli.PalCommand;
 import java.lang.reflect.Field;
+import java.util.Properties;
 import org.junit.After;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
@@ -62,9 +63,9 @@ public class MainCallTest {
     assertThat(code, is(0));
 
     // Reflect properties and assert some defaults populated by validateProperties
-    java.lang.reflect.Field f = Main.class.getDeclaredField("properties");
+    Field f = Main.class.getDeclaredField("properties");
     f.setAccessible(true);
-    java.util.Properties p = (java.util.Properties) f.get(app);
+    Properties p = (Properties) f.get(app);
     // Defaults from Main: wal/pub queues and pub spsc size
     assertNotNull(p.getProperty("wal.queue.initial"));
     assertNotNull(p.getProperty("wal.queue.chunk"));

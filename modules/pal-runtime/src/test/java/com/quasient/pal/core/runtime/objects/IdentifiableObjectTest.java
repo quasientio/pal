@@ -18,7 +18,6 @@ import com.quasient.pal.common.objects.ObjectRef;
 import java.lang.ref.ReferenceQueue;
 import java.util.Arrays;
 import java.util.List;
-import org.hamcrest.Matchers;
 import org.junit.Test;
 
 public class IdentifiableObjectTest {
@@ -56,25 +55,25 @@ public class IdentifiableObjectTest {
   /* ------------------------------------------------------------------ */
   @Test
   public void testEquals() {
-    // same value, different identity ­– should be equal (same identityHashCode for cached Integer)
+    // same value, different identity – should be equal (same identityHashCode for cached Integer)
     Integer int1 = 23;
     Integer int2 = 23;
-    assertThat(wrap(int1), Matchers.is(wrap(int2)));
+    assertThat(wrap(int1), is(wrap(int2)));
 
     // different instances with same value should NOT be equal
     String str1 = "ABC";
     String str2 = new String("ABC");
-    assertThat(wrap(str1), is(Matchers.not(wrap(str2))));
+    assertThat(wrap(str1), is(not(wrap(str2))));
 
     List<Float> floats1 = Arrays.asList(10f, 11f, 12f);
     List<Float> floats2 = Arrays.asList(10f, 11f, 12f);
-    assertThat(wrap(floats1), is(Matchers.not(wrap(floats2))));
+    assertThat(wrap(floats1), is(not(wrap(floats2))));
 
     // equal instances must be equal
-    assertThat(wrap(23), Matchers.is(wrap(23)));
-    assertThat(wrap("ABC"), Matchers.is(wrap("ABC")));
-    assertThat(wrap(floats1), Matchers.is(wrap(floats1)));
-    assertThat(wrap(Void.class), Matchers.is(wrap(Void.class)));
+    assertThat(wrap(23), is(wrap(23)));
+    assertThat(wrap("ABC"), is(wrap("ABC")));
+    assertThat(wrap(floats1), is(wrap(floats1)));
+    assertThat(wrap(Void.class), is(wrap(Void.class)));
 
     // equals with non-IdentifiableObject
     assertThat(wrap(int2), is(not((Object) int2)));

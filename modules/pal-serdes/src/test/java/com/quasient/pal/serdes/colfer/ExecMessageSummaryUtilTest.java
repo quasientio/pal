@@ -216,15 +216,15 @@ public class ExecMessageSummaryUtilTest {
 
   @Test
   public void getOneLinerSummary_returnValueNonVoid() throws NoSuchMethodException {
-    class DummyClass {
+    class DummyAdder {
       @SuppressWarnings("unused")
-      public int addInts(int a, int b) {
+      public int add(int a, int b) {
         return a + b;
       }
     }
 
-    Class<?> targetClass = DummyClass.class;
-    Method method = targetClass.getMethod("addInts", int.class, int.class);
+    Class<?> targetClass = DummyAdder.class;
+    Method method = targetClass.getMethod("add", int.class, int.class);
     ObjectRef returnValueObjRef = ObjectRef.randomRef();
     int returnValue = 4;
     String responseToId = UUID.randomUUID().toString();

@@ -30,6 +30,38 @@ public class ParamsDeserializerTest {
   private final Gson gson =
       new GsonBuilder().registerTypeAdapter(Params.class, new ParamsDeserializer()).create();
 
+  // Common test arguments used in both testArgumentInValue and testArgumentInArgs
+  private static final String[] VALID_ARGS = {
+    "{}",
+    "4", // 4 as int
+    "4.3", // 4 as double
+    "\"4\"", // 4 as string
+    "\"Hello\"",
+    "null",
+    "{\"value\": -10}",
+    "{\"value\": \"Hello\", \"type\": \"java.lang.String\"}",
+    // arrays
+    "[false,false,true]", // no type => Boolean[]
+    "[\"Hello\",\"world\"]", // no type => String[]
+    "[]", // no type => empty Object[]
+    "{\"value\":[false,true],\"type\":\"[Z\"}", // typed boolean array => boolean[]
+    "{\"value\":[\"Hello\",\"world\",\"!\"],\"type\":\"[Ljava.lang.String;\"}", // typed String[]
+    "{\"value\":[1,2,3],\"type\":\"[I\"}", // typed int[] {1,2,3}
+    "{\"value\":[],\"type\":\"[I\"}", // typed empty int[]
+    "{\"value\":null,\"type\":\"[I\"}", // typed null int[]
+    "{\"value\":[\"Hello\",null,\"world\"],\"type\":\"[Ljava.lang.String;\"}", // typed String[]
+    // arrays with suffixed numbers
+    "[239823d, 0.5f, 9999l]", // inferred type -> Double[]
+    "{\"value\":[239823d,38723d,2323d],\"type\":\"[D\"}", // with type
+    "{\"value\":[239823d,38723d,2323d]}", // without type
+    "{\"value\":[\"239823d\",\"0.5\",\"9999d\"],\"type\":\"[Ljava.lang.Double;\"}",
+    "{\"value\":[\"239823d\",\"0.5d\",\"9999d\"]}", // as strings, and without type
+    "{\"value\":[23f,1f,3f],\"type\":\"[F\"}",
+    "{\"value\":[\"23\",\"1f\",\"3f\"],\"type\":\"[Ljava.lang.Float;\"}",
+    "{\"value\":[2398239l,-23L],\"type\":\"[J\"}",
+    "{\"value\":[\"2398239\",\"-23l\"],\"type\":\"[Ljava.lang.Long;\"}",
+  };
+
   @Test
   public void testArgumentWithTypeNameAndValue() {
     String json =
@@ -177,39 +209,7 @@ public class ParamsDeserializerTest {
             + "\"value\": %s"
             + "}";
 
-    // Valid JSON arguments for the "value" field
-    String[] validArgs = {
-      "{}",
-      "4", // 4 as int
-      "4.3", // 4 as double
-      "\"4\"", // 4 as string
-      "\"Hello\"",
-      "null",
-      "{\"value\": -10}",
-      "{\"value\": \"Hello\", \"type\": \"java.lang.String\"}",
-      // arrays
-      "[false,false,true]", // no type => Boolean[]
-      "[\"Hello\",\"world\"]", // no type => String[]
-      "[]", // no type => empty Object[]
-      "{\"value\":[false,true],\"type\":\"[Z\"}", // typed boolean array => boolean[]
-      "{\"value\":[\"Hello\",\"world\",\"!\"],\"type\":\"[Ljava.lang.String;\"}", // typed String[]
-      "{\"value\":[1,2,3],\"type\":\"[I\"}", // typed int[] {1,2,3}
-      "{\"value\":[],\"type\":\"[I\"}", // typed empty int[]
-      "{\"value\":null,\"type\":\"[I\"}", // typed null int[]
-      "{\"value\":[\"Hello\",null,\"world\"],\"type\":\"[Ljava.lang.String;\"}", // typed String[]
-      // arrays with suffixed numbers
-      "[239823d, 0.5f, 9999l]", // inferred type -> Double[]
-      "{\"value\":[239823d,38723d,2323d],\"type\":\"[D\"}", // with type
-      "{\"value\":[239823d,38723d,2323d]}", // without type
-      "{\"value\":[\"239823d\",\"0.5\",\"9999d\"],\"type\":\"[Ljava.lang.Double;\"}",
-      "{\"value\":[\"239823d\",\"0.5d\",\"9999d\"]}", // as strings, and without type
-      "{\"value\":[23f,1f,3f],\"type\":\"[F\"}",
-      "{\"value\":[\"23\",\"1f\",\"3f\"],\"type\":\"[Ljava.lang.Float;\"}",
-      "{\"value\":[2398239l,-23L],\"type\":\"[J\"}",
-      "{\"value\":[\"2398239\",\"-23l\"],\"type\":\"[Ljava.lang.Long;\"}",
-    };
-
-    for (String arg : validArgs) {
+    for (String arg : VALID_ARGS) {
       String json = String.format(paramsJson, arg);
       Params params = gson.fromJson(json, Params.class);
 
@@ -359,39 +359,7 @@ public class ParamsDeserializerTest {
             + "\"args\": [%s]"
             + "}";
 
-    // Valid JSON arguments for the "args" field
-    String[] validArgs = {
-      "{}",
-      "4", // 4 as int
-      "4.3", // 4 as double
-      "\"4\"", // 4 as string
-      "\"Hello\"",
-      "null",
-      "{\"value\": -10}",
-      "{\"value\": \"Hello\", \"type\": \"java.lang.String\"}",
-      // arrays
-      "[false,false,true]",
-      "[\"Hello\",\"world\"]",
-      "[]",
-      "{\"value\":[false,true],\"type\":\"[Z\"}",
-      "{\"value\":[\"Hello\",\"world\",\"!\"],\"type\":\"[Ljava.lang.String;\"}",
-      "{\"value\":[1,2,3],\"type\":\"[I\"}",
-      "{\"value\":[],\"type\":\"[I\"}",
-      "{\"value\":null,\"type\":\"[I\"}",
-      "{\"value\":[\"Hello\",null,\"world\"],\"type\":\"[Ljava.lang.String;\"}",
-      // arrays with suffixed numbers
-      "[239823d, 0.5f, 9999l]", // without type -> inferred as Double[]
-      "{\"value\":[239823d,38723d,2323d],\"type\":\"[D\"}", // with type
-      "{\"value\":[239823d,38723d,2323d]}", // without type
-      "{\"value\":[\"239823d\",\"0.5\",\"9999d\"],\"type\":\"[Ljava.lang.Double;\"}",
-      "{\"value\":[\"239823d\",\"0.5d\",\"9999d\"]}", // as strings, and without type
-      "{\"value\":[23f,1f,3f],\"type\":\"[F\"}",
-      "{\"value\":[\"23\",\"1f\",\"3f\"],\"type\":\"[Ljava.lang.Float;\"}",
-      "{\"value\":[2398239l,-23L],\"type\":\"[J\"}",
-      "{\"value\":[\"2398239\",\"-23l\"],\"type\":\"[Ljava.lang.Long;\"}",
-    };
-
-    for (String arg : validArgs) {
+    for (String arg : VALID_ARGS) {
       String json = String.format(paramsJson, arg);
       Params params = gson.fromJson(json, Params.class);
 

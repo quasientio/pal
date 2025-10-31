@@ -17,6 +17,7 @@ import static org.junit.Assert.assertThrows;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Map;
 import org.junit.Test;
 
 public class ParameterAdaptationUtilsEdgeCasesTest {
@@ -34,9 +35,9 @@ public class ParameterAdaptationUtilsEdgeCasesTest {
   }
 
   static class Methods {
-    public static void acceptsListOfLongs(java.util.List<Long> a) {}
+    public static void acceptsListOfLongs(List<Long> a) {}
 
-    public static void acceptsMapOfSI(java.util.Map<String, Integer> m) {}
+    public static void acceptsMapOfSI(Map<String, Integer> m) {}
 
     public static void acceptsPrims(int i, long l) {}
 
@@ -82,7 +83,7 @@ public class ParameterAdaptationUtilsEdgeCasesTest {
 
   @Test
   public void adaptMap_wrongRawType_throws() throws Exception {
-    Method m = method("acceptsMapOfSI", java.util.Map.class);
+    Method m = method("acceptsMapOfSI", Map.class);
     MessageArgument[] raw = {new MessageArgument(123, false)};
     assertThrows(
         IllegalArgumentException.class,

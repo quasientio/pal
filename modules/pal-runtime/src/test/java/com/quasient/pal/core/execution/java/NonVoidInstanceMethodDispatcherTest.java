@@ -530,7 +530,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 
     // we use a method that exists, but with the wrong number of parameters
     String methodName = "toUpperCase";
-    Class<?>[] parameterTypes = {java.lang.String.class};
+    Class<?>[] parameterTypes = {String.class};
     Object[] args = {"et alia"};
     ObjectRef[] argObjRefs = {null};
 
