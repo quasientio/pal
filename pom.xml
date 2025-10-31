@@ -49,7 +49,10 @@
         <maven.plugin.resources.version>3.2.0</maven.plugin.resources.version>
         <maven.plugin.shade.version>3.5.2</maven.plugin.shade.version>
         <maven.plugin.checkstyle.version>3.6.0</maven.plugin.checkstyle.version>
+        <!-- NOTE: requireManagedDeps (v1.3) uses deprecated Enforcer API.
+         Do NOT upgrade maven-enforcer-plugin beyond 3.x until an updated rule is released. -->
         <maven.plugin.enforcer.version>3.6.2</maven.plugin.enforcer.version>
+        <enforce.managed.deps.rule.version>1.3</enforce.managed.deps.rule.version>
         <licensing.plugin.version>5.0.0</licensing.plugin.version>
         <license.maven.plugin.version>2.6.0</license.maven.plugin.version>
         <aspectj.plugin.version>1.15.0</aspectj.plugin.version>
@@ -134,41 +137,7 @@
                     <artifactId>maven-deploy-plugin</artifactId>
                     <version>${maven.plugin.deploy.version}</version>
                 </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-compiler-plugin</artifactId>
-                    <version>${maven.plugin.compiler.version}</version>
-                    <configuration>
-                        <source>${java.version}</source>
-                        <target>${java.version}</target>
-                        <release>17</release>
-                        <showWarnings>true</showWarnings>
-                        <encoding>UTF-8</encoding>
-                        <!-- -Xep:JUnitIncompatibleType:OFF to disable error (reported as https://github.com/google/error-prone/issues/4376) -->
-                        <compilerArgs>
-                            <arg>-Xlint:deprecation</arg>
-                            <arg>-Xlint:unchecked</arg>
-                            <arg>-XDcompilePolicy=simple</arg>
-                            <arg>--should-stop=ifError=FLOW</arg>
-                            <arg>
-                                -Xplugin:ErrorProne \
-                                -Xep:JUnitIncompatibleType:OFF \
-                                -Xep:DeadException:WARN \
-                                -XepExcludedPaths:.*/pal-serdes/src/main/java/com/quasient/pal/messages/colfer.* \
-                                -Xep:GuardedBy:OFF
-                            </arg>
-                        </compilerArgs>
-                        <annotationProcessorPaths>
-                            <path>
-                                <groupId>com.google.errorprone</groupId>
-                                <artifactId>error_prone_core</artifactId>
-                                <version>${errorprone.plugin.version}</version>
-                            </path>
-                        </annotationProcessorPaths>
-                    </configuration>
-
-                </plugin>
-                <!-- mvn enforcer -->
+               <!-- mvn enforcer -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-enforcer-plugin</artifactId>
@@ -269,6 +238,44 @@
         </pluginManagement>
 
         <plugins>
+            <!-- Compiler plugin with errorProne configuration -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven.plugin.compiler.version}</version>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                    <release>17</release>
+                    <showWarnings>true</showWarnings>
+                    <encoding>UTF-8</encoding>
+                    <!-- -Xep:JUnitIncompatibleType:OFF to disable error (reported as https://github.com/google/error-prone/issues/4376) -->
+                    <compilerArgs>
+                        <!-- normal javac flags can each be their own <arg> -->
+                        <arg>-Xlint:deprecation</arg>
+                        <arg>-Xlint:unchecked</arg>
+                        <arg>-XDcompilePolicy=simple</arg>
+                        <arg>--should-stop=ifError=FLOW</arg>
+
+                        <!-- ALL Error Prone stuff in ONE <arg> -->
+                        <arg>
+                            -Xplugin:ErrorProne
+                            -Xep:JUnitIncompatibleType:OFF
+                            -Xep:DeadException:WARN
+                            -XepExcludedPaths:.*/(pal-serdes/src/main/java/com/quasient/pal/messages/colfer.*|pal-benchmarks/target/generated-sources/.*)
+                            -Xep:GuardedBy:OFF
+                        </arg>
+                    </compilerArgs>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>com.google.errorprone</groupId>
+                            <artifactId>error_prone_core</artifactId>
+                            <version>${errorprone.plugin.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+
             <!-- cleaning tasks -->
             <plugin>
                 <artifactId>maven-clean-plugin</artifactId>
@@ -386,7 +393,7 @@
                     <dependency>
                         <groupId>org.commonjava.maven.enforcer</groupId>
                         <artifactId>enforce-managed-deps-rule</artifactId>
-                        <version>1.3</version>
+                        <version>${enforce.managed.deps.rule.version}</version>
                     </dependency>
                 </dependencies>
                 <executions>
