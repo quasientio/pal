@@ -31,7 +31,7 @@ docker pull apache/kafka:3.8.0 && docker tag apache/kafka:3.8.0 kafka:latest
     ```bash
     mvn -pl modules/itt verify
     ```
-   NOTE: Tests that require a peer automatically launch and manage their own peer processes via test suites:
+   NOTE: Tests that require a peer automatically launch and manage their own *transient* peer processes via test suites:
    - `RpcTestSuite`: Manages a peer for all RPC tests (binary and JSON) on ports 5656/7789
    - `InterceptTestSuite`: Manages a separate peer with `--interceptable` flag for intercept tests on ports 5657/7790
    - `ThinPeerTestSuite`: Manages a peer for ThinPeer connection tests on ports 5658/7791
@@ -42,3 +42,11 @@ docker pull apache/kafka:3.8.0 && docker tag apache/kafka:3.8.0 kafka:latest
     ```bash
     infra/bin/stop_etcd_and_kafka_docker.sh
     ```
+## Adding new tests
+New integration tests might or not need a peer to be running. If it does, then:
+- Consider adding the new test to an existing TestSuite that already launches and manages a shared peer,
+  listing the new class name under `@RunWith(Suite.class) @Suite.SuiteClasses({`.
+- Or create and manage the transient peer using JUnit's `@BeforeClass` and `@AfterClass` to launch and
+  stop the peer. For an example, see [ThinPeerIT.java](src/test/java/com/quasient/pal/cxn/ThinPeerIT.java).
+- Verify that the failsafe plugin configuration in [ITT's pom](pom.xml) is up to date, so that the new
+  test runs either as standalone or within a test suite.
