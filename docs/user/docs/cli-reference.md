@@ -72,6 +72,7 @@ pal ls -d localhost:2379 -L -S -r
 ```
 UUID                                 Name            ZMQ-RPC              JSON-RPC             PUB                  JMX                  Uptime
 ```
+
 - UUID: Peer unique identifier
 - Name: Peer name (if set)
 - ZMQ-RPC: Binary RPC endpoint (tcp://)
@@ -84,6 +85,7 @@ UUID                                 Name            ZMQ-RPC              JSON-R
 ```
 Name                 UUID                                 Size       Start    --> End      Created
 ```
+
 - Name: Log name
 - UUID: Log unique identifier
 - Size: Total size in human-readable format (KB, MB, GB)
@@ -269,6 +271,7 @@ pal call [OPTIONS] -l <LOG_NAME> <CLASS> <METHOD> [args...]
 Invokes static methods with `String[]` signature using command-line arguments.
 
 **Requirements**:
+
 - Method must have signature: `static void methodName(String[] args)`
 - Uses `-m` option to specify method name
 - Works with both `ZMQ_RPC` and `JSON_RPC`
@@ -289,6 +292,7 @@ pal call -d localhost:2379 -p my-peer --rpc-type ZMQ_RPC com.example.MyClass
 Sends arbitrary JSON-RPC requests via stdin for full flexibility.
 
 **Capabilities**:
+
 - Call any method with any signature
 - Construct objects (constructors)
 - Get/set fields (static and instance)
@@ -390,6 +394,7 @@ pal call -d localhost:2379 -l notifications -f com.example.Notifier send "Alert!
 ### RPC Type Selection
 
 The tool automatically infers RPC type based on:
+
 1. Explicit `--rpc-type` option
 2. Peer address scheme:
    - `tcp://` → `ZMQ_RPC`
@@ -439,11 +444,13 @@ pal rm [OPTIONS] -L <LOG...>   # Remove logs
 ### Behavior
 
 **Logs**:
+
 - Unregisters from directory
 - Deletes Kafka topic (for Kafka logs)
 - Deletes Chronicle queue files (for Chronicle logs)
 
 **Peers**:
+
 - Checks for active lease (is peer alive?)
 - Unregisters from directory
 - Requires `--force` to remove live peers

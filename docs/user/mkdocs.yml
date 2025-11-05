@@ -1,13 +1,23 @@
-site_name: Pal Documentation
+site_name: PAL - Online Documentation
 
 nav:
   - Home: index.md
+  - Understanding PAL: understanding-pal.md
   - Getting Started: getting-started.md
+  - Use Cases: use-cases.md
+  - Concepts:
+    - Peers and Logs: concepts/peers-and-logs.md
+    - Remote Procedure Calls: concepts/rpc.md
+    - Interception: concepts/interception.md
+    - Log Backends: concepts/logs.md
+  - Guides:
+    - Local Development: guides/local-development.md
+    - Distributed Application: guides/distributed-application.md
+    - Testing with Interception: guides/testing-with-interception.md
   - CLI Reference: cli-reference.md
 
 theme:
   name: material
-  custom_dir: overrides
   language: en
   logo: assets/imgs/PAL-logo-01.png
   palette:
@@ -26,9 +36,21 @@ theme:
   font:
     text: 'Roboto'
     code: 'Roboto Mono'
+  features:
+    - content.code.copy
+    - content.code.annotate
+    - content.code.select
 
 markdown_extensions:
   - attr_list
+  - pymdownx.highlight:
+      use_pygments: true
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
 
 extra:
   favicons:
@@ -37,6 +59,5 @@ extra:
     - { rel: 'icon', type: 'image/png', sizes: '16x16', href: 'assets/imgs/favicon-16x16.png' }
     - { rel: 'manifest', href: 'site.webmanifest' }
     - { rel: 'mask-icon', href: 'assets/imgs/safari-pinned-tab.svg', color: '#5bbad5' }
-    # - { rel: 'shortcut icon', href: 'favicon.ico' }
   msapplication_config: 'browserconfig.xml'
   theme_color: '#ffffff'
