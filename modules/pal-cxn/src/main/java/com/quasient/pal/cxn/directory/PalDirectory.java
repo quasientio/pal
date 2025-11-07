@@ -71,7 +71,7 @@ import org.slf4j.LoggerFactory;
  * functionalities to register, unregister, and query peers and logs, as well as manage intercept
  * requests.
  */
-public class PalDirectory implements AutoCloseable {
+public class PalDirectory {
 
   /** Logger instance for PalDirectory to log operations. */
   private static final Logger logger = LoggerFactory.getLogger(PalDirectory.class);
@@ -1794,7 +1794,6 @@ public class PalDirectory implements AutoCloseable {
    * <p>Closes the PalDirectory, releasing all resources including the etcd client and key-value
    * client.
    */
-  @Override
   public void close() {
 
     // Fast-path: already closed?

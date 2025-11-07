@@ -144,17 +144,14 @@ public abstract class AbstractIntegrationTest {
    * @throws Exception if directory access fails
    */
   protected static String getPeerJsonRpcAddress(UUID peerUuid) throws Exception {
-    DirectoryConnectionProvider directoryConnectionProvider =
-        new DirectoryConnectionProvider(getPalDirectoryUrl());
-    try (PalDirectory palDirectory =
-        directoryConnectionProvider.get().orElseThrow(RuntimeException::new)) {
-      PeerInfo peerInfo = palDirectory.getPeer(peerUuid);
-      if (peerInfo == null) {
-        logger.warn("Peer with UUID {} not found in directory", peerUuid);
-        return null;
-      }
-      return peerInfo.getJsonrpcAddress();
+    PalDirectory palDirectory = new PalDirectory(getPalDirectoryUrl(), null, true);
+    PeerInfo peerInfo = palDirectory.getPeer(peerUuid);
+    palDirectory.close();
+    if (peerInfo == null) {
+      logger.warn("Peer with UUID {} not found in directory", peerUuid);
+      return null;
     }
+    return peerInfo.getJsonrpcAddress();
   }
 
   /**
