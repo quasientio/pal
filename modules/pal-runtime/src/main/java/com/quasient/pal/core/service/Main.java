@@ -255,19 +255,19 @@ public class Main implements Callable<Integer> {
    * doesn't respond within this time, the peer will fail to start.
    */
   @Option(
-      names = {"--kafka-connect-timeout", "--kafka-timeout"},
+      names = {"--kafka-timeout"},
       paramLabel = "milliseconds",
       description =
           "timeout for Kafka connection health check in milliseconds (default: ${DEFAULT-VALUE})",
       defaultValue = "5000")
-  private Integer kafkaTimeout;
+  private Integer kafkaConnectTimeout;
 
   /**
    * Timeout in milliseconds for etcd connection health check during initialization when using a PAL
    * directory. Applied to preflight TCP/HTTP checks and jetcd status check.
    */
   @Option(
-      names = {"--etcd-connect-timeout"},
+      names = {"--etcd-timeout"},
       paramLabel = "milliseconds",
       description =
           "timeout for etcd connection health check in milliseconds (default: ${DEFAULT-VALUE})",
@@ -714,14 +714,14 @@ public class Main implements Callable<Integer> {
     tcpPub = getParameter("TCP_PUB", tcpPub);
 
     // timeouts via env override if CLI not provided
-    if (kafkaTimeout == null) {
+    if (kafkaConnectTimeout == null) {
       String kt = System.getenv("KAFKA_CONNECT_TIMEOUT_MS");
       if (kt == null) {
         kt = System.getenv("KAFKA_TIMEOUT_MS");
       }
       if (kt != null && !kt.isBlank()) {
         try {
-          kafkaTimeout = Integer.parseInt(kt.trim());
+          kafkaConnectTimeout = Integer.parseInt(kt.trim());
         } catch (NumberFormatException ignored) {
           // keep CLI/default
         }
@@ -922,8 +922,8 @@ public class Main implements Callable<Integer> {
     }
 
     // add kafka connection timeout
-    if (kafkaTimeout != null) {
-      properties.setProperty("kafka.connect.timeout.ms", String.valueOf(kafkaTimeout));
+    if (kafkaConnectTimeout != null) {
+      properties.setProperty("kafka.connect.timeout.ms", String.valueOf(kafkaConnectTimeout));
     }
 
     // add etcd connect timeout for DirectoryConnectionProvider injection
