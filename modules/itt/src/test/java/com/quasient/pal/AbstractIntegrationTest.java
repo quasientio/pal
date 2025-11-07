@@ -158,7 +158,8 @@ public abstract class AbstractIntegrationTest {
   }
 
   /**
-   * Executes `pal run` with the given arguments and returns the process result.
+   * Executes `pal run` with the given arguments, waits for it to finish and returns the process
+   * result.
    *
    * @param args the command-line arguments to pass to `pal run`
    * @return ProcessResult containing exit code, stdout, and stderr
@@ -170,7 +171,8 @@ public abstract class AbstractIntegrationTest {
   }
 
   /**
-   * Executes `pal run` with the given arguments, while adding/removing environment variables.
+   * Executes `pal run` with the given arguments, while adding/removing environment variables, waits
+   * for it to finish and returns the process result.
    *
    * @param palDirectory the PAL_DIRECTORY value to set, or null to remove it from Environment
    * @param args the command-line arguments to pass to `pal run`
@@ -345,9 +347,14 @@ public abstract class AbstractIntegrationTest {
    *
    * <p>The peer log is configured to write to {@code logs/peer.log} relative to PAL_HOME.
    *
+   * <p><b>Note:</b> This method removes PAL_DIRECTORY and KAFKA_SERVERS from the environment to
+   * ensure tests are explicit. Tests should pass configuration via command-line arguments (e.g.,
+   * {@code "-d", palDirectory}).
+   *
    * <p>The caller is responsible for stopping the peer via {@link Process#destroy()} or {@link
    * Process#destroyForcibly()}.
    *
+   * @param peerId the UUID to assign to the peer
    * @param args command-line arguments to pass to {@code pal run}
    * @return Process handle for the running peer
    * @throws IOException if process execution fails
@@ -388,7 +395,10 @@ public abstract class AbstractIntegrationTest {
             "PAL_PEER_LOGGING_CONFIG", Paths.get(palHome, "config", "peer-logging.xml").toString());
 
     // Remove environment variables that would interfere with tests
+    // Tests must pass configuration explicitly via command-line arguments (e.g., "-d", "-k")
+    pb.environment().remove("PAL_DIRECTORY");
     pb.environment().remove("KAFKA_SERVERS");
+    pb.environment().remove("CHRONICLE_BASE_DIR");
     pb.environment().remove("PAL_JMX_HOST");
     pb.environment().remove("PAL_JMX_PORT");
 
