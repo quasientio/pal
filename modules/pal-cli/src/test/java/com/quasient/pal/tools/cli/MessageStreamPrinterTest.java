@@ -77,10 +77,38 @@ public class MessageStreamPrinterTest {
     outField.setAccessible(true);
     outField.set(p, new PrintStream(bout));
 
-    var fmt = MessageStreamPrinter.class.getDeclaredField("format");
-    fmt.setAccessible(true);
+    // Access the formatOptions field and FormatOptions inner class
+    var fmtOptsField = MessageStreamPrinter.class.getDeclaredField("formatOptions");
+    fmtOptsField.setAccessible(true);
+    Class<?> formatOptionsClass =
+        Class.forName("com.quasient.pal.tools.cli.MessageStreamPrinter$FormatOptions");
+
+    // Test each format by setting the appropriate flag
     for (var v : MessageStreamPrinter.OutputFormat.values()) {
-      fmt.set(p, v);
+      // Create a new FormatOptions instance
+      Object formatOptions = formatOptionsClass.getDeclaredConstructor().newInstance();
+
+      // Set the appropriate flag based on the format
+      switch (v) {
+        case COMPACT -> {
+          var compactField = formatOptionsClass.getDeclaredField("compact");
+          compactField.setAccessible(true);
+          compactField.set(formatOptions, true);
+        }
+        case JSON -> {
+          var jsonField = formatOptionsClass.getDeclaredField("json");
+          jsonField.setAccessible(true);
+          jsonField.set(formatOptions, true);
+        }
+        case FULL -> {
+          var fullField = formatOptionsClass.getDeclaredField("full");
+          fullField.setAccessible(true);
+          fullField.set(formatOptions, true);
+        }
+      }
+
+      fmtOptsField.set(p, formatOptions);
+
       Method print =
           MessageStreamPrinter.class.getDeclaredMethod(
               "printRecord", String.class, LogMessage.class, long.class);

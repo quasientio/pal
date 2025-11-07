@@ -17,10 +17,8 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.After;
@@ -43,9 +41,6 @@ public class ListIT extends AbstractCliIT {
 
   /** Peer process launched for testing, or null if not launched. */
   private Process peerProcess;
-
-  /** List of Chronicle queue directories created during tests that need cleanup. */
-  private List<Path> chronicleDirectoriesToCleanup;
 
   /** Sets up test environment before each test. */
   @Before
@@ -90,28 +85,10 @@ public class ListIT extends AbstractCliIT {
   }
 
   /**
-   * Tracks a Chronicle queue directory for cleanup after the test.
-   *
-   * <p>The Chronicle queue will be created in PAL_HOME (where the peer process runs), so we need to
-   * construct the full path using PAL_HOME.
-   *
-   * @param queueName the name of the Chronicle queue directory (relative to PAL_HOME)
-   */
-  private void trackChronicleDirectory(String queueName) {
-    String palHome = System.getenv("PAL_HOME");
-    if (palHome != null) {
-      chronicleDirectoriesToCleanup.add(Paths.get(palHome, queueName));
-    } else {
-      // Fallback to current directory if PAL_HOME is not set
-      chronicleDirectoriesToCleanup.add(Paths.get(queueName));
-    }
-  }
-
-  /**
    * Tests that `pal ls -P` lists running peers. In short format, name is printed if given,
    * otherwise Id.
    *
-   * <p>Launches a transient peer and verifies it appears in the peer listing.
+   * <p>Launches a peer and verifies it appears in the peer listing.
    *
    * @throws Exception if test execution fails
    */
@@ -124,8 +101,7 @@ public class ListIT extends AbstractCliIT {
     UUID peerId = UUID.randomUUID();
 
     peerProcess =
-        launchTransientPeer(
-            peerId, "-d", palDirectory, "-n", peerName, "-cp", getIttAppsClasspath());
+        launchPeer(peerId, "-d", palDirectory, "-n", peerName, "-cp", getIttAppsClasspath());
 
     // List peers
     AbstractCliIT.CliProcessResult result = runLs("-d", palDirectory, "-P");
@@ -138,7 +114,7 @@ public class ListIT extends AbstractCliIT {
    * Tests that `pal ls -P` lists running peers. In short format, if no name is given, ID is
    * printed.
    *
-   * <p>Launches a transient peer and verifies it appears in the peer listing.
+   * <p>Launches a peer and verifies it appears in the peer listing.
    *
    * @throws Exception if test execution fails
    */
@@ -149,7 +125,7 @@ public class ListIT extends AbstractCliIT {
     // Launch a peer with a specific name and ID
     UUID peerId = UUID.randomUUID();
 
-    peerProcess = launchTransientPeer(peerId, "-d", palDirectory, "-cp", getIttAppsClasspath());
+    peerProcess = launchPeer(peerId, "-d", palDirectory, "-cp", getIttAppsClasspath());
 
     // List peers
     AbstractCliIT.CliProcessResult result = runLs("-d", palDirectory, "-P");
@@ -161,7 +137,7 @@ public class ListIT extends AbstractCliIT {
   /**
    * Tests that `pal ls -P -l` shows detailed peer information.
    *
-   * <p>Launches a transient peer and verifies long format includes RPC and PUB addresses.
+   * <p>Launches a peer and verifies long format includes RPC and PUB addresses.
    *
    * @throws Exception if test execution fails
    */
@@ -177,7 +153,7 @@ public class ListIT extends AbstractCliIT {
     String pubEndpoint = "localhost:38673";
 
     peerProcess =
-        launchTransientPeer(
+        launchPeer(
             peerId,
             "-d",
             palDirectory,
@@ -229,7 +205,7 @@ public class ListIT extends AbstractCliIT {
     String classToRun = "com.quasient.pal.apps.rpc.Methods";
 
     peerProcess =
-        launchTransientPeer(
+        launchPeer(
             peerId,
             "-d",
             palDirectory,
@@ -276,7 +252,7 @@ public class ListIT extends AbstractCliIT {
     String classToRun = "com.quasient.pal.apps.rpc.Methods";
 
     peerProcess =
-        launchTransientPeer(
+        launchPeer(
             peerId, "-d", palDirectory, "--wal", walPath, "-cp", getIttAppsClasspath(), classToRun);
 
     // Wait for the process to complete and create the Chronicle log
@@ -311,7 +287,7 @@ public class ListIT extends AbstractCliIT {
     String classToRun = "com.quasient.pal.apps.rpc.Methods";
 
     peerProcess =
-        launchTransientPeer(
+        launchPeer(
             peerId,
             "-d",
             palDirectory,
@@ -357,7 +333,7 @@ public class ListIT extends AbstractCliIT {
     String classToRun = "com.quasient.pal.apps.rpc.Methods";
 
     Process peer1 =
-        launchTransientPeer(
+        launchPeer(
             peerId1,
             "-d",
             palDirectory,
@@ -379,7 +355,7 @@ public class ListIT extends AbstractCliIT {
     String walName2 = "test-wal-ctime2-" + generateId();
     UUID peerId2 = UUID.randomUUID();
     peerProcess =
-        launchTransientPeer(
+        launchPeer(
             peerId2,
             "-d",
             palDirectory,
@@ -430,7 +406,7 @@ public class ListIT extends AbstractCliIT {
     String classToRun = "com.quasient.pal.apps.rpc.Methods";
 
     peerProcess =
-        launchTransientPeer(
+        launchPeer(
             peerId,
             "-d",
             palDirectory,
@@ -479,7 +455,7 @@ public class ListIT extends AbstractCliIT {
     String classToRun = "com.quasient.pal.apps.rpc.Methods";
 
     peerProcess =
-        launchTransientPeer(
+        launchPeer(
             peerId,
             "-d",
             palDirectory,
@@ -508,15 +484,5 @@ public class ListIT extends AbstractCliIT {
         result.stdout(),
         not(containsString(peerName)));
     logger.info("Successfully verified logs-only listing excludes peers");
-  }
-
-  /**
-   * Gets the classpath for itt-apps module.
-   *
-   * @return classpath string
-   */
-  private String getIttAppsClasspath() {
-    String palHome = System.getenv("PAL_HOME");
-    return palHome + "/modules/itt-apps/target/classes";
   }
 }

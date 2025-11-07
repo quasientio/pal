@@ -39,7 +39,7 @@ import org.zeromq.ZContext;
 
 /**
  * This class provides infrastructure for loading environment variables and configuration properties
- * for PalDirectory and Kafka. It also provides utility methods for launching transient peers with
+ * for PalDirectory and Kafka. It also provides utility methods for launching required peers with
  * different flags, ports and logging configurations.
  */
 public abstract class AbstractIntegrationTest {
@@ -55,7 +55,7 @@ public abstract class AbstractIntegrationTest {
   protected static final int PROCESS_TIMEOUT_SECONDS =
       15; // Increased to allow for Kafka health check timeout
 
-  /** Timeout in seconds to wait for a transient peer to become ready. */
+  /** Timeout in seconds to wait for a launched peer to become ready. */
   private static final int PEER_READY_TIMEOUT_SECONDS = 10;
 
   /** Peer ready line - expected in peer log at level INFO when */
@@ -158,27 +158,27 @@ public abstract class AbstractIntegrationTest {
   }
 
   /**
-   * Runs a pal command with the given arguments and returns the process result.
+   * Executes `pal run` with the given arguments and returns the process result.
    *
-   * @param args the command-line arguments to pass to pal.sh run
+   * @param args the command-line arguments to pass to `pal run`
    * @return ProcessResult containing exit code, stdout, and stderr
    * @throws IOException if process execution fails
    * @throws InterruptedException if the process is interrupted
    */
-  protected ProcessResult runPalCommand(String... args) throws IOException, InterruptedException {
-    return runPalCommandWithEnv(null, args);
+  protected ProcessResult runPeer(String... args) throws IOException, InterruptedException {
+    return runPeerWithEnv(null, args);
   }
 
   /**
-   * Runs a pal command with custom environment variables.
+   * Executes `pal run` with the given arguments, while adding/removing environment variables.
    *
-   * @param palDirectory the PAL_DIRECTORY value to set, or null to remove it
-   * @param args the command-line arguments to pass to pal.sh run
+   * @param palDirectory the PAL_DIRECTORY value to set, or null to remove it from Environment
+   * @param args the command-line arguments to pass to `pal run`
    * @return ProcessResult containing exit code, stdout, and stderr
    * @throws IOException if process execution fails
    * @throws InterruptedException if the process is interrupted
    */
-  protected ProcessResult runPalCommandWithEnv(String palDirectory, String... args)
+  protected ProcessResult runPeerWithEnv(String palDirectory, String... args)
       throws IOException, InterruptedException {
     String palHome = System.getenv("PAL_HOME");
     if (palHome == null) {
@@ -201,8 +201,7 @@ public abstract class AbstractIntegrationTest {
     // Configure logging
     pb.environment()
         .put(
-            "PAL_PEER_LOGGING_CONFIG",
-            Paths.get(palHome, "config", "transient-peer-logging.xml").toString());
+            "PAL_PEER_LOGGING_CONFIG", Paths.get(palHome, "config", "peer-logging.xml").toString());
 
     // Set or remove PAL_DIRECTORY based on parameter
     if (palDirectory != null) {
@@ -213,6 +212,7 @@ public abstract class AbstractIntegrationTest {
 
     // Remove other environment variables that would interfere with tests
     pb.environment().remove("KAFKA_SERVERS");
+    pb.environment().remove("CHRONICLE_BASE_DIR");
     pb.environment().remove("PAL_JMX_HOST");
     pb.environment().remove("PAL_JMX_PORT");
 
@@ -337,7 +337,7 @@ public abstract class AbstractIntegrationTest {
   }
 
   /**
-   * Launches a transient peer in the background and waits for it to be ready.
+   * Launches a new peer in the background and waits for it to be ready.
    *
    * <p>This method starts a peer process in the background, polls the peer log file for the
    * "Managed services ready" line (indicating the peer is ready to accept requests), and returns
@@ -354,7 +354,7 @@ public abstract class AbstractIntegrationTest {
    * @throws InterruptedException if interrupted while waiting for peer to be ready
    * @throws IllegalStateException if peer does not become ready within the timeout period
    */
-  protected Process launchTransientPeer(UUID peerId, String... args)
+  protected Process launchPeer(UUID peerId, String... args)
       throws IOException, InterruptedException {
     String palHome = System.getenv("PAL_HOME");
     if (palHome == null) {
@@ -376,7 +376,7 @@ public abstract class AbstractIntegrationTest {
     // Add given args
     command.addAll(Arrays.asList(args));
 
-    logger.info("Launching transient peer: {}", String.join(" ", command));
+    logger.info("Launching new peer: {}", String.join(" ", command));
 
     ProcessBuilder pb = new ProcessBuilder(command);
     pb.directory(new java.io.File(palHome));
@@ -385,8 +385,7 @@ public abstract class AbstractIntegrationTest {
     // Configure logging - CRITICAL for debugging test failures
     pb.environment()
         .put(
-            "PAL_PEER_LOGGING_CONFIG",
-            Paths.get(palHome, "config", "transient-peer-logging.xml").toString());
+            "PAL_PEER_LOGGING_CONFIG", Paths.get(palHome, "config", "peer-logging.xml").toString());
 
     // Remove environment variables that would interfere with tests
     pb.environment().remove("KAFKA_SERVERS");
@@ -410,7 +409,7 @@ public abstract class AbstractIntegrationTest {
                   stdout.append(line).append("\n");
                 }
               } catch (IOException e) {
-                logger.warn("Error reading stdout from transient peer", e);
+                logger.warn("Error reading stdout from launched peer", e);
               }
             });
 
@@ -424,7 +423,7 @@ public abstract class AbstractIntegrationTest {
                   stderr.append(line).append("\n");
                 }
               } catch (IOException e) {
-                logger.warn("Error reading stderr from transient peer", e);
+                logger.warn("Error reading stderr from launched peer", e);
               }
             });
 
@@ -432,7 +431,7 @@ public abstract class AbstractIntegrationTest {
     stderrReader.start();
 
     // Parse the logback config to find the actual log file path
-    Path loggingConfigPath = Paths.get(palHome, "config", "transient-peer-logging.xml");
+    Path loggingConfigPath = Paths.get(palHome, "config", "peer-logging.xml");
     Path logPath;
     try {
       logPath = parseLogbackLogFilePath(loggingConfigPath);
@@ -467,10 +466,10 @@ public abstract class AbstractIntegrationTest {
       String capturedStderr = stderr.toString();
 
       if (!capturedStdout.isEmpty()) {
-        logger.error("Transient peer stdout:\n{}", capturedStdout);
+        logger.error("Launched peer stdout:\n{}", capturedStdout);
       }
       if (!capturedStderr.isEmpty()) {
-        logger.error("Transient peer stderr:\n{}", capturedStderr);
+        logger.error("Launched peer stderr:\n{}", capturedStderr);
       }
 
       throw new IllegalStateException(
@@ -479,7 +478,7 @@ public abstract class AbstractIntegrationTest {
               PEER_READY_TIMEOUT_SECONDS));
     }
 
-    logger.info("Transient peer is ready");
+    logger.info("Peer is ready");
     return process;
   }
 

@@ -107,6 +107,12 @@ public class List extends AbstractPalSubcommand {
       description = "reverse order while sorting")
   private boolean reverseOrder;
 
+  /** Flag indicating whether to disable trimming of long field values. */
+  @Option(
+      names = {"--no-trim"},
+      description = "disable trimming of long field values")
+  private boolean noTrimming;
+
   /** Flag indicating whether the help message is requested. */
   @SuppressWarnings("unused")
   @Option(
@@ -123,9 +129,6 @@ public class List extends AbstractPalSubcommand {
 
   /** Mapping of server addresses to their respective Kafka admin clients. */
   private final Map<String, Admin> adminClientsPerServer = new HashMap<>();
-
-  /** Base directory for Chronicle queue files. */
-  private Path chronicleBaseDir;
 
   /*---------------------------------------------------------------------------------------------------
    * Column widths for variable-length fields. Adjust these values, not the format strings that follow.
@@ -183,15 +186,6 @@ public class List extends AbstractPalSubcommand {
       err.println(
           "A PalDirectory is required. Run with -d (--dir) or set the ENV variable PAL_DIRECTORY.");
       System.exit(1);
-    }
-
-    // Initialize Chronicle base directory from system property or environment variable
-    String baseDirStr =
-        System.getProperty("wal.chronicle.base_dir", System.getenv("CHRONICLE_BASE_DIR"));
-    if (baseDirStr == null || baseDirStr.isBlank()) {
-      chronicleBaseDir = Paths.get(".");
-    } else {
-      chronicleBaseDir = Paths.get(baseDirStr);
     }
   }
 
@@ -256,8 +250,7 @@ public class List extends AbstractPalSubcommand {
    * @return true if the Chronicle queue exists, false otherwise
    */
   private boolean chronicleLogExists(LogInfo logInfo) {
-    Path queuePath = ChronicleLogUtil.resolveQueuePath(logInfo.getName(), chronicleBaseDir);
-    return ChronicleLogUtil.queueExists(queuePath);
+    return ChronicleLogUtil.queueExists(Path.of(logInfo.getName()));
   }
 
   /**
@@ -266,7 +259,7 @@ public class List extends AbstractPalSubcommand {
    * @param logInfo the LogInfo to populate with offset information
    */
   private void fillChronicleLogOffsets(LogInfo logInfo) {
-    Path queuePath = ChronicleLogUtil.resolveQueuePath(logInfo.getName(), chronicleBaseDir);
+    Path queuePath = Path.of(logInfo.getName());
     ChronicleLogUtil.QueueIndexInfo indexInfo = ChronicleLogUtil.getQueueIndexInfo(queuePath);
 
     if (indexInfo != null) {
@@ -281,7 +274,7 @@ public class List extends AbstractPalSubcommand {
    * @param logInfo the LogInfo to populate with size information
    */
   private void fillChronicleLogSize(LogInfo logInfo) {
-    Path queuePath = ChronicleLogUtil.resolveQueuePath(logInfo.getName(), chronicleBaseDir);
+    Path queuePath = Path.of(logInfo.getName());
     long sizeInBytes = ChronicleLogUtil.getQueueSizeInBytes(queuePath);
     logInfo.setBytes(sizeInBytes);
   }
@@ -313,7 +306,16 @@ public class List extends AbstractPalSubcommand {
 
             for (LogInfo logInfo : logInfosSet) {
               logInfo.setStartOffset(startOffsets.get(logInfo.getName()));
-              logInfo.setEndOffset(endOffsets.get(logInfo.getName()));
+              // Kafka returns end offset as last+1, but we want to display the last message offset
+              Long endOffset = endOffsets.get(logInfo.getName());
+              if (endOffset != null) {
+                if (endOffset > 0) {
+                  logInfo.setEndOffset(endOffset - 1);
+                } else {
+                  logInfo.setEndOffset(0);
+                }
+              }
+              // If endOffset is null, leave it unset
             }
           } catch (Exception e) {
             logger.error("Error setting offset properties for List of LogInfo's", e);
@@ -408,14 +410,15 @@ public class List extends AbstractPalSubcommand {
   }
 
   /**
-   * Trims the given string to the specified maximum length, appending ".." if trimmed.
+   * Optionally trims the given string to the specified maximum length, appending ".." if trimmed.
+   * If the --no-trimming flag is set, returns the string unchanged.
    *
    * @param astring the string to trim
    * @param maxLength the maximum allowed length
    * @return the trimmed string if necessary, otherwise the original string
    */
-  private static String trimTo(String astring, int maxLength) {
-    if (astring.length() <= maxLength) {
+  private String optionallyTrim(String astring, int maxLength) {
+    if (noTrimming || astring.length() <= maxLength) {
       return astring;
     }
     return astring.substring(0, maxLength - 2) + "..";
@@ -443,24 +446,28 @@ public class List extends AbstractPalSubcommand {
    */
   private void print(LogInfo logInfo) {
     final String logInfoLine;
+    String logName =
+        logInfo.getLogType() == LogType.CHRONICLE
+            ? Paths.get(logInfo.getName()).getFileName().toString()
+            : logInfo.getName();
     if (longListing) {
       logInfoLine =
           format(
               LOGS_LONG_FORMAT,
-              trimTo(logInfo.getName(), MAX_LOG_NAME_LEN),
+              optionallyTrim(logName, MAX_LOG_NAME_LEN),
               logInfo.getUuid(),
               logInfo.getHumanReadableByteSize() == null
                   ? "??"
-                  : trimTo(logInfo.getHumanReadableByteSize(), MAX_LOG_SIZE_LEN),
+                  : optionallyTrim(logInfo.getHumanReadableByteSize(), MAX_LOG_SIZE_LEN),
               logInfo.getStartOffset() == null
                   ? "?"
-                  : trimTo(String.valueOf(logInfo.getStartOffset()), MAX_LOG_IDX_LEN),
+                  : optionallyTrim(String.valueOf(logInfo.getStartOffset()), MAX_LOG_IDX_LEN),
               logInfo.getEndOffset() == null
                   ? "?"
-                  : trimTo(String.valueOf(logInfo.getEndOffset()), MAX_LOG_IDX_LEN),
+                  : optionallyTrim(String.valueOf(logInfo.getEndOffset()), MAX_LOG_IDX_LEN),
               getFormattedDate(logInfo.getCTime()));
     } else {
-      logInfoLine = format("%s", logInfo.getName());
+      logInfoLine = format("%s", logName);
     }
     out.println(logInfoLine);
   }
@@ -475,21 +482,22 @@ public class List extends AbstractPalSubcommand {
       out.printf(
           PEERS_LONG_FORMAT + "%n",
           peerInfo.getUuid(),
-          peerInfo.getName() == null ? "" : trimTo(peerInfo.getName(), MAX_PEER_NAME_LEN),
+          peerInfo.getName() == null ? "" : optionallyTrim(peerInfo.getName(), MAX_PEER_NAME_LEN),
           peerInfo.getZmqRpcAddress() == null
               ? ""
-              : trimTo(
+              : optionallyTrim(
                   Strings.stringAfter(peerInfo.getZmqRpcAddress(), "tcp://"), MAX_ENDPOINT_LEN),
           peerInfo.getJsonrpcAddress() == null
               ? ""
-              : trimTo(
+              : optionallyTrim(
                   Strings.stringAfter(peerInfo.getJsonrpcAddress(), "ws://"), MAX_ENDPOINT_LEN),
           peerInfo.getPubAddress() == null
               ? ""
-              : trimTo(Strings.stringAfter(peerInfo.getPubAddress(), "tcp://"), MAX_ENDPOINT_LEN),
+              : optionallyTrim(
+                  Strings.stringAfter(peerInfo.getPubAddress(), "tcp://"), MAX_ENDPOINT_LEN),
           peerInfo.getJmxAddress() == null
               ? ""
-              : trimTo(peerInfo.getJmxAddress(), MAX_ENDPOINT_LEN),
+              : optionallyTrim(peerInfo.getJmxAddress(), MAX_ENDPOINT_LEN),
           getFormattedUptime(peerInfo.getCTime()));
     } else {
       // Short format: show name if present, otherwise UUID
@@ -578,8 +586,8 @@ public class List extends AbstractPalSubcommand {
   @Override
   protected int runCommand() throws Exception {
     // When neither flag is specified, list both
-    boolean shouldListLogs = listLogs || (!listLogs && !listPeers);
-    boolean shouldListPeers = listPeers || (!listLogs && !listPeers);
+    boolean shouldListLogs = listLogs || !listPeers;
+    boolean shouldListPeers = listPeers || !listLogs;
 
     if (shouldListLogs) {
       // get all logs in directory

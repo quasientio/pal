@@ -28,7 +28,7 @@ public class MainIT extends AbstractIntegrationTest {
 
   @Test
   public void testLogWithoutKafkaServers_fatalExitNoKafkaServers() throws Exception {
-    ProcessResult result = runPalCommand("--log", "test-log");
+    ProcessResult result = runPeer("--log", "test-log");
 
     assertEquals(
         "Expected fatal exit for missing Kafka servers",
@@ -44,7 +44,7 @@ public class MainIT extends AbstractIntegrationTest {
   public void testInitLogsWithUnreachableKafka_fatalExitInitializingLogs() throws Exception {
     // Use localhost:1 to simulate fast unreachable Kafka and reduce kafka-timeout to 3s
     ProcessResult result =
-        runPalCommand(
+        runPeer(
             "--log",
             "test-log",
             "--kafka-servers",
@@ -65,7 +65,7 @@ public class MainIT extends AbstractIntegrationTest {
 
   @Test
   public void testSourceLogWithoutKafkaServers_fatalExitNoKafkaServers() throws Exception {
-    ProcessResult result = runPalCommand("--source-log", "test-source-log");
+    ProcessResult result = runPeer("--source-log", "test-source-log");
 
     assertEquals(
         "Expected fatal exit for missing Kafka servers",
@@ -79,7 +79,7 @@ public class MainIT extends AbstractIntegrationTest {
 
   @Test
   public void testWalWithoutKafkaServers_fatalExitNoKafkaServers() throws Exception {
-    ProcessResult result = runPalCommand("--wal", "test-wal");
+    ProcessResult result = runPeer("--wal", "test-wal");
 
     assertEquals(
         "Expected fatal exit for missing Kafka servers",
@@ -93,7 +93,7 @@ public class MainIT extends AbstractIntegrationTest {
 
   @Test
   public void testNonExistentJarFile_fatalExitJarNotFound() throws Exception {
-    ProcessResult result = runPalCommand("-jar", "/nonexistent/path/to/app.jar");
+    ProcessResult result = runPeer("-jar", "/nonexistent/path/to/app.jar");
 
     assertEquals(
         "Expected fatal exit for non-existent JAR",
@@ -113,7 +113,7 @@ public class MainIT extends AbstractIntegrationTest {
     Path tempJar = createJarWithManifestWithoutMainClass();
 
     try {
-      ProcessResult result = runPalCommand("-jar", tempJar.toString());
+      ProcessResult result = runPeer("-jar", tempJar.toString());
 
       assertEquals(
           "Expected fatal exit for JAR without Main-Class in MANIFEST",

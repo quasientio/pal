@@ -156,7 +156,7 @@ public class LogConfigurator {
    * @return the LogInfo corresponding to the provided Log name
    * @throws Exception if the directory connection fails or Log registration encounters an error
    */
-  private LogInfo getOrRegisterGivenLog(String logName) throws Exception {
+  private LogInfo getOrRegisterGivenKafkaLog(String logName) throws Exception {
 
     final PalDirectory palDirectory =
         injector
@@ -177,15 +177,40 @@ public class LogConfigurator {
   }
 
   /**
+   * Normalizes a Chronicle queue path to absolute.
+   *
+   * <p>If the path is already absolute, it is returned as-is. If it is relative, it is resolved
+   * against the current working directory to create an absolute path. This ensures that Chronicle
+   * log paths stored in the directory are unambiguous and can be accessed from any working
+   * directory.
+   *
+   * @param queuePath the Chronicle queue path (relative or absolute)
+   * @return the absolute path
+   */
+  private String normalizeChronicleQueuePath(String queuePath) {
+    java.nio.file.Path path = java.nio.file.Paths.get(queuePath);
+
+    // If already absolute, return as-is
+    if (path.isAbsolute()) {
+      return queuePath;
+    }
+
+    // Resolve relative path to absolute based on current working directory
+    return path.toAbsolutePath().normalize().toString();
+  }
+
+  /**
    * Creates a LogInfo instance for a Chronicle queue without registering it in PalDirectory.
    *
-   * <p>This is used when running without a directory (noPaldir=true).
+   * <p>This is used when running without a directory (noPaldir=true). The path is normalized to
+   * absolute for consistency.
    *
-   * @param queuePath the path to the Chronicle queue
+   * @param queuePath the path to the Chronicle queue (will be normalized to absolute)
    * @return a new LogInfo instance configured for Chronicle queue
    */
   private LogInfo createChronicleLogInfo(String queuePath) {
-    LogInfo logInfo = new LogInfo(queuePath);
+    String normalizedPath = normalizeChronicleQueuePath(queuePath);
+    LogInfo logInfo = new LogInfo(normalizedPath);
     logInfo.setLogType(LogInfo.LogType.CHRONICLE);
     logInfo.setUuid(java.util.UUID.randomUUID());
     return logInfo;
@@ -194,10 +219,14 @@ public class LogConfigurator {
   /**
    * Retrieves or registers a Chronicle log with the specified path using the PalDirectory service.
    *
-   * <p>If the Log entry already exists in the directory, its associated LogInfo is returned.
-   * Otherwise, a new LogInfo is created and registered.
+   * <p>If a Log entry already exists in the directory with the exact same normalized absolute path,
+   * its associated LogInfo is returned. Otherwise, a new LogInfo is created with an absolute path
+   * and registered.
    *
-   * @param queuePath the path to the Chronicle queue
+   * <p>Note: Multiple Chronicle logs can have the same basename (filename) but different full
+   * paths. This method ensures we match by exact normalized path, not just by basename.
+   *
+   * @param queuePath the path to the Chronicle queue (relative or absolute)
    * @return the LogInfo corresponding to the provided Chronicle queue path
    * @throws Exception if the directory connection fails or Log registration encounters an error
    */
@@ -210,10 +239,30 @@ public class LogConfigurator {
             .orElseThrow(RuntimeException::new);
     final LogInfo logInfo;
 
-    // register given Chronicle log if not registered
-    if (palDirectory.logExists(queuePath)) {
-      logInfo = palDirectory.getLogInfo(queuePath);
+    // Normalize to absolute path for consistent comparison
+    String normalizedPath = normalizeChronicleQueuePath(queuePath);
+
+    // Get all logs with this basename (filename)
+    // Note: getLogsInfoByName() uses basename, so it may return multiple logs with same filename
+    java.util.List<LogInfo> candidateLogs = palDirectory.getLogsInfoByName(normalizedPath);
+
+    // Filter to find exact match by normalized path
+    LogInfo existingLog = null;
+    for (LogInfo candidate : candidateLogs) {
+      if (candidate.getLogType() == LogInfo.LogType.CHRONICLE
+          && candidate.getName().equals(normalizedPath)) {
+        existingLog = candidate;
+        break;
+      }
+    }
+
+    if (existingLog != null) {
+      // Found exact match by normalized path
+      logger.info("Found existing Chronicle log at path: {}", normalizedPath);
+      logInfo = existingLog;
     } else {
+      // Not found, create new entry with normalized absolute path
+      logger.info("Creating new Chronicle log entry for path: {}", normalizedPath);
       logInfo = createChronicleLogInfo(queuePath);
       palDirectory.createLog(logInfo);
     }
@@ -376,7 +425,7 @@ public class LogConfigurator {
         sourceLog =
             noPaldir
                 ? new LogInfo(sourceLogName, kafkaServers)
-                : getOrRegisterGivenLog(sourceLogName);
+                : getOrRegisterGivenKafkaLog(sourceLogName);
       }
     }
 
@@ -399,7 +448,7 @@ public class LogConfigurator {
         writeAheadLog =
             noPaldir
                 ? new LogInfo(writeAheadLogName, kafkaServers)
-                : getOrRegisterGivenLog(writeAheadLogName);
+                : getOrRegisterGivenKafkaLog(writeAheadLogName);
       }
     }
 

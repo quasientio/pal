@@ -21,7 +21,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.After;
@@ -44,9 +43,6 @@ public class RemoveIT extends AbstractCliIT {
 
   /** Peer process launched for testing, or null if not launched. */
   private Process peerProcess;
-
-  /** List of Chronicle queue directories created during tests that need cleanup. */
-  private List<Path> chronicleDirectoriesToCleanup;
 
   /** Sets up test environment before each test. */
   @Before
@@ -90,24 +86,6 @@ public class RemoveIT extends AbstractCliIT {
   }
 
   /**
-   * Tracks a Chronicle queue directory for cleanup after the test.
-   *
-   * <p>The Chronicle queue will be created in PAL_HOME (where the peer process runs), so we need to
-   * construct the full path using PAL_HOME.
-   *
-   * @param queueName the name of the Chronicle queue directory (relative to PAL_HOME)
-   */
-  private void trackChronicleDirectory(String queueName) {
-    String palHome = System.getenv("PAL_HOME");
-    if (palHome != null) {
-      chronicleDirectoriesToCleanup.add(Paths.get(palHome, queueName));
-    } else {
-      // Fallback to current directory if PAL_HOME is not set
-      chronicleDirectoriesToCleanup.add(Paths.get(queueName));
-    }
-  }
-
-  /**
    * Tests that `pal rm -P` removes a peer from the directory.
    *
    * <p>Launches a peer, removes it by UUID, then verifies it no longer appears in peer listing.
@@ -122,16 +100,7 @@ public class RemoveIT extends AbstractCliIT {
     String peerName = "test-peer-remove-" + generateId();
     UUID peerId = UUID.randomUUID();
     peerProcess =
-        launchTransientPeer(
-            peerId,
-            "-d",
-            palDirectory,
-            "-n",
-            peerName,
-            "--zmq-rpc",
-            "auto",
-            "-cp",
-            getIttAppsClasspath());
+        launchPeer(peerId, "-d", palDirectory, "-n", peerName, "-cp", getIttAppsClasspath());
 
     // Give peer a moment to fully register with its lease
     Thread.sleep(1000);
@@ -196,7 +165,7 @@ public class RemoveIT extends AbstractCliIT {
     String classToRun = "com.quasient.pal.apps.rpc.Methods";
 
     peerProcess =
-        launchTransientPeer(
+        launchPeer(
             peerId,
             "-d",
             palDirectory,
@@ -255,7 +224,7 @@ public class RemoveIT extends AbstractCliIT {
     String classToRun = "com.quasient.pal.apps.rpc.Methods";
 
     peerProcess =
-        launchTransientPeer(
+        launchPeer(
             peerId, "-d", palDirectory, "--wal", walPath, "-cp", getIttAppsClasspath(), classToRun);
 
     // Wait for the process to complete and create the log
@@ -319,7 +288,7 @@ public class RemoveIT extends AbstractCliIT {
 
     UUID peerId1 = UUID.randomUUID();
     Process peer1 =
-        launchTransientPeer(
+        launchPeer(
             peerId1,
             "-d",
             palDirectory,
@@ -337,7 +306,7 @@ public class RemoveIT extends AbstractCliIT {
 
     UUID peerId2 = UUID.randomUUID();
     Process peer2 =
-        launchTransientPeer(
+        launchPeer(
             peerId2,
             "-d",
             palDirectory,
@@ -399,29 +368,11 @@ public class RemoveIT extends AbstractCliIT {
 
     UUID peerId1 = UUID.randomUUID();
     Process peer1 =
-        launchTransientPeer(
-            peerId1,
-            "-d",
-            palDirectory,
-            "-n",
-            peerName1,
-            "--zmq-rpc",
-            "auto",
-            "-cp",
-            getIttAppsClasspath());
+        launchPeer(peerId1, "-d", palDirectory, "-n", peerName1, "-cp", getIttAppsClasspath());
 
     UUID peerId2 = UUID.randomUUID();
     peerProcess =
-        launchTransientPeer(
-            peerId2,
-            "-d",
-            palDirectory,
-            "-n",
-            peerName2,
-            "--zmq-rpc",
-            "auto",
-            "-cp",
-            getIttAppsClasspath());
+        launchPeer(peerId2, "-d", palDirectory, "-n", peerName2, "-cp", getIttAppsClasspath());
 
     // Give peers a moment to fully register in the directory with their leases
     Thread.sleep(1000);
@@ -474,15 +425,5 @@ public class RemoveIT extends AbstractCliIT {
         not(containsString(peerName2)));
 
     logger.info("Successfully removed all peers with prefix: {}", prefix);
-  }
-
-  /**
-   * Gets the classpath for itt-apps module.
-   *
-   * @return classpath string
-   */
-  private String getIttAppsClasspath() {
-    String palHome = System.getenv("PAL_HOME");
-    return palHome + "/modules/itt-apps/target/classes";
   }
 }

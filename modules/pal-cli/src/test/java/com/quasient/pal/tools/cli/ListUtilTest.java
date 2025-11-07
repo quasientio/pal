@@ -13,6 +13,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -21,12 +22,36 @@ import org.junit.Test;
 public class ListUtilTest {
 
   @Test
-  public void trimTo_and_date_formatters() throws Exception {
-    Method trim = List.class.getDeclaredMethod("trimTo", String.class, int.class);
-    trim.setAccessible(true);
-    assertThat((String) trim.invoke(null, "abcdef", 4), is("ab.."));
-    assertThat((String) trim.invoke(null, "abc", 4), is("abc"));
+  public void optionallyTrim_withTrimmingEnabled() throws Exception {
+    // Create List instance with trimming enabled (default)
+    List listInstance = new List();
+    Field noTrimmingField = List.class.getDeclaredField("noTrimming");
+    noTrimmingField.setAccessible(true);
+    noTrimmingField.setBoolean(listInstance, false);
 
+    Method trim = List.class.getDeclaredMethod("optionallyTrim", String.class, int.class);
+    trim.setAccessible(true);
+    assertThat((String) trim.invoke(listInstance, "abcdef", 4), is("ab.."));
+    assertThat((String) trim.invoke(listInstance, "abc", 4), is("abc"));
+  }
+
+  @Test
+  public void optionallyTrim_withNoTrimmingEnabled() throws Exception {
+    // Create List instance with --no-trim flag enabled
+    List listInstance = new List();
+    Field noTrimmingField = List.class.getDeclaredField("noTrimming");
+    noTrimmingField.setAccessible(true);
+    noTrimmingField.setBoolean(listInstance, true);
+
+    Method trim = List.class.getDeclaredMethod("optionallyTrim", String.class, int.class);
+    trim.setAccessible(true);
+    // With no-trim flag, strings should not be trimmed
+    assertThat((String) trim.invoke(listInstance, "abcdef", 4), is("abcdef"));
+    assertThat((String) trim.invoke(listInstance, "abc", 4), is("abc"));
+  }
+
+  @Test
+  public void date_formatters() throws Exception {
     Method fmtDate = List.class.getDeclaredMethod("getFormattedDate", OffsetDateTime.class);
     fmtDate.setAccessible(true);
     String s =

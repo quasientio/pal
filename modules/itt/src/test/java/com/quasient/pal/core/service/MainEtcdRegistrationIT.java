@@ -32,7 +32,7 @@ public class MainEtcdRegistrationIT extends AbstractIntegrationTest {
   public void testRegisterSelfWithUnreachableEtcd_fatalExitUnreachableEtcd() throws Exception {
     String unreachableEtcd = "192.0.2.1:2379";
     AbstractIntegrationTest.ProcessResult result =
-        runPalCommandWithEnv(unreachableEtcd, "--dir", unreachableEtcd, "com.example.DummyMain");
+        runPeerWithEnv(unreachableEtcd, "--dir", unreachableEtcd, "com.example.DummyMain");
 
     assertEquals(
         "Expected fatal exit for unreachable etcd",
@@ -51,7 +51,7 @@ public class MainEtcdRegistrationIT extends AbstractIntegrationTest {
     String unreachableEtcd = "192.0.2.1:2379";
     String kafka = getKafkaServersOrDefault("kafka:9092");
     ProcessResult result =
-        runPalCommandWithEnv(
+        runPeerWithEnv(
             unreachableEtcd,
             "--dir",
             unreachableEtcd,

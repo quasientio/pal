@@ -73,18 +73,15 @@ public class PalDirectoryPathsTest {
     mPeers.setAccessible(true);
     String peers = (String) mPeers.invoke(dir);
 
-    assertThat(peerPath, containsString("ns-test/peers/" + peer.toString()));
-    assertThat(inPath, containsString("ns-test/peers/" + peer.toString() + "/logs/source"));
-    assertThat(walPath, containsString("ns-test/peers/" + peer.toString() + "/logs/wal"));
+    assertThat(peerPath, containsString("ns-test/peers/" + peer));
+    assertThat(inPath, containsString("ns-test/peers/" + peer + "/logs/source"));
+    assertThat(walPath, containsString("ns-test/peers/" + peer + "/logs/wal"));
     assertThat(logs, containsString("ns-test/logs"));
     assertThat(peers, containsString("ns-test/peers"));
 
     // Keys mirror the same strings
     ByteSequence peersKey = invokeKey(dir, "getPeersPathKey");
-    ByteSequence logsKey = invokeKey(dir, "getLogsPathKey");
     String peersKeyStr = new String(peersKey.getBytes(), StandardCharsets.UTF_8);
-    String logsKeyStr = new String(logsKey.getBytes(), StandardCharsets.UTF_8);
     assertThat(peersKeyStr, is(peers));
-    assertThat(logsKeyStr, is(logs));
   }
 }

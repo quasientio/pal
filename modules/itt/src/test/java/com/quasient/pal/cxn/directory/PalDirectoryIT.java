@@ -11,6 +11,7 @@ package com.quasient.pal.cxn.directory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -477,18 +478,40 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   }
 
   @Test
-  public void list() throws Exception {
-    String logNamePrefix = "test.topic";
+  public void listLogsWithPrefix_multiplePrefix_onlyMatchingReturned() throws Exception {
+    String prefix1 = "test.topic";
+    String prefix2 = "other.topic";
+    String prefix3 = "another.log";
 
-    // create N logs
-    int logsToCreate = 10;
-    for (int i = 0; i < logsToCreate; i++) {
-      LogInfo newLogInfo = palDirectory.createAutoLog(logNamePrefix, getKafkaServers());
-      createdLogs.add(newLogInfo.getName());
+    // create logs with different prefixes
+    int logsPerPrefix = 5;
+    for (int i = 0; i < logsPerPrefix; i++) {
+      LogInfo log1 = palDirectory.createAutoLog(prefix1, getKafkaServers());
+      LogInfo log2 = palDirectory.createAutoLog(prefix2, getKafkaServers());
+      LogInfo log3 = palDirectory.createAutoLog(prefix3, getKafkaServers());
+      createdLogs.add(log1.getName());
+      createdLogs.add(log2.getName());
+      createdLogs.add(log3.getName());
     }
 
-    // verify
-    assertEquals(logsToCreate, palDirectory.listLogsWithPrefix(logNamePrefix).size());
+    // verify each prefix returns only its logs
+    Set<LogInfo> logsWithPrefix1 = palDirectory.listLogsWithPrefix(prefix1);
+    assertEquals(logsPerPrefix, logsWithPrefix1.size());
+    for (LogInfo log : logsWithPrefix1) {
+      assertTrue(log.getName().startsWith(prefix1));
+    }
+
+    Set<LogInfo> logsWithPrefix2 = palDirectory.listLogsWithPrefix(prefix2);
+    assertEquals(logsPerPrefix, logsWithPrefix2.size());
+    for (LogInfo log : logsWithPrefix2) {
+      assertTrue(log.getName().startsWith(prefix2));
+    }
+
+    Set<LogInfo> logsWithPrefix3 = palDirectory.listLogsWithPrefix(prefix3);
+    assertEquals(logsPerPrefix, logsWithPrefix3.size());
+    for (LogInfo log : logsWithPrefix3) {
+      assertTrue(log.getName().startsWith(prefix3));
+    }
   }
 
   @Test
@@ -498,59 +521,116 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   }
 
   @Test
-  public void countLogsWithPrefix() throws Exception {
-    String logNamePrefix = "test.topic";
-    // create  a few logs
-    int logsToCreate = 10;
-    for (int i = 0; i < logsToCreate; i++) {
-      LogInfo newLogInfo = palDirectory.createAutoLog(logNamePrefix, getKafkaServers());
-      createdLogs.add(newLogInfo.getName());
+  public void countLogsWithPrefix_multiplePrefixes_onlyMatchingCounted() throws Exception {
+    String prefix1 = "count.test";
+    String prefix2 = "count.other";
+    String prefix3 = "different.prefix";
+
+    // create logs with different prefixes
+    int logsForPrefix1 = 7;
+    int logsForPrefix2 = 3;
+    int logsForPrefix3 = 5;
+
+    for (int i = 0; i < logsForPrefix1; i++) {
+      LogInfo log = palDirectory.createAutoLog(prefix1, getKafkaServers());
+      createdLogs.add(log.getName());
     }
-    assertEquals(logsToCreate, palDirectory.countLogsWithPrefix(logNamePrefix));
+    for (int i = 0; i < logsForPrefix2; i++) {
+      LogInfo log = palDirectory.createAutoLog(prefix2, getKafkaServers());
+      createdLogs.add(log.getName());
+    }
+    for (int i = 0; i < logsForPrefix3; i++) {
+      LogInfo log = palDirectory.createAutoLog(prefix3, getKafkaServers());
+      createdLogs.add(log.getName());
+    }
+
+    // verify each prefix counts only its logs
+    assertEquals(logsForPrefix1, palDirectory.countLogsWithPrefix(prefix1));
+    assertEquals(logsForPrefix2, palDirectory.countLogsWithPrefix(prefix2));
+    assertEquals(logsForPrefix3, palDirectory.countLogsWithPrefix(prefix3));
+
+    // verify total
+    assertEquals(
+        logsForPrefix1 + logsForPrefix2 + logsForPrefix3, palDirectory.listAllLogs().size());
   }
 
   @Test
-  public void getLastLog_someLogsMatch_last() throws Exception {
-    String logNamePrefix = "test.topic";
+  public void getLatestLogWithPrefix_multiplePrefixes_onlyMatchingPrefixConsidered()
+      throws Exception {
+    String prefix1 = "latest.app";
+    String prefix2 = "latest.other";
+    String prefix3 = "different.log";
 
-    // create  a few logs
-    int logsToCreate = 10;
-    String lastCreated = null;
-    for (int i = 0; i < logsToCreate; i++) {
-      LogInfo newLogInfo = palDirectory.createAutoLog(logNamePrefix, getKafkaServers());
-      lastCreated = newLogInfo.getName();
-      createdLogs.add(lastCreated);
+    // create logs with different prefixes, interleaved
+    String lastPrefix1 = null;
+    String lastPrefix2 = null;
+    String lastPrefix3 = null;
+
+    for (int i = 0; i < 5; i++) {
+      LogInfo log1 = palDirectory.createAutoLog(prefix1, getKafkaServers());
+      lastPrefix1 = log1.getName();
+      createdLogs.add(lastPrefix1);
+
+      LogInfo log2 = palDirectory.createAutoLog(prefix2, getKafkaServers());
+      lastPrefix2 = log2.getName();
+      createdLogs.add(lastPrefix2);
+
+      LogInfo log3 = palDirectory.createAutoLog(prefix3, getKafkaServers());
+      lastPrefix3 = log3.getName();
+      createdLogs.add(lastPrefix3);
     }
 
-    assertEquals(lastCreated, palDirectory.getLatestLogWithPrefix(logNamePrefix).getName());
+    // verify each prefix returns its own latest log
+    assertEquals(lastPrefix1, palDirectory.getLatestLogWithPrefix(prefix1).getName());
+    assertEquals(lastPrefix2, palDirectory.getLatestLogWithPrefix(prefix2).getName());
+    assertEquals(lastPrefix3, palDirectory.getLatestLogWithPrefix(prefix3).getName());
+
+    // verify the returned logs have the correct prefixes
+    assertTrue(palDirectory.getLatestLogWithPrefix(prefix1).getName().startsWith(prefix1));
+    assertTrue(palDirectory.getLatestLogWithPrefix(prefix2).getName().startsWith(prefix2));
+    assertTrue(palDirectory.getLatestLogWithPrefix(prefix3).getName().startsWith(prefix3));
   }
 
   @Test
-  public void deleteAllLogs_matchingLogs_allMatchingDeleted() throws Exception {
-    String logNamePrefix = "test.topic";
+  public void deleteLogsWithPrefix_multiplePrefixes_onlyMatchingDeleted() throws Exception {
+    String prefix1 = "delete.target";
+    String prefix2 = "delete.other";
+    String prefix3 = "keep.these";
 
-    // create  a few with the prefix
-    int logsToCreate = 10;
-    for (int i = 0; i < logsToCreate; i++) {
-      LogInfo newLogInfo = palDirectory.createAutoLog(logNamePrefix, getKafkaServers());
-      createdLogs.add(newLogInfo.getName());
+    // create logs with different prefixes
+    int logsForPrefix1 = 10;
+    int logsForPrefix2 = 3;
+    int logsForPrefix3 = 5;
+
+    for (int i = 0; i < logsForPrefix1; i++) {
+      LogInfo log = palDirectory.createAutoLog(prefix1, getKafkaServers());
+      createdLogs.add(log.getName());
+    }
+    for (int i = 0; i < logsForPrefix2; i++) {
+      LogInfo log = palDirectory.createAutoLog(prefix2, getKafkaServers());
+      createdLogs.add(log.getName());
+    }
+    for (int i = 0; i < logsForPrefix3; i++) {
+      LogInfo log = palDirectory.createAutoLog(prefix3, getKafkaServers());
+      createdLogs.add(log.getName());
     }
 
-    // create a few with another prefix
-    for (int i = 0; i < 3; i++) {
-      LogInfo newLogInfo = palDirectory.createAutoLog("some.other.prefix", getKafkaServers());
-      createdLogs.add(newLogInfo.getName());
-    }
+    // pre-assertions - verify all logs exist
+    assertEquals(logsForPrefix1, palDirectory.countLogsWithPrefix(prefix1));
+    assertEquals(logsForPrefix2, palDirectory.countLogsWithPrefix(prefix2));
+    assertEquals(logsForPrefix3, palDirectory.countLogsWithPrefix(prefix3));
+    assertEquals(
+        logsForPrefix1 + logsForPrefix2 + logsForPrefix3, palDirectory.listAllLogs().size());
 
-    // pre-assertions
-    assertEquals(logsToCreate, palDirectory.countLogsWithPrefix(logNamePrefix));
+    // delete logs with prefix1
+    long logsDeleted = palDirectory.deleteLogsWithPrefix(prefix1);
+    assertEquals(logsForPrefix1, logsDeleted);
 
-    // delete with prefix
-    long logsDeleted = palDirectory.deleteLogsWithPrefix(logNamePrefix);
-    assertEquals(logsToCreate, logsDeleted);
-
-    // verify
-    assertEquals(0, palDirectory.countLogsWithPrefix(logNamePrefix));
+    // verify only prefix1 logs are deleted, others remain
+    assertEquals(0, palDirectory.countLogsWithPrefix(prefix1));
+    assertEquals(logsForPrefix2, palDirectory.countLogsWithPrefix(prefix2));
+    assertEquals(logsForPrefix3, palDirectory.countLogsWithPrefix(prefix3));
+    assertEquals(logsForPrefix2 + logsForPrefix3, palDirectory.listAllLogs().size());
   }
 
   @Test
@@ -986,5 +1066,359 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     // delete them
     palDirectory.deleteInterceptsForPeer(peerInfo.getUuid());
     assertEquals(0, palDirectory.listInterceptsForPeer(peerInfo.getUuid()).size());
+  }
+
+  // =========================================================================
+  // 1:N Log Mapping Tests - Multiple logs can share the same filename
+  // =========================================================================
+
+  @Test
+  public void createLog_multipleChronicleLogsWithSameFilename_allCreated() throws Exception {
+    // Create multiple Chronicle logs with same filename but different full paths
+    LogInfo log1 = new LogInfo("/tmp/wal/mylog");
+    log1.setLogType(LogInfo.LogType.CHRONICLE);
+    palDirectory.createLog(log1);
+    createdLogs.add(log1.getName());
+
+    LogInfo log2 = new LogInfo("/tmp/wal2/mylog");
+    log2.setLogType(LogInfo.LogType.CHRONICLE);
+    palDirectory.createLog(log2);
+    createdLogs.add(log2.getName());
+
+    LogInfo log3 = new LogInfo("/var/logs/mylog");
+    log3.setLogType(LogInfo.LogType.CHRONICLE);
+    palDirectory.createLog(log3);
+    createdLogs.add(log3.getName());
+
+    // All three logs should exist
+    assertTrue(palDirectory.logExists(log1.getUuid()));
+    assertTrue(palDirectory.logExists(log2.getUuid()));
+    assertTrue(palDirectory.logExists(log3.getUuid()));
+
+    // All should have different UUIDs
+    assertNotNull(log1.getUuid());
+    assertNotNull(log2.getUuid());
+    assertNotNull(log3.getUuid());
+    assertNotEquals(log1.getUuid(), log2.getUuid());
+    assertNotEquals(log2.getUuid(), log3.getUuid());
+    assertNotEquals(log1.getUuid(), log3.getUuid());
+
+    // Verify we can retrieve each by UUID
+    assertEquals(log1.getName(), palDirectory.getLogInfo(log1.getUuid()).getName());
+    assertEquals(log2.getName(), palDirectory.getLogInfo(log2.getUuid()).getName());
+    assertEquals(log3.getName(), palDirectory.getLogInfo(log3.getUuid()).getName());
+
+    // Clean up by UUID (required because multiple logs share the same filename)
+    palDirectory.deleteLog(log1.getUuid());
+    palDirectory.deleteLog(log2.getUuid());
+    palDirectory.deleteLog(log3.getUuid());
+    createdLogs.remove(log1.getName());
+    createdLogs.remove(log2.getName());
+    createdLogs.remove(log3.getName());
+  }
+
+  @Test
+  public void createLog_multipleKafkaLogsWithSameName_allCreated() throws Exception {
+    String logName = "app-log";
+
+    // Create multiple Kafka logs with same name but different bootstrap servers
+    LogInfo log1 = new LogInfo(logName, "localhost:9092");
+    log1.setLogType(LogInfo.LogType.KAFKA);
+    palDirectory.createLog(log1);
+    createdLogs.add(log1.getName());
+
+    LogInfo log2 = new LogInfo(logName, "prod-kafka:9092");
+    log2.setLogType(LogInfo.LogType.KAFKA);
+    palDirectory.createLog(log2);
+    createdLogs.add(log2.getName());
+
+    LogInfo log3 = new LogInfo(logName, "staging-kafka:9092");
+    log3.setLogType(LogInfo.LogType.KAFKA);
+    palDirectory.createLog(log3);
+    createdLogs.add(log3.getName());
+
+    // All three logs should exist
+    assertTrue(palDirectory.logExists(log1.getUuid()));
+    assertTrue(palDirectory.logExists(log2.getUuid()));
+    assertTrue(palDirectory.logExists(log3.getUuid()));
+
+    // All should have different UUIDs
+    assertNotNull(log1.getUuid());
+    assertNotNull(log2.getUuid());
+    assertNotNull(log3.getUuid());
+    assertNotEquals(log1.getUuid(), log2.getUuid());
+    assertNotEquals(log2.getUuid(), log3.getUuid());
+    assertNotEquals(log1.getUuid(), log3.getUuid());
+
+    // Verify we can retrieve each by UUID and servers match
+    assertEquals("localhost:9092", palDirectory.getLogInfo(log1.getUuid()).getBootstrapServers());
+    assertEquals("prod-kafka:9092", palDirectory.getLogInfo(log2.getUuid()).getBootstrapServers());
+    assertEquals(
+        "staging-kafka:9092", palDirectory.getLogInfo(log3.getUuid()).getBootstrapServers());
+
+    // Clean up by UUID (required because multiple logs share the same name)
+    palDirectory.deleteLog(log1.getUuid());
+    palDirectory.deleteLog(log2.getUuid());
+    palDirectory.deleteLog(log3.getUuid());
+    createdLogs.remove(log1.getName());
+    createdLogs.remove(log2.getName());
+    createdLogs.remove(log3.getName());
+  }
+
+  @Test
+  public void getLogsInfoByName_multipleLogsWithSameFilename_allReturned() throws Exception {
+    // Create multiple logs with same filename
+    LogInfo log1 = new LogInfo("/tmp/wal/mylog");
+    log1.setLogType(LogInfo.LogType.CHRONICLE);
+    palDirectory.createLog(log1);
+    createdLogs.add(log1.getName());
+
+    LogInfo log2 = new LogInfo("/tmp/wal2/mylog");
+    log2.setLogType(LogInfo.LogType.CHRONICLE);
+    palDirectory.createLog(log2);
+    createdLogs.add(log2.getName());
+
+    LogInfo log3 = new LogInfo("/var/logs/mylog");
+    log3.setLogType(LogInfo.LogType.CHRONICLE);
+    palDirectory.createLog(log3);
+    createdLogs.add(log3.getName());
+
+    // getLogsInfoByName should return all three logs
+    List<LogInfo> logs = palDirectory.getLogsInfoByName("/any/path/mylog");
+    assertEquals(3, logs.size());
+
+    // Verify all UUIDs are present
+    Set<UUID> uuids = new HashSet<>();
+    for (LogInfo log : logs) {
+      uuids.add(log.getUuid());
+    }
+    assertTrue(uuids.contains(log1.getUuid()));
+    assertTrue(uuids.contains(log2.getUuid()));
+    assertTrue(uuids.contains(log3.getUuid()));
+
+    // Clean up by UUID (required because multiple logs share the same filename)
+    palDirectory.deleteLog(log1.getUuid());
+    palDirectory.deleteLog(log2.getUuid());
+    palDirectory.deleteLog(log3.getUuid());
+    createdLogs.remove(log1.getName());
+    createdLogs.remove(log2.getName());
+    createdLogs.remove(log3.getName());
+  }
+
+  @Test
+  public void getLogInfo_multipleLogsWithSameFilename_throwsIllegalStateException()
+      throws Exception {
+    // Create multiple logs with same filename
+    LogInfo log1 = new LogInfo("/tmp/wal/mylog");
+    log1.setLogType(LogInfo.LogType.CHRONICLE);
+    palDirectory.createLog(log1);
+    createdLogs.add(log1.getName());
+
+    LogInfo log2 = new LogInfo("/tmp/wal2/mylog");
+    log2.setLogType(LogInfo.LogType.CHRONICLE);
+    palDirectory.createLog(log2);
+    createdLogs.add(log2.getName());
+
+    // getLogInfo(String) should throw IllegalStateException when multiple matches exist
+    try {
+      palDirectory.getLogInfo("/any/path/mylog");
+      fail("Expected IllegalStateException when multiple logs match the name");
+    } catch (IllegalStateException e) {
+      // Expected - verify error message contains UUIDs
+      String message = e.getMessage();
+      assertTrue(message.contains("Multiple logs"));
+      assertTrue(message.contains(log1.getUuid().toString()));
+      assertTrue(message.contains(log2.getUuid().toString()));
+      assertTrue(message.contains("mylog"));
+    }
+
+    // Clean up by UUID (required because multiple logs share the same filename)
+    palDirectory.deleteLog(log1.getUuid());
+    palDirectory.deleteLog(log2.getUuid());
+    createdLogs.remove(log1.getName());
+    createdLogs.remove(log2.getName());
+  }
+
+  @Test
+  public void deleteLog_multipleLogsWithSameFilename_throwsIllegalStateException()
+      throws Exception {
+    // Create multiple logs with same filename
+    LogInfo log1 = new LogInfo("/tmp/wal/mylog");
+    log1.setLogType(LogInfo.LogType.CHRONICLE);
+    palDirectory.createLog(log1);
+    createdLogs.add(log1.getName());
+
+    LogInfo log2 = new LogInfo("/tmp/wal2/mylog");
+    log2.setLogType(LogInfo.LogType.CHRONICLE);
+    palDirectory.createLog(log2);
+    createdLogs.add(log2.getName());
+
+    // deleteLog(String) should throw IllegalStateException when multiple matches exist
+    try {
+      palDirectory.deleteLog("/any/path/mylog");
+      fail("Expected IllegalStateException when multiple logs match the name");
+    } catch (IllegalStateException e) {
+      // Expected - verify error message contains UUIDs
+      String message = e.getMessage();
+      assertTrue(message.contains("Multiple logs"));
+      assertTrue(message.contains(log1.getUuid().toString()));
+      assertTrue(message.contains(log2.getUuid().toString()));
+      assertTrue(message.contains("Specify by UUID"));
+    }
+
+    // Verify both logs still exist
+    assertTrue(palDirectory.logExists(log1.getUuid()));
+    assertTrue(palDirectory.logExists(log2.getUuid()));
+
+    // Clean up by UUID (required because multiple logs share the same filename)
+    palDirectory.deleteLog(log1.getUuid());
+    palDirectory.deleteLog(log2.getUuid());
+    createdLogs.remove(log1.getName());
+    createdLogs.remove(log2.getName());
+  }
+
+  @Test
+  public void deleteLog_multipleLogsWithSameFilename_deleteByUuidSucceeds() throws Exception {
+    // Create multiple logs with same filename
+    LogInfo log1 = new LogInfo("/tmp/wal/mylog");
+    log1.setLogType(LogInfo.LogType.CHRONICLE);
+    palDirectory.createLog(log1);
+    createdLogs.add(log1.getName());
+
+    LogInfo log2 = new LogInfo("/tmp/wal2/mylog");
+    log2.setLogType(LogInfo.LogType.CHRONICLE);
+    palDirectory.createLog(log2);
+    createdLogs.add(log2.getName());
+
+    LogInfo log3 = new LogInfo("/var/logs/mylog");
+    log3.setLogType(LogInfo.LogType.CHRONICLE);
+    palDirectory.createLog(log3);
+    createdLogs.add(log3.getName());
+
+    // Pre-assertion: all three exist
+    assertEquals(3, palDirectory.getLogsInfoByName("/any/path/mylog").size());
+
+    // Delete log2 by UUID
+    palDirectory.deleteLog(log2.getUuid());
+    createdLogs.remove(log2.getName());
+
+    // Verify log2 is deleted but log1 and log3 remain
+    assertTrue(palDirectory.logExists(log1.getUuid()));
+    assertFalse(palDirectory.logExists(log2.getUuid()));
+    assertTrue(palDirectory.logExists(log3.getUuid()));
+
+    // getLogsInfoByName should now return only 2 logs
+    List<LogInfo> remainingLogs = palDirectory.getLogsInfoByName("/any/path/mylog");
+    assertEquals(2, remainingLogs.size());
+
+    Set<UUID> remainingUuids = new HashSet<>();
+    for (LogInfo log : remainingLogs) {
+      remainingUuids.add(log.getUuid());
+    }
+    assertTrue(remainingUuids.contains(log1.getUuid()));
+    assertFalse(remainingUuids.contains(log2.getUuid()));
+    assertTrue(remainingUuids.contains(log3.getUuid()));
+
+    // Clean up remaining logs by UUID (required because multiple logs share the same filename)
+    palDirectory.deleteLog(log1.getUuid());
+    palDirectory.deleteLog(log3.getUuid());
+    createdLogs.remove(log1.getName());
+    createdLogs.remove(log3.getName());
+  }
+
+  @Test
+  public void createLog_duplicateChronicleLogWithSamePath_notCreated() throws Exception {
+    // Create a Chronicle log
+    LogInfo log1 = new LogInfo("/tmp/wal/mylog");
+    log1.setLogType(LogInfo.LogType.CHRONICLE);
+    palDirectory.createLog(log1);
+    createdLogs.add(log1.getName());
+
+    UUID firstUuid = log1.getUuid();
+
+    // Try to create another Chronicle log with the exact same path
+    LogInfo log2 = new LogInfo("/tmp/wal/mylog");
+    log2.setLogType(LogInfo.LogType.CHRONICLE);
+    palDirectory.createLog(log2);
+    // Don't add to createdLogs since it shouldn't be created
+
+    // Should only have one log with this filename
+    List<LogInfo> logs = palDirectory.getLogsInfoByName("/tmp/wal/mylog");
+    assertEquals(1, logs.size());
+    assertEquals(firstUuid, logs.get(0).getUuid());
+  }
+
+  @Test
+  public void createLog_duplicateKafkaLogWithSameNameAndServers_notCreated() throws Exception {
+    String logName = "app-log";
+    String servers = "localhost:9092";
+
+    // Create a Kafka log
+    LogInfo log1 = new LogInfo(logName, servers);
+    log1.setLogType(LogInfo.LogType.KAFKA);
+    palDirectory.createLog(log1);
+    createdLogs.add(log1.getName());
+
+    UUID firstUuid = log1.getUuid();
+
+    // Try to create another Kafka log with the same name and servers
+    LogInfo log2 = new LogInfo(logName, servers);
+    log2.setLogType(LogInfo.LogType.KAFKA);
+    palDirectory.createLog(log2);
+    // Don't add to createdLogs since it shouldn't be created
+
+    // Should only have one log with this name+servers combination
+    List<LogInfo> logs = palDirectory.getLogsInfoByName(logName);
+    assertEquals(1, logs.size());
+    assertEquals(firstUuid, logs.get(0).getUuid());
+    assertEquals(servers, logs.get(0).getBootstrapServers());
+  }
+
+  @Test
+  public void listLogsWithPrefix_multipleLogsWithSameFilenamePrefix_allReturned() throws Exception {
+    // Create logs with filenames starting with "app"
+    LogInfo log1 = new LogInfo("/tmp/app-log");
+    log1.setLogType(LogInfo.LogType.CHRONICLE);
+    palDirectory.createLog(log1);
+    createdLogs.add(log1.getName());
+
+    LogInfo log2 = new LogInfo("/var/app-log");
+    log2.setLogType(LogInfo.LogType.CHRONICLE);
+    palDirectory.createLog(log2);
+    createdLogs.add(log2.getName());
+
+    LogInfo log3 = new LogInfo("/tmp/app-events");
+    log3.setLogType(LogInfo.LogType.CHRONICLE);
+    palDirectory.createLog(log3);
+    createdLogs.add(log3.getName());
+
+    // Create a log that doesn't match the prefix
+    LogInfo log4 = new LogInfo("/tmp/other-log");
+    log4.setLogType(LogInfo.LogType.CHRONICLE);
+    palDirectory.createLog(log4);
+    createdLogs.add(log4.getName());
+
+    // List logs with filename prefix "app"
+    Set<LogInfo> appLogs = palDirectory.listLogsWithPrefix("app");
+    assertEquals(3, appLogs.size());
+
+    Set<UUID> appLogUuids = new HashSet<>();
+    for (LogInfo log : appLogs) {
+      appLogUuids.add(log.getUuid());
+    }
+    assertTrue(appLogUuids.contains(log1.getUuid()));
+    assertTrue(appLogUuids.contains(log2.getUuid()));
+    assertTrue(appLogUuids.contains(log3.getUuid()));
+    assertFalse(appLogUuids.contains(log4.getUuid()));
+
+    // Clean up by UUID (log1 and log2 share the same filename "app-log")
+    palDirectory.deleteLog(log1.getUuid());
+    palDirectory.deleteLog(log2.getUuid());
+    palDirectory.deleteLog(log3.getUuid());
+    palDirectory.deleteLog(log4.getUuid());
+    createdLogs.remove(log1.getName());
+    createdLogs.remove(log2.getName());
+    createdLogs.remove(log3.getName());
+    createdLogs.remove(log4.getName());
   }
 }

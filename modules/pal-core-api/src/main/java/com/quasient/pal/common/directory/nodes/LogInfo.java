@@ -58,9 +58,6 @@ public final class LogInfo extends InfoNode implements Comparable<LogInfo> {
   /** The total number of bytes in the log. This field is used to track the size of the log data. */
   private long bytes;
 
-  /** Indicates whether the log exists in the system. */
-  private boolean exists;
-
   /**
    * The size of the log expressed in a human-readable format. Computed from the 'bytes' field
    * whenever the byte size is set.
@@ -231,24 +228,6 @@ public final class LogInfo extends InfoNode implements Comparable<LogInfo> {
   public void setBytes(long bytes) {
     this.bytes = bytes;
     humanReadableByteSize = ByteSizeConverter.humanReadableByteCount(getBytes(), false);
-  }
-
-  /**
-   * Checks whether the log exists in Kafka.
-   *
-   * @return true if the log exists, false otherwise.
-   */
-  public boolean isExists() {
-    return exists;
-  }
-
-  /**
-   * Sets the existence status of the log.
-   *
-   * @param exists true if the log exists, false otherwise.
-   */
-  public void setExists(boolean exists) {
-    this.exists = exists;
   }
 
   /**

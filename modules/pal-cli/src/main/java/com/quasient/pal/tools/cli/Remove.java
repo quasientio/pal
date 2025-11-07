@@ -17,7 +17,6 @@ import com.quasient.pal.cxn.chronicle.ChronicleLogUtil;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
@@ -117,9 +116,6 @@ public class Remove extends AbstractPalSubcommand {
   /** Counter for the number of errors encountered during command execution. */
   private int errors = 0;
 
-  /** Base directory for Chronicle queue files. */
-  private Path chronicleBaseDir;
-
   /** Validates user input. (Currently no validation is performed.) */
   @Override
   public void validateInput() {}
@@ -131,15 +127,6 @@ public class Remove extends AbstractPalSubcommand {
   @Override
   protected void initialize() {
     initializeDirectoryConnectionProvider(palCommand.getPalDirectoryConnectionString());
-
-    // Initialize Chronicle base directory from system property or environment variable
-    String baseDirStr =
-        System.getProperty("wal.chronicle.base_dir", System.getenv("CHRONICLE_BASE_DIR"));
-    if (baseDirStr == null || baseDirStr.isBlank()) {
-      chronicleBaseDir = Paths.get(".");
-    } else {
-      chronicleBaseDir = Paths.get(baseDirStr);
-    }
   }
 
   /**
@@ -198,7 +185,7 @@ public class Remove extends AbstractPalSubcommand {
       logger.debug("Attempting to remove Chronicle log '{}'", logInfo.getName());
     }
 
-    Path queuePath = ChronicleLogUtil.resolveQueuePath(logInfo.getName(), chronicleBaseDir);
+    Path queuePath = Path.of(logInfo.getName());
 
     if (!ChronicleLogUtil.queueExists(queuePath)) {
       logger.warn("Chronicle log '{}' does not exist at path: {}", logInfo.getName(), queuePath);

@@ -21,7 +21,7 @@ public class MainInvalidCombosIT extends AbstractIntegrationTest {
 
   @Test
   public void testSourceLogWithoutKafkaServers_fatalExitNoKafkaServers() throws Exception {
-    ProcessResult result = runPalCommand("--source-log", "someTopic");
+    ProcessResult result = runPeer("--source-log", "someTopic");
 
     assertEquals(
         "Expected fatal exit for source-log without Kafka servers",

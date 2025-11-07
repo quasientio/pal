@@ -21,7 +21,7 @@ public class MainInvalidInputIT extends AbstractIntegrationTest {
 
   @Test
   public void testStartOffsetWithoutLog_fatalExitNoLogGiven() throws Exception {
-    ProcessResult result = runPalCommand("--start-offset", "5");
+    ProcessResult result = runPeer("--start-offset", "5");
 
     assertEquals(
         "Expected fatal exit for start-offset without log",
@@ -35,7 +35,7 @@ public class MainInvalidInputIT extends AbstractIntegrationTest {
 
   @Test
   public void testInvalidZmqRpcPort_fatalExitParsingZmqPort() throws Exception {
-    ProcessResult result = runPalCommand("--zmq-rpc", "abc");
+    ProcessResult result = runPeer("--zmq-rpc", "abc");
 
     assertEquals(
         "Expected fatal exit for invalid ZMQ RPC port",
@@ -49,7 +49,7 @@ public class MainInvalidInputIT extends AbstractIntegrationTest {
 
   @Test
   public void testInvalidJsonRpcPort_fatalExitParsingJsonRpcPort() throws Exception {
-    ProcessResult result = runPalCommand("--json-rpc", "abc");
+    ProcessResult result = runPeer("--json-rpc", "abc");
 
     assertEquals(
         "Expected fatal exit for invalid JSON RPC port",

@@ -15,10 +15,8 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.After;
@@ -41,9 +39,6 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
   /** Peer process launched for testing, or null if not launched. */
   private Process peerProcess;
-
-  /** List of Chronicle queue directories created during tests that need cleanup. */
-  private List<Path> chronicleDirectoriesToCleanup;
 
   /** Sets up test environment before each test. */
   @Before
@@ -94,24 +89,6 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
   }
 
   /**
-   * Tracks a Chronicle queue directory for cleanup after the test.
-   *
-   * <p>The Chronicle queue will be created in PAL_HOME (where the peer process runs), so we need to
-   * construct the full path using PAL_HOME.
-   *
-   * @param queueName the name of the Chronicle queue directory (relative to PAL_HOME)
-   */
-  private void trackChronicleDirectory(String queueName) {
-    String palHome = System.getenv("PAL_HOME");
-    if (palHome != null) {
-      chronicleDirectoriesToCleanup.add(Paths.get(palHome, queueName));
-    } else {
-      // Fallback to current directory if PAL_HOME is not set
-      chronicleDirectoriesToCleanup.add(Paths.get(queueName));
-    }
-  }
-
-  /**
    * Tests that `pal print` can print messages from a Kafka log in FULL format.
    *
    * <p>This test creates a Kafka WAL by launching a peer, which causes the peer to write internal
@@ -133,7 +110,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
     String classToRun = "com.quasient.pal.apps.rpc.Methods";
 
     peerProcess =
-        launchTransientPeer(
+        launchPeer(
             peerId,
             "-d",
             palDirectory,
@@ -141,8 +118,6 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
             kafkaServers,
             "--wal",
             walName,
-            "--zmq-rpc",
-            "auto",
             "-cp",
             getIttAppsClasspath(),
             classToRun);
@@ -154,7 +129,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     // Print messages from the log in FULL format
     AbstractCliIT.CliProcessResult printResult =
-        runPrint("-d", palDirectory, "-l", walName, "--output-format", "FULL");
+        runPrint("-d", palDirectory, "-l", walName, "--full");
 
     assertEquals("Expected successful print", 0, printResult.exitCode());
     // Verify output is not empty (peer wrote some messages)
@@ -182,7 +157,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
     String classToRun = "com.quasient.pal.apps.rpc.Methods";
 
     peerProcess =
-        launchTransientPeer(
+        launchPeer(
             peerId,
             "-d",
             palDirectory,
@@ -190,8 +165,6 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
             kafkaServers,
             "--wal",
             walName,
-            "--zmq-rpc",
-            "auto",
             "-cp",
             getIttAppsClasspath(),
             classToRun);
@@ -203,7 +176,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     // Print messages in JSON format
     AbstractCliIT.CliProcessResult printResult =
-        runPrint("-d", palDirectory, "-l", walName, "--output-format", "JSON");
+        runPrint("-d", palDirectory, "-l", walName, "--json");
 
     assertEquals("Expected successful print", 0, printResult.exitCode());
     // JSON format should have JSON structure markers
@@ -231,7 +204,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
     String classToRun = "com.quasient.pal.apps.rpc.Methods";
 
     peerProcess =
-        launchTransientPeer(
+        launchPeer(
             peerId,
             "-d",
             palDirectory,
@@ -239,8 +212,6 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
             kafkaServers,
             "--wal",
             walName,
-            "--zmq-rpc",
-            "auto",
             "-cp",
             getIttAppsClasspath(),
             classToRun);
@@ -250,9 +221,8 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
     assertEquals("Expected successful peer exit code", 0, peerExitCode);
     peerProcess = null;
 
-    // Print messages in COMPACT format
-    AbstractCliIT.CliProcessResult printResult =
-        runPrint("-d", palDirectory, "-l", walName, "--output-format", "COMPACT");
+    // Print messages in COMPACT format - default: no flag needed
+    AbstractCliIT.CliProcessResult printResult = runPrint("-d", palDirectory, "-l", walName);
 
     assertEquals("Expected successful print", 0, printResult.exitCode());
     assertThat("Expected content in output", !printResult.stdout().isEmpty());
@@ -284,17 +254,8 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
     String classToRun = "com.quasient.pal.apps.rpc.Methods";
 
     peerProcess =
-        launchTransientPeer(
-            peerId,
-            "-d",
-            palDirectory,
-            "--wal",
-            walPath,
-            "--zmq-rpc",
-            "auto",
-            "-cp",
-            getIttAppsClasspath(),
-            classToRun);
+        launchPeer(
+            peerId, "-d", palDirectory, "--wal", walPath, "-cp", getIttAppsClasspath(), classToRun);
 
     // Wait for the process to complete and create the log
     int peerExitCode = joinPeer(peerProcess, 10);
@@ -303,7 +264,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     // Print messages from Chronicle log
     AbstractCliIT.CliProcessResult printResult =
-        runPrint("-d", palDirectory, "-l", walName, "--output-format", "FULL");
+        runPrint("-d", palDirectory, "-l", walName, "--full");
 
     assertEquals("Expected successful print", 0, printResult.exitCode());
     assertThat("Expected content in output", !printResult.stdout().isEmpty());
@@ -332,26 +293,16 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
     String classToRun = "com.quasient.pal.apps.rpc.Methods";
 
     peerProcess =
-        launchTransientPeer(
-            peerId,
-            "-d",
-            palDirectory,
-            "--wal",
-            walPath,
-            "--zmq-rpc",
-            "auto",
-            "-cp",
-            getIttAppsClasspath(),
-            classToRun);
+        launchPeer(
+            peerId, "-d", palDirectory, "--wal", walPath, "-cp", getIttAppsClasspath(), classToRun);
 
     // Wait for the process to complete and create the log
     int peerExitCode = joinPeer(peerProcess, 10);
     assertEquals("Expected successful peer exit code", 0, peerExitCode);
     peerProcess = null;
 
-    // Print messages in COMPACT format
-    AbstractCliIT.CliProcessResult printResult =
-        runPrint("-d", palDirectory, "-l", walName, "--output-format", "COMPACT");
+    // Print messages in COMPACT format (default, no flag needed)
+    AbstractCliIT.CliProcessResult printResult = runPrint("-d", palDirectory, "-l", walName);
 
     assertEquals("Expected successful print", 0, printResult.exitCode());
     assertThat("Expected content in output", !printResult.stdout().isEmpty());
@@ -380,17 +331,8 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
     String classToRun = "com.quasient.pal.apps.rpc.Methods";
 
     peerProcess =
-        launchTransientPeer(
-            peerId,
-            "-d",
-            palDirectory,
-            "--wal",
-            walPath,
-            "--zmq-rpc",
-            "auto",
-            "-cp",
-            getIttAppsClasspath(),
-            classToRun);
+        launchPeer(
+            peerId, "-d", palDirectory, "--wal", walPath, "-cp", getIttAppsClasspath(), classToRun);
 
     // Wait for the process to complete and create the log
     int peerExitCode = joinPeer(peerProcess, 10);
@@ -399,7 +341,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     // Print messages in JSON format
     AbstractCliIT.CliProcessResult printResult =
-        runPrint("-d", palDirectory, "-l", walName, "--output-format", "JSON");
+        runPrint("-d", palDirectory, "-l", walName, "--json");
 
     assertEquals("Expected successful print", 0, printResult.exitCode());
     // JSON format should have JSON structure markers
@@ -430,7 +372,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
     String classToRun = "com.quasient.pal.apps.rpc.Methods";
 
     peerProcess =
-        launchTransientPeer(
+        launchPeer(
             peerId,
             "-d",
             palDirectory,
@@ -438,8 +380,6 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
             kafkaServers,
             "--wal",
             walName,
-            "--zmq-rpc",
-            "auto",
             "-cp",
             getIttAppsClasspath(),
             classToRun);
@@ -451,7 +391,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     // Print starting from offset 0
     AbstractCliIT.CliProcessResult printResult =
-        runPrint("-d", palDirectory, "-l", walName, "-o", "0", "--output-format", "FULL");
+        runPrint("-d", palDirectory, "-l", walName, "-o", "0", "--full");
 
     assertEquals("Expected successful print with offset", 0, printResult.exitCode());
     assertThat("Expected content in output", !printResult.stdout().isEmpty());
@@ -480,7 +420,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
     String classToRun = "com.quasient.pal.apps.rpc.Methods";
 
     peerProcess =
-        launchTransientPeer(
+        launchPeer(
             peerId,
             "-d",
             palDirectory,
@@ -488,8 +428,6 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
             kafkaServers,
             "--wal",
             walName,
-            "--zmq-rpc",
-            "auto",
             "-cp",
             getIttAppsClasspath(),
             classToRun);
@@ -501,15 +439,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     // Print with message type filter
     AbstractCliIT.CliProcessResult printResult =
-        runPrint(
-            "-d",
-            palDirectory,
-            "-l",
-            walName,
-            "--types",
-            "CLASS_METHOD",
-            "--output-format",
-            "FULL");
+        runPrint("-d", palDirectory, "-l", walName, "--types", "CLASS_METHOD", "--full");
 
     // Command should execute successfully even if no EXEC messages exist
     assertEquals("Expected successful print (may have no output)", 0, printResult.exitCode());
@@ -541,17 +471,8 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
     String classToRun = "com.quasient.pal.apps.rpc.Methods";
 
     peerProcess =
-        launchTransientPeer(
-            peerId,
-            "-d",
-            palDirectory,
-            "--wal",
-            walPath,
-            "--zmq-rpc",
-            "auto",
-            "-cp",
-            getIttAppsClasspath(),
-            classToRun);
+        launchPeer(
+            peerId, "-d", palDirectory, "--wal", walPath, "-cp", getIttAppsClasspath(), classToRun);
 
     // Wait for the process to complete and create the log
     int peerExitCode = joinPeer(peerProcess, 10);
@@ -560,7 +481,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     // Print starting from offset 0
     AbstractCliIT.CliProcessResult printResult =
-        runPrint("-d", palDirectory, "-l", walName, "-o", "0", "--output-format", "FULL");
+        runPrint("-d", palDirectory, "-l", walName, "-o", "0", "--full");
 
     assertEquals("Expected successful print with offset", 0, printResult.exitCode());
     assertThat("Expected content in output", !printResult.stdout().isEmpty());
@@ -592,17 +513,8 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
     String classToRun = "com.quasient.pal.apps.rpc.Methods";
 
     peerProcess =
-        launchTransientPeer(
-            peerId,
-            "-d",
-            palDirectory,
-            "--wal",
-            walPath,
-            "--zmq-rpc",
-            "auto",
-            "-cp",
-            getIttAppsClasspath(),
-            classToRun);
+        launchPeer(
+            peerId, "-d", palDirectory, "--wal", walPath, "-cp", getIttAppsClasspath(), classToRun);
 
     // Wait for the process to complete and create the log
     int peerExitCode = joinPeer(peerProcess, 10);
@@ -611,29 +523,11 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     // Print with message type filter
     AbstractCliIT.CliProcessResult printResult =
-        runPrint(
-            "-d",
-            palDirectory,
-            "-l",
-            walName,
-            "--types",
-            "CLASS_METHOD",
-            "--output-format",
-            "FULL");
+        runPrint("-d", palDirectory, "-l", walName, "--types", "CLASS_METHOD", "--full");
 
     // Command should execute successfully even if no CLASS_METHOD messages exist
     assertEquals("Expected successful print (may have no output)", 0, printResult.exitCode());
 
     logger.info("Successfully executed print with message type filter on Chronicle log");
-  }
-
-  /**
-   * Gets the classpath for itt-apps module.
-   *
-   * @return classpath string
-   */
-  private String getIttAppsClasspath() {
-    String palHome = System.getenv("PAL_HOME");
-    return palHome + "/modules/itt-apps/target/classes";
   }
 }

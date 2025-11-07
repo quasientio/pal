@@ -81,7 +81,7 @@ public class CallerIT extends AbstractCliIT {
     String peerName = "test-call-nonmain-" + generateId();
     UUID peerId = UUID.randomUUID();
     peerProcess =
-        launchTransientPeer(
+        launchPeer(
             peerId,
             "-d",
             palDirectory,
@@ -129,7 +129,7 @@ public class CallerIT extends AbstractCliIT {
     String logName = "test-call-log-" + generateId();
     UUID peerId = UUID.randomUUID();
     peerProcess =
-        launchTransientPeer(
+        launchPeer(
             peerId,
             "-d",
             palDirectory,
@@ -155,7 +155,7 @@ public class CallerIT extends AbstractCliIT {
 
     // Verify message was written by printing the log
     AbstractCliIT.CliProcessResult printResult =
-        runPrint("-d", palDirectory, "-l", logName, "--output-format", "FULL");
+        runPrint("-d", palDirectory, "-l", logName, "--full");
 
     assertEquals("Expected successful print", 0, printResult.exitCode());
     assertThat("Expected message in stdout", printResult.stdout(), containsString("test-to-log"));
@@ -179,7 +179,7 @@ public class CallerIT extends AbstractCliIT {
     // Launch a peer with ZMQ RPC enabled
     UUID peerId = UUID.randomUUID();
     peerProcess =
-        launchTransientPeer(
+        launchPeer(
             peerId,
             "-d",
             palDirectory,
@@ -224,7 +224,7 @@ public class CallerIT extends AbstractCliIT {
     String peerName = "test-call-jsonrpc-method-" + generateId();
     UUID peerId = UUID.randomUUID();
     peerProcess =
-        launchTransientPeer(
+        launchPeer(
             peerId,
             "-d",
             palDirectory,
@@ -270,7 +270,7 @@ public class CallerIT extends AbstractCliIT {
     String peerName = "test-call-jsonrpc-ctor-" + generateId();
     UUID peerId = UUID.randomUUID();
     peerProcess =
-        launchTransientPeer(
+        launchPeer(
             peerId,
             "-d",
             palDirectory,
@@ -316,7 +316,7 @@ public class CallerIT extends AbstractCliIT {
     String peerName = "test-call-jsonrpc-get-" + generateId();
     UUID peerId = UUID.randomUUID();
     peerProcess =
-        launchTransientPeer(
+        launchPeer(
             peerId,
             "-d",
             palDirectory,
@@ -361,7 +361,7 @@ public class CallerIT extends AbstractCliIT {
     String peerName = "test-call-jsonrpc-set-" + generateId();
     UUID peerId = UUID.randomUUID();
     peerProcess =
-        launchTransientPeer(
+        launchPeer(
             peerId,
             "-d",
             palDirectory,
@@ -407,7 +407,7 @@ public class CallerIT extends AbstractCliIT {
     String peerName = "test-call-jsonrpc-multi-" + generateId();
     UUID peerId = UUID.randomUUID();
     peerProcess =
-        launchTransientPeer(
+        launchPeer(
             peerId,
             "-d",
             palDirectory,
@@ -441,15 +441,5 @@ public class CallerIT extends AbstractCliIT {
     assertThat("Expected field value", callResult.stdout(), containsString("classy"));
 
     logger.info("Successfully processed multiple JSON-RPC requests via stdin");
-  }
-
-  /**
-   * Gets the classpath for itt-apps module.
-   *
-   * @return classpath string
-   */
-  private String getIttAppsClasspath() {
-    String palHome = System.getenv("PAL_HOME");
-    return palHome + "/modules/itt-apps/target/classes";
   }
 }

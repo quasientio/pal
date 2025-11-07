@@ -100,6 +100,12 @@ public class PalDirectory implements AutoCloseable {
   /** Directory name for storing log information. */
   private static final String LOGS_DIR = "logs";
 
+  /** Subdirectory name for storing the log name-to-UUID index. */
+  private static final String LOGS_BY_NAME_DIR = "by-name";
+
+  /** Subdirectory name for storing log auto-naming counters. */
+  private static final String LOGS_COUNTERS_DIR = "counters";
+
   /** Directory name for storing intercept configurations. */
   private static final String INTERCEPTS_DIR = "intercepts";
 
@@ -1120,9 +1126,12 @@ public class PalDirectory implements AutoCloseable {
       }
     }
 
+    // Ensure UUID is set
     if (logInfo.getUuid() == null) {
       logInfo.setUuid(UUID.randomUUID());
     }
+
+    // Ensure timestamps are set
     final Instant now = Instant.now();
     if (logInfo.getCTime() == null) {
       logInfo.setCtime(now.toEpochMilli());
@@ -1130,21 +1139,64 @@ public class PalDirectory implements AutoCloseable {
     if (logInfo.getMTime() == null) {
       logInfo.setMtime(now.toEpochMilli());
     }
-    final ByteSequence logKey = ByteSequence.from(getLogPath(logInfo.getName()).getBytes(UTF8));
+
+    // Prepare keys and data for atomic transaction
+    // Primary: /<ns>/logs/<uuid> → LogInfo JSON
+    final ByteSequence logKey = ByteSequence.from(getLogPath(logInfo.getUuid()).getBytes(UTF8));
     final ByteSequence logData = ByteSequence.from(logInfo.toJson().getBytes(UTF8));
 
+    // Secondary index: /<ns>/logs/by-name/<filename>/<uuid> → "" (marker)
+    final ByteSequence byNameKey =
+        ByteSequence.from(
+            getLogByNameEntryPath(logInfo.getName(), logInfo.getUuid()).getBytes(UTF8));
+    final ByteSequence byNameData = ByteSequence.from("", UTF8); // Empty marker
+
+    // Check if this specific log already exists (same name + servers/path combination)
+    if (logExists(logInfo.getUuid())) {
+      logger.warn(
+          "Log {} w/uuid {} already exists - skipping", logInfo.getName(), logInfo.getUuid());
+      return;
+    }
+
+    // Check for duplicates: same name + same distinguishing characteristic
+    List<LogInfo> existingLogs = getLogsInfoByName(logInfo.getName());
+    for (LogInfo existing : existingLogs) {
+      if (logInfo.getLogType() == LogInfo.LogType.KAFKA) {
+        // For Kafka: check if name + bootstrapServers combination already exists
+        if (logInfo.getBootstrapServers().equals(existing.getBootstrapServers())) {
+          logger.warn(
+              "Log {} with bootstrap servers {} already exists - skipping",
+              logInfo.getName(),
+              logInfo.getBootstrapServers());
+          return;
+        }
+      } else if (logInfo.getLogType() == LogInfo.LogType.CHRONICLE) {
+        // For Chronicle: check if full path (name field) already exists
+        if (logInfo.getName().equals(existing.getName())) {
+          logger.warn("Chronicle log with path {} already exists - skipping", logInfo.getName());
+          return;
+        }
+      }
+    }
+
+    // Atomic transaction: create both primary and index entries
     TxnResponse response =
         kvClient
             .txn()
-            .If(new Cmp(logKey, Cmp.Op.EQUAL, CmpTarget.version(0))) // key must not exist
-            .Then(Op.put(logKey, logData, PutOption.DEFAULT))
+            .If(
+                new Cmp(
+                    byNameKey, Cmp.Op.EQUAL, CmpTarget.version(0))) // index entry must not exist
+            .Then(
+                Op.put(logKey, logData, PutOption.DEFAULT),
+                Op.put(byNameKey, byNameData, PutOption.DEFAULT))
             .commit()
             .get();
 
     if (response.isSucceeded()) {
       logger.info("Created log {} w/uuid {}", logInfo.getName(), logInfo.getUuid());
     } else {
-      logger.warn("Log {} already exists - skipping", logInfo.getName());
+      logger.warn(
+          "Log {} w/uuid {} already exists - skipping", logInfo.getName(), logInfo.getUuid());
     }
   }
 
@@ -1164,8 +1216,7 @@ public class PalDirectory implements AutoCloseable {
     Objects.requireNonNull(logServers, "logServers cannot be null");
 
     // 1) Atomically increment /<ns>/logs/counters/<prefix>
-    ByteSequence counterKey =
-        ByteSequence.from(format("%s/counters/%s", getLogsPath(), logNamePrefix), UTF8);
+    ByteSequence counterKey = ByteSequence.from(getLogCounterPath(logNamePrefix), UTF8);
 
     long nextIdx;
     while (true) {
@@ -1197,7 +1248,8 @@ public class PalDirectory implements AutoCloseable {
   }
 
   /**
-   * Auxiliary method that writes the LogInfo JSON under “…/logs/<name>”.
+   * Auxiliary method that writes the LogInfo JSON using the new storage pattern: primary key by
+   * UUID and secondary index by name.
    *
    * @param logName the log name
    * @param logServers the bootstrap servers for the new log
@@ -1214,70 +1266,194 @@ public class PalDirectory implements AutoCloseable {
     info.setCtime(now);
     info.setMtime(now);
 
-    ByteSequence logKey = ByteSequence.from(getLogPath(logName), UTF8);
+    // Primary: /<ns>/logs/<uuid> → LogInfo JSON
+    ByteSequence logKey = ByteSequence.from(getLogPath(info.getUuid()), UTF8);
     ByteSequence logValue = ByteSequence.from(info.toJson(), UTF8);
 
+    // Secondary index: /<ns>/logs/by-name/<filename>/<uuid> → "" (marker)
+    ByteSequence byNameKey =
+        ByteSequence.from(getLogByNameEntryPath(logName, info.getUuid()), UTF8);
+    ByteSequence byNameValue = ByteSequence.from("", UTF8);
+
+    // Write both entries (no need for CAS here since auto-log names are guaranteed unique by
+    // counter)
     kvClient.put(logKey, logValue).get();
+    kvClient.put(byNameKey, byNameValue).get();
+
     logger.info("Created new log {} (uuid={})", logName, info.getUuid());
 
     return info;
   }
 
   /**
-   * Retrieves the information of a specific log by its name.
+   * Retrieves the information of a specific log by its UUID (direct lookup).
    *
-   * @param logName the name of the log
+   * @param logUuid the UUID of the log
    * @return the {@link LogInfo} of the log, or {@code null} if the log does not exist
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
-  public LogInfo getLogInfo(String logName) throws ExecutionException, InterruptedException {
+  public LogInfo getLogInfo(UUID logUuid) throws ExecutionException, InterruptedException {
     final GetResponse getResponse =
-        kvClient.get(ByteSequence.from(getLogPath(logName).getBytes(UTF8))).get();
+        kvClient.get(ByteSequence.from(getLogPath(logUuid).getBytes(UTF8))).get();
     if (getResponse.getCount() == 0) {
-      logger.warn("Node for log w/name: {} does not exist", logName);
+      logger.warn("Node for log w/UUID: {} does not exist", logUuid);
       return null;
     }
     return LogInfo.fromJson(getResponse.getKvs().get(0).getValue().toString(UTF8));
   }
 
   /**
-   * Checks if a log with the specified name exists in the directory.
+   * Retrieves all logs with the specified name/path (via by-name index).
    *
-   * @param logName the name of the log to check
+   * <p>Multiple logs can have the same filename (basename) but differ by full path (Chronicle) or
+   * bootstrap servers (Kafka).
+   *
+   * @param logName the full name/path of the log
+   * @return a {@link List} of all {@link LogInfo} instances matching the name
+   * @throws ExecutionException if an error occurs during etcd operation
+   * @throws InterruptedException if the current thread is interrupted while waiting
+   */
+  public List<LogInfo> getLogsInfoByName(String logName)
+      throws ExecutionException, InterruptedException {
+    // Step 1: Scan by-name index for all UUIDs with this filename
+    final String filename = extractFilename(logName);
+    final String byNamePrefixPath = getLogByNamePrefixPath(filename);
+    final GetResponse byNameResponse =
+        kvClient
+            .get(
+                ByteSequence.from(byNamePrefixPath.getBytes(UTF8)),
+                GetOption.builder().isPrefix(true).build())
+            .get();
+
+    if (byNameResponse.getCount() == 0) {
+      logger.debug("No logs found with filename: {}", filename);
+      return List.of();
+    }
+
+    // Step 2: Extract UUIDs from keys and fetch primary entries
+    List<LogInfo> logs = new ArrayList<>();
+    for (KeyValue kv : byNameResponse.getKvs()) {
+      String fullPath = kv.getKey().toString(UTF8);
+      // Extract UUID from path: /<ns>/logs/by-name/<filename>/<uuid>
+      String uuidStr = fullPath.substring(byNamePrefixPath.length());
+      try {
+        UUID logUuid = UUID.fromString(uuidStr);
+        LogInfo logInfo = getLogInfo(logUuid);
+        if (logInfo != null) {
+          logs.add(logInfo);
+        }
+      } catch (IllegalArgumentException e) {
+        logger.warn("Invalid UUID in by-name index: {}", uuidStr);
+      }
+    }
+
+    return logs;
+  }
+
+  /**
+   * Retrieves the information of a specific log by its name (via by-name index).
+   *
+   * <p>If multiple logs match the name, throws {@link IllegalStateException}. For handling multiple
+   * matches, use {@link #getLogsInfoByName(String)}.
+   *
+   * @param logName the name of the log
+   * @return the {@link LogInfo} of the log, or {@code null} if the log does not exist
+   * @throws ExecutionException if an error occurs during etcd operation
+   * @throws InterruptedException if the current thread is interrupted while waiting
+   * @throws IllegalStateException if multiple logs match the name
+   */
+  public LogInfo getLogInfo(String logName) throws ExecutionException, InterruptedException {
+    List<LogInfo> logs = getLogsInfoByName(logName);
+
+    if (logs.isEmpty()) {
+      logger.warn("No log found with name: {}", logName);
+      return null;
+    }
+
+    if (logs.size() > 1) {
+      throw new IllegalStateException(
+          format(
+              "Multiple logs (%d) found with filename '%s'. Use getLogsInfoByName() or specify by UUID. Matching logs: %s",
+              logs.size(),
+              extractFilename(logName),
+              logs.stream().map(l -> l.getUuid().toString()).collect(Collectors.joining(", "))));
+    }
+
+    return logs.get(0);
+  }
+
+  /**
+   * Checks if a log with the specified UUID exists in the directory (direct lookup).
+   *
+   * @param logUuid the UUID of the log to check
    * @return {@code true} if the log exists, {@code false} otherwise
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
-  public boolean logExists(String logName) throws ExecutionException, InterruptedException {
-    return kvClient.get(ByteSequence.from(getLogPath(logName).getBytes(UTF8))).get().getCount()
+  public boolean logExists(UUID logUuid) throws ExecutionException, InterruptedException {
+    return kvClient.get(ByteSequence.from(getLogPath(logUuid).getBytes(UTF8))).get().getCount()
         != 0;
   }
 
   /**
-   * Retrieves all logs that have names starting with the specified prefix.
+   * Checks if any log with the specified name/filename exists in the directory (via by-name index).
    *
-   * @param logNamePrefix the prefix of the log names to retrieve
+   * @param logName the name of the log to check
+   * @return {@code true} if at least one log with the filename exists, {@code false} otherwise
+   * @throws ExecutionException if an error occurs during etcd operation
+   * @throws InterruptedException if the current thread is interrupted while waiting
+   */
+  public boolean logExists(String logName) throws ExecutionException, InterruptedException {
+    return !getLogsInfoByName(logName).isEmpty();
+  }
+
+  /**
+   * Retrieves all logs that have filenames starting with the specified prefix (via by-name index
+   * scan).
+   *
+   * @param filenamePrefix the prefix of the log filenames (not full paths) to retrieve
    * @return a {@link Set} of {@link LogInfo} matching the prefix
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
-  public Set<LogInfo> listLogsWithPrefix(String logNamePrefix)
+  public Set<LogInfo> listLogsWithPrefix(String filenamePrefix)
       throws ExecutionException, InterruptedException {
-    final GetResponse getResponse =
+    // Step 1: Prefix scan on by-name index: /<ns>/logs/by-name/<filenamePrefix>
+    final String byNamePrefixPath =
+        format("%s/%s/%s", getLogsPath(), LOGS_BY_NAME_DIR, filenamePrefix);
+    final GetResponse byNameResponse =
         kvClient
             .get(
-                ByteSequence.from(format("%s/%s", getLogsPath(), logNamePrefix).getBytes(UTF8)),
+                ByteSequence.from(byNamePrefixPath.getBytes(UTF8)),
                 GetOption.builder()
                     .withSortField(GetOption.SortTarget.CREATE)
                     .withSortOrder(GetOption.SortOrder.ASCEND)
                     .isPrefix(true)
                     .build())
             .get();
+
+    // Step 2: Extract UUIDs from keys and fetch primary entries
     final Set<LogInfo> logs = new TreeSet<>();
-    for (KeyValue kv : getResponse.getKvs()) {
-      logs.add(LogInfo.fromJson(kv.getValue().toString(UTF8)));
+    for (KeyValue kv : byNameResponse.getKvs()) {
+      String fullPath = kv.getKey().toString(UTF8);
+      // Path format: /<ns>/logs/by-name/<filename>/<uuid>
+      // Extract UUID: skip to last '/' and take remainder
+      int lastSlash = fullPath.lastIndexOf('/');
+      if (lastSlash != -1) {
+        String uuidStr = fullPath.substring(lastSlash + 1);
+        try {
+          UUID logUuid = UUID.fromString(uuidStr);
+          LogInfo logInfo = getLogInfo(logUuid);
+          if (logInfo != null) {
+            logs.add(logInfo);
+          }
+        } catch (IllegalArgumentException e) {
+          logger.warn("Invalid UUID in by-name index: {}", uuidStr);
+        }
+      }
     }
+
     if (logger.isDebugEnabled()) {
       logger.debug("returning from listLogsWithPrefix: {}", logs);
     }
@@ -1285,7 +1461,7 @@ public class PalDirectory implements AutoCloseable {
   }
 
   /**
-   * Retrieves all logs in the directory.
+   * Retrieves all logs in the directory (by scanning UUID-keyed primary entries).
    *
    * @return a {@link Set} of all {@link LogInfo} instances
    * @throws ExecutionException if an error occurs during etcd operation
@@ -1304,14 +1480,22 @@ public class PalDirectory implements AutoCloseable {
 
     Set<LogInfo> logs = new TreeSet<>();
     for (KeyValue kv : resp.getKvs()) {
-      String fullPath = kv.getKey().toString(UTF8); // e.g. "/<ns>/logs/app0000000001"
+      String fullPath = kv.getKey().toString(UTF8); // e.g. "/<ns>/logs/<uuid>"
       String remainder = fullPath.substring(logsPrefix.length());
 
-      // skip anything in subdirectories such as "counters/<prefix>"
+      // Skip anything in subdirectories (by-name/, counters/, etc.)
       if (remainder.contains("/")) {
         continue;
       }
-      logs.add(LogInfo.fromJson(kv.getValue().toString(UTF8)));
+
+      // Parse UUID to verify this is a primary log entry
+      try {
+        UUID.fromString(remainder); // Validate it's a UUID
+        logs.add(LogInfo.fromJson(kv.getValue().toString(UTF8)));
+      } catch (IllegalArgumentException e) {
+        // Not a UUID, skip (shouldn't happen with new storage pattern)
+        logger.warn("Skipping non-UUID key in logs directory: {}", fullPath);
+      }
     }
     if (logger.isDebugEnabled()) {
       logger.debug("returning from listAllLogs: {}", logs);
@@ -1320,7 +1504,8 @@ public class PalDirectory implements AutoCloseable {
   }
 
   /**
-   * Retrieves the last log with the specified name prefix based on creation time.
+   * Retrieves the last log with the specified name prefix based on creation time (via by-name index
+   * scan with client-side sorting).
    *
    * @param logNamePrefix the prefix of the log name
    * @return the last {@link LogInfo} with the specified prefix, or {@code null} if none exists
@@ -1329,24 +1514,26 @@ public class PalDirectory implements AutoCloseable {
    */
   public LogInfo getLatestLogWithPrefix(String logNamePrefix)
       throws ExecutionException, InterruptedException {
+    // Get all logs with the prefix and sort by creation time on the client side
+    final Set<LogInfo> logsWithPrefix = listLogsWithPrefix(logNamePrefix);
 
-    GetResponse resp =
-        kvClient
-            .get(
-                ByteSequence.from(format("%s/%s", getLogsPath(), logNamePrefix).getBytes(UTF8)),
-                GetOption.builder()
-                    .withSortField(GetOption.SortTarget.KEY)
-                    .withSortOrder(GetOption.SortOrder.DESCEND)
-                    .withLimit(1)
-                    .isPrefix(true)
-                    .build())
-            .get();
-    if (resp.getCount() == 0) {
+    if (logsWithPrefix.isEmpty()) {
       return null;
     }
-    LogInfo last = LogInfo.fromJson(resp.getKvs().get(0).getValue().toString(UTF8));
-    logger.info("With prefix '{}' got {}", logNamePrefix, last.getName());
-    return last;
+
+    // Find the log with the latest creation time
+    LogInfo latest = null;
+    for (LogInfo log : logsWithPrefix) {
+      if (latest == null || log.getCTime().isAfter(latest.getCTime())) {
+        latest = log;
+      }
+    }
+
+    logger.info(
+        "With prefix '{}' got latest: {}",
+        logNamePrefix,
+        latest != null ? latest.getName() : "null");
+    return latest;
   }
 
   /**
@@ -1363,22 +1550,21 @@ public class PalDirectory implements AutoCloseable {
   }
 
   /**
-   * Deletes a specific log info node identified by its name. Ensures that no peer is using the log
-   * before deletion.
+   * Deletes a specific log info node identified by its UUID (direct deletion). Ensures that no peer
+   * is using the log before deletion.
    *
-   * @param logName the name of the log to delete
+   * @param logUuid the UUID of the log to delete
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    * @throws IllegalArgumentException if a peer is currently using the log
    */
-  public void deleteLog(String logName) throws ExecutionException, InterruptedException {
+  public void deleteLog(UUID logUuid) throws ExecutionException, InterruptedException {
+    ByteSequence logKey = ByteSequence.from(getLogPath(logUuid), UTF8);
 
-    ByteSequence logKey = ByteSequence.from(getLogPath(logName), UTF8);
-
-    // Fetch the node once (for UUID + version token)
+    // Fetch the node once (for name + version token)
     GetResponse resp = kvClient.get(logKey).get();
     if (resp.getCount() == 0) {
-      logger.warn("Cannot delete log '{}': node does not exist", logName);
+      logger.warn("Cannot delete log with UUID '{}': node does not exist", logUuid);
       return;
     }
     LogInfo logInfo = LogInfo.fromJson(resp.getKvs().get(0).getValue().toString(UTF8));
@@ -1387,23 +1573,66 @@ public class PalDirectory implements AutoCloseable {
     // Single call to discover *all* used logs
     if (collectUsedLogIds().contains(logInfo.getUuid())) {
       throw new IllegalArgumentException(
-          "Cannot delete log '" + logName + "': it is in use by at least one peer");
+          "Cannot delete log with UUID '"
+              + logUuid
+              + "' (name: '"
+              + logInfo.getName()
+              + "'): it is in use by at least one peer");
     }
 
-    // Compare-and-delete (optimistic-lock on version)
+    // For UUID-based deletion, we need to delete both the primary entry and the by-name index
+    ByteSequence byNameKey =
+        ByteSequence.from(getLogByNameEntryPath(logInfo.getName(), logUuid), UTF8);
+
+    // Compare-and-delete both entries atomically (optimistic-lock on primary version)
     TxnResponse tx =
         kvClient
             .txn()
             .If(new Cmp(logKey, Cmp.Op.EQUAL, CmpTarget.version(version)))
-            .Then(Op.delete(logKey, DeleteOption.DEFAULT))
+            .Then(
+                Op.delete(logKey, DeleteOption.DEFAULT), Op.delete(byNameKey, DeleteOption.DEFAULT))
             .commit()
             .get();
 
     if (tx.isSucceeded()) {
-      logger.info("Deleted log '{}'", logName);
+      logger.info("Deleted log with UUID '{}' (name: '{}')", logUuid, logInfo.getName());
     } else {
-      logger.warn("Failed to delete log '{}': node changed concurrently", logName);
+      logger.warn("Failed to delete log with UUID '{}': node changed concurrently", logUuid);
     }
+  }
+
+  /**
+   * Deletes a specific log info node identified by its name (via by-name index). Ensures that no
+   * peer is using the log before deletion.
+   *
+   * <p>If multiple logs match the name, throws {@link IllegalStateException}.
+   *
+   * @param logName the name of the log to delete
+   * @throws ExecutionException if an error occurs during etcd operation
+   * @throws InterruptedException if the current thread is interrupted while waiting
+   * @throws IllegalArgumentException if a peer is currently using the log
+   * @throws IllegalStateException if multiple logs match the name
+   */
+  public void deleteLog(String logName) throws ExecutionException, InterruptedException {
+    // Step 1: Resolve name → UUIDs via by-name index
+    List<LogInfo> logs = getLogsInfoByName(logName);
+
+    if (logs.isEmpty()) {
+      logger.warn("Cannot delete log '{}': no logs found with this name", logName);
+      return;
+    }
+
+    if (logs.size() > 1) {
+      throw new IllegalStateException(
+          format(
+              "Multiple logs (%d) found with filename '%s'. Specify by UUID. Matching logs: %s",
+              logs.size(),
+              extractFilename(logName),
+              logs.stream().map(l -> l.getUuid().toString()).collect(Collectors.joining(", "))));
+    }
+
+    // Step 2: Delegate to UUID-based deletion (which handles both primary and index)
+    deleteLog(logs.get(0).getUuid());
   }
 
   /**
@@ -1432,7 +1661,8 @@ public class PalDirectory implements AutoCloseable {
   }
 
   /**
-   * Deletes all log nodes that have names starting with the specified prefix.
+   * Deletes all log nodes that have names starting with the specified prefix (via by-name index
+   * scan). Deletes both primary and index entries for each log.
    *
    * @param logNamePrefix the prefix of the log names to delete
    * @return the number of logs deleted
@@ -1440,18 +1670,66 @@ public class PalDirectory implements AutoCloseable {
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
   long deleteLogsWithPrefix(String logNamePrefix) throws ExecutionException, InterruptedException {
+    // Step 1: Scan by-name index to get all logs with the prefix
+    final String byNamePrefixPath =
+        format("%s/%s/%s", getLogsPath(), LOGS_BY_NAME_DIR, logNamePrefix);
+    final GetResponse byNameResponse =
+        kvClient
+            .get(
+                ByteSequence.from(byNamePrefixPath.getBytes(UTF8)),
+                GetOption.builder().isPrefix(true).build())
+            .get();
 
-    ByteSequence prefixKey = ByteSequence.from(format("%s/%s", getLogsPath(), logNamePrefix), UTF8);
-
-    DeleteResponse del =
-        kvClient.delete(prefixKey, DeleteOption.builder().isPrefix(true).build()).get();
-
-    if (del.getDeleted() == 0) {
+    if (byNameResponse.getCount() == 0) {
       logger.warn("No logs found with prefix '{}'", logNamePrefix);
-    } else {
-      logger.info("Deleted {} log(s) with prefix '{}'", del.getDeleted(), logNamePrefix);
+      return 0;
     }
-    return del.getDeleted();
+
+    // Step 2: Delete each log (both primary and index entries)
+    long deletedCount = 0;
+    for (KeyValue kv : byNameResponse.getKvs()) {
+      String fullPath = kv.getKey().toString(UTF8);
+      // Path format: /<ns>/logs/by-name/<filename>/<uuid>
+      // Extract UUID from last segment
+      int lastSlash = fullPath.lastIndexOf('/');
+      if (lastSlash == -1) {
+        logger.warn("Invalid by-name index path: {}", fullPath);
+        continue;
+      }
+
+      String uuidStr = fullPath.substring(lastSlash + 1);
+      try {
+        UUID logUuid = UUID.fromString(uuidStr);
+
+        // Delete both primary and by-name index entries
+        final ByteSequence logKey = ByteSequence.from(getLogPath(logUuid), UTF8);
+        final ByteSequence byNameKey = ByteSequence.from(fullPath, UTF8);
+
+        // Use transaction to delete both atomically
+        TxnResponse tx =
+            kvClient
+                .txn()
+                .Then(
+                    Op.delete(logKey, DeleteOption.DEFAULT),
+                    Op.delete(byNameKey, DeleteOption.DEFAULT))
+                .commit()
+                .get();
+
+        if (tx.isSucceeded()) {
+          deletedCount++;
+        }
+      } catch (IllegalArgumentException e) {
+        logger.warn("Invalid UUID in by-name index: {}", uuidStr);
+      }
+    }
+
+    if (deletedCount > 0) {
+      logger.info("Deleted {} log(s) with filename prefix '{}'", deletedCount, logNamePrefix);
+    } else {
+      logger.warn("Failed to delete any logs with filename prefix '{}'", logNamePrefix);
+    }
+
+    return deletedCount;
   }
 
   /**
@@ -1477,14 +1755,21 @@ public class PalDirectory implements AutoCloseable {
       return 0;
     }
 
-    /* Build a single transaction with all delete operations */
+    /* Build a single transaction with all delete operations (both primary and index) */
     io.etcd.jetcd.Txn txn = kvClient.txn();
 
-    // Add delete operations for each log
-    Op[] deleteOps = new Op[toDelete.size()];
+    // Add delete operations for each log (2 ops per log: primary + index)
+    Op[] deleteOps = new Op[toDelete.size() * 2];
     for (int i = 0; i < toDelete.size(); i++) {
-      ByteSequence logKey = ByteSequence.from(getLogPath(toDelete.get(i).getName()), UTF8);
-      deleteOps[i] = Op.delete(logKey, DeleteOption.DEFAULT);
+      LogInfo log = toDelete.get(i);
+      // Primary: /<ns>/logs/<uuid>
+      ByteSequence logKey = ByteSequence.from(getLogPath(log.getUuid()), UTF8);
+      deleteOps[i * 2] = Op.delete(logKey, DeleteOption.DEFAULT);
+
+      // Secondary index: /<ns>/logs/by-name/<filename>/<uuid>
+      ByteSequence byNameKey =
+          ByteSequence.from(getLogByNameEntryPath(log.getName(), log.getUuid()), UTF8);
+      deleteOps[i * 2 + 1] = Op.delete(byNameKey, DeleteOption.DEFAULT);
     }
 
     // Execute all deletes in a single transaction
@@ -1626,13 +1911,69 @@ public class PalDirectory implements AutoCloseable {
   }
 
   /**
-   * Retrieves the etcd path for a specific log.
+   * Retrieves the etcd path for a specific log by its UUID (primary key).
    *
-   * @param logName the name of the log
+   * @param logUuid the UUID of the log
    * @return the etcd path for the log
    */
-  private String getLogPath(String logName) {
-    return format("%s/%s", getLogsPath(), logName);
+  private String getLogPath(UUID logUuid) {
+    return format("%s/%s", getLogsPath(), logUuid);
+  }
+
+  /**
+   * Extracts the filename (basename) from a log name/path.
+   *
+   * <p>For Chronicle logs, the name is typically a full path like "/tmp/wal/mylog". For Kafka logs,
+   * the name is typically just a simple name like "my-kafka-log". This method extracts the last
+   * component of the path.
+   *
+   * @param logName the full log name/path
+   * @return the filename (basename) portion
+   */
+  private String extractFilename(String logName) {
+    if (logName == null || logName.isEmpty()) {
+      return logName;
+    }
+    int lastSlash = logName.lastIndexOf('/');
+    if (lastSlash == -1) {
+      return logName; // No slash, already just a name
+    }
+    return logName.substring(lastSlash + 1);
+  }
+
+  /**
+   * Retrieves the etcd path for a specific log name-to-UUID index entry.
+   *
+   * <p>The by-name index uses the filename (basename) as the key, allowing multiple logs with the
+   * same filename but different full paths or bootstrap servers to coexist.
+   *
+   * @param logName the full name/path of the log
+   * @param logUuid the UUID of the log
+   * @return the etcd path for the log's name index entry
+   */
+  private String getLogByNameEntryPath(String logName, UUID logUuid) {
+    String filename = extractFilename(logName);
+    return format("%s/%s/%s/%s", getLogsPath(), LOGS_BY_NAME_DIR, filename, logUuid);
+  }
+
+  /**
+   * Retrieves the etcd path prefix for all logs with the specified filename.
+   *
+   * @param filename the filename (basename) to search for
+   * @return the etcd path prefix for the filename's index entries
+   */
+  private String getLogByNamePrefixPath(String filename) {
+    return format("%s/%s/%s/", getLogsPath(), LOGS_BY_NAME_DIR, filename);
+  }
+
+  /**
+   * Retrieves the etcd path for a log auto-naming counter.
+   *
+   * @param prefix the log name prefix
+   * @return the etcd path for the counter
+   */
+  private String getLogCounterPath(String prefix) {
+    return format("%s/%s/%s", getLogsPath(), LOGS_COUNTERS_DIR, prefix);
   }
 
   /**
@@ -1660,15 +2001,6 @@ public class PalDirectory implements AutoCloseable {
    */
   private String getLogsPath() {
     return format("/%s/%s", namespace, LOGS_DIR);
-  }
-
-  /**
-   * Retrieves the etcd key sequence for the logs' path.
-   *
-   * @return the {@link ByteSequence} representing the logs path key
-   */
-  private ByteSequence getLogsPathKey() {
-    return ByteSequence.from(getLogsPath().getBytes(UTF8));
   }
 
   /**

@@ -15,6 +15,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -26,8 +27,8 @@ import org.slf4j.LoggerFactory;
 /**
  * Abstract base class for CLI integration tests.
  *
- * <p>Provides methods for launching transient peers, waiting for them to be ready, and executing
- * CLI subcommands against running infrastructure (etcd, Kafka) and peers.
+ * <p>Provides methods for launching required peers, waiting for them to be ready, and executing CLI
+ * subcommands against running infrastructure (etcd, Kafka) and peers.
  *
  * <p>Extends {@link AbstractIntegrationTest} to inherit methods for running pal commands and
  * accessing directory/Kafka configuration.
@@ -35,6 +36,9 @@ import org.slf4j.LoggerFactory;
 public abstract class AbstractCliIT extends AbstractIntegrationTest {
 
   private static final Logger logger = LoggerFactory.getLogger(AbstractCliIT.class);
+
+  /** List of Chronicle queue directories created during tests that need cleanup. */
+  protected List<Path> chronicleDirectoriesToCleanup;
 
   /**
    * Executes a `pal ls` command with the given arguments.
@@ -114,7 +118,7 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
     // Build command: pal [global-opts] <subcommand> <args>
     // Global options like -d must come BEFORE the subcommand
     List<String> command = new ArrayList<>();
-    command.add(palHome + "/bin/pal");
+    command.add(Paths.get(palHome, "bin", "pal").toAbsolutePath().toString());
 
     // Check if first arg is a global option (-d, -k, etc.)
     int startIdx = 0;
@@ -326,6 +330,38 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
     }
 
     return new CliProcessResult(exitCode, stdout.toString(), stderr.toString());
+  }
+
+  /**
+   * Gets the classpath for itt-apps module.
+   *
+   * @return classpath string
+   */
+  protected String getIttAppsClasspath() {
+    String palHome = System.getenv("PAL_HOME");
+    return Paths.get(palHome + "/modules/itt-apps/target/classes").toAbsolutePath().toString();
+  }
+
+  /**
+   * Tracks a Chronicle queue directory for cleanup after the test.
+   *
+   * <p>The Chronicle queue will be created in PAL_HOME (where the peer process runs), so we need to
+   * construct the full path using PAL_HOME.
+   *
+   * @param queueName the name of the Chronicle queue directory (relative to or absolute path)
+   */
+  protected void trackChronicleDirectory(String queueName) {
+    Path queuePath = Paths.get(queueName);
+    if (queuePath.isAbsolute()) {
+      chronicleDirectoriesToCleanup.add(queuePath);
+    } else {
+      String palHome = System.getenv("PAL_HOME");
+      if (palHome != null) {
+        chronicleDirectoriesToCleanup.add(Paths.get(palHome, queueName));
+      } else {
+        chronicleDirectoriesToCleanup.add(Paths.get(queueName));
+      }
+    }
   }
 
   /** Container for CLI process execution results. */

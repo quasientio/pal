@@ -81,8 +81,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
 
     // Run PAL with Chronicle WAL (without PAL directory since Chronicle doesn't need it)
     ProcessResult result =
-        runPalCommandWithEnv(
-            null, // No PAL_DIRECTORY
+        runPeer(
             "--wal",
             "file:" + walPath.toAbsolutePath(),
             "-cp",
@@ -129,8 +128,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
 
     // First, write some messages to the Chronicle queue
     ProcessResult writeResult =
-        runPalCommandWithEnv(
-            null, // No PAL_DIRECTORY
+        runPeer(
             "--wal",
             "file:" + walPath.toAbsolutePath(),
             "-cp",
@@ -149,8 +147,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
 
     // Now read from the same queue - need to specify the full path
     ProcessResult readResult =
-        runPalCommandWithEnv(
-            null, // No PAL_DIRECTORY
+        runPeer(
             "--source-log",
             "file:" + walPath.toAbsolutePath(),
             "-cp",
@@ -184,8 +181,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
     // Run PAL with Chronicle WAL but NO Kafka configuration
     // This should succeed because Chronicle doesn't need Kafka
     ProcessResult result =
-        runPalCommandWithEnv(
-            null, // No PAL_DIRECTORY
+        runPeer(
             "--wal",
             "file:" + walPath.toAbsolutePath(),
             "-cp",
@@ -225,7 +221,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
     String sourceLog = "test-kafka-topic-" + generateId();
 
     ProcessResult result =
-        runPalCommand(
+        runPeer(
             "--wal",
             "file:" + walPath.toAbsolutePath(),
             "--source-log",
@@ -264,8 +260,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
 
     // First, write some messages
     ProcessResult writeResult =
-        runPalCommandWithEnv(
-            null, // No PAL_DIRECTORY
+        runPeer(
             "--wal",
             "file:" + walPath.toAbsolutePath(),
             "-cp",
@@ -290,8 +285,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
 
     // Now read starting from calculated offset - need to specify the full path
     ProcessResult readResult =
-        runPalCommandWithEnv(
-            null, // No PAL_DIRECTORY
+        runPeer(
             "--source-log",
             "file:" + walPath.toAbsolutePath(),
             "--start-offset",
@@ -338,8 +332,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
 
     // Try to read from a non-existent Chronicle queue with --source-log
     ProcessResult result =
-        runPalCommandWithEnv(
-            null, // No PAL_DIRECTORY
+        runPeer(
             "--source-log",
             "file:" + nonExistentQueue.toAbsolutePath(),
             "-cp",
@@ -385,8 +378,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
 
     // Run with -l option (same log for reading and writing)
     ProcessResult result =
-        runPalCommandWithEnv(
-            null, // No PAL_DIRECTORY
+        runPeer(
             "--wal",
             "file:" + newQueue.toAbsolutePath(),
             "-cp",
@@ -433,8 +425,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
 
     // Run with relative path and --chronicle-base-dir
     ProcessResult result =
-        runPalCommandWithEnv(
-            null, // No PAL_DIRECTORY
+        runPeer(
             "--chronicle-base-dir",
             tempDir.toAbsolutePath().toString(),
             "--wal",

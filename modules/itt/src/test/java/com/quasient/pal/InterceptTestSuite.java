@@ -98,7 +98,7 @@ public class InterceptTestSuite extends AbstractIntegrationTest {
             palHome, palHome);
 
     sharedPeerProcess =
-        instance.launchTransientPeer(
+        instance.launchPeer(
             SHARED_PEER_UUID,
             "-d",
             palDirectory,

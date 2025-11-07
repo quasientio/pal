@@ -10,18 +10,16 @@
 package com.quasient.pal.cxn.chronicle;
 
 import com.quasient.pal.messages.OutboundMsg;
-import com.quasient.pal.messages.types.MessageType;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.List;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,9 +44,6 @@ import org.slf4j.LoggerFactory;
  *   QueueIndexInfo info = ChronicleLogUtil.getQueueIndexInfo(queuePath);
  *   long messageCount = info.getMessageCount();
  *   long sizeInBytes = ChronicleLogUtil.getQueueSizeInBytes(queuePath);
- *
- *   // Read messages
- *   List<OutboundMsg> messages = ChronicleLogUtil.readMessagesFrom(queuePath, 0, 100);
  * }
  * }</pre>
  */
@@ -60,21 +55,6 @@ public class ChronicleLogUtil {
   /** Private constructor to prevent instantiation of utility class. */
   private ChronicleLogUtil() {
     throw new UnsupportedOperationException("Utility class cannot be instantiated");
-  }
-
-  /**
-   * Resolves a Chronicle queue name to an absolute path.
-   *
-   * <p>If the queue name is an absolute path, it is returned as-is. Otherwise, it is resolved
-   * against the provided base directory.
-   *
-   * @param queueName the queue name or path (can be relative or absolute)
-   * @param baseDir the base directory for resolving relative paths
-   * @return the absolute path to the Chronicle queue
-   */
-  public static Path resolveQueuePath(String queueName, Path baseDir) {
-    Path queueNamePath = Path.of(queueName);
-    return queueNamePath.isAbsolute() ? queueNamePath : baseDir.resolve(queueName);
   }
 
   /**
@@ -102,33 +82,6 @@ public class ChronicleLogUtil {
       logger.debug("Error checking queue existence at {}", queuePath, e);
       return false;
     }
-  }
-
-  /**
-   * Reads all messages from the specified Chronicle queue.
-   *
-   * @param queuePath the path to the Chronicle queue directory
-   * @return a list of all messages in the queue, or an empty list if the queue is empty or doesn't
-   *     exist
-   */
-  public static List<OutboundMsg> readAllMessages(Path queuePath) {
-    List<OutboundMsg> messages = new ArrayList<>();
-
-    try (ChronicleQueue queue = createReadOnlyQueue(queuePath)) {
-      ExcerptTailer tailer = queue.createTailer();
-      tailer.toStart();
-
-      OutboundMsg msg;
-      while ((msg = OutboundMsg.readNext(tailer)) != null) {
-        messages.add(msg);
-      }
-    } catch (Exception e) {
-      logger.debug("Error reading all messages from queue at {}", queuePath, e);
-      // If queue doesn't exist or can't be read, return empty list
-      return messages;
-    }
-
-    return messages;
   }
 
   /**
@@ -173,17 +126,36 @@ public class ChronicleLogUtil {
   }
 
   /**
-   * Gets the first and last index of the Chronicle queue.
+   * Gets the first and last logical offset of the Chronicle queue.
+   *
+   * <p>Unlike Chronicle's internal indices (which encode cycle and sequence), this method returns
+   * logical offsets similar to Kafka: starting at 0 for the first message and incrementing
+   * sequentially. This makes Chronicle queue offsets comparable to Kafka offsets in CLI output.
    *
    * @param queuePath the path to the Chronicle queue directory
-   * @return a {@link QueueIndexInfo} containing first and last indices, or null if queue doesn't
-   *     exist
+   * @return a {@link QueueIndexInfo} containing logical first (0) and last (count-1) offsets, or
+   *     null if queue doesn't exist
    */
   @Nullable
   public static QueueIndexInfo getQueueIndexInfo(Path queuePath) {
     try (ChronicleQueue queue = createReadOnlyQueue(queuePath)) {
-      long firstIndex = queue.firstIndex();
-      long lastIndex = queue.lastIndex();
+      ExcerptTailer tailer = queue.createTailer();
+      tailer.toStart();
+
+      // Count messages to get logical offsets
+      long messageCount = 0;
+      while (OutboundMsg.readNext(tailer) != null) {
+        messageCount++;
+      }
+
+      if (messageCount == 0) {
+        // Empty queue - return -1 for both indices to indicate no messages
+        return new QueueIndexInfo(-1, -1);
+      }
+
+      // Return logical offsets: 0-based sequential numbering like Kafka
+      long firstIndex = 0;
+      long lastIndex = messageCount - 1;
       return new QueueIndexInfo(firstIndex, lastIndex);
     } catch (Exception e) {
       logger.debug("Error getting queue index info at {}", queuePath, e);
@@ -192,112 +164,111 @@ public class ChronicleLogUtil {
   }
 
   /**
-   * Reads a specific message at the given index from the Chronicle queue.
+   * Calculates the total logical data size of a Chronicle queue in bytes.
+   *
+   * <p>This method attempts to use Chronicle Queue's internal API to get actual write positions
+   * when possible. If internal APIs are not accessible, it falls back to sampling messages to
+   * estimate size.
+   *
+   * <p>Chronicle Queue pre-allocates .cq4 files (often 64MB+ per cycle), so file system size
+   * queries report allocated size, not actual data size. The `writePosition` from Chronicle's
+   * internal stores provides accurate byte positions (within ~4KB accuracy).
    *
    * @param queuePath the path to the Chronicle queue directory
-   * @param index the Chronicle index to read from
-   * @return the message at the specified index, or {@code null} if not found
-   */
-  @Nullable
-  public static OutboundMsg readMessageAtIndex(Path queuePath, long index) {
-    try (ChronicleQueue queue = createReadOnlyQueue(queuePath)) {
-      ExcerptTailer tailer = queue.createTailer();
-      if (tailer.moveToIndex(index)) {
-        return OutboundMsg.readNext(tailer);
-      }
-      return null;
-    } catch (Exception e) {
-      logger.debug("Error reading message at index {} from queue at {}", index, queuePath, e);
-      return null;
-    }
-  }
-
-  /**
-   * Reads messages starting from a specific offset up to a maximum count.
-   *
-   * @param queuePath the path to the Chronicle queue directory
-   * @param startOffset the Chronicle index to start reading from
-   * @param maxMessages maximum number of messages to read
-   * @return a list of messages, up to maxMessages count
-   */
-  public static List<OutboundMsg> readMessagesFrom(
-      Path queuePath, long startOffset, int maxMessages) {
-    List<OutboundMsg> messages = new ArrayList<>();
-
-    try (ChronicleQueue queue = createReadOnlyQueue(queuePath)) {
-      ExcerptTailer tailer = queue.createTailer();
-      if (!tailer.moveToIndex(startOffset)) {
-        return messages;
-      }
-
-      OutboundMsg msg;
-      int count = 0;
-      while (count < maxMessages && (msg = OutboundMsg.readNext(tailer)) != null) {
-        messages.add(msg);
-        count++;
-      }
-    } catch (Exception e) {
-      logger.debug("Error reading messages from offset {} at queue {}", startOffset, queuePath, e);
-      // Return whatever we read so far
-      return messages;
-    }
-
-    return messages;
-  }
-
-  /**
-   * Verifies that all messages in the queue have the expected message type.
-   *
-   * @param queuePath the path to the Chronicle queue directory
-   * @param expectedType the expected message type
-   * @return {@code true} if all messages have the expected type (or queue is empty), {@code false}
-   *     otherwise
-   */
-  public static boolean allMessagesHaveType(Path queuePath, MessageType expectedType) {
-    try (ChronicleQueue queue = createReadOnlyQueue(queuePath)) {
-      ExcerptTailer tailer = queue.createTailer();
-      tailer.toStart();
-
-      OutboundMsg msg;
-      while ((msg = OutboundMsg.readNext(tailer)) != null) {
-        if (msg.getMessageType() != expectedType) {
-          return false;
-        }
-      }
-      return true;
-    } catch (Exception e) {
-      logger.debug("Error verifying message types in queue at {}", queuePath, e);
-      return false;
-    }
-  }
-
-  /**
-   * Calculates the total size of a Chronicle queue on disk in bytes.
-   *
-   * <p>This method walks through all files in the queue directory and sums their sizes.
-   *
-   * @param queuePath the path to the Chronicle queue directory
-   * @return the total size in bytes, or 0 if the queue doesn't exist or an error occurs
+   * @return the estimated logical data size in bytes, or 0 if the queue doesn't exist or an error
+   *     occurs
    */
   public static long getQueueSizeInBytes(Path queuePath) {
     if (queuePath == null || !Files.exists(queuePath)) {
       return 0L;
     }
 
-    try (Stream<Path> files = Files.walk(queuePath)) {
-      return files
-          .filter(Files::isRegularFile)
-          .mapToLong(
-              path -> {
+    try (ChronicleQueue queue = createReadOnlyQueue(queuePath)) {
+      // Try to use Chronicle's internal API to get actual write positions
+      if (queue instanceof SingleChronicleQueue singleQueue) {
+        try {
+          // Attempt to calculate size using internal store positions
+          // This accesses the actual write position in each cycle file
+          long totalSize = 0;
+
+          // Get the first and last cycles
+          long firstCycle = singleQueue.firstCycle();
+          long lastCycle = singleQueue.lastCycle();
+
+          if (firstCycle == -1 || lastCycle == -1) {
+            return 0L; // Empty queue
+          }
+
+          // Sum write positions across all cycle files
+          for (long cycle = firstCycle; cycle <= lastCycle; cycle++) {
+            try {
+              // Try to get the store for this cycle
+              var store = singleQueue.storeForCycle((int) cycle, 0, false, null);
+              if (store != null) {
                 try {
-                  return Files.size(path);
-                } catch (IOException e) {
-                  logger.debug("Error getting size of file {}", path, e);
-                  return 0L;
+                  long writePos = store.writePosition();
+                  totalSize += writePos;
+                } finally {
+                  // Release the store reference if needed
+                  store.close();
                 }
-              })
-          .sum();
-    } catch (IOException e) {
+              }
+            } catch (Exception storeEx) {
+              logger.debug("Could not get store for cycle {}: {}", cycle, storeEx.getMessage());
+            }
+          }
+
+          if (totalSize > 0) {
+            logger.debug("Chronicle queue size from write positions: {} bytes", totalSize);
+            return totalSize;
+          }
+        } catch (Exception internalApiEx) {
+          logger.debug(
+              "Could not use Chronicle internal API for size calculation: {}",
+              internalApiEx.getMessage());
+          // Fall through to sampling approach
+        }
+      }
+
+      // Fallback: Sample messages to estimate size
+      ExcerptTailer tailer = queue.createTailer();
+      tailer.toStart();
+
+      long messageCount = 0;
+      long totalBytesRead = 0;
+      int sampleCount = 0;
+      final int SAMPLE_SIZE = 100; // Sample first 100 messages for average size
+
+      // Count all messages and sample some to estimate average size
+      OutboundMsg msg;
+      while ((msg = OutboundMsg.readNext(tailer)) != null) {
+        messageCount++;
+        if (sampleCount < SAMPLE_SIZE) {
+          // Estimate message size based on its content
+          // This is a rough estimate: header + payload + metadata
+          long estimatedMsgSize = 50; // Base overhead for type, headers, IDs, etc.
+          if (msg.getBody() != null) {
+            estimatedMsgSize += msg.getBody().length;
+          }
+          totalBytesRead += estimatedMsgSize;
+          sampleCount++;
+        }
+      }
+
+      if (messageCount == 0) {
+        return 0L;
+      }
+
+      // Calculate average and extrapolate
+      if (sampleCount > 0) {
+        long averageMessageSize = totalBytesRead / sampleCount;
+        long estimatedSize = averageMessageSize * messageCount;
+        logger.debug("Chronicle queue size estimated from sampling: {} bytes", estimatedSize);
+        return estimatedSize;
+      }
+
+      return 0L;
+    } catch (Exception e) {
       logger.debug("Error calculating queue size at {}", queuePath, e);
       return 0L;
     }

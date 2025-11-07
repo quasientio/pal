@@ -11,6 +11,7 @@ package com.quasient.pal.tools.cli;
 
 import static com.quasient.pal.common.util.Strings.stringAfter;
 import static com.quasient.pal.common.util.Strings.stringBefore;
+import static picocli.CommandLine.ArgGroup;
 import static picocli.CommandLine.Option;
 
 import com.quasient.pal.common.cli.PalCommand;
@@ -26,7 +27,6 @@ import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.serdes.colfer.ColferUtils;
 import com.quasient.pal.serdes.kafka.typed.KafkaLogMessageDeserializer;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
@@ -228,15 +228,55 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
   private String id;
 
   /**
+   * Output format options group.
+   *
+   * <p>These options are mutually exclusive. If none is specified, COMPACT is the default.
+   */
+  static class FormatOptions {
+    /** Flag indicating compact output format should be used. */
+    @Option(
+        names = {"--compact"},
+        description = "Compact output format (default)")
+    boolean compact;
+
+    /** Flag indicating JSON output format should be used. */
+    @Option(
+        names = {"--json"},
+        description = "JSON output format")
+    boolean json;
+
+    /** Flag indicating full output format should be used. */
+    @Option(
+        names = {"--full"},
+        description = "Full output format with all details")
+    boolean full;
+  }
+
+  /**
    * Specifies the output format for the printed messages.
    *
-   * <p>Possible values are FULL, JSON, and COMPACT. The default format is COMPACT.
+   * <p>The format options are mutually exclusive. If none is specified, COMPACT is the default.
    */
-  @Option(
-      names = {"--output-format"},
-      description = "Output format. Possible values: ${COMPLETION-CANDIDATES}",
-      defaultValue = "COMPACT")
-  private OutputFormat format;
+  @ArgGroup private FormatOptions formatOptions;
+
+  /**
+   * Gets the selected output format.
+   *
+   * @return the selected OutputFormat, defaulting to COMPACT if none specified
+   */
+  private OutputFormat getFormat() {
+    if (formatOptions == null) {
+      return OutputFormat.COMPACT;
+    }
+    if (formatOptions.full) {
+      return OutputFormat.FULL;
+    }
+    if (formatOptions.json) {
+      return OutputFormat.JSON;
+    }
+    // Default to COMPACT (this covers both explicit -c and no option selected)
+    return OutputFormat.COMPACT;
+  }
 
   /** If set, the command will run in verbose mode, providing additional logging information. */
   @Option(names = "-v", description = "Run verbosely")
@@ -250,9 +290,6 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
       description = "Display this help message")
   private boolean helpRequested = false;
 
-  /** Base directory for Chronicle queue files. */
-  private Path chronicleBaseDir;
-
   /**
    * {@inheritDoc}
    *
@@ -262,15 +299,6 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
   @Override
   protected void initialize() {
     initializeDirectoryConnectionProvider(palCommand.getPalDirectoryConnectionString());
-
-    // Initialize Chronicle base directory from system property or environment variable
-    String baseDirStr =
-        System.getProperty("wal.chronicle.base_dir", System.getenv("CHRONICLE_BASE_DIR"));
-    if (baseDirStr == null || baseDirStr.isBlank()) {
-      chronicleBaseDir = Paths.get(".");
-    } else {
-      chronicleBaseDir = Paths.get(baseDirStr);
-    }
   }
 
   /**
@@ -282,16 +310,62 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
   private int printLogMessageConsumer() throws Exception {
 
     logger.info("Started printer for log: {}", logIdentifier);
-    PalDirectory palDirectory = getPalDirectory();
 
-    // 1) Resolve the log info
-    LogInfo log = resolveLogInfo(palDirectory, logIdentifier);
-    if (log == null) {
-      logger.error("No Log found for identifier: {}", logIdentifier);
-      return 1;
+    // Strip "file:" prefix if present (Issue #8)
+    String chronicleFilePrefix = "file:";
+    boolean isChronicleLog = logIdentifier.startsWith(chronicleFilePrefix);
+    String logNameOrPath =
+        isChronicleLog ? logIdentifier.substring(chronicleFilePrefix.length()) : logIdentifier;
+
+    // Try to get PalDirectory if available
+    PalDirectory palDirectory = null;
+    try {
+      if (directoryConnectionProvider != null) {
+        Optional<PalDirectory> palDirOpt = directoryConnectionProvider.get();
+        palDirectory = palDirOpt.orElse(null);
+      }
+    } catch (Exception e) {
+      logger.debug("PalDirectory not available: {}", e.getMessage());
     }
 
-    // 2) Route based on log type
+    LogInfo log;
+
+    // If PalDirectory is available, use it to resolve the log
+    if (palDirectory != null) {
+      log = resolveLogInfo(palDirectory, logNameOrPath);
+      if (log == null) {
+        logger.error("No Log found for identifier: {}", logIdentifier);
+        return 1;
+      }
+    } else {
+      // PalDirectory not available, try to work with environment variables
+      logger.info("PalDirectory not available, attempting to use environment variables");
+
+      if (isChronicleLog) {
+        // Create a minimal LogInfo for Chronicle log
+        log = new LogInfo(logNameOrPath);
+        log.setLogType(LogType.CHRONICLE);
+        logger.info("Using Chronicle log without PAL_DIRECTORY: {}", logNameOrPath);
+      } else {
+        // Kafka log: verify KAFKA_SERVERS is available
+        String kafkaServers = getKafkaServers();
+        if (kafkaServers == null) {
+          logger.error(
+              "Cannot print Kafka log without PAL_DIRECTORY: "
+                  + "KAFKA_SERVERS environment variable not set");
+          return 1;
+        }
+        // Create a minimal LogInfo for Kafka log
+        log = new LogInfo(logNameOrPath, kafkaServers);
+        log.setLogType(LogType.KAFKA);
+        logger.info(
+            "Using Kafka log without PAL_DIRECTORY: topic={}, servers={}",
+            logNameOrPath,
+            kafkaServers);
+      }
+    }
+
+    // Route based on log type
     if (log.getLogType() == LogType.CHRONICLE) {
       return printChronicleLogMessages(log);
     } else {
@@ -456,8 +530,7 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
    * @throws Exception if an error occurs while reading messages
    */
   private int printChronicleLogMessages(LogInfo log) throws Exception {
-    final String queueName = log.getName();
-    Path queuePath = ChronicleLogUtil.resolveQueuePath(queueName, chronicleBaseDir);
+    Path queuePath = Path.of(log.getName());
 
     // Verify the queue exists
     if (!ChronicleLogUtil.queueExists(queuePath)) {
@@ -491,44 +564,22 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
             firstIndex, lastIndex, indexInfo.getMessageCount());
       }
 
-      // Position the tailer based on offset parameter
-      if (offset != null) {
-        if (offset < firstIndex) {
-          // Offset is before the first available index, so start from beginning
-          if (verbose) {
-            System.out.printf(
-                "Requested offset %d is before first index %d, starting from first index%n",
-                offset, firstIndex);
-          }
-          tailer.toStart();
-        } else if (offset <= lastIndex) {
-          // Seek to the given offset if it exists
-          if (verbose) {
-            System.out.printf("Seeking to index %d%n", offset);
-          }
-          if (!tailer.moveToIndex(offset)) {
-            logger.error("Failed to seek to index: {}", offset);
-            return 1;
-          }
+      // Always start from the beginning to use logical offsets (0-based sequential)
+      tailer.toStart();
+
+      if (verbose) {
+        if (offset != null) {
+          System.out.printf("Starting from first index to reach logical offset %d%n", offset);
         } else {
-          // offset is yet to come, so seek to end
-          if (verbose) {
-            System.out.printf("Seeking to latest index: %d%n", lastIndex);
-          }
-          tailer.toEnd();
-        }
-      } else {
-        // Start from the beginning
-        tailer.toStart();
-        if (verbose) {
           System.out.printf("Starting from first index: %d%n", firstIndex);
         }
       }
 
-      // Read and print messages
+      // Read and print messages, using logical offsets
       boolean messageFound = false;
+      long logicalOffset = 0; // Track logical 0-based sequential offset
+
       while (true) {
-        long currentIndex = tailer.index();
         OutboundMsg outboundMsg = OutboundMsg.readNext(tailer);
 
         if (outboundMsg == null) {
@@ -554,23 +605,31 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
         message.unmarshal(outboundMsg.getBody(), 0);
 
         // Create headers map from OutboundMsg metadata
-        LogMessage<Message> logMessage = getLogMessage(outboundMsg, currentIndex, message);
+        LogMessage<Message> logMessage = getLogMessage(outboundMsg, logicalOffset, message);
 
-        // If user requested a specific offset/index, print it and exit
-        if (offset != null && offset.equals(currentIndex)) {
-          printRecord(logMessage, currentIndex);
-          break;
+        // If user requested a specific logical offset, check if we've reached it
+        if (offset != null) {
+          if (logicalOffset == offset) {
+            // Found the requested offset, print it
+            printRecord(logMessage, logicalOffset);
+            if (!follow) {
+              // Not in follow mode, we're done after printing the requested offset
+              break;
+            }
+          } else if (logicalOffset > offset && !follow) {
+            // We've passed the offset without finding it (shouldn't happen), exit
+            break;
+          }
+          // In follow mode, continue after printing the offset
         } else {
-          // Apply filters and print if it passes
-          if (shouldPrint(currentIndex, null, logMessage)) {
-            printRecord(logMessage, currentIndex);
+          // No specific offset requested, apply filters and print if it passes
+          if (shouldPrint(logicalOffset, null, logMessage)) {
+            printRecord(logMessage, logicalOffset);
           }
         }
 
-        // If offset was specified, and we've printed it, we're done
-        if (offset != null && currentIndex >= offset) {
-          break;
-        }
+        // Increment logical offset for next message
+        logicalOffset++;
       }
 
       if (verbose) {
@@ -675,7 +734,7 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
    * @param offset the offset of the message
    */
   private void printRecord(String key, LogMessage<?> msg, long offset) {
-    switch (format) {
+    switch (getFormat()) {
       case FULL ->
           System.out.printf(
               "CONTEXT: offset: %d key: %s %nHEADERS: %s%n%s%n",
@@ -685,7 +744,7 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
       case COMPACT ->
           System.out.printf(
               "offset=%d id=%s message=%s%n", offset, getId(msg), getMessageOneLiner(msg));
-      default -> throw new IllegalStateException("Unexpected value: " + format);
+      default -> throw new IllegalStateException("Unexpected value: " + getFormat());
     }
   }
 
@@ -827,13 +886,13 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
           // stream: print
           stream.forEach(
               msg -> {
-                switch (format) {
+                switch (getFormat()) {
                   case FULL -> System.out.printf("%s%n", msg.toString());
                   case JSON -> System.out.printf("%s%n", ColferUtils.toJson(msg, true));
                   case COMPACT ->
                       System.out.printf(
                           "uuid=%s type=%s%n", getMessageTypeName(msg), getMessageTypeName(msg));
-                  default -> throw new IllegalStateException("Unexpected value: " + format);
+                  default -> throw new IllegalStateException("Unexpected value: " + getFormat());
                 }
               });
         };

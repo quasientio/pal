@@ -26,7 +26,7 @@ public class MainClassNotFoundIT extends AbstractIntegrationTest {
   public void testMissingMainClass_printsToStderrAndExit1() throws Exception {
     String missingClass = "com.example.DoesNotExist";
 
-    ProcessResult result = runPalCommand(missingClass);
+    ProcessResult result = runPeer(missingClass);
 
     assertEquals("Expected exit code 1 when main class cannot be found", 1, result.exitCode());
     assertThat(

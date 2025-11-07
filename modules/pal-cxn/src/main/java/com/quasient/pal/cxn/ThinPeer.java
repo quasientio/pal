@@ -40,7 +40,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -533,18 +532,6 @@ public class ThinPeer {
     final boolean withConsumer = consumer != null || consumerProperties != null;
     final boolean logless = !withProducer && !withConsumer;
 
-    // Initialize Chronicle base directory
-    String baseDirStr =
-        System.getProperty("wal.chronicle.base_dir", System.getenv("CHRONICLE_BASE_DIR"));
-
-    // Base directory for Chronicle queue files
-    Path chronicleBaseDir;
-    if (baseDirStr == null || baseDirStr.isBlank()) {
-      chronicleBaseDir = Paths.get(".");
-    } else {
-      chronicleBaseDir = Paths.get(baseDirStr);
-    }
-
     if (!logless) {
       // get last log with prefix from PAL directory
       LogInfo lastLog =
@@ -568,8 +555,7 @@ public class ThinPeer {
         // configure kafka consumer or Chronicle input queue
         if (this.inputLog.getLogType() == LogType.CHRONICLE) {
           // Initialize Chronicle input queue
-          Path queuePath =
-              ChronicleLogUtil.resolveQueuePath(this.inputLog.getName(), chronicleBaseDir);
+          Path queuePath = Path.of(this.inputLog.getName());
           if (!ChronicleLogUtil.queueExists(queuePath)) {
             throw new RuntimeException(
                 "Chronicle input log does not exist at path: "
@@ -624,8 +610,7 @@ public class ThinPeer {
         // configure kafka producer or Chronicle output queue
         if (this.outputLog.getLogType() == LogType.CHRONICLE) {
           // Initialize Chronicle output queue
-          Path queuePath =
-              ChronicleLogUtil.resolveQueuePath(this.outputLog.getName(), chronicleBaseDir);
+          Path queuePath = Path.of(this.outputLog.getName());
           // Create the queue if it doesn't exist (for output, we can create it)
           this.chronicleOutputQueue =
               SingleChronicleQueueBuilder.binary(queuePath.toFile()).build();

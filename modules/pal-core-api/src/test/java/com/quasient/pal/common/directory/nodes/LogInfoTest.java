@@ -22,7 +22,6 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.UUID;
-import java.util.stream.Stream;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -95,16 +94,6 @@ public class LogInfoTest {
   }
 
   @Test
-  public void setExists() {
-    Stream.of(true, false)
-        .forEach(
-            exists -> {
-              logInfo.setExists(exists);
-              assertThat(logInfo.isExists(), is(exists));
-            });
-  }
-
-  @Test
   public void compareTo() {
     LogInfo first = new LogInfo("first");
     LogInfo second = new LogInfo("second");
@@ -124,9 +113,9 @@ public class LogInfoTest {
     assertThat(b, is(c));
     assertThat(a.hashCode(), is(b.hashCode()));
     assertThat(b.hashCode(), is(c.hashCode()));
-    assertNotEquals(a, different);
-    assertNotEquals(a, null);
-    assertNotEquals(a, new Object());
+    assertNotEquals(different, a);
+    assertNotEquals(null, a);
+    assertNotEquals(new Object(), a);
   }
 
   @Test
