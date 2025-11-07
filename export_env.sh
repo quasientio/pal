@@ -29,6 +29,7 @@ export PAL_CLI_LOGGING_CONFIG=$PAL_HOME/.local/conf/cli-logging.xml
 export PAL_DIRECTORY=localhost:2379
 export KAFKA_SERVERS=localhost:29092
 export KAFKA_JMX_PORT=10121
+export CHRONICLE_BASE_DIR=/tmp/chronicle-logs
 # export CLASSPATH=
 # export PEER_NAME=
 # export PEER_UUID=
