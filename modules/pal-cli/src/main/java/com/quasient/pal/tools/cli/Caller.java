@@ -19,6 +19,7 @@ import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.common.util.Base62UuidGenerator;
 import com.quasient.pal.common.util.IdGenerator;
 import com.quasient.pal.cxn.ThinPeer;
+import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.messages.LogMessage;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.Message;
@@ -147,6 +148,18 @@ public class Caller extends AbstractPalSubcommand {
       paramLabel = "name",
       description = "write to given log")
   private String outputLogName;
+
+  /**
+   * Kafka bootstrap servers for direct access to Kafka logs without PAL_DIRECTORY.
+   *
+   * <p>When provided, allows accessing Kafka logs directly without connecting to the PAL directory.
+   * Takes precedence over the KAFKA_SERVERS environment variable.
+   */
+  @Option(
+      names = {"-k", "--kafka-servers"},
+      paramLabel = "host:port[,host:port...]",
+      description = "Kafka bootstrap servers (for direct Kafka access without -d)")
+  private String kafkaServers;
 
   /** Identifies the peer to communicate with, either by UUID or RPC address. */
   @Option(
@@ -391,6 +404,9 @@ public class Caller extends AbstractPalSubcommand {
 
     RpcType inferredRpcType = optionGiven(rpcType) ? RpcType.valueOf(rpcType) : null;
 
+    // see if we have a PalDirectory
+    boolean gotPalDir = !palDirectoryUrl.equals(PalDirectory.NO_URL);
+
     // create ThinPeer
     final ThinPeer thinPeer;
     final UUID thinPeerUuid = UUID.randomUUID();
@@ -426,7 +442,7 @@ public class Caller extends AbstractPalSubcommand {
           new ThinPeer()
               .withUuid(thinPeerUuid)
               .withDirectoryUrl(palDirectoryUrl)
-              .withSelfRegistration(true)
+              .withSelfRegistration(gotPalDir)
               .withInitialPeer(peerInfo)
               .withOutboundRpcType(inferredRpcType)
               .init();
@@ -435,29 +451,24 @@ public class Caller extends AbstractPalSubcommand {
         inputLogName = outputLogName = logName;
       }
 
-      // Fetch log information from directory if available
+      // Fetch log information from directory if available, or create minimal LogInfo for direct
+      // mode
       LogInfo inputLog = null;
       LogInfo outputLog = null;
 
       if (inputLogName != null) {
-        inputLog = getPalDirectory().getLogInfo(inputLogName);
-        if (inputLog == null) {
-          inputLog = new LogInfo(inputLogName);
-        }
+        inputLog = resolveLogInfo(inputLogName);
       }
 
       if (outputLogName != null) {
-        outputLog = getPalDirectory().getLogInfo(outputLogName);
-        if (outputLog == null) {
-          outputLog = new LogInfo(outputLogName);
-        }
+        outputLog = resolveLogInfo(outputLogName);
       }
 
       thinPeer =
           new ThinPeer()
               .withUuid(thinPeerUuid)
               .withDirectoryUrl(palDirectoryUrl)
-              .withSelfRegistration(true)
+              .withSelfRegistration(gotPalDir)
               .withInputLog(inputLog)
               .withOutputLog(outputLog)
               .withConsumerProperties(consumerProperties)
@@ -519,6 +530,7 @@ public class Caller extends AbstractPalSubcommand {
       } else {
         LogMessage<Message> responseLogMessage =
             thinPeer.sendExecMessageToLogAndReceive(staticMethodCallBuilder.buildExecMessage());
+        logger.debug("got response: {}", getMessageContentAsPrettyJson(responseLogMessage));
         printIfRequired(responseLogMessage.getContent().getExecMessage());
       }
       requestsSent++;
@@ -555,23 +567,20 @@ public class Caller extends AbstractPalSubcommand {
       inputLogName = outputLogName = logName;
     }
 
-    // Fetch log information from directory if available
+    // Fetch log information from directory if available, or create minimal LogInfo for direct mode
     LogInfo inputLog = null;
     LogInfo outputLog = null;
 
     if (inputLogName != null) {
-      inputLog = getPalDirectory().getLogInfo(inputLogName);
-      if (inputLog == null) {
-        inputLog = new LogInfo(inputLogName);
-      }
+      inputLog = resolveLogInfo(inputLogName);
     }
 
     if (outputLogName != null) {
-      outputLog = getPalDirectory().getLogInfo(outputLogName);
-      if (outputLog == null) {
-        outputLog = new LogInfo(outputLogName);
-      }
+      outputLog = resolveLogInfo(outputLogName);
     }
+
+    // see if we have a PalDirectory
+    boolean gotPalDir = !palDirectoryUrl.equals(PalDirectory.NO_URL);
 
     // create ThinPeer
     final UUID thinPeerUuid = UUID.randomUUID();
@@ -579,7 +588,7 @@ public class Caller extends AbstractPalSubcommand {
         new ThinPeer()
             .withUuid(thinPeerUuid)
             .withDirectoryUrl(palDirectoryUrl)
-            .withSelfRegistration(true)
+            .withSelfRegistration(gotPalDir)
             .withInputLog(inputLog)
             .withOutputLog(outputLog)
             .withConsumerProperties(consumerProperties)
@@ -809,6 +818,65 @@ public class Caller extends AbstractPalSubcommand {
       return;
     }
     out.println(ColferUtils.format(raisedThrowable));
+  }
+
+  /**
+   * Resolves log information by name, attempting to use PAL directory if available, or creating a
+   * minimal LogInfo for direct mode.
+   *
+   * @param logNameOrPath the log name or path to resolve
+   * @return LogInfo for the specified log, or null if resolution fails
+   */
+  private LogInfo resolveLogInfo(String logNameOrPath) {
+    // Try to get PalDirectory if available
+    try {
+      if (directoryConnectionProvider != null) {
+        var palDirOpt = directoryConnectionProvider.get();
+        if (palDirOpt.isPresent()) {
+          // Registry mode: lookup log by name
+          LogInfo logInfo = palDirOpt.get().getLogInfo(logNameOrPath);
+          if (logInfo != null) {
+            return logInfo;
+          }
+          // Not found in directory, fall through to direct mode
+        }
+      }
+    } catch (Exception e) {
+      logger.debug("PalDirectory not available: {}", e.getMessage());
+    }
+
+    // Direct mode: create minimal LogInfo
+    String chronicleFilePrefix = "file:";
+    boolean isChronicleLog = logNameOrPath.startsWith(chronicleFilePrefix);
+
+    if (isChronicleLog) {
+      // Chronicle log: strip prefix and create LogInfo
+      String path = logNameOrPath.substring(chronicleFilePrefix.length());
+      LogInfo logInfo = new LogInfo(path);
+      logInfo.setLogType(LogInfo.LogType.CHRONICLE);
+      logger.info("Using Chronicle log in direct mode: {}", path);
+      return logInfo;
+    } else {
+      // Kafka log: need bootstrap servers
+      String kafkaServersToUse = kafkaServers != null ? kafkaServers : getKafkaServers();
+      if (kafkaServersToUse != null) {
+        LogInfo logInfo = new LogInfo(logNameOrPath, kafkaServersToUse);
+        logInfo.setLogType(LogInfo.LogType.KAFKA);
+        logger.info(
+            "Using Kafka log in direct mode: topic={}, servers={}",
+            logNameOrPath,
+            kafkaServersToUse);
+        return logInfo;
+      } else {
+        // Cannot determine log type without Kafka servers
+        // Create a basic LogInfo and let it be resolved later
+        logger.warn(
+            "Log name '{}' does not have 'file:' prefix and no Kafka servers provided. "
+                + "Treating as bare log name.",
+            logNameOrPath);
+        return new LogInfo(logNameOrPath);
+      }
+    }
   }
 
   /**

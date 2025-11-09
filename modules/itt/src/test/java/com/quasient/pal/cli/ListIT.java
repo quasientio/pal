@@ -14,13 +14,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.UUID;
-import java.util.stream.Stream;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -47,7 +41,6 @@ public class ListIT extends AbstractCliIT {
   public void setUp() {
     // Clean slate for each test
     peerProcess = null;
-    chronicleDirectoriesToCleanup = new ArrayList<>();
   }
 
   /**
@@ -61,27 +54,6 @@ public class ListIT extends AbstractCliIT {
       stopPeer(peerProcess);
       peerProcess = null;
     }
-
-    // Clean up Chronicle queue directories created during the test
-    for (Path chronicleDir : chronicleDirectoriesToCleanup) {
-      if (chronicleDir != null && Files.exists(chronicleDir)) {
-        try (Stream<Path> files = Files.walk(chronicleDir)) {
-          files
-              .sorted(Comparator.reverseOrder())
-              .forEach(
-                  path -> {
-                    try {
-                      Files.delete(path);
-                    } catch (IOException e) {
-                      logger.warn("Failed to delete Chronicle queue file: {}", path, e);
-                    }
-                  });
-        } catch (IOException e) {
-          logger.warn("Failed to clean up Chronicle queue directory: {}", chronicleDir, e);
-        }
-      }
-    }
-    chronicleDirectoriesToCleanup.clear();
   }
 
   /**
@@ -242,7 +214,7 @@ public class ListIT extends AbstractCliIT {
 
     // Create a Chronicle WAL with a unique name
     String walName = "test-chronicle-" + generateId();
-    trackChronicleDirectory(walName);
+    trackChronicleLog(walName);
     String walPath = "file:" + walName;
 
     UUID peerId = UUID.randomUUID();

@@ -131,6 +131,10 @@ public class Methods {
     return "RESULT: " + input;
   }
 
+  public static String staticStringWithStringArgs(String[] input) {
+    return "RESULT: " + String.join(",", input);
+  }
+
   /**
    * Test method that takes String[] parameter (like main).
    *

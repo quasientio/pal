@@ -15,14 +15,10 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.io.IOException;
+import com.quasient.pal.cxn.directory.PalDirectory;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.UUID;
-import java.util.stream.Stream;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -48,7 +44,6 @@ public class RemoveIT extends AbstractCliIT {
   @Before
   public void setUp() {
     peerProcess = null;
-    chronicleDirectoriesToCleanup = new ArrayList<>();
   }
 
   /**
@@ -62,27 +57,6 @@ public class RemoveIT extends AbstractCliIT {
       stopPeer(peerProcess);
       peerProcess = null;
     }
-
-    // Clean up Chronicle queue directories created during the test
-    for (Path chronicleDir : chronicleDirectoriesToCleanup) {
-      if (chronicleDir != null && Files.exists(chronicleDir)) {
-        try (Stream<Path> files = Files.walk(chronicleDir)) {
-          files
-              .sorted(Comparator.reverseOrder())
-              .forEach(
-                  path -> {
-                    try {
-                      Files.delete(path);
-                    } catch (IOException e) {
-                      logger.warn("Failed to delete Chronicle queue file: {}", path, e);
-                    }
-                  });
-        } catch (IOException e) {
-          logger.warn("Failed to clean up Chronicle queue directory: {}", chronicleDir, e);
-        }
-      }
-    }
-    chronicleDirectoriesToCleanup.clear();
   }
 
   /**
@@ -210,11 +184,11 @@ public class RemoveIT extends AbstractCliIT {
    */
   @Test
   public void testRemoveLog_deletesChronicleLog() throws Exception {
-    String palDirectory = getPalDirectoryUrl();
+    String palDirectoryUrl = getPalDirectoryUrl();
 
     // Create a Chronicle WAL
     String walName = "test-chronicle-remove-" + generateId();
-    trackChronicleDirectory(walName);
+    trackChronicleLog(walName);
     String walPath = "file:" + walName;
 
     UUID peerId = UUID.randomUUID();
@@ -225,7 +199,14 @@ public class RemoveIT extends AbstractCliIT {
 
     peerProcess =
         launchPeer(
-            peerId, "-d", palDirectory, "--wal", walPath, "-cp", getIttAppsClasspath(), classToRun);
+            peerId,
+            "-d",
+            palDirectoryUrl,
+            "--wal",
+            walPath,
+            "-cp",
+            getIttAppsClasspath(),
+            classToRun);
 
     // Wait for the process to complete and create the log
     int peerExitCode = joinPeer(peerProcess, 10);
@@ -233,28 +214,28 @@ public class RemoveIT extends AbstractCliIT {
     peerProcess = null;
 
     // Verify log exists in directory
-    AbstractCliIT.CliProcessResult listResult = runLs("-d", palDirectory, "-L");
+    AbstractCliIT.CliProcessResult listResult = runLs("-d", palDirectoryUrl, "-L");
     assertEquals("Expected successful list", 0, listResult.exitCode());
     assertThat("Expected log in listing", listResult.stdout(), containsString(walName));
 
-    // Chronicle queues are created in PAL_HOME by default when peers are launched via pal.sh
-    // (unless wal.chronicle.base_dir is configured)
-    String palHome = System.getenv("PAL_HOME");
-    if (palHome == null) {
-      palHome = System.getProperty("user.dir");
-    }
-    Path chroniclePath = Paths.get(palHome, walName);
+    // get the absolute path created from the LogInfo (not printed by `pal ls`)
+    PalDirectory palDirectory = new PalDirectory(palDirectoryUrl, true);
+    String walAbsPath = palDirectory.getLogInfo(walName).getName();
+    palDirectory.close();
 
     // Verify Chronicle queue files exist
-    assertThat("Expected Chronicle queue directory to exist", Files.exists(chroniclePath));
+    Path chroniclePath = Path.of(walAbsPath);
+    assertThat(
+        String.format("Expected Chronicle queue directory to exist at %s", chroniclePath),
+        Files.exists(chroniclePath));
 
     // Remove the log with --force flag to skip confirmation prompts
     AbstractCliIT.CliProcessResult removeResult =
-        runRm("-d", palDirectory, "-L", walName, "--force");
+        runRm("-d", palDirectoryUrl, "-L", walName, "--force");
     assertEquals("Expected successful removal", 0, removeResult.exitCode());
 
     // Verify log is no longer listed
-    AbstractCliIT.CliProcessResult listAfterRemove = runLs("-d", palDirectory, "-L");
+    AbstractCliIT.CliProcessResult listAfterRemove = runLs("-d", palDirectoryUrl, "-L");
     assertEquals("Expected successful list", 0, listAfterRemove.exitCode());
     assertThat(
         "Expected log NOT in listing after removal",

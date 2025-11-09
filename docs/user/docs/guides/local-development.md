@@ -158,6 +158,31 @@ offset=0 id=abc123 message=HelloService.processMessage("hello")
 offset=1 id=abc124 message=HelloService.processMessage("world")
 ```
 
+**Note**: The `file:` prefix enables **direct mode** CLI access - you can read Chronicle logs without needing etcd or the PAL directory. This is perfect for local development!
+
+### Direct Mode CLI Commands
+
+When developing locally with Chronicle Queue, all CLI commands support direct mode access:
+
+```bash
+# Print messages from Chronicle log
+pal print -l file:/tmp/dev-wal --output-format FULL
+
+# Call method and write to Chronicle log
+pal call -l file:/tmp/dev-wal com.example.HelloService processMessage "test"
+
+# Remove Chronicle log
+pal rm -l file:/tmp/dev-wal
+```
+
+**Benefits of direct mode**:
+- No etcd or PAL directory needed
+- Simple file paths (absolute or relative)
+- Works immediately after creating a peer
+- Perfect for scripts and automation
+
+For distributed systems with multiple peers, use **registry mode** with the `-d` option to enable service discovery. See the [Distributed Application Guide](distributed-application.md) for details.
+
 ### Replay from WAL
 
 Stop the peer (Ctrl-C), then replay:

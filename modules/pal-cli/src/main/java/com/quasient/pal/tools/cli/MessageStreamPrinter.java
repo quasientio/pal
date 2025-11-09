@@ -118,6 +118,18 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
   private String logIdentifier;
 
   /**
+   * Kafka bootstrap servers for direct access to Kafka logs without PAL_DIRECTORY.
+   *
+   * <p>When provided, allows reading Kafka logs directly without connecting to the PAL directory.
+   * Takes precedence over the KAFKA_SERVERS environment variable.
+   */
+  @Option(
+      names = {"-k", "--kafka-servers"},
+      paramLabel = "host:port[,host:port...]",
+      description = "Kafka bootstrap servers (for direct Kafka access without -d)")
+  private String kafkaServers;
+
+  /**
    * UUID of the peer to subscribe to.
    *
    * <p>When provided, the command will subscribe to the peer with the specified UUID to stream
@@ -311,7 +323,7 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
 
     logger.info("Started printer for log: {}", logIdentifier);
 
-    // Strip "file:" prefix if present (Issue #8)
+    // Strip "file:" prefix if present
     String chronicleFilePrefix = "file:";
     boolean isChronicleLog = logIdentifier.startsWith(chronicleFilePrefix);
     String logNameOrPath =
@@ -347,21 +359,21 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
         log.setLogType(LogType.CHRONICLE);
         logger.info("Using Chronicle log without PAL_DIRECTORY: {}", logNameOrPath);
       } else {
-        // Kafka log: verify KAFKA_SERVERS is available
-        String kafkaServers = getKafkaServers();
-        if (kafkaServers == null) {
+        // Kafka log: verify KAFKA_SERVERS is available (from option or environment)
+        String kafkaServersToUse = kafkaServers != null ? kafkaServers : getKafkaServers();
+        if (kafkaServersToUse == null) {
           logger.error(
               "Cannot print Kafka log without PAL_DIRECTORY: "
-                  + "KAFKA_SERVERS environment variable not set");
+                  + "use --kafka-servers/-k option or set KAFKA_SERVERS environment variable");
           return 1;
         }
         // Create a minimal LogInfo for Kafka log
-        log = new LogInfo(logNameOrPath, kafkaServers);
+        log = new LogInfo(logNameOrPath, kafkaServersToUse);
         log.setLogType(LogType.KAFKA);
         logger.info(
             "Using Kafka log without PAL_DIRECTORY: topic={}, servers={}",
             logNameOrPath,
-            kafkaServers);
+            kafkaServersToUse);
       }
     }
 
@@ -531,6 +543,11 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
    */
   private int printChronicleLogMessages(LogInfo log) throws Exception {
     Path queuePath = Path.of(log.getName());
+
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          "Chronicle log w/name: {} has full path: {}", log.getName(), queuePath.toAbsolutePath());
+    }
 
     // Verify the queue exists
     if (!ChronicleLogUtil.queueExists(queuePath)) {

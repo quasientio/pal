@@ -13,9 +13,61 @@ pal <subcommand> [OPTIONS] [ARGUMENTS]
 Common options across all subcommands:
 
 - `-d, --dir <URL>` - PAL directory URL (etcd endpoint, e.g., `localhost:2379`)
+- `-k, --kafka-servers <host:port>` - Kafka bootstrap servers (for direct access)
 - `-h, --help` - Display help for the subcommand
 
-The directory URL can also be set via the `PAL_DIRECTORY` environment variable.
+The directory URL can also be set via the `PAL_DIRECTORY` environment variable. Kafka servers can be set via the `KAFKA_SERVERS` environment variable.
+
+## Registry Mode vs Direct Mode
+
+PAL CLI commands support two modes of operation:
+
+### Registry Mode (with PAL_DIRECTORY)
+
+Uses the PAL directory (etcd) to look up resources by name or UUID. This is the standard mode when multiple peers and systems need to coordinate.
+
+**Advantages**:
+- Central service discovery
+- Name-based lookup (no need to remember UUIDs or paths)
+- Automatic resolution of log locations
+- Shared visibility across distributed systems
+
+**Usage**: Specify `-d/--directory` option or set `PAL_DIRECTORY` environment variable.
+
+```bash
+pal print -d localhost:2379 -l my-log
+```
+
+### Direct Mode (without PAL_DIRECTORY)
+
+Directly accesses Kafka logs or Chronicle logs without using the PAL directory. Useful for:
+- Local development with Chronicle Queue
+- Accessing logs without etcd infrastructure
+- Scripts that know exact log locations
+- Debugging and troubleshooting
+
+**Direct access to logs**:
+- **Chronicle logs**: Use `file:` prefix followed by path (absolute or relative)
+- **Kafka logs**: Specify `-k` option with bootstrap servers
+
+**Usage examples**:
+
+```bash
+# Chronicle log (local file)
+pal print -l file:/tmp/my-log
+
+# Kafka log (specify servers)
+pal print -k localhost:29092 -l my-log
+```
+
+### Command Support
+
+| Command | Registry Mode | Direct Mode | Notes |
+|---------|--------------|-------------|-------|
+| `pal ls` | ✓ | ✗ | Requires directory (purpose is to list directory) |
+| `pal print` | ✓ | ✓ | Both Chronicle and Kafka |
+| `pal call` | ✓ | ✓ | Both Chronicle and Kafka |
+| `pal rm` | ✓ | ✓ | Both Chronicle and Kafka |
 
 ## pal ls - List Peers and Logs
 
@@ -121,7 +173,8 @@ pal print -pa <HOST:PORT> [OPTIONS]
 
 | Option | Description |
 |--------|-------------|
-| `-l, --log <name\|uuid>` | Read messages from the specified log |
+| `-l, --log <name\|uuid\|path>` | Read messages from the specified log (name/UUID for registry mode, `file:path` for Chronicle direct mode, topic name for Kafka direct mode) |
+| `-k, --kafka-servers <host:port>` | Kafka bootstrap servers (for direct Kafka access without `-d`) |
 | `-pu, --peer-uuid <uuid>` | Subscribe to peer by UUID |
 | `-pa, --peer-address <HOST:PORT>` | Subscribe to peer by address |
 | `-o, --offset <number>` | Print message at specific offset and exit |
@@ -174,7 +227,7 @@ offset: 42,
 
 ### Examples
 
-#### Reading from Logs
+#### Reading from Logs (Registry Mode)
 
 ```bash
 # Print all messages from a Kafka log in compact format
@@ -203,6 +256,32 @@ pal print -d localhost:2379 -l my-log -fp <peer-uuid>
 
 # Verbose output with diagnostics
 pal print -d localhost:2379 -l my-log -v
+```
+
+#### Reading from Logs (Direct Mode)
+
+```bash
+# Print from Chronicle log (absolute path)
+pal print -l file:/tmp/my-chronicle-log --output-format FULL
+
+# Print from Chronicle log (relative path)
+pal print -l file:./logs/my-log
+
+# Print from Kafka log (direct, with -k option)
+pal print -k localhost:29092 -l my-kafka-topic
+
+# Print from Kafka log (using KAFKA_SERVERS environment variable)
+export KAFKA_SERVERS=localhost:29092
+pal print -l my-kafka-topic
+
+# Follow new messages from Chronicle log
+pal print -l file:/tmp/my-log -f
+
+# Print message at specific offset from Chronicle log
+pal print -l file:/tmp/my-log -o 100
+
+# Combine direct mode with filters
+pal print -k localhost:29092 -l my-topic --types CLASS_METHOD -f
 ```
 
 #### Subscribing to Peers
@@ -253,7 +332,8 @@ pal call [OPTIONS] -l <LOG_NAME> <CLASS> <METHOD> [args...]
 | Option | Description |
 |--------|-------------|
 | `-p, --to-peer <uuid\|HOST:PORT\|name>` | Target peer by UUID, RPC address, or name |
-| `-l, --log <name>` | Read from and write to the same log |
+| `-l, --log <name\|path>` | Read from and write to the same log (name for registry mode, `file:path` for Chronicle, topic name for Kafka) |
+| `-k, --kafka-servers <host:port>` | Kafka bootstrap servers (for direct Kafka access without `-d`) |
 | `-i, --input-log <name>` | Read responses from this log |
 | `-o, --output-log <name>` | Write requests to this log |
 | `-r, --rpc-type <type>` | RPC type: `ZMQ_RPC` or `JSON_RPC` |
@@ -332,7 +412,7 @@ pal call -d localhost:2379 -p tcp://localhost:5001 com.example.App
 pal call -d localhost:2379 -p ws://localhost:9001 com.example.App
 ```
 
-#### Writing to Logs
+#### Writing to Logs (Registry Mode)
 
 ```bash
 # Write method call to log (async, no response)
@@ -340,6 +420,23 @@ pal call -d localhost:2379 -l my-log --forget-response com.example.Worker proces
 
 # Write to output log, read response from input log
 pal call -d localhost:2379 -i input-log -o output-log com.example.App
+```
+
+#### Writing to Logs (Direct Mode)
+
+```bash
+# Write to Chronicle log (no PAL directory needed)
+pal call -l file:/tmp/my-log --forget-response com.example.Worker process
+
+# Write to Chronicle log (relative path)
+pal call -l file:./logs/my-log com.example.App
+
+# Write to Kafka log (with -k option)
+pal call -k localhost:29092 -l my-topic --forget-response com.example.App
+
+# Write to Kafka log (using KAFKA_SERVERS environment variable)
+export KAFKA_SERVERS=localhost:29092
+pal call -l my-kafka-topic com.example.Processor data1 data2
 ```
 
 #### JSON-RPC via Stdin
@@ -431,6 +528,8 @@ pal rm [OPTIONS] -L <LOG...>   # Remove logs
 |--------|-------------|
 | `-P, --delete-peers` | Delete peers |
 | `-L, --delete-logs` | Delete logs |
+| `-l, --log <name\|path>` | Delete a single log (alternative to `-L`, supports direct mode paths like `file:path`) |
+| `-k, --kafka-servers <host:port>` | Kafka bootstrap servers (for direct Kafka access without `-d`) |
 | `-s, --starting-with` | Treat arguments as prefixes (delete all matching) |
 | `-a, --all` | Delete all peers or logs |
 | `-f, --force` | Skip confirmation prompts and remove live peers |
@@ -457,7 +556,7 @@ pal rm [OPTIONS] -L <LOG...>   # Remove logs
 
 ### Examples
 
-#### Removing Logs
+#### Removing Logs (Registry Mode)
 
 ```bash
 # Remove single log by name
@@ -474,6 +573,26 @@ pal rm -d localhost:2379 -L -s test-log
 
 # Remove all logs (dangerous!)
 pal rm -d localhost:2379 -L -a --force
+```
+
+#### Removing Logs (Direct Mode)
+
+```bash
+# Remove Chronicle log (no PAL directory needed)
+pal rm -l file:/tmp/my-chronicle-log
+
+# Remove Chronicle log (relative path)
+pal rm -l file:./logs/old-log
+
+# Remove Kafka log (with -k option)
+pal rm -k localhost:29092 -l my-kafka-topic
+
+# Remove Kafka log (using KAFKA_SERVERS environment variable)
+export KAFKA_SERVERS=localhost:29092
+pal rm -l my-old-topic
+
+# Note: Direct mode removes from backing store only
+# If log was registered in PAL directory, use registry mode to fully clean up
 ```
 
 #### Removing Peers
@@ -522,6 +641,8 @@ Cannot remove peer my-peer (uuid): peer is alive (has active lease). Use --force
 - **Name vs UUID**: Arguments can be names or UUIDs; the tool auto-detects
 - **Prefix matching** (`-s`): Useful for bulk cleanup of test resources
 - **Return code**: Returns the number of errors encountered (0 = success)
+- **Direct mode**: Removes from backing store only (doesn't unregister from PAL directory if it was registered there)
+- **Registry mode vs Direct mode**: Use registry mode for full cleanup (unregister + delete backing store), use direct mode for quick local log deletion
 
 ---
 

@@ -23,8 +23,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -49,8 +47,6 @@ import org.slf4j.LoggerFactory;
  *   <li>Stripping {@code file:} prefix in {@code pal print}
  *   <li>Kafka end offset display (last offset, not last+1)
  * </ul>
- *
- * <p>Requires running etcd and Kafka infrastructure as described in modules/itt/README.md.
  */
 public class ChronicleCliIT extends AbstractCliIT {
 
@@ -63,7 +59,6 @@ public class ChronicleCliIT extends AbstractCliIT {
   @Before
   public void setUp() {
     peerProcess = null;
-    chronicleDirectoriesToCleanup = new ArrayList<>();
   }
 
   /**
@@ -77,30 +72,6 @@ public class ChronicleCliIT extends AbstractCliIT {
       stopPeer(peerProcess);
       peerProcess = null;
     }
-
-    // Clean up Chronicle queue directories created during the test
-    logger.info("Cleaning up {} Chronicle queue directories", chronicleDirectoriesToCleanup.size());
-    for (Path chronicleDir : chronicleDirectoriesToCleanup) {
-      if (chronicleDir != null && Files.exists(chronicleDir)) {
-        logger.info("Deleting Chronicle queue directory: {}", chronicleDir);
-        try (Stream<Path> files = Files.walk(chronicleDir)) {
-          files
-              .sorted(Comparator.reverseOrder())
-              .forEach(
-                  path -> {
-                    try {
-                      Files.delete(path);
-                    } catch (IOException e) {
-                      logger.warn("Failed to delete Chronicle queue file: {}", path, e);
-                    }
-                  });
-          logger.info("Successfully deleted Chronicle queue directory: {}", chronicleDir);
-        } catch (IOException e) {
-          logger.warn("Failed to clean up Chronicle queue directory: {}", chronicleDir, e);
-        }
-      }
-    }
-    chronicleDirectoriesToCleanup.clear();
   }
 
   /**
@@ -119,7 +90,7 @@ public class ChronicleCliIT extends AbstractCliIT {
     UUID peerId = UUID.randomUUID();
     String classToRun = "com.quasient.pal.apps.rpc.Methods";
 
-    trackChronicleDirectory(walName);
+    trackChronicleLog(walName);
 
     peerProcess =
         launchPeer(
@@ -137,59 +108,14 @@ public class ChronicleCliIT extends AbstractCliIT {
     peerProcess = null;
 
     // Now try to print the log WITHOUT -d flag (no PAL_DIRECTORY)
-    CliProcessResult printResult = runPrint("-l", walName, "--full");
+    // Must use "file:" prefix to distinguish from Kafka logs
+    CliProcessResult printResult = runPrint("-l", "file:" + walName, "--full");
 
     assertEquals("Expected successful print without PAL_DIRECTORY", 0, printResult.exitCode());
     assertThat(
         "Expected non-empty output from Chronicle log", !printResult.stdout().trim().isEmpty());
 
     logger.info("Successfully printed Chronicle log without PAL_DIRECTORY");
-  }
-
-  /**
-   * Issue #1: Tests that {@code pal print} can print Kafka logs without PAL_DIRECTORY when
-   * KAFKA_SERVERS env var is set.
-   *
-   * <p>This test verifies that the print command can work with just KAFKA_SERVERS for Kafka logs,
-   * without requiring a PAL_DIRECTORY connection.
-   *
-   * @throws Exception if test execution fails
-   */
-  @Test
-  public void testPrintKafkaLog_withoutPalDirectory_withKafkaServers() throws Exception {
-    String palDirectory = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
-
-    // Create a Kafka log by running a peer
-    String walName = "test-print-kafka-no-dir-" + generateId();
-    UUID peerId = UUID.randomUUID();
-    String classToRun = "com.quasient.pal.apps.rpc.Methods";
-
-    peerProcess =
-        launchPeer(
-            peerId,
-            "-d",
-            palDirectory,
-            "-k",
-            kafkaServers,
-            "--wal",
-            walName,
-            "-cp",
-            getIttAppsClasspath(),
-            classToRun);
-
-    int peerExitCode = joinPeer(peerProcess, 10);
-    assertEquals("Expected successful peer exit code", 0, peerExitCode);
-    peerProcess = null;
-
-    // Now try to print the log WITHOUT -d flag (no PAL_DIRECTORY)
-    // This should work if KAFKA_SERVERS env var is available
-    CliProcessResult printResult = runPrint("-l", walName, "--full");
-
-    assertEquals("Expected successful print without PAL_DIRECTORY", 0, printResult.exitCode());
-    assertThat("Expected non-empty output from Kafka log", !printResult.stdout().trim().isEmpty());
-
-    logger.info("Successfully printed Kafka log without PAL_DIRECTORY");
   }
 
   /**
@@ -208,7 +134,7 @@ public class ChronicleCliIT extends AbstractCliIT {
     UUID peerId = UUID.randomUUID();
     String classToRun = "com.quasient.pal.apps.rpc.Methods";
 
-    trackChronicleDirectory(walName);
+    trackChronicleLog(walName);
 
     peerProcess =
         launchPeer(
@@ -284,7 +210,7 @@ public class ChronicleCliIT extends AbstractCliIT {
     UUID peerId2 = UUID.randomUUID();
     String classToRun = "com.quasient.pal.apps.rpc.Methods";
 
-    trackChronicleDirectory(walName);
+    trackChronicleLog(walName);
 
     // First run
     peerProcess =
@@ -360,7 +286,7 @@ public class ChronicleCliIT extends AbstractCliIT {
     UUID peerId = UUID.randomUUID();
     String classToRun = "com.quasient.pal.apps.rpc.Methods";
 
-    trackChronicleDirectory(absoluteWalPath);
+    trackChronicleLog(absoluteWalPath);
 
     peerProcess =
         launchPeer(
@@ -406,7 +332,7 @@ public class ChronicleCliIT extends AbstractCliIT {
     UUID peerId = UUID.randomUUID();
     String classToRun = "com.quasient.pal.apps.rpc.Methods";
 
-    trackChronicleDirectory(absoluteWalPath);
+    trackChronicleLog(absoluteWalPath);
 
     peerProcess =
         launchPeer(
@@ -460,7 +386,7 @@ public class ChronicleCliIT extends AbstractCliIT {
     UUID peerId = UUID.randomUUID();
     String classToRun = "com.quasient.pal.apps.rpc.Methods";
 
-    trackChronicleDirectory(absoluteWalPath);
+    trackChronicleLog(absoluteWalPath);
 
     peerProcess =
         launchPeer(
@@ -517,7 +443,7 @@ public class ChronicleCliIT extends AbstractCliIT {
     UUID peerId = UUID.randomUUID();
     String classToRun = "com.quasient.pal.apps.rpc.Methods";
 
-    trackChronicleDirectory(walName);
+    trackChronicleLog(walName);
 
     // Launch peer with relative path
     peerProcess =
@@ -561,71 +487,6 @@ public class ChronicleCliIT extends AbstractCliIT {
   }
 
   /**
-   * Issue #7: Tests that {@code pal ls} shows Kafka end offset as the last message offset (not
-   * last+1).
-   *
-   * <p>This test verifies that Kafka logs display the last message offset, not the Kafka-internal
-   * "end offset" which is last+1.
-   *
-   * @throws Exception if test execution fails
-   */
-  @Test
-  public void testListKafkaLog_endOffsetIsLastMessageOffset() throws Exception {
-    String palDirectory = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
-    String walName = "test-kafka-offset-" + generateId();
-    UUID peerId = UUID.randomUUID();
-    String classToRun = "com.quasient.pal.apps.rpc.Methods";
-
-    peerProcess =
-        launchPeer(
-            peerId,
-            "-d",
-            palDirectory,
-            "-k",
-            kafkaServers,
-            "--wal",
-            walName,
-            "-cp",
-            getIttAppsClasspath(),
-            classToRun);
-
-    int peerExitCode = joinPeer(peerProcess, 10);
-    assertEquals("Expected successful peer exit code", 0, peerExitCode);
-    peerProcess = null;
-
-    // List logs
-    CliProcessResult lsResult = runLs("-d", palDirectory, "-L", "-l", "--no-trim");
-
-    assertEquals("Expected successful ls", 0, lsResult.exitCode());
-    assertThat("Expected Kafka log in output", lsResult.stdout(), containsString(walName));
-
-    String output = lsResult.stdout();
-    logger.info("Kafka log ls output:\n{}", output);
-
-    // Print the log to count actual messages
-    CliProcessResult printResult = runPrint("-d", palDirectory, "-l", walName, "--compact");
-    assertEquals("Expected successful print", 0, printResult.exitCode());
-
-    long messageCount = printResult.stdout().lines().filter(line -> !line.trim().isEmpty()).count();
-    logger.info("Kafka log has {} messages", messageCount);
-
-    // Extract end offset from ls output
-    long endOffset = extractEndOffset(output, walName);
-    logger.info("Displayed end offset: {}", endOffset);
-
-    // The end offset should be the last message index (0-based)
-    // So if there are N messages, the last message is at index N-1
-    // The displayed end offset should be N-1, not N
-    if (messageCount > 0) {
-      assertEquals(
-          "End offset should be last message index (not last+1)", messageCount - 1, endOffset);
-    }
-
-    logger.info("Successfully verified Kafka end offset is last message offset");
-  }
-
-  /**
    * Issue #8: Tests that {@code pal print} works with {@code file:} prefix in log identifier.
    *
    * <p>This test verifies that the print command correctly handles Chronicle log identifiers with
@@ -640,7 +501,7 @@ public class ChronicleCliIT extends AbstractCliIT {
     UUID peerId = UUID.randomUUID();
     String classToRun = "com.quasient.pal.apps.rpc.Methods";
 
-    trackChronicleDirectory(walName);
+    trackChronicleLog(walName);
 
     peerProcess =
         launchPeer(
@@ -665,6 +526,146 @@ public class ChronicleCliIT extends AbstractCliIT {
         "Expected non-empty output from Chronicle log", !printResult.stdout().trim().isEmpty());
 
     logger.info("Successfully printed Chronicle log with file: prefix");
+  }
+
+  /**
+   * Tests that {@code pal rm} can remove Chronicle logs without PAL_DIRECTORY (Direct Mode).
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testRemoveChronicleLog_withoutPalDirectory() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+    String walName = "test-remove-chronicle-direct-" + generateId();
+    UUID peerId = UUID.randomUUID();
+    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+
+    trackChronicleLog(walName);
+
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDirectory,
+            "--wal",
+            "file:" + walName,
+            "-cp",
+            getIttAppsClasspath(),
+            classToRun);
+
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
+    peerProcess = null;
+
+    // Verify log directory exists
+    String palHome = System.getenv("PAL_HOME");
+    Path logPath = Paths.get(palHome, walName);
+    assertThat("Chronicle log directory should exist", Files.exists(logPath));
+
+    // Remove without PAL_DIRECTORY (Direct Mode)
+    CliProcessResult rmResult = runRm("-L", "file:" + walName);
+
+    assertEquals("Expected successful removal without PAL_DIRECTORY", 0, rmResult.exitCode());
+
+    // Verify log directory was removed
+    assertThat("Chronicle log directory should not exist after removal", !Files.exists(logPath));
+
+    logger.info("Successfully removed Chronicle log without PAL_DIRECTORY");
+  }
+
+  /**
+   * Tests that {@code pal call} can write to Chronicle logs with PAL_DIRECTORY (Registry Mode).
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testCallChronicleLog_withPalDirectory() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+    String walName = "test-call-chronicle-registry-" + generateId();
+
+    trackChronicleLog(walName);
+
+    // Launch peer with Chronicle log (keep it running)
+    UUID peerId = UUID.randomUUID();
+
+    peerProcess =
+        launchPeer(
+            peerId, "-d", palDirectory, "--log", "file:" + walName, "-cp", getIttAppsClasspath());
+
+    // Call a method via the log using PAL_DIRECTORY (Registry Mode)
+    CliProcessResult callResult =
+        runCall(
+            "-d",
+            palDirectory,
+            "-l",
+            "file:" + walName,
+            "com.quasient.pal.apps.rpc.Methods",
+            "-m",
+            "staticStringWithStringArgs",
+            "test-call-chronicle-registry");
+
+    assertEquals("Expected successful call with PAL_DIRECTORY", 0, callResult.exitCode());
+    assertThat(
+        "Expected result in output",
+        callResult.stdout(),
+        containsString("RESULT: test-call-chronicle-registry"));
+
+    // Stop the peer
+    stopPeer(peerProcess);
+    peerProcess = null;
+
+    logger.info("Successfully called to Chronicle log with PAL_DIRECTORY");
+  }
+
+  /**
+   * Tests that {@code pal call} can write to Chronicle logs without PAL_DIRECTORY (Direct Mode).
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testCallChronicleLog_withoutPalDirectory() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+    String walName = "test-call-chronicle-direct-" + generateId();
+
+    // Use an absolute path to for the Log: avoids retrieving it from PalDirectory after peer launch
+    Path absWalPath = Paths.get(System.getProperty("java.io.tmpdir"), walName);
+
+    trackChronicleLog(absWalPath.toString());
+
+    // Launch peer with Chronicle log (keep it running, no PAL_DIRECTORY needed)
+    UUID peerId = UUID.randomUUID();
+
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDirectory,
+            "--log",
+            "file:" + absWalPath,
+            "-cp",
+            getIttAppsClasspath());
+
+    // Call a method via the log without PAL_DIRECTORY (Direct Mode)
+    CliProcessResult callResult =
+        runCall(
+            "-l",
+            "file:" + absWalPath,
+            "com.quasient.pal.apps.rpc.Methods",
+            "-m",
+            "staticStringWithStringArgs",
+            "test-call-chronicle-direct");
+
+    assertEquals("Expected successful call without PAL_DIRECTORY", 0, callResult.exitCode());
+    assertThat(
+        "Expected result in output",
+        callResult.stdout(),
+        containsString("RESULT: test-call-chronicle-direct"));
+
+    // Stop the peer
+    stopPeer(peerProcess);
+    peerProcess = null;
+
+    logger.info("Successfully called to Chronicle log without PAL_DIRECTORY");
   }
 
   /**

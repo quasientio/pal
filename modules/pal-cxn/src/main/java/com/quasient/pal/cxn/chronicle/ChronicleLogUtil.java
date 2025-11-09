@@ -75,8 +75,8 @@ public class ChronicleLogUtil {
       return false;
     }
 
-    // Check if directory contains Chronicle queue files (*.cq4)
-    try (DirectoryStream<Path> stream = Files.newDirectoryStream(queuePath, "*.cq4")) {
+    // Check if directory contains Chronicle queue files (*.cq4*)
+    try (DirectoryStream<Path> stream = Files.newDirectoryStream(queuePath, "*.cq4*")) {
       return stream.iterator().hasNext();
     } catch (IOException e) {
       logger.debug("Error checking queue existence at {}", queuePath, e);

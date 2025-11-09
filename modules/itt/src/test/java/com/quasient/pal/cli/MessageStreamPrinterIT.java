@@ -12,13 +12,7 @@ package com.quasient.pal.cli;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.UUID;
-import java.util.stream.Stream;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -44,7 +38,6 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
   @Before
   public void setUp() {
     peerProcess = null;
-    chronicleDirectoriesToCleanup = new ArrayList<>();
   }
 
   /**
@@ -58,34 +51,6 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
       stopPeer(peerProcess);
       peerProcess = null;
     }
-
-    // Clean up Chronicle queue directories created during the test
-    logger.info("Cleaning up {} Chronicle queue directories", chronicleDirectoriesToCleanup.size());
-    for (Path chronicleDir : chronicleDirectoriesToCleanup) {
-      if (chronicleDir != null && Files.exists(chronicleDir)) {
-        logger.info("Deleting Chronicle queue directory: {}", chronicleDir);
-        try (Stream<Path> files = Files.walk(chronicleDir)) {
-          files
-              .sorted(Comparator.reverseOrder())
-              .forEach(
-                  path -> {
-                    try {
-                      Files.delete(path);
-                    } catch (IOException e) {
-                      logger.warn("Failed to delete Chronicle queue file: {}", path, e);
-                    }
-                  });
-          logger.info("Successfully deleted Chronicle queue directory: {}", chronicleDir);
-        } catch (IOException e) {
-          logger.warn("Failed to clean up Chronicle queue directory: {}", chronicleDir, e);
-        }
-      } else {
-        logger.debug(
-            "Chronicle queue directory does not exist or is null: {}",
-            chronicleDir != null ? chronicleDir : "null");
-      }
-    }
-    chronicleDirectoriesToCleanup.clear();
   }
 
   /**
@@ -244,7 +209,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     // Create a Chronicle WAL by launching a peer
     String walName = "test-print-chronicle-" + generateId();
-    trackChronicleDirectory(walName);
+    trackChronicleLog(walName);
     String walPath = "file:" + walName;
 
     UUID peerId = UUID.randomUUID();
@@ -283,7 +248,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     // Create a Chronicle WAL by launching a peer
     String walName = "test-print-chronicle-compact-" + generateId();
-    trackChronicleDirectory(walName);
+    trackChronicleLog(walName);
     String walPath = "file:" + walName;
 
     UUID peerId = UUID.randomUUID();
@@ -321,7 +286,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     // Create a Chronicle WAL by launching a peer
     String walName = "test-print-chronicle-json-" + generateId();
-    trackChronicleDirectory(walName);
+    trackChronicleLog(walName);
     String walPath = "file:" + walName;
 
     UUID peerId = UUID.randomUUID();
@@ -461,7 +426,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     // Create a Chronicle WAL with some messages
     String walName = "test-print-chronicle-offset-" + generateId();
-    trackChronicleDirectory(walName);
+    trackChronicleLog(walName);
     String walPath = "file:" + walName;
 
     UUID peerId = UUID.randomUUID();
@@ -503,7 +468,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     // Create a Chronicle WAL
     String walName = "test-print-chronicle-filter-" + generateId();
-    trackChronicleDirectory(walName);
+    trackChronicleLog(walName);
     String walPath = "file:" + walName;
 
     UUID peerId = UUID.randomUUID();

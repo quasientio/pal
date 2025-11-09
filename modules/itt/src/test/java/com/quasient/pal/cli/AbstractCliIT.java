@@ -10,17 +10,26 @@
 package com.quasient.pal.cli;
 
 import com.quasient.pal.AbstractIntegrationTest;
+import com.quasient.pal.common.directory.nodes.LogInfo;
+import com.quasient.pal.cxn.directory.PalDirectory;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
+import org.junit.After;
+import org.junit.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,8 +46,94 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
 
   private static final Logger logger = LoggerFactory.getLogger(AbstractCliIT.class);
 
-  /** List of Chronicle queue directories created during tests that need cleanup. */
-  protected List<Path> chronicleDirectoriesToCleanup;
+  /** List of Chronicle-queue Logs (i.e. directories) created during tests that need cleanup. */
+  protected List<Path> chronicleLogsToCleanup;
+
+  /** Sets up test environment before each test. */
+  @Before
+  public void setUpCLITest() {
+    chronicleLogsToCleanup = new ArrayList<>();
+  }
+
+  /**
+   * Cleans up resources after each test.
+   *
+   * @throws ExecutionException if etcd lookup fails
+   * @throws InterruptedException if the thread is interrupted
+   */
+  @After
+  public void tearDownCLITest() throws ExecutionException, InterruptedException {
+    cleanUpChronicleLogDirectories();
+    deleteLogsRemainingInPalDirectory();
+  }
+
+  private void deleteLogsRemainingInPalDirectory() {
+    Set<LogInfo> allLogs = null;
+    PalDirectory palDirectory = new PalDirectory(getPalDirectoryUrl(), true);
+    try {
+      allLogs = palDirectory.listAllLogs();
+    } catch (Exception e) {
+      // ignore
+    }
+    if (allLogs != null && !allLogs.isEmpty()) {
+      allLogs.forEach(
+          l -> {
+            try {
+              palDirectory.deleteLog(l.getUuid());
+            } catch (Exception e) {
+              logger.error("Error cleaning up log", e);
+            }
+          });
+    }
+    palDirectory.close();
+  }
+
+  /** Cleans up Chronicle log directories created during the test. */
+  private void cleanUpChronicleLogDirectories() throws ExecutionException, InterruptedException {
+    // Clean up Chronicle queue directories created during the test
+    logger.info("Cleaning up {} Chronicle queue directories", chronicleLogsToCleanup.size());
+
+    // initialize PalDirectory to look up absolute path of Logs passed with relative path
+    PalDirectory palDirectory = new PalDirectory(getPalDirectoryUrl(), true);
+
+    // loop through all chronicle directories to cleanup
+    for (Path chronicleDir : chronicleLogsToCleanup) {
+      Path absChronicleDirPath = null;
+      // if chronicle directory is absolute, use it as is
+      if (chronicleDir.isAbsolute()) {
+        absChronicleDirPath = chronicleDir;
+      } else { // if chronicle directory is relative, look up absolute path in PalDirectory
+        LogInfo logToDelete = palDirectory.getLogInfo(chronicleDir.toString());
+        if (logToDelete != null) {
+          absChronicleDirPath = Path.of(palDirectory.getLogInfo(chronicleDir.toString()).getName());
+        }
+      }
+
+      // delete chronicle directory if it exists
+      if (absChronicleDirPath != null && Files.exists(absChronicleDirPath)) {
+        logger.info("Deleting Chronicle queue directory: {}", absChronicleDirPath);
+        try (Stream<Path> files = Files.walk(absChronicleDirPath)) {
+          files
+              .sorted(Comparator.reverseOrder())
+              .forEach(
+                  path -> {
+                    try {
+                      Files.delete(path);
+                    } catch (IOException e) {
+                      logger.warn("Failed to delete Chronicle queue file: {}", path, e);
+                    }
+                  });
+          logger.info("Successfully deleted Chronicle queue directory: {}", absChronicleDirPath);
+        } catch (IOException e) {
+          logger.warn("Failed to clean up Chronicle queue directory: {}", absChronicleDirPath, e);
+        }
+      } else {
+        logger.debug("Chronicle queue directory does not exist: {}", absChronicleDirPath);
+      }
+    }
+    palDirectory.close();
+    chronicleLogsToCleanup.clear();
+  }
 
   /**
    * Executes a `pal ls` command with the given arguments.
@@ -253,25 +348,12 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
   }
 
   /**
-   * Tracks a Chronicle queue directory for cleanup after the test.
+   * Tracks a Chronicle Log for cleanup after the test.
    *
-   * <p>The Chronicle queue will be created in PAL_HOME (where the peer process runs), so we need to
-   * construct the full path using PAL_HOME.
-   *
-   * @param queueName the name of the Chronicle queue directory (relative to or absolute path)
+   * @param queueName the name of the Chronicle Log
    */
-  protected void trackChronicleDirectory(String queueName) {
-    Path queuePath = Paths.get(queueName);
-    if (queuePath.isAbsolute()) {
-      chronicleDirectoriesToCleanup.add(queuePath);
-    } else {
-      String palHome = System.getenv("PAL_HOME");
-      if (palHome != null) {
-        chronicleDirectoriesToCleanup.add(Paths.get(palHome, queueName));
-      } else {
-        chronicleDirectoriesToCleanup.add(queuePath);
-      }
-    }
+  protected void trackChronicleLog(String queueName) {
+    chronicleLogsToCleanup.add(Paths.get(queueName));
   }
 
   /** Container for CLI process execution results. */

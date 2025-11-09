@@ -12,6 +12,7 @@ package com.quasient.pal.cxn;
 import com.quasient.pal.common.directory.nodes.LogInfo;
 import com.quasient.pal.common.directory.nodes.LogInfo.LogType;
 import com.quasient.pal.common.directory.nodes.PeerInfo;
+import com.quasient.pal.common.runtime.ExecPhase;
 import com.quasient.pal.common.util.UuidUtils;
 import com.quasient.pal.cxn.chronicle.ChronicleLogUtil;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
@@ -1340,7 +1341,7 @@ public class ThinPeer {
       OutboundMsg outboundMsg =
           new OutboundMsg(
               messageType,
-              null, // phase can be null for log messages
+              ExecPhase.UNDEFINED,
               null, // no internal headers for now
               message.getMessageId(),
               message.getResponseToId(),
@@ -1356,8 +1357,11 @@ public class ThinPeer {
             message.getMessageId());
       }
 
-      // Read response from input queue (start reading from next index)
-      return pollForChronicleResponseToRequest(writeIndex + 1, message.getMessageId());
+      // Read response from input queue
+      // Note: We pass writeIndex, not writeIndex+1, because Chronicle indices are encoded values
+      // (cycle + sequence), not simple sequential numbers. The tailer will read our request
+      // message first (and skip it since it won't match the responseToId), then find the response.
+      return pollForChronicleResponseToRequest(writeIndex, message.getMessageId());
     } catch (Exception e) {
       logger.error("Error in Chronicle send-and-receive", e);
       return null;
@@ -1437,8 +1441,11 @@ public class ThinPeer {
 
     ExcerptTailer tailer = chronicleInputQueue.createTailer();
     if (!tailer.moveToIndex(startIndex)) {
-      logger.error("Failed to move tailer to index: {}", startIndex);
-      return null;
+      // If we can't move to the specific index, move to the end and poll for new messages.
+      // This can happen if the index is not yet available or if there's a timing issue.
+      logger.warn(
+          "Failed to move tailer to index: {}, falling back to reading from end", startIndex);
+      tailer.toEnd();
     }
 
     // Poll for response message

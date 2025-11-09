@@ -71,6 +71,18 @@ public class Remove extends AbstractPalSubcommand {
   private boolean deletePeers = false;
 
   /**
+   * Kafka bootstrap servers for direct access to Kafka logs without PAL_DIRECTORY.
+   *
+   * <p>When provided, allows deleting Kafka logs directly without connecting to the PAL directory.
+   * Takes precedence over the KAFKA_SERVERS environment variable.
+   */
+  @Option(
+      names = {"-k", "--kafka-servers"},
+      paramLabel = "host:port[,host:port...]",
+      description = "Kafka bootstrap servers (for direct Kafka access without -d)")
+  private String kafkaServers;
+
+  /**
    * Flag indicating that only peers or logs starting with the specified prefix should be deleted.
    */
   @Option(
@@ -202,14 +214,26 @@ public class Remove extends AbstractPalSubcommand {
   }
 
   /**
-   * Deletes the specified log from the PAL directory and removes its backing store (Kafka topic or
-   * Chronicle queue).
+   * Deletes the specified log from the PAL directory (if available) and removes its backing store
+   * (Kafka topic or Chronicle queue).
+   *
+   * <p>Supports direct mode: if PAL_DIRECTORY is not available, only deletes the physical log
+   * storage (Chronicle queue or Kafka topic).
    *
    * @param logInfo the LogInfo representing the log to delete
    */
   private void deleteLog(LogInfo logInfo) {
+    // Try to unregister from PAL directory if available
     try {
-      getPalDirectory().deleteLog(logInfo.getName());
+      if (directoryConnectionProvider != null) {
+        var palDirOpt = directoryConnectionProvider.get();
+        if (palDirOpt.isPresent()) {
+          palDirOpt.get().deleteLog(logInfo.getName());
+          logger.debug("Unregistered log '{}' from PAL directory", logInfo.getName());
+        } else {
+          logger.debug("PAL directory not available, skipping directory unregistration");
+        }
+      }
     } catch (Exception e) {
       logger.error("Error unregistering log '{}' from directory", logInfo.getName(), e);
       errors++;
@@ -223,7 +247,7 @@ public class Remove extends AbstractPalSubcommand {
       removeFromKafka(logInfo);
     }
 
-    logger.info("Log '{}' (UUID: {}) removed", logInfo.getName(), logInfo.getUuid());
+    logger.info("Log '{}' removed", logInfo.getName());
   }
 
   /**
@@ -375,6 +399,65 @@ public class Remove extends AbstractPalSubcommand {
   }
 
   /**
+   * Resolves log information by name, attempting to use PAL directory if available, or creating a
+   * minimal LogInfo for direct mode.
+   *
+   * @param logNameOrPath the log name or path to resolve
+   * @return LogInfo for the specified log, or null if resolution fails
+   */
+  private LogInfo resolveLogInfo(String logNameOrPath) {
+    // Try to get PalDirectory if available
+    try {
+      if (directoryConnectionProvider != null) {
+        var palDirOpt = directoryConnectionProvider.get();
+        if (palDirOpt.isPresent()) {
+          // Registry mode: lookup log by name
+          LogInfo logInfo = palDirOpt.get().getLogInfo(logNameOrPath);
+          if (logInfo != null) {
+            logger.debug("Found log '{}' in PAL directory", logNameOrPath);
+            return logInfo;
+          }
+          // Not found in directory, fall through to direct mode
+        }
+      }
+    } catch (Exception e) {
+      logger.debug("PalDirectory not available: {}", e.getMessage());
+    }
+
+    // Direct mode: create minimal LogInfo
+    String chronicleFilePrefix = "file:";
+    boolean isChronicleLog = logNameOrPath.startsWith(chronicleFilePrefix);
+
+    if (isChronicleLog) {
+      // Chronicle log: strip prefix and create LogInfo
+      String path = logNameOrPath.substring(chronicleFilePrefix.length());
+      LogInfo logInfo = new LogInfo(path);
+      logInfo.setLogType(LogType.CHRONICLE);
+      logger.info("Deleting Chronicle log in direct mode: {}", path);
+      return logInfo;
+    } else {
+      // Kafka log: need bootstrap servers
+      String kafkaServersToUse = kafkaServers != null ? kafkaServers : getKafkaServers();
+      if (kafkaServersToUse != null) {
+        LogInfo logInfo = new LogInfo(logNameOrPath, kafkaServersToUse);
+        logInfo.setLogType(LogType.KAFKA);
+        logger.info(
+            "Deleting Kafka log in direct mode: topic={}, servers={}",
+            logNameOrPath,
+            kafkaServersToUse);
+        return logInfo;
+      } else {
+        // Cannot resolve without Kafka servers
+        logger.error(
+            "Cannot resolve log '{}': not found in directory, does not have 'file:' prefix, "
+                + "and no Kafka servers provided (use -k or KAFKA_SERVERS env var)",
+            logNameOrPath);
+        return null;
+      }
+    }
+  }
+
+  /**
    * Executes the removal of peers and/or logs based on the specified options and arguments.
    *
    * @return the number of errors encountered during execution
@@ -433,12 +516,20 @@ public class Remove extends AbstractPalSubcommand {
           } else {
             // if not a valid UUID we will consider it a name
             if (startingWith) {
-              final Set<LogInfo> allLogs = getPalDirectory().listAllLogs();
-              allLogs.stream().filter(l -> l.getName().startsWith(arg)).forEach(this::deleteLog);
+              // Prefix matching requires PAL directory
+              try {
+                final Set<LogInfo> allLogs = getPalDirectory().listAllLogs();
+                allLogs.stream().filter(l -> l.getName().startsWith(arg)).forEach(this::deleteLog);
+              } catch (RuntimeException e) {
+                logger.error(
+                    "Cannot list logs for prefix matching: PAL_DIRECTORY required for --starting-with");
+                errors++;
+              }
             } else {
-              final LogInfo log = getPalDirectory().getLogInfo(arg);
+              // Try to resolve log by name (supports direct mode)
+              final LogInfo log = resolveLogInfo(arg);
               if (log == null) {
-                logger.error("Cannot find log named '{}' in directory", arg);
+                logger.error("Cannot resolve log: '{}'", arg);
                 errors++;
               } else {
                 deleteLog(log);
