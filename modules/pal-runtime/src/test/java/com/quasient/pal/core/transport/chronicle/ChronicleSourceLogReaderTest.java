@@ -1,0 +1,402 @@
+/*
+ * Copyright (C) 2025 Quasient Inc. <https://www.quasient.com>
+ *
+ * Use of this software is governed by the Business Source License 1.1
+ * included in the file LICENSE and at https://mariadb.com/bsl11
+ *
+ * Change Date: 2029-10-01
+ * Change License: Apache 2.0
+ */
+package com.quasient.pal.core.transport.chronicle;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.is;
+
+import com.google.common.util.concurrent.Service;
+import com.google.common.util.concurrent.ServiceManager;
+import com.quasient.pal.common.directory.nodes.LogInfo;
+import com.quasient.pal.common.runtime.ExecPhase;
+import com.quasient.pal.core.ZmqEnabledTest;
+import com.quasient.pal.core.internal.messages.InboundLogMsg;
+import com.quasient.pal.messages.OutboundMsg;
+import com.quasient.pal.messages.colfer.ExecMessage;
+import com.quasient.pal.messages.colfer.Message;
+import com.quasient.pal.messages.types.MessageType;
+import com.quasient.pal.serdes.colfer.MessageBuilder;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.RollCycles;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.zeromq.SocketType;
+import org.zeromq.ZContext;
+import org.zeromq.ZMQ;
+import org.zeromq.ZMQException;
+import zmq.ZError;
+
+/**
+ * Unit tests for {@link ChronicleSourceLogReader}.
+ *
+ * <p>These tests verify that the Chronicle log reader can correctly read messages from a Chronicle
+ * queue and dispatch them via ZeroMQ.
+ */
+public class ChronicleSourceLogReaderTest extends ZmqEnabledTest {
+
+  /** Worker class that receives messages from the ChronicleSourceLogReader via ZMQ. */
+  static class Worker implements Runnable {
+    private final ZMQ.Socket socket;
+    private final ZContext context;
+    private final String dealerAddress;
+    private final Set<String> receivedMessageIds = new TreeSet<>();
+    private final AtomicInteger messagesProcessed = new AtomicInteger(0);
+
+    Worker(ZContext context, String dealerAddress) {
+      this.context = context;
+      this.dealerAddress = dealerAddress;
+      this.socket = this.context.createSocket(SocketType.REP);
+    }
+
+    @Override
+    public void run() {
+      // connect to dealer
+      this.socket.connect(this.dealerAddress);
+      logger.debug("Worker connected to DEALER at {}", this.dealerAddress);
+
+      // process requests
+      while (!Thread.interrupted()) {
+        InboundLogMsg logMsg;
+        try {
+          logger.debug("Worker waiting to receive message...");
+          logMsg = InboundLogMsg.receive(socket, true);
+          if (logMsg != null) {
+            Message wrapper = new Message();
+            wrapper.unmarshal(logMsg.getBody(), 0);
+            if (wrapper.getExecMessage() != null) {
+              ExecMessage msg = wrapper.getExecMessage();
+              logger.debug("ExecMessage received with id: {}", msg.getMessageId());
+              receivedMessageIds.add(msg.getMessageId());
+              messagesProcessed.incrementAndGet();
+            }
+          }
+        } catch (ZMQException ex) {
+          int errorCode = ex.getErrorCode();
+          if (errorCode == ZError.ETERM) {
+            logger.warn("context terminated");
+            break;
+          } else if (errorCode == ZError.EINTR) {
+            logger.warn("interrupted during receive()");
+            break;
+          } else {
+            logger.error("unexpected error during receive()", ex);
+            throw ex;
+          }
+        } catch (Exception e) {
+          logger.error("error parsing received message", e);
+        }
+      }
+
+      this.socket.close();
+      this.context.close();
+    }
+
+    Set<String> getReceivedMessages() {
+      return receivedMessageIds;
+    }
+
+    int getMessagesProcessed() {
+      return messagesProcessed.get();
+    }
+  }
+
+  private static final Logger logger = LoggerFactory.getLogger("tests");
+  private ExecutorService execService;
+  private ZContext zmqContext;
+  private ChronicleSourceLogReader logReader;
+  private final UUID peerUuid = UUID.randomUUID();
+  private ServiceManager manager;
+  private LogInfo log;
+  private static final String DEALER_ADDRESS = "inproc://chronicle_source_log_tests";
+  private static final String OFFSET_PUB_ADDRESS = "inproc://chronicle_offsets_tests";
+  private final ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
+  private Set<Service> services;
+  private Path tempDir;
+  private Path queuePath;
+  private DefaultChronicleQueueFactory queueFactory;
+
+  @After
+  public void cleanup() throws Exception {
+    if (manager != null) {
+      manager.stopAsync().awaitStopped(5, TimeUnit.SECONDS);
+    }
+    closeContext(zmqContext);
+    execService.shutdownNow();
+    execService.awaitTermination(5, TimeUnit.SECONDS);
+
+    // Clean up temp directory
+    if (tempDir != null && Files.exists(tempDir)) {
+      try (Stream<Path> files = Files.walk(tempDir)) {
+        files
+            .sorted(Comparator.reverseOrder())
+            .forEach(
+                path -> {
+                  try {
+                    Files.delete(path);
+                  } catch (IOException e) {
+                    // Ignore cleanup errors
+                  }
+                });
+      }
+    }
+    logger.trace("cleanup complete");
+  }
+
+  @Before
+  public void setup() throws Exception {
+    execService = Executors.newSingleThreadExecutor();
+    zmqContext = this.createContext();
+    queueFactory = new DefaultChronicleQueueFactory();
+
+    // Create temp directory for Chronicle queues
+    tempDir = Files.createTempDirectory("chronicle-reader-test");
+    queuePath = tempDir.resolve("test-queue");
+
+    logReader =
+        new ChronicleSourceLogReader(
+            peerUuid,
+            zmqContext,
+            SYNC_SOCKET_ADDRESS,
+            servicesThreadGroup,
+            "ChronicleLogReaderTest",
+            DEALER_ADDRESS,
+            OFFSET_PUB_ADDRESS,
+            tempDir,
+            queueFactory);
+  }
+
+  /**
+   * Tests basic Chronicle queue write and read functionality.
+   *
+   * <p>This test verifies that we can write to and read from a Chronicle queue directly.
+   */
+  @Test
+  public void testBasicChronicleWriteAndRead() throws Exception {
+    int numMessages = 3;
+    MessageBuilder msgBuilder = new MessageBuilder();
+
+    // Write messages
+    try (ChronicleQueue queue =
+        queueFactory.create(queuePath, RollCycles.TEN_MINUTELY, 1000, 64 * 1024 * 1024)) {
+      ExcerptAppender appender = queue.createAppender();
+
+      for (int i = 0; i < numMessages; i++) {
+        ExecMessage execMsg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+        Message wrapper = msgBuilder.wrap(execMsg);
+        OutboundMsg outboundMsg =
+            new OutboundMsg(
+                MessageType.EXEC_CONSTRUCTOR,
+                ExecPhase.BEFORE,
+                null,
+                execMsg.getMessageId(),
+                execMsg.getResponseToId(),
+                wrapper);
+        long index = outboundMsg.appendTo(appender);
+        logger.debug("Wrote message at index {}", index);
+      }
+    }
+
+    // Read messages back
+    int messagesRead = 0;
+    try (ChronicleQueue queue = queueFactory.createReadOnly(queuePath)) {
+      ExcerptTailer tailer = queue.createTailer();
+      tailer.toStart();
+
+      logger.debug(
+          "Queue info: firstIndex={}, lastIndex={}", queue.firstIndex(), queue.lastIndex());
+
+      OutboundMsg msg;
+      while ((msg = OutboundMsg.readNext(tailer)) != null) {
+        messagesRead++;
+        logger.debug("Read message {}: {}", messagesRead, msg.getMessageId());
+      }
+    }
+
+    assertThat("Should have read all messages", messagesRead, is(numMessages));
+    logger.info("Successfully wrote and read {} messages", numMessages);
+  }
+
+  /**
+   * Tests that the Chronicle log reader can read messages from a Chronicle queue.
+   *
+   * <p>This test writes several messages to a Chronicle queue, then uses ChronicleSourceLogReader
+   * to read them back and verify they're received correctly.
+   */
+  @Test
+  public void testReadMessagesFromChronicleQueue() throws Exception {
+    // Write test messages to Chronicle queue
+    int numMessages = 5;
+    Set<String> writtenMessageIds = new HashSet<>();
+    MessageBuilder msgBuilder = new MessageBuilder();
+
+    try (ChronicleQueue queue =
+        queueFactory.create(queuePath, RollCycles.TEN_MINUTELY, 1000, 64 * 1024 * 1024)) {
+      ExcerptAppender appender = queue.createAppender();
+
+      for (int i = 0; i < numMessages; i++) {
+        // Build a simple constructor message
+        ExecMessage execMsg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+        writtenMessageIds.add(execMsg.getMessageId());
+
+        Message wrapper = msgBuilder.wrap(execMsg);
+        OutboundMsg outboundMsg =
+            new OutboundMsg(
+                MessageType.EXEC_CONSTRUCTOR,
+                ExecPhase.BEFORE,
+                null,
+                execMsg.getMessageId(),
+                execMsg.getResponseToId(),
+                wrapper);
+        outboundMsg.appendTo(appender);
+        logger.debug("Wrote message {} to Chronicle queue", execMsg.getMessageId());
+      }
+    }
+
+    // Create log info
+    log = new LogInfo(queuePath.toString());
+    log.setLogType(LogInfo.LogType.CHRONICLE);
+
+    // Configure log reader
+    logReader.readFromLog(log, false, null, false);
+
+    // Start worker to receive messages
+    Worker worker = new Worker(zmqContext, DEALER_ADDRESS);
+    @SuppressWarnings("unused")
+    var workerFuture = execService.submit(worker);
+
+    // Start log reader service
+    services = new HashSet<>();
+    services.add(logReader);
+    manager = new ServiceManager(services);
+    manager.startAsync().awaitHealthy(5, TimeUnit.SECONDS);
+    collectGoSignals(services.size(), zmqContext);
+
+    logReader.acceptRequests(true);
+
+    // Wait for messages to be processed
+    int maxWait = 100; // 10 seconds in 100ms intervals
+    int waited = 0;
+    while (worker.getMessagesProcessed() < numMessages && waited < maxWait) {
+      Thread.sleep(100);
+      waited++;
+    }
+
+    // Verify all messages were received
+    assertThat(
+        "Should have processed all messages", worker.getMessagesProcessed(), is(numMessages));
+    assertThat(
+        "Should have received all message IDs",
+        worker.getReceivedMessages(),
+        is(writtenMessageIds));
+
+    logger.info("Successfully read {} messages from Chronicle queue", numMessages);
+  }
+
+  /**
+   * Tests that the Chronicle log reader can start reading from a specific index.
+   *
+   * <p>This test writes several messages, then starts reading from a middle index to verify the
+   * initialOffset parameter works correctly.
+   */
+  @Test
+  public void testReadFromSpecificIndex() throws Exception {
+    // Write test messages to Chronicle queue and capture indices
+    int numMessages = 5;
+    long secondMessageIndex = -1;
+    MessageBuilder msgBuilder = new MessageBuilder();
+
+    try (ChronicleQueue queue =
+        queueFactory.create(queuePath, RollCycles.TEN_MINUTELY, 1000, 64 * 1024 * 1024)) {
+      ExcerptAppender appender = queue.createAppender();
+
+      for (int i = 0; i < numMessages; i++) {
+        // Build a simple constructor message
+        ExecMessage execMsg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+
+        Message wrapper = msgBuilder.wrap(execMsg);
+        OutboundMsg outboundMsg =
+            new OutboundMsg(
+                MessageType.EXEC_CONSTRUCTOR,
+                ExecPhase.BEFORE,
+                null,
+                execMsg.getMessageId(),
+                execMsg.getResponseToId(),
+                wrapper);
+        long index = outboundMsg.appendTo(appender);
+        if (i == 1) {
+          secondMessageIndex = index;
+        }
+        logger.debug("Wrote message {} at index {}", execMsg.getMessageId(), index);
+      }
+    }
+
+    assertThat("Should have captured second message index", secondMessageIndex, greaterThan(0L));
+
+    // Create log info
+    log = new LogInfo(queuePath.toString());
+    log.setLogType(LogInfo.LogType.CHRONICLE);
+
+    // Configure log reader to start from second message
+    logReader.readFromLog(log, false, secondMessageIndex, false);
+
+    // Start worker to receive messages
+    Worker worker = new Worker(zmqContext, DEALER_ADDRESS);
+    @SuppressWarnings("unused")
+    var workerFuture = execService.submit(worker);
+
+    // Start log reader service
+    services = new HashSet<>();
+    services.add(logReader);
+    manager = new ServiceManager(services);
+    manager.startAsync().awaitHealthy(5, TimeUnit.SECONDS);
+    collectGoSignals(services.size(), zmqContext);
+
+    logReader.acceptRequests(true);
+
+    // Wait for messages to be processed
+    int maxWait = 100; // 10 seconds in 100ms intervals
+    int waited = 0;
+    int expectedMessages = numMessages - 1; // Should read from index 1 onwards (messages 1-4)
+    while (worker.getMessagesProcessed() < expectedMessages && waited < maxWait) {
+      Thread.sleep(100);
+      waited++;
+    }
+
+    // Verify we read from the second message onwards
+    assertThat(
+        "Should have processed messages from second onwards",
+        worker.getMessagesProcessed(),
+        is(expectedMessages));
+
+    logger.info(
+        "Successfully read {} messages starting from index {}",
+        expectedMessages,
+        secondMessageIndex);
+  }
+}
