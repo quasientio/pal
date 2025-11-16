@@ -10,6 +10,8 @@
 package com.quasient.pal.core.execution.java;
 
 import com.quasient.pal.core.execution.java.reflect.ReflectionHelper;
+import com.quasient.pal.core.intercept.InterceptCallbackDispatcher;
+import com.quasient.pal.core.intercept.InterceptChecker;
 import com.quasient.pal.core.runtime.objects.ObjectLookupStore;
 import com.quasient.pal.core.service.RunOptions;
 import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
@@ -53,6 +55,12 @@ abstract class AbstractDispatcher {
    * Flag indicating whether non-public methods and fields can be accessed during RPC invocation.
    */
   protected boolean allowNonPublicAccess;
+
+  /** Checker for matching intercepts without creating ExecMessage (hot-path optimization). */
+  protected InterceptChecker interceptChecker;
+
+  /** Dispatcher for sending intercept callbacks to remote peers. */
+  protected InterceptCallbackDispatcher interceptCallbackDispatcher;
 
   /**
    * Sets the unique identifier (UUID) for the peer.
@@ -124,5 +132,26 @@ abstract class AbstractDispatcher {
   @Inject
   final void setAllowNonPublicAccess(@Named("rpc.allow_nonpublic") String allowNonPublicAccess) {
     this.allowNonPublicAccess = Boolean.parseBoolean(allowNonPublicAccess);
+  }
+
+  /**
+   * Sets the {@link InterceptChecker} for checking intercepts without message creation.
+   *
+   * @param interceptChecker the intercept checker instance
+   */
+  @Inject
+  final void setInterceptChecker(InterceptChecker interceptChecker) {
+    this.interceptChecker = interceptChecker;
+  }
+
+  /**
+   * Sets the {@link InterceptCallbackDispatcher} for sending intercept callbacks.
+   *
+   * @param interceptCallbackDispatcher the callback dispatcher instance
+   */
+  @Inject
+  final void setInterceptCallbackDispatcher(
+      InterceptCallbackDispatcher interceptCallbackDispatcher) {
+    this.interceptCallbackDispatcher = interceptCallbackDispatcher;
   }
 }

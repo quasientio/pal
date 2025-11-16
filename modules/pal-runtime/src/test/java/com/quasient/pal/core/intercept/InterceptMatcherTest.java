@@ -23,6 +23,7 @@ import com.quasient.pal.core.internal.messages.InterceptEventMsg;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.InterceptMessage;
 import com.quasient.pal.messages.types.MessageType;
+import com.quasient.pal.serdes.colfer.ExecMessageUtils;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
 import java.util.Collections;
 import java.util.HashSet;
@@ -153,10 +154,20 @@ public class InterceptMatcherTest extends ZmqEnabledTest {
     // create a non-matching ExecMessage
     ExecMessage execMessage = msgBuilder.buildEmptyConstructor(peerUuid, "java.util.HashMap");
 
+    // Extract matching info from ExecMessage
+    String className = ExecMessageUtils.getClassname(execMessage);
+    String executableName = ExecMessageUtils.getExecutableName(execMessage);
+    String[] parameterTypes =
+        ExecMessageUtils.getParameterTypes(execMessage).toArray(new String[0]);
+
     // verify it doesn't get intercepted
     List<InterceptMessage> matchingIntercepts =
         interceptMatcher.getMatchingIntercepts(
-            execMessage, MessageType.EXEC_CONSTRUCTOR, ExecPhase.BEFORE);
+            className,
+            executableName,
+            parameterTypes,
+            MessageType.EXEC_CONSTRUCTOR,
+            ExecPhase.BEFORE);
     assertThat(matchingIntercepts, is(empty()));
   }
 
@@ -181,10 +192,20 @@ public class InterceptMatcherTest extends ZmqEnabledTest {
     // create a matching ExecMessage with non-matching phase (ExecPhase = AFTER)
     ExecMessage execMessage = msgBuilder.buildEmptyConstructor(peerUuid, "java.util.ArrayList");
 
+    // Extract matching info from ExecMessage
+    String className = ExecMessageUtils.getClassname(execMessage);
+    String executableName = ExecMessageUtils.getExecutableName(execMessage);
+    String[] parameterTypes =
+        ExecMessageUtils.getParameterTypes(execMessage).toArray(new String[0]);
+
     // verify it doesn't get intercepted
     List<InterceptMessage> matchingIntercepts =
         interceptMatcher.getMatchingIntercepts(
-            execMessage, MessageType.EXEC_CONSTRUCTOR, ExecPhase.AFTER);
+            className,
+            executableName,
+            parameterTypes,
+            MessageType.EXEC_CONSTRUCTOR,
+            ExecPhase.AFTER);
     assertThat(matchingIntercepts, is(empty()));
   }
 
@@ -209,10 +230,20 @@ public class InterceptMatcherTest extends ZmqEnabledTest {
     // now send a matching ExecMessage
     ExecMessage execMessage = msgBuilder.buildEmptyConstructor(peerUuid, "java.util.ArrayList");
 
+    // Extract matching info from ExecMessage
+    String className = ExecMessageUtils.getClassname(execMessage);
+    String executableName = ExecMessageUtils.getExecutableName(execMessage);
+    String[] parameterTypes =
+        ExecMessageUtils.getParameterTypes(execMessage).toArray(new String[0]);
+
     // verify that it gets intercepted
     List<InterceptMessage> matchingIntercepts =
         interceptMatcher.getMatchingIntercepts(
-            execMessage, MessageType.EXEC_CONSTRUCTOR, ExecPhase.BEFORE);
+            className,
+            executableName,
+            parameterTypes,
+            MessageType.EXEC_CONSTRUCTOR,
+            ExecPhase.BEFORE);
     assertThat(matchingIntercepts, is(not(empty())));
     assertThat(matchingIntercepts.size(), is(1));
     assertThat(matchingIntercepts.get(0), is(interceptMessage));

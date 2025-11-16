@@ -13,7 +13,6 @@ import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.runtime.ExecPhase;
 import com.quasient.pal.core.internal.messages.InterceptEventMsg;
 import com.quasient.pal.core.service.ConnectedService;
-import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.InterceptMessage;
 import com.quasient.pal.messages.types.MessageType;
 import com.quasient.pal.serdes.colfer.ColferUtils;
@@ -143,29 +142,39 @@ public class InterceptMatcher extends ConnectedService {
   }
 
   /**
-   * Retrieves intercept messages that match the given execution context.
+   * Retrieves intercept messages that match the given execution parameters.
    *
    * <p>Depending on the specified execution phase, the method aggregates intercept requests
    * corresponding to pre-execution (BEFORE) or post-execution (AFTER) phases. If an unsupported
    * execution phase is provided, an UnsupportedOperationException is thrown.
    *
-   * @param execMessage the execution message that triggers intercept matching
+   * @param className the fully qualified class name
+   * @param executableName the method/field/constructor name
+   * @param parameterTypes the parameter types (null for fields)
    * @param messageType the type of message for which intercepts should be matched
    * @param phase the execution phase during which intercepts should be gathered (BEFORE or AFTER)
    * @return a list of intercept messages that match the provided criteria
    * @throws UnsupportedOperationException if the specified execution phase is not supported
    */
   public List<InterceptMessage> getMatchingIntercepts(
-      ExecMessage execMessage, MessageType messageType, ExecPhase phase) {
+      String className,
+      String executableName,
+      String[] parameterTypes,
+      MessageType messageType,
+      ExecPhase phase) {
     if (ExecPhase.BEFORE.equals(phase)) {
       final List<InterceptMessage> beforeIntercepts =
-          allIntercepts.get(InterceptType.BEFORE).getMatchingIntercepts(execMessage, messageType);
+          allIntercepts
+              .get(InterceptType.BEFORE)
+              .getMatchingIntercepts(className, executableName, parameterTypes, messageType);
       final List<InterceptMessage> beforeAsyncIntercepts =
           allIntercepts
               .get(InterceptType.BEFORE_ASYNC)
-              .getMatchingIntercepts(execMessage, messageType);
+              .getMatchingIntercepts(className, executableName, parameterTypes, messageType);
       final List<InterceptMessage> aroundIntercepts =
-          allIntercepts.get(InterceptType.AROUND).getMatchingIntercepts(execMessage, messageType);
+          allIntercepts
+              .get(InterceptType.AROUND)
+              .getMatchingIntercepts(className, executableName, parameterTypes, messageType);
       final List<InterceptMessage> interceptMessages =
           new ArrayList<>(
               beforeIntercepts.size() + beforeAsyncIntercepts.size() + aroundIntercepts.size());
@@ -176,11 +185,13 @@ public class InterceptMatcher extends ConnectedService {
     }
     if (ExecPhase.AFTER.equals(phase)) {
       final List<InterceptMessage> afterIntercepts =
-          allIntercepts.get(InterceptType.AFTER).getMatchingIntercepts(execMessage, messageType);
+          allIntercepts
+              .get(InterceptType.AFTER)
+              .getMatchingIntercepts(className, executableName, parameterTypes, messageType);
       final List<InterceptMessage> afterAsyncIntercepts =
           allIntercepts
               .get(InterceptType.AFTER_ASYNC)
-              .getMatchingIntercepts(execMessage, messageType);
+              .getMatchingIntercepts(className, executableName, parameterTypes, messageType);
       final List<InterceptMessage> interceptMessages =
           new ArrayList<>(afterIntercepts.size() + afterAsyncIntercepts.size());
       interceptMessages.addAll(afterIntercepts);

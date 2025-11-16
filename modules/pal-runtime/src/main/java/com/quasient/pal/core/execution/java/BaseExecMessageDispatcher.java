@@ -19,6 +19,7 @@ import com.quasient.pal.common.runtime.ExecPhase;
 import com.quasient.pal.common.util.Classes;
 import com.quasient.pal.common.weave.Proceed;
 import com.quasient.pal.common.weave.VoidProceed;
+import com.quasient.pal.core.intercept.InterceptCheckResult;
 import com.quasient.pal.core.internal.messages.SessionCommandMsg;
 import com.quasient.pal.core.service.RunOptions;
 import com.quasient.pal.core.transport.MessageChannelType;
@@ -73,26 +74,44 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       logger.trace("dispatch:in w/sender: {}, target: {}, args: {}", sender, target, args);
     }
 
+    // Check intercepts BEFORE creating Context/ExecMessage (optimization)
+    InterceptCheckResult beforeInterceptCheck = null;
+    if (runOptions.contains(RunOptions.WITH_INTERCEPTS)) {
+      beforeInterceptCheck =
+          interceptChecker.checkIntercepts(pjp, getBeforeExecMessageType(), ExecPhase.BEFORE);
+    }
+
+    // Decide if we need to create messages
     boolean withPubOrWal =
         runOptions.contains(RunOptions.WITH_WAL) || runOptions.contains(RunOptions.WITH_TCP_PUB);
+    boolean needsBeforeMessages =
+        withPubOrWal || (beforeInterceptCheck != null && beforeInterceptCheck.needsExecMessage());
 
     Context ctx = null;
+    ExecMessage beforeExecMsg;
 
-    if (withPubOrWal) {
-
-      // create (or get cached) context instance from join point
+    if (needsBeforeMessages) {
+      // Create (or get cached) context instance from join point
       ctx = ContextFactory.forJoinPoint(pjp.getStaticPart());
 
       // 1. Wrap message
-      final ExecMessage beforeExecMsg = createBeforeExecMessage(ctx, sender, target, args);
+      beforeExecMsg = createBeforeExecMessage(ctx, sender, target, args);
 
-      // 2. Send message
+      // 2. Send message (WAL/PUB only - intercepts handled separately)
       @SuppressWarnings("unused")
       final ExecMessage beforeExecResponseMsg =
           messageGateway.sendExecMessage(messageBuilder.wrap(beforeExecMsg), ExecPhase.BEFORE);
+
+      // 3. Send intercept callbacks (if any remote intercepts matched)
+      if (beforeInterceptCheck != null && beforeInterceptCheck.hasRemoteIntercepts()) {
+        interceptCallbackDispatcher.sendCallbacks(beforeInterceptCheck, beforeExecMsg);
+      }
+    } else if (beforeInterceptCheck != null && beforeInterceptCheck.hasLocalIntercepts()) {
+      // Future: handle local intercepts without creating ExecMessage
+      // handleLocalIntercepts(beforeInterceptCheck.getLocalIntercepts(), pjp, args);
     }
 
-    // 3. Invoke
+    // 4. Invoke
     T returnValue = null;
     InvocationThrowableWrapper throwableWrapper = null;
     try {
@@ -102,9 +121,23 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       throwableWrapper = new InvocationThrowableWrapper(th);
     }
 
-    if (withPubOrWal) {
+    // Check intercepts for AFTER phase
+    InterceptCheckResult afterInterceptCheck = null;
+    if (runOptions.contains(RunOptions.WITH_INTERCEPTS)) {
+      afterInterceptCheck =
+          interceptChecker.checkIntercepts(pjp, getBeforeExecMessageType(), ExecPhase.AFTER);
+    }
 
-      // 4. Store? object in object map
+    boolean needsAfterMessages =
+        withPubOrWal || (afterInterceptCheck != null && afterInterceptCheck.needsExecMessage());
+
+    if (needsAfterMessages) {
+      // Reuse context if already created
+      if (ctx == null) {
+        ctx = ContextFactory.forJoinPoint(pjp.getStaticPart());
+      }
+
+      // 5. Store? object in object map
       ObjectRef objectRef = null;
       if (returnValue != null) {
         objectRef = generateObjectRef(returnValue);
@@ -112,17 +145,25 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
       boolean returnsVoid = proceed instanceof VoidProceed;
 
-      // 5. Wrap object or exception
+      // 6. Wrap object or exception
       final ExecMessage afterExecMsg =
           createAfterExecMessage(ctx, returnValue, objectRef, returnsVoid);
 
-      // 6. Send object or exception
+      // 7. Send object or exception (WAL/PUB only)
       @SuppressWarnings("unused")
       final ExecMessage afterExecResponseMsg =
           messageGateway.sendExecMessage(messageBuilder.wrap(afterExecMsg), ExecPhase.AFTER);
+
+      // 8. Send intercept callbacks (if any remote intercepts matched)
+      if (afterInterceptCheck != null && afterInterceptCheck.hasRemoteIntercepts()) {
+        interceptCallbackDispatcher.sendCallbacks(afterInterceptCheck, afterExecMsg);
+      }
+    } else if (afterInterceptCheck != null && afterInterceptCheck.hasLocalIntercepts()) {
+      // Future: handle local intercepts without creating ExecMessage
+      // handleLocalIntercepts(afterInterceptCheck.getLocalIntercepts(), pjp, returnValue);
     }
 
-    // 7. Return object or re-raise exception
+    // 9. Return object or re-raise exception
     if (throwableWrapper != null) {
       if (logger.isTraceEnabled()) {
         logger.trace("dispatch:out re-raising exception: {}", throwableWrapper);

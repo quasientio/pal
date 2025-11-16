@@ -18,6 +18,7 @@ import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.InterceptMessage;
 import com.quasient.pal.messages.types.MessageType;
+import com.quasient.pal.serdes.colfer.ExecMessageUtils;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
 import java.util.Collections;
 import java.util.List;
@@ -49,8 +50,15 @@ public class InterceptRequestsTest {
     ExecMessage execMessage =
         msgBuilder.buildEmptyConstructor(UUID.randomUUID(), "java.util.ArrayList");
 
+    // Extract matching info from ExecMessage
+    String className = ExecMessageUtils.getClassname(execMessage);
+    String executableName = ExecMessageUtils.getExecutableName(execMessage);
+    String[] parameterTypes =
+        ExecMessageUtils.getParameterTypes(execMessage).toArray(new String[0]);
+
     List<InterceptMessage> matchedIntercepts =
-        interceptRequests.getMatchingIntercepts(execMessage, MessageType.EXEC_CONSTRUCTOR);
+        interceptRequests.getMatchingIntercepts(
+            className, executableName, parameterTypes, MessageType.EXEC_CONSTRUCTOR);
     assertThat(matchedIntercepts, is(notNullValue()));
     assertThat(matchedIntercepts.size(), is(1));
   }

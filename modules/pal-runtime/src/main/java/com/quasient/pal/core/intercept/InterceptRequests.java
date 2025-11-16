@@ -9,16 +9,13 @@
  */
 package com.quasient.pal.core.intercept;
 
-import static com.quasient.pal.serdes.colfer.ExecMessageUtils.getParameterTypes;
 import static java.lang.String.format;
 
 import com.quasient.pal.common.lang.FieldOpType;
-import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.InterceptMessage;
 import com.quasient.pal.messages.colfer.InterceptableField;
 import com.quasient.pal.messages.colfer.InterceptableMethod;
 import com.quasient.pal.messages.types.MessageType;
-import com.quasient.pal.serdes.colfer.ExecMessageUtils;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -51,49 +48,51 @@ public class InterceptRequests {
   private volatile List<InterceptRequestEntry> fieldPutIntercepts = new ArrayList<>();
 
   /**
-   * Filters the provided list of intercept request entries to find those matching the criteria
-   * extracted from the given execution message.
+   * Filters the provided list of intercept request entries to find those matching the given
+   * criteria.
    *
-   * @param execMessage the execution message containing context such as classname, executable name,
-   *     and parameter types
+   * @param className the fully qualified class name
+   * @param executableName the method/field/constructor name
+   * @param parameterTypes the parameter types (null for fields)
    * @param interceptRequestEntries the list of intercept request entries to be filtered
-   * @return a list of intercept messages corresponding to entries that match the execution message
-   *     criteria; never null but may be empty if no matches are found
+   * @return a list of intercept messages corresponding to entries that match the criteria; never
+   *     null but may be empty if no matches are found
    */
   private List<InterceptMessage> getMatchingIntercepts(
-      ExecMessage execMessage, List<InterceptRequestEntry> interceptRequestEntries) {
-    final String classname = ExecMessageUtils.getClassname(execMessage);
-    final String executableName = ExecMessageUtils.getExecutableName(execMessage);
-    final List<String> paramTypesList = getParameterTypes(execMessage);
-    final String[] parameterTypes =
-        paramTypesList == null ? null : paramTypesList.toArray(new String[0]);
+      String className,
+      String executableName,
+      String[] parameterTypes,
+      List<InterceptRequestEntry> interceptRequestEntries) {
 
     return interceptRequestEntries.stream()
-        .filter(i -> i.matches(classname, executableName, parameterTypes))
+        .filter(i -> i.matches(className, executableName, parameterTypes))
         .map(InterceptRequestEntry::getInterceptMessage)
         .collect(Collectors.toList());
   }
 
   /**
-   * Retrieves a list of intercept messages that match the provided execution message and message
+   * Retrieves a list of intercept messages that match the provided execution parameters and message
    * type. Depending on the message type, the search is performed within the corresponding intercept
    * request list.
    *
-   * @param execMessage the execution message providing context for matching intercept requests
+   * @param className the fully qualified class name
+   * @param executableName the method/field/constructor name
+   * @param parameterTypes the parameter types (null for fields)
    * @param messageType the type of execution event (e.g., constructor, method, or field access)
    *     used to select the appropriate list
    * @return a list of matching intercept messages; if no entries match, an empty list is returned
    */
   public List<InterceptMessage> getMatchingIntercepts(
-      ExecMessage execMessage, MessageType messageType) {
+      String className, String executableName, String[] parameterTypes, MessageType messageType) {
     return switch (messageType) {
-      case EXEC_CONSTRUCTOR -> getMatchingIntercepts(execMessage, constructorIntercepts);
+      case EXEC_CONSTRUCTOR ->
+          getMatchingIntercepts(className, executableName, parameterTypes, constructorIntercepts);
       case EXEC_INSTANCE_METHOD, EXEC_CLASS_METHOD ->
-          getMatchingIntercepts(execMessage, methodIntercepts);
+          getMatchingIntercepts(className, executableName, parameterTypes, methodIntercepts);
       case EXEC_GET_STATIC, EXEC_GET_FIELD ->
-          getMatchingIntercepts(execMessage, fieldGetIntercepts);
+          getMatchingIntercepts(className, executableName, parameterTypes, fieldGetIntercepts);
       case EXEC_PUT_STATIC, EXEC_PUT_FIELD ->
-          getMatchingIntercepts(execMessage, fieldPutIntercepts);
+          getMatchingIntercepts(className, executableName, parameterTypes, fieldPutIntercepts);
       default -> Collections.emptyList();
     };
   }

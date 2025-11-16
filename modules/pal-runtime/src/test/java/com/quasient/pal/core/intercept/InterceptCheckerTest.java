@@ -1,0 +1,276 @@
+/*
+ * Copyright (C) 2025 Quasient Inc. <https://www.quasient.com>
+ *
+ * Use of this software is governed by the Business Source License 1.1
+ * included in the file LICENSE and at https://mariadb.com/bsl11
+ *
+ * Change Date: 2029-10-01
+ * Change License: Apache 2.0
+ */
+package com.quasient.pal.core.intercept;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import com.quasient.pal.common.runtime.ExecPhase;
+import com.quasient.pal.messages.colfer.InterceptMessage;
+import com.quasient.pal.messages.types.MessageType;
+import java.util.Collections;
+import java.util.List;
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.reflect.ConstructorSignature;
+import org.aspectj.lang.reflect.FieldSignature;
+import org.aspectj.lang.reflect.MethodSignature;
+import org.junit.Before;
+import org.junit.Test;
+
+/** Unit tests for {@link InterceptChecker}. */
+@SuppressWarnings("DoNotMock")
+public class InterceptCheckerTest {
+
+  private InterceptMatcher interceptMatcher;
+  private InterceptChecker interceptChecker;
+
+  @Before
+  public void setUp() {
+    interceptMatcher = mock(InterceptMatcher.class);
+    interceptChecker = new InterceptChecker(interceptMatcher);
+  }
+
+  @Test
+  public void checkIntercepts_withMethodSignature_extractsCorrectInfo() {
+    // Setup mock ProceedingJoinPoint with method signature
+    ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
+    JoinPoint.StaticPart staticPart = mock(JoinPoint.StaticPart.class);
+    MethodSignature methodSig = mock(MethodSignature.class);
+
+    when(pjp.getStaticPart()).thenReturn(staticPart);
+    when(staticPart.getSignature()).thenReturn(methodSig);
+    when(methodSig.getDeclaringTypeName()).thenReturn("com.example.MyClass");
+    when(methodSig.getName()).thenReturn("myMethod");
+    when(methodSig.getParameterTypes()).thenReturn(new Class<?>[] {String.class, Integer.class});
+
+    // Mock matcher to return empty list
+    when(interceptMatcher.getMatchingIntercepts(
+            eq("com.example.MyClass"),
+            eq("myMethod"),
+            any(String[].class),
+            eq(MessageType.EXEC_INSTANCE_METHOD),
+            eq(ExecPhase.BEFORE)))
+        .thenReturn(Collections.emptyList());
+
+    // Execute
+    InterceptCheckResult result =
+        interceptChecker.checkIntercepts(pjp, MessageType.EXEC_INSTANCE_METHOD, ExecPhase.BEFORE);
+
+    // Verify
+    assertThat(result, is(notNullValue()));
+    assertThat(result.hasRemoteIntercepts(), is(false));
+    assertThat(result.hasLocalIntercepts(), is(false));
+
+    // Verify matcher was called with correct extracted parameters
+    verify(interceptMatcher)
+        .getMatchingIntercepts(
+            eq("com.example.MyClass"),
+            eq("myMethod"),
+            eq(new String[] {"java.lang.String", "java.lang.Integer"}),
+            eq(MessageType.EXEC_INSTANCE_METHOD),
+            eq(ExecPhase.BEFORE));
+  }
+
+  @Test
+  public void checkIntercepts_withConstructorSignature_usesNewAsName() {
+    // Setup mock ProceedingJoinPoint with constructor signature
+    ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
+    JoinPoint.StaticPart staticPart = mock(JoinPoint.StaticPart.class);
+    ConstructorSignature ctorSig = mock(ConstructorSignature.class);
+
+    when(pjp.getStaticPart()).thenReturn(staticPart);
+    when(staticPart.getSignature()).thenReturn(ctorSig);
+    when(ctorSig.getDeclaringTypeName()).thenReturn("java.util.ArrayList");
+    when(ctorSig.getParameterTypes()).thenReturn(new Class<?>[] {});
+
+    when(interceptMatcher.getMatchingIntercepts(
+            eq("java.util.ArrayList"),
+            eq("new"),
+            any(String[].class),
+            eq(MessageType.EXEC_CONSTRUCTOR),
+            eq(ExecPhase.BEFORE)))
+        .thenReturn(Collections.emptyList());
+
+    // Execute
+    interceptChecker.checkIntercepts(pjp, MessageType.EXEC_CONSTRUCTOR, ExecPhase.BEFORE);
+
+    // Verify constructor uses "new" as executable name
+    verify(interceptMatcher)
+        .getMatchingIntercepts(
+            eq("java.util.ArrayList"),
+            eq("new"),
+            eq(new String[] {}),
+            eq(MessageType.EXEC_CONSTRUCTOR),
+            eq(ExecPhase.BEFORE));
+  }
+
+  @Test
+  public void checkIntercepts_withFieldSignature_extractsFieldName() {
+    // Setup mock ProceedingJoinPoint with field signature
+    ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
+    JoinPoint.StaticPart staticPart = mock(JoinPoint.StaticPart.class);
+    FieldSignature fieldSig = mock(FieldSignature.class);
+
+    when(pjp.getStaticPart()).thenReturn(staticPart);
+    when(staticPart.getSignature()).thenReturn(fieldSig);
+    when(fieldSig.getDeclaringTypeName()).thenReturn("com.example.MyClass");
+    when(fieldSig.getName()).thenReturn("myField");
+
+    when(interceptMatcher.getMatchingIntercepts(
+            eq("com.example.MyClass"),
+            eq("myField"),
+            eq(null), // String[]
+            eq(MessageType.EXEC_GET_FIELD),
+            eq(ExecPhase.BEFORE)))
+        .thenReturn(Collections.emptyList());
+
+    // Execute
+    interceptChecker.checkIntercepts(pjp, MessageType.EXEC_GET_FIELD, ExecPhase.BEFORE);
+
+    // Verify field has null parameter types
+    verify(interceptMatcher)
+        .getMatchingIntercepts(
+            eq("com.example.MyClass"),
+            eq("myField"),
+            eq(null), // String[]
+            eq(MessageType.EXEC_GET_FIELD),
+            eq(ExecPhase.BEFORE));
+  }
+
+  @Test
+  public void checkIntercepts_withMatchingIntercepts_returnsRemoteIntercepts() {
+    // Setup mock ProceedingJoinPoint
+    ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
+    JoinPoint.StaticPart staticPart = mock(JoinPoint.StaticPart.class);
+    MethodSignature methodSig = mock(MethodSignature.class);
+
+    when(pjp.getStaticPart()).thenReturn(staticPart);
+    when(staticPart.getSignature()).thenReturn(methodSig);
+    when(methodSig.getDeclaringTypeName()).thenReturn("com.example.Calculator");
+    when(methodSig.getName()).thenReturn("add");
+    when(methodSig.getParameterTypes()).thenReturn(new Class<?>[] {int.class, int.class});
+
+    // Create matching intercepts
+    InterceptMessage intercept1 = new InterceptMessage();
+    intercept1.peerUuid = "peer-1";
+    InterceptMessage intercept2 = new InterceptMessage();
+    intercept2.peerUuid = "peer-2";
+    List<InterceptMessage> matchingIntercepts = List.of(intercept1, intercept2);
+
+    when(interceptMatcher.getMatchingIntercepts(
+            eq("com.example.Calculator"),
+            eq("add"),
+            eq(new String[] {"int", "int"}),
+            eq(MessageType.EXEC_INSTANCE_METHOD),
+            eq(ExecPhase.BEFORE)))
+        .thenReturn(matchingIntercepts);
+
+    // Execute
+    InterceptCheckResult result =
+        interceptChecker.checkIntercepts(pjp, MessageType.EXEC_INSTANCE_METHOD, ExecPhase.BEFORE);
+
+    // Verify
+    assertThat(result.hasRemoteIntercepts(), is(true));
+    assertThat(result.getRemoteIntercepts().size(), is(2));
+    assertThat(result.needsExecMessage(), is(true));
+  }
+
+  @Test
+  public void checkIntercepts_afterPhase_passesCorrectPhase() {
+    // Setup mock ProceedingJoinPoint
+    ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
+    JoinPoint.StaticPart staticPart = mock(JoinPoint.StaticPart.class);
+    MethodSignature methodSig = mock(MethodSignature.class);
+
+    when(pjp.getStaticPart()).thenReturn(staticPart);
+    when(staticPart.getSignature()).thenReturn(methodSig);
+    when(methodSig.getDeclaringTypeName()).thenReturn("com.example.MyClass");
+    when(methodSig.getName()).thenReturn("method");
+    when(methodSig.getParameterTypes()).thenReturn(new Class<?>[] {});
+
+    when(interceptMatcher.getMatchingIntercepts(
+            any(), any(), any(), eq(MessageType.EXEC_INSTANCE_METHOD), eq(ExecPhase.AFTER)))
+        .thenReturn(Collections.emptyList());
+
+    // Execute with AFTER phase
+    interceptChecker.checkIntercepts(pjp, MessageType.EXEC_INSTANCE_METHOD, ExecPhase.AFTER);
+
+    // Verify AFTER phase was passed
+    verify(interceptMatcher).getMatchingIntercepts(any(), any(), any(), any(), eq(ExecPhase.AFTER));
+  }
+
+  /**
+   * This test is a stub for the future implementation of local intercepts and assertions will need
+   * updating once we do have the impl in place.
+   */
+  @Test
+  public void checkIntercepts_localInterceptsCurrentlyEmpty() {
+    // Setup mock ProceedingJoinPoint
+    ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
+    JoinPoint.StaticPart staticPart = mock(JoinPoint.StaticPart.class);
+    MethodSignature methodSig = mock(MethodSignature.class);
+
+    when(pjp.getStaticPart()).thenReturn(staticPart);
+    when(staticPart.getSignature()).thenReturn(methodSig);
+    when(methodSig.getDeclaringTypeName()).thenReturn("com.example.MyClass");
+    when(methodSig.getName()).thenReturn("method");
+    when(methodSig.getParameterTypes()).thenReturn(new Class<?>[] {});
+
+    InterceptMessage intercept = new InterceptMessage();
+    when(interceptMatcher.getMatchingIntercepts(any(), any(), any(), any(), any()))
+        .thenReturn(List.of(intercept));
+
+    // Execute
+    InterceptCheckResult result =
+        interceptChecker.checkIntercepts(pjp, MessageType.EXEC_INSTANCE_METHOD, ExecPhase.BEFORE);
+
+    // Verify local intercepts are currently always empty (future implementation)
+    assertThat(result.getLocalIntercepts(), is(empty()));
+    assertThat(result.hasLocalIntercepts(), is(false));
+  }
+
+  @Test
+  public void checkIntercepts_withEmptyParameterArray_handlesCorrectly() {
+    // Setup mock ProceedingJoinPoint
+    ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
+    JoinPoint.StaticPart staticPart = mock(JoinPoint.StaticPart.class);
+    MethodSignature methodSig = mock(MethodSignature.class);
+
+    when(pjp.getStaticPart()).thenReturn(staticPart);
+    when(staticPart.getSignature()).thenReturn(methodSig);
+    when(methodSig.getDeclaringTypeName()).thenReturn("com.example.NoArgsMethod");
+    when(methodSig.getName()).thenReturn("noArgs");
+    when(methodSig.getParameterTypes()).thenReturn(new Class<?>[] {});
+
+    when(interceptMatcher.getMatchingIntercepts(
+            eq("com.example.NoArgsMethod"),
+            eq("noArgs"),
+            eq(new String[] {}),
+            eq(MessageType.EXEC_INSTANCE_METHOD),
+            eq(ExecPhase.BEFORE)))
+        .thenReturn(Collections.emptyList());
+
+    // Execute
+    interceptChecker.checkIntercepts(pjp, MessageType.EXEC_INSTANCE_METHOD, ExecPhase.BEFORE);
+
+    // Verify empty parameter array is handled
+    verify(interceptMatcher)
+        .getMatchingIntercepts(
+            any(), any(), eq(new String[] {}), eq(MessageType.EXEC_INSTANCE_METHOD), any());
+  }
+}

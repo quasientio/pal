@@ -13,21 +13,17 @@ package com.quasient.pal.core.transport.gateway;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.fail;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.common.runtime.ExecPhase;
 import com.quasient.pal.core.ZmqEnabledTest;
-import com.quasient.pal.core.intercept.InterceptMatcher;
 import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import com.quasient.pal.core.internal.messages.SessionCommandMsg;
 import com.quasient.pal.core.internal.messages.SessionResponseMsg;
 import com.quasient.pal.core.service.RunOptions;
 import com.quasient.pal.core.transport.WalWriter;
 import com.quasient.pal.core.transport.zmq.publish.PublishingDropPolicy;
-import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
-import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.messages.OutboundMsg;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.types.SessionCommandType;
@@ -42,7 +38,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.stubbing.Answer;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ.Socket;
@@ -58,7 +53,6 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
 
   private final UUID peerUuid = UUID.randomUUID();
   private final MessageBuilder builder = new MessageBuilder();
-  private final List<ExecMessage> msgsSeenByMatcher = new ArrayList<>();
 
   // --------------------------------------------------------------------
   // zmq / executor fixtures
@@ -66,13 +60,6 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
   private ZContext context;
   private ExecutorService execService;
   private SessionServiceStub sessionStub;
-
-  // --------------------------------------------------------------------
-  // DI mocks
-  // --------------------------------------------------------------------
-  private DirectoryConnectionProvider dirProvider;
-  private PalDirectory dir;
-  private InterceptMatcher matcher;
 
   private WalWriter walWriterMock;
   private HwmMessageQueue<OutboundMsg> walQueue;
@@ -84,28 +71,15 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
   // --------------------------------------------------------------------
   // set-up / tear-down
   // --------------------------------------------------------------------
-  @SuppressWarnings("unchecked")
   @Before
   public void setUp() throws Exception {
     context = createContext();
     execService = Executors.newCachedThreadPool();
     walFailed = new AtomicBoolean(false);
 
-    // ── directory mock
-    dir = mock(PalDirectory.class);
-    dirProvider = mock(DirectoryConnectionProvider.class);
-    when(dirProvider.get()).thenReturn(Optional.of(dir));
-
-    // ── intercept matcher mock
-    matcher = mock(InterceptMatcher.class);
-    when(matcher.getMatchingIntercepts(any(), any(), any()))
-        .thenAnswer(
-            (Answer<List<?>>)
-                inv -> {
-                  msgsSeenByMatcher.add((ExecMessage) inv.getArguments()[0]);
-                  return Collections.emptyList(); // no intercepts
-                });
-
+    // --------------------------------------------------------------------
+    // DI mocks
+    // --------------------------------------------------------------------
     // Wal Writer mock
     walWriterMock = mock(WalWriter.class);
 
@@ -147,9 +121,7 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
             context,
             peerUuid,
             builder,
-            dirProvider,
             opts,
-            matcher,
             walWriterMock,
             walQueue,
             walFailed,
@@ -212,9 +184,7 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
             context,
             peerUuid,
             builder,
-            dirProvider,
             opts,
-            matcher,
             walWriterMock,
             walQueue,
             walFailed,
@@ -239,7 +209,6 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
     ExecMessage returned = gateway.sendExecMessage(builder.wrap(msg), ExecPhase.BEFORE);
 
     assertThat(returned, is(msg)); // gateway returns same obj
-    assertThat(msgsSeenByMatcher, is(List.of(msg)));
 
     assertThat(pubQueue.currentSize(), is(withPub ? 1 : 0));
     assertThat(walQueue.currentSize(), is(withWal ? 1 : 0));
@@ -249,14 +218,10 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
     initGateway(withWal, withPub, withIntercepts);
 
     int n = 10;
-    List<ExecMessage> sent = new ArrayList<>();
     for (int i = 0; i < n; i++) {
       ExecMessage m = builder.buildEmptyConstructor(peerUuid, "java.lang.String");
-      sent.add(m);
       gateway.sendExecMessage(builder.wrap(m), ExecPhase.BEFORE);
     }
-    assertThat(msgsSeenByMatcher, is(sent));
-
     assertThat(pubQueue.currentSize(), is(withPub ? n : 0));
     assertThat(walQueue.currentSize(), is(withWal ? n : 0));
   }
@@ -266,7 +231,6 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
   // --------------------------------------------------------------------
   private static final class SessionServiceStub implements Runnable {
 
-    final List<SessionCommandMsg> messagesReceived = new ArrayList<>();
     private volatile boolean stop;
     private final ZContext ctx;
     private final CountDownLatch start;
@@ -289,61 +253,9 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
       while (!stop && !Thread.interrupted()) {
         SessionCommandMsg m = SessionCommandMsg.receive(rep, false);
         if (m == null) continue;
-        messagesReceived.add(m);
         new SessionResponseMsg(SessionStatusType.OK).send(rep);
       }
       rep.close();
-    }
-  }
-
-  // --------------------------------------------------------------------
-  // stub for a peer interceptor (RPC REP)
-  // --------------------------------------------------------------------
-  private static final class InterceptorServer implements Runnable {
-    private final ZContext ctx;
-    private final String endpoint;
-    private final boolean reply;
-    private final CountDownLatch start;
-    private volatile boolean stop;
-    final List<byte[]> messages = new ArrayList<>();
-
-    InterceptorServer(ZContext ctx, String endpoint, boolean reply, CountDownLatch start) {
-      this.ctx = ctx;
-      this.endpoint = endpoint;
-      this.reply = reply;
-      this.start = start;
-    }
-
-    void requestStop() {
-      stop = true;
-    }
-
-    @Override
-    public void run() {
-      Socket rep = ctx.createSocket(SocketType.REP);
-      try {
-        rep.bind(endpoint);
-        rep.setReceiveTimeOut(100);
-        start.countDown();
-        while (!stop && !Thread.interrupted()) {
-          try {
-            byte[] req = rep.recv(0);
-            if (req == null) continue;
-            messages.add(req);
-            if (reply) {
-              // echo back
-              rep.send(req, 0);
-            }
-            // For async tests we purposefully do not reply and exit
-            if (!reply) break;
-          } catch (org.zeromq.ZMQException e) {
-            // EINTR/ETERM on context close; exit quietly
-            break;
-          }
-        }
-      } finally {
-        rep.close();
-      }
     }
   }
 
@@ -365,9 +277,7 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
             context,
             peerUuid,
             builder,
-            dirProvider,
             opts,
-            matcher,
             walWriterMock,
             walQueue,
             walFailed,
@@ -378,7 +288,7 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
     ExecMessage m = builder.buildEmptyConstructor(peerUuid, "java.lang.String");
     gateway.sendExecMessage(builder.wrap(m), ExecPhase.BEFORE);
 
-    // Still full; drop policy increments counters internally but we assert no growth
+    // Still full; drop policy increments counters internally, but we assert no growth
     assertThat(pubQueue.currentSize(), is(cap));
   }
 
@@ -411,9 +321,7 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
             context,
             peerUuid,
             builder,
-            dirProvider,
             opts,
-            matcher,
             walWriterMock,
             walQueue,
             walFailed,
@@ -458,9 +366,7 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
             context,
             peerUuid,
             builder,
-            dirProvider,
             opts,
-            matcher,
             walWriterMock,
             walQueue,
             walFailed,
@@ -489,9 +395,7 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
             context,
             peerUuid,
             builder,
-            dirProvider,
             opts,
-            matcher,
             walWriterMock,
             fixedWalQueue,
             walFailed,
@@ -525,116 +429,6 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
   }
 
   @Test
-  public void intercept_sync_callback_usesDirectoryAndCachesSocket() throws Exception {
-    EnumSet<RunOptions> opts = EnumSet.of(RunOptions.WITH_INTERCEPTS);
-    gateway =
-        new OutboundMessageGateway(
-            context,
-            peerUuid,
-            builder,
-            dirProvider,
-            opts,
-            matcher,
-            walWriterMock,
-            walQueue,
-            walFailed,
-            pubQueue,
-            PublishingDropPolicy.DROP_OLD,
-            SESSION_SERVICE_REQ_ADDRESS);
-
-    // spin up interceptor REP server that echoes
-    String endpoint = "inproc://interceptor_sync";
-    UUID remote = UUID.randomUUID();
-    CountDownLatch latch = new CountDownLatch(1);
-    InterceptorServer interceptor = new InterceptorServer(context, endpoint, true, latch);
-    execService.execute(interceptor);
-    latch.await();
-    // directory stubs
-    com.quasient.pal.common.directory.nodes.PeerInfo pi =
-        new com.quasient.pal.common.directory.nodes.PeerInfo(remote);
-    pi.setZmqRpcAddress(endpoint);
-    when(dir.getPeer(remote)).thenReturn(pi);
-    when(dir.peerExists(remote)).thenReturn(true);
-
-    // return a BEFORE intercept targeting the remote peer
-    com.quasient.pal.messages.colfer.InterceptMessage im =
-        new com.quasient.pal.messages.colfer.InterceptMessage();
-    im.peerUuid = remote.toString();
-    im.interceptType = com.quasient.pal.common.lang.intercept.InterceptType.BEFORE.toByte();
-    im.callbackClass = "java.lang.String";
-    im.callbackMethod = "valueOf";
-    when(matcher.getMatchingIntercepts(any(), any(), any())).thenReturn(List.of(im));
-
-    ExecMessage msg = builder.buildEmptyConstructor(peerUuid, "java.lang.String");
-    gateway.sendExecMessage(builder.wrap(msg), ExecPhase.BEFORE);
-
-    // ensure server observed exactly one message
-    assertThat(interceptor.messages.size(), is(1));
-
-    // trigger again to reuse cached socket and ensure directory.getPeer only called once
-    gateway.sendExecMessage(builder.wrap(msg), ExecPhase.BEFORE);
-    verify(dir, times(1)).getPeer(remote);
-
-    interceptor.requestStop();
-    gateway.closeThreadLocalSockets();
-  }
-
-  @Test
-  public void intercept_async_callback_doesNotWaitForResponse() throws Exception {
-    EnumSet<RunOptions> opts = EnumSet.of(RunOptions.WITH_INTERCEPTS);
-    gateway =
-        new OutboundMessageGateway(
-            context,
-            peerUuid,
-            builder,
-            dirProvider,
-            opts,
-            matcher,
-            walWriterMock,
-            walQueue,
-            walFailed,
-            pubQueue,
-            PublishingDropPolicy.DROP_OLD,
-            SESSION_SERVICE_REQ_ADDRESS);
-
-    String endpoint = "inproc://interceptor_async";
-    UUID remote = UUID.randomUUID();
-    CountDownLatch latch = new CountDownLatch(1);
-    InterceptorServer interceptor = new InterceptorServer(context, endpoint, false, latch);
-    execService.execute(interceptor);
-    latch.await();
-
-    com.quasient.pal.common.directory.nodes.PeerInfo pi =
-        new com.quasient.pal.common.directory.nodes.PeerInfo(remote);
-    pi.setZmqRpcAddress(endpoint);
-    when(dir.getPeer(remote)).thenReturn(pi);
-    when(dir.peerExists(remote)).thenReturn(true);
-
-    com.quasient.pal.messages.colfer.InterceptMessage im =
-        new com.quasient.pal.messages.colfer.InterceptMessage();
-    im.peerUuid = remote.toString();
-    im.interceptType = com.quasient.pal.common.lang.intercept.InterceptType.BEFORE_ASYNC.toByte();
-    im.callbackClass = "java.lang.String";
-    im.callbackMethod = "valueOf";
-    when(matcher.getMatchingIntercepts(any(), any(), any())).thenReturn(List.of(im));
-
-    ExecMessage msg = builder.buildEmptyConstructor(peerUuid, "java.lang.String");
-    gateway.sendExecMessage(builder.wrap(msg), ExecPhase.BEFORE);
-
-    // wait briefly for server to receive
-    long deadline = System.currentTimeMillis() + 500;
-    while (System.currentTimeMillis() < deadline && interceptor.messages.size() == 0) {
-      try {
-        Thread.sleep(5);
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-      }
-    }
-    assertThat(interceptor.messages.size(), is(1));
-    gateway.closeThreadLocalSockets();
-  }
-
-  @Test
   public void printAggregateStats_smoke() {
     EnumSet<RunOptions> opts = EnumSet.of(RunOptions.WITH_WAL, RunOptions.WITH_TCP_PUB);
     gateway =
@@ -642,9 +436,7 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
             context,
             peerUuid,
             builder,
-            dirProvider,
             opts,
-            matcher,
             walWriterMock,
             walQueue,
             walFailed,
@@ -698,9 +490,7 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
             context,
             peerUuid,
             builder,
-            dirProvider,
             opts,
-            matcher,
             writer,
             null, // walQueue null => direct-write mode
             walFailed,
@@ -721,9 +511,7 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
             context,
             peerUuid,
             builder,
-            dirProvider,
             opts,
-            matcher,
             walWriterMock,
             walQueue,
             walFailed,

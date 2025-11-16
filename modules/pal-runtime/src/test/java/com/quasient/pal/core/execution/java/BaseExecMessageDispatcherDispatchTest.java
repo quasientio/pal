@@ -13,18 +13,26 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.Mockito.mock;
 
+import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.common.runtime.Context;
 import com.quasient.pal.common.weave.Proceed;
+import com.quasient.pal.core.service.RunOptions;
 import com.quasient.pal.messages.colfer.ExecMessage;
+import com.quasient.pal.messages.colfer.Parameter;
 import com.quasient.pal.messages.types.MessageType;
+import com.quasient.pal.serdes.colfer.MessageBuilder;
 import java.lang.reflect.AccessibleObject;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 public class BaseExecMessageDispatcherDispatchTest {
 
@@ -33,9 +41,8 @@ public class BaseExecMessageDispatcherDispatchTest {
     protected ExecMessage createBeforeExecMessage(
         Context ctxt, Object sender, Object target, Object[] args) {
       try {
-        java.lang.reflect.Constructor<?> ctor = String.class.getConstructor();
-        return new com.quasient.pal.serdes.colfer.MessageBuilder(
-                java.util.UUID.fromString("00000000-0000-0000-0000-000000000001"))
+        Constructor<?> ctor = String.class.getConstructor();
+        return new MessageBuilder(UUID.fromString("00000000-0000-0000-0000-000000000001"))
             .buildReturnValue("", ctor, null, false, null);
       } catch (NoSuchMethodException e) {
         throw new RuntimeException(e);
@@ -44,10 +51,7 @@ public class BaseExecMessageDispatcherDispatchTest {
 
     @Override
     protected ExecMessage createAfterExecMessage(
-        Context ctxt,
-        Object value,
-        com.quasient.pal.common.objects.ObjectRef objectRef,
-        boolean isVoid) {
+        Context ctxt, Object value, ObjectRef objectRef, boolean isVoid) {
       return new ExecMessage();
     }
 
@@ -55,24 +59,17 @@ public class BaseExecMessageDispatcherDispatchTest {
     protected ExecMessage createAfterExecMessage(
         ExecMessage execMessage,
         Object valueObject,
-        com.quasient.pal.common.objects.ObjectRef valueObjRef,
+        ObjectRef valueObjRef,
         AccessibleObject accessibleObject,
         Throwable exceptionWhileLoading,
         Throwable exceptionWhileInvoking) {
       try {
-        java.lang.reflect.Constructor<?> ctor = String.class.getConstructor();
-        return new com.quasient.pal.serdes.colfer.MessageBuilder(
-                java.util.UUID.fromString("00000000-0000-0000-0000-000000000001"))
+        Constructor<?> ctor = String.class.getConstructor();
+        return new MessageBuilder(UUID.fromString("00000000-0000-0000-0000-000000000001"))
             .buildReturnValue("", ctor, null, false, null);
       } catch (NoSuchMethodException e) {
         throw new RuntimeException(e);
       }
-    }
-
-    @Override
-    protected <T> T invoke(ProceedingJoinPoint pjp, Proceed<T> proceed, Object[] args)
-        throws Throwable {
-      return proceed.call();
     }
 
     @Override
@@ -95,8 +92,7 @@ public class BaseExecMessageDispatcherDispatchTest {
     }
 
     @Override
-    protected List<com.quasient.pal.messages.colfer.Parameter> getParameterList(
-        ExecMessage execMessage) {
+    protected List<Parameter> getParameterList(ExecMessage execMessage) {
       return Collections.emptyList();
     }
 
@@ -116,12 +112,11 @@ public class BaseExecMessageDispatcherDispatchTest {
     @Override
     protected <T> T invoke(ProceedingJoinPoint pjp, Proceed<T> proceed, Object[] args)
         throws Throwable {
-      throw new java.lang.reflect.InvocationTargetException(new IllegalStateException("boom"));
+      throw new InvocationTargetException(new IllegalStateException("boom"));
     }
   }
 
-  private static void setRunOptions(
-      AbstractDispatcher d, Set<com.quasient.pal.core.service.RunOptions> ro) throws Exception {
+  private static void setRunOptions(AbstractDispatcher d, Set<RunOptions> ro) throws Exception {
     var f = AbstractDispatcher.class.getDeclaredField("runOptions");
     f.setAccessible(true);
     f.set(d, ro);
@@ -130,14 +125,14 @@ public class BaseExecMessageDispatcherDispatchTest {
   @Test
   public void dispatch_returnsProceedValue_withoutWalOrPub() throws Throwable {
     MinimalOk d = new MinimalOk();
-    setRunOptions(d, EnumSet.noneOf(com.quasient.pal.core.service.RunOptions.class));
+    setRunOptions(d, EnumSet.noneOf(RunOptions.class));
 
     ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
     JoinPoint.StaticPart sp = mock(JoinPoint.StaticPart.class);
-    org.mockito.Mockito.when(pjp.getThis()).thenReturn(this);
-    org.mockito.Mockito.when(pjp.getTarget()).thenReturn(this);
-    org.mockito.Mockito.when(pjp.getArgs()).thenReturn(new Object[] {"x"});
-    org.mockito.Mockito.when(pjp.getStaticPart()).thenReturn(sp);
+    Mockito.when(pjp.getThis()).thenReturn(this);
+    Mockito.when(pjp.getTarget()).thenReturn(this);
+    Mockito.when(pjp.getArgs()).thenReturn(new Object[] {"x"});
+    Mockito.when(pjp.getStaticPart()).thenReturn(sp);
 
     Proceed<String> proceed = () -> "ok";
     String out = d.dispatch(pjp, proceed);
@@ -147,12 +142,12 @@ public class BaseExecMessageDispatcherDispatchTest {
   @Test(expected = IllegalStateException.class)
   public void dispatch_wrapsInvocationTargetException_andRethrowsCause() throws Throwable {
     MinimalThrows d = new MinimalThrows();
-    setRunOptions(d, EnumSet.noneOf(com.quasient.pal.core.service.RunOptions.class));
+    setRunOptions(d, EnumSet.noneOf(RunOptions.class));
     ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
-    org.mockito.Mockito.when(pjp.getThis()).thenReturn(this);
-    org.mockito.Mockito.when(pjp.getTarget()).thenReturn(this);
-    org.mockito.Mockito.when(pjp.getArgs()).thenReturn(new Object[] {});
-    org.mockito.Mockito.when(pjp.getStaticPart()).thenReturn(mock(JoinPoint.StaticPart.class));
+    Mockito.when(pjp.getThis()).thenReturn(this);
+    Mockito.when(pjp.getTarget()).thenReturn(this);
+    Mockito.when(pjp.getArgs()).thenReturn(new Object[] {});
+    Mockito.when(pjp.getStaticPart()).thenReturn(mock(JoinPoint.StaticPart.class));
     Proceed<Object> proceed = () -> null; // won't be called
     d.dispatch(pjp, proceed);
   }
