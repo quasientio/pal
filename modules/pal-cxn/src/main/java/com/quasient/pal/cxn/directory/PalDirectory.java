@@ -1789,9 +1789,7 @@ public class PalDirectory {
   // <editor-fold desc="Misc methods">
 
   /**
-   * {@inheritDoc}
-   *
-   * <p>Closes the PalDirectory, releasing all resources including the etcd client and key-value
+   * Closes the PalDirectory, releasing all resources including the etcd client and key-value
    * client.
    */
   public void close() {

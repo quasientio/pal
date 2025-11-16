@@ -587,19 +587,21 @@ public class List extends AbstractPalSubcommand {
   protected int runCommand() throws Exception {
     // Verify PAL_DIRECTORY is available (required for listing)
     try {
-      if (directoryConnectionProvider == null || !directoryConnectionProvider.get().isPresent()) {
+      if (directoryConnectionProvider == null || directoryConnectionProvider.get().isEmpty()) {
         err.println(
-            "Error: pal ls requires a PAL directory to list registered resources.\n"
-                + "Specify with --directory/-d option or PAL_DIRECTORY environment variable.\n"
-                + "Example: pal ls -d localhost:2379");
+            """
+                        Error: pal ls requires a PAL directory to list registered resources.
+                        Specify with --directory/-d option or PAL_DIRECTORY environment variable.
+                        Example: pal ls -d localhost:2379""");
         return 1;
       }
     } catch (Exception e) {
       err.println(
-          "Error: Cannot connect to PAL directory.\n"
-              + "Ensure etcd is running and accessible, then specify the directory:\n"
-              + "  pal ls -d localhost:2379\n"
-              + "Or set PAL_DIRECTORY environment variable.");
+          """
+                      Error: Cannot connect to PAL directory.
+                      Ensure etcd is running and accessible, then specify the directory:
+                        pal ls -d localhost:2379
+                      Or set PAL_DIRECTORY environment variable.""");
       return 1;
     }
 
