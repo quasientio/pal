@@ -106,6 +106,26 @@ public class InterceptChecker {
   }
 
   /**
+   * Determines whether the provided message type is eligible for intercept processing.
+   *
+   * @param type the MessageType to evaluate
+   * @return true if the type supports intercept handling; false otherwise
+   */
+  public static boolean isInterceptableType(MessageType type) {
+    return switch (type) {
+      case EXEC_CONSTRUCTOR,
+              EXEC_INSTANCE_METHOD,
+              EXEC_CLASS_METHOD,
+              EXEC_GET_STATIC,
+              EXEC_GET_FIELD,
+              EXEC_PUT_STATIC,
+              EXEC_PUT_FIELD ->
+          true;
+      default -> false;
+    };
+  }
+
+  /**
    * Extracts the executable name from the AspectJ signature.
    *
    * <p>For methods and fields, this returns the signature name. For constructors, this returns the

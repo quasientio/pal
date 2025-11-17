@@ -20,6 +20,7 @@ import com.quasient.pal.common.util.Classes;
 import com.quasient.pal.common.weave.Proceed;
 import com.quasient.pal.common.weave.VoidProceed;
 import com.quasient.pal.core.intercept.InterceptCheckResult;
+import com.quasient.pal.core.intercept.InterceptChecker;
 import com.quasient.pal.core.internal.messages.SessionCommandMsg;
 import com.quasient.pal.core.service.RunOptions;
 import com.quasient.pal.core.transport.MessageChannelType;
@@ -74,11 +75,14 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       logger.trace("dispatch:in w/sender: {}, target: {}, args: {}", sender, target, args);
     }
 
-    // Check intercepts BEFORE creating Context/ExecMessage (optimization)
+    // Check intercepts BEFORE creating Context/ExecMessage
+    final MessageType beforeExecMsgType = getBeforeExecMessageType();
+    final boolean isMessageInterceptable = InterceptChecker.isInterceptableType(beforeExecMsgType);
+
     InterceptCheckResult beforeInterceptCheck = null;
-    if (runOptions.contains(RunOptions.WITH_INTERCEPTS)) {
+    if (runOptions.contains(RunOptions.WITH_INTERCEPTS) && isMessageInterceptable) {
       beforeInterceptCheck =
-          interceptChecker.checkIntercepts(pjp, getBeforeExecMessageType(), ExecPhase.BEFORE);
+          interceptChecker.checkIntercepts(pjp, beforeExecMsgType, ExecPhase.BEFORE);
     }
 
     // Decide if we need to create messages
@@ -123,7 +127,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
     // Check intercepts for AFTER phase
     InterceptCheckResult afterInterceptCheck = null;
-    if (runOptions.contains(RunOptions.WITH_INTERCEPTS)) {
+    if (runOptions.contains(RunOptions.WITH_INTERCEPTS) && isMessageInterceptable) {
       afterInterceptCheck =
           interceptChecker.checkIntercepts(pjp, getBeforeExecMessageType(), ExecPhase.AFTER);
     }
