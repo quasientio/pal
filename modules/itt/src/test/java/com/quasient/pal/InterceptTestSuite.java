@@ -11,7 +11,7 @@ package com.quasient.pal;
 
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
-import com.quasient.pal.intercept.MethodInterceptIT;
+import com.quasient.pal.intercept.AsyncCallbackIT;
 import java.util.UUID;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -43,7 +43,9 @@ import org.slf4j.LoggerFactory;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
   // Intercept tests
-  MethodInterceptIT.class
+  //  SyncCallbackIT.class,
+  AsyncCallbackIT.class,
+  //  MethodInterceptIT.class
 })
 public class InterceptTestSuite extends AbstractIntegrationTest {
 

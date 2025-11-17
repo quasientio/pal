@@ -38,6 +38,11 @@ import org.zeromq.ZMQ.Socket;
  * intercepts. It manages per-thread ZeroMQ sockets for callback communication and handles both
  * synchronous (BEFORE/AFTER) and asynchronous (BEFORE_ASYNC/AFTER_ASYNC) intercept types.
  *
+ * <p>Socket Management: This dispatcher uses two separate socket caches: REQ sockets for
+ * synchronous callbacks (which require request-reply pattern) and DEALER sockets for asynchronous
+ * callbacks (which allow fire-and-forget). The server-side ROUTER socket in ZmqRpcServer accepts
+ * connections from both REQ and DEALER clients.
+ *
  * <p>Thread Safety: This class uses ThreadLocal storage for sockets, making it safe for
  * multithreaded use. Each thread maintains its own socket connections to target peers.
  */
@@ -63,10 +68,17 @@ public class InterceptCallbackDispatcher {
   private final DirectoryConnectionProvider directoryConnectionProvider;
 
   /**
-   * Per-thread socket cache for callback communication. Each thread maintains its own map of peer
-   * UUID to connected REQ socket.
+   * Per-thread socket cache for synchronous callback communication. Each thread maintains its own
+   * map of peer UUID to connected REQ socket for BEFORE/AFTER intercepts.
    */
-  private final ThreadLocal<Map<UUID, Socket>> callbackSockets =
+  private final ThreadLocal<Map<UUID, Socket>> syncCallbackSockets =
+      ThreadLocal.withInitial(HashMap::new);
+
+  /**
+   * Per-thread socket cache for asynchronous callback communication. Each thread maintains its own
+   * map of peer UUID to connected DEALER socket for BEFORE_ASYNC/AFTER_ASYNC intercepts.
+   */
+  private final ThreadLocal<Map<UUID, Socket>> asyncCallbackSockets =
       ThreadLocal.withInitial(HashMap::new);
 
   /**
@@ -138,13 +150,36 @@ public class InterceptCallbackDispatcher {
   /**
    * Sends an asynchronous callback message to the specified peer (fire-and-forget).
    *
+   * <p>Uses DEALER socket which allows sending without waiting for response, unlike REQ sockets
+   * which require strict send-recv alternation. DEALER sockets must send an empty delimiter frame
+   * before the payload to match the ROUTER socket's expected envelope format.
+   *
    * @param targetPeerUuid the unique identifier of the target peer
    * @param callbackMessage the callback message to send
    * @throws Exception if an error occurs while sending the message
    */
   private void sendAsyncCallbackToPeer(UUID targetPeerUuid, ExecMessage callbackMessage)
       throws Exception {
-    sendCallbackMessageToPeer(targetPeerUuid, callbackMessage, false);
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          "Sending async callback message: {} to peer w/uuid: {}",
+          ColferUtils.format(callbackMessage),
+          targetPeerUuid);
+    }
+
+    // Get DEALER socket for peer and send callback msg (no response expected)
+    // DEALER sends: [empty delimiter, payload]
+    Socket dealer = getConnectedDealerSocketFor(targetPeerUuid);
+    dealer.sendMore(new byte[0]); // Empty delimiter frame
+    final boolean sentOk = dealer.send(toBytes(messageBuilder.wrap(callbackMessage)), 0);
+
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          "Sent async callback message: {} (ret={}) to peer w/uuid: {}",
+          ColferUtils.format(callbackMessage),
+          sentOk,
+          targetPeerUuid);
+    }
   }
 
   /**
@@ -157,7 +192,7 @@ public class InterceptCallbackDispatcher {
    */
   private byte[] sendSyncCallbackToPeer(UUID targetPeerUuid, ExecMessage callbackMessage)
       throws Exception {
-    return sendCallbackMessageToPeer(targetPeerUuid, callbackMessage, true);
+    return sendCallbackMessageToPeer(targetPeerUuid, callbackMessage);
   }
 
   /**
@@ -165,12 +200,11 @@ public class InterceptCallbackDispatcher {
    *
    * @param interceptor the unique identifier of the target peer
    * @param callbackMessage the callback message to send
-   * @param getResponse whether to wait for and return a response
    * @return the response bytes if getResponse is true, null otherwise
    * @throws Exception if an error occurs during message sending or receiving
    */
-  private byte[] sendCallbackMessageToPeer(
-      UUID interceptor, ExecMessage callbackMessage, boolean getResponse) throws Exception {
+  private byte[] sendCallbackMessageToPeer(UUID interceptor, ExecMessage callbackMessage)
+      throws Exception {
 
     if (logger.isDebugEnabled()) {
       logger.debug(
@@ -194,34 +228,32 @@ public class InterceptCallbackDispatcher {
 
     // block until we get a response or peer is disconnected
     response = null;
-    if (getResponse) {
-      boolean peerIsUp = true;
-      boolean gotResponse = false;
-      while (!gotResponse && peerIsUp) {
-        response = req.recv(0);
-        if (response != null) {
-          gotResponse = true;
-          if (logger.isDebugEnabled()) {
-            final Message callbackResponseMessage = new Message();
-            callbackResponseMessage.unmarshal(response, 0);
-            logger.debug(
-                "Got response from callback: {}", ColferUtils.format(callbackResponseMessage));
-          }
-        } else { // we hit the timeout, check if peer is alive
-          final PalDirectory palDirectory =
-              directoryConnectionProvider.get().orElseThrow(RuntimeException::new);
-          peerIsUp = palDirectory.peerExists(interceptor);
-          if (peerIsUp) {
-            logger.warn(
-                "Timed out waiting for callback response from peer w/uuid: {}. "
-                    + "Peer still exists, will retry.",
-                interceptor);
-          } else {
-            logger.warn(
-                "Timed out waiting for callback response from peer w/uuid: {}. "
-                    + "Peer no longer exists.",
-                interceptor);
-          }
+    boolean peerIsUp = true;
+    boolean gotResponse = false;
+    while (!gotResponse && peerIsUp) {
+      response = req.recv(0);
+      if (response != null) {
+        gotResponse = true;
+        if (logger.isDebugEnabled()) {
+          final Message callbackResponseMessage = new Message();
+          callbackResponseMessage.unmarshal(response, 0);
+          logger.debug(
+              "Got response from callback: {}", ColferUtils.format(callbackResponseMessage));
+        }
+      } else { // we hit the timeout, check if peer is alive
+        final PalDirectory palDirectory =
+            directoryConnectionProvider.get().orElseThrow(RuntimeException::new);
+        peerIsUp = palDirectory.peerExists(interceptor);
+        if (peerIsUp) {
+          logger.warn(
+              "Timed out waiting for callback response from peer w/uuid: {}. "
+                  + "Peer still exists, will retry.",
+              interceptor);
+        } else {
+          logger.warn(
+              "Timed out waiting for callback response from peer w/uuid: {}. "
+                  + "Peer no longer exists.",
+              interceptor);
         }
       }
     }
@@ -240,11 +272,11 @@ public class InterceptCallbackDispatcher {
    */
   private Socket getConnectedReqSocketFor(UUID peer) throws Exception {
     // first check if socket for peer is already open
-    if (callbackSockets.get().containsKey(peer)) {
+    if (syncCallbackSockets.get().containsKey(peer)) {
       if (logger.isDebugEnabled()) {
         logger.debug("Returning existing REQ socket for peer w/uuid: {}", peer);
       }
-      return callbackSockets.get().get(peer);
+      return syncCallbackSockets.get().get(peer);
     }
 
     // else, create and connect new socket
@@ -263,21 +295,72 @@ public class InterceptCallbackDispatcher {
     reqSocket.connect(interceptorAddress);
 
     // store in thread-local peer->socket map
-    callbackSockets.get().put(peer, reqSocket);
+    syncCallbackSockets.get().put(peer, reqSocket);
 
     return reqSocket;
+  }
+
+  /**
+   * Retrieves an existing or creates a new thread-local DEALER socket connected to the specified
+   * peer.
+   *
+   * <p>DEALER sockets are used for asynchronous callbacks because they allow multiple sends without
+   * requiring a response, unlike REQ sockets which require strict send-recv alternation. The
+   * server-side ROUTER socket in ZmqRpcServer accepts connections from both REQ and DEALER clients.
+   *
+   * <p>The connection is established using the peer's ZMQ RPC address obtained from the directory
+   * provider. Sockets are cached per-thread to avoid repeated connection overhead.
+   *
+   * @param peer the unique identifier of the target peer
+   * @return a connected DEALER Socket for communication with the specified peer
+   * @throws Exception if the peer's information cannot be retrieved from the directory
+   */
+  private Socket getConnectedDealerSocketFor(UUID peer) throws Exception {
+    // first check if socket for peer is already open
+    if (asyncCallbackSockets.get().containsKey(peer)) {
+      if (logger.isDebugEnabled()) {
+        logger.debug("Returning existing DEALER socket for peer w/uuid: {}", peer);
+      }
+      return asyncCallbackSockets.get().get(peer);
+    }
+
+    // else, create and connect new socket
+    if (logger.isDebugEnabled()) {
+      logger.debug("Connecting new DEALER socket to peer w/uuid: {}", peer);
+    }
+
+    final Socket dealerSocket = zmqContext.createSocket(SocketType.DEALER);
+
+    // get peer's address
+    final PalDirectory palDirectory =
+        directoryConnectionProvider.get().orElseThrow(RuntimeException::new);
+    String interceptorAddress = palDirectory.getPeer(peer).getZmqRpcAddress();
+    dealerSocket.connect(interceptorAddress);
+
+    // store in thread-local peer->socket map
+    asyncCallbackSockets.get().put(peer, dealerSocket);
+
+    return dealerSocket;
   }
 
   /**
    * Cleans up thread-local sockets when a thread terminates.
    *
    * <p>This method should be called when a thread that has used this dispatcher is about to
-   * terminate, to properly close all open sockets and free resources.
+   * terminate, to properly close all open sockets and free resources. It cleans up both synchronous
+   * (REQ) and asynchronous (DEALER) socket caches.
    */
   public void cleanup() {
-    Map<UUID, Socket> sockets = callbackSockets.get();
-    sockets.values().forEach(Socket::close);
-    sockets.clear();
-    callbackSockets.remove();
+    // Clean up sync sockets (REQ)
+    Map<UUID, Socket> syncSockets = syncCallbackSockets.get();
+    syncSockets.values().forEach(Socket::close);
+    syncSockets.clear();
+    syncCallbackSockets.remove();
+
+    // Clean up async sockets (DEALER)
+    Map<UUID, Socket> asyncSockets = asyncCallbackSockets.get();
+    asyncSockets.values().forEach(Socket::close);
+    asyncSockets.clear();
+    asyncCallbackSockets.remove();
   }
 }

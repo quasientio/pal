@@ -646,7 +646,12 @@ public class PalDirectory {
   }
 
   /**
-   * Deletes all peer nodes except those specified in the exclusion set.
+   * Deletes all peer nodes except those specified in the exclusion set, and cleans up associated
+   * intercept requests.
+   *
+   * <p>This method removes all peers not in the exclusion set and their associated intercept
+   * requests. When the exclusion set is null or empty, uses a fast-path that deletes the entire
+   * peers subtree and all intercept requests in a single batch operation.
    *
    * @param excludePeers a {@link Set} of peer UUIDs to exclude from deletion; may be {@code null}
    * @return the number of peers deleted
@@ -670,6 +675,19 @@ public class PalDirectory {
       final DeleteResponse deleteResponse =
           kvClient.delete(getPeersPathKey(), DeleteOption.builder().isPrefix(true).build()).get();
       deleted = deleteResponse.getDeleted();
+
+      // Clean up all intercept requests since we deleted all peers
+      if (deleted > 0) {
+        final DeleteResponse interceptsDeleteResponse =
+            kvClient
+                .delete(getInterceptsPathKey(), DeleteOption.builder().isPrefix(true).build())
+                .get();
+        if (logger.isDebugEnabled()) {
+          logger.debug(
+              "Deleted {} intercept request(s) after deleting all peers",
+              interceptsDeleteResponse.getDeleted());
+        }
+      }
     }
     if (deleted == 0) {
       logger.warn("No peers found to delete");
@@ -680,7 +698,10 @@ public class PalDirectory {
   }
 
   /**
-   * Deletes all peer nodes in the directory.
+   * Deletes all peer nodes in the directory and cleans up all associated intercept requests.
+   *
+   * <p>This is a convenience method that calls {@link #purgePeersExcept(Set)} with a null exclusion
+   * set, resulting in a fast-path deletion of all peers and intercept requests.
    *
    * @return the number of peers deleted
    * @throws ExecutionException if an error occurs during etcd operation
@@ -691,9 +712,14 @@ public class PalDirectory {
   }
 
   /**
-   * Deletes a peer subtree atomically (root + logs + state).
+   * Deletes a peer subtree atomically (root + logs + state) and cleans up associated intercept
+   * requests.
    *
-   * @param peerUuid the peer’s UUID
+   * <p>This method deletes the peer's entire subtree and then removes all intercept requests
+   * registered by this peer. Intercept requests are stored separately under {@code
+   * /pal/intercepts/<peer-uuid>} and are not automatically deleted with the peer subtree.
+   *
+   * @param peerUuid the peer's UUID
    * @throws ExecutionException on etcd errors
    * @throws InterruptedException if the thread is interrupted
    */
@@ -721,6 +747,8 @@ public class PalDirectory {
 
     if (tx.isSucceeded()) {
       logger.info("Deleted peer {}", peerUuid);
+      // Clean up intercept requests for this peer
+      deleteInterceptsForPeer(peerUuid);
     } else {
       logger.warn("Failed to delete peer {}: node was modified concurrently", peerUuid);
     }

@@ -157,7 +157,7 @@ public class AbstractInterceptIT extends AbstractIntegrationTest implements Exec
     req = callbackSocket.recv(0);
     Message callbackMsg = new Message();
     callbackMsg.unmarshal(req, 0);
-    logger.debug("Received callback message: {}", ColferUtils.format(callbackMsg));
+    logger.debug("Received callback message: {}", colferToPrettyJson(callbackMsg));
 
     // verifications that should be done before replying
     assertionError = test.get();
@@ -174,7 +174,7 @@ public class AbstractInterceptIT extends AbstractIntegrationTest implements Exec
     Message wrappedMessage = messageBuilder.wrap(returnValue);
     byte[] messageAsBytes = ColferUtils.toBytes(wrappedMessage);
     callbackSocket.send(messageAsBytes);
-    logger.debug("Sent callback fake return value: {}", ColferUtils.format(wrappedMessage));
+    logger.debug("Sent callback fake return value: {}", colferToPrettyJson(wrappedMessage));
     return callbackMsg;
   }
 

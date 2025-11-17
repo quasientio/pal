@@ -176,9 +176,62 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
     // Should complete quickly (not wait for response)
     assertThat("Async callback should return quickly", elapsed < 100, is(true));
 
-    // Note: REQ socket requires reply, so server sends one but we don't wait for it
-    // The reply is sitting in the socket buffer, which is why we can't reuse this socket
-    // This is a known limitation of the current async implementation
+    // DEALER socket allows fire-and-forget; response is sent by server but caller doesn't wait
+    // The socket can be safely reused for subsequent async callbacks
+
+    server.requestStop();
+  }
+
+  @Test
+  public void sendCallbacks_multipleAsyncToSamePeer_reusesDealerSocket() throws Exception {
+    // Setup: Create stub server
+    String endpoint = "inproc://multi-async-callback-test";
+    UUID remotePeerUuid = UUID.randomUUID();
+    CountDownLatch serverReady = new CountDownLatch(1);
+    CountDownLatch messagesReceived = new CountDownLatch(2);
+    StubCallbackServer server =
+        new StubCallbackServer(context, endpoint, serverReady, messagesReceived);
+    executorService.execute(server);
+    serverReady.await(1, TimeUnit.SECONDS);
+
+    // Mock directory
+    PeerInfo peerInfo = new PeerInfo(remotePeerUuid);
+    peerInfo.setZmqRpcAddress(endpoint);
+    when(directory.getPeer(remotePeerUuid)).thenReturn(peerInfo);
+
+    // Create two async BEFORE intercepts to the same peer
+    InterceptMessage interceptMsg1 = new InterceptMessage();
+    interceptMsg1.peerUuid = remotePeerUuid.toString();
+    interceptMsg1.interceptType = InterceptType.BEFORE_ASYNC.toByte();
+    interceptMsg1.callbackClass = "com.example.Test";
+    interceptMsg1.callbackMethod = "callback1";
+
+    InterceptMessage interceptMsg2 = new InterceptMessage();
+    interceptMsg2.peerUuid = remotePeerUuid.toString();
+    interceptMsg2.interceptType = InterceptType.BEFORE_ASYNC.toByte();
+    interceptMsg2.callbackClass = "com.example.Test";
+    interceptMsg2.callbackMethod = "callback2";
+
+    InterceptCheckResult result =
+        new InterceptCheckResult(List.of(interceptMsg1, interceptMsg2), Collections.emptyList());
+
+    ExecMessage execMessage = messageBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+
+    // Execute - should send both callbacks quickly without waiting
+    long startTime = System.currentTimeMillis();
+    dispatcher.sendCallbacks(result, execMessage);
+    long elapsed = System.currentTimeMillis() - startTime;
+
+    // Should complete quickly (not wait for responses)
+    assertThat("Multiple async callbacks should return quickly", elapsed < 100, is(true));
+
+    // Verify both messages were received by server
+    boolean received = messagesReceived.await(2, TimeUnit.SECONDS);
+    assertThat("Server should receive both async callbacks", received, is(true));
+    assertThat(server.receivedMessages.size(), is(2));
+
+    // Verify directory.getPeer() was called only once (DEALER socket cached and reused)
+    verify(directory, times(1)).getPeer(remotePeerUuid);
 
     server.requestStop();
   }
@@ -370,10 +423,10 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
   }
 
   /**
-   * Stub server that receives callback messages and optionally sends replies.
+   * Stub server that receives callback messages and sends replies.
    *
-   * <p>Note: This always sends a reply to maintain REQ-REP socket validity, even for async tests
-   * where the caller doesn't wait for the response.
+   * <p>Uses ROUTER socket to accept connections from both REQ clients (sync callbacks) and DEALER
+   * clients (async callbacks). ROUTER sockets handle the envelope routing automatically.
    */
   private static class StubCallbackServer implements Runnable {
     private final ZContext context;
@@ -396,35 +449,52 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
 
     @Override
     public void run() {
-      Socket rep = context.createSocket(SocketType.REP);
-      rep.bind(endpoint);
-      rep.setReceiveTimeOut(100); // 100ms timeout for polling
+      Socket router = context.createSocket(SocketType.ROUTER);
+      router.bind(endpoint);
+      router.setReceiveTimeOut(100); // 100ms timeout for polling
       readyLatch.countDown();
 
       while (running) {
-        byte[] request = rep.recv(0);
-        if (request != null) {
-          // Parse and store received message
-          Message msg = new Message();
-          try {
-            msg.unmarshal(request, 0);
-            receivedMessages.add(msg);
-            receivedLatch.countDown();
-          } catch (Exception e) {
-            // Ignore parse errors in test
-          }
+        try {
+          // ROUTER receives: [identity, empty delimiter, payload]
+          // Use recv() without parameter to respect socket's configured timeout
+          byte[] identity = router.recv();
+          if (identity != null) {
+            byte[] empty = router.recv();
+            byte[] request = router.recv();
 
-          // Always send reply to maintain REQ-REP validity
-          // Even for async callbacks, the REQ socket needs a response
-          Message response = new Message();
-          response.messageType = msg.messageType;
-          byte[] responseBytes = new byte[response.marshalFit()];
-          response.marshal(responseBytes, 0);
-          rep.send(responseBytes, 0);
+            // Parse and store received message
+            Message msg = new Message();
+            try {
+              msg.unmarshal(request, 0);
+              receivedMessages.add(msg);
+              receivedLatch.countDown();
+            } catch (Exception e) {
+              // Ignore parse errors in test
+            }
+
+            // Send reply: [identity, empty delimiter, payload]
+            // This maintains validity for REQ clients; DEALER clients can ignore it
+            Message response = new Message();
+            response.messageType = msg.messageType;
+            byte[] responseBytes = new byte[response.marshalFit()];
+            response.marshal(responseBytes, 0);
+
+            router.sendMore(identity);
+            router.sendMore(empty);
+            router.send(responseBytes, 0);
+          }
+        } catch (org.zeromq.ZMQException e) {
+          // Expected during context/socket closure in teardown
+          if (e.getErrorCode() == 4) {
+            // EINTR - Interrupted function, happens during cleanup
+            break;
+          }
+          throw e;
         }
       }
 
-      rep.close();
+      router.close();
     }
 
     void requestStop() {

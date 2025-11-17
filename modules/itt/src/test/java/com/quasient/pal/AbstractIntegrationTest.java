@@ -16,7 +16,9 @@ import com.quasient.pal.common.util.Base62UuidGenerator;
 import com.quasient.pal.common.util.IdGenerator;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
+import com.quasient.pal.messages.Marshallable;
 import com.quasient.pal.messages.types.RpcType;
+import com.quasient.pal.serdes.colfer.ColferUtils;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -593,6 +595,11 @@ public abstract class AbstractIntegrationTest {
     }
 
     logger.info("Peer stopped");
+  }
+
+  /** Helper method to pretty-print a Marshallable (i.e. colfer) message */
+  protected String colferToPrettyJson(Marshallable message) {
+    return ColferUtils.toJson(message, true);
   }
 
   /** Container for process execution results. */
