@@ -11,7 +11,16 @@ package com.quasient.pal;
 
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
-import com.quasient.pal.intercept.AsyncCallbackIT;
+import com.quasient.pal.intercept.constructor.ConstructorAsyncCallbackIT;
+import com.quasient.pal.intercept.constructor.ConstructorSyncCallbackIT;
+import com.quasient.pal.intercept.instancefield.InstanceFieldAsyncCallbackIT;
+import com.quasient.pal.intercept.instancefield.InstanceFieldSyncCallbackIT;
+import com.quasient.pal.intercept.instancemethod.InstanceMethodAsyncCallbackIT;
+import com.quasient.pal.intercept.instancemethod.InstanceMethodSyncCallbackIT;
+import com.quasient.pal.intercept.staticfield.StaticFieldAsyncCallbackIT;
+import com.quasient.pal.intercept.staticfield.StaticFieldSyncCallbackIT;
+import com.quasient.pal.intercept.staticmethod.StaticMethodAsyncCallbackIT;
+import com.quasient.pal.intercept.staticmethod.StaticMethodSyncCallbackIT;
 import java.util.UUID;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -42,10 +51,21 @@ import org.slf4j.LoggerFactory;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-  // Intercept tests
-  //  SyncCallbackIT.class,
-  AsyncCallbackIT.class,
-  //  MethodInterceptIT.class
+  // Instance method intercept tests
+  InstanceMethodSyncCallbackIT.class,
+  InstanceMethodAsyncCallbackIT.class,
+  // Static method intercept tests
+  StaticMethodSyncCallbackIT.class,
+  StaticMethodAsyncCallbackIT.class,
+  // Constructor intercept tests
+  ConstructorSyncCallbackIT.class,
+  ConstructorAsyncCallbackIT.class,
+  // Static field intercept tests
+  StaticFieldSyncCallbackIT.class,
+  StaticFieldAsyncCallbackIT.class,
+  // Instance field intercept tests
+  InstanceFieldSyncCallbackIT.class,
+  InstanceFieldAsyncCallbackIT.class
 })
 public class InterceptTestSuite extends AbstractIntegrationTest {
 

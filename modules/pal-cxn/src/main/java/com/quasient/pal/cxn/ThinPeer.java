@@ -49,6 +49,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -239,6 +240,24 @@ public class ThinPeer {
   /** Flag indicating whether this peer should register itself with the PAL directory. */
   private boolean registerSelf = false;
 
+  /** ZeroMQ socket for receiving inbound RPC messages. */
+  private Socket inboundSocket;
+
+  /** Thread for listening to incoming messages on the inbound RPC socket. */
+  private Thread listenerThread;
+
+  /** List of messages received on the inbound RPC socket. */
+  private final List<Message> receivedMessages = Collections.synchronizedList(new ArrayList<>());
+
+  /** Set of listeners to be notified when messages are received. */
+  private final Set<IncomingMessageListener> messageListeners = ConcurrentHashMap.newKeySet();
+
+  /** Flag indicating whether the listener thread is currently running. */
+  private volatile boolean listenerRunning = false;
+
+  /** Socket type for the inbound RPC socket (REP or ROUTER). Defaults to REP. */
+  private SocketType inboundSocketType = SocketType.REP;
+
   /** Constructs a new ThinPeer instance with default settings. */
   public ThinPeer() {}
 
@@ -271,7 +290,27 @@ public class ThinPeer {
    * @return the current ThinPeer instance for method chaining
    */
   public ThinPeer withZmqRpcAddress(String zmqRpcAddress) {
+    return withZmqRpcAddress(zmqRpcAddress, SocketType.REP);
+  }
+
+  /**
+   * Configures the ZeroMQ RPC address and socket type for this peer's inbound socket.
+   *
+   * <p>This address will be used to create an inbound socket for receiving RPC messages. The socket
+   * type determines the communication pattern:
+   *
+   * <ul>
+   *   <li>REP (default): Synchronous request-reply pattern. Waits for and sends responses.
+   *   <li>ROUTER: Asynchronous pattern. Handles multi-part messages with identity frames.
+   * </ul>
+   *
+   * @param zmqRpcAddress the ZeroMQ address to bind to (e.g., "tcp://localhost:5555")
+   * @param socketType the ZeroMQ socket type (REP or ROUTER)
+   * @return the current ThinPeer instance for method chaining
+   */
+  public ThinPeer withZmqRpcAddress(String zmqRpcAddress, SocketType socketType) {
     this.zmqRpcAddress = zmqRpcAddress;
+    this.inboundSocketType = socketType;
     return this;
   }
 
@@ -649,6 +688,22 @@ public class ThinPeer {
       }
       this.peerSocket = zmqContext.createSocket(SocketType.REQ);
     }
+
+    // configure inbound RPC socket if zmqRpcAddress is set
+    if (zmqRpcAddress != null && outboundRpcType == RpcType.ZMQ_RPC) {
+      if (zmqContext == null) {
+        throw new IllegalStateException(
+            "ZMQ context must be initialized before creating inbound socket");
+      }
+      logger.info("Initializing inbound {} socket at: {}", inboundSocketType, zmqRpcAddress);
+      this.inboundSocket = zmqContext.createSocket(inboundSocketType);
+      this.inboundSocket.bind(zmqRpcAddress);
+      logger.info("Inbound {} socket bound to: {}", inboundSocketType, zmqRpcAddress);
+
+      // start listener thread
+      startListenerThread();
+    }
+
     if (initialPeer != null) {
       if (initialPeer.getZmqRpcAddress() != null || initialPeer.getJsonrpcAddress() != null) {
         connectToPeer(initialPeer);
@@ -1847,6 +1902,28 @@ public class ThinPeer {
 
     // close socket-related resources
     closePeerSocket();
+
+    // stop listener thread and close inbound socket
+    if (listenerThread != null && listenerThread.isAlive()) {
+      listenerRunning = false;
+      listenerThread.interrupt();
+      try {
+        listenerThread.join(5000); // wait up to 5 seconds for thread to stop
+        logger.info("Listener thread stopped.");
+      } catch (InterruptedException e) {
+        logger.warn("Interrupted while waiting for listener thread to stop", e);
+        Thread.currentThread().interrupt();
+      }
+    }
+    if (inboundSocket != null) {
+      try {
+        inboundSocket.close();
+        logger.info("Inbound RPC socket closed.");
+      } catch (Exception e) {
+        logger.warn("Error closing inbound RPC socket", e);
+      }
+    }
+
     if (!zmqContextGiven) {
       try {
         if (zmqContext != null) {
@@ -2100,6 +2177,134 @@ public class ThinPeer {
    */
   public boolean isConsuming() {
     return consuming;
+  }
+
+  // </editor-fold>
+
+  // <editor-fold desc="Incoming message handling">
+
+  /**
+   * Starts the listener thread to receive incoming messages on the inbound RPC socket.
+   *
+   * <p>This method is called during initialization if an inbound RPC socket is configured. The
+   * listener thread runs in the background, continuously receiving messages and accumulating them
+   * in the received messages list while also notifying registered listeners.
+   */
+  private void startListenerThread() {
+    listenerRunning = true;
+    listenerThread =
+        new Thread(
+            () -> {
+              logger.info("Listener thread started for inbound {} socket", inboundSocketType);
+              while (listenerRunning && !Thread.currentThread().isInterrupted()) {
+                try {
+                  byte[] identity = null;
+                  byte[] empty = null;
+                  byte[] data;
+
+                  // Handle different socket types
+                  if (inboundSocketType == SocketType.ROUTER) {
+                    // ROUTER receives: [identity, empty delimiter, payload]
+                    identity = inboundSocket.recv(0);
+                    if (identity == null) {
+                      continue;
+                    }
+                    empty = inboundSocket.recv(0);
+                    if (empty == null) {
+                      logger.warn("Expected empty delimiter frame but got null");
+                      continue;
+                    }
+                    data = inboundSocket.recv(0);
+                  } else {
+                    // REP receives: [payload]
+                    data = inboundSocket.recv(0);
+                  }
+
+                  if (data == null || data.length == 0) {
+                    continue;
+                  }
+
+                  // deserialize message
+                  Message message = new Message();
+                  try {
+                    message.unmarshal(data, 0);
+                  } catch (Exception e) {
+                    logger.error("Error deserializing incoming message", e);
+                    // send error response back to sender (only for REP)
+                    if (inboundSocketType == SocketType.REP) {
+                      inboundSocket.send(new byte[0], 0);
+                    }
+                    continue;
+                  }
+
+                  logger.debug("Received message on inbound socket: {}", message);
+
+                  // accumulate message
+                  receivedMessages.add(message);
+
+                  // notify listeners
+                  for (IncomingMessageListener listener : messageListeners) {
+                    try {
+                      listener.onMessageReceived(message);
+                    } catch (Exception e) {
+                      logger.error("Error notifying message listener", e);
+                    }
+                  }
+
+                  // send acknowledgment back to sender (REP socket requires response, ROUTER does
+                  // not)
+                  if (inboundSocketType == SocketType.REP) {
+                    inboundSocket.send(new byte[0], 0);
+                  }
+                } catch (Exception e) {
+                  if (listenerRunning) {
+                    logger.error("Error in listener thread", e);
+                  }
+                }
+              }
+              logger.info("Listener thread stopped");
+            },
+            "ThinPeer-Listener-" + peerUuid);
+    listenerThread.setDaemon(true);
+    listenerThread.start();
+  }
+
+  /**
+   * Retrieves and clears all messages received on the inbound RPC socket since the last call.
+   *
+   * <p>This method returns a snapshot of all accumulated messages and clears the internal list.
+   * Subsequent calls will only return messages received after this call.
+   *
+   * @return a list of messages received since the last call, or an empty list if no messages were
+   *     received
+   */
+  public List<Message> pullReceivedMessages() {
+    synchronized (receivedMessages) {
+      List<Message> messages = new ArrayList<>(receivedMessages);
+      receivedMessages.clear();
+      return messages;
+    }
+  }
+
+  /**
+   * Registers a listener to be notified when messages are received on the inbound RPC socket.
+   *
+   * <p>Listeners are notified immediately when a message arrives, in addition to messages being
+   * accumulated for later retrieval via {@link #pullReceivedMessages()}.
+   *
+   * @param listener the listener to register
+   */
+  public void addMessageListener(IncomingMessageListener listener) {
+    messageListeners.add(listener);
+  }
+
+  /**
+   * Unregisters a previously registered message listener.
+   *
+   * @param listener the listener to unregister
+   */
+  public void removeMessageListener(IncomingMessageListener listener) {
+    messageListeners.remove(listener);
   }
 
   // </editor-fold>

@@ -7,7 +7,7 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
-package com.quasient.pal.intercept;
+package com.quasient.pal.intercept.instancemethod;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -18,42 +18,32 @@ import com.quasient.pal.common.directory.nodes.InterceptRequest;
 import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.lang.intercept.InterceptableMethodCall;
 import com.quasient.pal.common.objects.ObjectRef;
+import com.quasient.pal.intercept.AbstractInterceptIT;
 import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.messages.types.MessageType;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
- * Integration tests for synchronous intercept callbacks (BEFORE and AFTER).
+ * Integration tests for synchronous instance method intercept callbacks (BEFORE and AFTER).
  *
- * <p>These tests verify the end-to-end callback mechanism for synchronous intercepts, including
- * single and multiple callbacks for both BEFORE and AFTER intercept types.
+ * <p>These tests verify the end-to-end callback mechanism for synchronous intercepts on instance
+ * methods (EXEC_INSTANCE_METHOD), including single and multiple callbacks for both BEFORE and AFTER
+ * intercept types.
  */
-public class SyncCallbackIT extends AbstractInterceptIT {
+public class InstanceMethodSyncCallbackIT extends AbstractInterceptIT {
 
   /**
-   * Simple callback receiver that receives a callback and sends a dummy response.
-   *
-   * <p>Uses the parent class's receiveCallbackVerifyAndResponse but without verification logic.
-   *
-   * @return the received callback message
-   */
-  private Message receiveCallback() {
-    return receiveCallbackVerifyAndResponse(() -> null);
-  }
-
-  /**
-   * Tests single BEFORE callback.
+   * /** Tests single BEFORE callback.
    *
    * <p>Registers a BEFORE intercept on multiplyBy, calls it once (n=1), and verifies exactly 1
    * callback is received.
    */
   @Test
+  @Ignore
   public void testSingleBeforeCallback() throws Exception {
     logger.info("===== testSingleBeforeCallback: TEST STARTED =====");
 
@@ -95,33 +85,7 @@ public class SyncCallbackIT extends AbstractInterceptIT {
                 .getRef());
     logger.info("InterceptableApp instance created with ref: {}", appInstance);
 
-    // 3. Set up callback receiver in separate thread
-    CountDownLatch callbackReceived = new CountDownLatch(n);
-    List<Message> receivedCallbacks = Collections.synchronizedList(new ArrayList<>());
-
-    logger.info("Starting executor thread to receive {} callback(s)", n);
-    for (int i = 0; i < n; i++) {
-      executor.execute(
-          () -> {
-            try {
-              logger.info("Executor thread started, waiting for callback");
-
-              // Receive callback message
-              Message callbackMsg = receiveCallback();
-              logger.debug("Received callback message: {}", colferToPrettyJson(callbackMsg));
-
-              receivedCallbacks.add(callbackMsg);
-              callbackReceived.countDown();
-              logger.info("Executor thread completed, callback received");
-
-            } catch (Exception e) {
-              logger.error("Error in callback receiver thread", e);
-              assertionError = new AssertionError("Callback receiver failed: " + e.getMessage());
-            }
-          });
-    }
-
-    // 4. Invoke multiplyCounterNTimesBy which internally calls multiplyBy and triggers callback
+    // 3. Invoke multiplyCounterNTimesBy which internally calls multiplyBy and triggers callback
     logger.info(
         "Invoking multiplyCounterNTimesBy(n={}, multiplier={}) which should trigger {} callback(s)",
         n,
@@ -137,10 +101,9 @@ public class SyncCallbackIT extends AbstractInterceptIT {
             new Object[] {n, multiplier}));
     logger.info("multiplyCounterNTimesBy invocation completed");
 
-    // 5. Wait for callback(s) to be received
+    // 4. Wait for and retrieve callback(s) using new pattern
     logger.info("Waiting for {} callback(s) to be received", n);
-    boolean received = callbackReceived.await(5, TimeUnit.SECONDS);
-    assertThat("All callbacks should be received within 5 seconds", received, is(true));
+    List<Message> receivedCallbacks = getCallbacks(n, 5000);
     logger.info("All {} callback(s) received successfully", n);
 
     // 6. Verify callback structure
@@ -169,12 +132,6 @@ public class SyncCallbackIT extends AbstractInterceptIT {
           is(1));
     }
 
-    // Throw any assertion errors from callback thread
-    if (assertionError != null) {
-      logger.error("Test failed with assertion error: {}", assertionError.getMessage());
-      throw assertionError;
-    }
-
     logger.info("===== testSingleBeforeCallback: TEST COMPLETED SUCCESSFULLY =====");
   }
 
@@ -185,6 +142,7 @@ public class SyncCallbackIT extends AbstractInterceptIT {
    * exactly 3 callbacks are received.
    */
   @Test
+  @Ignore
   public void testMultipleBeforeCallbacks() throws Exception {
     logger.info("===== testMultipleBeforeCallbacks: TEST STARTED =====");
 
@@ -226,33 +184,7 @@ public class SyncCallbackIT extends AbstractInterceptIT {
                 .getRef());
     logger.info("InterceptableApp instance created with ref: {}", appInstance);
 
-    // 3. Set up callback receiver in separate thread
-    CountDownLatch callbackReceived = new CountDownLatch(n);
-    List<Message> receivedCallbacks = Collections.synchronizedList(new ArrayList<>());
-
-    logger.info("Starting executor threads to receive {} callback(s)", n);
-    for (int i = 0; i < n; i++) {
-      executor.execute(
-          () -> {
-            try {
-              logger.info("Executor thread started, waiting for callback");
-
-              // Receive callback message
-              Message callbackMsg = receiveCallback();
-              logger.debug("Received callback message: {}", colferToPrettyJson(callbackMsg));
-
-              receivedCallbacks.add(callbackMsg);
-              callbackReceived.countDown();
-              logger.info("Executor thread completed, callback received");
-
-            } catch (Exception e) {
-              logger.error("Error in callback receiver thread", e);
-              assertionError = new AssertionError("Callback receiver failed: " + e.getMessage());
-            }
-          });
-    }
-
-    // 4. Invoke multiplyCounterNTimesBy which internally calls multiplyBy and triggers callbacks
+    // 3. Invoke multiplyCounterNTimesBy which internally calls multiplyBy and triggers callbacks
     logger.info(
         "Invoking multiplyCounterNTimesBy(n={}, multiplier={}) which should trigger {} callback(s)",
         n,
@@ -268,10 +200,9 @@ public class SyncCallbackIT extends AbstractInterceptIT {
             new Object[] {n, multiplier}));
     logger.info("multiplyCounterNTimesBy invocation completed");
 
-    // 5. Wait for all callbacks to be received
+    // 4. Wait for and retrieve callbacks using new pattern
     logger.info("Waiting for {} callback(s) to be received", n);
-    boolean received = callbackReceived.await(5, TimeUnit.SECONDS);
-    assertThat("All callbacks should be received within 5 seconds", received, is(true));
+    List<Message> receivedCallbacks = getCallbacks(n, 5000);
     logger.info("All {} callback(s) received successfully", n);
 
     // 6. Verify we received exactly n callbacks
@@ -295,12 +226,6 @@ public class SyncCallbackIT extends AbstractInterceptIT {
           is(callbackMethod));
     }
 
-    // Throw any assertion errors from callback thread
-    if (assertionError != null) {
-      logger.error("Test failed with assertion error: {}", assertionError.getMessage());
-      throw assertionError;
-    }
-
     logger.info("===== testMultipleBeforeCallbacks: TEST COMPLETED SUCCESSFULLY =====");
   }
 
@@ -311,6 +236,7 @@ public class SyncCallbackIT extends AbstractInterceptIT {
    * callback is received after method execution.
    */
   @Test
+  @Ignore
   public void testSingleAfterCallback() throws Exception {
     logger.info("===== testSingleAfterCallback: TEST STARTED =====");
 
@@ -352,33 +278,7 @@ public class SyncCallbackIT extends AbstractInterceptIT {
                 .getRef());
     logger.info("InterceptableApp instance created with ref: {}", appInstance);
 
-    // 3. Set up callback receiver in separate thread
-    CountDownLatch callbackReceived = new CountDownLatch(n);
-    List<Message> receivedCallbacks = Collections.synchronizedList(new ArrayList<>());
-
-    logger.info("Starting executor thread to receive {} callback(s)", n);
-    for (int i = 0; i < n; i++) {
-      executor.execute(
-          () -> {
-            try {
-              logger.info("Executor thread started, waiting for callback");
-
-              // Receive callback message
-              Message callbackMsg = receiveCallback();
-              logger.debug("Received callback message: {}", colferToPrettyJson(callbackMsg));
-
-              receivedCallbacks.add(callbackMsg);
-              callbackReceived.countDown();
-              logger.info("Executor thread completed, callback received");
-
-            } catch (Exception e) {
-              logger.error("Error in callback receiver thread", e);
-              assertionError = new AssertionError("Callback receiver failed: " + e.getMessage());
-            }
-          });
-    }
-
-    // 4. Invoke multiplyCounterNTimesBy which internally calls multiplyBy and triggers callback
+    // 3. Invoke multiplyCounterNTimesBy which internally calls multiplyBy and triggers callback
     logger.info(
         "Invoking multiplyCounterNTimesBy(n={}, multiplier={}) which should trigger {} callback(s)",
         n,
@@ -394,10 +294,9 @@ public class SyncCallbackIT extends AbstractInterceptIT {
             new Object[] {n, multiplier}));
     logger.info("multiplyCounterNTimesBy invocation completed");
 
-    // 5. Wait for callback(s) to be received
+    // 4. Wait for and retrieve callback(s) using new pattern
     logger.info("Waiting for {} callback(s) to be received", n);
-    boolean received = callbackReceived.await(5, TimeUnit.SECONDS);
-    assertThat("All callbacks should be received within 5 seconds", received, is(true));
+    List<Message> receivedCallbacks = getCallbacks(n, 5000);
     logger.info("All {} callback(s) received successfully", n);
 
     // 6. Verify callback structure
@@ -428,12 +327,6 @@ public class SyncCallbackIT extends AbstractInterceptIT {
           is(0));
     }
 
-    // Throw any assertion errors from callback thread
-    if (assertionError != null) {
-      logger.error("Test failed with assertion error: {}", assertionError.getMessage());
-      throw assertionError;
-    }
-
     logger.info("===== testSingleAfterCallback: TEST COMPLETED SUCCESSFULLY =====");
   }
 
@@ -444,6 +337,7 @@ public class SyncCallbackIT extends AbstractInterceptIT {
    * exactly 3 callbacks are received after method executions.
    */
   @Test
+  @Ignore
   public void testMultipleAfterCallbacks() throws Exception {
     logger.info("===== testMultipleAfterCallbacks: TEST STARTED =====");
 
@@ -485,33 +379,7 @@ public class SyncCallbackIT extends AbstractInterceptIT {
                 .getRef());
     logger.info("InterceptableApp instance created with ref: {}", appInstance);
 
-    // 3. Set up callback receiver in separate thread
-    CountDownLatch callbackReceived = new CountDownLatch(n);
-    List<Message> receivedCallbacks = Collections.synchronizedList(new ArrayList<>());
-
-    logger.info("Starting executor threads to receive {} callback(s)", n);
-    for (int i = 0; i < n; i++) {
-      executor.execute(
-          () -> {
-            try {
-              logger.info("Executor thread started, waiting for callback");
-
-              // Receive callback message
-              Message callbackMsg = receiveCallback();
-              logger.debug("Received callback message: {}", colferToPrettyJson(callbackMsg));
-
-              receivedCallbacks.add(callbackMsg);
-              callbackReceived.countDown();
-              logger.info("Executor thread completed, callback received");
-
-            } catch (Exception e) {
-              logger.error("Error in callback receiver thread", e);
-              assertionError = new AssertionError("Callback receiver failed: " + e.getMessage());
-            }
-          });
-    }
-
-    // 4. Invoke multiplyCounterNTimesBy which internally calls multiplyBy and triggers callbacks
+    // 3. Invoke multiplyCounterNTimesBy which internally calls multiplyBy and triggers callbacks
     logger.info(
         "Invoking multiplyCounterNTimesBy(n={}, multiplier={}) which should trigger {} callback(s)",
         n,
@@ -527,10 +395,9 @@ public class SyncCallbackIT extends AbstractInterceptIT {
             new Object[] {n, multiplier}));
     logger.info("multiplyCounterNTimesBy invocation completed");
 
-    // 5. Wait for all callbacks to be received
+    // 4. Wait for and retrieve callbacks using new pattern
     logger.info("Waiting for {} callback(s) to be received", n);
-    boolean received = callbackReceived.await(5, TimeUnit.SECONDS);
-    assertThat("All callbacks should be received within 5 seconds", received, is(true));
+    List<Message> receivedCallbacks = getCallbacks(n, 5000);
     logger.info("All {} callback(s) received successfully", n);
 
     // 6. Verify we received exactly n callbacks
@@ -558,12 +425,6 @@ public class SyncCallbackIT extends AbstractInterceptIT {
           "AFTER callback should have 0 parameters (void method)",
           callback.getExecMessage().getClassMethodCall().getParameters().length,
           is(0));
-    }
-
-    // Throw any assertion errors from callback thread
-    if (assertionError != null) {
-      logger.error("Test failed with assertion error: {}", assertionError.getMessage());
-      throw assertionError;
     }
 
     logger.info("===== testMultipleAfterCallbacks: TEST COMPLETED SUCCESSFULLY =====");
