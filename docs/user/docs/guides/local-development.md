@@ -86,7 +86,7 @@ public class HelloService {
 <dependencies>
     <dependency>
         <groupId>com.quasient.pal</groupId>
-        <artifactId>pal-core-api</artifactId>
+        <artifactId>pal-api</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </dependency>
 </dependencies>

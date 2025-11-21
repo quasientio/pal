@@ -262,7 +262,7 @@
                             -Xplugin:ErrorProne
                             -Xep:JUnitIncompatibleType:OFF
                             -Xep:DeadException:WARN
-                            -XepExcludedPaths:.*/(pal-serdes/src/main/java/com/quasient/pal/messages/colfer.*|pal-benchmarks/target/generated-sources/.*)
+                            -XepExcludedPaths:.*/(pal-api/src/main/java/com/quasient/pal/messages/colfer.*|pal-benchmarks/target/generated-sources/.*)
                             -Xep:GuardedBy:OFF
                         </arg>
                     </compilerArgs>
@@ -505,17 +505,12 @@
             <!-- OWN DEPENDENCIES -->
             <dependency>
                 <groupId>com.quasient.pal</groupId>
-                <artifactId>pal-core-api</artifactId>
+                <artifactId>pal-api</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.quasient.pal</groupId>
-                <artifactId>pal-serdes</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.quasient.pal</groupId>
-                <artifactId>pal-cxn</artifactId>
+                <artifactId>pal-client</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
@@ -758,11 +753,10 @@
     </dependencyManagement>
 
     <modules>
-        <module>modules/pal-core-api</module>
-        <module>modules/pal-runtime</module>
+        <module>modules/pal-api</module>
         <module>modules/pal-weave</module>
-        <module>modules/pal-serdes</module>
-        <module>modules/pal-cxn</module>
+        <module>modules/pal-client</module>
+        <module>modules/pal-runtime</module>
         <module>modules/pal-cli</module>
         <module>modules/itt-apps</module>
         <module>modules/itt</module>

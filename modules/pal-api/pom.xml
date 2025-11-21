@@ -13,9 +13,9 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
-    <artifactId>pal-core-api</artifactId>
+    <artifactId>pal-api</artifactId>
     <packaging>jar</packaging>
-    <name>API classes</name>
+    <name>API and serialization library</name>
 
     <parent>
         <groupId>com.quasient.pal</groupId>
@@ -44,6 +44,12 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>${jacoco.plugin.version}</version>
+                <configuration>
+                    <!-- Exclude auto-generated Colfer message classes from coverage -->
+                    <excludes>
+                        <exclude>com/quasient/pal/messages/colfer/**</exclude>
+                    </excludes>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>
@@ -59,7 +65,20 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <!-- Override PMD configuration to exclude Colfer-generated classes -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-pmd-plugin</artifactId>
+                <configuration>
+                    <!-- Append to parent's excludes instead of replacing -->
+                    <excludes combine.children="append">
+                        <exclude>com/quasient/pal/messages/colfer/**/*.java</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
         </plugins>
+
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
@@ -76,6 +95,7 @@
 
     <!-- DEPENDENCIES -->
     <dependencies>
+        <!-- From pal-core-api -->
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
@@ -127,6 +147,24 @@
         <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>fastjson</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
         </dependency>
     </dependencies>
 </project>

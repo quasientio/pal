@@ -115,15 +115,11 @@
         <!-- OWN DEPENDENCIES -->
         <dependency>
             <groupId>com.quasient.pal</groupId>
-            <artifactId>pal-core-api</artifactId>
+            <artifactId>pal-api</artifactId>
         </dependency>
         <dependency>
             <groupId>com.quasient.pal</groupId>
-            <artifactId>pal-serdes</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.quasient.pal</groupId>
-            <artifactId>pal-cxn</artifactId>
+            <artifactId>pal-client</artifactId>
         </dependency>
         <dependency>
             <groupId>com.quasient.pal</groupId>

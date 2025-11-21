@@ -222,22 +222,16 @@
                             </includes>
                         </filter>
                         <filter>
-                            <artifact>com.quasient.pal:pal-core-api</artifact>
+                            <artifact>com.quasient.pal:pal-api</artifact>
                             <includes>
-                                <include>com/quasient/pal/common/**</include>
+                                <include>com/quasient/pal/**</include>
                             </includes>
                         </filter>
                         <filter>
-                            <artifact>com.quasient.pal:pal-cxn</artifact>
+                            <artifact>com.quasient.pal:pal-client</artifact>
                             <includes>
                                 <include>com/quasient/pal/cxn/**</include>
                                 <include>com/quasient/pal/messages/**</include>
-                            </includes>
-                        </filter>
-                        <filter>
-                            <artifact>com.quasient.pal:pal-serdes</artifact>
-                            <includes>
-                                <include>com/quasient/pal/**</include>
                             </includes>
                         </filter>
                         <filter>
@@ -306,15 +300,11 @@
         <!-- OWN DEPENDENCIES -->
         <dependency>
             <groupId>com.quasient.pal</groupId>
-            <artifactId>pal-core-api</artifactId>
+            <artifactId>pal-api</artifactId>
         </dependency>
         <dependency>
             <groupId>com.quasient.pal</groupId>
-            <artifactId>pal-serdes</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.quasient.pal</groupId>
-            <artifactId>pal-cxn</artifactId>
+            <artifactId>pal-client</artifactId>
         </dependency>
         <dependency>
             <groupId>com.quasient.pal</groupId>

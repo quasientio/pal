@@ -67,7 +67,7 @@
         <!-- OWN DEPENDENCIES -->
         <dependency>
             <groupId>com.quasient.pal</groupId>
-            <artifactId>pal-core-api</artifactId>
+            <artifactId>pal-api</artifactId>
         </dependency>
         <!-- OTHER DEPENDENCIES -->
         <dependency>

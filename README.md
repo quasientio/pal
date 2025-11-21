@@ -151,8 +151,8 @@ Because operations are messages, they can be logged (enabling time-travel debugg
 PAL consists of:
 - **pal-weave:** AspectJ aspects that intercept operations at build time
 - **pal-runtime:** Message creation, routing, logging, and interception at runtime
-- **pal-serdes:** Binary (Colfer) and JSON-RPC serialization
-- **pal-cxn:** Directory service (etcd) and peer management
+- **pal-api:** Core types, interfaces, common utilities, and message serialization (Colfer/JSON-RPC)
+- **pal-client:** Directory service (etcd), RPC clients with fluent DSL, and peer management
 - **pal-cli:** Command-line interface for running peers and inspecting logs
 
 ## License

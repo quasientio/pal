@@ -138,7 +138,7 @@
         </dependency>
         <dependency>
             <groupId>com.quasient.pal</groupId>
-            <artifactId>pal-core-api</artifactId>
+            <artifactId>pal-api</artifactId>
             <scope>compile</scope>
         </dependency>
         <dependency>

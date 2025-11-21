@@ -18,8 +18,8 @@ fi
 # activate the py venv so we can import javalang
 source $PAL_HOME/venv/bin/activate
 
-# colf-linux must be run from the serdes root path (ie. $PAL_HOME/serdes)
-cd $PAL_HOME/modules/pal-serdes
+# colf-linux must be run from the pal-api root path (ie. $PAL_HOME/pal-api)
+cd $PAL_HOME/modules/pal-api
 
 # re-compile all schemas
 colf-linux -f \
