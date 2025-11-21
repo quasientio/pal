@@ -94,6 +94,14 @@ public class IncomingMessageDispatcher {
   @Inject
   private MetaMessageDispatcher metaMessageDispatcher;
 
+  // intercept callback dispatcher
+
+  /** Dispatcher that processes intercept callback requests from intercepted peers. */
+  @SuppressWarnings("unused")
+  @Inject
+  private com.quasient.pal.core.intercept.IncomingInterceptCallbackDispatcher
+      incomingInterceptCallbackDispatcher;
+
   /**
    * Dispatches an execution message to its appropriate handler based on the specified message type.
    *
@@ -152,5 +160,21 @@ public class IncomingMessageDispatcher {
    */
   public MetaMessage incomingMetaMessage(MetaMessage metaMessage) {
     return metaMessageDispatcher.incomingMetaMessage(metaMessage);
+  }
+
+  /**
+   * Delegates the provided intercept callback request to the intercept callback dispatcher for
+   * processing.
+   *
+   * <p>This method is invoked when an intercepted peer sends a callback request to this peer. The
+   * dispatcher will resolve the callback handler, invoke it with an {@link
+   * com.quasient.pal.core.intercept.InterceptContext}, and return a response.
+   *
+   * @param callbackRequest the intercept callback request to be processed
+   * @return the intercept callback response after being handled by the callback
+   */
+  public com.quasient.pal.messages.colfer.InterceptCallbackResponse incomingInterceptCallback(
+      com.quasient.pal.messages.colfer.InterceptCallbackRequest callbackRequest) {
+    return incomingInterceptCallbackDispatcher.handleCallback(callbackRequest);
   }
 }

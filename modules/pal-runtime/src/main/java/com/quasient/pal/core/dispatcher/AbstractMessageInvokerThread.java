@@ -65,6 +65,12 @@ public abstract class AbstractMessageInvokerThread extends Thread {
   /** Counter tracking the number of META dispatch errors encountered. */
   private final AtomicLong metaRequestErrors = new AtomicLong(0);
 
+  /** Counter tracking the number of INTERCEPT callback requests successfully dispatched. */
+  private final AtomicLong interceptRequestsDispatched = new AtomicLong(0);
+
+  /** Counter tracking the number of INTERCEPT callback dispatch errors encountered. */
+  private final AtomicLong interceptRequestErrors = new AtomicLong(0);
+
   /** List of listeners to be notified whenever a message is dispatched. */
   private final List<MessageDispatchListener> messageDispatchListeners = new ArrayList<>();
 
@@ -188,14 +194,17 @@ public abstract class AbstractMessageInvokerThread extends Thread {
           "Stopped invoker thread: {}"
               + ", EXEC requests: dispatched={}, errors={}"
               + "; CONTROL requests dispatched={}, errors={}"
-              + "; META requests dispatched={}, errors={}",
+              + "; META requests dispatched={}, errors={}"
+              + "; INTERCEPT requests dispatched={}, errors={}",
           getName(),
           getExecRequestsDispatched(),
           getExecRequestErrors(),
           getControlRequestsDispatched(),
           getControlRequestErrors(),
           getMetaRequestsDispatched(),
-          getMetaRequestErrors());
+          getMetaRequestErrors(),
+          getInterceptRequestsDispatched(),
+          getInterceptRequestErrors());
     }
   }
 
@@ -241,6 +250,14 @@ public abstract class AbstractMessageInvokerThread extends Thread {
     final MetaMessage metaMessage = message.getMetaMessage();
     if (metaMessage != null) {
       final Message response = messageBuilder.wrap(dispatch(message.getMetaMessage()));
+      notifyMessageDispatched(message);
+      return response;
+    }
+
+    final com.quasient.pal.messages.colfer.InterceptCallbackRequest callbackRequest =
+        message.getInterceptCallbackRequest();
+    if (callbackRequest != null) {
+      final Message response = messageBuilder.wrap(dispatch(callbackRequest));
       notifyMessageDispatched(message);
       return response;
     }
@@ -343,11 +360,41 @@ public abstract class AbstractMessageInvokerThread extends Thread {
   }
 
   /**
+   * Dispatches the given InterceptCallbackRequest by utilizing the incoming message dispatcher,
+   * updates relevant dispatch metrics, and logs the dispatch details.
+   *
+   * @param callbackRequest the InterceptCallbackRequest to be dispatched
+   * @return the response InterceptCallbackResponse generated after processing
+   */
+  private com.quasient.pal.messages.colfer.InterceptCallbackResponse dispatch(
+      com.quasient.pal.messages.colfer.InterceptCallbackRequest callbackRequest) {
+    boolean dispatched = false;
+    com.quasient.pal.messages.colfer.InterceptCallbackResponse responseMsg;
+    try {
+      responseMsg = incomingMessageDispatcher.incomingInterceptCallback(callbackRequest);
+      dispatched = true;
+    } finally {
+      DispatchResultType resultType =
+          dispatched ? DispatchResultType.OK : DispatchResultType.DISPATCH_ERROR;
+      endDispatch(MessageFamily.INTERCEPT, resultType);
+    }
+
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          "Invoker successfully dispatched Intercept Callback w/id: {} , response id: {}",
+          callbackRequest.getCallbackId(),
+          responseMsg.getCallbackId());
+    }
+    return responseMsg;
+  }
+
+  /**
    * Finalizes the dispatch process by updating dispatch counts for the specified message family
    * based on the result of the dispatch operation. It also resets the dispatch sequence in the
    * MessageBuilder.
    *
-   * @param dispatchedMessageType the family of the dispatched message (EXEC, CONTROL, or META)
+   * @param dispatchedMessageType the family of the dispatched message (EXEC, CONTROL, META, or
+   *     INTERCEPT)
    * @param resultType the outcome of the dispatch operation (OK or DISPATCH_ERROR)
    */
   private void endDispatch(MessageFamily dispatchedMessageType, DispatchResultType resultType) {
@@ -373,6 +420,13 @@ public abstract class AbstractMessageInvokerThread extends Thread {
           metaRequestErrors.getAndIncrement();
         }
       }
+      case INTERCEPT -> {
+        if (resultType.equals(DispatchResultType.OK)) {
+          interceptRequestsDispatched.getAndIncrement();
+        } else {
+          interceptRequestErrors.getAndIncrement();
+        }
+      }
       default -> {}
     }
 
@@ -383,12 +437,13 @@ public abstract class AbstractMessageInvokerThread extends Thread {
   /**
    * Retrieves the total number of requests dispatched across all message families.
    *
-   * @return the sum of dispatched EXEC, CONTROL, and META requests
+   * @return the sum of dispatched EXEC, CONTROL, META, and INTERCEPT requests
    */
   final long getRequestsDispatched() {
     return getExecRequestsDispatched()
         + getControlRequestsDispatched()
-        + getMetaRequestsDispatched();
+        + getMetaRequestsDispatched()
+        + getInterceptRequestsDispatched();
   }
 
   /**
@@ -421,10 +476,13 @@ public abstract class AbstractMessageInvokerThread extends Thread {
   /**
    * Retrieves the total number of dispatch errors across all message families.
    *
-   * @return the sum of EXEC, CONTROL, and META dispatch errors
+   * @return the sum of EXEC, CONTROL, META, and INTERCEPT dispatch errors
    */
   final long getRequestErrors() {
-    return getExecRequestErrors() + getControlRequestErrors() + getMetaRequestErrors();
+    return getExecRequestErrors()
+        + getControlRequestErrors()
+        + getMetaRequestErrors()
+        + getInterceptRequestErrors();
   }
 
   /**
@@ -452,6 +510,24 @@ public abstract class AbstractMessageInvokerThread extends Thread {
    */
   final long getMetaRequestErrors() {
     return metaRequestErrors.get();
+  }
+
+  /**
+   * Retrieves the number of successfully dispatched INTERCEPT callback requests.
+   *
+   * @return the count of dispatched INTERCEPT requests
+   */
+  final long getInterceptRequestsDispatched() {
+    return interceptRequestsDispatched.get();
+  }
+
+  /**
+   * Retrieves the number of dispatch errors encountered for INTERCEPT callback messages.
+   *
+   * @return the count of INTERCEPT dispatch errors
+   */
+  final long getInterceptRequestErrors() {
+    return interceptRequestErrors.get();
   }
 
   /**

@@ -55,3 +55,71 @@ type InterceptResponse struct {
 	responseToId text
 	result       bool
 }
+
+/*
+Values for phase:
+    BEFORE = 1;
+    AFTER = 2;
+*/
+
+/**
+ * Request sent from intercepted peer to intercepting peer when an
+ * intercept matches an operation.
+ *
+ * This message supports both registered callbacks (via callbackId) and
+ * static method callbacks (via callbackClass + callbackMethod).
+ */
+type InterceptCallbackRequest struct {
+	// Unique ID for this callback invocation
+	callbackId text
+
+	// Phase of callback: 1=BEFORE, 2=AFTER (for AROUND intercepts)
+	phase uint8
+
+	// Type of intercept: 1=BEFORE, 2=AFTER, 3=AROUND, 4=BEFORE_ASYNC, 5=AFTER_ASYNC
+	interceptType uint8
+
+	// UUID of peer being intercepted
+	interceptedPeer text
+
+	// Callback routing - use callbackId OR (callbackClass + callbackMethod)
+	registeredCallbackId text // If present, lookup registered callback
+	callbackClass        text // Or use reflection for static method
+	callbackMethod       text // Static method name
+
+	// Always present: operation metadata (class, method, args)
+	exec ExecMessage
+
+	// Phase 2 only (AFTER phase of AROUND, or standalone AFTER intercept)
+	returnValue     Obj             // Return value after execution
+	returnValueRef  uint32          // ObjectRef for return value
+	isVoid          bool            // Whether operation returns void
+	thrownException RaisedThrowable // If operation threw exception
+}
+
+/**
+ * Response sent from intercepting peer back to intercepted peer
+ * after callback execution.
+ */
+type InterceptCallbackResponse struct {
+	// Matches request callbackId
+	callbackId text
+
+	// Which phase this response is for: 1=BEFORE, 2=AFTER
+	phase uint8
+
+	// Phase 1 (BEFORE phase of AROUND, or standalone BEFORE)
+	mutatedArgs []Obj // If non-empty, replace original args
+
+	// Proceed control (AROUND only, Phase 1 only)
+	shouldProceed bool // If false, skip invoke()
+
+	// Phase 2 (AFTER phase of AROUND, or standalone AFTER)
+	overrideReturn bool   // Whether to override return value
+	newReturnValue Obj    // New return value
+	newReturnRef   uint32 // ObjectRef for new return (not currently used)
+
+	// Both phases: exception throwing
+	throwException bool            // Throw instead of return
+	exception      RaisedThrowable // Exception to throw
+}

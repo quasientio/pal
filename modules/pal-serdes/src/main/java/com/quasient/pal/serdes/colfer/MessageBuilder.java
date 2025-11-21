@@ -46,6 +46,8 @@ import com.quasient.pal.messages.colfer.InstanceFieldGet;
 import com.quasient.pal.messages.colfer.InstanceFieldPut;
 import com.quasient.pal.messages.colfer.InstanceFieldPutDone;
 import com.quasient.pal.messages.colfer.InstanceMethodCall;
+import com.quasient.pal.messages.colfer.InterceptCallbackRequest;
+import com.quasient.pal.messages.colfer.InterceptCallbackResponse;
 import com.quasient.pal.messages.colfer.InterceptKeyMessage;
 import com.quasient.pal.messages.colfer.InterceptMessage;
 import com.quasient.pal.messages.colfer.InterceptResponse;
@@ -2859,6 +2861,30 @@ public final class MessageBuilder {
     return new Message()
         .withMessageType(MessageType.INTERCEPT_RESPONSE.getId())
         .withInterceptResponse(interceptResponse);
+  }
+
+  /**
+   * Wraps an {@link InterceptCallbackRequest} into a generic {@link Message}.
+   *
+   * @param interceptCallbackRequest the intercept callback request to wrap
+   * @return a {@code Message} containing the intercept callback request
+   */
+  public Message wrap(InterceptCallbackRequest interceptCallbackRequest) {
+    return new Message()
+        .withMessageType(MessageType.INTERCEPT_CALLBACK_REQUEST.getId())
+        .withInterceptCallbackRequest(interceptCallbackRequest);
+  }
+
+  /**
+   * Wraps an {@link InterceptCallbackResponse} into a generic {@link Message}.
+   *
+   * @param interceptCallbackResponse the intercept callback response to wrap
+   * @return a {@code Message} containing the intercept callback response
+   */
+  public Message wrap(InterceptCallbackResponse interceptCallbackResponse) {
+    return new Message()
+        .withMessageType(MessageType.INTERCEPT_CALLBACK_RESPONSE.getId())
+        .withInterceptCallbackResponse(interceptCallbackResponse);
   }
 
   /**

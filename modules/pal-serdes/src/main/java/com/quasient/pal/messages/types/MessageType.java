@@ -64,6 +64,12 @@ public enum MessageType {
   /** Represents an intercept response message. */
   INTERCEPT_RESPONSE(MessageFamily.INTERCEPT, (byte) 53),
 
+  /** Represents an intercept callback request message. */
+  INTERCEPT_CALLBACK_REQUEST(MessageFamily.INTERCEPT, (byte) 54),
+
+  /** Represents an intercept callback response message. */
+  INTERCEPT_CALLBACK_RESPONSE(MessageFamily.INTERCEPT, (byte) 55),
+
   /** Represents a meta message request. */
   META_MESSAGE_REQUEST(MessageFamily.META, (byte) 60),
 
