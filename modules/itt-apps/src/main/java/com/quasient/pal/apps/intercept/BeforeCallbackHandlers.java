@@ -9,8 +9,8 @@
  */
 package com.quasient.pal.apps.intercept;
 
-import com.quasient.pal.core.intercept.InterceptCallbackResponse;
-import com.quasient.pal.core.intercept.InterceptContext;
+import com.quasient.pal.common.lang.intercept.InterceptCallbackResponse;
+import com.quasient.pal.common.lang.intercept.InterceptContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

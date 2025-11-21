@@ -141,11 +141,6 @@
             <artifactId>pal-api</artifactId>
             <scope>compile</scope>
         </dependency>
-        <dependency>
-            <groupId>com.quasient.pal</groupId>
-            <artifactId>pal-runtime</artifactId>
-            <scope>compile</scope>
-        </dependency>
 
         <!-- OTHER DEPENDENCIES -->
         <dependency>

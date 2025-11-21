@@ -7,10 +7,8 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
-package com.quasient.pal.core.intercept;
+package com.quasient.pal.common.lang.intercept;
 
-import com.quasient.pal.common.lang.intercept.InterceptPhase;
-import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import java.util.Arrays;
 import java.util.Objects;
@@ -352,30 +350,34 @@ public final class InterceptContext {
   /**
    * Returns whether any arguments have been modified via {@link #setArg(int, Object)}.
    *
+   * <p><b>Internal API:</b> This method is primarily for use by callback dispatchers.
+   *
    * @return {@code true} if arguments were modified, {@code false} otherwise
    */
-  boolean isArgsModified() {
+  public boolean isArgsModified() {
     return argsModified;
   }
 
   /**
    * Returns whether the return value has been modified via {@link #setReturnValue(Object)}.
    *
+   * <p><b>Internal API:</b> This method is primarily for use by callback dispatchers.
+   *
    * @return {@code true} if return value was modified, {@code false} otherwise
    */
-  boolean isReturnValueModified() {
+  public boolean isReturnValueModified() {
     return returnValueModified;
   }
 
   /**
    * Returns the (possibly modified) arguments array for internal use.
    *
-   * <p>Package-private for use by response builders.
+   * <p><b>Internal API:</b> This method is primarily for use by callback dispatchers.
    *
    * @return the arguments array
    */
   @Nullable
-  Object[] getArgsInternal() {
+  public Object[] getArgsInternal() {
     return args;
   }
 }

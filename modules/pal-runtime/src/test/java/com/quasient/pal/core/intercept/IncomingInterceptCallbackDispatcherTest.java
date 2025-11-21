@@ -15,6 +15,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import com.quasient.pal.common.lang.intercept.InterceptCallback;
+import com.quasient.pal.common.lang.intercept.InterceptContext;
 import com.quasient.pal.common.lang.intercept.InterceptPhase;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.InterceptCallbackRequest;
@@ -49,7 +51,7 @@ public class IncomingInterceptCallbackDispatcherTest {
   public void testRegisterCallback() {
     InterceptCallback callback =
         (ctx) -> {
-          return new com.quasient.pal.core.intercept.InterceptCallbackResponse();
+          return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
         };
 
     dispatcher.registerCallback("test-callback", callback);
@@ -65,7 +67,7 @@ public class IncomingInterceptCallbackDispatcherTest {
   public void testRegisterCallbackRejectsNullId() {
     InterceptCallback callback =
         (ctx) -> {
-          return new com.quasient.pal.core.intercept.InterceptCallbackResponse();
+          return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
         };
 
     try {
@@ -84,7 +86,7 @@ public class IncomingInterceptCallbackDispatcherTest {
   public void testRegisterCallbackRejectsEmptyId() {
     InterceptCallback callback =
         (ctx) -> {
-          return new com.quasient.pal.core.intercept.InterceptCallbackResponse();
+          return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
         };
 
     try {
@@ -117,11 +119,11 @@ public class IncomingInterceptCallbackDispatcherTest {
   public void testRegisterCallbackRejectsDuplicates() {
     InterceptCallback callback1 =
         (ctx) -> {
-          return new com.quasient.pal.core.intercept.InterceptCallbackResponse();
+          return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
         };
     InterceptCallback callback2 =
         (ctx) -> {
-          return new com.quasient.pal.core.intercept.InterceptCallbackResponse();
+          return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
         };
 
     dispatcher.registerCallback("test-callback", callback1);
@@ -143,7 +145,7 @@ public class IncomingInterceptCallbackDispatcherTest {
   public void testUnregisterCallback() {
     InterceptCallback callback =
         (ctx) -> {
-          return new com.quasient.pal.core.intercept.InterceptCallbackResponse();
+          return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
         };
 
     dispatcher.registerCallback("test-callback", callback);
@@ -177,7 +179,7 @@ public class IncomingInterceptCallbackDispatcherTest {
         (ctx) -> {
           invoked[0] = true;
           assertEquals(InterceptPhase.BEFORE, ctx.getPhase());
-          return new com.quasient.pal.core.intercept.InterceptCallbackResponse();
+          return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
         };
 
     dispatcher.registerCallback("test-callback", callback);
@@ -258,7 +260,7 @@ public class IncomingInterceptCallbackDispatcherTest {
           // Note: In this test we can't actually mutate args because extractArguments returns empty
           // array
           // This test verifies the response structure when isArgsModified() would return true
-          return new com.quasient.pal.core.intercept.InterceptCallbackResponse();
+          return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
         };
 
     dispatcher.registerCallback("test-callback", callback);
@@ -286,8 +288,8 @@ public class IncomingInterceptCallbackDispatcherTest {
   public void testHandleCallbackWithShouldProceedFalse() {
     InterceptCallback callback =
         (ctx) -> {
-          com.quasient.pal.core.intercept.InterceptCallbackResponse response =
-              new com.quasient.pal.core.intercept.InterceptCallbackResponse();
+          com.quasient.pal.common.lang.intercept.InterceptCallbackResponse response =
+              new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
           response.setShouldProceed(false);
           return response;
         };
@@ -334,7 +336,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     InterceptCallback callback =
         (ctx) -> {
           assertEquals(InterceptPhase.AFTER, ctx.getPhase());
-          return new com.quasient.pal.core.intercept.InterceptCallbackResponse();
+          return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
         };
 
     dispatcher.registerCallback("test-callback", callback);
@@ -364,9 +366,9 @@ public class IncomingInterceptCallbackDispatcherTest {
      * @param ctx the intercept context
      * @return a callback response
      */
-    public static com.quasient.pal.core.intercept.InterceptCallbackResponse testStaticCallback(
-        InterceptContext ctx) {
-      return new com.quasient.pal.core.intercept.InterceptCallbackResponse();
+    public static com.quasient.pal.common.lang.intercept.InterceptCallbackResponse
+        testStaticCallback(InterceptContext ctx) {
+      return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
     }
 
     /**
@@ -375,9 +377,9 @@ public class IncomingInterceptCallbackDispatcherTest {
      * @param ctx the intercept context
      * @return a callback response
      */
-    public com.quasient.pal.core.intercept.InterceptCallbackResponse testInstanceCallback(
+    public com.quasient.pal.common.lang.intercept.InterceptCallbackResponse testInstanceCallback(
         InterceptContext ctx) {
-      return new com.quasient.pal.core.intercept.InterceptCallbackResponse();
+      return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
     }
   }
 

@@ -7,7 +7,7 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
-package com.quasient.pal.core.intercept;
+package com.quasient.pal.common.lang.intercept;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -18,8 +18,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import com.quasient.pal.common.lang.intercept.InterceptPhase;
-import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import org.junit.Before;
 import org.junit.Test;

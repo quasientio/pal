@@ -7,7 +7,7 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
-package com.quasient.pal.core.intercept;
+package com.quasient.pal.common.lang.intercept;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;

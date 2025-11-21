@@ -168,7 +168,7 @@ public class IncomingMessageDispatcher {
    *
    * <p>This method is invoked when an intercepted peer sends a callback request to this peer. The
    * dispatcher will resolve the callback handler, invoke it with an {@link
-   * com.quasient.pal.core.intercept.InterceptContext}, and return a response.
+   * com.quasient.pal.common.lang.intercept.InterceptContext}, and return a response.
    *
    * @param callbackRequest the intercept callback request to be processed
    * @return the intercept callback response after being handled by the callback

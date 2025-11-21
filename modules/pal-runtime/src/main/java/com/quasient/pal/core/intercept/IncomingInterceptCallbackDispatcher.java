@@ -9,6 +9,8 @@
  */
 package com.quasient.pal.core.intercept;
 
+import com.quasient.pal.common.lang.intercept.InterceptCallback;
+import com.quasient.pal.common.lang.intercept.InterceptContext;
 import com.quasient.pal.common.lang.intercept.InterceptPhase;
 import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.messages.colfer.InterceptCallbackRequest;
@@ -89,7 +91,7 @@ public class IncomingInterceptCallbackDispatcher {
       InterceptContext context = buildContext(request);
 
       // Invoke the callback
-      com.quasient.pal.core.intercept.InterceptCallbackResponse userResponse =
+      com.quasient.pal.common.lang.intercept.InterceptCallbackResponse userResponse =
           callback.handle(context);
 
       // Build the wire response
@@ -149,7 +151,7 @@ public class IncomingInterceptCallbackDispatcher {
             "Callback method must be static: " + className + "." + methodName);
       }
 
-      if (!com.quasient.pal.core.intercept.InterceptCallbackResponse.class.isAssignableFrom(
+      if (!com.quasient.pal.common.lang.intercept.InterceptCallbackResponse.class.isAssignableFrom(
           callbackMethod.getReturnType())) {
         throw new IllegalArgumentException(
             "Callback method must return InterceptCallbackResponse: "
@@ -160,7 +162,7 @@ public class IncomingInterceptCallbackDispatcher {
 
       // Create a wrapper that invokes the static method
       return (ctx) ->
-          (com.quasient.pal.core.intercept.InterceptCallbackResponse)
+          (com.quasient.pal.common.lang.intercept.InterceptCallbackResponse)
               callbackMethod.invoke(null, ctx);
     }
   }
@@ -259,7 +261,7 @@ public class IncomingInterceptCallbackDispatcher {
   private InterceptCallbackResponse buildWireResponse(
       InterceptCallbackRequest request,
       InterceptContext context,
-      com.quasient.pal.core.intercept.InterceptCallbackResponse userResponse) {
+      com.quasient.pal.common.lang.intercept.InterceptCallbackResponse userResponse) {
 
     InterceptCallbackResponse wireResponse = new InterceptCallbackResponse();
     wireResponse.setCallbackId(request.getCallbackId());
