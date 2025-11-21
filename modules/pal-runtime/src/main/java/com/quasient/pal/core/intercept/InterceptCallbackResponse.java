@@ -9,8 +9,6 @@
  */
 package com.quasient.pal.core.intercept;
 
-import com.quasient.pal.common.lang.intercept.InterceptPhase;
-import com.quasient.pal.common.lang.intercept.InterceptType;
 import javax.annotation.Nullable;
 
 /**

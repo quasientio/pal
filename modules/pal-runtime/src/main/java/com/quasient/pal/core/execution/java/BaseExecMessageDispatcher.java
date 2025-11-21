@@ -92,7 +92,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         withPubOrWal || (beforeInterceptCheck != null && beforeInterceptCheck.needsExecMessage());
 
     Context ctx = null;
-    ExecMessage beforeExecMsg;
+    ExecMessage beforeExecMsg = null;
 
     if (needsBeforeMessages) {
       // Create (or get cached) context instance from join point
@@ -106,7 +106,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       final ExecMessage beforeExecResponseMsg =
           messageGateway.sendExecMessage(messageBuilder.wrap(beforeExecMsg), ExecPhase.BEFORE);
 
-      // 3. Send intercept callbacks (if any remote intercepts matched)
+      // 3. Send old-style intercept callbacks (if any remote intercepts matched)
       if (beforeInterceptCheck != null && beforeInterceptCheck.hasRemoteIntercepts()) {
         interceptCallbackDispatcher.sendCallbacks(beforeInterceptCheck, beforeExecMsg);
       }
@@ -115,11 +115,45 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       // handleLocalIntercepts(beforeInterceptCheck.getLocalIntercepts(), pjp, args);
     }
 
+    // 3a. Send new-style BEFORE intercept callbacks and apply argument mutations
+    Object[] finalArgs = args;
+    if (beforeInterceptCheck != null
+        && beforeInterceptCheck.hasRemoteIntercepts()
+        && beforeExecMsg != null) {
+      com.quasient.pal.core.intercept.InterceptCallbackDispatcher.ConsolidatedCallbackResponse
+          callbackResponse =
+              interceptCallbackDispatcher.sendBeforeCallbacks(
+                  beforeInterceptCheck, beforeExecMsg, args);
+
+      // Check if callback wants to throw an exception
+      if (callbackResponse.shouldThrowException()) {
+        throw callbackResponse.getExceptionToThrow();
+      }
+
+      // Apply argument mutations
+      if (callbackResponse.hasArgMutations()) {
+        Object[] mutatedArgs = args.clone();
+        for (java.util.Map.Entry<Integer, Object> entry :
+            callbackResponse.getMutatedArgs().entrySet()) {
+          int index = entry.getKey();
+          Object newValue = entry.getValue();
+          if (index >= 0 && index < mutatedArgs.length) {
+            mutatedArgs[index] = newValue;
+          }
+        }
+        finalArgs = mutatedArgs;
+
+        if (logger.isDebugEnabled()) {
+          logger.debug("Applied argument mutations from BEFORE callbacks: {}", mutatedArgs);
+        }
+      }
+    }
+
     // 4. Invoke
     T returnValue = null;
     InvocationThrowableWrapper throwableWrapper = null;
     try {
-      returnValue = invoke(pjp, proceed, args);
+      returnValue = invoke(pjp, proceed, finalArgs);
     } catch (Throwable th) {
       logger.error("Caught throwable while invoking field operation. Will wrap and return it.", th);
       throwableWrapper = new InvocationThrowableWrapper(th);

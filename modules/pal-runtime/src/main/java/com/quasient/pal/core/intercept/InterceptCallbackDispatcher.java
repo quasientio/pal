@@ -11,16 +11,23 @@ package com.quasient.pal.core.intercept;
 
 import static com.quasient.pal.serdes.colfer.ColferUtils.toBytes;
 
+import com.quasient.pal.common.lang.intercept.InterceptPhase;
 import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.messages.colfer.ExecMessage;
+import com.quasient.pal.messages.colfer.InterceptCallbackRequest;
+import com.quasient.pal.messages.colfer.InterceptCallbackResponse;
 import com.quasient.pal.messages.colfer.InterceptMessage;
 import com.quasient.pal.messages.colfer.Message;
+import com.quasient.pal.messages.colfer.Obj;
 import com.quasient.pal.serdes.colfer.ColferUtils;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
+import com.quasient.pal.serdes.colfer.WrapPolicy;
+import com.quasient.pal.serdes.colfer.Wrapper;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -341,6 +348,369 @@ public class InterceptCallbackDispatcher {
     asyncCallbackSockets.get().put(peer, dealerSocket);
 
     return dealerSocket;
+  }
+
+  /**
+   * Sends BEFORE-phase callbacks for all matching intercepts and collects responses.
+   *
+   * <p>This method sends {@link InterceptCallbackRequest} messages to callback peers for each
+   * matching BEFORE intercept. It waits for {@link InterceptCallbackResponse} from each callback
+   * and collects any argument mutations.
+   *
+   * <p>If multiple callbacks mutate the same argument, later mutations override earlier ones.
+   *
+   * @param interceptCheckResult result from InterceptChecker containing matched intercepts
+   * @param execMessage the execution message containing operation metadata
+   * @param args the method arguments (may be mutated by callbacks)
+   * @return a consolidated response containing all argument mutations and control flow decisions
+   */
+  public ConsolidatedCallbackResponse sendBeforeCallbacks(
+      InterceptCheckResult interceptCheckResult, ExecMessage execMessage, Object[] args) {
+
+    if (!interceptCheckResult.hasRemoteIntercepts()) {
+      return ConsolidatedCallbackResponse.proceed();
+    }
+
+    List<InterceptMessage> remoteIntercepts = interceptCheckResult.getRemoteIntercepts();
+    List<InterceptMessage> beforeIntercepts = new ArrayList<>();
+
+    // Filter for BEFORE intercepts only
+    for (InterceptMessage intercept : remoteIntercepts) {
+      InterceptType type = InterceptType.fromByte(intercept.getInterceptType());
+      if (type == InterceptType.BEFORE) {
+        beforeIntercepts.add(intercept);
+      }
+    }
+
+    if (beforeIntercepts.isEmpty()) {
+      return ConsolidatedCallbackResponse.proceed();
+    }
+
+    // Track mutations across all callbacks
+    Map<Integer, Object> mutatedArgs = new HashMap<>();
+    boolean shouldProceed = true;
+    Throwable exceptionToThrow = null;
+
+    for (InterceptMessage interceptMessage : beforeIntercepts) {
+      try {
+        UUID callbackPeerUuid = UUID.fromString(interceptMessage.getPeerUuid());
+
+        // Build the callback request
+        InterceptCallbackRequest request =
+            buildCallbackRequest(
+                interceptMessage, execMessage, InterceptPhase.BEFORE, args, null, false, null);
+
+        // Send and await response
+        InterceptCallbackResponse response = sendCallbackRequest(callbackPeerUuid, request);
+
+        // Check for exception
+        if (response.getThrowException()) {
+          exceptionToThrow = deserializeException(response.getException());
+          break; // Stop processing further callbacks
+        }
+
+        // Collect argument mutations
+        if (response.getMutatedArgs() != null && response.getMutatedArgs().length > 0) {
+          Obj[] responseMutatedArgs = response.getMutatedArgs();
+          for (int i = 0; i < responseMutatedArgs.length && i < args.length; i++) {
+            if (responseMutatedArgs[i] != null) {
+              mutatedArgs.put(i, deserializeArg(responseMutatedArgs[i]));
+            }
+          }
+        }
+
+        // Check proceed control (for AROUND, but doesn't hurt to check for BEFORE too)
+        if (!response.getShouldProceed()) {
+          shouldProceed = false;
+        }
+
+      } catch (Exception ex) {
+        logger.error(
+            "Error sending BEFORE callback to peer: {}, continuing with remaining callbacks",
+            interceptMessage.getPeerUuid(),
+            ex);
+        // Continue with other callbacks on error
+      }
+    }
+
+    return new ConsolidatedCallbackResponse(shouldProceed, mutatedArgs, exceptionToThrow);
+  }
+
+  /**
+   * Builds an {@link InterceptCallbackRequest} from the intercept metadata and execution context.
+   *
+   * @param interceptMessage the intercept message containing callback routing info
+   * @param execMessage the execution message with operation metadata
+   * @param phase the callback phase (BEFORE or AFTER)
+   * @param args the method arguments
+   * @param returnValue the return value (AFTER phase only, may be null)
+   * @param isVoid whether the method is void
+   * @param thrownException the thrown exception (AFTER phase only, may be null)
+   * @return the constructed callback request
+   */
+  private InterceptCallbackRequest buildCallbackRequest(
+      InterceptMessage interceptMessage,
+      ExecMessage execMessage,
+      InterceptPhase phase,
+      Object[] args,
+      Object returnValue,
+      boolean isVoid,
+      Throwable thrownException) {
+
+    InterceptCallbackRequest request = new InterceptCallbackRequest();
+
+    // Set unique callback ID
+    request.setCallbackId(UUID.randomUUID().toString());
+
+    // Set phase and type
+    request.setPhase(phase.toByte());
+    request.setInterceptType(interceptMessage.getInterceptType());
+
+    // Set peer info
+    request.setInterceptedPeer(peerUuid.toString());
+
+    // Set callback routing info from intercept message
+    request.setCallbackClass(interceptMessage.getCallbackClass());
+    request.setCallbackMethod(interceptMessage.getCallbackMethod());
+
+    // Set execution message
+    request.setExec(execMessage);
+
+    // Set phase-specific fields
+    if (phase == InterceptPhase.AFTER) {
+      request.setIsVoid(isVoid);
+      if (!isVoid && returnValue != null) {
+        request.setReturnValue(serializeObject(returnValue));
+      }
+      if (thrownException != null) {
+        request.setThrownException(serializeException(thrownException));
+      }
+    }
+
+    return request;
+  }
+
+  /**
+   * Sends an {@link InterceptCallbackRequest} to the specified peer and awaits the response.
+   *
+   * @param callbackPeerUuid the UUID of the callback peer
+   * @param request the callback request to send
+   * @return the callback response
+   * @throws Exception if sending or receiving fails
+   */
+  private InterceptCallbackResponse sendCallbackRequest(
+      UUID callbackPeerUuid, InterceptCallbackRequest request) throws Exception {
+
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          "Sending InterceptCallbackRequest to peer {}: callbackId={}",
+          callbackPeerUuid,
+          request.getCallbackId());
+    }
+
+    // Get REQ socket for the callback peer
+    Socket reqSocket = getConnectedReqSocketFor(callbackPeerUuid);
+
+    // Wrap the request in a Message and send
+    Message requestMessage = messageBuilder.wrap(request);
+    byte[] requestBytes = toBytes(requestMessage);
+    boolean sentOk = reqSocket.send(requestBytes, 0);
+
+    if (!sentOk) {
+      throw new RuntimeException("Failed to send callback request to peer: " + callbackPeerUuid);
+    }
+
+    // Await response
+    byte[] responseBytes = reqSocket.recv(0);
+
+    if (responseBytes == null) {
+      // Timeout occurred
+      logger.warn(
+          "Timeout waiting for callback response from peer {}. Returning proceed=true fallback.",
+          callbackPeerUuid);
+      // Return default "proceed" response on timeout
+      InterceptCallbackResponse fallback = new InterceptCallbackResponse();
+      fallback.setCallbackId(request.getCallbackId());
+      fallback.setPhase(request.getPhase());
+      fallback.setShouldProceed(true);
+      return fallback;
+    }
+
+    // Unmarshal response
+    Message responseMessage = new Message();
+    responseMessage.unmarshal(responseBytes, 0);
+
+    InterceptCallbackResponse response = responseMessage.getInterceptCallbackResponse();
+    if (response == null) {
+      throw new RuntimeException("Expected InterceptCallbackResponse but got: " + responseMessage);
+    }
+
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          "Received InterceptCallbackResponse from peer {}: callbackId={}",
+          callbackPeerUuid,
+          response.getCallbackId());
+    }
+
+    return response;
+  }
+
+  /**
+   * Serializes an object to Colfer {@link Obj} format with force-by-value semantics.
+   *
+   * @param value the object to serialize
+   * @return the serialized Obj
+   */
+  private Obj serializeObject(Object value) {
+    try {
+      Obj obj = new Obj();
+      return Wrapper.wrapInto(
+          obj,
+          value,
+          value != null ? value.getClass().getName() : null,
+          null,
+          WrapPolicy.FORCE_BY_VALUE);
+    } catch (Exception e) {
+      logger.error("Failed to serialize object: {}", value, e);
+      throw new RuntimeException("Failed to serialize object", e);
+    }
+  }
+
+  /**
+   * Serializes a throwable to Colfer RaisedThrowable format.
+   *
+   * @param throwable the throwable to serialize
+   * @return the serialized RaisedThrowable
+   */
+  private com.quasient.pal.messages.colfer.RaisedThrowable serializeException(Throwable throwable) {
+    // TODO: Implement proper exception serialization
+    // For now, create a basic RaisedThrowable with the exception message
+    com.quasient.pal.messages.colfer.RaisedThrowable raised =
+        new com.quasient.pal.messages.colfer.RaisedThrowable();
+    com.quasient.pal.messages.colfer.Throwable colferThrowable =
+        new com.quasient.pal.messages.colfer.Throwable();
+    colferThrowable.setType(throwable.getClass().getName());
+    colferThrowable.setMessage(throwable.getMessage());
+    raised.setThrowable(colferThrowable);
+    return raised;
+  }
+
+  /**
+   * Deserializes an argument from Colfer {@link Obj} format.
+   *
+   * @param obj the serialized object
+   * @return the deserialized value
+   */
+  private Object deserializeArg(Obj obj) {
+    try {
+      return com.quasient.pal.serdes.Unwrapper.unwrapObject(obj);
+    } catch (Exception e) {
+      logger.error("Failed to deserialize argument", e);
+      throw new RuntimeException("Failed to deserialize argument", e);
+    }
+  }
+
+  /**
+   * Deserializes an exception from Colfer RaisedThrowable format.
+   *
+   * @param raised the serialized exception
+   * @return the deserialized Throwable
+   */
+  private Throwable deserializeException(com.quasient.pal.messages.colfer.RaisedThrowable raised) {
+    // TODO: Implement proper exception deserialization
+    // For now, create a RuntimeException with the message
+    if (raised == null || raised.getThrowable() == null) {
+      return new RuntimeException("Unknown exception from callback");
+    }
+    com.quasient.pal.messages.colfer.Throwable colferThrowable = raised.getThrowable();
+    String message = colferThrowable.getMessage();
+    String type = colferThrowable.getType();
+    return new RuntimeException(type + ": " + message);
+  }
+
+  /**
+   * Consolidated response from multiple callback invocations.
+   *
+   * <p>This class aggregates responses from multiple callback handlers, including argument
+   * mutations, proceed control, and exception handling.
+   */
+  public static class ConsolidatedCallbackResponse {
+    /** Whether the intercepted method should proceed with execution. */
+    private final boolean shouldProceed;
+
+    /** Map of argument index to mutated value. */
+    private final Map<Integer, Object> mutatedArgs;
+
+    /** Exception to throw instead of normal execution (may be null). */
+    private final Throwable exceptionToThrow;
+
+    /**
+     * Constructs a consolidated response.
+     *
+     * @param shouldProceed whether execution should proceed
+     * @param mutatedArgs map of argument index to mutated value
+     * @param exceptionToThrow exception to throw (may be null)
+     */
+    public ConsolidatedCallbackResponse(
+        boolean shouldProceed, Map<Integer, Object> mutatedArgs, Throwable exceptionToThrow) {
+      this.shouldProceed = shouldProceed;
+      this.mutatedArgs = mutatedArgs;
+      this.exceptionToThrow = exceptionToThrow;
+    }
+
+    /**
+     * Creates a default "proceed" response with no mutations.
+     *
+     * @return a proceed response
+     */
+    public static ConsolidatedCallbackResponse proceed() {
+      return new ConsolidatedCallbackResponse(true, new HashMap<>(), null);
+    }
+
+    /**
+     * Returns whether execution should proceed.
+     *
+     * @return true if execution should proceed
+     */
+    public boolean shouldProceed() {
+      return shouldProceed;
+    }
+
+    /**
+     * Returns whether any arguments were mutated.
+     *
+     * @return true if arguments were mutated
+     */
+    public boolean hasArgMutations() {
+      return !mutatedArgs.isEmpty();
+    }
+
+    /**
+     * Returns the map of mutated arguments (index → value).
+     *
+     * @return the mutated arguments map
+     */
+    public Map<Integer, Object> getMutatedArgs() {
+      return mutatedArgs;
+    }
+
+    /**
+     * Returns whether an exception should be thrown.
+     *
+     * @return true if an exception should be thrown
+     */
+    public boolean shouldThrowException() {
+      return exceptionToThrow != null;
+    }
+
+    /**
+     * Returns the exception to throw.
+     *
+     * @return the exception (may be null)
+     */
+    public Throwable getExceptionToThrow() {
+      return exceptionToThrow;
+    }
   }
 
   /**

@@ -9,9 +9,6 @@
  */
 package com.quasient.pal.core.intercept;
 
-import com.quasient.pal.common.lang.intercept.InterceptPhase;
-import com.quasient.pal.common.lang.intercept.InterceptType;
-
 /**
  * Functional interface for handling intercept callbacks within the PAL runtime.
  *

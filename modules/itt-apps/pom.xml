@@ -68,6 +68,7 @@
                                 <include>com/quasient/pal/apps/rpc/ArrayVars.java</include>
                                 <include>com/quasient/pal/apps/rpc/StaticArrayVars.java</include>
                                 <include>com/quasient/pal/apps/rpc/Variables.java</include>
+                                <include>com/quasient/pal/apps/intercept/BeforeCallbackHandlers.java</include>
                             </includes>
                             <compilerArgs>
                                 <arg>-proc:none</arg>
@@ -97,6 +98,7 @@
                         <exclude>com/quasient/pal/apps/rpc/ArrayVars.java</exclude>
                         <exclude>com/quasient/pal/apps/rpc/StaticArrayVars.java</exclude>
                         <exclude>com/quasient/pal/apps/rpc/Variables.java</exclude>
+                        <exclude>com/quasient/pal/apps/intercept/BeforeCallbackHandlers.java</exclude>
                     </excludes>
                 </configuration>
                 <executions>
@@ -132,6 +134,16 @@
         <dependency>
             <groupId>com.quasient.pal</groupId>
             <artifactId>pal-weave</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.quasient.pal</groupId>
+            <artifactId>pal-core-api</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.quasient.pal</groupId>
+            <artifactId>pal-runtime</artifactId>
             <scope>compile</scope>
         </dependency>
 
