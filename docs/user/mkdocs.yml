@@ -14,6 +14,7 @@ nav:
     - Local Development: guides/local-development.md
     - Distributed Application: guides/distributed-application.md
     - Testing with Interception: guides/testing-with-interception.md
+    - Writing Callback Handlers: guides/writing-callback-handlers.md
   - CLI Reference: cli-reference.md
 
 theme:

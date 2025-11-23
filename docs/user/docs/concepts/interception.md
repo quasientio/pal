@@ -432,5 +432,6 @@ Anyone with directory access can register intercepts on any peer. To restrict:
 
 - [Peers and Logs](peers-and-logs.md) - Understanding peers
 - [RPC](rpc.md) - How callbacks are delivered
+- [Writing Callback Handlers](../guides/writing-callback-handlers.md) - Implementing callback logic with practical examples
 - [Testing Guide](../guides/testing-with-interception.md) - Practical testing patterns
 - [Local Development](../guides/local-development.md) - Setting up for interception
