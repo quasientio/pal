@@ -19,16 +19,17 @@ import org.aspectj.lang.*;
 /** Builds a ProceedingJoinPoint stub for dispatcher tests. */
 public final class PjpBuilder {
 
-  private final ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class, withSettings().lenient());
-  private final JoinPoint.StaticPart sp =
-      mock(JoinPoint.StaticPart.class, withSettings().lenient());
+  private final ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
+  private final JoinPoint.StaticPart sp = mock(JoinPoint.StaticPart.class);
   private final org.aspectj.lang.reflect.SourceLocation sl =
-      mock(org.aspectj.lang.reflect.SourceLocation.class, withSettings().lenient());
+      mock(org.aspectj.lang.reflect.SourceLocation.class);
 
   private PjpBuilder() throws Throwable {
     // default PJP wiring
-    doReturn(sp).when(pjp).getStaticPart();
-    doThrow(new IllegalStateException("pjp.proceed() must not be used")).when(pjp).proceed();
+    when(pjp.getStaticPart()).thenReturn(sp);
+    // pjp.proceed(Object[]) is used by BaseExecMessageDispatcher.invoke() to support argument
+    // mutation. Tests must configure this using proceedBehavior() to delegate to their Proceed
+    // callback. The default behavior (returns null) will indicate if a test forgot to configure it.
   }
 
   public static PjpBuilder create() throws Throwable {
@@ -128,6 +129,21 @@ public final class PjpBuilder {
 
   public PjpBuilder args(Object[] args) {
     doReturn(args).when(pjp).getArgs();
+    return this;
+  }
+
+  /**
+   * Configures pjp.proceed(Object[]) to delegate to a Proceed callback.
+   *
+   * <p>This is needed for tests that verify argument mutation through intercepts. The default
+   * behavior throws an exception to prevent accidental use of pjp.proceed().
+   *
+   * @param proceedCallback the callback to invoke when pjp.proceed(Object[]) is called
+   * @return this builder
+   */
+  public <T> PjpBuilder proceedBehavior(com.quasient.pal.common.weave.Proceed<T> proceedCallback)
+      throws Throwable {
+    when(pjp.proceed(any(Object[].class))).thenAnswer(inv -> proceedCallback.call());
     return this;
   }
 

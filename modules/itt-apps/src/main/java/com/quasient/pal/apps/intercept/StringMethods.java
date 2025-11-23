@@ -67,4 +67,58 @@ public class StringMethods {
   public int length(String input) {
     return input.length();
   }
+
+  /**
+   * Wrapper method that calls echo(String).
+   *
+   * <p>Used for testing single-argument mutation via call-site weaving. The echo() call within this
+   * method is the intercepted call site.
+   *
+   * @param input the input string
+   * @return result of echo(input)
+   */
+  public String callEcho(String input) {
+    return echo(input); // <-- Call site for interception
+  }
+
+  /**
+   * Wrapper method that calls concatenate(String, String).
+   *
+   * <p>Used for testing multi-argument mutation via call-site weaving. The concatenate() call
+   * within this method is the intercepted call site.
+   *
+   * @param a first string
+   * @param b second string
+   * @return result of concatenate(a, b)
+   */
+  public String callConcatenate(String a, String b) {
+    return concatenate(a, b); // <-- Call site for interception
+  }
+
+  /**
+   * Wrapper method that calls multiply(int, int).
+   *
+   * <p>Used for testing primitive argument mutation via call-site weaving. The multiply() call
+   * within this method is the intercepted call site.
+   *
+   * @param value the value to multiply
+   * @param factor the multiplication factor
+   * @return result of multiply(value, factor)
+   */
+  public int callMultiply(int value, int factor) {
+    return multiply(value, factor); // <-- Call site for interception
+  }
+
+  /**
+   * Wrapper method that calls length(String).
+   *
+   * <p>Used for testing void callback behavior via call-site weaving. The length() call within this
+   * method is the intercepted call site.
+   *
+   * @param input the input string
+   * @return result of length(input)
+   */
+  public int callLength(String input) {
+    return length(input); // <-- Call site for interception
+  }
 }

@@ -26,7 +26,6 @@ import com.quasient.pal.serdes.Unwrapper;
 import java.util.Collections;
 import java.util.UUID;
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -43,13 +42,9 @@ public class BeforeInterceptCallbackIT extends AbstractInterceptIT {
   /** UUID for the intercept registration. */
   private UUID interceptUuid;
 
-  /**
-   * Cleans up intercept registrations after each test.
-   *
-   * @throws Exception if cleanup fails
-   */
+  /** Cleans up intercept registrations after each test. */
   @After
-  public void cleanupIntercepts() throws Exception {
+  public void cleanupIntercepts() {
     if (interceptUuid != null) {
       logger.info("Cleaning up intercept registration: {}", interceptUuid);
       // Intercepts are cleaned up in AbstractInterceptIT.tearDown() via
@@ -64,7 +59,6 @@ public class BeforeInterceptCallbackIT extends AbstractInterceptIT {
    * uppercase. Verifies that the method receives the mutated argument by checking the return value.
    */
   @Test
-  @Ignore
   public void testSingleArgumentMutation() throws Exception {
     logger.info("===== testSingleArgumentMutation: TEST STARTED =====");
 
@@ -105,19 +99,21 @@ public class BeforeInterceptCallbackIT extends AbstractInterceptIT {
                 .getRef());
     logger.info("StringMethods instance created with ref: {}", stringMethodsInstance);
 
-    // 3. Invoke echo with lowercase input
+    // 3. Invoke callEcho with lowercase input (wrapper will call echo internally)
     logger.info(
-        "Invoking echo(\"{}\") which should receive mutated arg \"{}\"", inputValue, expectedValue);
+        "Invoking callEcho(\"{}\") which should receive mutated arg \"{}\"",
+        inputValue,
+        expectedValue);
     ExecMessage response =
         invoke(
             messageBuilder.buildInstanceMethod(
                 myPeerUuid,
                 StringMethods.class.getName(),
-                "echo",
+                "callEcho",
                 stringMethodsInstance,
                 new String[] {"java.lang.String"},
                 new Object[] {inputValue}));
-    logger.info("echo invocation completed");
+    logger.info("callEcho invocation completed");
 
     // 4. Verify the return value is uppercase (proving arg was mutated before method execution)
     String returnValue = (String) Unwrapper.unwrapObject(response.getReturnValue().getObject());
@@ -138,7 +134,6 @@ public class BeforeInterceptCallbackIT extends AbstractInterceptIT {
    * uppercase. Verifies that both arguments were mutated by checking the concatenated result.
    */
   @Test
-  @Ignore
   public void testMultiArgumentMutation() throws Exception {
     logger.info("===== testMultiArgumentMutation: TEST STARTED =====");
 
@@ -181,19 +176,21 @@ public class BeforeInterceptCallbackIT extends AbstractInterceptIT {
                 .getRef());
     logger.info("StringMethods instance created with ref: {}", stringMethodsInstance);
 
-    // 3. Invoke concatenate with lowercase inputs
+    // 3. Invoke callConcatenate with lowercase inputs (wrapper will call concatenate internally)
     logger.info(
-        "Invoking concatenate(\"{}\", \"{}\") which should receive mutated args", inputA, inputB);
+        "Invoking callConcatenate(\"{}\", \"{}\") which should receive mutated args",
+        inputA,
+        inputB);
     ExecMessage response =
         invoke(
             messageBuilder.buildInstanceMethod(
                 myPeerUuid,
                 StringMethods.class.getName(),
-                "concatenate",
+                "callConcatenate",
                 stringMethodsInstance,
                 new String[] {"java.lang.String", "java.lang.String"},
                 new Object[] {inputA, inputB}));
-    logger.info("concatenate invocation completed");
+    logger.info("callConcatenate invocation completed");
 
     // 4. Verify the return value is all uppercase
     String returnValue = (String) Unwrapper.unwrapObject(response.getReturnValue().getObject());
@@ -214,7 +211,6 @@ public class BeforeInterceptCallbackIT extends AbstractInterceptIT {
    * argument. Verifies the mutation by checking the multiplication result.
    */
   @Test
-  @Ignore
   public void testPrimitiveArgumentMutation() throws Exception {
     logger.info("===== testPrimitiveArgumentMutation: TEST STARTED =====");
 
@@ -256,9 +252,9 @@ public class BeforeInterceptCallbackIT extends AbstractInterceptIT {
                 .getRef());
     logger.info("StringMethods instance created with ref: {}", stringMethodsInstance);
 
-    // 3. Invoke multiply with value=5, factor=3 (callback will double first arg to 10)
+    // 3. Invoke callMultiply with value=5, factor=3 (wrapper will call multiply internally)
     logger.info(
-        "Invoking multiply({}, {}) which should receive mutated first arg (doubled)",
+        "Invoking callMultiply({}, {}) which should receive mutated first arg (doubled)",
         inputValue,
         factor);
     ExecMessage response =
@@ -266,11 +262,11 @@ public class BeforeInterceptCallbackIT extends AbstractInterceptIT {
             messageBuilder.buildInstanceMethod(
                 myPeerUuid,
                 StringMethods.class.getName(),
-                "multiply",
+                "callMultiply",
                 stringMethodsInstance,
                 new String[] {"int", "int"},
                 new Object[] {inputValue, factor}));
-    logger.info("multiply invocation completed");
+    logger.info("callMultiply invocation completed");
 
     // 4. Verify the return value reflects the doubled first argument
     int returnValue = (int) Unwrapper.unwrapObject(response.getReturnValue().getObject());
@@ -291,7 +287,6 @@ public class BeforeInterceptCallbackIT extends AbstractInterceptIT {
    * propagated back to the caller and the method is never executed.
    */
   @Test
-  @Ignore
   public void testCallbackThrowsException() throws Exception {
     logger.info("===== testCallbackThrowsException: TEST STARTED =====");
 
@@ -330,15 +325,16 @@ public class BeforeInterceptCallbackIT extends AbstractInterceptIT {
                 .getRef());
     logger.info("StringMethods instance created with ref: {}", stringMethodsInstance);
 
-    // 3. Invoke echo - should throw SecurityException from callback
-    logger.info("Invoking echo which should throw SecurityException from callback");
+    // 3. Invoke callEcho - should throw SecurityException from callback (wrapper calls echo
+    // internally)
+    logger.info("Invoking callEcho which should throw SecurityException from callback");
     try {
       ExecMessage response =
           invoke(
               messageBuilder.buildInstanceMethod(
                   myPeerUuid,
                   StringMethods.class.getName(),
-                  "echo",
+                  "callEcho",
                   stringMethodsInstance,
                   new String[] {"java.lang.String"},
                   new Object[] {"test"}));
@@ -376,7 +372,6 @@ public class BeforeInterceptCallbackIT extends AbstractInterceptIT {
    * that the method receives the original arguments unchanged.
    */
   @Test
-  @Ignore
   public void testNoOpCallback() throws Exception {
     logger.info("===== testNoOpCallback: TEST STARTED =====");
 
@@ -416,18 +411,18 @@ public class BeforeInterceptCallbackIT extends AbstractInterceptIT {
                 .getRef());
     logger.info("StringMethods instance created with ref: {}", stringMethodsInstance);
 
-    // 3. Invoke echo with input value
-    logger.info("Invoking echo(\"{}\") with no-op callback", inputValue);
+    // 3. Invoke callEcho with input value (wrapper calls echo internally)
+    logger.info("Invoking callEcho(\"{}\") with no-op callback", inputValue);
     ExecMessage response =
         invoke(
             messageBuilder.buildInstanceMethod(
                 myPeerUuid,
                 StringMethods.class.getName(),
-                "echo",
+                "callEcho",
                 stringMethodsInstance,
                 new String[] {"java.lang.String"},
                 new Object[] {inputValue}));
-    logger.info("echo invocation completed");
+    logger.info("callEcho invocation completed");
 
     // 4. Verify the return value is unchanged
     String returnValue = (String) Unwrapper.unwrapObject(response.getReturnValue().getObject());

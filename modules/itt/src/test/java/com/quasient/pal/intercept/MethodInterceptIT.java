@@ -26,13 +26,11 @@ import com.quasient.pal.serdes.Unwrapper;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class MethodInterceptIT extends AbstractInterceptIT {
 
   @Test
-  @Ignore
   public void testBeforeInstanceMethod() throws Exception {
     logger.info("===== testBeforeInstanceMethod: TEST STARTED =====");
 
@@ -101,12 +99,18 @@ public class MethodInterceptIT extends AbstractInterceptIT {
     callbacks.forEach(
         callback -> {
           assertThat(callback, is(not(nullValue())));
-          assertThat(callback.getMessageType(), is(MessageType.EXEC_CLASS_METHOD.getId()));
+          assertThat(callback.getMessageType(), is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
+          assertThat(callback.getInterceptCallbackRequest().getCallbackClass(), is(callbackClass));
           assertThat(
-              callback.getExecMessage().getClassMethodCall().getClazz().getName(),
-              is(callbackClass));
-          assertThat(callback.getExecMessage().getClassMethodCall().getName(), is(callbackMethod));
-          assertThat(callback.getExecMessage().getClassMethodCall().getParameters().length, is(1));
+              callback.getInterceptCallbackRequest().getCallbackMethod(), is(callbackMethod));
+          assertThat(
+              callback
+                  .getInterceptCallbackRequest()
+                  .getExec()
+                  .getInstanceMethodCall()
+                  .getParameters()
+                  .length,
+              is(1));
         });
 
     // Verify class/object state after callbacks

@@ -64,7 +64,8 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
             objectLookupStore);
   }
 
-  private ProceedingJoinPoint createPjp(Method method, Object target, Object[] args)
+  private <T> ProceedingJoinPoint createPjp(
+      Method method, Object target, Object[] args, com.quasient.pal.common.weave.Proceed<T> proceed)
       throws Throwable {
     String sourceFilename = "NotARealClass.java";
     return PjpBuilder.create()
@@ -74,6 +75,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
         .sender(this)
         .target(target)
         .args(args)
+        .proceedBehavior(proceed)
         .build();
   }
 
@@ -100,10 +102,11 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
 
     // ── PJP ──────────────────────────────────────────────────
-    ProceedingJoinPoint pjp = createPjp(m, target, args);
+    var proceed = asVoidProceed(target::addHelloWorld);
+    ProceedingJoinPoint pjp = createPjp(m, target, args, proceed);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned = dispatcher.dispatch(pjp, asVoidProceed(target::addHelloWorld));
+    Object returned = dispatcher.dispatch(pjp, proceed);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -130,11 +133,11 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
 
     // ── PJP ──────────────────────────────────────────────────
-    ProceedingJoinPoint pjp = createPjp(m, target, args);
+    var proceed = asVoidProceed(() -> target.addWord((String) args[0]));
+    ProceedingJoinPoint pjp = createPjp(m, target, args, proceed);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned =
-        dispatcher.dispatch(pjp, asVoidProceed(() -> target.addWord((String) args[0])));
+    Object returned = dispatcher.dispatch(pjp, proceed);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -162,10 +165,11 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
 
     // ── PJP ──────────────────────────────────────────────────
-    ProceedingJoinPoint pjp = createPjp(m, target, args);
+    var proceed = asVoidProceed(() -> target.addWords((int) args[0]));
+    ProceedingJoinPoint pjp = createPjp(m, target, args, proceed);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned = dispatcher.dispatch(pjp, asVoidProceed(() -> target.addWords((int) args[0])));
+    Object returned = dispatcher.dispatch(pjp, proceed);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -193,11 +197,11 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
 
     // ── PJP ──────────────────────────────────────────────────
-    ProceedingJoinPoint pjp = createPjp(m, target, args);
+    var proceed = asVoidProceed(() -> target.addWords((String[]) args[0]));
+    ProceedingJoinPoint pjp = createPjp(m, target, args, proceed);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned =
-        dispatcher.dispatch(pjp, asVoidProceed(() -> target.addWords((String[]) args[0])));
+    Object returned = dispatcher.dispatch(pjp, proceed);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -224,11 +228,12 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
 
     // ── PJP ──────────────────────────────────────────────────
-    ProceedingJoinPoint pjp = createPjp(m, target, args);
+    var proceed = asVoidProceed(() -> target.addWord((String) args[0]));
+    ProceedingJoinPoint pjp = createPjp(m, target, args, proceed);
 
     // ── dispatch ─────────────────────────────────────────────
     try {
-      dispatcher.dispatch(pjp, asVoidProceed(() -> target.addWord((String) args[0])));
+      dispatcher.dispatch(pjp, proceed);
       fail("Should have failed with an IllegalArgumentException");
     } catch (IllegalArgumentException iae) {
       // expected

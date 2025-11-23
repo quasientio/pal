@@ -50,9 +50,7 @@ public class IncomingInterceptCallbackDispatcherTest {
   @Test
   public void testRegisterCallback() {
     InterceptCallback callback =
-        (ctx) -> {
-          return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
-        };
+        (ctx) -> new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
 
     dispatcher.registerCallback("test-callback", callback);
 
@@ -66,9 +64,7 @@ public class IncomingInterceptCallbackDispatcherTest {
   @Test
   public void testRegisterCallbackRejectsNullId() {
     InterceptCallback callback =
-        (ctx) -> {
-          return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
-        };
+        (ctx) -> new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
 
     try {
       dispatcher.registerCallback(null, callback);
@@ -85,9 +81,7 @@ public class IncomingInterceptCallbackDispatcherTest {
   @Test
   public void testRegisterCallbackRejectsEmptyId() {
     InterceptCallback callback =
-        (ctx) -> {
-          return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
-        };
+        (ctx) -> new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
 
     try {
       dispatcher.registerCallback("", callback);
@@ -118,13 +112,9 @@ public class IncomingInterceptCallbackDispatcherTest {
   @Test
   public void testRegisterCallbackRejectsDuplicates() {
     InterceptCallback callback1 =
-        (ctx) -> {
-          return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
-        };
+        (ctx) -> new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
     InterceptCallback callback2 =
-        (ctx) -> {
-          return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
-        };
+        (ctx) -> new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
 
     dispatcher.registerCallback("test-callback", callback1);
 
@@ -144,9 +134,7 @@ public class IncomingInterceptCallbackDispatcherTest {
   @Test
   public void testUnregisterCallback() {
     InterceptCallback callback =
-        (ctx) -> {
-          return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
-        };
+        (ctx) -> new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
 
     dispatcher.registerCallback("test-callback", callback);
 
@@ -282,10 +270,10 @@ public class IncomingInterceptCallbackDispatcherTest {
 
   /**
    * Tests that {@link IncomingInterceptCallbackDispatcher#handleCallback(InterceptCallbackRequest)}
-   * handles shouldProceed flag for AROUND intercepts.
+   * honors shouldProceed=false for AROUND intercepts.
    */
   @Test
-  public void testHandleCallbackWithShouldProceedFalse() {
+  public void testAroundInterceptCanSetShouldProceedFalse() {
     InterceptCallback callback =
         (ctx) -> {
           com.quasient.pal.common.lang.intercept.InterceptCallbackResponse response =
@@ -307,7 +295,101 @@ public class IncomingInterceptCallbackDispatcherTest {
     InterceptCallbackResponse response = dispatcher.handleCallback(request);
 
     assertNotNull(response);
-    assertFalse("shouldProceed should be false", response.getShouldProceed());
+    assertFalse(
+        "AROUND intercept should be able to set shouldProceed=false", response.getShouldProceed());
+  }
+
+  /**
+   * Tests that {@link IncomingInterceptCallbackDispatcher#handleCallback(InterceptCallbackRequest)}
+   * forces shouldProceed=true for BEFORE intercepts (cannot skip execution).
+   */
+  @Test
+  public void testBeforeInterceptCannotSetShouldProceedFalse() {
+    InterceptCallback callback =
+        (ctx) -> {
+          com.quasient.pal.common.lang.intercept.InterceptCallbackResponse response =
+              new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
+          // Callback tries to set shouldProceed=false
+          response.setShouldProceed(false);
+          return response;
+        };
+
+    dispatcher.registerCallback("test-callback", callback);
+
+    InterceptCallbackRequest request = new InterceptCallbackRequest();
+    request.setCallbackId("req-123");
+    request.setPhase((byte) 1); // BEFORE
+    request.setInterceptType((byte) 1); // BEFORE (not AROUND)
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("test-callback");
+    request.setExec(execMessage);
+
+    InterceptCallbackResponse response = dispatcher.handleCallback(request);
+
+    assertNotNull(response);
+    assertTrue(
+        "BEFORE intercept cannot skip execution - shouldProceed forced to true",
+        response.getShouldProceed());
+  }
+
+  /**
+   * Tests that {@link IncomingInterceptCallbackDispatcher#handleCallback(InterceptCallbackRequest)}
+   * allows shouldProceed=true for BEFORE intercepts.
+   */
+  @Test
+  public void testBeforeInterceptCanSetShouldProceedTrue() {
+    InterceptCallback callback =
+        (ctx) -> {
+          com.quasient.pal.common.lang.intercept.InterceptCallbackResponse response =
+              new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
+          response.setShouldProceed(true);
+          return response;
+        };
+
+    dispatcher.registerCallback("test-callback", callback);
+
+    InterceptCallbackRequest request = new InterceptCallbackRequest();
+    request.setCallbackId("req-123");
+    request.setPhase((byte) 1); // BEFORE
+    request.setInterceptType((byte) 1); // BEFORE
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("test-callback");
+    request.setExec(execMessage);
+
+    InterceptCallbackResponse response = dispatcher.handleCallback(request);
+
+    assertNotNull(response);
+    assertTrue("BEFORE intercept with shouldProceed=true should work", response.getShouldProceed());
+  }
+
+  /**
+   * Tests that {@link IncomingInterceptCallbackDispatcher#handleCallback(InterceptCallbackRequest)}
+   * allows AROUND intercept to set shouldProceed=true.
+   */
+  @Test
+  public void testAroundInterceptCanSetShouldProceedTrue() {
+    InterceptCallback callback =
+        (ctx) -> {
+          com.quasient.pal.common.lang.intercept.InterceptCallbackResponse response =
+              new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
+          response.setShouldProceed(true);
+          return response;
+        };
+
+    dispatcher.registerCallback("test-callback", callback);
+
+    InterceptCallbackRequest request = new InterceptCallbackRequest();
+    request.setCallbackId("req-123");
+    request.setPhase((byte) 1); // BEFORE
+    request.setInterceptType((byte) 3); // AROUND
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("test-callback");
+    request.setExec(execMessage);
+
+    InterceptCallbackResponse response = dispatcher.handleCallback(request);
+
+    assertNotNull(response);
+    assertTrue("AROUND intercept with shouldProceed=true should work", response.getShouldProceed());
   }
 
   /** Tests that static callback method invocation requires both class and method names. */

@@ -89,6 +89,7 @@
                     <!-- exclude ITs that are already executed via the suites -->
                     <excludes>
                         <exclude>**/core/**/*IT.java</exclude>
+                        <exclude>**/intercept/**/*IT.java</exclude>
                     </excludes>
                 </configuration>
                 <executions>

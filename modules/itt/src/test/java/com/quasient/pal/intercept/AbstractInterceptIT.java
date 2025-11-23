@@ -135,7 +135,7 @@ public class AbstractInterceptIT extends AbstractIntegrationTest
     // Retry a few times to allow for directory registration delay
     PeerInfo interceptablePeer = null;
     for (int i = 0; i < 10; i++) {
-      interceptablePeer = palDirectory.getPeer(InterceptTestSuite.SHARED_PEER_UUID);
+      interceptablePeer = palDirectory.getPeer(InterceptTestSuite.INTERCEPTABLE_PEER_UUID);
       if (interceptablePeer != null) {
         break;
       }
@@ -194,8 +194,8 @@ public class AbstractInterceptIT extends AbstractIntegrationTest
   @After
   public void tearDown() throws Exception {
     logger.info("===== AbstractInterceptIT.tearDown: STARTING =====");
-    logger.info("Deleting intercepts for peer: {}", myPeerUuid);
-    palDirectory.deleteInterceptsForPeer(myPeerUuid);
+    logger.info("Deleting intercepts for peer: {}", InterceptTestSuite.INTERCEPTOR_PEER_UUID);
+    palDirectory.deleteInterceptsForPeer(InterceptTestSuite.INTERCEPTOR_PEER_UUID);
 
     logger.info("Removing message listener from thinPeer");
     thinPeer.removeMessageListener(this);

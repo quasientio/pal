@@ -22,9 +22,8 @@ import com.quasient.pal.messages.colfer.InterceptMessage;
 import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.messages.colfer.Obj;
 import com.quasient.pal.serdes.colfer.ColferUtils;
+import com.quasient.pal.serdes.colfer.ExceptionSerdes;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
-import com.quasient.pal.serdes.colfer.WrapPolicy;
-import com.quasient.pal.serdes.colfer.Wrapper;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.util.ArrayList;
@@ -45,13 +44,69 @@ import org.zeromq.ZMQ.Socket;
  * intercepts. It manages per-thread ZeroMQ sockets for callback communication and handles both
  * synchronous (BEFORE/AFTER) and asynchronous (BEFORE_ASYNC/AFTER_ASYNC) intercept types.
  *
- * <p>Socket Management: This dispatcher uses two separate socket caches: REQ sockets for
+ * <p><b>Socket Management:</b> This dispatcher uses two separate socket caches: REQ sockets for
  * synchronous callbacks (which require request-reply pattern) and DEALER sockets for asynchronous
  * callbacks (which allow fire-and-forget). The server-side ROUTER socket in ZmqRpcServer accepts
  * connections from both REQ and DEALER clients.
  *
- * <p>Thread Safety: This class uses ThreadLocal storage for sockets, making it safe for
+ * <p><b>Thread Safety:</b> This class uses ThreadLocal storage for sockets, making it safe for
  * multithreaded use. Each thread maintains its own socket connections to target peers.
+ *
+ * <h2>Argument Mutation Aggregation Strategy</h2>
+ *
+ * <p>When multiple BEFORE callbacks are invoked for the same operation, each callback receives the
+ * <b>original, unmodified arguments</b>. Callbacks do not see mutations made by other callbacks
+ * that executed before them. This design ensures:
+ *
+ * <ul>
+ *   <li><b>Callback independence:</b> Each callback sees the same view of the arguments, making
+ *       behavior predictable and avoiding order-dependent side effects
+ *   <li><b>Simplified reasoning:</b> Callbacks don't need to account for modifications by other
+ *       callbacks
+ *   <li><b>Deterministic results:</b> The final argument state is determined by aggregating all
+ *       mutations, not by chaining transformations
+ * </ul>
+ *
+ * <p><b>Mutation Aggregation Rules:</b>
+ *
+ * <ol>
+ *   <li>All callbacks execute and return their mutations independently
+ *   <li>Mutations are collected in a map: {@code Map<argumentIndex, mutatedValue>}
+ *   <li>If multiple callbacks mutate the same argument index, the <b>last callback's mutation
+ *       wins</b> (based on intercept registration order in etcd)
+ *   <li>The aggregated mutations are applied once, after all callbacks complete
+ *   <li>Only mutated arguments are modified; unmutated arguments retain their original values
+ * </ol>
+ *
+ * <p><b>Example:</b> If three callbacks are registered for {@code foo(x, y)} and:
+ *
+ * <ul>
+ *   <li>Callback A mutates arg[0] to 10
+ *   <li>Callback B mutates arg[0] to 20 and arg[1] to 30
+ *   <li>Callback C mutates arg[1] to 40
+ * </ul>
+ *
+ * <p>Then the final arguments will be: {@code foo(20, 40)} (Callback B's mutation of arg[0] wins,
+ * Callback C's mutation of arg[1] wins).
+ *
+ * <p><b>Ordering Implications:</b> Since the last mutation wins, the order in which intercepts are
+ * registered (and thus the order they appear in etcd) determines which callback's mutations take
+ * precedence when there are conflicts. Intercepts are processed in the order they are returned by
+ * the directory service.
+ *
+ * <h2>Exception Handling</h2>
+ *
+ * <p>If any callback throws an exception (via {@link
+ * com.quasient.pal.common.lang.intercept.InterceptCallbackResponse#setExceptionToThrow}), callback
+ * processing stops immediately and the exception is propagated to the caller. No subsequent
+ * callbacks are invoked, and any mutations from callbacks that executed before the exception are
+ * discarded.
+ *
+ * <h2>Execution Flow Control (AROUND Intercepts Only)</h2>
+ *
+ * <p>BEFORE intercepts cannot control whether the intercepted method proceeds with execution. Only
+ * AROUND intercepts can prevent execution by setting {@code shouldProceed = false}. BEFORE
+ * intercepts are designed for observation and argument transformation, not for execution control.
  */
 @Singleton
 public class InterceptCallbackDispatcher {
@@ -357,11 +412,22 @@ public class InterceptCallbackDispatcher {
    * matching BEFORE intercept. It waits for {@link InterceptCallbackResponse} from each callback
    * and collects any argument mutations.
    *
-   * <p>If multiple callbacks mutate the same argument, later mutations override earlier ones.
+   * <p><b>Important:</b> Each callback receives the <b>original, unmodified arguments</b> from the
+   * {@code execMessage}. Callbacks do not see mutations made by previously-executed callbacks. This
+   * ensures callback independence and predictable behavior.
+   *
+   * <p><b>Mutation Handling:</b> Argument mutations from all callbacks are collected into a map. If
+   * multiple callbacks mutate the same argument index, the last callback's mutation wins (based on
+   * intercept registration order). The aggregated mutations are returned in the {@link
+   * ConsolidatedCallbackResponse} and applied by the caller after all callbacks complete.
+   *
+   * <p><b>Exception Handling:</b> If any callback throws an exception, processing stops
+   * immediately. No further callbacks are invoked, and all mutations collected so far are
+   * discarded.
    *
    * @param interceptCheckResult result from InterceptChecker containing matched intercepts
-   * @param execMessage the execution message containing operation metadata
-   * @param args the method arguments (may be mutated by callbacks)
+   * @param execMessage the execution message containing operation metadata and original arguments
+   * @param args the method arguments (used for validation but not mutated by this method)
    * @return a consolidated response containing all argument mutations and control flow decisions
    */
   public ConsolidatedCallbackResponse sendBeforeCallbacks(
@@ -397,15 +463,15 @@ public class InterceptCallbackDispatcher {
 
         // Build the callback request
         InterceptCallbackRequest request =
-            buildCallbackRequest(
-                interceptMessage, execMessage, InterceptPhase.BEFORE, args, null, false, null);
+            messageBuilder.buildInterceptCallbackRequest(
+                peerUuid, interceptMessage, execMessage, InterceptPhase.BEFORE, null, false, null);
 
         // Send and await response
         InterceptCallbackResponse response = sendCallbackRequest(callbackPeerUuid, request);
 
         // Check for exception
         if (response.getThrowException()) {
-          exceptionToThrow = deserializeException(response.getException());
+          exceptionToThrow = ExceptionSerdes.deserializeException(response.getException());
           break; // Stop processing further callbacks
         }
 
@@ -419,10 +485,9 @@ public class InterceptCallbackDispatcher {
           }
         }
 
-        // Check proceed control (for AROUND, but doesn't hurt to check for BEFORE too)
-        if (!response.getShouldProceed()) {
-          shouldProceed = false;
-        }
+        // Note: shouldProceed is not checked here because BEFORE intercepts
+        // cannot control execution flow. Only AROUND intercepts can do this,
+        // and they are handled differently in the caller.
 
       } catch (Exception ex) {
         logger.error(
@@ -434,60 +499,6 @@ public class InterceptCallbackDispatcher {
     }
 
     return new ConsolidatedCallbackResponse(shouldProceed, mutatedArgs, exceptionToThrow);
-  }
-
-  /**
-   * Builds an {@link InterceptCallbackRequest} from the intercept metadata and execution context.
-   *
-   * @param interceptMessage the intercept message containing callback routing info
-   * @param execMessage the execution message with operation metadata
-   * @param phase the callback phase (BEFORE or AFTER)
-   * @param args the method arguments
-   * @param returnValue the return value (AFTER phase only, may be null)
-   * @param isVoid whether the method is void
-   * @param thrownException the thrown exception (AFTER phase only, may be null)
-   * @return the constructed callback request
-   */
-  private InterceptCallbackRequest buildCallbackRequest(
-      InterceptMessage interceptMessage,
-      ExecMessage execMessage,
-      InterceptPhase phase,
-      Object[] args,
-      Object returnValue,
-      boolean isVoid,
-      Throwable thrownException) {
-
-    InterceptCallbackRequest request = new InterceptCallbackRequest();
-
-    // Set unique callback ID
-    request.setCallbackId(UUID.randomUUID().toString());
-
-    // Set phase and type
-    request.setPhase(phase.toByte());
-    request.setInterceptType(interceptMessage.getInterceptType());
-
-    // Set peer info
-    request.setInterceptedPeer(peerUuid.toString());
-
-    // Set callback routing info from intercept message
-    request.setCallbackClass(interceptMessage.getCallbackClass());
-    request.setCallbackMethod(interceptMessage.getCallbackMethod());
-
-    // Set execution message
-    request.setExec(execMessage);
-
-    // Set phase-specific fields
-    if (phase == InterceptPhase.AFTER) {
-      request.setIsVoid(isVoid);
-      if (!isVoid && returnValue != null) {
-        request.setReturnValue(serializeObject(returnValue));
-      }
-      if (thrownException != null) {
-        request.setThrownException(serializeException(thrownException));
-      }
-    }
-
-    return request;
   }
 
   /**
@@ -556,46 +567,6 @@ public class InterceptCallbackDispatcher {
   }
 
   /**
-   * Serializes an object to Colfer {@link Obj} format with force-by-value semantics.
-   *
-   * @param value the object to serialize
-   * @return the serialized Obj
-   */
-  private Obj serializeObject(Object value) {
-    try {
-      Obj obj = new Obj();
-      return Wrapper.wrapInto(
-          obj,
-          value,
-          value != null ? value.getClass().getName() : null,
-          null,
-          WrapPolicy.FORCE_BY_VALUE);
-    } catch (Exception e) {
-      logger.error("Failed to serialize object: {}", value, e);
-      throw new RuntimeException("Failed to serialize object", e);
-    }
-  }
-
-  /**
-   * Serializes a throwable to Colfer RaisedThrowable format.
-   *
-   * @param throwable the throwable to serialize
-   * @return the serialized RaisedThrowable
-   */
-  private com.quasient.pal.messages.colfer.RaisedThrowable serializeException(Throwable throwable) {
-    // TODO: Implement proper exception serialization
-    // For now, create a basic RaisedThrowable with the exception message
-    com.quasient.pal.messages.colfer.RaisedThrowable raised =
-        new com.quasient.pal.messages.colfer.RaisedThrowable();
-    com.quasient.pal.messages.colfer.Throwable colferThrowable =
-        new com.quasient.pal.messages.colfer.Throwable();
-    colferThrowable.setType(throwable.getClass().getName());
-    colferThrowable.setMessage(throwable.getMessage());
-    raised.setThrowable(colferThrowable);
-    return raised;
-  }
-
-  /**
    * Deserializes an argument from Colfer {@link Obj} format.
    *
    * @param obj the serialized object
@@ -608,24 +579,6 @@ public class InterceptCallbackDispatcher {
       logger.error("Failed to deserialize argument", e);
       throw new RuntimeException("Failed to deserialize argument", e);
     }
-  }
-
-  /**
-   * Deserializes an exception from Colfer RaisedThrowable format.
-   *
-   * @param raised the serialized exception
-   * @return the deserialized Throwable
-   */
-  private Throwable deserializeException(com.quasient.pal.messages.colfer.RaisedThrowable raised) {
-    // TODO: Implement proper exception deserialization
-    // For now, create a RuntimeException with the message
-    if (raised == null || raised.getThrowable() == null) {
-      return new RuntimeException("Unknown exception from callback");
-    }
-    com.quasient.pal.messages.colfer.Throwable colferThrowable = raised.getThrowable();
-    String message = colferThrowable.getMessage();
-    String type = colferThrowable.getType();
-    return new RuntimeException(type + ": " + message);
   }
 
   /**

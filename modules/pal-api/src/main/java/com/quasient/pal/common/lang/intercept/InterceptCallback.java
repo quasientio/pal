@@ -21,68 +21,34 @@ package com.quasient.pal.common.lang.intercept;
  * will be invoked twice sequentially (BEFORE and AFTER phases) for each individual operation. Any
  * shared state must be properly synchronized.
  *
- * <p><b>Example: BEFORE intercept to modify arguments</b>
+ * <p><b>Basic Usage:</b>
  *
  * <pre>{@code
- * public class UpperCaseCurrencyCallback implements InterceptCallback {
+ * public class MyCallback implements InterceptCallback {
  *     @Override
  *     public InterceptCallbackResponse handle(InterceptContext ctx) {
- *         if (ctx.getPhase() == InterceptPhase.BEFORE && ctx.getArgs().length > 0) {
- *             Object firstArg = ctx.getArgs()[0];
- *             if (firstArg instanceof String) {
- *                 ctx.setArg(0, ((String) firstArg).toUpperCase());
- *             }
- *         }
- *         return new InterceptCallbackResponse();
- *     }
- * }
- * }</pre>
+ *         // Access operation details
+ *         String methodName = ctx.getExec().getMethodName();
+ *         Object[] args = ctx.getArgs();
  *
- * <p><b>Example: AFTER intercept to override return value</b>
- *
- * <pre>{@code
- * public class RedactSsnCallback implements InterceptCallback {
- *     @Override
- *     public InterceptCallbackResponse handle(InterceptContext ctx) {
- *         if (ctx.getPhase() == InterceptPhase.AFTER) {
- *             CustomerDto dto = (CustomerDto) ctx.getReturnValue();
- *             if (dto != null) {
- *                 dto.setSsn("***-**-****");
- *                 ctx.setReturnValue(dto);
- *             }
- *         }
- *         return new InterceptCallbackResponse();
- *     }
- * }
- * }</pre>
- *
- * <p><b>Example: AROUND intercept with proceed control</b>
- *
- * <pre>{@code
- * public class CachingCallback implements InterceptCallback {
- *     private final ConcurrentHashMap<String, Object> cache = new ConcurrentHashMap<>();
- *
- *     @Override
- *     public InterceptCallbackResponse handle(InterceptContext ctx) {
- *         String cacheKey = ctx.getExec().toString();
- *
+ *         // Modify arguments (BEFORE phase)
  *         if (ctx.getPhase() == InterceptPhase.BEFORE) {
- *             Object cached = cache.get(cacheKey);
- *             if (cached != null) {
- *                 // Skip execution and return cached value
- *                 InterceptCallbackResponse response = new InterceptCallbackResponse();
- *                 response.setShouldProceed(false);
- *                 response.setNewReturnValue(cached);
- *                 return response;
- *             }
- *         } else if (ctx.getPhase() == InterceptPhase.AFTER) {
- *             // Cache the result
- *             cache.put(cacheKey, ctx.getReturnValue());
+ *             ctx.setArg(0, transformedValue);
  *         }
+ *
+ *         // Access/modify return value (AFTER phase)
+ *         if (ctx.getPhase() == InterceptPhase.AFTER) {
+ *             Object returnValue = ctx.getReturnValue();
+ *             ctx.setReturnValue(transformedReturnValue);
+ *         }
+ *
  *         return new InterceptCallbackResponse();
  *     }
  * }
  * }</pre>
+ *
+ * <p>For practical examples including argument modification, return value override, and caching
+ * implementations, see the "Writing Callback Handlers" guide in the user documentation.
  *
  * @see InterceptContext
  * @see InterceptCallbackResponse

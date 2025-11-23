@@ -135,6 +135,9 @@ public class BaseExecMessageDispatcherDispatchTest {
     Mockito.when(pjp.getStaticPart()).thenReturn(sp);
 
     Proceed<String> proceed = () -> "ok";
+    // Stub pjp.proceed(Object[]) to delegate to the Proceed callback
+    Mockito.when(pjp.proceed(Mockito.any(Object[].class))).thenAnswer(inv -> proceed.call());
+
     String out = d.dispatch(pjp, proceed);
     assertThat(out, is("ok"));
   }

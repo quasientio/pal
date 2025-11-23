@@ -68,7 +68,9 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
             objectLookupStore);
   }
 
-  private ProceedingJoinPoint createPjp(Method method, Object[] args) throws Throwable {
+  private <T> ProceedingJoinPoint createPjp(
+      Method method, Object[] args, com.quasient.pal.common.weave.Proceed<T> proceed)
+      throws Throwable {
     String sourceFilename = "NotARealClass.java";
     return PjpBuilder.create()
         .kindMethodCall()
@@ -77,6 +79,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
         .sender(this)
         .target(null) // static method
         .args(args)
+        .proceedBehavior(proceed)
         .build();
   }
 
@@ -100,11 +103,11 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
     Object[] args = {};
 
     // ── PJP ──────────────────────────────────────────────────
-    ProceedingJoinPoint pjp = createPjp(m, args);
+    var proceed = asProceed(ClassForNonVoidClassMethodTest::getRandomMinute);
+    ProceedingJoinPoint pjp = createPjp(m, args, proceed);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned =
-        dispatcher.dispatch(pjp, asProceed(ClassForNonVoidClassMethodTest::getRandomMinute));
+    Object returned = dispatcher.dispatch(pjp, proceed);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -130,14 +133,12 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
     Object[] args = {smallDouble, bigDouble};
 
     // ── PJP ──────────────────────────────────────────────────
-    ProceedingJoinPoint pjp = createPjp(m, args);
+    var proceed =
+        asProceed(() -> ClassForNonVoidClassMethodTest.max((Double) args[0], (Double) args[1]));
+    ProceedingJoinPoint pjp = createPjp(m, args, proceed);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned =
-        dispatcher.dispatch(
-            pjp,
-            asProceed(
-                () -> ClassForNonVoidClassMethodTest.max((Double) args[0], (Double) args[1])));
+    Object returned = dispatcher.dispatch(pjp, proceed);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -162,14 +163,12 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
     Object[] args = {smallDouble, bigDouble};
 
     // ── PJP ──────────────────────────────────────────────────
-    ProceedingJoinPoint pjp = createPjp(m, args);
+    var proceed =
+        asProceed(() -> ClassForNonVoidClassMethodTest.min((double) args[0], (double) args[1]));
+    ProceedingJoinPoint pjp = createPjp(m, args, proceed);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned =
-        dispatcher.dispatch(
-            pjp,
-            asProceed(
-                () -> ClassForNonVoidClassMethodTest.min((double) args[0], (double) args[1])));
+    Object returned = dispatcher.dispatch(pjp, proceed);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -197,11 +196,11 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
     Object[] args = {varargs};
 
     // ── PJP ──────────────────────────────────────────────────
-    ProceedingJoinPoint pjp = createPjp(m, args);
+    var proceed = asProceed(() -> ClassForNonVoidClassMethodTest.max(varargs));
+    ProceedingJoinPoint pjp = createPjp(m, args, proceed);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned =
-        dispatcher.dispatch(pjp, asProceed(() -> ClassForNonVoidClassMethodTest.max(varargs)));
+    Object returned = dispatcher.dispatch(pjp, proceed);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -226,16 +225,16 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
     Object[] args = {number, divisor};
 
     // ── PJP ──────────────────────────────────────────────────
-    ProceedingJoinPoint pjp = createPjp(m, args);
+    var proceed =
+        asProceed(
+            () -> {
+              throw new ArithmeticException("/ by zero");
+            });
+    ProceedingJoinPoint pjp = createPjp(m, args, proceed);
 
     // ── dispatch ─────────────────────────────────────────────
     try {
-      dispatcher.dispatch(
-          pjp,
-          asProceed(
-              () -> {
-                throw new ArithmeticException("/ by zero");
-              }));
+      dispatcher.dispatch(pjp, proceed);
       fail("Should have failed with a div by zero overflow");
     } catch (ArithmeticException ae) {
       // expected

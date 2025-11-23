@@ -105,17 +105,12 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       @SuppressWarnings("unused")
       final ExecMessage beforeExecResponseMsg =
           messageGateway.sendExecMessage(messageBuilder.wrap(beforeExecMsg), ExecPhase.BEFORE);
-
-      // 3. Send old-style intercept callbacks (if any remote intercepts matched)
-      if (beforeInterceptCheck != null && beforeInterceptCheck.hasRemoteIntercepts()) {
-        interceptCallbackDispatcher.sendCallbacks(beforeInterceptCheck, beforeExecMsg);
-      }
     } else if (beforeInterceptCheck != null && beforeInterceptCheck.hasLocalIntercepts()) {
       // Future: handle local intercepts without creating ExecMessage
       // handleLocalIntercepts(beforeInterceptCheck.getLocalIntercepts(), pjp, args);
     }
 
-    // 3a. Send new-style BEFORE intercept callbacks and apply argument mutations
+    // Send BEFORE intercept callbacks and apply argument mutations
     Object[] finalArgs = args;
     if (beforeInterceptCheck != null
         && beforeInterceptCheck.hasRemoteIntercepts()
@@ -142,10 +137,6 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
           }
         }
         finalArgs = mutatedArgs;
-
-        if (logger.isDebugEnabled()) {
-          logger.debug("Applied argument mutations from BEFORE callbacks: {}", mutatedArgs);
-        }
       }
     }
 
@@ -588,15 +579,24 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
    *
    * <p>This method may be overridden by specialized dispatchers based on the type of the operation.
    *
+   * <p>If the args parameter differs from the original join point arguments (e.g., due to BEFORE
+   * intercept callback mutations), this method uses {@link ProceedingJoinPoint#proceed(Object[])}
+   * to pass the modified arguments to the intercepted operation.
+   *
    * @param pjp the proceeding join point
    * @param proceed handle to the {@link Proceed} callback
-   * @param args the arguments for the invocation
+   * @param args the arguments for the invocation (which may be mutated by intercept callbacks)
    * @return the result of the accessible object invocation, null if the operation is a setter or
    *     void call
    */
   protected <T> T invoke(ProceedingJoinPoint pjp, Proceed<T> proceed, Object[] args)
       throws Throwable {
-    return proceed.call();
+    // Use pjp.proceed(args) to pass the arguments (which may have been mutated by intercept
+    // callbacks) to the intercepted operation. AspectJ's proceed(Object[]) allows us to replace
+    // the original arguments with modified ones.
+    @SuppressWarnings("unchecked")
+    T result = (T) pjp.proceed(args);
+    return result;
   }
 
   /**

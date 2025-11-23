@@ -12,6 +12,7 @@ package com.quasient.pal;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.intercept.BeforeInterceptCallbackIT;
+import com.quasient.pal.intercept.MethodInterceptIT;
 import com.quasient.pal.intercept.constructor.ConstructorAsyncCallbackIT;
 import com.quasient.pal.intercept.constructor.ConstructorSyncCallbackIT;
 import com.quasient.pal.intercept.instancefield.InstanceFieldAsyncCallbackIT;
@@ -52,7 +53,8 @@ import org.slf4j.LoggerFactory;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-  // New-style BEFORE intercept tests
+  MethodInterceptIT.class,
+  // BEFORE intercept tests
   BeforeInterceptCallbackIT.class,
   // Instance method intercept tests
   InstanceMethodSyncCallbackIT.class,
@@ -141,8 +143,22 @@ public class InterceptTestSuite extends AbstractIntegrationTest {
     String palDirectory = getPalDirectoryUrl();
     String kafkaServers = getKafkaServers();
 
-    // Build classpath for itt-apps (both peers need access to test application classes)
-    String ittAppsClasspath = String.format("%s/modules/itt-apps/target/classes", palHome);
+    // Build classpath for itt-apps (both peers need access to test application classes and
+    // dependencies)
+    String userHome = System.getProperty("user.home");
+    String ittAppsClasses = String.format("%s/modules/itt-apps/target/classes", palHome);
+    String slf4jApi =
+        String.format("%s/.m2/repository/org/slf4j/slf4j-api/2.0.7/slf4j-api-2.0.7.jar", userHome);
+    String logbackClassic =
+        String.format(
+            "%s/.m2/repository/ch/qos/logback/logback-classic/1.5.13/logback-classic-1.5.13.jar",
+            userHome);
+    String logbackCore =
+        String.format(
+            "%s/.m2/repository/ch/qos/logback/logback-core/1.5.13/logback-core-1.5.13.jar",
+            userHome);
+    String ittAppsClasspath =
+        String.join(":", ittAppsClasses, slf4jApi, logbackClassic, logbackCore);
 
     // Launch interceptable peer (the peer being intercepted)
     logger.info("Launching interceptable peer...");
@@ -157,8 +173,6 @@ public class InterceptTestSuite extends AbstractIntegrationTest {
             "interceptable-peer",
             "--zmq-rpc",
             "5657",
-            "--json-rpc",
-            "7790",
             "--rpc-threads",
             "3",
             "--rpc-allow-nonpublic",
@@ -184,10 +198,8 @@ public class InterceptTestSuite extends AbstractIntegrationTest {
             "interceptor-peer",
             "--zmq-rpc",
             "5658",
-            "--json-rpc",
-            "7791",
             "--rpc-threads",
-            "2",
+            "1",
             "--rpc-allow-nonpublic",
             "--log",
             "auto",

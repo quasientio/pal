@@ -63,7 +63,8 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
             objectLookupStore);
   }
 
-  private ProceedingJoinPoint createPjp(Method method, Object target, Object[] args)
+  private <T> ProceedingJoinPoint createPjp(
+      Method method, Object target, Object[] args, com.quasient.pal.common.weave.Proceed<T> proceed)
       throws Throwable {
     String sourceFilename = "NotARealClass.java";
     return PjpBuilder.create()
@@ -73,6 +74,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
         .sender(this)
         .target(target)
         .args(args)
+        .proceedBehavior(proceed)
         .build();
   }
 
@@ -100,10 +102,11 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
     ClassForNonVoidInstanceMethodTest target = new ClassForNonVoidInstanceMethodTest(value);
 
     // ── PJP ──────────────────────────────────────────────────
-    ProceedingJoinPoint pjp = createPjp(m, target, args);
+    var proceed = asProceed(target::toUpperCase);
+    ProceedingJoinPoint pjp = createPjp(m, target, args, proceed);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned = dispatcher.dispatch(pjp, asProceed(target::toUpperCase));
+    Object returned = dispatcher.dispatch(pjp, proceed);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -130,10 +133,11 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
     ClassForNonVoidInstanceMethodTest target = new ClassForNonVoidInstanceMethodTest(value);
 
     // ── PJP ──────────────────────────────────────────────────
-    ProceedingJoinPoint pjp = createPjp(m, target, args);
+    var proceed = asProceed(() -> target.append((String) args[0]));
+    ProceedingJoinPoint pjp = createPjp(m, target, args, proceed);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned = dispatcher.dispatch(pjp, asProceed(() -> target.append((String) args[0])));
+    Object returned = dispatcher.dispatch(pjp, proceed);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -160,11 +164,11 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
     ClassForNonVoidInstanceMethodTest target = new ClassForNonVoidInstanceMethodTest();
 
     // ── PJP ──────────────────────────────────────────────────
-    ProceedingJoinPoint pjp = createPjp(m, target, args);
+    var proceed = asProceed(() -> target.floatAsString((float) args[0]));
+    ProceedingJoinPoint pjp = createPjp(m, target, args, proceed);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned =
-        dispatcher.dispatch(pjp, asProceed(() -> target.floatAsString((float) args[0])));
+    Object returned = dispatcher.dispatch(pjp, proceed);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -192,12 +196,11 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
     ClassForNonVoidInstanceMethodTest target = new ClassForNonVoidInstanceMethodTest();
 
     // ── PJP ──────────────────────────────────────────────────
-    ProceedingJoinPoint pjp = createPjp(m, target, args);
+    var proceed = asProceed(() -> target.join((String) args[0], (String[]) args[1]));
+    ProceedingJoinPoint pjp = createPjp(m, target, args, proceed);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned =
-        dispatcher.dispatch(
-            pjp, asProceed(() -> target.join((String) args[0], (String[]) args[1])));
+    Object returned = dispatcher.dispatch(pjp, proceed);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -224,11 +227,12 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
         new ClassForNonVoidInstanceMethodTest(); // value == null
 
     // ── PJP ──────────────────────────────────────────────────
-    ProceedingJoinPoint pjp = createPjp(m, target, args);
+    var proceed = asProceed(target::toUpperCase);
+    ProceedingJoinPoint pjp = createPjp(m, target, args, proceed);
 
     // ── dispatch ─────────────────────────────────────────────
     try {
-      dispatcher.dispatch(pjp, asProceed(target::toUpperCase));
+      dispatcher.dispatch(pjp, proceed);
       fail("Should have thrown a NPE");
     } catch (NullPointerException npe) {
       // expected

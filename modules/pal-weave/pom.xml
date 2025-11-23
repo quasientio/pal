@@ -27,6 +27,22 @@
     <!-- BUILD -->
     <build>
         <plugins>
+            <!-- Disable default javac compile inherited from parent -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>default-compile</id>
+                        <phase>none</phase>
+                    </execution>
+                    <execution>
+                        <id>default-testCompile</id>
+                        <phase>none</phase>
+                    </execution>
+                </executions>
+            </plugin>
+
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>aspectj-maven-plugin</artifactId>
@@ -36,13 +52,20 @@
                     <source>${java.version}</source>
                     <target>${java.version}</target>
                     <verbose>true</verbose>
-                    <!-- ONLY COMPILE ASPECTS, DON'T WEAVE THEM -->
-                    <XterminateAfterCompilation>true</XterminateAfterCompilation>
                 </configuration>
                 <executions>
                     <execution>
+                        <id>ajc-compile</id>
+                        <phase>compile</phase>
                         <goals>
                             <goal>compile</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>ajc-test-compile</id>
+                        <phase>test-compile</phase>
+                        <goals>
+                            <goal>test-compile</goal>
                         </goals>
                     </execution>
                 </executions>

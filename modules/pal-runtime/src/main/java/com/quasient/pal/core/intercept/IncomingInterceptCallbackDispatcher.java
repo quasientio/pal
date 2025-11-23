@@ -17,6 +17,7 @@ import com.quasient.pal.messages.colfer.InterceptCallbackRequest;
 import com.quasient.pal.messages.colfer.InterceptCallbackResponse;
 import com.quasient.pal.messages.colfer.Obj;
 import com.quasient.pal.serdes.Unwrapper;
+import com.quasient.pal.serdes.colfer.ExceptionSerdes;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.lang.reflect.Method;
@@ -142,7 +143,8 @@ public class IncomingInterceptCallbackDispatcher {
             "Either registeredCallbackId or callbackClass must be provided");
       }
 
-      Class<?> callbackClass = Class.forName(className);
+      Class<?> callbackClass =
+          Class.forName(className, true, Thread.currentThread().getContextClassLoader());
       Method callbackMethod = callbackClass.getMethod(methodName, InterceptContext.class);
 
       // Verify method is static and returns InterceptCallbackResponse
@@ -207,10 +209,43 @@ public class IncomingInterceptCallbackDispatcher {
    * @return the deserialized arguments array
    */
   private Object[] extractArguments(InterceptCallbackRequest request) {
-    // TODO: Extract arguments from request.getExec()
-    // This depends on the ExecMessage structure - for now return empty array
-    // In a complete implementation, we'd parse the parameters from the ExecMessage
-    return new Object[0];
+    com.quasient.pal.messages.colfer.ExecMessage exec = request.getExec();
+    if (exec == null) {
+      return new Object[0];
+    }
+
+    // Extract parameters based on message type
+    com.quasient.pal.messages.colfer.Parameter[] parameters = null;
+
+    if (exec.getConstructorCall() != null) {
+      parameters = exec.getConstructorCall().getParameters();
+    } else if (exec.getInstanceMethodCall() != null) {
+      parameters = exec.getInstanceMethodCall().getParameters();
+    } else if (exec.getClassMethodCall() != null) {
+      parameters = exec.getClassMethodCall().getParameters();
+    }
+
+    if (parameters == null || parameters.length == 0) {
+      return new Object[0];
+    }
+
+    // Deserialize each parameter
+    Object[] args = new Object[parameters.length];
+    for (int i = 0; i < parameters.length; i++) {
+      try {
+        Obj paramValue = parameters[i].getValue();
+        if (paramValue.getIsNull()) {
+          args[i] = null;
+        } else {
+          args[i] = Unwrapper.unwrapObject(paramValue);
+        }
+      } catch (Exception e) {
+        logger.warn("Failed to deserialize argument {}: {}", i, e.getMessage());
+        args[i] = null;
+      }
+    }
+
+    return args;
   }
 
   /**
@@ -238,16 +273,14 @@ public class IncomingInterceptCallbackDispatcher {
    *
    * @param request the callback request
    * @return the deserialized exception, or null
-   * @throws Exception if deserialization fails
    */
-  private Throwable extractThrownException(InterceptCallbackRequest request) throws Exception {
-    if (request.getThrownException() == null) {
+  private Throwable extractThrownException(InterceptCallbackRequest request) {
+    com.quasient.pal.messages.colfer.RaisedThrowable raised = request.getThrownException();
+    if (raised == null) {
       return null;
     }
 
-    // TODO: Deserialize RaisedThrowable to Throwable
-    // This requires proper exception deserialization logic
-    return null;
+    return ExceptionSerdes.deserializeException(raised);
   }
 
   /**
@@ -268,6 +301,7 @@ public class IncomingInterceptCallbackDispatcher {
     wireResponse.setPhase(request.getPhase());
 
     InterceptPhase phase = InterceptPhase.fromByte(request.getPhase());
+    InterceptType interceptType = InterceptType.fromByte(request.getInterceptType());
 
     if (phase == InterceptPhase.BEFORE) {
       // Handle argument mutation
@@ -276,7 +310,12 @@ public class IncomingInterceptCallbackDispatcher {
       }
 
       // Handle proceed control (AROUND only)
-      wireResponse.setShouldProceed(userResponse.isShouldProceed());
+      // BEFORE and AFTER intercepts cannot control execution flow
+      if (interceptType == InterceptType.AROUND) {
+        wireResponse.setShouldProceed(userResponse.isShouldProceed());
+      } else {
+        wireResponse.setShouldProceed(true);
+      }
 
     } else {
       // AFTER phase - handle return value override
@@ -319,9 +358,15 @@ public class IncomingInterceptCallbackDispatcher {
    * @return the serialized arguments array
    */
   private Obj[] serializeArgs(Object[] args) {
-    // TODO: Implement argument serialization
-    // This requires wrapping each argument in an Obj
-    return new Obj[0];
+    if (args == null || args.length == 0) {
+      return new Obj[0];
+    }
+
+    Obj[] serialized = new Obj[args.length];
+    for (int i = 0; i < args.length; i++) {
+      serialized[i] = serializeObject(args[i]);
+    }
+    return serialized;
   }
 
   /**
@@ -331,9 +376,18 @@ public class IncomingInterceptCallbackDispatcher {
    * @return the serialized object
    */
   private Obj serializeObject(Object value) {
-    // TODO: Implement object serialization
-    // This requires using a Wrapper to convert Java object to Obj
-    return new Obj();
+    Obj obj = new Obj();
+
+    if (value == null) {
+      obj.setIsNull(true);
+      return obj;
+    }
+
+    String className = value.getClass().getName();
+
+    // Use FORCE_BY_VALUE to serialize the actual value, not just a reference
+    return com.quasient.pal.serdes.colfer.Wrapper.wrapInto(
+        obj, value, className, null, com.quasient.pal.serdes.colfer.WrapPolicy.FORCE_BY_VALUE);
   }
 
   /**
@@ -343,9 +397,7 @@ public class IncomingInterceptCallbackDispatcher {
    * @return the serialized exception
    */
   private com.quasient.pal.messages.colfer.RaisedThrowable serializeException(Throwable throwable) {
-    // TODO: Implement exception serialization
-    // This requires proper RaisedThrowable construction
-    return new com.quasient.pal.messages.colfer.RaisedThrowable();
+    return ExceptionSerdes.serializeException(throwable);
   }
 
   /**

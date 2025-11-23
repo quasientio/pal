@@ -2864,6 +2864,89 @@ public final class MessageBuilder {
   }
 
   /**
+   * Builds an {@link InterceptCallbackRequest} from intercept metadata and execution context.
+   *
+   * <p>This method constructs a callback request message that will be sent to the callback peer.
+   * The request contains all necessary information for the callback handler to execute, including:
+   *
+   * <ul>
+   *   <li>Callback routing information (class, method, peer UUID)
+   *   <li>The original execution message
+   *   <li>Phase-specific data (arguments for BEFORE, return value/exception for AFTER)
+   * </ul>
+   *
+   * @param peerUuid the UUID of the peer being intercepted
+   * @param interceptMessage the intercept message containing callback routing info
+   * @param execMessage the execution message with operation metadata
+   * @param phase the callback phase (BEFORE or AFTER)
+   * @param returnValue the return value (AFTER phase only, may be null)
+   * @param isVoid whether the method is void
+   * @param thrownException the thrown exception (AFTER phase only, may be null)
+   * @return the constructed callback request
+   */
+  public InterceptCallbackRequest buildInterceptCallbackRequest(
+      UUID peerUuid,
+      InterceptMessage interceptMessage,
+      ExecMessage execMessage,
+      com.quasient.pal.common.lang.intercept.InterceptPhase phase,
+      Object returnValue,
+      boolean isVoid,
+      Throwable thrownException) {
+
+    InterceptCallbackRequest request = new InterceptCallbackRequest();
+
+    // Set unique callback ID
+    request.setCallbackId(UUID.randomUUID().toString());
+
+    // Set phase and type
+    request.setPhase(phase.toByte());
+    request.setInterceptType(interceptMessage.getInterceptType());
+
+    // Set peer info
+    request.setInterceptedPeer(peerUuid.toString());
+
+    // Set callback routing info from intercept message
+    request.setCallbackClass(interceptMessage.getCallbackClass());
+    request.setCallbackMethod(interceptMessage.getCallbackMethod());
+
+    // Set execution message
+    request.setExec(execMessage);
+
+    // Set phase-specific fields
+    if (phase == com.quasient.pal.common.lang.intercept.InterceptPhase.AFTER) {
+      request.setIsVoid(isVoid);
+      if (!isVoid && returnValue != null) {
+        request.setReturnValue(serializeObjectForCallback(returnValue));
+      }
+      if (thrownException != null) {
+        request.setThrownException(ExceptionSerdes.serializeException(thrownException));
+      }
+    }
+
+    return request;
+  }
+
+  /**
+   * Serializes an object to Colfer {@link Obj} format with force-by-value semantics.
+   *
+   * <p>This method is used specifically for intercept callbacks to ensure that actual values are
+   * serialized rather than just references. This is important because the callback may be on a
+   * different peer that doesn't have access to the same object references.
+   *
+   * @param value the object to serialize
+   * @return the serialized Obj
+   */
+  private Obj serializeObjectForCallback(Object value) {
+    Obj obj = new Obj();
+    if (value == null) {
+      obj.setIsNull(true);
+      return obj;
+    }
+    String className = value.getClass().getName();
+    return Wrapper.wrapInto(obj, value, className, null, WrapPolicy.FORCE_BY_VALUE);
+  }
+
+  /**
    * Wraps an {@link InterceptCallbackRequest} into a generic {@link Message}.
    *
    * @param interceptCallbackRequest the intercept callback request to wrap

@@ -1,0 +1,179 @@
+/*
+ * Copyright (C) 2025 Quasient Inc. <https://www.quasient.com>
+ *
+ * Use of this software is governed by the Business Source License 1.1
+ * included in the file LICENSE and at https://mariadb.com/bsl11
+ *
+ * Change Date: 2029-10-01
+ * Change License: Apache 2.0
+ */
+package com.quasient.pal.serdes.colfer;
+
+/**
+ * Utility class for serializing and deserializing exceptions to/from Colfer format.
+ *
+ * <p>This class provides methods to convert Java {@link Throwable} instances to Colfer {@link
+ * com.quasient.pal.messages.colfer.Throwable} and {@link
+ * com.quasient.pal.messages.colfer.RaisedThrowable} representations, and vice versa.
+ *
+ * <p>The serialization preserves:
+ *
+ * <ul>
+ *   <li>Exception type (class name)
+ *   <li>Exception message
+ *   <li>Stack trace elements
+ *   <li>Exception cause (recursively)
+ * </ul>
+ *
+ * <p>The deserialization attempts to reconstruct the original exception type when possible, falling
+ * back to {@link RuntimeException} if the class cannot be loaded.
+ */
+public final class ExceptionSerdes {
+
+  /** Private constructor to prevent instantiation. */
+  private ExceptionSerdes() {}
+
+  /**
+   * Serializes a Java Throwable to Colfer RaisedThrowable format.
+   *
+   * @param throwable the exception to serialize
+   * @return the serialized RaisedThrowable
+   */
+  public static com.quasient.pal.messages.colfer.RaisedThrowable serializeException(
+      Throwable throwable) {
+    com.quasient.pal.messages.colfer.RaisedThrowable raised =
+        new com.quasient.pal.messages.colfer.RaisedThrowable();
+
+    if (throwable == null) {
+      return raised;
+    }
+
+    raised.setThrowable(serializeThrowable(throwable));
+    return raised;
+  }
+
+  /**
+   * Serializes a Java Throwable to a Colfer Throwable.
+   *
+   * @param throwable the Java throwable
+   * @return the Colfer throwable
+   */
+  public static com.quasient.pal.messages.colfer.Throwable serializeThrowable(Throwable throwable) {
+    if (throwable == null) {
+      return null;
+    }
+
+    com.quasient.pal.messages.colfer.Throwable colferThrowable =
+        new com.quasient.pal.messages.colfer.Throwable();
+
+    colferThrowable.setType(throwable.getClass().getName());
+    colferThrowable.setMessage(throwable.getMessage());
+
+    // Serialize stack trace
+    StackTraceElement[] stackTrace = throwable.getStackTrace();
+    if (stackTrace != null && stackTrace.length > 0) {
+      String[] stackTraceStrings = new String[stackTrace.length];
+      for (int i = 0; i < stackTrace.length; i++) {
+        stackTraceStrings[i] = stackTrace[i].toString();
+      }
+      colferThrowable.setStackTraceElements(stackTraceStrings);
+    }
+
+    // Recursively serialize the cause
+    Throwable cause = throwable.getCause();
+    if (cause != null && cause != throwable) { // Avoid infinite recursion
+      colferThrowable.setCause(serializeThrowable(cause));
+    }
+
+    return colferThrowable;
+  }
+
+  /**
+   * Deserializes a Colfer RaisedThrowable to a Java Throwable.
+   *
+   * @param raised the serialized exception
+   * @return the deserialized Throwable
+   */
+  public static Throwable deserializeException(
+      com.quasient.pal.messages.colfer.RaisedThrowable raised) {
+    if (raised == null) {
+      return new RuntimeException("Unknown exception from callback");
+    }
+
+    return deserializeThrowable(raised.getThrowable());
+  }
+
+  /**
+   * Deserializes a Colfer Throwable to a Java Throwable.
+   *
+   * @param colferThrowable the Colfer throwable
+   * @return the Java throwable
+   */
+  public static Throwable deserializeThrowable(
+      com.quasient.pal.messages.colfer.Throwable colferThrowable) {
+    if (colferThrowable == null) {
+      return new RuntimeException("Unknown exception from callback");
+    }
+
+    String type = colferThrowable.getType();
+    String message = colferThrowable.getMessage();
+    com.quasient.pal.messages.colfer.Throwable colferCause = colferThrowable.getCause();
+
+    // Recursively deserialize the cause
+    Throwable cause = (colferCause != null) ? deserializeThrowable(colferCause) : null;
+
+    // Try to reconstruct the original exception type
+    Throwable exception;
+    try {
+      Class<?> exceptionClass = Class.forName(type);
+      if (Throwable.class.isAssignableFrom(exceptionClass)) {
+        // Try constructor with (String, Throwable)
+        try {
+          exception =
+              (Throwable)
+                  exceptionClass
+                      .getConstructor(String.class, Throwable.class)
+                      .newInstance(message, cause);
+        } catch (NoSuchMethodException e) {
+          // Try constructor with (String)
+          try {
+            exception =
+                (Throwable) exceptionClass.getConstructor(String.class).newInstance(message);
+            if (cause != null) {
+              exception.initCause(cause);
+            }
+          } catch (NoSuchMethodException e2) {
+            // Fallback to RuntimeException
+            exception = new RuntimeException(type + ": " + message, cause);
+          }
+        }
+      } else {
+        exception = new RuntimeException(type + ": " + message, cause);
+      }
+    } catch (Exception e) {
+      // If we can't instantiate the original exception, create a RuntimeException
+      exception = new RuntimeException(type + ": " + message, cause);
+    }
+
+    // Reconstruct stack trace if available
+    String[] stackTraceElements = colferThrowable.getStackTraceElements();
+    if (stackTraceElements != null && stackTraceElements.length > 0) {
+      StackTraceElement[] javaStackTrace = new StackTraceElement[stackTraceElements.length];
+      for (int i = 0; i < stackTraceElements.length; i++) {
+        // Parse stack trace element string (format: "className.methodName(fileName:lineNumber)")
+        String element = stackTraceElements[i];
+        try {
+          // For now, create a minimal stack trace element
+          // Full parsing would require more complex string manipulation
+          javaStackTrace[i] = new StackTraceElement("", element, null, 0);
+        } catch (Exception e) {
+          // Skip malformed stack trace elements
+          javaStackTrace[i] = new StackTraceElement("", "unknown", null, 0);
+        }
+      }
+      exception.setStackTrace(javaStackTrace);
+    }
+
+    return exception;
+  }
+}
