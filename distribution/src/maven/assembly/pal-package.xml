@@ -63,6 +63,10 @@
 
       <!-- exclude build-time files inside licenses/ -->
       <excludes>
+        <!-- exclude config files ending in .xml (not .xml.example) -->
+        <exclude>config/**/*.xml</exclude>
+
+        <!-- License stuff to exclude -->
         <exclude>licenses/BSL_HEADER.txt</exclude>
         <exclude>licenses/THIRD_PARTY.ftl</exclude>
         <exclude>licenses/url-fixes.xml</exclude>
