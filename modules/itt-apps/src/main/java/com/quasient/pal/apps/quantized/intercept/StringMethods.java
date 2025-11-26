@@ -7,7 +7,7 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
-package com.quasient.pal.apps.intercept;
+package com.quasient.pal.apps.quantized.intercept;
 
 /**
  * Test fixture application for BEFORE intercept callback integration tests.
@@ -120,5 +120,28 @@ public class StringMethods {
    */
   public int callLength(String input) {
     return length(input); // <-- Call site for interception
+  }
+
+  /**
+   * Void method that prints a message.
+   *
+   * <p>Used for testing AFTER intercepts on void methods.
+   *
+   * @param message the message to print
+   */
+  public void printMessage(String message) {
+    System.out.println(message);
+  }
+
+  /**
+   * Wrapper method that calls printMessage(String).
+   *
+   * <p>Used for testing AFTER intercepts on void methods via call-site weaving. The printMessage()
+   * call within this method is the intercepted call site.
+   *
+   * @param message the message to print
+   */
+  public void callPrintMessage(String message) {
+    printMessage(message); // <-- Call site for interception
   }
 }

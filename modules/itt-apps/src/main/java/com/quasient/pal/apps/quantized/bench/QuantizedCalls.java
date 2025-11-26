@@ -7,9 +7,8 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
-package com.quasient.pal.bench.woven;
+package com.quasient.pal.apps.quantized.bench;
 
-import com.quasient.pal.bench.Calls;
 import java.util.Arrays;
 
 /** Simple wrapper around misc calls to JDK classes. */

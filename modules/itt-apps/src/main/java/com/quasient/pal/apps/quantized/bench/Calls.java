@@ -7,7 +7,7 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
-package com.quasient.pal.bench;
+package com.quasient.pal.apps.quantized.bench;
 
 import java.util.Arrays;
 

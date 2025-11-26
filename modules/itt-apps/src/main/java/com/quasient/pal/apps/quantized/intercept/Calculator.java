@@ -7,7 +7,7 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
-package com.quasient.pal.apps.intercept;
+package com.quasient.pal.apps.quantized.intercept;
 
 /**
  * Simple calculator application for testing instance method intercepts.

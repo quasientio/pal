@@ -7,7 +7,10 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
-package com.quasient.pal.apps.intercept;
+package com.quasient.pal.apps.quantized.intercept;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Test fixture application for interception integration tests.
@@ -151,5 +154,122 @@ public class InterceptableApp {
    */
   public Integer callIncrementStaticCounter() {
     return incrementStaticCounter(); // <-- Static method call site for interception
+  }
+
+  /**
+   * Factory method that creates N instances using the parameterized constructor.
+   *
+   * <p>Used for testing multiple constructor intercepts from a single invocation. Each constructor
+   * call within this method is an intercepted call site.
+   *
+   * @param n number of instances to create
+   * @param initialCounter base initial value for the counter field
+   * @return list of new InterceptableApp instances
+   */
+  public static List<InterceptableApp> createNInstances(Integer n, Integer initialCounter) {
+    List<InterceptableApp> instances = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      instances.add(new InterceptableApp(initialCounter + i)); // <-- Constructor call site
+    }
+    return instances;
+  }
+
+  /**
+   * Wrapper method that calls multiplyStaticBy N times.
+   *
+   * <p>Used for testing multiple static method intercepts from a single invocation. Each static
+   * method call within this method is an intercepted call site.
+   *
+   * @param n number of times to call multiplyStaticBy
+   * @param factor factor to multiply static counter by
+   * @return final value of static counter after all multiplications
+   */
+  public Integer callMultiplyStaticByNTimes(Integer n, Integer factor) {
+    Integer result = null;
+    for (int i = 0; i < n; i++) {
+      result = multiplyStaticBy(factor); // <-- Static method call site
+    }
+    return result;
+  }
+
+  /**
+   * Wrapper method that calls incrementStaticCounter N times.
+   *
+   * <p>Used for testing multiple static method intercepts from a single invocation. Each static
+   * method call within this method is an intercepted call site.
+   *
+   * @param n number of times to call incrementStaticCounter
+   * @return final value of static counter after all increments
+   */
+  public Integer callIncrementStaticCounterNTimes(Integer n) {
+    Integer result = null;
+    for (int i = 0; i < n; i++) {
+      result = incrementStaticCounter(); // <-- Static method call site
+    }
+    return result;
+  }
+
+  /**
+   * Wrapper method that reads the instance counter field N times.
+   *
+   * <p>Used for testing multiple instance field get intercepts from a single invocation. Each field
+   * read within this method is an intercepted call site.
+   *
+   * @param n number of times to read the counter field
+   * @return list of counter values read
+   */
+  public List<Integer> getCounterNTimes(Integer n) {
+    List<Integer> values = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      values.add(counter); // <-- Field get call site
+    }
+    return values;
+  }
+
+  /**
+   * Wrapper method that writes the instance counter field N times.
+   *
+   * <p>Used for testing multiple instance field put intercepts from a single invocation. Each field
+   * write within this method is an intercepted call site.
+   *
+   * @param n number of times to write the counter field
+   * @param baseValue base value for the counter field
+   */
+  public void setCounterNTimes(Integer n, Integer baseValue) {
+    for (int i = 0; i < n; i++) {
+      counter = baseValue + i; // <-- Field put call site
+    }
+  }
+
+  /**
+   * Wrapper method that reads the static counter field N times.
+   *
+   * <p>Used for testing multiple static field get intercepts from a single invocation. Each field
+   * read within this method is an intercepted call site.
+   *
+   * @param n number of times to read the static counter field
+   * @return list of static counter values read
+   */
+  public static List<Integer> getStaticCounterNTimes(Integer n) {
+    List<Integer> values = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      values.add(staticCounter); // <-- Static field get call site
+    }
+    return values;
+  }
+
+  /**
+   * Wrapper method that writes the static counter field N times.
+   *
+   * <p>Used for testing multiple static field put intercepts from a single invocation. Each field
+   * write within this method is an intercepted call site.
+   *
+   * @param n number of times to write the static counter field
+   * @param baseValue base value for the static counter field
+   */
+  public static void setStaticCounterNTimes(Integer n, Integer baseValue) {
+    for (int i = 0; i < n; i++) {
+      staticCounter = baseValue + i; // <-- Static field put call site
+    }
   }
 }

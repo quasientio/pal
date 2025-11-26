@@ -7,7 +7,7 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
-package com.quasient.pal.apps.intercept;
+package com.quasient.pal.apps.callbacks;
 
 import com.quasient.pal.common.lang.intercept.InterceptCallbackResponse;
 import com.quasient.pal.common.lang.intercept.InterceptContext;
@@ -15,14 +15,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Callback handlers for constructor intercept integration tests.
+ * Callback handlers for static method intercept integration tests.
  *
  * <p>Provides static callback methods that can be invoked via reflection for testing BEFORE
- * intercepts on constructors.
+ * intercepts on static methods.
  */
-public class ConstructorHandlers {
+public class StaticMethodHandlers {
 
-  private static final Logger logger = LoggerFactory.getLogger(ConstructorHandlers.class);
+  private static final Logger logger = LoggerFactory.getLogger(StaticMethodHandlers.class);
 
   /**
    * No-op callback for testing.

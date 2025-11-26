@@ -55,21 +55,25 @@
                         <phase>none</phase>
                     </execution>
 
-                    <!-- Re-enable a targeted javac compile for excluded files -->
+                    <!-- Compile all non-quantized (i.e. non woven) sources with javac -->
                     <execution>
-                        <id>compile-excluded-with-javac</id>
+                        <id>compile-unwoven-with-javac</id>
                         <phase>compile</phase>
                         <goals>
                             <goal>compile</goal>
                         </goals>
                         <configuration>
                             <release>${java.version}</release>
+                            <!-- Take everything... -->
                             <includes>
-                                <include>com/quasient/pal/apps/rpc/ArrayVars.java</include>
-                                <include>com/quasient/pal/apps/rpc/StaticArrayVars.java</include>
-                                <include>com/quasient/pal/apps/rpc/Variables.java</include>
-                                <include>com/quasient/pal/apps/intercept/BeforeCallbackHandlers.java</include>
+                                <include>**/*.java</include>
                             </includes>
+
+                            <!-- ...except the quantized package (handled by Ajc) -->
+                            <excludes>
+                                <exclude>com/quasient/pal/apps/quantized/**/*.java</exclude>
+                            </excludes>
+
                             <compilerArgs>
                                 <arg>-proc:none</arg>
                             </compilerArgs>
@@ -94,12 +98,10 @@
                             <artifactId>pal-weave</artifactId>
                         </aspectLibrary>
                     </aspectLibraries>
-                    <excludes>
-                        <exclude>com/quasient/pal/apps/rpc/ArrayVars.java</exclude>
-                        <exclude>com/quasient/pal/apps/rpc/StaticArrayVars.java</exclude>
-                        <exclude>com/quasient/pal/apps/rpc/Variables.java</exclude>
-                        <exclude>com/quasient/pal/apps/intercept/BeforeCallbackHandlers.java</exclude>
-                    </excludes>
+                    <!-- Only compile/weave classes in the quantized package -->
+                    <includes>
+                        <include>com/quasient/pal/apps/quantized/**/*.java</include>
+                    </includes>
                 </configuration>
                 <executions>
                     <execution>
