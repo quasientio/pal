@@ -187,7 +187,7 @@ public abstract class AbstractIntegrationTest {
     }
 
     List<String> command = new ArrayList<>();
-    command.add(Paths.get(palHome, "bin", "pal.sh").toString());
+    command.add(Paths.get(palHome, "bin", "pal").toString());
     command.add("run");
 
     // Add the test arguments
@@ -368,7 +368,7 @@ public abstract class AbstractIntegrationTest {
     }
 
     List<String> command = new ArrayList<>();
-    command.add(Paths.get(palHome, "bin", "pal.sh").toString());
+    command.add(Paths.get(palHome, "bin", "pal").toString());
     command.add("run");
 
     // Set the peer Id so we can identify it in the logs

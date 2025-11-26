@@ -72,7 +72,7 @@
 
         - name: Copy pal binary
           copy:
-            src: "{{ pal_home }}/bin/pal.sh"
+            src: "{{ pal_home }}/bin/pal"
             dest: "{{ docker_pal_dir }}/bin/pal"
             mode: "0755"
 

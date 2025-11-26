@@ -30,14 +30,6 @@
       <source>../modules/pal-cli/target/pal-${project.version}.jar</source>
       <outputDirectory>lib</outputDirectory>
     </file>
-
-    <!-- copy pal.sh but rename it to plain “pal” -->
-    <file>
-      <source>../bin/pal.sh</source>
-      <outputDirectory>bin</outputDirectory>
-      <destName>pal</destName>
-      <fileMode>0755</fileMode>
-    </file>
   </files>
 
   <!-- ───────────────────────── Bulk file sets ──────────────────────────────── -->
@@ -73,11 +65,12 @@
       </excludes>
     </fileSet>
 
-    <!-- everything from ../bin *except* pal.sh (already handled above) -->
+    <!-- everything from ../bin -->
     <fileSet>
       <directory>../bin</directory>
       <outputDirectory>bin</outputDirectory>
       <includes>
+        <include>pal</include>
         <include>start_etcd.sh</include>
         <include>setup_kafka.sh</include>
         <include>start_kafka.sh</include>
