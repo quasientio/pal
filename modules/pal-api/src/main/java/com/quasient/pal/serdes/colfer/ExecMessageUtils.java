@@ -258,7 +258,16 @@ public class ExecMessageUtils {
     return switch (messageType.getFamily()) {
       case CONTROL -> msg.getControlMessage().getMessageId();
       case EXEC -> msg.getExecMessage().getMessageId();
-      case INTERCEPT -> msg.getInterceptMessage().getMessageId();
+      case INTERCEPT -> {
+        // Handle both InterceptMessage and InterceptCallbackRequest
+        if (msg.getInterceptCallbackRequest() != null) {
+          yield msg.getInterceptCallbackRequest().getCallbackId();
+        } else if (msg.getInterceptMessage() != null) {
+          yield msg.getInterceptMessage().getMessageId();
+        } else {
+          yield "unknown-intercept-message";
+        }
+      }
       case META -> msg.getMetaMessage().getMessageId();
     };
   }

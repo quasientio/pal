@@ -19,6 +19,7 @@ import com.google.gson.JsonParseException;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 import com.quasient.pal.common.lang.FieldOpType;
+import com.quasient.pal.common.lang.intercept.InterceptPhase;
 import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.messages.colfer.ClInitCall;
 import com.quasient.pal.messages.colfer.Class;
@@ -33,6 +34,8 @@ import com.quasient.pal.messages.colfer.InstanceFieldGet;
 import com.quasient.pal.messages.colfer.InstanceFieldPut;
 import com.quasient.pal.messages.colfer.InstanceFieldPutDone;
 import com.quasient.pal.messages.colfer.InstanceMethodCall;
+import com.quasient.pal.messages.colfer.InterceptCallbackRequest;
+import com.quasient.pal.messages.colfer.InterceptCallbackResponse;
 import com.quasient.pal.messages.colfer.InterceptKeyMessage;
 import com.quasient.pal.messages.colfer.InterceptMessage;
 import com.quasient.pal.messages.colfer.InterceptResponse;
@@ -883,6 +886,80 @@ public class JsonSerializers {
     }
   }
 
+  /** Serializes {@link InterceptCallbackRequest} objects to JSON. */
+  public static class InterceptCallbackRequestSerializer
+      implements JsonSerializer<InterceptCallbackRequest> {
+    /**
+     * Serializes an {@link InterceptCallbackRequest} into its corresponding JSON representation.
+     *
+     * @param message the {@link InterceptCallbackRequest} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link InterceptCallbackRequest}
+     */
+    @Override
+    public JsonElement serialize(
+        InterceptCallbackRequest message,
+        Type type,
+        JsonSerializationContext jsonSerializationContext) {
+      final JsonObject jsonElement = new JsonObject();
+      addProp(jsonElement, "callback_id", message.callbackId);
+      if (notEmpty(message.phase)) {
+        InterceptPhase phase = InterceptPhase.fromByte(message.phase);
+        jsonElement.addProperty("phase", phase.name());
+      }
+      if (notEmpty(message.interceptType)) {
+        InterceptType interceptType = InterceptType.fromByte(message.interceptType);
+        jsonElement.addProperty("intercept_type", interceptType.name());
+      }
+      addProp(jsonElement, "intercepted_peer", message.interceptedPeer);
+      addProp(jsonElement, "registered_callback_id", message.registeredCallbackId);
+      addProp(jsonElement, "callback_class", message.callbackClass);
+      addProp(jsonElement, "callback_method", message.callbackMethod);
+      addSer(jsonElement, "exec", message.exec, jsonSerializationContext);
+      addSer(jsonElement, "return_value", message.returnValue, jsonSerializationContext);
+      addProp(jsonElement, "return_value_ref", message.returnValueRef);
+      addProp(jsonElement, "is_void", message.isVoid);
+      addSer(jsonElement, "thrown_exception", message.thrownException, jsonSerializationContext);
+      return jsonElement;
+    }
+  }
+
+  /** Serializes {@link InterceptCallbackResponse} objects to JSON. */
+  public static class InterceptCallbackResponseSerializer
+      implements JsonSerializer<InterceptCallbackResponse> {
+    /**
+     * Serializes an {@link InterceptCallbackResponse} into its corresponding JSON representation.
+     *
+     * @param message the {@link InterceptCallbackResponse} to serialize
+     * @param type the type of the source object
+     * @param jsonSerializationContext the context of the serialization process
+     * @return the JSON representation of the {@link InterceptCallbackResponse}
+     */
+    @Override
+    public JsonElement serialize(
+        InterceptCallbackResponse message,
+        Type type,
+        JsonSerializationContext jsonSerializationContext) {
+      final JsonObject jsonElement = new JsonObject();
+      addProp(jsonElement, "callback_id", message.callbackId);
+      if (notEmpty(message.phase)) {
+        InterceptPhase phase = InterceptPhase.fromByte(message.phase);
+        jsonElement.addProperty("phase", phase.name());
+      }
+      if (notEmpty(message.mutatedArgs)) {
+        jsonElement.add("mutated_args", jsonSerializationContext.serialize(message.mutatedArgs));
+      }
+      addProp(jsonElement, "should_proceed", message.shouldProceed);
+      addProp(jsonElement, "override_return", message.overrideReturn);
+      addSer(jsonElement, "new_return_value", message.newReturnValue, jsonSerializationContext);
+      addProp(jsonElement, "new_return_ref", message.newReturnRef);
+      addProp(jsonElement, "throw_exception", message.throwException);
+      addSer(jsonElement, "exception", message.exception, jsonSerializationContext);
+      return jsonElement;
+    }
+  }
+
   /** Serializes {@link Class} objects to JSON. */
   public static class ClassSerializer implements JsonSerializer<Class> {
     /**
@@ -1236,6 +1313,16 @@ public class JsonSerializers {
               jsonElement.add(
                   "intercept_response",
                   jsonSerializationContext.serialize(message.interceptResponse));
+              break;
+            case INTERCEPT_CALLBACK_REQUEST:
+              jsonElement.add(
+                  "intercept_callback_request",
+                  jsonSerializationContext.serialize(message.interceptCallbackRequest));
+              break;
+            case INTERCEPT_CALLBACK_RESPONSE:
+              jsonElement.add(
+                  "intercept_callback_response",
+                  jsonSerializationContext.serialize(message.interceptCallbackResponse));
               break;
             default:
               logger.error("Unable to serialize message of type: {}", messageType);

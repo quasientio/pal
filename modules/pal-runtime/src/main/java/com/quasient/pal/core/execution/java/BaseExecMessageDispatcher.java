@@ -183,9 +183,30 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       final ExecMessage afterExecResponseMsg =
           messageGateway.sendExecMessage(messageBuilder.wrap(afterExecMsg), ExecPhase.AFTER);
 
-      // 8. Send intercept callbacks (if any remote intercepts matched)
+      // 8. Send intercept callbacks (if any remote intercepts matched) and apply return value
+      // override
       if (afterInterceptCheck != null && afterInterceptCheck.hasRemoteIntercepts()) {
-        interceptCallbackDispatcher.sendCallbacks(afterInterceptCheck, afterExecMsg);
+        com.quasient.pal.core.intercept.InterceptCallbackDispatcher.ConsolidatedCallbackResponse
+            afterCallbackResponse =
+                interceptCallbackDispatcher.sendAfterCallbacks(
+                    afterInterceptCheck,
+                    afterExecMsg,
+                    returnValue,
+                    returnsVoid,
+                    throwableWrapper != null ? throwableWrapper.throwable() : null);
+
+        // Check if callback wants to throw an exception
+        if (afterCallbackResponse.shouldThrowException()) {
+          throwableWrapper =
+              new InvocationThrowableWrapper(afterCallbackResponse.getExceptionToThrow());
+        }
+
+        // Apply return value override
+        if (afterCallbackResponse.hasReturnValueOverride()) {
+          @SuppressWarnings("unchecked")
+          T overriddenReturnValue = (T) afterCallbackResponse.getOverriddenReturnValue();
+          returnValue = overriddenReturnValue;
+        }
       }
     } else if (afterInterceptCheck != null && afterInterceptCheck.hasLocalIntercepts()) {
       // Future: handle local intercepts without creating ExecMessage

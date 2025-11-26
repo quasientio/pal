@@ -67,7 +67,9 @@ public final class ExceptionSerdes {
         new com.quasient.pal.messages.colfer.Throwable();
 
     colferThrowable.setType(throwable.getClass().getName());
-    colferThrowable.setMessage(throwable.getMessage());
+    // getMessage() can return null, but Colfer serialization requires non-null message
+    String message = throwable.getMessage();
+    colferThrowable.setMessage(message != null ? message : "");
 
     // Serialize stack trace
     StackTraceElement[] stackTrace = throwable.getStackTrace();

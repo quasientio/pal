@@ -13,6 +13,7 @@ import static java.lang.String.format;
 
 import com.quasient.pal.messages.colfer.InterceptMessage;
 import com.quasient.pal.messages.colfer.InterceptableMethod;
+import com.quasient.pal.serdes.colfer.ColferUtils;
 import io.github.azagniotov.matcher.AntPathMatcherArrays;
 import java.util.Objects;
 import org.slf4j.Logger;
@@ -174,7 +175,7 @@ public class InterceptRequestEntry {
         + ", isMethod="
         + isMethod
         + ", interceptMessage="
-        + interceptMessage
+        + ColferUtils.toJson(interceptMessage)
         + '}';
   }
 }

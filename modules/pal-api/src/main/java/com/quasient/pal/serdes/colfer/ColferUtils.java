@@ -26,6 +26,8 @@ import com.quasient.pal.messages.colfer.InstanceFieldGet;
 import com.quasient.pal.messages.colfer.InstanceFieldPut;
 import com.quasient.pal.messages.colfer.InstanceFieldPutDone;
 import com.quasient.pal.messages.colfer.InstanceMethodCall;
+import com.quasient.pal.messages.colfer.InterceptCallbackRequest;
+import com.quasient.pal.messages.colfer.InterceptCallbackResponse;
 import com.quasient.pal.messages.colfer.InterceptKeyMessage;
 import com.quasient.pal.messages.colfer.InterceptMessage;
 import com.quasient.pal.messages.colfer.InterceptResponse;
@@ -57,6 +59,8 @@ import com.quasient.pal.serdes.colfer.JsonSerializers.InstanceFieldGetSerializer
 import com.quasient.pal.serdes.colfer.JsonSerializers.InstanceFieldPutDoneAdapter;
 import com.quasient.pal.serdes.colfer.JsonSerializers.InstanceFieldPutSerializer;
 import com.quasient.pal.serdes.colfer.JsonSerializers.InstanceMethodCallSerializer;
+import com.quasient.pal.serdes.colfer.JsonSerializers.InterceptCallbackRequestSerializer;
+import com.quasient.pal.serdes.colfer.JsonSerializers.InterceptCallbackResponseSerializer;
 import com.quasient.pal.serdes.colfer.JsonSerializers.InterceptKeyMessageSerializer;
 import com.quasient.pal.serdes.colfer.JsonSerializers.InterceptMessageSerializer;
 import com.quasient.pal.serdes.colfer.JsonSerializers.InterceptResponseSerializer;
@@ -146,7 +150,11 @@ public class ColferUtils {
             // Intercept
             .registerTypeAdapter(InterceptMessage.class, new InterceptMessageSerializer())
             .registerTypeAdapter(InterceptKeyMessage.class, new InterceptKeyMessageSerializer())
-            .registerTypeAdapter(InterceptResponse.class, new InterceptResponseSerializer());
+            .registerTypeAdapter(InterceptResponse.class, new InterceptResponseSerializer())
+            .registerTypeAdapter(
+                InterceptCallbackRequest.class, new InterceptCallbackRequestSerializer())
+            .registerTypeAdapter(
+                InterceptCallbackResponse.class, new InterceptCallbackResponseSerializer());
 
     if (prettyPrint) {
       printerBuilder.setPrettyPrinting();

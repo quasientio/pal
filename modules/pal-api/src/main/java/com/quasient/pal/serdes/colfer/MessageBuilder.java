@@ -1462,80 +1462,6 @@ public final class MessageBuilder {
         objectRefArgs);
   }
 
-  /**
-   * Builds an {@link ExecMessage} for invoking a class (static) method based on another message's
-   * parameters.
-   *
-   * @param peerUuid the UUID of this peer
-   * @param className the name of the class containing the method
-   * @param methodName the name of the method to be invoked
-   * @param otherMessage the {@code ExecMessage} whose parameters will be used for this class method
-   *     invocation
-   * @return an {@code ExecMessage} representing the class method invocation with parameters from
-   *     another message
-   */
-  private ExecMessage buildClassMethodWithMessageParameters(
-      UUID peerUuid, String className, String methodName, ExecMessage otherMessage) {
-
-    final ClassMethodCall classMethodCall = new ClassMethodCall();
-    final String fieldParamType;
-    final MessageType otherMessageType = getMessageTypeOf(otherMessage);
-
-    Obj valueObj;
-    int valueObjectRef;
-    switch (otherMessageType) {
-      case EXEC_CONSTRUCTOR ->
-          classMethodCall.setParameters(otherMessage.getConstructorCall().getParameters());
-      case EXEC_INSTANCE_METHOD ->
-          classMethodCall.setParameters(otherMessage.getInstanceMethodCall().getParameters());
-      case EXEC_CLASS_METHOD ->
-          classMethodCall.setParameters(otherMessage.getClassMethodCall().getParameters());
-      case EXEC_PUT_STATIC -> {
-        fieldParamType = otherMessage.getStaticFieldPut().getField().getClazz().getName();
-        valueObj = otherMessage.getStaticFieldPut().getValueObject();
-        if (valueObj != null && valueObj.getRef() != 0) {
-          valueObjectRef = valueObj.getRef();
-        } else {
-          // fallback to the ObjectRef set in the message
-          valueObjectRef = otherMessage.getStaticFieldPut().getValueObjectRef();
-        }
-        classMethodCall.setParameters(
-            new Parameter[] {
-              createParameter(fieldParamType, valueObj, ObjectRef.from(valueObjectRef))
-            });
-      }
-      case EXEC_PUT_FIELD -> {
-        fieldParamType = otherMessage.getInstanceFieldPut().getField().getClazz().getName();
-        valueObj = otherMessage.getInstanceFieldPut().getValueObject();
-        if (valueObj != null && valueObj.getRef() != 0) {
-          valueObjectRef = valueObj.getRef();
-        } else {
-          // fallback to the ObjectRef set in the message
-          valueObjectRef = otherMessage.getInstanceFieldPut().getValueObjectRef();
-        }
-        classMethodCall.setParameters(
-            new Parameter[] {
-              createParameter(fieldParamType, valueObj, ObjectRef.from(valueObjectRef))
-            });
-      }
-      case EXEC_GET_STATIC -> {
-        fieldParamType = otherMessage.getStaticFieldGet().getField().getClazz().getName();
-        classMethodCall.setParameters(
-            new Parameter[] {createParameter(fieldParamType, null, null)});
-      }
-      case EXEC_GET_FIELD -> {
-        fieldParamType = otherMessage.getInstanceFieldGet().getField().getClazz().getName();
-        classMethodCall.setParameters(
-            new Parameter[] {createParameter(fieldParamType, null, null)});
-      }
-      default -> logger.error("Unsupported msg type: {}", otherMessageType);
-    }
-
-    return newExecMessage(peerUuid)
-        .withClassMethodCall(
-            classMethodCall.withClazz(getWrappedClass(className)).withName(methodName));
-  }
-
   // </editor-fold>
 
   // <editor-fold desc="Field op messages">
@@ -1834,6 +1760,68 @@ public final class MessageBuilder {
   // </editor-fold>
 
   // <editor-fold desc="Intercept messages">
+  /**
+   * Builds an {@link InterceptCallbackRequest} from intercept metadata and execution context.
+   *
+   * <p>This method constructs a callback request message that will be sent to the callback peer.
+   * The request contains all necessary information for the callback handler to execute, including:
+   *
+   * <ul>
+   *   <li>Callback routing information (class, method, peer UUID)
+   *   <li>The original execution message
+   *   <li>Phase-specific data (arguments for BEFORE, return value/exception for AFTER)
+   * </ul>
+   *
+   * @param peerUuid the UUID of the peer being intercepted
+   * @param interceptMessage the intercept message containing callback routing info
+   * @param execMessage the execution message with operation metadata
+   * @param phase the callback phase (BEFORE or AFTER)
+   * @param returnValue the return value (AFTER phase only, may be null)
+   * @param isVoid whether the method is void
+   * @param thrownException the thrown exception (AFTER phase only, may be null)
+   * @return the constructed callback request
+   */
+  public InterceptCallbackRequest buildInterceptCallbackRequest(
+      UUID peerUuid,
+      InterceptMessage interceptMessage,
+      ExecMessage execMessage,
+      com.quasient.pal.common.lang.intercept.InterceptPhase phase,
+      Object returnValue,
+      boolean isVoid,
+      Throwable thrownException) {
+
+    InterceptCallbackRequest request = new InterceptCallbackRequest();
+
+    // Set unique callback ID
+    request.setCallbackId(UUID.randomUUID().toString());
+
+    // Set phase and type
+    request.setPhase(phase.toByte());
+    request.setInterceptType(interceptMessage.getInterceptType());
+
+    // Set peer info
+    request.setInterceptedPeer(peerUuid.toString());
+
+    // Set callback routing info from intercept message
+    request.setCallbackClass(interceptMessage.getCallbackClass());
+    request.setCallbackMethod(interceptMessage.getCallbackMethod());
+
+    // Set execution message
+    request.setExec(execMessage);
+
+    // Set phase-specific fields
+    if (phase == com.quasient.pal.common.lang.intercept.InterceptPhase.AFTER) {
+      request.setIsVoid(isVoid);
+      if (!isVoid && returnValue != null) {
+        request.setReturnValue(serializeObjectForCallback(returnValue));
+      }
+      if (thrownException != null) {
+        request.setThrownException(ExceptionSerdes.serializeException(thrownException));
+      }
+    }
+
+    return request;
+  }
 
   /**
    * Builds an {@link InterceptMessage} for intercepting a method or field operation.
@@ -1982,25 +1970,6 @@ public final class MessageBuilder {
       keyMessage.setParameterTypes(paramTypes.toArray(new String[0]));
     }
     return keyMessage;
-  }
-
-  /**
-   * Builds a callback {@link ExecMessage} for an interception request based on the intercepted
-   * message.
-   *
-   * @param peerUuid the UUID of the peer initiating the callback
-   * @param interceptedMessage the {@code ExecMessage} that was intercepted
-   * @param interceptMessage the {@code InterceptMessage} containing interception details
-   * @return an {@code ExecMessage} representing the callback invocation
-   */
-  public ExecMessage buildCallbackForInterceptRequest(
-      UUID peerUuid, ExecMessage interceptedMessage, InterceptMessage interceptMessage) {
-
-    return buildClassMethodWithMessageParameters(
-        peerUuid,
-        interceptMessage.getCallbackClass(),
-        interceptMessage.getCallbackMethod(),
-        interceptedMessage);
   }
 
   // </editor-fold>
@@ -2861,69 +2830,6 @@ public final class MessageBuilder {
     return new Message()
         .withMessageType(MessageType.INTERCEPT_RESPONSE.getId())
         .withInterceptResponse(interceptResponse);
-  }
-
-  /**
-   * Builds an {@link InterceptCallbackRequest} from intercept metadata and execution context.
-   *
-   * <p>This method constructs a callback request message that will be sent to the callback peer.
-   * The request contains all necessary information for the callback handler to execute, including:
-   *
-   * <ul>
-   *   <li>Callback routing information (class, method, peer UUID)
-   *   <li>The original execution message
-   *   <li>Phase-specific data (arguments for BEFORE, return value/exception for AFTER)
-   * </ul>
-   *
-   * @param peerUuid the UUID of the peer being intercepted
-   * @param interceptMessage the intercept message containing callback routing info
-   * @param execMessage the execution message with operation metadata
-   * @param phase the callback phase (BEFORE or AFTER)
-   * @param returnValue the return value (AFTER phase only, may be null)
-   * @param isVoid whether the method is void
-   * @param thrownException the thrown exception (AFTER phase only, may be null)
-   * @return the constructed callback request
-   */
-  public InterceptCallbackRequest buildInterceptCallbackRequest(
-      UUID peerUuid,
-      InterceptMessage interceptMessage,
-      ExecMessage execMessage,
-      com.quasient.pal.common.lang.intercept.InterceptPhase phase,
-      Object returnValue,
-      boolean isVoid,
-      Throwable thrownException) {
-
-    InterceptCallbackRequest request = new InterceptCallbackRequest();
-
-    // Set unique callback ID
-    request.setCallbackId(UUID.randomUUID().toString());
-
-    // Set phase and type
-    request.setPhase(phase.toByte());
-    request.setInterceptType(interceptMessage.getInterceptType());
-
-    // Set peer info
-    request.setInterceptedPeer(peerUuid.toString());
-
-    // Set callback routing info from intercept message
-    request.setCallbackClass(interceptMessage.getCallbackClass());
-    request.setCallbackMethod(interceptMessage.getCallbackMethod());
-
-    // Set execution message
-    request.setExec(execMessage);
-
-    // Set phase-specific fields
-    if (phase == com.quasient.pal.common.lang.intercept.InterceptPhase.AFTER) {
-      request.setIsVoid(isVoid);
-      if (!isVoid && returnValue != null) {
-        request.setReturnValue(serializeObjectForCallback(returnValue));
-      }
-      if (thrownException != null) {
-        request.setThrownException(ExceptionSerdes.serializeException(thrownException));
-      }
-    }
-
-    return request;
   }
 
   /**

@@ -347,7 +347,17 @@ public class IncomingInterceptCallbackDispatcher {
     wireResponse.setCallbackId(request.getCallbackId());
     wireResponse.setPhase(request.getPhase());
     wireResponse.setThrowException(true);
-    wireResponse.setException(serializeException(error));
+
+    // Unwrap InvocationTargetException to get the real exception
+    Throwable exceptionToSerialize = error;
+    if (error instanceof java.lang.reflect.InvocationTargetException) {
+      Throwable cause = error.getCause();
+      if (cause != null) {
+        exceptionToSerialize = cause;
+      }
+    }
+
+    wireResponse.setException(serializeException(exceptionToSerialize));
     return wireResponse;
   }
 

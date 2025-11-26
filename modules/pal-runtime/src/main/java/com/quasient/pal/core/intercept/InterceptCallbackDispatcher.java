@@ -164,52 +164,6 @@ public class InterceptCallbackDispatcher {
   }
 
   /**
-   * Sends callbacks for all matching remote intercepts.
-   *
-   * <p>This method iterates through all remote intercepts in the check result and sends callback
-   * messages to the corresponding peers. Synchronous intercepts (BEFORE/AFTER) block until a
-   * response is received or timeout occurs. Asynchronous intercepts (BEFORE_ASYNC/AFTER_ASYNC)
-   * fire-and-forget without waiting for responses.
-   *
-   * @param interceptCheckResult result from InterceptChecker containing matched intercepts
-   * @param execMessage the execution message to send in callbacks
-   */
-  public void sendCallbacks(InterceptCheckResult interceptCheckResult, ExecMessage execMessage) {
-    if (!interceptCheckResult.hasRemoteIntercepts()) {
-      return;
-    }
-
-    List<InterceptMessage> remoteIntercepts = interceptCheckResult.getRemoteIntercepts();
-
-    for (InterceptMessage interceptMessage : remoteIntercepts) {
-      UUID interceptorPeerUuid = UUID.fromString(interceptMessage.getPeerUuid());
-      InterceptType interceptType = InterceptType.fromByte(interceptMessage.getInterceptType());
-
-      ExecMessage callbackMessage =
-          messageBuilder.buildCallbackForInterceptRequest(peerUuid, execMessage, interceptMessage);
-
-      try {
-        if (interceptType.equals(InterceptType.BEFORE_ASYNC)
-            || interceptType.equals(InterceptType.AFTER_ASYNC)) {
-          sendAsyncCallbackToPeer(interceptorPeerUuid, callbackMessage);
-        } else if (interceptType.equals(InterceptType.BEFORE)
-            || interceptType.equals(InterceptType.AFTER)) {
-          @SuppressWarnings("unused")
-          byte[] unusedResponse = sendSyncCallbackToPeer(interceptorPeerUuid, callbackMessage);
-        } else {
-          logger.error("Unsupported callback type: {}", interceptType);
-        }
-      } catch (Exception ex) {
-        logger.error(
-            "Error sending callback to peer w/uuid: {}, callback execMessage: {}",
-            interceptorPeerUuid,
-            ColferUtils.format(callbackMessage),
-            ex);
-      }
-    }
-  }
-
-  /**
    * Sends an asynchronous callback message to the specified peer (fire-and-forget).
    *
    * <p>Uses DEALER socket which allows sending without waiting for response, unlike REQ sockets
@@ -217,15 +171,15 @@ public class InterceptCallbackDispatcher {
    * before the payload to match the ROUTER socket's expected envelope format.
    *
    * @param targetPeerUuid the unique identifier of the target peer
-   * @param callbackMessage the callback message to send
+   * @param request the callback request to send
    * @throws Exception if an error occurs while sending the message
    */
-  private void sendAsyncCallbackToPeer(UUID targetPeerUuid, ExecMessage callbackMessage)
+  private void sendAsyncCallbackToPeer(UUID targetPeerUuid, InterceptCallbackRequest request)
       throws Exception {
     if (logger.isDebugEnabled()) {
       logger.debug(
-          "Sending async callback message: {} to peer w/uuid: {}",
-          ColferUtils.format(callbackMessage),
+          "Sending async callback request: {} to peer w/uuid: {}",
+          ColferUtils.toJson(request),
           targetPeerUuid);
     }
 
@@ -233,28 +187,15 @@ public class InterceptCallbackDispatcher {
     // DEALER sends: [empty delimiter, payload]
     Socket dealer = getConnectedDealerSocketFor(targetPeerUuid);
     dealer.sendMore(new byte[0]); // Empty delimiter frame
-    final boolean sentOk = dealer.send(toBytes(messageBuilder.wrap(callbackMessage)), 0);
+    final boolean sentOk = dealer.send(toBytes(messageBuilder.wrap(request)), 0);
 
     if (logger.isDebugEnabled()) {
       logger.debug(
-          "Sent async callback message: {} (ret={}) to peer w/uuid: {}",
-          ColferUtils.format(callbackMessage),
+          "Sent async callback request: {} (ret={}) to peer w/uuid: {}",
+          ColferUtils.toJson(request),
           sentOk,
           targetPeerUuid);
     }
-  }
-
-  /**
-   * Sends a synchronous callback message to the specified peer and waits for a response.
-   *
-   * @param targetPeerUuid the unique identifier of the target peer
-   * @param callbackMessage the callback message to send
-   * @return the response bytes received from the target peer
-   * @throws Exception if an error occurs while sending the message or receiving the response
-   */
-  private byte[] sendSyncCallbackToPeer(UUID targetPeerUuid, ExecMessage callbackMessage)
-      throws Exception {
-    return sendCallbackMessageToPeer(targetPeerUuid, callbackMessage);
   }
 
   /**
@@ -438,17 +379,20 @@ public class InterceptCallbackDispatcher {
     }
 
     List<InterceptMessage> remoteIntercepts = interceptCheckResult.getRemoteIntercepts();
-    List<InterceptMessage> beforeIntercepts = new ArrayList<>();
+    List<InterceptMessage> beforeSyncIntercepts = new ArrayList<>();
+    List<InterceptMessage> beforeAsyncIntercepts = new ArrayList<>();
 
-    // Filter for BEFORE intercepts only
+    // Filter for BEFORE and BEFORE_ASYNC intercepts
     for (InterceptMessage intercept : remoteIntercepts) {
       InterceptType type = InterceptType.fromByte(intercept.getInterceptType());
       if (type == InterceptType.BEFORE) {
-        beforeIntercepts.add(intercept);
+        beforeSyncIntercepts.add(intercept);
+      } else if (type == InterceptType.BEFORE_ASYNC) {
+        beforeAsyncIntercepts.add(intercept);
       }
     }
 
-    if (beforeIntercepts.isEmpty()) {
+    if (beforeSyncIntercepts.isEmpty() && beforeAsyncIntercepts.isEmpty()) {
       return ConsolidatedCallbackResponse.proceed();
     }
 
@@ -457,9 +401,19 @@ public class InterceptCallbackDispatcher {
     boolean shouldProceed = true;
     Throwable exceptionToThrow = null;
 
-    for (InterceptMessage interceptMessage : beforeIntercepts) {
+    // Process synchronous BEFORE intercepts (wait for response)
+    for (InterceptMessage interceptMessage : beforeSyncIntercepts) {
       try {
         UUID callbackPeerUuid = UUID.fromString(interceptMessage.getPeerUuid());
+        logger.info(
+            "===== BEFORE callback: interceptMessage.getPeerUuid()='{}', "
+                + "interceptMessage.getMessageId()='{}', interceptMessage.getClazz()='{}', "
+                + "interceptMessage.getCallbackClass()='{}', interceptMessage.getCallbackMethod()='{}'",
+            interceptMessage.getPeerUuid(),
+            interceptMessage.getMessageId(),
+            interceptMessage.getClazz(),
+            interceptMessage.getCallbackClass(),
+            interceptMessage.getCallbackMethod());
 
         // Build the callback request
         InterceptCallbackRequest request =
@@ -498,7 +452,223 @@ public class InterceptCallbackDispatcher {
       }
     }
 
+    // Process asynchronous BEFORE_ASYNC intercepts (fire-and-forget)
+    for (InterceptMessage interceptMessage : beforeAsyncIntercepts) {
+      try {
+        UUID callbackPeerUuid = UUID.fromString(interceptMessage.getPeerUuid());
+        logger.info(
+            "===== BEFORE_ASYNC callback: interceptMessage.getPeerUuid()='{}', "
+                + "interceptMessage.getMessageId()='{}', interceptMessage.getClazz()='{}', "
+                + "interceptMessage.getCallbackClass()='{}', interceptMessage.getCallbackMethod()='{}'",
+            interceptMessage.getPeerUuid(),
+            interceptMessage.getMessageId(),
+            interceptMessage.getClazz(),
+            interceptMessage.getCallbackClass(),
+            interceptMessage.getCallbackMethod());
+
+        // Build the callback request for async
+        InterceptCallbackRequest request =
+            messageBuilder.buildInterceptCallbackRequest(
+                peerUuid, interceptMessage, execMessage, InterceptPhase.BEFORE, null, false, null);
+
+        // Send asynchronously (fire-and-forget, no response expected)
+        sendAsyncCallbackToPeer(callbackPeerUuid, request);
+
+        // Note: Async callbacks cannot mutate arguments or throw exceptions
+        // since we don't wait for a response
+
+      } catch (Exception ex) {
+        logger.error(
+            "Error sending BEFORE_ASYNC callback to peer: {}, continuing with remaining callbacks",
+            interceptMessage.getPeerUuid(),
+            ex);
+        // Continue with other callbacks on error
+      }
+    }
+
     return new ConsolidatedCallbackResponse(shouldProceed, mutatedArgs, exceptionToThrow);
+  }
+
+  /**
+   * Sends AFTER-phase callbacks for all matching intercepts and collects responses.
+   *
+   * <p>This method sends {@link InterceptCallbackRequest} messages to callback peers for each
+   * matching AFTER intercept. It waits for {@link InterceptCallbackResponse} from each callback and
+   * collects any return value overrides.
+   *
+   * <p><b>Return Value Override:</b> If multiple callbacks override the return value, the last
+   * callback's override wins (based on intercept registration order). The aggregated override is
+   * returned in the {@link ConsolidatedCallbackResponse} and applied by the caller after all
+   * callbacks complete.
+   *
+   * <p><b>Exception Handling:</b> If any callback throws an exception, processing stops
+   * immediately. No further callbacks are invoked, and all overrides collected so far are
+   * discarded.
+   *
+   * @param interceptCheckResult result from InterceptChecker containing matched intercepts
+   * @param execMessage the execution message containing operation metadata
+   * @param returnValue the return value from the intercepted method (may be null)
+   * @param isVoid whether the intercepted method has void return type
+   * @param thrownException the exception thrown by the intercepted method (may be null)
+   * @return a consolidated response containing return value override and control flow decisions
+   */
+  public ConsolidatedCallbackResponse sendAfterCallbacks(
+      InterceptCheckResult interceptCheckResult,
+      ExecMessage execMessage,
+      Object returnValue,
+      boolean isVoid,
+      Throwable thrownException) {
+
+    System.out.println(
+        "===== sendAfterCallbacks CALLED: returnValue=" + returnValue + ", isVoid=" + isVoid);
+    logger.info("===== sendAfterCallbacks called: returnValue={}, isVoid={}", returnValue, isVoid);
+
+    if (!interceptCheckResult.hasRemoteIntercepts()) {
+      System.out.println("===== sendAfterCallbacks: NO remote intercepts");
+      logger.info("===== sendAfterCallbacks: no remote intercepts, returning proceed");
+      return ConsolidatedCallbackResponse.proceed();
+    }
+
+    List<InterceptMessage> remoteIntercepts = interceptCheckResult.getRemoteIntercepts();
+    List<InterceptMessage> afterSyncIntercepts = new ArrayList<>();
+    List<InterceptMessage> afterAsyncIntercepts = new ArrayList<>();
+
+    // Filter for AFTER and AFTER_ASYNC intercepts
+    for (InterceptMessage intercept : remoteIntercepts) {
+      InterceptType type = InterceptType.fromByte(intercept.getInterceptType());
+      if (type == InterceptType.AFTER) {
+        afterSyncIntercepts.add(intercept);
+      } else if (type == InterceptType.AFTER_ASYNC) {
+        afterAsyncIntercepts.add(intercept);
+      }
+    }
+
+    logger.info(
+        "===== sendAfterCallbacks: found {} AFTER intercepts, {} AFTER_ASYNC intercepts",
+        afterSyncIntercepts.size(),
+        afterAsyncIntercepts.size());
+
+    if (afterSyncIntercepts.isEmpty() && afterAsyncIntercepts.isEmpty()) {
+      logger.info(
+          "===== sendAfterCallbacks: no AFTER/AFTER_ASYNC intercepts after filtering, returning proceed");
+      return ConsolidatedCallbackResponse.proceed();
+    }
+
+    // Track return value override across all callbacks
+    Object currentReturnValue = returnValue;
+    boolean hasOverride = false;
+    boolean shouldProceed = true;
+    Throwable exceptionToThrow = null;
+
+    // Process synchronous AFTER intercepts (wait for response)
+    for (InterceptMessage interceptMessage : afterSyncIntercepts) {
+      try {
+        UUID callbackPeerUuid = UUID.fromString(interceptMessage.getPeerUuid());
+        logger.info(
+            "===== AFTER callback: interceptMessage.getPeerUuid()='{}', "
+                + "interceptMessage.getMessageId()='{}', interceptMessage.getClazz()='{}', "
+                + "interceptMessage.getCallbackClass()='{}', interceptMessage.getCallbackMethod()='{}'",
+            interceptMessage.getPeerUuid(),
+            interceptMessage.getMessageId(),
+            interceptMessage.getClazz(),
+            interceptMessage.getCallbackClass(),
+            interceptMessage.getCallbackMethod());
+
+        // Build the callback request with return value and exception
+        InterceptCallbackRequest request =
+            messageBuilder.buildInterceptCallbackRequest(
+                peerUuid,
+                interceptMessage,
+                execMessage,
+                InterceptPhase.AFTER,
+                returnValue,
+                isVoid,
+                thrownException);
+
+        // Send and await response
+        InterceptCallbackResponse response = sendCallbackRequest(callbackPeerUuid, request);
+
+        // Check for exception
+        if (response.getThrowException()) {
+          exceptionToThrow = ExceptionSerdes.deserializeException(response.getException());
+          break; // Stop processing further callbacks
+        }
+
+        // Collect return value override
+        if (response.getOverrideReturn()) {
+          logger.info("===== sendAfterCallbacks: response has overrideReturn=true");
+          Obj overriddenReturnObj = response.getNewReturnValue();
+          if (overriddenReturnObj != null) {
+            currentReturnValue = deserializeArg(overriddenReturnObj);
+            hasOverride = true;
+            logger.info(
+                "===== sendAfterCallbacks: overridden return value: {}", currentReturnValue);
+          } else {
+            logger.warn("===== sendAfterCallbacks: overrideReturn=true but newReturnValue is null");
+          }
+        } else {
+          logger.info("===== sendAfterCallbacks: response has overrideReturn=false");
+        }
+
+        // Note: shouldProceed is not checked here because AFTER intercepts
+        // cannot control execution flow. Only AROUND intercepts can do this,
+        // and they are handled differently in the caller.
+
+      } catch (Exception ex) {
+        logger.error(
+            "Error sending AFTER callback to peer: {}, continuing with remaining callbacks",
+            interceptMessage.getPeerUuid(),
+            ex);
+        // Continue with other callbacks on error
+      }
+    }
+
+    // Process asynchronous AFTER_ASYNC intercepts (fire-and-forget)
+    for (InterceptMessage interceptMessage : afterAsyncIntercepts) {
+      try {
+        UUID callbackPeerUuid = UUID.fromString(interceptMessage.getPeerUuid());
+        logger.info(
+            "===== AFTER_ASYNC callback: interceptMessage.getPeerUuid()='{}', "
+                + "interceptMessage.getMessageId()='{}', interceptMessage.getClazz()='{}', "
+                + "interceptMessage.getCallbackClass()='{}', interceptMessage.getCallbackMethod()='{}'",
+            interceptMessage.getPeerUuid(),
+            interceptMessage.getMessageId(),
+            interceptMessage.getClazz(),
+            interceptMessage.getCallbackClass(),
+            interceptMessage.getCallbackMethod());
+
+        // Build the callback request for async with return value and exception
+        InterceptCallbackRequest request =
+            messageBuilder.buildInterceptCallbackRequest(
+                peerUuid,
+                interceptMessage,
+                execMessage,
+                InterceptPhase.AFTER,
+                returnValue,
+                isVoid,
+                thrownException);
+
+        // Send asynchronously (fire-and-forget, no response expected)
+        sendAsyncCallbackToPeer(callbackPeerUuid, request);
+
+        // Note: Async callbacks cannot override return value or throw exceptions
+        // since we don't wait for a response
+
+      } catch (Exception ex) {
+        logger.error(
+            "Error sending AFTER_ASYNC callback to peer: {}, continuing with remaining callbacks",
+            interceptMessage.getPeerUuid(),
+            ex);
+        // Continue with other callbacks on error
+      }
+    }
+
+    logger.info(
+        "===== sendAfterCallbacks: returning hasOverride={}, currentReturnValue={}",
+        hasOverride,
+        currentReturnValue);
+    return new ConsolidatedCallbackResponse(
+        shouldProceed, new HashMap<>(), exceptionToThrow, currentReturnValue, hasOverride);
   }
 
   /**
@@ -597,6 +767,12 @@ public class InterceptCallbackDispatcher {
     /** Exception to throw instead of normal execution (may be null). */
     private final Throwable exceptionToThrow;
 
+    /** Overridden return value from AFTER callbacks (may be null). */
+    private final Object overriddenReturnValue;
+
+    /** Whether the return value was overridden by a callback. */
+    private final boolean hasReturnValueOverride;
+
     /**
      * Constructs a consolidated response.
      *
@@ -609,6 +785,30 @@ public class InterceptCallbackDispatcher {
       this.shouldProceed = shouldProceed;
       this.mutatedArgs = mutatedArgs;
       this.exceptionToThrow = exceptionToThrow;
+      this.overriddenReturnValue = null;
+      this.hasReturnValueOverride = false;
+    }
+
+    /**
+     * Constructs a consolidated response with return value override.
+     *
+     * @param shouldProceed whether execution should proceed
+     * @param mutatedArgs map of argument index to mutated value
+     * @param exceptionToThrow exception to throw (may be null)
+     * @param overriddenReturnValue the overridden return value (may be null)
+     * @param hasReturnValueOverride whether the return value was overridden
+     */
+    public ConsolidatedCallbackResponse(
+        boolean shouldProceed,
+        Map<Integer, Object> mutatedArgs,
+        Throwable exceptionToThrow,
+        Object overriddenReturnValue,
+        boolean hasReturnValueOverride) {
+      this.shouldProceed = shouldProceed;
+      this.mutatedArgs = mutatedArgs;
+      this.exceptionToThrow = exceptionToThrow;
+      this.overriddenReturnValue = overriddenReturnValue;
+      this.hasReturnValueOverride = hasReturnValueOverride;
     }
 
     /**
@@ -663,6 +863,24 @@ public class InterceptCallbackDispatcher {
      */
     public Throwable getExceptionToThrow() {
       return exceptionToThrow;
+    }
+
+    /**
+     * Returns whether the return value was overridden.
+     *
+     * @return true if the return value was overridden
+     */
+    public boolean hasReturnValueOverride() {
+      return hasReturnValueOverride;
+    }
+
+    /**
+     * Returns the overridden return value.
+     *
+     * @return the overridden return value (may be null)
+     */
+    public Object getOverriddenReturnValue() {
+      return overriddenReturnValue;
     }
   }
 

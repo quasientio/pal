@@ -85,21 +85,21 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
   }
 
   @Test
-  public void sendCallbacks_noRemoteIntercepts_doesNothing() throws Exception {
+  public void sendBeforeCallbacks_noRemoteIntercepts_doesNothing() throws Exception {
     // Create result with no remote intercepts
     InterceptCheckResult result =
         new InterceptCheckResult(Collections.emptyList(), Collections.emptyList());
     ExecMessage execMessage = messageBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
 
     // Should complete without error and not interact with directory
-    dispatcher.sendCallbacks(result, execMessage);
+    dispatcher.sendBeforeCallbacks(result, execMessage, new Object[0]);
 
     // Verify no directory lookups occurred
     verify(directory, times(0)).getPeer(ArgumentMatchers.any());
   }
 
   @Test
-  public void sendCallbacks_syncIntercept_sendsAndReceivesResponse() throws Exception {
+  public void sendBeforeCallbacks_syncIntercept_sendsAndReceivesResponse() throws Exception {
     // Setup: Create stub server that echoes responses
     String endpoint = "inproc://sync-callback-test";
     UUID remotePeerUuid = UUID.randomUUID();
@@ -129,7 +129,7 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
     ExecMessage execMessage = messageBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
 
     // Execute
-    dispatcher.sendCallbacks(result, execMessage);
+    dispatcher.sendBeforeCallbacks(result, execMessage, new Object[0]);
 
     // Verify server received the callback
     boolean received = messageReceived.await(2, TimeUnit.SECONDS);
@@ -140,7 +140,7 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
   }
 
   @Test
-  public void sendCallbacks_asyncIntercept_sendsWithoutBlocking() throws Exception {
+  public void sendBeforeCallbacks_asyncIntercept_sendsWithoutBlocking() throws Exception {
     // Setup: Create stub server
     String endpoint = "inproc://async-callback-test";
     UUID remotePeerUuid = UUID.randomUUID();
@@ -170,7 +170,7 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
 
     // Execute - should return quickly without waiting
     long startTime = System.currentTimeMillis();
-    dispatcher.sendCallbacks(result, execMessage);
+    dispatcher.sendBeforeCallbacks(result, execMessage, new Object[0]);
     long elapsed = System.currentTimeMillis() - startTime;
 
     // Should complete quickly (not wait for response)
@@ -183,7 +183,7 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
   }
 
   @Test
-  public void sendCallbacks_multipleAsyncToSamePeer_reusesDealerSocket() throws Exception {
+  public void sendBeforeCallbacks_multipleAsyncToSamePeer_reusesDealerSocket() throws Exception {
     // Setup: Create stub server
     String endpoint = "inproc://multi-async-callback-test";
     UUID remotePeerUuid = UUID.randomUUID();
@@ -219,7 +219,7 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
 
     // Execute - should send both callbacks quickly without waiting
     long startTime = System.currentTimeMillis();
-    dispatcher.sendCallbacks(result, execMessage);
+    dispatcher.sendBeforeCallbacks(result, execMessage, new Object[0]);
     long elapsed = System.currentTimeMillis() - startTime;
 
     // Should complete quickly (not wait for responses)
@@ -237,7 +237,7 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
   }
 
   @Test
-  public void sendCallbacks_socketCaching_reusesSameSocket() throws Exception {
+  public void sendBeforeCallbacks_socketCaching_reusesSameSocket() throws Exception {
     // Setup: Create stub server
     String endpoint = "inproc://socket-caching-test";
     UUID remotePeerUuid = UUID.randomUUID();
@@ -268,8 +268,8 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
     ExecMessage execMessage2 = messageBuilder.buildEmptyConstructor(peerUuid, "java.lang.Integer");
 
     // Send two callbacks to same peer
-    dispatcher.sendCallbacks(result, execMessage1);
-    dispatcher.sendCallbacks(result, execMessage2);
+    dispatcher.sendBeforeCallbacks(result, execMessage1, new Object[0]);
+    dispatcher.sendBeforeCallbacks(result, execMessage2, new Object[0]);
 
     // Verify both received
     boolean received = messagesReceived.await(2, TimeUnit.SECONDS);
@@ -283,7 +283,7 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
   }
 
   @Test
-  public void sendCallbacks_multiplePeers_createsMultipleSockets() throws Exception {
+  public void sendBeforeCallbacks_multiplePeers_createsMultipleSockets() throws Exception {
     // Setup: Create two stub servers
     String endpoint1 = "inproc://multi-peer-test-1";
     String endpoint2 = "inproc://multi-peer-test-2";
@@ -330,7 +330,7 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
     ExecMessage execMessage = messageBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
 
     // Send callbacks to both peers
-    dispatcher.sendCallbacks(result, execMessage);
+    dispatcher.sendBeforeCallbacks(result, execMessage, new Object[0]);
 
     // Verify both servers received
     assertThat(server1Received.await(2, TimeUnit.SECONDS), is(true));
@@ -343,7 +343,7 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
   }
 
   @Test
-  public void sendCallbacks_afterIntercept_sendsWithAfterType() throws Exception {
+  public void sendAfterCallbacks_afterIntercept_sendsWithAfterType() throws Exception {
     // Setup stub server
     String endpoint = "inproc://after-intercept-test";
     UUID remotePeerUuid = UUID.randomUUID();
@@ -372,8 +372,8 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
 
     ExecMessage execMessage = messageBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
 
-    // Execute
-    dispatcher.sendCallbacks(result, execMessage);
+    // Execute - sendAfterCallbacks with no return value, no exception
+    dispatcher.sendAfterCallbacks(result, execMessage, null, false, null);
 
     // Verify received
     boolean received = messageReceived.await(2, TimeUnit.SECONDS);
@@ -410,7 +410,7 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
         new InterceptCheckResult(List.of(interceptMsg), Collections.emptyList());
     ExecMessage execMessage = messageBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
 
-    dispatcher.sendCallbacks(result, execMessage);
+    dispatcher.sendBeforeCallbacks(result, execMessage, new Object[0]);
     messageReceived.await(1, TimeUnit.SECONDS);
 
     // Cleanup should close sockets without error

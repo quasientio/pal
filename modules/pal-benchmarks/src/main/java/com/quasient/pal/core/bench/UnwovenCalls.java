@@ -9,7 +9,7 @@
  */
 package com.quasient.pal.core.bench;
 
-import com.quasient.pal.bench.Calls;
+import com.quasient.pal.apps.quantized.bench.Calls;
 import java.util.Arrays;
 
 /** Simple wrapper around misc calls to JDK classes. */
