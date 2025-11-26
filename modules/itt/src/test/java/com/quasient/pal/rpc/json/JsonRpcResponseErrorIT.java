@@ -21,7 +21,7 @@ import org.junit.Test;
  */
 public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
 
-  protected final String className = "com.quasient.pal.apps.rpc.Constructors";
+  protected final String className = "com.quasient.pal.apps.quantized.rpc.Constructors";
   private static int messageId = 0;
 
   @Test

@@ -136,7 +136,7 @@ public class RemoveIT extends AbstractCliIT {
 
     // we need to run something for messages to be written to the WAL, which actually
     // creates the Log in Kafka
-    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+    String classToRun = "com.quasient.pal.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -195,7 +195,7 @@ public class RemoveIT extends AbstractCliIT {
 
     // we need to run something for messages to be written to the WAL, which actually
     // creates the Chronicle queue files
-    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+    String classToRun = "com.quasient.pal.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -265,7 +265,7 @@ public class RemoveIT extends AbstractCliIT {
 
     // we need to run something for messages to be written to the WAL, which actually
     // creates the Log in Kafka
-    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+    String classToRun = "com.quasient.pal.apps.quantized.rpc.Methods";
 
     UUID peerId1 = UUID.randomUUID();
     Process peer1 =

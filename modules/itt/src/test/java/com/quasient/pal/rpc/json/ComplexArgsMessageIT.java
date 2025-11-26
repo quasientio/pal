@@ -34,7 +34,7 @@ import org.junit.runners.Parameterized;
 @RunWith(Parameterized.class)
 public class ComplexArgsMessageIT extends AbstractJsonRpcMessageIT {
 
-  private static final String CLASS_NAME = "com.quasient.pal.apps.rpc.Methods";
+  private static final String CLASS_NAME = "com.quasient.pal.apps.quantized.rpc.Methods";
 
   public ComplexArgsMessageIT(TargetType targetType) {
     super(targetType);

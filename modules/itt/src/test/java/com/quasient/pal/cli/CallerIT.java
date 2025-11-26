@@ -103,7 +103,7 @@ public class CallerIT extends AbstractCliIT {
             "ZMQ_RPC",
             "-m",
             "processArgs",
-            "com.quasient.pal.apps.rpc.Methods",
+            "com.quasient.pal.apps.quantized.rpc.Methods",
             "arg1",
             "arg2",
             "arg3");
@@ -147,7 +147,7 @@ public class CallerIT extends AbstractCliIT {
             palDirectory,
             "-l",
             logName,
-            "com.quasient.pal.apps.rpc.Methods",
+            "com.quasient.pal.apps.quantized.rpc.Methods",
             "staticVoidWithStringArg",
             "test-to-log");
 
@@ -199,7 +199,7 @@ public class CallerIT extends AbstractCliIT {
             "--log",
             logName,
             "--forget-response",
-            "com.quasient.pal.apps.rpc.Methods",
+            "com.quasient.pal.apps.quantized.rpc.Methods",
             "staticVoidWithStringArg",
             "test-forget-response");
     long elapsedTime = System.currentTimeMillis() - startTime;
@@ -238,7 +238,7 @@ public class CallerIT extends AbstractCliIT {
     // Create JSON-RPC request for method invocation
     String jsonRpcRequest =
         """
-        {"jsonrpc":"2.0","id":"1","method":"call","params":{"type":"com.quasient.pal.apps.rpc.Methods","method":"staticStringWithStringArg","args":[{"type":"java.lang.String","value":"test-input"}]}}
+        {"jsonrpc":"2.0","id":"1","method":"call","params":{"type":"com.quasient.pal.apps.quantized.rpc.Methods","method":"staticStringWithStringArg","args":[{"type":"java.lang.String","value":"test-input"}]}}
         """;
 
     // Send JSON-RPC request via stdin
@@ -284,7 +284,7 @@ public class CallerIT extends AbstractCliIT {
     // Create JSON-RPC request for constructor invocation
     String jsonRpcRequest =
         """
-        {"jsonrpc":"2.0","id":"1","method":"new","params":{"type":"com.quasient.pal.apps.rpc.Methods"}}
+        {"jsonrpc":"2.0","id":"1","method":"new","params":{"type":"com.quasient.pal.apps.quantized.rpc.Methods"}}
         """;
 
     // Send JSON-RPC request via stdin
@@ -421,8 +421,8 @@ public class CallerIT extends AbstractCliIT {
     // Create multiple JSON-RPC requests (one per line)
     String jsonRpcRequests =
         """
-        {"jsonrpc":"2.0","id":"1","method":"call","params":{"type":"com.quasient.pal.apps.rpc.Methods","method":"staticStringWithStringArg","args":[{"type":"java.lang.String","value":"req1"}]}}
-        {"jsonrpc":"2.0","id":"2","method":"call","params":{"type":"com.quasient.pal.apps.rpc.Methods","method":"staticStringWithStringArg","args":[{"type":"java.lang.String","value":"req2"}]}}
+        {"jsonrpc":"2.0","id":"1","method":"call","params":{"type":"com.quasient.pal.apps.quantized.rpc.Methods","method":"staticStringWithStringArg","args":[{"type":"java.lang.String","value":"req1"}]}}
+        {"jsonrpc":"2.0","id":"2","method":"call","params":{"type":"com.quasient.pal.apps.quantized.rpc.Methods","method":"staticStringWithStringArg","args":[{"type":"java.lang.String","value":"req2"}]}}
         {"jsonrpc":"2.0","id":"3","method":"get","params":{"type":"com.quasient.pal.apps.rpc.Variables","field":"aClassString"}}
         """;
 

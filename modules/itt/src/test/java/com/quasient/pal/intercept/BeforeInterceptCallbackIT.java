@@ -15,8 +15,8 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.fail;
 
 import com.quasient.pal.InterceptTestSuite;
-import com.quasient.pal.apps.intercept.BeforeCallbackHandlers;
-import com.quasient.pal.apps.intercept.StringMethods;
+import com.quasient.pal.apps.callbacks.BeforeCallbackHandlers;
+import com.quasient.pal.apps.quantized.intercept.StringMethods;
 import com.quasient.pal.common.directory.nodes.InterceptRequest;
 import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.lang.intercept.InterceptableMethodCall;
@@ -25,7 +25,6 @@ import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.serdes.Unwrapper;
 import java.util.Collections;
 import java.util.UUID;
-import org.junit.After;
 import org.junit.Test;
 
 /**
@@ -41,16 +40,6 @@ public class BeforeInterceptCallbackIT extends AbstractInterceptIT {
 
   /** UUID for the intercept registration. */
   private UUID interceptUuid;
-
-  /** Cleans up intercept registrations after each test. */
-  @After
-  public void cleanupIntercepts() {
-    if (interceptUuid != null) {
-      logger.info("Cleaning up intercept registration: {}", interceptUuid);
-      // Intercepts are cleaned up in AbstractInterceptIT.tearDown() via
-      // deleteInterceptsForPeer(myPeerUuid)
-    }
-  }
 
   /**
    * Tests single-argument mutation via BEFORE callback.

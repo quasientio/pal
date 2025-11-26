@@ -12,8 +12,9 @@ package com.quasient.pal.intercept.staticmethod;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 
-import com.quasient.pal.apps.intercept.InterceptableApp;
+import com.quasient.pal.apps.quantized.intercept.InterceptableApp;
 import com.quasient.pal.common.directory.nodes.InterceptRequest;
 import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.lang.intercept.InterceptableMethodCall;
@@ -21,6 +22,7 @@ import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.cxn.ThinPeer;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.intercept.AbstractInterceptIT;
+import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.messages.types.MessageType;
 import java.util.Collections;
@@ -37,8 +39,8 @@ import org.zeromq.SocketType;
  * AFTER_ASYNC).
  *
  * <p>These tests verify the end-to-end callback mechanism for asynchronous intercepts on static
- * methods (EXEC_CLASS_METHOD) using DEALER sockets, including single and multiple callbacks for
- * both BEFORE_ASYNC and AFTER_ASYNC intercept types.
+ * methods (INTERCEPT_CALLBACK_REQUEST) using DEALER sockets, including single and multiple
+ * callbacks for both BEFORE_ASYNC and AFTER_ASYNC intercept types.
  *
  * <p>Unlike synchronous callbacks which use REQ-REP pattern and wait for responses, async callbacks
  * use DEALER-ROUTER pattern for fire-and-forget delivery.
@@ -104,15 +106,15 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
   /**
    * Tests single BEFORE_ASYNC callback on static method.
    *
-   * <p>Registers a BEFORE_ASYNC intercept on multiplyStaticBy, calls it once, and verifies the
-   * intercept mechanism works without blocking for a response.
+   * <p>Registers a BEFORE_ASYNC intercept on multiplyStaticBy, calls it once, and verifies exactly
+   * 1 callback is received without blocking for a response.
    */
   @Test
   public void testSingleBeforeAsyncCallback() throws Exception {
     logger.info("===== testSingleBeforeAsyncCallback: TEST STARTED =====");
 
-    final String callbackClass = "com.quasient.pal.apps.intercept.StaticMethodHandlers";
-    final String callbackMethod = "noOp";
+    final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
+    final String callbackMethod = "aFakeMethod";
     final int multiplier = 3;
 
     // 1. Register a BEFORE_ASYNC intercept on multiplyStaticBy method
@@ -138,7 +140,7 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     logger.info("Intercept registration delay completed");
 
-    // 3. Create InterceptableApp instance for calling wrapper method
+    // 2. Create InterceptableApp instance for calling wrapper method
     logger.info("Creating InterceptableApp instance");
     ObjectRef appInstance =
         ObjectRef.from(
@@ -150,19 +152,57 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
                 .getRef());
     logger.info("InterceptableApp instance created with ref: {}", appInstance);
 
-    // 4. Invoke callMultiplyStaticBy which triggers async intercept via call-site
+    // 3. Invoke callMultiplyStaticBy which triggers async intercept via call-site
     logger.info(
-        "Invoking callMultiplyStaticBy wrapper(multiplier={}) - async intercept should work",
+        "Invoking callMultiplyStaticBy wrapper(multiplier={}) which should trigger 1 callback",
         multiplier);
-    invoke(
-        messageBuilder.buildInstanceMethod(
-            myPeerUuid,
-            InterceptableApp.class.getName(),
-            "callMultiplyStaticBy",
-            appInstance,
-            new String[] {"java.lang.Integer"},
-            new Object[] {multiplier}));
-    logger.info("callMultiplyStaticBy invocation completed successfully");
+    ExecMessage response =
+        invoke(
+            messageBuilder.buildInstanceMethod(
+                myPeerUuid,
+                InterceptableApp.class.getName(),
+                "callMultiplyStaticBy",
+                appInstance,
+                new String[] {"java.lang.Integer"},
+                new Object[] {multiplier}));
+    logger.info("callMultiplyStaticBy invocation completed");
+
+    // 4. Verify invocation succeeded
+    assertThat(
+        "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
+
+    // 5. Retrieve and verify callbacks
+    logger.info("Waiting for 1 callback to be received");
+    List<Message> callbacks = getCallbacks(1, 5000);
+    logger.info("Callback received successfully");
+
+    assertThat("Should receive exactly 1 callback", callbacks.size(), is(1));
+
+    // 6. Verify callback structure
+    Message callback = callbacks.get(0);
+    assertThat("Callback message should not be null", callback, is(notNullValue()));
+    assertThat(
+        "Callback should be INTERCEPT_CALLBACK_REQUEST type",
+        callback.getMessageType(),
+        is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
+    assertThat(
+        "Callback class should match",
+        callback.getInterceptCallbackRequest().getCallbackClass(),
+        is(callbackClass));
+    assertThat(
+        "Callback method should match",
+        callback.getInterceptCallbackRequest().getCallbackMethod(),
+        is(callbackMethod));
+    // BEFORE callbacks receive method parameters (multiplyStaticBy has 1 Integer parameter)
+    assertThat(
+        "BEFORE callback should have 1 parameter (the Integer argument)",
+        callback
+            .getInterceptCallbackRequest()
+            .getExec()
+            .getClassMethodCall()
+            .getParameters()
+            .length,
+        is(1));
 
     logger.info("===== testSingleBeforeAsyncCallback: TEST COMPLETED SUCCESSFULLY =====");
   }
@@ -170,15 +210,15 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
   /**
    * Tests multiple BEFORE_ASYNC callbacks on static method.
    *
-   * <p>Registers a BEFORE_ASYNC intercept on incrementStaticCounter, calls it multiple times (n=3),
-   * and verifies the intercept mechanism works without blocking.
+   * <p>Registers a BEFORE_ASYNC intercept on incrementStaticCounter, invokes a wrapper method that
+   * calls it n=3 times, and verifies exactly 3 callbacks are received without blocking.
    */
   @Test
   public void testMultipleBeforeAsyncCallbacks() throws Exception {
     logger.info("===== testMultipleBeforeAsyncCallbacks: TEST STARTED =====");
 
-    final String callbackClass = "com.quasient.pal.apps.intercept.StaticMethodHandlers";
-    final String callbackMethod = "noOp";
+    final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
+    final String callbackMethod = "aFakeMethod";
     final int n = 3;
 
     // 1. Register a BEFORE_ASYNC intercept on incrementStaticCounter method
@@ -203,7 +243,7 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     logger.info("Intercept registration delay completed");
 
-    // 3. Create InterceptableApp instance for calling wrapper method
+    // 2. Create InterceptableApp instance for calling wrapper method
     logger.info("Creating InterceptableApp instance");
     ObjectRef appInstance =
         ObjectRef.from(
@@ -215,21 +255,61 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
                 .getRef());
     logger.info("InterceptableApp instance created with ref: {}", appInstance);
 
-    // 4. Invoke callIncrementStaticCounter multiple times (triggers incrementStaticCounter via
-    // call-site)
+    // 3. Invoke callIncrementStaticCounterNTimes which internally calls incrementStaticCounter n
+    // times
     logger.info(
-        "Invoking callIncrementStaticCounter wrapper {} times - async intercepts should work", n);
+        "Invoking callIncrementStaticCounterNTimes(n={}) which should trigger {} callback(s)",
+        n,
+        n);
+    ExecMessage response =
+        invoke(
+            messageBuilder.buildInstanceMethod(
+                myPeerUuid,
+                InterceptableApp.class.getName(),
+                "callIncrementStaticCounterNTimes",
+                appInstance,
+                new String[] {"java.lang.Integer"},
+                new Object[] {n}));
+    logger.info("callIncrementStaticCounterNTimes invocation completed");
+
+    // 4. Verify invocation succeeded
+    assertThat(
+        "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
+
+    // 5. Retrieve and verify callbacks
+    logger.info("Waiting for {} callback(s) to be received", n);
+    List<Message> callbacks = getCallbacks(n, 5000);
+    logger.info("All {} callback(s) received successfully", n);
+
+    assertThat("Should receive exactly " + n + " callback(s)", callbacks.size(), is(n));
+
+    // 6. Verify callback structure
     for (int i = 0; i < n; i++) {
-      invoke(
-          messageBuilder.buildInstanceMethod(
-              myPeerUuid,
-              InterceptableApp.class.getName(),
-              "callIncrementStaticCounter",
-              appInstance,
-              new String[] {},
-              new Object[] {}));
+      Message callback = callbacks.get(i);
+      assertThat("Callback message should not be null", callback, is(notNullValue()));
+      assertThat(
+          "Callback should be INTERCEPT_CALLBACK_REQUEST type",
+          callback.getMessageType(),
+          is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
+      assertThat(
+          "Callback class should match",
+          callback.getInterceptCallbackRequest().getCallbackClass(),
+          is(callbackClass));
+      assertThat(
+          "Callback method should match",
+          callback.getInterceptCallbackRequest().getCallbackMethod(),
+          is(callbackMethod));
+      // BEFORE callbacks receive method parameters (incrementStaticCounter has no params)
+      assertThat(
+          "BEFORE callback should have 0 parameters",
+          callback
+              .getInterceptCallbackRequest()
+              .getExec()
+              .getClassMethodCall()
+              .getParameters()
+              .length,
+          is(0));
     }
-    logger.info("callIncrementStaticCounter invocations completed successfully");
 
     logger.info("===== testMultipleBeforeAsyncCallbacks: TEST COMPLETED SUCCESSFULLY =====");
   }
@@ -245,8 +325,8 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
   public void testSingleAfterAsyncCallback() throws Exception {
     logger.info("===== testSingleAfterAsyncCallback: TEST STARTED =====");
 
-    final String callbackClass = "com.example.AsyncCallbackHandler";
-    final String callbackMethod = "handleAsyncCallback";
+    final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
+    final String callbackMethod = "aFakeMethod";
     final int multiplier = 3;
 
     // 1. Register an AFTER_ASYNC intercept on multiplyStaticBy method
@@ -271,7 +351,7 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     logger.info("Intercept registration delay completed");
 
-    // 3. Create InterceptableApp instance for calling wrapper method
+    // 2. Create InterceptableApp instance for calling wrapper method
     logger.info("Creating InterceptableApp instance");
     ObjectRef appInstance =
         ObjectRef.from(
@@ -283,48 +363,56 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
                 .getRef());
     logger.info("InterceptableApp instance created with ref: {}", appInstance);
 
-    // 4. Invoke callMultiplyStaticBy which triggers async callback via call-site
+    // 3. Invoke callMultiplyStaticBy wrapper which triggers async intercept
     logger.info(
-        "Invoking callMultiplyStaticBy wrapper(multiplier={}) which should trigger async callback",
+        "Invoking callMultiplyStaticBy wrapper(multiplier={}) which should trigger 1 callback",
         multiplier);
-    invoke(
-        messageBuilder.buildInstanceMethod(
-            myPeerUuid,
-            InterceptableApp.class.getName(),
-            "callMultiplyStaticBy",
-            appInstance,
-            new String[] {"java.lang.Integer"},
-            new Object[] {multiplier}));
+    ExecMessage response =
+        invoke(
+            messageBuilder.buildInstanceMethod(
+                myPeerUuid,
+                InterceptableApp.class.getName(),
+                "callMultiplyStaticBy",
+                appInstance,
+                new String[] {"java.lang.Integer"},
+                new Object[] {multiplier}));
     logger.info("callMultiplyStaticBy invocation completed");
 
-    // 4. Receive callbacks using getCallbacks()
-    logger.info("Receiving callbacks using getCallbacks()");
-    List<Message> receivedCallbacks = getCallbacks(1, 5000);
-    logger.info("Callbacks received successfully");
-
-    // 5. Verify callback structure
-    logger.info("Verifying async callback message structure");
-    assertThat("Should have received exactly 1 async callback", receivedCallbacks.size(), is(1));
-
-    Message callback = receivedCallbacks.get(0);
-    assertThat("Async callback message should not be null", callback, is(notNullValue()));
+    // 4. Verify invocation succeeded
     assertThat(
-        "Async callback should be CLASS_METHOD type",
+        "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
+
+    // 5. Retrieve and verify callbacks
+    logger.info("Waiting for 1 callback to be received");
+    List<Message> callbacks = getCallbacks(1, 5000);
+    logger.info("Callback received successfully");
+
+    assertThat("Should receive exactly 1 callback", callbacks.size(), is(1));
+
+    // 6. Verify callback structure
+    Message callback = callbacks.get(0);
+    assertThat("Callback message should not be null", callback, is(notNullValue()));
+    assertThat(
+        "Callback should be INTERCEPT_CALLBACK_REQUEST type",
         callback.getMessageType(),
-        is(MessageType.EXEC_CLASS_METHOD.getId()));
+        is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
     assertThat(
-        "Async callback class should match",
-        callback.getExecMessage().getClassMethodCall().getClazz().getName(),
+        "Callback class should match",
+        callback.getInterceptCallbackRequest().getCallbackClass(),
         is(callbackClass));
     assertThat(
-        "Async callback method should match",
-        callback.getExecMessage().getClassMethodCall().getName(),
+        "Callback method should match",
+        callback.getInterceptCallbackRequest().getCallbackMethod(),
         is(callbackMethod));
-    // AFTER_ASYNC callbacks receive the return value as parameter
-    // multiplyStaticBy returns Integer, so the callback has 1 parameter
+    // AFTER callbacks receive the return value (Integer return value)
     assertThat(
-        "AFTER_ASYNC callback should have 1 parameter (Integer return value)",
-        callback.getExecMessage().getClassMethodCall().getParameters().length,
+        "AFTER callback should have 1 parameter (the return value)",
+        callback
+            .getInterceptCallbackRequest()
+            .getExec()
+            .getClassMethodCall()
+            .getParameters()
+            .length,
         is(1));
 
     logger.info("===== testSingleAfterAsyncCallback: TEST COMPLETED SUCCESSFULLY =====");
@@ -333,16 +421,17 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
   /**
    * Tests multiple AFTER_ASYNC callbacks on static method.
    *
-   * <p>Registers an AFTER_ASYNC intercept on incrementStaticCounter, calls it multiple times (n=3),
-   * and verifies exactly 3 callbacks are received after method executions without blocking.
+   * <p>Registers an AFTER_ASYNC intercept on incrementStaticCounter, invokes a wrapper method that
+   * calls it n=3 times, and verifies exactly 3 callbacks are received after method executions
+   * without blocking.
    */
   @Test
   @Ignore
   public void testMultipleAfterAsyncCallbacks() throws Exception {
     logger.info("===== testMultipleAfterAsyncCallbacks: TEST STARTED =====");
 
-    final String callbackClass = "com.example.AsyncCallbackHandler";
-    final String callbackMethod = "handleAsyncCallback";
+    final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
+    final String callbackMethod = "aFakeMethod";
     final int n = 3;
 
     // 1. Register an AFTER_ASYNC intercept on incrementStaticCounter method
@@ -366,7 +455,7 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     logger.info("Intercept registration delay completed");
 
-    // 3. Create InterceptableApp instance for calling wrapper method
+    // 2. Create InterceptableApp instance for calling wrapper method
     logger.info("Creating InterceptableApp instance");
     ObjectRef appInstance =
         ObjectRef.from(
@@ -378,54 +467,59 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
                 .getRef());
     logger.info("InterceptableApp instance created with ref: {}", appInstance);
 
-    // 4. Invoke callIncrementStaticCounter multiple times (triggers incrementStaticCounter via
-    // call-site)
+    // 3. Invoke callIncrementStaticCounterNTimes which internally calls incrementStaticCounter n
+    // times
     logger.info(
-        "Invoking callIncrementStaticCounter wrapper {} times which should trigger {} async callbacks",
+        "Invoking callIncrementStaticCounterNTimes(n={}) which should trigger {} callback(s)",
         n,
         n);
-    for (int i = 0; i < n; i++) {
-      invoke(
-          messageBuilder.buildInstanceMethod(
-              myPeerUuid,
-              InterceptableApp.class.getName(),
-              "callIncrementStaticCounter",
-              appInstance,
-              new String[] {},
-              new Object[] {}));
-    }
-    logger.info("callIncrementStaticCounter invocations completed");
+    ExecMessage response =
+        invoke(
+            messageBuilder.buildInstanceMethod(
+                myPeerUuid,
+                InterceptableApp.class.getName(),
+                "callIncrementStaticCounterNTimes",
+                appInstance,
+                new String[] {"java.lang.Integer"},
+                new Object[] {n}));
+    logger.info("callIncrementStaticCounterNTimes invocation completed");
 
-    // 4. Receive callbacks using getCallbacks()
-    logger.info("Receiving {} callback(s) using getCallbacks()", n);
-    List<Message> receivedCallbacks = getCallbacks(n, 5000);
+    // 4. Verify invocation succeeded
+    assertThat(
+        "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
+
+    // 5. Retrieve and verify callbacks
+    logger.info("Waiting for {} callback(s) to be received", n);
+    List<Message> callbacks = getCallbacks(n, 5000);
     logger.info("All {} callback(s) received successfully", n);
 
-    // 5. Verify we received exactly n callbacks
-    logger.info("Verifying exactly {} async callbacks were received", n);
-    assertThat(
-        "Should have received exactly " + n + " async callbacks", receivedCallbacks.size(), is(n));
+    assertThat("Should receive exactly " + n + " callback(s)", callbacks.size(), is(n));
 
+    // 6. Verify callback structure
     for (int i = 0; i < n; i++) {
-      Message callback = receivedCallbacks.get(i);
-      assertThat("Async callback message should not be null", callback, is(notNullValue()));
+      Message callback = callbacks.get(i);
+      assertThat("Callback message should not be null", callback, is(notNullValue()));
       assertThat(
-          "Async callback should be CLASS_METHOD type",
+          "Callback should be INTERCEPT_CALLBACK_REQUEST type",
           callback.getMessageType(),
-          is(MessageType.EXEC_CLASS_METHOD.getId()));
+          is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
       assertThat(
-          "Async callback class should match",
-          callback.getExecMessage().getClassMethodCall().getClazz().getName(),
+          "Callback class should match",
+          callback.getInterceptCallbackRequest().getCallbackClass(),
           is(callbackClass));
       assertThat(
-          "Async callback method should match",
-          callback.getExecMessage().getClassMethodCall().getName(),
+          "Callback method should match",
+          callback.getInterceptCallbackRequest().getCallbackMethod(),
           is(callbackMethod));
-      // AFTER_ASYNC callbacks receive the return value as parameter
-      // incrementStaticCounter returns Integer, so the callback has 1 parameter
+      // AFTER callbacks receive the return value (Integer return value)
       assertThat(
-          "AFTER_ASYNC callback should have 1 parameter (Integer return value)",
-          callback.getExecMessage().getClassMethodCall().getParameters().length,
+          "AFTER callback should have 1 parameter (the return value)",
+          callback
+              .getInterceptCallbackRequest()
+              .getExec()
+              .getClassMethodCall()
+              .getParameters()
+              .length,
           is(1));
     }
 

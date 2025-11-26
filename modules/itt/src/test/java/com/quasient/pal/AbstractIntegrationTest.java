@@ -388,10 +388,25 @@ public abstract class AbstractIntegrationTest {
     pb.directory(new java.io.File(palHome));
     pb.environment().put("PAL_HOME", palHome);
 
+    // Extract peer name from args (value after -n flag)
+    String peerName = null;
+    for (int i = 0; i < args.length - 1; i++) {
+      if ("-n".equals(args[i])) {
+        peerName = args[i + 1];
+        break;
+      }
+    }
+
     // Configure logging - CRITICAL for debugging test failures
-    pb.environment()
-        .put(
-            "PAL_PEER_LOGGING_CONFIG", Paths.get(palHome, "config", "peer-logging.xml").toString());
+    // For interceptable and interceptor peers, create separate logging configs for easier debugging
+    String loggingConfigPath;
+    if ("interceptable-peer".equals(peerName) || "interceptor-peer".equals(peerName)) {
+      loggingConfigPath = createPeerSpecificLoggingConfig(peerName, palHome);
+    } else {
+      loggingConfigPath = Paths.get(palHome, "config", "peer-logging.xml").toString();
+    }
+
+    pb.environment().put("PAL_PEER_LOGGING_CONFIG", loggingConfigPath);
 
     // Remove environment variables that would interfere with tests
     // Tests must pass configuration explicitly via command-line arguments (e.g., "-d", "-k")
@@ -440,14 +455,14 @@ public abstract class AbstractIntegrationTest {
     stderrReader.start();
 
     // Parse the logback config to find the actual log file path
-    Path loggingConfigPath = Paths.get(palHome, "config", "peer-logging.xml");
+    Path loggingConfigFilePath = Paths.get(loggingConfigPath);
     Path logPath;
     try {
-      logPath = parseLogbackLogFilePath(loggingConfigPath);
-      logger.info("Parsed log file path from {}: {}", loggingConfigPath, logPath);
+      logPath = parseLogbackLogFilePath(loggingConfigFilePath);
+      logger.info("Parsed log file path from {}: {}", loggingConfigFilePath, logPath);
     } catch (IOException e) {
       // Fall back to default if parsing fails
-      logger.warn("Failed to parse log file path from {}, using default", loggingConfigPath, e);
+      logger.warn("Failed to parse log file path from {}, using default", loggingConfigFilePath, e);
       logPath = Paths.get(palHome, "logs", "peer.log");
     }
 
@@ -595,6 +610,56 @@ public abstract class AbstractIntegrationTest {
     }
 
     logger.info("Peer stopped");
+  }
+
+  /**
+   * Creates a peer-specific logging configuration file for intercept test debugging.
+   *
+   * <p>This method copies the peer-logging.xml.example template and modifies it to:
+   *
+   * <ul>
+   *   <li>Change the log file path from logs/peer.log to logs/{peerName}.log
+   *   <li>Add a DEBUG-level logger for com.quasient.pal.core package
+   * </ul>
+   *
+   * <p>This enables separate log files for interceptable-peer and interceptor-peer, making it
+   * easier to debug intercept callback flows without logs from both peers mixed together.
+   *
+   * @param peerName the name of the peer (e.g., "interceptable-peer", "interceptor-peer")
+   * @param palHome the PAL_HOME directory path
+   * @return the absolute path to the created logging configuration file
+   * @throws IOException if the config file cannot be read or written
+   */
+  private String createPeerSpecificLoggingConfig(String peerName, String palHome)
+      throws IOException {
+    Path sourceConfig = Paths.get(palHome, "config", "peer-logging.xml.example");
+    Path targetConfig = Paths.get(palHome, "config", peerName + "-logging.xml");
+
+    // Copy and modify the config
+    List<String> lines = Files.readAllLines(sourceConfig);
+    List<String> modifiedLines = new ArrayList<>();
+
+    for (String line : lines) {
+      // Replace log file path to use peer-specific log file
+      if (line.contains("logs/peer.log")) {
+        modifiedLines.add(line.replace("logs/peer.log", "logs/" + peerName + ".log"));
+      } else if (line.contains("<logger name=\"com.quasient.pal\" level=\"info\"")) {
+        // Add DEBUG logger for com.quasient.pal.core before the general logger
+        modifiedLines.add(
+            "    <logger name=\"com.quasient.pal.core\" level=\"DEBUG\" additivity=\"false\">");
+        modifiedLines.add("        <appender-ref ref=\"peer\"/>");
+        modifiedLines.add("    </logger>");
+        modifiedLines.add("");
+        modifiedLines.add(line);
+      } else {
+        modifiedLines.add(line);
+      }
+    }
+
+    Files.write(targetConfig, modifiedLines);
+    String configPath = targetConfig.toString();
+    logger.info("Created peer-specific logging config for {}: {}", peerName, configPath);
+    return configPath;
   }
 
   /** Helper method to pretty-print a Marshallable (i.e. colfer) message */

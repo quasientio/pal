@@ -179,6 +179,25 @@ public class AbstractInterceptIT extends AbstractIntegrationTest
         uuid, myPeerUuid, type, classname, callbackClass, callbackMethod, interceptableMethodCall);
   }
 
+  protected InterceptRequest<com.quasient.pal.common.lang.intercept.InterceptableFieldOp>
+      createFieldOpInterceptRequest(
+          UUID uuid,
+          UUID callbackPeerUuid,
+          InterceptType type,
+          String classname,
+          String callbackClass,
+          String callbackMethod,
+          com.quasient.pal.common.lang.intercept.InterceptableFieldOp interceptableFieldOp) {
+    return new InterceptRequest<>(
+        uuid,
+        callbackPeerUuid,
+        type,
+        classname,
+        callbackClass,
+        callbackMethod,
+        interceptableFieldOp);
+  }
+
   protected final void register(InterceptRequest<?> interceptRequest) throws Exception {
     palDirectory.createIntercept(interceptRequest);
   }

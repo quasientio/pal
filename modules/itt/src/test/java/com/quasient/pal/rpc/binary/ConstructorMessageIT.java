@@ -9,7 +9,7 @@
  */
 package com.quasient.pal.rpc.binary;
 
-import com.quasient.pal.apps.rpc.Constructors;
+import com.quasient.pal.apps.quantized.rpc.Constructors;
 import com.quasient.pal.common.objects.ObjectRef;
 import java.util.Collection;
 import org.junit.Test;
@@ -20,7 +20,7 @@ import org.junit.runners.Parameterized;
 @RunWith(Parameterized.class)
 public class ConstructorMessageIT extends AbstractColferRpcMessageIT {
 
-  protected final String className = "com.quasient.pal.apps.rpc.Constructors";
+  protected final String className = "com.quasient.pal.apps.quantized.rpc.Constructors";
 
   public ConstructorMessageIT(TargetType targetType) {
     super(targetType);
@@ -37,7 +37,7 @@ public class ConstructorMessageIT extends AbstractColferRpcMessageIT {
   // @Test
   public void innerConstructor() throws Exception {
 
-    String className = "com.quasient.pal.apps.rpc.Constructors$Empty";
+    String className = "com.quasient.pal.apps.quantized.rpc.Constructors$Empty";
     callEmptyConstructor(className);
   }
 

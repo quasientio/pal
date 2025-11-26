@@ -27,7 +27,7 @@ import org.junit.runners.Parameterized;
 @RunWith(Parameterized.class)
 public class CallMessageIT extends AbstractColferRpcMessageIT {
 
-  private static final String CLASS_NAME = "com.quasient.pal.apps.rpc.Methods";
+  private static final String CLASS_NAME = "com.quasient.pal.apps.quantized.rpc.Methods";
   private static final String[] EMPTY_STRING_ARRAY = {};
   private static final Object[] EMPTY_OBJECT_ARRAY = {};
 

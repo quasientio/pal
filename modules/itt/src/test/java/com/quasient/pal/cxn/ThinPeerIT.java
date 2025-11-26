@@ -544,7 +544,7 @@ public class ThinPeerIT extends AbstractIntegrationTest {
       ExecMessage execMsg =
           msgBuilder.buildClassMethod(
               tp.getPeerUuid(),
-              "com.quasient.pal.apps.rpc.Methods",
+              "com.quasient.pal.apps.quantized.rpc.Methods",
               "staticStringWithStringArg",
               new String[] {"java.lang.String"},
               null,

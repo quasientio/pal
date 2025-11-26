@@ -88,7 +88,7 @@ public class ChronicleCliIT extends AbstractCliIT {
     String palDirectory = getPalDirectoryUrl();
     String walName = "test-print-chronicle-no-dir-" + generateId();
     UUID peerId = UUID.randomUUID();
-    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+    String classToRun = "com.quasient.pal.apps.quantized.rpc.Methods";
 
     trackChronicleLog(walName);
 
@@ -132,7 +132,7 @@ public class ChronicleCliIT extends AbstractCliIT {
     String palDirectory = getPalDirectoryUrl();
     String walName = "test-ls-chronicle-size-" + generateId();
     UUID peerId = UUID.randomUUID();
-    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+    String classToRun = "com.quasient.pal.apps.quantized.rpc.Methods";
 
     trackChronicleLog(walName);
 
@@ -208,7 +208,7 @@ public class ChronicleCliIT extends AbstractCliIT {
     String walName = "test-ls-chronicle-rerun-" + generateId();
     UUID peerId1 = UUID.randomUUID();
     UUID peerId2 = UUID.randomUUID();
-    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+    String classToRun = "com.quasient.pal.apps.quantized.rpc.Methods";
 
     trackChronicleLog(walName);
 
@@ -284,7 +284,7 @@ public class ChronicleCliIT extends AbstractCliIT {
     String walName = "test-ls-abs-" + generateId();
     String absoluteWalPath = Paths.get(tmpDir, walName).toString();
     UUID peerId = UUID.randomUUID();
-    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+    String classToRun = "com.quasient.pal.apps.quantized.rpc.Methods";
 
     trackChronicleLog(absoluteWalPath);
 
@@ -330,7 +330,7 @@ public class ChronicleCliIT extends AbstractCliIT {
     String walName = "test-rm-abs-" + generateId();
     String absoluteWalPath = Paths.get(tmpDir, walName).toAbsolutePath().toString();
     UUID peerId = UUID.randomUUID();
-    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+    String classToRun = "com.quasient.pal.apps.quantized.rpc.Methods";
 
     trackChronicleLog(absoluteWalPath);
 
@@ -384,7 +384,7 @@ public class ChronicleCliIT extends AbstractCliIT {
     String walName = "test-rm-abs-" + generateId();
     String absoluteWalPath = Paths.get(tmpDir, walName).toAbsolutePath().toString();
     UUID peerId = UUID.randomUUID();
-    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+    String classToRun = "com.quasient.pal.apps.quantized.rpc.Methods";
 
     trackChronicleLog(absoluteWalPath);
 
@@ -441,7 +441,7 @@ public class ChronicleCliIT extends AbstractCliIT {
     String palDirectory = getPalDirectoryUrl();
     String walName = "test-abs-path-" + generateId();
     UUID peerId = UUID.randomUUID();
-    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+    String classToRun = "com.quasient.pal.apps.quantized.rpc.Methods";
 
     trackChronicleLog(walName);
 
@@ -499,7 +499,7 @@ public class ChronicleCliIT extends AbstractCliIT {
     String palDirectory = getPalDirectoryUrl();
     String walName = "test-print-file-prefix-" + generateId();
     UUID peerId = UUID.randomUUID();
-    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+    String classToRun = "com.quasient.pal.apps.quantized.rpc.Methods";
 
     trackChronicleLog(walName);
 
@@ -538,7 +538,7 @@ public class ChronicleCliIT extends AbstractCliIT {
     String palDirectory = getPalDirectoryUrl();
     String walName = "test-remove-chronicle-direct-" + generateId();
     UUID peerId = UUID.randomUUID();
-    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+    String classToRun = "com.quasient.pal.apps.quantized.rpc.Methods";
 
     trackChronicleLog(walName);
 
@@ -599,7 +599,7 @@ public class ChronicleCliIT extends AbstractCliIT {
             palDirectory,
             "-l",
             "file:" + walName,
-            "com.quasient.pal.apps.rpc.Methods",
+            "com.quasient.pal.apps.quantized.rpc.Methods",
             "-m",
             "staticStringWithStringArgs",
             "test-call-chronicle-registry");
@@ -650,7 +650,7 @@ public class ChronicleCliIT extends AbstractCliIT {
         runCall(
             "-l",
             "file:" + absWalPath,
-            "com.quasient.pal.apps.rpc.Methods",
+            "com.quasient.pal.apps.quantized.rpc.Methods",
             "-m",
             "staticStringWithStringArgs",
             "test-call-chronicle-direct");

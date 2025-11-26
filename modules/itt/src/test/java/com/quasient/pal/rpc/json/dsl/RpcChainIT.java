@@ -30,7 +30,7 @@ import org.junit.Test;
 public class RpcChainIT extends AbstractIntegrationTest {
 
   private static final String VARS_CLASS_NAME = "com.quasient.pal.apps.rpc.Variables";
-  private static final String METHODS_CLASS_NAME = "com.quasient.pal.apps.rpc.Methods";
+  private static final String METHODS_CLASS_NAME = "com.quasient.pal.apps.quantized.rpc.Methods";
 
   private ThinPeer thinPeer;
   private RpcChain chain;

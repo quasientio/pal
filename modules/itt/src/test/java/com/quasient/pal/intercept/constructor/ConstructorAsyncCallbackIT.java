@@ -12,14 +12,16 @@ package com.quasient.pal.intercept.constructor;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 
-import com.quasient.pal.apps.intercept.InterceptableApp;
+import com.quasient.pal.apps.quantized.intercept.InterceptableApp;
 import com.quasient.pal.common.directory.nodes.InterceptRequest;
 import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.lang.intercept.InterceptableMethodCall;
 import com.quasient.pal.cxn.ThinPeer;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.intercept.AbstractInterceptIT;
+import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.messages.types.MessageType;
 import java.util.Collections;
@@ -110,8 +112,8 @@ public class ConstructorAsyncCallbackIT extends AbstractInterceptIT {
   public void testSingleBeforeAsyncCallback() throws Exception {
     logger.info("===== testSingleBeforeAsyncCallback: TEST STARTED =====");
 
-    final String callbackClass = "com.quasient.pal.apps.intercept.ConstructorHandlers";
-    final String callbackMethod = "noOp";
+    final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
+    final String callbackMethod = "aFakeMethod";
     final int initialValue = 10;
 
     // 1. Register a BEFORE_ASYNC intercept on parameterized constructor
@@ -125,7 +127,7 @@ public class ConstructorAsyncCallbackIT extends AbstractInterceptIT {
             InterceptableApp.class.getName(),
             callbackClass,
             callbackMethod,
-            new InterceptableMethodCall("<init>", Collections.singletonList("java.lang.Integer")));
+            new InterceptableMethodCall("new", Collections.singletonList("java.lang.Integer")));
 
     logger.info("Registering intercept request");
     register(interceptRequest);
@@ -136,20 +138,61 @@ public class ConstructorAsyncCallbackIT extends AbstractInterceptIT {
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     logger.info("Intercept registration delay completed");
 
-    // 3. Invoke constructor - async intercept should work
+    // 2. Invoke factory method which internally calls constructor (triggers intercept via
+    // call-site)
     logger.info(
-        "Invoking InterceptableApp constructor with initialValue={} - async intercept should work",
+        "Invoking createWithCounter factory method with initialValue={} which should trigger 1 callback",
         initialValue);
-    invoke(
-        messageBuilder.buildClassMethod(
-            myPeerUuid,
-            InterceptableApp.class.getName(),
-            "createWithCounter",
-            new String[] {"java.lang.Integer"},
-            null,
-            null,
-            new Object[] {initialValue}));
-    logger.info("Constructor invocation completed successfully");
+    ExecMessage response =
+        invoke(
+            messageBuilder.buildClassMethod(
+                myPeerUuid,
+                InterceptableApp.class.getName(),
+                "createWithCounter",
+                new String[] {"java.lang.Integer"},
+                null,
+                null,
+                new Object[] {initialValue}));
+    logger.info("Factory method invocation completed");
+
+    // 3. Verify invocation succeeded
+    assertThat(
+        "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
+
+    // 4. Retrieve and verify callbacks
+    logger.info("Waiting for 1 callback to be received");
+    List<Message> callbacks = getCallbacks(1, 5000);
+    logger.info("Callback received successfully");
+
+    assertThat("Should receive exactly 1 callback", callbacks.size(), is(1));
+
+    // 5. Verify callback structure
+    Message callback = callbacks.get(0);
+    assertThat("Callback message should not be null", callback, is(notNullValue()));
+    logger.debug("Callback message type: {}", MessageType.fromId(callback.getMessageType()));
+    assertThat(
+        "Callback should be INTERCEPT_CALLBACK_REQUEST type",
+        callback.getMessageType(),
+        is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
+    assertThat(
+        "Callback class should match",
+        callback.getInterceptCallbackRequest().getCallbackClass(),
+        is(callbackClass));
+    assertThat(
+        "Callback method should match",
+        callback.getInterceptCallbackRequest().getCallbackMethod(),
+        is(callbackMethod));
+    // BEFORE callbacks receive the constructor parameters
+    // Constructor(Integer) has 1 parameter
+    assertThat(
+        "BEFORE callback should have 1 parameter (the Integer argument)",
+        callback
+            .getInterceptCallbackRequest()
+            .getExec()
+            .getConstructorCall()
+            .getParameters()
+            .length,
+        is(1));
 
     logger.info("===== testSingleBeforeAsyncCallback: TEST COMPLETED SUCCESSFULLY =====");
   }
@@ -157,16 +200,18 @@ public class ConstructorAsyncCallbackIT extends AbstractInterceptIT {
   /**
    * Tests multiple BEFORE_ASYNC callbacks on constructor.
    *
-   * <p>Registers a BEFORE_ASYNC intercept on the parameterized constructor, calls it multiple times
-   * (n=3), and verifies exactly 3 callbacks are received without blocking.
+   * <p>Registers a BEFORE_ASYNC intercept on the parameterized constructor, invokes a factory
+   * method that creates n=3 instances, and verifies exactly 3 callbacks are received without
+   * blocking.
    */
   @Test
   public void testMultipleBeforeAsyncCallbacks() throws Exception {
     logger.info("===== testMultipleBeforeAsyncCallbacks: TEST STARTED =====");
 
-    final String callbackClass = "com.quasient.pal.apps.intercept.ConstructorHandlers";
-    final String callbackMethod = "noOp";
+    final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
+    final String callbackMethod = "aFakeMethod";
     final int n = 3;
+    final int initialValue = 10;
 
     // 1. Register a BEFORE_ASYNC intercept on parameterized constructor
     logger.info("Creating BEFORE_ASYNC intercept request for parameterized constructor");
@@ -179,7 +224,7 @@ public class ConstructorAsyncCallbackIT extends AbstractInterceptIT {
             InterceptableApp.class.getName(),
             callbackClass,
             callbackMethod,
-            new InterceptableMethodCall("<init>", Collections.singletonList("java.lang.Integer")));
+            new InterceptableMethodCall("new", Collections.singletonList("java.lang.Integer")));
 
     logger.info("Registering intercept request");
     register(interceptRequest);
@@ -190,20 +235,64 @@ public class ConstructorAsyncCallbackIT extends AbstractInterceptIT {
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     logger.info("Intercept registration delay completed");
 
-    // 3. Invoke constructor multiple times - async intercepts should work
-    logger.info("Invoking constructor {} times - async intercepts should work", n);
+    // 2. Invoke createNInstances which internally calls constructor n times
+    logger.info(
+        "Invoking createNInstances(n={}, initialValue={}) which should trigger {} callback(s)",
+        n,
+        initialValue,
+        n);
+    ExecMessage response =
+        invoke(
+            messageBuilder.buildClassMethod(
+                myPeerUuid,
+                InterceptableApp.class.getName(),
+                "createNInstances",
+                new String[] {"java.lang.Integer", "java.lang.Integer"},
+                null,
+                null,
+                new Object[] {n, initialValue}));
+    logger.info("createNInstances invocation completed");
+
+    // 3. Verify invocation succeeded
+    assertThat(
+        "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
+
+    // 4. Retrieve and verify callbacks
+    logger.info("Waiting for {} callback(s) to be received", n);
+    List<Message> callbacks = getCallbacks(n, 5000);
+    logger.info("All {} callback(s) received successfully", n);
+
+    assertThat("Should receive exactly " + n + " callback(s)", callbacks.size(), is(n));
+
+    // 5. Verify callback structure
     for (int i = 0; i < n; i++) {
-      invoke(
-          messageBuilder.buildClassMethod(
-              myPeerUuid,
-              InterceptableApp.class.getName(),
-              "createWithCounter",
-              new String[] {"java.lang.Integer"},
-              null,
-              null,
-              new Object[] {10 + i}));
+      Message callback = callbacks.get(i);
+      assertThat("Callback message should not be null", callback, is(notNullValue()));
+      logger.debug("Callback message type: {}", MessageType.fromId(callback.getMessageType()));
+      assertThat(
+          "Callback should be INTERCEPT_CALLBACK_REQUEST type",
+          callback.getMessageType(),
+          is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
+      assertThat(
+          "Callback class should match",
+          callback.getInterceptCallbackRequest().getCallbackClass(),
+          is(callbackClass));
+      assertThat(
+          "Callback method should match",
+          callback.getInterceptCallbackRequest().getCallbackMethod(),
+          is(callbackMethod));
+      // BEFORE callbacks receive the constructor parameters
+      // Constructor(Integer) has 1 parameter
+      assertThat(
+          "BEFORE callback should have 1 parameter (the Integer argument)",
+          callback
+              .getInterceptCallbackRequest()
+              .getExec()
+              .getConstructorCall()
+              .getParameters()
+              .length,
+          is(1));
     }
-    logger.info("Constructor invocations completed successfully");
 
     logger.info("===== testMultipleBeforeAsyncCallbacks: TEST COMPLETED SUCCESSFULLY =====");
   }
@@ -219,8 +308,8 @@ public class ConstructorAsyncCallbackIT extends AbstractInterceptIT {
   public void testSingleAfterAsyncCallback() throws Exception {
     logger.info("===== testSingleAfterAsyncCallback: TEST STARTED =====");
 
-    final String callbackClass = "com.quasient.pal.apps.intercept.ConstructorHandlers";
-    final String callbackMethod = "noOp";
+    final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
+    final String callbackMethod = "aFakeMethod";
     final int initialValue = 10;
 
     // 1. Register an AFTER_ASYNC intercept on parameterized constructor
@@ -233,7 +322,7 @@ public class ConstructorAsyncCallbackIT extends AbstractInterceptIT {
             InterceptableApp.class.getName(),
             callbackClass,
             callbackMethod,
-            new InterceptableMethodCall("<init>", Collections.singletonList("java.lang.Integer")));
+            new InterceptableMethodCall("new", Collections.singletonList("java.lang.Integer")));
 
     logger.info("Registering intercept request");
     register(interceptRequest);
@@ -244,48 +333,59 @@ public class ConstructorAsyncCallbackIT extends AbstractInterceptIT {
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     logger.info("Intercept registration delay completed");
 
-    // 3. Invoke constructor which triggers async callback
+    // 2. Invoke factory method which internally calls constructor (triggers intercept via
+    // call-site)
     logger.info(
-        "Invoking InterceptableApp constructor with initialValue={} which should trigger async callback",
+        "Invoking createWithCounter factory method with initialValue={} which should trigger 1 callback",
         initialValue);
-    invoke(
-        messageBuilder.buildClassMethod(
-            myPeerUuid,
-            InterceptableApp.class.getName(),
-            "createWithCounter",
-            new String[] {"java.lang.Integer"},
-            null,
-            null,
-            new Object[] {initialValue}));
-    logger.info("Constructor invocation completed");
+    ExecMessage response =
+        invoke(
+            messageBuilder.buildClassMethod(
+                myPeerUuid,
+                InterceptableApp.class.getName(),
+                "createWithCounter",
+                new String[] {"java.lang.Integer"},
+                null,
+                null,
+                new Object[] {initialValue}));
+    logger.info("Factory method invocation completed");
 
-    // 4. Receive callbacks using getCallbacks()
-    logger.info("Receiving callbacks using getCallbacks()");
-    List<Message> receivedCallbacks = getCallbacks(1, 5000);
-    logger.info("Callbacks received successfully");
+    // 3. Verify invocation succeeded
+    assertThat(
+        "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
+
+    // 4. Retrieve and verify callbacks
+    logger.info("Waiting for 1 callback to be received");
+    List<Message> callbacks = getCallbacks(1, 5000);
+    logger.info("Callback received successfully");
+
+    assertThat("Should receive exactly 1 callback", callbacks.size(), is(1));
 
     // 5. Verify callback structure
-    logger.info("Verifying async callback message structure");
-    assertThat("Should have received exactly 1 async callback", receivedCallbacks.size(), is(1));
-
-    Message callback = receivedCallbacks.get(0);
-    assertThat("Async callback message should not be null", callback, is(notNullValue()));
+    Message callback = callbacks.get(0);
+    assertThat("Callback message should not be null", callback, is(notNullValue()));
+    logger.debug("Callback message type: {}", MessageType.fromId(callback.getMessageType()));
     assertThat(
-        "Async callback should be CLASS_METHOD type",
+        "Callback should be INTERCEPT_CALLBACK_REQUEST type",
         callback.getMessageType(),
-        is(MessageType.EXEC_CLASS_METHOD.getId()));
+        is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
     assertThat(
-        "Async callback class should match",
-        callback.getExecMessage().getClassMethodCall().getClazz().getName(),
+        "Callback class should match",
+        callback.getInterceptCallbackRequest().getCallbackClass(),
         is(callbackClass));
     assertThat(
-        "Async callback method should match",
-        callback.getExecMessage().getClassMethodCall().getName(),
+        "Callback method should match",
+        callback.getInterceptCallbackRequest().getCallbackMethod(),
         is(callbackMethod));
-    // AFTER_ASYNC callbacks receive the return value (constructed object), not parameters
+    // AFTER callbacks receive the return value (constructed object)
     assertThat(
-        "AFTER_ASYNC callback should have 1 parameter (constructed object)",
-        callback.getExecMessage().getClassMethodCall().getParameters().length,
+        "AFTER callback should have 1 parameter (the constructed object)",
+        callback
+            .getInterceptCallbackRequest()
+            .getExec()
+            .getConstructorCall()
+            .getParameters()
+            .length,
         is(1));
 
     logger.info("===== testSingleAfterAsyncCallback: TEST COMPLETED SUCCESSFULLY =====");
@@ -294,18 +394,19 @@ public class ConstructorAsyncCallbackIT extends AbstractInterceptIT {
   /**
    * Tests multiple AFTER_ASYNC callbacks on constructor.
    *
-   * <p>Registers an AFTER_ASYNC intercept on the parameterized constructor, calls it multiple times
-   * (n=3), and verifies exactly 3 callbacks are received after constructor executions without
-   * blocking.
+   * <p>Registers an AFTER_ASYNC intercept on the parameterized constructor, invokes a factory
+   * method that creates n=3 instances, and verifies exactly 3 callbacks are received after
+   * constructor executions without blocking.
    */
   @Test
   @Ignore
   public void testMultipleAfterAsyncCallbacks() throws Exception {
     logger.info("===== testMultipleAfterAsyncCallbacks: TEST STARTED =====");
 
-    final String callbackClass = "com.quasient.pal.apps.intercept.ConstructorHandlers";
-    final String callbackMethod = "noOp";
+    final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
+    final String callbackMethod = "aFakeMethod";
     final int n = 3;
+    final int initialValue = 10;
 
     // 1. Register an AFTER_ASYNC intercept on parameterized constructor
     logger.info("Creating AFTER_ASYNC intercept request for parameterized constructor");
@@ -317,7 +418,7 @@ public class ConstructorAsyncCallbackIT extends AbstractInterceptIT {
             InterceptableApp.class.getName(),
             callbackClass,
             callbackMethod,
-            new InterceptableMethodCall("<init>", Collections.singletonList("java.lang.Integer")));
+            new InterceptableMethodCall("new", Collections.singletonList("java.lang.Integer")));
 
     logger.info("Registering intercept request");
     register(interceptRequest);
@@ -328,50 +429,61 @@ public class ConstructorAsyncCallbackIT extends AbstractInterceptIT {
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     logger.info("Intercept registration delay completed");
 
-    // 3. Invoke constructor multiple times which triggers async callbacks
-    logger.info("Invoking constructor {} times which should trigger {} async callbacks", n, n);
-    for (int i = 0; i < n; i++) {
-      invoke(
-          messageBuilder.buildClassMethod(
-              myPeerUuid,
-              InterceptableApp.class.getName(),
-              "createWithCounter",
-              new String[] {"java.lang.Integer"},
-              null,
-              null,
-              new Object[] {10 + i}));
-    }
-    logger.info("Constructor invocations completed");
+    // 2. Invoke createNInstances which internally calls constructor n times
+    logger.info(
+        "Invoking createNInstances(n={}, initialValue={}) which should trigger {} callback(s)",
+        n,
+        initialValue,
+        n);
+    ExecMessage response =
+        invoke(
+            messageBuilder.buildClassMethod(
+                myPeerUuid,
+                InterceptableApp.class.getName(),
+                "createNInstances",
+                new String[] {"java.lang.Integer", "java.lang.Integer"},
+                null,
+                null,
+                new Object[] {n, initialValue}));
+    logger.info("createNInstances invocation completed");
 
-    // 4. Receive callbacks using getCallbacks()
-    logger.info("Receiving {} callback(s) using getCallbacks()", n);
-    List<Message> receivedCallbacks = getCallbacks(n, 5000);
+    // 3. Verify invocation succeeded
+    assertThat(
+        "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
+
+    // 4. Retrieve and verify callbacks
+    logger.info("Waiting for {} callback(s) to be received", n);
+    List<Message> callbacks = getCallbacks(n, 5000);
     logger.info("All {} callback(s) received successfully", n);
 
-    // 5. Verify we received exactly n callbacks
-    logger.info("Verifying exactly {} async callbacks were received", n);
-    assertThat(
-        "Should have received exactly " + n + " async callbacks", receivedCallbacks.size(), is(n));
+    assertThat("Should receive exactly " + n + " callback(s)", callbacks.size(), is(n));
 
+    // 5. Verify callback structure
     for (int i = 0; i < n; i++) {
-      Message callback = receivedCallbacks.get(i);
-      assertThat("Async callback message should not be null", callback, is(notNullValue()));
+      Message callback = callbacks.get(i);
+      logger.debug("Callback message type: {}", MessageType.fromId(callback.getMessageType()));
+      assertThat("Callback message should not be null", callback, is(notNullValue()));
       assertThat(
-          "Async callback should be CLASS_METHOD type",
+          "Callback should be INTERCEPT_CALLBACK_REQUEST type",
           callback.getMessageType(),
-          is(MessageType.EXEC_CLASS_METHOD.getId()));
+          is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
       assertThat(
-          "Async callback class should match",
-          callback.getExecMessage().getClassMethodCall().getClazz().getName(),
+          "Callback class should match",
+          callback.getInterceptCallbackRequest().getCallbackClass(),
           is(callbackClass));
       assertThat(
-          "Async callback method should match",
-          callback.getExecMessage().getClassMethodCall().getName(),
+          "Callback method should match",
+          callback.getInterceptCallbackRequest().getCallbackMethod(),
           is(callbackMethod));
-      // AFTER_ASYNC callbacks receive the return value (constructed object), not parameters
+      // AFTER callbacks receive the return value (constructed object)
       assertThat(
-          "AFTER_ASYNC callback should have 1 parameter (constructed object)",
-          callback.getExecMessage().getClassMethodCall().getParameters().length,
+          "AFTER callback should have 1 parameter (the constructed object)",
+          callback
+              .getInterceptCallbackRequest()
+              .getExec()
+              .getConstructorCall()
+              .getParameters()
+              .length,
           is(1));
     }
 

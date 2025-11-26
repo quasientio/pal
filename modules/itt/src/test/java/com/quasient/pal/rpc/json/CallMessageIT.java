@@ -32,7 +32,7 @@ import org.junit.runners.Parameterized;
 public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
   private static int messageId = 0;
-  private static final String CLASS_NAME = "com.quasient.pal.apps.rpc.Methods";
+  private static final String CLASS_NAME = "com.quasient.pal.apps.quantized.rpc.Methods";
 
   public CallMessageIT(TargetType targetType) {
     super(targetType);

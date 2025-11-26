@@ -174,7 +174,7 @@ public class ListIT extends AbstractCliIT {
 
     // we need to run something for messages to be written to the WAL, which actually
     // creates the Log in Kafka
-    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+    String classToRun = "com.quasient.pal.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -221,7 +221,7 @@ public class ListIT extends AbstractCliIT {
 
     // we need to run something for messages to be written to the WAL, which actually
     // creates the Chronicle queue files
-    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+    String classToRun = "com.quasient.pal.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -256,7 +256,7 @@ public class ListIT extends AbstractCliIT {
 
     // we need to run something for messages to be written to the WAL, which actually
     // creates the Log in Kafka
-    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+    String classToRun = "com.quasient.pal.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -302,7 +302,7 @@ public class ListIT extends AbstractCliIT {
 
     // we need to run something for messages to be written to the WAL, which actually
     // creates the Log in Kafka
-    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+    String classToRun = "com.quasient.pal.apps.quantized.rpc.Methods";
 
     Process peer1 =
         launchPeer(
@@ -375,7 +375,7 @@ public class ListIT extends AbstractCliIT {
 
     // we need to run something for messages to be written to the WAL, which actually
     // creates the Log in Kafka
-    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+    String classToRun = "com.quasient.pal.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -424,7 +424,7 @@ public class ListIT extends AbstractCliIT {
 
     // we need to run something for messages to be written to the WAL, which actually
     // creates the Log in Kafka
-    String classToRun = "com.quasient.pal.apps.rpc.Methods";
+    String classToRun = "com.quasient.pal.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
