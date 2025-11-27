@@ -69,12 +69,6 @@
     <fileSet>
       <directory>../bin</directory>
       <outputDirectory>bin</outputDirectory>
-      <includes>
-        <include>pal</include>
-        <include>start_etcd.sh</include>
-        <include>setup_kafka.sh</include>
-        <include>start_kafka.sh</include>
-      </includes>
     </fileSet>
 
   </fileSets>

@@ -26,7 +26,7 @@ docker pull apache/kafka:3.8.0 && docker tag apache/kafka:3.8.0 kafka:latest
     ```bash
     infra/bin/start_etcd_and_kafka_docker.sh
     ```
-   NOTE: If you're using a local installation of etcd and kafka, then replace the above by `start_etcd.sh && start_kafka.sh` (scripts found under the bin/ folder).
+   NOTE: If you're using a local installation of etcd and kafka, then replace the above by `start_etcd.sh && start_kafka.sh`.
 3. Run the integration tests
     ```bash
     mvn -pl modules/itt verify
