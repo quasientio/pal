@@ -822,5 +822,30 @@
                 </plugins>
             </build>
         </profile>
+        <profile>
+            <id>logs</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-clean-plugin</artifactId>
+                        <version>${maven.plugin.clean.version}</version>
+                        <configuration>
+                            <!-- Do NOT delete target/ -->
+                            <excludeDefaultDirectories>true</excludeDefaultDirectories>
+
+                            <filesets>
+                                <!-- runs once per project (root and each module) -->
+                                <fileset>
+                                    <directory>${project.basedir}/logs</directory>
+                                    <includes>
+                                        <include>**/*</include>
+                                    </includes>
+                                </fileset>
+                            </filesets>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
     </profiles>
 </project>
