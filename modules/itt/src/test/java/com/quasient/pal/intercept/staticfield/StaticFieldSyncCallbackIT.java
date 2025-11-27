@@ -36,9 +36,6 @@ import org.junit.Test;
  */
 public class StaticFieldSyncCallbackIT extends AbstractInterceptIT {
 
-  /** UUID for the intercept registration. */
-  private UUID interceptUuid;
-
   /**
    * Tests single BEFORE callback on static field GET operation.
    *

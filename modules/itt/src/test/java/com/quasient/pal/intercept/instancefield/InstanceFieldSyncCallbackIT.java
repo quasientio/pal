@@ -37,9 +37,6 @@ import org.junit.Test;
  */
 public class InstanceFieldSyncCallbackIT extends AbstractInterceptIT {
 
-  /** UUID for the intercept registration. */
-  private UUID interceptUuid;
-
   /**
    * Tests single BEFORE callback on instance field GET operation.
    *
