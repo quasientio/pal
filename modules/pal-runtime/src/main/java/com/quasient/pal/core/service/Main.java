@@ -55,6 +55,7 @@ import java.net.MalformedURLException;
 import java.net.ServerSocket;
 import java.net.URL;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -967,7 +968,7 @@ public class Main implements Callable<Integer> {
         String walPath = extractLogName(wal);
         // For absolute paths, extract base directory
         if (walPath.startsWith("/")) {
-          java.nio.file.Path p = Paths.get(walPath);
+          Path p = Paths.get(walPath);
           // Only set base_dir if not already configured
           if (!properties.containsKey("wal.chronicle.base_dir")) {
             properties.setProperty("wal.chronicle.base_dir", p.getParent().toString());

@@ -11,6 +11,7 @@ package com.quasient.pal.serdes.colfer;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 
 import org.junit.Test;
@@ -27,7 +28,7 @@ public class JsonUtilTest {
     String json = JsonUtil.toJson(b);
     assertThat(json, containsString("\"a\":\"x\""));
     Bean parsed = JsonUtil.fromJson(json, Bean.class);
-    org.junit.Assert.assertEquals("x", parsed.a);
+    assertEquals("x", parsed.a);
   }
 
   @Test

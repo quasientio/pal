@@ -111,6 +111,7 @@ public class WrapperTest extends WrappingTestBase {
   // <editor-fold defaultstate="collapsed" desc="getWrappedClass tests">
 
   @Test
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public void getWrappedClass_nullClass_unknownClassNoName() {
     com.quasient.pal.messages.colfer.Class wrappedClass = Wrapper.getWrappedClass((Class<?>) null);
     assertNotNull(wrappedClass);
@@ -118,6 +119,7 @@ public class WrapperTest extends WrappingTestBase {
   }
 
   @Test
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public void getWrappedClass_javaLangOrPrimitiveClass_wrappedOk() {
     com.quasient.pal.messages.colfer.Class wrappedClass;
     for (Class<?> clazz : allPrimitiveAndLangClasses) {
@@ -133,6 +135,7 @@ public class WrapperTest extends WrappingTestBase {
   }
 
   @Test
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public void getWrappedClass_nullClassName_wrappedOk() {
 
     com.quasient.pal.messages.colfer.Class wrappedClass;
@@ -145,6 +148,7 @@ public class WrapperTest extends WrappingTestBase {
   }
 
   @Test
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public void getWrappedClass_javaLangOrPrimitiveClassName_wrappedOk() {
 
     List<String> classNames = allPrimitiveAndLangClasses.stream().map(Class::getName).toList();
@@ -164,6 +168,7 @@ public class WrapperTest extends WrappingTestBase {
 
   // Class of all wrappableObjects must be wrappable as well
   @Test
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public void getWrappedClass_wrappableClass_wrappedOk() {
 
     List<Class<?>> classes =
@@ -186,6 +191,7 @@ public class WrapperTest extends WrappingTestBase {
 
   // <editor-fold defaultstate="collapsed" desc="getWrappedField tests">
   @Test
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public void getWrappedField_fieldAndClass_wrappedOk() {
 
     var clazz = Integer.class;
@@ -201,6 +207,7 @@ public class WrapperTest extends WrappingTestBase {
   }
 
   @Test
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public void wrapField_ValidField_wrappedField() throws NoSuchFieldException {
     Field field = Dimension.class.getDeclaredField("height");
     com.quasient.pal.messages.colfer.Field wrappedField = Wrapper.getWrappedField(field);
@@ -209,6 +216,7 @@ public class WrapperTest extends WrappingTestBase {
   }
 
   @Test
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public void getWrappedField_fieldAndClassName_wrappedOk() {
     String className = Integer.class.getName();
     String fieldName = "height";
@@ -351,6 +359,7 @@ public class WrapperTest extends WrappingTestBase {
 
   // <editor-fold defaultstate="collapsed" desc="getWrappedContext tests">
   @Test
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public void wrapContext_VariousContexts_wrappedContext() throws NoSuchFieldException {
     Signature signature = new FieldSignature(Dimension.class.getDeclaredField("width"));
     String sourceFile = "SomeJavaClass.java";

@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
 import com.quasient.pal.common.objects.ObjectRef;
+import com.quasient.pal.common.weave.Proceed;
 import com.quasient.pal.core.service.RunOptions;
 import com.quasient.pal.core.transport.MessageChannelType;
 import com.quasient.pal.messages.colfer.ExecMessage;
@@ -65,8 +66,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
   }
 
   private <T> ProceedingJoinPoint createPjp(
-      Field field, Object target, Object value, com.quasient.pal.common.weave.Proceed<T> proceed)
-      throws Throwable {
+      Field field, Object target, Object value, Proceed<T> proceed) throws Throwable {
     String sourceFilename = "NotARealClass.java";
     return PjpBuilder.create()
         .kindFieldSet()

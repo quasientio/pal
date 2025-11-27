@@ -10,6 +10,7 @@
 package com.quasient.pal.serdes.kafka.typed;
 
 import com.quasient.pal.messages.LogMessage;
+import java.util.Map;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serializer;
@@ -72,7 +73,7 @@ public class KafkaLogMessageSerde implements Serde<LogMessage<?>> {
    * @param isKey whether the SerDe is for key or value.
    */
   @Override
-  public void configure(java.util.Map<String, ?> configs, boolean isKey) {
+  public void configure(Map<String, ?> configs, boolean isKey) {
     serializer.configure(configs, isKey);
     deserializer.configure(configs, isKey);
   }

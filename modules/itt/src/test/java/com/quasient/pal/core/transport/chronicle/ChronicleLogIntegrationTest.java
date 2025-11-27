@@ -18,6 +18,7 @@ import com.quasient.pal.cxn.chronicle.ChronicleLogUtil;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.Locale;
 import java.util.stream.Stream;
 import org.junit.After;
@@ -48,7 +49,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
     if (tempDir != null && Files.exists(tempDir)) {
       try (Stream<Path> files = Files.walk(tempDir)) {
         files
-            .sorted(java.util.Comparator.reverseOrder())
+            .sorted(Comparator.reverseOrder())
             .forEach(
                 path -> {
                   try {

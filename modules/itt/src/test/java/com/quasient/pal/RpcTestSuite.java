@@ -9,6 +9,9 @@
  */
 package com.quasient.pal;
 
+import com.quasient.pal.common.directory.nodes.LogInfo;
+import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
+import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.rpc.binary.CallMessageIT;
 import com.quasient.pal.rpc.binary.ComplexArgsMessageIT;
 import com.quasient.pal.rpc.binary.ConstructorMessageIT;
@@ -17,6 +20,10 @@ import com.quasient.pal.rpc.binary.GetArrayMessageIT;
 import com.quasient.pal.rpc.binary.GetMessageIT;
 import com.quasient.pal.rpc.binary.MetaMessageIT;
 import com.quasient.pal.rpc.binary.PutMessageIT;
+import com.quasient.pal.rpc.json.CallArrayMessageIT;
+import com.quasient.pal.rpc.json.JsonRpcResponseErrorIT;
+import com.quasient.pal.rpc.json.PutGetArrayMessageIT;
+import com.quasient.pal.rpc.json.dsl.RpcChainIT;
 import java.util.UUID;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -58,18 +65,19 @@ import org.slf4j.LoggerFactory;
 
   // JSON RPC tests
   com.quasient.pal.rpc.json.CallMessageIT.class,
-  com.quasient.pal.rpc.json.CallArrayMessageIT.class,
+  CallArrayMessageIT.class,
   com.quasient.pal.rpc.json.ComplexArgsMessageIT.class,
   com.quasient.pal.rpc.json.ConstructorMessageIT.class,
   com.quasient.pal.rpc.json.ControlMessageIT.class,
   com.quasient.pal.rpc.json.GetArrayMessageIT.class,
   com.quasient.pal.rpc.json.GetMessageIT.class,
-  com.quasient.pal.rpc.json.JsonRpcResponseErrorIT.class,
+  JsonRpcResponseErrorIT.class,
   com.quasient.pal.rpc.json.MetaMessageIT.class,
   com.quasient.pal.rpc.json.PutMessageIT.class,
-  com.quasient.pal.rpc.json.PutGetArrayMessageIT.class,
-  com.quasient.pal.rpc.json.dsl.RpcChainIT.class
+  PutGetArrayMessageIT.class,
+  RpcChainIT.class
 })
+@SuppressWarnings("PMD.NoFullyQualifiedTypes")
 public class RpcTestSuite extends AbstractIntegrationTest {
 
   private static final Logger logger = LoggerFactory.getLogger(RpcTestSuite.class);
@@ -167,11 +175,10 @@ public class RpcTestSuite extends AbstractIntegrationTest {
       logger.info("Shared RPC test peer process stopped");
 
       // Now unregister the peer from the directory (after process is stopped)
-      com.quasient.pal.cxn.directory.PalDirectory palDirectory = null;
+      PalDirectory palDirectory = null;
       try {
-        com.quasient.pal.cxn.directory.DirectoryConnectionProvider directoryConnectionProvider =
-            new com.quasient.pal.cxn.directory.DirectoryConnectionProvider(
-                getPalDirectoryUrl(), null, true);
+        DirectoryConnectionProvider directoryConnectionProvider =
+            new DirectoryConnectionProvider(getPalDirectoryUrl(), null, true);
         palDirectory =
             directoryConnectionProvider
                 .get()
@@ -182,7 +189,7 @@ public class RpcTestSuite extends AbstractIntegrationTest {
 
         // Delete logs created by this suite (with prefix "itt")
         logger.info("Deleting logs created by RpcTestSuite");
-        for (com.quasient.pal.common.directory.nodes.LogInfo log : palDirectory.listAllLogs()) {
+        for (LogInfo log : palDirectory.listAllLogs()) {
           if (log.getName().startsWith("itt")) {
             logger.info("Deleting log: {}", log.getName());
             palDirectory.deleteLog(log.getName());

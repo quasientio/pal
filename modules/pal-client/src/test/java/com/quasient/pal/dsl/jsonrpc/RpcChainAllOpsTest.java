@@ -16,6 +16,7 @@ import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.cxn.ThinPeer;
 import com.quasient.pal.messages.jsonrpc.JsonRpcError;
 import com.quasient.pal.messages.jsonrpc.JsonRpcRequest;
@@ -118,7 +119,7 @@ public class RpcChainAllOpsTest {
     RpcChainInstance after = chain.with("s");
     assertNotNull(after);
     // And we can use a new chain with directRef path for instance get/put
-    com.quasient.pal.common.objects.ObjectRef ref = chain.getChainResult().getRef("s");
+    ObjectRef ref = chain.getChainResult().getRef("s");
     assertNotNull(ref);
     RpcChain chain2 = new RpcChain(peer);
     RpcChainInstance inst2 = new RpcChainInstance(chain2, ref, "s", "java.lang.String");

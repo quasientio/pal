@@ -9,6 +9,8 @@
  */
 package com.quasient.pal.common.util;
 
+import java.util.concurrent.ThreadLocalRandom;
+
 /**
  * Fast ID generator implementation. For a cryptographically strong/predictable id that uses
  * UUID.randomUUID() (and CSPRNG) use {@link Base62UuidGenerator}
@@ -52,8 +54,8 @@ public final class FastIdGeneratorNonCrypto implements IdGenerator {
   /** {@inheritDoc} */
   @Override
   public String nextId() {
-    long a = java.util.concurrent.ThreadLocalRandom.current().nextLong();
-    long b = java.util.concurrent.ThreadLocalRandom.current().nextLong();
+    long a = ThreadLocalRandom.current().nextLong();
+    long b = ThreadLocalRandom.current().nextLong();
     char[] buf = new char[22];
     enc64(buf, 0, a);
     enc64(buf, 11, b);

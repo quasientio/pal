@@ -22,6 +22,7 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.util.EnumSet;
 import java.util.Properties;
+import java.util.UUID;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -43,7 +44,7 @@ public class PeerWiringWalWriterAndPolicyTest {
 
   private Properties baseProps() {
     Properties p = new Properties();
-    p.setProperty("id", java.util.UUID.randomUUID().toString());
+    p.setProperty("id", UUID.randomUUID().toString());
     p.setProperty("wal.queue.type", "CHUNKED");
     p.setProperty("wal.queue.initial", "1024");
     p.setProperty("wal.queue.max", "2048");

@@ -41,6 +41,7 @@ import org.mockito.ArgumentMatchers;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ.Socket;
+import org.zeromq.ZMQException;
 
 /**
  * Unit tests for {@link InterceptCallbackDispatcher}.
@@ -484,7 +485,7 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
             router.sendMore(empty);
             router.send(responseBytes, 0);
           }
-        } catch (org.zeromq.ZMQException e) {
+        } catch (ZMQException e) {
           // Expected during context/socket closure in teardown
           if (e.getErrorCode() == 4) {
             // EINTR - Interrupted function, happens during cleanup

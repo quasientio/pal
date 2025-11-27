@@ -143,6 +143,7 @@ public class ContextTest {
     return mockedSourceLocation;
   }
 
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   private static JoinPoint.StaticPart getSubbedStaticPart(
       SourceLocation sourceLocation, org.aspectj.lang.reflect.MemberSignature signature) {
     JoinPoint.StaticPart mockedStaticPart = mock(JoinPoint.StaticPart.class);
@@ -152,6 +153,7 @@ public class ContextTest {
   }
 
   @Test
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public void parseFrom_constructor() {
     Constructor constructor = (Constructor) constructorArgs.accessibleObject;
 
@@ -190,6 +192,7 @@ public class ContextTest {
   }
 
   @Test
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public void parseFrom_method() {
     Method method = (Method) methodArgs.accessibleObject;
 
@@ -227,6 +230,7 @@ public class ContextTest {
   }
 
   @Test
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public void parseFrom_field() {
     Field field = (Field) fieldArgs.accessibleObject;
 
@@ -257,6 +261,7 @@ public class ContextTest {
   }
 
   @Test
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public void parseFrom_invalidSignatureClass() {
 
     // stub SourceLocation

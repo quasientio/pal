@@ -20,7 +20,6 @@ import com.quasient.pal.common.lang.intercept.InterceptContext;
 import com.quasient.pal.common.lang.intercept.InterceptPhase;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.InterceptCallbackRequest;
-import com.quasient.pal.messages.colfer.InterceptCallbackResponse;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -29,6 +28,9 @@ import org.junit.Test;
  *
  * <p>Verifies callback registration, resolution, and invocation logic.
  */
+// Name clash: com.quasient.pal.common.lang.intercept.InterceptCallbackResponse vs
+// com.quasient.pal.messages.colfer.InterceptCallbackResponse
+@SuppressWarnings("PMD.NoFullyQualifiedTypes")
 public class IncomingInterceptCallbackDispatcherTest {
 
   private IncomingInterceptCallbackDispatcher dispatcher;
@@ -180,7 +182,8 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setRegisteredCallbackId("test-callback");
     request.setExec(execMessage);
 
-    InterceptCallbackResponse response = dispatcher.handleCallback(request);
+    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
+        dispatcher.handleCallback(request);
 
     assertTrue("Callback should have been invoked", invoked[0]);
     assertNotNull(response);
@@ -202,7 +205,8 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setRegisteredCallbackId("non-existent");
     request.setExec(execMessage);
 
-    InterceptCallbackResponse response = dispatcher.handleCallback(request);
+    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
+        dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertEquals("req-123", response.getCallbackId());
@@ -230,7 +234,8 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setRegisteredCallbackId("test-callback");
     request.setExec(execMessage);
 
-    InterceptCallbackResponse response = dispatcher.handleCallback(request);
+    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
+        dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertEquals("req-123", response.getCallbackId());
@@ -261,7 +266,8 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setRegisteredCallbackId("test-callback");
     request.setExec(execMessage);
 
-    InterceptCallbackResponse response = dispatcher.handleCallback(request);
+    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
+        dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertEquals("req-123", response.getCallbackId());
@@ -292,7 +298,8 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setRegisteredCallbackId("test-callback");
     request.setExec(execMessage);
 
-    InterceptCallbackResponse response = dispatcher.handleCallback(request);
+    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
+        dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertFalse(
@@ -324,7 +331,8 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setRegisteredCallbackId("test-callback");
     request.setExec(execMessage);
 
-    InterceptCallbackResponse response = dispatcher.handleCallback(request);
+    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
+        dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertTrue(
@@ -356,7 +364,8 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setRegisteredCallbackId("test-callback");
     request.setExec(execMessage);
 
-    InterceptCallbackResponse response = dispatcher.handleCallback(request);
+    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
+        dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertTrue("BEFORE intercept with shouldProceed=true should work", response.getShouldProceed());
@@ -386,7 +395,8 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setRegisteredCallbackId("test-callback");
     request.setExec(execMessage);
 
-    InterceptCallbackResponse response = dispatcher.handleCallback(request);
+    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
+        dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertTrue("AROUND intercept with shouldProceed=true should work", response.getShouldProceed());
@@ -403,7 +413,8 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setExec(execMessage);
     // No registeredCallbackId and no callbackClass
 
-    InterceptCallbackResponse response = dispatcher.handleCallback(request);
+    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
+        dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertTrue("Should return error for missing callback routing", response.getThrowException());
@@ -432,7 +443,8 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setExec(execMessage);
     request.setIsVoid(false);
 
-    InterceptCallbackResponse response = dispatcher.handleCallback(request);
+    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
+        dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertEquals("req-123", response.getCallbackId());
@@ -480,7 +492,8 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackMethod("testStaticCallback");
     request.setExec(execMessage);
 
-    InterceptCallbackResponse response = dispatcher.handleCallback(request);
+    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
+        dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertEquals("req-123", response.getCallbackId());
@@ -502,7 +515,8 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackMethod("testInstanceCallback");
     request.setExec(execMessage);
 
-    InterceptCallbackResponse response = dispatcher.handleCallback(request);
+    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
+        dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertTrue("Should return error for non-static method", response.getThrowException());
@@ -523,7 +537,8 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackMethod("callback");
     request.setExec(execMessage);
 
-    InterceptCallbackResponse response = dispatcher.handleCallback(request);
+    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
+        dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertTrue("Should return error for class not found", response.getThrowException());
@@ -544,7 +559,8 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackMethod("nonExistentMethod");
     request.setExec(execMessage);
 
-    InterceptCallbackResponse response = dispatcher.handleCallback(request);
+    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
+        dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertTrue("Should return error for method not found", response.getThrowException());

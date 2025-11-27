@@ -16,9 +16,12 @@ import com.quasient.pal.core.execution.java.GetInstanceVariableDispatcher;
 import com.quasient.pal.core.execution.java.InstanceMethodDispatcher;
 import com.quasient.pal.core.execution.java.SetClassVariableDispatcher;
 import com.quasient.pal.core.execution.java.SetInstanceVariableDispatcher;
+import com.quasient.pal.core.intercept.IncomingInterceptCallbackDispatcher;
 import com.quasient.pal.core.transport.MessageChannelType;
 import com.quasient.pal.messages.colfer.ControlMessage;
 import com.quasient.pal.messages.colfer.ExecMessage;
+import com.quasient.pal.messages.colfer.InterceptCallbackRequest;
+import com.quasient.pal.messages.colfer.InterceptCallbackResponse;
 import com.quasient.pal.messages.colfer.MetaMessage;
 import com.quasient.pal.messages.types.MessageType;
 import com.quasient.pal.serdes.colfer.ColferUtils;
@@ -99,8 +102,7 @@ public class IncomingMessageDispatcher {
   /** Dispatcher that processes intercept callback requests from intercepted peers. */
   @SuppressWarnings("unused")
   @Inject
-  private com.quasient.pal.core.intercept.IncomingInterceptCallbackDispatcher
-      incomingInterceptCallbackDispatcher;
+  private IncomingInterceptCallbackDispatcher incomingInterceptCallbackDispatcher;
 
   /**
    * Dispatches an execution message to its appropriate handler based on the specified message type.
@@ -173,8 +175,8 @@ public class IncomingMessageDispatcher {
    * @param callbackRequest the intercept callback request to be processed
    * @return the intercept callback response after being handled by the callback
    */
-  public com.quasient.pal.messages.colfer.InterceptCallbackResponse incomingInterceptCallback(
-      com.quasient.pal.messages.colfer.InterceptCallbackRequest callbackRequest) {
+  public InterceptCallbackResponse incomingInterceptCallback(
+      InterceptCallbackRequest callbackRequest) {
     return incomingInterceptCallbackDispatcher.handleCallback(callbackRequest);
   }
 }

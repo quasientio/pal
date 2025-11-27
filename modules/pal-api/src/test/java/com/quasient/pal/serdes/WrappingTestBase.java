@@ -10,7 +10,9 @@
 package com.quasient.pal.serdes;
 
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
+import java.util.Random;
 
 @SuppressWarnings("JdkObsolete") // silence errorprone warnings about StringBuffer usage
 public abstract class WrappingTestBase {
@@ -98,5 +100,5 @@ public abstract class WrappingTestBase {
   // we need to test this class - silence errorprone warnings
   @SuppressWarnings({"JavaUtilDate"})
   protected static final List<Object> someNonWrappableObjects =
-      Arrays.asList(Object.class, new Object(), new java.util.Date(), new java.util.Random());
+      Arrays.asList(Object.class, new Object(), new Date(), new Random());
 }

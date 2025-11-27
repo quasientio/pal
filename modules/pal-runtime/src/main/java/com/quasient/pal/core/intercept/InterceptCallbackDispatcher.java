@@ -21,6 +21,7 @@ import com.quasient.pal.messages.colfer.InterceptCallbackResponse;
 import com.quasient.pal.messages.colfer.InterceptMessage;
 import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.messages.colfer.Obj;
+import com.quasient.pal.serdes.Unwrapper;
 import com.quasient.pal.serdes.colfer.ColferUtils;
 import com.quasient.pal.serdes.colfer.ExceptionSerdes;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
@@ -744,7 +745,7 @@ public class InterceptCallbackDispatcher {
    */
   private Object deserializeArg(Obj obj) {
     try {
-      return com.quasient.pal.serdes.Unwrapper.unwrapObject(obj);
+      return Unwrapper.unwrapObject(obj);
     } catch (Exception e) {
       logger.error("Failed to deserialize argument", e);
       throw new RuntimeException("Failed to deserialize argument", e);

@@ -10,6 +10,7 @@
 package com.quasient.pal.cxn;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThrows;
 
 import com.quasient.pal.common.directory.nodes.LogInfo;
@@ -38,13 +39,13 @@ public class ThinPeerGuardsAndBuildersTest {
             .withOutboundRpcType(RpcType.JSON_RPC);
 
     // Verify getters reflect builder-set values (no init performed)
-    assertThat(p.getName(), org.hamcrest.Matchers.is("peer-1"));
-    assertThat(p.getBootstrapServers(), org.hamcrest.Matchers.is("kafka:9092"));
-    assertThat(p.getInputLog().getName(), org.hamcrest.Matchers.is("topic-x"));
-    assertThat(p.getOutputLog().getName(), org.hamcrest.Matchers.is("topic-x"));
-    assertThat(p.getLogPrefix(), org.hamcrest.Matchers.is("app"));
-    assertThat(p.getZmqRpcAddress(), org.hamcrest.Matchers.is("inproc://peer"));
-    assertThat(p.getOutboundRpcType(), org.hamcrest.Matchers.is(RpcType.JSON_RPC));
+    assertThat(p.getName(), is("peer-1"));
+    assertThat(p.getBootstrapServers(), is("kafka:9092"));
+    assertThat(p.getInputLog().getName(), is("topic-x"));
+    assertThat(p.getOutputLog().getName(), is("topic-x"));
+    assertThat(p.getLogPrefix(), is("app"));
+    assertThat(p.getZmqRpcAddress(), is("inproc://peer"));
+    assertThat(p.getOutboundRpcType(), is(RpcType.JSON_RPC));
 
     assertThrows(IllegalStateException.class, () -> p.sendJsonRpcRequestToPeer("{}", "1"));
     assertThrows(IllegalStateException.class, () -> p.sendPing(Duration.ofMillis(50)));

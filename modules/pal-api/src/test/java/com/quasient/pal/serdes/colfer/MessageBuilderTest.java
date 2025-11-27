@@ -90,6 +90,7 @@ public class MessageBuilderTest {
     public static void dummyStaticMethod(String str1, String str2, boolean myboo) {}
   }
 
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   static class ExtractedFieldOpMessageInfo {
     ObjectRef targetObjectRef;
     com.quasient.pal.messages.colfer.Context context;
@@ -431,6 +432,7 @@ public class MessageBuilderTest {
   }
 
   @Test
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public void buildInstanceMethodEphemeral_withArgs_instanceMethodCallMessage() throws Exception {
     Object sender = this;
     ObjectRef senderObjRef = ObjectRef.randomRef();
@@ -1314,6 +1316,7 @@ public class MessageBuilderTest {
   }
 
   @Test
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public void buildAccessibleObjectThrowable_withCause_andNullMessage_setsCauseRecursively()
       throws NoSuchMethodException {
     Method method = DummyClassForTest.class.getMethod("addInts", int.class, int.class);
@@ -1334,6 +1337,7 @@ public class MessageBuilderTest {
   }
 
   @Test
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public void buildAccessibleObjectThrowable_nullAccessible_withMessage_setsMessageOnly() {
     String rid = UUID.randomUUID().toString();
     RuntimeException ex = new RuntimeException("oops");

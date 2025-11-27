@@ -18,6 +18,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import com.quasient.pal.common.objects.ObjectRef;
+import com.quasient.pal.common.weave.Proceed;
 import com.quasient.pal.core.ExecMessageMatchers.ComesFromClass;
 import com.quasient.pal.core.ExecMessageMatchers.ComesFromReflectable;
 import com.quasient.pal.core.service.RunOptions;
@@ -62,8 +63,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
             objectLookupStore);
   }
 
-  private <T> ProceedingJoinPoint createPjp(
-      Field field, Object target, com.quasient.pal.common.weave.Proceed<T> proceed)
+  private <T> ProceedingJoinPoint createPjp(Field field, Object target, Proceed<T> proceed)
       throws Throwable {
     String sourceFilename = "NotARealClass.java";
     return PjpBuilder.create()

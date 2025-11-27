@@ -9,6 +9,7 @@
  */
 package com.quasient.pal;
 
+import com.quasient.pal.common.directory.nodes.LogInfo;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.intercept.AfterInterceptCallbackIT;
@@ -254,7 +255,7 @@ public class InterceptTestSuite extends AbstractIntegrationTest {
 
         // Delete logs created by this suite (with prefix "itt")
         logger.info("Deleting logs created by InterceptTestSuite");
-        for (com.quasient.pal.common.directory.nodes.LogInfo log : palDirectory.listAllLogs()) {
+        for (LogInfo log : palDirectory.listAllLogs()) {
           if (log.getName().startsWith("itt")) {
             logger.info("Deleting log: {}", log.getName());
             palDirectory.deleteLog(log.getName());

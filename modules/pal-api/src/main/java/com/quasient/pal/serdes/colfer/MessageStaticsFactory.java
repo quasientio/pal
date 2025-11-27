@@ -15,6 +15,7 @@ import com.quasient.pal.common.runtime.Context;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -62,7 +63,7 @@ public final class MessageStaticsFactory {
           String[] pTypeNames =
               (pTypes == null)
                   ? null
-                  : java.util.Arrays.stream(pTypes).map(Class::getName).toArray(String[]::new);
+                  : Arrays.stream(pTypes).map(Class::getName).toArray(String[]::new);
           return new MessageStatics(clazzMsg, ms.getName(), ms.getModifiers(), pNames, pTypeNames);
         });
   }
@@ -88,7 +89,7 @@ public final class MessageStaticsFactory {
           String[] pTypeNames =
               (pTypes == null)
                   ? null
-                  : java.util.Arrays.stream(pTypes).map(Class::getName).toArray(String[]::new);
+                  : Arrays.stream(pTypes).map(Class::getName).toArray(String[]::new);
           return new MessageStatics(
               clazzMsg, /*name not used for ctor*/ "<init>", cs.getModifiers(), pNames, pTypeNames);
         });

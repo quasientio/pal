@@ -708,6 +708,7 @@ public class List extends AbstractPalSubcommand {
      * @throws ExecutionException if the computation threw an exception
      * @throws InterruptedException if the current thread was interrupted
      */
+    @SuppressWarnings("PMD.NoFullyQualifiedTypes")
     public static Map<String, Long> getStartOffsets(Set<String> logNames, Admin adminClient)
         throws ExecutionException, InterruptedException {
       java.util.List<TopicPartition> topicPartitions =
@@ -731,6 +732,7 @@ public class List extends AbstractPalSubcommand {
      * @throws ExecutionException if the computation threw an exception
      * @throws InterruptedException if the current thread was interrupted
      */
+    @SuppressWarnings("PMD.NoFullyQualifiedTypes")
     public static Map<String, Long> getEndOffsets(Set<String> logNames, Admin adminClient)
         throws ExecutionException, InterruptedException {
       java.util.List<TopicPartition> topicPartitions =

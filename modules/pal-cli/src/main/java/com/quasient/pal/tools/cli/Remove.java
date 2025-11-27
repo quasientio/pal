@@ -21,6 +21,7 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Scanner;
@@ -53,7 +54,7 @@ public class Remove extends AbstractPalSubcommand {
   /** List of positional arguments specifying the names or UUIDs of peers or logs to remove. */
   @Parameters(index = "0..*", hidden = true)
   @SuppressWarnings("unused")
-  private java.util.List<String> argList;
+  private List<String> argList;
 
   /** Reference to the parent PalCommand. */
   @ParentCommand PalCommand palCommand;

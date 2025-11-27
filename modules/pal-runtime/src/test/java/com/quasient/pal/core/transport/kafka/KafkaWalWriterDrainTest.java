@@ -12,12 +12,14 @@ package com.quasient.pal.core.transport.kafka;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 
+import com.quasient.pal.common.runtime.ExecPhase;
 import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import com.quasient.pal.core.internal.concurrent.MpscKind;
 import com.quasient.pal.core.transport.WalWriterStats;
 import com.quasient.pal.messages.OutboundMsg;
 import com.quasient.pal.messages.colfer.ConstructorCall;
 import com.quasient.pal.messages.types.MessageType;
+import java.util.List;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -66,12 +68,7 @@ public class KafkaWalWriterDrainTest {
 
   private static OutboundMsg newMsg(String id) {
     return new OutboundMsg(
-        MessageType.EXEC_CONSTRUCTOR,
-        com.quasient.pal.common.runtime.ExecPhase.BEFORE,
-        java.util.List.of(),
-        id,
-        null,
-        new ConstructorCall());
+        MessageType.EXEC_CONSTRUCTOR, ExecPhase.BEFORE, List.of(), id, null, new ConstructorCall());
   }
 
   @Test

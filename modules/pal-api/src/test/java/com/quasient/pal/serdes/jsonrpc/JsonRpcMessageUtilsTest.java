@@ -14,6 +14,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 
+import com.quasient.pal.messages.jsonrpc.Argument;
 import com.quasient.pal.messages.jsonrpc.Executable;
 import com.quasient.pal.messages.jsonrpc.JsonRpcError;
 import com.quasient.pal.messages.jsonrpc.JsonRpcErrorData;
@@ -190,11 +191,7 @@ public class JsonRpcMessageUtilsTest {
         Params.builder()
             .withType("T")
             .withField("f")
-            .withValue(
-                com.quasient.pal.messages.jsonrpc.Argument.builder()
-                    .withValue("x")
-                    .withType("java.lang.String")
-                    .build())
+            .withValue(Argument.builder().withValue("x").withType("java.lang.String").build())
             .build();
     req = JsonRpcRequest.builder().withId("6").withMethod("put").withParams(params).build();
     assertThat(JsonRpcMessageUtils.getMessageType(req), is(MessageType.EXEC_PUT_STATIC));
@@ -203,11 +200,7 @@ public class JsonRpcMessageUtilsTest {
             .withType("T")
             .withField("f")
             .withInstance(1)
-            .withValue(
-                com.quasient.pal.messages.jsonrpc.Argument.builder()
-                    .withValue("x")
-                    .withType("java.lang.String")
-                    .build())
+            .withValue(Argument.builder().withValue("x").withType("java.lang.String").build())
             .build();
     req = JsonRpcRequest.builder().withId("7").withMethod("put").withParams(params).build();
     assertThat(JsonRpcMessageUtils.getMessageType(req), is(MessageType.EXEC_PUT_FIELD));

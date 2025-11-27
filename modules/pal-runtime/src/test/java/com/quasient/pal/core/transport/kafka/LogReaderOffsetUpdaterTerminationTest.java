@@ -11,8 +11,10 @@ package com.quasient.pal.core.transport.kafka;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.mockito.Mockito.mock;
 
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
+import com.quasient.pal.cxn.directory.PalDirectory;
 import java.lang.reflect.Field;
 import java.util.UUID;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -51,12 +53,10 @@ public class LogReaderOffsetUpdaterTerminationTest {
 
     // Prepare test consumer (pure mock; no interactions are required for this test)
     @SuppressWarnings("unchecked")
-    Consumer<String, byte[]> consumer =
-        (Consumer<String, byte[]>) org.mockito.Mockito.mock(Consumer.class);
+    Consumer<String, byte[]> consumer = (Consumer<String, byte[]>) mock(Consumer.class);
 
     // Directory provider: pass NO_URL so get() returns Optional.empty()
-    DirectoryConnectionProvider dcp =
-        new DirectoryConnectionProvider(com.quasient.pal.cxn.directory.PalDirectory.NO_URL);
+    DirectoryConnectionProvider dcp = new DirectoryConnectionProvider(PalDirectory.NO_URL);
 
     // Bind a PUB socket so the SUB can connect successfully, even if no messages are sent
     ZMQ.Socket pub = ctx.createSocket(SocketType.PUB);

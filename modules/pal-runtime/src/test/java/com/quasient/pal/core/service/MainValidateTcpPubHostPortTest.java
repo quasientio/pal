@@ -16,6 +16,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.EnumSet;
 import java.util.Properties;
+import java.util.UUID;
 import org.junit.Test;
 
 public class MainValidateTcpPubHostPortTest {
@@ -41,7 +42,7 @@ public class MainValidateTcpPubHostPortTest {
   @Test
   public void tcpPubHostPort_setsTcpOutPub_andAddsRunOption() throws Exception {
     Main m = new Main();
-    setField(m, "uuid", java.util.UUID.randomUUID());
+    setField(m, "uuid", UUID.randomUUID());
     setField(m, "tcpPub", "localhost:45678");
     callValidateInput(m);
     // add misc properties to populate out.pub

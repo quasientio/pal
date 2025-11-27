@@ -19,6 +19,7 @@ import com.quasient.pal.cxn.ThinPeer;
 import com.quasient.pal.messages.jsonrpc.JsonRpcRequest;
 import com.quasient.pal.messages.jsonrpc.JsonRpcResponse;
 import com.quasient.pal.messages.jsonrpc.JsonRpcResponseReturnValue;
+import com.quasient.pal.messages.jsonrpc.ResponseObject;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -40,7 +41,7 @@ public class RpcChainOverloadsTest {
             JsonRpcResponseReturnValue.builder()
                 .withIsVoid(false)
                 .withValue(
-                    com.quasient.pal.messages.jsonrpc.ResponseObject.builder()
+                    ResponseObject.builder()
                         .withIsNull(false)
                         .withRef(1)
                         .withType("java.lang.String")

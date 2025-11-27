@@ -19,6 +19,8 @@ import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import com.quasient.pal.messages.colfer.ControlMessage;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.InstanceFieldPutDone;
+import com.quasient.pal.messages.colfer.InterceptCallbackRequest;
+import com.quasient.pal.messages.colfer.InterceptCallbackResponse;
 import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.messages.colfer.MetaMessage;
 import com.quasient.pal.messages.colfer.ReturnValue;
@@ -254,8 +256,7 @@ public abstract class AbstractMessageInvokerThread extends Thread {
       return response;
     }
 
-    final com.quasient.pal.messages.colfer.InterceptCallbackRequest callbackRequest =
-        message.getInterceptCallbackRequest();
+    final InterceptCallbackRequest callbackRequest = message.getInterceptCallbackRequest();
     if (callbackRequest != null) {
       final Message response = messageBuilder.wrap(dispatch(callbackRequest));
       notifyMessageDispatched(message);
@@ -366,10 +367,9 @@ public abstract class AbstractMessageInvokerThread extends Thread {
    * @param callbackRequest the InterceptCallbackRequest to be dispatched
    * @return the response InterceptCallbackResponse generated after processing
    */
-  private com.quasient.pal.messages.colfer.InterceptCallbackResponse dispatch(
-      com.quasient.pal.messages.colfer.InterceptCallbackRequest callbackRequest) {
+  private InterceptCallbackResponse dispatch(InterceptCallbackRequest callbackRequest) {
     boolean dispatched = false;
-    com.quasient.pal.messages.colfer.InterceptCallbackResponse responseMsg;
+    InterceptCallbackResponse responseMsg;
     try {
       responseMsg = incomingMessageDispatcher.incomingInterceptCallback(callbackRequest);
       dispatched = true;

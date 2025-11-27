@@ -124,6 +124,7 @@ public final class Context {
    * @throws IllegalArgumentException if the signature type is unsupported
    * @throws NullPointerException if any required information from {@code staticPart} is null
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public static Context parseFrom(final JoinPoint.StaticPart staticPart) {
     final String filename = staticPart.getSourceLocation().getFileName();
     final int sourceLine = staticPart.getSourceLocation().getLine();

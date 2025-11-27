@@ -13,11 +13,16 @@ import com.quasient.pal.common.lang.intercept.InterceptCallback;
 import com.quasient.pal.common.lang.intercept.InterceptContext;
 import com.quasient.pal.common.lang.intercept.InterceptPhase;
 import com.quasient.pal.common.lang.intercept.InterceptType;
+import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.InterceptCallbackRequest;
 import com.quasient.pal.messages.colfer.InterceptCallbackResponse;
 import com.quasient.pal.messages.colfer.Obj;
+import com.quasient.pal.messages.colfer.Parameter;
+import com.quasient.pal.messages.colfer.RaisedThrowable;
 import com.quasient.pal.serdes.Unwrapper;
 import com.quasient.pal.serdes.colfer.ExceptionSerdes;
+import com.quasient.pal.serdes.colfer.WrapPolicy;
+import com.quasient.pal.serdes.colfer.Wrapper;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.lang.reflect.Method;
@@ -75,6 +80,7 @@ public class IncomingInterceptCallbackDispatcher {
    * @param request the intercept callback request from the intercepted peer
    * @return the callback response to send back to the intercepted peer
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public InterceptCallbackResponse handleCallback(InterceptCallbackRequest request) {
     if (logger.isDebugEnabled()) {
       logger.debug(
@@ -123,6 +129,7 @@ public class IncomingInterceptCallbackDispatcher {
    * @return the resolved callback handler
    * @throws Exception if the callback cannot be resolved
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   private InterceptCallback resolveCallback(InterceptCallbackRequest request) throws Exception {
     String registeredCallbackId = request.getRegisteredCallbackId();
 
@@ -208,14 +215,15 @@ public class IncomingInterceptCallbackDispatcher {
    * @param request the callback request
    * @return the deserialized arguments array
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   private Object[] extractArguments(InterceptCallbackRequest request) {
-    com.quasient.pal.messages.colfer.ExecMessage exec = request.getExec();
+    ExecMessage exec = request.getExec();
     if (exec == null) {
       return new Object[0];
     }
 
     // Extract parameters based on message type
-    com.quasient.pal.messages.colfer.Parameter[] parameters = null;
+    Parameter[] parameters = null;
 
     if (exec.getConstructorCall() != null) {
       parameters = exec.getConstructorCall().getParameters();
@@ -274,8 +282,9 @@ public class IncomingInterceptCallbackDispatcher {
    * @param request the callback request
    * @return the deserialized exception, or null
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   private Throwable extractThrownException(InterceptCallbackRequest request) {
-    com.quasient.pal.messages.colfer.RaisedThrowable raised = request.getThrownException();
+    RaisedThrowable raised = request.getThrownException();
     if (raised == null) {
       return null;
     }
@@ -291,6 +300,7 @@ public class IncomingInterceptCallbackDispatcher {
    * @param userResponse the response from the callback handler
    * @return the wire-format response
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   private InterceptCallbackResponse buildWireResponse(
       InterceptCallbackRequest request,
       InterceptContext context,
@@ -385,6 +395,7 @@ public class IncomingInterceptCallbackDispatcher {
    * @param value the object to serialize
    * @return the serialized object
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   private Obj serializeObject(Object value) {
     Obj obj = new Obj();
 
@@ -396,8 +407,7 @@ public class IncomingInterceptCallbackDispatcher {
     String className = value.getClass().getName();
 
     // Use FORCE_BY_VALUE to serialize the actual value, not just a reference
-    return com.quasient.pal.serdes.colfer.Wrapper.wrapInto(
-        obj, value, className, null, com.quasient.pal.serdes.colfer.WrapPolicy.FORCE_BY_VALUE);
+    return Wrapper.wrapInto(obj, value, className, null, WrapPolicy.FORCE_BY_VALUE);
   }
 
   /**
@@ -406,7 +416,8 @@ public class IncomingInterceptCallbackDispatcher {
    * @param throwable the exception to serialize
    * @return the serialized exception
    */
-  private com.quasient.pal.messages.colfer.RaisedThrowable serializeException(Throwable throwable) {
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
+  private RaisedThrowable serializeException(Throwable throwable) {
     return ExceptionSerdes.serializeException(throwable);
   }
 

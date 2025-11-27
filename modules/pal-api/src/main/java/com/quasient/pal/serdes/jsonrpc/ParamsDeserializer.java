@@ -23,6 +23,7 @@ import com.quasient.pal.messages.jsonrpc.Params;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -270,7 +271,7 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
         if (p.isBoolean()) {
           return p.getAsBoolean();
         } else if (p.isString()) {
-          String s = p.getAsString().toLowerCase(java.util.Locale.ROOT);
+          String s = p.getAsString().toLowerCase(Locale.ROOT);
           if ("true".equals(s)) {
             return true;
           }
@@ -473,7 +474,7 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
         } else if (p.isString()) {
           String s = p.getAsString();
           // Handle numeric suffixes
-          if (s.toLowerCase(java.util.Locale.ROOT).endsWith("d")) {
+          if (s.toLowerCase(Locale.ROOT).endsWith("d")) {
             try {
               elements.add(Double.parseDouble(s.substring(0, s.length() - 1)));
               hasNonString = true;
@@ -482,7 +483,7 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
               elements.add(s);
               hasString = true;
             }
-          } else if (s.toLowerCase(java.util.Locale.ROOT).endsWith("f")) {
+          } else if (s.toLowerCase(Locale.ROOT).endsWith("f")) {
             try {
               elements.add(Float.parseFloat(s.substring(0, s.length() - 1)));
               hasNonString = true;
@@ -491,7 +492,7 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
               elements.add(s);
               hasString = true;
             }
-          } else if (s.toLowerCase(java.util.Locale.ROOT).endsWith("l")) {
+          } else if (s.toLowerCase(Locale.ROOT).endsWith("l")) {
             try {
               elements.add(Long.parseLong(s.substring(0, s.length() - 1)));
               hasNonString = true;
@@ -706,19 +707,19 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
       String s = p.getAsString();
       if (targetType == double.class || targetType == Double.class) {
         // If "d" suffix is present, remove it; otherwise parse directly
-        if (s.toLowerCase(java.util.Locale.ROOT).endsWith("d")) {
+        if (s.toLowerCase(Locale.ROOT).endsWith("d")) {
           s = s.substring(0, s.length() - 1);
         }
         return Double.parseDouble(s);
       } else if (targetType == float.class || targetType == Float.class) {
         // If "f" suffix is present, remove it; otherwise parse directly
-        if (s.toLowerCase(java.util.Locale.ROOT).endsWith("f")) {
+        if (s.toLowerCase(Locale.ROOT).endsWith("f")) {
           s = s.substring(0, s.length() - 1);
         }
         return Float.parseFloat(s);
       } else if (targetType == long.class || targetType == Long.class) {
         // If "l" suffix is present, remove it; otherwise parse directly
-        if (s.toLowerCase(java.util.Locale.ROOT).endsWith("l")) {
+        if (s.toLowerCase(Locale.ROOT).endsWith("l")) {
           s = s.substring(0, s.length() - 1);
         }
         return Long.parseLong(s);

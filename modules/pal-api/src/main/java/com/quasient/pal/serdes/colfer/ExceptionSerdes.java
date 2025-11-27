@@ -39,6 +39,7 @@ public final class ExceptionSerdes {
    * @param throwable the exception to serialize
    * @return the serialized RaisedThrowable
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public static com.quasient.pal.messages.colfer.RaisedThrowable serializeException(
       Throwable throwable) {
     com.quasient.pal.messages.colfer.RaisedThrowable raised =
@@ -58,6 +59,7 @@ public final class ExceptionSerdes {
    * @param throwable the Java throwable
    * @return the Colfer throwable
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public static com.quasient.pal.messages.colfer.Throwable serializeThrowable(Throwable throwable) {
     if (throwable == null) {
       return null;
@@ -96,6 +98,7 @@ public final class ExceptionSerdes {
    * @param raised the serialized exception
    * @return the deserialized Throwable
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public static Throwable deserializeException(
       com.quasient.pal.messages.colfer.RaisedThrowable raised) {
     if (raised == null) {
@@ -111,6 +114,7 @@ public final class ExceptionSerdes {
    * @param colferThrowable the Colfer throwable
    * @return the Java throwable
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public static Throwable deserializeThrowable(
       com.quasient.pal.messages.colfer.Throwable colferThrowable) {
     if (colferThrowable == null) {

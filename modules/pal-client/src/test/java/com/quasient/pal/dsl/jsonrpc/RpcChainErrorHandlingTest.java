@@ -14,6 +14,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import com.quasient.pal.cxn.ThinPeer;
+import com.quasient.pal.messages.jsonrpc.Argument;
 import com.quasient.pal.messages.jsonrpc.JsonRpcRequest;
 import com.quasient.pal.messages.jsonrpc.JsonRpcResponse;
 import com.quasient.pal.messages.jsonrpc.JsonRpcResponseReturnValue;
@@ -63,12 +64,7 @@ public class RpcChainErrorHandlingTest {
     chain.callStatic(
         "java.lang.Integer",
         "valueOf",
-        new Object[] {
-          com.quasient.pal.messages.jsonrpc.Argument.builder()
-              .withValue(11)
-              .withType("java.lang.Integer")
-              .build()
-        });
+        new Object[] {Argument.builder().withValue(11).withType("java.lang.Integer").build()});
     chain.send();
   }
 }

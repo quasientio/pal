@@ -15,7 +15,9 @@ import static org.hamcrest.Matchers.greaterThan;
 import com.quasient.pal.core.transport.WalWriterStats;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.util.Properties;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.junit.Test;
@@ -33,14 +35,14 @@ public class KafkaWalWriterSendCbTest {
         new ThreadGroup("svc"),
         "KafkaWalWriterTest",
         /* walQueue */ null,
-        new java.util.concurrent.atomic.AtomicBoolean(false),
+        new AtomicBoolean(false),
         "inproc://offs",
         /* flushOnClose */ null,
         /* lingerMs */ null,
         /* batchSize */ null,
         /* compressionType */ null,
         /* bufferMemory */ null,
-        (java.util.Properties props) -> null);
+        (Properties props) -> null);
   }
 
   private Object newSendCb(KafkaWalWriter writer) throws Exception {

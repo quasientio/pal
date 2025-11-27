@@ -19,6 +19,7 @@ import com.quasient.pal.common.runtime.ExecPhase;
 import com.quasient.pal.common.util.Classes;
 import com.quasient.pal.common.weave.Proceed;
 import com.quasient.pal.common.weave.VoidProceed;
+import com.quasient.pal.core.intercept.InterceptCallbackDispatcher;
 import com.quasient.pal.core.intercept.InterceptCheckResult;
 import com.quasient.pal.core.intercept.InterceptChecker;
 import com.quasient.pal.core.internal.messages.SessionCommandMsg;
@@ -35,6 +36,7 @@ import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -115,10 +117,9 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     if (beforeInterceptCheck != null
         && beforeInterceptCheck.hasRemoteIntercepts()
         && beforeExecMsg != null) {
-      com.quasient.pal.core.intercept.InterceptCallbackDispatcher.ConsolidatedCallbackResponse
-          callbackResponse =
-              interceptCallbackDispatcher.sendBeforeCallbacks(
-                  beforeInterceptCheck, beforeExecMsg, args);
+      InterceptCallbackDispatcher.ConsolidatedCallbackResponse callbackResponse =
+          interceptCallbackDispatcher.sendBeforeCallbacks(
+              beforeInterceptCheck, beforeExecMsg, args);
 
       // Check if callback wants to throw an exception
       if (callbackResponse.shouldThrowException()) {
@@ -128,8 +129,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       // Apply argument mutations
       if (callbackResponse.hasArgMutations()) {
         Object[] mutatedArgs = args.clone();
-        for (java.util.Map.Entry<Integer, Object> entry :
-            callbackResponse.getMutatedArgs().entrySet()) {
+        for (Map.Entry<Integer, Object> entry : callbackResponse.getMutatedArgs().entrySet()) {
           int index = entry.getKey();
           Object newValue = entry.getValue();
           if (index >= 0 && index < mutatedArgs.length) {
@@ -186,14 +186,13 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       // 8. Send intercept callbacks (if any remote intercepts matched) and apply return value
       // override
       if (afterInterceptCheck != null && afterInterceptCheck.hasRemoteIntercepts()) {
-        com.quasient.pal.core.intercept.InterceptCallbackDispatcher.ConsolidatedCallbackResponse
-            afterCallbackResponse =
-                interceptCallbackDispatcher.sendAfterCallbacks(
-                    afterInterceptCheck,
-                    afterExecMsg,
-                    returnValue,
-                    returnsVoid,
-                    throwableWrapper != null ? throwableWrapper.throwable() : null);
+        InterceptCallbackDispatcher.ConsolidatedCallbackResponse afterCallbackResponse =
+            interceptCallbackDispatcher.sendAfterCallbacks(
+                afterInterceptCheck,
+                afterExecMsg,
+                returnValue,
+                returnsVoid,
+                throwableWrapper != null ? throwableWrapper.throwable() : null);
 
         // Check if callback wants to throw an exception
         if (afterCallbackResponse.shouldThrowException()) {

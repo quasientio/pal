@@ -10,15 +10,19 @@
 package com.quasient.pal.core.transport.kafka;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.notNullValue;
 
+import com.lmax.disruptor.dsl.Disruptor;
 import com.quasient.pal.common.directory.nodes.LogInfo;
+import com.quasient.pal.core.transport.WalWriter;
 import com.quasient.pal.core.transport.WalWriterStats;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.junit.Test;
@@ -39,7 +43,7 @@ public class KafkaWalWriterOffsetsPublishTest {
         new ThreadGroup("svc"),
         "KafkaWalWriterOffsets",
         /* walQueue */ null,
-        new java.util.concurrent.atomic.AtomicBoolean(false),
+        new AtomicBoolean(false),
         "inproc://offs",
         /* flushOnClose */ null,
         /* lingerMs */ null,
@@ -79,7 +83,7 @@ public class KafkaWalWriterOffsetsPublishTest {
     oc.invoke(writer);
 
     // offsetsRing should be initialized
-    Field fRing = com.quasient.pal.core.transport.WalWriter.class.getDeclaredField("offsetsRing");
+    Field fRing = WalWriter.class.getDeclaredField("offsetsRing");
     fRing.setAccessible(true);
     Object ring = fRing.get(writer);
     assertThat(ring, notNullValue());
@@ -95,14 +99,12 @@ public class KafkaWalWriterOffsetsPublishTest {
 
     WalWriterStats stats = writer.getLiveStats();
     // messagesWritten should have increased via callback
-    assertThat(stats.messagesWritten(), org.hamcrest.Matchers.greaterThan(0L));
+    assertThat(stats.messagesWritten(), greaterThan(0L));
 
     // stop disruptor safely without touching producer (which was never created)
-    Field fDis =
-        com.quasient.pal.core.transport.WalWriter.class.getDeclaredField("offsetsDisruptor");
+    Field fDis = WalWriter.class.getDeclaredField("offsetsDisruptor");
     fDis.setAccessible(true);
-    com.lmax.disruptor.dsl.Disruptor<?> dis =
-        (com.lmax.disruptor.dsl.Disruptor<?>) fDis.get(writer);
+    Disruptor<?> dis = (Disruptor<?>) fDis.get(writer);
     if (dis != null) {
       dis.shutdown();
     }

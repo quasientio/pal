@@ -15,6 +15,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 import com.quasient.pal.common.directory.nodes.LogInfo;
 import com.quasient.pal.core.ZmqEnabledTest;
@@ -22,7 +23,9 @@ import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
 import java.lang.reflect.Field;
 import java.time.Duration;
+import java.util.AbstractQueue;
 import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -70,7 +73,7 @@ public class LogReaderSeekSkipOffsetsTest extends ZmqEnabledTest {
             /* pollDurationMs */ 10);
 
     // prepare ServiceManager
-    java.util.Set<com.google.common.util.concurrent.Service> services = new HashSet<>();
+    Set<Service> services = new HashSet<>();
     services.add(reader);
     manager = new ServiceManager(services);
   }
@@ -105,7 +108,7 @@ public class LogReaderSeekSkipOffsetsTest extends ZmqEnabledTest {
     Field fQueue = KafkaSourceLogReader.class.getDeclaredField("skipOffsets");
     fQueue.setAccessible(true);
     @SuppressWarnings("unchecked")
-    java.util.AbstractQueue<Long> q = (java.util.AbstractQueue<Long>) fQueue.get(reader);
+    AbstractQueue<Long> q = (AbstractQueue<Long>) fQueue.get(reader);
     q.clear();
     // nextToRead starts at 5, so add 5..9 to cause jump to 10
     for (long off = 5; off < 10; off++) {

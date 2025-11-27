@@ -19,13 +19,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.Test;
 
 public class MessageStreamPrinterTest {
 
   private static LogMessage<?> logOf(Message m) {
-    return new LogMessage<>("topic", 1L, java.util.Map.of(), m);
+    return new LogMessage<>("topic", 1L, Map.of(), m);
   }
 
   // MessageStreamPrinter does not expose getShortClassname; tested in MessageStreamStats suite.

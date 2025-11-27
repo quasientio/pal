@@ -18,5 +18,5 @@ package com.quasient.pal.common.logging;
  *
  * @see ch.qos.logback.core.FileAppender
  */
-@SuppressWarnings("rawtypes")
+@SuppressWarnings({"rawtypes", "PMD.NoFullyQualifiedTypes"})
 public final class PeerFileAppender extends ch.qos.logback.core.FileAppender {}

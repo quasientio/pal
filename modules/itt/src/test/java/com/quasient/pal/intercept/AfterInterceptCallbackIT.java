@@ -22,6 +22,7 @@ import com.quasient.pal.common.lang.intercept.InterceptableMethodCall;
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.serdes.Unwrapper;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.UUID;
 import org.junit.Test;
@@ -143,7 +144,7 @@ public class AfterInterceptCallbackIT extends AbstractInterceptIT {
             StringMethods.class.getName(),
             callbackClass,
             callbackMethod,
-            new InterceptableMethodCall("multiply", java.util.Arrays.asList("int", "int")));
+            new InterceptableMethodCall("multiply", Arrays.asList("int", "int")));
 
     logger.info("Registering intercept request");
     register(interceptRequest);

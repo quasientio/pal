@@ -33,6 +33,7 @@ import net.openhft.chronicle.queue.RollCycles;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.zeromq.ZContext;
 
 /** Direct-write (queueless) tests for ChronicleWalWriter. */
 public class ChronicleWalWriterDirectWriteTest extends ZmqEnabledTest {
@@ -41,7 +42,7 @@ public class ChronicleWalWriterDirectWriteTest extends ZmqEnabledTest {
   private static final LogInfo WAL_INFO = new LogInfo("direct_app", "n/a");
 
   private ChronicleWalWriter writer;
-  private org.zeromq.ZContext ctx;
+  private ZContext ctx;
   private Path baseDir;
   private ServiceManager manager;
   private final MessageBuilder builder = new MessageBuilder();

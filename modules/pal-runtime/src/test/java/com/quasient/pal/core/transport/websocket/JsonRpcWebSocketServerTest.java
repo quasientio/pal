@@ -14,9 +14,15 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assume.assumeTrue;
 
 import com.quasient.pal.core.internal.messages.InboundJsonRpcRequestMsg;
+import com.quasient.pal.messages.types.MessageType;
+import com.quasient.pal.messages.types.MetaServiceType;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
@@ -49,7 +55,7 @@ public class JsonRpcWebSocketServerTest {
   public void setup() throws Exception {
     int port = findFreePort();
     assumeTrue("no free port available", port > 0);
-    bindAddr = new InetSocketAddress(java.net.InetAddress.getLoopbackAddress(), port);
+    bindAddr = new InetSocketAddress(InetAddress.getLoopbackAddress(), port);
     queue = new ArrayBlockingQueue<>(8);
     ready = new CountDownLatch(1);
     server = new JsonRpcWebSocketServer(bindAddr, queue, ready);
@@ -113,8 +119,7 @@ public class JsonRpcWebSocketServerTest {
 
     // Echo a response to that peer and verify client receives it
     String response = "{\"jsonrpc\":\"2.0\",\"result\":true,\"id\":1}";
-    server.sendResponseToWebSocketClient(
-        peerId, response, com.quasient.pal.messages.types.MessageType.CONTROL_MESSAGE_RESPONSE);
+    server.sendResponseToWebSocketClient(peerId, response, MessageType.CONTROL_MESSAGE_RESPONSE);
     // Give it a moment
     TimeUnit.MILLISECONDS.sleep(100);
     assertThat(client.lastMessage, is(response));
@@ -137,14 +142,14 @@ public class JsonRpcWebSocketServerTest {
     client.connectBlocking(2, TimeUnit.SECONDS);
 
     // Prepare a temp file with known contents
-    java.nio.file.Path tmp = java.nio.file.Files.createTempFile("ws_meta_", ".txt");
-    java.nio.file.Files.writeString(tmp, "HELLO-WS", java.nio.charset.StandardCharsets.UTF_8);
+    Path tmp = Files.createTempFile("ws_meta_", ".txt");
+    Files.writeString(tmp, "HELLO-WS", StandardCharsets.UTF_8);
 
     // Build a minimal META_MESSAGE_RESPONSE JSON that JsonRpcWebSocketServer recognizes
     // as FETCH_CLASSES_INFO (service key) and carries the temp file path in response key.
     String metaBody =
         "{\"service\":\""
-            + com.quasient.pal.messages.types.MetaServiceType.FETCH_CLASSES_INFO.getJsonName()
+            + MetaServiceType.FETCH_CLASSES_INFO.getJsonName()
             + "\",\"response\":\""
             + tmp.toString().replace("\\", "\\\\")
             + "\"}";
@@ -154,8 +159,7 @@ public class JsonRpcWebSocketServerTest {
             + "\"}},\"id\":\"42\"}";
 
     // Trigger streaming path
-    server.sendResponseToWebSocketClient(
-        peerId, response, com.quasient.pal.messages.types.MessageType.META_MESSAGE_RESPONSE);
+    server.sendResponseToWebSocketClient(peerId, response, MessageType.META_MESSAGE_RESPONSE);
 
     // Client should receive a JSON containing the id and the streamed content
     // Give it a moment
@@ -165,7 +169,7 @@ public class JsonRpcWebSocketServerTest {
     assertThat(client.lastMessage.contains("HELLO-WS"), is(true));
 
     // The file should be deleted by server after streaming
-    boolean exists = java.nio.file.Files.exists(tmp);
+    boolean exists = Files.exists(tmp);
     assertThat(exists, is(false));
 
     client.closeBlocking();

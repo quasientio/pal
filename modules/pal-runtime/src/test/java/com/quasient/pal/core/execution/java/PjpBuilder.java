@@ -11,18 +11,22 @@ package com.quasient.pal.core.execution.java;
 
 import static org.mockito.Mockito.*;
 
+import com.quasient.pal.common.weave.Proceed;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import org.aspectj.lang.*;
+import org.aspectj.lang.reflect.ConstructorSignature;
+import org.aspectj.lang.reflect.FieldSignature;
+import org.aspectj.lang.reflect.MethodSignature;
+import org.aspectj.lang.reflect.SourceLocation;
 
 /** Builds a ProceedingJoinPoint stub for dispatcher tests. */
 public final class PjpBuilder {
 
   private final ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
   private final JoinPoint.StaticPart sp = mock(JoinPoint.StaticPart.class);
-  private final org.aspectj.lang.reflect.SourceLocation sl =
-      mock(org.aspectj.lang.reflect.SourceLocation.class);
+  private final SourceLocation sl = mock(SourceLocation.class);
 
   private PjpBuilder() throws Throwable {
     // default PJP wiring
@@ -72,8 +76,7 @@ public final class PjpBuilder {
 
   /** Use for execution JP of a method. */
   public PjpBuilder methodExecutionSignature(Method m) {
-    org.aspectj.lang.reflect.MethodSignature ms =
-        mock(org.aspectj.lang.reflect.MethodSignature.class, withSettings().lenient());
+    MethodSignature ms = mock(MethodSignature.class, withSettings().lenient());
     doReturn(m).when(ms).getMethod();
     doReturn(m.getDeclaringClass()).when(ms).getDeclaringType();
     doReturn(m.getDeclaringClass().getName()).when(ms).getDeclaringTypeName();
@@ -88,8 +91,7 @@ public final class PjpBuilder {
 
   /** Use for execution JP of a constructor. */
   public PjpBuilder constructorExecutionSignature(Constructor<?> c) {
-    org.aspectj.lang.reflect.ConstructorSignature cs =
-        mock(org.aspectj.lang.reflect.ConstructorSignature.class, withSettings().lenient());
+    ConstructorSignature cs = mock(ConstructorSignature.class, withSettings().lenient());
     doReturn(c).when(cs).getConstructor();
     doReturn(c.getDeclaringClass()).when(cs).getDeclaringType();
     doReturn(c.getDeclaringClass().getName()).when(cs).getDeclaringTypeName();
@@ -103,8 +105,7 @@ public final class PjpBuilder {
 
   /** Use for field get/set execution JP. */
   public PjpBuilder fieldExecutionSignature(Field f) {
-    org.aspectj.lang.reflect.FieldSignature fs =
-        mock(org.aspectj.lang.reflect.FieldSignature.class, withSettings().lenient());
+    FieldSignature fs = mock(FieldSignature.class, withSettings().lenient());
     doReturn(f).when(fs).getField();
     doReturn(f.getDeclaringClass()).when(fs).getDeclaringType();
     doReturn(f.getDeclaringClass().getName()).when(fs).getDeclaringTypeName();
@@ -141,8 +142,7 @@ public final class PjpBuilder {
    * @param proceedCallback the callback to invoke when pjp.proceed(Object[]) is called
    * @return this builder
    */
-  public <T> PjpBuilder proceedBehavior(com.quasient.pal.common.weave.Proceed<T> proceedCallback)
-      throws Throwable {
+  public <T> PjpBuilder proceedBehavior(Proceed<T> proceedCallback) throws Throwable {
     when(pjp.proceed(any(Object[].class))).thenAnswer(inv -> proceedCallback.call());
     return this;
   }

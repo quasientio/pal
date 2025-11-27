@@ -10,8 +10,10 @@
 package com.quasient.pal.core.transport.kafka;
 
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
 
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
+import com.quasient.pal.cxn.directory.PalDirectory;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -34,11 +36,9 @@ public class LogReaderRunInterruptTest {
 
     // Mock-like consumer: we don't reach poll since we interrupt while awaiting acceptRequests
     @SuppressWarnings("unchecked")
-    Consumer<String, byte[]> consumer =
-        (Consumer<String, byte[]>) org.mockito.Mockito.mock(Consumer.class);
+    Consumer<String, byte[]> consumer = (Consumer<String, byte[]>) mock(Consumer.class);
 
-    DirectoryConnectionProvider dcp =
-        new DirectoryConnectionProvider(com.quasient.pal.cxn.directory.PalDirectory.NO_URL);
+    DirectoryConnectionProvider dcp = new DirectoryConnectionProvider(PalDirectory.NO_URL);
 
     KafkaSourceLogReader lr =
         new KafkaSourceLogReader(

@@ -15,6 +15,7 @@ import static org.hamcrest.Matchers.is;
 import java.lang.reflect.Field;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.kafka.clients.producer.Producer;
 import org.junit.Test;
 import org.zeromq.ZContext;
@@ -31,7 +32,7 @@ public class KafkaWalWriterPropsTest {
             new ThreadGroup("svc"),
             "KafkaWalWriterProps",
             /* walQueue */ null,
-            new java.util.concurrent.atomic.AtomicBoolean(false),
+            new AtomicBoolean(false),
             "inproc://offs",
             /* flushOnClose */ null,
             /* lingerMs */ "1",

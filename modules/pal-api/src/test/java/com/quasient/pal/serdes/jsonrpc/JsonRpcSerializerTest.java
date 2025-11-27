@@ -14,6 +14,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThrows;
 
+import com.quasient.pal.messages.jsonrpc.JsonRpcError;
 import com.quasient.pal.messages.jsonrpc.JsonRpcRequest;
 import com.quasient.pal.messages.jsonrpc.JsonRpcResponse;
 import com.quasient.pal.messages.jsonrpc.JsonRpcResponseReturnValue;
@@ -65,8 +66,7 @@ public class JsonRpcSerializerTest {
 
   @Test
   public void response_toJson_fromJson_roundTrip_error() throws Exception {
-    com.quasient.pal.messages.jsonrpc.JsonRpcError err =
-        new com.quasient.pal.messages.jsonrpc.JsonRpcError();
+    JsonRpcError err = new JsonRpcError();
     err.setCode(-32000);
     err.setMessage("bad");
     JsonRpcResponse resp = JsonRpcResponse.builder().withId("y").withError(err).build();

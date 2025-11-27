@@ -170,6 +170,7 @@ public class SelfBootstrapInvokerExitCodeTest {
   }
 
   @Test
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public void callMain_withUnexpectedMessageType_returnsExitUnexpectedResponseType()
       throws Exception {
     // Simulate an unexpected message type in response

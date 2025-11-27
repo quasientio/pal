@@ -17,9 +17,18 @@ import com.quasient.pal.core.transport.SourceLogReader;
 import com.quasient.pal.core.transport.WalWriter;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import org.apache.kafka.clients.admin.AdminClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -188,7 +197,7 @@ public class LogConfigurator {
    * @return the absolute path
    */
   private String normalizeChronicleQueuePath(String queuePath) {
-    java.nio.file.Path path = java.nio.file.Paths.get(queuePath);
+    Path path = Paths.get(queuePath);
 
     // If already absolute, return as-is
     if (path.isAbsolute()) {
@@ -212,7 +221,7 @@ public class LogConfigurator {
     String normalizedPath = normalizeChronicleQueuePath(queuePath);
     LogInfo logInfo = new LogInfo(normalizedPath);
     logInfo.setLogType(LogInfo.LogType.CHRONICLE);
-    logInfo.setUuid(java.util.UUID.randomUUID());
+    logInfo.setUuid(UUID.randomUUID());
     return logInfo;
   }
 
@@ -244,7 +253,7 @@ public class LogConfigurator {
 
     // Get all logs with this basename (filename)
     // Note: getLogsInfoByName() uses basename, so it may return multiple logs with same filename
-    java.util.List<LogInfo> candidateLogs = palDirectory.getLogsInfoByName(normalizedPath);
+    List<LogInfo> candidateLogs = palDirectory.getLogsInfoByName(normalizedPath);
 
     // Filter to find exact match by normalized path
     LogInfo existingLog = null;
@@ -322,8 +331,8 @@ public class LogConfigurator {
       if (idx > 0 && idx < first.length() - 1) {
         String host = first.substring(0, idx);
         int port = Integer.parseInt(first.substring(idx + 1));
-        try (java.net.Socket s = new java.net.Socket()) {
-          s.connect(new java.net.InetSocketAddress(host, port), timeoutMs);
+        try (Socket s = new Socket()) {
+          s.connect(new InetSocketAddress(host, port), timeoutMs);
         }
       }
     } catch (Exception e) {
@@ -336,15 +345,14 @@ public class LogConfigurator {
 
     Properties adminProps = getKafkaAdminProperties(timeoutMs);
 
-    try (org.apache.kafka.clients.admin.AdminClient adminClient =
-        org.apache.kafka.clients.admin.AdminClient.create(adminProps)) {
+    try (AdminClient adminClient = AdminClient.create(adminProps)) {
 
       // Attempt to list topics as a health check
-      adminClient.listTopics().names().get(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS);
+      adminClient.listTopics().names().get(timeoutMs, TimeUnit.MILLISECONDS);
 
       logger.info("Kafka health check passed - cluster is reachable at {}", kafkaServers);
 
-    } catch (java.util.concurrent.TimeoutException e) {
+    } catch (TimeoutException e) {
       String msg =
           String.format(
               "Kafka health check failed: timeout after %dms trying to connect to %s",

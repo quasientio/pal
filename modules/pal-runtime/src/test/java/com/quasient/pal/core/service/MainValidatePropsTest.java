@@ -17,6 +17,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.EnumSet;
 import java.util.Properties;
+import java.util.UUID;
 import org.junit.Test;
 
 public class MainValidatePropsTest {
@@ -45,7 +46,7 @@ public class MainValidatePropsTest {
   @Test
   public void validate_tcpPub_setsTcpOutPubProperty() throws Exception {
     Main m = new Main();
-    setField(m, "uuid", java.util.UUID.randomUUID());
+    setField(m, "uuid", UUID.randomUUID());
     setField(m, "tcpPub", "127.0.0.1:45679");
     // set runOptions-indifferent fields and props; no System.exit triggered
     callValidateInput(m);
@@ -57,7 +58,7 @@ public class MainValidatePropsTest {
   @Test
   public void validate_jsonRpc_setsWsAddressAndRunOption() throws Exception {
     Main m = new Main();
-    setField(m, "uuid", java.util.UUID.randomUUID());
+    setField(m, "uuid", UUID.randomUUID());
     setField(m, "jsonRpc", "127.0.0.1:8080");
     callValidateInput(m);
     Properties p = (Properties) getField(m, "properties");
@@ -71,7 +72,7 @@ public class MainValidatePropsTest {
   @Test
   public void validate_noTcpPub_setsInprocOutPubProperty() throws Exception {
     Main m = new Main();
-    setField(m, "uuid", java.util.UUID.randomUUID());
+    setField(m, "uuid", UUID.randomUUID());
     // leave tcpPub null
     callValidateInput(m);
     Properties p = (Properties) getField(m, "properties");

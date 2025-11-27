@@ -20,6 +20,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.name.Names;
+import com.quasient.pal.RpcTestSuite;
 import com.quasient.pal.common.directory.nodes.PeerInfo;
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.cxn.ThinPeer;
@@ -86,7 +87,7 @@ public abstract class AbstractColferRpcMessageIT extends AbstractRpcMessageIT
           directoryConnectionProvider
               .get()
               .orElseThrow(() -> new RuntimeException("Could not connect to directory"))
-              .getPeer(com.quasient.pal.RpcTestSuite.SHARED_PEER_UUID);
+              .getPeer(RpcTestSuite.SHARED_PEER_UUID);
       if (rpcPeer != null) {
         break;
       }

@@ -15,10 +15,12 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.*;
 
+import com.quasient.pal.common.directory.nodes.LogInfo;
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.common.runtime.ExecPhase;
 import com.quasient.pal.core.ZmqEnabledTest;
 import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
+import com.quasient.pal.core.internal.concurrent.MpscKind;
 import com.quasient.pal.core.internal.messages.SessionCommandMsg;
 import com.quasient.pal.core.internal.messages.SessionResponseMsg;
 import com.quasient.pal.core.service.RunOptions;
@@ -84,12 +86,8 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
     walWriterMock = mock(WalWriter.class);
 
     // ── Real HWM queues (avoid mocking finals in sandbox)
-    walQueue =
-        HwmMessageQueue.createQueue(
-            com.quasient.pal.core.internal.concurrent.MpscKind.GROWABLE, 16, 1024);
-    pubQueue =
-        HwmMessageQueue.createQueue(
-            com.quasient.pal.core.internal.concurrent.MpscKind.GROWABLE, 16, 1024);
+    walQueue = HwmMessageQueue.createQueue(MpscKind.GROWABLE, 16, 1024);
+    pubQueue = HwmMessageQueue.createQueue(MpscKind.GROWABLE, 16, 1024);
 
     // ── start session-service stub
     CountDownLatch latch = new CountDownLatch(1);
@@ -339,8 +337,7 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
   @Test
   public void publish_none_whenQueueFull_recordsWaitStats() throws Exception {
     // Use a small FIXED queue to ensure offer() fails until consumer frees a slot
-    HwmMessageQueue<OutboundMsg> fixedPubQueue =
-        HwmMessageQueue.createQueue(com.quasient.pal.core.internal.concurrent.MpscKind.FIXED, 4, 4);
+    HwmMessageQueue<OutboundMsg> fixedPubQueue = HwmMessageQueue.createQueue(MpscKind.FIXED, 4, 4);
     int cap = fixedPubQueue.capacity();
     for (int i = 0; i < cap; i++) fixedPubQueue.offer(mock(OutboundMsg.class));
 
@@ -387,8 +384,7 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
     // enable WAL
     EnumSet<RunOptions> opts = EnumSet.of(RunOptions.WITH_WAL);
     // Use a small FIXED queue so offer() fails and we track waits
-    HwmMessageQueue<OutboundMsg> fixedWalQueue =
-        HwmMessageQueue.createQueue(com.quasient.pal.core.internal.concurrent.MpscKind.FIXED, 4, 4);
+    HwmMessageQueue<OutboundMsg> fixedWalQueue = HwmMessageQueue.createQueue(MpscKind.FIXED, 4, 4);
 
     gateway =
         new OutboundMessageGateway(
@@ -472,7 +468,7 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
     }
 
     @Override
-    public void writeToLog(com.quasient.pal.common.directory.nodes.LogInfo l, boolean p) {}
+    public void writeToLog(LogInfo l, boolean p) {}
 
     @Override
     protected void openConnections() {}

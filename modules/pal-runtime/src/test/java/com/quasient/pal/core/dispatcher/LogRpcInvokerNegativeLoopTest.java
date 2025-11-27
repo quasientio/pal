@@ -14,6 +14,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.quasient.pal.core.internal.messages.InboundLogMsg;
+import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import com.quasient.pal.messages.types.MessageFormatType;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
 import java.nio.charset.StandardCharsets;
@@ -24,6 +25,7 @@ import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
@@ -57,7 +59,7 @@ public class LogRpcInvokerNegativeLoopTest {
             new MessageBuilder(UUID.randomUUID()),
             address,
             dispatcher,
-            mock(com.quasient.pal.core.transport.gateway.OutboundMessageGateway.class),
+            mock(OutboundMessageGateway.class),
             UUID.randomUUID());
     t = new Thread(invoker, "log-invoker");
     t.start();
@@ -81,9 +83,7 @@ public class LogRpcInvokerNegativeLoopTest {
     InboundLogMsg m = new InboundLogMsg(1L, MessageFormatType.JSON, new RecordHeaders(), body);
     m.send(dealer);
     TimeUnit.MILLISECONDS.sleep(50);
-    verify(dispatcher, times(0))
-        .incomingCall(
-            org.mockito.Mockito.any(), org.mockito.Mockito.any(), org.mockito.Mockito.any());
+    verify(dispatcher, times(0)).incomingCall(Mockito.any(), Mockito.any(), Mockito.any());
   }
 
   @Test
@@ -92,8 +92,6 @@ public class LogRpcInvokerNegativeLoopTest {
     InboundLogMsg m = new InboundLogMsg(2L, MessageFormatType.BINARY, new RecordHeaders(), body);
     m.send(dealer);
     TimeUnit.MILLISECONDS.sleep(50);
-    verify(dispatcher, times(0))
-        .incomingCall(
-            org.mockito.Mockito.any(), org.mockito.Mockito.any(), org.mockito.Mockito.any());
+    verify(dispatcher, times(0)).incomingCall(Mockito.any(), Mockito.any(), Mockito.any());
   }
 }

@@ -13,6 +13,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -139,6 +140,6 @@ public class MetadataTest {
     ci.setMethods(Arrays.asList(mA, m("n", "int", p("java.lang.String", "s"))));
     String md3 = Metadata.computeMD5Sum(ci);
     // MD5 should change
-    org.junit.Assert.assertNotEquals(md1, md3);
+    assertNotEquals(md1, md3);
   }
 }

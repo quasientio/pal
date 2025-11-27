@@ -13,9 +13,11 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertThrows;
 
 import com.quasient.pal.common.runtime.ExecPhase;
+import com.quasient.pal.messages.colfer.InternalHeader;
 import com.quasient.pal.messages.types.MessageType;
 import java.util.Collections;
 import java.util.List;
@@ -60,7 +62,7 @@ public class OutboundMsgAdditionalTest {
     OutboundMsg.receive(rep, true);
 
     String s2 = msg.toString();
-    assertThat(s2, is(org.hamcrest.Matchers.not(containsString("size=<unknown>"))));
+    assertThat(s2, is(not(containsString("size=<unknown>"))));
 
     req.close();
     rep.close();
@@ -71,7 +73,7 @@ public class OutboundMsgAdditionalTest {
   public void sendWithFlags_throwsOnNullSocket_andNullExecPhase() {
     String id = UUID.randomUUID().toString();
     byte[] body = "xyz".getBytes(UTF_8);
-    List<com.quasient.pal.messages.colfer.InternalHeader> headers = Collections.emptyList();
+    List<InternalHeader> headers = Collections.emptyList();
     OutboundMsg msg =
         new OutboundMsg(MessageType.EXEC_GET_FIELD, ExecPhase.BEFORE, headers, id, null, body);
 

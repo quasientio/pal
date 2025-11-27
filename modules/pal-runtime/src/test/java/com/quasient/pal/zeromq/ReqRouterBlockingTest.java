@@ -19,6 +19,7 @@ import org.junit.Test;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
+import org.zeromq.ZMQException;
 
 /**
  * Unit test demonstrating that ZeroMQ REQ-ROUTER pattern does NOT support fire-and-forget
@@ -118,7 +119,7 @@ public class ReqRouterBlockingTest {
    * another message without receiving a reply first will throw an exception (ZMQException:
    * Operation cannot be accomplished in current state).
    */
-  @Test(expected = org.zeromq.ZMQException.class)
+  @Test(expected = ZMQException.class)
   public void testReqCannotSendSecondMessageWithoutReply() throws Exception {
     // Send first message from REQ socket
     boolean firstSent = reqSocket.send("Message 1".getBytes(ZMQ.CHARSET), 0);

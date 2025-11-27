@@ -18,6 +18,7 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +40,7 @@ public final class Wrapper {
   private static final int MAX_WRAPPABLE_COLLECTION_SIZE = 1000;
 
   /** Per-type cache of Colfer {@code Class} wrappers keyed by Java {@link Class}. */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   private static final ClassValue<com.quasient.pal.messages.colfer.Class> WRAPPED_CLASS_BY_TYPE =
       new ClassValue<>() {
         @Override
@@ -50,27 +52,26 @@ public final class Wrapper {
       };
 
   /** Intern table of Colfer {@code Class} by fully qualified class name. */
-  private static final java.util.concurrent.ConcurrentHashMap<
-          String, com.quasient.pal.messages.colfer.Class>
-      WRAPPED_CLASS_BY_NAME = new java.util.concurrent.ConcurrentHashMap<>();
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
+  private static final ConcurrentHashMap<String, com.quasient.pal.messages.colfer.Class>
+      WRAPPED_CLASS_BY_NAME = new ConcurrentHashMap<>();
 
   /** Per-declaring-class cache of wrapped fields keyed by {@link Field}. */
-  private static final ClassValue<
-          java.util.concurrent.ConcurrentHashMap<Field, com.quasient.pal.messages.colfer.Field>>
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
+  private static final ClassValue<ConcurrentHashMap<Field, com.quasient.pal.messages.colfer.Field>>
       WRAPPED_FIELD_BY_DECL_CLASS =
           new ClassValue<>() {
             @Override
-            protected java.util.concurrent.ConcurrentHashMap<
-                    Field, com.quasient.pal.messages.colfer.Field>
-                computeValue(Class<?> type) {
-              return new java.util.concurrent.ConcurrentHashMap<>();
+            protected ConcurrentHashMap<Field, com.quasient.pal.messages.colfer.Field> computeValue(
+                Class<?> type) {
+              return new ConcurrentHashMap<>();
             }
           };
 
   /** Intern table of wrapped fields keyed by {@code "class#name#mod"}. */
-  private static final java.util.concurrent.ConcurrentHashMap<
-          String, com.quasient.pal.messages.colfer.Field>
-      WRAPPED_FIELD_BY_TRIPLE = new java.util.concurrent.ConcurrentHashMap<>();
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
+  private static final ConcurrentHashMap<String, com.quasient.pal.messages.colfer.Field>
+      WRAPPED_FIELD_BY_TRIPLE = new ConcurrentHashMap<>();
 
   /** Private constructor to prevent instantiation of the Wrapper class. */
   private Wrapper() {
@@ -374,6 +375,7 @@ public final class Wrapper {
    * @param name fully qualified class name; {@code null} becomes {@code ""}.
    * @return the interned {@code Class} wrapper
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   private static com.quasient.pal.messages.colfer.Class internClassByName(String name) {
     String n = (name == null ? "" : name);
     return WRAPPED_CLASS_BY_NAME.computeIfAbsent(
@@ -391,6 +393,7 @@ public final class Wrapper {
    * @param className the name of the class to wrap
    * @return a Colfer {@code Class} instance with the provided class name
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   static com.quasient.pal.messages.colfer.Class getWrappedClass(String className) {
     return internClassByName(className);
   }
@@ -402,6 +405,7 @@ public final class Wrapper {
    * @return a Colfer {@code Class} instance with the name of the provided class, or an empty string
    *     if {@code clazz} is {@code null}
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   static com.quasient.pal.messages.colfer.Class getWrappedClass(@Nullable Class<?> clazz) {
     return (clazz == null) ? internClassByName("") : WRAPPED_CLASS_BY_TYPE.get(clazz);
   }
@@ -412,6 +416,7 @@ public final class Wrapper {
    * @param field the {@code Field} to wrap
    * @return a Colfer {@code Field} instance containing the field's name, class, and modifiers
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   static com.quasient.pal.messages.colfer.Field getWrappedField(Field field) {
     return WRAPPED_FIELD_BY_DECL_CLASS
         .get(field.getDeclaringClass())
@@ -459,6 +464,7 @@ public final class Wrapper {
    * @param modifiers the field's modifiers
    * @return a Colfer {@code Field} instance containing the provided information
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   static com.quasient.pal.messages.colfer.Field getWrappedField(
       Class<?> clazz, String fieldName, int modifiers) {
     return WRAPPED_FIELD_BY_TRIPLE.computeIfAbsent(
@@ -481,6 +487,7 @@ public final class Wrapper {
    * @param modifiers the field's modifiers
    * @return a Colfer {@code Field} instance containing the provided information
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   static com.quasient.pal.messages.colfer.Field getWrappedField(
       String className, String fieldName, int modifiers) {
     return WRAPPED_FIELD_BY_TRIPLE.computeIfAbsent(
@@ -504,6 +511,7 @@ public final class Wrapper {
    * @return a Colfer {@code Context} instance representing the provided context and sender
    *     information
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   static com.quasient.pal.messages.colfer.Context getWrappedContext(
       @Nullable Context context, Object sender, ObjectRef senderObjRef) {
 

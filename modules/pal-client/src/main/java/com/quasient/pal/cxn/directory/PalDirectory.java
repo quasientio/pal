@@ -23,6 +23,7 @@ import io.etcd.jetcd.Client;
 import io.etcd.jetcd.KV;
 import io.etcd.jetcd.KeyValue;
 import io.etcd.jetcd.Lease;
+import io.etcd.jetcd.Txn;
 import io.etcd.jetcd.Watch;
 import io.etcd.jetcd.kv.DeleteResponse;
 import io.etcd.jetcd.kv.GetResponse;
@@ -1784,7 +1785,7 @@ public class PalDirectory {
     }
 
     /* Build a single transaction with all delete operations (both primary and index) */
-    io.etcd.jetcd.Txn txn = kvClient.txn();
+    Txn txn = kvClient.txn();
 
     // Add delete operations for each log (2 ops per log: primary + index)
     Op[] deleteOps = new Op[toDelete.size() * 2];

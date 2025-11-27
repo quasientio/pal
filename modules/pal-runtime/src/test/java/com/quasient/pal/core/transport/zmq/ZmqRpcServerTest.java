@@ -16,6 +16,7 @@ import static org.hamcrest.Matchers.is;
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 import com.quasient.pal.core.ZmqEnabledTest;
+import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -47,7 +48,7 @@ public class ZmqRpcServerTest extends ZmqEnabledTest {
   @BeforeClass
   public static void skipInSandbox() {
     // Try opening a plain ServerSocket to detect sandboxed network restrictions
-    try (java.net.ServerSocket s = new java.net.ServerSocket(0)) {
+    try (ServerSocket s = new ServerSocket(0)) {
       // ok
     } catch (Exception e) {
       Assume.assumeNoException("Skipping ZmqRpcServerTest due to sandbox network restrictions", e);

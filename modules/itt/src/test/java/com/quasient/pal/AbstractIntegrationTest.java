@@ -20,6 +20,7 @@ import com.quasient.pal.messages.Marshallable;
 import com.quasient.pal.messages.types.RpcType;
 import com.quasient.pal.serdes.colfer.ColferUtils;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -196,7 +197,7 @@ public abstract class AbstractIntegrationTest {
     logger.info("Running command: {}", String.join(" ", command));
 
     ProcessBuilder pb = new ProcessBuilder(command);
-    pb.directory(new java.io.File(palHome));
+    pb.directory(new File(palHome));
     pb.environment().put("PAL_HOME", palHome);
 
     // Configure logging
@@ -385,7 +386,7 @@ public abstract class AbstractIntegrationTest {
     logger.info("Launching new peer: {}", String.join(" ", command));
 
     ProcessBuilder pb = new ProcessBuilder(command);
-    pb.directory(new java.io.File(palHome));
+    pb.directory(new File(palHome));
     pb.environment().put("PAL_HOME", palHome);
 
     // Extract peer name from args (value after -n flag)

@@ -22,6 +22,7 @@ import com.quasient.pal.messages.types.JsonRpcType;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
 import com.quasient.pal.serdes.kafka.typed.KafkaLogMessageDeserializer;
 import com.quasient.pal.serdes.kafka.typed.KafkaLogMessageSerializer;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -175,7 +176,7 @@ public class KafkaLogMessageSerdeTest {
             Optional.empty());
 
     mockConsumer.addRecord(consumerRecord);
-    return mockConsumer.poll(java.time.Duration.ZERO);
+    return mockConsumer.poll(Duration.ZERO);
   }
 
   /**

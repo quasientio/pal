@@ -101,6 +101,7 @@ public class Pal implements Callable<Integer>, PalCommand {
    *
    * @param args the command-line arguments provided by the user
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public static void main(String[] args) {
     System.setProperty("picocli.ansi", "false");
     Pal pal = new Pal();

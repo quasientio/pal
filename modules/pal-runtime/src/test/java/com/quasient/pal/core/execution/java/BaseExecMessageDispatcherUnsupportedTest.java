@@ -11,6 +11,7 @@ package com.quasient.pal.core.execution.java;
 
 import static org.junit.Assert.assertThrows;
 
+import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.common.runtime.Context;
 import com.quasient.pal.common.weave.Proceed;
 import com.quasient.pal.core.transport.MessageChannelType;
@@ -36,10 +37,7 @@ public class BaseExecMessageDispatcherUnsupportedTest {
 
     @Override
     protected ExecMessage createAfterExecMessage(
-        Context ctxt,
-        Object value,
-        com.quasient.pal.common.objects.ObjectRef objectRef,
-        boolean isVoid) {
+        Context ctxt, Object value, ObjectRef objectRef, boolean isVoid) {
       return new ExecMessage();
     }
 
@@ -47,7 +45,7 @@ public class BaseExecMessageDispatcherUnsupportedTest {
     protected ExecMessage createAfterExecMessage(
         ExecMessage execMessage,
         Object valueObject,
-        com.quasient.pal.common.objects.ObjectRef valueObjRef,
+        ObjectRef valueObjRef,
         AccessibleObject accessibleObject,
         Throwable exceptionWhileLoading,
         Throwable exceptionWhileInvoking) {

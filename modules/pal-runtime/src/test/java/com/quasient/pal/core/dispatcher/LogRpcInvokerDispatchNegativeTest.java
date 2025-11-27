@@ -11,6 +11,7 @@ package com.quasient.pal.core.dispatcher;
 
 import static org.junit.Assert.assertThrows;
 
+import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.messages.types.MetaServiceType;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
@@ -18,6 +19,7 @@ import java.lang.reflect.Method;
 import java.util.UUID;
 import org.junit.Assume;
 import org.junit.Test;
+import org.mockito.Mockito;
 import org.zeromq.ZContext;
 
 public class LogRpcInvokerDispatchNegativeTest {
@@ -39,9 +41,8 @@ public class LogRpcInvokerDispatchNegativeTest {
             ctx,
             mb,
             "inproc://dealer",
-            org.mockito.Mockito.mock(IncomingMessageDispatcher.class),
-            org.mockito.Mockito.mock(
-                com.quasient.pal.core.transport.gateway.OutboundMessageGateway.class),
+            Mockito.mock(IncomingMessageDispatcher.class),
+            Mockito.mock(OutboundMessageGateway.class),
             UUID.randomUUID());
 
     // Build a non-exec Message (Meta request)

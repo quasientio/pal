@@ -17,6 +17,7 @@ import com.quasient.pal.messages.types.MessageFormatType;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
 import javax.annotation.Nullable;
@@ -125,7 +126,7 @@ public class ChronicleSourceLogReader extends SourceLogReader {
       Path queueNamePath = Path.of(queueName);
       Path queuePath = queueNamePath.isAbsolute() ? queueNamePath : baseDir.resolve(queueName);
 
-      if (!java.nio.file.Files.exists(queuePath)) {
+      if (!Files.exists(queuePath)) {
         String errorMsg =
             String.format(
                 "Chronicle source log does not exist: %s%nEnsure the log was previously written to via --wal option.",

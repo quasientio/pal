@@ -111,6 +111,7 @@ public class ColferUtils {
    *     for readability; otherwise, it will produce compact JSON.
    * @return a configured {@link Gson} instance for serializing messages.
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   private static Gson createJsonPrinter(boolean prettyPrint) {
     final GsonBuilder printerBuilder =
         new GsonBuilder()

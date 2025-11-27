@@ -17,6 +17,7 @@ import com.quasient.pal.messages.jsonrpc.Argument;
 import com.quasient.pal.messages.jsonrpc.JsonRpcRequest;
 import com.quasient.pal.messages.jsonrpc.Params;
 import java.lang.reflect.Array;
+import java.util.LinkedHashMap;
 import java.util.List;
 import org.junit.Test;
 
@@ -27,7 +28,7 @@ public class ParamsBuilderAndDeserializerTest {
     // Build Params with arguments including array and primitive types
     Argument arrArg =
         Argument.builder().withName("array").withValue(new Integer[] {1, 2, 3}).build();
-    java.util.LinkedHashMap<String, Object> m = new java.util.LinkedHashMap<>();
+    LinkedHashMap<String, Object> m = new LinkedHashMap<>();
     m.put("k1", 1);
     m.put("k2", "v2");
     Argument mapArg = Argument.builder().withName("map").withValue(m).build();

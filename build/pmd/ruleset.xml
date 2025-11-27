@@ -16,10 +16,35 @@
          xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0
                              https://pmd.github.io/pmd-7.0.0/ruleset_2_0_0.xsd">
 
-  <description>
-    Disallow unnecessary fully qualified class names in Java code.
-    Developers should use imports instead, unless there is a name clash.
-  </description>
-  <rule ref="category/java/codestyle.xml/UnnecessaryFullyQualifiedName"/>
+    <description>
+        Disallow unnecessary fully qualified class names in Java code.
+        Developers should use imports instead, unless there is a name clash.
+    </description>
+    <rule ref="category/java/codestyle.xml/UnnecessaryFullyQualifiedName"/>
 
+    <rule name="NoFullyQualifiedTypes"
+          language="java"
+          class="net.sourceforge.pmd.lang.rule.xpath.XPathRule"
+          message="Avoid fully qualified type names; use imports instead."
+          priority="3">
+
+        <description>
+            Flags uses of fully qualified class names like
+            com.quasient.pal.messages.colfer.InterceptCallbackRequest.
+            Prefer imports and simple type names instead.
+        </description>
+
+        <properties>
+            <property name="xpath">
+                <value>
+                    <![CDATA[
+                      //ClassType[
+                          @FullyQualified = true()
+                          and not(starts-with(@PackageQualifier, 'java.lang'))
+                      ]
+                    ]]>
+                </value>
+            </property>
+        </properties>
+    </rule>
 </ruleset>

@@ -22,7 +22,9 @@ import com.quasient.pal.messages.colfer.ControlMessage;
 import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.messages.colfer.MetaMessage;
 import com.quasient.pal.messages.types.ControlCommandType;
+import com.quasient.pal.messages.types.ControlStatusType;
 import com.quasient.pal.messages.types.MetaServiceType;
+import com.quasient.pal.messages.types.MetaStatusType;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
 import java.util.UUID;
 import org.junit.Before;
@@ -70,8 +72,7 @@ public class AbstractMessageInvokerCountersTest {
     // Prepare control OK path
     ControlMessage ctrlReq = builder.buildControlCommandMessage(peerUuid, ControlCommandType.GC);
     ControlMessage ctrlResp =
-        builder.buildControlStatusMessage(
-            peerUuid, com.quasient.pal.messages.types.ControlStatusType.OK, ctrlReq.getMessageId());
+        builder.buildControlStatusMessage(peerUuid, ControlStatusType.OK, ctrlReq.getMessageId());
     when(dispatcher.incomingControlMessage(any(ControlMessage.class))).thenReturn(ctrlResp);
 
     // Prepare meta OK path
@@ -82,7 +83,7 @@ public class AbstractMessageInvokerCountersTest {
         builder.buildMetaMessageResponse(
             peerUuid,
             MetaServiceType.FETCH_CLASSES_INFO,
-            com.quasient.pal.messages.types.MetaStatusType.OK,
+            MetaStatusType.OK,
             null,
             metaReq.getMessageId());
     when(dispatcher.incomingMetaMessage(any(MetaMessage.class))).thenReturn(metaResp);

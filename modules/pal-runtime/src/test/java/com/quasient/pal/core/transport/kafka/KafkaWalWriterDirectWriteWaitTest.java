@@ -13,6 +13,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.Properties;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.Assume;
 import org.junit.Test;
 import org.zeromq.ZContext;
@@ -31,7 +32,7 @@ public class KafkaWalWriterDirectWriteWaitTest {
         new ThreadGroup("svc"),
         "KafkaWalWriterDirectWait",
         /* walQueue */ null, // queueless
-        new java.util.concurrent.atomic.AtomicBoolean(false),
+        new AtomicBoolean(false),
         "inproc://offs",
         /* flushOnClose */ null,
         /* lingerMs */ null,

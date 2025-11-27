@@ -18,6 +18,7 @@ package com.quasient.pal.serdes.colfer;
 final class MessageStatics {
 
   /** The declaring message class. */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   final com.quasient.pal.messages.colfer.Class clazz;
 
   /** The method or field name. */
@@ -41,6 +42,7 @@ final class MessageStatics {
    * @param paramNames parameter names, or {@code null} if omitted
    * @param paramTypeNames fully qualified parameter type names; not {@code null}
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   MessageStatics(
       com.quasient.pal.messages.colfer.Class clazz,
       String name,

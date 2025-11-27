@@ -13,9 +13,13 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThrows;
 
+import com.quasient.pal.common.objects.ObjectRef;
+import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.Obj;
+import com.quasient.pal.messages.types.MessageType;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
+import java.util.List;
 import org.junit.Test;
 
 public class SetFieldDispatcherEdgeTest {
@@ -30,7 +34,7 @@ public class SetFieldDispatcherEdgeTest {
   // Minimal subclass to expose protected methods
   static class TestDispatcher extends SetFieldDispatcher {
     public AccessibleObject load(String className, String fieldName) throws Exception {
-      return loadAccessibleObject(className, fieldName, java.util.List.of(), java.util.List.of());
+      return loadAccessibleObject(className, fieldName, List.of(), List.of());
     }
 
     public Object valueFrom(Obj valueObject, int ref, AccessibleObject ao) {
@@ -38,37 +42,35 @@ public class SetFieldDispatcherEdgeTest {
     }
 
     @Override
-    protected com.quasient.pal.messages.colfer.ExecMessage createAfterExecMessage(
-        com.quasient.pal.messages.colfer.ExecMessage execMessage,
+    protected ExecMessage createAfterExecMessage(
+        ExecMessage execMessage,
         Object valueObject,
-        com.quasient.pal.common.objects.ObjectRef valueObjRef,
+        ObjectRef valueObjRef,
         AccessibleObject accessibleObject,
         Throwable exceptionWhileLoading,
         Throwable exceptionWhileInvoking) {
-      return new com.quasient.pal.messages.colfer.ExecMessage();
+      return new ExecMessage();
     }
 
     @Override
     protected AccessibleObject loadAccessibleObject(
-        com.quasient.pal.messages.colfer.ExecMessage execMessage,
-        java.util.List<Class<?>> parameterTypes,
-        java.util.List<Object> args) {
+        ExecMessage execMessage, List<Class<?>> parameterTypes, List<Object> args) {
       return null;
     }
 
     @Override
-    protected com.quasient.pal.messages.types.MessageType getAfterExecMessageType() {
-      return com.quasient.pal.messages.types.MessageType.EXEC_PUT_FIELD_DONE;
+    protected MessageType getAfterExecMessageType() {
+      return MessageType.EXEC_PUT_FIELD_DONE;
     }
 
     @Override
-    protected com.quasient.pal.messages.types.MessageType getBeforeExecMessageType() {
-      return com.quasient.pal.messages.types.MessageType.EXEC_PUT_FIELD;
+    protected MessageType getBeforeExecMessageType() {
+      return MessageType.EXEC_PUT_FIELD;
     }
 
     @Override
-    public com.quasient.pal.messages.types.MessageType getSupportedMessageType() {
-      return com.quasient.pal.messages.types.MessageType.EXEC_PUT_FIELD;
+    public MessageType getSupportedMessageType() {
+      return MessageType.EXEC_PUT_FIELD;
     }
   }
 
@@ -86,6 +88,7 @@ public class SetFieldDispatcherEdgeTest {
   }
 
   @Test
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public void getValueFromMessage_classNotFound_throwsIAE() throws Exception {
     TestDispatcher d = new TestDispatcher();
     Field fld = Sample.class.getDeclaredField("x");

@@ -22,6 +22,7 @@ import static org.junit.Assert.fail;
 
 import com.quasient.pal.common.lang.reflect.Void;
 import com.quasient.pal.common.objects.ObjectRef;
+import com.quasient.pal.common.weave.Proceed;
 import com.quasient.pal.core.ExecMessageMatchers.ComesFromClass;
 import com.quasient.pal.core.ExecMessageMatchers.ComesFromReflectable;
 import com.quasient.pal.core.service.RunOptions;
@@ -68,8 +69,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
             objectLookupStore);
   }
 
-  private <T> ProceedingJoinPoint createPjp(
-      Method method, Object[] args, com.quasient.pal.common.weave.Proceed<T> proceed)
+  private <T> ProceedingJoinPoint createPjp(Method method, Object[] args, Proceed<T> proceed)
       throws Throwable {
     String sourceFilename = "NotARealClass.java";
     return PjpBuilder.create()

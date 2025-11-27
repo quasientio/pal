@@ -414,6 +414,7 @@ public final class MessageBuilder {
    * @param throwable the {@code Throwable} to be converted into a message
    * @return a {@code Throwable} message representing the provided exception
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   private com.quasient.pal.messages.colfer.Throwable buildThrowableMessage(Throwable throwable) {
 
     final com.quasient.pal.messages.colfer.Throwable throwableMsg =
@@ -487,6 +488,7 @@ public final class MessageBuilder {
    * @param senderObjRef the sender's object reference, or {@code null}
    * @return the thread-local context bean when enabled; {@code null} otherwise
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   private com.quasient.pal.messages.colfer.Context buildContextIfEnabled(
       Context context, Object sender, ObjectRef senderObjRef) {
     if (!includeSourceContext) {
@@ -631,6 +633,7 @@ public final class MessageBuilder {
    *     null}
    * @return an {@code ExecMessage} representing the constructor invocation
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public ExecMessage buildConstructorMessageEphemeral(
       Context context,
       Object sender,
@@ -682,6 +685,7 @@ public final class MessageBuilder {
    * @param argObjRefs the array of object references corresponding to the arguments
    * @return an {@code ExecMessage} representing the class method invocation with context
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public ExecMessage buildClassMethodMessageEphemeral(
       Context context,
       Object sender,
@@ -732,6 +736,7 @@ public final class MessageBuilder {
    * @param argObjRefs the array of object references corresponding to the arguments
    * @return an {@code ExecMessage} representing the instance method invocation with context
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public ExecMessage buildInstanceMethodMessageEphemeral(
       Context context,
       Object sender,
@@ -785,6 +790,7 @@ public final class MessageBuilder {
    * @return an {@code ExecMessage} representing the field operation
    * @throws IllegalArgumentException if the message type is unexpected
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public ExecMessage buildFieldOpEphemeral(
       Context context,
       MessageType messageType,
@@ -1259,6 +1265,7 @@ public final class MessageBuilder {
    * @param responseToId the message ID this {@code ExecMessage} is responding to
    * @return an {@code ExecMessage} representing the return value
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public ExecMessage buildReturnValue(
       Object object,
       AccessibleObject accessibleObject,
@@ -1328,6 +1335,7 @@ public final class MessageBuilder {
    * @param responseToId the message ID this {@code ExecMessage} is responding to
    * @return an {@code ExecMessage} representing the raised throwable
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public ExecMessage buildAccessibleObjectThrowable(
       UUID peerUuid,
       @Nullable AccessibleObject accessibleObject,
@@ -1480,6 +1488,7 @@ public final class MessageBuilder {
    * @return an {@code ExecMessage} representing the field operation
    * @throws IllegalArgumentException if the message type is unexpected
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public ExecMessage buildFieldOp(
       UUID peerUuid,
       Context context,
@@ -1781,6 +1790,7 @@ public final class MessageBuilder {
    * @param thrownException the thrown exception (AFTER phase only, may be null)
    * @return the constructed callback request
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public InterceptCallbackRequest buildInterceptCallbackRequest(
       UUID peerUuid,
       InterceptMessage interceptMessage,
@@ -2127,6 +2137,7 @@ public final class MessageBuilder {
    * @param jsonRpcRequest the JSON-RPC request to convert
    * @return an {@code InstanceFieldGet} representing the instance field get operation
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   private InstanceFieldGet createInstanceFieldGet(JsonRpcRequest jsonRpcRequest) {
     var getParams = jsonRpcRequest.getParams();
     String className = JsonRpcMessageUtils.getClassName(jsonRpcRequest).orElseThrow();
@@ -2149,6 +2160,7 @@ public final class MessageBuilder {
    * @param jsonRpcRequest the JSON-RPC request to convert
    * @return a {@code StaticFieldGet} representing the static field get operation
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   private StaticFieldGet createStaticFieldGet(JsonRpcRequest jsonRpcRequest) {
     String className = JsonRpcMessageUtils.getClassName(jsonRpcRequest).orElseThrow();
     String fieldName = JsonRpcMessageUtils.getFieldName(jsonRpcRequest).orElseThrow();
@@ -2165,6 +2177,7 @@ public final class MessageBuilder {
    * @param jsonRpcRequest the JSON-RPC request to convert
    * @return a {@code ConstructorCall} representing the constructor invocation
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   private ConstructorCall createConstructorCall(JsonRpcRequest jsonRpcRequest) {
     var newParams = jsonRpcRequest.getParams();
     String className = JsonRpcMessageUtils.getClassName(jsonRpcRequest).orElseThrow();
@@ -2289,6 +2302,7 @@ public final class MessageBuilder {
    * @return a {@code JsonRpcResponse} representing the executable message response
    * @throws RuntimeException if the response message type is unexpected
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public JsonRpcResponse jsonRpcResponseFromExecMessageResponse(ExecMessage execMessageResponse) {
     String requestId = execMessageResponse.getResponseToId();
 

@@ -14,6 +14,8 @@ import static org.hamcrest.Matchers.is;
 import static org.mockito.Mockito.mock;
 
 import com.quasient.pal.core.execution.java.reflect.ClassMetadataSerializer;
+import com.quasient.pal.core.runtime.objects.ObjectLookupStore;
+import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import com.quasient.pal.messages.colfer.ControlMessage;
 import com.quasient.pal.messages.colfer.MetaMessage;
 import com.quasient.pal.messages.types.ControlCommandType;
@@ -22,9 +24,13 @@ import com.quasient.pal.messages.types.MetaServiceType;
 import com.quasient.pal.messages.types.MetaStatusType;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
 import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.Test;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
 
 public class ControlAndMetaDispatcherTest {
 
@@ -40,14 +46,8 @@ public class ControlAndMetaDispatcherTest {
     UUID me = UUID.randomUUID();
     set(d, "peerUuid", me);
     set(d, "messageBuilder", new MessageBuilder());
-    set(
-        d,
-        "outboundMessageGateway",
-        mock(com.quasient.pal.core.transport.gateway.OutboundMessageGateway.class));
-    set(
-        d,
-        "objectLookupStore",
-        mock(com.quasient.pal.core.runtime.objects.ObjectLookupStore.class));
+    set(d, "outboundMessageGateway", mock(OutboundMessageGateway.class));
+    set(d, "objectLookupStore", mock(ObjectLookupStore.class));
 
     ControlMessage req = new ControlMessage();
     req.setFromPeer(UUID.randomUUID().toString());
@@ -63,13 +63,13 @@ public class ControlAndMetaDispatcherTest {
     UUID me = UUID.randomUUID();
     MessageBuilder mb = new MessageBuilder();
     ClassMetadataSerializer cms = mock(ClassMetadataSerializer.class);
-    java.nio.file.Path tmp = java.nio.file.Files.createTempFile("classes", ".json");
-    org.mockito.Mockito.when(
+    Path tmp = Files.createTempFile("classes", ".json");
+    Mockito.when(
             cms.scannedClasspathToJson(
-                org.mockito.ArgumentMatchers.anyBoolean(),
-                org.mockito.ArgumentMatchers.any(),
-                org.mockito.ArgumentMatchers.any(),
-                org.mockito.ArgumentMatchers.anyBoolean()))
+                ArgumentMatchers.anyBoolean(),
+                ArgumentMatchers.any(),
+                ArgumentMatchers.any(),
+                ArgumentMatchers.anyBoolean()))
         .thenReturn(tmp);
     MetaMessageDispatcher d = new MetaMessageDispatcher(me, cms, mb);
 
@@ -93,12 +93,12 @@ public class ControlAndMetaDispatcherTest {
     UUID me = UUID.randomUUID();
     MessageBuilder mb = new MessageBuilder();
     ClassMetadataSerializer cms = mock(ClassMetadataSerializer.class);
-    org.mockito.Mockito.when(
+    Mockito.when(
             cms.scannedClasspathToJson(
-                org.mockito.ArgumentMatchers.anyBoolean(),
-                org.mockito.ArgumentMatchers.any(),
-                org.mockito.ArgumentMatchers.any(),
-                org.mockito.ArgumentMatchers.anyBoolean()))
+                ArgumentMatchers.anyBoolean(),
+                ArgumentMatchers.any(),
+                ArgumentMatchers.any(),
+                ArgumentMatchers.anyBoolean()))
         .thenThrow(new RuntimeException("boom"));
     MetaMessageDispatcher d = new MetaMessageDispatcher(me, cms, mb);
     MetaMessage req =

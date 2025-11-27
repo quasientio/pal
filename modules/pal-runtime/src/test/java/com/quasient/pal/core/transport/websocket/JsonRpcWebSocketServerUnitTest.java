@@ -26,6 +26,7 @@ import java.nio.file.Path;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.junit.Test;
@@ -37,9 +38,7 @@ public class JsonRpcWebSocketServerUnitTest {
     BlockingQueue<InboundJsonRpcRequestMsg> q = new ArrayBlockingQueue<>(16);
     JsonRpcWebSocketServer server =
         new JsonRpcWebSocketServer(
-            new InetSocketAddress(InetAddress.getLoopbackAddress(), 0),
-            q,
-            new java.util.concurrent.CountDownLatch(1));
+            new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), q, new CountDownLatch(1));
 
     // Build a response object that looks like class metadata response
     String tmp = Files.createTempFile("meta", ".json").toString();
@@ -75,9 +74,7 @@ public class JsonRpcWebSocketServerUnitTest {
     BlockingQueue<InboundJsonRpcRequestMsg> q = new ArrayBlockingQueue<>(16);
     JsonRpcWebSocketServer server =
         new JsonRpcWebSocketServer(
-            new InetSocketAddress(InetAddress.getLoopbackAddress(), 0),
-            q,
-            new java.util.concurrent.CountDownLatch(1));
+            new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), q, new CountDownLatch(1));
 
     // temp file with some content
     Path tmp = Files.createTempFile("stream", ".bin");
@@ -96,8 +93,7 @@ public class JsonRpcWebSocketServerUnitTest {
   public void lifecycle_onOpenOnClose_tracksStatsAndMapping() {
     BlockingQueue<InboundJsonRpcRequestMsg> q = new ArrayBlockingQueue<>(16);
     JsonRpcWebSocketServer server =
-        new JsonRpcWebSocketServer(
-            new InetSocketAddress("localhost", 0), q, new java.util.concurrent.CountDownLatch(1));
+        new JsonRpcWebSocketServer(new InetSocketAddress("localhost", 0), q, new CountDownLatch(1));
 
     WebSocket socket = mock(WebSocket.class);
     when(socket.getRemoteSocketAddress())

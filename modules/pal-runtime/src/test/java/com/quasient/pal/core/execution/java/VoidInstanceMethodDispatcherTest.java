@@ -21,6 +21,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import com.quasient.pal.common.objects.ObjectRef;
+import com.quasient.pal.common.weave.Proceed;
 import com.quasient.pal.core.service.RunOptions;
 import com.quasient.pal.core.transport.MessageChannelType;
 import com.quasient.pal.messages.colfer.ExecMessage;
@@ -65,8 +66,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
   }
 
   private <T> ProceedingJoinPoint createPjp(
-      Method method, Object target, Object[] args, com.quasient.pal.common.weave.Proceed<T> proceed)
-      throws Throwable {
+      Method method, Object target, Object[] args, Proceed<T> proceed) throws Throwable {
     String sourceFilename = "NotARealClass.java";
     return PjpBuilder.create()
         .kindMethodCall()

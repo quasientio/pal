@@ -31,6 +31,7 @@ public class ColferUtilsTest {
     public int field;
   }
 
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   private Marshallable createMarshallable() throws NoSuchFieldException {
     // create signature
     FieldSignature signature =

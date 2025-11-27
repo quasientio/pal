@@ -14,6 +14,7 @@ import com.quasient.pal.InterceptTestSuite;
 import com.quasient.pal.common.directory.nodes.InterceptRequest;
 import com.quasient.pal.common.directory.nodes.PeerInfo;
 import com.quasient.pal.common.lang.intercept.InterceptType;
+import com.quasient.pal.common.lang.intercept.InterceptableFieldOp;
 import com.quasient.pal.common.lang.intercept.InterceptableMethodCall;
 import com.quasient.pal.cxn.IncomingMessageListener;
 import com.quasient.pal.cxn.ThinPeer;
@@ -179,15 +180,14 @@ public class AbstractInterceptIT extends AbstractIntegrationTest
         uuid, myPeerUuid, type, classname, callbackClass, callbackMethod, interceptableMethodCall);
   }
 
-  protected InterceptRequest<com.quasient.pal.common.lang.intercept.InterceptableFieldOp>
-      createFieldOpInterceptRequest(
-          UUID uuid,
-          UUID callbackPeerUuid,
-          InterceptType type,
-          String classname,
-          String callbackClass,
-          String callbackMethod,
-          com.quasient.pal.common.lang.intercept.InterceptableFieldOp interceptableFieldOp) {
+  protected InterceptRequest<InterceptableFieldOp> createFieldOpInterceptRequest(
+      UUID uuid,
+      UUID callbackPeerUuid,
+      InterceptType type,
+      String classname,
+      String callbackClass,
+      String callbackMethod,
+      InterceptableFieldOp interceptableFieldOp) {
     return new InterceptRequest<>(
         uuid,
         callbackPeerUuid,

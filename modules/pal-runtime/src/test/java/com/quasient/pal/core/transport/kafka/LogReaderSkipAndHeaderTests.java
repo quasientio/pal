@@ -15,6 +15,7 @@ import static org.hamcrest.Matchers.is;
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 import com.quasient.pal.common.directory.nodes.LogInfo;
+import com.quasient.pal.common.util.UuidUtils;
 import com.quasient.pal.core.ZmqEnabledTest;
 import com.quasient.pal.core.internal.messages.InboundLogMsg;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
@@ -188,7 +189,7 @@ public class LogReaderSkipAndHeaderTests extends ZmqEnabledTest {
             this.log.getName(), partition, 0, key, ColferUtils.toBytes(msgBuilder.wrap(msg)));
     RecordHeaders headers = (RecordHeaders) record.headers();
     headers.add("message-format", new byte[] {MessageFormatType.BINARY.toByte()});
-    headers.add("producer-id", com.quasient.pal.common.util.UuidUtils.toBytes(peerUuid));
+    headers.add("producer-id", UuidUtils.toBytes(peerUuid));
     this.consumer.addRecord(record);
 
     Thread.sleep(300);
