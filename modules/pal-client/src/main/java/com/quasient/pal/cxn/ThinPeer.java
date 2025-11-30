@@ -1109,6 +1109,55 @@ public class ThinPeer {
   }
 
   /**
+   * Retrieves all messages from the configured input log.
+   *
+   * <p>This method reads all messages from offset 0 to the current end of the log. Useful for
+   * debugging and test verification to dump the entire WAL contents.
+   *
+   * @return a list of LogMessage objects containing all messages in the log
+   * @throws IllegalStateException if log consumption is not enabled or the instance is not
+   *     initialized
+   */
+  public List<LogMessage<?>> getAllWalMessages() {
+    assertInitializedAndActive();
+    if (!consuming) {
+      throw new IllegalStateException("ThinPeer log consumer not configured. Cannot get messages.");
+    }
+
+    List<LogMessage<?>> messages = new ArrayList<>();
+
+    synchronized (consumerLock) {
+      // Get the end offset to know how many messages to read
+      Map<TopicPartition, Long> endOffsets =
+          consumer.endOffsets(Collections.singletonList(inTopicPartition));
+      long endOffset = endOffsets.getOrDefault(inTopicPartition, 0L);
+
+      if (endOffset == 0) {
+        logger.debug("Log is empty, no messages to retrieve");
+        return messages;
+      }
+
+      logger.debug("Reading all {} messages from WAL", endOffset);
+
+      // Seek to beginning
+      consumer.seek(inTopicPartition, 0);
+
+      // Read until we reach the end
+      while (messages.size() < endOffset) {
+        ConsumerRecords<String, LogMessage<?>> records = consumer.poll(pollingDuration);
+        for (var record : records) {
+          if (record.offset() < endOffset) {
+            messages.add(record.value());
+          }
+        }
+      }
+    }
+
+    logger.debug("Retrieved {} messages from WAL", messages.size());
+    return messages;
+  }
+
+  /**
    * Returns the UUID of this peer.
    *
    * @return the UUID assigned to this peer

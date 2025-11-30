@@ -10,6 +10,7 @@
 package com.quasient.pal;
 
 import com.quasient.pal.common.directory.nodes.LogInfo;
+import com.quasient.pal.cxn.ThinPeer;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.intercept.MethodInterceptIT;
@@ -23,6 +24,12 @@ import com.quasient.pal.intercept.staticfield.StaticFieldAsyncCallbackIT;
 import com.quasient.pal.intercept.staticfield.StaticFieldSyncCallbackIT;
 import com.quasient.pal.intercept.staticmethod.StaticMethodAsyncCallbackIT;
 import com.quasient.pal.intercept.staticmethod.StaticMethodSyncCallbackIT;
+import com.quasient.pal.messages.LogMessage;
+import com.quasient.pal.messages.colfer.Message;
+import com.quasient.pal.messages.jsonrpc.JsonRpcMessage;
+import com.quasient.pal.serdes.colfer.ColferUtils;
+import com.quasient.pal.serdes.jsonrpc.JsonRpcSerializer;
+import java.util.List;
 import java.util.UUID;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -87,37 +94,26 @@ import org.slf4j.LoggerFactory;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
   // Method intercept mechanism tests
-  // all passing
   MethodInterceptIT.class,
 
   // Instance method callback tests
-  // @before tests passing
   InstanceMethodSyncCallbackIT.class,
-  // @before tests passing
   InstanceMethodAsyncCallbackIT.class,
 
   // Static method callback tests
-  // @before tests passing
   StaticMethodSyncCallbackIT.class,
-  // @before tests passing
   StaticMethodAsyncCallbackIT.class,
 
   // Constructor callback tests
-  // @before tests passing
   ConstructorSyncCallbackIT.class,
-  // @before tests passing
   ConstructorAsyncCallbackIT.class,
 
   // Static field callback tests
-  // all passing
   StaticFieldSyncCallbackIT.class,
-  // all passing
   StaticFieldAsyncCallbackIT.class,
 
   // Instance field callback tests
-  // all passing except 2
   InstanceFieldSyncCallbackIT.class,
-  // all passing
   InstanceFieldAsyncCallbackIT.class
 })
 public class CallbackMechanismTestSuite extends AbstractIntegrationTest {
@@ -134,6 +130,9 @@ public class CallbackMechanismTestSuite extends AbstractIntegrationTest {
 
   /** Interceptable peer process (the one being intercepted). */
   private static Process interceptablePeerProcess;
+
+  /** ThinPeer for reading the interceptable peer's WAL for debugging. */
+  private static ThinPeer walReaderThinPeer;
 
   /** Helper instance to access non-static methods from AbstractIntegrationTest. */
   private static CallbackMechanismTestSuite instance;
@@ -210,6 +209,33 @@ public class CallbackMechanismTestSuite extends AbstractIntegrationTest {
             "-cp",
             ittAppsClasspath);
     logger.info("Interceptable peer launched successfully");
+
+    // Create a ThinPeer to read the WAL for debugging purposes
+    // Find the log name created by the peer (starts with "cbm-interceptable")
+    DirectoryConnectionProvider directoryConnectionProvider =
+        new DirectoryConnectionProvider(palDirectory);
+    PalDirectory directory =
+        directoryConnectionProvider
+            .get()
+            .orElseThrow(() -> new RuntimeException("Could not connect to directory"));
+    try {
+      String walLogName = null;
+      for (LogInfo log : directory.listAllLogs()) {
+        if (log.getName().startsWith("cbm-interceptable")) {
+          walLogName = log.getName();
+          logger.info("Found WAL log: {}", walLogName);
+          break;
+        }
+      }
+      if (walLogName != null) {
+        walReaderThinPeer = createLogReaderThinPeer(walLogName);
+        logger.info("Created WAL reader ThinPeer for log: {}", walLogName);
+      } else {
+        logger.warn("Could not find WAL log starting with 'cbm-interceptable'");
+      }
+    } finally {
+      directory.close();
+    }
   }
 
   /**
@@ -230,6 +256,20 @@ public class CallbackMechanismTestSuite extends AbstractIntegrationTest {
         instance.stopPeer(interceptablePeerProcess);
         interceptablePeerProcess = null;
         logger.info("Interceptable peer process stopped");
+      }
+
+      // Dump WAL contents for debugging before cleanup
+      dumpWalMessages();
+
+      // Close the WAL reader ThinPeer
+      if (walReaderThinPeer != null) {
+        try {
+          walReaderThinPeer.close();
+          logger.info("WAL reader ThinPeer closed");
+        } catch (Exception e) {
+          logger.warn("Error closing WAL reader ThinPeer", e);
+        }
+        walReaderThinPeer = null;
       }
 
       // Now unregister peer from the directory (after process is stopped)
@@ -268,6 +308,59 @@ public class CallbackMechanismTestSuite extends AbstractIntegrationTest {
       }
 
       logger.info("Shared interceptable peer stopped and cleaned up successfully");
+    }
+  }
+
+  /**
+   * Dumps all WAL messages to the debug log for test debugging.
+   *
+   * <p>This method reads all messages from the interceptable peer's WAL and logs them at DEBUG
+   * level as pretty-printed JSON. The output can be viewed in modules/itt/logs/tests.log when
+   * debugging test failures.
+   */
+  private static void dumpWalMessages() {
+    if (walReaderThinPeer == null) {
+      logger.warn("WAL reader not available, skipping WAL dump");
+      return;
+    }
+
+    try {
+      logger.info("============================================================");
+      logger.info("Dumping WAL messages for debugging");
+      logger.info("============================================================");
+
+      List<LogMessage<?>> messages = walReaderThinPeer.getAllWalMessages();
+      logger.info("WAL contains {} messages", messages.size());
+
+      int index = 0;
+      for (LogMessage<?> message : messages) {
+        String prettyJson = getMessageContentAsPrettyJson(message);
+        logger.debug("WAL[{}]:\n{}", index++, prettyJson);
+      }
+
+      logger.info("WAL dump complete");
+    } catch (Exception e) {
+      logger.warn("Failed to dump WAL messages", e);
+    }
+  }
+
+  /**
+   * Converts the content of a log message into a pretty-printed JSON string.
+   *
+   * @param logMessage the log message containing the content to be serialized
+   * @return a pretty-printed JSON representation of the message content
+   */
+  private static String getMessageContentAsPrettyJson(LogMessage<?> logMessage) {
+    if (logMessage.getContent() instanceof Message message) {
+      return ColferUtils.toJson(message, true);
+    } else if (logMessage.getContent() instanceof JsonRpcMessage jsonRpcMessage) {
+      try {
+        return JsonRpcSerializer.toPrettyJson(jsonRpcMessage);
+      } catch (Exception e) {
+        return "Failed to serialize JSON-RPC message: " + e.getMessage();
+      }
+    } else {
+      return "Unknown message type: " + logMessage.getContent().getClass().getName();
     }
   }
 }

@@ -11,9 +11,11 @@ package com.quasient.pal;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import com.quasient.pal.common.directory.nodes.LogInfo;
 import com.quasient.pal.common.directory.nodes.PeerInfo;
 import com.quasient.pal.common.util.Base62UuidGenerator;
 import com.quasient.pal.common.util.IdGenerator;
+import com.quasient.pal.cxn.ThinPeer;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.messages.Marshallable;
@@ -666,6 +668,41 @@ public abstract class AbstractIntegrationTest {
   /** Helper method to pretty-print a Marshallable (i.e. colfer) message */
   protected String colferToPrettyJson(Marshallable message) {
     return ColferUtils.toJson(message, true);
+  }
+
+  /**
+   * Creates a ThinPeer configured to read messages from a Kafka log.
+   *
+   * <p>This method creates a ThinPeer that can consume messages from the specified log topic. The
+   * peer is configured with consumer properties for Kafka but without ZMQ-RPC or directory
+   * registration. It's useful for debugging tests by allowing inspection of the WAL contents.
+   *
+   * <p>Example usage:
+   *
+   * <pre>{@code
+   * ThinPeer logReader = createLogReaderThinPeer("cbm-interceptable");
+   * List<LogMessage<?>> messages = logReader.getAllWalMessages();
+   * for (LogMessage<?> msg : messages) {
+   *   logger.debug("WAL message: {}", msg);
+   * }
+   * logReader.close();
+   * }</pre>
+   *
+   * @param logName the name of the Kafka topic/log to read from
+   * @return a configured ThinPeer that can read from the specified log
+   * @throws Exception if consumer properties cannot be loaded or ThinPeer initialization fails
+   */
+  protected static ThinPeer createLogReaderThinPeer(String logName) throws Exception {
+    Properties consumerProperties = getKafkaConsumerProperties();
+    String kafkaServers = getKafkaServers();
+    LogInfo logInfo = new LogInfo(logName, kafkaServers);
+
+    return new ThinPeer()
+        .withUuid(UUID.randomUUID())
+        .withName("LogReader-" + logName)
+        .withConsumerProperties(consumerProperties)
+        .withInputLog(logInfo)
+        .init();
   }
 
   /** Container for process execution results. */
