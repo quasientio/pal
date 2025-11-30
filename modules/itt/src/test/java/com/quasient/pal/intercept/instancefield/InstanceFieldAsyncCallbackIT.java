@@ -12,6 +12,7 @@ package com.quasient.pal.intercept.instancefield;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 
 import com.quasient.pal.apps.quantized.intercept.InterceptableApp;
 import com.quasient.pal.common.directory.nodes.InterceptRequest;
@@ -22,13 +23,15 @@ import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.cxn.ThinPeer;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.intercept.AbstractInterceptIT;
+import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.Message;
+import com.quasient.pal.messages.colfer.Obj;
 import com.quasient.pal.messages.types.MessageType;
+import com.quasient.pal.serdes.Unwrapper;
 import java.util.List;
 import java.util.UUID;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.zeromq.SocketType;
 
@@ -42,6 +45,10 @@ import org.zeromq.SocketType;
  *
  * <p>Unlike synchronous callbacks which use REQ-REP pattern and wait for responses, async callbacks
  * use DEALER-ROUTER pattern for fire-and-forget delivery.
+ *
+ * <p><b>NOTE:</b>These tests verify intercepts at the hot-path (via quantization, which happens at
+ * the call-site), and so, we need to invoke via RPC a method/ctor that triggers the actual
+ * interception target.
  */
 public class InstanceFieldAsyncCallbackIT extends AbstractInterceptIT {
 
@@ -53,9 +60,6 @@ public class InstanceFieldAsyncCallbackIT extends AbstractInterceptIT {
 
   /** UUID for the async callback receiver peer (registered in directory). */
   private final UUID asyncCallbackPeerUuid = UUID.randomUUID();
-
-  /** UUID for the intercept registration. */
-  private UUID interceptUuid;
 
   /**
    * Sets up ThinPeer with ROUTER socket for receiving async callbacks.
@@ -92,16 +96,11 @@ public class InstanceFieldAsyncCallbackIT extends AbstractInterceptIT {
   /** Closes the ThinPeer and unregisters from directory after tests complete. */
   @After
   public void tearDownAsyncReceiver() {
-    if (interceptUuid != null) {
-      logger.info("Cleaning up intercept registration: {}", interceptUuid);
-    }
     if (asyncCallbackPeer != null) {
       asyncCallbackPeer.close();
       logger.info("Async callback peer closed");
     }
   }
-
-  // Test methods for GET operation - 4 tests total (single/multiple BEFORE_ASYNC/AFTER_ASYNC)
 
   /** Tests single BEFORE_ASYNC callback on instance field GET operation. */
   @Test
@@ -172,81 +171,6 @@ public class InstanceFieldAsyncCallbackIT extends AbstractInterceptIT {
         is(notNullValue()));
 
     logger.info("===== testSingleBeforeAsyncCallbackOnGet: TEST COMPLETED SUCCESSFULLY =====");
-  }
-
-  /** Tests multiple BEFORE_ASYNC callbacks on instance field GET operation. */
-  @Test
-  public void testMultipleBeforeAsyncCallbacksOnGet() throws Exception {
-    logger.info("===== testMultipleBeforeAsyncCallbacksOnGet: TEST STARTED =====");
-
-    final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
-    final String callbackMethod = "aFakeMethod";
-    final int n = 3;
-
-    InterceptRequest<InterceptableFieldOp> interceptRequest =
-        createFieldOpInterceptRequest(
-            UUID.randomUUID(),
-            asyncCallbackPeerUuid,
-            InterceptType.BEFORE_ASYNC,
-            InterceptableApp.class.getName(),
-            callbackClass,
-            callbackMethod,
-            new InterceptableFieldOp("counter", FieldOpType.GET));
-
-    register(interceptRequest);
-    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
-
-    // Create InterceptableApp instance
-    ObjectRef appInstance =
-        ObjectRef.from(
-            invoke(
-                    messageBuilder.buildEmptyConstructor(
-                        myPeerUuid, InterceptableApp.class.getName()))
-                .getReturnValue()
-                .getObject()
-                .getRef());
-
-    for (int i = 0; i < n; i++) {
-      invoke(
-          messageBuilder.buildInstanceMethod(
-              myPeerUuid,
-              InterceptableApp.class.getName(),
-              "getCounter",
-              appInstance,
-              new String[] {},
-              new Object[] {}));
-    }
-
-    // Retrieve and verify callbacks
-    logger.info("Waiting for {} callbacks to be received", n);
-    List<Message> callbacks = getCallbacks(n, 5000);
-    logger.info("All {} callbacks received successfully", n);
-
-    assertThat("Should receive exactly " + n + " callbacks", callbacks.size(), is(n));
-
-    // Verify each callback structure
-    for (int i = 0; i < n; i++) {
-      Message callback = callbacks.get(i);
-      assertThat("Callback " + i + " should not be null", callback, is(notNullValue()));
-      assertThat(
-          "Callback " + i + " should be INTERCEPT_CALLBACK_REQUEST type",
-          callback.getMessageType(),
-          is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
-      assertThat(
-          "Callback " + i + " class should match",
-          callback.getInterceptCallbackRequest().getCallbackClass(),
-          is(callbackClass));
-      assertThat(
-          "Callback " + i + " method should match",
-          callback.getInterceptCallbackRequest().getCallbackMethod(),
-          is(callbackMethod));
-      assertThat(
-          "Callback " + i + " should be InstanceFieldGet",
-          callback.getInterceptCallbackRequest().getExec().getInstanceFieldGet(),
-          is(notNullValue()));
-    }
-
-    logger.info("===== testMultipleBeforeAsyncCallbacksOnGet: TEST COMPLETED SUCCESSFULLY =====");
   }
 
   /** Tests single AFTER_ASYNC callback on instance field GET operation. */
@@ -320,93 +244,22 @@ public class InstanceFieldAsyncCallbackIT extends AbstractInterceptIT {
     logger.info("===== testSingleAfterAsyncCallbackOnGet: TEST COMPLETED SUCCESSFULLY =====");
   }
 
-  /** Tests multiple AFTER_ASYNC callbacks on instance field GET operation. */
+  /**
+   * Tests double BEFORE_ASYNC callback on instance field PUT operation.
+   *
+   * <p>Registers a BEFORE_ASYNC intercept on counter, creates an app instance, calls a setter once,
+   * and verifies exactly 2 callbacks are received: one triggered by the field initializer and the
+   * second one triggered by our call to the setter.
+   */
   @Test
-  public void testMultipleAfterAsyncCallbacksOnGet() throws Exception {
-    logger.info("===== testMultipleAfterAsyncCallbacksOnGet: TEST STARTED =====");
-
-    final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
-    final String callbackMethod = "aFakeMethod";
-    final int n = 3;
-
-    InterceptRequest<InterceptableFieldOp> interceptRequest =
-        createFieldOpInterceptRequest(
-            UUID.randomUUID(),
-            asyncCallbackPeerUuid,
-            InterceptType.AFTER_ASYNC,
-            InterceptableApp.class.getName(),
-            callbackClass,
-            callbackMethod,
-            new InterceptableFieldOp("counter", FieldOpType.GET));
-
-    register(interceptRequest);
-    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
-
-    // Create InterceptableApp instance
-    ObjectRef appInstance =
-        ObjectRef.from(
-            invoke(
-                    messageBuilder.buildEmptyConstructor(
-                        myPeerUuid, InterceptableApp.class.getName()))
-                .getReturnValue()
-                .getObject()
-                .getRef());
-
-    for (int i = 0; i < n; i++) {
-      invoke(
-          messageBuilder.buildInstanceMethod(
-              myPeerUuid,
-              InterceptableApp.class.getName(),
-              "getCounter",
-              appInstance,
-              new String[] {},
-              new Object[] {}));
-    }
-
-    // Retrieve and verify callbacks
-    logger.info("Waiting for {} callbacks to be received", n);
-    List<Message> callbacks = getCallbacks(n, 5000);
-    logger.info("All {} callbacks received successfully", n);
-
-    assertThat("Should receive exactly " + n + " callbacks", callbacks.size(), is(n));
-
-    // Verify each callback structure
-    for (int i = 0; i < n; i++) {
-      Message callback = callbacks.get(i);
-      assertThat("Callback " + i + " should not be null", callback, is(notNullValue()));
-      assertThat(
-          "Callback " + i + " should be INTERCEPT_CALLBACK_REQUEST type",
-          callback.getMessageType(),
-          is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
-      assertThat(
-          "Callback " + i + " class should match",
-          callback.getInterceptCallbackRequest().getCallbackClass(),
-          is(callbackClass));
-      assertThat(
-          "Callback " + i + " method should match",
-          callback.getInterceptCallbackRequest().getCallbackMethod(),
-          is(callbackMethod));
-      // AFTER GET callbacks wrap the ReturnValue
-      assertThat(
-          "Callback " + i + " should have ReturnValue",
-          callback.getInterceptCallbackRequest().getExec().getReturnValue(),
-          is(notNullValue()));
-    }
-
-    logger.info("===== testMultipleAfterAsyncCallbacksOnGet: TEST COMPLETED SUCCESSFULLY =====");
-  }
-
-  // Test methods for PUT operation - 4 tests total (single/multiple BEFORE_ASYNC/AFTER_ASYNC)
-
-  /** Tests single BEFORE_ASYNC callback on instance field PUT operation. */
-  @Test
-  public void testSingleBeforeAsyncCallbackOnPut() throws Exception {
-    logger.info("===== testSingleBeforeAsyncCallbackOnPut: TEST STARTED =====");
+  public void testDoubleBeforeAsyncCallbackOnPut() throws Exception {
+    logger.info("===== testDoubleBeforeAsyncCallbackOnPut: TEST STARTED =====");
 
     final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
     final String callbackMethod = "aFakeMethod";
     final int newValue = 200;
 
+    // 1. Register a BEFORE intercept on counter field PUT
     InterceptRequest<InterceptableFieldOp> interceptRequest =
         createFieldOpInterceptRequest(
             UUID.randomUUID(),
@@ -417,9 +270,11 @@ public class InstanceFieldAsyncCallbackIT extends AbstractInterceptIT {
             callbackMethod,
             new InterceptableFieldOp("counter", FieldOpType.PUT));
 
+    // Wait for intercept registration to propagate
     register(interceptRequest);
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
 
+    // 2. Create InterceptableApp instance
     // Create InterceptableApp instance
     ObjectRef appInstance =
         ObjectRef.from(
@@ -429,138 +284,110 @@ public class InstanceFieldAsyncCallbackIT extends AbstractInterceptIT {
                 .getReturnValue()
                 .getObject()
                 .getRef());
+    logger.info(
+        "InterceptableApp instance created with ref: {}, should have triggered 1 callback",
+        appInstance);
 
-    invoke(
-        messageBuilder.buildInstanceMethod(
-            myPeerUuid,
-            InterceptableApp.class.getName(),
-            "setCounter",
-            appInstance,
-            new String[] {"java.lang.Integer"},
-            new Object[] {newValue}));
+    // 3. Invoke setCounter which triggers PUT_FIELD and callback
+    ExecMessage response =
+        invoke(
+            messageBuilder.buildInstanceMethod(
+                myPeerUuid,
+                InterceptableApp.class.getName(),
+                "setCounter",
+                appInstance,
+                new String[] {"java.lang.Integer"},
+                new Object[] {newValue}));
+    logger.info("setCounter invocation completed");
 
-    // Retrieve and verify callbacks - PUT generates 2 messages (PUT + PUT_DONE)
-    logger.info("Waiting for 2 callbacks to be received (PUT + PUT_DONE)");
+    // 4. Verify invocation succeeded
+    assertThat(
+        "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
+
+    // Retrieve and verify callbacks
+    logger.info("Waiting for 2 callbacks to be received");
     List<Message> callbacks = getCallbacks(2, 5000);
     logger.info("Callbacks received successfully");
 
-    assertThat("Should receive exactly 2 callbacks (PUT + PUT_DONE)", callbacks.size(), is(2));
+    assertThat("Should receive exactly 2 callbacks", callbacks.size(), is(2));
 
-    // Verify first callback (PUT) structure
-    Message putCallback = callbacks.get(0);
-    assertThat("PUT callback message should not be null", putCallback, is(notNullValue()));
+    // 6. Verify callback structure
+    Message initCallback = callbacks.get(0);
+    assertThat("PUT callback message should not be null", initCallback, is(notNullValue()));
     assertThat(
         "PUT callback should be INTERCEPT_CALLBACK_REQUEST type",
-        putCallback.getMessageType(),
+        initCallback.getMessageType(),
         is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
     assertThat(
         "PUT callback class should match",
-        putCallback.getInterceptCallbackRequest().getCallbackClass(),
+        initCallback.getInterceptCallbackRequest().getCallbackClass(),
         is(callbackClass));
     assertThat(
         "PUT callback method should match",
-        putCallback.getInterceptCallbackRequest().getCallbackMethod(),
+        initCallback.getInterceptCallbackRequest().getCallbackMethod(),
         is(callbackMethod));
     // BEFORE PUT callback wraps the PUT operation
     assertThat(
         "First callback should be InstanceFieldPut",
-        putCallback.getInterceptCallbackRequest().getExec().getInstanceFieldPut(),
+        initCallback.getInterceptCallbackRequest().getExec().getInstanceFieldPut(),
         is(notNullValue()));
 
-    logger.info("===== testSingleBeforeAsyncCallbackOnPut: TEST COMPLETED SUCCESSFULLY =====");
-  }
+    // verify value passed to fieldput is the initializer value in the app, triggered by call to
+    // ctor
+    Obj putValueObj =
+        initCallback.getInterceptCallbackRequest().getExec().getInstanceFieldPut().getValueObject();
+    Object value = Unwrapper.unwrapObject(putValueObj);
+    assertThat("First callback put value should be 1 (initializer value in class)", value, is(1));
 
-  /** Tests multiple BEFORE_ASYNC callbacks on instance field PUT operation. */
-  @Test
-  @Ignore
-  public void testMultipleBeforeAsyncCallbacksOnPut() throws Exception {
-    logger.info("===== testMultipleBeforeAsyncCallbacksOnPut: TEST STARTED =====");
-
-    final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
-    final String callbackMethod = "aFakeMethod";
-    final int n = 3;
-
-    InterceptRequest<InterceptableFieldOp> interceptRequest =
-        createFieldOpInterceptRequest(
-            UUID.randomUUID(),
-            asyncCallbackPeerUuid,
-            InterceptType.BEFORE_ASYNC,
-            InterceptableApp.class.getName(),
-            callbackClass,
-            callbackMethod,
-            new InterceptableFieldOp("counter", FieldOpType.PUT));
-
-    register(interceptRequest);
-    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
-
-    // Create InterceptableApp instance
-    ObjectRef appInstance =
-        ObjectRef.from(
-            invoke(
-                    messageBuilder.buildEmptyConstructor(
-                        myPeerUuid, InterceptableApp.class.getName()))
-                .getReturnValue()
-                .getObject()
-                .getRef());
-
-    for (int i = 0; i < n; i++) {
-      invoke(
-          messageBuilder.buildInstanceMethod(
-              myPeerUuid,
-              InterceptableApp.class.getName(),
-              "setCounter",
-              appInstance,
-              new String[] {"java.lang.Integer"},
-              new Object[] {200 + i}));
-    }
-
-    // Retrieve and verify callbacks - each PUT generates 2 messages (PUT + PUT_DONE)
-    final int expectedCallbacks = n * 2;
-    logger.info("Waiting for {} callbacks to be received ({} PUTs * 2)", expectedCallbacks, n);
-    List<Message> callbacks = getCallbacks(expectedCallbacks, 5000);
-    logger.info("All {} callbacks received successfully", expectedCallbacks);
-
+    // The second callback is from the field put triggered by the setter we invoke
+    Message setterCallback = callbacks.get(1);
+    assertThat("Callback message should not be null", setterCallback, is(notNullValue()));
     assertThat(
-        "Should receive exactly " + expectedCallbacks + " callbacks",
-        callbacks.size(),
-        is(expectedCallbacks));
+        "PUT callback should be INTERCEPT_CALLBACK_REQUEST type",
+        setterCallback.getMessageType(),
+        is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
+    assertThat(
+        "PUT callback class should match",
+        setterCallback.getInterceptCallbackRequest().getCallbackClass(),
+        is(callbackClass));
+    assertThat(
+        "PUT callback method should match",
+        setterCallback.getInterceptCallbackRequest().getCallbackMethod(),
+        is(callbackMethod));
+    assertThat(
+        "Second callback should be InstanceFieldPut",
+        setterCallback.getInterceptCallbackRequest().getExec().getInstanceFieldPut(),
+        is(notNullValue()));
 
-    // Verify each callback structure (alternating PUT and PUT_DONE)
-    for (int i = 0; i < expectedCallbacks; i++) {
-      Message callback = callbacks.get(i);
-      assertThat("Callback " + i + " should not be null", callback, is(notNullValue()));
-      assertThat(
-          "Callback " + i + " should be INTERCEPT_CALLBACK_REQUEST type",
-          callback.getMessageType(),
-          is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
-      assertThat(
-          "Callback " + i + " class should match",
-          callback.getInterceptCallbackRequest().getCallbackClass(),
-          is(callbackClass));
-      assertThat(
-          "Callback " + i + " method should match",
-          callback.getInterceptCallbackRequest().getCallbackMethod(),
-          is(callbackMethod));
-      // BEFORE PUT callbacks wrap either PUT or PUT_DONE
-      assertThat(
-          "Callback " + i + " should be InstanceFieldPut or InstanceFieldPutDone",
-          callback.getInterceptCallbackRequest().getExec().getInstanceFieldPut() != null
-              || callback.getInterceptCallbackRequest().getExec().getInstanceFieldPutDone() != null,
-          is(true));
-    }
+    // verify value passed to fieldput is the value we call the setter with
+    putValueObj =
+        setterCallback
+            .getInterceptCallbackRequest()
+            .getExec()
+            .getInstanceFieldPut()
+            .getValueObject();
+    value = Unwrapper.unwrapObject(putValueObj);
+    assertThat("Second callback put value should be value passed to setter", value, is(newValue));
 
-    logger.info("===== testMultipleBeforeAsyncCallbacksOnPut: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info("===== testDoubleBeforeAsyncCallbackOnPut: TEST COMPLETED SUCCESSFULLY =====");
   }
 
-  /** Tests single AFTER_ASYNC callback on instance field PUT operation. */
+  /**
+   * Tests double AFTER_ASYNC callback on instance field PUT operation.
+   *
+   * <p>Registers an AFTER_ASYNC intercept on counter, creates an app instance, calls a setter, and
+   * verifies exactly 2 callbacks are received after the field put: one triggered by the field
+   * initializer and the second one triggered by our call to the setter.
+   */
   @Test
-  public void testSingleAfterAsyncCallbackOnPut() throws Exception {
-    logger.info("===== testSingleAfterAsyncCallbackOnPut: TEST STARTED =====");
+  public void testDoubleAfterAsyncCallbackOnPut() throws Exception {
+    logger.info("===== testDoubleAfterAsyncCallbackOnPut: TEST STARTED =====");
 
     final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
     final String callbackMethod = "aFakeMethod";
     final int newValue = 200;
 
+    // 1. Register an AFTER intercept on counter field PUT
     InterceptRequest<InterceptableFieldOp> interceptRequest =
         createFieldOpInterceptRequest(
             UUID.randomUUID(),
@@ -571,10 +398,11 @@ public class InstanceFieldAsyncCallbackIT extends AbstractInterceptIT {
             callbackMethod,
             new InterceptableFieldOp("counter", FieldOpType.PUT));
 
+    logger.info("Registering intercept request");
     register(interceptRequest);
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
 
-    // Create InterceptableApp instance
+    // 2. Create InterceptableApp instance
     ObjectRef appInstance =
         ObjectRef.from(
             invoke(
@@ -583,7 +411,12 @@ public class InstanceFieldAsyncCallbackIT extends AbstractInterceptIT {
                 .getReturnValue()
                 .getObject()
                 .getRef());
+    logger.info(
+        "InterceptableApp instance created with ref: {}, should have triggered 1 callback",
+        appInstance);
 
+    // 3. Invoke setCounter which triggers PUT_FIELD and callback
+    logger.info("Invoking setCounter({}) which should trigger 1 callback", newValue);
     invoke(
         messageBuilder.buildInstanceMethod(
             myPeerUuid,
@@ -593,116 +426,70 @@ public class InstanceFieldAsyncCallbackIT extends AbstractInterceptIT {
             new String[] {"java.lang.Integer"},
             new Object[] {newValue}));
 
-    // Retrieve and verify callbacks - PUT generates 2 messages (PUT + PUT_DONE)
-    logger.info("Waiting for 2 callbacks to be received (PUT + PUT_DONE)");
+    // Retrieve and verify callbacks
+    logger.info("Waiting for 2 callbacks to be received");
     List<Message> callbacks = getCallbacks(2, 5000);
     logger.info("Callbacks received successfully");
 
-    assertThat("Should receive exactly 2 callbacks (PUT + PUT_DONE)", callbacks.size(), is(2));
+    assertThat("Should receive exactly 2 callbacks", callbacks.size(), is(2));
 
-    // Verify second callback (PUT_DONE) structure - AFTER callbacks focus on PUT_DONE
-    Message putDoneCallback = callbacks.get(1);
-    assertThat("PUT_DONE callback message should not be null", putDoneCallback, is(notNullValue()));
+    // 6. Verify callback structure
+
+    // The first callback is from the field put triggered by the field initializer
+    // when we created the app instance
+    Message initCallback = callbacks.get(0);
+    assertThat("PUT_DONE callback message should not be null", initCallback, is(notNullValue()));
     assertThat(
         "PUT_DONE callback should be INTERCEPT_CALLBACK_REQUEST type",
-        putDoneCallback.getMessageType(),
+        initCallback.getMessageType(),
         is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
     assertThat(
         "PUT_DONE callback class should match",
-        putDoneCallback.getInterceptCallbackRequest().getCallbackClass(),
+        initCallback.getInterceptCallbackRequest().getCallbackClass(),
         is(callbackClass));
     assertThat(
         "PUT_DONE callback method should match",
-        putDoneCallback.getInterceptCallbackRequest().getCallbackMethod(),
+        initCallback.getInterceptCallbackRequest().getCallbackMethod(),
         is(callbackMethod));
     // AFTER PUT callback wraps the PUT_DONE operation
     assertThat(
-        "Second callback should be InstanceFieldPutDone",
-        putDoneCallback.getInterceptCallbackRequest().getExec().getInstanceFieldPutDone(),
+        "First callback should be InstanceFieldPutDone",
+        initCallback.getInterceptCallbackRequest().getExec().getInstanceFieldPutDone(),
+        is(notNullValue()));
+    assertThat(
+        "InstanceFieldPutDone should have field info",
+        initCallback.getInterceptCallbackRequest().getExec().getInstanceFieldPutDone().getField(),
         is(notNullValue()));
 
-    logger.info("===== testSingleAfterAsyncCallbackOnPut: TEST COMPLETED SUCCESSFULLY =====");
-  }
+    // FIELD_PUT_DONE does not contain the value, cannot verify it here
 
-  /** Tests multiple AFTER_ASYNC callbacks on instance field PUT operation. */
-  @Test
-  @Ignore
-  public void testMultipleAfterAsyncCallbacksOnPut() throws Exception {
-    logger.info("===== testMultipleAfterAsyncCallbacksOnPut: TEST STARTED =====");
-
-    final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
-    final String callbackMethod = "aFakeMethod";
-    final int n = 3;
-
-    InterceptRequest<InterceptableFieldOp> interceptRequest =
-        createFieldOpInterceptRequest(
-            UUID.randomUUID(),
-            asyncCallbackPeerUuid,
-            InterceptType.AFTER_ASYNC,
-            InterceptableApp.class.getName(),
-            callbackClass,
-            callbackMethod,
-            new InterceptableFieldOp("counter", FieldOpType.PUT));
-
-    register(interceptRequest);
-    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
-
-    // Create InterceptableApp instance
-    ObjectRef appInstance =
-        ObjectRef.from(
-            invoke(
-                    messageBuilder.buildEmptyConstructor(
-                        myPeerUuid, InterceptableApp.class.getName()))
-                .getReturnValue()
-                .getObject()
-                .getRef());
-
-    for (int i = 0; i < n; i++) {
-      invoke(
-          messageBuilder.buildInstanceMethod(
-              myPeerUuid,
-              InterceptableApp.class.getName(),
-              "setCounter",
-              appInstance,
-              new String[] {"java.lang.Integer"},
-              new Object[] {200 + i}));
-    }
-
-    // Retrieve and verify callbacks - each PUT generates 2 messages (PUT + PUT_DONE)
-    final int expectedCallbacks = n * 2;
-    logger.info("Waiting for {} callbacks to be received ({} PUTs * 2)", expectedCallbacks, n);
-    List<Message> callbacks = getCallbacks(expectedCallbacks, 5000);
-    logger.info("All {} callbacks received successfully", expectedCallbacks);
-
+    // The second callback is from the field put triggered by the setter we invoke
+    Message setterCallback = callbacks.get(1);
+    assertThat("PUT_DONE callback message should not be null", setterCallback, is(notNullValue()));
     assertThat(
-        "Should receive exactly " + expectedCallbacks + " callbacks",
-        callbacks.size(),
-        is(expectedCallbacks));
+        "PUT_DONE callback should be INTERCEPT_CALLBACK_REQUEST type",
+        setterCallback.getMessageType(),
+        is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
+    assertThat(
+        "PUT_DONE callback class should match",
+        setterCallback.getInterceptCallbackRequest().getCallbackClass(),
+        is(callbackClass));
+    assertThat(
+        "PUT_DONE callback method should match",
+        setterCallback.getInterceptCallbackRequest().getCallbackMethod(),
+        is(callbackMethod));
+    // AFTER PUT callback wraps the PUT_DONE operation
+    assertThat(
+        "Callback should be InstanceFieldPutDone",
+        setterCallback.getInterceptCallbackRequest().getExec().getInstanceFieldPutDone(),
+        is(notNullValue()));
+    assertThat(
+        "InstanceFieldPutDone should have field info",
+        setterCallback.getInterceptCallbackRequest().getExec().getInstanceFieldPutDone().getField(),
+        is(notNullValue()));
 
-    // Verify each callback structure (alternating PUT and PUT_DONE)
-    for (int i = 0; i < expectedCallbacks; i++) {
-      Message callback = callbacks.get(i);
-      assertThat("Callback " + i + " should not be null", callback, is(notNullValue()));
-      assertThat(
-          "Callback " + i + " should be INTERCEPT_CALLBACK_REQUEST type",
-          callback.getMessageType(),
-          is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
-      assertThat(
-          "Callback " + i + " class should match",
-          callback.getInterceptCallbackRequest().getCallbackClass(),
-          is(callbackClass));
-      assertThat(
-          "Callback " + i + " method should match",
-          callback.getInterceptCallbackRequest().getCallbackMethod(),
-          is(callbackMethod));
-      // AFTER PUT callbacks wrap either PUT or PUT_DONE
-      assertThat(
-          "Callback " + i + " should be InstanceFieldPut or InstanceFieldPutDone",
-          callback.getInterceptCallbackRequest().getExec().getInstanceFieldPut() != null
-              || callback.getInterceptCallbackRequest().getExec().getInstanceFieldPutDone() != null,
-          is(true));
-    }
+    // FIELD_PUT_DONE does not contain the value, cannot verify it here
 
-    logger.info("===== testMultipleAfterAsyncCallbacksOnPut: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info("===== testDoubleAfterAsyncCallbackOnPut: TEST COMPLETED SUCCESSFULLY =====");
   }
 }

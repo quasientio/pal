@@ -26,7 +26,6 @@ import com.quasient.pal.messages.types.MessageType;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -35,6 +34,10 @@ import org.junit.Test;
  * <p>These tests verify the end-to-end callback mechanism for synchronous intercepts on static
  * methods (EXEC_CLASS_METHOD), including single and multiple callbacks for both BEFORE and AFTER
  * intercept types.
+ *
+ * <p><b>NOTE:</b>These tests verify intercepts at the hot-path (via quantization, which happens at
+ * the call-site), and so, we need to invoke via RPC a method/ctor that triggers the actual
+ * interception target.
  */
 public class StaticMethodSyncCallbackIT extends AbstractInterceptIT {
 
@@ -44,8 +47,8 @@ public class StaticMethodSyncCallbackIT extends AbstractInterceptIT {
   /**
    * Tests single BEFORE callback on static method.
    *
-   * <p>Registers a BEFORE intercept on incrementStaticCounter, calls it once, and verifies the
-   * intercept mechanism works without throwing.
+   * <p>Registers a BEFORE intercept on incrementStaticCounter, calls a wrapper that invokes it once
+   * and verifies the intercept mechanism works without throwing.
    */
   @Test
   public void testSingleBeforeCallback() throws Exception {
@@ -253,11 +256,10 @@ public class StaticMethodSyncCallbackIT extends AbstractInterceptIT {
   /**
    * Tests single AFTER callback on static method.
    *
-   * <p>Registers an AFTER intercept on multiplyStaticBy, calls it once, and verifies exactly 1
-   * callback is received after method execution.
+   * <p>Registers an AFTER intercept on multiplyStaticBy, calls a wrapper that invokes it once, and
+   * verifies exactly 1 callback is received after method execution.
    */
   @Test
-  @Ignore
   public void testSingleAfterCallback() throws Exception {
     logger.info("===== testSingleAfterCallback: TEST STARTED =====");
 
@@ -339,16 +341,24 @@ public class StaticMethodSyncCallbackIT extends AbstractInterceptIT {
         "Callback method should match",
         callback.getInterceptCallbackRequest().getCallbackMethod(),
         is(callbackMethod));
-    // Verify the intercepted method call has the expected parameter
+    // AFTER callbacks wrap ReturnValue, not ClassMethodCall
+    // Verify the return value structure for non-void method (returns Integer)
     assertThat(
-        "Intercepted method should have 1 parameter",
-        callback
-            .getInterceptCallbackRequest()
-            .getExec()
-            .getClassMethodCall()
-            .getParameters()
-            .length,
-        is(1));
+        "AFTER callback should have ReturnValue in exec",
+        callback.getInterceptCallbackRequest().getExec().getReturnValue(),
+        is(notNullValue()));
+    assertThat(
+        "multiplyStaticBy returns Integer, so isVoid should be false",
+        callback.getInterceptCallbackRequest().getExec().getReturnValue().isVoid,
+        is(false));
+    assertThat(
+        "ReturnValue should have the return object",
+        callback.getInterceptCallbackRequest().getExec().getReturnValue().getObject(),
+        is(notNullValue()));
+    assertThat(
+        "ReturnValue should have method info",
+        callback.getInterceptCallbackRequest().getExec().getReturnValue().getFrom().getMethod(),
+        is(notNullValue()));
 
     logger.info("===== testSingleAfterCallback: TEST COMPLETED SUCCESSFULLY =====");
   }
@@ -360,7 +370,6 @@ public class StaticMethodSyncCallbackIT extends AbstractInterceptIT {
    * times, and verifies exactly 3 callbacks are received after method executions.
    */
   @Test
-  @Ignore
   public void testMultipleAfterCallbacks() throws Exception {
     logger.info("===== testMultipleAfterCallbacks: TEST STARTED =====");
 
@@ -446,16 +455,24 @@ public class StaticMethodSyncCallbackIT extends AbstractInterceptIT {
           "Callback method should match",
           callback.getInterceptCallbackRequest().getCallbackMethod(),
           is(callbackMethod));
-      // Verify the intercepted method call has the expected parameter
+      // AFTER callbacks wrap ReturnValue, not ClassMethodCall
+      // Verify the return value structure for non-void method (returns Integer)
       assertThat(
-          "Intercepted method should have 1 parameter",
-          callback
-              .getInterceptCallbackRequest()
-              .getExec()
-              .getClassMethodCall()
-              .getParameters()
-              .length,
-          is(1));
+          "AFTER callback should have ReturnValue in exec",
+          callback.getInterceptCallbackRequest().getExec().getReturnValue(),
+          is(notNullValue()));
+      assertThat(
+          "multiplyStaticBy returns Integer, so isVoid should be false",
+          callback.getInterceptCallbackRequest().getExec().getReturnValue().isVoid,
+          is(false));
+      assertThat(
+          "ReturnValue should have the return object",
+          callback.getInterceptCallbackRequest().getExec().getReturnValue().getObject(),
+          is(notNullValue()));
+      assertThat(
+          "ReturnValue should have method info",
+          callback.getInterceptCallbackRequest().getExec().getReturnValue().getFrom().getMethod(),
+          is(notNullValue()));
     }
 
     logger.info("===== testMultipleAfterCallbacks: TEST COMPLETED SUCCESSFULLY =====");

@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.UUID;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.zeromq.SocketType;
 
@@ -43,6 +42,10 @@ import org.zeromq.SocketType;
  *
  * <p>Unlike synchronous callbacks which use REQ-REP pattern and wait for responses, async callbacks
  * use DEALER-ROUTER pattern for fire-and-forget delivery.
+ *
+ * <p><b>NOTE:</b>These tests verify intercepts at the hot-path (via quantization, which happens at
+ * the call-site), and so, we need to invoke via RPC a method/ctor that triggers the actual
+ * interception target.
  */
 public class ConstructorAsyncCallbackIT extends AbstractInterceptIT {
 
@@ -105,8 +108,9 @@ public class ConstructorAsyncCallbackIT extends AbstractInterceptIT {
   /**
    * Tests single BEFORE_ASYNC callback on constructor.
    *
-   * <p>Registers a BEFORE_ASYNC intercept on the parameterized constructor, calls it once, and
-   * verifies exactly 1 callback is received without blocking for a response.
+   * <p>Registers a BEFORE_ASYNC intercept on the parameterized constructor, invokes factory method
+   * which internally calls constructor (triggers intercept via call-site) once and verifies exactly
+   * 1 callback is received without blocking for a response.
    */
   @Test
   public void testSingleBeforeAsyncCallback() throws Exception {
@@ -300,11 +304,11 @@ public class ConstructorAsyncCallbackIT extends AbstractInterceptIT {
   /**
    * Tests single AFTER_ASYNC callback on constructor.
    *
-   * <p>Registers an AFTER_ASYNC intercept on the parameterized constructor, calls it once, and
-   * verifies exactly 1 callback is received after constructor execution without blocking.
+   * <p>Registers a AFTER_ASYNC intercept on the parameterized constructor, invokes factory method
+   * which internally calls constructor (triggers intercept via call-site) once and verifies exactly
+   * 1 callback is received without blocking for a response.
    */
   @Test
-  @Ignore
   public void testSingleAfterAsyncCallback() throws Exception {
     logger.info("===== testSingleAfterAsyncCallback: TEST STARTED =====");
 
@@ -377,16 +381,29 @@ public class ConstructorAsyncCallbackIT extends AbstractInterceptIT {
         "Callback method should match",
         callback.getInterceptCallbackRequest().getCallbackMethod(),
         is(callbackMethod));
-    // AFTER callbacks receive the return value (constructed object)
+    // AFTER callbacks wrap ReturnValue, not ConstructorCall
+    // Verify the return value structure for constructor (returns the constructed object)
     assertThat(
-        "AFTER callback should have 1 parameter (the constructed object)",
+        "AFTER callback should have ReturnValue in exec",
+        callback.getInterceptCallbackRequest().getExec().getReturnValue(),
+        is(notNullValue()));
+    assertThat(
+        "Constructor returns object, so isVoid should be false",
+        callback.getInterceptCallbackRequest().getExec().getReturnValue().isVoid,
+        is(false));
+    assertThat(
+        "ReturnValue should have the constructed object",
+        callback.getInterceptCallbackRequest().getExec().getReturnValue().getObject(),
+        is(notNullValue()));
+    assertThat(
+        "ReturnValue should have constructor info",
         callback
             .getInterceptCallbackRequest()
             .getExec()
-            .getConstructorCall()
-            .getParameters()
-            .length,
-        is(1));
+            .getReturnValue()
+            .getFrom()
+            .getConstructor(),
+        is(notNullValue()));
 
     logger.info("===== testSingleAfterAsyncCallback: TEST COMPLETED SUCCESSFULLY =====");
   }
@@ -399,7 +416,6 @@ public class ConstructorAsyncCallbackIT extends AbstractInterceptIT {
    * constructor executions without blocking.
    */
   @Test
-  @Ignore
   public void testMultipleAfterAsyncCallbacks() throws Exception {
     logger.info("===== testMultipleAfterAsyncCallbacks: TEST STARTED =====");
 
@@ -475,16 +491,28 @@ public class ConstructorAsyncCallbackIT extends AbstractInterceptIT {
           "Callback method should match",
           callback.getInterceptCallbackRequest().getCallbackMethod(),
           is(callbackMethod));
-      // AFTER callbacks receive the return value (constructed object)
+      // Verify the return value structure for constructor (returns the constructed object)
       assertThat(
-          "AFTER callback should have 1 parameter (the constructed object)",
+          "AFTER callback should have ReturnValue in exec",
+          callback.getInterceptCallbackRequest().getExec().getReturnValue(),
+          is(notNullValue()));
+      assertThat(
+          "Constructor returns object, so isVoid should be false",
+          callback.getInterceptCallbackRequest().getExec().getReturnValue().isVoid,
+          is(false));
+      assertThat(
+          "ReturnValue should have the constructed object",
+          callback.getInterceptCallbackRequest().getExec().getReturnValue().getObject(),
+          is(notNullValue()));
+      assertThat(
+          "ReturnValue should have constructor info",
           callback
               .getInterceptCallbackRequest()
               .getExec()
-              .getConstructorCall()
-              .getParameters()
-              .length,
-          is(1));
+              .getReturnValue()
+              .getFrom()
+              .getConstructor(),
+          is(notNullValue()));
     }
 
     logger.info("===== testMultipleAfterAsyncCallbacks: TEST COMPLETED SUCCESSFULLY =====");

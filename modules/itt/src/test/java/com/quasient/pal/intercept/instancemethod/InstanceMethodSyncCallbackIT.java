@@ -26,7 +26,6 @@ import com.quasient.pal.messages.types.MessageType;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -35,6 +34,10 @@ import org.junit.Test;
  * <p>These tests verify the end-to-end callback mechanism for synchronous intercepts on instance
  * methods (EXEC_INSTANCE_METHOD), including single and multiple callbacks for both BEFORE and AFTER
  * intercept types.
+ *
+ * <p><b>NOTE:</b>These tests verify intercepts at the hot-path (via quantization, which happens at
+ * the call-site), and so, we need to invoke via RPC a method/ctor that triggers the actual
+ * interception target.
  */
 public class InstanceMethodSyncCallbackIT extends AbstractInterceptIT {
 
@@ -44,9 +47,9 @@ public class InstanceMethodSyncCallbackIT extends AbstractInterceptIT {
   /**
    * Tests single BEFORE callback.
    *
-   * <p>Registers a BEFORE intercept on multiplyBy, calls it once (n=1), and verifies the intercept
-   * mechanism works without throwing, the number of expected callbacks are received, and their
-   * types and parameters if any, are as expected.
+   * <p>Registers a BEFORE intercept on multiplyBy, calls a wrapper that invokes it once (n=1), and
+   * verifies the intercept mechanism works without throwing, the number of expected callbacks are
+   * received, and their types and parameters if any, are as expected.
    */
   @Test
   public void testSingleBeforeCallback() throws Exception {
@@ -124,7 +127,6 @@ public class InstanceMethodSyncCallbackIT extends AbstractInterceptIT {
     for (int i = 0; i < n; i++) {
       Message callback = callbacks.get(i);
       assertThat("Callback message should not be null", callback, is(notNullValue()));
-      assertThat(callback.getMessageType(), is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
       assertThat(
           String.format(
               "Callback should be %s type", MessageType.INTERCEPT_CALLBACK_REQUEST.name()),
@@ -236,12 +238,15 @@ public class InstanceMethodSyncCallbackIT extends AbstractInterceptIT {
     for (int i = 0; i < n; i++) {
       Message callback = callbacks.get(i);
       assertThat("Callback message should not be null", callback, is(notNullValue()));
-      assertThat(callback.getMessageType(), is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
       assertThat(
           String.format(
               "Callback should be %s type", MessageType.INTERCEPT_CALLBACK_REQUEST.name()),
           callback.getMessageType(),
           is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
+      assertThat(
+          "Callback class should match",
+          callback.getInterceptCallbackRequest().getCallbackClass(),
+          is(callbackClass));
       assertThat(
           "Callback method should match",
           callback.getInterceptCallbackRequest().getCallbackMethod(),
@@ -265,11 +270,10 @@ public class InstanceMethodSyncCallbackIT extends AbstractInterceptIT {
   /**
    * Tests single AFTER callback.
    *
-   * <p>Registers an AFTER intercept on multiplyBy, calls it once (n=1), and verifies exactly 1
-   * callback is received after method execution.
+   * <p>Registers an AFTER intercept on multiplyBy, invokes a wrapper method that calls it once
+   * (n=1), and verifies exactly 1 callback is received after method execution.
    */
   @Test
-  @Ignore
   public void testSingleAfterCallback() throws Exception {
     logger.info("===== testSingleAfterCallback: TEST STARTED =====");
 
@@ -355,16 +359,20 @@ public class InstanceMethodSyncCallbackIT extends AbstractInterceptIT {
           "Callback method should match",
           callback.getInterceptCallbackRequest().getCallbackMethod(),
           is(callbackMethod));
-      // Verify the intercepted method call has the expected parameter
+      // AFTER callbacks wrap ReturnValue, not InstanceMethodCall
+      // Verify the return value structure for void method
       assertThat(
-          "Intercepted method should have 1 parameter",
-          callback
-              .getInterceptCallbackRequest()
-              .getExec()
-              .getInstanceMethodCall()
-              .getParameters()
-              .length,
-          is(1));
+          "AFTER callback should have ReturnValue in exec",
+          callback.getInterceptCallbackRequest().getExec().getReturnValue(),
+          is(notNullValue()));
+      assertThat(
+          "multiplyBy returns void, so isVoid should be true",
+          callback.getInterceptCallbackRequest().getExec().getReturnValue().isVoid,
+          is(true));
+      assertThat(
+          "ReturnValue should have method info",
+          callback.getInterceptCallbackRequest().getExec().getReturnValue().getFrom().getMethod(),
+          is(notNullValue()));
     }
 
     logger.info("===== testSingleAfterCallback: TEST COMPLETED SUCCESSFULLY =====");
@@ -377,7 +385,6 @@ public class InstanceMethodSyncCallbackIT extends AbstractInterceptIT {
    * multiplyBy n=3 times, and verifies exactly 3 callbacks are received.
    */
   @Test
-  @Ignore
   public void testMultipleAfterCallbacks() throws Exception {
     logger.info("===== testMultipleAfterCallbacks: TEST STARTED =====");
 
@@ -463,16 +470,20 @@ public class InstanceMethodSyncCallbackIT extends AbstractInterceptIT {
           "Callback method should match",
           callback.getInterceptCallbackRequest().getCallbackMethod(),
           is(callbackMethod));
-      // Verify the intercepted method call has the expected parameter
+      // AFTER callbacks wrap ReturnValue, not InstanceMethodCall
+      // Verify the return value structure for void method
       assertThat(
-          "Intercepted method should have 1 parameter",
-          callback
-              .getInterceptCallbackRequest()
-              .getExec()
-              .getInstanceMethodCall()
-              .getParameters()
-              .length,
-          is(1));
+          "AFTER callback should have ReturnValue in exec",
+          callback.getInterceptCallbackRequest().getExec().getReturnValue(),
+          is(notNullValue()));
+      assertThat(
+          "multiplyBy returns void, so isVoid should be true",
+          callback.getInterceptCallbackRequest().getExec().getReturnValue().isVoid,
+          is(true));
+      assertThat(
+          "ReturnValue should have method info",
+          callback.getInterceptCallbackRequest().getExec().getReturnValue().getFrom().getMethod(),
+          is(notNullValue()));
     }
 
     logger.info("===== testMultipleAfterCallbacks: TEST COMPLETED SUCCESSFULLY =====");

@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.UUID;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.zeromq.SocketType;
 
@@ -44,6 +43,10 @@ import org.zeromq.SocketType;
  *
  * <p>Unlike synchronous callbacks which use REQ-REP pattern and wait for responses, async callbacks
  * use DEALER-ROUTER pattern for fire-and-forget delivery.
+ *
+ * <p><b>NOTE:</b>These tests verify intercepts at the hot-path (via quantization, which happens at
+ * the call-site), and so, we need to invoke via RPC a method/ctor that triggers the actual
+ * interception target.
  */
 public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
 
@@ -106,8 +109,8 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
   /**
    * Tests single BEFORE_ASYNC callback on static method.
    *
-   * <p>Registers a BEFORE_ASYNC intercept on multiplyStaticBy, calls it once, and verifies exactly
-   * 1 callback is received without blocking for a response.
+   * <p>Registers a BEFORE_ASYNC intercept on multiplyStaticBy, calls a wrapper than invokes it
+   * once, and verifies exactly 1 callback is received without blocking for a response.
    */
   @Test
   public void testSingleBeforeAsyncCallback() throws Exception {
@@ -317,11 +320,10 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
   /**
    * Tests single AFTER_ASYNC callback on static method.
    *
-   * <p>Registers an AFTER_ASYNC intercept on multiplyStaticBy, calls it once, and verifies exactly
-   * 1 callback is received after method execution without blocking.
+   * <p>Registers an AFTER_ASYNC intercept on multiplyStaticBy, calls a wrapper that invokes it
+   * once, and verifies exactly 1 callback is received after method execution without blocking.
    */
   @Test
-  @Ignore
   public void testSingleAfterAsyncCallback() throws Exception {
     logger.info("===== testSingleAfterAsyncCallback: TEST STARTED =====");
 
@@ -404,16 +406,24 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
         "Callback method should match",
         callback.getInterceptCallbackRequest().getCallbackMethod(),
         is(callbackMethod));
-    // AFTER callbacks receive the return value (Integer return value)
+    // AFTER callbacks wrap ReturnValue, not ClassMethodCall
+    // Verify the return value structure for non-void method (returns Integer)
     assertThat(
-        "AFTER callback should have 1 parameter (the return value)",
-        callback
-            .getInterceptCallbackRequest()
-            .getExec()
-            .getClassMethodCall()
-            .getParameters()
-            .length,
-        is(1));
+        "AFTER callback should have ReturnValue in exec",
+        callback.getInterceptCallbackRequest().getExec().getReturnValue(),
+        is(notNullValue()));
+    assertThat(
+        "multiplyStaticBy returns Integer, so isVoid should be false",
+        callback.getInterceptCallbackRequest().getExec().getReturnValue().isVoid,
+        is(false));
+    assertThat(
+        "ReturnValue should have the return object",
+        callback.getInterceptCallbackRequest().getExec().getReturnValue().getObject(),
+        is(notNullValue()));
+    assertThat(
+        "ReturnValue should have method info",
+        callback.getInterceptCallbackRequest().getExec().getReturnValue().getFrom().getMethod(),
+        is(notNullValue()));
 
     logger.info("===== testSingleAfterAsyncCallback: TEST COMPLETED SUCCESSFULLY =====");
   }
@@ -426,7 +436,6 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
    * without blocking.
    */
   @Test
-  @Ignore
   public void testMultipleAfterAsyncCallbacks() throws Exception {
     logger.info("===== testMultipleAfterAsyncCallbacks: TEST STARTED =====");
 
@@ -511,16 +520,24 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
           "Callback method should match",
           callback.getInterceptCallbackRequest().getCallbackMethod(),
           is(callbackMethod));
-      // AFTER callbacks receive the return value (Integer return value)
+      // AFTER callbacks wrap ReturnValue, not ClassMethodCall
+      // Verify the return value structure for non-void method (returns Integer)
       assertThat(
-          "AFTER callback should have 1 parameter (the return value)",
-          callback
-              .getInterceptCallbackRequest()
-              .getExec()
-              .getClassMethodCall()
-              .getParameters()
-              .length,
-          is(1));
+          "AFTER callback should have ReturnValue in exec",
+          callback.getInterceptCallbackRequest().getExec().getReturnValue(),
+          is(notNullValue()));
+      assertThat(
+          "incrementStaticCounter returns Integer, so isVoid should be false",
+          callback.getInterceptCallbackRequest().getExec().getReturnValue().isVoid,
+          is(false));
+      assertThat(
+          "ReturnValue should have the return object",
+          callback.getInterceptCallbackRequest().getExec().getReturnValue().getObject(),
+          is(notNullValue()));
+      assertThat(
+          "ReturnValue should have method info",
+          callback.getInterceptCallbackRequest().getExec().getReturnValue().getFrom().getMethod(),
+          is(notNullValue()));
     }
 
     logger.info("===== testMultipleAfterAsyncCallbacks: TEST COMPLETED SUCCESSFULLY =====");

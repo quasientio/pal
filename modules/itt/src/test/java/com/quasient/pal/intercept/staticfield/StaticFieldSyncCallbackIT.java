@@ -33,14 +33,18 @@ import org.junit.Test;
  * <p>These tests verify the end-to-end callback mechanism for synchronous intercepts on static
  * field operations (EXEC_GET_STATIC and EXEC_PUT_STATIC), including single callbacks for both
  * BEFORE and AFTER intercept types.
+ *
+ * <p><b>NOTE:</b>These tests verify intercepts at the hot-path (via quantization, which happens at
+ * the call-site), and so, we need to invoke via RPC a method/ctor that triggers the actual
+ * interception target.
  */
 public class StaticFieldSyncCallbackIT extends AbstractInterceptIT {
 
   /**
    * Tests single BEFORE callback on static field GET operation.
    *
-   * <p>Registers a BEFORE intercept on getStaticCounter (which triggers EXEC_GET_STATIC), calls it
-   * once, and verifies exactly 1 callback is received.
+   * <p>Registers a BEFORE intercept on staticCounter, calls a getter (which triggers
+   * EXEC_GET_STATIC) once, and verifies exactly 1 callback is received.
    */
   @Test
   public void testSingleBeforeCallbackOnGet() throws Exception {
@@ -122,7 +126,7 @@ public class StaticFieldSyncCallbackIT extends AbstractInterceptIT {
   /**
    * Tests single AFTER callback on static field GET operation.
    *
-   * <p>Registers an AFTER intercept on getStaticCounter, calls it once, and verifies exactly 1
+   * <p>Registers a AFTER intercept on staticCounter, calls a getter once, and verifies exactly 1
    * callback is received after the field get.
    */
   @Test
@@ -198,6 +202,14 @@ public class StaticFieldSyncCallbackIT extends AbstractInterceptIT {
         "Intercepted operation should have ReturnValue",
         callback.getInterceptCallbackRequest().getExec().getReturnValue(),
         is(notNullValue()));
+    assertThat(
+        "The return value should not be void",
+        callback.getInterceptCallbackRequest().getExec().getReturnValue().isVoid,
+        is(false));
+    assertThat(
+        "ReturnValue should have field info",
+        callback.getInterceptCallbackRequest().getExec().getReturnValue().getFrom().getField(),
+        is(notNullValue()));
 
     logger.info("===== testSingleAfterCallbackOnGet: TEST COMPLETED SUCCESSFULLY =====");
   }
@@ -205,8 +217,8 @@ public class StaticFieldSyncCallbackIT extends AbstractInterceptIT {
   /**
    * Tests single BEFORE callback on static field PUT operation.
    *
-   * <p>Registers a BEFORE intercept on setStaticCounter (which triggers EXEC_PUT_STATIC), calls it
-   * once, and verifies exactly 1 callback is received.
+   * <p>Registers a BEFORE intercept on staticCounter, invoke a setter for the field, and verifies
+   * exactly 1 callback is received.
    */
   @Test
   public void testSingleBeforeCallbackOnPut() throws Exception {
@@ -290,8 +302,8 @@ public class StaticFieldSyncCallbackIT extends AbstractInterceptIT {
   /**
    * Tests single AFTER callback on static field PUT operation.
    *
-   * <p>Registers an AFTER intercept on setStaticCounter, calls it once, and verifies exactly 2
-   * callbacks are received (PUT + PUT_DONE).
+   * <p>Registers an AFTER intercept on staticCounter, calls a setter, and verifies exactly 1
+   * callback is received after the field put.
    */
   @Test
   public void testSingleAfterCallbackOnPut() throws Exception {
@@ -323,7 +335,6 @@ public class StaticFieldSyncCallbackIT extends AbstractInterceptIT {
     logger.info("Intercept registration delay completed");
 
     // 2. Invoke setStaticCounter which triggers PUT_STATIC and callback
-    // Note: PUT operations generate 2 messages (PUT + PUT_DONE), so we expect 2 callbacks
     logger.info(
         "Invoking setStaticCounter({}) which should trigger 2 callbacks (PUT + PUT_DONE)",
         newValue);
@@ -365,12 +376,14 @@ public class StaticFieldSyncCallbackIT extends AbstractInterceptIT {
         "Callback method should match",
         callback.getInterceptCallbackRequest().getCallbackMethod(),
         is(callbackMethod));
-    // AFTER PUT callback wraps PUT_DONE if available, otherwise PUT
     assertThat(
-        "Callback should have StaticFieldPut or StaticFieldPutDone",
-        callback.getInterceptCallbackRequest().getExec().getStaticFieldPut() != null
-            || callback.getInterceptCallbackRequest().getExec().getStaticFieldPutDone() != null,
-        is(true));
+        "Callback should have StaticFieldPutDone",
+        callback.getInterceptCallbackRequest().getExec().getStaticFieldPutDone(),
+        is(notNullValue()));
+    assertThat(
+        "StaticFieldPutDone should have field info",
+        callback.getInterceptCallbackRequest().getExec().getStaticFieldPutDone().getField(),
+        is(notNullValue()));
 
     logger.info("===== testSingleAfterCallbackOnPut: TEST COMPLETED SUCCESSFULLY =====");
   }

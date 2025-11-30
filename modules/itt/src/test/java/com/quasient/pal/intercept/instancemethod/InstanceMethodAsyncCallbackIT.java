@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.UUID;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.zeromq.SocketType;
 
@@ -44,6 +43,10 @@ import org.zeromq.SocketType;
  *
  * <p>Unlike synchronous callbacks which use REQ-REP pattern and wait for responses, async callbacks
  * use DEALER-ROUTER pattern for fire-and-forget delivery.
+ *
+ * <p><b>NOTE:</b>These tests verify intercepts at the hot-path (via quantization, which happens at
+ * the call-site), and so, we need to invoke via RPC a method/ctor that triggers the actual
+ * interception target.
  */
 public class InstanceMethodAsyncCallbackIT extends AbstractInterceptIT {
 
@@ -328,7 +331,6 @@ public class InstanceMethodAsyncCallbackIT extends AbstractInterceptIT {
    * (n=1), and verifies exactly 1 callback is received after method execution without blocking.
    */
   @Test
-  @Ignore
   public void testSingleAfterAsyncCallback() throws Exception {
     logger.info("===== testSingleAfterAsyncCallback: TEST STARTED =====");
 
@@ -415,16 +417,20 @@ public class InstanceMethodAsyncCallbackIT extends AbstractInterceptIT {
           "Callback method should match",
           callback.getInterceptCallbackRequest().getCallbackMethod(),
           is(callbackMethod));
-      // AFTER callbacks receive return value (void method returns 0)
+      // AFTER callbacks wrap ReturnValue, not InstanceMethodCall
+      // Verify the return value structure for void method
       assertThat(
-          "AFTER callback should have 0 parameters (void method)",
-          callback
-              .getInterceptCallbackRequest()
-              .getExec()
-              .getInstanceMethodCall()
-              .getParameters()
-              .length,
-          is(0));
+          "AFTER callback should have ReturnValue in exec",
+          callback.getInterceptCallbackRequest().getExec().getReturnValue(),
+          is(notNullValue()));
+      assertThat(
+          "multiplyBy returns void, so isVoid should be true",
+          callback.getInterceptCallbackRequest().getExec().getReturnValue().isVoid,
+          is(true));
+      assertThat(
+          "ReturnValue should have method info",
+          callback.getInterceptCallbackRequest().getExec().getReturnValue().getFrom().getMethod(),
+          is(notNullValue()));
     }
 
     logger.info("===== testSingleAfterAsyncCallback: TEST COMPLETED SUCCESSFULLY =====");
@@ -438,7 +444,6 @@ public class InstanceMethodAsyncCallbackIT extends AbstractInterceptIT {
    * blocking.
    */
   @Test
-  @Ignore
   public void testMultipleAfterAsyncCallbacks() throws Exception {
     logger.info("===== testMultipleAfterAsyncCallbacks: TEST STARTED =====");
 
@@ -525,16 +530,20 @@ public class InstanceMethodAsyncCallbackIT extends AbstractInterceptIT {
           "Callback method should match",
           callback.getInterceptCallbackRequest().getCallbackMethod(),
           is(callbackMethod));
-      // AFTER callbacks receive return value (void method returns 0)
+      // AFTER callbacks wrap ReturnValue, not InstanceMethodCall
+      // Verify the return value structure for void method
       assertThat(
-          "AFTER callback should have 0 parameters (void method)",
-          callback
-              .getInterceptCallbackRequest()
-              .getExec()
-              .getInstanceMethodCall()
-              .getParameters()
-              .length,
-          is(0));
+          "AFTER callback should have ReturnValue in exec",
+          callback.getInterceptCallbackRequest().getExec().getReturnValue(),
+          is(notNullValue()));
+      assertThat(
+          "multiplyBy returns void, so isVoid should be true",
+          callback.getInterceptCallbackRequest().getExec().getReturnValue().isVoid,
+          is(true));
+      assertThat(
+          "ReturnValue should have method info",
+          callback.getInterceptCallbackRequest().getExec().getReturnValue().getFrom().getMethod(),
+          is(notNullValue()));
     }
 
     logger.info("===== testMultipleAfterAsyncCallbacks: TEST COMPLETED SUCCESSFULLY =====");

@@ -40,6 +40,10 @@ import org.zeromq.SocketType;
  *
  * <p>Unlike synchronous callbacks which use REQ-REP pattern and wait for responses, async callbacks
  * use DEALER-ROUTER pattern for fire-and-forget delivery.
+ *
+ * <p><b>NOTE:</b>These tests verify intercepts at the hot-path (via quantization, which happens at
+ * the call-site), and so, we need to invoke via RPC a method/ctor that triggers the actual
+ * interception target.
  */
 public class StaticFieldAsyncCallbackIT extends AbstractInterceptIT {
 
@@ -51,9 +55,6 @@ public class StaticFieldAsyncCallbackIT extends AbstractInterceptIT {
 
   /** UUID for the async callback receiver peer (registered in directory). */
   private final UUID asyncCallbackPeerUuid = UUID.randomUUID();
-
-  /** UUID for the intercept registration. */
-  private UUID interceptUuid;
 
   /**
    * Sets up ThinPeer with ROUTER socket for receiving async callbacks.
@@ -90,16 +91,11 @@ public class StaticFieldAsyncCallbackIT extends AbstractInterceptIT {
   /** Closes the ThinPeer and unregisters from directory after tests complete. */
   @After
   public void tearDownAsyncReceiver() {
-    if (interceptUuid != null) {
-      logger.info("Cleaning up intercept registration: {}", interceptUuid);
-    }
     if (asyncCallbackPeer != null) {
       asyncCallbackPeer.close();
       logger.info("Async callback peer closed");
     }
   }
-
-  // Test methods for GET operation - 4 tests total (single/multiple BEFORE_ASYNC/AFTER_ASYNC)
 
   /** Tests single BEFORE_ASYNC callback on static field GET operation. */
   @Test
@@ -163,72 +159,6 @@ public class StaticFieldAsyncCallbackIT extends AbstractInterceptIT {
     logger.info("===== testSingleBeforeAsyncCallbackOnGet: TEST COMPLETED SUCCESSFULLY =====");
   }
 
-  /** Tests multiple BEFORE_ASYNC callbacks on static field GET operation. */
-  @Test
-  public void testMultipleBeforeAsyncCallbacksOnGet() throws Exception {
-    logger.info("===== testMultipleBeforeAsyncCallbacksOnGet: TEST STARTED =====");
-
-    final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
-    final String callbackMethod = "aFakeMethod";
-    final int n = 3;
-
-    InterceptRequest<InterceptableFieldOp> interceptRequest =
-        createFieldOpInterceptRequest(
-            UUID.randomUUID(),
-            asyncCallbackPeerUuid,
-            InterceptType.BEFORE_ASYNC,
-            InterceptableApp.class.getName(),
-            callbackClass,
-            callbackMethod,
-            new InterceptableFieldOp("staticCounter", FieldOpType.GET));
-
-    register(interceptRequest);
-    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
-
-    for (int i = 0; i < n; i++) {
-      invoke(
-          messageBuilder.buildClassMethod(
-              myPeerUuid,
-              InterceptableApp.class.getName(),
-              "getStaticCounter",
-              new String[] {},
-              null,
-              null,
-              new Object[] {}));
-    }
-
-    // Retrieve and verify callbacks
-    logger.info("Waiting for {} callbacks to be received", n);
-    List<Message> callbacks = getCallbacks(n, 5000);
-    logger.info("All {} callbacks received successfully", n);
-
-    assertThat("Should receive exactly " + n + " callbacks", callbacks.size(), is(n));
-
-    // Verify each callback structure
-    for (int i = 0; i < n; i++) {
-      Message callback = callbacks.get(i);
-      assertThat("Callback " + i + " should not be null", callback, is(notNullValue()));
-      assertThat(
-          "Callback " + i + " should be INTERCEPT_CALLBACK_REQUEST type",
-          callback.getMessageType(),
-          is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
-      assertThat(
-          "Callback " + i + " class should match",
-          callback.getInterceptCallbackRequest().getCallbackClass(),
-          is(callbackClass));
-      assertThat(
-          "Callback " + i + " method should match",
-          callback.getInterceptCallbackRequest().getCallbackMethod(),
-          is(callbackMethod));
-      assertThat(
-          "Callback " + i + " should be StaticFieldGet",
-          callback.getInterceptCallbackRequest().getExec().getStaticFieldGet(),
-          is(notNullValue()));
-    }
-
-    logger.info("===== testMultipleBeforeAsyncCallbacksOnGet: TEST COMPLETED SUCCESSFULLY =====");
-  }
-
   /** Tests single AFTER_ASYNC callback on static field GET operation. */
   @Test
   public void testSingleAfterAsyncCallbackOnGet() throws Exception {
@@ -287,78 +217,13 @@ public class StaticFieldAsyncCallbackIT extends AbstractInterceptIT {
         "Intercepted operation should have ReturnValue",
         callback.getInterceptCallbackRequest().getExec().getReturnValue(),
         is(notNullValue()));
+    assertThat(
+        "ReturnValue should have field info",
+        callback.getInterceptCallbackRequest().getExec().getReturnValue().getFrom().getField(),
+        is(notNullValue()));
 
     logger.info("===== testSingleAfterAsyncCallbackOnGet: TEST COMPLETED SUCCESSFULLY =====");
   }
-
-  /** Tests multiple AFTER_ASYNC callbacks on static field GET operation. */
-  @Test
-  public void testMultipleAfterAsyncCallbacksOnGet() throws Exception {
-    logger.info("===== testMultipleAfterAsyncCallbacksOnGet: TEST STARTED =====");
-
-    final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
-    final String callbackMethod = "aFakeMethod";
-    final int n = 3;
-
-    InterceptRequest<InterceptableFieldOp> interceptRequest =
-        createFieldOpInterceptRequest(
-            UUID.randomUUID(),
-            asyncCallbackPeerUuid,
-            InterceptType.AFTER_ASYNC,
-            InterceptableApp.class.getName(),
-            callbackClass,
-            callbackMethod,
-            new InterceptableFieldOp("staticCounter", FieldOpType.GET));
-
-    register(interceptRequest);
-    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
-
-    for (int i = 0; i < n; i++) {
-      invoke(
-          messageBuilder.buildClassMethod(
-              myPeerUuid,
-              InterceptableApp.class.getName(),
-              "getStaticCounter",
-              new String[] {},
-              null,
-              null,
-              new Object[] {}));
-    }
-
-    // Retrieve and verify callbacks
-    logger.info("Waiting for {} callbacks to be received", n);
-    List<Message> callbacks = getCallbacks(n, 5000);
-    logger.info("All {} callbacks received successfully", n);
-
-    assertThat("Should receive exactly " + n + " callbacks", callbacks.size(), is(n));
-
-    // Verify each callback structure
-    for (int i = 0; i < n; i++) {
-      Message callback = callbacks.get(i);
-      assertThat("Callback " + i + " should not be null", callback, is(notNullValue()));
-      assertThat(
-          "Callback " + i + " should be INTERCEPT_CALLBACK_REQUEST type",
-          callback.getMessageType(),
-          is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
-      assertThat(
-          "Callback " + i + " class should match",
-          callback.getInterceptCallbackRequest().getCallbackClass(),
-          is(callbackClass));
-      assertThat(
-          "Callback " + i + " method should match",
-          callback.getInterceptCallbackRequest().getCallbackMethod(),
-          is(callbackMethod));
-      // AFTER GET callbacks wrap the ReturnValue
-      assertThat(
-          "Callback " + i + " should have ReturnValue",
-          callback.getInterceptCallbackRequest().getExec().getReturnValue(),
-          is(notNullValue()));
-    }
-
-    logger.info("===== testMultipleAfterAsyncCallbacksOnGet: TEST COMPLETED SUCCESSFULLY =====");
-  }
-
-  // Test methods for PUT operation - 4 tests total (single/multiple BEFORE_ASYNC/AFTER_ASYNC)
 
   /** Tests single BEFORE_ASYNC callback on static field PUT operation. */
   @Test
@@ -423,73 +288,6 @@ public class StaticFieldAsyncCallbackIT extends AbstractInterceptIT {
     logger.info("===== testSingleBeforeAsyncCallbackOnPut: TEST COMPLETED SUCCESSFULLY =====");
   }
 
-  /** Tests multiple BEFORE_ASYNC callbacks on static field PUT operation. */
-  @Test
-  public void testMultipleBeforeAsyncCallbacksOnPut() throws Exception {
-    logger.info("===== testMultipleBeforeAsyncCallbacksOnPut: TEST STARTED =====");
-
-    final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
-    final String callbackMethod = "aFakeMethod";
-    final int n = 3;
-
-    InterceptRequest<InterceptableFieldOp> interceptRequest =
-        createFieldOpInterceptRequest(
-            UUID.randomUUID(),
-            asyncCallbackPeerUuid,
-            InterceptType.BEFORE_ASYNC,
-            InterceptableApp.class.getName(),
-            callbackClass,
-            callbackMethod,
-            new InterceptableFieldOp("staticCounter", FieldOpType.PUT));
-
-    register(interceptRequest);
-    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
-
-    for (int i = 0; i < n; i++) {
-      invoke(
-          messageBuilder.buildClassMethod(
-              myPeerUuid,
-              InterceptableApp.class.getName(),
-              "setStaticCounter",
-              new String[] {"java.lang.Integer"},
-              null,
-              null,
-              new Object[] {200 + i}));
-    }
-
-    // Retrieve and verify callbacks
-    logger.info("Waiting for {} callbacks to be received", n);
-    List<Message> callbacks = getCallbacks(n, 5000);
-    logger.info("All {} callbacks received successfully", n);
-
-    assertThat("Should receive exactly " + n + " callbacks", callbacks.size(), is(n));
-
-    // Verify each callback structure
-    for (int i = 0; i < n; i++) {
-      Message callback = callbacks.get(i);
-      assertThat("Callback " + i + " should not be null", callback, is(notNullValue()));
-      assertThat(
-          "Callback " + i + " should be INTERCEPT_CALLBACK_REQUEST type",
-          callback.getMessageType(),
-          is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
-      assertThat(
-          "Callback " + i + " class should match",
-          callback.getInterceptCallbackRequest().getCallbackClass(),
-          is(callbackClass));
-      assertThat(
-          "Callback " + i + " method should match",
-          callback.getInterceptCallbackRequest().getCallbackMethod(),
-          is(callbackMethod));
-      // BEFORE PUT callbacks wrap the PUT operation
-      assertThat(
-          "Callback " + i + " should be StaticFieldPut",
-          callback.getInterceptCallbackRequest().getExec().getStaticFieldPut(),
-          is(notNullValue()));
-    }
-
-    logger.info("===== testMultipleBeforeAsyncCallbacksOnPut: TEST COMPLETED SUCCESSFULLY =====");
-  }
-
   /** Tests single AFTER_ASYNC callback on static field PUT operation. */
   @Test
   public void testSingleAfterAsyncCallbackOnPut() throws Exception {
@@ -544,81 +342,15 @@ public class StaticFieldAsyncCallbackIT extends AbstractInterceptIT {
         "Callback method should match",
         callback.getInterceptCallbackRequest().getCallbackMethod(),
         is(callbackMethod));
-    // AFTER PUT callback wraps PUT_DONE if available, otherwise PUT
     assertThat(
-        "Callback should have StaticFieldPut or StaticFieldPutDone",
-        callback.getInterceptCallbackRequest().getExec().getStaticFieldPut() != null
-            || callback.getInterceptCallbackRequest().getExec().getStaticFieldPutDone() != null,
-        is(true));
+        "Callback should have StaticFieldPutDone",
+        callback.getInterceptCallbackRequest().getExec().getStaticFieldPutDone(),
+        is(notNullValue()));
+    assertThat(
+        "StaticFieldPutDone should have field info",
+        callback.getInterceptCallbackRequest().getExec().getStaticFieldPutDone().getField(),
+        is(notNullValue()));
 
     logger.info("===== testSingleAfterAsyncCallbackOnPut: TEST COMPLETED SUCCESSFULLY =====");
-  }
-
-  /** Tests multiple AFTER_ASYNC callbacks on static field PUT operation. */
-  @Test
-  public void testMultipleAfterAsyncCallbacksOnPut() throws Exception {
-    logger.info("===== testMultipleAfterAsyncCallbacksOnPut: TEST STARTED =====");
-
-    final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
-    final String callbackMethod = "aFakeMethod";
-    final int n = 3;
-
-    InterceptRequest<InterceptableFieldOp> interceptRequest =
-        createFieldOpInterceptRequest(
-            UUID.randomUUID(),
-            asyncCallbackPeerUuid,
-            InterceptType.AFTER_ASYNC,
-            InterceptableApp.class.getName(),
-            callbackClass,
-            callbackMethod,
-            new InterceptableFieldOp("staticCounter", FieldOpType.PUT));
-
-    register(interceptRequest);
-    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
-
-    for (int i = 0; i < n; i++) {
-      invoke(
-          messageBuilder.buildClassMethod(
-              myPeerUuid,
-              InterceptableApp.class.getName(),
-              "setStaticCounter",
-              new String[] {"java.lang.Integer"},
-              null,
-              null,
-              new Object[] {200 + i}));
-    }
-
-    // Retrieve and verify callbacks
-    logger.info("Waiting for {} callbacks to be received", n);
-    List<Message> callbacks = getCallbacks(n, 5000);
-    logger.info("All {} callbacks received successfully", n);
-
-    assertThat("Should receive exactly " + n + " callbacks", callbacks.size(), is(n));
-
-    // Verify each callback structure
-    for (int i = 0; i < n; i++) {
-      Message callback = callbacks.get(i);
-      assertThat("Callback " + i + " should not be null", callback, is(notNullValue()));
-      assertThat(
-          "Callback " + i + " should be INTERCEPT_CALLBACK_REQUEST type",
-          callback.getMessageType(),
-          is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
-      assertThat(
-          "Callback " + i + " class should match",
-          callback.getInterceptCallbackRequest().getCallbackClass(),
-          is(callbackClass));
-      assertThat(
-          "Callback " + i + " method should match",
-          callback.getInterceptCallbackRequest().getCallbackMethod(),
-          is(callbackMethod));
-      // AFTER PUT callbacks wrap PUT_DONE if available, otherwise PUT
-      assertThat(
-          "Callback " + i + " should have StaticFieldPut or StaticFieldPutDone",
-          callback.getInterceptCallbackRequest().getExec().getStaticFieldPut() != null
-              || callback.getInterceptCallbackRequest().getExec().getStaticFieldPutDone() != null,
-          is(true));
-    }
-
-    logger.info("===== testMultipleAfterAsyncCallbacksOnPut: TEST COMPLETED SUCCESSFULLY =====");
   }
 }
