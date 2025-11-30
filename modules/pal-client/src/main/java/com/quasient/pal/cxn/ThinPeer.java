@@ -22,6 +22,7 @@ import com.quasient.pal.messages.LogMessage;
 import com.quasient.pal.messages.OutboundMsg;
 import com.quasient.pal.messages.colfer.ControlMessage;
 import com.quasient.pal.messages.colfer.ExecMessage;
+import com.quasient.pal.messages.colfer.InterceptCallbackResponse;
 import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.messages.colfer.MetaMessage;
 import com.quasient.pal.messages.jsonrpc.JsonRpcMessage;
@@ -2184,11 +2185,26 @@ public class ThinPeer {
   // <editor-fold desc="Incoming message handling">
 
   /**
-   * Starts the listener thread to receive incoming messages on the inbound RPC socket.
+   * Starts the listener thread to receive incoming messages on the inbound ZMQ-RPC socket.
    *
-   * <p>This method is called during initialization if an inbound RPC socket is configured. The
+   * <p>This method is called during initialization if an inbound ZMQ-RPC socket is configured. The
    * listener thread runs in the background, continuously receiving messages and accumulating them
    * in the received messages list while also notifying registered listeners.
+   *
+   * <p><strong>Response handling for REP sockets:</strong>
+   *
+   * <ul>
+   *   <li>For {@code INTERCEPT_CALLBACK_REQUEST} messages: sends a proper {@link
+   *       InterceptCallbackResponse} with {@code shouldProceed = true}, allowing the intercepted
+   *       peer's dispatch to continue normally. Tests can then verify callbacks were received via
+   *       {@link #pullReceivedMessages()}.
+   *   <li>For all other message types: sends an empty acknowledgment.
+   * </ul>
+   *
+   * <p><strong>Note:</strong> This design is suitable for test scenarios where the goal is to
+   * accumulate and verify callback messages, not to respond to them synchronously/meaningfully. For
+   * production callback handlers that need to modify arguments, override return values, or throw
+   * exceptions, a full peer with actual callback handling logic would be required.
    */
   private void startListenerThread() {
     listenerRunning = true;
@@ -2198,8 +2214,8 @@ public class ThinPeer {
               logger.info("Listener thread started for inbound {} socket", inboundSocketType);
               while (listenerRunning && !Thread.currentThread().isInterrupted()) {
                 try {
-                  byte[] identity = null;
-                  byte[] empty = null;
+                  byte[] identity;
+                  byte[] empty;
                   byte[] data;
 
                   // Handle different socket types
@@ -2251,10 +2267,22 @@ public class ThinPeer {
                     }
                   }
 
-                  // send acknowledgment back to sender (REP socket requires response, ROUTER does
-                  // not)
+                  // send response back to sender (REP socket requires response, ROUTER does not)
                   if (inboundSocketType == SocketType.REP) {
-                    inboundSocket.send(new byte[0], 0);
+                    if (message.getMessageType()
+                        == MessageType.INTERCEPT_CALLBACK_REQUEST.getId()) {
+                      // For intercept callbacks, send a proper "proceed" response so the
+                      // intercepted peer's dispatch() can continue. Tests can verify the
+                      // callback was received via getCallbacks()/pullReceivedMessages().
+                      InterceptCallbackResponse response = new InterceptCallbackResponse();
+                      response.setCallbackId(message.getInterceptCallbackRequest().getCallbackId());
+                      response.setPhase(message.getInterceptCallbackRequest().getPhase());
+                      response.setShouldProceed(true);
+                      inboundSocket.send(ColferUtils.toBytes(msgBuilder.wrap(response)), 0);
+                    } else {
+                      // For other message types, send empty acknowledgment
+                      inboundSocket.send(new byte[0], 0);
+                    }
                   }
                 } catch (Exception e) {
                   if (listenerRunning) {

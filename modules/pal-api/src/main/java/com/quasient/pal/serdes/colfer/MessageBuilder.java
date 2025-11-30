@@ -80,6 +80,7 @@ import com.quasient.pal.messages.types.MessageType;
 import com.quasient.pal.messages.types.MetaServiceType;
 import com.quasient.pal.messages.types.MetaStatusType;
 import com.quasient.pal.serdes.ConversionUtils;
+import com.quasient.pal.serdes.NonWrappableObjectException;
 import com.quasient.pal.serdes.colfer.scratches.TlMsgScratch;
 import com.quasient.pal.serdes.colfer.scratches.TlScratchHolder;
 import com.quasient.pal.serdes.jsonrpc.InvalidJsonRpcParamsException;
@@ -1781,9 +1782,18 @@ public final class MessageBuilder {
    *   <li>Phase-specific data (arguments for BEFORE, return value/exception for AFTER)
    * </ul>
    *
+   * <p><b>IMPORTANT - ExecMessage Cloning:</b> The {@code execMessage} parameter is cloned before
+   * being stored in the request. This is critical because {@link ExecMessage} objects may be
+   * obtained from {@link com.quasient.pal.serdes.colfer.scratches.TlScratchHolder#exec()
+   * TlScratchHolder.exec()}, which returns thread-local reusable objects. During return value
+   * serialization (e.g., calling {@link #serializeObjectForCallback(Object)}), field accesses on
+   * the return value object can trigger nested dispatch operations that reuse and mutate the same
+   * {@code ExecMessage} instance. By cloning first, we preserve the original execution context for
+   * the callback.
+   *
    * @param peerUuid the UUID of the peer being intercepted
    * @param interceptMessage the intercept message containing callback routing info
-   * @param execMessage the execution message with operation metadata
+   * @param execMessage the execution message with operation metadata (will be cloned)
    * @param phase the callback phase (BEFORE or AFTER)
    * @param returnValue the return value (AFTER phase only, may be null)
    * @param isVoid whether the method is void
@@ -1816,8 +1826,12 @@ public final class MessageBuilder {
     request.setCallbackClass(interceptMessage.getCallbackClass());
     request.setCallbackMethod(interceptMessage.getCallbackMethod());
 
-    // Set execution message
-    request.setExec(execMessage);
+    // CRITICAL: Clone the execMessage BEFORE any operations that might trigger nested dispatches.
+    // The execMessage may be a thread-local reusable object from TlScratchHolder.exec().
+    // Serializing the return value (below) can access object fields, triggering field-get
+    // dispatches that reuse and mutate the same ExecMessage instance. Cloning preserves
+    // the original execution context.
+    request.setExec(cloneExecMessage(execMessage));
 
     // Set phase-specific fields
     if (phase == com.quasient.pal.common.lang.intercept.InterceptPhase.AFTER) {
@@ -1831,6 +1845,23 @@ public final class MessageBuilder {
     }
 
     return request;
+  }
+
+  /**
+   * Creates a deep copy of an {@link ExecMessage} by marshaling and unmarshaling.
+   *
+   * <p>This method is used to preserve the state of an ExecMessage before operations that might
+   * trigger nested dispatches which could reuse and mutate thread-local ExecMessage instances.
+   *
+   * @param original the ExecMessage to clone
+   * @return a new ExecMessage instance with the same data
+   */
+  private ExecMessage cloneExecMessage(ExecMessage original) {
+    byte[] buf = new byte[original.marshalFit()];
+    int len = original.marshal(buf, 0);
+    ExecMessage clone = new ExecMessage();
+    clone.unmarshal(buf, 0, len);
+    return clone;
   }
 
   /**
@@ -2863,7 +2894,19 @@ public final class MessageBuilder {
       return obj;
     }
     String className = value.getClass().getName();
-    return Wrapper.wrapInto(obj, value, className, null, WrapPolicy.FORCE_BY_VALUE);
+    try {
+      return Wrapper.wrapInto(obj, value, className, null, WrapPolicy.FORCE_BY_VALUE);
+    } catch (NonWrappableObjectException e) {
+      // For non-serializable objects (e.g., newly constructed objects in AFTER callbacks),
+      // we still send the callback but mark the value as "not available" by setting
+      // only the class name. The callback can still be useful for monitoring/logging.
+      logger.warn(
+          "Cannot serialize value of type {} for callback, sending without value: {}",
+          className,
+          e.getMessage());
+      obj.setClazz(getWrappedClass(className));
+      return obj;
+    }
   }
 
   /**

@@ -142,12 +142,7 @@ public final class Wrapper {
         switch (wrapPolicy) {
           case PREFER_REFERENCE -> // wrap value only if we don't have ref
               objectRef == null && isWrappable(object);
-          case FORCE_BY_VALUE -> { // always wrap value if possible
-            if (!isWrappable(object)) {
-              throw new NonWrappableObjectException("Object cannot be serialized");
-            }
-            yield true;
-          }
+          case FORCE_BY_VALUE -> true; // Always try - JsonUtil.toJson will fail if not serializable
           case DETECT -> objectRef == null || isWrappable(object);
         };
 
@@ -166,7 +161,13 @@ public final class Wrapper {
         wrappedObject.setValue(json);
       } catch (Exception e) {
         if (objectRef == null) {
-          throw new RuntimeException("ObjectRef is null but object could not be serialized", e);
+          throw new NonWrappableObjectException(
+              "Object of type '"
+                  + object.getClass().getName()
+                  + "' cannot be JSON-serialized. "
+                  + "Values must be serializable (simple types, collections, maps, or POJOs "
+                  + "with JSON-serializable fields).",
+              e);
         }
       }
     }

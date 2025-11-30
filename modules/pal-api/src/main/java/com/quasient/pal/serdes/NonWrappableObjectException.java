@@ -39,6 +39,17 @@ public class NonWrappableObjectException extends IllegalArgumentException {
   }
 
   /**
+   * Constructs a new NonWrappableObjectException with the specified detail message and cause.
+   *
+   * @param message the detail message explaining the reason for the exception
+   * @param cause the underlying cause of the serialization failure
+   */
+  public NonWrappableObjectException(String message, Throwable cause) {
+    super(message, cause);
+    this.nonWrappableObject = null;
+  }
+
+  /**
    * Returns the object that could not be wrapped.
    *
    * @return the non-wrappable object
