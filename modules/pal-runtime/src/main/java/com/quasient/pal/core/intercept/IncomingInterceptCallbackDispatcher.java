@@ -212,6 +212,9 @@ public class IncomingInterceptCallbackDispatcher {
   /**
    * Extracts arguments from the ExecMessage.
    *
+   * <p>For method and constructor calls, arguments are extracted from the parameters array. For
+   * field PUT operations, the value being set is treated as a single argument at index 0.
+   *
    * @param request the callback request
    * @return the deserialized arguments array
    */
@@ -222,7 +225,22 @@ public class IncomingInterceptCallbackDispatcher {
       return new Object[0];
     }
 
-    // Extract parameters based on message type
+    // Handle field PUT operations - value being set is the single argument
+    if (exec.getInstanceFieldPut() != null) {
+      Obj valueObj = exec.getInstanceFieldPut().getValueObject();
+      return extractFieldPutArgument(valueObj);
+    }
+    if (exec.getStaticFieldPut() != null) {
+      Obj valueObj = exec.getStaticFieldPut().getValueObject();
+      return extractFieldPutArgument(valueObj);
+    }
+
+    // Handle field GET operations - no arguments
+    if (exec.getInstanceFieldGet() != null || exec.getStaticFieldGet() != null) {
+      return new Object[0];
+    }
+
+    // Extract parameters for method/constructor calls
     Parameter[] parameters = null;
 
     if (exec.getConstructorCall() != null) {
@@ -254,6 +272,27 @@ public class IncomingInterceptCallbackDispatcher {
     }
 
     return args;
+  }
+
+  /**
+   * Extracts the field PUT value as a single-element argument array.
+   *
+   * @param valueObj the serialized value object (may be null)
+   * @return a single-element array containing the deserialized value
+   */
+  private Object[] extractFieldPutArgument(Obj valueObj) {
+    if (valueObj == null) {
+      return new Object[] {null};
+    }
+    try {
+      if (valueObj.getIsNull()) {
+        return new Object[] {null};
+      }
+      return new Object[] {Unwrapper.unwrapObject(valueObj)};
+    } catch (Exception e) {
+      logger.warn("Failed to deserialize field PUT value: {}", e.getMessage());
+      return new Object[] {null};
+    }
   }
 
   /**

@@ -111,6 +111,15 @@ public final class ExceptionSerdes {
   /**
    * Deserializes a Colfer Throwable to a Java Throwable.
    *
+   * <p>This method attempts to reconstruct the original exception type using reflection. It tries
+   * multiple constructor signatures in order of preference:
+   *
+   * <ol>
+   *   <li>{@code (String message, Throwable cause)} - preferred for full exception chain support
+   *   <li>{@code (String message)} - with {@code initCause()} called if cause exists
+   *   <li>Falls back to {@link RuntimeException} if the original type cannot be instantiated
+   * </ol>
+   *
    * @param colferThrowable the Colfer throwable
    * @return the Java throwable
    */
@@ -129,37 +138,7 @@ public final class ExceptionSerdes {
     Throwable cause = (colferCause != null) ? deserializeThrowable(colferCause) : null;
 
     // Try to reconstruct the original exception type
-    Throwable exception;
-    try {
-      Class<?> exceptionClass = Class.forName(type);
-      if (Throwable.class.isAssignableFrom(exceptionClass)) {
-        // Try constructor with (String, Throwable)
-        try {
-          exception =
-              (Throwable)
-                  exceptionClass
-                      .getConstructor(String.class, Throwable.class)
-                      .newInstance(message, cause);
-        } catch (NoSuchMethodException e) {
-          // Try constructor with (String)
-          try {
-            exception =
-                (Throwable) exceptionClass.getConstructor(String.class).newInstance(message);
-            if (cause != null) {
-              exception.initCause(cause);
-            }
-          } catch (NoSuchMethodException e2) {
-            // Fallback to RuntimeException
-            exception = new RuntimeException(type + ": " + message, cause);
-          }
-        }
-      } else {
-        exception = new RuntimeException(type + ": " + message, cause);
-      }
-    } catch (Exception e) {
-      // If we can't instantiate the original exception, create a RuntimeException
-      exception = new RuntimeException(type + ": " + message, cause);
-    }
+    Throwable exception = tryInstantiateException(type, message, cause);
 
     // Reconstruct stack trace if available
     String[] stackTraceElements = colferThrowable.getStackTraceElements();
@@ -181,5 +160,90 @@ public final class ExceptionSerdes {
     }
 
     return exception;
+  }
+
+  /**
+   * Attempts to instantiate an exception of the given type with the specified message and cause.
+   *
+   * @param type the fully qualified class name of the exception
+   * @param message the exception message
+   * @param cause the exception cause (may be null)
+   * @return the instantiated exception, or a RuntimeException if instantiation fails
+   */
+  private static Throwable tryInstantiateException(String type, String message, Throwable cause) {
+    if (type == null || type.isEmpty()) {
+      return new RuntimeException(message, cause);
+    }
+
+    try {
+      // Use context classloader for better compatibility
+      Class<?> exceptionClass =
+          Class.forName(type, true, Thread.currentThread().getContextClassLoader());
+
+      if (!Throwable.class.isAssignableFrom(exceptionClass)) {
+        return new RuntimeException(type + ": " + message, cause);
+      }
+
+      // Try constructor with (String, Throwable)
+      Throwable result = tryConstructor(exceptionClass, message, cause);
+      if (result != null) {
+        return result;
+      }
+
+      // Try constructor with (String) + initCause
+      result = tryStringConstructor(exceptionClass, message, cause);
+      if (result != null) {
+        return result;
+      }
+
+      // Fallback to RuntimeException
+      return new RuntimeException(type + ": " + message, cause);
+
+    } catch (ClassNotFoundException e) {
+      // Class not available, fallback to RuntimeException
+      return new RuntimeException(type + ": " + message, cause);
+    }
+  }
+
+  /**
+   * Tries to instantiate an exception using the (String, Throwable) constructor.
+   *
+   * @param exceptionClass the exception class
+   * @param message the exception message
+   * @param cause the exception cause
+   * @return the instantiated exception, or null if this constructor doesn't work
+   */
+  private static Throwable tryConstructor(
+      Class<?> exceptionClass, String message, Throwable cause) {
+    try {
+      return (Throwable)
+          exceptionClass.getConstructor(String.class, Throwable.class).newInstance(message, cause);
+    } catch (ReflectiveOperationException e) {
+      // Constructor not available or instantiation failed
+      return null;
+    }
+  }
+
+  /**
+   * Tries to instantiate an exception using the (String) constructor and initCause.
+   *
+   * @param exceptionClass the exception class
+   * @param message the exception message
+   * @param cause the exception cause (may be null)
+   * @return the instantiated exception, or null if this constructor doesn't work
+   */
+  private static Throwable tryStringConstructor(
+      Class<?> exceptionClass, String message, Throwable cause) {
+    try {
+      Throwable exception =
+          (Throwable) exceptionClass.getConstructor(String.class).newInstance(message);
+      if (cause != null) {
+        exception.initCause(cause);
+      }
+      return exception;
+    } catch (ReflectiveOperationException e) {
+      // Constructor not available or instantiation failed
+      return null;
+    }
   }
 }

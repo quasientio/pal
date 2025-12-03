@@ -110,7 +110,7 @@ public final class DispatchForwarder {
     try {
       return dispatcher.getStatic(pjp, proceed);
     } catch (Throwable e) {
-      throw new RuntimeException(e);
+      throw rethrowPreservingType(e);
     }
   }
 
@@ -125,7 +125,7 @@ public final class DispatchForwarder {
     try {
       return dispatcher.getObject(pjp, proceed);
     } catch (Throwable e) {
-      throw new RuntimeException(e);
+      throw rethrowPreservingType(e);
     }
   }
 
@@ -139,7 +139,7 @@ public final class DispatchForwarder {
     try {
       dispatcher.putStatic(pjp, proceed);
     } catch (Throwable e) {
-      throw new RuntimeException(e);
+      throw rethrowPreservingType(e);
     }
   }
 
@@ -153,7 +153,28 @@ public final class DispatchForwarder {
     try {
       dispatcher.putField(pjp, proceed);
     } catch (Throwable e) {
-      throw new RuntimeException(e);
+      throw rethrowPreservingType(e);
     }
+  }
+
+  /**
+   * Rethrows an exception while preserving its original type.
+   *
+   * <p>For RuntimeException and Error, the original exception is rethrown directly. For checked
+   * exceptions, they are wrapped in RuntimeException. This preserves exception types for intercept
+   * callbacks that throw unchecked exceptions.
+   *
+   * @param e the exception to rethrow
+   * @return never returns normally (always throws)
+   */
+  private static RuntimeException rethrowPreservingType(Throwable e) {
+    if (e instanceof RuntimeException) {
+      throw (RuntimeException) e;
+    }
+    if (e instanceof Error) {
+      throw (Error) e;
+    }
+    // Checked exception - wrap in RuntimeException but preserve as cause
+    throw new RuntimeException(e);
   }
 }
