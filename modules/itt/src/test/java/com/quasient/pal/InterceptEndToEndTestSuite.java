@@ -12,8 +12,12 @@ package com.quasient.pal;
 import com.quasient.pal.common.directory.nodes.LogInfo;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
-import com.quasient.pal.intercept.AfterInterceptCallbackIT;
-import com.quasient.pal.intercept.BeforeInterceptCallbackIT;
+import com.quasient.pal.intercept.endtoend.AfterConstructorCallbackIT;
+import com.quasient.pal.intercept.endtoend.AfterFieldCallbackIT;
+import com.quasient.pal.intercept.endtoend.AfterInterceptCallbackIT;
+import com.quasient.pal.intercept.endtoend.BeforeConstructorCallbackIT;
+import com.quasient.pal.intercept.endtoend.BeforeFieldCallbackIT;
+import com.quasient.pal.intercept.endtoend.BeforeInterceptCallbackIT;
 import java.util.UUID;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -40,9 +44,9 @@ import org.slf4j.LoggerFactory;
  *   <li>Test verifies the side effects (mutated args, overridden return, thrown exception)
  * </ol>
  *
- * <p><b>Key Difference from CallbackMechanismTestSuite:</b> This suite tests that handlers <b>run
- * and produce effects</b>. For testing that callbacks are <b>correctly dispatched and
- * structured</b> (without executing handlers), see {@link CallbackMechanismTestSuite}.
+ * <p><b>Key Difference from InterceptFlowTestSuite:</b> This suite tests that handlers <b>run and
+ * produce effects</b>. For testing that callbacks are <b>correctly dispatched and structured</b>
+ * (without executing handlers), see {@link InterceptFlowTestSuite}.
  *
  * <p><b>Architecture:</b> This suite launches two peers:
  *
@@ -71,13 +75,19 @@ import org.slf4j.LoggerFactory;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-  // Callback handler tests
+  // Method callback handler tests
   BeforeInterceptCallbackIT.class,
-  AfterInterceptCallbackIT.class
+  AfterInterceptCallbackIT.class,
+  // Constructor callback handler tests
+  BeforeConstructorCallbackIT.class,
+  AfterConstructorCallbackIT.class,
+  // Field callback handler tests
+  BeforeFieldCallbackIT.class,
+  AfterFieldCallbackIT.class
 })
-public class InterceptTestSuite extends AbstractIntegrationTest {
+public class InterceptEndToEndTestSuite extends AbstractIntegrationTest {
 
-  private static final Logger logger = LoggerFactory.getLogger(InterceptTestSuite.class);
+  private static final Logger logger = LoggerFactory.getLogger(InterceptEndToEndTestSuite.class);
 
   /**
    * Well-known UUID for the shared interceptable peer (the peer being intercepted).
@@ -104,7 +114,7 @@ public class InterceptTestSuite extends AbstractIntegrationTest {
   private static Process interceptorPeerProcess;
 
   /** Helper instance to access non-static methods from AbstractIntegrationTest. */
-  private static InterceptTestSuite instance;
+  private static InterceptEndToEndTestSuite instance;
 
   /**
    * Launches the shared intercept test peers before any tests run.
@@ -129,7 +139,7 @@ public class InterceptTestSuite extends AbstractIntegrationTest {
     logger.info("============================================================");
 
     // Create helper instance to access non-static methods
-    instance = new InterceptTestSuite();
+    instance = new InterceptEndToEndTestSuite();
 
     String palHome = System.getenv("PAL_HOME");
     if (palHome == null) {
@@ -254,7 +264,7 @@ public class InterceptTestSuite extends AbstractIntegrationTest {
         logger.info("Peers unregistered from directory");
 
         // Delete logs created by this suite (with prefix "itt")
-        logger.info("Deleting logs created by InterceptTestSuite");
+        logger.info("Deleting logs created by InterceptEndToEndTestSuite");
         for (LogInfo log : palDirectory.listAllLogs()) {
           if (log.getName().startsWith("itt")) {
             logger.info("Deleting log: {}", log.getName());

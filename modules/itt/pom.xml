@@ -77,8 +77,8 @@
                     <!-- Only discover the suites + truly-standalone ITs -->
                     <includes>
                         <include>**/RpcTestSuite.java</include>
-                        <include>**/InterceptTestSuite.java</include>
-                        <include>**/CallbackMechanismTestSuite.java</include>
+                        <include>**/InterceptEndToEndTestSuite.java</include>
+                        <include>**/InterceptFlowTestSuite.java</include>
 
                         <!-- keep only directories that are NOT covered by suites -->
                         <include>**/cli/**/*IT.java</include>

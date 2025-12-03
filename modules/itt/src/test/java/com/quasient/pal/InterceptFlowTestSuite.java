@@ -13,17 +13,17 @@ import com.quasient.pal.common.directory.nodes.LogInfo;
 import com.quasient.pal.cxn.ThinPeer;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
-import com.quasient.pal.intercept.MethodInterceptIT;
-import com.quasient.pal.intercept.constructor.ConstructorAsyncCallbackIT;
-import com.quasient.pal.intercept.constructor.ConstructorSyncCallbackIT;
-import com.quasient.pal.intercept.instancefield.InstanceFieldAsyncCallbackIT;
-import com.quasient.pal.intercept.instancefield.InstanceFieldSyncCallbackIT;
-import com.quasient.pal.intercept.instancemethod.InstanceMethodAsyncCallbackIT;
-import com.quasient.pal.intercept.instancemethod.InstanceMethodSyncCallbackIT;
-import com.quasient.pal.intercept.staticfield.StaticFieldAsyncCallbackIT;
-import com.quasient.pal.intercept.staticfield.StaticFieldSyncCallbackIT;
-import com.quasient.pal.intercept.staticmethod.StaticMethodAsyncCallbackIT;
-import com.quasient.pal.intercept.staticmethod.StaticMethodSyncCallbackIT;
+import com.quasient.pal.intercept.mechanism.MethodInterceptIT;
+import com.quasient.pal.intercept.mechanism.constructor.ConstructorAsyncCallbackIT;
+import com.quasient.pal.intercept.mechanism.constructor.ConstructorSyncCallbackIT;
+import com.quasient.pal.intercept.mechanism.instancefield.InstanceFieldAsyncCallbackIT;
+import com.quasient.pal.intercept.mechanism.instancefield.InstanceFieldSyncCallbackIT;
+import com.quasient.pal.intercept.mechanism.instancemethod.InstanceMethodAsyncCallbackIT;
+import com.quasient.pal.intercept.mechanism.instancemethod.InstanceMethodSyncCallbackIT;
+import com.quasient.pal.intercept.mechanism.staticfield.StaticFieldAsyncCallbackIT;
+import com.quasient.pal.intercept.mechanism.staticfield.StaticFieldSyncCallbackIT;
+import com.quasient.pal.intercept.mechanism.staticmethod.StaticMethodAsyncCallbackIT;
+import com.quasient.pal.intercept.mechanism.staticmethod.StaticMethodSyncCallbackIT;
 import com.quasient.pal.messages.LogMessage;
 import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.messages.jsonrpc.JsonRpcMessage;
@@ -57,9 +57,9 @@ import org.slf4j.LoggerFactory;
  *   <li>Test verifies callback structure (message type, class, method, parameters, etc.)
  * </ol>
  *
- * <p><b>Key Difference from InterceptTestSuite:</b> This suite tests that callbacks are <b>sent and
- * structured correctly</b>. For testing that handlers <b>execute and produce effects</b>, see
- * {@link InterceptTestSuite}.
+ * <p><b>Key Difference from InterceptEndToEndTestSuite:</b> This suite tests that callbacks are
+ * <b>sent and structured correctly</b>. For testing that handlers <b>execute and produce
+ * effects</b>, see {@link InterceptEndToEndTestSuite}.
  *
  * <p><b>Why No INTERCEPTOR_PEER_UUID Constant:</b> This suite intentionally does NOT define {@code
  * INTERCEPTOR_PEER_UUID} to provide <b>compile-time safety</b>. Tests in this suite should never
@@ -116,9 +116,9 @@ import org.slf4j.LoggerFactory;
   InstanceFieldSyncCallbackIT.class,
   InstanceFieldAsyncCallbackIT.class
 })
-public class CallbackMechanismTestSuite extends AbstractIntegrationTest {
+public class InterceptFlowTestSuite extends AbstractIntegrationTest {
 
-  private static final Logger logger = LoggerFactory.getLogger(CallbackMechanismTestSuite.class);
+  private static final Logger logger = LoggerFactory.getLogger(InterceptFlowTestSuite.class);
 
   /**
    * Well-known UUID for the shared interceptable peer (the peer being intercepted).
@@ -135,7 +135,7 @@ public class CallbackMechanismTestSuite extends AbstractIntegrationTest {
   private static ThinPeer walReaderThinPeer;
 
   /** Helper instance to access non-static methods from AbstractIntegrationTest. */
-  private static CallbackMechanismTestSuite instance;
+  private static InterceptFlowTestSuite instance;
 
   /**
    * Launches the shared interceptable peer before any tests run.
@@ -159,7 +159,7 @@ public class CallbackMechanismTestSuite extends AbstractIntegrationTest {
     logger.info("============================================================");
 
     // Create helper instance to access non-static methods
-    instance = new CallbackMechanismTestSuite();
+    instance = new InterceptFlowTestSuite();
 
     String palHome = System.getenv("PAL_HOME");
     if (palHome == null) {
@@ -287,7 +287,7 @@ public class CallbackMechanismTestSuite extends AbstractIntegrationTest {
         logger.info("Peer unregistered from directory");
 
         // Delete logs created by this suite (with prefix "cbm")
-        logger.info("Deleting logs created by CallbackMechanismTestSuite");
+        logger.info("Deleting logs created by InterceptFlowTestSuite");
         for (LogInfo log : palDirectory.listAllLogs()) {
           if (log.getName().startsWith("cbm")) {
             logger.info("Deleting log: {}", log.getName());

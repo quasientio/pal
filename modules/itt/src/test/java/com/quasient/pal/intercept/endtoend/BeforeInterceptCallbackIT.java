@@ -7,20 +7,20 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
-package com.quasient.pal.intercept;
+package com.quasient.pal.intercept.endtoend;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.fail;
 
-import com.quasient.pal.InterceptTestSuite;
 import com.quasient.pal.apps.callbacks.BeforeCallbackHandlers;
 import com.quasient.pal.apps.quantized.intercept.StringMethods;
 import com.quasient.pal.common.directory.nodes.InterceptRequest;
 import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.lang.intercept.InterceptableMethodCall;
 import com.quasient.pal.common.objects.ObjectRef;
+import com.quasient.pal.intercept.AbstractInterceptIT;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.serdes.Unwrapper;
 import java.util.Arrays;
@@ -63,7 +63,7 @@ public class BeforeInterceptCallbackIT extends AbstractInterceptIT {
     InterceptRequest<InterceptableMethodCall> interceptRequest =
         new InterceptRequest<>(
             interceptUuid,
-            InterceptTestSuite.INTERCEPTOR_PEER_UUID, // Callback to interceptor peer
+            INTERCEPTOR_PEER_UUID, // Callback to interceptor peer
             InterceptType.BEFORE,
             StringMethods.class.getName(),
             callbackClass,
@@ -139,7 +139,7 @@ public class BeforeInterceptCallbackIT extends AbstractInterceptIT {
     InterceptRequest<InterceptableMethodCall> interceptRequest =
         new InterceptRequest<>(
             interceptUuid,
-            InterceptTestSuite.INTERCEPTOR_PEER_UUID,
+            INTERCEPTOR_PEER_UUID,
             InterceptType.BEFORE,
             StringMethods.class.getName(),
             callbackClass,
@@ -216,7 +216,7 @@ public class BeforeInterceptCallbackIT extends AbstractInterceptIT {
     InterceptRequest<InterceptableMethodCall> interceptRequest =
         new InterceptRequest<>(
             interceptUuid,
-            InterceptTestSuite.INTERCEPTOR_PEER_UUID,
+            INTERCEPTOR_PEER_UUID,
             InterceptType.BEFORE,
             StringMethods.class.getName(),
             callbackClass,
@@ -289,7 +289,7 @@ public class BeforeInterceptCallbackIT extends AbstractInterceptIT {
     InterceptRequest<InterceptableMethodCall> interceptRequest =
         new InterceptRequest<>(
             interceptUuid,
-            InterceptTestSuite.INTERCEPTOR_PEER_UUID,
+            INTERCEPTOR_PEER_UUID,
             InterceptType.BEFORE,
             StringMethods.class.getName(),
             callbackClass,
@@ -375,7 +375,7 @@ public class BeforeInterceptCallbackIT extends AbstractInterceptIT {
     InterceptRequest<InterceptableMethodCall> interceptRequest =
         new InterceptRequest<>(
             interceptUuid,
-            InterceptTestSuite.INTERCEPTOR_PEER_UUID,
+            INTERCEPTOR_PEER_UUID,
             InterceptType.BEFORE,
             StringMethods.class.getName(),
             callbackClass,

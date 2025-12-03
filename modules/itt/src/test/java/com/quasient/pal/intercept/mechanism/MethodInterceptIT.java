@@ -7,7 +7,7 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
-package com.quasient.pal.intercept;
+package com.quasient.pal.intercept.mechanism;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -19,6 +19,7 @@ import com.quasient.pal.common.directory.nodes.InterceptRequest;
 import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.lang.intercept.InterceptableMethodCall;
 import com.quasient.pal.common.objects.ObjectRef;
+import com.quasient.pal.intercept.AbstractInterceptIT;
 import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.messages.colfer.ReturnValue;
 import com.quasient.pal.messages.types.MessageType;
