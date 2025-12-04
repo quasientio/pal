@@ -229,6 +229,19 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
   /**
    * {@inheritDoc}
    *
+   * <p>Indicates that a constructor invocation never returns void.
+   *
+   * @param pjp the proceeding join point (unused for constructor operations)
+   * @return always {@code false} since constructors yield object instances
+   */
+  @Override
+  protected boolean returnsVoid(ProceedingJoinPoint pjp) {
+    return false;
+  }
+
+  /**
+   * {@inheritDoc}
+   *
    * <p>Returns the message type used for pre-execution messages specific to constructor calls.
    *
    * @return {@link MessageType#EXEC_CONSTRUCTOR} indicating the message type for constructor

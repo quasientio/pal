@@ -111,9 +111,7 @@ public class SetClassVariableDispatcher extends SetFieldDispatcher {
 
     return loadAccessibleObject(
         execMessage.getStaticFieldPut().getClazz().getName(),
-        execMessage.getStaticFieldPut().getField().getName(),
-        parameterTypes,
-        args);
+        execMessage.getStaticFieldPut().getField().getName());
   }
 
   /**

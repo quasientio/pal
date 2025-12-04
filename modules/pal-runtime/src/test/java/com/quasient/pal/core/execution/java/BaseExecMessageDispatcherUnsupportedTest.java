@@ -13,7 +13,6 @@ import static org.junit.Assert.assertThrows;
 
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.common.runtime.Context;
-import com.quasient.pal.common.weave.Proceed;
 import com.quasient.pal.core.transport.MessageChannelType;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.Parameter;
@@ -53,7 +52,7 @@ public class BaseExecMessageDispatcherUnsupportedTest {
     }
 
     @Override
-    protected <T> T invoke(ProceedingJoinPoint pjp, Proceed<T> proceed, Object[] args) {
+    protected Object invoke(ProceedingJoinPoint pjp, Object[] args) {
       return null;
     }
 
@@ -68,6 +67,11 @@ public class BaseExecMessageDispatcherUnsupportedTest {
 
     @Override
     protected boolean returnsVoid(AccessibleObject accessibleObject) {
+      return false;
+    }
+
+    @Override
+    protected boolean returnsVoid(ProceedingJoinPoint pjp) {
       return false;
     }
 

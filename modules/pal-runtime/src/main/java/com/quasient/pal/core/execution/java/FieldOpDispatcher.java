@@ -17,6 +17,7 @@ import com.quasient.pal.messages.colfer.Parameter;
 import com.quasient.pal.messages.types.MessageType;
 import java.lang.reflect.AccessibleObject;
 import java.util.List;
+import org.aspectj.lang.ProceedingJoinPoint;
 
 /**
  * Dispatches field operation execution messages within the PAL runtime.
@@ -124,4 +125,18 @@ public abstract class FieldOpDispatcher extends BaseExecMessageDispatcher {
    * @return the {@link MessageType} for the post-execution phase of the field operation.
    */
   protected abstract MessageType getAfterExecMessageType();
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>For field operations, the return type is fixed: get operations return a value, set
+   * operations are void. This method delegates to the no-arg {@link #returnsVoid()} method.
+   *
+   * @param pjp the proceeding join point (unused for field operations)
+   * @return true if this is a set field operation; false if this is a get field operation
+   */
+  @Override
+  protected boolean returnsVoid(ProceedingJoinPoint pjp) {
+    return returnsVoid();
+  }
 }

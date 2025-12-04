@@ -15,7 +15,6 @@ import static org.mockito.Mockito.mock;
 
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.common.runtime.Context;
-import com.quasient.pal.common.weave.Proceed;
 import com.quasient.pal.core.service.RunOptions;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.Parameter;
@@ -87,6 +86,11 @@ public class BaseExecMessageDispatcherDispatchTest {
     }
 
     @Override
+    protected boolean returnsVoid(ProceedingJoinPoint pjp) {
+      return false;
+    }
+
+    @Override
     protected MessageType getBeforeExecMessageType() {
       return MessageType.EXEC_INSTANCE_METHOD;
     }
@@ -110,8 +114,7 @@ public class BaseExecMessageDispatcherDispatchTest {
 
   static class MinimalThrows extends MinimalOk {
     @Override
-    protected <T> T invoke(ProceedingJoinPoint pjp, Proceed<T> proceed, Object[] args)
-        throws Throwable {
+    protected Object invoke(ProceedingJoinPoint pjp, Object[] args) throws Throwable {
       throw new InvocationTargetException(new IllegalStateException("boom"));
     }
   }
@@ -133,12 +136,10 @@ public class BaseExecMessageDispatcherDispatchTest {
     Mockito.when(pjp.getTarget()).thenReturn(this);
     Mockito.when(pjp.getArgs()).thenReturn(new Object[] {"x"});
     Mockito.when(pjp.getStaticPart()).thenReturn(sp);
+    // Stub pjp.proceed(Object[]) to return "ok"
+    Mockito.when(pjp.proceed(Mockito.any(Object[].class))).thenReturn("ok");
 
-    Proceed<String> proceed = () -> "ok";
-    // Stub pjp.proceed(Object[]) to delegate to the Proceed callback
-    Mockito.when(pjp.proceed(Mockito.any(Object[].class))).thenAnswer(inv -> proceed.call());
-
-    String out = d.dispatch(pjp, proceed);
+    Object out = d.dispatch(pjp);
     assertThat(out, is("ok"));
   }
 
@@ -151,8 +152,7 @@ public class BaseExecMessageDispatcherDispatchTest {
     Mockito.when(pjp.getTarget()).thenReturn(this);
     Mockito.when(pjp.getArgs()).thenReturn(new Object[] {});
     Mockito.when(pjp.getStaticPart()).thenReturn(mock(JoinPoint.StaticPart.class));
-    Proceed<Object> proceed = () -> null; // won't be called
-    d.dispatch(pjp, proceed);
+    d.dispatch(pjp);
   }
 
   // NOTE: A more realistic WAL/BEFORE/AFTER path is exercised via concrete dispatcher tests.

@@ -16,6 +16,7 @@ import com.quasient.pal.messages.colfer.ExecMessage;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Method;
 import java.util.List;
+import org.aspectj.lang.ProceedingJoinPoint;
 
 /**
  * Provides reflection-based dispatching of method calls.
@@ -143,5 +144,24 @@ public abstract class MethodDispatcher extends BaseExecMessageDispatcher {
   @Override
   protected boolean returnsVoid(AccessibleObject accessibleObject) {
     return ((Method) accessibleObject).getReturnType().equals(Void.TYPE);
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Extracts the return type from the AspectJ method signature to determine if the method
+   * returns void.
+   *
+   * @param pjp the proceeding join point representing the intercepted method call
+   * @return {@code true} if the method's return type is void; {@code false} otherwise
+   */
+  @Override
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
+  protected boolean returnsVoid(ProceedingJoinPoint pjp) {
+    // Using FQN because there's a name conflict with
+    // com.quasient.pal.common.lang.reflect.MethodSignature
+    org.aspectj.lang.reflect.MethodSignature sig =
+        (org.aspectj.lang.reflect.MethodSignature) pjp.getSignature();
+    return sig.getReturnType().equals(Void.TYPE);
   }
 }

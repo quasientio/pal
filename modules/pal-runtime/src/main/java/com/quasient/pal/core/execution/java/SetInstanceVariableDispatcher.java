@@ -138,9 +138,7 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
 
     return loadAccessibleObject(
         execMessage.getInstanceFieldPut().getClazz().getName(),
-        execMessage.getInstanceFieldPut().getField().getName(),
-        parameterTypes,
-        args);
+        execMessage.getInstanceFieldPut().getField().getName());
   }
 
   /**

@@ -17,10 +17,12 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.CodeSignature;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Aspect which forwards all method, constructor and field access join points to {@link
- * com.quasient.pal.common.runtime.DispatchForwarder} for handling.
+ * DispatchForwarder} for handling.
  *
  * <p>The aspect is written in @AspectJ style and is intended to be used together with {@code
  * FullQuantizeSoftening.aj}, which declares soft exceptions for the {@code DispatchForwarder}
@@ -30,9 +32,8 @@ import org.aspectj.lang.reflect.CodeSignature;
 @Aspect
 public class FullQuantizeAspect {
 
-  /** Flag that controls verbose debug logging for all join points handled by this aspect. */
-  private static final boolean verbose =
-      Boolean.parseBoolean(System.getProperty("aspectj.debug", "false"));
+  /** Logger instance used for logging internal events and error messages. */
+  private static final Logger logger = LoggerFactory.getLogger(FullQuantizeAspect.class);
 
   /* POINTCUT DEFINITIONS */
 
@@ -93,14 +94,15 @@ public class FullQuantizeAspect {
    */
   @Around("voidInstanceMethods()")
   public void aroundVoidInstanceMethods(ProceedingJoinPoint pjp) throws Throwable {
-    if (verbose) {
-      print(" D --> void instance method: " + pjp.getStaticPart().getSignature().toShortString());
-      printStaticCtxt(pjp.getStaticPart());
-      printNonStaticCtxt(pjp);
-      printParameters(pjp);
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          " D --> void instance method: {}", pjp.getStaticPart().getSignature().toShortString());
+      logger.debug(staticCtxtToString(pjp.getStaticPart()));
+      logger.debug(nonStaticCtxtToString(pjp));
+      logger.debug(parametersToString(pjp));
     }
 
-    DispatchForwarder.voidInstanceMethod(pjp, pjp::proceed);
+    DispatchForwarder.voidInstanceMethod(pjp);
   }
 
   /**
@@ -112,14 +114,15 @@ public class FullQuantizeAspect {
    */
   @Around("voidClassMethods()")
   public void aroundVoidClassMethods(ProceedingJoinPoint pjp) throws Throwable {
-    if (verbose) {
-      print(" D --> void class method: " + pjp.getStaticPart().getSignature().toShortString());
-      printStaticCtxt(pjp.getStaticPart());
-      printNonStaticCtxt(pjp);
-      printParameters(pjp);
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          " D --> void class method: {}", pjp.getStaticPart().getSignature().toShortString());
+      logger.debug(staticCtxtToString(pjp.getStaticPart()));
+      logger.debug(nonStaticCtxtToString(pjp));
+      logger.debug(parametersToString(pjp));
     }
 
-    DispatchForwarder.voidClassMethod(pjp, pjp::proceed);
+    DispatchForwarder.voidClassMethod(pjp);
   }
 
   /**
@@ -132,15 +135,16 @@ public class FullQuantizeAspect {
    */
   @Around("nonVoidInstanceMethods()")
   public Object aroundNonVoidInstanceMethods(ProceedingJoinPoint pjp) throws Throwable {
-    if (verbose) {
-      print(
-          " D --> non-void instance method: " + pjp.getStaticPart().getSignature().toShortString());
-      printStaticCtxt(pjp.getStaticPart());
-      printNonStaticCtxt(pjp);
-      printParameters(pjp);
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          " D --> non-void instance method: {}",
+          pjp.getStaticPart().getSignature().toShortString());
+      logger.debug(staticCtxtToString(pjp.getStaticPart()));
+      logger.debug(nonStaticCtxtToString(pjp));
+      logger.debug(parametersToString(pjp));
     }
 
-    return DispatchForwarder.nonVoidInstanceMethod(pjp, pjp::proceed);
+    return DispatchForwarder.nonVoidInstanceMethod(pjp);
   }
 
   /**
@@ -153,14 +157,15 @@ public class FullQuantizeAspect {
    */
   @Around("nonVoidClassMethods()")
   public Object aroundNonVoidClassMethods(ProceedingJoinPoint pjp) throws Throwable {
-    if (verbose) {
-      print(" D --> non-void class method: " + pjp.getStaticPart().getSignature().toShortString());
-      printStaticCtxt(pjp.getStaticPart());
-      printNonStaticCtxt(pjp);
-      printParameters(pjp);
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          " D --> non-void class method: {}", pjp.getStaticPart().getSignature().toShortString());
+      logger.debug(staticCtxtToString(pjp.getStaticPart()));
+      logger.debug(nonStaticCtxtToString(pjp));
+      logger.debug(parametersToString(pjp));
     }
 
-    return DispatchForwarder.nonVoidClassMethod(pjp, pjp::proceed);
+    return DispatchForwarder.nonVoidClassMethod(pjp);
   }
 
   /* ADVICE for Constructors */
@@ -175,14 +180,14 @@ public class FullQuantizeAspect {
    */
   @Around("constructors()")
   public Object aroundConstructors(ProceedingJoinPoint pjp) throws Throwable {
-    if (verbose) {
-      print(" D --> constructor: " + pjp);
-      printStaticCtxt(pjp.getStaticPart());
-      printNonStaticCtxt(pjp);
-      printParameters(pjp);
+    if (logger.isDebugEnabled()) {
+      logger.debug(" D --> constructor: {}", pjp.getStaticPart().getSignature().toShortString());
+      logger.debug(staticCtxtToString(pjp.getStaticPart()));
+      logger.debug(nonStaticCtxtToString(pjp));
+      logger.debug(parametersToString(pjp));
     }
 
-    return DispatchForwarder.constructor(pjp, pjp::proceed);
+    return DispatchForwarder.constructor(pjp);
   }
 
   /* ADVICE for Fields */
@@ -196,13 +201,13 @@ public class FullQuantizeAspect {
    */
   @Around("staticGetfields()")
   public Object aroundStaticGetfields(ProceedingJoinPoint pjp) {
-    if (verbose) {
-      print(" D --> get static: " + pjp);
-      printStaticCtxt(pjp.getStaticPart());
-      printNonStaticCtxt(pjp);
+    if (logger.isDebugEnabled()) {
+      logger.debug(" D --> get static: {}", pjp.getStaticPart().getSignature().toShortString());
+      logger.debug(staticCtxtToString(pjp.getStaticPart()));
+      logger.debug(nonStaticCtxtToString(pjp));
     }
 
-    return DispatchForwarder.getStatic(pjp, pjp::proceed);
+    return DispatchForwarder.getStatic(pjp);
   }
 
   /**
@@ -214,13 +219,13 @@ public class FullQuantizeAspect {
    */
   @Around("nonStaticGetfields()")
   public Object aroundNonStaticGetfields(ProceedingJoinPoint pjp) {
-    if (verbose) {
-      print(" D --> get field: " + pjp);
-      printStaticCtxt(pjp.getStaticPart());
-      printNonStaticCtxt(pjp);
+    if (logger.isDebugEnabled()) {
+      logger.debug(" D --> get field: {}", pjp.getStaticPart().getSignature().toShortString());
+      logger.debug(staticCtxtToString(pjp.getStaticPart()));
+      logger.debug(nonStaticCtxtToString(pjp));
     }
 
-    return DispatchForwarder.getObject(pjp, pjp::proceed);
+    return DispatchForwarder.getObject(pjp);
   }
 
   /**
@@ -231,13 +236,13 @@ public class FullQuantizeAspect {
    */
   @Around("staticPutfields()")
   public void aroundStaticPutfields(ProceedingJoinPoint pjp) {
-    if (verbose) {
-      print(" D --> put static: " + pjp);
-      printStaticCtxt(pjp.getStaticPart());
-      printNonStaticCtxt(pjp);
+    if (logger.isDebugEnabled()) {
+      logger.debug(" D --> put static: {}", pjp.getStaticPart().getSignature().toShortString());
+      logger.debug(staticCtxtToString(pjp.getStaticPart()));
+      logger.debug(nonStaticCtxtToString(pjp));
     }
 
-    DispatchForwarder.putStatic(pjp, pjp::proceed);
+    DispatchForwarder.putStatic(pjp);
   }
 
   /**
@@ -248,63 +253,86 @@ public class FullQuantizeAspect {
    */
   @Around("nonStaticPutfields()")
   public void aroundNonStaticPutfields(ProceedingJoinPoint pjp) {
-    if (verbose) {
-      print(" D --> put field: " + pjp);
-      printStaticCtxt(pjp.getStaticPart());
-      printNonStaticCtxt(pjp);
+    if (logger.isDebugEnabled()) {
+      logger.debug(" D --> put field: {}", pjp.getStaticPart().getSignature().toShortString());
+      logger.debug(staticCtxtToString(pjp.getStaticPart()));
+      logger.debug(nonStaticCtxtToString(pjp));
     }
 
-    DispatchForwarder.putField(pjp, pjp::proceed);
-  }
-
-  /* Utility methods */
-
-  /**
-   * Prints a single debug line to the standard output.
-   *
-   * @param s the message to print
-   */
-  static void print(String s) {
-    System.out.println(s);
+    DispatchForwarder.putField(pjp);
   }
 
   /**
-   * Prints static join point context information such as id, kind, and source location.
+   * Builds static join point context information such as id, kind, and source location.
    *
    * @param jpsp the static part of the join point to describe
+   * @return a String with the formatted static context
    */
-  private static void printStaticCtxt(StaticPart jpsp) {
-    print(" ... jp.id=" + jpsp.getId());
-    print(" ... jp.kind=" + jpsp.getKind());
-    print(" ... jp.signature=" + jpsp.getSignature().toShortString());
-    print(" ... jp.source=" + jpsp.getSourceLocation());
-    print(" ... jp.toLongString=" + jpsp.toLongString());
+  private static String staticCtxtToString(StaticPart jpsp) {
+    StringBuilder sb = new StringBuilder();
+    String nl = System.lineSeparator();
+
+    sb.append(" ... jp.id=").append(jpsp.getId()).append(nl);
+    sb.append(" ... jp.kind=").append(jpsp.getKind()).append(nl);
+    sb.append(" ... jp.signature=").append(jpsp.getSignature().toShortString()).append(nl);
+    sb.append(" ... jp.source=").append(jpsp.getSourceLocation()).append(nl);
+    sb.append(" ... jp.toLongString=").append(jpsp.toLongString());
+
+    return sb.toString();
   }
 
   /**
-   * Prints non-static join point context, namely the target object and {@code this} reference.
+   * Builds non-static join point context, namely the target object and {@code this} reference.
    *
-   * @param jp the join point whose context should be printed
+   * @param jp the join point whose context should be represented
+   * @return a String with the formatted non-static context
    */
-  private static void printNonStaticCtxt(JoinPoint jp) {
-    print(" --- target object=" + jp.getTarget());
-    print(" --- this=" + jp.getThis());
+  private static String nonStaticCtxtToString(JoinPoint jp) {
+    StringBuilder sb = new StringBuilder();
+    String nl = System.lineSeparator();
+
+    sb.append(" --- target object=").append(jp.getTarget()).append(nl);
+    sb.append(" --- this=").append(jp.getThis());
+
+    return sb.toString();
   }
 
   /**
-   * Prints the argument names, types and values for the given join point.
+   * Builds the argument names, types and values for the given join point.
    *
-   * @param jp the join point whose parameter information should be printed
+   * @param jp the join point whose parameter information should be represented
+   * @return a String with the formatted parameters (or empty String if none)
    */
-  private static void printParameters(JoinPoint jp) {
+  private static String parametersToString(JoinPoint jp) {
     Object[] args = jp.getArgs();
     String[] names = ((CodeSignature) jp.getSignature()).getParameterNames();
     Class<?>[] types = ((CodeSignature) jp.getSignature()).getParameterTypes();
-    if (args.length > 0) {
-      print(" --- Arguments: ");
+
+    if (args.length == 0) {
+      return "";
     }
+
+    StringBuilder sb = new StringBuilder();
+    String nl = System.lineSeparator();
+
+    sb.append(" --- Arguments: ").append(nl);
     for (int i = 0; i < args.length; i++) {
-      print(" ---   " + i + ". " + names[i] + " : " + types[i].getName() + " = " + args[i]);
+      sb.append(" ---   ")
+          .append(i)
+          .append(". ")
+          .append(names[i])
+          .append(" : ")
+          .append(types[i].getName())
+          .append(" = ")
+          .append(args[i])
+          .append(nl);
     }
+
+    // Remove trailing newline
+    if (!sb.isEmpty()) {
+      sb.setLength(sb.length() - nl.length());
+    }
+
+    return sb.toString();
   }
 }

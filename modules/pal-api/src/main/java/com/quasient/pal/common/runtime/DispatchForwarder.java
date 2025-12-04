@@ -9,8 +9,6 @@
  */
 package com.quasient.pal.common.runtime;
 
-import com.quasient.pal.common.weave.Proceed;
-import com.quasient.pal.common.weave.VoidProceed;
 import jakarta.inject.Inject;
 import org.aspectj.lang.ProceedingJoinPoint;
 
@@ -37,121 +35,107 @@ public final class DispatchForwarder {
   private DispatchForwarder() {}
 
   /**
-   * Dispatches a constructor call with the given join point and arguments.
+   * Dispatches a constructor call with the given join point.
    *
    * @param pjp the {@link ProceedingJoinPoint} handle
-   * @param proceed the {@link Proceed} callback handle
    * @return the newly created object instance
    * @throws Throwable if dispatching the constructor fails
    */
-  public static Object constructor(ProceedingJoinPoint pjp, Proceed<Object> proceed)
-      throws Throwable {
-    return dispatcher.constructor(pjp, proceed);
+  public static Object constructor(ProceedingJoinPoint pjp) throws Throwable {
+    return dispatcher.constructor(pjp);
   }
 
   /**
-   * Dispatches a void instance method call with the given join point and arguments.
+   * Dispatches a void instance method call with the given join point.
    *
    * @param pjp the {@link ProceedingJoinPoint} handle
-   * @param proceed the {@link VoidProceed} callback handle
    * @throws Throwable if dispatching the method call fails
    */
-  public static void voidInstanceMethod(ProceedingJoinPoint pjp, VoidProceed proceed)
-      throws Throwable {
-    dispatcher.voidInstanceMethod(pjp, proceed);
+  public static void voidInstanceMethod(ProceedingJoinPoint pjp) throws Throwable {
+    dispatcher.voidInstanceMethod(pjp);
   }
 
   /**
-   * Dispatches a void static class method call with the given join point and arguments.
+   * Dispatches a void static class method call with the given join point.
    *
    * @param pjp the {@link ProceedingJoinPoint} handle
-   * @param proceed the {@link VoidProceed} callback handle
    * @throws Throwable if dispatching the method call fails
    */
-  public static void voidClassMethod(ProceedingJoinPoint pjp, VoidProceed proceed)
-      throws Throwable {
-    dispatcher.voidClassMethod(pjp, proceed);
+  public static void voidClassMethod(ProceedingJoinPoint pjp) throws Throwable {
+    dispatcher.voidClassMethod(pjp);
   }
 
   /**
-   * Dispatches a non-void instance method call with the given join point and arguments.
+   * Dispatches a non-void instance method call with the given join point.
    *
    * @param pjp the {@link ProceedingJoinPoint} handle
-   * @param proceed the {@link Proceed} callback handle
    * @return the result of the method invocation
    * @throws Throwable if dispatching the method call fails
    */
-  public static Object nonVoidInstanceMethod(ProceedingJoinPoint pjp, Proceed<Object> proceed)
-      throws Throwable {
-    return dispatcher.nonVoidInstanceMethod(pjp, proceed);
+  public static Object nonVoidInstanceMethod(ProceedingJoinPoint pjp) throws Throwable {
+    return dispatcher.nonVoidInstanceMethod(pjp);
   }
 
   /**
-   * Dispatches a non-void static class method call with the given join point and arguments.
+   * Dispatches a non-void static class method call with the given join point.
    *
    * @param pjp the {@link ProceedingJoinPoint} handle
-   * @param proceed the {@link Proceed} callback handle
    * @return the result of the method invocation
    * @throws Throwable if dispatching the method call fails
    */
-  public static Object nonVoidClassMethod(ProceedingJoinPoint pjp, Proceed<Object> proceed)
-      throws Throwable {
-    return dispatcher.nonVoidClassMethod(pjp, proceed);
+  public static Object nonVoidClassMethod(ProceedingJoinPoint pjp) throws Throwable {
+    return dispatcher.nonVoidClassMethod(pjp);
   }
 
   /**
-   * Dispatches a static field retrieval with the given join point and arguments.
+   * Dispatches a static field retrieval with the given join point.
    *
    * @param pjp the {@link ProceedingJoinPoint} handle
-   * @param proceed the {@link Proceed} callback handle
    * @return the value of the static field
    */
-  public static Object getStatic(ProceedingJoinPoint pjp, Proceed<Object> proceed) {
+  public static Object getStatic(ProceedingJoinPoint pjp) {
     try {
-      return dispatcher.getStatic(pjp, proceed);
+      return dispatcher.getStatic(pjp);
     } catch (Throwable e) {
       throw rethrowPreservingType(e);
     }
   }
 
   /**
-   * Dispatches an instance field retrieval with the given join point and arguments.
+   * Dispatches an instance field retrieval with the given join point.
    *
    * @param pjp the {@link ProceedingJoinPoint} handle
-   * @param proceed the {@link Proceed} callback handle
    * @return the value of the instance field
    */
-  public static Object getObject(ProceedingJoinPoint pjp, Proceed<Object> proceed) {
+  public static Object getObject(ProceedingJoinPoint pjp) {
     try {
-      return dispatcher.getObject(pjp, proceed);
+      return dispatcher.getObject(pjp);
     } catch (Throwable e) {
       throw rethrowPreservingType(e);
     }
   }
 
   /**
-   * Dispatches a static field assignment with the given join point and arguments.
+   * Dispatches a static field assignment with the given join point.
    *
    * @param pjp the {@link ProceedingJoinPoint} handle
-   * @param proceed the {@link VoidProceed} callback handle
    */
-  public static void putStatic(ProceedingJoinPoint pjp, VoidProceed proceed) {
+  public static void putStatic(ProceedingJoinPoint pjp) {
     try {
-      dispatcher.putStatic(pjp, proceed);
+      dispatcher.putStatic(pjp);
     } catch (Throwable e) {
       throw rethrowPreservingType(e);
     }
   }
 
   /**
-   * Dispatches an instance field assignment with the given join point and arguments.
+   * Dispatches an instance field assignment with the given join point.
    *
    * @param pjp the {@link ProceedingJoinPoint} handle
-   * @param proceed the {@link VoidProceed} callback handle
    */
-  public static void putField(ProceedingJoinPoint pjp, VoidProceed proceed) {
+  public static void putField(ProceedingJoinPoint pjp) {
     try {
-      dispatcher.putField(pjp, proceed);
+      dispatcher.putField(pjp);
     } catch (Throwable e) {
       throw rethrowPreservingType(e);
     }
@@ -168,11 +152,11 @@ public final class DispatchForwarder {
    * @return never returns normally (always throws)
    */
   private static RuntimeException rethrowPreservingType(Throwable e) {
-    if (e instanceof RuntimeException) {
-      throw (RuntimeException) e;
+    if (e instanceof RuntimeException rex) {
+      throw rex;
     }
-    if (e instanceof Error) {
-      throw (Error) e;
+    if (e instanceof Error err) {
+      throw err;
     }
     // Checked exception - wrap in RuntimeException but preserve as cause
     throw new RuntimeException(e);

@@ -34,7 +34,7 @@ public class SetFieldDispatcherEdgeTest {
   // Minimal subclass to expose protected methods
   static class TestDispatcher extends SetFieldDispatcher {
     public AccessibleObject load(String className, String fieldName) throws Exception {
-      return loadAccessibleObject(className, fieldName, List.of(), List.of());
+      return loadAccessibleObject(className, fieldName);
     }
 
     public Object valueFrom(Obj valueObject, int ref, AccessibleObject ao) {

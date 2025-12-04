@@ -18,7 +18,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import com.quasient.pal.common.objects.ObjectRef;
-import com.quasient.pal.common.weave.Proceed;
 import com.quasient.pal.core.ExecMessageMatchers.ComesFromClass;
 import com.quasient.pal.core.ExecMessageMatchers.ComesFromReflectable;
 import com.quasient.pal.core.service.RunOptions;
@@ -29,6 +28,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.concurrent.Callable;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.hamcrest.Matchers;
 import org.junit.Before;
@@ -63,7 +63,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
             objectLookupStore);
   }
 
-  private <T> ProceedingJoinPoint createPjp(Field field, Object target, Proceed<T> proceed)
+  private <T> ProceedingJoinPoint createPjp(Field field, Object target, Callable<T> proceedCallback)
       throws Throwable {
     String sourceFilename = "NotARealClass.java";
     return PjpBuilder.create()
@@ -73,7 +73,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
         .sender(this)
         .target(target)
         .args(new Object[0])
-        .proceedBehavior(proceed)
+        .proceedBehavior(proceedCallback)
         .build();
   }
 
@@ -95,11 +95,11 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     ClassForGetFieldTest target = new ClassForGetFieldTest(); // ← real receiver
 
     // ── PJP ──────────────────────────────────────────────────
-    var proceed = asProceed(() -> target.someShort);
-    ProceedingJoinPoint pjp = createPjp(field, target, proceed);
+    Callable<Object> proceedCallback = () -> target.someShort;
+    ProceedingJoinPoint pjp = createPjp(field, target, proceedCallback);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned = dispatcher.dispatch(pjp, proceed);
+    Object returned = dispatcher.dispatch(pjp);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -121,11 +121,11 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     ClassForGetFieldTest target = new ClassForGetFieldTest();
 
     // ── PJP ──────────────────────────────────────────────────
-    var proceed = asProceed(() -> target.bytes);
-    ProceedingJoinPoint pjp = createPjp(field, target, proceed);
+    Callable<Object> proceedCallback = () -> target.bytes;
+    ProceedingJoinPoint pjp = createPjp(field, target, proceedCallback);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned = dispatcher.dispatch(pjp, proceed);
+    Object returned = dispatcher.dispatch(pjp);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -147,11 +147,11 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     ClassForGetFieldTest target = new ClassForGetFieldTest();
 
     // ── PJP ──────────────────────────────────────────────────
-    var proceed = asProceed(() -> target.someInteger);
-    ProceedingJoinPoint pjp = createPjp(field, target, proceed);
+    Callable<Object> proceedCallback = () -> target.someInteger;
+    ProceedingJoinPoint pjp = createPjp(field, target, proceedCallback);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned = dispatcher.dispatch(pjp, proceed);
+    Object returned = dispatcher.dispatch(pjp);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -173,11 +173,11 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     ClassForGetFieldTest target = new ClassForGetFieldTest();
 
     // ── PJP ──────────────────────────────────────────────────
-    var proceed = asProceed(() -> target.aString);
-    ProceedingJoinPoint pjp = createPjp(field, target, proceed);
+    Callable<Object> proceedCallback = () -> target.aString;
+    ProceedingJoinPoint pjp = createPjp(field, target, proceedCallback);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned = dispatcher.dispatch(pjp, proceed);
+    Object returned = dispatcher.dispatch(pjp);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -199,11 +199,11 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     ClassForGetFieldTest target = new ClassForGetFieldTest();
 
     // ── PJP ──────────────────────────────────────────────────
-    var proceed = asProceed(() -> target.anObject);
-    ProceedingJoinPoint pjp = createPjp(field, target, proceed);
+    Callable<Object> proceedCallback = () -> target.anObject;
+    ProceedingJoinPoint pjp = createPjp(field, target, proceedCallback);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned = dispatcher.dispatch(pjp, proceed);
+    Object returned = dispatcher.dispatch(pjp);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -225,11 +225,11 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     ClassForGetFieldTest target = new ClassForGetFieldTest();
 
     // ── PJP ──────────────────────────────────────────────────
-    var proceed = asProceed(() -> target.aNullClass);
-    ProceedingJoinPoint pjp = createPjp(field, target, proceed);
+    Callable<Object> proceedCallback = () -> target.aNullClass;
+    ProceedingJoinPoint pjp = createPjp(field, target, proceedCallback);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned = dispatcher.dispatch(pjp, proceed);
+    Object returned = dispatcher.dispatch(pjp);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -251,11 +251,11 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     ClassForGetFieldTest target = new ClassForGetFieldTest();
 
     // ── PJP ──────────────────────────────────────────────────
-    var proceed = asProceed(() -> target.objects);
-    ProceedingJoinPoint pjp = createPjp(field, target, proceed);
+    Callable<Object> proceedCallback = () -> target.objects;
+    ProceedingJoinPoint pjp = createPjp(field, target, proceedCallback);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned = dispatcher.dispatch(pjp, proceed);
+    Object returned = dispatcher.dispatch(pjp);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -277,11 +277,11 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     ClassForGetFieldTest target = new ClassForGetFieldTest();
 
     // ── PJP ──────────────────────────────────────────────────
-    var proceed = asProceed(() -> target.lastError);
-    ProceedingJoinPoint pjp = createPjp(field, target, proceed);
+    Callable<Object> proceedCallback = () -> target.lastError;
+    ProceedingJoinPoint pjp = createPjp(field, target, proceedCallback);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned = dispatcher.dispatch(pjp, proceed);
+    Object returned = dispatcher.dispatch(pjp);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();

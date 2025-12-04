@@ -18,8 +18,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.quasient.pal.common.runtime.Dispatcher;
-import com.quasient.pal.common.weave.Proceed;
-import com.quasient.pal.common.weave.VoidProceed;
 import com.quasient.pal.core.execution.java.reflect.ReflectionHelper;
 import com.quasient.pal.core.runtime.objects.ConcurrentHashMapObjectLookupStore;
 import com.quasient.pal.core.runtime.objects.ObjectLookupStore;
@@ -31,7 +29,6 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.Callable;
 import org.junit.After;
 import org.junit.Before;
 import org.mockito.Mockito;
@@ -96,14 +93,6 @@ public abstract class AbstractDispatcherTest {
     objectLookupStore.clear();
     assertThat(objectLookupStore.size(), is(0L));
     Mockito.reset(outboundMessageGateway);
-  }
-
-  protected static VoidProceed asVoidProceed(Runnable body) {
-    return body::run;
-  }
-
-  protected static <T> Proceed<T> asProceed(Callable<T> body) {
-    return body::call;
   }
 
   // Stubs for accessibility tests

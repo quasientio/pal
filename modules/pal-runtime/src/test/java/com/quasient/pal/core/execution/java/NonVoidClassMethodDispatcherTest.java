@@ -22,7 +22,6 @@ import static org.junit.Assert.fail;
 
 import com.quasient.pal.common.lang.reflect.Void;
 import com.quasient.pal.common.objects.ObjectRef;
-import com.quasient.pal.common.weave.Proceed;
 import com.quasient.pal.core.ExecMessageMatchers.ComesFromClass;
 import com.quasient.pal.core.ExecMessageMatchers.ComesFromReflectable;
 import com.quasient.pal.core.service.RunOptions;
@@ -32,6 +31,7 @@ import com.quasient.pal.serdes.Unwrapper;
 import java.lang.reflect.Method;
 import java.util.EnumSet;
 import java.util.Random;
+import java.util.concurrent.Callable;
 import java.util.stream.DoubleStream;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.hamcrest.Matchers;
@@ -69,8 +69,8 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
             objectLookupStore);
   }
 
-  private <T> ProceedingJoinPoint createPjp(Method method, Object[] args, Proceed<T> proceed)
-      throws Throwable {
+  private <T> ProceedingJoinPoint createPjp(
+      Method method, Object[] args, Callable<T> proceedCallback) throws Throwable {
     String sourceFilename = "NotARealClass.java";
     return PjpBuilder.create()
         .kindMethodCall()
@@ -79,7 +79,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
         .sender(this)
         .target(null) // static method
         .args(args)
-        .proceedBehavior(proceed)
+        .proceedBehavior(proceedCallback)
         .build();
   }
 
@@ -103,11 +103,11 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
     Object[] args = {};
 
     // ── PJP ──────────────────────────────────────────────────
-    var proceed = asProceed(ClassForNonVoidClassMethodTest::getRandomMinute);
-    ProceedingJoinPoint pjp = createPjp(m, args, proceed);
+    Callable<Object> proceedCallback = ClassForNonVoidClassMethodTest::getRandomMinute;
+    ProceedingJoinPoint pjp = createPjp(m, args, proceedCallback);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned = dispatcher.dispatch(pjp, proceed);
+    Object returned = dispatcher.dispatch(pjp);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -133,12 +133,12 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
     Object[] args = {smallDouble, bigDouble};
 
     // ── PJP ──────────────────────────────────────────────────
-    var proceed =
-        asProceed(() -> ClassForNonVoidClassMethodTest.max((Double) args[0], (Double) args[1]));
-    ProceedingJoinPoint pjp = createPjp(m, args, proceed);
+    Callable<Object> proceedCallback =
+        () -> ClassForNonVoidClassMethodTest.max((Double) args[0], (Double) args[1]);
+    ProceedingJoinPoint pjp = createPjp(m, args, proceedCallback);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned = dispatcher.dispatch(pjp, proceed);
+    Object returned = dispatcher.dispatch(pjp);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -163,12 +163,12 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
     Object[] args = {smallDouble, bigDouble};
 
     // ── PJP ──────────────────────────────────────────────────
-    var proceed =
-        asProceed(() -> ClassForNonVoidClassMethodTest.min((double) args[0], (double) args[1]));
-    ProceedingJoinPoint pjp = createPjp(m, args, proceed);
+    Callable<Object> proceedCallback =
+        () -> ClassForNonVoidClassMethodTest.min((double) args[0], (double) args[1]);
+    ProceedingJoinPoint pjp = createPjp(m, args, proceedCallback);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned = dispatcher.dispatch(pjp, proceed);
+    Object returned = dispatcher.dispatch(pjp);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -196,11 +196,11 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
     Object[] args = {varargs};
 
     // ── PJP ──────────────────────────────────────────────────
-    var proceed = asProceed(() -> ClassForNonVoidClassMethodTest.max(varargs));
-    ProceedingJoinPoint pjp = createPjp(m, args, proceed);
+    Callable<Object> proceedCallback = () -> ClassForNonVoidClassMethodTest.max(varargs);
+    ProceedingJoinPoint pjp = createPjp(m, args, proceedCallback);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned = dispatcher.dispatch(pjp, proceed);
+    Object returned = dispatcher.dispatch(pjp);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -225,16 +225,15 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
     Object[] args = {number, divisor};
 
     // ── PJP ──────────────────────────────────────────────────
-    var proceed =
-        asProceed(
-            () -> {
-              throw new ArithmeticException("/ by zero");
-            });
-    ProceedingJoinPoint pjp = createPjp(m, args, proceed);
+    Callable<Object> proceedCallback =
+        () -> {
+          throw new ArithmeticException("/ by zero");
+        };
+    ProceedingJoinPoint pjp = createPjp(m, args, proceedCallback);
 
     // ── dispatch ─────────────────────────────────────────────
     try {
-      dispatcher.dispatch(pjp, proceed);
+      dispatcher.dispatch(pjp);
       fail("Should have failed with a div by zero overflow");
     } catch (ArithmeticException ae) {
       // expected

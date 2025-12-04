@@ -20,7 +20,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import com.quasient.pal.common.objects.ObjectRef;
-import com.quasient.pal.common.weave.Proceed;
 import com.quasient.pal.core.ExecMessageMatchers.ComesFromClass;
 import com.quasient.pal.core.ExecMessageMatchers.ComesFromReflectable;
 import com.quasient.pal.core.service.RunOptions;
@@ -28,6 +27,7 @@ import com.quasient.pal.core.transport.MessageChannelType;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import java.lang.reflect.Constructor;
 import java.util.EnumSet;
+import java.util.concurrent.Callable;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.hamcrest.Matchers;
 import org.junit.Before;
@@ -66,7 +66,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
   }
 
   private <T> ProceedingJoinPoint createPjp(
-      Constructor<?> constructor, Object[] args, Proceed<T> proceed) throws Throwable {
+      Constructor<?> constructor, Object[] args, Callable<T> proceedCallback) throws Throwable {
     String sourceFilename = "NotARealClass.java";
     return PjpBuilder.create()
         .kindConstructorCall()
@@ -75,7 +75,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
         .sender(this)
         .target(null) // ctor ⇒ no target yet
         .args(args)
-        .proceedBehavior(proceed)
+        .proceedBehavior(proceedCallback)
         .build();
   }
 
@@ -98,11 +98,11 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
     Object[] args = {}; // no-arg ctor
 
     // ── PJP ──────────────────────────────────────────────────
-    var proceed = asProceed(constructor::newInstance);
-    ProceedingJoinPoint pjp = createPjp(constructor, args, proceed);
+    Callable<Object> proceedCallback = constructor::newInstance;
+    ProceedingJoinPoint pjp = createPjp(constructor, args, proceedCallback);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned = dispatcher.dispatch(pjp, proceed);
+    Object returned = dispatcher.dispatch(pjp);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -125,11 +125,11 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
     Object[] args = {459};
 
     // ── PJP ──────────────────────────────────────────────────
-    var proceed = asProceed(() -> constructor.newInstance(args));
-    ProceedingJoinPoint pjp = createPjp(constructor, args, proceed);
+    Callable<Object> proceedCallback = () -> constructor.newInstance(args);
+    ProceedingJoinPoint pjp = createPjp(constructor, args, proceedCallback);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned = dispatcher.dispatch(pjp, proceed);
+    Object returned = dispatcher.dispatch(pjp);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -153,11 +153,11 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
     Object[] args = {true, 983309835L};
 
     // ── PJP ──────────────────────────────────────────────────
-    var proceed = asProceed(() -> constructor.newInstance(args));
-    ProceedingJoinPoint pjp = createPjp(constructor, args, proceed);
+    Callable<Object> proceedCallback = () -> constructor.newInstance(args);
+    ProceedingJoinPoint pjp = createPjp(constructor, args, proceedCallback);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned = dispatcher.dispatch(pjp, proceed);
+    Object returned = dispatcher.dispatch(pjp);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -181,11 +181,11 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
     Object[] args = {new String[] {"hello ", "world", "!"}};
 
     // ── PJP ──────────────────────────────────────────────────
-    var proceed = asProceed(() -> constructor.newInstance(args));
-    ProceedingJoinPoint pjp = createPjp(constructor, args, proceed);
+    Callable<Object> proceedCallback = () -> constructor.newInstance(args);
+    ProceedingJoinPoint pjp = createPjp(constructor, args, proceedCallback);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned = dispatcher.dispatch(pjp, proceed);
+    Object returned = dispatcher.dispatch(pjp);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -209,12 +209,12 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
     Object[] args = {"49385InvalidNumber1001"}; // will trigger NumberFormatException
 
     // ── PJP ──────────────────────────────────────────────────
-    var proceed = asProceed(() -> constructor.newInstance(args));
-    ProceedingJoinPoint pjp = createPjp(constructor, args, proceed);
+    Callable<Object> proceedCallback = () -> constructor.newInstance(args);
+    ProceedingJoinPoint pjp = createPjp(constructor, args, proceedCallback);
 
     // ── dispatch ─────────────────────────────────────────────
     try {
-      dispatcher.dispatch(pjp, proceed);
+      dispatcher.dispatch(pjp);
       fail("Should have thrown a NumberFormatException");
     } catch (NumberFormatException nfe) {
       // expected

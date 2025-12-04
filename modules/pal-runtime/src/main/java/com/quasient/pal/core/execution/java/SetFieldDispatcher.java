@@ -11,7 +11,6 @@ package com.quasient.pal.core.execution.java;
 
 import com.quasient.pal.common.lang.reflect.Void;
 import com.quasient.pal.common.objects.ObjectRef;
-import com.quasient.pal.common.weave.Proceed;
 import com.quasient.pal.messages.colfer.Obj;
 import com.quasient.pal.serdes.Unwrapper;
 import java.lang.reflect.AccessibleObject;
@@ -91,13 +90,10 @@ public abstract class SetFieldDispatcher extends FieldOpDispatcher {
    *
    * @param className the fully qualified name of the class that contains the field.
    * @param fieldName the name of the field to be accessed.
-   * @param parameterTypes a list of parameter types; currently not utilized in the lookup.
-   * @param args a list of arguments; currently not utilized in the lookup.
    * @return the {@code AccessibleObject} corresponding to the specified field.
    * @throws ReflectiveOperationException if the field cannot be located.
    */
-  protected final AccessibleObject loadAccessibleObject(
-      String className, String fieldName, List<Class<?>> parameterTypes, List<Object> args)
+  protected final AccessibleObject loadAccessibleObject(String className, String fieldName)
       throws ReflectiveOperationException {
 
     Class<?> clazz = Class.forName(className, true, Thread.currentThread().getContextClassLoader());
@@ -117,13 +113,11 @@ public abstract class SetFieldDispatcher extends FieldOpDispatcher {
    * parameters.
    *
    * @param pjp the proceeding join point
-   * @param proceed handle to the {@link Proceed} callback
    * @param args the arguments for the invocation
-   * @return always null
+   * @return always null for field SET operations
    */
   @Override
-  protected final <T> T invoke(ProceedingJoinPoint pjp, Proceed<T> proceed, Object[] args)
-      throws Throwable {
+  protected final Object invoke(ProceedingJoinPoint pjp, Object[] args) throws Throwable {
 
     FieldSignature fieldSignature = (FieldSignature) pjp.getStaticPart().getSignature();
     Field field = fieldSignature.getField();
@@ -136,7 +130,7 @@ public abstract class SetFieldDispatcher extends FieldOpDispatcher {
       field.set(pjp.getTarget(), fieldValue);
       return null;
     }
-    return super.invoke(pjp, proceed, args);
+    return super.invoke(pjp, args);
   }
 
   /**

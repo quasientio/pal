@@ -22,7 +22,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 
 import com.quasient.pal.common.objects.ObjectRef;
-import com.quasient.pal.common.weave.Proceed;
 import com.quasient.pal.core.service.RunOptions;
 import com.quasient.pal.core.transport.MessageChannelType;
 import com.quasient.pal.messages.colfer.ExecMessage;
@@ -30,6 +29,7 @@ import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.EnumSet;
+import java.util.concurrent.Callable;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.junit.After;
 import org.junit.Before;
@@ -70,7 +70,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     ClassForPutStaticTest.resetStaticVars();
   }
 
-  private <T> ProceedingJoinPoint createPjp(Field field, Object value, Proceed<T> proceed)
+  private <T> ProceedingJoinPoint createPjp(Field field, Object value, Callable<T> proceedCallback)
       throws Throwable {
     String sourceFilename = "NotARealClass.java";
     return PjpBuilder.create()
@@ -80,7 +80,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
         .sender(this)
         .target(null) // static op
         .args(new Object[] {value})
-        .proceedBehavior(proceed)
+        .proceedBehavior(proceedCallback)
         .build();
   }
 
@@ -103,11 +103,15 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     short newFieldValue = 987;
 
     // ── PJP ──────────────────────────────────────────────────
-    var proceed = asVoidProceed(() -> ClassForPutStaticTest.someShort = newFieldValue);
-    ProceedingJoinPoint pjp = createPjp(field, newFieldValue, proceed);
+    Callable<Object> proceedCallback =
+        () -> {
+          ClassForPutStaticTest.someShort = newFieldValue;
+          return null;
+        };
+    ProceedingJoinPoint pjp = createPjp(field, newFieldValue, proceedCallback);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned = dispatcher.dispatch(pjp, proceed);
+    Object returned = dispatcher.dispatch(pjp);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -130,11 +134,15 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     byte[] newFieldValue = "this is just a test".getBytes(StandardCharsets.UTF_8);
 
     // ── PJP ──────────────────────────────────────────────────
-    var proceed = asVoidProceed(() -> ClassForPutStaticTest.bytes = newFieldValue);
-    ProceedingJoinPoint pjp = createPjp(field, newFieldValue, proceed);
+    Callable<Object> proceedCallback =
+        () -> {
+          ClassForPutStaticTest.bytes = newFieldValue;
+          return null;
+        };
+    ProceedingJoinPoint pjp = createPjp(field, newFieldValue, proceedCallback);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned = dispatcher.dispatch(pjp, proceed);
+    Object returned = dispatcher.dispatch(pjp);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -160,11 +168,15 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     assertFalse(ClassForPutStaticTest.someBoolean);
 
     // ── PJP ──────────────────────────────────────────────────
-    var proceed = asVoidProceed(() -> ClassForPutStaticTest.someBoolean = newFieldValue);
-    ProceedingJoinPoint pjp = createPjp(field, newFieldValue, proceed);
+    Callable<Object> proceedCallback =
+        () -> {
+          ClassForPutStaticTest.someBoolean = newFieldValue;
+          return null;
+        };
+    ProceedingJoinPoint pjp = createPjp(field, newFieldValue, proceedCallback);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned = dispatcher.dispatch(pjp, proceed);
+    Object returned = dispatcher.dispatch(pjp);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -187,11 +199,15 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     String newFieldValue = "abnormally";
 
     // ── PJP ──────────────────────────────────────────────────
-    var proceed = asVoidProceed(() -> ClassForPutStaticTest.aString = newFieldValue);
-    ProceedingJoinPoint pjp = createPjp(field, newFieldValue, proceed);
+    Callable<Object> proceedCallback =
+        () -> {
+          ClassForPutStaticTest.aString = newFieldValue;
+          return null;
+        };
+    ProceedingJoinPoint pjp = createPjp(field, newFieldValue, proceedCallback);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned = dispatcher.dispatch(pjp, proceed);
+    Object returned = dispatcher.dispatch(pjp);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -214,11 +230,15 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     var newFieldValue = new ArrayDeque<>();
 
     // ── PJP ──────────────────────────────────────────────────
-    var proceed = asVoidProceed(() -> ClassForPutStaticTest.aCollection = newFieldValue);
-    ProceedingJoinPoint pjp = createPjp(field, newFieldValue, proceed);
+    Callable<Object> proceedCallback =
+        () -> {
+          ClassForPutStaticTest.aCollection = newFieldValue;
+          return null;
+        };
+    ProceedingJoinPoint pjp = createPjp(field, newFieldValue, proceedCallback);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned = dispatcher.dispatch(pjp, proceed);
+    Object returned = dispatcher.dispatch(pjp);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -245,11 +265,15 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     assertThat(ClassForPutStaticTest.aCollection, notNullValue());
 
     // ── PJP ──────────────────────────────────────────────────
-    var proceed = asVoidProceed(() -> ClassForPutStaticTest.aCollection = null);
-    ProceedingJoinPoint pjp = createPjp(field, newFieldValue, proceed);
+    Callable<Object> proceedCallback =
+        () -> {
+          ClassForPutStaticTest.aCollection = null;
+          return null;
+        };
+    ProceedingJoinPoint pjp = createPjp(field, newFieldValue, proceedCallback);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned = dispatcher.dispatch(pjp, proceed);
+    Object returned = dispatcher.dispatch(pjp);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -272,11 +296,15 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     Object[] newFieldValue = {1, "a", false, 9283.95d};
 
     // ── PJP ──────────────────────────────────────────────────
-    var proceed = asVoidProceed(() -> ClassForPutStaticTest.objects = newFieldValue);
-    ProceedingJoinPoint pjp = createPjp(field, newFieldValue, proceed);
+    Callable<Object> proceedCallback =
+        () -> {
+          ClassForPutStaticTest.objects = newFieldValue;
+          return null;
+        };
+    ProceedingJoinPoint pjp = createPjp(field, newFieldValue, proceedCallback);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned = dispatcher.dispatch(pjp, proceed);
+    Object returned = dispatcher.dispatch(pjp);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -300,11 +328,15 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     Exception newFieldValue = new Exception("not working");
 
     // ── PJP ──────────────────────────────────────────────────
-    var proceed = asVoidProceed(() -> ClassForPutStaticTest.lastError = newFieldValue);
-    ProceedingJoinPoint pjp = createPjp(field, newFieldValue, proceed);
+    Callable<Object> proceedCallback =
+        () -> {
+          ClassForPutStaticTest.lastError = newFieldValue;
+          return null;
+        };
+    ProceedingJoinPoint pjp = createPjp(field, newFieldValue, proceedCallback);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned = dispatcher.dispatch(pjp, proceed);
+    Object returned = dispatcher.dispatch(pjp);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();

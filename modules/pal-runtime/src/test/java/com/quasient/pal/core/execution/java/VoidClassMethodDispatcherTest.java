@@ -23,7 +23,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import com.quasient.pal.common.objects.ObjectRef;
-import com.quasient.pal.common.weave.Proceed;
 import com.quasient.pal.core.service.RunOptions;
 import com.quasient.pal.core.transport.MessageChannelType;
 import com.quasient.pal.messages.colfer.ExecMessage;
@@ -31,6 +30,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.stream.LongStream;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.junit.After;
@@ -73,8 +73,8 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
             objectLookupStore);
   }
 
-  private <T> ProceedingJoinPoint createPjp(Method method, Object[] args, Proceed<T> proceed)
-      throws Throwable {
+  private <T> ProceedingJoinPoint createPjp(
+      Method method, Object[] args, Callable<T> proceedCallback) throws Throwable {
     String sourceFilename = "NotARealClass.java";
     return PjpBuilder.create()
         .kindMethodCall()
@@ -83,7 +83,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
         .sender(this)
         .target(null) // static method
         .args(args)
-        .proceedBehavior(proceed)
+        .proceedBehavior(proceedCallback)
         .build();
   }
 
@@ -109,11 +109,15 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
     assertFalse(ClassForVoidClassMethodTest.slept);
 
     // ── PJP ──────────────────────────────────────────────────
-    var proceed = asVoidProceed(ClassForVoidClassMethodTest::sleep);
-    ProceedingJoinPoint pjp = createPjp(m, args, proceed);
+    Callable<Object> proceedCallback =
+        () -> {
+          ClassForVoidClassMethodTest.sleep();
+          return null;
+        };
+    ProceedingJoinPoint pjp = createPjp(m, args, proceedCallback);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned = dispatcher.dispatch(pjp, proceed);
+    Object returned = dispatcher.dispatch(pjp);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -141,11 +145,15 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
     assertThat(ClassForVoidClassMethodTest.millisSlept, is(0L));
 
     // ── PJP ──────────────────────────────────────────────────
-    var proceed = asVoidProceed(() -> ClassForVoidClassMethodTest.sleep(millisToSleep));
-    ProceedingJoinPoint pjp = createPjp(m, args, proceed);
+    Callable<Object> proceedCallback =
+        () -> {
+          ClassForVoidClassMethodTest.sleep(millisToSleep);
+          return null;
+        };
+    ProceedingJoinPoint pjp = createPjp(m, args, proceedCallback);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned = dispatcher.dispatch(pjp, proceed);
+    Object returned = dispatcher.dispatch(pjp);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -173,11 +181,15 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
     assertThat(ClassForVoidClassMethodTest.millisSlept, is(0L));
 
     // ── PJP ──────────────────────────────────────────────────
-    var proceed = asVoidProceed(() -> ClassForVoidClassMethodTest.sleepUnboxed(millisToSleep));
-    ProceedingJoinPoint pjp = createPjp(m, args, proceed);
+    Callable<Object> proceedCallback =
+        () -> {
+          ClassForVoidClassMethodTest.sleepUnboxed(millisToSleep);
+          return null;
+        };
+    ProceedingJoinPoint pjp = createPjp(m, args, proceedCallback);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned = dispatcher.dispatch(pjp, proceed);
+    Object returned = dispatcher.dispatch(pjp);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -203,11 +215,15 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
     Object[] args = {sumContainer, someNumbers};
 
     // ── PJP ──────────────────────────────────────────────────
-    var proceed = asVoidProceed(() -> ClassForVoidClassMethodTest.add(sumContainer, someNumbers));
-    ProceedingJoinPoint pjp = createPjp(m, args, proceed);
+    Callable<Object> proceedCallback =
+        () -> {
+          ClassForVoidClassMethodTest.add(sumContainer, someNumbers);
+          return null;
+        };
+    ProceedingJoinPoint pjp = createPjp(m, args, proceedCallback);
 
     // ── dispatch ─────────────────────────────────────────────
-    Object returned = dispatcher.dispatch(pjp, proceed);
+    Object returned = dispatcher.dispatch(pjp);
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
@@ -232,12 +248,16 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
     Object[] args = {null, 2L}; // will trigger NPE in method
 
     // ── PJP ──────────────────────────────────────────────────
-    var proceed = asVoidProceed(() -> ClassForVoidClassMethodTest.addPositive(null, 2L));
-    ProceedingJoinPoint pjp = createPjp(m, args, proceed);
+    Callable<Object> proceedCallback =
+        () -> {
+          ClassForVoidClassMethodTest.addPositive(null, 2L);
+          return null;
+        };
+    ProceedingJoinPoint pjp = createPjp(m, args, proceedCallback);
 
     // ── dispatch ─────────────────────────────────────────────
     try {
-      dispatcher.dispatch(pjp, proceed);
+      dispatcher.dispatch(pjp);
       fail("Should have thrown a NPE");
     } catch (NullPointerException npe) {
       // expected

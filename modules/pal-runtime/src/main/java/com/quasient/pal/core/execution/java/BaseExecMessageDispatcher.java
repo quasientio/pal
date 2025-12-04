@@ -17,8 +17,6 @@ import com.quasient.pal.common.runtime.ContextFactory;
 import com.quasient.pal.common.runtime.Dispatcher;
 import com.quasient.pal.common.runtime.ExecPhase;
 import com.quasient.pal.common.util.Classes;
-import com.quasient.pal.common.weave.Proceed;
-import com.quasient.pal.common.weave.VoidProceed;
 import com.quasient.pal.core.intercept.InterceptCallbackDispatcher;
 import com.quasient.pal.core.intercept.InterceptCheckResult;
 import com.quasient.pal.core.intercept.InterceptChecker;
@@ -60,13 +58,11 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
    * cause.
    *
    * @param pjp the {@link ProceedingJoinPoint} handle
-   * @param proceed the {@link Proceed} callback handle
-   * @return the result of the executed operation, or a special void instance if no result is
-   *     produced
+   * @return the result of the executed operation, or null for void operations
    * @throws Throwable if an error occurs during invocation or processing phases
    */
   @Override
-  public final <T> T dispatch(ProceedingJoinPoint pjp, Proceed<T> proceed) throws Throwable {
+  public final Object dispatch(ProceedingJoinPoint pjp) throws Throwable {
 
     final Object sender = pjp.getThis();
     final Object[] args = pjp.getArgs();
@@ -141,10 +137,10 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     }
 
     // 4. Invoke
-    T returnValue = null;
+    Object returnValue = null;
     InvocationThrowableWrapper throwableWrapper = null;
     try {
-      returnValue = invoke(pjp, proceed, finalArgs);
+      returnValue = invoke(pjp, finalArgs);
     } catch (Throwable th) {
       logger.error("Caught throwable while invoking field operation. Will wrap and return it.", th);
       throwableWrapper = new InvocationThrowableWrapper(th);
@@ -172,7 +168,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         objectRef = generateObjectRef(returnValue);
       }
 
-      boolean returnsVoid = proceed instanceof VoidProceed;
+      boolean returnsVoid = returnsVoid(pjp);
 
       // 6. Wrap object or exception
       final ExecMessage afterExecMsg =
@@ -202,9 +198,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
         // Apply return value override
         if (afterCallbackResponse.hasReturnValueOverride()) {
-          @SuppressWarnings("unchecked")
-          T overriddenReturnValue = (T) afterCallbackResponse.getOverriddenReturnValue();
-          returnValue = overriddenReturnValue;
+          returnValue = afterCallbackResponse.getOverriddenReturnValue();
         }
       }
     } else if (afterInterceptCheck != null && afterInterceptCheck.hasLocalIntercepts()) {
@@ -604,19 +598,14 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
    * to pass the modified arguments to the intercepted operation.
    *
    * @param pjp the proceeding join point
-   * @param proceed handle to the {@link Proceed} callback
    * @param args the arguments for the invocation (which may be mutated by intercept callbacks)
-   * @return the result of the accessible object invocation, null if the operation is a setter or
-   *     void call
+   * @return the result of the accessible object invocation, or null for void operations
    */
-  protected <T> T invoke(ProceedingJoinPoint pjp, Proceed<T> proceed, Object[] args)
-      throws Throwable {
+  protected Object invoke(ProceedingJoinPoint pjp, Object[] args) throws Throwable {
     // Use pjp.proceed(args) to pass the arguments (which may have been mutated by intercept
     // callbacks) to the intercepted operation. AspectJ's proceed(Object[]) allows us to replace
     // the original arguments with modified ones.
-    @SuppressWarnings("unchecked")
-    T result = (T) pjp.proceed(args);
-    return result;
+    return pjp.proceed(args);
   }
 
   /**
@@ -644,6 +633,19 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
    * @return true if the invocation yields no meaningful return value; false otherwise
    */
   protected abstract boolean returnsVoid(AccessibleObject accessibleObject);
+
+  /**
+   * Determines whether the operation represented by the proceeding join point returns void.
+   *
+   * <p>This method is used during dispatch to determine whether the operation produces a return
+   * value. For method calls, the return type is extracted from the method signature. For field
+   * operations and constructors, subclasses return a fixed value (set fields return void,
+   * constructors and get fields do not).
+   *
+   * @param pjp the proceeding join point representing the intercepted operation
+   * @return true if the operation returns void; false otherwise
+   */
+  protected abstract boolean returnsVoid(ProceedingJoinPoint pjp);
 
   /**
    * Retrieves the MessageType corresponding to the before-execution phase.

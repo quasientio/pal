@@ -11,10 +11,10 @@ package com.quasient.pal.core.execution.java;
 
 import static org.mockito.Mockito.*;
 
-import com.quasient.pal.common.weave.Proceed;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.concurrent.Callable;
 import org.aspectj.lang.*;
 import org.aspectj.lang.reflect.ConstructorSignature;
 import org.aspectj.lang.reflect.FieldSignature;
@@ -28,7 +28,7 @@ public final class PjpBuilder {
   private final JoinPoint.StaticPart sp = mock(JoinPoint.StaticPart.class);
   private final SourceLocation sl = mock(SourceLocation.class);
 
-  private PjpBuilder() throws Throwable {
+  private PjpBuilder() {
     // default PJP wiring
     when(pjp.getStaticPart()).thenReturn(sp);
     // pjp.proceed(Object[]) is used by BaseExecMessageDispatcher.invoke() to support argument
@@ -86,6 +86,7 @@ public final class PjpBuilder {
     doReturn(m.getParameterTypes()).when(ms).getParameterTypes();
     doReturn(m.getReturnType()).when(ms).getReturnType();
     doReturn(ms).when(sp).getSignature();
+    doReturn(ms).when(pjp).getSignature();
     return this;
   }
 
@@ -134,7 +135,7 @@ public final class PjpBuilder {
   }
 
   /**
-   * Configures pjp.proceed(Object[]) to delegate to a Proceed callback.
+   * Configures pjp.proceed(Object[]) to delegate to a Callable callback.
    *
    * <p>This is needed for tests that verify argument mutation through intercepts. The default
    * behavior throws an exception to prevent accidental use of pjp.proceed().
@@ -142,7 +143,7 @@ public final class PjpBuilder {
    * @param proceedCallback the callback to invoke when pjp.proceed(Object[]) is called
    * @return this builder
    */
-  public <T> PjpBuilder proceedBehavior(Proceed<T> proceedCallback) throws Throwable {
+  public <T> PjpBuilder proceedBehavior(Callable<T> proceedCallback) throws Throwable {
     when(pjp.proceed(any(Object[].class))).thenAnswer(inv -> proceedCallback.call());
     return this;
   }

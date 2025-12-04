@@ -9,7 +9,6 @@
  */
 package com.quasient.pal.common.runtime;
 
-import com.quasient.pal.common.weave.Proceed;
 import org.aspectj.lang.ProceedingJoinPoint;
 
 /**
@@ -21,12 +20,11 @@ public interface Dispatcher {
 
   /**
    * Entry point for the hot-path, i.e. execution of quantized operations (constructor/method calls
-   * and field ops)
+   * and field ops).
    *
    * @param pjp the {@link ProceedingJoinPoint} handle
-   * @param proceed the {@link Proceed} callback handle
-   * @return the result of the dispatch operation
+   * @return the result of the dispatch operation, or null for void operations
    * @throws Throwable if an error occurs during the dispatch process
    */
-  <T> T dispatch(ProceedingJoinPoint pjp, Proceed<T> proceed) throws Throwable;
+  Object dispatch(ProceedingJoinPoint pjp) throws Throwable;
 }
