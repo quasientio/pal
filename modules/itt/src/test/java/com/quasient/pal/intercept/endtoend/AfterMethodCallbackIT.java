@@ -28,15 +28,15 @@ import java.util.UUID;
 import org.junit.Test;
 
 /**
- * Integration tests for AFTER intercept callbacks with return value override.
+ * Integration tests for AFTER method intercept callbacks with return value override.
  *
- * <p>These tests verify the end-to-end callback mechanism for AFTER intercepts, including return
- * value override via static callback methods invoked using reflection.
+ * <p>These tests verify the end-to-end callback mechanism for AFTER method intercepts, including
+ * return value override via static callback methods invoked using reflection.
  *
  * <p>Tests use the shared intercept peer with StringMethods application class and
  * AfterCallbackHandlers callback handlers (both in itt-apps module).
  */
-public class AfterInterceptCallbackIT extends AbstractInterceptIT {
+public class AfterMethodCallbackIT extends AbstractInterceptIT {
 
   /** UUID for the intercept registration. */
   private UUID interceptUuid;

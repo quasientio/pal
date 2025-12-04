@@ -14,10 +14,10 @@ import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.intercept.endtoend.AfterConstructorCallbackIT;
 import com.quasient.pal.intercept.endtoend.AfterFieldCallbackIT;
-import com.quasient.pal.intercept.endtoend.AfterInterceptCallbackIT;
+import com.quasient.pal.intercept.endtoend.AfterMethodCallbackIT;
 import com.quasient.pal.intercept.endtoend.BeforeConstructorCallbackIT;
 import com.quasient.pal.intercept.endtoend.BeforeFieldCallbackIT;
-import com.quasient.pal.intercept.endtoend.BeforeInterceptCallbackIT;
+import com.quasient.pal.intercept.endtoend.BeforeMethodCallbackIT;
 import java.util.UUID;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -76,8 +76,8 @@ import org.slf4j.LoggerFactory;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
   // Method callback handler tests
-  BeforeInterceptCallbackIT.class,
-  AfterInterceptCallbackIT.class,
+  BeforeMethodCallbackIT.class,
+  AfterMethodCallbackIT.class,
   // Constructor callback handler tests
   BeforeConstructorCallbackIT.class,
   AfterConstructorCallbackIT.class,

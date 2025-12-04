@@ -13,7 +13,7 @@ import com.quasient.pal.common.directory.nodes.LogInfo;
 import com.quasient.pal.cxn.ThinPeer;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
-import com.quasient.pal.intercept.mechanism.MethodInterceptIT;
+import com.quasient.pal.intercept.complex.MethodInterceptInFlightVerificationIT;
 import com.quasient.pal.intercept.mechanism.constructor.ConstructorAsyncCallbackIT;
 import com.quasient.pal.intercept.mechanism.constructor.ConstructorSyncCallbackIT;
 import com.quasient.pal.intercept.mechanism.instancefield.InstanceFieldAsyncCallbackIT;
@@ -73,8 +73,9 @@ import org.slf4j.LoggerFactory;
  *       (StringMethods, InterceptableApp, etc.) with {@code --interceptable} flag. Sends callback
  *       requests when intercepts match.
  *   <li><b>ThinPeer (per test)</b>: Each test creates its own ThinPeer via {@code
- *       AbstractInterceptIT.setUp()}. Receives and accumulates {@code InterceptCallbackRequest}
- *       messages without executing handlers. Accessed via {@code myPeerUuid}.
+ *       AbstractInterceptIT.setUpAbstractInterceptIT()}. Receives and accumulates {@code
+ *       InterceptCallbackRequest} messages without executing handlers. Accessed via {@code
+ *       myPeerUuid}.
  * </ul>
  *
  * <p>The shared interceptable peer is configured with:
@@ -93,9 +94,6 @@ import org.slf4j.LoggerFactory;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-  // Method intercept mechanism tests
-  MethodInterceptIT.class,
-
   // Instance method callback tests
   InstanceMethodSyncCallbackIT.class,
   InstanceMethodAsyncCallbackIT.class,
@@ -114,7 +112,10 @@ import org.slf4j.LoggerFactory;
 
   // Instance field callback tests
   InstanceFieldSyncCallbackIT.class,
-  InstanceFieldAsyncCallbackIT.class
+  InstanceFieldAsyncCallbackIT.class,
+
+  // More complex intercept tests
+  MethodInterceptInFlightVerificationIT.class
 })
 public class InterceptFlowTestSuite extends AbstractIntegrationTest {
 

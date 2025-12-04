@@ -7,7 +7,7 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
-package com.quasient.pal.intercept.mechanism;
+package com.quasient.pal.intercept.complex;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -19,6 +19,7 @@ import com.quasient.pal.common.directory.nodes.InterceptRequest;
 import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.lang.intercept.InterceptableMethodCall;
 import com.quasient.pal.common.objects.ObjectRef;
+import com.quasient.pal.cxn.ThinPeer;
 import com.quasient.pal.intercept.AbstractInterceptIT;
 import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.messages.colfer.ReturnValue;
@@ -27,9 +28,43 @@ import com.quasient.pal.serdes.Unwrapper;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
-public class MethodInterceptIT extends AbstractInterceptIT {
+/**
+ * A second, 'verifier' ThinPeer is used, so two in total: one for invoking a call (to a method or
+ * field op) and a second one to send messages to the interceptable peer before/after callbacks in
+ * order to verify state object/class values.
+ */
+public class MethodInterceptInFlightVerificationIT extends AbstractInterceptIT {
+
+  private ThinPeer verifierThinPeer;
+
+  @Before
+  public void setUp() throws Exception {
+    logger.info("===== MethodInterceptInFlightVerificationIT.setUp: STARTING =====");
+
+    // a 2nd ThinPeer to be used for verifications from callback threads
+    this.verifierThinPeer =
+        new ThinPeer()
+            .withUuid(UUID.randomUUID())
+            .withName("Verifier")
+            .withInitialPeer(interceptablePeerInfo)
+            .withDirectoryProvider(directoryConnectionProvider)
+            .init();
+
+    logger.info("===== MethodInterceptInFlightVerificationIT.setUp: COMPLETED =====");
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    logger.info("===== MethodInterceptInFlightVerificationIT.tearDown: STARTING =====");
+
+    logger.info("Closing verifierThinPeer");
+    verifierThinPeer.close();
+    logger.info("===== MethodInterceptInFlightVerificationIT.tearDown: COMPLETED =====");
+  }
 
   @Test
   public void testBeforeInstanceMethod() throws Exception {

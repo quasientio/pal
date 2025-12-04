@@ -34,24 +34,8 @@ import org.slf4j.LoggerFactory;
 /**
  * Base class for intercept integration tests.
  *
- * <p>This class provides common infrastructure for both {@link
- * com.quasient.pal.InterceptEndToEndTestSuite} and {@link com.quasient.pal.InterceptFlowTestSuite}
- * tests, including ThinPeer setup, intercept registration, and callback handling.
- *
- * <p>Intercept tests may be a little hard to follow, so some notes to clarify.
- *
- * <pre>
- * - Two ThinPeers are used, one for invoking a call (to a method or field op)
- *   and a second one to send messages to the peer before/after callbacks in
- *   order to verify state object/class values.
- * - The peer against which we run the tests must be started with at least two
- *   RPC threads (--rpc-threads=2), one to receive the method/field op
- *   invocation, and another one to get requests that verify state.
- * - The ThinPeer that invokes methods/field ops is configured with an inbound
- *   RPC socket to receive callbacks. ThinPeer manages the socket and listener
- *   thread automatically.
- *
- * </pre>
+ * <p>This class provides common infrastructure for Intercept integration tests, including ThinPeer
+ * setup, intercept registration, and callback handling.
  */
 public class AbstractInterceptIT extends AbstractIntegrationTest
     implements ExecMessageAssertions, IncomingMessageListener {
@@ -81,14 +65,13 @@ public class AbstractInterceptIT extends AbstractIntegrationTest
 
   protected MessageBuilder messageBuilder;
   protected final UUID myPeerUuid = UUID.randomUUID();
+  protected PeerInfo interceptablePeerInfo;
 
+  protected DirectoryConnectionProvider directoryConnectionProvider;
   private PalDirectory palDirectory;
 
   // a ThinPeer to invoke methods/field ops that will trigger callbacks
   private ThinPeer thinPeer;
-
-  // a 2nd ThinPeer to be used for verifications from callback threads
-  protected ThinPeer verifierThinPeer;
 
   // list to accumulate received callback messages
   private final List<Message> receivedCallbacks = new ArrayList<>();
@@ -148,25 +131,25 @@ public class AbstractInterceptIT extends AbstractIntegrationTest
   }
 
   @Before
-  public void setUp() throws Exception {
-    DirectoryConnectionProvider directoryConnectionProvider =
-        new DirectoryConnectionProvider(getPalDirectoryUrl(), null, true);
+  public void setUpAbstractInterceptIT() throws Exception {
+    logger.info("===== AbstractInterceptIT.setUpAbstractInterceptIT: STARTING =====");
+
+    directoryConnectionProvider = new DirectoryConnectionProvider(getPalDirectoryUrl(), null, true);
     this.palDirectory =
         directoryConnectionProvider
             .get()
             .orElseThrow(() -> new RuntimeException("No connection for PalDirectory"));
     // Use the well-known shared peer UUID instead of searching for a peer
     // Retry a few times to allow for directory registration delay
-    PeerInfo interceptablePeer = null;
     for (int i = 0; i < 10; i++) {
-      interceptablePeer = palDirectory.getPeer(INTERCEPTABLE_PEER_UUID);
-      if (interceptablePeer != null) {
+      interceptablePeerInfo = palDirectory.getPeer(INTERCEPTABLE_PEER_UUID);
+      if (interceptablePeerInfo != null) {
         break;
       }
       logger.debug("Waiting for peer to register in directory (attempt {})", i + 1);
       Thread.sleep(500);
     }
-    if (interceptablePeer == null) {
+    if (interceptablePeerInfo == null) {
       throw new RuntimeException(
           "Shared intercept test peer not found in directory after 5 seconds");
     }
@@ -176,20 +159,14 @@ public class AbstractInterceptIT extends AbstractIntegrationTest
             .withName("InterceptTestClient")
             .withSelfRegistration(true)
             .withZmqRpcAddress(RPC_ADDRESS)
-            .withInitialPeer(interceptablePeer)
-            .withDirectoryProvider(directoryConnectionProvider)
-            .init();
-    this.verifierThinPeer =
-        new ThinPeer()
-            .withUuid(UUID.randomUUID())
-            .withName("Verifier")
-            .withInitialPeer(interceptablePeer)
+            .withInitialPeer(interceptablePeerInfo)
             .withDirectoryProvider(directoryConnectionProvider)
             .init();
     this.messageBuilder = new MessageBuilder(myPeerUuid);
 
     // register this test class as a listener for incoming callback messages
     thinPeer.addMessageListener(this);
+    logger.info("===== AbstractInterceptIT.setUpAbstractInterceptIT: COMPLETED =====");
   }
 
   protected InterceptRequest<InterceptableMethodCall> createMethodCallInterceptRequest(
@@ -248,8 +225,8 @@ public class AbstractInterceptIT extends AbstractIntegrationTest
   }
 
   @After
-  public void tearDown() throws Exception {
-    logger.info("===== AbstractInterceptIT.tearDown: STARTING =====");
+  public void tearDownAbstractInterceptIT() throws Exception {
+    logger.info("===== AbstractInterceptIT.tearDownAbstractInterceptIT: STARTING =====");
 
     // Clean up intercepts registered for this test's ThinPeer (mechanism tests)
     logger.info("Deleting intercepts for myPeerUuid: {}", myPeerUuid);
@@ -263,10 +240,8 @@ public class AbstractInterceptIT extends AbstractIntegrationTest
     thinPeer.removeMessageListener(this);
     logger.info("Closing thinPeer");
     thinPeer.close();
-    logger.info("Closing verifierThinPeer");
-    verifierThinPeer.close();
     logger.info("Closing palDirectory");
     palDirectory.close();
-    logger.info("===== AbstractInterceptIT.tearDown: COMPLETED =====");
+    logger.info("===== AbstractInterceptIT.tearDownAbstractInterceptIT: COMPLETED =====");
   }
 }

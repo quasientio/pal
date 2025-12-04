@@ -29,15 +29,15 @@ import java.util.UUID;
 import org.junit.Test;
 
 /**
- * Integration tests for BEFORE intercept callbacks with argument mutation.
+ * Integration tests for BEFORE method intercept callbacks with argument mutation.
  *
- * <p>These tests verify the end-to-end callback mechanism for BEFORE intercepts, including argument
- * mutation via static callback methods invoked using reflection.
+ * <p>These tests verify the end-to-end callback mechanism for BEFORE method intercepts, including
+ * argument mutation via static callback methods invoked using reflection.
  *
  * <p>Tests use the shared intercept peer with StringMethods application class and
  * BeforeCallbackHandlers callback handlers (both in itt-apps module).
  */
-public class BeforeInterceptCallbackIT extends AbstractInterceptIT {
+public class BeforeMethodCallbackIT extends AbstractInterceptIT {
 
   /** UUID for the intercept registration. */
   private UUID interceptUuid;
