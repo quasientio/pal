@@ -100,6 +100,9 @@ public final class InterceptContext {
   /** Flag indicating whether the return value has been modified. */
   private boolean returnValueModified = false;
 
+  /** The exception to throw instead of normal execution/return. */
+  @Nullable private Throwable exceptionToThrow;
+
   /**
    * Constructs an {@code InterceptContext} with the specified parameters.
    *
@@ -307,11 +310,21 @@ public final class InterceptContext {
    * <p><b>Limitation:</b> Only simple types are supported (primitives, wrappers, String, and simple
    * arrays). Setting complex objects may result in serialization errors.
    *
+   * <p><b>ASYNC Restriction:</b> Argument mutation is not supported for {@link
+   * InterceptType#BEFORE_ASYNC} intercepts. ASYNC callbacks are fire-and-forget and cannot modify
+   * the arguments because the response is not awaited by the intercepted peer.
+   *
    * @param index the zero-based argument index
    * @param value the new argument value
    * @throws IndexOutOfBoundsException if the index is out of range
+   * @throws UnsupportedOperationException if the intercept type is BEFORE_ASYNC
    */
   public void setArg(int index, @Nullable Object value) {
+    if (interceptType == InterceptType.BEFORE_ASYNC) {
+      throw new UnsupportedOperationException(
+          "Argument mutation is not supported for BEFORE_ASYNC intercepts. "
+              + "ASYNC callbacks are fire-and-forget and cannot modify arguments.");
+    }
     if (args == null) {
       throw new IllegalStateException("No arguments available to modify");
     }
@@ -336,15 +349,65 @@ public final class InterceptContext {
    * <p><b>Note:</b> Return values are force-serialized (by-value). ObjectRef-based remote
    * references are not supported.
    *
+   * <p><b>ASYNC Restriction:</b> Return value override is not supported for {@link
+   * InterceptType#AFTER_ASYNC} intercepts. ASYNC callbacks are fire-and-forget and cannot modify
+   * the return value because the response is not awaited by the intercepted peer.
+   *
    * @param value the new return value
    * @throws IllegalStateException if the method is void
+   * @throws UnsupportedOperationException if the intercept type is AFTER_ASYNC
    */
   public void setReturnValue(@Nullable Object value) {
+    if (interceptType == InterceptType.AFTER_ASYNC) {
+      throw new UnsupportedOperationException(
+          "Return value override is not supported for AFTER_ASYNC intercepts. "
+              + "ASYNC callbacks are fire-and-forget and cannot modify the return value.");
+    }
     if (isVoid) {
       throw new IllegalStateException("Cannot set return value for void method");
     }
     this.returnValue = value;
     this.returnValueModified = true;
+  }
+
+  /**
+   * Sets an exception to throw instead of normal execution or return.
+   *
+   * <p>If set, this exception will be thrown on the intercepted peer instead of:
+   *
+   * <ul>
+   *   <li><b>BEFORE phase:</b> Instead of executing the method
+   *   <li><b>AFTER phase:</b> Instead of returning the method's result or original exception
+   * </ul>
+   *
+   * <p><b>ASYNC Restriction:</b> Exception throwing is not supported for {@link
+   * InterceptType#BEFORE_ASYNC} or {@link InterceptType#AFTER_ASYNC} intercepts. ASYNC callbacks
+   * are fire-and-forget and cannot affect the intercepted peer's execution flow.
+   *
+   * @param exception the exception to throw
+   * @throws UnsupportedOperationException if the intercept type is BEFORE_ASYNC or AFTER_ASYNC
+   */
+  public void setExceptionToThrow(@Nonnull Throwable exception) {
+    if (interceptType == InterceptType.BEFORE_ASYNC || interceptType == InterceptType.AFTER_ASYNC) {
+      throw new UnsupportedOperationException(
+          "Exception throwing is not supported for "
+              + interceptType
+              + " intercepts. "
+              + "ASYNC callbacks are fire-and-forget and cannot affect execution flow.");
+    }
+    this.exceptionToThrow = Objects.requireNonNull(exception, "exception cannot be null");
+  }
+
+  /**
+   * Returns the exception set via {@link #setExceptionToThrow(Throwable)}.
+   *
+   * <p><b>Internal API:</b> This method is primarily for use by callback dispatchers.
+   *
+   * @return the exception to throw, or null if no exception was set
+   */
+  @Nullable
+  public Throwable getExceptionToThrow() {
+    return exceptionToThrow;
   }
 
   /**

@@ -15,6 +15,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -296,6 +297,131 @@ public class InterceptContextTest {
       fail("Expected NullPointerException for null peerUuid");
     } catch (NullPointerException e) {
       assertTrue(e.getMessage().contains("interceptedPeerUuid"));
+    }
+  }
+
+  /**
+   * Tests that {@link InterceptContext#setArg(int, Object)} throws UnsupportedOperationException
+   * for BEFORE_ASYNC intercepts.
+   */
+  @Test
+  public void testSetArgThrowsForBeforeAsync() {
+    Object[] args = new Object[] {"hello", 42};
+
+    InterceptContext ctx =
+        InterceptContext.forBeforePhase(execMessage, InterceptType.BEFORE_ASYNC, peerUuid, args);
+
+    try {
+      ctx.setArg(0, "MODIFIED");
+      fail("Expected UnsupportedOperationException for BEFORE_ASYNC");
+    } catch (UnsupportedOperationException e) {
+      assertTrue(e.getMessage().contains("BEFORE_ASYNC"));
+      assertTrue(e.getMessage().contains("fire-and-forget"));
+    }
+  }
+
+  /**
+   * Tests that {@link InterceptContext#setReturnValue(Object)} throws UnsupportedOperationException
+   * for AFTER_ASYNC intercepts.
+   */
+  @Test
+  public void testSetReturnValueThrowsForAfterAsync() {
+    InterceptContext ctx =
+        InterceptContext.forAfterPhase(
+            execMessage, InterceptType.AFTER_ASYNC, peerUuid, new Object[] {}, 100, false, null);
+
+    try {
+      ctx.setReturnValue(200);
+      fail("Expected UnsupportedOperationException for AFTER_ASYNC");
+    } catch (UnsupportedOperationException e) {
+      assertTrue(e.getMessage().contains("AFTER_ASYNC"));
+      assertTrue(e.getMessage().contains("fire-and-forget"));
+    }
+  }
+
+  /** Tests that reading args and return value is still allowed for ASYNC intercepts. */
+  @Test
+  public void testReadOnlyAccessAllowedForAsync() {
+    Object[] args = new Object[] {"hello", 42};
+    Object returnValue = "result";
+
+    // BEFORE_ASYNC - can read args
+    InterceptContext beforeCtx =
+        InterceptContext.forBeforePhase(execMessage, InterceptType.BEFORE_ASYNC, peerUuid, args);
+    Object[] readArgs = beforeCtx.getArgs();
+    assertArrayEquals(new Object[] {"hello", 42}, readArgs);
+
+    // AFTER_ASYNC - can read return value
+    InterceptContext afterCtx =
+        InterceptContext.forAfterPhase(
+            execMessage, InterceptType.AFTER_ASYNC, peerUuid, args, returnValue, false, null);
+    assertEquals("result", afterCtx.getReturnValue());
+    assertArrayEquals(new Object[] {"hello", 42}, afterCtx.getArgs());
+  }
+
+  /**
+   * Tests that {@link InterceptContext#setExceptionToThrow(Throwable)} works for SYNC intercepts.
+   */
+  @Test
+  public void testSetExceptionToThrow() {
+    InterceptContext ctx =
+        InterceptContext.forBeforePhase(execMessage, InterceptType.BEFORE, peerUuid, new Object[0]);
+
+    RuntimeException exception = new RuntimeException("test exception");
+    ctx.setExceptionToThrow(exception);
+
+    assertSame(exception, ctx.getExceptionToThrow());
+  }
+
+  /**
+   * Tests that {@link InterceptContext#setExceptionToThrow(Throwable)} throws
+   * UnsupportedOperationException for BEFORE_ASYNC intercepts.
+   */
+  @Test
+  public void testSetExceptionToThrowThrowsForBeforeAsync() {
+    InterceptContext ctx =
+        InterceptContext.forBeforePhase(
+            execMessage, InterceptType.BEFORE_ASYNC, peerUuid, new Object[0]);
+
+    try {
+      ctx.setExceptionToThrow(new RuntimeException("test"));
+      fail("Expected UnsupportedOperationException for BEFORE_ASYNC");
+    } catch (UnsupportedOperationException e) {
+      assertTrue(e.getMessage().contains("BEFORE_ASYNC"));
+      assertTrue(e.getMessage().contains("fire-and-forget"));
+    }
+  }
+
+  /**
+   * Tests that {@link InterceptContext#setExceptionToThrow(Throwable)} throws
+   * UnsupportedOperationException for AFTER_ASYNC intercepts.
+   */
+  @Test
+  public void testSetExceptionToThrowThrowsForAfterAsync() {
+    InterceptContext ctx =
+        InterceptContext.forAfterPhase(
+            execMessage, InterceptType.AFTER_ASYNC, peerUuid, new Object[0], 100, false, null);
+
+    try {
+      ctx.setExceptionToThrow(new RuntimeException("test"));
+      fail("Expected UnsupportedOperationException for AFTER_ASYNC");
+    } catch (UnsupportedOperationException e) {
+      assertTrue(e.getMessage().contains("AFTER_ASYNC"));
+      assertTrue(e.getMessage().contains("fire-and-forget"));
+    }
+  }
+
+  /** Tests that {@link InterceptContext#setExceptionToThrow(Throwable)} rejects null. */
+  @Test
+  public void testSetExceptionToThrowRejectsNull() {
+    InterceptContext ctx =
+        InterceptContext.forBeforePhase(execMessage, InterceptType.BEFORE, peerUuid, new Object[0]);
+
+    try {
+      ctx.setExceptionToThrow(null);
+      fail("Expected NullPointerException for null exception");
+    } catch (NullPointerException e) {
+      assertTrue(e.getMessage().contains("exception cannot be null"));
     }
   }
 }
