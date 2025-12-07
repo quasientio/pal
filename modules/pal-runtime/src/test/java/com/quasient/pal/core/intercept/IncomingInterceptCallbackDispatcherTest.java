@@ -12,14 +12,24 @@ package com.quasient.pal.core.intercept;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import com.quasient.pal.common.lang.intercept.InterceptCallback;
 import com.quasient.pal.common.lang.intercept.InterceptContext;
 import com.quasient.pal.common.lang.intercept.InterceptPhase;
+import com.quasient.pal.messages.colfer.Class;
 import com.quasient.pal.messages.colfer.ExecMessage;
+import com.quasient.pal.messages.colfer.Field;
+import com.quasient.pal.messages.colfer.InstanceFieldPut;
+import com.quasient.pal.messages.colfer.InstanceMethodCall;
 import com.quasient.pal.messages.colfer.InterceptCallbackRequest;
+import com.quasient.pal.messages.colfer.Obj;
+import com.quasient.pal.messages.colfer.Parameter;
+import com.quasient.pal.messages.colfer.StaticFieldPut;
+import com.quasient.pal.serdes.colfer.WrapPolicy;
+import com.quasient.pal.serdes.colfer.Wrapper;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -564,5 +574,382 @@ public class IncomingInterceptCallbackDispatcherTest {
 
     assertNotNull(response);
     assertTrue("Should return error for method not found", response.getThrowException());
+  }
+
+  // ===========================================================================
+  // Argument Deserialization Tests
+  // ===========================================================================
+
+  /**
+   * Tests successful deserialization of method arguments.
+   *
+   * <p>Verifies that valid arguments (String, Integer) are correctly deserialized and passed to the
+   * callback handler.
+   */
+  @Test
+  public void testArgumentDeserializationSuccess() {
+    // Track deserialized arguments
+    final Object[][] capturedArgs = {null};
+
+    InterceptCallback callback =
+        (ctx) -> {
+          capturedArgs[0] = ctx.getArgs();
+          return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
+        };
+
+    dispatcher.registerCallback("test-callback", callback);
+
+    // Create ExecMessage with method call and parameters
+    ExecMessage exec = new ExecMessage();
+    exec.setMessageId("test-msg");
+
+    InstanceMethodCall methodCall = new InstanceMethodCall();
+    methodCall.setName("testMethod");
+
+    // Create parameters with wrapped values
+    Parameter param1 = new Parameter();
+    param1.setName("arg0");
+    param1.setValue(wrapValue("hello", String.class.getName()));
+
+    Parameter param2 = new Parameter();
+    param2.setName("arg1");
+    param2.setValue(wrapValue(42, Integer.class.getName()));
+
+    methodCall.setParameters(new Parameter[] {param1, param2});
+    exec.setInstanceMethodCall(methodCall);
+
+    InterceptCallbackRequest request = new InterceptCallbackRequest();
+    request.setCallbackId("req-123");
+    request.setPhase((byte) 1); // BEFORE
+    request.setInterceptType((byte) 1);
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("test-callback");
+    request.setExec(exec);
+
+    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
+        dispatcher.handleCallback(request);
+
+    assertNotNull(response);
+    assertFalse("Should not throw exception", response.getThrowException());
+    assertNotNull("Args should be captured", capturedArgs[0]);
+    assertEquals("Should have 2 args", 2, capturedArgs[0].length);
+    assertEquals("First arg should be 'hello'", "hello", capturedArgs[0][0]);
+    assertEquals("Second arg should be 42", 42, capturedArgs[0][1]);
+  }
+
+  /**
+   * Tests successful deserialization of null method arguments.
+   *
+   * <p>Verifies that null values are correctly handled (not confused with deserialization failure).
+   */
+  @Test
+  public void testArgumentDeserializationNullValue() {
+    final Object[][] capturedArgs = {null};
+
+    InterceptCallback callback =
+        (ctx) -> {
+          capturedArgs[0] = ctx.getArgs();
+          return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
+        };
+
+    dispatcher.registerCallback("test-callback", callback);
+
+    ExecMessage exec = new ExecMessage();
+    exec.setMessageId("test-msg");
+
+    InstanceMethodCall methodCall = new InstanceMethodCall();
+    methodCall.setName("testMethod");
+
+    // Create parameter with null value
+    Parameter param = new Parameter();
+    param.setName("arg0");
+    Obj nullObj = new Obj();
+    nullObj.setIsNull(true);
+    param.setValue(nullObj);
+
+    methodCall.setParameters(new Parameter[] {param});
+    exec.setInstanceMethodCall(methodCall);
+
+    InterceptCallbackRequest request = new InterceptCallbackRequest();
+    request.setCallbackId("req-123");
+    request.setPhase((byte) 1);
+    request.setInterceptType((byte) 1);
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("test-callback");
+    request.setExec(exec);
+
+    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
+        dispatcher.handleCallback(request);
+
+    assertNotNull(response);
+    assertFalse("Should not throw exception", response.getThrowException());
+    assertNotNull("Args should be captured", capturedArgs[0]);
+    assertEquals("Should have 1 arg", 1, capturedArgs[0].length);
+    assertNull("Arg should be null", capturedArgs[0][0]);
+  }
+
+  /**
+   * Tests that argument deserialization failure throws IllegalArgumentException.
+   *
+   * <p>Verifies that malformed argument data causes callback dispatch to fail with error response,
+   * rather than silently returning null.
+   */
+  @Test
+  public void testArgumentDeserializationFailure() {
+    InterceptCallback callback =
+        (ctx) -> {
+          fail("Callback should not be invoked when deserialization fails");
+          return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
+        };
+
+    dispatcher.registerCallback("test-callback", callback);
+
+    ExecMessage exec = new ExecMessage();
+    exec.setMessageId("test-msg");
+
+    InstanceMethodCall methodCall = new InstanceMethodCall();
+    methodCall.setName("testMethod");
+
+    // Create parameter with malformed value that will fail deserialization
+    Parameter param = new Parameter();
+    param.setName("arg0");
+    param.setValue(createMalformedObj());
+
+    methodCall.setParameters(new Parameter[] {param});
+    exec.setInstanceMethodCall(methodCall);
+
+    InterceptCallbackRequest request = new InterceptCallbackRequest();
+    request.setCallbackId("req-123");
+    request.setPhase((byte) 1);
+    request.setInterceptType((byte) 1);
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("test-callback");
+    request.setExec(exec);
+
+    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
+        dispatcher.handleCallback(request);
+
+    assertNotNull(response);
+    assertTrue(
+        "Should return error response when argument deserialization fails",
+        response.getThrowException());
+  }
+
+  // ===========================================================================
+  // Field PUT Value Deserialization Tests
+  // ===========================================================================
+
+  /**
+   * Tests successful deserialization of instance field PUT value.
+   *
+   * <p>Verifies that the PUT value is correctly deserialized and passed to the callback handler as
+   * args[0].
+   */
+  @Test
+  public void testInstanceFieldPutValueDeserializationSuccess() {
+    final Object[][] capturedArgs = {null};
+
+    InterceptCallback callback =
+        (ctx) -> {
+          capturedArgs[0] = ctx.getArgs();
+          return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
+        };
+
+    dispatcher.registerCallback("test-callback", callback);
+
+    ExecMessage exec = new ExecMessage();
+    exec.setMessageId("test-msg");
+
+    InstanceFieldPut fieldPut = new InstanceFieldPut();
+    Field field = new Field();
+    field.setName("counter");
+    fieldPut.setField(field);
+    fieldPut.setValueObject(wrapValue(100, Integer.class.getName()));
+    exec.setInstanceFieldPut(fieldPut);
+
+    InterceptCallbackRequest request = new InterceptCallbackRequest();
+    request.setCallbackId("req-123");
+    request.setPhase((byte) 1);
+    request.setInterceptType((byte) 1);
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("test-callback");
+    request.setExec(exec);
+
+    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
+        dispatcher.handleCallback(request);
+
+    assertNotNull(response);
+    assertFalse("Should not throw exception", response.getThrowException());
+    assertNotNull("Args should be captured", capturedArgs[0]);
+    assertEquals("Should have 1 arg (PUT value)", 1, capturedArgs[0].length);
+    assertEquals("PUT value should be 100", 100, capturedArgs[0][0]);
+  }
+
+  /**
+   * Tests successful deserialization of null field PUT value.
+   *
+   * <p>Verifies that null is correctly handled as a valid PUT value (not confused with
+   * deserialization failure).
+   */
+  @Test
+  public void testFieldPutValueDeserializationNullValue() {
+    final Object[][] capturedArgs = {null};
+
+    InterceptCallback callback =
+        (ctx) -> {
+          capturedArgs[0] = ctx.getArgs();
+          return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
+        };
+
+    dispatcher.registerCallback("test-callback", callback);
+
+    ExecMessage exec = new ExecMessage();
+    exec.setMessageId("test-msg");
+
+    InstanceFieldPut fieldPut = new InstanceFieldPut();
+    Field field = new Field();
+    field.setName("counter");
+    fieldPut.setField(field);
+    Obj nullObj = new Obj();
+    nullObj.setIsNull(true);
+    fieldPut.setValueObject(nullObj);
+    exec.setInstanceFieldPut(fieldPut);
+
+    InterceptCallbackRequest request = new InterceptCallbackRequest();
+    request.setCallbackId("req-123");
+    request.setPhase((byte) 1);
+    request.setInterceptType((byte) 1);
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("test-callback");
+    request.setExec(exec);
+
+    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
+        dispatcher.handleCallback(request);
+
+    assertNotNull(response);
+    assertFalse("Should not throw exception", response.getThrowException());
+    assertNotNull("Args should be captured", capturedArgs[0]);
+    assertEquals("Should have 1 arg", 1, capturedArgs[0].length);
+    assertNull("PUT value should be null", capturedArgs[0][0]);
+  }
+
+  /**
+   * Tests that instance field PUT value deserialization failure throws IllegalArgumentException.
+   *
+   * <p>Verifies that malformed PUT value data causes callback dispatch to fail with error response,
+   * rather than silently returning null.
+   */
+  @Test
+  public void testInstanceFieldPutValueDeserializationFailure() {
+    InterceptCallback callback =
+        (ctx) -> {
+          fail("Callback should not be invoked when deserialization fails");
+          return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
+        };
+
+    dispatcher.registerCallback("test-callback", callback);
+
+    ExecMessage exec = new ExecMessage();
+    exec.setMessageId("test-msg");
+
+    InstanceFieldPut fieldPut = new InstanceFieldPut();
+    Field field = new Field();
+    field.setName("counter");
+    fieldPut.setField(field);
+    fieldPut.setValueObject(createMalformedObj());
+    exec.setInstanceFieldPut(fieldPut);
+
+    InterceptCallbackRequest request = new InterceptCallbackRequest();
+    request.setCallbackId("req-123");
+    request.setPhase((byte) 1);
+    request.setInterceptType((byte) 1);
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("test-callback");
+    request.setExec(exec);
+
+    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
+        dispatcher.handleCallback(request);
+
+    assertNotNull(response);
+    assertTrue(
+        "Should return error response when PUT value deserialization fails",
+        response.getThrowException());
+  }
+
+  /**
+   * Tests that static field PUT value deserialization failure throws IllegalArgumentException.
+   *
+   * <p>Verifies that malformed PUT value data for static fields also causes callback dispatch to
+   * fail.
+   */
+  @Test
+  public void testStaticFieldPutValueDeserializationFailure() {
+    InterceptCallback callback =
+        (ctx) -> {
+          fail("Callback should not be invoked when deserialization fails");
+          return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
+        };
+
+    dispatcher.registerCallback("test-callback", callback);
+
+    ExecMessage exec = new ExecMessage();
+    exec.setMessageId("test-msg");
+
+    StaticFieldPut fieldPut = new StaticFieldPut();
+    Field field = new Field();
+    field.setName("staticCounter");
+    fieldPut.setField(field);
+    fieldPut.setValueObject(createMalformedObj());
+    exec.setStaticFieldPut(fieldPut);
+
+    InterceptCallbackRequest request = new InterceptCallbackRequest();
+    request.setCallbackId("req-123");
+    request.setPhase((byte) 1);
+    request.setInterceptType((byte) 1);
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("test-callback");
+    request.setExec(exec);
+
+    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
+        dispatcher.handleCallback(request);
+
+    assertNotNull(response);
+    assertTrue(
+        "Should return error response when static PUT value deserialization fails",
+        response.getThrowException());
+  }
+
+  // ===========================================================================
+  // Helper Methods
+  // ===========================================================================
+
+  /**
+   * Wraps a value into an Obj using the Wrapper utility.
+   *
+   * @param value the value to wrap
+   * @param className the class name of the value
+   * @return the wrapped Obj
+   */
+  private Obj wrapValue(Object value, String className) {
+    Obj obj = new Obj();
+    return Wrapper.wrapInto(obj, value, className, null, WrapPolicy.FORCE_BY_VALUE);
+  }
+
+  /**
+   * Creates a malformed Obj that will fail deserialization.
+   *
+   * <p>Sets the class to Integer but the value to invalid JSON, causing Unwrapper to fail.
+   *
+   * @return a malformed Obj
+   */
+  private Obj createMalformedObj() {
+    Obj obj = new Obj();
+    obj.setIsNull(false);
+    Class clazz = new Class();
+    clazz.setName("java.lang.Integer");
+    obj.setClazz(clazz);
+    // Invalid JSON for Integer - will cause deserialization to fail
+    obj.setValue("not-a-valid-integer-json");
+    return obj;
   }
 }

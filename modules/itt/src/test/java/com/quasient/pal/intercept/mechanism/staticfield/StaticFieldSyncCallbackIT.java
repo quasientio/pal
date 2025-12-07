@@ -22,7 +22,9 @@ import com.quasient.pal.common.lang.intercept.InterceptableFieldOp;
 import com.quasient.pal.intercept.AbstractInterceptIT;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.Message;
+import com.quasient.pal.messages.colfer.Obj;
 import com.quasient.pal.messages.types.MessageType;
+import com.quasient.pal.serdes.Unwrapper;
 import java.util.List;
 import java.util.UUID;
 import org.junit.Test;
@@ -295,6 +297,12 @@ public class StaticFieldSyncCallbackIT extends AbstractInterceptIT {
         "Callback should be StaticFieldPut",
         callback.getInterceptCallbackRequest().getExec().getStaticFieldPut(),
         is(notNullValue()));
+
+    // Verify the value being PUT matches what we passed to the setter
+    Obj putValueObj =
+        callback.getInterceptCallbackRequest().getExec().getStaticFieldPut().getValueObject();
+    Object value = Unwrapper.unwrapObject(putValueObj);
+    assertThat("PUT value should match the value passed to setter", value, is(newValue));
 
     logger.info("===== testSingleBeforeCallbackOnPut: TEST COMPLETED SUCCESSFULLY =====");
   }

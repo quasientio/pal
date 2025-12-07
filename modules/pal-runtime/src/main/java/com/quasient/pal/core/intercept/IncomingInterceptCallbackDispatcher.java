@@ -256,18 +256,20 @@ public class IncomingInterceptCallbackDispatcher {
     }
 
     // Deserialize each parameter
+    // Throws on deserialization failure rather than silently returning null,
+    // because null is a valid argument value.
     Object[] args = new Object[parameters.length];
     for (int i = 0; i < parameters.length; i++) {
-      try {
-        Obj paramValue = parameters[i].getValue();
-        if (paramValue.getIsNull()) {
-          args[i] = null;
-        } else {
-          args[i] = Unwrapper.unwrapObject(paramValue);
-        }
-      } catch (Exception e) {
-        logger.warn("Failed to deserialize argument {}: {}", i, e.getMessage());
+      Obj paramValue = parameters[i].getValue();
+      if (paramValue.getIsNull()) {
         args[i] = null;
+      } else {
+        try {
+          args[i] = Unwrapper.unwrapObject(paramValue);
+        } catch (Exception e) {
+          throw new IllegalArgumentException(
+              "Failed to deserialize argument " + i + ": " + e.getMessage(), e);
+        }
       }
     }
 
@@ -277,21 +279,26 @@ public class IncomingInterceptCallbackDispatcher {
   /**
    * Extracts the field PUT value as a single-element argument array.
    *
+   * <p>This method throws an exception on deserialization failure rather than silently returning
+   * null, because null is a valid PUT value and the callback handler must be able to distinguish
+   * between "value is null" and "deserialization failed".
+   *
    * @param valueObj the serialized value object (may be null)
    * @return a single-element array containing the deserialized value
+   * @throws IllegalArgumentException if deserialization fails
    */
   private Object[] extractFieldPutArgument(Obj valueObj) {
     if (valueObj == null) {
       return new Object[] {null};
     }
+    if (valueObj.getIsNull()) {
+      return new Object[] {null};
+    }
     try {
-      if (valueObj.getIsNull()) {
-        return new Object[] {null};
-      }
       return new Object[] {Unwrapper.unwrapObject(valueObj)};
     } catch (Exception e) {
-      logger.warn("Failed to deserialize field PUT value: {}", e.getMessage());
-      return new Object[] {null};
+      throw new IllegalArgumentException(
+          "Failed to deserialize field PUT value: " + e.getMessage(), e);
     }
   }
 
