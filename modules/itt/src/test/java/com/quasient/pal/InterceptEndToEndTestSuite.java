@@ -12,13 +12,24 @@ package com.quasient.pal;
 import com.quasient.pal.common.directory.nodes.LogInfo;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
-import com.quasient.pal.intercept.endtoend.AfterConstructorCallbackIT;
-import com.quasient.pal.intercept.endtoend.AfterFieldCallbackIT;
-import com.quasient.pal.intercept.endtoend.AfterMethodCallbackIT;
-import com.quasient.pal.intercept.endtoend.BeforeConstructorCallbackIT;
-import com.quasient.pal.intercept.endtoend.BeforeFieldCallbackIT;
-import com.quasient.pal.intercept.endtoend.BeforeMethodCallbackIT;
+import com.quasient.pal.intercept.endtoend.constructor.AfterConstructorAsyncCallbackIT;
+import com.quasient.pal.intercept.endtoend.constructor.AfterConstructorCallbackIT;
+import com.quasient.pal.intercept.endtoend.constructor.BeforeConstructorAsyncCallbackIT;
+import com.quasient.pal.intercept.endtoend.constructor.BeforeConstructorCallbackIT;
+import com.quasient.pal.intercept.endtoend.field.AfterFieldAsyncCallbackIT;
+import com.quasient.pal.intercept.endtoend.field.AfterFieldCallbackIT;
+import com.quasient.pal.intercept.endtoend.field.BeforeFieldAsyncCallbackIT;
+import com.quasient.pal.intercept.endtoend.field.BeforeFieldCallbackIT;
+import com.quasient.pal.intercept.endtoend.method.AfterMethodAsyncCallbackIT;
+import com.quasient.pal.intercept.endtoend.method.AfterMethodCallbackIT;
+import com.quasient.pal.intercept.endtoend.method.BeforeMethodAsyncCallbackIT;
+import com.quasient.pal.intercept.endtoend.method.BeforeMethodCallbackIT;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
@@ -75,15 +86,24 @@ import org.slf4j.LoggerFactory;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-  // Method callback handler tests
+  // Method callback handler tests (SYNC)
   BeforeMethodCallbackIT.class,
   AfterMethodCallbackIT.class,
-  // Constructor callback handler tests
+  // Method callback handler tests (ASYNC)
+  BeforeMethodAsyncCallbackIT.class,
+  AfterMethodAsyncCallbackIT.class,
+  // Constructor callback handler tests (SYNC)
   BeforeConstructorCallbackIT.class,
   AfterConstructorCallbackIT.class,
-  // Field callback handler tests
+  // Constructor callback handler tests (ASYNC)
+  BeforeConstructorAsyncCallbackIT.class,
+  AfterConstructorAsyncCallbackIT.class,
+  // Field callback handler tests (SYNC)
   BeforeFieldCallbackIT.class,
-  AfterFieldCallbackIT.class
+  AfterFieldCallbackIT.class,
+  // Field callback handler tests (ASYNC)
+  BeforeFieldAsyncCallbackIT.class,
+  AfterFieldAsyncCallbackIT.class
 })
 public class InterceptEndToEndTestSuite extends AbstractIntegrationTest {
 
@@ -108,10 +128,96 @@ public class InterceptEndToEndTestSuite extends AbstractIntegrationTest {
       UUID.fromString("00000000-0000-0000-0000-000000000003");
 
   /** Interceptable peer process (the one being intercepted). */
-  private static Process interceptablePeerProcess;
+  private static PeerProcess interceptablePeerProcess;
 
   /** Interceptor peer process (handles callbacks). */
-  private static Process interceptorPeerProcess;
+  private static PeerProcess interceptorPeerProcess;
+
+  /**
+   * Returns the interceptable peer process.
+   *
+   * <p>Tests can use this to access the peer's log file for verification.
+   *
+   * @return the interceptable peer process, or null if not yet launched
+   */
+  public static PeerProcess getInterceptablePeerProcess() {
+    return interceptablePeerProcess;
+  }
+
+  /**
+   * Returns the interceptor peer process.
+   *
+   * <p>Tests can use this to access the peer's log file for verification, which is useful for
+   * verifying that async callback handlers logged expected messages.
+   *
+   * @return the interceptor peer process, or null if not yet launched
+   */
+  public static PeerProcess getInterceptorPeerProcess() {
+    return interceptorPeerProcess;
+  }
+
+  /** Path to the application log file (itt-apps.log) for callback handler logs. */
+  private static Path appLogPath;
+
+  /** Timeout for waiting for application log lines (seconds). */
+  private static final int APP_LOG_TIMEOUT_SECONDS = 10;
+
+  /**
+   * Returns the path to the application log file.
+   *
+   * <p>This is the log file where callback handlers write their logs, separate from the peer
+   * runtime logs.
+   *
+   * @return the path to itt-apps.log
+   */
+  public static Path getAppLogPath() {
+    return appLogPath;
+  }
+
+  /**
+   * Waits for a log line matching the given regex pattern to appear in the application log.
+   *
+   * <p>This method polls the application log file (itt-apps.log) until a line matching the pattern
+   * is found or the timeout is reached.
+   *
+   * @param regex the regular expression pattern to match
+   * @return true if a matching line was found, false if timeout was reached
+   */
+  public static boolean waitForAppLogLine(String regex) {
+    return waitForAppLogLine(regex, APP_LOG_TIMEOUT_SECONDS);
+  }
+
+  /**
+   * Waits for a log line matching the given regex pattern to appear in the application log.
+   *
+   * <p>This method polls the application log file (itt-apps.log) until a line matching the pattern
+   * is found or the timeout is reached.
+   *
+   * @param regex the regular expression pattern to match
+   * @param timeoutSeconds maximum time to wait in seconds
+   * @return true if a matching line was found, false if timeout was reached
+   */
+  public static boolean waitForAppLogLine(String regex, int timeoutSeconds) {
+    Pattern pattern = Pattern.compile(regex);
+    long deadline = System.currentTimeMillis() + (timeoutSeconds * 1000L);
+
+    while (System.currentTimeMillis() < deadline) {
+      try {
+        if (Files.exists(appLogPath)) {
+          for (String line : Files.readAllLines(appLogPath)) {
+            if (pattern.matcher(line).find()) {
+              return true;
+            }
+          }
+        }
+        Thread.sleep(100);
+      } catch (IOException | InterruptedException e) {
+        logger.warn("Error reading application log", e);
+        return false;
+      }
+    }
+    return false;
+  }
 
   /** Helper instance to access non-static methods from AbstractIntegrationTest. */
   private static InterceptEndToEndTestSuite instance;
@@ -146,11 +252,22 @@ public class InterceptEndToEndTestSuite extends AbstractIntegrationTest {
       throw new RuntimeException("PAL_HOME environment variable is not set");
     }
 
+    // Initialize application log path and clear any existing log
+    appLogPath = Paths.get(palHome, "logs", "itt-apps.log");
+    try {
+      Files.deleteIfExists(appLogPath);
+      logger.info("Cleared application log file: {}", appLogPath);
+    } catch (IOException e) {
+      logger.warn("Failed to clear application log file: {}", appLogPath, e);
+    }
+
     String palDirectory = getPalDirectoryUrl();
     String kafkaServers = getKafkaServers();
 
-    // Build classpath for itt-apps (both peers need access to test application classes and
-    // dependencies)
+    // Build classpath for itt-apps (both peers need access to test application classes)
+    // NOTE: Include slf4j-api AND logback so callback handler code can log properly.
+    // The itt-apps module has a logback.xml that configures logging to write to
+    // ${PAL_HOME}/logs/itt-apps.log so test assertions can verify callback execution.
     String userHome = System.getProperty("user.home");
     String ittAppsClasses = String.format("%s/modules/itt-apps/target/classes", palHome);
     String slf4jApi =

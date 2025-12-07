@@ -7,14 +7,16 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
-package com.quasient.pal.intercept.endtoend;
+package com.quasient.pal.intercept.endtoend.constructor;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import com.quasient.pal.InterceptEndToEndTestSuite;
 import com.quasient.pal.apps.callbacks.ConstructorHandlers;
 import com.quasient.pal.apps.quantized.intercept.InterceptableApp;
 import com.quasient.pal.common.directory.nodes.InterceptRequest;
@@ -129,6 +131,11 @@ public class AfterConstructorCallbackIT extends AbstractInterceptIT {
         counterValue,
         is(inputValue));
 
+    // Verify callback logged the constructed object info in application log
+    assertTrue(
+        "Expected logConstructedObject callback to log isVoid status",
+        InterceptEndToEndTestSuite.waitForAppLogLine("logConstructedObject: isVoid=false"));
+
     logger.info("===== testAfterConstructorNoOpCallback: TEST COMPLETED SUCCESSFULLY =====");
   }
 
@@ -199,6 +206,12 @@ public class AfterConstructorCallbackIT extends AbstractInterceptIT {
             "Exception message should mention AFTER constructor callback",
             exceptionMessage,
             containsString("Access denied by AFTER constructor intercept callback"));
+
+        // Verify callback logged that it was throwing an exception
+        assertTrue(
+            "Expected throwExceptionAfter callback to log",
+            InterceptEndToEndTestSuite.waitForAppLogLine(
+                "throwExceptionAfter: throwing SecurityException from AFTER constructor callback"));
 
         logger.info(
             "===== testAfterConstructorCallbackThrowsException: TEST COMPLETED SUCCESSFULLY =====");
@@ -287,6 +300,11 @@ public class AfterConstructorCallbackIT extends AbstractInterceptIT {
     logger.info("Counter value: {}", counterValue);
 
     assertThat("Counter should be the input value", counterValue, is(inputValue));
+
+    // Verify callback logged no mutations in application log
+    assertTrue(
+        "Expected noOp callback to log no mutations",
+        InterceptEndToEndTestSuite.waitForAppLogLine("noOp: no mutations"));
 
     logger.info("===== testAfterConstructorSimpleNoOp: TEST COMPLETED SUCCESSFULLY =====");
   }

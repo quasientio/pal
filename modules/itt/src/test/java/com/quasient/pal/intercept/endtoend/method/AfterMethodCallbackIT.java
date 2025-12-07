@@ -7,12 +7,14 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
-package com.quasient.pal.intercept.endtoend;
+package com.quasient.pal.intercept.endtoend.method;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertTrue;
 
+import com.quasient.pal.InterceptEndToEndTestSuite;
 import com.quasient.pal.apps.callbacks.AfterCallbackHandlers;
 import com.quasient.pal.apps.quantized.intercept.StringMethods;
 import com.quasient.pal.common.directory.nodes.InterceptRequest;
@@ -114,6 +116,11 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
         returnValue,
         is(expectedValue));
 
+    // Verify callback logged the return value override in application log
+    assertTrue(
+        "Expected uppercaseReturnValue callback to log override",
+        InterceptEndToEndTestSuite.waitForAppLogLine("uppercaseReturnValue: hello -> HELLO"));
+
     logger.info("===== testSimpleReturnValueOverride: TEST COMPLETED SUCCESSFULLY =====");
   }
 
@@ -188,6 +195,11 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
         returnValue,
         is(expectedResult));
 
+    // Verify callback logged the return value doubling in application log
+    assertTrue(
+        "Expected doubleReturnValue callback to log override",
+        InterceptEndToEndTestSuite.waitForAppLogLine("doubleReturnValue: 15 -> 30"));
+
     logger.info("===== testPrimitiveReturnValueOverride: TEST COMPLETED SUCCESSFULLY =====");
   }
 
@@ -261,6 +273,11 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
               + " - "
               + response.getRaisedThrowable().getThrowable().getMessage());
     }
+
+    // Verify callback logged that method was confirmed void in application log
+    assertTrue(
+        "Expected checkIsVoid callback to log confirmation",
+        InterceptEndToEndTestSuite.waitForAppLogLine("checkIsVoid: confirmed method is void"));
 
     logger.info("===== testVoidMethodIsVoidCheck: TEST COMPLETED SUCCESSFULLY =====");
   }
@@ -340,6 +357,12 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
           is("java.lang.IllegalStateException"));
       assertThat(
           "Exception message should mention void method", exceptionMessage, containsString("void"));
+
+      // Verify callback logged the attempt in application log
+      assertTrue(
+          "Expected attemptSetReturnValueOnVoid callback to log attempt",
+          InterceptEndToEndTestSuite.waitForAppLogLine(
+              "attemptSetReturnValueOnVoid: attempting to set return value on void method"));
 
       logger.info("===== testVoidMethodCannotSetReturnValue: TEST COMPLETED SUCCESSFULLY =====");
     } else {
@@ -422,6 +445,12 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
           exceptionMessage,
           containsString("Access denied by AFTER intercept callback"));
 
+      // Verify callback logged that it was throwing an exception
+      assertTrue(
+          "Expected throwException callback to log",
+          InterceptEndToEndTestSuite.waitForAppLogLine(
+              "throwException: throwing SecurityException"));
+
       logger.info("===== testCallbackThrowsException: TEST COMPLETED SUCCESSFULLY =====");
     } else {
       throw new AssertionError(
@@ -496,6 +525,11 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
         "Return value should be unchanged (no-op callback doesn't override)",
         returnValue,
         is(inputValue));
+
+    // Verify callback logged no override in application log
+    assertTrue(
+        "Expected noOp callback to log no override",
+        InterceptEndToEndTestSuite.waitForAppLogLine("noOp: no return value override"));
 
     logger.info("===== testNoOpCallback: TEST COMPLETED SUCCESSFULLY =====");
   }

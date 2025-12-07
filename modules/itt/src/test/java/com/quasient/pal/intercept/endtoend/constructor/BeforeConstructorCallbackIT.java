@@ -7,13 +7,15 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
-package com.quasient.pal.intercept.endtoend;
+package com.quasient.pal.intercept.endtoend.constructor;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import com.quasient.pal.InterceptEndToEndTestSuite;
 import com.quasient.pal.apps.callbacks.ConstructorHandlers;
 import com.quasient.pal.apps.quantized.intercept.InterceptableApp;
 import com.quasient.pal.common.directory.nodes.InterceptRequest;
@@ -123,6 +125,11 @@ public class BeforeConstructorCallbackIT extends AbstractInterceptIT {
         counterValue,
         is(expectedValue));
 
+    // Verify callback logged the mutation in application log
+    assertTrue(
+        "Expected doubleFirstIntArg callback to log mutation",
+        InterceptEndToEndTestSuite.waitForAppLogLine("doubleFirstIntArg: 10 -> 20"));
+
     logger.info("===== testConstructorArgumentMutation: TEST COMPLETED SUCCESSFULLY =====");
   }
 
@@ -192,6 +199,12 @@ public class BeforeConstructorCallbackIT extends AbstractInterceptIT {
             "Exception message should mention constructor callback",
             exceptionMessage,
             containsString("Access denied by constructor intercept callback"));
+
+        // Verify callback logged that it was throwing an exception
+        assertTrue(
+            "Expected throwException callback to log",
+            InterceptEndToEndTestSuite.waitForAppLogLine(
+                "throwException: throwing SecurityException from constructor callback"));
 
         logger.info(
             "===== testConstructorCallbackThrowsException: TEST COMPLETED SUCCESSFULLY =====");
@@ -278,6 +291,11 @@ public class BeforeConstructorCallbackIT extends AbstractInterceptIT {
         "Counter should be unchanged (no-op callback doesn't mutate)",
         counterValue,
         is(inputValue));
+
+    // Verify callback logged no mutations in application log
+    assertTrue(
+        "Expected noOp callback to log no mutations",
+        InterceptEndToEndTestSuite.waitForAppLogLine("noOp: no mutations"));
 
     logger.info("===== testConstructorNoOpCallback: TEST COMPLETED SUCCESSFULLY =====");
   }

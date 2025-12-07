@@ -7,13 +7,15 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
-package com.quasient.pal.intercept.endtoend;
+package com.quasient.pal.intercept.endtoend.method;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import com.quasient.pal.InterceptEndToEndTestSuite;
 import com.quasient.pal.apps.callbacks.BeforeCallbackHandlers;
 import com.quasient.pal.apps.quantized.intercept.StringMethods;
 import com.quasient.pal.common.directory.nodes.InterceptRequest;
@@ -114,6 +116,11 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
         returnValue,
         is(expectedValue));
 
+    // Verify callback logged the mutation in application log
+    assertTrue(
+        "Expected uppercaseFirstArg callback to log mutation",
+        InterceptEndToEndTestSuite.waitForAppLogLine("uppercaseFirstArg: hello -> HELLO"));
+
     logger.info("===== testSingleArgumentMutation: TEST COMPLETED SUCCESSFULLY =====");
   }
 
@@ -191,6 +198,12 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
         returnValue,
         is(expectedResult));
 
+    // Verify callback logged both argument mutations in application log
+    assertTrue(
+        "Expected uppercaseBothArgs callback to log mutations",
+        InterceptEndToEndTestSuite.waitForAppLogLine(
+            "uppercaseBothArgs:.*hello.*world.*HELLO.*WORLD"));
+
     logger.info("===== testMultiArgumentMutation: TEST COMPLETED SUCCESSFULLY =====");
   }
 
@@ -266,6 +279,11 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
         "Return value should be 30 (first arg was doubled by callback: (5*2)*3=30)",
         returnValue,
         is(expectedResult));
+
+    // Verify callback logged the primitive mutation in application log
+    assertTrue(
+        "Expected doubleFirstIntArg callback to log mutation",
+        InterceptEndToEndTestSuite.waitForAppLogLine("doubleFirstIntArg: 5 -> 10"));
 
     logger.info("===== testPrimitiveArgumentMutation: TEST COMPLETED SUCCESSFULLY =====");
   }
@@ -345,6 +363,12 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
             exceptionMessage,
             containsString("Access denied by intercept callback"));
 
+        // Verify callback logged that it was throwing an exception
+        assertTrue(
+            "Expected throwException callback to log",
+            InterceptEndToEndTestSuite.waitForAppLogLine(
+                "throwException: throwing SecurityException"));
+
         logger.info("===== testCallbackThrowsException: TEST COMPLETED SUCCESSFULLY =====");
       } else {
         fail("Expected SecurityException to be thrown by callback, but no exception was raised");
@@ -422,6 +446,11 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
         "Return value should be unchanged (no-op callback doesn't mutate)",
         returnValue,
         is(inputValue));
+
+    // Verify callback logged no mutations in application log
+    assertTrue(
+        "Expected noOp callback to log no mutations",
+        InterceptEndToEndTestSuite.waitForAppLogLine("noOp: no mutations"));
 
     logger.info("===== testNoOpCallback: TEST COMPLETED SUCCESSFULLY =====");
   }
