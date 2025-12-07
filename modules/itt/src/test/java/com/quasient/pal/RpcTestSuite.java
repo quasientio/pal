@@ -91,7 +91,7 @@ public class RpcTestSuite extends AbstractIntegrationTest {
       UUID.fromString("00000000-0000-0000-0000-000000000001");
 
   /** Shared peer process, launched once for all tests in the suite. */
-  private static Process sharedPeerProcess;
+  private static PeerProcess sharedPeerProcess;
 
   /** Helper instance to access non-static methods from AbstractIntegrationTest. */
   private static RpcTestSuite instance;

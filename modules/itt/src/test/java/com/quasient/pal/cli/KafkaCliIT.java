@@ -14,6 +14,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
 
+import com.quasient.pal.PeerProcess;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -40,7 +41,7 @@ public class KafkaCliIT extends AbstractCliIT {
   private static final Logger logger = LoggerFactory.getLogger(KafkaCliIT.class);
 
   /** Peer process launched for testing, or null if not launched. */
-  private Process peerProcess;
+  private PeerProcess peerProcess;
 
   @After
   public void tearDown() throws Exception {

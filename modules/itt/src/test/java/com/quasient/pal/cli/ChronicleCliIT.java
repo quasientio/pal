@@ -17,6 +17,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import com.quasient.pal.PeerProcess;
 import com.quasient.pal.common.directory.nodes.LogInfo;
 import com.quasient.pal.cxn.directory.PalDirectory;
 import java.io.IOException;
@@ -53,7 +54,7 @@ public class ChronicleCliIT extends AbstractCliIT {
   private static final Logger logger = LoggerFactory.getLogger(ChronicleCliIT.class);
 
   /** Peer process launched for testing, or null if not launched. */
-  private Process peerProcess;
+  private PeerProcess peerProcess;
 
   /** Sets up test environment before each test. */
   @Before

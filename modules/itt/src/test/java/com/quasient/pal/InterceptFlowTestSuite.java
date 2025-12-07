@@ -130,7 +130,7 @@ public class InterceptFlowTestSuite extends AbstractIntegrationTest {
       UUID.fromString("00000000-0000-0000-0000-000000000002");
 
   /** Interceptable peer process (the one being intercepted). */
-  private static Process interceptablePeerProcess;
+  private static PeerProcess interceptablePeerProcess;
 
   /** ThinPeer for reading the interceptable peer's WAL for debugging. */
   private static ThinPeer walReaderThinPeer;

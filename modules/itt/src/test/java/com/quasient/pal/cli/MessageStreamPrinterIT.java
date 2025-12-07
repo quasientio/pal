@@ -12,6 +12,7 @@ package com.quasient.pal.cli;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 
+import com.quasient.pal.PeerProcess;
 import java.util.UUID;
 import org.junit.After;
 import org.junit.Before;
@@ -32,7 +33,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
   private static final Logger logger = LoggerFactory.getLogger(MessageStreamPrinterIT.class);
 
   /** Peer process launched for testing, or null if not launched. */
-  private Process peerProcess;
+  private PeerProcess peerProcess;
 
   /** Sets up test environment before each test. */
   @Before

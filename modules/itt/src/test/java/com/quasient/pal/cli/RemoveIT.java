@@ -15,6 +15,7 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import com.quasient.pal.PeerProcess;
 import com.quasient.pal.cxn.directory.PalDirectory;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -38,7 +39,7 @@ public class RemoveIT extends AbstractCliIT {
   private static final Logger logger = LoggerFactory.getLogger(RemoveIT.class);
 
   /** Peer process launched for testing, or null if not launched. */
-  private Process peerProcess;
+  private PeerProcess peerProcess;
 
   /** Sets up test environment before each test. */
   @Before
@@ -268,7 +269,7 @@ public class RemoveIT extends AbstractCliIT {
     String classToRun = "com.quasient.pal.apps.quantized.rpc.Methods";
 
     UUID peerId1 = UUID.randomUUID();
-    Process peer1 =
+    PeerProcess peer1 =
         launchPeer(
             peerId1,
             "-d",
@@ -286,7 +287,7 @@ public class RemoveIT extends AbstractCliIT {
     assertEquals("Expected successful peer1 exit code", 0, peer1ExitCode);
 
     UUID peerId2 = UUID.randomUUID();
-    Process peer2 =
+    PeerProcess peer2 =
         launchPeer(
             peerId2,
             "-d",
@@ -348,7 +349,7 @@ public class RemoveIT extends AbstractCliIT {
     String peerName2 = prefix + "-peer2";
 
     UUID peerId1 = UUID.randomUUID();
-    Process peer1 =
+    PeerProcess peer1 =
         launchPeer(peerId1, "-d", palDirectory, "-n", peerName1, "-cp", getIttAppsClasspath());
 
     UUID peerId2 = UUID.randomUUID();

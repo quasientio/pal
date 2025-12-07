@@ -18,6 +18,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import com.quasient.pal.AbstractIntegrationTest;
+import com.quasient.pal.PeerProcess;
 import com.quasient.pal.common.directory.nodes.LogInfo;
 import com.quasient.pal.common.directory.nodes.PeerInfo;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
@@ -72,7 +73,7 @@ public class ThinPeerIT extends AbstractIntegrationTest {
       UUID.fromString("00000000-0000-0000-0000-000000000004");
 
   /** Shared peer process for tests that need RPC peers. */
-  private static Process sharedPeerProcess;
+  private static PeerProcess sharedPeerProcess;
 
   /** Helper instance to access non-static methods. */
   private static ThinPeerIT instance;
