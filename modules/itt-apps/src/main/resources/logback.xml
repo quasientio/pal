@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Copyright (C) 2025 Quasient Inc. <https://www.quasient.com>
+
+    Use of this software is governed by the Business Source License 1.1
+    included in the file LICENSE and at https://mariadb.com/bsl11
+
+    Change Date: 2029-10-01
+    Change License: Apache 2.0
+
+-->
+<!--
+  Logback configuration for itt-apps callback handlers.
+
+  This configuration is used by application code (callback handlers) loaded via
+  CustomClassLoader. It writes to a separate log file from the peer runtime logs.
+
+  The peer runtime uses shaded logback classes (via pal-cli), so there's no
+  conflict with this application-level logback configuration.
+-->
+<configuration>
+    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+        <file>${PAL_HOME}/logs/itt-apps.log</file>
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="FILE"/>
+    </root>
+</configuration>
