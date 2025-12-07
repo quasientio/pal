@@ -344,26 +344,26 @@ public abstract class AbstractIntegrationTest {
    * Launches a new peer in the background and waits for it to be ready.
    *
    * <p>This method starts a peer process in the background, polls the peer log file for the
-   * "Managed services ready" line (indicating the peer is ready to accept requests), and returns
-   * the Process handle.
+   * "Managed services ready" line (indicating the peer is ready to accept requests), and returns a
+   * {@link PeerProcess} handle that provides access to both the process and its log file.
    *
-   * <p>The peer log is configured to write to {@code logs/peer.log} relative to PAL_HOME.
+   * <p>The peer log is configured to write to {@code logs/peer.log} relative to PAL_HOME, or {@code
+   * logs/{peerName}.log} for named peers like "interceptable-peer" or "interceptor-peer".
    *
    * <p><b>Note:</b> This method removes PAL_DIRECTORY and KAFKA_SERVERS from the environment to
    * ensure tests are explicit. Tests should pass configuration via command-line arguments (e.g.,
    * {@code "-d", palDirectory}).
    *
-   * <p>The caller is responsible for stopping the peer via {@link Process#destroy()} or {@link
-   * Process#destroyForcibly()}.
+   * <p>The caller is responsible for stopping the peer via {@link #stopPeer(PeerProcess)}.
    *
    * @param peerId the UUID to assign to the peer
    * @param args command-line arguments to pass to {@code pal run}
-   * @return Process handle for the running peer
+   * @return PeerProcess handle for the running peer, with access to its log file
    * @throws IOException if process execution fails
    * @throws InterruptedException if interrupted while waiting for peer to be ready
    * @throws IllegalStateException if peer does not become ready within the timeout period
    */
-  protected Process launchPeer(UUID peerId, String... args)
+  protected PeerProcess launchPeer(UUID peerId, String... args)
       throws IOException, InterruptedException {
     String palHome = System.getenv("PAL_HOME");
     if (palHome == null) {
@@ -506,7 +506,7 @@ public abstract class AbstractIntegrationTest {
     }
 
     logger.info("Peer is ready");
-    return process;
+    return new PeerProcess(process, logPath, peerName != null ? peerName : "peer-" + peerId);
   }
 
   /**
@@ -556,22 +556,29 @@ public abstract class AbstractIntegrationTest {
    * <p>Use this method when you need to wait for the peer to finish its work before making
    * assertions (e.g., checking logs after peer has completed).
    *
-   * @param process the peer process to wait for
+   * @param peerProcess the peer process to wait for
    * @param timeoutSeconds maximum time to wait for the process to complete, in seconds
    * @return the exit code of the process
    * @throws InterruptedException if interrupted while waiting for process termination
    * @throws IllegalStateException if the process does not complete within the timeout
    */
-  protected int joinPeer(Process process, int timeoutSeconds) throws InterruptedException {
-    if (process == null || !process.isAlive()) {
-      return process != null ? process.exitValue() : 0;
+  protected int joinPeer(PeerProcess peerProcess, int timeoutSeconds) throws InterruptedException {
+    if (peerProcess == null || !peerProcess.isAlive()) {
+      return peerProcess != null ? peerProcess.exitValue() : 0;
     }
 
-    logger.info("Waiting for peer process to complete (timeout: {} seconds)", timeoutSeconds);
+    Process process = peerProcess.getProcess();
+    logger.info(
+        "Waiting for peer [{}] to complete (timeout: {} seconds)",
+        peerProcess.getPeerName(),
+        timeoutSeconds);
     boolean exited = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
 
     if (!exited) {
-      logger.warn("Peer did not complete within {} seconds, force killing", timeoutSeconds);
+      logger.warn(
+          "Peer [{}] did not complete within {} seconds, force killing",
+          peerProcess.getPeerName(),
+          timeoutSeconds);
       process.destroyForcibly();
       process.waitFor(2, TimeUnit.SECONDS);
       throw new IllegalStateException(
@@ -579,7 +586,7 @@ public abstract class AbstractIntegrationTest {
     }
 
     int exitCode = process.exitValue();
-    logger.info("Peer process completed with exit code: {}", exitCode);
+    logger.info("Peer [{}] completed with exit code: {}", peerProcess.getPeerName(), exitCode);
     return exitCode;
   }
 
@@ -589,16 +596,17 @@ public abstract class AbstractIntegrationTest {
    * <p>Destroys the process and waits up to 5 seconds for it to terminate. If still alive, force
    * kills it.
    *
-   * @param process the peer process to stop
+   * @param peerProcess the peer process to stop
    * @throws InterruptedException if interrupted while waiting for process termination
    */
-  protected void stopPeer(Process process) throws InterruptedException {
-    if (process == null || !process.isAlive()) {
-      logger.info("Process is null or not alive, nothing to stop");
+  protected void stopPeer(PeerProcess peerProcess) throws InterruptedException {
+    if (peerProcess == null || !peerProcess.isAlive()) {
+      logger.info("PeerProcess is null or not alive, nothing to stop");
       return;
     }
 
-    logger.info("Stopping peer process, calling destroy()");
+    Process process = peerProcess.getProcess();
+    logger.info("Stopping peer process [{}], calling destroy()", peerProcess.getPeerName());
     process.destroy();
     logger.info("destroy() called, now waiting for exit (5s timeout)");
     boolean exited = process.waitFor(5, TimeUnit.SECONDS);
@@ -612,7 +620,7 @@ public abstract class AbstractIntegrationTest {
       logger.info("Second waitFor returned after destroyForcibly");
     }
 
-    logger.info("Peer stopped");
+    logger.info("Peer [{}] stopped", peerProcess.getPeerName());
   }
 
   /**
@@ -650,6 +658,12 @@ public abstract class AbstractIntegrationTest {
         // Add DEBUG logger for com.quasient.pal.core before the general logger
         modifiedLines.add(
             "    <logger name=\"com.quasient.pal.core\" level=\"DEBUG\" additivity=\"false\">");
+        modifiedLines.add("        <appender-ref ref=\"peer\"/>");
+        modifiedLines.add("    </logger>");
+        modifiedLines.add("");
+        // Add INFO logger for com.quasient.pal.apps to capture callback handler logs
+        modifiedLines.add(
+            "    <logger name=\"com.quasient.pal.apps\" level=\"INFO\" additivity=\"false\">");
         modifiedLines.add("        <appender-ref ref=\"peer\"/>");
         modifiedLines.add("    </logger>");
         modifiedLines.add("");
