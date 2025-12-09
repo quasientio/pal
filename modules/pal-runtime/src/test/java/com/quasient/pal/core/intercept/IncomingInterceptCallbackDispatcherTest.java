@@ -17,6 +17,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import com.quasient.pal.common.lang.intercept.InterceptCallback;
+import com.quasient.pal.common.lang.intercept.InterceptCallbackResponse;
 import com.quasient.pal.common.lang.intercept.InterceptContext;
 import com.quasient.pal.common.lang.intercept.InterceptPhase;
 import com.quasient.pal.messages.colfer.Class;
@@ -24,7 +25,8 @@ import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.Field;
 import com.quasient.pal.messages.colfer.InstanceFieldPut;
 import com.quasient.pal.messages.colfer.InstanceMethodCall;
-import com.quasient.pal.messages.colfer.InterceptCallbackRequest;
+import com.quasient.pal.messages.colfer.InterceptCallbackRequestMessage;
+import com.quasient.pal.messages.colfer.InterceptCallbackResponseMessage;
 import com.quasient.pal.messages.colfer.Obj;
 import com.quasient.pal.messages.colfer.Parameter;
 import com.quasient.pal.messages.colfer.StaticFieldPut;
@@ -38,9 +40,6 @@ import org.junit.Test;
  *
  * <p>Verifies callback registration, resolution, and invocation logic.
  */
-// Name clash: com.quasient.pal.common.lang.intercept.InterceptCallbackResponse vs
-// com.quasient.pal.messages.colfer.InterceptCallbackResponse
-@SuppressWarnings("PMD.NoFullyQualifiedTypes")
 public class IncomingInterceptCallbackDispatcherTest {
 
   private IncomingInterceptCallbackDispatcher dispatcher;
@@ -61,8 +60,7 @@ public class IncomingInterceptCallbackDispatcherTest {
    */
   @Test
   public void testRegisterCallback() {
-    InterceptCallback callback =
-        (ctx) -> new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
+    InterceptCallback callback = (ctx) -> new InterceptCallbackResponse();
 
     dispatcher.registerCallback("test-callback", callback);
 
@@ -75,8 +73,7 @@ public class IncomingInterceptCallbackDispatcherTest {
    */
   @Test
   public void testRegisterCallbackRejectsNullId() {
-    InterceptCallback callback =
-        (ctx) -> new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
+    InterceptCallback callback = (ctx) -> new InterceptCallbackResponse();
 
     try {
       dispatcher.registerCallback(null, callback);
@@ -92,8 +89,7 @@ public class IncomingInterceptCallbackDispatcherTest {
    */
   @Test
   public void testRegisterCallbackRejectsEmptyId() {
-    InterceptCallback callback =
-        (ctx) -> new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
+    InterceptCallback callback = (ctx) -> new InterceptCallbackResponse();
 
     try {
       dispatcher.registerCallback("", callback);
@@ -123,10 +119,8 @@ public class IncomingInterceptCallbackDispatcherTest {
    */
   @Test
   public void testRegisterCallbackRejectsDuplicates() {
-    InterceptCallback callback1 =
-        (ctx) -> new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
-    InterceptCallback callback2 =
-        (ctx) -> new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
+    InterceptCallback callback1 = (ctx) -> new InterceptCallbackResponse();
+    InterceptCallback callback2 = (ctx) -> new InterceptCallbackResponse();
 
     dispatcher.registerCallback("test-callback", callback1);
 
@@ -145,8 +139,7 @@ public class IncomingInterceptCallbackDispatcherTest {
    */
   @Test
   public void testUnregisterCallback() {
-    InterceptCallback callback =
-        (ctx) -> new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
+    InterceptCallback callback = (ctx) -> new InterceptCallbackResponse();
 
     dispatcher.registerCallback("test-callback", callback);
 
@@ -167,8 +160,9 @@ public class IncomingInterceptCallbackDispatcherTest {
   }
 
   /**
-   * Tests that {@link IncomingInterceptCallbackDispatcher#handleCallback(InterceptCallbackRequest)}
-   * invokes a registered callback for BEFORE phase.
+   * Tests that {@link
+   * IncomingInterceptCallbackDispatcher#handleCallback(InterceptCallbackRequestMessage)} invokes a
+   * registered callback for BEFORE phase.
    */
   @Test
   public void testHandleCallbackWithRegisteredCallback() {
@@ -179,12 +173,12 @@ public class IncomingInterceptCallbackDispatcherTest {
         (ctx) -> {
           invoked[0] = true;
           assertEquals(InterceptPhase.BEFORE, ctx.getPhase());
-          return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
+          return new InterceptCallbackResponse();
         };
 
     dispatcher.registerCallback("test-callback", callback);
 
-    InterceptCallbackRequest request = new InterceptCallbackRequest();
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
     request.setCallbackId("req-123");
     request.setPhase((byte) 1); // BEFORE
     request.setInterceptType((byte) 1); // BEFORE intercept
@@ -192,8 +186,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setRegisteredCallbackId("test-callback");
     request.setExec(execMessage);
 
-    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
-        dispatcher.handleCallback(request);
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
 
     assertTrue("Callback should have been invoked", invoked[0]);
     assertNotNull(response);
@@ -202,12 +195,13 @@ public class IncomingInterceptCallbackDispatcherTest {
   }
 
   /**
-   * Tests that {@link IncomingInterceptCallbackDispatcher#handleCallback(InterceptCallbackRequest)}
-   * handles callback not found error.
+   * Tests that {@link
+   * IncomingInterceptCallbackDispatcher#handleCallback(InterceptCallbackRequestMessage)} handles
+   * callback not found error.
    */
   @Test
   public void testHandleCallbackNotFound() {
-    InterceptCallbackRequest request = new InterceptCallbackRequest();
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
     request.setCallbackId("req-123");
     request.setPhase((byte) 1); // BEFORE
     request.setInterceptType((byte) 1);
@@ -215,8 +209,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setRegisteredCallbackId("non-existent");
     request.setExec(execMessage);
 
-    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
-        dispatcher.handleCallback(request);
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertEquals("req-123", response.getCallbackId());
@@ -224,8 +217,9 @@ public class IncomingInterceptCallbackDispatcherTest {
   }
 
   /**
-   * Tests that {@link IncomingInterceptCallbackDispatcher#handleCallback(InterceptCallbackRequest)}
-   * handles exceptions thrown by callback.
+   * Tests that {@link
+   * IncomingInterceptCallbackDispatcher#handleCallback(InterceptCallbackRequestMessage)} handles
+   * exceptions thrown by callback.
    */
   @Test
   public void testHandleCallbackThrowsException() {
@@ -236,7 +230,7 @@ public class IncomingInterceptCallbackDispatcherTest {
 
     dispatcher.registerCallback("test-callback", callback);
 
-    InterceptCallbackRequest request = new InterceptCallbackRequest();
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
     request.setCallbackId("req-123");
     request.setPhase((byte) 1); // BEFORE
     request.setInterceptType((byte) 1);
@@ -244,8 +238,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setRegisteredCallbackId("test-callback");
     request.setExec(execMessage);
 
-    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
-        dispatcher.handleCallback(request);
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertEquals("req-123", response.getCallbackId());
@@ -253,8 +246,9 @@ public class IncomingInterceptCallbackDispatcherTest {
   }
 
   /**
-   * Tests that {@link IncomingInterceptCallbackDispatcher#handleCallback(InterceptCallbackRequest)}
-   * propagates argument mutations for BEFORE phase.
+   * Tests that {@link
+   * IncomingInterceptCallbackDispatcher#handleCallback(InterceptCallbackRequestMessage)} propagates
+   * argument mutations for BEFORE phase.
    */
   @Test
   public void testHandleCallbackWithArgumentMutation() {
@@ -263,12 +257,12 @@ public class IncomingInterceptCallbackDispatcherTest {
           // Note: In this test we can't actually mutate args because extractArguments returns empty
           // array
           // This test verifies the response structure when isArgsModified() would return true
-          return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
+          return new InterceptCallbackResponse();
         };
 
     dispatcher.registerCallback("test-callback", callback);
 
-    InterceptCallbackRequest request = new InterceptCallbackRequest();
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
     request.setCallbackId("req-123");
     request.setPhase((byte) 1); // BEFORE
     request.setInterceptType((byte) 1);
@@ -276,8 +270,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setRegisteredCallbackId("test-callback");
     request.setExec(execMessage);
 
-    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
-        dispatcher.handleCallback(request);
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertEquals("req-123", response.getCallbackId());
@@ -285,22 +278,22 @@ public class IncomingInterceptCallbackDispatcherTest {
   }
 
   /**
-   * Tests that {@link IncomingInterceptCallbackDispatcher#handleCallback(InterceptCallbackRequest)}
-   * honors shouldProceed=false for AROUND intercepts.
+   * Tests that {@link
+   * IncomingInterceptCallbackDispatcher#handleCallback(InterceptCallbackRequestMessage)} honors
+   * shouldProceed=false for AROUND intercepts.
    */
   @Test
   public void testAroundInterceptCanSetShouldProceedFalse() {
     InterceptCallback callback =
         (ctx) -> {
-          com.quasient.pal.common.lang.intercept.InterceptCallbackResponse response =
-              new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
+          InterceptCallbackResponse response = new InterceptCallbackResponse();
           response.setShouldProceed(false);
           return response;
         };
 
     dispatcher.registerCallback("test-callback", callback);
 
-    InterceptCallbackRequest request = new InterceptCallbackRequest();
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
     request.setCallbackId("req-123");
     request.setPhase((byte) 1); // BEFORE
     request.setInterceptType((byte) 3); // AROUND
@@ -308,8 +301,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setRegisteredCallbackId("test-callback");
     request.setExec(execMessage);
 
-    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
-        dispatcher.handleCallback(request);
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertFalse(
@@ -317,15 +309,15 @@ public class IncomingInterceptCallbackDispatcherTest {
   }
 
   /**
-   * Tests that {@link IncomingInterceptCallbackDispatcher#handleCallback(InterceptCallbackRequest)}
-   * forces shouldProceed=true for BEFORE intercepts (cannot skip execution).
+   * Tests that {@link
+   * IncomingInterceptCallbackDispatcher#handleCallback(InterceptCallbackRequestMessage)} forces
+   * shouldProceed=true for BEFORE intercepts (cannot skip execution).
    */
   @Test
   public void testBeforeInterceptCannotSetShouldProceedFalse() {
     InterceptCallback callback =
         (ctx) -> {
-          com.quasient.pal.common.lang.intercept.InterceptCallbackResponse response =
-              new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
+          InterceptCallbackResponse response = new InterceptCallbackResponse();
           // Callback tries to set shouldProceed=false
           response.setShouldProceed(false);
           return response;
@@ -333,7 +325,7 @@ public class IncomingInterceptCallbackDispatcherTest {
 
     dispatcher.registerCallback("test-callback", callback);
 
-    InterceptCallbackRequest request = new InterceptCallbackRequest();
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
     request.setCallbackId("req-123");
     request.setPhase((byte) 1); // BEFORE
     request.setInterceptType((byte) 1); // BEFORE (not AROUND)
@@ -341,8 +333,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setRegisteredCallbackId("test-callback");
     request.setExec(execMessage);
 
-    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
-        dispatcher.handleCallback(request);
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertTrue(
@@ -351,22 +342,22 @@ public class IncomingInterceptCallbackDispatcherTest {
   }
 
   /**
-   * Tests that {@link IncomingInterceptCallbackDispatcher#handleCallback(InterceptCallbackRequest)}
-   * allows shouldProceed=true for BEFORE intercepts.
+   * Tests that {@link
+   * IncomingInterceptCallbackDispatcher#handleCallback(InterceptCallbackRequestMessage)} allows
+   * shouldProceed=true for BEFORE intercepts.
    */
   @Test
   public void testBeforeInterceptCanSetShouldProceedTrue() {
     InterceptCallback callback =
         (ctx) -> {
-          com.quasient.pal.common.lang.intercept.InterceptCallbackResponse response =
-              new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
+          InterceptCallbackResponse response = new InterceptCallbackResponse();
           response.setShouldProceed(true);
           return response;
         };
 
     dispatcher.registerCallback("test-callback", callback);
 
-    InterceptCallbackRequest request = new InterceptCallbackRequest();
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
     request.setCallbackId("req-123");
     request.setPhase((byte) 1); // BEFORE
     request.setInterceptType((byte) 1); // BEFORE
@@ -374,30 +365,29 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setRegisteredCallbackId("test-callback");
     request.setExec(execMessage);
 
-    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
-        dispatcher.handleCallback(request);
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertTrue("BEFORE intercept with shouldProceed=true should work", response.getShouldProceed());
   }
 
   /**
-   * Tests that {@link IncomingInterceptCallbackDispatcher#handleCallback(InterceptCallbackRequest)}
-   * allows AROUND intercept to set shouldProceed=true.
+   * Tests that {@link
+   * IncomingInterceptCallbackDispatcher#handleCallback(InterceptCallbackRequestMessage)} allows
+   * AROUND intercept to set shouldProceed=true.
    */
   @Test
   public void testAroundInterceptCanSetShouldProceedTrue() {
     InterceptCallback callback =
         (ctx) -> {
-          com.quasient.pal.common.lang.intercept.InterceptCallbackResponse response =
-              new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
+          InterceptCallbackResponse response = new InterceptCallbackResponse();
           response.setShouldProceed(true);
           return response;
         };
 
     dispatcher.registerCallback("test-callback", callback);
 
-    InterceptCallbackRequest request = new InterceptCallbackRequest();
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
     request.setCallbackId("req-123");
     request.setPhase((byte) 1); // BEFORE
     request.setInterceptType((byte) 3); // AROUND
@@ -405,8 +395,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setRegisteredCallbackId("test-callback");
     request.setExec(execMessage);
 
-    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
-        dispatcher.handleCallback(request);
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertTrue("AROUND intercept with shouldProceed=true should work", response.getShouldProceed());
@@ -415,7 +404,7 @@ public class IncomingInterceptCallbackDispatcherTest {
   /** Tests that static callback method invocation requires both class and method names. */
   @Test
   public void testHandleCallbackWithoutClassOrRegisteredId() {
-    InterceptCallbackRequest request = new InterceptCallbackRequest();
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
     request.setCallbackId("req-123");
     request.setPhase((byte) 1);
     request.setInterceptType((byte) 1);
@@ -423,28 +412,28 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setExec(execMessage);
     // No registeredCallbackId and no callbackClass
 
-    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
-        dispatcher.handleCallback(request);
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertTrue("Should return error for missing callback routing", response.getThrowException());
   }
 
   /**
-   * Tests that {@link IncomingInterceptCallbackDispatcher#handleCallback(InterceptCallbackRequest)}
-   * for AFTER phase.
+   * Tests that {@link
+   * IncomingInterceptCallbackDispatcher#handleCallback(InterceptCallbackRequestMessage)} for AFTER
+   * phase.
    */
   @Test
   public void testHandleCallbackAfterPhase() {
     InterceptCallback callback =
         (ctx) -> {
           assertEquals(InterceptPhase.AFTER, ctx.getPhase());
-          return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
+          return new InterceptCallbackResponse();
         };
 
     dispatcher.registerCallback("test-callback", callback);
 
-    InterceptCallbackRequest request = new InterceptCallbackRequest();
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
     request.setCallbackId("req-123");
     request.setPhase((byte) 2); // AFTER
     request.setInterceptType((byte) 2); // AFTER intercept
@@ -453,8 +442,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setExec(execMessage);
     request.setIsVoid(false);
 
-    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
-        dispatcher.handleCallback(request);
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertEquals("req-123", response.getCallbackId());
@@ -470,9 +458,8 @@ public class IncomingInterceptCallbackDispatcherTest {
      * @param ctx the intercept context
      * @return a callback response
      */
-    public static com.quasient.pal.common.lang.intercept.InterceptCallbackResponse
-        testStaticCallback(InterceptContext ctx) {
-      return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
+    public static InterceptCallbackResponse testStaticCallback(InterceptContext ctx) {
+      return new InterceptCallbackResponse();
     }
 
     /**
@@ -481,19 +468,19 @@ public class IncomingInterceptCallbackDispatcherTest {
      * @param ctx the intercept context
      * @return a callback response
      */
-    public com.quasient.pal.common.lang.intercept.InterceptCallbackResponse testInstanceCallback(
-        InterceptContext ctx) {
-      return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
+    public InterceptCallbackResponse testInstanceCallback(InterceptContext ctx) {
+      return new InterceptCallbackResponse();
     }
   }
 
   /**
-   * Tests that {@link IncomingInterceptCallbackDispatcher#handleCallback(InterceptCallbackRequest)}
-   * can invoke a static callback method via reflection.
+   * Tests that {@link
+   * IncomingInterceptCallbackDispatcher#handleCallback(InterceptCallbackRequestMessage)} can invoke
+   * a static callback method via reflection.
    */
   @Test
   public void testHandleCallbackWithStaticMethod() {
-    InterceptCallbackRequest request = new InterceptCallbackRequest();
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
     request.setCallbackId("req-123");
     request.setPhase((byte) 1); // BEFORE
     request.setInterceptType((byte) 1);
@@ -502,8 +489,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackMethod("testStaticCallback");
     request.setExec(execMessage);
 
-    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
-        dispatcher.handleCallback(request);
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertEquals("req-123", response.getCallbackId());
@@ -511,12 +497,13 @@ public class IncomingInterceptCallbackDispatcherTest {
   }
 
   /**
-   * Tests that {@link IncomingInterceptCallbackDispatcher#handleCallback(InterceptCallbackRequest)}
-   * rejects non-static callback methods.
+   * Tests that {@link
+   * IncomingInterceptCallbackDispatcher#handleCallback(InterceptCallbackRequestMessage)} rejects
+   * non-static callback methods.
    */
   @Test
   public void testHandleCallbackRejectsNonStaticMethod() {
-    InterceptCallbackRequest request = new InterceptCallbackRequest();
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
     request.setCallbackId("req-123");
     request.setPhase((byte) 1);
     request.setInterceptType((byte) 1);
@@ -525,20 +512,20 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackMethod("testInstanceCallback");
     request.setExec(execMessage);
 
-    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
-        dispatcher.handleCallback(request);
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertTrue("Should return error for non-static method", response.getThrowException());
   }
 
   /**
-   * Tests that {@link IncomingInterceptCallbackDispatcher#handleCallback(InterceptCallbackRequest)}
-   * handles class not found errors.
+   * Tests that {@link
+   * IncomingInterceptCallbackDispatcher#handleCallback(InterceptCallbackRequestMessage)} handles
+   * class not found errors.
    */
   @Test
   public void testHandleCallbackClassNotFound() {
-    InterceptCallbackRequest request = new InterceptCallbackRequest();
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
     request.setCallbackId("req-123");
     request.setPhase((byte) 1);
     request.setInterceptType((byte) 1);
@@ -547,20 +534,20 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackMethod("callback");
     request.setExec(execMessage);
 
-    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
-        dispatcher.handleCallback(request);
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertTrue("Should return error for class not found", response.getThrowException());
   }
 
   /**
-   * Tests that {@link IncomingInterceptCallbackDispatcher#handleCallback(InterceptCallbackRequest)}
-   * handles method not found errors.
+   * Tests that {@link
+   * IncomingInterceptCallbackDispatcher#handleCallback(InterceptCallbackRequestMessage)} handles
+   * method not found errors.
    */
   @Test
   public void testHandleCallbackMethodNotFound() {
-    InterceptCallbackRequest request = new InterceptCallbackRequest();
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
     request.setCallbackId("req-123");
     request.setPhase((byte) 1);
     request.setInterceptType((byte) 1);
@@ -569,8 +556,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackMethod("nonExistentMethod");
     request.setExec(execMessage);
 
-    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
-        dispatcher.handleCallback(request);
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertTrue("Should return error for method not found", response.getThrowException());
@@ -594,7 +580,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     InterceptCallback callback =
         (ctx) -> {
           capturedArgs[0] = ctx.getArgs();
-          return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
+          return new InterceptCallbackResponse();
         };
 
     dispatcher.registerCallback("test-callback", callback);
@@ -618,7 +604,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     methodCall.setParameters(new Parameter[] {param1, param2});
     exec.setInstanceMethodCall(methodCall);
 
-    InterceptCallbackRequest request = new InterceptCallbackRequest();
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
     request.setCallbackId("req-123");
     request.setPhase((byte) 1); // BEFORE
     request.setInterceptType((byte) 1);
@@ -626,8 +612,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setRegisteredCallbackId("test-callback");
     request.setExec(exec);
 
-    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
-        dispatcher.handleCallback(request);
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertFalse("Should not throw exception", response.getThrowException());
@@ -649,7 +634,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     InterceptCallback callback =
         (ctx) -> {
           capturedArgs[0] = ctx.getArgs();
-          return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
+          return new InterceptCallbackResponse();
         };
 
     dispatcher.registerCallback("test-callback", callback);
@@ -670,7 +655,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     methodCall.setParameters(new Parameter[] {param});
     exec.setInstanceMethodCall(methodCall);
 
-    InterceptCallbackRequest request = new InterceptCallbackRequest();
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
     request.setCallbackId("req-123");
     request.setPhase((byte) 1);
     request.setInterceptType((byte) 1);
@@ -678,8 +663,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setRegisteredCallbackId("test-callback");
     request.setExec(exec);
 
-    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
-        dispatcher.handleCallback(request);
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertFalse("Should not throw exception", response.getThrowException());
@@ -699,7 +683,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     InterceptCallback callback =
         (ctx) -> {
           fail("Callback should not be invoked when deserialization fails");
-          return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
+          return new InterceptCallbackResponse();
         };
 
     dispatcher.registerCallback("test-callback", callback);
@@ -718,7 +702,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     methodCall.setParameters(new Parameter[] {param});
     exec.setInstanceMethodCall(methodCall);
 
-    InterceptCallbackRequest request = new InterceptCallbackRequest();
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
     request.setCallbackId("req-123");
     request.setPhase((byte) 1);
     request.setInterceptType((byte) 1);
@@ -726,8 +710,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setRegisteredCallbackId("test-callback");
     request.setExec(exec);
 
-    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
-        dispatcher.handleCallback(request);
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertTrue(
@@ -752,7 +735,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     InterceptCallback callback =
         (ctx) -> {
           capturedArgs[0] = ctx.getArgs();
-          return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
+          return new InterceptCallbackResponse();
         };
 
     dispatcher.registerCallback("test-callback", callback);
@@ -767,7 +750,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     fieldPut.setValueObject(wrapValue(100, Integer.class.getName()));
     exec.setInstanceFieldPut(fieldPut);
 
-    InterceptCallbackRequest request = new InterceptCallbackRequest();
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
     request.setCallbackId("req-123");
     request.setPhase((byte) 1);
     request.setInterceptType((byte) 1);
@@ -775,8 +758,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setRegisteredCallbackId("test-callback");
     request.setExec(exec);
 
-    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
-        dispatcher.handleCallback(request);
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertFalse("Should not throw exception", response.getThrowException());
@@ -798,7 +780,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     InterceptCallback callback =
         (ctx) -> {
           capturedArgs[0] = ctx.getArgs();
-          return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
+          return new InterceptCallbackResponse();
         };
 
     dispatcher.registerCallback("test-callback", callback);
@@ -815,7 +797,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     fieldPut.setValueObject(nullObj);
     exec.setInstanceFieldPut(fieldPut);
 
-    InterceptCallbackRequest request = new InterceptCallbackRequest();
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
     request.setCallbackId("req-123");
     request.setPhase((byte) 1);
     request.setInterceptType((byte) 1);
@@ -823,8 +805,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setRegisteredCallbackId("test-callback");
     request.setExec(exec);
 
-    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
-        dispatcher.handleCallback(request);
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertFalse("Should not throw exception", response.getThrowException());
@@ -844,7 +825,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     InterceptCallback callback =
         (ctx) -> {
           fail("Callback should not be invoked when deserialization fails");
-          return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
+          return new InterceptCallbackResponse();
         };
 
     dispatcher.registerCallback("test-callback", callback);
@@ -859,7 +840,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     fieldPut.setValueObject(createMalformedObj());
     exec.setInstanceFieldPut(fieldPut);
 
-    InterceptCallbackRequest request = new InterceptCallbackRequest();
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
     request.setCallbackId("req-123");
     request.setPhase((byte) 1);
     request.setInterceptType((byte) 1);
@@ -867,8 +848,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setRegisteredCallbackId("test-callback");
     request.setExec(exec);
 
-    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
-        dispatcher.handleCallback(request);
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertTrue(
@@ -887,7 +867,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     InterceptCallback callback =
         (ctx) -> {
           fail("Callback should not be invoked when deserialization fails");
-          return new com.quasient.pal.common.lang.intercept.InterceptCallbackResponse();
+          return new InterceptCallbackResponse();
         };
 
     dispatcher.registerCallback("test-callback", callback);
@@ -902,7 +882,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     fieldPut.setValueObject(createMalformedObj());
     exec.setStaticFieldPut(fieldPut);
 
-    InterceptCallbackRequest request = new InterceptCallbackRequest();
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
     request.setCallbackId("req-123");
     request.setPhase((byte) 1);
     request.setInterceptType((byte) 1);
@@ -910,8 +890,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setRegisteredCallbackId("test-callback");
     request.setExec(exec);
 
-    com.quasient.pal.messages.colfer.InterceptCallbackResponse response =
-        dispatcher.handleCallback(request);
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
 
     assertNotNull(response);
     assertTrue(

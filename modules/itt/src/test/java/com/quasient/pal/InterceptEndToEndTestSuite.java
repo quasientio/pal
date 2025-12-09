@@ -49,7 +49,7 @@ import org.slf4j.LoggerFactory;
  * <ol>
  *   <li>Test registers intercept with <b>{@code INTERCEPTOR_PEER_UUID}</b> as callback peer
  *   <li>Test invokes intercepted method on interceptable peer
- *   <li>Interceptable peer matches intercept and sends {@code InterceptCallbackRequest} to
+ *   <li>Interceptable peer matches intercept and sends {@code InterceptCallbackRequestMessage} to
  *       interceptor peer
  *   <li><b>Interceptor peer executes the actual callback handler method</b>
  *   <li>Test verifies the side effects (mutated args, overridden return, thrown exception)
@@ -66,8 +66,8 @@ import org.slf4j.LoggerFactory;
  *       (StringMethods, InterceptableApp, etc.) with {@code --interceptable} flag. Sends callback
  *       requests when intercepts match.
  *   <li><b>Interceptor peer</b> ({@link #INTERCEPTOR_PEER_UUID}): Receives {@code
- *       InterceptCallbackRequest} messages and invokes the specified callback handler methods. Has
- *       callback handler classes (InstanceMethodHandlers, etc.) on its classpath.
+ *       InterceptCallbackRequestMessage} messages and invokes the specified callback handler
+ *       methods. Has callback handler classes (InstanceMethodHandlers, etc.) on its classpath.
  * </ul>
  *
  * <p>The peers are configured with:
@@ -121,8 +121,8 @@ public class InterceptEndToEndTestSuite extends AbstractIntegrationTest {
   /**
    * Well-known UUID for the interceptor peer (receives and handles intercept callbacks).
    *
-   * <p>This peer runs the callback handlers and receives InterceptCallbackRequest messages from the
-   * interceptable peer.
+   * <p>This peer runs the callback handlers and receives InterceptCallbackRequestMessage messages
+   * from the interceptable peer.
    */
   public static final UUID INTERCEPTOR_PEER_UUID =
       UUID.fromString("00000000-0000-0000-0000-000000000003");
@@ -231,7 +231,7 @@ public class InterceptEndToEndTestSuite extends AbstractIntegrationTest {
    *   <li><b>Interceptable peer</b> ({@link #INTERCEPTABLE_PEER_UUID}): Runs the test applications
    *       (StringMethods, InterceptableApp, etc.). Configured with --interceptable flag.
    *   <li><b>Interceptor peer</b> ({@link #INTERCEPTOR_PEER_UUID}): Handles intercept callbacks.
-   *       Receives InterceptCallbackRequest messages and invokes callback handlers.
+   *       Receives InterceptCallbackRequestMessage messages and invokes callback handlers.
    * </ul>
    *
    * @throws Exception if peer launch fails

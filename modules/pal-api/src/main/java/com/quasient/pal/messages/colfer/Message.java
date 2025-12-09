@@ -55,9 +55,9 @@ public class Message implements Serializable, com.quasient.pal.messages.Marshall
 
   public InterceptResponse interceptResponse;
 
-  public InterceptCallbackRequest interceptCallbackRequest;
+  public InterceptCallbackRequestMessage interceptCallbackRequestMessage;
 
-  public InterceptCallbackResponse interceptCallbackResponse;
+  public InterceptCallbackResponseMessage interceptCallbackResponseMessage;
 
   /** Default constructor */
   public Message() {
@@ -166,10 +166,10 @@ public class Message implements Serializable, com.quasient.pal.messages.Marshall
     if (this.interceptMessage != null) n += 1 + (long) this.interceptMessage.marshalFit();
     if (this.interceptKeyMessage != null) n += 1 + (long) this.interceptKeyMessage.marshalFit();
     if (this.interceptResponse != null) n += 1 + (long) this.interceptResponse.marshalFit();
-    if (this.interceptCallbackRequest != null)
-      n += 1 + (long) this.interceptCallbackRequest.marshalFit();
-    if (this.interceptCallbackResponse != null)
-      n += 1 + (long) this.interceptCallbackResponse.marshalFit();
+    if (this.interceptCallbackRequestMessage != null)
+      n += 1 + (long) this.interceptCallbackRequestMessage.marshalFit();
+    if (this.interceptCallbackResponseMessage != null)
+      n += 1 + (long) this.interceptCallbackResponseMessage.marshalFit();
     if (n < 0 || n > (long) Message.colferSizeMax) return Message.colferSizeMax;
     return (int) n;
   }
@@ -247,14 +247,14 @@ public class Message implements Serializable, com.quasient.pal.messages.Marshall
         i = this.interceptResponse.marshal(buf, i);
       }
 
-      if (this.interceptCallbackRequest != null) {
+      if (this.interceptCallbackRequestMessage != null) {
         buf[i++] = (byte) 7;
-        i = this.interceptCallbackRequest.marshal(buf, i);
+        i = this.interceptCallbackRequestMessage.marshal(buf, i);
       }
 
-      if (this.interceptCallbackResponse != null) {
+      if (this.interceptCallbackResponseMessage != null) {
         buf[i++] = (byte) 8;
-        i = this.interceptCallbackResponse.marshal(buf, i);
+        i = this.interceptCallbackResponseMessage.marshal(buf, i);
       }
 
       buf[i++] = (byte) 0x7f;
@@ -344,14 +344,14 @@ public class Message implements Serializable, com.quasient.pal.messages.Marshall
       }
 
       if (header == (byte) 7) {
-        this.interceptCallbackRequest = new InterceptCallbackRequest();
-        i = this.interceptCallbackRequest.unmarshal(buf, i, end);
+        this.interceptCallbackRequestMessage = new InterceptCallbackRequestMessage();
+        i = this.interceptCallbackRequestMessage.unmarshal(buf, i, end);
         header = buf[i++];
       }
 
       if (header == (byte) 8) {
-        this.interceptCallbackResponse = new InterceptCallbackResponse();
-        i = this.interceptCallbackResponse.unmarshal(buf, i, end);
+        this.interceptCallbackResponseMessage = new InterceptCallbackResponseMessage();
+        i = this.interceptCallbackResponseMessage.unmarshal(buf, i, end);
         header = buf[i++];
       }
 
@@ -600,60 +600,60 @@ public class Message implements Serializable, com.quasient.pal.messages.Marshall
   }
 
   /**
-   * Gets com.quasient.pal.messages/colfer.Message.interceptCallbackRequest.
+   * Gets com.quasient.pal.messages/colfer.Message.interceptCallbackRequestMessage.
    *
    * @return the value.
    */
-  public InterceptCallbackRequest getInterceptCallbackRequest() {
-    return this.interceptCallbackRequest;
+  public InterceptCallbackRequestMessage getInterceptCallbackRequestMessage() {
+    return this.interceptCallbackRequestMessage;
   }
 
   /**
-   * Sets com.quasient.pal.messages/colfer.Message.interceptCallbackRequest.
+   * Sets com.quasient.pal.messages/colfer.Message.interceptCallbackRequestMessage.
    *
    * @param value the replacement.
    */
-  public void setInterceptCallbackRequest(InterceptCallbackRequest value) {
-    this.interceptCallbackRequest = value;
+  public void setInterceptCallbackRequestMessage(InterceptCallbackRequestMessage value) {
+    this.interceptCallbackRequestMessage = value;
   }
 
   /**
-   * Sets com.quasient.pal.messages/colfer.Message.interceptCallbackRequest.
+   * Sets com.quasient.pal.messages/colfer.Message.interceptCallbackRequestMessage.
    *
    * @param value the replacement.
    * @return {@code this}.
    */
-  public Message withInterceptCallbackRequest(InterceptCallbackRequest value) {
-    this.interceptCallbackRequest = value;
+  public Message withInterceptCallbackRequestMessage(InterceptCallbackRequestMessage value) {
+    this.interceptCallbackRequestMessage = value;
     return this;
   }
 
   /**
-   * Gets com.quasient.pal.messages/colfer.Message.interceptCallbackResponse.
+   * Gets com.quasient.pal.messages/colfer.Message.interceptCallbackResponseMessage.
    *
    * @return the value.
    */
-  public InterceptCallbackResponse getInterceptCallbackResponse() {
-    return this.interceptCallbackResponse;
+  public InterceptCallbackResponseMessage getInterceptCallbackResponseMessage() {
+    return this.interceptCallbackResponseMessage;
   }
 
   /**
-   * Sets com.quasient.pal.messages/colfer.Message.interceptCallbackResponse.
+   * Sets com.quasient.pal.messages/colfer.Message.interceptCallbackResponseMessage.
    *
    * @param value the replacement.
    */
-  public void setInterceptCallbackResponse(InterceptCallbackResponse value) {
-    this.interceptCallbackResponse = value;
+  public void setInterceptCallbackResponseMessage(InterceptCallbackResponseMessage value) {
+    this.interceptCallbackResponseMessage = value;
   }
 
   /**
-   * Sets com.quasient.pal.messages/colfer.Message.interceptCallbackResponse.
+   * Sets com.quasient.pal.messages/colfer.Message.interceptCallbackResponseMessage.
    *
    * @param value the replacement.
    * @return {@code this}.
    */
-  public Message withInterceptCallbackResponse(InterceptCallbackResponse value) {
-    this.interceptCallbackResponse = value;
+  public Message withInterceptCallbackResponseMessage(InterceptCallbackResponseMessage value) {
+    this.interceptCallbackResponseMessage = value;
     return this;
   }
 
@@ -667,10 +667,10 @@ public class Message implements Serializable, com.quasient.pal.messages.Marshall
     if (this.interceptMessage != null) h = 31 * h + this.interceptMessage.hashCode();
     if (this.interceptKeyMessage != null) h = 31 * h + this.interceptKeyMessage.hashCode();
     if (this.interceptResponse != null) h = 31 * h + this.interceptResponse.hashCode();
-    if (this.interceptCallbackRequest != null)
-      h = 31 * h + this.interceptCallbackRequest.hashCode();
-    if (this.interceptCallbackResponse != null)
-      h = 31 * h + this.interceptCallbackResponse.hashCode();
+    if (this.interceptCallbackRequestMessage != null)
+      h = 31 * h + this.interceptCallbackRequestMessage.hashCode();
+    if (this.interceptCallbackResponseMessage != null)
+      h = 31 * h + this.interceptCallbackResponseMessage.hashCode();
     return h;
   }
 
@@ -702,12 +702,12 @@ public class Message implements Serializable, com.quasient.pal.messages.Marshall
         && (this.interceptResponse == null
             ? o.interceptResponse == null
             : this.interceptResponse.equals(o.interceptResponse))
-        && (this.interceptCallbackRequest == null
-            ? o.interceptCallbackRequest == null
-            : this.interceptCallbackRequest.equals(o.interceptCallbackRequest))
-        && (this.interceptCallbackResponse == null
-            ? o.interceptCallbackResponse == null
-            : this.interceptCallbackResponse.equals(o.interceptCallbackResponse));
+        && (this.interceptCallbackRequestMessage == null
+            ? o.interceptCallbackRequestMessage == null
+            : this.interceptCallbackRequestMessage.equals(o.interceptCallbackRequestMessage))
+        && (this.interceptCallbackResponseMessage == null
+            ? o.interceptCallbackResponseMessage == null
+            : this.interceptCallbackResponseMessage.equals(o.interceptCallbackResponseMessage));
   }
 
   @Override
@@ -747,14 +747,16 @@ public class Message implements Serializable, com.quasient.pal.messages.Marshall
         this.interceptResponse = new InterceptResponse().fromJson(jsonObj);
       }
 
-      if (json.has("interceptCallbackRequest")) {
-        JsonObject jsonObj = json.getAsJsonObject("interceptCallbackRequest");
-        this.interceptCallbackRequest = new InterceptCallbackRequest().fromJson(jsonObj);
+      if (json.has("interceptCallbackRequestMessage")) {
+        JsonObject jsonObj = json.getAsJsonObject("interceptCallbackRequestMessage");
+        this.interceptCallbackRequestMessage =
+            new InterceptCallbackRequestMessage().fromJson(jsonObj);
       }
 
-      if (json.has("interceptCallbackResponse")) {
-        JsonObject jsonObj = json.getAsJsonObject("interceptCallbackResponse");
-        this.interceptCallbackResponse = new InterceptCallbackResponse().fromJson(jsonObj);
+      if (json.has("interceptCallbackResponseMessage")) {
+        JsonObject jsonObj = json.getAsJsonObject("interceptCallbackResponseMessage");
+        this.interceptCallbackResponseMessage =
+            new InterceptCallbackResponseMessage().fromJson(jsonObj);
       }
 
     } catch (Exception e) {
@@ -776,7 +778,7 @@ public class Message implements Serializable, com.quasient.pal.messages.Marshall
     this.interceptMessage = null;
     this.interceptKeyMessage = null;
     this.interceptResponse = null;
-    this.interceptCallbackRequest = null;
-    this.interceptCallbackResponse = null;
+    this.interceptCallbackRequestMessage = null;
+    this.interceptCallbackResponseMessage = null;
   }
 }

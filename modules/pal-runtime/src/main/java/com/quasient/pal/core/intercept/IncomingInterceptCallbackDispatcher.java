@@ -14,8 +14,8 @@ import com.quasient.pal.common.lang.intercept.InterceptContext;
 import com.quasient.pal.common.lang.intercept.InterceptPhase;
 import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.messages.colfer.ExecMessage;
-import com.quasient.pal.messages.colfer.InterceptCallbackRequest;
-import com.quasient.pal.messages.colfer.InterceptCallbackResponse;
+import com.quasient.pal.messages.colfer.InterceptCallbackRequestMessage;
+import com.quasient.pal.messages.colfer.InterceptCallbackResponseMessage;
 import com.quasient.pal.messages.colfer.Obj;
 import com.quasient.pal.messages.colfer.Parameter;
 import com.quasient.pal.messages.colfer.RaisedThrowable;
@@ -33,9 +33,9 @@ import org.slf4j.LoggerFactory;
 /**
  * Handles incoming intercept callback requests by invoking registered or static callback handlers.
  *
- * <p>This dispatcher receives {@link InterceptCallbackRequest} messages from intercepted peers,
- * routes them to the appropriate callback handler, constructs an {@link InterceptContext}, invokes
- * the callback, and returns an {@link InterceptCallbackResponse}.
+ * <p>This dispatcher receives {@link InterceptCallbackRequestMessage} messages from intercepted
+ * peers, routes them to the appropriate callback handler, constructs an {@link InterceptContext},
+ * invokes the callback, and returns an {@link InterceptCallbackResponseMessage}.
  *
  * <p><b>Callback Resolution:</b>
  *
@@ -74,14 +74,14 @@ public class IncomingInterceptCallbackDispatcher {
    *   <li>Resolves the callback handler (registered or static method)
    *   <li>Builds an {@link InterceptContext} from the request
    *   <li>Invokes {@link InterceptCallback#handle(InterceptContext)}
-   *   <li>Constructs an {@link InterceptCallbackResponse} from the result
+   *   <li>Constructs an {@link InterceptCallbackResponseMessage} from the result
    * </ol>
    *
    * @param request the intercept callback request from the intercepted peer
    * @return the callback response to send back to the intercepted peer
    */
   @SuppressWarnings("PMD.NoFullyQualifiedTypes")
-  public InterceptCallbackResponse handleCallback(InterceptCallbackRequest request) {
+  public InterceptCallbackResponseMessage handleCallback(InterceptCallbackRequestMessage request) {
     if (logger.isDebugEnabled()) {
       logger.debug(
           "Handling intercept callback: callbackId={}, phase={}, interceptType={}",
@@ -102,7 +102,8 @@ public class IncomingInterceptCallbackDispatcher {
           callback.handle(context);
 
       // Build the wire response
-      InterceptCallbackResponse wireResponse = buildWireResponse(request, context, userResponse);
+      InterceptCallbackResponseMessage wireResponse =
+          buildWireResponse(request, context, userResponse);
 
       if (logger.isDebugEnabled()) {
         logger.debug("Callback completed successfully: callbackId={}", request.getCallbackId());
@@ -130,7 +131,8 @@ public class IncomingInterceptCallbackDispatcher {
    * @throws Exception if the callback cannot be resolved
    */
   @SuppressWarnings("PMD.NoFullyQualifiedTypes")
-  private InterceptCallback resolveCallback(InterceptCallbackRequest request) throws Exception {
+  private InterceptCallback resolveCallback(InterceptCallbackRequestMessage request)
+      throws Exception {
     String registeredCallbackId = request.getRegisteredCallbackId();
 
     if (registeredCallbackId != null && !registeredCallbackId.isEmpty()) {
@@ -154,7 +156,7 @@ public class IncomingInterceptCallbackDispatcher {
           Class.forName(className, true, Thread.currentThread().getContextClassLoader());
       Method callbackMethod = callbackClass.getMethod(methodName, InterceptContext.class);
 
-      // Verify method is static and returns InterceptCallbackResponse
+      // Verify method is static and returns InterceptCallbackResponseMessage
       if (!java.lang.reflect.Modifier.isStatic(callbackMethod.getModifiers())) {
         throw new IllegalArgumentException(
             "Callback method must be static: " + className + "." + methodName);
@@ -163,7 +165,7 @@ public class IncomingInterceptCallbackDispatcher {
       if (!com.quasient.pal.common.lang.intercept.InterceptCallbackResponse.class.isAssignableFrom(
           callbackMethod.getReturnType())) {
         throw new IllegalArgumentException(
-            "Callback method must return InterceptCallbackResponse: "
+            "Callback method must return InterceptCallbackResponseMessage: "
                 + className
                 + "."
                 + methodName);
@@ -183,7 +185,7 @@ public class IncomingInterceptCallbackDispatcher {
    * @return the context for the callback
    * @throws Exception if context building fails
    */
-  private InterceptContext buildContext(InterceptCallbackRequest request) throws Exception {
+  private InterceptContext buildContext(InterceptCallbackRequestMessage request) throws Exception {
     InterceptPhase phase = InterceptPhase.fromByte(request.getPhase());
     InterceptType interceptType = InterceptType.fromByte(request.getInterceptType());
 
@@ -219,7 +221,7 @@ public class IncomingInterceptCallbackDispatcher {
    * @return the deserialized arguments array
    */
   @SuppressWarnings("PMD.NoFullyQualifiedTypes")
-  private Object[] extractArguments(InterceptCallbackRequest request) {
+  private Object[] extractArguments(InterceptCallbackRequestMessage request) {
     ExecMessage exec = request.getExec();
     if (exec == null) {
       return new Object[0];
@@ -309,7 +311,7 @@ public class IncomingInterceptCallbackDispatcher {
    * @return the deserialized return value, or null
    * @throws Exception if deserialization fails
    */
-  private Object extractReturnValue(InterceptCallbackRequest request) throws Exception {
+  private Object extractReturnValue(InterceptCallbackRequestMessage request) throws Exception {
     if (request.getIsVoid()) {
       return null;
     }
@@ -329,7 +331,7 @@ public class IncomingInterceptCallbackDispatcher {
    * @return the deserialized exception, or null
    */
   @SuppressWarnings("PMD.NoFullyQualifiedTypes")
-  private Throwable extractThrownException(InterceptCallbackRequest request) {
+  private Throwable extractThrownException(InterceptCallbackRequestMessage request) {
     RaisedThrowable raised = request.getThrownException();
     if (raised == null) {
       return null;
@@ -347,12 +349,12 @@ public class IncomingInterceptCallbackDispatcher {
    * @return the wire-format response
    */
   @SuppressWarnings("PMD.NoFullyQualifiedTypes")
-  private InterceptCallbackResponse buildWireResponse(
-      InterceptCallbackRequest request,
+  private InterceptCallbackResponseMessage buildWireResponse(
+      InterceptCallbackRequestMessage request,
       InterceptContext context,
       com.quasient.pal.common.lang.intercept.InterceptCallbackResponse userResponse) {
 
-    InterceptCallbackResponse wireResponse = new InterceptCallbackResponse();
+    InterceptCallbackResponseMessage wireResponse = new InterceptCallbackResponseMessage();
     wireResponse.setCallbackId(request.getCallbackId());
     wireResponse.setPhase(request.getPhase());
 
@@ -397,9 +399,9 @@ public class IncomingInterceptCallbackDispatcher {
    * @param error the exception that occurred
    * @return the error response
    */
-  private InterceptCallbackResponse buildErrorResponse(
-      InterceptCallbackRequest request, Exception error) {
-    InterceptCallbackResponse wireResponse = new InterceptCallbackResponse();
+  private InterceptCallbackResponseMessage buildErrorResponse(
+      InterceptCallbackRequestMessage request, Exception error) {
+    InterceptCallbackResponseMessage wireResponse = new InterceptCallbackResponseMessage();
     wireResponse.setCallbackId(request.getCallbackId());
     wireResponse.setPhase(request.getPhase());
     wireResponse.setThrowException(true);

@@ -116,18 +116,18 @@ public class ConstructorSyncCallbackIT extends AbstractInterceptIT {
         is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
     assertThat(
         "Callback class should match",
-        callback.getInterceptCallbackRequest().getCallbackClass(),
+        callback.getInterceptCallbackRequestMessage().getCallbackClass(),
         is(callbackClass));
     assertThat(
         "Callback method should match",
-        callback.getInterceptCallbackRequest().getCallbackMethod(),
+        callback.getInterceptCallbackRequestMessage().getCallbackMethod(),
         is(callbackMethod));
     // BEFORE callbacks receive the constructor parameters
     // Constructor(Integer) has 1 parameter
     assertThat(
         "BEFORE callback should have 1 parameter (the Integer argument)",
         callback
-            .getInterceptCallbackRequest()
+            .getInterceptCallbackRequestMessage()
             .getExec()
             .getConstructorCall()
             .getParameters()
@@ -213,18 +213,18 @@ public class ConstructorSyncCallbackIT extends AbstractInterceptIT {
           is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
       assertThat(
           "Callback class should match",
-          callback.getInterceptCallbackRequest().getCallbackClass(),
+          callback.getInterceptCallbackRequestMessage().getCallbackClass(),
           is(callbackClass));
       assertThat(
           "Callback method should match",
-          callback.getInterceptCallbackRequest().getCallbackMethod(),
+          callback.getInterceptCallbackRequestMessage().getCallbackMethod(),
           is(callbackMethod));
       // BEFORE callbacks receive the constructor parameters
       // Constructor(Integer) has 1 parameter
       assertThat(
           "BEFORE callback should have 1 parameter (the Integer argument)",
           callback
-              .getInterceptCallbackRequest()
+              .getInterceptCallbackRequestMessage()
               .getExec()
               .getConstructorCall()
               .getParameters()
@@ -306,30 +306,30 @@ public class ConstructorSyncCallbackIT extends AbstractInterceptIT {
         is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
     assertThat(
         "Callback class should match",
-        callback.getInterceptCallbackRequest().getCallbackClass(),
+        callback.getInterceptCallbackRequestMessage().getCallbackClass(),
         is(callbackClass));
     assertThat(
         "Callback method should match",
-        callback.getInterceptCallbackRequest().getCallbackMethod(),
+        callback.getInterceptCallbackRequestMessage().getCallbackMethod(),
         is(callbackMethod));
     // AFTER callbacks wrap ReturnValue, not ConstructorCall
     // Verify the return value structure for constructor (returns the constructed object)
     assertThat(
         "AFTER callback should have ReturnValue in exec",
-        callback.getInterceptCallbackRequest().getExec().getReturnValue(),
+        callback.getInterceptCallbackRequestMessage().getExec().getReturnValue(),
         is(notNullValue()));
     assertThat(
         "Constructor returns object, so isVoid should be false",
-        callback.getInterceptCallbackRequest().getExec().getReturnValue().isVoid,
+        callback.getInterceptCallbackRequestMessage().getExec().getReturnValue().isVoid,
         is(false));
     assertThat(
         "ReturnValue should have the constructed object",
-        callback.getInterceptCallbackRequest().getExec().getReturnValue().getObject(),
+        callback.getInterceptCallbackRequestMessage().getExec().getReturnValue().getObject(),
         is(notNullValue()));
     assertThat(
         "ReturnValue should have constructor info",
         callback
-            .getInterceptCallbackRequest()
+            .getInterceptCallbackRequestMessage()
             .getExec()
             .getReturnValue()
             .getFrom()
@@ -413,30 +413,30 @@ public class ConstructorSyncCallbackIT extends AbstractInterceptIT {
           is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
       assertThat(
           "Callback class should match",
-          callback.getInterceptCallbackRequest().getCallbackClass(),
+          callback.getInterceptCallbackRequestMessage().getCallbackClass(),
           is(callbackClass));
       assertThat(
           "Callback method should match",
-          callback.getInterceptCallbackRequest().getCallbackMethod(),
+          callback.getInterceptCallbackRequestMessage().getCallbackMethod(),
           is(callbackMethod));
       // AFTER callbacks wrap ReturnValue, not ConstructorCall
       // Verify the return value structure for constructor (returns the constructed object)
       assertThat(
           "AFTER callback should have ReturnValue in exec",
-          callback.getInterceptCallbackRequest().getExec().getReturnValue(),
+          callback.getInterceptCallbackRequestMessage().getExec().getReturnValue(),
           is(notNullValue()));
       assertThat(
           "Constructor returns object, so isVoid should be false",
-          callback.getInterceptCallbackRequest().getExec().getReturnValue().isVoid,
+          callback.getInterceptCallbackRequestMessage().getExec().getReturnValue().isVoid,
           is(false));
       assertThat(
           "ReturnValue should have the constructed object",
-          callback.getInterceptCallbackRequest().getExec().getReturnValue().getObject(),
+          callback.getInterceptCallbackRequestMessage().getExec().getReturnValue().getObject(),
           is(notNullValue()));
       assertThat(
           "ReturnValue should have constructor info",
           callback
-              .getInterceptCallbackRequest()
+              .getInterceptCallbackRequestMessage()
               .getExec()
               .getReturnValue()
               .getFrom()

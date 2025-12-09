@@ -69,7 +69,7 @@ Values for phase:
  * This message supports both registered callbacks (via callbackId) and
  * static method callbacks (via callbackClass + callbackMethod).
  */
-type InterceptCallbackRequest struct {
+type InterceptCallbackRequestMessage struct {
 	// Unique ID for this callback invocation
 	callbackId text
 
@@ -101,7 +101,7 @@ type InterceptCallbackRequest struct {
  * Response sent from intercepting peer back to intercepted peer
  * after callback execution.
  */
-type InterceptCallbackResponse struct {
+type InterceptCallbackResponseMessage struct {
 	// Matches request callbackId
 	callbackId text
 

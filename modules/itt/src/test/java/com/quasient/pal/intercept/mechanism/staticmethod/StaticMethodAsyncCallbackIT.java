@@ -190,17 +190,17 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
         is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
     assertThat(
         "Callback class should match",
-        callback.getInterceptCallbackRequest().getCallbackClass(),
+        callback.getInterceptCallbackRequestMessage().getCallbackClass(),
         is(callbackClass));
     assertThat(
         "Callback method should match",
-        callback.getInterceptCallbackRequest().getCallbackMethod(),
+        callback.getInterceptCallbackRequestMessage().getCallbackMethod(),
         is(callbackMethod));
     // BEFORE callbacks receive method parameters (multiplyStaticBy has 1 Integer parameter)
     assertThat(
         "BEFORE callback should have 1 parameter (the Integer argument)",
         callback
-            .getInterceptCallbackRequest()
+            .getInterceptCallbackRequestMessage()
             .getExec()
             .getClassMethodCall()
             .getParameters()
@@ -296,17 +296,17 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
           is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
       assertThat(
           "Callback class should match",
-          callback.getInterceptCallbackRequest().getCallbackClass(),
+          callback.getInterceptCallbackRequestMessage().getCallbackClass(),
           is(callbackClass));
       assertThat(
           "Callback method should match",
-          callback.getInterceptCallbackRequest().getCallbackMethod(),
+          callback.getInterceptCallbackRequestMessage().getCallbackMethod(),
           is(callbackMethod));
       // BEFORE callbacks receive method parameters (incrementStaticCounter has no params)
       assertThat(
           "BEFORE callback should have 0 parameters",
           callback
-              .getInterceptCallbackRequest()
+              .getInterceptCallbackRequestMessage()
               .getExec()
               .getClassMethodCall()
               .getParameters()
@@ -400,29 +400,34 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
         is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
     assertThat(
         "Callback class should match",
-        callback.getInterceptCallbackRequest().getCallbackClass(),
+        callback.getInterceptCallbackRequestMessage().getCallbackClass(),
         is(callbackClass));
     assertThat(
         "Callback method should match",
-        callback.getInterceptCallbackRequest().getCallbackMethod(),
+        callback.getInterceptCallbackRequestMessage().getCallbackMethod(),
         is(callbackMethod));
     // AFTER callbacks wrap ReturnValue, not ClassMethodCall
     // Verify the return value structure for non-void method (returns Integer)
     assertThat(
         "AFTER callback should have ReturnValue in exec",
-        callback.getInterceptCallbackRequest().getExec().getReturnValue(),
+        callback.getInterceptCallbackRequestMessage().getExec().getReturnValue(),
         is(notNullValue()));
     assertThat(
         "multiplyStaticBy returns Integer, so isVoid should be false",
-        callback.getInterceptCallbackRequest().getExec().getReturnValue().isVoid,
+        callback.getInterceptCallbackRequestMessage().getExec().getReturnValue().isVoid,
         is(false));
     assertThat(
         "ReturnValue should have the return object",
-        callback.getInterceptCallbackRequest().getExec().getReturnValue().getObject(),
+        callback.getInterceptCallbackRequestMessage().getExec().getReturnValue().getObject(),
         is(notNullValue()));
     assertThat(
         "ReturnValue should have method info",
-        callback.getInterceptCallbackRequest().getExec().getReturnValue().getFrom().getMethod(),
+        callback
+            .getInterceptCallbackRequestMessage()
+            .getExec()
+            .getReturnValue()
+            .getFrom()
+            .getMethod(),
         is(notNullValue()));
 
     logger.info("===== testSingleAfterAsyncCallback: TEST COMPLETED SUCCESSFULLY =====");
@@ -514,29 +519,34 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
           is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
       assertThat(
           "Callback class should match",
-          callback.getInterceptCallbackRequest().getCallbackClass(),
+          callback.getInterceptCallbackRequestMessage().getCallbackClass(),
           is(callbackClass));
       assertThat(
           "Callback method should match",
-          callback.getInterceptCallbackRequest().getCallbackMethod(),
+          callback.getInterceptCallbackRequestMessage().getCallbackMethod(),
           is(callbackMethod));
       // AFTER callbacks wrap ReturnValue, not ClassMethodCall
       // Verify the return value structure for non-void method (returns Integer)
       assertThat(
           "AFTER callback should have ReturnValue in exec",
-          callback.getInterceptCallbackRequest().getExec().getReturnValue(),
+          callback.getInterceptCallbackRequestMessage().getExec().getReturnValue(),
           is(notNullValue()));
       assertThat(
           "incrementStaticCounter returns Integer, so isVoid should be false",
-          callback.getInterceptCallbackRequest().getExec().getReturnValue().isVoid,
+          callback.getInterceptCallbackRequestMessage().getExec().getReturnValue().isVoid,
           is(false));
       assertThat(
           "ReturnValue should have the return object",
-          callback.getInterceptCallbackRequest().getExec().getReturnValue().getObject(),
+          callback.getInterceptCallbackRequestMessage().getExec().getReturnValue().getObject(),
           is(notNullValue()));
       assertThat(
           "ReturnValue should have method info",
-          callback.getInterceptCallbackRequest().getExec().getReturnValue().getFrom().getMethod(),
+          callback
+              .getInterceptCallbackRequestMessage()
+              .getExec()
+              .getReturnValue()
+              .getFrom()
+              .getMethod(),
           is(notNullValue()));
     }
 

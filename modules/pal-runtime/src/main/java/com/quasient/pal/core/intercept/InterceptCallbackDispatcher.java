@@ -16,8 +16,8 @@ import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.messages.colfer.ExecMessage;
-import com.quasient.pal.messages.colfer.InterceptCallbackRequest;
-import com.quasient.pal.messages.colfer.InterceptCallbackResponse;
+import com.quasient.pal.messages.colfer.InterceptCallbackRequestMessage;
+import com.quasient.pal.messages.colfer.InterceptCallbackResponseMessage;
 import com.quasient.pal.messages.colfer.InterceptMessage;
 import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.messages.colfer.Obj;
@@ -179,7 +179,7 @@ public class InterceptCallbackDispatcher {
    * @param request the callback request to send
    * @throws Exception if an error occurs while sending the message
    */
-  private void sendAsyncCallbackToPeer(UUID targetPeerUuid, InterceptCallbackRequest request)
+  private void sendAsyncCallbackToPeer(UUID targetPeerUuid, InterceptCallbackRequestMessage request)
       throws Exception {
     if (logger.isDebugEnabled()) {
       logger.debug(
@@ -289,9 +289,9 @@ public class InterceptCallbackDispatcher {
   /**
    * Sends BEFORE-phase callbacks for all matching intercepts and collects responses.
    *
-   * <p>This method sends {@link InterceptCallbackRequest} messages to callback peers for each
-   * matching BEFORE intercept. It waits for {@link InterceptCallbackResponse} from each callback
-   * and collects any argument mutations.
+   * <p>This method sends {@link InterceptCallbackRequestMessage} messages to callback peers for
+   * each matching BEFORE intercept. It waits for {@link InterceptCallbackResponseMessage} from each
+   * callback and collects any argument mutations.
    *
    * <p><b>Important:</b> Each callback receives the <b>original, unmodified arguments</b> from the
    * {@code execMessage}. Callbacks do not see mutations made by previously-executed callbacks. This
@@ -356,12 +356,12 @@ public class InterceptCallbackDispatcher {
             interceptMessage.getCallbackMethod());
 
         // Build the callback request
-        InterceptCallbackRequest request =
+        InterceptCallbackRequestMessage request =
             messageBuilder.buildInterceptCallbackRequest(
                 peerUuid, interceptMessage, execMessage, InterceptPhase.BEFORE, null, false, null);
 
         // Send and await response
-        InterceptCallbackResponse response = sendCallbackRequest(callbackPeerUuid, request);
+        InterceptCallbackResponseMessage response = sendCallbackRequest(callbackPeerUuid, request);
 
         // Check for exception
         if (response.getThrowException()) {
@@ -407,7 +407,7 @@ public class InterceptCallbackDispatcher {
             interceptMessage.getCallbackMethod());
 
         // Build the callback request for async
-        InterceptCallbackRequest request =
+        InterceptCallbackRequestMessage request =
             messageBuilder.buildInterceptCallbackRequest(
                 peerUuid, interceptMessage, execMessage, InterceptPhase.BEFORE, null, false, null);
 
@@ -432,9 +432,9 @@ public class InterceptCallbackDispatcher {
   /**
    * Sends AFTER-phase callbacks for all matching intercepts and collects responses.
    *
-   * <p>This method sends {@link InterceptCallbackRequest} messages to callback peers for each
-   * matching AFTER intercept. It waits for {@link InterceptCallbackResponse} from each callback and
-   * collects any return value overrides.
+   * <p>This method sends {@link InterceptCallbackRequestMessage} messages to callback peers for
+   * each matching AFTER intercept. It waits for {@link InterceptCallbackResponseMessage} from each
+   * callback and collects any return value overrides.
    *
    * <p><b>Return Value Override:</b> If multiple callbacks override the return value, the last
    * callback's override wins (based on intercept registration order). The aggregated override is
@@ -515,7 +515,7 @@ public class InterceptCallbackDispatcher {
             interceptMessage.getCallbackMethod());
 
         // Build the callback request with return value and exception
-        InterceptCallbackRequest request =
+        InterceptCallbackRequestMessage request =
             messageBuilder.buildInterceptCallbackRequest(
                 peerUuid,
                 interceptMessage,
@@ -526,7 +526,7 @@ public class InterceptCallbackDispatcher {
                 thrownException);
 
         // Send and await response
-        InterceptCallbackResponse response = sendCallbackRequest(callbackPeerUuid, request);
+        InterceptCallbackResponseMessage response = sendCallbackRequest(callbackPeerUuid, request);
 
         // Check for exception
         if (response.getThrowException()) {
@@ -578,7 +578,7 @@ public class InterceptCallbackDispatcher {
             interceptMessage.getCallbackMethod());
 
         // Build the callback request for async with return value and exception
-        InterceptCallbackRequest request =
+        InterceptCallbackRequestMessage request =
             messageBuilder.buildInterceptCallbackRequest(
                 peerUuid,
                 interceptMessage,
@@ -612,19 +612,19 @@ public class InterceptCallbackDispatcher {
   }
 
   /**
-   * Sends an {@link InterceptCallbackRequest} to the specified peer and awaits the response.
+   * Sends an {@link InterceptCallbackRequestMessage} to the specified peer and awaits the response.
    *
    * @param callbackPeerUuid the UUID of the callback peer
    * @param request the callback request to send
    * @return the callback response
    * @throws Exception if sending or receiving fails
    */
-  private InterceptCallbackResponse sendCallbackRequest(
-      UUID callbackPeerUuid, InterceptCallbackRequest request) throws Exception {
+  private InterceptCallbackResponseMessage sendCallbackRequest(
+      UUID callbackPeerUuid, InterceptCallbackRequestMessage request) throws Exception {
 
     if (logger.isDebugEnabled()) {
       logger.debug(
-          "Sending InterceptCallbackRequest to peer {}: callbackId={}",
+          "Sending InterceptCallbackRequestMessage to peer {}: callbackId={}",
           callbackPeerUuid,
           request.getCallbackId());
     }
@@ -650,7 +650,7 @@ public class InterceptCallbackDispatcher {
           "Timeout waiting for callback response from peer {}. Returning proceed=true fallback.",
           callbackPeerUuid);
       // Return default "proceed" response on timeout
-      InterceptCallbackResponse fallback = new InterceptCallbackResponse();
+      InterceptCallbackResponseMessage fallback = new InterceptCallbackResponseMessage();
       fallback.setCallbackId(request.getCallbackId());
       fallback.setPhase(request.getPhase());
       fallback.setShouldProceed(true);
@@ -661,14 +661,16 @@ public class InterceptCallbackDispatcher {
     Message responseMessage = new Message();
     responseMessage.unmarshal(responseBytes, 0);
 
-    InterceptCallbackResponse response = responseMessage.getInterceptCallbackResponse();
+    InterceptCallbackResponseMessage response =
+        responseMessage.getInterceptCallbackResponseMessage();
     if (response == null) {
-      throw new RuntimeException("Expected InterceptCallbackResponse but got: " + responseMessage);
+      throw new RuntimeException(
+          "Expected InterceptCallbackResponseMessage but got: " + responseMessage);
     }
 
     if (logger.isDebugEnabled()) {
       logger.debug(
-          "Received InterceptCallbackResponse from peer {}: callbackId={}",
+          "Received InterceptCallbackResponseMessage from peer {}: callbackId={}",
           callbackPeerUuid,
           response.getCallbackId());
     }

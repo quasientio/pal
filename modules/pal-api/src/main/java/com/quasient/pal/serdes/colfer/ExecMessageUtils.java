@@ -259,9 +259,9 @@ public class ExecMessageUtils {
       case CONTROL -> msg.getControlMessage().getMessageId();
       case EXEC -> msg.getExecMessage().getMessageId();
       case INTERCEPT -> {
-        // Handle both InterceptMessage and InterceptCallbackRequest
-        if (msg.getInterceptCallbackRequest() != null) {
-          yield msg.getInterceptCallbackRequest().getCallbackId();
+        // Handle both InterceptMessage and InterceptCallbackRequestMessage
+        if (msg.getInterceptCallbackRequestMessage() != null) {
+          yield msg.getInterceptCallbackRequestMessage().getCallbackId();
         } else if (msg.getInterceptMessage() != null) {
           yield msg.getInterceptMessage().getMessageId();
         } else {

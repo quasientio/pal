@@ -136,12 +136,14 @@ public class MethodInterceptInFlightVerificationIT extends AbstractInterceptIT {
         callback -> {
           assertThat(callback, is(not(nullValue())));
           assertThat(callback.getMessageType(), is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
-          assertThat(callback.getInterceptCallbackRequest().getCallbackClass(), is(callbackClass));
           assertThat(
-              callback.getInterceptCallbackRequest().getCallbackMethod(), is(callbackMethod));
+              callback.getInterceptCallbackRequestMessage().getCallbackClass(), is(callbackClass));
+          assertThat(
+              callback.getInterceptCallbackRequestMessage().getCallbackMethod(),
+              is(callbackMethod));
           assertThat(
               callback
-                  .getInterceptCallbackRequest()
+                  .getInterceptCallbackRequestMessage()
                   .getExec()
                   .getInstanceMethodCall()
                   .getParameters()

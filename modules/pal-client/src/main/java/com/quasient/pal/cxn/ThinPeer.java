@@ -22,7 +22,7 @@ import com.quasient.pal.messages.LogMessage;
 import com.quasient.pal.messages.OutboundMsg;
 import com.quasient.pal.messages.colfer.ControlMessage;
 import com.quasient.pal.messages.colfer.ExecMessage;
-import com.quasient.pal.messages.colfer.InterceptCallbackResponse;
+import com.quasient.pal.messages.colfer.InterceptCallbackResponseMessage;
 import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.messages.colfer.MetaMessage;
 import com.quasient.pal.messages.jsonrpc.JsonRpcMessage;
@@ -2274,9 +2274,9 @@ public class ThinPeer {
    *
    * <ul>
    *   <li>For {@code INTERCEPT_CALLBACK_REQUEST} messages: sends a proper {@link
-   *       InterceptCallbackResponse} with {@code shouldProceed = true}, allowing the intercepted
-   *       peer's dispatch to continue normally. Tests can then verify callbacks were received via
-   *       {@link #pullReceivedMessages()}.
+   *       InterceptCallbackResponseMessage} with {@code shouldProceed = true}, allowing the
+   *       intercepted peer's dispatch to continue normally. Tests can then verify callbacks were
+   *       received via {@link #pullReceivedMessages()}.
    *   <li>For all other message types: sends an empty acknowledgment.
    * </ul>
    *
@@ -2353,9 +2353,11 @@ public class ThinPeer {
                       // For intercept callbacks, send a proper "proceed" response so the
                       // intercepted peer's dispatch() can continue. Tests can verify the
                       // callback was received via getCallbacks()/pullReceivedMessages().
-                      InterceptCallbackResponse response = new InterceptCallbackResponse();
-                      response.setCallbackId(message.getInterceptCallbackRequest().getCallbackId());
-                      response.setPhase(message.getInterceptCallbackRequest().getPhase());
+                      InterceptCallbackResponseMessage response =
+                          new InterceptCallbackResponseMessage();
+                      response.setCallbackId(
+                          message.getInterceptCallbackRequestMessage().getCallbackId());
+                      response.setPhase(message.getInterceptCallbackRequestMessage().getPhase());
                       response.setShouldProceed(true);
                       inboundSocket.send(ColferUtils.toBytes(msgBuilder.wrap(response)), 0);
                     } else {

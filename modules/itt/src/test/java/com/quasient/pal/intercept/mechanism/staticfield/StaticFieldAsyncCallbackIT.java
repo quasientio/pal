@@ -146,16 +146,16 @@ public class StaticFieldAsyncCallbackIT extends AbstractInterceptIT {
         is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
     assertThat(
         "Callback class should match",
-        callback.getInterceptCallbackRequest().getCallbackClass(),
+        callback.getInterceptCallbackRequestMessage().getCallbackClass(),
         is(callbackClass));
     assertThat(
         "Callback method should match",
-        callback.getInterceptCallbackRequest().getCallbackMethod(),
+        callback.getInterceptCallbackRequestMessage().getCallbackMethod(),
         is(callbackMethod));
     // Verify the intercepted operation is a static field GET
     assertThat(
         "Intercepted operation should be StaticFieldGet",
-        callback.getInterceptCallbackRequest().getExec().getStaticFieldGet(),
+        callback.getInterceptCallbackRequestMessage().getExec().getStaticFieldGet(),
         is(notNullValue()));
 
     logger.info("===== testSingleBeforeAsyncCallbackOnGet: TEST COMPLETED SUCCESSFULLY =====");
@@ -208,20 +208,25 @@ public class StaticFieldAsyncCallbackIT extends AbstractInterceptIT {
         is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
     assertThat(
         "Callback class should match",
-        callback.getInterceptCallbackRequest().getCallbackClass(),
+        callback.getInterceptCallbackRequestMessage().getCallbackClass(),
         is(callbackClass));
     assertThat(
         "Callback method should match",
-        callback.getInterceptCallbackRequest().getCallbackMethod(),
+        callback.getInterceptCallbackRequestMessage().getCallbackMethod(),
         is(callbackMethod));
     // AFTER GET callbacks wrap the ReturnValue (the field value that was read)
     assertThat(
         "Intercepted operation should have ReturnValue",
-        callback.getInterceptCallbackRequest().getExec().getReturnValue(),
+        callback.getInterceptCallbackRequestMessage().getExec().getReturnValue(),
         is(notNullValue()));
     assertThat(
         "ReturnValue should have field info",
-        callback.getInterceptCallbackRequest().getExec().getReturnValue().getFrom().getField(),
+        callback
+            .getInterceptCallbackRequestMessage()
+            .getExec()
+            .getReturnValue()
+            .getFrom()
+            .getField(),
         is(notNullValue()));
 
     logger.info("===== testSingleAfterAsyncCallbackOnGet: TEST COMPLETED SUCCESSFULLY =====");
@@ -275,21 +280,25 @@ public class StaticFieldAsyncCallbackIT extends AbstractInterceptIT {
         is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
     assertThat(
         "Callback class should match",
-        callback.getInterceptCallbackRequest().getCallbackClass(),
+        callback.getInterceptCallbackRequestMessage().getCallbackClass(),
         is(callbackClass));
     assertThat(
         "Callback method should match",
-        callback.getInterceptCallbackRequest().getCallbackMethod(),
+        callback.getInterceptCallbackRequestMessage().getCallbackMethod(),
         is(callbackMethod));
     // BEFORE PUT callback wraps the PUT operation
     assertThat(
         "Callback should be StaticFieldPut",
-        callback.getInterceptCallbackRequest().getExec().getStaticFieldPut(),
+        callback.getInterceptCallbackRequestMessage().getExec().getStaticFieldPut(),
         is(notNullValue()));
 
     // Verify the value being PUT matches what we passed to the setter
     Obj putValueObj =
-        callback.getInterceptCallbackRequest().getExec().getStaticFieldPut().getValueObject();
+        callback
+            .getInterceptCallbackRequestMessage()
+            .getExec()
+            .getStaticFieldPut()
+            .getValueObject();
     Object value = Unwrapper.unwrapObject(putValueObj);
     assertThat("PUT value should match the value passed to setter", value, is(newValue));
 
@@ -344,19 +353,19 @@ public class StaticFieldAsyncCallbackIT extends AbstractInterceptIT {
         is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
     assertThat(
         "Callback class should match",
-        callback.getInterceptCallbackRequest().getCallbackClass(),
+        callback.getInterceptCallbackRequestMessage().getCallbackClass(),
         is(callbackClass));
     assertThat(
         "Callback method should match",
-        callback.getInterceptCallbackRequest().getCallbackMethod(),
+        callback.getInterceptCallbackRequestMessage().getCallbackMethod(),
         is(callbackMethod));
     assertThat(
         "Callback should have StaticFieldPutDone",
-        callback.getInterceptCallbackRequest().getExec().getStaticFieldPutDone(),
+        callback.getInterceptCallbackRequestMessage().getExec().getStaticFieldPutDone(),
         is(notNullValue()));
     assertThat(
         "StaticFieldPutDone should have field info",
-        callback.getInterceptCallbackRequest().getExec().getStaticFieldPutDone().getField(),
+        callback.getInterceptCallbackRequestMessage().getExec().getStaticFieldPutDone().getField(),
         is(notNullValue()));
 
     logger.info("===== testSingleAfterAsyncCallbackOnPut: TEST COMPLETED SUCCESSFULLY =====");

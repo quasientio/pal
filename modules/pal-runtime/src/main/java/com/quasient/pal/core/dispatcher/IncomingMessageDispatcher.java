@@ -20,8 +20,8 @@ import com.quasient.pal.core.intercept.IncomingInterceptCallbackDispatcher;
 import com.quasient.pal.core.transport.MessageChannelType;
 import com.quasient.pal.messages.colfer.ControlMessage;
 import com.quasient.pal.messages.colfer.ExecMessage;
-import com.quasient.pal.messages.colfer.InterceptCallbackRequest;
-import com.quasient.pal.messages.colfer.InterceptCallbackResponse;
+import com.quasient.pal.messages.colfer.InterceptCallbackRequestMessage;
+import com.quasient.pal.messages.colfer.InterceptCallbackResponseMessage;
 import com.quasient.pal.messages.colfer.MetaMessage;
 import com.quasient.pal.messages.types.MessageType;
 import com.quasient.pal.serdes.colfer.ColferUtils;
@@ -175,8 +175,8 @@ public class IncomingMessageDispatcher {
    * @param callbackRequest the intercept callback request to be processed
    * @return the intercept callback response after being handled by the callback
    */
-  public InterceptCallbackResponse incomingInterceptCallback(
-      InterceptCallbackRequest callbackRequest) {
+  public InterceptCallbackResponseMessage incomingInterceptCallback(
+      InterceptCallbackRequestMessage callbackRequest) {
     return incomingInterceptCallbackDispatcher.handleCallback(callbackRequest);
   }
 }

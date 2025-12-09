@@ -26,8 +26,8 @@ import com.quasient.pal.messages.colfer.InstanceFieldGet;
 import com.quasient.pal.messages.colfer.InstanceFieldPut;
 import com.quasient.pal.messages.colfer.InstanceFieldPutDone;
 import com.quasient.pal.messages.colfer.InstanceMethodCall;
-import com.quasient.pal.messages.colfer.InterceptCallbackRequest;
-import com.quasient.pal.messages.colfer.InterceptCallbackResponse;
+import com.quasient.pal.messages.colfer.InterceptCallbackRequestMessage;
+import com.quasient.pal.messages.colfer.InterceptCallbackResponseMessage;
 import com.quasient.pal.messages.colfer.InterceptKeyMessage;
 import com.quasient.pal.messages.colfer.InterceptMessage;
 import com.quasient.pal.messages.colfer.InterceptResponse;
@@ -153,9 +153,9 @@ public class ColferUtils {
             .registerTypeAdapter(InterceptKeyMessage.class, new InterceptKeyMessageSerializer())
             .registerTypeAdapter(InterceptResponse.class, new InterceptResponseSerializer())
             .registerTypeAdapter(
-                InterceptCallbackRequest.class, new InterceptCallbackRequestSerializer())
+                InterceptCallbackRequestMessage.class, new InterceptCallbackRequestSerializer())
             .registerTypeAdapter(
-                InterceptCallbackResponse.class, new InterceptCallbackResponseSerializer());
+                InterceptCallbackResponseMessage.class, new InterceptCallbackResponseSerializer());
 
     if (prettyPrint) {
       printerBuilder.setPrettyPrinting();

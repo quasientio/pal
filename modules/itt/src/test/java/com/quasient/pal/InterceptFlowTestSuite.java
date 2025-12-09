@@ -51,7 +51,8 @@ import org.slf4j.LoggerFactory;
  *   <li>Test creates ThinPeer (accessed via {@code myPeerUuid}) to accumulate callbacks
  *   <li>Test registers intercept with <b>{@code myPeerUuid}</b> as callback peer
  *   <li>Test invokes intercepted method/field/constructor on interceptable peer
- *   <li>Interceptable peer matches intercept and sends {@code InterceptCallbackRequest} to ThinPeer
+ *   <li>Interceptable peer matches intercept and sends {@code InterceptCallbackRequestMessage} to
+ *       ThinPeer
  *   <li><b>ThinPeer accumulates callback (does NOT execute handler)</b>
  *   <li>Test retrieves callbacks via {@code getCallbacks(n, timeout)}
  *   <li>Test verifies callback structure (message type, class, method, parameters, etc.)
@@ -74,7 +75,7 @@ import org.slf4j.LoggerFactory;
  *       requests when intercepts match.
  *   <li><b>ThinPeer (per test)</b>: Each test creates its own ThinPeer via {@code
  *       AbstractInterceptIT.setUpAbstractInterceptIT()}. Receives and accumulates {@code
- *       InterceptCallbackRequest} messages without executing handlers. Accessed via {@code
+ *       InterceptCallbackRequestMessage} messages without executing handlers. Accessed via {@code
  *       myPeerUuid}.
  * </ul>
  *

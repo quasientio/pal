@@ -34,8 +34,8 @@ import com.quasient.pal.messages.colfer.InstanceFieldGet;
 import com.quasient.pal.messages.colfer.InstanceFieldPut;
 import com.quasient.pal.messages.colfer.InstanceFieldPutDone;
 import com.quasient.pal.messages.colfer.InstanceMethodCall;
-import com.quasient.pal.messages.colfer.InterceptCallbackRequest;
-import com.quasient.pal.messages.colfer.InterceptCallbackResponse;
+import com.quasient.pal.messages.colfer.InterceptCallbackRequestMessage;
+import com.quasient.pal.messages.colfer.InterceptCallbackResponseMessage;
 import com.quasient.pal.messages.colfer.InterceptKeyMessage;
 import com.quasient.pal.messages.colfer.InterceptMessage;
 import com.quasient.pal.messages.colfer.InterceptResponse;
@@ -886,20 +886,21 @@ public class JsonSerializers {
     }
   }
 
-  /** Serializes {@link InterceptCallbackRequest} objects to JSON. */
+  /** Serializes {@link InterceptCallbackRequestMessage} objects to JSON. */
   public static class InterceptCallbackRequestSerializer
-      implements JsonSerializer<InterceptCallbackRequest> {
+      implements JsonSerializer<InterceptCallbackRequestMessage> {
     /**
-     * Serializes an {@link InterceptCallbackRequest} into its corresponding JSON representation.
+     * Serializes an {@link InterceptCallbackRequestMessage} into its corresponding JSON
+     * representation.
      *
-     * @param message the {@link InterceptCallbackRequest} to serialize
+     * @param message the {@link InterceptCallbackRequestMessage} to serialize
      * @param type the type of the source object
      * @param jsonSerializationContext the context of the serialization process
-     * @return the JSON representation of the {@link InterceptCallbackRequest}
+     * @return the JSON representation of the {@link InterceptCallbackRequestMessage}
      */
     @Override
     public JsonElement serialize(
-        InterceptCallbackRequest message,
+        InterceptCallbackRequestMessage message,
         Type type,
         JsonSerializationContext jsonSerializationContext) {
       final JsonObject jsonElement = new JsonObject();
@@ -925,20 +926,21 @@ public class JsonSerializers {
     }
   }
 
-  /** Serializes {@link InterceptCallbackResponse} objects to JSON. */
+  /** Serializes {@link InterceptCallbackResponseMessage} objects to JSON. */
   public static class InterceptCallbackResponseSerializer
-      implements JsonSerializer<InterceptCallbackResponse> {
+      implements JsonSerializer<InterceptCallbackResponseMessage> {
     /**
-     * Serializes an {@link InterceptCallbackResponse} into its corresponding JSON representation.
+     * Serializes an {@link InterceptCallbackResponseMessage} into its corresponding JSON
+     * representation.
      *
-     * @param message the {@link InterceptCallbackResponse} to serialize
+     * @param message the {@link InterceptCallbackResponseMessage} to serialize
      * @param type the type of the source object
      * @param jsonSerializationContext the context of the serialization process
-     * @return the JSON representation of the {@link InterceptCallbackResponse}
+     * @return the JSON representation of the {@link InterceptCallbackResponseMessage}
      */
     @Override
     public JsonElement serialize(
-        InterceptCallbackResponse message,
+        InterceptCallbackResponseMessage message,
         Type type,
         JsonSerializationContext jsonSerializationContext) {
       final JsonObject jsonElement = new JsonObject();
@@ -1317,12 +1319,12 @@ public class JsonSerializers {
             case INTERCEPT_CALLBACK_REQUEST:
               jsonElement.add(
                   "intercept_callback_request",
-                  jsonSerializationContext.serialize(message.interceptCallbackRequest));
+                  jsonSerializationContext.serialize(message.interceptCallbackRequestMessage));
               break;
             case INTERCEPT_CALLBACK_RESPONSE:
               jsonElement.add(
                   "intercept_callback_response",
-                  jsonSerializationContext.serialize(message.interceptCallbackResponse));
+                  jsonSerializationContext.serialize(message.interceptCallbackResponseMessage));
               break;
             default:
               logger.error("Unable to serialize message of type: {}", messageType);

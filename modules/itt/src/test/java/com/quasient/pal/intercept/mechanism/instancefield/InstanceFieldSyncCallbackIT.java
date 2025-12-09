@@ -122,16 +122,16 @@ public class InstanceFieldSyncCallbackIT extends AbstractInterceptIT {
         is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
     assertThat(
         "Callback class should match",
-        callback.getInterceptCallbackRequest().getCallbackClass(),
+        callback.getInterceptCallbackRequestMessage().getCallbackClass(),
         is(callbackClass));
     assertThat(
         "Callback method should match",
-        callback.getInterceptCallbackRequest().getCallbackMethod(),
+        callback.getInterceptCallbackRequestMessage().getCallbackMethod(),
         is(callbackMethod));
     // Verify the intercepted operation is an instance field GET
     assertThat(
         "Intercepted operation should be InstanceFieldGet",
-        callback.getInterceptCallbackRequest().getExec().getInstanceFieldGet(),
+        callback.getInterceptCallbackRequestMessage().getExec().getInstanceFieldGet(),
         is(notNullValue()));
 
     logger.info("===== testSingleBeforeCallbackOnGet: TEST COMPLETED SUCCESSFULLY =====");
@@ -216,24 +216,29 @@ public class InstanceFieldSyncCallbackIT extends AbstractInterceptIT {
         is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
     assertThat(
         "Callback class should match",
-        callback.getInterceptCallbackRequest().getCallbackClass(),
+        callback.getInterceptCallbackRequestMessage().getCallbackClass(),
         is(callbackClass));
     assertThat(
         "Callback method should match",
-        callback.getInterceptCallbackRequest().getCallbackMethod(),
+        callback.getInterceptCallbackRequestMessage().getCallbackMethod(),
         is(callbackMethod));
     // AFTER GET callbacks wrap the ReturnValue (the field value that was read)
     assertThat(
         "Intercepted operation should have ReturnValue",
-        callback.getInterceptCallbackRequest().getExec().getReturnValue(),
+        callback.getInterceptCallbackRequestMessage().getExec().getReturnValue(),
         is(notNullValue()));
     assertThat(
         "The return value should not be void",
-        callback.getInterceptCallbackRequest().getExec().getReturnValue().isVoid,
+        callback.getInterceptCallbackRequestMessage().getExec().getReturnValue().isVoid,
         is(false));
     assertThat(
         "ReturnValue should have field info",
-        callback.getInterceptCallbackRequest().getExec().getReturnValue().getFrom().getField(),
+        callback
+            .getInterceptCallbackRequestMessage()
+            .getExec()
+            .getReturnValue()
+            .getFrom()
+            .getField(),
         is(notNullValue()));
 
     logger.info("===== testSingleAfterCallbackOnGet: TEST COMPLETED SUCCESSFULLY =====");
@@ -325,21 +330,25 @@ public class InstanceFieldSyncCallbackIT extends AbstractInterceptIT {
         is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
     assertThat(
         "PUT callback class should match",
-        initCallback.getInterceptCallbackRequest().getCallbackClass(),
+        initCallback.getInterceptCallbackRequestMessage().getCallbackClass(),
         is(callbackClass));
     assertThat(
         "PUT callback method should match",
-        initCallback.getInterceptCallbackRequest().getCallbackMethod(),
+        initCallback.getInterceptCallbackRequestMessage().getCallbackMethod(),
         is(callbackMethod));
     assertThat(
         "First callback should be InstanceFieldPut",
-        initCallback.getInterceptCallbackRequest().getExec().getInstanceFieldPut(),
+        initCallback.getInterceptCallbackRequestMessage().getExec().getInstanceFieldPut(),
         is(notNullValue()));
 
     // verify value passed to fieldput is the initializer value in the app, triggered by call to
     // ctor
     Obj putValueObj =
-        initCallback.getInterceptCallbackRequest().getExec().getInstanceFieldPut().getValueObject();
+        initCallback
+            .getInterceptCallbackRequestMessage()
+            .getExec()
+            .getInstanceFieldPut()
+            .getValueObject();
     Object value = Unwrapper.unwrapObject(putValueObj);
     assertThat("First callback put value should be 1 (initializer value in class)", value, is(1));
 
@@ -352,21 +361,21 @@ public class InstanceFieldSyncCallbackIT extends AbstractInterceptIT {
         is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
     assertThat(
         "PUT callback class should match",
-        setterCallback.getInterceptCallbackRequest().getCallbackClass(),
+        setterCallback.getInterceptCallbackRequestMessage().getCallbackClass(),
         is(callbackClass));
     assertThat(
         "PUT callback method should match",
-        setterCallback.getInterceptCallbackRequest().getCallbackMethod(),
+        setterCallback.getInterceptCallbackRequestMessage().getCallbackMethod(),
         is(callbackMethod));
     assertThat(
         "Second callback should be InstanceFieldPut",
-        setterCallback.getInterceptCallbackRequest().getExec().getInstanceFieldPut(),
+        setterCallback.getInterceptCallbackRequestMessage().getExec().getInstanceFieldPut(),
         is(notNullValue()));
 
     // verify value passed to fieldput is the value we call the setter with
     putValueObj =
         setterCallback
-            .getInterceptCallbackRequest()
+            .getInterceptCallbackRequestMessage()
             .getExec()
             .getInstanceFieldPut()
             .getValueObject();
@@ -462,20 +471,24 @@ public class InstanceFieldSyncCallbackIT extends AbstractInterceptIT {
         is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
     assertThat(
         "PUT_DONE callback class should match",
-        initCallback.getInterceptCallbackRequest().getCallbackClass(),
+        initCallback.getInterceptCallbackRequestMessage().getCallbackClass(),
         is(callbackClass));
     assertThat(
         "PUT_DONE callback method should match",
-        initCallback.getInterceptCallbackRequest().getCallbackMethod(),
+        initCallback.getInterceptCallbackRequestMessage().getCallbackMethod(),
         is(callbackMethod));
     // AFTER PUT callback wraps the PUT_DONE operation
     assertThat(
         "Callback should be InstanceFieldPutDone",
-        initCallback.getInterceptCallbackRequest().getExec().getInstanceFieldPutDone(),
+        initCallback.getInterceptCallbackRequestMessage().getExec().getInstanceFieldPutDone(),
         is(notNullValue()));
     assertThat(
         "InstanceFieldPutDone should have field info",
-        initCallback.getInterceptCallbackRequest().getExec().getInstanceFieldPutDone().getField(),
+        initCallback
+            .getInterceptCallbackRequestMessage()
+            .getExec()
+            .getInstanceFieldPutDone()
+            .getField(),
         is(notNullValue()));
 
     // FIELD_PUT_DONE does not contain the value, cannot verify it here
@@ -489,20 +502,24 @@ public class InstanceFieldSyncCallbackIT extends AbstractInterceptIT {
         is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
     assertThat(
         "PUT_DONE callback class should match",
-        setterCallback.getInterceptCallbackRequest().getCallbackClass(),
+        setterCallback.getInterceptCallbackRequestMessage().getCallbackClass(),
         is(callbackClass));
     assertThat(
         "PUT_DONE callback method should match",
-        setterCallback.getInterceptCallbackRequest().getCallbackMethod(),
+        setterCallback.getInterceptCallbackRequestMessage().getCallbackMethod(),
         is(callbackMethod));
     // AFTER PUT callback wraps the PUT_DONE operation
     assertThat(
         "Callback should be InstanceFieldPutDone",
-        setterCallback.getInterceptCallbackRequest().getExec().getInstanceFieldPutDone(),
+        setterCallback.getInterceptCallbackRequestMessage().getExec().getInstanceFieldPutDone(),
         is(notNullValue()));
     assertThat(
         "InstanceFieldPutDone should have field info",
-        setterCallback.getInterceptCallbackRequest().getExec().getInstanceFieldPutDone().getField(),
+        setterCallback
+            .getInterceptCallbackRequestMessage()
+            .getExec()
+            .getInstanceFieldPutDone()
+            .getField(),
         is(notNullValue()));
 
     // FIELD_PUT_DONE does not contain the value, cannot verify it here

@@ -194,17 +194,17 @@ public class InstanceMethodAsyncCallbackIT extends AbstractInterceptIT {
           is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
       assertThat(
           "Callback class should match",
-          callback.getInterceptCallbackRequest().getCallbackClass(),
+          callback.getInterceptCallbackRequestMessage().getCallbackClass(),
           is(callbackClass));
       assertThat(
           "Callback method should match",
-          callback.getInterceptCallbackRequest().getCallbackMethod(),
+          callback.getInterceptCallbackRequestMessage().getCallbackMethod(),
           is(callbackMethod));
       // BEFORE callbacks receive method parameters (multiplyBy has 1 Integer parameter)
       assertThat(
           "BEFORE callback should have 1 parameter (the Integer argument)",
           callback
-              .getInterceptCallbackRequest()
+              .getInterceptCallbackRequestMessage()
               .getExec()
               .getInstanceMethodCall()
               .getParameters()
@@ -303,17 +303,17 @@ public class InstanceMethodAsyncCallbackIT extends AbstractInterceptIT {
           is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
       assertThat(
           "Callback class should match",
-          callback.getInterceptCallbackRequest().getCallbackClass(),
+          callback.getInterceptCallbackRequestMessage().getCallbackClass(),
           is(callbackClass));
       assertThat(
           "Callback method should match",
-          callback.getInterceptCallbackRequest().getCallbackMethod(),
+          callback.getInterceptCallbackRequestMessage().getCallbackMethod(),
           is(callbackMethod));
       // BEFORE callbacks receive method parameters (multiplyBy has 1 Integer parameter)
       assertThat(
           "BEFORE callback should have 1 parameter (the Integer argument)",
           callback
-              .getInterceptCallbackRequest()
+              .getInterceptCallbackRequestMessage()
               .getExec()
               .getInstanceMethodCall()
               .getParameters()
@@ -411,25 +411,30 @@ public class InstanceMethodAsyncCallbackIT extends AbstractInterceptIT {
           is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
       assertThat(
           "Callback class should match",
-          callback.getInterceptCallbackRequest().getCallbackClass(),
+          callback.getInterceptCallbackRequestMessage().getCallbackClass(),
           is(callbackClass));
       assertThat(
           "Callback method should match",
-          callback.getInterceptCallbackRequest().getCallbackMethod(),
+          callback.getInterceptCallbackRequestMessage().getCallbackMethod(),
           is(callbackMethod));
       // AFTER callbacks wrap ReturnValue, not InstanceMethodCall
       // Verify the return value structure for void method
       assertThat(
           "AFTER callback should have ReturnValue in exec",
-          callback.getInterceptCallbackRequest().getExec().getReturnValue(),
+          callback.getInterceptCallbackRequestMessage().getExec().getReturnValue(),
           is(notNullValue()));
       assertThat(
           "multiplyBy returns void, so isVoid should be true",
-          callback.getInterceptCallbackRequest().getExec().getReturnValue().isVoid,
+          callback.getInterceptCallbackRequestMessage().getExec().getReturnValue().isVoid,
           is(true));
       assertThat(
           "ReturnValue should have method info",
-          callback.getInterceptCallbackRequest().getExec().getReturnValue().getFrom().getMethod(),
+          callback
+              .getInterceptCallbackRequestMessage()
+              .getExec()
+              .getReturnValue()
+              .getFrom()
+              .getMethod(),
           is(notNullValue()));
     }
 
@@ -524,25 +529,30 @@ public class InstanceMethodAsyncCallbackIT extends AbstractInterceptIT {
           is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
       assertThat(
           "Callback class should match",
-          callback.getInterceptCallbackRequest().getCallbackClass(),
+          callback.getInterceptCallbackRequestMessage().getCallbackClass(),
           is(callbackClass));
       assertThat(
           "Callback method should match",
-          callback.getInterceptCallbackRequest().getCallbackMethod(),
+          callback.getInterceptCallbackRequestMessage().getCallbackMethod(),
           is(callbackMethod));
       // AFTER callbacks wrap ReturnValue, not InstanceMethodCall
       // Verify the return value structure for void method
       assertThat(
           "AFTER callback should have ReturnValue in exec",
-          callback.getInterceptCallbackRequest().getExec().getReturnValue(),
+          callback.getInterceptCallbackRequestMessage().getExec().getReturnValue(),
           is(notNullValue()));
       assertThat(
           "multiplyBy returns void, so isVoid should be true",
-          callback.getInterceptCallbackRequest().getExec().getReturnValue().isVoid,
+          callback.getInterceptCallbackRequestMessage().getExec().getReturnValue().isVoid,
           is(true));
       assertThat(
           "ReturnValue should have method info",
-          callback.getInterceptCallbackRequest().getExec().getReturnValue().getFrom().getMethod(),
+          callback
+              .getInterceptCallbackRequestMessage()
+              .getExec()
+              .getReturnValue()
+              .getFrom()
+              .getMethod(),
           is(notNullValue()));
     }
 

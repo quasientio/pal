@@ -19,8 +19,8 @@ import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import com.quasient.pal.messages.colfer.ControlMessage;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.InstanceFieldPutDone;
-import com.quasient.pal.messages.colfer.InterceptCallbackRequest;
-import com.quasient.pal.messages.colfer.InterceptCallbackResponse;
+import com.quasient.pal.messages.colfer.InterceptCallbackRequestMessage;
+import com.quasient.pal.messages.colfer.InterceptCallbackResponseMessage;
 import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.messages.colfer.MetaMessage;
 import com.quasient.pal.messages.colfer.ReturnValue;
@@ -260,7 +260,8 @@ public abstract class AbstractMessageInvokerThread extends Thread {
       return response;
     }
 
-    final InterceptCallbackRequest callbackRequest = message.getInterceptCallbackRequest();
+    final InterceptCallbackRequestMessage callbackRequest =
+        message.getInterceptCallbackRequestMessage();
     if (callbackRequest != null) {
       final Message response = messageBuilder.wrap(dispatch(callbackRequest));
       notifyMessageDispatched(message);
@@ -365,15 +366,16 @@ public abstract class AbstractMessageInvokerThread extends Thread {
   }
 
   /**
-   * Dispatches the given InterceptCallbackRequest by utilizing the incoming message dispatcher,
-   * updates relevant dispatch metrics, and logs the dispatch details.
+   * Dispatches the given InterceptCallbackRequestMessage by utilizing the incoming message
+   * dispatcher, updates relevant dispatch metrics, and logs the dispatch details.
    *
-   * @param callbackRequest the InterceptCallbackRequest to be dispatched
-   * @return the response InterceptCallbackResponse generated after processing
+   * @param callbackRequest the InterceptCallbackRequestMessage to be dispatched
+   * @return the response InterceptCallbackResponseMessage generated after processing
    */
-  private InterceptCallbackResponse dispatch(InterceptCallbackRequest callbackRequest) {
+  private InterceptCallbackResponseMessage dispatch(
+      InterceptCallbackRequestMessage callbackRequest) {
     boolean dispatched = false;
-    InterceptCallbackResponse responseMsg;
+    InterceptCallbackResponseMessage responseMsg;
     try {
       responseMsg = incomingMessageDispatcher.incomingInterceptCallback(callbackRequest);
       dispatched = true;

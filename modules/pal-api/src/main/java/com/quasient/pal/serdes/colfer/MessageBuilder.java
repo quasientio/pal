@@ -46,8 +46,8 @@ import com.quasient.pal.messages.colfer.InstanceFieldGet;
 import com.quasient.pal.messages.colfer.InstanceFieldPut;
 import com.quasient.pal.messages.colfer.InstanceFieldPutDone;
 import com.quasient.pal.messages.colfer.InstanceMethodCall;
-import com.quasient.pal.messages.colfer.InterceptCallbackRequest;
-import com.quasient.pal.messages.colfer.InterceptCallbackResponse;
+import com.quasient.pal.messages.colfer.InterceptCallbackRequestMessage;
+import com.quasient.pal.messages.colfer.InterceptCallbackResponseMessage;
 import com.quasient.pal.messages.colfer.InterceptKeyMessage;
 import com.quasient.pal.messages.colfer.InterceptMessage;
 import com.quasient.pal.messages.colfer.InterceptResponse;
@@ -1791,7 +1791,8 @@ public final class MessageBuilder {
 
   // <editor-fold desc="Intercept messages">
   /**
-   * Builds an {@link InterceptCallbackRequest} from intercept metadata and execution context.
+   * Builds an {@link InterceptCallbackRequestMessage} from intercept metadata and execution
+   * context.
    *
    * <p>This method constructs a callback request message that will be sent to the callback peer.
    * The request contains all necessary information for the callback handler to execute, including:
@@ -1821,7 +1822,7 @@ public final class MessageBuilder {
    * @return the constructed callback request
    */
   @SuppressWarnings("PMD.NoFullyQualifiedTypes")
-  public InterceptCallbackRequest buildInterceptCallbackRequest(
+  public InterceptCallbackRequestMessage buildInterceptCallbackRequest(
       UUID peerUuid,
       InterceptMessage interceptMessage,
       ExecMessage execMessage,
@@ -1830,7 +1831,7 @@ public final class MessageBuilder {
       boolean isVoid,
       Throwable thrownException) {
 
-    InterceptCallbackRequest request = new InterceptCallbackRequest();
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
 
     // Set unique callback ID
     request.setCallbackId(UUID.randomUUID().toString());
@@ -2930,27 +2931,27 @@ public final class MessageBuilder {
   }
 
   /**
-   * Wraps an {@link InterceptCallbackRequest} into a generic {@link Message}.
+   * Wraps an {@link InterceptCallbackRequestMessage} into a generic {@link Message}.
    *
-   * @param interceptCallbackRequest the intercept callback request to wrap
+   * @param interceptCallbackRequestMessage the intercept callback request to wrap
    * @return a {@code Message} containing the intercept callback request
    */
-  public Message wrap(InterceptCallbackRequest interceptCallbackRequest) {
+  public Message wrap(InterceptCallbackRequestMessage interceptCallbackRequestMessage) {
     return new Message()
         .withMessageType(MessageType.INTERCEPT_CALLBACK_REQUEST.getId())
-        .withInterceptCallbackRequest(interceptCallbackRequest);
+        .withInterceptCallbackRequestMessage(interceptCallbackRequestMessage);
   }
 
   /**
-   * Wraps an {@link InterceptCallbackResponse} into a generic {@link Message}.
+   * Wraps an {@link InterceptCallbackResponseMessage} into a generic {@link Message}.
    *
-   * @param interceptCallbackResponse the intercept callback response to wrap
+   * @param interceptCallbackResponseMessage the intercept callback response to wrap
    * @return a {@code Message} containing the intercept callback response
    */
-  public Message wrap(InterceptCallbackResponse interceptCallbackResponse) {
+  public Message wrap(InterceptCallbackResponseMessage interceptCallbackResponseMessage) {
     return new Message()
         .withMessageType(MessageType.INTERCEPT_CALLBACK_RESPONSE.getId())
-        .withInterceptCallbackResponse(interceptCallbackResponse);
+        .withInterceptCallbackResponseMessage(interceptCallbackResponseMessage);
   }
 
   /**
