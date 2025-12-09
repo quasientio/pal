@@ -10,6 +10,7 @@
 package com.quasient.pal.messages.jsonrpc;
 
 import com.google.gson.annotations.SerializedName;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Objects;
 import javax.annotation.Nullable;
 
@@ -20,6 +21,9 @@ import javax.annotation.Nullable;
  * present, and the executable that generated the response. It is used to serialize and deserialize
  * JSON-RPC responses.
  */
+@SuppressFBWarnings(
+    value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"},
+    justification = "JSON-RPC DTO - mutable by design for serialization")
 public class JsonRpcResponseReturnValue {
 
   /** Indicates whether the JSON-RPC response has no result. */

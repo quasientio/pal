@@ -29,6 +29,7 @@ import com.quasient.pal.messages.types.MessageFamily;
 import com.quasient.pal.messages.types.MessageType;
 import com.quasient.pal.serdes.colfer.JsonSerializers;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -44,6 +45,9 @@ import org.zeromq.ZContext;
  * both Log and Socket RPC Invoker threads to execute remote calls and handle dispatch errors while
  * keeping track of dispatch metrics.
  */
+@SuppressFBWarnings(
+    value = "URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD",
+    justification = "Protected fields available for subclass extension")
 public abstract class AbstractMessageInvokerThread extends Thread {
 
   /** Logger instance. */

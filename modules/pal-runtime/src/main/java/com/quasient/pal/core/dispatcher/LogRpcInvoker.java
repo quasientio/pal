@@ -23,6 +23,7 @@ import com.quasient.pal.messages.jsonrpc.JsonRpcRequest;
 import com.quasient.pal.messages.types.MessageType;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
 import com.quasient.pal.serdes.jsonrpc.JsonRpcRequestException;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import org.zeromq.SocketType;
@@ -39,6 +40,9 @@ import zmq.ZError;
  * parsing, validation, and dispatching to appropriate handlers. It is intended to connect to a
  * designated Log dealer endpoint.
  */
+@SuppressFBWarnings(
+    value = "UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR",
+    justification = "Socket initialized in run() - two-phase initialization pattern")
 class LogRpcInvoker extends AbstractMessageInvokerThread {
 
   /** The network endpoint of the Log dealer to which the socket connects. */

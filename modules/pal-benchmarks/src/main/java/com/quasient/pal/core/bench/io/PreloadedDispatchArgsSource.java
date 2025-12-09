@@ -11,6 +11,7 @@ package com.quasient.pal.core.bench.io;
 
 import com.quasient.pal.core.bench.DispatchBenchmark;
 import com.quasient.pal.core.bench.InvocationArgs;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -36,6 +37,9 @@ import org.slf4j.LoggerFactory;
  *
  * <p>This implementation is selected with {@code -p inputMode=PRELOADED}.
  */
+@SuppressFBWarnings(
+    value = "EI_EXPOSE_REP2",
+    justification = "JMH source - shared benchmark reference for data generation")
 public final class PreloadedDispatchArgsSource implements InvocationArgsSource {
 
   /** Logger instance for this class. */

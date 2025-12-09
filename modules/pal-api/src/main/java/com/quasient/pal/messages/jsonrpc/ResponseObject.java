@@ -11,6 +11,7 @@ package com.quasient.pal.messages.jsonrpc;
 
 import com.google.gson.annotations.SerializedName;
 import com.quasient.pal.serdes.Unwrappable;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Objects;
 import javax.annotation.Nullable;
 
@@ -25,7 +26,7 @@ public class ResponseObject implements Unwrappable {
 
   /** Indicates whether the response is null. Serialized as "null" in JSON. */
   @SerializedName("null")
-  private Boolean isNull;
+  private Boolean isNull = Boolean.FALSE;
 
   /** The value contained in the response. May be null if no value is present. */
   @Nullable private String value;
@@ -153,6 +154,9 @@ public class ResponseObject implements Unwrappable {
   }
 
   /** Builder class for constructing instances of {@code ResponseObject}. */
+  @SuppressFBWarnings(
+      value = "EI_EXPOSE_REP",
+      justification = "Builder pattern - returns the built object intentionally")
   public static class Builder {
 
     /** Instance of {@link ResponseObject} which will be returned. */

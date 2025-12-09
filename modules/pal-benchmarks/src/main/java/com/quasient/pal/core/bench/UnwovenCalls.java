@@ -10,9 +10,13 @@
 package com.quasient.pal.core.bench;
 
 import com.quasient.pal.apps.quantized.bench.Calls;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Arrays;
 
 /** Simple wrapper around misc calls to JDK classes. */
+@SuppressFBWarnings(
+    value = "DM_CONVERT_CASE",
+    justification = "Benchmark - locale-independent case conversion for consistent results")
 public class UnwovenCalls implements Calls {
 
   /** {@inheritDoc} */

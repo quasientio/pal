@@ -10,6 +10,7 @@
 package com.quasient.pal.common.objects;
 
 import java.util.Objects;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Represents a unique identifier reference within the PAL runtime. This class encapsulates an
@@ -78,7 +79,7 @@ public final class ObjectRef {
    * @return a new ObjectRef instance with a random reference
    */
   public static ObjectRef randomRef() {
-    return new ObjectRef(String.valueOf((int) (Math.random() * 100000)));
+    return new ObjectRef(String.valueOf(ThreadLocalRandom.current().nextInt(100000)));
   }
 
   /** {@inheritDoc} */

@@ -14,6 +14,7 @@ import com.quasient.pal.core.internal.messages.InboundLogMsg;
 import com.quasient.pal.core.transport.SourceLogReader;
 import com.quasient.pal.messages.OutboundMsg;
 import com.quasient.pal.messages.types.MessageFormatType;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -35,6 +36,10 @@ import org.zeromq.ZContext;
  * dispatching them via a ZeroMQ DEALER socket. It continuously reads messages from the queue and
  * forwards valid messages for dispatching.
  */
+@SuppressFBWarnings(
+    value = "UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR",
+    justification =
+        "Log reader - tailer initialized in openConnections() - two-phase initialization")
 @Singleton
 public class ChronicleSourceLogReader extends SourceLogReader {
 

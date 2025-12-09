@@ -17,6 +17,8 @@ import com.quasient.pal.core.transport.SourceLogReader;
 import com.quasient.pal.core.transport.WalWriter;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.file.Path;
@@ -26,6 +28,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.apache.kafka.clients.admin.AdminClient;
@@ -40,6 +43,9 @@ import org.slf4j.LoggerFactory;
  * entries may be automatically registered or retrieved from the Pal directory, and corresponding
  * reading and writing operations are initiated.
  */
+@SuppressFBWarnings(
+    value = "EI_EXPOSE_REP2",
+    justification = "Configuration class - shared Properties object passed from caller")
 public class LogConfigurator {
 
   /** Logger instance. */
@@ -335,7 +341,7 @@ public class LogConfigurator {
           s.connect(new InetSocketAddress(host, port), timeoutMs);
         }
       }
-    } catch (Exception e) {
+    } catch (IOException | IllegalArgumentException e) {
       String msg =
           String.format(
               "Kafka health check failed: TCP connect to %s within %dms", kafkaServers, timeoutMs);
@@ -359,11 +365,17 @@ public class LogConfigurator {
               timeoutMs, kafkaServers);
       logger.error(msg);
       throw new Exception(msg, e);
-    } catch (Exception e) {
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      String msg =
+          String.format("Kafka health check interrupted while connecting to %s", kafkaServers);
+      logger.error(msg);
+      throw new Exception(msg, e);
+    } catch (ExecutionException e) {
       String msg =
           String.format(
               "Kafka health check failed: unable to connect to %s - %s",
-              kafkaServers, e.getMessage());
+              kafkaServers, e.getCause() != null ? e.getCause().getMessage() : e.getMessage());
       logger.error(msg);
       throw new Exception(msg, e);
     }

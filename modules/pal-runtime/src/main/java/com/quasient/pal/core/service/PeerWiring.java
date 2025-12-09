@@ -42,6 +42,7 @@ import com.quasient.pal.core.transport.zmq.publish.PublishingDropPolicy;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.messages.OutboundMsg;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -65,6 +66,9 @@ import org.zeromq.ZContext;
  * ZeroMQ context, custom class loader, and service thread management. It also initializes internal
  * queues and configuration properties.
  */
+@SuppressFBWarnings(
+    value = {"DLS_DEAD_LOCAL_STORE", "EI_EXPOSE_REP", "EI_EXPOSE_REP2"},
+    justification = "Guice wiring module - shared references for dependency injection")
 public class PeerWiring extends AbstractModule {
 
   /** Logger instance. */

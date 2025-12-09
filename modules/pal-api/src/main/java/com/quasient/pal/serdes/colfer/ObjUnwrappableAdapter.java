@@ -12,6 +12,7 @@ package com.quasient.pal.serdes.colfer;
 import com.quasient.pal.messages.colfer.Obj;
 import com.quasient.pal.serdes.Unwrappable;
 import com.quasient.pal.serdes.Unwrapper;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
  * Adapts an {@link Obj} instance to the {@link Unwrappable} interface.
@@ -20,6 +21,9 @@ import com.quasient.pal.serdes.Unwrapper;
  * {@code Unwrappable} is required, providing access to the underlying object's properties through
  * the {@code Unwrappable} interface methods.
  */
+@SuppressFBWarnings(
+    value = "EI_EXPOSE_REP2",
+    justification = "Adapter pattern - wraps the Obj instance without copying")
 public class ObjUnwrappableAdapter implements Unwrappable {
 
   /** The {@code Obj} instance being adapted. */

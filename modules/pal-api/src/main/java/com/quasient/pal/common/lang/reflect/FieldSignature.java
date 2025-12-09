@@ -9,6 +9,7 @@
  */
 package com.quasient.pal.common.lang.reflect;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.lang.reflect.Field;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -18,6 +19,10 @@ import javax.annotation.Nonnull;
  * information about the field, including its type and declaring class.
  */
 @SuppressWarnings("rawtypes")
+@SuppressFBWarnings(
+    value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"},
+    justification =
+        "Wrapper for java.lang.reflect.Field - intentionally exposes the wrapped object")
 public final class FieldSignature extends Signature {
 
   /** The reflection {@link Field} object representing the field's metadata. */

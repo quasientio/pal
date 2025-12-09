@@ -13,6 +13,7 @@ import com.quasient.pal.core.internal.concurrent.AdaptiveSpinParkWaitStrategy;
 import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import com.quasient.pal.core.service.ConnectedService;
 import com.quasient.pal.messages.OutboundMsg;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -34,6 +35,14 @@ import org.zeromq.ZMQException;
  * forwarding such outbound messages through a tcp PUB socket instead. The service stops when
  * interrupted or upon encountering critical socket errors.
  */
+@SuppressFBWarnings(
+    value = {
+      "DB_DUPLICATE_SWITCH_CLAUSES",
+      "EI_EXPOSE_REP2",
+      "UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"
+    },
+    justification =
+        "Publisher - duplicate switch intentional for clarity; two-phase initialization")
 @Singleton
 public class MessagePublisher extends ConnectedService {
 

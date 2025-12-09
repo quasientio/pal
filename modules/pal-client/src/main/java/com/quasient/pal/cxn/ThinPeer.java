@@ -38,6 +38,7 @@ import com.quasient.pal.serdes.colfer.MessageBuilder;
 import com.quasient.pal.serdes.jsonrpc.JsonRpcMessageFactory;
 import com.quasient.pal.serdes.jsonrpc.JsonRpcSerializer;
 import com.quasient.pal.serdes.jsonrpc.JsonSerializationException;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
@@ -93,6 +94,9 @@ import org.zeromq.ZMQ.Socket;
  * <p>Use {@link #init()} to initialize the peer before using it, and {@link #close()} to release
  * resources. Configure the peer using the provided builder methods before initialization.
  */
+@SuppressFBWarnings(
+    value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"},
+    justification = "Builder pattern with shared mutable state for fluent API")
 public class ThinPeer {
   /** Logger instance for ThinPeer class. */
   private static final Logger logger = LoggerFactory.getLogger(ThinPeer.class);
@@ -564,7 +568,7 @@ public class ThinPeer {
         }
         getPalDirectory().createPeer(self);
         peerLease = getPalDirectory().createPeerLease(self.getUuid(), PEER_KA_SECS);
-      } catch (Exception ex) {
+      } catch (RuntimeException ex) {
         logger.error("Error registering peer", ex);
       }
     }
@@ -780,11 +784,12 @@ public class ThinPeer {
 
   /**
    * Establishes a ZeroMQ socket connection to the specified peer, and sends a Ping command, waiting
-   * for the reply within the specified timeout
+   * for the reply within the specified timeout.
    *
    * @param peer the PeerInfo object representing the peer to connect to
    * @param timeout the timeout duration
    * @return Returns true if the connection succeeded within the specified timeout.
+   * @throws RuntimeException if the ping is interrupted or fails with an execution exception
    */
   private boolean connectZmqSocketWithTimeout(PeerInfo peer, Duration timeout) {
 
@@ -796,7 +801,12 @@ public class ThinPeer {
     boolean pingResponded = false;
     try {
       pingResponded = sendPing(timeout) != -1;
-    } catch (Exception e) {
+    } catch (RuntimeException e) {
+      throw e;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException(e);
+    } catch (ExecutionException e) {
       throw new RuntimeException(e);
     } finally {
       // reset socket if we got no response to our ping
@@ -1250,7 +1260,7 @@ public class ThinPeer {
       // Chronicle writes are synchronous, so return completed future
       // We create a fake RecordMetadata-like result
       return CompletableFuture.completedFuture(null);
-    } catch (Exception e) {
+    } catch (RuntimeException e) {
       logger.error("Error writing to Chronicle queue", e);
       CompletableFuture<RecordMetadata> future = new CompletableFuture<>();
       future.completeExceptionally(e);
@@ -1345,7 +1355,11 @@ public class ThinPeer {
         logger.debug("Message sent for JSON-RPC id: {}", jsonRpcId);
       }
       sentRecordOffset = recordMetadata.offset();
-    } catch (Exception e) {
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      logger.error("Interrupted getting sent record metadata", e);
+      return null;
+    } catch (ExecutionException e) {
       logger.error("Error getting sent record metadata", e);
       return null;
     }
@@ -1421,7 +1435,11 @@ public class ThinPeer {
         logger.debug("Message sent:\n {}", logMessage);
       }
       sentRecordOffset = recordMetadata.offset();
-    } catch (Exception e) {
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      logger.error("Interrupted getting sent record metadata", e);
+      return null;
+    } catch (ExecutionException e) {
       logger.error("Error getting sent record metadata", e);
       return null;
     }
@@ -1467,7 +1485,7 @@ public class ThinPeer {
       // (cycle + sequence), not simple sequential numbers. The tailer will read our request
       // message first (and skip it since it won't match the responseToId), then find the response.
       return pollForChronicleResponseToRequest(writeIndex, message.getMessageId());
-    } catch (Exception e) {
+    } catch (RuntimeException e) {
       logger.error("Error in Chronicle send-and-receive", e);
       return null;
     }
@@ -1592,7 +1610,7 @@ public class ThinPeer {
             }
           }
         }
-      } catch (Exception e) {
+      } catch (RuntimeException e) {
         logger.error("Error deserializing Chronicle message at index {}", currentIndex, e);
       }
     }
@@ -1612,7 +1630,7 @@ public class ThinPeer {
     }
     try {
       newPeer = getPalDirectory().getPeer(peerUuid);
-    } catch (Exception ex) {
+    } catch (RuntimeException ex) {
       logger.error("Couldn't get peer properties", ex);
     }
     if (newPeer != null && !newPeer.equals(currentPeer)) {
@@ -1856,7 +1874,10 @@ public class ThinPeer {
           logger.error(
               "Error deleting session w/id: {} - error: {}", sessionId, response.getError());
         }
-      } catch (Exception e) {
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        logger.error("Interrupted sending json-rpc request to delete session", e);
+      } catch (ExecutionException | JsonSerializationException e) {
         logger.error("Error sending json-rpc request to delete session", e);
       }
     } else {
@@ -1866,6 +1887,9 @@ public class ThinPeer {
   }
 
   /** Closes the Kafka consumer if it was not provided externally. */
+  @SuppressFBWarnings(
+      value = "REC_CATCH_EXCEPTION",
+      justification = "Cleanup method - must catch all exceptions to ensure resource release")
   private void closeConsumer() {
     if (consumer != null) {
       try {
@@ -1881,6 +1905,9 @@ public class ThinPeer {
   }
 
   /** Closes the Kafka producer if it was not provided externally. */
+  @SuppressFBWarnings(
+      value = "REC_CATCH_EXCEPTION",
+      justification = "Cleanup method - must catch all exceptions to ensure resource release")
   private void closeProducer() {
     if (producer != null) {
       try {
@@ -1915,6 +1942,9 @@ public class ThinPeer {
   }
 
   /** Closes the peer connection sockets, including ZeroMQ and WebSocket clients. */
+  @SuppressFBWarnings(
+      value = "REC_CATCH_EXCEPTION",
+      justification = "Cleanup method - must catch all exceptions to ensure resource release")
   private void closePeerSocket() {
     try {
       closePeerZMQSocket();

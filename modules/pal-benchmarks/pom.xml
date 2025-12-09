@@ -38,6 +38,12 @@
       <artifactId>itt-apps</artifactId>
     </dependency>
 
+    <!-- STATIC ANALYSIS -->
+    <dependency>
+      <groupId>com.github.spotbugs</groupId>
+      <artifactId>spotbugs-annotations</artifactId>
+    </dependency>
+
     <!-- JMH itself -->
     <dependency>
       <groupId>org.openjdk.jmh</groupId>

@@ -155,14 +155,14 @@ public abstract class InvokerThreadFactory implements ThreadFactory {
   }
 
   /**
-   * Returns the list of threads that have been created by this factory.
+   * Returns a shallow copy of the list of threads that have been created by this factory.
    *
    * <p>This list can be used for monitoring and managing the lifecycle of created threads.
    *
-   * @return a list of created threads.
+   * @return a shallow copy of the created threads list, suitable for iteration.
    */
   public List<Thread> getCreatedThreads() {
-    return createdThreads;
+    return new ArrayList<>(createdThreads);
   }
 
   /**

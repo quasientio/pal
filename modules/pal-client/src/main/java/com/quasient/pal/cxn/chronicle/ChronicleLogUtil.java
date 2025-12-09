@@ -10,6 +10,7 @@
 package com.quasient.pal.cxn.chronicle;
 
 import com.quasient.pal.messages.OutboundMsg;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -47,6 +48,9 @@ import org.slf4j.LoggerFactory;
  * }
  * }</pre>
  */
+@SuppressFBWarnings(
+    value = "CT_CONSTRUCTOR_THROW",
+    justification = "Utility class - private constructor throws to prevent instantiation")
 public class ChronicleLogUtil {
 
   /** Logger instance. */

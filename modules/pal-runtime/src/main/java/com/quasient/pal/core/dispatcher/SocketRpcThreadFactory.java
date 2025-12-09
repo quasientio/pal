@@ -14,6 +14,7 @@ import com.quasient.pal.core.service.RunOptions;
 import com.quasient.pal.core.transport.MessageChannelType;
 import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Set;
 import java.util.UUID;
 import org.zeromq.ZContext;
@@ -24,6 +25,9 @@ import org.zeromq.ZContext;
  * <p>This factory extends {@link InvokerThreadFactory} and leverages a ZeroMQ context along with
  * specific socket addresses to establish both binary and JSON-based RPC communication channels.
  */
+@SuppressFBWarnings(
+    value = "EI_EXPOSE_REP2",
+    justification = "Factory pattern - run options shared with created threads")
 public class SocketRpcThreadFactory extends InvokerThreadFactory {
 
   /**

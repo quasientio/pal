@@ -9,6 +9,7 @@
  */
 package com.quasient.pal.messages.jsonrpc;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Objects;
 import javax.annotation.Nullable;
 
@@ -19,6 +20,9 @@ import javax.annotation.Nullable;
  * JsonRpcMessage} and provides methods to access and modify the response's contents, including the
  * result and error.
  */
+@SuppressFBWarnings(
+    value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"},
+    justification = "JSON-RPC DTO - mutable by design for serialization")
 public class JsonRpcResponse extends JsonRpcMessage {
 
   /**

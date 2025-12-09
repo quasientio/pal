@@ -14,6 +14,7 @@ import com.quasient.pal.common.directory.nodes.LogInfo;
 import com.quasient.pal.common.directory.nodes.LogInfo.LogType;
 import com.quasient.pal.common.directory.nodes.PeerInfo;
 import com.quasient.pal.cxn.chronicle.ChronicleLogUtil;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
@@ -27,6 +28,7 @@ import java.util.Properties;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.DeleteTopicsOptions;
@@ -49,6 +51,9 @@ import picocli.CommandLine.ParentCommand;
     sortOptions = false,
     optionListHeading = "%nOptions:%n",
     description = "Remove peers or logs from directory")
+@SuppressFBWarnings(
+    value = {"UPM_UNCALLED_PRIVATE_METHOD", "URF_UNREAD_FIELD"},
+    justification = "Method kept for future use")
 public class Remove extends AbstractPalSubcommand {
 
   /** List of positional arguments specifying the names or UUIDs of peers or logs to remove. */
@@ -235,7 +240,7 @@ public class Remove extends AbstractPalSubcommand {
           logger.debug("PAL directory not available, skipping directory unregistration");
         }
       }
-    } catch (Exception e) {
+    } catch (RuntimeException | ExecutionException | InterruptedException e) {
       logger.error("Error unregistering log '{}' from directory", logInfo.getName(), e);
       errors++;
     }
@@ -264,7 +269,7 @@ public class Remove extends AbstractPalSubcommand {
           getPalDirectory().listAllLogs().stream()
               .filter(l -> l.getUuid().equals(uuid))
               .collect(Collectors.toSet());
-    } catch (Exception e) {
+    } catch (RuntimeException | ExecutionException | InterruptedException e) {
       logger.error("Error fetching logs from directory matching UUID '{}'", uuid, e);
       errors++;
       return;
@@ -295,7 +300,7 @@ public class Remove extends AbstractPalSubcommand {
     final Set<LogInfo> allLogs;
     try {
       allLogs = getPalDirectory().listAllLogs();
-    } catch (Exception e) {
+    } catch (RuntimeException | ExecutionException | InterruptedException e) {
       errors++;
       return;
     }
@@ -319,7 +324,7 @@ public class Remove extends AbstractPalSubcommand {
         return;
       }
       getPalDirectory().deletePeer(peerUuid);
-    } catch (Exception e) {
+    } catch (RuntimeException | ExecutionException | InterruptedException e) {
       errors++;
     }
   }
@@ -365,7 +370,7 @@ public class Remove extends AbstractPalSubcommand {
           continue;
         }
         getPalDirectory().deletePeer(peer.getUuid());
-      } catch (Exception e) {
+      } catch (RuntimeException | ExecutionException | InterruptedException e) {
         logger.error("Error unregistering peer UUID '{}' from directory", peer.getUuid(), e);
         errors++;
       }
@@ -377,7 +382,7 @@ public class Remove extends AbstractPalSubcommand {
     try {
       long peersUnregistered = getPalDirectory().deletePeers();
       logger.debug("Unregistered {} peers", peersUnregistered);
-    } catch (Exception e) {
+    } catch (RuntimeException | ExecutionException | InterruptedException e) {
       errors++;
     }
   }
@@ -421,7 +426,7 @@ public class Remove extends AbstractPalSubcommand {
           // Not found in directory, fall through to direct mode
         }
       }
-    } catch (Exception e) {
+    } catch (RuntimeException | ExecutionException | InterruptedException e) {
       logger.debug("PalDirectory not available: {}", e.getMessage());
     }
 

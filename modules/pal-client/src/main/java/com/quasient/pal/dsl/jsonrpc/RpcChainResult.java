@@ -10,6 +10,7 @@
 package com.quasient.pal.dsl.jsonrpc;
 
 import com.quasient.pal.common.objects.ObjectRef;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -25,6 +26,9 @@ import java.util.Map;
  * <p>Provides methods to access individual values by their variable names and to inspect all
  * responses collectively.
  */
+@SuppressFBWarnings(
+    value = "EI_EXPOSE_REP",
+    justification = "Result container - chainValues list is intentionally shared for inspection")
 public class RpcChainResult {
 
   /**

@@ -9,6 +9,7 @@
  */
 package com.quasient.pal.messages.jsonrpc;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Objects;
 import javax.annotation.Nullable;
 
@@ -17,6 +18,9 @@ import javax.annotation.Nullable;
  * a code, a message, and optional additional error data in the form of a {@link JsonRpcErrorData}.
  * It is used to communicate errors between a JSON-RPC server and client.
  */
+@SuppressFBWarnings(
+    value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"},
+    justification = "JSON-RPC DTO - mutable by design for serialization")
 public class JsonRpcError {
 
   /** The error code indicating the type of error. */

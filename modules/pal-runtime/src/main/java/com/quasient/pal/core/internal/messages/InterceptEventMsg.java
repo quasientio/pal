@@ -13,6 +13,7 @@ import static com.quasient.pal.serdes.colfer.ColferUtils.toBytes;
 
 import com.quasient.pal.messages.BaseMsg;
 import com.quasient.pal.messages.Marshallable;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nullable;
@@ -25,6 +26,9 @@ import org.zeromq.ZMQ;
  * transmitted as a multi-part ZeroMQ message where the first frame identifies the event type, and
  * the second frame contains the payload or identifier.
  */
+@SuppressFBWarnings(
+    value = {"CT_CONSTRUCTOR_THROW", "EI_EXPOSE_REP"},
+    justification = "Message construction from bytes may throw; body shared for serialization")
 public class InterceptEventMsg extends BaseMsg {
 
   /**

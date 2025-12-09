@@ -9,6 +9,7 @@
  */
 package com.quasient.pal.core.transport.gateway;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 
 /**
@@ -20,6 +21,9 @@ import java.util.List;
  * @param totalFailedOffers number of times the call to {@code queue.offer(..)} returned false
  * @param perThread list of per-thread {@link ThreadWaitSnapshot}'s
  */
+@SuppressFBWarnings(
+    value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"},
+    justification = "Stats record - intentionally shared for monitoring")
 public record MessageQueueStats(
     long messagesDropped,
     long totalParkedNanos,

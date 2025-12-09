@@ -9,8 +9,13 @@
  */
 package com.quasient.pal.apps.rpc;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 // NOTE THAT INTEGRATION TESTS are dependent on this class
 @SuppressWarnings({"unused", "FieldMayBeFinal"})
+@SuppressFBWarnings(
+    value = {"EI_EXPOSE_REP", "URF_UNREAD_FIELD", "UUF_UNUSED_FIELD"},
+    justification = "Test app - array exposure and unused fields intentional for RPC testing")
 public class ArrayVars {
 
   private static boolean[] aNull_booleanArray;

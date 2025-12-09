@@ -30,6 +30,7 @@ import com.quasient.pal.messages.types.MessageType;
 import com.quasient.pal.messages.types.SessionCommandType;
 import com.quasient.pal.serdes.Unwrapper;
 import com.quasient.pal.serdes.colfer.ColferUtils;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -45,6 +46,10 @@ import org.aspectj.lang.ProceedingJoinPoint;
  * invocation, and response handling of execution messages. Subclasses must implement abstract
  * methods to create specific message wrappers and handle invocation details.
  */
+@SuppressFBWarnings(
+    value = {"DLS_DEAD_LOCAL_STORE", "UCF_USELESS_CONTROL_FLOW"},
+    justification =
+        "Control flow for AspectJ join points; dead store for explicit variable tracking")
 abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     implements Dispatcher, ExecMessageDispatcher {
 
@@ -287,7 +292,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       if (allowNonPublicAccess) { // extra-check, since already checked in loadAccessibleObject
         accessibleObject.setAccessible(true);
       }
-    } catch (Exception ex) {
+    } catch (ReflectiveOperationException | AmbiguousCallException | RuntimeException ex) {
       logger.error("Error during loading phase", ex);
       exceptionWhileLoading = ex;
     }
@@ -304,13 +309,12 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
               returnValue == null ? "unavailable" : returnValue.getClass().toString();
           logger.trace("invokeIncoming returnValue: {} of class: {}", returnValue, returnedClass);
         }
-      } catch (Exception e) {
+      } catch (InvocationTargetException e) {
         logger.error("Error during invocation phase - invoke", e);
-        if (e instanceof InvocationTargetException) {
-          exceptionWhileInvoking = e.getCause();
-        } else {
-          exceptionWhileInvoking = e;
-        }
+        exceptionWhileInvoking = e.getCause();
+      } catch (ReflectiveOperationException | IllegalArgumentException e) {
+        logger.error("Error during invocation phase - invoke", e);
+        exceptionWhileInvoking = e;
       }
     }
 
@@ -320,7 +324,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         if (!returnsVoid(accessibleObject) && returnValue != null) {
           objectRef = storeObject(returnValue);
         }
-      } catch (Exception e) {
+      } catch (RuntimeException e) {
         logger.error("Error after invocation phase - mapping objectref -> return value", e);
       }
 
@@ -329,7 +333,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         try {
           final UUID peerUuid = UUID.fromString(incomingCall.getPeerUuid());
           storeObjectInSession(peerUuid, objectRef);
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
           logger.error("Error after invocation phase - saving return value to session", e);
         }
       }
@@ -620,11 +624,11 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
    * @param args the list of arguments encapsulated in MessageArgument instances
    * @param value the value to assign for field operations, if applicable
    * @return the result of the invocation, which may include a wrapped exception
-   * @throws Exception if an error occurs during the invocation process
+   * @throws ReflectiveOperationException if a reflection error occurs during invocation
    */
   protected abstract Object invokeIncoming(
       AccessibleObject accessibleObject, Object target, List<MessageArgument> args, Object value)
-      throws Exception;
+      throws ReflectiveOperationException;
 
   /**
    * Determines whether invoking the specified accessible object results in a void return type.

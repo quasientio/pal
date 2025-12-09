@@ -9,7 +9,12 @@
  */
 package com.quasient.pal.apps.quantized.rpc;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 @SuppressWarnings("unused")
+@SuppressFBWarnings(
+    value = {"CT_CONSTRUCTOR_THROW", "URF_UNREAD_FIELD"},
+    justification = "Test app - constructor exception and unused field part of test scenarios")
 public class Constructors {
 
   private Constructors innerInstance;

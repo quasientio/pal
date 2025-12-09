@@ -11,6 +11,7 @@ package com.quasient.pal.core.execution.java;
 
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.messages.colfer.ExecMessage;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
 import java.util.List;
@@ -25,6 +26,9 @@ import org.aspectj.lang.ProceedingJoinPoint;
  * both the invocation of the field access and the creation of messages that encapsulate the result
  * or exceptions from such operations.
  */
+@SuppressFBWarnings(
+    value = "BC_UNCONFIRMED_CAST",
+    justification = "Type already validated before cast in dispatcher pattern")
 public abstract class GetFieldDispatcher extends FieldOpDispatcher {
 
   /**
@@ -39,12 +43,12 @@ public abstract class GetFieldDispatcher extends FieldOpDispatcher {
    * @param args a list of message arguments (ignored in this request processing).
    * @param value an additional value parameter (ignored in this operation).
    * @return the value of the specified field obtained from the target object.
-   * @throws Exception if an error occurs during the reflective field access.
+   * @throws ReflectiveOperationException if an error occurs during the reflective field access.
    */
   @Override
   protected Object invokeIncoming(
       AccessibleObject accessibleObject, Object target, List<MessageArgument> args, Object value)
-      throws Exception {
+      throws ReflectiveOperationException {
 
     // discard args and value
     return invokeIncoming(accessibleObject, target);
@@ -59,9 +63,10 @@ public abstract class GetFieldDispatcher extends FieldOpDispatcher {
    * @param accessibleObject the accessible object representing the {@code Field}.
    * @param target the object instance from which to extract the field value.
    * @return the value of the field obtained from the target object.
-   * @throws Exception if an error occurs during the field access operation.
+   * @throws IllegalAccessException if an error occurs during the field access operation.
    */
-  private Object invokeIncoming(AccessibleObject accessibleObject, Object target) throws Exception {
+  private Object invokeIncoming(AccessibleObject accessibleObject, Object target)
+      throws IllegalAccessException {
     if (logger.isTraceEnabled()) {
       logger.trace(
           "invokeIncoming:in w/ accessibleObject: {}, target: {}", accessibleObject, target);

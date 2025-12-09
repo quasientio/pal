@@ -12,6 +12,7 @@ package com.quasient.pal.core.internal.messages;
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.messages.BaseMsg;
 import com.quasient.pal.messages.types.SessionStatusType;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Set;
@@ -34,6 +35,9 @@ import org.zeromq.ZMQ;
  * 2. objectRefs : comma-separated list of objectRefs (used in response to DELETE_SESSION)
  * </pre>
  */
+@SuppressFBWarnings(
+    value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"},
+    justification = "Response wrapper - object refs shared for session tracking")
 public class SessionResponseMsg extends BaseMsg {
   /** The session status indicating the outcome of a session operation. */
   private final SessionStatusType statusType;

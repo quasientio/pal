@@ -172,11 +172,12 @@ public class ColferUtils {
    * calculated buffer size, a trimmed array is returned.
    *
    * @param message the {@link Marshallable} message to serialize
-   * @return a byte array containing the serialized message, or {@code null} if the message is null
+   * @return a byte array containing the serialized message, or an empty byte array if the message
+   *     is null
    */
   public static byte[] toBytes(Marshallable message) {
     if (message == null) {
-      return null;
+      return new byte[0];
     }
 
     final int maxSize = message.marshalFit();

@@ -9,6 +9,7 @@
  */
 package com.quasient.pal.cxn;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.util.Set;
 import javax.management.MBeanServerConnection;
@@ -25,6 +26,9 @@ import org.slf4j.LoggerFactory;
  * Client for connecting to a JMX server, allowing querying of MBeans and retrieval of attribute
  * values. Manages the JMX connection and handles automatic reconnection upon connection closure.
  */
+@SuppressFBWarnings(
+    value = "CT_CONSTRUCTOR_THROW",
+    justification = "JMX connection failure should propagate - no sensitive state to protect")
 public class JmxClient {
 
   /** Logger instance for the JmxClient class. */

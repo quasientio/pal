@@ -26,6 +26,7 @@ import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.serdes.colfer.ColferUtils;
 import com.quasient.pal.serdes.kafka.typed.KafkaLogMessageDeserializer;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Collections;
@@ -36,6 +37,7 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -76,6 +78,9 @@ import picocli.CommandLine.ParentCommand;
     sortOptions = false,
     optionListHeading = "%nOptions:%n",
     commandListHeading = "%nCommands:%n")
+@SuppressFBWarnings(
+    value = {"SIC_INNER_SHOULD_BE_STATIC_ANON", "URF_UNREAD_FIELD"},
+    justification = "Anonymous Thread subclass for shutdown hook")
 public class MessageStreamPrinter extends AbstractPalSubcommand {
 
   /** Logger instance. */
@@ -336,7 +341,7 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
         Optional<PalDirectory> palDirOpt = directoryConnectionProvider.get();
         palDirectory = palDirOpt.orElse(null);
       }
-    } catch (Exception e) {
+    } catch (RuntimeException e) {
       logger.debug("PalDirectory not available: {}", e.getMessage());
     }
 
@@ -799,7 +804,7 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
     // try to get log by name
     try {
       log = palDirectory.getLogInfo(logIdentifier);
-    } catch (Exception e) {
+    } catch (RuntimeException | ExecutionException | InterruptedException e) {
       logger.debug("Error trying to find log by name in directory: {}", logIdentifier);
     }
 
@@ -826,7 +831,7 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
             log = logInfoByUuid.get();
             logger.info("Got matching Log: {} for logIdentifier: {}", log, logIdentifier);
           }
-        } catch (Exception e) {
+        } catch (RuntimeException | ExecutionException | InterruptedException e) {
           logger.error("Error fetching logs from directory.");
         }
       }

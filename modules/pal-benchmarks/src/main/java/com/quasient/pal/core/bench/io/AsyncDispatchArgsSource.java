@@ -11,13 +11,14 @@ package com.quasient.pal.core.bench.io;
 
 import com.quasient.pal.core.bench.DispatchBenchmark;
 import com.quasient.pal.core.bench.InvocationArgs;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * “On‑the‑fly” generator that fills a queue with {@link InvocationArgs}:
+ * "On‑the‑fly" generator that fills a queue with {@link InvocationArgs}:
  *
  * <ul>
  *   <li>A <b>single daemon producer thread</b> keeps a ring‑buffer topped‑up with freshly generated
@@ -29,6 +30,9 @@ import org.slf4j.LoggerFactory;
  *
  * <p>This implementation is chosen with {@code -p inputMode=ASYNC}.
  */
+@SuppressFBWarnings(
+    value = {"EI_EXPOSE_REP2", "UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"},
+    justification = "JMH source - two-phase initialization and shared benchmark reference")
 public final class AsyncDispatchArgsSource implements InvocationArgsSource {
 
   /** Logger instance for this class. */

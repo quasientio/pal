@@ -15,6 +15,7 @@ import com.quasient.pal.core.internal.messages.SessionResponseMsg;
 import com.quasient.pal.core.runtime.objects.ObjectLookupStore;
 import com.quasient.pal.core.service.ConnectedService;
 import com.quasient.pal.messages.types.SessionStatusType;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -43,6 +44,9 @@ import zmq.ZError;
  * clearing all sessions by interacting with a ZeroMQ REP socket.
  */
 @Singleton
+@SuppressFBWarnings(
+    value = "EI_EXPOSE_REP2",
+    justification = "Service requires shared reference to object lookup store")
 public class SessionService extends ConnectedService {
 
   /** Logging instance. */

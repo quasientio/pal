@@ -75,7 +75,7 @@ public final class ExceptionSerdes {
 
     // Serialize stack trace
     StackTraceElement[] stackTrace = throwable.getStackTrace();
-    if (stackTrace != null && stackTrace.length > 0) {
+    if (stackTrace.length > 0) {
       String[] stackTraceStrings = new String[stackTrace.length];
       for (int i = 0; i < stackTrace.length; i++) {
         stackTraceStrings[i] = stackTrace[i].toString();

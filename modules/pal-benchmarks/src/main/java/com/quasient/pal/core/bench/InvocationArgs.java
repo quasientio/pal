@@ -9,11 +9,16 @@
  */
 package com.quasient.pal.core.bench;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * Encapsulates the arguments for calls being benchmarked.
  *
  * @param target the target object on which the method is invoked; null for static method calls
  * @param args the arguments for the method
  */
+@SuppressFBWarnings(
+    value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"},
+    justification = "Benchmark data class - args array shared for performance")
 @SuppressWarnings("ArrayRecordComponent")
 public record InvocationArgs(Object target, Object[] args) {}

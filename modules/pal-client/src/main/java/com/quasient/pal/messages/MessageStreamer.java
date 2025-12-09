@@ -10,6 +10,7 @@
 package com.quasient.pal.messages;
 
 import com.quasient.pal.messages.colfer.Message;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +27,9 @@ import zmq.ZError;
  * the setup of the ZeroMQ context and subscriber socket, maintains a count of received messages,
  * and offers methods to retrieve the message stream and connection statistics.
  */
+@SuppressFBWarnings(
+    value = "UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR",
+    justification = "Fields initialized in connect() - two-phase initialization pattern")
 public class MessageStreamer {
 
   /** Logger instance. */

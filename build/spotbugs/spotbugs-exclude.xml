@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Copyright (C) 2025 Quasient Inc. <https://www.quasient.com>
+
+    Use of this software is governed by the Business Source License 1.1
+    included in the file LICENSE and at https://mariadb.com/bsl11
+
+    Change Date: 2029-10-01
+    Change License: Apache 2.0
+
+-->
+<!--
+    SpotBugs exclusion filter for PAL project.
+    Only excludes auto-generated code that cannot be annotated.
+    All other suppressions should use @SuppressFBWarnings annotations in code.
+-->
+<FindBugsFilter>
+    <!-- Exclude Colfer-generated message classes (auto-generated, cannot modify) -->
+    <Match>
+        <Package name="~com\.quasient\.pal\.messages\.colfer.*"/>
+    </Match>
+
+    <!-- Exclude JMH-generated benchmark code (auto-generated, cannot modify) -->
+    <Match>
+        <Package name="~.*\.jmh_generated"/>
+    </Match>
+
+    <!--
+        AspectJ-generated singleton instance fields.
+        These are internal AspectJ implementation details that cannot be modified.
+    -->
+    <Match>
+        <Bug pattern="MS_SHOULD_BE_FINAL,PA_PUBLIC_PRIMITIVE_ATTRIBUTE"/>
+        <Field name="ajc$perSingletonInstance"/>
+    </Match>
+
+</FindBugsFilter>

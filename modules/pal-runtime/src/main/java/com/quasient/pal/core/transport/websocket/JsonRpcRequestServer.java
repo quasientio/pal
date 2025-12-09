@@ -13,6 +13,7 @@ import com.quasient.pal.common.util.Strings;
 import com.quasient.pal.core.internal.messages.InboundJsonRpcRequestMsg;
 import com.quasient.pal.core.internal.messages.OutboundJsonRpcResponseMsg;
 import com.quasient.pal.core.service.ConnectedService;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -38,6 +39,9 @@ import zmq.ZError;
  * to forward these requests to dispatcher threads. The class leverages a push-pull pattern to avoid
  * sharing the dealer socket among multiple threads.
  */
+@SuppressFBWarnings(
+    value = "UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR",
+    justification = "Server and socket initialized in openConnections() - two-phase initialization")
 @Singleton
 public class JsonRpcRequestServer extends ConnectedService {
 

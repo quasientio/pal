@@ -12,6 +12,7 @@ package com.quasient.pal.core.intercept;
 import com.quasient.pal.common.runtime.ExecPhase;
 import com.quasient.pal.messages.colfer.InterceptMessage;
 import com.quasient.pal.messages.types.MessageType;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.util.Arrays;
@@ -39,6 +40,10 @@ import org.slf4j.LoggerFactory;
  * intercepts (which can be handled in-process), allowing further optimization opportunities.
  */
 @Singleton
+@SuppressFBWarnings(
+    value = {"EI_EXPOSE_REP2", "PZLA_PREFER_ZERO_LENGTH_ARRAYS"},
+    justification =
+        "Checker pattern with shared matcher; null return indicates no params vs empty params")
 public class InterceptChecker {
 
   /** Logger instance for debugging intercept matching operations. */

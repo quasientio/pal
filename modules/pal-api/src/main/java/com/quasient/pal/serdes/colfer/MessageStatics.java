@@ -9,6 +9,8 @@
  */
 package com.quasient.pal.serdes.colfer;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * Immutable metadata for a message-related method or field.
  *
@@ -28,6 +30,8 @@ final class MessageStatics {
   final int modifiers;
 
   /** Parameter names, or {@code null} if omitted. */
+  @SuppressWarnings("UnusedVariable")
+  @SuppressFBWarnings(value = "URF_UNREAD_FIELD", justification = "Kept for data completeness")
   final String[] paramNames;
 
   /** Fully qualified parameter type names, in declaration order. */

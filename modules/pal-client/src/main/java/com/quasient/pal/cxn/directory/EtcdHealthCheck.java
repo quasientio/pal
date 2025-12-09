@@ -10,6 +10,7 @@
 package com.quasient.pal.cxn.directory;
 
 import com.google.common.base.Splitter;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URI;
@@ -75,8 +76,11 @@ public final class EtcdHealthCheck {
           logger.debug("etcd endpoint {} is healthy (via {})", baseUri, path);
           return true;
         }
-      } catch (Exception e) {
+      } catch (IOException | InterruptedException e) {
         logger.trace("Health check failed for {} via {}: {}", baseUri, path, e.getMessage());
+        if (e instanceof InterruptedException) {
+          Thread.currentThread().interrupt();
+        }
         // Try next path
       }
     }
@@ -100,7 +104,7 @@ public final class EtcdHealthCheck {
       socket.connect(new InetSocketAddress(host, port), timeoutMs);
       logger.debug("TCP connection successful to {}:{}", host, port);
       return true;
-    } catch (Exception e) {
+    } catch (IOException e) {
       logger.trace("TCP connection failed to {}:{}: {}", host, port, e.getMessage());
       return false;
     }
@@ -137,7 +141,7 @@ public final class EtcdHealthCheck {
               if (healthCheck.isHealthy(uri)) {
                 healthyEndpoints.add(endpoint);
               }
-            } catch (Exception e) {
+            } catch (IllegalArgumentException e) {
               logger.trace(
                   "TCP connected but HTTP health check failed for {}: {}",
                   endpoint,

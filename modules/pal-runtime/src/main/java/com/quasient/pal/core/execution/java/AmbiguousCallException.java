@@ -10,7 +10,9 @@
 package com.quasient.pal.core.execution.java;
 
 import java.lang.reflect.Executable;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -36,9 +38,9 @@ public class AmbiguousCallException extends Exception {
 
   /**
    * The list of executable members (methods or constructors) that match the provided parameter
-   * types, leading to the ambiguity.
+   * types, leading to the ambiguity. This is a defensive copy of the original list.
    */
-  private final List<? extends Executable> matchingExecutables;
+  private final List<Executable> matchingExecutables;
 
   /**
    * Constructs an AmbiguousCallException for a method call when multiple executable methods match
@@ -57,8 +59,8 @@ public class AmbiguousCallException extends Exception {
       List<? extends Executable> matchingExecutables) {
     this.className = className;
     this.methodName = methodName;
-    this.parameterTypesToMatch = parameterTypesToMatch;
-    this.matchingExecutables = matchingExecutables;
+    this.parameterTypesToMatch = new ArrayList<>(parameterTypesToMatch);
+    this.matchingExecutables = new ArrayList<>(matchingExecutables);
   }
 
   /**
@@ -93,14 +95,14 @@ public class AmbiguousCallException extends Exception {
   }
 
   /**
-   * Returns the list of executable members (methods or constructors) that were found to match the
-   * provided parameters and caused the ambiguity.
+   * Returns an unmodifiable view of the executable members (methods or constructors) that were
+   * found to match the provided parameters and caused the ambiguity.
    *
-   * @return a list of matching executable members
+   * @return an unmodifiable list of matching executable members
    */
   @SuppressWarnings("unused")
   public List<? extends Executable> getMatchingExecutables() {
-    return matchingExecutables;
+    return Collections.unmodifiableList(matchingExecutables);
   }
 
   /**

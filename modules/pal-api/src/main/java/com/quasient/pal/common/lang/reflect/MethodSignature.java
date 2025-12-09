@@ -9,6 +9,7 @@
  */
 package com.quasient.pal.common.lang.reflect;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Objects;
@@ -20,6 +21,10 @@ import javax.annotation.Nonnull;
  * include method-specific details such as the associated {@link Method} object and its return type.
  */
 @SuppressWarnings("rawtypes")
+@SuppressFBWarnings(
+    value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"},
+    justification =
+        "Wrapper for java.lang.reflect.Method - intentionally exposes the wrapped object")
 public final class MethodSignature extends CodeSignature {
 
   /** The {@link Method} instance that defines the method signature. */

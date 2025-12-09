@@ -12,6 +12,7 @@ package com.quasient.pal.core.bench;
 
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.joran.JoranConfigurator;
+import ch.qos.logback.core.joran.spi.JoranException;
 import com.google.common.base.Splitter;
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
@@ -47,10 +48,12 @@ import com.quasient.pal.core.transport.zmq.publish.MessagePublisherStats;
 import com.quasient.pal.core.transport.zmq.publish.PublishingDropPolicy;
 import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.messages.OutboundMsg;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
@@ -75,8 +78,8 @@ import org.zeromq.ZMQ.Socket;
  * <p>Driven by two main params/axis: variant and ioProfile Each axis answers a different question:
  *
  * <ul>
- *   <li>variant → “Which Pal features?”
- *   <li>ioProfile → “How realistic is the transport?”
+ *   <li>variant → "Which Pal features?"
+ *   <li>ioProfile → "How realistic is the transport?"
  * </ul>
  *
  * <hr> You can bisect a regression quickly:
@@ -104,6 +107,10 @@ import org.zeromq.ZMQ.Socket;
  *
  * Use the <b>run.sh</b> script to configure and launch this benchmark.
  */
+@SuppressFBWarnings(
+    value = {"DP_CREATE_CLASSLOADER_INSIDE_DO_PRIVILEGED", "SIC_INNER_SHOULD_BE_STATIC_ANON"},
+    justification =
+        "Benchmark code - classloader created explicitly; anonymous Runnable captures local state")
 @Timeout(time = 10, timeUnit = TimeUnit.MINUTES)
 @State(Scope.Benchmark)
 public class DispatchBenchmark {
@@ -204,6 +211,9 @@ public class DispatchBenchmark {
    * Unused (otherwise, rename to parallelThreads). Parallel producer threads JMH should use. Set
    * with -t <n> on CLI.
    */
+  @SuppressFBWarnings(
+      value = "URF_UNREAD_FIELD",
+      justification = "JMH @Param field - value injected by framework")
   @Param({"1"})
   public int unused; // (value unused; @Threads controls parallelism)
 
@@ -294,6 +304,9 @@ public class DispatchBenchmark {
   private int doubleArraySize;
 
   /** number of worker threads in this fork */
+  @SuppressFBWarnings(
+      value = "URF_UNREAD_FIELD",
+      justification = "JMH thread count captured for potential future debugging/logging use")
   int jmhThreads;
 
   /** parsed values from {@link #sizeDistPct} for [micro, small, medium, large] */
@@ -657,8 +670,11 @@ public class DispatchBenchmark {
                     @SuppressWarnings("unused")
                     OutboundMsg unused = OutboundMsg.receive(dummySubSocket, true);
                     dummyRcvs++;
-                  } catch (Exception ignore) {
-                    // ignore malformed / partially received messages – rare on inproc
+                  } catch (RuntimeException e) {
+                    // malformed / partially received messages – rare on inproc
+                    if (logger.isDebugEnabled()) {
+                      logger.debug("Ignoring malformed message in dummy subscriber", e);
+                    }
                   }
                 }
               }
@@ -742,9 +758,13 @@ public class DispatchBenchmark {
     }
   }
 
-  /** Expose sizeDist */
+  /**
+   * Returns a defensive copy of the size distribution array.
+   *
+   * @return a copy of the size distribution percentages [micro, small, medium, large]
+   */
   public int[] sizeDistribution() {
-    return sizeDist;
+    return Arrays.copyOf(sizeDist, sizeDist.length);
   }
 
   /** Tear down the benchmark run. */
@@ -978,13 +998,13 @@ public class DispatchBenchmark {
         if (Files.exists(Paths.get(palLogging))) {
           givenFileExists = true;
         }
-      } catch (Exception ex) {
+      } catch (InvalidPathException | SecurityException ex) {
         ex.printStackTrace(System.err);
       }
       if (givenFileExists) {
         try {
           configurator.doConfigure(palLogging);
-        } catch (Exception ex) {
+        } catch (JoranException ex) {
           System.err.printf("Error loading logging configuration from %s%n", palLogging);
           // for more info: StatusPrinter.printInCaseOfErrorsOrWarnings(context);
           //noinspection CallToPrintStackTrace
@@ -997,7 +1017,7 @@ public class DispatchBenchmark {
     // fall back to our default logging configuration
     try (final InputStream stream = Main.class.getResourceAsStream(LOGGING_CONFIG)) {
       configurator.doConfigure(stream);
-    } catch (Exception ex) {
+    } catch (JoranException | IOException ex) {
       System.err.printf("Error loading logging configuration from %s%n", LOGGING_CONFIG);
       // for more info: StatusPrinter.printInCaseOfErrorsOrWarnings(context);
       //noinspection CallToPrintStackTrace

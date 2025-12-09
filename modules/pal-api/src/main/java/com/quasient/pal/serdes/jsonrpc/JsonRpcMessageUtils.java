@@ -21,6 +21,7 @@ import com.quasient.pal.messages.jsonrpc.JsonRpcResponseReturnValue;
 import com.quasient.pal.messages.jsonrpc.ResponseObject;
 import com.quasient.pal.messages.types.JsonRpcType;
 import com.quasient.pal.messages.types.MessageType;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.StringReader;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
@@ -130,6 +131,9 @@ public class JsonRpcMessageUtils {
    * @throws IllegalArgumentException if the response type is unsupported
    */
   @SuppressWarnings("checkstyle:FallThrough")
+  @SuppressFBWarnings(
+      value = "SF_SWITCH_FALLTHROUGH",
+      justification = "Intentional fallthrough for field put operations sharing return value logic")
   public static Optional<String> getClassName(JsonRpcResponse jsonRpcResponse) {
     MessageType jsonRpcResponseType = getJsonRpcResponseType(jsonRpcResponse);
     boolean isFieldPutDone = false;
@@ -147,7 +151,7 @@ public class JsonRpcMessageUtils {
       case EXEC_PUT_STATIC_DONE:
       case EXEC_PUT_FIELD_DONE:
         isFieldPutDone = true;
-        // fall through
+        /* falls through */
       case EXEC_RETURN_VALUE:
         JsonRpcResponseReturnValue returnValue = jsonRpcResponse.getResult();
         if (returnValue == null || returnValue.getFrom() == null) {

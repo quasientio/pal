@@ -11,6 +11,7 @@ package com.quasient.pal.tools.cli;
 
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.joran.JoranConfigurator;
+import ch.qos.logback.core.joran.spi.JoranException;
 import com.quasient.pal.core.service.Main;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
@@ -19,6 +20,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.concurrent.Callable;
@@ -124,13 +126,13 @@ public abstract class AbstractPalSubcommand extends AbstractTool implements Call
         if (Files.exists(Paths.get(palLogging))) {
           givenFileExists = true;
         }
-      } catch (Exception ex) {
+      } catch (InvalidPathException | SecurityException ex) {
         ex.printStackTrace(System.err);
       }
       if (givenFileExists) {
         try {
           configurator.doConfigure(palLogging);
-        } catch (Exception ex) {
+        } catch (JoranException ex) {
           System.err.printf("Error loading logging configuration from %s%n", palLogging);
           // for more info: StatusPrinter.printInCaseOfErrorsOrWarnings(context);
           //noinspection CallToPrintStackTrace
@@ -143,7 +145,7 @@ public abstract class AbstractPalSubcommand extends AbstractTool implements Call
     // fall back to our default logging configuration
     try (final InputStream stream = Main.class.getResourceAsStream(LOGGING_CONFIG)) {
       configurator.doConfigure(stream);
-    } catch (Exception ex) {
+    } catch (JoranException | IOException ex) {
       System.err.printf("Error loading logging configuration from %s%n", LOGGING_CONFIG);
       // for more info: StatusPrinter.printInCaseOfErrorsOrWarnings(context);
       //noinspection CallToPrintStackTrace

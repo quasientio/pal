@@ -20,6 +20,7 @@ import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import com.quasient.pal.messages.OutboundMsg;
 import com.quasient.pal.messages.colfer.ConstructorCall;
 import com.quasient.pal.messages.types.MessageType;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -195,6 +196,9 @@ public abstract class WalWriter extends ConnectedService {
   public abstract void writeToLog(LogInfo writeAheadLog, boolean publishOffsets);
 
   /** Simple bean holding offset publishing data */
+  @SuppressFBWarnings(
+      value = "UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR",
+      justification = "Ring buffer event - fields set via set() method for reuse")
   protected static final class OffsetEvent {
     /** The ID of the message written */
     public String msgId;

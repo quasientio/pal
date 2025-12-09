@@ -9,6 +9,7 @@
  */
 package com.quasient.pal.common.lang.reflect;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.lang.reflect.Parameter;
 import java.util.Arrays;
 import java.util.Objects;
@@ -18,6 +19,9 @@ import javax.annotation.Nonnull;
  * Encapsulates information about method parameters, including their names, types, and reflective
  * {@link Parameter} instances.
  */
+@SuppressFBWarnings(
+    value = "EI_EXPOSE_REP",
+    justification = "Internal DTO - intentionally exposes arrays for performance")
 public final class Params {
 
   /**

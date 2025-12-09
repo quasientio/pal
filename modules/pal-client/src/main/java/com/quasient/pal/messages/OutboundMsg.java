@@ -14,6 +14,7 @@ import static com.quasient.pal.serdes.colfer.ColferUtils.toBytes;
 import com.quasient.pal.common.runtime.ExecPhase;
 import com.quasient.pal.messages.colfer.InternalHeader;
 import com.quasient.pal.messages.types.MessageType;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -56,6 +57,9 @@ import org.zeromq.ZMQException;
  *  2. body          : byte[]
  * </pre>
  */
+@SuppressFBWarnings(
+    value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"},
+    justification = "Message wrapper - direct array access for performance in serialization")
 public class OutboundMsg extends BaseMsg {
 
   /** Logger instance. */
@@ -384,12 +388,17 @@ public class OutboundMsg extends BaseMsg {
    *
    * @param appender the excerpt appender
    * @return the index of the newly written message
+   * @throws IllegalStateException if the DocumentContext wire is null
    */
   public long appendTo(ExcerptAppender appender) {
     final DocumentContext dc =
         appender.writingDocument(); // don't use try-with-resources: we may need rollback
     try {
-      final Bytes<?> out = dc.wire().bytes(); // direct view on the mapped region
+      final var wire = dc.wire();
+      if (wire == null) {
+        throw new IllegalStateException("DocumentContext wire is null");
+      }
+      final Bytes<?> out = wire.bytes(); // direct view on the mapped region
 
       // [0] type          : byte
       out.writeByte(messageType.getId());
@@ -426,13 +435,18 @@ public class OutboundMsg extends BaseMsg {
    *
    * @param tailer the queue tailer/reader
    * @return a new {@link OutboundMsg} or null if none available
+   * @throws IllegalStateException if the DocumentContext wire is null
+   * @throws IORuntimeException if body length is negative or data is truncated
    */
   @Nullable
   public static OutboundMsg readNext(ExcerptTailer tailer) {
     try (DocumentContext dc = tailer.readingDocument()) {
       if (!dc.isPresent()) return null;
-
-      final Bytes<?> in = dc.wire().bytes();
+      final var wire = dc.wire();
+      if (wire == null) {
+        throw new IllegalStateException("DocumentContext wire is null");
+      }
+      final Bytes<?> in = wire.bytes();
 
       // [0] type
       final byte typeId = in.readByte();

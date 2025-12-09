@@ -13,6 +13,7 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.quasient.pal.messages.BaseMsg;
 import com.quasient.pal.messages.types.MessageFormatType;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.stream.Stream;
@@ -37,6 +38,9 @@ import org.zeromq.ZMQ;
  *
  * Instances can be created either directly via the constructor or through message reception.
  */
+@SuppressFBWarnings(
+    value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"},
+    justification = "Message wrapper - body array shared for performance in deserialization")
 public class InboundLogMsg extends BaseMsg {
   /** The log offset that identifies the position of this message within the log stream. */
   private final long offset;

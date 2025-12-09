@@ -12,6 +12,7 @@ package com.quasient.pal.apps.callbacks;
 import com.quasient.pal.common.lang.intercept.InterceptCallbackResponse;
 import com.quasient.pal.common.lang.intercept.InterceptContext;
 import com.quasient.pal.common.lang.intercept.InterceptPhase;
+import java.util.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,7 +44,7 @@ public class AfterCallbackHandlers {
     Object returnValue = ctx.getReturnValue();
     if (returnValue instanceof String) {
       String original = (String) returnValue;
-      String uppercased = original.toUpperCase();
+      String uppercased = original.toUpperCase(Locale.ROOT);
       ctx.setReturnValue(uppercased);
       logger.info("uppercaseReturnValue: {} -> {}", original, uppercased);
     }

@@ -9,6 +9,7 @@
  */
 package com.quasient.pal.messages.jsonrpc;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -21,6 +22,9 @@ import javax.annotation.Nullable;
  * such as the type of request, method to be invoked, field, instance identifier, arguments, and an
  * optional value. It supports building instances through the {@link Builder} class.
  */
+@SuppressFBWarnings(
+    value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"},
+    justification = "JSON-RPC DTO - mutable by design for serialization")
 public class Params {
   /** Specifies the type of JSON-RPC request. */
   private String type;

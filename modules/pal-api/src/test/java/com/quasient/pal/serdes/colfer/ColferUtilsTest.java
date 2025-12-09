@@ -14,7 +14,6 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import com.quasient.pal.common.lang.reflect.FieldSignature;
@@ -62,8 +61,10 @@ public class ColferUtilsTest {
   }
 
   @Test
-  public void toBytes_NullInstanceFieldGet_null() {
-    assertNull(ColferUtils.toBytes(null));
+  public void toBytes_NullInstanceFieldGet_emptyArray() {
+    byte[] result = ColferUtils.toBytes(null);
+    assertNotNull(result);
+    assertEquals(0, result.length);
   }
 
   @Test

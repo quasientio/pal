@@ -16,6 +16,7 @@ import com.quasient.pal.messages.colfer.InterceptMessage;
 import com.quasient.pal.messages.colfer.InterceptableField;
 import com.quasient.pal.messages.colfer.InterceptableMethod;
 import com.quasient.pal.messages.types.MessageType;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -31,6 +32,9 @@ import org.slf4j.LoggerFactory;
  * however, registration and unregistration must be performed exclusively from the designated thread
  * (typically the InterceptMatcher thread) to guarantee safe modifications.
  */
+@SuppressFBWarnings(
+    value = "BC_BAD_CAST_TO_CONCRETE_COLLECTION",
+    justification = "Known ArrayList implementation - cast is safe in this context")
 public class InterceptRequests {
   /** Logger instance used to log debug messages for intercept request operations. */
   private static final Logger logger = LoggerFactory.getLogger(InterceptRequests.class);

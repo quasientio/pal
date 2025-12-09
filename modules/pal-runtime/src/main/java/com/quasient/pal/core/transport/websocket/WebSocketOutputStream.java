@@ -9,6 +9,7 @@
  */
 package com.quasient.pal.core.transport.websocket;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -25,6 +26,9 @@ import org.java_websocket.enums.Opcode;
  * invoked. The stream automatically manages the framing of data and ensures the final frame is sent
  * only once.
  */
+@SuppressFBWarnings(
+    value = "EI_EXPOSE_REP2",
+    justification = "Stream wrapper - WebSocket connection intentionally shared")
 public class WebSocketOutputStream extends OutputStream {
 
   /** The underlying WebSocket connection used to transmit data frames. */

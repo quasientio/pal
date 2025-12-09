@@ -10,6 +10,7 @@
 package com.quasient.pal.messages.jsonrpc;
 
 import com.quasient.pal.common.objects.ObjectRef;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Objects;
 import javax.annotation.Nullable;
 
@@ -203,6 +204,9 @@ public class Argument {
   }
 
   /** Builder class for constructing {@link Argument} instances. */
+  @SuppressFBWarnings(
+      value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"},
+      justification = "JSON-RPC DTO - mutable by design for serialization")
   public static class Builder {
     /** The {@code Argument} instance being built. */
     private final Argument argument = new Argument();

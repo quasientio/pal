@@ -23,6 +23,7 @@ import com.quasient.pal.serdes.kafka.KafkaMessageSerde;
 import com.quasient.pal.tools.AbstractTool;
 import com.quasient.pal.tools.stats.ContinuousPrinter;
 import com.quasient.pal.tools.stats.Counters;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
@@ -33,7 +34,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import org.apache.kafka.common.serialization.Serdes;
@@ -70,6 +70,15 @@ import picocli.CommandLine.Command;
  * <p>Options allow filtering by message types, peer UUID or address, and thread name.
  */
 @Command(name = "stats")
+@SuppressFBWarnings(
+    value = {
+      "EI_EXPOSE_REP2",
+      "SIC_INNER_SHOULD_BE_STATIC_ANON",
+      "URF_UNREAD_FIELD",
+      "URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD"
+    },
+    justification =
+        "CLI stats command - shared state for thread operations; format strings intentional")
 public class MessageStreamStats extends AbstractTool implements Callable<Integer> {
 
   /** Logger for logging information and errors. */
@@ -331,20 +340,10 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
     counters.getNumberOfMessages().getAndIncrement();
 
     // by msg type
-    AtomicLong messageCounter = counters.getMessagesByType().get(getMessageTypeName(message));
-    if (messageCounter == null) {
-      counters.getMessagesByType().put(getMessageTypeName(message), new AtomicLong(1));
-    } else {
-      messageCounter.getAndIncrement();
-    }
+    counters.incrementMessagesByType(getMessageTypeName(message));
 
     // by peer
-    messageCounter = counters.getMessagesFromPeer().get(getPeerUuid(message));
-    if (messageCounter == null) {
-      counters.getMessagesFromPeer().put(getPeerUuid(message), new AtomicLong(1));
-    } else {
-      messageCounter.getAndIncrement();
-    }
+    counters.incrementMessagesFromPeer(getPeerUuid(message));
 
     final ExecMessage execMessage = message.getExecMessage();
     if (execMessage == null) {
@@ -352,12 +351,7 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
     }
 
     // by thread
-    messageCounter = counters.getMessagesByThread().get(execMessage.getThreadName());
-    if (messageCounter == null) {
-      counters.getMessagesByThread().put(execMessage.getThreadName(), new AtomicLong(1));
-    } else {
-      messageCounter.getAndIncrement();
-    }
+    counters.incrementMessagesByThread(execMessage.getThreadName());
 
     String className;
     String methodName;
@@ -415,12 +409,7 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
    * @param key the class name key representing the object type
    */
   private void incrementObjectsCreated(String key) {
-    AtomicLong counter = counters.getObjectsCreated().get(key);
-    if (counter == null) {
-      counters.getObjectsCreated().put(key, new AtomicLong(1));
-    } else {
-      counter.getAndIncrement();
-    }
+    counters.incrementObjectsCreated(key);
   }
 
   /**
@@ -429,12 +418,7 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
    * @param key the key representing the method (e.g., "ClassName.methodName()")
    */
   private void incrementMethodCalls(String key) {
-    AtomicLong counter = counters.getMethodsCalled().get(key);
-    if (counter == null) {
-      counters.getMethodsCalled().put(key, new AtomicLong(1));
-    } else {
-      counter.getAndIncrement();
-    }
+    counters.incrementMethodsCalled(key);
   }
 
   /**
@@ -443,12 +427,7 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
    * @param key the key representing the field (e.g., "ClassName.fieldName")
    */
   private void incrementFieldReads(String key) {
-    AtomicLong counter = counters.getFieldReads().get(key);
-    if (counter == null) {
-      counters.getFieldReads().put(key, new AtomicLong(1));
-    } else {
-      counter.getAndIncrement();
-    }
+    counters.incrementFieldReads(key);
   }
 
   /**
@@ -457,12 +436,7 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
    * @param key the key representing the field (e.g., "ClassName.fieldName")
    */
   private void incrementFieldWrites(String key) {
-    AtomicLong counter = counters.getFieldWrites().get(key);
-    if (counter == null) {
-      counters.getFieldWrites().put(key, new AtomicLong(1));
-    } else {
-      counter.getAndIncrement();
-    }
+    counters.incrementFieldWrites(key);
   }
 
   /**
@@ -487,7 +461,7 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
       System.out.println("CONFIG:");
       System.out.println("=======");
       System.out.printf(
-          "Kafka config: topic=%s bootstrap_servers=%s app_id=%s\n",
+          "Kafka config: topic=%s bootstrap_servers=%s app_id=%s%n",
           logName, bootstrapServers, consumerId);
     }
     props.put(StreamsConfig.APPLICATION_ID_CONFIG, consumerId);

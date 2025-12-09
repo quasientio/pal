@@ -10,6 +10,7 @@
 package com.quasient.pal.core.execution.java.reflect;
 
 import com.quasient.pal.core.execution.java.AmbiguousCallException;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -42,6 +43,9 @@ import org.slf4j.LoggerFactory;
  * <p>NOTE: lookupMethod will not currently find inherited methods if they are not public.
  */
 @Singleton
+@SuppressFBWarnings(
+    value = "UPM_UNCALLED_PRIVATE_METHOD",
+    justification = "Unused method kept for future use")
 public class ReflectionHelper {
   /** Logger for internal diagnostics and tracing of reflection operations. */
   private static final Logger logger = LoggerFactory.getLogger(ReflectionHelper.class);
@@ -165,7 +169,7 @@ public class ReflectionHelper {
         logger.debug("Got method with signature in step1: {}", methodFound.toGenericString());
       }
       return methodFound;
-    } catch (Exception e) {
+    } catch (NoSuchMethodException | SecurityException e) {
       if (logger.isDebugEnabled()) {
         logger.debug("Could not find method the easy way - {}", e.getMessage());
       }
@@ -285,7 +289,7 @@ public class ReflectionHelper {
             "Got constructor with signature in step1: {}", constructorFound.toGenericString());
       }
       return constructorFound;
-    } catch (Exception e) {
+    } catch (NoSuchMethodException | SecurityException e) {
       if (logger.isDebugEnabled()) {
         logger.debug("Could not find constructor the easy way - {}", e.getMessage());
       }

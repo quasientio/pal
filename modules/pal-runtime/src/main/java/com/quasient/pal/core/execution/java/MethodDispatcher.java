@@ -13,6 +13,7 @@ import com.quasient.pal.common.lang.reflect.MethodSignature;
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.common.runtime.Context;
 import com.quasient.pal.messages.colfer.ExecMessage;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Method;
 import java.util.List;
@@ -25,6 +26,9 @@ import org.aspectj.lang.ProceedingJoinPoint;
  * performs the reflective invocation on a given target, and constructs the appropriate
  * post-execution message, handling both normal return values and execution exceptions.
  */
+@SuppressFBWarnings(
+    value = "BC_UNCONFIRMED_CAST",
+    justification = "Type already validated before cast in dispatcher pattern")
 public abstract class MethodDispatcher extends BaseExecMessageDispatcher {
 
   /**
@@ -38,12 +42,13 @@ public abstract class MethodDispatcher extends BaseExecMessageDispatcher {
    * @param args the list of message arguments to be adapted and supplied to the method.
    * @param value an additional parameter that is deliberately ignored.
    * @return the result produced by the invoked method.
-   * @throws Exception if an error occurs during parameter adaptation or method invocation.
+   * @throws ReflectiveOperationException if an error occurs during parameter adaptation or method
+   *     invocation.
    */
   @Override
   protected Object invokeIncoming(
       AccessibleObject accessibleObject, Object target, List<MessageArgument> args, Object value)
-      throws Exception {
+      throws ReflectiveOperationException {
     // discard value
     return invokeIncoming(accessibleObject, target, args);
   }
@@ -61,12 +66,12 @@ public abstract class MethodDispatcher extends BaseExecMessageDispatcher {
    * @param deserializedArgs the list of message arguments to be converted into the method's
    *     parameter types.
    * @return the result returned from the method invocation.
-   * @throws Exception if parameter adaptation fails or if an exception is thrown during method
-   *     invocation.
+   * @throws ReflectiveOperationException if parameter adaptation fails or if an exception is thrown
+   *     during method invocation.
    */
   private Object invokeIncoming(
       AccessibleObject accessibleObject, Object target, List<MessageArgument> deserializedArgs)
-      throws Exception {
+      throws ReflectiveOperationException {
     if (logger.isTraceEnabled()) {
       logger.trace(
           "invokeIncoming:in w/ accessibleObject: {}, target: {}, args: {}",

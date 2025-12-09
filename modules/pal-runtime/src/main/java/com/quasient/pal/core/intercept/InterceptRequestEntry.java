@@ -14,6 +14,7 @@ import static java.lang.String.format;
 import com.quasient.pal.messages.colfer.InterceptMessage;
 import com.quasient.pal.messages.colfer.InterceptableMethod;
 import com.quasient.pal.serdes.colfer.ColferUtils;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.github.azagniotov.matcher.AntPathMatcherArrays;
 import java.util.Objects;
 import org.slf4j.Logger;
@@ -26,6 +27,9 @@ import org.slf4j.LoggerFactory;
  * method or a field. For method entries, it records parameter types and the number of parameters to
  * aid in precise matching of method invocations.
  */
+@SuppressFBWarnings(
+    value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"},
+    justification = "Entry wrapper - intercept message intentionally shared")
 public class InterceptRequestEntry {
   /** Logger for outputting debug and trace messages related to interception matching. */
   private static final Logger logger = LoggerFactory.getLogger(InterceptRequestEntry.class);

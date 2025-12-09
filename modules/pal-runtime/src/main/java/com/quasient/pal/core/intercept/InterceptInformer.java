@@ -19,6 +19,7 @@ import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.messages.colfer.InterceptMessage;
 import com.quasient.pal.serdes.colfer.ColferUtils;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -43,6 +44,9 @@ import zmq.ZError;
  * uses a per-thread ZeroMQ REQ socket to send messages to the intercept matcher service.
  */
 @Singleton
+@SuppressFBWarnings(
+    value = "EI_EXPOSE_REP2",
+    justification = "Informer requires reference to ZMQ context for socket creation")
 public class InterceptInformer implements InterceptNodeListener {
 
   /** Logger instance used for logging events, errors, and debug information. */

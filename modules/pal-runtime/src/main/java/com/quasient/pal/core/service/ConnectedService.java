@@ -10,6 +10,7 @@
 package com.quasient.pal.core.service;
 
 import com.google.common.util.concurrent.AbstractService;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.Closeable;
 import java.util.UUID;
 import javax.annotation.Nullable;
@@ -33,6 +34,10 @@ import org.zeromq.ZMQ;
  * <p>Subclasses should implement the {@link #run()}, {@link #openConnections()}, and {@link
  * #closeConnections()} methods to define the service-specific behavior.
  */
+@SuppressFBWarnings(
+    value = "MC_OVERRIDABLE_METHOD_CALL_IN_CONSTRUCTOR",
+    justification =
+        "Thread created with method reference; closeConnections only called when thread runs, not during construction")
 public abstract class ConnectedService extends AbstractService {
 
   /** Logger instance. */

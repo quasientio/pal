@@ -60,6 +60,8 @@
         <jacoco.plugin.version>0.8.12</jacoco.plugin.version>
         <errorprone.plugin.version>2.38.0</errorprone.plugin.version>
         <pmd.plugin.version>3.28.0</pmd.plugin.version>
+        <spotbugs.plugin.version>4.8.6.6</spotbugs.plugin.version>
+        <spotbugs.annotations.version>4.8.6</spotbugs.annotations.version>
         <jxr.plugin.version>3.6.0</jxr.plugin.version>
 
         <!-- DEPENDENCIES VERSIONS -->
@@ -497,6 +499,29 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <!-- SpotBugs static analysis -->
+            <plugin>
+                <groupId>com.github.spotbugs</groupId>
+                <artifactId>spotbugs-maven-plugin</artifactId>
+                <version>${spotbugs.plugin.version}</version>
+                <configuration>
+                    <effort>Max</effort>
+                    <threshold>Low</threshold>
+                    <failOnError>true</failOnError>
+                    <includeTests>false</includeTests>
+                    <excludeFilterFile>${maven.multiModuleProjectDirectory}/build/spotbugs/spotbugs-exclude.xml</excludeFilterFile>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>spotbugs-check</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
        </plugins>
     </build>
 
@@ -531,6 +556,14 @@
             </dependency>
 
             <!-- OTHER DEPENDENCIES -->
+
+            <!-- static analysis annotations -->
+            <dependency>
+                <groupId>com.github.spotbugs</groupId>
+                <artifactId>spotbugs-annotations</artifactId>
+                <version>${spotbugs.annotations.version}</version>
+                <optional>true</optional>
+            </dependency>
 
             <!-- logging -->
             <dependency>

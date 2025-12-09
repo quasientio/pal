@@ -22,7 +22,9 @@ import com.quasient.pal.messages.jsonrpc.ResponseObject;
 import com.quasient.pal.messages.types.MessageType;
 import com.quasient.pal.messages.types.MetaServiceType;
 import com.quasient.pal.serdes.jsonrpc.JsonRpcSerializer;
+import com.quasient.pal.serdes.jsonrpc.JsonSerializationException;
 import com.quasient.pal.serdes.jsonrpc.ResponseObjectSerializer;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
@@ -48,6 +50,10 @@ import org.slf4j.LoggerFactory;
  * dispatches responses to clients. For certain response types, such as metadata responses, file
  * contents are streamed back to clients using a custom output stream.
  */
+@SuppressFBWarnings(
+    value = "SIC_INNER_SHOULD_BE_STATIC_ANON",
+    justification =
+        "TypeReference anonymous classes cannot be static - generic type inference required")
 class JsonRpcWebSocketServer extends WebSocketServer {
 
   /** Logger instance. */
@@ -162,7 +168,7 @@ class JsonRpcWebSocketServer extends WebSocketServer {
           logger.debug("Sent back response to peer w/id: {}", peerId);
           return;
         }
-      } catch (Exception e) {
+      } catch (JsonSerializationException | IOException e) {
         logger.error("Error sending back response to peer w/id: {}", peerId, e);
         return;
       }
@@ -173,7 +179,8 @@ class JsonRpcWebSocketServer extends WebSocketServer {
       connSocket.send(response);
       peerStatsMap.get(peerId).incrementTotalMessagesSent();
       logger.debug("Sent back response to peer w/id: {}", peerId);
-    } catch (Exception e) {
+    } catch (RuntimeException e) {
+      // WebSocket send can throw IllegalStateException or other runtime exceptions on disconnect
       logger.error("Error sending back response to peer w/id: {}", peerId, e);
     }
   }
@@ -332,8 +339,10 @@ class JsonRpcWebSocketServer extends WebSocketServer {
     }
     InboundJsonRpcRequestMsg requestMsg = new InboundJsonRpcRequestMsg(peerId, message);
     // Add the message to the queue
-    requestQueue.offer(requestMsg);
-    if (logger.isDebugEnabled()) {
+    boolean offered = requestQueue.offer(requestMsg);
+    if (!offered) {
+      logger.error("Failed to enqueue message from peer w/id: {} - queue is full", peerId);
+    } else if (logger.isDebugEnabled()) {
       logger.debug("Pushed message from peer w/id: {} for dispatch", peerId);
     }
   }

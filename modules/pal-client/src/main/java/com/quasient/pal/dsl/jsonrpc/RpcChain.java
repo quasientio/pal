@@ -21,6 +21,7 @@ import com.quasient.pal.messages.jsonrpc.JsonRpcResponseReturnValue;
 import com.quasient.pal.messages.jsonrpc.ResponseObject;
 import com.quasient.pal.serdes.Unwrapper;
 import com.quasient.pal.serdes.jsonrpc.JsonRpcMessageFactory;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -35,6 +36,9 @@ import org.slf4j.LoggerFactory;
  * interface. The chain can be executed to send all queued requests to a peer and handle responses
  * accordingly.
  */
+@SuppressFBWarnings(
+    value = "EI_EXPOSE_REP2",
+    justification = "DSL builder - ThinPeer reference is intentionally shared for RPC operations")
 public class RpcChain {
   /** Logger for RpcChain operations and debugging. */
   private static final Logger logger = LoggerFactory.getLogger(RpcChain.class);

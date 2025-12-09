@@ -10,6 +10,7 @@
 package com.quasient.pal.messages.jsonrpc;
 
 import com.google.gson.annotations.SerializedName;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Objects;
 import javax.annotation.Nullable;
 
@@ -48,7 +49,7 @@ public class Executable {
    * @param className the class name to set; must not be empty.
    */
   public void setClassName(String className) {
-    if (!className.isEmpty()) {
+    if (className != null && !className.isEmpty()) {
       this.className = className;
     }
   }
@@ -172,6 +173,9 @@ public class Executable {
   }
 
   /** Builder class for {@link Executable}, providing a fluent API for setting properties. */
+  @SuppressFBWarnings(
+      value = "EI_EXPOSE_REP",
+      justification = "Builder pattern - returns the built object intentionally")
   public static class Builder {
 
     /** Instance of {@link Executable} which will be returned. */

@@ -9,6 +9,7 @@
  */
 package com.quasient.pal.core.dispatcher.thread;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,6 +20,9 @@ import org.slf4j.LoggerFactory;
  * starts them with a no-operation task, and provides a mechanism to gracefully shutdown by
  * interrupting all running threads.
  */
+@SuppressFBWarnings(
+    value = "EI_EXPOSE_REP2",
+    justification = "Pool pattern - thread factory reference shared for thread creation")
 public class ThreadPool {
 
   /** Logger instance. */

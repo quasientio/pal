@@ -20,6 +20,7 @@ import com.quasient.pal.messages.types.MessageType;
 import com.quasient.pal.serdes.jsonrpc.JsonRpcMessageUtils;
 import com.quasient.pal.serdes.jsonrpc.JsonRpcSerializer;
 import com.quasient.pal.serdes.jsonrpc.JsonSerializationException;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
@@ -34,7 +35,10 @@ import org.apache.kafka.common.header.Headers;
  *
  * @param <T> the type of the message content
  */
-public class LogMessage<T> {
+@SuppressFBWarnings(
+    value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"},
+    justification = "Message wrapper - headers map is intentionally shared")
+public final class LogMessage<T> {
 
   /** The type of log backend from which the message was retrieved. */
   public enum LogBackendType {

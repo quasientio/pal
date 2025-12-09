@@ -9,6 +9,7 @@
  */
 package com.quasient.pal.common.lang.reflect;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.lang.reflect.Constructor;
 import java.util.Arrays;
 import java.util.Objects;
@@ -19,6 +20,10 @@ import javax.annotation.Nonnull;
  * modifiers, and exceptions.
  */
 @SuppressWarnings("rawtypes")
+@SuppressFBWarnings(
+    value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"},
+    justification =
+        "Wrapper for java.lang.reflect.Constructor - intentionally exposes the wrapped object")
 public final class ConstructorSignature extends CodeSignature {
 
   /** The {@link Constructor} instance that this signature represents. */

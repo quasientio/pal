@@ -9,6 +9,8 @@
  */
 package com.quasient.pal.serdes.jsonrpc;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * Represents an exception that occurs during JSON parsing in JSON-RPC requests. This exception
  * wraps the underlying parsing exception to provide flexibility in changing the underlying JSON
@@ -16,6 +18,9 @@ package com.quasient.pal.serdes.jsonrpc;
  *
  * @see JsonRpcRequestException
  */
+@SuppressFBWarnings(
+    value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"},
+    justification = "Exception wrapper - intentionally stores and exposes the original exception")
 public class JsonRpcParseException extends JsonRpcRequestException {
 
   /** The exception that was thrown during JSON parsing. */

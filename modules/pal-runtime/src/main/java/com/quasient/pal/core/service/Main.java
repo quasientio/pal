@@ -14,6 +14,7 @@ import static picocli.CommandLine.Option;
 
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.joran.JoranConfigurator;
+import ch.qos.logback.core.joran.spi.JoranException;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
@@ -48,6 +49,7 @@ import com.quasient.pal.cxn.directory.EtcdUnavailableException;
 import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.cxn.directory.PeerLease;
 import com.quasient.pal.messages.OutboundMsg;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -55,6 +57,7 @@ import java.net.MalformedURLException;
 import java.net.ServerSocket;
 import java.net.URL;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
@@ -110,6 +113,10 @@ import picocli.CommandLine.Spec;
       "    or pal run [OPTIONS]",
       "            (to run as service - ie. no entry point)%n",
     })
+@SuppressFBWarnings(
+    value = {"DLS_DEAD_LOCAL_STORE", "SIC_INNER_SHOULD_BE_STATIC_ANON", "URF_UNREAD_FIELD"},
+    justification =
+        "Main class with complex initialization; anonymous inner classes for service lifecycle")
 public class Main implements Callable<Integer> {
 
   /** Reference to the parent PAL command instance providing common command-line options. */
@@ -490,13 +497,13 @@ public class Main implements Callable<Integer> {
         if (Files.exists(Paths.get(palLogging))) {
           givenFileExists = true;
         }
-      } catch (Exception ex) {
+      } catch (InvalidPathException | SecurityException ex) {
         ex.printStackTrace(System.err);
       }
       if (givenFileExists) {
         try {
           configurator.doConfigure(palLogging);
-        } catch (Exception ex) {
+        } catch (JoranException ex) {
           System.err.printf("Error loading logging configuration from %s%n", palLogging);
           // for more info: StatusPrinter.printInCaseOfErrorsOrWarnings(context);
           //noinspection CallToPrintStackTrace
@@ -509,7 +516,7 @@ public class Main implements Callable<Integer> {
     // fall back to our default logging configuration
     try (final InputStream stream = Main.class.getResourceAsStream(LOGGING_CONFIG)) {
       configurator.doConfigure(stream);
-    } catch (Exception ex) {
+    } catch (JoranException | IOException ex) {
       System.err.printf("Error loading logging configuration from %s%n", LOGGING_CONFIG);
       // for more info: StatusPrinter.printInCaseOfErrorsOrWarnings(context);
       //noinspection CallToPrintStackTrace
@@ -526,7 +533,7 @@ public class Main implements Callable<Integer> {
     // load properties from file in classpath
     try (final InputStream stream = Main.class.getResourceAsStream(PROPERTIES_FILE)) {
       properties.load(stream);
-    } catch (Exception ex) {
+    } catch (IOException ex) {
       fatalExit(
           ex,
           PeerException.FatalCode.ERROR_LOADING_PROPERTIES,
@@ -969,9 +976,10 @@ public class Main implements Callable<Integer> {
         // For absolute paths, extract base directory
         if (walPath.startsWith("/")) {
           Path p = Paths.get(walPath);
-          // Only set base_dir if not already configured
-          if (!properties.containsKey("wal.chronicle.base_dir")) {
-            properties.setProperty("wal.chronicle.base_dir", p.getParent().toString());
+          Path parent = p.getParent();
+          // Only set base_dir if not already configured and parent exists
+          if (parent != null && !properties.containsKey("wal.chronicle.base_dir")) {
+            properties.setProperty("wal.chronicle.base_dir", parent.toString());
           }
         }
       } else {
@@ -1468,9 +1476,12 @@ public class Main implements Callable<Integer> {
 
     initLogging();
     if (logger.isDebugEnabled()) {
-      List<String> rawArgs = spec.commandLine().getParseResult().originalArgs();
-      // print all args excluding the 'run' subcommand
-      logger.debug("Starting peer with args: {}", rawArgs.subList(1, rawArgs.size()));
+      var parseResult = spec.commandLine().getParseResult();
+      if (parseResult != null) {
+        List<String> rawArgs = parseResult.originalArgs();
+        // print all args excluding the 'run' subcommand
+        logger.debug("Starting peer with args: {}", rawArgs.subList(1, rawArgs.size()));
+      }
     }
 
     // for async calls

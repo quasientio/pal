@@ -9,6 +9,7 @@
  */
 package com.quasient.pal.apps.quantized.rpc;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -19,6 +20,13 @@ import java.util.Locale;
 import java.util.Map;
 
 @SuppressWarnings("unused")
+@SuppressFBWarnings(
+    value = {
+      "CT_CONSTRUCTOR_THROW",
+      "PZLA_PREFER_ZERO_LENGTH_ARRAYS",
+      "UPM_UNCALLED_PRIVATE_METHOD"
+    },
+    justification = "Test app - null array return and uncalled methods intentional for testing")
 public class Methods {
 
   public final Integer anInt = 4;

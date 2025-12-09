@@ -9,6 +9,7 @@
  */
 package com.quasient.pal.messages;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Arrays;
 import java.util.Objects;
 import org.apache.kafka.common.header.Header;
@@ -19,6 +20,9 @@ import org.apache.kafka.common.header.Header;
  * <p>This class encapsulates a key-value pair used to store header information associated with log
  * messages.
  */
+@SuppressFBWarnings(
+    value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"},
+    justification = "Kafka Header interface requires direct array access for performance")
 public class LogMessageHeader implements Header {
   /** the key of the header */
   private final String key;

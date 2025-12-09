@@ -11,6 +11,7 @@ package com.quasient.pal.apps.callbacks;
 
 import com.quasient.pal.common.lang.intercept.InterceptCallbackResponse;
 import com.quasient.pal.common.lang.intercept.InterceptContext;
+import java.util.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,7 +38,7 @@ public class BeforeCallbackHandlers {
     Object[] args = ctx.getArgs();
     if (args.length > 0 && args[0] instanceof String) {
       String original = (String) args[0];
-      String uppercased = original.toUpperCase();
+      String uppercased = original.toUpperCase(Locale.ROOT);
       ctx.setArg(0, uppercased);
       logger.info("uppercaseFirstArg: {} -> {}", original, uppercased);
     }
@@ -57,8 +58,8 @@ public class BeforeCallbackHandlers {
     if (args.length >= 2 && args[0] instanceof String && args[1] instanceof String) {
       String original0 = (String) args[0];
       String original1 = (String) args[1];
-      String uppercased0 = original0.toUpperCase();
-      String uppercased1 = original1.toUpperCase();
+      String uppercased0 = original0.toUpperCase(Locale.ROOT);
+      String uppercased1 = original1.toUpperCase(Locale.ROOT);
       ctx.setArg(0, uppercased0);
       ctx.setArg(1, uppercased1);
       logger.info(

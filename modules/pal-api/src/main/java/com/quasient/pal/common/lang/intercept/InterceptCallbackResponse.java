@@ -9,6 +9,7 @@
  */
 package com.quasient.pal.common.lang.intercept;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import javax.annotation.Nullable;
 
 /**
@@ -56,6 +57,9 @@ import javax.annotation.Nullable;
  * @see InterceptCallback
  * @see InterceptContext
  */
+@SuppressFBWarnings(
+    value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"},
+    justification = "Internal API - exception is intentionally passed by reference")
 public class InterceptCallbackResponse {
 
   /**

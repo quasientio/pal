@@ -18,6 +18,7 @@ import com.quasient.pal.common.directory.events.InterceptNodeListener;
 import com.quasient.pal.common.directory.nodes.InterceptRequest;
 import com.quasient.pal.common.directory.nodes.LogInfo;
 import com.quasient.pal.common.directory.nodes.PeerInfo;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.etcd.jetcd.ByteSequence;
 import io.etcd.jetcd.Client;
 import io.etcd.jetcd.KV;
@@ -72,6 +73,10 @@ import org.slf4j.LoggerFactory;
  * functionalities to register, unregister, and query peers and logs, as well as manage intercept
  * requests.
  */
+@SuppressFBWarnings(
+    value = "CT_CONSTRUCTOR_THROW",
+    justification =
+        "etcd connection failure should propagate - caller handles initialization errors")
 public class PalDirectory {
 
   /** Logger instance for PalDirectory to log operations. */

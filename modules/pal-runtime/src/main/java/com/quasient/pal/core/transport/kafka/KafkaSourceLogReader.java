@@ -17,6 +17,7 @@ import com.quasient.pal.core.transport.SourceLogReader;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.messages.types.MessageFormatType;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -56,6 +57,9 @@ import zmq.ZError;
  * processes them based on their headers (e.g. message format and origin), and then forwards valid
  * messages for dispatching.
  */
+@SuppressFBWarnings(
+    value = {"CT_CONSTRUCTOR_THROW"},
+    justification = "Kafka reader - constructor throws on configuration errors")
 @Singleton
 public class KafkaSourceLogReader extends SourceLogReader {
 
@@ -137,17 +141,19 @@ public class KafkaSourceLogReader extends SourceLogReader {
       while (!shutdownRequested && !interrupted() && !socketError) {
         try {
           PublishedOffsetMsg msg = PublishedOffsetMsg.receive(offsetSubscriber, true);
-          assert msg != null;
-          skipOffsets.add(msg.getOffset());
+          if (msg == null) {
+            // ZMQ context probably closed - null returned from blocking receive
+            if (logger.isDebugEnabled()) {
+              logger.debug(
+                  "Received null during blocking read, ZMQ context probably closed. Breaking out.");
+            }
+            socketError = true;
+          } else {
+            skipOffsets.add(msg.getOffset());
+          }
         } catch (ClosedSelectorException ex) {
           if (logger.isDebugEnabled()) {
             logger.debug("Caught ClosedSelectorException. Breaking out.");
-          }
-          socketError = true;
-        } catch (NullPointerException ex) {
-          if (logger.isDebugEnabled()) {
-            logger.debug(
-                "Caught NPE during blocking read, ZMQ context probably closed. Breaking out.", ex);
           }
           socketError = true;
         } catch (ZMQException ex) {
@@ -443,7 +449,7 @@ public class KafkaSourceLogReader extends SourceLogReader {
         // get next offset to poll
         if (skipWrittenOffsets) {
           Long nextOffset = nextOffset();
-          if ((nextOffset != null) && (nextOffset > (lastOffsetRead + 1))) {
+          if (nextOffset > (lastOffsetRead + 1)) {
             if (logger.isDebugEnabled()) {
               logger.debug(
                   "Skipping received records. Jumping from offset: {} to: {}",
@@ -483,7 +489,7 @@ public class KafkaSourceLogReader extends SourceLogReader {
       // get next offset to poll
       if (skipWrittenOffsets) {
         Long nextOffset = nextOffset();
-        if ((nextOffset != null) && (nextOffset > (lastOffsetRead + 1))) {
+        if (nextOffset > (lastOffsetRead + 1)) {
           if (logger.isDebugEnabled()) {
             logger.debug("Jumping from offset: {} to: {}", lastOffsetRead, nextOffset);
           }

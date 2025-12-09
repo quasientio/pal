@@ -9,6 +9,7 @@
  */
 package com.quasient.pal.apps.quantized.intercept;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,6 +20,9 @@ import java.util.List;
  * static methods, constructors, instance field operations, and static field operations.
  */
 @SuppressWarnings("unused")
+@SuppressFBWarnings(
+    value = "CT_CONSTRUCTOR_THROW",
+    justification = "Test app - constructor exception part of test scenario")
 public class InterceptableApp {
   /** Instance field for testing EXEC_GET_FIELD and EXEC_PUT_FIELD interception. */
   volatile Integer counter = 1;

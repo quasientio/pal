@@ -10,12 +10,16 @@
 package com.quasient.pal.dsl.jsonrpc;
 
 import com.quasient.pal.common.objects.ObjectRef;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import javax.annotation.Nullable;
 
 /**
  * Represents an RPC chain with an object instance, enabling instance method invocations and field
  * access operations to be queued and executed within the RPC framework.
  */
+@SuppressFBWarnings(
+    value = "EI_EXPOSE_REP2",
+    justification = "DSL builder - RpcChain reference is intentionally shared for chain operations")
 public class RpcChainInstance {
 
   /**

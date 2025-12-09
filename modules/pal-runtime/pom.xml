@@ -146,6 +146,12 @@
             <artifactId>pal-weave</artifactId>
         </dependency>
 
+        <!-- STATIC ANALYSIS -->
+        <dependency>
+            <groupId>com.github.spotbugs</groupId>
+            <artifactId>spotbugs-annotations</artifactId>
+        </dependency>
+
         <!-- OTHER DEPENDENCIES -->
         <dependency>
             <groupId>junit</groupId>

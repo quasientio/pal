@@ -16,6 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.quasient.pal.core.execution.java.CustomClassloader;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ClassInfo;
 import io.github.classgraph.FieldInfo;
@@ -51,6 +52,9 @@ import org.slf4j.LoggerFactory;
  * inherited members from ancestor classes and interfaces.
  */
 @Singleton
+@SuppressFBWarnings(
+    value = "EI_EXPOSE_REP2",
+    justification = "Serializer requires reference to custom classloader for class resolution")
 public class ClassMetadataSerializer {
 
   /** Logger for reporting scanning and serialization events. */

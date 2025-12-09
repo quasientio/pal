@@ -10,6 +10,7 @@
 package com.quasient.pal.messages.jsonrpc;
 
 import com.quasient.pal.serdes.jsonrpc.JsonRpcRequestValidator;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Objects;
 
 /**
@@ -18,6 +19,9 @@ import java.util.Objects;
  * <p>This class encapsulates the details of a JSON-RPC request, including the method name,
  * parameters, and identifier.
  */
+@SuppressFBWarnings(
+    value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"},
+    justification = "JSON-RPC DTO - mutable by design for serialization")
 public class JsonRpcRequest extends JsonRpcMessage {
 
   /** The name of the method to be invoked. */

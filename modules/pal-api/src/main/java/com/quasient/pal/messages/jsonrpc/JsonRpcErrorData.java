@@ -10,6 +10,7 @@
 package com.quasient.pal.messages.jsonrpc;
 
 import com.google.gson.annotations.SerializedName;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nullable;
@@ -22,6 +23,9 @@ import javax.annotation.Nullable;
  * request ID, and the origin of the error. It supports nested error causes and can be
  * serialized/deserialized using Gson.
  */
+@SuppressFBWarnings(
+    value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"},
+    justification = "JSON-RPC DTO - mutable by design for serialization")
 public class JsonRpcErrorData {
 
   /** Constructs a new instance of {@code JsonRpcErrorData} with default values. */

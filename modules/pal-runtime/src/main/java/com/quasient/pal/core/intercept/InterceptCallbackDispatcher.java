@@ -25,6 +25,7 @@ import com.quasient.pal.serdes.Unwrapper;
 import com.quasient.pal.serdes.colfer.ColferUtils;
 import com.quasient.pal.serdes.colfer.ExceptionSerdes;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.util.ArrayList;
@@ -110,6 +111,9 @@ import org.zeromq.ZMQ.Socket;
  * intercepts are designed for observation and argument transformation, not for execution control.
  */
 @Singleton
+@SuppressFBWarnings(
+    value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"},
+    justification = "Dispatcher pattern with shared mutable state for callback handling")
 public class InterceptCallbackDispatcher {
 
   /** Logger instance for debugging callback dispatch operations. */

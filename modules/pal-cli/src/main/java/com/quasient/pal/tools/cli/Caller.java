@@ -35,6 +35,7 @@ import com.quasient.pal.serdes.colfer.ColferUtils;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
 import com.quasient.pal.serdes.jsonrpc.JsonRpcSerializer;
 import com.quasient.pal.serdes.jsonrpc.JsonSerializationException;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -73,6 +74,9 @@ import picocli.CommandLine.ParentCommand;
     separator = " ",
     sortOptions = false,
     optionListHeading = "%nOptions:%n")
+@SuppressFBWarnings(
+    value = {"DLS_DEAD_LOCAL_STORE", "URF_UNREAD_FIELD"},
+    justification = "Unused field from picocli")
 public class Caller extends AbstractPalSubcommand {
 
   /** Logger instance. */
@@ -630,6 +634,10 @@ public class Caller extends AbstractPalSubcommand {
    *
    * @throws Exception if an error occurs during the sending of requests.
    */
+  @SuppressFBWarnings(
+      value = "REC_CATCH_EXCEPTION",
+      justification =
+          "Catches exceptions from sendRequestsWithSingleClient methods that throw Exception")
   private void sendRequestsWithManyClients() throws Exception {
 
     if (numberOfThreads <= 1) {
@@ -841,7 +849,7 @@ public class Caller extends AbstractPalSubcommand {
           // Not found in directory, fall through to direct mode
         }
       }
-    } catch (Exception e) {
+    } catch (RuntimeException | ExecutionException | InterruptedException e) {
       logger.debug("PalDirectory not available: {}", e.getMessage());
     }
 

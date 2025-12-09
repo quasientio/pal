@@ -11,6 +11,7 @@ package com.quasient.pal.common.lang.intercept;
 
 import static java.lang.String.format;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -69,6 +70,9 @@ public final class InterceptableMethodCall extends Interceptable {
    *
    * @return the list of parameter type names
    */
+  @SuppressFBWarnings(
+      value = "EI_EXPOSE_REP",
+      justification = "Internal API - parameter types list is immutable after construction")
   public List<String> getParameterTypes() {
     return parameterTypes;
   }

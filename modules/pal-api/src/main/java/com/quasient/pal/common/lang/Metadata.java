@@ -9,6 +9,7 @@
  */
 package com.quasient.pal.common.lang;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -128,6 +129,9 @@ public class Metadata {
    * Contains metadata about a Java class including its structure, hierarchy, and relationships.
    * Used to represent class information in serialized form (JSON) for static analysis.
    */
+  @SuppressFBWarnings(
+      value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"},
+      justification = "Internal DTO - intentionally exposes mutable state for serialization")
   public static class ClassInfo {
     /** Fully qualified class name */
     String className;
@@ -512,6 +516,9 @@ public class Metadata {
   }
 
   /** Represents metadata about a constructor declaration */
+  @SuppressFBWarnings(
+      value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"},
+      justification = "Internal DTO - intentionally exposes mutable state for serialization")
   public static class ConstructorInfo {
     /** Constructor name (matches declaring class simple name) */
     String name;
@@ -592,6 +599,9 @@ public class Metadata {
   }
 
   /** Represents metadata about a method declaration or inheritance */
+  @SuppressFBWarnings(
+      value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"},
+      justification = "Internal DTO - intentionally exposes mutable state for serialization")
   public static class MethodInfo {
     /** Method name as declared in source code */
     String name;

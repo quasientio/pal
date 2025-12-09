@@ -9,6 +9,7 @@
  */
 package com.quasient.pal.core.execution.java;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -28,6 +29,9 @@ import java.util.Map;
  * collections, and maps to the required types. Advanced conversion cases (e.g. BigInteger or
  * special parameterized types) might need further error handling as noted by the TODO comments.
  */
+@SuppressFBWarnings(
+    value = "FE_FLOATING_POINT_EQUALITY",
+    justification = "Comparing double to its int/long cast validates fractional part is zero")
 public final class ParameterAdaptationUtils {
 
   /** Private constructor to prevent instantiation. */

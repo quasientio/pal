@@ -22,6 +22,7 @@ import com.quasient.pal.serdes.colfer.ColferUtils;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Set;
 import java.util.UUID;
@@ -167,7 +168,12 @@ public class ControlMessageDispatcher {
         logger.debug("Garbage collector invoked successfully.");
       }
       return true;
-    } catch (Exception e) {
+    } catch (ClassNotFoundException
+        | NoSuchMethodException
+        | SecurityException
+        | IllegalAccessException
+        | IllegalArgumentException
+        | InvocationTargetException e) {
       logger.error("Error while invoking Runtime.gc()", e);
       return false;
     }

@@ -13,6 +13,7 @@ import com.quasient.pal.common.lang.reflect.Void;
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.messages.colfer.Obj;
 import com.quasient.pal.serdes.Unwrapper;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -30,6 +31,9 @@ import org.aspectj.lang.reflect.FieldSignature;
  * extends {@link FieldOpDispatcher} and overrides the necessary methods to support field-specific
  * operations.
  */
+@SuppressFBWarnings(
+    value = {"BC_UNCONFIRMED_CAST", "DP_DO_INSIDE_DO_PRIVILEGED"},
+    justification = "Type validated before cast; setAccessible needed for field access in runtime")
 public abstract class SetFieldDispatcher extends FieldOpDispatcher {
 
   /**
@@ -43,12 +47,13 @@ public abstract class SetFieldDispatcher extends FieldOpDispatcher {
    * @param args a list of message arguments, which are ignored in this context.
    * @param value the new value to assign to the field.
    * @return a {@code Void} instance indicating the completion of the operation.
-   * @throws Exception if a reflective operation fails during the field assignment.
+   * @throws ReflectiveOperationException if a reflective operation fails during the field
+   *     assignment.
    */
   @Override
   protected Object invokeIncoming(
       AccessibleObject accessibleObject, Object target, List<MessageArgument> args, Object value)
-      throws Exception {
+      throws ReflectiveOperationException {
 
     // discard args
     return invokeIncoming(accessibleObject, target, value);
@@ -65,10 +70,11 @@ public abstract class SetFieldDispatcher extends FieldOpDispatcher {
    * @param target the object whose field is being modified.
    * @param value the value to assign to the field; may be {@code null}.
    * @return a {@code Void} instance to denote that the operation has been completed.
-   * @throws Exception if the field assignment fails.
+   * @throws IllegalAccessException if the field assignment fails.
    */
   private Object invokeIncoming(
-      AccessibleObject accessibleObject, Object target, @Nullable Object value) throws Exception {
+      AccessibleObject accessibleObject, Object target, @Nullable Object value)
+      throws IllegalAccessException {
     if (logger.isTraceEnabled()) {
       logger.trace(
           "invokeIncoming:in w/ accessibleObject: {}, target: {}, value: {}",

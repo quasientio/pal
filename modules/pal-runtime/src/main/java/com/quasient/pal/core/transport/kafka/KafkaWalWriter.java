@@ -20,6 +20,7 @@ import com.quasient.pal.messages.LogMessageHeader;
 import com.quasient.pal.messages.OutboundMsg;
 import com.quasient.pal.messages.types.MessageFormatType;
 import com.quasient.pal.messages.types.MessageType;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import java.util.ArrayDeque;
@@ -59,6 +60,9 @@ import zmq.ZMQ;
  *       poison pill.
  * </ul>
  */
+@SuppressFBWarnings(
+    value = {"CT_CONSTRUCTOR_THROW", "EI_EXPOSE_REP2"},
+    justification = "WAL writer - constructor throws on configuration errors; shared log reference")
 public class KafkaWalWriter extends WalWriter {
 
   /** Logger instance. */
@@ -455,6 +459,9 @@ public class KafkaWalWriter extends WalWriter {
    * @param message the byte array payload of the message.
    * @param messageId unique identifier for the message.
    */
+  @SuppressFBWarnings(
+      value = "DLS_DEAD_LOCAL_STORE",
+      justification = "Unused variable holds Future to force async send; callback handles result")
   private void sendToKafka(MessageType messageType, byte[] message, String messageId) {
 
     // Build record with immutable base headers; Kafka will copy them into a RecordHeaders

@@ -24,6 +24,7 @@ import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.messages.types.MessageType;
 import com.quasient.pal.serdes.colfer.ColferUtils;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -57,6 +58,9 @@ import org.zeromq.ZMQ.Socket;
  *   <li>Relay a session command.
  * </ul>
  */
+@SuppressFBWarnings(
+    value = {"CT_CONSTRUCTOR_THROW", "EI_EXPOSE_REP2"},
+    justification = "Gateway pattern - shared references to ZMQ context and WAL writer")
 @Singleton
 public class OutboundMessageGateway {
 

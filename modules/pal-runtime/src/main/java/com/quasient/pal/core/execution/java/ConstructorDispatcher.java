@@ -22,6 +22,7 @@ import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.Parameter;
 import com.quasient.pal.messages.types.MessageType;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -40,6 +41,9 @@ import org.aspectj.lang.ProceedingJoinPoint;
  * constructors based on incoming execution messages. It builds pre- and post-execution messages to
  * encapsulate the invocation details and any exceptions that may occur.
  */
+@SuppressFBWarnings(
+    value = "BC_UNCONFIRMED_CAST",
+    justification = "Type already validated before cast in dispatcher pattern")
 @Singleton
 public class ConstructorDispatcher extends BaseExecMessageDispatcher {
 
@@ -176,12 +180,13 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
    * @param args list of message arguments to be adapted for the constructor call
    * @param value a pre-provided value (ignored in this context)
    * @return the object created by invoking the constructor with adapted arguments
-   * @throws Exception if any error occurs during argument adaptation or constructor invocation
+   * @throws ReflectiveOperationException if any error occurs during argument adaptation or
+   *     constructor invocation
    */
   @Override
   protected Object invokeIncoming(
       AccessibleObject accessibleObject, Object target, List<MessageArgument> args, Object value)
-      throws Exception {
+      throws ReflectiveOperationException {
     // discard target and value
     return invokeIncoming(accessibleObject, args);
   }
@@ -196,10 +201,12 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
    * @param accessibleObject the reflective constructor to be invoked
    * @param deserializedArgs the list of arguments deserialized from the incoming message
    * @return a new object instance created by the constructor
-   * @throws Exception if instantiation fails or arguments are incompatible with the constructor
+   * @throws ReflectiveOperationException if instantiation fails or arguments are incompatible with
+   *     the constructor
    */
   private Object invokeIncoming(
-      AccessibleObject accessibleObject, List<MessageArgument> deserializedArgs) throws Exception {
+      AccessibleObject accessibleObject, List<MessageArgument> deserializedArgs)
+      throws ReflectiveOperationException {
     if (logger.isTraceEnabled()) {
       logger.trace(
           "invokeIncoming:in w/ accessibleObject: {}, args: {}",

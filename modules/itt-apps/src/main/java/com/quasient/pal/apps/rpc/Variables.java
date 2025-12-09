@@ -9,7 +9,20 @@
  */
 package com.quasient.pal.apps.rpc;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 @SuppressWarnings("unused")
+@SuppressFBWarnings(
+    value = {
+      "MS_SHOULD_BE_FINAL",
+      "SS_SHOULD_BE_STATIC",
+      "URF_UNREAD_FIELD",
+      "URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD",
+      "UUF_UNUSED_FIELD",
+      "UUF_UNUSED_PUBLIC_OR_PROTECTED_FIELD"
+    },
+    justification =
+        "Test fixture - fields intentionally unused and mutable, accessed via RPC for testing")
 public class Variables {
 
   // instance variables

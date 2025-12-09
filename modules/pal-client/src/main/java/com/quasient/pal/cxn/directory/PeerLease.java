@@ -9,6 +9,7 @@
  */
 package com.quasient.pal.cxn.directory;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.etcd.jetcd.Lease;
 import java.util.concurrent.ScheduledFuture;
 
@@ -18,6 +19,9 @@ import java.util.concurrent.ScheduledFuture;
  *
  * <p>Upon closing, the scheduled keep-alive task is canceled and the etcd lease is revoked.
  */
+@SuppressFBWarnings(
+    value = {"DE_MIGHT_IGNORE", "DLS_DEAD_LOCAL_STORE"},
+    justification = "close() intentionally ignores revoke failures - best-effort cleanup")
 public class PeerLease implements AutoCloseable {
 
   /** The identifier of the etcd lease. */

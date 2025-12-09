@@ -17,6 +17,7 @@ import com.quasient.pal.common.directory.nodes.LogInfo.LogType;
 import com.quasient.pal.common.directory.nodes.PeerInfo;
 import com.quasient.pal.common.util.Strings;
 import com.quasient.pal.cxn.chronicle.ChronicleLogUtil;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -66,6 +67,9 @@ import picocli.CommandLine.ParentCommand;
     sortOptions = false,
     optionListHeading = "%nOptions:%n",
     commandListHeading = "%nCommands:%n")
+@SuppressFBWarnings(
+    value = {"DM_EXIT", "URF_UNREAD_FIELD"},
+    justification = "CLI command - System.exit intentional; helpRequested field set by picocli")
 public class List extends AbstractPalSubcommand {
 
   /** The parent command to which this subcommand belongs. */
@@ -228,19 +232,20 @@ public class List extends AbstractPalSubcommand {
    * Retrieves the set of logs present in the specified Kafka servers.
    *
    * @param bootstrapServers the Kafka bootstrap servers
-   * @return a set of {@link LogInfo} representing the logs in the servers
+   * @return a set of {@link LogInfo} representing the logs in the servers, or empty set on error
    */
   private Set<LogInfo> getLogsInKafkaServers(String bootstrapServers) {
-    Set<LogInfo> logsInServers = null;
     try {
-      logsInServers =
-          getAdminClientForServers(bootstrapServers).listTopics().names().get().stream()
-              .map(name -> new LogInfo(name, bootstrapServers))
-              .collect(Collectors.toSet());
-    } catch (InterruptedException | ExecutionException e) {
+      return getAdminClientForServers(bootstrapServers).listTopics().names().get().stream()
+          .map(name -> new LogInfo(name, bootstrapServers))
+          .collect(Collectors.toSet());
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      logger.error("Interrupted while listing logs in kafka", e);
+    } catch (ExecutionException e) {
       logger.error("Error listing logs in kafka", e);
     }
-    return logsInServers;
+    return Collections.emptySet();
   }
 
   /**
@@ -317,8 +322,11 @@ public class List extends AbstractPalSubcommand {
               }
               // If endOffset is null, leave it unset
             }
-          } catch (Exception e) {
-            logger.error("Error setting offset properties for List of LogInfo's", e);
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            logger.error("Interrupted while setting offset properties for LogInfos", e);
+          } catch (ExecutionException e) {
+            logger.error("Error setting offset properties for LogInfos", e);
           }
         });
   }
@@ -446,10 +454,13 @@ public class List extends AbstractPalSubcommand {
    */
   private void print(LogInfo logInfo) {
     final String logInfoLine;
-    String logName =
-        logInfo.getLogType() == LogType.CHRONICLE
-            ? Paths.get(logInfo.getName()).getFileName().toString()
-            : logInfo.getName();
+    String logName;
+    if (logInfo.getLogType() == LogType.CHRONICLE) {
+      Path fileName = Paths.get(logInfo.getName()).getFileName();
+      logName = fileName != null ? fileName.toString() : logInfo.getName();
+    } else {
+      logName = logInfo.getName();
+    }
     if (longListing) {
       logInfoLine =
           format(
@@ -595,7 +606,7 @@ public class List extends AbstractPalSubcommand {
                         Example: pal ls -d localhost:2379""");
         return 1;
       }
-    } catch (Exception e) {
+    } catch (RuntimeException e) {
       err.println(
           """
                       Error: Cannot connect to PAL directory.

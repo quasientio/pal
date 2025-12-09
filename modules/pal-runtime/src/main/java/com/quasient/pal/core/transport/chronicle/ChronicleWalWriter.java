@@ -16,6 +16,7 @@ import com.quasient.pal.common.directory.nodes.LogInfo;
 import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import com.quasient.pal.core.transport.WalWriter;
 import com.quasient.pal.messages.OutboundMsg;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -63,6 +64,10 @@ import zmq.ZMQ;
  *   <li>A simple binary layout is written (see {@link OutboundMsg}).
  * </ul>
  */
+@SuppressFBWarnings(
+    value = {"CT_CONSTRUCTOR_THROW", "EI_EXPOSE_REP2", "UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"},
+    justification =
+        "WAL writer - constructor throws on configuration errors; two-phase initialization")
 @Singleton
 public class ChronicleWalWriter extends WalWriter {
 

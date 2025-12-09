@@ -62,7 +62,7 @@ public class KafkaLogMessageSerializer implements Serializer<LogMessage<?>> {
    *
    * @param topic the Kafka topic associated with the serialized data
    * @param logMessage the log message to serialize
-   * @return the serialized byte array, or {@code null} if {@code logMessage} is {@code null}
+   * @return the serialized byte array, or an empty byte array if {@code logMessage} is {@code null}
    */
   @Override
   public byte[] serialize(String topic, LogMessage<?> logMessage) {
@@ -84,14 +84,14 @@ public class KafkaLogMessageSerializer implements Serializer<LogMessage<?>> {
    * @param topic the Kafka topic associated with the serialized data
    * @param headers the Kafka record headers to include, or {@code null} to use default headers
    * @param logMessage the log message to serialize
-   * @return the serialized byte array, or {@code null} if {@code logMessage} is {@code null} or
-   *     serialization fails
+   * @return the serialized byte array, or an empty byte array if {@code logMessage} is {@code null}
+   *     or serialization fails
    * @throws IllegalArgumentException if the content type of {@code logMessage} is unsupported
    */
   @Override
   public byte[] serialize(String topic, Headers headers, LogMessage<?> logMessage) {
     if (logMessage == null) {
-      return null;
+      return new byte[0];
     }
 
     Object content = logMessage.getContent();
@@ -126,7 +126,7 @@ public class KafkaLogMessageSerializer implements Serializer<LogMessage<?>> {
         json = JsonRpcSerializer.toJson(jsonRpcMessage);
       } catch (JsonSerializationException e) {
         logger.error("Failed to serialize JsonRpcMessage: {}", jsonRpcMessage, e);
-        return null;
+        return new byte[0];
       }
       data = json.getBytes(StandardCharsets.UTF_8);
     } else {
@@ -152,16 +152,16 @@ public class KafkaLogMessageSerializer implements Serializer<LogMessage<?>> {
   /**
    * Serializes the given {@code Marshallable} message into a byte array using Colfer serialization.
    *
-   * <p>If the {@code message} is {@code null}, returns {@code null}. Otherwise, it determines the
-   * required buffer size, marshals the message into the buffer, and returns the resulting byte
-   * array trimmed to the actual data size.
+   * <p>If the {@code message} is {@code null}, returns an empty byte array. Otherwise, it
+   * determines the required buffer size, marshals the message into the buffer, and returns the
+   * resulting byte array trimmed to the actual data size.
    *
    * @param message the message to serialize
-   * @return the serialized byte array, or {@code null} if {@code message} is {@code null}
+   * @return the serialized byte array, or an empty byte array if {@code message} is {@code null}
    */
   private static byte[] colferMessageToBytes(Marshallable message) {
     if (message == null) {
-      return null;
+      return new byte[0];
     }
 
     final int maxSize = message.marshalFit();

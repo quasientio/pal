@@ -213,12 +213,12 @@ public final class MessageBuilder {
    * Converts a parameter map to an array of {@link Parameter} objects.
    *
    * @param params the map of parameter names to their respective values
-   * @return an array of {@code Parameter} objects representing the key-value pairs, or {@code null}
-   *     if the input map is {@code null}
+   * @return an array of {@code Parameter} objects representing the key-value pairs, or an empty
+   *     array if the input map is {@code null}
    */
   private static Parameter[] paramMapToParameters(Map<String, Object> params) {
     if (params == null) {
-      return null;
+      return new Parameter[0];
     }
 
     Parameter[] keyValues = new Parameter[params.size()];
@@ -428,10 +428,8 @@ public final class MessageBuilder {
     }
     // stack trace
     StackTraceElement[] stackTrace = throwable.getStackTrace();
-    if (stackTrace != null) {
-      throwableMsg.setStackTraceElements(
-          Arrays.stream(stackTrace).map(StackTraceElement::toString).toArray(String[]::new));
-    }
+    throwableMsg.setStackTraceElements(
+        Arrays.stream(stackTrace).map(StackTraceElement::toString).toArray(String[]::new));
     // fill in cause(s) -- recursive
     if (throwable.getCause() != null) {
       throwableMsg.setCause(buildThrowableMessage(throwable.getCause()));
@@ -804,12 +802,8 @@ public final class MessageBuilder {
     final FieldSignature fs = (FieldSignature) context.getSignature();
 
     // ---- cached flyweights (no alloc) ----
-    // Prefer the actual Field for stronger cache hit; fall back to (clazz,name,modifiers).
     com.quasient.pal.messages.colfer.Class clazzFly = getWrappedClass(fs.getDeclaringType());
-    com.quasient.pal.messages.colfer.Field fieldFly =
-        (fs.getField() != null)
-            ? getWrappedField(fs.getField())
-            : getWrappedField(fs.getDeclaringType(), fs.getName(), fs.getModifiers());
+    com.quasient.pal.messages.colfer.Field fieldFly = getWrappedField(fs.getField());
 
     // ---- optional source context (reuse sc.cctx + sc.senderObj) ----
     com.quasient.pal.messages.colfer.Context cctxBean = TlScratchHolder.cctx();
@@ -1027,7 +1021,8 @@ public final class MessageBuilder {
    * @param context the execution context containing field signature information
    * @param type the type of field operation completion message to build
    * @return an {@code ExecMessage} representing the field operation completion
-   * @throws IllegalArgumentException if the completion type is unexpected
+   * @throws IllegalArgumentException if accessibleObject is not a Field, or if the completion type
+   *     is unexpected
    */
   public ExecMessage buildFieldOpDoneEphemeral(
       AccessibleObject accessibleObject, Context context, MessageType type) {
@@ -1036,17 +1031,21 @@ public final class MessageBuilder {
     fillExecHeader(m);
 
     final FieldSignature fs = (FieldSignature) context.getSignature();
+    if (!(accessibleObject instanceof Field field)) {
+      throw new IllegalArgumentException(
+          "Expected java.lang.reflect.Field, got: " + accessibleObject.getClass());
+    }
     switch (type) {
       case EXEC_PUT_FIELD_DONE -> {
         final InstanceFieldPutDone ifpd = TlScratchHolder.ifpd();
         ifpd.clazz = getWrappedClass(fs.getDeclaringType());
-        ifpd.field = getWrappedField((Field) accessibleObject); // java.lang.reflect.Field
+        ifpd.field = getWrappedField(field);
         m.instanceFieldPutDone = ifpd;
       }
       case EXEC_PUT_STATIC_DONE -> {
         final StaticFieldPutDone sfpd = TlScratchHolder.sfpd();
         sfpd.clazz = getWrappedClass(fs.getDeclaringType());
-        sfpd.field = getWrappedField((Field) accessibleObject);
+        sfpd.field = getWrappedField(field);
         m.staticFieldPutDone = sfpd;
       }
       default -> throw new IllegalArgumentException("Unexpected field op done type: " + type);
@@ -1265,6 +1264,8 @@ public final class MessageBuilder {
    * @param isVoid {@code true} if the method has a void return type, otherwise {@code false}
    * @param responseToId the message ID this {@code ExecMessage} is responding to
    * @return an {@code ExecMessage} representing the return value
+   * @throws IllegalArgumentException if accessibleObject is not a Member (Field, Method, or
+   *     Constructor)
    */
   @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public ExecMessage buildReturnValue(
@@ -1276,7 +1277,11 @@ public final class MessageBuilder {
 
     final ReturnValue valueMessage = new ReturnValue();
 
-    Class<?> declaringClass = ((Member) accessibleObject).getDeclaringClass();
+    if (!(accessibleObject instanceof Member member)) {
+      throw new IllegalArgumentException(
+          "Expected Member (Field, Method, or Constructor), got: " + accessibleObject.getClass());
+    }
+    Class<?> declaringClass = member.getDeclaringClass();
 
     // set 'object'
     if (!isVoid) {
@@ -1549,10 +1554,15 @@ public final class MessageBuilder {
    * @param context the execution context containing field signature information
    * @param type the type of field operation completion message to build
    * @return an {@code ExecMessage} representing the field operation completion
-   * @throws IllegalArgumentException if the completion type is unexpected
+   * @throws IllegalArgumentException if accessibleObject is not a Field, or if the completion type
+   *     is unexpected
    */
   public ExecMessage buildFieldOpDone(
       UUID peerUuid, AccessibleObject accessibleObject, Context context, MessageType type) {
+    if (!(accessibleObject instanceof Field field)) {
+      throw new IllegalArgumentException(
+          "Expected java.lang.reflect.Field, got: " + accessibleObject.getClass());
+    }
     final FieldSignature fieldSignature = (FieldSignature) context.getSignature();
     final ExecMessage execMessage = newExecMessage(peerUuid);
     switch (type) {
@@ -1560,12 +1570,12 @@ public final class MessageBuilder {
           execMessage.setInstanceFieldPutDone(
               new InstanceFieldPutDone()
                   .withClazz(getWrappedClass(fieldSignature.getDeclaringType()))
-                  .withField(getWrappedField((Field) accessibleObject)));
+                  .withField(getWrappedField(field)));
       case EXEC_PUT_STATIC_DONE ->
           execMessage.setStaticFieldPutDone(
               new StaticFieldPutDone()
                   .withClazz(getWrappedClass(fieldSignature.getDeclaringType()))
-                  .withField(getWrappedField((Field) accessibleObject)));
+                  .withField(getWrappedField(field)));
       default -> throw new IllegalArgumentException("Unexpected field op done type: " + type);
     }
     return execMessage;
@@ -1579,17 +1589,22 @@ public final class MessageBuilder {
    * @param instanceFieldPutId the ID of the instance field put operation
    * @param responseToId the message ID this {@code ExecMessage} is responding to
    * @return an {@code ExecMessage} representing the completion of the instance field put operation
+   * @throws IllegalArgumentException if accessibleObject is not a Field
    */
   public ExecMessage buildPutObjectDone(
       UUID peerUuid,
       AccessibleObject accessibleObject,
       String instanceFieldPutId,
       String responseToId) {
+    if (!(accessibleObject instanceof Field field)) {
+      throw new IllegalArgumentException(
+          "Expected java.lang.reflect.Field, got: " + accessibleObject.getClass());
+    }
     return newExecMessage(peerUuid, responseToId)
         .withInstanceFieldPutDone(
             new InstanceFieldPutDone()
-                .withClazz(getWrappedClass(((Field) accessibleObject).getDeclaringClass()))
-                .withField(getWrappedField((Field) accessibleObject))
+                .withClazz(getWrappedClass(field.getDeclaringClass()))
+                .withField(getWrappedField(field))
                 .withInstanceFieldPutId(instanceFieldPutId));
   }
 
@@ -1601,17 +1616,22 @@ public final class MessageBuilder {
    * @param staticFieldPutId the ID of the static field put operation
    * @param responseToId the message ID this {@code ExecMessage} is responding to
    * @return an {@code ExecMessage} representing the completion of the static field put operation
+   * @throws IllegalArgumentException if accessibleObject is not a Field
    */
   public ExecMessage buildPutStaticDone(
       UUID peerUuid,
       AccessibleObject accessibleObject,
       String staticFieldPutId,
       String responseToId) {
+    if (!(accessibleObject instanceof Field field)) {
+      throw new IllegalArgumentException(
+          "Expected java.lang.reflect.Field, got: " + accessibleObject.getClass());
+    }
     return newExecMessage(peerUuid, responseToId)
         .withStaticFieldPutDone(
             new StaticFieldPutDone()
-                .withClazz(getWrappedClass(((Field) accessibleObject).getDeclaringClass()))
-                .withField(getWrappedField((Field) accessibleObject))
+                .withClazz(getWrappedClass(field.getDeclaringClass()))
+                .withField(getWrappedField(field))
                 .withStaticFieldPutId(staticFieldPutId));
   }
 

@@ -10,6 +10,7 @@
 package com.quasient.pal.dsl.jsonrpc;
 
 import com.quasient.pal.common.objects.ObjectRef;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import javax.annotation.Nullable;
 
 /**
@@ -17,6 +18,9 @@ import javax.annotation.Nullable;
  * execute operations such as creating instances, invoking constructors/methods, and accessing
  * fields at a later stage.
  */
+@SuppressFBWarnings(
+    value = "EI_EXPOSE_REP",
+    justification = "DSL builder - args array is intentionally shared for chain operations")
 public class DeferredOperation {
   /** Enumerates the types of supported deferred operations. */
   public enum OpType {

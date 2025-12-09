@@ -11,6 +11,7 @@ package com.quasient.pal.common.directory.events;
 
 import com.google.common.base.Splitter;
 import com.quasient.pal.common.directory.nodes.InterceptRequest;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -38,6 +39,9 @@ import javax.annotation.Nullable;
  *     Type#INTERCEPT_ADDED}.
  * @see InterceptRequest
  */
+@SuppressFBWarnings(
+    value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"},
+    justification = "Internal event class - callers are trusted")
 public record InterceptEvent(
     @Nonnull InterceptEvent.Type type,
     @Nonnull String interceptPath,

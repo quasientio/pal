@@ -130,7 +130,7 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
       JsonPrimitive primitive = element.getAsJsonPrimitive();
       if (primitive.isNumber()) {
         double numValue = primitive.getAsDouble();
-        if (numValue == (int) numValue) {
+        if (Double.compare(numValue, (int) numValue) == 0) {
           argument.setValue((int) numValue);
         } else {
           argument.setValue(numValue);
@@ -286,7 +286,7 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
       case "java.lang.Integer", "int" -> {
         if (p.isNumber()) {
           double num = p.getAsDouble();
-          if (num == (int) num) {
+          if (Double.compare(num, (int) num) == 0) {
             return (int) num;
           } else {
             throw new JsonParseException("Non-integer numeric value for Integer type");
@@ -469,7 +469,7 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
           hasNonString = true;
         } else if (p.isNumber()) {
           double num = p.getAsDouble();
-          elements.add(num != (int) num ? num : (int) num);
+          elements.add(Double.compare(num, (int) num) != 0 ? num : (int) num);
           hasNonString = true;
         } else if (p.isString()) {
           String s = p.getAsString();
@@ -677,7 +677,7 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
       // Handle numeric types
       if (targetType == int.class || targetType == Integer.class) {
         double d = n.doubleValue();
-        if (d == (int) d) {
+        if (Double.compare(d, (int) d) == 0) {
           return n.intValue();
         } else {
           throw new JsonParseException("Non-integer value in int array");

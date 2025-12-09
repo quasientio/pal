@@ -9,12 +9,16 @@
  */
 package com.quasient.pal.core.runtime.objects;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Represents statistical data for an object lookup store, including metrics such as successful
  * lookups, total objects cleared, and maximum store size.
  */
+@SuppressFBWarnings(
+    value = "EI_EXPOSE_REP",
+    justification = "Stats container - atomic counters intentionally shared for monitoring")
 public final class ObjectLookupStoreStats {
 
   /** The count of successful store lookup operations. */
