@@ -250,6 +250,7 @@
                     <target>${java.version}</target>
                     <release>17</release>
                     <showWarnings>true</showWarnings>
+                    <failOnWarning>true</failOnWarning>
                     <encoding>UTF-8</encoding>
                     <!-- -Xep:JUnitIncompatibleType:OFF to disable error (reported as https://github.com/google/error-prone/issues/4376) -->
                     <compilerArgs>
