@@ -16,7 +16,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import com.quasient.pal.InterceptEndToEndTestSuite;
-import com.quasient.pal.apps.callbacks.BeforeCallbackHandlers;
+import com.quasient.pal.apps.callbacks.method.MethodHandlers;
 import com.quasient.pal.apps.quantized.intercept.StringMethods;
 import com.quasient.pal.common.directory.nodes.InterceptRequest;
 import com.quasient.pal.common.lang.intercept.InterceptType;
@@ -36,8 +36,8 @@ import org.junit.Test;
  * <p>These tests verify the end-to-end callback mechanism for BEFORE method intercepts, including
  * argument mutation via static callback methods invoked using reflection.
  *
- * <p>Tests use the shared intercept peer with StringMethods application class and
- * BeforeCallbackHandlers callback handlers (both in itt-apps module).
+ * <p>Tests use the shared intercept peer with StringMethods application class and MethodHandlers
+ * callback handlers (both in itt-apps module).
  */
 public class BeforeMethodCallbackIT extends AbstractInterceptIT {
 
@@ -54,7 +54,7 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
   public void testSingleArgumentMutation() throws Exception {
     logger.info("===== testSingleArgumentMutation: TEST STARTED =====");
 
-    final String callbackClass = BeforeCallbackHandlers.class.getName();
+    final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "uppercaseFirstArg";
     final String inputValue = "hello";
     final String expectedValue = "HELLO";
@@ -134,7 +134,7 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
   public void testMultiArgumentMutation() throws Exception {
     logger.info("===== testMultiArgumentMutation: TEST STARTED =====");
 
-    final String callbackClass = BeforeCallbackHandlers.class.getName();
+    final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "uppercaseBothArgs";
     final String inputA = "hello";
     final String inputB = "world";
@@ -217,7 +217,7 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
   public void testPrimitiveArgumentMutation() throws Exception {
     logger.info("===== testPrimitiveArgumentMutation: TEST STARTED =====");
 
-    final String callbackClass = BeforeCallbackHandlers.class.getName();
+    final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "doubleFirstIntArg";
     final int inputValue = 5;
     final int factor = 3;
@@ -298,7 +298,7 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
   public void testCallbackThrowsException() throws Exception {
     logger.info("===== testCallbackThrowsException: TEST STARTED =====");
 
-    final String callbackClass = BeforeCallbackHandlers.class.getName();
+    final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "throwException";
 
     // 1. Register a BEFORE intercept on echo method that throws exception
@@ -389,7 +389,7 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
   public void testNoOpCallback() throws Exception {
     logger.info("===== testNoOpCallback: TEST STARTED =====");
 
-    final String callbackClass = BeforeCallbackHandlers.class.getName();
+    final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "noOp";
     final String inputValue = "hello";
 
@@ -453,5 +453,320 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
         InterceptEndToEndTestSuite.waitForAppLogLine("noOp: no mutations"));
 
     logger.info("===== testNoOpCallback: TEST COMPLETED SUCCESSFULLY =====");
+  }
+
+  // ========================================================================
+  // Phase/Type Restriction Tests - BEFORE intercepts
+  // ========================================================================
+
+  /**
+   * Tests that getReturnValue() throws UnsupportedOperationException in BEFORE intercept.
+   *
+   * <p>Registers a BEFORE intercept with a callback that attempts to call getReturnValue(). The
+   * callback verifies that UnsupportedOperationException is thrown, then returns normally. If the
+   * exception is not thrown, the callback throws AssertionError and the test fails.
+   */
+  @Test
+  public void testGetReturnValueThrowsInBefore() throws Exception {
+    logger.info("===== testGetReturnValueThrowsInBefore: TEST STARTED =====");
+
+    final String callbackClass = MethodHandlers.class.getName();
+    final String callbackMethod = "attemptGetReturnValueInBefore";
+
+    interceptUuid = UUID.randomUUID();
+    InterceptRequest<InterceptableMethodCall> interceptRequest =
+        new InterceptRequest<>(
+            interceptUuid,
+            INTERCEPTOR_PEER_UUID,
+            InterceptType.BEFORE,
+            StringMethods.class.getName(),
+            callbackClass,
+            callbackMethod,
+            new InterceptableMethodCall("echo", Collections.singletonList("java.lang.String")));
+
+    register(interceptRequest);
+    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
+
+    ObjectRef stringMethodsInstance =
+        ObjectRef.from(
+            invoke(messageBuilder.buildEmptyConstructor(myPeerUuid, StringMethods.class.getName()))
+                .getReturnValue()
+                .getObject()
+                .getRef());
+
+    // Invoke method - callback should verify exception and return normally
+    ExecMessage response =
+        invoke(
+            messageBuilder.buildInstanceMethod(
+                myPeerUuid,
+                StringMethods.class.getName(),
+                "callEcho",
+                stringMethodsInstance,
+                new String[] {"java.lang.String"},
+                new Object[] {"hello"}));
+
+    // If callback threw AssertionError, propagate it
+    if (response.getRaisedThrowable() != null) {
+      fail(
+          "Callback failed: "
+              + response.getRaisedThrowable().getThrowable().getType()
+              + " - "
+              + response.getRaisedThrowable().getThrowable().getMessage());
+    }
+
+    assertTrue(
+        "Expected callback to log UnsupportedOperationException",
+        InterceptEndToEndTestSuite.waitForAppLogLine(
+            "attemptGetReturnValueInBefore: correctly threw UnsupportedOperationException"));
+
+    logger.info("===== testGetReturnValueThrowsInBefore: TEST COMPLETED SUCCESSFULLY =====");
+  }
+
+  /**
+   * Tests that getThrownException() throws UnsupportedOperationException in BEFORE intercept.
+   *
+   * <p>Registers a BEFORE intercept with a callback that attempts to call getThrownException(). The
+   * callback verifies that UnsupportedOperationException is thrown, then returns normally.
+   */
+  @Test
+  public void testGetThrownExceptionThrowsInBefore() throws Exception {
+    logger.info("===== testGetThrownExceptionThrowsInBefore: TEST STARTED =====");
+
+    final String callbackClass = MethodHandlers.class.getName();
+    final String callbackMethod = "attemptGetThrownExceptionInBefore";
+
+    interceptUuid = UUID.randomUUID();
+    InterceptRequest<InterceptableMethodCall> interceptRequest =
+        new InterceptRequest<>(
+            interceptUuid,
+            INTERCEPTOR_PEER_UUID,
+            InterceptType.BEFORE,
+            StringMethods.class.getName(),
+            callbackClass,
+            callbackMethod,
+            new InterceptableMethodCall("echo", Collections.singletonList("java.lang.String")));
+
+    register(interceptRequest);
+    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
+
+    ObjectRef stringMethodsInstance =
+        ObjectRef.from(
+            invoke(messageBuilder.buildEmptyConstructor(myPeerUuid, StringMethods.class.getName()))
+                .getReturnValue()
+                .getObject()
+                .getRef());
+
+    ExecMessage response =
+        invoke(
+            messageBuilder.buildInstanceMethod(
+                myPeerUuid,
+                StringMethods.class.getName(),
+                "callEcho",
+                stringMethodsInstance,
+                new String[] {"java.lang.String"},
+                new Object[] {"hello"}));
+
+    if (response.getRaisedThrowable() != null) {
+      fail(
+          "Callback failed: "
+              + response.getRaisedThrowable().getThrowable().getType()
+              + " - "
+              + response.getRaisedThrowable().getThrowable().getMessage());
+    }
+
+    assertTrue(
+        "Expected callback to log UnsupportedOperationException",
+        InterceptEndToEndTestSuite.waitForAppLogLine(
+            "attemptGetThrownExceptionInBefore: correctly threw UnsupportedOperationException"));
+
+    logger.info("===== testGetThrownExceptionThrowsInBefore: TEST COMPLETED SUCCESSFULLY =====");
+  }
+
+  /**
+   * Tests that setReturnValue() throws UnsupportedOperationException in BEFORE intercept.
+   *
+   * <p>Registers a BEFORE intercept with a callback that attempts to call setReturnValue(). The
+   * callback verifies that UnsupportedOperationException is thrown, then returns normally.
+   */
+  @Test
+  public void testSetReturnValueThrowsInBefore() throws Exception {
+    logger.info("===== testSetReturnValueThrowsInBefore: TEST STARTED =====");
+
+    final String callbackClass = MethodHandlers.class.getName();
+    final String callbackMethod = "attemptSetReturnValueInBefore";
+
+    interceptUuid = UUID.randomUUID();
+    InterceptRequest<InterceptableMethodCall> interceptRequest =
+        new InterceptRequest<>(
+            interceptUuid,
+            INTERCEPTOR_PEER_UUID,
+            InterceptType.BEFORE,
+            StringMethods.class.getName(),
+            callbackClass,
+            callbackMethod,
+            new InterceptableMethodCall("echo", Collections.singletonList("java.lang.String")));
+
+    register(interceptRequest);
+    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
+
+    ObjectRef stringMethodsInstance =
+        ObjectRef.from(
+            invoke(messageBuilder.buildEmptyConstructor(myPeerUuid, StringMethods.class.getName()))
+                .getReturnValue()
+                .getObject()
+                .getRef());
+
+    ExecMessage response =
+        invoke(
+            messageBuilder.buildInstanceMethod(
+                myPeerUuid,
+                StringMethods.class.getName(),
+                "callEcho",
+                stringMethodsInstance,
+                new String[] {"java.lang.String"},
+                new Object[] {"hello"}));
+
+    if (response.getRaisedThrowable() != null) {
+      fail(
+          "Callback failed: "
+              + response.getRaisedThrowable().getThrowable().getType()
+              + " - "
+              + response.getRaisedThrowable().getThrowable().getMessage());
+    }
+
+    assertTrue(
+        "Expected callback to log UnsupportedOperationException",
+        InterceptEndToEndTestSuite.waitForAppLogLine(
+            "attemptSetReturnValueInBefore: correctly threw UnsupportedOperationException"));
+
+    logger.info("===== testSetReturnValueThrowsInBefore: TEST COMPLETED SUCCESSFULLY =====");
+  }
+
+  /**
+   * Tests that setExceptionToThrow() works in BEFORE intercept via InterceptContext.
+   *
+   * <p>Registers a BEFORE intercept with a callback that calls ctx.setExceptionToThrow(). Verifies
+   * that the SecurityException is propagated to the caller, preventing method execution.
+   */
+  @Test
+  public void testSetExceptionToThrowWorksInBefore() throws Exception {
+    logger.info("===== testSetExceptionToThrowWorksInBefore: TEST STARTED =====");
+
+    final String callbackClass = MethodHandlers.class.getName();
+    final String callbackMethod = "setExceptionViaContextInBefore";
+
+    interceptUuid = UUID.randomUUID();
+    InterceptRequest<InterceptableMethodCall> interceptRequest =
+        new InterceptRequest<>(
+            interceptUuid,
+            INTERCEPTOR_PEER_UUID,
+            InterceptType.BEFORE,
+            StringMethods.class.getName(),
+            callbackClass,
+            callbackMethod,
+            new InterceptableMethodCall("echo", Collections.singletonList("java.lang.String")));
+
+    register(interceptRequest);
+    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
+
+    ObjectRef stringMethodsInstance =
+        ObjectRef.from(
+            invoke(messageBuilder.buildEmptyConstructor(myPeerUuid, StringMethods.class.getName()))
+                .getReturnValue()
+                .getObject()
+                .getRef());
+
+    // Invoke callEcho - should throw SecurityException from BEFORE callback
+    logger.info("Invoking callEcho which should throw SecurityException from BEFORE callback");
+    ExecMessage response =
+        invoke(
+            messageBuilder.buildInstanceMethod(
+                myPeerUuid,
+                StringMethods.class.getName(),
+                "callEcho",
+                stringMethodsInstance,
+                new String[] {"java.lang.String"},
+                new Object[] {"hello"}));
+
+    // Verify SecurityException was thrown
+    assertTrue(
+        "Expected SecurityException to be thrown by BEFORE callback",
+        response.getRaisedThrowable() != null);
+    assertThat(
+        "Expected SecurityException type",
+        response.getRaisedThrowable().getThrowable().getType(),
+        is(SecurityException.class.getName()));
+    assertThat(
+        "Expected exception message to indicate BEFORE intercept via context",
+        response.getRaisedThrowable().getThrowable().getMessage(),
+        containsString("BEFORE intercept via context"));
+
+    // Verify callback logged that it set the exception
+    assertTrue(
+        "Expected callback to log exception setting",
+        InterceptEndToEndTestSuite.waitForAppLogLine(
+            "setExceptionViaContextInBefore: exception set successfully"));
+
+    logger.info("===== testSetExceptionToThrowWorksInBefore: TEST COMPLETED SUCCESSFULLY =====");
+  }
+
+  /**
+   * Tests that proceed() throws UnsupportedOperationException in BEFORE intercept.
+   *
+   * <p>Registers a BEFORE intercept with a callback that attempts to call proceed(). The callback
+   * verifies that UnsupportedOperationException is thrown, then returns normally.
+   */
+  @Test
+  public void testProceedThrowsInBefore() throws Exception {
+    logger.info("===== testProceedThrowsInBefore: TEST STARTED =====");
+
+    final String callbackClass = MethodHandlers.class.getName();
+    final String callbackMethod = "attemptProceedInBefore";
+
+    interceptUuid = UUID.randomUUID();
+    InterceptRequest<InterceptableMethodCall> interceptRequest =
+        new InterceptRequest<>(
+            interceptUuid,
+            INTERCEPTOR_PEER_UUID,
+            InterceptType.BEFORE,
+            StringMethods.class.getName(),
+            callbackClass,
+            callbackMethod,
+            new InterceptableMethodCall("echo", Collections.singletonList("java.lang.String")));
+
+    register(interceptRequest);
+    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
+
+    ObjectRef stringMethodsInstance =
+        ObjectRef.from(
+            invoke(messageBuilder.buildEmptyConstructor(myPeerUuid, StringMethods.class.getName()))
+                .getReturnValue()
+                .getObject()
+                .getRef());
+
+    ExecMessage response =
+        invoke(
+            messageBuilder.buildInstanceMethod(
+                myPeerUuid,
+                StringMethods.class.getName(),
+                "callEcho",
+                stringMethodsInstance,
+                new String[] {"java.lang.String"},
+                new Object[] {"hello"}));
+
+    if (response.getRaisedThrowable() != null) {
+      fail(
+          "Callback failed: "
+              + response.getRaisedThrowable().getThrowable().getType()
+              + " - "
+              + response.getRaisedThrowable().getThrowable().getMessage());
+    }
+
+    assertTrue(
+        "Expected callback to log UnsupportedOperationException",
+        InterceptEndToEndTestSuite.waitForAppLogLine(
+            "attemptProceedInBefore: correctly threw UnsupportedOperationException"));
+
+    logger.info("===== testProceedThrowsInBefore: TEST COMPLETED SUCCESSFULLY =====");
   }
 }

@@ -14,7 +14,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertTrue;
 
 import com.quasient.pal.InterceptEndToEndTestSuite;
-import com.quasient.pal.apps.callbacks.AsyncCallbackHandlers;
+import com.quasient.pal.apps.callbacks.method.MethodHandlers;
 import com.quasient.pal.apps.quantized.intercept.StringMethods;
 import com.quasient.pal.common.directory.nodes.InterceptRequest;
 import com.quasient.pal.common.lang.intercept.InterceptType;
@@ -38,8 +38,8 @@ import org.junit.Test;
  *   <li>Throw UnsupportedOperationException when attempting to override return value
  * </ul>
  *
- * <p>Tests use the shared intercept peer with StringMethods application class and
- * AsyncCallbackHandlers callback handlers (both in itt-apps module).
+ * <p>Tests use the shared intercept peer with StringMethods application class and MethodHandlers
+ * callback handlers (both in itt-apps module).
  */
 public class AfterMethodAsyncCallbackIT extends AbstractInterceptIT {
 
@@ -56,7 +56,7 @@ public class AfterMethodAsyncCallbackIT extends AbstractInterceptIT {
   public void testAsyncCallbackCanReadReturnValue() throws Exception {
     logger.info("===== testAsyncCallbackCanReadReturnValue: TEST STARTED =====");
 
-    final String callbackClass = AsyncCallbackHandlers.class.getName();
+    final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "logReturnValue";
     final String inputValue = "hello";
 
@@ -131,7 +131,7 @@ public class AfterMethodAsyncCallbackIT extends AbstractInterceptIT {
   public void testAsyncCallbackCannotOverrideReturnValue() throws Exception {
     logger.info("===== testAsyncCallbackCannotOverrideReturnValue: TEST STARTED =====");
 
-    final String callbackClass = AsyncCallbackHandlers.class.getName();
+    final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "attemptReturnOverride";
     final String inputValue = "hello";
 
@@ -182,11 +182,11 @@ public class AfterMethodAsyncCallbackIT extends AbstractInterceptIT {
         returnValue,
         is(inputValue));
 
-    // Verify callback logged the override attempt in application log
+    // Verify callback caught UnsupportedOperationException
     assertTrue(
-        "Expected attemptReturnOverride callback to log override attempt",
+        "Expected attemptReturnOverride callback to log UnsupportedOperationException",
         InterceptEndToEndTestSuite.waitForAppLogLine(
-            "attemptReturnOverride.*AFTER_ASYNC.*attempting to override return value"));
+            "attemptReturnOverride: correctly threw UnsupportedOperationException"));
 
     logger.info(
         "===== testAsyncCallbackCannotOverrideReturnValue: TEST COMPLETED SUCCESSFULLY =====");
@@ -203,7 +203,7 @@ public class AfterMethodAsyncCallbackIT extends AbstractInterceptIT {
   public void testAsyncCallbackReceivesCorrectReturnValue() throws Exception {
     logger.info("===== testAsyncCallbackReceivesCorrectReturnValue: TEST STARTED =====");
 
-    final String callbackClass = AsyncCallbackHandlers.class.getName();
+    final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "verifyReturnValueIsHello";
     final String inputValue = "hello";
 
@@ -273,7 +273,7 @@ public class AfterMethodAsyncCallbackIT extends AbstractInterceptIT {
   public void testAsyncCallbackCannotThrowException() throws Exception {
     logger.info("===== testAsyncCallbackCannotThrowException: TEST STARTED =====");
 
-    final String callbackClass = AsyncCallbackHandlers.class.getName();
+    final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "attemptThrowException";
     final String inputValue = "hello";
 
@@ -324,11 +324,11 @@ public class AfterMethodAsyncCallbackIT extends AbstractInterceptIT {
         returnValue,
         is(inputValue));
 
-    // Verify callback logged the exception throw attempt in application log
+    // Verify callback caught UnsupportedOperationException
     assertTrue(
-        "Expected attemptThrowException callback to log exception throw attempt",
+        "Expected attemptThrowException callback to log UnsupportedOperationException",
         InterceptEndToEndTestSuite.waitForAppLogLine(
-            "attemptThrowException.*AFTER_ASYNC.*attempting to set exception"));
+            "attemptThrowException: correctly threw UnsupportedOperationException"));
 
     logger.info("===== testAsyncCallbackCannotThrowException: TEST COMPLETED SUCCESSFULLY =====");
   }

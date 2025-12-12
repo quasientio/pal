@@ -89,7 +89,7 @@ public abstract class AbstractMessageInvokerThread extends Thread {
   protected final UUID peerUuid;
 
   /** Dispatcher handling incoming messages and delegating them to the appropriate services. */
-  private final IncomingMessageDispatcher incomingMessageDispatcher;
+  protected final IncomingMessageDispatcher incomingMessageDispatcher;
 
   /** Connector for managing communication with the dispatcher; may be null during unit testing. */
   protected final OutboundMessageGateway outboundMessageGateway;

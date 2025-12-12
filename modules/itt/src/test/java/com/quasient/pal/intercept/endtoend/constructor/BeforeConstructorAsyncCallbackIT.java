@@ -15,7 +15,7 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertTrue;
 
 import com.quasient.pal.InterceptEndToEndTestSuite;
-import com.quasient.pal.apps.callbacks.AsyncCallbackHandlers;
+import com.quasient.pal.apps.callbacks.constructor.ConstructorHandlers;
 import com.quasient.pal.apps.quantized.intercept.InterceptableApp;
 import com.quasient.pal.common.directory.nodes.InterceptRequest;
 import com.quasient.pal.common.lang.intercept.InterceptType;
@@ -40,7 +40,7 @@ import org.junit.Test;
  * </ul>
  *
  * <p>Tests use the shared intercept peer with InterceptableApp application class and
- * AsyncCallbackHandlers callback handlers (both in itt-apps module).
+ * ConstructorHandlers callback handlers (both in itt-apps module).
  */
 public class BeforeConstructorAsyncCallbackIT extends AbstractInterceptIT {
 
@@ -57,7 +57,7 @@ public class BeforeConstructorAsyncCallbackIT extends AbstractInterceptIT {
   public void testAsyncCallbackCanReadArgs() throws Exception {
     logger.info("===== testAsyncCallbackCanReadArgs: TEST STARTED =====");
 
-    final String callbackClass = AsyncCallbackHandlers.class.getName();
+    final String callbackClass = ConstructorHandlers.class.getName();
     final String callbackMethod = "logArgs";
     final int inputValue = 42;
 
@@ -141,7 +141,7 @@ public class BeforeConstructorAsyncCallbackIT extends AbstractInterceptIT {
   public void testAsyncCallbackCannotMutateArgs() throws Exception {
     logger.info("===== testAsyncCallbackCannotMutateArgs: TEST STARTED =====");
 
-    final String callbackClass = AsyncCallbackHandlers.class.getName();
+    final String callbackClass = ConstructorHandlers.class.getName();
     final String callbackMethod = "attemptIntArgMutation";
     final int inputValue = 42;
 
@@ -221,7 +221,7 @@ public class BeforeConstructorAsyncCallbackIT extends AbstractInterceptIT {
   public void testAsyncCallbackReceivesCorrectArgs() throws Exception {
     logger.info("===== testAsyncCallbackReceivesCorrectArgs: TEST STARTED =====");
 
-    final String callbackClass = AsyncCallbackHandlers.class.getName();
+    final String callbackClass = ConstructorHandlers.class.getName();
     final String callbackMethod = "verifyFirstArgIs42";
     final int inputValue = 42;
 
@@ -301,7 +301,7 @@ public class BeforeConstructorAsyncCallbackIT extends AbstractInterceptIT {
   public void testAsyncCallbackCannotThrowException() throws Exception {
     logger.info("===== testAsyncCallbackCannotThrowException: TEST STARTED =====");
 
-    final String callbackClass = AsyncCallbackHandlers.class.getName();
+    final String callbackClass = ConstructorHandlers.class.getName();
     final String callbackMethod = "attemptThrowException";
     final int inputValue = 42;
 

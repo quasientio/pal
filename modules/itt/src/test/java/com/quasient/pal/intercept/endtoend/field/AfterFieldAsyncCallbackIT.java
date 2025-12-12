@@ -15,7 +15,7 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertTrue;
 
 import com.quasient.pal.InterceptEndToEndTestSuite;
-import com.quasient.pal.apps.callbacks.AsyncCallbackHandlers;
+import com.quasient.pal.apps.callbacks.field.FieldHandlers;
 import com.quasient.pal.apps.quantized.intercept.InterceptableApp;
 import com.quasient.pal.common.directory.nodes.InterceptRequest;
 import com.quasient.pal.common.lang.FieldOpType;
@@ -39,8 +39,8 @@ import org.junit.Test;
  *   <li>Throw UnsupportedOperationException when attempting to override return value
  * </ul>
  *
- * <p>Tests use the shared intercept peer with InterceptableApp application class and
- * AsyncCallbackHandlers callback handlers (both in itt-apps module).
+ * <p>Tests use the shared intercept peer with InterceptableApp application class and FieldHandlers
+ * callback handlers (both in itt-apps module).
  */
 public class AfterFieldAsyncCallbackIT extends AbstractInterceptIT {
 
@@ -57,7 +57,7 @@ public class AfterFieldAsyncCallbackIT extends AbstractInterceptIT {
   public void testInstanceFieldGetAsyncCanReadValue() throws Exception {
     logger.info("===== testInstanceFieldGetAsyncCanReadValue: TEST STARTED =====");
 
-    final String callbackClass = AsyncCallbackHandlers.class.getName();
+    final String callbackClass = FieldHandlers.class.getName();
     final String callbackMethod = "logReturnValue";
     final int initialValue = 42;
 
@@ -136,7 +136,7 @@ public class AfterFieldAsyncCallbackIT extends AbstractInterceptIT {
   public void testInstanceFieldGetAsyncCannotOverride() throws Exception {
     logger.info("===== testInstanceFieldGetAsyncCannotOverride: TEST STARTED =====");
 
-    final String callbackClass = AsyncCallbackHandlers.class.getName();
+    final String callbackClass = FieldHandlers.class.getName();
     final String callbackMethod = "attemptReturnOverride";
     final int initialValue = 25;
 
@@ -214,7 +214,7 @@ public class AfterFieldAsyncCallbackIT extends AbstractInterceptIT {
   public void testStaticFieldGetAsyncNoOp() throws Exception {
     logger.info("===== testStaticFieldGetAsyncNoOp: TEST STARTED =====");
 
-    final String callbackClass = AsyncCallbackHandlers.class.getName();
+    final String callbackClass = FieldHandlers.class.getName();
     final String callbackMethod = "logReturnValue";
     final int initialValue = 200;
 
@@ -293,7 +293,7 @@ public class AfterFieldAsyncCallbackIT extends AbstractInterceptIT {
   public void testAsyncCallbackCannotThrowException() throws Exception {
     logger.info("===== testAsyncCallbackCannotThrowException: TEST STARTED =====");
 
-    final String callbackClass = AsyncCallbackHandlers.class.getName();
+    final String callbackClass = FieldHandlers.class.getName();
     final String callbackMethod = "attemptThrowException";
     final int initialValue = 42;
 

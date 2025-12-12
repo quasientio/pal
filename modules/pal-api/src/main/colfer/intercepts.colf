@@ -95,6 +95,10 @@ type InterceptCallbackRequestMessage struct {
 	returnValueRef  uint32          // ObjectRef for return value
 	isVoid          bool            // Whether operation returns void
 	thrownException RaisedThrowable // If operation threw exception
+
+	// AROUND intercepts only: timeout for proceed() in milliseconds
+	// Set by interceptable peer; interceptor should complete within this time
+	timeoutMs uint32
 }
 
 /**

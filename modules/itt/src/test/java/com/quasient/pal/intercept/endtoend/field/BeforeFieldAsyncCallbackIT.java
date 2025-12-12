@@ -15,7 +15,7 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertTrue;
 
 import com.quasient.pal.InterceptEndToEndTestSuite;
-import com.quasient.pal.apps.callbacks.AsyncCallbackHandlers;
+import com.quasient.pal.apps.callbacks.field.FieldHandlers;
 import com.quasient.pal.apps.quantized.intercept.InterceptableApp;
 import com.quasient.pal.common.directory.nodes.InterceptRequest;
 import com.quasient.pal.common.lang.FieldOpType;
@@ -39,8 +39,8 @@ import org.junit.Test;
  *   <li>Throw UnsupportedOperationException when attempting to mutate arguments
  * </ul>
  *
- * <p>Tests use the shared intercept peer with InterceptableApp application class and
- * AsyncCallbackHandlers callback handlers (both in itt-apps module).
+ * <p>Tests use the shared intercept peer with InterceptableApp application class and FieldHandlers
+ * callback handlers (both in itt-apps module).
  */
 public class BeforeFieldAsyncCallbackIT extends AbstractInterceptIT {
 
@@ -57,7 +57,7 @@ public class BeforeFieldAsyncCallbackIT extends AbstractInterceptIT {
   public void testInstanceFieldPutAsyncCanReadValue() throws Exception {
     logger.info("===== testInstanceFieldPutAsyncCanReadValue: TEST STARTED =====");
 
-    final String callbackClass = AsyncCallbackHandlers.class.getName();
+    final String callbackClass = FieldHandlers.class.getName();
     final String callbackMethod = "logArgs";
     final int newValue = 100;
 
@@ -134,7 +134,7 @@ public class BeforeFieldAsyncCallbackIT extends AbstractInterceptIT {
   public void testInstanceFieldPutAsyncCannotMutate() throws Exception {
     logger.info("===== testInstanceFieldPutAsyncCannotMutate: TEST STARTED =====");
 
-    final String callbackClass = AsyncCallbackHandlers.class.getName();
+    final String callbackClass = FieldHandlers.class.getName();
     final String callbackMethod = "attemptIntArgMutation";
     final int newValue = 50;
 
@@ -214,7 +214,7 @@ public class BeforeFieldAsyncCallbackIT extends AbstractInterceptIT {
   public void testStaticFieldPutAsyncNoOp() throws Exception {
     logger.info("===== testStaticFieldPutAsyncNoOp: TEST STARTED =====");
 
-    final String callbackClass = AsyncCallbackHandlers.class.getName();
+    final String callbackClass = FieldHandlers.class.getName();
     final String callbackMethod = "logArgs";
     final int newValue = 300;
 
@@ -295,7 +295,7 @@ public class BeforeFieldAsyncCallbackIT extends AbstractInterceptIT {
   public void testAsyncCallbackCannotThrowException() throws Exception {
     logger.info("===== testAsyncCallbackCannotThrowException: TEST STARTED =====");
 
-    final String callbackClass = AsyncCallbackHandlers.class.getName();
+    final String callbackClass = FieldHandlers.class.getName();
     final String callbackMethod = "attemptThrowException";
     final int newValue = 99;
 

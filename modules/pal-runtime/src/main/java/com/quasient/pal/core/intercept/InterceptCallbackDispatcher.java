@@ -826,6 +826,381 @@ public class InterceptCallbackDispatcher {
     }
   }
 
+  // ---- AROUND intercept support with ctx.proceed() API ----
+
+  /** Default timeout in milliseconds for AROUND intercept callbacks. */
+  private static final int DEFAULT_AROUND_TIMEOUT_MS = 30000;
+
+  /**
+   * State tracking for a pending AROUND callback that needs AFTER phase.
+   *
+   * @param intercept the intercept message
+   * @param callbackId the callback ID for correlation
+   * @param callbackPeer the callback peer UUID
+   */
+  public record AroundCallbackState(
+      InterceptMessage intercept, String callbackId, UUID callbackPeer) {}
+
+  /**
+   * Sends AROUND BEFORE-phase callbacks and returns state for AFTER phase.
+   *
+   * <p>This method handles AROUND intercepts with the {@code ctx.proceed()} API. For each AROUND
+   * intercept:
+   *
+   * <ol>
+   *   <li>Sends BEFORE phase request with {@code timeoutMs}
+   *   <li>Awaits response
+   *   <li>If {@code shouldProceed=false}: returns skip response immediately (method not executed)
+   *   <li>If {@code shouldProceed=true}: collects mutations and tracks callback for AFTER phase
+   * </ol>
+   *
+   * @param interceptCheckResult result from InterceptChecker containing matched intercepts
+   * @param execMessage the execution message containing operation metadata
+   * @param args the method arguments
+   * @return consolidated response with pending callbacks for AFTER phase
+   */
+  public AroundConsolidatedResponse sendAroundCallbacks(
+      InterceptCheckResult interceptCheckResult, ExecMessage execMessage, Object[] args) {
+
+    if (!interceptCheckResult.hasRemoteIntercepts()) {
+      return AroundConsolidatedResponse.proceed();
+    }
+
+    List<InterceptMessage> remoteIntercepts = interceptCheckResult.getRemoteIntercepts();
+    List<InterceptMessage> aroundIntercepts = new ArrayList<>();
+
+    // Filter for AROUND intercepts
+    for (InterceptMessage intercept : remoteIntercepts) {
+      InterceptType type = InterceptType.fromByte(intercept.getInterceptType());
+      if (type == InterceptType.AROUND) {
+        aroundIntercepts.add(intercept);
+      }
+    }
+
+    if (aroundIntercepts.isEmpty()) {
+      return AroundConsolidatedResponse.proceed();
+    }
+
+    // Track state across all callbacks
+    Map<Integer, Object> mutatedArgs = new HashMap<>();
+    List<AroundCallbackState> pendingCallbacks = new ArrayList<>();
+    Throwable exceptionToThrow = null;
+
+    // Process AROUND intercepts
+    for (InterceptMessage interceptMessage : aroundIntercepts) {
+      try {
+        UUID callbackPeerUuid = UUID.fromString(interceptMessage.getPeerUuid());
+        if (logger.isDebugEnabled()) {
+          logger.debug(
+              "AROUND BEFORE callback: peer={}, class={}, method={}",
+              interceptMessage.getPeerUuid(),
+              interceptMessage.getClazz(),
+              interceptMessage.getCallbackMethod());
+        }
+
+        // Generate unique callback ID
+        String callbackId = UUID.randomUUID().toString();
+
+        // Build the BEFORE phase callback request with timeout
+        InterceptCallbackRequestMessage request =
+            buildAroundBeforeRequest(
+                interceptMessage, execMessage, callbackId, DEFAULT_AROUND_TIMEOUT_MS);
+
+        // Send and await response
+        InterceptCallbackResponseMessage response = sendCallbackRequest(callbackPeerUuid, request);
+
+        // Check for exception
+        if (response.getThrowException()) {
+          exceptionToThrow = ExceptionSerdes.deserializeException(response.getException());
+          break; // Stop processing further callbacks
+        }
+
+        // Check shouldProceed
+        if (!response.getShouldProceed()) {
+          // Callback says skip execution - extract overridden return value
+          Object skipReturnValue = null;
+          if (response.getOverrideReturn()) {
+            // Note: getNewReturnValue() returns an Obj, which may represent null via isNull flag
+            Obj returnValueObj = response.getNewReturnValue();
+            if (returnValueObj != null) {
+              skipReturnValue = deserializeArg(returnValueObj);
+            }
+          }
+          // Note: exceptionToThrow is guaranteed to be null here (would have returned earlier if
+          // set)
+          return AroundConsolidatedResponse.skipWithReturn(skipReturnValue, null);
+        }
+
+        // shouldProceed=true - collect mutations and track for AFTER phase
+        if (response.getMutatedArgs() != null && response.getMutatedArgs().length > 0) {
+          Obj[] responseMutatedArgs = response.getMutatedArgs();
+          for (int i = 0; i < responseMutatedArgs.length && i < args.length; i++) {
+            if (responseMutatedArgs[i] != null) {
+              mutatedArgs.put(i, deserializeArg(responseMutatedArgs[i]));
+            }
+          }
+        }
+
+        // Track this callback for AFTER phase
+        pendingCallbacks.add(
+            new AroundCallbackState(interceptMessage, callbackId, callbackPeerUuid));
+
+      } catch (Exception ex) {
+        logger.error(
+            "Error sending AROUND BEFORE callback to peer: {}, continuing with remaining callbacks",
+            interceptMessage.getPeerUuid(),
+            ex);
+        // Continue with other callbacks on error
+      }
+    }
+
+    return new AroundConsolidatedResponse(true, mutatedArgs, exceptionToThrow, pendingCallbacks);
+  }
+
+  /**
+   * Sends AROUND AFTER-phase callbacks for pending callbacks that called proceed().
+   *
+   * <p>This method is called after the intercepted method has executed. It sends AFTER phase
+   * requests to all callbacks that returned {@code shouldProceed=true} in the BEFORE phase.
+   *
+   * @param pendingCallbacks list of callbacks that need AFTER phase
+   * @param execMessage the execution message
+   * @param returnValue the return value from method execution
+   * @param isVoid whether the method has void return type
+   * @param thrownException exception thrown by the method (may be null)
+   * @return consolidated response with any return value override
+   */
+  public ConsolidatedCallbackResponse sendAroundAfterCallbacks(
+      List<AroundCallbackState> pendingCallbacks,
+      ExecMessage execMessage,
+      Object returnValue,
+      boolean isVoid,
+      Throwable thrownException) {
+
+    if (pendingCallbacks == null || pendingCallbacks.isEmpty()) {
+      return ConsolidatedCallbackResponse.proceed();
+    }
+
+    // Track return value override
+    Object currentReturnValue = returnValue;
+    boolean hasOverride = false;
+    Throwable exceptionToThrow = null;
+
+    // Process pending callbacks
+    for (AroundCallbackState state : pendingCallbacks) {
+      try {
+        if (logger.isDebugEnabled()) {
+          logger.debug(
+              "AROUND AFTER callback: peer={}, callbackId={}",
+              state.callbackPeer(),
+              state.callbackId());
+        }
+
+        // Build the AFTER phase callback request
+        InterceptCallbackRequestMessage request =
+            buildAroundAfterRequest(
+                state.intercept(),
+                execMessage,
+                state.callbackId(),
+                currentReturnValue,
+                isVoid,
+                thrownException);
+
+        // Send and await response
+        InterceptCallbackResponseMessage response =
+            sendCallbackRequest(state.callbackPeer(), request);
+
+        // Check for exception
+        if (response.getThrowException()) {
+          exceptionToThrow = ExceptionSerdes.deserializeException(response.getException());
+          break; // Stop processing further callbacks
+        }
+
+        // Collect return value override
+        if (response.getOverrideReturn() && response.getNewReturnValue() != null) {
+          currentReturnValue = deserializeArg(response.getNewReturnValue());
+          hasOverride = true;
+        }
+
+      } catch (Exception ex) {
+        logger.error(
+            "Error sending AROUND AFTER callback to peer: {}, continuing with remaining callbacks",
+            state.callbackPeer(),
+            ex);
+        // Continue with other callbacks on error
+      }
+    }
+
+    return new ConsolidatedCallbackResponse(
+        true, new HashMap<>(), exceptionToThrow, currentReturnValue, hasOverride);
+  }
+
+  /**
+   * Builds an AROUND BEFORE phase callback request with timeout.
+   *
+   * @param interceptMessage the intercept message
+   * @param execMessage the execution message
+   * @param callbackId the unique callback ID
+   * @param timeoutMs the timeout in milliseconds
+   * @return the callback request
+   */
+  private InterceptCallbackRequestMessage buildAroundBeforeRequest(
+      InterceptMessage interceptMessage,
+      ExecMessage execMessage,
+      String callbackId,
+      int timeoutMs) {
+    InterceptCallbackRequestMessage request =
+        messageBuilder.buildInterceptCallbackRequest(
+            peerUuid, interceptMessage, execMessage, InterceptPhase.BEFORE, null, false, null);
+    request.setCallbackId(callbackId);
+    request.setTimeoutMs(timeoutMs);
+    return request;
+  }
+
+  /**
+   * Builds an AROUND AFTER phase callback request.
+   *
+   * @param interceptMessage the intercept message
+   * @param execMessage the execution message
+   * @param callbackId the callback ID (must match BEFORE phase)
+   * @param returnValue the return value from method execution
+   * @param isVoid whether the method has void return type
+   * @param thrownException exception thrown by the method
+   * @return the callback request
+   */
+  private InterceptCallbackRequestMessage buildAroundAfterRequest(
+      InterceptMessage interceptMessage,
+      ExecMessage execMessage,
+      String callbackId,
+      Object returnValue,
+      boolean isVoid,
+      Throwable thrownException) {
+    InterceptCallbackRequestMessage request =
+        messageBuilder.buildInterceptCallbackRequest(
+            peerUuid,
+            interceptMessage,
+            execMessage,
+            InterceptPhase.AFTER,
+            returnValue,
+            isVoid,
+            thrownException);
+    request.setCallbackId(callbackId);
+    return request;
+  }
+
+  /**
+   * Consolidated response for AROUND intercept BEFORE phase callbacks.
+   *
+   * <p>Contains the result of processing AROUND BEFORE callbacks, including whether to proceed with
+   * method execution and any pending callbacks for the AFTER phase.
+   */
+  public static class AroundConsolidatedResponse {
+    /** Whether the intercepted method should proceed with execution. */
+    private final boolean shouldProceed;
+
+    /** Map of argument index to mutated value. */
+    private final Map<Integer, Object> mutatedArgs;
+
+    /** Exception to throw instead of normal execution (may be null). */
+    private final Throwable exceptionToThrow;
+
+    /** Overridden return value when shouldProceed=false (may be null). */
+    private final Object skipReturnValue;
+
+    /** Pending callbacks that need AFTER phase (only if shouldProceed=true). */
+    private final List<AroundCallbackState> pendingCallbacks;
+
+    /**
+     * Constructs an AroundConsolidatedResponse for proceeding with execution.
+     *
+     * @param shouldProceed whether execution should proceed
+     * @param mutatedArgs map of argument index to mutated value
+     * @param exceptionToThrow exception to throw (may be null)
+     * @param pendingCallbacks callbacks that need AFTER phase
+     */
+    public AroundConsolidatedResponse(
+        boolean shouldProceed,
+        Map<Integer, Object> mutatedArgs,
+        Throwable exceptionToThrow,
+        List<AroundCallbackState> pendingCallbacks) {
+      this.shouldProceed = shouldProceed;
+      this.mutatedArgs = mutatedArgs;
+      this.exceptionToThrow = exceptionToThrow;
+      this.skipReturnValue = null;
+      this.pendingCallbacks = pendingCallbacks;
+    }
+
+    /**
+     * Constructs an AroundConsolidatedResponse for skipping execution.
+     *
+     * @param skipReturnValue the return value to use instead of executing
+     * @param exceptionToThrow exception to throw (may be null)
+     */
+    private AroundConsolidatedResponse(Object skipReturnValue, Throwable exceptionToThrow) {
+      this.shouldProceed = false;
+      this.mutatedArgs = new HashMap<>();
+      this.exceptionToThrow = exceptionToThrow;
+      this.skipReturnValue = skipReturnValue;
+      this.pendingCallbacks = new ArrayList<>();
+    }
+
+    /**
+     * Creates a default "proceed" response with no pending callbacks.
+     *
+     * @return a proceed response
+     */
+    public static AroundConsolidatedResponse proceed() {
+      return new AroundConsolidatedResponse(true, new HashMap<>(), null, new ArrayList<>());
+    }
+
+    /**
+     * Creates a "skip" response with the specified return value.
+     *
+     * @param returnValue the return value to use instead of executing
+     * @param exceptionToThrow exception to throw (may be null)
+     * @return a skip response
+     */
+    public static AroundConsolidatedResponse skipWithReturn(
+        Object returnValue, Throwable exceptionToThrow) {
+      return new AroundConsolidatedResponse(returnValue, exceptionToThrow);
+    }
+
+    /** Returns whether execution should proceed. */
+    public boolean shouldProceed() {
+      return shouldProceed;
+    }
+
+    /** Returns whether any arguments were mutated. */
+    public boolean hasArgMutations() {
+      return !mutatedArgs.isEmpty();
+    }
+
+    /** Returns the map of mutated arguments. */
+    public Map<Integer, Object> getMutatedArgs() {
+      return mutatedArgs;
+    }
+
+    /** Returns whether an exception should be thrown. */
+    public boolean shouldThrowException() {
+      return exceptionToThrow != null;
+    }
+
+    /** Returns the exception to throw. */
+    public Throwable getExceptionToThrow() {
+      return exceptionToThrow;
+    }
+
+    /** Returns the return value for skip (when shouldProceed=false). */
+    public Object getSkipReturnValue() {
+      return skipReturnValue;
+    }
+
+    /** Returns the pending callbacks for AFTER phase. */
+    public List<AroundCallbackState> getPendingCallbacks() {
+      return pendingCallbacks;
+    }
+  }
+
   /**
    * Cleans up thread-local sockets when a thread terminates.
    *

@@ -14,14 +14,19 @@ import com.quasient.pal.cxn.ThinPeer;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.intercept.complex.MethodInterceptInFlightVerificationIT;
+import com.quasient.pal.intercept.mechanism.constructor.ConstructorAroundCallbackIT;
 import com.quasient.pal.intercept.mechanism.constructor.ConstructorAsyncCallbackIT;
 import com.quasient.pal.intercept.mechanism.constructor.ConstructorSyncCallbackIT;
+import com.quasient.pal.intercept.mechanism.instancefield.InstanceFieldAroundCallbackIT;
 import com.quasient.pal.intercept.mechanism.instancefield.InstanceFieldAsyncCallbackIT;
 import com.quasient.pal.intercept.mechanism.instancefield.InstanceFieldSyncCallbackIT;
+import com.quasient.pal.intercept.mechanism.instancemethod.InstanceMethodAroundCallbackIT;
 import com.quasient.pal.intercept.mechanism.instancemethod.InstanceMethodAsyncCallbackIT;
 import com.quasient.pal.intercept.mechanism.instancemethod.InstanceMethodSyncCallbackIT;
+import com.quasient.pal.intercept.mechanism.staticfield.StaticFieldAroundCallbackIT;
 import com.quasient.pal.intercept.mechanism.staticfield.StaticFieldAsyncCallbackIT;
 import com.quasient.pal.intercept.mechanism.staticfield.StaticFieldSyncCallbackIT;
+import com.quasient.pal.intercept.mechanism.staticmethod.StaticMethodAroundCallbackIT;
 import com.quasient.pal.intercept.mechanism.staticmethod.StaticMethodAsyncCallbackIT;
 import com.quasient.pal.intercept.mechanism.staticmethod.StaticMethodSyncCallbackIT;
 import com.quasient.pal.messages.LogMessage;
@@ -98,22 +103,27 @@ import org.slf4j.LoggerFactory;
   // Instance method callback tests
   InstanceMethodSyncCallbackIT.class,
   InstanceMethodAsyncCallbackIT.class,
+  InstanceMethodAroundCallbackIT.class,
 
   // Static method callback tests
   StaticMethodSyncCallbackIT.class,
   StaticMethodAsyncCallbackIT.class,
+  StaticMethodAroundCallbackIT.class,
 
   // Constructor callback tests
   ConstructorSyncCallbackIT.class,
   ConstructorAsyncCallbackIT.class,
+  ConstructorAroundCallbackIT.class,
 
   // Static field callback tests
   StaticFieldSyncCallbackIT.class,
   StaticFieldAsyncCallbackIT.class,
+  StaticFieldAroundCallbackIT.class,
 
   // Instance field callback tests
   InstanceFieldSyncCallbackIT.class,
   InstanceFieldAsyncCallbackIT.class,
+  InstanceFieldAroundCallbackIT.class,
 
   // More complex intercept tests
   MethodInterceptInFlightVerificationIT.class

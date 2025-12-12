@@ -14,14 +14,17 @@ import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
 import com.quasient.pal.intercept.endtoend.constructor.AfterConstructorAsyncCallbackIT;
 import com.quasient.pal.intercept.endtoend.constructor.AfterConstructorCallbackIT;
+import com.quasient.pal.intercept.endtoend.constructor.AroundConstructorCallbackIT;
 import com.quasient.pal.intercept.endtoend.constructor.BeforeConstructorAsyncCallbackIT;
 import com.quasient.pal.intercept.endtoend.constructor.BeforeConstructorCallbackIT;
 import com.quasient.pal.intercept.endtoend.field.AfterFieldAsyncCallbackIT;
 import com.quasient.pal.intercept.endtoend.field.AfterFieldCallbackIT;
+import com.quasient.pal.intercept.endtoend.field.AroundFieldCallbackIT;
 import com.quasient.pal.intercept.endtoend.field.BeforeFieldAsyncCallbackIT;
 import com.quasient.pal.intercept.endtoend.field.BeforeFieldCallbackIT;
 import com.quasient.pal.intercept.endtoend.method.AfterMethodAsyncCallbackIT;
 import com.quasient.pal.intercept.endtoend.method.AfterMethodCallbackIT;
+import com.quasient.pal.intercept.endtoend.method.AroundMethodCallbackIT;
 import com.quasient.pal.intercept.endtoend.method.BeforeMethodAsyncCallbackIT;
 import com.quasient.pal.intercept.endtoend.method.BeforeMethodCallbackIT;
 import java.io.IOException;
@@ -89,18 +92,21 @@ import org.slf4j.LoggerFactory;
   // Method callback handler tests (SYNC)
   BeforeMethodCallbackIT.class,
   AfterMethodCallbackIT.class,
+  AroundMethodCallbackIT.class,
   // Method callback handler tests (ASYNC)
   BeforeMethodAsyncCallbackIT.class,
   AfterMethodAsyncCallbackIT.class,
   // Constructor callback handler tests (SYNC)
   BeforeConstructorCallbackIT.class,
   AfterConstructorCallbackIT.class,
+  AroundConstructorCallbackIT.class,
   // Constructor callback handler tests (ASYNC)
   BeforeConstructorAsyncCallbackIT.class,
   AfterConstructorAsyncCallbackIT.class,
   // Field callback handler tests (SYNC)
   BeforeFieldCallbackIT.class,
   AfterFieldCallbackIT.class,
+  AroundFieldCallbackIT.class,
   // Field callback handler tests (ASYNC)
   BeforeFieldAsyncCallbackIT.class,
   AfterFieldAsyncCallbackIT.class

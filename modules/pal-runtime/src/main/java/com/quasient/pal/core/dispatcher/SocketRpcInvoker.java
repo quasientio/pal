@@ -15,17 +15,27 @@ import static com.quasient.pal.serdes.colfer.ExecMessageUtils.getMessageTypeOf;
 import static com.quasient.pal.serdes.colfer.MetaMessageUtils.getMessageTypeOf;
 import static com.quasient.pal.serdes.jsonrpc.JsonRpcMessageUtils.parseAndValidateJsonRpcMessage;
 
+import com.quasient.pal.common.lang.intercept.AfterPhaseData;
+import com.quasient.pal.common.lang.intercept.AroundSocketAccessor;
+import com.quasient.pal.common.lang.intercept.AroundTimeoutException;
+import com.quasient.pal.common.lang.intercept.InterceptPhase;
+import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.core.internal.messages.InboundJsonRpcRequestMsg;
 import com.quasient.pal.core.internal.messages.OutboundJsonRpcResponseMsg;
 import com.quasient.pal.core.service.RunOptions;
 import com.quasient.pal.core.transport.MessageChannelType;
 import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
+import com.quasient.pal.messages.colfer.InterceptCallbackRequestMessage;
+import com.quasient.pal.messages.colfer.InterceptCallbackResponseMessage;
 import com.quasient.pal.messages.colfer.Message;
+import com.quasient.pal.messages.colfer.RaisedThrowable;
 import com.quasient.pal.messages.jsonrpc.JsonRpcRequest;
 import com.quasient.pal.messages.jsonrpc.JsonRpcResponse;
 import com.quasient.pal.messages.types.MessageFamily;
 import com.quasient.pal.messages.types.MessageType;
+import com.quasient.pal.serdes.Unwrapper;
 import com.quasient.pal.serdes.colfer.ColferUtils;
+import com.quasient.pal.serdes.colfer.ExceptionSerdes;
 import com.quasient.pal.serdes.colfer.MessageBuilder;
 import com.quasient.pal.serdes.jsonrpc.InvalidJsonRpcRequestException;
 import com.quasient.pal.serdes.jsonrpc.JsonRpcMessageUtils;
@@ -53,6 +63,9 @@ import zmq.ZError;
  * or a fatal socket error occurs.
  */
 class SocketRpcInvoker extends AbstractMessageInvokerThread {
+
+  /** Default receive timeout for intercept callbacks in milliseconds. */
+  private static final int DEFAULT_CALLBACK_RECEIVE_TIMEOUT_MS = 30000;
 
   /**
    * Runtime options controlling behavior (e.g. enabling/disabling ZMQ-RPC or JSON-RPC features).
@@ -303,6 +316,16 @@ class SocketRpcInvoker extends AbstractMessageInvokerThread {
     // dispatch
     if (!unmarshalError) {
       try {
+        // Check if this is an AROUND intercept BEFORE phase - needs special handling
+        InterceptCallbackRequestMessage callbackReq =
+            requestMsg.getInterceptCallbackRequestMessage();
+
+        if (callbackReq != null && isAroundBeforePhase(callbackReq)) {
+          handleAroundInterceptCallback(callbackReq, started);
+          return;
+        }
+
+        // Normal dispatch path
         final Message responseMessage = dispatch(requestMsg, MessageChannelType.ZMQ_SOCKET_RPC);
 
         // send response
@@ -322,6 +345,159 @@ class SocketRpcInvoker extends AbstractMessageInvokerThread {
         logger.error("Error dispatching message w/id {}", getMessageId(requestMsg), e);
       }
     }
+  }
+
+  /**
+   * Checks if the callback request is an AROUND intercept in BEFORE phase.
+   *
+   * @param req the callback request to check
+   * @return true if this is an AROUND BEFORE phase request
+   */
+  private boolean isAroundBeforePhase(InterceptCallbackRequestMessage req) {
+    return req.getInterceptType() == InterceptType.AROUND.toByte()
+        && req.getPhase() == InterceptPhase.BEFORE.toByte();
+  }
+
+  /**
+   * Handles an AROUND intercept callback with the ctx.proceed() API.
+   *
+   * <p>This method:
+   *
+   * <ol>
+   *   <li>Creates a socket accessor for the callback to use
+   *   <li>Dispatches to the callback dispatcher with the accessor
+   *   <li>Sends the final AFTER response when the callback completes
+   * </ol>
+   *
+   * @param beforeReq the BEFORE phase request
+   * @param started the timestamp when dispatch started (for logging)
+   */
+  private void handleAroundInterceptCallback(
+      InterceptCallbackRequestMessage beforeReq, long started) {
+    if (logger.isDebugEnabled()) {
+      logger.debug("Handling AROUND intercept callback: callbackId={}", beforeReq.getCallbackId());
+    }
+
+    // Create socket accessor for this thread's socket
+    AroundSocketAccessor accessor = createAroundSocketAccessor();
+
+    try {
+      // Dispatch to callback with accessor - this may block in proceed()
+      InterceptCallbackResponseMessage finalResponse =
+          incomingMessageDispatcher.incomingAroundInterceptCallback(beforeReq, accessor);
+
+      // Send final response (AFTER phase response if proceed() was called,
+      // or BEFORE phase skip response if proceed() was not called)
+      zmqRpcSocket.send(ColferUtils.toBytes(messageBuilder.wrap(finalResponse)));
+
+      if (logger.isDebugEnabled()) {
+        final long took = System.currentTimeMillis() - started;
+        logger.debug(
+            "AROUND callback completed: callbackId={}, phase={}, took={}ms",
+            finalResponse.getCallbackId(),
+            finalResponse.getPhase(),
+            took);
+      }
+    } catch (Exception e) {
+      logger.error(
+          "Error handling AROUND intercept callback: callbackId={}", beforeReq.getCallbackId(), e);
+      // Send error response
+      InterceptCallbackResponseMessage errorResponse = buildErrorResponse(beforeReq, e);
+      zmqRpcSocket.send(ColferUtils.toBytes(messageBuilder.wrap(errorResponse)));
+    }
+  }
+
+  /**
+   * Creates an AroundSocketAccessor for the current socket.
+   *
+   * <p>The accessor allows ctx.proceed() to send/receive on this thread's socket while respecting
+   * ZMQ's single-thread-per-socket constraint.
+   *
+   * @return the socket accessor
+   */
+  private AroundSocketAccessor createAroundSocketAccessor() {
+    return (beforeResponse, timeoutMs) -> {
+      // Calculate effective timeout
+      int effectiveTimeout = timeoutMs > 0 ? timeoutMs : DEFAULT_CALLBACK_RECEIVE_TIMEOUT_MS;
+
+      // Save current timeout and set new one
+      int originalTimeout = zmqRpcSocket.getReceiveTimeOut();
+      zmqRpcSocket.setReceiveTimeOut(effectiveTimeout);
+
+      try {
+        // Send BEFORE response
+        zmqRpcSocket.send(ColferUtils.toBytes(messageBuilder.wrap(beforeResponse)), 0);
+
+        // Receive AFTER request (blocks)
+        byte[] afterReqBytes = zmqRpcSocket.recv(0);
+
+        if (afterReqBytes == null) {
+          throw new AroundTimeoutException(
+              "Timeout waiting for AFTER phase from interceptable peer after "
+                  + effectiveTimeout
+                  + "ms");
+        }
+
+        // Parse AFTER request
+        Message afterMsg = new Message();
+        afterMsg.unmarshal(afterReqBytes, 0);
+        InterceptCallbackRequestMessage afterReq = afterMsg.getInterceptCallbackRequestMessage();
+
+        if (afterReq == null) {
+          throw new IllegalStateException(
+              "Expected InterceptCallbackRequestMessage for AFTER phase, got: " + afterMsg);
+        }
+
+        return parseAfterPhaseData(afterReq);
+
+      } finally {
+        // Restore original timeout
+        zmqRpcSocket.setReceiveTimeOut(originalTimeout);
+      }
+    };
+  }
+
+  /**
+   * Parses the AFTER phase data from the callback request.
+   *
+   * @param afterReq the AFTER phase request
+   * @return the parsed after phase data
+   */
+  private AfterPhaseData parseAfterPhaseData(InterceptCallbackRequestMessage afterReq) {
+    Object returnValue = null;
+    Throwable thrownException = null;
+
+    if (!afterReq.getIsVoid() && afterReq.getReturnValue() != null) {
+      try {
+        returnValue = Unwrapper.unwrapObject(afterReq.getReturnValue());
+      } catch (Exception e) {
+        logger.warn("Failed to unwrap return value in AFTER phase", e);
+      }
+    }
+
+    RaisedThrowable raised = afterReq.getThrownException();
+    if (raised != null) {
+      thrownException = ExceptionSerdes.deserializeException(raised);
+    }
+
+    return new AfterPhaseData(returnValue, thrownException, afterReq.getIsVoid());
+  }
+
+  /**
+   * Builds an error response for a failed AROUND callback.
+   *
+   * @param request the original request
+   * @param error the exception that occurred
+   * @return the error response
+   */
+  private InterceptCallbackResponseMessage buildErrorResponse(
+      InterceptCallbackRequestMessage request, Exception error) {
+    InterceptCallbackResponseMessage response = new InterceptCallbackResponseMessage();
+    response.setCallbackId(request.getCallbackId());
+    response.setPhase(request.getPhase());
+    response.setThrowException(true);
+    response.setException(ExceptionSerdes.serializeException(error));
+    return response;
   }
 
   /**
@@ -392,7 +568,7 @@ class SocketRpcInvoker extends AbstractMessageInvokerThread {
 
     Exception invalidRequestException = null;
     // create ExecMessage from JSON-RPC request message
-    MessageType requestMessageType = null;
+    MessageType requestMessageType;
     MessageFamily requestFamily = null;
     try {
       requestMessageType = JsonRpcMessageUtils.getMessageType(jsonRpcRequest);

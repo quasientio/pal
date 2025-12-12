@@ -9,6 +9,7 @@
  */
 package com.quasient.pal.core.intercept;
 
+import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.messages.colfer.InterceptMessage;
 import java.util.Collections;
 import java.util.List;
@@ -103,5 +104,26 @@ public class InterceptCheckResult {
    */
   public List<InterceptMessage> getLocalIntercepts() {
     return Collections.unmodifiableList(localIntercepts);
+  }
+
+  /**
+   * Checks whether any AROUND intercepts were matched.
+   *
+   * @return true if at least one AROUND intercept matched; false otherwise
+   */
+  public boolean hasAroundIntercepts() {
+    return remoteIntercepts.stream()
+        .anyMatch(i -> InterceptType.fromByte(i.getInterceptType()) == InterceptType.AROUND);
+  }
+
+  /**
+   * Retrieves the list of AROUND intercept messages from remote intercepts.
+   *
+   * @return list of AROUND intercepts; never null but may be empty
+   */
+  public List<InterceptMessage> getAroundIntercepts() {
+    return remoteIntercepts.stream()
+        .filter(i -> InterceptType.fromByte(i.getInterceptType()) == InterceptType.AROUND)
+        .toList();
   }
 }

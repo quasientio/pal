@@ -13,9 +13,10 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import com.quasient.pal.InterceptEndToEndTestSuite;
-import com.quasient.pal.apps.callbacks.AfterCallbackHandlers;
+import com.quasient.pal.apps.callbacks.method.MethodHandlers;
 import com.quasient.pal.apps.quantized.intercept.StringMethods;
 import com.quasient.pal.common.directory.nodes.InterceptRequest;
 import com.quasient.pal.common.lang.intercept.InterceptType;
@@ -35,8 +36,8 @@ import org.junit.Test;
  * <p>These tests verify the end-to-end callback mechanism for AFTER method intercepts, including
  * return value override via static callback methods invoked using reflection.
  *
- * <p>Tests use the shared intercept peer with StringMethods application class and
- * AfterCallbackHandlers callback handlers (both in itt-apps module).
+ * <p>Tests use the shared intercept peer with StringMethods application class and MethodHandlers
+ * callback handlers (both in itt-apps module).
  */
 public class AfterMethodCallbackIT extends AbstractInterceptIT {
 
@@ -53,7 +54,7 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
   public void testSimpleReturnValueOverride() throws Exception {
     logger.info("===== testSimpleReturnValueOverride: TEST STARTED =====");
 
-    final String callbackClass = AfterCallbackHandlers.class.getName();
+    final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "uppercaseReturnValue";
     final String inputValue = "hello";
     final String expectedValue = "HELLO";
@@ -134,7 +135,7 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
   public void testPrimitiveReturnValueOverride() throws Exception {
     logger.info("===== testPrimitiveReturnValueOverride: TEST STARTED =====");
 
-    final String callbackClass = AfterCallbackHandlers.class.getName();
+    final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "doubleReturnValue";
     final int inputValue = 5;
     final int factor = 3;
@@ -213,7 +214,7 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
   public void testVoidMethodIsVoidCheck() throws Exception {
     logger.info("===== testVoidMethodIsVoidCheck: TEST STARTED =====");
 
-    final String callbackClass = AfterCallbackHandlers.class.getName();
+    final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "checkIsVoid";
     final String inputValue = "test message";
 
@@ -292,7 +293,7 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
   public void testVoidMethodCannotSetReturnValue() throws Exception {
     logger.info("===== testVoidMethodCannotSetReturnValue: TEST STARTED =====");
 
-    final String callbackClass = AfterCallbackHandlers.class.getName();
+    final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "attemptSetReturnValueOnVoid";
     final String inputValue = "test message";
 
@@ -381,8 +382,8 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
   public void testCallbackThrowsException() throws Exception {
     logger.info("===== testCallbackThrowsException: TEST STARTED =====");
 
-    final String callbackClass = AfterCallbackHandlers.class.getName();
-    final String callbackMethod = "throwException";
+    final String callbackClass = MethodHandlers.class.getName();
+    final String callbackMethod = "throwExceptionAfter";
 
     // 1. Register an AFTER intercept on echo method that throws exception
     logger.info("Creating AFTER intercept request for echo method with throwing callback");
@@ -449,7 +450,7 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
       assertTrue(
           "Expected throwException callback to log",
           InterceptEndToEndTestSuite.waitForAppLogLine(
-              "throwException: throwing SecurityException"));
+              "throwExceptionAfter: throwing SecurityException"));
 
       logger.info("===== testCallbackThrowsException: TEST COMPLETED SUCCESSFULLY =====");
     } else {
@@ -468,8 +469,8 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
   public void testNoOpCallback() throws Exception {
     logger.info("===== testNoOpCallback: TEST STARTED =====");
 
-    final String callbackClass = AfterCallbackHandlers.class.getName();
-    final String callbackMethod = "noOp";
+    final String callbackClass = MethodHandlers.class.getName();
+    final String callbackMethod = "noOpAfter";
     final String inputValue = "hello";
 
     // 1. Register an AFTER intercept on echo method with no-op callback
@@ -529,8 +530,132 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
     // Verify callback logged no override in application log
     assertTrue(
         "Expected noOp callback to log no override",
-        InterceptEndToEndTestSuite.waitForAppLogLine("noOp: no return value override"));
+        InterceptEndToEndTestSuite.waitForAppLogLine("noOpAfter: no return value override"));
 
     logger.info("===== testNoOpCallback: TEST COMPLETED SUCCESSFULLY =====");
+  }
+
+  // ========================================================================
+  // Phase/Type Restriction Tests - AFTER intercepts
+  // ========================================================================
+
+  /**
+   * Tests that setArg() throws UnsupportedOperationException in AFTER intercept.
+   *
+   * <p>Registers an AFTER intercept with a callback that attempts to call setArg(). The callback
+   * verifies that UnsupportedOperationException is thrown, then returns normally.
+   */
+  @Test
+  public void testSetArgThrowsInAfter() throws Exception {
+    logger.info("===== testSetArgThrowsInAfter: TEST STARTED =====");
+
+    final String callbackClass = MethodHandlers.class.getName();
+    final String callbackMethod = "attemptSetArgInAfter";
+
+    interceptUuid = UUID.randomUUID();
+    InterceptRequest<InterceptableMethodCall> interceptRequest =
+        new InterceptRequest<>(
+            interceptUuid,
+            INTERCEPTOR_PEER_UUID,
+            InterceptType.AFTER,
+            StringMethods.class.getName(),
+            callbackClass,
+            callbackMethod,
+            new InterceptableMethodCall("echo", Collections.singletonList("java.lang.String")));
+
+    register(interceptRequest);
+    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
+
+    ObjectRef stringMethodsInstance =
+        ObjectRef.from(
+            invoke(messageBuilder.buildEmptyConstructor(myPeerUuid, StringMethods.class.getName()))
+                .getReturnValue()
+                .getObject()
+                .getRef());
+
+    ExecMessage response =
+        invoke(
+            messageBuilder.buildInstanceMethod(
+                myPeerUuid,
+                StringMethods.class.getName(),
+                "callEcho",
+                stringMethodsInstance,
+                new String[] {"java.lang.String"},
+                new Object[] {"hello"}));
+
+    if (response.getRaisedThrowable() != null) {
+      fail(
+          "Callback failed: "
+              + response.getRaisedThrowable().getThrowable().getType()
+              + " - "
+              + response.getRaisedThrowable().getThrowable().getMessage());
+    }
+
+    assertTrue(
+        "Expected callback to log UnsupportedOperationException",
+        InterceptEndToEndTestSuite.waitForAppLogLine(
+            "attemptSetArgInAfter: correctly threw UnsupportedOperationException"));
+
+    logger.info("===== testSetArgThrowsInAfter: TEST COMPLETED SUCCESSFULLY =====");
+  }
+
+  /**
+   * Tests that proceed() throws UnsupportedOperationException in AFTER intercept.
+   *
+   * <p>Registers an AFTER intercept with a callback that attempts to call proceed(). The callback
+   * verifies that UnsupportedOperationException is thrown, then returns normally.
+   */
+  @Test
+  public void testProceedThrowsInAfter() throws Exception {
+    logger.info("===== testProceedThrowsInAfter: TEST STARTED =====");
+
+    final String callbackClass = MethodHandlers.class.getName();
+    final String callbackMethod = "attemptProceedInAfter";
+
+    interceptUuid = UUID.randomUUID();
+    InterceptRequest<InterceptableMethodCall> interceptRequest =
+        new InterceptRequest<>(
+            interceptUuid,
+            INTERCEPTOR_PEER_UUID,
+            InterceptType.AFTER,
+            StringMethods.class.getName(),
+            callbackClass,
+            callbackMethod,
+            new InterceptableMethodCall("echo", Collections.singletonList("java.lang.String")));
+
+    register(interceptRequest);
+    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
+
+    ObjectRef stringMethodsInstance =
+        ObjectRef.from(
+            invoke(messageBuilder.buildEmptyConstructor(myPeerUuid, StringMethods.class.getName()))
+                .getReturnValue()
+                .getObject()
+                .getRef());
+
+    ExecMessage response =
+        invoke(
+            messageBuilder.buildInstanceMethod(
+                myPeerUuid,
+                StringMethods.class.getName(),
+                "callEcho",
+                stringMethodsInstance,
+                new String[] {"java.lang.String"},
+                new Object[] {"hello"}));
+
+    if (response.getRaisedThrowable() != null) {
+      fail(
+          "Callback failed: "
+              + response.getRaisedThrowable().getThrowable().getType()
+              + " - "
+              + response.getRaisedThrowable().getThrowable().getMessage());
+    }
+
+    assertTrue(
+        "Expected callback to log UnsupportedOperationException",
+        InterceptEndToEndTestSuite.waitForAppLogLine(
+            "attemptProceedInAfter: correctly threw UnsupportedOperationException"));
+
+    logger.info("===== testProceedThrowsInAfter: TEST COMPLETED SUCCESSFULLY =====");
   }
 }

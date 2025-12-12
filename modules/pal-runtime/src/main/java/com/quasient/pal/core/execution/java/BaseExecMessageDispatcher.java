@@ -18,6 +18,8 @@ import com.quasient.pal.common.runtime.Dispatcher;
 import com.quasient.pal.common.runtime.ExecPhase;
 import com.quasient.pal.common.util.Classes;
 import com.quasient.pal.core.intercept.InterceptCallbackDispatcher;
+import com.quasient.pal.core.intercept.InterceptCallbackDispatcher.AroundCallbackState;
+import com.quasient.pal.core.intercept.InterceptCallbackDispatcher.AroundConsolidatedResponse;
 import com.quasient.pal.core.intercept.InterceptCheckResult;
 import com.quasient.pal.core.intercept.InterceptChecker;
 import com.quasient.pal.core.internal.messages.SessionCommandMsg;
@@ -141,14 +143,61 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       }
     }
 
-    // 4. Invoke
+    // Send AROUND BEFORE callbacks and handle skip semantics
+    List<AroundCallbackState> aroundPendingCallbacks = null;
+    boolean skipInvoke = false;
+    Object skipReturnValue = null;
+    if (beforeInterceptCheck != null
+        && beforeInterceptCheck.hasRemoteIntercepts()
+        && beforeExecMsg != null) {
+      AroundConsolidatedResponse aroundResponse =
+          interceptCallbackDispatcher.sendAroundCallbacks(
+              beforeInterceptCheck, beforeExecMsg, finalArgs);
+
+      // Check if callback wants to throw an exception
+      if (aroundResponse.shouldThrowException()) {
+        throw aroundResponse.getExceptionToThrow();
+      }
+
+      // Check if callback says to skip execution (e.g., cache hit)
+      if (!aroundResponse.shouldProceed()) {
+        // Skip method invocation but continue with post-execution steps (WAL, AFTER intercepts)
+        // Note: AROUND AFTER callbacks won't fire since proceed() wasn't called
+        skipInvoke = true;
+        skipReturnValue = aroundResponse.getSkipReturnValue();
+      } else {
+        // Apply additional argument mutations from AROUND callbacks
+        if (aroundResponse.hasArgMutations()) {
+          Object[] mutatedArgs = finalArgs == args ? args.clone() : finalArgs;
+          for (Map.Entry<Integer, Object> entry : aroundResponse.getMutatedArgs().entrySet()) {
+            int index = entry.getKey();
+            Object newValue = entry.getValue();
+            if (index >= 0 && index < mutatedArgs.length) {
+              mutatedArgs[index] = newValue;
+            }
+          }
+          finalArgs = mutatedArgs;
+        }
+
+        // Track pending AROUND callbacks for AFTER phase
+        aroundPendingCallbacks = aroundResponse.getPendingCallbacks();
+      }
+    }
+
+    // 4. Invoke (skip if AROUND callback said to skip)
     Object returnValue = null;
     InvocationThrowableWrapper throwableWrapper = null;
-    try {
-      returnValue = invoke(pjp, finalArgs);
-    } catch (Throwable th) {
-      logger.error("Caught throwable while invoking field operation. Will wrap and return it.", th);
-      throwableWrapper = new InvocationThrowableWrapper(th);
+    if (skipInvoke) {
+      // Use the skip return value from AROUND callback (e.g., cached value)
+      returnValue = skipReturnValue;
+    } else {
+      try {
+        returnValue = invoke(pjp, finalArgs);
+      } catch (Throwable th) {
+        logger.error(
+            "Caught throwable while invoking field operation. Will wrap and return it.", th);
+        throwableWrapper = new InvocationThrowableWrapper(th);
+      }
     }
 
     // Check intercepts for AFTER phase
@@ -204,6 +253,28 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         // Apply return value override
         if (afterCallbackResponse.hasReturnValueOverride()) {
           returnValue = afterCallbackResponse.getOverriddenReturnValue();
+        }
+      }
+
+      // 8.5. Send AROUND AFTER callbacks (for callbacks that called proceed())
+      if (aroundPendingCallbacks != null && !aroundPendingCallbacks.isEmpty()) {
+        InterceptCallbackDispatcher.ConsolidatedCallbackResponse aroundAfterResponse =
+            interceptCallbackDispatcher.sendAroundAfterCallbacks(
+                aroundPendingCallbacks,
+                afterExecMsg,
+                returnValue,
+                returnsVoid,
+                throwableWrapper != null ? throwableWrapper.throwable() : null);
+
+        // Check if callback wants to throw an exception
+        if (aroundAfterResponse.shouldThrowException()) {
+          throwableWrapper =
+              new InvocationThrowableWrapper(aroundAfterResponse.getExceptionToThrow());
+        }
+
+        // Apply return value override
+        if (aroundAfterResponse.hasReturnValueOverride()) {
+          returnValue = aroundAfterResponse.getOverriddenReturnValue();
         }
       }
     } else if (afterInterceptCheck != null && afterInterceptCheck.hasLocalIntercepts()) {

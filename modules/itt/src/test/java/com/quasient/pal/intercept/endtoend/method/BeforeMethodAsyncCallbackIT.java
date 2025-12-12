@@ -14,7 +14,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertTrue;
 
 import com.quasient.pal.InterceptEndToEndTestSuite;
-import com.quasient.pal.apps.callbacks.AsyncCallbackHandlers;
+import com.quasient.pal.apps.callbacks.method.MethodHandlers;
 import com.quasient.pal.apps.quantized.intercept.StringMethods;
 import com.quasient.pal.common.directory.nodes.InterceptRequest;
 import com.quasient.pal.common.lang.intercept.InterceptType;
@@ -38,8 +38,8 @@ import org.junit.Test;
  *   <li>Throw UnsupportedOperationException when attempting to mutate arguments
  * </ul>
  *
- * <p>Tests use the shared intercept peer with StringMethods application class and
- * AsyncCallbackHandlers callback handlers (both in itt-apps module).
+ * <p>Tests use the shared intercept peer with StringMethods application class and MethodHandlers
+ * callback handlers (both in itt-apps module).
  */
 public class BeforeMethodAsyncCallbackIT extends AbstractInterceptIT {
 
@@ -56,7 +56,7 @@ public class BeforeMethodAsyncCallbackIT extends AbstractInterceptIT {
   public void testAsyncCallbackCanReadArgs() throws Exception {
     logger.info("===== testAsyncCallbackCanReadArgs: TEST STARTED =====");
 
-    final String callbackClass = AsyncCallbackHandlers.class.getName();
+    final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "logArgs";
     final String inputValue = "hello";
 
@@ -132,7 +132,7 @@ public class BeforeMethodAsyncCallbackIT extends AbstractInterceptIT {
   public void testAsyncCallbackCannotMutateArgs() throws Exception {
     logger.info("===== testAsyncCallbackCannotMutateArgs: TEST STARTED =====");
 
-    final String callbackClass = AsyncCallbackHandlers.class.getName();
+    final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "attemptArgMutation";
     final String inputValue = "hello";
 
@@ -183,11 +183,11 @@ public class BeforeMethodAsyncCallbackIT extends AbstractInterceptIT {
         returnValue,
         is(inputValue));
 
-    // Verify callback logged the mutation attempt in application log
+    // Verify callback caught UnsupportedOperationException
     assertTrue(
-        "Expected attemptArgMutation callback to log mutation attempt",
+        "Expected attemptArgMutation callback to log UnsupportedOperationException",
         InterceptEndToEndTestSuite.waitForAppLogLine(
-            "attemptArgMutation.*BEFORE_ASYNC.*attempting to mutate"));
+            "attemptArgMutation: correctly threw UnsupportedOperationException"));
 
     logger.info("===== testAsyncCallbackCannotMutateArgs: TEST COMPLETED SUCCESSFULLY =====");
   }
@@ -203,7 +203,7 @@ public class BeforeMethodAsyncCallbackIT extends AbstractInterceptIT {
   public void testAsyncCallbackReceivesCorrectArgs() throws Exception {
     logger.info("===== testAsyncCallbackReceivesCorrectArgs: TEST STARTED =====");
 
-    final String callbackClass = AsyncCallbackHandlers.class.getName();
+    final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "verifyFirstArgIsHello";
     final String inputValue = "hello";
 
@@ -272,7 +272,7 @@ public class BeforeMethodAsyncCallbackIT extends AbstractInterceptIT {
   public void testAsyncCallbackCannotThrowException() throws Exception {
     logger.info("===== testAsyncCallbackCannotThrowException: TEST STARTED =====");
 
-    final String callbackClass = AsyncCallbackHandlers.class.getName();
+    final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "attemptThrowException";
     final String inputValue = "hello";
 
@@ -323,11 +323,11 @@ public class BeforeMethodAsyncCallbackIT extends AbstractInterceptIT {
         returnValue,
         is(inputValue));
 
-    // Verify callback logged the exception throw attempt in application log
+    // Verify callback logged that UnsupportedOperationException was correctly thrown
     assertTrue(
-        "Expected attemptThrowException callback to log exception throw attempt",
+        "Expected attemptThrowException callback to log UnsupportedOperationException",
         InterceptEndToEndTestSuite.waitForAppLogLine(
-            "attemptThrowException.*BEFORE_ASYNC.*attempting to set exception"));
+            "attemptThrowException: correctly threw UnsupportedOperationException"));
 
     logger.info("===== testAsyncCallbackCannotThrowException: TEST COMPLETED SUCCESSFULLY =====");
   }

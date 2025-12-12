@@ -129,6 +129,11 @@ public class Unwrapper {
    *     be found
    */
   public static Object unwrapObject(Unwrappable wrappedObject) throws ClassNotFoundException {
+    // Check for null before trying to resolve the type - null values don't have type information
+    if (wrappedObject.isNull()) {
+      return null;
+    }
+
     String className = wrappedObject.getType();
     Class<?> clazz = Classes.getClassForPrimitive(className);
     if (clazz == null) {

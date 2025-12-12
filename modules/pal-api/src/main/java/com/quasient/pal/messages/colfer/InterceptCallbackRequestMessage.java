@@ -73,6 +73,12 @@ public class InterceptCallbackRequestMessage
 
   public RaisedThrowable thrownException;
 
+  /**
+   * AROUND intercepts only: timeout for proceed() in milliseconds Set by interceptable peer;
+   * interceptor should complete within this time
+   */
+  public int timeoutMs;
+
   /** Default constructor */
   public InterceptCallbackRequestMessage() {
     init();
@@ -197,7 +203,8 @@ public class InterceptCallbackRequestMessage
             + 6
             + (long) this.callbackMethod.length() * 3
             + 5
-            + 1;
+            + 1
+            + 5;
     if (this.exec != null) n += 1 + (long) this.exec.marshalFit();
     if (this.returnValue != null) n += 1 + (long) this.returnValue.marshalFit();
     if (this.thrownException != null) n += 1 + (long) this.thrownException.marshalFit();
@@ -530,6 +537,23 @@ public class InterceptCallbackRequestMessage
         i = this.thrownException.marshal(buf, i);
       }
 
+      if (this.timeoutMs != 0) {
+        int x = this.timeoutMs;
+        if ((x & ~((1 << 21) - 1)) != 0) {
+          buf[i++] = (byte) (12 | 0x80);
+          buf[i++] = (byte) (x >>> 24);
+          buf[i++] = (byte) (x >>> 16);
+          buf[i++] = (byte) (x >>> 8);
+        } else {
+          buf[i++] = (byte) 12;
+          while (x > 0x7f) {
+            buf[i++] = (byte) (x | 0x80);
+            x >>>= 7;
+          }
+        }
+        buf[i++] = (byte) x;
+      }
+
       buf[i++] = (byte) 0x7f;
       return i;
     } catch (ArrayIndexOutOfBoundsException e) {
@@ -721,6 +745,24 @@ public class InterceptCallbackRequestMessage
         header = buf[i++];
       }
 
+      if (header == (byte) 12) {
+        int x = 0;
+        for (int shift = 0; true; shift += 7) {
+          byte b = buf[i++];
+          x |= (b & 0x7f) << shift;
+          if (shift == 28 || b >= 0) break;
+        }
+        this.timeoutMs = x;
+        header = buf[i++];
+      } else if (header == (byte) (12 | 0x80)) {
+        this.timeoutMs =
+            (buf[i++] & 0xff) << 24
+                | (buf[i++] & 0xff) << 16
+                | (buf[i++] & 0xff) << 8
+                | (buf[i++] & 0xff);
+        header = buf[i++];
+      }
+
       if (header != (byte) 0x7f)
         throw new InputMismatchException(format("colfer: unknown header at byte %d", i - 1));
     } finally {
@@ -738,7 +780,7 @@ public class InterceptCallbackRequestMessage
   }
 
   // {@link Serializable} version number.
-  private static final long serialVersionUID = 12L;
+  private static final long serialVersionUID = 13L;
 
   // {@link Serializable} Colfer extension.
   private void writeObject(ObjectOutputStream out) throws IOException {
@@ -1111,6 +1153,35 @@ public class InterceptCallbackRequestMessage
     return this;
   }
 
+  /**
+   * Gets com.quasient.pal.messages/colfer.InterceptCallbackRequestMessage.timeoutMs.
+   *
+   * @return the value.
+   */
+  public int getTimeoutMs() {
+    return this.timeoutMs;
+  }
+
+  /**
+   * Sets com.quasient.pal.messages/colfer.InterceptCallbackRequestMessage.timeoutMs.
+   *
+   * @param value the replacement.
+   */
+  public void setTimeoutMs(int value) {
+    this.timeoutMs = value;
+  }
+
+  /**
+   * Sets com.quasient.pal.messages/colfer.InterceptCallbackRequestMessage.timeoutMs.
+   *
+   * @param value the replacement.
+   * @return {@code this}.
+   */
+  public InterceptCallbackRequestMessage withTimeoutMs(int value) {
+    this.timeoutMs = value;
+    return this;
+  }
+
   @Override
   public final int hashCode() {
     int h = 1;
@@ -1126,6 +1197,7 @@ public class InterceptCallbackRequestMessage
     h = 31 * h + this.returnValueRef;
     h = 31 * h + (this.isVoid ? 1231 : 1237);
     if (this.thrownException != null) h = 31 * h + this.thrownException.hashCode();
+    h = 31 * h + this.timeoutMs;
     return h;
   }
 
@@ -1162,7 +1234,8 @@ public class InterceptCallbackRequestMessage
         && this.isVoid == o.isVoid
         && (this.thrownException == null
             ? o.thrownException == null
-            : this.thrownException.equals(o.thrownException));
+            : this.thrownException.equals(o.thrownException))
+        && this.timeoutMs == o.timeoutMs;
   }
 
   @Override
@@ -1219,6 +1292,10 @@ public class InterceptCallbackRequestMessage
         this.thrownException = new RaisedThrowable().fromJson(jsonObj);
       }
 
+      if (json.has("timeoutMs")) {
+        this.timeoutMs = json.get("timeoutMs").getAsInt();
+      }
+
     } catch (Exception e) {
       throw new JsonParseException("Error deserializing json object: " + e.getMessage(), e);
     }
@@ -1238,5 +1315,6 @@ public class InterceptCallbackRequestMessage
     this.returnValueRef = 0;
     this.isVoid = false;
     this.thrownException = null;
+    this.timeoutMs = 0;
   }
 }

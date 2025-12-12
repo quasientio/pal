@@ -10,6 +10,8 @@
 package com.quasient.pal.common.lang.intercept;
 
 import com.quasient.pal.messages.colfer.ExecMessage;
+import com.quasient.pal.messages.colfer.InterceptCallbackResponseMessage;
+import com.quasient.pal.serdes.colfer.Wrapper;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Arrays;
 import java.util.Objects;
@@ -59,8 +61,10 @@ public final class InterceptContext {
   /** The execution message containing operation metadata. */
   @Nonnull private final ExecMessage exec;
 
-  /** The current callback phase (BEFORE or AFTER). */
-  @Nonnull private final InterceptPhase phase;
+  /**
+   * The current callback phase (BEFORE or AFTER). Mutable for AROUND intercepts after proceed().
+   */
+  @Nonnull private InterceptPhase phase;
 
   /** The type of intercept (BEFORE, AFTER, or AROUND). */
   @Nonnull private final InterceptType interceptType;
@@ -70,6 +74,23 @@ public final class InterceptContext {
 
   /** The method arguments. Mutable via {@link #setArg(int, Object)}. */
   @Nullable private Object[] args;
+
+  // ---- AROUND intercept support fields ----
+
+  /** Socket accessor for AROUND proceed() - set by dispatcher before callback invocation. */
+  @Nullable private AroundSocketAccessor aroundSocketAccessor;
+
+  /** Callback ID for correlating BEFORE/AFTER phases of AROUND intercept. */
+  @Nullable private String callbackId;
+
+  /** Timeout in milliseconds for AROUND proceed(). */
+  private int timeoutMs;
+
+  /** Flag indicating whether proceed() has been called (AROUND only). */
+  private boolean proceedCalled = false;
+
+  /** Whether the method has void return type - mutable for AROUND after proceed(). */
+  private boolean isVoidMutable;
 
   /**
    * The return value from the intercepted method (AFTER phase only).
@@ -84,13 +105,6 @@ public final class InterceptContext {
    * </ul>
    */
   @Nullable private Object returnValue;
-
-  /**
-   * Whether the intercepted method has a void return type.
-   *
-   * <p>This is {@code true} if the method signature declares {@code void} as its return type.
-   */
-  private final boolean isVoid;
 
   /**
    * The exception thrown by the intercepted method (AFTER phase only).
@@ -136,7 +150,7 @@ public final class InterceptContext {
         Objects.requireNonNull(interceptedPeerUuid, "interceptedPeerUuid must not be null");
     this.args = args;
     this.returnValue = returnValue;
-    this.isVoid = isVoid;
+    this.isVoidMutable = isVoid;
     this.thrownException = thrownException;
   }
 
@@ -264,21 +278,39 @@ public final class InterceptContext {
   /**
    * Returns the return value from the intercepted method.
    *
-   * <p>This is only meaningful in the {@link InterceptPhase#AFTER} phase.
+   * <p>This is only available in the {@link InterceptPhase#AFTER} phase. For AROUND intercepts,
+   * this becomes available after {@link #proceed()} is called.
    *
    * <p>This returns {@code null} if:
    *
    * <ul>
-   *   <li>The phase is BEFORE
    *   <li>The method is void ({@link #isVoid()} returns true)
    *   <li>The method threw an exception ({@link #getThrownException()} is non-null)
    *   <li>The method explicitly returned null
    * </ul>
    *
    * @return the return value, or null
+   * @throws UnsupportedOperationException if intercept type is BEFORE or BEFORE_ASYNC (return value
+   *     never available)
+   * @throws IllegalStateException if AROUND intercept before proceed() (return value not yet
+   *     available)
    */
   @Nullable
   public Object getReturnValue() {
+    // BEFORE and BEFORE_ASYNC intercepts never have access to return value
+    if (interceptType == InterceptType.BEFORE || interceptType == InterceptType.BEFORE_ASYNC) {
+      throw new UnsupportedOperationException(
+          "getReturnValue() is not supported for "
+              + interceptType
+              + " intercepts. "
+              + "Return value is only available in AFTER or AROUND intercepts.");
+    }
+    // AROUND intercept before proceed() - supported but not in this phase
+    if (phase == InterceptPhase.BEFORE) {
+      throw new IllegalStateException(
+          "getReturnValue() is not available before proceed(). "
+              + "Call proceed() first to execute the method.");
+    }
     return returnValue;
   }
 
@@ -288,47 +320,84 @@ public final class InterceptContext {
    * @return {@code true} if the method is declared void, {@code false} otherwise
    */
   public boolean isVoid() {
-    return isVoid;
+    return isVoidMutable;
   }
 
   /**
    * Returns the exception thrown by the intercepted method.
    *
-   * <p>This is only meaningful in the {@link InterceptPhase#AFTER} phase.
+   * <p>This is only available in the {@link InterceptPhase#AFTER} phase. For AROUND intercepts,
+   * this becomes available after {@link #proceed()} is called.
    *
    * <p>If this is non-null, the intercepted method threw an exception instead of returning
    * normally.
    *
    * @return the thrown exception, or null if the method completed normally
+   * @throws UnsupportedOperationException if intercept type is BEFORE or BEFORE_ASYNC (thrown
+   *     exception never available)
+   * @throws IllegalStateException if AROUND intercept before proceed() (thrown exception not yet
+   *     available)
    */
   @Nullable
   public Throwable getThrownException() {
+    // BEFORE and BEFORE_ASYNC intercepts never have access to thrown exception
+    if (interceptType == InterceptType.BEFORE || interceptType == InterceptType.BEFORE_ASYNC) {
+      throw new UnsupportedOperationException(
+          "getThrownException() is not supported for "
+              + interceptType
+              + " intercepts. "
+              + "Thrown exception is only available in AFTER or AROUND intercepts.");
+    }
+    // AROUND intercept before proceed() - supported but not in this phase
+    if (phase == InterceptPhase.BEFORE) {
+      throw new IllegalStateException(
+          "getThrownException() is not available before proceed(). "
+              + "Call proceed() first to execute the method.");
+    }
     return thrownException;
   }
 
   /**
    * Sets the value of a specific argument.
    *
-   * <p>This is typically used in the {@link InterceptPhase#BEFORE} phase to modify arguments before
-   * method execution.
+   * <p>This is only available in the {@link InterceptPhase#BEFORE} phase to modify arguments before
+   * method execution. For AROUND intercepts, this must be called before {@link #proceed()}.
    *
    * <p><b>Limitation:</b> Only simple types are supported (primitives, wrappers, String, and simple
    * arrays). Setting complex objects may result in serialization errors.
    *
-   * <p><b>ASYNC Restriction:</b> Argument mutation is not supported for {@link
-   * InterceptType#BEFORE_ASYNC} intercepts. ASYNC callbacks are fire-and-forget and cannot modify
-   * the arguments because the response is not awaited by the intercepted peer.
+   * <p><b>Type restrictions:</b>
+   *
+   * <ul>
+   *   <li>AFTER/AFTER_ASYNC intercepts cannot mutate arguments (execution already happened)
+   *   <li>BEFORE_ASYNC intercepts cannot mutate arguments (fire-and-forget, response not awaited)
+   * </ul>
    *
    * @param index the zero-based argument index
    * @param value the new argument value
    * @throws IndexOutOfBoundsException if the index is out of range
-   * @throws UnsupportedOperationException if the intercept type is BEFORE_ASYNC
+   * @throws UnsupportedOperationException if the intercept type is AFTER, BEFORE_ASYNC, or
+   *     AFTER_ASYNC
+   * @throws IllegalStateException if called in AFTER phase (for AROUND after proceed())
    */
   public void setArg(int index, @Nullable Object value) {
+    // Check for unsupported intercept types
+    if (interceptType == InterceptType.AFTER || interceptType == InterceptType.AFTER_ASYNC) {
+      throw new UnsupportedOperationException(
+          "Argument mutation is not supported for "
+              + interceptType
+              + " intercepts. "
+              + "The method has already executed.");
+    }
     if (interceptType == InterceptType.BEFORE_ASYNC) {
       throw new UnsupportedOperationException(
           "Argument mutation is not supported for BEFORE_ASYNC intercepts. "
               + "ASYNC callbacks are fire-and-forget and cannot modify arguments.");
+    }
+    // Check phase for AROUND intercepts (after proceed(), we're in AFTER phase)
+    if (phase == InterceptPhase.AFTER) {
+      throw new IllegalStateException(
+          "setArg() is not available in AFTER phase. " + "The method has already executed.");
     }
     if (args == null) {
       throw new IllegalStateException("No arguments available to modify");
@@ -348,27 +417,40 @@ public final class InterceptContext {
   /**
    * Sets the return value to be sent back to the intercepted peer.
    *
-   * <p>This is typically used in the {@link InterceptPhase#AFTER} phase to override the method's
-   * return value.
+   * <p>This is available for AFTER and AROUND intercepts. For AROUND intercepts, this can be called
+   * either before {@link #proceed()} (to skip execution and return a custom value) or after
+   * proceed() (to override the method's return value).
    *
    * <p><b>Note:</b> Return values are force-serialized (by-value). ObjectRef-based remote
    * references are not supported.
    *
-   * <p><b>ASYNC Restriction:</b> Return value override is not supported for {@link
-   * InterceptType#AFTER_ASYNC} intercepts. ASYNC callbacks are fire-and-forget and cannot modify
-   * the return value because the response is not awaited by the intercepted peer.
+   * <p><b>Type restrictions:</b>
+   *
+   * <ul>
+   *   <li>BEFORE intercepts cannot override return value (use AROUND with skipProceed for that)
+   *   <li>ASYNC intercepts cannot override return value (fire-and-forget, response not awaited)
+   * </ul>
    *
    * @param value the new return value
    * @throws IllegalStateException if the method is void
-   * @throws UnsupportedOperationException if the intercept type is AFTER_ASYNC
+   * @throws UnsupportedOperationException if the intercept type is BEFORE, BEFORE_ASYNC, or
+   *     AFTER_ASYNC
    */
   public void setReturnValue(@Nullable Object value) {
-    if (interceptType == InterceptType.AFTER_ASYNC) {
+    // Check for unsupported intercept types
+    if (interceptType == InterceptType.BEFORE) {
       throw new UnsupportedOperationException(
-          "Return value override is not supported for AFTER_ASYNC intercepts. "
+          "Return value override is not supported for BEFORE intercepts. "
+              + "Use AROUND with skipProceed() to return a custom value.");
+    }
+    if (interceptType == InterceptType.BEFORE_ASYNC || interceptType == InterceptType.AFTER_ASYNC) {
+      throw new UnsupportedOperationException(
+          "Return value override is not supported for "
+              + interceptType
+              + " intercepts. "
               + "ASYNC callbacks are fire-and-forget and cannot modify the return value.");
     }
-    if (isVoid) {
+    if (isVoidMutable) {
       throw new IllegalStateException("Cannot set return value for void method");
     }
     this.returnValue = value;
@@ -378,16 +460,22 @@ public final class InterceptContext {
   /**
    * Sets an exception to throw instead of normal execution or return.
    *
-   * <p>If set, this exception will be thrown on the intercepted peer instead of:
+   * <p>If set, this exception will be thrown on the intercepted peer instead of executing the
+   * method (for BEFORE intercepts) or returning the method's result (for AFTER/AROUND intercepts).
+   *
+   * <p><b>Use cases:</b>
    *
    * <ul>
-   *   <li><b>BEFORE phase:</b> Instead of executing the method
-   *   <li><b>AFTER phase:</b> Instead of returning the method's result or original exception
+   *   <li>BEFORE: Security checks, validation, rate limiting - reject before execution
+   *   <li>AFTER: Transform or replace exceptions thrown by the method
+   *   <li>AROUND: Either of the above, depending on phase
    * </ul>
    *
-   * <p><b>ASYNC Restriction:</b> Exception throwing is not supported for {@link
-   * InterceptType#BEFORE_ASYNC} or {@link InterceptType#AFTER_ASYNC} intercepts. ASYNC callbacks
-   * are fire-and-forget and cannot affect the intercepted peer's execution flow.
+   * <p><b>Type restrictions:</b>
+   *
+   * <ul>
+   *   <li>ASYNC intercepts cannot throw exceptions (fire-and-forget, cannot affect execution flow)
+   * </ul>
    *
    * @param exception the exception to throw
    * @throws UnsupportedOperationException if the intercept type is BEFORE_ASYNC or AFTER_ASYNC
@@ -438,6 +526,21 @@ public final class InterceptContext {
   }
 
   /**
+   * Returns the return value without phase validation, for internal use.
+   *
+   * <p><b>Internal API:</b> This method is for use by callback dispatchers when building responses.
+   * Unlike {@link #getReturnValue()}, this method does not throw if called in BEFORE phase. This is
+   * necessary for AROUND intercepts that skip execution (don't call proceed()) but still need to
+   * return a custom value.
+   *
+   * @return the return value (may be null)
+   */
+  @Nullable
+  public Object getReturnValueInternal() {
+    return returnValue;
+  }
+
+  /**
    * Returns the (possibly modified) arguments array for internal use.
    *
    * <p><b>Internal API:</b> This method is primarily for use by callback dispatchers.
@@ -447,5 +550,136 @@ public final class InterceptContext {
   @Nullable
   public Object[] getArgsInternal() {
     return args;
+  }
+
+  // ---- AROUND intercept proceed() support ----
+
+  /**
+   * Proceeds with the intercepted method execution (AROUND intercepts only).
+   *
+   * <p>This method:
+   *
+   * <ol>
+   *   <li>Sends the BEFORE phase response (with any argument mutations)
+   *   <li>Blocks until the method executes and AFTER message arrives
+   *   <li>Updates this context with return value / thrown exception
+   *   <li>Returns the execution result
+   * </ol>
+   *
+   * <p>After {@code proceed()} returns, you can:
+   *
+   * <ul>
+   *   <li>Access {@link #getReturnValue()} for the method's return value
+   *   <li>Access {@link #getThrownException()} if the method threw
+   *   <li>Override via {@link #setReturnValue(Object)} before returning
+   * </ul>
+   *
+   * <p><b>Note:</b> This method can only be called once per callback invocation.
+   *
+   * <p><b>Example:</b>
+   *
+   * <pre>{@code
+   * public InterceptCallbackResponse handle(InterceptContext ctx) {
+   *     // Pre-proceed logic (BEFORE phase)
+   *     // Extract key from the intercepted method's first argument
+   *     Object key = ctx.getArgs()[0];
+   *     Object cached = cache.get(key);
+   *     if (cached != null) {
+   *         ctx.setReturnValue(cached);
+   *         return InterceptCallbackResponse.skipProceed();
+   *     }
+   *
+   *     // Execute the method
+   *     ProceedResult result = ctx.proceed();
+   *
+   *     // Post-proceed logic (AFTER phase)
+   *     if (!result.hasException()) {
+   *         cache.put(key, result.getReturnValue());
+   *     }
+   *
+   *     return new InterceptCallbackResponse();
+   * }
+   * }</pre>
+   *
+   * @return the result of method execution
+   * @throws UnsupportedOperationException if intercept type is not AROUND (proceed only valid for
+   *     AROUND)
+   * @throws IllegalStateException if proceed() was already called (can only be called once)
+   * @throws AroundTimeoutException if timeout exceeded waiting for method execution
+   */
+  public ProceedResult proceed() {
+    if (interceptType != InterceptType.AROUND) {
+      throw new UnsupportedOperationException(
+          "proceed() is only valid for AROUND intercepts, not " + interceptType);
+    }
+    if (proceedCalled) {
+      throw new IllegalStateException("proceed() can only be called once per callback invocation");
+    }
+    if (aroundSocketAccessor == null) {
+      throw new IllegalStateException("AroundSocketAccessor not set - internal error");
+    }
+
+    proceedCalled = true;
+
+    // Build BEFORE response with any arg mutations
+    InterceptCallbackResponseMessage beforeResponse = buildBeforeResponse();
+
+    // Send BEFORE, receive AFTER (blocks)
+    AfterPhaseData afterData =
+        aroundSocketAccessor.sendBeforeAndReceiveAfter(beforeResponse, timeoutMs);
+
+    // Update context with AFTER data
+    this.returnValue = afterData.returnValue();
+    this.thrownException = afterData.thrownException();
+    this.isVoidMutable = afterData.isVoid();
+    this.phase = InterceptPhase.AFTER;
+    this.returnValueModified = false; // Reset for AFTER phase modifications
+
+    return new ProceedResult(afterData.returnValue(), afterData.thrownException());
+  }
+
+  /**
+   * Returns whether {@link #proceed()} was called.
+   *
+   * <p><b>Internal API:</b> Used by dispatchers to determine response type.
+   *
+   * @return {@code true} if proceed() was called, {@code false} otherwise
+   */
+  public boolean isProceedCalled() {
+    return proceedCalled;
+  }
+
+  /**
+   * Sets the socket accessor for AROUND proceed().
+   *
+   * <p><b>Internal API:</b> Called by dispatcher before invoking callback.
+   *
+   * @param accessor the socket accessor for send/receive operations
+   * @param callbackId the callback ID for correlating BEFORE/AFTER phases
+   * @param timeoutMs timeout in milliseconds for proceed() (0 = infinite)
+   */
+  public void setAroundAccessor(
+      @Nonnull AroundSocketAccessor accessor, @Nonnull String callbackId, int timeoutMs) {
+    this.aroundSocketAccessor = Objects.requireNonNull(accessor, "accessor must not be null");
+    this.callbackId = Objects.requireNonNull(callbackId, "callbackId must not be null");
+    this.timeoutMs = timeoutMs;
+  }
+
+  /**
+   * Builds the BEFORE phase response message for AROUND proceed().
+   *
+   * @return the BEFORE response message
+   */
+  private InterceptCallbackResponseMessage buildBeforeResponse() {
+    InterceptCallbackResponseMessage response = new InterceptCallbackResponseMessage();
+    response.setCallbackId(callbackId);
+    response.setPhase(InterceptPhase.BEFORE.toByte());
+    response.setShouldProceed(true);
+
+    if (argsModified && args != null) {
+      response.setMutatedArgs(Wrapper.wrapArgsForceByValue(args));
+    }
+
+    return response;
   }
 }

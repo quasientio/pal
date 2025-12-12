@@ -15,7 +15,7 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertTrue;
 
 import com.quasient.pal.InterceptEndToEndTestSuite;
-import com.quasient.pal.apps.callbacks.AsyncCallbackHandlers;
+import com.quasient.pal.apps.callbacks.constructor.ConstructorHandlers;
 import com.quasient.pal.apps.quantized.intercept.InterceptableApp;
 import com.quasient.pal.common.directory.nodes.InterceptRequest;
 import com.quasient.pal.common.lang.intercept.InterceptType;
@@ -44,7 +44,7 @@ import org.junit.Test;
  * meaningfully inspect the constructed object's state via getReturnValue().
  *
  * <p>Tests use the shared intercept peer with InterceptableApp application class and
- * AsyncCallbackHandlers callback handlers (both in itt-apps module).
+ * ConstructorHandlers callback handlers (both in itt-apps module).
  */
 public class AfterConstructorAsyncCallbackIT extends AbstractInterceptIT {
 
@@ -61,7 +61,7 @@ public class AfterConstructorAsyncCallbackIT extends AbstractInterceptIT {
   public void testAsyncCallbackInvokedAfterConstruction() throws Exception {
     logger.info("===== testAsyncCallbackInvokedAfterConstruction: TEST STARTED =====");
 
-    final String callbackClass = AsyncCallbackHandlers.class.getName();
+    final String callbackClass = ConstructorHandlers.class.getName();
     final String callbackMethod = "logReturnValue";
     final int inputValue = 42;
 
@@ -146,7 +146,7 @@ public class AfterConstructorAsyncCallbackIT extends AbstractInterceptIT {
   public void testAsyncCallbackCannotOverrideReturnValue() throws Exception {
     logger.info("===== testAsyncCallbackCannotOverrideReturnValue: TEST STARTED =====");
 
-    final String callbackClass = AsyncCallbackHandlers.class.getName();
+    final String callbackClass = ConstructorHandlers.class.getName();
     final String callbackMethod = "attemptReturnOverride";
     final int inputValue = 42;
 
@@ -227,7 +227,7 @@ public class AfterConstructorAsyncCallbackIT extends AbstractInterceptIT {
   public void testAsyncNoOpCallback() throws Exception {
     logger.info("===== testAsyncNoOpCallback: TEST STARTED =====");
 
-    final String callbackClass = AsyncCallbackHandlers.class.getName();
+    final String callbackClass = ConstructorHandlers.class.getName();
     final String callbackMethod = "logArgs"; // Re-use logArgs as a simple no-op for AFTER
     final int inputValue = 123;
 
@@ -310,7 +310,7 @@ public class AfterConstructorAsyncCallbackIT extends AbstractInterceptIT {
   public void testAsyncCallbackCannotThrowException() throws Exception {
     logger.info("===== testAsyncCallbackCannotThrowException: TEST STARTED =====");
 
-    final String callbackClass = AsyncCallbackHandlers.class.getName();
+    final String callbackClass = ConstructorHandlers.class.getName();
     final String callbackMethod = "attemptThrowException";
     final int inputValue = 42;
 

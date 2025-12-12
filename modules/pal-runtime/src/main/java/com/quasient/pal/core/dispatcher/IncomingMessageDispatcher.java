@@ -9,6 +9,7 @@
  */
 package com.quasient.pal.core.dispatcher;
 
+import com.quasient.pal.common.lang.intercept.AroundSocketAccessor;
 import com.quasient.pal.core.execution.java.ClassMethodDispatcher;
 import com.quasient.pal.core.execution.java.ConstructorDispatcher;
 import com.quasient.pal.core.execution.java.GetClassVariableDispatcher;
@@ -178,5 +179,23 @@ public class IncomingMessageDispatcher {
   public InterceptCallbackResponseMessage incomingInterceptCallback(
       InterceptCallbackRequestMessage callbackRequest) {
     return incomingInterceptCallbackDispatcher.handleCallback(callbackRequest);
+  }
+
+  /**
+   * Delegates an AROUND intercept callback request with socket accessor for proceed() support.
+   *
+   * <p>This method is invoked when an intercepted peer sends an AROUND intercept BEFORE phase
+   * request. The callback is invoked once, and can call {@code ctx.proceed()} to trigger method
+   * execution. The socket accessor is used by proceed() to send/receive the BEFORE response and
+   * AFTER request.
+   *
+   * @param callbackRequest the AROUND intercept callback BEFORE phase request
+   * @param socketAccessor the accessor for socket operations during proceed()
+   * @return the final callback response (AFTER phase if proceed() was called, BEFORE skip if not)
+   */
+  public InterceptCallbackResponseMessage incomingAroundInterceptCallback(
+      InterceptCallbackRequestMessage callbackRequest, AroundSocketAccessor socketAccessor) {
+    return incomingInterceptCallbackDispatcher.handleAroundCallback(
+        callbackRequest, socketAccessor);
   }
 }

@@ -9,7 +9,9 @@
  */
 package com.quasient.pal.core.intercept;
 
+import com.quasient.pal.common.lang.intercept.AroundSocketAccessor;
 import com.quasient.pal.common.lang.intercept.InterceptCallback;
+import com.quasient.pal.common.lang.intercept.InterceptCallbackResponse;
 import com.quasient.pal.common.lang.intercept.InterceptContext;
 import com.quasient.pal.common.lang.intercept.InterceptPhase;
 import com.quasient.pal.common.lang.intercept.InterceptType;
@@ -21,7 +23,6 @@ import com.quasient.pal.messages.colfer.Parameter;
 import com.quasient.pal.messages.colfer.RaisedThrowable;
 import com.quasient.pal.serdes.Unwrapper;
 import com.quasient.pal.serdes.colfer.ExceptionSerdes;
-import com.quasient.pal.serdes.colfer.WrapPolicy;
 import com.quasient.pal.serdes.colfer.Wrapper;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
@@ -98,8 +99,7 @@ public class IncomingInterceptCallbackDispatcher {
       InterceptContext context = buildContext(request);
 
       // Invoke the callback
-      com.quasient.pal.common.lang.intercept.InterceptCallbackResponse userResponse =
-          callback.handle(context);
+      InterceptCallbackResponse userResponse = callback.handle(context);
 
       // Build the wire response
       InterceptCallbackResponseMessage wireResponse =
@@ -162,8 +162,7 @@ public class IncomingInterceptCallbackDispatcher {
             "Callback method must be static: " + className + "." + methodName);
       }
 
-      if (!com.quasient.pal.common.lang.intercept.InterceptCallbackResponse.class.isAssignableFrom(
-          callbackMethod.getReturnType())) {
+      if (!InterceptCallbackResponse.class.isAssignableFrom(callbackMethod.getReturnType())) {
         throw new IllegalArgumentException(
             "Callback method must return InterceptCallbackResponseMessage: "
                 + className
@@ -172,9 +171,7 @@ public class IncomingInterceptCallbackDispatcher {
       }
 
       // Create a wrapper that invokes the static method
-      return (ctx) ->
-          (com.quasient.pal.common.lang.intercept.InterceptCallbackResponse)
-              callbackMethod.invoke(null, ctx);
+      return (ctx) -> (InterceptCallbackResponse) callbackMethod.invoke(null, ctx);
     }
   }
 
@@ -352,7 +349,7 @@ public class IncomingInterceptCallbackDispatcher {
   private InterceptCallbackResponseMessage buildWireResponse(
       InterceptCallbackRequestMessage request,
       InterceptContext context,
-      com.quasient.pal.common.lang.intercept.InterceptCallbackResponse userResponse) {
+      InterceptCallbackResponse userResponse) {
 
     InterceptCallbackResponseMessage wireResponse = new InterceptCallbackResponseMessage();
     wireResponse.setCallbackId(request.getCallbackId());
@@ -364,7 +361,7 @@ public class IncomingInterceptCallbackDispatcher {
     if (phase == InterceptPhase.BEFORE) {
       // Handle argument mutation
       if (context.isArgsModified()) {
-        wireResponse.setMutatedArgs(serializeArgs(context.getArgsInternal()));
+        wireResponse.setMutatedArgs(Wrapper.wrapArgsForceByValue(context.getArgsInternal()));
       }
 
       // Handle proceed control (AROUND only)
@@ -379,14 +376,18 @@ public class IncomingInterceptCallbackDispatcher {
       // AFTER phase - handle return value override
       if (context.isReturnValueModified()) {
         wireResponse.setOverrideReturn(true);
-        wireResponse.setNewReturnValue(serializeObject(context.getReturnValue()));
+        wireResponse.setNewReturnValue(Wrapper.wrapForceByValue(context.getReturnValue()));
       }
     }
 
-    // Handle exceptions (both phases)
-    if (userResponse.getExceptionToThrow() != null) {
+    // Handle exceptions (both phases) - check both context and response
+    Throwable exceptionToThrow = context.getExceptionToThrow();
+    if (exceptionToThrow == null) {
+      exceptionToThrow = userResponse.getExceptionToThrow();
+    }
+    if (exceptionToThrow != null) {
       wireResponse.setThrowException(true);
-      wireResponse.setException(serializeException(userResponse.getExceptionToThrow()));
+      wireResponse.setException(serializeException(exceptionToThrow));
     }
 
     return wireResponse;
@@ -417,45 +418,6 @@ public class IncomingInterceptCallbackDispatcher {
 
     wireResponse.setException(serializeException(exceptionToSerialize));
     return wireResponse;
-  }
-
-  /**
-   * Serializes an array of arguments to Colfer Obj format.
-   *
-   * @param args the arguments to serialize
-   * @return the serialized arguments array
-   */
-  private Obj[] serializeArgs(Object[] args) {
-    if (args == null || args.length == 0) {
-      return new Obj[0];
-    }
-
-    Obj[] serialized = new Obj[args.length];
-    for (int i = 0; i < args.length; i++) {
-      serialized[i] = serializeObject(args[i]);
-    }
-    return serialized;
-  }
-
-  /**
-   * Serializes a single object to Colfer Obj format.
-   *
-   * @param value the object to serialize
-   * @return the serialized object
-   */
-  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
-  private Obj serializeObject(Object value) {
-    Obj obj = new Obj();
-
-    if (value == null) {
-      obj.setIsNull(true);
-      return obj;
-    }
-
-    String className = value.getClass().getName();
-
-    // Use FORCE_BY_VALUE to serialize the actual value, not just a reference
-    return Wrapper.wrapInto(obj, value, className, null, WrapPolicy.FORCE_BY_VALUE);
   }
 
   /**
@@ -507,5 +469,182 @@ public class IncomingInterceptCallbackDispatcher {
       return true;
     }
     return false;
+  }
+
+  // ---- AROUND intercept support with ctx.proceed() API ----
+
+  /**
+   * Handles an AROUND intercept callback with socket accessor for proceed() support.
+   *
+   * <p>This method:
+   *
+   * <ol>
+   *   <li>Resolves the callback handler
+   *   <li>Builds an {@link InterceptContext} with the socket accessor injected
+   *   <li>Invokes the callback once (the callback can call proceed())
+   *   <li>Returns the appropriate response based on whether proceed() was called
+   * </ol>
+   *
+   * @param request the AROUND intercept BEFORE phase request
+   * @param socketAccessor the accessor for socket operations during proceed()
+   * @return the final response (AFTER if proceed() was called, BEFORE skip if not)
+   */
+  public InterceptCallbackResponseMessage handleAroundCallback(
+      InterceptCallbackRequestMessage request, AroundSocketAccessor socketAccessor) {
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          "Handling AROUND callback: callbackId={}, interceptType={}",
+          request.getCallbackId(),
+          request.getInterceptType());
+    }
+
+    try {
+      // Resolve the callback handler
+      InterceptCallback callback = resolveCallback(request);
+
+      // Build context for AROUND with accessor injected
+      InterceptContext context = buildAroundContext(request, socketAccessor);
+
+      // Invoke the callback (may call proceed() internally)
+      InterceptCallbackResponse userResponse = callback.handle(context);
+
+      // Build response based on whether proceed() was called
+      InterceptCallbackResponseMessage wireResponse;
+      if (context.isProceedCalled()) {
+        // proceed() was called - build AFTER phase response
+        wireResponse = buildAfterResponse(request, context, userResponse);
+      } else {
+        // proceed() was NOT called - build BEFORE skip response
+        wireResponse = buildSkipResponse(request, context, userResponse);
+      }
+
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            "AROUND callback completed: callbackId={}, proceedCalled={}",
+            request.getCallbackId(),
+            context.isProceedCalled());
+      }
+
+      return wireResponse;
+
+    } catch (Exception ex) {
+      logger.error(
+          "Error handling AROUND intercept callback: callbackId={}", request.getCallbackId(), ex);
+      return buildErrorResponse(request, ex);
+    }
+  }
+
+  /**
+   * Builds an {@link InterceptContext} for AROUND intercept with socket accessor.
+   *
+   * @param request the callback request
+   * @param socketAccessor the accessor for socket operations
+   * @return the context for the callback
+   */
+  private InterceptContext buildAroundContext(
+      InterceptCallbackRequestMessage request, AroundSocketAccessor socketAccessor) {
+    // Extract arguments
+    Object[] args = extractArguments(request);
+
+    // Create context in BEFORE phase with AROUND type
+    InterceptContext context =
+        InterceptContext.forBeforePhase(
+            request.getExec(), InterceptType.AROUND, request.getInterceptedPeer(), args);
+
+    // Inject the socket accessor for proceed()
+    int timeoutMs = request.getTimeoutMs();
+    context.setAroundAccessor(socketAccessor, request.getCallbackId(), timeoutMs);
+
+    return context;
+  }
+
+  /**
+   * Builds a skip response when proceed() was NOT called (e.g., cache hit).
+   *
+   * @param request the original request
+   * @param context the context after callback execution
+   * @param userResponse the user's response
+   * @return the BEFORE phase response with shouldProceed=false
+   * @throws IllegalStateException if skipProceed() was called without setReturnValue() or
+   *     setExceptionToThrow()
+   */
+  private InterceptCallbackResponseMessage buildSkipResponse(
+      InterceptCallbackRequestMessage request,
+      InterceptContext context,
+      InterceptCallbackResponse userResponse) {
+
+    // Check for exception first (either from context or response)
+    Throwable exceptionToThrow = context.getExceptionToThrow();
+    if (exceptionToThrow == null) {
+      exceptionToThrow = userResponse.getExceptionToThrow();
+    }
+
+    // Validate: skipProceed() requires either setReturnValue() or setExceptionToThrow()
+    if (!context.isReturnValueModified() && exceptionToThrow == null) {
+      throw new IllegalStateException(
+          "skipProceed() was called but no return value was set. "
+              + "You must call ctx.setReturnValue(value) or ctx.setExceptionToThrow(exception) "
+              + "before skipping execution. Use ctx.setReturnValue(null) for explicit null.");
+    }
+
+    InterceptCallbackResponseMessage wireResponse = new InterceptCallbackResponseMessage();
+    wireResponse.setCallbackId(request.getCallbackId());
+    wireResponse.setPhase(InterceptPhase.BEFORE.toByte());
+    wireResponse.setShouldProceed(false);
+
+    // Handle argument mutations (if any were made before deciding to skip)
+    if (context.isArgsModified()) {
+      wireResponse.setMutatedArgs(Wrapper.wrapArgsForceByValue(context.getArgsInternal()));
+    }
+
+    // Handle return value override (the value to return instead of executing)
+    // Use getReturnValueInternal() because context is in BEFORE phase but user set a return value
+    if (context.isReturnValueModified()) {
+      wireResponse.setOverrideReturn(true);
+      wireResponse.setNewReturnValue(Wrapper.wrapForceByValue(context.getReturnValueInternal()));
+    }
+
+    // Handle exception throwing
+    if (exceptionToThrow != null) {
+      wireResponse.setThrowException(true);
+      wireResponse.setException(serializeException(exceptionToThrow));
+    }
+
+    return wireResponse;
+  }
+
+  /**
+   * Builds an AFTER phase response when proceed() was called.
+   *
+   * @param request the original request
+   * @param context the context after callback and proceed() execution
+   * @param userResponse the user's response
+   * @return the AFTER phase response
+   */
+  private InterceptCallbackResponseMessage buildAfterResponse(
+      InterceptCallbackRequestMessage request,
+      InterceptContext context,
+      InterceptCallbackResponse userResponse) {
+    InterceptCallbackResponseMessage wireResponse = new InterceptCallbackResponseMessage();
+    wireResponse.setCallbackId(request.getCallbackId());
+    wireResponse.setPhase(InterceptPhase.AFTER.toByte());
+
+    // Handle return value override (post-proceed modifications)
+    if (context.isReturnValueModified()) {
+      wireResponse.setOverrideReturn(true);
+      wireResponse.setNewReturnValue(Wrapper.wrapForceByValue(context.getReturnValue()));
+    }
+
+    // Handle exception throwing - check both context and response
+    Throwable exceptionToThrow = context.getExceptionToThrow();
+    if (exceptionToThrow == null) {
+      exceptionToThrow = userResponse.getExceptionToThrow();
+    }
+    if (exceptionToThrow != null) {
+      wireResponse.setThrowException(true);
+      wireResponse.setException(serializeException(exceptionToThrow));
+    }
+
+    return wireResponse;
   }
 }
