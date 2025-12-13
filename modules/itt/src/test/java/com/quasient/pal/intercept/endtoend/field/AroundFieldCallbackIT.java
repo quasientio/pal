@@ -25,10 +25,14 @@ import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.lang.intercept.InterceptableFieldOp;
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.intercept.AbstractInterceptIT;
+import com.quasient.pal.intercept.InvocationPath;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.serdes.Unwrapper;
+import java.util.Collection;
 import java.util.UUID;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Integration tests for AROUND intercept callbacks on field operations.
@@ -45,11 +49,45 @@ import org.junit.Test;
  *
  * <p>Tests use the shared intercept peer with InterceptableApp application class and FieldHandlers
  * callback handlers (both in itt-apps module).
+ *
+ * <p>Tests are parameterized to run through both HOT_PATH (direct local invocation) and
+ * INCOMING_RPC (remote invocation) paths.
  */
+@RunWith(Parameterized.class)
 public class AroundFieldCallbackIT extends AbstractInterceptIT {
+
+  /** Field invocation descriptors for parameterized tests. */
+  private static final FieldInvocation COUNTER =
+      new FieldInvocation("getCounter", "setCounter", "counter", "java.lang.Integer", false);
+
+  private static final FieldInvocation STATIC_COUNTER =
+      new FieldInvocation(
+          "getStaticCounter", "setStaticCounter", "staticCounter", "java.lang.Integer", true);
 
   /** UUID for the intercept registration. */
   private UUID interceptUuid;
+
+  /** The invocation path for this parameterized test run. */
+  private final InvocationPath invocationPath;
+
+  /**
+   * Constructs a parameterized test instance.
+   *
+   * @param invocationPath the invocation path (HOT_PATH or INCOMING_RPC)
+   */
+  public AroundFieldCallbackIT(InvocationPath invocationPath) {
+    this.invocationPath = invocationPath;
+  }
+
+  /**
+   * Provides parameters for the test: both invocation paths.
+   *
+   * @return collection of invocation paths to test
+   */
+  @Parameterized.Parameters(name = "{index}: path={0}")
+  public static Collection<Object[]> data() {
+    return invocationPathParameters();
+  }
 
   // ===========================================================================
   // Instance Field PUT Tests
@@ -63,7 +101,9 @@ public class AroundFieldCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testInstanceFieldPutValueMutation() throws Exception {
-    logger.info("===== testInstanceFieldPutValueMutation: TEST STARTED =====");
+    logger.info(
+        "===== testInstanceFieldPutValueMutation: TEST STARTED ({}) =====",
+        invocationPath.getDescription());
 
     final String callbackClass = FieldHandlers.class.getName();
     final String callbackMethod = "doublePutValueAndProceed";
@@ -94,14 +134,8 @@ public class AroundFieldCallbackIT extends AbstractInterceptIT {
     // 3. Call setCounter with inputValue - callback should double it
     logger.info("Invoking setCounter({}) which should be mutated to {}", inputValue, expectedValue);
     ExecMessage setResponse =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "setCounter",
-                appInstance,
-                new String[] {"java.lang.Integer"},
-                new Object[] {inputValue}));
+        invokeFieldPut(
+            invocationPath, InterceptableApp.class.getName(), COUNTER, appInstance, inputValue);
 
     assertThat(
         "setCounter should not raise exception", setResponse.getRaisedThrowable(), is(nullValue()));
@@ -126,7 +160,9 @@ public class AroundFieldCallbackIT extends AbstractInterceptIT {
         "Expected doublePutValueAndProceed callback to log mutation",
         InterceptEndToEndTestSuite.waitForAppLogLine("doublePutValueAndProceed: 25 -> 50"));
 
-    logger.info("===== testInstanceFieldPutValueMutation: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testInstanceFieldPutValueMutation: TEST COMPLETED SUCCESSFULLY ({}) =====",
+        invocationPath.getDescription());
   }
 
   // ===========================================================================
@@ -141,7 +177,9 @@ public class AroundFieldCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testInstanceFieldGetValueOverride() throws Exception {
-    logger.info("===== testInstanceFieldGetValueOverride: TEST STARTED =====");
+    logger.info(
+        "===== testInstanceFieldGetValueOverride: TEST STARTED ({}) =====",
+        invocationPath.getDescription());
 
     final String callbackClass = FieldHandlers.class.getName();
     final String callbackMethod = "doubleGetValueAfterProceed";
@@ -180,14 +218,7 @@ public class AroundFieldCallbackIT extends AbstractInterceptIT {
     // 3. Call getCounter - callback should double the returned value
     logger.info("Invoking getCounter() - expected to return {} (doubled)", expectedValue);
     ExecMessage getResponse =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "getCounter",
-                appInstance,
-                new String[] {},
-                new Object[] {}));
+        invokeFieldGet(invocationPath, InterceptableApp.class.getName(), COUNTER, appInstance);
 
     assertThat(
         "getCounter should not raise exception", getResponse.getRaisedThrowable(), is(nullValue()));
@@ -202,7 +233,9 @@ public class AroundFieldCallbackIT extends AbstractInterceptIT {
         "Expected doubleGetValueAfterProceed callback to log",
         InterceptEndToEndTestSuite.waitForAppLogLine("doubleGetValueAfterProceed: 30 -> 60"));
 
-    logger.info("===== testInstanceFieldGetValueOverride: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testInstanceFieldGetValueOverride: TEST COMPLETED SUCCESSFULLY ({}) =====",
+        invocationPath.getDescription());
   }
 
   // ===========================================================================
@@ -216,7 +249,9 @@ public class AroundFieldCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testStaticFieldPutValueMutation() throws Exception {
-    logger.info("===== testStaticFieldPutValueMutation: TEST STARTED =====");
+    logger.info(
+        "===== testStaticFieldPutValueMutation: TEST STARTED ({}) =====",
+        invocationPath.getDescription());
 
     final String callbackClass = FieldHandlers.class.getName();
     final String callbackMethod = "doublePutValueAndProceed";
@@ -243,15 +278,8 @@ public class AroundFieldCallbackIT extends AbstractInterceptIT {
     logger.info(
         "Invoking setStaticCounter({}) which should be mutated to {}", inputValue, expectedValue);
     ExecMessage setResponse =
-        invoke(
-            messageBuilder.buildClassMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "setStaticCounter",
-                new String[] {"java.lang.Integer"},
-                null,
-                null,
-                new Object[] {inputValue}));
+        invokeFieldPut(
+            invocationPath, InterceptableApp.class.getName(), STATIC_COUNTER, null, inputValue);
 
     assertThat(
         "setStaticCounter should not raise exception",
@@ -280,7 +308,9 @@ public class AroundFieldCallbackIT extends AbstractInterceptIT {
         "Expected doublePutValueAndProceed callback to log mutation",
         InterceptEndToEndTestSuite.waitForAppLogLine("doublePutValueAndProceed: 15 -> 30"));
 
-    logger.info("===== testStaticFieldPutValueMutation: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testStaticFieldPutValueMutation: TEST COMPLETED SUCCESSFULLY ({}) =====",
+        invocationPath.getDescription());
   }
 
   // ===========================================================================
@@ -295,7 +325,9 @@ public class AroundFieldCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testStaticFieldGetValueOverride() throws Exception {
-    logger.info("===== testStaticFieldGetValueOverride: TEST STARTED =====");
+    logger.info(
+        "===== testStaticFieldGetValueOverride: TEST STARTED ({}) =====",
+        invocationPath.getDescription());
 
     final String callbackClass = FieldHandlers.class.getName();
     final String callbackMethod = "doubleGetValueAfterProceed";
@@ -332,15 +364,7 @@ public class AroundFieldCallbackIT extends AbstractInterceptIT {
     // 3. Call getStaticCounter - callback should double the returned value
     logger.info("Invoking getStaticCounter() - expected to return {} (doubled)", expectedValue);
     ExecMessage getResponse =
-        invoke(
-            messageBuilder.buildClassMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "getStaticCounter",
-                new String[] {},
-                null,
-                null,
-                new Object[] {}));
+        invokeFieldGet(invocationPath, InterceptableApp.class.getName(), STATIC_COUNTER, null);
 
     assertThat(
         "getStaticCounter should not raise exception",
@@ -359,7 +383,9 @@ public class AroundFieldCallbackIT extends AbstractInterceptIT {
         "Expected doubleGetValueAfterProceed callback to log",
         InterceptEndToEndTestSuite.waitForAppLogLine("doubleGetValueAfterProceed: 40 -> 80"));
 
-    logger.info("===== testStaticFieldGetValueOverride: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testStaticFieldGetValueOverride: TEST COMPLETED SUCCESSFULLY ({}) =====",
+        invocationPath.getDescription());
   }
 
   // ===========================================================================
@@ -374,7 +400,9 @@ public class AroundFieldCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testInstanceFieldPutNoOpCallback() throws Exception {
-    logger.info("===== testInstanceFieldPutNoOpCallback: TEST STARTED =====");
+    logger.info(
+        "===== testInstanceFieldPutNoOpCallback: TEST STARTED ({}) =====",
+        invocationPath.getDescription());
 
     final String callbackClass = FieldHandlers.class.getName();
     final String callbackMethod = "noOpAround";
@@ -404,14 +432,8 @@ public class AroundFieldCallbackIT extends AbstractInterceptIT {
     // 3. Call setCounter
     logger.info("Invoking setCounter({}) with no-op AROUND callback", newValue);
     ExecMessage setResponse =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "setCounter",
-                appInstance,
-                new String[] {"java.lang.Integer"},
-                new Object[] {newValue}));
+        invokeFieldPut(
+            invocationPath, InterceptableApp.class.getName(), COUNTER, appInstance, newValue);
 
     assertThat(
         "setCounter should not raise exception", setResponse.getRaisedThrowable(), is(nullValue()));
@@ -439,7 +461,9 @@ public class AroundFieldCallbackIT extends AbstractInterceptIT {
         "Expected noOp callback to log",
         InterceptEndToEndTestSuite.waitForAppLogLine("noOp: proceeding with no modifications"));
 
-    logger.info("===== testInstanceFieldPutNoOpCallback: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testInstanceFieldPutNoOpCallback: TEST COMPLETED SUCCESSFULLY ({}) =====",
+        invocationPath.getDescription());
   }
 
   /**
@@ -450,7 +474,9 @@ public class AroundFieldCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testInstanceFieldGetNoOpCallback() throws Exception {
-    logger.info("===== testInstanceFieldGetNoOpCallback: TEST STARTED =====");
+    logger.info(
+        "===== testInstanceFieldGetNoOpCallback: TEST STARTED ({}) =====",
+        invocationPath.getDescription());
 
     final String callbackClass = FieldHandlers.class.getName();
     final String callbackMethod = "noOpAround";
@@ -488,14 +514,7 @@ public class AroundFieldCallbackIT extends AbstractInterceptIT {
     // 3. Call getCounter
     logger.info("Invoking getCounter() with no-op AROUND callback");
     ExecMessage getResponse =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "getCounter",
-                appInstance,
-                new String[] {},
-                new Object[] {}));
+        invokeFieldGet(invocationPath, InterceptableApp.class.getName(), COUNTER, appInstance);
 
     assertThat(
         "getCounter should not raise exception", getResponse.getRaisedThrowable(), is(nullValue()));
@@ -509,7 +528,9 @@ public class AroundFieldCallbackIT extends AbstractInterceptIT {
         "Expected noOp callback to log",
         InterceptEndToEndTestSuite.waitForAppLogLine("noOp: proceeding with no modifications"));
 
-    logger.info("===== testInstanceFieldGetNoOpCallback: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testInstanceFieldGetNoOpCallback: TEST COMPLETED SUCCESSFULLY ({}) =====",
+        invocationPath.getDescription());
   }
 
   // ===========================================================================
@@ -525,7 +546,9 @@ public class AroundFieldCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testSkipProceedWithoutReturnValueThrows() throws Exception {
-    logger.info("===== testSkipProceedWithoutReturnValueThrows: TEST STARTED =====");
+    logger.info(
+        "===== testSkipProceedWithoutReturnValueThrows: TEST STARTED ({}) =====",
+        invocationPath.getDescription());
 
     final String callbackClass = FieldHandlers.class.getName();
     final String callbackMethod = "skipWithoutReturnValue";
@@ -562,14 +585,7 @@ public class AroundFieldCallbackIT extends AbstractInterceptIT {
     // 3. Call getCounter - should throw IllegalStateException due to missing return value
     logger.info("Invoking getCounter which should throw IllegalStateException");
     ExecMessage response =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "getCounter",
-                appInstance,
-                new String[] {},
-                new Object[] {}));
+        invokeFieldGet(invocationPath, InterceptableApp.class.getName(), COUNTER, appInstance);
 
     // Verify IllegalStateException was thrown
     assertTrue(
@@ -584,7 +600,9 @@ public class AroundFieldCallbackIT extends AbstractInterceptIT {
         response.getRaisedThrowable().getThrowable().getMessage(),
         containsString("setReturnValue"));
 
-    logger.info("===== testSkipProceedWithoutReturnValueThrows: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testSkipProceedWithoutReturnValueThrows: TEST COMPLETED SUCCESSFULLY ({}) =====",
+        invocationPath.getDescription());
   }
 
   /**
@@ -595,7 +613,9 @@ public class AroundFieldCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testSkipProceedWithNullReturnValueSucceeds() throws Exception {
-    logger.info("===== testSkipProceedWithNullReturnValueSucceeds: TEST STARTED =====");
+    logger.info(
+        "===== testSkipProceedWithNullReturnValueSucceeds: TEST STARTED ({}) =====",
+        invocationPath.getDescription());
 
     final String callbackClass = FieldHandlers.class.getName();
     final String callbackMethod = "skipWithNullReturnValue";
@@ -632,14 +652,7 @@ public class AroundFieldCallbackIT extends AbstractInterceptIT {
     // 3. Call getCounter - should return null (not throw)
     logger.info("Invoking getCounter which should return null");
     ExecMessage response =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "getCounter",
-                appInstance,
-                new String[] {},
-                new Object[] {}));
+        invokeFieldGet(invocationPath, InterceptableApp.class.getName(), COUNTER, appInstance);
 
     // Verify no exception was thrown
     if (response.getRaisedThrowable() != null) {
@@ -660,6 +673,7 @@ public class AroundFieldCallbackIT extends AbstractInterceptIT {
             "skipWithNullReturnValue: skipping execution with explicit null return value"));
 
     logger.info(
-        "===== testSkipProceedWithNullReturnValueSucceeds: TEST COMPLETED SUCCESSFULLY =====");
+        "===== testSkipProceedWithNullReturnValueSucceeds: TEST COMPLETED SUCCESSFULLY ({}) =====",
+        invocationPath.getDescription());
   }
 }

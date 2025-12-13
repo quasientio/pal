@@ -23,12 +23,16 @@ import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.lang.intercept.InterceptableMethodCall;
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.intercept.AbstractInterceptIT;
+import com.quasient.pal.intercept.InvocationPath;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.serdes.Unwrapper;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.UUID;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Integration tests for BEFORE method intercept callbacks with argument mutation.
@@ -38,11 +42,49 @@ import org.junit.Test;
  *
  * <p>Tests use the shared intercept peer with StringMethods application class and MethodHandlers
  * callback handlers (both in itt-apps module).
+ *
+ * <p><b>Parameterized:</b> Each test runs through both invocation paths:
+ *
+ * <ul>
+ *   <li><b>HOT_PATH</b>: Invokes wrapper method (e.g., callEcho) → intercept fires at call-site
+ *   <li><b>INCOMING_RPC</b>: Invokes target method directly (e.g., echo) → intercept fires in
+ *       dispatchIncoming
+ * </ul>
  */
+@RunWith(Parameterized.class)
 public class BeforeMethodCallbackIT extends AbstractInterceptIT {
+
+  /** Method invocation descriptors for parameterized tests. */
+  private static final MethodInvocation ECHO = new MethodInvocation("callEcho", "echo");
+
+  private static final MethodInvocation CONCATENATE =
+      new MethodInvocation("callConcatenate", "concatenate");
+  private static final MethodInvocation MULTIPLY = new MethodInvocation("callMultiply", "multiply");
 
   /** UUID for the intercept registration. */
   private UUID interceptUuid;
+
+  /** The invocation path for this parameterized test run. */
+  private final InvocationPath invocationPath;
+
+  /**
+   * Constructs a parameterized test instance.
+   *
+   * @param invocationPath the invocation path (HOT_PATH or INCOMING_RPC)
+   */
+  public BeforeMethodCallbackIT(InvocationPath invocationPath) {
+    this.invocationPath = invocationPath;
+  }
+
+  /**
+   * Provides parameters for the test: both invocation paths.
+   *
+   * @return collection of invocation paths to test
+   */
+  @Parameterized.Parameters(name = "{index}: path={0}")
+  public static Collection<Object[]> data() {
+    return invocationPathParameters();
+  }
 
   /**
    * Tests single-argument mutation via BEFORE callback.
@@ -52,7 +94,9 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testSingleArgumentMutation() throws Exception {
-    logger.info("===== testSingleArgumentMutation: TEST STARTED =====");
+    logger.info(
+        "===== testSingleArgumentMutation [{}]: TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "uppercaseFirstArg";
@@ -91,21 +135,21 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
                 .getRef());
     logger.info("StringMethods instance created with ref: {}", stringMethodsInstance);
 
-    // 3. Invoke callEcho with lowercase input (wrapper will call echo internally)
+    // 3. Invoke method via the parameterized path
     logger.info(
-        "Invoking callEcho(\"{}\") which should receive mutated arg \"{}\"",
-        inputValue,
+        "Invoking {} via {} path - expecting mutated arg \"{}\"",
+        ECHO.targetMethod(),
+        invocationPath,
         expectedValue);
     ExecMessage response =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                StringMethods.class.getName(),
-                "callEcho",
-                stringMethodsInstance,
-                new String[] {"java.lang.String"},
-                new Object[] {inputValue}));
-    logger.info("callEcho invocation completed");
+        invokeMethod(
+            invocationPath,
+            StringMethods.class.getName(),
+            ECHO,
+            stringMethodsInstance,
+            new String[] {"java.lang.String"},
+            new Object[] {inputValue});
+    logger.info("Invocation completed");
 
     // 4. Verify the return value is uppercase (proving arg was mutated before method execution)
     String returnValue = (String) Unwrapper.unwrapObject(response.getReturnValue().getObject());
@@ -121,7 +165,9 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
         "Expected uppercaseFirstArg callback to log mutation",
         InterceptEndToEndTestSuite.waitForAppLogLine("uppercaseFirstArg: hello -> HELLO"));
 
-    logger.info("===== testSingleArgumentMutation: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testSingleArgumentMutation [{}]: TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 
   /**
@@ -132,7 +178,9 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testMultiArgumentMutation() throws Exception {
-    logger.info("===== testMultiArgumentMutation: TEST STARTED =====");
+    logger.info(
+        "===== testMultiArgumentMutation [{}]: TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "uppercaseBothArgs";
@@ -173,21 +221,20 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
                 .getRef());
     logger.info("StringMethods instance created with ref: {}", stringMethodsInstance);
 
-    // 3. Invoke callConcatenate with lowercase inputs (wrapper will call concatenate internally)
+    // 3. Invoke method via the parameterized path
     logger.info(
-        "Invoking callConcatenate(\"{}\", \"{}\") which should receive mutated args",
-        inputA,
-        inputB);
+        "Invoking {} via {} path - expecting mutated args",
+        CONCATENATE.targetMethod(),
+        invocationPath);
     ExecMessage response =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                StringMethods.class.getName(),
-                "callConcatenate",
-                stringMethodsInstance,
-                new String[] {"java.lang.String", "java.lang.String"},
-                new Object[] {inputA, inputB}));
-    logger.info("callConcatenate invocation completed");
+        invokeMethod(
+            invocationPath,
+            StringMethods.class.getName(),
+            CONCATENATE,
+            stringMethodsInstance,
+            new String[] {"java.lang.String", "java.lang.String"},
+            new Object[] {inputA, inputB});
+    logger.info("Invocation completed");
 
     // 4. Verify the return value is all uppercase
     String returnValue = (String) Unwrapper.unwrapObject(response.getReturnValue().getObject());
@@ -204,7 +251,9 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
         InterceptEndToEndTestSuite.waitForAppLogLine(
             "uppercaseBothArgs:.*hello.*world.*HELLO.*WORLD"));
 
-    logger.info("===== testMultiArgumentMutation: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testMultiArgumentMutation [{}]: TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 
   /**
@@ -215,7 +264,9 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testPrimitiveArgumentMutation() throws Exception {
-    logger.info("===== testPrimitiveArgumentMutation: TEST STARTED =====");
+    logger.info(
+        "===== testPrimitiveArgumentMutation [{}]: TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "doubleFirstIntArg";
@@ -255,21 +306,20 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
                 .getRef());
     logger.info("StringMethods instance created with ref: {}", stringMethodsInstance);
 
-    // 3. Invoke callMultiply with value=5, factor=3 (wrapper will call multiply internally)
+    // 3. Invoke method via the parameterized path
     logger.info(
-        "Invoking callMultiply({}, {}) which should receive mutated first arg (doubled)",
-        inputValue,
-        factor);
+        "Invoking {} via {} path - expecting doubled first arg",
+        MULTIPLY.targetMethod(),
+        invocationPath);
     ExecMessage response =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                StringMethods.class.getName(),
-                "callMultiply",
-                stringMethodsInstance,
-                new String[] {"int", "int"},
-                new Object[] {inputValue, factor}));
-    logger.info("callMultiply invocation completed");
+        invokeMethod(
+            invocationPath,
+            StringMethods.class.getName(),
+            MULTIPLY,
+            stringMethodsInstance,
+            new String[] {"int", "int"},
+            new Object[] {inputValue, factor});
+    logger.info("Invocation completed");
 
     // 4. Verify the return value reflects the doubled first argument
     int returnValue = (int) Unwrapper.unwrapObject(response.getReturnValue().getObject());
@@ -285,7 +335,9 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
         "Expected doubleFirstIntArg callback to log mutation",
         InterceptEndToEndTestSuite.waitForAppLogLine("doubleFirstIntArg: 5 -> 10"));
 
-    logger.info("===== testPrimitiveArgumentMutation: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testPrimitiveArgumentMutation [{}]: TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 
   /**
@@ -296,7 +348,9 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testCallbackThrowsException() throws Exception {
-    logger.info("===== testCallbackThrowsException: TEST STARTED =====");
+    logger.info(
+        "===== testCallbackThrowsException [{}]: TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "throwException";
@@ -333,19 +387,18 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
                 .getRef());
     logger.info("StringMethods instance created with ref: {}", stringMethodsInstance);
 
-    // 3. Invoke callEcho - should throw SecurityException from callback (wrapper calls echo
-    // internally)
-    logger.info("Invoking callEcho which should throw SecurityException from callback");
+    // 3. Invoke method - should throw SecurityException from callback
+    logger.info(
+        "Invoking {} via {} - should throw SecurityException", ECHO.targetMethod(), invocationPath);
     try {
       ExecMessage response =
-          invoke(
-              messageBuilder.buildInstanceMethod(
-                  myPeerUuid,
-                  StringMethods.class.getName(),
-                  "callEcho",
-                  stringMethodsInstance,
-                  new String[] {"java.lang.String"},
-                  new Object[] {"test"}));
+          invokeMethod(
+              invocationPath,
+              StringMethods.class.getName(),
+              ECHO,
+              stringMethodsInstance,
+              new String[] {"java.lang.String"},
+              new Object[] {"test"});
 
       // Check if response contains a raised exception
       if (response.getRaisedThrowable() != null) {
@@ -369,7 +422,9 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
             InterceptEndToEndTestSuite.waitForAppLogLine(
                 "throwException: throwing SecurityException"));
 
-        logger.info("===== testCallbackThrowsException: TEST COMPLETED SUCCESSFULLY =====");
+        logger.info(
+            "===== testCallbackThrowsException [{}]: TEST COMPLETED SUCCESSFULLY =====",
+            invocationPath.getDescription());
       } else {
         fail("Expected SecurityException to be thrown by callback, but no exception was raised");
       }
@@ -387,7 +442,7 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testNoOpCallback() throws Exception {
-    logger.info("===== testNoOpCallback: TEST STARTED =====");
+    logger.info("===== testNoOpCallback [{}]: TEST STARTED =====", invocationPath.getDescription());
 
     final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "noOp";
@@ -425,18 +480,17 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
                 .getRef());
     logger.info("StringMethods instance created with ref: {}", stringMethodsInstance);
 
-    // 3. Invoke callEcho with input value (wrapper calls echo internally)
-    logger.info("Invoking callEcho(\"{}\") with no-op callback", inputValue);
+    // 3. Invoke method via the parameterized path
+    logger.info("Invoking {} via {} with no-op callback", ECHO.targetMethod(), invocationPath);
     ExecMessage response =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                StringMethods.class.getName(),
-                "callEcho",
-                stringMethodsInstance,
-                new String[] {"java.lang.String"},
-                new Object[] {inputValue}));
-    logger.info("callEcho invocation completed");
+        invokeMethod(
+            invocationPath,
+            StringMethods.class.getName(),
+            ECHO,
+            stringMethodsInstance,
+            new String[] {"java.lang.String"},
+            new Object[] {inputValue});
+    logger.info("Invocation completed");
 
     // 4. Verify the return value is unchanged
     String returnValue = (String) Unwrapper.unwrapObject(response.getReturnValue().getObject());
@@ -452,7 +506,9 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
         "Expected noOp callback to log no mutations",
         InterceptEndToEndTestSuite.waitForAppLogLine("noOp: no mutations"));
 
-    logger.info("===== testNoOpCallback: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testNoOpCallback [{}]: TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 
   // ========================================================================
@@ -468,7 +524,9 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testGetReturnValueThrowsInBefore() throws Exception {
-    logger.info("===== testGetReturnValueThrowsInBefore: TEST STARTED =====");
+    logger.info(
+        "===== testGetReturnValueThrowsInBefore [{}]: TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "attemptGetReturnValueInBefore";
@@ -496,14 +554,13 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
 
     // Invoke method - callback should verify exception and return normally
     ExecMessage response =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                StringMethods.class.getName(),
-                "callEcho",
-                stringMethodsInstance,
-                new String[] {"java.lang.String"},
-                new Object[] {"hello"}));
+        invokeMethod(
+            invocationPath,
+            StringMethods.class.getName(),
+            ECHO,
+            stringMethodsInstance,
+            new String[] {"java.lang.String"},
+            new Object[] {"hello"});
 
     // If callback threw AssertionError, propagate it
     if (response.getRaisedThrowable() != null) {
@@ -519,7 +576,9 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
         InterceptEndToEndTestSuite.waitForAppLogLine(
             "attemptGetReturnValueInBefore: correctly threw UnsupportedOperationException"));
 
-    logger.info("===== testGetReturnValueThrowsInBefore: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testGetReturnValueThrowsInBefore [{}]: TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 
   /**
@@ -530,7 +589,9 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testGetThrownExceptionThrowsInBefore() throws Exception {
-    logger.info("===== testGetThrownExceptionThrowsInBefore: TEST STARTED =====");
+    logger.info(
+        "===== testGetThrownExceptionThrowsInBefore [{}]: TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "attemptGetThrownExceptionInBefore";
@@ -557,14 +618,13 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
                 .getRef());
 
     ExecMessage response =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                StringMethods.class.getName(),
-                "callEcho",
-                stringMethodsInstance,
-                new String[] {"java.lang.String"},
-                new Object[] {"hello"}));
+        invokeMethod(
+            invocationPath,
+            StringMethods.class.getName(),
+            ECHO,
+            stringMethodsInstance,
+            new String[] {"java.lang.String"},
+            new Object[] {"hello"});
 
     if (response.getRaisedThrowable() != null) {
       fail(
@@ -579,7 +639,9 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
         InterceptEndToEndTestSuite.waitForAppLogLine(
             "attemptGetThrownExceptionInBefore: correctly threw UnsupportedOperationException"));
 
-    logger.info("===== testGetThrownExceptionThrowsInBefore: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testGetThrownExceptionThrowsInBefore [{}]: TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 
   /**
@@ -590,7 +652,9 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testSetReturnValueThrowsInBefore() throws Exception {
-    logger.info("===== testSetReturnValueThrowsInBefore: TEST STARTED =====");
+    logger.info(
+        "===== testSetReturnValueThrowsInBefore [{}]: TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "attemptSetReturnValueInBefore";
@@ -617,14 +681,13 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
                 .getRef());
 
     ExecMessage response =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                StringMethods.class.getName(),
-                "callEcho",
-                stringMethodsInstance,
-                new String[] {"java.lang.String"},
-                new Object[] {"hello"}));
+        invokeMethod(
+            invocationPath,
+            StringMethods.class.getName(),
+            ECHO,
+            stringMethodsInstance,
+            new String[] {"java.lang.String"},
+            new Object[] {"hello"});
 
     if (response.getRaisedThrowable() != null) {
       fail(
@@ -639,7 +702,9 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
         InterceptEndToEndTestSuite.waitForAppLogLine(
             "attemptSetReturnValueInBefore: correctly threw UnsupportedOperationException"));
 
-    logger.info("===== testSetReturnValueThrowsInBefore: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testSetReturnValueThrowsInBefore [{}]: TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 
   /**
@@ -650,7 +715,9 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testSetExceptionToThrowWorksInBefore() throws Exception {
-    logger.info("===== testSetExceptionToThrowWorksInBefore: TEST STARTED =====");
+    logger.info(
+        "===== testSetExceptionToThrowWorksInBefore [{}]: TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "setExceptionViaContextInBefore";
@@ -676,17 +743,19 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
                 .getObject()
                 .getRef());
 
-    // Invoke callEcho - should throw SecurityException from BEFORE callback
-    logger.info("Invoking callEcho which should throw SecurityException from BEFORE callback");
+    // Invoke method - should throw SecurityException from BEFORE callback
+    logger.info(
+        "Invoking {} via {} - should throw SecurityException from BEFORE callback",
+        ECHO.targetMethod(),
+        invocationPath);
     ExecMessage response =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                StringMethods.class.getName(),
-                "callEcho",
-                stringMethodsInstance,
-                new String[] {"java.lang.String"},
-                new Object[] {"hello"}));
+        invokeMethod(
+            invocationPath,
+            StringMethods.class.getName(),
+            ECHO,
+            stringMethodsInstance,
+            new String[] {"java.lang.String"},
+            new Object[] {"hello"});
 
     // Verify SecurityException was thrown
     assertTrue(
@@ -707,7 +776,9 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
         InterceptEndToEndTestSuite.waitForAppLogLine(
             "setExceptionViaContextInBefore: exception set successfully"));
 
-    logger.info("===== testSetExceptionToThrowWorksInBefore: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testSetExceptionToThrowWorksInBefore [{}]: TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 
   /**
@@ -718,7 +789,9 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testProceedThrowsInBefore() throws Exception {
-    logger.info("===== testProceedThrowsInBefore: TEST STARTED =====");
+    logger.info(
+        "===== testProceedThrowsInBefore [{}]: TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "attemptProceedInBefore";
@@ -745,14 +818,13 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
                 .getRef());
 
     ExecMessage response =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                StringMethods.class.getName(),
-                "callEcho",
-                stringMethodsInstance,
-                new String[] {"java.lang.String"},
-                new Object[] {"hello"}));
+        invokeMethod(
+            invocationPath,
+            StringMethods.class.getName(),
+            ECHO,
+            stringMethodsInstance,
+            new String[] {"java.lang.String"},
+            new Object[] {"hello"});
 
     if (response.getRaisedThrowable() != null) {
       fail(
@@ -767,6 +839,8 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
         InterceptEndToEndTestSuite.waitForAppLogLine(
             "attemptProceedInBefore: correctly threw UnsupportedOperationException"));
 
-    logger.info("===== testProceedThrowsInBefore: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testProceedThrowsInBefore [{}]: TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 }

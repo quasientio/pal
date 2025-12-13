@@ -23,12 +23,16 @@ import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.lang.intercept.InterceptableMethodCall;
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.intercept.AbstractInterceptIT;
+import com.quasient.pal.intercept.InvocationPath;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.serdes.Unwrapper;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.UUID;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Integration tests for AFTER method intercept callbacks with return value override.
@@ -38,11 +42,34 @@ import org.junit.Test;
  *
  * <p>Tests use the shared intercept peer with StringMethods application class and MethodHandlers
  * callback handlers (both in itt-apps module).
+ *
+ * <p><b>Parameterized:</b> Each test runs through both invocation paths (HOT_PATH and
+ * INCOMING_RPC).
  */
+@RunWith(Parameterized.class)
 public class AfterMethodCallbackIT extends AbstractInterceptIT {
+
+  /** Method invocation descriptors. */
+  private static final MethodInvocation ECHO = new MethodInvocation("callEcho", "echo");
+
+  private static final MethodInvocation MULTIPLY = new MethodInvocation("callMultiply", "multiply");
+  private static final MethodInvocation PRINT_MESSAGE =
+      new MethodInvocation("callPrintMessage", "printMessage");
 
   /** UUID for the intercept registration. */
   private UUID interceptUuid;
+
+  /** The invocation path for this parameterized test run. */
+  private final InvocationPath invocationPath;
+
+  public AfterMethodCallbackIT(InvocationPath invocationPath) {
+    this.invocationPath = invocationPath;
+  }
+
+  @Parameterized.Parameters(name = "{index}: path={0}")
+  public static Collection<Object[]> data() {
+    return invocationPathParameters();
+  }
 
   /**
    * Tests simple string return value override via AFTER callback.
@@ -52,7 +79,9 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testSimpleReturnValueOverride() throws Exception {
-    logger.info("===== testSimpleReturnValueOverride: TEST STARTED =====");
+    logger.info(
+        "===== testSimpleReturnValueOverride [{}]: TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "uppercaseReturnValue";
@@ -75,54 +104,41 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
     logger.info("Registering intercept request");
     register(interceptRequest);
 
-    // Wait for intercept registration to propagate
-    logger.info(
-        "Sleeping {}ms to allow intercept registration", INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
-    logger.info("Intercept registration delay completed");
 
     // 2. Create StringMethods instance
-    logger.info("Creating StringMethods instance");
     ObjectRef stringMethodsInstance =
         ObjectRef.from(
             invoke(messageBuilder.buildEmptyConstructor(myPeerUuid, StringMethods.class.getName()))
                 .getReturnValue()
                 .getObject()
                 .getRef());
-    logger.info("StringMethods instance created with ref: {}", stringMethodsInstance);
 
-    // 3. Invoke callEcho with lowercase input (wrapper will call echo internally)
-    logger.info(
-        "Invoking callEcho(\"{}\") which should return overridden value \"{}\"",
-        inputValue,
-        expectedValue);
+    // 3. Invoke method via the parameterized path
     ExecMessage response =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                StringMethods.class.getName(),
-                "callEcho",
-                stringMethodsInstance,
-                new String[] {"java.lang.String"},
-                new Object[] {inputValue}));
-    logger.info("callEcho invocation completed");
+        invokeMethod(
+            invocationPath,
+            StringMethods.class.getName(),
+            ECHO,
+            stringMethodsInstance,
+            new String[] {"java.lang.String"},
+            new Object[] {inputValue});
 
-    // 4. Verify the return value is uppercase (proving return value was overridden by AFTER
-    // callback)
+    // 4. Verify the return value is uppercase
     String returnValue = (String) Unwrapper.unwrapObject(response.getReturnValue().getObject());
-    logger.info("Return value: {}", returnValue);
 
     assertThat(
         "Return value should be uppercase (overridden by AFTER callback)",
         returnValue,
         is(expectedValue));
 
-    // Verify callback logged the return value override in application log
     assertTrue(
         "Expected uppercaseReturnValue callback to log override",
         InterceptEndToEndTestSuite.waitForAppLogLine("uppercaseReturnValue: hello -> HELLO"));
 
-    logger.info("===== testSimpleReturnValueOverride: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testSimpleReturnValueOverride [{}]: TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 
   /**
@@ -133,7 +149,9 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testPrimitiveReturnValueOverride() throws Exception {
-    logger.info("===== testPrimitiveReturnValueOverride: TEST STARTED =====");
+    logger.info(
+        "===== testPrimitiveReturnValueOverride [{}]: TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "doubleReturnValue";
@@ -141,8 +159,6 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
     final int factor = 3;
     final int expectedResult = 30; // (5 * 3) * 2 = 30
 
-    // 1. Register an AFTER intercept on multiply method
-    logger.info("Creating AFTER intercept request for multiply method");
     interceptUuid = UUID.randomUUID();
     InterceptRequest<InterceptableMethodCall> interceptRequest =
         new InterceptRequest<>(
@@ -154,54 +170,39 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
             callbackMethod,
             new InterceptableMethodCall("multiply", Arrays.asList("int", "int")));
 
-    logger.info("Registering intercept request");
     register(interceptRequest);
-
-    // Wait for intercept registration to propagate
-    logger.info(
-        "Sleeping {}ms to allow intercept registration", INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
-    logger.info("Intercept registration delay completed");
 
-    // 2. Create StringMethods instance
-    logger.info("Creating StringMethods instance");
     ObjectRef stringMethodsInstance =
         ObjectRef.from(
             invoke(messageBuilder.buildEmptyConstructor(myPeerUuid, StringMethods.class.getName()))
                 .getReturnValue()
                 .getObject()
                 .getRef());
-    logger.info("StringMethods instance created with ref: {}", stringMethodsInstance);
 
-    // 3. Invoke callMultiply with value=5, factor=3 (wrapper will call multiply internally)
-    logger.info(
-        "Invoking callMultiply({}, {}) which should return doubled result", inputValue, factor);
     ExecMessage response =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                StringMethods.class.getName(),
-                "callMultiply",
-                stringMethodsInstance,
-                new String[] {"int", "int"},
-                new Object[] {inputValue, factor}));
-    logger.info("callMultiply invocation completed");
+        invokeMethod(
+            invocationPath,
+            StringMethods.class.getName(),
+            MULTIPLY,
+            stringMethodsInstance,
+            new String[] {"int", "int"},
+            new Object[] {inputValue, factor});
 
-    // 4. Verify the return value reflects the doubled result
     int returnValue = (int) Unwrapper.unwrapObject(response.getReturnValue().getObject());
-    logger.info("Return value: {}", returnValue);
 
     assertThat(
         "Return value should be 30 (result was doubled by callback: (5*3)*2=30)",
         returnValue,
         is(expectedResult));
 
-    // Verify callback logged the return value doubling in application log
     assertTrue(
         "Expected doubleReturnValue callback to log override",
         InterceptEndToEndTestSuite.waitForAppLogLine("doubleReturnValue: 15 -> 30"));
 
-    logger.info("===== testPrimitiveReturnValueOverride: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testPrimitiveReturnValueOverride [{}]: TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 
   /**
@@ -212,14 +213,14 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testVoidMethodIsVoidCheck() throws Exception {
-    logger.info("===== testVoidMethodIsVoidCheck: TEST STARTED =====");
+    logger.info(
+        "===== testVoidMethodIsVoidCheck [{}]: TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "checkIsVoid";
     final String inputValue = "test message";
 
-    // 1. Register an AFTER intercept on printMessage method
-    logger.info("Creating AFTER intercept request for printMessage method (void)");
     interceptUuid = UUID.randomUUID();
     InterceptRequest<InterceptableMethodCall> interceptRequest =
         new InterceptRequest<>(
@@ -232,40 +233,25 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
             new InterceptableMethodCall(
                 "printMessage", Collections.singletonList("java.lang.String")));
 
-    logger.info("Registering intercept request");
     register(interceptRequest);
-
-    // Wait for intercept registration to propagate
-    logger.info(
-        "Sleeping {}ms to allow intercept registration", INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
-    logger.info("Intercept registration delay completed");
 
-    // 2. Create StringMethods instance
-    logger.info("Creating StringMethods instance");
     ObjectRef stringMethodsInstance =
         ObjectRef.from(
             invoke(messageBuilder.buildEmptyConstructor(myPeerUuid, StringMethods.class.getName()))
                 .getReturnValue()
                 .getObject()
                 .getRef());
-    logger.info("StringMethods instance created with ref: {}", stringMethodsInstance);
 
-    // 3. Invoke callPrintMessage (wrapper will call printMessage internally)
-    logger.info("Invoking callPrintMessage(\"{}\") (void method)", inputValue);
     ExecMessage response =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                StringMethods.class.getName(),
-                "callPrintMessage",
-                stringMethodsInstance,
-                new String[] {"java.lang.String"},
-                new Object[] {inputValue}));
-    logger.info("callPrintMessage invocation completed");
+        invokeMethod(
+            invocationPath,
+            StringMethods.class.getName(),
+            PRINT_MESSAGE,
+            stringMethodsInstance,
+            new String[] {"java.lang.String"},
+            new Object[] {inputValue});
 
-    // 4. Verify the method completed successfully
-    // If the callback threw AssertionError, the response would contain it
     if (response.getRaisedThrowable() != null) {
       String exceptionClass = response.getRaisedThrowable().getThrowable().getType();
       throw new AssertionError(
@@ -275,12 +261,13 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
               + response.getRaisedThrowable().getThrowable().getMessage());
     }
 
-    // Verify callback logged that method was confirmed void in application log
     assertTrue(
         "Expected checkIsVoid callback to log confirmation",
         InterceptEndToEndTestSuite.waitForAppLogLine("checkIsVoid: confirmed method is void"));
 
-    logger.info("===== testVoidMethodIsVoidCheck: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testVoidMethodIsVoidCheck [{}]: TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 
   /**
@@ -291,14 +278,14 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testVoidMethodCannotSetReturnValue() throws Exception {
-    logger.info("===== testVoidMethodCannotSetReturnValue: TEST STARTED =====");
+    logger.info(
+        "===== testVoidMethodCannotSetReturnValue [{}]: TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "attemptSetReturnValueOnVoid";
     final String inputValue = "test message";
 
-    // 1. Register an AFTER intercept on printMessage method
-    logger.info("Creating AFTER intercept request for printMessage method (void)");
     interceptUuid = UUID.randomUUID();
     InterceptRequest<InterceptableMethodCall> interceptRequest =
         new InterceptRequest<>(
@@ -311,46 +298,28 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
             new InterceptableMethodCall(
                 "printMessage", Collections.singletonList("java.lang.String")));
 
-    logger.info("Registering intercept request");
     register(interceptRequest);
-
-    // Wait for intercept registration to propagate
-    logger.info(
-        "Sleeping {}ms to allow intercept registration", INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
-    logger.info("Intercept registration delay completed");
 
-    // 2. Create StringMethods instance
-    logger.info("Creating StringMethods instance");
     ObjectRef stringMethodsInstance =
         ObjectRef.from(
             invoke(messageBuilder.buildEmptyConstructor(myPeerUuid, StringMethods.class.getName()))
                 .getReturnValue()
                 .getObject()
                 .getRef());
-    logger.info("StringMethods instance created with ref: {}", stringMethodsInstance);
 
-    // 3. Invoke callPrintMessage - callback should throw IllegalStateException
-    logger.info(
-        "Invoking callPrintMessage(\"{}\") - callback should throw IllegalStateException",
-        inputValue);
     ExecMessage response =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                StringMethods.class.getName(),
-                "callPrintMessage",
-                stringMethodsInstance,
-                new String[] {"java.lang.String"},
-                new Object[] {inputValue}));
-    logger.info("callPrintMessage invocation completed");
+        invokeMethod(
+            invocationPath,
+            StringMethods.class.getName(),
+            PRINT_MESSAGE,
+            stringMethodsInstance,
+            new String[] {"java.lang.String"},
+            new Object[] {inputValue});
 
-    // 4. Verify that IllegalStateException was thrown
     if (response.getRaisedThrowable() != null) {
       String exceptionClass = response.getRaisedThrowable().getThrowable().getType();
       String exceptionMessage = response.getRaisedThrowable().getThrowable().getMessage();
-
-      logger.info("Received exception: {} with message: {}", exceptionClass, exceptionMessage);
 
       assertThat(
           "Exception should be IllegalStateException",
@@ -359,13 +328,14 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
       assertThat(
           "Exception message should mention void method", exceptionMessage, containsString("void"));
 
-      // Verify callback logged the attempt in application log
       assertTrue(
           "Expected attemptSetReturnValueOnVoid callback to log attempt",
           InterceptEndToEndTestSuite.waitForAppLogLine(
               "attemptSetReturnValueOnVoid: attempting to set return value on void method"));
 
-      logger.info("===== testVoidMethodCannotSetReturnValue: TEST COMPLETED SUCCESSFULLY =====");
+      logger.info(
+          "===== testVoidMethodCannotSetReturnValue [{}]: TEST COMPLETED SUCCESSFULLY =====",
+          invocationPath.getDescription());
     } else {
       throw new AssertionError(
           "Expected IllegalStateException when attempting to set return value on void method, but no exception was raised");
@@ -380,13 +350,13 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testCallbackThrowsException() throws Exception {
-    logger.info("===== testCallbackThrowsException: TEST STARTED =====");
+    logger.info(
+        "===== testCallbackThrowsException [{}]: TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "throwExceptionAfter";
 
-    // 1. Register an AFTER intercept on echo method that throws exception
-    logger.info("Creating AFTER intercept request for echo method with throwing callback");
     interceptUuid = UUID.randomUUID();
     InterceptRequest<InterceptableMethodCall> interceptRequest =
         new InterceptRequest<>(
@@ -398,44 +368,28 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
             callbackMethod,
             new InterceptableMethodCall("echo", Collections.singletonList("java.lang.String")));
 
-    logger.info("Registering intercept request");
     register(interceptRequest);
-
-    // Wait for intercept registration to propagate
-    logger.info(
-        "Sleeping {}ms to allow intercept registration", INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
-    logger.info("Intercept registration delay completed");
 
-    // 2. Create StringMethods instance
-    logger.info("Creating StringMethods instance");
     ObjectRef stringMethodsInstance =
         ObjectRef.from(
             invoke(messageBuilder.buildEmptyConstructor(myPeerUuid, StringMethods.class.getName()))
                 .getReturnValue()
                 .getObject()
                 .getRef());
-    logger.info("StringMethods instance created with ref: {}", stringMethodsInstance);
 
-    // 3. Invoke callEcho - should throw SecurityException from AFTER callback (wrapper calls echo
-    // internally)
-    logger.info("Invoking callEcho which should throw SecurityException from AFTER callback");
     ExecMessage response =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                StringMethods.class.getName(),
-                "callEcho",
-                stringMethodsInstance,
-                new String[] {"java.lang.String"},
-                new Object[] {"test"}));
+        invokeMethod(
+            invocationPath,
+            StringMethods.class.getName(),
+            ECHO,
+            stringMethodsInstance,
+            new String[] {"java.lang.String"},
+            new Object[] {"test"});
 
-    // 4. Check if response contains a raised exception
     if (response.getRaisedThrowable() != null) {
       String exceptionClass = response.getRaisedThrowable().getThrowable().getType();
       String exceptionMessage = response.getRaisedThrowable().getThrowable().getMessage();
-
-      logger.info("Received exception: {} with message: {}", exceptionClass, exceptionMessage);
 
       assertThat(
           "Exception should be SecurityException",
@@ -446,13 +400,14 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
           exceptionMessage,
           containsString("Access denied by AFTER intercept callback"));
 
-      // Verify callback logged that it was throwing an exception
       assertTrue(
           "Expected throwException callback to log",
           InterceptEndToEndTestSuite.waitForAppLogLine(
               "throwExceptionAfter: throwing SecurityException"));
 
-      logger.info("===== testCallbackThrowsException: TEST COMPLETED SUCCESSFULLY =====");
+      logger.info(
+          "===== testCallbackThrowsException [{}]: TEST COMPLETED SUCCESSFULLY =====",
+          invocationPath.getDescription());
     } else {
       throw new AssertionError(
           "Expected SecurityException to be thrown by callback, but no exception was raised");
@@ -467,14 +422,12 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testNoOpCallback() throws Exception {
-    logger.info("===== testNoOpCallback: TEST STARTED =====");
+    logger.info("===== testNoOpCallback [{}]: TEST STARTED =====", invocationPath.getDescription());
 
     final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "noOpAfter";
     final String inputValue = "hello";
 
-    // 1. Register an AFTER intercept on echo method with no-op callback
-    logger.info("Creating AFTER intercept request for echo method with no-op callback");
     interceptUuid = UUID.randomUUID();
     InterceptRequest<InterceptableMethodCall> interceptRequest =
         new InterceptRequest<>(
@@ -486,68 +439,50 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
             callbackMethod,
             new InterceptableMethodCall("echo", Collections.singletonList("java.lang.String")));
 
-    logger.info("Registering intercept request");
     register(interceptRequest);
-
-    // Wait for intercept registration to propagate
-    logger.info(
-        "Sleeping {}ms to allow intercept registration", INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
-    logger.info("Intercept registration delay completed");
 
-    // 2. Create StringMethods instance
-    logger.info("Creating StringMethods instance");
     ObjectRef stringMethodsInstance =
         ObjectRef.from(
             invoke(messageBuilder.buildEmptyConstructor(myPeerUuid, StringMethods.class.getName()))
                 .getReturnValue()
                 .getObject()
                 .getRef());
-    logger.info("StringMethods instance created with ref: {}", stringMethodsInstance);
 
-    // 3. Invoke callEcho with input value (wrapper calls echo internally)
-    logger.info("Invoking callEcho(\"{}\") with no-op callback", inputValue);
     ExecMessage response =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                StringMethods.class.getName(),
-                "callEcho",
-                stringMethodsInstance,
-                new String[] {"java.lang.String"},
-                new Object[] {inputValue}));
-    logger.info("callEcho invocation completed");
+        invokeMethod(
+            invocationPath,
+            StringMethods.class.getName(),
+            ECHO,
+            stringMethodsInstance,
+            new String[] {"java.lang.String"},
+            new Object[] {inputValue});
 
-    // 4. Verify the return value is unchanged
     String returnValue = (String) Unwrapper.unwrapObject(response.getReturnValue().getObject());
-    logger.info("Return value: {}", returnValue);
 
     assertThat(
         "Return value should be unchanged (no-op callback doesn't override)",
         returnValue,
         is(inputValue));
 
-    // Verify callback logged no override in application log
     assertTrue(
         "Expected noOp callback to log no override",
         InterceptEndToEndTestSuite.waitForAppLogLine("noOpAfter: no return value override"));
 
-    logger.info("===== testNoOpCallback: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testNoOpCallback [{}]: TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 
   // ========================================================================
   // Phase/Type Restriction Tests - AFTER intercepts
   // ========================================================================
 
-  /**
-   * Tests that setArg() throws UnsupportedOperationException in AFTER intercept.
-   *
-   * <p>Registers an AFTER intercept with a callback that attempts to call setArg(). The callback
-   * verifies that UnsupportedOperationException is thrown, then returns normally.
-   */
+  /** Tests that setArg() throws UnsupportedOperationException in AFTER intercept. */
   @Test
   public void testSetArgThrowsInAfter() throws Exception {
-    logger.info("===== testSetArgThrowsInAfter: TEST STARTED =====");
+    logger.info(
+        "===== testSetArgThrowsInAfter [{}]: TEST STARTED =====", invocationPath.getDescription());
 
     final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "attemptSetArgInAfter";
@@ -574,14 +509,13 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
                 .getRef());
 
     ExecMessage response =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                StringMethods.class.getName(),
-                "callEcho",
-                stringMethodsInstance,
-                new String[] {"java.lang.String"},
-                new Object[] {"hello"}));
+        invokeMethod(
+            invocationPath,
+            StringMethods.class.getName(),
+            ECHO,
+            stringMethodsInstance,
+            new String[] {"java.lang.String"},
+            new Object[] {"hello"});
 
     if (response.getRaisedThrowable() != null) {
       fail(
@@ -596,18 +530,16 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
         InterceptEndToEndTestSuite.waitForAppLogLine(
             "attemptSetArgInAfter: correctly threw UnsupportedOperationException"));
 
-    logger.info("===== testSetArgThrowsInAfter: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testSetArgThrowsInAfter [{}]: TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 
-  /**
-   * Tests that proceed() throws UnsupportedOperationException in AFTER intercept.
-   *
-   * <p>Registers an AFTER intercept with a callback that attempts to call proceed(). The callback
-   * verifies that UnsupportedOperationException is thrown, then returns normally.
-   */
+  /** Tests that proceed() throws UnsupportedOperationException in AFTER intercept. */
   @Test
   public void testProceedThrowsInAfter() throws Exception {
-    logger.info("===== testProceedThrowsInAfter: TEST STARTED =====");
+    logger.info(
+        "===== testProceedThrowsInAfter [{}]: TEST STARTED =====", invocationPath.getDescription());
 
     final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "attemptProceedInAfter";
@@ -634,14 +566,13 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
                 .getRef());
 
     ExecMessage response =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                StringMethods.class.getName(),
-                "callEcho",
-                stringMethodsInstance,
-                new String[] {"java.lang.String"},
-                new Object[] {"hello"}));
+        invokeMethod(
+            invocationPath,
+            StringMethods.class.getName(),
+            ECHO,
+            stringMethodsInstance,
+            new String[] {"java.lang.String"},
+            new Object[] {"hello"});
 
     if (response.getRaisedThrowable() != null) {
       fail(
@@ -656,6 +587,8 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
         InterceptEndToEndTestSuite.waitForAppLogLine(
             "attemptProceedInAfter: correctly threw UnsupportedOperationException"));
 
-    logger.info("===== testProceedThrowsInAfter: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testProceedThrowsInAfter [{}]: TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 }

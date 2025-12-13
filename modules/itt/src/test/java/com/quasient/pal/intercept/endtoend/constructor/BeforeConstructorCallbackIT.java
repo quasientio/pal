@@ -23,11 +23,16 @@ import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.lang.intercept.InterceptableMethodCall;
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.intercept.AbstractInterceptIT;
+import com.quasient.pal.intercept.InvocationPath;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.serdes.Unwrapper;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Integration tests for BEFORE intercept callbacks on constructors with argument mutation.
@@ -40,11 +45,46 @@ import org.junit.Test;
  *
  * <p><b>Constructor Interception Pattern:</b> Constructors are intercepted using method name "new"
  * and the constructor parameter types as the signature.
+ *
+ * <p><b>Parameterized:</b> Each test runs through both invocation paths:
+ *
+ * <ul>
+ *   <li><b>HOT_PATH</b>: Invokes factory method (e.g., createWithCounter) → intercept fires at
+ *       call-site
+ *   <li><b>INCOMING_RPC</b>: Invokes constructor directly → intercept fires in dispatchIncoming
+ * </ul>
  */
+@RunWith(Parameterized.class)
 public class BeforeConstructorCallbackIT extends AbstractInterceptIT {
+
+  /** Constructor invocation descriptor for parameterized tests. */
+  private static final ConstructorInvocation WITH_COUNTER =
+      new ConstructorInvocation("createWithCounter", List.of("java.lang.Integer"));
 
   /** UUID for the intercept registration. */
   private UUID interceptUuid;
+
+  /** The invocation path for this parameterized test run. */
+  private final InvocationPath invocationPath;
+
+  /**
+   * Constructs a parameterized test instance.
+   *
+   * @param invocationPath the invocation path (HOT_PATH or INCOMING_RPC)
+   */
+  public BeforeConstructorCallbackIT(InvocationPath invocationPath) {
+    this.invocationPath = invocationPath;
+  }
+
+  /**
+   * Provides parameters for the test: both invocation paths.
+   *
+   * @return collection of invocation paths to test
+   */
+  @Parameterized.Parameters(name = "{index}: path={0}")
+  public static Collection<Object[]> data() {
+    return invocationPathParameters();
+  }
 
   /**
    * Tests constructor argument mutation via BEFORE callback.
@@ -55,7 +95,9 @@ public class BeforeConstructorCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testConstructorArgumentMutation() throws Exception {
-    logger.info("===== testConstructorArgumentMutation: TEST STARTED =====");
+    logger.info(
+        "===== testConstructorArgumentMutation [{}]: TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = ConstructorHandlers.class.getName();
     final String callbackMethod = "doubleFirstIntArg";
@@ -84,22 +126,19 @@ public class BeforeConstructorCallbackIT extends AbstractInterceptIT {
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     logger.info("Intercept registration delay completed");
 
-    // 2. Invoke factory method that calls constructor (triggers intercept via call-site)
+    // 2. Invoke constructor via parameterized path
     logger.info(
-        "Invoking createWithCounter({}) which should receive mutated arg {}",
+        "Invoking constructor via {} path with arg {} which should receive mutated arg {}",
+        invocationPath,
         inputValue,
         expectedValue);
     ExecMessage response =
-        invoke(
-            messageBuilder.buildClassMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "createWithCounter",
-                new String[] {"java.lang.Integer"},
-                null,
-                null,
-                new Object[] {inputValue}));
-    logger.info("createWithCounter invocation completed");
+        invokeConstructor(
+            invocationPath,
+            InterceptableApp.class.getName(),
+            WITH_COUNTER,
+            new Object[] {inputValue});
+    logger.info("Constructor invocation completed");
 
     // 3. Get the created instance and verify the counter value
     ObjectRef appInstance = ObjectRef.from(response.getReturnValue().getObject().getRef());
@@ -130,7 +169,9 @@ public class BeforeConstructorCallbackIT extends AbstractInterceptIT {
         "Expected doubleFirstIntArg callback to log mutation",
         InterceptEndToEndTestSuite.waitForAppLogLine("doubleFirstIntArg: 10 -> 20"));
 
-    logger.info("===== testConstructorArgumentMutation: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testConstructorArgumentMutation [{}]: TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 
   /**
@@ -142,7 +183,9 @@ public class BeforeConstructorCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testConstructorCallbackThrowsException() throws Exception {
-    logger.info("===== testConstructorCallbackThrowsException: TEST STARTED =====");
+    logger.info(
+        "===== testConstructorCallbackThrowsException [{}]: TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = ConstructorHandlers.class.getName();
     final String callbackMethod = "throwException";
@@ -170,19 +213,14 @@ public class BeforeConstructorCallbackIT extends AbstractInterceptIT {
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     logger.info("Intercept registration delay completed");
 
-    // 2. Invoke factory method - should throw SecurityException from callback
-    logger.info("Invoking createWithCounter which should throw SecurityException from callback");
+    // 2. Invoke constructor via parameterized path - should throw SecurityException from callback
+    logger.info(
+        "Invoking constructor via {} path which should throw SecurityException from callback",
+        invocationPath);
     try {
       ExecMessage response =
-          invoke(
-              messageBuilder.buildClassMethod(
-                  myPeerUuid,
-                  InterceptableApp.class.getName(),
-                  "createWithCounter",
-                  new String[] {"java.lang.Integer"},
-                  null,
-                  null,
-                  new Object[] {10}));
+          invokeConstructor(
+              invocationPath, InterceptableApp.class.getName(), WITH_COUNTER, new Object[] {10});
 
       // Check if response contains a raised exception
       if (response.getRaisedThrowable() != null) {
@@ -207,7 +245,8 @@ public class BeforeConstructorCallbackIT extends AbstractInterceptIT {
                 "throwException: throwing SecurityException from constructor callback"));
 
         logger.info(
-            "===== testConstructorCallbackThrowsException: TEST COMPLETED SUCCESSFULLY =====");
+            "===== testConstructorCallbackThrowsException [{}]: TEST COMPLETED SUCCESSFULLY =====",
+            invocationPath.getDescription());
       } else {
         fail("Expected SecurityException to be thrown by callback, but no exception was raised");
       }
@@ -225,7 +264,9 @@ public class BeforeConstructorCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testConstructorNoOpCallback() throws Exception {
-    logger.info("===== testConstructorNoOpCallback: TEST STARTED =====");
+    logger.info(
+        "===== testConstructorNoOpCallback [{}]: TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = ConstructorHandlers.class.getName();
     final String callbackMethod = "noOp";
@@ -254,19 +295,18 @@ public class BeforeConstructorCallbackIT extends AbstractInterceptIT {
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     logger.info("Intercept registration delay completed");
 
-    // 2. Invoke factory method that calls constructor
-    logger.info("Invoking createWithCounter({}) with no-op callback", inputValue);
+    // 2. Invoke constructor via parameterized path
+    logger.info(
+        "Invoking constructor via {} path with arg {} with no-op callback",
+        invocationPath,
+        inputValue);
     ExecMessage response =
-        invoke(
-            messageBuilder.buildClassMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "createWithCounter",
-                new String[] {"java.lang.Integer"},
-                null,
-                null,
-                new Object[] {inputValue}));
-    logger.info("createWithCounter invocation completed");
+        invokeConstructor(
+            invocationPath,
+            InterceptableApp.class.getName(),
+            WITH_COUNTER,
+            new Object[] {inputValue});
+    logger.info("Constructor invocation completed");
 
     // 3. Get the created instance and verify the counter value is unchanged
     ObjectRef appInstance = ObjectRef.from(response.getReturnValue().getObject().getRef());
@@ -297,6 +337,8 @@ public class BeforeConstructorCallbackIT extends AbstractInterceptIT {
         "Expected noOp callback to log no mutations",
         InterceptEndToEndTestSuite.waitForAppLogLine("noOp: no mutations"));
 
-    logger.info("===== testConstructorNoOpCallback: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testConstructorNoOpCallback [{}]: TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 }

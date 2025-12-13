@@ -23,10 +23,14 @@ import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.lang.intercept.InterceptableFieldOp;
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.intercept.AbstractInterceptIT;
+import com.quasient.pal.intercept.InvocationPath;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.serdes.Unwrapper;
+import java.util.Collection;
 import java.util.UUID;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Integration tests for AFTER_ASYNC field intercept callbacks.
@@ -42,10 +46,41 @@ import org.junit.Test;
  * <p>Tests use the shared intercept peer with InterceptableApp application class and FieldHandlers
  * callback handlers (both in itt-apps module).
  */
+@RunWith(Parameterized.class)
 public class AfterFieldAsyncCallbackIT extends AbstractInterceptIT {
+
+  /** Field invocation descriptors for parameterized tests. */
+  private static final FieldInvocation COUNTER =
+      new FieldInvocation("getCounter", "setCounter", "counter", "java.lang.Integer", false);
+
+  private static final FieldInvocation STATIC_COUNTER =
+      new FieldInvocation(
+          "getStaticCounter", "setStaticCounter", "staticCounter", "java.lang.Integer", true);
 
   /** UUID for the intercept registration. */
   private UUID interceptUuid;
+
+  /** The invocation path for this parameterized test run. */
+  private final InvocationPath invocationPath;
+
+  /**
+   * Constructs a parameterized test instance.
+   *
+   * @param invocationPath the invocation path (HOT_PATH or INCOMING_RPC)
+   */
+  public AfterFieldAsyncCallbackIT(InvocationPath invocationPath) {
+    this.invocationPath = invocationPath;
+  }
+
+  /**
+   * Provides parameters for the test: both invocation paths.
+   *
+   * @return collection of invocation paths to test
+   */
+  @Parameterized.Parameters(name = "{index}: path={0}")
+  public static Collection<Object[]> data() {
+    return invocationPathParameters();
+  }
 
   /**
    * Tests that AFTER_ASYNC callback can read GET return value without override on instance field.
@@ -55,7 +90,9 @@ public class AfterFieldAsyncCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testInstanceFieldGetAsyncCanReadValue() throws Exception {
-    logger.info("===== testInstanceFieldGetAsyncCanReadValue: TEST STARTED =====");
+    logger.info(
+        "===== testInstanceFieldGetAsyncCanReadValue ({}): TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = FieldHandlers.class.getName();
     final String callbackMethod = "logReturnValue";
@@ -94,16 +131,9 @@ public class AfterFieldAsyncCallbackIT extends AbstractInterceptIT {
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
 
     // 3. Call getCounter to trigger the callback
-    logger.info("Invoking getCounter() with AFTER_ASYNC callback");
+    logger.info("Invoking getCounter() with AFTER_ASYNC callback via {}", invocationPath);
     ExecMessage response =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "getCounter",
-                appInstance,
-                new String[] {},
-                new Object[] {}));
+        invokeFieldGet(invocationPath, InterceptableApp.class.getName(), COUNTER, appInstance);
 
     // 4. Verify no exception and value is unchanged
     assertThat(
@@ -123,7 +153,9 @@ public class AfterFieldAsyncCallbackIT extends AbstractInterceptIT {
         InterceptEndToEndTestSuite.waitForAppLogLine(
             "logReturnValue.*AFTER_ASYNC.*returnValue.*" + initialValue));
 
-    logger.info("===== testInstanceFieldGetAsyncCanReadValue: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testInstanceFieldGetAsyncCanReadValue ({}): TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 
   /**
@@ -134,7 +166,9 @@ public class AfterFieldAsyncCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testInstanceFieldGetAsyncCannotOverride() throws Exception {
-    logger.info("===== testInstanceFieldGetAsyncCannotOverride: TEST STARTED =====");
+    logger.info(
+        "===== testInstanceFieldGetAsyncCannotOverride ({}): TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = FieldHandlers.class.getName();
     final String callbackMethod = "attemptReturnOverride";
@@ -173,16 +207,11 @@ public class AfterFieldAsyncCallbackIT extends AbstractInterceptIT {
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
 
     // 3. Call getCounter - callback will throw but ASYNC is fire-and-forget
-    logger.info("Invoking getCounter() - callback should throw but caller gets original value");
+    logger.info(
+        "Invoking getCounter() via {} - callback should throw but caller gets original value",
+        invocationPath);
     ExecMessage response =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "getCounter",
-                appInstance,
-                new String[] {},
-                new Object[] {}));
+        invokeFieldGet(invocationPath, InterceptableApp.class.getName(), COUNTER, appInstance);
 
     // 4. Verify caller receives original value (ASYNC exception doesn't affect caller)
     assertThat(
@@ -202,7 +231,9 @@ public class AfterFieldAsyncCallbackIT extends AbstractInterceptIT {
         InterceptEndToEndTestSuite.waitForAppLogLine(
             "attemptReturnOverride.*AFTER_ASYNC.*attempting to override return value"));
 
-    logger.info("===== testInstanceFieldGetAsyncCannotOverride: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testInstanceFieldGetAsyncCannotOverride ({}): TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 
   /**
@@ -212,7 +243,9 @@ public class AfterFieldAsyncCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testStaticFieldGetAsyncNoOp() throws Exception {
-    logger.info("===== testStaticFieldGetAsyncNoOp: TEST STARTED =====");
+    logger.info(
+        "===== testStaticFieldGetAsyncNoOp ({}): TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = FieldHandlers.class.getName();
     final String callbackMethod = "logReturnValue";
@@ -248,17 +281,9 @@ public class AfterFieldAsyncCallbackIT extends AbstractInterceptIT {
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
 
     // 3. Call getStaticCounter to trigger the callback
-    logger.info("Invoking getStaticCounter() with AFTER_ASYNC callback");
+    logger.info("Invoking getStaticCounter() with AFTER_ASYNC callback via {}", invocationPath);
     ExecMessage response =
-        invoke(
-            messageBuilder.buildClassMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "getStaticCounter",
-                new String[] {},
-                null,
-                null,
-                new Object[] {}));
+        invokeFieldGet(invocationPath, InterceptableApp.class.getName(), STATIC_COUNTER, null);
 
     // 4. Verify no exception and value is unchanged
     assertThat(
@@ -275,7 +300,9 @@ public class AfterFieldAsyncCallbackIT extends AbstractInterceptIT {
         InterceptEndToEndTestSuite.waitForAppLogLine(
             "logReturnValue.*AFTER_ASYNC.*returnValue.*" + initialValue));
 
-    logger.info("===== testStaticFieldGetAsyncNoOp: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testStaticFieldGetAsyncNoOp ({}): TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 
   /**
@@ -291,7 +318,9 @@ public class AfterFieldAsyncCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testAsyncCallbackCannotThrowException() throws Exception {
-    logger.info("===== testAsyncCallbackCannotThrowException: TEST STARTED =====");
+    logger.info(
+        "===== testAsyncCallbackCannotThrowException ({}): TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = FieldHandlers.class.getName();
     final String callbackMethod = "attemptThrowException";
@@ -331,16 +360,10 @@ public class AfterFieldAsyncCallbackIT extends AbstractInterceptIT {
 
     // 3. Call getCounter to trigger the callback
     logger.info(
-        "Invoking getCounter() - callback should throw but caller should get original value");
+        "Invoking getCounter() via {} - callback should throw but caller should get original value",
+        invocationPath);
     ExecMessage response =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "getCounter",
-                appInstance,
-                new String[] {},
-                new Object[] {}));
+        invokeFieldGet(invocationPath, InterceptableApp.class.getName(), COUNTER, appInstance);
 
     // 4. Verify no exception and value is unchanged
     assertThat(
@@ -360,6 +383,8 @@ public class AfterFieldAsyncCallbackIT extends AbstractInterceptIT {
         InterceptEndToEndTestSuite.waitForAppLogLine(
             "attemptThrowException.*AFTER_ASYNC.*attempting to set exception"));
 
-    logger.info("===== testAsyncCallbackCannotThrowException: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testAsyncCallbackCannotThrowException ({}): TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 }

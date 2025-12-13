@@ -22,11 +22,16 @@ import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.lang.intercept.InterceptableMethodCall;
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.intercept.AbstractInterceptIT;
+import com.quasient.pal.intercept.InvocationPath;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.serdes.Unwrapper;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Integration tests for BEFORE_ASYNC constructor intercept callbacks.
@@ -41,11 +46,46 @@ import org.junit.Test;
  *
  * <p>Tests use the shared intercept peer with InterceptableApp application class and
  * ConstructorHandlers callback handlers (both in itt-apps module).
+ *
+ * <p><b>Parameterized:</b> Each test runs through both invocation paths:
+ *
+ * <ul>
+ *   <li><b>HOT_PATH</b>: Invokes factory method (e.g., createWithCounter) → intercept fires at
+ *       call-site
+ *   <li><b>INCOMING_RPC</b>: Invokes constructor directly → intercept fires in dispatchIncoming
+ * </ul>
  */
+@RunWith(Parameterized.class)
 public class BeforeConstructorAsyncCallbackIT extends AbstractInterceptIT {
+
+  /** Constructor invocation descriptor for parameterized tests. */
+  private static final ConstructorInvocation WITH_COUNTER =
+      new ConstructorInvocation("createWithCounter", List.of("java.lang.Integer"));
 
   /** UUID for the intercept registration. */
   private UUID interceptUuid;
+
+  /** The invocation path for this parameterized test run. */
+  private final InvocationPath invocationPath;
+
+  /**
+   * Constructs a parameterized test instance.
+   *
+   * @param invocationPath the invocation path (HOT_PATH or INCOMING_RPC)
+   */
+  public BeforeConstructorAsyncCallbackIT(InvocationPath invocationPath) {
+    this.invocationPath = invocationPath;
+  }
+
+  /**
+   * Provides parameters for the test: both invocation paths.
+   *
+   * @return collection of invocation paths to test
+   */
+  @Parameterized.Parameters(name = "{index}: path={0}")
+  public static Collection<Object[]> data() {
+    return invocationPathParameters();
+  }
 
   /**
    * Tests that BEFORE_ASYNC callback can read constructor arguments without mutation.
@@ -55,7 +95,9 @@ public class BeforeConstructorAsyncCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testAsyncCallbackCanReadArgs() throws Exception {
-    logger.info("===== testAsyncCallbackCanReadArgs: TEST STARTED =====");
+    logger.info(
+        "===== testAsyncCallbackCanReadArgs [{}]: TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = ConstructorHandlers.class.getName();
     final String callbackMethod = "logArgs";
@@ -82,15 +124,11 @@ public class BeforeConstructorAsyncCallbackIT extends AbstractInterceptIT {
     // 2. Invoke factory method that calls constructor
     logger.info("Invoking createWithCounter({}) with BEFORE_ASYNC callback", inputValue);
     ExecMessage response =
-        invoke(
-            messageBuilder.buildClassMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "createWithCounter",
-                new String[] {"java.lang.Integer"},
-                null,
-                null,
-                new Object[] {inputValue}));
+        invokeConstructor(
+            invocationPath,
+            InterceptableApp.class.getName(),
+            WITH_COUNTER,
+            new Object[] {inputValue});
 
     // 3. Verify no exception was raised
     assertThat(
@@ -123,7 +161,9 @@ public class BeforeConstructorAsyncCallbackIT extends AbstractInterceptIT {
         "Expected logArgs callback to log the args",
         InterceptEndToEndTestSuite.waitForAppLogLine("logArgs.*BEFORE_ASYNC.*args.*" + inputValue));
 
-    logger.info("===== testAsyncCallbackCanReadArgs: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testAsyncCallbackCanReadArgs [{}]: TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 
   /**
@@ -139,7 +179,9 @@ public class BeforeConstructorAsyncCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testAsyncCallbackCannotMutateArgs() throws Exception {
-    logger.info("===== testAsyncCallbackCannotMutateArgs: TEST STARTED =====");
+    logger.info(
+        "===== testAsyncCallbackCannotMutateArgs [{}]: TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = ConstructorHandlers.class.getName();
     final String callbackMethod = "attemptIntArgMutation";
@@ -166,15 +208,11 @@ public class BeforeConstructorAsyncCallbackIT extends AbstractInterceptIT {
     // 2. Invoke factory method - callback will throw but ASYNC is fire-and-forget
     logger.info("Invoking createWithCounter - callback should throw but constructor still runs");
     ExecMessage response =
-        invoke(
-            messageBuilder.buildClassMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "createWithCounter",
-                new String[] {"java.lang.Integer"},
-                null,
-                null,
-                new Object[] {inputValue}));
+        invokeConstructor(
+            invocationPath,
+            InterceptableApp.class.getName(),
+            WITH_COUNTER,
+            new Object[] {inputValue});
 
     // 3. Verify constructor executed with unchanged args
     assertThat(
@@ -207,7 +245,9 @@ public class BeforeConstructorAsyncCallbackIT extends AbstractInterceptIT {
         InterceptEndToEndTestSuite.waitForAppLogLine(
             "attemptIntArgMutation.*BEFORE_ASYNC.*attempting to mutate"));
 
-    logger.info("===== testAsyncCallbackCannotMutateArgs: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testAsyncCallbackCannotMutateArgs [{}]: TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 
   /**
@@ -219,7 +259,9 @@ public class BeforeConstructorAsyncCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testAsyncCallbackReceivesCorrectArgs() throws Exception {
-    logger.info("===== testAsyncCallbackReceivesCorrectArgs: TEST STARTED =====");
+    logger.info(
+        "===== testAsyncCallbackReceivesCorrectArgs [{}]: TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = ConstructorHandlers.class.getName();
     final String callbackMethod = "verifyFirstArgIs42";
@@ -246,15 +288,11 @@ public class BeforeConstructorAsyncCallbackIT extends AbstractInterceptIT {
     // 2. Invoke factory method with value 42 - callback will verify
     logger.info("Invoking createWithCounter(42) - callback should verify arg is 42");
     ExecMessage response =
-        invoke(
-            messageBuilder.buildClassMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "createWithCounter",
-                new String[] {"java.lang.Integer"},
-                null,
-                null,
-                new Object[] {inputValue}));
+        invokeConstructor(
+            invocationPath,
+            InterceptableApp.class.getName(),
+            WITH_COUNTER,
+            new Object[] {inputValue});
 
     // 3. Constructor should execute normally
     assertThat(
@@ -282,7 +320,9 @@ public class BeforeConstructorAsyncCallbackIT extends AbstractInterceptIT {
         InterceptEndToEndTestSuite.waitForAppLogLine(
             "verifyFirstArgIs42: verified first arg is 42"));
 
-    logger.info("===== testAsyncCallbackReceivesCorrectArgs: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testAsyncCallbackReceivesCorrectArgs [{}]: TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 
   /**
@@ -299,7 +339,9 @@ public class BeforeConstructorAsyncCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testAsyncCallbackCannotThrowException() throws Exception {
-    logger.info("===== testAsyncCallbackCannotThrowException: TEST STARTED =====");
+    logger.info(
+        "===== testAsyncCallbackCannotThrowException [{}]: TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = ConstructorHandlers.class.getName();
     final String callbackMethod = "attemptThrowException";
@@ -327,15 +369,11 @@ public class BeforeConstructorAsyncCallbackIT extends AbstractInterceptIT {
     logger.info(
         "Invoking createWithCounter({}) - callback should throw but constructor runs", inputValue);
     ExecMessage response =
-        invoke(
-            messageBuilder.buildClassMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "createWithCounter",
-                new String[] {"java.lang.Integer"},
-                null,
-                null,
-                new Object[] {inputValue}));
+        invokeConstructor(
+            invocationPath,
+            InterceptableApp.class.getName(),
+            WITH_COUNTER,
+            new Object[] {inputValue});
 
     // 3. Verify no exception was raised
     assertThat(
@@ -364,6 +402,8 @@ public class BeforeConstructorAsyncCallbackIT extends AbstractInterceptIT {
         InterceptEndToEndTestSuite.waitForAppLogLine(
             "attemptThrowException.*BEFORE_ASYNC.*attempting to set exception"));
 
-    logger.info("===== testAsyncCallbackCannotThrowException: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testAsyncCallbackCannotThrowException [{}]: TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 }

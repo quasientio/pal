@@ -25,10 +25,14 @@ import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.lang.intercept.InterceptableFieldOp;
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.intercept.AbstractInterceptIT;
+import com.quasient.pal.intercept.InvocationPath;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.serdes.Unwrapper;
+import java.util.Collection;
 import java.util.UUID;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Integration tests for BEFORE intercept callbacks on field operations.
@@ -44,11 +48,49 @@ import org.junit.Test;
  *
  * <p>Tests use the shared intercept peer with InterceptableApp application class and FieldHandlers
  * callback handlers (both in itt-apps module).
+ *
+ * <p>These tests are parameterized to run through both invocation paths:
+ *
+ * <ul>
+ *   <li><b>HOT_PATH</b>: Field access via wrapper methods (e.g., getCounter/setCounter)
+ *   <li><b>INCOMING_RPC</b>: Direct field access via RPC messages
+ * </ul>
  */
+@RunWith(Parameterized.class)
 public class BeforeFieldCallbackIT extends AbstractInterceptIT {
+
+  /** Field invocation descriptors for parameterized tests. */
+  private static final FieldInvocation COUNTER =
+      new FieldInvocation("getCounter", "setCounter", "counter", "java.lang.Integer", false);
+
+  private static final FieldInvocation STATIC_COUNTER =
+      new FieldInvocation(
+          "getStaticCounter", "setStaticCounter", "staticCounter", "java.lang.Integer", true);
 
   /** UUID for the intercept registration. */
   private UUID interceptUuid;
+
+  /** The invocation path for this parameterized test run. */
+  private final InvocationPath invocationPath;
+
+  /**
+   * Constructs a parameterized test instance.
+   *
+   * @param invocationPath the invocation path (HOT_PATH or INCOMING_RPC)
+   */
+  public BeforeFieldCallbackIT(InvocationPath invocationPath) {
+    this.invocationPath = invocationPath;
+  }
+
+  /**
+   * Provides parameters for the test: both invocation paths.
+   *
+   * @return collection of invocation paths to test
+   */
+  @Parameterized.Parameters(name = "{index}: path={0}")
+  public static Collection<Object[]> data() {
+    return invocationPathParameters();
+  }
 
   // ===========================================================================
   // Instance Field Tests
@@ -61,14 +103,17 @@ public class BeforeFieldCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testInstanceFieldGetNoOpCallback() throws Exception {
-    logger.info("===== testInstanceFieldGetNoOpCallback: TEST STARTED =====");
+    logger.info(
+        "===== testInstanceFieldGetNoOpCallback ({}): TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = FieldHandlers.class.getName();
     final String callbackMethod = "noOp";
     final int initialValue = 42;
 
     // 1. Register a BEFORE intercept on counter field GET
-    logger.info("Creating BEFORE intercept request for counter GET");
+    logger.info(
+        "Creating BEFORE intercept request for counter GET ({})", invocationPath.getDescription());
     interceptUuid = UUID.randomUUID();
     InterceptRequest<InterceptableFieldOp> interceptRequest =
         createFieldOpInterceptRequest(
@@ -80,14 +125,17 @@ public class BeforeFieldCallbackIT extends AbstractInterceptIT {
             callbackMethod,
             new InterceptableFieldOp("counter", FieldOpType.GET));
 
-    logger.info("Registering intercept request");
+    logger.info("Registering intercept request ({})", invocationPath.getDescription());
     register(interceptRequest);
 
     // Wait for intercept registration to propagate
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
 
     // 2. Create InterceptableApp instance with initial value
-    logger.info("Creating InterceptableApp instance with initial value {}", initialValue);
+    logger.info(
+        "Creating InterceptableApp instance with initial value {} ({})",
+        initialValue,
+        invocationPath.getDescription());
     ExecMessage createResponse =
         invoke(
             messageBuilder.buildClassMethod(
@@ -101,23 +149,16 @@ public class BeforeFieldCallbackIT extends AbstractInterceptIT {
     ObjectRef appInstance = ObjectRef.from(createResponse.getReturnValue().getObject().getRef());
 
     // 3. Call getCounter to trigger the callback
-    logger.info("Invoking getCounter()");
+    logger.info("Invoking getCounter() ({})", invocationPath.getDescription());
     ExecMessage response =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "getCounter",
-                appInstance,
-                new String[] {},
-                new Object[] {}));
+        invokeFieldGet(invocationPath, InterceptableApp.class.getName(), COUNTER, appInstance);
 
     // 4. Verify no exception and value is unchanged
     assertThat(
         "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
 
     int counterValue = (int) Unwrapper.unwrapObject(response.getReturnValue().getObject());
-    logger.info("Counter value: {}", counterValue);
+    logger.info("Counter value: {} ({})", counterValue, invocationPath.getDescription());
 
     assertThat("Counter value should be unchanged", counterValue, is(initialValue));
 
@@ -126,7 +167,9 @@ public class BeforeFieldCallbackIT extends AbstractInterceptIT {
         "Expected noOp callback to log",
         InterceptEndToEndTestSuite.waitForAppLogLine("noOp: no mutations, phase=BEFORE"));
 
-    logger.info("===== testInstanceFieldGetNoOpCallback: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testInstanceFieldGetNoOpCallback ({}): TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 
   /**
@@ -136,14 +179,17 @@ public class BeforeFieldCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testInstanceFieldPutNoOpCallback() throws Exception {
-    logger.info("===== testInstanceFieldPutNoOpCallback: TEST STARTED =====");
+    logger.info(
+        "===== testInstanceFieldPutNoOpCallback ({}): TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = FieldHandlers.class.getName();
     final String callbackMethod = "noOp";
     final int newValue = 100;
 
     // 1. Register a BEFORE intercept on counter field PUT
-    logger.info("Creating BEFORE intercept request for counter PUT");
+    logger.info(
+        "Creating BEFORE intercept request for counter PUT ({})", invocationPath.getDescription());
     interceptUuid = UUID.randomUUID();
     InterceptRequest<InterceptableFieldOp> interceptRequest =
         createFieldOpInterceptRequest(
@@ -155,7 +201,7 @@ public class BeforeFieldCallbackIT extends AbstractInterceptIT {
             callbackMethod,
             new InterceptableFieldOp("counter", FieldOpType.PUT));
 
-    logger.info("Registering intercept request");
+    logger.info("Registering intercept request ({})", invocationPath.getDescription());
     register(interceptRequest);
 
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
@@ -166,16 +212,10 @@ public class BeforeFieldCallbackIT extends AbstractInterceptIT {
     ObjectRef appInstance = ObjectRef.from(createResponse.getReturnValue().getObject().getRef());
 
     // 3. Call setCounter to trigger the callback
-    logger.info("Invoking setCounter({})", newValue);
+    logger.info("Invoking setCounter({}) ({})", newValue, invocationPath.getDescription());
     ExecMessage setResponse =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "setCounter",
-                appInstance,
-                new String[] {"java.lang.Integer"},
-                new Object[] {newValue}));
+        invokeFieldPut(
+            invocationPath, InterceptableApp.class.getName(), COUNTER, appInstance, newValue);
 
     assertThat(
         "setCounter should not raise exception", setResponse.getRaisedThrowable(), is(nullValue()));
@@ -192,7 +232,7 @@ public class BeforeFieldCallbackIT extends AbstractInterceptIT {
                 new Object[] {}));
 
     int counterValue = (int) Unwrapper.unwrapObject(getResponse.getReturnValue().getObject());
-    logger.info("Counter value after set: {}", counterValue);
+    logger.info("Counter value after set: {} ({})", counterValue, invocationPath.getDescription());
 
     assertThat("Counter should have the set value", counterValue, is(newValue));
 
@@ -201,7 +241,9 @@ public class BeforeFieldCallbackIT extends AbstractInterceptIT {
         "Expected noOp callback to log",
         InterceptEndToEndTestSuite.waitForAppLogLine("noOp: no mutations, phase=BEFORE"));
 
-    logger.info("===== testInstanceFieldPutNoOpCallback: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testInstanceFieldPutNoOpCallback ({}): TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 
   /**
@@ -212,7 +254,9 @@ public class BeforeFieldCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testInstanceFieldPutValueMutation() throws Exception {
-    logger.info("===== testInstanceFieldPutValueMutation: TEST STARTED =====");
+    logger.info(
+        "===== testInstanceFieldPutValueMutation ({}): TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = FieldHandlers.class.getName();
     final String callbackMethod = "doublePutValue";
@@ -220,7 +264,9 @@ public class BeforeFieldCallbackIT extends AbstractInterceptIT {
     final int expectedValue = 50; // 25 * 2 = 50
 
     // 1. Register a BEFORE intercept on counter field PUT that doubles value
-    logger.info("Creating BEFORE intercept request for counter PUT with doubling callback");
+    logger.info(
+        "Creating BEFORE intercept request for counter PUT with doubling callback ({})",
+        invocationPath.getDescription());
     interceptUuid = UUID.randomUUID();
     InterceptRequest<InterceptableFieldOp> interceptRequest =
         createFieldOpInterceptRequest(
@@ -232,7 +278,7 @@ public class BeforeFieldCallbackIT extends AbstractInterceptIT {
             callbackMethod,
             new InterceptableFieldOp("counter", FieldOpType.PUT));
 
-    logger.info("Registering intercept request");
+    logger.info("Registering intercept request ({})", invocationPath.getDescription());
     register(interceptRequest);
 
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
@@ -243,16 +289,14 @@ public class BeforeFieldCallbackIT extends AbstractInterceptIT {
     ObjectRef appInstance = ObjectRef.from(createResponse.getReturnValue().getObject().getRef());
 
     // 3. Call setCounter with inputValue - callback should double it
-    logger.info("Invoking setCounter({}) which should be mutated to {}", inputValue, expectedValue);
+    logger.info(
+        "Invoking setCounter({}) which should be mutated to {} ({})",
+        inputValue,
+        expectedValue,
+        invocationPath.getDescription());
     ExecMessage setResponse =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "setCounter",
-                appInstance,
-                new String[] {"java.lang.Integer"},
-                new Object[] {inputValue}));
+        invokeFieldPut(
+            invocationPath, InterceptableApp.class.getName(), COUNTER, appInstance, inputValue);
 
     assertThat(
         "setCounter should not raise exception", setResponse.getRaisedThrowable(), is(nullValue()));
@@ -269,7 +313,7 @@ public class BeforeFieldCallbackIT extends AbstractInterceptIT {
                 new Object[] {}));
 
     int counterValue = (int) Unwrapper.unwrapObject(getResponse.getReturnValue().getObject());
-    logger.info("Counter value after set: {}", counterValue);
+    logger.info("Counter value after set: {} ({})", counterValue, invocationPath.getDescription());
 
     assertThat("Counter should have doubled value (25 * 2 = 50)", counterValue, is(expectedValue));
 
@@ -278,7 +322,9 @@ public class BeforeFieldCallbackIT extends AbstractInterceptIT {
         "Expected doublePutValue callback to log mutation",
         InterceptEndToEndTestSuite.waitForAppLogLine("doublePutValue: 25 -> 50"));
 
-    logger.info("===== testInstanceFieldPutValueMutation: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testInstanceFieldPutValueMutation ({}): TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 
   // ===========================================================================
@@ -292,7 +338,9 @@ public class BeforeFieldCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testStaticFieldGetNoOpCallback() throws Exception {
-    logger.info("===== testStaticFieldGetNoOpCallback: TEST STARTED =====");
+    logger.info(
+        "===== testStaticFieldGetNoOpCallback ({}): TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = FieldHandlers.class.getName();
     final String callbackMethod = "noOp";
@@ -310,7 +358,9 @@ public class BeforeFieldCallbackIT extends AbstractInterceptIT {
             new Object[] {initialValue}));
 
     // 2. Register a BEFORE intercept on staticCounter field GET
-    logger.info("Creating BEFORE intercept request for staticCounter GET");
+    logger.info(
+        "Creating BEFORE intercept request for staticCounter GET ({})",
+        invocationPath.getDescription());
     interceptUuid = UUID.randomUUID();
     InterceptRequest<InterceptableFieldOp> interceptRequest =
         createFieldOpInterceptRequest(
@@ -322,30 +372,22 @@ public class BeforeFieldCallbackIT extends AbstractInterceptIT {
             callbackMethod,
             new InterceptableFieldOp("staticCounter", FieldOpType.GET));
 
-    logger.info("Registering intercept request");
+    logger.info("Registering intercept request ({})", invocationPath.getDescription());
     register(interceptRequest);
 
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
 
     // 3. Call getStaticCounter to trigger the callback
-    logger.info("Invoking getStaticCounter()");
+    logger.info("Invoking getStaticCounter() ({})", invocationPath.getDescription());
     ExecMessage response =
-        invoke(
-            messageBuilder.buildClassMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "getStaticCounter",
-                new String[] {},
-                null,
-                null,
-                new Object[] {}));
+        invokeFieldGet(invocationPath, InterceptableApp.class.getName(), STATIC_COUNTER, null);
 
     // 4. Verify no exception and value is unchanged
     assertThat(
         "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
 
     int counterValue = (int) Unwrapper.unwrapObject(response.getReturnValue().getObject());
-    logger.info("Static counter value: {}", counterValue);
+    logger.info("Static counter value: {} ({})", counterValue, invocationPath.getDescription());
 
     assertThat("Static counter value should be unchanged", counterValue, is(initialValue));
 
@@ -354,7 +396,9 @@ public class BeforeFieldCallbackIT extends AbstractInterceptIT {
         "Expected noOp callback to log",
         InterceptEndToEndTestSuite.waitForAppLogLine("noOp: no mutations, phase=BEFORE"));
 
-    logger.info("===== testStaticFieldGetNoOpCallback: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testStaticFieldGetNoOpCallback ({}): TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 
   /**
@@ -364,14 +408,18 @@ public class BeforeFieldCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testStaticFieldPutNoOpCallback() throws Exception {
-    logger.info("===== testStaticFieldPutNoOpCallback: TEST STARTED =====");
+    logger.info(
+        "===== testStaticFieldPutNoOpCallback ({}): TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = FieldHandlers.class.getName();
     final String callbackMethod = "noOp";
     final int newValue = 300;
 
     // 1. Register a BEFORE intercept on staticCounter field PUT
-    logger.info("Creating BEFORE intercept request for staticCounter PUT");
+    logger.info(
+        "Creating BEFORE intercept request for staticCounter PUT ({})",
+        invocationPath.getDescription());
     interceptUuid = UUID.randomUUID();
     InterceptRequest<InterceptableFieldOp> interceptRequest =
         createFieldOpInterceptRequest(
@@ -383,23 +431,16 @@ public class BeforeFieldCallbackIT extends AbstractInterceptIT {
             callbackMethod,
             new InterceptableFieldOp("staticCounter", FieldOpType.PUT));
 
-    logger.info("Registering intercept request");
+    logger.info("Registering intercept request ({})", invocationPath.getDescription());
     register(interceptRequest);
 
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
 
     // 2. Call setStaticCounter to trigger the callback
-    logger.info("Invoking setStaticCounter({})", newValue);
+    logger.info("Invoking setStaticCounter({}) ({})", newValue, invocationPath.getDescription());
     ExecMessage setResponse =
-        invoke(
-            messageBuilder.buildClassMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "setStaticCounter",
-                new String[] {"java.lang.Integer"},
-                null,
-                null,
-                new Object[] {newValue}));
+        invokeFieldPut(
+            invocationPath, InterceptableApp.class.getName(), STATIC_COUNTER, null, newValue);
 
     assertThat(
         "setStaticCounter should not raise exception",
@@ -419,7 +460,8 @@ public class BeforeFieldCallbackIT extends AbstractInterceptIT {
                 new Object[] {}));
 
     int counterValue = (int) Unwrapper.unwrapObject(getResponse.getReturnValue().getObject());
-    logger.info("Static counter value after set: {}", counterValue);
+    logger.info(
+        "Static counter value after set: {} ({})", counterValue, invocationPath.getDescription());
 
     assertThat("Static counter should have the set value", counterValue, is(newValue));
 
@@ -428,7 +470,9 @@ public class BeforeFieldCallbackIT extends AbstractInterceptIT {
         "Expected noOp callback to log",
         InterceptEndToEndTestSuite.waitForAppLogLine("noOp: no mutations, phase=BEFORE"));
 
-    logger.info("===== testStaticFieldPutNoOpCallback: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testStaticFieldPutNoOpCallback ({}): TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 
   /**
@@ -439,7 +483,9 @@ public class BeforeFieldCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testStaticFieldPutValueMutation() throws Exception {
-    logger.info("===== testStaticFieldPutValueMutation: TEST STARTED =====");
+    logger.info(
+        "===== testStaticFieldPutValueMutation ({}): TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = FieldHandlers.class.getName();
     final String callbackMethod = "addHundredToPutValue";
@@ -447,7 +493,9 @@ public class BeforeFieldCallbackIT extends AbstractInterceptIT {
     final int expectedValue = 150; // 50 + 100 = 150
 
     // 1. Register a BEFORE intercept on staticCounter field PUT that adds 100
-    logger.info("Creating BEFORE intercept request for staticCounter PUT with add100 callback");
+    logger.info(
+        "Creating BEFORE intercept request for staticCounter PUT with add100 callback ({})",
+        invocationPath.getDescription());
     interceptUuid = UUID.randomUUID();
     InterceptRequest<InterceptableFieldOp> interceptRequest =
         createFieldOpInterceptRequest(
@@ -459,24 +507,20 @@ public class BeforeFieldCallbackIT extends AbstractInterceptIT {
             callbackMethod,
             new InterceptableFieldOp("staticCounter", FieldOpType.PUT));
 
-    logger.info("Registering intercept request");
+    logger.info("Registering intercept request ({})", invocationPath.getDescription());
     register(interceptRequest);
 
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
 
     // 2. Call setStaticCounter with inputValue - callback should add 100
     logger.info(
-        "Invoking setStaticCounter({}) which should be mutated to {}", inputValue, expectedValue);
+        "Invoking setStaticCounter({}) which should be mutated to {} ({})",
+        inputValue,
+        expectedValue,
+        invocationPath.getDescription());
     ExecMessage setResponse =
-        invoke(
-            messageBuilder.buildClassMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "setStaticCounter",
-                new String[] {"java.lang.Integer"},
-                null,
-                null,
-                new Object[] {inputValue}));
+        invokeFieldPut(
+            invocationPath, InterceptableApp.class.getName(), STATIC_COUNTER, null, inputValue);
 
     assertThat(
         "setStaticCounter should not raise exception",
@@ -496,7 +540,8 @@ public class BeforeFieldCallbackIT extends AbstractInterceptIT {
                 new Object[] {}));
 
     int counterValue = (int) Unwrapper.unwrapObject(getResponse.getReturnValue().getObject());
-    logger.info("Static counter value after set: {}", counterValue);
+    logger.info(
+        "Static counter value after set: {} ({})", counterValue, invocationPath.getDescription());
 
     assertThat(
         "Static counter should have modified value (50 + 100 = 150)",
@@ -508,7 +553,9 @@ public class BeforeFieldCallbackIT extends AbstractInterceptIT {
         "Expected addHundredToPutValue callback to log mutation",
         InterceptEndToEndTestSuite.waitForAppLogLine("addHundredToPutValue: 50 -> 150"));
 
-    logger.info("===== testStaticFieldPutValueMutation: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testStaticFieldPutValueMutation ({}): TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 
   /**
@@ -519,7 +566,9 @@ public class BeforeFieldCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testInstanceFieldPutCallbackThrowsException() throws Exception {
-    logger.info("===== testInstanceFieldPutCallbackThrowsException: TEST STARTED =====");
+    logger.info(
+        "===== testInstanceFieldPutCallbackThrowsException ({}): TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = FieldHandlers.class.getName();
     final String callbackMethod = "throwExceptionOnPut";
@@ -540,7 +589,9 @@ public class BeforeFieldCallbackIT extends AbstractInterceptIT {
     ObjectRef appInstance = ObjectRef.from(createResponse.getReturnValue().getObject().getRef());
 
     // 2. Register a BEFORE intercept on counter field PUT that throws
-    logger.info("Creating BEFORE intercept request for counter PUT with throwing callback");
+    logger.info(
+        "Creating BEFORE intercept request for counter PUT with throwing callback ({})",
+        invocationPath.getDescription());
     interceptUuid = UUID.randomUUID();
     InterceptRequest<InterceptableFieldOp> interceptRequest =
         createFieldOpInterceptRequest(
@@ -552,29 +603,30 @@ public class BeforeFieldCallbackIT extends AbstractInterceptIT {
             callbackMethod,
             new InterceptableFieldOp("counter", FieldOpType.PUT));
 
-    logger.info("Registering intercept request");
+    logger.info("Registering intercept request ({})", invocationPath.getDescription());
     register(interceptRequest);
 
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
 
     // 3. Call setCounter - should throw SecurityException
-    logger.info("Invoking setCounter({}) which should throw SecurityException", newValue);
+    logger.info(
+        "Invoking setCounter({}) which should throw SecurityException ({})",
+        newValue,
+        invocationPath.getDescription());
     try {
       ExecMessage setResponse =
-          invoke(
-              messageBuilder.buildInstanceMethod(
-                  myPeerUuid,
-                  InterceptableApp.class.getName(),
-                  "setCounter",
-                  appInstance,
-                  new String[] {"java.lang.Integer"},
-                  new Object[] {newValue}));
+          invokeFieldPut(
+              invocationPath, InterceptableApp.class.getName(), COUNTER, appInstance, newValue);
 
       if (setResponse.getRaisedThrowable() != null) {
         String exceptionClass = setResponse.getRaisedThrowable().getThrowable().getType();
         String exceptionMessage = setResponse.getRaisedThrowable().getThrowable().getMessage();
 
-        logger.info("Received exception: {} with message: {}", exceptionClass, exceptionMessage);
+        logger.info(
+            "Received exception: {} with message: {} ({})",
+            exceptionClass,
+            exceptionMessage,
+            invocationPath.getDescription());
 
         assertThat(
             "Exception should be SecurityException",
@@ -594,11 +646,12 @@ public class BeforeFieldCallbackIT extends AbstractInterceptIT {
         fail("Expected SecurityException to be thrown by callback");
       }
     } catch (Exception e) {
-      logger.error("Unexpected exception during test", e);
+      logger.error("Unexpected exception during test ({})", invocationPath.getDescription(), e);
       throw e;
     }
 
     logger.info(
-        "===== testInstanceFieldPutCallbackThrowsException: TEST COMPLETED SUCCESSFULLY =====");
+        "===== testInstanceFieldPutCallbackThrowsException ({}): TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 }

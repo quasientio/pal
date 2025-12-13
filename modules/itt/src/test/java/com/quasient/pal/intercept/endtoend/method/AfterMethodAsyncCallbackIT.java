@@ -21,11 +21,15 @@ import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.lang.intercept.InterceptableMethodCall;
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.intercept.AbstractInterceptIT;
+import com.quasient.pal.intercept.InvocationPath;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.serdes.Unwrapper;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.UUID;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Integration tests for AFTER_ASYNC method intercept callbacks.
@@ -40,11 +44,45 @@ import org.junit.Test;
  *
  * <p>Tests use the shared intercept peer with StringMethods application class and MethodHandlers
  * callback handlers (both in itt-apps module).
+ *
+ * <p><b>Parameterized:</b> Each test runs through both invocation paths:
+ *
+ * <ul>
+ *   <li><b>HOT_PATH</b>: Invokes wrapper method (e.g., callEcho) → intercept fires at call-site
+ *   <li><b>INCOMING_RPC</b>: Invokes target method directly (e.g., echo) → intercept fires in
+ *       dispatchIncoming
+ * </ul>
  */
+@RunWith(Parameterized.class)
 public class AfterMethodAsyncCallbackIT extends AbstractInterceptIT {
+
+  /** Method invocation descriptor for parameterized tests. */
+  private static final MethodInvocation ECHO = new MethodInvocation("callEcho", "echo");
 
   /** UUID for the intercept registration. */
   private UUID interceptUuid;
+
+  /** The invocation path for this parameterized test run. */
+  private final InvocationPath invocationPath;
+
+  /**
+   * Constructs a parameterized test instance.
+   *
+   * @param invocationPath the invocation path (HOT_PATH or INCOMING_RPC)
+   */
+  public AfterMethodAsyncCallbackIT(InvocationPath invocationPath) {
+    this.invocationPath = invocationPath;
+  }
+
+  /**
+   * Provides parameters for the test: both invocation paths.
+   *
+   * @return collection of invocation paths to test
+   */
+  @Parameterized.Parameters(name = "{index}: path={0}")
+  public static Collection<Object[]> data() {
+    return invocationPathParameters();
+  }
 
   /**
    * Tests that AFTER_ASYNC callback can read return value without override.
@@ -54,7 +92,9 @@ public class AfterMethodAsyncCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testAsyncCallbackCanReadReturnValue() throws Exception {
-    logger.info("===== testAsyncCallbackCanReadReturnValue: TEST STARTED =====");
+    logger.info(
+        "===== testAsyncCallbackCanReadReturnValue [{}]: TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "logReturnValue";
@@ -87,17 +127,17 @@ public class AfterMethodAsyncCallbackIT extends AbstractInterceptIT {
                 .getObject()
                 .getRef());
 
-    // 3. Invoke callEcho - ASYNC callback should log return value but not override it
-    logger.info("Invoking callEcho(\"{}\") with AFTER_ASYNC callback", inputValue);
+    // 3. Invoke method via parameterized path - ASYNC callback should log return value
+    logger.info(
+        "Invoking {} via {} path with AFTER_ASYNC callback", ECHO.targetMethod(), invocationPath);
     ExecMessage response =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                StringMethods.class.getName(),
-                "callEcho",
-                stringMethodsInstance,
-                new String[] {"java.lang.String"},
-                new Object[] {inputValue}));
+        invokeMethod(
+            invocationPath,
+            StringMethods.class.getName(),
+            ECHO,
+            stringMethodsInstance,
+            new String[] {"java.lang.String"},
+            new Object[] {inputValue});
 
     // 4. Verify the return value is unchanged (ASYNC cannot override)
     String returnValue = (String) Unwrapper.unwrapObject(response.getReturnValue().getObject());
@@ -114,7 +154,9 @@ public class AfterMethodAsyncCallbackIT extends AbstractInterceptIT {
         InterceptEndToEndTestSuite.waitForAppLogLine(
             "logReturnValue.*AFTER_ASYNC.*returnValue.*" + inputValue));
 
-    logger.info("===== testAsyncCallbackCanReadReturnValue: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testAsyncCallbackCanReadReturnValue [{}]: TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 
   /**
@@ -129,7 +171,9 @@ public class AfterMethodAsyncCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testAsyncCallbackCannotOverrideReturnValue() throws Exception {
-    logger.info("===== testAsyncCallbackCannotOverrideReturnValue: TEST STARTED =====");
+    logger.info(
+        "===== testAsyncCallbackCannotOverrideReturnValue [{}]: TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "attemptReturnOverride";
@@ -161,17 +205,19 @@ public class AfterMethodAsyncCallbackIT extends AbstractInterceptIT {
                 .getObject()
                 .getRef());
 
-    // 3. Invoke callEcho - callback will throw but ASYNC is fire-and-forget
-    logger.info("Invoking callEcho - callback should throw but caller gets original return value");
+    // 3. Invoke method - callback will throw but ASYNC is fire-and-forget
+    logger.info(
+        "Invoking {} via {} path - callback should throw but caller gets original return value",
+        ECHO.targetMethod(),
+        invocationPath);
     ExecMessage response =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                StringMethods.class.getName(),
-                "callEcho",
-                stringMethodsInstance,
-                new String[] {"java.lang.String"},
-                new Object[] {inputValue}));
+        invokeMethod(
+            invocationPath,
+            StringMethods.class.getName(),
+            ECHO,
+            stringMethodsInstance,
+            new String[] {"java.lang.String"},
+            new Object[] {inputValue});
 
     // 4. Verify caller receives original return value (ASYNC exception doesn't affect caller)
     String returnValue = (String) Unwrapper.unwrapObject(response.getReturnValue().getObject());
@@ -189,7 +235,8 @@ public class AfterMethodAsyncCallbackIT extends AbstractInterceptIT {
             "attemptReturnOverride: correctly threw UnsupportedOperationException"));
 
     logger.info(
-        "===== testAsyncCallbackCannotOverrideReturnValue: TEST COMPLETED SUCCESSFULLY =====");
+        "===== testAsyncCallbackCannotOverrideReturnValue [{}]: TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 
   /**
@@ -201,7 +248,9 @@ public class AfterMethodAsyncCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testAsyncCallbackReceivesCorrectReturnValue() throws Exception {
-    logger.info("===== testAsyncCallbackReceivesCorrectReturnValue: TEST STARTED =====");
+    logger.info(
+        "===== testAsyncCallbackReceivesCorrectReturnValue [{}]: TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "verifyReturnValueIsHello";
@@ -233,17 +282,19 @@ public class AfterMethodAsyncCallbackIT extends AbstractInterceptIT {
                 .getObject()
                 .getRef());
 
-    // 3. Invoke callEcho with "hello" - callback will verify return value
-    logger.info("Invoking callEcho(\"hello\") - callback should verify return value is 'hello'");
+    // 3. Invoke method via parameterized path - callback will verify return value
+    logger.info(
+        "Invoking {} via {} path - callback should verify return value is 'hello'",
+        ECHO.targetMethod(),
+        invocationPath);
     ExecMessage response =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                StringMethods.class.getName(),
-                "callEcho",
-                stringMethodsInstance,
-                new String[] {"java.lang.String"},
-                new Object[] {inputValue}));
+        invokeMethod(
+            invocationPath,
+            StringMethods.class.getName(),
+            ECHO,
+            stringMethodsInstance,
+            new String[] {"java.lang.String"},
+            new Object[] {inputValue});
 
     // 4. Caller receives original return value
     String returnValue = (String) Unwrapper.unwrapObject(response.getReturnValue().getObject());
@@ -256,7 +307,8 @@ public class AfterMethodAsyncCallbackIT extends AbstractInterceptIT {
             "verifyReturnValueIsHello: verified return value is 'hello'"));
 
     logger.info(
-        "===== testAsyncCallbackReceivesCorrectReturnValue: TEST COMPLETED SUCCESSFULLY =====");
+        "===== testAsyncCallbackReceivesCorrectReturnValue [{}]: TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 
   /**
@@ -271,7 +323,9 @@ public class AfterMethodAsyncCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testAsyncCallbackCannotThrowException() throws Exception {
-    logger.info("===== testAsyncCallbackCannotThrowException: TEST STARTED =====");
+    logger.info(
+        "===== testAsyncCallbackCannotThrowException [{}]: TEST STARTED =====",
+        invocationPath.getDescription());
 
     final String callbackClass = MethodHandlers.class.getName();
     final String callbackMethod = "attemptThrowException";
@@ -303,17 +357,19 @@ public class AfterMethodAsyncCallbackIT extends AbstractInterceptIT {
                 .getObject()
                 .getRef());
 
-    // 3. Invoke callEcho - method runs, callback throws UnsupportedOperationException after
-    logger.info("Invoking callEcho - callback should throw but caller should get original result");
+    // 3. Invoke method - method runs, callback throws UnsupportedOperationException after
+    logger.info(
+        "Invoking {} via {} path - callback should throw but caller should get original result",
+        ECHO.targetMethod(),
+        invocationPath);
     ExecMessage response =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                StringMethods.class.getName(),
-                "callEcho",
-                stringMethodsInstance,
-                new String[] {"java.lang.String"},
-                new Object[] {inputValue}));
+        invokeMethod(
+            invocationPath,
+            StringMethods.class.getName(),
+            ECHO,
+            stringMethodsInstance,
+            new String[] {"java.lang.String"},
+            new Object[] {inputValue});
 
     // 4. Verify caller receives original return value (ASYNC exception doesn't affect caller)
     String returnValue = (String) Unwrapper.unwrapObject(response.getReturnValue().getObject());
@@ -330,6 +386,8 @@ public class AfterMethodAsyncCallbackIT extends AbstractInterceptIT {
         InterceptEndToEndTestSuite.waitForAppLogLine(
             "attemptThrowException: correctly threw UnsupportedOperationException"));
 
-    logger.info("===== testAsyncCallbackCannotThrowException: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testAsyncCallbackCannotThrowException [{}]: TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 }
