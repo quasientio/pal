@@ -23,13 +23,17 @@ import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.lang.intercept.InterceptableMethodCall;
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.intercept.AbstractInterceptIT;
+import com.quasient.pal.intercept.InvocationPath;
 import com.quasient.pal.messages.colfer.InterceptCallbackRequestMessage;
 import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.messages.types.MessageType;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Integration tests for AROUND instance method intercept callback dispatch.
@@ -49,16 +53,43 @@ import org.junit.Test;
  *   <li>Method parameters are present
  * </ul>
  *
- * <p><b>NOTE:</b> These tests verify intercepts at the hot-path (via quantization, which happens at
- * the call-site), and so, we need to invoke via RPC a method/ctor that triggers the actual
- * interception target.
+ * <p>Tests are parameterized to run through both invocation paths:
+ *
+ * <ul>
+ *   <li><b>HOT_PATH</b>: Intercepts triggered via AspectJ weaving at call-site (wrapper method
+ *       calls target)
+ *   <li><b>INCOMING_RPC</b>: Intercepts triggered via direct RPC message dispatch
+ * </ul>
  */
+@RunWith(Parameterized.class)
 public class InstanceMethodAroundCallbackIT extends AbstractInterceptIT {
+
+  /** The invocation path for this test run. */
+  private final InvocationPath path;
+
+  /**
+   * Constructs a test instance for the specified invocation path.
+   *
+   * @param path the invocation path to test
+   */
+  public InstanceMethodAroundCallbackIT(InvocationPath path) {
+    this.path = path;
+  }
+
+  /**
+   * Returns the parameterized test data for invocation paths.
+   *
+   * @return collection of invocation path parameters
+   */
+  @Parameterized.Parameters(name = "{index}: path={0}")
+  public static Collection<Object[]> data() {
+    return invocationPathParameters();
+  }
 
   /**
    * Tests single AROUND callback dispatch on instance method.
    *
-   * <p>Registers an AROUND intercept on multiplyBy, calls a wrapper that invokes it once (n=1), and
+   * <p>Registers an AROUND intercept on multiplyBy, invokes it once through the specified path, and
    * verifies:
    *
    * <ul>
@@ -72,16 +103,14 @@ public class InstanceMethodAroundCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testSingleAroundCallback() throws Exception {
-    logger.info("===== testSingleAroundCallback: TEST STARTED =====");
+    logger.info("===== testSingleAroundCallback [{}]: TEST STARTED =====", path);
 
     final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
     final String callbackMethod = "aFakeMethod";
-    final int n = 1; // Number of times to call multiplyBy
     final int multiplier = 3;
 
     // 1. Register an AROUND intercept on multiplyBy method
     logger.info("Creating AROUND intercept request for multiplyBy method");
-    // UUID for the intercept registration.
     UUID interceptUuid = UUID.randomUUID();
     InterceptRequest<InterceptableMethodCall> interceptRequest =
         new InterceptRequest<>(
@@ -115,25 +144,34 @@ public class InstanceMethodAroundCallbackIT extends AbstractInterceptIT {
                 .getRef());
     logger.info("InterceptableApp instance created with ref: {}", appInstance);
 
-    // 3. Invoke multiplyCounterNTimesBy which internally calls multiplyBy and triggers intercept
-    logger.info(
-        "Invoking multiplyCounterNTimesBy(n={}, multiplier={}) which should trigger {} AROUND callback(s)",
-        n,
-        multiplier,
-        n);
-    invoke(
-        messageBuilder.buildInstanceMethod(
-            myPeerUuid,
-            InterceptableApp.class.getName(),
-            "multiplyCounterNTimesBy",
-            appInstance,
-            new String[] {"java.lang.Integer", "java.lang.Integer"},
-            new Object[] {n, multiplier}));
-    logger.info("multiplyCounterNTimesBy invocation completed");
+    // 3. Invoke multiplyBy through the specified path
+    logger.info("Invoking multiplyBy via {} path which should trigger AROUND callback", path);
+    if (path == InvocationPath.HOT_PATH) {
+      // HOT_PATH: Use wrapper method that calls multiplyBy once
+      invoke(
+          messageBuilder.buildInstanceMethod(
+              myPeerUuid,
+              InterceptableApp.class.getName(),
+              "multiplyCounterNTimesBy",
+              appInstance,
+              new String[] {"java.lang.Integer", "java.lang.Integer"},
+              new Object[] {1, multiplier}));
+    } else {
+      // INCOMING_RPC: Call multiplyBy directly
+      invoke(
+          messageBuilder.buildInstanceMethod(
+              myPeerUuid,
+              InterceptableApp.class.getName(),
+              "multiplyBy",
+              appInstance,
+              new String[] {"java.lang.Integer"},
+              new Object[] {multiplier}));
+    }
+    logger.info("multiplyBy invocation completed");
 
     // 4. Verify invocation succeeded (or timed out waiting for callback response)
     // Note: Since we're using ThinPeer which doesn't execute handlers, the interceptable
-    // peer will timeout waiting for a response. We just need to verify the callback was sent.
+    // peer will time out waiting for a response. We just need to verify the callback was sent.
 
     // 5. Retrieve and verify callbacks
     // AROUND intercepts send 2 callbacks: BEFORE phase + AFTER phase
@@ -241,6 +279,6 @@ public class InstanceMethodAroundCallbackIT extends AbstractInterceptIT {
         afterReq.getExec().getReturnValue().isVoid,
         is(true));
 
-    logger.info("===== testSingleAroundCallback: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info("===== testSingleAroundCallback [{}]: TEST COMPLETED SUCCESSFULLY =====", path);
   }
 }

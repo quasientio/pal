@@ -23,12 +23,16 @@ import com.quasient.pal.common.lang.intercept.InterceptPhase;
 import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.lang.intercept.InterceptableFieldOp;
 import com.quasient.pal.intercept.AbstractInterceptIT;
+import com.quasient.pal.intercept.InvocationPath;
 import com.quasient.pal.messages.colfer.InterceptCallbackRequestMessage;
 import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.messages.types.MessageType;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Integration tests for AROUND static field intercept callback dispatch.
@@ -47,16 +51,44 @@ import org.junit.Test;
  *   <li>timeoutMs field is set (> 0) on BEFORE phase
  * </ul>
  *
- * <p><b>NOTE:</b>These tests verify intercepts at the hot-path (via quantization, which happens at
- * the call-site), and so, we need to invoke via RPC a method/ctor that triggers the actual
- * interception target.
+ * <p>Tests are parameterized to run through both invocation paths:
+ *
+ * <ul>
+ *   <li><b>HOT_PATH</b>: Intercepts triggered via AspectJ weaving at call-site (getter/setter calls
+ *       field access)
+ *   <li><b>INCOMING_RPC</b>: Intercepts triggered via direct RPC message dispatch
+ * </ul>
  */
+@RunWith(Parameterized.class)
 public class StaticFieldAroundCallbackIT extends AbstractInterceptIT {
+
+  /** The invocation path for this test run. */
+  private final InvocationPath path;
+
+  /**
+   * Constructs a test instance for the specified invocation path.
+   *
+   * @param path the invocation path to test
+   */
+  public StaticFieldAroundCallbackIT(InvocationPath path) {
+    this.path = path;
+  }
+
+  /**
+   * Returns the parameterized test data for invocation paths.
+   *
+   * @return collection of invocation path parameters
+   */
+  @Parameterized.Parameters(name = "{index}: path={0}")
+  public static Collection<Object[]> data() {
+    return invocationPathParameters();
+  }
 
   /**
    * Tests single AROUND callback dispatch on static field GET operation.
    *
-   * <p>Registers an AROUND intercept on staticCounter GET, calls a getter once, and verifies:
+   * <p>Registers an AROUND intercept on staticCounter GET, invokes it through the specified path,
+   * and verifies:
    *
    * <ul>
    *   <li>Exactly 2 callbacks are received (BEFORE phase + AFTER phase)
@@ -69,7 +101,7 @@ public class StaticFieldAroundCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testSingleAroundCallbackOnGet() throws Exception {
-    logger.info("===== testSingleAroundCallbackOnGet: TEST STARTED =====");
+    logger.info("===== testSingleAroundCallbackOnGet [{}]: TEST STARTED =====", path);
 
     final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
     final String callbackMethod = "aFakeMethod";
@@ -95,18 +127,25 @@ public class StaticFieldAroundCallbackIT extends AbstractInterceptIT {
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     logger.info("Intercept registration delay completed");
 
-    // 2. Invoke getStaticCounter which triggers GET_STATIC and callback
-    logger.info("Invoking getStaticCounter() which should trigger 2 AROUND callbacks");
-    invoke(
-        messageBuilder.buildClassMethod(
-            myPeerUuid,
-            InterceptableApp.class.getName(),
-            "getStaticCounter",
-            new String[] {},
-            null,
-            null,
-            new Object[] {}));
-    logger.info("getStaticCounter invocation completed");
+    // 2. Invoke static field GET through the specified path
+    logger.info(
+        "Invoking static field GET via {} path which should trigger 2 AROUND callbacks", path);
+    if (path == InvocationPath.HOT_PATH) {
+      invoke(
+          messageBuilder.buildClassMethod(
+              myPeerUuid,
+              InterceptableApp.class.getName(),
+              "getStaticCounter",
+              new String[] {},
+              null,
+              null,
+              new Object[] {}));
+    } else {
+      invoke(
+          messageBuilder.buildGetStatic(
+              myPeerUuid, InterceptableApp.class.getName(), "staticCounter"));
+    }
+    logger.info("Static field GET invocation completed");
 
     // 3. Retrieve and verify callbacks
     // AROUND intercepts send 2 callbacks: BEFORE phase + AFTER phase
@@ -209,13 +248,15 @@ public class StaticFieldAroundCallbackIT extends AbstractInterceptIT {
         afterReq.getExec().getReturnValue().isVoid,
         is(false));
 
-    logger.info("===== testSingleAroundCallbackOnGet: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testSingleAroundCallbackOnGet [{}]: TEST COMPLETED SUCCESSFULLY =====", path);
   }
 
   /**
    * Tests single AROUND callback dispatch on static field PUT operation.
    *
-   * <p>Registers an AROUND intercept on staticCounter PUT, calls a setter once, and verifies:
+   * <p>Registers an AROUND intercept on staticCounter PUT, invokes it through the specified path,
+   * and verifies:
    *
    * <ul>
    *   <li>Exactly 2 callbacks are received (BEFORE phase + AFTER phase)
@@ -228,7 +269,7 @@ public class StaticFieldAroundCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testSingleAroundCallbackOnPut() throws Exception {
-    logger.info("===== testSingleAroundCallbackOnPut: TEST STARTED =====");
+    logger.info("===== testSingleAroundCallbackOnPut [{}]: TEST STARTED =====", path);
 
     final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
     final String callbackMethod = "aFakeMethod";
@@ -255,18 +296,29 @@ public class StaticFieldAroundCallbackIT extends AbstractInterceptIT {
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     logger.info("Intercept registration delay completed");
 
-    // 2. Invoke setStaticCounter which triggers PUT_STATIC and callback
-    logger.info("Invoking setStaticCounter({}) which should trigger 2 AROUND callbacks", newValue);
-    invoke(
-        messageBuilder.buildClassMethod(
-            myPeerUuid,
-            InterceptableApp.class.getName(),
-            "setStaticCounter",
-            new String[] {"java.lang.Integer"},
-            null,
-            null,
-            new Object[] {newValue}));
-    logger.info("setStaticCounter invocation completed");
+    // 2. Invoke static field PUT through the specified path
+    logger.info(
+        "Invoking static field PUT via {} path which should trigger 2 AROUND callbacks", path);
+    if (path == InvocationPath.HOT_PATH) {
+      invoke(
+          messageBuilder.buildClassMethod(
+              myPeerUuid,
+              InterceptableApp.class.getName(),
+              "setStaticCounter",
+              new String[] {"java.lang.Integer"},
+              null,
+              null,
+              new Object[] {newValue}));
+    } else {
+      invoke(
+          messageBuilder.buildPutStatic(
+              myPeerUuid,
+              InterceptableApp.class.getName(),
+              "staticCounter",
+              "java.lang.Integer",
+              newValue));
+    }
+    logger.info("Static field PUT invocation completed");
 
     // 3. Retrieve and verify callbacks
     // AROUND intercepts send 2 callbacks: BEFORE phase + AFTER phase
@@ -361,6 +413,7 @@ public class StaticFieldAroundCallbackIT extends AbstractInterceptIT {
         afterReq.getExec().getStaticFieldPutDone(),
         is(notNullValue()));
 
-    logger.info("===== testSingleAroundCallbackOnPut: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testSingleAroundCallbackOnPut [{}]: TEST COMPLETED SUCCESSFULLY =====", path);
   }
 }

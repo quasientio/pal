@@ -20,37 +20,123 @@ import com.quasient.pal.common.lang.FieldOpType;
 import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.lang.intercept.InterceptableFieldOp;
 import com.quasient.pal.intercept.AbstractInterceptIT;
+import com.quasient.pal.intercept.InvocationPath;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.messages.colfer.Obj;
 import com.quasient.pal.messages.types.MessageType;
 import com.quasient.pal.serdes.Unwrapper;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Integration tests for synchronous static field intercept callbacks (BEFORE and AFTER).
  *
- * <p>These tests verify the end-to-end callback mechanism for synchronous intercepts on static
- * field operations (EXEC_GET_STATIC and EXEC_PUT_STATIC), including single callbacks for both
- * BEFORE and AFTER intercept types.
+ * <p>These tests verify the callback mechanism for synchronous intercepts on static field
+ * operations (EXEC_GET_STATIC and EXEC_PUT_STATIC), including single callbacks for both BEFORE and
+ * AFTER intercept types.
  *
- * <p><b>NOTE:</b>These tests verify intercepts at the hot-path (via quantization, which happens at
- * the call-site), and so, we need to invoke via RPC a method/ctor that triggers the actual
- * interception target.
+ * <p>Tests are parameterized to run through both invocation paths:
+ *
+ * <ul>
+ *   <li><b>HOT_PATH</b>: Intercepts triggered via AspectJ weaving at call-site (getter/setter
+ *       method accesses static field)
+ *   <li><b>INCOMING_RPC</b>: Intercepts triggered via direct RPC message dispatch
+ * </ul>
  */
+@RunWith(Parameterized.class)
 public class StaticFieldSyncCallbackIT extends AbstractInterceptIT {
+
+  /** The invocation path for this test run. */
+  private final InvocationPath path;
+
+  /**
+   * Constructs a test instance for the specified invocation path.
+   *
+   * @param path the invocation path to test
+   */
+  public StaticFieldSyncCallbackIT(InvocationPath path) {
+    this.path = path;
+  }
+
+  /**
+   * Returns the parameterized test data for invocation paths.
+   *
+   * @return collection of invocation path parameters
+   */
+  @Parameterized.Parameters(name = "{index}: path={0}")
+  public static Collection<Object[]> data() {
+    return invocationPathParameters();
+  }
+
+  /**
+   * Invokes a GET on the staticCounter field through the specified invocation path.
+   *
+   * @return the response ExecMessage
+   */
+  private ExecMessage invokeStaticFieldGet() {
+    if (path == InvocationPath.HOT_PATH) {
+      // HOT_PATH: Use getter method that accesses static field
+      return invoke(
+          messageBuilder.buildClassMethod(
+              myPeerUuid,
+              InterceptableApp.class.getName(),
+              "getStaticCounter",
+              new String[] {},
+              null,
+              null,
+              new Object[] {}));
+    } else {
+      // INCOMING_RPC: Access static field directly
+      return invoke(
+          messageBuilder.buildGetStatic(
+              myPeerUuid, InterceptableApp.class.getName(), "staticCounter"));
+    }
+  }
+
+  /**
+   * Invokes a PUT on the staticCounter field through the specified invocation path.
+   *
+   * @param value the value to set
+   * @return the response ExecMessage
+   */
+  private ExecMessage invokeStaticFieldPut(int value) {
+    if (path == InvocationPath.HOT_PATH) {
+      // HOT_PATH: Use setter method that accesses static field
+      return invoke(
+          messageBuilder.buildClassMethod(
+              myPeerUuid,
+              InterceptableApp.class.getName(),
+              "setStaticCounter",
+              new String[] {"java.lang.Integer"},
+              null,
+              null,
+              new Object[] {value}));
+    } else {
+      // INCOMING_RPC: Access static field directly
+      return invoke(
+          messageBuilder.buildPutStatic(
+              myPeerUuid,
+              InterceptableApp.class.getName(),
+              "staticCounter",
+              "java.lang.Integer",
+              value));
+    }
+  }
 
   /**
    * Tests single BEFORE callback on static field GET operation.
    *
-   * <p>Registers a BEFORE intercept on staticCounter, calls a getter (which triggers
-   * EXEC_GET_STATIC) once, and verifies exactly 1 callback is received.
+   * <p>Registers a BEFORE intercept on staticCounter, invokes a field GET, and verifies exactly 1
+   * callback is received with correct structure.
    */
   @Test
   public void testSingleBeforeCallbackOnGet() throws Exception {
-    logger.info("===== testSingleBeforeCallbackOnGet: TEST STARTED =====");
+    logger.info("===== testSingleBeforeCallbackOnGet [{}]: TEST STARTED =====", path);
 
     final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
     final String callbackMethod = "aFakeMethod";
@@ -76,19 +162,10 @@ public class StaticFieldSyncCallbackIT extends AbstractInterceptIT {
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     logger.info("Intercept registration delay completed");
 
-    // 2. Invoke getStaticCounter which triggers GET_STATIC and callback
-    logger.info("Invoking getStaticCounter() which should trigger 1 callback");
-    ExecMessage response =
-        invoke(
-            messageBuilder.buildClassMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "getStaticCounter",
-                new String[] {},
-                null,
-                null,
-                new Object[] {}));
-    logger.info("getStaticCounter invocation completed");
+    // 2. Invoke static field GET through the specified path
+    logger.info("Invoking staticCounter GET via {} path which should trigger 1 callback", path);
+    ExecMessage response = invokeStaticFieldGet();
+    logger.info("staticCounter GET invocation completed");
 
     // 3. Verify invocation succeeded
     assertThat(
@@ -122,18 +199,19 @@ public class StaticFieldSyncCallbackIT extends AbstractInterceptIT {
         callback.getInterceptCallbackRequestMessage().getExec().getStaticFieldGet(),
         is(notNullValue()));
 
-    logger.info("===== testSingleBeforeCallbackOnGet: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testSingleBeforeCallbackOnGet [{}]: TEST COMPLETED SUCCESSFULLY =====", path);
   }
 
   /**
    * Tests single AFTER callback on static field GET operation.
    *
-   * <p>Registers a AFTER intercept on staticCounter, calls a getter once, and verifies exactly 1
+   * <p>Registers an AFTER intercept on staticCounter, invokes a field GET, and verifies exactly 1
    * callback is received after the field get.
    */
   @Test
   public void testSingleAfterCallbackOnGet() throws Exception {
-    logger.info("===== testSingleAfterCallbackOnGet: TEST STARTED =====");
+    logger.info("===== testSingleAfterCallbackOnGet [{}]: TEST STARTED =====", path);
 
     final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
     final String callbackMethod = "aFakeMethod";
@@ -159,19 +237,10 @@ public class StaticFieldSyncCallbackIT extends AbstractInterceptIT {
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     logger.info("Intercept registration delay completed");
 
-    // 2. Invoke getStaticCounter which triggers GET_STATIC and callback
-    logger.info("Invoking getStaticCounter() which should trigger 1 callback");
-    ExecMessage response =
-        invoke(
-            messageBuilder.buildClassMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "getStaticCounter",
-                new String[] {},
-                null,
-                null,
-                new Object[] {}));
-    logger.info("getStaticCounter invocation completed");
+    // 2. Invoke static field GET through the specified path
+    logger.info("Invoking staticCounter GET via {} path which should trigger 1 callback", path);
+    ExecMessage response = invokeStaticFieldGet();
+    logger.info("staticCounter GET invocation completed");
 
     // 3. Verify invocation succeeded
     assertThat(
@@ -218,18 +287,18 @@ public class StaticFieldSyncCallbackIT extends AbstractInterceptIT {
             .getField(),
         is(notNullValue()));
 
-    logger.info("===== testSingleAfterCallbackOnGet: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info("===== testSingleAfterCallbackOnGet [{}]: TEST COMPLETED SUCCESSFULLY =====", path);
   }
 
   /**
    * Tests single BEFORE callback on static field PUT operation.
    *
-   * <p>Registers a BEFORE intercept on staticCounter, invoke a setter for the field, and verifies
-   * exactly 1 callback is received.
+   * <p>Registers a BEFORE intercept on staticCounter, invokes a field PUT, and verifies exactly 1
+   * callback is received with correct structure.
    */
   @Test
   public void testSingleBeforeCallbackOnPut() throws Exception {
-    logger.info("===== testSingleBeforeCallbackOnPut: TEST STARTED =====");
+    logger.info("===== testSingleBeforeCallbackOnPut [{}]: TEST STARTED =====", path);
 
     final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
     final String callbackMethod = "aFakeMethod";
@@ -256,20 +325,10 @@ public class StaticFieldSyncCallbackIT extends AbstractInterceptIT {
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     logger.info("Intercept registration delay completed");
 
-    // 2. Invoke setStaticCounter which triggers PUT_STATIC and callback
-    // Note: Static field PUT operations generate only 1 callback (no PUT_DONE for static fields)
-    logger.info("Invoking setStaticCounter({}) which should trigger 1 callback", newValue);
-    ExecMessage response =
-        invoke(
-            messageBuilder.buildClassMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "setStaticCounter",
-                new String[] {"java.lang.Integer"},
-                null,
-                null,
-                new Object[] {newValue}));
-    logger.info("setStaticCounter invocation completed");
+    // 2. Invoke static field PUT through the specified path
+    logger.info("Invoking staticCounter PUT via {} path which should trigger 1 callback", path);
+    ExecMessage response = invokeStaticFieldPut(newValue);
+    logger.info("staticCounter PUT invocation completed");
 
     // 3. Verify invocation succeeded
     assertThat(
@@ -303,7 +362,7 @@ public class StaticFieldSyncCallbackIT extends AbstractInterceptIT {
         callback.getInterceptCallbackRequestMessage().getExec().getStaticFieldPut(),
         is(notNullValue()));
 
-    // Verify the value being PUT matches what we passed to the setter
+    // Verify the value being PUT matches what we passed
     Obj putValueObj =
         callback
             .getInterceptCallbackRequestMessage()
@@ -311,20 +370,21 @@ public class StaticFieldSyncCallbackIT extends AbstractInterceptIT {
             .getStaticFieldPut()
             .getValueObject();
     Object value = Unwrapper.unwrapObject(putValueObj);
-    assertThat("PUT value should match the value passed to setter", value, is(newValue));
+    assertThat("PUT value should match the value we set", value, is(newValue));
 
-    logger.info("===== testSingleBeforeCallbackOnPut: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testSingleBeforeCallbackOnPut [{}]: TEST COMPLETED SUCCESSFULLY =====", path);
   }
 
   /**
    * Tests single AFTER callback on static field PUT operation.
    *
-   * <p>Registers an AFTER intercept on staticCounter, calls a setter, and verifies exactly 1
+   * <p>Registers an AFTER intercept on staticCounter, invokes a field PUT, and verifies exactly 1
    * callback is received after the field put.
    */
   @Test
   public void testSingleAfterCallbackOnPut() throws Exception {
-    logger.info("===== testSingleAfterCallbackOnPut: TEST STARTED =====");
+    logger.info("===== testSingleAfterCallbackOnPut [{}]: TEST STARTED =====", path);
 
     final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
     final String callbackMethod = "aFakeMethod";
@@ -351,21 +411,10 @@ public class StaticFieldSyncCallbackIT extends AbstractInterceptIT {
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     logger.info("Intercept registration delay completed");
 
-    // 2. Invoke setStaticCounter which triggers PUT_STATIC and callback
-    logger.info(
-        "Invoking setStaticCounter({}) which should trigger 2 callbacks (PUT + PUT_DONE)",
-        newValue);
-    ExecMessage response =
-        invoke(
-            messageBuilder.buildClassMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "setStaticCounter",
-                new String[] {"java.lang.Integer"},
-                null,
-                null,
-                new Object[] {newValue}));
-    logger.info("setStaticCounter invocation completed");
+    // 2. Invoke static field PUT through the specified path
+    logger.info("Invoking staticCounter PUT via {} path which should trigger 1 callback", path);
+    ExecMessage response = invokeStaticFieldPut(newValue);
+    logger.info("staticCounter PUT invocation completed");
 
     // 3. Verify invocation succeeded
     assertThat(
@@ -402,6 +451,6 @@ public class StaticFieldSyncCallbackIT extends AbstractInterceptIT {
         callback.getInterceptCallbackRequestMessage().getExec().getStaticFieldPutDone().getField(),
         is(notNullValue()));
 
-    logger.info("===== testSingleAfterCallbackOnPut: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info("===== testSingleAfterCallbackOnPut [{}]: TEST COMPLETED SUCCESSFULLY =====", path);
   }
 }

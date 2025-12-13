@@ -19,39 +19,98 @@ import com.quasient.pal.common.directory.nodes.InterceptRequest;
 import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.lang.intercept.InterceptableMethodCall;
 import com.quasient.pal.intercept.AbstractInterceptIT;
+import com.quasient.pal.intercept.InvocationPath;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.messages.types.MessageType;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Integration tests for synchronous constructor intercept callbacks (BEFORE and AFTER).
  *
- * <p>These tests verify the end-to-end callback mechanism for synchronous intercepts on
- * constructors (INTERCEPT_CALLBACK_REQUEST), including single and multiple callbacks for both
- * BEFORE and AFTER intercept types.
+ * <p>These tests verify the callback mechanism for synchronous intercepts on constructors
+ * (INTERCEPT_CALLBACK_REQUEST), including single and multiple callbacks for both BEFORE and AFTER
+ * intercept types.
  *
- * <p><b>NOTE:</b>These tests verify intercepts at the hot-path (via quantization, which happens at
- * the call-site), and so, we need to invoke via RPC a method/ctor that triggers the actual
- * interception target.
+ * <p>Tests are parameterized to run through both invocation paths:
+ *
+ * <ul>
+ *   <li><b>HOT_PATH</b>: Intercepts triggered via AspectJ weaving at call-site (factory method
+ *       calls constructor)
+ *   <li><b>INCOMING_RPC</b>: Intercepts triggered via direct RPC message dispatch
+ * </ul>
  */
+@RunWith(Parameterized.class)
 public class ConstructorSyncCallbackIT extends AbstractInterceptIT {
 
-  /** UUID for the intercept registration. */
-  private UUID interceptUuid;
+  /** The invocation path for this test run. */
+  private final InvocationPath path;
+
+  /**
+   * Constructs a test instance for the specified invocation path.
+   *
+   * @param path the invocation path to test
+   */
+  public ConstructorSyncCallbackIT(InvocationPath path) {
+    this.path = path;
+  }
+
+  /**
+   * Returns the parameterized test data for invocation paths.
+   *
+   * @return collection of invocation path parameters
+   */
+  @Parameterized.Parameters(name = "{index}: path={0}")
+  public static Collection<Object[]> data() {
+    return invocationPathParameters();
+  }
+
+  /**
+   * Invokes the parameterized constructor once through the specified invocation path.
+   *
+   * @param initialValue the initial counter value
+   * @return the response ExecMessage
+   */
+  private ExecMessage invokeConstructorOnce(int initialValue) {
+    if (path == InvocationPath.HOT_PATH) {
+      // HOT_PATH: Use factory method that calls constructor once
+      return invoke(
+          messageBuilder.buildClassMethod(
+              myPeerUuid,
+              InterceptableApp.class.getName(),
+              "createWithCounter",
+              new String[] {"java.lang.Integer"},
+              null,
+              null,
+              new Object[] {initialValue}));
+    } else {
+      // INCOMING_RPC: Call constructor directly
+      return invoke(
+          messageBuilder.buildConstructor(
+              myPeerUuid,
+              InterceptableApp.class.getName(),
+              new String[] {"java.lang.Integer"},
+              new Object[] {initialValue},
+              null,
+              null));
+    }
+  }
 
   /**
    * Tests single BEFORE callback on constructor.
    *
-   * <p>Registers a BEFORE intercept on the parameterized constructor, invokes a factory method that
-   * calls it once, and verifies exactly 1 callback is received.
+   * <p>Registers a BEFORE intercept on the parameterized constructor, invokes it once, and verifies
+   * exactly 1 callback is received with correct structure.
    */
   @Test
   public void testSingleBeforeCallback() throws Exception {
-    logger.info("===== testSingleBeforeCallback: TEST STARTED =====");
+    logger.info("===== testSingleBeforeCallback [{}]: TEST STARTED =====", path);
 
     final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
     final String callbackMethod = "aFakeMethod";
@@ -59,7 +118,7 @@ public class ConstructorSyncCallbackIT extends AbstractInterceptIT {
 
     // 1. Register a BEFORE intercept on parameterized constructor
     logger.info("Creating BEFORE intercept request for parameterized constructor");
-    interceptUuid = UUID.randomUUID();
+    UUID interceptUuid = UUID.randomUUID();
     InterceptRequest<InterceptableMethodCall> interceptRequest =
         new InterceptRequest<>(
             interceptUuid,
@@ -79,22 +138,10 @@ public class ConstructorSyncCallbackIT extends AbstractInterceptIT {
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     logger.info("Intercept registration delay completed");
 
-    // 2. Invoke factory method which internally calls constructor (triggers intercept via
-    // call-site)
-    logger.info(
-        "Invoking createWithCounter factory method with initialValue={} which should trigger 1 callback",
-        initialValue);
-    ExecMessage response =
-        invoke(
-            messageBuilder.buildClassMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "createWithCounter",
-                new String[] {"java.lang.Integer"},
-                null,
-                null,
-                new Object[] {initialValue}));
-    logger.info("Factory method invocation completed");
+    // 2. Invoke constructor through the specified path
+    logger.info("Invoking constructor via {} path which should trigger 1 callback", path);
+    ExecMessage response = invokeConstructorOnce(initialValue);
+    logger.info("Constructor invocation completed");
 
     // 3. Verify invocation succeeded
     assertThat(
@@ -134,18 +181,21 @@ public class ConstructorSyncCallbackIT extends AbstractInterceptIT {
             .length,
         is(1));
 
-    logger.info("===== testSingleBeforeCallback: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info("===== testSingleBeforeCallback [{}]: TEST COMPLETED SUCCESSFULLY =====", path);
   }
 
   /**
    * Tests multiple BEFORE callbacks on constructor.
    *
-   * <p>Registers a BEFORE intercept on the parameterized constructor, invokes a factory method that
-   * creates n=3 instances, and verifies exactly 3 callbacks are received.
+   * <p>Registers a BEFORE intercept on the parameterized constructor, invokes it multiple times,
+   * and verifies the correct number of callbacks are received.
+   *
+   * <p>For HOT_PATH: Uses factory method that calls constructor n times. For INCOMING_RPC: Calls
+   * constructor directly n times.
    */
   @Test
   public void testMultipleBeforeCallbacks() throws Exception {
-    logger.info("===== testMultipleBeforeCallbacks: TEST STARTED =====");
+    logger.info("===== testMultipleBeforeCallbacks [{}]: TEST STARTED =====", path);
 
     final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
     final String callbackMethod = "aFakeMethod";
@@ -154,7 +204,7 @@ public class ConstructorSyncCallbackIT extends AbstractInterceptIT {
 
     // 1. Register a BEFORE intercept on parameterized constructor
     logger.info("Creating BEFORE intercept request for parameterized constructor");
-    interceptUuid = UUID.randomUUID();
+    UUID interceptUuid = UUID.randomUUID();
     InterceptRequest<InterceptableMethodCall> interceptRequest =
         new InterceptRequest<>(
             interceptUuid,
@@ -174,36 +224,55 @@ public class ConstructorSyncCallbackIT extends AbstractInterceptIT {
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     logger.info("Intercept registration delay completed");
 
-    // 2. Invoke createNInstances which internally calls constructor n times
+    // 2. Invoke constructor n times through the specified path
     logger.info(
-        "Invoking createNInstances(n={}, initialValue={}) which should trigger {} callback(s)",
+        "Invoking constructor {} times via {} path which should trigger {} callback(s)",
         n,
-        initialValue,
+        path,
         n);
-    ExecMessage response =
-        invoke(
-            messageBuilder.buildClassMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "createNInstances",
-                new String[] {"java.lang.Integer", "java.lang.Integer"},
-                null,
-                null,
-                new Object[] {n, initialValue}));
-    logger.info("createNInstances invocation completed");
 
-    // 3. Verify invocation succeeded
-    assertThat(
-        "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
+    if (path == InvocationPath.HOT_PATH) {
+      // HOT_PATH: Use factory method that calls constructor n times
+      ExecMessage response =
+          invoke(
+              messageBuilder.buildClassMethod(
+                  myPeerUuid,
+                  InterceptableApp.class.getName(),
+                  "createNInstances",
+                  new String[] {"java.lang.Integer", "java.lang.Integer"},
+                  null,
+                  null,
+                  new Object[] {n, initialValue}));
+      assertThat(
+          "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
+    } else {
+      // INCOMING_RPC: Call constructor directly n times
+      for (int i = 0; i < n; i++) {
+        ExecMessage response =
+            invoke(
+                messageBuilder.buildConstructor(
+                    myPeerUuid,
+                    InterceptableApp.class.getName(),
+                    new String[] {"java.lang.Integer"},
+                    new Object[] {initialValue + i},
+                    null,
+                    null));
+        assertThat(
+            "Invocation should not raise exception",
+            response.getRaisedThrowable(),
+            is(nullValue()));
+      }
+    }
+    logger.info("Constructor invocations completed");
 
-    // 4. Retrieve and verify callbacks
+    // 3. Retrieve and verify callbacks
     logger.info("Waiting for {} callback(s) to be received", n);
     List<Message> callbacks = getCallbacks(n, 5000);
     logger.info("All {} callback(s) received successfully", n);
 
     assertThat("Should receive exactly " + n + " callback(s)", callbacks.size(), is(n));
 
-    // 5. Verify callback structure
+    // 4. Verify callback structure
     for (int i = 0; i < n; i++) {
       Message callback = callbacks.get(i);
       assertThat("Callback message should not be null", callback, is(notNullValue()));
@@ -232,18 +301,18 @@ public class ConstructorSyncCallbackIT extends AbstractInterceptIT {
           is(1));
     }
 
-    logger.info("===== testMultipleBeforeCallbacks: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info("===== testMultipleBeforeCallbacks [{}]: TEST COMPLETED SUCCESSFULLY =====", path);
   }
 
   /**
    * Tests single AFTER callback on constructor.
    *
-   * <p>Registers a AFTER intercept on the parameterized constructor, invokes a factory method that
-   * calls it once, and verifies exactly 1 callback is received after constructor execution.
+   * <p>Registers an AFTER intercept on the parameterized constructor, invokes it once, and verifies
+   * exactly 1 callback is received after constructor execution.
    */
   @Test
   public void testSingleAfterCallback() throws Exception {
-    logger.info("===== testSingleAfterCallback: TEST STARTED =====");
+    logger.info("===== testSingleAfterCallback [{}]: TEST STARTED =====", path);
 
     final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
     final String callbackMethod = "aFakeMethod";
@@ -269,22 +338,10 @@ public class ConstructorSyncCallbackIT extends AbstractInterceptIT {
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     logger.info("Intercept registration delay completed");
 
-    // 2. Invoke factory method which internally calls constructor (triggers intercept via
-    // call-site)
-    logger.info(
-        "Invoking createWithCounter factory method with initialValue={} which should trigger 1 callback",
-        initialValue);
-    ExecMessage response =
-        invoke(
-            messageBuilder.buildClassMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "createWithCounter",
-                new String[] {"java.lang.Integer"},
-                null,
-                null,
-                new Object[] {initialValue}));
-    logger.info("Factory method invocation completed");
+    // 2. Invoke constructor through the specified path
+    logger.info("Invoking constructor via {} path which should trigger 1 callback", path);
+    ExecMessage response = invokeConstructorOnce(initialValue);
+    logger.info("Constructor invocation completed");
 
     // 3. Verify invocation succeeded
     assertThat(
@@ -336,18 +393,21 @@ public class ConstructorSyncCallbackIT extends AbstractInterceptIT {
             .getConstructor(),
         is(notNullValue()));
 
-    logger.info("===== testSingleAfterCallback: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info("===== testSingleAfterCallback [{}]: TEST COMPLETED SUCCESSFULLY =====", path);
   }
 
   /**
    * Tests multiple AFTER callbacks on constructor.
    *
-   * <p>Registers an AFTER intercept on the parameterized constructor, invokes a factory method that
-   * creates n=3 instances, and verifies exactly 3 callbacks are received.
+   * <p>Registers an AFTER intercept on the parameterized constructor, invokes it multiple times,
+   * and verifies the correct number of callbacks are received.
+   *
+   * <p>For HOT_PATH: Uses factory method that calls constructor n times. For INCOMING_RPC: Calls
+   * constructor directly n times.
    */
   @Test
   public void testMultipleAfterCallbacks() throws Exception {
-    logger.info("===== testMultipleAfterCallbacks: TEST STARTED =====");
+    logger.info("===== testMultipleAfterCallbacks [{}]: TEST STARTED =====", path);
 
     final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
     final String callbackMethod = "aFakeMethod";
@@ -374,36 +434,55 @@ public class ConstructorSyncCallbackIT extends AbstractInterceptIT {
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     logger.info("Intercept registration delay completed");
 
-    // 2. Invoke createNInstances which internally calls constructor n times
+    // 2. Invoke constructor n times through the specified path
     logger.info(
-        "Invoking createNInstances(n={}, initialValue={}) which should trigger {} callback(s)",
+        "Invoking constructor {} times via {} path which should trigger {} callback(s)",
         n,
-        initialValue,
+        path,
         n);
-    ExecMessage response =
-        invoke(
-            messageBuilder.buildClassMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "createNInstances",
-                new String[] {"java.lang.Integer", "java.lang.Integer"},
-                null,
-                null,
-                new Object[] {n, initialValue}));
-    logger.info("createNInstances invocation completed");
 
-    // 3. Verify invocation succeeded
-    assertThat(
-        "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
+    if (path == InvocationPath.HOT_PATH) {
+      // HOT_PATH: Use factory method that calls constructor n times
+      ExecMessage response =
+          invoke(
+              messageBuilder.buildClassMethod(
+                  myPeerUuid,
+                  InterceptableApp.class.getName(),
+                  "createNInstances",
+                  new String[] {"java.lang.Integer", "java.lang.Integer"},
+                  null,
+                  null,
+                  new Object[] {n, initialValue}));
+      assertThat(
+          "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
+    } else {
+      // INCOMING_RPC: Call constructor directly n times
+      for (int i = 0; i < n; i++) {
+        ExecMessage response =
+            invoke(
+                messageBuilder.buildConstructor(
+                    myPeerUuid,
+                    InterceptableApp.class.getName(),
+                    new String[] {"java.lang.Integer"},
+                    new Object[] {initialValue + i},
+                    null,
+                    null));
+        assertThat(
+            "Invocation should not raise exception",
+            response.getRaisedThrowable(),
+            is(nullValue()));
+      }
+    }
+    logger.info("Constructor invocations completed");
 
-    // 4. Retrieve and verify callbacks
+    // 3. Retrieve and verify callbacks
     logger.info("Waiting for {} callback(s) to be received", n);
     List<Message> callbacks = getCallbacks(n, 5000);
     logger.info("All {} callback(s) received successfully", n);
 
     assertThat("Should receive exactly " + n + " callback(s)", callbacks.size(), is(n));
 
-    // 5. Verify callback structure
+    // 4. Verify callback structure
     for (int i = 0; i < n; i++) {
       Message callback = callbacks.get(i);
       assertThat("Callback message should not be null", callback, is(notNullValue()));
@@ -444,6 +523,6 @@ public class ConstructorSyncCallbackIT extends AbstractInterceptIT {
           is(notNullValue()));
     }
 
-    logger.info("===== testMultipleAfterCallbacks: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info("===== testMultipleAfterCallbacks [{}]: TEST COMPLETED SUCCESSFULLY =====", path);
   }
 }

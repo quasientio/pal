@@ -21,15 +21,20 @@ import com.quasient.pal.common.lang.intercept.InterceptableFieldOp;
 import com.quasient.pal.cxn.ThinPeer;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.intercept.AbstractInterceptIT;
+import com.quasient.pal.intercept.InvocationPath;
+import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.messages.colfer.Obj;
 import com.quasient.pal.messages.types.MessageType;
 import com.quasient.pal.serdes.Unwrapper;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.zeromq.SocketType;
 
 /**
@@ -43,10 +48,15 @@ import org.zeromq.SocketType;
  * <p>Unlike synchronous callbacks which use REQ-REP pattern and wait for responses, async callbacks
  * use DEALER-ROUTER pattern for fire-and-forget delivery.
  *
- * <p><b>NOTE:</b>These tests verify intercepts at the hot-path (via quantization, which happens at
- * the call-site), and so, we need to invoke via RPC a method/ctor that triggers the actual
- * interception target.
+ * <p>Tests are parameterized to run through both invocation paths:
+ *
+ * <ul>
+ *   <li><b>HOT_PATH</b>: Intercepts triggered via AspectJ weaving at call-site (getter/setter calls
+ *       field access)
+ *   <li><b>INCOMING_RPC</b>: Intercepts triggered via direct RPC message dispatch
+ * </ul>
  */
+@RunWith(Parameterized.class)
 public class StaticFieldAsyncCallbackIT extends AbstractInterceptIT {
 
   /** ThinPeer for receiving async callbacks via ROUTER socket. */
@@ -55,8 +65,85 @@ public class StaticFieldAsyncCallbackIT extends AbstractInterceptIT {
   /** Address for the async callback receiver. */
   private static final String ASYNC_CALLBACK_ADDRESS = "tcp://localhost:7894";
 
+  /** The invocation path for this test run. */
+  private final InvocationPath path;
+
   /** UUID for the async callback receiver peer (registered in directory). */
   private final UUID asyncCallbackPeerUuid = UUID.randomUUID();
+
+  /**
+   * Constructs a test instance for the specified invocation path.
+   *
+   * @param path the invocation path to test
+   */
+  public StaticFieldAsyncCallbackIT(InvocationPath path) {
+    this.path = path;
+  }
+
+  /**
+   * Returns the parameterized test data for invocation paths.
+   *
+   * @return collection of invocation path parameters
+   */
+  @Parameterized.Parameters(name = "{index}: path={0}")
+  public static Collection<Object[]> data() {
+    return invocationPathParameters();
+  }
+
+  /**
+   * Invokes a static field GET operation through the specified invocation path.
+   *
+   * @return the response ExecMessage
+   */
+  private ExecMessage invokeStaticFieldGet() {
+    if (path == InvocationPath.HOT_PATH) {
+      // HOT_PATH: Use getter method that accesses the field (triggers intercept via call-site)
+      return invoke(
+          messageBuilder.buildClassMethod(
+              myPeerUuid,
+              InterceptableApp.class.getName(),
+              "getStaticCounter",
+              new String[] {},
+              null,
+              null,
+              new Object[] {}));
+    } else {
+      // INCOMING_RPC: Call static field get directly
+      return invoke(
+          messageBuilder.buildGetStatic(
+              myPeerUuid, InterceptableApp.class.getName(), "staticCounter"));
+    }
+  }
+
+  /**
+   * Invokes a static field PUT operation through the specified invocation path.
+   *
+   * @param value the value to set
+   * @return the response ExecMessage
+   */
+  private ExecMessage invokeStaticFieldPut(int value) {
+    if (path == InvocationPath.HOT_PATH) {
+      // HOT_PATH: Use setter method that accesses the field (triggers intercept via call-site)
+      return invoke(
+          messageBuilder.buildClassMethod(
+              myPeerUuid,
+              InterceptableApp.class.getName(),
+              "setStaticCounter",
+              new String[] {"java.lang.Integer"},
+              null,
+              null,
+              new Object[] {value}));
+    } else {
+      // INCOMING_RPC: Call static field put directly
+      return invoke(
+          messageBuilder.buildPutStatic(
+              myPeerUuid,
+              InterceptableApp.class.getName(),
+              "staticCounter",
+              "java.lang.Integer",
+              value));
+    }
+  }
 
   /**
    * Sets up ThinPeer with ROUTER socket for receiving async callbacks.
@@ -102,7 +189,7 @@ public class StaticFieldAsyncCallbackIT extends AbstractInterceptIT {
   /** Tests single BEFORE_ASYNC callback on static field GET operation. */
   @Test
   public void testSingleBeforeAsyncCallbackOnGet() throws Exception {
-    logger.info("===== testSingleBeforeAsyncCallbackOnGet: TEST STARTED =====");
+    logger.info("===== testSingleBeforeAsyncCallbackOnGet [{}]: TEST STARTED =====", path);
 
     final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
     final String callbackMethod = "aFakeMethod";
@@ -120,15 +207,9 @@ public class StaticFieldAsyncCallbackIT extends AbstractInterceptIT {
     register(interceptRequest);
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
 
-    invoke(
-        messageBuilder.buildClassMethod(
-            myPeerUuid,
-            InterceptableApp.class.getName(),
-            "getStaticCounter",
-            new String[] {},
-            null,
-            null,
-            new Object[] {}));
+    // Invoke static field GET through the specified path
+    logger.info("Invoking static field GET via {} path which should trigger 1 callback", path);
+    invokeStaticFieldGet();
 
     // Retrieve and verify callbacks
     logger.info("Waiting for 1 callback to be received");
@@ -158,13 +239,14 @@ public class StaticFieldAsyncCallbackIT extends AbstractInterceptIT {
         callback.getInterceptCallbackRequestMessage().getExec().getStaticFieldGet(),
         is(notNullValue()));
 
-    logger.info("===== testSingleBeforeAsyncCallbackOnGet: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testSingleBeforeAsyncCallbackOnGet [{}]: TEST COMPLETED SUCCESSFULLY =====", path);
   }
 
   /** Tests single AFTER_ASYNC callback on static field GET operation. */
   @Test
   public void testSingleAfterAsyncCallbackOnGet() throws Exception {
-    logger.info("===== testSingleAfterAsyncCallbackOnGet: TEST STARTED =====");
+    logger.info("===== testSingleAfterAsyncCallbackOnGet [{}]: TEST STARTED =====", path);
 
     final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
     final String callbackMethod = "aFakeMethod";
@@ -182,15 +264,9 @@ public class StaticFieldAsyncCallbackIT extends AbstractInterceptIT {
     register(interceptRequest);
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
 
-    invoke(
-        messageBuilder.buildClassMethod(
-            myPeerUuid,
-            InterceptableApp.class.getName(),
-            "getStaticCounter",
-            new String[] {},
-            null,
-            null,
-            new Object[] {}));
+    // Invoke static field GET through the specified path
+    logger.info("Invoking static field GET via {} path which should trigger 1 callback", path);
+    invokeStaticFieldGet();
 
     // Retrieve and verify callbacks
     logger.info("Waiting for 1 callback to be received");
@@ -229,13 +305,14 @@ public class StaticFieldAsyncCallbackIT extends AbstractInterceptIT {
             .getField(),
         is(notNullValue()));
 
-    logger.info("===== testSingleAfterAsyncCallbackOnGet: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testSingleAfterAsyncCallbackOnGet [{}]: TEST COMPLETED SUCCESSFULLY =====", path);
   }
 
   /** Tests single BEFORE_ASYNC callback on static field PUT operation. */
   @Test
   public void testSingleBeforeAsyncCallbackOnPut() throws Exception {
-    logger.info("===== testSingleBeforeAsyncCallbackOnPut: TEST STARTED =====");
+    logger.info("===== testSingleBeforeAsyncCallbackOnPut [{}]: TEST STARTED =====", path);
 
     final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
     final String callbackMethod = "aFakeMethod";
@@ -254,15 +331,9 @@ public class StaticFieldAsyncCallbackIT extends AbstractInterceptIT {
     register(interceptRequest);
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
 
-    invoke(
-        messageBuilder.buildClassMethod(
-            myPeerUuid,
-            InterceptableApp.class.getName(),
-            "setStaticCounter",
-            new String[] {"java.lang.Integer"},
-            null,
-            null,
-            new Object[] {newValue}));
+    // Invoke static field PUT through the specified path
+    logger.info("Invoking static field PUT via {} path which should trigger 1 callback", path);
+    invokeStaticFieldPut(newValue);
 
     // Retrieve and verify callbacks
     logger.info("Waiting for 1 callback to be received");
@@ -302,13 +373,14 @@ public class StaticFieldAsyncCallbackIT extends AbstractInterceptIT {
     Object value = Unwrapper.unwrapObject(putValueObj);
     assertThat("PUT value should match the value passed to setter", value, is(newValue));
 
-    logger.info("===== testSingleBeforeAsyncCallbackOnPut: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testSingleBeforeAsyncCallbackOnPut [{}]: TEST COMPLETED SUCCESSFULLY =====", path);
   }
 
   /** Tests single AFTER_ASYNC callback on static field PUT operation. */
   @Test
   public void testSingleAfterAsyncCallbackOnPut() throws Exception {
-    logger.info("===== testSingleAfterAsyncCallbackOnPut: TEST STARTED =====");
+    logger.info("===== testSingleAfterAsyncCallbackOnPut [{}]: TEST STARTED =====", path);
 
     final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
     final String callbackMethod = "aFakeMethod";
@@ -327,15 +399,9 @@ public class StaticFieldAsyncCallbackIT extends AbstractInterceptIT {
     register(interceptRequest);
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
 
-    invoke(
-        messageBuilder.buildClassMethod(
-            myPeerUuid,
-            InterceptableApp.class.getName(),
-            "setStaticCounter",
-            new String[] {"java.lang.Integer"},
-            null,
-            null,
-            new Object[] {newValue}));
+    // Invoke static field PUT through the specified path
+    logger.info("Invoking static field PUT via {} path which should trigger 1 callback", path);
+    invokeStaticFieldPut(newValue);
 
     // Retrieve and verify callbacks
     logger.info("Waiting for 1 callback to be received");
@@ -368,6 +434,7 @@ public class StaticFieldAsyncCallbackIT extends AbstractInterceptIT {
         callback.getInterceptCallbackRequestMessage().getExec().getStaticFieldPutDone().getField(),
         is(notNullValue()));
 
-    logger.info("===== testSingleAfterAsyncCallbackOnPut: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testSingleAfterAsyncCallbackOnPut [{}]: TEST COMPLETED SUCCESSFULLY =====", path);
   }
 }

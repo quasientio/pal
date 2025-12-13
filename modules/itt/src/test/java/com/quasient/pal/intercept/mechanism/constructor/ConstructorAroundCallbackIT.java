@@ -22,13 +22,17 @@ import com.quasient.pal.common.lang.intercept.InterceptPhase;
 import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.lang.intercept.InterceptableMethodCall;
 import com.quasient.pal.intercept.AbstractInterceptIT;
+import com.quasient.pal.intercept.InvocationPath;
 import com.quasient.pal.messages.colfer.InterceptCallbackRequestMessage;
 import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.messages.types.MessageType;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Integration tests for AROUND constructor intercept callback dispatch.
@@ -49,17 +53,44 @@ import org.junit.Test;
  *   <li>Return value (constructed object) present in AFTER phase
  * </ul>
  *
- * <p><b>NOTE:</b>These tests verify intercepts at the hot-path (via quantization, which happens at
- * the call-site), and so, we need to invoke via RPC a method/ctor that triggers the actual
- * interception target.
+ * <p>Tests are parameterized to run through both invocation paths:
+ *
+ * <ul>
+ *   <li><b>HOT_PATH</b>: Intercepts triggered via AspectJ weaving at call-site (factory method
+ *       calls constructor)
+ *   <li><b>INCOMING_RPC</b>: Intercepts triggered via direct RPC message dispatch
+ * </ul>
  */
+@RunWith(Parameterized.class)
 public class ConstructorAroundCallbackIT extends AbstractInterceptIT {
+
+  /** The invocation path for this test run. */
+  private final InvocationPath path;
+
+  /**
+   * Constructs a test instance for the specified invocation path.
+   *
+   * @param path the invocation path to test
+   */
+  public ConstructorAroundCallbackIT(InvocationPath path) {
+    this.path = path;
+  }
+
+  /**
+   * Returns the parameterized test data for invocation paths.
+   *
+   * @return collection of invocation path parameters
+   */
+  @Parameterized.Parameters(name = "{index}: path={0}")
+  public static Collection<Object[]> data() {
+    return invocationPathParameters();
+  }
 
   /**
    * Tests single AROUND callback dispatch on constructor.
    *
-   * <p>Registers an AROUND intercept on the parameterized constructor, invokes a factory method
-   * that calls it once, and verifies:
+   * <p>Registers an AROUND intercept on the parameterized constructor, invokes it once through the
+   * specified path, and verifies:
    *
    * <ul>
    *   <li>Exactly 2 callbacks are received (BEFORE phase + AFTER phase)
@@ -72,7 +103,7 @@ public class ConstructorAroundCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testSingleAroundCallback() throws Exception {
-    logger.info("===== testSingleAroundCallback: TEST STARTED =====");
+    logger.info("===== testSingleAroundCallback [{}]: TEST STARTED =====", path);
 
     final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
     final String callbackMethod = "aFakeMethod";
@@ -80,7 +111,6 @@ public class ConstructorAroundCallbackIT extends AbstractInterceptIT {
 
     // 1. Register an AROUND intercept on parameterized constructor
     logger.info("Creating AROUND intercept request for parameterized constructor");
-    // UUID for the intercept registration.
     UUID interceptUuid = UUID.randomUUID();
     InterceptRequest<InterceptableMethodCall> interceptRequest =
         new InterceptRequest<>(
@@ -101,21 +131,30 @@ public class ConstructorAroundCallbackIT extends AbstractInterceptIT {
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     logger.info("Intercept registration delay completed");
 
-    // 2. Invoke factory method which internally calls constructor (triggers intercept via
-    // call-site)
-    logger.info(
-        "Invoking createWithCounter factory method with initialValue={} which should trigger 2 AROUND callbacks",
-        initialValue);
-    invoke(
-        messageBuilder.buildClassMethod(
-            myPeerUuid,
-            InterceptableApp.class.getName(),
-            "createWithCounter",
-            new String[] {"java.lang.Integer"},
-            null,
-            null,
-            new Object[] {initialValue}));
-    logger.info("Factory method invocation completed");
+    // 2. Invoke constructor through the specified path
+    logger.info("Invoking constructor via {} path which should trigger 2 AROUND callbacks", path);
+    if (path == InvocationPath.HOT_PATH) {
+      // HOT_PATH: Use factory method that calls constructor (triggers intercept via call-site)
+      invoke(
+          messageBuilder.buildClassMethod(
+              myPeerUuid,
+              InterceptableApp.class.getName(),
+              "createWithCounter",
+              new String[] {"java.lang.Integer"},
+              null,
+              null,
+              new Object[] {initialValue}));
+    } else {
+      // INCOMING_RPC: Call constructor directly
+      invoke(
+          messageBuilder.buildNonEmptyConstructor(
+              myPeerUuid,
+              InterceptableApp.class.getName(),
+              new String[] {"java.lang.Integer"},
+              new Object[] {initialValue},
+              null));
+    }
+    logger.info("Constructor invocation completed");
 
     // 3. Retrieve and verify callbacks
     // AROUND intercepts send 2 callbacks: BEFORE phase + AFTER phase
@@ -227,6 +266,6 @@ public class ConstructorAroundCallbackIT extends AbstractInterceptIT {
         afterReq.getExec().getReturnValue().getObject(),
         is(notNullValue()));
 
-    logger.info("===== testSingleAroundCallback: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info("===== testSingleAroundCallback [{}]: TEST COMPLETED SUCCESSFULLY =====", path);
   }
 }

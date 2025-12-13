@@ -22,15 +22,19 @@ import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.cxn.ThinPeer;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.intercept.AbstractInterceptIT;
+import com.quasient.pal.intercept.InvocationPath;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.messages.types.MessageType;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.zeromq.SocketType;
 
 /**
@@ -44,14 +48,22 @@ import org.zeromq.SocketType;
  * <p>Unlike synchronous callbacks which use REQ-REP pattern and wait for responses, async callbacks
  * use DEALER-ROUTER pattern for fire-and-forget delivery.
  *
- * <p><b>NOTE:</b>These tests verify intercepts at the hot-path (via quantization, which happens at
- * the call-site), and so, we need to invoke via RPC a method/ctor that triggers the actual
- * interception target.
+ * <p>Tests are parameterized to run through both invocation paths:
+ *
+ * <ul>
+ *   <li><b>HOT_PATH</b>: Intercepts triggered via AspectJ weaving at call-site (wrapper method
+ *       calls target)
+ *   <li><b>INCOMING_RPC</b>: Intercepts triggered via direct RPC message dispatch
+ * </ul>
  */
+@RunWith(Parameterized.class)
 public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
 
   /** Address for the async callback receiver. */
   private static final String ASYNC_CALLBACK_ADDRESS = "tcp://localhost:7892";
+
+  /** The invocation path for this test run. */
+  private final InvocationPath path;
 
   /** UUID for the async callback receiver peer (registered in directory). */
   private final UUID asyncCallbackPeerUuid = UUID.randomUUID();
@@ -61,6 +73,65 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
 
   /** ThinPeer for receiving async callbacks via ROUTER socket. */
   private ThinPeer asyncCallbackPeer;
+
+  /**
+   * Constructs a test instance for the specified invocation path.
+   *
+   * @param path the invocation path to test
+   */
+  public StaticMethodAsyncCallbackIT(InvocationPath path) {
+    this.path = path;
+  }
+
+  /**
+   * Returns the parameterized test data for invocation paths.
+   *
+   * @return collection of invocation path parameters
+   */
+  @Parameterized.Parameters(name = "{index}: path={0}")
+  public static Collection<Object[]> data() {
+    return invocationPathParameters();
+  }
+
+  /**
+   * Invokes multiplyStaticBy once through the specified invocation path.
+   *
+   * @param multiplier the multiplier argument
+   * @return the response ExecMessage
+   */
+  private ExecMessage invokeMultiplyStaticByOnce(int multiplier) {
+    if (path == InvocationPath.HOT_PATH) {
+      // HOT_PATH: Use wrapper method that calls multiplyStaticBy once
+      // Need an instance to call the wrapper
+      ObjectRef appInstance =
+          ObjectRef.from(
+              invoke(
+                      messageBuilder.buildEmptyConstructor(
+                          myPeerUuid, InterceptableApp.class.getName()))
+                  .getReturnValue()
+                  .getObject()
+                  .getRef());
+      return invoke(
+          messageBuilder.buildInstanceMethod(
+              myPeerUuid,
+              InterceptableApp.class.getName(),
+              "callMultiplyStaticBy",
+              appInstance,
+              new String[] {"java.lang.Integer"},
+              new Object[] {multiplier}));
+    } else {
+      // INCOMING_RPC: Call multiplyStaticBy directly
+      return invoke(
+          messageBuilder.buildClassMethod(
+              myPeerUuid,
+              InterceptableApp.class.getName(),
+              "multiplyStaticBy",
+              new String[] {"java.lang.Integer"},
+              null,
+              null,
+              new Object[] {multiplier}));
+    }
+  }
 
   /**
    * Sets up ThinPeer with ROUTER socket for receiving async callbacks.
@@ -109,12 +180,12 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
   /**
    * Tests single BEFORE_ASYNC callback on static method.
    *
-   * <p>Registers a BEFORE_ASYNC intercept on multiplyStaticBy, calls a wrapper than invokes it
-   * once, and verifies exactly 1 callback is received without blocking for a response.
+   * <p>Registers a BEFORE_ASYNC intercept on multiplyStaticBy, invokes it once through the
+   * specified path, and verifies exactly 1 callback is received without blocking for a response.
    */
   @Test
   public void testSingleBeforeAsyncCallback() throws Exception {
-    logger.info("===== testSingleBeforeAsyncCallback: TEST STARTED =====");
+    logger.info("===== testSingleBeforeAsyncCallback [{}]: TEST STARTED =====", path);
 
     final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
     final String callbackMethod = "aFakeMethod";
@@ -143,45 +214,23 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     logger.info("Intercept registration delay completed");
 
-    // 2. Create InterceptableApp instance for calling wrapper method
-    logger.info("Creating InterceptableApp instance");
-    ObjectRef appInstance =
-        ObjectRef.from(
-            invoke(
-                    messageBuilder.buildEmptyConstructor(
-                        myPeerUuid, InterceptableApp.class.getName()))
-                .getReturnValue()
-                .getObject()
-                .getRef());
-    logger.info("InterceptableApp instance created with ref: {}", appInstance);
+    // 2. Invoke multiplyStaticBy through the specified path
+    logger.info("Invoking multiplyStaticBy via {} path which should trigger 1 callback", path);
+    ExecMessage response = invokeMultiplyStaticByOnce(multiplier);
+    logger.info("multiplyStaticBy invocation completed");
 
-    // 3. Invoke callMultiplyStaticBy which triggers async intercept via call-site
-    logger.info(
-        "Invoking callMultiplyStaticBy wrapper(multiplier={}) which should trigger 1 callback",
-        multiplier);
-    ExecMessage response =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "callMultiplyStaticBy",
-                appInstance,
-                new String[] {"java.lang.Integer"},
-                new Object[] {multiplier}));
-    logger.info("callMultiplyStaticBy invocation completed");
-
-    // 4. Verify invocation succeeded
+    // 3. Verify invocation succeeded
     assertThat(
         "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
 
-    // 5. Retrieve and verify callbacks
+    // 4. Retrieve and verify callbacks
     logger.info("Waiting for 1 callback to be received");
     List<Message> callbacks = getCallbacks(1, 5000);
     logger.info("Callback received successfully");
 
     assertThat("Should receive exactly 1 callback", callbacks.size(), is(1));
 
-    // 6. Verify callback structure
+    // 5. Verify callback structure
     Message callback = callbacks.get(0);
     assertThat("Callback message should not be null", callback, is(notNullValue()));
     assertThat(
@@ -207,18 +256,22 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
             .length,
         is(1));
 
-    logger.info("===== testSingleBeforeAsyncCallback: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testSingleBeforeAsyncCallback [{}]: TEST COMPLETED SUCCESSFULLY =====", path);
   }
 
   /**
    * Tests multiple BEFORE_ASYNC callbacks on static method.
    *
-   * <p>Registers a BEFORE_ASYNC intercept on incrementStaticCounter, invokes a wrapper method that
-   * calls it n=3 times, and verifies exactly 3 callbacks are received without blocking.
+   * <p>Registers a BEFORE_ASYNC intercept on incrementStaticCounter, invokes it n times through the
+   * specified path, and verifies exactly n callbacks are received without blocking.
+   *
+   * <p>For HOT_PATH: Uses wrapper method that calls target n times. For INCOMING_RPC: Calls target
+   * directly n times.
    */
   @Test
   public void testMultipleBeforeAsyncCallbacks() throws Exception {
-    logger.info("===== testMultipleBeforeAsyncCallbacks: TEST STARTED =====");
+    logger.info("===== testMultipleBeforeAsyncCallbacks [{}]: TEST STARTED =====", path);
 
     final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
     final String callbackMethod = "aFakeMethod";
@@ -246,47 +299,63 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     logger.info("Intercept registration delay completed");
 
-    // 2. Create InterceptableApp instance for calling wrapper method
-    logger.info("Creating InterceptableApp instance");
-    ObjectRef appInstance =
-        ObjectRef.from(
-            invoke(
-                    messageBuilder.buildEmptyConstructor(
-                        myPeerUuid, InterceptableApp.class.getName()))
-                .getReturnValue()
-                .getObject()
-                .getRef());
-    logger.info("InterceptableApp instance created with ref: {}", appInstance);
-
-    // 3. Invoke callIncrementStaticCounterNTimes which internally calls incrementStaticCounter n
-    // times
+    // 2. Invoke incrementStaticCounter n times through the specified path
     logger.info(
-        "Invoking callIncrementStaticCounterNTimes(n={}) which should trigger {} callback(s)",
+        "Invoking incrementStaticCounter {} times via {} path which should trigger {} callback(s)",
         n,
+        path,
         n);
-    ExecMessage response =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "callIncrementStaticCounterNTimes",
-                appInstance,
-                new String[] {"java.lang.Integer"},
-                new Object[] {n}));
-    logger.info("callIncrementStaticCounterNTimes invocation completed");
 
-    // 4. Verify invocation succeeded
-    assertThat(
-        "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
+    if (path == InvocationPath.HOT_PATH) {
+      // HOT_PATH: Use wrapper method that calls target n times
+      ObjectRef appInstance =
+          ObjectRef.from(
+              invoke(
+                      messageBuilder.buildEmptyConstructor(
+                          myPeerUuid, InterceptableApp.class.getName()))
+                  .getReturnValue()
+                  .getObject()
+                  .getRef());
+      ExecMessage response =
+          invoke(
+              messageBuilder.buildInstanceMethod(
+                  myPeerUuid,
+                  InterceptableApp.class.getName(),
+                  "callIncrementStaticCounterNTimes",
+                  appInstance,
+                  new String[] {"java.lang.Integer"},
+                  new Object[] {n}));
+      assertThat(
+          "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
+    } else {
+      // INCOMING_RPC: Call target method directly n times
+      for (int i = 0; i < n; i++) {
+        ExecMessage response =
+            invoke(
+                messageBuilder.buildClassMethod(
+                    myPeerUuid,
+                    InterceptableApp.class.getName(),
+                    "incrementStaticCounter",
+                    new String[] {},
+                    null,
+                    null,
+                    new Object[] {}));
+        assertThat(
+            "Invocation should not raise exception",
+            response.getRaisedThrowable(),
+            is(nullValue()));
+      }
+    }
+    logger.info("incrementStaticCounter invocations completed");
 
-    // 5. Retrieve and verify callbacks
+    // 3. Retrieve and verify callbacks
     logger.info("Waiting for {} callback(s) to be received", n);
     List<Message> callbacks = getCallbacks(n, 5000);
     logger.info("All {} callback(s) received successfully", n);
 
     assertThat("Should receive exactly " + n + " callback(s)", callbacks.size(), is(n));
 
-    // 6. Verify callback structure
+    // 4. Verify callback structure
     for (int i = 0; i < n; i++) {
       Message callback = callbacks.get(i);
       assertThat("Callback message should not be null", callback, is(notNullValue()));
@@ -314,18 +383,20 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
           is(0));
     }
 
-    logger.info("===== testMultipleBeforeAsyncCallbacks: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testMultipleBeforeAsyncCallbacks [{}]: TEST COMPLETED SUCCESSFULLY =====", path);
   }
 
   /**
    * Tests single AFTER_ASYNC callback on static method.
    *
-   * <p>Registers an AFTER_ASYNC intercept on multiplyStaticBy, calls a wrapper that invokes it
-   * once, and verifies exactly 1 callback is received after method execution without blocking.
+   * <p>Registers an AFTER_ASYNC intercept on multiplyStaticBy, invokes it once through the
+   * specified path, and verifies exactly 1 callback is received after method execution without
+   * blocking.
    */
   @Test
   public void testSingleAfterAsyncCallback() throws Exception {
-    logger.info("===== testSingleAfterAsyncCallback: TEST STARTED =====");
+    logger.info("===== testSingleAfterAsyncCallback [{}]: TEST STARTED =====", path);
 
     final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
     final String callbackMethod = "aFakeMethod";
@@ -353,45 +424,23 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     logger.info("Intercept registration delay completed");
 
-    // 2. Create InterceptableApp instance for calling wrapper method
-    logger.info("Creating InterceptableApp instance");
-    ObjectRef appInstance =
-        ObjectRef.from(
-            invoke(
-                    messageBuilder.buildEmptyConstructor(
-                        myPeerUuid, InterceptableApp.class.getName()))
-                .getReturnValue()
-                .getObject()
-                .getRef());
-    logger.info("InterceptableApp instance created with ref: {}", appInstance);
+    // 2. Invoke multiplyStaticBy through the specified path
+    logger.info("Invoking multiplyStaticBy via {} path which should trigger 1 callback", path);
+    ExecMessage response = invokeMultiplyStaticByOnce(multiplier);
+    logger.info("multiplyStaticBy invocation completed");
 
-    // 3. Invoke callMultiplyStaticBy wrapper which triggers async intercept
-    logger.info(
-        "Invoking callMultiplyStaticBy wrapper(multiplier={}) which should trigger 1 callback",
-        multiplier);
-    ExecMessage response =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "callMultiplyStaticBy",
-                appInstance,
-                new String[] {"java.lang.Integer"},
-                new Object[] {multiplier}));
-    logger.info("callMultiplyStaticBy invocation completed");
-
-    // 4. Verify invocation succeeded
+    // 3. Verify invocation succeeded
     assertThat(
         "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
 
-    // 5. Retrieve and verify callbacks
+    // 4. Retrieve and verify callbacks
     logger.info("Waiting for 1 callback to be received");
     List<Message> callbacks = getCallbacks(1, 5000);
     logger.info("Callback received successfully");
 
     assertThat("Should receive exactly 1 callback", callbacks.size(), is(1));
 
-    // 6. Verify callback structure
+    // 5. Verify callback structure
     Message callback = callbacks.get(0);
     assertThat("Callback message should not be null", callback, is(notNullValue()));
     assertThat(
@@ -430,19 +479,22 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
             .getMethod(),
         is(notNullValue()));
 
-    logger.info("===== testSingleAfterAsyncCallback: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info("===== testSingleAfterAsyncCallback [{}]: TEST COMPLETED SUCCESSFULLY =====", path);
   }
 
   /**
    * Tests multiple AFTER_ASYNC callbacks on static method.
    *
-   * <p>Registers an AFTER_ASYNC intercept on incrementStaticCounter, invokes a wrapper method that
-   * calls it n=3 times, and verifies exactly 3 callbacks are received after method executions
-   * without blocking.
+   * <p>Registers an AFTER_ASYNC intercept on incrementStaticCounter, invokes it n times through the
+   * specified path, and verifies exactly n callbacks are received after method executions without
+   * blocking.
+   *
+   * <p>For HOT_PATH: Uses wrapper method that calls target n times. For INCOMING_RPC: Calls target
+   * directly n times.
    */
   @Test
   public void testMultipleAfterAsyncCallbacks() throws Exception {
-    logger.info("===== testMultipleAfterAsyncCallbacks: TEST STARTED =====");
+    logger.info("===== testMultipleAfterAsyncCallbacks [{}]: TEST STARTED =====", path);
 
     final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
     final String callbackMethod = "aFakeMethod";
@@ -469,47 +521,63 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     logger.info("Intercept registration delay completed");
 
-    // 2. Create InterceptableApp instance for calling wrapper method
-    logger.info("Creating InterceptableApp instance");
-    ObjectRef appInstance =
-        ObjectRef.from(
-            invoke(
-                    messageBuilder.buildEmptyConstructor(
-                        myPeerUuid, InterceptableApp.class.getName()))
-                .getReturnValue()
-                .getObject()
-                .getRef());
-    logger.info("InterceptableApp instance created with ref: {}", appInstance);
-
-    // 3. Invoke callIncrementStaticCounterNTimes which internally calls incrementStaticCounter n
-    // times
+    // 2. Invoke incrementStaticCounter n times through the specified path
     logger.info(
-        "Invoking callIncrementStaticCounterNTimes(n={}) which should trigger {} callback(s)",
+        "Invoking incrementStaticCounter {} times via {} path which should trigger {} callback(s)",
         n,
+        path,
         n);
-    ExecMessage response =
-        invoke(
-            messageBuilder.buildInstanceMethod(
-                myPeerUuid,
-                InterceptableApp.class.getName(),
-                "callIncrementStaticCounterNTimes",
-                appInstance,
-                new String[] {"java.lang.Integer"},
-                new Object[] {n}));
-    logger.info("callIncrementStaticCounterNTimes invocation completed");
 
-    // 4. Verify invocation succeeded
-    assertThat(
-        "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
+    if (path == InvocationPath.HOT_PATH) {
+      // HOT_PATH: Use wrapper method that calls target n times
+      ObjectRef appInstance =
+          ObjectRef.from(
+              invoke(
+                      messageBuilder.buildEmptyConstructor(
+                          myPeerUuid, InterceptableApp.class.getName()))
+                  .getReturnValue()
+                  .getObject()
+                  .getRef());
+      ExecMessage response =
+          invoke(
+              messageBuilder.buildInstanceMethod(
+                  myPeerUuid,
+                  InterceptableApp.class.getName(),
+                  "callIncrementStaticCounterNTimes",
+                  appInstance,
+                  new String[] {"java.lang.Integer"},
+                  new Object[] {n}));
+      assertThat(
+          "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
+    } else {
+      // INCOMING_RPC: Call target method directly n times
+      for (int i = 0; i < n; i++) {
+        ExecMessage response =
+            invoke(
+                messageBuilder.buildClassMethod(
+                    myPeerUuid,
+                    InterceptableApp.class.getName(),
+                    "incrementStaticCounter",
+                    new String[] {},
+                    null,
+                    null,
+                    new Object[] {}));
+        assertThat(
+            "Invocation should not raise exception",
+            response.getRaisedThrowable(),
+            is(nullValue()));
+      }
+    }
+    logger.info("incrementStaticCounter invocations completed");
 
-    // 5. Retrieve and verify callbacks
+    // 3. Retrieve and verify callbacks
     logger.info("Waiting for {} callback(s) to be received", n);
     List<Message> callbacks = getCallbacks(n, 5000);
     logger.info("All {} callback(s) received successfully", n);
 
     assertThat("Should receive exactly " + n + " callback(s)", callbacks.size(), is(n));
 
-    // 6. Verify callback structure
+    // 4. Verify callback structure
     for (int i = 0; i < n; i++) {
       Message callback = callbacks.get(i);
       assertThat("Callback message should not be null", callback, is(notNullValue()));
@@ -550,6 +618,7 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
           is(notNullValue()));
     }
 
-    logger.info("===== testMultipleAfterAsyncCallbacks: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testMultipleAfterAsyncCallbacks [{}]: TEST COMPLETED SUCCESSFULLY =====", path);
   }
 }

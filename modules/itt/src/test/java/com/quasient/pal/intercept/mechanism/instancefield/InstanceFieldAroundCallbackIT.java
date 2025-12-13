@@ -24,12 +24,16 @@ import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.lang.intercept.InterceptableFieldOp;
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.intercept.AbstractInterceptIT;
+import com.quasient.pal.intercept.InvocationPath;
 import com.quasient.pal.messages.colfer.InterceptCallbackRequestMessage;
 import com.quasient.pal.messages.colfer.Message;
 import com.quasient.pal.messages.types.MessageType;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Integration tests for AROUND instance field intercept callback dispatch.
@@ -48,17 +52,47 @@ import org.junit.Test;
  *   <li>timeoutMs field is set (> 0) on BEFORE phase
  * </ul>
  *
- * <p><b>NOTE:</b>These tests verify intercepts at the hot-path (via quantization, which happens at
- * the call-site), and so, we need to invoke via RPC a method/ctor that triggers the actual
- * interception target.
+ * <p>Tests are parameterized to run through both invocation paths:
+ *
+ * <ul>
+ *   <li><b>HOT_PATH</b>: Intercepts triggered via AspectJ weaving at call-site (getter/setter calls
+ *       field access)
+ *   <li><b>INCOMING_RPC</b>: Intercepts triggered via direct RPC message dispatch
+ * </ul>
+ *
+ * <p><b>Note:</b> Instance field PUT tests have path-dependent callback counts. HOT_PATH triggers
+ * the field initializer when creating the instance, resulting in extra callbacks.
  */
+@RunWith(Parameterized.class)
 public class InstanceFieldAroundCallbackIT extends AbstractInterceptIT {
+
+  /** The invocation path for this test run. */
+  private final InvocationPath path;
+
+  /**
+   * Constructs a test instance for the specified invocation path.
+   *
+   * @param path the invocation path to test
+   */
+  public InstanceFieldAroundCallbackIT(InvocationPath path) {
+    this.path = path;
+  }
+
+  /**
+   * Returns the parameterized test data for invocation paths.
+   *
+   * @return collection of invocation path parameters
+   */
+  @Parameterized.Parameters(name = "{index}: path={0}")
+  public static Collection<Object[]> data() {
+    return invocationPathParameters();
+  }
 
   /**
    * Tests single AROUND callback dispatch on instance field GET operation.
    *
-   * <p>Registers an AROUND intercept on counter GET, creates an app instance, calls a getter once,
-   * and verifies:
+   * <p>Registers an AROUND intercept on counter GET, creates an app instance, invokes GET through
+   * the specified path, and verifies:
    *
    * <ul>
    *   <li>Exactly 2 callbacks are received (BEFORE phase + AFTER phase)
@@ -71,7 +105,7 @@ public class InstanceFieldAroundCallbackIT extends AbstractInterceptIT {
    */
   @Test
   public void testSingleAroundCallbackOnGet() throws Exception {
-    logger.info("===== testSingleAroundCallbackOnGet: TEST STARTED =====");
+    logger.info("===== testSingleAroundCallbackOnGet [{}]: TEST STARTED =====", path);
 
     final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
     final String callbackMethod = "aFakeMethod";
@@ -109,17 +143,23 @@ public class InstanceFieldAroundCallbackIT extends AbstractInterceptIT {
                 .getRef());
     logger.info("InterceptableApp instance created with ref: {}", appInstance);
 
-    // 3. Invoke getCounter which triggers GET_FIELD and callback
-    logger.info("Invoking getCounter() which should trigger 2 AROUND callbacks");
-    invoke(
-        messageBuilder.buildInstanceMethod(
-            myPeerUuid,
-            InterceptableApp.class.getName(),
-            "getCounter",
-            appInstance,
-            new String[] {},
-            new Object[] {}));
-    logger.info("getCounter invocation completed");
+    // 3. Invoke field GET through the specified path
+    logger.info("Invoking field GET via {} path which should trigger 2 AROUND callbacks", path);
+    if (path == InvocationPath.HOT_PATH) {
+      invoke(
+          messageBuilder.buildInstanceMethod(
+              myPeerUuid,
+              InterceptableApp.class.getName(),
+              "getCounter",
+              appInstance,
+              new String[] {},
+              new Object[] {}));
+    } else {
+      invoke(
+          messageBuilder.buildGetObject(
+              myPeerUuid, InterceptableApp.class.getName(), "counter", appInstance));
+    }
+    logger.info("Field GET invocation completed");
 
     // 4. Retrieve and verify callbacks
     // AROUND intercepts send 2 callbacks: BEFORE phase + AFTER phase
@@ -222,23 +262,44 @@ public class InstanceFieldAroundCallbackIT extends AbstractInterceptIT {
         afterReq.getExec().getReturnValue().isVoid,
         is(false));
 
-    logger.info("===== testSingleAroundCallbackOnGet: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info(
+        "===== testSingleAroundCallbackOnGet [{}]: TEST COMPLETED SUCCESSFULLY =====", path);
   }
 
   /**
-   * Tests single AROUND callback dispatch on instance field PUT operation.
+   * Tests AROUND callback dispatch on instance field PUT operation.
    *
-   * <p>Registers an AROUND intercept on counter PUT, creates an app instance, calls a setter once,
-   * and verifies the callbacks. Note: Creating the app instance also triggers a PUT for the field
-   * initializer, so we expect 4 callbacks total (2 from init + 2 from setter).
+   * <p>Registers an AROUND intercept on counter PUT, creates an app instance, invokes PUT through
+   * the specified path, and verifies the callbacks.
+   *
+   * <p>For HOT_PATH: Creating the app instance also triggers a PUT for the field initializer, so we
+   * expect 4 callbacks total (2 from init + 2 from setter). For INCOMING_RPC: Only the direct PUT
+   * call triggers callbacks, so we expect 2 callbacks. To achieve this, we create the instance
+   * before registering the intercept for INCOMING_RPC.
    */
   @Test
   public void testAroundCallbackOnPut() throws Exception {
-    logger.info("===== testAroundCallbackOnPut: TEST STARTED =====");
+    logger.info("===== testAroundCallbackOnPut [{}]: TEST STARTED =====", path);
 
     final String callbackClass = "com.quasient.pal.intercept.FakeCallbackClass";
     final String callbackMethod = "aFakeMethod";
     final int newValue = 200;
+
+    // For INCOMING_RPC, create instance BEFORE registering intercept to avoid
+    // intercepting the field initializer PUT
+    ObjectRef appInstance = null;
+    if (path == InvocationPath.INCOMING_RPC) {
+      logger.info("Creating InterceptableApp instance before intercept registration");
+      appInstance =
+          ObjectRef.from(
+              invoke(
+                      messageBuilder.buildEmptyConstructor(
+                          myPeerUuid, InterceptableApp.class.getName()))
+                  .getReturnValue()
+                  .getObject()
+                  .getRef());
+      logger.info("InterceptableApp instance created with ref: {}", appInstance);
+    }
 
     // 1. Register an AROUND intercept on counter field PUT
     logger.info("Creating AROUND intercept request for counter PUT");
@@ -261,102 +322,114 @@ public class InstanceFieldAroundCallbackIT extends AbstractInterceptIT {
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
     logger.info("Intercept registration delay completed");
 
-    // 2. Create InterceptableApp instance (triggers field initializer PUT - 2 callbacks)
-    logger.info("Creating InterceptableApp instance (triggers field initializer PUT)");
-    ObjectRef appInstance =
-        ObjectRef.from(
-            invoke(
-                    messageBuilder.buildEmptyConstructor(
-                        myPeerUuid, InterceptableApp.class.getName()))
-                .getReturnValue()
-                .getObject()
-                .getRef());
-    logger.info("InterceptableApp instance created with ref: {}", appInstance);
+    // 2. For HOT_PATH, create InterceptableApp instance after registering intercept
+    // (field initializer will be intercepted)
+    if (path == InvocationPath.HOT_PATH) {
+      logger.info("Creating InterceptableApp instance (will trigger field initializer callback)");
+      appInstance =
+          ObjectRef.from(
+              invoke(
+                      messageBuilder.buildEmptyConstructor(
+                          myPeerUuid, InterceptableApp.class.getName()))
+                  .getReturnValue()
+                  .getObject()
+                  .getRef());
+      logger.info("InterceptableApp instance created with ref: {}", appInstance);
+    }
 
-    // 3. Invoke setCounter which triggers PUT_FIELD and callback (2 more callbacks)
-    logger.info("Invoking setCounter({}) which should trigger 2 more AROUND callbacks", newValue);
-    invoke(
-        messageBuilder.buildInstanceMethod(
-            myPeerUuid,
-            InterceptableApp.class.getName(),
-            "setCounter",
-            appInstance,
-            new String[] {"java.lang.Integer"},
-            new Object[] {newValue}));
-    logger.info("setCounter invocation completed");
+    // 3. Invoke field PUT through the specified path
+    logger.info("Invoking field PUT via {} path which should trigger AROUND callbacks", path);
+    if (path == InvocationPath.HOT_PATH) {
+      invoke(
+          messageBuilder.buildInstanceMethod(
+              myPeerUuid,
+              InterceptableApp.class.getName(),
+              "setCounter",
+              appInstance,
+              new String[] {"java.lang.Integer"},
+              new Object[] {newValue}));
+    } else {
+      invoke(
+          messageBuilder.buildPutObject(
+              myPeerUuid,
+              InterceptableApp.class.getName(),
+              "counter",
+              appInstance,
+              "java.lang.Integer",
+              newValue));
+    }
+    logger.info("Field PUT invocation completed");
 
-    // 4. Retrieve and verify callbacks
-    // AROUND intercepts send 2 callbacks per operation: BEFORE + AFTER
-    // We have 2 PUT operations (initializer + setter) = 4 callbacks total
-    final int expectedCallbacks = 4;
-    logger.info(
-        "Waiting for {} AROUND callback(s) to be received (2 from init + 2 from setter)",
-        expectedCallbacks);
+    // 4. Retrieve and verify callbacks based on path
+    // HOT_PATH: 4 callbacks (2 from field initializer + 2 from setter)
+    // INCOMING_RPC: 2 callbacks (only direct PUT call)
+    final int expectedCallbacks = (path == InvocationPath.HOT_PATH) ? 4 : 2;
+    logger.info("Waiting for {} AROUND callback(s) to be received", expectedCallbacks);
     List<Message> callbacks = getCallbacks(expectedCallbacks, 5000);
     logger.info("All {} AROUND callback(s) received successfully", expectedCallbacks);
 
     assertThat(
-        "Should receive exactly 4 callbacks (2 from init + 2 from setter)",
+        "Should receive exactly " + expectedCallbacks + " callbacks",
         callbacks.size(),
         is(expectedCallbacks));
 
-    // 5. Verify the setter callbacks (last 2 callbacks)
-    // The first 2 callbacks are from field initializer, last 2 from setter
+    // 5. Verify the PUT callbacks (for HOT_PATH: last 2 callbacks, for INCOMING_RPC: all callbacks)
+    int putBeforeIndex = (path == InvocationPath.HOT_PATH) ? 2 : 0;
+    int putAfterIndex = (path == InvocationPath.HOT_PATH) ? 3 : 1;
 
-    Message setterBeforeCallback = callbacks.get(2);
-    assertThat(
-        "Setter BEFORE callback should not be null", setterBeforeCallback, is(notNullValue()));
+    Message putBeforeCallback = callbacks.get(putBeforeIndex);
+    assertThat("PUT BEFORE callback should not be null", putBeforeCallback, is(notNullValue()));
 
-    InterceptCallbackRequestMessage setterBeforeReq =
-        setterBeforeCallback.getInterceptCallbackRequestMessage();
+    InterceptCallbackRequestMessage putBeforeReq =
+        putBeforeCallback.getInterceptCallbackRequestMessage();
     assertThat(
         "Intercept type should be AROUND",
-        setterBeforeReq.getInterceptType(),
+        putBeforeReq.getInterceptType(),
         is(InterceptType.AROUND.toByte()));
 
     assertThat(
-        "Setter BEFORE phase should be BEFORE",
-        setterBeforeReq.getPhase(),
+        "PUT BEFORE phase should be BEFORE",
+        putBeforeReq.getPhase(),
         is(InterceptPhase.BEFORE.toByte()));
 
     assertThat(
         "timeoutMs should be set (> 0) for AROUND BEFORE phase",
-        setterBeforeReq.getTimeoutMs(),
+        putBeforeReq.getTimeoutMs(),
         is(greaterThan(0)));
 
-    String setterCallbackId = setterBeforeReq.getCallbackId();
+    String putCallbackId = putBeforeReq.getCallbackId();
     assertThat(
         "callbackId should be set (non-empty) for correlating BEFORE/AFTER phases",
-        setterCallbackId,
+        putCallbackId,
         is(not(emptyOrNullString())));
 
-    // Verify instance field PUT in setter BEFORE phase
+    // Verify instance field PUT in BEFORE phase
     assertThat(
-        "Setter BEFORE callback should have InstanceFieldPut",
-        setterBeforeReq.getExec().getInstanceFieldPut(),
+        "PUT BEFORE callback should have InstanceFieldPut",
+        putBeforeReq.getExec().getInstanceFieldPut(),
         is(notNullValue()));
 
-    // Verify setter AFTER phase
-    Message setterAfterCallback = callbacks.get(3);
-    InterceptCallbackRequestMessage setterAfterReq =
-        setterAfterCallback.getInterceptCallbackRequestMessage();
+    // Verify AFTER phase
+    Message putAfterCallback = callbacks.get(putAfterIndex);
+    InterceptCallbackRequestMessage putAfterReq =
+        putAfterCallback.getInterceptCallbackRequestMessage();
 
     assertThat(
-        "Setter AFTER phase should be AFTER",
-        setterAfterReq.getPhase(),
+        "PUT AFTER phase should be AFTER",
+        putAfterReq.getPhase(),
         is(InterceptPhase.AFTER.toByte()));
 
     assertThat(
-        "Setter AFTER callback should have same callbackId as BEFORE",
-        setterAfterReq.getCallbackId(),
-        is(setterCallbackId));
+        "PUT AFTER callback should have same callbackId as BEFORE",
+        putAfterReq.getCallbackId(),
+        is(putCallbackId));
 
     // Verify PUT_DONE in AFTER phase
     assertThat(
-        "Setter AFTER callback should have InstanceFieldPutDone",
-        setterAfterReq.getExec().getInstanceFieldPutDone(),
+        "PUT AFTER callback should have InstanceFieldPutDone",
+        putAfterReq.getExec().getInstanceFieldPutDone(),
         is(notNullValue()));
 
-    logger.info("===== testAroundCallbackOnPut: TEST COMPLETED SUCCESSFULLY =====");
+    logger.info("===== testAroundCallbackOnPut [{}]: TEST COMPLETED SUCCESSFULLY =====", path);
   }
 }
