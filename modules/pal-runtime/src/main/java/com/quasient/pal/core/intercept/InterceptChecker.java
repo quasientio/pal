@@ -86,6 +86,30 @@ public class InterceptChecker {
     String executableName = extractExecutableName(ajSig);
     String[] paramTypes = extractParamTypes(ajSig);
 
+    return checkIntercepts(className, executableName, paramTypes, messageType, phase);
+  }
+
+  /**
+   * Checks for matching intercepts using explicitly provided execution context.
+   *
+   * <p>This method is used by the incoming RPC path ({@code dispatchIncoming()}) where the
+   * execution context is extracted from an {@code ExecMessage} rather than an AspectJ join point.
+   * It queries the intercept matcher with the provided parameters to find matching intercepts.
+   *
+   * @param className the fully qualified name of the class being executed
+   * @param executableName the name of the method, constructor ("new"), or field being executed
+   * @param paramTypes the parameter type names (null for fields)
+   * @param messageType the type of execution message (e.g., EXEC_INSTANCE_METHOD, EXEC_CONSTRUCTOR)
+   * @param phase the execution phase (BEFORE or AFTER)
+   * @return an InterceptCheckResult containing matched remote and local intercepts
+   */
+  public InterceptCheckResult checkIntercepts(
+      String className,
+      String executableName,
+      String[] paramTypes,
+      MessageType messageType,
+      ExecPhase phase) {
+
     if (logger.isDebugEnabled()) {
       logger.debug(
           "Checking intercepts for: {}.{} with params: {}",

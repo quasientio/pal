@@ -9,7 +9,10 @@
  */
 package com.quasient.pal.core.execution.java;
 
+import static com.quasient.pal.serdes.colfer.ExecMessageUtils.getClassname;
+import static com.quasient.pal.serdes.colfer.ExecMessageUtils.getExecutableName;
 import static com.quasient.pal.serdes.colfer.ExecMessageUtils.getMessageTypeOf;
+import static com.quasient.pal.serdes.colfer.ExecMessageUtils.getParameterTypes;
 
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.common.runtime.Context;
@@ -307,7 +310,8 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
    *
    * <p>This method validates the message type, writes ahead if not coming from Log, and performs
    * the loading and invocation phases including argument extraction, accessible object loading, and
-   * target retrieval. It then sends an after-execution message to complete the processing.
+   * target retrieval. It also handles intercept callbacks (BEFORE, AROUND, AFTER) when intercepts
+   * are enabled. Finally, it sends an after-execution message to complete the processing.
    *
    * @param incomingCall the execution message to process
    * @param messageChannel the transport channel through which the message was received
@@ -331,6 +335,21 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     if (!getSupportedMessageType().equals(messageType)) {
       throw new IllegalArgumentException(
           "Unsupported message type: " + messageType + " for dispatcher: " + this.getClass());
+    }
+
+    // Check intercepts BEFORE loading/invocation phases
+    final boolean isMessageInterceptable = InterceptChecker.isInterceptableType(messageType);
+    InterceptCheckResult beforeInterceptCheck = null;
+    if (runOptions.contains(RunOptions.WITH_INTERCEPTS) && isMessageInterceptable) {
+      List<String> paramTypeList = getParameterTypes(incomingCall);
+      String[] paramTypes = paramTypeList != null ? paramTypeList.toArray(new String[0]) : null;
+      beforeInterceptCheck =
+          interceptChecker.checkIntercepts(
+              getClassname(incomingCall),
+              getExecutableName(incomingCall),
+              paramTypes,
+              messageType,
+              ExecPhase.BEFORE);
     }
 
     Throwable exceptionWhileLoading = null;
@@ -368,25 +387,147 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       exceptionWhileLoading = ex;
     }
 
+    // Process BEFORE intercept callbacks and apply argument mutations
+    List<MessageArgument> finalArgs = args;
+    List<AroundCallbackState> aroundPendingCallbacks = null;
+    boolean skipInvoke = false;
+    Object skipReturnValue = null;
+
+    if (exceptionWhileLoading == null
+        && beforeInterceptCheck != null
+        && beforeInterceptCheck.hasRemoteIntercepts()) {
+      // Extract current arg values for callbacks
+      // For field PUT operations, the value to set is passed as args[0] to callbacks
+      Object[] argValues;
+      if (isFieldPutOperation(messageType) && value != null) {
+        argValues = new Object[] {value};
+      } else {
+        argValues =
+            args != null
+                ? args.stream().map(MessageArgument::object).toArray(Object[]::new)
+                : new Object[0];
+      }
+
+      // Send BEFORE intercept callbacks
+      InterceptCallbackDispatcher.ConsolidatedCallbackResponse beforeCallbackResponse =
+          interceptCallbackDispatcher.sendBeforeCallbacks(
+              beforeInterceptCheck, incomingCall, argValues);
+
+      // Check if callback wants to throw an exception
+      if (beforeCallbackResponse.shouldThrowException()) {
+        exceptionWhileInvoking = beforeCallbackResponse.getExceptionToThrow();
+      }
+
+      // Apply argument mutations from BEFORE callbacks
+      if (exceptionWhileInvoking == null && beforeCallbackResponse.hasArgMutations()) {
+        // For field PUT operations, args is null; mutation applies to 'value' (index 0)
+        if (isFieldPutOperation(messageType)) {
+          Object mutatedValue = beforeCallbackResponse.getMutatedArgs().get(0);
+          if (mutatedValue != null) {
+            value = mutatedValue;
+            argValues = new Object[] {value};
+          }
+        } else if (args != null) {
+          List<MessageArgument> mutatedArgs = new ArrayList<>(args);
+          for (Map.Entry<Integer, Object> entry :
+              beforeCallbackResponse.getMutatedArgs().entrySet()) {
+            int index = entry.getKey();
+            Object newValue = entry.getValue();
+            if (index >= 0 && index < mutatedArgs.size()) {
+              // Preserve the byReference flag from original arg
+              mutatedArgs.set(index, new MessageArgument(newValue, args.get(index).byReference()));
+            }
+          }
+          finalArgs = mutatedArgs;
+          argValues =
+              finalArgs.stream().map(MessageArgument::object).toArray(Object[]::new); // update
+        }
+      }
+
+      // Send AROUND BEFORE callbacks and handle skip semantics
+      if (exceptionWhileInvoking == null) {
+        AroundConsolidatedResponse aroundResponse =
+            interceptCallbackDispatcher.sendAroundCallbacks(
+                beforeInterceptCheck, incomingCall, argValues);
+
+        // Check if callback wants to throw an exception
+        if (aroundResponse.shouldThrowException()) {
+          exceptionWhileInvoking = aroundResponse.getExceptionToThrow();
+        }
+
+        // Check if callback says to skip execution (e.g., cache hit)
+        if (exceptionWhileInvoking == null && !aroundResponse.shouldProceed()) {
+          skipInvoke = true;
+          skipReturnValue = aroundResponse.getSkipReturnValue();
+        } else if (exceptionWhileInvoking == null) {
+          // Apply additional argument mutations from AROUND callbacks
+          if (aroundResponse.hasArgMutations()) {
+            // For field PUT operations, args is null; mutation applies to 'value' (index 0)
+            if (isFieldPutOperation(messageType)) {
+              Object mutatedValue = aroundResponse.getMutatedArgs().get(0);
+              if (mutatedValue != null) {
+                value = mutatedValue;
+              }
+            } else if (args != null) {
+              List<MessageArgument> mutatedArgs =
+                  finalArgs == args ? new ArrayList<>(args) : finalArgs;
+              for (Map.Entry<Integer, Object> entry : aroundResponse.getMutatedArgs().entrySet()) {
+                int index = entry.getKey();
+                Object newValue = entry.getValue();
+                if (index >= 0 && index < mutatedArgs.size()) {
+                  mutatedArgs.set(
+                      index, new MessageArgument(newValue, args.get(index).byReference()));
+                }
+              }
+              finalArgs = mutatedArgs;
+            }
+          }
+          // Track pending AROUND callbacks for AFTER phase
+          aroundPendingCallbacks = aroundResponse.getPendingCallbacks();
+        }
+      }
+    }
+
     // Invocation phase
     Object returnValue = null;
     ObjectRef objectRef = null;
-    if (exceptionWhileLoading == null) {
-      try {
-        // 7. Invoke constructor/method/field
-        returnValue = invokeIncoming(accessibleObject, target, args, value);
-        if (logger.isTraceEnabled()) {
-          String returnedClass =
-              returnValue == null ? "unavailable" : returnValue.getClass().toString();
-          logger.trace("invokeIncoming returnValue: {} of class: {}", returnValue, returnedClass);
+    if (exceptionWhileLoading == null && exceptionWhileInvoking == null) {
+      if (skipInvoke) {
+        // Use the skip return value from AROUND callback (e.g., cached value)
+        returnValue = skipReturnValue;
+      } else {
+        try {
+          // 7. Invoke constructor/method/field (using possibly mutated args and value)
+          // Note: For field PUT operations, 'value' has already been updated from callback
+          // mutations
+          returnValue = invokeIncoming(accessibleObject, target, finalArgs, value);
+          if (logger.isTraceEnabled()) {
+            String returnedClass =
+                returnValue == null ? "unavailable" : returnValue.getClass().toString();
+            logger.trace("invokeIncoming returnValue: {} of class: {}", returnValue, returnedClass);
+          }
+        } catch (InvocationTargetException e) {
+          logger.error("Error during invocation phase - invoke", e);
+          exceptionWhileInvoking = e.getCause();
+        } catch (ReflectiveOperationException | IllegalArgumentException e) {
+          logger.error("Error during invocation phase - invoke", e);
+          exceptionWhileInvoking = e;
         }
-      } catch (InvocationTargetException e) {
-        logger.error("Error during invocation phase - invoke", e);
-        exceptionWhileInvoking = e.getCause();
-      } catch (ReflectiveOperationException | IllegalArgumentException e) {
-        logger.error("Error during invocation phase - invoke", e);
-        exceptionWhileInvoking = e;
       }
+    }
+
+    // Check intercepts for AFTER phase
+    InterceptCheckResult afterInterceptCheck = null;
+    if (runOptions.contains(RunOptions.WITH_INTERCEPTS) && isMessageInterceptable) {
+      List<String> paramTypeList = getParameterTypes(incomingCall);
+      String[] paramTypes = paramTypeList != null ? paramTypeList.toArray(new String[0]) : null;
+      afterInterceptCheck =
+          interceptChecker.checkIntercepts(
+              getClassname(incomingCall),
+              getExecutableName(incomingCall),
+              paramTypes,
+              messageType,
+              ExecPhase.AFTER);
     }
 
     // 8. Map returnValue: add new entry in objectRef->object map
@@ -420,9 +561,70 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
             exceptionWhileLoading,
             exceptionWhileInvoking);
 
+    // Send AFTER intercept callbacks and apply return value overrides
+    if (afterInterceptCheck != null && afterInterceptCheck.hasRemoteIntercepts()) {
+      boolean returnsVoidMethod = accessibleObject != null ? returnsVoid(accessibleObject) : false;
+      InterceptCallbackDispatcher.ConsolidatedCallbackResponse afterCallbackResponse =
+          interceptCallbackDispatcher.sendAfterCallbacks(
+              afterInterceptCheck,
+              afterExecMsg,
+              returnValue,
+              returnsVoidMethod,
+              exceptionWhileInvoking);
+
+      // Check if callback wants to throw an exception
+      if (afterCallbackResponse.shouldThrowException()) {
+        exceptionWhileInvoking = afterCallbackResponse.getExceptionToThrow();
+      }
+
+      // Apply return value override
+      if (afterCallbackResponse.hasReturnValueOverride()) {
+        returnValue = afterCallbackResponse.getOverriddenReturnValue();
+      }
+    }
+
+    // Send AROUND AFTER callbacks (for callbacks that called proceed())
+    if (aroundPendingCallbacks != null && !aroundPendingCallbacks.isEmpty()) {
+      boolean returnsVoidMethod = accessibleObject != null ? returnsVoid(accessibleObject) : false;
+      InterceptCallbackDispatcher.ConsolidatedCallbackResponse aroundAfterResponse =
+          interceptCallbackDispatcher.sendAroundAfterCallbacks(
+              aroundPendingCallbacks,
+              afterExecMsg,
+              returnValue,
+              returnsVoidMethod,
+              exceptionWhileInvoking);
+
+      // Check if callback wants to throw an exception
+      if (aroundAfterResponse.shouldThrowException()) {
+        exceptionWhileInvoking = aroundAfterResponse.getExceptionToThrow();
+      }
+
+      // Apply return value override
+      if (aroundAfterResponse.hasReturnValueOverride()) {
+        returnValue = aroundAfterResponse.getOverriddenReturnValue();
+      }
+    }
+
+    // Recreate afterExecMsg if returnValue was overridden by callbacks
+    final ExecMessage finalAfterExecMsg;
+    if (afterInterceptCheck != null
+        || (aroundPendingCallbacks != null && !aroundPendingCallbacks.isEmpty())) {
+      // Regenerate the after exec message with potentially modified return value/exception
+      finalAfterExecMsg =
+          createAfterExecMessage(
+              incomingCall,
+              returnValue,
+              objectRef,
+              accessibleObject,
+              exceptionWhileLoading,
+              exceptionWhileInvoking);
+    } else {
+      finalAfterExecMsg = afterExecMsg;
+    }
+
     // 11. Send object or exception, and receive
     final ExecMessage afterExecResponseMsg =
-        messageGateway.sendExecMessage(messageBuilder.wrap(afterExecMsg), ExecPhase.AFTER);
+        messageGateway.sendExecMessage(messageBuilder.wrap(finalAfterExecMsg), ExecPhase.AFTER);
 
     // 12. Return received message
     if (logger.isTraceEnabled()) {
@@ -756,4 +958,17 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
   protected abstract AccessibleObject loadAccessibleObject(
       ExecMessage execMessage, List<Class<?>> parameterTypes, List<Object> args)
       throws ReflectiveOperationException, AmbiguousCallException;
+
+  /**
+   * Checks if the given message type represents a field PUT operation.
+   *
+   * <p>Field PUT operations store the value to set in args[0], so when intercept callbacks mutate
+   * args, we need to pass the mutated value to invokeIncoming.
+   *
+   * @param messageType the message type to check
+   * @return true if this is a field PUT operation (instance or static)
+   */
+  private boolean isFieldPutOperation(MessageType messageType) {
+    return messageType == MessageType.EXEC_PUT_FIELD || messageType == MessageType.EXEC_PUT_STATIC;
+  }
 }
