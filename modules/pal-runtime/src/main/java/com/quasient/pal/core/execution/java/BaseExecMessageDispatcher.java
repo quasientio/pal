@@ -402,10 +402,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       if (isFieldPutOperation(messageType) && value != null) {
         argValues = new Object[] {value};
       } else {
-        argValues =
-            args != null
-                ? args.stream().map(MessageArgument::object).toArray(Object[]::new)
-                : new Object[0];
+        argValues = args.stream().map(MessageArgument::object).toArray(Object[]::new);
       }
 
       // Send BEFORE intercept callbacks
@@ -427,7 +424,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
             value = mutatedValue;
             argValues = new Object[] {value};
           }
-        } else if (args != null) {
+        } else {
           List<MessageArgument> mutatedArgs = new ArrayList<>(args);
           for (Map.Entry<Integer, Object> entry :
               beforeCallbackResponse.getMutatedArgs().entrySet()) {
@@ -468,7 +465,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
               if (mutatedValue != null) {
                 value = mutatedValue;
               }
-            } else if (args != null) {
+            } else {
               List<MessageArgument> mutatedArgs =
                   finalArgs == args ? new ArrayList<>(args) : finalArgs;
               for (Map.Entry<Integer, Object> entry : aroundResponse.getMutatedArgs().entrySet()) {
@@ -563,7 +560,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
     // Send AFTER intercept callbacks and apply return value overrides
     if (afterInterceptCheck != null && afterInterceptCheck.hasRemoteIntercepts()) {
-      boolean returnsVoidMethod = accessibleObject != null ? returnsVoid(accessibleObject) : false;
+      boolean returnsVoidMethod = accessibleObject != null && returnsVoid(accessibleObject);
       InterceptCallbackDispatcher.ConsolidatedCallbackResponse afterCallbackResponse =
           interceptCallbackDispatcher.sendAfterCallbacks(
               afterInterceptCheck,
@@ -585,7 +582,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
     // Send AROUND AFTER callbacks (for callbacks that called proceed())
     if (aroundPendingCallbacks != null && !aroundPendingCallbacks.isEmpty()) {
-      boolean returnsVoidMethod = accessibleObject != null ? returnsVoid(accessibleObject) : false;
+      boolean returnsVoidMethod = accessibleObject != null && returnsVoid(accessibleObject);
       InterceptCallbackDispatcher.ConsolidatedCallbackResponse aroundAfterResponse =
           interceptCallbackDispatcher.sendAroundAfterCallbacks(
               aroundPendingCallbacks,
