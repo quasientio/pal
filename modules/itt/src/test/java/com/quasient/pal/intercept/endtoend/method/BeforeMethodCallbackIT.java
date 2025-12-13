@@ -12,6 +12,7 @@ package com.quasient.pal.intercept.endtoend.method;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -758,9 +759,9 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
             new Object[] {"hello"});
 
     // Verify SecurityException was thrown
-    assertTrue(
+    assertNotNull(
         "Expected SecurityException to be thrown by BEFORE callback",
-        response.getRaisedThrowable() != null);
+        response.getRaisedThrowable());
     assertThat(
         "Expected SecurityException type",
         response.getRaisedThrowable().getThrowable().getType(),

@@ -315,15 +315,14 @@ public class AbstractInterceptIT extends AbstractIntegrationTest
    */
   protected ExecMessage invokeConstructor(
       InvocationPath path, String className, ConstructorInvocation invocation, Object[] args) {
+    String[] paramTypes = invocation.constructorParamTypes().toArray(new String[0]);
     if (path == InvocationPath.HOT_PATH) {
       // HOT_PATH: Call factory method which internally calls the constructor
-      String[] paramTypes = invocation.constructorParamTypes().toArray(new String[0]);
       return invoke(
           messageBuilder.buildClassMethod(
               myPeerUuid, className, invocation.factoryMethod(), paramTypes, null, null, args));
     } else {
       // INCOMING_RPC: Call constructor directly
-      String[] paramTypes = invocation.constructorParamTypes().toArray(new String[0]);
       return invoke(
           messageBuilder.buildConstructor(myPeerUuid, className, paramTypes, args, null, null));
     }
@@ -457,20 +456,6 @@ public class AbstractInterceptIT extends AbstractIntegrationTest
                 value));
       }
     }
-  }
-
-  /**
-   * Deletes all intercepts registered for the specified callback peer UUID.
-   *
-   * <p>This method is useful for end-to-end tests that register intercepts with
-   * INTERCEPTOR_PEER_UUID instead of myPeerUuid.
-   *
-   * @param callbackPeerUuid the UUID of the callback peer whose intercepts should be deleted
-   * @throws Exception if there's an error deleting the intercepts
-   */
-  protected void deleteInterceptsForCallbackPeer(UUID callbackPeerUuid) throws Exception {
-    logger.info("Deleting intercepts for callback peer: {}", callbackPeerUuid);
-    palDirectory.deleteInterceptsForPeer(callbackPeerUuid);
   }
 
   @After

@@ -13,6 +13,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -456,9 +457,9 @@ public class AroundConstructorCallbackIT extends AbstractInterceptIT {
             invocationPath, InterceptableApp.class.getName(), WITH_COUNTER, new Object[] {10});
 
     // Verify IllegalStateException was thrown
-    assertTrue(
+    assertNotNull(
         "Expected IllegalStateException to be thrown due to missing return value",
-        response.getRaisedThrowable() != null);
+        response.getRaisedThrowable());
     assertThat(
         "Expected IllegalStateException type",
         response.getRaisedThrowable().getThrowable().getType(),
