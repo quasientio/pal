@@ -63,6 +63,7 @@
         <spotbugs.plugin.version>4.8.6.6</spotbugs.plugin.version>
         <spotbugs.annotations.version>4.8.6</spotbugs.annotations.version>
         <jxr.plugin.version>3.6.0</jxr.plugin.version>
+        <maven.plugin.javadoc.version>3.6.3</maven.plugin.javadoc.version>
 
         <!-- DEPENDENCIES VERSIONS -->
         <aspectj.version>1.9.24</aspectj.version>
@@ -210,6 +211,32 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-dependency-plugin</artifactId>
                     <version>${maven.plugin.dependency.version}</version>
+                </plugin>
+                <!-- Javadoc generation -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <version>${maven.plugin.javadoc.version}</version>
+                    <configuration>
+                        <!-- Java 17 source -->
+                        <source>${java.version}</source>
+                        <!-- Include only public and protected members -->
+                        <show>protected</show>
+                        <!-- Fail on errors but not warnings (existing javadoc may have minor issues) -->
+                        <failOnError>true</failOnError>
+                        <failOnWarnings>false</failOnWarnings>
+                        <!-- Link to standard Java SE docs -->
+                        <links>
+                            <link>https://docs.oracle.com/en/java/javase/17/docs/api/</link>
+                        </links>
+                        <!-- Additional options for cleaner output -->
+                        <quiet>true</quiet>
+                        <encoding>UTF-8</encoding>
+                        <docencoding>UTF-8</docencoding>
+                        <charset>UTF-8</charset>
+                        <!-- Doclint: disable all checks (references to internal classes cause errors) -->
+                        <doclint>none</doclint>
+                    </configuration>
                 </plugin>
                 <!-- Licensing third-party -->
                 <plugin>
@@ -877,6 +904,42 @@
                                 </fileset>
                             </filesets>
                         </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <!--
+                Javadoc generation profile (pal-api and pal-client only).
+                Usage:
+                  mvn javadoc:javadoc -Pjavadoc         - Generate HTML docs
+                  mvn javadoc:jar -Pjavadoc             - Generate javadoc JARs
+                  mvn javadoc:aggregate -Pjavadoc       - Generate combined HTML docs at root
+
+                Artifacts:
+                  - Per-module HTML: modules/<name>/target/site/apidocs/
+                  - Per-module JAR:  modules/<name>/target/<name>-<version>-javadoc.jar
+                  - Aggregated HTML: target/site/apidocs/
+            -->
+            <id>javadoc</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <configuration>
+                            <!-- Only generate javadocs for pal-api and pal-client -->
+                            <skippedModules>pal,pal-weave,pal-runtime,pal-cli,itt,itt-apps,pal-benchmarks,distribution</skippedModules>
+                        </configuration>
+                        <executions>
+                            <!-- Attach javadoc JAR to install/deploy phase -->
+                            <execution>
+                                <id>attach-javadocs</id>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
                     </plugin>
                 </plugins>
             </build>
