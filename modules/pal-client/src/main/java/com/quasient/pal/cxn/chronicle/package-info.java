@@ -9,9 +9,9 @@
  */
 
 /**
- * Custom Logback appenders for PAL peer logging.
+ * Chronicle Queue utilities for local log storage.
  *
- * <p>These appenders extend Logback's standard appenders with peer-specific naming conventions,
- * making it easier to identify log output from individual peers in distributed deployments.
+ * <p>Chronicle Queue provides a high-performance, memory-mapped file-based message store for
+ * single-peer deployments or local development without Kafka.
  */
-package com.quasient.pal.common.logging;
+package com.quasient.pal.cxn.chronicle;

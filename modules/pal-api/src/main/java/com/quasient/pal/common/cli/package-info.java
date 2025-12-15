@@ -7,4 +7,10 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
+
+/**
+ * Command-line interface abstractions shared between peer runtime and CLI tool.
+ *
+ * <p>Contains base classes and utilities for picocli-based command implementations.
+ */
 package com.quasient.pal.common.cli;

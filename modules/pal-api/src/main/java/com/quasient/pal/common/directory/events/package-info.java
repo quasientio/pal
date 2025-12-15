@@ -7,4 +7,11 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
+
+/**
+ * Events and listeners for directory watch notifications.
+ *
+ * <p>The directory service notifies listeners when resources change (created, updated, deleted).
+ * This enables peers to react to dynamic intercept registration and other directory changes.
+ */
 package com.quasient.pal.common.directory.events;

@@ -7,4 +7,20 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
+
+/**
+ * PAL directory service abstractions for peer, log, and intercept registration.
+ *
+ * <p>The directory is backed by etcd and provides:
+ *
+ * <ul>
+ *   <li>Peer registration and discovery
+ *   <li>Log registration and metadata
+ *   <li>Dynamic intercept registration
+ *   <li>Watch notifications for changes
+ * </ul>
+ *
+ * @see com.quasient.pal.common.directory.nodes Data structures stored in etcd
+ * @see com.quasient.pal.common.directory.events Watch event types
+ */
 package com.quasient.pal.common.directory;

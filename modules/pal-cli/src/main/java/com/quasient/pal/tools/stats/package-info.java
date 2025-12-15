@@ -9,9 +9,11 @@
  */
 
 /**
- * Custom Logback appenders for PAL peer logging.
+ * Statistics collection and display utilities for CLI tools.
  *
- * <p>These appenders extend Logback's standard appenders with peer-specific naming conventions,
- * making it easier to identify log output from individual peers in distributed deployments.
+ * <ul>
+ *   <li>{@link Counters} - Message counting and aggregation
+ *   <li>{@link ContinuousPrinter} - Real-time statistics output
+ * </ul>
  */
-package com.quasient.pal.common.logging;
+package com.quasient.pal.tools.stats;

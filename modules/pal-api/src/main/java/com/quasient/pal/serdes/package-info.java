@@ -7,4 +7,15 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
+
+/**
+ * Serialization and deserialization utilities for PAL messages.
+ *
+ * <p>Subpackages provide format-specific implementations:
+ *
+ * <ul>
+ *   <li>{@code colfer} - Binary serialization using Colfer codec (high performance, compact)
+ *   <li>{@code jsonrpc} - JSON serialization for JSON-RPC messages
+ * </ul>
+ */
 package com.quasient.pal.serdes;

@@ -9,13 +9,18 @@
  */
 package com.quasient.pal.common.lang;
 
-/** Represents the types of operations that can be performed on a field. */
+/**
+ * Types of field access operations captured by PAL.
+ *
+ * <p>When PAL intercepts field access, it records whether the operation was a read (GET) or write
+ * (PUT). This enum is used in field access messages to distinguish between these operations.
+ */
 public enum FieldOpType {
 
-  /** Represents a get field operation. */
+  /** Read operation: retrieving the current value of a field. */
   GET((byte) 1),
 
-  /** Represents a put field operation. */
+  /** Write operation: assigning a new value to a field. */
   PUT((byte) 2);
 
   /** The byte value associated with the field operation type. */

@@ -7,4 +7,11 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
+
+/**
+ * Colfer binary serialization utilities for PAL messages.
+ *
+ * <p>Provides helpers for wrapping and unwrapping Java values to/from Colfer message format. The
+ * {@link Wrapper} class handles conversion of method arguments and return values for wire transfer.
+ */
 package com.quasient.pal.serdes.colfer;

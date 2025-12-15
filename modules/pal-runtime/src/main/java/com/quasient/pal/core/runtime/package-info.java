@@ -9,9 +9,13 @@
  */
 
 /**
- * Custom Logback appenders for PAL peer logging.
+ * Runtime state management for objects and sessions.
  *
- * <p>These appenders extend Logback's standard appenders with peer-specific naming conventions,
- * making it easier to identify log output from individual peers in distributed deployments.
+ * <p>Subpackages:
+ *
+ * <ul>
+ *   <li>{@link objects} - Remote object reference lifecycle management
+ *   <li>{@link session} - Peer session tracking
+ * </ul>
  */
-package com.quasient.pal.common.logging;
+package com.quasient.pal.core.runtime;

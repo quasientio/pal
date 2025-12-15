@@ -7,4 +7,12 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
+
+/**
+ * Remote object reference abstractions.
+ *
+ * <p>{@link ObjectRef} represents a reference to an object that may live on a remote peer. When
+ * objects are passed across peer boundaries, they are wrapped in ObjectRef to enable transparent
+ * remote method invocation.
+ */
 package com.quasient.pal.common.objects;

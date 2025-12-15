@@ -10,32 +10,19 @@
 package com.quasient.pal.common.lang.reflect;
 
 /**
- * Defines the types of executable objects that can be reflected upon within the Pal runtime.
+ * Categories of code elements that PAL can intercept and convert to messages.
  *
- * @see java.lang.reflect.Constructor
- * @see java.lang.reflect.Method
- * @see java.lang.reflect.Field
+ * <p>PAL captures three types of operations: constructor invocations, method calls, and field
+ * accesses. This enum identifies which category a given signature or message belongs to.
  */
 public enum ExecutableObjectType {
 
-  /**
-   * Represents a constructor executable object.
-   *
-   * @see java.lang.reflect.Constructor
-   */
+  /** A constructor invocation ({@code new ClassName(...)}). */
   CONSTRUCTOR,
 
-  /**
-   * Represents a method executable object.
-   *
-   * @see java.lang.reflect.Method
-   */
+  /** A method call ({@code object.method(...)} or {@code ClassName.staticMethod(...)}). */
   METHOD,
 
-  /**
-   * Represents a field executable object.
-   *
-   * @see java.lang.reflect.Field
-   */
+  /** A field access (read or write). */
   FIELD
 }

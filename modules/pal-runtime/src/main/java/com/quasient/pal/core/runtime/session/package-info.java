@@ -9,9 +9,9 @@
  */
 
 /**
- * Custom Logback appenders for PAL peer logging.
+ * Peer session tracking and management.
  *
- * <p>These appenders extend Logback's standard appenders with peer-specific naming conventions,
- * making it easier to identify log output from individual peers in distributed deployments.
+ * <p>{@link SessionService} tracks active sessions with remote peers, enabling session-scoped
+ * resource management and cleanup.
  */
-package com.quasient.pal.common.logging;
+package com.quasient.pal.core.runtime.session;
