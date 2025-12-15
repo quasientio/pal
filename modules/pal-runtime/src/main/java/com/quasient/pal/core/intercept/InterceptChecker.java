@@ -16,8 +16,8 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.Signature;
@@ -52,14 +52,22 @@ public class InterceptChecker {
   /** Matcher responsible for finding registered intercepts that match execution criteria. */
   private final InterceptMatcher interceptMatcher;
 
+  /** UUID of this peer, used to distinguish local intercepts from remote intercepts. */
+  private final UUID peerUuid;
+
   /**
-   * Constructs a new InterceptChecker with the specified intercept matcher.
+   * Constructs a new InterceptChecker with the specified intercept matcher and peer UUID.
+   *
+   * <p>The peer UUID is used to determine whether an intercept callback should be handled locally
+   * (when the intercept's callback peer matches this peer's UUID) or remotely (when they differ).
    *
    * @param interceptMatcher the matcher used to find registered intercepts
+   * @param peerUuid the UUID of this peer
    */
   @Inject
-  public InterceptChecker(InterceptMatcher interceptMatcher) {
+  public InterceptChecker(InterceptMatcher interceptMatcher, UUID peerUuid) {
     this.interceptMatcher = interceptMatcher;
+    this.peerUuid = peerUuid;
   }
 
   /**
@@ -194,31 +202,29 @@ public class InterceptChecker {
   /**
    * Filters the list of matched intercepts to return only those that require remote peer callbacks.
    *
-   * <p>Currently, all intercepts are considered remote. In the future, this method will check the
-   * peer UUID to determine if the intercept is local to this JVM.
+   * <p>An intercept is considered remote when its callback peer UUID differs from this peer's UUID.
+   * Remote intercepts require ZMQ message passing to invoke the callback on the target peer.
    *
    * @param matches the list of all matched intercepts
-   * @return the list of remote intercepts
+   * @return the list of remote intercepts (callbacks on other peers)
    */
   private List<InterceptMessage> filterRemoteIntercepts(List<InterceptMessage> matches) {
-    // For now, all intercepts are remote
-    // Future: check if interceptMessage.getPeerUuid() equals local peer UUID
-    return matches;
+    String thisPeerUuidString = peerUuid.toString();
+    return matches.stream().filter(im -> !thisPeerUuidString.equals(im.getPeerUuid())).toList();
   }
 
   /**
    * Filters the list of matched intercepts to return only those that can be handled locally.
    *
-   * <p>Currently, local intercepts are not supported, so this always returns an empty list. This is
-   * reserved for future functionality where intercepts can be registered and handled within the
-   * same JVM without message passing overhead.
+   * <p>An intercept is considered local when its callback peer UUID matches this peer's UUID. Local
+   * intercepts can be invoked directly without ZMQ message passing overhead, avoiding serialization
+   * costs and network latency.
    *
-   * @param ignoredMatches the list of all matched intercepts
-   * @return the list of local intercepts (currently always empty)
+   * @param matches the list of all matched intercepts
+   * @return the list of local intercepts (callbacks on this peer)
    */
-  @SuppressWarnings("unused")
-  private List<InterceptMessage> filterLocalIntercepts(List<InterceptMessage> ignoredMatches) {
-    // Future implementation: filter for intercepts with local peer UUID
-    return Collections.emptyList();
+  private List<InterceptMessage> filterLocalIntercepts(List<InterceptMessage> matches) {
+    String thisPeerUuidString = peerUuid.toString();
+    return matches.stream().filter(im -> thisPeerUuidString.equals(im.getPeerUuid())).toList();
   }
 }

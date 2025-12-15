@@ -25,8 +25,9 @@ package com.quasient.pal.intercept;
  * <p><b>Why both paths matter:</b> The hot-path uses AspectJ's {@code ProceedingJoinPoint} for
  * interception, while the incoming RPC path extracts intercept information from {@code
  * ExecMessage}. Both paths must behave identically for intercept callbacks (BEFORE, AFTER, AROUND).
- * <p>
- * See {@code BaseExecMessageDispatcher#dispatch} and {@code BaseExecMessageDispatcher#dispatchIncoming}
+ *
+ * <p>See {@code BaseExecMessageDispatcher#dispatch} and {@code
+ * BaseExecMessageDispatcher#dispatchIncoming}
  */
 public enum InvocationPath {
 

@@ -24,6 +24,7 @@ import com.quasient.pal.messages.colfer.InterceptMessage;
 import com.quasient.pal.messages.types.MessageType;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.ConstructorSignature;
@@ -36,13 +37,16 @@ import org.junit.Test;
 @SuppressWarnings("DoNotMock")
 public class InterceptCheckerTest {
 
+  /** Test peer UUID for local intercept filtering. */
+  private static final UUID TEST_PEER_UUID = UUID.randomUUID();
+
   private InterceptMatcher interceptMatcher;
   private InterceptChecker interceptChecker;
 
   @Before
   public void setUp() {
     interceptMatcher = mock(InterceptMatcher.class);
-    interceptChecker = new InterceptChecker(interceptMatcher);
+    interceptChecker = new InterceptChecker(interceptMatcher, TEST_PEER_UUID);
   }
 
   @Test
@@ -215,11 +219,13 @@ public class InterceptCheckerTest {
   }
 
   /**
-   * This test is a stub for the future implementation of local intercepts and assertions will need
-   * updating once we do have the impl in place.
+   * Tests that intercepts with remote peer UUIDs are classified as remote intercepts.
+   *
+   * <p>When an intercept's callback peer UUID differs from the local peer UUID, it should be
+   * filtered into the remote intercepts list.
    */
   @Test
-  public void checkIntercepts_localInterceptsCurrentlyEmpty() {
+  public void checkIntercepts_withRemotePeerUuid_isRemoteIntercept() {
     // Setup mock ProceedingJoinPoint
     ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
     JoinPoint.StaticPart staticPart = mock(JoinPoint.StaticPart.class);
@@ -231,7 +237,9 @@ public class InterceptCheckerTest {
     when(methodSig.getName()).thenReturn("method");
     when(methodSig.getParameterTypes()).thenReturn(new Class<?>[] {});
 
+    // Create intercept with a different peer UUID
     InterceptMessage intercept = new InterceptMessage();
+    intercept.setPeerUuid(UUID.randomUUID().toString()); // Different from TEST_PEER_UUID
     when(interceptMatcher.getMatchingIntercepts(any(), any(), any(), any(), any()))
         .thenReturn(List.of(intercept));
 
@@ -239,9 +247,87 @@ public class InterceptCheckerTest {
     InterceptCheckResult result =
         interceptChecker.checkIntercepts(pjp, MessageType.EXEC_INSTANCE_METHOD, ExecPhase.BEFORE);
 
-    // Verify local intercepts are currently always empty (future implementation)
+    // Verify intercept is classified as remote
+    assertThat(result.getRemoteIntercepts().size(), is(1));
+    assertThat(result.hasRemoteIntercepts(), is(true));
     assertThat(result.getLocalIntercepts(), is(empty()));
     assertThat(result.hasLocalIntercepts(), is(false));
+  }
+
+  /**
+   * Tests that intercepts with the local peer UUID are classified as local intercepts.
+   *
+   * <p>When an intercept's callback peer UUID matches the local peer UUID, it should be filtered
+   * into the local intercepts list.
+   */
+  @Test
+  public void checkIntercepts_withLocalPeerUuid_isLocalIntercept() {
+    // Setup mock ProceedingJoinPoint
+    ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
+    JoinPoint.StaticPart staticPart = mock(JoinPoint.StaticPart.class);
+    MethodSignature methodSig = mock(MethodSignature.class);
+
+    when(pjp.getStaticPart()).thenReturn(staticPart);
+    when(staticPart.getSignature()).thenReturn(methodSig);
+    when(methodSig.getDeclaringTypeName()).thenReturn("com.example.MyClass");
+    when(methodSig.getName()).thenReturn("method");
+    when(methodSig.getParameterTypes()).thenReturn(new Class<?>[] {});
+
+    // Create intercept with same peer UUID as test instance
+    InterceptMessage intercept = new InterceptMessage();
+    intercept.setPeerUuid(TEST_PEER_UUID.toString()); // Same as local peer
+    when(interceptMatcher.getMatchingIntercepts(any(), any(), any(), any(), any()))
+        .thenReturn(List.of(intercept));
+
+    // Execute
+    InterceptCheckResult result =
+        interceptChecker.checkIntercepts(pjp, MessageType.EXEC_INSTANCE_METHOD, ExecPhase.BEFORE);
+
+    // Verify intercept is classified as local
+    assertThat(result.getLocalIntercepts().size(), is(1));
+    assertThat(result.hasLocalIntercepts(), is(true));
+    assertThat(result.getRemoteIntercepts(), is(empty()));
+    assertThat(result.hasRemoteIntercepts(), is(false));
+  }
+
+  /**
+   * Tests that a mix of local and remote intercepts are correctly separated.
+   *
+   * <p>When there are both local and remote intercepts, they should be filtered into their
+   * respective lists correctly.
+   */
+  @Test
+  public void checkIntercepts_withMixedIntercepts_separatesCorrectly() {
+    // Setup mock ProceedingJoinPoint
+    ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
+    JoinPoint.StaticPart staticPart = mock(JoinPoint.StaticPart.class);
+    MethodSignature methodSig = mock(MethodSignature.class);
+
+    when(pjp.getStaticPart()).thenReturn(staticPart);
+    when(staticPart.getSignature()).thenReturn(methodSig);
+    when(methodSig.getDeclaringTypeName()).thenReturn("com.example.MyClass");
+    when(methodSig.getName()).thenReturn("method");
+    when(methodSig.getParameterTypes()).thenReturn(new Class<?>[] {});
+
+    // Create one local and one remote intercept
+    InterceptMessage localIntercept = new InterceptMessage();
+    localIntercept.setPeerUuid(TEST_PEER_UUID.toString());
+
+    InterceptMessage remoteIntercept = new InterceptMessage();
+    remoteIntercept.setPeerUuid(UUID.randomUUID().toString());
+
+    when(interceptMatcher.getMatchingIntercepts(any(), any(), any(), any(), any()))
+        .thenReturn(List.of(localIntercept, remoteIntercept));
+
+    // Execute
+    InterceptCheckResult result =
+        interceptChecker.checkIntercepts(pjp, MessageType.EXEC_INSTANCE_METHOD, ExecPhase.BEFORE);
+
+    // Verify intercepts are correctly separated
+    assertThat(result.getLocalIntercepts().size(), is(1));
+    assertThat(result.hasLocalIntercepts(), is(true));
+    assertThat(result.getRemoteIntercepts().size(), is(1));
+    assertThat(result.hasRemoteIntercepts(), is(true));
   }
 
   @Test

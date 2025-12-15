@@ -26,8 +26,6 @@ import com.quasient.pal.serdes.colfer.ExceptionSerdes;
 import com.quasient.pal.serdes.colfer.Wrapper;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
-import java.lang.reflect.Method;
-import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,7 +40,7 @@ import org.slf4j.LoggerFactory;
  *
  * <ul>
  *   <li>If {@code registeredCallbackId} is present, looks up a registered {@link InterceptCallback}
- *       instance
+ *       instance via {@link CallbackResolver}
  *   <li>Otherwise, uses reflection to invoke a static method: {@code callbackClass.callbackMethod}
  * </ul>
  *
@@ -56,14 +54,17 @@ public class IncomingInterceptCallbackDispatcher {
   private static final Logger logger =
       LoggerFactory.getLogger(IncomingInterceptCallbackDispatcher.class);
 
-  /** Registry of callback handlers by their unique identifiers. */
-  private final ConcurrentHashMap<String, InterceptCallback> callbackRegistry =
-      new ConcurrentHashMap<>();
+  /** Shared callback resolver for looking up registered callbacks and resolving static methods. */
+  private final CallbackResolver callbackResolver;
 
-  /** Constructs a new IncomingInterceptCallbackDispatcher. */
+  /**
+   * Constructs a new IncomingInterceptCallbackDispatcher.
+   *
+   * @param callbackResolver the shared callback resolver
+   */
   @Inject
-  public IncomingInterceptCallbackDispatcher() {
-    // No dependencies yet
+  public IncomingInterceptCallbackDispatcher(CallbackResolver callbackResolver) {
+    this.callbackResolver = callbackResolver;
   }
 
   /**
@@ -122,57 +123,18 @@ public class IncomingInterceptCallbackDispatcher {
   /**
    * Resolves the callback handler from the request.
    *
-   * <p>If {@code registeredCallbackId} is present, looks it up in the registry. Otherwise, uses
-   * reflection to create a callback that invokes the static method {@code callbackClass}.{@code
-   * callbackMethod}.
+   * <p>Delegates to {@link CallbackResolver} for callback resolution. If {@code
+   * registeredCallbackId} is present, looks it up in the registry. Otherwise, uses reflection to
+   * create a callback that invokes the static method {@code callbackClass.callbackMethod}.
    *
    * @param request the callback request
    * @return the resolved callback handler
    * @throws Exception if the callback cannot be resolved
    */
-  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   private InterceptCallback resolveCallback(InterceptCallbackRequestMessage request)
       throws Exception {
-    String registeredCallbackId = request.getRegisteredCallbackId();
-
-    if (registeredCallbackId != null && !registeredCallbackId.isEmpty()) {
-      // Look up registered callback
-      InterceptCallback callback = callbackRegistry.get(registeredCallbackId);
-      if (callback == null) {
-        throw new IllegalStateException("Registered callback not found: " + registeredCallbackId);
-      }
-      return callback;
-    } else {
-      // Use reflection to invoke static method
-      String className = request.getCallbackClass();
-      String methodName = request.getCallbackMethod();
-
-      if (className == null || className.isEmpty()) {
-        throw new IllegalArgumentException(
-            "Either registeredCallbackId or callbackClass must be provided");
-      }
-
-      Class<?> callbackClass =
-          Class.forName(className, true, Thread.currentThread().getContextClassLoader());
-      Method callbackMethod = callbackClass.getMethod(methodName, InterceptContext.class);
-
-      // Verify method is static and returns InterceptCallbackResponseMessage
-      if (!java.lang.reflect.Modifier.isStatic(callbackMethod.getModifiers())) {
-        throw new IllegalArgumentException(
-            "Callback method must be static: " + className + "." + methodName);
-      }
-
-      if (!InterceptCallbackResponse.class.isAssignableFrom(callbackMethod.getReturnType())) {
-        throw new IllegalArgumentException(
-            "Callback method must return InterceptCallbackResponseMessage: "
-                + className
-                + "."
-                + methodName);
-      }
-
-      // Create a wrapper that invokes the static method
-      return (ctx) -> (InterceptCallbackResponse) callbackMethod.invoke(null, ctx);
-    }
+    return callbackResolver.resolve(
+        request.getRegisteredCallbackId(), request.getCallbackClass(), request.getCallbackMethod());
   }
 
   /**
@@ -435,40 +397,23 @@ public class IncomingInterceptCallbackDispatcher {
    * Registers a callback handler with a unique identifier.
    *
    * <p>Registered callbacks can be invoked via {@code registeredCallbackId} in the callback
-   * request.
+   * request. Delegates to {@link CallbackResolver}.
    *
    * @param callbackId the unique identifier for this callback
    * @param callback the callback handler implementation
    */
   public void registerCallback(String callbackId, InterceptCallback callback) {
-    if (callbackId == null || callbackId.isEmpty()) {
-      throw new IllegalArgumentException("Callback ID must not be null or empty");
-    }
-    if (callback == null) {
-      throw new IllegalArgumentException("Callback must not be null");
-    }
-
-    InterceptCallback existing = callbackRegistry.putIfAbsent(callbackId, callback);
-    if (existing != null) {
-      throw new IllegalStateException("Callback already registered with ID: " + callbackId);
-    }
-
-    logger.info("Registered intercept callback: {}", callbackId);
+    callbackResolver.registerCallback(callbackId, callback);
   }
 
   /**
-   * Unregisters a callback handler.
+   * Unregisters a callback handler. Delegates to {@link CallbackResolver}.
    *
    * @param callbackId the identifier of the callback to unregister
    * @return true if a callback was removed, false if no callback was registered with this ID
    */
   public boolean unregisterCallback(String callbackId) {
-    InterceptCallback removed = callbackRegistry.remove(callbackId);
-    if (removed != null) {
-      logger.info("Unregistered intercept callback: {}", callbackId);
-      return true;
-    }
-    return false;
+    return callbackResolver.unregisterCallback(callbackId);
   }
 
   // ---- AROUND intercept support with ctx.proceed() API ----

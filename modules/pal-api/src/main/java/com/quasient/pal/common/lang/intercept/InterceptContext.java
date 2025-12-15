@@ -14,6 +14,7 @@ import com.quasient.pal.messages.colfer.InterceptCallbackResponseMessage;
 import com.quasient.pal.serdes.colfer.Wrapper;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -26,7 +27,8 @@ import javax.annotation.Nullable;
  *
  * <ul>
  *   <li>The {@link ExecMessage} containing operation metadata (class, method, parameter types,
- *       etc.)
+ *       etc.) - for remote intercepts
+ *   <li>{@link LocalInterceptMetadata} for local intercepts (no ExecMessage overhead)
  *   <li>The current {@link InterceptPhase} (BEFORE or AFTER)
  *   <li>The {@link InterceptType} of this intercept (BEFORE, AFTER, or AROUND)
  *   <li>Method arguments (readable and modifiable in BEFORE phase)
@@ -34,14 +36,24 @@ import javax.annotation.Nullable;
  *   <li>Helper methods for modifying arguments and return values
  * </ul>
  *
+ * <p><b>Local vs Remote Intercepts:</b>
+ *
+ * <ul>
+ *   <li><b>Remote intercepts:</b> Created via {@link #forBeforePhase} or {@link #forAfterPhase}
+ *       with an ExecMessage. Full metadata available. Arguments are deserialized.
+ *   <li><b>Local intercepts:</b> Created via {@link #forLocalBeforePhase} or {@link
+ *       #forLocalAfterPhase} without ExecMessage overhead. Arguments are live Java objects. {@link
+ *       #getExec()} returns null for local intercepts.
+ * </ul>
+ *
  * <p><b>Limitations:</b>
  *
  * <ul>
- *   <li><b>Argument mutation:</b> Only simple types are supported (primitives, wrapper types,
- *       String, and simple arrays of these). Complex objects will be force-serialized when sent
- *       back.
- *   <li><b>Return value override:</b> Return values are force-serialized (by-value) when sent back
- *       to the intercepted peer. ObjectRef-based remote references are not supported.
+ *   <li><b>Argument mutation:</b> Only simple types are supported for remote intercepts
+ *       (primitives, wrapper types, String, and simple arrays). Local intercepts can mutate any
+ *       object directly.
+ *   <li><b>Return value override:</b> For remote intercepts, return values are force-serialized
+ *       (by-value). For local intercepts, return values are passed directly.
  * </ul>
  *
  * <p><b>Thread Safety:</b> This class is <b>not</b> thread-safe. Each callback invocation receives
@@ -58,8 +70,49 @@ import javax.annotation.Nullable;
         "Internal API - mutable state is intentionally exposed for callback manipulation")
 public final class InterceptContext {
 
-  /** The execution message containing operation metadata. */
-  @Nonnull private final ExecMessage exec;
+  /**
+   * Metadata for local intercepts when ExecMessage is not available.
+   *
+   * <p>Local intercepts (where callback peer == intercepted peer) can avoid the overhead of
+   * creating an ExecMessage by using this lightweight metadata container instead.
+   *
+   * @param className the fully qualified name of the intercepted class
+   * @param methodName the name of the intercepted method, constructor, or field
+   * @param paramTypes the parameter type names (for methods/constructors), immutable, may be empty
+   */
+  public record LocalInterceptMetadata(
+      @Nonnull String className, @Nonnull String methodName, @Nonnull List<String> paramTypes) {
+    /**
+     * Creates a new LocalInterceptMetadata.
+     *
+     * @param className the class name (must not be null)
+     * @param methodName the method/field name (must not be null)
+     * @param paramTypes the parameter types (must not be null, may be empty)
+     */
+    public LocalInterceptMetadata {
+      Objects.requireNonNull(className, "className must not be null");
+      Objects.requireNonNull(methodName, "methodName must not be null");
+      Objects.requireNonNull(paramTypes, "paramTypes must not be null");
+      // Ensure immutability
+      paramTypes = List.copyOf(paramTypes);
+    }
+  }
+
+  /**
+   * The execution message containing operation metadata (null for local intercepts).
+   *
+   * <p>For remote intercepts, this contains the full ExecMessage with all metadata. For local
+   * intercepts, this is null and {@link #localMetadata} is used instead.
+   */
+  @Nullable private final ExecMessage exec;
+
+  /**
+   * Metadata for local intercepts (null for remote intercepts).
+   *
+   * <p>For local intercepts, this provides lightweight access to class/method information without
+   * the overhead of ExecMessage creation.
+   */
+  @Nullable private final LocalInterceptMetadata localMetadata;
 
   /**
    * The current callback phase (BEFORE or AFTER). Mutable for AROUND intercepts after proceed().
@@ -77,13 +130,16 @@ public final class InterceptContext {
 
   // ---- AROUND intercept support fields ----
 
-  /** Socket accessor for AROUND proceed() - set by dispatcher before callback invocation. */
+  /** Socket accessor for remote AROUND proceed() - set by dispatcher before callback invocation. */
   @Nullable private AroundSocketAccessor aroundSocketAccessor;
+
+  /** Local accessor for local AROUND proceed() - set by dispatcher for same-peer intercepts. */
+  @Nullable private LocalAroundAccessor localAroundAccessor;
 
   /** Callback ID for correlating BEFORE/AFTER phases of AROUND intercept. */
   @Nullable private String callbackId;
 
-  /** Timeout in milliseconds for AROUND proceed(). */
+  /** Timeout in milliseconds for remote AROUND proceed(). */
   private int timeoutMs;
 
   /** Flag indicating whether proceed() has been called (AROUND only). */
@@ -123,7 +179,7 @@ public final class InterceptContext {
   @Nullable private Throwable exceptionToThrow;
 
   /**
-   * Constructs an {@code InterceptContext} with the specified parameters.
+   * Constructs an {@code InterceptContext} for remote intercepts (with ExecMessage).
    *
    * @param exec the execution message containing operation metadata
    * @param phase the current callback phase
@@ -144,6 +200,40 @@ public final class InterceptContext {
       boolean isVoid,
       @Nullable Throwable thrownException) {
     this.exec = Objects.requireNonNull(exec, "exec must not be null");
+    this.localMetadata = null;
+    this.phase = Objects.requireNonNull(phase, "phase must not be null");
+    this.interceptType = Objects.requireNonNull(interceptType, "interceptType must not be null");
+    this.interceptedPeerUuid =
+        Objects.requireNonNull(interceptedPeerUuid, "interceptedPeerUuid must not be null");
+    this.args = args;
+    this.returnValue = returnValue;
+    this.isVoidMutable = isVoid;
+    this.thrownException = thrownException;
+  }
+
+  /**
+   * Constructs an {@code InterceptContext} for local intercepts (without ExecMessage).
+   *
+   * @param localMetadata the lightweight metadata for local intercepts
+   * @param phase the current callback phase
+   * @param interceptType the type of intercept
+   * @param interceptedPeerUuid the UUID of the peer being intercepted (same as callback peer)
+   * @param args the method arguments (live Java objects, not serialized)
+   * @param returnValue the return value (AFTER phase only, nullable)
+   * @param isVoid whether the method has a void return type
+   * @param thrownException the exception thrown by the method (AFTER phase only, nullable)
+   */
+  private InterceptContext(
+      @Nonnull LocalInterceptMetadata localMetadata,
+      @Nonnull InterceptPhase phase,
+      @Nonnull InterceptType interceptType,
+      @Nonnull String interceptedPeerUuid,
+      @Nullable Object[] args,
+      @Nullable Object returnValue,
+      boolean isVoid,
+      @Nullable Throwable thrownException) {
+    this.exec = null;
+    this.localMetadata = Objects.requireNonNull(localMetadata, "localMetadata must not be null");
     this.phase = Objects.requireNonNull(phase, "phase must not be null");
     this.interceptType = Objects.requireNonNull(interceptType, "interceptType must not be null");
     this.interceptedPeerUuid =
@@ -210,6 +300,121 @@ public final class InterceptContext {
         thrownException);
   }
 
+  // ---- Local intercept factory methods (no ExecMessage overhead) ----
+
+  /**
+   * Creates a new {@code InterceptContext} for the BEFORE phase of a local intercept.
+   *
+   * <p>Local intercepts are handled within the same JVM (callback peer == intercepted peer), so
+   * there is no need to create an ExecMessage. Arguments are live Java objects, not serialized.
+   *
+   * @param className the fully qualified name of the intercepted class
+   * @param methodName the name of the intercepted method, constructor, or field
+   * @param paramTypes the parameter type names (may be empty for fields or no-arg methods)
+   * @param interceptType the type of intercept
+   * @param interceptedPeerUuid the UUID of the peer being intercepted
+   * @param args the method arguments (live Java objects)
+   * @return a new BEFORE-phase context for local intercept
+   */
+  public static InterceptContext forLocalBeforePhase(
+      @Nonnull String className,
+      @Nonnull String methodName,
+      @Nonnull List<String> paramTypes,
+      @Nonnull InterceptType interceptType,
+      @Nonnull String interceptedPeerUuid,
+      @Nullable Object[] args) {
+    LocalInterceptMetadata metadata = new LocalInterceptMetadata(className, methodName, paramTypes);
+    return new InterceptContext(
+        metadata,
+        InterceptPhase.BEFORE,
+        interceptType,
+        interceptedPeerUuid,
+        args != null ? Arrays.copyOf(args, args.length) : null,
+        null,
+        false,
+        null);
+  }
+
+  /**
+   * Creates a new {@code InterceptContext} for the AFTER phase of a local intercept.
+   *
+   * <p>Local intercepts are handled within the same JVM (callback peer == intercepted peer), so
+   * there is no need to create an ExecMessage. Arguments and return values are live Java objects.
+   *
+   * @param className the fully qualified name of the intercepted class
+   * @param methodName the name of the intercepted method, constructor, or field
+   * @param paramTypes the parameter type names (may be empty for fields or no-arg methods)
+   * @param interceptType the type of intercept
+   * @param interceptedPeerUuid the UUID of the peer being intercepted
+   * @param args the method arguments (live Java objects)
+   * @param returnValue the return value (null if void or exception thrown)
+   * @param isVoid whether the method has a void return type
+   * @param thrownException the exception thrown (null if normal completion)
+   * @return a new AFTER-phase context for local intercept
+   */
+  public static InterceptContext forLocalAfterPhase(
+      @Nonnull String className,
+      @Nonnull String methodName,
+      @Nonnull List<String> paramTypes,
+      @Nonnull InterceptType interceptType,
+      @Nonnull String interceptedPeerUuid,
+      @Nullable Object[] args,
+      @Nullable Object returnValue,
+      boolean isVoid,
+      @Nullable Throwable thrownException) {
+    LocalInterceptMetadata metadata = new LocalInterceptMetadata(className, methodName, paramTypes);
+    return new InterceptContext(
+        metadata,
+        InterceptPhase.AFTER,
+        interceptType,
+        interceptedPeerUuid,
+        args,
+        returnValue,
+        isVoid,
+        thrownException);
+  }
+
+  /**
+   * Creates a new {@code InterceptContext} for a local AROUND intercept.
+   *
+   * <p>Local AROUND intercepts are handled within the same JVM and use direct method invocation
+   * instead of socket communication. The context starts in BEFORE phase; when {@link #proceed()} is
+   * called, the {@code LocalAroundAccessor} directly invokes the method.
+   *
+   * <p><b>Usage pattern:</b>
+   *
+   * <pre>{@code
+   * InterceptContext ctx = InterceptContext.forLocalAroundPhase(
+   *     className, methodName, paramTypes, peerUuid, args);
+   * ctx.setLocalAroundAccessor(accessor);
+   * InterceptCallbackResponse response = callback.handle(ctx);
+   * }</pre>
+   *
+   * @param className the fully qualified name of the intercepted class
+   * @param methodName the name of the intercepted method, constructor, or field
+   * @param paramTypes the parameter type names (may be empty for fields or no-arg methods)
+   * @param interceptedPeerUuid the UUID of the peer being intercepted
+   * @param args the method arguments (live Java objects)
+   * @return a new context for local AROUND intercept (starts in BEFORE phase)
+   */
+  public static InterceptContext forLocalAroundPhase(
+      @Nonnull String className,
+      @Nonnull String methodName,
+      @Nonnull List<String> paramTypes,
+      @Nonnull String interceptedPeerUuid,
+      @Nullable Object[] args) {
+    LocalInterceptMetadata metadata = new LocalInterceptMetadata(className, methodName, paramTypes);
+    return new InterceptContext(
+        metadata,
+        InterceptPhase.BEFORE,
+        InterceptType.AROUND,
+        interceptedPeerUuid,
+        args != null ? Arrays.copyOf(args, args.length) : null,
+        null,
+        false,
+        null);
+  }
+
   /**
    * Returns the {@link ExecMessage} containing operation metadata.
    *
@@ -223,11 +428,39 @@ public final class InterceptContext {
    *   <li>Other operation-specific metadata
    * </ul>
    *
-   * @return the execution message (never null)
+   * <p><b>Note:</b> For local intercepts, this returns {@code null}. Use {@link
+   * #isLocalIntercept()} to check, or use {@link #getLocalMetadata()} for local intercept metadata.
+   *
+   * @return the execution message, or null for local intercepts
    */
-  @Nonnull
+  @Nullable
   public ExecMessage getExec() {
     return exec;
+  }
+
+  /**
+   * Returns whether this is a local intercept (callback handled in same JVM).
+   *
+   * <p>Local intercepts do not have an ExecMessage and instead use lightweight {@link
+   * LocalInterceptMetadata}.
+   *
+   * @return {@code true} if this is a local intercept, {@code false} for remote intercepts
+   */
+  public boolean isLocalIntercept() {
+    return localMetadata != null;
+  }
+
+  /**
+   * Returns the metadata for local intercepts.
+   *
+   * <p>This is only available for local intercepts (where {@link #isLocalIntercept()} returns
+   * true). For remote intercepts, use {@link #getExec()} instead.
+   *
+   * @return the local intercept metadata, or null for remote intercepts
+   */
+  @Nullable
+  public LocalInterceptMetadata getLocalMetadata() {
+    return localMetadata;
   }
 
   /**
@@ -615,18 +848,22 @@ public final class InterceptContext {
     if (proceedCalled) {
       throw new IllegalStateException("proceed() can only be called once per callback invocation");
     }
-    if (aroundSocketAccessor == null) {
-      throw new IllegalStateException("AroundSocketAccessor not set - internal error");
+    if (aroundSocketAccessor == null && localAroundAccessor == null) {
+      throw new IllegalStateException("No AROUND accessor set - internal error");
     }
 
     proceedCalled = true;
 
-    // Build BEFORE response with any arg mutations
-    InterceptCallbackResponseMessage beforeResponse = buildBeforeResponse();
+    AfterPhaseData afterData;
 
-    // Send BEFORE, receive AFTER (blocks)
-    AfterPhaseData afterData =
-        aroundSocketAccessor.sendBeforeAndReceiveAfter(beforeResponse, timeoutMs);
+    if (localAroundAccessor != null) {
+      // Local AROUND: direct method invocation (no serialization, no network)
+      afterData = localAroundAccessor.invokeMethod(args);
+    } else {
+      // Remote AROUND: send BEFORE response, receive AFTER via socket
+      InterceptCallbackResponseMessage beforeResponse = buildBeforeResponse();
+      afterData = aroundSocketAccessor.sendBeforeAndReceiveAfter(beforeResponse, timeoutMs);
+    }
 
     // Update context with AFTER data
     this.returnValue = afterData.returnValue();
@@ -663,6 +900,20 @@ public final class InterceptContext {
     this.aroundSocketAccessor = Objects.requireNonNull(accessor, "accessor must not be null");
     this.callbackId = Objects.requireNonNull(callbackId, "callbackId must not be null");
     this.timeoutMs = timeoutMs;
+  }
+
+  /**
+   * Sets the local accessor for local AROUND proceed().
+   *
+   * <p><b>Internal API:</b> Called by dispatcher before invoking callback for same-peer intercepts.
+   *
+   * <p>Local AROUND intercepts use direct method invocation instead of socket communication,
+   * eliminating serialization overhead and network latency.
+   *
+   * @param accessor the local accessor for direct method invocation
+   */
+  public void setLocalAroundAccessor(@Nonnull LocalAroundAccessor accessor) {
+    this.localAroundAccessor = Objects.requireNonNull(accessor, "accessor must not be null");
   }
 
   /**

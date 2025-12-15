@@ -43,12 +43,14 @@ import org.junit.Test;
 public class IncomingInterceptCallbackDispatcherTest {
 
   private IncomingInterceptCallbackDispatcher dispatcher;
+  private CallbackResolver callbackResolver;
   private ExecMessage execMessage;
 
   /** Sets up test fixtures. */
   @Before
   public void setUp() {
-    dispatcher = new IncomingInterceptCallbackDispatcher();
+    callbackResolver = new CallbackResolver();
+    dispatcher = new IncomingInterceptCallbackDispatcher(callbackResolver);
 
     execMessage = new ExecMessage();
     execMessage.setMessageId("test-msg-123");

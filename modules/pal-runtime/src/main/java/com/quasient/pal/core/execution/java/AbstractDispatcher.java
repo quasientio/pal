@@ -12,6 +12,7 @@ package com.quasient.pal.core.execution.java;
 import com.quasient.pal.core.execution.java.reflect.ReflectionHelper;
 import com.quasient.pal.core.intercept.InterceptCallbackDispatcher;
 import com.quasient.pal.core.intercept.InterceptChecker;
+import com.quasient.pal.core.intercept.LocalInterceptCallbackDispatcher;
 import com.quasient.pal.core.runtime.objects.ObjectLookupStore;
 import com.quasient.pal.core.service.RunOptions;
 import com.quasient.pal.core.transport.gateway.OutboundMessageGateway;
@@ -61,6 +62,9 @@ abstract class AbstractDispatcher {
 
   /** Dispatcher for sending intercept callbacks to remote peers. */
   protected InterceptCallbackDispatcher interceptCallbackDispatcher;
+
+  /** Dispatcher for sending intercept callbacks to local handlers (same JVM). */
+  protected LocalInterceptCallbackDispatcher localInterceptCallbackDispatcher;
 
   /**
    * Sets the unique identifier (UUID) for the peer.
@@ -153,5 +157,16 @@ abstract class AbstractDispatcher {
   final void setInterceptCallbackDispatcher(
       InterceptCallbackDispatcher interceptCallbackDispatcher) {
     this.interceptCallbackDispatcher = interceptCallbackDispatcher;
+  }
+
+  /**
+   * Sets the {@link LocalInterceptCallbackDispatcher} for sending local intercept callbacks.
+   *
+   * @param localInterceptCallbackDispatcher the local callback dispatcher instance
+   */
+  @Inject
+  final void setLocalInterceptCallbackDispatcher(
+      LocalInterceptCallbackDispatcher localInterceptCallbackDispatcher) {
+    this.localInterceptCallbackDispatcher = localInterceptCallbackDispatcher;
   }
 }

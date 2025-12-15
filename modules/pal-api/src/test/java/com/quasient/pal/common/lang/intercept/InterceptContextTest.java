@@ -20,6 +20,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import com.quasient.pal.messages.colfer.ExecMessage;
+import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -407,12 +408,12 @@ public class InterceptContextTest {
     InterceptContext ctx =
         InterceptContext.forBeforePhase(execMessage, InterceptType.AROUND, peerUuid, new Object[0]);
 
-    // Don't set the accessor
+    // Don't set the accessor (neither AroundSocketAccessor nor LocalAroundAccessor)
     try {
       ctx.proceed();
       fail("Expected IllegalStateException when accessor not set");
     } catch (IllegalStateException e) {
-      assertTrue(e.getMessage().contains("AroundSocketAccessor"));
+      assertTrue(e.getMessage().contains("No AROUND accessor set"));
     }
   }
 
@@ -1035,4 +1036,260 @@ public class InterceptContextTest {
   // Note: testProceedThrowsForNonAroundIntercept already tests BEFORE throwing
   // IllegalStateException
   // We need to change it to UnsupportedOperationException
+
+  // ===== Local Intercept Factory Method Tests =====
+
+  /** Tests that forLocalBeforePhase() creates a valid BEFORE-phase local context. */
+  @Test
+  public void testForLocalBeforePhase() {
+    Object[] args = new Object[] {"hello", 42};
+
+    InterceptContext ctx =
+        InterceptContext.forLocalBeforePhase(
+            "com.example.MyClass",
+            "myMethod",
+            List.of("String", "int"),
+            InterceptType.BEFORE,
+            peerUuid,
+            args);
+
+    assertEquals(InterceptPhase.BEFORE, ctx.getPhase());
+    assertEquals(InterceptType.BEFORE, ctx.getInterceptType());
+    assertEquals(peerUuid, ctx.getInterceptedPeerUuid());
+    assertNull(ctx.getExec()); // Local intercepts have no ExecMessage
+    assertTrue(ctx.isLocalIntercept());
+    assertNotNull(ctx.getLocalMetadata());
+    assertEquals("com.example.MyClass", ctx.getLocalMetadata().className());
+    assertEquals("myMethod", ctx.getLocalMetadata().methodName());
+    assertEquals(List.of("String", "int"), ctx.getLocalMetadata().paramTypes());
+    assertArrayEquals(new Object[] {"hello", 42}, ctx.getArgs());
+  }
+
+  /** Tests that forLocalBeforePhase() copies the args array to prevent external modification. */
+  @Test
+  public void testForLocalBeforePhaseArgsAreCopied() {
+    Object[] args = new Object[] {"original"};
+
+    InterceptContext ctx =
+        InterceptContext.forLocalBeforePhase(
+            "com.example.MyClass",
+            "myMethod",
+            List.of("String"),
+            InterceptType.BEFORE,
+            peerUuid,
+            args);
+
+    // Modify original array
+    args[0] = "modified";
+
+    // Context should have the original value
+    assertEquals("original", ctx.getArgs()[0]);
+  }
+
+  /** Tests that forLocalAfterPhase() creates a valid AFTER-phase local context. */
+  @Test
+  public void testForLocalAfterPhase() {
+    Object[] args = new Object[] {"arg1"};
+    Object returnValue = "result";
+
+    InterceptContext ctx =
+        InterceptContext.forLocalAfterPhase(
+            "com.example.MyClass",
+            "myMethod",
+            List.of("String"),
+            InterceptType.AFTER,
+            peerUuid,
+            args,
+            returnValue,
+            false,
+            null);
+
+    assertEquals(InterceptPhase.AFTER, ctx.getPhase());
+    assertEquals(InterceptType.AFTER, ctx.getInterceptType());
+    assertEquals(peerUuid, ctx.getInterceptedPeerUuid());
+    assertNull(ctx.getExec()); // Local intercepts have no ExecMessage
+    assertTrue(ctx.isLocalIntercept());
+    assertEquals("result", ctx.getReturnValue());
+    assertFalse(ctx.isVoid());
+    assertNull(ctx.getThrownException());
+  }
+
+  /** Tests that forLocalAfterPhase() with exception captures the thrown exception. */
+  @Test
+  public void testForLocalAfterPhaseWithException() {
+    RuntimeException exception = new RuntimeException("test error");
+
+    InterceptContext ctx =
+        InterceptContext.forLocalAfterPhase(
+            "com.example.MyClass",
+            "myMethod",
+            List.of(),
+            InterceptType.AFTER,
+            peerUuid,
+            null,
+            null,
+            false,
+            exception);
+
+    assertSame(exception, ctx.getThrownException());
+  }
+
+  /** Tests that forLocalAroundPhase() creates a valid AROUND-phase local context. */
+  @Test
+  public void testForLocalAroundPhase() {
+    Object[] args = new Object[] {"arg1", 100};
+
+    InterceptContext ctx =
+        InterceptContext.forLocalAroundPhase(
+            "com.example.Calculator", "add", List.of("int", "int"), peerUuid, args);
+
+    assertEquals(InterceptPhase.BEFORE, ctx.getPhase());
+    assertEquals(InterceptType.AROUND, ctx.getInterceptType());
+    assertEquals(peerUuid, ctx.getInterceptedPeerUuid());
+    assertNull(ctx.getExec()); // Local intercepts have no ExecMessage
+    assertTrue(ctx.isLocalIntercept());
+    assertArrayEquals(new Object[] {"arg1", 100}, ctx.getArgs());
+    assertFalse(ctx.isProceedCalled());
+  }
+
+  // ===== Local AROUND Accessor Tests =====
+
+  /** Tests that setLocalAroundAccessor() sets the accessor correctly. */
+  @Test
+  public void testSetLocalAroundAccessor() {
+    InterceptContext ctx =
+        InterceptContext.forLocalAroundPhase(
+            "com.example.MyClass", "myMethod", List.of(), peerUuid, null);
+
+    LocalAroundAccessor accessor = (args) -> new AfterPhaseData("result", null, false);
+    ctx.setLocalAroundAccessor(accessor);
+
+    // Verify proceed() works with local accessor
+    ProceedResult result = ctx.proceed();
+    assertEquals("result", result.getReturnValue());
+    assertFalse(result.hasException());
+  }
+
+  /** Tests that setLocalAroundAccessor() requires non-null accessor. */
+  @Test
+  public void testSetLocalAroundAccessorRequiresNonNull() {
+    InterceptContext ctx =
+        InterceptContext.forLocalAroundPhase(
+            "com.example.MyClass", "myMethod", List.of(), peerUuid, null);
+
+    try {
+      ctx.setLocalAroundAccessor(null);
+      fail("Expected NullPointerException for null accessor");
+    } catch (NullPointerException e) {
+      assertTrue(e.getMessage().contains("accessor"));
+    }
+  }
+
+  /** Tests that proceed() uses LocalAroundAccessor when set. */
+  @Test
+  public void testProceedWithLocalAroundAccessor() {
+    InterceptContext ctx =
+        InterceptContext.forLocalAroundPhase(
+            "com.example.Calculator", "add", List.of("int", "int"), peerUuid, new Object[] {5, 3});
+
+    // Local accessor that simulates adding two numbers
+    LocalAroundAccessor accessor =
+        (args) -> {
+          int a = (args != null && args.length > 0) ? (Integer) args[0] : 0;
+          int b = (args != null && args.length > 1) ? (Integer) args[1] : 0;
+          return new AfterPhaseData(a + b, null, false);
+        };
+    ctx.setLocalAroundAccessor(accessor);
+
+    ProceedResult result = ctx.proceed();
+
+    assertEquals(8, result.getReturnValue());
+    assertFalse(result.hasException());
+    assertTrue(ctx.isProceedCalled());
+    assertEquals(InterceptPhase.AFTER, ctx.getPhase());
+  }
+
+  /** Tests that proceed() with local accessor handles exceptions. */
+  @Test
+  public void testProceedWithLocalAroundAccessorException() {
+    InterceptContext ctx =
+        InterceptContext.forLocalAroundPhase(
+            "com.example.MyClass", "myMethod", List.of(), peerUuid, null);
+
+    RuntimeException exception = new RuntimeException("method threw");
+    LocalAroundAccessor accessor = (args) -> new AfterPhaseData(null, exception, false);
+    ctx.setLocalAroundAccessor(accessor);
+
+    ProceedResult result = ctx.proceed();
+
+    assertNull(result.getReturnValue());
+    assertTrue(result.hasException());
+    assertSame(exception, result.getThrownException());
+    assertSame(exception, ctx.getThrownException());
+  }
+
+  /** Tests that proceed() with local accessor handles void methods. */
+  @Test
+  public void testProceedWithLocalAroundAccessorVoidMethod() {
+    InterceptContext ctx =
+        InterceptContext.forLocalAroundPhase(
+            "com.example.MyClass", "voidMethod", List.of(), peerUuid, null);
+
+    LocalAroundAccessor accessor = (args) -> new AfterPhaseData(null, null, true);
+    ctx.setLocalAroundAccessor(accessor);
+
+    ProceedResult result = ctx.proceed();
+
+    assertNull(result.getReturnValue());
+    assertFalse(result.hasException());
+    assertTrue(ctx.isVoid());
+  }
+
+  /** Tests that local accessor takes precedence over remote accessor when both are set. */
+  @Test
+  public void testLocalAccessorTakesPrecedenceOverRemote() {
+    InterceptContext ctx =
+        InterceptContext.forLocalAroundPhase(
+            "com.example.MyClass", "myMethod", List.of(), peerUuid, null);
+
+    // Set both accessors
+    AroundSocketAccessor remoteAccessor =
+        (beforeResponse, timeoutMs) -> new AfterPhaseData("remote", null, false);
+    ctx.setAroundAccessor(remoteAccessor, "callback-123", 30000);
+
+    LocalAroundAccessor localAccessor = (args) -> new AfterPhaseData("local", null, false);
+    ctx.setLocalAroundAccessor(localAccessor);
+
+    ProceedResult result = ctx.proceed();
+
+    // Local accessor should be used
+    assertEquals("local", result.getReturnValue());
+  }
+
+  /** Tests that args can be modified before proceed() and are passed to local accessor. */
+  @Test
+  public void testArgsPassedToLocalAccessorAfterModification() {
+    InterceptContext ctx =
+        InterceptContext.forLocalAroundPhase(
+            "com.example.MyClass",
+            "myMethod",
+            List.of("String"),
+            peerUuid,
+            new Object[] {"original"});
+
+    // Modify args before proceed()
+    ctx.setArg(0, "modified");
+
+    final Object[] capturedArgs = new Object[1];
+    LocalAroundAccessor accessor =
+        (args) -> {
+          capturedArgs[0] = args != null ? args[0] : null;
+          return new AfterPhaseData("result", null, false);
+        };
+    ctx.setLocalAroundAccessor(accessor);
+
+    ctx.proceed();
+
+    assertEquals("modified", capturedArgs[0]);
+  }
 }

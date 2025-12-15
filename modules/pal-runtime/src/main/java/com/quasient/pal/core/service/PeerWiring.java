@@ -52,6 +52,8 @@ import java.util.Locale;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -458,5 +460,27 @@ public class PeerWiring extends AbstractModule {
         publishingDropPolicy,
         Integer.parseInt(properties.getProperty("pub.drop.hwm_pct")),
         Integer.parseInt(properties.getProperty("pub.drop.keep_pct")));
+  }
+
+  /**
+   * Provides the executor service for asynchronous local intercept callbacks.
+   *
+   * <p>This executor is used to run BEFORE_ASYNC and AFTER_ASYNC intercept callbacks in the
+   * background without blocking the main execution thread. Uses a cached thread pool for efficient
+   * resource utilization with varying callback loads.
+   *
+   * @return an ExecutorService for async intercept callbacks
+   */
+  @SuppressWarnings({"unused", "CloseableProvides"})
+  @Provides
+  @Singleton
+  @Named("intercept.async.executor")
+  public ExecutorService provideInterceptAsyncExecutor() {
+    return Executors.newCachedThreadPool(
+        runnable -> {
+          Thread thread = new Thread(serviceThreadGroup, runnable, "intercept-async-callback");
+          thread.setDaemon(true);
+          return thread;
+        });
   }
 }
