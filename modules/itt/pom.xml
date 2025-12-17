@@ -79,6 +79,7 @@
                         <include>**/RpcTestSuite.java</include>
                         <include>**/InterceptEndToEndTestSuite.java</include>
                         <include>**/InterceptFlowTestSuite.java</include>
+                        <include>**/LocalInterceptTestSuite.java</include>
 
                         <!-- keep only directories that are NOT covered by suites -->
                         <include>**/cli/**/*IT.java</include>

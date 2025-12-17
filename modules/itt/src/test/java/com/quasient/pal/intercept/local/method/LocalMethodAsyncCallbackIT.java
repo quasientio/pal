@@ -12,9 +12,10 @@ package com.quasient.pal.intercept.local.method;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assert.assertTrue;
 
+import com.quasient.pal.LocalInterceptTestSuite;
 import com.quasient.pal.apps.quantized.intercept.InterceptableApp;
-import com.quasient.pal.apps.quantized.intercept.callback.LocalInterceptCallbacks;
 import com.quasient.pal.common.directory.nodes.InterceptRequest;
 import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.lang.intercept.InterceptableMethodCall;
@@ -25,7 +26,6 @@ import com.quasient.pal.messages.colfer.ExecMessage;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.UUID;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -47,9 +47,8 @@ import org.junit.runners.Parameterized;
 public class LocalMethodAsyncCallbackIT extends AbstractInterceptIT {
 
   private static final String CALLBACK_CLASS =
-      "com.quasient.pal.apps.quantized.intercept.callback.LocalInterceptCallbacks";
+      "com.quasient.pal.apps.callbacks.local.LocalInterceptCallbacks";
   private static final String TARGET_CLASS = InterceptableApp.class.getName();
-  private static final long ASYNC_WAIT_MS = 2000;
 
   /** The invocation path for this test run. */
   private final InvocationPath path;
@@ -71,12 +70,6 @@ public class LocalMethodAsyncCallbackIT extends AbstractInterceptIT {
   @Parameterized.Parameters(name = "{index}: path={0}")
   public static Collection<Object[]> data() {
     return invocationPathParameters();
-  }
-
-  /** Resets callback state before each test. */
-  @Before
-  public void resetCallbacks() {
-    LocalInterceptCallbacks.reset();
   }
 
   /**
@@ -133,16 +126,13 @@ public class LocalMethodAsyncCallbackIT extends AbstractInterceptIT {
    * Tests that a local BEFORE_ASYNC callback is invoked asynchronously.
    *
    * <p>Registers a local BEFORE_ASYNC intercept on multiplyBy, invokes it, and verifies the
-   * callback was invoked asynchronously using a latch.
+   * callback was invoked by checking the application log.
    */
   @Test
   public void testLocalBeforeAsyncCallback() throws Exception {
     logger.info("===== testLocalBeforeAsyncCallback [{}]: TEST STARTED =====", path);
 
-    // 1. Set up latch to wait for async callback
-    LocalInterceptCallbacks.setAsyncLatch(1);
-
-    // 2. Register a local BEFORE_ASYNC intercept on multiplyBy method
+    // 1. Register a local BEFORE_ASYNC intercept on multiplyBy method
     logger.info("Creating local BEFORE_ASYNC intercept request for multiplyBy method");
     InterceptRequest<InterceptableMethodCall> interceptRequest =
         createLocalMethodIntercept(
@@ -151,7 +141,7 @@ public class LocalMethodAsyncCallbackIT extends AbstractInterceptIT {
     register(interceptRequest);
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
 
-    // 3. Create InterceptableApp instance
+    // 2. Create InterceptableApp instance
     ObjectRef appInstance =
         ObjectRef.from(
             invoke(messageBuilder.buildEmptyConstructor(myPeerUuid, TARGET_CLASS))
@@ -159,23 +149,18 @@ public class LocalMethodAsyncCallbackIT extends AbstractInterceptIT {
                 .getObject()
                 .getRef());
 
-    // 4. Invoke multiplyBy
+    // 3. Invoke multiplyBy
     logger.info("Invoking multiplyBy via {} path", path);
     ExecMessage response = invokeMultiplyByOnce(appInstance, 3);
 
-    // 5. Verify invocation succeeded
+    // 4. Verify invocation succeeded
     assertThat(
         "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
 
-    // 6. Wait for async callback
-    boolean completed = LocalInterceptCallbacks.awaitAsyncCallbacks(ASYNC_WAIT_MS);
-    assertThat("Async callback should complete within timeout", completed, is(true));
-
-    // 7. Verify local BEFORE_ASYNC callback was invoked
-    assertThat(
+    // 5. Verify local BEFORE_ASYNC callback was invoked (via log output)
+    assertTrue(
         "Local BEFORE_ASYNC callback should have been invoked",
-        LocalInterceptCallbacks.getBeforeAsyncCallCount(),
-        is(1));
+        LocalInterceptTestSuite.waitForAppLogLine("LOCAL_BEFORE_ASYNC:.*multiplyBy.*count=1"));
 
     logger.info("===== testLocalBeforeAsyncCallback [{}]: TEST COMPLETED =====", path);
   }
@@ -184,16 +169,13 @@ public class LocalMethodAsyncCallbackIT extends AbstractInterceptIT {
    * Tests that a local AFTER_ASYNC callback is invoked asynchronously.
    *
    * <p>Registers a local AFTER_ASYNC intercept on multiplyBy, invokes it, and verifies the callback
-   * was invoked asynchronously using a latch.
+   * was invoked by checking the application log.
    */
   @Test
   public void testLocalAfterAsyncCallback() throws Exception {
     logger.info("===== testLocalAfterAsyncCallback [{}]: TEST STARTED =====", path);
 
-    // 1. Set up latch to wait for async callback
-    LocalInterceptCallbacks.setAsyncLatch(1);
-
-    // 2. Register a local AFTER_ASYNC intercept on multiplyBy method
+    // 1. Register a local AFTER_ASYNC intercept on multiplyBy method
     logger.info("Creating local AFTER_ASYNC intercept request for multiplyBy method");
     InterceptRequest<InterceptableMethodCall> interceptRequest =
         createLocalMethodIntercept(
@@ -202,7 +184,7 @@ public class LocalMethodAsyncCallbackIT extends AbstractInterceptIT {
     register(interceptRequest);
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
 
-    // 3. Create InterceptableApp instance
+    // 2. Create InterceptableApp instance
     ObjectRef appInstance =
         ObjectRef.from(
             invoke(messageBuilder.buildEmptyConstructor(myPeerUuid, TARGET_CLASS))
@@ -210,23 +192,18 @@ public class LocalMethodAsyncCallbackIT extends AbstractInterceptIT {
                 .getObject()
                 .getRef());
 
-    // 4. Invoke multiplyBy
+    // 3. Invoke multiplyBy
     logger.info("Invoking multiplyBy via {} path", path);
     ExecMessage response = invokeMultiplyByOnce(appInstance, 3);
 
-    // 5. Verify invocation succeeded
+    // 4. Verify invocation succeeded
     assertThat(
         "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
 
-    // 6. Wait for async callback
-    boolean completed = LocalInterceptCallbacks.awaitAsyncCallbacks(ASYNC_WAIT_MS);
-    assertThat("Async callback should complete within timeout", completed, is(true));
-
-    // 7. Verify local AFTER_ASYNC callback was invoked
-    assertThat(
+    // 5. Verify local AFTER_ASYNC callback was invoked (via log output)
+    assertTrue(
         "Local AFTER_ASYNC callback should have been invoked",
-        LocalInterceptCallbacks.getAfterAsyncCallCount(),
-        is(1));
+        LocalInterceptTestSuite.waitForAppLogLine("LOCAL_AFTER_ASYNC:.*multiplyBy.*count=1"));
 
     logger.info("===== testLocalAfterAsyncCallback [{}]: TEST COMPLETED =====", path);
   }
@@ -242,17 +219,14 @@ public class LocalMethodAsyncCallbackIT extends AbstractInterceptIT {
 
     final int n = 3;
 
-    // 1. Set up latch to wait for n async callbacks
-    LocalInterceptCallbacks.setAsyncLatch(n);
-
-    // 2. Register a local BEFORE_ASYNC intercept
+    // 1. Register a local BEFORE_ASYNC intercept
     InterceptRequest<InterceptableMethodCall> interceptRequest =
         createLocalMethodIntercept(
             InterceptType.BEFORE_ASYNC, "multiplyBy", "java.lang.Integer", "onBeforeAsync");
     register(interceptRequest);
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
 
-    // 3. Create InterceptableApp instance
+    // 2. Create InterceptableApp instance
     ObjectRef appInstance =
         ObjectRef.from(
             invoke(messageBuilder.buildEmptyConstructor(myPeerUuid, TARGET_CLASS))
@@ -260,7 +234,7 @@ public class LocalMethodAsyncCallbackIT extends AbstractInterceptIT {
                 .getObject()
                 .getRef());
 
-    // 4. Invoke multiplyBy n times
+    // 3. Invoke multiplyBy n times
     logger.info("Invoking multiplyBy {} times via {} path", n, path);
     if (path == InvocationPath.HOT_PATH) {
       ExecMessage response =
@@ -288,15 +262,10 @@ public class LocalMethodAsyncCallbackIT extends AbstractInterceptIT {
       }
     }
 
-    // 5. Wait for all async callbacks
-    boolean completed = LocalInterceptCallbacks.awaitAsyncCallbacks(ASYNC_WAIT_MS);
-    assertThat("All async callbacks should complete within timeout", completed, is(true));
-
-    // 6. Verify local BEFORE_ASYNC callback was invoked n times
-    assertThat(
+    // 4. Verify local BEFORE_ASYNC callbacks were invoked n times (via log output)
+    assertTrue(
         "Local BEFORE_ASYNC callback should have been invoked " + n + " times",
-        LocalInterceptCallbacks.getBeforeAsyncCallCount(),
-        is(n));
+        LocalInterceptTestSuite.waitForAppLogLine("LOCAL_BEFORE_ASYNC:.*multiplyBy.*count=" + n));
 
     logger.info("===== testMultipleLocalBeforeAsyncCallbacks [{}]: TEST COMPLETED =====", path);
   }
@@ -310,10 +279,7 @@ public class LocalMethodAsyncCallbackIT extends AbstractInterceptIT {
   public void testLocalBeforeAndAfterAsyncCallbacks() throws Exception {
     logger.info("===== testLocalBeforeAndAfterAsyncCallbacks [{}]: TEST STARTED =====", path);
 
-    // 1. Set up latch to wait for 2 async callbacks
-    LocalInterceptCallbacks.setAsyncLatch(2);
-
-    // 2. Register both BEFORE_ASYNC and AFTER_ASYNC intercepts
+    // 1. Register both BEFORE_ASYNC and AFTER_ASYNC intercepts
     InterceptRequest<InterceptableMethodCall> beforeAsyncIntercept =
         createLocalMethodIntercept(
             InterceptType.BEFORE_ASYNC, "multiplyBy", "java.lang.Integer", "onBeforeAsync");
@@ -325,7 +291,7 @@ public class LocalMethodAsyncCallbackIT extends AbstractInterceptIT {
     register(afterAsyncIntercept);
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
 
-    // 3. Create InterceptableApp instance
+    // 2. Create InterceptableApp instance
     ObjectRef appInstance =
         ObjectRef.from(
             invoke(messageBuilder.buildEmptyConstructor(myPeerUuid, TARGET_CLASS))
@@ -333,23 +299,17 @@ public class LocalMethodAsyncCallbackIT extends AbstractInterceptIT {
                 .getObject()
                 .getRef());
 
-    // 4. Invoke multiplyBy
+    // 3. Invoke multiplyBy
     ExecMessage response = invokeMultiplyByOnce(appInstance, 3);
     assertThat(response.getRaisedThrowable(), is(nullValue()));
 
-    // 5. Wait for all async callbacks
-    boolean completed = LocalInterceptCallbacks.awaitAsyncCallbacks(ASYNC_WAIT_MS);
-    assertThat("All async callbacks should complete within timeout", completed, is(true));
-
-    // 6. Verify both callbacks were invoked
-    assertThat(
+    // 4. Verify both callbacks were invoked (via log output)
+    assertTrue(
         "Local BEFORE_ASYNC callback should have been invoked",
-        LocalInterceptCallbacks.getBeforeAsyncCallCount(),
-        is(1));
-    assertThat(
+        LocalInterceptTestSuite.waitForAppLogLine("LOCAL_BEFORE_ASYNC:.*multiplyBy.*count=1"));
+    assertTrue(
         "Local AFTER_ASYNC callback should have been invoked",
-        LocalInterceptCallbacks.getAfterAsyncCallCount(),
-        is(1));
+        LocalInterceptTestSuite.waitForAppLogLine("LOCAL_AFTER_ASYNC:.*multiplyBy.*count=1"));
 
     logger.info("===== testLocalBeforeAndAfterAsyncCallbacks [{}]: TEST COMPLETED =====", path);
   }

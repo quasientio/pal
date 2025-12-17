@@ -67,7 +67,14 @@ public class InterceptInformer implements InterceptNodeListener {
   /** Address string of the intercept endpoint to which intercept messages are sent. */
   private final String interceptsAddress;
 
-  /** Unique identifier for the local peer. */
+  /**
+   * Unique identifier for the local peer.
+   *
+   * <p>Note: This field is currently unused but kept for potential future use and because it's
+   * injected via Dagger. Previously used for "self-produced" intercept filtering which was removed
+   * to support local intercepts.
+   */
+  @SuppressWarnings("UnusedVariable")
   private final UUID peerUuid;
 
   /**
@@ -177,25 +184,17 @@ public class InterceptInformer implements InterceptNodeListener {
     switch (event.type()) {
       case INTERCEPT_ADDED -> {
         final InterceptRequest<?> interceptRequest = event.interceptRequest();
-        if (event.peerUuid().equals(peerUuid)) {
-          if (logger.isDebugEnabled()) {
-            logger.debug("Ignoring self-produced intercept request: {}", interceptRequest);
-          }
-          return;
-        }
         Objects.requireNonNull(interceptRequest);
+        // Note: We no longer skip "self-produced" intercepts because local intercepts
+        // (where callback peer == interceptable peer) need to be registered in the
+        // InterceptMatcher for matching to work. The intercept may have been created
+        // by an external process (e.g., test JVM) even if it targets this peer.
         InterceptMessage interceptMessage = messageBuilder.buildInterceptMessage(interceptRequest);
         interceptEventMsg = new InterceptEventMsg(ColferUtils.toBytes(interceptMessage));
       }
       case INTERCEPT_REMOVED -> {
-        if (event.peerUuid().equals(peerUuid)) {
-          if (logger.isDebugEnabled()) {
-            logger.debug(
-                "Ignoring unregistration of self-produced intercept request: {}",
-                event.interceptRequest());
-          }
-          return;
-        }
+        // Note: We no longer skip "self-produced" intercept removals for the same reason
+        // as INTERCEPT_ADDED - local intercepts need to be properly unregistered.
         String interceptMsgId = event.interceptId();
         interceptEventMsg = new InterceptEventMsg(interceptMsgId);
       }

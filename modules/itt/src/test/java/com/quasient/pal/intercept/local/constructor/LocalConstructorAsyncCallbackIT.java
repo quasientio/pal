@@ -10,13 +10,12 @@
 package com.quasient.pal.intercept.local.constructor;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertTrue;
 
+import com.quasient.pal.LocalInterceptTestSuite;
 import com.quasient.pal.apps.quantized.intercept.InterceptableApp;
-import com.quasient.pal.apps.quantized.intercept.callback.LocalInterceptCallbacks;
 import com.quasient.pal.common.directory.nodes.InterceptRequest;
 import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.lang.intercept.InterceptableMethodCall;
@@ -27,7 +26,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -52,15 +50,12 @@ import org.junit.runners.Parameterized;
 public class LocalConstructorAsyncCallbackIT extends AbstractInterceptIT {
 
   private static final String CALLBACK_CLASS =
-      "com.quasient.pal.apps.quantized.intercept.callback.LocalInterceptCallbacks";
+      "com.quasient.pal.apps.callbacks.local.LocalInterceptCallbacks";
   private static final String TARGET_CLASS = InterceptableApp.class.getName();
 
   /** Constructor invocation descriptor for parameterized tests. */
   private static final ConstructorInvocation WITH_COUNTER =
       new ConstructorInvocation("createWithCounter", List.of("java.lang.Integer"));
-
-  /** Timeout for waiting for async callbacks (milliseconds). */
-  private static final long ASYNC_CALLBACK_TIMEOUT_MS = 2000;
 
   /** The invocation path for this test run. */
   private final InvocationPath path;
@@ -82,12 +77,6 @@ public class LocalConstructorAsyncCallbackIT extends AbstractInterceptIT {
   @Parameterized.Parameters(name = "{index}: path={0}")
   public static Collection<Object[]> data() {
     return invocationPathParameters();
-  }
-
-  /** Resets callback state before each test. */
-  @Before
-  public void resetCallbacks() {
-    LocalInterceptCallbacks.reset();
   }
 
   /**
@@ -114,16 +103,13 @@ public class LocalConstructorAsyncCallbackIT extends AbstractInterceptIT {
    * Tests that a local BEFORE_ASYNC callback is invoked for a constructor.
    *
    * <p>Registers a local BEFORE_ASYNC intercept, invokes the constructor, and verifies the async
-   * callback was eventually invoked using a latch.
+   * callback was invoked by checking the application log.
    */
   @Test
   public void testLocalBeforeAsyncConstructorCallback() throws Exception {
     logger.info("===== testLocalBeforeAsyncConstructorCallback [{}]: TEST STARTED =====", path);
 
-    // 1. Set up latch for async callback
-    LocalInterceptCallbacks.setAsyncLatch(1);
-
-    // 2. Register a local BEFORE_ASYNC intercept on parameterized constructor
+    // 1. Register a local BEFORE_ASYNC intercept on parameterized constructor
     logger.info("Creating local BEFORE_ASYNC intercept request for constructor");
     InterceptRequest<InterceptableMethodCall> interceptRequest =
         createLocalConstructorIntercept(
@@ -132,27 +118,19 @@ public class LocalConstructorAsyncCallbackIT extends AbstractInterceptIT {
     register(interceptRequest);
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
 
-    // 3. Invoke constructor
+    // 2. Invoke constructor
     logger.info("Invoking constructor via {} path", path);
     ExecMessage response = invokeConstructor(path, TARGET_CLASS, WITH_COUNTER, new Object[] {42});
 
-    // 4. Verify invocation succeeded
+    // 3. Verify invocation succeeded
     assertThat(
         "Constructor should not raise exception", response.getRaisedThrowable(), is(nullValue()));
 
-    // 5. Wait for async callback to complete
-    boolean callbackInvoked =
-        LocalInterceptCallbacks.awaitAsyncCallbacks(ASYNC_CALLBACK_TIMEOUT_MS);
-    assertTrue("Async BEFORE callback should complete within timeout", callbackInvoked);
-
-    // 6. Verify callback was invoked
-    assertThat(
+    // 4. Verify local BEFORE_ASYNC callback was invoked (via log output)
+    assertTrue(
         "Local BEFORE_ASYNC callback should have been invoked",
-        LocalInterceptCallbacks.getBeforeAsyncCallCount(),
-        is(greaterThan(0)));
+        LocalInterceptTestSuite.waitForAppLogLine("LOCAL_BEFORE_ASYNC:.*method=(new|<init>)"));
 
-    logger.info(
-        "Local BEFORE_ASYNC callback count: {}", LocalInterceptCallbacks.getBeforeAsyncCallCount());
     logger.info("===== testLocalBeforeAsyncConstructorCallback [{}]: TEST COMPLETED =====", path);
   }
 
@@ -160,16 +138,13 @@ public class LocalConstructorAsyncCallbackIT extends AbstractInterceptIT {
    * Tests that a local AFTER_ASYNC callback is invoked for a constructor.
    *
    * <p>Registers a local AFTER_ASYNC intercept, invokes the constructor, and verifies the async
-   * callback was eventually invoked using a latch.
+   * callback was invoked by checking the application log.
    */
   @Test
   public void testLocalAfterAsyncConstructorCallback() throws Exception {
     logger.info("===== testLocalAfterAsyncConstructorCallback [{}]: TEST STARTED =====", path);
 
-    // 1. Set up latch for async callback
-    LocalInterceptCallbacks.setAsyncLatch(1);
-
-    // 2. Register a local AFTER_ASYNC intercept on parameterized constructor
+    // 1. Register a local AFTER_ASYNC intercept on parameterized constructor
     logger.info("Creating local AFTER_ASYNC intercept request for constructor");
     InterceptRequest<InterceptableMethodCall> interceptRequest =
         createLocalConstructorIntercept(
@@ -178,27 +153,19 @@ public class LocalConstructorAsyncCallbackIT extends AbstractInterceptIT {
     register(interceptRequest);
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
 
-    // 3. Invoke constructor
+    // 2. Invoke constructor
     logger.info("Invoking constructor via {} path", path);
     ExecMessage response = invokeConstructor(path, TARGET_CLASS, WITH_COUNTER, new Object[] {42});
 
-    // 4. Verify invocation succeeded
+    // 3. Verify invocation succeeded
     assertThat(
         "Constructor should not raise exception", response.getRaisedThrowable(), is(nullValue()));
 
-    // 5. Wait for async callback to complete
-    boolean callbackInvoked =
-        LocalInterceptCallbacks.awaitAsyncCallbacks(ASYNC_CALLBACK_TIMEOUT_MS);
-    assertTrue("Async AFTER callback should complete within timeout", callbackInvoked);
-
-    // 6. Verify callback was invoked
-    assertThat(
+    // 4. Verify local AFTER_ASYNC callback was invoked (via log output)
+    assertTrue(
         "Local AFTER_ASYNC callback should have been invoked",
-        LocalInterceptCallbacks.getAfterAsyncCallCount(),
-        is(greaterThan(0)));
+        LocalInterceptTestSuite.waitForAppLogLine("LOCAL_AFTER_ASYNC:.*method=(new|<init>)"));
 
-    logger.info(
-        "Local AFTER_ASYNC callback count: {}", LocalInterceptCallbacks.getAfterAsyncCallCount());
     logger.info("===== testLocalAfterAsyncConstructorCallback [{}]: TEST COMPLETED =====", path);
   }
 
@@ -212,10 +179,7 @@ public class LocalConstructorAsyncCallbackIT extends AbstractInterceptIT {
     logger.info(
         "===== testLocalBeforeAndAfterAsyncConstructorCallbacks [{}]: TEST STARTED =====", path);
 
-    // 1. Set up latch for 2 async callbacks
-    LocalInterceptCallbacks.setAsyncLatch(2);
-
-    // 2. Register both BEFORE_ASYNC and AFTER_ASYNC intercepts
+    // 1. Register both BEFORE_ASYNC and AFTER_ASYNC intercepts
     InterceptRequest<InterceptableMethodCall> beforeIntercept =
         createLocalConstructorIntercept(
             InterceptType.BEFORE_ASYNC, "java.lang.Integer", "onBeforeAsync");
@@ -227,27 +191,20 @@ public class LocalConstructorAsyncCallbackIT extends AbstractInterceptIT {
     register(afterIntercept);
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
 
-    // 3. Invoke constructor
+    // 2. Invoke constructor
     logger.info("Invoking constructor via {} path", path);
     ExecMessage response = invokeConstructor(path, TARGET_CLASS, WITH_COUNTER, new Object[] {42});
 
-    // 4. Verify invocation succeeded
+    // 3. Verify invocation succeeded
     assertThat(response.getRaisedThrowable(), is(nullValue()));
 
-    // 5. Wait for async callbacks to complete
-    boolean callbacksInvoked =
-        LocalInterceptCallbacks.awaitAsyncCallbacks(ASYNC_CALLBACK_TIMEOUT_MS);
-    assertTrue("Both async callbacks should complete within timeout", callbacksInvoked);
-
-    // 6. Verify both callbacks were invoked
-    assertThat(
+    // 4. Verify both callbacks were invoked (via log output)
+    assertTrue(
         "Local BEFORE_ASYNC callback should have been invoked",
-        LocalInterceptCallbacks.getBeforeAsyncCallCount(),
-        is(greaterThan(0)));
-    assertThat(
+        LocalInterceptTestSuite.waitForAppLogLine("LOCAL_BEFORE_ASYNC:.*method=(new|<init>)"));
+    assertTrue(
         "Local AFTER_ASYNC callback should have been invoked",
-        LocalInterceptCallbacks.getAfterAsyncCallCount(),
-        is(greaterThan(0)));
+        LocalInterceptTestSuite.waitForAppLogLine("LOCAL_AFTER_ASYNC:.*method=(new|<init>)"));
 
     logger.info(
         "===== testLocalBeforeAndAfterAsyncConstructorCallbacks [{}]: TEST COMPLETED =====", path);

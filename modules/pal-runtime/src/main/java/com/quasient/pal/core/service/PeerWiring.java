@@ -20,6 +20,7 @@ import com.quasient.pal.common.runtime.DispatchForwarder;
 import com.quasient.pal.common.runtime.ProxyDispatcher;
 import com.quasient.pal.core.annotations.AnnotationProcessor;
 import com.quasient.pal.core.annotations.AnnotationsProcessor;
+import com.quasient.pal.core.dispatcher.InterceptAsyncThreadFactory;
 import com.quasient.pal.core.execution.java.AspectProxyDispatcher;
 import com.quasient.pal.core.execution.java.CustomClassloader;
 import com.quasient.pal.core.internal.concurrent.HwmMessageQueue;
@@ -469,6 +470,9 @@ public class PeerWiring extends AbstractModule {
    * background without blocking the main execution thread. Uses a cached thread pool for efficient
    * resource utilization with varying callback loads.
    *
+   * <p>The executor uses {@link InterceptAsyncThreadFactory} which ensures threads inherit the
+   * {@link CustomClassloader} for proper class resolution during callback execution.
+   *
    * @return an ExecutorService for async intercept callbacks
    */
   @SuppressWarnings({"unused", "CloseableProvides"})
@@ -477,10 +481,6 @@ public class PeerWiring extends AbstractModule {
   @Named("intercept.async.executor")
   public ExecutorService provideInterceptAsyncExecutor() {
     return Executors.newCachedThreadPool(
-        runnable -> {
-          Thread thread = new Thread(serviceThreadGroup, runnable, "intercept-async-callback");
-          thread.setDaemon(true);
-          return thread;
-        });
+        new InterceptAsyncThreadFactory(serviceThreadGroup, customClassloader));
   }
 }

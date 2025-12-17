@@ -7,15 +7,18 @@
  * Change Date: 2029-10-01
  * Change License: Apache 2.0
  */
-package com.quasient.pal.apps.quantized.intercept.callback;
+package com.quasient.pal.apps.callbacks.local;
 
 import com.quasient.pal.common.lang.intercept.InterceptCallbackResponse;
 import com.quasient.pal.common.lang.intercept.InterceptContext;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Callback class for local intercept integration tests.
@@ -29,7 +32,13 @@ import java.util.concurrent.atomic.AtomicReference;
  * {@link #reset()}.
  */
 @SuppressWarnings("unused") // Callbacks invoked via reflection
+@SuppressFBWarnings(
+    value = {"EI_EXPOSE_STATIC_REP2", "MS_EXPOSE_REP"},
+    justification = "Test helper class; mutable static state is intentional for test coordination")
 public final class LocalInterceptCallbacks {
+
+  /** Logger for callback invocations - tests verify callbacks via log output. */
+  private static final Logger logger = LoggerFactory.getLogger(LocalInterceptCallbacks.class);
 
   /** Counter for BEFORE callback invocations. */
   private static final AtomicInteger beforeCallCount = new AtomicInteger(0);
@@ -314,10 +323,16 @@ public final class LocalInterceptCallbacks {
    * @return the intercept response
    */
   public static InterceptCallbackResponse onBefore(InterceptContext ctx) {
-    beforeCallCount.incrementAndGet();
+    int count = beforeCallCount.incrementAndGet();
     beforeClassNames.add(extractClassName(ctx));
     beforeMethodNames.add(extractMethodName(ctx));
     lastContext.set(ctx);
+
+    logger.info(
+        "LOCAL_BEFORE: class={}, method={}, count={}",
+        extractClassName(ctx),
+        extractMethodName(ctx),
+        count);
 
     // Check for configured exception
     if (beforeExceptionToThrow != null) {
@@ -339,13 +354,19 @@ public final class LocalInterceptCallbacks {
    * @return the intercept response
    */
   public static InterceptCallbackResponse onAfter(InterceptContext ctx) {
-    afterCallCount.incrementAndGet();
+    int count = afterCallCount.incrementAndGet();
     afterClassNames.add(extractClassName(ctx));
     afterMethodNames.add(extractMethodName(ctx));
     if (!ctx.isVoid()) {
       afterReturnValues.add(ctx.getReturnValue());
     }
     lastContext.set(ctx);
+
+    logger.info(
+        "LOCAL_AFTER: class={}, method={}, count={}",
+        extractClassName(ctx),
+        extractMethodName(ctx),
+        count);
 
     // Check for configured exception
     if (afterExceptionToThrow != null) {
@@ -367,8 +388,10 @@ public final class LocalInterceptCallbacks {
    * @return the intercept response
    */
   public static InterceptCallbackResponse onAround(InterceptContext ctx) {
-    aroundCallCount.incrementAndGet();
+    int count = aroundCallCount.incrementAndGet();
     lastContext.set(ctx);
+
+    logger.info("LOCAL_AROUND: proceeding, count={}", count);
 
     // Proceed with the original invocation
     ctx.proceed();
@@ -408,11 +431,18 @@ public final class LocalInterceptCallbacks {
    * @return the intercept response
    */
   public static InterceptCallbackResponse onBeforeAsync(InterceptContext ctx) {
-    beforeAsyncCallCount.incrementAndGet();
+    int count = beforeAsyncCallCount.incrementAndGet();
     beforeClassNames.add(extractClassName(ctx));
     beforeMethodNames.add(extractMethodName(ctx));
     lastContext.set(ctx);
     asyncLatch.countDown();
+
+    logger.info(
+        "LOCAL_BEFORE_ASYNC: class={}, method={}, count={}",
+        extractClassName(ctx),
+        extractMethodName(ctx),
+        count);
+
     return new InterceptCallbackResponse();
   }
 
@@ -423,7 +453,7 @@ public final class LocalInterceptCallbacks {
    * @return the intercept response
    */
   public static InterceptCallbackResponse onAfterAsync(InterceptContext ctx) {
-    afterAsyncCallCount.incrementAndGet();
+    int count = afterAsyncCallCount.incrementAndGet();
     afterClassNames.add(extractClassName(ctx));
     afterMethodNames.add(extractMethodName(ctx));
     if (!ctx.isVoid()) {
@@ -431,6 +461,13 @@ public final class LocalInterceptCallbacks {
     }
     lastContext.set(ctx);
     asyncLatch.countDown();
+
+    logger.info(
+        "LOCAL_AFTER_ASYNC: class={}, method={}, count={}",
+        extractClassName(ctx),
+        extractMethodName(ctx),
+        count);
+
     return new InterceptCallbackResponse();
   }
 }

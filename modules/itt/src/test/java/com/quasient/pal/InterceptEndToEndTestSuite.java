@@ -27,6 +27,7 @@ import com.quasient.pal.intercept.endtoend.method.AfterMethodCallbackIT;
 import com.quasient.pal.intercept.endtoend.method.AroundMethodCallbackIT;
 import com.quasient.pal.intercept.endtoend.method.BeforeMethodAsyncCallbackIT;
 import com.quasient.pal.intercept.endtoend.method.BeforeMethodCallbackIT;
+import com.quasient.pal.intercept.local.combined.LocalAndRemoteCombinedIT;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -109,7 +110,10 @@ import org.slf4j.LoggerFactory;
   AroundFieldCallbackIT.class,
   // Field callback handler tests (ASYNC)
   BeforeFieldAsyncCallbackIT.class,
-  AfterFieldAsyncCallbackIT.class
+  AfterFieldAsyncCallbackIT.class,
+
+  // Combined local and remote intercept tests
+  LocalAndRemoteCombinedIT.class
 })
 public class InterceptEndToEndTestSuite extends AbstractIntegrationTest {
 

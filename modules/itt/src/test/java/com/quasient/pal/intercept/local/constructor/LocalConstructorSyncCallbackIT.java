@@ -10,12 +10,12 @@
 package com.quasient.pal.intercept.local.constructor;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assert.assertTrue;
 
+import com.quasient.pal.LocalInterceptTestSuite;
 import com.quasient.pal.apps.quantized.intercept.InterceptableApp;
-import com.quasient.pal.apps.quantized.intercept.callback.LocalInterceptCallbacks;
 import com.quasient.pal.common.directory.nodes.InterceptRequest;
 import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.lang.intercept.InterceptableMethodCall;
@@ -26,7 +26,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -53,7 +52,7 @@ import org.junit.runners.Parameterized;
 public class LocalConstructorSyncCallbackIT extends AbstractInterceptIT {
 
   private static final String CALLBACK_CLASS =
-      "com.quasient.pal.apps.quantized.intercept.callback.LocalInterceptCallbacks";
+      "com.quasient.pal.apps.callbacks.local.LocalInterceptCallbacks";
   private static final String TARGET_CLASS = InterceptableApp.class.getName();
 
   /** Constructor invocation descriptor for parameterized tests. */
@@ -82,12 +81,6 @@ public class LocalConstructorSyncCallbackIT extends AbstractInterceptIT {
     return invocationPathParameters();
   }
 
-  /** Resets callback state before each test. */
-  @Before
-  public void resetCallbacks() {
-    LocalInterceptCallbacks.reset();
-  }
-
   /**
    * Creates a local intercept request for a constructor where callback peer = interceptable peer.
    *
@@ -114,7 +107,7 @@ public class LocalConstructorSyncCallbackIT extends AbstractInterceptIT {
    * Tests that a local BEFORE callback is invoked for a constructor.
    *
    * <p>Registers a local BEFORE intercept on InterceptableApp(Integer) constructor, invokes it, and
-   * verifies the callback was invoked by checking the counter in LocalInterceptCallbacks.
+   * verifies the callback was invoked by checking the application log.
    */
   @Test
   public void testLocalBeforeConstructorCallback() throws Exception {
@@ -137,14 +130,11 @@ public class LocalConstructorSyncCallbackIT extends AbstractInterceptIT {
     assertThat(
         "Constructor should not raise exception", response.getRaisedThrowable(), is(nullValue()));
 
-    // 4. Verify local BEFORE callback was invoked
-    Thread.sleep(50);
-    assertThat(
+    // 4. Verify local BEFORE callback was invoked (via log output)
+    assertTrue(
         "Local BEFORE callback should have been invoked",
-        LocalInterceptCallbacks.getBeforeCallCount(),
-        is(greaterThan(0)));
+        LocalInterceptTestSuite.waitForAppLogLine("LOCAL_BEFORE:.*method=(new|<init>)"));
 
-    logger.info("Local BEFORE callback count: {}", LocalInterceptCallbacks.getBeforeCallCount());
     logger.info("===== testLocalBeforeConstructorCallback [{}]: TEST COMPLETED =====", path);
   }
 
@@ -152,7 +142,7 @@ public class LocalConstructorSyncCallbackIT extends AbstractInterceptIT {
    * Tests that a local AFTER callback is invoked for a constructor.
    *
    * <p>Registers a local AFTER intercept on InterceptableApp(Integer) constructor, invokes it, and
-   * verifies the callback was invoked by checking the counter in LocalInterceptCallbacks.
+   * verifies the callback was invoked by checking the application log.
    */
   @Test
   public void testLocalAfterConstructorCallback() throws Exception {
@@ -175,14 +165,11 @@ public class LocalConstructorSyncCallbackIT extends AbstractInterceptIT {
     assertThat(
         "Constructor should not raise exception", response.getRaisedThrowable(), is(nullValue()));
 
-    // 4. Verify local AFTER callback was invoked
-    Thread.sleep(50);
-    assertThat(
+    // 4. Verify local AFTER callback was invoked (via log output)
+    assertTrue(
         "Local AFTER callback should have been invoked",
-        LocalInterceptCallbacks.getAfterCallCount(),
-        is(greaterThan(0)));
+        LocalInterceptTestSuite.waitForAppLogLine("LOCAL_AFTER:.*method=(new|<init>)"));
 
-    logger.info("Local AFTER callback count: {}", LocalInterceptCallbacks.getAfterCallCount());
     logger.info("===== testLocalAfterConstructorCallback [{}]: TEST COMPLETED =====", path);
   }
 
@@ -212,16 +199,13 @@ public class LocalConstructorSyncCallbackIT extends AbstractInterceptIT {
     // 3. Verify invocation succeeded
     assertThat(response.getRaisedThrowable(), is(nullValue()));
 
-    // 4. Verify both callbacks were invoked
-    Thread.sleep(50);
-    assertThat(
+    // 4. Verify both callbacks were invoked (via log output)
+    assertTrue(
         "Local BEFORE callback should have been invoked",
-        LocalInterceptCallbacks.getBeforeCallCount(),
-        is(greaterThan(0)));
-    assertThat(
+        LocalInterceptTestSuite.waitForAppLogLine("LOCAL_BEFORE:.*method=(new|<init>)"));
+    assertTrue(
         "Local AFTER callback should have been invoked",
-        LocalInterceptCallbacks.getAfterCallCount(),
-        is(greaterThan(0)));
+        LocalInterceptTestSuite.waitForAppLogLine("LOCAL_AFTER:.*method=(new|<init>)"));
 
     logger.info(
         "===== testLocalBeforeAndAfterConstructorCallbacks [{}]: TEST COMPLETED =====", path);
@@ -253,14 +237,11 @@ public class LocalConstructorSyncCallbackIT extends AbstractInterceptIT {
     assertThat(
         "Constructor should not raise exception", response.getRaisedThrowable(), is(nullValue()));
 
-    // 4. Verify local AROUND callback was invoked
-    Thread.sleep(50);
-    assertThat(
+    // 4. Verify local AROUND callback was invoked (via log output)
+    assertTrue(
         "Local AROUND callback should have been invoked",
-        LocalInterceptCallbacks.getAroundCallCount(),
-        is(greaterThan(0)));
+        LocalInterceptTestSuite.waitForAppLogLine("LOCAL_AROUND:.*"));
 
-    logger.info("Local AROUND callback count: {}", LocalInterceptCallbacks.getAroundCallCount());
     logger.info("===== testLocalAroundConstructorCallback [{}]: TEST COMPLETED =====", path);
   }
 }

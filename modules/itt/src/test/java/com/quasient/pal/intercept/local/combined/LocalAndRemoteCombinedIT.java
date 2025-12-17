@@ -10,7 +10,6 @@
 package com.quasient.pal.intercept.local.combined;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertTrue;
@@ -18,7 +17,6 @@ import static org.junit.Assert.assertTrue;
 import com.quasient.pal.InterceptEndToEndTestSuite;
 import com.quasient.pal.apps.callbacks.method.MethodHandlers;
 import com.quasient.pal.apps.quantized.intercept.InterceptableApp;
-import com.quasient.pal.apps.quantized.intercept.callback.LocalInterceptCallbacks;
 import com.quasient.pal.common.directory.nodes.InterceptRequest;
 import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.lang.intercept.InterceptableMethodCall;
@@ -29,7 +27,6 @@ import com.quasient.pal.messages.colfer.ExecMessage;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.UUID;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -59,7 +56,7 @@ import org.junit.runners.Parameterized;
 public class LocalAndRemoteCombinedIT extends AbstractInterceptIT {
 
   private static final String LOCAL_CALLBACK_CLASS =
-      "com.quasient.pal.apps.quantized.intercept.callback.LocalInterceptCallbacks";
+      "com.quasient.pal.apps.callbacks.local.LocalInterceptCallbacks";
   private static final String REMOTE_CALLBACK_CLASS = MethodHandlers.class.getName();
   private static final String TARGET_CLASS = InterceptableApp.class.getName();
 
@@ -83,12 +80,6 @@ public class LocalAndRemoteCombinedIT extends AbstractInterceptIT {
   @Parameterized.Parameters(name = "{index}: path={0}")
   public static Collection<Object[]> data() {
     return invocationPathParameters();
-  }
-
-  /** Resets callback state before each test. */
-  @Before
-  public void resetCallbacks() {
-    LocalInterceptCallbacks.reset();
   }
 
   /**
@@ -204,12 +195,10 @@ public class LocalAndRemoteCombinedIT extends AbstractInterceptIT {
     assertThat(
         "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
 
-    // 6. Verify local BEFORE callback was invoked
-    Thread.sleep(50);
-    assertThat(
+    // 6. Verify local BEFORE callback was invoked (via log output)
+    assertTrue(
         "Local BEFORE callback should have been invoked",
-        LocalInterceptCallbacks.getBeforeCallCount(),
-        is(greaterThan(0)));
+        InterceptEndToEndTestSuite.waitForAppLogLine("LOCAL_BEFORE:.*multiplyBy.*count=1"));
 
     // 7. Verify remote BEFORE callback was invoked (via app log)
     assertTrue(
@@ -260,12 +249,10 @@ public class LocalAndRemoteCombinedIT extends AbstractInterceptIT {
     assertThat(
         "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
 
-    // 6. Verify local AFTER callback was invoked
-    Thread.sleep(50);
-    assertThat(
+    // 6. Verify local AFTER callback was invoked (via log output)
+    assertTrue(
         "Local AFTER callback should have been invoked",
-        LocalInterceptCallbacks.getAfterCallCount(),
-        is(greaterThan(0)));
+        InterceptEndToEndTestSuite.waitForAppLogLine("LOCAL_AFTER:.*multiplyBy.*count=1"));
 
     // 7. Verify remote AFTER callback was invoked (via app log)
     assertTrue(
@@ -318,16 +305,13 @@ public class LocalAndRemoteCombinedIT extends AbstractInterceptIT {
     assertThat(
         "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
 
-    // 5. Verify local callbacks were invoked
-    Thread.sleep(50);
-    assertThat(
+    // 5. Verify local callbacks were invoked (via log output)
+    assertTrue(
         "Local BEFORE callback should have been invoked",
-        LocalInterceptCallbacks.getBeforeCallCount(),
-        is(greaterThan(0)));
-    assertThat(
+        InterceptEndToEndTestSuite.waitForAppLogLine("LOCAL_BEFORE:.*multiplyBy.*count=1"));
+    assertTrue(
         "Local AFTER callback should have been invoked",
-        LocalInterceptCallbacks.getAfterCallCount(),
-        is(greaterThan(0)));
+        InterceptEndToEndTestSuite.waitForAppLogLine("LOCAL_AFTER:.*multiplyBy.*count=1"));
 
     // 6. Verify remote callbacks were invoked (via app log - should see at least 2 logs)
     // Note: We can't easily distinguish between remote BEFORE and AFTER logs with noOp
@@ -348,15 +332,12 @@ public class LocalAndRemoteCombinedIT extends AbstractInterceptIT {
   public void testLocalAsyncWithRemoteSyncCallbacks() throws Exception {
     logger.info("===== testLocalAsyncWithRemoteSyncCallbacks [{}]: TEST STARTED =====", path);
 
-    // 1. Set up latch for async callback
-    LocalInterceptCallbacks.setAsyncLatch(1);
-
-    // 2. Register a local BEFORE_ASYNC intercept
+    // 1. Register a local BEFORE_ASYNC intercept
     InterceptRequest<InterceptableMethodCall> localAsyncIntercept =
         createLocalMethodIntercept(
             InterceptType.BEFORE_ASYNC, "multiplyBy", "java.lang.Integer", "onBeforeAsync");
 
-    // 3. Register a remote BEFORE intercept
+    // 2. Register a remote BEFORE intercept
     InterceptRequest<InterceptableMethodCall> remoteIntercept =
         createRemoteMethodIntercept(
             InterceptType.BEFORE, "multiplyBy", "java.lang.Integer", "noOp");
@@ -365,7 +346,7 @@ public class LocalAndRemoteCombinedIT extends AbstractInterceptIT {
     register(remoteIntercept);
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
 
-    // 4. Create InterceptableApp instance
+    // 3. Create InterceptableApp instance
     ObjectRef appInstance =
         ObjectRef.from(
             invoke(messageBuilder.buildEmptyConstructor(myPeerUuid, TARGET_CLASS))
@@ -373,25 +354,20 @@ public class LocalAndRemoteCombinedIT extends AbstractInterceptIT {
                 .getObject()
                 .getRef());
 
-    // 5. Invoke multiplyBy
+    // 4. Invoke multiplyBy
     logger.info("Invoking multiplyBy via {} path", path);
     ExecMessage response = invokeMultiplyByOnce(appInstance, 3);
 
-    // 6. Verify invocation succeeded
+    // 5. Verify invocation succeeded
     assertThat(
         "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
 
-    // 7. Wait for async callback to complete
-    boolean asyncInvoked = LocalInterceptCallbacks.awaitAsyncCallbacks(2000);
-    assertTrue("Async callback should complete within timeout", asyncInvoked);
-
-    // 8. Verify local async callback was invoked
-    assertThat(
+    // 6. Verify local async callback was invoked (via log output)
+    assertTrue(
         "Local BEFORE_ASYNC callback should have been invoked",
-        LocalInterceptCallbacks.getBeforeAsyncCallCount(),
-        is(greaterThan(0)));
+        InterceptEndToEndTestSuite.waitForAppLogLine("LOCAL_BEFORE_ASYNC:.*multiplyBy.*count=1"));
 
-    // 9. Verify remote callback was invoked
+    // 7. Verify remote callback was invoked
     assertTrue(
         "Expected remote noOp callback to log",
         InterceptEndToEndTestSuite.waitForAppLogLine("noOp: no mutations"));

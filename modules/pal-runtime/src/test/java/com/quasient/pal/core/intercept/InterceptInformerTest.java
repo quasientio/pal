@@ -186,12 +186,19 @@ public class InterceptInformerTest extends ZmqEnabledTest {
     assertThat(requestsToUnregister.size(), is(1));
   }
 
+  /**
+   * Tests that intercepts targeting this peer (local intercepts) ARE registered.
+   *
+   * <p>Previously, intercepts where the interceptable peer == this peer were ignored as
+   * "self-produced". This was changed to support local intercepts where the callback peer == this
+   * peer. Now all intercepts are registered regardless of the target peer.
+   */
   @Test
   public void interceptRequestFromThisPeer() {
     var interceptRequest =
         new InterceptRequest<>(
             UUID.randomUUID(),
-            peerUuid, // this peer (self)
+            peerUuid, // this peer (self) - local intercept
             InterceptType.BEFORE,
             "java.io.PrintStream",
             "org.package.Callback",
@@ -215,7 +222,7 @@ public class InterceptInformerTest extends ZmqEnabledTest {
             interceptRequest);
     interceptInformer.interceptEvent(interceptEvent);
 
-    // verify that NO intercept messages were sent
-    assertThat(interceptRequestMessages.size(), is(0));
+    // verify that intercept message WAS sent (local intercepts are now registered)
+    assertThat(interceptRequestMessages.size(), is(1));
   }
 }

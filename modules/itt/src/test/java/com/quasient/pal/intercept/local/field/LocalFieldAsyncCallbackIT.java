@@ -10,13 +10,12 @@
 package com.quasient.pal.intercept.local.field;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertTrue;
 
+import com.quasient.pal.LocalInterceptTestSuite;
 import com.quasient.pal.apps.quantized.intercept.InterceptableApp;
-import com.quasient.pal.apps.quantized.intercept.callback.LocalInterceptCallbacks;
 import com.quasient.pal.common.directory.nodes.InterceptRequest;
 import com.quasient.pal.common.lang.FieldOpType;
 import com.quasient.pal.common.lang.intercept.InterceptType;
@@ -27,7 +26,6 @@ import com.quasient.pal.intercept.InvocationPath;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import java.util.Collection;
 import java.util.UUID;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -52,15 +50,12 @@ import org.junit.runners.Parameterized;
 public class LocalFieldAsyncCallbackIT extends AbstractInterceptIT {
 
   private static final String CALLBACK_CLASS =
-      "com.quasient.pal.apps.quantized.intercept.callback.LocalInterceptCallbacks";
+      "com.quasient.pal.apps.callbacks.local.LocalInterceptCallbacks";
   private static final String TARGET_CLASS = InterceptableApp.class.getName();
 
   /** Field invocation descriptor for instance field tests. */
   private static final FieldInvocation COUNTER =
       new FieldInvocation("getCounter", "setCounter", "counter", "java.lang.Integer", false);
-
-  /** Timeout for waiting for async callbacks (milliseconds). */
-  private static final long ASYNC_CALLBACK_TIMEOUT_MS = 2000;
 
   /** The invocation path for this test run. */
   private final InvocationPath path;
@@ -82,12 +77,6 @@ public class LocalFieldAsyncCallbackIT extends AbstractInterceptIT {
   @Parameterized.Parameters(name = "{index}: path={0}")
   public static Collection<Object[]> data() {
     return invocationPathParameters();
-  }
-
-  /** Resets callback state before each test. */
-  @Before
-  public void resetCallbacks() {
-    LocalInterceptCallbacks.reset();
   }
 
   /**
@@ -119,16 +108,13 @@ public class LocalFieldAsyncCallbackIT extends AbstractInterceptIT {
    * Tests that a local BEFORE_ASYNC callback is invoked for field GET.
    *
    * <p>Registers a local BEFORE_ASYNC intercept, invokes the field GET, and verifies the async
-   * callback was eventually invoked using a latch.
+   * callback was invoked by checking the application log.
    */
   @Test
   public void testLocalBeforeAsyncFieldGetCallback() throws Exception {
     logger.info("===== testLocalBeforeAsyncFieldGetCallback [{}]: TEST STARTED =====", path);
 
-    // 1. Set up latch for async callback
-    LocalInterceptCallbacks.setAsyncLatch(1);
-
-    // 2. Register a local BEFORE_ASYNC intercept on counter field GET
+    // 1. Register a local BEFORE_ASYNC intercept on counter field GET
     InterceptRequest<InterceptableFieldOp> interceptRequest =
         createLocalFieldIntercept(
             InterceptType.BEFORE_ASYNC, "counter", FieldOpType.GET, "onBeforeAsync");
@@ -136,7 +122,7 @@ public class LocalFieldAsyncCallbackIT extends AbstractInterceptIT {
     register(interceptRequest);
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
 
-    // 3. Create InterceptableApp instance
+    // 2. Create InterceptableApp instance
     ExecMessage createResponse =
         invoke(
             messageBuilder.buildClassMethod(
@@ -149,24 +135,18 @@ public class LocalFieldAsyncCallbackIT extends AbstractInterceptIT {
                 new Object[] {42}));
     ObjectRef appInstance = ObjectRef.from(createResponse.getReturnValue().getObject().getRef());
 
-    // 4. Invoke field GET
+    // 3. Invoke field GET
     logger.info("Invoking getCounter via {} path", path);
     ExecMessage response = invokeFieldGet(path, TARGET_CLASS, COUNTER, appInstance);
 
-    // 5. Verify invocation succeeded
+    // 4. Verify invocation succeeded
     assertThat(
         "Field GET should not raise exception", response.getRaisedThrowable(), is(nullValue()));
 
-    // 6. Wait for async callback to complete
-    boolean callbackInvoked =
-        LocalInterceptCallbacks.awaitAsyncCallbacks(ASYNC_CALLBACK_TIMEOUT_MS);
-    assertTrue("Async BEFORE callback should complete within timeout", callbackInvoked);
-
-    // 7. Verify callback was invoked
-    assertThat(
+    // 5. Verify local BEFORE_ASYNC callback was invoked (via log output)
+    assertTrue(
         "Local BEFORE_ASYNC callback should have been invoked",
-        LocalInterceptCallbacks.getBeforeAsyncCallCount(),
-        is(greaterThan(0)));
+        LocalInterceptTestSuite.waitForAppLogLine("LOCAL_BEFORE_ASYNC:.*method=counter"));
 
     logger.info("===== testLocalBeforeAsyncFieldGetCallback [{}]: TEST COMPLETED =====", path);
   }
@@ -175,16 +155,13 @@ public class LocalFieldAsyncCallbackIT extends AbstractInterceptIT {
    * Tests that a local AFTER_ASYNC callback is invoked for field GET.
    *
    * <p>Registers a local AFTER_ASYNC intercept, invokes the field GET, and verifies the async
-   * callback was eventually invoked using a latch.
+   * callback was invoked by checking the application log.
    */
   @Test
   public void testLocalAfterAsyncFieldGetCallback() throws Exception {
     logger.info("===== testLocalAfterAsyncFieldGetCallback [{}]: TEST STARTED =====", path);
 
-    // 1. Set up latch for async callback
-    LocalInterceptCallbacks.setAsyncLatch(1);
-
-    // 2. Register a local AFTER_ASYNC intercept on counter field GET
+    // 1. Register a local AFTER_ASYNC intercept on counter field GET
     InterceptRequest<InterceptableFieldOp> interceptRequest =
         createLocalFieldIntercept(
             InterceptType.AFTER_ASYNC, "counter", FieldOpType.GET, "onAfterAsync");
@@ -192,7 +169,7 @@ public class LocalFieldAsyncCallbackIT extends AbstractInterceptIT {
     register(interceptRequest);
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
 
-    // 3. Create InterceptableApp instance
+    // 2. Create InterceptableApp instance
     ExecMessage createResponse =
         invoke(
             messageBuilder.buildClassMethod(
@@ -205,24 +182,18 @@ public class LocalFieldAsyncCallbackIT extends AbstractInterceptIT {
                 new Object[] {42}));
     ObjectRef appInstance = ObjectRef.from(createResponse.getReturnValue().getObject().getRef());
 
-    // 4. Invoke field GET
+    // 3. Invoke field GET
     logger.info("Invoking getCounter via {} path", path);
     ExecMessage response = invokeFieldGet(path, TARGET_CLASS, COUNTER, appInstance);
 
-    // 5. Verify invocation succeeded
+    // 4. Verify invocation succeeded
     assertThat(
         "Field GET should not raise exception", response.getRaisedThrowable(), is(nullValue()));
 
-    // 6. Wait for async callback to complete
-    boolean callbackInvoked =
-        LocalInterceptCallbacks.awaitAsyncCallbacks(ASYNC_CALLBACK_TIMEOUT_MS);
-    assertTrue("Async AFTER callback should complete within timeout", callbackInvoked);
-
-    // 7. Verify callback was invoked
-    assertThat(
+    // 5. Verify local AFTER_ASYNC callback was invoked (via log output)
+    assertTrue(
         "Local AFTER_ASYNC callback should have been invoked",
-        LocalInterceptCallbacks.getAfterAsyncCallCount(),
-        is(greaterThan(0)));
+        LocalInterceptTestSuite.waitForAppLogLine("LOCAL_AFTER_ASYNC:.*method=counter"));
 
     logger.info("===== testLocalAfterAsyncFieldGetCallback [{}]: TEST COMPLETED =====", path);
   }
@@ -235,16 +206,13 @@ public class LocalFieldAsyncCallbackIT extends AbstractInterceptIT {
    * Tests that a local BEFORE_ASYNC callback is invoked for field PUT.
    *
    * <p>Registers a local BEFORE_ASYNC intercept, invokes the field PUT, and verifies the async
-   * callback was eventually invoked using a latch.
+   * callback was invoked by checking the application log.
    */
   @Test
   public void testLocalBeforeAsyncFieldPutCallback() throws Exception {
     logger.info("===== testLocalBeforeAsyncFieldPutCallback [{}]: TEST STARTED =====", path);
 
-    // 1. Set up latch for async callback
-    LocalInterceptCallbacks.setAsyncLatch(1);
-
-    // 2. Register a local BEFORE_ASYNC intercept on counter field PUT
+    // 1. Register a local BEFORE_ASYNC intercept on counter field PUT
     InterceptRequest<InterceptableFieldOp> interceptRequest =
         createLocalFieldIntercept(
             InterceptType.BEFORE_ASYNC, "counter", FieldOpType.PUT, "onBeforeAsync");
@@ -252,29 +220,23 @@ public class LocalFieldAsyncCallbackIT extends AbstractInterceptIT {
     register(interceptRequest);
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
 
-    // 3. Create InterceptableApp instance
+    // 2. Create InterceptableApp instance
     ExecMessage createResponse =
         invoke(messageBuilder.buildEmptyConstructor(myPeerUuid, TARGET_CLASS));
     ObjectRef appInstance = ObjectRef.from(createResponse.getReturnValue().getObject().getRef());
 
-    // 4. Invoke field PUT
+    // 3. Invoke field PUT
     logger.info("Invoking setCounter via {} path", path);
     ExecMessage response = invokeFieldPut(path, TARGET_CLASS, COUNTER, appInstance, 100);
 
-    // 5. Verify invocation succeeded
+    // 4. Verify invocation succeeded
     assertThat(
         "Field PUT should not raise exception", response.getRaisedThrowable(), is(nullValue()));
 
-    // 6. Wait for async callback to complete
-    boolean callbackInvoked =
-        LocalInterceptCallbacks.awaitAsyncCallbacks(ASYNC_CALLBACK_TIMEOUT_MS);
-    assertTrue("Async BEFORE callback should complete within timeout", callbackInvoked);
-
-    // 7. Verify callback was invoked
-    assertThat(
+    // 5. Verify local BEFORE_ASYNC callback was invoked (via log output)
+    assertTrue(
         "Local BEFORE_ASYNC callback should have been invoked",
-        LocalInterceptCallbacks.getBeforeAsyncCallCount(),
-        is(greaterThan(0)));
+        LocalInterceptTestSuite.waitForAppLogLine("LOCAL_BEFORE_ASYNC:.*method=counter"));
 
     logger.info("===== testLocalBeforeAsyncFieldPutCallback [{}]: TEST COMPLETED =====", path);
   }
@@ -283,16 +245,13 @@ public class LocalFieldAsyncCallbackIT extends AbstractInterceptIT {
    * Tests that a local AFTER_ASYNC callback is invoked for field PUT.
    *
    * <p>Registers a local AFTER_ASYNC intercept, invokes the field PUT, and verifies the async
-   * callback was eventually invoked using a latch.
+   * callback was invoked by checking the application log.
    */
   @Test
   public void testLocalAfterAsyncFieldPutCallback() throws Exception {
     logger.info("===== testLocalAfterAsyncFieldPutCallback [{}]: TEST STARTED =====", path);
 
-    // 1. Set up latch for async callback
-    LocalInterceptCallbacks.setAsyncLatch(1);
-
-    // 2. Register a local AFTER_ASYNC intercept on counter field PUT
+    // 1. Register a local AFTER_ASYNC intercept on counter field PUT
     InterceptRequest<InterceptableFieldOp> interceptRequest =
         createLocalFieldIntercept(
             InterceptType.AFTER_ASYNC, "counter", FieldOpType.PUT, "onAfterAsync");
@@ -300,29 +259,23 @@ public class LocalFieldAsyncCallbackIT extends AbstractInterceptIT {
     register(interceptRequest);
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
 
-    // 3. Create InterceptableApp instance
+    // 2. Create InterceptableApp instance
     ExecMessage createResponse =
         invoke(messageBuilder.buildEmptyConstructor(myPeerUuid, TARGET_CLASS));
     ObjectRef appInstance = ObjectRef.from(createResponse.getReturnValue().getObject().getRef());
 
-    // 4. Invoke field PUT
+    // 3. Invoke field PUT
     logger.info("Invoking setCounter via {} path", path);
     ExecMessage response = invokeFieldPut(path, TARGET_CLASS, COUNTER, appInstance, 100);
 
-    // 5. Verify invocation succeeded
+    // 4. Verify invocation succeeded
     assertThat(
         "Field PUT should not raise exception", response.getRaisedThrowable(), is(nullValue()));
 
-    // 6. Wait for async callback to complete
-    boolean callbackInvoked =
-        LocalInterceptCallbacks.awaitAsyncCallbacks(ASYNC_CALLBACK_TIMEOUT_MS);
-    assertTrue("Async AFTER callback should complete within timeout", callbackInvoked);
-
-    // 7. Verify callback was invoked
-    assertThat(
+    // 5. Verify local AFTER_ASYNC callback was invoked (via log output)
+    assertTrue(
         "Local AFTER_ASYNC callback should have been invoked",
-        LocalInterceptCallbacks.getAfterAsyncCallCount(),
-        is(greaterThan(0)));
+        LocalInterceptTestSuite.waitForAppLogLine("LOCAL_AFTER_ASYNC:.*method=counter"));
 
     logger.info("===== testLocalAfterAsyncFieldPutCallback [{}]: TEST COMPLETED =====", path);
   }
@@ -341,10 +294,7 @@ public class LocalFieldAsyncCallbackIT extends AbstractInterceptIT {
     logger.info(
         "===== testLocalBeforeAndAfterAsyncFieldGetCallbacks [{}]: TEST STARTED =====", path);
 
-    // 1. Set up latch for 2 async callbacks
-    LocalInterceptCallbacks.setAsyncLatch(2);
-
-    // 2. Register both BEFORE_ASYNC and AFTER_ASYNC intercepts
+    // 1. Register both BEFORE_ASYNC and AFTER_ASYNC intercepts
     InterceptRequest<InterceptableFieldOp> beforeIntercept =
         createLocalFieldIntercept(
             InterceptType.BEFORE_ASYNC, "counter", FieldOpType.GET, "onBeforeAsync");
@@ -356,7 +306,7 @@ public class LocalFieldAsyncCallbackIT extends AbstractInterceptIT {
     register(afterIntercept);
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
 
-    // 3. Create InterceptableApp instance
+    // 2. Create InterceptableApp instance
     ExecMessage createResponse =
         invoke(
             messageBuilder.buildClassMethod(
@@ -369,24 +319,17 @@ public class LocalFieldAsyncCallbackIT extends AbstractInterceptIT {
                 new Object[] {42}));
     ObjectRef appInstance = ObjectRef.from(createResponse.getReturnValue().getObject().getRef());
 
-    // 4. Invoke field GET
+    // 3. Invoke field GET
     ExecMessage response = invokeFieldGet(path, TARGET_CLASS, COUNTER, appInstance);
     assertThat(response.getRaisedThrowable(), is(nullValue()));
 
-    // 5. Wait for async callbacks to complete
-    boolean callbacksInvoked =
-        LocalInterceptCallbacks.awaitAsyncCallbacks(ASYNC_CALLBACK_TIMEOUT_MS);
-    assertTrue("Both async callbacks should complete within timeout", callbacksInvoked);
-
-    // 6. Verify both callbacks were invoked
-    assertThat(
+    // 4. Verify both callbacks were invoked (via log output)
+    assertTrue(
         "Local BEFORE_ASYNC callback should have been invoked",
-        LocalInterceptCallbacks.getBeforeAsyncCallCount(),
-        is(greaterThan(0)));
-    assertThat(
+        LocalInterceptTestSuite.waitForAppLogLine("LOCAL_BEFORE_ASYNC:.*method=counter"));
+    assertTrue(
         "Local AFTER_ASYNC callback should have been invoked",
-        LocalInterceptCallbacks.getAfterAsyncCallCount(),
-        is(greaterThan(0)));
+        LocalInterceptTestSuite.waitForAppLogLine("LOCAL_AFTER_ASYNC:.*method=counter"));
 
     logger.info(
         "===== testLocalBeforeAndAfterAsyncFieldGetCallbacks [{}]: TEST COMPLETED =====", path);

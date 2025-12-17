@@ -10,12 +10,12 @@
 package com.quasient.pal.intercept.local.field;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assert.assertTrue;
 
+import com.quasient.pal.LocalInterceptTestSuite;
 import com.quasient.pal.apps.quantized.intercept.InterceptableApp;
-import com.quasient.pal.apps.quantized.intercept.callback.LocalInterceptCallbacks;
 import com.quasient.pal.common.directory.nodes.InterceptRequest;
 import com.quasient.pal.common.lang.FieldOpType;
 import com.quasient.pal.common.lang.intercept.InterceptType;
@@ -26,7 +26,6 @@ import com.quasient.pal.intercept.InvocationPath;
 import com.quasient.pal.messages.colfer.ExecMessage;
 import java.util.Collection;
 import java.util.UUID;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -50,7 +49,7 @@ import org.junit.runners.Parameterized;
 public class LocalFieldSyncCallbackIT extends AbstractInterceptIT {
 
   private static final String CALLBACK_CLASS =
-      "com.quasient.pal.apps.quantized.intercept.callback.LocalInterceptCallbacks";
+      "com.quasient.pal.apps.callbacks.local.LocalInterceptCallbacks";
   private static final String TARGET_CLASS = InterceptableApp.class.getName();
 
   /** Field invocation descriptors for parameterized tests. */
@@ -81,12 +80,6 @@ public class LocalFieldSyncCallbackIT extends AbstractInterceptIT {
   @Parameterized.Parameters(name = "{index}: path={0}")
   public static Collection<Object[]> data() {
     return invocationPathParameters();
-  }
-
-  /** Resets callback state before each test. */
-  @Before
-  public void resetCallbacks() {
-    LocalInterceptCallbacks.reset();
   }
 
   /**
@@ -152,12 +145,10 @@ public class LocalFieldSyncCallbackIT extends AbstractInterceptIT {
     assertThat(
         "Field GET should not raise exception", response.getRaisedThrowable(), is(nullValue()));
 
-    // 5. Verify local BEFORE callback was invoked
-    Thread.sleep(50);
-    assertThat(
+    // 5. Verify local BEFORE callback was invoked (via log output)
+    assertTrue(
         "Local BEFORE callback should have been invoked",
-        LocalInterceptCallbacks.getBeforeCallCount(),
-        is(greaterThan(0)));
+        LocalInterceptTestSuite.waitForAppLogLine("LOCAL_BEFORE:.*counter.*count=1"));
 
     logger.info("===== testLocalBeforeFieldGetCallback [{}]: TEST COMPLETED =====", path);
   }
@@ -200,12 +191,10 @@ public class LocalFieldSyncCallbackIT extends AbstractInterceptIT {
     assertThat(
         "Field GET should not raise exception", response.getRaisedThrowable(), is(nullValue()));
 
-    // 5. Verify local AFTER callback was invoked
-    Thread.sleep(50);
-    assertThat(
+    // 5. Verify local AFTER callback was invoked (via log output)
+    assertTrue(
         "Local AFTER callback should have been invoked",
-        LocalInterceptCallbacks.getAfterCallCount(),
-        is(greaterThan(0)));
+        LocalInterceptTestSuite.waitForAppLogLine("LOCAL_AFTER:.*counter.*count=1"));
 
     logger.info("===== testLocalAfterFieldGetCallback [{}]: TEST COMPLETED =====", path);
   }
@@ -244,12 +233,10 @@ public class LocalFieldSyncCallbackIT extends AbstractInterceptIT {
     assertThat(
         "Field PUT should not raise exception", response.getRaisedThrowable(), is(nullValue()));
 
-    // 5. Verify local BEFORE callback was invoked
-    Thread.sleep(50);
-    assertThat(
+    // 5. Verify local BEFORE callback was invoked (via log output)
+    assertTrue(
         "Local BEFORE callback should have been invoked",
-        LocalInterceptCallbacks.getBeforeCallCount(),
-        is(greaterThan(0)));
+        LocalInterceptTestSuite.waitForAppLogLine("LOCAL_BEFORE:.*counter.*count=1"));
 
     logger.info("===== testLocalBeforeFieldPutCallback [{}]: TEST COMPLETED =====", path);
   }
@@ -284,12 +271,10 @@ public class LocalFieldSyncCallbackIT extends AbstractInterceptIT {
     assertThat(
         "Field PUT should not raise exception", response.getRaisedThrowable(), is(nullValue()));
 
-    // 5. Verify local AFTER callback was invoked
-    Thread.sleep(50);
-    assertThat(
+    // 5. Verify local AFTER callback was invoked (via log output)
+    assertTrue(
         "Local AFTER callback should have been invoked",
-        LocalInterceptCallbacks.getAfterCallCount(),
-        is(greaterThan(0)));
+        LocalInterceptTestSuite.waitForAppLogLine("LOCAL_AFTER:.*counter.*count=1"));
 
     logger.info("===== testLocalAfterFieldPutCallback [{}]: TEST COMPLETED =====", path);
   }
@@ -337,12 +322,10 @@ public class LocalFieldSyncCallbackIT extends AbstractInterceptIT {
         response.getRaisedThrowable(),
         is(nullValue()));
 
-    // 5. Verify local BEFORE callback was invoked
-    Thread.sleep(50);
-    assertThat(
+    // 5. Verify local BEFORE callback was invoked (via log output)
+    assertTrue(
         "Local BEFORE callback should have been invoked",
-        LocalInterceptCallbacks.getBeforeCallCount(),
-        is(greaterThan(0)));
+        LocalInterceptTestSuite.waitForAppLogLine("LOCAL_BEFORE:.*staticCounter.*count=1"));
 
     logger.info("===== testLocalBeforeStaticFieldGetCallback [{}]: TEST COMPLETED =====", path);
   }
@@ -375,12 +358,10 @@ public class LocalFieldSyncCallbackIT extends AbstractInterceptIT {
         response.getRaisedThrowable(),
         is(nullValue()));
 
-    // 4. Verify local BEFORE callback was invoked
-    Thread.sleep(50);
-    assertThat(
+    // 4. Verify local BEFORE callback was invoked (via log output)
+    assertTrue(
         "Local BEFORE callback should have been invoked",
-        LocalInterceptCallbacks.getBeforeCallCount(),
-        is(greaterThan(0)));
+        LocalInterceptTestSuite.waitForAppLogLine("LOCAL_BEFORE:.*staticCounter.*count=1"));
 
     logger.info("===== testLocalBeforeStaticFieldPutCallback [{}]: TEST COMPLETED =====", path);
   }
@@ -425,16 +406,13 @@ public class LocalFieldSyncCallbackIT extends AbstractInterceptIT {
     ExecMessage response = invokeFieldGet(path, TARGET_CLASS, COUNTER, appInstance);
     assertThat(response.getRaisedThrowable(), is(nullValue()));
 
-    // 4. Verify both callbacks were invoked
-    Thread.sleep(50);
-    assertThat(
+    // 4. Verify both callbacks were invoked (via log output)
+    assertTrue(
         "Local BEFORE callback should have been invoked",
-        LocalInterceptCallbacks.getBeforeCallCount(),
-        is(greaterThan(0)));
-    assertThat(
+        LocalInterceptTestSuite.waitForAppLogLine("LOCAL_BEFORE:.*counter.*count=1"));
+    assertTrue(
         "Local AFTER callback should have been invoked",
-        LocalInterceptCallbacks.getAfterCallCount(),
-        is(greaterThan(0)));
+        LocalInterceptTestSuite.waitForAppLogLine("LOCAL_AFTER:.*counter.*count=1"));
 
     logger.info("===== testLocalBeforeAndAfterFieldGetCallbacks [{}]: TEST COMPLETED =====", path);
   }
@@ -477,12 +455,10 @@ public class LocalFieldSyncCallbackIT extends AbstractInterceptIT {
     assertThat(
         "Field GET should not raise exception", response.getRaisedThrowable(), is(nullValue()));
 
-    // 5. Verify local AROUND callback was invoked
-    Thread.sleep(50);
-    assertThat(
+    // 5. Verify local AROUND callback was invoked (via log output)
+    assertTrue(
         "Local AROUND callback should have been invoked",
-        LocalInterceptCallbacks.getAroundCallCount(),
-        is(greaterThan(0)));
+        LocalInterceptTestSuite.waitForAppLogLine("LOCAL_AROUND:.*count=1"));
 
     logger.info("===== testLocalAroundFieldGetCallback [{}]: TEST COMPLETED =====", path);
   }
