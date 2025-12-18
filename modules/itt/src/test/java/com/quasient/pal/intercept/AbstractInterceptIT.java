@@ -46,15 +46,6 @@ public class AbstractInterceptIT extends AbstractIntegrationTest
   protected static final Logger logger = LoggerFactory.getLogger("tests");
   protected static final long INTERCEPT_REGISTRATION_MAX_DELAY_MS = 100;
 
-  /**
-   * Wait time for local intercept callback execution to complete.
-   *
-   * <p>Local intercepts execute synchronously via reflection in the same JVM, but we still need a
-   * brief delay to ensure callback counters are updated before assertions. This is much shorter
-   * than remote intercept timeouts since no network communication is involved.
-   */
-  protected static final long LOCAL_INVOCATION_WAIT_MS = 50;
-
   private static final String RPC_ADDRESS = "tcp://localhost:7890";
 
   /**

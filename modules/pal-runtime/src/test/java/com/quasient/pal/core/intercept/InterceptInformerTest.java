@@ -125,7 +125,7 @@ public class InterceptInformerTest extends ZmqEnabledTest {
     final String interceptId = UUID.randomUUID().toString();
     interceptInformer =
         new InterceptInformer(
-            context, msgBuilder, directoryConnectionProvider, peerUuid, INTERCEPT_REG_ADDRESS);
+            context, msgBuilder, directoryConnectionProvider, INTERCEPT_REG_ADDRESS);
     final InterceptEvent interceptEvent =
         new InterceptEvent(
             InterceptEvent.Type.INTERCEPT_ADDED,
@@ -159,7 +159,7 @@ public class InterceptInformerTest extends ZmqEnabledTest {
     final String interceptId = UUID.randomUUID().toString();
     interceptInformer =
         new InterceptInformer(
-            context, msgBuilder, directoryConnectionProvider, peerUuid, INTERCEPT_REG_ADDRESS);
+            context, msgBuilder, directoryConnectionProvider, INTERCEPT_REG_ADDRESS);
     InterceptEvent interceptEvent =
         new InterceptEvent(
             InterceptEvent.Type.INTERCEPT_ADDED,
@@ -212,7 +212,7 @@ public class InterceptInformerTest extends ZmqEnabledTest {
     final String interceptId = UUID.randomUUID().toString();
     interceptInformer =
         new InterceptInformer(
-            context, msgBuilder, directoryConnectionProvider, peerUuid, INTERCEPT_REG_ADDRESS);
+            context, msgBuilder, directoryConnectionProvider, INTERCEPT_REG_ADDRESS);
     final InterceptEvent interceptEvent =
         new InterceptEvent(
             InterceptEvent.Type.INTERCEPT_ADDED,

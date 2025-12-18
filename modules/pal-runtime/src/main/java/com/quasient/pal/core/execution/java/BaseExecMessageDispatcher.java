@@ -634,10 +634,8 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         Object[] argValues;
         if (isFieldPutOperation(messageType) && value != null) {
           argValues = new Object[] {value};
-        } else if (args != null) {
-          argValues = args.stream().map(MessageArgument::object).toArray(Object[]::new);
         } else {
-          argValues = new Object[0];
+          argValues = args.stream().map(MessageArgument::object).toArray(Object[]::new);
         }
 
         ConsolidatedCallbackResponse localBeforeResponse =
@@ -661,7 +659,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
             if (mutatedValue != null) {
               value = mutatedValue;
             }
-          } else if (args != null) {
+          } else {
             List<MessageArgument> mutatedArgs = new ArrayList<>(args);
             for (Map.Entry<Integer, Object> entry :
                 localBeforeResponse.getMutatedArgs().entrySet()) {
@@ -713,10 +711,8 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         Object[] argValues;
         if (isFieldPutOperation(messageType) && value != null) {
           argValues = new Object[] {value};
-        } else if (finalArgs != null) {
-          argValues = finalArgs.stream().map(MessageArgument::object).toArray(Object[]::new);
         } else {
-          argValues = new Object[0];
+          argValues = finalArgs.stream().map(MessageArgument::object).toArray(Object[]::new);
         }
 
         // Create accessor that invokes the method directly
@@ -731,7 +727,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
               try {
                 // Convert args back to MessageArgument list if needed
                 List<MessageArgument> invokeArgs = argsForLambda;
-                if (argsToInvoke != null && argsForLambda != null) {
+                if (argsToInvoke != null) {
                   invokeArgs = new ArrayList<>(argsForLambda.size());
                   for (int i = 0; i < argsForLambda.size() && i < argsToInvoke.length; i++) {
                     invokeArgs.add(
@@ -784,7 +780,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
               if (mutatedValue != null) {
                 value = mutatedValue;
               }
-            } else if (finalArgs != null) {
+            } else {
               List<MessageArgument> mutatedArgs = new ArrayList<>(finalArgs);
               for (Map.Entry<Integer, Object> entry :
                   localAroundResponse.getMutatedArgs().entrySet()) {

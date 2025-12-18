@@ -27,7 +27,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
@@ -68,16 +67,6 @@ public class InterceptInformer implements InterceptNodeListener {
   private final String interceptsAddress;
 
   /**
-   * Unique identifier for the local peer.
-   *
-   * <p>Note: This field is currently unused but kept for potential future use and because it's
-   * injected via Dagger. Previously used for "self-produced" intercept filtering which was removed
-   * to support local intercepts.
-   */
-  @SuppressWarnings("UnusedVariable")
-  private final UUID peerUuid;
-
-  /**
    * Thread-local flag indicating whether the REQ socket has been created for the current thread.
    * This flag prevents attempts to close a socket that was never initialized.
    */
@@ -110,7 +99,6 @@ public class InterceptInformer implements InterceptNodeListener {
    * @param zmqContext the ZeroMQ context for socket operations
    * @param messageBuilder builder to create intercept messages from requests
    * @param directoryConnectionProvider provider to retrieve the directory connection
-   * @param peerUuid unique identifier for the local peer
    * @param interceptsAddress endpoint address (injected with qualifier "intercepts.reg")
    */
   @Inject
@@ -118,12 +106,10 @@ public class InterceptInformer implements InterceptNodeListener {
       ZContext zmqContext,
       MessageBuilder messageBuilder,
       DirectoryConnectionProvider directoryConnectionProvider,
-      UUID peerUuid,
       @Named("intercepts.reg") String interceptsAddress) {
     this.zmqContext = zmqContext;
     this.messageBuilder = messageBuilder;
     this.directoryConnectionProvider = directoryConnectionProvider;
-    this.peerUuid = peerUuid;
     this.interceptsAddress = interceptsAddress;
   }
 
