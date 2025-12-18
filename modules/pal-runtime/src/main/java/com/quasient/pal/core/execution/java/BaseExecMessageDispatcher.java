@@ -781,17 +781,8 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
                 value = mutatedValue;
               }
             } else {
-              List<MessageArgument> mutatedArgs = new ArrayList<>(finalArgs);
-              for (Map.Entry<Integer, Object> entry :
-                  localAroundResponse.getMutatedArgs().entrySet()) {
-                int index = entry.getKey();
-                Object newValue = entry.getValue();
-                if (index >= 0 && index < mutatedArgs.size()) {
-                  mutatedArgs.set(
-                      index, new MessageArgument(newValue, finalArgs.get(index).byReference()));
-                }
-              }
-              finalArgs = mutatedArgs;
+              finalArgs =
+                  applyArgMutations(finalArgs, finalArgs, localAroundResponse.getMutatedArgs());
             }
           }
 
@@ -845,19 +836,8 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
             argValues = new Object[] {value};
           }
         } else {
-          List<MessageArgument> mutatedArgs = new ArrayList<>(args);
-          for (Map.Entry<Integer, Object> entry :
-              beforeCallbackResponse.getMutatedArgs().entrySet()) {
-            int index = entry.getKey();
-            Object newValue = entry.getValue();
-            if (index >= 0 && index < mutatedArgs.size()) {
-              // Preserve the byReference flag from original arg
-              mutatedArgs.set(index, new MessageArgument(newValue, args.get(index).byReference()));
-            }
-          }
-          finalArgs = mutatedArgs;
-          argValues =
-              finalArgs.stream().map(MessageArgument::object).toArray(Object[]::new); // update
+          finalArgs = applyArgMutations(args, args, beforeCallbackResponse.getMutatedArgs());
+          argValues = finalArgs.stream().map(MessageArgument::object).toArray(Object[]::new);
         }
       }
 
@@ -886,17 +866,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
                 value = mutatedValue;
               }
             } else {
-              List<MessageArgument> mutatedArgs =
-                  finalArgs == args ? new ArrayList<>(args) : finalArgs;
-              for (Map.Entry<Integer, Object> entry : aroundResponse.getMutatedArgs().entrySet()) {
-                int index = entry.getKey();
-                Object newValue = entry.getValue();
-                if (index >= 0 && index < mutatedArgs.size()) {
-                  mutatedArgs.set(
-                      index, new MessageArgument(newValue, args.get(index).byReference()));
-                }
-              }
-              finalArgs = mutatedArgs;
+              finalArgs = applyArgMutations(finalArgs, args, aroundResponse.getMutatedArgs());
             }
           }
           // Track pending AROUND callbacks for AFTER phase
@@ -1466,6 +1436,51 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
    */
   private boolean isFieldPutOperation(MessageType messageType) {
     return messageType == MessageType.EXEC_PUT_FIELD || messageType == MessageType.EXEC_PUT_STATIC;
+  }
+
+  /**
+   * Applies argument mutations from intercept callbacks to a list of message arguments.
+   *
+   * <p>This method creates a new list with the mutated values applied. The {@code byReference} flag
+   * for each argument is always taken from {@code originalArgs}, not {@code currentArgs}. This is
+   * important because:
+   *
+   * <ul>
+   *   <li>The {@code byReference} flag is part of the method's contract (how the parameter was
+   *       declared)
+   *   <li>When multiple callbacks mutate args sequentially, each should preserve the original
+   *       by-reference semantics
+   *   <li>A callback mutating a value should not change whether that parameter is passed by
+   *       reference
+   * </ul>
+   *
+   * <p><b>Usage patterns:</b>
+   *
+   * <ul>
+   *   <li>First mutation: {@code applyArgMutations(args, args, mutations)} - both parameters are
+   *       the original args
+   *   <li>Subsequent mutations: {@code applyArgMutations(finalArgs, args, mutations)} - currentArgs
+   *       may already be mutated, but byReference comes from original
+   * </ul>
+   *
+   * @param currentArgs the current argument list (may already have mutations applied)
+   * @param originalArgs the original argument list (used for {@code byReference} flag lookup)
+   * @param mutations map of argument index to new value
+   * @return a new list with mutations applied, preserving original byReference flags
+   */
+  private List<MessageArgument> applyArgMutations(
+      List<MessageArgument> currentArgs,
+      List<MessageArgument> originalArgs,
+      Map<Integer, Object> mutations) {
+    List<MessageArgument> result = new ArrayList<>(currentArgs);
+    for (Map.Entry<Integer, Object> entry : mutations.entrySet()) {
+      int index = entry.getKey();
+      Object newValue = entry.getValue();
+      if (index >= 0 && index < result.size()) {
+        result.set(index, new MessageArgument(newValue, originalArgs.get(index).byReference()));
+      }
+    }
+    return result;
   }
 
   // ---- Helper methods for local intercepts ----
