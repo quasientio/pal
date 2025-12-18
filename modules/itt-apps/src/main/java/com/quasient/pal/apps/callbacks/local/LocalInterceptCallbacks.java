@@ -470,4 +470,438 @@ public final class LocalInterceptCallbacks {
 
     return new InterceptCallbackResponse();
   }
+
+  // ==================== Arg Mutation Callbacks ====================
+
+  /**
+   * BEFORE callback that mutates the first argument by doubling integer values.
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse onBeforeMutateArg(InterceptContext ctx) {
+    beforeCallCount.incrementAndGet();
+    Object[] args = ctx.getArgs();
+    if (args.length > 0 && args[0] instanceof Integer) {
+      int original = (Integer) args[0];
+      int mutated = original * 2;
+      ctx.setArg(0, mutated);
+      logger.info("LOCAL_BEFORE_MUTATE_ARG: {} -> {}", original, mutated);
+    } else {
+      logger.info("LOCAL_BEFORE_MUTATE_ARG: no mutation (args not suitable)");
+    }
+    return new InterceptCallbackResponse();
+  }
+
+  /**
+   * AROUND callback that mutates argument before proceeding.
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse onAroundMutateArgBeforeProceed(InterceptContext ctx) {
+    aroundCallCount.incrementAndGet();
+    Object[] args = ctx.getArgs();
+    if (args.length > 0 && args[0] instanceof Integer) {
+      int original = (Integer) args[0];
+      int mutated = original * 2;
+      ctx.setArg(0, mutated);
+      logger.info("LOCAL_AROUND_MUTATE_ARG: {} -> {}", original, mutated);
+    }
+    ctx.proceed();
+    return new InterceptCallbackResponse();
+  }
+
+  // ==================== Return Override Callbacks ====================
+
+  /**
+   * AFTER callback that overrides the return value by doubling integer values.
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse onAfterOverrideReturn(InterceptContext ctx) {
+    afterCallCount.incrementAndGet();
+    if (!ctx.isVoid()) {
+      Object returnValue = ctx.getReturnValue();
+      if (returnValue instanceof Integer) {
+        int original = (Integer) returnValue;
+        int overridden = original * 2;
+        ctx.setReturnValue(overridden);
+        logger.info("LOCAL_AFTER_OVERRIDE_RETURN: {} -> {}", original, overridden);
+      } else {
+        logger.info("LOCAL_AFTER_OVERRIDE_RETURN: no override (return not Integer)");
+      }
+    } else {
+      logger.info("LOCAL_AFTER_OVERRIDE_RETURN: no override (void method)");
+    }
+    return new InterceptCallbackResponse();
+  }
+
+  /**
+   * AROUND callback that overrides return value after proceeding.
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse onAroundOverrideReturnAfterProceed(InterceptContext ctx) {
+    aroundCallCount.incrementAndGet();
+    ctx.proceed();
+    if (!ctx.isVoid()) {
+      Object returnValue = ctx.getReturnValue();
+      if (returnValue instanceof Integer) {
+        int original = (Integer) returnValue;
+        int overridden = original * 2;
+        ctx.setReturnValue(overridden);
+        logger.info("LOCAL_AROUND_OVERRIDE_RETURN: {} -> {}", original, overridden);
+      }
+    }
+    return new InterceptCallbackResponse();
+  }
+
+  // ==================== AROUND Skip Callbacks ====================
+
+  /**
+   * AROUND callback that skips proceed and returns a fixed value (42).
+   *
+   * @param ctx the intercept context
+   * @return the intercept response with skip
+   */
+  public static InterceptCallbackResponse onAroundSkipWithReturn(InterceptContext ctx) {
+    aroundCallCount.incrementAndGet();
+    ctx.setReturnValue(42);
+    logger.info("LOCAL_AROUND_SKIP_WITH_RETURN: returning 42");
+    return InterceptCallbackResponse.skipProceed();
+  }
+
+  /**
+   * AROUND callback that skips proceed and returns null explicitly.
+   *
+   * @param ctx the intercept context
+   * @return the intercept response with skip
+   */
+  public static InterceptCallbackResponse onAroundSkipWithNullReturn(InterceptContext ctx) {
+    aroundCallCount.incrementAndGet();
+    ctx.setReturnValue(null);
+    logger.info("LOCAL_AROUND_SKIP_WITH_NULL_RETURN: returning null");
+    return InterceptCallbackResponse.skipProceed();
+  }
+
+  /**
+   * AROUND callback that skips proceed and throws an exception.
+   *
+   * @param ctx the intercept context
+   * @return the intercept response with skip
+   */
+  public static InterceptCallbackResponse onAroundSkipWithException(InterceptContext ctx) {
+    aroundCallCount.incrementAndGet();
+    ctx.setExceptionToThrow(new SecurityException("Access denied by AROUND skip"));
+    logger.info("LOCAL_AROUND_SKIP_WITH_EXCEPTION: throwing SecurityException");
+    return InterceptCallbackResponse.skipProceed();
+  }
+
+  // ==================== Exception Throwing Callbacks ====================
+
+  /**
+   * BEFORE callback that sets a SecurityException via ctx.setExceptionToThrow().
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse onBeforeThrowException(InterceptContext ctx) {
+    beforeCallCount.incrementAndGet();
+    logger.info("LOCAL_BEFORE_THROW_EXCEPTION: setting SecurityException via ctx");
+    ctx.setExceptionToThrow(new SecurityException("Access denied by BEFORE callback"));
+    return new InterceptCallbackResponse();
+  }
+
+  /**
+   * AFTER callback that sets a SecurityException via ctx.setExceptionToThrow().
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse onAfterThrowException(InterceptContext ctx) {
+    afterCallCount.incrementAndGet();
+    logger.info("LOCAL_AFTER_THROW_EXCEPTION: setting SecurityException via ctx");
+    ctx.setExceptionToThrow(new SecurityException("Access denied by AFTER callback"));
+    return new InterceptCallbackResponse();
+  }
+
+  /**
+   * AROUND callback that sets a SecurityException and skips proceed.
+   *
+   * @param ctx the intercept context
+   * @return the intercept response with skipProceed
+   */
+  public static InterceptCallbackResponse onAroundThrowException(InterceptContext ctx) {
+    aroundCallCount.incrementAndGet();
+    logger.info("LOCAL_AROUND_THROW_EXCEPTION: setting SecurityException via ctx");
+    ctx.setExceptionToThrow(new SecurityException("Access denied by AROUND callback"));
+    return InterceptCallbackResponse.skipProceed();
+  }
+
+  // ==================== Illegal Operation Callbacks (BEFORE) ====================
+
+  /**
+   * BEFORE callback that attempts to call getReturnValue() (should throw UnsupportedOp).
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse onBeforeAttemptGetReturnValue(InterceptContext ctx) {
+    beforeCallCount.incrementAndGet();
+    try {
+      ctx.getReturnValue();
+      logger.info("LOCAL_BEFORE_ILLEGAL_GET_RETURN: ERROR - did not throw");
+    } catch (UnsupportedOperationException e) {
+      logger.info("LOCAL_BEFORE_ILLEGAL_GET_RETURN: correctly threw UnsupportedOperationException");
+    }
+    return new InterceptCallbackResponse();
+  }
+
+  /**
+   * BEFORE callback that attempts to call setReturnValue() (should throw UnsupportedOp).
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse onBeforeAttemptSetReturnValue(InterceptContext ctx) {
+    beforeCallCount.incrementAndGet();
+    try {
+      ctx.setReturnValue(999);
+      logger.info("LOCAL_BEFORE_ILLEGAL_SET_RETURN: ERROR - did not throw");
+    } catch (UnsupportedOperationException e) {
+      logger.info("LOCAL_BEFORE_ILLEGAL_SET_RETURN: correctly threw UnsupportedOperationException");
+    }
+    return new InterceptCallbackResponse();
+  }
+
+  /**
+   * BEFORE callback that attempts to call proceed() (should throw UnsupportedOp).
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse onBeforeAttemptProceed(InterceptContext ctx) {
+    beforeCallCount.incrementAndGet();
+    try {
+      ctx.proceed();
+      logger.info("LOCAL_BEFORE_ILLEGAL_PROCEED: ERROR - did not throw");
+    } catch (UnsupportedOperationException e) {
+      logger.info("LOCAL_BEFORE_ILLEGAL_PROCEED: correctly threw UnsupportedOperationException");
+    }
+    return new InterceptCallbackResponse();
+  }
+
+  /**
+   * BEFORE callback that attempts to call getThrownException() (should throw UnsupportedOp).
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse onBeforeAttemptGetThrownException(InterceptContext ctx) {
+    beforeCallCount.incrementAndGet();
+    try {
+      ctx.getThrownException();
+      logger.info("LOCAL_BEFORE_ILLEGAL_GET_THROWN: ERROR - did not throw");
+    } catch (UnsupportedOperationException e) {
+      logger.info("LOCAL_BEFORE_ILLEGAL_GET_THROWN: correctly threw UnsupportedOperationException");
+    }
+    return new InterceptCallbackResponse();
+  }
+
+  // ==================== Illegal Operation Callbacks (AFTER) ====================
+
+  /**
+   * AFTER callback that attempts to call setArg() (should throw UnsupportedOp).
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse onAfterAttemptSetArg(InterceptContext ctx) {
+    afterCallCount.incrementAndGet();
+    try {
+      ctx.setArg(0, 999);
+      logger.info("LOCAL_AFTER_ILLEGAL_SET_ARG: ERROR - did not throw");
+    } catch (UnsupportedOperationException e) {
+      logger.info("LOCAL_AFTER_ILLEGAL_SET_ARG: correctly threw UnsupportedOperationException");
+    }
+    return new InterceptCallbackResponse();
+  }
+
+  /**
+   * AFTER callback that attempts to call proceed() (should throw UnsupportedOp).
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse onAfterAttemptProceed(InterceptContext ctx) {
+    afterCallCount.incrementAndGet();
+    try {
+      ctx.proceed();
+      logger.info("LOCAL_AFTER_ILLEGAL_PROCEED: ERROR - did not throw");
+    } catch (UnsupportedOperationException e) {
+      logger.info("LOCAL_AFTER_ILLEGAL_PROCEED: correctly threw UnsupportedOperationException");
+    }
+    return new InterceptCallbackResponse();
+  }
+
+  // ==================== Illegal Operation Callbacks (AROUND) ====================
+
+  /**
+   * AROUND callback that attempts getReturnValue() before proceed() (should throw IllegalState).
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse onAroundAttemptGetReturnBeforeProceed(
+      InterceptContext ctx) {
+    aroundCallCount.incrementAndGet();
+    try {
+      ctx.getReturnValue();
+      logger.info("LOCAL_AROUND_ILLEGAL_GET_RETURN_BEFORE_PROCEED: ERROR - did not throw");
+    } catch (IllegalStateException e) {
+      logger.info(
+          "LOCAL_AROUND_ILLEGAL_GET_RETURN_BEFORE_PROCEED: correctly threw IllegalStateException");
+    }
+    ctx.proceed();
+    return new InterceptCallbackResponse();
+  }
+
+  /**
+   * AROUND callback that attempts getThrownException() before proceed() (should throw
+   * IllegalState).
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse onAroundAttemptGetThrownBeforeProceed(
+      InterceptContext ctx) {
+    aroundCallCount.incrementAndGet();
+    try {
+      ctx.getThrownException();
+      logger.info("LOCAL_AROUND_ILLEGAL_GET_THROWN_BEFORE_PROCEED: ERROR - did not throw");
+    } catch (IllegalStateException e) {
+      logger.info(
+          "LOCAL_AROUND_ILLEGAL_GET_THROWN_BEFORE_PROCEED: correctly threw IllegalStateException");
+    }
+    ctx.proceed();
+    return new InterceptCallbackResponse();
+  }
+
+  /**
+   * AROUND callback that attempts setArg() after proceed() (should throw IllegalState).
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse onAroundAttemptSetArgAfterProceed(InterceptContext ctx) {
+    aroundCallCount.incrementAndGet();
+    ctx.proceed();
+    try {
+      ctx.setArg(0, 999);
+      logger.info("LOCAL_AROUND_ILLEGAL_SET_ARG_AFTER_PROCEED: ERROR - did not throw");
+    } catch (IllegalStateException e) {
+      logger.info(
+          "LOCAL_AROUND_ILLEGAL_SET_ARG_AFTER_PROCEED: correctly threw IllegalStateException");
+    }
+    return new InterceptCallbackResponse();
+  }
+
+  /**
+   * AROUND callback that attempts skipProceed() without setReturnValue() (should throw
+   * IllegalState).
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse onAroundSkipWithoutReturnValue(InterceptContext ctx) {
+    aroundCallCount.incrementAndGet();
+    logger.info("LOCAL_AROUND_SKIP_WITHOUT_RETURN: attempting skipProceed without setReturnValue");
+    // Don't set return value, just skip - this should cause IllegalStateException
+    return InterceptCallbackResponse.skipProceed();
+  }
+
+  // ==================== Illegal Operation Callbacks (ASYNC) ====================
+
+  /**
+   * BEFORE_ASYNC callback that attempts to call setArg() (should throw UnsupportedOp).
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse onBeforeAsyncAttemptSetArg(InterceptContext ctx) {
+    beforeAsyncCallCount.incrementAndGet();
+    try {
+      ctx.setArg(0, 999);
+      logger.info("LOCAL_BEFORE_ASYNC_ILLEGAL_SET_ARG: ERROR - did not throw");
+    } catch (UnsupportedOperationException e) {
+      logger.info(
+          "LOCAL_BEFORE_ASYNC_ILLEGAL_SET_ARG: correctly threw UnsupportedOperationException");
+    }
+    asyncLatch.countDown();
+    return new InterceptCallbackResponse();
+  }
+
+  /**
+   * AFTER_ASYNC callback that attempts to call setReturnValue() (should throw UnsupportedOp).
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse onAfterAsyncAttemptSetReturnValue(InterceptContext ctx) {
+    afterAsyncCallCount.incrementAndGet();
+    try {
+      ctx.setReturnValue(999);
+      logger.info("LOCAL_AFTER_ASYNC_ILLEGAL_SET_RETURN: ERROR - did not throw");
+    } catch (UnsupportedOperationException e) {
+      logger.info(
+          "LOCAL_AFTER_ASYNC_ILLEGAL_SET_RETURN: correctly threw UnsupportedOperationException");
+    }
+    asyncLatch.countDown();
+    return new InterceptCallbackResponse();
+  }
+
+  /**
+   * AFTER_ASYNC callback that attempts to call setExceptionToThrow() (should throw UnsupportedOp).
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse onAfterAsyncAttemptSetException(InterceptContext ctx) {
+    afterAsyncCallCount.incrementAndGet();
+    try {
+      ctx.setExceptionToThrow(new RuntimeException("test"));
+      logger.info("LOCAL_AFTER_ASYNC_ILLEGAL_SET_EXCEPTION: ERROR - did not throw");
+    } catch (UnsupportedOperationException e) {
+      logger.info(
+          "LOCAL_AFTER_ASYNC_ILLEGAL_SET_EXCEPTION: correctly threw UnsupportedOperationException");
+    }
+    asyncLatch.countDown();
+    return new InterceptCallbackResponse();
+  }
+
+  // ==================== Void Method Checks ====================
+
+  /**
+   * AFTER callback that checks isVoid() on void method and attempts setReturnValue.
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse onAfterVoidMethodSetReturn(InterceptContext ctx) {
+    afterCallCount.incrementAndGet();
+    boolean isVoid = ctx.isVoid();
+    logger.info("LOCAL_AFTER_VOID_CHECK: isVoid={}", isVoid);
+    if (isVoid) {
+      try {
+        ctx.setReturnValue(999);
+        logger.info("LOCAL_AFTER_VOID_SET_RETURN: ERROR - did not throw");
+      } catch (IllegalStateException e) {
+        logger.info("LOCAL_AFTER_VOID_SET_RETURN: correctly threw IllegalStateException");
+      }
+    }
+    return new InterceptCallbackResponse();
+  }
 }

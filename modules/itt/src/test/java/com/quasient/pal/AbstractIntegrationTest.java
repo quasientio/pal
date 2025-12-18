@@ -434,6 +434,8 @@ public abstract class AbstractIntegrationTest {
                 String line;
                 while ((line = reader.readLine()) != null) {
                   stdout.append(line).append("\n");
+                  // Log stdout in real-time for debugging
+                  logger.info("[PEER STDOUT] {}", line);
                 }
               } catch (IOException e) {
                 logger.warn("Error reading stdout from launched peer", e);

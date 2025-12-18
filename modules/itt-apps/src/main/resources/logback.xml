@@ -19,7 +19,7 @@
   The peer runtime uses shaded logback classes (via pal-cli), so there's no
   conflict with this application-level logback configuration.
 -->
-<configuration>
+<configuration debug="true">
     <appender name="FILE" class="ch.qos.logback.core.FileAppender">
         <file>${PAL_HOME}/logs/itt-apps.log</file>
         <immediateFlush>true</immediateFlush>

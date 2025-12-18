@@ -720,11 +720,12 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         }
 
         // Create accessor that invokes the method directly
-        // Capture accessibleObject, target, and value for the lambda
+        // Capture accessibleObject, target, value, and messageType for the lambda
         final AccessibleObject accessibleForLambda = accessibleObject;
         final Object targetForLambda = target;
         final Object valueForLambda = value;
         final List<MessageArgument> argsForLambda = finalArgs;
+        final boolean isFieldPut = isFieldPutOperation(messageType);
         LocalAroundAccessor localAccessor =
             (argsToInvoke) -> {
               try {
@@ -737,9 +738,13 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
                         new MessageArgument(argsToInvoke[i], argsForLambda.get(i).byReference()));
                   }
                 }
+                // For field PUT operations, use the mutated value from argsToInvoke[0]
+                Object invokeValue = valueForLambda;
+                if (isFieldPut && argsToInvoke != null && argsToInvoke.length > 0) {
+                  invokeValue = argsToInvoke[0];
+                }
                 Object result =
-                    invokeIncoming(
-                        accessibleForLambda, targetForLambda, invokeArgs, valueForLambda);
+                    invokeIncoming(accessibleForLambda, targetForLambda, invokeArgs, invokeValue);
                 boolean isVoid = accessibleForLambda != null && returnsVoid(accessibleForLambda);
                 return new AfterPhaseData(result, null, isVoid);
               } catch (Throwable th) {

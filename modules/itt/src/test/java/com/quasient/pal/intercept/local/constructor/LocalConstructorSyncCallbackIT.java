@@ -10,7 +10,9 @@
 package com.quasient.pal.intercept.local.constructor;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertTrue;
 
@@ -19,13 +21,17 @@ import com.quasient.pal.apps.quantized.intercept.InterceptableApp;
 import com.quasient.pal.common.directory.nodes.InterceptRequest;
 import com.quasient.pal.common.lang.intercept.InterceptType;
 import com.quasient.pal.common.lang.intercept.InterceptableMethodCall;
+import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.intercept.AbstractInterceptIT;
 import com.quasient.pal.intercept.InvocationPath;
 import com.quasient.pal.messages.colfer.ExecMessage;
+import com.quasient.pal.serdes.Unwrapper;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -69,6 +75,20 @@ public class LocalConstructorSyncCallbackIT extends AbstractInterceptIT {
    */
   public LocalConstructorSyncCallbackIT(InvocationPath path) {
     this.path = path;
+  }
+
+  /**
+   * Clears the application log and resets callback counters before each test.
+   *
+   * @throws IOException if log file cannot be cleared
+   */
+  @Before
+  public void clearAppLogBeforeTest() throws IOException {
+    LocalInterceptTestSuite.clearAppLog();
+    // Reset callback counters in the peer via RPC
+    invoke(
+        messageBuilder.buildClassMethod(
+            myPeerUuid, TARGET_CLASS, "resetLocalInterceptCallbacks", null, null, null, null));
   }
 
   /**
@@ -243,5 +263,466 @@ public class LocalConstructorSyncCallbackIT extends AbstractInterceptIT {
         LocalInterceptTestSuite.waitForAppLogLine("LOCAL_AROUND:.*"));
 
     logger.info("===== testLocalAroundConstructorCallback [{}]: TEST COMPLETED =====", path);
+  }
+
+  // ===========================================================================
+  // Argument Mutation Tests
+  // ===========================================================================
+
+  /**
+   * Tests that a BEFORE callback can mutate constructor arguments.
+   *
+   * <p>Registers a BEFORE intercept that doubles the constructor argument, then verifies the object
+   * was created with the mutated value.
+   */
+  @Test
+  public void testBeforeArgMutation() throws Exception {
+    logger.info("===== testBeforeArgMutation [{}]: TEST STARTED =====", path);
+
+    // 1. Register BEFORE intercept that doubles the constructor argument
+    InterceptRequest<InterceptableMethodCall> interceptRequest =
+        createLocalConstructorIntercept(
+            InterceptType.BEFORE, "java.lang.Integer", "onBeforeMutateArg");
+
+    register(interceptRequest);
+    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
+
+    // 2. Create InterceptableApp with counter=10 - callback should double to 20
+    ExecMessage response = invokeConstructor(path, TARGET_CLASS, WITH_COUNTER, new Object[] {10});
+    assertThat(response.getRaisedThrowable(), is(nullValue()));
+    ObjectRef appInstance = ObjectRef.from(response.getReturnValue().getObject().getRef());
+
+    // 3. Verify arg was mutated (via log)
+    assertTrue(
+        "BEFORE callback should have mutated arg 10 -> 20",
+        LocalInterceptTestSuite.waitForAppLogLine("LOCAL_BEFORE_MUTATE_ARG: 10 -> 20"));
+
+    // 4. Verify the counter value is 20 (not 10)
+    ExecMessage getCounterResponse =
+        invoke(
+            messageBuilder.buildInstanceMethod(
+                myPeerUuid, TARGET_CLASS, "getCounter", appInstance, new String[] {}, null));
+    int counterValue =
+        (Integer) Unwrapper.unwrapObject(getCounterResponse.getReturnValue().getObject());
+    assertThat("Counter should be 20 due to arg mutation", counterValue, is(20));
+
+    logger.info("===== testBeforeArgMutation [{}]: TEST COMPLETED =====", path);
+  }
+
+  /**
+   * Tests that an AROUND callback can mutate constructor arguments before proceeding.
+   *
+   * <p>Registers an AROUND intercept that doubles the argument before calling proceed().
+   */
+  @Test
+  public void testAroundMutateArgBeforeProceed() throws Exception {
+    logger.info("===== testAroundMutateArgBeforeProceed [{}]: TEST STARTED =====", path);
+
+    // 1. Register AROUND intercept that doubles arg before proceed
+    InterceptRequest<InterceptableMethodCall> interceptRequest =
+        createLocalConstructorIntercept(
+            InterceptType.AROUND, "java.lang.Integer", "onAroundMutateArgBeforeProceed");
+
+    register(interceptRequest);
+    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
+
+    // 2. Create InterceptableApp with counter=10 - callback should double to 20
+    ExecMessage response = invokeConstructor(path, TARGET_CLASS, WITH_COUNTER, new Object[] {10});
+    assertThat(response.getRaisedThrowable(), is(nullValue()));
+    ObjectRef appInstance = ObjectRef.from(response.getReturnValue().getObject().getRef());
+
+    // 3. Verify arg was mutated (via log)
+    assertTrue(
+        "AROUND callback should have mutated arg 10 -> 20",
+        LocalInterceptTestSuite.waitForAppLogLine("LOCAL_AROUND_MUTATE_ARG: 10 -> 20"));
+
+    // 4. Verify the counter value is 20 (not 10)
+    ExecMessage getCounterResponse =
+        invoke(
+            messageBuilder.buildInstanceMethod(
+                myPeerUuid, TARGET_CLASS, "getCounter", appInstance, new String[] {}, null));
+    int counterValue =
+        (Integer) Unwrapper.unwrapObject(getCounterResponse.getReturnValue().getObject());
+    assertThat("Counter should be 20 due to arg mutation", counterValue, is(20));
+
+    logger.info("===== testAroundMutateArgBeforeProceed [{}]: TEST COMPLETED =====", path);
+  }
+
+  // ===========================================================================
+  // Exception Throwing Tests
+  // ===========================================================================
+
+  /**
+   * Tests that a BEFORE callback can throw an exception.
+   *
+   * <p>Registers a BEFORE intercept that throws SecurityException.
+   */
+  @Test
+  public void testBeforeThrowsException() throws Exception {
+    logger.info("===== testBeforeThrowsException [{}]: TEST STARTED =====", path);
+
+    // 1. Register BEFORE intercept that throws exception
+    InterceptRequest<InterceptableMethodCall> interceptRequest =
+        createLocalConstructorIntercept(
+            InterceptType.BEFORE, "java.lang.Integer", "onBeforeThrowException");
+
+    register(interceptRequest);
+    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
+
+    // 2. Create InterceptableApp - callback should throw exception
+    ExecMessage response = invokeConstructor(path, TARGET_CLASS, WITH_COUNTER, new Object[] {10});
+
+    // 3. Verify exception was raised
+    assertThat(
+        "Exception should have been raised", response.getRaisedThrowable(), is(notNullValue()));
+    assertThat(
+        "Exception should be SecurityException",
+        response.getRaisedThrowable().getThrowable().getType(),
+        is(SecurityException.class.getName()));
+    assertThat(
+        "Exception message should match",
+        response.getRaisedThrowable().getThrowable().getMessage(),
+        containsString("Access denied by BEFORE callback"));
+
+    // 4. Verify exception was logged
+    assertTrue(
+        "BEFORE callback should have logged exception",
+        LocalInterceptTestSuite.waitForAppLogLine(
+            "LOCAL_BEFORE_THROW_EXCEPTION: setting SecurityException via ctx"));
+
+    logger.info("===== testBeforeThrowsException [{}]: TEST COMPLETED =====", path);
+  }
+
+  /**
+   * Tests that an AFTER callback can throw an exception.
+   *
+   * <p>Registers an AFTER intercept that throws SecurityException.
+   */
+  @Test
+  public void testAfterThrowsException() throws Exception {
+    logger.info("===== testAfterThrowsException [{}]: TEST STARTED =====", path);
+
+    // 1. Register AFTER intercept that throws exception
+    InterceptRequest<InterceptableMethodCall> interceptRequest =
+        createLocalConstructorIntercept(
+            InterceptType.AFTER, "java.lang.Integer", "onAfterThrowException");
+
+    register(interceptRequest);
+    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
+
+    // 2. Create InterceptableApp - constructor runs but AFTER throws exception
+    ExecMessage response = invokeConstructor(path, TARGET_CLASS, WITH_COUNTER, new Object[] {10});
+
+    // 3. Verify exception was raised
+    assertThat(
+        "Exception should have been raised", response.getRaisedThrowable(), is(notNullValue()));
+    assertThat(
+        "Exception should be SecurityException",
+        response.getRaisedThrowable().getThrowable().getType(),
+        is(SecurityException.class.getName()));
+    assertThat(
+        "Exception message should match",
+        response.getRaisedThrowable().getThrowable().getMessage(),
+        containsString("Access denied by AFTER callback"));
+
+    // 4. Verify exception was logged
+    assertTrue(
+        "AFTER callback should have logged exception",
+        LocalInterceptTestSuite.waitForAppLogLine(
+            "LOCAL_AFTER_THROW_EXCEPTION: setting SecurityException via ctx"));
+
+    logger.info("===== testAfterThrowsException [{}]: TEST COMPLETED =====", path);
+  }
+
+  /**
+   * Tests that an AROUND callback can skip proceed and throw an exception.
+   *
+   * <p>Registers an AROUND intercept that skips proceed and throws SecurityException.
+   */
+  @Test
+  public void testAroundSkipWithException() throws Exception {
+    logger.info("===== testAroundSkipWithException [{}]: TEST STARTED =====", path);
+
+    // 1. Register AROUND intercept that skips and throws exception
+    InterceptRequest<InterceptableMethodCall> interceptRequest =
+        createLocalConstructorIntercept(
+            InterceptType.AROUND, "java.lang.Integer", "onAroundSkipWithException");
+
+    register(interceptRequest);
+    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
+
+    // 2. Create InterceptableApp - callback should skip and throw exception
+    ExecMessage response = invokeConstructor(path, TARGET_CLASS, WITH_COUNTER, new Object[] {10});
+
+    // 3. Verify exception was raised
+    assertThat(
+        "Exception should have been raised", response.getRaisedThrowable(), is(notNullValue()));
+    assertThat(
+        "Exception should be SecurityException",
+        response.getRaisedThrowable().getThrowable().getType(),
+        is(SecurityException.class.getName()));
+    assertThat(
+        "Exception message should match",
+        response.getRaisedThrowable().getThrowable().getMessage(),
+        containsString("Access denied by AROUND skip"));
+
+    // 4. Verify skip was logged
+    assertTrue(
+        "AROUND callback should have logged skip with exception",
+        LocalInterceptTestSuite.waitForAppLogLine(
+            "LOCAL_AROUND_SKIP_WITH_EXCEPTION: throwing SecurityException"));
+
+    logger.info("===== testAroundSkipWithException [{}]: TEST COMPLETED =====", path);
+  }
+
+  // ===========================================================================
+  // Illegal Operation Tests (BEFORE)
+  // ===========================================================================
+
+  /** Tests that getReturnValue() throws UnsupportedOperationException in BEFORE callback. */
+  @Test
+  public void testBeforeGetReturnValueThrowsUnsupported() throws Exception {
+    logger.info("===== testBeforeGetReturnValueThrowsUnsupported [{}]: TEST STARTED =====", path);
+
+    // 1. Register BEFORE intercept that attempts getReturnValue()
+    InterceptRequest<InterceptableMethodCall> interceptRequest =
+        createLocalConstructorIntercept(
+            InterceptType.BEFORE, "java.lang.Integer", "onBeforeAttemptGetReturnValue");
+
+    register(interceptRequest);
+    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
+
+    // 2. Create InterceptableApp
+    ExecMessage response = invokeConstructor(path, TARGET_CLASS, WITH_COUNTER, new Object[] {10});
+    assertThat(response.getRaisedThrowable(), is(nullValue()));
+
+    // 3. Verify the callback correctly caught UnsupportedOperationException
+    assertTrue(
+        "BEFORE callback should have caught UnsupportedOperationException for getReturnValue()",
+        LocalInterceptTestSuite.waitForAppLogLine(
+            "LOCAL_BEFORE_ILLEGAL_GET_RETURN: correctly threw UnsupportedOperationException"));
+
+    logger.info("===== testBeforeGetReturnValueThrowsUnsupported [{}]: TEST COMPLETED =====", path);
+  }
+
+  /** Tests that proceed() throws UnsupportedOperationException in BEFORE callback. */
+  @Test
+  public void testBeforeProceedThrowsUnsupported() throws Exception {
+    logger.info("===== testBeforeProceedThrowsUnsupported [{}]: TEST STARTED =====", path);
+
+    // 1. Register BEFORE intercept that attempts proceed()
+    InterceptRequest<InterceptableMethodCall> interceptRequest =
+        createLocalConstructorIntercept(
+            InterceptType.BEFORE, "java.lang.Integer", "onBeforeAttemptProceed");
+
+    register(interceptRequest);
+    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
+
+    // 2. Create InterceptableApp
+    ExecMessage response = invokeConstructor(path, TARGET_CLASS, WITH_COUNTER, new Object[] {10});
+    assertThat(response.getRaisedThrowable(), is(nullValue()));
+
+    // 3. Verify the callback correctly caught UnsupportedOperationException
+    assertTrue(
+        "BEFORE callback should have caught UnsupportedOperationException for proceed()",
+        LocalInterceptTestSuite.waitForAppLogLine(
+            "LOCAL_BEFORE_ILLEGAL_PROCEED: correctly threw UnsupportedOperationException"));
+
+    logger.info("===== testBeforeProceedThrowsUnsupported [{}]: TEST COMPLETED =====", path);
+  }
+
+  // ===========================================================================
+  // Illegal Operation Tests (AFTER)
+  // ===========================================================================
+
+  /** Tests that setArg() throws UnsupportedOperationException in AFTER callback. */
+  @Test
+  public void testAfterSetArgThrowsUnsupported() throws Exception {
+    logger.info("===== testAfterSetArgThrowsUnsupported [{}]: TEST STARTED =====", path);
+
+    // 1. Register AFTER intercept that attempts setArg()
+    InterceptRequest<InterceptableMethodCall> interceptRequest =
+        createLocalConstructorIntercept(
+            InterceptType.AFTER, "java.lang.Integer", "onAfterAttemptSetArg");
+
+    register(interceptRequest);
+    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
+
+    // 2. Create InterceptableApp
+    ExecMessage response = invokeConstructor(path, TARGET_CLASS, WITH_COUNTER, new Object[] {10});
+    assertThat(response.getRaisedThrowable(), is(nullValue()));
+
+    // 3. Verify the callback correctly caught UnsupportedOperationException
+    assertTrue(
+        "AFTER callback should have caught UnsupportedOperationException for setArg()",
+        LocalInterceptTestSuite.waitForAppLogLine(
+            "LOCAL_AFTER_ILLEGAL_SET_ARG: correctly threw UnsupportedOperationException"));
+
+    logger.info("===== testAfterSetArgThrowsUnsupported [{}]: TEST COMPLETED =====", path);
+  }
+
+  /** Tests that proceed() throws UnsupportedOperationException in AFTER callback. */
+  @Test
+  public void testAfterProceedThrowsUnsupported() throws Exception {
+    logger.info("===== testAfterProceedThrowsUnsupported [{}]: TEST STARTED =====", path);
+
+    // 1. Register AFTER intercept that attempts proceed()
+    InterceptRequest<InterceptableMethodCall> interceptRequest =
+        createLocalConstructorIntercept(
+            InterceptType.AFTER, "java.lang.Integer", "onAfterAttemptProceed");
+
+    register(interceptRequest);
+    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
+
+    // 2. Create InterceptableApp
+    ExecMessage response = invokeConstructor(path, TARGET_CLASS, WITH_COUNTER, new Object[] {10});
+    assertThat(response.getRaisedThrowable(), is(nullValue()));
+
+    // 3. Verify the callback correctly caught UnsupportedOperationException
+    assertTrue(
+        "AFTER callback should have caught UnsupportedOperationException for proceed()",
+        LocalInterceptTestSuite.waitForAppLogLine(
+            "LOCAL_AFTER_ILLEGAL_PROCEED: correctly threw UnsupportedOperationException"));
+
+    logger.info("===== testAfterProceedThrowsUnsupported [{}]: TEST COMPLETED =====", path);
+  }
+
+  // ===========================================================================
+  // Illegal Operation Tests (AROUND)
+  // ===========================================================================
+
+  /**
+   * Tests that getReturnValue() throws IllegalStateException before proceed() in AROUND callback.
+   */
+  @Test
+  public void testAroundGetReturnValueBeforeProceedThrowsIllegalState() throws Exception {
+    logger.info(
+        "===== testAroundGetReturnValueBeforeProceedThrowsIllegalState [{}]: TEST STARTED =====",
+        path);
+
+    // 1. Register AROUND intercept that attempts getReturnValue() before proceed()
+    InterceptRequest<InterceptableMethodCall> interceptRequest =
+        createLocalConstructorIntercept(
+            InterceptType.AROUND, "java.lang.Integer", "onAroundAttemptGetReturnBeforeProceed");
+
+    register(interceptRequest);
+    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
+
+    // 2. Create InterceptableApp
+    ExecMessage response = invokeConstructor(path, TARGET_CLASS, WITH_COUNTER, new Object[] {10});
+    assertThat(response.getRaisedThrowable(), is(nullValue()));
+
+    // 3. Verify the callback correctly caught IllegalStateException
+    assertTrue(
+        "AROUND callback should have caught IllegalStateException for getReturnValue() before proceed()",
+        LocalInterceptTestSuite.waitForAppLogLine(
+            "LOCAL_AROUND_ILLEGAL_GET_RETURN_BEFORE_PROCEED: correctly threw IllegalStateException"));
+
+    logger.info(
+        "===== testAroundGetReturnValueBeforeProceedThrowsIllegalState [{}]: TEST COMPLETED =====",
+        path);
+  }
+
+  /** Tests that setArg() throws IllegalStateException after proceed() in AROUND callback. */
+  @Test
+  public void testAroundSetArgAfterProceedThrowsIllegalState() throws Exception {
+    logger.info(
+        "===== testAroundSetArgAfterProceedThrowsIllegalState [{}]: TEST STARTED =====", path);
+
+    // 1. Register AROUND intercept that attempts setArg() after proceed()
+    InterceptRequest<InterceptableMethodCall> interceptRequest =
+        createLocalConstructorIntercept(
+            InterceptType.AROUND, "java.lang.Integer", "onAroundAttemptSetArgAfterProceed");
+
+    register(interceptRequest);
+    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
+
+    // 2. Create InterceptableApp
+    ExecMessage response = invokeConstructor(path, TARGET_CLASS, WITH_COUNTER, new Object[] {10});
+    assertThat(response.getRaisedThrowable(), is(nullValue()));
+
+    // 3. Verify the callback correctly caught IllegalStateException
+    assertTrue(
+        "AROUND callback should have caught IllegalStateException for setArg() after proceed()",
+        LocalInterceptTestSuite.waitForAppLogLine(
+            "LOCAL_AROUND_ILLEGAL_SET_ARG_AFTER_PROCEED: correctly threw IllegalStateException"));
+
+    logger.info(
+        "===== testAroundSetArgAfterProceedThrowsIllegalState [{}]: TEST COMPLETED =====", path);
+  }
+
+  /** Tests that skipProceed() without setReturnValue() throws IllegalStateException. */
+  @Test
+  public void testAroundSkipWithoutReturnValueThrowsIllegalState() throws Exception {
+    logger.info(
+        "===== testAroundSkipWithoutReturnValueThrowsIllegalState [{}]: TEST STARTED =====", path);
+
+    // 1. Register AROUND intercept that attempts skipProceed without setReturnValue
+    InterceptRequest<InterceptableMethodCall> interceptRequest =
+        createLocalConstructorIntercept(
+            InterceptType.AROUND, "java.lang.Integer", "onAroundSkipWithoutReturnValue");
+
+    register(interceptRequest);
+    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
+
+    // 2. Create InterceptableApp - should fail with IllegalStateException
+    ExecMessage response = invokeConstructor(path, TARGET_CLASS, WITH_COUNTER, new Object[] {10});
+
+    // 3. Verify IllegalStateException was raised
+    assertThat(
+        "Exception should have been raised", response.getRaisedThrowable(), is(notNullValue()));
+    assertThat(
+        "Exception should be IllegalStateException",
+        response.getRaisedThrowable().getThrowable().getType(),
+        is(IllegalStateException.class.getName()));
+    assertThat(
+        "Exception message should mention setReturnValue",
+        response.getRaisedThrowable().getThrowable().getMessage(),
+        containsString("setReturnValue"));
+
+    // 4. Verify the callback logged the attempt
+    assertTrue(
+        "AROUND callback should have logged skip without return value attempt",
+        LocalInterceptTestSuite.waitForAppLogLine(
+            "LOCAL_AROUND_SKIP_WITHOUT_RETURN: attempting skipProceed without setReturnValue"));
+
+    logger.info(
+        "===== testAroundSkipWithoutReturnValueThrowsIllegalState [{}]: TEST COMPLETED =====",
+        path);
+  }
+
+  /**
+   * Tests that skipProceed() with null return value succeeds for constructors.
+   *
+   * <p>Unlike methods, constructors can return null when skipped.
+   */
+  @Test
+  public void testAroundSkipWithNullReturnValueSucceeds() throws Exception {
+    logger.info("===== testAroundSkipWithNullReturnValueSucceeds [{}]: TEST STARTED =====", path);
+
+    // 1. Register AROUND intercept that skips and returns null
+    InterceptRequest<InterceptableMethodCall> interceptRequest =
+        createLocalConstructorIntercept(
+            InterceptType.AROUND, "java.lang.Integer", "onAroundSkipWithNullReturn");
+
+    register(interceptRequest);
+    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
+
+    // 2. Create InterceptableApp - callback should skip and return null
+    ExecMessage response = invokeConstructor(path, TARGET_CLASS, WITH_COUNTER, new Object[] {10});
+
+    assertThat(response.getRaisedThrowable(), is(nullValue()));
+
+    // 3. Verify skip was logged
+    assertTrue(
+        "AROUND callback should have skipped with null return",
+        LocalInterceptTestSuite.waitForAppLogLine(
+            "LOCAL_AROUND_SKIP_WITH_NULL_RETURN: returning null"));
+
+    // 4. Verify return value is null
+    Object returnValue = Unwrapper.unwrapObject(response.getReturnValue().getObject());
+    assertThat("Return value should be null from skip", returnValue, is(nullValue()));
+
+    logger.info("===== testAroundSkipWithNullReturnValueSucceeds [{}]: TEST COMPLETED =====", path);
   }
 }

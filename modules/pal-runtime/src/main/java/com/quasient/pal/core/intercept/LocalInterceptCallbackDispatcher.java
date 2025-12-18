@@ -693,12 +693,22 @@ public class LocalInterceptCallbackDispatcher {
 
         // Check if proceed() was called
         if (!context.isProceedCalled()) {
+          // Validate: skipProceed() on non-void methods requires setReturnValue() or
+          // setExceptionToThrow()
+          Throwable exToThrow = context.getExceptionToThrow();
+          if (!context.isVoid() && !context.isReturnValueModified() && exToThrow == null) {
+            throw new IllegalStateException(
+                "skipProceed() was called but no return value was set. "
+                    + "You must call ctx.setReturnValue(value) or ctx.setExceptionToThrow(exception) "
+                    + "before skipping execution. Use ctx.setReturnValue(null) for explicit null.");
+          }
+
           // Skip execution - extract return value from context
           Object skipReturnValue = context.getReturnValueInternal();
           if (logger.isDebugEnabled()) {
             logger.debug("Local AROUND callback skipped proceed(), returning cached value");
           }
-          return LocalAroundConsolidatedResponse.skipWithReturn(skipReturnValue, null);
+          return LocalAroundConsolidatedResponse.skipWithReturn(skipReturnValue, exToThrow);
         }
 
         // proceed() was called - collect any arg mutations made before proceed()

@@ -23,9 +23,11 @@ import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.intercept.AbstractInterceptIT;
 import com.quasient.pal.intercept.InvocationPath;
 import com.quasient.pal.messages.colfer.ExecMessage;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.UUID;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -60,6 +62,20 @@ public class LocalMethodAsyncCallbackIT extends AbstractInterceptIT {
    */
   public LocalMethodAsyncCallbackIT(InvocationPath path) {
     this.path = path;
+  }
+
+  /**
+   * Clears the application log and resets callback counters before each test.
+   *
+   * @throws IOException if log file cannot be cleared
+   */
+  @Before
+  public void clearAppLogBeforeTest() throws IOException {
+    LocalInterceptTestSuite.clearAppLog();
+    // Reset callback counters in the peer via RPC
+    invoke(
+        messageBuilder.buildClassMethod(
+            myPeerUuid, TARGET_CLASS, "resetLocalInterceptCallbacks", null, null, null, null));
   }
 
   /**
@@ -312,5 +328,133 @@ public class LocalMethodAsyncCallbackIT extends AbstractInterceptIT {
         LocalInterceptTestSuite.waitForAppLogLine("LOCAL_AFTER_ASYNC:.*multiplyBy.*count=1"));
 
     logger.info("===== testLocalBeforeAndAfterAsyncCallbacks [{}]: TEST COMPLETED =====", path);
+  }
+
+  // ===========================================================================
+  // Illegal Operation Tests (BEFORE_ASYNC)
+  // ===========================================================================
+
+  /**
+   * Tests that setArg() throws UnsupportedOperationException in BEFORE_ASYNC callback.
+   *
+   * <p>ASYNC callbacks cannot mutate arguments (fire-and-forget semantics).
+   */
+  @Test
+  public void testBeforeAsyncSetArgThrowsUnsupported() throws Exception {
+    logger.info("===== testBeforeAsyncSetArgThrowsUnsupported [{}]: TEST STARTED =====", path);
+
+    // 1. Register BEFORE_ASYNC intercept that attempts setArg()
+    InterceptRequest<InterceptableMethodCall> interceptRequest =
+        createLocalMethodIntercept(
+            InterceptType.BEFORE_ASYNC,
+            "multiplyBy",
+            "java.lang.Integer",
+            "onBeforeAsyncAttemptSetArg");
+
+    register(interceptRequest);
+    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
+
+    // 2. Create InterceptableApp and invoke
+    ObjectRef appInstance =
+        ObjectRef.from(
+            invoke(messageBuilder.buildEmptyConstructor(myPeerUuid, TARGET_CLASS))
+                .getReturnValue()
+                .getObject()
+                .getRef());
+    ExecMessage response = invokeMultiplyByOnce(appInstance, 3);
+    assertThat(response.getRaisedThrowable(), is(nullValue()));
+
+    // 3. Verify the callback correctly caught UnsupportedOperationException
+    assertTrue(
+        "BEFORE_ASYNC callback should have caught UnsupportedOperationException for setArg()",
+        LocalInterceptTestSuite.waitForAppLogLine(
+            "LOCAL_BEFORE_ASYNC_ILLEGAL_SET_ARG: correctly threw UnsupportedOperationException"));
+
+    logger.info("===== testBeforeAsyncSetArgThrowsUnsupported [{}]: TEST COMPLETED =====", path);
+  }
+
+  // ===========================================================================
+  // Illegal Operation Tests (AFTER_ASYNC)
+  // ===========================================================================
+
+  /**
+   * Tests that setReturnValue() throws UnsupportedOperationException in AFTER_ASYNC callback.
+   *
+   * <p>ASYNC callbacks cannot override return values (fire-and-forget semantics).
+   */
+  @Test
+  public void testAfterAsyncSetReturnValueThrowsUnsupported() throws Exception {
+    logger.info(
+        "===== testAfterAsyncSetReturnValueThrowsUnsupported [{}]: TEST STARTED =====", path);
+
+    // 1. Register AFTER_ASYNC intercept that attempts setReturnValue()
+    InterceptRequest<InterceptableMethodCall> interceptRequest =
+        createLocalMethodIntercept(
+            InterceptType.AFTER_ASYNC,
+            "multiplyBy",
+            "java.lang.Integer",
+            "onAfterAsyncAttemptSetReturnValue");
+
+    register(interceptRequest);
+    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
+
+    // 2. Create InterceptableApp and invoke
+    ObjectRef appInstance =
+        ObjectRef.from(
+            invoke(messageBuilder.buildEmptyConstructor(myPeerUuid, TARGET_CLASS))
+                .getReturnValue()
+                .getObject()
+                .getRef());
+    ExecMessage response = invokeMultiplyByOnce(appInstance, 3);
+    assertThat(response.getRaisedThrowable(), is(nullValue()));
+
+    // 3. Verify the callback correctly caught UnsupportedOperationException
+    assertTrue(
+        "AFTER_ASYNC callback should have caught UnsupportedOperationException for setReturnValue()",
+        LocalInterceptTestSuite.waitForAppLogLine(
+            "LOCAL_AFTER_ASYNC_ILLEGAL_SET_RETURN: correctly threw UnsupportedOperationException"));
+
+    logger.info(
+        "===== testAfterAsyncSetReturnValueThrowsUnsupported [{}]: TEST COMPLETED =====", path);
+  }
+
+  /**
+   * Tests that setExceptionToThrow() throws UnsupportedOperationException in AFTER_ASYNC callback.
+   *
+   * <p>ASYNC callbacks cannot throw exceptions (fire-and-forget semantics).
+   */
+  @Test
+  public void testAfterAsyncSetExceptionThrowsUnsupported() throws Exception {
+    logger.info("===== testAfterAsyncSetExceptionThrowsUnsupported [{}]: TEST STARTED =====", path);
+
+    // 1. Register AFTER_ASYNC intercept that attempts setExceptionToThrow()
+    InterceptRequest<InterceptableMethodCall> interceptRequest =
+        createLocalMethodIntercept(
+            InterceptType.AFTER_ASYNC,
+            "multiplyBy",
+            "java.lang.Integer",
+            "onAfterAsyncAttemptSetException");
+
+    register(interceptRequest);
+    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
+
+    // 2. Create InterceptableApp and invoke
+    ObjectRef appInstance =
+        ObjectRef.from(
+            invoke(messageBuilder.buildEmptyConstructor(myPeerUuid, TARGET_CLASS))
+                .getReturnValue()
+                .getObject()
+                .getRef());
+    ExecMessage response = invokeMultiplyByOnce(appInstance, 3);
+    assertThat(response.getRaisedThrowable(), is(nullValue()));
+
+    // 3. Verify the callback correctly caught UnsupportedOperationException
+    assertTrue(
+        "AFTER_ASYNC callback should have caught UnsupportedOperationException for setExceptionToThrow()",
+        LocalInterceptTestSuite.waitForAppLogLine(
+            "LOCAL_AFTER_ASYNC_ILLEGAL_SET_EXCEPTION: correctly threw UnsupportedOperationException"));
+
+    logger.info(
+        "===== testAfterAsyncSetExceptionThrowsUnsupported [{}]: TEST COMPLETED =====", path);
   }
 }

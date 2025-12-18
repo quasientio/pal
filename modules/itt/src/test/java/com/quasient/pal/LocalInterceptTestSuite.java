@@ -18,6 +18,7 @@ import com.quasient.pal.intercept.local.field.LocalFieldAsyncCallbackIT;
 import com.quasient.pal.intercept.local.field.LocalFieldSyncCallbackIT;
 import com.quasient.pal.intercept.local.method.LocalMethodAsyncCallbackIT;
 import com.quasient.pal.intercept.local.method.LocalMethodSyncCallbackIT;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -148,11 +149,19 @@ public class LocalInterceptTestSuite extends AbstractIntegrationTest {
   /**
    * Clears the application log file before each test run.
    *
-   * @throws IOException if the log file cannot be deleted
+   * <p>This method TRUNCATES the file rather than deleting it because the peer's logback
+   * FileAppender holds an open file descriptor to the log file. Deleting the file would orphan that
+   * file descriptor, causing subsequent log writes to go to /dev/null (the orphaned inode).
+   *
+   * @throws IOException if the log file cannot be truncated
    */
   public static void clearAppLog() throws IOException {
     if (Files.exists(appLogPath)) {
-      Files.delete(appLogPath);
+      // Truncate instead of delete - this preserves the file's inode so the open FileOutputStream
+      // continues to write to the same file
+      try (FileOutputStream fos = new FileOutputStream(appLogPath.toFile(), false)) {
+        // Opening with append=false truncates the file to zero length
+      }
     }
   }
 

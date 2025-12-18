@@ -9,6 +9,7 @@
  */
 package com.quasient.pal.apps.quantized.intercept;
 
+import com.quasient.pal.apps.callbacks.local.LocalInterceptCallbacks;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.List;
@@ -275,5 +276,15 @@ public class InterceptableApp {
     for (int i = 0; i < n; i++) {
       staticCounter = baseValue + i; // <-- Static field put call site
     }
+  }
+
+  /**
+   * Resets the local intercept callback counters.
+   *
+   * <p>This method is called via RPC before each local intercept test to ensure callback count
+   * assertions start from a known state (count=0).
+   */
+  public static void resetLocalInterceptCallbacks() {
+    LocalInterceptCallbacks.reset();
   }
 }
