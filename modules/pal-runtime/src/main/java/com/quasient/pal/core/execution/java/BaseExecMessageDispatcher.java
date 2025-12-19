@@ -419,10 +419,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     if (localAroundPendingCallbacks != null && !localAroundPendingCallbacks.isEmpty()) {
       ConsolidatedCallbackResponse localAroundAfterResponse =
           localInterceptCallbackDispatcher.sendLocalAroundAfterCallbacks(
-              localAroundPendingCallbacks,
-              returnValue,
-              returnsVoid(pjp),
-              throwableWrapper != null ? throwableWrapper.throwable() : null);
+              localAroundPendingCallbacks, returnValue);
 
       // Check if callback wants to throw an exception
       if (localAroundAfterResponse.shouldThrowException()) {
@@ -1001,10 +998,9 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
     // Handle LOCAL AROUND AFTER phase (for callbacks that called proceed())
     if (localAroundPendingCallbacks != null && !localAroundPendingCallbacks.isEmpty()) {
-      boolean returnsVoidLocal = accessibleObject != null && returnsVoid(accessibleObject);
       ConsolidatedCallbackResponse localAroundAfterResponse =
           localInterceptCallbackDispatcher.sendLocalAroundAfterCallbacks(
-              localAroundPendingCallbacks, returnValue, returnsVoidLocal, exceptionWhileInvoking);
+              localAroundPendingCallbacks, returnValue);
 
       // Check if callback wants to throw an exception
       if (localAroundAfterResponse.shouldThrowException()) {

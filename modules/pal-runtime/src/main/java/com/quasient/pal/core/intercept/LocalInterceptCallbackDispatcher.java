@@ -747,21 +747,18 @@ public class LocalInterceptCallbackDispatcher {
    * <p>This method is called after the intercepted method has executed. It processes any return
    * value modifications from callbacks that called {@code proceed()}.
    *
-   * <p><b>Note:</b> Unlike remote AROUND, local AROUND doesn't send a separate AFTER message. The
-   * callback already executed the method via {@code proceed()} and can modify the return value
-   * immediately. This method handles collecting any final return value overrides.
+   * <p><b>Note:</b> Unlike remote AROUND, local AROUND doesn't need {@code isVoid} or {@code
+   * thrownException} parameters because the callback's {@link InterceptContext} is updated directly
+   * during {@link InterceptContext#proceed()}. The context already has the return value, void
+   * status, and any thrown exception from the actual method invocation.
    *
    * @param pendingCallbacks list of callbacks that called proceed()
-   * @param returnValue the return value from method execution (from proceed())
-   * @param isVoid whether the method has void return type
-   * @param thrownException exception thrown by the method (may be null)
+   * @param returnValue the return value from method execution (used as initial value for override
+   *     tracking)
    * @return consolidated response with any return value override
    */
   public InterceptCallbackDispatcher.ConsolidatedCallbackResponse sendLocalAroundAfterCallbacks(
-      List<LocalAroundCallbackState> pendingCallbacks,
-      Object returnValue,
-      boolean isVoid,
-      Throwable thrownException) {
+      List<LocalAroundCallbackState> pendingCallbacks, Object returnValue) {
 
     if (pendingCallbacks == null || pendingCallbacks.isEmpty()) {
       return InterceptCallbackDispatcher.ConsolidatedCallbackResponse.proceed();

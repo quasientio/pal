@@ -302,7 +302,7 @@ public class LocalInterceptCallbackDispatcherTest {
   @Test
   public void testSendLocalAroundAfterCallbacksEmptyList() {
     ConsolidatedCallbackResponse response =
-        dispatcher.sendLocalAroundAfterCallbacks(new ArrayList<>(), 100, false, null);
+        dispatcher.sendLocalAroundAfterCallbacks(new ArrayList<>(), 100);
 
     assertTrue(response.shouldProceed());
     assertFalse(response.hasReturnValueOverride());
@@ -312,8 +312,7 @@ public class LocalInterceptCallbackDispatcherTest {
   /** Tests that AROUND AFTER with null list returns proceed response. */
   @Test
   public void testSendLocalAroundAfterCallbacksNullList() {
-    ConsolidatedCallbackResponse response =
-        dispatcher.sendLocalAroundAfterCallbacks(null, 100, false, null);
+    ConsolidatedCallbackResponse response = dispatcher.sendLocalAroundAfterCallbacks(null, 100);
 
     assertTrue(response.shouldProceed());
     assertFalse(response.hasReturnValueOverride());
@@ -341,8 +340,7 @@ public class LocalInterceptCallbackDispatcherTest {
 
     // Then send AROUND AFTER callbacks
     ConsolidatedCallbackResponse afterResponse =
-        dispatcher.sendLocalAroundAfterCallbacks(
-            aroundResponse.getPendingCallbacks(), 100, false, null);
+        dispatcher.sendLocalAroundAfterCallbacks(aroundResponse.getPendingCallbacks(), 100);
 
     assertTrue(afterResponse.hasReturnValueOverride());
     assertEquals(999, afterResponse.getOverriddenReturnValue());
