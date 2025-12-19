@@ -28,6 +28,8 @@ import com.quasient.pal.intercept.endtoend.method.AroundMethodCallbackIT;
 import com.quasient.pal.intercept.endtoend.method.BeforeMethodAsyncCallbackIT;
 import com.quasient.pal.intercept.endtoend.method.BeforeMethodCallbackIT;
 import com.quasient.pal.intercept.local.combined.LocalAndRemoteCombinedIT;
+import com.quasient.pal.intercept.order.InterceptExecutionOrderIT;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -113,7 +115,10 @@ import org.slf4j.LoggerFactory;
   AfterFieldAsyncCallbackIT.class,
 
   // Combined local and remote intercept tests
-  LocalAndRemoteCombinedIT.class
+  LocalAndRemoteCombinedIT.class,
+
+  // Intercept execution order tests
+  InterceptExecutionOrderIT.class
 })
 public class InterceptEndToEndTestSuite extends AbstractIntegrationTest {
 
@@ -227,6 +232,24 @@ public class InterceptEndToEndTestSuite extends AbstractIntegrationTest {
       }
     }
     return false;
+  }
+
+  /**
+   * Clears the application log file by truncating it.
+   *
+   * <p>This method truncates rather than deletes the file to preserve the file's inode, so any open
+   * file handles continue to write to the same file.
+   *
+   * @throws IOException if the log file cannot be truncated
+   */
+  public static void clearAppLog() throws IOException {
+    if (Files.exists(appLogPath)) {
+      // Truncate instead of delete - preserves file's inode so open FileOutputStream
+      // continues to write to the same file
+      try (FileOutputStream fos = new FileOutputStream(appLogPath.toFile(), false)) {
+        // Opening with append=false truncates the file to zero length
+      }
+    }
   }
 
   /** Helper instance to access non-static methods from AbstractIntegrationTest. */
