@@ -16,21 +16,17 @@ import static com.quasient.pal.serdes.colfer.ExecMessageUtils.getParameterTypes;
 
 import com.quasient.pal.common.lang.intercept.AfterPhaseData;
 import com.quasient.pal.common.lang.intercept.InterceptType;
-import com.quasient.pal.common.lang.intercept.LocalAroundAccessor;
 import com.quasient.pal.common.objects.ObjectRef;
 import com.quasient.pal.common.runtime.Context;
 import com.quasient.pal.common.runtime.ContextFactory;
 import com.quasient.pal.common.runtime.Dispatcher;
 import com.quasient.pal.common.runtime.ExecPhase;
 import com.quasient.pal.common.util.Classes;
+import com.quasient.pal.core.intercept.AroundInterceptChain;
 import com.quasient.pal.core.intercept.InterceptCallbackDispatcher;
-import com.quasient.pal.core.intercept.InterceptCallbackDispatcher.AroundCallbackState;
-import com.quasient.pal.core.intercept.InterceptCallbackDispatcher.AroundConsolidatedResponse;
 import com.quasient.pal.core.intercept.InterceptCallbackDispatcher.ConsolidatedCallbackResponse;
 import com.quasient.pal.core.intercept.InterceptCheckResult;
 import com.quasient.pal.core.intercept.InterceptChecker;
-import com.quasient.pal.core.intercept.LocalInterceptCallbackDispatcher.LocalAroundCallbackState;
-import com.quasient.pal.core.intercept.LocalInterceptCallbackDispatcher.LocalAroundConsolidatedResponse;
 import com.quasient.pal.core.internal.messages.SessionCommandMsg;
 import com.quasient.pal.core.service.RunOptions;
 import com.quasient.pal.core.transport.MessageChannelType;
@@ -208,137 +204,45 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       }
     }
 
-    // Handle LOCAL AROUND intercepts (direct method invocation, no serialization)
-    List<LocalAroundCallbackState> localAroundPendingCallbacks = null;
-    boolean skipInvoke = false;
-    Object skipReturnValue = null;
-    InvocationThrowableWrapper throwableWrapper = null;
+    // Build AROUND chain (unified local + remote, onion model)
+    // Each proceed() invokes the next layer, not the method directly
+    AroundInterceptChain aroundChain = null;
+    if (beforeInterceptCheck != null && beforeInterceptCheck.hasAnyIntercepts()) {
+      String className = getClassNameFromPjp(pjp);
+      String methodName = getMethodNameFromPjp(pjp);
+      List<String> paramTypes = getParamTypesFromPjp(pjp);
+
+      // Method invoker for the innermost layer
+      final Object[] argsForChain = finalArgs;
+      AroundInterceptChain.MethodInvoker methodInvoker =
+          (invokeArgs) -> {
+            try {
+              Object result = invoke(pjp, invokeArgs != null ? invokeArgs : argsForChain);
+              return new AfterPhaseData(result, null, returnsVoid(pjp));
+            } catch (Throwable th) {
+              return new AfterPhaseData(null, th, returnsVoid(pjp));
+            }
+          };
+
+      aroundChain =
+          aroundChainBuilder.build(
+              beforeInterceptCheck, className, methodName, paramTypes, methodInvoker);
+    }
+
+    // Execute AROUND chain OR invoke method directly
     Object returnValue = null;
+    InvocationThrowableWrapper throwableWrapper = null;
 
-    if (beforeInterceptCheck != null && beforeInterceptCheck.hasLocalIntercepts()) {
-      List<InterceptMessage> localAroundIntercepts =
-          filterAroundIntercepts(beforeInterceptCheck.getLocalIntercepts());
-      if (!localAroundIntercepts.isEmpty()) {
-        String className = getClassNameFromPjp(pjp);
-        String methodName = getMethodNameFromPjp(pjp);
-        List<String> paramTypes = getParamTypesFromPjp(pjp);
+    if (aroundChain != null && !aroundChain.isEmpty()) {
+      // Execute through the unified chain (handles local + remote AROUND in proper order)
+      AroundInterceptChain.ChainResult chainResult = aroundChain.invoke(finalArgs, beforeExecMsg);
 
-        // Create accessor that invokes the method directly
-        final Object[] argsForAccessor = finalArgs;
-        LocalAroundAccessor localAccessor =
-            (argsToInvoke) -> {
-              try {
-                Object result = invoke(pjp, argsToInvoke != null ? argsToInvoke : argsForAccessor);
-                return new AfterPhaseData(result, null, returnsVoid(pjp));
-              } catch (Throwable th) {
-                return new AfterPhaseData(null, th, returnsVoid(pjp));
-              }
-            };
-
-        LocalAroundConsolidatedResponse localAroundResponse =
-            localInterceptCallbackDispatcher.sendLocalAroundCallbacks(
-                localAroundIntercepts,
-                finalArgs,
-                className,
-                methodName,
-                paramTypes,
-                peerUuid.toString(),
-                localAccessor);
-
-        // Check if callback wants to throw an exception
-        if (localAroundResponse.shouldThrowException()) {
-          throw localAroundResponse.getExceptionToThrow();
-        }
-
-        // Check if callback says to skip execution (e.g., cache hit)
-        if (!localAroundResponse.shouldProceed()) {
-          // Skip method invocation - use cached/computed value from callback
-          skipInvoke = true;
-          skipReturnValue = localAroundResponse.getSkipReturnValue();
-        } else {
-          // Apply argument mutations from local AROUND
-          if (!localAroundResponse.getMutatedArgs().isEmpty()) {
-            Object[] mutatedArgs = finalArgs == args ? args.clone() : finalArgs;
-            for (Map.Entry<Integer, Object> entry :
-                localAroundResponse.getMutatedArgs().entrySet()) {
-              int index = entry.getKey();
-              Object newValue = entry.getValue();
-              if (index >= 0 && index < mutatedArgs.length) {
-                mutatedArgs[index] = newValue;
-              }
-            }
-            finalArgs = mutatedArgs;
-          }
-
-          // Track pending local AROUND callbacks for AFTER phase
-          localAroundPendingCallbacks = localAroundResponse.getPendingCallbacks();
-
-          // If any local AROUND callback called proceed(), the method was already invoked
-          // Extract the return value from the last pending callback's context
-          if (localAroundPendingCallbacks != null && !localAroundPendingCallbacks.isEmpty()) {
-            LocalAroundCallbackState lastCallback =
-                localAroundPendingCallbacks.get(localAroundPendingCallbacks.size() - 1);
-            returnValue = lastCallback.context().getReturnValueInternal();
-            Throwable thrown = lastCallback.context().getThrownException();
-            if (thrown != null) {
-              throwableWrapper = new InvocationThrowableWrapper(thrown);
-            }
-            // Skip remote AROUND and direct invocation since local AROUND already invoked
-            skipInvoke = true;
-          }
-        }
-      }
-    }
-
-    // Send REMOTE AROUND BEFORE callbacks and handle skip semantics
-    // (only if local AROUND didn't already invoke the method)
-    List<AroundCallbackState> aroundPendingCallbacks = null;
-    if (!skipInvoke
-        && beforeInterceptCheck != null
-        && beforeInterceptCheck.hasRemoteIntercepts()
-        && beforeExecMsg != null) {
-      AroundConsolidatedResponse aroundResponse =
-          interceptCallbackDispatcher.sendAroundCallbacks(
-              beforeInterceptCheck, beforeExecMsg, finalArgs);
-
-      // Check if callback wants to throw an exception
-      if (aroundResponse.shouldThrowException()) {
-        throw aroundResponse.getExceptionToThrow();
-      }
-
-      // Check if callback says to skip execution (e.g., cache hit)
-      if (!aroundResponse.shouldProceed()) {
-        // Skip method invocation but continue with post-execution steps (WAL, AFTER intercepts)
-        // Note: AROUND AFTER callbacks won't fire since proceed() wasn't called
-        skipInvoke = true;
-        skipReturnValue = aroundResponse.getSkipReturnValue();
-      } else {
-        // Apply additional argument mutations from AROUND callbacks
-        if (aroundResponse.hasArgMutations()) {
-          Object[] mutatedArgs = finalArgs == args ? args.clone() : finalArgs;
-          for (Map.Entry<Integer, Object> entry : aroundResponse.getMutatedArgs().entrySet()) {
-            int index = entry.getKey();
-            Object newValue = entry.getValue();
-            if (index >= 0 && index < mutatedArgs.length) {
-              mutatedArgs[index] = newValue;
-            }
-          }
-          finalArgs = mutatedArgs;
-        }
-
-        // Track pending AROUND callbacks for AFTER phase
-        aroundPendingCallbacks = aroundResponse.getPendingCallbacks();
-      }
-    }
-
-    // 4. Invoke (skip if AROUND callback said to skip or local AROUND already invoked)
-    if (skipInvoke) {
-      // Use the skip return value from AROUND callback (e.g., cached value)
-      // If local AROUND invoked, returnValue is already set; otherwise use skipReturnValue
-      if (returnValue == null && localAroundPendingCallbacks == null) {
-        returnValue = skipReturnValue;
+      returnValue = chainResult.returnValue();
+      if (chainResult.thrownException() != null) {
+        throwableWrapper = new InvocationThrowableWrapper(chainResult.thrownException());
       }
     } else {
+      // No AROUND intercepts - invoke method directly
       try {
         returnValue = invoke(pjp, finalArgs);
       } catch (Throwable th) {
@@ -415,23 +319,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       }
     }
 
-    // Handle LOCAL AROUND AFTER phase (for callbacks that called proceed())
-    if (localAroundPendingCallbacks != null && !localAroundPendingCallbacks.isEmpty()) {
-      ConsolidatedCallbackResponse localAroundAfterResponse =
-          localInterceptCallbackDispatcher.sendLocalAroundAfterCallbacks(
-              localAroundPendingCallbacks, returnValue);
-
-      // Check if callback wants to throw an exception
-      if (localAroundAfterResponse.shouldThrowException()) {
-        throwableWrapper =
-            new InvocationThrowableWrapper(localAroundAfterResponse.getExceptionToThrow());
-      }
-
-      // Apply return value override
-      if (localAroundAfterResponse.hasReturnValueOverride()) {
-        returnValue = localAroundAfterResponse.getOverriddenReturnValue();
-      }
-    }
+    // Note: LOCAL AROUND AFTER is now handled by AroundInterceptChain
 
     if (needsAfterMessages) {
       // Reuse context if already created
@@ -479,27 +367,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         }
       }
 
-      // 8.5. Send AROUND AFTER callbacks (for callbacks that called proceed())
-      if (aroundPendingCallbacks != null && !aroundPendingCallbacks.isEmpty()) {
-        InterceptCallbackDispatcher.ConsolidatedCallbackResponse aroundAfterResponse =
-            interceptCallbackDispatcher.sendAroundAfterCallbacks(
-                aroundPendingCallbacks,
-                afterExecMsg,
-                returnValue,
-                returnsVoid,
-                throwableWrapper != null ? throwableWrapper.throwable() : null);
-
-        // Check if callback wants to throw an exception
-        if (aroundAfterResponse.shouldThrowException()) {
-          throwableWrapper =
-              new InvocationThrowableWrapper(aroundAfterResponse.getExceptionToThrow());
-        }
-
-        // Apply return value override
-        if (aroundAfterResponse.hasReturnValueOverride()) {
-          returnValue = aroundAfterResponse.getOverriddenReturnValue();
-        }
-      }
+      // Note: REMOTE AROUND AFTER is now handled by AroundInterceptChain
     }
 
     // 9. Return object or re-raise exception
@@ -606,12 +474,6 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
     // Process BEFORE intercept callbacks and apply argument mutations
     List<MessageArgument> finalArgs = args;
-    List<AroundCallbackState> aroundPendingCallbacks = null;
-    List<LocalAroundCallbackState> localAroundPendingCallbacks = null;
-    boolean skipInvoke = false;
-    Object skipReturnValue = null;
-    Object localAroundReturnValue = null;
-    Throwable localAroundThrownException = null;
 
     // Handle LOCAL BEFORE intercepts first (before remote)
     if (exceptionWhileLoading == null
@@ -689,114 +551,58 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       }
     }
 
-    // Handle LOCAL AROUND intercepts (direct method invocation, no serialization)
+    // Build AROUND chain (unified local + remote, onion model)
+    // Note: AROUND chain is built after BEFORE intercepts but before invocation
+    AroundInterceptChain aroundChain = null;
     if (exceptionWhileLoading == null
         && exceptionWhileInvoking == null
         && beforeInterceptCheck != null
-        && beforeInterceptCheck.hasLocalIntercepts()) {
-      List<InterceptMessage> localAroundIntercepts =
-          filterAroundIntercepts(beforeInterceptCheck.getLocalIntercepts());
-      if (!localAroundIntercepts.isEmpty()) {
-        String className = getClassname(incomingCall);
-        String methodName = getExecutableName(incomingCall);
-        List<String> paramTypesList = getParameterTypes(incomingCall);
-        if (paramTypesList == null) {
-          paramTypesList = List.of();
-        }
-
-        // Extract current arg values for accessor
-        Object[] argValues;
-        if (isFieldPutOperation(messageType) && value != null) {
-          argValues = new Object[] {value};
-        } else {
-          argValues = finalArgs.stream().map(MessageArgument::object).toArray(Object[]::new);
-        }
-
-        // Create accessor that invokes the method directly
-        // Capture accessibleObject, target, value, and messageType for the lambda
-        final AccessibleObject accessibleForLambda = accessibleObject;
-        final Object targetForLambda = target;
-        final Object valueForLambda = value;
-        final List<MessageArgument> argsForLambda = finalArgs;
-        final boolean isFieldPut = isFieldPutOperation(messageType);
-        LocalAroundAccessor localAccessor =
-            (argsToInvoke) -> {
-              try {
-                // Convert args back to MessageArgument list if needed
-                List<MessageArgument> invokeArgs = argsForLambda;
-                if (argsToInvoke != null) {
-                  invokeArgs = new ArrayList<>(argsForLambda.size());
-                  for (int i = 0; i < argsForLambda.size() && i < argsToInvoke.length; i++) {
-                    invokeArgs.add(
-                        new MessageArgument(argsToInvoke[i], argsForLambda.get(i).byReference()));
-                  }
-                }
-                // For field PUT operations, use the mutated value from argsToInvoke[0]
-                Object invokeValue = valueForLambda;
-                if (isFieldPut && argsToInvoke != null && argsToInvoke.length > 0) {
-                  invokeValue = argsToInvoke[0];
-                }
-                Object result =
-                    invokeIncoming(accessibleForLambda, targetForLambda, invokeArgs, invokeValue);
-                boolean isVoid = accessibleForLambda != null && returnsVoid(accessibleForLambda);
-                return new AfterPhaseData(result, null, isVoid);
-              } catch (Throwable th) {
-                Throwable cause = th;
-                if (th instanceof InvocationTargetException) {
-                  cause = th.getCause();
-                }
-                boolean isVoid = accessibleForLambda != null && returnsVoid(accessibleForLambda);
-                return new AfterPhaseData(null, cause, isVoid);
-              }
-            };
-
-        LocalAroundConsolidatedResponse localAroundResponse =
-            localInterceptCallbackDispatcher.sendLocalAroundCallbacks(
-                localAroundIntercepts,
-                argValues,
-                className,
-                methodName,
-                paramTypesList,
-                peerUuid.toString(),
-                localAccessor);
-
-        // Check if callback wants to throw an exception
-        if (localAroundResponse.shouldThrowException()) {
-          exceptionWhileInvoking = localAroundResponse.getExceptionToThrow();
-        }
-
-        // Check if callback says to skip execution
-        if (exceptionWhileInvoking == null && !localAroundResponse.shouldProceed()) {
-          skipInvoke = true;
-          skipReturnValue = localAroundResponse.getSkipReturnValue();
-        } else if (exceptionWhileInvoking == null) {
-          // Apply argument mutations from local AROUND
-          if (!localAroundResponse.getMutatedArgs().isEmpty()) {
-            if (isFieldPutOperation(messageType)) {
-              Object mutatedValue = localAroundResponse.getMutatedArgs().get(0);
-              if (mutatedValue != null) {
-                value = mutatedValue;
-              }
-            } else {
-              finalArgs =
-                  applyArgMutations(finalArgs, finalArgs, localAroundResponse.getMutatedArgs());
-            }
-          }
-
-          // Track pending local AROUND callbacks for AFTER phase
-          localAroundPendingCallbacks = localAroundResponse.getPendingCallbacks();
-
-          // If any local AROUND callback called proceed(), the method was already invoked
-          if (localAroundPendingCallbacks != null && !localAroundPendingCallbacks.isEmpty()) {
-            LocalAroundCallbackState lastCallback =
-                localAroundPendingCallbacks.get(localAroundPendingCallbacks.size() - 1);
-            localAroundReturnValue = lastCallback.context().getReturnValueInternal();
-            localAroundThrownException = lastCallback.context().getThrownException();
-            // Skip remote AROUND and direct invocation since local AROUND already invoked
-            skipInvoke = true;
-          }
-        }
+        && beforeInterceptCheck.hasAnyIntercepts()) {
+      String className = getClassname(incomingCall);
+      String methodName = getExecutableName(incomingCall);
+      List<String> paramTypesList = getParameterTypes(incomingCall);
+      if (paramTypesList == null) {
+        paramTypesList = List.of();
       }
+
+      // Capture for lambda
+      final AccessibleObject accessibleForChain = accessibleObject;
+      final Object targetForChain = target;
+      final Object valueForChain = value;
+      final List<MessageArgument> argsForChain = finalArgs;
+      final boolean isFieldPut = isFieldPutOperation(messageType);
+
+      AroundInterceptChain.MethodInvoker methodInvoker =
+          (invokeArgs) -> {
+            try {
+              // Convert args back to MessageArgument list if needed
+              List<MessageArgument> invokeArgsList = argsForChain;
+              if (invokeArgs != null) {
+                invokeArgsList = new ArrayList<>(argsForChain.size());
+                for (int i = 0; i < argsForChain.size() && i < invokeArgs.length; i++) {
+                  invokeArgsList.add(
+                      new MessageArgument(invokeArgs[i], argsForChain.get(i).byReference()));
+                }
+              }
+              // For field PUT operations, use the mutated value from invokeArgs[0]
+              Object invokeValue = valueForChain;
+              if (isFieldPut && invokeArgs != null && invokeArgs.length > 0) {
+                invokeValue = invokeArgs[0];
+              }
+              Object result =
+                  invokeIncoming(accessibleForChain, targetForChain, invokeArgsList, invokeValue);
+              boolean isVoid = accessibleForChain != null && returnsVoid(accessibleForChain);
+              return new AfterPhaseData(result, null, isVoid);
+            } catch (Throwable th) {
+              Throwable cause = th instanceof InvocationTargetException ? th.getCause() : th;
+              boolean isVoid = accessibleForChain != null && returnsVoid(accessibleForChain);
+              return new AfterPhaseData(null, cause, isVoid);
+            }
+          };
+
+      aroundChain =
+          aroundChainBuilder.build(
+              beforeInterceptCheck, className, methodName, paramTypesList, methodInvoker);
     }
 
     // Handle REMOTE BEFORE intercept callbacks
@@ -830,68 +636,38 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
           Object mutatedValue = beforeCallbackResponse.getMutatedArgs().get(0);
           if (mutatedValue != null) {
             value = mutatedValue;
-            argValues = new Object[] {value};
           }
         } else {
           finalArgs = applyArgMutations(args, args, beforeCallbackResponse.getMutatedArgs());
-          argValues = finalArgs.stream().map(MessageArgument::object).toArray(Object[]::new);
         }
       }
-
-      // Send AROUND BEFORE callbacks and handle skip semantics
-      if (exceptionWhileInvoking == null) {
-        AroundConsolidatedResponse aroundResponse =
-            interceptCallbackDispatcher.sendAroundCallbacks(
-                beforeInterceptCheck, incomingCall, argValues);
-
-        // Check if callback wants to throw an exception
-        if (aroundResponse.shouldThrowException()) {
-          exceptionWhileInvoking = aroundResponse.getExceptionToThrow();
-        }
-
-        // Check if callback says to skip execution (e.g., cache hit)
-        if (exceptionWhileInvoking == null && !aroundResponse.shouldProceed()) {
-          skipInvoke = true;
-          skipReturnValue = aroundResponse.getSkipReturnValue();
-        } else if (exceptionWhileInvoking == null) {
-          // Apply additional argument mutations from AROUND callbacks
-          if (aroundResponse.hasArgMutations()) {
-            // For field PUT operations, args is null; mutation applies to 'value' (index 0)
-            if (isFieldPutOperation(messageType)) {
-              Object mutatedValue = aroundResponse.getMutatedArgs().get(0);
-              if (mutatedValue != null) {
-                value = mutatedValue;
-              }
-            } else {
-              finalArgs = applyArgMutations(finalArgs, args, aroundResponse.getMutatedArgs());
-            }
-          }
-          // Track pending AROUND callbacks for AFTER phase
-          aroundPendingCallbacks = aroundResponse.getPendingCallbacks();
-        }
-      }
+      // Note: REMOTE AROUND is now handled by AroundInterceptChain
     }
 
-    // Invocation phase
+    // Invocation phase - use AROUND chain if present
     Object returnValue = null;
     ObjectRef objectRef = null;
     if (exceptionWhileLoading == null && exceptionWhileInvoking == null) {
-      if (skipInvoke) {
-        // Use the skip return value from AROUND callback (e.g., cached value)
-        // If local AROUND invoked, use its return value; otherwise use skipReturnValue
-        if (localAroundPendingCallbacks != null && !localAroundPendingCallbacks.isEmpty()) {
-          returnValue = localAroundReturnValue;
-          if (localAroundThrownException != null) {
-            exceptionWhileInvoking = localAroundThrownException;
-          }
-        } else {
-          returnValue = skipReturnValue;
+      // Extract arg values for chain invocation
+      Object[] argValues;
+      if (isFieldPutOperation(messageType) && value != null) {
+        argValues = new Object[] {value};
+      } else {
+        argValues = finalArgs.stream().map(MessageArgument::object).toArray(Object[]::new);
+      }
+
+      if (aroundChain != null && !aroundChain.isEmpty()) {
+        // Execute through the unified chain (handles local + remote AROUND in proper order)
+        AroundInterceptChain.ChainResult chainResult = aroundChain.invoke(argValues, incomingCall);
+
+        returnValue = chainResult.returnValue();
+        if (chainResult.thrownException() != null) {
+          exceptionWhileInvoking = chainResult.thrownException();
         }
       } else {
+        // No AROUND intercepts - invoke directly
         try {
           // 7. Invoke constructor/method/field (using possibly mutated args and value)
-          // Note: For field PUT operations, 'value' has already been updated from callback
-          // mutations
           returnValue = invokeIncoming(accessibleObject, target, finalArgs, value);
           if (logger.isTraceEnabled()) {
             String returnedClass =
@@ -996,22 +772,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       }
     }
 
-    // Handle LOCAL AROUND AFTER phase (for callbacks that called proceed())
-    if (localAroundPendingCallbacks != null && !localAroundPendingCallbacks.isEmpty()) {
-      ConsolidatedCallbackResponse localAroundAfterResponse =
-          localInterceptCallbackDispatcher.sendLocalAroundAfterCallbacks(
-              localAroundPendingCallbacks, returnValue);
-
-      // Check if callback wants to throw an exception
-      if (localAroundAfterResponse.shouldThrowException()) {
-        exceptionWhileInvoking = localAroundAfterResponse.getExceptionToThrow();
-      }
-
-      // Apply return value override
-      if (localAroundAfterResponse.hasReturnValueOverride()) {
-        returnValue = localAroundAfterResponse.getOverriddenReturnValue();
-      }
-    }
+    // Note: LOCAL AROUND AFTER is now handled by AroundInterceptChain
 
     // 10. Wrap object or exception
     final ExecMessage afterExecMsg =
@@ -1045,32 +806,11 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       }
     }
 
-    // Send AROUND AFTER callbacks (for callbacks that called proceed())
-    if (aroundPendingCallbacks != null && !aroundPendingCallbacks.isEmpty()) {
-      boolean returnsVoidMethod = accessibleObject != null && returnsVoid(accessibleObject);
-      InterceptCallbackDispatcher.ConsolidatedCallbackResponse aroundAfterResponse =
-          interceptCallbackDispatcher.sendAroundAfterCallbacks(
-              aroundPendingCallbacks,
-              afterExecMsg,
-              returnValue,
-              returnsVoidMethod,
-              exceptionWhileInvoking);
-
-      // Check if callback wants to throw an exception
-      if (aroundAfterResponse.shouldThrowException()) {
-        exceptionWhileInvoking = aroundAfterResponse.getExceptionToThrow();
-      }
-
-      // Apply return value override
-      if (aroundAfterResponse.hasReturnValueOverride()) {
-        returnValue = aroundAfterResponse.getOverriddenReturnValue();
-      }
-    }
+    // Note: REMOTE AROUND AFTER is now handled by AroundInterceptChain
 
     // Recreate afterExecMsg if returnValue was overridden by callbacks
     final ExecMessage finalAfterExecMsg;
-    if (afterInterceptCheck != null
-        || (aroundPendingCallbacks != null && !aroundPendingCallbacks.isEmpty())) {
+    if (afterInterceptCheck != null) {
       // Regenerate the after exec message with potentially modified return value/exception
       finalAfterExecMsg =
           createAfterExecMessage(
@@ -1539,18 +1279,6 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
   private List<InterceptMessage> filterAfterIntercepts(List<InterceptMessage> intercepts) {
     return intercepts.stream()
         .filter(im -> InterceptType.fromByte(im.getInterceptType()) == InterceptType.AFTER)
-        .toList();
-  }
-
-  /**
-   * Filters intercept messages to return only AROUND type intercepts.
-   *
-   * @param intercepts the list of intercepts to filter
-   * @return list of AROUND intercepts
-   */
-  private List<InterceptMessage> filterAroundIntercepts(List<InterceptMessage> intercepts) {
-    return intercepts.stream()
-        .filter(im -> InterceptType.fromByte(im.getInterceptType()) == InterceptType.AROUND)
         .toList();
   }
 

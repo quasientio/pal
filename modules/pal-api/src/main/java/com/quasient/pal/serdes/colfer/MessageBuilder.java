@@ -1852,7 +1852,8 @@ public final class MessageBuilder {
     // Serializing the return value (below) can access object fields, triggering field-get
     // dispatches that reuse and mutate the same ExecMessage instance. Cloning preserves
     // the original execution context.
-    request.setExec(cloneExecMessage(execMessage));
+    ExecMessage clonedExec = cloneExecMessage(execMessage);
+    request.setExec(clonedExec);
 
     // Set phase-specific fields
     if (phase == com.quasient.pal.common.lang.intercept.InterceptPhase.AFTER) {
@@ -1862,6 +1863,39 @@ public final class MessageBuilder {
       }
       if (thrownException != null) {
         request.setThrownException(ExceptionSerdes.serializeException(thrownException));
+      }
+
+      // For AROUND AFTER callbacks, the exec message may be from BEFORE phase and lack
+      // return value. Only set if not already present (regular AFTER callbacks have it).
+      if (clonedExec.getReturnValue() == null) {
+        ReturnValue rv = new ReturnValue();
+        rv.isVoid = isVoid;
+        if (!isVoid && returnValue != null) {
+          rv.object = serializeObjectForCallback(returnValue);
+        }
+        clonedExec.setReturnValue(rv);
+      }
+
+      // For field PUT operations, convert BEFORE phase message to AFTER phase format.
+      // Use the exec message ID as the PUT ID for correlation.
+      if (clonedExec.getInstanceFieldPut() != null
+          && clonedExec.getInstanceFieldPutDone() == null) {
+        InstanceFieldPut put = clonedExec.getInstanceFieldPut();
+        clonedExec.setInstanceFieldPutDone(
+            new InstanceFieldPutDone()
+                .withClazz(put.getClazz())
+                .withField(put.getField())
+                .withInstanceFieldPutId(clonedExec.getMessageId()));
+        clonedExec.setInstanceFieldPut(null);
+      }
+      if (clonedExec.getStaticFieldPut() != null && clonedExec.getStaticFieldPutDone() == null) {
+        StaticFieldPut put = clonedExec.getStaticFieldPut();
+        clonedExec.setStaticFieldPutDone(
+            new StaticFieldPutDone()
+                .withClazz(put.getClazz())
+                .withField(put.getField())
+                .withStaticFieldPutId(clonedExec.getMessageId()));
+        clonedExec.setStaticFieldPut(null);
       }
     }
 

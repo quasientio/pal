@@ -1036,6 +1036,136 @@ public class InterceptCallbackDispatcher {
   }
 
   /**
+   * Sends a chained AROUND BEFORE request to a remote callback peer.
+   *
+   * <p>This method is used by {@link AroundInterceptChain} when processing remote AROUND intercepts
+   * in the chain. Unlike {@link #sendAroundCallbacks}, this processes a single intercept at a time,
+   * allowing proper chaining where each proceed() invokes the next layer.
+   *
+   * @param intercept the intercept message
+   * @param callbackPeerUuid the callback peer UUID
+   * @param callbackId the callback ID for correlation
+   * @param execMessage the execution message
+   * @param args the current arguments
+   * @return the BEFORE phase result
+   */
+  public AroundInterceptChain.RemoteAroundBeforeResult sendChainedAroundBefore(
+      InterceptMessage intercept,
+      UUID callbackPeerUuid,
+      String callbackId,
+      ExecMessage execMessage,
+      Object[] args) {
+
+    try {
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            "Sending chained AROUND BEFORE to peer {}: callbackId={}",
+            callbackPeerUuid,
+            callbackId);
+      }
+
+      // Build the BEFORE phase callback request
+      InterceptCallbackRequestMessage request =
+          buildAroundBeforeRequest(intercept, execMessage, callbackId, DEFAULT_AROUND_TIMEOUT_MS);
+
+      // Send and await response
+      InterceptCallbackResponseMessage response = sendCallbackRequest(callbackPeerUuid, request);
+
+      // Check for exception
+      if (response.getThrowException()) {
+        Throwable ex = ExceptionSerdes.deserializeException(response.getException());
+        return new AroundInterceptChain.RemoteAroundBeforeResult(false, Map.of(), null, ex);
+      }
+
+      // Check shouldProceed
+      if (!response.getShouldProceed()) {
+        Object skipReturnValue = null;
+        if (response.getOverrideReturn() && response.getNewReturnValue() != null) {
+          skipReturnValue = deserializeArg(response.getNewReturnValue());
+        }
+        return new AroundInterceptChain.RemoteAroundBeforeResult(
+            false, Map.of(), skipReturnValue, null);
+      }
+
+      // Collect argument mutations
+      Map<Integer, Object> mutations = new HashMap<>();
+      if (response.getMutatedArgs() != null && response.getMutatedArgs().length > 0) {
+        Obj[] responseMutatedArgs = response.getMutatedArgs();
+        for (int i = 0; i < responseMutatedArgs.length && i < args.length; i++) {
+          if (responseMutatedArgs[i] != null) {
+            mutations.put(i, deserializeArg(responseMutatedArgs[i]));
+          }
+        }
+      }
+
+      return new AroundInterceptChain.RemoteAroundBeforeResult(true, mutations, null, null);
+
+    } catch (Exception ex) {
+      logger.error("Error sending chained AROUND BEFORE to peer: {}", callbackPeerUuid, ex);
+      return new AroundInterceptChain.RemoteAroundBeforeResult(false, Map.of(), null, ex);
+    }
+  }
+
+  /**
+   * Sends a chained AROUND AFTER request to a remote callback peer.
+   *
+   * <p>This method is used by {@link AroundInterceptChain} when processing remote AROUND intercepts
+   * in the chain. It sends the AFTER phase for a single intercept with the return value from inner
+   * layers.
+   *
+   * @param intercept the intercept message
+   * @param callbackPeerUuid the callback peer UUID
+   * @param callbackId the callback ID (must match the BEFORE request)
+   * @param execMessage the execution message
+   * @param returnValue the return value from inner layers
+   * @param isVoid whether the method is void
+   * @param thrownException exception from inner layers
+   * @return the AFTER phase result
+   */
+  public AroundInterceptChain.RemoteAroundAfterResult sendChainedAroundAfter(
+      InterceptMessage intercept,
+      UUID callbackPeerUuid,
+      String callbackId,
+      ExecMessage execMessage,
+      Object returnValue,
+      boolean isVoid,
+      Throwable thrownException) {
+
+    try {
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            "Sending chained AROUND AFTER to peer {}: callbackId={}", callbackPeerUuid, callbackId);
+      }
+
+      // Build the AFTER phase callback request
+      InterceptCallbackRequestMessage request =
+          buildAroundAfterRequest(
+              intercept, execMessage, callbackId, returnValue, isVoid, thrownException);
+
+      // Send and await response
+      InterceptCallbackResponseMessage response = sendCallbackRequest(callbackPeerUuid, request);
+
+      // Check for exception
+      if (response.getThrowException()) {
+        Throwable ex = ExceptionSerdes.deserializeException(response.getException());
+        return new AroundInterceptChain.RemoteAroundAfterResult(false, null, ex);
+      }
+
+      // Check for return value override
+      if (response.getOverrideReturn() && response.getNewReturnValue() != null) {
+        Object overridden = deserializeArg(response.getNewReturnValue());
+        return new AroundInterceptChain.RemoteAroundAfterResult(true, overridden, null);
+      }
+
+      return new AroundInterceptChain.RemoteAroundAfterResult(false, null, null);
+
+    } catch (Exception ex) {
+      logger.error("Error sending chained AROUND AFTER to peer: {}", callbackPeerUuid, ex);
+      return new AroundInterceptChain.RemoteAroundAfterResult(false, null, ex);
+    }
+  }
+
+  /**
    * Builds an AROUND BEFORE phase callback request with timeout.
    *
    * @param interceptMessage the intercept message

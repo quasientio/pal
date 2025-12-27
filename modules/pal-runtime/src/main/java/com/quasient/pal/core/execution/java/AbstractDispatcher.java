@@ -10,6 +10,7 @@
 package com.quasient.pal.core.execution.java;
 
 import com.quasient.pal.core.execution.java.reflect.ReflectionHelper;
+import com.quasient.pal.core.intercept.AroundInterceptChainBuilder;
 import com.quasient.pal.core.intercept.InterceptCallbackDispatcher;
 import com.quasient.pal.core.intercept.InterceptChecker;
 import com.quasient.pal.core.intercept.LocalInterceptCallbackDispatcher;
@@ -65,6 +66,9 @@ abstract class AbstractDispatcher {
 
   /** Dispatcher for sending intercept callbacks to local handlers (same JVM). */
   protected LocalInterceptCallbackDispatcher localInterceptCallbackDispatcher;
+
+  /** Builder for AROUND intercept chains. */
+  protected AroundInterceptChainBuilder aroundChainBuilder;
 
   /**
    * Sets the unique identifier (UUID) for the peer.
@@ -168,5 +172,15 @@ abstract class AbstractDispatcher {
   final void setLocalInterceptCallbackDispatcher(
       LocalInterceptCallbackDispatcher localInterceptCallbackDispatcher) {
     this.localInterceptCallbackDispatcher = localInterceptCallbackDispatcher;
+  }
+
+  /**
+   * Sets the {@link AroundInterceptChainBuilder} for building AROUND intercept chains.
+   *
+   * @param aroundChainBuilder the chain builder instance
+   */
+  @Inject
+  final void setAroundChainBuilder(AroundInterceptChainBuilder aroundChainBuilder) {
+    this.aroundChainBuilder = aroundChainBuilder;
   }
 }
