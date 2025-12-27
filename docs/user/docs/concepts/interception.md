@@ -49,7 +49,7 @@ InterceptRequest intercept = InterceptRequest.builder()
 
 ### AFTER
 
-Callback executes **after** the method, asynchronously:
+Callback executes **after** the method completes, synchronously:
 
 ```java
 InterceptRequest intercept = InterceptRequest.builder()
@@ -63,15 +63,15 @@ InterceptRequest intercept = InterceptRequest.builder()
 **Use cases**:
 
 - Verify return value
+- Override return value
 - Log method exit
 - Collect metrics
-- Audit trail
 
-**Timing**: Target method completes first, then callback is sent (non-blocking).
+**Timing**: Blocks until callback completes (synchronous). Use `AFTER_ASYNC` for fire-and-forget callbacks.
 
 ### AROUND
 
-Callback executes **instead** of the method (can skip execution):
+Callback **wraps** the method execution with before/after logic. Call `ctx.proceed()` to execute the method (or next layer in the chain), or skip execution entirely:
 
 ```java
 InterceptRequest intercept = InterceptRequest.builder()
@@ -86,10 +86,110 @@ InterceptRequest intercept = InterceptRequest.builder()
 
 - Mock return values in tests
 - Cache results (skip expensive computation)
+- Transform arguments before and return values after execution
 - Circuit breaker pattern
-- Replace functionality
 
-**Timing**: Callback decides whether to execute original method.
+**Timing**: Callback decides whether to call `proceed()` (execute method) or `skipProceed()` (return custom value).
+
+**Key methods**:
+- `ctx.proceed()` - Execute method, returns `ProceedResult` with return value or exception
+- `ctx.setReturnValue(value)` + `skipProceed()` - Skip method and return custom value
+- `ctx.setArg(index, value)` - Modify arguments before `proceed()`
+
+### BEFORE_ASYNC and AFTER_ASYNC
+
+Fire-and-forget callbacks that don't block execution:
+
+```java
+InterceptRequest intercept = InterceptRequest.builder()
+    .classPattern("com.example.Service")
+    .methodPattern("process")
+    .interceptType(InterceptType.BEFORE_ASYNC)  // or AFTER_ASYNC
+    .callbackPeer(myPeerUuid)
+    .build();
+```
+
+**Use cases**:
+
+- Telemetry and monitoring
+- Audit logging
+- Metrics collection
+- Notifications
+
+**Timing**: Callback is sent but caller doesn't wait for response.
+
+**Limitations**: Cannot modify arguments, return values, or throw exceptions (fire-and-forget).
+
+## Multiple Intercepts and Ordering
+
+When multiple intercepts match the same operation, they execute in a specific order.
+
+### Execution Order
+
+1. **Local vs Remote**: Local intercepts (callback peer = intercepted peer) always execute **before** remote intercepts
+2. **Registration order**: Within each category, intercepts execute in the order they were registered
+
+```
+BEFORE phase:
+  1. Local BEFORE callbacks
+  2. Remote BEFORE callbacks
+
+AROUND phase (onion model):
+  3. Local AROUND callbacks (outermost layers)
+  4. Remote AROUND callbacks (inner layers)
+  [Method Execution - innermost]
+  (Return values propagate outward)
+
+AFTER phase:
+  5. Local AFTER callbacks
+  6. Remote AFTER callbacks
+```
+
+### AROUND Chaining (Onion Model)
+
+Multiple AROUND intercepts form a **chain** where each `proceed()` invokes the next layer, not the method directly:
+
+```
+┌─ Local AROUND #1 (outermost) ───────────────────────────┐
+│  BEFORE logic                                            │
+│  ctx.proceed() ─────────────────────────────────────────┼──▶
+│    ┌─ Local AROUND #2 ──────────────────────────────┐   │
+│    │  BEFORE logic                                   │   │
+│    │  ctx.proceed() ────────────────────────────────┼───┼──▶
+│    │    ┌─ Remote AROUND #1 (innermost) ────────┐   │   │
+│    │    │  ctx.proceed() ───────────────────────┼───┼───┼──▶ [METHOD]
+│    │    │  (return flows back)                  │   │   │
+│    │    │  AFTER logic                          │   │   │
+│    │    └───────────────────────────────────────┘   │   │
+│    │  AFTER logic (can modify return)               │   │
+│    └────────────────────────────────────────────────┘   │
+│  AFTER logic (can modify return)                        │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Key behaviors**:
+
+- **Argument mutations propagate inward**: Each layer sees cumulative mutations from outer layers
+- **Return values propagate outward**: Each layer can modify the return value from inner layers
+- **Skip affects all inner layers**: When any layer calls `skipProceed()`, all inner layers (including the method) are bypassed
+
+### Argument Mutation in AROUND Chains
+
+```java
+// Chain: Outer → Inner → Method
+// Outer sets arg[0] = 10, calls proceed()
+// Inner sees arg[0] = 10, sets arg[0] = 20, calls proceed()
+// Method sees arg[0] = 20
+```
+
+### Return Value Override in AROUND Chains
+
+```java
+// Method returns 5
+// Inner receives 5, returns 5 + 10 = 15
+// Outer receives 15, returns 15 * 2 = 30
+// Final result = 30
+```
 
 ## Registering Intercepts
 
