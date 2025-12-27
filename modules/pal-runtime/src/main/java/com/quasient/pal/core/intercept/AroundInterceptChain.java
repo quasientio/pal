@@ -390,6 +390,16 @@ public class AroundInterceptChain {
     // Check if callback modified return value after proceed()
     if (context.isReturnValueModified()) {
       returnValue = context.getReturnValueInternal();
+      // If callback set a return value after proceed() and there was an exception,
+      // the callback has "handled" the exception - don't propagate it
+      if (thrownException != null) {
+        if (logger.isDebugEnabled()) {
+          logger.debug(
+              "Callback modified return value after exception, treating as suppressed: {}",
+              thrownException.getClass().getSimpleName());
+        }
+        thrownException = null;
+      }
     }
 
     return new AfterPhaseData(returnValue, thrownException, context.isVoid());

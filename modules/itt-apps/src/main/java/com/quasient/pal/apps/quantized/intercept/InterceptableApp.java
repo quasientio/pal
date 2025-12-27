@@ -287,4 +287,73 @@ public class InterceptableApp {
   public static void resetLocalInterceptCallbacks() {
     LocalInterceptCallbacks.reset();
   }
+
+  // ==================== Arithmetic Methods ====================
+
+  /**
+   * Adds two integers.
+   *
+   * <p>Used for testing argument mutation through the AROUND chain.
+   *
+   * @param a first operand
+   * @param b second operand
+   * @return the sum of a and b
+   */
+  public Integer add(Integer a, Integer b) {
+    return a + b;
+  }
+
+  /**
+   * Returns a constant value (100).
+   *
+   * <p>Used for testing return value modification through the AROUND chain.
+   *
+   * @return always returns 100
+   */
+  public Integer returnHundred() {
+    return 100;
+  }
+
+  // ==================== Exception Throwing Methods ====================
+
+  /**
+   * Method that throws an IllegalArgumentException with the given message.
+   *
+   * <p>Used for testing exception propagation through the AROUND chain.
+   *
+   * @param message the exception message
+   * @throws IllegalArgumentException always
+   */
+  public void throwIllegalArgumentException(String message) {
+    throw new IllegalArgumentException(message);
+  }
+
+  /**
+   * Method that throws a RuntimeException with the given message.
+   *
+   * <p>Used for testing exception propagation through the AROUND chain.
+   *
+   * @param message the exception message
+   * @throws RuntimeException always
+   */
+  public void throwRuntimeException(String message) {
+    throw new RuntimeException(message);
+  }
+
+  /**
+   * Method that conditionally throws based on parameter.
+   *
+   * <p>If shouldThrow is true, throws an IllegalArgumentException. Otherwise returns the counter
+   * value.
+   *
+   * @param shouldThrow whether to throw an exception
+   * @return the counter value if shouldThrow is false
+   * @throws IllegalArgumentException if shouldThrow is true
+   */
+  public Integer maybeThrow(Boolean shouldThrow) {
+    if (shouldThrow) {
+      throw new IllegalArgumentException("Intentional exception from maybeThrow");
+    }
+    return counter;
+  }
 }

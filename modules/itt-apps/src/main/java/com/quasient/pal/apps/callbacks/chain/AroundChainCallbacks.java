@@ -54,6 +54,15 @@ public final class AroundChainCallbacks {
   /** Invocation counter for caching callback. */
   private static final AtomicInteger cachingCount = new AtomicInteger(0);
 
+  /** Invocation counter for exception thrower callback. */
+  private static final AtomicInteger exceptionThrowerCount = new AtomicInteger(0);
+
+  /** Invocation counter for exception suppressor callback. */
+  private static final AtomicInteger exceptionSuppressorCount = new AtomicInteger(0);
+
+  /** Invocation counter for exception replacer callback. */
+  private static final AtomicInteger exceptionReplacerCount = new AtomicInteger(0);
+
   /** Cache for caching callback. Key: method+args hash, Value: cached return value. */
   private static final ConcurrentHashMap<String, Object> cache = new ConcurrentHashMap<>();
 
@@ -71,6 +80,9 @@ public final class AroundChainCallbacks {
     outerDoublerCount.set(0);
     middleLoggerCount.set(0);
     cachingCount.set(0);
+    exceptionThrowerCount.set(0);
+    exceptionSuppressorCount.set(0);
+    exceptionReplacerCount.set(0);
     cache.clear();
     lastCallWasCacheHit = false;
     logger.info("AROUND_CHAIN_CALLBACKS: state reset");
@@ -112,6 +124,33 @@ public final class AroundChainCallbacks {
    */
   public static boolean wasLastCallCacheHit() {
     return lastCallWasCacheHit;
+  }
+
+  /**
+   * Returns the invocation count for exception thrower callback.
+   *
+   * @return the count
+   */
+  public static int getExceptionThrowerCount() {
+    return exceptionThrowerCount.get();
+  }
+
+  /**
+   * Returns the invocation count for exception suppressor callback.
+   *
+   * @return the count
+   */
+  public static int getExceptionSuppressorCount() {
+    return exceptionSuppressorCount.get();
+  }
+
+  /**
+   * Returns the invocation count for exception replacer callback.
+   *
+   * @return the count
+   */
+  public static int getExceptionReplacerCount() {
+    return exceptionReplacerCount.get();
   }
 
   // ==================== AROUND Callbacks for Chain Testing ====================
@@ -242,5 +281,280 @@ public final class AroundChainCallbacks {
     }
 
     return new InterceptCallbackResponse();
+  }
+
+  // ==================== Exception Handling Callbacks ====================
+
+  /**
+   * Local AROUND callback that throws an exception BEFORE proceeding.
+   *
+   * <p>This callback throws a RuntimeException without calling proceed(), testing that:
+   *
+   * <ul>
+   *   <li>The inner chain (including method execution) is NOT invoked
+   *   <li>The exception propagates outward through the chain
+   * </ul>
+   *
+   * @param ctx the intercept context
+   * @return the intercept response (never reached)
+   */
+  public static InterceptCallbackResponse exceptionThrowerBefore(InterceptContext ctx) {
+    int seq = exceptionThrowerCount.incrementAndGet();
+    logger.info("AROUND_CHAIN: exceptionThrowerBefore THROWING, seq={}", seq);
+
+    // Throw exception using the context API
+    ctx.setExceptionToThrow(
+        new RuntimeException("Exception from exceptionThrowerBefore (seq=" + seq + ")"));
+    return new InterceptCallbackResponse();
+  }
+
+  /**
+   * Local AROUND callback that throws an exception AFTER proceeding.
+   *
+   * <p>This callback calls proceed() to execute the method, then throws an exception, testing that:
+   *
+   * <ul>
+   *   <li>The method executes successfully
+   *   <li>The exception from the callback overrides the method's return value
+   * </ul>
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse exceptionThrowerAfter(InterceptContext ctx) {
+    int seq = exceptionThrowerCount.incrementAndGet();
+    logger.info("AROUND_CHAIN: exceptionThrowerAfter BEFORE, seq={}", seq);
+
+    // Proceed to execute the method
+    ctx.proceed();
+
+    Object returnValue = ctx.isVoid() ? "void" : ctx.getReturnValue();
+    logger.info(
+        "AROUND_CHAIN: exceptionThrowerAfter AFTER, seq={}, got return={}, NOW THROWING",
+        seq,
+        returnValue);
+
+    // Throw exception after proceed
+    ctx.setExceptionToThrow(
+        new RuntimeException("Exception from exceptionThrowerAfter (seq=" + seq + ")"));
+    return new InterceptCallbackResponse();
+  }
+
+  /**
+   * Local AROUND callback that suppresses an exception from the inner chain.
+   *
+   * <p>This callback calls proceed() and checks if the method threw. If it did, it suppresses the
+   * exception and returns a fallback value instead.
+   *
+   * <p>This tests exception suppression/recovery patterns.
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse exceptionSuppressor(InterceptContext ctx) {
+    int seq = exceptionSuppressorCount.incrementAndGet();
+    logger.info("AROUND_CHAIN: exceptionSuppressor BEFORE, seq={}", seq);
+
+    // Proceed to execute the method
+    ctx.proceed();
+
+    // Check if inner chain threw
+    Throwable thrown = ctx.getThrownException();
+    if (thrown != null) {
+      logger.info(
+          "AROUND_CHAIN: exceptionSuppressor SUPPRESSING exception, seq={}, exception={}",
+          seq,
+          thrown.getMessage());
+      // Suppress exception by setting a fallback return value
+      ctx.setReturnValue(-999);
+    } else {
+      logger.info(
+          "AROUND_CHAIN: exceptionSuppressor AFTER, seq={}, no exception, return={}",
+          seq,
+          ctx.isVoid() ? "void" : ctx.getReturnValue());
+    }
+
+    return new InterceptCallbackResponse();
+  }
+
+  /**
+   * Local AROUND callback that replaces one exception type with another.
+   *
+   * <p>This callback calls proceed() and if the method threw an IllegalArgumentException, it
+   * replaces it with an IllegalStateException, wrapping the original.
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse exceptionReplacer(InterceptContext ctx) {
+    int seq = exceptionReplacerCount.incrementAndGet();
+    logger.info("AROUND_CHAIN: exceptionReplacer BEFORE, seq={}", seq);
+
+    // Proceed to execute the method
+    ctx.proceed();
+
+    // Check if inner chain threw
+    Throwable thrown = ctx.getThrownException();
+    if (thrown != null) {
+      if (thrown instanceof IllegalArgumentException) {
+        logger.info(
+            "AROUND_CHAIN: exceptionReplacer REPLACING IllegalArgumentException, seq={}", seq);
+        ctx.setExceptionToThrow(
+            new IllegalStateException("Replaced exception (seq=" + seq + ")", thrown));
+      } else {
+        logger.info(
+            "AROUND_CHAIN: exceptionReplacer NOT REPLACING (not IllegalArgumentException), "
+                + "seq={}, type={}",
+            seq,
+            thrown.getClass().getSimpleName());
+      }
+    } else {
+      logger.info(
+          "AROUND_CHAIN: exceptionReplacer AFTER, seq={}, no exception, return={}",
+          seq,
+          ctx.isVoid() ? "void" : ctx.getReturnValue());
+    }
+
+    return new InterceptCallbackResponse();
+  }
+
+  /**
+   * Local AROUND callback that logs exceptions propagating through but doesn't modify them.
+   *
+   * <p>This is useful as an outer layer to verify that exceptions propagate correctly through the
+   * chain.
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse exceptionLogger(InterceptContext ctx) {
+    int seq = middleLoggerCount.incrementAndGet();
+    logger.info("AROUND_CHAIN: exceptionLogger BEFORE, seq={}", seq);
+
+    ctx.proceed();
+
+    Throwable thrown = ctx.getThrownException();
+    if (thrown != null) {
+      logger.info(
+          "AROUND_CHAIN: exceptionLogger AFTER, seq={}, exception propagating: {}",
+          seq,
+          thrown.getMessage());
+    } else {
+      logger.info(
+          "AROUND_CHAIN: exceptionLogger AFTER, seq={}, return={}",
+          seq,
+          ctx.isVoid() ? "void" : ctx.getReturnValue());
+    }
+
+    return new InterceptCallbackResponse();
+  }
+
+  // ==================== Chain Order Verification Callbacks ====================
+
+  /**
+   * Local AROUND callback "A" for chain order verification.
+   *
+   * <p>Logs "LOCAL_AROUND_A_BEFORE" and "LOCAL_AROUND_A_AFTER" to verify execution order.
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse localAroundA(InterceptContext ctx) {
+    logger.info("AROUND_CHAIN_ORDER: LOCAL_AROUND_A_BEFORE");
+
+    ctx.proceed();
+
+    logger.info("AROUND_CHAIN_ORDER: LOCAL_AROUND_A_AFTER");
+    return new InterceptCallbackResponse();
+  }
+
+  /**
+   * Local AROUND callback "C" for chain order verification.
+   *
+   * <p>Logs "LOCAL_AROUND_C_BEFORE" and "LOCAL_AROUND_C_AFTER" to verify execution order.
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse localAroundC(InterceptContext ctx) {
+    logger.info("AROUND_CHAIN_ORDER: LOCAL_AROUND_C_BEFORE");
+
+    ctx.proceed();
+
+    logger.info("AROUND_CHAIN_ORDER: LOCAL_AROUND_C_AFTER");
+    return new InterceptCallbackResponse();
+  }
+
+  // ==================== Arg Mutation Callbacks ====================
+
+  /**
+   * Local AROUND callback that mutates the first argument to 10.
+   *
+   * <p>Used for testing argument mutation propagation through the chain.
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse mutateFirstArgTo10(InterceptContext ctx) {
+    Object[] args = ctx.getArgs();
+    Object originalArg = args.length > 0 ? args[0] : null;
+    logger.info("AROUND_CHAIN: mutateFirstArgTo10 BEFORE, original arg[0]={}", originalArg);
+
+    // Mutate first arg to 10
+    ctx.setArg(0, 10);
+
+    ctx.proceed();
+
+    logger.info(
+        "AROUND_CHAIN: mutateFirstArgTo10 AFTER, return={}",
+        ctx.isVoid() ? "void" : ctx.getReturnValue());
+    return new InterceptCallbackResponse();
+  }
+
+  // ==================== Return Value Modification Callbacks ====================
+
+  /**
+   * Local AROUND callback that adds 1 to the return value.
+   *
+   * <p>Used for testing return value modification propagation through the chain.
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse addOneToReturn(InterceptContext ctx) {
+    logger.info("AROUND_CHAIN: addOneToReturn BEFORE");
+
+    ctx.proceed();
+
+    if (!ctx.isVoid()) {
+      Object returnValue = ctx.getReturnValue();
+      if (returnValue instanceof Integer) {
+        int original = (Integer) returnValue;
+        int modified = original + 1;
+        ctx.setReturnValue(modified);
+        logger.info("AROUND_CHAIN: addOneToReturn AFTER, {} + 1 = {}", original, modified);
+      }
+    }
+
+    return new InterceptCallbackResponse();
+  }
+
+  // ==================== Skip Callbacks ====================
+
+  /**
+   * Local AROUND callback that skips execution with a cached value.
+   *
+   * <p>Always skips proceed() and returns a hardcoded value (999). Used for testing that skipping
+   * in the middle of the chain prevents inner layers from executing.
+   *
+   * @param ctx the intercept context
+   * @return the intercept response with skip
+   */
+  public static InterceptCallbackResponse alwaysSkipWithCachedValue(InterceptContext ctx) {
+    logger.info("AROUND_CHAIN: alwaysSkipWithCachedValue SKIPPING");
+
+    // Skip execution and return cached value
+    ctx.setReturnValue(999);
+    return InterceptCallbackResponse.skipProceed();
   }
 }
