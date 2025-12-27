@@ -18,10 +18,9 @@ public class MyHandler implements InterceptCallback {
 
 The `InterceptContext` provides access to:
 - **Operation metadata**: Class name, method name, arguments
-- **Execution phase**: BEFORE or AFTER
-- **Argument modification**: `ctx.setArg(index, newValue)`
-- **Return value access/override**: `ctx.getReturnValue()`, `ctx.setReturnValue(value)`
-- **Execution control**: `response.setShouldProceed(false)` (AROUND only)
+- **Argument modification**: `ctx.setArg(index, newValue)` (BEFORE, AROUND before proceed)
+- **Return value access/override**: `ctx.getReturnValue()`, `ctx.setReturnValue(value)` (AFTER, AROUND after proceed)
+- **Execution control**: `ctx.proceed()` and `InterceptCallbackResponse.skipProceed()` (AROUND only)
 
 ## Example 1: Argument Modification (BEFORE)
 
@@ -31,11 +30,9 @@ This example converts string arguments to uppercase before method execution:
 public class UpperCaseCurrencyCallback implements InterceptCallback {
     @Override
     public InterceptCallbackResponse handle(InterceptContext ctx) {
-        if (ctx.getPhase() == InterceptPhase.BEFORE && ctx.getArgs().length > 0) {
-            Object firstArg = ctx.getArgs()[0];
-            if (firstArg instanceof String) {
-                ctx.setArg(0, ((String) firstArg).toUpperCase());
-            }
+        Object[] args = ctx.getArgs();
+        if (args.length > 0 && args[0] instanceof String) {
+            ctx.setArg(0, ((String) args[0]).toUpperCase());
         }
         return new InterceptCallbackResponse();
     }
@@ -63,12 +60,10 @@ This example redacts sensitive data in return values:
 public class RedactSsnCallback implements InterceptCallback {
     @Override
     public InterceptCallbackResponse handle(InterceptContext ctx) {
-        if (ctx.getPhase() == InterceptPhase.AFTER) {
-            CustomerDto dto = (CustomerDto) ctx.getReturnValue();
-            if (dto != null) {
-                dto.setSsn("***-**-****");
-                ctx.setReturnValue(dto);
-            }
+        CustomerDto dto = (CustomerDto) ctx.getReturnValue();
+        if (dto != null) {
+            dto.setSsn("***-**-****");
+            ctx.setReturnValue(dto);
         }
         return new InterceptCallbackResponse();
     }
@@ -90,7 +85,7 @@ InterceptRequest intercept = InterceptRequest.builder()
 
 ## Example 3: Caching with Execution Control (AROUND)
 
-This example implements a caching layer that can skip method execution:
+This example implements a caching layer that can skip method execution. AROUND intercepts use `ctx.proceed()` to call the original method, giving you full control over execution flow:
 
 ```java
 public class CachingCallback implements InterceptCallback {
@@ -98,21 +93,25 @@ public class CachingCallback implements InterceptCallback {
 
     @Override
     public InterceptCallbackResponse handle(InterceptContext ctx) {
-        String cacheKey = ctx.getExec().toString();
+        Object[] args = ctx.getArgs();
+        String cacheKey = args.length > 0 ? String.valueOf(args[0]) : "";
 
-        if (ctx.getPhase() == InterceptPhase.BEFORE) {
-            Object cached = cache.get(cacheKey);
-            if (cached != null) {
-                // Skip execution and return cached value
-                InterceptCallbackResponse response = new InterceptCallbackResponse();
-                response.setShouldProceed(false);
-                response.setNewReturnValue(cached);
-                return response;
-            }
-        } else if (ctx.getPhase() == InterceptPhase.AFTER) {
-            // Cache the result
-            cache.put(cacheKey, ctx.getReturnValue());
+        // Check cache first
+        Object cached = cache.get(cacheKey);
+        if (cached != null) {
+            // Cache hit: skip method execution and return cached value
+            ctx.setReturnValue(cached);
+            return InterceptCallbackResponse.skipProceed();
         }
+
+        // Cache miss: proceed with method execution
+        ProceedResult result = ctx.proceed();
+
+        // Cache the result if no exception was thrown
+        if (!result.hasException()) {
+            cache.put(cacheKey, result.getReturnValue());
+        }
+
         return new InterceptCallbackResponse();
     }
 }
@@ -121,8 +120,15 @@ public class CachingCallback implements InterceptCallback {
 **Use case**: Cache expensive computation results without modifying application code.
 
 **How it works**:
-1. **BEFORE phase**: Check cache. If hit, skip method execution and return cached value
-2. **AFTER phase**: Store result in cache for next time
+1. Check cache for existing result
+2. On cache hit: set return value via `ctx.setReturnValue()` and skip execution with `skipProceed()`
+3. On cache miss: call `ctx.proceed()` to execute the method, then cache the result
+
+**Key AROUND patterns**:
+- `ctx.proceed()` - Execute the original method, returns `ProceedResult`
+- `ctx.setReturnValue(value)` + `skipProceed()` - Skip execution and return custom value
+- `result.hasException()` - Check if method threw an exception
+- `result.getReturnValue()` - Get the method's return value after proceed
 
 **How to use**:
 ```java
@@ -142,11 +148,9 @@ If you don't need instance state, use static methods:
 ```java
 public class ValidationHandlers {
     public static InterceptCallbackResponse validateNonNull(InterceptContext ctx) {
-        if (ctx.getPhase() == InterceptPhase.BEFORE) {
-            for (Object arg : ctx.getArgs()) {
-                if (arg == null) {
-                    throw new IllegalArgumentException("Null argument not allowed");
-                }
+        for (Object arg : ctx.getArgs()) {
+            if (arg == null) {
+                throw new IllegalArgumentException("Null argument not allowed");
             }
         }
         return new InterceptCallbackResponse();
@@ -162,11 +166,9 @@ Register with:
 
 ## Thread Safety
 
-**Important**: Callback handlers must be thread-safe. For `AROUND` intercepts, the same handler instance may be invoked:
-- Concurrently for different operations
-- Twice sequentially (BEFORE and AFTER phases) for each operation
+**Important**: Callback handlers must be thread-safe. The same handler instance may be invoked concurrently for different operations.
 
-Use thread-safe data structures (`ConcurrentHashMap`, `CopyOnWriteArrayList`) or synchronization when sharing state.
+Use thread-safe data structures (`ConcurrentHashMap`, `CopyOnWriteArrayList`) or synchronization when sharing state across invocations.
 
 ## Error Handling
 
@@ -176,25 +178,35 @@ Exceptions thrown from callback handlers are propagated to the intercepted peer:
 public class AuthorizationCallback implements InterceptCallback {
     @Override
     public InterceptCallbackResponse handle(InterceptContext ctx) {
-        if (ctx.getPhase() == InterceptPhase.BEFORE) {
-            if (!isAuthorized(ctx)) {
-                throw new SecurityException("Unauthorized access");
-            }
+        if (!isAuthorized(ctx)) {
+            throw new SecurityException("Unauthorized access");
         }
         return new InterceptCallbackResponse();
     }
 }
 ```
 
-The intercepted method will receive the `SecurityException` as if it were thrown locally.
+Register as a BEFORE intercept to reject unauthorized calls before execution. The intercepted method will receive the `SecurityException` as if it were thrown locally.
+
+You can also set exceptions via the context or response:
+
+```java
+// Via context
+ctx.setExceptionToThrow(new SecurityException("Access denied"));
+return new InterceptCallbackResponse();
+
+// Via response
+return InterceptCallbackResponse.throwException(new SecurityException("Access denied"));
+```
 
 ## Best Practices
 
-1. **Keep callbacks fast**: BEFORE callbacks block method execution
+1. **Keep callbacks fast**: BEFORE and AROUND callbacks block method execution
 2. **Use AFTER for side effects**: Logging, metrics, auditing don't need to be synchronous
-3. **Validate phases**: Always check `ctx.getPhase()` when handling AROUND intercepts
-4. **Return empty responses**: If you don't modify execution, return `new InterceptCallbackResponse()`
-5. **Test callback isolation**: Ensure handlers don't have unexpected side effects
+3. **Use `proceed()` in AROUND**: Call `ctx.proceed()` to execute the method, or `skipProceed()` to skip it
+4. **Always set return value before skip**: When using `skipProceed()`, first call `ctx.setReturnValue(value)`
+5. **Return empty responses**: If you don't modify execution, return `new InterceptCallbackResponse()`
+6. **Test callback isolation**: Ensure handlers don't have unexpected side effects
 
 ## See Also
 
