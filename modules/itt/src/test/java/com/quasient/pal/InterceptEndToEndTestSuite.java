@@ -12,6 +12,7 @@ package com.quasient.pal;
 import com.quasient.pal.common.directory.nodes.LogInfo;
 import com.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import com.quasient.pal.cxn.directory.PalDirectory;
+import com.quasient.pal.intercept.chain.AroundChainIT;
 import com.quasient.pal.intercept.endtoend.constructor.AfterConstructorAsyncCallbackIT;
 import com.quasient.pal.intercept.endtoend.constructor.AfterConstructorCallbackIT;
 import com.quasient.pal.intercept.endtoend.constructor.AroundConstructorCallbackIT;
@@ -118,7 +119,10 @@ import org.slf4j.LoggerFactory;
   LocalAndRemoteCombinedIT.class,
 
   // Intercept execution order tests
-  InterceptExecutionOrderIT.class
+  InterceptExecutionOrderIT.class,
+
+  // AROUND intercept chain tests (onion model)
+  AroundChainIT.class
 })
 public class InterceptEndToEndTestSuite extends AbstractIntegrationTest {
 
