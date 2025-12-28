@@ -34,6 +34,7 @@
  *   <li>Handler can inspect/modify arguments, skip execution, or modify return values
  * </ol>
  *
- * @see com.quasient.pal.common.lang.intercept API types for intercept handlers
+ * @see com.quasient.pal.common.lang.intercept.InterceptType
+ * @see com.quasient.pal.common.lang.intercept.InterceptCallback
  */
 package com.quasient.pal.core.intercept;

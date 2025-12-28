@@ -115,14 +115,12 @@ public class SetClassVariableDispatcher extends SetFieldDispatcher {
   }
 
   /**
-   * {@inheritDoc}
+   * Extracts the value to be applied to the static field from the execution message. Depending on
+   * the message content, the value is retrieved either directly or via a reference object.
    *
-   * <p>Extracts the value to be applied to the static field from the execution message. Depending
-   * on the message content, the value is retrieved either directly or via a reference object.
-   *
-   * @param execMessage the execution message containing the update details.
-   * @param accessibleObject the reflective object representing the target static field.
-   * @return the value to be assigned to the static field, or {@code null} if no value is provided.
+   * @param execMessage the execution message containing the update details
+   * @param accessibleObject the reflective object representing the target static field
+   * @return the value to be assigned to the static field, or {@code null} if no value is provided
    */
   @Override
   protected @Nullable Object getValueFromMessage(

@@ -14,8 +14,6 @@ package com.quasient.pal.common.lang.intercept;
  *
  * <p>Each {@code InterceptType} defines a specific phase in the interception process, determining
  * when an interceptor should be invoked relative to the target method's execution.
- *
- * @see com.quasient.pal.common.lang.intercept.Interceptor
  */
 public enum InterceptType {
 

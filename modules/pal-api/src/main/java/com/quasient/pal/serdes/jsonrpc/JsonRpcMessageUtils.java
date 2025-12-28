@@ -78,7 +78,8 @@ public class JsonRpcMessageUtils {
 
   /**
    * Determines whether the given exception type corresponds to a "Method not found" error in
-   * JSON-RPC, in order to return the appropriate {@link JsonRpcErrorCode#METHOD_NOT_FOUND}.
+   * JSON-RPC, in order to return the appropriate {@link
+   * com.quasient.pal.messages.types.JsonRpcErrorCode#METHOD_NOT_FOUND METHOD_NOT_FOUND}.
    *
    * @param exceptionType the fully qualified name of the exception type to check
    * @return {@code true} if the exception type is recognized as a "not found" exception; {@code

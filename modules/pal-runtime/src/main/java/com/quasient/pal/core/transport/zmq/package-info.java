@@ -18,6 +18,6 @@
  *   <li>{@link ZmqUtils} - Socket configuration utilities
  * </ul>
  *
- * @see publish Message publishing via ZeroMQ PUB-SUB pattern
+ * @see com.quasient.pal.core.transport.zmq.publish
  */
 package com.quasient.pal.core.transport.zmq;

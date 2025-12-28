@@ -19,7 +19,7 @@ import org.aspectj.lang.reflect.ConstructorSignature;
 import org.aspectj.lang.reflect.FieldSignature;
 import org.aspectj.lang.reflect.MethodSignature;
 
-/** Provides per-type & per-member caching of built Context instances */
+/** Provides per-type and per-member caching of built Context instances. */
 public final class ContextFactory {
 
   /** Avoid direct instantiation */

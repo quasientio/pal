@@ -17,8 +17,9 @@ import javax.annotation.Nullable;
 /**
  * Represents an argument in a JSON-RPC request.
  *
- * <p>This class is deserialized using the custom {@link ParamsDeserializer} adapter. It
- * encapsulates the value, reference, type, and name of an argument.
+ * <p>This class is deserialized using the custom {@link
+ * com.quasient.pal.serdes.jsonrpc.ParamsDeserializer ParamsDeserializer} adapter. It encapsulates
+ * the value, reference, type, and name of an argument.
  */
 public class Argument {
   /** A constant representing a null argument where both value and reference are {@code null}. */

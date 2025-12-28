@@ -144,15 +144,13 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
   }
 
   /**
-   * {@inheritDoc}
-   *
-   * <p>Retrieves the target object for an instance method call based on the provided execution
+   * Retrieves the target object for an instance method call based on the provided execution
    * message. The method looks up the target object using its object reference from a lookup store.
    * If no matching object is found, a NullPointerException is thrown with a detailed cause.
    *
-   * @param execMessage the execution message containing target object reference details.
-   * @return the target object to be used for method invocation.
-   * @throws NullPointerException if no object corresponding to the provided reference is found.
+   * @param execMessage the execution message containing target object reference details
+   * @return the target object to be used for method invocation
+   * @throws NullPointerException if no object corresponding to the provided reference is found
    */
   @Override
   protected Object getTargetFromMessage(ExecMessage execMessage) throws NullPointerException {

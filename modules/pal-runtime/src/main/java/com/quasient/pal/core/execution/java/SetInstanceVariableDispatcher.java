@@ -92,9 +92,7 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
   }
 
   /**
-   * {@inheritDoc}
-   *
-   * <p>Extracts the target object for the field update from the provided execution message. It
+   * Extracts the target object for the field update from the provided execution message. It
    * retrieves the object reference and checks for its presence in the lookup store. If the target
    * is not found, a {@link NullPointerException} with the appropriate cause is thrown.
    *
@@ -142,10 +140,8 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
   }
 
   /**
-   * {@inheritDoc}
-   *
-   * <p>Extracts the new field value from the execution message. The value may be provided directly
-   * or as a reference, and this method handles both scenarios to produce the value to be set in the
+   * Extracts the new field value from the execution message. The value may be provided directly or
+   * as a reference, and this method handles both scenarios to produce the value to be set in the
    * target field.
    *
    * @param execMessage the execution message carrying the update payload

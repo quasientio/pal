@@ -143,12 +143,9 @@ public final class HwmMessageQueue<E> implements MessagePassingQueue<E> {
 
   /**
    * Stuff the queue with up to {@code limit} elements from the supplier. Semantically similar to:
+   * {@code for(int i = 0; i < limit && relaxedOffer(s.get()); i++);}
    *
-   * <pre>
-   *   for(int i = 0; i < limit && relaxedOffer(s.get()); i++);
-   * </pre>
-   *
-   * There's no strong commitment to the queue being full at the end of a fill. Called from a
+   * <p>There's no strong commitment to the queue being full at the end of a fill. Called from a
    * producer thread subject to the restrictions appropriate to the implementation.
    *
    * @param s supplier of elements to insert (must not be null)
@@ -253,13 +250,9 @@ public final class HwmMessageQueue<E> implements MessagePassingQueue<E> {
 
   /**
    * Remove up to {@code limit} elements from the queue and hand to consumer. Semantically similar
-   * to:
+   * to: {@code for(int i = 0; i < limit && (m = relaxedPoll()) != null; i++){ c.accept(m); }}
    *
-   * <pre>
-   *   for(int i = 0; i < limit && (m = relaxedPoll()) != null; i++){ c.accept(m); }
-   * </pre>
-   *
-   * There's no strong commitment to the queue being empty at the end of a drain. Called from a
+   * <p>There's no strong commitment to the queue being empty at the end of a drain. Called from a
    * consumer thread subject to the restrictions appropriate to the implementation.
    *
    * @param c consumer to process each element (must not be null)

@@ -118,8 +118,8 @@ public final class LogMessage<T> {
 
   /**
    * Creates a {@code LogMessage} by deserializing the provided data. This method is utilized by
-   * {@link KafkaLogMessageDeserializer} to convert raw Kafka records into {@code LogMessage}
-   * instances.
+   * {@link com.quasient.pal.serdes.kafka.typed.KafkaLogMessageDeserializer
+   * KafkaLogMessageDeserializer} to convert raw Kafka records into {@code LogMessage} instances.
    *
    * @param topic the Kafka topic (i.e. log) from which the message was read; may be {@code null}
    * @param offset the offset of the message within the topic; may be {@code null}

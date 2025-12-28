@@ -15,11 +15,11 @@
  * (WAL), with implementations for different backends:
  *
  * <ul>
- *   <li>{@link kafka} - Kafka-based distributed logging
- *   <li>{@link chronicle} - Chronicle Queue for local high-performance logging
- *   <li>{@link gateway} - Outbound message routing
- *   <li>{@link zmq} - ZeroMQ socket utilities
- *   <li>{@link websocket} - WebSocket-based JSON-RPC transport
+ *   <li>{@code kafka} - Kafka-based distributed logging
+ *   <li>{@code chronicle} - Chronicle Queue for local high-performance logging
+ *   <li>{@code gateway} - Outbound message routing
+ *   <li>{@code zmq} - ZeroMQ socket utilities
+ *   <li>{@code websocket} - WebSocket-based JSON-RPC transport
  * </ul>
  *
  * <h2>Key Abstractions</h2>

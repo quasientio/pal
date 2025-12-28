@@ -14,8 +14,8 @@
  * <p>Subpackages:
  *
  * <ul>
- *   <li>{@link objects} - Remote object reference lifecycle management
- *   <li>{@link session} - Peer session tracking
+ *   <li>{@code objects} - Remote object reference lifecycle management
+ *   <li>{@code session} - Peer session tracking
  * </ul>
  */
 package com.quasient.pal.core.runtime;

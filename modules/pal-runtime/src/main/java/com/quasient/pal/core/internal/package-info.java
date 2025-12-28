@@ -14,8 +14,8 @@
  * <p>Subpackages:
  *
  * <ul>
- *   <li>{@link messages} - Internal message types for inter-component communication
- *   <li>{@link concurrent} - Lock-free data structures for high-performance queuing
+ *   <li>{@code messages} - Internal message types for inter-component communication
+ *   <li>{@code concurrent} - Lock-free data structures for high-performance queuing
  * </ul>
  *
  * <p><b>Warning:</b> Classes in this package are implementation details and may change without

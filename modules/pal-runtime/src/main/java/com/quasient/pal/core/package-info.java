@@ -26,14 +26,14 @@
  * <h2>Package Structure</h2>
  *
  * <ul>
- *   <li>{@link service} - Peer lifecycle and dependency injection
- *   <li>{@link execution.java} - Operation dispatchers (methods, constructors, fields)
- *   <li>{@link dispatcher} - Incoming message routing
- *   <li>{@link intercept} - Dynamic interception system
- *   <li>{@link transport} - Log and network I/O
- *   <li>{@link runtime} - Object and session state management
- *   <li>{@link internal} - Internal utilities
- *   <li>{@link annotations} - Annotation processing
+ *   <li>{@code service} - Peer lifecycle and dependency injection
+ *   <li>{@code execution.java} - Operation dispatchers (methods, constructors, fields)
+ *   <li>{@code dispatcher} - Incoming message routing
+ *   <li>{@code intercept} - Dynamic interception system
+ *   <li>{@code transport} - Log and network I/O
+ *   <li>{@code runtime} - Object and session state management
+ *   <li>{@code internal} - Internal utilities
+ *   <li>{@code annotations} - Annotation processing
  * </ul>
  *
  * @see com.quasient.pal.core.service.Main Entry point for starting a peer
