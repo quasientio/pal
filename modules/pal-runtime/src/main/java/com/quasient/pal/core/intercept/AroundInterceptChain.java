@@ -322,8 +322,7 @@ public class AroundInterceptChain {
 
   /** Invokes a local AROUND intercept in the chain. */
   private AfterPhaseData invokeLocal(
-      int index, LocalAroundHandle handle, Object[] args, ExecMessage execMessage)
-      throws Throwable {
+      int index, LocalAroundHandle handle, Object[] args, ExecMessage execMessage) {
 
     if (logger.isDebugEnabled()) {
       logger.debug(
@@ -493,7 +492,7 @@ public class AroundInterceptChain {
      * @param skipException the exception
      */
     SkipExecutionException(Object returnValue, Throwable skipException) {
-      super((String) null, null, false, false); // No stack trace needed
+      super(null, null, false, false); // No stack trace needed
       this.returnValue = returnValue;
       this.skipException = skipException;
     }

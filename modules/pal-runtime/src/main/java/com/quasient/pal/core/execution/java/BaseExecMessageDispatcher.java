@@ -319,7 +319,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       }
     }
 
-    // Note: LOCAL AROUND AFTER is now handled by AroundInterceptChain
+    // Note: LOCAL AROUND AFTER is handled by AroundInterceptChain
 
     if (needsAfterMessages) {
       // Reuse context if already created
@@ -367,7 +367,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         }
       }
 
-      // Note: REMOTE AROUND AFTER is now handled by AroundInterceptChain
+      // Note: REMOTE AROUND AFTER is handled by AroundInterceptChain
     }
 
     // 9. Return object or re-raise exception
@@ -641,7 +641,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
           finalArgs = applyArgMutations(args, args, beforeCallbackResponse.getMutatedArgs());
         }
       }
-      // Note: REMOTE AROUND is now handled by AroundInterceptChain
+      // Note: REMOTE AROUND is handled by AroundInterceptChain
     }
 
     // Invocation phase - use AROUND chain if present
@@ -772,7 +772,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       }
     }
 
-    // Note: LOCAL AROUND AFTER is now handled by AroundInterceptChain
+    // Note: LOCAL AROUND AFTER is handled by AroundInterceptChain
 
     // 10. Wrap object or exception
     final ExecMessage afterExecMsg =
@@ -806,7 +806,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       }
     }
 
-    // Note: REMOTE AROUND AFTER is now handled by AroundInterceptChain
+    // Note: REMOTE AROUND AFTER is handled by AroundInterceptChain
 
     // Recreate afterExecMsg if returnValue was overridden by callbacks
     final ExecMessage finalAfterExecMsg;
