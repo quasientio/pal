@@ -70,7 +70,7 @@ In `pom.xml`:
 ```xml
 <dependencies>
     <dependency>
-        <groupId>com.quasient.pal</groupId>
+        <groupId>io.quasient.pal</groupId>
         <artifactId>pal-api</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </dependency>
@@ -88,7 +88,7 @@ In `pom.xml`:
                 <target>17</target>
                 <aspectLibraries>
                     <aspectLibrary>
-                        <groupId>com.quasient.pal</groupId>
+                        <groupId>io.quasient.pal</groupId>
                         <artifactId>pal-weave</artifactId>
                     </aspectLibrary>
                 </aspectLibraries>
@@ -204,8 +204,8 @@ $ pal print -d localhost:2379 -l calculator-wal -f
 ```java
 package com.example.client;
 
-import com.quasient.pal.cxn.PalDirectory;
-import com.quasient.pal.core.PeerInfo;
+import io.quasient.pal.cxn.PalDirectory;
+import io.quasient.pal.core.PeerInfo;
 
 public class CalculatorClient {
 
@@ -267,9 +267,9 @@ pal run -d localhost:2379 \
 ```java
 package com.example.monitor;
 
-import com.quasient.pal.core.InterceptRequest;
-import com.quasient.pal.core.InterceptType;
-import com.quasient.pal.cxn.PalDirectory;
+import io.quasient.pal.core.InterceptRequest;
+import io.quasient.pal.core.InterceptType;
+import io.quasient.pal.cxn.PalDirectory;
 
 public class MonitorService {
 

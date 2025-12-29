@@ -18,7 +18,7 @@
 <FindBugsFilter>
     <!-- Exclude Colfer-generated message classes (auto-generated, cannot modify) -->
     <Match>
-        <Package name="~com\.quasient\.pal\.messages\.colfer.*"/>
+        <Package name="~io\.quasient\.pal\.messages\.colfer.*"/>
     </Match>
 
     <!-- Exclude JMH-generated benchmark code (auto-generated, cannot modify) -->

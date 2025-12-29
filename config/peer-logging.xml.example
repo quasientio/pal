@@ -13,21 +13,21 @@
 <configuration debug="false" scan="false" scanPeriod="30 seconds">
 
     <!-- APPENDERS -->
-    <appender name="peer" class="com.quasient.pal.common.logging.PeerFileAppender">
+    <appender name="peer" class="io.quasient.pal.common.logging.PeerFileAppender">
         <file>logs/peer.log</file>
         <encoder>
             <pattern>%date %level [%thread][%logger{10}] %message%n</pattern>
         </encoder>
     </appender>
 
-    <appender name="kafka" class="com.quasient.pal.common.logging.PeerFileAppender">
+    <appender name="kafka" class="io.quasient.pal.common.logging.PeerFileAppender">
         <file>logs/kafka.log</file>
         <encoder>
             <pattern>%date %level [%thread][%logger{10}] %message%n</pattern>
         </encoder>
     </appender>
 
-    <appender name="etcd" class="com.quasient.pal.common.logging.PeerFileAppender">
+    <appender name="etcd" class="io.quasient.pal.common.logging.PeerFileAppender">
         <file>logs/etcd.log</file>
         <encoder>
             <pattern>%date %level [%thread][%logger{10}] %message%n</pattern>
@@ -35,15 +35,15 @@
     </appender>
 
     <!-- LOGGERS -->
-    <logger name="com.quasient.pal" level="info" additivity="false">
+    <logger name="io.quasient.pal" level="info" additivity="false">
         <appender-ref ref="peer"/>
     </logger>
 
-    <logger name="com.quasient.pal.shd.apache.kafka" level="warn" additivity="false">
+    <logger name="io.quasient.pal.shd.apache.kafka" level="warn" additivity="false">
         <appender-ref ref="kafka"/>
     </logger>
 
-    <logger name="com.quasient.pal.shd.io.etcd" level="warn" additivity="false">
+    <logger name="io.quasient.pal.shd.io.etcd" level="warn" additivity="false">
         <appender-ref ref="etcd"/>
     </logger>
 

@@ -24,8 +24,8 @@ cd $PAL_HOME/modules/pal-api
 # re-compile all schemas
 colf-linux -f \
  -b src/main/java \
- -p com.quasient.pal.messages \
- -i com.quasient.pal.messages.Marshallable \
+ -p io.quasient.pal.messages \
+ -i io.quasient.pal.messages.Marshallable \
   Java src/main/colfer/*.colf
 
 # add the fromJson() method to all generated classes

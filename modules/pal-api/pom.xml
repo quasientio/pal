@@ -18,7 +18,7 @@
     <name>API and serialization library</name>
 
     <parent>
-        <groupId>com.quasient.pal</groupId>
+        <groupId>io.quasient.pal</groupId>
         <artifactId>pal</artifactId>
         <version>1.0.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
@@ -47,7 +47,7 @@
                 <configuration>
                     <!-- Exclude auto-generated Colfer message classes from coverage -->
                     <excludes>
-                        <exclude>com/quasient/pal/messages/colfer/**</exclude>
+                        <exclude>io/quasient/pal/messages/colfer/**</exclude>
                     </excludes>
                 </configuration>
                 <executions>
@@ -73,7 +73,7 @@
                 <configuration>
                     <!-- Append to parent's excludes instead of replacing -->
                     <excludes combine.children="append">
-                        <exclude>com/quasient/pal/messages/colfer/**/*.java</exclude>
+                        <exclude>io/quasient/pal/messages/colfer/**/*.java</exclude>
                     </excludes>
                 </configuration>
             </plugin>

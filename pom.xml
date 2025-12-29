@@ -13,7 +13,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
-    <groupId>com.quasient.pal</groupId>
+    <groupId>io.quasient.pal</groupId>
     <artifactId>pal</artifactId>
     <packaging>pom</packaging>
     <version>1.0.0-SNAPSHOT</version>
@@ -253,7 +253,7 @@
                         <sortArtifactByName>true</sortArtifactByName>
 
                         <!-- skip own modules -->
-                        <excludedGroups>com.quasient.pal</excludedGroups>
+                        <excludedGroups>io.quasient.pal</excludedGroups>
 
                         <!-- download-goal settings -->
                         <licensesConfigFile>${project.basedir}/licenses/url-fixes.xml</licensesConfigFile>
@@ -292,7 +292,7 @@
                             -Xplugin:ErrorProne
                             -Xep:JUnitIncompatibleType:OFF
                             -Xep:DeadException:WARN
-                            -XepExcludedPaths:.*/(pal-api/src/main/java/com/quasient/pal/messages/colfer.*|pal-benchmarks/target/generated-sources/.*)
+                            -XepExcludedPaths:.*/(pal-api/src/main/java/io/quasient/pal/messages/colfer.*|pal-benchmarks/target/generated-sources/.*)
                             -Xep:GuardedBy:OFF
                         </arg>
                     </compilerArgs>
@@ -557,28 +557,28 @@
         <dependencies>
             <!-- OWN DEPENDENCIES -->
             <dependency>
-                <groupId>com.quasient.pal</groupId>
+                <groupId>io.quasient.pal</groupId>
                 <artifactId>pal-api</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.quasient.pal</groupId>
+                <groupId>io.quasient.pal</groupId>
                 <artifactId>pal-client</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.quasient.pal</groupId>
+                <groupId>io.quasient.pal</groupId>
                 <artifactId>pal-weave</artifactId>
                 <version>${project.version}</version>
                 <scope>runtime</scope>
             </dependency>
             <dependency>
-                <groupId>com.quasient.pal</groupId>
+                <groupId>io.quasient.pal</groupId>
                 <artifactId>itt-apps</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.quasient.pal</groupId>
+                <groupId>io.quasient.pal</groupId>
                 <artifactId>pal-runtime</artifactId>
                 <version>${project.version}</version>
             </dependency>

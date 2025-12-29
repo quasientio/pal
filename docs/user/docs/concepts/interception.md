@@ -406,7 +406,7 @@ If building a JAR manually, configure AspectJ in your `pom.xml`:
     <configuration>
         <aspectLibraries>
             <aspectLibrary>
-                <groupId>com.quasient.pal</groupId>
+                <groupId>io.quasient.pal</groupId>
                 <artifactId>pal-weave</artifactId>
             </aspectLibrary>
         </aspectLibraries>
@@ -490,7 +490,7 @@ Look for intercept support indicator.
 **Check 3**: Does pattern match?
 ```bash
 # Enable debug logging in peer
-<logger name="com.quasient.pal.core.InterceptMatcher" level="DEBUG"/>
+<logger name="io.quasient.pal.core.InterceptMatcher" level="DEBUG"/>
 ```
 
 ### Callback Peer Not Receiving

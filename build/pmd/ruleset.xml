@@ -30,7 +30,7 @@
 
         <description>
             Flags uses of fully qualified class names like
-            com.quasient.pal.messages.colfer.InterceptCallbackRequestMessage.
+            io.quasient.pal.messages.colfer.InterceptCallbackRequestMessage.
             Prefer imports and simple type names instead.
         </description>
 

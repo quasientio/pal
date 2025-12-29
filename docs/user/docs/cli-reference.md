@@ -730,4 +730,4 @@ pal print -d localhost:2379 -l bench-wal --output-format COMPACT | grep -E "meth
 
 - Getting Started guide for `pal run` documentation
 - PAL Architecture documentation for concepts (peers, logs, messages)
-- Integration tests in `modules/itt/src/test/java/com/quasient/pal/cli/` for more examples
+- Integration tests in `modules/itt/src/test/java/io/quasient/pal/cli/` for more examples

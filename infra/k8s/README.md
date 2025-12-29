@@ -63,7 +63,7 @@ pal run \
   --kafka-servers 192.168.49.2:30092 \
   --log           auto \
   -cp target/classes/ \
-  com.quasient.pal.examples.HelloWorld
+  io.quasient.pal.examples.HelloWorld
 ```
 
 ---

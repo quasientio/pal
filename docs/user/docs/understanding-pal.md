@@ -461,7 +461,7 @@ class PaymentService implements PALService  // ✗
 No framework coupling:
 ```java
 // NOT required
-import com.quasient.pal.*  // ✗ (in application code)
+import io.quasient.pal.*  // ✗ (in application code)
 ```
 
 ## Comparison to Other Approaches

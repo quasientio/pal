@@ -17,7 +17,7 @@ Before you begin, ensure you have:
 
 ```bash
 # Clone the repository
-git clone https://github.com/quasient/pal.git
+git clone https://github.io/quasient/pal.git
 cd pal
 
 # Build and run tests (skips integration tests)
@@ -158,7 +158,7 @@ Create `pom.xml`:
     <dependencies>
         <!-- PAL weave aspect library -->
         <dependency>
-            <groupId>com.quasient.pal</groupId>
+            <groupId>io.quasient.pal</groupId>
             <artifactId>pal-weave</artifactId>
             <version>${pal.version}</version>
         </dependency>
@@ -177,7 +177,7 @@ Create `pom.xml`:
                     <target>17</target>
                     <aspectLibraries>
                         <aspectLibrary>
-                            <groupId>com.quasient.pal</groupId>
+                            <groupId>io.quasient.pal</groupId>
                             <artifactId>pal-weave</artifactId>
                         </aspectLibrary>
                     </aspectLibraries>
@@ -482,9 +482,9 @@ Create `src/main/java/tutorial/MonitorService.java`:
 ```java
 package tutorial;
 
-import com.quasient.pal.cxn.PalDirectory;
-import com.quasient.pal.core.api.InterceptRequest;
-import com.quasient.pal.core.api.InterceptType;
+import io.quasient.pal.cxn.PalDirectory;
+import io.quasient.pal.core.api.InterceptRequest;
+import io.quasient.pal.core.api.InterceptType;
 
 public class MonitorService {
     public static void main(String[] args) throws Exception {
@@ -645,7 +645,7 @@ javap -c target/classes/tutorial/OrderService.class | grep aspectOf
 4. Enable debug logging in logback.xml:
 
 ```xml
-<logger name="com.quasient.pal.core.InterceptMatcher" level="DEBUG"/>
+<logger name="io.quasient.pal.core.InterceptMatcher" level="DEBUG"/>
 ```
 
 ## Next Steps

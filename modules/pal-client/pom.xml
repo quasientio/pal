@@ -20,7 +20,7 @@
     <name>client library</name>
 
     <parent>
-        <groupId>com.quasient.pal</groupId>
+        <groupId>io.quasient.pal</groupId>
         <artifactId>pal</artifactId>
         <version>1.0.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
@@ -100,7 +100,7 @@
     <dependencies>
         <!-- OWN DEPENDENCIES -->
         <dependency>
-            <groupId>com.quasient.pal</groupId>
+            <groupId>io.quasient.pal</groupId>
             <artifactId>pal-api</artifactId>
         </dependency>
 

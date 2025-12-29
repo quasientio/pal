@@ -33,11 +33,11 @@
         </encoder>
     </appender>
 
-    <logger name="com.quasient.pal" level="debug" additivity="false">
+    <logger name="io.quasient.pal" level="debug" additivity="false">
         <appender-ref ref="cli"/>
     </logger>
 
-    <logger name="com.quasient.pal.serdes.kafka" level="info" additivity="false">
+    <logger name="io.quasient.pal.serdes.kafka" level="info" additivity="false">
         <appender-ref ref="cli"/>
     </logger>
 

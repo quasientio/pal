@@ -254,7 +254,7 @@ if not pal_home:
   print("PAL_HOME is not defined. Aborting.")
   sys.exit(1)
   
-java_classes_base_path = f'{pal_home}/modules/pal-api/src/main/java/com/quasient/pal/messages/colfer'
+java_classes_base_path = f'{pal_home}/modules/pal-api/src/main/java/io/quasient/pal/messages/colfer'
 
 # First pass: parse all classes to populate all_classes (for nested message detection)
 for filename in os.listdir(java_classes_base_path):

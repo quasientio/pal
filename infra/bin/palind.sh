@@ -23,7 +23,7 @@
 #          --zmq-rpc 6678 \
 #          --json-rpc 6679 \
 #          -cp "$(pwd)/target/classes" \
-#          com.quasient.pal.examples.HelloWorld
+#          io.quasient.pal.examples.HelloWorld
 
 ###############################################################################
 # 0. helper paths / functions

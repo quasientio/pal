@@ -85,7 +85,7 @@ public class HelloService {
 ```xml
 <dependencies>
     <dependency>
-        <groupId>com.quasient.pal</groupId>
+        <groupId>io.quasient.pal</groupId>
         <artifactId>pal-api</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </dependency>
@@ -101,7 +101,7 @@ public class HelloService {
                 <complianceLevel>17</complianceLevel>
                 <aspectLibraries>
                     <aspectLibrary>
-                        <groupId>com.quasient.pal</groupId>
+                        <groupId>io.quasient.pal</groupId>
                         <artifactId>pal-weave</artifactId>
                     </aspectLibrary>
                 </aspectLibraries>
@@ -313,7 +313,7 @@ Run PAL peer from your IDE for breakpoint debugging:
 
 **IntelliJ Run Configuration**:
 
-- **Main class**: `com.quasient.pal.cli.Pal`
+- **Main class**: `io.quasient.pal.cli.Pal`
 - **Program arguments**: `run --wal file:/tmp/debug-wal -cp target/classes com.example.HelloService arg1`
 - **VM options**: `-DPAL_HOME=/path/to/pal`
 
@@ -337,7 +337,7 @@ Create local logging config:
     <logger name="com.example" level="DEBUG"/>
 
     <!-- Debug PAL internals if needed -->
-    <logger name="com.quasient.pal.core.dispatcher" level="DEBUG"/>
+    <logger name="io.quasient.pal.core.dispatcher" level="DEBUG"/>
 
     <root level="INFO">
         <appender-ref ref="STDOUT"/>

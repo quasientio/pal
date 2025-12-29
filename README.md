@@ -86,7 +86,7 @@ Because operations are messages, they can be:
 
 ```bash
 # Clone and build
-git clone https://github.com/quasient/pal.git
+git clone https://github.io/quasient/pal.git
 cd pal
 mvn install -DskipITs
 
@@ -165,11 +165,11 @@ See [LICENSE](LICENSE) for details.
 
 Contributions welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-- Bug reports and feature requests: [GitHub Issues](https://github.com/quasient/pal/issues)
-- Code contributions: [GitHub Pull Requests](https://github.com/quasient/pal/pulls)
+- Bug reports and feature requests: [GitHub Issues](https://github.io/quasient/pal/issues)
+- Code contributions: [GitHub Pull Requests](https://github.io/quasient/pal/pulls)
 
 ## Community
 
 - **Documentation:** [Full docs](docs/user/docs/)
 - **Examples:** [pal-examples repository](https://github.com/cometera/pal-examples)
-- **Discussion:** [GitHub Discussions](https://github.com/quasient/pal/discussions)
+- **Discussion:** [GitHub Discussions](https://github.io/quasient/pal/discussions)

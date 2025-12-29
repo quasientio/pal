@@ -175,6 +175,6 @@ New integration tests might or not require a peer to be running. If it does, the
 - Consider adding the new test to an existing TestSuite that already launches and manages a shared peer,
   listing the new class name under `@RunWith(Suite.class) @Suite.SuiteClasses({`.
 - Or create and manage the required peer using JUnit's `@BeforeClass` and `@AfterClass` to launch and
-  stop the peer. For an example, see [ThinPeerIT.java](src/test/java/com/quasient/pal/cxn/ThinPeerIT.java).
+  stop the peer. For an example, see [ThinPeerIT.java](src/test/java/io/quasient/pal/cxn/ThinPeerIT.java).
 - Verify that the failsafe plugin configuration in [ITT's pom](pom.xml) is up to date, so that the new
   test runs either as standalone or within a test suite.

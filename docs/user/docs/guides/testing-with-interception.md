@@ -497,7 +497,7 @@ Each test should:
 ### Enable Debug Logging
 
 ```xml
-<logger name="com.quasient.pal.core.InterceptMatcher" level="DEBUG"/>
+<logger name="io.quasient.pal.core.InterceptMatcher" level="DEBUG"/>
 ```
 
 ### Print All Callbacks
@@ -524,8 +524,8 @@ Should show AspectJ calls.
 
 See the PAL integration tests for complete examples:
 
-- `modules/itt/src/test/java/com/quasient/pal/core/InterceptTests.java`
-- `modules/itt/src/test/java/com/quasient/pal/core/BinaryRpcTest.java`
+- `modules/itt/src/test/java/io/quasient/pal/core/InterceptTests.java`
+- `modules/itt/src/test/java/io/quasient/pal/core/BinaryRpcTest.java`
 
 ## Further Reading
 

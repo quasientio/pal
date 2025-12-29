@@ -22,15 +22,15 @@
 
   <parent>
     <artifactId>pal</artifactId>
-    <groupId>com.quasient.pal</groupId>
+    <groupId>io.quasient.pal</groupId>
     <version>1.0.0-SNAPSHOT</version>
   </parent>
 
   <properties>
-      <file.appender.class>com.quasient.pal.common.logging.PeerFileAppender</file.appender.class>
-      <console.appender.class>com.quasient.pal.common.logging.PeerConsoleAppender</console.appender.class>
-      <kafka.logger.name>com.quasient.pal.shd.apache.kafka</kafka.logger.name>
-      <jetcd.logger.name>com.quasient.pal.shd.io.etcd</jetcd.logger.name>
+      <file.appender.class>io.quasient.pal.common.logging.PeerFileAppender</file.appender.class>
+      <console.appender.class>io.quasient.pal.common.logging.PeerConsoleAppender</console.appender.class>
+      <kafka.logger.name>io.quasient.pal.shd.apache.kafka</kafka.logger.name>
+      <jetcd.logger.name>io.quasient.pal.shd.io.etcd</jetcd.logger.name>
   </properties>
 
 
@@ -65,7 +65,7 @@
             <configuration>
               <artifactItems>
                 <artifactItem>
-                  <groupId>com.quasient.pal</groupId>
+                  <groupId>io.quasient.pal</groupId>
                   <artifactId>pal-cli</artifactId>
                   <version>${project.version}</version>
                   <outputDirectory>${project.basedir}/../lib</outputDirectory>

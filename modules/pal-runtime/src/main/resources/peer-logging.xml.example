@@ -35,19 +35,19 @@
     </appender>
 
     <!-- LOGGERS -->
-    <logger name="com.quasient.pal.core" level="info" additivity="false">
+    <logger name="io.quasient.pal.core" level="info" additivity="false">
         <appender-ref ref="peer"/>
     </logger>
 
-    <logger name="com.quasient.pal.common" level="info" additivity="false">
+    <logger name="io.quasient.pal.common" level="info" additivity="false">
         <appender-ref ref="peer"/>
     </logger>
 
-    <logger name="com.quasient.pal.core.transport.kafka.LogReader" level="info" additivity="false">
+    <logger name="io.quasient.pal.core.transport.kafka.LogReader" level="info" additivity="false">
         <appender-ref ref="peer"/>
     </logger>
 
-    <logger name="com.quasient.pal.cxn" level="info" additivity="false">
+    <logger name="io.quasient.pal.cxn" level="info" additivity="false">
         <appender-ref ref="peer"/>
     </logger>
 

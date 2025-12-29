@@ -79,7 +79,7 @@ All without changing your code. No annotations, no interfaces, no framework lock
 
 ```bash
 # Clone and build
-git clone https://github.com/quasientinc/pal.git
+git clone https://github.io/quasientinc/pal.git
 cd pal
 mvn install -DskipITs
 

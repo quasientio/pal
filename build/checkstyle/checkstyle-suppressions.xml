@@ -2,9 +2,9 @@
   "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
   "https://checkstyle.org/dtds/suppressions_1_2.dtd">
 <suppressions>
-  <!-- Ignore generated Colfer classes (/src/main/java/com/quasient/pal/messages/colfer/) -->
-  <suppress files=".*[\\/]+src[\\/]+main[\\/]+java[\\/]+com[\\/]+quasient[\\/]+pal[\\/]+messages[\\/]+colfer[\\/]+.*" checks=".*"/>
+  <!-- Ignore generated Colfer classes (/src/main/java/io/quasient/pal/messages/colfer/) -->
+  <suppress files=".*[\\/]+src[\\/]+main[\\/]+java[\\/]+io[\\/]+quasient[\\/]+pal[\\/]+messages[\\/]+colfer[\\/]+.*" checks=".*"/>
 
-  <!-- Ignore apps - classes under itt/ and used by integration tests (/src/main/java/com/quasient/pal/apps) -->
-  <suppress files=".*[\\/]+src[\\/]+main[\\/]+java[\\/]+com[\\/]+quasient[\\/]+pal[\\/]+apps[\\/]+.*" checks=".*"/>
+  <!-- Ignore apps - classes under itt/ and used by integration tests (/src/main/java/io/quasient/pal/apps) -->
+  <suppress files=".*[\\/]+src[\\/]+main[\\/]+java[\\/]+io[\\/]+quasient[\\/]+pal[\\/]+apps[\\/]+.*" checks=".*"/>
 </suppressions>

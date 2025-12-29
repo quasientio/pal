@@ -18,7 +18,7 @@
     <name>apps and classes for integration tests</name>
 
     <parent>
-        <groupId>com.quasient.pal</groupId>
+        <groupId>io.quasient.pal</groupId>
         <artifactId>pal</artifactId>
         <version>1.0.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
@@ -71,7 +71,7 @@
 
                             <!-- ...except the quantized package (handled by Ajc) -->
                             <excludes>
-                                <exclude>com/quasient/pal/apps/quantized/**/*.java</exclude>
+                                <exclude>io/quasient/pal/apps/quantized/**/*.java</exclude>
                             </excludes>
 
                             <compilerArgs>
@@ -94,13 +94,13 @@
                     <verbose>true</verbose>
                     <aspectLibraries>
                         <aspectLibrary>
-                            <groupId>com.quasient.pal</groupId>
+                            <groupId>io.quasient.pal</groupId>
                             <artifactId>pal-weave</artifactId>
                         </aspectLibrary>
                     </aspectLibraries>
                     <!-- Only compile/weave classes in the quantized package -->
                     <includes>
-                        <include>com/quasient/pal/apps/quantized/**/*.java</include>
+                        <include>io/quasient/pal/apps/quantized/**/*.java</include>
                     </includes>
                 </configuration>
                 <executions>
@@ -134,12 +134,12 @@
     <dependencies>
         <!-- OWN DEPENDENCIES -->
         <dependency>
-            <groupId>com.quasient.pal</groupId>
+            <groupId>io.quasient.pal</groupId>
             <artifactId>pal-weave</artifactId>
             <scope>compile</scope>
         </dependency>
         <dependency>
-            <groupId>com.quasient.pal</groupId>
+            <groupId>io.quasient.pal</groupId>
             <artifactId>pal-api</artifactId>
             <scope>compile</scope>
         </dependency>

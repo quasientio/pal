@@ -39,11 +39,11 @@
 		<appender-ref ref="tests"/>
 	</logger>
 
-	<logger name="com.quasient.pal.core" level="debug" additivity="false">
+	<logger name="io.quasient.pal.core" level="debug" additivity="false">
 		<appender-ref ref="tests"/>
 	</logger>
 
-	<logger name="com.quasient.pal.cxn" level="debug" additivity="false">
+	<logger name="io.quasient.pal.cxn" level="debug" additivity="false">
 		<appender-ref ref="tests"/>
 	</logger>
 
