@@ -378,7 +378,6 @@
                                 <exclude>docs/**</exclude>
                                 <exclude>site/**</exclude>
                                 <exclude>licenses/third-party/</exclude>
-                                <exclude>bin/pal</exclude>   <!-- ignore symlink -->
                                 <exclude>infra/bin/palind</exclude>   <!-- ignore symlink -->
                                 <exclude>config/kafka/server.properties</exclude>
                             </excludes>
@@ -827,39 +826,6 @@
 
 
     <profiles>
-        <profile>
-            <id>gitlab-ci</id>
-            <activation>
-                <property>
-                    <name>env.CI_PROJECT_ID</name>
-                </property>
-            </activation>
-            <repositories>
-                <repository>
-                    <id>gitlab-maven</id>
-                    <url>https://gitlab.cometera.org/api/v4/projects/${env.CI_PROJECT_ID}/packages/maven</url>
-                </repository>
-            </repositories>
-            <distributionManagement>
-                <repository>
-                    <id>gitlab-maven</id>
-                    <url>https://gitlab.cometera.org/api/v4/projects/${env.CI_PROJECT_ID}/packages/maven</url>
-                </repository>
-                <snapshotRepository>
-                    <id>gitlab-maven</id>
-                    <url>https://gitlab.cometera.org/api/v4/projects/${env.CI_PROJECT_ID}/packages/maven</url>
-                </snapshotRepository>
-            </distributionManagement>
-        </profile>
-        <profile>
-            <id>local</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-                <property>
-                    <name>!env.CI_PROJECT_ID</name>
-                </property>
-            </activation>
-        </profile>
         <profile>
             <id>release-legal</id>
             <build>
