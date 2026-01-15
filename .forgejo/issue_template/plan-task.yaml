@@ -1,0 +1,53 @@
+name: Plan Task
+title: ""
+about: Task created as part of an implementation plan (used by planner workflow)
+labels: []
+body:
+  - type: markdown
+    id: intro
+    attributes:
+      value: |
+        ## Task from Plan
+
+  - type: input
+    id: plan_issue
+    attributes:
+      label: Plan Issue
+      description: The parent plan issue number
+      placeholder: "#123"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What needs to be done for this task?
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance Criteria
+      description: How will we know this task is complete?
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: How this task fits into the overall implementation goal
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      description: Other tasks that must be completed before this one
+
+  - type: input
+    id: parent_plan_title
+    attributes:
+      label: Part of Plan
+      description: Parent plan title and reference
