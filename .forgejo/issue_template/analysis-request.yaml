@@ -1,0 +1,48 @@
+name: Analysis Request
+title: "[Analysis] "
+about: Request codebase analysis for a feature or change
+labels:
+  - task/analysis
+body:
+  - type: markdown
+    id: intro
+    attributes:
+      value: |
+        ## Request Analysis
+        Provide details about what you want analyzed. The agent will investigate
+        the codebase and provide a technical analysis with implementation approaches.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Feature/Change Description
+      description: What do you want to build or change?
+      placeholder: Add request validation middleware for API endpoints
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context & Motivation
+      description: Why is this needed? What problem does it solve?
+      placeholder: Currently API endpoints accept any payload, causing errors deep in the pipeline...
+    validations:
+      required: true
+
+  - type: textarea
+    id: requirements
+    attributes:
+      label: Requirements
+      description: What must the solution do? List specific requirements.
+      placeholder: |
+        - Validate request body schemas before handler execution
+        - Return clear 400 errors for invalid payloads
+        - Support custom validation rules per endpoint
+
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints
+      description: Performance, compatibility, or dependency constraints
+      placeholder: Must not add external dependencies, must work with existing handler chain
