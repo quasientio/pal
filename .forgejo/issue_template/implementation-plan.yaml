@@ -1,0 +1,21 @@
+name: Implementation Plan
+title: "[Plan] "
+about: Generate implementation plan from approved analysis
+labels:
+  - task/plan
+body:
+  - type: markdown
+    id: intro
+    attributes:
+      value: |
+        ## Implementation Plan
+        This issue triggers the planner workflow to generate sub-tasks from an approved analysis.
+
+  - type: input
+    id: analysis_issue
+    attributes:
+      label: Approved Analysis Issue
+      description: Reference to the approved analysis issue (e.g., #123)
+      placeholder: "#123"
+    validations:
+      required: true
