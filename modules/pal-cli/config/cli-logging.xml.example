@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Copyright (C) 2026 Quasient Inc. <https://www.quasient.com>
+
+    Use of this software is governed by the Business Source License 1.1
+    included in the file LICENSE and at https://mariadb.com/bsl11
+
+    Change Date: 2030-10-01
+    Change License: Apache 2.0
+
+-->
+<configuration debug="false" scan="false">
+
+    <appender name="cli" class="io.quasient.pal.common.logging.PeerFileAppender">
+        <file>logs/cli.log</file>
+        <encoder>
+            <pattern>%date %level [%thread][%logger{10}] %message%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="kafka" class="io.quasient.pal.common.logging.PeerFileAppender">
+        <file>logs/kafka-cli.log</file>
+        <encoder>
+            <pattern>%date %level [%thread][%logger{10}] %message%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="etcd" class="io.quasient.pal.common.logging.PeerFileAppender">
+        <file>logs/etcd-cli.log</file>
+        <encoder>
+            <pattern>%date %level [%thread][%logger{10}] %message%n</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="io.quasient.pal" level="debug" additivity="false">
+        <appender-ref ref="cli"/>
+    </logger>
+
+    <logger name="io.quasient.pal.serdes.kafka" level="info" additivity="false">
+        <appender-ref ref="cli"/>
+    </logger>
+
+    <logger name="org.apache.kafka" level="info" additivity="false">
+        <appender-ref ref="kafka"/>
+    </logger>
+
+    <logger name="io.etcd" level="info" additivity="false">
+        <appender-ref ref="etcd"/>
+    </logger>
+
+    <root level="warn">
+        <appender-ref ref="cli"/>
+    </root>
+
+</configuration>
