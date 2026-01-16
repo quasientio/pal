@@ -1,11 +1,11 @@
 <!--
 
-    Copyright (C) 2025 Quasient Inc. <https://www.quasient.com>
+    Copyright (C) 2026 Quasient Inc. <https://www.quasient.com>
 
     Use of this software is governed by the Business Source License 1.1
     included in the file LICENSE and at https://mariadb.com/bsl11
 
-    Change Date: 2029-10-01
+    Change Date: 2030-10-01
     Change License: Apache 2.0
 
 -->
@@ -106,8 +106,8 @@
         <skipUTs>${skipTests}</skipUTs>
 
         <!-- LICENSING :: must be kept in sync with values in licenses/BSL_HEADER.txt -->
-        <changeDate>2029-10-01</changeDate>
-        <copyrightYear>2025</copyrightYear>
+        <changeDate>2030-10-01</changeDate>
+        <copyrightYear>2026</copyrightYear>
 
         <!-- MISC PROPERTIES -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

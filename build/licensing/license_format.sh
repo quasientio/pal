@@ -10,7 +10,7 @@
 
 # one-off to set the change date in the BSL
 
-export CDATE="2029-10-01"
+export CDATE="2030-10-01"
 # OR pick "today + 4y - 1d"
 # export CDATE=$(date -u -d '+4 years -1 day' '+%Y-%m-%d')
 export YEAR_NOW=$(date '+%Y')
