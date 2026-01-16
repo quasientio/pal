@@ -377,6 +377,7 @@
                                 <exclude>.m2/**</exclude>
                                 <exclude>docs/**</exclude>
                                 <exclude>site/**</exclude>
+                                <exclude>.forgejo/**/*.yaml</exclude>
                                 <exclude>licenses/third-party/</exclude>
                                 <exclude>infra/bin/palind</exclude>   <!-- ignore symlink -->
                                 <exclude>config/kafka/server.properties</exclude>
