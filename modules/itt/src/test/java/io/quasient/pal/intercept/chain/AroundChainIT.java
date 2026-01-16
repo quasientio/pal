@@ -496,6 +496,143 @@ public class AroundChainIT extends AbstractInterceptIT {
     logger.info("===== testAroundSkipInMiddleOfChain [{}]: PASSED =====", path);
   }
 
+  /**
+   * Tests that skipping in a local intercept prevents downstream remote intercepts.
+   *
+   * <p>Chain: Local-A (outer) → Local-Skip (skips) → Remote-D (should NOT execute) → Method
+   *
+   * <p>Expected: Local-A executes, Local-Skip returns cached value, Remote-D does NOT execute,
+   * Method does NOT execute.
+   *
+   * <p>This test verifies that the skip mechanism works correctly across the local/remote boundary,
+   * ensuring that when a local intercept skips, it prevents both downstream local intercepts AND
+   * remote intercepts from executing.
+   *
+   * @throws Exception if test fails
+   */
+  @Test
+  public void testAroundSkipInMiddleOfChainWithRemote() throws Exception {
+    logger.info("===== testAroundSkipInMiddleOfChainWithRemote [{}] =====", path);
+
+    // Register: Local-A, Local-Skip, Remote-D
+    InterceptRequest<?> localA = createLocalAroundIntercept("localAroundA");
+    InterceptRequest<?> localSkip = createLocalAroundIntercept("alwaysSkipWithCachedValue");
+    InterceptRequest<?> remoteD = createRemoteAroundIntercept("remoteAroundD");
+
+    register(localA);
+    register(localSkip);
+    register(remoteD);
+    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
+
+    // Create app with counter = 42
+    ObjectRef appInstance = createAppWithCounter(42);
+
+    // Invoke getCounter
+    ExecMessage response = invokeGetCounter(appInstance);
+
+    // Verify no exception
+    assertThat(
+        "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
+
+    // Verify return value is the cached value (999) from alwaysSkipWithCachedValue
+    int returnValue = (Integer) Unwrapper.unwrapObject(response.getReturnValue().getObject());
+    assertThat("Return should be cached value 999", returnValue, is(999));
+
+    // Verify Local-A executed
+    assertTrue(
+        "LOCAL_AROUND_A_BEFORE should execute",
+        InterceptEndToEndTestSuite.waitForAppLogLine("AROUND_CHAIN_ORDER: LOCAL_AROUND_A_BEFORE"));
+    assertTrue(
+        "LOCAL_AROUND_A_AFTER should execute",
+        InterceptEndToEndTestSuite.waitForAppLogLine("AROUND_CHAIN_ORDER: LOCAL_AROUND_A_AFTER"));
+
+    // Verify Local-Skip executed and skipped
+    assertTrue(
+        "alwaysSkipWithCachedValue should log SKIPPING",
+        InterceptEndToEndTestSuite.waitForAppLogLine("alwaysSkipWithCachedValue SKIPPING"));
+
+    // Verify Remote-D did NOT execute (wait briefly and check)
+    Thread.sleep(500);
+    boolean remoteDExecuted =
+        InterceptEndToEndTestSuite.waitForAppLogLine("REMOTE_AROUND_D_BEFORE", 1);
+    assertThat(
+        "Remote-D should NOT execute (skip bypassed it across local/remote boundary)",
+        remoteDExecuted,
+        is(false));
+
+    logger.info("===== testAroundSkipInMiddleOfChainWithRemote [{}]: PASSED =====", path);
+  }
+
+  /**
+   * Tests that skipping in a remote intercept prevents method execution but not outer locals.
+   *
+   * <p>Chain: Local-A (outer) → Local-C (middle) → Remote-Skip (inner, skips) → Method
+   *
+   * <p>Expected: Local-A executes fully, Local-C executes fully, Remote-Skip returns cached value,
+   * Method does NOT execute.
+   *
+   * <p>This test verifies that when a remote intercept skips, it prevents method execution but does
+   * NOT prevent outer local intercepts from executing. This is because in the AROUND chain model,
+   * ALL local intercepts are outer layers relative to ALL remote intercepts, regardless of
+   * registration order. The skip value (888) propagates back through the outer layers.
+   *
+   * @throws Exception if test fails
+   */
+  @Test
+  public void testAroundSkipInRemoteIntercept() throws Exception {
+    logger.info("===== testAroundSkipInRemoteIntercept [{}] =====", path);
+
+    // Register: Local-A, Remote-Skip, Local-C
+    // NOTE: Even though Remote-Skip is registered between Local-A and Local-C,
+    // the actual chain is: Local-A → Local-C → Remote-Skip → Method
+    // because all local intercepts execute before any remote intercepts.
+    InterceptRequest<?> localA = createLocalAroundIntercept("localAroundA");
+    InterceptRequest<?> remoteSkip = createRemoteAroundIntercept("remoteAlwaysSkip");
+    InterceptRequest<?> localC = createLocalAroundIntercept("localAroundC");
+
+    register(localA);
+    register(remoteSkip);
+    register(localC);
+    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
+
+    // Create app with counter = 42
+    ObjectRef appInstance = createAppWithCounter(42);
+
+    // Invoke getCounter
+    ExecMessage response = invokeGetCounter(appInstance);
+
+    // Verify no exception
+    assertThat(
+        "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
+
+    // Verify return value is the cached value (888) from remoteAlwaysSkip
+    int returnValue = (Integer) Unwrapper.unwrapObject(response.getReturnValue().getObject());
+    assertThat("Return should be cached value 888 from remote skip", returnValue, is(888));
+
+    // Verify Local-A executed
+    assertTrue(
+        "LOCAL_AROUND_A_BEFORE should execute",
+        InterceptEndToEndTestSuite.waitForAppLogLine("AROUND_CHAIN_ORDER: LOCAL_AROUND_A_BEFORE"));
+    assertTrue(
+        "LOCAL_AROUND_A_AFTER should execute",
+        InterceptEndToEndTestSuite.waitForAppLogLine("AROUND_CHAIN_ORDER: LOCAL_AROUND_A_AFTER"));
+
+    // Verify Local-C executed (it's an outer layer, so it always executes)
+    assertTrue(
+        "LOCAL_AROUND_C_BEFORE should execute",
+        InterceptEndToEndTestSuite.waitForAppLogLine("AROUND_CHAIN_ORDER: LOCAL_AROUND_C_BEFORE"));
+    assertTrue(
+        "LOCAL_AROUND_C_AFTER should execute",
+        InterceptEndToEndTestSuite.waitForAppLogLine("AROUND_CHAIN_ORDER: LOCAL_AROUND_C_AFTER"));
+
+    // Verify Remote-Skip executed and skipped
+    assertTrue(
+        "remoteAlwaysSkip should log SKIPPING",
+        InterceptEndToEndTestSuite.waitForAppLogLine("remoteAlwaysSkip SKIPPING"));
+
+    logger.info("===== testAroundSkipInRemoteIntercept [{}]: PASSED =====", path);
+  }
+
   // ==================== Arg Mutation Tests ====================
 
   /**
