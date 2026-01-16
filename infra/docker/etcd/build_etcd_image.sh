@@ -17,8 +17,8 @@ fi
 
 # build
 docker build \
---tag $CI_REGISTRY/quasient/pal/etcd:3.5.7 \
---tag $CI_REGISTRY/quasient/pal/etcd:latest \
+--tag $CI_REGISTRY/quasientio/pal/etcd:3.6.7 \
+--tag $CI_REGISTRY/quasientio/pal/etcd:latest \
 --tag etcd:latest .
 
 
@@ -27,4 +27,4 @@ docker build \
 # docker login $CI_REGISTRY
 
 #push it
-docker push --all-tags $CI_REGISTRY/quasient/pal/etcd
+docker push --all-tags $CI_REGISTRY/quasientio/pal/etcd

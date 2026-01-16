@@ -13,11 +13,11 @@
 #
 # Build:
 #    build          docker build \
-#                     --tag $CI_REGISTRY/quasient/pal/etcd:3.5.7 \
-#                     --tag $CI_REGISTRY/quasient/pal/etcd:latest \
+#                     --tag $CI_REGISTRY/quasientio/pal/etcd:3.6.7 \
+#                     --tag $CI_REGISTRY/quasientio/pal/etcd:latest \
 #                     --tag etcd:latest .
 #    push           docker login $CI_REGISTRY
-#                   docker push --all-tags $CI_REGISTRY/quasient/pal/etcd
+#                   docker push --all-tags $CI_REGISTRY/quasientio/pal/etcd
 #
 # Build Args:
 #                   ETCD_VERSION
@@ -39,7 +39,7 @@
 
 FROM alpine:latest
 
-ARG ETCD_VERSION="v3.5.16"
+ARG ETCD_VERSION="v3.6.7"
 ARG GOOGLE_URL="https://storage.googleapis.com/etcd"
 
 RUN apk update
