@@ -21,6 +21,10 @@ docker build \
 --tag $CI_REGISTRY/quasient/pal/etcd:latest \
 --tag etcd:latest .
 
+
+# Optional authentication - enable if registry requires auth
 # login to remote registry and push
-docker login $CI_REGISTRY
+# docker login $CI_REGISTRY
+
+#push it
 docker push --all-tags $CI_REGISTRY/quasient/pal/etcd

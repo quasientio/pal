@@ -16,7 +16,6 @@ export PAL_HOME="$(pwd)"
 export PATH=$PAL_HOME/bin:$PAL_HOME/infra/bin:$PATH
 
 # Optional
-export CI_REGISTRY=gitlab.cometera.org:5050
 export PAL_JMX_HOST=localhost
 export PAL_JMX_PORT=9012
 export PAL_PEER_LOGGING_CONFIG=$PAL_HOME/.local/conf/peer-logging.xml
@@ -40,3 +39,6 @@ export CHRONICLE_BASE_DIR=/tmp/chronicle-logs
 # export SOURCE_LOG=
 # export WAL=
 # export LOG_PREFIX=
+
+# Source local-specific vars
+[ -f "$PAL_HOME/.env.local" ] && source "$PAL_HOME/.env.local"
