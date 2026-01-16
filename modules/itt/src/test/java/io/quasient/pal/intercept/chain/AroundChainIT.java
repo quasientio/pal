@@ -29,7 +29,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.UUID;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -427,13 +426,26 @@ public class AroundChainIT extends AbstractInterceptIT {
    * <p>Expected: Local-A executes, Local-Skip returns cached value, Local-C does NOT execute,
    * Method does NOT execute.
    *
-   * <p>NOTE: This test is ignored due to interaction issues with the exception suppression logic in
-   * AroundInterceptChain. The skip mechanism triggers validation that interferes with multi-layer
-   * chains. Needs deeper investigation.
+   * <p><b>Fixes Required:</b> This test initially failed due to how {@link
+   * io.quasient.pal.core.intercept.AroundInterceptChain.SkipExecutionException} was handled in
+   * multi-layer AROUND intercept chains. Two fixes were needed in {@code AroundInterceptChain}:
+   *
+   * <ol>
+   *   <li><b>Unwrap InvocationTargetException</b> ({@code AroundInterceptChain.invokeLocal()}):
+   *       Callbacks are invoked via reflection, which wraps exceptions in {@code
+   *       InvocationTargetException}. The code needed to unwrap this and check if the cause is a
+   *       {@code SkipExecutionException}, then re-throw it to propagate the skip signal through the
+   *       chain.
+   *   <li><b>Convert skip to normal return in accessor</b> ({@code
+   *       AroundInterceptChain.invokeLocal()} accessor lambda): When an inner layer skips, the
+   *       {@code proceed()} call should return normally (not throw), allowing the outer callback to
+   *       complete its AFTER logic. The accessor now converts {@code SkipExecutionException} into a
+   *       normal {@code AfterPhaseData} return with the skip value, rather than re-throwing the
+   *       exception.
+   * </ol>
    *
    * @throws Exception if test fails
    */
-  @Ignore("Skip in middle of chain has interaction issues with exception suppression logic")
   @Test
   public void testAroundSkipInMiddleOfChain() throws Exception {
     logger.info("===== testAroundSkipInMiddleOfChain [{}] =====", path);

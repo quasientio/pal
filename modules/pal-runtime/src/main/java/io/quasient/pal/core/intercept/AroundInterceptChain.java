@@ -17,6 +17,7 @@ import io.quasient.pal.common.lang.intercept.InterceptContext;
 import io.quasient.pal.common.lang.intercept.LocalAroundAccessor;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.InterceptMessage;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -333,13 +334,18 @@ public class AroundInterceptChain {
     }
 
     // Create accessor that continues the chain (not direct method invocation!)
+    // IMPORTANT: This accessor implements proceed() for AROUND intercepts
     LocalAroundAccessor chainAccessor =
         (modifiedArgs) -> {
           Object[] nextArgs = modifiedArgs != null ? modifiedArgs : args;
           try {
             return invokeAt(index + 1, nextArgs, execMessage);
           } catch (SkipExecutionException e) {
-            throw e; // Propagate skip signal
+            // FIX: When an inner layer skips, return the skip value as a normal result.
+            // This allows the outer callback to complete its AFTER logic.
+            // Previously, we re-threw the exception, which prevented outer callbacks from
+            // executing their cleanup/after code. See AroundChainIT.testAroundSkipInMiddleOfChain.
+            return new AfterPhaseData(e.returnValue, e.skipException, false);
           } catch (Throwable t) {
             return new AfterPhaseData(null, t, false);
           }
@@ -355,6 +361,21 @@ public class AroundInterceptChain {
     InterceptCallbackResponse response;
     try {
       response = handle.callback().handle(context);
+    } catch (InvocationTargetException e) {
+      // FIX: Callbacks are invoked via reflection (CallbackResolver uses Method.invoke()),
+      // which wraps all thrown exceptions in InvocationTargetException. We need to unwrap
+      // and check if the cause is a SkipExecutionException, then re-throw it to properly
+      // propagate the skip signal through multi-layer AROUND chains.
+      // Previously, we caught all exceptions generically, treating skip signals as errors.
+      // See AroundChainIT.testAroundSkipInMiddleOfChain.
+      Throwable cause = e.getCause();
+      if (cause instanceof SkipExecutionException skipExecutionException) {
+        throw skipExecutionException;
+      }
+      return new AfterPhaseData(null, e, false);
+    } catch (SkipExecutionException e) {
+      // Re-throw skip signal to propagate through chain (in case not invoked via reflection)
+      throw e;
     } catch (Exception e) {
       return new AfterPhaseData(null, e, false);
     }
