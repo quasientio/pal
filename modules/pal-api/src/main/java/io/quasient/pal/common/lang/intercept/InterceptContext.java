@@ -56,9 +56,105 @@ import javax.annotation.Nullable;
  *       (by-value). For local intercepts, return values are passed directly.
  * </ul>
  *
- * <p><b>Thread Safety:</b> This class is <b>not</b> thread-safe. Each callback invocation receives
- * its own context instance, but the same callback implementation may be invoked concurrently with
- * different contexts. Do not share context instances across threads.
+ * <p><b>Thread Safety:</b> This class is <b>not</b> thread-safe, but each callback invocation
+ * receives its own context instance. The intercept mechanism ensures contexts are never shared
+ * across threads, so you can safely mutate context state (arguments, return values, etc.) without
+ * synchronization. However, any shared state in your callback implementation (e.g., static fields)
+ * follows standard Java concurrency rules.
+ *
+ * <p><b>Context Isolation:</b>
+ *
+ * <p>Each callback invocation gets a unique {@code InterceptContext} instance, so there is no risk
+ * of concurrent access to the same context. You can safely modify arguments and return values
+ * without synchronization.
+ *
+ * <p><b>Key points:</b>
+ *
+ * <ul>
+ *   <li><b>Context isolation:</b> Each callback invocation gets its own context instance, so you
+ *       can safely mutate arguments, return values, etc. without synchronization
+ *   <li><b>Shared state:</b> If your callback maintains shared state (e.g., static fields),
+ *       standard Java concurrency rules apply - use thread-safe collections or explicit
+ *       synchronization (see {@link InterceptCallback} for examples)
+ *   <li><b>Don't share contexts:</b> Contexts are single-use and should not be stored in static
+ *       fields or passed between threads
+ *   <li><b>AROUND phase sequencing:</b> For AROUND intercepts, the same context instance is used
+ *       for both BEFORE and AFTER phases sequentially on the same thread (no special
+ *       synchronization needed)
+ * </ul>
+ *
+ * <p><b>Example: Context Usage with Shared State</b>
+ *
+ * <p>This example shows safe usage - context modifications don't need synchronization, but shared
+ * state does:
+ *
+ * <pre>{@code
+ * public class SafeCallback implements InterceptCallback {
+ *     // Shared state is thread-safe
+ *     private final ConcurrentHashMap<String, Integer> counts =
+ *         new ConcurrentHashMap<>();
+ *
+ *     @Override
+ *     public InterceptCallbackResponse handle(InterceptContext ctx) {
+ *         // Safe: ctx is unique to this invocation, no synchronization needed
+ *         Object[] args = ctx.getArgs();
+ *         ctx.setArg(0, modifiedValue);
+ *
+ *         // Safe: only shared state (counts) needs synchronization
+ *         String key = String.valueOf(args[0]);
+ *         counts.merge(key, 1, Integer::sum);
+ *
+ *         return new InterceptCallbackResponse();
+ *     }
+ * }
+ * }</pre>
+ *
+ * <p><b>Example: Common Mistake - Sharing Contexts</b>
+ *
+ * <p><b>WARNING:</b> This shows a concurrency bug - storing context instances in shared state:
+ *
+ * <pre>{@code
+ * public class UnsafeCallback implements InterceptCallback {
+ *     // WRONG: Storing context in static field
+ *     private static InterceptContext lastContext;
+ *
+ *     @Override
+ *     public InterceptCallbackResponse handle(InterceptContext ctx) {
+ *         // RACE CONDITION: Multiple threads can overwrite lastContext
+ *         lastContext = ctx;  // WRONG: Don't share contexts
+ *
+ *         // WRONG: Using stored context from another thread's invocation
+ *         Object[] args = lastContext.getArgs();  // May be from different invocation!
+ *
+ *         return new InterceptCallbackResponse();
+ *     }
+ * }
+ * }</pre>
+ *
+ * <p><b>AROUND Callback Context Usage:</b>
+ *
+ * <p>For AROUND intercepts, the same context instance is used across two sequential phases (BEFORE
+ * and AFTER) on the same thread - no special synchronization needed:
+ *
+ * <pre>{@code
+ * public class AroundCallback implements InterceptCallback {
+ *     @Override
+ *     public InterceptCallbackResponse handle(InterceptContext ctx) {
+ *         // BEFORE phase: ctx is in BEFORE phase
+ *         Object[] args = ctx.getArgs();
+ *         ctx.setArg(0, modifiedValue);
+ *
+ *         // Call proceed() - blocks until method executes
+ *         ctx.proceed();
+ *
+ *         // AFTER phase: same ctx instance, now in AFTER phase
+ *         // This is safe because phases execute sequentially, not concurrently
+ *         Object returnValue = ctx.getReturnValue();
+ *
+ *         return new InterceptCallbackResponse();
+ *     }
+ * }
+ * }</pre>
  *
  * @see InterceptCallback
  * @see InterceptCallbackResponse

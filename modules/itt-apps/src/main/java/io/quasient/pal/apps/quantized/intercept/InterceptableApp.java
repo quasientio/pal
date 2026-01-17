@@ -84,6 +84,33 @@ public class InterceptableApp {
   }
 
   /**
+   * Thread-safe static method that returns its argument unchanged.
+   *
+   * <p>This method is designed for concurrent callback testing where the expected return value must
+   * be deterministic. Unlike {@link #multiplyStaticBy(Integer)}, this method does not mutate shared
+   * state and is safe for concurrent invocation.
+   *
+   * @param value the value to return
+   * @return the same value passed in
+   */
+  public static Integer echoInteger(Integer value) {
+    return value;
+  }
+
+  /**
+   * Wrapper method that calls the static echoInteger method.
+   *
+   * <p>Used for testing static method interception via call-site weaving. The static method call
+   * within this instance method is the intercepted call site.
+   *
+   * @param value the value to echo
+   * @return the echoed value
+   */
+  public Integer callEchoInteger(Integer value) {
+    return echoInteger(value); // <-- Static method call site for interception
+  }
+
+  /**
    * Static method for testing EXEC_CLASS_METHOD interception.
    *
    * @param multiple factor to multiply static counter by

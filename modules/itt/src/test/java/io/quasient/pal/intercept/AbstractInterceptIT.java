@@ -49,14 +49,29 @@ public class AbstractInterceptIT extends AbstractIntegrationTest
   private static final String RPC_ADDRESS = "tcp://localhost:7890";
 
   /**
-   * Well-known UUID for the shared interceptable peer.
+   * Default well-known UUID for the shared interceptable peer.
    *
    * <p>This UUID is shared between both test suites ({@link
    * io.quasient.pal.InterceptEndToEndTestSuite} and {@link io.quasient.pal.InterceptFlowTestSuite})
    * since they both target the same interceptable peer.
+   *
+   * <p>Subclasses that need a different peer UUID should override {@link
+   * #getInterceptablePeerUuid()} instead of relying on this constant.
    */
   protected static final UUID INTERCEPTABLE_PEER_UUID =
       UUID.fromString("00000000-0000-0000-0000-000000000002");
+
+  /**
+   * Returns the UUID of the interceptable peer to connect to.
+   *
+   * <p>Subclasses can override this method to specify a different peer UUID when they belong to a
+   * test suite that uses a different interceptable peer (e.g., ConcurrentCallbackTestSuite).
+   *
+   * @return the UUID of the interceptable peer
+   */
+  protected UUID getInterceptablePeerUuid() {
+    return INTERCEPTABLE_PEER_UUID;
+  }
 
   /**
    * Well-known UUID for the interceptor peer (end-to-end tests only).
@@ -145,17 +160,21 @@ public class AbstractInterceptIT extends AbstractIntegrationTest
             .orElseThrow(() -> new RuntimeException("No connection for PalDirectory"));
     // Use the well-known shared peer UUID instead of searching for a peer
     // Retry a few times to allow for directory registration delay
+    UUID targetPeerUuid = getInterceptablePeerUuid();
     for (int i = 0; i < 10; i++) {
-      interceptablePeerInfo = palDirectory.getPeer(INTERCEPTABLE_PEER_UUID);
+      interceptablePeerInfo = palDirectory.getPeer(targetPeerUuid);
       if (interceptablePeerInfo != null) {
         break;
       }
-      logger.debug("Waiting for peer to register in directory (attempt {})", i + 1);
+      logger.debug(
+          "Waiting for peer {} to register in directory (attempt {})", targetPeerUuid, i + 1);
       Thread.sleep(500);
     }
     if (interceptablePeerInfo == null) {
       throw new RuntimeException(
-          "Shared intercept test peer not found in directory after 5 seconds");
+          "Shared intercept test peer "
+              + targetPeerUuid
+              + " not found in directory after 5 seconds");
     }
     this.thinPeer =
         new ThinPeer()
@@ -474,6 +493,15 @@ public class AbstractInterceptIT extends AbstractIntegrationTest
     // Clean up intercepts registered for INTERCEPTABLE_PEER_UUID (local intercept tests)
     logger.info("Deleting intercepts for INTERCEPTABLE_PEER_UUID: {}", INTERCEPTABLE_PEER_UUID);
     palDirectory.deleteInterceptsForPeer(INTERCEPTABLE_PEER_UUID);
+
+    // Clean up intercepts for the actual interceptable peer UUID (may differ from constant)
+    // This handles subclasses like ConcurrentCallbackIT that override getInterceptablePeerUuid()
+    UUID actualInterceptablePeerUuid = getInterceptablePeerUuid();
+    if (!actualInterceptablePeerUuid.equals(INTERCEPTABLE_PEER_UUID)) {
+      logger.info(
+          "Deleting intercepts for overridden interceptable peer: {}", actualInterceptablePeerUuid);
+      palDirectory.deleteInterceptsForPeer(actualInterceptablePeerUuid);
+    }
 
     logger.info("Removing message listener from thinPeer");
     thinPeer.removeMessageListener(this);
