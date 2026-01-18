@@ -46,3 +46,19 @@ body:
       label: Constraints
       description: Performance, compatibility, or dependency constraints
       placeholder: Must not add external dependencies, must work with existing handler chain
+
+  - type: textarea
+    id: context_files
+    attributes:
+      label: Context Files (Optional)
+      description: |
+        Embed specific files in the analysis prompt. Edit the paths below or delete unused lines.
+        These are HTML comments (invisible when rendered) that control which files the analyst sees.
+      value: |
+        <!-- context: path/to/relevant-doc.md -->
+        <!-- context: -path/to/exclude.md -->
+        <!-- context-only: path/to/replace-all.md -->
+      placeholder: |
+        <!-- context: docs/ARCHITECTURE.md -->
+        <!-- context: -README.md -->
+        <!-- context-only: docs/SPECIFIC.md -->
