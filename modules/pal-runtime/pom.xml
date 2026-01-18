@@ -50,39 +50,6 @@
                     </argLine>
                 </configuration>
             </plugin>
-            <!-- code reformatting -->
-            <plugin>
-                <groupId>com.spotify.fmt</groupId>
-                <artifactId>fmt-maven-plugin</artifactId>
-                <version>${google.format.plugin.version}</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>format</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <!-- coverage -->
-            <plugin>
-                <groupId>org.jacoco</groupId>
-                <artifactId>jacoco-maven-plugin</artifactId>
-                <version>${jacoco.plugin.version}</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>prepare-agent</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>report</id>
-                        <phase>test</phase>
-                        <goals>
-                            <goal>report</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
             <!-- copy peer-logging.xml.example to config/ -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -111,7 +78,11 @@
                     </execution>
                 </executions>
             </plugin>
-
+            <!-- coverage: activates jacoco from parent pluginManagement -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+            </plugin>
         </plugins>
 
         <resources>

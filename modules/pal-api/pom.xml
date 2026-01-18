@@ -26,44 +26,15 @@
 
     <build>
         <plugins>
-            <!-- code reformatting -->
-            <plugin>
-                <groupId>com.spotify.fmt</groupId>
-                <artifactId>fmt-maven-plugin</artifactId>
-                <version>${google.format.plugin.version}</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>format</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <!-- coverage -->
+            <!-- coverage: override to exclude auto-generated Colfer classes -->
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>${jacoco.plugin.version}</version>
                 <configuration>
-                    <!-- Exclude auto-generated Colfer message classes from coverage -->
                     <excludes>
                         <exclude>io/quasient/pal/messages/colfer/**</exclude>
                     </excludes>
                 </configuration>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>prepare-agent</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>report</id>
-                        <phase>test</phase>
-                        <goals>
-                            <goal>report</goal>
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
 
             <!-- Override PMD configuration to exclude Colfer-generated classes -->

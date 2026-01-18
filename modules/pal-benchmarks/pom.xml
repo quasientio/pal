@@ -66,20 +66,6 @@
   <build>
     <plugins>
 
-      <!-- code reformatting -->
-      <plugin>
-        <groupId>com.spotify.fmt</groupId>
-        <artifactId>fmt-maven-plugin</artifactId>
-        <version>${google.format.plugin.version}</version>
-        <executions>
-          <execution>
-            <goals>
-              <goal>format</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-
       <!-- make sure annotation processing is on -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

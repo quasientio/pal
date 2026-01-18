@@ -168,6 +168,33 @@
                         <skipSortingImports>false</skipSortingImports>
                         <style>google</style>
                     </configuration>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>format</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <!-- code coverage -->
+                <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <version>${jacoco.plugin.version}</version>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>prepare-agent</goal>
+                            </goals>
+                        </execution>
+                        <execution>
+                            <id>report</id>
+                            <phase>test</phase>
+                            <goals>
+                                <goal>report</goal>
+                            </goals>
+                        </execution>
+                    </executions>
                 </plugin>
                 <!-- resources -->
                 <plugin>
@@ -582,6 +609,11 @@
                 <artifactId>pal-runtime</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>io.quasient.pal</groupId>
+                <artifactId>pal-cli</artifactId>
+                <version>${project.version}</version>
+            </dependency>
 
             <!-- OTHER DEPENDENCIES -->
 
@@ -822,6 +854,7 @@
         <module>modules/itt-apps</module>
         <module>modules/itt</module>
         <module>modules/pal-benchmarks</module>
+        <module>modules/pal-coverage</module>
         <module>distribution</module>
     </modules>
 
