@@ -607,18 +607,17 @@ public abstract class AbstractIntegrationTest {
       return;
     }
 
-    Process process = peerProcess.getProcess();
     logger.info("Stopping peer process [{}], calling destroy()", peerProcess.getPeerName());
-    process.destroy();
+    peerProcess.destroy();
     logger.info("destroy() called, now waiting for exit (5s timeout)");
-    boolean exited = process.waitFor(5, TimeUnit.SECONDS);
+    boolean exited = peerProcess.waitFor(5, TimeUnit.SECONDS);
     logger.info("waitFor returned, exited={}", exited);
 
     if (!exited) {
       logger.warn("Peer did not exit gracefully, force killing");
-      process.destroyForcibly();
+      peerProcess.destroyForcibly();
       logger.info("destroyForcibly() called, waiting for exit (2s timeout)");
-      process.waitFor(2, TimeUnit.SECONDS);
+      peerProcess.waitFor(2, TimeUnit.SECONDS);
       logger.info("Second waitFor returned after destroyForcibly");
     }
 
