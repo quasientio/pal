@@ -9,9 +9,12 @@
  */
 package io.quasient.pal.core.service;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.hasItem;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-import org.junit.Ignore;
+import java.util.EnumSet;
 import org.junit.Test;
 
 /**
@@ -28,19 +31,14 @@ public class RunOptionsTest {
    * <p>Acceptance Criterion: [TEST:RunOptionsTest.withInFlightTracking_existsInEnum]
    */
   @Test
-  @Ignore("Awaiting implementation in #238")
   public void withInFlightTracking_existsInEnum() {
     // Given: The RunOptions enum
     // When: Attempting to access WITH_IN_FLIGHT_TRACKING constant
+    RunOptions option = RunOptions.WITH_IN_FLIGHT_TRACKING;
+
     // Then: The constant exists and is not null
-
-    // TODO: Implement after #238 adds WITH_IN_FLIGHT_TRACKING to RunOptions enum
-    // Expected implementation:
-    // RunOptions option = RunOptions.WITH_IN_FLIGHT_TRACKING;
-    // assertThat(option, is(notNullValue()));
-    // assertThat(option.name(), is("WITH_IN_FLIGHT_TRACKING"));
-
-    fail("Not yet implemented");
+    assertThat(option, is(notNullValue()));
+    assertThat(option.name(), is("WITH_IN_FLIGHT_TRACKING"));
   }
 
   /**
@@ -53,22 +51,17 @@ public class RunOptionsTest {
    * <p>Acceptance Criterion: [TEST:RunOptionsTest.withInFlightTracking_canBeAddedToSet]
    */
   @Test
-  @Ignore("Awaiting implementation in #238")
   public void withInFlightTracking_canBeAddedToSet() {
     // Given: An EnumSet containing other RunOptions
+    EnumSet<RunOptions> options = EnumSet.of(RunOptions.WITH_PALDIR, RunOptions.WITH_SESSIONS);
+
     // When: WITH_IN_FLIGHT_TRACKING is added to the set
+    options.add(RunOptions.WITH_IN_FLIGHT_TRACKING);
+
     // Then: The set contains WITH_IN_FLIGHT_TRACKING along with other options
-
-    // TODO: Implement after #238 adds WITH_IN_FLIGHT_TRACKING to RunOptions enum
-    // Expected implementation:
-    // EnumSet<RunOptions> options = EnumSet.of(RunOptions.WITH_PALDIR, RunOptions.WITH_SESSIONS);
-    // options.add(RunOptions.WITH_IN_FLIGHT_TRACKING);
-    //
-    // assertThat(options, hasItem(RunOptions.WITH_IN_FLIGHT_TRACKING));
-    // assertThat(options, hasItem(RunOptions.WITH_PALDIR));
-    // assertThat(options, hasItem(RunOptions.WITH_SESSIONS));
-    // assertThat(options.size(), is(3));
-
-    fail("Not yet implemented");
+    assertThat(options, hasItem(RunOptions.WITH_IN_FLIGHT_TRACKING));
+    assertThat(options, hasItem(RunOptions.WITH_PALDIR));
+    assertThat(options, hasItem(RunOptions.WITH_SESSIONS));
+    assertThat(options.size(), is(3));
   }
 }

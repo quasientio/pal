@@ -61,5 +61,19 @@ public enum RunOptions {
   WITH_WAL,
 
   /** Enables sessions - automatically set if any RPC interface is enabled */
-  WITH_SESSIONS
+  WITH_SESSIONS,
+
+  /**
+   * Enables in-flight dispatch tracking for intercept coordination.
+   *
+   * <p>When activated, this option enables tracking of method calls that are currently being
+   * executed (in-flight dispatches). This is used to coordinate intercept registration with ongoing
+   * method executions, ensuring that intercepts can wait for in-flight calls to complete before
+   * activation (guaranteed quiescence).
+   *
+   * <p>This option controls whether new method calls are temporarily blocked (fenced) while waiting
+   * for existing in-flight calls to drain, allowing safe intercept activation without race
+   * conditions.
+   */
+  WITH_IN_FLIGHT_TRACKING
 }
