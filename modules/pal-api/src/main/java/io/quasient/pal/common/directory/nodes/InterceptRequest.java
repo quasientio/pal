@@ -64,7 +64,61 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
   @Nonnull private final T interceptable;
 
   /**
+   * Whether to force immediate application of this intercept without waiting for in-flight calls to
+   * complete. This field overrides the peer's global {@code WITH_IN_FLIGHT_TRACKING} configuration
+   * for this specific intercept.
+   *
+   * <p>When {@code true}, the intercept is applied immediately, even if matching method calls are
+   * currently in-flight. This is useful for hot-patching methods that are stuck in loops,
+   * recursion, or hanging on external resources where waiting for completion would never succeed.
+   *
+   * <p>When {@code false}, the intercept waits for in-flight calls to complete before activation
+   * (if the peer has {@code WITH_IN_FLIGHT_TRACKING} enabled).
+   *
+   * <p><strong>Example use case:</strong> A method is hanging on an external API call. Setting
+   * {@code forceImmediate=true} allows the intercept to redirect the method to a fallback
+   * implementation immediately, without waiting for the hanging call to complete.
+   *
+   * @see io.quasient.pal.core.options.RunOptions#WITH_IN_FLIGHT_TRACKING
+   */
+  private final boolean forceImmediate;
+
+  /**
    * Constructs a new {@code InterceptRequest} with the specified parameters.
+   *
+   * @param uuid the unique identifier for this request; must not be {@code null}
+   * @param peer the identifier of the peer initiating the request; must not be {@code null}
+   * @param type the type of interception; must not be {@code null}
+   * @param clazz the target class name for interception; must not be {@code null}
+   * @param callbackClass the callback class name; must not be {@code null}
+   * @param callbackMethod the callback method name; must not be {@code null}
+   * @param interceptable the interceptable action; must not be {@code null}
+   * @param forceImmediate whether to force immediate application without waiting for in-flight
+   *     calls
+   * @throws NullPointerException if any of the object parameters are {@code null}
+   */
+  public InterceptRequest(
+      @Nonnull UUID uuid,
+      @Nonnull UUID peer,
+      @Nonnull InterceptType type,
+      @Nonnull String clazz,
+      @Nonnull String callbackClass,
+      @Nonnull String callbackMethod,
+      @Nonnull T interceptable,
+      boolean forceImmediate) {
+    this.uuid = Objects.requireNonNull(uuid, "uuid must not be null");
+    this.peer = Objects.requireNonNull(peer, "peer must not be null");
+    this.type = Objects.requireNonNull(type, "type must not be null");
+    this.clazz = Objects.requireNonNull(clazz, "clazz must not be null");
+    this.callbackClass = Objects.requireNonNull(callbackClass, "callbackClass must not be null");
+    this.callbackMethod = Objects.requireNonNull(callbackMethod, "callbackMethod must not be null");
+    this.interceptable = Objects.requireNonNull(interceptable, "interceptable must not be null");
+    this.forceImmediate = forceImmediate;
+  }
+
+  /**
+   * Constructs a new {@code InterceptRequest} with the specified parameters. This is a convenience
+   * constructor that defaults {@code forceImmediate} to {@code false}.
    *
    * @param uuid the unique identifier for this request; must not be {@code null}
    * @param peer the identifier of the peer initiating the request; must not be {@code null}
@@ -83,13 +137,7 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
       @Nonnull String callbackClass,
       @Nonnull String callbackMethod,
       @Nonnull T interceptable) {
-    this.uuid = Objects.requireNonNull(uuid, "uuid must not be null");
-    this.peer = Objects.requireNonNull(peer, "peer must not be null");
-    this.type = Objects.requireNonNull(type, "type must not be null");
-    this.clazz = Objects.requireNonNull(clazz, "clazz must not be null");
-    this.callbackClass = Objects.requireNonNull(callbackClass, "callbackClass must not be null");
-    this.callbackMethod = Objects.requireNonNull(callbackMethod, "callbackMethod must not be null");
-    this.interceptable = Objects.requireNonNull(interceptable, "interceptable must not be null");
+    this(uuid, peer, type, clazz, callbackClass, callbackMethod, interceptable, false);
   }
 
   /**
@@ -163,6 +211,21 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
   }
 
   /**
+   * Indicates whether this intercept should be applied immediately without waiting for in-flight
+   * calls to complete.
+   *
+   * <p>When {@code true}, this intercept overrides the peer's global {@code
+   * WITH_IN_FLIGHT_TRACKING} configuration and applies immediately. This is useful for hot-patching
+   * methods that are stuck in loops, recursion, or hanging on external resources.
+   *
+   * @return {@code true} if the intercept should be applied immediately, {@code false} to wait for
+   *     quiescence
+   */
+  public boolean isForceImmediate() {
+    return forceImmediate;
+  }
+
+  /**
    * Compares this {@code InterceptRequest} to the specified object.
    *
    * @param o the object to compare this {@code InterceptRequest} against
@@ -179,7 +242,8 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
       return false;
     }
     InterceptRequest<?> that = (InterceptRequest<?>) o;
-    return uuid.equals(that.uuid)
+    return forceImmediate == that.forceImmediate
+        && uuid.equals(that.uuid)
         && peer.equals(that.peer)
         && type == that.type
         && clazz.equals(that.clazz)
@@ -196,7 +260,8 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
    */
   @Override
   public int hashCode() {
-    return Objects.hash(uuid, peer, type, clazz, callbackClass, callbackMethod, interceptable);
+    return Objects.hash(
+        uuid, peer, type, clazz, callbackClass, callbackMethod, interceptable, forceImmediate);
   }
 
   /**
@@ -224,7 +289,9 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
                 + LINE_SEP // 5. callbackMethod
                 + "%d"
                 + LINE_SEP // 6. interceptableType
-                + "%s", // 7. interceptable
+                + "%s"
+                + LINE_SEP // 7. interceptable
+                + "%b", // 8. forceImmediate
             uuid,
             peer,
             type.toByte(),
@@ -232,7 +299,8 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
             callbackClass,
             callbackMethod,
             interceptable.getType().toByte(),
-            interceptable.toSerializedString());
+            interceptable.toSerializedString(),
+            forceImmediate);
     return s.getBytes(charset);
   }
 
@@ -268,8 +336,10 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
           case METHOD_CALL -> InterceptableMethodCall.fromSerializedString(parts[7]);
           case FIELD_OP -> InterceptableFieldOp.fromSerializedString(parts[7]);
         };
+    // Handle backwards compatibility: if forceImmediate field is missing, default to false
+    final boolean forceImmediate = parts.length > 8 ? Boolean.parseBoolean(parts[8]) : false;
     return new InterceptRequest<>(
-        uuid, peer, type, clazz, callbackClass, callbackMethod, interceptable);
+        uuid, peer, type, clazz, callbackClass, callbackMethod, interceptable, forceImmediate);
   }
 
   /**
@@ -297,6 +367,8 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
         + ", callbackMethod='"
         + callbackMethod
         + '\''
+        + ", forceImmediate="
+        + forceImmediate
         + ", ctime="
         + getCTime()
         + ", mtime="

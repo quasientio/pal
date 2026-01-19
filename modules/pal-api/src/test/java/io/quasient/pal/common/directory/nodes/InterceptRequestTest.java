@@ -175,6 +175,8 @@ public class InterceptRequestTest {
                           + ", callbackMethod='"
                           + callbackMethod
                           + '\''
+                          + ", forceImmediate="
+                          + interceptRequest.isForceImmediate()
                           + ", ctime="
                           + OffsetDateTime.ofInstant(Instant.ofEpochMilli(ctime), ZoneOffset.UTC)
                           + ", mtime="

@@ -57,6 +57,8 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
 
   public String callbackMethod;
 
+  public boolean forceImmediate;
+
   /** Default constructor */
   public InterceptMessage() {
     init();
@@ -176,7 +178,8 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
             + 6
             + (long) this.callbackClass.length() * 3
             + 6
-            + (long) this.callbackMethod.length() * 3;
+            + (long) this.callbackMethod.length() * 3
+            + 1;
     if (this.field != null) n += 1 + (long) this.field.marshalFit();
     if (this.method != null) n += 1 + (long) this.method.marshalFit();
     if (n < 0 || n > (long) InterceptMessage.colferSizeMax) return InterceptMessage.colferSizeMax;
@@ -476,6 +479,10 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
         buf[ii] = (byte) size;
       }
 
+      if (this.forceImmediate) {
+        buf[i++] = (byte) 8;
+      }
+
       buf[i++] = (byte) 0x7f;
       return i;
     } catch (ArrayIndexOutOfBoundsException e) {
@@ -633,6 +640,11 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
         header = buf[i++];
       }
 
+      if (header == (byte) 8) {
+        this.forceImmediate = true;
+        header = buf[i++];
+      }
+
       if (header != (byte) 0x7f)
         throw new InputMismatchException(format("colfer: unknown header at byte %d", i - 1));
     } finally {
@@ -650,7 +662,7 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
   }
 
   // {@link Serializable} version number.
-  private static final long serialVersionUID = 8L;
+  private static final long serialVersionUID = 9L;
 
   // {@link Serializable} Colfer extension.
   private void writeObject(ObjectOutputStream out) throws IOException {
@@ -907,6 +919,35 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
     return this;
   }
 
+  /**
+   * Gets io.quasient.pal.messages/colfer.InterceptMessage.forceImmediate.
+   *
+   * @return the value.
+   */
+  public boolean getForceImmediate() {
+    return this.forceImmediate;
+  }
+
+  /**
+   * Sets io.quasient.pal.messages/colfer.InterceptMessage.forceImmediate.
+   *
+   * @param value the replacement.
+   */
+  public void setForceImmediate(boolean value) {
+    this.forceImmediate = value;
+  }
+
+  /**
+   * Sets io.quasient.pal.messages/colfer.InterceptMessage.forceImmediate.
+   *
+   * @param value the replacement.
+   * @return {@code this}.
+   */
+  public InterceptMessage withForceImmediate(boolean value) {
+    this.forceImmediate = value;
+    return this;
+  }
+
   @Override
   public final int hashCode() {
     int h = 1;
@@ -918,6 +959,7 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
     if (this.method != null) h = 31 * h + this.method.hashCode();
     if (this.callbackClass != null) h = 31 * h + this.callbackClass.hashCode();
     if (this.callbackMethod != null) h = 31 * h + this.callbackMethod.hashCode();
+    h = 31 * h + (this.forceImmediate ? 1231 : 1237);
     return h;
   }
 
@@ -941,7 +983,8 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
             : this.callbackClass.equals(o.callbackClass))
         && (this.callbackMethod == null
             ? o.callbackMethod == null
-            : this.callbackMethod.equals(o.callbackMethod));
+            : this.callbackMethod.equals(o.callbackMethod))
+        && this.forceImmediate == o.forceImmediate;
   }
 
   @Override
@@ -981,6 +1024,10 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
         this.callbackMethod = json.get("callbackMethod").getAsString();
       }
 
+      if (json.has("forceImmediate")) {
+        this.forceImmediate = json.get("forceImmediate").getAsBoolean();
+      }
+
     } catch (Exception e) {
       throw new JsonParseException("Error deserializing json object: " + e.getMessage(), e);
     }
@@ -996,5 +1043,6 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
     this.interceptType = (byte) 0;
     this.field = null;
     this.method = null;
+    this.forceImmediate = false;
   }
 }

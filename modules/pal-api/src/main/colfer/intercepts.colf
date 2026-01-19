@@ -41,6 +41,7 @@ type InterceptMessage struct {
 	method         InterceptableMethod
 	callbackClass  text
 	callbackMethod text
+	forceImmediate bool
 }
 
 type InterceptKeyMessage struct {
