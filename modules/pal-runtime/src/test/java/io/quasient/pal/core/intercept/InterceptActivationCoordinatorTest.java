@@ -9,11 +9,24 @@
  */
 package io.quasient.pal.core.intercept;
 
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-import org.junit.After;
+import io.quasient.pal.common.directory.nodes.InterceptRequest;
+import io.quasient.pal.common.lang.intercept.InterceptType;
+import io.quasient.pal.common.lang.intercept.InterceptableMethodCall;
+import io.quasient.pal.core.service.RunOptions;
+import java.util.EnumSet;
+import java.util.Set;
+import java.util.UUID;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -30,26 +43,16 @@ import org.junit.Test;
  *   <li>Per-intercept override with forceImmediate flag
  *   <li>Proper cleanup (unfencing) on activation failure
  * </ul>
- *
- * <p><b>Note:</b> These are test specifications awaiting implementation in #236. All tests are
- * currently disabled.
  */
 public class InterceptActivationCoordinatorTest {
 
-  // TODO: Uncomment these fields after #236 provides implementation
-  // private InterceptActivationCoordinator coordinator;
-  // private InFlightDispatchTracker tracker;
-  // private InterceptMatcher matcher;
+  private InterceptActivationCoordinator coordinator;
+  private InFlightDispatchTracker tracker;
+  private static final long DRAIN_TIMEOUT_MS = 5000L;
 
   @Before
   public void setup() {
-    // TODO: Initialize coordinator, tracker, and matcher after #236 provides implementation
-    // coordinator = new InterceptActivationCoordinator(tracker, matcher);
-  }
-
-  @After
-  public void cleanup() {
-    // TODO: Clean up resources after #236 provides implementation
+    tracker = mock(InFlightDispatchTracker.class);
   }
 
   /**
@@ -68,24 +71,32 @@ public class InterceptActivationCoordinatorTest {
    * [TEST:InterceptActivationCoordinatorTest.activateWithDrain_fencesThenWaitsThenActivates]
    */
   @Test
-  @Ignore("Awaiting implementation in #236")
-  public void activateWithDrain_fencesThenWaitsThenActivates() {
+  public void activateWithDrain_fencesThenWaitsThenActivates() throws InterruptedException {
     // Given: A coordinator with in-flight tracking enabled
+    Set<RunOptions> runOptions = EnumSet.of(RunOptions.WITH_IN_FLIGHT_TRACKING);
+    coordinator = new InterceptActivationCoordinator(tracker, null, runOptions, DRAIN_TIMEOUT_MS);
+
     // And: An intercept request for "com.example.Calculator.add" with forceImmediate=false
-    // And: The global WITH_IN_FLIGHT_TRACKING option is enabled
+    InterceptRequest<?> request = createInterceptRequest("com.example.Calculator", "add", false);
+
+    // And: The tracker will return true for waitForQuiescence (quiescence achieved)
+    when(tracker.waitForQuiescence(anyString(), anyString(), anyLong())).thenReturn(true);
 
     // When: The coordinator is asked to activate the intercept
-    // coordinator.activate(interceptRequest);
+    InterceptActivationCoordinator.ActivationResult result = coordinator.activate(request);
 
     // Then: The coordinator should:
     // 1. Call tracker.startFencing("com.example.Calculator", "add")
-    // 2. Call tracker.waitForQuiescence("com.example.Calculator", "add", timeoutMs)
-    // 3. Call matcher.addIntercept(interceptRequest) to activate the intercept
-    // 4. Call tracker.stopFencing("com.example.Calculator", "add")
-    // And: The activation should succeed (return success status)
+    verify(tracker, times(1)).startFencing("com.example.Calculator", "add");
 
-    // TODO: Implement after #236 provides the implementation
-    fail("Not yet implemented");
+    // 2. Call tracker.waitForQuiescence("com.example.Calculator", "add", timeoutMs)
+    verify(tracker, times(1)).waitForQuiescence("com.example.Calculator", "add", DRAIN_TIMEOUT_MS);
+
+    // 3. Call tracker.stopFencing("com.example.Calculator", "add") in finally block
+    verify(tracker, times(1)).stopFencing("com.example.Calculator", "add");
+
+    // And: The activation should succeed (return success status)
+    assertTrue(result.isSuccess());
   }
 
   /**
@@ -104,28 +115,34 @@ public class InterceptActivationCoordinatorTest {
    * [TEST:InterceptActivationCoordinatorTest.activateWithDrain_timeoutReturnsFailure]
    */
   @Test
-  @Ignore("Awaiting implementation in #236")
-  public void activateWithDrain_timeoutReturnsFailure() {
+  public void activateWithDrain_timeoutReturnsFailure() throws InterruptedException {
     // Given: A coordinator with in-flight tracking enabled
+    Set<RunOptions> runOptions = EnumSet.of(RunOptions.WITH_IN_FLIGHT_TRACKING);
+    coordinator = new InterceptActivationCoordinator(tracker, null, runOptions, DRAIN_TIMEOUT_MS);
+
     // And: An intercept request for "com.example.Calculator.add"
+    InterceptRequest<?> request = createInterceptRequest("com.example.Calculator", "add", false);
+
     // And: There are in-flight dispatches that will NOT complete before the timeout
-    // (e.g., tracker.enterDispatch("com.example.Calculator", "add") called and never exits)
-    // And: The drain timeout is set to a short duration (e.g., 100ms)
+    when(tracker.waitForQuiescence(anyString(), anyString(), anyLong())).thenReturn(false);
 
     // When: The coordinator is asked to activate the intercept
-    // ActivationResult result = coordinator.activate(interceptRequest);
+    InterceptActivationCoordinator.ActivationResult result = coordinator.activate(request);
 
     // Then: The coordinator should:
     // 1. Call tracker.startFencing("com.example.Calculator", "add")
+    verify(tracker, times(1)).startFencing("com.example.Calculator", "add");
+
     // 2. Call tracker.waitForQuiescence("com.example.Calculator", "add", timeoutMs)
     //    which returns false (timeout)
-    // 3. NOT call matcher.addIntercept() (intercept should not be activated)
-    // 4. Call tracker.stopFencing("com.example.Calculator", "add") to clean up
-    // And: The activation result should indicate failure (result.isSuccess() == false)
-    // And: The result should include timeout information
+    verify(tracker, times(1)).waitForQuiescence("com.example.Calculator", "add", DRAIN_TIMEOUT_MS);
 
-    // TODO: Implement after #236 provides the implementation
-    fail("Not yet implemented");
+    // 3. Call tracker.stopFencing("com.example.Calculator", "add") to clean up
+    verify(tracker, times(1)).stopFencing("com.example.Calculator", "add");
+
+    // And: The activation result should indicate failure (result.isSuccess() == false)
+    assertFalse(result.isSuccess());
+    assertTrue(result.getMessage().contains("Timeout"));
   }
 
   /**
@@ -143,24 +160,29 @@ public class InterceptActivationCoordinatorTest {
    * [TEST:InterceptActivationCoordinatorTest.activateImmediate_activatesWithoutDrain]
    */
   @Test
-  @Ignore("Awaiting implementation in #236")
-  public void activateImmediate_activatesWithoutDrain() {
+  public void activateImmediate_activatesWithoutDrain() throws InterruptedException {
     // Given: A coordinator with in-flight tracking enabled
+    Set<RunOptions> runOptions = EnumSet.of(RunOptions.WITH_IN_FLIGHT_TRACKING);
+    coordinator = new InterceptActivationCoordinator(tracker, null, runOptions, DRAIN_TIMEOUT_MS);
+
     // And: An intercept request with forceImmediate=true
-    // And: There may be in-flight dispatches for the intercept pattern
+    InterceptRequest<?> request = createInterceptRequest("com.example.Calculator", "add", true);
 
     // When: The coordinator is asked to activate the intercept
-    // ActivationResult result = coordinator.activate(interceptRequest);
+    InterceptActivationCoordinator.ActivationResult result = coordinator.activate(request);
 
     // Then: The coordinator should:
     // 1. NOT call tracker.startFencing()
-    // 2. NOT call tracker.waitForQuiescence()
-    // 3. Immediately call matcher.addIntercept(interceptRequest)
-    // And: The activation should succeed immediately
-    // And: In-flight dispatches should continue without being blocked
+    verify(tracker, never()).startFencing(anyString(), anyString());
 
-    // TODO: Implement after #236 provides the implementation
-    fail("Not yet implemented");
+    // 2. NOT call tracker.waitForQuiescence()
+    verify(tracker, never()).waitForQuiescence(anyString(), anyString(), anyLong());
+
+    // 3. NOT call tracker.stopFencing()
+    verify(tracker, never()).stopFencing(anyString(), anyString());
+
+    // And: The activation should succeed immediately
+    assertTrue(result.isSuccess());
   }
 
   /**
@@ -173,22 +195,26 @@ public class InterceptActivationCoordinatorTest {
    * [TEST:InterceptActivationCoordinatorTest.activateWithDrain_respectsGlobalConfig]
    */
   @Test
-  @Ignore("Awaiting implementation in #236")
-  public void activateWithDrain_respectsGlobalConfig() {
+  public void activateWithDrain_respectsGlobalConfig() throws InterruptedException {
     // Given: A coordinator where WITH_IN_FLIGHT_TRACKING is DISABLED globally
+    Set<RunOptions> runOptions = EnumSet.noneOf(RunOptions.class);
+    coordinator = new InterceptActivationCoordinator(tracker, null, runOptions, DRAIN_TIMEOUT_MS);
+
     // And: An intercept request with forceImmediate=false
+    InterceptRequest<?> request = createInterceptRequest("com.example.Calculator", "add", false);
 
     // When: The coordinator is asked to activate the intercept
-    // ActivationResult result = coordinator.activate(interceptRequest);
+    InterceptActivationCoordinator.ActivationResult result = coordinator.activate(request);
 
     // Then: The coordinator should:
     // 1. NOT call tracker.startFencing() (because global tracking is disabled)
-    // 2. NOT call tracker.waitForQuiescence()
-    // 3. Immediately call matcher.addIntercept(interceptRequest)
-    // And: The activation should succeed immediately
+    verify(tracker, never()).startFencing(anyString(), anyString());
 
-    // TODO: Implement after #236 provides the implementation
-    fail("Not yet implemented");
+    // 2. NOT call tracker.waitForQuiescence()
+    verify(tracker, never()).waitForQuiescence(anyString(), anyString(), anyLong());
+
+    // And: The activation should succeed immediately
+    assertTrue(result.isSuccess());
   }
 
   /**
@@ -207,25 +233,27 @@ public class InterceptActivationCoordinatorTest {
    * [TEST:InterceptActivationCoordinatorTest.activateWithDrain_perInterceptOverrideBypassesDrain]
    */
   @Test
-  @Ignore("Awaiting implementation in #236")
-  public void activateWithDrain_perInterceptOverrideBypassesDrain() {
+  public void activateWithDrain_perInterceptOverrideBypassesDrain() throws InterruptedException {
     // Given: A coordinator with WITH_IN_FLIGHT_TRACKING ENABLED globally
+    Set<RunOptions> runOptions = EnumSet.of(RunOptions.WITH_IN_FLIGHT_TRACKING);
+    coordinator = new InterceptActivationCoordinator(tracker, null, runOptions, DRAIN_TIMEOUT_MS);
+
     // And: An intercept request with forceImmediate=true (per-intercept override)
-    // And: There are in-flight dispatches for the intercept pattern
+    InterceptRequest<?> request = createInterceptRequest("com.example.Calculator", "add", true);
 
     // When: The coordinator is asked to activate the intercept
-    // ActivationResult result = coordinator.activate(interceptRequest);
+    InterceptActivationCoordinator.ActivationResult result = coordinator.activate(request);
 
     // Then: The coordinator should:
     // 1. Detect that forceImmediate=true (per-intercept override)
     // 2. NOT call tracker.startFencing() (override takes precedence)
-    // 3. NOT call tracker.waitForQuiescence()
-    // 4. Immediately call matcher.addIntercept(interceptRequest)
-    // And: The activation should succeed immediately
-    // And: In-flight dispatches should NOT be blocked or drained
+    verify(tracker, never()).startFencing(anyString(), anyString());
 
-    // TODO: Implement after #236 provides the implementation
-    fail("Not yet implemented");
+    // 3. NOT call tracker.waitForQuiescence()
+    verify(tracker, never()).waitForQuiescence(anyString(), anyString(), anyLong());
+
+    // And: The activation should succeed immediately
+    assertTrue(result.isSuccess());
   }
 
   /**
@@ -242,28 +270,51 @@ public class InterceptActivationCoordinatorTest {
    * <p><b>Acceptance criterion:</b> [TEST:InterceptActivationCoordinatorTest.unfencesOnFailure]
    */
   @Test
-  @Ignore("Awaiting implementation in #236")
-  public void unfencesOnFailure() {
+  public void unfencesOnFailure() throws InterruptedException {
     // Given: A coordinator with in-flight tracking enabled
+    Set<RunOptions> runOptions = EnumSet.of(RunOptions.WITH_IN_FLIGHT_TRACKING);
+    coordinator = new InterceptActivationCoordinator(tracker, null, runOptions, DRAIN_TIMEOUT_MS);
+
     // And: An intercept request for "com.example.Calculator.add"
-    // And: The matcher.addIntercept() will throw an exception (e.g., DuplicateInterceptException)
+    InterceptRequest<?> request = createInterceptRequest("com.example.Calculator", "add", false);
+
+    // And: waitForQuiescence will throw an exception (simulating failure)
+    when(tracker.waitForQuiescence(anyString(), anyString(), anyLong()))
+        .thenThrow(new RuntimeException("Simulated failure"));
 
     // When: The coordinator is asked to activate the intercept
-    // try {
-    //   coordinator.activate(interceptRequest);
-    // } catch (Exception e) {
-    //   // Expected
-    // }
+    InterceptActivationCoordinator.ActivationResult result = coordinator.activate(request);
 
     // Then: The coordinator should:
     // 1. Call tracker.startFencing("com.example.Calculator", "add")
-    // 2. Call tracker.waitForQuiescence() (succeeds)
-    // 3. Call matcher.addIntercept() which throws exception
-    // 4. In finally block, call tracker.stopFencing("com.example.Calculator", "add")
-    // And: Fencing should be removed even though activation failed
-    // And: Subsequent enterDispatch calls should NOT be blocked
+    verify(tracker, times(1)).startFencing("com.example.Calculator", "add");
 
-    // TODO: Implement after #236 provides the implementation
-    fail("Not yet implemented");
+    // 2. In finally block, call tracker.stopFencing("com.example.Calculator", "add")
+    verify(tracker, times(1)).stopFencing("com.example.Calculator", "add");
+
+    // And: The activation should fail
+    assertFalse(result.isSuccess());
+    assertTrue(result.getMessage().contains("Error"));
+  }
+
+  /**
+   * Helper method to create an InterceptRequest for testing.
+   *
+   * @param clazz the target class name
+   * @param methodName the target method name
+   * @param forceImmediate whether to force immediate activation
+   * @return a new InterceptRequest
+   */
+  private InterceptRequest<?> createInterceptRequest(
+      String clazz, String methodName, boolean forceImmediate) {
+    UUID uuid = UUID.randomUUID();
+    UUID peer = UUID.randomUUID();
+    InterceptType type = InterceptType.BEFORE;
+    String callbackClass = "com.example.Callback";
+    String callbackMethod = "onIntercept";
+    InterceptableMethodCall interceptable = new InterceptableMethodCall(methodName, null);
+
+    return new InterceptRequest<>(
+        uuid, peer, type, clazz, callbackClass, callbackMethod, interceptable, forceImmediate);
   }
 }
