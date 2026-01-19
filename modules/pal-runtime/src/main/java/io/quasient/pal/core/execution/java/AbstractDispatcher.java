@@ -11,6 +11,7 @@ package io.quasient.pal.core.execution.java;
 
 import io.quasient.pal.core.execution.java.reflect.ReflectionHelper;
 import io.quasient.pal.core.intercept.AroundInterceptChainBuilder;
+import io.quasient.pal.core.intercept.InFlightDispatchTracker;
 import io.quasient.pal.core.intercept.InterceptCallbackDispatcher;
 import io.quasient.pal.core.intercept.InterceptChecker;
 import io.quasient.pal.core.intercept.LocalInterceptCallbackDispatcher;
@@ -69,6 +70,9 @@ abstract class AbstractDispatcher {
 
   /** Builder for AROUND intercept chains. */
   protected AroundInterceptChainBuilder aroundChainBuilder;
+
+  /** Tracker for in-flight dispatch operations, used for intercept coordination. */
+  protected InFlightDispatchTracker inFlightDispatchTracker;
 
   /**
    * Sets the unique identifier (UUID) for the peer.
@@ -182,5 +186,18 @@ abstract class AbstractDispatcher {
   @Inject
   final void setAroundChainBuilder(AroundInterceptChainBuilder aroundChainBuilder) {
     this.aroundChainBuilder = aroundChainBuilder;
+  }
+
+  /**
+   * Sets the {@link InFlightDispatchTracker} for tracking in-flight dispatch operations.
+   *
+   * <p>This tracker enables coordinated intercept activation with guaranteed quiescence, allowing
+   * intercepts to wait for in-flight method calls to complete before activation.
+   *
+   * @param inFlightDispatchTracker the in-flight dispatch tracker instance
+   */
+  @Inject
+  final void setInFlightDispatchTracker(InFlightDispatchTracker inFlightDispatchTracker) {
+    this.inFlightDispatchTracker = inFlightDispatchTracker;
   }
 }

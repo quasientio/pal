@@ -9,7 +9,6 @@
  */
 package io.quasient.pal.core.intercept;
 
-
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.junit.After;
