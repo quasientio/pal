@@ -2012,7 +2012,8 @@ public final class MessageBuilder {
                           .getParameterTypes()
                           .toArray(new String[0])))
           .withCallbackClass(intercept.getCallbackClass())
-          .withCallbackMethod(intercept.getCallbackMethod());
+          .withCallbackMethod(intercept.getCallbackMethod())
+          .withForceImmediate(intercept.isForceImmediate());
     }
 
     return new InterceptMessage()
@@ -2029,7 +2030,8 @@ public final class MessageBuilder {
                         .getFieldOpType()
                         .toByte()))
         .withCallbackClass(intercept.getCallbackClass())
-        .withCallbackMethod(intercept.getCallbackMethod());
+        .withCallbackMethod(intercept.getCallbackMethod())
+        .withForceImmediate(intercept.isForceImmediate());
   }
 
   /**

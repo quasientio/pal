@@ -74,7 +74,8 @@ public class InterceptActivationCoordinatorTest {
   public void activateWithDrain_fencesThenWaitsThenActivates() throws InterruptedException {
     // Given: A coordinator with in-flight tracking enabled
     Set<RunOptions> runOptions = EnumSet.of(RunOptions.WITH_IN_FLIGHT_TRACKING);
-    coordinator = new InterceptActivationCoordinator(tracker, null, runOptions, DRAIN_TIMEOUT_MS);
+    coordinator =
+        new InterceptActivationCoordinator(tracker, () -> null, runOptions, DRAIN_TIMEOUT_MS);
 
     // And: An intercept request for "com.example.Calculator.add" with forceImmediate=false
     InterceptRequest<?> request = createInterceptRequest("com.example.Calculator", "add", false);
@@ -118,7 +119,8 @@ public class InterceptActivationCoordinatorTest {
   public void activateWithDrain_timeoutReturnsFailure() throws InterruptedException {
     // Given: A coordinator with in-flight tracking enabled
     Set<RunOptions> runOptions = EnumSet.of(RunOptions.WITH_IN_FLIGHT_TRACKING);
-    coordinator = new InterceptActivationCoordinator(tracker, null, runOptions, DRAIN_TIMEOUT_MS);
+    coordinator =
+        new InterceptActivationCoordinator(tracker, () -> null, runOptions, DRAIN_TIMEOUT_MS);
 
     // And: An intercept request for "com.example.Calculator.add"
     InterceptRequest<?> request = createInterceptRequest("com.example.Calculator", "add", false);
@@ -163,7 +165,8 @@ public class InterceptActivationCoordinatorTest {
   public void activateImmediate_activatesWithoutDrain() throws InterruptedException {
     // Given: A coordinator with in-flight tracking enabled
     Set<RunOptions> runOptions = EnumSet.of(RunOptions.WITH_IN_FLIGHT_TRACKING);
-    coordinator = new InterceptActivationCoordinator(tracker, null, runOptions, DRAIN_TIMEOUT_MS);
+    coordinator =
+        new InterceptActivationCoordinator(tracker, () -> null, runOptions, DRAIN_TIMEOUT_MS);
 
     // And: An intercept request with forceImmediate=true
     InterceptRequest<?> request = createInterceptRequest("com.example.Calculator", "add", true);
@@ -198,7 +201,8 @@ public class InterceptActivationCoordinatorTest {
   public void activateWithDrain_respectsGlobalConfig() throws InterruptedException {
     // Given: A coordinator where WITH_IN_FLIGHT_TRACKING is DISABLED globally
     Set<RunOptions> runOptions = EnumSet.noneOf(RunOptions.class);
-    coordinator = new InterceptActivationCoordinator(tracker, null, runOptions, DRAIN_TIMEOUT_MS);
+    coordinator =
+        new InterceptActivationCoordinator(tracker, () -> null, runOptions, DRAIN_TIMEOUT_MS);
 
     // And: An intercept request with forceImmediate=false
     InterceptRequest<?> request = createInterceptRequest("com.example.Calculator", "add", false);
@@ -236,7 +240,8 @@ public class InterceptActivationCoordinatorTest {
   public void activateWithDrain_perInterceptOverrideBypassesDrain() throws InterruptedException {
     // Given: A coordinator with WITH_IN_FLIGHT_TRACKING ENABLED globally
     Set<RunOptions> runOptions = EnumSet.of(RunOptions.WITH_IN_FLIGHT_TRACKING);
-    coordinator = new InterceptActivationCoordinator(tracker, null, runOptions, DRAIN_TIMEOUT_MS);
+    coordinator =
+        new InterceptActivationCoordinator(tracker, () -> null, runOptions, DRAIN_TIMEOUT_MS);
 
     // And: An intercept request with forceImmediate=true (per-intercept override)
     InterceptRequest<?> request = createInterceptRequest("com.example.Calculator", "add", true);
@@ -273,7 +278,8 @@ public class InterceptActivationCoordinatorTest {
   public void unfencesOnFailure() throws InterruptedException {
     // Given: A coordinator with in-flight tracking enabled
     Set<RunOptions> runOptions = EnumSet.of(RunOptions.WITH_IN_FLIGHT_TRACKING);
-    coordinator = new InterceptActivationCoordinator(tracker, null, runOptions, DRAIN_TIMEOUT_MS);
+    coordinator =
+        new InterceptActivationCoordinator(tracker, () -> null, runOptions, DRAIN_TIMEOUT_MS);
 
     // And: An intercept request for "com.example.Calculator.add"
     InterceptRequest<?> request = createInterceptRequest("com.example.Calculator", "add", false);

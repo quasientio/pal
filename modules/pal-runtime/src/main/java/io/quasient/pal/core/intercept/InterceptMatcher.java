@@ -77,6 +77,12 @@ public class InterceptMatcher extends ConnectedService {
       new EnumMap<>(InterceptType.class);
 
   /**
+   * The coordinator that orchestrates safe intercept activation with optional in-flight tracking
+   * and drain mechanism.
+   */
+  private final InterceptActivationCoordinator activationCoordinator;
+
+  /**
    * Constructs a new InterceptMatcher instance.
    *
    * <p>This constructor initializes the intercept matcher by setting up the underlying connected
@@ -89,6 +95,7 @@ public class InterceptMatcher extends ConnectedService {
    * @param serviceThreadGroup the thread group managing service threads
    * @param serviceName the name of the intercept service
    * @param interceptRegAddress the network address endpoint for intercept registration
+   * @param activationCoordinator the coordinator for safe intercept activation
    */
   @Inject
   public InterceptMatcher(
@@ -97,9 +104,11 @@ public class InterceptMatcher extends ConnectedService {
       @Named("sync.ready") String syncSocketAddress,
       ThreadGroup serviceThreadGroup,
       @Named("Intercepts.service") String serviceName,
-      @Named("intercepts.reg") String interceptRegAddress) {
+      @Named("intercepts.reg") String interceptRegAddress,
+      InterceptActivationCoordinator activationCoordinator) {
     super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
     this.interceptRegAddress = interceptRegAddress;
+    this.activationCoordinator = activationCoordinator;
     // initialize intercept registry
     for (InterceptType interceptType : InterceptType.values()) {
       allIntercepts.put(interceptType, new InterceptRequests());
@@ -125,11 +134,14 @@ public class InterceptMatcher extends ConnectedService {
    * contained in the provided message, and registers the intercept request. A duplicate request
    * will trigger a DuplicateInterceptException.
    *
+   * <p>This method is package-private to allow {@link InterceptActivationCoordinator} to call it
+   * after quiescence is achieved when in-flight tracking is enabled.
+   *
    * @param incomingInterceptMessage the intercept message containing registration data
    * @throws DuplicateInterceptException if an intercept request with the same identifier is already
    *     registered
    */
-  private void registerInterceptRequest(InterceptMessage incomingInterceptMessage)
+  void registerInterceptRequest(InterceptMessage incomingInterceptMessage)
       throws DuplicateInterceptException {
     InterceptRequests registeredIntercepts =
         allIntercepts.get(InterceptType.fromByte(incomingInterceptMessage.getInterceptType()));
@@ -241,8 +253,25 @@ public class InterceptMatcher extends ConnectedService {
    * Processes new intercept registration and unregistration events received over the network.
    *
    * <p>This method reads an intercept event message from the REP socket. For registration requests,
-   * it parses the message, registers the intercept, and sends a response code. For unregistration
-   * requests, it removes the intercept from all registries and sends the corresponding response.
+   * it parses the message and delegates to {@link InterceptActivationCoordinator} which handles the
+   * coordination of in-flight tracking, fencing, and drain (if enabled) before registering the
+   * intercept. For unregistration requests, it removes the intercept from all registries and sends
+   * the corresponding response.
+   *
+   * <p>The registration flow:
+   *
+   * <ol>
+   *   <li>Receive and parse the intercept message
+   *   <li>Call activationCoordinator.activateIntercept() which:
+   *       <ul>
+   *         <li>Checks if drain is required (based on WITH_IN_FLIGHT_TRACKING and forceImmediate)
+   *         <li>If drain required: fence → wait for quiescence → register → unfence
+   *         <li>If drain not required: register immediately
+   *       </ul>
+   *   <li>The coordinator calls back to registerInterceptRequest() after quiescence (or
+   *       immediately)
+   *   <li>Send response code to the caller
+   * </ol>
    */
   private void registerNewAndGoneIntercepts() {
     InterceptEventMsg interceptEventMsg = InterceptEventMsg.receive(registerSocket, true);
@@ -265,12 +294,26 @@ public class InterceptMatcher extends ConnectedService {
       }
       if (interceptMessage != null) {
         try {
-          registerInterceptRequest(interceptMessage);
-          registerSocket.send(REGISTER_OK_RESPONSE);
-        } catch (DuplicateInterceptException e) {
-          logger.warn("Cannot register duplicate intercept request", e);
-          registerSocket.send(REGISTER_DUP_RESPONSE);
+          // Delegate to coordinator for safe activation with optional drain
+          InterceptActivationCoordinator.ActivationResult result =
+              activationCoordinator.activateIntercept(interceptMessage);
+
+          if (result.isSuccess()) {
+            registerSocket.send(REGISTER_OK_RESPONSE);
+          } else {
+            // Check if it was a duplicate (coordinator returns failure for duplicates)
+            if (result.getMessage().contains("Duplicate")) {
+              registerSocket.send(REGISTER_DUP_RESPONSE);
+            } else {
+              registerSocket.send(REGISTER_UNKNOWN_ERROR_RESPONSE);
+            }
+          }
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          logger.warn("Interrupted while activating intercept", e);
+          registerSocket.send(REGISTER_UNKNOWN_ERROR_RESPONSE);
         } catch (Exception e) {
+          logger.error("Unexpected error during intercept activation", e);
           registerSocket.send(REGISTER_UNKNOWN_ERROR_RESPONSE);
         }
       }

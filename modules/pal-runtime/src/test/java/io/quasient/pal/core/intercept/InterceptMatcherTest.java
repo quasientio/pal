@@ -53,6 +53,9 @@ public class InterceptMatcherTest extends ZmqEnabledTest {
   public void setup() throws InterruptedException {
     this.peerUuid = UUID.randomUUID();
     this.context = createContext();
+
+    // Create the InterceptMatcher first so we can reference it in the mock
+    // We'll set the coordinator after creating the matcher
     this.interceptMatcher =
         new InterceptMatcher(
             peerUuid,
@@ -60,7 +63,9 @@ public class InterceptMatcherTest extends ZmqEnabledTest {
             SYNC_SOCKET_ADDRESS,
             servicesThreadGroup,
             "InterceptMatcherTest-Service",
-            INTERCEPT_REG_ADDRESS);
+            INTERCEPT_REG_ADDRESS,
+            createTestCoordinator());
+
     final Set<Service> services = new HashSet<>(List.of(this.interceptMatcher));
     this.manager = new ServiceManager(services);
     // start service
@@ -70,6 +75,36 @@ public class InterceptMatcherTest extends ZmqEnabledTest {
     // create REQ socket to simulate requests (IRL: InterceptNodeListener)
     registerSocket = context.createSocket(SocketType.REQ);
     registerSocket.connect(INTERCEPT_REG_ADDRESS);
+  }
+
+  /**
+   * Creates a test coordinator that registers intercepts immediately without drain.
+   *
+   * <p>The mock coordinator is configured to call the matcher's registerInterceptRequest method
+   * directly when activateIntercept is called, simulating immediate activation without drain.
+   */
+  private InterceptActivationCoordinator createTestCoordinator() throws InterruptedException {
+    InterceptActivationCoordinator mockCoordinator =
+        org.mockito.Mockito.mock(InterceptActivationCoordinator.class);
+    org.mockito.Mockito.when(mockCoordinator.activateIntercept(org.mockito.ArgumentMatchers.any()))
+        .thenAnswer(
+            invocation -> {
+              // Get the InterceptMessage argument
+              InterceptMessage msg = invocation.getArgument(0);
+              try {
+                // Call registerInterceptRequest directly on the matcher
+                interceptMatcher.registerInterceptRequest(msg);
+                return InterceptActivationCoordinator.ActivationResult.success(
+                    "Intercept activated in test");
+              } catch (DuplicateInterceptException e) {
+                return InterceptActivationCoordinator.ActivationResult.failure(
+                    "Duplicate intercept: " + e.getMessage());
+              } catch (Exception e) {
+                return InterceptActivationCoordinator.ActivationResult.failure(
+                    "Error: " + e.getMessage());
+              }
+            });
+    return mockCoordinator;
   }
 
   @After

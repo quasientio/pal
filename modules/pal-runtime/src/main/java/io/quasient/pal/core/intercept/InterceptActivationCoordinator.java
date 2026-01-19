@@ -9,10 +9,13 @@
  */
 package io.quasient.pal.core.intercept;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.quasient.pal.common.directory.nodes.InterceptRequest;
 import io.quasient.pal.core.service.RunOptions;
+import io.quasient.pal.messages.colfer.InterceptMessage;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
+import jakarta.inject.Provider;
 import jakarta.inject.Singleton;
 import java.util.Set;
 import org.slf4j.Logger;
@@ -85,15 +88,26 @@ public class InterceptActivationCoordinator {
   private final InFlightDispatchTracker inFlightTracker;
 
   /**
-   * Matcher for registering and querying intercepts.
+   * Provider for InterceptMatcher to break circular dependency.
    *
-   * <p>Note: Currently unused as direct registration is not yet implemented (TODO(#243)). This
-   * field is retained for future integration when InterceptMatcher supports direct registration.
+   * <p>This coordinator calls {@link
+   * InterceptMatcher#registerInterceptRequest(io.quasient.pal.messages.colfer.InterceptMessage)}
+   * after quiescence is achieved (when drain is required) or immediately (when drain is not
+   * required).
+   *
+   * <p>We use a Provider to avoid a circular dependency: InterceptMatcher depends on
+   * InterceptActivationCoordinator, and the coordinator needs to call back to the matcher.
    */
-  @SuppressWarnings("unused")
-  private final InterceptMatcher interceptMatcher;
+  private final Provider<InterceptMatcher> interceptMatcherProvider;
 
-  /** Runtime options controlling peer behavior. */
+  /**
+   * Runtime options controlling peer behavior.
+   *
+   * <p>This set is injected by Guice and is immutable at runtime, so storing a reference is safe.
+   */
+  @SuppressFBWarnings(
+      value = "EI_EXPOSE_REP2",
+      justification = "RunOptions set is injected and immutable at runtime")
   private final Set<RunOptions> runOptions;
 
   /** Timeout in milliseconds for waiting for in-flight dispatches to drain. */
@@ -103,7 +117,8 @@ public class InterceptActivationCoordinator {
    * Constructs a new InterceptActivationCoordinator with the specified dependencies.
    *
    * @param inFlightTracker the tracker for in-flight dispatches
-   * @param interceptMatcher the matcher for registering intercepts
+   * @param interceptMatcherProvider the provider for InterceptMatcher (to break circular
+   *     dependency)
    * @param runOptions the runtime options controlling peer behavior
    * @param drainTimeoutMs the timeout in milliseconds for waiting for in-flight dispatches to drain
    *     (injected from properties as "intercept.drain.timeout.ms")
@@ -111,11 +126,11 @@ public class InterceptActivationCoordinator {
   @Inject
   public InterceptActivationCoordinator(
       InFlightDispatchTracker inFlightTracker,
-      InterceptMatcher interceptMatcher,
+      Provider<InterceptMatcher> interceptMatcherProvider,
       Set<RunOptions> runOptions,
       @Named("intercept.drain.timeout.ms") long drainTimeoutMs) {
     this.inFlightTracker = inFlightTracker;
-    this.interceptMatcher = interceptMatcher;
+    this.interceptMatcherProvider = interceptMatcherProvider;
     this.runOptions = runOptions;
     this.drainTimeoutMs = drainTimeoutMs;
 
@@ -179,6 +194,54 @@ public class InterceptActivationCoordinator {
   }
 
   /**
+   * Activates an intercept from an InterceptMessage received via ZMQ.
+   *
+   * <p>This method is called by {@link InterceptMatcher} when it receives an intercept registration
+   * message. It coordinates the activation sequence based on configuration and the forceImmediate
+   * flag in the message.
+   *
+   * <p>The activation flow:
+   *
+   * <ol>
+   *   <li>Extract class and method patterns from the message
+   *   <li>Check if drain is required (WITH_IN_FLIGHT_TRACKING enabled and forceImmediate=false)
+   *   <li>If drain required: fence → wait for quiescence → register → unfence
+   *   <li>If drain not required: register immediately
+   * </ol>
+   *
+   * @param interceptMessage the intercept message containing registration data
+   * @return an {@link ActivationResult} indicating success or failure
+   * @throws InterruptedException if the thread is interrupted while waiting for quiescence
+   */
+  public ActivationResult activateIntercept(InterceptMessage interceptMessage)
+      throws InterruptedException {
+    String classPattern = interceptMessage.getClazz();
+    String methodPattern = extractMethodPatternFromMessage(interceptMessage);
+
+    boolean trackingEnabled = runOptions.contains(RunOptions.WITH_IN_FLIGHT_TRACKING);
+    boolean forceImmediate = interceptMessage.getForceImmediate();
+
+    // Determine if drain is required
+    boolean shouldDrain = trackingEnabled && !forceImmediate;
+
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          "Activating intercept for {}.{}, trackingEnabled={}, forceImmediate={}, shouldDrain={}",
+          classPattern,
+          methodPattern,
+          trackingEnabled,
+          forceImmediate,
+          shouldDrain);
+    }
+
+    if (shouldDrain) {
+      return activateWithDrainAndRegister(classPattern, methodPattern, interceptMessage);
+    } else {
+      return activateImmediateAndRegister(classPattern, methodPattern, interceptMessage);
+    }
+  }
+
+  /**
    * Activates an intercept immediately without waiting for in-flight dispatches to complete.
    *
    * <p>This method is used when:
@@ -207,6 +270,44 @@ public class InterceptActivationCoordinator {
   }
 
   /**
+   * Activates an intercept immediately and registers it with the matcher.
+   *
+   * <p>This method is used when:
+   *
+   * <ul>
+   *   <li>Global in-flight tracking is disabled, or
+   *   <li>The intercept has forceImmediate=true (per-intercept override)
+   * </ul>
+   *
+   * @param classPattern the class pattern from the message
+   * @param methodPattern the method pattern from the message
+   * @param interceptMessage the intercept message to register
+   * @return an {@link ActivationResult} indicating success or failure
+   */
+  private ActivationResult activateImmediateAndRegister(
+      String classPattern, String methodPattern, InterceptMessage interceptMessage) {
+    if (logger.isDebugEnabled()) {
+      logger.debug("Activating intercept immediately for {}.{}", classPattern, methodPattern);
+    }
+
+    try {
+      interceptMatcherProvider.get().registerInterceptRequest(interceptMessage);
+      return ActivationResult.success("Intercept activated immediately");
+    } catch (DuplicateInterceptException e) {
+      if (logger.isWarnEnabled()) {
+        logger.warn(
+            "Cannot register duplicate intercept for {}.{}", classPattern, methodPattern, e);
+      }
+      return ActivationResult.failure("Duplicate intercept: " + e.getMessage());
+    } catch (Exception e) {
+      if (logger.isErrorEnabled()) {
+        logger.error("Error activating intercept for {}.{}", classPattern, methodPattern, e);
+      }
+      return ActivationResult.failure("Error during intercept activation: " + e.getMessage());
+    }
+  }
+
+  /**
    * Activates an intercept after waiting for in-flight dispatches to complete (drain).
    *
    * <p>This method:
@@ -224,6 +325,33 @@ public class InterceptActivationCoordinator {
    * @throws InterruptedException if the thread is interrupted while waiting for quiescence
    */
   private ActivationResult activateWithDrain(String classPattern, String methodPattern)
+      throws InterruptedException {
+    return activateWithDrainAndRegister(classPattern, methodPattern, null);
+  }
+
+  /**
+   * Activates an intercept after waiting for in-flight dispatches to complete (drain) and
+   * optionally registers it with the matcher.
+   *
+   * <p>This method:
+   *
+   * <ol>
+   *   <li>Starts fencing for the intercept pattern
+   *   <li>Waits for in-flight dispatches to complete (quiescence) with configured timeout
+   *   <li>If quiescence is achieved and interceptMessage is provided, registers the intercept with
+   *       InterceptMatcher
+   *   <li>Always stops fencing in a finally block to ensure cleanup
+   * </ol>
+   *
+   * @param classPattern the class pattern from the message
+   * @param methodPattern the method pattern from the message
+   * @param interceptMessage the intercept message to register (may be null if called from legacy
+   *     activate method)
+   * @return an {@link ActivationResult} indicating success or failure
+   * @throws InterruptedException if the thread is interrupted while waiting for quiescence
+   */
+  private ActivationResult activateWithDrainAndRegister(
+      String classPattern, String methodPattern, InterceptMessage interceptMessage)
       throws InterruptedException {
     if (logger.isDebugEnabled()) {
       logger.debug(
@@ -255,21 +383,36 @@ public class InterceptActivationCoordinator {
                 "Timeout waiting for in-flight dispatches to complete after %dms", drainTimeoutMs));
       }
 
-      // Step 3: Activate intercept
+      // Step 3: Register intercept with matcher after quiescence is achieved (if message provided)
       if (logger.isDebugEnabled()) {
         logger.debug(
-            "Quiescence achieved for {}.{}, activating intercept", classPattern, methodPattern);
+            "Quiescence achieved for {}.{}, {}",
+            classPattern,
+            methodPattern,
+            interceptMessage != null ? "registering intercept" : "activating intercept");
       }
 
-      // Note: Similar to activateImmediate(), direct activation via InterceptMatcher
-      // is not yet supported. This will be addressed in issue #243.
-      //
-      // TODO(#243): Replace this with direct call to InterceptMatcher.registerIntercept()
+      if (interceptMessage != null) {
+        try {
+          interceptMatcherProvider.get().registerInterceptRequest(interceptMessage);
+          return ActivationResult.success("Intercept activated after drain");
+        } catch (DuplicateInterceptException e) {
+          if (logger.isWarnEnabled()) {
+            logger.warn(
+                "Cannot register duplicate intercept for {}.{}", classPattern, methodPattern, e);
+          }
+          return ActivationResult.failure("Duplicate intercept: " + e.getMessage());
+        }
+      } else {
+        // Legacy path for activate(InterceptRequest) - no actual registration
+        return ActivationResult.success("Intercept activated after drain");
+      }
 
-      return ActivationResult.success("Intercept activated after drain");
-
+    } catch (InterruptedException e) {
+      // Propagate interruption
+      throw e;
     } catch (Exception e) {
-      // Activation failed (e.g., duplicate intercept, parsing error)
+      // Activation failed (e.g., other errors during registration)
       if (logger.isErrorEnabled()) {
         logger.error("Error activating intercept for {}.{}", classPattern, methodPattern, e);
       }
@@ -310,6 +453,24 @@ public class InterceptActivationCoordinator {
     }
 
     return pattern;
+  }
+
+  /**
+   * Extracts the method/field pattern from an intercept message.
+   *
+   * <p>For method intercepts, returns the method name. For field intercepts, returns the field
+   * name.
+   *
+   * @param message the intercept message
+   * @return the method or field name pattern string
+   */
+  private String extractMethodPatternFromMessage(InterceptMessage message) {
+    if (message.getMethod() != null) {
+      return message.getMethod().getName();
+    } else if (message.getField() != null) {
+      return message.getField().getName();
+    }
+    throw new IllegalArgumentException("InterceptMessage must have either method or field defined");
   }
 
   /**
