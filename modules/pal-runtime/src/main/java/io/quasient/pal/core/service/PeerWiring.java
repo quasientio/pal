@@ -24,6 +24,8 @@ import io.quasient.pal.core.annotations.AnnotationsProcessor;
 import io.quasient.pal.core.dispatcher.InterceptAsyncThreadFactory;
 import io.quasient.pal.core.execution.java.AspectProxyDispatcher;
 import io.quasient.pal.core.execution.java.CustomClassloader;
+import io.quasient.pal.core.intercept.InFlightDispatchTracker;
+import io.quasient.pal.core.intercept.InterceptActivationCoordinator;
 import io.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import io.quasient.pal.core.internal.concurrent.MpscKind;
 import io.quasient.pal.core.runtime.objects.ConcurrentHashMapObjectLookupStore;
@@ -201,9 +203,29 @@ public class PeerWiring extends AbstractModule {
     bind(MessageBuilder.class).toProvider(() -> new MessageBuilder(peerUuid)).asEagerSingleton();
     bind(DirectoryConnectionProvider.class).asEagerSingleton();
 
+    // Intercept coordination components
+    bind(InFlightDispatchTracker.class).asEagerSingleton();
+    bind(InterceptActivationCoordinator.class).asEagerSingleton();
+
     // AspectProxy and DispatchForwarder's fields are static
     requestStaticInjection(AspectProxyDispatcher.class);
     requestStaticInjection(DispatchForwarder.class);
+  }
+
+  /**
+   * Provides the drain timeout for intercept activation coordinator.
+   *
+   * <p>This timeout controls how long to wait for in-flight dispatches to complete before
+   * activating an intercept. Configured via the "intercept.drain.timeout.ms" property (default:
+   * 5000ms).
+   *
+   * @return the drain timeout in milliseconds
+   */
+  @SuppressWarnings("unused")
+  @Provides
+  @Named("intercept.drain.timeout.ms")
+  public long provideInterceptDrainTimeout() {
+    return Long.parseLong(properties.getProperty("intercept.drain.timeout.ms", "5000"));
   }
 
   /**
