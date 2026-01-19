@@ -352,6 +352,32 @@ public class Main implements Callable<Integer> {
   private boolean disableAnnotationProcessing = false;
 
   /**
+   * Flag to enable in-flight dispatch tracking for intercept coordination. When enabled, intercept
+   * registration will wait for in-flight method calls to complete before activating the intercept,
+   * ensuring guaranteed quiescence.
+   */
+  @Option(
+      names = {"--in-flight-tracking"},
+      description =
+          "enable in-flight dispatch tracking for intercept coordination (default: ${DEFAULT-VALUE})",
+      defaultValue = "true",
+      showDefaultValue = CommandLine.Help.Visibility.ALWAYS)
+  private Boolean inFlightTracking; // corresponding ENV var: IN_FLIGHT_TRACKING
+
+  /**
+   * Timeout in milliseconds for drain operations when waiting for in-flight dispatches to complete
+   * before activating an intercept.
+   */
+  @Option(
+      names = {"--drain-timeout-ms"},
+      paramLabel = "milliseconds",
+      description =
+          "timeout for drain operations when waiting for in-flight dispatches (default: ${DEFAULT-VALUE})",
+      defaultValue = "5000",
+      showDefaultValue = CommandLine.Help.Visibility.ALWAYS)
+  private Integer drainTimeoutMs; // corresponding ENV var: DRAIN_TIMEOUT_MS
+
+  /**
    * Flag to trigger display of the help message for command-line usage. Handled automatically by
    * the CLI parser.
    */
@@ -746,6 +772,26 @@ public class Main implements Callable<Integer> {
       }
     }
 
+    // in-flight tracking via env override if CLI not provided
+    if (inFlightTracking == null) {
+      String ift = System.getenv("IN_FLIGHT_TRACKING");
+      if (ift != null && !ift.isBlank()) {
+        inFlightTracking = Boolean.parseBoolean(ift.trim());
+      }
+    }
+
+    // drain timeout via env override if CLI not provided
+    if (drainTimeoutMs == null) {
+      String dt = System.getenv("DRAIN_TIMEOUT_MS");
+      if (dt != null && !dt.isBlank()) {
+        try {
+          drainTimeoutMs = Integer.parseInt(dt.trim());
+        } catch (NumberFormatException ignored) {
+          // keep CLI/default
+        }
+      }
+    }
+
     // if not given as option to this CMD, check if it was given to parent (Pal) or ENV
     if (palDirectoryUrl == null || palDirectoryUrl.trim().isEmpty()) {
       // check ENV variable
@@ -857,6 +903,11 @@ public class Main implements Callable<Integer> {
         || runOptions.contains(RunOptions.WITH_JSON_RPC)
         || runOptions.contains(RunOptions.WITH_SOURCE_LOG)) {
       runOptions.add(RunOptions.WITH_SESSIONS);
+    }
+
+    // enable in-flight tracking if configured (defaults to true if not explicitly set)
+    if (inFlightTracking == null || inFlightTracking) {
+      runOptions.add(RunOptions.WITH_IN_FLIGHT_TRACKING);
     }
 
     logger.info("Running with options: {}", runOptions);
@@ -1080,6 +1131,11 @@ public class Main implements Callable<Integer> {
 
     // rpc options
     properties.setProperty("rpc.allow_nonpublic", String.valueOf(rpcAllowNonPublic));
+
+    // in-flight tracking options
+    if (drainTimeoutMs != null) {
+      properties.setProperty("intercept.drain.timeout.ms", String.valueOf(drainTimeoutMs));
+    }
   }
 
   /**
