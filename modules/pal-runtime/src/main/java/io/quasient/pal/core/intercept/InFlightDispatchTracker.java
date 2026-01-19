@@ -1,0 +1,485 @@
+/*
+ * Copyright (C) 2026 Quasient Inc. <https://www.quasient.com>
+ *
+ * Use of this software is governed by the Business Source License 1.1
+ * included in the file LICENSE and at https://mariadb.com/bsl11
+ *
+ * Change Date: 2030-10-01
+ * Change License: Apache 2.0
+ */
+package io.quasient.pal.core.intercept;
+
+import io.github.azagniotov.matcher.AntPathMatcherArrays;
+import jakarta.inject.Singleton;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.LongAdder;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Tracks in-flight dispatch operations to enable coordinated intercept activation with guaranteed
+ * quiescence.
+ *
+ * <p>This class provides thread-safe tracking of method and field operation dispatches as they
+ * enter and exit execution. It supports:
+ *
+ * <ul>
+ *   <li><b>Counter tracking:</b> Tracks dispatch entry/exit per class+method pattern using {@link
+ *       LongAdder} for low-contention counting
+ *   <li><b>Pattern matching:</b> Supports wildcard patterns for class and method names using
+ *       AntPathMatcher (e.g., "com.example.*", "*.Calculator.add")
+ *   <li><b>Quiescence waiting:</b> Blocks until all matching dispatches complete with configurable
+ *       timeout
+ *   <li><b>Fencing mechanism:</b> Blocks new dispatches matching a pattern using {@link
+ *       ReentrantLock} with {@link Condition}
+ * </ul>
+ *
+ * <p><b>Thread safety:</b> All public methods are thread-safe and may be called concurrently from
+ * multiple threads. Counters use {@link LongAdder} for high-performance concurrent increments.
+ * Fencing uses {@link ReentrantLock} per dispatch key to avoid blocking unrelated dispatches.
+ *
+ * <p><b>Usage example:</b>
+ *
+ * <pre>{@code
+ * InFlightDispatchTracker tracker = ...;
+ *
+ * // In dispatch hot-path:
+ * tracker.enterDispatch("com.example.Calculator", "add");
+ * try {
+ *   // ... execute method ...
+ * } finally {
+ *   tracker.exitDispatch("com.example.Calculator", "add");
+ * }
+ *
+ * // When registering intercept:
+ * tracker.startFencing("com.example.Calculator", "add");
+ * try {
+ *   boolean quiescent = tracker.waitForQuiescence("com.example.Calculator", "add", 5000);
+ *   if (quiescent) {
+ *     // ... activate intercept ...
+ *   }
+ * } finally {
+ *   tracker.stopFencing("com.example.Calculator", "add");
+ * }
+ * }</pre>
+ *
+ * <p><b>Performance considerations:</b> This class is designed for use on the dispatch hot-path.
+ * Counter operations use {@link LongAdder}, which provides excellent performance under contention.
+ * Pattern matching is only performed when checking for in-flight dispatches or starting fencing,
+ * not on every enter/exit.
+ *
+ * @see io.quasient.pal.core.options.RunOptions#WITH_IN_FLIGHT_TRACKING
+ * @see io.quasient.pal.common.directory.nodes.InterceptRequest#isForceImmediate()
+ */
+@Singleton
+public class InFlightDispatchTracker {
+
+  /** Logger instance for debug and trace messages. */
+  private static final Logger logger = LoggerFactory.getLogger(InFlightDispatchTracker.class);
+
+  /**
+   * Encapsulates counter and lock for a single dispatch key (className.methodName).
+   *
+   * <p>This inner class combines the in-flight counter with a lock/condition for fencing. Each
+   * dispatch key has its own {@code DispatchCounter} to avoid lock contention between unrelated
+   * dispatches.
+   */
+  private static class DispatchCounter {
+    /** Counter for in-flight dispatches. Uses LongAdder for low-contention concurrent updates. */
+    private final LongAdder count = new LongAdder();
+
+    /** Lock for fencing mechanism. Held by threads entering a fenced dispatch. */
+    private final ReentrantLock lock = new ReentrantLock();
+
+    /** Condition for waiting until fencing is lifted. */
+    private final Condition notFenced = lock.newCondition();
+
+    /** Flag indicating whether new dispatches are fenced (blocked). */
+    private volatile boolean fenced = false;
+
+    /**
+     * Increments the in-flight counter.
+     *
+     * <p>This method is lock-free and designed for high-throughput dispatch tracking.
+     */
+    void increment() {
+      count.increment();
+    }
+
+    /**
+     * Decrements the in-flight counter.
+     *
+     * <p>This method is lock-free and designed for high-throughput dispatch tracking.
+     */
+    void decrement() {
+      count.decrement();
+    }
+
+    /**
+     * Returns the current count of in-flight dispatches.
+     *
+     * @return the sum of all increments minus decrements
+     */
+    long sum() {
+      return count.sum();
+    }
+
+    /**
+     * Blocks if this dispatch is currently fenced, waiting until the fence is lifted.
+     *
+     * <p>This method is called before entering a dispatch. If fencing is active, the calling thread
+     * will block until {@link #stopFencing()} is called or the thread is interrupted.
+     *
+     * @throws InterruptedException if the thread is interrupted while waiting
+     */
+    void awaitNotFenced() throws InterruptedException {
+      if (!fenced) {
+        return; // Fast path: no fencing active
+      }
+      lock.lock();
+      try {
+        while (fenced) {
+          notFenced.await();
+        }
+      } finally {
+        lock.unlock();
+      }
+    }
+
+    /**
+     * Starts fencing for this dispatch, blocking all new {@link #awaitNotFenced()} calls.
+     *
+     * <p>Fencing does not affect dispatches that have already entered (already incremented the
+     * counter). It only blocks new dispatches.
+     */
+    void startFencing() {
+      lock.lock();
+      try {
+        fenced = true;
+      } finally {
+        lock.unlock();
+      }
+    }
+
+    /**
+     * Stops fencing for this dispatch, unblocking all threads waiting in {@link #awaitNotFenced()}.
+     */
+    void stopFencing() {
+      lock.lock();
+      try {
+        fenced = false;
+        notFenced.signalAll();
+      } finally {
+        lock.unlock();
+      }
+    }
+  }
+
+  /**
+   * Map from dispatch key ("className.methodName") to counter/lock structure.
+   *
+   * <p>This map grows dynamically as new dispatches are tracked. Entries are never removed to avoid
+   * race conditions and to optimize for the common case where the same methods are called
+   * repeatedly.
+   */
+  private final ConcurrentHashMap<String, DispatchCounter> dispatchCounters =
+      new ConcurrentHashMap<>();
+
+  /**
+   * Map of active fence patterns.
+   *
+   * <p>When a pattern is added to this map, any enterDispatch call matching the pattern will be
+   * fenced, even if the specific dispatch key doesn't exist in dispatchCounters yet.
+   */
+  private final ConcurrentHashMap<String, Boolean> fencedPatterns = new ConcurrentHashMap<>();
+
+  /**
+   * Matcher for comparing dot-separated patterns.
+   *
+   * <p>Configured to match case-insensitively with token trimming, consistent with intercept
+   * pattern matching elsewhere in the codebase.
+   */
+  private static final AntPathMatcherArrays matcher =
+      new AntPathMatcherArrays.Builder()
+          .withPathSeparator('.')
+          .withTrimTokens()
+          .withIgnoreCase()
+          .build();
+
+  /**
+   * Records that a dispatch has entered execution for the specified class and method.
+   *
+   * <p>This method increments the in-flight counter for the dispatch key "className.methodName". If
+   * fencing is active for this dispatch, the calling thread will block until the fence is lifted.
+   *
+   * <p><b>Usage:</b> Call this method immediately before executing a method or field operation,
+   * typically at the start of the dispatch hot-path.
+   *
+   * <p><b>Thread safety:</b> This method is thread-safe and may be called concurrently from
+   * multiple threads.
+   *
+   * @param className the fully qualified class name (e.g., "com.example.Calculator")
+   * @param methodName the method or field name (e.g., "add")
+   * @throws InterruptedException if the thread is interrupted while waiting for fencing to be
+   *     lifted
+   */
+  public void enterDispatch(String className, String methodName) throws InterruptedException {
+    String key = className + "." + methodName;
+
+    // Check if there's a fenced pattern that matches this key
+    boolean shouldFence = false;
+    for (String pattern : fencedPatterns.keySet()) {
+      if (matcher.isMatch(pattern, key)) {
+        shouldFence = true;
+        break;
+      }
+    }
+
+    DispatchCounter counter;
+    if (shouldFence) {
+      // Create counter with fencing if it doesn't exist
+      counter =
+          dispatchCounters.computeIfAbsent(
+              key,
+              k -> {
+                DispatchCounter newCounter = new DispatchCounter();
+                newCounter.startFencing();
+                return newCounter;
+              });
+    } else {
+      counter = dispatchCounters.computeIfAbsent(key, k -> new DispatchCounter());
+    }
+
+    // Block if fenced
+    counter.awaitNotFenced();
+
+    // Increment counter
+    counter.increment();
+
+    if (logger.isTraceEnabled()) {
+      logger.trace("Entered dispatch for {}, count={}", key, counter.sum());
+    }
+  }
+
+  /**
+   * Records that a dispatch has exited execution for the specified class and method.
+   *
+   * <p>This method decrements the in-flight counter for the dispatch key "className.methodName". If
+   * no counter exists for this key, this method logs a warning but does not throw an exception.
+   *
+   * <p><b>Usage:</b> Call this method in a {@code finally} block after dispatch execution to ensure
+   * the counter is always decremented, even if an exception occurs.
+   *
+   * <p><b>Thread safety:</b> This method is thread-safe and may be called concurrently from
+   * multiple threads.
+   *
+   * @param className the fully qualified class name (e.g., "com.example.Calculator")
+   * @param methodName the method or field name (e.g., "add")
+   */
+  public void exitDispatch(String className, String methodName) {
+    String key = className + "." + methodName;
+    DispatchCounter counter = dispatchCounters.get(key);
+
+    if (counter == null) {
+      if (logger.isWarnEnabled()) {
+        logger.warn(
+            "exitDispatch called for {} but no counter exists (missing enterDispatch?)", key);
+      }
+      return;
+    }
+
+    counter.decrement();
+
+    if (logger.isTraceEnabled()) {
+      logger.trace("Exited dispatch for {}, count={}", key, counter.sum());
+    }
+  }
+
+  /**
+   * Checks whether any dispatches are currently in-flight for methods matching the specified
+   * pattern.
+   *
+   * <p>This method searches all tracked dispatch keys for matches against the pattern
+   * "classPattern.methodPattern". The pattern may contain wildcards (e.g., "com.example.*" or
+   * "*.Calculator.add").
+   *
+   * <p><b>Pattern matching rules:</b>
+   *
+   * <ul>
+   *   <li>{@code "*"} matches any sequence of characters within a single dot-separated segment
+   *   <li>{@code "**"} matches any sequence of segments (not typically needed for class.method
+   *       patterns)
+   *   <li>Matching is case-insensitive
+   *   <li>Leading/trailing whitespace in patterns is ignored
+   * </ul>
+   *
+   * <p><b>Examples:</b>
+   *
+   * <pre>
+   * hasInFlightDispatches("com.example.Calculator", "add")  // exact match
+   * hasInFlightDispatches("com.example.*", "*")             // all methods in package
+   * hasInFlightDispatches("*", "*")                         // all dispatches
+   * </pre>
+   *
+   * <p><b>Thread safety:</b> This method is thread-safe and may be called concurrently.
+   *
+   * @param classPattern the class name pattern, potentially with wildcards
+   * @param methodPattern the method name pattern, potentially with wildcards
+   * @return {@code true} if any matching dispatches have a counter > 0, {@code false} otherwise
+   */
+  public boolean hasInFlightDispatches(String classPattern, String methodPattern) {
+    String pattern = classPattern + "." + methodPattern;
+
+    for (Map.Entry<String, DispatchCounter> entry : dispatchCounters.entrySet()) {
+      String key = entry.getKey();
+      if (matcher.isMatch(pattern, key)) {
+        long count = entry.getValue().sum();
+        if (count > 0) {
+          if (logger.isDebugEnabled()) {
+            logger.debug(
+                "Found in-flight dispatches for pattern '{}': {} has count={}",
+                pattern,
+                key,
+                count);
+          }
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Waits until all dispatches matching the specified pattern have completed (quiescence), or until
+   * the timeout expires.
+   *
+   * <p>This method polls {@link #hasInFlightDispatches(String, String)} at short intervals until
+   * either:
+   *
+   * <ul>
+   *   <li>No in-flight dispatches remain for the pattern (quiescence achieved), or
+   *   <li>The specified timeout elapses
+   * </ul>
+   *
+   * <p><b>Usage:</b> Call this method after starting fencing and before activating an intercept to
+   * ensure all in-flight calls have completed.
+   *
+   * <p><b>Thread safety:</b> This method is thread-safe and may be called concurrently.
+   *
+   * @param classPattern the class name pattern, potentially with wildcards
+   * @param methodPattern the method name pattern, potentially with wildcards
+   * @param timeoutMs the maximum time to wait in milliseconds
+   * @return {@code true} if quiescence was achieved before the timeout, {@code false} if the
+   *     timeout expired while dispatches were still in-flight
+   * @throws InterruptedException if the thread is interrupted while waiting
+   */
+  public boolean waitForQuiescence(String classPattern, String methodPattern, long timeoutMs)
+      throws InterruptedException {
+    long deadline = System.currentTimeMillis() + timeoutMs;
+
+    while (hasInFlightDispatches(classPattern, methodPattern)) {
+      long remaining = deadline - System.currentTimeMillis();
+      if (remaining <= 0) {
+        if (logger.isDebugEnabled()) {
+          logger.debug(
+              "Timeout waiting for quiescence of {}.{} after {}ms",
+              classPattern,
+              methodPattern,
+              timeoutMs);
+        }
+        return false; // Timeout
+      }
+
+      // Short sleep to avoid busy-waiting
+      // Use a small interval (1ms) for responsive quiescence detection
+      Thread.sleep(Math.min(1, remaining));
+    }
+
+    if (logger.isDebugEnabled()) {
+      logger.debug("Achieved quiescence for {}.{}", classPattern, methodPattern);
+    }
+    return true;
+  }
+
+  /**
+   * Starts fencing for all dispatches matching the specified pattern, blocking new {@link
+   * #enterDispatch(String, String)} calls.
+   *
+   * <p>After calling this method, any thread attempting to enter a dispatch matching the pattern
+   * will block until {@link #stopFencing(String, String)} is called.
+   *
+   * <p><b>Important:</b> Fencing does not affect dispatches that have already entered (already
+   * called {@link #enterDispatch(String, String)}). Those dispatches will continue executing and
+   * will still be counted by {@link #hasInFlightDispatches(String, String)}.
+   *
+   * <p><b>Usage pattern:</b>
+   *
+   * <pre>{@code
+   * tracker.startFencing(classPattern, methodPattern);
+   * try {
+   *   boolean quiescent = tracker.waitForQuiescence(classPattern, methodPattern, timeoutMs);
+   *   if (quiescent) {
+   *     // Activate intercept
+   *   }
+   * } finally {
+   *   tracker.stopFencing(classPattern, methodPattern);
+   * }
+   * }</pre>
+   *
+   * <p><b>Thread safety:</b> This method is thread-safe and may be called concurrently.
+   *
+   * @param classPattern the class name pattern, potentially with wildcards
+   * @param methodPattern the method name pattern, potentially with wildcards
+   */
+  public void startFencing(String classPattern, String methodPattern) {
+    String pattern = classPattern + "." + methodPattern;
+    // Store the fence pattern for checking during enterDispatch
+    fencedPatterns.put(pattern, Boolean.TRUE);
+
+    // Also fence existing counters
+    for (Map.Entry<String, DispatchCounter> entry : dispatchCounters.entrySet()) {
+      String key = entry.getKey();
+      if (matcher.isMatch(pattern, key)) {
+        entry.getValue().startFencing();
+        if (logger.isDebugEnabled()) {
+          logger.debug(
+              "Started fencing for dispatch key '{}' (matches pattern '{}')", key, pattern);
+        }
+      }
+    }
+  }
+
+  /**
+   * Stops fencing for all dispatches matching the specified pattern, unblocking threads waiting in
+   * {@link #enterDispatch(String, String)}.
+   *
+   * <p>After calling this method, threads blocked in {@link #enterDispatch(String, String)} for
+   * matching dispatches will be unblocked and allowed to proceed.
+   *
+   * <p><b>Thread safety:</b> This method is thread-safe and may be called concurrently.
+   *
+   * @param classPattern the class name pattern, potentially with wildcards
+   * @param methodPattern the method name pattern, potentially with wildcards
+   */
+  public void stopFencing(String classPattern, String methodPattern) {
+    String pattern = classPattern + "." + methodPattern;
+
+    // Remove the pattern from fenced patterns
+    fencedPatterns.remove(pattern);
+
+    for (Map.Entry<String, DispatchCounter> entry : dispatchCounters.entrySet()) {
+      String key = entry.getKey();
+      if (matcher.isMatch(pattern, key)) {
+        entry.getValue().stopFencing();
+        if (logger.isDebugEnabled()) {
+          logger.debug(
+              "Stopped fencing for dispatch key '{}' (matches pattern '{}')", key, pattern);
+        }
+      }
+    }
+  }
+}
