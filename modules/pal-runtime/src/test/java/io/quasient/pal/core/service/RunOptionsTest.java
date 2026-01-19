@@ -9,14 +9,8 @@
  */
 package io.quasient.pal.core.service;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.fail;
 
-import java.util.EnumSet;
 import org.junit.Ignore;
 import org.junit.Test;
 
