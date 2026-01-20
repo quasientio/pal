@@ -14,6 +14,7 @@ import io.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import io.quasient.pal.cxn.directory.PalDirectory;
 import io.quasient.pal.intercept.chain.AroundChainExceptionIT;
 import io.quasient.pal.intercept.chain.AroundChainIT;
+import io.quasient.pal.intercept.endtoend.activation.ImmediateActivationIT;
 import io.quasient.pal.intercept.endtoend.constructor.AfterConstructorAsyncCallbackIT;
 import io.quasient.pal.intercept.endtoend.constructor.AfterConstructorCallbackIT;
 import io.quasient.pal.intercept.endtoend.constructor.AroundConstructorCallbackIT;
@@ -124,7 +125,10 @@ import org.slf4j.LoggerFactory;
 
   // AROUND intercept chain tests (onion model)
   AroundChainIT.class,
-  AroundChainExceptionIT.class
+  AroundChainExceptionIT.class,
+
+  // Immediate activation tests (verifies behavior when --in-flight-tracking is disabled)
+  ImmediateActivationIT.class
 })
 public class InterceptEndToEndTestSuite extends AbstractIntegrationTest {
 
@@ -323,6 +327,8 @@ public class InterceptEndToEndTestSuite extends AbstractIntegrationTest {
         String.join(":", ittAppsClasses, slf4jApi, logbackClassic, logbackCore);
 
     // Launch interceptable peer (the peer being intercepted)
+    // NOTE: Explicitly disable in-flight tracking to test immediate activation behavior.
+    // Tests that need tracking enabled should use InFlightTrackingTestSuite instead.
     logger.info("Launching interceptable peer...");
     interceptablePeerProcess =
         instance.launchPeer(
@@ -339,6 +345,8 @@ public class InterceptEndToEndTestSuite extends AbstractIntegrationTest {
             "3",
             "--rpc-allow-nonpublic",
             "--interceptable",
+            "--in-flight-tracking",
+            "false",
             "--log",
             "auto",
             "--log-prefix",

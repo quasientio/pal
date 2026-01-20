@@ -1,0 +1,374 @@
+/*
+ * Copyright (C) 2026 Quasient Inc. <https://www.quasient.com>
+ *
+ * Use of this software is governed by the Business Source License 1.1
+ * included in the file LICENSE and at https://mariadb.com/bsl11
+ *
+ * Change Date: 2030-10-01
+ * Change License: Apache 2.0
+ */
+package io.quasient.pal.intercept.endtoend.activation;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertTrue;
+
+import io.quasient.pal.InterceptEndToEndTestSuite;
+import io.quasient.pal.common.directory.nodes.InterceptRequest;
+import io.quasient.pal.common.lang.intercept.InterceptType;
+import io.quasient.pal.common.lang.intercept.InterceptableMethodCall;
+import io.quasient.pal.common.objects.ObjectRef;
+import io.quasient.pal.cxn.ThinPeer;
+import io.quasient.pal.intercept.AbstractInterceptIT;
+import io.quasient.pal.messages.colfer.Message;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+import org.junit.Test;
+
+/**
+ * Integration tests for immediate intercept activation when in-flight tracking is disabled.
+ *
+ * <p>These tests verify that intercepts activate immediately (without a drain phase) when the peer
+ * does NOT have {@code --in-flight-tracking} enabled. This is the default behavior and matches the
+ * legacy implementation before in-flight tracking was added.
+ *
+ * <p><b>Key Difference from InFlightInterceptActivationIT:</b>
+ *
+ * <ul>
+ *   <li>{@link io.quasient.pal.intercept.inflight.InFlightInterceptActivationIT} tests with {@code
+ *       --in-flight-tracking} enabled (drain before activation)
+ *   <li>This class tests with tracking disabled (immediate activation, no drain)
+ * </ul>
+ *
+ * <p><b>Test Scenario:</b>
+ *
+ * <ol>
+ *   <li><b>Given:</b> The peer does NOT have {@code --in-flight-tracking} enabled (default)
+ *   <li><b>And:</b> A method has in-flight calls executing
+ *   <li><b>When:</b> An intercept is registered for that method
+ *   <li><b>Then:</b> The intercept activates immediately (no drain phase)
+ *   <li><b>And:</b> New calls are intercepted immediately without blocking
+ *   <li><b>And:</b> In-flight calls may or may not be intercepted (race condition is acceptable)
+ * </ol>
+ *
+ * <p><b>Test Infrastructure:</b>
+ *
+ * <ul>
+ *   <li>Uses the shared interceptable peer from {@link InterceptEndToEndTestSuite}
+ *   <li>This peer does NOT have {@code --in-flight-tracking} flag set
+ *   <li>Uses {@code SlowMethodApp} for controllable slow method execution
+ * </ul>
+ *
+ * @see io.quasient.pal.intercept.inflight.InFlightInterceptActivationIT
+ */
+public class ImmediateActivationIT extends AbstractInterceptIT {
+
+  /** Fully qualified class name for the SlowMethodApp test application. */
+  private static final String SLOW_METHOD_APP_CLASS =
+      "io.quasient.pal.apps.quantized.intercept.SlowMethodApp";
+
+  /**
+   * Returns the UUID of the interceptable peer from InterceptEndToEndTestSuite.
+   *
+   * <p>This peer does NOT have {@code --in-flight-tracking} enabled, so intercepts activate
+   * immediately without a drain phase.
+   *
+   * @return the UUID of the interceptable peer
+   */
+  @Override
+  protected UUID getInterceptablePeerUuid() {
+    return InterceptEndToEndTestSuite.INTERCEPTABLE_PEER_UUID;
+  }
+
+  /**
+   * Tests that intercept activates immediately without waiting for in-flight calls to complete.
+   *
+   * <p><b>Test Flow:</b>
+   *
+   * <ol>
+   *   <li>Start a slow method call (becomes in-flight, runs for 3 seconds)
+   *   <li>Register an intercept while the slow method is executing
+   *   <li>Immediately invoke the method again
+   *   <li>Verify the second call completes quickly (no blocking/drain)
+   *   <li>Verify the second call is intercepted (callback received)
+   * </ol>
+   *
+   * <p><b>Verification:</b>
+   *
+   * <ul>
+   *   <li>Second call completes in less than 2 seconds (no drain phase waiting for 3s in-flight
+   *       call)
+   *   <li>Callback is received for the second call (intercept is active)
+   * </ul>
+   */
+  @Test
+  public void interceptActivatesImmediatelyWithoutDrain() throws Exception {
+    logger.info("===== interceptActivatesImmediatelyWithoutDrain: TEST STARTED =====");
+
+    // Given: A method has in-flight calls executing
+    final int slowMethodDelayMs = 3000; // 3 seconds
+    final long[] newCallTimes = new long[2]; // [startTime, endTime]
+    final long[] inFlightCallEndTime = new long[1]; // When the in-flight call completes
+
+    // Create separate ThinPeer for concurrent thread (ZMQ sockets are not thread-safe)
+    ThinPeer inFlightThinPeer = createAdditionalThinPeer();
+
+    try {
+      // First, create an instance of SlowMethodApp
+      logger.info("Creating SlowMethodApp instance");
+      ObjectRef slowMethodAppInstance =
+          ObjectRef.from(
+              invoke(messageBuilder.buildEmptyConstructor(myPeerUuid, SLOW_METHOD_APP_CLASS))
+                  .getReturnValue()
+                  .getObject()
+                  .getRef());
+      logger.info("SlowMethodApp instance created with ref: {}", slowMethodAppInstance);
+
+      // Start a slow method call (becomes in-flight)
+      logger.info("Starting in-flight slowMethod call ({}ms)", slowMethodDelayMs);
+      Thread inFlightThread =
+          new Thread(
+              () -> {
+                try {
+                  invoke(
+                      messageBuilder.buildInstanceMethod(
+                          myPeerUuid,
+                          SLOW_METHOD_APP_CLASS,
+                          "slowMethod",
+                          slowMethodAppInstance,
+                          new String[] {"int"},
+                          new Object[] {slowMethodDelayMs}),
+                      inFlightThinPeer);
+                  inFlightCallEndTime[0] = System.currentTimeMillis();
+                  logger.info("In-flight call completed at {}", inFlightCallEndTime[0]);
+                } catch (Exception e) {
+                  logger.error("Error in inFlightThread", e);
+                }
+              });
+      inFlightThread.start();
+
+      // Wait for method to become in-flight
+      Thread.sleep(500);
+
+      // When: An intercept is registered while the method is executing
+      logger.info("Registering intercept while slowMethod is in-flight");
+      UUID interceptUuid = UUID.randomUUID();
+      InterceptRequest<InterceptableMethodCall> interceptRequest =
+          new InterceptRequest<>(
+              interceptUuid,
+              myPeerUuid, // Callback to this test client
+              InterceptType.BEFORE,
+              SLOW_METHOD_APP_CLASS,
+              SLOW_METHOD_APP_CLASS, // Callback class (not used for BEFORE with test client)
+              "slowMethod", // Callback method (not used for BEFORE with test client)
+              new InterceptableMethodCall("slowMethod", Collections.singletonList("int")),
+              false); // forceImmediate=false (but tracking is disabled, so should be immediate)
+
+      register(interceptRequest);
+
+      // Wait briefly for intercept registration to propagate
+      Thread.sleep(200);
+
+      // Then: Immediately invoke method again - should NOT block
+      logger.info("Invoking slowMethod again - should NOT block (no drain phase)");
+      newCallTimes[0] = System.currentTimeMillis();
+      invoke(
+          messageBuilder.buildInstanceMethod(
+              myPeerUuid,
+              SLOW_METHOD_APP_CLASS,
+              "slowMethod",
+              slowMethodAppInstance,
+              new String[] {"int"},
+              new Object[] {100})); // Short delay for second call
+      newCallTimes[1] = System.currentTimeMillis();
+
+      // Verify: Second call completed quickly (no drain phase)
+      // With drain enabled, the call would wait ~3 seconds for the in-flight call to complete.
+      // Without drain, it should complete much faster (just the 100ms delay + RPC overhead).
+      long newCallDuration = newCallTimes[1] - newCallTimes[0];
+      logger.info("New call duration: {}ms", newCallDuration);
+      assertTrue(
+          "New call should complete without waiting for in-flight drain (was "
+              + newCallDuration
+              + "ms)",
+          newCallDuration < 2500); // Allow generous overhead, but must be less than 3s drain wait
+
+      // Verify: Callback was received (intercept is active)
+      List<Message> callbacks = getCallbacks(1, 5000);
+      logger.info("Received {} callbacks", callbacks.size());
+      assertThat("Should receive 1 callback (intercept activated)", callbacks.size(), is(1));
+
+      // Wait for in-flight thread to complete
+      inFlightThread.join();
+      logger.info("In-flight thread completed normally");
+
+      // CRITICAL VERIFICATION: Prove the first call was actually in-flight when we registered
+      // the intercept and made the second call. The in-flight call (3000ms) must complete AFTER
+      // the second call (100ms) finished.
+      assertTrue(
+          "In-flight call must complete AFTER second call to prove it was in-flight during "
+              + "intercept registration (in-flight ended at "
+              + inFlightCallEndTime[0]
+              + ", second call ended at "
+              + newCallTimes[1]
+              + ")",
+          inFlightCallEndTime[0] > newCallTimes[1]);
+
+      logger.info("===== interceptActivatesImmediatelyWithoutDrain: TEST PASSED =====");
+    } finally {
+      // Clean up additional ThinPeer
+      inFlightThinPeer.close();
+    }
+  }
+
+  /**
+   * Tests that new calls during intercept registration do not block when tracking is disabled.
+   *
+   * <p>This test verifies that when in-flight tracking is disabled, there is no fencing mechanism
+   * that blocks new calls during intercept registration. Multiple concurrent calls can proceed
+   * simultaneously without any coordination.
+   *
+   * <p><b>Test Flow:</b>
+   *
+   * <ol>
+   *   <li>Start a slow method call (becomes in-flight)
+   *   <li>Register an intercept while the slow method is executing
+   *   <li>Immediately start another slow method call
+   *   <li>Verify the second call starts immediately (no blocking on fence)
+   *   <li>Verify both calls complete at expected times
+   * </ol>
+   */
+  @Test
+  public void newCallsNotBlockedDuringRegistration() throws Exception {
+    logger.info("===== newCallsNotBlockedDuringRegistration: TEST STARTED =====");
+
+    // Given: An intercept is being registered while calls are in-flight
+    final int slowMethodDelayMs = 2000; // 2 seconds
+    final long[] secondCallTimes = new long[2]; // [startTime, endTime]
+    final long[] firstCallEndTime = new long[1]; // When the first call completes
+
+    // Create separate ThinPeers for concurrent threads (ZMQ sockets are not thread-safe)
+    ThinPeer firstThinPeer = createAdditionalThinPeer();
+    ThinPeer secondThinPeer = createAdditionalThinPeer();
+
+    try {
+      // First, create an instance of SlowMethodApp
+      logger.info("Creating SlowMethodApp instance");
+      ObjectRef slowMethodAppInstance =
+          ObjectRef.from(
+              invoke(messageBuilder.buildEmptyConstructor(myPeerUuid, SLOW_METHOD_APP_CLASS))
+                  .getReturnValue()
+                  .getObject()
+                  .getRef());
+
+      // Start first slow method call
+      logger.info("Starting first slowMethod call ({}ms)", slowMethodDelayMs);
+      Thread firstThread =
+          new Thread(
+              () -> {
+                try {
+                  invoke(
+                      messageBuilder.buildInstanceMethod(
+                          myPeerUuid,
+                          SLOW_METHOD_APP_CLASS,
+                          "slowMethod",
+                          slowMethodAppInstance,
+                          new String[] {"int"},
+                          new Object[] {slowMethodDelayMs}),
+                      firstThinPeer);
+                  firstCallEndTime[0] = System.currentTimeMillis();
+                  logger.info("First call completed at {}", firstCallEndTime[0]);
+                } catch (Exception e) {
+                  logger.error("Error in firstThread", e);
+                }
+              });
+      firstThread.start();
+
+      // Wait for method to become in-flight
+      Thread.sleep(300);
+
+      // When: Register intercept while first call is in-flight
+      logger.info("Registering intercept while first call is in-flight");
+      UUID interceptUuid = UUID.randomUUID();
+      InterceptRequest<InterceptableMethodCall> interceptRequest =
+          new InterceptRequest<>(
+              interceptUuid,
+              myPeerUuid,
+              InterceptType.BEFORE,
+              SLOW_METHOD_APP_CLASS,
+              SLOW_METHOD_APP_CLASS,
+              "slowMethod",
+              new InterceptableMethodCall("slowMethod", Collections.singletonList("int")),
+              false);
+
+      register(interceptRequest);
+
+      // Then: Start second call immediately - should NOT block on fence
+      logger.info("Starting second slowMethod call - should NOT block");
+      Thread secondThread =
+          new Thread(
+              () -> {
+                try {
+                  secondCallTimes[0] = System.currentTimeMillis();
+                  invoke(
+                      messageBuilder.buildInstanceMethod(
+                          myPeerUuid,
+                          SLOW_METHOD_APP_CLASS,
+                          "slowMethod",
+                          slowMethodAppInstance,
+                          new String[] {"int"},
+                          new Object[] {slowMethodDelayMs}),
+                      secondThinPeer);
+                  secondCallTimes[1] = System.currentTimeMillis();
+                  logger.info("Second call completed");
+                } catch (Exception e) {
+                  logger.error("Error in secondThread", e);
+                }
+              });
+      secondThread.start();
+
+      // Wait for both threads to complete
+      firstThread.join();
+      secondThread.join();
+
+      // Verify: Second call took approximately the expected time (not blocked by fence)
+      // With fencing, the second call would block until the first call completes (~2s),
+      // then execute its own delay (~2s), totaling ~4s. Without fencing, both calls
+      // run concurrently, so second call should complete in ~2s (its own delay).
+      long secondCallDuration = secondCallTimes[1] - secondCallTimes[0];
+      logger.info("Second call duration: {}ms", secondCallDuration);
+
+      // Second call should complete in ~2000ms (its own delay), not 2000ms + first call delay
+      // Allow generous tolerance for overhead and GC pauses
+      assertTrue(
+          "Second call should complete near its delay time without fence blocking (was "
+              + secondCallDuration
+              + "ms)",
+          secondCallDuration >= 1800 && secondCallDuration <= 4000);
+
+      // Verify callbacks received (may receive 0, 1, or 2 depending on race)
+      // The key assertion is that calls didn't block - callback count depends on timing
+      Thread.sleep(500);
+      List<Message> callbacks = getCallbacksNonBlocking();
+      logger.info("Received {} callbacks (timing-dependent)", callbacks.size());
+
+      // CRITICAL VERIFICATION: Prove the first call was actually in-flight when the second call
+      // started. The second call must START before the first call ENDS (proving concurrency).
+      assertTrue(
+          "Second call must start BEFORE first call ends to prove first was in-flight "
+              + "(second started at "
+              + secondCallTimes[0]
+              + ", first ended at "
+              + firstCallEndTime[0]
+              + ")",
+          secondCallTimes[0] < firstCallEndTime[0]);
+
+      logger.info("===== newCallsNotBlockedDuringRegistration: TEST PASSED =====");
+    } finally {
+      // Clean up additional ThinPeers
+      firstThinPeer.close();
+      secondThinPeer.close();
+    }
+  }
+}
