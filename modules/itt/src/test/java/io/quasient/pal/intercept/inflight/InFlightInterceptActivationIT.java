@@ -11,7 +11,9 @@ package io.quasient.pal.intercept.inflight;
 
 import static org.junit.Assert.fail;
 
+import io.quasient.pal.InFlightTrackingTestSuite;
 import io.quasient.pal.intercept.AbstractInterceptIT;
+import java.util.UUID;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -56,6 +58,19 @@ import org.junit.Test;
  * tests are marked with @Ignore.
  */
 public class InFlightInterceptActivationIT extends AbstractInterceptIT {
+
+  /**
+   * Returns the UUID of the interceptable peer configured with in-flight tracking.
+   *
+   * <p>This test class uses the dedicated in-flight tracking peer from {@link
+   * InFlightTrackingTestSuite} instead of the standard interceptable peer.
+   *
+   * @return the UUID of the in-flight tracking test peer
+   */
+  @Override
+  protected UUID getInterceptablePeerUuid() {
+    return InFlightTrackingTestSuite.INTERCEPTABLE_PEER_UUID;
+  }
 
   /**
    * Tests that intercept activates only after in-flight method executions complete.
