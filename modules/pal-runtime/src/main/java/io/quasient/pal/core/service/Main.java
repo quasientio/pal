@@ -361,6 +361,8 @@ public class Main implements Callable<Integer> {
       description =
           "enable in-flight dispatch tracking for intercept coordination (default: ${DEFAULT-VALUE})",
       defaultValue = "true",
+      fallbackValue = "true",
+      arity = "0..1",
       showDefaultValue = CommandLine.Help.Visibility.ALWAYS)
   private Boolean inFlightTracking; // corresponding ENV var: IN_FLIGHT_TRACKING
 
