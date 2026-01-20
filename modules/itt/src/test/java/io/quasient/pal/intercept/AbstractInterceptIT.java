@@ -152,6 +152,23 @@ public class AbstractInterceptIT extends AbstractIntegrationTest
     }
   }
 
+  /**
+   * Returns any callback messages that have been received without blocking.
+   *
+   * <p>This method returns immediately with whatever callbacks have been received so far, without
+   * waiting for any specific number. Useful for verifying that NO callbacks were received (e.g.,
+   * when testing that an intercept was not activated).
+   *
+   * @return a list of received callback messages (may be empty)
+   */
+  protected List<Message> getCallbacksNonBlocking() {
+    synchronized (callbackLock) {
+      List<Message> callbacks = new ArrayList<>(receivedCallbacks);
+      receivedCallbacks.clear();
+      return callbacks;
+    }
+  }
+
   @Before
   public void setUpAbstractInterceptIT() throws Exception {
     logger.info("===== AbstractInterceptIT.setUpAbstractInterceptIT: STARTING =====");
