@@ -68,6 +68,7 @@
                         <include>**/InterceptFlowTestSuite.java</include>
                         <include>**/LocalInterceptTestSuite.java</include>
                         <include>**/ConcurrentCallbackTestSuite.java</include>
+                        <include>**/InFlightTrackingTestSuite.java</include>
 
                         <!-- keep only directories that are NOT covered by suites -->
                         <include>**/cli/**/*IT.java</include>

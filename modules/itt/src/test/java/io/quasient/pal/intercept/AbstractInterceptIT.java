@@ -24,6 +24,8 @@ import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.Message;
 import io.quasient.pal.rpc.binary.ExecMessageAssertions;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
+import java.io.IOException;
+import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -46,7 +48,8 @@ public class AbstractInterceptIT extends AbstractIntegrationTest
   protected static final Logger logger = LoggerFactory.getLogger("tests");
   protected static final long INTERCEPT_REGISTRATION_MAX_DELAY_MS = 100;
 
-  private static final String RPC_ADDRESS = "tcp://localhost:7890";
+  /** Dynamically allocated RPC address for this test instance. */
+  private String rpcAddress;
 
   /**
    * Default well-known UUID for the shared interceptable peer.
@@ -176,12 +179,16 @@ public class AbstractInterceptIT extends AbstractIntegrationTest
               + targetPeerUuid
               + " not found in directory after 5 seconds");
     }
+    // Use a dynamically allocated port to avoid port conflicts between tests
+    int freePort = findFreePort();
+    this.rpcAddress = "tcp://localhost:" + freePort;
+    logger.info("Using dynamic RPC address: {}", rpcAddress);
     this.thinPeer =
         new ThinPeer()
             .withUuid(myPeerUuid)
             .withName("InterceptTestClient")
             .withSelfRegistration(true)
-            .withZmqRpcAddress(RPC_ADDRESS)
+            .withZmqRpcAddress(rpcAddress)
             .withInitialPeer(interceptablePeerInfo)
             .withDirectoryProvider(directoryConnectionProvider)
             .init();
@@ -231,6 +238,34 @@ public class AbstractInterceptIT extends AbstractIntegrationTest
 
   protected ExecMessage invoke(ExecMessage execMessage, ThinPeer withThinPeer) {
     return withThinPeer.sendToPeer(execMessage);
+  }
+
+  /**
+   * Creates an additional ThinPeer for concurrent thread usage.
+   *
+   * <p>Each ThinPeer uses its own ZMQ socket, so concurrent calls require separate instances.
+   *
+   * @return a new ThinPeer connected to the interceptable peer
+   * @throws RuntimeException if ThinPeer initialization fails
+   */
+  protected ThinPeer createAdditionalThinPeer() {
+    try {
+      int port = findFreePort();
+      UUID peerUuid = UUID.randomUUID();
+      ThinPeer peer =
+          new ThinPeer()
+              .withUuid(peerUuid)
+              .withName("AdditionalTestClient-" + port)
+              .withSelfRegistration(true)
+              .withZmqRpcAddress("tcp://localhost:" + port)
+              .withInitialPeer(interceptablePeerInfo)
+              .withDirectoryProvider(directoryConnectionProvider)
+              .init();
+      logger.info("Created additional ThinPeer {} on port {}", peerUuid, port);
+      return peer;
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to create additional ThinPeer", e);
+    }
   }
 
   // ========================================================================
@@ -510,5 +545,19 @@ public class AbstractInterceptIT extends AbstractIntegrationTest
     logger.info("Closing palDirectory");
     palDirectory.close();
     logger.info("===== AbstractInterceptIT.tearDownAbstractInterceptIT: COMPLETED =====");
+  }
+
+  /**
+   * Finds an available TCP port for ZMQ socket binding.
+   *
+   * @return an available port number
+   * @throws RuntimeException if no port can be found
+   */
+  private static int findFreePort() {
+    try (ServerSocket socket = new ServerSocket(0)) {
+      return socket.getLocalPort();
+    } catch (IOException e) {
+      throw new RuntimeException("Failed to find free port", e);
+    }
   }
 }

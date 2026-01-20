@@ -11,11 +11,13 @@ package io.quasient.pal.core.intercept;
 
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.core.ZmqEnabledTest;
@@ -101,8 +103,7 @@ public class InterceptMatcherCoordinatorIntegrationTest extends ZmqEnabledTest {
               }
             });
 
-    final Set<com.google.common.util.concurrent.Service> services =
-        new HashSet<>(List.of(this.interceptMatcher));
+    final Set<Service> services = new HashSet<>(List.of(this.interceptMatcher));
     this.manager = new ServiceManager(services);
     // start service
     manager.startAsync().awaitHealthy();
@@ -204,9 +205,7 @@ public class InterceptMatcherCoordinatorIntegrationTest extends ZmqEnabledTest {
 
     // And: The coordinator should have been called with a message where forceImmediate=true
     verify(mockCoordinator, times(1))
-        .activateIntercept(
-            org.mockito.ArgumentMatchers.argThat(
-                msg -> msg.getForceImmediate())); // Verify the flag is true
+        .activateIntercept(argThat(msg -> msg.getForceImmediate())); // Verify the flag is true
   }
 
   /**
@@ -242,9 +241,7 @@ public class InterceptMatcherCoordinatorIntegrationTest extends ZmqEnabledTest {
 
     // And: The coordinator should have been called with a message where forceImmediate=false
     verify(mockCoordinator, times(1))
-        .activateIntercept(
-            org.mockito.ArgumentMatchers.argThat(
-                msg -> !msg.getForceImmediate())); // Verify the flag is false
+        .activateIntercept(argThat(msg -> !msg.getForceImmediate())); // Verify the flag is false
   }
 
   /**
@@ -280,8 +277,6 @@ public class InterceptMatcherCoordinatorIntegrationTest extends ZmqEnabledTest {
 
     // And: The coordinator should have been called with a message where forceImmediate=true
     verify(mockCoordinator, times(1))
-        .activateIntercept(
-            org.mockito.ArgumentMatchers.argThat(
-                msg -> msg.getForceImmediate())); // Verify the flag is true
+        .activateIntercept(argThat(msg -> msg.getForceImmediate())); // Verify the flag is true
   }
 }

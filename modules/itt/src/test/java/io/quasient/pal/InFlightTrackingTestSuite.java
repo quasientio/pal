@@ -29,8 +29,8 @@ import org.slf4j.LoggerFactory;
  *
  * <ul>
  *   <li><b>In-flight tracking enabled:</b> Peer configured with {@code --in-flight-tracking} flag
- *   <li><b>Drain timeout configured:</b> Peer configured with {@code --in-flight-drain-timeout-ms}
- *       for quiescence coordination
+ *   <li><b>Drain timeout configured:</b> Peer configured with {@code --drain-timeout-ms} for
+ *       quiescence coordination
  *   <li><b>Test application:</b> Uses {@link
  *       io.quasient.pal.apps.quantized.intercept.SlowMethodApp} with controllable slow/blocking
  *       methods
@@ -54,12 +54,12 @@ import org.slf4j.LoggerFactory;
  * <p>The peers are configured with:
  *
  * <ul>
- *   <li>ZMQ RPC on ports 5659 (interceptable) and 5660 (interceptor)
+ *   <li>ZMQ RPC on ports 5661 (interceptable) and 5662 (interceptor)
  *   <li>3 RPC threads (interceptable), 1 RPC thread (interceptor)
  *   <li>Allow non-public method invocation
  *   <li><b>Interception enabled (--interceptable)</b> on interceptable peer
  *   <li><b>In-flight tracking enabled (--in-flight-tracking)</b> on interceptable peer
- *   <li><b>Drain timeout configured (--in-flight-drain-timeout-ms 5000)</b> on interceptable peer
+ *   <li><b>Drain timeout configured (--drain-timeout-ms 5000)</b> on interceptable peer
  *   <li>ITT apps classes on classpath (includes SlowMethodApp)
  * </ul>
  *
@@ -82,7 +82,7 @@ public class InFlightTrackingTestSuite extends AbstractIntegrationTest {
    * concurrently without conflicts.
    */
   public static final UUID INTERCEPTABLE_PEER_UUID =
-      UUID.fromString("00000000-0000-0000-0000-000000000004");
+      UUID.fromString("00000000-0000-0000-0000-000000000006");
 
   /**
    * Well-known UUID for the interceptor peer (receives and handles intercept callbacks).
@@ -91,7 +91,7 @@ public class InFlightTrackingTestSuite extends AbstractIntegrationTest {
    * from the interceptable peer.
    */
   public static final UUID INTERCEPTOR_PEER_UUID =
-      UUID.fromString("00000000-0000-0000-0000-000000000005");
+      UUID.fromString("00000000-0000-0000-0000-000000000007");
 
   /** Interceptable peer process (the one being intercepted with in-flight tracking). */
   private static PeerProcess interceptablePeerProcess;
@@ -186,13 +186,13 @@ public class InFlightTrackingTestSuite extends AbstractIntegrationTest {
             "-n",
             "inflight-interceptable-peer",
             "--zmq-rpc",
-            "5659",
+            "5661",
             "--rpc-threads",
             "3",
             "--rpc-allow-nonpublic",
             "--interceptable",
             "--in-flight-tracking",
-            "--in-flight-drain-timeout-ms",
+            "--drain-timeout-ms",
             "5000",
             "--log",
             "auto",
@@ -214,7 +214,7 @@ public class InFlightTrackingTestSuite extends AbstractIntegrationTest {
             "-n",
             "inflight-interceptor-peer",
             "--zmq-rpc",
-            "5660",
+            "5662",
             "--rpc-threads",
             "1",
             "--rpc-allow-nonpublic",

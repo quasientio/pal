@@ -18,6 +18,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Properties;
 import java.util.Set;
+import java.util.UUID;
 import org.junit.Test;
 import picocli.CommandLine;
 
@@ -125,7 +126,7 @@ public class MainInFlightTrackingOptionsTest {
     // Set required fields to avoid NPE in addMiscProperties
     Field uuidField = Main.class.getDeclaredField("uuid");
     uuidField.setAccessible(true);
-    uuidField.set(main, java.util.UUID.randomUUID());
+    uuidField.set(main, UUID.randomUUID());
 
     Method method = Main.class.getDeclaredMethod("addMiscProperties");
     method.setAccessible(true);
@@ -152,7 +153,7 @@ public class MainInFlightTrackingOptionsTest {
     // Set required fields to avoid NPE in addMiscProperties
     Field uuidField = Main.class.getDeclaredField("uuid");
     uuidField.setAccessible(true);
-    uuidField.set(main, java.util.UUID.randomUUID());
+    uuidField.set(main, UUID.randomUUID());
 
     Method method = Main.class.getDeclaredMethod("addMiscProperties");
     method.setAccessible(true);

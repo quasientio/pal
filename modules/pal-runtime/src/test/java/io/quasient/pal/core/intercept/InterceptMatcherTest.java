@@ -13,6 +13,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
@@ -84,9 +87,8 @@ public class InterceptMatcherTest extends ZmqEnabledTest {
    * directly when activateIntercept is called, simulating immediate activation without drain.
    */
   private InterceptActivationCoordinator createTestCoordinator() throws InterruptedException {
-    InterceptActivationCoordinator mockCoordinator =
-        org.mockito.Mockito.mock(InterceptActivationCoordinator.class);
-    org.mockito.Mockito.when(mockCoordinator.activateIntercept(org.mockito.ArgumentMatchers.any()))
+    InterceptActivationCoordinator mockCoordinator = mock(InterceptActivationCoordinator.class);
+    when(mockCoordinator.activateIntercept(any()))
         .thenAnswer(
             invocation -> {
               // Get the InterceptMessage argument
