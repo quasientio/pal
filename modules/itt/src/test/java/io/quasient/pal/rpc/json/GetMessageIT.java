@@ -38,7 +38,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
   public void getClassVariable_publicStringNotNull_varReturned() throws Exception {
     String fieldName = "aClassString";
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "method": "get",
@@ -60,7 +60,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
   public void getClassVariable_publicStringNull_nullStringReturned() throws Exception {
     String fieldName = "aNullStaticStr";
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "method": "get",
@@ -82,7 +82,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
   public void getClassVariable_privateIntegerNotNull_intReturned() throws Exception {
     String fieldName = "aPrivateClassInt";
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "method": "get",
@@ -104,7 +104,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
   public void getClassVariable_protectedBoolNull_nullBoolReturned() throws Exception {
     String fieldName = "aProtectedBool";
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "method": "get",
@@ -126,7 +126,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
   public void getClassVariable_packageVisibleBoolNotNull_boolReturned() throws Exception {
     String fieldName = "aPackageVisibleBool";
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "method": "get",
@@ -149,7 +149,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
     String nonExistingClass = "io.quasient.pal.apps.IDontExist";
     String fieldName = "aProtectedBool";
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "method": "get",
@@ -176,7 +176,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
   public void getClassVariable_noSuchField_exThrown() throws Exception {
     String fieldName = "aMadeUpField";
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "method": "get",
@@ -205,7 +205,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
 
     // Create a new instance
     String createRequest =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "method": "new",
@@ -227,7 +227,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
 
     // Get the instance variable
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "method": "get",
@@ -252,7 +252,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
 
     // Create a new instance
     String createRequest =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "method": "new",
@@ -274,7 +274,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
 
     // Get the instance variable
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "method": "get",
@@ -299,7 +299,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
 
     // Create a new instance
     String createRequest =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "method": "new",
@@ -321,7 +321,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
 
     // Get the instance variable
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "method": "get",
@@ -346,7 +346,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
 
     // Create a new instance
     String createRequest =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "method": "new",
@@ -368,7 +368,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
 
     // Get the instance variable
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "method": "get",
@@ -393,7 +393,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
 
     // Create a new instance
     String createRequest =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "method": "new",
@@ -415,7 +415,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
 
     // Get the instance variable
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "method": "get",
@@ -440,7 +440,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
 
     // Create a new instance
     String createRequest =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "method": "new",
@@ -462,7 +462,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
 
     // Get the instance variable
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "method": "get",
@@ -487,7 +487,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
 
     // Create a new instance
     String createRequest =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "method": "new",
@@ -509,7 +509,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
 
     // Get the instance variable
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "method": "get",
@@ -535,7 +535,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
 
     // Create a new instance of CLASS_NAME
     String createRequest =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "method": "new",
@@ -555,7 +555,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
 
     // Attempt to get a field from a non-existing class
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "method": "get",
@@ -588,7 +588,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
 
     // Attempt to get the field
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "method": "get",
@@ -618,7 +618,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
 
     // Create a new instance
     String createRequest =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "method": "new",
@@ -638,7 +638,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
 
     // Attempt to get a non-existing field
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "method": "get",

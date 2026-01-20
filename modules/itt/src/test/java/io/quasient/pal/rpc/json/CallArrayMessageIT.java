@@ -212,7 +212,7 @@ public class CallArrayMessageIT extends AbstractJsonRpcMessageIT {
     // 2) call setter with nonEmptyValue
     String jsonArg = arrayToJsonString(nonEmptyValue, false);
     String argsJson =
-            """
+        """
             [
               {
                 "type": "%s",

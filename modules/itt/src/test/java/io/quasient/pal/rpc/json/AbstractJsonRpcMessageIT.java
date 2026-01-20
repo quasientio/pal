@@ -153,7 +153,7 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractRpcMessageIT
   protected JsonRpcResponse callGetStaticField(String className, String fieldName)
       throws Exception {
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "method": "get",
@@ -172,7 +172,7 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractRpcMessageIT
   protected JsonRpcResponse callPutStaticField(
       String className, String fieldName, String fieldValue) throws Exception {
     String request =
-            """
+        """
              {
                "jsonrpc": "2.0",
                "method": "put",
@@ -192,7 +192,7 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractRpcMessageIT
   protected JsonRpcResponse callGetInstanceField(
       String className, String fieldName, long instanceRef) throws Exception {
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "method": "get",
@@ -212,7 +212,7 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractRpcMessageIT
   protected JsonRpcResponse callPutInstanceField(
       String className, String fieldName, long instanceRef, String fieldValue) throws Exception {
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "method": "put",
@@ -245,7 +245,7 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractRpcMessageIT
     if (argsJson == null) {
       // no arguments
       request =
-              """
+          """
               {
                 "jsonrpc": "2.0",
                 "id": %s,
@@ -259,7 +259,7 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractRpcMessageIT
               .formatted(generateId(), className, methodName);
     } else {
       request =
-              """
+          """
               {
                 "jsonrpc": "2.0",
                 "id": %s,
@@ -293,7 +293,7 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractRpcMessageIT
     if (argsJson == null) {
       // no arguments
       request =
-              """
+          """
               {
                 "jsonrpc": "2.0",
                 "id": %s,
@@ -308,7 +308,7 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractRpcMessageIT
               .formatted(generateId(), className, methodName, instanceRef);
     } else {
       request =
-              """
+          """
               {
                 "jsonrpc": "2.0",
                 "id": %s,
@@ -329,7 +329,7 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractRpcMessageIT
 
   protected Integer createNewInstance(String className) throws Exception {
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "method": "new",

@@ -29,7 +29,7 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
 
     // missing comma after "method": "new"
     String request =
-            """
+        """
                      {
                       "jsonrpc": "2.0",
                       "id": "%s",
@@ -56,7 +56,7 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
 
     // missing method field
     String request =
-            """
+        """
                      {
                       "jsonrpc": "2.0",
                       "id": "%s",
@@ -79,7 +79,7 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
 
     // missing method field
     String request =
-            """
+        """
                      {
                       "jsonrpc": "2.0",
                       "id": "%s",
@@ -104,7 +104,7 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
   @Test
   public void constructor_constructor3DoublesDoesNotExist_noSuchMethodThrown() throws Exception {
     String request =
-            """
+        """
                      {
                       "jsonrpc": "2.0",
                       "id": "%s",
@@ -135,7 +135,7 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
   public void constructor_noSuchClass_classNotFoundThrown() throws Exception {
     String nonExistingClass = "io.quasient.pal.apps.IDontExist";
     String request =
-            """
+        """
                      {
                       "jsonrpc": "2.0",
                       "id": "%s",
@@ -160,7 +160,7 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
   @Test
   public void constructor_missingParams_invalidParamsThrown() throws Exception {
     String request =
-            """
+        """
                      {
                       "jsonrpc": "2.0",
                       "id": "%s",
@@ -178,7 +178,7 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
   @Test
   public void constructor_missingTypeInParams_invalidParamsThrown() throws Exception {
     String request =
-            """
+        """
                          {
                           "jsonrpc": "2.0",
                           "id": "%s",
@@ -205,7 +205,7 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
   @Test
   public void constructor_invalidCharsInType_invalidParamsThrown() throws Exception {
     String request =
-            """
+        """
                              {
                               "jsonrpc": "2.0",
                               "id": "%s",
@@ -230,7 +230,7 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
   @Test
   public void constructor_reservedKeywordInType_invalidParamsThrown() throws Exception {
     String request =
-            """
+        """
                                  {
                                   "jsonrpc": "2.0",
                                   "id": "%s",
@@ -255,7 +255,7 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
   @Test
   public void constructor_callWithoutMethod_invalidParamsThrown() throws Exception {
     String request =
-            """
+        """
                                      {
                                       "jsonrpc": "2.0",
                                       "id": "%s",
@@ -280,7 +280,7 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
   @Test
   public void constructor_getWithoutField_invalidParamsThrown() throws Exception {
     String request =
-            """
+        """
                                      {
                                       "jsonrpc": "2.0",
                                       "id": "%s",
@@ -305,7 +305,7 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
   @Test
   public void constructor_putWithoutField_invalidParamsThrown() throws Exception {
     String request =
-            """
+        """
                                      {
                                       "jsonrpc": "2.0",
                                       "id": "%s",
@@ -331,7 +331,7 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
   @Test
   public void constructor_putWithoutValue_invalidParamsThrown() throws Exception {
     String request =
-            """
+        """
                                      {
                                       "jsonrpc": "2.0",
                                       "id": "%s",

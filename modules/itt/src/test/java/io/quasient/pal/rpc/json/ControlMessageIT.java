@@ -27,7 +27,7 @@ public class ControlMessageIT extends AbstractJsonRpcMessageIT {
   private void addToList(ObjectRef listObjRef, String arg, @Nullable String expectedThrowableType)
       throws Exception {
     String argsAsJson =
-            """
+        """
             [{ "type": "%s", "value": "%s" }]
             """
             .formatted(arg.getClass().getName(), arg);

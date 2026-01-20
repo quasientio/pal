@@ -47,7 +47,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
   public void callClassMethod_privateWithArg_void() throws Exception {
     String methodName = "testVoidStatic";
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -77,7 +77,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
   public void callClassMethod_privateWithPrimitiveAndWrapperArgs_void() throws Exception {
     String methodName = "printArg";
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -108,7 +108,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
   public void callClassMethod_packageWithNoArgs_void() throws Exception {
     String methodName = "doSomethingStatically";
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -135,7 +135,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
   public void callClassMethod_publicStaticVoidMain_void() throws Exception {
     String methodName = "main";
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -167,7 +167,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
     // 1. Create a new ArrayList instance
     String createRequest =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -193,7 +193,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
     int[] someIntegers = {39, 5, 58, 32, 70, 42};
     for (int someInt : someIntegers) {
       String addRequest =
-              """
+          """
               {
                 "jsonrpc": "2.0",
                 "id": %d,
@@ -217,7 +217,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
     // 3. Call the static method with the list as argument
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -249,7 +249,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
     String methodName = "doSomethingStatically";
 
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -288,7 +288,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
     String methodName = "a_made_up_method";
 
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -327,7 +327,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
     String methodName = "throwRuntimeException";
 
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -366,7 +366,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
     String param = "GIVE ME THIS IN LOWERCASE";
 
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -402,7 +402,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
     String methodName = "highFive";
 
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -436,7 +436,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
     // 1. Create a new ArrayList instance
     String createRequest =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -459,7 +459,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
     int[] someIntegers = {39, 5, 58, 32, 70, 42};
     for (int someInt : someIntegers) {
       String addRequest =
-              """
+          """
               {
                 "jsonrpc": "2.0",
                 "id": %d,
@@ -482,7 +482,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
     // 3. Call the sum up method
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -519,7 +519,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
     // 1. Create a new ArrayList instance
     String createRequest =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -541,7 +541,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
     // 2. Add integers to the list as an array using Collections.addAll
     Integer[] someIntegers = {39, 5, 58, 32, 70, 42}; // needs to be Integer[], not int[]
     String addRequest =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -567,7 +567,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
     // 3. Call the sum up method
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -603,7 +603,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
     String methodName = "giveMeNull";
 
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -636,7 +636,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
     String param = "split me up";
 
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -672,7 +672,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
     String methodName = "giveMeAnEmptyLongArray";
 
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -705,7 +705,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
     String methodName = "giveMeNullBoolArray";
 
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -738,7 +738,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
     // First call
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -760,7 +760,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
     // Second call
     request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -790,7 +790,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
     String methodName = "getThreadArray";
 
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -821,7 +821,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
     String param = "not_a_num";
 
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -862,7 +862,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
     String methodName = "throwMeAnException";
 
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -899,7 +899,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
     // 1. Create a new instance
     String createRequest =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -919,7 +919,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
     // 2. Call the instance method
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -950,7 +950,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
     // 1. Create a new instance
     String createRequest =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -970,7 +970,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
     // 2. Call the instance method with argument
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -1003,7 +1003,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
     // 1. Create a new instance
     String createRequest =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -1023,7 +1023,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
     // 2. Call the instance method
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -1053,7 +1053,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
     // 1. Create a new instance
     String createRequest =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -1073,7 +1073,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
     // 2. Call the instance method with null argument
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -1115,7 +1115,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
     // 1. Create a new instance of CLASS_NAME
     String createRequest =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -1135,7 +1135,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
     // 2. Attempt to call a method on a non-existing class
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -1179,7 +1179,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
     // 1. Create a new instance
     String createRequest =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -1199,7 +1199,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
     // 2. Attempt to call a non-existing method
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -1243,7 +1243,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
     // Attempt to call the instance method
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -1281,7 +1281,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
     // 1. Create a new instance
     String createRequest =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -1301,7 +1301,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
     // 2. Call the instance method
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -1336,7 +1336,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
     // 1. Create a new instance
     String createRequest =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -1356,7 +1356,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
     // 2. Call the instance method
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -1388,7 +1388,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
     // 1. Create a new instance
     String createRequest =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -1408,7 +1408,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
     // 2. Call the instance method
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -1440,7 +1440,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
     // 1. Create a new ArrayList instance
     String createListRequest =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -1462,7 +1462,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
     int[] someIntegers = {1, 2, 3, 5, 7, 9};
     for (int someInt : someIntegers) {
       String addRequest =
-              """
+          """
               {
                 "jsonrpc": "2.0",
                 "id": %d,
@@ -1485,7 +1485,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
     // 3. Create an instance of CLASS_NAME
     String createInstanceRequest =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -1506,7 +1506,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
     // 4. Call the method with offset and listRef
     int offsetParam = 10;
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -1543,7 +1543,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
     // 1. Create a new instance
     String createInstanceRequest =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,
@@ -1566,7 +1566,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
     // 3. Call the instance method
     String request =
-            """
+        """
             {
               "jsonrpc": "2.0",
               "id": %d,

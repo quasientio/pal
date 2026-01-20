@@ -56,7 +56,8 @@
         <licensing.plugin.version>5.0.0</licensing.plugin.version>
         <license.maven.plugin.version>2.6.0</license.maven.plugin.version>
         <aspectj.plugin.version>1.15.0</aspectj.plugin.version>
-        <google.format.plugin.version>2.23</google.format.plugin.version>
+        <spotless.version>2.43.0</spotless.version>
+        <googleJavaFormat.version>1.22.0</googleJavaFormat.version>
         <jacoco.plugin.version>0.8.12</jacoco.plugin.version>
         <errorprone.plugin.version>2.38.0</errorprone.plugin.version>
         <pmd.plugin.version>3.28.0</pmd.plugin.version>
@@ -157,21 +158,27 @@
                     <artifactId>maven-project-info-reports-plugin</artifactId>
                     <version>${maven.plugin.reports.version}</version>
                 </plugin>
-                <!-- code reformatting -->
+                <!-- code reformatting (Spotless with Google Java Format) -->
                 <plugin>
-                    <groupId>com.spotify.fmt</groupId>
-                    <artifactId>fmt-maven-plugin</artifactId>
-                    <version>${google.format.plugin.version}</version>
+                    <groupId>com.diffplug.spotless</groupId>
+                    <artifactId>spotless-maven-plugin</artifactId>
+                    <version>${spotless.version}</version>
                     <configuration>
-                        <verbose>true</verbose>
-                        <filesNamePattern>.*\.java</filesNamePattern>
-                        <skipSortingImports>false</skipSortingImports>
-                        <style>google</style>
+                        <java>
+                            <googleJavaFormat>
+                                <version>${googleJavaFormat.version}</version>
+                            </googleJavaFormat>
+                            <removeUnusedImports />
+                            <trimTrailingWhitespace />
+                            <endWithNewline />
+                        </java>
                     </configuration>
                     <executions>
                         <execution>
+                            <id>spotless-apply</id>
+                            <phase>process-sources</phase>
                             <goals>
-                                <goal>format</goal>
+                                <goal>apply</goal>
                             </goals>
                         </execution>
                     </executions>
@@ -379,6 +386,12 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+
+            <!-- Spotless code formatting (inherited by all modules) -->
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
             </plugin>
 
 

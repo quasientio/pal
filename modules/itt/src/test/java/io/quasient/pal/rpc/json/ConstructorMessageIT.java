@@ -35,7 +35,7 @@ public class ConstructorMessageIT extends AbstractJsonRpcMessageIT {
   @Test
   public void constructor_publicNoArgs_newObjectReturned() throws Exception {
     String request =
-            """
+        """
                      {
                       "jsonrpc": "2.0",
                       "id": 1,
@@ -60,7 +60,7 @@ public class ConstructorMessageIT extends AbstractJsonRpcMessageIT {
   @Test
   public void constructor_publicOneArg_newObjectReturned() throws Exception {
     String request =
-            """
+        """
                      {
                       "jsonrpc": "2.0",
                       "id": 1,
@@ -88,7 +88,7 @@ public class ConstructorMessageIT extends AbstractJsonRpcMessageIT {
   @Test
   public void constructor_privateOneArgArray_newObjectReturned() throws Exception {
     String request =
-            """
+        """
                      {
                       "jsonrpc": "2.0",
                       "id": 1,
@@ -116,7 +116,7 @@ public class ConstructorMessageIT extends AbstractJsonRpcMessageIT {
   @Test
   public void constructor_publicOneArgNull_newObjectReturned() throws Exception {
     String request =
-            """
+        """
                      {
                       "jsonrpc": "2.0",
                       "id": 1,
@@ -146,7 +146,7 @@ public class ConstructorMessageIT extends AbstractJsonRpcMessageIT {
 
     // 1. Construct an instance calling no-args constructor
     String request =
-            """
+        """
                      {
                       "jsonrpc": "2.0",
                       "id": 1,
@@ -169,7 +169,7 @@ public class ConstructorMessageIT extends AbstractJsonRpcMessageIT {
 
     // 2. Construct an instance calling the constructor that takes another instance as arg
     request =
-            """
+        """
                      {
                       "jsonrpc": "2.0",
                       "id": 1,

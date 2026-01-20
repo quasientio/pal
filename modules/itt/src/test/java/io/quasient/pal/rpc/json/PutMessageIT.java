@@ -43,7 +43,7 @@ public class PutMessageIT extends AbstractJsonRpcMessageIT {
     try {
       // 1. Get the original value
       String getRequest =
-              """
+          """
                 {
                   "jsonrpc": "2.0",
                   "method": "get",
@@ -61,7 +61,7 @@ public class PutMessageIT extends AbstractJsonRpcMessageIT {
 
       // 2. Set a new value
       String putRequest =
-              """
+          """
                 {
                   "jsonrpc": "2.0",
                   "method": "put",
@@ -80,7 +80,7 @@ public class PutMessageIT extends AbstractJsonRpcMessageIT {
 
       // 3. Get the field again to verify
       getRequest =
-              """
+          """
                 {
                   "jsonrpc": "2.0",
                   "method": "get",
@@ -98,7 +98,7 @@ public class PutMessageIT extends AbstractJsonRpcMessageIT {
     } finally {
       // Reset the field to the original value
       String putRequest =
-              """
+          """
                 {
                   "jsonrpc": "2.0",
                   "method": "put",
@@ -126,7 +126,7 @@ public class PutMessageIT extends AbstractJsonRpcMessageIT {
     try {
       // 1. Get the original value
       String getRequest =
-              """
+          """
                 {
                   "jsonrpc": "2.0",
                   "method": "get",
@@ -144,7 +144,7 @@ public class PutMessageIT extends AbstractJsonRpcMessageIT {
 
       // 2. Set a new value
       String putRequest =
-              """
+          """
                 {
                   "jsonrpc": "2.0",
                   "method": "put",
@@ -163,7 +163,7 @@ public class PutMessageIT extends AbstractJsonRpcMessageIT {
 
       // 3. Get the field again to verify
       getRequest =
-              """
+          """
                 {
                   "jsonrpc": "2.0",
                   "method": "get",
@@ -181,7 +181,7 @@ public class PutMessageIT extends AbstractJsonRpcMessageIT {
     } finally {
       // Reset the field to the original value
       String putRequest =
-              """
+          """
                 {
                   "jsonrpc": "2.0",
                   "method": "put",
@@ -206,7 +206,7 @@ public class PutMessageIT extends AbstractJsonRpcMessageIT {
     String value = "whatever";
 
     String putRequest =
-            """
+        """
               {
                 "jsonrpc": "2.0",
                 "method": "put",
@@ -237,7 +237,7 @@ public class PutMessageIT extends AbstractJsonRpcMessageIT {
     String value = "someValue";
 
     String putRequest =
-            """
+        """
               {
                 "jsonrpc": "2.0",
                 "method": "put",
@@ -269,7 +269,7 @@ public class PutMessageIT extends AbstractJsonRpcMessageIT {
 
     // Create new instance
     String newRequest =
-            """
+        """
               {
                 "jsonrpc": "2.0",
                 "method": "new",
@@ -289,7 +289,7 @@ public class PutMessageIT extends AbstractJsonRpcMessageIT {
 
     // 1. Get the original value
     String getRequest =
-            """
+        """
               {
                 "jsonrpc": "2.0",
                 "method": "get",
@@ -308,7 +308,7 @@ public class PutMessageIT extends AbstractJsonRpcMessageIT {
 
     // 2. Set a new value
     String putRequest =
-            """
+        """
               {
                 "jsonrpc": "2.0",
                 "method": "put",
@@ -328,7 +328,7 @@ public class PutMessageIT extends AbstractJsonRpcMessageIT {
 
     // 3. Get the field again to verify
     getRequest =
-            """
+        """
               {
                 "jsonrpc": "2.0",
                 "method": "get",
@@ -353,7 +353,7 @@ public class PutMessageIT extends AbstractJsonRpcMessageIT {
 
     // Create new instance
     String newRequest =
-            """
+        """
               {
                 "jsonrpc": "2.0",
                 "method": "new",
@@ -374,7 +374,7 @@ public class PutMessageIT extends AbstractJsonRpcMessageIT {
     try {
       // 1. Get the original value
       String getRequest =
-              """
+          """
                 {
                   "jsonrpc": "2.0",
                   "method": "get",
@@ -393,7 +393,7 @@ public class PutMessageIT extends AbstractJsonRpcMessageIT {
 
       // 2. Set the field to null
       String putRequest =
-              """
+          """
                 {
                   "jsonrpc": "2.0",
                   "method": "put",
@@ -413,7 +413,7 @@ public class PutMessageIT extends AbstractJsonRpcMessageIT {
 
       // 3. Get the field again to verify
       getRequest =
-              """
+          """
                 {
                   "jsonrpc": "2.0",
                   "method": "get",
@@ -432,7 +432,7 @@ public class PutMessageIT extends AbstractJsonRpcMessageIT {
     } finally {
       // Reset the field to the original value
       String putRequest =
-              """
+          """
                 {
                   "jsonrpc": "2.0",
                   "method": "put",
@@ -460,7 +460,7 @@ public class PutMessageIT extends AbstractJsonRpcMessageIT {
 
     // Create new instance
     String newRequest =
-            """
+        """
               {
                 "jsonrpc": "2.0",
                 "method": "new",
@@ -480,7 +480,7 @@ public class PutMessageIT extends AbstractJsonRpcMessageIT {
 
     // Attempt to set the field with wrong type
     String putRequest =
-            """
+        """
               {
                 "jsonrpc": "2.0",
                 "method": "put",
@@ -514,7 +514,7 @@ public class PutMessageIT extends AbstractJsonRpcMessageIT {
 
     // Create new instance
     String newRequest =
-            """
+        """
               {
                 "jsonrpc": "2.0",
                 "method": "new",
@@ -534,7 +534,7 @@ public class PutMessageIT extends AbstractJsonRpcMessageIT {
 
     // Attempt to set the non-existing field
     String putRequest =
-            """
+        """
               {
                 "jsonrpc": "2.0",
                 "method": "put",
@@ -567,7 +567,7 @@ public class PutMessageIT extends AbstractJsonRpcMessageIT {
 
     // Create new instance (of existing class)
     String newRequest =
-            """
+        """
               {
                 "jsonrpc": "2.0",
                 "method": "new",
@@ -587,7 +587,7 @@ public class PutMessageIT extends AbstractJsonRpcMessageIT {
 
     // Attempt to set the field on non-existing class
     String putRequest =
-            """
+        """
               {
                 "jsonrpc": "2.0",
                 "method": "put",
@@ -620,7 +620,7 @@ public class PutMessageIT extends AbstractJsonRpcMessageIT {
 
     // Attempt to set the field on a non-existing instance
     String putRequest =
-            """
+        """
               {
                 "jsonrpc": "2.0",
                 "method": "put",
