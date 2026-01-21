@@ -9,6 +9,9 @@
  */
 package io.quasient.pal;
 
+import io.quasient.pal.common.directory.nodes.LogInfo;
+import io.quasient.pal.cxn.directory.DirectoryConnectionProvider;
+import io.quasient.pal.cxn.directory.PalDirectory;
 import io.quasient.pal.intercept.inflight.InFlightInterceptActivationIT;
 import java.util.UUID;
 import org.junit.AfterClass;
@@ -232,6 +235,18 @@ public class InFlightTrackingTestSuite extends AbstractIntegrationTest {
   /**
    * Stops the shared in-flight tracking test peers after all tests complete.
    *
+   * <p>This method performs comprehensive cleanup:
+   *
+   * <ol>
+   *   <li>Stops peer processes (gracefully, then forcefully if needed)
+   *   <li>Explicitly unregisters peers from the directory (etcd)
+   *   <li>Deletes logs created by this suite
+   * </ol>
+   *
+   * <p>The explicit directory cleanup is necessary because if a test fails mid-execution, the peer
+   * process may be killed but its registration in etcd may persist, causing subsequent test suites
+   * to fail with "Directory not clean" errors.
+   *
    * @throws Exception if peer stop fails
    */
   @AfterClass
@@ -243,18 +258,60 @@ public class InFlightTrackingTestSuite extends AbstractIntegrationTest {
     if (instance != null) {
       // Stop both peer processes
       if (interceptablePeerProcess != null) {
-        logger.info("Stopping interceptable peer...");
+        logger.info("Stopping interceptable peer process...");
         instance.stopPeer(interceptablePeerProcess);
-        logger.info("Interceptable peer stopped");
+        interceptablePeerProcess = null;
+        logger.info("Interceptable peer process stopped");
       }
 
       if (interceptorPeerProcess != null) {
-        logger.info("Stopping interceptor peer...");
+        logger.info("Stopping interceptor peer process...");
         instance.stopPeer(interceptorPeerProcess);
-        logger.info("Interceptor peer stopped");
+        interceptorPeerProcess = null;
+        logger.info("Interceptor peer process stopped");
       }
-    }
 
-    logger.info("All in-flight tracking test peers stopped successfully");
+      // Now unregister peers from the directory (after processes are stopped)
+      // This ensures cleanup even if the peer process crashed or was killed
+      PalDirectory palDirectory = null;
+      try {
+        DirectoryConnectionProvider directoryConnectionProvider =
+            new DirectoryConnectionProvider(getPalDirectoryUrl(), null, true);
+        palDirectory =
+            directoryConnectionProvider
+                .get()
+                .orElseThrow(() -> new RuntimeException("No connection for PalDirectory"));
+
+        logger.info("Unregistering interceptable peer {} from directory", INTERCEPTABLE_PEER_UUID);
+        palDirectory.deletePeer(INTERCEPTABLE_PEER_UUID);
+
+        logger.info("Unregistering interceptor peer {} from directory", INTERCEPTOR_PEER_UUID);
+        palDirectory.deletePeer(INTERCEPTOR_PEER_UUID);
+
+        logger.info("Peers unregistered from directory");
+
+        // Delete logs created by this suite (with prefix "itt-inflight")
+        logger.info("Deleting logs created by InFlightTrackingTestSuite");
+        for (LogInfo log : palDirectory.listAllLogs()) {
+          if (log.getName().startsWith("itt-inflight")) {
+            logger.info("Deleting log: {}", log.getName());
+            palDirectory.deleteLog(log.getName());
+          }
+        }
+        logger.info("Logs cleaned up");
+      } catch (Exception e) {
+        logger.warn("Failed to unregister peers from directory (may already be gone)", e);
+      } finally {
+        if (palDirectory != null) {
+          try {
+            palDirectory.close();
+          } catch (Exception e) {
+            logger.warn("Error closing palDirectory", e);
+          }
+        }
+      }
+
+      logger.info("Shared in-flight tracking test peers stopped and cleaned up successfully");
+    }
   }
 }
