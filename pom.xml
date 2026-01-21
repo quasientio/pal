@@ -407,6 +407,7 @@
                             <header>licenses/BSL_HEADER.txt</header>
                             <excludes>
                                 <exclude>AUTHORS</exclude>
+                                <exclude>requirements.txt</exclude>
                                 <exclude>.java-version</exclude>
                                 <exclude>**/*.env</exclude>
                                 <exclude>**/*.env.example</exclude>
