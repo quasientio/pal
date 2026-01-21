@@ -23,11 +23,15 @@ import io.quasient.pal.common.directory.nodes.InterceptRequest;
 import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.common.lang.intercept.InterceptableMethodCall;
 import io.quasient.pal.core.service.RunOptions;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Unit tests for {@link InterceptActivationCoordinator}.
@@ -43,12 +47,42 @@ import org.junit.Test;
  *   <li>Per-intercept override with forceImmediate flag
  *   <li>Proper cleanup (unfencing) on activation failure
  * </ul>
+ *
+ * <p><b>Parameterization:</b> Tests are parameterized by {@link InterceptType} to ensure equal
+ * coverage across BEFORE, AFTER, and AROUND intercept types. Each test runs three times, once for
+ * each intercept type.
  */
+@RunWith(Parameterized.class)
 public class InterceptActivationCoordinatorTest {
 
   private InterceptActivationCoordinator coordinator;
   private InFlightDispatchTracker tracker;
   private static final long DRAIN_TIMEOUT_MS = 5000L;
+
+  /** The intercept type being tested in this parameterized run. */
+  private final InterceptType interceptType;
+
+  /**
+   * Constructs a test instance for the specified intercept type.
+   *
+   * @param interceptType the intercept type to test
+   */
+  public InterceptActivationCoordinatorTest(InterceptType interceptType) {
+    this.interceptType = interceptType;
+  }
+
+  /**
+   * Returns the parameterized test data for intercept types.
+   *
+   * <p>Tests run for BEFORE, AFTER, and AROUND intercept types to ensure equal coverage.
+   *
+   * @return collection of intercept type parameters
+   */
+  @Parameterized.Parameters(name = "{index}: interceptType={0}")
+  public static Collection<Object[]> interceptTypes() {
+    return Arrays.asList(
+        new Object[][] {{InterceptType.BEFORE}, {InterceptType.AFTER}, {InterceptType.AROUND}});
+  }
 
   @Before
   public void setup() {
@@ -306,6 +340,8 @@ public class InterceptActivationCoordinatorTest {
   /**
    * Helper method to create an InterceptRequest for testing.
    *
+   * <p>Uses the parameterized {@link #interceptType} to test different intercept types.
+   *
    * @param clazz the target class name
    * @param methodName the target method name
    * @param forceImmediate whether to force immediate activation
@@ -315,12 +351,18 @@ public class InterceptActivationCoordinatorTest {
       String clazz, String methodName, boolean forceImmediate) {
     UUID uuid = UUID.randomUUID();
     UUID peer = UUID.randomUUID();
-    InterceptType type = InterceptType.BEFORE;
     String callbackClass = "com.example.Callback";
     String callbackMethod = "onIntercept";
     InterceptableMethodCall interceptable = new InterceptableMethodCall(methodName, null);
 
     return new InterceptRequest<>(
-        uuid, peer, type, clazz, callbackClass, callbackMethod, interceptable, forceImmediate);
+        uuid,
+        peer,
+        interceptType,
+        clazz,
+        callbackClass,
+        callbackMethod,
+        interceptable,
+        forceImmediate);
   }
 }

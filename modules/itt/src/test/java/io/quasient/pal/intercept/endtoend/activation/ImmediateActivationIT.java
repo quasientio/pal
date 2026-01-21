@@ -21,10 +21,14 @@ import io.quasient.pal.common.objects.ObjectRef;
 import io.quasient.pal.cxn.ThinPeer;
 import io.quasient.pal.intercept.AbstractInterceptIT;
 import io.quasient.pal.messages.colfer.Message;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Integration tests for immediate intercept activation when in-flight tracking is disabled.
@@ -60,13 +64,43 @@ import org.junit.Test;
  *   <li>Uses {@code SlowMethodApp} for controllable slow method execution
  * </ul>
  *
+ * <p><b>Parameterization:</b> Tests are parameterized by {@link InterceptType} to ensure equal
+ * coverage across BEFORE, AFTER, and AROUND intercept types. Each test runs three times, once for
+ * each intercept type.
+ *
  * @see io.quasient.pal.intercept.inflight.InFlightInterceptActivationIT
  */
+@RunWith(Parameterized.class)
 public class ImmediateActivationIT extends AbstractInterceptIT {
 
   /** Fully qualified class name for the SlowMethodApp test application. */
   private static final String SLOW_METHOD_APP_CLASS =
       "io.quasient.pal.apps.quantized.intercept.SlowMethodApp";
+
+  /** The intercept type being tested in this parameterized run. */
+  private final InterceptType interceptType;
+
+  /**
+   * Constructs a test instance for the specified intercept type.
+   *
+   * @param interceptType the intercept type to test
+   */
+  public ImmediateActivationIT(InterceptType interceptType) {
+    this.interceptType = interceptType;
+  }
+
+  /**
+   * Returns the parameterized test data for intercept types.
+   *
+   * <p>Tests run for BEFORE, AFTER, and AROUND intercept types to ensure equal coverage.
+   *
+   * @return collection of intercept type parameters
+   */
+  @Parameterized.Parameters(name = "{index}: interceptType={0}")
+  public static Collection<Object[]> interceptTypes() {
+    return Arrays.asList(
+        new Object[][] {{InterceptType.BEFORE}, {InterceptType.AFTER}, {InterceptType.AROUND}});
+  }
 
   /**
    * Returns the UUID of the interceptable peer from InterceptEndToEndTestSuite.
@@ -79,6 +113,38 @@ public class ImmediateActivationIT extends AbstractInterceptIT {
   @Override
   protected UUID getInterceptablePeerUuid() {
     return InterceptEndToEndTestSuite.INTERCEPTABLE_PEER_UUID;
+  }
+
+  /**
+   * Creates an intercept request for the slowMethod with the current parameterized intercept type.
+   *
+   * @param callbackPeerUuid the UUID of the peer to receive callbacks
+   * @param forceImmediate whether to force immediate activation
+   * @return the intercept request
+   */
+  private InterceptRequest<InterceptableMethodCall> createSlowMethodIntercept(
+      UUID callbackPeerUuid, boolean forceImmediate) {
+    return new InterceptRequest<>(
+        UUID.randomUUID(),
+        callbackPeerUuid,
+        interceptType,
+        SLOW_METHOD_APP_CLASS,
+        SLOW_METHOD_APP_CLASS,
+        "slowMethod",
+        new InterceptableMethodCall("slowMethod", Collections.singletonList("int")),
+        forceImmediate);
+  }
+
+  /**
+   * Returns the expected number of callbacks per method invocation for the current intercept type.
+   *
+   * <p>AROUND intercepts send 2 callbacks per invocation (BEFORE and AFTER phases), while BEFORE
+   * and AFTER intercepts each send 1 callback.
+   *
+   * @return the expected callback count per invocation
+   */
+  private int expectedCallbacksPerInvocation() {
+    return interceptType == InterceptType.AROUND ? 2 : 1;
   }
 
   /**
@@ -104,7 +170,8 @@ public class ImmediateActivationIT extends AbstractInterceptIT {
    */
   @Test
   public void interceptActivatesImmediatelyWithoutDrain() throws Exception {
-    logger.info("===== interceptActivatesImmediatelyWithoutDrain: TEST STARTED =====");
+    logger.info(
+        "===== interceptActivatesImmediatelyWithoutDrain [{}]: TEST STARTED =====", interceptType);
 
     // Given: A method has in-flight calls executing
     final int slowMethodDelayMs = 3000; // 3 seconds
@@ -152,18 +219,10 @@ public class ImmediateActivationIT extends AbstractInterceptIT {
       Thread.sleep(500);
 
       // When: An intercept is registered while the method is executing
-      logger.info("Registering intercept while slowMethod is in-flight");
-      UUID interceptUuid = UUID.randomUUID();
+      logger.info("Registering {} intercept while slowMethod is in-flight", interceptType);
       InterceptRequest<InterceptableMethodCall> interceptRequest =
-          new InterceptRequest<>(
-              interceptUuid,
-              myPeerUuid, // Callback to this test client
-              InterceptType.BEFORE,
-              SLOW_METHOD_APP_CLASS,
-              SLOW_METHOD_APP_CLASS, // Callback class (not used for BEFORE with test client)
-              "slowMethod", // Callback method (not used for BEFORE with test client)
-              new InterceptableMethodCall("slowMethod", Collections.singletonList("int")),
-              false); // forceImmediate=false (but tracking is disabled, so should be immediate)
+          createSlowMethodIntercept(
+              myPeerUuid, false); // forceImmediate=false (tracking disabled, so still immediate)
 
       register(interceptRequest);
 
@@ -195,9 +254,13 @@ public class ImmediateActivationIT extends AbstractInterceptIT {
           newCallDuration < 2500); // Allow generous overhead, but must be less than 3s drain wait
 
       // Verify: Callback was received (intercept is active)
-      List<Message> callbacks = getCallbacks(1, 5000);
+      int expectedCallbacks = expectedCallbacksPerInvocation();
+      List<Message> callbacks = getCallbacks(expectedCallbacks, 5000);
       logger.info("Received {} callbacks", callbacks.size());
-      assertThat("Should receive 1 callback (intercept activated)", callbacks.size(), is(1));
+      assertThat(
+          "Should receive " + expectedCallbacks + " callback(s) (intercept activated)",
+          callbacks.size(),
+          is(expectedCallbacks));
 
       // Wait for in-flight thread to complete
       inFlightThread.join();
@@ -215,7 +278,8 @@ public class ImmediateActivationIT extends AbstractInterceptIT {
               + ")",
           inFlightCallEndTime[0] > newCallTimes[1]);
 
-      logger.info("===== interceptActivatesImmediatelyWithoutDrain: TEST PASSED =====");
+      logger.info(
+          "===== interceptActivatesImmediatelyWithoutDrain [{}]: TEST PASSED =====", interceptType);
     } finally {
       // Clean up additional ThinPeer
       inFlightThinPeer.close();
@@ -241,7 +305,8 @@ public class ImmediateActivationIT extends AbstractInterceptIT {
    */
   @Test
   public void newCallsNotBlockedDuringRegistration() throws Exception {
-    logger.info("===== newCallsNotBlockedDuringRegistration: TEST STARTED =====");
+    logger.info(
+        "===== newCallsNotBlockedDuringRegistration [{}]: TEST STARTED =====", interceptType);
 
     // Given: An intercept is being registered while calls are in-flight
     final int slowMethodDelayMs = 2000; // 2 seconds
@@ -289,18 +354,9 @@ public class ImmediateActivationIT extends AbstractInterceptIT {
       Thread.sleep(300);
 
       // When: Register intercept while first call is in-flight
-      logger.info("Registering intercept while first call is in-flight");
-      UUID interceptUuid = UUID.randomUUID();
+      logger.info("Registering {} intercept while first call is in-flight", interceptType);
       InterceptRequest<InterceptableMethodCall> interceptRequest =
-          new InterceptRequest<>(
-              interceptUuid,
-              myPeerUuid,
-              InterceptType.BEFORE,
-              SLOW_METHOD_APP_CLASS,
-              SLOW_METHOD_APP_CLASS,
-              "slowMethod",
-              new InterceptableMethodCall("slowMethod", Collections.singletonList("int")),
-              false);
+          createSlowMethodIntercept(myPeerUuid, false);
 
       register(interceptRequest);
 
@@ -364,7 +420,8 @@ public class ImmediateActivationIT extends AbstractInterceptIT {
               + ")",
           secondCallTimes[0] < firstCallEndTime[0]);
 
-      logger.info("===== newCallsNotBlockedDuringRegistration: TEST PASSED =====");
+      logger.info(
+          "===== newCallsNotBlockedDuringRegistration [{}]: TEST PASSED =====", interceptType);
     } finally {
       // Clean up additional ThinPeers
       firstThinPeer.close();
