@@ -11,6 +11,7 @@ package io.quasient.pal.core.intercept;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -36,6 +37,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.ArgumentMatchers;
 import org.zeromq.SocketType;
@@ -421,6 +423,84 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
     // (We can't easily verify socket closure, but we verify no errors occur)
 
     server.requestStop();
+  }
+
+  // ===== Exception Handling Policy Tests =====
+
+  /**
+   * Tests that API misuse errors are logged and do not propagate to caller.
+   *
+   * <p>Given: A callback response with isApiMisuseError=true
+   *
+   * <p>When: Processing the response from a synchronous callback
+   *
+   * <p>Then: The error is logged but not propagated to the caller; processing continues with
+   * remaining callbacks
+   *
+   * <p>This test verifies that API misuse errors (such as IllegalArgumentException when a callback
+   * handler is improperly implemented) are treated as non-fatal errors that should not disrupt the
+   * normal flow of the intercepted operation.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #292")
+  public void shouldLogApiMisuseErrorAndContinue() {
+    // Given: Response has isApiMisuseError=true
+    // When: Processing response
+    // Then: Error logged but not propagated to caller; continue with remaining callbacks
+
+    // TODO: Implement after #292 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that exception propagation policy is applied to deserialized exceptions.
+   *
+   * <p>Given: A callback response with throwException=true and exception propagation policy
+   * SWALLOW_ALL
+   *
+   * <p>When: Processing the response from a synchronous callback
+   *
+   * <p>Then: The deserialized exception is logged but swallowed; the method continues normally
+   * without propagating the exception
+   *
+   * <p>This test verifies that the ExceptionPropagationPolicy.SWALLOW_ALL policy correctly prevents
+   * exceptions from callbacks from propagating to the caller, even when the callback explicitly
+   * sets an exception to throw.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #292")
+  public void shouldApplyPropagationPolicyToDeserializedException() {
+    // Given: Response has throwException=true; policy SWALLOW_ALL
+    // When: Processing response
+    // Then: Exception logged but swallowed; method continues
+
+    // TODO: Implement after #292 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that business exceptions are propagated with PROPAGATE_ALL policy.
+   *
+   * <p>Given: A callback response with throwException=true, isApiMisuseError=false, and exception
+   * propagation policy PROPAGATE_ALL
+   *
+   * <p>When: Processing the response from a synchronous callback
+   *
+   * <p>Then: The exception is deserialized and propagated to the caller of the intercepted method
+   *
+   * <p>This test verifies that the ExceptionPropagationPolicy.PROPAGATE_ALL policy correctly
+   * propagates business exceptions (non-API-misuse exceptions) from callback handlers to the
+   * caller, allowing callbacks to control exceptional flow of the intercepted operation.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #292")
+  public void shouldPropagateBusinessExceptionWithPropagateAllPolicy() {
+    // Given: Response has throwException=true, isApiMisuseError=false; policy PROPAGATE_ALL
+    // When: Processing response
+    // Then: Exception deserialized and propagated to caller
+
+    // TODO: Implement after #292 provides the implementation
+    fail("Not yet implemented");
   }
 
   /**
