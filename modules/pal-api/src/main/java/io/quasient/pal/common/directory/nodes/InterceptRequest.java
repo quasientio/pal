@@ -11,6 +11,8 @@ package io.quasient.pal.common.directory.nodes;
 
 import static java.lang.String.format;
 
+import io.quasient.pal.common.lang.intercept.CheckedExceptionPolicy;
+import io.quasient.pal.common.lang.intercept.ExceptionPropagationPolicy;
 import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.common.lang.intercept.Interceptable;
 import io.quasient.pal.common.lang.intercept.Interceptable.InterceptableType;
@@ -20,6 +22,7 @@ import java.nio.charset.Charset;
 import java.util.Objects;
 import java.util.UUID;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -84,6 +87,28 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
   private final boolean forceImmediate;
 
   /**
+   * Exception propagation policy for this intercept. Determines how exceptions thrown by the
+   * intercept callback are handled.
+   *
+   * <p>When {@code null}, the policy defers to the global peer configuration. When non-null, this
+   * policy overrides the global configuration for this specific intercept.
+   *
+   * @see ExceptionPropagationPolicy
+   */
+  @Nullable private final ExceptionPropagationPolicy exceptionPropagationPolicy;
+
+  /**
+   * Checked exception policy for this intercept. Determines how checked exceptions set by the
+   * callback are validated against the intercepted method's declared exceptions.
+   *
+   * <p>When {@code null}, the policy defers to the global peer configuration. When non-null, this
+   * policy overrides the global configuration for this specific intercept.
+   *
+   * @see CheckedExceptionPolicy
+   */
+  @Nullable private final CheckedExceptionPolicy checkedExceptionPolicy;
+
+  /**
    * Constructs a new {@code InterceptRequest} with the specified parameters.
    *
    * @param uuid the unique identifier for this request; must not be {@code null}
@@ -95,7 +120,11 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
    * @param interceptable the interceptable action; must not be {@code null}
    * @param forceImmediate whether to force immediate application without waiting for in-flight
    *     calls
-   * @throws NullPointerException if any of the object parameters are {@code null}
+   * @param exceptionPropagationPolicy exception propagation policy for this intercept, or {@code
+   *     null} to defer to global configuration
+   * @param checkedExceptionPolicy checked exception policy for this intercept, or {@code null} to
+   *     defer to global configuration
+   * @throws NullPointerException if any of the required object parameters are {@code null}
    */
   public InterceptRequest(
       @Nonnull UUID uuid,
@@ -105,7 +134,9 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
       @Nonnull String callbackClass,
       @Nonnull String callbackMethod,
       @Nonnull T interceptable,
-      boolean forceImmediate) {
+      boolean forceImmediate,
+      @Nullable ExceptionPropagationPolicy exceptionPropagationPolicy,
+      @Nullable CheckedExceptionPolicy checkedExceptionPolicy) {
     this.uuid = Objects.requireNonNull(uuid, "uuid must not be null");
     this.peer = Objects.requireNonNull(peer, "peer must not be null");
     this.type = Objects.requireNonNull(type, "type must not be null");
@@ -114,11 +145,14 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
     this.callbackMethod = Objects.requireNonNull(callbackMethod, "callbackMethod must not be null");
     this.interceptable = Objects.requireNonNull(interceptable, "interceptable must not be null");
     this.forceImmediate = forceImmediate;
+    this.exceptionPropagationPolicy = exceptionPropagationPolicy;
+    this.checkedExceptionPolicy = checkedExceptionPolicy;
   }
 
   /**
    * Constructs a new {@code InterceptRequest} with the specified parameters. This is a convenience
-   * constructor that defaults {@code forceImmediate} to {@code false}.
+   * constructor that defaults {@code forceImmediate} to {@code false} and both policies to {@code
+   * null}.
    *
    * @param uuid the unique identifier for this request; must not be {@code null}
    * @param peer the identifier of the peer initiating the request; must not be {@code null}
@@ -137,7 +171,44 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
       @Nonnull String callbackClass,
       @Nonnull String callbackMethod,
       @Nonnull T interceptable) {
-    this(uuid, peer, type, clazz, callbackClass, callbackMethod, interceptable, false);
+    this(uuid, peer, type, clazz, callbackClass, callbackMethod, interceptable, false, null, null);
+  }
+
+  /**
+   * Constructs a new {@code InterceptRequest} with the specified parameters. This is a convenience
+   * constructor that defaults both policies to {@code null}.
+   *
+   * @param uuid the unique identifier for this request; must not be {@code null}
+   * @param peer the identifier of the peer initiating the request; must not be {@code null}
+   * @param type the type of interception; must not be {@code null}
+   * @param clazz the target class name for interception; must not be {@code null}
+   * @param callbackClass the callback class name; must not be {@code null}
+   * @param callbackMethod the callback method name; must not be {@code null}
+   * @param interceptable the interceptable action; must not be {@code null}
+   * @param forceImmediate whether to force immediate application without waiting for in-flight
+   *     calls
+   * @throws NullPointerException if any of the parameters are {@code null}
+   */
+  public InterceptRequest(
+      @Nonnull UUID uuid,
+      @Nonnull UUID peer,
+      @Nonnull InterceptType type,
+      @Nonnull String clazz,
+      @Nonnull String callbackClass,
+      @Nonnull String callbackMethod,
+      @Nonnull T interceptable,
+      boolean forceImmediate) {
+    this(
+        uuid,
+        peer,
+        type,
+        clazz,
+        callbackClass,
+        callbackMethod,
+        interceptable,
+        forceImmediate,
+        null,
+        null);
   }
 
   /**
@@ -226,6 +297,30 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
   }
 
   /**
+   * Retrieves the exception propagation policy for this intercept.
+   *
+   * <p>When {@code null}, the policy defers to the global peer configuration.
+   *
+   * @return the exception propagation policy, or {@code null} to defer to global configuration
+   */
+  @Nullable
+  public ExceptionPropagationPolicy getExceptionPropagationPolicy() {
+    return exceptionPropagationPolicy;
+  }
+
+  /**
+   * Retrieves the checked exception policy for this intercept.
+   *
+   * <p>When {@code null}, the policy defers to the global peer configuration.
+   *
+   * @return the checked exception policy, or {@code null} to defer to global configuration
+   */
+  @Nullable
+  public CheckedExceptionPolicy getCheckedExceptionPolicy() {
+    return checkedExceptionPolicy;
+  }
+
+  /**
    * Compares this {@code InterceptRequest} to the specified object.
    *
    * @param o the object to compare this {@code InterceptRequest} against
@@ -249,7 +344,9 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
         && clazz.equals(that.clazz)
         && callbackClass.equals(that.callbackClass)
         && callbackMethod.equals(that.callbackMethod)
-        && interceptable.equals(that.interceptable);
+        && interceptable.equals(that.interceptable)
+        && exceptionPropagationPolicy == that.exceptionPropagationPolicy
+        && checkedExceptionPolicy == that.checkedExceptionPolicy;
   }
 
   /**
@@ -261,7 +358,16 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
   @Override
   public int hashCode() {
     return Objects.hash(
-        uuid, peer, type, clazz, callbackClass, callbackMethod, interceptable, forceImmediate);
+        uuid,
+        peer,
+        type,
+        clazz,
+        callbackClass,
+        callbackMethod,
+        interceptable,
+        forceImmediate,
+        exceptionPropagationPolicy,
+        checkedExceptionPolicy);
   }
 
   /**
@@ -291,7 +397,11 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
                 + LINE_SEP // 6. interceptableType
                 + "%s"
                 + LINE_SEP // 7. interceptable
-                + "%b", // 8. forceImmediate
+                + "%b"
+                + LINE_SEP // 8. forceImmediate
+                + "%s"
+                + LINE_SEP // 9. exceptionPropagationPolicy
+                + "%s", // 10. checkedExceptionPolicy
             uuid,
             peer,
             type.toByte(),
@@ -300,7 +410,9 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
             callbackMethod,
             interceptable.getType().toByte(),
             interceptable.toSerializedString(),
-            forceImmediate);
+            forceImmediate,
+            exceptionPropagationPolicy != null ? exceptionPropagationPolicy.name() : "null",
+            checkedExceptionPolicy != null ? checkedExceptionPolicy.name() : "null");
     return s.getBytes(charset);
   }
 
@@ -338,8 +450,28 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
         };
     // Handle backwards compatibility: if forceImmediate field is missing, default to false
     final boolean forceImmediate = parts.length > 8 ? Boolean.parseBoolean(parts[8]) : false;
+
+    // Handle backwards compatibility: if policy fields are missing, default to null
+    final ExceptionPropagationPolicy exceptionPropagationPolicy =
+        (parts.length > 9 && !parts[9].equals("null"))
+            ? ExceptionPropagationPolicy.valueOf(parts[9])
+            : null;
+    final CheckedExceptionPolicy checkedExceptionPolicy =
+        (parts.length > 10 && !parts[10].equals("null"))
+            ? CheckedExceptionPolicy.valueOf(parts[10])
+            : null;
+
     return new InterceptRequest<>(
-        uuid, peer, type, clazz, callbackClass, callbackMethod, interceptable, forceImmediate);
+        uuid,
+        peer,
+        type,
+        clazz,
+        callbackClass,
+        callbackMethod,
+        interceptable,
+        forceImmediate,
+        exceptionPropagationPolicy,
+        checkedExceptionPolicy);
   }
 
   /**

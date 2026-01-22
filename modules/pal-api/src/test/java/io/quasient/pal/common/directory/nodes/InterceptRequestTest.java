@@ -13,8 +13,11 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNull;
 
 import io.quasient.pal.common.lang.FieldOpType;
+import io.quasient.pal.common.lang.intercept.CheckedExceptionPolicy;
+import io.quasient.pal.common.lang.intercept.ExceptionPropagationPolicy;
 import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.common.lang.intercept.InterceptableFieldOp;
 import io.quasient.pal.common.lang.intercept.InterceptableMethodCall;
@@ -26,7 +29,6 @@ import java.util.Arrays;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class InterceptRequestTest {
@@ -193,19 +195,24 @@ public class InterceptRequestTest {
    * Exception propagation policy stored
    */
   @Test
-  @Ignore("Awaiting implementation in #278")
   public void shouldStoreExceptionPropagationPolicy() {
     // Given: InterceptRequest with PROPAGATE_ALL exception propagation policy
+    InterceptRequest<?> request =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            type,
+            clazz,
+            callbackClass,
+            callbackMethod,
+            interceptableMethod,
+            false,
+            ExceptionPropagationPolicy.PROPAGATE_ALL,
+            null);
+
     // When: Getting the exception propagation policy
     // Then: Returns PROPAGATE_ALL
-
-    // TODO: Implement after #278 provides the implementation
-    // Expected usage:
-    // InterceptRequest<?> request = new InterceptRequest<>(
-    //     uuid, peer, type, clazz, callbackClass, callbackMethod, interceptableMethod,
-    //     false, ExceptionPropagationPolicy.PROPAGATE_ALL, null);
-    // assertEquals(ExceptionPropagationPolicy.PROPAGATE_ALL,
-    // request.getExceptionPropagationPolicy());
+    assertEquals(ExceptionPropagationPolicy.PROPAGATE_ALL, request.getExceptionPropagationPolicy());
   }
 
   /**
@@ -215,18 +222,24 @@ public class InterceptRequestTest {
    * exception policy stored
    */
   @Test
-  @Ignore("Awaiting implementation in #278")
   public void shouldStoreCheckedExceptionPolicy() {
     // Given: InterceptRequest with WRAP checked exception policy
+    InterceptRequest<?> request =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            type,
+            clazz,
+            callbackClass,
+            callbackMethod,
+            interceptableMethod,
+            false,
+            null,
+            CheckedExceptionPolicy.WRAP);
+
     // When: Getting the checked exception policy
     // Then: Returns WRAP
-
-    // TODO: Implement after #278 provides the implementation
-    // Expected usage:
-    // InterceptRequest<?> request = new InterceptRequest<>(
-    //     uuid, peer, type, clazz, callbackClass, callbackMethod, interceptableMethod,
-    //     false, null, CheckedExceptionPolicy.WRAP);
-    // assertEquals(CheckedExceptionPolicy.WRAP, request.getCheckedExceptionPolicy());
+    assertEquals(CheckedExceptionPolicy.WRAP, request.getCheckedExceptionPolicy());
   }
 
   /**
@@ -236,18 +249,16 @@ public class InterceptRequestTest {
    * for deferred resolution
    */
   @Test
-  @Ignore("Awaiting implementation in #278")
   public void shouldDefaultToNullPolicies() {
     // Given: InterceptRequest constructed without explicit policies
+    InterceptRequest<?> request =
+        new InterceptRequest<>(
+            uuid, peer, type, clazz, callbackClass, callbackMethod, interceptableMethod);
+
     // When: Getting both exception propagation and checked exception policies
     // Then: Both policies return null (indicating they defer to global defaults)
-
-    // TODO: Implement after #278 provides the implementation
-    // Expected usage:
-    // InterceptRequest<?> request = new InterceptRequest<>(
-    //     uuid, peer, type, clazz, callbackClass, callbackMethod, interceptableMethod);
-    // assertNull(request.getExceptionPropagationPolicy());
-    // assertNull(request.getCheckedExceptionPolicy());
+    assertNull(request.getExceptionPropagationPolicy());
+    assertNull(request.getCheckedExceptionPolicy());
   }
 
   /**
@@ -257,22 +268,29 @@ public class InterceptRequestTest {
    * serialization works
    */
   @Test
-  @Ignore("Awaiting implementation in #278")
   public void shouldSerializeAndDeserializePolicies() {
     // Given: InterceptRequest with both exception propagation and checked exception policies set
-    // When: Serializing to bytes and deserializing back
-    // Then: Both policies are preserved after round-trip serialization
+    InterceptRequest<?> original =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            type,
+            clazz,
+            callbackClass,
+            callbackMethod,
+            interceptableMethod,
+            false,
+            ExceptionPropagationPolicy.PROPAGATE_EXPLICIT_ONLY,
+            CheckedExceptionPolicy.REJECT);
 
-    // TODO: Implement after #278 provides the implementation
-    // Expected usage:
-    // InterceptRequest<?> original = new InterceptRequest<>(
-    //     uuid, peer, type, clazz, callbackClass, callbackMethod, interceptableMethod,
-    //     false, ExceptionPropagationPolicy.PROPAGATE_EXPLICIT_ONLY,
-    //     CheckedExceptionPolicy.REJECT);
-    // byte[] bytes = original.toBytes(StandardCharsets.UTF_8);
-    // InterceptRequest<?> deserialized = InterceptRequest.fromBytes(bytes, StandardCharsets.UTF_8);
-    // assertEquals(ExceptionPropagationPolicy.PROPAGATE_EXPLICIT_ONLY,
-    //     deserialized.getExceptionPropagationPolicy());
-    // assertEquals(CheckedExceptionPolicy.REJECT, deserialized.getCheckedExceptionPolicy());
+    // When: Serializing to bytes and deserializing back
+    byte[] bytes = original.toBytes(StandardCharsets.UTF_8);
+    InterceptRequest<?> deserialized = InterceptRequest.fromBytes(bytes, StandardCharsets.UTF_8);
+
+    // Then: Both policies are preserved after round-trip serialization
+    assertEquals(
+        ExceptionPropagationPolicy.PROPAGATE_EXPLICIT_ONLY,
+        deserialized.getExceptionPropagationPolicy());
+    assertEquals(CheckedExceptionPolicy.REJECT, deserialized.getCheckedExceptionPolicy());
   }
 }
