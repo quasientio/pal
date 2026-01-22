@@ -1997,6 +1997,16 @@ public final class MessageBuilder {
     boolean isMethodInterceptable =
         intercept.getInterceptable().getType().equals(InterceptableType.METHOD_CALL);
 
+    // Convert exception policies to bytes: 255 = null (defer to global), 0-3 = enum value
+    byte exceptionPropagationPolicyByte =
+        intercept.getExceptionPropagationPolicy() != null
+            ? intercept.getExceptionPropagationPolicy().toByte()
+            : (byte) 255;
+    byte checkedExceptionPolicyByte =
+        intercept.getCheckedExceptionPolicy() != null
+            ? intercept.getCheckedExceptionPolicy().toByte()
+            : (byte) 255;
+
     if (isMethodInterceptable) {
       return new InterceptMessage()
           .withPeerUuid(intercept.getPeer().toString())
@@ -2013,7 +2023,9 @@ public final class MessageBuilder {
                           .toArray(new String[0])))
           .withCallbackClass(intercept.getCallbackClass())
           .withCallbackMethod(intercept.getCallbackMethod())
-          .withForceImmediate(intercept.isForceImmediate());
+          .withForceImmediate(intercept.isForceImmediate())
+          .withExceptionPropagationPolicy(exceptionPropagationPolicyByte)
+          .withCheckedExceptionPolicy(checkedExceptionPolicyByte);
     }
 
     return new InterceptMessage()
@@ -2031,7 +2043,9 @@ public final class MessageBuilder {
                         .toByte()))
         .withCallbackClass(intercept.getCallbackClass())
         .withCallbackMethod(intercept.getCallbackMethod())
-        .withForceImmediate(intercept.isForceImmediate());
+        .withForceImmediate(intercept.isForceImmediate())
+        .withExceptionPropagationPolicy(exceptionPropagationPolicyByte)
+        .withCheckedExceptionPolicy(checkedExceptionPolicyByte);
   }
 
   /**

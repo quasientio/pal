@@ -40,7 +40,7 @@ public enum ExceptionPropagationPolicy {
    * <p><b>Example:</b> An authorization callback that throws {@code UnauthorizedException} should
    * propagate that exception to prevent unauthorized method execution.
    */
-  PROPAGATE_ALL,
+  PROPAGATE_ALL((byte) 0),
 
   /**
    * Only exceptions explicitly set via {@link InterceptCallbackResponse#setExceptionToThrow}
@@ -61,7 +61,7 @@ public enum ExceptionPropagationPolicy {
    * will be logged but won't break the monitored method. However, if the callback explicitly sets
    * an exception via {@code setExceptionToThrow()}, that exception will propagate.
    */
-  PROPAGATE_EXPLICIT_ONLY,
+  PROPAGATE_EXPLICIT_ONLY((byte) 1),
 
   /**
    * All exceptions thrown by intercept callbacks are swallowed and logged.
@@ -81,7 +81,7 @@ public enum ExceptionPropagationPolicy {
    * <p><b>Warning:</b> This policy can hide serious errors in callback logic. Use with caution and
    * ensure proper logging and monitoring are in place.
    */
-  SWALLOW_ALL,
+  SWALLOW_ALL((byte) 2),
 
   /**
    * Only exceptions from successfully-executed callbacks that explicitly set an exception
@@ -109,5 +109,47 @@ public enum ExceptionPropagationPolicy {
    * <p>This is the recommended policy for production systems where callback stability is important
    * but controlled exception signaling is needed.
    */
-  PROPAGATE_CONTROLLED_ONLY
+  PROPAGATE_CONTROLLED_ONLY((byte) 3);
+
+  /** The byte identifier associated with this exception propagation policy. */
+  private final byte idx;
+
+  /**
+   * Constructs an {@code ExceptionPropagationPolicy} with the specified byte identifier.
+   *
+   * @param idx the byte value representing this policy
+   */
+  ExceptionPropagationPolicy(byte idx) {
+    this.idx = idx;
+  }
+
+  /**
+   * Converts a byte value to its corresponding {@code ExceptionPropagationPolicy}.
+   *
+   * @param policyAsByte the byte value representing an exception propagation policy
+   * @return the {@code ExceptionPropagationPolicy} corresponding to the provided byte
+   * @throws IllegalArgumentException if the byte value does not match any defined policy
+   * @see #toByte()
+   */
+  public static ExceptionPropagationPolicy fromByte(byte policyAsByte) {
+    return switch (policyAsByte) {
+      case 0 -> PROPAGATE_ALL;
+      case 1 -> PROPAGATE_EXPLICIT_ONLY;
+      case 2 -> SWALLOW_ALL;
+      case 3 -> PROPAGATE_CONTROLLED_ONLY;
+      default ->
+          throw new IllegalArgumentException(
+              "Unknown exception propagation policy: " + policyAsByte);
+    };
+  }
+
+  /**
+   * Retrieves the byte identifier associated with this {@code ExceptionPropagationPolicy}.
+   *
+   * @return the byte value representing this policy
+   * @see #fromByte(byte)
+   */
+  public byte toByte() {
+    return idx;
+  }
 }

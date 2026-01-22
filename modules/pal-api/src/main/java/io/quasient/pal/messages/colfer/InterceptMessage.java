@@ -59,6 +59,10 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
 
   public boolean forceImmediate;
 
+  public byte exceptionPropagationPolicy;
+
+  public byte checkedExceptionPolicy;
+
   /** Default constructor */
   public InterceptMessage() {
     init();
@@ -179,7 +183,9 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
             + (long) this.callbackClass.length() * 3
             + 6
             + (long) this.callbackMethod.length() * 3
-            + 1;
+            + 1
+            + 2
+            + 2;
     if (this.field != null) n += 1 + (long) this.field.marshalFit();
     if (this.method != null) n += 1 + (long) this.method.marshalFit();
     if (n < 0 || n > (long) InterceptMessage.colferSizeMax) return InterceptMessage.colferSizeMax;
@@ -483,6 +489,16 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
         buf[i++] = (byte) 8;
       }
 
+      if (this.exceptionPropagationPolicy != 0) {
+        buf[i++] = (byte) 9;
+        buf[i++] = this.exceptionPropagationPolicy;
+      }
+
+      if (this.checkedExceptionPolicy != 0) {
+        buf[i++] = (byte) 10;
+        buf[i++] = this.checkedExceptionPolicy;
+      }
+
       buf[i++] = (byte) 0x7f;
       return i;
     } catch (ArrayIndexOutOfBoundsException e) {
@@ -645,6 +661,16 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
         header = buf[i++];
       }
 
+      if (header == (byte) 9) {
+        this.exceptionPropagationPolicy = buf[i++];
+        header = buf[i++];
+      }
+
+      if (header == (byte) 10) {
+        this.checkedExceptionPolicy = buf[i++];
+        header = buf[i++];
+      }
+
       if (header != (byte) 0x7f)
         throw new InputMismatchException(format("colfer: unknown header at byte %d", i - 1));
     } finally {
@@ -662,7 +688,7 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
   }
 
   // {@link Serializable} version number.
-  private static final long serialVersionUID = 9L;
+  private static final long serialVersionUID = 11L;
 
   // {@link Serializable} Colfer extension.
   private void writeObject(ObjectOutputStream out) throws IOException {
@@ -948,6 +974,64 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
     return this;
   }
 
+  /**
+   * Gets io.quasient.pal.messages/colfer.InterceptMessage.exceptionPropagationPolicy.
+   *
+   * @return the value.
+   */
+  public byte getExceptionPropagationPolicy() {
+    return this.exceptionPropagationPolicy;
+  }
+
+  /**
+   * Sets io.quasient.pal.messages/colfer.InterceptMessage.exceptionPropagationPolicy.
+   *
+   * @param value the replacement.
+   */
+  public void setExceptionPropagationPolicy(byte value) {
+    this.exceptionPropagationPolicy = value;
+  }
+
+  /**
+   * Sets io.quasient.pal.messages/colfer.InterceptMessage.exceptionPropagationPolicy.
+   *
+   * @param value the replacement.
+   * @return {@code this}.
+   */
+  public InterceptMessage withExceptionPropagationPolicy(byte value) {
+    this.exceptionPropagationPolicy = value;
+    return this;
+  }
+
+  /**
+   * Gets io.quasient.pal.messages/colfer.InterceptMessage.checkedExceptionPolicy.
+   *
+   * @return the value.
+   */
+  public byte getCheckedExceptionPolicy() {
+    return this.checkedExceptionPolicy;
+  }
+
+  /**
+   * Sets io.quasient.pal.messages/colfer.InterceptMessage.checkedExceptionPolicy.
+   *
+   * @param value the replacement.
+   */
+  public void setCheckedExceptionPolicy(byte value) {
+    this.checkedExceptionPolicy = value;
+  }
+
+  /**
+   * Sets io.quasient.pal.messages/colfer.InterceptMessage.checkedExceptionPolicy.
+   *
+   * @param value the replacement.
+   * @return {@code this}.
+   */
+  public InterceptMessage withCheckedExceptionPolicy(byte value) {
+    this.checkedExceptionPolicy = value;
+    return this;
+  }
+
   @Override
   public final int hashCode() {
     int h = 1;
@@ -960,6 +1044,8 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
     if (this.callbackClass != null) h = 31 * h + this.callbackClass.hashCode();
     if (this.callbackMethod != null) h = 31 * h + this.callbackMethod.hashCode();
     h = 31 * h + (this.forceImmediate ? 1231 : 1237);
+    h = 31 * h + (this.exceptionPropagationPolicy & 0xff);
+    h = 31 * h + (this.checkedExceptionPolicy & 0xff);
     return h;
   }
 
@@ -984,7 +1070,9 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
         && (this.callbackMethod == null
             ? o.callbackMethod == null
             : this.callbackMethod.equals(o.callbackMethod))
-        && this.forceImmediate == o.forceImmediate;
+        && this.forceImmediate == o.forceImmediate
+        && this.exceptionPropagationPolicy == o.exceptionPropagationPolicy
+        && this.checkedExceptionPolicy == o.checkedExceptionPolicy;
   }
 
   @Override
@@ -1028,6 +1116,14 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
         this.forceImmediate = json.get("forceImmediate").getAsBoolean();
       }
 
+      if (json.has("exceptionPropagationPolicy")) {
+        this.exceptionPropagationPolicy = json.get("exceptionPropagationPolicy").getAsByte();
+      }
+
+      if (json.has("checkedExceptionPolicy")) {
+        this.checkedExceptionPolicy = json.get("checkedExceptionPolicy").getAsByte();
+      }
+
     } catch (Exception e) {
       throw new JsonParseException("Error deserializing json object: " + e.getMessage(), e);
     }
@@ -1044,5 +1140,7 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
     this.field = null;
     this.method = null;
     this.forceImmediate = false;
+    this.exceptionPropagationPolicy = (byte) 0;
+    this.checkedExceptionPolicy = (byte) 0;
   }
 }

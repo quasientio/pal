@@ -30,6 +30,8 @@ import static org.junit.Assert.fail;
 
 import io.quasient.pal.common.directory.nodes.InterceptRequest;
 import io.quasient.pal.common.lang.FieldOpType;
+import io.quasient.pal.common.lang.intercept.CheckedExceptionPolicy;
+import io.quasient.pal.common.lang.intercept.ExceptionPropagationPolicy;
 import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.common.lang.intercept.InterceptableFieldOp;
 import io.quasient.pal.common.lang.intercept.InterceptableMethodCall;
@@ -1513,5 +1515,111 @@ public class MessageBuilderTest {
     assertEquals(requestId, controlMessage.getResponseToId());
     assertEquals(controlMessage, wrappedMessage.getControlMessage());
   }
+
+  // </editor-fold>
+
+  // <editor-fold desc="InterceptMessage with exception policies">
+
+  /**
+   * Test specification for InterceptMessage with exception policies.
+   *
+   * <p>Acceptance Criterion: [TEST:MessageBuilderTest.shouldBuildInterceptMessageWithPolicies]
+   * InterceptMessage includes exception policies from InterceptRequest
+   */
+  @Test
+  public void shouldBuildInterceptMessageWithPolicies() {
+    // Given: InterceptRequest with both exception policies set
+    UUID uuid = UUID.randomUUID();
+    UUID peer = UUID.randomUUID();
+    InterceptableMethodCall interceptable =
+        new InterceptableMethodCall("testMethod", List.of("java.lang.String"));
+    InterceptRequest<InterceptableMethodCall> interceptRequest =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            InterceptType.BEFORE,
+            "com.example.TestClass",
+            "com.example.CallbackClass",
+            "callbackMethod",
+            interceptable,
+            false,
+            ExceptionPropagationPolicy.PROPAGATE_EXPLICIT_ONLY,
+            CheckedExceptionPolicy.WRAP);
+
+    // When: Building InterceptMessage from InterceptRequest
+    InterceptMessage interceptMessage = messageBuilder.buildInterceptMessage(interceptRequest);
+
+    // Then: InterceptMessage includes the exception policies as bytes
+    assertEquals(
+        (byte) 1, interceptMessage.getExceptionPropagationPolicy()); // PROPAGATE_EXPLICIT_ONLY = 1
+    assertEquals((byte) 0, interceptMessage.getCheckedExceptionPolicy()); // WRAP = 0
+  }
+
+  /**
+   * Test specification for InterceptMessage with null exception policies.
+   *
+   * <p>Acceptance Criterion: [TEST:MessageBuilderTest.shouldBuildInterceptMessageWithNullPolicies]
+   * InterceptMessage uses sentinel value 255 for null policies
+   */
+  @Test
+  public void shouldBuildInterceptMessageWithNullPolicies() {
+    // Given: InterceptRequest with null exception policies (defer to global)
+    UUID uuid = UUID.randomUUID();
+    UUID peer = UUID.randomUUID();
+    InterceptableMethodCall interceptable =
+        new InterceptableMethodCall("testMethod", List.of("java.lang.String"));
+    InterceptRequest<InterceptableMethodCall> interceptRequest =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            InterceptType.BEFORE,
+            "com.example.TestClass",
+            "com.example.CallbackClass",
+            "callbackMethod",
+            interceptable);
+
+    // When: Building InterceptMessage from InterceptRequest
+    InterceptMessage interceptMessage = messageBuilder.buildInterceptMessage(interceptRequest);
+
+    // Then: InterceptMessage uses sentinel value 255 for null policies
+    assertEquals((byte) 255, interceptMessage.getExceptionPropagationPolicy());
+    assertEquals((byte) 255, interceptMessage.getCheckedExceptionPolicy());
+  }
+
+  /**
+   * Test specification for InterceptMessage with mixed null and non-null policies.
+   *
+   * <p>Acceptance Criterion: [TEST:MessageBuilderTest.shouldBuildInterceptMessageWithMixedPolicies]
+   * InterceptMessage correctly handles mixed null and non-null policies
+   */
+  @Test
+  public void shouldBuildInterceptMessageWithMixedPolicies() {
+    // Given: InterceptRequest with one policy set and one null
+    UUID uuid = UUID.randomUUID();
+    UUID peer = UUID.randomUUID();
+    InterceptableMethodCall interceptable =
+        new InterceptableMethodCall("testMethod", List.of("java.lang.String"));
+    InterceptRequest<InterceptableMethodCall> interceptRequest =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            InterceptType.AROUND,
+            "com.example.TestClass",
+            "com.example.CallbackClass",
+            "callbackMethod",
+            interceptable,
+            true,
+            ExceptionPropagationPolicy.SWALLOW_ALL,
+            null);
+
+    // When: Building InterceptMessage from InterceptRequest
+    InterceptMessage interceptMessage = messageBuilder.buildInterceptMessage(interceptRequest);
+
+    // Then: Non-null policy is included, null policy uses sentinel value
+    assertEquals((byte) 2, interceptMessage.getExceptionPropagationPolicy()); // SWALLOW_ALL = 2
+    assertEquals((byte) 255, interceptMessage.getCheckedExceptionPolicy()); // null = 255
+    assertTrue(interceptMessage.getForceImmediate());
+  }
+
   // </editor-fold>
 }

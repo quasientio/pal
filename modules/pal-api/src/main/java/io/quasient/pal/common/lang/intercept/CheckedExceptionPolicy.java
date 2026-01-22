@@ -50,7 +50,7 @@ public enum CheckedExceptionPolicy {
    * <p><b>Trade-off:</b> Provides maximum flexibility but may hide type system violations that
    * indicate programming errors.
    */
-  WRAP,
+  WRAP((byte) 0),
 
   /**
    * Reject invalid checked exceptions by throwing {@link InvalidCallbackExceptionException}.
@@ -77,7 +77,7 @@ public enum CheckedExceptionPolicy {
    * designed to match the intercepted method's exception contract. Best for development and testing
    * environments where strict validation is preferred.
    */
-  REJECT,
+  REJECT((byte) 1),
 
   /**
    * Allow all exceptions without validation.
@@ -108,5 +108,45 @@ public enum CheckedExceptionPolicy {
    * potentially leading to runtime surprises and {@link UndeclaredThrowableException} in reflection
    * or proxy scenarios.
    */
-  ALLOW_ALL
+  ALLOW_ALL((byte) 2);
+
+  /** The byte identifier associated with this checked exception policy. */
+  private final byte idx;
+
+  /**
+   * Constructs a {@code CheckedExceptionPolicy} with the specified byte identifier.
+   *
+   * @param idx the byte value representing this policy
+   */
+  CheckedExceptionPolicy(byte idx) {
+    this.idx = idx;
+  }
+
+  /**
+   * Converts a byte value to its corresponding {@code CheckedExceptionPolicy}.
+   *
+   * @param policyAsByte the byte value representing a checked exception policy
+   * @return the {@code CheckedExceptionPolicy} corresponding to the provided byte
+   * @throws IllegalArgumentException if the byte value does not match any defined policy
+   * @see #toByte()
+   */
+  public static CheckedExceptionPolicy fromByte(byte policyAsByte) {
+    return switch (policyAsByte) {
+      case 0 -> WRAP;
+      case 1 -> REJECT;
+      case 2 -> ALLOW_ALL;
+      default ->
+          throw new IllegalArgumentException("Unknown checked exception policy: " + policyAsByte);
+    };
+  }
+
+  /**
+   * Retrieves the byte identifier associated with this {@code CheckedExceptionPolicy}.
+   *
+   * @return the byte value representing this policy
+   * @see #fromByte(byte)
+   */
+  public byte toByte() {
+    return idx;
+  }
 }

@@ -33,15 +33,17 @@ type InterceptableField struct {
 }
 
 type InterceptMessage struct {
-	peerUuid       text
-	messageId      text
-	interceptType  uint8
-	clazz          text
-	field          InterceptableField
-	method         InterceptableMethod
-	callbackClass  text
-	callbackMethod text
-	forceImmediate bool
+	peerUuid                   text
+	messageId                  text
+	interceptType              uint8
+	clazz                      text
+	field                      InterceptableField
+	method                     InterceptableMethod
+	callbackClass              text
+	callbackMethod             text
+	forceImmediate             bool
+	exceptionPropagationPolicy uint8 // 255 = null (defer to global), 0-3 = enum ordinal
+	checkedExceptionPolicy     uint8 // 255 = null (defer to global), 0-2 = enum ordinal
 }
 
 type InterceptKeyMessage struct {
