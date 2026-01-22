@@ -41,11 +41,18 @@ public abstract class FieldOpDispatcher extends BaseExecMessageDispatcher {
    * @param target the object on which the field operation is performed.
    * @param args arguments passed to the operation; the first element is used as the key parameter
    *     if available.
+   * @param includeDeclaredExceptions if {@code true}, extract and include declared exceptions; if
+   *     {@code false}, declaredExceptions will be {@code null}. Field operations do not declare
+   *     exceptions, so this parameter is ignored.
    * @return an {@link ExecMessage} representing the state before executing the field operation.
    */
   @Override
   protected final ExecMessage createBeforeExecMessage(
-      Context ctxt, Object sender, Object target, Object[] args) {
+      Context ctxt,
+      Object sender,
+      Object target,
+      Object[] args,
+      boolean includeDeclaredExceptions) {
     Object parameter = (args == null || args.length == 0) ? null : args[0];
     return messageBuilder.buildFieldOpEphemeral(
         ctxt,

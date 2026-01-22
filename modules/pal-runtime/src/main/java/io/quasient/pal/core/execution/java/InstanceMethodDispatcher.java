@@ -82,18 +82,25 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
    * @param sender the object initiating the method call.
    * @param target the target object on which the method will be invoked.
    * @param args the array of arguments to be passed to the target method.
+   * @param includeDeclaredExceptions if {@code true}, extract and include declared exceptions from
+   *     method signature; if {@code false}, declaredExceptions will be {@code null}
    * @return an ExecMessage instance encapsulating pre-execution invocation details.
    */
   @Override
   protected final ExecMessage createBeforeExecMessage(
-      Context ctxt, Object sender, Object target, Object[] args) {
+      Context ctxt,
+      Object sender,
+      Object target,
+      Object[] args,
+      boolean includeDeclaredExceptions) {
     return messageBuilder.buildInstanceMethodMessageEphemeral(
         ctxt,
         sender,
         generateObjectRef(sender),
         generateObjectRef(target),
         args,
-        Arrays.stream(args).map(this::generateObjectRef).toArray(ObjectRef[]::new));
+        Arrays.stream(args).map(this::generateObjectRef).toArray(ObjectRef[]::new),
+        includeDeclaredExceptions);
   }
 
   /**

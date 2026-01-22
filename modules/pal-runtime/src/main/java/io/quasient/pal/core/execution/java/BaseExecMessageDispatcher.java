@@ -132,8 +132,14 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         // Create (or get cached) context instance from join point
         ctx = ContextFactory.forJoinPoint(pjp.getStaticPart());
 
+        // Determine if we should include declared exceptions
+        // Include them only when intercepts are registered (to avoid message size increase)
+        boolean includeDeclaredExceptions =
+            beforeInterceptCheck != null && beforeInterceptCheck.hasAnyIntercepts();
+
         // 1. Wrap message
-        beforeExecMsg = createBeforeExecMessage(ctx, sender, target, args);
+        beforeExecMsg =
+            createBeforeExecMessage(ctx, sender, target, args, includeDeclaredExceptions);
 
         // 2. Send message (WAL/PUB only - intercepts handled separately)
         @SuppressWarnings("unused")
@@ -1078,10 +1084,12 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
    * @param sender the originator of the call
    * @param target the target on which the accessible object will be invoked
    * @param args the arguments to be used in the invocation
+   * @param includeDeclaredExceptions if {@code true}, extract and include declared exceptions from
+   *     method signature; if {@code false}, declaredExceptions will be {@code null}
    * @return the constructed before-execution ExecMessage
    */
   protected abstract ExecMessage createBeforeExecMessage(
-      Context ctxt, Object sender, Object target, Object[] args);
+      Context ctxt, Object sender, Object target, Object[] args, boolean includeDeclaredExceptions);
 
   /**
    * Creates an execution message to be sent after the invocation has been performed.

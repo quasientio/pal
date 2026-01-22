@@ -691,6 +691,30 @@ public final class MessageBuilder {
       ObjectRef senderObjRef,
       Object[] args,
       ObjectRef[] argObjRefs) {
+    return buildClassMethodMessageEphemeral(context, sender, senderObjRef, args, argObjRefs, false);
+  }
+
+  /**
+   * Builds an {@link ExecMessage} for invoking a class (static) method with specified arguments and
+   * object references, optionally including declared exceptions.
+   *
+   * @param context the execution context containing method signature information
+   * @param sender the object sending the message
+   * @param senderObjRef the reference to the sender object
+   * @param args the array of argument values corresponding to the parameters
+   * @param argObjRefs the array of object references corresponding to the arguments
+   * @param includeDeclaredExceptions if {@code true}, extract and include declared exceptions from
+   *     method signature; if {@code false}, declaredExceptions will be {@code null}
+   * @return an {@code ExecMessage} representing the class method invocation with context
+   */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
+  public ExecMessage buildClassMethodMessageEphemeral(
+      Context context,
+      Object sender,
+      ObjectRef senderObjRef,
+      Object[] args,
+      ObjectRef[] argObjRefs,
+      boolean includeDeclaredExceptions) {
 
     // precomputed statics (no alloc)
     final MessageStatics stat = MessageStaticsFactory.forMethod(context);
@@ -721,6 +745,13 @@ public final class MessageBuilder {
     fillExecHeader(m);
     m.classMethodCall = call;
 
+    // Include declared exceptions if requested
+    if (includeDeclaredExceptions) {
+      String[] declaredExceptions =
+          extractDeclaredExceptions(stat.clazz.getName(), stat.name, stat.paramTypeNames);
+      m.setDeclaredExceptions(declaredExceptions);
+    }
+
     return m;
   }
 
@@ -743,6 +774,33 @@ public final class MessageBuilder {
       ObjectRef targetObjRef,
       Object[] args,
       ObjectRef[] argObjRefs) {
+    return buildInstanceMethodMessageEphemeral(
+        context, sender, senderObjRef, targetObjRef, args, argObjRefs, false);
+  }
+
+  /**
+   * Builds an {@link ExecMessage} for invoking an instance method using execution context,
+   * optionally including declared exceptions.
+   *
+   * @param context the execution context containing method signature information
+   * @param sender the object sending the message
+   * @param senderObjRef the reference to the sender object
+   * @param targetObjRef the object reference of the target instance on which the method is invoked
+   * @param args the array of argument values corresponding to the parameters
+   * @param argObjRefs the array of object references corresponding to the arguments
+   * @param includeDeclaredExceptions if {@code true}, extract and include declared exceptions from
+   *     method signature; if {@code false}, declaredExceptions will be {@code null}
+   * @return an {@code ExecMessage} representing the instance method invocation with context
+   */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
+  public ExecMessage buildInstanceMethodMessageEphemeral(
+      Context context,
+      Object sender,
+      ObjectRef senderObjRef,
+      ObjectRef targetObjRef,
+      Object[] args,
+      ObjectRef[] argObjRefs,
+      boolean includeDeclaredExceptions) {
 
     // precomputed statics (no alloc)
     final MessageStatics stat = MessageStaticsFactory.forMethod(context);
@@ -772,6 +830,13 @@ public final class MessageBuilder {
     final ExecMessage m = TlScratchHolder.exec();
     fillExecHeader(m);
     m.instanceMethodCall = call;
+
+    // Include declared exceptions if requested
+    if (includeDeclaredExceptions) {
+      String[] declaredExceptions =
+          extractDeclaredExceptions(stat.clazz.getName(), stat.name, stat.paramTypeNames);
+      m.setDeclaredExceptions(declaredExceptions);
+    }
 
     return m;
   }

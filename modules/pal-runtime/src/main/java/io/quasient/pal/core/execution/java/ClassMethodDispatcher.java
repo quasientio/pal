@@ -84,17 +84,24 @@ public class ClassMethodDispatcher extends MethodDispatcher {
    * @param sender the object initiating the method call.
    * @param target the target object (unused for static methods).
    * @param args the arguments to pass to the method.
+   * @param includeDeclaredExceptions if {@code true}, extract and include declared exceptions from
+   *     method signature; if {@code false}, declaredExceptions will be {@code null}
    * @return an {@link ExecMessage} representing the pre-execution state for the class method call.
    */
   @Override
   protected final ExecMessage createBeforeExecMessage(
-      Context ctxt, Object sender, Object target, Object[] args) {
+      Context ctxt,
+      Object sender,
+      Object target,
+      Object[] args,
+      boolean includeDeclaredExceptions) {
     return messageBuilder.buildClassMethodMessageEphemeral(
         ctxt,
         sender,
         generateObjectRef(sender),
         args,
-        Arrays.stream(args).map(this::generateObjectRef).toArray(ObjectRef[]::new));
+        Arrays.stream(args).map(this::generateObjectRef).toArray(ObjectRef[]::new),
+        includeDeclaredExceptions);
   }
 
   /**

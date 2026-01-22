@@ -87,11 +87,17 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
    * @param target the target on which the constructor is eventually invoked (null and ignored in
    *     constructor calls)
    * @param args the arguments to be passed to the constructor
+   * @param includeDeclaredExceptions if {@code true}, extract and include declared exceptions from
+   *     constructor signature; if {@code false}, declaredExceptions will be {@code null}
    * @return an {@link ExecMessage} representing the constructor call request
    */
   @Override
   protected final ExecMessage createBeforeExecMessage(
-      Context ctxt, Object sender, Object target, Object[] args) {
+      Context ctxt,
+      Object sender,
+      Object target,
+      Object[] args,
+      boolean includeDeclaredExceptions) {
 
     return messageBuilder.buildConstructorMessageEphemeral(
         ctxt,

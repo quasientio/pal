@@ -30,7 +30,11 @@ public class BaseExecMessageDispatcherUnsupportedTest {
   static class MinimalDispatcher extends BaseExecMessageDispatcher {
     @Override
     protected ExecMessage createBeforeExecMessage(
-        Context ctxt, Object sender, Object target, Object[] args) {
+        Context ctxt,
+        Object sender,
+        Object target,
+        Object[] args,
+        boolean includeDeclaredExceptions) {
       return new ExecMessage();
     }
 

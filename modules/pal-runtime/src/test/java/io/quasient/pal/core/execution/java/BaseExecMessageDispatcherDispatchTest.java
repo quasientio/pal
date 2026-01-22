@@ -38,7 +38,11 @@ public class BaseExecMessageDispatcherDispatchTest {
   static class MinimalOk extends BaseExecMessageDispatcher {
     @Override
     protected ExecMessage createBeforeExecMessage(
-        Context ctxt, Object sender, Object target, Object[] args) {
+        Context ctxt,
+        Object sender,
+        Object target,
+        Object[] args,
+        boolean includeDeclaredExceptions) {
       try {
         Constructor<?> ctor = String.class.getConstructor();
         return new MessageBuilder(UUID.fromString("00000000-0000-0000-0000-000000000001"))
