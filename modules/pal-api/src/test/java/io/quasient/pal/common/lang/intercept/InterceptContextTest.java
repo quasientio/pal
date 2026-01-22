@@ -22,6 +22,7 @@ import static org.junit.Assert.fail;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import java.util.List;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -1291,5 +1292,101 @@ public class InterceptContextTest {
     ctx.proceed();
 
     assertEquals("modified", capturedArgs[0]);
+  }
+
+  // ========================================================================
+  // Custom Exception Type Tests - #270
+  // ========================================================================
+
+  /**
+   * Tests that getReturnValue() throws InterceptTypeNotSupportedException for BEFORE intercepts.
+   *
+   * <p>Verifies that the new custom exception type is thrown instead of
+   * UnsupportedOperationException when attempting to access return value in a BEFORE intercept.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #271")
+  public void shouldThrowInterceptTypeNotSupportedForGetReturnValueInBeforeIntercept() {
+    // Given: A BEFORE intercept context
+    // When: getReturnValue() is called
+    // Then: InterceptTypeNotSupportedException is thrown with operation="getReturnValue()" and
+    // interceptType=BEFORE
+
+    // TODO: Implement after #271 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that getReturnValue() throws InterceptPhaseViolationException for AROUND before
+   * proceed().
+   *
+   * <p>Verifies that the new custom exception type is thrown instead of IllegalStateException when
+   * attempting to access return value in an AROUND intercept before proceed() is called.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #271")
+  public void shouldThrowInterceptPhaseViolationForGetReturnValueBeforeProceed() {
+    // Given: An AROUND intercept context in BEFORE phase (proceed() not called)
+    // When: getReturnValue() is called
+    // Then: InterceptPhaseViolationException is thrown with operation="getReturnValue()",
+    // currentPhase=BEFORE, requiredPhase=AFTER
+
+    // TODO: Implement after #271 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that setArg() throws InterceptTypeNotSupportedException for AFTER intercepts.
+   *
+   * <p>Verifies that the new custom exception type is thrown instead of
+   * UnsupportedOperationException when attempting to modify arguments in an AFTER intercept.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #271")
+  public void shouldThrowInterceptTypeNotSupportedForSetArgInAfterIntercept() {
+    // Given: An AFTER intercept context
+    // When: setArg() is called
+    // Then: InterceptTypeNotSupportedException is thrown with operation="setArg()" and
+    // interceptType=AFTER
+
+    // TODO: Implement after #271 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that setArg() throws InterceptPhaseViolationException for AROUND after proceed().
+   *
+   * <p>Verifies that the new custom exception type is thrown instead of IllegalStateException when
+   * attempting to modify arguments in an AROUND intercept after proceed() is called.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #271")
+  public void shouldThrowInterceptPhaseViolationForSetArgAfterProceed() {
+    // Given: An AROUND intercept context where proceed() has been called (now in AFTER phase)
+    // When: setArg() is called
+    // Then: InterceptPhaseViolationException is thrown with operation="setArg()",
+    // currentPhase=AFTER, requiredPhase=BEFORE
+
+    // TODO: Implement after #271 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that proceed() throws InterceptTypeNotSupportedException for non-AROUND intercepts.
+   *
+   * <p>Verifies that the new custom exception type is thrown instead of
+   * UnsupportedOperationException when attempting to call proceed() in a BEFORE intercept (or any
+   * non-AROUND intercept type).
+   */
+  @Test
+  @Ignore("Awaiting implementation in #271")
+  public void shouldThrowInterceptTypeNotSupportedForProceedInNonAroundIntercept() {
+    // Given: A BEFORE intercept context (non-AROUND type)
+    // When: proceed() is called
+    // Then: InterceptTypeNotSupportedException is thrown with operation="proceed()" and
+    // interceptType=BEFORE
+
+    // TODO: Implement after #271 provides the implementation
+    fail("Not yet implemented");
   }
 }
