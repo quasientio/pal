@@ -13,7 +13,11 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
+import io.quasient.pal.common.lang.intercept.CheckedExceptionPolicy;
+import io.quasient.pal.common.lang.intercept.ExceptionPropagationPolicy;
+import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.core.execution.java.CustomClassloader;
+import io.quasient.pal.core.intercept.ExceptionPolicyConfig;
 import io.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import io.quasient.pal.messages.OutboundMsg;
 import java.net.URL;
@@ -90,5 +94,108 @@ public class PeerWiringProvidersTest {
     CustomClassloader cl = new CustomClassloader(new URL[] {}, ClassLoader.getSystemClassLoader());
     PeerWiring wiring = new PeerWiring(props, EnumSet.of(RunOptions.WITH_SESSIONS), ctx, cl);
     assertThat(wiring.provideSessionServiceEndpoint(), is("inproc://session"));
+  }
+
+  @Test
+  public void exceptionPolicyConfig_usesDefaultsWhenNotConfigured() {
+    Properties props = baseProps();
+    CustomClassloader cl = new CustomClassloader(new URL[] {}, ClassLoader.getSystemClassLoader());
+    PeerWiring wiring = new PeerWiring(props, EnumSet.noneOf(RunOptions.class), ctx, cl);
+
+    ExceptionPolicyConfig config = wiring.provideExceptionPolicyConfig();
+
+    // Verify defaults
+    assertThat(
+        config.getGlobalPropagationPolicy(),
+        is(ExceptionPropagationPolicy.PROPAGATE_CONTROLLED_ONLY));
+    assertThat(config.getGlobalCheckedExceptionPolicy(), is(CheckedExceptionPolicy.WRAP));
+  }
+
+  @Test
+  public void exceptionPolicyConfig_usesGlobalPolicyFromSystemProperty() {
+    Properties props = baseProps();
+    props.setProperty("pal.intercept.exception-policy.default", "PROPAGATE_ALL");
+    props.setProperty("pal.intercept.checked-exception-policy.default", "REJECT");
+
+    CustomClassloader cl = new CustomClassloader(new URL[] {}, ClassLoader.getSystemClassLoader());
+    PeerWiring wiring = new PeerWiring(props, EnumSet.noneOf(RunOptions.class), ctx, cl);
+
+    ExceptionPolicyConfig config = wiring.provideExceptionPolicyConfig();
+
+    assertThat(config.getGlobalPropagationPolicy(), is(ExceptionPropagationPolicy.PROPAGATE_ALL));
+    assertThat(config.getGlobalCheckedExceptionPolicy(), is(CheckedExceptionPolicy.REJECT));
+  }
+
+  @Test
+  public void exceptionPolicyConfig_usesPerTypePolicyFromSystemProperty() {
+    Properties props = baseProps();
+    props.setProperty("pal.intercept.exception-policy.before", "SWALLOW_ALL");
+    props.setProperty("pal.intercept.checked-exception-policy.after", "ALLOW_ALL");
+
+    CustomClassloader cl = new CustomClassloader(new URL[] {}, ClassLoader.getSystemClassLoader());
+    PeerWiring wiring = new PeerWiring(props, EnumSet.noneOf(RunOptions.class), ctx, cl);
+
+    ExceptionPolicyConfig config = wiring.provideExceptionPolicyConfig();
+
+    assertThat(
+        config.getPropagationPolicyForType(InterceptType.BEFORE),
+        is(ExceptionPropagationPolicy.SWALLOW_ALL));
+    assertThat(
+        config.getCheckedExceptionPolicyForType(InterceptType.AFTER),
+        is(CheckedExceptionPolicy.ALLOW_ALL));
+  }
+
+  @Test
+  public void exceptionPolicyConfig_hardcodesAsyncToSwallowAll() {
+    Properties props = baseProps();
+    // Even if we try to set ASYNC types differently, they should be hardcoded to SWALLOW_ALL
+    props.setProperty("pal.intercept.exception-policy.before-async", "PROPAGATE_ALL");
+    props.setProperty("pal.intercept.exception-policy.after-async", "PROPAGATE_ALL");
+
+    CustomClassloader cl = new CustomClassloader(new URL[] {}, ClassLoader.getSystemClassLoader());
+    PeerWiring wiring = new PeerWiring(props, EnumSet.noneOf(RunOptions.class), ctx, cl);
+
+    ExceptionPolicyConfig config = wiring.provideExceptionPolicyConfig();
+
+    // ASYNC types must always be SWALLOW_ALL
+    assertThat(
+        config.getPropagationPolicyForType(InterceptType.BEFORE_ASYNC),
+        is(ExceptionPropagationPolicy.SWALLOW_ALL));
+    assertThat(
+        config.getPropagationPolicyForType(InterceptType.AFTER_ASYNC),
+        is(ExceptionPropagationPolicy.SWALLOW_ALL));
+  }
+
+  @Test
+  public void exceptionPolicyConfig_ignoresInvalidPolicyValues() {
+    Properties props = baseProps();
+    props.setProperty("pal.intercept.exception-policy.default", "INVALID_POLICY");
+    props.setProperty("pal.intercept.checked-exception-policy.default", "ALSO_INVALID");
+
+    CustomClassloader cl = new CustomClassloader(new URL[] {}, ClassLoader.getSystemClassLoader());
+    PeerWiring wiring = new PeerWiring(props, EnumSet.noneOf(RunOptions.class), ctx, cl);
+
+    ExceptionPolicyConfig config = wiring.provideExceptionPolicyConfig();
+
+    // Should fall back to defaults when invalid values are provided
+    assertThat(
+        config.getGlobalPropagationPolicy(),
+        is(ExceptionPropagationPolicy.PROPAGATE_CONTROLLED_ONLY));
+    assertThat(config.getGlobalCheckedExceptionPolicy(), is(CheckedExceptionPolicy.WRAP));
+  }
+
+  @Test
+  public void exceptionPolicyConfig_handlesCaseInsensitiveInput() {
+    Properties props = baseProps();
+    props.setProperty("pal.intercept.exception-policy.default", "propagate_all");
+    props.setProperty("pal.intercept.checked-exception-policy.default", "wrap");
+
+    CustomClassloader cl = new CustomClassloader(new URL[] {}, ClassLoader.getSystemClassLoader());
+    PeerWiring wiring = new PeerWiring(props, EnumSet.noneOf(RunOptions.class), ctx, cl);
+
+    ExceptionPolicyConfig config = wiring.provideExceptionPolicyConfig();
+
+    assertThat(config.getGlobalPropagationPolicy(), is(ExceptionPropagationPolicy.PROPAGATE_ALL));
+    assertThat(config.getGlobalCheckedExceptionPolicy(), is(CheckedExceptionPolicy.WRAP));
   }
 }

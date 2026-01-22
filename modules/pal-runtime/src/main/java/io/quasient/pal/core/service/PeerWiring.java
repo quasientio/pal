@@ -17,6 +17,9 @@ import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import io.quasient.pal.common.lang.intercept.CheckedExceptionPolicy;
+import io.quasient.pal.common.lang.intercept.ExceptionPropagationPolicy;
+import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.common.runtime.DispatchForwarder;
 import io.quasient.pal.common.runtime.ProxyDispatcher;
 import io.quasient.pal.core.annotations.AnnotationProcessor;
@@ -24,6 +27,7 @@ import io.quasient.pal.core.annotations.AnnotationsProcessor;
 import io.quasient.pal.core.dispatcher.InterceptAsyncThreadFactory;
 import io.quasient.pal.core.execution.java.AspectProxyDispatcher;
 import io.quasient.pal.core.execution.java.CustomClassloader;
+import io.quasient.pal.core.intercept.ExceptionPolicyConfig;
 import io.quasient.pal.core.intercept.InFlightDispatchTracker;
 import io.quasient.pal.core.intercept.InterceptActivationCoordinator;
 import io.quasient.pal.core.internal.concurrent.HwmMessageQueue;
@@ -504,5 +508,132 @@ public class PeerWiring extends AbstractModule {
   public ExecutorService provideInterceptAsyncExecutor() {
     return Executors.newCachedThreadPool(
         new InterceptAsyncThreadFactory(serviceThreadGroup, customClassloader));
+  }
+
+  /**
+   * Provides the exception policy configuration for intercept callbacks.
+   *
+   * <p>This configuration determines how exceptions thrown by intercept callbacks are handled. The
+   * configuration is built from system properties and CLI flags in the following precedence order:
+   *
+   * <ol>
+   *   <li>CLI flags (--exception-policy, --checked-exception-policy)
+   *   <li>System properties (pal.intercept.exception-policy.default, etc.)
+   *   <li>Built-in defaults (PROPAGATE_CONTROLLED_ONLY, WRAP)
+   * </ol>
+   *
+   * <p><b>Default policies (safety-first approach):</b>
+   *
+   * <ul>
+   *   <li>Global exception propagation: PROPAGATE_CONTROLLED_ONLY
+   *   <li>Global checked exception: WRAP
+   *   <li>ASYNC intercepts (BEFORE_ASYNC, AFTER_ASYNC): SWALLOW_ALL (hardcoded, unchangeable)
+   * </ul>
+   *
+   * <p><b>System properties for configuration:</b>
+   *
+   * <ul>
+   *   <li>{@code pal.intercept.exception-policy.default=POLICY} - Global propagation policy
+   *   <li>{@code pal.intercept.exception-policy.before=POLICY} - Per-type propagation for BEFORE
+   *   <li>{@code pal.intercept.exception-policy.after=POLICY} - Per-type propagation for AFTER
+   *   <li>{@code pal.intercept.exception-policy.around=POLICY} - Per-type propagation for AROUND
+   *   <li>{@code pal.intercept.checked-exception-policy.default=POLICY} - Global checked policy
+   *   <li>{@code pal.intercept.checked-exception-policy.before=POLICY} - Per-type checked for
+   *       BEFORE
+   *   <li>{@code pal.intercept.checked-exception-policy.after=POLICY} - Per-type checked for AFTER
+   *   <li>{@code pal.intercept.checked-exception-policy.around=POLICY} - Per-type checked for
+   *       AROUND
+   * </ul>
+   *
+   * @return the configured exception policy
+   */
+  @SuppressWarnings("unused")
+  @Provides
+  @Singleton
+  public ExceptionPolicyConfig provideExceptionPolicyConfig() {
+    ExceptionPolicyConfig.Builder builder = new ExceptionPolicyConfig.Builder();
+
+    // Parse global exception propagation policy from properties or use default
+    String globalExceptionPolicyStr =
+        properties.getProperty("pal.intercept.exception-policy.default");
+    if (globalExceptionPolicyStr != null && !globalExceptionPolicyStr.isBlank()) {
+      try {
+        ExceptionPropagationPolicy policy =
+            ExceptionPropagationPolicy.valueOf(
+                globalExceptionPolicyStr.trim().toUpperCase(Locale.ENGLISH));
+        builder.globalPropagationPolicy(policy);
+      } catch (IllegalArgumentException e) {
+        logger.warn(
+            "Invalid exception propagation policy '{}', using default", globalExceptionPolicyStr);
+      }
+    }
+    // If not specified, builder uses default: PROPAGATE_CONTROLLED_ONLY
+
+    // Parse global checked exception policy from properties or use default
+    String globalCheckedPolicyStr =
+        properties.getProperty("pal.intercept.checked-exception-policy.default");
+    if (globalCheckedPolicyStr != null && !globalCheckedPolicyStr.isBlank()) {
+      try {
+        CheckedExceptionPolicy policy =
+            CheckedExceptionPolicy.valueOf(
+                globalCheckedPolicyStr.trim().toUpperCase(Locale.ENGLISH));
+        builder.globalCheckedExceptionPolicy(policy);
+      } catch (IllegalArgumentException e) {
+        logger.warn("Invalid checked exception policy '{}', using default", globalCheckedPolicyStr);
+      }
+    }
+    // If not specified, builder uses default: WRAP
+
+    // Parse per-type exception propagation policies
+    for (InterceptType type :
+        new InterceptType[] {InterceptType.BEFORE, InterceptType.AFTER, InterceptType.AROUND}) {
+      String key =
+          "pal.intercept.exception-policy."
+              + type.name().toLowerCase(Locale.ENGLISH).replace('_', '-');
+      String policyStr = properties.getProperty(key);
+      if (policyStr != null && !policyStr.isBlank()) {
+        try {
+          ExceptionPropagationPolicy policy =
+              ExceptionPropagationPolicy.valueOf(policyStr.trim().toUpperCase(Locale.ENGLISH));
+          builder.perTypePropagationPolicy(type, policy);
+        } catch (IllegalArgumentException e) {
+          logger.warn("Invalid exception propagation policy '{}' for type {}", policyStr, type);
+        }
+      }
+    }
+
+    // Parse per-type checked exception policies
+    for (InterceptType type :
+        new InterceptType[] {InterceptType.BEFORE, InterceptType.AFTER, InterceptType.AROUND}) {
+      String key =
+          "pal.intercept.checked-exception-policy."
+              + type.name().toLowerCase(Locale.ENGLISH).replace('_', '-');
+      String policyStr = properties.getProperty(key);
+      if (policyStr != null && !policyStr.isBlank()) {
+        try {
+          CheckedExceptionPolicy policy =
+              CheckedExceptionPolicy.valueOf(policyStr.trim().toUpperCase(Locale.ENGLISH));
+          builder.perTypeCheckedExceptionPolicy(type, policy);
+        } catch (IllegalArgumentException e) {
+          logger.warn("Invalid checked exception policy '{}' for type {}", policyStr, type);
+        }
+      }
+    }
+
+    // Hardcode ASYNC intercepts to always use SWALLOW_ALL
+    // This is unchangeable to ensure async callbacks never block or propagate exceptions
+    builder.perTypePropagationPolicy(
+        InterceptType.BEFORE_ASYNC, ExceptionPropagationPolicy.SWALLOW_ALL);
+    builder.perTypePropagationPolicy(
+        InterceptType.AFTER_ASYNC, ExceptionPropagationPolicy.SWALLOW_ALL);
+
+    ExceptionPolicyConfig config = builder.build();
+    logger.info(
+        "Exception policy configuration: global propagation={}, global checked={}",
+        config.getGlobalPropagationPolicy(),
+        config.getGlobalCheckedExceptionPolicy());
+    logger.debug("ASYNC intercepts hardcoded to SWALLOW_ALL");
+
+    return config;
   }
 }

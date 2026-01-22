@@ -380,6 +380,32 @@ public class Main implements Callable<Integer> {
   private Integer drainTimeoutMs; // corresponding ENV var: DRAIN_TIMEOUT_MS
 
   /**
+   * Global default exception propagation policy for intercept callbacks. Determines how exceptions
+   * thrown by callbacks propagate to callers. Does not apply to ASYNC intercepts (which always use
+   * SWALLOW_ALL).
+   */
+  @Option(
+      names = {"--exception-policy"},
+      paramLabel = "POLICY",
+      description =
+          "global exception propagation policy for intercept callbacks. Valid values: "
+              + "PROPAGATE_ALL, PROPAGATE_EXPLICIT_ONLY, SWALLOW_ALL, PROPAGATE_CONTROLLED_ONLY "
+              + "(default: PROPAGATE_CONTROLLED_ONLY)")
+  private String exceptionPolicy; // corresponding ENV var: EXCEPTION_POLICY
+
+  /**
+   * Global default checked exception policy for intercept callbacks. Determines how checked
+   * exceptions set via setExceptionToThrow are handled when not declared by the intercepted method.
+   */
+  @Option(
+      names = {"--checked-exception-policy"},
+      paramLabel = "POLICY",
+      description =
+          "global checked exception policy for intercept callbacks. Valid values: "
+              + "WRAP, REJECT, ALLOW_ALL (default: WRAP)")
+  private String checkedExceptionPolicy; // corresponding ENV var: CHECKED_EXCEPTION_POLICY
+
+  /**
    * Flag to trigger display of the help message for command-line usage. Handled automatically by
    * the CLI parser.
    */
@@ -794,6 +820,12 @@ public class Main implements Callable<Integer> {
       }
     }
 
+    // exception policy via env override if CLI not provided
+    exceptionPolicy = getParameter("EXCEPTION_POLICY", exceptionPolicy);
+
+    // checked exception policy via env override if CLI not provided
+    checkedExceptionPolicy = getParameter("CHECKED_EXCEPTION_POLICY", checkedExceptionPolicy);
+
     // if not given as option to this CMD, check if it was given to parent (Pal) or ENV
     if (palDirectoryUrl == null || palDirectoryUrl.trim().isEmpty()) {
       // check ENV variable
@@ -1137,6 +1169,15 @@ public class Main implements Callable<Integer> {
     // in-flight tracking options
     if (drainTimeoutMs != null) {
       properties.setProperty("intercept.drain.timeout.ms", String.valueOf(drainTimeoutMs));
+    }
+
+    // exception policy configuration
+    if (exceptionPolicy != null && !exceptionPolicy.isBlank()) {
+      properties.setProperty("pal.intercept.exception-policy.default", exceptionPolicy.trim());
+    }
+    if (checkedExceptionPolicy != null && !checkedExceptionPolicy.isBlank()) {
+      properties.setProperty(
+          "pal.intercept.checked-exception-policy.default", checkedExceptionPolicy.trim());
     }
   }
 
