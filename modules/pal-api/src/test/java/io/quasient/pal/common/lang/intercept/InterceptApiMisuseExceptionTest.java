@@ -9,9 +9,12 @@
  */
 package io.quasient.pal.common.lang.intercept;
 
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
-import org.junit.Ignore;
+import java.util.Locale;
 import org.junit.Test;
 
 /**
@@ -47,31 +50,30 @@ public class InterceptApiMisuseExceptionTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #269")
   public void shouldCreateBaseExceptionWithAllFields() {
     // Given: InterceptType.BEFORE, InterceptPhase.BEFORE, operation "getReturnValue()"
-    // InterceptType interceptType = InterceptType.BEFORE;
-    // InterceptPhase interceptPhase = InterceptPhase.BEFORE;
-    // String operation = "getReturnValue()";
+    InterceptType interceptType = InterceptType.BEFORE;
+    InterceptPhase interceptPhase = InterceptPhase.BEFORE;
+    String operation = "getReturnValue()";
 
     // When: InterceptApiMisuseException is constructed
-    // InterceptApiMisuseException exception =
-    //     new InterceptApiMisuseException("Test message", operation, interceptType,
-    // interceptPhase);
+    InterceptApiMisuseException exception =
+        new InterceptApiMisuseException(
+            "Test message for getReturnValue() operation",
+            operation,
+            interceptType,
+            interceptPhase);
 
     // Then: All fields are accessible via getters
-    // assertNotNull(exception);
-    // assertEquals(operation, exception.getOperation());
-    // assertEquals(interceptType, exception.getInterceptType());
-    // assertEquals(interceptPhase, exception.getInterceptPhase());
+    assertNotNull(exception);
+    assertEquals(operation, exception.getOperation());
+    assertEquals(interceptType, exception.getInterceptType());
+    assertEquals(interceptPhase, exception.getInterceptPhase());
 
     // And: Message contains operation name
-    // String message = exception.getMessage();
-    // assertNotNull(message);
-    // assertTrue("Message should contain operation name",
-    //     message.contains("getReturnValue()"));
-
-    fail("Not yet implemented");
+    String message = exception.getMessage();
+    assertNotNull(message);
+    assertTrue("Message should contain operation name", message.contains("getReturnValue()"));
   }
 
   /**
@@ -89,32 +91,27 @@ public class InterceptApiMisuseExceptionTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #269")
   public void shouldCreateTypeNotSupportedExceptionWithCorrectMessage() {
     // Given: Operation "getReturnValue()" and InterceptType.BEFORE
-    // String operation = "getReturnValue()";
-    // InterceptType interceptType = InterceptType.BEFORE;
+    String operation = "getReturnValue()";
+    InterceptType interceptType = InterceptType.BEFORE;
 
     // When: InterceptTypeNotSupportedException is constructed
-    // InterceptTypeNotSupportedException exception =
-    //     new InterceptTypeNotSupportedException(operation, interceptType);
+    InterceptTypeNotSupportedException exception =
+        new InterceptTypeNotSupportedException(operation, interceptType);
 
     // Then: Message states operation is not supported for intercept type
-    // String message = exception.getMessage();
-    // assertNotNull(message);
-    // assertTrue("Message should contain operation name", message.contains("getReturnValue()"));
-    // assertTrue("Message should contain intercept type", message.contains("BEFORE"));
-    // assertTrue("Message should indicate lack of support",
-    //     message.toLowerCase().contains("not supported"));
+    String message = exception.getMessage();
+    assertNotNull(message);
+    assertTrue("Message should contain operation name", message.contains("getReturnValue()"));
+    assertTrue("Message should contain intercept type", message.contains("BEFORE"));
+    assertTrue(
+        "Message should indicate lack of support",
+        message.toLowerCase(Locale.ROOT).contains("not supported"));
 
     // And: Getters work correctly
-    // assertEquals(operation, exception.getOperation());
-    // assertEquals(interceptType, exception.getInterceptType());
-
-    // And: Is instance of base exception
-    // assertTrue(exception instanceof InterceptApiMisuseException);
-
-    fail("Not yet implemented");
+    assertEquals(operation, exception.getOperation());
+    assertEquals(interceptType, exception.getInterceptType());
   }
 
   /**
@@ -133,32 +130,26 @@ public class InterceptApiMisuseExceptionTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #269")
   public void shouldCreatePhaseViolationExceptionWithCorrectMessage() {
     // Given: Operation "getReturnValue()", currentPhase BEFORE, requiredPhase AFTER
-    // String operation = "getReturnValue()";
-    // InterceptPhase currentPhase = InterceptPhase.BEFORE;
-    // InterceptPhase requiredPhase = InterceptPhase.AFTER;
+    String operation = "getReturnValue()";
+    InterceptPhase currentPhase = InterceptPhase.BEFORE;
+    InterceptPhase requiredPhase = InterceptPhase.AFTER;
 
     // When: InterceptPhaseViolationException is constructed
-    // InterceptPhaseViolationException exception =
-    //     new InterceptPhaseViolationException(operation, currentPhase, requiredPhase);
+    InterceptPhaseViolationException exception =
+        new InterceptPhaseViolationException(operation, currentPhase, requiredPhase);
 
     // Then: Message states phase mismatch
-    // String message = exception.getMessage();
-    // assertNotNull(message);
-    // assertTrue("Message should contain operation name", message.contains("getReturnValue()"));
-    // assertTrue("Message should contain current phase", message.contains("BEFORE"));
-    // assertTrue("Message should contain required phase", message.contains("AFTER"));
+    String message = exception.getMessage();
+    assertNotNull(message);
+    assertTrue("Message should contain operation name", message.contains("getReturnValue()"));
+    assertTrue("Message should contain current phase", message.contains("BEFORE"));
+    assertTrue("Message should contain required phase", message.contains("AFTER"));
 
     // And: Phases are accessible via getters
-    // assertEquals(currentPhase, exception.getCurrentPhase());
-    // assertEquals(requiredPhase, exception.getRequiredPhase());
-
-    // And: Is instance of base exception
-    // assertTrue(exception instanceof InterceptApiMisuseException);
-
-    fail("Not yet implemented");
+    assertEquals(currentPhase, exception.getCurrentPhase());
+    assertEquals(requiredPhase, exception.getRequiredPhase());
   }
 
   /**
@@ -175,30 +166,27 @@ public class InterceptApiMisuseExceptionTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #269")
   public void shouldPreserveExceptionCause() {
     // Given: An underlying cause exception
-    // Exception cause = new NullPointerException("Test NPE");
-    // String operation = "getReturnValue()";
-    // InterceptType interceptType = InterceptType.BEFORE;
-    // InterceptPhase interceptPhase = InterceptPhase.BEFORE;
+    Exception cause = new NullPointerException("Test NPE");
+    String operation = "getReturnValue()";
+    InterceptType interceptType = InterceptType.BEFORE;
+    InterceptPhase interceptPhase = InterceptPhase.BEFORE;
 
     // When: InterceptApiMisuseException is constructed with cause
-    // InterceptApiMisuseException exception =
-    //     new InterceptApiMisuseException("Test message", operation, interceptType, interceptPhase,
-    // cause);
+    InterceptApiMisuseException exception =
+        new InterceptApiMisuseException(
+            "Test message", operation, interceptType, interceptPhase, cause);
 
     // Then: getCause() returns original exception
-    // Throwable returnedCause = exception.getCause();
-    // assertNotNull(returnedCause);
-    // assertSame("Cause should be same instance", cause, returnedCause);
+    Throwable returnedCause = exception.getCause();
+    assertNotNull(returnedCause);
+    assertSame("Cause should be same instance", cause, returnedCause);
 
     // And: All context fields are still accessible
-    // assertEquals(operation, exception.getOperation());
-    // assertEquals(interceptType, exception.getInterceptType());
-    // assertEquals(interceptPhase, exception.getInterceptPhase());
-
-    fail("Not yet implemented");
+    assertEquals(operation, exception.getOperation());
+    assertEquals(interceptType, exception.getInterceptType());
+    assertEquals(interceptPhase, exception.getInterceptPhase());
   }
 
   /**
@@ -216,38 +204,19 @@ public class InterceptApiMisuseExceptionTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #269")
   public void shouldBeInstanceOfRuntimeException() {
-    // Given: InterceptApiMisuseException and its subclasses
-    // String operation = "test()";
-    // InterceptType interceptType = InterceptType.BEFORE;
-    // InterceptPhase currentPhase = InterceptPhase.BEFORE;
-    // InterceptPhase requiredPhase = InterceptPhase.AFTER;
+    // Given: InterceptApiMisuseException and its subclasses (classes are loaded for hierarchy
+    // checks)
 
-    // When: Creating instances
-    // InterceptApiMisuseException baseException =
-    //     new InterceptApiMisuseException("Test", operation, interceptType, currentPhase);
-    // InterceptTypeNotSupportedException typeException =
-    //     new InterceptTypeNotSupportedException(operation, interceptType);
-    // InterceptPhaseViolationException phaseException =
-    //     new InterceptPhaseViolationException(operation, currentPhase, requiredPhase);
-
-    // Then: All are instances of RuntimeException
-    // assertTrue("Base exception should be RuntimeException",
-    //     baseException instanceof RuntimeException);
-    // assertTrue("Type exception should be RuntimeException",
-    //     typeException instanceof RuntimeException);
-    // assertTrue("Phase exception should be RuntimeException",
-    //     phaseException instanceof RuntimeException);
-
-    // And: Verify class hierarchy
-    // assertTrue("InterceptApiMisuseException should extend RuntimeException",
-    //     RuntimeException.class.isAssignableFrom(InterceptApiMisuseException.class));
-    // assertTrue("InterceptTypeNotSupportedException should extend RuntimeException",
-    //     RuntimeException.class.isAssignableFrom(InterceptTypeNotSupportedException.class));
-    // assertTrue("InterceptPhaseViolationException should extend RuntimeException",
-    //     RuntimeException.class.isAssignableFrom(InterceptPhaseViolationException.class));
-
-    fail("Not yet implemented");
+    // Then: Verify class hierarchy
+    assertTrue(
+        "InterceptApiMisuseException should extend RuntimeException",
+        RuntimeException.class.isAssignableFrom(InterceptApiMisuseException.class));
+    assertTrue(
+        "InterceptTypeNotSupportedException should extend RuntimeException",
+        RuntimeException.class.isAssignableFrom(InterceptTypeNotSupportedException.class));
+    assertTrue(
+        "InterceptPhaseViolationException should extend RuntimeException",
+        RuntimeException.class.isAssignableFrom(InterceptPhaseViolationException.class));
   }
 }
