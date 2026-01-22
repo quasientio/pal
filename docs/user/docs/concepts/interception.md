@@ -506,6 +506,239 @@ pal ls -d localhost:2379 -P -l
 ```
 Verify RPC endpoint is accessible.
 
+## Exception Propagation
+
+When callback handlers throw exceptions, PAL provides policies to control whether those exceptions propagate to the intercepted code.
+
+### Exception Propagation Policies
+
+**PROPAGATE_CONTROLLED_ONLY** (default) - Only propagate exceptions that are explicitly set via `ctx.setExceptionToThrow()` and the callback completes successfully:
+
+```java
+// This will propagate
+ctx.setExceptionToThrow(new SecurityException("Access denied"));
+return new InterceptCallbackResponse();
+
+// This will NOT propagate (callback crashed)
+throw new RuntimeException("Callback bug");
+```
+
+**Use when**: You want callbacks to signal errors explicitly while protecting against callback bugs.
+
+**PROPAGATE_EXPLICIT_ONLY** - Only propagate exceptions explicitly set via `ctx.setExceptionToThrow()`:
+
+```java
+// Same behavior as PROPAGATE_CONTROLLED_ONLY but stricter
+// Even if callback completes normally, only explicit exceptions propagate
+```
+
+**Use when**: You need fine-grained control over which exceptions propagate.
+
+**PROPAGATE_ALL** - Propagate all exceptions, including callback crashes:
+
+```java
+// Both of these will propagate
+ctx.setExceptionToThrow(new SecurityException("Access denied"));
+// AND
+throw new RuntimeException("Callback bug");
+```
+
+**Use when**: Testing or development where you want to catch callback bugs immediately.
+
+**SWALLOW_ALL** - Never propagate exceptions (all are logged but swallowed):
+
+```java
+// Neither of these will propagate
+ctx.setExceptionToThrow(new SecurityException("Access denied"));
+throw new RuntimeException("Callback bug");
+```
+
+**Use when**: Non-critical monitoring or logging where callback failures shouldn't affect application behavior.
+
+### Checked Exception Policies
+
+Java's checked exception system requires methods to declare which checked exceptions they throw. When a callback tries to throw a checked exception not declared by the intercepted method, PAL applies a policy:
+
+**WRAP** (default) - Wrap undeclared checked exceptions in RuntimeException:
+
+```java
+// Method signature: String readFile() throws IOException
+// Callback throws: SQLException (not declared)
+// Result: RuntimeException wrapping SQLException
+```
+
+**REJECT** - Throw `InvalidCallbackExceptionException` to signal the violation:
+
+```java
+// Throws InvalidCallbackExceptionException with details about the mismatch
+```
+
+**Use when**: Testing to catch incorrect exception types early.
+
+**ALLOW_ALL** - Allow any exception to propagate (bypasses Java type safety):
+
+```java
+// SQLException propagates directly (may cause UndeclaredThrowableException)
+```
+
+**Warning**: Can violate Java's exception contract. Use only if you understand the risks.
+
+### Configuring Exception Policies
+
+Exception policies can be configured at three levels (most specific wins):
+
+#### Global Default
+
+```bash
+# Via CLI flags
+pal run --exception-policy PROPAGATE_ALL \
+        --checked-exception-policy REJECT \
+        -cp app.jar
+
+# Via environment variables
+export EXCEPTION_POLICY=PROPAGATE_ALL
+export CHECKED_EXCEPTION_POLICY=REJECT
+
+# Via system properties
+-Dpal.intercept.exception-policy.default=PROPAGATE_ALL
+-Dpal.intercept.checked-exception-policy.default=REJECT
+```
+
+#### Per-Type Default
+
+```bash
+# Different policies for different intercept types
+-Dpal.intercept.exception-policy.before=PROPAGATE_ALL
+-Dpal.intercept.exception-policy.after=SWALLOW_ALL
+-Dpal.intercept.exception-policy.around=PROPAGATE_CONTROLLED_ONLY
+```
+
+#### Per-Intercept Override
+
+```java
+InterceptRequest.builder()
+    .interceptType(InterceptType.BEFORE)
+    .callbackClass(AuthCallback.class.getName())
+    .exceptionPropagationPolicy(ExceptionPropagationPolicy.PROPAGATE_ALL)
+    .checkedExceptionPolicy(CheckedExceptionPolicy.REJECT)
+    .build();
+```
+
+### Exception Handling Examples
+
+#### Example 1: Validation with Explicit Exceptions
+
+```java
+public class ValidationCallback implements InterceptCallback {
+    @Override
+    public InterceptCallbackResponse handle(InterceptContext ctx) {
+        String input = (String) ctx.getArgs()[0];
+        if (input == null || input.isEmpty()) {
+            // This will propagate with PROPAGATE_CONTROLLED_ONLY
+            ctx.setExceptionToThrow(new IllegalArgumentException("Input required"));
+        }
+        return new InterceptCallbackResponse();
+    }
+}
+
+// Register with default policy (PROPAGATE_CONTROLLED_ONLY)
+InterceptRequest.builder()
+    .interceptType(InterceptType.BEFORE)
+    .callbackClass(ValidationCallback.class.getName())
+    .build();
+```
+
+#### Example 2: Resilient Monitoring
+
+```java
+public class MetricsCallback implements InterceptCallback {
+    @Override
+    public InterceptCallbackResponse handle(InterceptContext ctx) {
+        // Even if metrics system crashes, don't break application
+        metrics.record(ctx.getMethod(), ctx.getReturnValue());
+        return new InterceptCallbackResponse();
+    }
+}
+
+// Register with SWALLOW_ALL policy
+InterceptRequest.builder()
+    .interceptType(InterceptType.AFTER)
+    .callbackClass(MetricsCallback.class.getName())
+    .exceptionPropagationPolicy(ExceptionPropagationPolicy.SWALLOW_ALL)
+    .build();
+```
+
+#### Example 3: Exception Transformation in AROUND
+
+```java
+public class ExceptionWrapperCallback implements InterceptCallback {
+    @Override
+    public InterceptCallbackResponse handle(InterceptContext ctx) {
+        ProceedResult result = ctx.proceed();
+
+        if (result.hasException()) {
+            Throwable original = result.getException();
+            // Wrap low-level exceptions in domain exceptions
+            ctx.setExceptionToThrow(
+                new ServiceException("Operation failed", original)
+            );
+        }
+
+        return new InterceptCallbackResponse();
+    }
+}
+```
+
+### API Misuse Exceptions
+
+PAL throws specific exceptions when callback code violates the intercept API contract. These always propagate regardless of policy:
+
+**InterceptTypeNotSupportedException** - Operation not supported for current intercept type:
+
+```java
+// ERROR: Can't get return value in BEFORE intercept
+public InterceptCallbackResponse handle(InterceptContext ctx) {
+    Object value = ctx.getReturnValue();  // throws InterceptTypeNotSupportedException
+    return new InterceptCallbackResponse();
+}
+```
+
+**InterceptPhaseViolationException** - Operation called during wrong phase (AROUND intercepts):
+
+```java
+// ERROR: Can't modify arguments after proceed
+public InterceptCallbackResponse handle(InterceptContext ctx) {
+    ctx.proceed();
+    ctx.setArg(0, "too late");  // throws InterceptPhaseViolationException
+    return new InterceptCallbackResponse();
+}
+```
+
+**InvalidCallbackExceptionException** - Callback threw checked exception not compatible with method signature (only when policy is REJECT):
+
+```java
+// Method declares: throws IOException
+// Callback throws: SQLException (not compatible)
+// Result: InvalidCallbackExceptionException with details
+```
+
+These exceptions help you catch programming errors during development. Fix the callback code to follow the API contract.
+
+### Async Intercepts and Exceptions
+
+**BEFORE_ASYNC** and **AFTER_ASYNC** intercepts always use `SWALLOW_ALL` policy:
+
+```java
+// Fire-and-forget - exceptions logged but never propagate
+InterceptRequest.builder()
+    .interceptType(InterceptType.BEFORE_ASYNC)
+    .callbackClass(AsyncCallback.class.getName())
+    .exceptionPropagationPolicy(ExceptionPropagationPolicy.PROPAGATE_ALL)  // ignored
+    .build();
+```
+
+This is because async intercepts don't block the caller, so there's no synchronous path to propagate exceptions.
+
 ## Limitations
 
 ### Only Woven Code
