@@ -22,7 +22,6 @@ import static org.junit.Assert.fail;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import java.util.List;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -304,8 +303,8 @@ public class InterceptContextTest {
   }
 
   /**
-   * Tests that {@link InterceptContext#setArg(int, Object)} throws UnsupportedOperationException
-   * for BEFORE_ASYNC intercepts.
+   * Tests that {@link InterceptContext#setArg(int, Object)} throws
+   * InterceptTypeNotSupportedException for BEFORE_ASYNC intercepts.
    */
   @Test
   public void testSetArgThrowsForBeforeAsync() {
@@ -316,16 +315,16 @@ public class InterceptContextTest {
 
     try {
       ctx.setArg(0, "MODIFIED");
-      fail("Expected UnsupportedOperationException for BEFORE_ASYNC");
-    } catch (UnsupportedOperationException e) {
-      assertTrue(e.getMessage().contains("BEFORE_ASYNC"));
-      assertTrue(e.getMessage().contains("fire-and-forget"));
+      fail("Expected InterceptTypeNotSupportedException for BEFORE_ASYNC");
+    } catch (InterceptTypeNotSupportedException e) {
+      assertEquals("setArg()", e.getOperation());
+      assertEquals(InterceptType.BEFORE_ASYNC, e.getInterceptType());
     }
   }
 
   /**
-   * Tests that {@link InterceptContext#setReturnValue(Object)} throws UnsupportedOperationException
-   * for AFTER_ASYNC intercepts.
+   * Tests that {@link InterceptContext#setReturnValue(Object)} throws
+   * InterceptTypeNotSupportedException for AFTER_ASYNC intercepts.
    */
   @Test
   public void testSetReturnValueThrowsForAfterAsync() {
@@ -335,10 +334,10 @@ public class InterceptContextTest {
 
     try {
       ctx.setReturnValue(200);
-      fail("Expected UnsupportedOperationException for AFTER_ASYNC");
-    } catch (UnsupportedOperationException e) {
-      assertTrue(e.getMessage().contains("AFTER_ASYNC"));
-      assertTrue(e.getMessage().contains("fire-and-forget"));
+      fail("Expected InterceptTypeNotSupportedException for AFTER_ASYNC");
+    } catch (InterceptTypeNotSupportedException e) {
+      assertEquals("setReturnValue()", e.getOperation());
+      assertEquals(InterceptType.AFTER_ASYNC, e.getInterceptType());
     }
   }
 
@@ -365,7 +364,8 @@ public class InterceptContextTest {
   // ---- AROUND intercept proceed() tests ----
 
   /**
-   * Tests that proceed() throws UnsupportedOperationException for non-AROUND intercept (BEFORE).
+   * Tests that proceed() throws InterceptTypeNotSupportedException for non-AROUND intercept
+   * (BEFORE).
    */
   @Test
   public void testProceedThrowsForNonAroundIntercept() {
@@ -374,9 +374,10 @@ public class InterceptContextTest {
 
     try {
       ctx.proceed();
-      fail("Expected UnsupportedOperationException for non-AROUND intercept");
-    } catch (UnsupportedOperationException e) {
-      assertTrue(e.getMessage().contains("AROUND"));
+      fail("Expected InterceptTypeNotSupportedException for non-AROUND intercept");
+    } catch (InterceptTypeNotSupportedException e) {
+      assertEquals("proceed()", e.getOperation());
+      assertEquals(InterceptType.BEFORE, e.getInterceptType());
     }
   }
 
@@ -477,12 +478,15 @@ public class InterceptContextTest {
     InterceptContext ctx =
         InterceptContext.forBeforePhase(execMessage, InterceptType.AROUND, peerUuid, new Object[0]);
 
-    // Before proceed(), getReturnValue() throws IllegalStateException (supported but wrong phase)
+    // Before proceed(), getReturnValue() throws InterceptPhaseViolationException (supported but
+    // wrong phase)
     try {
       ctx.getReturnValue();
-      fail("Expected IllegalStateException before proceed()");
-    } catch (IllegalStateException e) {
-      assertTrue(e.getMessage().contains("proceed"));
+      fail("Expected InterceptPhaseViolationException before proceed()");
+    } catch (InterceptPhaseViolationException e) {
+      assertEquals("getReturnValue()", e.getOperation());
+      assertEquals(InterceptPhase.BEFORE, e.getCurrentPhase());
+      assertEquals(InterceptPhase.AFTER, e.getRequiredPhase());
     }
 
     AroundSocketAccessor mockAccessor =
@@ -501,13 +505,15 @@ public class InterceptContextTest {
     InterceptContext ctx =
         InterceptContext.forBeforePhase(execMessage, InterceptType.AROUND, peerUuid, new Object[0]);
 
-    // Before proceed(), getThrownException() throws IllegalStateException (supported but wrong
-    // phase)
+    // Before proceed(), getThrownException() throws InterceptPhaseViolationException (supported but
+    // wrong phase)
     try {
       ctx.getThrownException();
-      fail("Expected IllegalStateException before proceed()");
-    } catch (IllegalStateException e) {
-      assertTrue(e.getMessage().contains("proceed"));
+      fail("Expected InterceptPhaseViolationException before proceed()");
+    } catch (InterceptPhaseViolationException e) {
+      assertEquals("getThrownException()", e.getOperation());
+      assertEquals(InterceptPhase.BEFORE, e.getCurrentPhase());
+      assertEquals(InterceptPhase.AFTER, e.getRequiredPhase());
     }
 
     RuntimeException exception = new RuntimeException("error");
@@ -656,7 +662,7 @@ public class InterceptContextTest {
 
   /**
    * Tests that {@link InterceptContext#setExceptionToThrow(Throwable)} throws
-   * UnsupportedOperationException for BEFORE_ASYNC intercepts.
+   * InterceptTypeNotSupportedException for BEFORE_ASYNC intercepts.
    */
   @Test
   public void testSetExceptionToThrowThrowsForBeforeAsync() {
@@ -666,16 +672,16 @@ public class InterceptContextTest {
 
     try {
       ctx.setExceptionToThrow(new RuntimeException("test"));
-      fail("Expected UnsupportedOperationException for BEFORE_ASYNC");
-    } catch (UnsupportedOperationException e) {
-      assertTrue(e.getMessage().contains("BEFORE_ASYNC"));
-      assertTrue(e.getMessage().contains("fire-and-forget"));
+      fail("Expected InterceptTypeNotSupportedException for BEFORE_ASYNC");
+    } catch (InterceptTypeNotSupportedException e) {
+      assertEquals("setExceptionToThrow()", e.getOperation());
+      assertEquals(InterceptType.BEFORE_ASYNC, e.getInterceptType());
     }
   }
 
   /**
    * Tests that {@link InterceptContext#setExceptionToThrow(Throwable)} throws
-   * UnsupportedOperationException for AFTER_ASYNC intercepts.
+   * InterceptTypeNotSupportedException for AFTER_ASYNC intercepts.
    */
   @Test
   public void testSetExceptionToThrowThrowsForAfterAsync() {
@@ -685,10 +691,10 @@ public class InterceptContextTest {
 
     try {
       ctx.setExceptionToThrow(new RuntimeException("test"));
-      fail("Expected UnsupportedOperationException for AFTER_ASYNC");
-    } catch (UnsupportedOperationException e) {
-      assertTrue(e.getMessage().contains("AFTER_ASYNC"));
-      assertTrue(e.getMessage().contains("fire-and-forget"));
+      fail("Expected InterceptTypeNotSupportedException for AFTER_ASYNC");
+    } catch (InterceptTypeNotSupportedException e) {
+      assertEquals("setExceptionToThrow()", e.getOperation());
+      assertEquals(InterceptType.AFTER_ASYNC, e.getInterceptType());
     }
   }
 
@@ -712,7 +718,7 @@ public class InterceptContextTest {
   // ========================================================================
 
   /**
-   * Tests that setArg() throws UnsupportedOperationException for AFTER intercepts.
+   * Tests that setArg() throws InterceptTypeNotSupportedException for AFTER intercepts.
    *
    * <p>AFTER intercepts cannot mutate arguments because execution has already happened.
    */
@@ -726,14 +732,16 @@ public class InterceptContextTest {
 
     try {
       ctx.setArg(0, "MODIFIED");
-      fail("Expected UnsupportedOperationException for AFTER intercept");
-    } catch (UnsupportedOperationException e) {
-      assertTrue(e.getMessage().contains("AFTER"));
+      fail("Expected InterceptTypeNotSupportedException for AFTER intercept");
+    } catch (InterceptTypeNotSupportedException e) {
+      assertEquals("setArg()", e.getOperation());
+      assertEquals(InterceptType.AFTER, e.getInterceptType());
     }
   }
 
   /**
-   * Tests that setArg() throws IllegalStateException for AROUND intercept after proceed().
+   * Tests that setArg() throws InterceptPhaseViolationException for AROUND intercept after
+   * proceed().
    *
    * <p>After proceed() is called, the AROUND intercept is in AFTER phase and cannot mutate args.
    */
@@ -753,14 +761,16 @@ public class InterceptContextTest {
 
     try {
       ctx.setArg(0, "MODIFIED");
-      fail("Expected IllegalStateException for AROUND after proceed()");
-    } catch (IllegalStateException e) {
-      assertTrue(e.getMessage().contains("AFTER"));
+      fail("Expected InterceptPhaseViolationException for AROUND after proceed()");
+    } catch (InterceptPhaseViolationException e) {
+      assertEquals("setArg()", e.getOperation());
+      assertEquals(InterceptPhase.AFTER, e.getCurrentPhase());
+      assertEquals(InterceptPhase.BEFORE, e.getRequiredPhase());
     }
   }
 
   /**
-   * Tests that setArg() throws UnsupportedOperationException for AFTER_ASYNC intercepts.
+   * Tests that setArg() throws InterceptTypeNotSupportedException for AFTER_ASYNC intercepts.
    *
    * <p>ASYNC intercepts are fire-and-forget and cannot affect execution.
    */
@@ -774,9 +784,10 @@ public class InterceptContextTest {
 
     try {
       ctx.setArg(0, "MODIFIED");
-      fail("Expected UnsupportedOperationException for AFTER_ASYNC intercept");
-    } catch (UnsupportedOperationException e) {
-      assertTrue(e.getMessage().contains("AFTER_ASYNC"));
+      fail("Expected InterceptTypeNotSupportedException for AFTER_ASYNC intercept");
+    } catch (InterceptTypeNotSupportedException e) {
+      assertEquals("setArg()", e.getOperation());
+      assertEquals(InterceptType.AFTER_ASYNC, e.getInterceptType());
     }
   }
 
@@ -785,7 +796,7 @@ public class InterceptContextTest {
   // ========================================================================
 
   /**
-   * Tests that getReturnValue() throws UnsupportedOperationException for BEFORE intercepts.
+   * Tests that getReturnValue() throws InterceptTypeNotSupportedException for BEFORE intercepts.
    *
    * <p>BEFORE intercepts never have access to return value in any phase.
    */
@@ -797,14 +808,16 @@ public class InterceptContextTest {
 
     try {
       ctx.getReturnValue();
-      fail("Expected UnsupportedOperationException for BEFORE intercept");
-    } catch (UnsupportedOperationException e) {
-      assertTrue(e.getMessage().contains("BEFORE"));
+      fail("Expected InterceptTypeNotSupportedException for BEFORE intercept");
+    } catch (InterceptTypeNotSupportedException e) {
+      assertEquals("getReturnValue()", e.getOperation());
+      assertEquals(InterceptType.BEFORE, e.getInterceptType());
     }
   }
 
   /**
-   * Tests that getReturnValue() throws IllegalStateException for AROUND before proceed().
+   * Tests that getReturnValue() throws InterceptPhaseViolationException for AROUND before
+   * proceed().
    *
    * <p>Before proceed() is called, return value is not yet available.
    */
@@ -816,14 +829,17 @@ public class InterceptContextTest {
 
     try {
       ctx.getReturnValue();
-      fail("Expected IllegalStateException for AROUND before proceed()");
-    } catch (IllegalStateException e) {
-      assertTrue(e.getMessage().contains("proceed"));
+      fail("Expected InterceptPhaseViolationException for AROUND before proceed()");
+    } catch (InterceptPhaseViolationException e) {
+      assertEquals("getReturnValue()", e.getOperation());
+      assertEquals(InterceptPhase.BEFORE, e.getCurrentPhase());
+      assertEquals(InterceptPhase.AFTER, e.getRequiredPhase());
     }
   }
 
   /**
-   * Tests that getReturnValue() throws UnsupportedOperationException for BEFORE_ASYNC intercepts.
+   * Tests that getReturnValue() throws InterceptTypeNotSupportedException for BEFORE_ASYNC
+   * intercepts.
    *
    * <p>BEFORE_ASYNC intercepts never have access to return value in any phase.
    */
@@ -835,9 +851,10 @@ public class InterceptContextTest {
 
     try {
       ctx.getReturnValue();
-      fail("Expected UnsupportedOperationException for BEFORE_ASYNC intercept");
-    } catch (UnsupportedOperationException e) {
-      assertTrue(e.getMessage().contains("BEFORE_ASYNC"));
+      fail("Expected InterceptTypeNotSupportedException for BEFORE_ASYNC intercept");
+    } catch (InterceptTypeNotSupportedException e) {
+      assertEquals("getReturnValue()", e.getOperation());
+      assertEquals(InterceptType.BEFORE_ASYNC, e.getInterceptType());
     }
   }
 
@@ -846,7 +863,7 @@ public class InterceptContextTest {
   // ========================================================================
 
   /**
-   * Tests that setReturnValue() throws UnsupportedOperationException for BEFORE intercepts.
+   * Tests that setReturnValue() throws InterceptTypeNotSupportedException for BEFORE intercepts.
    *
    * <p>BEFORE intercepts cannot override return value - use AFTER or AROUND for that.
    */
@@ -858,14 +875,16 @@ public class InterceptContextTest {
 
     try {
       ctx.setReturnValue("overridden");
-      fail("Expected UnsupportedOperationException for BEFORE intercept");
-    } catch (UnsupportedOperationException e) {
-      assertTrue(e.getMessage().contains("BEFORE"));
+      fail("Expected InterceptTypeNotSupportedException for BEFORE intercept");
+    } catch (InterceptTypeNotSupportedException e) {
+      assertEquals("setReturnValue()", e.getOperation());
+      assertEquals(InterceptType.BEFORE, e.getInterceptType());
     }
   }
 
   /**
-   * Tests that setReturnValue() throws UnsupportedOperationException for BEFORE_ASYNC intercepts.
+   * Tests that setReturnValue() throws InterceptTypeNotSupportedException for BEFORE_ASYNC
+   * intercepts.
    *
    * <p>ASYNC intercepts are fire-and-forget and cannot affect execution.
    */
@@ -877,9 +896,10 @@ public class InterceptContextTest {
 
     try {
       ctx.setReturnValue("overridden");
-      fail("Expected UnsupportedOperationException for BEFORE_ASYNC intercept");
-    } catch (UnsupportedOperationException e) {
-      assertTrue(e.getMessage().contains("BEFORE_ASYNC"));
+      fail("Expected InterceptTypeNotSupportedException for BEFORE_ASYNC intercept");
+    } catch (InterceptTypeNotSupportedException e) {
+      assertEquals("setReturnValue()", e.getOperation());
+      assertEquals(InterceptType.BEFORE_ASYNC, e.getInterceptType());
     }
   }
 
@@ -890,7 +910,8 @@ public class InterceptContextTest {
   // ========================================================================
 
   /**
-   * Tests that getThrownException() throws UnsupportedOperationException for BEFORE intercepts.
+   * Tests that getThrownException() throws InterceptTypeNotSupportedException for BEFORE
+   * intercepts.
    *
    * <p>BEFORE intercepts never have access to thrown exception in any phase.
    */
@@ -902,14 +923,16 @@ public class InterceptContextTest {
 
     try {
       ctx.getThrownException();
-      fail("Expected UnsupportedOperationException for BEFORE intercept");
-    } catch (UnsupportedOperationException e) {
-      assertTrue(e.getMessage().contains("BEFORE"));
+      fail("Expected InterceptTypeNotSupportedException for BEFORE intercept");
+    } catch (InterceptTypeNotSupportedException e) {
+      assertEquals("getThrownException()", e.getOperation());
+      assertEquals(InterceptType.BEFORE, e.getInterceptType());
     }
   }
 
   /**
-   * Tests that getThrownException() throws IllegalStateException for AROUND before proceed().
+   * Tests that getThrownException() throws InterceptPhaseViolationException for AROUND before
+   * proceed().
    *
    * <p>Before proceed() is called, thrown exception is not yet available.
    */
@@ -921,14 +944,16 @@ public class InterceptContextTest {
 
     try {
       ctx.getThrownException();
-      fail("Expected IllegalStateException for AROUND before proceed()");
-    } catch (IllegalStateException e) {
-      assertTrue(e.getMessage().contains("proceed"));
+      fail("Expected InterceptPhaseViolationException for AROUND before proceed()");
+    } catch (InterceptPhaseViolationException e) {
+      assertEquals("getThrownException()", e.getOperation());
+      assertEquals(InterceptPhase.BEFORE, e.getCurrentPhase());
+      assertEquals(InterceptPhase.AFTER, e.getRequiredPhase());
     }
   }
 
   /**
-   * Tests that getThrownException() throws UnsupportedOperationException for BEFORE_ASYNC
+   * Tests that getThrownException() throws InterceptTypeNotSupportedException for BEFORE_ASYNC
    * intercepts.
    *
    * <p>BEFORE_ASYNC intercepts never have access to thrown exception in any phase.
@@ -941,9 +966,10 @@ public class InterceptContextTest {
 
     try {
       ctx.getThrownException();
-      fail("Expected UnsupportedOperationException for BEFORE_ASYNC intercept");
-    } catch (UnsupportedOperationException e) {
-      assertTrue(e.getMessage().contains("BEFORE_ASYNC"));
+      fail("Expected InterceptTypeNotSupportedException for BEFORE_ASYNC intercept");
+    } catch (InterceptTypeNotSupportedException e) {
+      assertEquals("getThrownException()", e.getOperation());
+      assertEquals(InterceptType.BEFORE_ASYNC, e.getInterceptType());
     }
   }
 
@@ -978,7 +1004,7 @@ public class InterceptContextTest {
   // ========================================================================
 
   /**
-   * Tests that proceed() throws UnsupportedOperationException for AFTER intercepts.
+   * Tests that proceed() throws InterceptTypeNotSupportedException for AFTER intercepts.
    *
    * <p>proceed() is only valid for AROUND intercepts.
    */
@@ -990,14 +1016,15 @@ public class InterceptContextTest {
 
     try {
       ctx.proceed();
-      fail("Expected UnsupportedOperationException for AFTER intercept");
-    } catch (UnsupportedOperationException e) {
-      assertTrue(e.getMessage().contains("AROUND"));
+      fail("Expected InterceptTypeNotSupportedException for AFTER intercept");
+    } catch (InterceptTypeNotSupportedException e) {
+      assertEquals("proceed()", e.getOperation());
+      assertEquals(InterceptType.AFTER, e.getInterceptType());
     }
   }
 
   /**
-   * Tests that proceed() throws UnsupportedOperationException for BEFORE_ASYNC intercepts.
+   * Tests that proceed() throws InterceptTypeNotSupportedException for BEFORE_ASYNC intercepts.
    *
    * <p>proceed() is only valid for AROUND intercepts.
    */
@@ -1009,14 +1036,15 @@ public class InterceptContextTest {
 
     try {
       ctx.proceed();
-      fail("Expected UnsupportedOperationException for BEFORE_ASYNC intercept");
-    } catch (UnsupportedOperationException e) {
-      assertTrue(e.getMessage().contains("AROUND"));
+      fail("Expected InterceptTypeNotSupportedException for BEFORE_ASYNC intercept");
+    } catch (InterceptTypeNotSupportedException e) {
+      assertEquals("proceed()", e.getOperation());
+      assertEquals(InterceptType.BEFORE_ASYNC, e.getInterceptType());
     }
   }
 
   /**
-   * Tests that proceed() throws UnsupportedOperationException for AFTER_ASYNC intercepts.
+   * Tests that proceed() throws InterceptTypeNotSupportedException for AFTER_ASYNC intercepts.
    *
    * <p>proceed() is only valid for AROUND intercepts.
    */
@@ -1028,15 +1056,12 @@ public class InterceptContextTest {
 
     try {
       ctx.proceed();
-      fail("Expected UnsupportedOperationException for AFTER_ASYNC intercept");
-    } catch (UnsupportedOperationException e) {
-      assertTrue(e.getMessage().contains("AROUND"));
+      fail("Expected InterceptTypeNotSupportedException for AFTER_ASYNC intercept");
+    } catch (InterceptTypeNotSupportedException e) {
+      assertEquals("proceed()", e.getOperation());
+      assertEquals(InterceptType.AFTER_ASYNC, e.getInterceptType());
     }
   }
-
-  // Note: testProceedThrowsForNonAroundIntercept already tests BEFORE throwing
-  // IllegalStateException
-  // We need to change it to UnsupportedOperationException
 
   // ===== Local Intercept Factory Method Tests =====
 
@@ -1305,15 +1330,23 @@ public class InterceptContextTest {
    * UnsupportedOperationException when attempting to access return value in a BEFORE intercept.
    */
   @Test
-  @Ignore("Awaiting implementation in #271")
   public void shouldThrowInterceptTypeNotSupportedForGetReturnValueInBeforeIntercept() {
     // Given: A BEFORE intercept context
+    InterceptContext ctx =
+        InterceptContext.forBeforePhase(
+            execMessage, InterceptType.BEFORE, peerUuid, new Object[] {"hello"});
+
     // When: getReturnValue() is called
     // Then: InterceptTypeNotSupportedException is thrown with operation="getReturnValue()" and
     // interceptType=BEFORE
-
-    // TODO: Implement after #271 provides the implementation
-    fail("Not yet implemented");
+    try {
+      ctx.getReturnValue();
+      fail("Expected InterceptTypeNotSupportedException for BEFORE intercept");
+    } catch (InterceptTypeNotSupportedException e) {
+      assertEquals("getReturnValue()", e.getOperation());
+      assertEquals(InterceptType.BEFORE, e.getInterceptType());
+      assertNull(e.getInterceptPhase());
+    }
   }
 
   /**
@@ -1324,15 +1357,23 @@ public class InterceptContextTest {
    * attempting to access return value in an AROUND intercept before proceed() is called.
    */
   @Test
-  @Ignore("Awaiting implementation in #271")
   public void shouldThrowInterceptPhaseViolationForGetReturnValueBeforeProceed() {
     // Given: An AROUND intercept context in BEFORE phase (proceed() not called)
+    InterceptContext ctx =
+        InterceptContext.forBeforePhase(
+            execMessage, InterceptType.AROUND, peerUuid, new Object[] {"hello"});
+
     // When: getReturnValue() is called
     // Then: InterceptPhaseViolationException is thrown with operation="getReturnValue()",
     // currentPhase=BEFORE, requiredPhase=AFTER
-
-    // TODO: Implement after #271 provides the implementation
-    fail("Not yet implemented");
+    try {
+      ctx.getReturnValue();
+      fail("Expected InterceptPhaseViolationException for AROUND before proceed()");
+    } catch (InterceptPhaseViolationException e) {
+      assertEquals("getReturnValue()", e.getOperation());
+      assertEquals(InterceptPhase.BEFORE, e.getCurrentPhase());
+      assertEquals(InterceptPhase.AFTER, e.getRequiredPhase());
+    }
   }
 
   /**
@@ -1342,15 +1383,24 @@ public class InterceptContextTest {
    * UnsupportedOperationException when attempting to modify arguments in an AFTER intercept.
    */
   @Test
-  @Ignore("Awaiting implementation in #271")
   public void shouldThrowInterceptTypeNotSupportedForSetArgInAfterIntercept() {
     // Given: An AFTER intercept context
+    Object[] args = new Object[] {"hello", 42};
+    InterceptContext ctx =
+        InterceptContext.forAfterPhase(
+            execMessage, InterceptType.AFTER, peerUuid, args, "result", false, null);
+
     // When: setArg() is called
     // Then: InterceptTypeNotSupportedException is thrown with operation="setArg()" and
     // interceptType=AFTER
-
-    // TODO: Implement after #271 provides the implementation
-    fail("Not yet implemented");
+    try {
+      ctx.setArg(0, "MODIFIED");
+      fail("Expected InterceptTypeNotSupportedException for AFTER intercept");
+    } catch (InterceptTypeNotSupportedException e) {
+      assertEquals("setArg()", e.getOperation());
+      assertEquals(InterceptType.AFTER, e.getInterceptType());
+      assertNull(e.getInterceptPhase());
+    }
   }
 
   /**
@@ -1360,15 +1410,30 @@ public class InterceptContextTest {
    * attempting to modify arguments in an AROUND intercept after proceed() is called.
    */
   @Test
-  @Ignore("Awaiting implementation in #271")
   public void shouldThrowInterceptPhaseViolationForSetArgAfterProceed() {
     // Given: An AROUND intercept context where proceed() has been called (now in AFTER phase)
+    Object[] args = new Object[] {"hello", 42};
+    InterceptContext ctx =
+        InterceptContext.forBeforePhase(execMessage, InterceptType.AROUND, peerUuid, args);
+
+    AroundSocketAccessor mockAccessor =
+        (beforeResponse, timeoutMs) -> new AfterPhaseData("result", null, false);
+    ctx.setAroundAccessor(mockAccessor, "callback-123", 30000);
+
+    // proceed() transitions to AFTER phase
+    ctx.proceed();
+
     // When: setArg() is called
     // Then: InterceptPhaseViolationException is thrown with operation="setArg()",
     // currentPhase=AFTER, requiredPhase=BEFORE
-
-    // TODO: Implement after #271 provides the implementation
-    fail("Not yet implemented");
+    try {
+      ctx.setArg(0, "MODIFIED");
+      fail("Expected InterceptPhaseViolationException for AROUND after proceed()");
+    } catch (InterceptPhaseViolationException e) {
+      assertEquals("setArg()", e.getOperation());
+      assertEquals(InterceptPhase.AFTER, e.getCurrentPhase());
+      assertEquals(InterceptPhase.BEFORE, e.getRequiredPhase());
+    }
   }
 
   /**
@@ -1379,14 +1444,21 @@ public class InterceptContextTest {
    * non-AROUND intercept type).
    */
   @Test
-  @Ignore("Awaiting implementation in #271")
   public void shouldThrowInterceptTypeNotSupportedForProceedInNonAroundIntercept() {
     // Given: A BEFORE intercept context (non-AROUND type)
+    InterceptContext ctx =
+        InterceptContext.forBeforePhase(execMessage, InterceptType.BEFORE, peerUuid, new Object[0]);
+
     // When: proceed() is called
     // Then: InterceptTypeNotSupportedException is thrown with operation="proceed()" and
     // interceptType=BEFORE
-
-    // TODO: Implement after #271 provides the implementation
-    fail("Not yet implemented");
+    try {
+      ctx.proceed();
+      fail("Expected InterceptTypeNotSupportedException for non-AROUND intercept");
+    } catch (InterceptTypeNotSupportedException e) {
+      assertEquals("proceed()", e.getOperation());
+      assertEquals(InterceptType.BEFORE, e.getInterceptType());
+      assertNull(e.getInterceptPhase());
+    }
   }
 }

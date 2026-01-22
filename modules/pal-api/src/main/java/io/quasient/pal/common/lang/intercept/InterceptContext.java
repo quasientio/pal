@@ -619,26 +619,21 @@ public final class InterceptContext {
    * </ul>
    *
    * @return the return value, or null
-   * @throws UnsupportedOperationException if intercept type is BEFORE or BEFORE_ASYNC (return value
-   *     never available)
-   * @throws IllegalStateException if AROUND intercept before proceed() (return value not yet
-   *     available)
+   * @throws InterceptTypeNotSupportedException if intercept type is BEFORE or BEFORE_ASYNC (return
+   *     value never available)
+   * @throws InterceptPhaseViolationException if AROUND intercept before proceed() (return value not
+   *     yet available)
    */
   @Nullable
   public Object getReturnValue() {
     // BEFORE and BEFORE_ASYNC intercepts never have access to return value
     if (interceptType == InterceptType.BEFORE || interceptType == InterceptType.BEFORE_ASYNC) {
-      throw new UnsupportedOperationException(
-          "getReturnValue() is not supported for "
-              + interceptType
-              + " intercepts. "
-              + "Return value is only available in AFTER or AROUND intercepts.");
+      throw new InterceptTypeNotSupportedException("getReturnValue()", interceptType);
     }
     // AROUND intercept before proceed() - supported but not in this phase
     if (phase == InterceptPhase.BEFORE) {
-      throw new IllegalStateException(
-          "getReturnValue() is not available before proceed(). "
-              + "Call proceed() first to execute the method.");
+      throw new InterceptPhaseViolationException(
+          "getReturnValue()", InterceptPhase.BEFORE, InterceptPhase.AFTER);
     }
     return returnValue;
   }
@@ -662,26 +657,21 @@ public final class InterceptContext {
    * normally.
    *
    * @return the thrown exception, or null if the method completed normally
-   * @throws UnsupportedOperationException if intercept type is BEFORE or BEFORE_ASYNC (thrown
+   * @throws InterceptTypeNotSupportedException if intercept type is BEFORE or BEFORE_ASYNC (thrown
    *     exception never available)
-   * @throws IllegalStateException if AROUND intercept before proceed() (thrown exception not yet
-   *     available)
+   * @throws InterceptPhaseViolationException if AROUND intercept before proceed() (thrown exception
+   *     not yet available)
    */
   @Nullable
   public Throwable getThrownException() {
     // BEFORE and BEFORE_ASYNC intercepts never have access to thrown exception
     if (interceptType == InterceptType.BEFORE || interceptType == InterceptType.BEFORE_ASYNC) {
-      throw new UnsupportedOperationException(
-          "getThrownException() is not supported for "
-              + interceptType
-              + " intercepts. "
-              + "Thrown exception is only available in AFTER or AROUND intercepts.");
+      throw new InterceptTypeNotSupportedException("getThrownException()", interceptType);
     }
     // AROUND intercept before proceed() - supported but not in this phase
     if (phase == InterceptPhase.BEFORE) {
-      throw new IllegalStateException(
-          "getThrownException() is not available before proceed(). "
-              + "Call proceed() first to execute the method.");
+      throw new InterceptPhaseViolationException(
+          "getThrownException()", InterceptPhase.BEFORE, InterceptPhase.AFTER);
     }
     return thrownException;
   }
@@ -705,28 +695,22 @@ public final class InterceptContext {
    * @param index the zero-based argument index
    * @param value the new argument value
    * @throws IndexOutOfBoundsException if the index is out of range
-   * @throws UnsupportedOperationException if the intercept type is AFTER, BEFORE_ASYNC, or
+   * @throws InterceptTypeNotSupportedException if the intercept type is AFTER, BEFORE_ASYNC, or
    *     AFTER_ASYNC
-   * @throws IllegalStateException if called in AFTER phase (for AROUND after proceed())
+   * @throws InterceptPhaseViolationException if called in AFTER phase (for AROUND after proceed())
    */
   public void setArg(int index, @Nullable Object value) {
     // Check for unsupported intercept types
     if (interceptType == InterceptType.AFTER || interceptType == InterceptType.AFTER_ASYNC) {
-      throw new UnsupportedOperationException(
-          "Argument mutation is not supported for "
-              + interceptType
-              + " intercepts. "
-              + "The method has already executed.");
+      throw new InterceptTypeNotSupportedException("setArg()", interceptType);
     }
     if (interceptType == InterceptType.BEFORE_ASYNC) {
-      throw new UnsupportedOperationException(
-          "Argument mutation is not supported for BEFORE_ASYNC intercepts. "
-              + "ASYNC callbacks are fire-and-forget and cannot modify arguments.");
+      throw new InterceptTypeNotSupportedException("setArg()", interceptType);
     }
     // Check phase for AROUND intercepts (after proceed(), we're in AFTER phase)
     if (phase == InterceptPhase.AFTER) {
-      throw new IllegalStateException(
-          "setArg() is not available in AFTER phase. " + "The method has already executed.");
+      throw new InterceptPhaseViolationException(
+          "setArg()", InterceptPhase.AFTER, InterceptPhase.BEFORE);
     }
     if (args == null) {
       throw new IllegalStateException("No arguments available to modify");
@@ -762,22 +746,16 @@ public final class InterceptContext {
    *
    * @param value the new return value
    * @throws IllegalStateException if the method is void
-   * @throws UnsupportedOperationException if the intercept type is BEFORE, BEFORE_ASYNC, or
+   * @throws InterceptTypeNotSupportedException if the intercept type is BEFORE, BEFORE_ASYNC, or
    *     AFTER_ASYNC
    */
   public void setReturnValue(@Nullable Object value) {
     // Check for unsupported intercept types
     if (interceptType == InterceptType.BEFORE) {
-      throw new UnsupportedOperationException(
-          "Return value override is not supported for BEFORE intercepts. "
-              + "Use AROUND with skipProceed() to return a custom value.");
+      throw new InterceptTypeNotSupportedException("setReturnValue()", interceptType);
     }
     if (interceptType == InterceptType.BEFORE_ASYNC || interceptType == InterceptType.AFTER_ASYNC) {
-      throw new UnsupportedOperationException(
-          "Return value override is not supported for "
-              + interceptType
-              + " intercepts. "
-              + "ASYNC callbacks are fire-and-forget and cannot modify the return value.");
+      throw new InterceptTypeNotSupportedException("setReturnValue()", interceptType);
     }
     if (isVoidMutable) {
       throw new IllegalStateException("Cannot set return value for void method");
@@ -807,15 +785,11 @@ public final class InterceptContext {
    * </ul>
    *
    * @param exception the exception to throw
-   * @throws UnsupportedOperationException if the intercept type is BEFORE_ASYNC or AFTER_ASYNC
+   * @throws InterceptTypeNotSupportedException if the intercept type is BEFORE_ASYNC or AFTER_ASYNC
    */
   public void setExceptionToThrow(@Nonnull Throwable exception) {
     if (interceptType == InterceptType.BEFORE_ASYNC || interceptType == InterceptType.AFTER_ASYNC) {
-      throw new UnsupportedOperationException(
-          "Exception throwing is not supported for "
-              + interceptType
-              + " intercepts. "
-              + "ASYNC callbacks are fire-and-forget and cannot affect execution flow.");
+      throw new InterceptTypeNotSupportedException("setExceptionToThrow()", interceptType);
     }
     this.exceptionToThrow = Objects.requireNonNull(exception, "exception cannot be null");
   }
@@ -931,15 +905,14 @@ public final class InterceptContext {
    * }</pre>
    *
    * @return the result of method execution
-   * @throws UnsupportedOperationException if intercept type is not AROUND (proceed only valid for
-   *     AROUND)
+   * @throws InterceptTypeNotSupportedException if intercept type is not AROUND (proceed only valid
+   *     for AROUND)
    * @throws IllegalStateException if proceed() was already called (can only be called once)
    * @throws AroundTimeoutException if timeout exceeded waiting for method execution
    */
   public ProceedResult proceed() {
     if (interceptType != InterceptType.AROUND) {
-      throw new UnsupportedOperationException(
-          "proceed() is only valid for AROUND intercepts, not " + interceptType);
+      throw new InterceptTypeNotSupportedException("proceed()", interceptType);
     }
     if (proceedCalled) {
       throw new IllegalStateException("proceed() can only be called once per callback invocation");
