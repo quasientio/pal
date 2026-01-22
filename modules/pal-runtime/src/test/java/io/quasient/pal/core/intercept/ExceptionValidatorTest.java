@@ -9,9 +9,16 @@
  */
 package io.quasient.pal.core.intercept;
 
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
-import org.junit.Ignore;
+import io.quasient.pal.common.lang.intercept.CheckedExceptionPolicy;
+import io.quasient.pal.common.lang.intercept.InvalidCallbackExceptionException;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.sql.SQLException;
 import org.junit.Test;
 
 /**
@@ -27,8 +34,6 @@ import org.junit.Test;
  *       io.quasient.pal.common.lang.intercept.CheckedExceptionPolicy}
  *   <li>Handle edge cases gracefully (null declarations, missing classes)
  * </ul>
- *
- * <p>These test specifications are awaiting implementation in issue #284.
  */
 public class ExceptionValidatorTest {
 
@@ -42,14 +47,18 @@ public class ExceptionValidatorTest {
    * <p><b>Then:</b> No exception thrown (RuntimeExceptions always allowed)
    */
   @Test
-  @Ignore("Awaiting implementation in #284")
   public void shouldAllowRuntimeExceptionAlways() {
     // Given: Method declares IOException; callback throws IllegalArgumentException
-    // When: Validating the exception
-    // Then: No exception thrown (RuntimeExceptions always allowed)
+    String[] declaredExceptions = new String[] {"java.io.IOException"};
+    IllegalArgumentException runtimeException = new IllegalArgumentException("test");
 
-    // TODO: Implement after #284 provides ExceptionValidator implementation
-    fail("Not yet implemented");
+    // When: Validating the exception with REJECT policy (strictest policy)
+    Throwable result =
+        ExceptionValidator.validateThrowable(
+            runtimeException, declaredExceptions, CheckedExceptionPolicy.REJECT);
+
+    // Then: Returns the same exception unchanged (RuntimeExceptions always allowed)
+    assertSame(runtimeException, result);
   }
 
   /**
@@ -62,14 +71,18 @@ public class ExceptionValidatorTest {
    * <p><b>Then:</b> No exception thrown (Errors always allowed)
    */
   @Test
-  @Ignore("Awaiting implementation in #284")
   public void shouldAllowErrorAlways() {
     // Given: Method declares IOException; callback throws OutOfMemoryError
-    // When: Validating the exception
-    // Then: No exception thrown (Errors always allowed)
+    String[] declaredExceptions = new String[] {"java.io.IOException"};
+    OutOfMemoryError error = new OutOfMemoryError("test");
 
-    // TODO: Implement after #284 provides ExceptionValidator implementation
-    fail("Not yet implemented");
+    // When: Validating the exception with REJECT policy (strictest policy)
+    Throwable result =
+        ExceptionValidator.validateThrowable(
+            error, declaredExceptions, CheckedExceptionPolicy.REJECT);
+
+    // Then: Returns the same error unchanged (Errors always allowed)
+    assertSame(error, result);
   }
 
   /**
@@ -82,14 +95,18 @@ public class ExceptionValidatorTest {
    * <p><b>Then:</b> No exception thrown (exact match allowed)
    */
   @Test
-  @Ignore("Awaiting implementation in #284")
   public void shouldAllowDeclaredCheckedException() {
     // Given: Method declares IOException; callback throws IOException
-    // When: Validating the exception
-    // Then: No exception thrown (exact match allowed)
+    String[] declaredExceptions = new String[] {"java.io.IOException"};
+    IOException checkedException = new IOException("test");
 
-    // TODO: Implement after #284 provides ExceptionValidator implementation
-    fail("Not yet implemented");
+    // When: Validating the exception
+    Throwable result =
+        ExceptionValidator.validateThrowable(
+            checkedException, declaredExceptions, CheckedExceptionPolicy.REJECT);
+
+    // Then: Returns the same exception unchanged (exact match allowed)
+    assertSame(checkedException, result);
   }
 
   /**
@@ -102,14 +119,18 @@ public class ExceptionValidatorTest {
    * <p><b>Then:</b> No exception thrown (FileNotFoundException extends IOException)
    */
   @Test
-  @Ignore("Awaiting implementation in #284")
   public void shouldAllowSubclassOfDeclaredException() {
     // Given: Method declares IOException; callback throws FileNotFoundException
-    // When: Validating the exception
-    // Then: No exception thrown (FileNotFoundException extends IOException)
+    String[] declaredExceptions = new String[] {"java.io.IOException"};
+    FileNotFoundException subclassException = new FileNotFoundException("test");
 
-    // TODO: Implement after #284 provides ExceptionValidator implementation
-    fail("Not yet implemented");
+    // When: Validating the exception
+    Throwable result =
+        ExceptionValidator.validateThrowable(
+            subclassException, declaredExceptions, CheckedExceptionPolicy.REJECT);
+
+    // Then: Returns the same exception unchanged (FileNotFoundException extends IOException)
+    assertSame(subclassException, result);
   }
 
   /**
@@ -121,15 +142,16 @@ public class ExceptionValidatorTest {
    *
    * <p><b>Then:</b> InvalidCallbackExceptionException thrown
    */
-  @Test
-  @Ignore("Awaiting implementation in #284")
+  @Test(expected = InvalidCallbackExceptionException.class)
   public void shouldRejectUndeclaredCheckedException() {
     // Given: Method declares IOException; callback throws SQLException
+    String[] declaredExceptions = new String[] {"java.io.IOException"};
+    SQLException undeclaredException = new SQLException("test");
+
     // When: Validating with REJECT policy
     // Then: InvalidCallbackExceptionException thrown
-
-    // TODO: Implement after #284 provides ExceptionValidator implementation
-    fail("Not yet implemented");
+    ExceptionValidator.validateThrowable(
+        undeclaredException, declaredExceptions, CheckedExceptionPolicy.REJECT);
   }
 
   /**
@@ -142,14 +164,20 @@ public class ExceptionValidatorTest {
    * <p><b>Then:</b> Returns RuntimeException wrapping SQLException
    */
   @Test
-  @Ignore("Awaiting implementation in #284")
   public void shouldWrapUndeclaredCheckedException() {
     // Given: Method declares IOException; callback throws SQLException
-    // When: Validating with WRAP policy
-    // Then: Returns RuntimeException wrapping SQLException
+    String[] declaredExceptions = new String[] {"java.io.IOException"};
+    SQLException undeclaredException = new SQLException("test");
 
-    // TODO: Implement after #284 provides ExceptionValidator implementation
-    fail("Not yet implemented");
+    // When: Validating with WRAP policy
+    Throwable result =
+        ExceptionValidator.validateThrowable(
+            undeclaredException, declaredExceptions, CheckedExceptionPolicy.WRAP);
+
+    // Then: Returns RuntimeException wrapping SQLException
+    assertTrue(result instanceof RuntimeException);
+    assertSame(undeclaredException, result.getCause());
+    assertEquals("Callback threw undeclared checked exception", result.getMessage());
   }
 
   /**
@@ -162,14 +190,16 @@ public class ExceptionValidatorTest {
    * <p><b>Then:</b> No exception thrown (fail-open)
    */
   @Test
-  @Ignore("Awaiting implementation in #284")
   public void shouldSkipValidationWhenDeclaredExceptionsNull() {
     // Given: Method with null declaredExceptions
-    // When: Validating any exception
-    // Then: No exception thrown (fail-open)
+    SQLException checkedException = new SQLException("test");
 
-    // TODO: Implement after #284 provides ExceptionValidator implementation
-    fail("Not yet implemented");
+    // When: Validating with null declaredExceptions (fail-open)
+    Throwable result =
+        ExceptionValidator.validateThrowable(checkedException, null, CheckedExceptionPolicy.REJECT);
+
+    // Then: Returns the same exception unchanged (validation skipped)
+    assertSame(checkedException, result);
   }
 
   /**
@@ -182,13 +212,15 @@ public class ExceptionValidatorTest {
    * <p><b>Then:</b> Returns false gracefully (no CNFE thrown to caller)
    */
   @Test
-  @Ignore("Awaiting implementation in #284")
   public void shouldHandleClassNotFoundGracefully() {
     // Given: Exception type not on classpath
-    // When: Checking isAssignableTo
-    // Then: Returns false gracefully (no CNFE thrown to caller)
+    String exceptionClassName = "com.example.NonExistentException";
+    String declaredClassName = "java.io.IOException";
 
-    // TODO: Implement after #284 provides ExceptionValidator implementation
-    fail("Not yet implemented");
+    // When: Checking isAssignableTo with non-existent class
+    boolean result = ExceptionValidator.isAssignableTo(exceptionClassName, declaredClassName);
+
+    // Then: Returns false gracefully (no CNFE thrown to caller)
+    assertFalse(result);
   }
 }
