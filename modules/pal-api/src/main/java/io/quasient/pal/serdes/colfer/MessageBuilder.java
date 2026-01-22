@@ -1151,6 +1151,94 @@ public final class MessageBuilder {
 
   // </editor-fold>
 
+  // <editor-fold desc="Helper methods for exception extraction">
+
+  /**
+   * Extracts declared exception class names from a method signature using reflection.
+   *
+   * <p>This method resolves the method using the provided class name, method name, and parameter
+   * types, then returns the names of all declared (checked) exceptions in the method's throws
+   * clause.
+   *
+   * @param className the fully qualified name of the class containing the method
+   * @param methodName the name of the method
+   * @param parameterTypes the array of parameter type names (may be {@code null} or empty)
+   * @return an array of fully qualified exception class names, or an empty array if the method has
+   *     no declared exceptions or if the method cannot be resolved
+   */
+  private String[] extractDeclaredExceptions(
+      String className, String methodName, String[] parameterTypes) {
+    try {
+      // Load the class
+      Class<?> clazz = Class.forName(className);
+
+      // Convert parameter type names to Class array
+      Class<?>[] paramTypes = null;
+      if (parameterTypes != null && parameterTypes.length > 0) {
+        paramTypes = new Class<?>[parameterTypes.length];
+        for (int i = 0; i < parameterTypes.length; i++) {
+          paramTypes[i] = resolveClass(parameterTypes[i]);
+        }
+      }
+
+      // Find the method
+      Method method;
+      if (paramTypes == null || paramTypes.length == 0) {
+        method = clazz.getMethod(methodName);
+      } else {
+        method = clazz.getMethod(methodName, paramTypes);
+      }
+
+      // Extract declared exceptions
+      Class<?>[] exceptionTypes = method.getExceptionTypes();
+      if (exceptionTypes.length == 0) {
+        return new String[0];
+      }
+
+      String[] exceptionNames = new String[exceptionTypes.length];
+      for (int i = 0; i < exceptionTypes.length; i++) {
+        exceptionNames[i] = exceptionTypes[i].getName();
+      }
+
+      return exceptionNames;
+
+    } catch (ClassNotFoundException | NoSuchMethodException e) {
+      // If we cannot resolve the method, return empty array
+      // This is acceptable as the method may not be available at build time
+      logger.debug(
+          "Could not resolve method {}.{}() to extract declared exceptions: {}",
+          className,
+          methodName,
+          e.getMessage());
+      return new String[0];
+    }
+  }
+
+  /**
+   * Resolves a class name to a Class object, handling primitives and arrays.
+   *
+   * @param typeName the name of the type (e.g., "int", "java.lang.String", "[Ljava.lang.String;")
+   * @return the resolved {@link Class} object
+   * @throws ClassNotFoundException if the class cannot be found
+   */
+  private Class<?> resolveClass(String typeName) throws ClassNotFoundException {
+    // Handle primitive types
+    return switch (typeName) {
+      case "boolean" -> boolean.class;
+      case "byte" -> byte.class;
+      case "char" -> char.class;
+      case "short" -> short.class;
+      case "int" -> int.class;
+      case "long" -> long.class;
+      case "float" -> float.class;
+      case "double" -> double.class;
+      case "void" -> void.class;
+      default -> Class.forName(typeName);
+    };
+  }
+
+  // </editor-fold>
+
   // <editor-fold desc="Instance method messages">
 
   /**
@@ -1195,6 +1283,58 @@ public final class MessageBuilder {
   }
 
   /**
+   * Builds an {@link ExecMessage} for invoking an instance method with arguments, optionally
+   * including declared exceptions.
+   *
+   * <p>Convenience method for building an instance method message packing all arguments in a single
+   * array, regardless of type (ObjectRef or not).
+   *
+   * @param peerUuid the UUID of this peer
+   * @param className the name of the class containing the method
+   * @param methodName the name of the method to be invoked
+   * @param targetObjRef the object reference of the target instance on which the method is invoked
+   * @param parameterTypes the array of parameter type names
+   * @param args the array of argument values corresponding to the parameters
+   * @param includeDeclaredExceptions if {@code true}, extract and include declared exceptions from
+   *     method signature; if {@code false}, declaredExceptions will be {@code null}
+   * @return an {@code ExecMessage} representing the instance method invocation
+   */
+  public ExecMessage buildInstanceMethod(
+      UUID peerUuid,
+      String className,
+      String methodName,
+      ObjectRef targetObjRef,
+      String[] parameterTypes,
+      Object[] args,
+      boolean includeDeclaredExceptions) {
+
+    Object[] nonObjRefArgs = null;
+    ObjectRef[] objRefArgs = null;
+    if (args != null) {
+      nonObjRefArgs = new Object[args.length];
+      objRefArgs = new ObjectRef[args.length];
+      for (int i = 0; i < args.length; i++) {
+        Object arg = args[i];
+        if (arg instanceof ObjectRef objRefArg) {
+          objRefArgs[i] = objRefArg;
+        } else {
+          nonObjRefArgs[i] = arg;
+        }
+      }
+    }
+
+    return buildInstanceMethod(
+        peerUuid,
+        className,
+        methodName,
+        targetObjRef,
+        parameterTypes,
+        nonObjRefArgs,
+        objRefArgs,
+        includeDeclaredExceptions);
+  }
+
+  /**
    * Builds an {@link ExecMessage} for invoking an instance method with specified arguments and
    * object references.
    *
@@ -1223,7 +1363,56 @@ public final class MessageBuilder {
     if (parameterTypes != null && args != null && argObjRefs != null) {
       call.setParameters(createNamedParameters(parameterTypes, args, argObjRefs));
     }
-    return newExecMessage(peerUuid).withInstanceMethodCall(call);
+    ExecMessage execMessage = newExecMessage(peerUuid).withInstanceMethodCall(call);
+    // For backward compatibility, explicitly set declaredExceptions to null
+    execMessage.setDeclaredExceptions(null);
+    return execMessage;
+  }
+
+  /**
+   * Builds an {@link ExecMessage} for invoking an instance method with specified arguments and
+   * object references, optionally including declared exceptions.
+   *
+   * @param peerUuid the UUID of this peer
+   * @param className the name of the class containing the method
+   * @param methodName the name of the method to be invoked
+   * @param targetObjRef the object reference of the target instance on which the method is invoked
+   * @param parameterTypes the array of parameter type names
+   * @param args the array of argument values
+   * @param argObjRefs the array of object references corresponding to the arguments
+   * @param includeDeclaredExceptions if {@code true}, extract and include declared exceptions from
+   *     method signature; if {@code false}, declaredExceptions will be {@code null}
+   * @return an {@code ExecMessage} representing the instance method invocation
+   */
+  public ExecMessage buildInstanceMethod(
+      UUID peerUuid,
+      String className,
+      String methodName,
+      ObjectRef targetObjRef,
+      String[] parameterTypes,
+      Object[] args,
+      ObjectRef[] argObjRefs,
+      boolean includeDeclaredExceptions) {
+    final InstanceMethodCall call =
+        new InstanceMethodCall()
+            .withClazz(getWrappedClass(className))
+            .withName(methodName)
+            .withObjectRef(targetObjRef.getRef());
+    if (parameterTypes != null && args != null && argObjRefs != null) {
+      call.setParameters(createNamedParameters(parameterTypes, args, argObjRefs));
+    }
+
+    ExecMessage execMessage = newExecMessage(peerUuid).withInstanceMethodCall(call);
+
+    if (includeDeclaredExceptions) {
+      String[] declaredExceptions =
+          extractDeclaredExceptions(className, methodName, parameterTypes);
+      execMessage.setDeclaredExceptions(declaredExceptions);
+    } else {
+      execMessage.setDeclaredExceptions(null);
+    }
+
+    return execMessage;
   }
 
   // </editor-fold>
@@ -1423,7 +1612,60 @@ public final class MessageBuilder {
     if (includeSourceContext) {
       classMethodCall.setContext(getWrappedContext(null, sender, senderObjRef));
     }
-    return newExecMessage(peerUuid).withClassMethodCall(classMethodCall);
+    ExecMessage execMessage = newExecMessage(peerUuid).withClassMethodCall(classMethodCall);
+    // For backward compatibility, explicitly set declaredExceptions to null
+    execMessage.setDeclaredExceptions(null);
+    return execMessage;
+  }
+
+  /**
+   * Builds an {@link ExecMessage} for invoking a class (static) method with arguments, optionally
+   * including declared exceptions.
+   *
+   * @param peerUuid the UUID of this peer
+   * @param className the name of the class containing the method
+   * @param methodName the name of the method to be invoked
+   * @param parameterTypes the array of parameter type names
+   * @param sender the object sending the message
+   * @param senderObjRef the reference to the sender object
+   * @param args the array of argument values corresponding to the parameters
+   * @param argObjRefs the array of objectRefs corresponding to the parameters
+   * @param includeDeclaredExceptions if {@code true}, extract and include declared exceptions from
+   *     method signature; if {@code false}, declaredExceptions will be {@code null}
+   * @return an {@code ExecMessage} representing the class method invocation
+   */
+  public ExecMessage buildClassMethod(
+      UUID peerUuid,
+      String className,
+      String methodName,
+      String[] parameterTypes,
+      Object sender,
+      ObjectRef senderObjRef,
+      Object[] args,
+      ObjectRef[] argObjRefs,
+      boolean includeDeclaredExceptions) {
+
+    final ClassMethodCall classMethodCall =
+        new ClassMethodCall().withClazz(getWrappedClass(className)).withName(methodName);
+    if (parameterTypes != null && args != null && argObjRefs != null) {
+      classMethodCall.setParameters(createNamedParameters(parameterTypes, args, argObjRefs));
+    }
+
+    if (includeSourceContext) {
+      classMethodCall.setContext(getWrappedContext(null, sender, senderObjRef));
+    }
+
+    ExecMessage execMessage = newExecMessage(peerUuid).withClassMethodCall(classMethodCall);
+
+    if (includeDeclaredExceptions) {
+      String[] declaredExceptions =
+          extractDeclaredExceptions(className, methodName, parameterTypes);
+      execMessage.setDeclaredExceptions(declaredExceptions);
+    } else {
+      execMessage.setDeclaredExceptions(null);
+    }
+
+    return execMessage;
   }
 
   /**
@@ -1474,6 +1716,61 @@ public final class MessageBuilder {
         senderObjRef,
         noObjRefArgs,
         objectRefArgs);
+  }
+
+  /**
+   * Builds an {@link ExecMessage} for invoking a class (static) method with arguments, optionally
+   * including declared exceptions.
+   *
+   * <p>Convenience method for building a class method message packing all arguments in a single
+   * array, regardless of type (ObjectRef or not).
+   *
+   * @param peerUuid the UUID of this peer
+   * @param className the name of the class containing the method
+   * @param methodName the name of the method to be invoked
+   * @param parameterTypes the array of parameter type names
+   * @param sender the object sending the message
+   * @param senderObjRef the reference to the sender object
+   * @param args the array of argument values corresponding to the parameters
+   * @param includeDeclaredExceptions if {@code true}, extract and include declared exceptions from
+   *     method signature; if {@code false}, declaredExceptions will be {@code null}
+   * @return an {@code ExecMessage} representing the class method invocation
+   */
+  public ExecMessage buildClassMethod(
+      UUID peerUuid,
+      String className,
+      String methodName,
+      String[] parameterTypes,
+      Object sender,
+      ObjectRef senderObjRef,
+      Object[] args,
+      boolean includeDeclaredExceptions) {
+
+    Object[] noObjRefArgs = null;
+    ObjectRef[] objectRefArgs = null;
+    if (args != null) {
+      noObjRefArgs = new Object[args.length];
+      objectRefArgs = new ObjectRef[args.length];
+      for (int i = 0; i < args.length; i++) {
+        Object arg = args[i];
+        if (arg instanceof ObjectRef objRefArg) {
+          objectRefArgs[i] = objRefArg;
+        } else {
+          noObjRefArgs[i] = arg;
+        }
+      }
+    }
+
+    return buildClassMethod(
+        peerUuid,
+        className,
+        methodName,
+        parameterTypes,
+        sender,
+        senderObjRef,
+        noObjRefArgs,
+        objectRefArgs,
+        includeDeclaredExceptions);
   }
 
   // </editor-fold>
