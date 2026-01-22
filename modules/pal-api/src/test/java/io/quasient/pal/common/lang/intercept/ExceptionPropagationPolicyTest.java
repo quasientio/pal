@@ -9,16 +9,17 @@
  */
 package io.quasient.pal.common.lang.intercept;
 
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
-import org.junit.Ignore;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
 import org.junit.Test;
 
 /**
  * Unit test specifications for {@link ExceptionPropagationPolicy}.
- *
- * <p>These are test stubs that specify the expected behavior of the exception propagation policy
- * enum. The actual implementation will be provided in issue #274.
  *
  * <p>Verifies that the enum contains all expected policy values and supports string serialization
  * for configuration and persistence.
@@ -44,39 +45,35 @@ public class ExceptionPropagationPolicyTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #274")
   public void shouldHaveAllExpectedPolicyValues() {
     // Given: ExceptionPropagationPolicy enum
-    // ExceptionPropagationPolicy[] values = ExceptionPropagationPolicy.values();
+    ExceptionPropagationPolicy[] values = ExceptionPropagationPolicy.values();
 
     // When: Listing all values
     // Then: Contains exactly 4 values
-    // assertNotNull(values);
-    // assertEquals(4, values.length);
+    assertNotNull(values);
+    assertEquals(4, values.length);
 
     // And: Values are PROPAGATE_ALL, PROPAGATE_EXPLICIT_ONLY, SWALLOW_ALL,
     // PROPAGATE_CONTROLLED_ONLY
-    // List<ExceptionPropagationPolicy> valueList = Arrays.asList(values);
-    // assertTrue(
-    //     "Should contain PROPAGATE_ALL",
-    // valueList.contains(ExceptionPropagationPolicy.PROPAGATE_ALL));
-    // assertTrue(
-    //     "Should contain PROPAGATE_EXPLICIT_ONLY",
-    //     valueList.contains(ExceptionPropagationPolicy.PROPAGATE_EXPLICIT_ONLY));
-    // assertTrue(
-    //     "Should contain SWALLOW_ALL",
-    // valueList.contains(ExceptionPropagationPolicy.SWALLOW_ALL));
-    // assertTrue(
-    //     "Should contain PROPAGATE_CONTROLLED_ONLY",
-    //     valueList.contains(ExceptionPropagationPolicy.PROPAGATE_CONTROLLED_ONLY));
+    List<ExceptionPropagationPolicy> valueList = Arrays.asList(values);
+    assertTrue(
+        "Should contain PROPAGATE_ALL",
+        valueList.contains(ExceptionPropagationPolicy.PROPAGATE_ALL));
+    assertTrue(
+        "Should contain PROPAGATE_EXPLICIT_ONLY",
+        valueList.contains(ExceptionPropagationPolicy.PROPAGATE_EXPLICIT_ONLY));
+    assertTrue(
+        "Should contain SWALLOW_ALL", valueList.contains(ExceptionPropagationPolicy.SWALLOW_ALL));
+    assertTrue(
+        "Should contain PROPAGATE_CONTROLLED_ONLY",
+        valueList.contains(ExceptionPropagationPolicy.PROPAGATE_CONTROLLED_ONLY));
 
     // And: Can access each value directly
-    // assertNotNull(ExceptionPropagationPolicy.PROPAGATE_ALL);
-    // assertNotNull(ExceptionPropagationPolicy.PROPAGATE_EXPLICIT_ONLY);
-    // assertNotNull(ExceptionPropagationPolicy.SWALLOW_ALL);
-    // assertNotNull(ExceptionPropagationPolicy.PROPAGATE_CONTROLLED_ONLY);
-
-    fail("Not yet implemented");
+    assertNotNull(ExceptionPropagationPolicy.PROPAGATE_ALL);
+    assertNotNull(ExceptionPropagationPolicy.PROPAGATE_EXPLICIT_ONLY);
+    assertNotNull(ExceptionPropagationPolicy.SWALLOW_ALL);
+    assertNotNull(ExceptionPropagationPolicy.PROPAGATE_CONTROLLED_ONLY);
   }
 
   /**
@@ -95,36 +92,32 @@ public class ExceptionPropagationPolicyTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #274")
   public void shouldSerializeToAndFromString() {
     // Given: Each ExceptionPropagationPolicy value
-    // for (ExceptionPropagationPolicy policy : ExceptionPropagationPolicy.values()) {
+    for (ExceptionPropagationPolicy policy : ExceptionPropagationPolicy.values()) {
 
-    // When: Converting to string
-    // String policyString = policy.name(); // or policy.toString()
+      // When: Converting to string
+      String policyString = policy.name();
 
-    // And: Converting back using valueOf()
-    // ExceptionPropagationPolicy roundTripped = ExceptionPropagationPolicy.valueOf(policyString);
+      // And: Converting back using valueOf()
+      ExceptionPropagationPolicy roundTripped = ExceptionPropagationPolicy.valueOf(policyString);
 
-    // Then: Round-trip succeeds
-    // assertNotNull(roundTripped);
-    // assertEquals(policy, roundTripped);
+      // Then: Round-trip succeeds
+      assertNotNull(roundTripped);
+      assertEquals(policy, roundTripped);
 
-    // And: String representation is human-readable
-    // assertTrue(
-    //     "String should be uppercase constant",
-    //     policyString.equals(policyString.toUpperCase()));
-    // }
+      // And: String representation is human-readable
+      assertTrue(
+          "String should be uppercase constant",
+          policyString.equals(policyString.toUpperCase(Locale.ROOT)));
+    }
 
     // Verify specific string representations
-    // assertEquals("PROPAGATE_ALL", ExceptionPropagationPolicy.PROPAGATE_ALL.name());
-    // assertEquals(
-    //     "PROPAGATE_EXPLICIT_ONLY", ExceptionPropagationPolicy.PROPAGATE_EXPLICIT_ONLY.name());
-    // assertEquals("SWALLOW_ALL", ExceptionPropagationPolicy.SWALLOW_ALL.name());
-    // assertEquals(
-    //     "PROPAGATE_CONTROLLED_ONLY",
-    // ExceptionPropagationPolicy.PROPAGATE_CONTROLLED_ONLY.name());
-
-    fail("Not yet implemented");
+    assertEquals("PROPAGATE_ALL", ExceptionPropagationPolicy.PROPAGATE_ALL.name());
+    assertEquals(
+        "PROPAGATE_EXPLICIT_ONLY", ExceptionPropagationPolicy.PROPAGATE_EXPLICIT_ONLY.name());
+    assertEquals("SWALLOW_ALL", ExceptionPropagationPolicy.SWALLOW_ALL.name());
+    assertEquals(
+        "PROPAGATE_CONTROLLED_ONLY", ExceptionPropagationPolicy.PROPAGATE_CONTROLLED_ONLY.name());
   }
 }

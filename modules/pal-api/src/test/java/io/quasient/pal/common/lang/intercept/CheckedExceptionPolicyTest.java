@@ -9,16 +9,17 @@
  */
 package io.quasient.pal.common.lang.intercept;
 
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
-import org.junit.Ignore;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
 import org.junit.Test;
 
 /**
  * Unit test specifications for {@link CheckedExceptionPolicy}.
- *
- * <p>These are test stubs that specify the expected behavior of the checked exception handling
- * policy enum. The actual implementation will be provided in issue #274.
  *
  * <p>Verifies that the enum contains all expected policy values (WRAP, REJECT, ALLOW_ALL) and
  * supports string serialization for configuration and persistence.
@@ -41,28 +42,25 @@ public class CheckedExceptionPolicyTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #274")
   public void shouldHaveAllExpectedPolicyValues() {
     // Given: CheckedExceptionPolicy enum
-    // CheckedExceptionPolicy[] values = CheckedExceptionPolicy.values();
+    CheckedExceptionPolicy[] values = CheckedExceptionPolicy.values();
 
     // When: Listing all values
     // Then: Contains exactly 3 values
-    // assertNotNull(values);
-    // assertEquals(3, values.length);
+    assertNotNull(values);
+    assertEquals(3, values.length);
 
     // And: Values are WRAP, REJECT, ALLOW_ALL
-    // List<CheckedExceptionPolicy> valueList = Arrays.asList(values);
-    // assertTrue("Should contain WRAP", valueList.contains(CheckedExceptionPolicy.WRAP));
-    // assertTrue("Should contain REJECT", valueList.contains(CheckedExceptionPolicy.REJECT));
-    // assertTrue("Should contain ALLOW_ALL", valueList.contains(CheckedExceptionPolicy.ALLOW_ALL));
+    List<CheckedExceptionPolicy> valueList = Arrays.asList(values);
+    assertTrue("Should contain WRAP", valueList.contains(CheckedExceptionPolicy.WRAP));
+    assertTrue("Should contain REJECT", valueList.contains(CheckedExceptionPolicy.REJECT));
+    assertTrue("Should contain ALLOW_ALL", valueList.contains(CheckedExceptionPolicy.ALLOW_ALL));
 
     // And: Can access each value directly
-    // assertNotNull(CheckedExceptionPolicy.WRAP);
-    // assertNotNull(CheckedExceptionPolicy.REJECT);
-    // assertNotNull(CheckedExceptionPolicy.ALLOW_ALL);
-
-    fail("Not yet implemented");
+    assertNotNull(CheckedExceptionPolicy.WRAP);
+    assertNotNull(CheckedExceptionPolicy.REJECT);
+    assertNotNull(CheckedExceptionPolicy.ALLOW_ALL);
   }
 
   /**
@@ -80,32 +78,29 @@ public class CheckedExceptionPolicyTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #274")
   public void shouldSerializeToAndFromString() {
     // Given: Each CheckedExceptionPolicy value
-    // for (CheckedExceptionPolicy policy : CheckedExceptionPolicy.values()) {
+    for (CheckedExceptionPolicy policy : CheckedExceptionPolicy.values()) {
 
-    // When: Converting to string
-    // String policyString = policy.name(); // or policy.toString()
+      // When: Converting to string
+      String policyString = policy.name();
 
-    // And: Converting back using valueOf()
-    // CheckedExceptionPolicy roundTripped = CheckedExceptionPolicy.valueOf(policyString);
+      // And: Converting back using valueOf()
+      CheckedExceptionPolicy roundTripped = CheckedExceptionPolicy.valueOf(policyString);
 
-    // Then: Round-trip succeeds
-    // assertNotNull(roundTripped);
-    // assertEquals(policy, roundTripped);
+      // Then: Round-trip succeeds
+      assertNotNull(roundTripped);
+      assertEquals(policy, roundTripped);
 
-    // And: String representation is human-readable
-    // assertTrue(
-    //     "String should be uppercase constant",
-    //     policyString.equals(policyString.toUpperCase()));
-    // }
+      // And: String representation is human-readable
+      assertTrue(
+          "String should be uppercase constant",
+          policyString.equals(policyString.toUpperCase(Locale.ROOT)));
+    }
 
     // Verify specific string representations
-    // assertEquals("WRAP", CheckedExceptionPolicy.WRAP.name());
-    // assertEquals("REJECT", CheckedExceptionPolicy.REJECT.name());
-    // assertEquals("ALLOW_ALL", CheckedExceptionPolicy.ALLOW_ALL.name());
-
-    fail("Not yet implemented");
+    assertEquals("WRAP", CheckedExceptionPolicy.WRAP.name());
+    assertEquals("REJECT", CheckedExceptionPolicy.REJECT.name());
+    assertEquals("ALLOW_ALL", CheckedExceptionPolicy.ALLOW_ALL.name());
   }
 }
