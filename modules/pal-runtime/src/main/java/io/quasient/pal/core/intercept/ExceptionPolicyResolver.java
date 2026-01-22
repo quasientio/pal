@@ -157,38 +157,40 @@ public class ExceptionPolicyResolver {
   /**
    * Extracts the exception propagation policy from an intercept message, if present.
    *
-   * <p>This method is a placeholder for future implementation when {@link InterceptMessage} is
-   * extended to include exception policy fields.
+   * <p>If the intercept message contains a per-intercept policy override (indicated by a byte value
+   * other than 255), that policy is returned. A byte value of 255 indicates no override, causing
+   * this method to return null so resolution falls through to lower priority policies.
    *
    * @param intercept the intercept message
    * @return the exception propagation policy from the message, or null if not present
    */
   @Nullable
-  @SuppressWarnings("UnusedVariable")
   private ExceptionPropagationPolicy getInterceptPropagationPolicy(InterceptMessage intercept) {
-    // TODO: Once InterceptMessage has exceptionPropagationPolicy field, return it here
-    // For now, return null to fall through to lower priority policies
-    // Example future implementation:
-    // return intercept.getExceptionPropagationPolicy();
-    return null;
+    byte policyByte = intercept.getExceptionPropagationPolicy();
+    // 255 = null (defer to global), 0-3 = enum ordinal
+    if (policyByte == (byte) 255) {
+      return null;
+    }
+    return ExceptionPropagationPolicy.fromByte(policyByte);
   }
 
   /**
    * Extracts the checked exception policy from an intercept message, if present.
    *
-   * <p>This method is a placeholder for future implementation when {@link InterceptMessage} is
-   * extended to include exception policy fields.
+   * <p>If the intercept message contains a per-intercept policy override (indicated by a byte value
+   * other than 255), that policy is returned. A byte value of 255 indicates no override, causing
+   * this method to return null so resolution falls through to lower priority policies.
    *
    * @param intercept the intercept message
    * @return the checked exception policy from the message, or null if not present
    */
   @Nullable
-  @SuppressWarnings("UnusedVariable")
   private CheckedExceptionPolicy getInterceptCheckedExceptionPolicy(InterceptMessage intercept) {
-    // TODO: Once InterceptMessage has checkedExceptionPolicy field, return it here
-    // For now, return null to fall through to lower priority policies
-    // Example future implementation:
-    // return intercept.getCheckedExceptionPolicy();
-    return null;
+    byte policyByte = intercept.getCheckedExceptionPolicy();
+    // 255 = null (defer to global), 0-2 = enum ordinal
+    if (policyByte == (byte) 255) {
+      return null;
+    }
+    return CheckedExceptionPolicy.fromByte(policyByte);
   }
 }
