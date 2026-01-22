@@ -129,4 +129,7 @@ type InterceptCallbackResponseMessage struct {
 	// Both phases: exception throwing
 	throwException bool            // Throw instead of return
 	exception      RaisedThrowable // Exception to throw
+
+	// Exception classification (for exception policy enforcement)
+	isApiMisuseError bool // True if exception is API misuse (e.g., IllegalArgumentException)
 }

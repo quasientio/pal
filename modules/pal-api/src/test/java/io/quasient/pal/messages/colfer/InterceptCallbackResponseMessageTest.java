@@ -9,9 +9,9 @@
  */
 package io.quasient.pal.messages.colfer;
 
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -32,25 +32,21 @@ public class InterceptCallbackResponseMessageTest {
    * Then: Flag is preserved after round-trip
    */
   @Test
-  @Ignore("Awaiting implementation in #280")
-  public void shouldSerializeIsApiMisuseErrorFlag() {
+  public void shouldSerializeIsApiMisuseErrorFlag() throws Exception {
     // Given: Response with isApiMisuseError = true
-    // InterceptCallbackResponseMessage response = new InterceptCallbackResponseMessage();
-    // response.setCallbackId("test-callback-id");
-    // response.setIsApiMisuseError(true);
+    InterceptCallbackResponseMessage response = new InterceptCallbackResponseMessage();
+    response.setCallbackId("test-callback-id");
+    response.setIsApiMisuseError(true);
 
     // When: Marshaling to bytes and unmarshaling back
-    // byte[] buf = new byte[response.marshalFit()];
-    // int length = response.marshal(buf, 0);
-    //
-    // InterceptCallbackResponseMessage deserialized = new InterceptCallbackResponseMessage();
-    // deserialized.unmarshal(buf, 0, length);
+    byte[] buf = new byte[response.marshalFit()];
+    int length = response.marshal(buf, 0);
+
+    InterceptCallbackResponseMessage deserialized = new InterceptCallbackResponseMessage();
+    deserialized.unmarshal(buf, 0, length);
 
     // Then: Flag is preserved after round-trip
-    // assertTrue(deserialized.getIsApiMisuseError());
-
-    // TODO: Implement after #280 provides the isApiMisuseError field
-    fail("Not yet implemented");
+    assertTrue(deserialized.getIsApiMisuseError());
   }
 
   /**
@@ -62,19 +58,15 @@ public class InterceptCallbackResponseMessageTest {
    * Returns false
    */
   @Test
-  @Ignore("Awaiting implementation in #280")
   public void shouldDefaultIsApiMisuseErrorToFalse() {
     // Given: Default response
-    // InterceptCallbackResponseMessage response = new InterceptCallbackResponseMessage();
-    // response.setCallbackId("test-callback-id");
+    InterceptCallbackResponseMessage response = new InterceptCallbackResponseMessage();
+    response.setCallbackId("test-callback-id");
 
     // When: Getting isApiMisuseError
-    // boolean result = response.getIsApiMisuseError();
+    boolean result = response.getIsApiMisuseError();
 
     // Then: Returns false
-    // assertFalse(result);
-
-    // TODO: Implement after #280 provides the isApiMisuseError field
-    fail("Not yet implemented");
+    assertFalse(result);
   }
 }

@@ -9,9 +9,10 @@
  */
 package io.quasient.pal.messages.colfer;
 
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -33,28 +34,24 @@ public class ExecMessageTest {
    * preserved after round-trip
    */
   @Test
-  @Ignore("Awaiting implementation in #280")
-  public void shouldSerializeDeclaredExceptions() {
+  public void shouldSerializeDeclaredExceptions() throws Exception {
     // Given: ExecMessage with declaredExceptions
-    // ExecMessage message = new ExecMessage();
-    // message.setPeerUuid("test-peer-uuid");
-    // message.setMessageId("test-message-id");
-    // String[] exceptions = new String[] {"java.io.IOException", "java.sql.SQLException"};
-    // message.setDeclaredExceptions(exceptions);
+    ExecMessage message = new ExecMessage();
+    message.setPeerUuid("test-peer-uuid");
+    message.setMessageId("test-message-id");
+    String[] exceptions = new String[] {"java.io.IOException", "java.sql.SQLException"};
+    message.setDeclaredExceptions(exceptions);
 
     // When: Marshaling to bytes and unmarshaling back
-    // byte[] buf = new byte[message.marshalFit()];
-    // int length = message.marshal(buf, 0);
-    //
-    // ExecMessage deserialized = new ExecMessage();
-    // deserialized.unmarshal(buf, 0, length);
+    byte[] buf = new byte[message.marshalFit()];
+    int length = message.marshal(buf, 0);
+
+    ExecMessage deserialized = new ExecMessage();
+    deserialized.unmarshal(buf, 0, length);
 
     // Then: Array is preserved after round-trip
-    // assertNotNull(deserialized.getDeclaredExceptions());
-    // assertArrayEquals(exceptions, deserialized.getDeclaredExceptions());
-
-    // TODO: Implement after #280 provides the declaredExceptions field
-    fail("Not yet implemented");
+    assertNotNull(deserialized.getDeclaredExceptions());
+    assertArrayEquals(exceptions, deserialized.getDeclaredExceptions());
   }
 
   /**
@@ -66,20 +63,16 @@ public class ExecMessageTest {
    * Returns null or empty array
    */
   @Test
-  @Ignore("Awaiting implementation in #280")
   public void shouldHandleNullDeclaredExceptions() {
     // Given: ExecMessage without declaredExceptions set
-    // ExecMessage message = new ExecMessage();
-    // message.setPeerUuid("test-peer-uuid");
-    // message.setMessageId("test-message-id");
+    ExecMessage message = new ExecMessage();
+    message.setPeerUuid("test-peer-uuid");
+    message.setMessageId("test-message-id");
 
     // When: Getting declaredExceptions
-    // String[] result = message.getDeclaredExceptions();
+    String[] result = message.getDeclaredExceptions();
 
     // Then: Returns null or empty array (depending on Colfer generation behavior)
-    // assertTrue(result == null || result.length == 0);
-
-    // TODO: Implement after #280 provides the declaredExceptions field
-    fail("Not yet implemented");
+    assertTrue(result == null || result.length == 0);
   }
 }

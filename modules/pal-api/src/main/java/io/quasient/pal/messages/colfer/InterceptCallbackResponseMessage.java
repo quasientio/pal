@@ -70,6 +70,9 @@ public class InterceptCallbackResponseMessage
 
   public RaisedThrowable exception;
 
+  /** Exception classification (for exception policy enforcement) */
+  public boolean isApiMisuseError;
+
   /** Default constructor */
   public InterceptCallbackResponseMessage() {
     init();
@@ -179,7 +182,7 @@ public class InterceptCallbackResponseMessage
    * @return the number of bytes.
    */
   public int marshalFit() {
-    long n = 1L + 6 + (long) this.callbackId.length() * 3 + 2 + 6 + 1 + 1 + 5 + 1;
+    long n = 1L + 6 + (long) this.callbackId.length() * 3 + 2 + 6 + 1 + 1 + 5 + 1 + 1;
     for (Obj o : this.mutatedArgs) {
       if (o == null) n++;
       else n += o.marshalFit();
@@ -351,6 +354,10 @@ public class InterceptCallbackResponseMessage
         i = this.exception.marshal(buf, i);
       }
 
+      if (this.isApiMisuseError) {
+        buf[i++] = (byte) 9;
+      }
+
       buf[i++] = (byte) 0x7f;
       return i;
     } catch (ArrayIndexOutOfBoundsException e) {
@@ -490,6 +497,11 @@ public class InterceptCallbackResponseMessage
         header = buf[i++];
       }
 
+      if (header == (byte) 9) {
+        this.isApiMisuseError = true;
+        header = buf[i++];
+      }
+
       if (header != (byte) 0x7f)
         throw new InputMismatchException(format("colfer: unknown header at byte %d", i - 1));
     } finally {
@@ -507,7 +519,7 @@ public class InterceptCallbackResponseMessage
   }
 
   // {@link Serializable} version number.
-  private static final long serialVersionUID = 9L;
+  private static final long serialVersionUID = 10L;
 
   // {@link Serializable} Colfer extension.
   private void writeObject(ObjectOutputStream out) throws IOException {
@@ -793,6 +805,35 @@ public class InterceptCallbackResponseMessage
     return this;
   }
 
+  /**
+   * Gets io.quasient.pal.messages/colfer.InterceptCallbackResponseMessage.isApiMisuseError.
+   *
+   * @return the value.
+   */
+  public boolean getIsApiMisuseError() {
+    return this.isApiMisuseError;
+  }
+
+  /**
+   * Sets io.quasient.pal.messages/colfer.InterceptCallbackResponseMessage.isApiMisuseError.
+   *
+   * @param value the replacement.
+   */
+  public void setIsApiMisuseError(boolean value) {
+    this.isApiMisuseError = value;
+  }
+
+  /**
+   * Sets io.quasient.pal.messages/colfer.InterceptCallbackResponseMessage.isApiMisuseError.
+   *
+   * @param value the replacement.
+   * @return {@code this}.
+   */
+  public InterceptCallbackResponseMessage withIsApiMisuseError(boolean value) {
+    this.isApiMisuseError = value;
+    return this;
+  }
+
   @Override
   public final int hashCode() {
     int h = 1;
@@ -805,6 +846,7 @@ public class InterceptCallbackResponseMessage
     h = 31 * h + this.newReturnRef;
     h = 31 * h + (this.throwException ? 1231 : 1237);
     if (this.exception != null) h = 31 * h + this.exception.hashCode();
+    h = 31 * h + (this.isApiMisuseError ? 1231 : 1237);
     return h;
   }
 
@@ -828,7 +870,8 @@ public class InterceptCallbackResponseMessage
             : this.newReturnValue.equals(o.newReturnValue))
         && this.newReturnRef == o.newReturnRef
         && this.throwException == o.throwException
-        && (this.exception == null ? o.exception == null : this.exception.equals(o.exception));
+        && (this.exception == null ? o.exception == null : this.exception.equals(o.exception))
+        && this.isApiMisuseError == o.isApiMisuseError;
   }
 
   @Override
@@ -876,6 +919,10 @@ public class InterceptCallbackResponseMessage
         this.exception = new RaisedThrowable().fromJson(jsonObj);
       }
 
+      if (json.has("isApiMisuseError")) {
+        this.isApiMisuseError = json.get("isApiMisuseError").getAsBoolean();
+      }
+
     } catch (Exception e) {
       throw new JsonParseException("Error deserializing json object: " + e.getMessage(), e);
     }
@@ -895,5 +942,6 @@ public class InterceptCallbackResponseMessage
     this.newReturnRef = 0;
     this.throwException = false;
     this.exception = null;
+    this.isApiMisuseError = false;
   }
 }

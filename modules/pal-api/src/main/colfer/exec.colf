@@ -31,4 +31,7 @@ type ExecMessage struct {
 	instanceFieldPutDone InstanceFieldPutDone
 	raisedThrowable      RaisedThrowable
 	returnValue          ReturnValue
+
+	// Method metadata for exception validation
+	declaredExceptions []text // Declared checked exceptions for method calls
 }

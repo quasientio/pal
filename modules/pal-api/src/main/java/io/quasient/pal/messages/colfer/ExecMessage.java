@@ -16,6 +16,7 @@ package io.quasient.pal.messages.colfer;
 
 import static java.lang.String.format;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import java.io.IOException;
@@ -40,6 +41,9 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
 
   /** The upper limit for serial byte sizes. */
   public static int colferSizeMax = 16 * 1024 * 1024;
+
+  /** The upper limit for the number of elements in a list. */
+  public static int colferListMax = 64 * 1024;
 
   public String peerUuid;
 
@@ -80,10 +84,15 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
 
   public ReturnValue returnValue;
 
+  /** Method metadata for exception validation */
+  public String[] declaredExceptions;
+
   /** Default constructor */
   public ExecMessage() {
     init();
   }
+
+  private static final String[] _zeroDeclaredExceptions = new String[0];
 
   /** Colfer zero values. */
   private void init() {
@@ -92,6 +101,7 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
     threadName = "";
     currentTime = "";
     responseToId = "";
+    declaredExceptions = _zeroDeclaredExceptions;
   }
 
   /** {@link #reset(InputStream) Reusable} deserialization of Colfer streams. */
@@ -137,7 +147,8 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
      *
      * @return the result or {@code null} when EOF.
      * @throws IOException from the input stream.
-     * @throws SecurityException on an upper limit breach defined by {@link #colferSizeMax}.
+     * @throws SecurityException on an upper limit breach defined by either {@link #colferSizeMax}
+     *     or {@link #colferListMax}.
      * @throws InputMismatchException when the data does not match this object's schema.
      */
     public ExecMessage next() throws IOException {
@@ -199,7 +210,9 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
             + 5
             + 5
             + 6
-            + (long) this.responseToId.length() * 3;
+            + (long) this.responseToId.length() * 3
+            + 6
+            + (long) this.declaredExceptions.length * 6;
     if (this.constructorCall != null) n += 1 + (long) this.constructorCall.marshalFit();
     if (this.instanceMethodCall != null) n += 1 + (long) this.instanceMethodCall.marshalFit();
     if (this.classMethodCall != null) n += 1 + (long) this.classMethodCall.marshalFit();
@@ -212,19 +225,22 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
     if (this.instanceFieldPutDone != null) n += 1 + (long) this.instanceFieldPutDone.marshalFit();
     if (this.raisedThrowable != null) n += 1 + (long) this.raisedThrowable.marshalFit();
     if (this.returnValue != null) n += 1 + (long) this.returnValue.marshalFit();
+    for (String s : this.declaredExceptions) if (s != null) n += (long) s.length() * 3;
     if (n < 0 || n > (long) ExecMessage.colferSizeMax) return ExecMessage.colferSizeMax;
     return (int) n;
   }
 
   /**
-   * Serializes the object.
+   * Serializes the object. All {@code null} elements in {@link #declaredExceptions} will be
+   * replaced with {@code ""}.
    *
    * @param out the data destination.
    * @param buf the initial buffer or {@code null}.
    * @return the final buffer. When the serial fits into {@code buf} then the return is {@code buf}.
    *     Otherwise the return is a new buffer, large enough to hold the whole serial.
    * @throws IOException from {@code out}.
-   * @throws IllegalStateException on an upper limit breach defined by {@link #colferSizeMax}.
+   * @throws IllegalStateException on an upper limit breach defined by either {@link #colferSizeMax}
+   *     or {@link #colferListMax}.
    */
   public byte[] marshal(OutputStream out, byte[] buf) throws IOException {
     int n = 0;
@@ -242,13 +258,15 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
   }
 
   /**
-   * Serializes the object.
+   * Serializes the object. All {@code null} elements in {@link #declaredExceptions} will be
+   * replaced with {@code ""}.
    *
    * @param buf the data destination.
    * @param offset the initial index for {@code buf}, inclusive.
    * @return the final index for {@code buf}, exclusive.
    * @throws BufferOverflowException when {@code buf} is too small.
-   * @throws IllegalStateException on an upper limit breach defined by {@link #colferSizeMax}.
+   * @throws IllegalStateException on an upper limit breach defined by either {@link #colferSizeMax}
+   *     or {@link #colferListMax}.
    */
   public int marshal(byte[] buf, int offset) {
     int i = offset;
@@ -588,6 +606,75 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
         i = this.returnValue.marshal(buf, i);
       }
 
+      if (this.declaredExceptions.length != 0) {
+        buf[i++] = (byte) 19;
+        String[] a = this.declaredExceptions;
+
+        int x = a.length;
+        if (x > ExecMessage.colferListMax)
+          throw new IllegalStateException(
+              format(
+                  "colfer: io.quasient.pal.messages/colfer.ExecMessage.declaredExceptions length %d exceeds %d elements",
+                  x, ExecMessage.colferListMax));
+        while (x > 0x7f) {
+          buf[i++] = (byte) (x | 0x80);
+          x >>>= 7;
+        }
+        buf[i++] = (byte) x;
+
+        for (int ai = 0; ai < a.length; ai++) {
+          String s = a[ai];
+          if (s == null) {
+            s = "";
+            a[ai] = s;
+          }
+
+          int start = ++i;
+
+          for (int sIndex = 0, sLength = s.length(); sIndex < sLength; sIndex++) {
+            char c = s.charAt(sIndex);
+            if (c < '\u0080') {
+              buf[i++] = (byte) c;
+            } else if (c < '\u0800') {
+              buf[i++] = (byte) (192 | c >>> 6);
+              buf[i++] = (byte) (128 | c & 63);
+            } else if (c < '\ud800' || c > '\udfff') {
+              buf[i++] = (byte) (224 | c >>> 12);
+              buf[i++] = (byte) (128 | c >>> 6 & 63);
+              buf[i++] = (byte) (128 | c & 63);
+            } else {
+              int cp = 0;
+              if (++sIndex < sLength) cp = Character.toCodePoint(c, s.charAt(sIndex));
+              if ((cp >= 1 << 16) && (cp < 1 << 21)) {
+                buf[i++] = (byte) (240 | cp >>> 18);
+                buf[i++] = (byte) (128 | cp >>> 12 & 63);
+                buf[i++] = (byte) (128 | cp >>> 6 & 63);
+                buf[i++] = (byte) (128 | cp & 63);
+              } else buf[i++] = (byte) '?';
+            }
+          }
+          int size = i - start;
+          if (size > ExecMessage.colferSizeMax)
+            throw new IllegalStateException(
+                format(
+                    "colfer: io.quasient.pal.messages/colfer.ExecMessage.declaredExceptions[%d] size %d exceeds %d UTF-8 bytes",
+                    ai, size, ExecMessage.colferSizeMax));
+
+          int ii = start - 1;
+          if (size > 0x7f) {
+            i++;
+            for (int y = size; y >= 1 << 14; y >>>= 7) i++;
+            System.arraycopy(buf, start, buf, i - size, size);
+
+            do {
+              buf[ii++] = (byte) (size | 0x80);
+              size >>>= 7;
+            } while (size > 0x7f);
+          }
+          buf[ii] = (byte) size;
+        }
+      }
+
       buf[i++] = (byte) 0x7f;
       return i;
     } catch (ArrayIndexOutOfBoundsException e) {
@@ -608,7 +695,8 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
    * @param offset the initial index for {@code buf}, inclusive.
    * @return the final index for {@code buf}, exclusive.
    * @throws BufferUnderflowException when {@code buf} is incomplete. (EOF)
-   * @throws SecurityException on an upper limit breach defined by {@link #colferSizeMax}.
+   * @throws SecurityException on an upper limit breach defined by either {@link #colferSizeMax} or
+   *     {@link #colferListMax}.
    * @throws InputMismatchException when the data does not match this object's schema.
    */
   public int unmarshal(byte[] buf, int offset) {
@@ -623,7 +711,8 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
    * @param end the index limit for {@code buf}, exclusive.
    * @return the final index for {@code buf}, exclusive.
    * @throws BufferUnderflowException when {@code buf} is incomplete. (EOF)
-   * @throws SecurityException on an upper limit breach defined by {@link #colferSizeMax}.
+   * @throws SecurityException on an upper limit breach defined by either {@link #colferSizeMax} or
+   *     {@link #colferListMax}.
    * @throws InputMismatchException when the data does not match this object's schema.
    */
   public int unmarshal(byte[] buf, int offset, int end) {
@@ -836,6 +925,41 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
         header = buf[i++];
       }
 
+      if (header == (byte) 19) {
+        int length = 0;
+        for (int shift = 0; true; shift += 7) {
+          byte b = buf[i++];
+          length |= (b & 0x7f) << shift;
+          if (shift == 28 || b >= 0) break;
+        }
+        if (length < 0 || length > ExecMessage.colferListMax)
+          throw new SecurityException(
+              format(
+                  "colfer: io.quasient.pal.messages/colfer.ExecMessage.declaredExceptions length %d exceeds %d elements",
+                  length, ExecMessage.colferListMax));
+
+        String[] a = new String[length];
+        for (int ai = 0; ai < length; ai++) {
+          int size = 0;
+          for (int shift = 0; true; shift += 7) {
+            byte b = buf[i++];
+            size |= (b & 0x7f) << shift;
+            if (shift == 28 || b >= 0) break;
+          }
+          if (size < 0 || size > ExecMessage.colferSizeMax)
+            throw new SecurityException(
+                format(
+                    "colfer: io.quasient.pal.messages/colfer.ExecMessage.declaredExceptions[%d] size %d exceeds %d UTF-8 bytes",
+                    ai, size, ExecMessage.colferSizeMax));
+
+          int start = i;
+          i += size;
+          a[ai] = new String(buf, start, size, StandardCharsets.UTF_8);
+        }
+        this.declaredExceptions = a;
+        header = buf[i++];
+      }
+
       if (header != (byte) 0x7f)
         throw new InputMismatchException(format("colfer: unknown header at byte %d", i - 1));
     } finally {
@@ -852,7 +976,7 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
   }
 
   // {@link Serializable} version number.
-  private static final long serialVersionUID = 19L;
+  private static final long serialVersionUID = 20L;
 
   // {@link Serializable} Colfer extension.
   private void writeObject(ObjectOutputStream out) throws IOException {
@@ -1428,6 +1552,35 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
     return this;
   }
 
+  /**
+   * Gets io.quasient.pal.messages/colfer.ExecMessage.declaredExceptions.
+   *
+   * @return the value.
+   */
+  public String[] getDeclaredExceptions() {
+    return this.declaredExceptions;
+  }
+
+  /**
+   * Sets io.quasient.pal.messages/colfer.ExecMessage.declaredExceptions.
+   *
+   * @param value the replacement.
+   */
+  public void setDeclaredExceptions(String[] value) {
+    this.declaredExceptions = value;
+  }
+
+  /**
+   * Sets io.quasient.pal.messages/colfer.ExecMessage.declaredExceptions.
+   *
+   * @param value the replacement.
+   * @return {@code this}.
+   */
+  public ExecMessage withDeclaredExceptions(String[] value) {
+    this.declaredExceptions = value;
+    return this;
+  }
+
   @Override
   public final int hashCode() {
     int h = 1;
@@ -1450,6 +1603,7 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
     if (this.instanceFieldPutDone != null) h = 31 * h + this.instanceFieldPutDone.hashCode();
     if (this.raisedThrowable != null) h = 31 * h + this.raisedThrowable.hashCode();
     if (this.returnValue != null) h = 31 * h + this.returnValue.hashCode();
+    for (String o : this.declaredExceptions) h = 31 * h + (o == null ? 0 : o.hashCode());
     return h;
   }
 
@@ -1506,7 +1660,8 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
             : this.raisedThrowable.equals(o.raisedThrowable))
         && (this.returnValue == null
             ? o.returnValue == null
-            : this.returnValue.equals(o.returnValue));
+            : this.returnValue.equals(o.returnValue))
+        && java.util.Arrays.equals(this.declaredExceptions, o.declaredExceptions);
   }
 
   @Override
@@ -1600,6 +1755,13 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
         this.returnValue = new ReturnValue().fromJson(jsonObj);
       }
 
+      if (json.has("declaredExceptions")) {
+        JsonArray jsonArray = json.getAsJsonArray("declaredExceptions");
+        this.declaredExceptions = new String[jsonArray.size()];
+        for (int i = 0; i < jsonArray.size(); i++) {
+          this.declaredExceptions[i] = jsonArray.get(i).getAsString();
+        }
+      }
     } catch (Exception e) {
       throw new JsonParseException("Error deserializing json object: " + e.getMessage(), e);
     }
