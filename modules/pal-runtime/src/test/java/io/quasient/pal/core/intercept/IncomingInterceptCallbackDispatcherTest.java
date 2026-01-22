@@ -33,6 +33,7 @@ import io.quasient.pal.messages.colfer.StaticFieldPut;
 import io.quasient.pal.serdes.colfer.WrapPolicy;
 import io.quasient.pal.serdes.colfer.Wrapper;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -932,5 +933,73 @@ public class IncomingInterceptCallbackDispatcherTest {
     // Invalid JSON for Integer - will cause deserialization to fail
     obj.setValue("not-a-valid-integer-json");
     return obj;
+  }
+
+  // ===========================================================================
+  // Exception Handling Tests (Issue #289)
+  // ===========================================================================
+
+  /**
+   * Tests that API misuse error flag is set on response when callback throws
+   * InterceptApiMisuseException.
+   *
+   * <p>Acceptance Criterion:
+   * [TEST:IncomingInterceptCallbackDispatcherTest.shouldSetApiMisuseErrorFlagOnResponse]
+   *
+   * <p>Part of issue #289 - Unit test specifications for exception handling
+   */
+  @Test
+  @Ignore("Awaiting implementation in #290")
+  public void shouldSetApiMisuseErrorFlagOnResponse() {
+    // Given: Callback throws InterceptApiMisuseException
+    // When: Building error response
+    // Then: Response has isApiMisuseError=true and throwException=true
+
+    // TODO: Implement after #290 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that API misuse error flag is NOT set for business exceptions.
+   *
+   * <p>Verifies that when a callback throws a RuntimeException (intentional business exception),
+   * the response correctly identifies it as a business exception rather than API misuse.
+   *
+   * <p>Acceptance Criterion:
+   * [TEST:IncomingInterceptCallbackDispatcherTest.shouldNotSetApiMisuseErrorFlagForBusinessException]
+   *
+   * <p>Part of issue #289 - Unit test specifications for exception handling
+   */
+  @Test
+  @Ignore("Awaiting implementation in #290")
+  public void shouldNotSetApiMisuseErrorFlagForBusinessException() {
+    // Given: Callback throws RuntimeException (intentional)
+    // When: Building error response
+    // Then: Response has isApiMisuseError=false and throwException=true
+
+    // TODO: Implement after #290 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that checked exceptions are validated before serialization according to policy.
+   *
+   * <p>Verifies that when CheckedExceptionPolicy is WRAP, a checked exception (e.g., SQLException)
+   * thrown by the callback is wrapped in RuntimeException in the serialized response.
+   *
+   * <p>Acceptance Criterion:
+   * [TEST:IncomingInterceptCallbackDispatcherTest.shouldValidateCheckedExceptionBeforeSerialization]
+   *
+   * <p>Part of issue #289 - Unit test specifications for exception handling
+   */
+  @Test
+  @Ignore("Awaiting implementation in #290")
+  public void shouldValidateCheckedExceptionBeforeSerialization() {
+    // Given: Checked exception policy WRAP; callback throws SQLException
+    // When: Building response
+    // Then: SQLException wrapped in RuntimeException in serialized response
+
+    // TODO: Implement after #290 provides the implementation
+    fail("Not yet implemented");
   }
 }
