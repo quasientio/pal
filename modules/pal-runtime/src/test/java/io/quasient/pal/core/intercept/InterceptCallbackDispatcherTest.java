@@ -11,18 +11,19 @@ package io.quasient.pal.core.intercept;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.quasient.pal.common.directory.nodes.PeerInfo;
+import io.quasient.pal.common.lang.intercept.ExceptionPropagationPolicy;
 import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.core.ZmqEnabledTest;
 import io.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import io.quasient.pal.cxn.directory.PalDirectory;
 import io.quasient.pal.messages.colfer.ExecMessage;
+import io.quasient.pal.messages.colfer.InterceptCallbackResponseMessage;
 import io.quasient.pal.messages.colfer.InterceptMessage;
 import io.quasient.pal.messages.colfer.Message;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
@@ -37,7 +38,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.ArgumentMatchers;
 import org.zeromq.SocketType;
@@ -59,6 +59,7 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
   private UUID peerUuid;
   private MessageBuilder messageBuilder;
   private PalDirectory directory;
+  private ExceptionPolicyResolver exceptionPolicyResolver;
   private InterceptCallbackDispatcher dispatcher;
 
   @Before
@@ -73,8 +74,16 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
     DirectoryConnectionProvider directoryProvider = mock(DirectoryConnectionProvider.class);
     when(directoryProvider.get()).thenReturn(Optional.of(directory));
 
+    // Create exception policy resolver with default configuration
+    ExceptionPolicyConfig policyConfig =
+        new ExceptionPolicyConfig.Builder()
+            .globalPropagationPolicy(ExceptionPropagationPolicy.PROPAGATE_CONTROLLED_ONLY)
+            .build();
+    exceptionPolicyResolver = new ExceptionPolicyResolver(policyConfig);
+
     dispatcher =
-        new InterceptCallbackDispatcher(peerUuid, context, messageBuilder, directoryProvider);
+        new InterceptCallbackDispatcher(
+            peerUuid, context, messageBuilder, directoryProvider, exceptionPolicyResolver);
   }
 
   @After
@@ -442,14 +451,56 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
    * normal flow of the intercepted operation.
    */
   @Test
-  @Ignore("Awaiting implementation in #292")
-  public void shouldLogApiMisuseErrorAndContinue() {
-    // Given: Response has isApiMisuseError=true
-    // When: Processing response
-    // Then: Error logged but not propagated to caller; continue with remaining callbacks
+  public void shouldLogApiMisuseErrorAndContinue() throws Exception {
+    // Setup: Create stub server that responds with API misuse error
+    String endpoint = "inproc://api-misuse-test";
+    UUID remotePeerUuid = UUID.randomUUID();
+    CountDownLatch serverReady = new CountDownLatch(1);
+    CountDownLatch messageReceived = new CountDownLatch(1);
 
-    // TODO: Implement after #292 provides the implementation
-    fail("Not yet implemented");
+    // Create a response with API misuse error
+    InterceptCallbackResponseMessage apiMisuseResponse = new InterceptCallbackResponseMessage();
+    apiMisuseResponse.setCallbackId("test-callback-id");
+    apiMisuseResponse.setPhase((byte) 1); // BEFORE
+    apiMisuseResponse.setThrowException(true);
+    apiMisuseResponse.setIsApiMisuseError(true);
+    apiMisuseResponse.setException(
+        io.quasient.pal.serdes.colfer.ExceptionSerdes.serializeException(
+            new IllegalArgumentException("API misuse error")));
+
+    ConfigurableCallbackServer server =
+        new ConfigurableCallbackServer(
+            context, endpoint, serverReady, messageReceived, apiMisuseResponse);
+    executorService.execute(server);
+    serverReady.await(1, TimeUnit.SECONDS);
+
+    // Mock directory
+    PeerInfo peerInfo = new PeerInfo(remotePeerUuid);
+    peerInfo.setZmqRpcAddress(endpoint);
+    when(directory.getPeer(remotePeerUuid)).thenReturn(peerInfo);
+    when(directory.peerExists(remotePeerUuid)).thenReturn(true);
+
+    // Create intercept (exceptionPropagationPolicy defaults to 0/PROPAGATE_ALL, which is fine here)
+    InterceptMessage interceptMsg = new InterceptMessage();
+    interceptMsg.peerUuid = remotePeerUuid.toString();
+    interceptMsg.interceptType = InterceptType.BEFORE.toByte();
+    interceptMsg.callbackClass = "com.example.Test";
+    interceptMsg.callbackMethod = "callback";
+
+    InterceptCheckResult result =
+        new InterceptCheckResult(List.of(interceptMsg), Collections.emptyList());
+
+    ExecMessage execMessage = messageBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+
+    // Execute - API misuse error should be logged but not propagate
+    InterceptCallbackDispatcher.ConsolidatedCallbackResponse response =
+        dispatcher.sendBeforeCallbacks(result, execMessage, new Object[0]);
+
+    // Verify: No exception should be thrown (API misuse is swallowed)
+    assertThat("API misuse error should not propagate", response.shouldThrowException(), is(false));
+    assertThat("Should proceed with execution", response.shouldProceed(), is(true));
+
+    server.requestStop();
   }
 
   /**
@@ -468,14 +519,75 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
    * sets an exception to throw.
    */
   @Test
-  @Ignore("Awaiting implementation in #292")
-  public void shouldApplyPropagationPolicyToDeserializedException() {
-    // Given: Response has throwException=true; policy SWALLOW_ALL
-    // When: Processing response
-    // Then: Exception logged but swallowed; method continues
+  public void shouldApplyPropagationPolicyToDeserializedException() throws Exception {
+    // Setup: Create dispatcher with SWALLOW_ALL policy
+    ExceptionPolicyConfig swallowAllConfig =
+        new ExceptionPolicyConfig.Builder()
+            .globalPropagationPolicy(ExceptionPropagationPolicy.SWALLOW_ALL)
+            .build();
+    ExceptionPolicyResolver swallowAllResolver = new ExceptionPolicyResolver(swallowAllConfig);
 
-    // TODO: Implement after #292 provides the implementation
-    fail("Not yet implemented");
+    // Setup: Create stub server that responds with business exception
+    String endpoint = "inproc://swallow-all-test";
+    UUID remotePeerUuid = UUID.randomUUID();
+    CountDownLatch serverReady = new CountDownLatch(1);
+    CountDownLatch messageReceived = new CountDownLatch(1);
+
+    // Create a response with business exception (not API misuse)
+    InterceptCallbackResponseMessage exceptionResponse = new InterceptCallbackResponseMessage();
+    exceptionResponse.setCallbackId("test-callback-id");
+    exceptionResponse.setPhase((byte) 1); // BEFORE
+    exceptionResponse.setThrowException(true);
+    exceptionResponse.setIsApiMisuseError(false); // Business exception
+    exceptionResponse.setException(
+        io.quasient.pal.serdes.colfer.ExceptionSerdes.serializeException(
+            new RuntimeException("Business exception from callback")));
+
+    ConfigurableCallbackServer server =
+        new ConfigurableCallbackServer(
+            context, endpoint, serverReady, messageReceived, exceptionResponse);
+    executorService.execute(server);
+    serverReady.await(1, TimeUnit.SECONDS);
+
+    // Mock directory
+    DirectoryConnectionProvider swallowDirectoryProvider = mock(DirectoryConnectionProvider.class);
+    PalDirectory swallowDirectory = mock(PalDirectory.class);
+    when(swallowDirectoryProvider.get()).thenReturn(Optional.of(swallowDirectory));
+
+    PeerInfo peerInfo = new PeerInfo(remotePeerUuid);
+    peerInfo.setZmqRpcAddress(endpoint);
+    when(swallowDirectory.getPeer(remotePeerUuid)).thenReturn(peerInfo);
+    when(swallowDirectory.peerExists(remotePeerUuid)).thenReturn(true);
+
+    // Create dispatcher with SWALLOW_ALL policy and proper directory provider
+    InterceptCallbackDispatcher swallowDispatcher =
+        new InterceptCallbackDispatcher(
+            peerUuid, context, messageBuilder, swallowDirectoryProvider, swallowAllResolver);
+
+    // Create intercept (set exceptionPropagationPolicy to 255 to defer to global policy)
+    InterceptMessage interceptMsg = new InterceptMessage();
+    interceptMsg.peerUuid = remotePeerUuid.toString();
+    interceptMsg.interceptType = InterceptType.BEFORE.toByte();
+    interceptMsg.callbackClass = "com.example.Test";
+    interceptMsg.callbackMethod = "callback";
+    interceptMsg.exceptionPropagationPolicy = (byte) 255; // Defer to global policy
+
+    InterceptCheckResult result =
+        new InterceptCheckResult(List.of(interceptMsg), Collections.emptyList());
+
+    ExecMessage execMessage = messageBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+
+    // Execute - exception should be swallowed by SWALLOW_ALL policy
+    InterceptCallbackDispatcher.ConsolidatedCallbackResponse response =
+        swallowDispatcher.sendBeforeCallbacks(result, execMessage, new Object[0]);
+
+    // Verify: Exception should be swallowed
+    assertThat(
+        "Exception should be swallowed by policy", response.shouldThrowException(), is(false));
+    assertThat("Should proceed with execution", response.shouldProceed(), is(true));
+
+    swallowDispatcher.cleanup();
+    server.requestStop();
   }
 
   /**
@@ -493,14 +605,152 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
    * caller, allowing callbacks to control exceptional flow of the intercepted operation.
    */
   @Test
-  @Ignore("Awaiting implementation in #292")
-  public void shouldPropagateBusinessExceptionWithPropagateAllPolicy() {
-    // Given: Response has throwException=true, isApiMisuseError=false; policy PROPAGATE_ALL
-    // When: Processing response
-    // Then: Exception deserialized and propagated to caller
+  public void shouldPropagateBusinessExceptionWithPropagateAllPolicy() throws Exception {
+    // Setup: Create dispatcher with PROPAGATE_ALL policy
+    ExceptionPolicyConfig propagateAllConfig =
+        new ExceptionPolicyConfig.Builder()
+            .globalPropagationPolicy(ExceptionPropagationPolicy.PROPAGATE_ALL)
+            .build();
+    ExceptionPolicyResolver propagateAllResolver = new ExceptionPolicyResolver(propagateAllConfig);
 
-    // TODO: Implement after #292 provides the implementation
-    fail("Not yet implemented");
+    // Setup: Create stub server that responds with business exception
+    String endpoint = "inproc://propagate-all-test";
+    UUID remotePeerUuid = UUID.randomUUID();
+    CountDownLatch serverReady = new CountDownLatch(1);
+    CountDownLatch messageReceived = new CountDownLatch(1);
+
+    // Create a response with business exception (not API misuse)
+    InterceptCallbackResponseMessage exceptionResponse = new InterceptCallbackResponseMessage();
+    exceptionResponse.setCallbackId("test-callback-id");
+    exceptionResponse.setPhase((byte) 1); // BEFORE
+    exceptionResponse.setThrowException(true);
+    exceptionResponse.setIsApiMisuseError(false); // Business exception
+    exceptionResponse.setException(
+        io.quasient.pal.serdes.colfer.ExceptionSerdes.serializeException(
+            new RuntimeException("Business exception to propagate")));
+
+    ConfigurableCallbackServer server =
+        new ConfigurableCallbackServer(
+            context, endpoint, serverReady, messageReceived, exceptionResponse);
+    executorService.execute(server);
+    serverReady.await(1, TimeUnit.SECONDS);
+
+    // Mock directory
+    DirectoryConnectionProvider propagateDirectoryProvider =
+        mock(DirectoryConnectionProvider.class);
+    PalDirectory propagateDirectory = mock(PalDirectory.class);
+    when(propagateDirectoryProvider.get()).thenReturn(Optional.of(propagateDirectory));
+
+    PeerInfo peerInfo = new PeerInfo(remotePeerUuid);
+    peerInfo.setZmqRpcAddress(endpoint);
+    when(propagateDirectory.getPeer(remotePeerUuid)).thenReturn(peerInfo);
+    when(propagateDirectory.peerExists(remotePeerUuid)).thenReturn(true);
+
+    // Create dispatcher with PROPAGATE_ALL policy
+    InterceptCallbackDispatcher propagateDispatcher =
+        new InterceptCallbackDispatcher(
+            peerUuid, context, messageBuilder, propagateDirectoryProvider, propagateAllResolver);
+
+    // Create intercept (set exceptionPropagationPolicy to 255 to defer to global policy)
+    InterceptMessage interceptMsg = new InterceptMessage();
+    interceptMsg.peerUuid = remotePeerUuid.toString();
+    interceptMsg.interceptType = InterceptType.BEFORE.toByte();
+    interceptMsg.callbackClass = "com.example.Test";
+    interceptMsg.callbackMethod = "callback";
+    interceptMsg.exceptionPropagationPolicy = (byte) 255; // Defer to global policy
+
+    InterceptCheckResult result =
+        new InterceptCheckResult(List.of(interceptMsg), Collections.emptyList());
+
+    ExecMessage execMessage = messageBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+
+    // Execute - exception should be propagated by PROPAGATE_ALL policy
+    InterceptCallbackDispatcher.ConsolidatedCallbackResponse response =
+        propagateDispatcher.sendBeforeCallbacks(result, execMessage, new Object[0]);
+
+    // Verify: Exception should be propagated
+    assertThat(
+        "Exception should be propagated by policy", response.shouldThrowException(), is(true));
+    assertThat(
+        "Exception message should match",
+        response.getExceptionToThrow().getMessage(),
+        is("Business exception to propagate"));
+
+    propagateDispatcher.cleanup();
+    server.requestStop();
+  }
+
+  /**
+   * Configurable callback server that sends a predetermined response.
+   *
+   * <p>This server allows tests to control the exact response that will be sent back, enabling
+   * testing of specific exception handling scenarios.
+   */
+  private static class ConfigurableCallbackServer implements Runnable {
+    private final ZContext context;
+    private final String endpoint;
+    private final CountDownLatch readyLatch;
+    private final CountDownLatch receivedLatch;
+    private final InterceptCallbackResponseMessage responseToSend;
+    private volatile boolean running = true;
+
+    ConfigurableCallbackServer(
+        ZContext context,
+        String endpoint,
+        CountDownLatch readyLatch,
+        CountDownLatch receivedLatch,
+        InterceptCallbackResponseMessage responseToSend) {
+      this.context = context;
+      this.endpoint = endpoint;
+      this.readyLatch = readyLatch;
+      this.receivedLatch = receivedLatch;
+      this.responseToSend = responseToSend;
+    }
+
+    @Override
+    public void run() {
+      Socket router = context.createSocket(SocketType.ROUTER);
+      router.bind(endpoint);
+      router.setReceiveTimeOut(100); // 100ms timeout for polling
+      readyLatch.countDown();
+
+      while (running) {
+        try {
+          // ROUTER receives: [identity, empty delimiter, payload]
+          byte[] identity = router.recv();
+          if (identity != null) {
+            byte[] empty = router.recv();
+            @SuppressWarnings("unused") // Request is received but not processed in this stub
+            byte[] request = router.recv();
+
+            receivedLatch.countDown();
+
+            // Send predetermined response
+            Message response = new Message();
+            response.setInterceptCallbackResponseMessage(responseToSend);
+            byte[] responseBytes = new byte[response.marshalFit()];
+            response.marshal(responseBytes, 0);
+
+            router.sendMore(identity);
+            router.sendMore(empty);
+            router.send(responseBytes, 0);
+          }
+        } catch (ZMQException e) {
+          // Expected during context/socket closure in teardown
+          if (e.getErrorCode() == 4) {
+            // EINTR - Interrupted function, happens during cleanup
+            break;
+          }
+          throw e;
+        }
+      }
+
+      router.close();
+    }
+
+    void requestStop() {
+      running = false;
+    }
   }
 
   /**

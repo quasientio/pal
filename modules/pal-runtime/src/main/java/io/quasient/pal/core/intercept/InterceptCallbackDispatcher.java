@@ -12,6 +12,7 @@ package io.quasient.pal.core.intercept;
 import static io.quasient.pal.serdes.colfer.ColferUtils.toBytes;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import io.quasient.pal.common.lang.intercept.ExceptionPropagationPolicy;
 import io.quasient.pal.common.lang.intercept.InterceptPhase;
 import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.cxn.directory.DirectoryConnectionProvider;
@@ -134,6 +135,9 @@ public class InterceptCallbackDispatcher {
   /** Provider for accessing the PAL directory to look up peer endpoints. */
   private final DirectoryConnectionProvider directoryConnectionProvider;
 
+  /** Resolver for exception policies applied to callback exceptions. */
+  private final ExceptionPolicyResolver exceptionPolicyResolver;
+
   /**
    * Per-thread socket cache for synchronous callback communication. Each thread maintains its own
    * map of peer UUID to connected REQ socket for BEFORE/AFTER intercepts.
@@ -155,17 +159,20 @@ public class InterceptCallbackDispatcher {
    * @param zmqContext the ZeroMQ context for socket creation
    * @param messageBuilder the message builder for constructing callback messages
    * @param directoryConnectionProvider provider for accessing peer directory information
+   * @param exceptionPolicyResolver resolver for exception policies applied to callback exceptions
    */
   @Inject
   public InterceptCallbackDispatcher(
       UUID peerUuid,
       ZContext zmqContext,
       MessageBuilder messageBuilder,
-      DirectoryConnectionProvider directoryConnectionProvider) {
+      DirectoryConnectionProvider directoryConnectionProvider,
+      ExceptionPolicyResolver exceptionPolicyResolver) {
     this.peerUuid = peerUuid;
     this.zmqContext = zmqContext;
     this.messageBuilder = messageBuilder;
     this.directoryConnectionProvider = directoryConnectionProvider;
+    this.exceptionPolicyResolver = exceptionPolicyResolver;
   }
 
   /**
@@ -363,9 +370,11 @@ public class InterceptCallbackDispatcher {
         // Send and await response
         InterceptCallbackResponseMessage response = sendCallbackRequest(callbackPeerUuid, request);
 
-        // Check for exception
-        if (response.getThrowException()) {
-          exceptionToThrow = ExceptionSerdes.deserializeException(response.getException());
+        // Process exception with policy
+        Throwable callbackException =
+            processCallbackException(response, interceptMessage, InterceptType.BEFORE);
+        if (callbackException != null) {
+          exceptionToThrow = callbackException;
           break; // Stop processing further callbacks
         }
 
@@ -528,9 +537,11 @@ public class InterceptCallbackDispatcher {
         // Send and await response
         InterceptCallbackResponseMessage response = sendCallbackRequest(callbackPeerUuid, request);
 
-        // Check for exception
-        if (response.getThrowException()) {
-          exceptionToThrow = ExceptionSerdes.deserializeException(response.getException());
+        // Process exception with policy
+        Throwable callbackException =
+            processCallbackException(response, interceptMessage, InterceptType.AFTER);
+        if (callbackException != null) {
+          exceptionToThrow = callbackException;
           break; // Stop processing further callbacks
         }
 
@@ -609,6 +620,74 @@ public class InterceptCallbackDispatcher {
         currentReturnValue);
     return new ConsolidatedCallbackResponse(
         shouldProceed, new HashMap<>(), exceptionToThrow, currentReturnValue, hasOverride);
+  }
+
+  /**
+   * Processes exception from callback response according to policy.
+   *
+   * <p>This method handles both API misuse errors and business exceptions:
+   *
+   * <ul>
+   *   <li><b>API misuse errors:</b> Logged and swallowed (returns null)
+   *   <li><b>Business exceptions:</b> Deserialized and policy applied to determine if they should
+   *       propagate
+   * </ul>
+   *
+   * @param response the callback response containing exception information
+   * @param interceptMessage the intercept message for policy resolution
+   * @param interceptType the type of intercept for policy resolution
+   * @return the exception to throw (if policy allows), or null if swallowed
+   */
+  private Throwable processCallbackException(
+      InterceptCallbackResponseMessage response,
+      InterceptMessage interceptMessage,
+      InterceptType interceptType) {
+
+    if (!response.getThrowException()) {
+      return null;
+    }
+
+    // Check for API misuse error
+    if (response.getIsApiMisuseError()) {
+      // API misuse errors are logged but not propagated
+      logger.error(
+          "API misuse error in callback for intercept type {}: {}. "
+              + "This indicates improper callback handler implementation. "
+              + "The error will be logged but not propagated to the caller.",
+          interceptType,
+          response.getException() != null
+              ? ExceptionSerdes.deserializeException(response.getException())
+              : "Unknown error");
+      return null; // Swallow API misuse errors
+    }
+
+    // Deserialize the business exception
+    Throwable exception = ExceptionSerdes.deserializeException(response.getException());
+
+    // Resolve propagation policy for this intercept
+    ExceptionPropagationPolicy policy =
+        exceptionPolicyResolver.resolvePropagationPolicy(interceptMessage, interceptType);
+
+    // Apply policy
+    boolean shouldPropagate =
+        switch (policy) {
+          case PROPAGATE_ALL -> true;
+          case SWALLOW_ALL -> false;
+          case PROPAGATE_EXPLICIT_ONLY, PROPAGATE_CONTROLLED_ONLY -> {
+            // For these policies, exceptions set via setExceptionToThrow should propagate
+            // (which is indicated by throwException=true and isApiMisuseError=false)
+            yield true;
+          }
+        };
+
+    if (shouldPropagate) {
+      logger.debug(
+          "Propagating business exception from callback (policy={}): {}", policy, exception);
+      return exception;
+    } else {
+      logger.info("Swallowing business exception from callback (policy={}): {}", policy, exception);
+      return null;
+    }
   }
 
   /**

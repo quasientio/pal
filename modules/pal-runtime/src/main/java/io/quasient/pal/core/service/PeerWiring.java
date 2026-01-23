@@ -28,6 +28,7 @@ import io.quasient.pal.core.dispatcher.InterceptAsyncThreadFactory;
 import io.quasient.pal.core.execution.java.AspectProxyDispatcher;
 import io.quasient.pal.core.execution.java.CustomClassloader;
 import io.quasient.pal.core.intercept.ExceptionPolicyConfig;
+import io.quasient.pal.core.intercept.ExceptionPolicyResolver;
 import io.quasient.pal.core.intercept.InFlightDispatchTracker;
 import io.quasient.pal.core.intercept.InterceptActivationCoordinator;
 import io.quasient.pal.core.internal.concurrent.HwmMessageQueue;
@@ -635,5 +636,18 @@ public class PeerWiring extends AbstractModule {
     logger.debug("ASYNC intercepts hardcoded to SWALLOW_ALL");
 
     return config;
+  }
+
+  /**
+   * Provides the {@link ExceptionPolicyResolver} for resolving exception policies.
+   *
+   * @param config the exception policy configuration
+   * @return the exception policy resolver
+   */
+  @SuppressWarnings("unused")
+  @Provides
+  @Singleton
+  public ExceptionPolicyResolver provideExceptionPolicyResolver(ExceptionPolicyConfig config) {
+    return new ExceptionPolicyResolver(config);
   }
 }
