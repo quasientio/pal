@@ -129,6 +129,47 @@ import org.slf4j.LoggerFactory;
  */
 public final class MessageBuilder {
 
+  /**
+   * Holds the result of separating a mixed argument array into regular arguments and ObjectRef
+   * arguments.
+   */
+  private static final class SeparatedArgs {
+    /** The array of non-ObjectRef arguments (may contain nulls at ObjectRef positions). */
+    private final Object[] regularArgs;
+
+    /** The array of ObjectRef arguments (may contain nulls at regular arg positions). */
+    private final ObjectRef[] objRefArgs;
+
+    /**
+     * Creates a new instance with the given separated arguments.
+     *
+     * @param regularArgs the array of regular (non-ObjectRef) arguments
+     * @param objRefArgs the array of ObjectRef arguments
+     */
+    SeparatedArgs(Object[] regularArgs, ObjectRef[] objRefArgs) {
+      this.regularArgs = regularArgs;
+      this.objRefArgs = objRefArgs;
+    }
+
+    /**
+     * Returns the array of regular arguments.
+     *
+     * @return the regular arguments array
+     */
+    Object[] regularArgs() {
+      return regularArgs;
+    }
+
+    /**
+     * Returns the array of ObjectRef arguments.
+     *
+     * @return the ObjectRef arguments array
+     */
+    ObjectRef[] objRefArgs() {
+      return objRefArgs;
+    }
+  }
+
   /** Logger instance for logging message building operations. */
   private static final Logger logger = LoggerFactory.getLogger(MessageBuilder.class);
 
@@ -241,6 +282,35 @@ public final class MessageBuilder {
    */
   private String nextId() {
     return idGenerator.nextId();
+  }
+
+  /**
+   * Separates a mixed argument array into regular arguments and ObjectRef arguments.
+   *
+   * <p>This method processes an array of arguments where some may be {@link ObjectRef} instances,
+   * and returns two parallel arrays: one containing only the non-ObjectRef arguments (with nulls at
+   * positions where ObjectRefs were found), and another containing only the ObjectRef arguments
+   * (with nulls elsewhere).
+   *
+   * @param args the mixed array of arguments to separate, may be {@code null}
+   * @return a {@link SeparatedArgs} containing the separated arrays, or a record with null arrays
+   *     if the input was null
+   */
+  private static SeparatedArgs separateObjectRefArgs(Object[] args) {
+    if (args == null) {
+      return new SeparatedArgs(null, null);
+    }
+    Object[] regularArgs = new Object[args.length];
+    ObjectRef[] objRefArgs = new ObjectRef[args.length];
+    for (int i = 0; i < args.length; i++) {
+      Object arg = args[i];
+      if (arg instanceof ObjectRef objRefArg) {
+        objRefArgs[i] = objRefArg;
+      } else {
+        regularArgs[i] = arg;
+      }
+    }
+    return new SeparatedArgs(regularArgs, objRefArgs);
   }
 
   /**
@@ -1328,23 +1398,15 @@ public final class MessageBuilder {
       String[] parameterTypes,
       Object[] args) {
 
-    Object[] nonObjRefArgs = null;
-    ObjectRef[] objRefArgs = null;
-    if (args != null) {
-      nonObjRefArgs = new Object[args.length];
-      objRefArgs = new ObjectRef[args.length];
-      for (int i = 0; i < args.length; i++) {
-        Object arg = args[i];
-        if (arg instanceof ObjectRef objRefArg) {
-          objRefArgs[i] = objRefArg;
-        } else {
-          nonObjRefArgs[i] = arg;
-        }
-      }
-    }
-
+    SeparatedArgs separated = separateObjectRefArgs(args);
     return buildInstanceMethod(
-        peerUuid, className, methodName, targetObjRef, parameterTypes, nonObjRefArgs, objRefArgs);
+        peerUuid,
+        className,
+        methodName,
+        targetObjRef,
+        parameterTypes,
+        separated.regularArgs(),
+        separated.objRefArgs());
   }
 
   /**
@@ -1373,29 +1435,15 @@ public final class MessageBuilder {
       Object[] args,
       boolean includeDeclaredExceptions) {
 
-    Object[] nonObjRefArgs = null;
-    ObjectRef[] objRefArgs = null;
-    if (args != null) {
-      nonObjRefArgs = new Object[args.length];
-      objRefArgs = new ObjectRef[args.length];
-      for (int i = 0; i < args.length; i++) {
-        Object arg = args[i];
-        if (arg instanceof ObjectRef objRefArg) {
-          objRefArgs[i] = objRefArg;
-        } else {
-          nonObjRefArgs[i] = arg;
-        }
-      }
-    }
-
+    SeparatedArgs separated = separateObjectRefArgs(args);
     return buildInstanceMethod(
         peerUuid,
         className,
         methodName,
         targetObjRef,
         parameterTypes,
-        nonObjRefArgs,
-        objRefArgs,
+        separated.regularArgs(),
+        separated.objRefArgs(),
         includeDeclaredExceptions);
   }
 
@@ -1757,21 +1805,7 @@ public final class MessageBuilder {
       ObjectRef senderObjRef,
       Object[] args) {
 
-    Object[] noObjRefArgs = null;
-    ObjectRef[] objectRefArgs = null;
-    if (args != null) {
-      noObjRefArgs = new Object[args.length];
-      objectRefArgs = new ObjectRef[args.length];
-      for (int i = 0; i < args.length; i++) {
-        Object arg = args[i];
-        if (arg instanceof ObjectRef objRefArg) {
-          objectRefArgs[i] = objRefArg;
-        } else {
-          noObjRefArgs[i] = arg;
-        }
-      }
-    }
-
+    SeparatedArgs separated = separateObjectRefArgs(args);
     return buildClassMethod(
         peerUuid,
         className,
@@ -1779,8 +1813,8 @@ public final class MessageBuilder {
         parameterTypes,
         sender,
         senderObjRef,
-        noObjRefArgs,
-        objectRefArgs);
+        separated.regularArgs(),
+        separated.objRefArgs());
   }
 
   /**
@@ -1811,21 +1845,7 @@ public final class MessageBuilder {
       Object[] args,
       boolean includeDeclaredExceptions) {
 
-    Object[] noObjRefArgs = null;
-    ObjectRef[] objectRefArgs = null;
-    if (args != null) {
-      noObjRefArgs = new Object[args.length];
-      objectRefArgs = new ObjectRef[args.length];
-      for (int i = 0; i < args.length; i++) {
-        Object arg = args[i];
-        if (arg instanceof ObjectRef objRefArg) {
-          objectRefArgs[i] = objRefArg;
-        } else {
-          noObjRefArgs[i] = arg;
-        }
-      }
-    }
-
+    SeparatedArgs separated = separateObjectRefArgs(args);
     return buildClassMethod(
         peerUuid,
         className,
@@ -1833,8 +1853,8 @@ public final class MessageBuilder {
         parameterTypes,
         sender,
         senderObjRef,
-        noObjRefArgs,
-        objectRefArgs,
+        separated.regularArgs(),
+        separated.objRefArgs(),
         includeDeclaredExceptions);
   }
 
