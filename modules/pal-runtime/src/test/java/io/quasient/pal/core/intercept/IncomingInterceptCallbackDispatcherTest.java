@@ -20,6 +20,8 @@ import io.quasient.pal.common.lang.intercept.InterceptCallback;
 import io.quasient.pal.common.lang.intercept.InterceptCallbackResponse;
 import io.quasient.pal.common.lang.intercept.InterceptContext;
 import io.quasient.pal.common.lang.intercept.InterceptPhase;
+import io.quasient.pal.common.lang.intercept.InterceptType;
+import io.quasient.pal.common.lang.intercept.InterceptTypeNotSupportedException;
 import io.quasient.pal.messages.colfer.Class;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.Field;
@@ -29,9 +31,12 @@ import io.quasient.pal.messages.colfer.InterceptCallbackRequestMessage;
 import io.quasient.pal.messages.colfer.InterceptCallbackResponseMessage;
 import io.quasient.pal.messages.colfer.Obj;
 import io.quasient.pal.messages.colfer.Parameter;
+import io.quasient.pal.messages.colfer.RaisedThrowable;
 import io.quasient.pal.messages.colfer.StaticFieldPut;
+import io.quasient.pal.serdes.colfer.ExceptionSerdes;
 import io.quasient.pal.serdes.colfer.WrapPolicy;
 import io.quasient.pal.serdes.colfer.Wrapper;
+import java.sql.SQLException;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -952,8 +957,8 @@ public class IncomingInterceptCallbackDispatcherTest {
     // Given: Callback throws InterceptApiMisuseException
     InterceptCallback callback =
         (ctx) -> {
-          throw new io.quasient.pal.common.lang.intercept.InterceptTypeNotSupportedException(
-              "getReturnValue()", io.quasient.pal.common.lang.intercept.InterceptType.BEFORE, null);
+          throw new InterceptTypeNotSupportedException(
+              "getReturnValue()", InterceptType.BEFORE, null);
         };
 
     dispatcher.registerCallback("test-callback", callback);
@@ -1035,7 +1040,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     // Given: Callback throws SQLException (checked exception)
     InterceptCallback callback =
         (ctx) -> {
-          throw new java.sql.SQLException("Database connection failed");
+          throw new SQLException("Database connection failed");
         };
 
     dispatcher.registerCallback("test-callback", callback);
@@ -1065,12 +1070,11 @@ public class IncomingInterceptCallbackDispatcherTest {
     assertNotNull("Should have exception set", response.getException());
 
     // Verify that the exception was wrapped
-    io.quasient.pal.messages.colfer.RaisedThrowable raisedThrowable = response.getException();
+    RaisedThrowable raisedThrowable = response.getException();
     assertNotNull(raisedThrowable);
     // The exception should be wrapped in RuntimeException
     // We can verify this by deserializing and checking the exception class
-    Throwable deserializedException =
-        io.quasient.pal.serdes.colfer.ExceptionSerdes.deserializeException(raisedThrowable);
+    Throwable deserializedException = ExceptionSerdes.deserializeException(raisedThrowable);
     assertNotNull(deserializedException);
     assertTrue(
         "Exception should be wrapped in RuntimeException",
@@ -1078,7 +1082,6 @@ public class IncomingInterceptCallbackDispatcherTest {
     // Verify the original SQLException is the cause
     assertNotNull("Should have a cause", deserializedException.getCause());
     assertTrue(
-        "Cause should be SQLException",
-        deserializedException.getCause() instanceof java.sql.SQLException);
+        "Cause should be SQLException", deserializedException.getCause() instanceof SQLException);
   }
 }

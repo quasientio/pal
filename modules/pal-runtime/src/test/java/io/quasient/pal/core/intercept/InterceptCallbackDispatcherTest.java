@@ -26,6 +26,7 @@ import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.InterceptCallbackResponseMessage;
 import io.quasient.pal.messages.colfer.InterceptMessage;
 import io.quasient.pal.messages.colfer.Message;
+import io.quasient.pal.serdes.colfer.ExceptionSerdes;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -465,8 +466,7 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
     apiMisuseResponse.setThrowException(true);
     apiMisuseResponse.setIsApiMisuseError(true);
     apiMisuseResponse.setException(
-        io.quasient.pal.serdes.colfer.ExceptionSerdes.serializeException(
-            new IllegalArgumentException("API misuse error")));
+        ExceptionSerdes.serializeException(new IllegalArgumentException("API misuse error")));
 
     ConfigurableCallbackServer server =
         new ConfigurableCallbackServer(
@@ -540,7 +540,7 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
     exceptionResponse.setThrowException(true);
     exceptionResponse.setIsApiMisuseError(false); // Business exception
     exceptionResponse.setException(
-        io.quasient.pal.serdes.colfer.ExceptionSerdes.serializeException(
+        ExceptionSerdes.serializeException(
             new RuntimeException("Business exception from callback")));
 
     ConfigurableCallbackServer server =
@@ -626,7 +626,7 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
     exceptionResponse.setThrowException(true);
     exceptionResponse.setIsApiMisuseError(false); // Business exception
     exceptionResponse.setException(
-        io.quasient.pal.serdes.colfer.ExceptionSerdes.serializeException(
+        ExceptionSerdes.serializeException(
             new RuntimeException("Business exception to propagate")));
 
     ConfigurableCallbackServer server =

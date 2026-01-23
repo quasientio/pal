@@ -350,32 +350,7 @@ public class IncomingInterceptCallbackDispatcher {
       exceptionToThrow = userResponse.getExceptionToThrow();
     }
     if (exceptionToThrow != null) {
-      wireResponse.setThrowException(true);
-
-      // Classify and validate the exception
-      if (exceptionToThrow instanceof InterceptApiMisuseException) {
-        wireResponse.setIsApiMisuseError(true);
-        logger.error(
-            "API misuse error in callback handler: callbackId={}, error={}",
-            request.getCallbackId(),
-            exceptionToThrow.getMessage(),
-            exceptionToThrow);
-      } else {
-        wireResponse.setIsApiMisuseError(false);
-
-        // Extract declared exceptions from the ExecMessage
-        String[] declaredExceptions = null;
-        if (request.getExec() != null) {
-          declaredExceptions = request.getExec().getDeclaredExceptions();
-        }
-
-        // Validate and potentially wrap the exception
-        exceptionToThrow =
-            ExceptionValidator.validateThrowable(
-                exceptionToThrow, declaredExceptions, CheckedExceptionPolicy.WRAP);
-      }
-
-      wireResponse.setException(serializeException(exceptionToThrow));
+      processAndSetException(wireResponse, exceptionToThrow, request);
     }
 
     return wireResponse;
@@ -384,14 +359,7 @@ public class IncomingInterceptCallbackDispatcher {
   /**
    * Builds an error response when callback invocation fails.
    *
-   * <p>This method handles exception classification and validation:
-   *
-   * <ul>
-   *   <li>Detects {@link InterceptApiMisuseException} and sets {@code isApiMisuseError=true}
-   *   <li>Validates checked exceptions against the method's declared exceptions
-   *   <li>Applies checked exception policy (WRAP/REJECT/ALLOW_ALL)
-   *   <li>Logs API misuse errors on the interceptor peer side
-   * </ul>
+   * <p>Exception handling is delegated to {@link #processAndSetException}.
    *
    * @param request the original request
    * @param error the exception that occurred
@@ -451,6 +419,55 @@ public class IncomingInterceptCallbackDispatcher {
   @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   private RaisedThrowable serializeException(Throwable throwable) {
     return ExceptionSerdes.serializeException(throwable);
+  }
+
+  /**
+   * Processes and sets exception on the wire response.
+   *
+   * <p>This helper handles the common exception processing pattern:
+   *
+   * <ul>
+   *   <li>Classifies {@link InterceptApiMisuseException} as API misuse errors (with logging)
+   *   <li>Validates and potentially wraps other exceptions against declared exception types
+   *   <li>Serializes the exception and sets it on the wire response
+   * </ul>
+   *
+   * @param wireResponse the response to set exception on
+   * @param exception the exception to process
+   * @param request the original request (for callback ID and declared exceptions)
+   */
+  private void processAndSetException(
+      InterceptCallbackResponseMessage wireResponse,
+      Throwable exception,
+      InterceptCallbackRequestMessage request) {
+    wireResponse.setThrowException(true);
+
+    Throwable processedException = exception;
+
+    // Classify and validate the exception
+    if (exception instanceof InterceptApiMisuseException) {
+      wireResponse.setIsApiMisuseError(true);
+      logger.error(
+          "API misuse error in callback handler: callbackId={}, error={}",
+          request.getCallbackId(),
+          exception.getMessage(),
+          exception);
+    } else {
+      wireResponse.setIsApiMisuseError(false);
+
+      // Extract declared exceptions from the ExecMessage
+      String[] declaredExceptions = null;
+      if (request.getExec() != null) {
+        declaredExceptions = request.getExec().getDeclaredExceptions();
+      }
+
+      // Validate and potentially wrap the exception
+      processedException =
+          ExceptionValidator.validateThrowable(
+              exception, declaredExceptions, CheckedExceptionPolicy.WRAP);
+    }
+
+    wireResponse.setException(serializeException(processedException));
   }
 
   /**
@@ -611,32 +628,7 @@ public class IncomingInterceptCallbackDispatcher {
 
     // Handle exception throwing
     if (exceptionToThrow != null) {
-      wireResponse.setThrowException(true);
-
-      // Classify and validate the exception
-      if (exceptionToThrow instanceof InterceptApiMisuseException) {
-        wireResponse.setIsApiMisuseError(true);
-        logger.error(
-            "API misuse error in callback handler: callbackId={}, error={}",
-            request.getCallbackId(),
-            exceptionToThrow.getMessage(),
-            exceptionToThrow);
-      } else {
-        wireResponse.setIsApiMisuseError(false);
-
-        // Extract declared exceptions from the ExecMessage
-        String[] declaredExceptions = null;
-        if (request.getExec() != null) {
-          declaredExceptions = request.getExec().getDeclaredExceptions();
-        }
-
-        // Validate and potentially wrap the exception
-        exceptionToThrow =
-            ExceptionValidator.validateThrowable(
-                exceptionToThrow, declaredExceptions, CheckedExceptionPolicy.WRAP);
-      }
-
-      wireResponse.setException(serializeException(exceptionToThrow));
+      processAndSetException(wireResponse, exceptionToThrow, request);
     }
 
     return wireResponse;
@@ -670,32 +662,7 @@ public class IncomingInterceptCallbackDispatcher {
       exceptionToThrow = userResponse.getExceptionToThrow();
     }
     if (exceptionToThrow != null) {
-      wireResponse.setThrowException(true);
-
-      // Classify and validate the exception
-      if (exceptionToThrow instanceof InterceptApiMisuseException) {
-        wireResponse.setIsApiMisuseError(true);
-        logger.error(
-            "API misuse error in callback handler: callbackId={}, error={}",
-            request.getCallbackId(),
-            exceptionToThrow.getMessage(),
-            exceptionToThrow);
-      } else {
-        wireResponse.setIsApiMisuseError(false);
-
-        // Extract declared exceptions from the ExecMessage
-        String[] declaredExceptions = null;
-        if (request.getExec() != null) {
-          declaredExceptions = request.getExec().getDeclaredExceptions();
-        }
-
-        // Validate and potentially wrap the exception
-        exceptionToThrow =
-            ExceptionValidator.validateThrowable(
-                exceptionToThrow, declaredExceptions, CheckedExceptionPolicy.WRAP);
-      }
-
-      wireResponse.setException(serializeException(exceptionToThrow));
+      processAndSetException(wireResponse, exceptionToThrow, request);
     }
 
     return wireResponse;
