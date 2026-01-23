@@ -17,6 +17,7 @@ import io.quasient.pal.common.lang.intercept.InterceptCallback;
 import io.quasient.pal.common.lang.intercept.InterceptCallbackResponse;
 import io.quasient.pal.common.lang.intercept.InterceptContext;
 import io.quasient.pal.common.lang.intercept.InterceptType;
+import io.quasient.pal.common.lang.intercept.InvalidCallbackExceptionException;
 import io.quasient.pal.common.lang.intercept.LocalAroundAccessor;
 import io.quasient.pal.messages.colfer.InterceptMessage;
 import jakarta.inject.Inject;
@@ -236,7 +237,7 @@ public class LocalInterceptCallbackDispatcher {
       validatedException =
           ExceptionValidator.validateThrowable(
               exceptionToConsider, declaredExceptions, checkedPolicy);
-    } catch (io.quasient.pal.common.lang.intercept.InvalidCallbackExceptionException ice) {
+    } catch (InvalidCallbackExceptionException ice) {
       // REJECT policy throws InvalidCallbackExceptionException for incompatible checked exceptions
       validatedException = ice;
     }

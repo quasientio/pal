@@ -11,6 +11,8 @@ package io.quasient.pal.core.intercept;
 
 import io.quasient.pal.common.lang.intercept.CheckedExceptionPolicy;
 import io.quasient.pal.common.lang.intercept.InvalidCallbackExceptionException;
+import java.util.ArrayList;
+import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -201,7 +203,7 @@ public final class ExceptionValidator {
    * @return array of loaded Class objects (may be smaller if some classes cannot be loaded)
    */
   private static Class<?>[] loadDeclaredExceptionClasses(String[] declaredExceptions) {
-    java.util.List<Class<?>> loadedClasses = new java.util.ArrayList<>();
+    List<Class<?>> loadedClasses = new ArrayList<>();
 
     for (String className : declaredExceptions) {
       try {

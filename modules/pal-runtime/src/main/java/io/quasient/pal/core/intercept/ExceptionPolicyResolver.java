@@ -9,6 +9,7 @@
  */
 package io.quasient.pal.core.intercept;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.quasient.pal.common.lang.intercept.CheckedExceptionPolicy;
 import io.quasient.pal.common.lang.intercept.ExceptionPropagationPolicy;
 import io.quasient.pal.common.lang.intercept.InterceptType;
@@ -63,6 +64,11 @@ public class ExceptionPolicyResolver {
    * @param config the configuration containing default policies; must not be null
    * @throws NullPointerException if config is null
    */
+  @SuppressFBWarnings(
+      value = "CT_CONSTRUCTOR_THROW",
+      justification =
+          "NullPointerException from input validation is acceptable; "
+              + "no finalizer exists and this is an internal class")
   public ExceptionPolicyResolver(@Nonnull ExceptionPolicyConfig config) {
     if (config == null) {
       throw new NullPointerException("config must not be null");
