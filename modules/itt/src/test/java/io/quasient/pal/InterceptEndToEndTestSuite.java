@@ -30,6 +30,7 @@ import io.quasient.pal.intercept.endtoend.method.AfterMethodCallbackIT;
 import io.quasient.pal.intercept.endtoend.method.AroundMethodCallbackIT;
 import io.quasient.pal.intercept.endtoend.method.BeforeMethodAsyncCallbackIT;
 import io.quasient.pal.intercept.endtoend.method.BeforeMethodCallbackIT;
+import io.quasient.pal.intercept.exception.ExceptionHandlingIT;
 import io.quasient.pal.intercept.local.combined.LocalAndRemoteCombinedIT;
 import io.quasient.pal.intercept.order.InterceptExecutionOrderIT;
 import java.io.FileOutputStream;
@@ -128,7 +129,10 @@ import org.slf4j.LoggerFactory;
   AroundChainExceptionIT.class,
 
   // Immediate activation tests (verifies behavior when --in-flight-tracking is disabled)
-  ImmediateActivationIT.class
+  ImmediateActivationIT.class,
+
+  // Exception handling tests (API misuse, business exceptions, policies)
+  ExceptionHandlingIT.class
 })
 public class InterceptEndToEndTestSuite extends AbstractIntegrationTest {
 
