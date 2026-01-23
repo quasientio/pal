@@ -33,7 +33,6 @@ import io.quasient.pal.messages.colfer.StaticFieldPut;
 import io.quasient.pal.serdes.colfer.WrapPolicy;
 import io.quasient.pal.serdes.colfer.Wrapper;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -949,14 +948,34 @@ public class IncomingInterceptCallbackDispatcherTest {
    * <p>Part of issue #289 - Unit test specifications for exception handling
    */
   @Test
-  @Ignore("Awaiting implementation in #290")
   public void shouldSetApiMisuseErrorFlagOnResponse() {
     // Given: Callback throws InterceptApiMisuseException
-    // When: Building error response
-    // Then: Response has isApiMisuseError=true and throwException=true
+    InterceptCallback callback =
+        (ctx) -> {
+          throw new io.quasient.pal.common.lang.intercept.InterceptTypeNotSupportedException(
+              "getReturnValue()", io.quasient.pal.common.lang.intercept.InterceptType.BEFORE, null);
+        };
 
-    // TODO: Implement after #290 provides the implementation
-    fail("Not yet implemented");
+    dispatcher.registerCallback("test-callback", callback);
+
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
+    request.setCallbackId("req-123");
+    request.setPhase((byte) 1); // BEFORE
+    request.setInterceptType((byte) 1);
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("test-callback");
+    request.setExec(execMessage);
+
+    // When: Building error response
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
+
+    // Then: Response has isApiMisuseError=true and throwException=true
+    assertNotNull(response);
+    assertTrue("Should set throwException flag", response.getThrowException());
+    assertTrue(
+        "Should set isApiMisuseError flag for InterceptApiMisuseException",
+        response.getIsApiMisuseError());
+    assertNotNull("Should have exception set", response.getException());
   }
 
   /**
@@ -971,14 +990,33 @@ public class IncomingInterceptCallbackDispatcherTest {
    * <p>Part of issue #289 - Unit test specifications for exception handling
    */
   @Test
-  @Ignore("Awaiting implementation in #290")
   public void shouldNotSetApiMisuseErrorFlagForBusinessException() {
-    // Given: Callback throws RuntimeException (intentional)
-    // When: Building error response
-    // Then: Response has isApiMisuseError=false and throwException=true
+    // Given: Callback throws RuntimeException (intentional business exception)
+    InterceptCallback callback =
+        (ctx) -> {
+          throw new RuntimeException("Business logic error");
+        };
 
-    // TODO: Implement after #290 provides the implementation
-    fail("Not yet implemented");
+    dispatcher.registerCallback("test-callback", callback);
+
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
+    request.setCallbackId("req-123");
+    request.setPhase((byte) 1); // BEFORE
+    request.setInterceptType((byte) 1);
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("test-callback");
+    request.setExec(execMessage);
+
+    // When: Building error response
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
+
+    // Then: Response has isApiMisuseError=false and throwException=true
+    assertNotNull(response);
+    assertTrue("Should set throwException flag", response.getThrowException());
+    assertFalse(
+        "Should NOT set isApiMisuseError flag for business exceptions",
+        response.getIsApiMisuseError());
+    assertNotNull("Should have exception set", response.getException());
   }
 
   /**
@@ -993,13 +1031,54 @@ public class IncomingInterceptCallbackDispatcherTest {
    * <p>Part of issue #289 - Unit test specifications for exception handling
    */
   @Test
-  @Ignore("Awaiting implementation in #290")
   public void shouldValidateCheckedExceptionBeforeSerialization() {
-    // Given: Checked exception policy WRAP; callback throws SQLException
-    // When: Building response
-    // Then: SQLException wrapped in RuntimeException in serialized response
+    // Given: Callback throws SQLException (checked exception)
+    InterceptCallback callback =
+        (ctx) -> {
+          throw new java.sql.SQLException("Database connection failed");
+        };
 
-    // TODO: Implement after #290 provides the implementation
-    fail("Not yet implemented");
+    dispatcher.registerCallback("test-callback", callback);
+
+    // Create ExecMessage with declared exceptions (e.g., IOException only)
+    ExecMessage exec = new ExecMessage();
+    exec.setMessageId("test-msg");
+    exec.setDeclaredExceptions(new String[] {"java.io.IOException"});
+
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
+    request.setCallbackId("req-123");
+    request.setPhase((byte) 1); // BEFORE
+    request.setInterceptType((byte) 1);
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("test-callback");
+    request.setExec(exec);
+
+    // When: Building response (with CheckedExceptionPolicy.WRAP as default)
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
+
+    // Then: SQLException wrapped in RuntimeException in serialized response
+    assertNotNull(response);
+    assertTrue("Should set throwException flag", response.getThrowException());
+    assertFalse(
+        "Should NOT set isApiMisuseError flag for checked exceptions",
+        response.getIsApiMisuseError());
+    assertNotNull("Should have exception set", response.getException());
+
+    // Verify that the exception was wrapped
+    io.quasient.pal.messages.colfer.RaisedThrowable raisedThrowable = response.getException();
+    assertNotNull(raisedThrowable);
+    // The exception should be wrapped in RuntimeException
+    // We can verify this by deserializing and checking the exception class
+    Throwable deserializedException =
+        io.quasient.pal.serdes.colfer.ExceptionSerdes.deserializeException(raisedThrowable);
+    assertNotNull(deserializedException);
+    assertTrue(
+        "Exception should be wrapped in RuntimeException",
+        deserializedException instanceof RuntimeException);
+    // Verify the original SQLException is the cause
+    assertNotNull("Should have a cause", deserializedException.getCause());
+    assertTrue(
+        "Cause should be SQLException",
+        deserializedException.getCause() instanceof java.sql.SQLException);
   }
 }
