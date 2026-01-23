@@ -10,6 +10,9 @@
 package io.quasient.pal.core.intercept;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import io.quasient.pal.common.lang.intercept.CheckedExceptionPolicy;
+import io.quasient.pal.common.lang.intercept.ExceptionPropagationPolicy;
+import io.quasient.pal.common.lang.intercept.InterceptApiMisuseException;
 import io.quasient.pal.common.lang.intercept.InterceptCallback;
 import io.quasient.pal.common.lang.intercept.InterceptCallbackResponse;
 import io.quasient.pal.common.lang.intercept.InterceptContext;
@@ -24,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
+import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,6 +63,9 @@ public class LocalInterceptCallbackDispatcher {
   /** Executor service for running async intercept callbacks in the background. */
   private final ExecutorService asyncExecutor;
 
+  /** Resolver for determining exception propagation and checked exception policies. */
+  private final ExceptionPolicyResolver exceptionPolicyResolver;
+
   /**
    * Constructs a new LocalInterceptCallbackDispatcher.
    *
@@ -69,8 +76,172 @@ public class LocalInterceptCallbackDispatcher {
   public LocalInterceptCallbackDispatcher(
       CallbackResolver callbackResolver,
       @Named("intercept.async.executor") ExecutorService asyncExecutor) {
+    this(callbackResolver, asyncExecutor, createDefaultPolicyResolver());
+  }
+
+  /**
+   * Constructs a new LocalInterceptCallbackDispatcher with custom exception policy resolver.
+   *
+   * @param callbackResolver the shared callback resolver
+   * @param asyncExecutor the executor service for async callbacks
+   * @param exceptionPolicyResolver the resolver for exception policies
+   */
+  public LocalInterceptCallbackDispatcher(
+      CallbackResolver callbackResolver,
+      ExecutorService asyncExecutor,
+      ExceptionPolicyResolver exceptionPolicyResolver) {
     this.callbackResolver = callbackResolver;
     this.asyncExecutor = asyncExecutor;
+    this.exceptionPolicyResolver =
+        exceptionPolicyResolver != null ? exceptionPolicyResolver : createDefaultPolicyResolver();
+  }
+
+  /**
+   * Creates a default exception policy resolver with sensible defaults.
+   *
+   * @return the default policy resolver
+   */
+  private static ExceptionPolicyResolver createDefaultPolicyResolver() {
+    return new ExceptionPolicyResolver(new ExceptionPolicyConfig.Builder().build());
+  }
+
+  // ---- Exception handling helpers ----
+
+  /**
+   * Result of processing a callback exception based on exception policies.
+   *
+   * @param shouldPropagate whether the exception should be propagated to the caller
+   * @param exceptionToPropagate the exception to propagate (may be validated/wrapped), or null
+   */
+  private record ExceptionHandlingResult(boolean shouldPropagate, Throwable exceptionToPropagate) {}
+
+  /**
+   * Unwraps an exception to get the root cause.
+   *
+   * <p>When callbacks are invoked via reflection, exceptions are wrapped in {@link
+   * java.lang.reflect.InvocationTargetException}. This method extracts the actual exception that
+   * was thrown by the callback.
+   *
+   * @param exception the exception to unwrap
+   * @return the unwrapped exception (or original if not wrapped)
+   */
+  private static Throwable unwrapException(Throwable exception) {
+    Throwable current = exception;
+    while (current instanceof java.lang.reflect.InvocationTargetException
+        && current.getCause() != null) {
+      current = current.getCause();
+    }
+    return current;
+  }
+
+  /**
+   * Processes an exception thrown during callback execution based on exception policies.
+   *
+   * <p>This method implements the following logic:
+   *
+   * <ol>
+   *   <li>API misuse exceptions (InterceptApiMisuseException) are always filtered and logged
+   *   <li>For other exceptions, the propagation policy determines handling:
+   *       <ul>
+   *         <li>PROPAGATE_ALL: All exceptions propagate
+   *         <li>PROPAGATE_EXPLICIT_ONLY: Only explicit exceptions (via setExceptionToThrow)
+   *             propagate
+   *         <li>SWALLOW_ALL: All exceptions are swallowed
+   *         <li>PROPAGATE_CONTROLLED_ONLY: Only explicit exceptions from successful callbacks
+   *             propagate
+   *       </ul>
+   *   <li>For propagated checked exceptions, validation is applied based on CheckedExceptionPolicy
+   * </ol>
+   *
+   * @param directThrowException exception thrown directly by callback (not via setExceptionToThrow)
+   * @param explicitException exception set via setExceptionToThrow (from context or response)
+   * @param callbackCompletedSuccessfully true if callback completed without throwing
+   * @param intercept the intercept message for policy lookup
+   * @param interceptType the type of intercept being processed
+   * @param declaredExceptions the declared exceptions of the intercepted method
+   * @param callbackClass the callback class name (for logging)
+   * @param callbackMethod the callback method name (for logging)
+   * @return the exception handling result indicating whether to propagate and what exception
+   */
+  private ExceptionHandlingResult processException(
+      @Nullable Throwable directThrowException,
+      @Nullable Throwable explicitException,
+      boolean callbackCompletedSuccessfully,
+      InterceptMessage intercept,
+      InterceptType interceptType,
+      @Nullable String[] declaredExceptions,
+      String callbackClass,
+      String callbackMethod) {
+
+    // Determine which exception to consider
+    Throwable exceptionToConsider = directThrowException != null ? directThrowException : null;
+    boolean isExplicit = false;
+
+    // If callback completed successfully, use explicit exception if set
+    if (callbackCompletedSuccessfully && explicitException != null) {
+      exceptionToConsider = explicitException;
+      isExplicit = true;
+    } else if (!callbackCompletedSuccessfully && directThrowException != null) {
+      // Callback threw directly - unwrap InvocationTargetException if needed
+      exceptionToConsider = unwrapException(directThrowException);
+      isExplicit = false;
+    }
+
+    // No exception to process
+    if (exceptionToConsider == null) {
+      return new ExceptionHandlingResult(false, null);
+    }
+
+    // Step 1: Always filter API misuse exceptions
+    if (exceptionToConsider instanceof InterceptApiMisuseException) {
+      logger.warn(
+          "API misuse exception from callback: class={}, method={}, exception={}",
+          callbackClass,
+          callbackMethod,
+          exceptionToConsider.getMessage());
+      return new ExceptionHandlingResult(false, null);
+    }
+
+    // Step 2: Resolve propagation policy
+    ExceptionPropagationPolicy propagationPolicy =
+        exceptionPolicyResolver.resolvePropagationPolicy(intercept, interceptType);
+
+    // Step 3: Apply propagation policy
+    boolean shouldPropagate =
+        switch (propagationPolicy) {
+          case PROPAGATE_ALL -> true;
+          case PROPAGATE_EXPLICIT_ONLY -> isExplicit;
+          case SWALLOW_ALL -> false;
+          case PROPAGATE_CONTROLLED_ONLY -> isExplicit && callbackCompletedSuccessfully;
+        };
+
+    if (!shouldPropagate) {
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            "Swallowing exception per policy {}: class={}, method={}, exception={}",
+            propagationPolicy,
+            callbackClass,
+            callbackMethod,
+            exceptionToConsider.getClass().getName());
+      }
+      return new ExceptionHandlingResult(false, null);
+    }
+
+    // Step 4: Validate checked exceptions if propagating
+    CheckedExceptionPolicy checkedPolicy =
+        exceptionPolicyResolver.resolveCheckedExceptionPolicy(intercept, interceptType);
+
+    Throwable validatedException;
+    try {
+      validatedException =
+          ExceptionValidator.validateThrowable(
+              exceptionToConsider, declaredExceptions, checkedPolicy);
+    } catch (io.quasient.pal.common.lang.intercept.InvalidCallbackExceptionException ice) {
+      // REJECT policy throws InvalidCallbackExceptionException for incompatible checked exceptions
+      validatedException = ice;
+    }
+
+    return new ExceptionHandlingResult(true, validatedException);
   }
 
   // ---- BEFORE callbacks (synchronous) ----
@@ -102,6 +273,47 @@ public class LocalInterceptCallbackDispatcher {
       String methodName,
       List<String> paramTypes,
       String interceptedPeerUuid) {
+    return sendLocalBeforeCallbacks(
+        localIntercepts, args, className, methodName, paramTypes, interceptedPeerUuid, null);
+  }
+
+  /**
+   * Sends local BEFORE callbacks and returns the aggregated response.
+   *
+   * <p>Invokes each matching BEFORE callback in order. Callbacks can:
+   *
+   * <ul>
+   *   <li>Mutate arguments via {@link InterceptContext#setArg(int, Object)}
+   *   <li>Throw an exception via {@link InterceptContext#setExceptionToThrow(Throwable)}
+   * </ul>
+   *
+   * <p>Processing stops early if any callback sets an exception to throw.
+   *
+   * <p>Exception handling is controlled by exception policies:
+   *
+   * <ul>
+   *   <li>API misuse exceptions are always filtered and logged but not propagated
+   *   <li>Propagation policy determines which exceptions propagate to the caller
+   *   <li>Checked exception policy validates exceptions against declared exceptions
+   * </ul>
+   *
+   * @param localIntercepts the list of local BEFORE intercepts
+   * @param args the method arguments (live Java objects)
+   * @param className the intercepted class name
+   * @param methodName the intercepted method name
+   * @param paramTypes the parameter type names
+   * @param interceptedPeerUuid the UUID of the intercepted peer (same as callback peer)
+   * @param declaredExceptions the declared exceptions of the intercepted method (may be null)
+   * @return the consolidated response with mutations and exceptions
+   */
+  public InterceptCallbackDispatcher.ConsolidatedCallbackResponse sendLocalBeforeCallbacks(
+      List<InterceptMessage> localIntercepts,
+      Object[] args,
+      String className,
+      String methodName,
+      List<String> paramTypes,
+      String interceptedPeerUuid,
+      @Nullable String[] declaredExceptions) {
 
     if (localIntercepts.isEmpty()) {
       return InterceptCallbackDispatcher.ConsolidatedCallbackResponse.proceed();
@@ -126,6 +338,10 @@ public class LocalInterceptCallbackDispatcher {
         continue;
       }
 
+      Throwable directThrowException = null;
+      Throwable explicitException = null;
+      boolean callbackCompletedSuccessfully = false;
+
       try {
         // Resolve the callback (InterceptMessage only has callbackClass/callbackMethod, no
         // registered ID)
@@ -140,6 +356,7 @@ public class LocalInterceptCallbackDispatcher {
 
         // Invoke the callback
         InterceptCallbackResponse response = callback.handle(context);
+        callbackCompletedSuccessfully = true;
 
         // Aggregate argument mutations
         if (context.isArgsModified()) {
@@ -151,20 +368,10 @@ public class LocalInterceptCallbackDispatcher {
           }
         }
 
-        // Check for exception (from context or response)
-        exceptionToThrow = context.getExceptionToThrow();
-        if (exceptionToThrow == null) {
-          exceptionToThrow = response.getExceptionToThrow();
-        }
-
-        // Stop processing on exception
-        if (exceptionToThrow != null) {
-          if (logger.isDebugEnabled()) {
-            logger.debug(
-                "Local BEFORE callback requested exception: {}",
-                exceptionToThrow.getClass().getName());
-          }
-          break;
+        // Check for explicit exception (from context or response)
+        explicitException = context.getExceptionToThrow();
+        if (explicitException == null) {
+          explicitException = response.getExceptionToThrow();
         }
 
       } catch (Exception e) {
@@ -173,8 +380,28 @@ public class LocalInterceptCallbackDispatcher {
             intercept.getCallbackClass(),
             intercept.getCallbackMethod(),
             e);
-        // Treat callback errors as exceptions to throw
-        exceptionToThrow = e;
+        directThrowException = e;
+      }
+
+      // Process exception using policy-based handling
+      ExceptionHandlingResult result =
+          processException(
+              directThrowException,
+              explicitException,
+              callbackCompletedSuccessfully,
+              intercept,
+              interceptType,
+              declaredExceptions,
+              intercept.getCallbackClass(),
+              intercept.getCallbackMethod());
+
+      if (result.shouldPropagate()) {
+        exceptionToThrow = result.exceptionToPropagate();
+        if (logger.isDebugEnabled()) {
+          logger.debug(
+              "Local BEFORE callback requested exception: {}",
+              exceptionToThrow.getClass().getName());
+        }
         break;
       }
     }
@@ -339,6 +566,60 @@ public class LocalInterceptCallbackDispatcher {
       String methodName,
       List<String> paramTypes,
       String interceptedPeerUuid) {
+    return sendLocalAfterCallbacks(
+        localIntercepts,
+        args,
+        returnValue,
+        isVoid,
+        thrownException,
+        className,
+        methodName,
+        paramTypes,
+        interceptedPeerUuid,
+        null);
+  }
+
+  /**
+   * Sends local AFTER callbacks and returns the aggregated response.
+   *
+   * <p>Invokes each matching AFTER callback in order. Callbacks can:
+   *
+   * <ul>
+   *   <li>Override the return value via {@link InterceptContext#setReturnValue(Object)}
+   *   <li>Throw an exception via {@link InterceptContext#setExceptionToThrow(Throwable)}
+   * </ul>
+   *
+   * <p>Exception handling is controlled by exception policies:
+   *
+   * <ul>
+   *   <li>API misuse exceptions are always filtered and logged but not propagated
+   *   <li>Propagation policy determines which exceptions propagate to the caller
+   *   <li>Checked exception policy validates exceptions against declared exceptions
+   * </ul>
+   *
+   * @param localIntercepts the list of local AFTER intercepts
+   * @param args the method arguments (from BEFORE phase, possibly modified)
+   * @param returnValue the original return value (may be null)
+   * @param isVoid whether the method is void
+   * @param thrownException the exception thrown by the method (may be null)
+   * @param className the intercepted class name
+   * @param methodName the intercepted method name
+   * @param paramTypes the parameter type names
+   * @param interceptedPeerUuid the UUID of the intercepted peer
+   * @param declaredExceptions the declared exceptions of the intercepted method (may be null)
+   * @return the consolidated response with return value override and exceptions
+   */
+  public InterceptCallbackDispatcher.ConsolidatedCallbackResponse sendLocalAfterCallbacks(
+      List<InterceptMessage> localIntercepts,
+      Object[] args,
+      Object returnValue,
+      boolean isVoid,
+      Throwable thrownException,
+      String className,
+      String methodName,
+      List<String> paramTypes,
+      String interceptedPeerUuid,
+      @Nullable String[] declaredExceptions) {
 
     if (localIntercepts.isEmpty()) {
       return InterceptCallbackDispatcher.ConsolidatedCallbackResponse.proceed();
@@ -364,6 +645,10 @@ public class LocalInterceptCallbackDispatcher {
         continue;
       }
 
+      Throwable directThrowException = null;
+      Throwable explicitException = null;
+      boolean callbackCompletedSuccessfully = false;
+
       try {
         // Resolve the callback (InterceptMessage only has callbackClass/callbackMethod, no
         // registered ID)
@@ -386,6 +671,7 @@ public class LocalInterceptCallbackDispatcher {
 
         // Invoke the callback
         InterceptCallbackResponse response = callback.handle(context);
+        callbackCompletedSuccessfully = true;
 
         // Check for return value override
         if (context.isReturnValueModified()) {
@@ -393,20 +679,10 @@ public class LocalInterceptCallbackDispatcher {
           returnValueOverridden = true;
         }
 
-        // Check for exception (from context or response)
-        exceptionToThrow = context.getExceptionToThrow();
-        if (exceptionToThrow == null) {
-          exceptionToThrow = response.getExceptionToThrow();
-        }
-
-        // Stop processing on exception
-        if (exceptionToThrow != null) {
-          if (logger.isDebugEnabled()) {
-            logger.debug(
-                "Local AFTER callback requested exception: {}",
-                exceptionToThrow.getClass().getName());
-          }
-          break;
+        // Check for explicit exception (from context or response)
+        explicitException = context.getExceptionToThrow();
+        if (explicitException == null) {
+          explicitException = response.getExceptionToThrow();
         }
 
       } catch (Exception e) {
@@ -415,7 +691,28 @@ public class LocalInterceptCallbackDispatcher {
             intercept.getCallbackClass(),
             intercept.getCallbackMethod(),
             e);
-        exceptionToThrow = e;
+        directThrowException = e;
+      }
+
+      // Process exception using policy-based handling
+      ExceptionHandlingResult result =
+          processException(
+              directThrowException,
+              explicitException,
+              callbackCompletedSuccessfully,
+              intercept,
+              interceptType,
+              declaredExceptions,
+              intercept.getCallbackClass(),
+              intercept.getCallbackMethod());
+
+      if (result.shouldPropagate()) {
+        exceptionToThrow = result.exceptionToPropagate();
+        if (logger.isDebugEnabled()) {
+          logger.debug(
+              "Local AFTER callback requested exception: {}",
+              exceptionToThrow.getClass().getName());
+        }
         break;
       }
     }
@@ -626,6 +923,61 @@ public class LocalInterceptCallbackDispatcher {
       List<String> paramTypes,
       String interceptedPeerUuid,
       LocalAroundAccessor localAroundAccessor) {
+    return sendLocalAroundCallbacks(
+        localIntercepts,
+        args,
+        className,
+        methodName,
+        paramTypes,
+        interceptedPeerUuid,
+        localAroundAccessor,
+        null);
+  }
+
+  /**
+   * Sends local AROUND BEFORE-phase callbacks and returns state for AFTER phase.
+   *
+   * <p>This method handles local AROUND intercepts with the {@code ctx.proceed()} API. For each
+   * AROUND intercept:
+   *
+   * <ol>
+   *   <li>Creates context with {@link LocalAroundAccessor}
+   *   <li>Invokes callback
+   *   <li>If {@code proceed()} not called: returns skip response (method not executed)
+   *   <li>If {@code proceed()} called: collects mutations and tracks callback for AFTER phase
+   * </ol>
+   *
+   * <p><b>Key difference from remote AROUND:</b> Local AROUND intercepts invoke the method directly
+   * via {@link LocalAroundAccessor} when {@code proceed()} is called. The accessor is passed to the
+   * dispatcher, which calls it at the appropriate time.
+   *
+   * <p>Exception handling is controlled by exception policies:
+   *
+   * <ul>
+   *   <li>API misuse exceptions are always filtered and logged but not propagated
+   *   <li>Propagation policy determines which exceptions propagate to the caller
+   *   <li>Checked exception policy validates exceptions against declared exceptions
+   * </ul>
+   *
+   * @param localIntercepts the list of local AROUND intercepts
+   * @param args the method arguments (live Java objects)
+   * @param className the intercepted class name
+   * @param methodName the intercepted method name
+   * @param paramTypes the parameter type names
+   * @param interceptedPeerUuid the UUID of the intercepted peer
+   * @param localAroundAccessor the accessor for invoking the method
+   * @param declaredExceptions the declared exceptions of the intercepted method (may be null)
+   * @return consolidated response with pending callbacks for AFTER phase
+   */
+  public LocalAroundConsolidatedResponse sendLocalAroundCallbacks(
+      List<InterceptMessage> localIntercepts,
+      Object[] args,
+      String className,
+      String methodName,
+      List<String> paramTypes,
+      String interceptedPeerUuid,
+      LocalAroundAccessor localAroundAccessor,
+      @Nullable String[] declaredExceptions) {
 
     if (localIntercepts.isEmpty()) {
       return LocalAroundConsolidatedResponse.proceed();
@@ -660,6 +1012,11 @@ public class LocalInterceptCallbackDispatcher {
 
     // Process AROUND intercepts
     for (InterceptMessage intercept : aroundIntercepts) {
+      InterceptType interceptType = InterceptType.AROUND;
+      Throwable directThrowException = null;
+      Throwable explicitException = null;
+      boolean callbackCompletedSuccessfully = false;
+
       try {
         // Resolve the callback
         InterceptCallback callback =
@@ -676,13 +1033,28 @@ public class LocalInterceptCallbackDispatcher {
 
         // Invoke the callback
         InterceptCallbackResponse response = callback.handle(context);
+        callbackCompletedSuccessfully = true;
 
-        // Check for exception
-        exceptionToThrow = context.getExceptionToThrow();
-        if (exceptionToThrow == null) {
-          exceptionToThrow = response.getExceptionToThrow();
+        // Check for explicit exception (from context or response)
+        explicitException = context.getExceptionToThrow();
+        if (explicitException == null) {
+          explicitException = response.getExceptionToThrow();
         }
-        if (exceptionToThrow != null) {
+
+        // Process exception using policy-based handling
+        ExceptionHandlingResult result =
+            processException(
+                null,
+                explicitException,
+                callbackCompletedSuccessfully,
+                intercept,
+                interceptType,
+                declaredExceptions,
+                intercept.getCallbackClass(),
+                intercept.getCallbackMethod());
+
+        if (result.shouldPropagate()) {
+          exceptionToThrow = result.exceptionToPropagate();
           if (logger.isDebugEnabled()) {
             logger.debug(
                 "Local AROUND callback requested exception: {}",
@@ -732,8 +1104,24 @@ public class LocalInterceptCallbackDispatcher {
             intercept.getCallbackClass(),
             intercept.getCallbackMethod(),
             e);
-        exceptionToThrow = e;
-        break;
+        directThrowException = e;
+
+        // Process exception using policy-based handling
+        ExceptionHandlingResult result =
+            processException(
+                directThrowException,
+                null,
+                false,
+                intercept,
+                interceptType,
+                declaredExceptions,
+                intercept.getCallbackClass(),
+                intercept.getCallbackMethod());
+
+        if (result.shouldPropagate()) {
+          exceptionToThrow = result.exceptionToPropagate();
+          break;
+        }
       }
     }
 
@@ -759,6 +1147,38 @@ public class LocalInterceptCallbackDispatcher {
    */
   public InterceptCallbackDispatcher.ConsolidatedCallbackResponse sendLocalAroundAfterCallbacks(
       List<LocalAroundCallbackState> pendingCallbacks, Object returnValue) {
+    return sendLocalAroundAfterCallbacks(pendingCallbacks, returnValue, null);
+  }
+
+  /**
+   * Sends local AROUND AFTER-phase callbacks for pending callbacks that called proceed().
+   *
+   * <p>This method is called after the intercepted method has executed. It processes any return
+   * value modifications from callbacks that called {@code proceed()}.
+   *
+   * <p><b>Note:</b> Unlike remote AROUND, local AROUND doesn't need {@code isVoid} or {@code
+   * thrownException} parameters because the callback's {@link InterceptContext} is updated directly
+   * during {@link InterceptContext#proceed()}. The context already has the return value, void
+   * status, and any thrown exception from the actual method invocation.
+   *
+   * <p>Exception handling is controlled by exception policies:
+   *
+   * <ul>
+   *   <li>API misuse exceptions are always filtered and logged but not propagated
+   *   <li>Propagation policy determines which exceptions propagate to the caller
+   *   <li>Checked exception policy validates exceptions against declared exceptions
+   * </ul>
+   *
+   * @param pendingCallbacks list of callbacks that called proceed()
+   * @param returnValue the return value from method execution (used as initial value for override
+   *     tracking)
+   * @param declaredExceptions the declared exceptions of the intercepted method (may be null)
+   * @return consolidated response with any return value override
+   */
+  public InterceptCallbackDispatcher.ConsolidatedCallbackResponse sendLocalAroundAfterCallbacks(
+      List<LocalAroundCallbackState> pendingCallbacks,
+      Object returnValue,
+      @Nullable String[] declaredExceptions) {
 
     if (pendingCallbacks == null || pendingCallbacks.isEmpty()) {
       return InterceptCallbackDispatcher.ConsolidatedCallbackResponse.proceed();
@@ -772,6 +1192,8 @@ public class LocalInterceptCallbackDispatcher {
     // Process pending callbacks - check if they modified return value after proceed()
     for (LocalAroundCallbackState state : pendingCallbacks) {
       InterceptContext context = state.context();
+      InterceptMessage intercept = state.intercept();
+      InterceptType interceptType = InterceptType.AROUND;
 
       // Check for return value override (set after proceed())
       if (context.isReturnValueModified()) {
@@ -783,14 +1205,29 @@ public class LocalInterceptCallbackDispatcher {
       }
 
       // Check for exception
-      if (context.getExceptionToThrow() != null) {
-        exceptionToThrow = context.getExceptionToThrow();
-        if (logger.isDebugEnabled()) {
-          logger.debug(
-              "Local AROUND callback requested exception: {}",
-              exceptionToThrow.getClass().getName());
+      Throwable explicitException = context.getExceptionToThrow();
+      if (explicitException != null) {
+        // Process exception using policy-based handling
+        ExceptionHandlingResult result =
+            processException(
+                null,
+                explicitException,
+                true, // Callback completed successfully if we got to AFTER phase
+                intercept,
+                interceptType,
+                declaredExceptions,
+                intercept.getCallbackClass(),
+                intercept.getCallbackMethod());
+
+        if (result.shouldPropagate()) {
+          exceptionToThrow = result.exceptionToPropagate();
+          if (logger.isDebugEnabled()) {
+            logger.debug(
+                "Local AROUND callback requested exception: {}",
+                exceptionToThrow.getClass().getName());
+          }
+          break;
         }
-        break;
       }
     }
 

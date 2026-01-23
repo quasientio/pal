@@ -13,24 +13,28 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import io.quasient.pal.common.lang.intercept.AfterPhaseData;
+import io.quasient.pal.common.lang.intercept.CheckedExceptionPolicy;
+import io.quasient.pal.common.lang.intercept.ExceptionPropagationPolicy;
+import io.quasient.pal.common.lang.intercept.InterceptApiMisuseException;
 import io.quasient.pal.common.lang.intercept.InterceptCallbackResponse;
 import io.quasient.pal.common.lang.intercept.InterceptContext;
+import io.quasient.pal.common.lang.intercept.InterceptPhase;
 import io.quasient.pal.common.lang.intercept.InterceptType;
+import io.quasient.pal.common.lang.intercept.InvalidCallbackExceptionException;
 import io.quasient.pal.common.lang.intercept.LocalAroundAccessor;
 import io.quasient.pal.core.intercept.InterceptCallbackDispatcher.ConsolidatedCallbackResponse;
 import io.quasient.pal.core.intercept.LocalInterceptCallbackDispatcher.LocalAroundCallbackState;
 import io.quasient.pal.core.intercept.LocalInterceptCallbackDispatcher.LocalAroundConsolidatedResponse;
 import io.quasient.pal.messages.colfer.InterceptMessage;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -353,6 +357,8 @@ public class LocalInterceptCallbackDispatcherTest {
   /**
    * Creates an intercept message with a static callback method.
    *
+   * <p>The exception policies are set to 255 (defer to config) by default.
+   *
    * @param type the intercept type
    * @param methodName the callback method name in TestCallbacks class
    * @return the intercept message
@@ -362,32 +368,64 @@ public class LocalInterceptCallbackDispatcherTest {
     msg.setInterceptType(type.toByte());
     msg.setCallbackClass(CALLBACK_CLASS);
     msg.setCallbackMethod(methodName);
+    // Set policies to 255 (defer to config) so tests can control via ExceptionPolicyConfig
+    msg.setExceptionPropagationPolicy((byte) 255);
+    msg.setCheckedExceptionPolicy((byte) 255);
     return msg;
   }
 
   // ===== Exception Handling Tests =====
 
   /**
-   * Tests that API misuse exceptions (InterceptTypeNotSupportedException) are filtered and not
-   * propagated.
+   * Creates a dispatcher with a specific exception policy configuration.
+   *
+   * @param propagationPolicy the exception propagation policy
+   * @param checkedPolicy the checked exception policy
+   * @return a new dispatcher with the specified policies
+   */
+  private LocalInterceptCallbackDispatcher createDispatcherWithPolicy(
+      ExceptionPropagationPolicy propagationPolicy, CheckedExceptionPolicy checkedPolicy) {
+    ExceptionPolicyConfig config =
+        new ExceptionPolicyConfig.Builder()
+            .globalPropagationPolicy(propagationPolicy)
+            .globalCheckedExceptionPolicy(checkedPolicy)
+            .build();
+    ExceptionPolicyResolver resolver = new ExceptionPolicyResolver(config);
+    return new LocalInterceptCallbackDispatcher(callbackResolver, asyncExecutor, resolver);
+  }
+
+  /**
+   * Tests that API misuse exceptions (InterceptApiMisuseException) are filtered and not propagated.
    *
    * <p>Acceptance Criteria:
    * [TEST:LocalInterceptCallbackDispatcherTest.shouldFilterApiMisuseExceptionAndNotPropagate]
    */
   @Test
-  @Ignore("Awaiting implementation in #288")
   public void shouldFilterApiMisuseExceptionAndNotPropagate() {
-    // Given: Callback throws InterceptTypeNotSupportedException (API misuse)
-    // When: Executing callback via dispatcher
-    // Then: Exception is logged but not propagated; method continues normally
+    // Given: Callback throws InterceptApiMisuseException (API misuse)
+    // Configure with PROPAGATE_ALL to ensure only API misuse filtering is being tested
+    LocalInterceptCallbackDispatcher policyDispatcher =
+        createDispatcherWithPolicy(
+            ExceptionPropagationPolicy.PROPAGATE_ALL, CheckedExceptionPolicy.ALLOW_ALL);
 
-    // TODO: Implement after #288 provides the implementation
-    // 1. Create a callback that throws InterceptTypeNotSupportedException
-    // 2. Send callback through dispatcher
-    // 3. Verify shouldProceed() returns true
-    // 4. Verify shouldThrowException() returns false
-    // 5. Verify exception was logged (check log output if possible)
-    fail("Not yet implemented");
+    InterceptMessage intercept = createIntercept(InterceptType.BEFORE, "throwApiMisuseException");
+    List<InterceptMessage> intercepts = List.of(intercept);
+
+    // When: Executing callback via dispatcher
+    ConsolidatedCallbackResponse response =
+        policyDispatcher.sendLocalBeforeCallbacks(
+            intercepts,
+            new Object[] {1, 2},
+            TEST_CLASS,
+            TEST_METHOD,
+            TEST_PARAM_TYPES,
+            TEST_PEER_UUID,
+            null);
+
+    // Then: Exception is logged but not propagated; method continues normally
+    assertTrue("Should proceed when API misuse exception is filtered", response.shouldProceed());
+    assertFalse(
+        "Should not throw exception when API misuse is filtered", response.shouldThrowException());
   }
 
   /**
@@ -397,20 +435,33 @@ public class LocalInterceptCallbackDispatcherTest {
    * [TEST:LocalInterceptCallbackDispatcherTest.shouldPropagateExplicitExceptionWithPropagateAllPolicy]
    */
   @Test
-  @Ignore("Awaiting implementation in #288")
   public void shouldPropagateExplicitExceptionWithPropagateAllPolicy() {
     // Given: Exception propagation policy is PROPAGATE_ALL
-    //        Callback sets exception via setExceptionToThrow()
-    // When: Executing callback via dispatcher
-    // Then: Exception is propagated to caller
+    LocalInterceptCallbackDispatcher policyDispatcher =
+        createDispatcherWithPolicy(
+            ExceptionPropagationPolicy.PROPAGATE_ALL, CheckedExceptionPolicy.ALLOW_ALL);
 
-    // TODO: Implement after #288 provides the implementation
-    // 1. Configure dispatcher/intercept with PROPAGATE_ALL policy
-    // 2. Create callback that calls ctx.setExceptionToThrow(new RuntimeException(...))
-    // 3. Send callback through dispatcher
-    // 4. Verify shouldThrowException() returns true
-    // 5. Verify getExceptionToThrow() returns the expected exception
-    fail("Not yet implemented");
+    RuntimeException expectedException = new RuntimeException("Test explicit exception");
+    TestCallbacks.exceptionToThrow = expectedException;
+
+    InterceptMessage intercept = createIntercept(InterceptType.BEFORE, "throwException");
+    List<InterceptMessage> intercepts = List.of(intercept);
+
+    // When: Executing callback via dispatcher
+    ConsolidatedCallbackResponse response =
+        policyDispatcher.sendLocalBeforeCallbacks(
+            intercepts,
+            new Object[] {1, 2},
+            TEST_CLASS,
+            TEST_METHOD,
+            TEST_PARAM_TYPES,
+            TEST_PEER_UUID,
+            null);
+
+    // Then: Exception is propagated to caller
+    assertTrue("Should throw exception with PROPAGATE_ALL", response.shouldThrowException());
+    assertEquals(
+        "Should return the expected exception", expectedException, response.getExceptionToThrow());
   }
 
   /**
@@ -420,21 +471,34 @@ public class LocalInterceptCallbackDispatcherTest {
    * [TEST:LocalInterceptCallbackDispatcherTest.shouldSwallowDirectThrowWithPropagateExplicitOnlyPolicy]
    */
   @Test
-  @Ignore("Awaiting implementation in #288")
   public void shouldSwallowDirectThrowWithPropagateExplicitOnlyPolicy() {
     // Given: Exception propagation policy is PROPAGATE_EXPLICIT_ONLY
-    //        Callback throws exception directly (not via setExceptionToThrow)
-    // When: Executing callback via dispatcher
-    // Then: Exception is logged but swallowed; method continues normally
+    LocalInterceptCallbackDispatcher policyDispatcher =
+        createDispatcherWithPolicy(
+            ExceptionPropagationPolicy.PROPAGATE_EXPLICIT_ONLY, CheckedExceptionPolicy.ALLOW_ALL);
 
-    // TODO: Implement after #288 provides the implementation
-    // 1. Configure dispatcher/intercept with PROPAGATE_EXPLICIT_ONLY policy
-    // 2. Create callback that throws exception directly (throw new RuntimeException(...))
-    // 3. Send callback through dispatcher
-    // 4. Verify shouldProceed() returns true
-    // 5. Verify shouldThrowException() returns false
-    // 6. Verify exception was logged
-    fail("Not yet implemented");
+    InterceptMessage intercept = createIntercept(InterceptType.BEFORE, "throwDirectException");
+    List<InterceptMessage> intercepts = List.of(intercept);
+
+    // When: Executing callback via dispatcher (callback throws directly, not via
+    // setExceptionToThrow)
+    ConsolidatedCallbackResponse response =
+        policyDispatcher.sendLocalBeforeCallbacks(
+            intercepts,
+            new Object[] {1, 2},
+            TEST_CLASS,
+            TEST_METHOD,
+            TEST_PARAM_TYPES,
+            TEST_PEER_UUID,
+            null);
+
+    // Then: Exception is logged but swallowed; method continues normally
+    assertTrue(
+        "Should proceed when direct throw is swallowed with PROPAGATE_EXPLICIT_ONLY",
+        response.shouldProceed());
+    assertFalse(
+        "Should not throw exception when direct throw is swallowed",
+        response.shouldThrowException());
   }
 
   /**
@@ -444,21 +508,33 @@ public class LocalInterceptCallbackDispatcherTest {
    * [TEST:LocalInterceptCallbackDispatcherTest.shouldSwallowAllWithSwallowAllPolicy]
    */
   @Test
-  @Ignore("Awaiting implementation in #288")
   public void shouldSwallowAllWithSwallowAllPolicy() {
     // Given: Exception propagation policy is SWALLOW_ALL
-    //        Callback throws any exception (either direct throw or via setExceptionToThrow)
-    // When: Executing callback via dispatcher
-    // Then: Exception is logged but swallowed; method continues normally
+    LocalInterceptCallbackDispatcher policyDispatcher =
+        createDispatcherWithPolicy(
+            ExceptionPropagationPolicy.SWALLOW_ALL, CheckedExceptionPolicy.ALLOW_ALL);
 
-    // TODO: Implement after #288 provides the implementation
-    // 1. Configure dispatcher/intercept with SWALLOW_ALL policy
-    // 2. Create callback that throws exception (try both direct and via setExceptionToThrow)
-    // 3. Send callback through dispatcher
-    // 4. Verify shouldProceed() returns true
-    // 5. Verify shouldThrowException() returns false
-    // 6. Verify exception was logged
-    fail("Not yet implemented");
+    RuntimeException expectedException = new RuntimeException("Test exception to swallow");
+    TestCallbacks.exceptionToThrow = expectedException;
+
+    InterceptMessage intercept = createIntercept(InterceptType.BEFORE, "throwException");
+    List<InterceptMessage> intercepts = List.of(intercept);
+
+    // When: Executing callback via dispatcher (with exception set via setExceptionToThrow)
+    ConsolidatedCallbackResponse response =
+        policyDispatcher.sendLocalBeforeCallbacks(
+            intercepts,
+            new Object[] {1, 2},
+            TEST_CLASS,
+            TEST_METHOD,
+            TEST_PARAM_TYPES,
+            TEST_PEER_UUID,
+            null);
+
+    // Then: Exception is logged but swallowed; method continues normally
+    assertTrue("Should proceed when all exceptions are swallowed", response.shouldProceed());
+    assertFalse(
+        "Should not throw exception with SWALLOW_ALL policy", response.shouldThrowException());
   }
 
   /**
@@ -468,23 +544,36 @@ public class LocalInterceptCallbackDispatcherTest {
    * [TEST:LocalInterceptCallbackDispatcherTest.shouldValidateCheckedExceptionAndWrap]
    */
   @Test
-  @Ignore("Awaiting implementation in #288")
   public void shouldValidateCheckedExceptionAndWrap() {
     // Given: Checked exception policy is WRAP
-    //        Callback throws SQLException (checked exception)
-    //        Intercepted method declares IOException
-    // When: Executing callback via dispatcher
-    // Then: SQLException is wrapped in RuntimeException before propagation
+    LocalInterceptCallbackDispatcher policyDispatcher =
+        createDispatcherWithPolicy(
+            ExceptionPropagationPolicy.PROPAGATE_ALL, CheckedExceptionPolicy.WRAP);
 
-    // TODO: Implement after #288 provides the implementation
-    // 1. Configure dispatcher/intercept with WRAP checked exception policy
-    // 2. Create a test method signature that declares IOException
-    // 3. Create callback that sets SQLException via setExceptionToThrow()
-    // 4. Send callback through dispatcher
-    // 5. Verify shouldThrowException() returns true
-    // 6. Verify getExceptionToThrow() is RuntimeException (or wrapper)
-    // 7. Verify getCause() returns the original SQLException
-    fail("Not yet implemented");
+    InterceptMessage intercept = createIntercept(InterceptType.BEFORE, "throwCheckedSqlException");
+    List<InterceptMessage> intercepts = List.of(intercept);
+
+    // Intercepted method declares IOException, callback throws SQLException
+    String[] declaredExceptions = new String[] {"java.io.IOException"};
+
+    // When: Executing callback via dispatcher
+    ConsolidatedCallbackResponse response =
+        policyDispatcher.sendLocalBeforeCallbacks(
+            intercepts,
+            new Object[] {1, 2},
+            TEST_CLASS,
+            TEST_METHOD,
+            TEST_PARAM_TYPES,
+            TEST_PEER_UUID,
+            declaredExceptions);
+
+    // Then: SQLException is wrapped in RuntimeException before propagation
+    assertTrue("Should throw exception", response.shouldThrowException());
+    Throwable thrown = response.getExceptionToThrow();
+    assertNotNull("Exception should not be null", thrown);
+    assertTrue("Should be wrapped in RuntimeException", thrown instanceof RuntimeException);
+    assertNotNull("Should have a cause", thrown.getCause());
+    assertTrue("Cause should be SQLException", thrown.getCause() instanceof SQLException);
   }
 
   /**
@@ -494,23 +583,38 @@ public class LocalInterceptCallbackDispatcherTest {
    * [TEST:LocalInterceptCallbackDispatcherTest.shouldValidateCheckedExceptionAndReject]
    */
   @Test
-  @Ignore("Awaiting implementation in #288")
   public void shouldValidateCheckedExceptionAndReject() {
     // Given: Checked exception policy is REJECT
-    //        Callback throws SQLException (checked exception)
-    //        Intercepted method declares IOException
-    // When: Executing callback via dispatcher
-    // Then: InvalidCallbackExceptionException is thrown
+    LocalInterceptCallbackDispatcher policyDispatcher =
+        createDispatcherWithPolicy(
+            ExceptionPropagationPolicy.PROPAGATE_ALL, CheckedExceptionPolicy.REJECT);
 
-    // TODO: Implement after #288 provides the implementation
-    // 1. Configure dispatcher/intercept with REJECT checked exception policy
-    // 2. Create a test method signature that declares IOException
-    // 3. Create callback that sets SQLException via setExceptionToThrow()
-    // 4. Send callback through dispatcher
-    // 5. Verify shouldThrowException() returns true
-    // 6. Verify getExceptionToThrow() is InvalidCallbackExceptionException
-    // 7. Verify the cause is the original SQLException
-    fail("Not yet implemented");
+    InterceptMessage intercept = createIntercept(InterceptType.BEFORE, "throwCheckedSqlException");
+    List<InterceptMessage> intercepts = List.of(intercept);
+
+    // Intercepted method declares IOException, callback throws SQLException
+    String[] declaredExceptions = new String[] {"java.io.IOException"};
+
+    // When: Executing callback via dispatcher
+    ConsolidatedCallbackResponse response =
+        policyDispatcher.sendLocalBeforeCallbacks(
+            intercepts,
+            new Object[] {1, 2},
+            TEST_CLASS,
+            TEST_METHOD,
+            TEST_PARAM_TYPES,
+            TEST_PEER_UUID,
+            declaredExceptions);
+
+    // Then: InvalidCallbackExceptionException is thrown
+    assertTrue("Should throw exception", response.shouldThrowException());
+    Throwable thrown = response.getExceptionToThrow();
+    assertNotNull("Exception should not be null", thrown);
+    assertTrue(
+        "Should be InvalidCallbackExceptionException",
+        thrown instanceof InvalidCallbackExceptionException);
+    assertNotNull("Should have a cause", thrown.getCause());
+    assertTrue("Cause should be SQLException", thrown.getCause() instanceof SQLException);
   }
 
   // ===== Test Callbacks Class =====
@@ -534,12 +638,32 @@ public class LocalInterceptCallbackDispatcherTest {
       return new InterceptCallbackResponse();
     }
 
-    /** Throws an exception if exceptionToThrow is set. */
+    /** Throws an exception if exceptionToThrow is set via setExceptionToThrow. */
     public static InterceptCallbackResponse throwException(InterceptContext ctx) {
       lastContext = ctx;
       if (exceptionToThrow != null) {
         ctx.setExceptionToThrow(exceptionToThrow);
       }
+      return new InterceptCallbackResponse();
+    }
+
+    /** Throws an exception directly (not via setExceptionToThrow). */
+    public static InterceptCallbackResponse throwDirectException(InterceptContext ctx) {
+      lastContext = ctx;
+      throw new RuntimeException("Direct throw exception");
+    }
+
+    /** Throws an InterceptApiMisuseException. */
+    public static InterceptCallbackResponse throwApiMisuseException(InterceptContext ctx) {
+      lastContext = ctx;
+      throw new InterceptApiMisuseException(
+          "Test API misuse", "testOperation()", InterceptType.BEFORE, InterceptPhase.BEFORE);
+    }
+
+    /** Throws a checked SQLException via setExceptionToThrow. */
+    public static InterceptCallbackResponse throwCheckedSqlException(InterceptContext ctx) {
+      lastContext = ctx;
+      ctx.setExceptionToThrow(new SQLException("Test SQL exception"));
       return new InterceptCallbackResponse();
     }
 
