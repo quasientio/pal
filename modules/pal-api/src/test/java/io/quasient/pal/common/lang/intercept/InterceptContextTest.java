@@ -227,8 +227,8 @@ public class InterceptContextTest {
 
     try {
       ctx.setReturnValue("should fail");
-      fail("Expected IllegalStateException for void method");
-    } catch (IllegalStateException e) {
+      fail("Expected InterceptApiMisuseException for void method");
+    } catch (InterceptApiMisuseException e) {
       assertTrue(e.getMessage().contains("Cannot set return value for void method"));
     }
   }
@@ -398,8 +398,8 @@ public class InterceptContextTest {
     // Second call should fail
     try {
       ctx.proceed();
-      fail("Expected IllegalStateException when proceed() called twice");
-    } catch (IllegalStateException e) {
+      fail("Expected InterceptApiMisuseException when proceed() called twice");
+    } catch (InterceptApiMisuseException e) {
       assertTrue(e.getMessage().contains("once"));
     }
   }

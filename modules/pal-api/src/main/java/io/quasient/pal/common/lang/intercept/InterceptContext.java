@@ -745,7 +745,7 @@ public final class InterceptContext {
    * </ul>
    *
    * @param value the new return value
-   * @throws IllegalStateException if the method is void
+   * @throws InterceptApiMisuseException if the method is void
    * @throws InterceptTypeNotSupportedException if the intercept type is BEFORE, BEFORE_ASYNC, or
    *     AFTER_ASYNC
    */
@@ -758,7 +758,8 @@ public final class InterceptContext {
       throw new InterceptTypeNotSupportedException("setReturnValue()", interceptType);
     }
     if (isVoidMutable) {
-      throw new IllegalStateException("Cannot set return value for void method");
+      throw new InterceptApiMisuseException(
+          "Cannot set return value for void method", "setReturnValue()", interceptType, phase);
     }
     this.returnValue = value;
     this.returnValueModified = true;
@@ -907,7 +908,7 @@ public final class InterceptContext {
    * @return the result of method execution
    * @throws InterceptTypeNotSupportedException if intercept type is not AROUND (proceed only valid
    *     for AROUND)
-   * @throws IllegalStateException if proceed() was already called (can only be called once)
+   * @throws InterceptApiMisuseException if proceed() was already called (can only be called once)
    * @throws AroundTimeoutException if timeout exceeded waiting for method execution
    */
   public ProceedResult proceed() {
@@ -915,7 +916,11 @@ public final class InterceptContext {
       throw new InterceptTypeNotSupportedException("proceed()", interceptType);
     }
     if (proceedCalled) {
-      throw new IllegalStateException("proceed() can only be called once per callback invocation");
+      throw new InterceptApiMisuseException(
+          "proceed() can only be called once per callback invocation",
+          "proceed()",
+          interceptType,
+          phase);
     }
     if (aroundSocketAccessor == null && localAroundAccessor == null) {
       throw new IllegalStateException("No AROUND accessor set - internal error");

@@ -73,8 +73,8 @@ public final class ExceptionValidator {
    * <ol>
    *   <li><b>Unchecked exceptions:</b> {@link RuntimeException} and {@link Error} subclasses always
    *       pass validation and are returned unchanged
-   *   <li><b>Null declared exceptions:</b> If {@code declaredExceptions} is null, validation is
-   *       skipped (fail-open) and the exception is returned unchanged
+   *   <li><b>Null or empty declared exceptions:</b> If {@code declaredExceptions} is null or empty,
+   *       validation is skipped (fail-open) and the exception is returned unchanged
    *   <li><b>Compatible checked exceptions:</b> If the exception is assignable to any declared
    *       exception type, it passes validation and is returned unchanged
    *   <li><b>Incompatible checked exceptions:</b> Handling depends on the policy:
@@ -87,7 +87,7 @@ public final class ExceptionValidator {
    *
    * @param exception the exception thrown by the callback; must not be null
    * @param declaredExceptions array of fully-qualified exception class names declared by the
-   *     intercepted method; null means skip validation (fail-open)
+   *     intercepted method; null or empty means skip validation (fail-open)
    * @param policy the policy for handling incompatible checked exceptions; must not be null
    * @return the validated exception (either original or wrapped), ready to be thrown
    * @throws InvalidCallbackExceptionException if the policy is {@code REJECT} and the exception is
@@ -112,8 +112,8 @@ public final class ExceptionValidator {
       return exception;
     }
 
-    // Step 2: If declaredExceptions is null, skip validation (fail-open)
-    if (declaredExceptions == null) {
+    // Step 2: If declaredExceptions is null or empty, skip validation (fail-open)
+    if (declaredExceptions == null || declaredExceptions.length == 0) {
       return exception;
     }
 

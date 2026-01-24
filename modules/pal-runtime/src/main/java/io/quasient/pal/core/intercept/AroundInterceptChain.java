@@ -11,6 +11,7 @@ package io.quasient.pal.core.intercept;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.quasient.pal.common.lang.intercept.AfterPhaseData;
+import io.quasient.pal.common.lang.intercept.InterceptApiMisuseException;
 import io.quasient.pal.common.lang.intercept.InterceptCallback;
 import io.quasient.pal.common.lang.intercept.InterceptCallbackResponse;
 import io.quasient.pal.common.lang.intercept.InterceptContext;
@@ -364,15 +365,26 @@ public class AroundInterceptChain {
     } catch (InvocationTargetException e) {
       // FIX: Callbacks are invoked via reflection (CallbackResolver uses Method.invoke()),
       // which wraps all thrown exceptions in InvocationTargetException. We need to unwrap
-      // and check if the cause is a SkipExecutionException, then re-throw it to properly
-      // propagate the skip signal through multi-layer AROUND chains.
-      // Previously, we caught all exceptions generically, treating skip signals as errors.
+      // the cause for proper exception handling downstream.
+      // - SkipExecutionException: re-throw to propagate skip signal through chain
+      // - InterceptApiMisuseException: log and filter (don't propagate)
+      // - Other exceptions: store unwrapped cause in AfterPhaseData
       // See AroundChainIT.testAroundSkipInMiddleOfChain.
       Throwable cause = e.getCause();
       if (cause instanceof SkipExecutionException skipExecutionException) {
         throw skipExecutionException;
       }
-      return new AfterPhaseData(null, e, false);
+      // Filter API misuse exceptions - log but don't propagate
+      if (cause instanceof InterceptApiMisuseException) {
+        logger.warn("API misuse exception from AROUND callback: {}", cause.getMessage());
+        // If proceed() was called, return its result; otherwise return null
+        // This allows the method to complete normally despite the callback bug
+        Object returnValue = context.isProceedCalled() ? context.getReturnValueInternal() : null;
+        Throwable thrownException = context.isProceedCalled() ? context.getThrownException() : null;
+        return new AfterPhaseData(returnValue, thrownException, context.isVoid());
+      }
+      // Store unwrapped exception for other cases
+      return new AfterPhaseData(null, cause != null ? cause : e, false);
     } catch (SkipExecutionException e) {
       // Re-throw skip signal to propagate through chain (in case not invoked via reflection)
       throw e;

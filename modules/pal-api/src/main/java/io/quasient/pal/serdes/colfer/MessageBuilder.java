@@ -774,7 +774,7 @@ public final class MessageBuilder {
    * @param args the array of argument values corresponding to the parameters
    * @param argObjRefs the array of object references corresponding to the arguments
    * @param includeDeclaredExceptions if {@code true}, extract and include declared exceptions from
-   *     method signature; if {@code false}, declaredExceptions will be {@code null}
+   *     method signature; if {@code false}, declaredExceptions will be empty
    * @return an {@code ExecMessage} representing the class method invocation with context
    */
   @SuppressWarnings("PMD.NoFullyQualifiedTypes")
@@ -859,7 +859,7 @@ public final class MessageBuilder {
    * @param args the array of argument values corresponding to the parameters
    * @param argObjRefs the array of object references corresponding to the arguments
    * @param includeDeclaredExceptions if {@code true}, extract and include declared exceptions from
-   *     method signature; if {@code false}, declaredExceptions will be {@code null}
+   *     method signature; if {@code false}, declaredExceptions will be empty
    * @return an {@code ExecMessage} representing the instance method invocation with context
    */
   @SuppressWarnings("PMD.NoFullyQualifiedTypes")
@@ -1423,7 +1423,7 @@ public final class MessageBuilder {
    * @param parameterTypes the array of parameter type names
    * @param args the array of argument values corresponding to the parameters
    * @param includeDeclaredExceptions if {@code true}, extract and include declared exceptions from
-   *     method signature; if {@code false}, declaredExceptions will be {@code null}
+   *     method signature; if {@code false}, declaredExceptions will be empty
    * @return an {@code ExecMessage} representing the instance method invocation
    */
   public ExecMessage buildInstanceMethod(
@@ -1477,8 +1477,6 @@ public final class MessageBuilder {
       call.setParameters(createNamedParameters(parameterTypes, args, argObjRefs));
     }
     ExecMessage execMessage = newExecMessage(peerUuid).withInstanceMethodCall(call);
-    // For backward compatibility, explicitly set declaredExceptions to null
-    execMessage.setDeclaredExceptions(null);
     return execMessage;
   }
 
@@ -1494,7 +1492,7 @@ public final class MessageBuilder {
    * @param args the array of argument values
    * @param argObjRefs the array of object references corresponding to the arguments
    * @param includeDeclaredExceptions if {@code true}, extract and include declared exceptions from
-   *     method signature; if {@code false}, declaredExceptions will be {@code null}
+   *     method signature; if {@code false}, declaredExceptions will be empty
    * @return an {@code ExecMessage} representing the instance method invocation
    */
   public ExecMessage buildInstanceMethod(
@@ -1521,8 +1519,6 @@ public final class MessageBuilder {
       String[] declaredExceptions =
           extractDeclaredExceptions(className, methodName, parameterTypes);
       execMessage.setDeclaredExceptions(declaredExceptions);
-    } else {
-      execMessage.setDeclaredExceptions(null);
     }
 
     return execMessage;
@@ -1726,8 +1722,6 @@ public final class MessageBuilder {
       classMethodCall.setContext(getWrappedContext(null, sender, senderObjRef));
     }
     ExecMessage execMessage = newExecMessage(peerUuid).withClassMethodCall(classMethodCall);
-    // For backward compatibility, explicitly set declaredExceptions to null
-    execMessage.setDeclaredExceptions(null);
     return execMessage;
   }
 
@@ -1744,7 +1738,7 @@ public final class MessageBuilder {
    * @param args the array of argument values corresponding to the parameters
    * @param argObjRefs the array of objectRefs corresponding to the parameters
    * @param includeDeclaredExceptions if {@code true}, extract and include declared exceptions from
-   *     method signature; if {@code false}, declaredExceptions will be {@code null}
+   *     method signature; if {@code false}, declaredExceptions will be empty
    * @return an {@code ExecMessage} representing the class method invocation
    */
   public ExecMessage buildClassMethod(
@@ -1774,8 +1768,6 @@ public final class MessageBuilder {
       String[] declaredExceptions =
           extractDeclaredExceptions(className, methodName, parameterTypes);
       execMessage.setDeclaredExceptions(declaredExceptions);
-    } else {
-      execMessage.setDeclaredExceptions(null);
     }
 
     return execMessage;
@@ -1832,7 +1824,7 @@ public final class MessageBuilder {
    * @param senderObjRef the reference to the sender object
    * @param args the array of argument values corresponding to the parameters
    * @param includeDeclaredExceptions if {@code true}, extract and include declared exceptions from
-   *     method signature; if {@code false}, declaredExceptions will be {@code null}
+   *     method signature; if {@code false}, declaredExceptions will be empty
    * @return an {@code ExecMessage} representing the class method invocation
    */
   public ExecMessage buildClassMethod(

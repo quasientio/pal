@@ -203,6 +203,29 @@ public class ExceptionValidatorTest {
   }
 
   /**
+   * Tests that validation is skipped when declared exceptions array is empty (fail-open behavior).
+   *
+   * <p><b>Given:</b> Method with empty declaredExceptions array
+   *
+   * <p><b>When:</b> Validating any exception
+   *
+   * <p><b>Then:</b> No exception thrown (fail-open)
+   */
+  @Test
+  public void shouldSkipValidationWhenDeclaredExceptionsEmpty() {
+    // Given: Method with empty declaredExceptions array
+    SQLException checkedException = new SQLException("test");
+
+    // When: Validating with empty declaredExceptions (fail-open)
+    Throwable result =
+        ExceptionValidator.validateThrowable(
+            checkedException, new String[0], CheckedExceptionPolicy.REJECT);
+
+    // Then: Returns the same exception unchanged (validation skipped)
+    assertSame(checkedException, result);
+  }
+
+  /**
    * Tests that ClassNotFoundException is handled gracefully during assignability checks.
    *
    * <p><b>Given:</b> Exception type not on classpath

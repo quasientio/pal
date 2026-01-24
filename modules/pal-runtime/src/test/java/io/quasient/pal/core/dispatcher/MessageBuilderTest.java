@@ -11,9 +11,9 @@ package io.quasient.pal.core.dispatcher;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.arrayContaining;
+import static org.hamcrest.Matchers.emptyArray;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.nullValue;
 
 import io.quasient.pal.common.objects.ObjectRef;
 import io.quasient.pal.messages.colfer.ExecMessage;
@@ -135,7 +135,7 @@ public class MessageBuilderTest {
    * when flag false
    *
    * <p>Given: Method signature with throws IOException When: buildInstanceMethod() called with
-   * includeDeclaredExceptions=false Then: ExecMessage.declaredExceptions is null
+   * includeDeclaredExceptions=false Then: ExecMessage.declaredExceptions is empty
    */
   @Test
   public void shouldExcludeDeclaredExceptionsWhenNotRequested() {
@@ -157,9 +157,9 @@ public class MessageBuilderTest {
             null /* argObjRefs */,
             false /* includeDeclaredExceptions */);
 
-    // Then: ExecMessage.declaredExceptions should be null (not populated)
+    // Then: ExecMessage.declaredExceptions should be empty (not populated)
     assertThat(execMessage, notNullValue());
-    assertThat(execMessage.getDeclaredExceptions(), nullValue());
+    assertThat(execMessage.getDeclaredExceptions(), emptyArray());
   }
 
   /**
@@ -239,7 +239,7 @@ public class MessageBuilderTest {
    *
    * <p>Given: Static method signature with throws IOException, SQLException When:
    * buildClassMethod() called with includeDeclaredExceptions=false Then:
-   * ExecMessage.declaredExceptions is null
+   * ExecMessage.declaredExceptions is empty
    */
   @Test
   public void shouldExcludeDeclaredExceptionsForClassMethodWhenNotRequested() {
@@ -262,21 +262,20 @@ public class MessageBuilderTest {
             null /* argObjRefs */,
             false /* includeDeclaredExceptions */);
 
-    // Then: ExecMessage.declaredExceptions should be null
+    // Then: ExecMessage.declaredExceptions should be empty
     assertThat(execMessage, notNullValue());
-    assertThat(execMessage.getDeclaredExceptions(), nullValue());
+    assertThat(execMessage.getDeclaredExceptions(), emptyArray());
   }
 
   /**
-   * Additional test: verify backward compatibility - methods without includeDeclaredExceptions
-   * parameter should have null declaredExceptions.
+   * Additional test: verify that methods without includeDeclaredExceptions parameter have empty
+   * declaredExceptions.
    *
    * <p>Given: Method signature with throws IOException When: buildInstanceMethod() called without
-   * includeDeclaredExceptions parameter Then: ExecMessage.declaredExceptions is null (backward
-   * compatible)
+   * includeDeclaredExceptions parameter Then: ExecMessage.declaredExceptions is empty
    */
   @Test
-  public void shouldDefaultToExcludingDeclaredExceptionsForBackwardCompatibility() {
+  public void shouldDefaultToExcludingDeclaredExceptions() {
     // Given: A method signature with declared exceptions
     String className = TestClass.class.getName();
     String methodName = "methodWithException";
@@ -288,8 +287,8 @@ public class MessageBuilderTest {
         messageBuilder.buildInstanceMethod(
             peerUuid, className, methodName, targetObjRef, parameterTypes, args);
 
-    // Then: ExecMessage.declaredExceptions should be null (backward compatible default)
+    // Then: ExecMessage.declaredExceptions should be empty
     assertThat(execMessage, notNullValue());
-    assertThat(execMessage.getDeclaredExceptions(), nullValue());
+    assertThat(execMessage.getDeclaredExceptions(), emptyArray());
   }
 }
