@@ -496,11 +496,11 @@ public class LocalConstructorSyncCallbackIT extends AbstractInterceptIT {
     ExecMessage response = invokeConstructor(path, TARGET_CLASS, WITH_COUNTER, new Object[] {10});
     assertThat(response.getRaisedThrowable(), is(nullValue()));
 
-    // 3. Verify the callback correctly caught UnsupportedOperationException
+    // 3. Verify the callback correctly caught InterceptApiMisuseException
     assertTrue(
-        "BEFORE callback should have caught UnsupportedOperationException for getReturnValue()",
+        "BEFORE callback should have caught InterceptApiMisuseException for getReturnValue()",
         LocalInterceptTestSuite.waitForAppLogLine(
-            "LOCAL_BEFORE_ILLEGAL_GET_RETURN: correctly threw UnsupportedOperationException"));
+            "LOCAL_BEFORE_ILLEGAL_GET_RETURN: correctly threw InterceptApiMisuseException"));
 
     logger.info("===== testBeforeGetReturnValueThrowsUnsupported [{}]: TEST COMPLETED =====", path);
   }
@@ -522,11 +522,11 @@ public class LocalConstructorSyncCallbackIT extends AbstractInterceptIT {
     ExecMessage response = invokeConstructor(path, TARGET_CLASS, WITH_COUNTER, new Object[] {10});
     assertThat(response.getRaisedThrowable(), is(nullValue()));
 
-    // 3. Verify the callback correctly caught UnsupportedOperationException
+    // 3. Verify the callback correctly caught InterceptApiMisuseException
     assertTrue(
-        "BEFORE callback should have caught UnsupportedOperationException for proceed()",
+        "BEFORE callback should have caught InterceptApiMisuseException for proceed()",
         LocalInterceptTestSuite.waitForAppLogLine(
-            "LOCAL_BEFORE_ILLEGAL_PROCEED: correctly threw UnsupportedOperationException"));
+            "LOCAL_BEFORE_ILLEGAL_PROCEED: correctly threw InterceptApiMisuseException"));
 
     logger.info("===== testBeforeProceedThrowsUnsupported [{}]: TEST COMPLETED =====", path);
   }
@@ -552,11 +552,11 @@ public class LocalConstructorSyncCallbackIT extends AbstractInterceptIT {
     ExecMessage response = invokeConstructor(path, TARGET_CLASS, WITH_COUNTER, new Object[] {10});
     assertThat(response.getRaisedThrowable(), is(nullValue()));
 
-    // 3. Verify the callback correctly caught UnsupportedOperationException
+    // 3. Verify the callback correctly caught InterceptApiMisuseException
     assertTrue(
-        "AFTER callback should have caught UnsupportedOperationException for setArg()",
+        "AFTER callback should have caught InterceptApiMisuseException for setArg()",
         LocalInterceptTestSuite.waitForAppLogLine(
-            "LOCAL_AFTER_ILLEGAL_SET_ARG: correctly threw UnsupportedOperationException"));
+            "LOCAL_AFTER_ILLEGAL_SET_ARG: correctly threw InterceptApiMisuseException"));
 
     logger.info("===== testAfterSetArgThrowsUnsupported [{}]: TEST COMPLETED =====", path);
   }
@@ -578,11 +578,11 @@ public class LocalConstructorSyncCallbackIT extends AbstractInterceptIT {
     ExecMessage response = invokeConstructor(path, TARGET_CLASS, WITH_COUNTER, new Object[] {10});
     assertThat(response.getRaisedThrowable(), is(nullValue()));
 
-    // 3. Verify the callback correctly caught UnsupportedOperationException
+    // 3. Verify the callback correctly caught InterceptApiMisuseException
     assertTrue(
-        "AFTER callback should have caught UnsupportedOperationException for proceed()",
+        "AFTER callback should have caught InterceptApiMisuseException for proceed()",
         LocalInterceptTestSuite.waitForAppLogLine(
-            "LOCAL_AFTER_ILLEGAL_PROCEED: correctly threw UnsupportedOperationException"));
+            "LOCAL_AFTER_ILLEGAL_PROCEED: correctly threw InterceptApiMisuseException"));
 
     logger.info("===== testAfterProceedThrowsUnsupported [{}]: TEST COMPLETED =====", path);
   }
@@ -616,7 +616,7 @@ public class LocalConstructorSyncCallbackIT extends AbstractInterceptIT {
     assertTrue(
         "AROUND callback should have caught IllegalStateException for getReturnValue() before proceed()",
         LocalInterceptTestSuite.waitForAppLogLine(
-            "LOCAL_AROUND_ILLEGAL_GET_RETURN_BEFORE_PROCEED: correctly threw IllegalStateException"));
+            "LOCAL_AROUND_ILLEGAL_GET_RETURN_BEFORE_PROCEED: correctly threw InterceptApiMisuseException"));
 
     logger.info(
         "===== testAroundGetReturnValueBeforeProceedThrowsIllegalState [{}]: TEST COMPLETED =====",
@@ -645,7 +645,7 @@ public class LocalConstructorSyncCallbackIT extends AbstractInterceptIT {
     assertTrue(
         "AROUND callback should have caught IllegalStateException for setArg() after proceed()",
         LocalInterceptTestSuite.waitForAppLogLine(
-            "LOCAL_AROUND_ILLEGAL_SET_ARG_AFTER_PROCEED: correctly threw IllegalStateException"));
+            "LOCAL_AROUND_ILLEGAL_SET_ARG_AFTER_PROCEED: correctly threw InterceptApiMisuseException"));
 
     logger.info(
         "===== testAroundSetArgAfterProceedThrowsIllegalState [{}]: TEST COMPLETED =====", path);

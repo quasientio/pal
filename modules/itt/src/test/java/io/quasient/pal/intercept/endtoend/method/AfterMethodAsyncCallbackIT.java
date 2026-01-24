@@ -39,7 +39,7 @@ import org.junit.runners.Parameterized;
  * <ul>
  *   <li>Can read return values but cannot override them
  *   <li>Are fire-and-forget (caller receives original return value)
- *   <li>Throw UnsupportedOperationException when attempting to override return value
+ *   <li>Throw InterceptApiMisuseException when attempting to override return value
  * </ul>
  *
  * <p>Tests use the shared intercept peer with StringMethods application class and MethodHandlers
@@ -160,12 +160,12 @@ public class AfterMethodAsyncCallbackIT extends AbstractInterceptIT {
   }
 
   /**
-   * Tests that AFTER_ASYNC callback throws UnsupportedOperationException on override attempt.
+   * Tests that AFTER_ASYNC callback throws InterceptApiMisuseException on override attempt.
    *
    * <p>Registers an AFTER_ASYNC intercept that attempts to override return value. Verifies that:
    *
    * <ul>
-   *   <li>The callback throws UnsupportedOperationException
+   *   <li>The callback throws InterceptApiMisuseException
    *   <li>The caller still receives the original return value (ASYNC is fire-and-forget)
    * </ul>
    */
@@ -228,11 +228,11 @@ public class AfterMethodAsyncCallbackIT extends AbstractInterceptIT {
         returnValue,
         is(inputValue));
 
-    // Verify callback caught UnsupportedOperationException
+    // Verify callback caught InterceptApiMisuseException
     assertTrue(
-        "Expected attemptReturnOverride callback to log UnsupportedOperationException",
+        "Expected attemptReturnOverride callback to log InterceptApiMisuseException",
         InterceptEndToEndTestSuite.waitForAppLogLine(
-            "attemptReturnOverride: correctly threw UnsupportedOperationException"));
+            "attemptReturnOverride: correctly threw InterceptApiMisuseException"));
 
     logger.info(
         "===== testAsyncCallbackCannotOverrideReturnValue [{}]: TEST COMPLETED SUCCESSFULLY =====",
@@ -317,7 +317,7 @@ public class AfterMethodAsyncCallbackIT extends AbstractInterceptIT {
    * <p>Registers an AFTER_ASYNC intercept that attempts to call setExceptionToThrow. Verifies that:
    *
    * <ol>
-   *   <li>The callback throws UnsupportedOperationException when calling setExceptionToThrow
+   *   <li>The callback throws InterceptApiMisuseException when calling setExceptionToThrow
    *   <li>The caller receives the original return value (ASYNC is fire-and-forget)
    * </ol>
    */
@@ -357,7 +357,7 @@ public class AfterMethodAsyncCallbackIT extends AbstractInterceptIT {
                 .getObject()
                 .getRef());
 
-    // 3. Invoke method - method runs, callback throws UnsupportedOperationException after
+    // 3. Invoke method - method runs, callback throws InterceptApiMisuseException after
     logger.info(
         "Invoking {} via {} path - callback should throw but caller should get original result",
         ECHO.targetMethod(),
@@ -380,11 +380,11 @@ public class AfterMethodAsyncCallbackIT extends AbstractInterceptIT {
         returnValue,
         is(inputValue));
 
-    // Verify callback caught UnsupportedOperationException
+    // Verify callback caught InterceptApiMisuseException
     assertTrue(
-        "Expected attemptThrowException callback to log UnsupportedOperationException",
+        "Expected attemptThrowException callback to log InterceptApiMisuseException",
         InterceptEndToEndTestSuite.waitForAppLogLine(
-            "attemptThrowException: correctly threw UnsupportedOperationException"));
+            "attemptThrowException: correctly threw InterceptApiMisuseException"));
 
     logger.info(
         "===== testAsyncCallbackCannotThrowException [{}]: TEST COMPLETED SUCCESSFULLY =====",

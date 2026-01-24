@@ -39,7 +39,7 @@ import org.junit.runners.Parameterized;
  * <ul>
  *   <li>Can read arguments but cannot mutate them
  *   <li>Are fire-and-forget (method execution does not wait for callback response)
- *   <li>Throw UnsupportedOperationException when attempting to mutate arguments
+ *   <li>Throw InterceptApiMisuseException when attempting to mutate arguments
  * </ul>
  *
  * <p>Tests use the shared intercept peer with StringMethods application class and MethodHandlers
@@ -160,12 +160,12 @@ public class BeforeMethodAsyncCallbackIT extends AbstractInterceptIT {
   }
 
   /**
-   * Tests that BEFORE_ASYNC callback throws UnsupportedOperationException on mutation attempt.
+   * Tests that BEFORE_ASYNC callback throws InterceptApiMisuseException on mutation attempt.
    *
    * <p>Registers a BEFORE_ASYNC intercept that attempts to mutate arguments. Verifies that:
    *
    * <ul>
-   *   <li>The callback throws UnsupportedOperationException
+   *   <li>The callback throws InterceptApiMisuseException
    *   <li>The original method still executes (ASYNC is fire-and-forget)
    *   <li>Arguments are not mutated
    * </ul>
@@ -229,11 +229,11 @@ public class BeforeMethodAsyncCallbackIT extends AbstractInterceptIT {
         returnValue,
         is(inputValue));
 
-    // Verify callback caught UnsupportedOperationException
+    // Verify callback caught InterceptApiMisuseException
     assertTrue(
-        "Expected attemptArgMutation callback to log UnsupportedOperationException",
+        "Expected attemptArgMutation callback to log InterceptApiMisuseException",
         InterceptEndToEndTestSuite.waitForAppLogLine(
-            "attemptArgMutation: correctly threw UnsupportedOperationException"));
+            "attemptArgMutation: correctly threw InterceptApiMisuseException"));
 
     logger.info(
         "===== testAsyncCallbackCannotMutateArgs [{}]: TEST COMPLETED SUCCESSFULLY =====",
@@ -317,7 +317,7 @@ public class BeforeMethodAsyncCallbackIT extends AbstractInterceptIT {
    * <p>Registers a BEFORE_ASYNC intercept that attempts to call setExceptionToThrow. Verifies that:
    *
    * <ol>
-   *   <li>The callback throws UnsupportedOperationException when calling setExceptionToThrow
+   *   <li>The callback throws InterceptApiMisuseException when calling setExceptionToThrow
    *   <li>The original method still executes (ASYNC is fire-and-forget)
    *   <li>The method returns normally with unchanged result
    * </ol>
@@ -358,7 +358,7 @@ public class BeforeMethodAsyncCallbackIT extends AbstractInterceptIT {
                 .getObject()
                 .getRef());
 
-    // 3. Invoke method - callback will throw UnsupportedOperationException but method still runs
+    // 3. Invoke method - callback will throw InterceptApiMisuseException but method still runs
     logger.info(
         "Invoking {} via {} path - callback should throw but method should still execute",
         ECHO.targetMethod(),
@@ -381,11 +381,11 @@ public class BeforeMethodAsyncCallbackIT extends AbstractInterceptIT {
         returnValue,
         is(inputValue));
 
-    // Verify callback logged that UnsupportedOperationException was correctly thrown
+    // Verify callback logged that InterceptApiMisuseException was correctly thrown
     assertTrue(
-        "Expected attemptThrowException callback to log UnsupportedOperationException",
+        "Expected attemptThrowException callback to log InterceptApiMisuseException",
         InterceptEndToEndTestSuite.waitForAppLogLine(
-            "attemptThrowException: correctly threw UnsupportedOperationException"));
+            "attemptThrowException: correctly threw InterceptApiMisuseException"));
 
     logger.info(
         "===== testAsyncCallbackCannotThrowException [{}]: TEST COMPLETED SUCCESSFULLY =====",

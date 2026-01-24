@@ -356,7 +356,7 @@ public class LocalFieldAsyncCallbackIT extends AbstractInterceptIT {
   // ===========================================================================
 
   /**
-   * Tests that setArg() throws UnsupportedOperationException in BEFORE_ASYNC callback.
+   * Tests that setArg() throws InterceptApiMisuseException in BEFORE_ASYNC callback.
    *
    * <p>ASYNC callbacks cannot mutate arguments (fire-and-forget semantics).
    */
@@ -379,11 +379,11 @@ public class LocalFieldAsyncCallbackIT extends AbstractInterceptIT {
     ExecMessage response = invokeFieldPut(path, TARGET_CLASS, COUNTER, appInstance, 100);
     assertThat(response.getRaisedThrowable(), is(nullValue()));
 
-    // 3. Verify the callback correctly caught UnsupportedOperationException
+    // 3. Verify the callback correctly caught InterceptApiMisuseException
     assertTrue(
-        "BEFORE_ASYNC callback should have caught UnsupportedOperationException for setArg()",
+        "BEFORE_ASYNC callback should have caught InterceptApiMisuseException for setArg()",
         LocalInterceptTestSuite.waitForAppLogLine(
-            "LOCAL_BEFORE_ASYNC_ILLEGAL_SET_ARG: correctly threw UnsupportedOperationException"));
+            "LOCAL_BEFORE_ASYNC_ILLEGAL_SET_ARG: correctly threw InterceptApiMisuseException"));
 
     logger.info("===== testBeforeAsyncSetArgThrowsUnsupported [{}]: TEST COMPLETED =====", path);
   }
@@ -393,7 +393,7 @@ public class LocalFieldAsyncCallbackIT extends AbstractInterceptIT {
   // ===========================================================================
 
   /**
-   * Tests that setReturnValue() throws UnsupportedOperationException in AFTER_ASYNC callback.
+   * Tests that setReturnValue() throws InterceptApiMisuseException in AFTER_ASYNC callback.
    *
    * <p>ASYNC callbacks cannot override return values (fire-and-forget semantics).
    */
@@ -428,18 +428,18 @@ public class LocalFieldAsyncCallbackIT extends AbstractInterceptIT {
     ExecMessage response = invokeFieldGet(path, TARGET_CLASS, COUNTER, appInstance);
     assertThat(response.getRaisedThrowable(), is(nullValue()));
 
-    // 3. Verify the callback correctly caught UnsupportedOperationException
+    // 3. Verify the callback correctly caught InterceptApiMisuseException
     assertTrue(
-        "AFTER_ASYNC callback should have caught UnsupportedOperationException for setReturnValue()",
+        "AFTER_ASYNC callback should have caught InterceptApiMisuseException for setReturnValue()",
         LocalInterceptTestSuite.waitForAppLogLine(
-            "LOCAL_AFTER_ASYNC_ILLEGAL_SET_RETURN: correctly threw UnsupportedOperationException"));
+            "LOCAL_AFTER_ASYNC_ILLEGAL_SET_RETURN: correctly threw InterceptApiMisuseException"));
 
     logger.info(
         "===== testAfterAsyncSetReturnValueThrowsUnsupported [{}]: TEST COMPLETED =====", path);
   }
 
   /**
-   * Tests that setExceptionToThrow() throws UnsupportedOperationException in AFTER_ASYNC callback.
+   * Tests that setExceptionToThrow() throws InterceptApiMisuseException in AFTER_ASYNC callback.
    *
    * <p>ASYNC callbacks cannot throw exceptions (fire-and-forget semantics).
    */
@@ -473,11 +473,11 @@ public class LocalFieldAsyncCallbackIT extends AbstractInterceptIT {
     ExecMessage response = invokeFieldGet(path, TARGET_CLASS, COUNTER, appInstance);
     assertThat(response.getRaisedThrowable(), is(nullValue()));
 
-    // 3. Verify the callback correctly caught UnsupportedOperationException
+    // 3. Verify the callback correctly caught InterceptApiMisuseException
     assertTrue(
-        "AFTER_ASYNC callback should have caught UnsupportedOperationException for setExceptionToThrow()",
+        "AFTER_ASYNC callback should have caught InterceptApiMisuseException for setExceptionToThrow()",
         LocalInterceptTestSuite.waitForAppLogLine(
-            "LOCAL_AFTER_ASYNC_ILLEGAL_SET_EXCEPTION: correctly threw UnsupportedOperationException"));
+            "LOCAL_AFTER_ASYNC_ILLEGAL_SET_EXCEPTION: correctly threw InterceptApiMisuseException"));
 
     logger.info(
         "===== testAfterAsyncSetExceptionThrowsUnsupported [{}]: TEST COMPLETED =====", path);

@@ -517,10 +517,10 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
   // ========================================================================
 
   /**
-   * Tests that getReturnValue() throws UnsupportedOperationException in BEFORE intercept.
+   * Tests that getReturnValue() throws InterceptApiMisuseException in BEFORE intercept.
    *
    * <p>Registers a BEFORE intercept with a callback that attempts to call getReturnValue(). The
-   * callback verifies that UnsupportedOperationException is thrown, then returns normally. If the
+   * callback verifies that InterceptApiMisuseException is thrown, then returns normally. If the
    * exception is not thrown, the callback throws AssertionError and the test fails.
    */
   @Test
@@ -573,9 +573,9 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
     }
 
     assertTrue(
-        "Expected callback to log UnsupportedOperationException",
+        "Expected callback to log InterceptApiMisuseException",
         InterceptEndToEndTestSuite.waitForAppLogLine(
-            "attemptGetReturnValueInBefore: correctly threw UnsupportedOperationException"));
+            "attemptGetReturnValueInBefore: correctly threw InterceptApiMisuseException"));
 
     logger.info(
         "===== testGetReturnValueThrowsInBefore [{}]: TEST COMPLETED SUCCESSFULLY =====",
@@ -583,10 +583,10 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
   }
 
   /**
-   * Tests that getThrownException() throws UnsupportedOperationException in BEFORE intercept.
+   * Tests that getThrownException() throws InterceptApiMisuseException in BEFORE intercept.
    *
    * <p>Registers a BEFORE intercept with a callback that attempts to call getThrownException(). The
-   * callback verifies that UnsupportedOperationException is thrown, then returns normally.
+   * callback verifies that InterceptApiMisuseException is thrown, then returns normally.
    */
   @Test
   public void testGetThrownExceptionThrowsInBefore() throws Exception {
@@ -636,9 +636,9 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
     }
 
     assertTrue(
-        "Expected callback to log UnsupportedOperationException",
+        "Expected callback to log InterceptApiMisuseException",
         InterceptEndToEndTestSuite.waitForAppLogLine(
-            "attemptGetThrownExceptionInBefore: correctly threw UnsupportedOperationException"));
+            "attemptGetThrownExceptionInBefore: correctly threw InterceptApiMisuseException"));
 
     logger.info(
         "===== testGetThrownExceptionThrowsInBefore [{}]: TEST COMPLETED SUCCESSFULLY =====",
@@ -646,10 +646,10 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
   }
 
   /**
-   * Tests that setReturnValue() throws UnsupportedOperationException in BEFORE intercept.
+   * Tests that setReturnValue() throws InterceptApiMisuseException in BEFORE intercept.
    *
    * <p>Registers a BEFORE intercept with a callback that attempts to call setReturnValue(). The
-   * callback verifies that UnsupportedOperationException is thrown, then returns normally.
+   * callback verifies that InterceptApiMisuseException is thrown, then returns normally.
    */
   @Test
   public void testSetReturnValueThrowsInBefore() throws Exception {
@@ -699,9 +699,9 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
     }
 
     assertTrue(
-        "Expected callback to log UnsupportedOperationException",
+        "Expected callback to log InterceptApiMisuseException",
         InterceptEndToEndTestSuite.waitForAppLogLine(
-            "attemptSetReturnValueInBefore: correctly threw UnsupportedOperationException"));
+            "attemptSetReturnValueInBefore: correctly threw InterceptApiMisuseException"));
 
     logger.info(
         "===== testSetReturnValueThrowsInBefore [{}]: TEST COMPLETED SUCCESSFULLY =====",
@@ -783,10 +783,10 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
   }
 
   /**
-   * Tests that proceed() throws UnsupportedOperationException in BEFORE intercept.
+   * Tests that proceed() throws InterceptApiMisuseException in BEFORE intercept.
    *
    * <p>Registers a BEFORE intercept with a callback that attempts to call proceed(). The callback
-   * verifies that UnsupportedOperationException is thrown, then returns normally.
+   * verifies that InterceptApiMisuseException is thrown, then returns normally.
    */
   @Test
   public void testProceedThrowsInBefore() throws Exception {
@@ -836,9 +836,9 @@ public class BeforeMethodCallbackIT extends AbstractInterceptIT {
     }
 
     assertTrue(
-        "Expected callback to log UnsupportedOperationException",
+        "Expected callback to log InterceptApiMisuseException",
         InterceptEndToEndTestSuite.waitForAppLogLine(
-            "attemptProceedInBefore: correctly threw UnsupportedOperationException"));
+            "attemptProceedInBefore: correctly threw InterceptApiMisuseException"));
 
     logger.info(
         "===== testProceedThrowsInBefore [{}]: TEST COMPLETED SUCCESSFULLY =====",

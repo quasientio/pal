@@ -12,6 +12,7 @@ package io.quasient.pal.intercept.endtoend.method;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -317,29 +318,30 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
             new String[] {"java.lang.String"},
             new Object[] {inputValue});
 
-    if (response.getRaisedThrowable() != null) {
-      String exceptionClass = response.getRaisedThrowable().getThrowable().getType();
-      String exceptionMessage = response.getRaisedThrowable().getThrowable().getMessage();
+    // API misuse exceptions (InterceptApiMisuseException) are filtered and logged, not propagated.
+    // The callback attempts setReturnValue() on a void method, which throws
+    // InterceptApiMisuseException.
+    // This exception is caught by the dispatcher, logged as a warning, and filtered (not
+    // propagated).
+    // This design ensures that callback bugs don't break the application.
 
-      assertThat(
-          "Exception should be IllegalStateException",
-          exceptionClass,
-          is("java.lang.IllegalStateException"));
-      assertThat(
-          "Exception message should mention void method", exceptionMessage, containsString("void"));
+    assertThat(
+        "No exception should propagate (API misuse exceptions are filtered)",
+        response.getRaisedThrowable(),
+        is(nullValue()));
 
-      assertTrue(
-          "Expected attemptSetReturnValueOnVoid callback to log attempt",
-          InterceptEndToEndTestSuite.waitForAppLogLine(
-              "attemptSetReturnValueOnVoid: attempting to set return value on void method"));
+    // Verify the callback logged its attempt to set return value (before the exception was thrown)
+    assertTrue(
+        "Expected attemptSetReturnValueOnVoid callback to log attempt",
+        InterceptEndToEndTestSuite.waitForAppLogLine(
+            "attemptSetReturnValueOnVoid: attempting to set return value on void method"));
 
-      logger.info(
-          "===== testVoidMethodCannotSetReturnValue [{}]: TEST COMPLETED SUCCESSFULLY =====",
-          invocationPath.getDescription());
-    } else {
-      throw new AssertionError(
-          "Expected IllegalStateException when attempting to set return value on void method, but no exception was raised");
-    }
+    // Note: The API misuse warning is logged by the runtime (pal-runtime), not the app (itt-apps),
+    // so we can't verify it with waitForAppLogLine. The warning can be seen in the runtime logs.
+
+    logger.info(
+        "===== testVoidMethodCannotSetReturnValue [{}]: TEST COMPLETED SUCCESSFULLY =====",
+        invocationPath.getDescription());
   }
 
   /**
@@ -478,7 +480,7 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
   // Phase/Type Restriction Tests - AFTER intercepts
   // ========================================================================
 
-  /** Tests that setArg() throws UnsupportedOperationException in AFTER intercept. */
+  /** Tests that setArg() throws InterceptApiMisuseException in AFTER intercept. */
   @Test
   public void testSetArgThrowsInAfter() throws Exception {
     logger.info(
@@ -526,16 +528,16 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
     }
 
     assertTrue(
-        "Expected callback to log UnsupportedOperationException",
+        "Expected callback to log InterceptApiMisuseException",
         InterceptEndToEndTestSuite.waitForAppLogLine(
-            "attemptSetArgInAfter: correctly threw UnsupportedOperationException"));
+            "attemptSetArgInAfter: correctly threw InterceptApiMisuseException"));
 
     logger.info(
         "===== testSetArgThrowsInAfter [{}]: TEST COMPLETED SUCCESSFULLY =====",
         invocationPath.getDescription());
   }
 
-  /** Tests that proceed() throws UnsupportedOperationException in AFTER intercept. */
+  /** Tests that proceed() throws InterceptApiMisuseException in AFTER intercept. */
   @Test
   public void testProceedThrowsInAfter() throws Exception {
     logger.info(
@@ -583,9 +585,9 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
     }
 
     assertTrue(
-        "Expected callback to log UnsupportedOperationException",
+        "Expected callback to log InterceptApiMisuseException",
         InterceptEndToEndTestSuite.waitForAppLogLine(
-            "attemptProceedInAfter: correctly threw UnsupportedOperationException"));
+            "attemptProceedInAfter: correctly threw InterceptApiMisuseException"));
 
     logger.info(
         "===== testProceedThrowsInAfter [{}]: TEST COMPLETED SUCCESSFULLY =====",

@@ -10,6 +10,7 @@
 package io.quasient.pal.apps.callbacks.local;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import io.quasient.pal.common.lang.intercept.InterceptApiMisuseException;
 import io.quasient.pal.common.lang.intercept.InterceptCallbackResponse;
 import io.quasient.pal.common.lang.intercept.InterceptContext;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -654,8 +655,8 @@ public final class LocalInterceptCallbacks {
     try {
       ctx.getReturnValue();
       logger.info("LOCAL_BEFORE_ILLEGAL_GET_RETURN: ERROR - did not throw");
-    } catch (UnsupportedOperationException e) {
-      logger.info("LOCAL_BEFORE_ILLEGAL_GET_RETURN: correctly threw UnsupportedOperationException");
+    } catch (InterceptApiMisuseException e) {
+      logger.info("LOCAL_BEFORE_ILLEGAL_GET_RETURN: correctly threw InterceptApiMisuseException");
     }
     return new InterceptCallbackResponse();
   }
@@ -671,8 +672,8 @@ public final class LocalInterceptCallbacks {
     try {
       ctx.setReturnValue(999);
       logger.info("LOCAL_BEFORE_ILLEGAL_SET_RETURN: ERROR - did not throw");
-    } catch (UnsupportedOperationException e) {
-      logger.info("LOCAL_BEFORE_ILLEGAL_SET_RETURN: correctly threw UnsupportedOperationException");
+    } catch (InterceptApiMisuseException e) {
+      logger.info("LOCAL_BEFORE_ILLEGAL_SET_RETURN: correctly threw InterceptApiMisuseException");
     }
     return new InterceptCallbackResponse();
   }
@@ -688,8 +689,8 @@ public final class LocalInterceptCallbacks {
     try {
       ctx.proceed();
       logger.info("LOCAL_BEFORE_ILLEGAL_PROCEED: ERROR - did not throw");
-    } catch (UnsupportedOperationException e) {
-      logger.info("LOCAL_BEFORE_ILLEGAL_PROCEED: correctly threw UnsupportedOperationException");
+    } catch (InterceptApiMisuseException e) {
+      logger.info("LOCAL_BEFORE_ILLEGAL_PROCEED: correctly threw InterceptApiMisuseException");
     }
     return new InterceptCallbackResponse();
   }
@@ -705,8 +706,8 @@ public final class LocalInterceptCallbacks {
     try {
       ctx.getThrownException();
       logger.info("LOCAL_BEFORE_ILLEGAL_GET_THROWN: ERROR - did not throw");
-    } catch (UnsupportedOperationException e) {
-      logger.info("LOCAL_BEFORE_ILLEGAL_GET_THROWN: correctly threw UnsupportedOperationException");
+    } catch (InterceptApiMisuseException e) {
+      logger.info("LOCAL_BEFORE_ILLEGAL_GET_THROWN: correctly threw InterceptApiMisuseException");
     }
     return new InterceptCallbackResponse();
   }
@@ -724,8 +725,8 @@ public final class LocalInterceptCallbacks {
     try {
       ctx.setArg(0, 999);
       logger.info("LOCAL_AFTER_ILLEGAL_SET_ARG: ERROR - did not throw");
-    } catch (UnsupportedOperationException e) {
-      logger.info("LOCAL_AFTER_ILLEGAL_SET_ARG: correctly threw UnsupportedOperationException");
+    } catch (InterceptApiMisuseException e) {
+      logger.info("LOCAL_AFTER_ILLEGAL_SET_ARG: correctly threw InterceptApiMisuseException");
     }
     return new InterceptCallbackResponse();
   }
@@ -741,8 +742,8 @@ public final class LocalInterceptCallbacks {
     try {
       ctx.proceed();
       logger.info("LOCAL_AFTER_ILLEGAL_PROCEED: ERROR - did not throw");
-    } catch (UnsupportedOperationException e) {
-      logger.info("LOCAL_AFTER_ILLEGAL_PROCEED: correctly threw UnsupportedOperationException");
+    } catch (InterceptApiMisuseException e) {
+      logger.info("LOCAL_AFTER_ILLEGAL_PROCEED: correctly threw InterceptApiMisuseException");
     }
     return new InterceptCallbackResponse();
   }
@@ -761,9 +762,9 @@ public final class LocalInterceptCallbacks {
     try {
       ctx.getReturnValue();
       logger.info("LOCAL_AROUND_ILLEGAL_GET_RETURN_BEFORE_PROCEED: ERROR - did not throw");
-    } catch (IllegalStateException e) {
+    } catch (InterceptApiMisuseException e) {
       logger.info(
-          "LOCAL_AROUND_ILLEGAL_GET_RETURN_BEFORE_PROCEED: correctly threw IllegalStateException");
+          "LOCAL_AROUND_ILLEGAL_GET_RETURN_BEFORE_PROCEED: correctly threw InterceptApiMisuseException");
     }
     ctx.proceed();
     return new InterceptCallbackResponse();
@@ -782,9 +783,9 @@ public final class LocalInterceptCallbacks {
     try {
       ctx.getThrownException();
       logger.info("LOCAL_AROUND_ILLEGAL_GET_THROWN_BEFORE_PROCEED: ERROR - did not throw");
-    } catch (IllegalStateException e) {
+    } catch (InterceptApiMisuseException e) {
       logger.info(
-          "LOCAL_AROUND_ILLEGAL_GET_THROWN_BEFORE_PROCEED: correctly threw IllegalStateException");
+          "LOCAL_AROUND_ILLEGAL_GET_THROWN_BEFORE_PROCEED: correctly threw InterceptApiMisuseException");
     }
     ctx.proceed();
     return new InterceptCallbackResponse();
@@ -802,9 +803,9 @@ public final class LocalInterceptCallbacks {
     try {
       ctx.setArg(0, 999);
       logger.info("LOCAL_AROUND_ILLEGAL_SET_ARG_AFTER_PROCEED: ERROR - did not throw");
-    } catch (IllegalStateException e) {
+    } catch (InterceptApiMisuseException e) {
       logger.info(
-          "LOCAL_AROUND_ILLEGAL_SET_ARG_AFTER_PROCEED: correctly threw IllegalStateException");
+          "LOCAL_AROUND_ILLEGAL_SET_ARG_AFTER_PROCEED: correctly threw InterceptApiMisuseException");
     }
     return new InterceptCallbackResponse();
   }
@@ -836,9 +837,9 @@ public final class LocalInterceptCallbacks {
     try {
       ctx.setArg(0, 999);
       logger.info("LOCAL_BEFORE_ASYNC_ILLEGAL_SET_ARG: ERROR - did not throw");
-    } catch (UnsupportedOperationException e) {
+    } catch (InterceptApiMisuseException e) {
       logger.info(
-          "LOCAL_BEFORE_ASYNC_ILLEGAL_SET_ARG: correctly threw UnsupportedOperationException");
+          "LOCAL_BEFORE_ASYNC_ILLEGAL_SET_ARG: correctly threw InterceptApiMisuseException");
     }
     asyncLatch.countDown();
     return new InterceptCallbackResponse();
@@ -855,9 +856,9 @@ public final class LocalInterceptCallbacks {
     try {
       ctx.setReturnValue(999);
       logger.info("LOCAL_AFTER_ASYNC_ILLEGAL_SET_RETURN: ERROR - did not throw");
-    } catch (UnsupportedOperationException e) {
+    } catch (InterceptApiMisuseException e) {
       logger.info(
-          "LOCAL_AFTER_ASYNC_ILLEGAL_SET_RETURN: correctly threw UnsupportedOperationException");
+          "LOCAL_AFTER_ASYNC_ILLEGAL_SET_RETURN: correctly threw InterceptApiMisuseException");
     }
     asyncLatch.countDown();
     return new InterceptCallbackResponse();
@@ -874,9 +875,9 @@ public final class LocalInterceptCallbacks {
     try {
       ctx.setExceptionToThrow(new RuntimeException("test"));
       logger.info("LOCAL_AFTER_ASYNC_ILLEGAL_SET_EXCEPTION: ERROR - did not throw");
-    } catch (UnsupportedOperationException e) {
+    } catch (InterceptApiMisuseException e) {
       logger.info(
-          "LOCAL_AFTER_ASYNC_ILLEGAL_SET_EXCEPTION: correctly threw UnsupportedOperationException");
+          "LOCAL_AFTER_ASYNC_ILLEGAL_SET_EXCEPTION: correctly threw InterceptApiMisuseException");
     }
     asyncLatch.countDown();
     return new InterceptCallbackResponse();
@@ -898,8 +899,8 @@ public final class LocalInterceptCallbacks {
       try {
         ctx.setReturnValue(999);
         logger.info("LOCAL_AFTER_VOID_SET_RETURN: ERROR - did not throw");
-      } catch (IllegalStateException e) {
-        logger.info("LOCAL_AFTER_VOID_SET_RETURN: correctly threw IllegalStateException");
+      } catch (InterceptApiMisuseException e) {
+        logger.info("LOCAL_AFTER_VOID_SET_RETURN: correctly threw InterceptApiMisuseException");
       }
     }
     return new InterceptCallbackResponse();

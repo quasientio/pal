@@ -41,7 +41,7 @@ import org.junit.runners.Parameterized;
  * <ul>
  *   <li>Can read arguments but cannot mutate them
  *   <li>Are fire-and-forget (constructor execution does not wait for callback response)
- *   <li>Throw UnsupportedOperationException when attempting to mutate arguments
+ *   <li>Throw InterceptApiMisuseException when attempting to mutate arguments
  * </ul>
  *
  * <p>Tests use the shared intercept peer with InterceptableApp application class and
@@ -167,12 +167,12 @@ public class BeforeConstructorAsyncCallbackIT extends AbstractInterceptIT {
   }
 
   /**
-   * Tests that BEFORE_ASYNC callback throws UnsupportedOperationException on mutation attempt.
+   * Tests that BEFORE_ASYNC callback throws InterceptApiMisuseException on mutation attempt.
    *
    * <p>Registers a BEFORE_ASYNC intercept that attempts to mutate arguments. Verifies that:
    *
    * <ul>
-   *   <li>The callback throws UnsupportedOperationException
+   *   <li>The callback throws InterceptApiMisuseException
    *   <li>The constructor still executes (ASYNC is fire-and-forget)
    *   <li>Arguments are not mutated
    * </ul>
@@ -332,7 +332,7 @@ public class BeforeConstructorAsyncCallbackIT extends AbstractInterceptIT {
    * Verifies that:
    *
    * <ol>
-   *   <li>The callback throws UnsupportedOperationException when calling setExceptionToThrow
+   *   <li>The callback throws InterceptApiMisuseException when calling setExceptionToThrow
    *   <li>The constructor still executes (ASYNC is fire-and-forget)
    *   <li>The object is created normally
    * </ol>

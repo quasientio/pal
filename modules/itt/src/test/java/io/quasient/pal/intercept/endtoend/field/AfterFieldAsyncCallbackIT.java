@@ -40,7 +40,7 @@ import org.junit.runners.Parameterized;
  * <ul>
  *   <li>Can read the GET return value but cannot override it
  *   <li>Are fire-and-forget (caller receives original value)
- *   <li>Throw UnsupportedOperationException when attempting to override return value
+ *   <li>Throw InterceptApiMisuseException when attempting to override return value
  * </ul>
  *
  * <p>Tests use the shared intercept peer with InterceptableApp application class and FieldHandlers
@@ -159,7 +159,7 @@ public class AfterFieldAsyncCallbackIT extends AbstractInterceptIT {
   }
 
   /**
-   * Tests that AFTER_ASYNC callback throws UnsupportedOperationException on override attempt.
+   * Tests that AFTER_ASYNC callback throws InterceptApiMisuseException on override attempt.
    *
    * <p>Registers an AFTER_ASYNC intercept that attempts to override the GET return value. Verifies
    * that the caller still receives the original value.
@@ -312,7 +312,7 @@ public class AfterFieldAsyncCallbackIT extends AbstractInterceptIT {
    * setExceptionToThrow. Verifies that:
    *
    * <ol>
-   *   <li>The callback throws UnsupportedOperationException when calling setExceptionToThrow
+   *   <li>The callback throws InterceptApiMisuseException when calling setExceptionToThrow
    *   <li>The caller receives the original field value (ASYNC is fire-and-forget)
    * </ol>
    */

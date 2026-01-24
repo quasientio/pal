@@ -9,6 +9,7 @@
  */
 package io.quasient.pal.apps.callbacks.method;
 
+import io.quasient.pal.common.lang.intercept.InterceptApiMisuseException;
 import io.quasient.pal.common.lang.intercept.InterceptCallbackResponse;
 import io.quasient.pal.common.lang.intercept.InterceptContext;
 import io.quasient.pal.common.lang.intercept.InterceptPhase;
@@ -146,10 +147,10 @@ public class MethodHandlers {
       logger.error(
           "attemptGetReturnValueInBefore: getReturnValue did NOT throw - got value: {}", value);
       throw new AssertionError(
-          "Expected UnsupportedOperationException but getReturnValue() returned: " + value);
-    } catch (UnsupportedOperationException e) {
+          "Expected InterceptApiMisuseException but getReturnValue() returned: " + value);
+    } catch (InterceptApiMisuseException e) {
       logger.info(
-          "attemptGetReturnValueInBefore: correctly threw UnsupportedOperationException: {}",
+          "attemptGetReturnValueInBefore: correctly threw InterceptApiMisuseException: {}",
           e.getMessage());
       return new InterceptCallbackResponse();
     }
@@ -170,10 +171,10 @@ public class MethodHandlers {
           "attemptGetThrownExceptionInBefore: getThrownException did NOT throw - got: {}",
           (Object) value);
       throw new AssertionError(
-          "Expected UnsupportedOperationException but getThrownException() returned: " + value);
-    } catch (UnsupportedOperationException e) {
+          "Expected InterceptApiMisuseException but getThrownException() returned: " + value);
+    } catch (InterceptApiMisuseException e) {
       logger.info(
-          "attemptGetThrownExceptionInBefore: correctly threw UnsupportedOperationException: {}",
+          "attemptGetThrownExceptionInBefore: correctly threw InterceptApiMisuseException: {}",
           e.getMessage());
       return new InterceptCallbackResponse();
     }
@@ -191,10 +192,10 @@ public class MethodHandlers {
       ctx.setReturnValue("should fail");
       logger.error("attemptSetReturnValueInBefore: setReturnValue did NOT throw!");
       throw new AssertionError(
-          "Expected UnsupportedOperationException but setReturnValue() succeeded");
-    } catch (UnsupportedOperationException e) {
+          "Expected InterceptApiMisuseException but setReturnValue() succeeded");
+    } catch (InterceptApiMisuseException e) {
       logger.info(
-          "attemptSetReturnValueInBefore: correctly threw UnsupportedOperationException: {}",
+          "attemptSetReturnValueInBefore: correctly threw InterceptApiMisuseException: {}",
           e.getMessage());
       return new InterceptCallbackResponse();
     }
@@ -228,10 +229,10 @@ public class MethodHandlers {
     try {
       ctx.proceed();
       logger.error("attemptProceedInBefore: proceed() did NOT throw!");
-      throw new AssertionError("Expected UnsupportedOperationException but proceed() succeeded");
-    } catch (UnsupportedOperationException e) {
+      throw new AssertionError("Expected InterceptApiMisuseException but proceed() succeeded");
+    } catch (InterceptApiMisuseException e) {
       logger.info(
-          "attemptProceedInBefore: correctly threw UnsupportedOperationException: {}",
+          "attemptProceedInBefore: correctly threw InterceptApiMisuseException: {}",
           e.getMessage());
       return new InterceptCallbackResponse();
     }
@@ -364,11 +365,10 @@ public class MethodHandlers {
     try {
       ctx.setArg(0, "should fail");
       logger.error("attemptSetArgInAfter: setArg did NOT throw!");
-      throw new AssertionError("Expected UnsupportedOperationException but setArg() succeeded");
-    } catch (UnsupportedOperationException e) {
+      throw new AssertionError("Expected InterceptApiMisuseException but setArg() succeeded");
+    } catch (InterceptApiMisuseException e) {
       logger.info(
-          "attemptSetArgInAfter: correctly threw UnsupportedOperationException: {}",
-          e.getMessage());
+          "attemptSetArgInAfter: correctly threw InterceptApiMisuseException: {}", e.getMessage());
       return new InterceptCallbackResponse();
     }
   }
@@ -384,11 +384,10 @@ public class MethodHandlers {
     try {
       ctx.proceed();
       logger.error("attemptProceedInAfter: proceed() did NOT throw!");
-      throw new AssertionError("Expected UnsupportedOperationException but proceed() succeeded");
-    } catch (UnsupportedOperationException e) {
+      throw new AssertionError("Expected InterceptApiMisuseException but proceed() succeeded");
+    } catch (InterceptApiMisuseException e) {
       logger.info(
-          "attemptProceedInAfter: correctly threw UnsupportedOperationException: {}",
-          e.getMessage());
+          "attemptProceedInAfter: correctly threw InterceptApiMisuseException: {}", e.getMessage());
       return new InterceptCallbackResponse();
     }
   }
@@ -586,10 +585,10 @@ public class MethodHandlers {
       logger.error(
           "attemptGetReturnValueBeforeProceed: getReturnValue did NOT throw - got: {}", value);
       throw new AssertionError(
-          "Expected IllegalStateException but getReturnValue() returned: " + value);
-    } catch (IllegalStateException e) {
+          "Expected InterceptApiMisuseException but getReturnValue() returned: " + value);
+    } catch (InterceptApiMisuseException e) {
       logger.info(
-          "attemptGetReturnValueBeforeProceed: correctly threw IllegalStateException: {}",
+          "attemptGetReturnValueBeforeProceed: correctly threw InterceptApiMisuseException: {}",
           e.getMessage());
     }
     // Proceed to verify test completes successfully
@@ -613,10 +612,10 @@ public class MethodHandlers {
           "attemptGetThrownExceptionBeforeProceed: getThrownException did NOT throw - got: {}",
           (Object) value);
       throw new AssertionError(
-          "Expected IllegalStateException but getThrownException() returned: " + value);
-    } catch (IllegalStateException e) {
+          "Expected InterceptApiMisuseException but getThrownException() returned: " + value);
+    } catch (InterceptApiMisuseException e) {
       logger.info(
-          "attemptGetThrownExceptionBeforeProceed: correctly threw IllegalStateException: {}",
+          "attemptGetThrownExceptionBeforeProceed: correctly threw InterceptApiMisuseException: {}",
           e.getMessage());
     }
     // Proceed to verify test completes successfully
@@ -637,10 +636,11 @@ public class MethodHandlers {
       ctx.setArg(0, "should fail");
       logger.error("attemptSetArgAfterProceed: setArg did NOT throw after proceed()!");
       throw new AssertionError(
-          "Expected IllegalStateException but setArg() succeeded after proceed()");
-    } catch (IllegalStateException e) {
+          "Expected InterceptApiMisuseException but setArg() succeeded after proceed()");
+    } catch (InterceptApiMisuseException e) {
       logger.info(
-          "attemptSetArgAfterProceed: correctly threw IllegalStateException: {}", e.getMessage());
+          "attemptSetArgAfterProceed: correctly threw InterceptApiMisuseException: {}",
+          e.getMessage());
       return new InterceptCallbackResponse();
     }
   }
@@ -683,10 +683,10 @@ public class MethodHandlers {
     try {
       ctx.setArg(0, "MUTATED");
       logger.error("attemptArgMutation: setArg did NOT throw - this is a bug!");
-      throw new AssertionError("Expected UnsupportedOperationException but setArg() succeeded");
-    } catch (UnsupportedOperationException e) {
+      throw new AssertionError("Expected InterceptApiMisuseException but setArg() succeeded");
+    } catch (InterceptApiMisuseException e) {
       logger.info(
-          "attemptArgMutation: correctly threw UnsupportedOperationException: {}", e.getMessage());
+          "attemptArgMutation: correctly threw InterceptApiMisuseException: {}", e.getMessage());
       return new InterceptCallbackResponse();
     }
   }
@@ -703,11 +703,10 @@ public class MethodHandlers {
       ctx.setReturnValue("OVERRIDDEN");
       logger.error("attemptReturnOverride: setReturnValue did NOT throw - this is a bug!");
       throw new AssertionError(
-          "Expected UnsupportedOperationException but setReturnValue() succeeded");
-    } catch (UnsupportedOperationException e) {
+          "Expected InterceptApiMisuseException but setReturnValue() succeeded");
+    } catch (InterceptApiMisuseException e) {
       logger.info(
-          "attemptReturnOverride: correctly threw UnsupportedOperationException: {}",
-          e.getMessage());
+          "attemptReturnOverride: correctly threw InterceptApiMisuseException: {}", e.getMessage());
       return new InterceptCallbackResponse();
     }
   }
@@ -766,11 +765,10 @@ public class MethodHandlers {
       ctx.setExceptionToThrow(new SecurityException("This should not propagate"));
       logger.error("attemptThrowException: setExceptionToThrow did NOT throw - this is a bug!");
       throw new AssertionError(
-          "Expected UnsupportedOperationException but setExceptionToThrow() succeeded");
-    } catch (UnsupportedOperationException e) {
+          "Expected InterceptApiMisuseException but setExceptionToThrow() succeeded");
+    } catch (InterceptApiMisuseException e) {
       logger.info(
-          "attemptThrowException: correctly threw UnsupportedOperationException: {}",
-          e.getMessage());
+          "attemptThrowException: correctly threw InterceptApiMisuseException: {}", e.getMessage());
       return new InterceptCallbackResponse();
     }
   }

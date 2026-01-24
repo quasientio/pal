@@ -40,7 +40,7 @@ import org.junit.runners.Parameterized;
  * <ul>
  *   <li>Can read the PUT value but cannot mutate it
  *   <li>Are fire-and-forget (field operation does not wait for callback response)
- *   <li>Throw UnsupportedOperationException when attempting to mutate arguments
+ *   <li>Throw InterceptApiMisuseException when attempting to mutate arguments
  * </ul>
  *
  * <p>Tests use the shared intercept peer with InterceptableApp application class and FieldHandlers
@@ -165,7 +165,7 @@ public class BeforeFieldAsyncCallbackIT extends AbstractInterceptIT {
   }
 
   /**
-   * Tests that BEFORE_ASYNC callback throws UnsupportedOperationException on mutation attempt.
+   * Tests that BEFORE_ASYNC callback throws InterceptApiMisuseException on mutation attempt.
    *
    * <p>Registers a BEFORE_ASYNC intercept that attempts to mutate the PUT value. Verifies that the
    * field operation still completes with the original value.
@@ -331,7 +331,7 @@ public class BeforeFieldAsyncCallbackIT extends AbstractInterceptIT {
    * setExceptionToThrow. Verifies that:
    *
    * <ol>
-   *   <li>The callback throws UnsupportedOperationException when calling setExceptionToThrow
+   *   <li>The callback throws InterceptApiMisuseException when calling setExceptionToThrow
    *   <li>The field operation still executes (ASYNC is fire-and-forget)
    *   <li>The field value is set normally
    * </ol>

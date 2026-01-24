@@ -838,7 +838,7 @@ public class AroundMethodCallbackIT extends AbstractInterceptIT {
     assertTrue(
         "Expected callback to log IllegalStateException",
         InterceptEndToEndTestSuite.waitForAppLogLine(
-            "attemptGetReturnValueBeforeProceed: correctly threw IllegalStateException"));
+            "attemptGetReturnValueBeforeProceed: correctly threw InterceptApiMisuseException"));
 
     logger.info(
         "===== testGetReturnValueThrowsBeforeProceed [{}]: TEST COMPLETED SUCCESSFULLY =====",
@@ -903,7 +903,7 @@ public class AroundMethodCallbackIT extends AbstractInterceptIT {
     assertTrue(
         "Expected callback to log IllegalStateException",
         InterceptEndToEndTestSuite.waitForAppLogLine(
-            "attemptGetThrownExceptionBeforeProceed: correctly threw IllegalStateException"));
+            "attemptGetThrownExceptionBeforeProceed: correctly threw InterceptApiMisuseException"));
 
     logger.info(
         "===== testGetThrownExceptionThrowsBeforeProceed [{}]: TEST COMPLETED SUCCESSFULLY =====",
@@ -966,7 +966,7 @@ public class AroundMethodCallbackIT extends AbstractInterceptIT {
     assertTrue(
         "Expected callback to log IllegalStateException",
         InterceptEndToEndTestSuite.waitForAppLogLine(
-            "attemptSetArgAfterProceed: correctly threw IllegalStateException"));
+            "attemptSetArgAfterProceed: correctly threw InterceptApiMisuseException"));
 
     logger.info(
         "===== testSetArgThrowsAfterProceed [{}]: TEST COMPLETED SUCCESSFULLY =====",

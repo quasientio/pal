@@ -41,7 +41,7 @@ import org.junit.runners.Parameterized;
  * <ul>
  *   <li>Can read the constructed object (return value) but cannot override it
  *   <li>Are fire-and-forget (caller receives original constructed object)
- *   <li>Throw UnsupportedOperationException when attempting to override return value
+ *   <li>Throw InterceptApiMisuseException when attempting to override return value
  * </ul>
  *
  * <p><b>Note:</b> Constructor return values (the constructed object) are typically not
@@ -172,12 +172,12 @@ public class AfterConstructorAsyncCallbackIT extends AbstractInterceptIT {
   }
 
   /**
-   * Tests that AFTER_ASYNC callback throws UnsupportedOperationException on override attempt.
+   * Tests that AFTER_ASYNC callback throws InterceptApiMisuseException on override attempt.
    *
    * <p>Registers an AFTER_ASYNC intercept that attempts to override return value. Verifies that:
    *
    * <ul>
-   *   <li>The callback throws UnsupportedOperationException
+   *   <li>The callback throws InterceptApiMisuseException
    *   <li>The caller still receives the original constructed object (ASYNC is fire-and-forget)
    * </ul>
    */
@@ -340,7 +340,7 @@ public class AfterConstructorAsyncCallbackIT extends AbstractInterceptIT {
    * Verifies that:
    *
    * <ol>
-   *   <li>The callback throws UnsupportedOperationException when calling setExceptionToThrow
+   *   <li>The callback throws InterceptApiMisuseException when calling setExceptionToThrow
    *   <li>The caller receives the constructed object normally (ASYNC is fire-and-forget)
    * </ol>
    */
