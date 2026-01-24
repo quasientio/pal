@@ -448,18 +448,11 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
           case METHOD_CALL -> InterceptableMethodCall.fromSerializedString(parts[7]);
           case FIELD_OP -> InterceptableFieldOp.fromSerializedString(parts[7]);
         };
-    // Handle backwards compatibility: if forceImmediate field is missing, default to false
-    final boolean forceImmediate = parts.length > 8 ? Boolean.parseBoolean(parts[8]) : false;
-
-    // Handle backwards compatibility: if policy fields are missing, default to null
+    final boolean forceImmediate = Boolean.parseBoolean(parts[8]);
     final ExceptionPropagationPolicy exceptionPropagationPolicy =
-        (parts.length > 9 && !parts[9].equals("null"))
-            ? ExceptionPropagationPolicy.valueOf(parts[9])
-            : null;
+        parts[9].equals("null") ? null : ExceptionPropagationPolicy.valueOf(parts[9]);
     final CheckedExceptionPolicy checkedExceptionPolicy =
-        (parts.length > 10 && !parts[10].equals("null"))
-            ? CheckedExceptionPolicy.valueOf(parts[10])
-            : null;
+        parts[10].equals("null") ? null : CheckedExceptionPolicy.valueOf(parts[10]);
 
     return new InterceptRequest<>(
         uuid,
