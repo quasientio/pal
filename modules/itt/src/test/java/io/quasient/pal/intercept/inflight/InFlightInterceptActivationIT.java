@@ -380,7 +380,9 @@ public class InFlightInterceptActivationIT extends AbstractInterceptIT {
 
       register(interceptRequest);
 
-      // Wait a bit for fencing to start
+      // Small delay to ensure registration is processed.
+      // Note: Fencing starts synchronously when the coordinator receives the activation request,
+      // so we only need to wait for the ZMQ round-trip, not for async processing.
       Thread.sleep(200);
 
       // Thread 3: Invoke method during drain phase (should block)
