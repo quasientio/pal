@@ -176,6 +176,7 @@ pal rm -l file:/tmp/dev-wal
 ```
 
 **Benefits of direct mode**:
+
 - No etcd or PAL directory needed
 - Simple file paths (absolute or relative)
 - Works immediately after creating a peer

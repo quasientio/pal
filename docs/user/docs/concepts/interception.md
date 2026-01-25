@@ -92,6 +92,7 @@ InterceptRequest intercept = InterceptRequest.builder()
 **Timing**: Callback decides whether to call `proceed()` (execute method) or `skipProceed()` (return custom value).
 
 **Key methods**:
+
 - `ctx.proceed()` - Execute method, returns `ProceedResult` with return value or exception
 - `ctx.setReturnValue(value)` + `skipProceed()` - Skip method and return custom value
 - `ctx.setArg(index, value)` - Modify arguments before `proceed()`

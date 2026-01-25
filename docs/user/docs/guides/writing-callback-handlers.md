@@ -17,6 +17,7 @@ public class MyHandler implements InterceptCallback {
 ```
 
 The `InterceptContext` provides access to:
+
 - **Operation metadata**: Class name, method name, arguments
 - **Argument modification**: `ctx.setArg(index, newValue)` (BEFORE, AROUND before proceed)
 - **Return value access/override**: `ctx.getReturnValue()`, `ctx.setReturnValue(value)` (AFTER, AROUND after proceed)
@@ -120,11 +121,13 @@ public class CachingCallback implements InterceptCallback {
 **Use case**: Cache expensive computation results without modifying application code.
 
 **How it works**:
+
 1. Check cache for existing result
 2. On cache hit: set return value via `ctx.setReturnValue()` and skip execution with `skipProceed()`
 3. On cache miss: call `ctx.proceed()` to execute the method, then cache the result
 
 **Key AROUND patterns**:
+
 - `ctx.proceed()` - Execute the original method, returns `ProceedResult`
 - `ctx.setReturnValue(value)` + `skipProceed()` - Skip execution and return custom value
 - `result.hasException()` - Check if method threw an exception
@@ -196,6 +199,7 @@ public class BadCallback implements InterceptCallback {
 ```
 
 **Common violations**:
+
 - `getReturnValue()` in BEFORE intercepts (no return value yet)
 - `proceed()` in BEFORE/AFTER intercepts (only AROUND can proceed)
 - `setArg()` in AFTER intercepts (arguments already consumed)
@@ -217,6 +221,7 @@ public class AroundCallback implements InterceptCallback {
 ```
 
 **Phase rules for AROUND intercepts**:
+
 - **Before proceed**: Can call `setArg()`, `getArgs()`, `proceed()`
 - **After proceed**: Can call `getReturnValue()`, `setReturnValue()`, `setExceptionToThrow()`
 - Cannot call `proceed()` twice

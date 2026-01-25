@@ -27,6 +27,7 @@ PAL CLI commands support two modes of operation:
 Uses the PAL directory (etcd) to look up resources by name or UUID. This is the standard mode when multiple peers and systems need to coordinate.
 
 **Advantages**:
+
 - Central service discovery
 - Name-based lookup (no need to remember UUIDs or paths)
 - Automatic resolution of log locations
@@ -41,12 +42,14 @@ pal print -d localhost:2379 -l my-log
 ### Direct Mode (without PAL_DIRECTORY)
 
 Directly accesses Kafka logs or Chronicle logs without using the PAL directory. Useful for:
+
 - Local development with Chronicle Queue
 - Accessing logs without etcd infrastructure
 - Scripts that know exact log locations
 - Debugging and troubleshooting
 
 **Direct access to logs**:
+
 - **Chronicle logs**: Use `file:` prefix followed by path (absolute or relative)
 - **Kafka logs**: Specify `-k` option with bootstrap servers
 
