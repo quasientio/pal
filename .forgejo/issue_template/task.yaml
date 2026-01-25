@@ -42,3 +42,18 @@ body:
         - [ ] Criterion 2
     validations:
       required: true
+
+  - type: textarea
+    id: context_files
+    attributes:
+      label: Context Files (Optional)
+      description: |
+        Embed specific files in the developer prompt. Edit the paths below or delete unused lines.
+        These are HTML comments (invisible when rendered) that control which files the agent sees.
+      value: |
+        <!-- context: path/to/add-file.md -->
+        <!-- context: -path/to/remove-file.md -->
+      placeholder: |
+        <!-- context: docs/ARCHITECTURE.md -->     Add to config defaults
+        <!-- context: -README.md -->               Remove from config defaults
+        <!-- context-only: docs/SPECIFIC.md -->    Replace ALL defaults (use sparingly)
