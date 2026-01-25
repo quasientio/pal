@@ -224,9 +224,10 @@ public class InterceptInformer implements InterceptNodeListener {
       }
       outSocket.close();
     }
-    if (!"0".equals(rcvdString)) {
+    // Accept "0" (success) and "A" (async pending) as successful responses
+    if (!"0".equals(rcvdString) && !"A".equals(rcvdString)) {
       logger.warn(
-          "Received non-0 response (code={}) when informing of intercept event: {}",
+          "Received error response (code={}) when informing of intercept event: {}",
           rcvdString,
           message);
     }

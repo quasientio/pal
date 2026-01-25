@@ -10,7 +10,6 @@
 package io.quasient.pal.core.intercept;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import io.quasient.pal.common.directory.nodes.InterceptRequest;
 import io.quasient.pal.core.service.RunOptions;
 import io.quasient.pal.messages.colfer.InterceptMessage;
 import jakarta.inject.Inject;
@@ -18,6 +17,9 @@ import jakarta.inject.Named;
 import jakarta.inject.Provider;
 import jakarta.inject.Singleton;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,14 +33,20 @@ import org.slf4j.LoggerFactory;
  * <ol>
  *   <li><b>Check configuration:</b> Determine if in-flight tracking is enabled globally and if the
  *       intercept has a forceImmediate override
- *   <li><b>Fence new dispatches:</b> If drain is required, start fencing to block new matching
- *       dispatches
- *   <li><b>Wait for quiescence:</b> Wait for in-flight dispatches to complete within the configured
- *       timeout
- *   <li><b>Activate intercept:</b> Register the intercept with InterceptMatcher once quiescence is
- *       achieved
- *   <li><b>Unfence:</b> Stop fencing to allow new dispatches to proceed (now intercepted)
+ *   <li><b>For immediate activation:</b> Register the intercept synchronously and return
+ *   <li><b>For drain-based activation:</b> Submit async task that performs:
+ *       <ul>
+ *         <li>Fence new dispatches to block new matching dispatches
+ *         <li>Wait for in-flight dispatches to complete within the configured timeout
+ *         <li>Register the intercept with InterceptMatcher once quiescence is achieved
+ *         <li>Unfence to allow new dispatches to proceed (now intercepted)
+ *       </ul>
  * </ol>
+ *
+ * <p><b>Async activation:</b> When drain is required, the activation is performed asynchronously in
+ * a dedicated single-threaded executor. This prevents blocking the InterceptMatcher thread that
+ * processes intercept events from etcd. The caller receives an {@link ActivationResult} with status
+ * {@link ActivationResult#ASYNC_PENDING} indicating the activation is in progress.
  *
  * <p><b>Configuration:</b>
  *
@@ -51,22 +59,30 @@ import org.slf4j.LoggerFactory;
  *       (default: 5000ms)
  * </ul>
  *
- * <p><b>Activation result:</b> The {@link #activate(InterceptRequest)} method returns an {@link
- * ActivationResult} indicating success or failure, along with details about what happened during
- * activation.
+ * <p><b>Activation result:</b> The {@link #activateIntercept(InterceptMessage)} method returns an
+ * {@link ActivationResult} indicating:
+ *
+ * <ul>
+ *   <li>{@link ActivationResult#isSuccess()} = true: Immediate activation succeeded
+ *   <li>{@link ActivationResult#isAsyncPending()} = true: Async activation submitted (drain in
+ *       progress)
+ *   <li>{@link ActivationResult#isSuccess()} = false: Activation failed (e.g., duplicate intercept)
+ * </ul>
  *
  * <p><b>Thread safety:</b> This class is thread-safe and may be called concurrently from multiple
- * threads.
+ * threads. Async activations are serialized via a single-threaded executor.
  *
  * <p><b>Usage example:</b>
  *
  * <pre>{@code
  * InterceptActivationCoordinator coordinator = ...;
- * InterceptRequest<?> request = ...;
+ * InterceptMessage message = ...;
  *
- * ActivationResult result = coordinator.activate(request);
+ * ActivationResult result = coordinator.activateIntercept(message);
  * if (result.isSuccess()) {
- *   logger.info("Intercept activated successfully");
+ *   // Immediate activation succeeded
+ * } else if (result.isAsyncPending()) {
+ *   // Drain-based activation in progress, will complete asynchronously
  * } else {
  *   logger.warn("Intercept activation failed: {}", result.getMessage());
  * }
@@ -75,7 +91,6 @@ import org.slf4j.LoggerFactory;
  * @see InFlightDispatchTracker
  * @see InterceptMatcher
  * @see RunOptions#WITH_IN_FLIGHT_TRACKING
- * @see InterceptRequest#isForceImmediate()
  */
 @Singleton
 public class InterceptActivationCoordinator {
@@ -114,6 +129,15 @@ public class InterceptActivationCoordinator {
   private final long drainTimeoutMs;
 
   /**
+   * Single-threaded executor for async drain-based activations.
+   *
+   * <p>Using a single thread ensures that only one drain/activation runs at a time, which is
+   * important because {@link InterceptRequests} assumes single-writer semantics. This also prevents
+   * blocking the InterceptMatcher thread that processes intercept events.
+   */
+  private final ExecutorService asyncActivationExecutor;
+
+  /**
    * Constructs a new InterceptActivationCoordinator with the specified dependencies.
    *
    * @param inFlightTracker the tracker for in-flight dispatches
@@ -129,10 +153,39 @@ public class InterceptActivationCoordinator {
       Provider<InterceptMatcher> interceptMatcherProvider,
       Set<RunOptions> runOptions,
       @Named("intercept.drain.timeout.ms") long drainTimeoutMs) {
+    this(
+        inFlightTracker,
+        interceptMatcherProvider,
+        runOptions,
+        drainTimeoutMs,
+        Executors.newSingleThreadExecutor(
+            r -> {
+              Thread t = new Thread(r, "intercept-activation-async");
+              t.setDaemon(true);
+              return t;
+            }));
+  }
+
+  /**
+   * Package-private constructor for testing that allows injection of a custom executor.
+   *
+   * @param inFlightTracker the tracker for in-flight dispatches
+   * @param interceptMatcherProvider the provider for InterceptMatcher
+   * @param runOptions the runtime options controlling peer behavior
+   * @param drainTimeoutMs the timeout in milliseconds for waiting for in-flight dispatches to drain
+   * @param asyncActivationExecutor the executor for async activations (for testing)
+   */
+  InterceptActivationCoordinator(
+      InFlightDispatchTracker inFlightTracker,
+      Provider<InterceptMatcher> interceptMatcherProvider,
+      Set<RunOptions> runOptions,
+      long drainTimeoutMs,
+      ExecutorService asyncActivationExecutor) {
     this.inFlightTracker = inFlightTracker;
     this.interceptMatcherProvider = interceptMatcherProvider;
     this.runOptions = runOptions;
     this.drainTimeoutMs = drainTimeoutMs;
+    this.asyncActivationExecutor = asyncActivationExecutor;
 
     if (logger.isDebugEnabled()) {
       logger.debug(
@@ -143,53 +196,23 @@ public class InterceptActivationCoordinator {
   }
 
   /**
-   * Activates an intercept request, coordinating with in-flight dispatch tracking as needed.
+   * Shuts down the async activation executor, waiting for pending activations to complete.
    *
-   * <p>This method determines whether drain is required based on the global {@code
-   * WITH_IN_FLIGHT_TRACKING} option and the per-intercept {@code forceImmediate} flag. If drain is
-   * required, it:
+   * <p>This method should be called during peer shutdown to ensure clean termination.
    *
-   * <ol>
-   *   <li>Starts fencing for the intercept pattern
-   *   <li>Waits for in-flight dispatches to complete (quiescence)
-   *   <li>Activates the intercept if quiescence is achieved
-   *   <li>Stops fencing
-   * </ol>
-   *
-   * <p>If drain is not required (tracking disabled or forceImmediate=true), the intercept is
-   * activated immediately without fencing or waiting.
-   *
-   * <p><b>Error handling:</b> If activation fails (e.g., due to duplicate intercept), fencing is
-   * always cleaned up (stopFencing) to avoid leaving threads blocked.
-   *
-   * @param request the intercept request to activate
-   * @return an {@link ActivationResult} indicating success or failure
-   * @throws InterruptedException if the thread is interrupted while waiting for quiescence
+   * @param timeoutMs maximum time to wait for pending activations to complete
    */
-  public ActivationResult activate(InterceptRequest<?> request) throws InterruptedException {
-    String classPattern = request.getClazz();
-    String methodPattern = extractMethodPattern(request);
-
-    boolean trackingEnabled = runOptions.contains(RunOptions.WITH_IN_FLIGHT_TRACKING);
-    boolean forceImmediate = request.isForceImmediate();
-
-    // Determine if drain is required
-    boolean shouldDrain = trackingEnabled && !forceImmediate;
-
-    if (logger.isDebugEnabled()) {
-      logger.debug(
-          "Activating intercept for {}.{}, trackingEnabled={}, forceImmediate={}, shouldDrain={}",
-          classPattern,
-          methodPattern,
-          trackingEnabled,
-          forceImmediate,
-          shouldDrain);
-    }
-
-    if (shouldDrain) {
-      return activateWithDrain(classPattern, methodPattern);
-    } else {
-      return activateImmediate(classPattern, methodPattern);
+  public void shutdown(long timeoutMs) {
+    asyncActivationExecutor.shutdown();
+    try {
+      if (!asyncActivationExecutor.awaitTermination(timeoutMs, TimeUnit.MILLISECONDS)) {
+        logger.warn(
+            "Async activation executor did not terminate within {}ms, forcing shutdown", timeoutMs);
+        asyncActivationExecutor.shutdownNow();
+      }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      asyncActivationExecutor.shutdownNow();
     }
   }
 
@@ -205,16 +228,18 @@ public class InterceptActivationCoordinator {
    * <ol>
    *   <li>Extract class and method patterns from the message
    *   <li>Check if drain is required (WITH_IN_FLIGHT_TRACKING enabled and forceImmediate=false)
-   *   <li>If drain required: fence → wait for quiescence → register → unfence
-   *   <li>If drain not required: register immediately
+   *   <li>If drain required: submit async task to executor, return ASYNC_PENDING immediately
+   *   <li>If drain not required: register immediately and return success/failure
    * </ol>
    *
+   * <p><b>Non-blocking:</b> This method never blocks. When drain is required, the drain/activation
+   * is performed asynchronously in a background thread, allowing the caller (InterceptMatcher) to
+   * continue processing other intercept events.
+   *
    * @param interceptMessage the intercept message containing registration data
-   * @return an {@link ActivationResult} indicating success or failure
-   * @throws InterruptedException if the thread is interrupted while waiting for quiescence
+   * @return an {@link ActivationResult} indicating success, async pending, or failure
    */
-  public ActivationResult activateIntercept(InterceptMessage interceptMessage)
-      throws InterruptedException {
+  public ActivationResult activateIntercept(InterceptMessage interceptMessage) {
     String classPattern = interceptMessage.getClazz();
     String methodPattern = extractMethodPatternFromMessage(interceptMessage);
 
@@ -235,38 +260,46 @@ public class InterceptActivationCoordinator {
     }
 
     if (shouldDrain) {
-      return activateWithDrainAndRegister(classPattern, methodPattern, interceptMessage);
+      // Start fencing synchronously to ensure new dispatches are blocked immediately.
+      // This preserves the semantic that once register() returns, new calls will be blocked.
+      inFlightTracker.startFencing(classPattern, methodPattern);
+
+      // Submit the rest (wait for quiescence, register, stop fencing) to async executor.
+      // This avoids blocking the InterceptMatcher thread during the potentially long drain wait.
+      submitAsyncDrainAndRegister(classPattern, methodPattern, interceptMessage);
+      return ActivationResult.asyncPending(
+          "Intercept activation pending (drain in progress for "
+              + classPattern
+              + "."
+              + methodPattern
+              + ")");
     } else {
       return activateImmediateAndRegister(classPattern, methodPattern, interceptMessage);
     }
   }
 
   /**
-   * Activates an intercept immediately without waiting for in-flight dispatches to complete.
+   * Submits the drain and register task to the async executor.
    *
-   * <p>This method is used when:
+   * <p>This is called AFTER fencing has been started synchronously. The async task waits for
+   * quiescence, registers the intercept, and stops fencing.
    *
-   * <ul>
-   *   <li>Global in-flight tracking is disabled, or
-   *   <li>The intercept has forceImmediate=true (per-intercept override)
-   * </ul>
+   * <p>This helper method exists to allow proper suppression of the SpotBugs DLS_DEAD_LOCAL_STORE
+   * warning that would occur if we used a local variable to suppress the error-prone
+   * FutureReturnValueIgnored warning.
    *
-   * @param classPattern the class pattern from the request
-   * @param methodPattern the method pattern from the request
-   * @return an {@link ActivationResult} indicating success or failure
+   * @param classPattern the class pattern
+   * @param methodPattern the method pattern
+   * @param interceptMessage the intercept message to register
    */
-  private ActivationResult activateImmediate(String classPattern, String methodPattern) {
-    if (logger.isDebugEnabled()) {
-      logger.debug("Activating intercept immediately for {}.{}", classPattern, methodPattern);
-    }
-
-    // Note: In the current InterceptMatcher implementation, intercepts are registered
-    // via ZMQ REP socket, not via direct method call. This is a design limitation
-    // that will be addressed in issue #243. For now, we return success assuming
-    // the intercept will be registered via the existing ZMQ mechanism.
-    //
-    // TODO(#243): Replace this with direct call to InterceptMatcher.registerIntercept()
-    return ActivationResult.success("Intercept activated immediately");
+  @SuppressWarnings("FutureReturnValueIgnored")
+  @SuppressFBWarnings(
+      value = "RV_RETURN_VALUE_IGNORED_BAD_PRACTICE",
+      justification = "Future intentionally ignored - activation completes asynchronously")
+  private void submitAsyncDrainAndRegister(
+      String classPattern, String methodPattern, InterceptMessage interceptMessage) {
+    asyncActivationExecutor.submit(
+        () -> waitForQuiescenceAndRegisterAsync(classPattern, methodPattern, interceptMessage));
   }
 
   /**
@@ -308,151 +341,97 @@ public class InterceptActivationCoordinator {
   }
 
   /**
-   * Activates an intercept after waiting for in-flight dispatches to complete (drain).
+   * Waits for quiescence and registers the intercept asynchronously.
    *
-   * <p>This method:
+   * <p>This method runs asynchronously in the {@link #asyncActivationExecutor} thread. It is called
+   * AFTER fencing has been started synchronously by the caller. It:
    *
    * <ol>
-   *   <li>Starts fencing for the intercept pattern
    *   <li>Waits for in-flight dispatches to complete (quiescence) with configured timeout
-   *   <li>If quiescence is achieved, activates the intercept
+   *   <li>If quiescence is achieved, registers the intercept with InterceptMatcher
    *   <li>Always stops fencing in a finally block to ensure cleanup
    * </ol>
    *
-   * @param classPattern the class pattern from the request
-   * @param methodPattern the method pattern from the request
-   * @return an {@link ActivationResult} indicating success or failure
-   * @throws InterruptedException if the thread is interrupted while waiting for quiescence
-   */
-  private ActivationResult activateWithDrain(String classPattern, String methodPattern)
-      throws InterruptedException {
-    return activateWithDrainAndRegister(classPattern, methodPattern, null);
-  }
-
-  /**
-   * Activates an intercept after waiting for in-flight dispatches to complete (drain) and
-   * optionally registers it with the matcher.
+   * <p><b>Note:</b> Fencing is started synchronously by {@link #activateIntercept} before this
+   * method is called. This ensures that new dispatches are blocked immediately when the
+   * registration response is sent.
    *
-   * <p>This method:
-   *
-   * <ol>
-   *   <li>Starts fencing for the intercept pattern
-   *   <li>Waits for in-flight dispatches to complete (quiescence) with configured timeout
-   *   <li>If quiescence is achieved and interceptMessage is provided, registers the intercept with
-   *       InterceptMatcher
-   *   <li>Always stops fencing in a finally block to ensure cleanup
-   * </ol>
+   * <p><b>Note:</b> This method does not return a result to the original caller since it runs
+   * asynchronously. Success or failure is logged, and the intercept is registered (or not) based on
+   * the outcome.
    *
    * @param classPattern the class pattern from the message
    * @param methodPattern the method pattern from the message
-   * @param interceptMessage the intercept message to register (may be null if called from legacy
-   *     activate method)
-   * @return an {@link ActivationResult} indicating success or failure
-   * @throws InterruptedException if the thread is interrupted while waiting for quiescence
+   * @param interceptMessage the intercept message to register
    */
-  private ActivationResult activateWithDrainAndRegister(
-      String classPattern, String methodPattern, InterceptMessage interceptMessage)
-      throws InterruptedException {
+  private void waitForQuiescenceAndRegisterAsync(
+      String classPattern, String methodPattern, InterceptMessage interceptMessage) {
     if (logger.isDebugEnabled()) {
       logger.debug(
-          "Activating intercept with drain for {}.{}, timeout={}ms",
+          "Async: Waiting for quiescence for {}.{}, timeout={}ms",
           classPattern,
           methodPattern,
           drainTimeoutMs);
     }
 
-    // Step 1: Start fencing
-    inFlightTracker.startFencing(classPattern, methodPattern);
-
     try {
-      // Step 2: Wait for quiescence
+      // Step 1: Wait for quiescence (fencing was already started synchronously)
       boolean quiescent =
           inFlightTracker.waitForQuiescence(classPattern, methodPattern, drainTimeoutMs);
 
       if (!quiescent) {
-        // Timeout occurred
+        // Timeout occurred - do not activate
         if (logger.isWarnEnabled()) {
           logger.warn(
-              "Timeout waiting for quiescence of {}.{} after {}ms, intercept not activated",
+              "Async: Timeout waiting for quiescence of {}.{} after {}ms, intercept not activated",
               classPattern,
               methodPattern,
               drainTimeoutMs);
         }
-        return ActivationResult.failure(
-            String.format(
-                "Timeout waiting for in-flight dispatches to complete after %dms", drainTimeoutMs));
+        return;
       }
 
-      // Step 3: Register intercept with matcher after quiescence is achieved (if message provided)
+      // Step 2: Register intercept with matcher after quiescence is achieved
       if (logger.isDebugEnabled()) {
         logger.debug(
-            "Quiescence achieved for {}.{}, {}",
+            "Async: Quiescence achieved for {}.{}, registering intercept",
             classPattern,
-            methodPattern,
-            interceptMessage != null ? "registering intercept" : "activating intercept");
+            methodPattern);
       }
 
-      if (interceptMessage != null) {
-        try {
-          interceptMatcherProvider.get().registerInterceptRequest(interceptMessage);
-          return ActivationResult.success("Intercept activated after drain");
-        } catch (DuplicateInterceptException e) {
-          if (logger.isWarnEnabled()) {
-            logger.warn(
-                "Cannot register duplicate intercept for {}.{}", classPattern, methodPattern, e);
-          }
-          return ActivationResult.failure("Duplicate intercept: " + e.getMessage());
+      try {
+        interceptMatcherProvider.get().registerInterceptRequest(interceptMessage);
+        if (logger.isInfoEnabled()) {
+          logger.info(
+              "Async: Intercept activated after drain for {}.{}", classPattern, methodPattern);
         }
-      } else {
-        // Legacy path for activate(InterceptRequest) - no actual registration
-        return ActivationResult.success("Intercept activated after drain");
+      } catch (DuplicateInterceptException e) {
+        if (logger.isWarnEnabled()) {
+          logger.warn(
+              "Async: Cannot register duplicate intercept for {}.{}",
+              classPattern,
+              methodPattern,
+              e);
+        }
       }
 
     } catch (InterruptedException e) {
-      // Propagate interruption
-      throw e;
-    } catch (Exception e) {
-      // Activation failed (e.g., other errors during registration)
-      if (logger.isErrorEnabled()) {
-        logger.error("Error activating intercept for {}.{}", classPattern, methodPattern, e);
+      Thread.currentThread().interrupt();
+      if (logger.isWarnEnabled()) {
+        logger.warn(
+            "Async: Interrupted while activating intercept for {}.{}", classPattern, methodPattern);
       }
-      return ActivationResult.failure("Error during intercept activation: " + e.getMessage());
+    } catch (Exception e) {
+      if (logger.isErrorEnabled()) {
+        logger.error("Async: Error activating intercept for {}.{}", classPattern, methodPattern, e);
+      }
     } finally {
-      // Step 4: Always stop fencing to unblock waiting threads
+      // Step 3: Always stop fencing to unblock waiting threads
       inFlightTracker.stopFencing(classPattern, methodPattern);
       if (logger.isDebugEnabled()) {
-        logger.debug("Fencing stopped for {}.{}", classPattern, methodPattern);
+        logger.debug("Async: Fencing stopped for {}.{}", classPattern, methodPattern);
       }
     }
-  }
-
-  /**
-   * Extracts the method pattern from an intercept request.
-   *
-   * <p>The method pattern is derived from the interceptable field of the request. For method calls,
-   * it's the method name. For field operations, it's the field name.
-   *
-   * <p>The serialized format for InterceptableMethodCall is "methodName&&paramType1&&paramType2..."
-   * where && is the field separator. We extract just the methodName part.
-   *
-   * @param request the intercept request
-   * @return the method/field pattern string
-   */
-  private String extractMethodPattern(InterceptRequest<?> request) {
-    // The interceptable's pattern string varies by type:
-    // - InterceptableMethodCall: methodName&&paramType1&&paramType2...
-    // - InterceptableFieldOp: fieldName
-    // We need to extract just the name part before the field separator
-    String pattern = request.getInterceptable().toSerializedString();
-
-    // For method calls, the pattern includes parameter types separated by "&&"
-    // We want just "methodName" for the pattern
-    int sepIndex = pattern.indexOf("&&");
-    if (sepIndex > 0) {
-      return pattern.substring(0, sepIndex);
-    }
-
-    return pattern;
   }
 
   /**
@@ -476,12 +455,15 @@ public class InterceptActivationCoordinator {
   /**
    * Result of an intercept activation attempt.
    *
-   * <p>This class encapsulates the outcome of calling {@link #activate(InterceptRequest)},
-   * indicating whether the activation succeeded and providing details about what happened.
+   * <p>This class encapsulates the outcome of calling {@link #activateIntercept(InterceptMessage)},
+   * indicating whether the activation succeeded, is pending asynchronously, or failed.
    */
   public static class ActivationResult {
-    /** Whether the activation succeeded. */
+    /** Whether the activation succeeded (immediate activation). */
     private final boolean success;
+
+    /** Whether the activation is pending asynchronously (drain in progress). */
+    private final boolean asyncPending;
 
     /** Human-readable message describing the result. */
     private final String message;
@@ -490,21 +472,23 @@ public class InterceptActivationCoordinator {
      * Constructs a new ActivationResult.
      *
      * @param success whether the activation succeeded
+     * @param asyncPending whether the activation is pending asynchronously
      * @param message a human-readable message describing the result
      */
-    private ActivationResult(boolean success, String message) {
+    private ActivationResult(boolean success, boolean asyncPending, String message) {
       this.success = success;
+      this.asyncPending = asyncPending;
       this.message = message;
     }
 
     /**
-     * Creates a success result.
+     * Creates a success result for immediate activation.
      *
      * @param message a message describing the successful activation
      * @return a success result
      */
     public static ActivationResult success(String message) {
-      return new ActivationResult(true, message);
+      return new ActivationResult(true, false, message);
     }
 
     /**
@@ -514,16 +498,41 @@ public class InterceptActivationCoordinator {
      * @return a failure result
      */
     public static ActivationResult failure(String message) {
-      return new ActivationResult(false, message);
+      return new ActivationResult(false, false, message);
     }
 
     /**
-     * Returns whether the activation succeeded.
+     * Creates an async pending result for drain-based activation.
+     *
+     * <p>This result indicates that the activation has been submitted to the async executor and
+     * will complete in the background. The caller should not wait for completion.
+     *
+     * @param message a message describing the pending activation
+     * @return an async pending result
+     */
+    public static ActivationResult asyncPending(String message) {
+      return new ActivationResult(false, true, message);
+    }
+
+    /**
+     * Returns whether the activation succeeded immediately.
      *
      * @return {@code true} if the activation succeeded, {@code false} otherwise
      */
     public boolean isSuccess() {
       return success;
+    }
+
+    /**
+     * Returns whether the activation is pending asynchronously.
+     *
+     * <p>When this returns {@code true}, the activation has been submitted to a background thread
+     * for drain-based activation. The intercept will be registered once quiescence is achieved.
+     *
+     * @return {@code true} if the activation is pending asynchronously, {@code false} otherwise
+     */
+    public boolean isAsyncPending() {
+      return asyncPending;
     }
 
     /**
@@ -537,7 +546,13 @@ public class InterceptActivationCoordinator {
 
     @Override
     public String toString() {
-      return "ActivationResult{success=" + success + ", message='" + message + "'}";
+      return "ActivationResult{success="
+          + success
+          + ", asyncPending="
+          + asyncPending
+          + ", message='"
+          + message
+          + "'}";
     }
   }
 }

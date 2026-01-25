@@ -72,6 +72,15 @@ public class InterceptMatcher extends ConnectedService {
   /** Response code indicating an unknown error during intercept unregistration. */
   public static final String UNREGISTER_UNKNOWN_ERROR_RESPONSE = "4";
 
+  /**
+   * Response code indicating that intercept activation is pending asynchronously.
+   *
+   * <p>This response is returned when in-flight tracking is enabled and the intercept requires
+   * drain before activation. The actual activation will happen in a background thread once
+   * quiescence is achieved.
+   */
+  public static final String REGISTER_ASYNC_PENDING_RESPONSE = "A";
+
   /** Map containing registered intercept requests organized by their intercept type. */
   private final Map<InterceptType, InterceptRequests> allIntercepts =
       new EnumMap<>(InterceptType.class);
@@ -300,6 +309,9 @@ public class InterceptMatcher extends ConnectedService {
 
           if (result.isSuccess()) {
             registerSocket.send(REGISTER_OK_RESPONSE);
+          } else if (result.isAsyncPending()) {
+            // Drain-based activation is in progress asynchronously
+            registerSocket.send(REGISTER_ASYNC_PENDING_RESPONSE);
           } else {
             // Check if it was a duplicate (coordinator returns failure for duplicates)
             if (result.getMessage().contains("Duplicate")) {
@@ -308,10 +320,6 @@ public class InterceptMatcher extends ConnectedService {
               registerSocket.send(REGISTER_UNKNOWN_ERROR_RESPONSE);
             }
           }
-        } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          logger.warn("Interrupted while activating intercept", e);
-          registerSocket.send(REGISTER_UNKNOWN_ERROR_RESPONSE);
         } catch (Exception e) {
           logger.error("Unexpected error during intercept activation", e);
           registerSocket.send(REGISTER_UNKNOWN_ERROR_RESPONSE);
