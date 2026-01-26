@@ -9,6 +9,7 @@
  */
 package io.quasient.pal.core.intercept;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.common.runtime.ExecPhase;
 import io.quasient.pal.core.internal.messages.InterceptEventMsg;
@@ -24,10 +25,13 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.jctools.queues.MessagePassingQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
+import org.zeromq.ZMQ;
+import org.zeromq.ZMQ.Poller;
 import org.zeromq.ZMQ.Socket;
 import org.zeromq.ZMQException;
 import zmq.ZError;
@@ -39,6 +43,10 @@ import zmq.ZError;
  * <p>It listens for registration and unregistration events using a ZeroMQ REP socket and maintains
  * a mapping of intercept requests organized by intercept type. It also provides methods to retrieve
  * intercepts based on execution messages, message types, and execution phases.
+ *
+ * <p>This class also polls the pending activations queue for intercepts that have completed their
+ * drain phase and are ready for registration. This allows multiple drain operations to run in
+ * parallel while maintaining single-writer semantics for the intercept registry.
  */
 @Singleton
 public class InterceptMatcher extends ConnectedService {
@@ -48,6 +56,12 @@ public class InterceptMatcher extends ConnectedService {
 
   /** ZeroMQ REP socket used to receive intercept registration and unregistration events. */
   private Socket registerSocket;
+
+  /** ZeroMQ poller for non-blocking socket polling. */
+  private Poller poller;
+
+  /** Poller index for the register socket. */
+  private int registerSocketPollIndex;
 
   /** The network address endpoint used for intercept registration communication. */
   private final String interceptRegAddress;
@@ -81,6 +95,12 @@ public class InterceptMatcher extends ConnectedService {
    */
   public static final String REGISTER_ASYNC_PENDING_RESPONSE = "A";
 
+  /** Polling timeout in milliseconds for non-blocking socket polling. */
+  private static final long POLL_TIMEOUT_MS = 10;
+
+  /** Maximum number of pending activations to process per poll iteration. */
+  private static final int MAX_PENDING_PER_POLL = 16;
+
   /** Map containing registered intercept requests organized by their intercept type. */
   private final Map<InterceptType, InterceptRequests> allIntercepts =
       new EnumMap<>(InterceptType.class);
@@ -90,6 +110,17 @@ public class InterceptMatcher extends ConnectedService {
    * and drain mechanism.
    */
   private final InterceptActivationCoordinator activationCoordinator;
+
+  /**
+   * Queue for pending intercept activations that have completed drain and are ready for
+   * registration.
+   *
+   * <p>This MPSC queue is shared with {@link InterceptActivationCoordinator}. After quiescence is
+   * achieved, drain threads enqueue completed activations here. This class (the single consumer)
+   * polls the queue and registers the intercepts, maintaining single-writer semantics for the
+   * intercept registry.
+   */
+  private final MessagePassingQueue<PendingInterceptActivation> pendingActivationsQueue;
 
   /**
    * Constructs a new InterceptMatcher instance.
@@ -105,8 +136,12 @@ public class InterceptMatcher extends ConnectedService {
    * @param serviceName the name of the intercept service
    * @param interceptRegAddress the network address endpoint for intercept registration
    * @param activationCoordinator the coordinator for safe intercept activation
+   * @param pendingActivationsQueue the MPSC queue for completed activations
    */
   @Inject
+  @SuppressFBWarnings(
+      value = "EI_EXPOSE_REP2",
+      justification = "Queue intentionally shared between coordinator and matcher for MPSC pattern")
   public InterceptMatcher(
       UUID peerUuid,
       ZContext context,
@@ -114,10 +149,13 @@ public class InterceptMatcher extends ConnectedService {
       ThreadGroup serviceThreadGroup,
       @Named("Intercepts.service") String serviceName,
       @Named("intercepts.reg") String interceptRegAddress,
-      InterceptActivationCoordinator activationCoordinator) {
+      InterceptActivationCoordinator activationCoordinator,
+      @Named("intercept.pending.activations.queue")
+          MessagePassingQueue<PendingInterceptActivation> pendingActivationsQueue) {
     super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
     this.interceptRegAddress = interceptRegAddress;
     this.activationCoordinator = activationCoordinator;
+    this.pendingActivationsQueue = pendingActivationsQueue;
     // initialize intercept registry
     for (InterceptType interceptType : InterceptType.values()) {
       allIntercepts.put(interceptType, new InterceptRequests());
@@ -128,12 +166,16 @@ public class InterceptMatcher extends ConnectedService {
    * Opens the necessary connections for intercept registration.
    *
    * <p>This method creates a ZeroMQ REP socket and binds it to the configured intercept
-   * registration address.
+   * registration address. It also sets up a poller for non-blocking socket polling.
    */
   @Override
   protected void openConnections() {
     registerSocket = zmqContext.createSocket(SocketType.REP);
     registerSocket.bind(interceptRegAddress);
+
+    // Set up poller for non-blocking socket polling
+    poller = zmqContext.createPoller(1);
+    registerSocketPollIndex = poller.register(registerSocket, ZMQ.Poller.POLLIN);
   }
 
   /**
@@ -224,37 +266,126 @@ public class InterceptMatcher extends ConnectedService {
   }
 
   /**
-   * Continuously polls for intercept registration events and processes them.
+   * Continuously polls for intercept registration events and pending activations, processing them.
    *
-   * <p>This method runs in a loop, receiving intercept event messages and dispatching them for
-   * registration or unregistration. It terminates the polling when the thread is interrupted or
-   * when critical errors occur.
+   * <p>This method runs in a loop, using a ZMQ poller to non-blocking poll the REP socket for
+   * intercept event messages. It also polls the pending activations queue for intercepts that have
+   * completed their drain phase and are ready for registration.
+   *
+   * <p>The dual-polling design allows:
+   *
+   * <ul>
+   *   <li>Multiple drain operations to run in parallel (in the activation coordinator's thread
+   *       pool)
+   *   <li>Single-writer semantics for the intercept registry (only this thread registers)
+   *   <li>Non-blocking operation (can process both sockets and queue in the same loop iteration)
+   * </ul>
+   *
+   * <p>It terminates the polling when the thread is interrupted or when critical errors occur.
    */
   @Override
   public final void run() {
     while (!Thread.interrupted()) {
-      // poll registerSocket and dispatch
       try {
-        registerNewAndGoneIntercepts();
+        // Poll socket with timeout to allow checking the pending queue regularly
+        int pollResult = poller.poll(POLL_TIMEOUT_MS);
+
+        if (pollResult == -1) {
+          // Poll was interrupted
+          if (logger.isDebugEnabled()) {
+            logger.debug("Poller interrupted, exiting run loop");
+          }
+          break;
+        }
+
+        // Check if socket has data
+        if (poller.pollin(registerSocketPollIndex)) {
+          processSocketEvent();
+        }
+
+        // Process pending activations from the queue (up to MAX_PENDING_PER_POLL)
+        processPendingActivations();
+
       } catch (ZMQException ex) {
         int errorCode = ex.getErrorCode();
         if (errorCode == ZError.ETERM) {
           if (logger.isDebugEnabled()) {
-            logger.debug("Caught ETERM during blocking read. No more polling for new intercepts.");
+            logger.debug("Caught ETERM during polling. No more polling for new intercepts.");
           }
           break;
         } else if (errorCode == ZError.EINTR) {
           if (logger.isDebugEnabled()) {
-            logger.debug("Caught EINTR during blocking read. No more polling for new intercepts.");
+            logger.debug("Caught EINTR during polling. No more polling for new intercepts.");
           }
           break;
         } else {
           throw ex;
         }
       } catch (Exception e) {
-        logger.error("Error receiving message. No more polling for new intercepts.", e);
+        logger.error("Error in intercept processing loop. No more polling for new intercepts.", e);
         break;
       }
+    }
+  }
+
+  /**
+   * Processes a single intercept event from the socket.
+   *
+   * <p>This method is called when the poller indicates data is available on the register socket.
+   */
+  private void processSocketEvent() {
+    try {
+      registerNewAndGoneIntercepts();
+    } catch (Exception e) {
+      logger.error("Error processing socket event", e);
+      // Continue processing - don't break the loop for single event errors
+    }
+  }
+
+  /**
+   * Processes pending activations from the MPSC queue.
+   *
+   * <p>This method drains pending activations from the queue and registers them. It processes up to
+   * {@link #MAX_PENDING_PER_POLL} activations per call to avoid blocking the socket polling for too
+   * long.
+   */
+  private void processPendingActivations() {
+    int processed = 0;
+    PendingInterceptActivation pending;
+
+    while (processed < MAX_PENDING_PER_POLL && (pending = pendingActivationsQueue.poll()) != null) {
+      try {
+        registerInterceptRequest(pending.interceptMessage());
+        processed++;
+        if (logger.isInfoEnabled()) {
+          logger.info(
+              "Registered pending intercept for {}.{} (from async drain)",
+              pending.classPattern(),
+              pending.methodPattern());
+        }
+      } catch (DuplicateInterceptException e) {
+        if (logger.isWarnEnabled()) {
+          logger.warn(
+              "Cannot register pending duplicate intercept for {}.{}",
+              pending.classPattern(),
+              pending.methodPattern(),
+              e);
+        }
+      } catch (Exception e) {
+        logger.error(
+            "Error registering pending intercept for {}.{}",
+            pending.classPattern(),
+            pending.methodPattern(),
+            e);
+      } finally {
+        // Signal the drain thread that registration is complete (or failed).
+        // This must happen regardless of success/failure so the drain thread can stop fencing.
+        pending.signalRegistered();
+      }
+    }
+
+    if (processed > 0 && logger.isDebugEnabled()) {
+      logger.debug("Processed {} pending activations from queue", processed);
     }
   }
 
@@ -274,11 +405,11 @@ public class InterceptMatcher extends ConnectedService {
    *   <li>Call activationCoordinator.activateIntercept() which:
    *       <ul>
    *         <li>Checks if drain is required (based on WITH_IN_FLIGHT_TRACKING and forceImmediate)
-   *         <li>If drain required: fence → wait for quiescence → register → unfence
+   *         <li>If drain required: fence → wait for quiescence → enqueue → unfence
    *         <li>If drain not required: register immediately
    *       </ul>
-   *   <li>The coordinator calls back to registerInterceptRequest() after quiescence (or
-   *       immediately)
+   *   <li>For drain-based activations, the coordinator enqueues to the pending activations queue
+   *   <li>This method (run loop) polls the queue and registers pending intercepts
    *   <li>Send response code to the caller
    * </ol>
    */
@@ -344,11 +475,18 @@ public class InterceptMatcher extends ConnectedService {
   /**
    * Closes established connections associated with intercept registration.
    *
-   * <p>This method safely closes the ZeroMQ REP socket used for intercept communication and logs
-   * errors if they occur.
+   * <p>This method safely closes the ZeroMQ poller and REP socket used for intercept communication
+   * and logs errors if they occur.
    */
   @Override
   protected void closeConnections() {
+    if (poller != null) {
+      try {
+        poller.close();
+      } catch (Exception e) {
+        logger.error("Error closing poller", e);
+      }
+    }
     closeConnection(registerSocket, "Error closing register (REP) socket");
   }
 }

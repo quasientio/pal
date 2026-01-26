@@ -20,6 +20,8 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.jctools.queues.MessagePassingQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,15 +40,22 @@ import org.slf4j.LoggerFactory;
  *       <ul>
  *         <li>Fence new dispatches to block new matching dispatches
  *         <li>Wait for in-flight dispatches to complete within the configured timeout
- *         <li>Register the intercept with InterceptMatcher once quiescence is achieved
- *         <li>Unfence to allow new dispatches to proceed (now intercepted)
+ *         <li>On quiescence, enqueue the intercept to the pending activations queue
+ *         <li>Wait for InterceptMatcher to register the intercept from the queue
+ *         <li>Unfence to allow new dispatches to proceed (now with intercept active)
  *       </ul>
  * </ol>
  *
- * <p><b>Async activation:</b> When drain is required, the activation is performed asynchronously in
- * a dedicated single-threaded executor. This prevents blocking the InterceptMatcher thread that
- * processes intercept events from etcd. The caller receives an {@link ActivationResult} with status
- * {@link ActivationResult#ASYNC_PENDING} indicating the activation is in progress.
+ * <p><b>Parallel drain activation:</b> Multiple drain-based activations can run concurrently using
+ * an unbounded cached thread pool. After achieving quiescence, completed activations are enqueued
+ * to an MPSC (multiple-producer, single-consumer) queue which is polled by {@link InterceptMatcher}
+ * for final registration. This design allows:
+ *
+ * <ul>
+ *   <li>Multiple intercepts to drain in parallel
+ *   <li>Single-writer semantics preserved for intercept registration (InterceptMatcher thread)
+ *   <li>Non-blocking InterceptMatcher thread (can continue processing other events)
+ * </ul>
  *
  * <p><b>Configuration:</b>
  *
@@ -70,7 +79,8 @@ import org.slf4j.LoggerFactory;
  * </ul>
  *
  * <p><b>Thread safety:</b> This class is thread-safe and may be called concurrently from multiple
- * threads. Async activations are serialized via a single-threaded executor.
+ * threads. Drain operations run in parallel, but final registration is serialized via the MPSC
+ * queue consumed by InterceptMatcher.
  *
  * <p><b>Usage example:</b>
  *
@@ -107,8 +117,8 @@ public class InterceptActivationCoordinator {
    *
    * <p>This coordinator calls {@link
    * InterceptMatcher#registerInterceptRequest(io.quasient.pal.messages.colfer.InterceptMessage)}
-   * after quiescence is achieved (when drain is required) or immediately (when drain is not
-   * required).
+   * for immediate activations only. For drain-based activations, it uses the pending activations
+   * queue instead.
    *
    * <p>We use a Provider to avoid a circular dependency: InterceptMatcher depends on
    * InterceptActivationCoordinator, and the coordinator needs to call back to the matcher.
@@ -129,13 +139,30 @@ public class InterceptActivationCoordinator {
   private final long drainTimeoutMs;
 
   /**
-   * Single-threaded executor for async drain-based activations.
+   * Queue for pending intercept activations that have completed drain and are ready for
+   * registration.
    *
-   * <p>Using a single thread ensures that only one drain/activation runs at a time, which is
-   * important because {@link InterceptRequests} assumes single-writer semantics. This also prevents
-   * blocking the InterceptMatcher thread that processes intercept events.
+   * <p>This MPSC queue allows multiple async drain threads (producers) to enqueue completed
+   * activations, while InterceptMatcher (single consumer) polls and registers them, preserving
+   * single-writer semantics for the intercept registry.
+   */
+  private final MessagePassingQueue<PendingInterceptActivation> pendingActivationsQueue;
+
+  /**
+   * Cached thread pool executor for async drain-based activations.
+   *
+   * <p>Using a cached thread pool (unbounded) allows multiple drain operations to run in parallel.
+   * This eliminates the bottleneck of the previous single-threaded executor design where drain
+   * operations were serialized.
+   *
+   * <p>Thread safety for intercept registration is maintained by using the MPSC queue: after
+   * quiescence is achieved, the intercept is enqueued for registration by the InterceptMatcher
+   * thread.
    */
   private final ExecutorService asyncActivationExecutor;
+
+  /** Counter for tracking active drain operations (for monitoring/debugging). */
+  private final AtomicInteger activeDrainCount = new AtomicInteger(0);
 
   /**
    * Constructs a new InterceptActivationCoordinator with the specified dependencies.
@@ -146,25 +173,32 @@ public class InterceptActivationCoordinator {
    * @param runOptions the runtime options controlling peer behavior
    * @param drainTimeoutMs the timeout in milliseconds for waiting for in-flight dispatches to drain
    *     (injected from properties as "intercept.drain.timeout.ms")
+   * @param pendingActivationsQueue the MPSC queue for completed activations
    */
   @Inject
   public InterceptActivationCoordinator(
       InFlightDispatchTracker inFlightTracker,
       Provider<InterceptMatcher> interceptMatcherProvider,
       Set<RunOptions> runOptions,
-      @Named("intercept.drain.timeout.ms") long drainTimeoutMs) {
+      @Named("intercept.drain.timeout.ms") long drainTimeoutMs,
+      @Named("intercept.pending.activations.queue")
+          MessagePassingQueue<PendingInterceptActivation> pendingActivationsQueue) {
     this(
         inFlightTracker,
         interceptMatcherProvider,
         runOptions,
         drainTimeoutMs,
-        Executors.newSingleThreadExecutor(
+        pendingActivationsQueue,
+        Executors.newCachedThreadPool(
             r -> {
-              Thread t = new Thread(r, "intercept-activation-async");
+              Thread t = new Thread(r, "intercept-activation-async-" + activationThreadCounter++);
               t.setDaemon(true);
               return t;
             }));
   }
+
+  /** Thread counter for naming async activation threads. */
+  private static int activationThreadCounter = 0;
 
   /**
    * Package-private constructor for testing that allows injection of a custom executor.
@@ -173,6 +207,7 @@ public class InterceptActivationCoordinator {
    * @param interceptMatcherProvider the provider for InterceptMatcher
    * @param runOptions the runtime options controlling peer behavior
    * @param drainTimeoutMs the timeout in milliseconds for waiting for in-flight dispatches to drain
+   * @param pendingActivationsQueue the MPSC queue for completed activations
    * @param asyncActivationExecutor the executor for async activations (for testing)
    */
   InterceptActivationCoordinator(
@@ -180,11 +215,13 @@ public class InterceptActivationCoordinator {
       Provider<InterceptMatcher> interceptMatcherProvider,
       Set<RunOptions> runOptions,
       long drainTimeoutMs,
+      MessagePassingQueue<PendingInterceptActivation> pendingActivationsQueue,
       ExecutorService asyncActivationExecutor) {
     this.inFlightTracker = inFlightTracker;
     this.interceptMatcherProvider = interceptMatcherProvider;
     this.runOptions = runOptions;
     this.drainTimeoutMs = drainTimeoutMs;
+    this.pendingActivationsQueue = pendingActivationsQueue;
     this.asyncActivationExecutor = asyncActivationExecutor;
 
     if (logger.isDebugEnabled()) {
@@ -214,6 +251,32 @@ public class InterceptActivationCoordinator {
       Thread.currentThread().interrupt();
       asyncActivationExecutor.shutdownNow();
     }
+  }
+
+  /**
+   * Returns the current number of active drain operations.
+   *
+   * <p>This is primarily useful for monitoring and debugging purposes.
+   *
+   * @return the number of drain operations currently in progress
+   */
+  public int getActiveDrainCount() {
+    return activeDrainCount.get();
+  }
+
+  /**
+   * Returns the pending activations queue.
+   *
+   * <p>This queue contains intercept activations that have completed drain and are ready for
+   * registration by InterceptMatcher.
+   *
+   * @return the pending activations queue
+   */
+  @SuppressFBWarnings(
+      value = "EI_EXPOSE_REP",
+      justification = "Queue intentionally shared between coordinator and matcher for MPSC pattern")
+  public MessagePassingQueue<PendingInterceptActivation> getPendingActivationsQueue() {
+    return pendingActivationsQueue;
   }
 
   /**
@@ -264,9 +327,9 @@ public class InterceptActivationCoordinator {
       // This preserves the semantic that once register() returns, new calls will be blocked.
       inFlightTracker.startFencing(classPattern, methodPattern);
 
-      // Submit the rest (wait for quiescence, register, stop fencing) to async executor.
-      // This avoids blocking the InterceptMatcher thread during the potentially long drain wait.
-      submitAsyncDrainAndRegister(classPattern, methodPattern, interceptMessage);
+      // Submit the rest (wait for quiescence, enqueue, stop fencing) to async executor.
+      // Multiple drain tasks can now run in parallel.
+      submitAsyncDrainAndEnqueue(classPattern, methodPattern, interceptMessage);
       return ActivationResult.asyncPending(
           "Intercept activation pending (drain in progress for "
               + classPattern
@@ -279,10 +342,10 @@ public class InterceptActivationCoordinator {
   }
 
   /**
-   * Submits the drain and register task to the async executor.
+   * Submits the drain and enqueue task to the async executor.
    *
    * <p>This is called AFTER fencing has been started synchronously. The async task waits for
-   * quiescence, registers the intercept, and stops fencing.
+   * quiescence, enqueues the intercept for registration, and stops fencing.
    *
    * <p>This helper method exists to allow proper suppression of the SpotBugs DLS_DEAD_LOCAL_STORE
    * warning that would occur if we used a local variable to suppress the error-prone
@@ -296,10 +359,17 @@ public class InterceptActivationCoordinator {
   @SuppressFBWarnings(
       value = "RV_RETURN_VALUE_IGNORED_BAD_PRACTICE",
       justification = "Future intentionally ignored - activation completes asynchronously")
-  private void submitAsyncDrainAndRegister(
+  private void submitAsyncDrainAndEnqueue(
       String classPattern, String methodPattern, InterceptMessage interceptMessage) {
+    activeDrainCount.incrementAndGet();
     asyncActivationExecutor.submit(
-        () -> waitForQuiescenceAndRegisterAsync(classPattern, methodPattern, interceptMessage));
+        () -> {
+          try {
+            waitForQuiescenceAndEnqueueAsync(classPattern, methodPattern, interceptMessage);
+          } finally {
+            activeDrainCount.decrementAndGet();
+          }
+        });
   }
 
   /**
@@ -341,14 +411,16 @@ public class InterceptActivationCoordinator {
   }
 
   /**
-   * Waits for quiescence and registers the intercept asynchronously.
+   * Waits for quiescence and enqueues the intercept for registration asynchronously.
    *
-   * <p>This method runs asynchronously in the {@link #asyncActivationExecutor} thread. It is called
-   * AFTER fencing has been started synchronously by the caller. It:
+   * <p>This method runs asynchronously in the cached thread pool. It is called AFTER fencing has
+   * been started synchronously by the caller. It:
    *
    * <ol>
    *   <li>Waits for in-flight dispatches to complete (quiescence) with configured timeout
-   *   <li>If quiescence is achieved, registers the intercept with InterceptMatcher
+   *   <li>If quiescence is achieved, enqueues the intercept to the pending activations queue
+   *   <li>Waits for InterceptMatcher to register the intercept (ensures registration before
+   *       unfencing)
    *   <li>Always stops fencing in a finally block to ensure cleanup
    * </ol>
    *
@@ -357,21 +429,22 @@ public class InterceptActivationCoordinator {
    * registration response is sent.
    *
    * <p><b>Note:</b> This method does not return a result to the original caller since it runs
-   * asynchronously. Success or failure is logged, and the intercept is registered (or not) based on
-   * the outcome.
+   * asynchronously. Success or failure is logged, and the intercept is enqueued (or not) based on
+   * the outcome. The InterceptMatcher will pick up the enqueued intercept and register it.
    *
    * @param classPattern the class pattern from the message
    * @param methodPattern the method pattern from the message
    * @param interceptMessage the intercept message to register
    */
-  private void waitForQuiescenceAndRegisterAsync(
+  private void waitForQuiescenceAndEnqueueAsync(
       String classPattern, String methodPattern, InterceptMessage interceptMessage) {
     if (logger.isDebugEnabled()) {
       logger.debug(
-          "Async: Waiting for quiescence for {}.{}, timeout={}ms",
+          "Async: Waiting for quiescence for {}.{}, timeout={}ms, activeDrains={}",
           classPattern,
           methodPattern,
-          drainTimeoutMs);
+          drainTimeoutMs,
+          activeDrainCount.get());
     }
 
     try {
@@ -391,27 +464,41 @@ public class InterceptActivationCoordinator {
         return;
       }
 
-      // Step 2: Register intercept with matcher after quiescence is achieved
+      // Step 2: Enqueue intercept for registration by InterceptMatcher
       if (logger.isDebugEnabled()) {
         logger.debug(
-            "Async: Quiescence achieved for {}.{}, registering intercept",
+            "Async: Quiescence achieved for {}.{}, enqueuing for registration",
             classPattern,
             methodPattern);
       }
 
-      try {
-        interceptMatcherProvider.get().registerInterceptRequest(interceptMessage);
-        if (logger.isInfoEnabled()) {
-          logger.info(
-              "Async: Intercept activated after drain for {}.{}", classPattern, methodPattern);
-        }
-      } catch (DuplicateInterceptException e) {
+      PendingInterceptActivation pending =
+          new PendingInterceptActivation(interceptMessage, classPattern, methodPattern);
+
+      if (!pendingActivationsQueue.offer(pending)) {
+        // This should never happen with an unbounded queue, but log if it does
+        logger.error(
+            "Async: Failed to enqueue pending activation for {}.{} - queue rejected offer",
+            classPattern,
+            methodPattern);
+        return;
+      }
+
+      if (logger.isInfoEnabled()) {
+        logger.info(
+            "Async: Intercept enqueued for registration after drain for {}.{}",
+            classPattern,
+            methodPattern);
+      }
+
+      // Step 3: Wait for InterceptMatcher to register the intercept before stopping fencing.
+      // This ensures that threads unblocked by unfencing will see the newly registered intercept.
+      if (!pending.awaitRegistration(drainTimeoutMs)) {
         if (logger.isWarnEnabled()) {
           logger.warn(
-              "Async: Cannot register duplicate intercept for {}.{}",
+              "Async: Timeout waiting for InterceptMatcher to register intercept for {}.{}",
               classPattern,
-              methodPattern,
-              e);
+              methodPattern);
         }
       }
 
@@ -426,7 +513,8 @@ public class InterceptActivationCoordinator {
         logger.error("Async: Error activating intercept for {}.{}", classPattern, methodPattern, e);
       }
     } finally {
-      // Step 3: Always stop fencing to unblock waiting threads
+      // Step 4: Always stop fencing to unblock waiting threads.
+      // At this point, the intercept has been registered (or registration timed out/failed).
       inFlightTracker.stopFencing(classPattern, methodPattern);
       if (logger.isDebugEnabled()) {
         logger.debug("Async: Fencing stopped for {}.{}", classPattern, methodPattern);
@@ -527,7 +615,8 @@ public class InterceptActivationCoordinator {
      * Returns whether the activation is pending asynchronously.
      *
      * <p>When this returns {@code true}, the activation has been submitted to a background thread
-     * for drain-based activation. The intercept will be registered once quiescence is achieved.
+     * for drain-based activation. The intercept will be enqueued for registration once quiescence
+     * is achieved.
      *
      * @return {@code true} if the activation is pending asynchronously, {@code false} otherwise
      */

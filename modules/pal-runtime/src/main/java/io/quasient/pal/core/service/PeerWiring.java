@@ -31,6 +31,7 @@ import io.quasient.pal.core.intercept.ExceptionPolicyConfig;
 import io.quasient.pal.core.intercept.ExceptionPolicyResolver;
 import io.quasient.pal.core.intercept.InFlightDispatchTracker;
 import io.quasient.pal.core.intercept.InterceptActivationCoordinator;
+import io.quasient.pal.core.intercept.PendingInterceptActivation;
 import io.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import io.quasient.pal.core.internal.concurrent.MpscKind;
 import io.quasient.pal.core.runtime.objects.ConcurrentHashMapObjectLookupStore;
@@ -65,6 +66,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
 import org.apache.kafka.clients.producer.KafkaProducer;
+import org.jctools.queues.MessagePassingQueue;
+import org.jctools.queues.MpscUnboundedArrayQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.ZContext;
@@ -231,6 +234,28 @@ public class PeerWiring extends AbstractModule {
   @Named("intercept.drain.timeout.ms")
   public long provideInterceptDrainTimeout() {
     return Long.parseLong(properties.getProperty("intercept.drain.timeout.ms", "5000"));
+  }
+
+  /**
+   * Provides the MPSC queue for pending intercept activations.
+   *
+   * <p>This queue is shared between the {@link InterceptActivationCoordinator} and the {@link
+   * io.quasient.pal.core.intercept.InterceptMatcher}. After drain operations complete quiescence,
+   * they enqueue pending activations here. The InterceptMatcher polls this queue and registers the
+   * intercepts, maintaining single-writer semantics for the intercept registry.
+   *
+   * <p>The queue is unbounded (using {@link MpscUnboundedArrayQueue}) to ensure drain threads never
+   * block when enqueuing. The chunk size is 64 for balanced memory usage and throughput.
+   *
+   * @return the MPSC queue for pending intercept activations
+   */
+  @SuppressWarnings("unused")
+  @Provides
+  @Singleton
+  @Named("intercept.pending.activations.queue")
+  public MessagePassingQueue<PendingInterceptActivation> providePendingActivationsQueue() {
+    // Initial chunk size of 64 for balanced memory usage and throughput
+    return new MpscUnboundedArrayQueue<>(64);
   }
 
   /**

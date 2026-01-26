@@ -33,6 +33,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import org.jctools.queues.MessagePassingQueue;
+import org.jctools.queues.MpscUnboundedArrayQueue;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -51,11 +53,13 @@ public class InterceptMatcherTest extends ZmqEnabledTest {
   private final ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
   private final MessageBuilder msgBuilder = new MessageBuilder();
   private Socket registerSocket;
+  private MessagePassingQueue<PendingInterceptActivation> pendingQueue;
 
   @Before
   public void setup() throws InterruptedException {
     this.peerUuid = UUID.randomUUID();
     this.context = createContext();
+    this.pendingQueue = new MpscUnboundedArrayQueue<>(64);
 
     // Create the InterceptMatcher first so we can reference it in the mock
     // We'll set the coordinator after creating the matcher
@@ -67,7 +71,8 @@ public class InterceptMatcherTest extends ZmqEnabledTest {
             servicesThreadGroup,
             "InterceptMatcherTest-Service",
             INTERCEPT_REG_ADDRESS,
-            createTestCoordinator());
+            createTestCoordinator(),
+            pendingQueue);
 
     final Set<Service> services = new HashSet<>(List.of(this.interceptMatcher));
     this.manager = new ServiceManager(services);

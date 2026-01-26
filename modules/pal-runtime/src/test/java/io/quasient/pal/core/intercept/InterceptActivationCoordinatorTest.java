@@ -9,6 +9,8 @@
  */
 package io.quasient.pal.core.intercept;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -28,6 +30,8 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
+import org.jctools.queues.MessagePassingQueue;
+import org.jctools.queues.MpscUnboundedArrayQueue;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -40,13 +44,14 @@ import org.junit.runners.Parameterized;
  * and fencing mechanism, ensuring:
  *
  * <ul>
- *   <li>Safe activation sequence: fence → wait for quiescence → activate → unfence
+ *   <li>Safe activation sequence: fence → wait for quiescence → enqueue → unfence
  *   <li>Timeout handling during drain operations
  *   <li>Immediate activation bypassing drain when forceImmediate=true
  *   <li>Respect for global WITH_IN_FLIGHT_TRACKING configuration
  *   <li>Per-intercept override with forceImmediate flag
  *   <li>Proper cleanup (unfencing) on activation failure
- *   <li>Async behavior for drain-based activations
+ *   <li>Async behavior for drain-based activations with MPSC queue
+ *   <li>Parallel drain processing support
  * </ul>
  *
  * <p><b>Parameterization:</b> Tests are parameterized by {@link InterceptType} to ensure equal
@@ -62,7 +67,14 @@ public class InterceptActivationCoordinatorTest {
 
   private InterceptActivationCoordinator coordinator;
   private InFlightDispatchTracker tracker;
-  private static final long DRAIN_TIMEOUT_MS = 5000L;
+  private MessagePassingQueue<PendingInterceptActivation> pendingQueue;
+
+  /**
+   * Timeout for drain operations in tests. Kept short because the direct executor runs the async
+   * task synchronously, and the {@link PendingInterceptActivation#awaitRegistration(long)} call
+   * blocks for this duration when no consumer signals registration (as in unit tests).
+   */
+  private static final long DRAIN_TIMEOUT_MS = 50L;
 
   /**
    * A direct executor that runs tasks immediately in the calling thread. This allows testing of
@@ -98,6 +110,7 @@ public class InterceptActivationCoordinatorTest {
   @Before
   public void setup() {
     tracker = mock(InFlightDispatchTracker.class);
+    pendingQueue = new MpscUnboundedArrayQueue<>(64);
   }
 
   /**
@@ -108,6 +121,7 @@ public class InterceptActivationCoordinatorTest {
    * <ol>
    *   <li>Start fencing for the intercept pattern
    *   <li>Wait for in-flight dispatches to complete (quiescence)
+   *   <li>Enqueue the intercept for registration
    *   <li>Stop fencing to allow new dispatches
    * </ol>
    *
@@ -115,16 +129,15 @@ public class InterceptActivationCoordinatorTest {
    * allowing verification of the sequence.
    *
    * <p><b>Acceptance criterion:</b>
-   * [TEST:InterceptActivationCoordinatorTest.activateWithDrain_fencesThenWaitsThenActivates]
+   * [TEST:InterceptActivationCoordinatorTest.activateWithDrain_fencesThenWaitsThenEnqueues]
    */
   @Test
-  public void activateWithDrain_fencesThenWaitsThenActivates() throws Exception {
+  public void activateWithDrain_fencesThenWaitsThenEnqueues() throws Exception {
     // Given: A coordinator with in-flight tracking enabled
-    // Using null provider since we're only testing the tracker interactions
     Set<RunOptions> runOptions = EnumSet.of(RunOptions.WITH_IN_FLIGHT_TRACKING);
     coordinator =
         new InterceptActivationCoordinator(
-            tracker, () -> null, runOptions, DRAIN_TIMEOUT_MS, directExecutor);
+            tracker, () -> null, runOptions, DRAIN_TIMEOUT_MS, pendingQueue, directExecutor);
 
     // And: An intercept message for "com.example.Calculator.add" with forceImmediate=false
     InterceptMessage message = createInterceptMessage("com.example.Calculator", "add", false);
@@ -145,31 +158,38 @@ public class InterceptActivationCoordinatorTest {
     // 2. Call tracker.waitForQuiescence() in the async task (via direct executor in this test)
     verify(tracker, times(1)).waitForQuiescence("com.example.Calculator", "add", DRAIN_TIMEOUT_MS);
 
-    // 3. Call tracker.stopFencing() in the async task's finally block
+    // 3. Enqueue the intercept for registration
+    PendingInterceptActivation pending = pendingQueue.poll();
+    assertNotNull("Intercept should be enqueued for registration", pending);
+    assertEquals("com.example.Calculator", pending.classPattern());
+    assertEquals("add", pending.methodPattern());
+    assertNotNull(pending.interceptMessage());
+
+    // 4. Call tracker.stopFencing() in the async task's finally block
     verify(tracker, times(1)).stopFencing("com.example.Calculator", "add");
   }
 
   /**
-   * Tests that the coordinator does not proceed to registration when the drain timeout is exceeded.
+   * Tests that the coordinator does not enqueue when the drain timeout is exceeded.
    *
    * <p>Verifies that if in-flight dispatches do not complete within the configured timeout, the
    * coordinator:
    *
    * <ul>
-   *   <li>Does NOT proceed to registration
+   *   <li>Does NOT enqueue for registration
    *   <li>Stops fencing to unblock waiting threads
    * </ul>
    *
    * <p><b>Acceptance criterion:</b>
-   * [TEST:InterceptActivationCoordinatorTest.activateWithDrain_timeoutDoesNotRegister]
+   * [TEST:InterceptActivationCoordinatorTest.activateWithDrain_timeoutDoesNotEnqueue]
    */
   @Test
-  public void activateWithDrain_timeoutDoesNotRegister() throws Exception {
+  public void activateWithDrain_timeoutDoesNotEnqueue() throws Exception {
     // Given: A coordinator with in-flight tracking enabled
     Set<RunOptions> runOptions = EnumSet.of(RunOptions.WITH_IN_FLIGHT_TRACKING);
     coordinator =
         new InterceptActivationCoordinator(
-            tracker, () -> null, runOptions, DRAIN_TIMEOUT_MS, directExecutor);
+            tracker, () -> null, runOptions, DRAIN_TIMEOUT_MS, pendingQueue, directExecutor);
 
     // And: An intercept message for "com.example.Calculator.add"
     InterceptMessage message = createInterceptMessage("com.example.Calculator", "add", false);
@@ -190,7 +210,10 @@ public class InterceptActivationCoordinatorTest {
     // 2. Call tracker.waitForQuiescence (which returns false - timeout)
     verify(tracker, times(1)).waitForQuiescence("com.example.Calculator", "add", DRAIN_TIMEOUT_MS);
 
-    // 3. Call tracker.stopFencing to clean up
+    // 3. NOT enqueue the intercept
+    assertTrue("Queue should be empty on timeout", pendingQueue.isEmpty());
+
+    // 4. Call tracker.stopFencing to clean up
     verify(tracker, times(1)).stopFencing("com.example.Calculator", "add");
   }
 
@@ -216,7 +239,7 @@ public class InterceptActivationCoordinatorTest {
     Set<RunOptions> runOptions = EnumSet.of(RunOptions.WITH_IN_FLIGHT_TRACKING);
     coordinator =
         new InterceptActivationCoordinator(
-            tracker, () -> null, runOptions, DRAIN_TIMEOUT_MS, directExecutor);
+            tracker, () -> null, runOptions, DRAIN_TIMEOUT_MS, pendingQueue, directExecutor);
 
     // And: An intercept message with forceImmediate=true
     InterceptMessage message = createInterceptMessage("com.example.Calculator", "add", true);
@@ -239,6 +262,9 @@ public class InterceptActivationCoordinatorTest {
 
     // 3. NOT call tracker.stopFencing()
     verify(tracker, never()).stopFencing(anyString(), anyString());
+
+    // 4. Queue should remain empty (immediate path doesn't use queue)
+    assertTrue("Queue should be empty for immediate activation", pendingQueue.isEmpty());
   }
 
   /**
@@ -256,7 +282,7 @@ public class InterceptActivationCoordinatorTest {
     Set<RunOptions> runOptions = EnumSet.noneOf(RunOptions.class);
     coordinator =
         new InterceptActivationCoordinator(
-            tracker, () -> null, runOptions, DRAIN_TIMEOUT_MS, directExecutor);
+            tracker, () -> null, runOptions, DRAIN_TIMEOUT_MS, pendingQueue, directExecutor);
 
     // And: An intercept message with forceImmediate=false
     InterceptMessage message = createInterceptMessage("com.example.Calculator", "add", false);
@@ -298,7 +324,7 @@ public class InterceptActivationCoordinatorTest {
     Set<RunOptions> runOptions = EnumSet.of(RunOptions.WITH_IN_FLIGHT_TRACKING);
     coordinator =
         new InterceptActivationCoordinator(
-            tracker, () -> null, runOptions, DRAIN_TIMEOUT_MS, directExecutor);
+            tracker, () -> null, runOptions, DRAIN_TIMEOUT_MS, pendingQueue, directExecutor);
 
     // And: An intercept message with forceImmediate=true (per-intercept override)
     InterceptMessage message = createInterceptMessage("com.example.Calculator", "add", true);
@@ -338,7 +364,7 @@ public class InterceptActivationCoordinatorTest {
     Set<RunOptions> runOptions = EnumSet.of(RunOptions.WITH_IN_FLIGHT_TRACKING);
     coordinator =
         new InterceptActivationCoordinator(
-            tracker, () -> null, runOptions, DRAIN_TIMEOUT_MS, directExecutor);
+            tracker, () -> null, runOptions, DRAIN_TIMEOUT_MS, pendingQueue, directExecutor);
 
     // And: An intercept message for "com.example.Calculator.add"
     InterceptMessage message = createInterceptMessage("com.example.Calculator", "add", false);
@@ -359,6 +385,39 @@ public class InterceptActivationCoordinatorTest {
 
     // 2. In finally block, call tracker.stopFencing("com.example.Calculator", "add")
     verify(tracker, times(1)).stopFencing("com.example.Calculator", "add");
+
+    // 3. Queue should be empty (enqueue didn't happen due to exception)
+    assertTrue("Queue should be empty on failure", pendingQueue.isEmpty());
+  }
+
+  /**
+   * Tests that multiple drain operations can be tracked with the active drain counter.
+   *
+   * <p>This test verifies the monitoring capability of the coordinator.
+   *
+   * <p><b>Acceptance criterion:</b>
+   * [TEST:InterceptActivationCoordinatorTest.activeDrainCount_tracksParallelOperations]
+   */
+  @Test
+  public void activeDrainCount_tracksParallelOperations() throws Exception {
+    // Given: A coordinator with in-flight tracking enabled
+    Set<RunOptions> runOptions = EnumSet.of(RunOptions.WITH_IN_FLIGHT_TRACKING);
+    coordinator =
+        new InterceptActivationCoordinator(
+            tracker, () -> null, runOptions, DRAIN_TIMEOUT_MS, pendingQueue, directExecutor);
+
+    // And: Initially no active drains
+    assertEquals(0, coordinator.getActiveDrainCount());
+
+    // And: waitForQuiescence returns true
+    when(tracker.waitForQuiescence(anyString(), anyString(), anyLong())).thenReturn(true);
+
+    // When: We activate an intercept (using direct executor, it runs synchronously)
+    InterceptMessage message = createInterceptMessage("com.example.Calculator", "add", false);
+    coordinator.activateIntercept(message);
+
+    // Then: After the direct executor completes, drain count should be back to 0
+    assertEquals(0, coordinator.getActiveDrainCount());
   }
 
   /**
