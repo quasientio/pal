@@ -13,13 +13,12 @@ import io.quasient.pal.common.directory.nodes.LogInfo;
 import io.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import io.quasient.pal.cxn.directory.PalDirectory;
 import io.quasient.pal.intercept.inflight.InFlightInterceptActivationIT;
+import io.quasient.pal.intercept.inflight.ParallelDrainActivationIT;
 import java.util.UUID;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Test suite for in-flight dispatch tracking and intercept activation coordination.
@@ -73,10 +72,10 @@ import org.slf4j.LoggerFactory;
  * @see io.quasient.pal.apps.quantized.intercept.SlowMethodApp
  */
 @RunWith(Suite.class)
-@Suite.SuiteClasses({InFlightInterceptActivationIT.class})
+@Suite.SuiteClasses({InFlightInterceptActivationIT.class, ParallelDrainActivationIT.class})
 public class InFlightTrackingTestSuite extends AbstractIntegrationTest {
 
-  private static final Logger logger = LoggerFactory.getLogger(InFlightTrackingTestSuite.class);
+  // private static final Logger logger = LoggerFactory.getLogger(InFlightTrackingTestSuite.class);
 
   /**
    * Well-known UUID for the shared interceptable peer (the peer being intercepted).

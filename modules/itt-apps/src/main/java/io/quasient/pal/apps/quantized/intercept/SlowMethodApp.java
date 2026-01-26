@@ -68,6 +68,23 @@ public class SlowMethodApp {
   }
 
   /**
+   * Another slow method for testing parallel drain activation.
+   *
+   * <p>This method is identical to {@link #slowMethod(int)} but has a different name. It's used in
+   * integration tests to verify that drain operations for different methods can execute in
+   * parallel.
+   *
+   * @param delayMs duration to sleep in milliseconds
+   * @return the system timestamp (milliseconds since epoch) when the method returns
+   * @throws InterruptedException if the thread is interrupted while sleeping
+   * @see #slowMethod(int)
+   */
+  public long anotherSlowMethod(int delayMs) throws InterruptedException {
+    Thread.sleep(delayMs);
+    return System.currentTimeMillis();
+  }
+
+  /**
    * Blocks until the provided latch is counted down to zero.
    *
    * <p>This method simulates a blocking operation with indeterminate duration (controlled
