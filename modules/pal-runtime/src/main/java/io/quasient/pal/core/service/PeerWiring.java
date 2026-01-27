@@ -233,7 +233,7 @@ public class PeerWiring extends AbstractModule {
   @Provides
   @Named("intercept.drain.timeout.ms")
   public long provideInterceptDrainTimeout() {
-    return Long.parseLong(properties.getProperty("intercept.drain.timeout.ms", "5000"));
+    return Long.parseLong(properties.getProperty("intercept.drain.timeout.ms"));
   }
 
   /**
