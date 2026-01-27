@@ -52,7 +52,7 @@ import org.junit.runners.Parameterized;
  *
  * <ul>
  *   <li>Extends AbstractInterceptIT for PAL infrastructure (etcd, Kafka)
- *   <li>Uses the shared interceptable peer from InterceptEndToEndTestSuite
+ *   <li>Uses the shared interceptable peer from InFlightTrackingTestSuite
  *   <li>Requires concurrent thread execution for realistic in-flight scenarios
  *   <li>Tests register intercepts via etcd while methods are executing
  *   <li>Verifies activation timing through callback execution and return values
@@ -69,9 +69,6 @@ import org.junit.runners.Parameterized;
  *   <li>Verify that new calls after drain block until activation completes
  *   <li>Verify that post-activation calls are intercepted correctly
  * </ol>
- *
- * <p><b>Note:</b> These tests require issue #245 implementation to be completed. Until then, all
- * tests are marked with @Ignore.
  *
  * <p><b>Parameterization:</b> Tests are parameterized by {@link InterceptType} to ensure equal
  * coverage across BEFORE, AFTER, and AROUND intercept types. Each test runs three times, once for
