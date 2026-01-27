@@ -718,6 +718,8 @@ pal print -d localhost:2379 -l bench-wal --output-format COMPACT | grep -E "meth
 - `KAFKA_SERVERS` - Kafka bootstrap servers
 - `CHRONICLE_BASE_DIR` - Base directory for Chronicle queues (default: current directory)
 - `PAL_CLI_LOGGING_CONFIG` - Custom CLI logging configuration file
+- `IN_FLIGHT_TRACKING` - Enable in-flight dispatch tracking for safe intercept activation (default: `true`)
+- `DRAIN_TIMEOUT_MS` - Timeout in milliseconds for drain operations during intercept activation (default: `5000`)
 
 ---
 

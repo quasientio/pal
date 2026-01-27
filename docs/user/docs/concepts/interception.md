@@ -426,6 +426,62 @@ pal run -d localhost:2379 --interceptable \
 
 The `--interceptable` flag enables the intercept matcher service.
 
+## Intercept Activation Safety
+
+By default, PAL waits for in-flight method calls to finish before activating a new intercept. This ensures no method execution sees a partially-activated intercept -- for example, a BEFORE callback fires but the method was already past that point.
+
+### How It Works
+
+When a new intercept is registered, PAL:
+
+1. **Fences** the matching methods so no new calls can start
+2. **Waits** for all currently executing matching calls to complete (drain)
+3. **Activates** the intercept once all in-flight calls finish
+4. **Unfences** so new calls proceed with the intercept active
+
+This guarantees that every call either completes entirely without the intercept or executes entirely with it -- never a mix.
+
+### Enabling and Configuring
+
+In-flight tracking is enabled by default. To disable it (immediate activation for all intercepts):
+
+```bash
+pal run --in-flight-tracking=false -d localhost:2379 -cp app.jar
+```
+
+The **drain timeout** controls how long PAL waits for in-flight calls to complete. If the timeout expires, the intercept is **not** activated:
+
+```bash
+# Default: 5000ms. Increase for slow methods:
+pal run --drain-timeout-ms 10000 -d localhost:2379 -cp app.jar
+```
+
+Both settings are also available as environment variables: `IN_FLIGHT_TRACKING` and `DRAIN_TIMEOUT_MS`.
+
+### Per-Intercept Override: forceImmediate
+
+Individual intercepts can bypass the drain by setting `forceImmediate` to `true`:
+
+```java
+InterceptRequest intercept = InterceptRequest.builder()
+    .classPattern("com.example.HangingService")
+    .methodPattern("blockingCall")
+    .interceptType(InterceptType.BEFORE)
+    .callbackPeer(callbackPeerUuid)
+    .forceImmediate(true)
+    .build();
+```
+
+**When to use**: Emergency hot-patches where the target method is hanging or stuck, monitoring intercepts where strict activation safety isn't needed, or any case where you need the intercept active immediately regardless of in-flight calls.
+
+### When to Disable Globally
+
+Disable in-flight tracking (`--in-flight-tracking=false`) when:
+
+- Running in a controlled test environment where race conditions aren't a concern
+- Performance is critical and you accept the small risk of partial activation
+- All your intercepts are `BEFORE_ASYNC` or `AFTER_ASYNC` (fire-and-forget)
+
 ## Managing Intercepts
 
 ### List Active Intercepts

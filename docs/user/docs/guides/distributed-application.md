@@ -119,6 +119,7 @@ pal run -d localhost:2379 -k localhost:29092 \
   --rpc auto \
   --json-rpc auto \
   --interceptable \
+  --in-flight-tracking \
   -n calculator \
   -cp target/calculator-1.0-SNAPSHOT.jar \
   com.example.calculator.CalculatorService
@@ -132,6 +133,7 @@ pal run -d localhost:2379 -k localhost:29092 \
 - `--rpc auto`: Enables binary RPC on random port
 - `--json-rpc auto`: Enables JSON-RPC on random port
 - `--interceptable`: Allows dynamic interception
+- `--in-flight-tracking`: Waits for in-flight calls to complete before activating new intercepts (enabled by default, shown here for clarity)
 - `-n calculator`: Service name for discovery
 
 ### Verify Service Started
