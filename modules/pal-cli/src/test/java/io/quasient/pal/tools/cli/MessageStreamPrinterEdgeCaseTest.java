@@ -51,7 +51,7 @@ public class MessageStreamPrinterEdgeCaseTest {
     // Set multiple filters that all match
     var fTypes = MessageStreamPrinter.class.getDeclaredField("msgTypes");
     fTypes.setAccessible(true);
-    fTypes.set(p, List.of("EXEC_CONSTRUCTOR"));
+    fTypes.set(p, List.of("CONSTRUCTOR")); // Note: shouldPrint strips "EXEC_" prefix
 
     var fPeer = MessageStreamPrinter.class.getDeclaredField("fromPeer");
     fPeer.setAccessible(true);
@@ -88,7 +88,7 @@ public class MessageStreamPrinterEdgeCaseTest {
     // Set multiple filters where one doesn't match
     var fTypes = MessageStreamPrinter.class.getDeclaredField("msgTypes");
     fTypes.setAccessible(true);
-    fTypes.set(p, List.of("EXEC_CONSTRUCTOR"));
+    fTypes.set(p, List.of("CONSTRUCTOR")); // Note: shouldPrint strips "EXEC_" prefix
 
     var fPeer = MessageStreamPrinter.class.getDeclaredField("fromPeer");
     fPeer.setAccessible(true);
@@ -118,10 +118,8 @@ public class MessageStreamPrinterEdgeCaseTest {
 
     MessageStreamPrinter p = new MessageStreamPrinter();
 
-    // Don't set any filters (or set to empty)
-    var fTypes = MessageStreamPrinter.class.getDeclaredField("msgTypes");
-    fTypes.setAccessible(true);
-    fTypes.set(p, List.of()); // Empty list
+    // Don't set any filters (leave as null to match all)
+    // Note: empty list List.of() means "match nothing", null means "no filter = match all"
 
     Method should =
         MessageStreamPrinter.class.getDeclaredMethod(
@@ -129,7 +127,7 @@ public class MessageStreamPrinterEdgeCaseTest {
     should.setAccessible(true);
 
     boolean ok = (boolean) should.invoke(p, 5L, peer.toString(), lm);
-    assertThat("Empty filters - should match all", ok, is(true));
+    assertThat("Null filters - should match all", ok, is(true));
   }
 
   /**
@@ -150,7 +148,12 @@ public class MessageStreamPrinterEdgeCaseTest {
     // Set multiple message types in filter
     var fTypes = MessageStreamPrinter.class.getDeclaredField("msgTypes");
     fTypes.setAccessible(true);
-    fTypes.set(p, List.of("EXEC_CONSTRUCTOR", "EXEC_INSTANCE_METHOD", "EXEC_CLASS_METHOD"));
+    fTypes.set(
+        p,
+        List.of(
+            "CONSTRUCTOR",
+            "INSTANCE_METHOD",
+            "CLASS_METHOD")); // Note: shouldPrint strips "EXEC_" prefix
 
     Method should =
         MessageStreamPrinter.class.getDeclaredMethod(
@@ -179,7 +182,11 @@ public class MessageStreamPrinterEdgeCaseTest {
     // Set filter for types that don't match
     var fTypes = MessageStreamPrinter.class.getDeclaredField("msgTypes");
     fTypes.setAccessible(true);
-    fTypes.set(p, List.of("EXEC_INSTANCE_METHOD", "EXEC_CLASS_METHOD")); // Not CONSTRUCTOR
+    fTypes.set(
+        p,
+        List.of(
+            "INSTANCE_METHOD",
+            "CLASS_METHOD")); // Not CONSTRUCTOR (note: shouldPrint strips "EXEC_" prefix)
 
     Method should =
         MessageStreamPrinter.class.getDeclaredMethod(
@@ -267,7 +274,7 @@ public class MessageStreamPrinterEdgeCaseTest {
     // Filter for different message ID
     var fId = MessageStreamPrinter.class.getDeclaredField("id");
     fId.setAccessible(true);
-    fId.set(p, 99999L); // Different ID
+    fId.set(p, "99999"); // Different ID (id field is String)
 
     Method should =
         MessageStreamPrinter.class.getDeclaredMethod(
