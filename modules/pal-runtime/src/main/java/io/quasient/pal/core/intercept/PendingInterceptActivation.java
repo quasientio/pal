@@ -58,6 +58,14 @@ public class PendingInterceptActivation {
   /** The method pattern extracted from the message (for logging/debugging). */
   private final String methodPattern;
 
+  /**
+   * The parameter types extracted from the message, used for stopping fencing after registration.
+   *
+   * <p>{@code null} for field intercepts, {@code new String[0]} for no-arg methods/constructors, or
+   * a populated array for methods/constructors with parameters.
+   */
+  private final String[] parameterTypes;
+
   /** Latch used to synchronize the drain thread with the registration in InterceptMatcher. */
   private final CountDownLatch registrationLatch;
 
@@ -67,12 +75,17 @@ public class PendingInterceptActivation {
    * @param interceptMessage the intercept message to register
    * @param classPattern the class pattern for logging
    * @param methodPattern the method pattern for logging
+   * @param parameterTypes the parameter types for fencing (null for field intercepts)
    */
   public PendingInterceptActivation(
-      InterceptMessage interceptMessage, String classPattern, String methodPattern) {
+      InterceptMessage interceptMessage,
+      String classPattern,
+      String methodPattern,
+      String[] parameterTypes) {
     this.interceptMessage = interceptMessage;
     this.classPattern = classPattern;
     this.methodPattern = methodPattern;
+    this.parameterTypes = parameterTypes;
     this.registrationLatch = new CountDownLatch(1);
   }
 
@@ -101,6 +114,18 @@ public class PendingInterceptActivation {
    */
   public String methodPattern() {
     return methodPattern;
+  }
+
+  /**
+   * Returns the parameter types used for fencing.
+   *
+   * @return the parameter types, or {@code null} for field intercepts
+   */
+  @SuppressFBWarnings(
+      value = "EI_EXPOSE_REP",
+      justification = "Array is intentionally shared for pass-through to stopFencing")
+  public String[] parameterTypes() {
+    return parameterTypes;
   }
 
   /**

@@ -11,11 +11,13 @@ package io.quasient.pal.core.intercept;
 
 import io.github.azagniotov.matcher.AntPathMatcherArrays;
 import jakarta.inject.Singleton;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,12 +25,14 @@ import org.slf4j.LoggerFactory;
  * Tracks in-flight dispatch operations to enable coordinated intercept activation with guaranteed
  * quiescence.
  *
- * <p>This class provides thread-safe tracking of method and field operation dispatches as they
- * enter and exit execution. It supports:
+ * <p>This class provides thread-safe tracking of method, constructor, and field operation
+ * dispatches as they enter and exit execution. It supports:
  *
  * <ul>
- *   <li><b>Counter tracking:</b> Tracks dispatch entry/exit per class+method pattern using {@link
+ *   <li><b>Counter tracking:</b> Tracks dispatch entry/exit per dispatch key using {@link
  *       LongAdder} for low-contention counting
+ *   <li><b>Parameter-type-aware keys:</b> Dispatch keys incorporate parameter types so that
+ *       overloaded methods (e.g., {@code add(int)} vs {@code add(int,int)}) have separate counters
  *   <li><b>Pattern matching:</b> Supports wildcard patterns for class and method names using
  *       AntPathMatcher (e.g., "com.example.*", "*.Calculator.add")
  *   <li><b>Quiescence waiting:</b> Blocks until all matching dispatches complete with configurable
@@ -36,6 +40,25 @@ import org.slf4j.LoggerFactory;
  *   <li><b>Fencing mechanism:</b> Blocks new dispatches matching a pattern using {@link
  *       ReentrantLock} with {@link Condition}
  * </ul>
+ *
+ * <p><b>Key format:</b>
+ *
+ * <table>
+ *   <tr><th>Operation</th><th>Key Format</th><th>Example</th></tr>
+ *   <tr><td>Method (with params)</td><td>{@code className.methodName(p1,p2)}</td>
+ *       <td>{@code com.example.Calc.add(int,java.lang.String)}</td></tr>
+ *   <tr><td>Method (no params)</td><td>{@code className.methodName()}</td>
+ *       <td>{@code com.example.Calc.reset()}</td></tr>
+ *   <tr><td>Constructor</td><td>{@code className.new(p1)}</td>
+ *       <td>{@code com.example.Foo.new(int)}</td></tr>
+ *   <tr><td>Constructor (no-arg)</td><td>{@code className.new()}</td>
+ *       <td>{@code com.example.Foo.new()}</td></tr>
+ *   <tr><td>Field op</td><td>{@code className.fieldName}</td>
+ *       <td>{@code com.example.Foo.myField}</td></tr>
+ * </table>
+ *
+ * <p>The presence or absence of parentheses distinguishes methods/constructors from field
+ * operations.
  *
  * <p><b>Thread safety:</b> All public methods are thread-safe and may be called concurrently from
  * multiple threads. Counters use {@link LongAdder} for high-performance concurrent increments.
@@ -46,23 +69,27 @@ import org.slf4j.LoggerFactory;
  * <pre>{@code
  * InFlightDispatchTracker tracker = ...;
  *
- * // In dispatch hot-path:
- * tracker.enterDispatch("com.example.Calculator", "add");
+ * // In dispatch hot-path (method with params):
+ * tracker.enterDispatch("com.example.Calculator", "add", new String[]{"int", "int"});
  * try {
  *   // ... execute method ...
  * } finally {
- *   tracker.exitDispatch("com.example.Calculator", "add");
+ *   tracker.exitDispatch("com.example.Calculator", "add", new String[]{"int", "int"});
  * }
  *
+ * // Field operation (null parameterTypes):
+ * tracker.enterDispatch("com.example.Foo", "myField", null);
+ *
  * // When registering intercept:
- * tracker.startFencing("com.example.Calculator", "add");
+ * tracker.startFencing("com.example.Calculator", "add", new String[]{"int", "int"});
  * try {
- *   boolean quiescent = tracker.waitForQuiescence("com.example.Calculator", "add", 5000);
+ *   boolean quiescent = tracker.waitForQuiescence(
+ *       "com.example.Calculator", "add", new String[]{"int", "int"}, 5000);
  *   if (quiescent) {
  *     // ... activate intercept ...
  *   }
  * } finally {
- *   tracker.stopFencing("com.example.Calculator", "add");
+ *   tracker.stopFencing("com.example.Calculator", "add", new String[]{"int", "int"});
  * }
  * }</pre>
  *
@@ -179,7 +206,11 @@ public class InFlightDispatchTracker {
   }
 
   /**
-   * Map from dispatch key ("className.methodName") to counter/lock structure.
+   * Map from dispatch key to counter/lock structure.
+   *
+   * <p>Keys use the format described in the class Javadoc: {@code className.methodName(p1,p2)} for
+   * methods/constructors with parameters, {@code className.methodName()} for no-arg
+   * methods/constructors, and {@code className.fieldName} for field operations.
    *
    * <p>This map grows dynamically as new dispatches are tracked. Entries are never removed to avoid
    * race conditions and to optimize for the common case where the same methods are called
@@ -210,29 +241,34 @@ public class InFlightDispatchTracker {
           .build();
 
   /**
-   * Records that a dispatch has entered execution for the specified class and method.
+   * Records that a dispatch has entered execution for the specified class, method, and parameter
+   * types.
    *
-   * <p>This method increments the in-flight counter for the dispatch key "className.methodName". If
-   * fencing is active for this dispatch, the calling thread will block until the fence is lifted.
+   * <p>This method increments the in-flight counter for the dispatch key built from the class name,
+   * method name, and parameter types. If fencing is active for this dispatch, the calling thread
+   * will block until the fence is lifted.
    *
-   * <p><b>Usage:</b> Call this method immediately before executing a method or field operation,
-   * typically at the start of the dispatch hot-path.
+   * <p><b>Usage:</b> Call this method immediately before executing a method, constructor, or field
+   * operation, typically at the start of the dispatch hot-path.
    *
    * <p><b>Thread safety:</b> This method is thread-safe and may be called concurrently from
    * multiple threads.
    *
    * @param className the fully qualified class name (e.g., "com.example.Calculator")
-   * @param methodName the method or field name (e.g., "add")
+   * @param executableName the method, constructor ("new"), or field name (e.g., "add")
+   * @param parameterTypes the parameter type names for methods/constructors ({@code new String[0]}
+   *     for no-arg), or {@code null} for field operations
    * @throws InterruptedException if the thread is interrupted while waiting for fencing to be
    *     lifted
    */
-  public void enterDispatch(String className, String methodName) throws InterruptedException {
-    String key = className + "." + methodName;
+  public void enterDispatch(String className, String executableName, String[] parameterTypes)
+      throws InterruptedException {
+    String key = buildKey(className, executableName, parameterTypes);
 
     // Check if there's a fenced pattern that matches this key
     boolean shouldFence = false;
     for (String pattern : fencedPatterns.keySet()) {
-      if (matcher.isMatch(pattern, key)) {
+      if (matchesPattern(pattern, key)) {
         shouldFence = true;
         break;
       }
@@ -265,10 +301,11 @@ public class InFlightDispatchTracker {
   }
 
   /**
-   * Records that a dispatch has exited execution for the specified class and method.
+   * Records that a dispatch has exited execution for the specified class, method, and parameter
+   * types.
    *
-   * <p>This method decrements the in-flight counter for the dispatch key "className.methodName". If
-   * no counter exists for this key, this method logs a warning but does not throw an exception.
+   * <p>This method decrements the in-flight counter for the dispatch key. If no counter exists for
+   * this key, this method logs a warning but does not throw an exception.
    *
    * <p><b>Usage:</b> Call this method in a {@code finally} block after dispatch execution to ensure
    * the counter is always decremented, even if an exception occurs.
@@ -277,10 +314,12 @@ public class InFlightDispatchTracker {
    * multiple threads.
    *
    * @param className the fully qualified class name (e.g., "com.example.Calculator")
-   * @param methodName the method or field name (e.g., "add")
+   * @param executableName the method, constructor ("new"), or field name (e.g., "add")
+   * @param parameterTypes the parameter type names for methods/constructors ({@code new String[0]}
+   *     for no-arg), or {@code null} for field operations
    */
-  public void exitDispatch(String className, String methodName) {
-    String key = className + "." + methodName;
+  public void exitDispatch(String className, String executableName, String[] parameterTypes) {
+    String key = buildKey(className, executableName, parameterTypes);
     DispatchCounter counter = dispatchCounters.get(key);
 
     if (counter == null) {
@@ -299,12 +338,12 @@ public class InFlightDispatchTracker {
   }
 
   /**
-   * Checks whether any dispatches are currently in-flight for methods matching the specified
+   * Checks whether any dispatches are currently in-flight for operations matching the specified
    * pattern.
    *
-   * <p>This method searches all tracked dispatch keys for matches against the pattern
-   * "classPattern.methodPattern". The pattern may contain wildcards (e.g., "com.example.*" or
-   * "*.Calculator.add").
+   * <p>This method searches all tracked dispatch keys for matches against the pattern built from
+   * the class pattern, method pattern, and parameter types. The pattern may contain wildcards
+   * (e.g., "com.example.*" or "*.Calculator.add").
    *
    * <p><b>Pattern matching rules:</b>
    *
@@ -314,28 +353,35 @@ public class InFlightDispatchTracker {
    *       patterns)
    *   <li>Matching is case-insensitive
    *   <li>Leading/trailing whitespace in patterns is ignored
+   *   <li>Parameter types are exact-matched (no wildcards in param types)
+   *   <li>If one has params and the other doesn't, no match (prevents field/method
+   *       cross-contamination)
    * </ul>
    *
    * <p><b>Examples:</b>
    *
    * <pre>
-   * hasInFlightDispatches("com.example.Calculator", "add")  // exact match
-   * hasInFlightDispatches("com.example.*", "*")             // all methods in package
-   * hasInFlightDispatches("*", "*")                         // all dispatches
+   * hasInFlightDispatches("com.example.Calculator", "add", new String[]{"int"})
+   * hasInFlightDispatches("com.example.*", "*", new String[0])  // all no-arg methods
+   * hasInFlightDispatches("*", "*", null)                       // all field ops
    * </pre>
    *
    * <p><b>Thread safety:</b> This method is thread-safe and may be called concurrently.
    *
    * @param classPattern the class name pattern, potentially with wildcards
-   * @param methodPattern the method name pattern, potentially with wildcards
+   * @param executableNamePattern the method/constructor/field name pattern, potentially with
+   *     wildcards
+   * @param parameterTypes the parameter type names for methods/constructors ({@code new String[0]}
+   *     for no-arg), or {@code null} for field operations
    * @return {@code true} if any matching dispatches have a counter > 0, {@code false} otherwise
    */
-  public boolean hasInFlightDispatches(String classPattern, String methodPattern) {
-    String pattern = classPattern + "." + methodPattern;
+  public boolean hasInFlightDispatches(
+      String classPattern, String executableNamePattern, String[] parameterTypes) {
+    String pattern = buildKey(classPattern, executableNamePattern, parameterTypes);
 
     for (Map.Entry<String, DispatchCounter> entry : dispatchCounters.entrySet()) {
       String key = entry.getKey();
-      if (matcher.isMatch(pattern, key)) {
+      if (matchesPattern(pattern, key)) {
         long count = entry.getValue().sum();
         if (count > 0) {
           if (logger.isDebugEnabled()) {
@@ -357,8 +403,8 @@ public class InFlightDispatchTracker {
    * Waits until all dispatches matching the specified pattern have completed (quiescence), or until
    * the timeout expires.
    *
-   * <p>This method polls {@link #hasInFlightDispatches(String, String)} at short intervals until
-   * either:
+   * <p>This method polls {@link #hasInFlightDispatches(String, String, String[])} at short
+   * intervals until either:
    *
    * <ul>
    *   <li>No in-flight dispatches remain for the pattern (quiescence achieved), or
@@ -371,24 +417,28 @@ public class InFlightDispatchTracker {
    * <p><b>Thread safety:</b> This method is thread-safe and may be called concurrently.
    *
    * @param classPattern the class name pattern, potentially with wildcards
-   * @param methodPattern the method name pattern, potentially with wildcards
+   * @param executableNamePattern the method/constructor/field name pattern, potentially with
+   *     wildcards
+   * @param parameterTypes the parameter type names for methods/constructors ({@code new String[0]}
+   *     for no-arg), or {@code null} for field operations
    * @param timeoutMs the maximum time to wait in milliseconds
    * @return {@code true} if quiescence was achieved before the timeout, {@code false} if the
    *     timeout expired while dispatches were still in-flight
    * @throws InterruptedException if the thread is interrupted while waiting
    */
-  public boolean waitForQuiescence(String classPattern, String methodPattern, long timeoutMs)
+  public boolean waitForQuiescence(
+      String classPattern, String executableNamePattern, String[] parameterTypes, long timeoutMs)
       throws InterruptedException {
     long deadline = System.currentTimeMillis() + timeoutMs;
 
-    while (hasInFlightDispatches(classPattern, methodPattern)) {
+    while (hasInFlightDispatches(classPattern, executableNamePattern, parameterTypes)) {
       long remaining = deadline - System.currentTimeMillis();
       if (remaining <= 0) {
         if (logger.isDebugEnabled()) {
           logger.debug(
               "Timeout waiting for quiescence of {}.{} after {}ms",
               classPattern,
-              methodPattern,
+              executableNamePattern,
               timeoutMs);
         }
         return false; // Timeout
@@ -400,50 +450,56 @@ public class InFlightDispatchTracker {
     }
 
     if (logger.isDebugEnabled()) {
-      logger.debug("Achieved quiescence for {}.{}", classPattern, methodPattern);
+      logger.debug("Achieved quiescence for {}.{}", classPattern, executableNamePattern);
     }
     return true;
   }
 
   /**
    * Starts fencing for all dispatches matching the specified pattern, blocking new {@link
-   * #enterDispatch(String, String)} calls.
+   * #enterDispatch(String, String, String[])} calls.
    *
    * <p>After calling this method, any thread attempting to enter a dispatch matching the pattern
-   * will block until {@link #stopFencing(String, String)} is called.
+   * will block until {@link #stopFencing(String, String, String[])} is called.
    *
    * <p><b>Important:</b> Fencing does not affect dispatches that have already entered (already
-   * called {@link #enterDispatch(String, String)}). Those dispatches will continue executing and
-   * will still be counted by {@link #hasInFlightDispatches(String, String)}.
+   * called {@link #enterDispatch(String, String, String[])}). Those dispatches will continue
+   * executing and will still be counted by {@link #hasInFlightDispatches(String, String,
+   * String[])}.
    *
    * <p><b>Usage pattern:</b>
    *
    * <pre>{@code
-   * tracker.startFencing(classPattern, methodPattern);
+   * tracker.startFencing(classPattern, methodPattern, parameterTypes);
    * try {
-   *   boolean quiescent = tracker.waitForQuiescence(classPattern, methodPattern, timeoutMs);
+   *   boolean quiescent = tracker.waitForQuiescence(
+   *       classPattern, methodPattern, parameterTypes, timeoutMs);
    *   if (quiescent) {
    *     // Activate intercept
    *   }
    * } finally {
-   *   tracker.stopFencing(classPattern, methodPattern);
+   *   tracker.stopFencing(classPattern, methodPattern, parameterTypes);
    * }
    * }</pre>
    *
    * <p><b>Thread safety:</b> This method is thread-safe and may be called concurrently.
    *
    * @param classPattern the class name pattern, potentially with wildcards
-   * @param methodPattern the method name pattern, potentially with wildcards
+   * @param executableNamePattern the method/constructor/field name pattern, potentially with
+   *     wildcards
+   * @param parameterTypes the parameter type names for methods/constructors ({@code new String[0]}
+   *     for no-arg), or {@code null} for field operations
    */
-  public void startFencing(String classPattern, String methodPattern) {
-    String pattern = classPattern + "." + methodPattern;
+  public void startFencing(
+      String classPattern, String executableNamePattern, String[] parameterTypes) {
+    String pattern = buildKey(classPattern, executableNamePattern, parameterTypes);
     // Store the fence pattern for checking during enterDispatch
     fencedPatterns.put(pattern, Boolean.TRUE);
 
     // Also fence existing counters
     for (Map.Entry<String, DispatchCounter> entry : dispatchCounters.entrySet()) {
       String key = entry.getKey();
-      if (matcher.isMatch(pattern, key)) {
+      if (matchesPattern(pattern, key)) {
         entry.getValue().startFencing();
         if (logger.isDebugEnabled()) {
           logger.debug(
@@ -455,25 +511,29 @@ public class InFlightDispatchTracker {
 
   /**
    * Stops fencing for all dispatches matching the specified pattern, unblocking threads waiting in
-   * {@link #enterDispatch(String, String)}.
+   * {@link #enterDispatch(String, String, String[])}.
    *
-   * <p>After calling this method, threads blocked in {@link #enterDispatch(String, String)} for
-   * matching dispatches will be unblocked and allowed to proceed.
+   * <p>After calling this method, threads blocked in {@link #enterDispatch(String, String,
+   * String[])} for matching dispatches will be unblocked and allowed to proceed.
    *
    * <p><b>Thread safety:</b> This method is thread-safe and may be called concurrently.
    *
    * @param classPattern the class name pattern, potentially with wildcards
-   * @param methodPattern the method name pattern, potentially with wildcards
+   * @param executableNamePattern the method/constructor/field name pattern, potentially with
+   *     wildcards
+   * @param parameterTypes the parameter type names for methods/constructors ({@code new String[0]}
+   *     for no-arg), or {@code null} for field operations
    */
-  public void stopFencing(String classPattern, String methodPattern) {
-    String pattern = classPattern + "." + methodPattern;
+  public void stopFencing(
+      String classPattern, String executableNamePattern, String[] parameterTypes) {
+    String pattern = buildKey(classPattern, executableNamePattern, parameterTypes);
 
     // Remove the pattern from fenced patterns
     fencedPatterns.remove(pattern);
 
     for (Map.Entry<String, DispatchCounter> entry : dispatchCounters.entrySet()) {
       String key = entry.getKey();
-      if (matcher.isMatch(pattern, key)) {
+      if (matchesPattern(pattern, key)) {
         entry.getValue().stopFencing();
         if (logger.isDebugEnabled()) {
           logger.debug(
@@ -481,5 +541,92 @@ public class InFlightDispatchTracker {
         }
       }
     }
+  }
+
+  /**
+   * Builds a dispatch key from class name, executable name, and parameter types.
+   *
+   * <p>The key format distinguishes methods/constructors from field operations:
+   *
+   * <ul>
+   *   <li>Methods/constructors: {@code className.executableName(param1,param2)}
+   *   <li>No-arg methods/constructors: {@code className.executableName()}
+   *   <li>Field operations: {@code className.fieldName} (no parentheses)
+   * </ul>
+   *
+   * @param className the fully qualified class name
+   * @param executableName the method, constructor ("new"), or field name
+   * @param parameterTypes the parameter type names, or {@code null} for field operations
+   * @return the dispatch key string
+   */
+  static String buildKey(String className, String executableName, String[] parameterTypes) {
+    String classMethod = className + "." + executableName;
+    if (parameterTypes == null) {
+      return classMethod;
+    }
+    return classMethod + "(" + Arrays.stream(parameterTypes).collect(Collectors.joining(",")) + ")";
+  }
+
+  /**
+   * Matches a fence pattern against a dispatch key, taking parameter types into account.
+   *
+   * <p>The matching process:
+   *
+   * <ol>
+   *   <li>Split both strings on the first {@code '('} to separate the class.method portion from the
+   *       parameter types portion
+   *   <li>AntPath-match the class.method portions (supports wildcards like {@code com.example.*})
+   *   <li>If both have parameter types, exact-match the parenthesized suffix
+   *   <li>If one has params and the other doesn't, no match (prevents field/method
+   *       cross-contamination)
+   * </ol>
+   *
+   * @param pattern the fence pattern (may contain wildcards in class.method portion)
+   * @param key the dispatch key to match against
+   * @return {@code true} if the pattern matches the key
+   */
+  static boolean matchesPattern(String pattern, String key) {
+    int patternParenIdx = pattern.indexOf('(');
+    int keyParenIdx = key.indexOf('(');
+
+    // Extract class.method and param portions
+    String patternClassMethod;
+    String patternParams;
+    if (patternParenIdx >= 0) {
+      patternClassMethod = pattern.substring(0, patternParenIdx);
+      patternParams = pattern.substring(patternParenIdx);
+    } else {
+      patternClassMethod = pattern;
+      patternParams = null;
+    }
+
+    String keyClassMethod;
+    String keyParams;
+    if (keyParenIdx >= 0) {
+      keyClassMethod = key.substring(0, keyParenIdx);
+      keyParams = key.substring(keyParenIdx);
+    } else {
+      keyClassMethod = key;
+      keyParams = null;
+    }
+
+    // If one has params and the other doesn't, no match
+    // This prevents field ops from matching method/ctor patterns and vice versa
+    if ((patternParams == null) != (keyParams == null)) {
+      return false;
+    }
+
+    // AntPath-match the class.method portions
+    if (!matcher.isMatch(patternClassMethod, keyClassMethod)) {
+      return false;
+    }
+
+    // If both have param types, exact-match the parenthesized suffix
+    if (patternParams != null) {
+      return patternParams.equals(keyParams);
+    }
+
+    // Both are field ops (no params) and class.method matched
+    return true;
   }
 }

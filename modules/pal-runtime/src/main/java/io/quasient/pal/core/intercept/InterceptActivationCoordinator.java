@@ -305,6 +305,7 @@ public class InterceptActivationCoordinator {
   public ActivationResult activateIntercept(InterceptMessage interceptMessage) {
     String classPattern = interceptMessage.getClazz();
     String methodPattern = extractMethodPatternFromMessage(interceptMessage);
+    String[] paramTypes = extractParamTypesFromMessage(interceptMessage);
 
     boolean trackingEnabled = runOptions.contains(RunOptions.WITH_IN_FLIGHT_TRACKING);
     boolean forceImmediate = interceptMessage.getForceImmediate();
@@ -325,11 +326,11 @@ public class InterceptActivationCoordinator {
     if (shouldDrain) {
       // Start fencing synchronously to ensure new dispatches are blocked immediately.
       // This preserves the semantic that once register() returns, new calls will be blocked.
-      inFlightTracker.startFencing(classPattern, methodPattern);
+      inFlightTracker.startFencing(classPattern, methodPattern, paramTypes);
 
       // Submit the rest (wait for quiescence, enqueue, stop fencing) to async executor.
       // Multiple drain tasks can now run in parallel.
-      submitAsyncDrainAndEnqueue(classPattern, methodPattern, interceptMessage);
+      submitAsyncDrainAndEnqueue(classPattern, methodPattern, paramTypes, interceptMessage);
       return ActivationResult.asyncPending(
           "Intercept activation pending (drain in progress for "
               + classPattern
@@ -353,6 +354,7 @@ public class InterceptActivationCoordinator {
    *
    * @param classPattern the class pattern
    * @param methodPattern the method pattern
+   * @param paramTypes the parameter types for in-flight tracking (null for field intercepts)
    * @param interceptMessage the intercept message to register
    */
   @SuppressWarnings("FutureReturnValueIgnored")
@@ -360,12 +362,16 @@ public class InterceptActivationCoordinator {
       value = "RV_RETURN_VALUE_IGNORED_BAD_PRACTICE",
       justification = "Future intentionally ignored - activation completes asynchronously")
   private void submitAsyncDrainAndEnqueue(
-      String classPattern, String methodPattern, InterceptMessage interceptMessage) {
+      String classPattern,
+      String methodPattern,
+      String[] paramTypes,
+      InterceptMessage interceptMessage) {
     activeDrainCount.incrementAndGet();
     asyncActivationExecutor.submit(
         () -> {
           try {
-            waitForQuiescenceAndEnqueueAsync(classPattern, methodPattern, interceptMessage);
+            waitForQuiescenceAndEnqueueAsync(
+                classPattern, methodPattern, paramTypes, interceptMessage);
           } finally {
             activeDrainCount.decrementAndGet();
           }
@@ -434,10 +440,14 @@ public class InterceptActivationCoordinator {
    *
    * @param classPattern the class pattern from the message
    * @param methodPattern the method pattern from the message
+   * @param paramTypes the parameter types for in-flight tracking (null for field intercepts)
    * @param interceptMessage the intercept message to register
    */
   private void waitForQuiescenceAndEnqueueAsync(
-      String classPattern, String methodPattern, InterceptMessage interceptMessage) {
+      String classPattern,
+      String methodPattern,
+      String[] paramTypes,
+      InterceptMessage interceptMessage) {
     if (logger.isDebugEnabled()) {
       logger.debug(
           "Async: Waiting for quiescence for {}.{}, timeout={}ms, activeDrains={}",
@@ -450,7 +460,8 @@ public class InterceptActivationCoordinator {
     try {
       // Step 1: Wait for quiescence (fencing was already started synchronously)
       boolean quiescent =
-          inFlightTracker.waitForQuiescence(classPattern, methodPattern, drainTimeoutMs);
+          inFlightTracker.waitForQuiescence(
+              classPattern, methodPattern, paramTypes, drainTimeoutMs);
 
       if (!quiescent) {
         // Timeout occurred - do not activate
@@ -473,7 +484,7 @@ public class InterceptActivationCoordinator {
       }
 
       PendingInterceptActivation pending =
-          new PendingInterceptActivation(interceptMessage, classPattern, methodPattern);
+          new PendingInterceptActivation(interceptMessage, classPattern, methodPattern, paramTypes);
 
       if (!pendingActivationsQueue.offer(pending)) {
         // This should never happen with an unbounded queue, but log if it does
@@ -515,7 +526,7 @@ public class InterceptActivationCoordinator {
     } finally {
       // Step 4: Always stop fencing to unblock waiting threads.
       // At this point, the intercept has been registered (or registration timed out/failed).
-      inFlightTracker.stopFencing(classPattern, methodPattern);
+      inFlightTracker.stopFencing(classPattern, methodPattern, paramTypes);
       if (logger.isDebugEnabled()) {
         logger.debug("Async: Fencing stopped for {}.{}", classPattern, methodPattern);
       }
@@ -538,6 +549,28 @@ public class InterceptActivationCoordinator {
       return message.getField().getName();
     }
     throw new IllegalArgumentException("InterceptMessage must have either method or field defined");
+  }
+
+  /**
+   * Extracts parameter types from an intercept message for in-flight tracking.
+   *
+   * <p>For method intercepts, returns the parameter types array from the message. For field
+   * intercepts, returns {@code null} (fields have no parameter types).
+   *
+   * @param message the intercept message
+   * @return the parameter types array, or {@code null} for field intercepts
+   */
+  @SuppressFBWarnings(
+      value = "PZLA_PREFER_ZERO_LENGTH_ARRAYS",
+      justification =
+          "Null signals a field intercept (no parameter types) vs empty array for"
+              + " no-arg methods/constructors; this distinction is required by InFlightDispatchTracker")
+  private String[] extractParamTypesFromMessage(InterceptMessage message) {
+    if (message.getMethod() != null) {
+      String[] types = message.getMethod().getParameterTypes();
+      return types != null ? types : new String[0];
+    }
+    return null; // Field intercepts have no parameter types
   }
 
   /**

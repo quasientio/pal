@@ -50,6 +50,7 @@ import javax.annotation.Nonnull;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.Signature;
 import org.aspectj.lang.reflect.CodeSignature;
+import org.aspectj.lang.reflect.ConstructorSignature;
 
 /**
  * Base dispatcher for execution messages, providing the common logic for handling local and RPC
@@ -86,12 +87,14 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         runOptions != null && runOptions.contains(RunOptions.WITH_IN_FLIGHT_TRACKING);
     String className = null;
     String methodName = null;
+    String[] trackingParamTypes = null;
 
     if (trackingEnabled) {
       className = getClassNameFromPjp(pjp);
       methodName = getMethodNameFromPjp(pjp);
+      trackingParamTypes = getParamTypesForTracking(pjp);
       try {
-        inFlightDispatchTracker.enterDispatch(className, methodName);
+        inFlightDispatchTracker.enterDispatch(className, methodName, trackingParamTypes);
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
         throw new RuntimeException("Interrupted while entering dispatch", e);
@@ -417,7 +420,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     } finally {
       // Always exit dispatch tracking, even if an exception occurred
       if (trackingEnabled) {
-        inFlightDispatchTracker.exitDispatch(className, methodName);
+        inFlightDispatchTracker.exitDispatch(className, methodName, trackingParamTypes);
       }
     }
   }
@@ -444,12 +447,15 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         runOptions != null && runOptions.contains(RunOptions.WITH_IN_FLIGHT_TRACKING);
     String className = null;
     String methodName = null;
+    String[] trackingParamTypes = null;
 
     if (trackingEnabled) {
       className = getClassname(incomingCall);
       methodName = getExecutableName(incomingCall);
+      List<String> paramTypeList = getParameterTypes(incomingCall);
+      trackingParamTypes = paramTypeList != null ? paramTypeList.toArray(new String[0]) : null;
       try {
-        inFlightDispatchTracker.enterDispatch(className, methodName);
+        inFlightDispatchTracker.enterDispatch(className, methodName, trackingParamTypes);
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
         throw new RuntimeException("Interrupted while entering dispatch", e);
@@ -891,7 +897,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     } finally {
       // Always exit dispatch tracking, even if an exception occurred
       if (trackingEnabled) {
-        inFlightDispatchTracker.exitDispatch(className, methodName);
+        inFlightDispatchTracker.exitDispatch(className, methodName, trackingParamTypes);
       }
     }
   }
@@ -1296,11 +1302,18 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
   /**
    * Extracts the method/field name from a ProceedingJoinPoint.
    *
+   * <p>Returns "new" for constructors (matching the convention used in message construction and
+   * intercept registration), or the signature name for methods and fields.
+   *
    * @param pjp the proceeding join point
-   * @return the method or field name
+   * @return the method, constructor ("new"), or field name
    */
   private String getMethodNameFromPjp(ProceedingJoinPoint pjp) {
-    return pjp.getSignature().getName();
+    Signature sig = pjp.getSignature();
+    if (sig instanceof ConstructorSignature) {
+      return "new";
+    }
+    return sig.getName();
   }
 
   /**
@@ -1318,6 +1331,28 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       }
     }
     return List.of();
+  }
+
+  /**
+   * Extracts parameter type names from a ProceedingJoinPoint for in-flight dispatch tracking.
+   *
+   * <p>Returns {@code null} for field operations (no params), or a {@code String[]} of
+   * fully-qualified parameter type names for methods and constructors (may be empty for no-arg).
+   *
+   * @param pjp the proceeding join point
+   * @return array of parameter type names, or {@code null} for field operations
+   */
+  @SuppressFBWarnings(
+      value = "PZLA_PREFER_ZERO_LENGTH_ARRAYS",
+      justification =
+          "Null signals a field operation (no parameter types) vs empty array for"
+              + " no-arg methods/constructors; this distinction is required by InFlightDispatchTracker")
+  private String[] getParamTypesForTracking(ProceedingJoinPoint pjp) {
+    Signature sig = pjp.getSignature();
+    if (sig instanceof CodeSignature codeSig) {
+      return Arrays.stream(codeSig.getParameterTypes()).map(Class::getName).toArray(String[]::new);
+    }
+    return null; // Field operations
   }
 
   /**
