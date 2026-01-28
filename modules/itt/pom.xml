@@ -192,6 +192,10 @@
         </dependency>
         <dependency>
             <groupId>io.quasient.pal</groupId>
+            <artifactId>pal-cli</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quasient.pal</groupId>
             <artifactId>itt-apps</artifactId>
         </dependency>
         <dependency>
