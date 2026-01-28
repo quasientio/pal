@@ -46,6 +46,14 @@
             <groupId>io.quasient.pal</groupId>
             <artifactId>pal-runtime</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.quasient.pal</groupId>
+            <artifactId>itt</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quasient.pal</groupId>
+            <artifactId>itt-apps</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
@@ -54,6 +62,7 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <executions>
+                    <!-- Unit test aggregate (existing) -->
                     <execution>
                         <id>aggregate-report</id>
                         <phase>verify</phase>
@@ -61,7 +70,57 @@
                             <goal>report-aggregate</goal>
                         </goals>
                         <configuration>
+                            <title>PAL Unit Test Coverage</title>
                             <outputDirectory>${project.build.directory}/site/jacoco-aggregate</outputDirectory>
+                            <!-- Exclude auto-generated Colfer classes -->
+                            <excludes>
+                                <exclude>io/quasient/pal/messages/colfer/**</exclude>
+                            </excludes>
+                        </configuration>
+                    </execution>
+
+                    <!-- Integration test aggregate (new) -->
+                    <execution>
+                        <id>aggregate-report-integration</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report-aggregate</goal>
+                        </goals>
+                        <configuration>
+                            <title>PAL Integration Test Coverage</title>
+                            <dataFileIncludes>
+                                <dataFileInclude>**/jacoco-it.exec</dataFileInclude>
+                                <dataFileInclude>**/jacoco-peer-*.exec</dataFileInclude>
+                                <dataFileInclude>**/jacoco-merged-it.exec</dataFileInclude>
+                            </dataFileIncludes>
+                            <outputDirectory>${project.build.directory}/site/jacoco-aggregate-it</outputDirectory>
+                            <!-- Exclude auto-generated Colfer classes -->
+                            <excludes>
+                                <exclude>io/quasient/pal/messages/colfer/**</exclude>
+                            </excludes>
+                        </configuration>
+                    </execution>
+
+                    <!-- Combined aggregate (new) -->
+                    <execution>
+                        <id>aggregate-report-all</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report-aggregate</goal>
+                        </goals>
+                        <configuration>
+                            <title>PAL All Tests Coverage</title>
+                            <dataFileIncludes>
+                                <dataFileInclude>**/jacoco.exec</dataFileInclude>
+                                <dataFileInclude>**/jacoco-it.exec</dataFileInclude>
+                                <dataFileInclude>**/jacoco-peer-*.exec</dataFileInclude>
+                                <dataFileInclude>**/jacoco-merged-it.exec</dataFileInclude>
+                            </dataFileIncludes>
+                            <outputDirectory>${project.build.directory}/site/jacoco-aggregate-all</outputDirectory>
+                            <!-- Exclude auto-generated Colfer classes -->
+                            <excludes>
+                                <exclude>io/quasient/pal/messages/colfer/**</exclude>
+                            </excludes>
                         </configuration>
                     </execution>
                 </executions>
