@@ -492,6 +492,30 @@ Each test should:
 - Register only needed intercepts
 - Clean up completely
 
+### 6. Test Constructors and Field Operations
+
+In-flight tracking applies to all operation types -- methods, constructors, and field accesses. When testing intercepted constructors or fields, the same activation safety guarantees apply:
+
+```java
+// Intercept a constructor
+InterceptRequest ctorIntercept = InterceptRequest.builder()
+    .classPattern("com.example.UserService")
+    .methodPattern("new")
+    .interceptType(InterceptType.BEFORE)
+    .callbackPeer(callbackPeerUuid)
+    .build();
+
+// Intercept a field access
+InterceptRequest fieldIntercept = InterceptRequest.builder()
+    .classPattern("com.example.Config")
+    .fieldPattern("maxRetries")
+    .interceptType(InterceptType.AROUND)
+    .callbackPeer(callbackPeerUuid)
+    .build();
+```
+
+Parameter types are also considered: intercepting `process(String)` does not affect `process(String, int)`. This means tests for overloaded methods can safely target specific signatures without interfering with other overloads.
+
 ## Debugging Tests
 
 ### Enable Debug Logging

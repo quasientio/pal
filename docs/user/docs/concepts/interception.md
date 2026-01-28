@@ -428,18 +428,20 @@ The `--interceptable` flag enables the intercept matcher service.
 
 ## Intercept Activation Safety
 
-By default, PAL waits for in-flight method calls to finish before activating a new intercept. This ensures no method execution sees a partially-activated intercept -- for example, a BEFORE callback fires but the method was already past that point.
+By default, PAL waits for in-flight operations to finish before activating a new intercept. This applies to methods, constructors, and field operations. It ensures no execution sees a partially-activated intercept -- for example, a BEFORE callback fires but the method was already past that point.
 
 ### How It Works
 
 When a new intercept is registered, PAL:
 
-1. **Fences** the matching methods so no new calls can start
+1. **Fences** the matching operations so no new calls can start
 2. **Waits** for all currently executing matching calls to complete (drain)
 3. **Activates** the intercept once all in-flight calls finish
 4. **Unfences** so new calls proceed with the intercept active
 
 This guarantees that every call either completes entirely without the intercept or executes entirely with it -- never a mix.
+
+Tracking is **per-operation-signature**: parameter types are considered when matching. Fencing `add(int)` does **not** block `add(int, int)` -- only the exact overload being intercepted is fenced. Similarly, constructors and field operations are tracked separately from methods, even if they share a name.
 
 ### Enabling and Configuring
 
