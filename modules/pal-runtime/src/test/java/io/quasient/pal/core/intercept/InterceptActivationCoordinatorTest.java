@@ -12,6 +12,7 @@ package io.quasient.pal.core.intercept;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -143,7 +144,7 @@ public class InterceptActivationCoordinatorTest {
     InterceptMessage message = createInterceptMessage("com.example.Calculator", "add", false);
 
     // And: The tracker will return true for waitForQuiescence (quiescence achieved)
-    when(tracker.waitForQuiescence(anyString(), anyString(), anyLong())).thenReturn(true);
+    when(tracker.waitForQuiescence(anyString(), anyString(), any(), anyLong())).thenReturn(true);
 
     // When: The coordinator is asked to activate the intercept
     InterceptActivationCoordinator.ActivationResult result = coordinator.activateIntercept(message);
@@ -153,10 +154,11 @@ public class InterceptActivationCoordinatorTest {
 
     // And: The coordinator should:
     // 1. Call tracker.startFencing() SYNCHRONOUSLY before returning
-    verify(tracker, times(1)).startFencing("com.example.Calculator", "add");
+    verify(tracker, times(1)).startFencing("com.example.Calculator", "add", new String[0]);
 
     // 2. Call tracker.waitForQuiescence() in the async task (via direct executor in this test)
-    verify(tracker, times(1)).waitForQuiescence("com.example.Calculator", "add", DRAIN_TIMEOUT_MS);
+    verify(tracker, times(1))
+        .waitForQuiescence("com.example.Calculator", "add", new String[0], DRAIN_TIMEOUT_MS);
 
     // 3. Enqueue the intercept for registration
     PendingInterceptActivation pending = pendingQueue.poll();
@@ -166,7 +168,7 @@ public class InterceptActivationCoordinatorTest {
     assertNotNull(pending.interceptMessage());
 
     // 4. Call tracker.stopFencing() in the async task's finally block
-    verify(tracker, times(1)).stopFencing("com.example.Calculator", "add");
+    verify(tracker, times(1)).stopFencing("com.example.Calculator", "add", new String[0]);
   }
 
   /**
@@ -195,7 +197,7 @@ public class InterceptActivationCoordinatorTest {
     InterceptMessage message = createInterceptMessage("com.example.Calculator", "add", false);
 
     // And: There are in-flight dispatches that will NOT complete before the timeout
-    when(tracker.waitForQuiescence(anyString(), anyString(), anyLong())).thenReturn(false);
+    when(tracker.waitForQuiescence(anyString(), anyString(), any(), anyLong())).thenReturn(false);
 
     // When: The coordinator is asked to activate the intercept
     InterceptActivationCoordinator.ActivationResult result = coordinator.activateIntercept(message);
@@ -204,17 +206,18 @@ public class InterceptActivationCoordinatorTest {
     assertTrue(result.isAsyncPending());
 
     // And: The coordinator should:
-    // 1. Call tracker.startFencing("com.example.Calculator", "add")
-    verify(tracker, times(1)).startFencing("com.example.Calculator", "add");
+    // 1. Call tracker.startFencing("com.example.Calculator", "add", new String[0])
+    verify(tracker, times(1)).startFencing("com.example.Calculator", "add", new String[0]);
 
     // 2. Call tracker.waitForQuiescence (which returns false - timeout)
-    verify(tracker, times(1)).waitForQuiescence("com.example.Calculator", "add", DRAIN_TIMEOUT_MS);
+    verify(tracker, times(1))
+        .waitForQuiescence("com.example.Calculator", "add", new String[0], DRAIN_TIMEOUT_MS);
 
     // 3. NOT enqueue the intercept
     assertTrue("Queue should be empty on timeout", pendingQueue.isEmpty());
 
     // 4. Call tracker.stopFencing to clean up
-    verify(tracker, times(1)).stopFencing("com.example.Calculator", "add");
+    verify(tracker, times(1)).stopFencing("com.example.Calculator", "add", new String[0]);
   }
 
   /**
@@ -255,13 +258,13 @@ public class InterceptActivationCoordinatorTest {
 
     // Then: The coordinator should:
     // 1. NOT call tracker.startFencing()
-    verify(tracker, never()).startFencing(anyString(), anyString());
+    verify(tracker, never()).startFencing(anyString(), anyString(), any());
 
     // 2. NOT call tracker.waitForQuiescence()
-    verify(tracker, never()).waitForQuiescence(anyString(), anyString(), anyLong());
+    verify(tracker, never()).waitForQuiescence(anyString(), anyString(), any(), anyLong());
 
     // 3. NOT call tracker.stopFencing()
-    verify(tracker, never()).stopFencing(anyString(), anyString());
+    verify(tracker, never()).stopFencing(anyString(), anyString(), any());
 
     // 4. Queue should remain empty (immediate path doesn't use queue)
     assertTrue("Queue should be empty for immediate activation", pendingQueue.isEmpty());
@@ -297,10 +300,10 @@ public class InterceptActivationCoordinatorTest {
 
     // Then: The coordinator should:
     // 1. NOT call tracker.startFencing() (because global tracking is disabled)
-    verify(tracker, never()).startFencing(anyString(), anyString());
+    verify(tracker, never()).startFencing(anyString(), anyString(), any());
 
     // 2. NOT call tracker.waitForQuiescence()
-    verify(tracker, never()).waitForQuiescence(anyString(), anyString(), anyLong());
+    verify(tracker, never()).waitForQuiescence(anyString(), anyString(), any(), anyLong());
   }
 
   /**
@@ -339,10 +342,10 @@ public class InterceptActivationCoordinatorTest {
     // Then: The coordinator should:
     // 1. Detect that forceImmediate=true (per-intercept override)
     // 2. NOT call tracker.startFencing() (override takes precedence)
-    verify(tracker, never()).startFencing(anyString(), anyString());
+    verify(tracker, never()).startFencing(anyString(), anyString(), any());
 
     // 3. NOT call tracker.waitForQuiescence()
-    verify(tracker, never()).waitForQuiescence(anyString(), anyString(), anyLong());
+    verify(tracker, never()).waitForQuiescence(anyString(), anyString(), any(), anyLong());
   }
 
   /**
@@ -370,7 +373,7 @@ public class InterceptActivationCoordinatorTest {
     InterceptMessage message = createInterceptMessage("com.example.Calculator", "add", false);
 
     // And: waitForQuiescence will throw an exception (simulating failure)
-    when(tracker.waitForQuiescence(anyString(), anyString(), anyLong()))
+    when(tracker.waitForQuiescence(anyString(), anyString(), any(), anyLong()))
         .thenThrow(new RuntimeException("Simulated failure"));
 
     // When: The coordinator is asked to activate the intercept
@@ -380,11 +383,11 @@ public class InterceptActivationCoordinatorTest {
     assertTrue(result.isAsyncPending());
 
     // And: The coordinator should:
-    // 1. Call tracker.startFencing("com.example.Calculator", "add")
-    verify(tracker, times(1)).startFencing("com.example.Calculator", "add");
+    // 1. Call tracker.startFencing("com.example.Calculator", "add", new String[0])
+    verify(tracker, times(1)).startFencing("com.example.Calculator", "add", new String[0]);
 
-    // 2. In finally block, call tracker.stopFencing("com.example.Calculator", "add")
-    verify(tracker, times(1)).stopFencing("com.example.Calculator", "add");
+    // 2. In finally block, call tracker.stopFencing("com.example.Calculator", "add", ...)
+    verify(tracker, times(1)).stopFencing("com.example.Calculator", "add", new String[0]);
 
     // 3. Queue should be empty (enqueue didn't happen due to exception)
     assertTrue("Queue should be empty on failure", pendingQueue.isEmpty());
@@ -410,7 +413,7 @@ public class InterceptActivationCoordinatorTest {
     assertEquals(0, coordinator.getActiveDrainCount());
 
     // And: waitForQuiescence returns true
-    when(tracker.waitForQuiescence(anyString(), anyString(), anyLong())).thenReturn(true);
+    when(tracker.waitForQuiescence(anyString(), anyString(), any(), anyLong())).thenReturn(true);
 
     // When: We activate an intercept (using direct executor, it runs synchronously)
     InterceptMessage message = createInterceptMessage("com.example.Calculator", "add", false);
