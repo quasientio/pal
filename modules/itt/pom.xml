@@ -43,6 +43,74 @@
                 </configuration>
             </plugin>
 
+            <!-- Copy JaCoCo agent to known location for peer instrumentation -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-jacoco-agent</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>org.jacoco</groupId>
+                                    <artifactId>org.jacoco.agent</artifactId>
+                                    <version>${jacoco.plugin.version}</version>
+                                    <classifier>runtime</classifier>
+                                    <destFileName>jacocoagent.jar</destFileName>
+                                </artifactItem>
+                            </artifactItems>
+                            <outputDirectory>${project.build.directory}/jacoco-agent</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- JaCoCo coverage for integration tests -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <executions>
+                    <!-- Merge all integration test coverage files -->
+                    <execution>
+                        <id>merge-integration-coverage</id>
+                        <phase>post-integration-test</phase>
+                        <goals>
+                            <goal>merge</goal>
+                        </goals>
+                        <configuration>
+                            <fileSets>
+                                <fileSet>
+                                    <directory>${project.build.directory}</directory>
+                                    <includes>
+                                        <include>jacoco-it.exec</include>
+                                        <include>jacoco-peer-*.exec</include>
+                                    </includes>
+                                </fileSet>
+                            </fileSets>
+                            <destFile>${project.build.directory}/jacoco-merged-it.exec</destFile>
+                        </configuration>
+                    </execution>
+
+                    <!-- Generate report from merged coverage -->
+                    <execution>
+                        <id>report-merged-integration</id>
+                        <phase>post-integration-test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                        <configuration>
+                            <dataFile>${project.build.directory}/jacoco-merged-it.exec</dataFile>
+                            <outputDirectory>${project.build.directory}/site/jacoco-merged-it</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
             <!-- configure failsafe -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -50,7 +118,10 @@
                 <version>${maven.failsafe.version}</version>
                 <configuration>
                     <reuseForks>false</reuseForks>
+
+                    <!-- Prepend JaCoCo agent to existing Java module arguments -->
                     <argLine>
+                        ${failsafeArgLine}
                         --add-exports=java.base/jdk.internal.ref=ALL-UNNAMED
                         --add-exports=java.base/sun.nio.ch=ALL-UNNAMED
                         --add-exports=jdk.unsupported/sun.misc=ALL-UNNAMED
@@ -60,6 +131,12 @@
                         --add-opens=java.base/java.util=ALL-UNNAMED
                         --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
                     </argLine>
+
+                    <!-- Pass JaCoCo agent path to tests for peer instrumentation -->
+                    <systemPropertyVariables>
+                        <jacoco.agent.jar>${project.build.directory}/jacoco-agent/jacocoagent.jar</jacoco.agent.jar>
+                        <jacoco.destfile.dir>${project.build.directory}</jacoco.destfile.dir>
+                    </systemPropertyVariables>
 
                     <!-- Only discover the suites + truly-standalone ITs -->
                     <includes>

@@ -201,6 +201,29 @@
                                 <goal>report</goal>
                             </goals>
                         </execution>
+                        <!-- Integration test instrumentation -->
+                        <execution>
+                            <id>prepare-agent-integration</id>
+                            <goals>
+                                <goal>prepare-agent-integration</goal>
+                            </goals>
+                            <configuration>
+                                <destFile>${project.build.directory}/jacoco-it.exec</destFile>
+                                <propertyName>failsafeArgLine</propertyName>
+                            </configuration>
+                        </execution>
+                        <!-- Integration test report -->
+                        <execution>
+                            <id>report-integration</id>
+                            <phase>post-integration-test</phase>
+                            <goals>
+                                <goal>report-integration</goal>
+                            </goals>
+                            <configuration>
+                                <dataFile>${project.build.directory}/jacoco-it.exec</dataFile>
+                                <outputDirectory>${project.build.directory}/site/jacoco-it</outputDirectory>
+                            </configuration>
+                        </execution>
                     </executions>
                 </plugin>
                 <!-- resources -->
@@ -616,6 +639,11 @@
             <dependency>
                 <groupId>io.quasient.pal</groupId>
                 <artifactId>itt-apps</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.quasient.pal</groupId>
+                <artifactId>itt</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

@@ -411,6 +411,29 @@ public abstract class AbstractIntegrationTest {
 
     pb.environment().put("PAL_PEER_LOGGING_CONFIG", loggingConfigPath);
 
+    // Configure JaCoCo agent for peer process coverage collection
+    String jacocoAgentJar = System.getProperty("jacoco.agent.jar");
+    String jacocoDestFileDir = System.getProperty("jacoco.destfile.dir");
+    if (jacocoAgentJar != null && jacocoDestFileDir != null) {
+      File agentFile = new File(jacocoAgentJar);
+      if (agentFile.exists()) {
+        // Create unique coverage file for this peer
+        String coverageFile =
+            Paths.get(jacocoDestFileDir, "jacoco-peer-" + peerId + ".exec").toString();
+        // Note: bin/pal script adds '-javaagent:' prefix automatically, so only provide
+        // path+options
+        String javaAgent =
+            String.format(
+                "%s=destfile=%s,append=true,dumponexit=true", jacocoAgentJar, coverageFile);
+        pb.environment().put("JAVA_AGENT", javaAgent);
+        logger.info("Enabled JaCoCo agent for peer process: {}", coverageFile);
+      } else {
+        logger.warn("JaCoCo agent JAR not found at: {}", jacocoAgentJar);
+      }
+    } else {
+      logger.debug("JaCoCo agent not configured (running without coverage collection)");
+    }
+
     // Remove environment variables that would interfere with tests
     // Tests must pass configuration explicitly via command-line arguments (e.g., "-d", "-k")
     pb.environment().remove("PAL_DIRECTORY");
