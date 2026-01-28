@@ -36,6 +36,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
@@ -468,6 +469,7 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
     props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
     props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
     props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, KafkaMessageSerde.class);
+    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
     /*
      2. DEFINE PROCESSING TOPOLOGY
