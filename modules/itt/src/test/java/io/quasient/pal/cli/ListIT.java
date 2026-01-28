@@ -13,6 +13,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import io.quasient.pal.PeerProcess;
 import java.util.UUID;
@@ -457,5 +458,290 @@ public class ListIT extends AbstractCliIT {
         result.stdout(),
         not(containsString(peerName)));
     logger.info("Successfully verified logs-only listing excludes peers");
+  }
+
+  /**
+   * Tests that `pal ls -P` does not show logs.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testListPeers_doesNotShowLogs() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+
+    // Launch a peer with a WAL
+    String peerName = "test-peer-exclude-logs-" + generateId();
+    String walName = "test-wal-exclude-logs-" + generateId();
+    UUID peerId = UUID.randomUUID();
+
+    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDirectory,
+            "-k",
+            kafkaServers,
+            "-n",
+            peerName,
+            "--wal",
+            walName,
+            "-cp",
+            getIttAppsClasspath(),
+            classToRun);
+
+    // Wait for the process to complete and create the WAL
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
+    peerProcess = null;
+
+    // Re-launch the peer so it's visible in peer listing
+    peerProcess =
+        launchPeer(peerId, "-d", palDirectory, "-n", peerName, "-cp", getIttAppsClasspath());
+
+    // List only peers
+    AbstractCliIT.CliProcessResult result = runLs("-d", palDirectory, "-P");
+
+    assertEquals("Expected successful exit code", 0, result.exitCode());
+    assertThat("Expected peer name in output", result.stdout(), containsString(peerName));
+    // Should not show logs when -P is specified
+    assertThat(
+        "Expected WAL log name NOT in peers-only output",
+        result.stdout(),
+        not(containsString(walName)));
+    logger.info("Successfully verified peers-only listing excludes logs");
+  }
+
+  /**
+   * Tests that `pal ls -L -S` sorts logs by size (largest first).
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testListLogs_sortBySize() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+
+    // Create two logs - run different classes to get different sizes
+    String walName1 = "test-wal-size1-" + generateId();
+    UUID peerId1 = UUID.randomUUID();
+    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+
+    PeerProcess peer1 =
+        launchPeer(
+            peerId1,
+            "-d",
+            palDirectory,
+            "-k",
+            kafkaServers,
+            "--wal",
+            walName1,
+            "-cp",
+            getIttAppsClasspath(),
+            classToRun);
+
+    int peer1ExitCode = joinPeer(peer1, 10);
+    assertEquals("Expected successful peer1 exit code", 0, peer1ExitCode);
+
+    String walName2 = "test-wal-size2-" + generateId();
+    UUID peerId2 = UUID.randomUUID();
+
+    peerProcess =
+        launchPeer(
+            peerId2,
+            "-d",
+            palDirectory,
+            "-k",
+            kafkaServers,
+            "--wal",
+            walName2,
+            "-cp",
+            getIttAppsClasspath(),
+            classToRun);
+
+    int peer2ExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer2 exit code", 0, peer2ExitCode);
+    peerProcess = null;
+
+    // List logs sorted by size
+    AbstractCliIT.CliProcessResult result = runLs("-d", palDirectory, "-L", "-l", "-S");
+
+    assertEquals("Expected successful exit code", 0, result.exitCode());
+    assertThat("Expected first WAL log in output", result.stdout(), containsString(walName1));
+    assertThat("Expected second WAL log in output", result.stdout(), containsString(walName2));
+    logger.info("Successfully listed logs sorted by size");
+  }
+
+  /**
+   * Tests that `pal ls -L -r` reverses the sort order.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testListLogs_reverseOrder() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+
+    // Create two logs
+    String walName1 = "test-wal-rev1-" + generateId();
+    UUID peerId1 = UUID.randomUUID();
+    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+
+    PeerProcess peer1 =
+        launchPeer(
+            peerId1,
+            "-d",
+            palDirectory,
+            "-k",
+            kafkaServers,
+            "--wal",
+            walName1,
+            "-cp",
+            getIttAppsClasspath(),
+            classToRun);
+
+    int peer1ExitCode = joinPeer(peer1, 10);
+    assertEquals("Expected successful peer1 exit code", 0, peer1ExitCode);
+
+    // Wait to ensure different creation times
+    Thread.sleep(1000);
+
+    String walName2 = "test-wal-rev2-" + generateId();
+    UUID peerId2 = UUID.randomUUID();
+
+    peerProcess =
+        launchPeer(
+            peerId2,
+            "-d",
+            palDirectory,
+            "-k",
+            kafkaServers,
+            "--wal",
+            walName2,
+            "-cp",
+            getIttAppsClasspath(),
+            classToRun);
+
+    int peer2ExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer2 exit code", 0, peer2ExitCode);
+    peerProcess = null;
+
+    // List logs sorted by ctime with reverse order (oldest first)
+    AbstractCliIT.CliProcessResult result = runLs("-d", palDirectory, "-L", "-c", "-r");
+
+    assertEquals("Expected successful exit code", 0, result.exitCode());
+    assertThat("Expected first WAL log in output", result.stdout(), containsString(walName1));
+    assertThat("Expected second WAL log in output", result.stdout(), containsString(walName2));
+
+    // Check that walName1 appears before walName2 (oldest first due to reverse)
+    int idx1 = result.stdout().indexOf(walName1);
+    int idx2 = result.stdout().indexOf(walName2);
+    assertThat("Expected older log to appear first with reverse order", idx1 < idx2);
+    logger.info("Successfully verified reverse sort order");
+  }
+
+  /**
+   * Tests that `pal ls -L -l --no-trim` shows full field values without truncation.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testListLogs_noTrim() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+
+    // Create a log with a long name
+    String walName = "test-wal-notrim-verylongname-" + generateId();
+    UUID peerId = UUID.randomUUID();
+    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDirectory,
+            "-k",
+            kafkaServers,
+            "--wal",
+            walName,
+            "-cp",
+            getIttAppsClasspath(),
+            classToRun);
+
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
+    peerProcess = null;
+
+    // List logs in long format with no trimming
+    AbstractCliIT.CliProcessResult result = runLs("-d", palDirectory, "-L", "-l", "--no-trim");
+
+    assertEquals("Expected successful exit code", 0, result.exitCode());
+    // With --no-trim, the full name should appear (no ".." truncation)
+    assertThat("Expected full log name in output", result.stdout(), containsString(walName));
+    logger.info("Successfully verified --no-trim option");
+  }
+
+  /**
+   * Tests that `pal ls` fails with error when both -L and -P are specified.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testList_bothFlags_showsError() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+
+    // Run ls with both -L and -P
+    AbstractCliIT.CliProcessResult result = runLs("-d", palDirectory, "-L", "-P");
+
+    // Should return non-zero exit code
+    assertTrue("Expected non-zero exit code", result.exitCode() != 0);
+    logger.info("Successfully validated ls command rejects both -L and -P flags");
+  }
+
+  /**
+   * Tests that `pal ls -P -c` sorts peers by creation time (newest first).
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testListPeers_sortByCtime() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+
+    // Create two peers with different creation times
+    String peerName1 = "test-peer-ctime1-" + generateId();
+    UUID peerId1 = UUID.randomUUID();
+
+    PeerProcess peer1 =
+        launchPeer(peerId1, "-d", palDirectory, "-n", peerName1, "-cp", getIttAppsClasspath());
+
+    // Wait to ensure different creation times
+    Thread.sleep(1000);
+
+    String peerName2 = "test-peer-ctime2-" + generateId();
+    UUID peerId2 = UUID.randomUUID();
+
+    peerProcess =
+        launchPeer(peerId2, "-d", palDirectory, "-n", peerName2, "-cp", getIttAppsClasspath());
+
+    // List peers sorted by creation time
+    AbstractCliIT.CliProcessResult result = runLs("-d", palDirectory, "-P", "-c");
+
+    assertEquals("Expected successful exit code", 0, result.exitCode());
+    assertThat("Expected first peer in output", result.stdout(), containsString(peerName1));
+    assertThat("Expected second peer in output", result.stdout(), containsString(peerName2));
+
+    // Check that peerName2 appears before peerName1 (newest first)
+    int idx1 = result.stdout().indexOf(peerName1);
+    int idx2 = result.stdout().indexOf(peerName2);
+    assertThat("Expected newer peer to appear first", idx2 < idx1);
+
+    // Cleanup
+    stopPeer(peer1);
+    stopPeer(peerProcess);
+    peerProcess = null;
+
+    logger.info("Successfully verified peers sorted by creation time");
   }
 }

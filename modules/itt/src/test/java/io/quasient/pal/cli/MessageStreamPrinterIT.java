@@ -496,4 +496,220 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     logger.info("Successfully executed print with message type filter on Chronicle log");
   }
+
+  /**
+   * Tests that `pal print` can filter messages by peer UUID.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testPrint_kafkaLog_filterByPeer() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+
+    // Create a WAL
+    String walName = "test-print-filter-peer-" + generateId();
+    UUID peerId = UUID.randomUUID();
+
+    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDirectory,
+            "-k",
+            kafkaServers,
+            "--wal",
+            walName,
+            "-cp",
+            getIttAppsClasspath(),
+            classToRun);
+
+    // Wait for the process to complete
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
+    peerProcess = null;
+
+    // Print with peer UUID filter
+    AbstractCliIT.CliProcessResult printResult =
+        runPrint("-d", palDirectory, "-l", walName, "--from-peer", peerId.toString(), "--full");
+
+    // Command should execute successfully
+    assertEquals("Expected successful print", 0, printResult.exitCode());
+
+    logger.info("Successfully executed print with peer UUID filter");
+  }
+
+  /**
+   * Tests that `pal print` can filter messages by thread name.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testPrint_kafkaLog_filterByThread() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+
+    // Create a WAL
+    String walName = "test-print-filter-thread-" + generateId();
+    UUID peerId = UUID.randomUUID();
+
+    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDirectory,
+            "-k",
+            kafkaServers,
+            "--wal",
+            walName,
+            "-cp",
+            getIttAppsClasspath(),
+            classToRun);
+
+    // Wait for the process to complete
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
+    peerProcess = null;
+
+    // Print with thread name filter (main thread)
+    AbstractCliIT.CliProcessResult printResult =
+        runPrint("-d", palDirectory, "-l", walName, "--from-thread", "main", "--full");
+
+    // Command should execute successfully
+    assertEquals("Expected successful print", 0, printResult.exitCode());
+    // Should have output since main thread creates messages
+    assertThat("Expected content in output", !printResult.stdout().isEmpty());
+
+    logger.info("Successfully executed print with thread name filter");
+  }
+
+  /**
+   * Tests that `pal print` can access Kafka logs directly with -k option.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testPrint_kafkaLog_directMode() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+
+    // Create a WAL by launching a peer
+    String walName = "test-print-direct-" + generateId();
+    UUID peerId = UUID.randomUUID();
+
+    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDirectory,
+            "-k",
+            kafkaServers,
+            "--wal",
+            walName,
+            "-cp",
+            getIttAppsClasspath(),
+            classToRun);
+
+    // Wait for the process to complete
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
+    peerProcess = null;
+
+    // Print using direct Kafka mode with -k option
+    AbstractCliIT.CliProcessResult printResult =
+        runPrint("-d", palDirectory, "-k", kafkaServers, "-l", walName, "--full");
+
+    assertEquals("Expected successful print in direct mode", 0, printResult.exitCode());
+    assertThat("Expected content in output", !printResult.stdout().isEmpty());
+
+    logger.info("Successfully printed messages using direct Kafka mode");
+  }
+
+  /**
+   * Tests that `pal print` can filter by multiple message types.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testPrint_kafkaLog_multipleTypeFilters() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+
+    // Create a WAL
+    String walName = "test-print-multi-types-" + generateId();
+    UUID peerId = UUID.randomUUID();
+
+    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDirectory,
+            "-k",
+            kafkaServers,
+            "--wal",
+            walName,
+            "-cp",
+            getIttAppsClasspath(),
+            classToRun);
+
+    // Wait for the process to complete
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
+    peerProcess = null;
+
+    // Print with multiple type filters
+    AbstractCliIT.CliProcessResult printResult =
+        runPrint(
+            "-d", palDirectory, "-l", walName, "--types", "CONSTRUCTOR,INSTANCE_METHOD", "--full");
+
+    // Command should execute successfully
+    assertEquals("Expected successful print", 0, printResult.exitCode());
+
+    logger.info("Successfully executed print with multiple type filters");
+  }
+
+  /**
+   * Tests that `pal print` with Chronicle log can use direct file path.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testPrint_chronicleLog_directFilePath() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+
+    // Create a Chronicle WAL
+    String walName = "test-print-chronicle-direct-" + generateId();
+    trackChronicleLog(walName);
+    String walPath = "file:" + walName;
+
+    UUID peerId = UUID.randomUUID();
+
+    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+
+    peerProcess =
+        launchPeer(
+            peerId, "-d", palDirectory, "--wal", walPath, "-cp", getIttAppsClasspath(), classToRun);
+
+    // Wait for the process to complete
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
+    peerProcess = null;
+
+    // Print using the file: prefix to indicate direct Chronicle access
+    AbstractCliIT.CliProcessResult printResult =
+        runPrint("-d", palDirectory, "-l", walPath, "--full");
+
+    assertEquals("Expected successful print", 0, printResult.exitCode());
+    assertThat("Expected content in output", !printResult.stdout().isEmpty());
+
+    logger.info("Successfully printed messages from Chronicle log using direct file path");
+  }
 }

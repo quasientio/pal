@@ -20,7 +20,6 @@ import io.quasient.pal.messages.MessageStreamer;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.Message;
 import io.quasient.pal.messages.types.MessageType;
-import io.quasient.pal.serdes.kafka.KafkaMessageSerde;
 import io.quasient.pal.tools.AbstractTool;
 import io.quasient.pal.tools.stats.ContinuousPrinter;
 import io.quasient.pal.tools.stats.Counters;
@@ -468,7 +467,7 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
     props.put(StreamsConfig.APPLICATION_ID_CONFIG, consumerId);
     props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
     props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-    props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, KafkaMessageSerde.class);
+    props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.ByteArray().getClass());
     props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
     /*

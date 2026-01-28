@@ -117,8 +117,26 @@ public class MessageStreamStatsIT extends AbstractCliIT {
               }
             });
 
-    // Wait a few seconds for stats to process messages
-    Thread.sleep(3000);
+    // Wait for Kafka Streams to initialize and process messages
+    // Kafka Streams needs time to: start, subscribe, seek to beginning, consume, process
+    // Poll counters until messages are processed or timeout
+    int maxWaitSeconds = 30;
+    int pollIntervalMs = 500;
+    int attempts = (maxWaitSeconds * 1000) / pollIntervalMs;
+    boolean messagesProcessed = false;
+
+    for (int i = 0; i < attempts; i++) {
+      Thread.sleep(pollIntervalMs);
+      if (stats.getCounters().getNumberOfMessages().get() > 0) {
+        messagesProcessed = true;
+        logger.info("Messages processed after {} ms", i * pollIntervalMs);
+        break;
+      }
+    }
+
+    if (!messagesProcessed) {
+      logger.warn("No messages processed after {} seconds", maxWaitSeconds);
+    }
 
     // Stop stats collection
     stats.stopStreams();
@@ -193,8 +211,24 @@ public class MessageStreamStatsIT extends AbstractCliIT {
               }
             });
 
-    // Wait for stats to process messages
-    Thread.sleep(3000);
+    // Wait for Kafka Streams to process messages
+    int maxWaitSeconds = 30;
+    int pollIntervalMs = 500;
+    int attempts = (maxWaitSeconds * 1000) / pollIntervalMs;
+    boolean messagesProcessed = false;
+
+    for (int i = 0; i < attempts; i++) {
+      Thread.sleep(pollIntervalMs);
+      if (stats.getCounters().getNumberOfMessages().get() > 0) {
+        messagesProcessed = true;
+        logger.info("Messages processed after {} ms", i * pollIntervalMs);
+        break;
+      }
+    }
+
+    if (!messagesProcessed) {
+      logger.warn("No messages processed after {} seconds", maxWaitSeconds);
+    }
 
     // Stop stats collection
     stats.stopStreams();
@@ -273,8 +307,24 @@ public class MessageStreamStatsIT extends AbstractCliIT {
               }
             });
 
-    // Wait for stats to process messages
-    Thread.sleep(3000);
+    // Wait for Kafka Streams to process messages
+    int maxWaitSeconds = 30;
+    int pollIntervalMs = 500;
+    int attempts = (maxWaitSeconds * 1000) / pollIntervalMs;
+    boolean messagesProcessed = false;
+
+    for (int i = 0; i < attempts; i++) {
+      Thread.sleep(pollIntervalMs);
+      if (stats.getCounters().getNumberOfMessages().get() > 0) {
+        messagesProcessed = true;
+        logger.info("Messages processed after {} ms", i * pollIntervalMs);
+        break;
+      }
+    }
+
+    if (!messagesProcessed) {
+      logger.warn("No messages processed after {} seconds", maxWaitSeconds);
+    }
 
     // Stop stats collection
     stats.stopStreams();
@@ -348,8 +398,24 @@ public class MessageStreamStatsIT extends AbstractCliIT {
               }
             });
 
-    // Wait for stats to process messages
-    Thread.sleep(3000);
+    // Wait for Kafka Streams to process messages
+    int maxWaitSeconds = 30;
+    int pollIntervalMs = 500;
+    int attempts = (maxWaitSeconds * 1000) / pollIntervalMs;
+    boolean messagesProcessed = false;
+
+    for (int i = 0; i < attempts; i++) {
+      Thread.sleep(pollIntervalMs);
+      if (stats.getCounters().getNumberOfMessages().get() > 0) {
+        messagesProcessed = true;
+        logger.info("Messages processed after {} ms", i * pollIntervalMs);
+        break;
+      }
+    }
+
+    if (!messagesProcessed) {
+      logger.warn("No messages processed after {} seconds", maxWaitSeconds);
+    }
 
     // Stop stats collection
     stats.stopStreams();

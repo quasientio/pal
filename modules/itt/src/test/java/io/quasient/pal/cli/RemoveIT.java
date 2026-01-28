@@ -408,4 +408,200 @@ public class RemoveIT extends AbstractCliIT {
 
     logger.info("Successfully removed all peers with prefix: {}", prefix);
   }
+
+  /**
+   * Tests that `pal rm -P` can remove a peer by its UUID.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testRemovePeer_byUuid() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+
+    // Launch a peer
+    UUID peerId = UUID.randomUUID();
+    peerProcess = launchPeer(peerId, "-d", palDirectory, "-cp", getIttAppsClasspath());
+
+    // Give peer a moment to fully register
+    Thread.sleep(1000);
+
+    // Verify peer is registered
+    AbstractCliIT.CliProcessResult listResult = runLs("-d", palDirectory, "-P");
+    assertEquals("Expected successful list", 0, listResult.exitCode());
+    assertThat(
+        "Expected peer UUID in listing", listResult.stdout(), containsString(peerId.toString()));
+
+    // Remove the peer by UUID with --force (since it's alive)
+    AbstractCliIT.CliProcessResult removeResult =
+        runRm("-d", palDirectory, "-P", peerId.toString(), "--force");
+    assertEquals("Expected successful removal", 0, removeResult.exitCode());
+
+    // Stop the peer process
+    stopPeer(peerProcess);
+    peerProcess = null;
+
+    // Verify peer is no longer listed
+    AbstractCliIT.CliProcessResult listAfterRemove = runLs("-d", palDirectory, "-P");
+    assertEquals("Expected successful list", 0, listAfterRemove.exitCode());
+    assertThat(
+        "Expected peer NOT in listing after removal",
+        listAfterRemove.stdout(),
+        not(containsString(peerId.toString())));
+
+    logger.info("Successfully removed peer by UUID: {}", peerId);
+  }
+
+  /**
+   * Tests that `pal rm -L` can remove a log directly by name when accessing Kafka directly.
+   *
+   * <p>This test uses the -k (--kafka-servers) option to delete a Kafka log without using the PAL
+   * directory for resolution (direct mode).
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testRemoveLog_directKafkaMode() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+
+    // Create a log by launching a peer with a WAL
+    String walName = "test-wal-direct-rm-" + generateId();
+    UUID peerId = UUID.randomUUID();
+    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDirectory,
+            "-k",
+            kafkaServers,
+            "--wal",
+            walName,
+            "-cp",
+            getIttAppsClasspath(),
+            classToRun);
+
+    // Wait for the process to complete
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
+    peerProcess = null;
+
+    // Verify log exists
+    AbstractCliIT.CliProcessResult listResult = runLs("-d", palDirectory, "-L");
+    assertEquals("Expected successful list", 0, listResult.exitCode());
+    assertThat("Expected log in listing", listResult.stdout(), containsString(walName));
+
+    // Remove the log using direct Kafka mode with -k option
+    AbstractCliIT.CliProcessResult removeResult =
+        runRm("-d", palDirectory, "-k", kafkaServers, "-L", walName, "--force");
+    assertEquals("Expected successful removal in direct mode", 0, removeResult.exitCode());
+
+    // Verify log is no longer listed
+    AbstractCliIT.CliProcessResult listAfterRemove = runLs("-d", palDirectory, "-L");
+    assertEquals("Expected successful list", 0, listAfterRemove.exitCode());
+    assertThat(
+        "Expected log NOT in listing after removal",
+        listAfterRemove.stdout(),
+        not(containsString(walName)));
+
+    logger.info("Successfully removed Kafka log in direct mode: {}", walName);
+  }
+
+  /**
+   * Tests that `pal rm` fails gracefully when neither -L nor -P is specified.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testRemove_noFlag_showsUsage() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+
+    // Run rm without -L or -P
+    AbstractCliIT.CliProcessResult removeResult = runRm("-d", palDirectory, "some-name");
+
+    // Should return non-zero exit code
+    assertTrue("Expected non-zero exit code", removeResult.exitCode() != 0);
+    // Should show usage hint
+    assertThat("Expected usage hint about -L or -P", removeResult.stdout(), containsString("-L"));
+
+    logger.info("Successfully validated rm command requires -L or -P flag");
+  }
+
+  /**
+   * Tests that `pal rm -L --all` removes all logs.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testRemoveLogs_deleteAll() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+
+    // Create multiple logs with a unique prefix to avoid interfering with other tests
+    String prefix = "test-rmall-" + generateId();
+    String walName1 = prefix + "-log1";
+    String walName2 = prefix + "-log2";
+
+    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+
+    UUID peerId1 = UUID.randomUUID();
+    PeerProcess peer1 =
+        launchPeer(
+            peerId1,
+            "-d",
+            palDirectory,
+            "-k",
+            kafkaServers,
+            "--wal",
+            walName1,
+            "-cp",
+            getIttAppsClasspath(),
+            classToRun);
+
+    int peer1ExitCode = joinPeer(peer1, 10);
+    assertEquals("Expected successful peer1 exit code", 0, peer1ExitCode);
+
+    UUID peerId2 = UUID.randomUUID();
+    PeerProcess peer2 =
+        launchPeer(
+            peerId2,
+            "-d",
+            palDirectory,
+            "-k",
+            kafkaServers,
+            "--wal",
+            walName2,
+            "-cp",
+            getIttAppsClasspath(),
+            classToRun);
+
+    int peer2ExitCode = joinPeer(peer2, 10);
+    assertEquals("Expected successful peer2 exit code", 0, peer2ExitCode);
+
+    // Verify both logs exist
+    AbstractCliIT.CliProcessResult listResult = runLs("-d", palDirectory, "-L");
+    assertEquals("Expected successful list", 0, listResult.exitCode());
+    assertThat("Expected log1 in listing", listResult.stdout(), containsString(walName1));
+    assertThat("Expected log2 in listing", listResult.stdout(), containsString(walName2));
+
+    // Remove all logs with prefix using --starting-with
+    AbstractCliIT.CliProcessResult removeResult =
+        runRm("-d", palDirectory, "-L", "-s", prefix, "--force");
+    assertEquals("Expected successful removal", 0, removeResult.exitCode());
+
+    // Verify logs are no longer listed
+    AbstractCliIT.CliProcessResult listAfterRemove = runLs("-d", palDirectory, "-L");
+    assertEquals("Expected successful list", 0, listAfterRemove.exitCode());
+    assertThat(
+        "Expected log1 NOT in listing after removal",
+        listAfterRemove.stdout(),
+        not(containsString(walName1)));
+    assertThat(
+        "Expected log2 NOT in listing after removal",
+        listAfterRemove.stdout(),
+        not(containsString(walName2)));
+
+    logger.info("Successfully removed all logs with prefix: {}", prefix);
+  }
 }
