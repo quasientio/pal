@@ -11,11 +11,13 @@ package io.quasient.pal.cli;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import io.quasient.pal.PeerProcess;
 import java.util.UUID;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -737,5 +739,207 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
     assertThat("Expected content in output", !printResult.stdout().isEmpty());
 
     logger.info("Successfully printed messages from Chronicle log using direct file path");
+  }
+
+  // ==========================================================================
+  // Socket-based MessageStreamPrinter tests (printSocketMessageStream() method)
+  // ==========================================================================
+
+  /**
+   * Tests that `pal print` can print messages from a peer's PUB socket in FULL format.
+   *
+   * <p>Given: A peer running with a TCP PUB socket enabled (--tcp-pub) that generates messages
+   * (constructor calls, method invocations, etc.) during its main class execution.
+   *
+   * <p>When: `pal print -d localhost:2379 -pa <pub-address> --full` is executed to subscribe to the
+   * peer's PUB socket and collect messages.
+   *
+   * <p>Then: Exit code should be 0; stdout should contain message content in FULL format including
+   * context headers and detailed JSON representation.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #378")
+  public void testPrint_peerSocket_fullFormat() throws Exception {
+    // Given: Peer running with PUB socket
+    // - Launch peer with --tcp-pub flag and a class that generates messages
+    // - Peer should publish messages to its PUB socket
+
+    // When: `pal print -d <palDir> -pa <pub-address> --full` executed
+    // - Subscribe to peer's PUB socket using -pa option
+    // - Collect messages for a period to verify socket streaming works
+
+    // Then: Exit code 0; stdout contains message content in FULL format
+    // - Verify exit code is 0 (successful)
+    // - Verify stdout contains "CONTEXT:" (FULL format header)
+    // - Verify stdout contains "HEADERS:" (FULL format header)
+    // - Verify stdout contains message JSON content
+
+    // TODO(#378): Implement after #378 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that `pal print` can print messages from a peer's PUB socket in JSON format.
+   *
+   * <p>Given: A peer running with a TCP PUB socket enabled that generates messages.
+   *
+   * <p>When: `pal print -pa <pub-address> --json` is executed to subscribe to the peer's PUB socket
+   * and output messages in JSON format.
+   *
+   * <p>Then: Exit code should be 0; stdout should contain valid JSON message representations.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #378")
+  public void testPrint_peerSocket_jsonFormat() throws Exception {
+    // Given: Peer running with PUB socket
+    // - Launch peer with --tcp-pub flag and a class that generates messages
+    // - Peer should publish messages to its PUB socket
+
+    // When: `pal print -pa <pub-address> --json` executed
+    // - Subscribe to peer's PUB socket using -pa option with JSON format
+    // - Collect messages for a period
+
+    // Then: Exit code 0; stdout contains valid JSON messages
+    // - Verify exit code is 0
+    // - Verify stdout contains JSON object markers "{" and "}"
+    // - Verify stdout contains expected JSON fields (e.g., "offset:")
+
+    // TODO(#378): Implement after #378 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that `pal print` can print messages from a peer's PUB socket in COMPACT format (default).
+   *
+   * <p>Given: A peer running with a TCP PUB socket enabled.
+   *
+   * <p>When: `pal print -pa <pub-address>` is executed (COMPACT is default format).
+   *
+   * <p>Then: Exit code should be 0; stdout should contain compact message summaries.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #378")
+  public void testPrint_peerSocket_compactFormat() throws Exception {
+    // Given: Peer running with PUB socket
+    // - Launch peer with --tcp-pub flag and a class that generates messages
+    // - Peer should publish messages to its PUB socket
+
+    // When: `pal print -pa <pub-address>` executed (no format flag = COMPACT default)
+    // - Subscribe to peer's PUB socket using -pa option
+    // - Collect messages for a period
+
+    // Then: Exit code 0; stdout contains compact message summaries
+    // - Verify exit code is 0
+    // - Verify stdout contains compact format markers (e.g., "offset=", "id=", "message=")
+    // - Verify stdout does NOT contain FULL format markers like "CONTEXT:" or "HEADERS:"
+
+    // TODO(#378): Implement after #378 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that `pal print` can filter messages by type when streaming from a peer socket.
+   *
+   * <p>Given: A peer running with a TCP PUB socket that generates various message types
+   * (CONSTRUCTOR, INSTANCE_METHOD, CLASS_METHOD, etc.) during execution.
+   *
+   * <p>When: `pal print -pa <pub-address> --types INSTANCE_METHOD` is executed to filter for only
+   * instance method messages.
+   *
+   * <p>Then: Only INSTANCE_METHOD messages should appear in the output.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #378")
+  public void testPrint_peerSocket_filterByMessageType() throws Exception {
+    // Given: Peer generating various message types
+    // - Launch peer with --tcp-pub flag and a class that creates objects and calls methods
+    // - Peer generates CONSTRUCTOR, INSTANCE_METHOD, CLASS_METHOD, etc.
+
+    // When: `pal print -pa <pub-address> --types INSTANCE_METHOD` executed
+    // - Subscribe to peer's PUB socket with type filter
+    // - Collect messages for a period
+
+    // Then: Only INSTANCE_METHOD messages in output
+    // - Verify exit code is 0
+    // - Verify stdout contains INSTANCE_METHOD messages (if any generated)
+    // - Verify stdout does NOT contain CONSTRUCTOR or CLASS_METHOD messages
+    // - Or verify that message type indicators all show INSTANCE_METHOD
+
+    // TODO(#378): Implement after #378 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that `pal print` can filter messages by peer UUID when streaming from a socket.
+   *
+   * <p>Given: A peer running with a TCP PUB socket and a known UUID.
+   *
+   * <p>When: `pal print -pa <pub-address> --from-peer <uuid>` is executed to filter messages by
+   * peer.
+   *
+   * <p>Then: Only messages from the specified peer should appear in the output.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #378")
+  public void testPrint_peerSocket_filterByPeer() throws Exception {
+    // Given: Peer with known UUID
+    // - Launch peer with --tcp-pub flag and known UUID
+    // - Peer generates messages with its UUID in the message headers
+
+    // When: `pal print -pa <pub-address> --from-peer <uuid>` executed
+    // - Subscribe to peer's PUB socket with peer UUID filter
+    // - Collect messages for a period
+
+    // Then: Only messages from specified peer in output
+    // - Verify exit code is 0
+    // - Verify stdout contains messages from the specified peer
+    // - In FULL format, verify peer UUID appears in message headers
+    // - Messages from other peers (if any) should be filtered out
+
+    // TODO(#378): Implement after #378 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that `pal print` can filter messages by thread name when streaming from a socket.
+   *
+   * <p>Given: A peer running with a TCP PUB socket that generates messages from multiple threads.
+   *
+   * <p>When: `pal print -pa <pub-address> --from-thread main` is executed to filter messages by
+   * thread name.
+   *
+   * <p>Then: Only messages from the 'main' thread should appear in the output.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #378")
+  public void testPrint_peerSocket_filterByThread() throws Exception {
+    // Given: Peer running with multiple threads
+    // - Launch peer with --tcp-pub flag and a class that generates messages from multiple threads
+    // - Peer generates messages with thread name in headers
+
+    // When: `pal print -pa <pub-address> --from-thread main` executed
+    // - Subscribe to peer's PUB socket with thread name filter
+    // - Collect messages for a period
+
+    // Then: Only messages from 'main' thread in output
+    // - Verify exit code is 0
+    // - Verify stdout contains messages from the 'main' thread
+    // - In FULL format, verify thread name appears as 'main' in headers
+    // - Messages from other threads should be filtered out
+
+    // TODO(#378): Implement after #378 provides the implementation
+    fail("Not yet implemented");
   }
 }
