@@ -14,6 +14,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import io.quasient.pal.PeerProcess;
 import io.quasient.pal.cxn.directory.PalDirectory;
@@ -22,6 +23,7 @@ import java.nio.file.Path;
 import java.util.UUID;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -603,5 +605,119 @@ public class RemoveIT extends AbstractCliIT {
         not(containsString(walName2)));
 
     logger.info("Successfully removed all logs with prefix: {}", prefix);
+  }
+
+  // ============================================================================
+  // Test stubs for Issue #381 - Remove edge cases
+  // Implementation tracking: Issue #382
+  // ============================================================================
+
+  /**
+   * Tests that `pal rm -P` can remove a dead peer without the --force flag.
+   *
+   * <p>Dead peers (those that have terminated and no longer maintain their etcd lease) should be
+   * removable without requiring the --force flag, since there's no active lease to override.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #382")
+  public void testRemovePeer_deadPeer_removesWithoutForce() throws Exception {
+    // Given: A peer that has terminated (dead) - its lease has expired
+    // - Launch a peer with a unique name
+    // - Stop the peer process
+    // - Wait for the etcd lease to expire (or ensure the peer didn't register a lease)
+    // - Verify the peer still appears in directory listing (as dead/no lease)
+
+    // When: `pal rm -d localhost:2379 -P <peer-name>` (no --force flag)
+    // - Execute the rm command without the --force flag
+
+    // Then: Exit code 0; peer removed successfully
+    // - Verify the rm command succeeds with exit code 0
+    // - Verify the peer no longer appears in directory listing
+
+    // TODO(#382): Implement after #382 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that `pal rm -P` shows an error when trying to remove a non-existent peer.
+   *
+   * <p>Attempting to remove a peer that does not exist in the directory should result in an
+   * appropriate error message and non-zero exit code.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #382")
+  public void testRemovePeer_nonExistent_showsError() throws Exception {
+    // Given: No peer with the specified name exists in the directory
+    // - Generate a unique peer name that definitely doesn't exist
+    // - Optionally verify via pal ls that the peer is not registered
+
+    // When: `pal rm -d localhost:2379 -P nonexistent-peer`
+    // - Execute the rm command with a non-existent peer name
+
+    // Then: Non-zero exit code or appropriate error handling
+    // - Verify the rm command returns a non-zero exit code
+    // - Verify an appropriate error message is shown (e.g., "peer not found")
+
+    // TODO(#382): Implement after #382 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that `pal rm -L` shows an error when trying to remove a non-existent log.
+   *
+   * <p>Attempting to remove a log that does not exist in the directory should result in an error
+   * message being logged.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #382")
+  public void testRemoveLog_nonExistent_showsError() throws Exception {
+    // Given: No log with the specified name exists in the directory
+    // - Generate a unique log name that definitely doesn't exist
+    // - Optionally verify via pal ls that the log is not registered
+
+    // When: `pal rm -d localhost:2379 -L nonexistent-log`
+    // - Execute the rm command with a non-existent log name
+
+    // Then: Error message logged
+    // - Verify an appropriate error or warning message is shown
+    // - The exit code behavior may vary (could be 0 with warning or non-zero)
+
+    // TODO(#382): Implement after #382 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that `pal rm -L` can remove a Chronicle log directly without using the directory.
+   *
+   * <p>When using direct Chronicle mode (file:// URI without -d flag), the rm command should delete
+   * the Chronicle queue files from the filesystem directly.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #382")
+  public void testRemoveLog_directChronicleMode_deletesFiles() throws Exception {
+    // Given: A Chronicle log exists at file:/tmp/test-chronicle-log
+    // - Create a Chronicle log by running a peer with --wal file:/tmp/test-chronicle-log
+    // - Wait for the peer to complete and verify the Chronicle directory exists
+    // - Verify the Chronicle queue files are present on the filesystem
+
+    // When: `pal rm -L file:/tmp/test-chronicle-log` (no -d flag for direct mode)
+    // - Execute the rm command with the file:// URI directly
+    // - Note: This is "direct mode" - no directory lookup, just filesystem deletion
+
+    // Then: Exit code 0; directory deleted from filesystem
+    // - Verify the rm command succeeds with exit code 0
+    // - Verify the Chronicle queue directory has been deleted from the filesystem
+    // - Verify all Chronicle queue files (.cq4, .metadata.cq4t, etc.) are removed
+
+    // TODO(#382): Implement after #382 provides the implementation
+    fail("Not yet implemented");
   }
 }
