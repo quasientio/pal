@@ -359,4 +359,156 @@ public class InterceptCheckerTest {
         .getMatchingIntercepts(
             any(), any(), eq(new String[] {}), eq(MessageType.EXEC_INSTANCE_METHOD), any());
   }
+
+  // ========== isInterceptableType Tests ==========
+
+  /** Tests that EXEC_CONSTRUCTOR is an interceptable type. */
+  @Test
+  public void isInterceptableType_constructor_returnsTrue() {
+    assertThat(InterceptChecker.isInterceptableType(MessageType.EXEC_CONSTRUCTOR), is(true));
+  }
+
+  /** Tests that EXEC_INSTANCE_METHOD is an interceptable type. */
+  @Test
+  public void isInterceptableType_instanceMethod_returnsTrue() {
+    assertThat(InterceptChecker.isInterceptableType(MessageType.EXEC_INSTANCE_METHOD), is(true));
+  }
+
+  /** Tests that EXEC_CLASS_METHOD is an interceptable type. */
+  @Test
+  public void isInterceptableType_classMethod_returnsTrue() {
+    assertThat(InterceptChecker.isInterceptableType(MessageType.EXEC_CLASS_METHOD), is(true));
+  }
+
+  /** Tests that EXEC_GET_STATIC is an interceptable type. */
+  @Test
+  public void isInterceptableType_getStatic_returnsTrue() {
+    assertThat(InterceptChecker.isInterceptableType(MessageType.EXEC_GET_STATIC), is(true));
+  }
+
+  /** Tests that EXEC_GET_FIELD is an interceptable type. */
+  @Test
+  public void isInterceptableType_getField_returnsTrue() {
+    assertThat(InterceptChecker.isInterceptableType(MessageType.EXEC_GET_FIELD), is(true));
+  }
+
+  /** Tests that EXEC_PUT_STATIC is an interceptable type. */
+  @Test
+  public void isInterceptableType_putStatic_returnsTrue() {
+    assertThat(InterceptChecker.isInterceptableType(MessageType.EXEC_PUT_STATIC), is(true));
+  }
+
+  /** Tests that EXEC_PUT_FIELD is an interceptable type. */
+  @Test
+  public void isInterceptableType_putField_returnsTrue() {
+    assertThat(InterceptChecker.isInterceptableType(MessageType.EXEC_PUT_FIELD), is(true));
+  }
+
+  /** Tests that CONTROL_MESSAGE_REQUEST is not an interceptable type. */
+  @Test
+  public void isInterceptableType_controlMessageRequest_returnsFalse() {
+    assertThat(
+        InterceptChecker.isInterceptableType(MessageType.CONTROL_MESSAGE_REQUEST), is(false));
+  }
+
+  /** Tests that META_MESSAGE_REQUEST is not an interceptable type. */
+  @Test
+  public void isInterceptableType_metaMessageRequest_returnsFalse() {
+    assertThat(InterceptChecker.isInterceptableType(MessageType.META_MESSAGE_REQUEST), is(false));
+  }
+
+  /** Tests that EXEC_RETURN_VALUE is not an interceptable type. */
+  @Test
+  public void isInterceptableType_execReturnValue_returnsFalse() {
+    assertThat(InterceptChecker.isInterceptableType(MessageType.EXEC_RETURN_VALUE), is(false));
+  }
+
+  /** Tests that EXEC_THROWABLE is not an interceptable type. */
+  @Test
+  public void isInterceptableType_execThrowable_returnsFalse() {
+    assertThat(InterceptChecker.isInterceptableType(MessageType.EXEC_THROWABLE), is(false));
+  }
+
+  // ========== checkIntercepts with Explicit Parameters Tests ==========
+
+  /** Tests the overload that accepts explicit string parameters. */
+  @Test
+  public void checkIntercepts_withExplicitParams_passesToMatcher() {
+    String className = "com.example.Calculator";
+    String methodName = "calculate";
+    String[] paramTypes = new String[] {"int", "int"};
+
+    when(interceptMatcher.getMatchingIntercepts(
+            eq(className),
+            eq(methodName),
+            eq(paramTypes),
+            eq(MessageType.EXEC_INSTANCE_METHOD),
+            eq(ExecPhase.BEFORE)))
+        .thenReturn(Collections.emptyList());
+
+    // Execute with explicit parameters
+    InterceptCheckResult result =
+        interceptChecker.checkIntercepts(
+            className, methodName, paramTypes, MessageType.EXEC_INSTANCE_METHOD, ExecPhase.BEFORE);
+
+    // Verify
+    assertThat(result, is(notNullValue()));
+    verify(interceptMatcher)
+        .getMatchingIntercepts(
+            eq(className),
+            eq(methodName),
+            eq(paramTypes),
+            eq(MessageType.EXEC_INSTANCE_METHOD),
+            eq(ExecPhase.BEFORE));
+  }
+
+  /** Tests that explicit parameters with null paramTypes works for fields. */
+  @Test
+  public void checkIntercepts_withNullParamTypes_worksForFields() {
+    String className = "com.example.MyClass";
+    String fieldName = "myField";
+
+    when(interceptMatcher.getMatchingIntercepts(
+            eq(className),
+            eq(fieldName),
+            eq(null),
+            eq(MessageType.EXEC_GET_FIELD),
+            eq(ExecPhase.BEFORE)))
+        .thenReturn(Collections.emptyList());
+
+    // Execute with null param types (for field access)
+    InterceptCheckResult result =
+        interceptChecker.checkIntercepts(
+            className, fieldName, null, MessageType.EXEC_GET_FIELD, ExecPhase.BEFORE);
+
+    // Verify
+    assertThat(result, is(notNullValue()));
+    verify(interceptMatcher)
+        .getMatchingIntercepts(
+            eq(className), eq(fieldName), eq(null), eq(MessageType.EXEC_GET_FIELD), any());
+  }
+
+  /** Tests explicit params with matching intercepts. */
+  @Test
+  public void checkIntercepts_explicitParams_withMatches_returnsCorrectResult() {
+    String className = "com.example.Service";
+    String methodName = "process";
+    String[] paramTypes = new String[] {"java.lang.String"};
+
+    // Create a remote intercept
+    InterceptMessage intercept = new InterceptMessage();
+    intercept.setPeerUuid(UUID.randomUUID().toString());
+
+    when(interceptMatcher.getMatchingIntercepts(any(), any(), any(), any(), any()))
+        .thenReturn(List.of(intercept));
+
+    // Execute
+    InterceptCheckResult result =
+        interceptChecker.checkIntercepts(
+            className, methodName, paramTypes, MessageType.EXEC_INSTANCE_METHOD, ExecPhase.BEFORE);
+
+    // Verify
+    assertThat(result.hasRemoteIntercepts(), is(true));
+    assertThat(result.getRemoteIntercepts().size(), is(1));
+  }
 }

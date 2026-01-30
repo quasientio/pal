@@ -16,6 +16,7 @@ import static org.mockito.Mockito.when;
 
 import io.quasient.pal.common.directory.events.InterceptEvent;
 import io.quasient.pal.common.directory.nodes.InterceptRequest;
+import io.quasient.pal.common.directory.nodes.PeerInfo;
 import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.common.lang.intercept.InterceptableMethodCall;
 import io.quasient.pal.core.ZmqEnabledTest;
@@ -25,8 +26,10 @@ import io.quasient.pal.cxn.directory.PalDirectory;
 import io.quasient.pal.messages.colfer.InterceptMessage;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -224,5 +227,224 @@ public class InterceptInformerTest extends ZmqEnabledTest {
 
     // verify that intercept message WAS sent (local intercepts are now registered)
     assertThat(interceptRequestMessages.size(), is(1));
+  }
+
+  // ========== registerAllInterceptsInDirectory Tests ==========
+
+  /**
+   * Tests that registerAllInterceptsInDirectory retrieves intercepts from all peers and sends them.
+   */
+  @Test
+  public void registerAllInterceptsInDirectory_sendsAllIntercepts() throws Exception {
+    // Setup mock directory with multiple peers and intercepts
+    UUID peer1Uuid = UUID.randomUUID();
+    UUID peer2Uuid = UUID.randomUUID();
+    PeerInfo peer1 = new PeerInfo();
+    peer1.setUuid(peer1Uuid);
+    PeerInfo peer2 = new PeerInfo();
+    peer2.setUuid(peer2Uuid);
+    Set<PeerInfo> peers = new HashSet<>();
+    peers.add(peer1);
+    peers.add(peer2);
+
+    InterceptRequest<?> intercept1 =
+        new InterceptRequest<>(
+            UUID.randomUUID(),
+            peer1Uuid,
+            InterceptType.BEFORE,
+            "com.example.Class1",
+            "org.callback.Handler",
+            "handle1",
+            new InterceptableMethodCall("method1", null));
+
+    InterceptRequest<?> intercept2 =
+        new InterceptRequest<>(
+            UUID.randomUUID(),
+            peer2Uuid,
+            InterceptType.AFTER,
+            "com.example.Class2",
+            "org.callback.Handler",
+            "handle2",
+            new InterceptableMethodCall("method2", null));
+
+    when(palDirectory.listPeers()).thenReturn(peers);
+    when(palDirectory.listInterceptsForPeer(peer1Uuid)).thenReturn(Set.of(intercept1));
+    when(palDirectory.listInterceptsForPeer(peer2Uuid)).thenReturn(Set.of(intercept2));
+
+    // Start intercepts stub
+    execService.execute(new InterceptsStub());
+
+    // Create informer and call registerAllInterceptsInDirectory
+    interceptInformer =
+        new InterceptInformer(
+            context, msgBuilder, directoryConnectionProvider, INTERCEPT_REG_ADDRESS);
+    interceptInformer.registerAllInterceptsInDirectory();
+
+    // Give some time for async processing
+    Thread.sleep(100);
+
+    // Verify both intercepts were sent
+    assertThat(interceptRequestMessages.size(), is(2));
+  }
+
+  /** Tests that registerAllInterceptsInDirectory handles empty peer list gracefully. */
+  @Test
+  public void registerAllInterceptsInDirectory_emptyPeerList_noMessages() throws Exception {
+    when(palDirectory.listPeers()).thenReturn(new HashSet<>());
+
+    // Start intercepts stub
+    execService.execute(new InterceptsStub());
+
+    interceptInformer =
+        new InterceptInformer(
+            context, msgBuilder, directoryConnectionProvider, INTERCEPT_REG_ADDRESS);
+    interceptInformer.registerAllInterceptsInDirectory();
+
+    // Give some time for async processing
+    Thread.sleep(50);
+
+    // Verify no intercepts were sent
+    assertThat(interceptRequestMessages.size(), is(0));
+  }
+
+  /** Tests that registerAllInterceptsInDirectory continues processing even if one peer fails. */
+  @Test
+  public void registerAllInterceptsInDirectory_peerError_continuesProcessing() throws Exception {
+    UUID peer1Uuid = UUID.randomUUID();
+    UUID peer2Uuid = UUID.randomUUID();
+    PeerInfo peer1 = new PeerInfo();
+    peer1.setUuid(peer1Uuid);
+    PeerInfo peer2 = new PeerInfo();
+    peer2.setUuid(peer2Uuid);
+    Set<PeerInfo> peers = new HashSet<>();
+    peers.add(peer1);
+    peers.add(peer2);
+
+    InterceptRequest<?> intercept2 =
+        new InterceptRequest<>(
+            UUID.randomUUID(),
+            peer2Uuid,
+            InterceptType.BEFORE,
+            "com.example.Class",
+            "org.callback.Handler",
+            "handle",
+            new InterceptableMethodCall("method", null));
+
+    when(palDirectory.listPeers()).thenReturn(peers);
+    when(palDirectory.listInterceptsForPeer(peer1Uuid))
+        .thenThrow(new RuntimeException("Peer 1 error"));
+    when(palDirectory.listInterceptsForPeer(peer2Uuid)).thenReturn(Set.of(intercept2));
+
+    // Start intercepts stub
+    execService.execute(new InterceptsStub());
+
+    interceptInformer =
+        new InterceptInformer(
+            context, msgBuilder, directoryConnectionProvider, INTERCEPT_REG_ADDRESS);
+    interceptInformer.registerAllInterceptsInDirectory();
+
+    // Give some time for async processing
+    Thread.sleep(100);
+
+    // Verify peer2's intercept was still sent despite peer1 error
+    assertThat(interceptRequestMessages.size(), is(1));
+  }
+
+  /** Tests that registerAllInterceptsInDirectory handles directory error gracefully. */
+  @Test
+  public void registerAllInterceptsInDirectory_directoryError_logsAndReturns() throws Exception {
+    when(palDirectory.listPeers()).thenThrow(new RuntimeException("Directory error"));
+
+    // Start intercepts stub
+    execService.execute(new InterceptsStub());
+
+    interceptInformer =
+        new InterceptInformer(
+            context, msgBuilder, directoryConnectionProvider, INTERCEPT_REG_ADDRESS);
+
+    // Should not throw, just log error and return
+    interceptInformer.registerAllInterceptsInDirectory();
+
+    // Give some time
+    Thread.sleep(50);
+
+    // Verify no intercepts were sent
+    assertThat(interceptRequestMessages.size(), is(0));
+  }
+
+  // ========== closeThreadLocalSocket Tests ==========
+
+  /** Tests that closeThreadLocalSocket can be called safely even when socket was never created. */
+  @Test
+  public void closeThreadLocalSocket_noSocketCreated_doesNothing() {
+    interceptInformer =
+        new InterceptInformer(
+            context, msgBuilder, directoryConnectionProvider, INTERCEPT_REG_ADDRESS);
+
+    // Should not throw when no socket was created
+    interceptInformer.closeThreadLocalSocket();
+  }
+
+  /** Tests that closeThreadLocalSocket properly closes the socket after use. */
+  @Test
+  public void closeThreadLocalSocket_afterUse_closesSocket() {
+    // Start intercepts stub
+    execService.execute(new InterceptsStub());
+
+    var interceptRequest =
+        new InterceptRequest<>(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            InterceptType.BEFORE,
+            "com.example.Class",
+            "org.callback.Handler",
+            "handle",
+            new InterceptableMethodCall("method", null));
+
+    interceptInformer =
+        new InterceptInformer(
+            context, msgBuilder, directoryConnectionProvider, INTERCEPT_REG_ADDRESS);
+
+    // Send an event to create the socket
+    InterceptEvent event =
+        new InterceptEvent(
+            InterceptEvent.Type.INTERCEPT_ADDED,
+            "/root/intercepts/peer/intercept",
+            UUID.randomUUID(),
+            UUID.randomUUID().toString(),
+            interceptRequest);
+    interceptInformer.interceptEvent(event);
+
+    // Now close the socket
+    interceptInformer.closeThreadLocalSocket();
+
+    // Verify message was sent before closing
+    assertThat(interceptRequestMessages.size(), is(1));
+  }
+
+  // ========== interceptEvent Error Handling Tests ==========
+
+  /**
+   * Tests that interceptEvent throws NullPointerException when interceptRequest is null for
+   * INTERCEPT_ADDED.
+   */
+  @Test(expected = NullPointerException.class)
+  public void interceptEvent_addedWithNullRequest_throwsNpe() {
+    execService.execute(new InterceptsStub());
+
+    interceptInformer =
+        new InterceptInformer(
+            context, msgBuilder, directoryConnectionProvider, INTERCEPT_REG_ADDRESS);
+
+    // Create event with null interceptRequest
+    InterceptEvent event =
+        new InterceptEvent(
+            InterceptEvent.Type.INTERCEPT_ADDED,
+            "/root/intercepts/peer/intercept",
+            UUID.randomUUID(),
+            UUID.randomUUID().toString(),
+            null); // null interceptRequest
+
+    interceptInformer.interceptEvent(event);
   }
 }

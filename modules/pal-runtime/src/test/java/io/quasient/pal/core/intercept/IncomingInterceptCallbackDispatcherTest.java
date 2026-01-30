@@ -16,6 +16,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import io.quasient.pal.common.lang.intercept.AfterPhaseData;
+import io.quasient.pal.common.lang.intercept.AroundSocketAccessor;
 import io.quasient.pal.common.lang.intercept.InterceptCallback;
 import io.quasient.pal.common.lang.intercept.InterceptCallbackResponse;
 import io.quasient.pal.common.lang.intercept.InterceptContext;
@@ -23,8 +25,11 @@ import io.quasient.pal.common.lang.intercept.InterceptPhase;
 import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.common.lang.intercept.InterceptTypeNotSupportedException;
 import io.quasient.pal.messages.colfer.Class;
+import io.quasient.pal.messages.colfer.ClassMethodCall;
+import io.quasient.pal.messages.colfer.ConstructorCall;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.Field;
+import io.quasient.pal.messages.colfer.InstanceFieldGet;
 import io.quasient.pal.messages.colfer.InstanceFieldPut;
 import io.quasient.pal.messages.colfer.InstanceMethodCall;
 import io.quasient.pal.messages.colfer.InterceptCallbackRequestMessage;
@@ -32,6 +37,7 @@ import io.quasient.pal.messages.colfer.InterceptCallbackResponseMessage;
 import io.quasient.pal.messages.colfer.Obj;
 import io.quasient.pal.messages.colfer.Parameter;
 import io.quasient.pal.messages.colfer.RaisedThrowable;
+import io.quasient.pal.messages.colfer.StaticFieldGet;
 import io.quasient.pal.messages.colfer.StaticFieldPut;
 import io.quasient.pal.serdes.colfer.ExceptionSerdes;
 import io.quasient.pal.serdes.colfer.WrapPolicy;
@@ -1083,5 +1089,800 @@ public class IncomingInterceptCallbackDispatcherTest {
     assertNotNull("Should have a cause", deserializedException.getCause());
     assertTrue(
         "Cause should be SQLException", deserializedException.getCause() instanceof SQLException);
+  }
+
+  // ===========================================================================
+  // AROUND Intercept with ctx.proceed() API Tests
+  // ===========================================================================
+
+  /**
+   * Tests that handleAroundCallback correctly handles callback that calls proceed().
+   *
+   * <p>Verifies that when the callback invokes ctx.proceed(), the response is an AFTER phase
+   * response.
+   */
+  @Test
+  public void testHandleAroundCallback_proceedCalled_returnsAfterPhaseResponse() {
+    // Create callback that calls proceed()
+    InterceptCallback callback =
+        (ctx) -> {
+          ctx.proceed();
+          return new InterceptCallbackResponse();
+        };
+
+    dispatcher.registerCallback("around-callback", callback);
+
+    // Create mock socket accessor that simulates successful proceed
+    AroundSocketAccessor socketAccessor =
+        (beforeResponse, timeoutMs) ->
+            new AfterPhaseData("proceed-result", null, false); // successful return
+
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
+    request.setCallbackId("req-around");
+    request.setPhase((byte) 1); // BEFORE
+    request.setInterceptType((byte) 3); // AROUND
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("around-callback");
+    request.setExec(execMessage);
+    request.setTimeoutMs(5000);
+
+    InterceptCallbackResponseMessage response =
+        dispatcher.handleAroundCallback(request, socketAccessor);
+
+    assertNotNull(response);
+    assertEquals("req-around", response.getCallbackId());
+    assertEquals(
+        "Should return AFTER phase when proceed() was called",
+        InterceptPhase.AFTER.toByte(),
+        response.getPhase());
+    assertFalse("Should not throw exception", response.getThrowException());
+  }
+
+  /**
+   * Tests that handleAroundCallback correctly handles callback that skips execution.
+   *
+   * <p>Verifies that when the callback does NOT call proceed() but sets a return value, the
+   * response is a BEFORE phase skip response.
+   */
+  @Test
+  public void testHandleAroundCallback_skipWithReturnValue_returnsSkipResponse() {
+    // Create callback that skips proceed() and sets return value
+    InterceptCallback callback =
+        (ctx) -> {
+          ctx.setReturnValue("cached-value");
+          // Don't call proceed()
+          return new InterceptCallbackResponse();
+        };
+
+    dispatcher.registerCallback("around-callback", callback);
+
+    // Socket accessor should not be called since we skip
+    AroundSocketAccessor socketAccessor =
+        (beforeResponse, timeoutMs) -> {
+          fail("Socket accessor should not be called when skipping");
+          return null;
+        };
+
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
+    request.setCallbackId("req-around");
+    request.setPhase((byte) 1); // BEFORE
+    request.setInterceptType((byte) 3); // AROUND
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("around-callback");
+    request.setExec(execMessage);
+    request.setTimeoutMs(5000);
+
+    InterceptCallbackResponseMessage response =
+        dispatcher.handleAroundCallback(request, socketAccessor);
+
+    assertNotNull(response);
+    assertEquals("req-around", response.getCallbackId());
+    assertEquals(
+        "Should return BEFORE phase when skipping",
+        InterceptPhase.BEFORE.toByte(),
+        response.getPhase());
+    assertFalse("Should NOT proceed", response.getShouldProceed());
+    assertTrue("Should override return", response.getOverrideReturn());
+    assertFalse("Should not throw exception", response.getThrowException());
+  }
+
+  /**
+   * Tests that handleAroundCallback correctly handles callback that skips with exception.
+   *
+   * <p>Verifies that when the callback does NOT call proceed() but sets an exception, the response
+   * is a BEFORE phase skip response with exception.
+   */
+  @Test
+  public void testHandleAroundCallback_skipWithException_returnsSkipResponseWithException() {
+    // Create callback that skips proceed() and sets exception
+    InterceptCallback callback =
+        (ctx) -> {
+          ctx.setExceptionToThrow(new IllegalStateException("Skipped with error"));
+          return new InterceptCallbackResponse();
+        };
+
+    dispatcher.registerCallback("around-callback", callback);
+
+    AroundSocketAccessor socketAccessor =
+        (beforeResponse, timeoutMs) -> {
+          fail("Socket accessor should not be called when skipping");
+          return null;
+        };
+
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
+    request.setCallbackId("req-around");
+    request.setPhase((byte) 1); // BEFORE
+    request.setInterceptType((byte) 3); // AROUND
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("around-callback");
+    request.setExec(execMessage);
+    request.setTimeoutMs(5000);
+
+    InterceptCallbackResponseMessage response =
+        dispatcher.handleAroundCallback(request, socketAccessor);
+
+    assertNotNull(response);
+    assertEquals(
+        "Should return BEFORE phase when skipping",
+        InterceptPhase.BEFORE.toByte(),
+        response.getPhase());
+    assertFalse("Should NOT proceed", response.getShouldProceed());
+    assertTrue("Should throw exception", response.getThrowException());
+  }
+
+  /**
+   * Tests that handleAroundCallback throws when skipping without return value or exception.
+   *
+   * <p>Verifies that when the callback does NOT call proceed() and does NOT set return value or
+   * exception, an IllegalStateException is thrown.
+   */
+  @Test
+  public void testHandleAroundCallback_skipWithoutReturnValue_returnsError() {
+    // Create callback that skips proceed() but doesn't set return value
+    InterceptCallback callback =
+        (ctx) -> {
+          // Don't call proceed()
+          // Don't set return value
+          return new InterceptCallbackResponse();
+        };
+
+    dispatcher.registerCallback("around-callback", callback);
+
+    AroundSocketAccessor socketAccessor =
+        (beforeResponse, timeoutMs) -> {
+          fail("Socket accessor should not be called when skipping");
+          return null;
+        };
+
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
+    request.setCallbackId("req-around");
+    request.setPhase((byte) 1); // BEFORE
+    request.setInterceptType((byte) 3); // AROUND
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("around-callback");
+    request.setExec(execMessage);
+    request.setTimeoutMs(5000);
+
+    InterceptCallbackResponseMessage response =
+        dispatcher.handleAroundCallback(request, socketAccessor);
+
+    assertNotNull(response);
+    assertTrue(
+        "Should return error when skipping without return value", response.getThrowException());
+  }
+
+  /**
+   * Tests that handleAroundCallback handles callback that modifies return value after proceed().
+   *
+   * <p>Verifies post-proceed return value modification.
+   */
+  @Test
+  public void testHandleAroundCallback_proceedWithReturnValueOverride_overridesReturn() {
+    // Create callback that calls proceed() and then modifies return value
+    InterceptCallback callback =
+        (ctx) -> {
+          ctx.proceed();
+          ctx.setReturnValue("modified-result");
+          return new InterceptCallbackResponse();
+        };
+
+    dispatcher.registerCallback("around-callback", callback);
+
+    AroundSocketAccessor socketAccessor =
+        (beforeResponse, timeoutMs) -> new AfterPhaseData("original-result", null, false);
+
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
+    request.setCallbackId("req-around");
+    request.setPhase((byte) 1); // BEFORE
+    request.setInterceptType((byte) 3); // AROUND
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("around-callback");
+    request.setExec(execMessage);
+    request.setTimeoutMs(5000);
+
+    InterceptCallbackResponseMessage response =
+        dispatcher.handleAroundCallback(request, socketAccessor);
+
+    assertNotNull(response);
+    assertEquals(InterceptPhase.AFTER.toByte(), response.getPhase());
+    assertTrue("Should override return value", response.getOverrideReturn());
+    assertFalse("Should not throw exception", response.getThrowException());
+  }
+
+  /**
+   * Tests that handleAroundCallback handles callback exception.
+   *
+   * <p>Verifies that exceptions thrown by the callback are handled properly.
+   */
+  @Test
+  public void testHandleAroundCallback_callbackThrows_returnsErrorResponse() {
+    InterceptCallback callback =
+        (ctx) -> {
+          throw new RuntimeException("Callback failed");
+        };
+
+    dispatcher.registerCallback("around-callback", callback);
+
+    AroundSocketAccessor socketAccessor =
+        (beforeResponse, timeoutMs) -> new AfterPhaseData("result", null, false);
+
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
+    request.setCallbackId("req-around");
+    request.setPhase((byte) 1); // BEFORE
+    request.setInterceptType((byte) 3); // AROUND
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("around-callback");
+    request.setExec(execMessage);
+    request.setTimeoutMs(5000);
+
+    InterceptCallbackResponseMessage response =
+        dispatcher.handleAroundCallback(request, socketAccessor);
+
+    assertNotNull(response);
+    assertTrue("Should indicate error", response.getThrowException());
+  }
+
+  // ===========================================================================
+  // extractArguments Additional Tests
+  // ===========================================================================
+
+  /** Tests extractArguments with ExecMessage having no call types set. */
+  @Test
+  public void testExtractArguments_emptyExecMessage_returnsEmptyArray() {
+    final Object[][] capturedArgs = {null};
+
+    InterceptCallback callback =
+        (ctx) -> {
+          capturedArgs[0] = ctx.getArgs();
+          return new InterceptCallbackResponse();
+        };
+
+    dispatcher.registerCallback("test-callback", callback);
+
+    // Empty ExecMessage with no method/field/constructor call set
+    ExecMessage emptyExec = new ExecMessage();
+    emptyExec.setMessageId("test-empty-msg");
+
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
+    request.setCallbackId("req-123");
+    request.setPhase((byte) 1);
+    request.setInterceptType((byte) 1);
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("test-callback");
+    request.setExec(emptyExec); // ExecMessage with no call types set
+
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
+
+    assertNotNull(response);
+    assertFalse("Should not throw exception", response.getThrowException());
+    assertNotNull("Args should be captured", capturedArgs[0]);
+    assertEquals("Should have empty args array", 0, capturedArgs[0].length);
+  }
+
+  /** Tests extractArguments with instance field GET (no arguments). */
+  @Test
+  public void testExtractArguments_instanceFieldGet_returnsEmptyArray() {
+    final Object[][] capturedArgs = {null};
+
+    InterceptCallback callback =
+        (ctx) -> {
+          capturedArgs[0] = ctx.getArgs();
+          return new InterceptCallbackResponse();
+        };
+
+    dispatcher.registerCallback("test-callback", callback);
+
+    ExecMessage exec = new ExecMessage();
+    exec.setMessageId("test-msg");
+    InstanceFieldGet fieldGet = new InstanceFieldGet();
+    Field field = new Field();
+    field.setName("myField");
+    fieldGet.setField(field);
+    exec.setInstanceFieldGet(fieldGet);
+
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
+    request.setCallbackId("req-123");
+    request.setPhase((byte) 1);
+    request.setInterceptType((byte) 1);
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("test-callback");
+    request.setExec(exec);
+
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
+
+    assertNotNull(response);
+    assertFalse("Should not throw exception", response.getThrowException());
+    assertNotNull("Args should be captured", capturedArgs[0]);
+    assertEquals("Field GET should have empty args", 0, capturedArgs[0].length);
+  }
+
+  /** Tests extractArguments with static field GET (no arguments). */
+  @Test
+  public void testExtractArguments_staticFieldGet_returnsEmptyArray() {
+    final Object[][] capturedArgs = {null};
+
+    InterceptCallback callback =
+        (ctx) -> {
+          capturedArgs[0] = ctx.getArgs();
+          return new InterceptCallbackResponse();
+        };
+
+    dispatcher.registerCallback("test-callback", callback);
+
+    ExecMessage exec = new ExecMessage();
+    exec.setMessageId("test-msg");
+    StaticFieldGet fieldGet = new StaticFieldGet();
+    Field field = new Field();
+    field.setName("staticField");
+    fieldGet.setField(field);
+    exec.setStaticFieldGet(fieldGet);
+
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
+    request.setCallbackId("req-123");
+    request.setPhase((byte) 1);
+    request.setInterceptType((byte) 1);
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("test-callback");
+    request.setExec(exec);
+
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
+
+    assertNotNull(response);
+    assertFalse("Should not throw exception", response.getThrowException());
+    assertNotNull("Args should be captured", capturedArgs[0]);
+    assertEquals("Static field GET should have empty args", 0, capturedArgs[0].length);
+  }
+
+  /** Tests extractArguments with constructor call parameters. */
+  @Test
+  public void testExtractArguments_constructorCall_extractsParameters() {
+    final Object[][] capturedArgs = {null};
+
+    InterceptCallback callback =
+        (ctx) -> {
+          capturedArgs[0] = ctx.getArgs();
+          return new InterceptCallbackResponse();
+        };
+
+    dispatcher.registerCallback("test-callback", callback);
+
+    ExecMessage exec = new ExecMessage();
+    exec.setMessageId("test-msg");
+
+    ConstructorCall constructorCall = new ConstructorCall();
+    Parameter param = new Parameter();
+    param.setName("arg0");
+    param.setValue(wrapValue("constructor-arg", String.class.getName()));
+    constructorCall.setParameters(new Parameter[] {param});
+    exec.setConstructorCall(constructorCall);
+
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
+    request.setCallbackId("req-123");
+    request.setPhase((byte) 1);
+    request.setInterceptType((byte) 1);
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("test-callback");
+    request.setExec(exec);
+
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
+
+    assertNotNull(response);
+    assertFalse("Should not throw exception", response.getThrowException());
+    assertNotNull("Args should be captured", capturedArgs[0]);
+    assertEquals("Should have 1 arg", 1, capturedArgs[0].length);
+    assertEquals("Arg should be 'constructor-arg'", "constructor-arg", capturedArgs[0][0]);
+  }
+
+  /** Tests extractArguments with static method call parameters. */
+  @Test
+  public void testExtractArguments_staticMethodCall_extractsParameters() {
+    final Object[][] capturedArgs = {null};
+
+    InterceptCallback callback =
+        (ctx) -> {
+          capturedArgs[0] = ctx.getArgs();
+          return new InterceptCallbackResponse();
+        };
+
+    dispatcher.registerCallback("test-callback", callback);
+
+    ExecMessage exec = new ExecMessage();
+    exec.setMessageId("test-msg");
+
+    ClassMethodCall classMethodCall = new ClassMethodCall();
+    classMethodCall.setName("staticMethod");
+    Parameter param = new Parameter();
+    param.setName("arg0");
+    param.setValue(wrapValue(999, Integer.class.getName()));
+    classMethodCall.setParameters(new Parameter[] {param});
+    exec.setClassMethodCall(classMethodCall);
+
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
+    request.setCallbackId("req-123");
+    request.setPhase((byte) 1);
+    request.setInterceptType((byte) 1);
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("test-callback");
+    request.setExec(exec);
+
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
+
+    assertNotNull(response);
+    assertFalse("Should not throw exception", response.getThrowException());
+    assertNotNull("Args should be captured", capturedArgs[0]);
+    assertEquals("Should have 1 arg", 1, capturedArgs[0].length);
+    assertEquals("Arg should be 999", 999, capturedArgs[0][0]);
+  }
+
+  /** Tests extractArguments with empty parameters array. */
+  @Test
+  public void testExtractArguments_emptyParameters_returnsEmptyArray() {
+    final Object[][] capturedArgs = {null};
+
+    InterceptCallback callback =
+        (ctx) -> {
+          capturedArgs[0] = ctx.getArgs();
+          return new InterceptCallbackResponse();
+        };
+
+    dispatcher.registerCallback("test-callback", callback);
+
+    ExecMessage exec = new ExecMessage();
+    exec.setMessageId("test-msg");
+
+    InstanceMethodCall methodCall = new InstanceMethodCall();
+    methodCall.setName("noArgMethod");
+    methodCall.setParameters(new Parameter[0]); // empty array
+    exec.setInstanceMethodCall(methodCall);
+
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
+    request.setCallbackId("req-123");
+    request.setPhase((byte) 1);
+    request.setInterceptType((byte) 1);
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("test-callback");
+    request.setExec(exec);
+
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
+
+    assertNotNull(response);
+    assertFalse("Should not throw exception", response.getThrowException());
+    assertNotNull("Args should be captured", capturedArgs[0]);
+    assertEquals("Should have empty args array", 0, capturedArgs[0].length);
+  }
+
+  /** Tests extractArguments with null parameters. */
+  @Test
+  public void testExtractArguments_nullParameters_returnsEmptyArray() {
+    final Object[][] capturedArgs = {null};
+
+    InterceptCallback callback =
+        (ctx) -> {
+          capturedArgs[0] = ctx.getArgs();
+          return new InterceptCallbackResponse();
+        };
+
+    dispatcher.registerCallback("test-callback", callback);
+
+    ExecMessage exec = new ExecMessage();
+    exec.setMessageId("test-msg");
+
+    InstanceMethodCall methodCall = new InstanceMethodCall();
+    methodCall.setName("noArgMethod");
+    methodCall.setParameters(null); // null array
+    exec.setInstanceMethodCall(methodCall);
+
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
+    request.setCallbackId("req-123");
+    request.setPhase((byte) 1);
+    request.setInterceptType((byte) 1);
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("test-callback");
+    request.setExec(exec);
+
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
+
+    assertNotNull(response);
+    assertFalse("Should not throw exception", response.getThrowException());
+    assertNotNull("Args should be captured", capturedArgs[0]);
+    assertEquals("Should have empty args array", 0, capturedArgs[0].length);
+  }
+
+  // ===========================================================================
+  // extractReturnValue Tests
+  // ===========================================================================
+
+  /** Tests AFTER phase with void method (isVoid=true). */
+  @Test
+  public void testAfterPhase_voidMethod_returnValueIsNull() {
+    final Object[] capturedReturnValue = {new Object()}; // sentinel to detect null
+
+    InterceptCallback callback =
+        (ctx) -> {
+          capturedReturnValue[0] = ctx.getReturnValue();
+          return new InterceptCallbackResponse();
+        };
+
+    dispatcher.registerCallback("test-callback", callback);
+
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
+    request.setCallbackId("req-123");
+    request.setPhase((byte) 2); // AFTER
+    request.setInterceptType((byte) 2);
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("test-callback");
+    request.setExec(execMessage);
+    request.setIsVoid(true);
+    request.setReturnValue(null);
+
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
+
+    assertNotNull(response);
+    assertFalse("Should not throw exception", response.getThrowException());
+    assertNull("Return value should be null for void method", capturedReturnValue[0]);
+  }
+
+  /** Tests AFTER phase with non-null return value. */
+  @Test
+  public void testAfterPhase_withReturnValue_deserializesCorrectly() {
+    final Object[] capturedReturnValue = {null};
+
+    InterceptCallback callback =
+        (ctx) -> {
+          capturedReturnValue[0] = ctx.getReturnValue();
+          return new InterceptCallbackResponse();
+        };
+
+    dispatcher.registerCallback("test-callback", callback);
+
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
+    request.setCallbackId("req-123");
+    request.setPhase((byte) 2); // AFTER
+    request.setInterceptType((byte) 2);
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("test-callback");
+    request.setExec(execMessage);
+    request.setIsVoid(false);
+    request.setReturnValue(wrapValue("returned-value", String.class.getName()));
+
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
+
+    assertNotNull(response);
+    assertFalse("Should not throw exception", response.getThrowException());
+    assertEquals("returned-value", capturedReturnValue[0]);
+  }
+
+  /** Tests AFTER phase with null return value object. */
+  @Test
+  public void testAfterPhase_nullReturnValueObj_returnsNull() {
+    final Object[] capturedReturnValue = {new Object()}; // sentinel
+
+    InterceptCallback callback =
+        (ctx) -> {
+          capturedReturnValue[0] = ctx.getReturnValue();
+          return new InterceptCallbackResponse();
+        };
+
+    dispatcher.registerCallback("test-callback", callback);
+
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
+    request.setCallbackId("req-123");
+    request.setPhase((byte) 2); // AFTER
+    request.setInterceptType((byte) 2);
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("test-callback");
+    request.setExec(execMessage);
+    request.setIsVoid(false);
+    request.setReturnValue(null); // null Obj
+
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
+
+    assertNotNull(response);
+    assertFalse("Should not throw exception", response.getThrowException());
+    assertNull("Return value should be null", capturedReturnValue[0]);
+  }
+
+  // ===========================================================================
+  // extractThrownException Tests
+  // ===========================================================================
+
+  /** Tests AFTER phase with thrown exception. */
+  @Test
+  public void testAfterPhase_withThrownException_deserializesCorrectly() {
+    final Throwable[] capturedException = {null};
+
+    InterceptCallback callback =
+        (ctx) -> {
+          capturedException[0] = ctx.getThrownException();
+          return new InterceptCallbackResponse();
+        };
+
+    dispatcher.registerCallback("test-callback", callback);
+
+    // Create serialized exception
+    RaisedThrowable raisedException =
+        ExceptionSerdes.serializeException(new RuntimeException("Test exception"));
+
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
+    request.setCallbackId("req-123");
+    request.setPhase((byte) 2); // AFTER
+    request.setInterceptType((byte) 2);
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("test-callback");
+    request.setExec(execMessage);
+    request.setIsVoid(false);
+    request.setThrownException(raisedException);
+
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
+
+    assertNotNull(response);
+    assertFalse("Should not throw exception", response.getThrowException());
+    assertNotNull("Exception should be captured", capturedException[0]);
+    assertTrue(
+        "Exception should be RuntimeException", capturedException[0] instanceof RuntimeException);
+    assertEquals("Test exception", capturedException[0].getMessage());
+  }
+
+  /** Tests AFTER phase with null thrown exception. */
+  @Test
+  public void testAfterPhase_nullThrownException_returnsNull() {
+    final Throwable[] capturedException = {new RuntimeException("sentinel")};
+
+    InterceptCallback callback =
+        (ctx) -> {
+          capturedException[0] = ctx.getThrownException();
+          return new InterceptCallbackResponse();
+        };
+
+    dispatcher.registerCallback("test-callback", callback);
+
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
+    request.setCallbackId("req-123");
+    request.setPhase((byte) 2); // AFTER
+    request.setInterceptType((byte) 2);
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("test-callback");
+    request.setExec(execMessage);
+    request.setIsVoid(false);
+    request.setThrownException(null);
+
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
+
+    assertNotNull(response);
+    assertFalse("Should not throw exception", response.getThrowException());
+    assertNull("Exception should be null", capturedException[0]);
+  }
+
+  // ===========================================================================
+  // Return Value Override in AFTER Phase Tests
+  // ===========================================================================
+
+  /** Tests AFTER phase callback that overrides return value. */
+  @Test
+  public void testAfterPhase_callbackOverridesReturnValue() {
+    InterceptCallback callback =
+        (ctx) -> {
+          ctx.setReturnValue("overridden-value");
+          return new InterceptCallbackResponse();
+        };
+
+    dispatcher.registerCallback("test-callback", callback);
+
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
+    request.setCallbackId("req-123");
+    request.setPhase((byte) 2); // AFTER
+    request.setInterceptType((byte) 2);
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("test-callback");
+    request.setExec(execMessage);
+    request.setIsVoid(false);
+    request.setReturnValue(wrapValue("original-value", String.class.getName()));
+
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
+
+    assertNotNull(response);
+    assertFalse("Should not throw exception", response.getThrowException());
+    assertTrue("Should have overrideReturn=true", response.getOverrideReturn());
+    assertNotNull("New return value should be set", response.getNewReturnValue());
+  }
+
+  /** Tests field PUT with null valueObject. */
+  @Test
+  public void testFieldPut_nullValueObject_returnsNullAsArg() {
+    final Object[][] capturedArgs = {null};
+
+    InterceptCallback callback =
+        (ctx) -> {
+          capturedArgs[0] = ctx.getArgs();
+          return new InterceptCallbackResponse();
+        };
+
+    dispatcher.registerCallback("test-callback", callback);
+
+    ExecMessage exec = new ExecMessage();
+    exec.setMessageId("test-msg");
+
+    InstanceFieldPut fieldPut = new InstanceFieldPut();
+    Field field = new Field();
+    field.setName("counter");
+    fieldPut.setField(field);
+    fieldPut.setValueObject(null); // null value object
+    exec.setInstanceFieldPut(fieldPut);
+
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
+    request.setCallbackId("req-123");
+    request.setPhase((byte) 1);
+    request.setInterceptType((byte) 1);
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("test-callback");
+    request.setExec(exec);
+
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
+
+    assertNotNull(response);
+    assertFalse("Should not throw exception", response.getThrowException());
+    assertNotNull("Args should be captured", capturedArgs[0]);
+    assertEquals("Should have 1 arg", 1, capturedArgs[0].length);
+    assertNull("PUT value should be null", capturedArgs[0][0]);
+  }
+
+  /** Tests static field PUT value deserialization success. */
+  @Test
+  public void testStaticFieldPut_success() {
+    final Object[][] capturedArgs = {null};
+
+    InterceptCallback callback =
+        (ctx) -> {
+          capturedArgs[0] = ctx.getArgs();
+          return new InterceptCallbackResponse();
+        };
+
+    dispatcher.registerCallback("test-callback", callback);
+
+    ExecMessage exec = new ExecMessage();
+    exec.setMessageId("test-msg");
+
+    StaticFieldPut fieldPut = new StaticFieldPut();
+    Field field = new Field();
+    field.setName("staticCounter");
+    fieldPut.setField(field);
+    fieldPut.setValueObject(wrapValue(42, Integer.class.getName()));
+    exec.setStaticFieldPut(fieldPut);
+
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
+    request.setCallbackId("req-123");
+    request.setPhase((byte) 1);
+    request.setInterceptType((byte) 1);
+    request.setInterceptedPeer("peer-uuid");
+    request.setRegisteredCallbackId("test-callback");
+    request.setExec(exec);
+
+    InterceptCallbackResponseMessage response = dispatcher.handleCallback(request);
+
+    assertNotNull(response);
+    assertFalse("Should not throw exception", response.getThrowException());
+    assertNotNull("Args should be captured", capturedArgs[0]);
+    assertEquals("Should have 1 arg", 1, capturedArgs[0].length);
+    assertEquals("PUT value should be 42", 42, capturedArgs[0][0]);
   }
 }
