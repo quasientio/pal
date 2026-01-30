@@ -89,6 +89,7 @@
                                     <includes>
                                         <include>jacoco-it.exec</include>
                                         <include>jacoco-peer-*.exec</include>
+                                        <include>jacoco-cli-*.exec</include>
                                     </includes>
                                 </fileSet>
                             </fileSets>

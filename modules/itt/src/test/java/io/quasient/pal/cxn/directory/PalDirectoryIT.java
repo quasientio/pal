@@ -1421,4 +1421,292 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     createdLogs.remove(log3.getName());
     createdLogs.remove(log4.getName());
   }
+
+  // =========================================================================
+  // Source Log and WAL Registration Error Cases
+  // =========================================================================
+
+  @Test
+  public void setSourceLog_nonExistentPeer_throwsNoPeerInfoNodeException() throws Exception {
+    // Create a log
+    LogInfo sourceLog = palDirectory.createAutoLog("test_source", getKafkaServers());
+    createdLogs.add(sourceLog.getName());
+
+    // Create peer info for a non-existent peer
+    PeerInfo nonExistentPeer = new PeerInfo(UUID.randomUUID());
+    nonExistentPeer.setZmqRpcAddress("tcp://127.0.0.1:5671");
+
+    // Attempt to set source log for non-existent peer
+    try {
+      palDirectory.setSourceLog(nonExistentPeer, sourceLog, null);
+      fail("Should have raised NoPeerInfoNodeException");
+    } catch (NoPeerInfoNodeException e) {
+      // Expected
+      assertTrue(e.getMessage().contains("does not exist"));
+    }
+  }
+
+  @Test
+  public void setWalLog_nonExistentPeer_throwsNoPeerInfoNodeException() throws Exception {
+    // Create a log
+    LogInfo walLog = palDirectory.createAutoLog("test_wal", getKafkaServers());
+    createdLogs.add(walLog.getName());
+
+    // Create peer info for a non-existent peer
+    PeerInfo nonExistentPeer = new PeerInfo(UUID.randomUUID());
+    nonExistentPeer.setZmqRpcAddress("tcp://127.0.0.1:5671");
+
+    // Attempt to set WAL for non-existent peer
+    try {
+      palDirectory.setWalLog(nonExistentPeer, walLog, null);
+      fail("Should have raised NoPeerInfoNodeException");
+    } catch (NoPeerInfoNodeException e) {
+      // Expected
+      assertTrue(e.getMessage().contains("does not exist"));
+    }
+  }
+
+  @Test
+  public void setSourceLog_alreadySet_throwsIllegalStateException() throws Exception {
+    // Create peer
+    final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID());
+    peerInfo.setZmqRpcAddress("tcp://127.0.0.1:5671");
+    palDirectory.createPeer(peerInfo);
+    createdPeers.add(peerInfo.getUuid());
+
+    // Create two logs
+    LogInfo sourceLog1 = palDirectory.createAutoLog("test_source1", getKafkaServers());
+    LogInfo sourceLog2 = palDirectory.createAutoLog("test_source2", getKafkaServers());
+    createdLogs.add(sourceLog1.getName());
+    createdLogs.add(sourceLog2.getName());
+
+    // Set source log first time - should succeed
+    palDirectory.setSourceLog(peerInfo, sourceLog1, null);
+
+    // Try to set source log again - should fail
+    try {
+      palDirectory.setSourceLog(peerInfo, sourceLog2, null);
+      fail("Should have raised IllegalStateException");
+    } catch (IllegalStateException e) {
+      // Expected
+      assertTrue(e.getMessage().contains("Source log already registered"));
+    }
+  }
+
+  @Test
+  public void setWalLog_alreadySet_throwsIllegalStateException() throws Exception {
+    // Create peer
+    final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID());
+    peerInfo.setZmqRpcAddress("tcp://127.0.0.1:5671");
+    palDirectory.createPeer(peerInfo);
+    createdPeers.add(peerInfo.getUuid());
+
+    // Create two logs
+    LogInfo walLog1 = palDirectory.createAutoLog("test_wal1", getKafkaServers());
+    LogInfo walLog2 = palDirectory.createAutoLog("test_wal2", getKafkaServers());
+    createdLogs.add(walLog1.getName());
+    createdLogs.add(walLog2.getName());
+
+    // Set WAL first time - should succeed
+    palDirectory.setWalLog(peerInfo, walLog1, null);
+
+    // Try to set WAL again - should fail
+    try {
+      palDirectory.setWalLog(peerInfo, walLog2, null);
+      fail("Should have raised IllegalStateException");
+    } catch (IllegalStateException e) {
+      // Expected
+      assertTrue(e.getMessage().contains("Write-Ahead log is already registered"));
+    }
+  }
+
+  @Test
+  public void getSourceLogId_noSourceLog_returnsNull() throws Exception {
+    // Create peer without source log
+    final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID());
+    peerInfo.setZmqRpcAddress("tcp://127.0.0.1:5671");
+    palDirectory.createPeer(peerInfo);
+    createdPeers.add(peerInfo.getUuid());
+
+    // Should return null when no source log is set
+    assertNull(palDirectory.getSourceLogId(peerInfo.getUuid()));
+  }
+
+  @Test
+  public void getWalId_noWal_returnsNull() throws Exception {
+    // Create peer without WAL
+    final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID());
+    peerInfo.setZmqRpcAddress("tcp://127.0.0.1:5671");
+    palDirectory.createPeer(peerInfo);
+    createdPeers.add(peerInfo.getUuid());
+
+    // Should return null when no WAL is set
+    assertNull(palDirectory.getWalId(peerInfo.getUuid()));
+  }
+
+  @Test
+  public void updatePeer_existingPeer_updatesState() throws Exception {
+    // Create initial peer
+    final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "initial-name");
+    peerInfo.setZmqRpcAddress("tcp://127.0.0.1:5671");
+    palDirectory.createPeer(peerInfo);
+    createdPeers.add(peerInfo.getUuid());
+
+    // Verify initial state
+    PeerInfo retrieved = palDirectory.getPeer(peerInfo.getUuid());
+    assertEquals("initial-name", retrieved.getName());
+    assertEquals("tcp://127.0.0.1:5671", retrieved.getZmqRpcAddress());
+
+    // Update peer with new addresses
+    PeerInfo updatedPeerInfo = new PeerInfo(peerInfo.getUuid(), "initial-name");
+    updatedPeerInfo.setZmqRpcAddress("tcp://127.0.0.1:9999");
+    updatedPeerInfo.setJsonrpcAddress("ws://localhost:8080");
+    updatedPeerInfo.setPubAddress("tcp://localhost:7777");
+    updatedPeerInfo.setJmxAddress("localhost:9012");
+    palDirectory.updatePeer(updatedPeerInfo, 0);
+
+    // Verify updated state
+    PeerInfo updated = palDirectory.getPeer(peerInfo.getUuid());
+    assertEquals("tcp://127.0.0.1:9999", updated.getZmqRpcAddress());
+    assertEquals("ws://localhost:8080", updated.getJsonrpcAddress());
+    assertEquals("tcp://localhost:7777", updated.getPubAddress());
+    assertEquals("localhost:9012", updated.getJmxAddress());
+  }
+
+  @Test
+  public void createPeerLease_nonExistentPeer_throwsIllegalStateException() throws Exception {
+    UUID nonExistentPeerUuid = UUID.randomUUID();
+
+    // Attempt to create lease for non-existent peer
+    try {
+      palDirectory.createPeerLease(nonExistentPeerUuid, 5);
+      fail("Should have raised IllegalStateException");
+    } catch (IllegalStateException e) {
+      // Expected
+      assertTrue(e.getMessage().contains("does not exist") || e.getMessage().contains("stale"));
+    }
+  }
+
+  @Test
+  public void deletePeer_peerWithIntercepts_interceptsAlsoDeleted() throws Exception {
+    // Create peer
+    final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "intercept-peer");
+    peerInfo.setZmqRpcAddress("tcp://127.0.0.1:5671");
+    palDirectory.createPeer(peerInfo);
+    createdPeers.add(peerInfo.getUuid());
+
+    // Create intercept requests for this peer
+    for (int i = 0; i < 3; i++) {
+      InterceptRequest<InterceptableMethodCall> req =
+          new InterceptRequest<>(
+              UUID.randomUUID(),
+              peerInfo.getUuid(),
+              InterceptType.BEFORE,
+              "java.io.PrintStream",
+              "org.Callback",
+              "method" + i,
+              new InterceptableMethodCall("println", Arrays.asList("java.lang.String")));
+      palDirectory.createIntercept(req);
+      addInterceptRequestToCreated(peerInfo.getUuid(), req.getUuid());
+    }
+
+    // Verify intercepts exist
+    assertEquals(3, palDirectory.listInterceptsForPeer(peerInfo.getUuid()).size());
+
+    // Delete peer
+    palDirectory.deletePeer(peerInfo.getUuid());
+    createdPeers.remove(peerInfo.getUuid());
+    createdInterceptRequests.remove(peerInfo.getUuid());
+
+    // Verify peer is deleted
+    assertFalse(palDirectory.peerExists(peerInfo.getUuid()));
+
+    // Verify intercepts are also deleted
+    assertTrue(palDirectory.listInterceptsForPeer(peerInfo.getUuid()).isEmpty());
+  }
+
+  @Test
+  public void deleteNonExistentLog_noError() throws Exception {
+    // Deleting a non-existent log by name should not throw
+    String nonExistentLogName = "non_existent_log_" + UUID.randomUUID();
+    // This should not throw - it just logs a warning
+    palDirectory.deleteLog(nonExistentLogName);
+  }
+
+  @Test
+  public void deleteNonExistentLogByUuid_noError() throws Exception {
+    // Deleting a non-existent log by UUID should not throw
+    UUID nonExistentLogUuid = UUID.randomUUID();
+    // This should not throw - it just logs a warning
+    palDirectory.deleteLog(nonExistentLogUuid);
+  }
+
+  @Test
+  public void getLogInfoByUuid_nonExistent_returnsNull() throws Exception {
+    UUID nonExistentLogUuid = UUID.randomUUID();
+    assertNull(palDirectory.getLogInfo(nonExistentLogUuid));
+  }
+
+  @Test
+  public void logExistsByUuid_nonExistent_returnsFalse() throws Exception {
+    UUID nonExistentLogUuid = UUID.randomUUID();
+    assertFalse(palDirectory.logExists(nonExistentLogUuid));
+  }
+
+  @Test
+  public void logExistsByUuid_existingLog_returnsTrue() throws Exception {
+    LogInfo log = palDirectory.createAutoLog("test_exists_uuid", getKafkaServers());
+    createdLogs.add(log.getName());
+
+    assertTrue(palDirectory.logExists(log.getUuid()));
+  }
+
+  @Test
+  public void getLatestLogWithPrefix_noMatchingLogs_returnsNull() throws Exception {
+    String uniquePrefix = "unique_nonexistent_prefix_" + System.currentTimeMillis();
+    assertNull(palDirectory.getLatestLogWithPrefix(uniquePrefix));
+  }
+
+  @Test
+  public void deleteInterceptsForPeer_noPeer_noError() throws Exception {
+    // Deleting intercepts for non-existent peer should not throw
+    UUID nonExistentPeerUuid = UUID.randomUUID();
+    // This should not throw
+    palDirectory.deleteInterceptsForPeer(nonExistentPeerUuid);
+  }
+
+  @Test
+  public void deleteIntercept_nonExistent_noError() throws Exception {
+    // Create peer
+    final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID());
+    peerInfo.setZmqRpcAddress("tcp://127.0.0.1:5671");
+    palDirectory.createPeer(peerInfo);
+    createdPeers.add(peerInfo.getUuid());
+
+    // Deleting a non-existent intercept should not throw
+    UUID nonExistentInterceptUuid = UUID.randomUUID();
+    palDirectory.deleteIntercept(peerInfo.getUuid(), nonExistentInterceptUuid);
+  }
+
+  @Test
+  public void getLogInfo_singleMatch_returnsLogInfo() throws Exception {
+    // Create a single log
+    String logName = "unique_single_log_" + System.currentTimeMillis();
+    LogInfo log = new LogInfo(logName, getKafkaServers());
+    palDirectory.createLog(log);
+    createdLogs.add(logName);
+
+    // getLogInfo(String) should return the log when there's only one match
+    LogInfo retrieved = palDirectory.getLogInfo(logName);
+    assertNotNull(retrieved);
+    assertEquals(logName, retrieved.getName());
+    assertEquals(log.getUuid(), retrieved.getUuid());
+  }
+
+  @Test
+  public void getLogsInfoByName_noMatch_returnsEmptyList() throws Exception {
+    String nonExistentLogName = "non_existent_log_" + System.currentTimeMillis();
+    List<LogInfo> logs = palDirectory.getLogsInfoByName(nonExistentLogName);
+    assertTrue(logs.isEmpty());
+  }
 }

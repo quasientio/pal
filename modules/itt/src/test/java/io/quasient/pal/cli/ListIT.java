@@ -299,7 +299,8 @@ public class ListIT extends AbstractCliIT {
     String kafkaServers = getKafkaServers();
 
     // Create two logs with different creation times
-    String walName1 = "test-wal-ctime1-" + generateId();
+    // Use short prefixes to avoid CLI truncation
+    String walName1 = "ct1-" + generateId();
     UUID peerId1 = UUID.randomUUID();
 
     // we need to run something for messages to be written to the WAL, which actually
@@ -326,7 +327,7 @@ public class ListIT extends AbstractCliIT {
     // Wait a bit to ensure different creation times
     Thread.sleep(1000);
 
-    String walName2 = "test-wal-ctime2-" + generateId();
+    String walName2 = "ct2-" + generateId();
     UUID peerId2 = UUID.randomUUID();
     peerProcess =
         launchPeer(
@@ -350,12 +351,13 @@ public class ListIT extends AbstractCliIT {
     AbstractCliIT.CliProcessResult result = runLs("-d", palDirectory, "-L", "-c");
 
     assertEquals("Expected successful exit code", 0, result.exitCode());
-    assertThat("Expected first WAL log in output", result.stdout(), containsString(walName1));
-    assertThat("Expected second WAL log in output", result.stdout(), containsString(walName2));
+    // CLI truncates long names, so check for the prefix that identifies each log
+    assertThat("Expected first WAL log in output", result.stdout(), containsString("ct1-"));
+    assertThat("Expected second WAL log in output", result.stdout(), containsString("ct2-"));
 
-    // Check that walName2 appears before walName1 (newest first)
-    int idx1 = result.stdout().indexOf(walName1);
-    int idx2 = result.stdout().indexOf(walName2);
+    // Check that ct2- appears before ct1- (newest first)
+    int idx1 = result.stdout().indexOf("ct1-");
+    int idx2 = result.stdout().indexOf("ct2-");
     assertThat("Expected newer log to appear first", idx2 < idx1);
     logger.info("Successfully verified logs sorted by creation time");
   }
@@ -471,8 +473,9 @@ public class ListIT extends AbstractCliIT {
     String kafkaServers = getKafkaServers();
 
     // Launch a peer with a WAL
-    String peerName = "test-peer-exclude-logs-" + generateId();
-    String walName = "test-wal-exclude-logs-" + generateId();
+    // Use shorter names to avoid CLI truncation (CLI truncates names at ~18 chars)
+    String peerName = "xclg-" + generateId();
+    String walName = "xclg-wal-" + generateId();
     UUID peerId = UUID.randomUUID();
 
     String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
@@ -497,9 +500,12 @@ public class ListIT extends AbstractCliIT {
     assertEquals("Expected successful peer exit code", 0, peerExitCode);
     peerProcess = null;
 
-    // Re-launch the peer so it's visible in peer listing
+    // Re-launch a new peer so it's visible in peer listing.
+    // Use a new peerId because waitForPeerReady checks log for "Peer {uuid} up and running"
+    // and would find the old line from the first peer if we reuse the same ID.
+    UUID peerId2 = UUID.randomUUID();
     peerProcess =
-        launchPeer(peerId, "-d", palDirectory, "-n", peerName, "-cp", getIttAppsClasspath());
+        launchPeer(peerId2, "-d", palDirectory, "-n", peerName, "-cp", getIttAppsClasspath());
 
     // List only peers
     AbstractCliIT.CliProcessResult result = runLs("-d", palDirectory, "-P");
@@ -525,7 +531,8 @@ public class ListIT extends AbstractCliIT {
     String kafkaServers = getKafkaServers();
 
     // Create two logs - run different classes to get different sizes
-    String walName1 = "test-wal-size1-" + generateId();
+    // Use shorter names to avoid CLI truncation (CLI truncates names at ~18 chars)
+    String walName1 = "sz1-" + generateId();
     UUID peerId1 = UUID.randomUUID();
     String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
 
@@ -545,7 +552,7 @@ public class ListIT extends AbstractCliIT {
     int peer1ExitCode = joinPeer(peer1, 10);
     assertEquals("Expected successful peer1 exit code", 0, peer1ExitCode);
 
-    String walName2 = "test-wal-size2-" + generateId();
+    String walName2 = "sz2-" + generateId();
     UUID peerId2 = UUID.randomUUID();
 
     peerProcess =
@@ -569,8 +576,9 @@ public class ListIT extends AbstractCliIT {
     AbstractCliIT.CliProcessResult result = runLs("-d", palDirectory, "-L", "-l", "-S");
 
     assertEquals("Expected successful exit code", 0, result.exitCode());
-    assertThat("Expected first WAL log in output", result.stdout(), containsString(walName1));
-    assertThat("Expected second WAL log in output", result.stdout(), containsString(walName2));
+    // CLI truncates long names, so check for the prefix that identifies each log
+    assertThat("Expected first WAL log in output", result.stdout(), containsString("sz1-"));
+    assertThat("Expected second WAL log in output", result.stdout(), containsString("sz2-"));
     logger.info("Successfully listed logs sorted by size");
   }
 
@@ -584,8 +592,8 @@ public class ListIT extends AbstractCliIT {
     String palDirectory = getPalDirectoryUrl();
     String kafkaServers = getKafkaServers();
 
-    // Create two logs
-    String walName1 = "test-wal-rev1-" + generateId();
+    // Create two logs - use short prefixes to avoid CLI truncation
+    String walName1 = "rv1-" + generateId();
     UUID peerId1 = UUID.randomUUID();
     String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
 
@@ -608,7 +616,7 @@ public class ListIT extends AbstractCliIT {
     // Wait to ensure different creation times
     Thread.sleep(1000);
 
-    String walName2 = "test-wal-rev2-" + generateId();
+    String walName2 = "rv2-" + generateId();
     UUID peerId2 = UUID.randomUUID();
 
     peerProcess =
@@ -632,12 +640,13 @@ public class ListIT extends AbstractCliIT {
     AbstractCliIT.CliProcessResult result = runLs("-d", palDirectory, "-L", "-c", "-r");
 
     assertEquals("Expected successful exit code", 0, result.exitCode());
-    assertThat("Expected first WAL log in output", result.stdout(), containsString(walName1));
-    assertThat("Expected second WAL log in output", result.stdout(), containsString(walName2));
+    // CLI truncates long names, so check for the prefix that identifies each log
+    assertThat("Expected first WAL log in output", result.stdout(), containsString("rv1-"));
+    assertThat("Expected second WAL log in output", result.stdout(), containsString("rv2-"));
 
-    // Check that walName1 appears before walName2 (oldest first due to reverse)
-    int idx1 = result.stdout().indexOf(walName1);
-    int idx2 = result.stdout().indexOf(walName2);
+    // Check that rv1- appears before rv2- (oldest first due to reverse)
+    int idx1 = result.stdout().indexOf("rv1-");
+    int idx2 = result.stdout().indexOf("rv2-");
     assertThat("Expected older log to appear first with reverse order", idx1 < idx2);
     logger.info("Successfully verified reverse sort order");
   }
@@ -710,7 +719,8 @@ public class ListIT extends AbstractCliIT {
     String palDirectory = getPalDirectoryUrl();
 
     // Create two peers with different creation times
-    String peerName1 = "test-peer-ctime1-" + generateId();
+    // Use short prefixes to avoid CLI truncation
+    String peerName1 = "pc1-" + generateId();
     UUID peerId1 = UUID.randomUUID();
 
     PeerProcess peer1 =
@@ -719,7 +729,7 @@ public class ListIT extends AbstractCliIT {
     // Wait to ensure different creation times
     Thread.sleep(1000);
 
-    String peerName2 = "test-peer-ctime2-" + generateId();
+    String peerName2 = "pc2-" + generateId();
     UUID peerId2 = UUID.randomUUID();
 
     peerProcess =
@@ -729,12 +739,13 @@ public class ListIT extends AbstractCliIT {
     AbstractCliIT.CliProcessResult result = runLs("-d", palDirectory, "-P", "-c");
 
     assertEquals("Expected successful exit code", 0, result.exitCode());
-    assertThat("Expected first peer in output", result.stdout(), containsString(peerName1));
-    assertThat("Expected second peer in output", result.stdout(), containsString(peerName2));
+    // CLI truncates long names, so check for the prefix that identifies each peer
+    assertThat("Expected first peer in output", result.stdout(), containsString("pc1-"));
+    assertThat("Expected second peer in output", result.stdout(), containsString("pc2-"));
 
-    // Check that peerName2 appears before peerName1 (newest first)
-    int idx1 = result.stdout().indexOf(peerName1);
-    int idx2 = result.stdout().indexOf(peerName2);
+    // Check that pc2- appears before pc1- (newest first)
+    int idx1 = result.stdout().indexOf("pc1-");
+    int idx2 = result.stdout().indexOf("pc2-");
     assertThat("Expected newer peer to appear first", idx2 < idx1);
 
     // Cleanup

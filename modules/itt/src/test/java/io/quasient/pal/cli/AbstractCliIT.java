@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.junit.After;
 import org.junit.Before;
@@ -45,6 +46,9 @@ import org.slf4j.LoggerFactory;
 public abstract class AbstractCliIT extends AbstractIntegrationTest {
 
   private static final Logger logger = LoggerFactory.getLogger(AbstractCliIT.class);
+
+  /** Counter for generating unique coverage file names for CLI processes. */
+  private static final AtomicInteger cliInvocationCounter = new AtomicInteger(0);
 
   /** List of Chronicle-queue Logs (i.e. directories) created during tests that need cleanup. */
   protected List<Path> chronicleLogsToCleanup;
@@ -262,6 +266,29 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
     // Configure logging
     pb.environment()
         .put("PAL_CLI_LOGGING_CONFIG", Paths.get(palHome, "config", "cli-logging.xml").toString());
+
+    // Configure JaCoCo agent for CLI process coverage collection
+    String jacocoAgentJar = System.getProperty("jacoco.agent.jar");
+    String jacocoDestFileDir = System.getProperty("jacoco.destfile.dir");
+    if (jacocoAgentJar != null && jacocoDestFileDir != null) {
+      File agentFile = new File(jacocoAgentJar);
+      if (agentFile.exists()) {
+        // Create unique coverage file for this CLI invocation
+        int invocationId = cliInvocationCounter.getAndIncrement();
+        String coverageFile =
+            Paths.get(jacocoDestFileDir, "jacoco-cli-" + subcommand + "-" + invocationId + ".exec")
+                .toString();
+        // Note: bin/pal script adds '-javaagent:' prefix automatically, so only provide
+        // path+options
+        String javaAgent =
+            String.format(
+                "%s=destfile=%s,append=true,dumponexit=true", jacocoAgentJar, coverageFile);
+        pb.environment().put("JAVA_AGENT", javaAgent);
+        logger.debug("Enabled JaCoCo agent for CLI process: {}", coverageFile);
+      } else {
+        logger.warn("JaCoCo agent JAR not found at: {}", jacocoAgentJar);
+      }
+    }
 
     // Remove environment variables that would interfere with tests
     // Tests must explicitly pass configuration via CLI args (e.g., -d, -k)

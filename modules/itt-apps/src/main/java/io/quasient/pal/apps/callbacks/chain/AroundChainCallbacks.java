@@ -557,4 +557,79 @@ public final class AroundChainCallbacks {
     ctx.setReturnValue(999);
     return InterceptCallbackResponse.skipProceed();
   }
+
+  // ==================== BEFORE/AFTER Callbacks for Combined Chain Testing ====================
+
+  /**
+   * Local BEFORE callback that logs invocation.
+   *
+   * <p>Used for testing BEFORE + AROUND + AFTER combinations.
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse beforeLogger(InterceptContext ctx) {
+    logger.info("BEFORE_AFTER_CHAIN: beforeLogger executed");
+    return new InterceptCallbackResponse();
+  }
+
+  /**
+   * Local BEFORE callback "A" for testing multiple BEFORE callbacks.
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse beforeLoggerA(InterceptContext ctx) {
+    logger.info("BEFORE_AFTER_CHAIN: beforeLoggerA executed");
+    return new InterceptCallbackResponse();
+  }
+
+  /**
+   * Local BEFORE callback "B" for testing multiple BEFORE callbacks.
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse beforeLoggerB(InterceptContext ctx) {
+    logger.info("BEFORE_AFTER_CHAIN: beforeLoggerB executed");
+    return new InterceptCallbackResponse();
+  }
+
+  /**
+   * Local AFTER callback that logs the return value.
+   *
+   * <p>Used for testing BEFORE + AROUND + AFTER combinations.
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse afterLogger(InterceptContext ctx) {
+    Object returnValue = ctx.isVoid() ? "void" : ctx.getReturnValue();
+    logger.info("BEFORE_AFTER_CHAIN: afterLogger received return={}", returnValue);
+    return new InterceptCallbackResponse();
+  }
+
+  /**
+   * Local AFTER callback "A" for testing multiple AFTER callbacks.
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse afterLoggerA(InterceptContext ctx) {
+    Object returnValue = ctx.isVoid() ? "void" : ctx.getReturnValue();
+    logger.info("BEFORE_AFTER_CHAIN: afterLoggerA received return={}", returnValue);
+    return new InterceptCallbackResponse();
+  }
+
+  /**
+   * Local AFTER callback "B" for testing multiple AFTER callbacks.
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse afterLoggerB(InterceptContext ctx) {
+    Object returnValue = ctx.isVoid() ? "void" : ctx.getReturnValue();
+    logger.info("BEFORE_AFTER_CHAIN: afterLoggerB received return={}", returnValue);
+    return new InterceptCallbackResponse();
+  }
 }

@@ -932,4 +932,442 @@ public class ThinPeerIT extends AbstractIntegrationTest {
       }
     }
   }
+
+  @Test
+  public void testSeparateInputOutputLogs() throws Exception {
+    LogInfo inputLog = createTestLog();
+    LogInfo outputLog = createTestLog();
+
+    try (MockConsumer<String, LogMessage<?>> testConsumer =
+            new MockConsumer<>(OffsetResetStrategy.EARLIEST);
+        MockProducer<String, LogMessage<?>> testProducer =
+            new MockProducer<>(true, new StringSerializer(), new KafkaLogMessageSerializer())) {
+      ThinPeer tp = null;
+      try {
+        tp =
+            new ThinPeer()
+                .withDirectoryProvider(directoryConnectionProvider)
+                .withConsumer(testConsumer)
+                .withProducer(testProducer)
+                .withInputLog(inputLog)
+                .withOutputLog(outputLog)
+                .init();
+
+        // Verify separate logs are correctly set
+        assertEquals("Input log should match", inputLog, tp.getInputLog());
+        assertEquals("Output log should match", outputLog, tp.getOutputLog());
+        assertFalse(
+            "Input and output logs should be different",
+            tp.getInputLog().getUuid().equals(tp.getOutputLog().getUuid()));
+        assertTrue("Log IO should be enabled", tp.isLogIOEnabled());
+      } finally {
+        if (tp != null && !tp.isClosed()) {
+          try {
+            tp.close();
+          } catch (IllegalStateException e) {
+            logger.debug("Ignoring IllegalStateException while closing ThinPeer", e);
+          }
+        }
+      }
+    }
+  }
+
+  @Test
+  public void testWebSocketConnectionLostTimeoutConfiguration() throws Exception {
+    ThinPeer tp = null;
+    try {
+      // Test that websocket connection lost timeout can be configured
+      // (no getter available, but configuration should not throw)
+      tp =
+          new ThinPeer()
+              .withDirectoryProvider(directoryConnectionProvider)
+              .withOutboundRpcType(RpcType.JSON_RPC)
+              .withWebsocketConnectionLostTimeout(30)
+              .withSelfRegistration(false)
+              .init();
+
+      // If we get here, configuration was accepted
+      assertTrue("Peer should be initialized", tp.isInitialized());
+    } finally {
+      if (tp != null && !tp.isClosed()) {
+        try {
+          tp.close();
+        } catch (IllegalStateException e) {
+          logger.debug("Ignoring IllegalStateException while closing ThinPeer", e);
+        }
+      }
+    }
+  }
+
+  @Test
+  public void testConnectToPeerByUuid() throws Exception {
+    ThinPeer tp = null;
+    try {
+      tp =
+          new ThinPeer()
+              .withDirectoryProvider(directoryConnectionProvider)
+              .withOutboundRpcType(RpcType.ZMQ_RPC)
+              .withSelfRegistration(false)
+              .init();
+
+      // Connect using the shared peer's UUID (this method returns void)
+      tp.connectToPeer(SHARED_PEER_UUID);
+      assertTrue("Should be talking to peer", tp.isTalkingToPeer());
+      assertNotNull("Current peer should not be null", tp.getCurrentPeer());
+      assertEquals(
+          "Current peer UUID should match", SHARED_PEER_UUID, tp.getCurrentPeer().getUuid());
+    } finally {
+      if (tp != null && !tp.isClosed()) {
+        try {
+          tp.close();
+        } catch (IllegalStateException e) {
+          logger.debug("Ignoring IllegalStateException while closing ThinPeer", e);
+        }
+      }
+    }
+  }
+
+  @Test
+  public void testConnectToPeerByUuid_nonExistent_doesNotConnect() throws Exception {
+    ThinPeer tp = null;
+    try {
+      tp =
+          new ThinPeer()
+              .withDirectoryProvider(directoryConnectionProvider)
+              .withOutboundRpcType(RpcType.ZMQ_RPC)
+              .withSelfRegistration(false)
+              .init();
+
+      // Try to connect to non-existent peer - silently does nothing
+      UUID nonExistentUuid = UUID.randomUUID();
+      tp.connectToPeer(nonExistentUuid);
+
+      // Should not be connected since peer doesn't exist
+      assertFalse("Should not be talking to peer", tp.isTalkingToPeer());
+    } finally {
+      if (tp != null && !tp.isClosed()) {
+        try {
+          tp.close();
+        } catch (IllegalStateException e) {
+          logger.debug("Ignoring IllegalStateException while closing ThinPeer", e);
+        }
+      }
+    }
+  }
+
+  @Test
+  public void testSendExecMessageToPeer() throws Exception {
+    ThinPeer tp = null;
+    try {
+      tp =
+          new ThinPeer()
+              .withDirectoryProvider(directoryConnectionProvider)
+              .withOutboundRpcType(RpcType.ZMQ_RPC)
+              .withSelfRegistration(false)
+              .init();
+
+      // Connect to shared peer
+      PeerInfo zmqPeer = findRpcPeer(RpcType.ZMQ_RPC, directoryConnectionProvider).orElseThrow();
+      tp.connectToPeer(zmqPeer);
+
+      // Send an exec message
+      ExecMessage execMsg =
+          msgBuilder.buildClassMethod(
+              tp.getPeerUuid(),
+              "io.quasient.pal.apps.quantized.rpc.Methods",
+              "staticVoidNoArg",
+              new String[] {},
+              null,
+              null,
+              new Object[] {},
+              null);
+
+      ExecMessage response = tp.sendToPeer(execMsg);
+
+      assertNotNull("Response should not be null", response);
+    } finally {
+      if (tp != null && !tp.isClosed()) {
+        try {
+          tp.close();
+        } catch (IllegalStateException e) {
+          logger.debug("Ignoring IllegalStateException while closing ThinPeer", e);
+        }
+      }
+    }
+  }
+
+  @Test
+  public void testInitWithDefaultRpcType() throws Exception {
+    ThinPeer tp = null;
+    try {
+      tp =
+          new ThinPeer()
+              .withDirectoryProvider(directoryConnectionProvider)
+              .withSelfRegistration(false)
+              .init();
+
+      // Default RPC type should be ZMQ_RPC
+      assertEquals("Default RPC type should be ZMQ_RPC", RpcType.ZMQ_RPC, tp.getOutboundRpcType());
+    } finally {
+      if (tp != null && !tp.isClosed()) {
+        try {
+          tp.close();
+        } catch (IllegalStateException e) {
+          logger.debug("Ignoring IllegalStateException while closing ThinPeer", e);
+        }
+      }
+    }
+  }
+
+  @Test
+  public void testDefaultPollingDuration() throws Exception {
+    LogInfo testLog = createTestLog();
+
+    try (MockConsumer<String, LogMessage<?>> testConsumer =
+            new MockConsumer<>(OffsetResetStrategy.EARLIEST);
+        MockProducer<String, LogMessage<?>> testProducer =
+            new MockProducer<>(true, new StringSerializer(), new KafkaLogMessageSerializer())) {
+      ThinPeer tp = null;
+      try {
+        tp =
+            new ThinPeer()
+                .withDirectoryProvider(directoryConnectionProvider)
+                .withConsumer(testConsumer)
+                .withProducer(testProducer)
+                .withLog(testLog)
+                .init();
+
+        // Default polling duration should be 10ms
+        assertEquals(
+            "Default polling duration should be 10ms",
+            Duration.ofMillis(10),
+            tp.getPollingDuration());
+      } finally {
+        if (tp != null && !tp.isClosed()) {
+          try {
+            tp.close();
+          } catch (IllegalStateException e) {
+            logger.debug("Ignoring IllegalStateException while closing ThinPeer", e);
+          }
+        }
+      }
+    }
+  }
+
+  @Test
+  public void testWithInitialPeerAndJsonRpc() throws Exception {
+    ThinPeer tp = null;
+    try {
+      PeerInfo jsonRpcPeer =
+          findRpcPeer(RpcType.JSON_RPC, directoryConnectionProvider).orElseThrow();
+
+      tp =
+          new ThinPeer()
+              .withDirectoryProvider(directoryConnectionProvider)
+              .withInitialPeer(jsonRpcPeer)
+              .withOutboundRpcType(RpcType.JSON_RPC)
+              .withSelfRegistration(false)
+              .init();
+
+      assertTrue("Should be talking to peer", tp.isTalkingToPeer());
+      assertEquals("Initial peer should match", jsonRpcPeer, tp.getInitialPeer());
+      // Connection is established via initial peer
+      assertNotNull("Current peer should be set", tp.getCurrentPeer());
+    } finally {
+      if (tp != null && !tp.isClosed()) {
+        try {
+          tp.close();
+        } catch (IllegalStateException e) {
+          logger.debug("Ignoring IllegalStateException while closing ThinPeer", e);
+        }
+      }
+    }
+  }
+
+  @Test
+  public void testSendControlMessageWithTimeout() throws Exception {
+    ThinPeer tp = null;
+    try {
+      tp =
+          new ThinPeer()
+              .withDirectoryProvider(directoryConnectionProvider)
+              .withOutboundRpcType(RpcType.ZMQ_RPC)
+              .withSelfRegistration(false)
+              .init();
+
+      PeerInfo peerInfo = findRpcPeer(RpcType.ZMQ_RPC, directoryConnectionProvider).orElseThrow();
+      tp.connectToPeer(peerInfo);
+
+      // Send ping with explicit timeout
+      ControlMessage pingMsg =
+          msgBuilder.buildControlCommandMessage(tp.getPeerUuid(), ControlCommandType.PING);
+      ControlMessage response = tp.sendToPeer(pingMsg, Duration.ofSeconds(10));
+
+      assertNotNull("Response should not be null", response);
+      assertEquals(
+          "Response status should be OK", ControlStatusType.OK.toId(), response.getStatus());
+    } finally {
+      if (tp != null && !tp.isClosed()) {
+        try {
+          tp.close();
+        } catch (IllegalStateException e) {
+          logger.debug("Ignoring IllegalStateException while closing ThinPeer", e);
+        }
+      }
+    }
+  }
+
+  @Test
+  public void testSendPingViaJsonRpc() throws Exception {
+    ThinPeer tp = null;
+    try {
+      tp =
+          new ThinPeer()
+              .withDirectoryProvider(directoryConnectionProvider)
+              .withOutboundRpcType(RpcType.JSON_RPC)
+              .withSelfRegistration(false)
+              .init();
+
+      PeerInfo jsonRpcPeer =
+          findRpcPeer(RpcType.JSON_RPC, directoryConnectionProvider).orElseThrow();
+      tp.connectToPeer(jsonRpcPeer);
+
+      // Test ping via JSON-RPC
+      double pingTime = tp.sendPing();
+      assertTrue("Ping should return valid time", pingTime >= 0.0);
+    } finally {
+      if (tp != null && !tp.isClosed()) {
+        try {
+          tp.close();
+        } catch (IllegalStateException e) {
+          logger.debug("Ignoring IllegalStateException while closing ThinPeer", e);
+        }
+      }
+    }
+  }
+
+  @Test(expected = IllegalStateException.class)
+  public void testSendPingWhenNotConnected() throws Exception {
+    ThinPeer tp = null;
+    try {
+      tp =
+          new ThinPeer()
+              .withDirectoryProvider(directoryConnectionProvider)
+              .withOutboundRpcType(RpcType.ZMQ_RPC)
+              .init();
+
+      // Should throw IllegalStateException because not connected to any peer
+      tp.sendPing();
+    } finally {
+      if (tp != null && !tp.isClosed()) {
+        try {
+          tp.close();
+        } catch (IllegalStateException e) {
+          logger.debug("Ignoring IllegalStateException while closing ThinPeer", e);
+        }
+      }
+    }
+  }
+
+  @Test
+  public void testAutoGeneratedUuid() throws Exception {
+    ThinPeer tp = null;
+    try {
+      tp =
+          new ThinPeer()
+              .withDirectoryProvider(directoryConnectionProvider)
+              .withOutboundRpcType(RpcType.ZMQ_RPC)
+              .withSelfRegistration(false)
+              .init();
+
+      // UUID should be auto-generated
+      assertNotNull("UUID should be auto-generated", tp.getPeerUuid());
+    } finally {
+      if (tp != null && !tp.isClosed()) {
+        try {
+          tp.close();
+        } catch (IllegalStateException e) {
+          logger.debug("Ignoring IllegalStateException while closing ThinPeer", e);
+        }
+      }
+    }
+  }
+
+  @Test
+  public void testNoLogIOWhenNoLogConfigured() throws Exception {
+    ThinPeer tp = null;
+    try {
+      tp =
+          new ThinPeer()
+              .withDirectoryProvider(directoryConnectionProvider)
+              .withOutboundRpcType(RpcType.ZMQ_RPC)
+              .withSelfRegistration(false)
+              .init();
+
+      // Log IO should be disabled when no log is configured
+      assertFalse("Log IO should be disabled", tp.isLogIOEnabled());
+      assertFalse("Consuming should be disabled", tp.isConsuming());
+      assertFalse("Producing should be disabled", tp.isProducing());
+      assertThat("Input log should be null", tp.getInputLog(), is((LogInfo) null));
+      assertThat("Output log should be null", tp.getOutputLog(), is((LogInfo) null));
+    } finally {
+      if (tp != null && !tp.isClosed()) {
+        try {
+          tp.close();
+        } catch (IllegalStateException e) {
+          logger.debug("Ignoring IllegalStateException while closing ThinPeer", e);
+        }
+      }
+    }
+  }
+
+  @Test
+  public void testLogPrefixNullWhenNotConfigured() throws Exception {
+    ThinPeer tp = null;
+    try {
+      tp =
+          new ThinPeer()
+              .withDirectoryProvider(directoryConnectionProvider)
+              .withOutboundRpcType(RpcType.ZMQ_RPC)
+              .withSelfRegistration(false)
+              .init();
+
+      // Log prefix is null when not explicitly configured
+      // (DEFAULT_TOPIC_PREFIX is only used internally for log lookup)
+      assertThat(
+          "Log prefix should be null when not configured", tp.getLogPrefix(), is((String) null));
+    } finally {
+      if (tp != null && !tp.isClosed()) {
+        try {
+          tp.close();
+        } catch (IllegalStateException e) {
+          logger.debug("Ignoring IllegalStateException while closing ThinPeer", e);
+        }
+      }
+    }
+  }
+
+  @Test
+  public void testLogPrefixWhenConfigured() throws Exception {
+    ThinPeer tp = null;
+    try {
+      tp =
+          new ThinPeer()
+              .withDirectoryProvider(directoryConnectionProvider)
+              .withLogPrefix("custom-prefix")
+              .withOutboundRpcType(RpcType.ZMQ_RPC)
+              .withSelfRegistration(false)
+              .init();
+
+      assertEquals("Log prefix should match configured value", "custom-prefix", tp.getLogPrefix());
+    } finally {
+      if (tp != null && !tp.isClosed()) {
+        try {
+          tp.close();
+        } catch (IllegalStateException e) {
+          logger.debug("Ignoring IllegalStateException while closing ThinPeer", e);
+        }
+      }
+    }
+  }
 }

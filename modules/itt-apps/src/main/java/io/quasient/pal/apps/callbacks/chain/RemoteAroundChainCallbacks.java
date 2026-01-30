@@ -311,4 +311,33 @@ public final class RemoteAroundChainCallbacks {
     ctx.setReturnValue(888);
     return InterceptCallbackResponse.skipProceed();
   }
+
+  // ==================== BEFORE/AFTER Callbacks for Combined Chain Testing ====================
+
+  /**
+   * Remote BEFORE callback that logs invocation.
+   *
+   * <p>Used for testing mixed local/remote BEFORE + AROUND + AFTER combinations.
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse remoteBeforeLogger(InterceptContext ctx) {
+    logger.info("BEFORE_AFTER_CHAIN: remoteBeforeLogger executed");
+    return new InterceptCallbackResponse();
+  }
+
+  /**
+   * Remote AFTER callback that logs the return value.
+   *
+   * <p>Used for testing mixed local/remote BEFORE + AROUND + AFTER combinations.
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse remoteAfterLogger(InterceptContext ctx) {
+    Object returnValue = ctx.isVoid() ? "void" : ctx.getReturnValue();
+    logger.info("BEFORE_AFTER_CHAIN: remoteAfterLogger received return={}", returnValue);
+    return new InterceptCallbackResponse();
+  }
 }
