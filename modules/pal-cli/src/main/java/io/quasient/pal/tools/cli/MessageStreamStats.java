@@ -87,8 +87,26 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
   /** Aggregates various statistics counters for processed messages. */
   private final Counters counters = new Counters();
 
-  /** Latch used to coordinate shutdown signal handling. */
-  private final CountDownLatch shutdownLatch = new CountDownLatch(1);
+  /**
+   * Latch used to coordinate shutdown signal handling for Kafka streams.
+   *
+   * <p>Package-private for test access.
+   */
+  final CountDownLatch shutdownLatch = new CountDownLatch(1);
+
+  /**
+   * Latch used to coordinate shutdown signal handling for socket streams.
+   *
+   * <p>Package-private for test access.
+   */
+  CountDownLatch socketShutdownLatch;
+
+  /**
+   * Kafka streams instance for log-based message processing.
+   *
+   * <p>Package-private for test access.
+   */
+  KafkaStreams kafkaStreams;
 
   /** Handles continuous printing of aggregated statistics. */
   private ContinuousPrinter continuousPrinter;
@@ -512,22 +530,18 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
       System.out.println(topology.describe());
     }
 
-    final KafkaStreams streams = new KafkaStreams(topology, props);
+    kafkaStreams = new KafkaStreams(topology, props);
     // attach shutdown handler to catch control-c
     Runtime.getRuntime()
         .addShutdownHook(
             new Thread("streams-shutdown-hook") {
               @Override
               public void run() {
-                streams.close();
-                if (continuousPrinter != null) {
-                  continuousPrinter.setDone(true);
-                }
-                shutdownLatch.countDown();
+                performKafkaShutdown();
               }
             });
 
-    startStreams(streams, counters);
+    startStreams(kafkaStreams, counters);
     try {
       shutdownLatch.await();
     } catch (Throwable e) {
@@ -594,7 +608,7 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
         };
 
     // latch to wait for termination
-    final CountDownLatch latch = new CountDownLatch(1);
+    socketShutdownLatch = new CountDownLatch(1);
 
     // attach shutdown handler to catch control-c
     Runtime.getRuntime()
@@ -602,7 +616,7 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
             new Thread("streams-shutdown-hook") {
               @Override
               public void run() {
-                latch.countDown();
+                performSocketShutdown();
               }
             });
 
@@ -615,7 +629,7 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
         executor.execute(continuousPrinter);
         logger.info("Printer started");
       }
-      latch.await();
+      socketShutdownLatch.await();
       logger.info("Shutting down");
       if (continuousPrinter != null) {
         continuousPrinter.setDone(true);
@@ -662,6 +676,36 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
   @SuppressWarnings("unused")
   public void stopStreams() {
     shutdownLatch.countDown();
+  }
+
+  /**
+   * Performs shutdown for Kafka-based message streaming.
+   *
+   * <p>This method closes the Kafka streams, signals the continuous printer to stop, and counts
+   * down the shutdown latch. It is called by the shutdown hook when the application receives a
+   * termination signal (e.g., Ctrl+C).
+   *
+   * <p>Package-private for test access.
+   */
+  void performKafkaShutdown() {
+    kafkaStreams.close();
+    if (continuousPrinter != null) {
+      continuousPrinter.setDone(true);
+    }
+    shutdownLatch.countDown();
+  }
+
+  /**
+   * Performs shutdown for socket-based message streaming.
+   *
+   * <p>This method counts down the socket shutdown latch to signal the streaming thread to
+   * terminate. It is called by the shutdown hook when the application receives a termination signal
+   * (e.g., Ctrl+C).
+   *
+   * <p>Package-private for test access.
+   */
+  void performSocketShutdown() {
+    socketShutdownLatch.countDown();
   }
 
   /**
