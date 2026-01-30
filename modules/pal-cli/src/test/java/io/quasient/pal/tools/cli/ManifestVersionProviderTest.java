@@ -9,9 +9,9 @@
  */
 package io.quasient.pal.tools.cli;
 
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -30,18 +30,16 @@ public class ManifestVersionProviderTest {
    * an Implementation-Version or not.
    */
   @Test
-  @Ignore("Awaiting implementation in #357")
   public void testGetVersion_returnsVersionArray() {
     // Given: A ManifestVersionProvider instance
+    ManifestVersionProvider provider = new ManifestVersionProvider();
 
     // When: getVersion() is called
+    String[] version = provider.getVersion();
 
     // Then: Returns a non-null String array with exactly one element
-    //       The array should never be null
-    //       The array length should be exactly 1
-
-    // TODO(#357): Implement after implementation is provided
-    fail("Not yet implemented");
+    assertNotNull("getVersion() should not return null", version);
+    assertEquals("getVersion() should return array with exactly one element", 1, version.length);
   }
 
   /**
@@ -52,17 +50,19 @@ public class ManifestVersionProviderTest {
    * the Implementation-Version may be null since the manifest is not present.
    */
   @Test
-  @Ignore("Awaiting implementation in #357")
   public void testGetVersion_returnsImplementationVersion() {
     // Given: A ManifestVersionProvider instance
+    ManifestVersionProvider provider = new ManifestVersionProvider();
+    Package pkg = provider.getClass().getPackage();
+    String expectedVersion = pkg.getImplementationVersion();
 
     // When: getVersion() is called
+    String[] version = provider.getVersion();
 
     // Then: The first element should be the package's Implementation-Version
     //       In test context (classes directory), this may be null
     //       In production (JAR with MANIFEST.MF), this should be the version string
-
-    // TODO(#357): Implement after implementation is provided
-    fail("Not yet implemented");
+    assertEquals(
+        "getVersion()[0] should match package Implementation-Version", expectedVersion, version[0]);
   }
 }
