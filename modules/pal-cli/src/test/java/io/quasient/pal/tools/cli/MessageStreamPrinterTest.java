@@ -9,6 +9,7 @@
  */
 package io.quasient.pal.tools.cli;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.fail;
@@ -126,134 +127,252 @@ public class MessageStreamPrinterTest {
   // ==========================================================================
 
   @Test
-  @Ignore("Awaiting implementation in #367")
   public void testGetFormat_returnsCompact_whenNoFormatSpecified() throws Exception {
     // Given: No format flags set (formatOptions is null)
-    // When: getFormat() called
-    // Then: Returns COMPACT
+    MessageStreamPrinter p = new MessageStreamPrinter();
+    // formatOptions is null by default
 
-    // TODO(#367): Implement after #367 provides the implementation
-    // Create MessageStreamPrinter instance without setting any format flags
-    // Access getFormat() via reflection
-    // Assert that the returned format is OutputFormat.COMPACT
-    fail("Not yet implemented");
+    // When: getFormat() called via reflection
+    Method getFormat = MessageStreamPrinter.class.getDeclaredMethod("getFormat");
+    getFormat.setAccessible(true);
+    Object result = getFormat.invoke(p);
+
+    // Then: Returns COMPACT
+    assertThat(result, is(MessageStreamPrinter.OutputFormat.COMPACT));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #367")
   public void testGetFormat_returnsFull_whenFullFlagSet() throws Exception {
     // Given: fullOutput=true in FormatOptions
-    // When: getFormat() called
-    // Then: Returns FULL
+    MessageStreamPrinter p = new MessageStreamPrinter();
 
-    // TODO(#367): Implement after #367 provides the implementation
-    // Create MessageStreamPrinter instance
     // Create FormatOptions instance with full=true
+    Class<?> formatOptionsClass =
+        Class.forName("io.quasient.pal.tools.cli.MessageStreamPrinter$FormatOptions");
+    Object formatOptions = formatOptionsClass.getDeclaredConstructor().newInstance();
+    var fullField = formatOptionsClass.getDeclaredField("full");
+    fullField.setAccessible(true);
+    fullField.set(formatOptions, true);
+
     // Set formatOptions field via reflection
-    // Access getFormat() via reflection
-    // Assert that the returned format is OutputFormat.FULL
-    fail("Not yet implemented");
+    var fmtOptsField = MessageStreamPrinter.class.getDeclaredField("formatOptions");
+    fmtOptsField.setAccessible(true);
+    fmtOptsField.set(p, formatOptions);
+
+    // When: getFormat() called via reflection
+    Method getFormat = MessageStreamPrinter.class.getDeclaredMethod("getFormat");
+    getFormat.setAccessible(true);
+    Object result = getFormat.invoke(p);
+
+    // Then: Returns FULL
+    assertThat(result, is(MessageStreamPrinter.OutputFormat.FULL));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #367")
   public void testGetFormat_returnsJson_whenJsonFlagSet() throws Exception {
     // Given: jsonOutput=true in FormatOptions
-    // When: getFormat() called
-    // Then: Returns JSON
+    MessageStreamPrinter p = new MessageStreamPrinter();
 
-    // TODO(#367): Implement after #367 provides the implementation
-    // Create MessageStreamPrinter instance
     // Create FormatOptions instance with json=true
+    Class<?> formatOptionsClass =
+        Class.forName("io.quasient.pal.tools.cli.MessageStreamPrinter$FormatOptions");
+    Object formatOptions = formatOptionsClass.getDeclaredConstructor().newInstance();
+    var jsonField = formatOptionsClass.getDeclaredField("json");
+    jsonField.setAccessible(true);
+    jsonField.set(formatOptions, true);
+
     // Set formatOptions field via reflection
-    // Access getFormat() via reflection
-    // Assert that the returned format is OutputFormat.JSON
-    fail("Not yet implemented");
+    var fmtOptsField = MessageStreamPrinter.class.getDeclaredField("formatOptions");
+    fmtOptsField.setAccessible(true);
+    fmtOptsField.set(p, formatOptions);
+
+    // When: getFormat() called via reflection
+    Method getFormat = MessageStreamPrinter.class.getDeclaredMethod("getFormat");
+    getFormat.setAccessible(true);
+    Object result = getFormat.invoke(p);
+
+    // Then: Returns JSON
+    assertThat(result, is(MessageStreamPrinter.OutputFormat.JSON));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #367")
   public void testShouldPrint_filtersNullOffset() throws Exception {
-    // Given: startOffset set; message with null offset passed to shouldPrint
-    // When: shouldPrint() called with null recOffset
-    // Then: Returns false (message filtered out because offset doesn't match)
+    // Given: startOffset set; message with null offset and mismatched type filter
+    // The offset check in shouldPrint only short-circuits on match (returns true).
+    // When offset doesn't match, it continues to other filters.
+    // To test that null offset doesn't trigger the early-exit, we add a type filter
+    // that will reject the message, proving the offset check didn't short-circuit.
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    var em = b.buildEmptyConstructor(peer, "java.lang.String");
+    var m = b.wrap(em);
+    LogMessage<?> lm = logOf(m);
 
-    // TODO(#367): Implement after #367 provides the implementation
-    // Create MessageStreamPrinter instance
+    MessageStreamPrinter p = new MessageStreamPrinter();
     // Set the offset field to a non-null value (e.g., 10L) via reflection
-    // Create a LogMessage
-    // Call shouldPrint(null, key, logMessage) via reflection
-    // Assert that the method returns false since null != 10L
-    fail("Not yet implemented");
+    var offsetField = MessageStreamPrinter.class.getDeclaredField("offset");
+    offsetField.setAccessible(true);
+    offsetField.set(p, 10L);
+    // Set a type filter that won't match (message is CONSTRUCTOR, filter is INSTANCE_METHOD)
+    var fTypes = MessageStreamPrinter.class.getDeclaredField("msgTypes");
+    fTypes.setAccessible(true);
+    fTypes.set(p, List.of("INSTANCE_METHOD"));
+
+    // When: shouldPrint() called with null recOffset (doesn't match 10L) via reflection
+    Method shouldPrint =
+        MessageStreamPrinter.class.getDeclaredMethod(
+            "shouldPrint", Long.class, String.class, LogMessage.class);
+    shouldPrint.setAccessible(true);
+    boolean result = (boolean) shouldPrint.invoke(p, null, peer.toString(), lm);
+
+    // Then: Returns false because:
+    // 1. offset (10L) != recOffset (null), so no early return
+    // 2. Type filter rejects message (CONSTRUCTOR not in [INSTANCE_METHOD])
+    assertThat(result, is(false));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #367")
   public void testShouldPrint_combinesMultipleFilters() throws Exception {
     // Given: Type filter AND peer filter both set
-    // When: shouldPrint() called with message matching both filters
-    // Then: Returns true
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    var em = b.buildEmptyConstructor(peer, "java.lang.String");
+    var m = b.wrap(em);
+    LogMessage<?> lm = logOf(m);
 
-    // TODO(#367): Implement after #367 provides the implementation
-    // Create MessageStreamPrinter instance
+    MessageStreamPrinter p = new MessageStreamPrinter();
     // Set msgTypes field to List.of("CONSTRUCTOR") via reflection
+    var fTypes = MessageStreamPrinter.class.getDeclaredField("msgTypes");
+    fTypes.setAccessible(true);
+    fTypes.set(p, List.of("CONSTRUCTOR"));
     // Set fromPeer field to a specific UUID string via reflection
-    // Create a LogMessage with matching type (EXEC_CONSTRUCTOR) and peer UUID
-    // Call shouldPrint(offset, peerUuid, logMessage) via reflection
-    // Assert that the method returns true
-    fail("Not yet implemented");
+    var fPeer = MessageStreamPrinter.class.getDeclaredField("fromPeer");
+    fPeer.setAccessible(true);
+    fPeer.set(p, peer.toString());
+
+    // When: shouldPrint() called with message matching both filters via reflection
+    Method shouldPrint =
+        MessageStreamPrinter.class.getDeclaredMethod(
+            "shouldPrint", Long.class, String.class, LogMessage.class);
+    shouldPrint.setAccessible(true);
+    boolean result = (boolean) shouldPrint.invoke(p, 5L, peer.toString(), lm);
+
+    // Then: Returns true
+    assertThat(result, is(true));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #367")
   public void testShouldPrint_rejectsMismatchedFilter() throws Exception {
     // Given: Type filter set to CONSTRUCTOR
-    // When: shouldPrint() called with message of type INSTANCE_METHOD
-    // Then: Returns false
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    // Create an instance method message instead of constructor
+    var em =
+        b.buildInstanceMethod(
+            peer,
+            "java.util.ArrayList",
+            "add",
+            io.quasient.pal.common.objects.ObjectRef.randomRef(),
+            new String[] {"int"},
+            new Object[] {1});
+    var m = b.wrap(em);
+    LogMessage<?> lm = logOf(m);
 
-    // TODO(#367): Implement after #367 provides the implementation
-    // Create MessageStreamPrinter instance
+    MessageStreamPrinter p = new MessageStreamPrinter();
     // Set msgTypes field to List.of("CONSTRUCTOR") via reflection
-    // Create a LogMessage with type EXEC_INSTANCE_METHOD
-    // Call shouldPrint(offset, key, logMessage) via reflection
-    // Assert that the method returns false
-    fail("Not yet implemented");
+    var fTypes = MessageStreamPrinter.class.getDeclaredField("msgTypes");
+    fTypes.setAccessible(true);
+    fTypes.set(p, List.of("CONSTRUCTOR"));
+
+    // When: shouldPrint() called with message of type INSTANCE_METHOD via reflection
+    Method shouldPrint =
+        MessageStreamPrinter.class.getDeclaredMethod(
+            "shouldPrint", Long.class, String.class, LogMessage.class);
+    shouldPrint.setAccessible(true);
+    boolean result = (boolean) shouldPrint.invoke(p, 5L, peer.toString(), lm);
+
+    // Then: Returns false
+    assertThat(result, is(false));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #367")
   public void testPrintRecord_handlesFullFormat() throws Exception {
     // Given: OutputFormat.FULL configured
-    // When: printRecord() called
-    // Then: Outputs detailed multi-line format with CONTEXT, HEADERS, and JSON content
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    var em = b.buildEmptyConstructor(peer, "java.lang.String");
+    var m = b.wrap(em);
+    LogMessage<?> lm = logOf(m);
 
-    // TODO(#367): Implement after #367 provides the implementation
-    // Create MessageStreamPrinter instance
+    MessageStreamPrinter p = new MessageStreamPrinter();
+
     // Set formatOptions.full = true via reflection
-    // Set up ByteArrayOutputStream to capture output
-    // Set out field to PrintStream wrapping the ByteArrayOutputStream
-    // Create a LogMessage with test content
-    // Call printRecord(key, logMessage, offset) via reflection
-    // Assert output contains "CONTEXT:", "HEADERS:", and message content in JSON
-    fail("Not yet implemented");
+    Class<?> formatOptionsClass =
+        Class.forName("io.quasient.pal.tools.cli.MessageStreamPrinter$FormatOptions");
+    Object formatOptions = formatOptionsClass.getDeclaredConstructor().newInstance();
+    var fullField = formatOptionsClass.getDeclaredField("full");
+    fullField.setAccessible(true);
+    fullField.set(formatOptions, true);
+    var fmtOptsField = MessageStreamPrinter.class.getDeclaredField("formatOptions");
+    fmtOptsField.setAccessible(true);
+    fmtOptsField.set(p, formatOptions);
+
+    // Redirect System.out to capture output (printRecord uses System.out.printf)
+    PrintStream originalOut = System.out;
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(bout, true, UTF_8));
+
+    try {
+      // When: printRecord() called via reflection
+      Method printRecord =
+          MessageStreamPrinter.class.getDeclaredMethod(
+              "printRecord", String.class, LogMessage.class, long.class);
+      printRecord.setAccessible(true);
+      printRecord.invoke(p, peer.toString(), lm, 10L);
+
+      // Then: Output contains "CONTEXT:", "HEADERS:", and offset info
+      String output = bout.toString(UTF_8);
+      assertThat(output.contains("CONTEXT:"), is(true));
+      assertThat(output.contains("HEADERS:"), is(true));
+      assertThat(output.contains("offset: 10"), is(true));
+    } finally {
+      System.setOut(originalOut);
+    }
   }
 
   @Test
-  @Ignore("Awaiting implementation in #367")
   public void testPrintRecord_handlesCompactFormat() throws Exception {
-    // Given: OutputFormat.COMPACT configured (default or explicit)
-    // When: printRecord() called
-    // Then: Outputs single-line summary with offset=, id=, message=
+    // Given: OutputFormat.COMPACT configured (default - formatOptions is null)
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    var em = b.buildEmptyConstructor(peer, "java.lang.String");
+    var m = b.wrap(em);
+    LogMessage<?> lm = logOf(m);
 
-    // TODO(#367): Implement after #367 provides the implementation
-    // Create MessageStreamPrinter instance
-    // Set formatOptions.compact = true via reflection (or leave formatOptions null for default)
-    // Set up ByteArrayOutputStream to capture output
-    // Set out field to PrintStream wrapping the ByteArrayOutputStream
-    // Create a LogMessage with test content
-    // Call printRecord(key, logMessage, offset) via reflection
-    // Assert output is single line containing "offset=", "id=", "message="
-    fail("Not yet implemented");
+    MessageStreamPrinter p = new MessageStreamPrinter();
+    // formatOptions is null by default, which means COMPACT format
+
+    // Redirect System.out to capture output (printRecord uses System.out.printf)
+    PrintStream originalOut = System.out;
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(bout, true, UTF_8));
+
+    try {
+      // When: printRecord() called via reflection
+      Method printRecord =
+          MessageStreamPrinter.class.getDeclaredMethod(
+              "printRecord", String.class, LogMessage.class, long.class);
+      printRecord.setAccessible(true);
+      printRecord.invoke(p, peer.toString(), lm, 10L);
+
+      // Then: Output is single line containing "offset=", "id=", "message="
+      String output = bout.toString(UTF_8);
+      assertThat(output.contains("offset=10"), is(true));
+      assertThat(output.contains("id="), is(true));
+      assertThat(output.contains("message="), is(true));
+    } finally {
+      System.setOut(originalOut);
+    }
   }
 
   // ==========================================================================
