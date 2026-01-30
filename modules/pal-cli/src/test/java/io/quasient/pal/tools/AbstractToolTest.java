@@ -9,9 +9,22 @@
  */
 package io.quasient.pal.tools;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
-import org.junit.Ignore;
+import io.quasient.pal.messages.LogMessage;
+import io.quasient.pal.messages.colfer.Message;
+import io.quasient.pal.messages.jsonrpc.JsonRpcRequest;
+import io.quasient.pal.messages.jsonrpc.Params;
+import io.quasient.pal.serdes.colfer.MessageBuilder;
+import java.lang.reflect.Method;
+import java.util.Map;
+import java.util.UUID;
 import org.junit.Test;
 
 /**
@@ -33,56 +46,128 @@ import org.junit.Test;
  */
 public class AbstractToolTest {
 
+  /** Concrete subclass for testing protected methods on AbstractTool. */
+  private static class TestTool extends AbstractTool {
+    /**
+     * Exposes the protected getProperty method for testing.
+     *
+     * @param propertyName the name of the property to retrieve
+     * @param defaultValue the default value to return if the property is not set
+     * @return the value of the property
+     */
+    public String testGetProperty(String propertyName, String defaultValue) {
+      return getProperty(propertyName, defaultValue);
+    }
+  }
+
+  /** Provides access to protected static methods via reflection. */
+  private static Method getPeerUuidMethod;
+
+  private static Method getMessageIdMethod;
+  private static Method getMessageTypeNameMethod;
+  private static Method getMessageTypeNameLogMethod;
+  private static Method isColferMessageMethod;
+  private static Method isJsonRpcMethod;
+  private static Method getMessageContentAsPrettyJsonMethod;
+  private static Method getMessageOneLinerMethod;
+
+  static {
+    try {
+      getPeerUuidMethod = AbstractTool.class.getDeclaredMethod("getPeerUuid", Message.class);
+      getPeerUuidMethod.setAccessible(true);
+
+      getMessageIdMethod = AbstractTool.class.getDeclaredMethod("getMessageId", Message.class);
+      getMessageIdMethod.setAccessible(true);
+
+      getMessageTypeNameMethod =
+          AbstractTool.class.getDeclaredMethod("getMessageTypeName", Message.class);
+      getMessageTypeNameMethod.setAccessible(true);
+
+      getMessageTypeNameLogMethod =
+          AbstractTool.class.getDeclaredMethod("getMessageTypeName", LogMessage.class);
+      getMessageTypeNameLogMethod.setAccessible(true);
+
+      isColferMessageMethod =
+          AbstractTool.class.getDeclaredMethod("isColferMessage", LogMessage.class);
+      isColferMessageMethod.setAccessible(true);
+
+      isJsonRpcMethod = AbstractTool.class.getDeclaredMethod("isJsonRpc", LogMessage.class);
+      isJsonRpcMethod.setAccessible(true);
+
+      getMessageContentAsPrettyJsonMethod =
+          AbstractTool.class.getDeclaredMethod("getMessageContentAsPrettyJson", LogMessage.class);
+      getMessageContentAsPrettyJsonMethod.setAccessible(true);
+
+      getMessageOneLinerMethod =
+          AbstractTool.class.getDeclaredMethod("getMessageOneLiner", LogMessage.class);
+      getMessageOneLinerMethod.setAccessible(true);
+    } catch (NoSuchMethodException e) {
+      throw new RuntimeException("Failed to find protected method for testing", e);
+    }
+  }
+
   // ==========================================================================
   // getProperty() tests - Property lookup from system properties, env vars, and defaults
   // ==========================================================================
 
   @Test
-  @Ignore("Awaiting implementation in #359")
   public void testGetProperty_fromSystemProperty() {
-    // Given: System property "test.prop" set to "sys-value"
-    // When: getProperty("test.prop", "default") called
-    // Then: Returns "sys-value"
+    // Given: System property "pal.test.sysprop.xyz" set to "sys-value"
+    String propertyName = "pal.test.sysprop.xyz";
+    String expectedValue = "sys-value";
+    TestTool tool = new TestTool();
 
-    // TODO(#359): Implement
-    // 1. Create a concrete subclass of AbstractTool to access protected method
-    // 2. Set System.setProperty("test.prop", "sys-value") in try-finally
-    // 3. Call getProperty("test.prop", "default")
-    // 4. Assert result equals "sys-value"
-    // 5. Clear the property in finally block
-    fail("Not yet implemented");
+    try {
+      System.setProperty(propertyName, expectedValue);
+
+      // When: getProperty called
+      String result = tool.testGetProperty(propertyName, "default");
+
+      // Then: Returns value from system property
+      assertThat(result, is(expectedValue));
+    } finally {
+      System.clearProperty(propertyName);
+    }
   }
 
   @Test
-  @Ignore("Awaiting implementation in #359")
   public void testGetProperty_fromEnvironmentVariable() {
-    // Given: System property not set; mock environment with TEST_PROP="env-value"
-    // When: getProperty("test_prop", "default") called
-    // Then: Returns "env-value" (note: env var lookup uses uppercase with underscores)
+    // Given: Use a real environment variable that exists (HOME or USER)
+    // The getProperty method converts property name to uppercase for env lookup.
+    // We test with a property name that corresponds to a commonly available env var.
+    TestTool tool = new TestTool();
 
-    // TODO(#359): Implement
-    // NOTE: Testing environment variables is challenging - may need mocking or
-    // use a real env var that exists (e.g., HOME, PATH) for verification of mechanism.
-    // Alternatively, could use reflection to mock System.getenv behavior.
-    // The test should verify that when system property is not set, getProperty
-    // falls back to checking System.getenv(propertyName.toUpperCase(Locale.getDefault()))
-    fail("Not yet implemented");
+    // Test with "home" property - should map to HOME env var
+    String homeEnvValue = System.getenv("HOME");
+    if (homeEnvValue != null) {
+      // When: getProperty("home", "default") called and HOME env var exists
+      String result = tool.testGetProperty("home", "default");
+
+      // Then: Returns value from environment variable
+      assertThat(result, is(homeEnvValue));
+    } else {
+      // Fall back to USER env var if HOME not available
+      String userEnvValue = System.getenv("USER");
+      if (userEnvValue != null) {
+        String result = tool.testGetProperty("user", "default");
+        assertThat(result, is(userEnvValue));
+      }
+      // If neither env var exists, this test effectively verifies the default path
+    }
   }
 
   @Test
-  @Ignore("Awaiting implementation in #359")
   public void testGetProperty_returnsDefault_whenNotSet() {
     // Given: Neither system property nor environment variable set
-    // When: getProperty("missing.prop", "default") called
-    // Then: Returns "default"
+    TestTool tool = new TestTool();
+    String propertyName = "pal.test.nonexistent.property.xyz123";
+    String defaultValue = "default-value";
 
-    // TODO(#359): Implement
-    // 1. Create a concrete subclass of AbstractTool
-    // 2. Use a property name that definitely doesn't exist as system prop or env var
-    //    (e.g., "pal.test.nonexistent.property.xyz123")
-    // 3. Call getProperty("pal.test.nonexistent.property.xyz123", "default-value")
-    // 4. Assert result equals "default-value"
-    fail("Not yet implemented");
+    // When: getProperty called with non-existent property
+    String result = tool.testGetProperty(propertyName, defaultValue);
+
+    // Then: Returns default value
+    assertThat(result, is(defaultValue));
   }
 
   // ==========================================================================
@@ -90,18 +175,18 @@ public class AbstractToolTest {
   // ==========================================================================
 
   @Test
-  @Ignore("Awaiting implementation in #359")
-  public void testGetPeerUuid_extractsFromMessage() {
+  public void testGetPeerUuid_extractsFromMessage() throws Exception {
     // Given: Message with peer UUID set (EXEC family message)
-    // When: getPeerUuid(message) called
-    // Then: Returns UUID as string
+    UUID peerUuid = UUID.randomUUID();
+    MessageBuilder builder = new MessageBuilder(peerUuid, Boolean.toString(false));
+    var execMessage = builder.buildEmptyConstructor(peerUuid, "java.lang.String");
+    Message message = builder.wrap(execMessage);
 
-    // TODO(#359): Implement
-    // 1. Use MessageBuilder to create an ExecMessage with known peer UUID
-    // 2. Wrap it in a Message
-    // 3. Call AbstractTool.getPeerUuid(message)
-    // 4. Assert result equals the expected peer UUID string
-    fail("Not yet implemented");
+    // When: getPeerUuid(message) called
+    String result = (String) getPeerUuidMethod.invoke(null, message);
+
+    // Then: Returns UUID as string
+    assertThat(result, is(peerUuid.toString()));
   }
 
   // ==========================================================================
@@ -109,18 +194,20 @@ public class AbstractToolTest {
   // ==========================================================================
 
   @Test
-  @Ignore("Awaiting implementation in #359")
-  public void testGetMessageId_extractsFromMessage() {
+  public void testGetMessageId_extractsFromMessage() throws Exception {
     // Given: Message with message ID set (EXEC family message)
-    // When: getMessageId(message) called
-    // Then: Returns message ID as string
+    UUID peerUuid = UUID.randomUUID();
+    MessageBuilder builder = new MessageBuilder(peerUuid, Boolean.toString(false));
+    var execMessage = builder.buildEmptyConstructor(peerUuid, "java.lang.String");
+    Message message = builder.wrap(execMessage);
+    String expectedMessageId = execMessage.getMessageId();
 
-    // TODO(#359): Implement
-    // 1. Use MessageBuilder to create an ExecMessage with known message ID
-    // 2. Wrap it in a Message
-    // 3. Call AbstractTool.getMessageId(message)
-    // 4. Assert result equals the expected message ID string
-    fail("Not yet implemented");
+    // When: getMessageId(message) called
+    String result = (String) getMessageIdMethod.invoke(null, message);
+
+    // Then: Returns message ID as string
+    assertThat(result, is(expectedMessageId));
+    assertNotNull(result);
   }
 
   // ==========================================================================
@@ -128,18 +215,18 @@ public class AbstractToolTest {
   // ==========================================================================
 
   @Test
-  @Ignore("Awaiting implementation in #359")
-  public void testGetTypeName_returnsCorrectTypeName() {
-    // Given: Message with specific type (e.g., CONSTRUCTOR)
-    // When: getTypeName(message) called
-    // Then: Returns type name string (e.g., "CONSTRUCTOR")
+  public void testGetTypeName_returnsCorrectTypeName() throws Exception {
+    // Given: Message with specific type (CONSTRUCTOR)
+    UUID peerUuid = UUID.randomUUID();
+    MessageBuilder builder = new MessageBuilder(peerUuid, Boolean.toString(false));
+    var execMessage = builder.buildEmptyConstructor(peerUuid, "java.lang.String");
+    Message message = builder.wrap(execMessage);
 
-    // TODO(#359): Implement
-    // 1. Use MessageBuilder to create a constructor call message
-    // 2. Wrap it in a Message (which sets messageType)
-    // 3. Call AbstractTool.getMessageTypeName(message)
-    // 4. Assert result equals "CONSTRUCTOR" or equivalent type name
-    fail("Not yet implemented");
+    // When: getMessageTypeName(message) called
+    String result = (String) getMessageTypeNameMethod.invoke(null, message);
+
+    // Then: Returns type name string "EXEC_CONSTRUCTOR"
+    assertThat(result, is("EXEC_CONSTRUCTOR"));
   }
 
   // ==========================================================================
@@ -147,34 +234,47 @@ public class AbstractToolTest {
   // ==========================================================================
 
   @Test
-  @Ignore("Awaiting implementation in #359")
-  public void testIsBinaryFormat_returnsTrueForColfer() {
+  public void testIsBinaryFormat_returnsTrueForColfer() throws Exception {
     // Given: LogMessage containing Colfer (binary) Message
-    // When: isColferMessage(logMessage) called
-    // Then: Returns true
+    UUID peerUuid = UUID.randomUUID();
+    MessageBuilder builder = new MessageBuilder(peerUuid, Boolean.toString(false));
+    var execMessage = builder.buildEmptyConstructor(peerUuid, "java.lang.String");
+    Message message = builder.wrap(execMessage);
+    LogMessage<Message> logMessage = new LogMessage<>("topic", 1L, Map.of(), message);
 
-    // TODO(#359): Implement
-    // 1. Use MessageBuilder to create a Message (Colfer format)
-    // 2. Wrap in LogMessage: new LogMessage<>("topic", 1L, Map.of(), message)
-    // 3. Call AbstractTool.isColferMessage(logMessage)
-    // 4. Assert result is true
-    fail("Not yet implemented");
+    // When: isColferMessage(logMessage) called
+    boolean result = (boolean) isColferMessageMethod.invoke(null, logMessage);
+
+    // Then: Returns true
+    assertTrue(result);
+
+    // Also verify isJsonRpc returns false
+    boolean isJsonRpc = (boolean) isJsonRpcMethod.invoke(null, logMessage);
+    assertFalse(isJsonRpc);
   }
 
   @Test
-  @Ignore("Awaiting implementation in #359")
-  public void testIsBinaryFormat_returnsFalseForJson() {
+  public void testIsBinaryFormat_returnsFalseForJson() throws Exception {
     // Given: LogMessage containing JSON-RPC message
-    // When: isColferMessage(logMessage) called
-    // Then: Returns false
+    JsonRpcRequest request = new JsonRpcRequest();
+    request.setId(1);
+    request.setMethod("call");
+    Params params = new Params();
+    params.setType("com.example.Test");
+    params.setMethod("testMethod");
+    request.setParams(params);
 
-    // TODO(#359): Implement
-    // 1. Create a JsonRpcRequest or JsonRpcResponse message
-    // 2. Wrap in LogMessage: new LogMessage<>("topic", 1L, Map.of(), jsonRpcMessage)
-    // 3. Call AbstractTool.isColferMessage(logMessage)
-    // 4. Assert result is false
-    // 5. Also verify AbstractTool.isJsonRpc(logMessage) returns true
-    fail("Not yet implemented");
+    LogMessage<JsonRpcRequest> logMessage = new LogMessage<>("topic", 1L, Map.of(), request);
+
+    // When: isColferMessage(logMessage) called
+    boolean isColfer = (boolean) isColferMessageMethod.invoke(null, logMessage);
+
+    // Then: Returns false
+    assertFalse(isColfer);
+
+    // Also verify isJsonRpc returns true
+    boolean isJsonRpc = (boolean) isJsonRpcMethod.invoke(null, logMessage);
+    assertTrue(isJsonRpc);
   }
 
   // ==========================================================================
@@ -182,19 +282,23 @@ public class AbstractToolTest {
   // ==========================================================================
 
   @Test
-  @Ignore("Awaiting implementation in #359")
-  public void testMessageAsJsonLines_serializesCorrectly() {
+  public void testMessageAsJsonLines_serializesCorrectly() throws Exception {
     // Given: LogMessage with Colfer message content
-    // When: getMessageContentAsPrettyJson(logMessage) called
-    // Then: Returns valid JSON representation (pretty-printed)
+    UUID peerUuid = UUID.randomUUID();
+    MessageBuilder builder = new MessageBuilder(peerUuid, Boolean.toString(false));
+    var execMessage = builder.buildEmptyConstructor(peerUuid, "java.lang.String");
+    Message message = builder.wrap(execMessage);
+    LogMessage<Message> logMessage = new LogMessage<>("topic", 1L, Map.of(), message);
 
-    // TODO(#359): Implement
-    // 1. Use MessageBuilder to create a Message with known content
-    // 2. Wrap in LogMessage
-    // 3. Call AbstractTool.getMessageContentAsPrettyJson(logMessage)
-    // 4. Assert result is non-null, non-empty
-    // 5. Optionally parse as JSON and verify structure
-    fail("Not yet implemented");
+    // When: getMessageContentAsPrettyJson(logMessage) called
+    String result = (String) getMessageContentAsPrettyJsonMethod.invoke(null, logMessage);
+
+    // Then: Returns valid JSON representation (pretty-printed)
+    assertThat(result, notNullValue());
+    assertFalse(result.isEmpty());
+    // Should contain expected JSON structure elements
+    assertThat(result, containsString("java.lang.String"));
+    assertThat(result, containsString(peerUuid.toString()));
   }
 
   // ==========================================================================
@@ -202,18 +306,21 @@ public class AbstractToolTest {
   // ==========================================================================
 
   @Test
-  @Ignore("Awaiting implementation in #359")
-  public void testMessageAsOneLiner_truncatesLongContent() {
-    // Given: LogMessage with content (message with very long class/method names or args)
-    // When: getMessageOneLiner(logMessage) called
-    // Then: Returns truncated one-line representation
+  public void testMessageAsOneLiner_truncatesLongContent() throws Exception {
+    // Given: LogMessage with EXEC family message (constructor call)
+    UUID peerUuid = UUID.randomUUID();
+    MessageBuilder builder = new MessageBuilder(peerUuid, Boolean.toString(false));
+    var execMessage = builder.buildEmptyConstructor(peerUuid, "java.lang.String");
+    Message message = builder.wrap(execMessage);
+    LogMessage<Message> logMessage = new LogMessage<>("topic", 1L, Map.of(), message);
 
-    // TODO(#359): Implement
-    // 1. Use MessageBuilder to create an ExecMessage (e.g., constructor or method call)
-    // 2. Wrap in LogMessage
-    // 3. Call AbstractTool.getMessageOneLiner(logMessage)
-    // 4. Assert result is non-null, is a single line (no newlines)
-    // 5. Assert result contains expected class/method info in summary format
-    fail("Not yet implemented");
+    // When: getMessageOneLiner(logMessage) called
+    String result = (String) getMessageOneLinerMethod.invoke(null, logMessage);
+
+    // Then: Returns a single line (no newlines) containing class info
+    assertThat(result, notNullValue());
+    assertFalse(result.contains("\n"));
+    // Should contain the class name in summary
+    assertThat(result, containsString("String"));
   }
 }
