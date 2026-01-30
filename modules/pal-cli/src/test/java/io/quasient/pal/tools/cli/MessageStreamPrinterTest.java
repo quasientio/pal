@@ -13,6 +13,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
+import io.quasient.pal.common.objects.ObjectRef;
 import io.quasient.pal.messages.LogMessage;
 import io.quasient.pal.messages.colfer.Message;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
@@ -271,7 +272,7 @@ public class MessageStreamPrinterTest {
             peer,
             "java.util.ArrayList",
             "add",
-            io.quasient.pal.common.objects.ObjectRef.randomRef(),
+            ObjectRef.randomRef(),
             new String[] {"int"},
             new Object[] {1});
     var m = b.wrap(em);

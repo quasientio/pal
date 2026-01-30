@@ -242,6 +242,9 @@
                   <version>${maven.surefire.version}</version>
                   <configuration>
                       <skipTests>${skipUTs}</skipTests>
+                      <!-- Use TCP for fork communication to avoid stdin/stdout stream corruption
+                           when tests redirect System.out/System.in -->
+                      <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory"/>
                   </configuration>
                 </plugin>
                 <plugin>

@@ -21,6 +21,7 @@ import io.quasient.pal.messages.colfer.ReturnValue;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
@@ -71,14 +72,19 @@ public class CallerTest {
     outLog.setAccessible(true);
     outLog.set(c, "L");
 
-    // Provide stdin
-    System.setIn(new ByteArrayInputStream("{}\n".getBytes(StandardCharsets.UTF_8)));
-    // Now set className too
-    var cn = Caller.class.getDeclaredField("className");
-    cn.setAccessible(true);
-    cn.set(c, "X");
-    Exception e = assertThrows(RuntimeException.class, c::validateInput);
-    assertThat(e.getMessage(), containsString("Either specify a class"));
+    // Provide stdin - save original and restore after test
+    InputStream originalIn = System.in;
+    try {
+      System.setIn(new ByteArrayInputStream("{}\n".getBytes(StandardCharsets.UTF_8)));
+      // Now set className too
+      var cn = Caller.class.getDeclaredField("className");
+      cn.setAccessible(true);
+      cn.set(c, "X");
+      Exception e = assertThrows(RuntimeException.class, c::validateInput);
+      assertThat(e.getMessage(), containsString("Either specify a class"));
+    } finally {
+      System.setIn(originalIn);
+    }
   }
 
   @Test
