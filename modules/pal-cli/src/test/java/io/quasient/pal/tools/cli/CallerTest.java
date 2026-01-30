@@ -13,6 +13,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.fail;
 
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.Obj;
@@ -28,6 +29,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class CallerTest {
@@ -136,5 +138,127 @@ public class CallerTest {
     var m2 = Caller.class.getDeclaredMethod("print", RaisedThrowable.class);
     m2.setAccessible(true);
     m2.invoke(c, rt);
+  }
+
+  // ============================================================================
+  // Test specifications for issue #362 - Awaiting implementation in #363
+  // ============================================================================
+
+  /**
+   * Tests that print(ReturnValue) handles a ReturnValue with null object gracefully.
+   *
+   * <p>This test targets the null object branch in the print(ReturnValue) method at line 813-816.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #363")
+  public void testPrint_returnValue_handlesNullObject() throws Exception {
+    // Given: A Caller instance with printResponses enabled
+    //        and a ReturnValue that has isVoid=false but object=null
+
+    // When: print(ReturnValue) is called with the ReturnValue containing null object
+
+    // Then: The method should handle null gracefully without NPE
+    //       (either print nothing or print appropriate message)
+
+    // TODO(#363): Implement after implementation is provided
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that print(RaisedThrowable) handles a RaisedThrowable with null internal values.
+   *
+   * <p>This test targets null value handling in the print(RaisedThrowable) method at line 824-829.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #363")
+  public void testPrint_raisedThrowable_handlesNullThrowable() throws Exception {
+    // Given: A Caller instance with printResponses enabled
+    //        and a RaisedThrowable with null className/message/stackTrace
+
+    // When: print(RaisedThrowable) is called
+
+    // Then: The method should return early or handle gracefully without NPE
+    //       ColferUtils.format should handle null fields appropriately
+
+    // TODO(#363): Implement after implementation is provided
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that StaticMethodCallBuilder.buildJsonRpc() handles null argList.
+   *
+   * <p>This test targets the null argList branch in buildJsonRpc() at line 966-972.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #363")
+  public void testBuildJsonRpc_handlesNullArgList() throws Exception {
+    // Given: A StaticMethodCallBuilder constructed with null argList
+
+    // When: buildJsonRpc() is called
+
+    // Then: A valid JsonRpcRequest should be created with empty params
+    //       (no args added to the params builder)
+
+    // TODO(#363): Implement after implementation is provided
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that StaticMethodCallBuilder constructor handles null argList.
+   *
+   * <p>This test targets the null argList handling in constructor at line 935-937.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #363")
+  public void testConstructor_handlesNullArgList() throws Exception {
+    // Given: A null argList parameter
+
+    // When: StaticMethodCallBuilder is constructed with null argList
+
+    // Then: argList should be handled gracefully - either initialized to empty
+    //       or parameters[0] should remain as empty String[]
+
+    // TODO(#363): Implement after implementation is provided
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that validateInput() succeeds with a valid peer address (-pa).
+   *
+   * <p>This test targets the valid peer address path in validateInput() at line 265-284.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #363")
+  public void testValidateInput_success_withValidPeerAddress() throws Exception {
+    // Given: A Caller instance with valid peer address (tcp:// or ws://) set
+    //        and a className set (so we have something to call)
+
+    // When: validateInput() is called
+
+    // Then: No exception should be thrown
+    //       peerAddress should be set to the provided address
+
+    // TODO(#363): Implement after implementation is provided
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that validateInput() succeeds with valid input/output log configuration.
+   *
+   * <p>This test targets the valid log configuration path in validateInput() at line 259-261.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #363")
+  public void testValidateInput_success_withValidLogConfiguration() throws Exception {
+    // Given: A Caller instance with valid inputLogName and outputLogName set
+    //        and a className set (so we have something to call)
+    //        or sendAndForget=true (so inputLogName is not required)
+
+    // When: validateInput() is called
+
+    // Then: No exception should be thrown
+
+    // TODO(#363): Implement after implementation is provided
+    fail("Not yet implemented");
   }
 }
