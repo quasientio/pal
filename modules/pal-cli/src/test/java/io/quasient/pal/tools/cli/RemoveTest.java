@@ -17,6 +17,7 @@ import static org.hamcrest.Matchers.is;
 import io.quasient.pal.cxn.directory.PalDirectory;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class RemoveTest {
@@ -45,5 +46,76 @@ public class RemoveTest {
     int code = rm.call();
     assertThat(code, is(1));
     assertThat(bout.toString(UTF_8), containsString("Use -L/--logs to remove logs"));
+  }
+
+  // ===========================================================================
+  // Test specifications for resolveLogInfo() - Issue #368
+  // ===========================================================================
+
+  /**
+   * Tests that resolveLogInfo() correctly parses a Chronicle log path with "file:" prefix.
+   *
+   * <p>Verifies that the "file:" prefix is stripped and a LogInfo with CHRONICLE type is returned.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #369")
+  public void testResolveLogInfo_chronicleWithFilePrefix() throws Exception {
+    // Given: logNameOrPath = "file:/tmp/mylog"
+    //        Remove instance with no PAL directory connection
+
+    // When: resolveLogInfo() called via reflection
+
+    // Then: Returns LogInfo with:
+    //       - CHRONICLE type
+    //       - path "/tmp/mylog" (prefix stripped)
+
+    // TODO(#369): Implement after #369 provides the implementation
+    throw new AssertionError("Not yet implemented");
+  }
+
+  /**
+   * Tests that resolveLogInfo() correctly creates a Kafka LogInfo when bootstrap servers are set.
+   *
+   * <p>Verifies that a Kafka-type LogInfo is returned with the provided bootstrap servers.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #369")
+  public void testResolveLogInfo_kafkaWithBootstrapServers() throws Exception {
+    // Given: logNameOrPath = "my-topic"
+    //        kafkaServers field set to "localhost:29092"
+    //        Remove instance with no PAL directory connection
+
+    // When: resolveLogInfo() called via reflection
+
+    // Then: Returns LogInfo with:
+    //       - KAFKA type
+    //       - name "my-topic"
+    //       - bootstrap servers "localhost:29092"
+
+    // TODO(#369): Implement after #369 provides the implementation
+    throw new AssertionError("Not yet implemented");
+  }
+
+  /**
+   * Tests that resolveLogInfo() returns null and logs error when Kafka servers are not available.
+   *
+   * <p>Verifies that when no "file:" prefix is present and no Kafka servers are configured (neither
+   * via field nor KAFKA_SERVERS env var), the method returns null.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #369")
+  public void testResolveLogInfo_failsWithoutKafkaServers() throws Exception {
+    // Given: logNameOrPath = "my-topic" (no "file:" prefix)
+    //        kafkaServers field is null
+    //        KAFKA_SERVERS environment variable is not set
+    //        Remove instance with no PAL directory connection
+
+    // When: resolveLogInfo() called via reflection
+
+    // Then: Returns null
+    //       Logs error message about missing Kafka servers
+
+    // TODO(#369): Implement after #369 provides the implementation
+    throw new AssertionError("Not yet implemented");
   }
 }
