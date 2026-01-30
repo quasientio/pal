@@ -25,9 +25,11 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
+    <!-- See README.md for usage instructions -->
+
     <!--
-        Dependencies listed here are analyzed for aggregate coverage.
-        JaCoCo will combine coverage data from all these modules.
+        Dependencies provide class files for coverage analysis.
+        JaCoCo also searches these modules' target dirs for exec files.
     -->
     <dependencies>
         <dependency>
@@ -46,23 +48,74 @@
             <groupId>io.quasient.pal</groupId>
             <artifactId>pal-runtime</artifactId>
         </dependency>
+        <!--
+            itt module provides IT exec files (jacoco-peer-*.exec, jacoco-cli-*.exec).
+            Note: itt has maven.install.skip=true, so use -am when building this module.
+        -->
         <dependency>
             <groupId>io.quasient.pal</groupId>
             <artifactId>itt</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.quasient.pal</groupId>
-            <artifactId>itt-apps</artifactId>
         </dependency>
     </dependencies>
 
     <build>
         <plugins>
+            <!-- Copy JaCoCo CLI JAR and unpack shaded JAR for coverage analysis -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-jacoco-cli</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>org.jacoco</groupId>
+                                    <artifactId>org.jacoco.cli</artifactId>
+                                    <version>${jacoco.plugin.version}</version>
+                                    <classifier>nodeps</classifier>
+                                    <outputDirectory>${project.build.directory}</outputDirectory>
+                                    <destFileName>jacococli.jar</destFileName>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                    <!--
+                        Unpack shaded JAR for IT coverage analysis.
+                        The shaded JAR is a multi-release JAR containing META-INF/versions/
+                        which causes JaCoCo to fail with "different class with same name" errors.
+                        We unpack it and exclude the multi-release classes.
+                    -->
+                    <execution>
+                        <id>unpack-shaded-jar</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>unpack</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>io.quasient.pal</groupId>
+                                    <artifactId>pal-cli</artifactId>
+                                    <version>${project.version}</version>
+                                    <outputDirectory>${project.build.directory}/shaded-classes</outputDirectory>
+                                    <excludes>META-INF/versions/**,META-INF/MANIFEST.MF,META-INF/maven/**,META-INF/LICENSE*,META-INF/NOTICE*,META-INF/services/**</excludes>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <executions>
-                    <!-- Unit test aggregate (existing) -->
+                    <!-- Unit test aggregate report (uses unshaded classes) -->
                     <execution>
                         <id>aggregate-report</id>
                         <phase>verify</phase>
@@ -72,55 +125,147 @@
                         <configuration>
                             <title>PAL Unit Test Coverage</title>
                             <outputDirectory>${project.build.directory}/site/jacoco-aggregate</outputDirectory>
-                            <!-- Exclude auto-generated Colfer classes -->
-                            <excludes>
-                                <exclude>io/quasient/pal/messages/colfer/**</exclude>
-                            </excludes>
-                        </configuration>
-                    </execution>
-
-                    <!-- Integration test aggregate (new) -->
-                    <execution>
-                        <id>aggregate-report-integration</id>
-                        <phase>verify</phase>
-                        <goals>
-                            <goal>report-aggregate</goal>
-                        </goals>
-                        <configuration>
-                            <title>PAL Integration Test Coverage</title>
-                            <dataFileIncludes>
-                                <dataFileInclude>**/jacoco-it.exec</dataFileInclude>
-                                <dataFileInclude>**/jacoco-peer-*.exec</dataFileInclude>
-                                <dataFileInclude>**/jacoco-merged-it.exec</dataFileInclude>
-                            </dataFileIncludes>
-                            <outputDirectory>${project.build.directory}/site/jacoco-aggregate-it</outputDirectory>
-                            <!-- Exclude auto-generated Colfer classes -->
-                            <excludes>
-                                <exclude>io/quasient/pal/messages/colfer/**</exclude>
-                            </excludes>
-                        </configuration>
-                    </execution>
-
-                    <!-- Combined aggregate (new) -->
-                    <execution>
-                        <id>aggregate-report-all</id>
-                        <phase>verify</phase>
-                        <goals>
-                            <goal>report-aggregate</goal>
-                        </goals>
-                        <configuration>
-                            <title>PAL All Tests Coverage</title>
                             <dataFileIncludes>
                                 <dataFileInclude>**/jacoco.exec</dataFileInclude>
-                                <dataFileInclude>**/jacoco-it.exec</dataFileInclude>
-                                <dataFileInclude>**/jacoco-peer-*.exec</dataFileInclude>
-                                <dataFileInclude>**/jacoco-merged-it.exec</dataFileInclude>
                             </dataFileIncludes>
-                            <outputDirectory>${project.build.directory}/site/jacoco-aggregate-all</outputDirectory>
-                            <!-- Exclude auto-generated Colfer classes -->
                             <excludes>
                                 <exclude>io/quasient/pal/messages/colfer/**</exclude>
                             </excludes>
+                        </configuration>
+                    </execution>
+
+                    <!-- Merge IT exec files -->
+                    <execution>
+                        <id>merge-it-exec</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>merge</goal>
+                        </goals>
+                        <configuration>
+                            <fileSets>
+                                <fileSet>
+                                    <directory>${project.basedir}/../itt/target</directory>
+                                    <includes>
+                                        <include>jacoco-it.exec</include>
+                                        <include>jacoco-peer-*.exec</include>
+                                        <include>jacoco-cli-*.exec</include>
+                                    </includes>
+                                </fileSet>
+                            </fileSets>
+                            <destFile>${project.build.directory}/jacoco-it-merged.exec</destFile>
+                        </configuration>
+                    </execution>
+
+                    <!-- Merge all exec files -->
+                    <execution>
+                        <id>merge-all-exec</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>merge</goal>
+                        </goals>
+                        <configuration>
+                            <fileSets>
+                                <fileSet>
+                                    <directory>${project.basedir}/../pal-api/target</directory>
+                                    <includes><include>jacoco.exec</include></includes>
+                                </fileSet>
+                                <fileSet>
+                                    <directory>${project.basedir}/../pal-client/target</directory>
+                                    <includes><include>jacoco.exec</include></includes>
+                                </fileSet>
+                                <fileSet>
+                                    <directory>${project.basedir}/../pal-cli/target</directory>
+                                    <includes><include>jacoco.exec</include></includes>
+                                </fileSet>
+                                <fileSet>
+                                    <directory>${project.basedir}/../pal-runtime/target</directory>
+                                    <includes><include>jacoco.exec</include></includes>
+                                </fileSet>
+                                <fileSet>
+                                    <directory>${project.basedir}/../itt/target</directory>
+                                    <includes>
+                                        <include>jacoco-it.exec</include>
+                                        <include>jacoco-peer-*.exec</include>
+                                        <include>jacoco-cli-*.exec</include>
+                                    </includes>
+                                </fileSet>
+                            </fileSets>
+                            <destFile>${project.build.directory}/jacoco-all-merged.exec</destFile>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Create output directories for JaCoCo CLI reports -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>create-jacoco-dirs</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <mkdir dir="${project.build.directory}/site/jacoco-aggregate-it"/>
+                                <mkdir dir="${project.build.directory}/site/jacoco-aggregate-all"/>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!--
+                Use JaCoCo CLI for IT and combined reports.
+                The CLI supports custom classfiles, allowing us to use the shaded JAR.
+            -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <!--
+                        IT report using unpacked shaded classes.
+                        Uses shaded bytecode to match IT exec file checksums (IT tests run against shaded JAR).
+                        Skips gracefully if no IT exec files exist (e.g., when ITs were skipped).
+                    -->
+                    <execution>
+                        <id>jacoco-report-it</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>bash</executable>
+                            <arguments>
+                                <argument>-c</argument>
+                                <argument>if [ -f "${project.build.directory}/jacoco-it-merged.exec" ]; then java -jar "${project.build.directory}/jacococli.jar" report "${project.build.directory}/jacoco-it-merged.exec" --classfiles "${project.build.directory}/shaded-classes" --sourcefiles "${project.basedir}/../pal-api/src/main/java" --sourcefiles "${project.basedir}/../pal-client/src/main/java" --sourcefiles "${project.basedir}/../pal-cli/src/main/java" --sourcefiles "${project.basedir}/../pal-runtime/src/main/java" --html "${project.build.directory}/site/jacoco-aggregate-it" --csv "${project.build.directory}/site/jacoco-aggregate-it/jacoco.csv"; else echo "Skipping IT report: no IT exec files found (ITs may have been skipped)"; fi</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+
+                    <!--
+                        Combined report using unpacked shaded classes.
+                        Note: Unit test coverage may have some checksum mismatches for classes that
+                        reference relocated packages (e.g., org.slf4j -> io.quasient.pal.shaded.org.slf4j).
+                        IT coverage will be accurate since IT tests run against shaded classes.
+                        Skips gracefully if no exec files exist.
+                    -->
+                    <execution>
+                        <id>jacoco-report-all</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>bash</executable>
+                            <arguments>
+                                <argument>-c</argument>
+                                <argument>if [ -f "${project.build.directory}/jacoco-all-merged.exec" ]; then java -jar "${project.build.directory}/jacococli.jar" report "${project.build.directory}/jacoco-all-merged.exec" --classfiles "${project.build.directory}/shaded-classes" --sourcefiles "${project.basedir}/../pal-api/src/main/java" --sourcefiles "${project.basedir}/../pal-client/src/main/java" --sourcefiles "${project.basedir}/../pal-cli/src/main/java" --sourcefiles "${project.basedir}/../pal-runtime/src/main/java" --html "${project.build.directory}/site/jacoco-aggregate-all" --csv "${project.build.directory}/site/jacoco-aggregate-all/jacoco.csv"; else echo "Skipping combined report: no exec files found"; fi</argument>
+                            </arguments>
                         </configuration>
                     </execution>
                 </executions>
