@@ -15,6 +15,7 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import io.quasient.pal.PeerProcess;
 import io.quasient.pal.tools.cli.MessageStreamStats;
@@ -25,6 +26,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -487,5 +489,112 @@ public class MessageStreamStatsIT extends AbstractCliIT {
     // Verify counters show zero or handle gracefully
     // Empty log should have zero messages processed
     logger.info("Empty log test completed with counters: {}", stats.getCounters());
+  }
+
+  // ==========================================================================
+  // Socket-based MessageStreamStats tests (socketMessageStreamStats() method)
+  // ==========================================================================
+
+  /**
+   * Tests that MessageStreamStats can collect basic statistics from a peer's PUB socket.
+   *
+   * <p>Given: A peer running with a TCP PUB socket enabled that generates messages (constructor
+   * calls, method invocations, etc.) during its main class execution.
+   *
+   * <p>When: MessageStreamStats is created with the peer's UUID and PAL directory address, and runs
+   * for a period to collect statistics from the socket stream.
+   *
+   * <p>Then: The counters should show messages received with numberOfMessages > 0, and message type
+   * tracking should be populated.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #380")
+  public void testStats_peerSocket_basicCounters() throws Exception {
+    // Given: Peer running with PUB socket
+    // - Launch peer with --tcp-pub flag and a class that generates messages
+    // - Peer should publish messages to its PUB socket
+
+    // When: MessageStreamStats created with peer UUID; run for 5 seconds
+    // - Use socket-based constructor: MessageStreamStats(palDirAddress, peerUuid, peerAddress,
+    //   msgTypes, fromPeer, threadName)
+    // - Run stats collection in background
+    // - Wait for messages to be processed
+
+    // Then: Counters show messages received; numberOfMessages > 0
+    // - Verify counters.getNumberOfMessages().get() > 0
+    // - Verify counters.getMessagesByType().size() > 0
+    // - Verify counters.getMessagesFromPeer().size() >= 1
+
+    // TODO(#380): Implement after #380 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that MessageStreamStats can filter messages by type when streaming from a peer socket.
+   *
+   * <p>Given: A peer running with a TCP PUB socket that generates various message types
+   * (EXEC_CONSTRUCTOR, EXEC_INSTANCE_METHOD, EXEC_CLASS_METHOD, etc.) during execution.
+   *
+   * <p>When: MessageStreamStats is created with a message type filter (e.g., only EXEC_CONSTRUCTOR)
+   * and runs for a period collecting statistics from the socket stream.
+   *
+   * <p>Then: Only messages matching the filtered type should be counted in the statistics.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #380")
+  public void testStats_peerSocket_messageTypeFiltering() throws Exception {
+    // Given: Peer generating various message types
+    // - Launch peer with --tcp-pub flag and a class that creates objects and calls methods
+    // - Peer generates EXEC_CONSTRUCTOR, EXEC_INSTANCE_METHOD, etc.
+
+    // When: MessageStreamStats created with type filter; run for 5 seconds
+    // - Use socket-based constructor with msgTypes = List.of("EXEC_CONSTRUCTOR")
+    // - Run stats collection in background
+    // - Wait for messages to be processed
+
+    // Then: Only filtered message types counted
+    // - Verify counters.getNumberOfMessages().get() > 0 (assuming constructors were called)
+    // - Verify counters.getMessagesByType() only contains EXEC_CONSTRUCTOR
+    // - Verify other message types are NOT counted
+
+    // TODO(#380): Implement after #380 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that MessageStreamStats can filter messages by peer UUID when streaming from a socket.
+   *
+   * <p>Given: A peer running with a TCP PUB socket and a known UUID that generates messages.
+   *
+   * <p>When: MessageStreamStats is created with a peer filter matching the running peer's UUID and
+   * runs for a period collecting statistics from the socket stream.
+   *
+   * <p>Then: Only messages from the specified peer should be counted in the statistics.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #380")
+  public void testStats_peerSocket_peerFiltering() throws Exception {
+    // Given: Peer with known UUID
+    // - Launch peer with --tcp-pub flag and known UUID
+    // - Peer generates messages with its UUID in the message headers
+
+    // When: MessageStreamStats created with peer filter; run for 5 seconds
+    // - Use socket-based constructor with fromPeer = peerId.toString()
+    // - Run stats collection in background
+    // - Wait for messages to be processed
+
+    // Then: Only messages from specified peer counted
+    // - Verify counters.getNumberOfMessages().get() > 0
+    // - Verify counters.getMessagesFromPeer().containsKey(peerId.toString())
+    // - Verify all counted messages are from the specified peer
+
+    // TODO(#380): Implement after #380 provides the implementation
+    fail("Not yet implemented");
   }
 }
