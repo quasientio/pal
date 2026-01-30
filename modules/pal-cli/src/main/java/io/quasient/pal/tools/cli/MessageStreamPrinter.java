@@ -87,6 +87,14 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
   private static final Logger logger = LoggerFactory.getLogger(MessageStreamPrinter.class);
 
   /**
+   * Latch used for coordinating shutdown in socket-based message streaming.
+   *
+   * <p>This latch is counted down during shutdown to signal the streaming thread to terminate.
+   * Package-private for test access.
+   */
+  CountDownLatch socketPrinterLatch;
+
+  /**
    * Enum representing the output formats available for printing messages.
    *
    * <p>Supported formats include:
@@ -920,7 +928,7 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
         };
 
     // latch to wait for termination
-    final CountDownLatch latch = new CountDownLatch(1);
+    socketPrinterLatch = new CountDownLatch(1);
 
     // attach shutdown handler to catch control-c
     Runtime.getRuntime()
@@ -928,7 +936,7 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
             new Thread("streams-shutdown-hook") {
               @Override
               public void run() {
-                latch.countDown();
+                performSocketPrinterShutdown();
               }
             });
 
@@ -936,7 +944,7 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
     try {
       executor.execute(streamerThread);
       logger.info("Stream started");
-      latch.await();
+      socketPrinterLatch.await();
       logger.info("Shutting down");
       executor.shutdownNow();
       streamer.close();
@@ -945,6 +953,18 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
       return 1;
     }
     return 0;
+  }
+
+  /**
+   * Performs shutdown for socket-based message streaming.
+   *
+   * <p>This method counts down the latch to signal the streaming thread to terminate. It is called
+   * by the shutdown hook when the application receives a termination signal (e.g., Ctrl+C).
+   *
+   * <p>Package-private for test access.
+   */
+  void performSocketPrinterShutdown() {
+    socketPrinterLatch.countDown();
   }
 
   /**
