@@ -9,10 +9,21 @@
  */
 package io.quasient.pal.tools.cli;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
+import io.quasient.pal.common.objects.ObjectRef;
+import io.quasient.pal.messages.colfer.ControlMessage;
+import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.Message;
+import io.quasient.pal.messages.types.ControlCommandType;
+import io.quasient.pal.serdes.colfer.MessageBuilder;
+import io.quasient.pal.tools.stats.Counters;
 import java.lang.reflect.Method;
+import java.util.UUID;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -33,14 +44,22 @@ public class MessageStreamStatsTest {
    * counters.getNumberOfMessages() value by 1.
    */
   @Test
-  @Ignore("Awaiting implementation in #365")
-  public void testUpdateCounters_incrementsMessageCount() {
+  public void testUpdateCounters_incrementsMessageCount() throws Exception {
     // Given: MessageStreamStats instance; Message with valid content
-    // When: updateCounters(message) called via reflection
-    // Then: counters.getNumberOfMessages() incremented by 1
+    UUID peerId = UUID.randomUUID();
+    MessageBuilder builder = new MessageBuilder(peerId, Boolean.toString(false));
+    MessageStreamStats stats =
+        new MessageStreamStats("localhost:9092", "test-log", null, null, null);
 
-    // TODO(#365): Implement test
-    fail("Not yet implemented");
+    ExecMessage execMessage = builder.buildEmptyConstructor(peerId, "java.lang.String");
+    Message message = builder.wrap(execMessage);
+
+    // When: updateCounters(message) called via reflection
+    invokeUpdateCounters(stats, message);
+
+    // Then: counters.getNumberOfMessages() incremented by 1
+    Counters counters = stats.getCounters();
+    assertThat(counters.getNumberOfMessages().get(), is(1L));
   }
 
   /**
@@ -50,14 +69,30 @@ public class MessageStreamStatsTest {
    * tracked in counters.getMessagesByType().
    */
   @Test
-  @Ignore("Awaiting implementation in #365")
-  public void testUpdateCounters_tracksMessageTypes() {
+  public void testUpdateCounters_tracksMessageTypes() throws Exception {
     // Given: Message of type INSTANCE_METHOD
-    // When: updateCounters(message) called
-    // Then: counters.getMessagesByType() contains INSTANCE_METHOD entry
+    UUID peerId = UUID.randomUUID();
+    MessageBuilder builder = new MessageBuilder(peerId, Boolean.toString(false));
+    MessageStreamStats stats =
+        new MessageStreamStats("localhost:9092", "test-log", null, null, null);
 
-    // TODO(#365): Implement test
-    fail("Not yet implemented");
+    ExecMessage execMessage =
+        builder.buildInstanceMethod(
+            peerId,
+            "java.util.ArrayList",
+            "add",
+            ObjectRef.randomRef(),
+            new String[] {"int"},
+            new Object[] {1});
+    Message message = builder.wrap(execMessage);
+
+    // When: updateCounters(message) called
+    invokeUpdateCounters(stats, message);
+
+    // Then: counters.getMessagesByType() contains EXEC_INSTANCE_METHOD entry
+    Counters counters = stats.getCounters();
+    assertNotNull(counters.getMessagesByType().get("EXEC_INSTANCE_METHOD"));
+    assertThat(counters.getMessagesByType().get("EXEC_INSTANCE_METHOD").get(), is(1L));
   }
 
   /**
@@ -67,14 +102,23 @@ public class MessageStreamStatsTest {
    * counters.getMessagesFromPeer().
    */
   @Test
-  @Ignore("Awaiting implementation in #365")
-  public void testUpdateCounters_tracksMessagesFromPeer() {
+  public void testUpdateCounters_tracksMessagesFromPeer() throws Exception {
     // Given: Message with specific peer UUID
-    // When: updateCounters(message) called
-    // Then: counters.getMessagesFromPeer() contains peer UUID entry
+    UUID peerId = UUID.randomUUID();
+    MessageBuilder builder = new MessageBuilder(peerId, Boolean.toString(false));
+    MessageStreamStats stats =
+        new MessageStreamStats("localhost:9092", "test-log", null, null, null);
 
-    // TODO(#365): Implement test
-    fail("Not yet implemented");
+    ExecMessage execMessage = builder.buildEmptyConstructor(peerId, "java.lang.String");
+    Message message = builder.wrap(execMessage);
+
+    // When: updateCounters(message) called
+    invokeUpdateCounters(stats, message);
+
+    // Then: counters.getMessagesFromPeer() contains peer UUID entry
+    Counters counters = stats.getCounters();
+    assertNotNull(counters.getMessagesFromPeer().get(peerId.toString()));
+    assertThat(counters.getMessagesFromPeer().get(peerId.toString()).get(), is(1L));
   }
 
   /**
@@ -85,14 +129,36 @@ public class MessageStreamStatsTest {
    * increments the basic message count.
    */
   @Test
-  @Ignore("Awaiting implementation in #365")
-  public void testUpdateCounters_handlesNullExecMessage() {
-    // Given: Message with null execMessage
-    // When: updateCounters(message) called
-    // Then: Returns early without incrementing detailed counters
+  public void testUpdateCounters_handlesNullExecMessage() throws Exception {
+    // Given: Message with null execMessage (using a ControlMessage instead)
+    UUID peerId = UUID.randomUUID();
+    MessageBuilder builder = new MessageBuilder(peerId, Boolean.toString(false));
+    MessageStreamStats stats =
+        new MessageStreamStats("localhost:9092", "test-log", null, null, null);
 
-    // TODO(#365): Implement test
-    fail("Not yet implemented");
+    // Create a ControlMessage which results in a Message with null execMessage
+    ControlMessage controlMessage =
+        builder.buildControlCommandMessage(peerId, ControlCommandType.GC);
+    Message message = builder.wrap(controlMessage);
+
+    // Verify that execMessage is null
+    assertNull(message.getExecMessage());
+
+    // When: updateCounters(message) called
+    invokeUpdateCounters(stats, message);
+
+    // Then: Returns early without incrementing detailed counters
+    // Basic counters are incremented
+    Counters counters = stats.getCounters();
+    assertThat(counters.getNumberOfMessages().get(), is(1L));
+    assertNotNull(counters.getMessagesByType().get("CONTROL_MESSAGE_REQUEST"));
+
+    // Detailed counters remain empty because execMessage is null
+    assertThat(counters.getObjectsCreated().isEmpty(), is(true));
+    assertThat(counters.getMethodsCalled().isEmpty(), is(true));
+    assertThat(counters.getFieldReads().isEmpty(), is(true));
+    assertThat(counters.getFieldWrites().isEmpty(), is(true));
+    assertThat(counters.getMessagesByThread().isEmpty(), is(true));
   }
 
   // ==================== increment*() Helper Methods Tests ====================
@@ -104,14 +170,19 @@ public class MessageStreamStatsTest {
    * tracked in counters.getObjectsCreated().
    */
   @Test
-  @Ignore("Awaiting implementation in #365")
-  public void testIncrementObjectsCreated_updatesCounter() {
+  public void testIncrementObjectsCreated_updatesCounter() throws Exception {
     // Given: MessageStreamStats instance
-    // When: incrementObjectsCreated(className) called via reflection
-    // Then: counters.getObjectsCreated() contains className
+    MessageStreamStats stats =
+        new MessageStreamStats("localhost:9092", "test-log", null, null, null);
+    String className = "com.example.MyClass";
 
-    // TODO(#365): Implement test
-    fail("Not yet implemented");
+    // When: incrementObjectsCreated(className) called via reflection
+    invokeIncrementObjectsCreated(stats, className);
+
+    // Then: counters.getObjectsCreated() contains className
+    Counters counters = stats.getCounters();
+    assertNotNull(counters.getObjectsCreated().get(className));
+    assertThat(counters.getObjectsCreated().get(className).get(), is(1L));
   }
 
   /**
@@ -121,14 +192,19 @@ public class MessageStreamStatsTest {
    * tracked in counters.getMethodsCalled().
    */
   @Test
-  @Ignore("Awaiting implementation in #365")
-  public void testIncrementMethodCalls_updatesCounter() {
+  public void testIncrementMethodCalls_updatesCounter() throws Exception {
     // Given: MessageStreamStats instance
-    // When: incrementMethodCalls(methodKey) called via reflection
-    // Then: counters.getMethodsCalled() contains methodKey
+    MessageStreamStats stats =
+        new MessageStreamStats("localhost:9092", "test-log", null, null, null);
+    String methodKey = "MyClass.myMethod()";
 
-    // TODO(#365): Implement test
-    fail("Not yet implemented");
+    // When: incrementMethodCalls(methodKey) called via reflection
+    invokeIncrementMethodCalls(stats, methodKey);
+
+    // Then: counters.getMethodsCalled() contains methodKey
+    Counters counters = stats.getCounters();
+    assertNotNull(counters.getMethodsCalled().get(methodKey));
+    assertThat(counters.getMethodsCalled().get(methodKey).get(), is(1L));
   }
 
   /**
@@ -138,14 +214,19 @@ public class MessageStreamStatsTest {
    * tracked in counters.getFieldReads().
    */
   @Test
-  @Ignore("Awaiting implementation in #365")
-  public void testIncrementFieldReads_updatesCounter() {
+  public void testIncrementFieldReads_updatesCounter() throws Exception {
     // Given: MessageStreamStats instance
-    // When: incrementFieldReads(fieldKey) called via reflection
-    // Then: counters.getFieldReads() contains fieldKey
+    MessageStreamStats stats =
+        new MessageStreamStats("localhost:9092", "test-log", null, null, null);
+    String fieldKey = "MyClass.myField";
 
-    // TODO(#365): Implement test
-    fail("Not yet implemented");
+    // When: incrementFieldReads(fieldKey) called via reflection
+    invokeIncrementFieldReads(stats, fieldKey);
+
+    // Then: counters.getFieldReads() contains fieldKey
+    Counters counters = stats.getCounters();
+    assertNotNull(counters.getFieldReads().get(fieldKey));
+    assertThat(counters.getFieldReads().get(fieldKey).get(), is(1L));
   }
 
   /**
@@ -155,14 +236,19 @@ public class MessageStreamStatsTest {
    * tracked in counters.getFieldWrites().
    */
   @Test
-  @Ignore("Awaiting implementation in #365")
-  public void testIncrementFieldWrites_updatesCounter() {
+  public void testIncrementFieldWrites_updatesCounter() throws Exception {
     // Given: MessageStreamStats instance
-    // When: incrementFieldWrites(fieldKey) called via reflection
-    // Then: counters.getFieldWrites() contains fieldKey
+    MessageStreamStats stats =
+        new MessageStreamStats("localhost:9092", "test-log", null, null, null);
+    String fieldKey = "MyClass.myField";
 
-    // TODO(#365): Implement test
-    fail("Not yet implemented");
+    // When: incrementFieldWrites(fieldKey) called via reflection
+    invokeIncrementFieldWrites(stats, fieldKey);
+
+    // Then: counters.getFieldWrites() contains fieldKey
+    Counters counters = stats.getCounters();
+    assertNotNull(counters.getFieldWrites().get(fieldKey));
+    assertThat(counters.getFieldWrites().get(fieldKey).get(), is(1L));
   }
 
   // ==================== getShortClassname() Tests ====================
@@ -173,14 +259,17 @@ public class MessageStreamStatsTest {
    * <p>Verifies that "com.example.MyClass" returns "MyClass".
    */
   @Test
-  @Ignore("Awaiting implementation in #365")
-  public void testGetShortClassname_extractsSimpleName() {
+  public void testGetShortClassname_extractsSimpleName() throws Exception {
     // Given: Full class name "com.example.MyClass"
-    // When: getShortClassname(fullName) called via reflection
-    // Then: Returns "MyClass"
+    MessageStreamStats stats =
+        new MessageStreamStats("localhost:9092", "test-log", null, null, null);
+    String fullClassName = "com.example.MyClass";
 
-    // TODO(#365): Implement test
-    fail("Not yet implemented");
+    // When: getShortClassname(fullName) called via reflection
+    String result = invokeGetShortClassname(stats, fullClassName);
+
+    // Then: Returns "MyClass"
+    assertThat(result, is("MyClass"));
   }
 
   /**
@@ -189,14 +278,17 @@ public class MessageStreamStatsTest {
    * <p>Verifies that "MyClass" (no package) returns "MyClass".
    */
   @Test
-  @Ignore("Awaiting implementation in #365")
-  public void testGetShortClassname_handlesNoPackage() {
+  public void testGetShortClassname_handlesNoPackage() throws Exception {
     // Given: Class name "MyClass" (no package)
-    // When: getShortClassname(name) called
-    // Then: Returns "MyClass"
+    MessageStreamStats stats =
+        new MessageStreamStats("localhost:9092", "test-log", null, null, null);
+    String className = "MyClass";
 
-    // TODO(#365): Implement test
-    fail("Not yet implemented");
+    // When: getShortClassname(name) called
+    String result = invokeGetShortClassname(stats, className);
+
+    // Then: Returns "MyClass"
+    assertThat(result, is("MyClass"));
   }
 
   // ==================== Helper Methods ====================
