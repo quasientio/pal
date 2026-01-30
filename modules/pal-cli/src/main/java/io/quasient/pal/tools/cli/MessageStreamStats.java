@@ -603,6 +603,28 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
     Runnable streamerThread =
         () -> {
           Stream<Message> stream = streamer.getStream();
+
+          // Apply filter: message types
+          if (msgTypes != null) {
+            stream =
+                stream.filter(
+                    m -> {
+                      if (m == null || m.getExecMessage() == null) {
+                        return false;
+                      }
+                      MessageType messageType = MessageType.fromId(m.getMessageType());
+                      return msgTypes.contains(messageType.name());
+                    });
+          }
+
+          // Apply filter: from peer (uuid)
+          if (fromPeer != null) {
+            stream = stream.filter(m -> m != null && fromPeer.equalsIgnoreCase(getPeerUuid(m)));
+          }
+
+          // Filter out null messages (can happen when socket is closed)
+          stream = stream.filter(Objects::nonNull);
+
           // process each record updating counters
           stream.forEach(this::updateCounters);
         };
@@ -671,11 +693,15 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
   /**
    * Stops the ongoing stream processing by triggering a shutdown.
    *
-   * <p>Signals the stream processing threads to terminate gracefully.
+   * <p>Signals the stream processing threads to terminate gracefully. Works for both Kafka-based
+   * and socket-based stream processing.
    */
   @SuppressWarnings("unused")
   public void stopStreams() {
     shutdownLatch.countDown();
+    if (socketShutdownLatch != null) {
+      socketShutdownLatch.countDown();
+    }
   }
 
   /**

@@ -15,7 +15,6 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
 import io.quasient.pal.PeerProcess;
 import io.quasient.pal.tools.cli.MessageStreamStats;
@@ -26,7 +25,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -510,25 +508,86 @@ public class MessageStreamStatsIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #380")
   public void testStats_peerSocket_basicCounters() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+
     // Given: Peer running with PUB socket
-    // - Launch peer with --tcp-pub flag and a class that generates messages
-    // - Peer should publish messages to its PUB socket
+    UUID peerId = UUID.randomUUID();
+    String pubEndpoint = "localhost:41781";
 
-    // When: MessageStreamStats created with peer UUID; run for 5 seconds
-    // - Use socket-based constructor: MessageStreamStats(palDirAddress, peerUuid, peerAddress,
-    //   msgTypes, fromPeer, threadName)
-    // - Run stats collection in background
-    // - Wait for messages to be processed
+    // Launch a peer with TCP PUB socket and a class that generates messages
+    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
 
-    // Then: Counters show messages received; numberOfMessages > 0
-    // - Verify counters.getNumberOfMessages().get() > 0
-    // - Verify counters.getMessagesByType().size() > 0
-    // - Verify counters.getMessagesFromPeer().size() >= 1
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDirectory,
+            "--tcp-pub",
+            pubEndpoint,
+            "-cp",
+            getIttAppsClasspath(),
+            classToRun);
 
-    // TODO(#380): Implement after #380 provides the implementation
-    fail("Not yet implemented");
+    // When: MessageStreamStats created with peer UUID and address
+    // Use the socket-based constructor
+    MessageStreamStats stats =
+        new MessageStreamStats(palDirectory, peerId, "tcp://" + pubEndpoint, null, null, null);
+
+    // Run stats collection in background
+    CompletableFuture<Integer> statsFuture =
+        CompletableFuture.supplyAsync(
+            () -> {
+              try {
+                return stats.call();
+              } catch (Exception e) {
+                logger.error("Error running stats", e);
+                return 1;
+              }
+            });
+
+    // Wait for socket to connect and process messages
+    int maxWaitSeconds = 10;
+    int pollIntervalMs = 200;
+    int attempts = (maxWaitSeconds * 1000) / pollIntervalMs;
+
+    for (int i = 0; i < attempts; i++) {
+      Thread.sleep(pollIntervalMs);
+      if (stats.getCounters().getNumberOfMessages().get() > 0) {
+        logger.info("Messages processed after {} ms", i * pollIntervalMs);
+        break;
+      }
+    }
+
+    // Trigger shutdown - socket stream may not terminate cleanly due to ZMQ blocking
+    stats.stopStreams();
+
+    // Give a brief moment for shutdown to propagate
+    Thread.sleep(100);
+
+    // Cancel the future if still running - socket streaming may not terminate cleanly
+    // when the peer exits and there are no more messages
+    boolean completed = statsFuture.isDone();
+    if (!completed) {
+      logger.info("Stats future not complete, cancelling");
+      statsFuture.cancel(true);
+    }
+
+    // Then: Verify counters show messages received (primary test assertion)
+    Counters counters = stats.getCounters();
+    assertThat("Expected counters to be created", counters, notNullValue());
+    assertThat(
+        "Expected messages to be processed", counters.getNumberOfMessages().get(), greaterThan(0L));
+    assertThat(
+        "Expected message types to be tracked",
+        counters.getMessagesByType().size(),
+        greaterThan(0));
+    assertThat(
+        "Expected peer tracking", counters.getMessagesFromPeer().size(), greaterThanOrEqualTo(1));
+
+    logger.info(
+        "Successfully collected {} messages from peer socket",
+        counters.getNumberOfMessages().get());
   }
 
   /**
@@ -545,24 +604,91 @@ public class MessageStreamStatsIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #380")
   public void testStats_peerSocket_messageTypeFiltering() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+
     // Given: Peer generating various message types
-    // - Launch peer with --tcp-pub flag and a class that creates objects and calls methods
-    // - Peer generates EXEC_CONSTRUCTOR, EXEC_INSTANCE_METHOD, etc.
+    UUID peerId = UUID.randomUUID();
+    String pubEndpoint = "localhost:41782";
 
-    // When: MessageStreamStats created with type filter; run for 5 seconds
-    // - Use socket-based constructor with msgTypes = List.of("EXEC_CONSTRUCTOR")
-    // - Run stats collection in background
-    // - Wait for messages to be processed
+    // Launch a peer with TCP PUB socket and a class that generates multiple message types
+    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
 
-    // Then: Only filtered message types counted
-    // - Verify counters.getNumberOfMessages().get() > 0 (assuming constructors were called)
-    // - Verify counters.getMessagesByType() only contains EXEC_CONSTRUCTOR
-    // - Verify other message types are NOT counted
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDirectory,
+            "--tcp-pub",
+            pubEndpoint,
+            "-cp",
+            getIttAppsClasspath(),
+            classToRun);
 
-    // TODO(#380): Implement after #380 provides the implementation
-    fail("Not yet implemented");
+    // When: MessageStreamStats created with type filter for EXEC_CONSTRUCTOR only
+    List<String> msgTypes = List.of("EXEC_CONSTRUCTOR");
+    MessageStreamStats stats =
+        new MessageStreamStats(palDirectory, peerId, "tcp://" + pubEndpoint, msgTypes, null, null);
+
+    // Run stats collection in background
+    CompletableFuture<Integer> statsFuture =
+        CompletableFuture.supplyAsync(
+            () -> {
+              try {
+                return stats.call();
+              } catch (Exception e) {
+                logger.error("Error running stats", e);
+                return 1;
+              }
+            });
+
+    // Wait for socket to connect and process messages
+    int maxWaitSeconds = 10;
+    int pollIntervalMs = 200;
+    int attempts = (maxWaitSeconds * 1000) / pollIntervalMs;
+
+    for (int i = 0; i < attempts; i++) {
+      Thread.sleep(pollIntervalMs);
+      if (stats.getCounters().getNumberOfMessages().get() > 0) {
+        logger.info("Messages processed after {} ms", i * pollIntervalMs);
+        break;
+      }
+    }
+
+    // Trigger shutdown - socket stream may not terminate cleanly due to ZMQ blocking
+    stats.stopStreams();
+
+    // Give a brief moment for shutdown to propagate
+    Thread.sleep(100);
+
+    // Cancel the future if still running
+    if (!statsFuture.isDone()) {
+      logger.info("Stats future not complete, cancelling");
+      statsFuture.cancel(true);
+    }
+
+    // Then: Verify only filtered message types are counted
+    Counters counters = stats.getCounters();
+    assertThat(
+        "Expected messages to be processed", counters.getNumberOfMessages().get(), greaterThan(0L));
+
+    // All messages should be EXEC_CONSTRUCTOR type
+    if (counters.getMessagesByType().size() > 0) {
+      // Verify only the filtered type is present
+      assertThat(
+          "Expected only EXEC_CONSTRUCTOR messages",
+          counters.getMessagesByType().containsKey("EXEC_CONSTRUCTOR"),
+          equalTo(true));
+      // Verify no other message types are counted
+      assertThat(
+          "Expected only one message type (EXEC_CONSTRUCTOR)",
+          counters.getMessagesByType().size(),
+          equalTo(1));
+    }
+
+    logger.info(
+        "Successfully collected {} filtered messages from peer socket",
+        counters.getNumberOfMessages().get());
   }
 
   /**
@@ -578,23 +704,87 @@ public class MessageStreamStatsIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #380")
   public void testStats_peerSocket_peerFiltering() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+
     // Given: Peer with known UUID
-    // - Launch peer with --tcp-pub flag and known UUID
-    // - Peer generates messages with its UUID in the message headers
+    UUID peerId = UUID.randomUUID();
+    String pubEndpoint = "localhost:41783";
 
-    // When: MessageStreamStats created with peer filter; run for 5 seconds
-    // - Use socket-based constructor with fromPeer = peerId.toString()
-    // - Run stats collection in background
-    // - Wait for messages to be processed
+    // Launch a peer with TCP PUB socket
+    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
 
-    // Then: Only messages from specified peer counted
-    // - Verify counters.getNumberOfMessages().get() > 0
-    // - Verify counters.getMessagesFromPeer().containsKey(peerId.toString())
-    // - Verify all counted messages are from the specified peer
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDirectory,
+            "--tcp-pub",
+            pubEndpoint,
+            "-cp",
+            getIttAppsClasspath(),
+            classToRun);
 
-    // TODO(#380): Implement after #380 provides the implementation
-    fail("Not yet implemented");
+    // When: MessageStreamStats created with peer filter
+    String filterPeerUuid = peerId.toString();
+    MessageStreamStats stats =
+        new MessageStreamStats(
+            palDirectory, peerId, "tcp://" + pubEndpoint, null, filterPeerUuid, null);
+
+    // Run stats collection in background
+    CompletableFuture<Integer> statsFuture =
+        CompletableFuture.supplyAsync(
+            () -> {
+              try {
+                return stats.call();
+              } catch (Exception e) {
+                logger.error("Error running stats", e);
+                return 1;
+              }
+            });
+
+    // Wait for socket to connect and process messages
+    int maxWaitSeconds = 10;
+    int pollIntervalMs = 200;
+    int attempts = (maxWaitSeconds * 1000) / pollIntervalMs;
+
+    for (int i = 0; i < attempts; i++) {
+      Thread.sleep(pollIntervalMs);
+      if (stats.getCounters().getNumberOfMessages().get() > 0) {
+        logger.info("Messages processed after {} ms", i * pollIntervalMs);
+        break;
+      }
+    }
+
+    // Trigger shutdown - socket stream may not terminate cleanly due to ZMQ blocking
+    stats.stopStreams();
+
+    // Give a brief moment for shutdown to propagate
+    Thread.sleep(100);
+
+    // Cancel the future if still running
+    if (!statsFuture.isDone()) {
+      logger.info("Stats future not complete, cancelling");
+      statsFuture.cancel(true);
+    }
+
+    // Then: Verify only messages from specified peer are counted
+    Counters counters = stats.getCounters();
+    assertThat(
+        "Expected messages to be processed", counters.getNumberOfMessages().get(), greaterThan(0L));
+
+    // All messages should be from the specified peer
+    assertThat(
+        "Expected messages from specified peer",
+        counters.getMessagesFromPeer().containsKey(filterPeerUuid),
+        equalTo(true));
+
+    // Verify only messages from the specified peer are counted (should only have one peer)
+    assertThat(
+        "Expected messages from only one peer", counters.getMessagesFromPeer().size(), equalTo(1));
+
+    logger.info(
+        "Successfully collected {} messages from specified peer via socket",
+        counters.getNumberOfMessages().get());
   }
 }
