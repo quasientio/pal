@@ -13,7 +13,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 import io.quasient.pal.common.objects.ObjectRef;
 import io.quasient.pal.messages.colfer.ControlMessage;
@@ -21,10 +22,13 @@ import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.Message;
 import io.quasient.pal.messages.types.ControlCommandType;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
+import io.quasient.pal.tools.stats.ContinuousPrinter;
 import io.quasient.pal.tools.stats.Counters;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.UUID;
-import org.junit.Ignore;
+import java.util.concurrent.CountDownLatch;
+import org.apache.kafka.streams.KafkaStreams;
 import org.junit.Test;
 
 /**
@@ -398,20 +402,18 @@ public class MessageStreamStatsTest {
    * <p>Verifies that calling performKafkaShutdown() invokes close() on the KafkaStreams instance.
    */
   @Test
-  @Ignore("Awaiting implementation in #373")
   public void testPerformKafkaShutdown_closesStreams() {
     // Given: Mock KafkaStreams instance set on MessageStreamStats
-    // When: performKafkaShutdown() called
-    // Then: streams.close() invoked
+    MessageStreamStats stats =
+        new MessageStreamStats("localhost:9092", "test-log", null, null, null);
+    KafkaStreams mockStreams = mock(KafkaStreams.class);
+    stats.kafkaStreams = mockStreams;
 
-    // TODO(#373): Implement test
-    // Create MessageStreamStats instance
-    // Create mock KafkaStreams using Mockito
-    // Set the kafkaStreams field via reflection or package-private access
-    // Set up shutdownLatch
-    // Call performKafkaShutdown()
-    // Verify that kafkaStreams.close() was called
-    fail("Not yet implemented");
+    // When: performKafkaShutdown() called
+    stats.performKafkaShutdown();
+
+    // Then: streams.close() invoked
+    verify(mockStreams).close();
   }
 
   /**
@@ -419,22 +421,28 @@ public class MessageStreamStatsTest {
    *
    * <p>Verifies that calling performKafkaShutdown() invokes setDone(true) on the continuousPrinter
    * if it is not null.
+   *
+   * @throws Exception if reflection fails
    */
   @Test
-  @Ignore("Awaiting implementation in #373")
-  public void testPerformKafkaShutdown_stopsContinuousPrinter() {
+  public void testPerformKafkaShutdown_stopsContinuousPrinter() throws Exception {
     // Given: continuousPrinter is not null
-    // When: performKafkaShutdown() called
-    // Then: continuousPrinter.setDone(true) invoked
+    MessageStreamStats stats =
+        new MessageStreamStats("localhost:9092", "test-log", null, null, null);
+    KafkaStreams mockStreams = mock(KafkaStreams.class);
+    stats.kafkaStreams = mockStreams;
+    ContinuousPrinter mockPrinter = mock(ContinuousPrinter.class);
 
-    // TODO(#373): Implement test
-    // Create MessageStreamStats instance
-    // Create mock KafkaStreams and ContinuousPrinter using Mockito
-    // Set kafkaStreams and continuousPrinter fields via reflection
-    // Set up shutdownLatch
-    // Call performKafkaShutdown()
-    // Verify that continuousPrinter.setDone(true) was called
-    fail("Not yet implemented");
+    // Set continuousPrinter field via reflection
+    Field continuousPrinterField = MessageStreamStats.class.getDeclaredField("continuousPrinter");
+    continuousPrinterField.setAccessible(true);
+    continuousPrinterField.set(stats, mockPrinter);
+
+    // When: performKafkaShutdown() called
+    stats.performKafkaShutdown();
+
+    // Then: continuousPrinter.setDone(true) invoked
+    verify(mockPrinter).setDone(true);
   }
 
   /**
@@ -443,20 +451,21 @@ public class MessageStreamStatsTest {
    * <p>Verifies that calling performKafkaShutdown() decrements the shutdownLatch count to 0.
    */
   @Test
-  @Ignore("Awaiting implementation in #373")
   public void testPerformKafkaShutdown_countsDownLatch() {
     // Given: shutdownLatch with count of 1
-    // When: performKafkaShutdown() called
-    // Then: shutdownLatch.getCount() returns 0
+    MessageStreamStats stats =
+        new MessageStreamStats("localhost:9092", "test-log", null, null, null);
+    KafkaStreams mockStreams = mock(KafkaStreams.class);
+    stats.kafkaStreams = mockStreams;
 
-    // TODO(#373): Implement test
-    // Create MessageStreamStats instance
-    // Create mock KafkaStreams using Mockito
-    // Set kafkaStreams field via reflection or package-private access
     // Assert shutdownLatch.getCount() == 1 before call
-    // Call performKafkaShutdown()
-    // Assert shutdownLatch.getCount() == 0 after call
-    fail("Not yet implemented");
+    assertThat(stats.shutdownLatch.getCount(), is(1L));
+
+    // When: performKafkaShutdown() called
+    stats.performKafkaShutdown();
+
+    // Then: shutdownLatch.getCount() returns 0
+    assertThat(stats.shutdownLatch.getCount(), is(0L));
   }
 
   // ==================== performSocketShutdown() Tests ====================
@@ -468,18 +477,19 @@ public class MessageStreamStatsTest {
    * <p>Verifies that calling performSocketShutdown() decrements the socketShutdownLatch count to 0.
    */
   @Test
-  @Ignore("Awaiting implementation in #373")
   public void testPerformSocketShutdown_countsDownLatch() {
     // Given: Socket streaming latch with count of 1
-    // When: performSocketShutdown() called
-    // Then: latch count decremented to 0
+    MessageStreamStats stats =
+        new MessageStreamStats("localhost:9092", "test-log", null, null, null);
+    stats.socketShutdownLatch = new CountDownLatch(1);
 
-    // TODO(#373): Implement test
-    // Create MessageStreamStats instance
-    // Create and set socketShutdownLatch field to new CountDownLatch(1)
     // Assert socketShutdownLatch.getCount() == 1 before call
-    // Call performSocketShutdown()
-    // Assert socketShutdownLatch.getCount() == 0 after call
-    fail("Not yet implemented");
+    assertThat(stats.socketShutdownLatch.getCount(), is(1L));
+
+    // When: performSocketShutdown() called
+    stats.performSocketShutdown();
+
+    // Then: latch count decremented to 0
+    assertThat(stats.socketShutdownLatch.getCount(), is(0L));
   }
 }

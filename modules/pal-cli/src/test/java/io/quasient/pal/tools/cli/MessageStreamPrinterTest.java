@@ -12,7 +12,6 @@ package io.quasient.pal.tools.cli;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.fail;
 
 import io.quasient.pal.messages.LogMessage;
 import io.quasient.pal.messages.colfer.Message;
@@ -23,7 +22,7 @@ import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import org.junit.Ignore;
+import java.util.concurrent.CountDownLatch;
 import org.junit.Test;
 
 public class MessageStreamPrinterTest {
@@ -387,18 +386,18 @@ public class MessageStreamPrinterTest {
    * to 0.
    */
   @Test
-  @Ignore("Awaiting implementation in #373")
   public void testPerformSocketPrinterShutdown_countsDownLatch() {
     // Given: latch with count of 1
-    // When: performSocketPrinterShutdown() called
-    // Then: latch.getCount() returns 0
+    MessageStreamPrinter printer = new MessageStreamPrinter();
+    printer.socketPrinterLatch = new CountDownLatch(1);
 
-    // TODO(#373): Implement test
-    // Create MessageStreamPrinter instance
-    // Create and set socketPrinterLatch field to new CountDownLatch(1)
     // Assert socketPrinterLatch.getCount() == 1 before call
-    // Call performSocketPrinterShutdown()
-    // Assert socketPrinterLatch.getCount() == 0 after call
-    fail("Not yet implemented");
+    assertThat(printer.socketPrinterLatch.getCount(), is(1L));
+
+    // When: performSocketPrinterShutdown() called
+    printer.performSocketPrinterShutdown();
+
+    // Then: latch.getCount() returns 0
+    assertThat(printer.socketPrinterLatch.getCount(), is(0L));
   }
 }
