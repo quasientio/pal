@@ -394,6 +394,346 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
     chronicleLogsToCleanup.add(Paths.get(queueName));
   }
 
+  /**
+   * Starts a `pal print` command in the background and returns a handle to control it.
+   *
+   * <p>This method is designed for socket-based streaming tests where the print command needs to be
+   * started BEFORE the peer that publishes messages. The caller can then:
+   *
+   * <ol>
+   *   <li>Start the print command with this method
+   *   <li>Launch the peer that will publish messages
+   *   <li>Wait for a period to collect messages
+   *   <li>Terminate the print command and get results
+   * </ol>
+   *
+   * @param args command-line arguments to pass to `pal print`
+   * @return PrintProcessHandle that can be used to wait and terminate the process
+   * @throws Exception if command cannot be started
+   */
+  protected PrintProcessHandle startPrintInBackground(String... args) throws Exception {
+    String palHome = System.getenv("PAL_HOME");
+    if (palHome == null || palHome.isEmpty()) {
+      throw new IllegalStateException("PAL_HOME environment variable not set");
+    }
+
+    // Build command: pal [global-opts] print <args>
+    List<String> command = new ArrayList<>();
+    command.add(Paths.get(palHome, "bin", "pal").toAbsolutePath().toString());
+
+    // Check if first arg is a global option (-d, -k, etc.)
+    int startIdx = 0;
+    if (args.length >= 2 && args[0].equals("-d")) {
+      command.add(args[0]); // -d
+      command.add(args[1]); // directory value
+      startIdx = 2;
+    }
+
+    // Add subcommand
+    command.add("print");
+
+    // Add remaining args
+    command.addAll(Arrays.asList(args).subList(startIdx, args.length));
+
+    logger.info("Starting print command in background: {}", String.join(" ", command));
+
+    ProcessBuilder pb = new ProcessBuilder(command);
+    pb.directory(new File(palHome));
+
+    // Configure logging
+    pb.environment()
+        .put("PAL_CLI_LOGGING_CONFIG", Paths.get(palHome, "config", "cli-logging.xml").toString());
+
+    // Configure JaCoCo agent for CLI process coverage collection
+    String jacocoAgentJar = System.getProperty("jacoco.agent.jar");
+    String jacocoDestFileDir = System.getProperty("jacoco.destfile.dir");
+    if (jacocoAgentJar != null && jacocoDestFileDir != null) {
+      File agentFile = new File(jacocoAgentJar);
+      if (agentFile.exists()) {
+        int invocationId = cliInvocationCounter.getAndIncrement();
+        String coverageFile =
+            Paths.get(jacocoDestFileDir, "jacoco-cli-print-socket-" + invocationId + ".exec")
+                .toString();
+        String javaAgent =
+            String.format(
+                "%s=destfile=%s,append=true,dumponexit=true", jacocoAgentJar, coverageFile);
+        pb.environment().put("JAVA_AGENT", javaAgent);
+        logger.debug("Enabled JaCoCo agent for CLI process: {}", coverageFile);
+      }
+    }
+
+    // Remove environment variables that would interfere with tests
+    pb.environment().remove("PAL_DIRECTORY");
+    pb.environment().remove("KAFKA_SERVERS");
+    pb.environment().remove("CHRONICLE_BASE_DIR");
+    pb.environment().remove("PAL_JMX_HOST");
+    pb.environment().remove("PAL_JMX_PORT");
+
+    Process process = pb.start();
+
+    return new PrintProcessHandle(process);
+  }
+
+  /**
+   * Handle for a background print process that captures output.
+   *
+   * <p>Use {@link #waitAndTerminate(long)} to collect output for a duration then terminate.
+   */
+  protected static class PrintProcessHandle {
+    private final Process process;
+    private final StringBuilder stdout = new StringBuilder();
+    private final StringBuilder stderr = new StringBuilder();
+    private final Thread stdoutThread;
+    private final Thread stderrThread;
+
+    /**
+     * Creates a handle for the given process and starts output capture threads.
+     *
+     * @param process the print process
+     */
+    PrintProcessHandle(Process process) {
+      this.process = process;
+
+      // Start output capture threads
+      this.stdoutThread =
+          new Thread(
+              () -> {
+                try (BufferedReader reader =
+                    new BufferedReader(
+                        new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+                  String line;
+                  while ((line = reader.readLine()) != null) {
+                    synchronized (stdout) {
+                      stdout.append(line).append("\n");
+                    }
+                  }
+                } catch (IOException e) {
+                  // Process terminated, expected
+                }
+              });
+
+      this.stderrThread =
+          new Thread(
+              () -> {
+                try (BufferedReader reader =
+                    new BufferedReader(
+                        new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8))) {
+                  String line;
+                  while ((line = reader.readLine()) != null) {
+                    synchronized (stderr) {
+                      stderr.append(line).append("\n");
+                    }
+                  }
+                } catch (IOException e) {
+                  // Process terminated, expected
+                }
+              });
+
+      stdoutThread.start();
+      stderrThread.start();
+    }
+
+    /**
+     * Waits for the specified duration to collect output, then terminates the process.
+     *
+     * @param collectDurationMs duration in milliseconds to collect output
+     * @return CliProcessResult with collected stdout and stderr
+     * @throws InterruptedException if interrupted while waiting
+     */
+    public CliProcessResult waitAndTerminate(long collectDurationMs) throws InterruptedException {
+      // Wait for the collect duration
+      Thread.sleep(collectDurationMs);
+
+      // Terminate the process gracefully first
+      process.destroy();
+      boolean terminated = process.waitFor(2, TimeUnit.SECONDS);
+      if (!terminated) {
+        process.destroyForcibly();
+        process.waitFor(1, TimeUnit.SECONDS);
+      }
+
+      // Wait for output capture threads to finish
+      stdoutThread.join(2000);
+      stderrThread.join(2000);
+
+      int exitCode = process.exitValue();
+      return new CliProcessResult(exitCode, stdout.toString(), stderr.toString());
+    }
+
+    /**
+     * Returns the currently captured stdout.
+     *
+     * @return captured stdout so far
+     */
+    public String getCurrentStdout() {
+      synchronized (stdout) {
+        return stdout.toString();
+      }
+    }
+  }
+
+  /**
+   * Executes a `pal print` command with a custom timeout, designed for socket-based streaming
+   * tests.
+   *
+   * <p>Unlike {@link #runPrint}, this method runs the print command for a specified duration then
+   * terminates the process gracefully. This is necessary for socket-based streaming tests where the
+   * print command would otherwise run indefinitely.
+   *
+   * <p>The method:
+   *
+   * <ol>
+   *   <li>Starts the print process
+   *   <li>Waits for the specified collect duration while capturing output
+   *   <li>Terminates the process (first gracefully, then forcibly if needed)
+   *   <li>Returns collected stdout/stderr
+   * </ol>
+   *
+   * @param collectDurationMs duration in milliseconds to collect messages before terminating
+   * @param args command-line arguments to pass to `pal print`
+   * @return CliProcessResult containing collected stdout and stderr (exit code is typically 143
+   *     from SIGTERM)
+   * @throws Exception if command execution fails before the timeout
+   */
+  protected CliProcessResult runPrintWithTimeout(long collectDurationMs, String... args)
+      throws Exception {
+    String palHome = System.getenv("PAL_HOME");
+    if (palHome == null || palHome.isEmpty()) {
+      throw new IllegalStateException("PAL_HOME environment variable not set");
+    }
+
+    // Build command: pal [global-opts] print <args>
+    List<String> command = new ArrayList<>();
+    command.add(Paths.get(palHome, "bin", "pal").toAbsolutePath().toString());
+
+    // Check if first arg is a global option (-d, -k, etc.)
+    int startIdx = 0;
+    if (args.length >= 2 && args[0].equals("-d")) {
+      command.add(args[0]); // -d
+      command.add(args[1]); // directory value
+      startIdx = 2;
+    }
+
+    // Add subcommand
+    command.add("print");
+
+    // Add remaining args
+    command.addAll(Arrays.asList(args).subList(startIdx, args.length));
+
+    logger.info(
+        "Executing CLI command with {}ms timeout: {}",
+        collectDurationMs,
+        String.join(" ", command));
+
+    ProcessBuilder pb = new ProcessBuilder(command);
+    pb.directory(new File(palHome));
+
+    // Configure logging
+    pb.environment()
+        .put("PAL_CLI_LOGGING_CONFIG", Paths.get(palHome, "config", "cli-logging.xml").toString());
+
+    // Configure JaCoCo agent for CLI process coverage collection
+    String jacocoAgentJar = System.getProperty("jacoco.agent.jar");
+    String jacocoDestFileDir = System.getProperty("jacoco.destfile.dir");
+    if (jacocoAgentJar != null && jacocoDestFileDir != null) {
+      File agentFile = new File(jacocoAgentJar);
+      if (agentFile.exists()) {
+        // Create unique coverage file for this CLI invocation
+        int invocationId = cliInvocationCounter.getAndIncrement();
+        String coverageFile =
+            Paths.get(jacocoDestFileDir, "jacoco-cli-print-socket-" + invocationId + ".exec")
+                .toString();
+        String javaAgent =
+            String.format(
+                "%s=destfile=%s,append=true,dumponexit=true", jacocoAgentJar, coverageFile);
+        pb.environment().put("JAVA_AGENT", javaAgent);
+        logger.debug("Enabled JaCoCo agent for CLI process: {}", coverageFile);
+      }
+    }
+
+    // Remove environment variables that would interfere with tests
+    pb.environment().remove("PAL_DIRECTORY");
+    pb.environment().remove("KAFKA_SERVERS");
+    pb.environment().remove("CHRONICLE_BASE_DIR");
+    pb.environment().remove("PAL_JMX_HOST");
+    pb.environment().remove("PAL_JMX_PORT");
+
+    Process process = pb.start();
+
+    // Capture stdout and stderr
+    StringBuilder stdout = new StringBuilder();
+    StringBuilder stderr = new StringBuilder();
+
+    Thread stdoutThread =
+        new Thread(
+            () -> {
+              try (BufferedReader reader =
+                  new BufferedReader(
+                      new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                  synchronized (stdout) {
+                    stdout.append(line).append("\n");
+                  }
+                }
+              } catch (IOException e) {
+                // Process terminated, expected
+                logger.debug("Stdout reader ended", e);
+              }
+            });
+
+    Thread stderrThread =
+        new Thread(
+            () -> {
+              try (BufferedReader reader =
+                  new BufferedReader(
+                      new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                  synchronized (stderr) {
+                    stderr.append(line).append("\n");
+                  }
+                }
+              } catch (IOException e) {
+                // Process terminated, expected
+                logger.debug("Stderr reader ended", e);
+              }
+            });
+
+    stdoutThread.start();
+    stderrThread.start();
+
+    // Wait for the collect duration
+    Thread.sleep(collectDurationMs);
+
+    // Terminate the process gracefully first
+    process.destroy();
+    boolean terminated = process.waitFor(2, TimeUnit.SECONDS);
+    if (!terminated) {
+      logger.warn("Process did not terminate gracefully, force killing");
+      process.destroyForcibly();
+      process.waitFor(1, TimeUnit.SECONDS);
+    }
+
+    // Wait for output capture threads to finish
+    stdoutThread.join(2000);
+    stderrThread.join(2000);
+
+    int exitCode = process.exitValue();
+    logger.info(
+        "CLI command terminated with exit code {}, stdout length: {}, stderr length: {}",
+        exitCode,
+        stdout.length(),
+        stderr.length());
+
+    if (logger.isDebugEnabled()) {
+      logger.debug("-----CLI STDOUT-----\n{}", stdout);
+      logger.debug("-----CLI STDERR-----\n{}", stderr);
+    }
+
+    return new CliProcessResult(exitCode, stdout.toString(), stderr.toString());
+  }
+
   /** Container for CLI process execution results. */
   protected record CliProcessResult(int exitCode, String stdout, String stderr) {}
 }
