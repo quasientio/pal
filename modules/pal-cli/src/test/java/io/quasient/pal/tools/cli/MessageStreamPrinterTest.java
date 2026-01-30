@@ -255,4 +255,31 @@ public class MessageStreamPrinterTest {
     // Assert output is single line containing "offset=", "id=", "message="
     fail("Not yet implemented");
   }
+
+  // ==========================================================================
+  // Test specifications for performSocketPrinterShutdown()
+  // Issue #372 - Awaiting implementation in #373
+  // ==========================================================================
+
+  /**
+   * Tests that performSocketPrinterShutdown counts down the latch.
+   *
+   * <p>Verifies that calling performSocketPrinterShutdown() decrements the socketPrinterLatch count
+   * to 0.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #373")
+  public void testPerformSocketPrinterShutdown_countsDownLatch() {
+    // Given: latch with count of 1
+    // When: performSocketPrinterShutdown() called
+    // Then: latch.getCount() returns 0
+
+    // TODO(#373): Implement test
+    // Create MessageStreamPrinter instance
+    // Create and set socketPrinterLatch field to new CountDownLatch(1)
+    // Assert socketPrinterLatch.getCount() == 1 before call
+    // Call performSocketPrinterShutdown()
+    // Assert socketPrinterLatch.getCount() == 0 after call
+    fail("Not yet implemented");
+  }
 }

@@ -296,4 +296,98 @@ public class MessageStreamStatsTest {
     method.setAccessible(true);
     return (String) method.invoke(stats, classname);
   }
+
+  // ==================== performKafkaShutdown() Tests ====================
+  // Issue #372 - Awaiting implementation in #373
+
+  /**
+   * Tests that performKafkaShutdown closes the Kafka streams.
+   *
+   * <p>Verifies that calling performKafkaShutdown() invokes close() on the KafkaStreams instance.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #373")
+  public void testPerformKafkaShutdown_closesStreams() {
+    // Given: Mock KafkaStreams instance set on MessageStreamStats
+    // When: performKafkaShutdown() called
+    // Then: streams.close() invoked
+
+    // TODO(#373): Implement test
+    // Create MessageStreamStats instance
+    // Create mock KafkaStreams using Mockito
+    // Set the kafkaStreams field via reflection or package-private access
+    // Set up shutdownLatch
+    // Call performKafkaShutdown()
+    // Verify that kafkaStreams.close() was called
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that performKafkaShutdown stops the continuous printer when present.
+   *
+   * <p>Verifies that calling performKafkaShutdown() invokes setDone(true) on the continuousPrinter
+   * if it is not null.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #373")
+  public void testPerformKafkaShutdown_stopsContinuousPrinter() {
+    // Given: continuousPrinter is not null
+    // When: performKafkaShutdown() called
+    // Then: continuousPrinter.setDone(true) invoked
+
+    // TODO(#373): Implement test
+    // Create MessageStreamStats instance
+    // Create mock KafkaStreams and ContinuousPrinter using Mockito
+    // Set kafkaStreams and continuousPrinter fields via reflection
+    // Set up shutdownLatch
+    // Call performKafkaShutdown()
+    // Verify that continuousPrinter.setDone(true) was called
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that performKafkaShutdown counts down the shutdown latch.
+   *
+   * <p>Verifies that calling performKafkaShutdown() decrements the shutdownLatch count to 0.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #373")
+  public void testPerformKafkaShutdown_countsDownLatch() {
+    // Given: shutdownLatch with count of 1
+    // When: performKafkaShutdown() called
+    // Then: shutdownLatch.getCount() returns 0
+
+    // TODO(#373): Implement test
+    // Create MessageStreamStats instance
+    // Create mock KafkaStreams using Mockito
+    // Set kafkaStreams field via reflection or package-private access
+    // Assert shutdownLatch.getCount() == 1 before call
+    // Call performKafkaShutdown()
+    // Assert shutdownLatch.getCount() == 0 after call
+    fail("Not yet implemented");
+  }
+
+  // ==================== performSocketShutdown() Tests ====================
+  // Issue #372 - Awaiting implementation in #373
+
+  /**
+   * Tests that performSocketShutdown counts down the socket shutdown latch.
+   *
+   * <p>Verifies that calling performSocketShutdown() decrements the socketShutdownLatch count to 0.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #373")
+  public void testPerformSocketShutdown_countsDownLatch() {
+    // Given: Socket streaming latch with count of 1
+    // When: performSocketShutdown() called
+    // Then: latch count decremented to 0
+
+    // TODO(#373): Implement test
+    // Create MessageStreamStats instance
+    // Create and set socketShutdownLatch field to new CountDownLatch(1)
+    // Assert socketShutdownLatch.getCount() == 1 before call
+    // Call performSocketShutdown()
+    // Assert socketShutdownLatch.getCount() == 0 after call
+    fail("Not yet implemented");
+  }
 }
