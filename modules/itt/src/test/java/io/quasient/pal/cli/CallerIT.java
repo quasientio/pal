@@ -12,11 +12,13 @@ package io.quasient.pal.cli;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import io.quasient.pal.PeerProcess;
 import java.util.UUID;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -442,5 +444,177 @@ public class CallerIT extends AbstractCliIT {
     assertThat("Expected field value", callResult.stdout(), containsString("classy"));
 
     logger.info("Successfully processed multiple JSON-RPC requests via stdin");
+  }
+
+  // ==========================================================================
+  // ZMQ RPC Test Specifications (Issue #374)
+  // These tests exercise Caller.sendRequestsWithSingleClient() via ZMQ_RPC protocol
+  // Implementation: Issue #375
+  // ==========================================================================
+
+  /**
+   * Tests method invocation via ZMQ RPC protocol.
+   *
+   * <p>This test verifies that the {@code pal call} command can invoke a static method on a remote
+   * peer using ZMQ RPC transport. The Caller.sendRequestsWithSingleClient() method handles the
+   * actual ZMQ RPC communication.
+   *
+   * <p><b>Note:</b> testCall_zmqRpc_nonMainMethod already tests a similar scenario. This test
+   * provides additional coverage for the specific acceptance criterion.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #375")
+  public void testCall_zmqRpc_methodInvocation() throws Exception {
+    // Given: Peer running with ZMQ RPC; method target class available
+    // - Launch peer with --zmq-rpc auto
+    // - Use io.quasient.pal.apps.quantized.rpc.Methods class which has various test methods
+
+    // When: `pal call -d localhost:2379 -p <peer-uuid> --rpc-type ZMQ_RPC -m <method> <class> args`
+    // - Execute pal call command targeting the peer via ZMQ RPC
+    // - Call a static method with arguments (e.g., staticStringWithIntArg)
+
+    // Then: Exit code 0; stdout contains return value
+    // - Command should complete successfully
+    // - Output should contain the expected return value from the method
+
+    // TODO(#375): Implement after #375 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests constructor invocation via ZMQ RPC protocol.
+   *
+   * <p>This test verifies that the {@code pal call} command can invoke a constructor on a remote
+   * peer using ZMQ RPC transport to create a new object instance.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #375")
+  public void testCall_zmqRpc_constructorInvocation() throws Exception {
+    // Given: Peer running with ZMQ RPC
+    // - Launch peer with --zmq-rpc auto
+    // - Target class must have accessible constructor
+
+    // When: `pal call -d localhost:2379 -p <peer-uuid> --rpc-type ZMQ_RPC -m new <class>`
+    // - Execute pal call command targeting the peer via ZMQ RPC
+    // - Use -m new to invoke the constructor
+
+    // Then: Exit code 0; object reference returned
+    // - Command should complete successfully
+    // - Output should contain an ObjectRef (UUID reference to the created object)
+
+    // TODO(#375): Implement after #375 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests field get operation via ZMQ RPC protocol.
+   *
+   * <p>This test verifies that the {@code pal call} command can read a field value from a remote
+   * peer using ZMQ RPC transport.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #375")
+  public void testCall_zmqRpc_fieldGet() throws Exception {
+    // Given: Peer running with object instance or class with static field
+    // - Launch peer with --zmq-rpc auto
+    // - Use io.quasient.pal.apps.rpc.Variables class which has test fields
+
+    // When: `pal call` with field get operation via ZMQ RPC
+    // - Execute pal call command targeting the peer via ZMQ RPC
+    // - Use appropriate syntax for field get (e.g., get operation on static field)
+
+    // Then: Exit code 0; field value returned
+    // - Command should complete successfully
+    // - Output should contain the expected field value
+
+    // TODO(#375): Implement after #375 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests field set operation via ZMQ RPC protocol.
+   *
+   * <p>This test verifies that the {@code pal call} command can write a field value on a remote
+   * peer using ZMQ RPC transport.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #375")
+  public void testCall_zmqRpc_fieldSet() throws Exception {
+    // Given: Peer running with object instance or class with static field
+    // - Launch peer with --zmq-rpc auto
+    // - Use io.quasient.pal.apps.rpc.Variables class which has test fields
+
+    // When: `pal call` with field set operation via ZMQ RPC
+    // - Execute pal call command targeting the peer via ZMQ RPC
+    // - Use appropriate syntax for field set (e.g., put operation on static field)
+
+    // Then: Exit code 0; field updated
+    // - Command should complete successfully
+    // - Subsequent field get should return the new value
+
+    // TODO(#375): Implement after #375 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests error handling when peer is unreachable via ZMQ RPC.
+   *
+   * <p>This test verifies that the {@code pal call} command fails gracefully when attempting to
+   * communicate with a peer that is not running or unreachable.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #375")
+  public void testCall_unreachablePeer_failsGracefully() throws Exception {
+    // Given: No peer running at specified address
+    // - Do NOT launch any peer
+    // - Use a nonexistent peer UUID or unreachable address
+
+    // When: `pal call -d localhost:2379 -p nonexistent-peer --rpc-type ZMQ_RPC -m foo <class>`
+    // - Execute pal call command targeting a nonexistent peer
+    // - The command should attempt ZMQ RPC connection and fail
+
+    // Then: Non-zero exit code; error message in stderr
+    // - Command should exit with non-zero code
+    // - stderr should contain meaningful error message about peer not found or unreachable
+
+    // TODO(#375): Implement after #375 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests error handling when invoking a non-existent method via ZMQ RPC.
+   *
+   * <p>This test verifies that the {@code pal call} command returns an appropriate error when
+   * attempting to invoke a method that does not exist on the target class.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #375")
+  public void testCall_invalidMethod_returnsError() throws Exception {
+    // Given: Peer running with ZMQ RPC
+    // - Launch peer with --zmq-rpc auto
+    // - Target class exists but method does not
+
+    // When: `pal call` with non-existent method via ZMQ RPC
+    // - Execute pal call command targeting the peer via ZMQ RPC
+    // - Specify a method name that does not exist (e.g., nonExistentMethod)
+
+    // Then: Non-zero exit code; error message about method not found
+    // - Command should exit with non-zero code
+    // - Output should contain error message indicating method not found or NoSuchMethodException
+
+    // TODO(#375): Implement after #375 provides the implementation
+    fail("Not yet implemented");
   }
 }
