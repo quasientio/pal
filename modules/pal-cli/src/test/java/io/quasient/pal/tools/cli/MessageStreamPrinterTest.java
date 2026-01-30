@@ -11,6 +11,7 @@ package io.quasient.pal.tools.cli;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.fail;
 
 import io.quasient.pal.messages.LogMessage;
 import io.quasient.pal.messages.colfer.Message;
@@ -21,6 +22,7 @@ import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class MessageStreamPrinterTest {
@@ -116,5 +118,141 @@ public class MessageStreamPrinterTest {
       print.setAccessible(true);
       print.invoke(p, peer.toString(), lm, 10L);
     }
+  }
+
+  // ==========================================================================
+  // Test specifications for getFormat(), shouldPrint() branches, and printRecord()
+  // Issue #366 - Awaiting implementation in #367
+  // ==========================================================================
+
+  @Test
+  @Ignore("Awaiting implementation in #367")
+  public void testGetFormat_returnsCompact_whenNoFormatSpecified() throws Exception {
+    // Given: No format flags set (formatOptions is null)
+    // When: getFormat() called
+    // Then: Returns COMPACT
+
+    // TODO(#367): Implement after #367 provides the implementation
+    // Create MessageStreamPrinter instance without setting any format flags
+    // Access getFormat() via reflection
+    // Assert that the returned format is OutputFormat.COMPACT
+    fail("Not yet implemented");
+  }
+
+  @Test
+  @Ignore("Awaiting implementation in #367")
+  public void testGetFormat_returnsFull_whenFullFlagSet() throws Exception {
+    // Given: fullOutput=true in FormatOptions
+    // When: getFormat() called
+    // Then: Returns FULL
+
+    // TODO(#367): Implement after #367 provides the implementation
+    // Create MessageStreamPrinter instance
+    // Create FormatOptions instance with full=true
+    // Set formatOptions field via reflection
+    // Access getFormat() via reflection
+    // Assert that the returned format is OutputFormat.FULL
+    fail("Not yet implemented");
+  }
+
+  @Test
+  @Ignore("Awaiting implementation in #367")
+  public void testGetFormat_returnsJson_whenJsonFlagSet() throws Exception {
+    // Given: jsonOutput=true in FormatOptions
+    // When: getFormat() called
+    // Then: Returns JSON
+
+    // TODO(#367): Implement after #367 provides the implementation
+    // Create MessageStreamPrinter instance
+    // Create FormatOptions instance with json=true
+    // Set formatOptions field via reflection
+    // Access getFormat() via reflection
+    // Assert that the returned format is OutputFormat.JSON
+    fail("Not yet implemented");
+  }
+
+  @Test
+  @Ignore("Awaiting implementation in #367")
+  public void testShouldPrint_filtersNullOffset() throws Exception {
+    // Given: startOffset set; message with null offset passed to shouldPrint
+    // When: shouldPrint() called with null recOffset
+    // Then: Returns false (message filtered out because offset doesn't match)
+
+    // TODO(#367): Implement after #367 provides the implementation
+    // Create MessageStreamPrinter instance
+    // Set the offset field to a non-null value (e.g., 10L) via reflection
+    // Create a LogMessage
+    // Call shouldPrint(null, key, logMessage) via reflection
+    // Assert that the method returns false since null != 10L
+    fail("Not yet implemented");
+  }
+
+  @Test
+  @Ignore("Awaiting implementation in #367")
+  public void testShouldPrint_combinesMultipleFilters() throws Exception {
+    // Given: Type filter AND peer filter both set
+    // When: shouldPrint() called with message matching both filters
+    // Then: Returns true
+
+    // TODO(#367): Implement after #367 provides the implementation
+    // Create MessageStreamPrinter instance
+    // Set msgTypes field to List.of("CONSTRUCTOR") via reflection
+    // Set fromPeer field to a specific UUID string via reflection
+    // Create a LogMessage with matching type (EXEC_CONSTRUCTOR) and peer UUID
+    // Call shouldPrint(offset, peerUuid, logMessage) via reflection
+    // Assert that the method returns true
+    fail("Not yet implemented");
+  }
+
+  @Test
+  @Ignore("Awaiting implementation in #367")
+  public void testShouldPrint_rejectsMismatchedFilter() throws Exception {
+    // Given: Type filter set to CONSTRUCTOR
+    // When: shouldPrint() called with message of type INSTANCE_METHOD
+    // Then: Returns false
+
+    // TODO(#367): Implement after #367 provides the implementation
+    // Create MessageStreamPrinter instance
+    // Set msgTypes field to List.of("CONSTRUCTOR") via reflection
+    // Create a LogMessage with type EXEC_INSTANCE_METHOD
+    // Call shouldPrint(offset, key, logMessage) via reflection
+    // Assert that the method returns false
+    fail("Not yet implemented");
+  }
+
+  @Test
+  @Ignore("Awaiting implementation in #367")
+  public void testPrintRecord_handlesFullFormat() throws Exception {
+    // Given: OutputFormat.FULL configured
+    // When: printRecord() called
+    // Then: Outputs detailed multi-line format with CONTEXT, HEADERS, and JSON content
+
+    // TODO(#367): Implement after #367 provides the implementation
+    // Create MessageStreamPrinter instance
+    // Set formatOptions.full = true via reflection
+    // Set up ByteArrayOutputStream to capture output
+    // Set out field to PrintStream wrapping the ByteArrayOutputStream
+    // Create a LogMessage with test content
+    // Call printRecord(key, logMessage, offset) via reflection
+    // Assert output contains "CONTEXT:", "HEADERS:", and message content in JSON
+    fail("Not yet implemented");
+  }
+
+  @Test
+  @Ignore("Awaiting implementation in #367")
+  public void testPrintRecord_handlesCompactFormat() throws Exception {
+    // Given: OutputFormat.COMPACT configured (default or explicit)
+    // When: printRecord() called
+    // Then: Outputs single-line summary with offset=, id=, message=
+
+    // TODO(#367): Implement after #367 provides the implementation
+    // Create MessageStreamPrinter instance
+    // Set formatOptions.compact = true via reflection (or leave formatOptions null for default)
+    // Set up ByteArrayOutputStream to capture output
+    // Set out field to PrintStream wrapping the ByteArrayOutputStream
+    // Create a LogMessage with test content
+    // Call printRecord(key, logMessage, offset) via reflection
+    // Assert output is single line containing "offset=", "id=", "message="
+    fail("Not yet implemented");
   }
 }
