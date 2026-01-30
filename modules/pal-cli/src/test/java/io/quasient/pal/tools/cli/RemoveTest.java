@@ -13,11 +13,16 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 
+import io.quasient.pal.common.directory.nodes.LogInfo;
+import io.quasient.pal.common.directory.nodes.LogInfo.LogType;
 import io.quasient.pal.cxn.directory.PalDirectory;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-import org.junit.Ignore;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import org.junit.Test;
 
 public class RemoveTest {
@@ -49,7 +54,7 @@ public class RemoveTest {
   }
 
   // ===========================================================================
-  // Test specifications for resolveLogInfo() - Issue #368
+  // Tests for resolveLogInfo() - Issue #368, #369
   // ===========================================================================
 
   /**
@@ -58,19 +63,24 @@ public class RemoveTest {
    * <p>Verifies that the "file:" prefix is stripped and a LogInfo with CHRONICLE type is returned.
    */
   @Test
-  @Ignore("Awaiting implementation in #369")
   public void testResolveLogInfo_chronicleWithFilePrefix() throws Exception {
     // Given: logNameOrPath = "file:/tmp/mylog"
     //        Remove instance with no PAL directory connection
+    Remove rm = new Remove();
+
+    // Access the private resolveLogInfo method via reflection
+    Method resolveLogInfoMethod = Remove.class.getDeclaredMethod("resolveLogInfo", String.class);
+    resolveLogInfoMethod.setAccessible(true);
 
     // When: resolveLogInfo() called via reflection
+    LogInfo result = (LogInfo) resolveLogInfoMethod.invoke(rm, "file:/tmp/mylog");
 
     // Then: Returns LogInfo with:
     //       - CHRONICLE type
     //       - path "/tmp/mylog" (prefix stripped)
-
-    // TODO(#369): Implement after #369 provides the implementation
-    throw new AssertionError("Not yet implemented");
+    assertThat(result, is(notNullValue()));
+    assertThat(result.getLogType(), is(LogType.CHRONICLE));
+    assertThat(result.getName(), is("/tmp/mylog"));
   }
 
   /**
@@ -79,21 +89,32 @@ public class RemoveTest {
    * <p>Verifies that a Kafka-type LogInfo is returned with the provided bootstrap servers.
    */
   @Test
-  @Ignore("Awaiting implementation in #369")
   public void testResolveLogInfo_kafkaWithBootstrapServers() throws Exception {
     // Given: logNameOrPath = "my-topic"
     //        kafkaServers field set to "localhost:29092"
     //        Remove instance with no PAL directory connection
+    Remove rm = new Remove();
+
+    // Set kafkaServers field via reflection
+    Field kafkaServersField = Remove.class.getDeclaredField("kafkaServers");
+    kafkaServersField.setAccessible(true);
+    kafkaServersField.set(rm, "localhost:29092");
+
+    // Access the private resolveLogInfo method via reflection
+    Method resolveLogInfoMethod = Remove.class.getDeclaredMethod("resolveLogInfo", String.class);
+    resolveLogInfoMethod.setAccessible(true);
 
     // When: resolveLogInfo() called via reflection
+    LogInfo result = (LogInfo) resolveLogInfoMethod.invoke(rm, "my-topic");
 
     // Then: Returns LogInfo with:
     //       - KAFKA type
     //       - name "my-topic"
     //       - bootstrap servers "localhost:29092"
-
-    // TODO(#369): Implement after #369 provides the implementation
-    throw new AssertionError("Not yet implemented");
+    assertThat(result, is(notNullValue()));
+    assertThat(result.getLogType(), is(LogType.KAFKA));
+    assertThat(result.getName(), is("my-topic"));
+    assertThat(result.getBootstrapServers(), is("localhost:29092"));
   }
 
   /**
@@ -101,21 +122,45 @@ public class RemoveTest {
    *
    * <p>Verifies that when no "file:" prefix is present and no Kafka servers are configured (neither
    * via field nor KAFKA_SERVERS env var), the method returns null.
+   *
+   * <p>Note: This test assumes KAFKA_SERVERS environment variable is not set. If the test is run in
+   * an environment where KAFKA_SERVERS is set, the test may fail. In CI/CD pipelines, ensure this
+   * env var is not set when running unit tests.
    */
   @Test
-  @Ignore("Awaiting implementation in #369")
   public void testResolveLogInfo_failsWithoutKafkaServers() throws Exception {
     // Given: logNameOrPath = "my-topic" (no "file:" prefix)
     //        kafkaServers field is null
     //        KAFKA_SERVERS environment variable is not set
     //        Remove instance with no PAL directory connection
+    Remove rm = new Remove();
+
+    // Ensure kafkaServers field is null (it should be by default, but be explicit)
+    Field kafkaServersField = Remove.class.getDeclaredField("kafkaServers");
+    kafkaServersField.setAccessible(true);
+    kafkaServersField.set(rm, null);
+
+    // Access the private resolveLogInfo method via reflection
+    Method resolveLogInfoMethod = Remove.class.getDeclaredMethod("resolveLogInfo", String.class);
+    resolveLogInfoMethod.setAccessible(true);
 
     // When: resolveLogInfo() called via reflection
+    // Note: This test assumes KAFKA_SERVERS env var is not set. If it is set,
+    // the method will return a valid LogInfo instead of null.
+    String kafkaServersEnv = System.getenv("KAFKA_SERVERS");
+    LogInfo result = (LogInfo) resolveLogInfoMethod.invoke(rm, "my-topic");
 
-    // Then: Returns null
+    // Then: Returns null if KAFKA_SERVERS is not set
     //       Logs error message about missing Kafka servers
-
-    // TODO(#369): Implement after #369 provides the implementation
-    throw new AssertionError("Not yet implemented");
+    if (kafkaServersEnv == null || kafkaServersEnv.isEmpty()) {
+      assertThat(result, is(nullValue()));
+    } else {
+      // If KAFKA_SERVERS is set, the result should be a valid Kafka LogInfo
+      // using the environment variable value
+      assertThat(result, is(notNullValue()));
+      assertThat(result.getLogType(), is(LogType.KAFKA));
+      assertThat(result.getName(), is("my-topic"));
+      assertThat(result.getBootstrapServers(), is(kafkaServersEnv));
+    }
   }
 }
