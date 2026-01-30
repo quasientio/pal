@@ -617,4 +617,143 @@ public class CallerIT extends AbstractCliIT {
     // TODO(#375): Implement after #375 provides the implementation
     fail("Not yet implemented");
   }
+
+  // ==========================================================================
+  // JSON RPC and Async Test Specifications (Issue #375)
+  // These tests exercise Caller's JSON_RPC protocol and async functionality
+  // Implementation: Issue #376
+  // ==========================================================================
+
+  /**
+   * Tests method invocation via JSON RPC protocol.
+   *
+   * <p>This test verifies that the {@code pal call} command can invoke a method on a remote peer
+   * using JSON RPC transport with stdin input. The Caller handles JSON-RPC requests sent via stdin
+   * and returns JSON-formatted responses.
+   *
+   * <p><b>Note:</b> This test is similar to testCall_jsonRpcStdin_methodInvocation but is specified
+   * as a distinct acceptance criterion for issue #375 coverage.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #376")
+  public void testCall_jsonRpc_methodInvocation() throws Exception {
+    // Given: Peer running with JSON RPC enabled
+    // - Launch peer with --json-rpc auto
+    // - Use io.quasient.pal.apps.quantized.rpc.Methods class which has various test methods
+
+    // When: `pal call` using JSON RPC with stdin input
+    // - Create JSON-RPC request: {"jsonrpc":"2.0","id":"1","method":"call",
+    //   "params":{"type":"<class>","method":"<method>","args":[...]}}
+    // - Send request via stdin to pal call command targeting the peer's JSON-RPC address
+    // - The address should be retrieved via getPeerJsonRpcAddress(peerId)
+
+    // Then: Exit code 0; JSON response returned
+    // - Command should complete with exit code 0
+    // - stdout should contain JSON-RPC response with result field
+    // - Response should contain expected return value from method invocation
+
+    // TODO(#376): Implement after #376 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests async fire-and-forget invocation.
+   *
+   * <p>This test verifies that the {@code pal call} command with the {@code --forget-response} flag
+   * returns immediately without waiting for the method execution result. This is useful for
+   * one-way/asynchronous messaging patterns where the caller does not need the response.
+   *
+   * <p><b>Note:</b> This test is similar to testCall_forgetResponse_returnsImmediately but is
+   * specified as a distinct acceptance criterion for issue #375 coverage.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #376")
+  public void testCall_async_fireAndForget() throws Exception {
+    // Given: Peer running; --forget-response flag
+    // - Launch peer with ZMQ RPC or JSON RPC enabled
+    // - The method being called may take some time to execute
+
+    // When: `pal call -d localhost:2379 -p <peer> --forget-response -c Class -m method`
+    // - Execute pal call command with --forget-response flag
+    // - The command should send the request and return immediately
+    // - It should NOT wait for the method to complete execution
+
+    // Then: Exit code 0; command returns immediately without waiting for response
+    // - Command should complete with exit code 0
+    // - Elapsed time should be minimal (< 5 seconds) regardless of method execution time
+    // - No result output is expected (fire-and-forget semantics)
+
+    // TODO(#376): Implement after #376 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests writing a message to a Kafka log via pal call.
+   *
+   * <p>This test verifies that the {@code pal call} command can write a message to a Kafka log
+   * using the {@code --output-log} option. The message is serialized and appended to the specified
+   * Kafka topic.
+   *
+   * <p><b>Note:</b> This test is similar to testCall_toLog_writesMessage but explicitly verifies
+   * Kafka log backend as specified in the acceptance criterion for issue #375.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #376")
+  public void testCall_toKafkaLog_writesMessage() throws Exception {
+    // Given: Kafka log exists
+    // - Ensure Kafka infrastructure is running (see modules/itt/README.md)
+    // - Create or use an existing Kafka topic as the target log
+    // - Launch a peer with Kafka servers configured (-k option)
+
+    // When: `pal call -d localhost:2379 --output-log <log-name> -c Class -m method`
+    // - Execute pal call command with --output-log pointing to a Kafka log
+    // - The log name should be a Kafka topic name (not a file:/ path)
+    // - Include appropriate class and method arguments
+
+    // Then: Exit code 0; message appears in log (verify with pal print)
+    // - Command should complete with exit code 0
+    // - Run pal print command to verify the message was written to the Kafka log
+    // - The printed output should contain the method invocation details
+
+    // TODO(#376): Implement after #376 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests writing a message to a Chronicle log via pal call.
+   *
+   * <p>This test verifies that the {@code pal call} command can write a message to a Chronicle
+   * Queue log using the {@code --output-log} option with a file:/ URI. The message is serialized
+   * and appended to the local Chronicle Queue.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #376")
+  public void testCall_toChronicleLog_writesMessage() throws Exception {
+    // Given: Chronicle log path
+    // - Choose a temporary directory for Chronicle Queue storage
+    // - Use file:/ URI scheme to specify Chronicle backend (e.g., file:/tmp/test-log)
+    // - No Kafka servers needed for Chronicle-only operation
+
+    // When: `pal call --output-log file:/tmp/test-log -c Class -m method`
+    // - Execute pal call command with --output-log pointing to a Chronicle log
+    // - The log path must use file:/ URI scheme
+    // - Include appropriate class and method arguments
+
+    // Then: Exit code 0; message appears in Chronicle log
+    // - Command should complete with exit code 0
+    // - Verify the Chronicle Queue directory was created at the specified path
+    // - Run pal print command to verify the message was written to the Chronicle log
+    // - The printed output should contain the method invocation details
+
+    // TODO(#376): Implement after #376 provides the implementation
+    fail("Not yet implemented");
+  }
 }
