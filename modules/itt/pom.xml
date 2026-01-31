@@ -153,6 +153,9 @@
                         <include>**/cxn/directory/*IT.java</include>
                         <include>**/cxn/EtcdIT.java</include>
                         <include>**/cxn/ThinPeerIT.java</include>
+
+                        <!-- Standalone peer startup tests (issue #483) -->
+                        <include>**/core/service/PeerStartupIT.java</include>
                     </includes>
 
                     <!-- exclude ITs that are already executed via the suites -->
