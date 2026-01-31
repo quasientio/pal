@@ -89,6 +89,7 @@
                         The shaded JAR is a multi-release JAR containing META-INF/versions/
                         which causes JaCoCo to fail with "different class with same name" errors.
                         We unpack it and exclude the multi-release classes.
+                        Note: Must run in 'package' phase to ensure pal-cli is packaged first (MDEP-98).
                     -->
                     <execution>
                         <id>unpack-shaded-jar</id>
