@@ -12,6 +12,7 @@ package io.quasient.pal.cxn.chronicle;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import io.quasient.pal.cxn.chronicle.ChronicleLogUtil.QueueIndexInfo;
 import java.io.IOException;
@@ -21,6 +22,7 @@ import java.util.Comparator;
 import java.util.stream.Stream;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -223,5 +225,233 @@ public class ChronicleLogUtilTest {
     String str = info.toString();
     assertTrue("toString should contain large firstIndex", str.contains("firstIndex=1000000"));
     assertTrue("toString should contain large lastIndex", str.contains("lastIndex=2000000"));
+  }
+
+  // ============================================================================
+  // Test specifications for ChronicleLogUtil with real queues (Issue #419)
+  // These tests use real Chronicle queues (not mocks) to verify actual behavior.
+  // Awaiting implementation in #420
+  // ============================================================================
+
+  /**
+   * Verifies that queueExists returns true for a directory containing actual .cq4 Chronicle files.
+   *
+   * <p>This test creates a real Chronicle queue by appending messages, then verifies that
+   * queueExists correctly detects the queue based on the presence of .cq4 files.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #420")
+  public void queueExists_directoryWithCq4Files_true() {
+    // Given: Directory with actual .cq4 Chronicle files (created by populating queue)
+    // When: queueExists(path) called
+    // Then: Returns true
+
+    // TODO(#420): Implement test - create queue, populate with message, verify queueExists
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that countMessages returns 0 for a newly created empty Chronicle queue.
+   *
+   * <p>This test creates an empty Chronicle queue (with metadata but no messages) and verifies that
+   * countMessages correctly returns 0.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #420")
+  public void countMessages_emptyQueue_zero() {
+    // Given: Newly created empty Chronicle queue
+    // When: countMessages(path) called
+    // Then: Returns 0
+
+    // TODO(#420): Implement test - create empty queue, verify count is 0
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that countMessages returns the exact number of messages in a populated queue.
+   *
+   * <p>This test creates a Chronicle queue with exactly 42 messages and verifies that countMessages
+   * returns the exact count.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #420")
+  public void countMessages_knownMessageCount_exactCount() {
+    // Given: Queue populated with exactly 42 messages
+    // When: countMessages(path) called
+    // Then: Returns 42
+
+    // TODO(#420): Implement test using populateQueueWithMessages(path, 42)
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that isQueueEmpty returns true for an existing but empty Chronicle queue.
+   *
+   * <p>This test creates a Chronicle queue directory structure (by opening and closing a queue)
+   * without writing any messages, then verifies isQueueEmpty returns true.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #420")
+  public void isQueueEmpty_emptyExistingQueue_true() {
+    // Given: Existing queue directory with no messages
+    // When: isQueueEmpty(path) called
+    // Then: Returns true
+
+    // TODO(#420): Implement test - create queue without messages, verify isEmpty
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that isQueueEmpty returns false for a Chronicle queue containing messages.
+   *
+   * <p>This test creates a Chronicle queue with at least one message and verifies that isQueueEmpty
+   * correctly returns false.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #420")
+  public void isQueueEmpty_populatedQueue_false() {
+    // Given: Queue with at least one message
+    // When: isQueueEmpty(path) called
+    // Then: Returns false
+
+    // TODO(#420): Implement test using populateQueueWithMessages(path, 1)
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that getQueueIndexInfo returns negative indices for an empty Chronicle queue.
+   *
+   * <p>For an empty queue, the method should return QueueIndexInfo with firstIndex=-1 and
+   * lastIndex=-1 to indicate no messages are present.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #420")
+  public void getQueueIndexInfo_emptyQueue_negativeIndices() {
+    // Given: Empty Chronicle queue
+    // When: getQueueIndexInfo(path) called
+    // Then: Returns QueueIndexInfo with firstIndex=-1, lastIndex=-1
+
+    // TODO(#420): Implement test - verify empty queue returns (-1, -1)
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that getQueueIndexInfo returns 0,0 indices for a queue with exactly one message.
+   *
+   * <p>For a queue with a single message, the logical indices should be firstIndex=0 and
+   * lastIndex=0.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #420")
+  public void getQueueIndexInfo_singleMessage_zeroZero() {
+    // Given: Queue with exactly 1 message
+    // When: getQueueIndexInfo(path) called
+    // Then: Returns QueueIndexInfo with firstIndex=0, lastIndex=0
+
+    // TODO(#420): Implement test using populateQueueWithMessages(path, 1)
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that getQueueIndexInfo returns correct index range for multiple messages.
+   *
+   * <p>For a queue with 10 messages, the logical indices should be firstIndex=0 and lastIndex=9.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #420")
+  public void getQueueIndexInfo_multipleMessages_correctRange() {
+    // Given: Queue with exactly 10 messages
+    // When: getQueueIndexInfo(path) called
+    // Then: Returns QueueIndexInfo with firstIndex=0, lastIndex=9
+
+    // TODO(#420): Implement test using populateQueueWithMessages(path, 10)
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that getQueueSizeInBytes returns 0 for an empty Chronicle queue.
+   *
+   * <p>An empty queue should report 0 bytes of logical data, even though Chronicle may allocate
+   * files for metadata.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #420")
+  public void getQueueSizeInBytes_emptyQueue_zero() {
+    // Given: Empty Chronicle queue
+    // When: getQueueSizeInBytes(path) called
+    // Then: Returns 0
+
+    // TODO(#420): Implement test - verify empty queue returns 0 bytes
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that getQueueSizeInBytes returns a non-zero value for a populated queue.
+   *
+   * <p>A queue with messages should report a positive byte size reflecting the actual data written.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #420")
+  public void getQueueSizeInBytes_populatedQueue_nonZero() {
+    // Given: Queue with known messages
+    // When: getQueueSizeInBytes(path) called
+    // Then: Returns value > 0
+
+    // TODO(#420): Implement test using populateQueueWithMessages, verify size > 0
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that deleteQueue successfully removes a real Chronicle queue with .cq4 files.
+   *
+   * <p>This test creates a real Chronicle queue with messages (including .cq4 files and metadata),
+   * then verifies that deleteQueue successfully removes all files and the directory.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #420")
+  public void deleteQueue_chronicleQueueWithFiles_deleted() {
+    // Given: Queue with .cq4 files and metadata
+    // When: deleteQueue(path) called
+    // Then: Returns true; directory no longer exists
+
+    // TODO(#420): Implement test - create populated queue, delete, verify removal
+    fail("Not yet implemented");
+  }
+
+  // ============================================================================
+  // Helper method for populating queues with test messages
+  // ============================================================================
+
+  /**
+   * Creates a Chronicle queue at the specified path and appends the given number of OutboundMsg
+   * instances.
+   *
+   * <p>Each message is created with a unique message ID and minimal body content. The queue is
+   * closed after writing, ensuring all data is flushed.
+   *
+   * <p>Example usage:
+   *
+   * <pre>{@code
+   * Path queuePath = tempDir.resolve("test-queue");
+   * populateQueueWithMessages(queuePath, 42);
+   * // Queue now contains 42 messages
+   * }</pre>
+   *
+   * @param queuePath the path where the Chronicle queue should be created
+   * @param count the number of messages to append to the queue
+   */
+  @SuppressWarnings("unused") // Helper method for test implementations in #420
+  private void populateQueueWithMessages(Path queuePath, int count) {
+    // TODO(#420): Implement helper method
+    // 1. Create Chronicle queue at queuePath using SingleChronicleQueueBuilder
+    // 2. Create ExcerptAppender
+    // 3. For each message (0 to count-1):
+    //    a. Create OutboundMsg using public constructor with Marshallable body
+    //    b. Call msg.appendTo(appender) to write to queue
+    // 4. Close the queue to flush all data
+    //
+    // Note: Use MessageBuilder from io.quasient.pal.serdes.colfer to create
+    // ExecMessage instances as the Marshallable body.
+    throw new UnsupportedOperationException("Awaiting implementation in #420");
   }
 }
