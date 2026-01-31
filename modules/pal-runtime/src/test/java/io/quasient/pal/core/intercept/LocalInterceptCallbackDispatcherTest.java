@@ -13,6 +13,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import io.quasient.pal.common.lang.intercept.AfterPhaseData;
 import io.quasient.pal.common.lang.intercept.CheckedExceptionPolicy;
@@ -35,6 +36,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -615,6 +617,186 @@ public class LocalInterceptCallbackDispatcherTest {
         thrown instanceof InvalidCallbackExceptionException);
     assertNotNull("Should have a cause", thrown.getCause());
     assertTrue("Cause should be SQLException", thrown.getCause() instanceof SQLException);
+  }
+
+  // ===== Additional Test Specifications (Issue #454) =====
+
+  /**
+   * Tests that BEFORE_ASYNC callback exceptions are logged but not propagated.
+   *
+   * <p>Acceptance Criteria:
+   * [TEST:LocalInterceptCallbackDispatcherTest.sendLocalBeforeAsyncCallbacks_callbackThrows_logsAndContinues]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #455")
+  public void sendLocalBeforeAsyncCallbacks_callbackThrows_logsAndContinues() {
+    // Given: BEFORE_ASYNC callback that throws RuntimeException
+    // When: sendLocalBeforeAsyncCallbacks() called
+    // Then: Exception logged but not propagated; method completes normally
+
+    // TODO(#455): Implement test logic
+    // 1. Create InterceptMessage with InterceptType.BEFORE_ASYNC pointing to a callback
+    //    that throws RuntimeException
+    // 2. Call sendLocalBeforeAsyncCallbacks()
+    // 3. Verify method completes without exception
+    // 4. Optionally verify exception was logged (may require log capture)
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that AFTER_ASYNC callback exceptions are logged but not propagated.
+   *
+   * <p>Acceptance Criteria:
+   * [TEST:LocalInterceptCallbackDispatcherTest.sendLocalAfterAsyncCallbacks_callbackThrows_logsAndContinues]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #455")
+  public void sendLocalAfterAsyncCallbacks_callbackThrows_logsAndContinues() {
+    // Given: AFTER_ASYNC callback that throws RuntimeException
+    // When: sendLocalAfterAsyncCallbacks() called
+    // Then: Exception logged but not propagated; method completes normally
+
+    // TODO(#455): Implement test logic
+    // 1. Create InterceptMessage with InterceptType.AFTER_ASYNC pointing to a callback
+    //    that throws RuntimeException
+    // 2. Call sendLocalAfterAsyncCallbacks()
+    // 3. Verify method completes without exception
+    // 4. Optionally verify exception was logged (may require log capture)
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that sendLocalAroundCallbacks handles null pending callbacks list gracefully.
+   *
+   * <p>Acceptance Criteria:
+   * [TEST:LocalInterceptCallbackDispatcherTest.sendLocalAroundCallbacks_nullPendingList_handlesGracefully]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #455")
+  public void sendLocalAroundCallbacks_nullPendingList_handlesGracefully() {
+    // Given: AROUND callback scenario with null pending callbacks list
+    // When: sendLocalAroundCallbacks() called
+    // Then: Method handles gracefully without NPE
+
+    // TODO(#455): Implement test logic
+    // 1. Create scenario where pendingCallbacks could be null
+    // 2. Call sendLocalAroundCallbacks() or related method
+    // 3. Verify no NullPointerException is thrown
+    // 4. Verify appropriate default response is returned
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that sendLocalAroundAfterCallbacks handles mismatched callback counts gracefully.
+   *
+   * <p>Acceptance Criteria:
+   * [TEST:LocalInterceptCallbackDispatcherTest.sendLocalAroundAfterCallbacks_mismatchedCallbackCount_handlesGracefully]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #455")
+  public void sendLocalAroundAfterCallbacks_mismatchedCallbackCount_handlesGracefully() {
+    // Given: More AROUND BEFORE callbacks than AFTER callbacks
+    // When: sendLocalAroundAfterCallbacks() called
+    // Then: Method processes available callbacks without exception
+
+    // TODO(#455): Implement test logic
+    // 1. Create scenario with AROUND callbacks where some called proceed() and others didn't
+    // 2. Call sendLocalAroundAfterCallbacks() with partial list
+    // 3. Verify method completes without exception
+    // 4. Verify only available callbacks are processed
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that multiple BEFORE callbacks stop on first exception.
+   *
+   * <p>Acceptance Criteria:
+   * [TEST:LocalInterceptCallbackDispatcherTest.sendLocalBeforeCallbacks_multipleCallbacks_stopsOnFirstException]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #455")
+  public void sendLocalBeforeCallbacks_multipleCallbacks_stopsOnFirstException() {
+    // Given: 3 BEFORE callbacks, second one throws exception
+    // When: sendLocalBeforeCallbacks() called
+    // Then: Third callback not invoked; exception from second propagated
+
+    // TODO(#455): Implement test logic
+    // 1. Create 3 InterceptMessages with BEFORE type
+    //    - First callback: records invocation, succeeds
+    //    - Second callback: sets exception via setExceptionToThrow
+    //    - Third callback: records invocation (should not be called)
+    // 2. Call sendLocalBeforeCallbacks()
+    // 3. Verify response.shouldThrowException() is true
+    // 4. Verify third callback was NOT invoked
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that multiple AFTER callbacks apply return value mutations in order.
+   *
+   * <p>Acceptance Criteria:
+   * [TEST:LocalInterceptCallbackDispatcherTest.sendLocalAfterCallbacks_multipleReturnValueMutations_appliedInOrder]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #455")
+  public void sendLocalAfterCallbacks_multipleReturnValueMutations_appliedInOrder() {
+    // Given: 3 AFTER callbacks each multiplying return value by 2
+    // When: sendLocalAfterCallbacks() called with initial value 1
+    // Then: Final return value is 8 (1*2*2*2)
+
+    // TODO(#455): Implement test logic
+    // 1. Create 3 InterceptMessages with AFTER type pointing to a callback
+    //    that doubles the return value
+    // 2. Call sendLocalAfterCallbacks() with initial returnValue of 1
+    // 3. Verify hasReturnValueOverride() is true
+    // 4. Verify getOverriddenReturnValue() returns 8
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that executor rejection is handled gracefully in BEFORE_ASYNC callbacks.
+   *
+   * <p>Acceptance Criteria:
+   * [TEST:LocalInterceptCallbackDispatcherTest.sendLocalBeforeAsyncCallbacks_executorShutdown_handlesGracefully]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #455")
+  public void sendLocalBeforeAsyncCallbacks_executorShutdown_handlesGracefully() {
+    // Given: ExecutorService that rejects tasks
+    // When: sendLocalBeforeAsyncCallbacks() called
+    // Then: RejectedExecutionException caught and logged
+
+    // TODO(#455): Implement test logic
+    // 1. Create a LocalInterceptCallbackDispatcher with a shutdown ExecutorService
+    // 2. Create InterceptMessage with BEFORE_ASYNC type
+    // 3. Call sendLocalBeforeAsyncCallbacks()
+    // 4. Verify no exception is thrown to caller
+    // 5. Optionally verify RejectedExecutionException was logged
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that SWALLOW_EXPLICIT policy swallows direct throws.
+   *
+   * <p>Acceptance Criteria:
+   * [TEST:LocalInterceptCallbackDispatcherTest.processException_withSWALLOW_EXPLICIT_policy_swallowsDirectThrows]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #455")
+  public void processException_withSWALLOW_EXPLICIT_policy_swallowsDirectThrows() {
+    // Given: Exception policy SWALLOW_EXPLICIT_ONLY (which is PROPAGATE_EXPLICIT_ONLY inverse)
+    // When: Callback throws directly (not via setExceptionToThrow)
+    // Then: Exception swallowed; proceed response returned
+
+    // TODO(#455): Implement test logic
+    // Note: The policy name in the issue might be conceptually referring to
+    // PROPAGATE_EXPLICIT_ONLY which only propagates explicit exceptions
+    // 1. Create dispatcher with PROPAGATE_EXPLICIT_ONLY policy
+    // 2. Create callback that throws directly (not via setExceptionToThrow)
+    // 3. Call sendLocalBeforeCallbacks()
+    // 4. Verify shouldProceed() is true
+    // 5. Verify shouldThrowException() is false
+    fail("Not yet implemented");
   }
 
   // ===== Test Callbacks Class =====
