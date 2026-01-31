@@ -27,6 +27,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.io.IORuntimeException;
@@ -36,7 +37,6 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -412,8 +412,8 @@ public class OutboundMsgTest {
   }
 
   // ============================================================================
-  // Test specifications for OutboundMsg edge cases (Issue #427)
-  // These tests are awaiting implementation in #428
+  // Edge case tests for OutboundMsg (Issue #428)
+  // Implements test specifications from Issue #427
   // ============================================================================
 
   /**
@@ -423,14 +423,23 @@ public class OutboundMsgTest {
    * IllegalArgumentException for null socket parameter.
    */
   @Test
-  @Ignore("Awaiting implementation in #428")
   public void send_nullSocket_throwsIllegalArgumentException() {
     // Given: A valid OutboundMsg with all required fields
+    String messageId = UUID.randomUUID().toString();
+    byte[] body = "test body".getBytes(UTF_8);
+    OutboundMsg msg =
+        new OutboundMsg(
+            MessageType.EXEC_CONSTRUCTOR, ExecPhase.BEFORE, null, messageId, null, body);
+
     // When: send(null) is called
     // Then: IllegalArgumentException is thrown (per Javadoc contract)
-
-    // TODO(#428): Implement test
-    fail("Not yet implemented");
+    try {
+      msg.send(null);
+      fail("Expected IllegalArgumentException for null socket");
+    } catch (IllegalArgumentException e) {
+      // Expected - verify message contains useful info
+      assertThat(e.getMessage().toLowerCase(Locale.ROOT).contains("null"), is(true));
+    }
   }
 
   /**
@@ -441,14 +450,34 @@ public class OutboundMsgTest {
    * successfully.
    */
   @Test
-  @Ignore("Awaiting implementation in #428")
   public void send_withDontwaitFlag_returnsAppropriately() {
-    // Given: A valid OutboundMsg; ZMQ socket configured with DONTWAIT flag
-    // When: send(socket, ZMQ.DONTWAIT) is called
-    // Then: Returns false if would block; true if sent successfully
+    // Given: A valid OutboundMsg; ZMQ socket pair for send/receive
+    String messageId = UUID.randomUUID().toString();
+    byte[] body = "test body".getBytes(UTF_8);
+    OutboundMsg msg =
+        new OutboundMsg(
+            MessageType.EXEC_CONSTRUCTOR, ExecPhase.BEFORE, null, messageId, null, body);
 
-    // TODO(#428): Implement test
-    fail("Not yet implemented");
+    String zmqEndpoint = "inproc://dontwait-test";
+    ZContext zmqContext = createContext();
+    ZMQ.Socket receiver = zmqContext.createSocket(SocketType.REP);
+    receiver.bind(zmqEndpoint);
+    ZMQ.Socket sender = zmqContext.createSocket(SocketType.REQ);
+    sender.connect(zmqEndpoint);
+
+    // When: send(socket, ZMQ.DONTWAIT) is called on a connected socket
+    // Then: Returns true because the socket is ready
+    boolean sent = msg.send(sender, ZMQ.DONTWAIT);
+    assertThat("Message should be sent successfully with DONTWAIT on ready socket", sent, is(true));
+
+    // Verify the message was actually received
+    OutboundMsg received = OutboundMsg.receive(receiver, true);
+    assertThat(received, is(notNullValue()));
+    assertThat(received.getMessageId(), is(messageId));
+
+    sender.close();
+    receiver.close();
+    zmqContext.destroy();
   }
 
   /**
@@ -458,14 +487,35 @@ public class OutboundMsgTest {
    * with a null socket parameter.
    */
   @Test
-  @Ignore("Awaiting implementation in #428")
   public void receive_nullSocket_handlesGracefully() {
     // Given: null socket
-    // When: receive(null) is called
+    // When: receive(null, blocking) is called
     // Then: IllegalArgumentException is thrown (per Javadoc contract)
+    try {
+      OutboundMsg.receive(null, true);
+      fail("Expected IllegalArgumentException for null socket with blocking=true");
+    } catch (IllegalArgumentException e) {
+      // Expected - verify message contains useful info
+      assertThat(e.getMessage().toLowerCase(Locale.ROOT).contains("null"), is(true));
+    }
 
-    // TODO(#428): Implement test
-    fail("Not yet implemented");
+    // Also test the non-blocking variant
+    try {
+      OutboundMsg.receive(null, false);
+      fail("Expected IllegalArgumentException for null socket with blocking=false");
+    } catch (IllegalArgumentException e) {
+      // Expected
+      assertThat(e.getMessage().toLowerCase(Locale.ROOT).contains("null"), is(true));
+    }
+
+    // Also test the convenience method (no blocking param)
+    try {
+      OutboundMsg.receive(null);
+      fail("Expected IllegalArgumentException for null socket with convenience method");
+    } catch (IllegalArgumentException e) {
+      // Expected
+      assertThat(e.getMessage().toLowerCase(Locale.ROOT).contains("null"), is(true));
+    }
   }
 
   /**
@@ -475,14 +525,41 @@ public class OutboundMsgTest {
    * + length (4 bytes) + body (variable).
    */
   @Test
-  @Ignore("Awaiting implementation in #428")
   public void writeTo_validBytes_writesCorrectFormat() {
     // Given: A valid OutboundMsg with known body content
-    // When: writeTo(bytes) is called
-    // Then: Writes type (1 byte) + length (4 bytes) + body in correct format
+    byte[] bodyContent = "hello world".getBytes(UTF_8);
+    OutboundMsg msg = new OutboundMsg(MessageType.EXEC_CONSTRUCTOR, bodyContent);
 
-    // TODO(#428): Implement test
-    fail("Not yet implemented");
+    // When: writeTo(bytes) is called
+    Bytes<?> out = Bytes.allocateElasticOnHeap(64);
+    msg.writeTo(out);
+
+    // Then: Writes type (1 byte) + length (4 bytes) + body in correct format
+    // Reset read position to beginning
+    out.readPosition(0);
+
+    // Read type byte
+    byte type = out.readByte();
+    assertThat(
+        "Type byte should match MessageType", type, is(MessageType.EXEC_CONSTRUCTOR.getId()));
+
+    // Read length (4 bytes, int)
+    int length = out.readInt();
+    assertThat("Length should match body length", length, is(bodyContent.length));
+
+    // Read body
+    byte[] readBody = new byte[length];
+    out.read(readBody, 0, length);
+    assertThat("Body content should match original", readBody, is(bodyContent));
+
+    // Verify total written size: 1 (type) + 4 (length) + body.length
+    long totalWritten = out.writePosition();
+    assertThat(
+        "Total bytes written should be 1 + 4 + body.length",
+        totalWritten,
+        is((long) (1 + 4 + bodyContent.length)));
+
+    out.releaseLast();
   }
 
   /**
@@ -492,14 +569,53 @@ public class OutboundMsgTest {
    * message is sent via ZMQ and then received.
    */
   @Test
-  @Ignore("Awaiting implementation in #428")
   public void sendReceive_multipleHeaders_roundTripPreserved() {
     // Given: OutboundMsg with 3 InternalHeaders
-    // When: Message is sent via ZMQ then received
-    // Then: All headers are preserved in received message
+    InternalHeader header1 = new InternalHeader().withHeaderType((byte) 1).withValue("value-one");
+    InternalHeader header2 = new InternalHeader().withHeaderType((byte) 2).withValue("value-two");
+    InternalHeader header3 = new InternalHeader().withHeaderType((byte) 3).withValue("value-three");
+    List<InternalHeader> headers = Arrays.asList(header1, header2, header3);
 
-    // TODO(#428): Implement test
-    fail("Not yet implemented");
+    String messageId = UUID.randomUUID().toString();
+    String responseToId = UUID.randomUUID().toString();
+    byte[] body = "multi-header body".getBytes(UTF_8);
+
+    OutboundMsg msgOut =
+        new OutboundMsg(
+            MessageType.INTERCEPT_MESSAGE, ExecPhase.AFTER, headers, messageId, responseToId, body);
+
+    // When: Message is sent via ZMQ then received
+    String zmqEndpoint = "inproc://multi-headers-test";
+    ZContext zmqContext = createContext();
+    ZMQ.Socket receiver = zmqContext.createSocket(SocketType.REP);
+    receiver.bind(zmqEndpoint);
+    ZMQ.Socket sender = zmqContext.createSocket(SocketType.REQ);
+    sender.connect(zmqEndpoint);
+
+    boolean sent = msgOut.send(sender);
+    assertThat("Message should be sent successfully", sent, is(true));
+
+    OutboundMsg msgIn = OutboundMsg.receive(receiver, true);
+
+    // Then: All headers are preserved in received message
+    assertThat(msgIn, is(notNullValue()));
+    assertThat(msgIn.getHeaders(), is(notNullValue()));
+    assertThat("Should have 3 headers", msgIn.getHeaders().size(), is(3));
+
+    // Verify each header is preserved
+    assertThat(msgIn.getHeaders().get(0).getHeaderType(), is((byte) 1));
+    assertThat(msgIn.getHeaders().get(0).getValue(), is("value-one"));
+    assertThat(msgIn.getHeaders().get(1).getHeaderType(), is((byte) 2));
+    assertThat(msgIn.getHeaders().get(1).getValue(), is("value-two"));
+    assertThat(msgIn.getHeaders().get(2).getHeaderType(), is((byte) 3));
+    assertThat(msgIn.getHeaders().get(2).getValue(), is("value-three"));
+
+    // Verify the entire message equals the original
+    assertThat(msgIn, is(msgOut));
+
+    sender.close();
+    receiver.close();
+    zmqContext.destroy();
   }
 
   /**
@@ -510,14 +626,38 @@ public class OutboundMsgTest {
    * size.
    */
   @Test
-  @Ignore("Awaiting implementation in #428")
   public void toString_validMessage_returnsReadableString() {
     // Given: OutboundMsg with all fields populated
-    // When: toString() is called
-    // Then: Returns informative string representation containing all field values
+    InternalHeader header = new InternalHeader().withHeaderType((byte) 5).withValue("test-header");
+    List<InternalHeader> headers = Collections.singletonList(header);
 
-    // TODO(#428): Implement test
-    fail("Not yet implemented");
+    String messageId = "test-msg-id-12345";
+    String responseToId = "response-to-id-67890";
+    byte[] body = "test body content".getBytes(UTF_8);
+
+    OutboundMsg msg =
+        new OutboundMsg(
+            MessageType.EXEC_INSTANCE_METHOD,
+            ExecPhase.BEFORE,
+            headers,
+            messageId,
+            responseToId,
+            body);
+
+    // When: toString() is called
+    String result = msg.toString();
+
+    // Then: Returns informative string representation containing all field values
+    assertThat("toString should contain class name", result.contains("OutboundMsg"), is(true));
+    assertThat(
+        "toString should contain message type", result.contains("EXEC_INSTANCE_METHOD"), is(true));
+    assertThat("toString should contain exec phase", result.contains("BEFORE"), is(true));
+    assertThat("toString should contain messageId", result.contains(messageId), is(true));
+    assertThat("toString should contain responseToId", result.contains(responseToId), is(true));
+    // Body is shown as byte array, so check for "body=" or similar
+    assertThat("toString should mention body", result.contains("body="), is(true));
+    // Size should be mentioned
+    assertThat("toString should mention size", result.contains("size="), is(true));
   }
 
   /**
@@ -527,14 +667,53 @@ public class OutboundMsgTest {
    * same hashCode value.
    */
   @Test
-  @Ignore("Awaiting implementation in #428")
   public void hashCode_equalObjects_sameHashCode() {
     // Given: Two equal OutboundMsg objects (same messageType, execPhase, headers,
     //        messageId, responseToId, and body)
-    // When: hashCode() is called on both
-    // Then: Same hash code value is returned
+    InternalHeader header = new InternalHeader().withHeaderType((byte) 7).withValue("hash-test");
+    List<InternalHeader> headers1 = Collections.singletonList(header);
+    List<InternalHeader> headers2 =
+        Collections.singletonList(
+            new InternalHeader().withHeaderType((byte) 7).withValue("hash-test"));
 
-    // TODO(#428): Implement test
-    fail("Not yet implemented");
+    String messageId = "hash-msg-id";
+    String responseToId = "hash-response-id";
+    byte[] body1 = "hash body".getBytes(UTF_8);
+    byte[] body2 = "hash body".getBytes(UTF_8);
+
+    OutboundMsg msg1 =
+        new OutboundMsg(
+            MessageType.EXEC_GET_FIELD, ExecPhase.AFTER, headers1, messageId, responseToId, body1);
+
+    OutboundMsg msg2 =
+        new OutboundMsg(
+            MessageType.EXEC_GET_FIELD, ExecPhase.AFTER, headers2, messageId, responseToId, body2);
+
+    // Verify objects are equal first
+    assertThat("Objects should be equal", msg1, is(msg2));
+
+    // When: hashCode() is called on both
+    int hash1 = msg1.hashCode();
+    int hash2 = msg2.hashCode();
+
+    // Then: Same hash code value is returned
+    assertThat("Equal objects must have same hashCode", hash1, is(hash2));
+
+    // Additional verification: hashCode is consistent (multiple calls return same value)
+    assertThat("hashCode should be consistent", msg1.hashCode(), is(hash1));
+    assertThat("hashCode should be consistent", msg2.hashCode(), is(hash2));
+
+    // Also verify that different objects have different hash codes (not guaranteed, but likely)
+    OutboundMsg msg3 =
+        new OutboundMsg(
+            MessageType.EXEC_PUT_FIELD, // Different type
+            ExecPhase.AFTER,
+            headers1,
+            messageId,
+            responseToId,
+            body1);
+
+    assertThat("Different objects should not be equal", msg1, is(not(msg3)));
+    // Note: Different objects MAY have same hashCode (hash collisions), but usually won't
   }
 }
