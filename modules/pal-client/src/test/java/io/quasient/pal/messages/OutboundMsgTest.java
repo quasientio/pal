@@ -36,6 +36,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -408,5 +409,132 @@ public class OutboundMsgTest {
         // pass
       }
     }
+  }
+
+  // ============================================================================
+  // Test specifications for OutboundMsg edge cases (Issue #427)
+  // These tests are awaiting implementation in #428
+  // ============================================================================
+
+  /**
+   * Verifies that send() throws IllegalArgumentException when called with a null socket.
+   *
+   * <p>Per Javadoc contract, the send method should validate its input and throw
+   * IllegalArgumentException for null socket parameter.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #428")
+  public void send_nullSocket_throwsIllegalArgumentException() {
+    // Given: A valid OutboundMsg with all required fields
+    // When: send(null) is called
+    // Then: IllegalArgumentException is thrown (per Javadoc contract)
+
+    // TODO(#428): Implement test
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that send() with DONTWAIT flag returns appropriate values.
+   *
+   * <p>When using the two-argument send(socket, flags) method with ZMQ.DONTWAIT flag, the method
+   * should return false if the operation would block, and true if the message was sent
+   * successfully.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #428")
+  public void send_withDontwaitFlag_returnsAppropriately() {
+    // Given: A valid OutboundMsg; ZMQ socket configured with DONTWAIT flag
+    // When: send(socket, ZMQ.DONTWAIT) is called
+    // Then: Returns false if would block; true if sent successfully
+
+    // TODO(#428): Implement test
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that receive() handles null socket gracefully.
+   *
+   * <p>Per Javadoc contract, the receive method should throw IllegalArgumentException when called
+   * with a null socket parameter.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #428")
+  public void receive_nullSocket_handlesGracefully() {
+    // Given: null socket
+    // When: receive(null) is called
+    // Then: IllegalArgumentException is thrown (per Javadoc contract)
+
+    // TODO(#428): Implement test
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that writeTo() writes the correct binary format.
+   *
+   * <p>The writeTo method should write the message in Chronicle Queue binary format: type (1 byte)
+   * + length (4 bytes) + body (variable).
+   */
+  @Test
+  @Ignore("Awaiting implementation in #428")
+  public void writeTo_validBytes_writesCorrectFormat() {
+    // Given: A valid OutboundMsg with known body content
+    // When: writeTo(bytes) is called
+    // Then: Writes type (1 byte) + length (4 bytes) + body in correct format
+
+    // TODO(#428): Implement test
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that multiple headers are preserved during send/receive round-trip.
+   *
+   * <p>When an OutboundMsg has multiple InternalHeaders, all headers should be preserved when the
+   * message is sent via ZMQ and then received.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #428")
+  public void sendReceive_multipleHeaders_roundTripPreserved() {
+    // Given: OutboundMsg with 3 InternalHeaders
+    // When: Message is sent via ZMQ then received
+    // Then: All headers are preserved in received message
+
+    // TODO(#428): Implement test
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that toString() returns a readable string representation.
+   *
+   * <p>When an OutboundMsg has all fields populated, toString() should return an informative string
+   * that includes the message type, execution phase, headers, message ID, response-to ID, body, and
+   * size.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #428")
+  public void toString_validMessage_returnsReadableString() {
+    // Given: OutboundMsg with all fields populated
+    // When: toString() is called
+    // Then: Returns informative string representation containing all field values
+
+    // TODO(#428): Implement test
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that equal OutboundMsg objects have the same hashCode.
+   *
+   * <p>Per the hashCode contract, two objects that are equal according to equals() must return the
+   * same hashCode value.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #428")
+  public void hashCode_equalObjects_sameHashCode() {
+    // Given: Two equal OutboundMsg objects (same messageType, execPhase, headers,
+    //        messageId, responseToId, and body)
+    // When: hashCode() is called on both
+    // Then: Same hash code value is returned
+
+    // TODO(#428): Implement test
+    fail("Not yet implemented");
   }
 }
