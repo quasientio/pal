@@ -13,6 +13,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
@@ -31,6 +32,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
@@ -219,6 +221,159 @@ public class SessionServiceTest extends ZmqEnabledTest {
     sessionResponseMsg = SessionResponseMsg.receive(socket, true);
     assertNotNull(sessionResponseMsg);
     assertThat(sessionResponseMsg.getStatus(), is(SessionStatusType.NO_SUCH_SESSION));
+  }
+
+  // ===========================================================================
+  // Test specifications for issue #462 - Awaiting implementation in #463
+  // ===========================================================================
+
+  /**
+   * Tests that CLEAR_SESSIONS command clears all sessions.
+   *
+   * <p>Given: SessionService with 3 sessions containing objects When: CLEAR_SESSIONS command
+   * received Then: All sessions cleared; response indicates success
+   */
+  @Test
+  @Ignore("Awaiting implementation in #463")
+  public void run_clearSessionsCommand_clearsAllSessions() {
+    // Given: SessionService with 3 sessions containing objects
+    // - Create session 1 with object
+    // - Create session 2 with object
+    // - Create session 3 with object
+
+    // When: CLEAR_SESSIONS command received
+    // - Send CLEAR_SESSIONS command via socket
+
+    // Then: All sessions cleared; response indicates success
+    // - Verify response status is OK
+    // - Verify all 3 sessions are gone (DELETE_OBJECT returns NO_SUCH_SESSION for each)
+
+    // TODO(#463): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that deleteSession throws NoSuchSessionException for non-existent session.
+   *
+   * <p>Given: SessionService with no sessions When: deleteSession called with random UUID Then:
+   * NoSuchSessionException thrown (returns NO_SUCH_SESSION via socket)
+   */
+  @Test
+  @Ignore("Awaiting implementation in #463")
+  public void deleteSession_nonExistent_throwsNoSuchSessionException() {
+    // Given: SessionService with no sessions
+    // - No setup required, service starts with empty sessions
+
+    // When: deleteSession called with random UUID
+    // - Send DELETE_SESSION command with random session UUID
+
+    // Then: NoSuchSessionException thrown (returns NO_SUCH_SESSION via socket)
+    // - Verify response status is NO_SUCH_SESSION
+
+    // TODO(#463): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that storeInSession handles null object gracefully.
+   *
+   * <p>Given: Valid session When: storeInSession called with null object (ObjectRef not in lookup
+   * store) Then: Method handles gracefully (returns ERROR status)
+   */
+  @Test
+  @Ignore("Awaiting implementation in #463")
+  public void storeInSession_nullObject_handlesGracefully() {
+    // Given: Valid session (or new session will be created)
+    // - Create an ObjectRef that is NOT in the objectLookupStore
+
+    // When: storeInSession called with null object
+    // - Send STORE_OBJECT command with an ObjectRef that doesn't exist in lookup store
+
+    // Then: Method handles gracefully (returns ERROR status)
+    // - Verify response status is ERROR (storeInSession returns false when object is null)
+
+    // TODO(#463): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that getObjectRefsInSession throws NoSuchSessionException for non-existent session.
+   *
+   * <p>Given: SessionService with no matching session When: getObjectRefsInSession called (via
+   * DELETE_SESSION) Then: NoSuchSessionException thrown (returns NO_SUCH_SESSION via socket)
+   */
+  @Test
+  @Ignore("Awaiting implementation in #463")
+  public void getObjectRefsInSession_nonExistentSession_throwsNoSuchSessionException() {
+    // Given: SessionService with no matching session
+    // - No setup required, service starts with empty sessions
+
+    // When: getObjectRefsInSession called (indirectly via DELETE_SESSION command)
+    // - Send DELETE_SESSION command with random session UUID
+    // - The run() method calls getObjectRefsInSession before deleteSession
+
+    // Then: NoSuchSessionException thrown (returns NO_SUCH_SESSION via socket)
+    // - Verify response status is NO_SUCH_SESSION
+
+    // TODO(#463): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that deleteObject from non-existent session returns appropriate status.
+   *
+   * <p>Given: SessionService with no matching session When: deleteObject called Then: Returns
+   * NO_SUCH_SESSION status (no crash)
+   *
+   * <p>Note: The private deleteObject method throws NoSuchSessionException, which is caught in
+   * run() and converted to NO_SUCH_SESSION status.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #463")
+  public void deleteObject_fromNonExistentSession_returnsFalse() {
+    // Given: SessionService with no matching session
+    // - No setup required, service starts with empty sessions
+
+    // When: deleteObject called via DELETE_OBJECT command
+    // - Send DELETE_OBJECT command with random session UUID and any ObjectRef
+
+    // Then: Returns NO_SUCH_SESSION status (no crash)
+    // - Verify response status is NO_SUCH_SESSION
+    // - Verify service continues running (send another command successfully)
+
+    // TODO(#463): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that invalid/unknown command type results in appropriate warning.
+   *
+   * <p>Given: SessionService running When: Unknown command type received Then: Warning logged;
+   * UNSUPPORTED_SESSION_CMD status returned; no crash
+   *
+   * <p>Note: This tests the default case in the switch statement of run(). Since SessionCommandType
+   * is an enum with fixed values, we cannot send an unknown value via the normal API. This test
+   * verifies the default branch exists and handles gracefully. Implementation may require mocking
+   * or special test infrastructure.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #463")
+  public void run_invalidCommand_logsWarning() {
+    // Given: SessionService running
+    // - Service is already started in @Before setup
+
+    // When: Unknown command type received
+    // - This is challenging as SessionCommandType is an enum
+    // - May need to: (a) use reflection to inject invalid command, or
+    //                (b) verify via integration with custom message, or
+    //                (c) document that this path is unreachable in practice
+
+    // Then: Warning logged; UNSUPPORTED_SESSION_CMD status returned; no crash
+    // - If we can send invalid command: verify response is UNSUPPORTED_SESSION_CMD
+    // - Verify service continues to respond to valid commands
+
+    // TODO(#463): Implement test logic - may require special test approach
+    fail("Not yet implemented");
   }
 
   @After
