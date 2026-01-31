@@ -125,10 +125,17 @@ public class MessageStreamer {
   /**
    * Closes the subscriber socket and terminates the ZeroMQ context, releasing all associated
    * resources.
+   *
+   * <p>This method is idempotent and safe to call multiple times. It is also safe to call before
+   * {@link #connect()} has been called, in which case it is a no-op.
    */
   public void close() {
-    subscriber.close();
-    zmqContext.close();
+    if (subscriber != null) {
+      subscriber.close();
+    }
+    if (zmqContext != null) {
+      zmqContext.close();
+    }
   }
 
   /**

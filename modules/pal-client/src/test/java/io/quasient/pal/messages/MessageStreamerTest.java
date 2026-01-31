@@ -23,7 +23,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.junit.Assume;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -132,7 +131,7 @@ public class MessageStreamerTest {
     logger.debug("Stream received {} messages", messageStreamer.getReceivedMessagesCount());
   }
 
-  // ===== Edge Case Test Specifications (Issue #425) =====
+  // ===== Edge Case Tests (Issue #426) =====
   // These tests target error handling paths to improve coverage of MessageStreamer.
 
   /**
@@ -143,19 +142,28 @@ public class MessageStreamerTest {
    * without causing errors or unexpected behavior.
    */
   @Test
-  @Ignore("Awaiting implementation in #426")
-  public void close_calledMultipleTimes_noException() {
+  public void close_calledMultipleTimes_noException() throws Exception {
     // Given: A connected MessageStreamer
-    // When: close() is called twice
-    // Then: No exception is thrown
+    final int port;
+    try {
+      port = findOpenPort();
+    } catch (Exception e) {
+      Assume.assumeNoException("Skipping network-dependent test due to sandbox", e);
+      return;
+    }
 
-    // TODO(#426): Implement after #426 provides the implementation
-    // Implementation should:
-    // 1. Create a MessageStreamer with valid host/port
-    // 2. Call connect() to establish connection
-    // 3. Call close() first time (should succeed)
-    // 4. Call close() second time (should not throw)
-    org.junit.Assert.fail("Not yet implemented");
+    MessageStreamer streamer = new MessageStreamer("localhost", port);
+    try {
+      streamer.connect();
+
+      // When: close() is called twice
+      streamer.close();
+      streamer.close();
+
+      // Then: No exception is thrown (test passes if we reach this point)
+    } finally {
+      // Cleanup is already done via close() calls above
+    }
   }
 
   /**
@@ -165,19 +173,13 @@ public class MessageStreamerTest {
    * treating it as a no-op rather than throwing a NullPointerException.
    */
   @Test
-  @Ignore("Awaiting implementation in #426")
   public void close_calledBeforeConnect_noException() {
     // Given: An unconnected MessageStreamer (connect() never called)
+    MessageStreamer streamer = new MessageStreamer("localhost", 5555);
+
     // When: close() is called
     // Then: No exception is thrown; it should be a safe no-op
-
-    // TODO(#426): Implement after #426 provides the implementation
-    // Implementation should:
-    // 1. Create a MessageStreamer with valid host/port
-    // 2. Do NOT call connect()
-    // 3. Call close() directly
-    // 4. Verify no exception is thrown (may need null checks in close())
-    org.junit.Assert.fail("Not yet implemented");
+    streamer.close();
   }
 
   /**
@@ -187,20 +189,28 @@ public class MessageStreamerTest {
    * before any messages flow through the stream.
    */
   @Test
-  @Ignore("Awaiting implementation in #426")
-  public void getReceivedMessagesCount_noMessages_zero() {
+  public void getReceivedMessagesCount_noMessages_zero() throws Exception {
     // Given: A connected MessageStreamer with no messages received
-    // When: getReceivedMessagesCount() is called
-    // Then: Returns 0
+    final int port;
+    try {
+      port = findOpenPort();
+    } catch (Exception e) {
+      Assume.assumeNoException("Skipping network-dependent test due to sandbox", e);
+      return;
+    }
 
-    // TODO(#426): Implement after #426 provides the implementation
-    // Implementation should:
-    // 1. Create a MessageStreamer with valid host/port
-    // 2. Call connect() to establish connection
-    // 3. Immediately call getReceivedMessagesCount() without consuming any messages
-    // 4. Assert that the count is 0
-    // 5. Clean up with close()
-    org.junit.Assert.fail("Not yet implemented");
+    MessageStreamer streamer = new MessageStreamer("localhost", port);
+    try {
+      streamer.connect();
+
+      // When: getReceivedMessagesCount() is called
+      long count = streamer.getReceivedMessagesCount();
+
+      // Then: Returns 0
+      org.junit.Assert.assertEquals("Initial message count should be zero", 0L, count);
+    } finally {
+      streamer.close();
+    }
   }
 
   /**
@@ -210,19 +220,22 @@ public class MessageStreamerTest {
    * gracefully when given an invalid value like -1.
    */
   @Test
-  @Ignore("Awaiting implementation in #426")
   public void connect_invalidPort_throwsException() {
     // Given: A MessageStreamer configured with invalid port (-1)
-    // When: connect() is called
-    // Then: An appropriate exception is thrown (likely ZMQException or IllegalArgumentException)
+    MessageStreamer streamer = new MessageStreamer("localhost", -1);
 
-    // TODO(#426): Implement after #426 provides the implementation
-    // Implementation should:
-    // 1. Create a MessageStreamer with host="localhost" and port=-1
-    // 2. Attempt to call connect()
-    // 3. Expect an exception to be thrown
-    // 4. Optionally verify the exception type/message
-    org.junit.Assert.fail("Not yet implemented");
+    try {
+      // When: connect() is called
+      streamer.connect();
+
+      // Then: An appropriate exception is thrown
+      org.junit.Assert.fail("Expected an exception for invalid port");
+    } catch (IllegalArgumentException | org.zeromq.ZMQException e) {
+      // Expected - ZMQ should reject invalid port
+      logger.debug("Got expected exception for invalid port: {}", e.getMessage());
+    } finally {
+      streamer.close();
+    }
   }
 
   /**
@@ -233,19 +246,31 @@ public class MessageStreamerTest {
    * throw an appropriate exception.
    */
   @Test
-  @Ignore("Awaiting implementation in #426")
-  public void getStream_afterClose_behavesCorrectly() {
+  public void getStream_afterClose_behavesCorrectly() throws Exception {
     // Given: A MessageStreamer that was connected and then closed
-    // When: getStream() is called and an attempt is made to consume from it
-    // Then: The stream terminates gracefully or throws an appropriate exception
+    final int port;
+    try {
+      port = findOpenPort();
+    } catch (Exception e) {
+      Assume.assumeNoException("Skipping network-dependent test due to sandbox", e);
+      return;
+    }
 
-    // TODO(#426): Implement after #426 provides the implementation
-    // Implementation should:
-    // 1. Create a MessageStreamer with valid host/port
-    // 2. Call connect() to establish connection
-    // 3. Call close() to terminate the connection
-    // 4. Call getStream() and attempt to read (e.g., findFirst() or limit(1))
-    // 5. Verify behavior: either null elements, empty stream, or appropriate exception
-    org.junit.Assert.fail("Not yet implemented");
+    MessageStreamer streamer = new MessageStreamer("localhost", port);
+    streamer.connect();
+    streamer.close();
+
+    // When: getStream() is called and an attempt is made to consume from it
+    // Then: The stream should return null elements (ZMQ exceptions are caught in getNext())
+    java.util.stream.Stream<io.quasient.pal.messages.colfer.Message> stream = streamer.getStream();
+
+    // Use iterator to handle null values (findFirst() throws NPE on null)
+    java.util.Iterator<io.quasient.pal.messages.colfer.Message> iterator =
+        stream.limit(1).iterator();
+    org.junit.Assert.assertTrue("Stream should have an element", iterator.hasNext());
+    io.quasient.pal.messages.colfer.Message message = iterator.next();
+
+    // The stream should return null (getNext returns null when socket is closed/errors occur)
+    org.junit.Assert.assertNull("After close, stream element should be null", message);
   }
 }
