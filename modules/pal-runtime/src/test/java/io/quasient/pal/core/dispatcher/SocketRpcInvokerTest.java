@@ -11,6 +11,7 @@ package io.quasient.pal.core.dispatcher;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -41,6 +42,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
@@ -315,5 +317,166 @@ public class SocketRpcInvokerTest extends ZmqEnabledTest {
     JsonRpcResponse json = gson.fromJson(resp.getJsonMessage(), JsonRpcResponse.class);
     assertThat(json.getError() != null, is(true));
     verify(incomingMessageDispatcher, times(0)).incomingCall(any(), any(), any());
+  }
+
+  // ==========================================================================
+  // Test specifications for Issue #476 - Awaiting implementation in #477
+  // ==========================================================================
+
+  /**
+   * Test specification: META message handling via JSON-RPC.
+   *
+   * <p>Given: JSON-RPC request for META service (e.g., "describe" method)
+   *
+   * <p>When: Request is dispatched through the JSON-RPC socket
+   *
+   * <p>Then: MetaMessageDispatcher should be invoked and return class metadata response
+   */
+  @Test
+  @Ignore("Awaiting implementation in #477")
+  public void dispatchJsonRpcRequest_metaMessage_handledCorrectly() {
+    // Given: JSON-RPC request for META service
+    // When: Request dispatched
+    // Then: MetaMessageDispatcher invoked; response returned
+
+    // TODO(#477): Implement test logic
+    // - Create a JSON-RPC request with method "describe" and params containing type name
+    // - Configure mock incomingMessageDispatcher to return valid MetaMessage response
+    // - Send request via jsonRpcDealerSocket
+    // - Verify response contains class metadata
+    // - Verify MetaMessageDispatcher was invoked (via incomingCall)
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Test specification: CONTROL message handling via JSON-RPC.
+   *
+   * <p>Given: JSON-RPC request for CONTROL message (e.g., session control)
+   *
+   * <p>When: Request is dispatched through the JSON-RPC socket
+   *
+   * <p>Then: ControlMessageDispatcher should be invoked and return session response
+   */
+  @Test
+  @Ignore("Awaiting implementation in #477")
+  public void dispatchJsonRpcRequest_controlMessage_handledCorrectly() {
+    // Given: JSON-RPC request for CONTROL message
+    // When: Request dispatched
+    // Then: ControlMessageDispatcher invoked; response returned
+
+    // TODO(#477): Implement test logic
+    // - Create a JSON-RPC request with CONTROL method (e.g., session management)
+    // - Configure mock incomingMessageDispatcher to return valid ControlMessage response
+    // - Send request via jsonRpcDealerSocket
+    // - Verify response contains control message result
+    // - Verify ControlMessageDispatcher was invoked
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Test specification: Dispatch exception returns error response.
+   *
+   * <p>Given: IncomingMessageDispatcher that throws exception during dispatch
+   *
+   * <p>When: JSON-RPC request is dispatched
+   *
+   * <p>Then: JSON-RPC error response should be returned with appropriate error details
+   */
+  @Test
+  @Ignore("Awaiting implementation in #477")
+  public void dispatchJsonRpcRequest_dispatchException_returnsErrorResponse() {
+    // Given: IncomingMessageDispatcher that throws exception
+    // When: Request dispatched
+    // Then: JSON-RPC error response returned
+
+    // TODO(#477): Implement test logic
+    // - Configure incomingMessageDispatcher.incomingCall() to throw RuntimeException
+    // - Create valid JSON-RPC EXEC request
+    // - Send request via jsonRpcDealerSocket
+    // - Verify response contains error object with exception details
+    // - Verify result is null
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Test specification: AROUND intercept callback with proceed() call.
+   *
+   * <p>Given: AROUND BEFORE intercept callback request
+   *
+   * <p>When: Callback handler calls ctx.proceed() to continue execution
+   *
+   * <p>Then: Original method should execute, AFTER phase should complete, final response returned
+   */
+  @Test
+  @Ignore("Awaiting implementation in #477")
+  public void handleAroundInterceptCallback_proceedCalled_executesChain() {
+    // Given: AROUND BEFORE intercept request
+    // When: Callback calls proceed()
+    // Then: Original method executed; AFTER phase completes
+
+    // TODO(#477): Implement test logic
+    // - Create InterceptCallbackRequestMessage with AROUND type and BEFORE phase
+    // - Configure mock incomingMessageDispatcher.incomingAroundInterceptCallback() to:
+    //   - Invoke the AroundSocketAccessor.sendAndReceiveAfterPhase()
+    //   - Return final InterceptCallbackResponseMessage
+    // - Send the AROUND BEFORE request via zmqRpcDealerSocket
+    // - Send AFTER phase request in response to BEFORE response
+    // - Verify final response has AFTER phase data
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Test specification: AROUND intercept callback timeout.
+   *
+   * <p>Given: AROUND callback that doesn't respond within timeout
+   *
+   * <p>When: Timeout is exceeded while waiting for AFTER phase
+   *
+   * <p>Then: AroundTimeoutException should be raised and error response returned
+   */
+  @Test
+  @Ignore("Awaiting implementation in #477")
+  public void handleAroundInterceptCallback_proceedTimeout_returnsError() {
+    // Given: AROUND callback that doesn't respond
+    // When: Timeout exceeded
+    // Then: Timeout error returned
+
+    // TODO(#477): Implement test logic
+    // - Create InterceptCallbackRequestMessage with AROUND type and BEFORE phase
+    // - Configure mock incomingMessageDispatcher.incomingAroundInterceptCallback() to:
+    //   - Invoke AroundSocketAccessor.sendAndReceiveAfterPhase() which times out
+    //   - Throw AroundTimeoutException
+    // - Send the AROUND BEFORE request via zmqRpcDealerSocket
+    // - Do NOT send AFTER phase request (simulate timeout)
+    // - Verify error response contains timeout information
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Test specification: Socket exception with non-terminal error is rethrown.
+   *
+   * <p>Given: ZMQException with non-terminal error code (not ETERM or EINTR)
+   *
+   * <p>When: handleSocketException is called with this exception
+   *
+   * <p>Then: Exception should be rethrown rather than handled gracefully
+   *
+   * <p>Note: This test verifies the rethrow path in handleSocketException. Existing test
+   * SocketRpcInvokerHandleExceptionTest covers ETERM/EINTR cases, this covers the rethrow case.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #477")
+  public void handleSocketException_otherError_rethrows() {
+    // Given: ZMQException with non-terminal error
+    // When: handleSocketException called
+    // Then: Exception rethrown
+
+    // TODO(#477): Implement test logic
+    // - Use reflection to access private handleSocketException method
+    // - Call with ZMQException containing EFAULT or other non-terminal error code
+    // - Verify ZMQException is thrown (not caught/handled)
+    // Note: SocketRpcInvokerHandleExceptionTest already tests this case but
+    // this spec documents the requirement explicitly for coverage
+    fail("Not yet implemented");
   }
 }
