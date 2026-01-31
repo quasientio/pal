@@ -11,18 +11,26 @@ package io.quasient.pal.cxn.chronicle;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
+import io.quasient.pal.common.runtime.ExecPhase;
 import io.quasient.pal.cxn.chronicle.ChronicleLogUtil.QueueIndexInfo;
+import io.quasient.pal.messages.OutboundMsg;
+import io.quasient.pal.messages.colfer.ExecMessage;
+import io.quasient.pal.messages.types.MessageType;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
+import java.util.UUID;
 import java.util.stream.Stream;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.wire.WireType;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -228,9 +236,8 @@ public class ChronicleLogUtilTest {
   }
 
   // ============================================================================
-  // Test specifications for ChronicleLogUtil with real queues (Issue #419)
+  // Tests for ChronicleLogUtil with real queues (Issue #420)
   // These tests use real Chronicle queues (not mocks) to verify actual behavior.
-  // Awaiting implementation in #420
   // ============================================================================
 
   /**
@@ -240,14 +247,16 @@ public class ChronicleLogUtilTest {
    * queueExists correctly detects the queue based on the presence of .cq4 files.
    */
   @Test
-  @Ignore("Awaiting implementation in #420")
   public void queueExists_directoryWithCq4Files_true() {
     // Given: Directory with actual .cq4 Chronicle files (created by populating queue)
-    // When: queueExists(path) called
-    // Then: Returns true
+    Path queuePath = tempDir.resolve("queue-with-cq4-files");
+    populateQueueWithMessages(queuePath, 1);
 
-    // TODO(#420): Implement test - create queue, populate with message, verify queueExists
-    fail("Not yet implemented");
+    // When: queueExists(path) called
+    boolean exists = ChronicleLogUtil.queueExists(queuePath);
+
+    // Then: Returns true
+    assertTrue("Queue with .cq4 files should exist", exists);
   }
 
   /**
@@ -257,14 +266,16 @@ public class ChronicleLogUtilTest {
    * countMessages correctly returns 0.
    */
   @Test
-  @Ignore("Awaiting implementation in #420")
   public void countMessages_emptyQueue_zero() {
     // Given: Newly created empty Chronicle queue
-    // When: countMessages(path) called
-    // Then: Returns 0
+    Path queuePath = tempDir.resolve("empty-queue-count");
+    createEmptyQueue(queuePath);
 
-    // TODO(#420): Implement test - create empty queue, verify count is 0
-    fail("Not yet implemented");
+    // When: countMessages(path) called
+    int count = ChronicleLogUtil.countMessages(queuePath);
+
+    // Then: Returns 0
+    assertEquals("Empty queue should have 0 messages", 0, count);
   }
 
   /**
@@ -274,14 +285,16 @@ public class ChronicleLogUtilTest {
    * returns the exact count.
    */
   @Test
-  @Ignore("Awaiting implementation in #420")
   public void countMessages_knownMessageCount_exactCount() {
     // Given: Queue populated with exactly 42 messages
-    // When: countMessages(path) called
-    // Then: Returns 42
+    Path queuePath = tempDir.resolve("queue-with-42-messages");
+    populateQueueWithMessages(queuePath, 42);
 
-    // TODO(#420): Implement test using populateQueueWithMessages(path, 42)
-    fail("Not yet implemented");
+    // When: countMessages(path) called
+    int count = ChronicleLogUtil.countMessages(queuePath);
+
+    // Then: Returns 42
+    assertEquals("Queue should have exactly 42 messages", 42, count);
   }
 
   /**
@@ -291,14 +304,16 @@ public class ChronicleLogUtilTest {
    * without writing any messages, then verifies isQueueEmpty returns true.
    */
   @Test
-  @Ignore("Awaiting implementation in #420")
   public void isQueueEmpty_emptyExistingQueue_true() {
     // Given: Existing queue directory with no messages
-    // When: isQueueEmpty(path) called
-    // Then: Returns true
+    Path queuePath = tempDir.resolve("empty-queue-exists");
+    createEmptyQueue(queuePath);
 
-    // TODO(#420): Implement test - create queue without messages, verify isEmpty
-    fail("Not yet implemented");
+    // When: isQueueEmpty(path) called
+    boolean isEmpty = ChronicleLogUtil.isQueueEmpty(queuePath);
+
+    // Then: Returns true
+    assertTrue("Empty existing queue should be considered empty", isEmpty);
   }
 
   /**
@@ -308,14 +323,16 @@ public class ChronicleLogUtilTest {
    * correctly returns false.
    */
   @Test
-  @Ignore("Awaiting implementation in #420")
   public void isQueueEmpty_populatedQueue_false() {
     // Given: Queue with at least one message
-    // When: isQueueEmpty(path) called
-    // Then: Returns false
+    Path queuePath = tempDir.resolve("populated-queue");
+    populateQueueWithMessages(queuePath, 1);
 
-    // TODO(#420): Implement test using populateQueueWithMessages(path, 1)
-    fail("Not yet implemented");
+    // When: isQueueEmpty(path) called
+    boolean isEmpty = ChronicleLogUtil.isQueueEmpty(queuePath);
+
+    // Then: Returns false
+    assertFalse("Populated queue should not be considered empty", isEmpty);
   }
 
   /**
@@ -325,14 +342,19 @@ public class ChronicleLogUtilTest {
    * lastIndex=-1 to indicate no messages are present.
    */
   @Test
-  @Ignore("Awaiting implementation in #420")
   public void getQueueIndexInfo_emptyQueue_negativeIndices() {
     // Given: Empty Chronicle queue
-    // When: getQueueIndexInfo(path) called
-    // Then: Returns QueueIndexInfo with firstIndex=-1, lastIndex=-1
+    Path queuePath = tempDir.resolve("empty-queue-index");
+    createEmptyQueue(queuePath);
 
-    // TODO(#420): Implement test - verify empty queue returns (-1, -1)
-    fail("Not yet implemented");
+    // When: getQueueIndexInfo(path) called
+    QueueIndexInfo info = ChronicleLogUtil.getQueueIndexInfo(queuePath);
+
+    // Then: Returns QueueIndexInfo with firstIndex=-1, lastIndex=-1
+    assertNotNull("QueueIndexInfo should not be null", info);
+    assertEquals("Empty queue should have firstIndex=-1", -1, info.getFirstIndex());
+    assertEquals("Empty queue should have lastIndex=-1", -1, info.getLastIndex());
+    assertEquals("Empty queue should have messageCount=0", 0, info.getMessageCount());
   }
 
   /**
@@ -342,14 +364,19 @@ public class ChronicleLogUtilTest {
    * lastIndex=0.
    */
   @Test
-  @Ignore("Awaiting implementation in #420")
   public void getQueueIndexInfo_singleMessage_zeroZero() {
     // Given: Queue with exactly 1 message
-    // When: getQueueIndexInfo(path) called
-    // Then: Returns QueueIndexInfo with firstIndex=0, lastIndex=0
+    Path queuePath = tempDir.resolve("single-message-queue");
+    populateQueueWithMessages(queuePath, 1);
 
-    // TODO(#420): Implement test using populateQueueWithMessages(path, 1)
-    fail("Not yet implemented");
+    // When: getQueueIndexInfo(path) called
+    QueueIndexInfo info = ChronicleLogUtil.getQueueIndexInfo(queuePath);
+
+    // Then: Returns QueueIndexInfo with firstIndex=0, lastIndex=0
+    assertNotNull("QueueIndexInfo should not be null", info);
+    assertEquals("Single message queue should have firstIndex=0", 0, info.getFirstIndex());
+    assertEquals("Single message queue should have lastIndex=0", 0, info.getLastIndex());
+    assertEquals("Single message queue should have messageCount=1", 1, info.getMessageCount());
   }
 
   /**
@@ -358,14 +385,19 @@ public class ChronicleLogUtilTest {
    * <p>For a queue with 10 messages, the logical indices should be firstIndex=0 and lastIndex=9.
    */
   @Test
-  @Ignore("Awaiting implementation in #420")
   public void getQueueIndexInfo_multipleMessages_correctRange() {
     // Given: Queue with exactly 10 messages
-    // When: getQueueIndexInfo(path) called
-    // Then: Returns QueueIndexInfo with firstIndex=0, lastIndex=9
+    Path queuePath = tempDir.resolve("ten-message-queue");
+    populateQueueWithMessages(queuePath, 10);
 
-    // TODO(#420): Implement test using populateQueueWithMessages(path, 10)
-    fail("Not yet implemented");
+    // When: getQueueIndexInfo(path) called
+    QueueIndexInfo info = ChronicleLogUtil.getQueueIndexInfo(queuePath);
+
+    // Then: Returns QueueIndexInfo with firstIndex=0, lastIndex=9
+    assertNotNull("QueueIndexInfo should not be null", info);
+    assertEquals("Ten message queue should have firstIndex=0", 0, info.getFirstIndex());
+    assertEquals("Ten message queue should have lastIndex=9", 9, info.getLastIndex());
+    assertEquals("Ten message queue should have messageCount=10", 10, info.getMessageCount());
   }
 
   /**
@@ -375,14 +407,16 @@ public class ChronicleLogUtilTest {
    * files for metadata.
    */
   @Test
-  @Ignore("Awaiting implementation in #420")
   public void getQueueSizeInBytes_emptyQueue_zero() {
     // Given: Empty Chronicle queue
-    // When: getQueueSizeInBytes(path) called
-    // Then: Returns 0
+    Path queuePath = tempDir.resolve("empty-queue-size");
+    createEmptyQueue(queuePath);
 
-    // TODO(#420): Implement test - verify empty queue returns 0 bytes
-    fail("Not yet implemented");
+    // When: getQueueSizeInBytes(path) called
+    long size = ChronicleLogUtil.getQueueSizeInBytes(queuePath);
+
+    // Then: Returns 0
+    assertEquals("Empty queue should have 0 bytes", 0L, size);
   }
 
   /**
@@ -391,14 +425,16 @@ public class ChronicleLogUtilTest {
    * <p>A queue with messages should report a positive byte size reflecting the actual data written.
    */
   @Test
-  @Ignore("Awaiting implementation in #420")
   public void getQueueSizeInBytes_populatedQueue_nonZero() {
     // Given: Queue with known messages
-    // When: getQueueSizeInBytes(path) called
-    // Then: Returns value > 0
+    Path queuePath = tempDir.resolve("populated-queue-size");
+    populateQueueWithMessages(queuePath, 10);
 
-    // TODO(#420): Implement test using populateQueueWithMessages, verify size > 0
-    fail("Not yet implemented");
+    // When: getQueueSizeInBytes(path) called
+    long size = ChronicleLogUtil.getQueueSizeInBytes(queuePath);
+
+    // Then: Returns value > 0
+    assertTrue("Populated queue should have non-zero byte size", size > 0);
   }
 
   /**
@@ -408,14 +444,19 @@ public class ChronicleLogUtilTest {
    * then verifies that deleteQueue successfully removes all files and the directory.
    */
   @Test
-  @Ignore("Awaiting implementation in #420")
   public void deleteQueue_chronicleQueueWithFiles_deleted() {
     // Given: Queue with .cq4 files and metadata
-    // When: deleteQueue(path) called
-    // Then: Returns true; directory no longer exists
+    Path queuePath = tempDir.resolve("queue-to-delete");
+    populateQueueWithMessages(queuePath, 5);
+    assertTrue("Queue directory should exist before deletion", Files.exists(queuePath));
+    assertTrue("Queue should exist before deletion", ChronicleLogUtil.queueExists(queuePath));
 
-    // TODO(#420): Implement test - create populated queue, delete, verify removal
-    fail("Not yet implemented");
+    // When: deleteQueue(path) called
+    boolean deleted = ChronicleLogUtil.deleteQueue(queuePath);
+
+    // Then: Returns true; directory no longer exists
+    assertTrue("deleteQueue should return true", deleted);
+    assertFalse("Queue directory should not exist after deletion", Files.exists(queuePath));
   }
 
   // ============================================================================
@@ -440,18 +481,55 @@ public class ChronicleLogUtilTest {
    * @param queuePath the path where the Chronicle queue should be created
    * @param count the number of messages to append to the queue
    */
-  @SuppressWarnings("unused") // Helper method for test implementations in #420
   private void populateQueueWithMessages(Path queuePath, int count) {
-    // TODO(#420): Implement helper method
-    // 1. Create Chronicle queue at queuePath using SingleChronicleQueueBuilder
-    // 2. Create ExcerptAppender
-    // 3. For each message (0 to count-1):
-    //    a. Create OutboundMsg using public constructor with Marshallable body
-    //    b. Call msg.appendTo(appender) to write to queue
-    // 4. Close the queue to flush all data
-    //
-    // Note: Use MessageBuilder from io.quasient.pal.serdes.colfer to create
-    // ExecMessage instances as the Marshallable body.
-    throw new UnsupportedOperationException("Awaiting implementation in #420");
+    try (ChronicleQueue queue =
+        SingleChronicleQueueBuilder.single(queuePath.toFile())
+            .wireType(WireType.BINARY_LIGHT)
+            .build()) {
+      ExcerptAppender appender = queue.createAppender();
+
+      for (int i = 0; i < count; i++) {
+        // Create an ExecMessage as the Marshallable body
+        ExecMessage execMessage = new ExecMessage();
+        execMessage.peerUuid = UUID.randomUUID().toString();
+        execMessage.messageId = UUID.randomUUID().toString();
+        execMessage.threadName = "test-thread-" + i;
+        execMessage.currentTime = String.valueOf(System.currentTimeMillis());
+        execMessage.dispatchSeq = i;
+        execMessage.builderSeq = i;
+
+        // Create OutboundMsg using public constructor with Marshallable
+        String messageId = UUID.randomUUID().toString();
+        OutboundMsg msg =
+            new OutboundMsg(
+                MessageType.EXEC_INSTANCE_METHOD,
+                ExecPhase.BEFORE,
+                null, // no headers
+                messageId,
+                null, // no responseToId
+                execMessage);
+
+        // Write to queue
+        msg.appendTo(appender);
+      }
+    }
+  }
+
+  /**
+   * Creates an empty Chronicle queue at the specified path.
+   *
+   * <p>The queue is opened and immediately closed, which creates the queue directory and metadata
+   * files but no messages.
+   *
+   * @param queuePath the path where the Chronicle queue should be created
+   */
+  private void createEmptyQueue(Path queuePath) {
+    try (ChronicleQueue queue =
+        SingleChronicleQueueBuilder.single(queuePath.toFile())
+            .wireType(WireType.BINARY_LIGHT)
+            .build()) {
+      // Just create the queue and close it - this creates the queue directory structure
+      queue.createAppender();
+    }
   }
 }
