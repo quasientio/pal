@@ -14,6 +14,7 @@ import io.quasient.pal.cxn.ThinPeer;
 import io.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import io.quasient.pal.cxn.directory.PalDirectory;
 import io.quasient.pal.intercept.complex.MethodInterceptInFlightVerificationIT;
+import io.quasient.pal.intercept.mechanism.AroundProceedIT;
 import io.quasient.pal.intercept.mechanism.constructor.ConstructorAroundCallbackIT;
 import io.quasient.pal.intercept.mechanism.constructor.ConstructorAsyncCallbackIT;
 import io.quasient.pal.intercept.mechanism.constructor.ConstructorSyncCallbackIT;
@@ -126,7 +127,10 @@ import org.slf4j.LoggerFactory;
   InstanceFieldAroundCallbackIT.class,
 
   // More complex intercept tests
-  MethodInterceptInFlightVerificationIT.class
+  MethodInterceptInFlightVerificationIT.class,
+
+  // AROUND proceed() mechanism tests (issue #477)
+  AroundProceedIT.class
 })
 public class InterceptFlowTestSuite extends AbstractIntegrationTest {
 
