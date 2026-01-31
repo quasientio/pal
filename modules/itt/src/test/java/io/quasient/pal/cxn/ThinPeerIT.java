@@ -51,9 +51,11 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.apache.kafka.clients.consumer.MockConsumer;
 import org.apache.kafka.clients.consumer.OffsetResetStrategy;
@@ -1626,7 +1628,7 @@ public class ThinPeerIT extends AbstractIntegrationTest {
       // When: sendExecMessageToLog() called with a valid ExecMessage
       ExecMessage execMsg = msgBuilder.buildEmptyConstructor(tp.getPeerUuid(), "java.lang.String");
 
-      java.util.concurrent.Future<?> sendFuture = tp.sendExecMessageToLog(execMsg);
+      Future<?> sendFuture = tp.sendExecMessageToLog(execMsg);
       sendFuture.get(5, TimeUnit.SECONDS);
 
       // Then: Message should be appended to Chronicle queue
@@ -1690,8 +1692,8 @@ public class ThinPeerIT extends AbstractIntegrationTest {
       ExecMessage execMsg2 =
           msgBuilder.buildEmptyConstructor(tp.getPeerUuid(), "java.lang.Integer");
 
-      java.util.concurrent.Future<?> sendFuture1 = tp.sendExecMessageToLog(execMsg1);
-      java.util.concurrent.Future<?> sendFuture2 = tp.sendExecMessageToLog(execMsg2);
+      Future<?> sendFuture1 = tp.sendExecMessageToLog(execMsg1);
+      Future<?> sendFuture2 = tp.sendExecMessageToLog(execMsg2);
       sendFuture1.get(5, TimeUnit.SECONDS);
       sendFuture2.get(5, TimeUnit.SECONDS);
 
@@ -1703,7 +1705,7 @@ public class ThinPeerIT extends AbstractIntegrationTest {
       // Verify the messages can be read back using Chronicle's low-level API
       try (ChronicleQueue queue =
           SingleChronicleQueueBuilder.binary(queuePath.toFile()).readOnly(true).build()) {
-        net.openhft.chronicle.queue.ExcerptTailer tailer = queue.createTailer();
+        ExcerptTailer tailer = queue.createTailer();
         tailer.toStart();
 
         OutboundMsg readMsg1 = OutboundMsg.readNext(tailer);
@@ -1768,7 +1770,7 @@ public class ThinPeerIT extends AbstractIntegrationTest {
             msgBuilder.buildEmptyConstructor(tp.getPeerUuid(), "java.lang.String" + i);
         messageIds[i] = execMsg.getMessageId();
 
-        java.util.concurrent.Future<?> sendFuture = tp.sendExecMessageToLog(execMsg);
+        Future<?> sendFuture = tp.sendExecMessageToLog(execMsg);
         sendFuture.get(5, TimeUnit.SECONDS);
       }
     } finally {
@@ -1792,7 +1794,7 @@ public class ThinPeerIT extends AbstractIntegrationTest {
     // embedded in the serialized body and would need deserialization to extract.
     try (ChronicleQueue queue =
         SingleChronicleQueueBuilder.binary(queuePath.toFile()).readOnly(true).build()) {
-      net.openhft.chronicle.queue.ExcerptTailer tailer = queue.createTailer();
+      ExcerptTailer tailer = queue.createTailer();
       tailer.toStart();
 
       // Read first message (offset 0)

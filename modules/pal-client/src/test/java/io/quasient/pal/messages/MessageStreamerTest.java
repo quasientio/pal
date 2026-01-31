@@ -9,19 +9,27 @@
  */
 package io.quasient.pal.messages;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import io.quasient.pal.common.runtime.ExecPhase;
 import io.quasient.pal.messages.colfer.ExecMessage;
+import io.quasient.pal.messages.colfer.Message;
 import io.quasient.pal.messages.types.MessageType;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 import org.junit.Assume;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -29,6 +37,7 @@ import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
+import org.zeromq.ZMQException;
 
 public class MessageStreamerTest {
 
@@ -207,7 +216,7 @@ public class MessageStreamerTest {
       long count = streamer.getReceivedMessagesCount();
 
       // Then: Returns 0
-      org.junit.Assert.assertEquals("Initial message count should be zero", 0L, count);
+      assertEquals("Initial message count should be zero", 0L, count);
     } finally {
       streamer.close();
     }
@@ -229,8 +238,8 @@ public class MessageStreamerTest {
       streamer.connect();
 
       // Then: An appropriate exception is thrown
-      org.junit.Assert.fail("Expected an exception for invalid port");
-    } catch (IllegalArgumentException | org.zeromq.ZMQException e) {
+      fail("Expected an exception for invalid port");
+    } catch (IllegalArgumentException | ZMQException e) {
       // Expected - ZMQ should reject invalid port
       logger.debug("Got expected exception for invalid port: {}", e.getMessage());
     } finally {
@@ -262,15 +271,14 @@ public class MessageStreamerTest {
 
     // When: getStream() is called and an attempt is made to consume from it
     // Then: The stream should return null elements (ZMQ exceptions are caught in getNext())
-    java.util.stream.Stream<io.quasient.pal.messages.colfer.Message> stream = streamer.getStream();
+    Stream<Message> stream = streamer.getStream();
 
     // Use iterator to handle null values (findFirst() throws NPE on null)
-    java.util.Iterator<io.quasient.pal.messages.colfer.Message> iterator =
-        stream.limit(1).iterator();
-    org.junit.Assert.assertTrue("Stream should have an element", iterator.hasNext());
-    io.quasient.pal.messages.colfer.Message message = iterator.next();
+    Iterator<Message> iterator = stream.limit(1).iterator();
+    assertTrue("Stream should have an element", iterator.hasNext());
+    Message message = iterator.next();
 
     // The stream should return null (getNext returns null when socket is closed/errors occur)
-    org.junit.Assert.assertNull("After close, stream element should be null", message);
+    assertNull("After close, stream element should be null", message);
   }
 }
