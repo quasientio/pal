@@ -518,4 +518,177 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
     gateway.sendExecMessage(builder.wrap(m), ExecPhase.BEFORE);
     assertThat(walQueue.currentSize(), is(before));
   }
+
+  // ============================================================================
+  // Additional test specifications for issue #456
+  // These tests are awaiting implementation in issue #457
+  // ============================================================================
+
+  /**
+   * Tests that custom headers are concatenated with writeAheadHeaders when sending an exec message.
+   *
+   * <p>Given: Gateway with WAL enabled, writeAheadHeaders set When: sendExecMessage called with
+   * non-null custom headers array Then: Final headers are concatenation of writeAheadHeaders +
+   * custom headers
+   */
+  @Test
+  @org.junit.Ignore("Awaiting implementation in #457")
+  public void sendExecMessage_withCustomHeaders_concatenatesHeaders() {
+    // Given: Gateway with WAL enabled, writeAheadHeaders set
+    // When: sendExecMessage called with non-null custom headers array
+    // Then: Final headers are concatenation of writeAheadHeaders + custom headers
+
+    // TODO(#457): Implement test logic
+    // - Create gateway with WAL enabled
+    // - Call sendExecMessage with custom headers via reflection or internal method
+    // - Verify that outbound message contains both writeAheadHeaders and custom headers
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that sending a null message throws NullPointerException.
+   *
+   * <p>Given: Properly configured gateway When: sendExecMessage called with null message Then:
+   * NullPointerException thrown
+   */
+  @Test
+  @org.junit.Ignore("Awaiting implementation in #457")
+  public void sendExecMessage_nullMessage_throwsNPE() {
+    // Given: Properly configured gateway
+    // When: sendExecMessage called with null message
+    // Then: NullPointerException thrown
+
+    // TODO(#457): Implement test logic
+    // - Create gateway with standard configuration
+    // - Call sendExecMessage with null Message
+    // - Verify NullPointerException is thrown
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests constructor validation when WAL is enabled but both walWriter and walQueue are null.
+   *
+   * <p>Given: RunOptions.WITH_WAL enabled, but walWriter=null and walQueue=null When: Constructor
+   * called Then: IllegalStateException thrown
+   */
+  @Test
+  @org.junit.Ignore("Awaiting implementation in #457")
+  public void constructor_walEnabledButNoWriterOrQueue_throwsIllegalState() {
+    // Given: RunOptions.WITH_WAL enabled, but walWriter=null and walQueue=null
+    // When: Constructor called
+    // Then: IllegalStateException thrown
+
+    // TODO(#457): Implement test logic
+    // - Attempt to construct OutboundMessageGateway with WITH_WAL but null writer and queue
+    // - Verify IllegalStateException is thrown with appropriate message
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that blockUntilEnqueued records stats when multiple spin-park cycles are required.
+   *
+   * <p>Given: Queue at 99% capacity requiring multiple park iterations When: blockUntilEnqueued
+   * called Then: WaitStats shows parks > 1 and parkedNanos > 0
+   */
+  @Test
+  @org.junit.Ignore("Awaiting implementation in #457")
+  public void blockUntilEnqueued_multipleSpinParkCycles_recordsStats() {
+    // Given: Queue at 99% capacity requiring multiple park iterations
+    // When: blockUntilEnqueued called
+    // Then: WaitStats shows parks > 1 and parkedNanos > 0
+
+    // TODO(#457): Implement test logic
+    // - Create a small fixed-size pub queue
+    // - Fill queue to near capacity
+    // - Use background thread to slowly drain queue
+    // - Call sendExecMessage with PublishingDropPolicy.NONE
+    // - Verify getPubQueueStats shows multiple parks and non-zero parkedNanos
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests error handling when session service socket send fails.
+   *
+   * <p>Given: Session service enabled, but socket send returns false When:
+   * sendMessageToSessionService called Then: Error logged and handled appropriately
+   */
+  @Test
+  @org.junit.Ignore("Awaiting implementation in #457")
+  public void sendMessageToSessionService_sendFails_throwsRuntimeException() {
+    // Given: Session service enabled, but socket send returns false
+    // When: sendMessageToSessionService called
+    // Then: Error logged and handled appropriately
+
+    // TODO(#457): Implement test logic
+    // - Configure gateway with sessions enabled
+    // - Mock or simulate session service that causes send to fail
+    // - Call sendMessageToSessionService
+    // - Verify appropriate error handling (null response or exception)
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests getPUBWaitSnapshot returns stats from multiple threads.
+   *
+   * <p>Given: 3 threads have recorded wait stats When: getPUBWaitSnapshot called Then: Returns
+   * snapshot with 3 entries
+   */
+  @Test
+  @org.junit.Ignore("Awaiting implementation in #457")
+  public void getPUBWaitSnapshot_withMultipleThreads_returnsAllThreadStats() {
+    // Given: 3 threads have recorded wait stats
+    // When: getPUBWaitSnapshot called
+    // Then: Returns snapshot with 3 entries
+
+    // TODO(#457): Implement test logic
+    // - Create gateway with PUB enabled
+    // - Spawn 3 threads that each send messages (triggering PUB queue stats)
+    // - Wait for threads to complete
+    // - Call getPUBWaitSnapshot
+    // - Verify snapshot contains entries for all 3 threads
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests getWALWaitSnapshot returns stats from multiple threads.
+   *
+   * <p>Given: 3 threads have recorded WAL wait stats When: getWALWaitSnapshot called Then: Returns
+   * snapshot with 3 entries
+   */
+  @Test
+  @org.junit.Ignore("Awaiting implementation in #457")
+  public void getWALWaitSnapshot_withMultipleThreads_returnsAllThreadStats() {
+    // Given: 3 threads have recorded WAL wait stats
+    // When: getWALWaitSnapshot called
+    // Then: Returns snapshot with 3 entries
+
+    // TODO(#457): Implement test logic
+    // - Create gateway with WAL enabled
+    // - Spawn 3 threads that each send messages (triggering WAL queue stats)
+    // - Wait for threads to complete
+    // - Call getWALWaitSnapshot
+    // - Verify snapshot contains entries for all 3 threads
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that closeThreadLocalSockets properly closes sockets from multiple threads.
+   *
+   * <p>Given: Multiple threads have created session sockets When: closeThreadLocalSockets called
+   * from each thread Then: All sockets closed without exception
+   */
+  @Test
+  @org.junit.Ignore("Awaiting implementation in #457")
+  public void closeThreadLocalSockets_multipleThreads_closesAllSockets() {
+    // Given: Multiple threads have created session sockets
+    // When: closeThreadLocalSockets called from each thread
+    // Then: All sockets closed without exception
+
+    // TODO(#457): Implement test logic
+    // - Create gateway with sessions enabled
+    // - Spawn multiple threads that each call sendMessageToSessionService (creating sockets)
+    // - Each thread calls closeThreadLocalSockets before exiting
+    // - Verify no exceptions thrown during socket cleanup
+    fail("Not yet implemented");
+  }
 }
