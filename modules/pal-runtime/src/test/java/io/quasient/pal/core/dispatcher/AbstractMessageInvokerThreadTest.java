@@ -9,36 +9,40 @@
  */
 package io.quasient.pal.core.dispatcher;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import io.quasient.pal.core.transport.MessageChannelType;
+import io.quasient.pal.messages.colfer.ControlMessage;
 import io.quasient.pal.messages.colfer.Message;
+import io.quasient.pal.messages.types.ControlCommandType;
+import io.quasient.pal.messages.types.ControlStatusType;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.zeromq.ZContext;
 
 /**
  * Unit tests for AbstractMessageInvokerThread focusing on dispatch listeners, metrics recording,
- * and error handling. These test specifications exercise the listener management and dispatch flow
- * paths in the abstract invoker thread.
+ * and error handling. These tests exercise the listener management and dispatch flow paths in the
+ * abstract invoker thread.
  *
  * <p>This test class uses a lightweight concrete implementation (TestInvoker) that provides an
  * empty run() implementation, allowing direct testing of the protected dispatch methods without
  * requiring full thread lifecycle management.
- *
- * <p>Note: This is a test specification file. The suppressed warnings are for unused test fixtures
- * that will be used when the tests are implemented in issue #482.
  */
-@SuppressWarnings({
-  "UnusedVariable",
-  "UnusedNestedClass",
-  "UnusedMethod",
-  "MockNotUsedInProduction"
-})
 public class AbstractMessageInvokerThreadTest {
 
   private UUID peerUuid;
@@ -93,6 +97,14 @@ public class AbstractMessageInvokerThreadTest {
     dispatcher = mock(IncomingMessageDispatcher.class);
   }
 
+  /** Cleans up resources after each test. */
+  @After
+  public void tearDown() {
+    if (ctx != null) {
+      ctx.close();
+    }
+  }
+
   /**
    * Tests that a registered dispatch listener is called when a message is dispatched.
    *
@@ -103,21 +115,32 @@ public class AbstractMessageInvokerThreadTest {
    * <p>Then: The listener's onMessageDispatched method is called with the dispatched message
    */
   @Test
-  @Ignore("Awaiting implementation in #482")
   public void addDispatchListener_listenerCalled_onDispatch() {
-    // Given: A listener registered via addMessageDispatchListener
-    // When: Message dispatched
-    // Then: Listener onDispatch called with message
+    // Setup mock to return a valid response
+    ControlMessage ctrlReq = builder.buildControlCommandMessage(peerUuid, ControlCommandType.GC);
+    ControlMessage ctrlResp =
+        builder.buildControlStatusMessage(peerUuid, ControlStatusType.OK, ctrlReq.getMessageId());
+    when(dispatcher.incomingControlMessage(any(ControlMessage.class))).thenReturn(ctrlResp);
 
-    // TODO(#482): Implement after #482 provides the implementation
-    // Setup:
-    // 1. Create TestInvoker instance
-    // 2. Create AtomicBoolean to track listener invocation
-    // 3. Register listener that sets AtomicBoolean to true
-    // 4. Create and dispatch a ControlMessage
-    // 5. Assert that the listener was called (AtomicBoolean is true)
+    // Create invoker and track listener calls
+    TestInvoker invoker = new TestInvoker(ctx, builder, dispatcher, peerUuid);
+    AtomicBoolean listenerCalled = new AtomicBoolean(false);
+    AtomicReference<Message> receivedMessage = new AtomicReference<>();
 
-    fail("Not yet implemented");
+    // Register listener
+    invoker.addMessageDispatchListener(
+        msg -> {
+          listenerCalled.set(true);
+          receivedMessage.set(msg);
+        });
+
+    // Dispatch message
+    Message wrappedRequest = builder.wrap(ctrlReq);
+    invoker.dispatchMsg(wrappedRequest);
+
+    // Assert listener was called with correct message
+    assertTrue("Listener should have been called", listenerCalled.get());
+    assertThat(receivedMessage.get(), is(wrappedRequest));
   }
 
   /**
@@ -130,22 +153,29 @@ public class AbstractMessageInvokerThreadTest {
    * <p>Then: The removed listener is NOT called
    */
   @Test
-  @Ignore("Awaiting implementation in #482")
   public void removeDispatchListener_listenerNotCalled_afterRemoval() {
-    // Given: Listener registered then removed
-    // When: Message dispatched
-    // Then: Listener NOT called
+    // Setup mock to return a valid response
+    ControlMessage ctrlReq = builder.buildControlCommandMessage(peerUuid, ControlCommandType.GC);
+    ControlMessage ctrlResp =
+        builder.buildControlStatusMessage(peerUuid, ControlStatusType.OK, ctrlReq.getMessageId());
+    when(dispatcher.incomingControlMessage(any(ControlMessage.class))).thenReturn(ctrlResp);
 
-    // TODO(#482): Implement after #482 provides the implementation
-    // Setup:
-    // 1. Create TestInvoker instance
-    // 2. Create AtomicBoolean to track listener invocation
-    // 3. Register listener that sets AtomicBoolean to true
-    // 4. Remove the listener via removeMessageDispatchListener
-    // 5. Create and dispatch a ControlMessage
-    // 6. Assert that the listener was NOT called (AtomicBoolean is still false)
+    // Create invoker and track listener calls
+    TestInvoker invoker = new TestInvoker(ctx, builder, dispatcher, peerUuid);
+    AtomicBoolean listenerCalled = new AtomicBoolean(false);
 
-    fail("Not yet implemented");
+    // Create listener
+    MessageDispatchListener listener = msg -> listenerCalled.set(true);
+
+    // Register then remove the listener
+    invoker.addMessageDispatchListener(listener);
+    invoker.removeMessageDispatchListener(listener);
+
+    // Dispatch message
+    invoker.dispatchMsg(builder.wrap(ctrlReq));
+
+    // Assert listener was NOT called after removal
+    assertTrue("Listener should NOT have been called after removal", !listenerCalled.get());
   }
 
   /**
@@ -158,22 +188,32 @@ public class AbstractMessageInvokerThreadTest {
    * <p>Then: Dispatch counters are recorded correctly reflecting the number of dispatched messages
    */
   @Test
-  @Ignore("Awaiting implementation in #482")
   public void dispatchWithMetrics_recordsTimingStats() {
-    // Given: Metrics enabled invoker
-    // When: Multiple messages dispatched
-    // Then: Dispatch timing stats recorded correctly
+    // Setup mock to return valid responses
+    ControlMessage ctrlReq = builder.buildControlCommandMessage(peerUuid, ControlCommandType.GC);
+    ControlMessage ctrlResp =
+        builder.buildControlStatusMessage(peerUuid, ControlStatusType.OK, ctrlReq.getMessageId());
+    when(dispatcher.incomingControlMessage(any(ControlMessage.class))).thenReturn(ctrlResp);
 
-    // TODO(#482): Implement after #482 provides the implementation
-    // Note: AbstractMessageInvokerThread tracks dispatch counts via AtomicLong counters
-    // (e.g., controlRequestsDispatched, execRequestsDispatched)
-    // Setup:
-    // 1. Create TestInvoker instance
-    // 2. Dispatch multiple ControlMessages (e.g., 3 messages)
-    // 3. Assert getControlRequestsDispatched() returns expected count
-    // 4. Assert getRequestsDispatched() returns total count
+    // Create invoker
+    TestInvoker invoker = new TestInvoker(ctx, builder, dispatcher, peerUuid);
 
-    fail("Not yet implemented");
+    // Verify initial counters are zero
+    assertThat(invoker.getControlRequestsDispatched(), is(0L));
+    assertThat(invoker.getRequestsDispatched(), is(0L));
+    assertThat(invoker.getControlRequestErrors(), is(0L));
+
+    // Dispatch multiple ControlMessages
+    int numMessages = 3;
+    for (int i = 0; i < numMessages; i++) {
+      ControlMessage req = builder.buildControlCommandMessage(peerUuid, ControlCommandType.GC);
+      invoker.dispatchMsg(builder.wrap(req));
+    }
+
+    // Assert counters reflect the number of dispatched messages
+    assertThat(invoker.getControlRequestsDispatched(), is((long) numMessages));
+    assertThat(invoker.getRequestsDispatched(), is((long) numMessages));
+    assertThat(invoker.getControlRequestErrors(), is(0L));
   }
 
   /**
@@ -188,23 +228,36 @@ public class AbstractMessageInvokerThreadTest {
    * still in a valid state to process more messages
    */
   @Test
-  @Ignore("Awaiting implementation in #482")
   public void dispatch_throwsException_logsAndContinues() {
-    // Given: Dispatcher that throws exception
-    // When: dispatch called
-    // Then: Exception logged; invoker continues
+    // Create invoker
+    TestInvoker invoker = new TestInvoker(ctx, builder, dispatcher, peerUuid);
 
-    // TODO(#482): Implement after #482 provides the implementation
-    // Setup:
-    // 1. Create TestInvoker instance
-    // 2. Configure mock dispatcher to throw RuntimeException
-    // 3. Call dispatch and expect RuntimeException to be thrown
-    // 4. Assert that error counter was incremented (e.g., getControlRequestErrors() == 1)
-    // 5. Reconfigure mock to succeed
-    // 6. Dispatch another message successfully
-    // 7. Assert invoker continues working (getControlRequestsDispatched() == 1)
+    // Configure mock dispatcher to throw RuntimeException
+    ControlMessage ctrlReq = builder.buildControlCommandMessage(peerUuid, ControlCommandType.GC);
+    doThrow(new RuntimeException("Simulated dispatch error"))
+        .when(dispatcher)
+        .incomingControlMessage(any(ControlMessage.class));
 
-    fail("Not yet implemented");
+    // Call dispatch and expect RuntimeException to be thrown
+    assertThrows(RuntimeException.class, () -> invoker.dispatchMsg(builder.wrap(ctrlReq)));
+
+    // Assert that error counter was incremented
+    assertThat(invoker.getControlRequestErrors(), is(1L));
+    assertThat(invoker.getControlRequestsDispatched(), is(0L));
+
+    // Reconfigure mock to succeed
+    ControlMessage ctrlResp =
+        builder.buildControlStatusMessage(peerUuid, ControlStatusType.OK, ctrlReq.getMessageId());
+    when(dispatcher.incomingControlMessage(any(ControlMessage.class))).thenReturn(ctrlResp);
+
+    // Dispatch another message successfully
+    ControlMessage ctrlReq2 = builder.buildControlCommandMessage(peerUuid, ControlCommandType.GC);
+    invoker.dispatchMsg(builder.wrap(ctrlReq2));
+
+    // Assert invoker continues working - success counter should increment
+    assertThat(invoker.getControlRequestsDispatched(), is(1L));
+    // Error counter remains at 1 from the previous failure
+    assertThat(invoker.getControlRequestErrors(), is(1L));
   }
 
   /**
@@ -220,22 +273,90 @@ public class AbstractMessageInvokerThreadTest {
    * custom triggerStop() method. Subclasses check interrupted() in their run() loop.
    */
   @Test
-  @Ignore("Awaiting implementation in #482")
-  public void triggerStop_setsStopFlag() {
-    // Given: Running invoker thread
-    // When: triggerStop called (via Thread.interrupt())
-    // Then: Stop flag set; thread will exit on next iteration
+  public void triggerStop_setsStopFlag() throws InterruptedException {
+    // Create a test invoker with a run() that loops until interrupted
+    CountDownLatch startedLatch = new CountDownLatch(1);
+    CountDownLatch stoppedLatch = new CountDownLatch(1);
+    AtomicBoolean wasInterrupted = new AtomicBoolean(false);
 
-    // TODO(#482): Implement after #482 provides the implementation
-    // Note: AbstractMessageInvokerThread relies on Thread.interrupt() mechanism.
-    // The run() method in subclasses checks interrupted() in their main loop.
-    // Setup:
-    // 1. Create TestInvoker instance
-    // 2. Start the invoker thread
-    // 3. Call interrupt() on the thread
-    // 4. Assert that isInterrupted() returns true
-    // 5. Optionally join the thread and verify it has stopped
+    RunnableTestInvoker invoker =
+        new RunnableTestInvoker(
+            ctx, builder, dispatcher, peerUuid, startedLatch, stoppedLatch, wasInterrupted);
 
-    fail("Not yet implemented");
+    // Start the invoker thread
+    invoker.start();
+
+    // Wait for thread to start its run loop
+    assertTrue("Thread should start within timeout", startedLatch.await(5, TimeUnit.SECONDS));
+
+    // Interrupt the thread to signal stop
+    invoker.interrupt();
+
+    // Wait for thread to stop
+    assertTrue("Thread should stop within timeout", stoppedLatch.await(5, TimeUnit.SECONDS));
+
+    // Verify the thread detected the interrupt
+    assertTrue("Thread should have detected interrupt", wasInterrupted.get());
+
+    // Join the thread to ensure it has fully terminated
+    invoker.join(1000);
+    assertTrue("Thread should have terminated", !invoker.isAlive());
+  }
+
+  /**
+   * A test invoker with an actual run() loop that checks for interruption, used to test the
+   * interrupt/stop mechanism.
+   */
+  private static class RunnableTestInvoker extends AbstractMessageInvokerThread {
+
+    private final CountDownLatch startedLatch;
+    private final CountDownLatch stoppedLatch;
+    private final AtomicBoolean wasInterrupted;
+
+    /**
+     * Constructs a RunnableTestInvoker for testing the interrupt mechanism.
+     *
+     * @param zmqContext the ZeroMQ context
+     * @param messageBuilder the message builder
+     * @param incomingMessageDispatcher the incoming message dispatcher
+     * @param peerUuid the peer UUID
+     * @param startedLatch latch to signal when run loop starts
+     * @param stoppedLatch latch to signal when run loop stops
+     * @param wasInterrupted flag to record if interrupt was detected
+     */
+    RunnableTestInvoker(
+        ZContext zmqContext,
+        MessageBuilder messageBuilder,
+        IncomingMessageDispatcher incomingMessageDispatcher,
+        UUID peerUuid,
+        CountDownLatch startedLatch,
+        CountDownLatch stoppedLatch,
+        AtomicBoolean wasInterrupted) {
+      super(zmqContext, messageBuilder, incomingMessageDispatcher, peerUuid);
+      this.startedLatch = startedLatch;
+      this.stoppedLatch = stoppedLatch;
+      this.wasInterrupted = wasInterrupted;
+    }
+
+    @Override
+    public void run() {
+      startedLatch.countDown();
+      try {
+        while (!isInterrupted()) {
+          // Simulate work with a small sleep
+          sleep(10);
+        }
+      } catch (InterruptedException e) {
+        // Expected when interrupted during sleep
+        wasInterrupted.set(true);
+        interrupt();
+      } finally {
+        // Also check the flag in case interrupt happened outside sleep
+        if (isInterrupted()) {
+          wasInterrupted.set(true);
+        }
+        stoppedLatch.countDown();
+      }
+    }
   }
 }
