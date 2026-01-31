@@ -447,4 +447,123 @@ public class InterceptInformerTest extends ZmqEnabledTest {
 
     interceptInformer.interceptEvent(event);
   }
+
+  // ========== Issue #470 Test Specifications ==========
+
+  /**
+   * Tests that interceptEvent with INTERCEPT_REMOVED sends unregister message.
+   *
+   * <p>Specification for issue #470.
+   *
+   * <ul>
+   *   <li>Given: InterceptInformer with valid connection
+   *   <li>When: interceptEvent called with INTERCEPT_REMOVED event
+   *   <li>Then: Unregister message sent to InterceptMatcher
+   * </ul>
+   */
+  @Test
+  @org.junit.Ignore("Awaiting implementation in #471")
+  public void interceptEvent_INTERCEPT_REMOVED_sendsUnregisterMessage() {
+    // Given: InterceptInformer with valid connection
+    // When: interceptEvent called with INTERCEPT_REMOVED event
+    // Then: Unregister message sent to InterceptMatcher
+
+    // TODO(#471): Implement test logic
+    // Note: Similar behavior is tested in unregisterRequestFromRemotePeer()
+    org.junit.Assert.fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that registerAllInterceptsInDirectory handles directory error gracefully.
+   *
+   * <p>Specification for issue #470.
+   *
+   * <ul>
+   *   <li>Given: Directory that throws exception on getPeers()
+   *   <li>When: registerAllInterceptsInDirectory called
+   *   <li>Then: Error logged; method completes without throwing
+   * </ul>
+   */
+  @Test
+  @org.junit.Ignore("Awaiting implementation in #471")
+  public void registerAllInterceptsInDirectory_directoryError_logsAndContinues() {
+    // Given: Directory that throws exception on getPeers()
+    // When: registerAllInterceptsInDirectory called
+    // Then: Error logged; method completes without throwing
+
+    // TODO(#471): Implement test logic
+    // Note: Similar behavior is tested in
+    // registerAllInterceptsInDirectory_directoryError_logsAndReturns()
+    org.junit.Assert.fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that sendInterceptEventMsg logs warning when error response received.
+   *
+   * <p>Specification for issue #470.
+   *
+   * <ul>
+   *   <li>Given: InterceptMatcher returns error response (not "0" or "A")
+   *   <li>When: sendInterceptEventMsg called
+   *   <li>Then: Warning logged
+   * </ul>
+   */
+  @Test
+  @org.junit.Ignore("Awaiting implementation in #471")
+  public void sendInterceptEventMsg_errorResponse_logsWarning() {
+    // Given: InterceptMatcher returns error response (not "0" or "A")
+    // When: sendInterceptEventMsg called (via interceptEvent)
+    // Then: Warning logged
+
+    // TODO(#471): Implement test logic
+    // Need to create a stub that returns an error response (e.g., "E" or "-1")
+    // instead of "0" or "A", then verify warning is logged
+    org.junit.Assert.fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that closeThreadLocalSocket handles case when no socket was created.
+   *
+   * <p>Specification for issue #470.
+   *
+   * <ul>
+   *   <li>Given: Thread that never created a socket
+   *   <li>When: closeThreadLocalSocket called
+   *   <li>Then: Method completes without error
+   * </ul>
+   */
+  @Test
+  @org.junit.Ignore("Awaiting implementation in #471")
+  public void closeThreadLocalSocket_noSocketCreated_noOp() {
+    // Given: Thread that never created a socket
+    // When: closeThreadLocalSocket called
+    // Then: Method completes without error
+
+    // TODO(#471): Implement test logic
+    // Note: Similar behavior is tested in closeThreadLocalSocket_noSocketCreated_doesNothing()
+    org.junit.Assert.fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that interceptEvent with INTERCEPT_ADDED sends register message.
+   *
+   * <p>Specification for issue #470.
+   *
+   * <ul>
+   *   <li>Given: InterceptInformer with valid connection
+   *   <li>When: interceptEvent called with INTERCEPT_ADDED event
+   *   <li>Then: Register message sent successfully
+   * </ul>
+   */
+  @Test
+  @org.junit.Ignore("Awaiting implementation in #471")
+  public void interceptEvent_INTERCEPT_ADDED_sendsRegisterMessage() {
+    // Given: InterceptInformer with valid connection
+    // When: interceptEvent called with INTERCEPT_ADDED event
+    // Then: Register message sent successfully
+
+    // TODO(#471): Implement test logic
+    // Note: Similar behavior is tested in interceptRequestFromRemotePeer()
+    org.junit.Assert.fail("Not yet implemented");
+  }
 }
