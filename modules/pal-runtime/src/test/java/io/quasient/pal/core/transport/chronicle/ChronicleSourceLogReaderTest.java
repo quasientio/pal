@@ -10,8 +10,10 @@
 package io.quasient.pal.core.transport.chronicle;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.fail;
 
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
@@ -43,6 +45,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -398,5 +401,114 @@ public class ChronicleSourceLogReaderTest extends ZmqEnabledTest {
         "Successfully read {} messages starting from index {}",
         expectedMessages,
         secondMessageIndex);
+  }
+
+  // ==================== Test Specifications for Issue #472 ====================
+  // The following tests are specifications awaiting implementation in issue #473.
+
+  /**
+   * Tests that readFromLog throws when queue doesn't exist and sourceLogWillBeCreated is false.
+   *
+   * <p>Given: Path to non-existent Chronicle queue directory When: readFromLog called Then:
+   * Appropriate exception thrown
+   *
+   * <p>This verifies that the reader properly validates queue existence for read-only scenarios.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #473")
+  public void readFromLog_nonExistentQueue_throwsException() {
+    // Given: A non-existent Chronicle queue path
+    // When: readFromLog is called with sourceLogWillBeCreated = false
+    // Then: IllegalStateException is thrown with informative message
+
+    // TODO(#473): Implement test logic
+    // - Create a LogInfo pointing to non-existent queue
+    // - Call readFromLog with sourceLogWillBeCreated = false
+    // - Verify IllegalStateException is thrown
+    // - Verify exception message mentions queue doesn't exist
+    LogInfo nonExistentLog = new LogInfo("non-existent-queue-for-test");
+    nonExistentLog.setLogType(LogInfo.LogType.CHRONICLE);
+
+    try {
+      logReader.readFromLog(nonExistentLog, false, null, false);
+      fail("Expected IllegalStateException for non-existent queue");
+    } catch (IllegalStateException e) {
+      assertThat(
+          "Exception message should mention non-existent log",
+          e.getMessage(),
+          containsString("does not exist"));
+    }
+  }
+
+  /**
+   * Tests that openConnections handles tailer creation failure gracefully.
+   *
+   * <p>Given: ChronicleQueueFactory that throws on createTailer When: openConnections called Then:
+   * Exception handled; service fails gracefully
+   *
+   * <p>This test verifies that the reader properly handles failures during tailer creation, such as
+   * when the underlying Chronicle Queue infrastructure encounters an error.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #473")
+  public void openConnections_tailerCreationFails_handlesGracefully() {
+    // Given: A ChronicleQueueFactory that returns a queue which fails on createTailer()
+    // When: The service is started (which calls openConnections)
+    // Then: The exception is handled gracefully, service fails with appropriate error
+
+    // TODO(#473): Implement test logic
+    // - Create a mock ChronicleQueueFactory that returns a queue
+    // - The queue's createTailer() should throw an exception
+    // - Start the service and verify it handles the failure gracefully
+    // - Verify appropriate error logging occurs
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that the run loop handles message read errors and continues processing.
+   *
+   * <p>Given: Chronicle queue with corrupted message When: run loop reads message Then: Error
+   * logged; reader continues to next message
+   *
+   * <p>This test verifies the reader's resilience when encountering malformed or corrupted messages
+   * in the Chronicle queue.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #473")
+  public void run_messageReadError_logsAndContinues() {
+    // Given: A Chronicle queue containing a corrupted/malformed message
+    // When: The run loop attempts to read and process the message
+    // Then: The error is logged and the reader continues to the next message
+
+    // TODO(#473): Implement test logic
+    // - Create a Chronicle queue with valid messages
+    // - Insert a corrupted message (invalid bytes/format)
+    // - Start the reader and verify it logs the error
+    // - Verify subsequent valid messages are still processed
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that closeConnections can be called multiple times without throwing.
+   *
+   * <p>Given: ChronicleSourceLogReader already closed When: closeConnections called again Then: No
+   * exception thrown
+   *
+   * <p>This test verifies the idempotency of the close operation, ensuring that calling close
+   * multiple times (e.g., during error cleanup) doesn't cause additional failures.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #473")
+  public void closeConnections_alreadyClosed_noException() {
+    // Given: A ChronicleSourceLogReader that has been started and stopped
+    // When: closeConnections is called again (double close scenario)
+    // Then: No exception is thrown
+
+    // TODO(#473): Implement test logic
+    // - Create and configure a ChronicleSourceLogReader
+    // - Start and then stop the service (first close)
+    // - Call close again (second close)
+    // - Verify no exception is thrown
+    fail("Not yet implemented");
   }
 }
