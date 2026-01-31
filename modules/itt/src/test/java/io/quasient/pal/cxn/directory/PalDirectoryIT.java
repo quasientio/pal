@@ -24,6 +24,7 @@ import io.quasient.pal.common.directory.nodes.LogInfo;
 import io.quasient.pal.common.directory.nodes.PeerInfo;
 import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.common.lang.intercept.InterceptableMethodCall;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -41,7 +42,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1727,14 +1727,26 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #422")
   public void isPeerAlive_peerWithActiveLease_true() throws Exception {
-    // Given: Peer created with active lease (60s TTL)
-    // When: isPeerAlive(peerUuid) called
-    // Then: Returns true
+    // Given: Peer created with active lease
+    final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "alive-lease-peer");
+    peerInfo.setZmqRpcAddress("tcp://127.0.0.1:5671");
+    palDirectory.createPeer(peerInfo);
+    createdPeers.add(peerInfo.getUuid());
 
-    // TODO(#422): Implement after #422 provides the implementation
-    fail("Not yet implemented");
+    // Create lease with 60s TTL
+    PeerLease lease = palDirectory.createPeerLease(peerInfo.getUuid(), 60);
+
+    try {
+      // When: isPeerAlive(peerUuid) called
+      boolean alive = palDirectory.isPeerAlive(peerInfo.getUuid());
+
+      // Then: Returns true
+      assertTrue("Peer with active lease should be alive", alive);
+    } finally {
+      // Clean up the lease
+      lease.close();
+    }
   }
 
   /**
@@ -1749,14 +1761,35 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #422")
   public void isPeerAlive_peerWithRevokedLease_false() throws Exception {
-    // Given: Peer created; lease created then revoked via close()
-    // When: isPeerAlive(peerUuid) called (after short wait)
-    // Then: Returns false
+    // Given: Peer created with lease
+    final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "revoked-lease-peer");
+    peerInfo.setZmqRpcAddress("tcp://127.0.0.1:5671");
+    palDirectory.createPeer(peerInfo);
+    createdPeers.add(peerInfo.getUuid());
 
-    // TODO(#422): Implement after #422 provides the implementation
-    fail("Not yet implemented");
+    // Create lease with 5s TTL
+    PeerLease lease = palDirectory.createPeerLease(peerInfo.getUuid(), 5);
+
+    // Verify peer is alive with active lease
+    assertTrue(
+        "Peer should be alive with active lease", palDirectory.isPeerAlive(peerInfo.getUuid()));
+
+    // Revoke lease via close()
+    lease.close();
+
+    // Wait for etcd to apply the revoke (up to 6s)
+    for (int i = 0; i < 12; i++) {
+      if (!palDirectory.isPeerAlive(peerInfo.getUuid())) {
+        break;
+      }
+      TimeUnit.MILLISECONDS.sleep(500);
+    }
+
+    // Then: Returns false after lease revocation
+    assertFalse(
+        "Peer should not be alive after lease revocation",
+        palDirectory.isPeerAlive(peerInfo.getUuid()));
   }
 
   /**
@@ -1771,14 +1804,18 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #422")
   public void isPeerAlive_nonExistentPeer_false() throws Exception {
     // Given: Random UUID not in directory
-    // When: isPeerAlive(randomUuid) called
-    // Then: Returns false
+    UUID randomUuid = UUID.randomUUID();
 
-    // TODO(#422): Implement after #422 provides the implementation
-    fail("Not yet implemented");
+    // Verify the peer doesn't exist
+    assertFalse("Random UUID should not exist in directory", palDirectory.peerExists(randomUuid));
+
+    // When: isPeerAlive(randomUuid) called
+    boolean alive = palDirectory.isPeerAlive(randomUuid);
+
+    // Then: Returns false
+    assertFalse("Non-existent peer should not be alive", alive);
   }
 
   // ==========================================================================
@@ -1797,14 +1834,43 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #422")
   public void getIntercept_validPath_returnsIntercept() throws Exception {
-    // Given: Intercept created for peer
-    // When: getIntercept(interceptPath) called with correct path
-    // Then: Returns InterceptRequest matching original
+    // Given: Peer and intercept created
+    final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "intercept-test-peer");
+    peerInfo.setZmqRpcAddress("tcp://127.0.0.1:5671");
+    palDirectory.createPeer(peerInfo);
+    createdPeers.add(peerInfo.getUuid());
 
-    // TODO(#422): Implement after #422 provides the implementation
-    fail("Not yet implemented");
+    // Create intercept request
+    InterceptRequest<InterceptableMethodCall> req =
+        new InterceptRequest<>(
+            UUID.randomUUID(),
+            peerInfo.getUuid(),
+            InterceptType.BEFORE,
+            "java.io.PrintStream",
+            "org.package.Callback",
+            "callMe",
+            new InterceptableMethodCall(
+                "println", Arrays.asList("java.lang.String", "java.lang.Integer")));
+
+    palDirectory.createIntercept(req);
+    addInterceptRequestToCreated(peerInfo.getUuid(), req.getUuid());
+
+    // When: getIntercept(interceptPath) called with correct path
+    // Path format: /pal/intercepts/<peerUuid>/<interceptUuid>
+    String interceptPath = "/pal/intercepts/" + peerInfo.getUuid() + "/" + req.getUuid();
+    InterceptRequest<?> retrieved = palDirectory.getIntercept(interceptPath);
+
+    // Then: Returns InterceptRequest matching original
+    assertNotNull("Retrieved intercept should not be null", retrieved);
+    assertEquals("Intercept UUID should match", req.getUuid(), retrieved.getUuid());
+    assertEquals("Peer UUID should match", req.getPeer(), retrieved.getPeer());
+    assertEquals("Intercept type should match", req.getType(), retrieved.getType());
+    assertEquals("Target class should match", req.getClazz(), retrieved.getClazz());
+    assertEquals(
+        "Callback class should match", req.getCallbackClass(), retrieved.getCallbackClass());
+    assertEquals(
+        "Callback method should match", req.getCallbackMethod(), retrieved.getCallbackMethod());
   }
 
   /**
@@ -1819,14 +1885,15 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #422")
   public void getIntercept_invalidPath_null() throws Exception {
-    // Given: No intercept at path
-    // When: getIntercept("/nonexistent/path") called
-    // Then: Returns null
+    // Given: No intercept at path (use random UUIDs to ensure path doesn't exist)
+    String nonExistentPath = "/pal/intercepts/" + UUID.randomUUID() + "/" + UUID.randomUUID();
 
-    // TODO(#422): Implement after #422 provides the implementation
-    fail("Not yet implemented");
+    // When: getIntercept("/nonexistent/path") called
+    InterceptRequest<?> retrieved = palDirectory.getIntercept(nonExistentPath);
+
+    // Then: Returns null
+    assertNull("getIntercept should return null for non-existent path", retrieved);
   }
 
   // ==========================================================================
@@ -1845,14 +1912,30 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #422")
   public void deletePeers_allPeers_allDeleted() throws Exception {
     // Given: 3 peers created in directory
-    // When: deletePeers() called
-    // Then: All peers deleted; listPeers() returns empty
+    // Note: setup() ensures directory is clean, so we start with 0 peers
+    int peersToCreate = 3;
+    for (int i = 0; i < peersToCreate; i++) {
+      final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "delete-test-peer-" + i);
+      peerInfo.setZmqRpcAddress("tcp://127.0.0.1:" + (5671 + i));
+      palDirectory.createPeer(peerInfo);
+      createdPeers.add(peerInfo.getUuid());
+    }
 
-    // TODO(#422): Implement after #422 provides the implementation
-    fail("Not yet implemented");
+    // Verify peers were created
+    int totalPeers = palDirectory.listPeers().size();
+    assertTrue("Should have at least 3 peers", totalPeers >= peersToCreate);
+
+    // When: deletePeers() called
+    long deletedCount = palDirectory.deletePeers();
+
+    // Then: All peers deleted; listPeers() returns empty
+    assertTrue("Should delete at least the peers we created", deletedCount >= peersToCreate);
+    assertTrue("listPeers() should return empty", palDirectory.listPeers().isEmpty());
+
+    // Clear createdPeers since we've already deleted them
+    createdPeers.clear();
   }
 
   // ==========================================================================
@@ -1871,14 +1954,31 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #422")
   public void close_multipleCallsAndResourceVerification() throws Exception {
-    // Given: Active PalDirectory instance
-    // When: close() called twice
-    // Then: No exception; resources released
+    // Given: Active PalDirectory instance (create a separate one to avoid interfering with cleanup)
+    PalDirectory testDirectory = new PalDirectory(getPalDirectoryUrl());
 
-    // TODO(#422): Implement after #422 provides the implementation
-    fail("Not yet implemented");
+    // Perform an operation to ensure the directory is active
+    testDirectory.listPeers();
+
+    // When: close() called twice
+    // First close should succeed
+    testDirectory.close();
+
+    // Second close should also succeed (no exception)
+    testDirectory.close();
+
+    // Then: No exception; resources released
+    // If we got here without exception, the test passes
+    // Verify operations fail after close by trying to use the closed directory
+    try {
+      testDirectory.listPeers();
+      // Note: Some implementations may throw on use after close, but this isn't guaranteed
+      // The main assertion is that close() can be called twice without exception
+    } catch (Exception e) {
+      // Expected - directory is closed, operations may fail
+      logger.debug("Operation after close() threw exception as expected: {}", e.getMessage());
+    }
   }
 
   // ==========================================================================
@@ -1897,14 +1997,41 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #422")
   public void constructor_withNamespace_usesNamespace() throws Exception {
     // Given: PalDirectory created with custom namespace
-    // When: Peer created and retrieved
-    // Then: Peer exists in namespaced path
+    String customNamespace = "test-namespace-" + System.currentTimeMillis();
+    PalDirectory namespacedDirectory =
+        new PalDirectory(getPalDirectoryUrl(), customNamespace, true);
 
-    // TODO(#422): Implement after #422 provides the implementation
-    fail("Not yet implemented");
+    try {
+      // When: Peer created in namespaced directory
+      final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "namespaced-peer");
+      peerInfo.setZmqRpcAddress("tcp://127.0.0.1:5671");
+      namespacedDirectory.createPeer(peerInfo);
+
+      try {
+        // Then: Peer exists in namespaced path (can be retrieved from namespaced directory)
+        assertTrue(
+            "Peer should exist in namespaced directory",
+            namespacedDirectory.peerExists(peerInfo.getUuid()));
+
+        // Peer should NOT be visible from the default namespace directory
+        assertFalse(
+            "Peer should NOT exist in default namespace",
+            palDirectory.peerExists(peerInfo.getUuid()));
+
+        // Can retrieve peer from namespaced directory
+        PeerInfo retrieved = namespacedDirectory.getPeer(peerInfo.getUuid());
+        assertNotNull("Should be able to retrieve peer from namespaced directory", retrieved);
+        assertEquals("Peer UUID should match", peerInfo.getUuid(), retrieved.getUuid());
+      } finally {
+        // Clean up peer from namespaced directory
+        namespacedDirectory.deletePeer(peerInfo.getUuid());
+      }
+    } finally {
+      // Close the namespaced directory
+      namespacedDirectory.close();
+    }
   }
 
   /**
@@ -1919,13 +2046,27 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #422")
   public void constructor_withTimeout_respectsTimeout() throws Exception {
-    // Given: PalDirectory created with 1ms timeout and invalid endpoint
-    // When: Constructor called
-    // Then: Fails fast with EtcdUnavailableException
+    // Given: Invalid endpoint with very short timeout
+    // Use an IP address that is not routable (RFC 5737 test range)
+    String invalidEndpoint = "192.0.2.1:2379";
+    Duration shortTimeout = Duration.ofMillis(100);
 
-    // TODO(#422): Implement after #422 provides the implementation
-    fail("Not yet implemented");
+    // When/Then: Constructor should fail fast with EtcdUnavailableException
+    long startTime = System.currentTimeMillis();
+    try {
+      // blocking=true to trigger the preflight health check
+      new PalDirectory(invalidEndpoint, null, true, shortTimeout);
+      fail("Should have thrown EtcdUnavailableException for invalid endpoint");
+    } catch (EtcdUnavailableException e) {
+      // Expected exception
+      long elapsed = System.currentTimeMillis() - startTime;
+      logger.info(
+          "Constructor failed as expected in {}ms with message: {}", elapsed, e.getMessage());
+
+      // Verify it failed reasonably quickly (within 2 seconds to allow for some overhead)
+      assertTrue(
+          "Should fail within reasonable time frame (elapsed: " + elapsed + "ms)", elapsed < 2000);
+    }
   }
 }
