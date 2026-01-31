@@ -46,6 +46,7 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1369,5 +1370,181 @@ public class ThinPeerIT extends AbstractIntegrationTest {
         }
       }
     }
+  }
+
+  // ============================================================================
+  // WebSocket and Chronicle Integration Tests (Issue #423)
+  // These test specifications verify ThinPeer WebSocket client and Chronicle
+  // log operations against real peers and infrastructure.
+  // ============================================================================
+
+  /**
+   * Tests that sendJsonRpcRequestToPeer receives a valid response when connected.
+   *
+   * <p>Acceptance Criteria:
+   * [INTEGRATION:ThinPeerIT.sendJsonRpcRequestToPeer_connected_receivesResponse]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #424")
+  public void sendJsonRpcRequestToPeer_connected_receivesResponse() throws Exception {
+    // Given: ThinPeer connected to shared peer via WebSocket
+    // When: sendJsonRpcRequestToPeer() with valid request called
+    // Then: Receives valid JsonRpcResponse
+
+    // TODO(#424): Implement after #424 provides the implementation
+    // - Configure ThinPeer with JSON-RPC outbound type
+    // - Connect to shared peer via WebSocket
+    // - Create a valid JsonRpcRequest (e.g., ping or simple method call)
+    // - Call sendJsonRpcRequestToPeer(request)
+    // - Verify the CompletableFuture completes with a valid JsonRpcResponse
+    // - Assert response is not null and has expected structure
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that sendJsonRpcRequestToPeer correctly tracks message IDs.
+   *
+   * <p>Acceptance Criteria:
+   * [INTEGRATION:ThinPeerIT.sendJsonRpcRequestToPeer_withMessageId_tracksCorrectly]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #424")
+  public void sendJsonRpcRequestToPeer_withMessageId_tracksCorrectly() throws Exception {
+    // Given: ThinPeer connected via WebSocket
+    // When: sendJsonRpcRequestToPeer(request, messageId) called
+    // Then: Response correlates to messageId
+
+    // TODO(#424): Implement after #424 provides the implementation
+    // - Configure ThinPeer with JSON-RPC outbound type
+    // - Connect to shared peer via WebSocket
+    // - Create a valid JsonRpcRequest with known ID
+    // - Call sendJsonRpcRequestToPeer(request, messageId)
+    // - Verify the response has the same ID as the request
+    // - Test with multiple concurrent requests to ensure correct correlation
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that WebSocket connection loss is handled gracefully.
+   *
+   * <p>Acceptance Criteria: [INTEGRATION:ThinPeerIT.wsClient_connectionLost_handlesGracefully]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #424")
+  public void wsClient_connectionLost_handlesGracefully() throws Exception {
+    // Given: ThinPeer connected via WebSocket
+    // When: Connection closed by peer
+    // Then: Appropriate error handling; no exception propagation
+
+    // TODO(#424): Implement after #424 provides the implementation
+    // - Configure ThinPeer with JSON-RPC outbound type
+    // - Connect to shared peer via WebSocket
+    // - Verify connection is established
+    // - Initiate an async request
+    // - Close the connection (simulate peer closing)
+    // - Verify pending futures are completed exceptionally
+    // - Verify no unhandled exceptions are thrown
+    // - Verify ThinPeer state is consistent after connection loss
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that sendExecMessageToLog appends successfully to Chronicle log.
+   *
+   * <p>Acceptance Criteria:
+   * [INTEGRATION:ThinPeerIT.sendExecMessageToChronicleLog_validMessage_appendsSuccessfully]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #424")
+  public void sendExecMessageToChronicleLog_validMessage_appendsSuccessfully() throws Exception {
+    // Given: ThinPeer with Chronicle output log configured
+    // When: sendExecMessageToLog() called
+    // Then: Message appended to Chronicle queue
+
+    // TODO(#424): Implement after #424 provides the implementation
+    // - Create a temp directory for Chronicle queue
+    // - Create LogInfo with CHRONICLE type pointing to temp dir
+    // - Configure ThinPeer with Chronicle output log
+    // - Create a valid ExecMessage
+    // - Call sendExecMessageToLog(execMessage)
+    // - Verify the Future completes successfully
+    // - Verify message was written to Chronicle queue (read it back)
+    // - Clean up temp directory
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests Chronicle round-trip: send message and receive response.
+   *
+   * <p>Acceptance Criteria:
+   * [INTEGRATION:ThinPeerIT.sendExecMessageToChronicleLogAndReceive_validMessage_receivesResponse]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #424")
+  public void sendExecMessageToChronicleLogAndReceive_validMessage_receivesResponse()
+      throws Exception {
+    // Given: ThinPeer with Chronicle log; peer consuming from log
+    // When: sendExecMessageToChronicleLogAndReceive() called
+    // Then: Receives response after peer processing
+
+    // TODO(#424): Implement after #424 provides the implementation
+    // - This test requires a peer that reads from Chronicle and writes responses
+    // - Create temp directories for input and output Chronicle queues
+    // - Configure shared peer to read from input queue and write to output queue
+    // - Configure ThinPeer with Chronicle input/output logs
+    // - Create a valid ExecMessage (e.g., static method call)
+    // - Call sendExecMessageToLogAndReceive(execMessage)
+    // - Verify the response LogMessage is received
+    // - Verify response content matches expected result
+    // - Clean up temp directories
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that getMessageAtOffset retrieves correct message from Chronicle log.
+   *
+   * <p>Acceptance Criteria:
+   * [INTEGRATION:ThinPeerIT.getMessageAtOffset_chronicleLog_retrievesCorrectMessage]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #424")
+  public void getMessageAtOffset_chronicleLog_retrievesCorrectMessage() throws Exception {
+    // Given: ThinPeer with Chronicle input log containing messages
+    // When: getMessageAtOffset(offset) called
+    // Then: Returns message at specified offset
+
+    // TODO(#424): Implement after #424 provides the implementation
+    // - Create temp directory for Chronicle queue
+    // - Write multiple test messages to Chronicle queue
+    // - Create LogInfo with CHRONICLE type pointing to temp dir
+    // - Configure ThinPeer with Chronicle input log (consuming enabled)
+    // - Call getMessageAtOffset(knownOffset) for each written message
+    // - Verify returned message matches expected content at that offset
+    // - Test edge cases: first message, last message
+    // - Clean up temp directory
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that connectWebSocketWithTimeout returns false after timeout for invalid peer.
+   *
+   * <p>Acceptance Criteria:
+   * [INTEGRATION:ThinPeerIT.connectWebSocketWithTimeout_invalidPeer_timesOut]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #424")
+  public void connectWebSocketWithTimeout_invalidPeer_timesOut() throws Exception {
+    // Given: ThinPeer configured for non-responsive endpoint
+    // When: connectWebSocketWithTimeout(peer, shortTimeout) called
+    // Then: Returns false after timeout
+
+    // TODO(#424): Implement after #424 provides the implementation
+    // - Configure ThinPeer with JSON-RPC outbound type
+    // - Create PeerInfo with non-existent JSON-RPC address (e.g., ws://localhost:1)
+    // - Call connectToPeer(peer, Duration.ofSeconds(2))
+    // - Verify method returns false (connection failed)
+    // - Verify the timeout was respected (elapsed time >= timeout)
+    // - Verify ThinPeer state shows not connected
+    fail("Not yet implemented");
   }
 }
