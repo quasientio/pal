@@ -41,6 +41,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1708,5 +1709,223 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     String nonExistentLogName = "non_existent_log_" + System.currentTimeMillis();
     List<LogInfo> logs = palDirectory.getLogsInfoByName(nonExistentLogName);
     assertTrue(logs.isEmpty());
+  }
+
+  // ==========================================================================
+  // isPeerAlive() Tests - Issue #421
+  // ==========================================================================
+
+  /**
+   * Tests that isPeerAlive returns true for a peer with an active lease.
+   *
+   * <p>Specification from Issue #421:
+   *
+   * <ul>
+   *   <li>Given: Peer created with active lease (60s TTL)
+   *   <li>When: isPeerAlive(peerUuid) called
+   *   <li>Then: Returns true
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #422")
+  public void isPeerAlive_peerWithActiveLease_true() throws Exception {
+    // Given: Peer created with active lease (60s TTL)
+    // When: isPeerAlive(peerUuid) called
+    // Then: Returns true
+
+    // TODO(#422): Implement after #422 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that isPeerAlive returns false for a peer whose lease has been revoked.
+   *
+   * <p>Specification from Issue #421:
+   *
+   * <ul>
+   *   <li>Given: Peer created; lease created then revoked via close()
+   *   <li>When: isPeerAlive(peerUuid) called (after short wait)
+   *   <li>Then: Returns false
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #422")
+  public void isPeerAlive_peerWithRevokedLease_false() throws Exception {
+    // Given: Peer created; lease created then revoked via close()
+    // When: isPeerAlive(peerUuid) called (after short wait)
+    // Then: Returns false
+
+    // TODO(#422): Implement after #422 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that isPeerAlive returns false for a non-existent peer.
+   *
+   * <p>Specification from Issue #421:
+   *
+   * <ul>
+   *   <li>Given: Random UUID not in directory
+   *   <li>When: isPeerAlive(randomUuid) called
+   *   <li>Then: Returns false
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #422")
+  public void isPeerAlive_nonExistentPeer_false() throws Exception {
+    // Given: Random UUID not in directory
+    // When: isPeerAlive(randomUuid) called
+    // Then: Returns false
+
+    // TODO(#422): Implement after #422 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  // ==========================================================================
+  // getIntercept() Tests - Issue #421
+  // ==========================================================================
+
+  /**
+   * Tests that getIntercept returns the intercept request for a valid path.
+   *
+   * <p>Specification from Issue #421:
+   *
+   * <ul>
+   *   <li>Given: Intercept created for peer
+   *   <li>When: getIntercept(interceptPath) called with correct path
+   *   <li>Then: Returns InterceptRequest matching original
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #422")
+  public void getIntercept_validPath_returnsIntercept() throws Exception {
+    // Given: Intercept created for peer
+    // When: getIntercept(interceptPath) called with correct path
+    // Then: Returns InterceptRequest matching original
+
+    // TODO(#422): Implement after #422 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that getIntercept returns null for an invalid path.
+   *
+   * <p>Specification from Issue #421:
+   *
+   * <ul>
+   *   <li>Given: No intercept at path
+   *   <li>When: getIntercept("/nonexistent/path") called
+   *   <li>Then: Returns null
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #422")
+  public void getIntercept_invalidPath_null() throws Exception {
+    // Given: No intercept at path
+    // When: getIntercept("/nonexistent/path") called
+    // Then: Returns null
+
+    // TODO(#422): Implement after #422 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  // ==========================================================================
+  // deletePeers() Tests - Issue #421
+  // ==========================================================================
+
+  /**
+   * Tests that deletePeers removes all peers from the directory.
+   *
+   * <p>Specification from Issue #421:
+   *
+   * <ul>
+   *   <li>Given: 3 peers created in directory
+   *   <li>When: deletePeers() called
+   *   <li>Then: All peers deleted; listPeers() returns empty
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #422")
+  public void deletePeers_allPeers_allDeleted() throws Exception {
+    // Given: 3 peers created in directory
+    // When: deletePeers() called
+    // Then: All peers deleted; listPeers() returns empty
+
+    // TODO(#422): Implement after #422 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  // ==========================================================================
+  // close() Tests - Issue #421
+  // ==========================================================================
+
+  /**
+   * Tests that close() is safe to call multiple times and resources are released.
+   *
+   * <p>Specification from Issue #421:
+   *
+   * <ul>
+   *   <li>Given: Active PalDirectory instance
+   *   <li>When: close() called twice
+   *   <li>Then: No exception; resources released
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #422")
+  public void close_multipleCallsAndResourceVerification() throws Exception {
+    // Given: Active PalDirectory instance
+    // When: close() called twice
+    // Then: No exception; resources released
+
+    // TODO(#422): Implement after #422 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  // ==========================================================================
+  // Constructor Tests - Issue #421
+  // ==========================================================================
+
+  /**
+   * Tests that PalDirectory with a custom namespace uses that namespace.
+   *
+   * <p>Specification from Issue #421:
+   *
+   * <ul>
+   *   <li>Given: PalDirectory created with custom namespace
+   *   <li>When: Peer created and retrieved
+   *   <li>Then: Peer exists in namespaced path
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #422")
+  public void constructor_withNamespace_usesNamespace() throws Exception {
+    // Given: PalDirectory created with custom namespace
+    // When: Peer created and retrieved
+    // Then: Peer exists in namespaced path
+
+    // TODO(#422): Implement after #422 provides the implementation
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that PalDirectory constructor with short timeout fails fast for invalid endpoint.
+   *
+   * <p>Specification from Issue #421:
+   *
+   * <ul>
+   *   <li>Given: PalDirectory created with 1ms timeout and invalid endpoint
+   *   <li>When: Constructor called
+   *   <li>Then: Fails fast with EtcdUnavailableException
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #422")
+  public void constructor_withTimeout_respectsTimeout() throws Exception {
+    // Given: PalDirectory created with 1ms timeout and invalid endpoint
+    // When: Constructor called
+    // Then: Fails fast with EtcdUnavailableException
+
+    // TODO(#422): Implement after #422 provides the implementation
+    fail("Not yet implemented");
   }
 }
