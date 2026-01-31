@@ -1243,7 +1243,7 @@ public class ThinPeer {
       OutboundMsg outboundMsg =
           new OutboundMsg(
               messageType,
-              null, // phase can be null for log messages
+              ExecPhase.UNDEFINED, // UNDEFINED for log messages (no specific phase)
               null, // no internal headers for now
               message.getMessageId(),
               message.getResponseToId(),
