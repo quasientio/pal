@@ -31,6 +31,7 @@ import io.quasient.pal.serdes.colfer.MessageBuilder;
 import java.nio.file.Path;
 import java.util.UUID;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -255,5 +256,163 @@ public class MetaMessageDispatcherTest {
     MetaMessage response = dispatcher.incomingMetaMessage(request);
 
     assertThat(response.getFromPeer(), is(peerUuid.toString()));
+  }
+
+  // ===== Additional Test Specifications (Issue #468) =====
+
+  /**
+   * Tests that an unsupported service type returns UNSUPPORTED status.
+   *
+   * <p>Given: MetaMessage with unknown service type (service ID not mapped to any MetaServiceType)
+   * When: incomingMetaMessage called Then: Response has UNSUPPORTED status and error message
+   * indicates the unsupported service
+   */
+  @Test
+  @Ignore("Awaiting implementation in #469")
+  public void incomingMetaMessage_unsupportedService_returnsUnsupportedResponse() {
+    // Given: MetaMessage with unknown service type
+    // The service ID 127 is not mapped to any MetaServiceType (only FETCH_CLASSES_INFO=1 exists)
+
+    // When: incomingMetaMessage called
+
+    // Then: Response has UNSUPPORTED status
+
+    // TODO(#469): Implement test logic
+    throw new AssertionError("Not yet implemented");
+  }
+
+  /**
+   * Tests that an unknown parameter name is logged as warning but processing continues.
+   *
+   * <p>Given: MetaMessage with unrecognized parameter name When: incomingMetaMessage called Then:
+   * Warning logged; parameter ignored; processing continues successfully
+   *
+   * <p>Note: This test verifies the behavior documented at MetaMessageDispatcher.java:136 where
+   * unknown parameters are logged with logger.warn() and skipped.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #469")
+  public void incomingMetaMessage_unknownParameter_logsWarning() {
+    // Given: MetaMessage with unrecognized parameter name
+
+    // When: incomingMetaMessage called
+
+    // Then: Warning logged; parameter ignored; processing continues
+
+    // TODO(#469): Implement test logic
+    // Consider using a log appender to verify the warning was logged
+    throw new AssertionError("Not yet implemented");
+  }
+
+  /**
+   * Tests that a malformed parameter value throws RuntimeException during unwrapping.
+   *
+   * <p>Given: MetaMessage with malformed parameter value (e.g., compress_encode set to a value that
+   * cannot be cast to Boolean) When: incomingMetaMessage called Then: RuntimeException thrown with
+   * message indicating the parameter name
+   */
+  @Test
+  @Ignore("Awaiting implementation in #469")
+  public void incomingMetaMessage_unwrapError_throwsRuntimeException() {
+    // Given: MetaMessage with malformed parameter value
+    // Create an Obj with incorrect type that will fail to unwrap as Boolean
+
+    // When: incomingMetaMessage called
+
+    // Then: RuntimeException thrown
+
+    // TODO(#469): Implement test logic
+    // Create a parameter where getValue() returns an Obj that cannot be unwrapped as Boolean
+    throw new AssertionError("Not yet implemented");
+  }
+
+  /**
+   * Tests that exclude_prefixes parameter excludes matching classes from result.
+   *
+   * <p>Given: MetaMessage with exclude_prefixes parameter containing class prefixes When:
+   * FETCH_CLASSES_INFO processed Then: Classes matching prefixes excluded from result; serializer
+   * called with correct excludePrefixes set
+   */
+  @Test
+  @Ignore("Awaiting implementation in #469")
+  public void incomingMetaMessage_excludePrefixes_excludesMatchingClasses() throws Exception {
+    // Given: MetaMessage with exclude_prefixes parameter
+    // Create a parameter with name "exclude_prefixes" and value as String[]
+
+    // When: FETCH_CLASSES_INFO processed
+
+    // Then: Classes matching prefixes excluded from result
+    // Verify classMetadataSerializer.scannedClasspathToJson was called with correct excludePrefixes
+
+    // TODO(#469): Implement test logic
+    // Use Wrapper to create properly wrapped String[] for exclude_prefixes
+    // Verify using Mockito ArgumentCaptor or eq() matchers
+    throw new AssertionError("Not yet implemented");
+  }
+
+  /**
+   * Tests that include_classes parameter only includes specified classes in result.
+   *
+   * <p>Given: MetaMessage with include_classes parameter containing specific class names When:
+   * FETCH_CLASSES_INFO processed Then: Only specified classes in result; serializer called with
+   * correct includeClasses set
+   */
+  @Test
+  @Ignore("Awaiting implementation in #469")
+  public void incomingMetaMessage_includeClasses_onlyIncludesSpecified() throws Exception {
+    // Given: MetaMessage with include_classes parameter
+    // Create a parameter with name "include_classes" and value as String[]
+
+    // When: FETCH_CLASSES_INFO processed
+
+    // Then: Only specified classes in result
+    // Verify classMetadataSerializer.scannedClasspathToJson was called with correct includeClasses
+
+    // TODO(#469): Implement test logic
+    // Use Wrapper to create properly wrapped String[] for include_classes
+    // Use ArgumentCaptor to capture the Set<String> argument
+    throw new AssertionError("Not yet implemented");
+  }
+
+  /**
+   * Tests that merge_ancestry=true parameter includes parent members in result.
+   *
+   * <p>Given: MetaMessage with merge_ancestry=true When: FETCH_CLASSES_INFO processed Then: Result
+   * includes inherited members; serializer called with mergeAncestry=true
+   */
+  @Test
+  @Ignore("Awaiting implementation in #469")
+  public void incomingMetaMessage_mergeAncestry_includesParentMembers() throws Exception {
+    // Given: MetaMessage with merge_ancestry=true
+
+    // When: FETCH_CLASSES_INFO processed
+
+    // Then: Result includes inherited members
+    // Verify classMetadataSerializer.scannedClasspathToJson was called with mergeAncestry=true
+
+    // TODO(#469): Implement test logic
+    // Use Wrapper to create properly wrapped Boolean for merge_ancestry
+    throw new AssertionError("Not yet implemented");
+  }
+
+  /**
+   * Tests that compress_encode=false returns uncompressed JSON result.
+   *
+   * <p>Given: MetaMessage with compress_encode=false When: FETCH_CLASSES_INFO processed Then:
+   * Result is plain JSON (not compressed); serializer called with compressAndEncode=false
+   */
+  @Test
+  @Ignore("Awaiting implementation in #469")
+  public void incomingMetaMessage_compressEncodeFalse_returnsUncompressed() throws Exception {
+    // Given: MetaMessage with compress_encode=false
+
+    // When: FETCH_CLASSES_INFO processed
+
+    // Then: Result is plain JSON (not compressed)
+    // Verify classMetadataSerializer.scannedClasspathToJson was called with compressAndEncode=false
+
+    // TODO(#469): Implement test logic
+    // Use Wrapper to create properly wrapped Boolean for compress_encode
+    throw new AssertionError("Not yet implemented");
   }
 }
