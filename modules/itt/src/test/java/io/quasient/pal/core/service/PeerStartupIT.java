@@ -9,11 +9,26 @@
  */
 package io.quasient.pal.core.service;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import io.quasient.pal.AbstractIntegrationTest;
-import org.junit.Ignore;
+import io.quasient.pal.PeerProcess;
+import io.quasient.pal.common.directory.nodes.PeerInfo;
+import io.quasient.pal.cxn.directory.PalDirectory;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Comparator;
+import java.util.UUID;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Integration tests for peer startup behavior with various configurations.
@@ -39,41 +54,80 @@ import org.junit.Test;
  *   <li>{@link MainClassNotFoundIT} - Main class not found errors
  * </ul>
  *
- * @see <a href="https://github.com/quasient/pal/issues/483">Issue #483</a>
+ * @see <a href="https://github.com/quasient/pal/issues/484">Issue #484</a>
  */
 public class PeerStartupIT extends AbstractIntegrationTest {
+
+  private static final Logger logger = LoggerFactory.getLogger(PeerStartupIT.class);
 
   /**
    * Verifies peer starts successfully with WAL and RPC configuration.
    *
-   * <p>Given: Valid etcd and Kafka configuration When: Peer started with --wal and --rpc flags
+   * <p>Given: Valid etcd and Kafka configuration When: Peer started with --wal and --zmq-rpc flags
    * Then: Peer registers in directory; RPC endpoints available
-   *
-   * <p>TODO(#484): Implement after the implementation issue is complete
    */
   @Test
-  @Ignore("Awaiting implementation in #484")
-  public void main_withWalAndRpc_startsSuccessfully() {
-    // Given: Valid etcd and Kafka configuration
-    //   - PAL_DIRECTORY environment variable points to running etcd
-    //   - KAFKA_SERVERS environment variable points to running Kafka
-    //   - Valid main class in classpath
+  public void main_withWalAndRpc_startsSuccessfully() throws Exception {
+    UUID peerId = UUID.randomUUID();
+    String walName = "test-startup-wal-" + generateId();
+    PeerProcess peer = null;
+    PalDirectory directory = null;
 
-    // When: Peer started with --wal and --rpc flags
-    //   - Use launchPeer() with:
-    //     "-d", getPalDirectoryUrl(),
-    //     "-k", getKafkaServers(),
-    //     "--wal", "test-wal-<unique-id>",
-    //     "--rpc", "auto",
-    //     "io.quasient.pal.apps.DummyMain"
+    try {
+      // Build classpath for itt-apps (same as RpcTestSuite)
+      String palHome = System.getenv("PAL_HOME");
+      String ittAppsClasspath =
+          String.format(
+              "%s/modules/itt-apps/target/classes:%s/modules/itt-apps/target/classes",
+              palHome, palHome);
 
-    // Then: Peer registers in directory; RPC endpoints available
-    //   - Peer should register in etcd directory
-    //   - Use PalDirectory to verify peer exists
-    //   - Verify either ZMQ RPC or JSON RPC address is set
-    //   - Stop peer after verification
+      // When: Peer started with --wal and --zmq-rpc flags
+      // Note: We use --as-service to keep the peer running after main() returns
+      peer =
+          launchPeer(
+              peerId,
+              "-d",
+              getPalDirectoryUrl(),
+              "-k",
+              getKafkaServers(),
+              "--wal",
+              walName,
+              "--zmq-rpc",
+              "auto",
+              "--as-service",
+              "-cp",
+              ittAppsClasspath,
+              "io.quasient.pal.apps.quantized.rpc.Methods");
 
-    fail("Not yet implemented");
+      // Then: Peer registers in directory
+      assertTrue("Peer process should be alive", peer.isAlive());
+
+      // Verify peer is registered in etcd directory
+      directory = new PalDirectory(getPalDirectoryUrl(), null, true);
+      PeerInfo peerInfo = directory.getPeer(peerId);
+      assertNotNull("Peer should be registered in directory", peerInfo);
+      assertThat("Peer should have ZMQ RPC address", peerInfo.getZmqRpcAddress(), notNullValue());
+
+      logger.info(
+          "Peer {} successfully started with WAL and RPC, ZMQ address: {}",
+          peerId,
+          peerInfo.getZmqRpcAddress());
+
+    } finally {
+      // Cleanup
+      if (peer != null) {
+        stopPeer(peer);
+      }
+      if (directory != null) {
+        try {
+          directory.deletePeer(peerId);
+          directory.deleteLog(walName);
+        } catch (Exception e) {
+          logger.warn("Cleanup error (may already be cleaned)", e);
+        }
+        directory.close();
+      }
+    }
   }
 
   /**
@@ -81,59 +135,80 @@ public class PeerStartupIT extends AbstractIntegrationTest {
    *
    * <p>Given: Chronicle queue path (file:/tmp/test-wal) When: Peer started with --wal file:/path
    * Then: Peer starts successfully without Kafka
-   *
-   * <p>TODO(#484): Implement after the implementation issue is complete
    */
   @Test
-  @Ignore("Awaiting implementation in #484")
-  public void main_withChronicleWal_startsWithoutKafka() {
-    // Given: Chronicle queue path (file:/tmp/test-wal)
-    //   - No KAFKA_SERVERS required when using Chronicle
-    //   - Temporary directory for Chronicle queue files
+  public void main_withChronicleWal_startsWithoutKafka() throws Exception {
+    UUID peerId = UUID.randomUUID();
+    Path chronicleDir = Files.createTempDirectory("test-chronicle-wal-");
+    PeerProcess peer = null;
 
-    // When: Peer started with --wal file:/path
-    //   - Use launchPeer() with:
-    //     "--wal", "file:/tmp/test-chronicle-wal-<unique-id>",
-    //     "--rpc", "auto",
-    //     "io.quasient.pal.apps.DummyMain"
-    //   - Note: No -k flag (Kafka not needed for Chronicle)
+    try {
+      // Build classpath for itt-apps
+      String palHome = System.getenv("PAL_HOME");
+      String ittAppsClasspath =
+          String.format(
+              "%s/modules/itt-apps/target/classes:%s/modules/itt-apps/target/classes",
+              palHome, palHome);
 
-    // Then: Peer starts successfully without Kafka
-    //   - Peer process should start and become ready
-    //   - Verify peer is alive
-    //   - Stop peer and cleanup Chronicle directory
+      // When: Peer started with Chronicle WAL (no Kafka required)
+      // Note: We use --zmq-rpc auto and --as-service to keep peer running after main() returns
+      peer =
+          launchPeer(
+              peerId,
+              "--wal",
+              "file:" + chronicleDir.toString(),
+              "--zmq-rpc",
+              "auto",
+              "--as-service",
+              "-cp",
+              ittAppsClasspath,
+              "io.quasient.pal.apps.quantized.rpc.Methods");
 
-    fail("Not yet implemented");
+      // Then: Peer starts successfully without Kafka
+      assertTrue("Peer process should be alive", peer.isAlive());
+
+      logger.info("Peer {} successfully started with Chronicle WAL (no Kafka)", peerId);
+
+    } finally {
+      // Cleanup
+      if (peer != null) {
+        stopPeer(peer);
+      }
+      // Delete Chronicle directory
+      deleteDirectoryRecursively(chronicleDir);
+    }
   }
 
   /**
    * Verifies peer exits with code 14 when etcd is unavailable.
    *
-   * <p>Given: Invalid etcd endpoint When: Peer started with --directory flag Then: Process exits
-   * with code 14 (ERROR_UNREACHABLE_ETCD)
-   *
-   * <p>Note: Similar test exists in {@link MainEtcdRegistrationIT}, this test may be consolidated.
-   *
-   * <p>TODO(#484): Implement after the implementation issue is complete
+   * <p>Given: Invalid etcd endpoint When: Peer started with --dir flag Then: Process exits with
+   * code 14 (ERROR_UNREACHABLE_ETCD)
    */
   @Test
-  @Ignore("Awaiting implementation in #484")
-  public void main_etcdUnavailable_failsWithExitCode14() {
-    // Given: Invalid etcd endpoint
-    //   - Use non-routable IP (e.g., 192.0.2.1:2379) to simulate unreachable etcd
-    //   - Set short --etcd-timeout for faster test execution
+  public void main_etcdUnavailable_failsWithExitCode14() throws Exception {
+    // Given: Invalid etcd endpoint (non-routable TEST-NET-1 address)
+    String unreachableEtcd = "192.0.2.1:2379";
 
-    // When: Peer started with --directory flag pointing to invalid etcd
-    //   - Use runPeerWithEnv() with invalid etcd endpoint
-    //   - "--dir", "192.0.2.1:2379",
-    //   - "--etcd-timeout", "3000",
-    //   - "io.quasient.pal.apps.DummyMain"
+    // When: Peer started with --dir pointing to invalid etcd
+    ProcessResult result =
+        runPeerWithEnv(
+            unreachableEtcd,
+            "--dir",
+            unreachableEtcd,
+            "--etcd-timeout",
+            "3000",
+            "com.example.DummyMain");
 
     // Then: Process exits with code 14 (ERROR_UNREACHABLE_ETCD)
-    //   - assertEquals(PeerException.FatalCode.ERROR_UNREACHABLE_ETCD.getCode(), result.exitCode())
-    //   - assertThat(result.stderr(), containsString(ERROR_UNREACHABLE_ETCD message))
-
-    fail("Not yet implemented");
+    assertEquals(
+        "Expected fatal exit for unreachable etcd",
+        PeerException.FatalCode.ERROR_UNREACHABLE_ETCD.getCode(),
+        result.exitCode());
+    assertThat(
+        "Expected error message in stderr",
+        result.stderr(),
+        containsString(PeerException.FatalCode.ERROR_UNREACHABLE_ETCD.getMessage()));
   }
 
   /**
@@ -141,33 +216,30 @@ public class PeerStartupIT extends AbstractIntegrationTest {
    *
    * <p>Given: Invalid Kafka bootstrap servers When: Peer started with Kafka --wal Then: Process
    * exits with code 7 (ERROR_INITIALIZING_LOGS)
-   *
-   * <p>Note: Similar test exists in {@link
-   * MainIT#testInitLogsWithUnreachableKafka_fatalExitInitializingLogs()}, this test may be
-   * consolidated.
-   *
-   * <p>TODO(#484): Implement after the implementation issue is complete
    */
   @Test
-  @Ignore("Awaiting implementation in #484")
-  public void main_kafkaUnavailable_failsWithExitCode7() {
+  public void main_kafkaUnavailable_failsWithExitCode7() throws Exception {
     // Given: Invalid Kafka bootstrap servers
-    //   - Use localhost:1 or similar unreachable Kafka endpoint
-    //   - Set short --kafka-timeout for faster test execution
-
     // When: Peer started with Kafka --wal
-    //   - Use runPeer() with:
-    //     "--wal", "test-log",
-    //     "--kafka-servers", "localhost:1",
-    //     "--kafka-timeout", "3000",
-    //     "io.quasient.pal.apps.DummyMain"
+    ProcessResult result =
+        runPeer(
+            "--wal",
+            "test-log",
+            "--kafka-servers",
+            "localhost:1",
+            "--kafka-timeout",
+            "3000",
+            "com.example.DummyMain");
 
     // Then: Process exits with code 7 (ERROR_INITIALIZING_LOGS)
-    //   - assertEquals(PeerException.FatalCode.ERROR_INITIALIZING_LOGS.getCode(),
-    // result.exitCode())
-    //   - assertThat(result.stderr(), containsString(ERROR_INITIALIZING_LOGS message))
-
-    fail("Not yet implemented");
+    assertEquals(
+        "Expected fatal exit for Kafka initialization failure",
+        PeerException.FatalCode.ERROR_INITIALIZING_LOGS.getCode(),
+        result.exitCode());
+    assertThat(
+        "Expected error message in stderr",
+        result.stderr(),
+        containsString(PeerException.FatalCode.ERROR_INITIALIZING_LOGS.getMessage()));
   }
 
   /**
@@ -175,57 +247,122 @@ public class PeerStartupIT extends AbstractIntegrationTest {
    *
    * <p>Given: Invalid --zmq-rpc port value When: Peer started Then: Process exits with code 12
    * (ERROR_PARSING_ZMQ_RPC_PORT_NUMBER)
-   *
-   * <p>Note: Similar test exists in {@link
-   * MainInvalidInputIT#testInvalidZmqRpcPort_fatalExitParsingZmqPort()}, this test may be
-   * consolidated.
-   *
-   * <p>TODO(#484): Implement after the implementation issue is complete
    */
   @Test
-  @Ignore("Awaiting implementation in #484")
-  public void main_invalidRpcPort_failsWithExitCode12() {
+  public void main_invalidRpcPort_failsWithExitCode12() throws Exception {
     // Given: Invalid --zmq-rpc port value
-    //   - Use non-numeric value like "abc" or "not-a-port"
-
     // When: Peer started
-    //   - Use runPeer() with:
-    //     "--zmq-rpc", "abc",
-    //     "io.quasient.pal.apps.DummyMain"
+    ProcessResult result = runPeer("--zmq-rpc", "not-a-port", "com.example.DummyMain");
 
     // Then: Process exits with code 12 (ERROR_PARSING_ZMQ_RPC_PORT_NUMBER)
-    //   - assertEquals(
-    //       PeerException.FatalCode.ERROR_PARSING_ZMQ_RPC_PORT_NUMBER.getCode(),
-    //       result.exitCode())
-    //   - assertThat(result.stderr(), containsString(ERROR_PARSING_ZMQ_RPC_PORT_NUMBER message))
-
-    fail("Not yet implemented");
+    assertEquals(
+        "Expected fatal exit for invalid ZMQ RPC port",
+        PeerException.FatalCode.ERROR_PARSING_ZMQ_RPC_PORT_NUMBER.getCode(),
+        result.exitCode());
+    assertThat(
+        "Expected error message in stderr",
+        result.stderr(),
+        containsString(PeerException.FatalCode.ERROR_PARSING_ZMQ_RPC_PORT_NUMBER.getMessage()));
   }
 
   /**
    * Verifies peer deregisters from directory on graceful shutdown.
    *
-   * <p>Given: Running peer registered in directory When: SIGTERM sent to peer process Then: Peer
+   * <p>Given: Running peer registered in directory When: Peer process stopped (SIGTERM) Then: Peer
    * deregisters from etcd before exit
-   *
-   * <p>TODO(#484): Implement after the implementation issue is complete
    */
   @Test
-  @Ignore("Awaiting implementation in #484")
-  public void main_gracefulShutdown_deregistersFromDirectory() {
-    // Given: Running peer registered in directory
-    //   - Use launchPeer() to start a peer with directory registration
-    //   - Verify peer is registered in etcd using PalDirectory.getPeer()
+  public void main_gracefulShutdown_deregistersFromDirectory() throws Exception {
+    UUID peerId = UUID.randomUUID();
+    String walName = "test-shutdown-wal-" + generateId();
+    PeerProcess peer = null;
+    PalDirectory directory = null;
 
-    // When: SIGTERM sent to peer process
-    //   - Use stopPeer() to send graceful shutdown signal
-    //   - Wait for process to terminate
+    try {
+      // Build classpath for itt-apps
+      String palHome = System.getenv("PAL_HOME");
+      String ittAppsClasspath =
+          String.format(
+              "%s/modules/itt-apps/target/classes:%s/modules/itt-apps/target/classes",
+              palHome, palHome);
 
-    // Then: Peer deregisters from etcd before exit
-    //   - Use PalDirectory.getPeer() to verify peer is no longer registered
-    //   - Peer entry should be null or deleted
-    //   - Process should exit cleanly (exit code 0)
+      // Given: Running peer registered in directory
+      // Note: We use --as-service to keep the peer running after main() returns
+      // Otherwise the peer shuts down immediately and we can't verify registration
+      peer =
+          launchPeer(
+              peerId,
+              "-d",
+              getPalDirectoryUrl(),
+              "-k",
+              getKafkaServers(),
+              "--wal",
+              walName,
+              "--zmq-rpc",
+              "auto",
+              "--as-service",
+              "-cp",
+              ittAppsClasspath,
+              "io.quasient.pal.apps.quantized.rpc.Methods");
 
-    fail("Not yet implemented");
+      // Verify peer is registered in etcd using PalDirectory.getPeer()
+      directory = new PalDirectory(getPalDirectoryUrl(), null, true);
+      PeerInfo peerInfo = directory.getPeer(peerId);
+      assertNotNull("Peer should be registered in directory before shutdown", peerInfo);
+      logger.info(
+          "Peer {} registered in directory with ZMQ: {}", peerId, peerInfo.getZmqRpcAddress());
+
+      // When: SIGTERM sent to peer process
+      stopPeer(peer);
+      peer = null; // Mark as stopped
+
+      // Give etcd a moment to process the lease expiration/deletion
+      Thread.sleep(1000);
+
+      // Then: Peer deregisters from etcd before exit
+      PeerInfo peerInfoAfter = directory.getPeer(peerId);
+      assertThat("Peer should be deregistered from directory", peerInfoAfter, nullValue());
+
+      logger.info("Peer {} successfully deregistered from directory on graceful shutdown", peerId);
+
+    } finally {
+      // Cleanup
+      if (peer != null) {
+        stopPeer(peer);
+      }
+      if (directory != null) {
+        try {
+          directory.deleteLog(walName);
+        } catch (Exception e) {
+          logger.warn("Cleanup error (may already be cleaned)", e);
+        }
+        directory.close();
+      }
+    }
+  }
+
+  /**
+   * Recursively deletes a directory and all its contents.
+   *
+   * @param dir the directory to delete
+   */
+  private void deleteDirectoryRecursively(Path dir) {
+    if (!Files.exists(dir)) {
+      return;
+    }
+    try (var stream = Files.walk(dir)) {
+      stream
+          .sorted(Comparator.reverseOrder())
+          .forEach(
+              path -> {
+                try {
+                  Files.deleteIfExists(path);
+                } catch (IOException e) {
+                  logger.warn("Failed to delete {}", path, e);
+                }
+              });
+    } catch (IOException e) {
+      logger.warn("Failed to delete directory recursively: {}", dir, e);
+    }
   }
 }
