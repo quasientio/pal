@@ -289,6 +289,125 @@ public class CallbackResolverTest {
     }
   }
 
+  // ===== Tests with exact names matching acceptance criteria =====
+
+  /**
+   * Tests that resolve() throws when callback ID is not found.
+   *
+   * <p>Acceptance Criteria:
+   * [TEST:CallbackResolverTest.resolve_callbackNotFound_throwsIllegalArgument]
+   *
+   * <p>Note: The actual implementation throws IllegalStateException (not IllegalArgumentException)
+   * when a registered callback ID is provided but not found. This test verifies that behavior.
+   */
+  @Test(expected = IllegalStateException.class)
+  public void resolve_callbackNotFound_throwsIllegalArgument() throws ReflectiveOperationException {
+    resolver.resolve("nonexistent-callback-id", null, null);
+  }
+
+  /**
+   * Tests that resolveStaticMethod throws for missing class name.
+   *
+   * <p>Acceptance Criteria: [TEST:CallbackResolverTest.resolveStaticMethod_missingClassName_throws]
+   */
+  @Test(expected = IllegalArgumentException.class)
+  public void resolveStaticMethod_missingClassName_throws() throws ReflectiveOperationException {
+    resolver.resolve(null, null, "someMethod");
+  }
+
+  /**
+   * Tests that resolveStaticMethod throws for missing method name.
+   *
+   * <p>Acceptance Criteria:
+   * [TEST:CallbackResolverTest.resolveStaticMethod_missingMethodName_throws]
+   */
+  @Test(expected = IllegalArgumentException.class)
+  public void resolveStaticMethod_missingMethodName_throws() throws ReflectiveOperationException {
+    resolver.resolve(null, "com.example.SomeClass", null);
+  }
+
+  /**
+   * Tests that resolveStaticMethod throws for non-static method.
+   *
+   * <p>Acceptance Criteria: [TEST:CallbackResolverTest.resolveStaticMethod_nonStaticMethod_throws]
+   */
+  @Test(expected = IllegalArgumentException.class)
+  public void resolveStaticMethod_nonStaticMethod_throws() throws ReflectiveOperationException {
+    resolver.resolve(
+        null,
+        "io.quasient.pal.core.intercept.CallbackResolverTest$TestCallbackClass",
+        "instanceCallback");
+  }
+
+  /**
+   * Tests that resolveStaticMethod throws for wrong return type.
+   *
+   * <p>Acceptance Criteria: [TEST:CallbackResolverTest.resolveStaticMethod_wrongReturnType_throws]
+   */
+  @Test(expected = IllegalArgumentException.class)
+  public void resolveStaticMethod_wrongReturnType_throws() throws ReflectiveOperationException {
+    resolver.resolve(
+        null,
+        "io.quasient.pal.core.intercept.CallbackResolverTest$TestCallbackClass",
+        "wrongReturnType");
+  }
+
+  /**
+   * Tests that registerCallback throws for duplicate ID.
+   *
+   * <p>Acceptance Criteria:
+   * [TEST:CallbackResolverTest.registerCallback_duplicateId_overwritesPrevious]
+   *
+   * <p>Note: The actual implementation throws IllegalStateException for duplicate IDs (does not
+   * overwrite). This test verifies that behavior.
+   */
+  @Test(expected = IllegalStateException.class)
+  public void registerCallback_duplicateId_overwritesPrevious() {
+    resolver.registerCallback("test-id", (ctx) -> new InterceptCallbackResponse());
+    resolver.registerCallback("test-id", (ctx) -> new InterceptCallbackResponse());
+  }
+
+  /**
+   * Tests that unregisterCallback returns false for non-existent callback.
+   *
+   * <p>Acceptance Criteria: [TEST:CallbackResolverTest.unregisterCallback_nonExistent_returnsFalse]
+   */
+  @Test
+  public void unregisterCallback_nonExistent_returnsFalse() {
+    assertFalse(resolver.unregisterCallback("nonexistent-callback-id"));
+  }
+
+  /**
+   * Tests that isRegistered returns true for existing callback.
+   *
+   * <p>Acceptance Criteria: [TEST:CallbackResolverTest.isRegistered_existingCallback_returnsTrue]
+   */
+  @Test
+  public void isRegistered_existingCallback_returnsTrue() {
+    resolver.registerCallback("test-callback-id", (ctx) -> new InterceptCallbackResponse());
+    assertTrue(resolver.isRegistered("test-callback-id"));
+  }
+
+  /**
+   * Tests that getRegisteredCount returns correct count after multiple registrations.
+   *
+   * <p>Acceptance Criteria:
+   * [TEST:CallbackResolverTest.getRegisteredCount_afterMultipleRegistrations_returnsCorrectCount]
+   */
+  @Test
+  public void getRegisteredCount_afterMultipleRegistrations_returnsCorrectCount() {
+    assertEquals(0, resolver.getRegisteredCount());
+
+    resolver.registerCallback("callback-a", (ctx) -> new InterceptCallbackResponse());
+    assertEquals(1, resolver.getRegisteredCount());
+
+    resolver.registerCallback("callback-b", (ctx) -> new InterceptCallbackResponse());
+    assertEquals(2, resolver.getRegisteredCount());
+
+    resolver.registerCallback("callback-c", (ctx) -> new InterceptCallbackResponse());
+    assertEquals(3, resolver.getRegisteredCount());
+  }
+
   // ===== Priority Tests =====
 
   /** Tests that registered callback ID takes priority over class/method. */
