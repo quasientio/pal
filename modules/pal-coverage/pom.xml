@@ -92,7 +92,7 @@
                     -->
                     <execution>
                         <id>unpack-shaded-jar</id>
-                        <phase>generate-resources</phase>
+                        <phase>pre-integration-test</phase>
                         <goals>
                             <goal>unpack</goal>
                         </goals>
