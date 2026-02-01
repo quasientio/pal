@@ -9,6 +9,7 @@
  */
 package io.quasient.pal.core.dispatcher;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.Mockito.any;
@@ -17,6 +18,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.core.ZmqEnabledTest;
 import io.quasient.pal.core.internal.messages.InboundLogMsg;
 import io.quasient.pal.messages.colfer.ExecMessage;
@@ -196,9 +198,8 @@ public class LogRpcInvokerTest extends ZmqEnabledTest {
     }
   }
 
-  // ===== Error Handling Test Specifications =====
-  // The following tests are specifications awaiting implementation in #459.
-  // They focus on error handling paths that have lower coverage.
+  // ===== Error Handling Tests =====
+  // Tests for error handling paths in LogRpcInvoker.
 
   /**
    * Tests that run() continues processing after receiving an invalid JSON-RPC message.
@@ -207,20 +208,42 @@ public class LogRpcInvokerTest extends ZmqEnabledTest {
    * the invoker thread, allowing it to continue processing subsequent valid messages.
    */
   @Test
-  @Ignore("Awaiting implementation in #459")
-  public void run_invalidJsonRpcMessage_logsErrorAndContinues() {
-    // Given: LogRpcInvoker connected to dealer socket
-    // When: Malformed JSON-RPC message received (e.g., truncated JSON, missing required fields)
-    // Then: Error logged; invoker continues processing next message
+  public void run_invalidJsonRpcMessage_logsErrorAndContinues() throws Exception {
+    // Start invoker thread
+    execService.execute(logRpcInvoker);
 
-    // TODO(#459): Implement test logic
-    // - Create LogRpcInvoker with mocked IncomingMessageDispatcher
-    // - Start invoker in executor
-    // - Send malformed JSON-RPC message via dealer socket
-    // - Send valid message after the malformed one
-    // - Verify invoker processed the valid message (continues processing)
-    // - Verify dispatch was NOT called for malformed message
-    Assert.fail("Not yet implemented");
+    // Create latch for the valid message
+    CountDownLatch latch = new CountDownLatch(1);
+    MessageDispatchListener listener = message -> latch.countDown();
+    logRpcInvoker.addMessageDispatchListener(listener);
+
+    // Send malformed JSON-RPC message (truncated JSON with missing required fields)
+    Headers emptyHeaders = new RecordHeaders();
+    byte[] invalidJson = "{\"jsonrpc\":\"2.0\",\"id\":\"x\"".getBytes(UTF_8);
+    InboundLogMsg invalidMsg =
+        new InboundLogMsg(0, MessageFormatType.JSON, emptyHeaders, invalidJson);
+    invalidMsg.send(dealerSocket);
+
+    // Wait a bit for the invalid message to be processed
+    TimeUnit.MILLISECONDS.sleep(50);
+
+    // Send valid binary message
+    ExecMessage invokable = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+    InboundLogMsg validMsg =
+        new InboundLogMsg(
+            1,
+            MessageFormatType.BINARY,
+            emptyHeaders,
+            ColferUtils.toBytes(msgBuilder.wrap(invokable)));
+    validMsg.send(dealerSocket);
+
+    // Wait for valid message to be dispatched
+    boolean dispatched = latch.await(5, TimeUnit.SECONDS);
+
+    // Verify the invoker continued and processed the valid message
+    assertThat("Valid message should have been dispatched", dispatched, is(true));
+    verify(incomingMessageDispatcher, times(1)).incomingCall(any(), any(), any());
+    assertThat(logRpcInvoker.getExecRequestsDispatched(), is(1L));
   }
 
   /**
@@ -230,43 +253,79 @@ public class LogRpcInvokerTest extends ZmqEnabledTest {
    * without terminating the invoker thread.
    */
   @Test
-  @Ignore("Awaiting implementation in #459")
-  public void run_binaryParseException_logsErrorAndContinues() {
-    // Given: LogRpcInvoker in binary mode
-    // When: Corrupted binary message (invalid Colfer format) received
-    // Then: Error logged; invoker continues processing
+  public void run_binaryParseException_logsErrorAndContinues() throws Exception {
+    // Start invoker thread
+    execService.execute(logRpcInvoker);
 
-    // TODO(#459): Implement test logic
-    // - Create LogRpcInvoker with mocked IncomingMessageDispatcher
-    // - Start invoker in executor
-    // - Send corrupted binary message (random bytes that fail Colfer unmarshal)
-    // - Send valid binary message after the corrupted one
-    // - Verify invoker processed the valid message (continues processing)
-    // - Verify dispatch was NOT called for corrupted message
-    Assert.fail("Not yet implemented");
+    // Create latch for the valid message
+    CountDownLatch latch = new CountDownLatch(1);
+    MessageDispatchListener listener = message -> latch.countDown();
+    logRpcInvoker.addMessageDispatchListener(listener);
+
+    // Send corrupted binary message (random bytes that fail Colfer unmarshal)
+    Headers emptyHeaders = new RecordHeaders();
+    byte[] corruptedBinary = new byte[] {(byte) 0xFF, 0x01, 0x02, 0x03, 0x04, 0x05};
+    InboundLogMsg corruptedMsg =
+        new InboundLogMsg(0, MessageFormatType.BINARY, emptyHeaders, corruptedBinary);
+    corruptedMsg.send(dealerSocket);
+
+    // Wait a bit for the corrupted message to be processed
+    TimeUnit.MILLISECONDS.sleep(50);
+
+    // Send valid binary message
+    ExecMessage invokable = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+    InboundLogMsg validMsg =
+        new InboundLogMsg(
+            1,
+            MessageFormatType.BINARY,
+            emptyHeaders,
+            ColferUtils.toBytes(msgBuilder.wrap(invokable)));
+    validMsg.send(dealerSocket);
+
+    // Wait for valid message to be dispatched
+    boolean dispatched = latch.await(5, TimeUnit.SECONDS);
+
+    // Verify the invoker continued and processed the valid message
+    assertThat("Valid message should have been dispatched", dispatched, is(true));
+    verify(incomingMessageDispatcher, times(1)).incomingCall(any(), any(), any());
+    assertThat(logRpcInvoker.getExecRequestsDispatched(), is(1L));
   }
 
   /**
    * Tests that run() handles missing producer-id header gracefully.
    *
    * <p>This verifies that when the producer-id header is missing from a JSON-RPC message, the
-   * invoker logs the error but continues processing with a null fromPeerUuid.
+   * invoker logs the error but continues processing with a null fromPeerUuid. The message still
+   * gets dispatched despite the missing header.
    */
   @Test
-  @Ignore("Awaiting implementation in #459")
-  public void run_missingProducerId_usesDefaultValue() {
-    // Given: Message without producer-id header
-    // When: Message processed
-    // Then: Default producer ID (null) used; no exception; processing continues
+  public void run_missingProducerId_usesDefaultValue() throws Exception {
+    // Start invoker thread
+    execService.execute(logRpcInvoker);
 
-    // TODO(#459): Implement test logic
-    // - Create LogRpcInvoker with mocked IncomingMessageDispatcher
-    // - Start invoker in executor
-    // - Create valid JSON-RPC InboundLogMsg WITHOUT producer-id header
-    // - Send message via dealer socket
-    // - Verify dispatch was called (message processed despite missing header)
-    // - Verify the fromPeerUuid passed to messageBuilder.jsonRpcRequestToExecMessage is null
-    Assert.fail("Not yet implemented");
+    // Create latch for the message
+    CountDownLatch latch = new CountDownLatch(1);
+    MessageDispatchListener listener = message -> latch.countDown();
+    logRpcInvoker.addMessageDispatchListener(listener);
+
+    // Create a valid JSON-RPC message WITHOUT producer-id header
+    // This is a valid JSON-RPC constructor call
+    Headers emptyHeaders = new RecordHeaders(); // No producer-id header
+    String validJsonRpc =
+        "{\"jsonrpc\":\"2.0\",\"id\":\"test-1\",\"method\":\"new\","
+            + "\"params\":{\"type\":\"java.lang.String\",\"args\":[]}}";
+    byte[] jsonBody = validJsonRpc.getBytes(UTF_8);
+    InboundLogMsg msgWithoutProducerId =
+        new InboundLogMsg(0, MessageFormatType.JSON, emptyHeaders, jsonBody);
+    msgWithoutProducerId.send(dealerSocket);
+
+    // Wait for message to be dispatched
+    boolean dispatched = latch.await(5, TimeUnit.SECONDS);
+
+    // Verify message was dispatched despite missing producer-id header
+    assertThat("Message should have been dispatched", dispatched, is(true));
+    verify(incomingMessageDispatcher, times(1)).incomingCall(any(), any(), any());
+    assertThat(logRpcInvoker.getExecRequestsDispatched(), is(1L));
   }
 
   /**
@@ -274,23 +333,22 @@ public class LogRpcInvokerTest extends ZmqEnabledTest {
    *
    * <p>This verifies that the default branch in the message format switch statement is handled
    * correctly by logging an error and skipping the message.
+   *
+   * <p>Note: This test is skipped because the default branch in the switch statement on
+   * MessageFormatType is defensive code that cannot be reached through normal API usage. The
+   * MessageFormatType enum only has JSON and BINARY values, and InboundLogMsg.receive() throws
+   * IllegalArgumentException when given an unknown format byte. This test would require reflection
+   * or bytecode manipulation to test, which is not warranted for dead code coverage.
    */
   @Test
-  @Ignore("Awaiting implementation in #459")
+  @Ignore("Default branch is unreachable: MessageFormatType enum has only 2 values (JSON, BINARY)")
   public void run_unknownMessageFormat_logsWarning() {
-    // Given: Message with unrecognized format byte (not JSON or BINARY)
-    // When: Message processed
-    // Then: Warning logged; message skipped; invoker continues
-
-    // TODO(#459): Implement test logic
-    // - Create LogRpcInvoker with mocked IncomingMessageDispatcher
-    // - Start invoker in executor
-    // - Create InboundLogMsg with unknown MessageFormatType (may need reflection/mocking)
-    // - Send message via dealer socket
-    // - Send valid message after to verify invoker continues
-    // - Verify dispatch was NOT called for unknown format message
-    // - Verify invoker processed subsequent valid message
-    Assert.fail("Not yet implemented");
+    // This test cannot be implemented through normal API usage because:
+    // 1. MessageFormatType is an enum with only JSON (1) and BINARY (2) values
+    // 2. MessageFormatType.fromByte() throws IllegalArgumentException for unknown bytes
+    // 3. InboundLogMsg.receive() would throw before LogRpcInvoker sees the message
+    // The default branch in LogRpcInvoker.run() is defensive code for future enum additions
+    Assert.fail("Cannot test unreachable code path");
   }
 
   /**
@@ -300,21 +358,77 @@ public class LogRpcInvokerTest extends ZmqEnabledTest {
    * message dispatch, the error is logged and the invoker continues processing.
    */
   @Test
-  @Ignore("Awaiting implementation in #459")
-  public void dispatch_throwsException_handledGracefully() {
-    // Given: IncomingMessageDispatcher mock that throws RuntimeException on incomingCall
-    // When: dispatch called via valid JSON-RPC message
-    // Then: Exception caught, logged; invoker continues processing next message
+  public void dispatch_throwsException_handledGracefully() throws Exception {
+    // Create separate context and invoker with a different mock
+    ZContext testContext = createContext();
+    String testAddress = "inproc://test_dispatch_ex_" + UUID.randomUUID();
+    Socket testDealerSocket = testContext.createSocket(SocketType.DEALER);
+    testDealerSocket.bind(testAddress);
+    MessageBuilder testMsgBuilder = new MessageBuilder(peerUuid);
 
-    // TODO(#459): Implement test logic
-    // - Create LogRpcInvoker with mocked IncomingMessageDispatcher
-    // - Configure mock to throw RuntimeException on incomingCall
-    // - Start invoker in executor
-    // - Send valid JSON-RPC message that will trigger dispatch
-    // - Verify exception was thrown (via mock verification or log capture)
-    // - Send another message to verify invoker continues
-    // - Reconfigure mock to succeed, verify second message processed
-    Assert.fail("Not yet implemented");
+    // Create mock that throws on first call, succeeds on second
+    IncomingMessageDispatcher testDispatcher = mock(IncomingMessageDispatcher.class);
+    RuntimeException dispatchException = new RuntimeException("Dispatch failed");
+    when(testDispatcher.incomingCall(any(), any(), any()))
+        .thenThrow(dispatchException)
+        .thenAnswer(
+            invocation -> {
+              ExecMessage incomingMsg = (ExecMessage) invocation.getArguments()[0];
+              return testMsgBuilder.buildReturnValue(
+                  "", String.class.getConstructor(), null, false, incomingMsg.getMessageId());
+            });
+
+    LogRpcInvoker testInvoker =
+        new LogRpcInvoker(testContext, testMsgBuilder, testAddress, testDispatcher, peerUuid);
+
+    // Start invoker thread
+    Thread invokerThread = new Thread(testInvoker);
+    invokerThread.start();
+
+    // Create latch for the second (successful) message
+    CountDownLatch latch = new CountDownLatch(1);
+    MessageDispatchListener listener = message -> latch.countDown();
+    testInvoker.addMessageDispatchListener(listener);
+
+    // Create valid JSON-RPC messages with required producer-id header
+    Headers headersWithProducerId = new RecordHeaders();
+    headersWithProducerId.add("producer-id", UuidUtils.toBytes(peerUuid));
+
+    // Send first message (will throw exception during dispatch)
+    String jsonRpc1 =
+        "{\"jsonrpc\":\"2.0\",\"id\":\"test-1\",\"method\":\"new\","
+            + "\"params\":{\"type\":\"java.lang.String\",\"args\":[]}}";
+    InboundLogMsg msg1 =
+        new InboundLogMsg(
+            0, MessageFormatType.JSON, headersWithProducerId, jsonRpc1.getBytes(UTF_8));
+    msg1.send(testDealerSocket);
+
+    // Wait for first message to be processed (with exception)
+    TimeUnit.MILLISECONDS.sleep(100);
+
+    // Send second message (should succeed)
+    String jsonRpc2 =
+        "{\"jsonrpc\":\"2.0\",\"id\":\"test-2\",\"method\":\"new\","
+            + "\"params\":{\"type\":\"java.lang.String\",\"args\":[]}}";
+    InboundLogMsg msg2 =
+        new InboundLogMsg(
+            1, MessageFormatType.JSON, headersWithProducerId, jsonRpc2.getBytes(UTF_8));
+    msg2.send(testDealerSocket);
+
+    // Wait for second message to be dispatched
+    boolean dispatched = latch.await(5, TimeUnit.SECONDS);
+
+    // Verify: 2 dispatch calls attempted, invoker continued after first exception
+    verify(testDispatcher, times(2)).incomingCall(any(), any(), any());
+    assertThat("Second message should have been dispatched", dispatched, is(true));
+    // Only one successful dispatch (second one)
+    assertThat(testInvoker.getExecRequestsDispatched(), is(1L));
+    // One error from the first dispatch
+    assertThat(testInvoker.getExecRequestErrors(), is(1L));
+
+    // Cleanup
+    closeContext(testContext);
+    invokerThread.join(2000);
   }
 
   /**
@@ -324,20 +438,34 @@ public class LogRpcInvokerTest extends ZmqEnabledTest {
    * ZContext termination) does not throw an exception.
    */
   @Test
-  @Ignore("Awaiting implementation in #459")
-  public void closeConnections_socketAlreadyClosed_noException() {
-    // Given: Socket already closed externally (e.g., via context termination)
-    // When: closeConnections called
-    // Then: No exception; cleanup completes normally
+  public void closeConnections_socketAlreadyClosed_noException() throws Exception {
+    // Create a separate context and invoker for this test to avoid affecting other tests
+    ZContext testContext = createContext();
+    Socket testDealerSocket = testContext.createSocket(SocketType.DEALER);
+    String testAddress = "inproc://test_close_" + UUID.randomUUID();
+    testDealerSocket.bind(testAddress);
 
-    // TODO(#459): Implement test logic
-    // - Create LogRpcInvoker
-    // - Start invoker briefly to initialize socket
-    // - Close the ZContext (which closes all sockets)
-    // - Call closeConnections() directly via reflection or by interrupting the invoker
-    // - Verify no exception is thrown
-    // - Verify cleanup completes (super.closeConnections is called)
-    Assert.fail("Not yet implemented");
+    IncomingMessageDispatcher testDispatcher = mock(IncomingMessageDispatcher.class);
+    MessageBuilder testMsgBuilder = new MessageBuilder(peerUuid);
+
+    LogRpcInvoker testInvoker =
+        new LogRpcInvoker(testContext, testMsgBuilder, testAddress, testDispatcher, peerUuid);
+
+    // Start invoker in a separate thread
+    Thread invokerThread = new Thread(testInvoker);
+    invokerThread.start();
+
+    // Wait for socket to be initialized in run()
+    TimeUnit.MILLISECONDS.sleep(50);
+
+    // Close the context which closes all sockets
+    testContext.close();
+
+    // Wait for thread to exit naturally (due to ZMQException ETERM)
+    invokerThread.join(2000);
+
+    // Verify the thread exited gracefully (no exception should propagate)
+    assertThat("Invoker thread should have terminated", invokerThread.isAlive(), is(false));
   }
 
   /**
@@ -347,20 +475,39 @@ public class LogRpcInvokerTest extends ZmqEnabledTest {
    * loop and cleaning up resources.
    */
   @Test
-  @Ignore("Awaiting implementation in #459")
-  public void run_interrupted_exitsGracefully() {
-    // Given: Running LogRpcInvoker thread
-    // When: Thread interrupted via Thread.interrupt()
-    // Then: Invoker exits run loop gracefully; closeConnections called
+  public void run_interrupted_exitsGracefully() throws Exception {
+    // Create a separate context and invoker for this test
+    ZContext testContext = createContext();
+    Socket testDealerSocket = testContext.createSocket(SocketType.DEALER);
+    String testAddress = "inproc://test_interrupt_" + UUID.randomUUID();
+    testDealerSocket.bind(testAddress);
 
-    // TODO(#459): Implement test logic
-    // - Create LogRpcInvoker with mocked IncomingMessageDispatcher
-    // - Start invoker in a separate thread
-    // - Wait briefly for invoker to enter blocking receive
-    // - Call thread.interrupt()
-    // - Wait for thread to terminate (with timeout)
-    // - Verify thread is no longer alive
-    // - Verify closeConnections was called (socket closed, metrics logged)
-    Assert.fail("Not yet implemented");
+    IncomingMessageDispatcher testDispatcher = mock(IncomingMessageDispatcher.class);
+    MessageBuilder testMsgBuilder = new MessageBuilder(peerUuid);
+
+    LogRpcInvoker testInvoker =
+        new LogRpcInvoker(testContext, testMsgBuilder, testAddress, testDispatcher, peerUuid);
+
+    // Start invoker in a separate thread
+    Thread invokerThread = new Thread(testInvoker);
+    invokerThread.start();
+
+    // Wait for invoker to enter blocking receive
+    TimeUnit.MILLISECONDS.sleep(100);
+
+    // Verify thread is running
+    assertThat("Invoker thread should be alive", invokerThread.isAlive(), is(true));
+
+    // Interrupt the thread - this will cause ZMQException with EINTR
+    invokerThread.interrupt();
+
+    // Wait for thread to terminate (with timeout)
+    invokerThread.join(2000);
+
+    // Verify thread has exited gracefully
+    assertThat("Invoker thread should have terminated", invokerThread.isAlive(), is(false));
+
+    // Cleanup
+    closeContext(testContext);
   }
 }
