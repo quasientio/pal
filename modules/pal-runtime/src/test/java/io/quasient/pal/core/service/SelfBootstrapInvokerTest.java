@@ -9,38 +9,113 @@
  */
 package io.quasient.pal.core.service;
 
+import static io.quasient.pal.core.service.SelfBootstrapInvoker.EXIT_INVALID_RETURN_VALUE;
+import static io.quasient.pal.core.service.SelfBootstrapInvoker.EXIT_MAIN_THREW_EXCEPTION;
+import static io.quasient.pal.core.service.SelfBootstrapInvoker.EXIT_SUCCESS;
+import static io.quasient.pal.core.service.SelfBootstrapInvoker.EXIT_UNEXPECTED_RESPONSE_TYPE;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
-import org.junit.Ignore;
+import io.quasient.pal.core.dispatcher.IncomingMessageDispatcher;
+import io.quasient.pal.core.execution.java.CustomClassloader;
+import io.quasient.pal.messages.colfer.ExecMessage;
+import io.quasient.pal.messages.colfer.InstanceMethodCall;
+import io.quasient.pal.messages.colfer.Obj;
+import io.quasient.pal.messages.colfer.ReturnValue;
+import io.quasient.pal.serdes.colfer.MessageBuilder;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Collections;
+import java.util.UUID;
+import java.util.jar.Attributes;
+import java.util.jar.JarOutputStream;
+import java.util.jar.Manifest;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
+import org.zeromq.ZContext;
 
 /**
- * Unit test specifications for {@link SelfBootstrapInvoker}.
+ * Unit tests for {@link SelfBootstrapInvoker}.
  *
- * <p>These test specifications focus on error paths in JAR loading and exit value extraction that
- * have lower coverage. Test stubs are awaiting implementation in issue #465.
+ * <p>Tests cover error paths in JAR loading and exit value extraction.
  *
  * @see SelfBootstrapInvokerJarTest for additional JAR loading tests
  * @see SelfBootstrapInvokerExitCodeTest for additional exit code tests
  */
 public class SelfBootstrapInvokerTest {
 
+  private ZContext ctx;
+  private UUID peerId;
+  private IncomingMessageDispatcher dispatcher;
+  private MessageBuilder messageBuilder;
+  private CustomClassloader classloader;
+  private SelfBootstrapInvoker invoker;
+  private Path tempDir;
+
+  /** Sets up the test fixtures. */
+  @Before
+  public void setup() throws IOException {
+    ctx = new ZContext(1);
+    peerId = UUID.randomUUID();
+    dispatcher = mock(IncomingMessageDispatcher.class);
+    messageBuilder = new MessageBuilder(peerId);
+    classloader = new CustomClassloader(new URL[] {}, ClassLoader.getSystemClassLoader());
+
+    invoker =
+        new SelfBootstrapInvoker(
+            peerId,
+            dispatcher,
+            messageBuilder,
+            classloader,
+            ctx,
+            "inproc://offs",
+            Collections.emptySet());
+
+    tempDir = Files.createTempDirectory("selfbootstrap-test");
+  }
+
+  /** Cleans up the test fixtures. */
+  @After
+  public void cleanup() throws IOException {
+    ctx.close();
+    if (tempDir != null) {
+      try (var walk = Files.walk(tempDir)) {
+        walk.sorted((a, b) -> b.compareTo(a))
+            .forEach(
+                p -> {
+                  try {
+                    Files.deleteIfExists(p);
+                  } catch (IOException e) {
+                    // ignore
+                  }
+                });
+      }
+    }
+  }
+
   /**
    * Tests that callJar throws PeerException with ERROR_JAR_NOT_FOUND_OR_MISSING_MANIFEST when given
    * a non-existent JAR file path.
    */
   @Test
-  @Ignore("Awaiting implementation in #465")
   public void callJar_missingJarFile_throwsPeerException() {
-    // Given: Non-existent JAR path
-    // When: callJar called
-    // Then: PeerException thrown with ERROR_JAR_NOT_FOUND_OR_MISSING_MANIFEST code
+    String nonExistentJar = "/path/to/nonexistent/file.jar";
 
-    // TODO(#465): Implement test logic
-    // - Create SelfBootstrapInvoker with required mocks
-    // - Call callJar with a path to a file that does not exist
-    // - Assert PeerException is thrown with fatalCode ERROR_JAR_NOT_FOUND_OR_MISSING_MANIFEST
-    fail("Not yet implemented");
+    try {
+      invoker.callJar(nonExistentJar, Collections.emptyList());
+      fail("Expected PeerException for non-existent JAR");
+    } catch (PeerException e) {
+      assertThat(
+          e.getFatalCode(), is(PeerException.FatalCode.ERROR_JAR_NOT_FOUND_OR_MISSING_MANIFEST));
+    }
   }
 
   /**
@@ -48,18 +123,24 @@ public class SelfBootstrapInvokerTest {
    * JAR file without a Main-Class entry in its MANIFEST.MF.
    */
   @Test
-  @Ignore("Awaiting implementation in #465")
-  public void callJar_noMainClassInManifest_throwsPeerException() {
-    // Given: JAR file without Main-Class in MANIFEST.MF
-    // When: callJar called
-    // Then: PeerException thrown with ERROR_NO_MAIN_CLASS_IN_JAR_MANIFEST code
+  public void callJar_noMainClassInManifest_throwsPeerException() throws IOException {
+    // Create a valid JAR without Main-Class attribute
+    Path jarWithoutMain = tempDir.resolve("no-main.jar");
+    Manifest manifest = new Manifest();
+    manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
+    // No Main-Class attribute
 
-    // TODO(#465): Implement test logic
-    // - Create a temporary JAR file with a valid manifest but no Main-Class attribute
-    // - Create SelfBootstrapInvoker with required mocks
-    // - Call callJar with the path to the JAR
-    // - Assert PeerException is thrown with fatalCode ERROR_NO_MAIN_CLASS_IN_JAR_MANIFEST
-    fail("Not yet implemented");
+    try (FileOutputStream fos = new FileOutputStream(jarWithoutMain.toFile());
+        JarOutputStream jos = new JarOutputStream(fos, manifest)) {
+      // Empty JAR with just manifest
+    }
+
+    try {
+      invoker.callJar(jarWithoutMain.toString(), Collections.emptyList());
+      fail("Expected PeerException for JAR without Main-Class");
+    } catch (PeerException e) {
+      assertThat(e.getFatalCode(), is(PeerException.FatalCode.ERROR_NO_MAIN_CLASS_IN_JAR_MANIFEST));
+    }
   }
 
   /**
@@ -68,19 +149,24 @@ public class SelfBootstrapInvokerTest {
    * THROWABLE).
    */
   @Test
-  @Ignore("Awaiting implementation in #465")
-  public void getExitValueFromResponse_unexpectedMessageType_returns125() {
-    // Given: ExecMessage with unexpected type (not RETURN_VALUE/THROWABLE)
-    // When: getExitValueFromResponse called
-    // Then: Returns EXIT_UNEXPECTED_RESPONSE_TYPE (125)
+  public void getExitValueFromResponse_unexpectedMessageType_returns125() throws Exception {
+    // Mock dispatcher to return an ExecMessage with an unexpected type (EXEC_INSTANCE_METHOD)
+    when(dispatcher.incomingCall(any(), any(), any()))
+        .thenAnswer(
+            inv -> {
+              ExecMessage req = (ExecMessage) inv.getArguments()[0];
+              // Build a message with an unexpected type by setting instanceMethodCall field
+              ExecMessage response = new ExecMessage();
+              response.messageId = req.getMessageId();
+              response.instanceMethodCall = new InstanceMethodCall();
+              return response;
+            });
 
-    // TODO(#465): Implement test logic
-    // - Create SelfBootstrapInvoker with mocked IncomingMessageDispatcher
-    // - Mock dispatcher to return an ExecMessage with an unexpected type (e.g.,
-    // EXEC_INSTANCE_METHOD)
-    // - Call callMain to trigger getExitValueFromResponse
-    // - Assert return value is EXIT_UNEXPECTED_RESPONSE_TYPE (125)
-    fail("Not yet implemented");
+    int exitCode = invoker.callMain("com.example.TestClass", Collections.emptyList());
+    assertThat(
+        "Unexpected message type should return EXIT_UNEXPECTED_RESPONSE_TYPE",
+        exitCode,
+        is(EXIT_UNEXPECTED_RESPONSE_TYPE));
   }
 
   /**
@@ -88,19 +174,35 @@ public class SelfBootstrapInvokerTest {
    * return value fails due to ClassNotFoundException.
    */
   @Test
-  @Ignore("Awaiting implementation in #465")
-  public void getIntFromReturnValue_unwrapFails_returns126() {
-    // Given: ExecMessage with malformed return value that causes unwrap failure
-    // When: getIntFromReturnValue called
-    // Then: Returns EXIT_INVALID_RETURN_VALUE (126)
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
+  public void getIntFromReturnValue_unwrapFails_returns126() throws Exception {
+    // Mock dispatcher to return an ExecMessage with a return value containing
+    // a class name that cannot be found (causes ClassNotFoundException in Unwrapper)
+    when(dispatcher.incomingCall(any(), any(), any()))
+        .thenAnswer(
+            inv -> {
+              ExecMessage req = (ExecMessage) inv.getArguments()[0];
+              ExecMessage response = new ExecMessage();
+              response.messageId = req.getMessageId();
 
-    // TODO(#465): Implement test logic
-    // - Create SelfBootstrapInvoker with mocked IncomingMessageDispatcher
-    // - Mock dispatcher to return an ExecMessage with a return value containing
-    //   a class name that cannot be found (causes ClassNotFoundException in Unwrapper)
-    // - Call callMain to trigger getIntFromReturnValue
-    // - Assert return value is EXIT_INVALID_RETURN_VALUE (126)
-    fail("Not yet implemented");
+              // Create a return value with a non-existent class type
+              ReturnValue rv = new ReturnValue();
+              Obj obj = new Obj();
+              obj.value = "\"some value\""; // JSON value
+              obj.clazz = new io.quasient.pal.messages.colfer.Class();
+              obj.clazz.name = "com.nonexistent.ClassThatDoesNotExist";
+              obj.isNull = false;
+              rv.setObject(obj);
+              response.returnValue = rv;
+
+              return response;
+            });
+
+    int exitCode = invoker.callMain("com.example.TestClass", Collections.emptyList());
+    assertThat(
+        "Unwrap failure should return EXIT_INVALID_RETURN_VALUE",
+        exitCode,
+        is(EXIT_INVALID_RETURN_VALUE));
   }
 
   /**
@@ -108,18 +210,20 @@ public class SelfBootstrapInvokerTest {
    * indicating a void return from main method.
    */
   @Test
-  @Ignore("Awaiting implementation in #465")
-  public void getIntFromReturnValue_voidReturn_returns0() {
-    // Given: ExecMessage with null return value (void method)
-    // When: getIntFromReturnValue called
-    // Then: Returns EXIT_SUCCESS (0)
+  public void getIntFromReturnValue_voidReturn_returns0() throws Exception {
+    // Mock dispatcher to return an ExecMessage with null return value (void main)
+    when(dispatcher.incomingCall(any(), any(), any()))
+        .thenAnswer(
+            inv -> {
+              ExecMessage req = (ExecMessage) inv.getArguments()[0];
+              // Build a return value with null object (void return)
+              java.lang.reflect.Method voidMethod = Object.class.getMethod("wait");
+              return messageBuilder.buildReturnValue(
+                  null, voidMethod, null, false, req.getMessageId());
+            });
 
-    // TODO(#465): Implement test logic
-    // - Create SelfBootstrapInvoker with mocked IncomingMessageDispatcher
-    // - Mock dispatcher to return an ExecMessage with null return value (void main)
-    // - Call callMain to trigger getIntFromReturnValue
-    // - Assert return value is EXIT_SUCCESS (0)
-    fail("Not yet implemented");
+    int exitCode = invoker.callMain("com.example.TestClass", Collections.emptyList());
+    assertThat("Void main() should return EXIT_SUCCESS", exitCode, is(EXIT_SUCCESS));
   }
 
   /**
@@ -127,17 +231,21 @@ public class SelfBootstrapInvokerTest {
    * message is of type EXEC_THROWABLE.
    */
   @Test
-  @Ignore("Awaiting implementation in #465")
-  public void getExitValueFromResponse_throwableMessage_returns1() {
-    // Given: ExecMessage of type EXEC_THROWABLE
-    // When: getExitValueFromResponse called
-    // Then: Returns EXIT_MAIN_THREW_EXCEPTION (1)
+  public void getExitValueFromResponse_throwableMessage_returns1() throws Exception {
+    // Mock dispatcher to return an ExecMessage with EXEC_THROWABLE type
+    when(dispatcher.incomingCall(any(), any(), any()))
+        .thenAnswer(
+            inv -> {
+              ExecMessage req = (ExecMessage) inv.getArguments()[0];
+              RuntimeException ex = new RuntimeException("Test exception");
+              return messageBuilder.buildAccessibleObjectThrowable(
+                  peerId, null, ex, req.getMessageId());
+            });
 
-    // TODO(#465): Implement test logic
-    // - Create SelfBootstrapInvoker with mocked IncomingMessageDispatcher
-    // - Mock dispatcher to return an ExecMessage with EXEC_THROWABLE type
-    // - Call callMain to trigger getExitValueFromResponse
-    // - Assert return value is EXIT_MAIN_THREW_EXCEPTION (1)
-    fail("Not yet implemented");
+    int exitCode = invoker.callMain("com.example.TestClass", Collections.emptyList());
+    assertThat(
+        "Exception from main() should return EXIT_MAIN_THREW_EXCEPTION",
+        exitCode,
+        is(EXIT_MAIN_THREW_EXCEPTION));
   }
 }
