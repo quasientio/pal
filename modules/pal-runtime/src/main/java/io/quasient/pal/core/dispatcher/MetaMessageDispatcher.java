@@ -138,6 +138,24 @@ public class MetaMessageDispatcher {
       }
     }
 
+    // Handle null serviceType (unknown service ID)
+    if (serviceType == null) {
+      String errorMessage =
+          String.format(
+              "Incoming Meta message w/id=%s from peer=%s ignored - unknown service ID: %d",
+              metaMessage.getMessageId(), metaMessage.fromPeer, metaMessage.getService());
+      logger.error(errorMessage);
+      // Build response manually since we don't have a valid MetaServiceType
+      MetaMessage response = new MetaMessage();
+      response.setFromPeer(peerUuid.toString());
+      response.setMessageId(UUID.randomUUID().toString());
+      response.setResponseToId(metaMessage.getMessageId());
+      response.setService(metaMessage.getService()); // Preserve original service ID
+      response.setStatus(MetaStatusType.UNSUPPORTED.getId());
+      response.setBody(errorMessage);
+      return response;
+    }
+
     switch (serviceType) {
       case FETCH_CLASSES_INFO -> {
         try {

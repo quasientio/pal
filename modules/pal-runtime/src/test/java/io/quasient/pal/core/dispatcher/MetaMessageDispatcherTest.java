@@ -21,6 +21,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import io.quasient.pal.core.execution.java.reflect.ClassMetadataSerializer;
 import io.quasient.pal.messages.colfer.MetaMessage;
 import io.quasient.pal.messages.colfer.Obj;
@@ -28,11 +32,14 @@ import io.quasient.pal.messages.colfer.Parameter;
 import io.quasient.pal.messages.types.MetaServiceType;
 import io.quasient.pal.messages.types.MetaStatusType;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
+import io.quasient.pal.serdes.colfer.Wrapper;
 import java.nio.file.Path;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+import org.slf4j.LoggerFactory;
 
 /**
  * Unit tests for {@link MetaMessageDispatcher}.
@@ -265,20 +272,25 @@ public class MetaMessageDispatcherTest {
    *
    * <p>Given: MetaMessage with unknown service type (service ID not mapped to any MetaServiceType)
    * When: incomingMetaMessage called Then: Response has UNSUPPORTED status and error message
-   * indicates the unsupported service
+   * indicates the unknown service ID
    */
   @Test
-  @Ignore("Awaiting implementation in #469")
   public void incomingMetaMessage_unsupportedService_returnsUnsupportedResponse() {
     // Given: MetaMessage with unknown service type
     // The service ID 127 is not mapped to any MetaServiceType (only FETCH_CLASSES_INFO=1 exists)
+    MetaMessage request = new MetaMessage();
+    request.setService((byte) 127);
+    request.setMessageId("msg-unsupported");
+    request.setFromPeer("peer-unsupported");
 
     // When: incomingMetaMessage called
+    MetaMessage response = dispatcher.incomingMetaMessage(request);
 
-    // Then: Response has UNSUPPORTED status
-
-    // TODO(#469): Implement test logic
-    throw new AssertionError("Not yet implemented");
+    // Then: Response has UNSUPPORTED status and error message indicates the unknown service
+    assertThat(response, notNullValue());
+    assertThat(response.getStatus(), is(MetaStatusType.UNSUPPORTED.getId()));
+    assertThat(response.getBody(), containsString("unknown service ID"));
+    assertThat(response.getResponseToId(), is("msg-unsupported"));
   }
 
   /**
@@ -291,17 +303,46 @@ public class MetaMessageDispatcherTest {
    * unknown parameters are logged with logger.warn() and skipped.
    */
   @Test
-  @Ignore("Awaiting implementation in #469")
-  public void incomingMetaMessage_unknownParameter_logsWarning() {
+  public void incomingMetaMessage_unknownParameter_logsWarning() throws Exception {
     // Given: MetaMessage with unrecognized parameter name
+    Logger logger = (Logger) LoggerFactory.getLogger(MetaMessageDispatcher.class);
+    ListAppender<ILoggingEvent> listAppender = new ListAppender<>();
+    listAppender.start();
+    logger.addAppender(listAppender);
 
-    // When: incomingMetaMessage called
+    try {
+      MetaMessage request = new MetaMessage();
+      request.setService(MetaServiceType.FETCH_CLASSES_INFO.getId());
+      request.setMessageId("msg-unknown-param-log");
 
-    // Then: Warning logged; parameter ignored; processing continues
+      Obj valueObj = Wrapper.wrapForceByValue("some-value");
+      Parameter param = new Parameter();
+      param.setName("totally_unknown_param");
+      param.setValue(valueObj);
+      request.setParams(new Parameter[] {param});
 
-    // TODO(#469): Implement test logic
-    // Consider using a log appender to verify the warning was logged
-    throw new AssertionError("Not yet implemented");
+      Path resultPath = Path.of("/tmp/result.json");
+      when(classMetadataSerializer.scannedClasspathToJson(eq(true), isNull(), isNull(), eq(false)))
+          .thenReturn(resultPath);
+
+      // When: incomingMetaMessage called
+      MetaMessage response = dispatcher.incomingMetaMessage(request);
+
+      // Then: Warning logged; parameter ignored; processing continues
+      assertThat(response, notNullValue());
+      assertThat(response.getStatus(), is(MetaStatusType.OK.getId()));
+
+      // Verify warning was logged
+      boolean warningLogged =
+          listAppender.list.stream()
+              .anyMatch(
+                  event ->
+                      event.getLevel() == Level.WARN
+                          && event.getFormattedMessage().contains("totally_unknown_param"));
+      assertThat("Warning should be logged for unknown parameter", warningLogged, is(true));
+    } finally {
+      logger.detachAppender(listAppender);
+    }
   }
 
   /**
@@ -311,19 +352,24 @@ public class MetaMessageDispatcherTest {
    * cannot be cast to Boolean) When: incomingMetaMessage called Then: RuntimeException thrown with
    * message indicating the parameter name
    */
-  @Test
-  @Ignore("Awaiting implementation in #469")
+  @Test(expected = RuntimeException.class)
   public void incomingMetaMessage_unwrapError_throwsRuntimeException() {
     // Given: MetaMessage with malformed parameter value
     // Create an Obj with incorrect type that will fail to unwrap as Boolean
+    MetaMessage request = new MetaMessage();
+    request.setService(MetaServiceType.FETCH_CLASSES_INFO.getId());
+    request.setMessageId("msg-unwrap-error");
+
+    // Create a parameter with a String value for compress_encode which expects Boolean
+    Obj wrongTypeValue = Wrapper.wrapForceByValue("not-a-boolean");
+    Parameter param = new Parameter();
+    param.setName("compress_encode");
+    param.setValue(wrongTypeValue);
+    request.setParams(new Parameter[] {param});
 
     // When: incomingMetaMessage called
-
-    // Then: RuntimeException thrown
-
-    // TODO(#469): Implement test logic
-    // Create a parameter where getValue() returns an Obj that cannot be unwrapped as Boolean
-    throw new AssertionError("Not yet implemented");
+    // Then: RuntimeException thrown with message indicating the parameter name
+    dispatcher.incomingMetaMessage(request);
   }
 
   /**
@@ -334,20 +380,42 @@ public class MetaMessageDispatcherTest {
    * called with correct excludePrefixes set
    */
   @Test
-  @Ignore("Awaiting implementation in #469")
+  @SuppressWarnings("unchecked")
   public void incomingMetaMessage_excludePrefixes_excludesMatchingClasses() throws Exception {
     // Given: MetaMessage with exclude_prefixes parameter
+    MetaMessage request = new MetaMessage();
+    request.setService(MetaServiceType.FETCH_CLASSES_INFO.getId());
+    request.setMessageId("msg-exclude-prefixes");
+
     // Create a parameter with name "exclude_prefixes" and value as String[]
+    String[] prefixesToExclude = new String[] {"java.lang.", "sun.misc."};
+    Obj valueObj = Wrapper.wrapForceByValue(prefixesToExclude);
+    Parameter param = new Parameter();
+    param.setName("exclude_prefixes");
+    param.setValue(valueObj);
+    request.setParams(new Parameter[] {param});
+
+    Path resultPath = Path.of("/tmp/result.json");
+    when(classMetadataSerializer.scannedClasspathToJson(
+            anyBoolean(), any(), any(Set.class), anyBoolean()))
+        .thenReturn(resultPath);
 
     // When: FETCH_CLASSES_INFO processed
+    MetaMessage response = dispatcher.incomingMetaMessage(request);
 
     // Then: Classes matching prefixes excluded from result
-    // Verify classMetadataSerializer.scannedClasspathToJson was called with correct excludePrefixes
+    assertThat(response, notNullValue());
+    assertThat(response.getStatus(), is(MetaStatusType.OK.getId()));
 
-    // TODO(#469): Implement test logic
-    // Use Wrapper to create properly wrapped String[] for exclude_prefixes
-    // Verify using Mockito ArgumentCaptor or eq() matchers
-    throw new AssertionError("Not yet implemented");
+    // Verify classMetadataSerializer.scannedClasspathToJson was called with correct excludePrefixes
+    ArgumentCaptor<Set<String>> excludePrefixesCaptor = ArgumentCaptor.forClass(Set.class);
+    verify(classMetadataSerializer)
+        .scannedClasspathToJson(eq(true), isNull(), excludePrefixesCaptor.capture(), eq(false));
+
+    Set<String> capturedPrefixes = excludePrefixesCaptor.getValue();
+    assertThat(capturedPrefixes, notNullValue());
+    assertThat(capturedPrefixes.contains("java.lang."), is(true));
+    assertThat(capturedPrefixes.contains("sun.misc."), is(true));
   }
 
   /**
@@ -358,20 +426,42 @@ public class MetaMessageDispatcherTest {
    * correct includeClasses set
    */
   @Test
-  @Ignore("Awaiting implementation in #469")
+  @SuppressWarnings("unchecked")
   public void incomingMetaMessage_includeClasses_onlyIncludesSpecified() throws Exception {
     // Given: MetaMessage with include_classes parameter
+    MetaMessage request = new MetaMessage();
+    request.setService(MetaServiceType.FETCH_CLASSES_INFO.getId());
+    request.setMessageId("msg-include-classes");
+
     // Create a parameter with name "include_classes" and value as String[]
+    String[] classesToInclude = new String[] {"com.example.MyClass", "com.example.AnotherClass"};
+    Obj valueObj = Wrapper.wrapForceByValue(classesToInclude);
+    Parameter param = new Parameter();
+    param.setName("include_classes");
+    param.setValue(valueObj);
+    request.setParams(new Parameter[] {param});
+
+    Path resultPath = Path.of("/tmp/result.json");
+    when(classMetadataSerializer.scannedClasspathToJson(
+            anyBoolean(), any(Set.class), any(), anyBoolean()))
+        .thenReturn(resultPath);
 
     // When: FETCH_CLASSES_INFO processed
+    MetaMessage response = dispatcher.incomingMetaMessage(request);
 
     // Then: Only specified classes in result
-    // Verify classMetadataSerializer.scannedClasspathToJson was called with correct includeClasses
+    assertThat(response, notNullValue());
+    assertThat(response.getStatus(), is(MetaStatusType.OK.getId()));
 
-    // TODO(#469): Implement test logic
-    // Use Wrapper to create properly wrapped String[] for include_classes
-    // Use ArgumentCaptor to capture the Set<String> argument
-    throw new AssertionError("Not yet implemented");
+    // Verify classMetadataSerializer.scannedClasspathToJson was called with correct includeClasses
+    ArgumentCaptor<Set<String>> includeClassesCaptor = ArgumentCaptor.forClass(Set.class);
+    verify(classMetadataSerializer)
+        .scannedClasspathToJson(eq(true), includeClassesCaptor.capture(), isNull(), eq(false));
+
+    Set<String> capturedClasses = includeClassesCaptor.getValue();
+    assertThat(capturedClasses, notNullValue());
+    assertThat(capturedClasses.contains("com.example.MyClass"), is(true));
+    assertThat(capturedClasses.contains("com.example.AnotherClass"), is(true));
   }
 
   /**
@@ -381,18 +471,32 @@ public class MetaMessageDispatcherTest {
    * includes inherited members; serializer called with mergeAncestry=true
    */
   @Test
-  @Ignore("Awaiting implementation in #469")
   public void incomingMetaMessage_mergeAncestry_includesParentMembers() throws Exception {
     // Given: MetaMessage with merge_ancestry=true
+    MetaMessage request = new MetaMessage();
+    request.setService(MetaServiceType.FETCH_CLASSES_INFO.getId());
+    request.setMessageId("msg-merge-ancestry");
+
+    // Create a parameter with name "merge_ancestry" and value as Boolean true
+    Obj valueObj = Wrapper.wrapForceByValue(Boolean.TRUE);
+    Parameter param = new Parameter();
+    param.setName("merge_ancestry");
+    param.setValue(valueObj);
+    request.setParams(new Parameter[] {param});
+
+    Path resultPath = Path.of("/tmp/result.json");
+    when(classMetadataSerializer.scannedClasspathToJson(eq(true), isNull(), isNull(), eq(true)))
+        .thenReturn(resultPath);
 
     // When: FETCH_CLASSES_INFO processed
+    MetaMessage response = dispatcher.incomingMetaMessage(request);
 
     // Then: Result includes inherited members
-    // Verify classMetadataSerializer.scannedClasspathToJson was called with mergeAncestry=true
+    assertThat(response, notNullValue());
+    assertThat(response.getStatus(), is(MetaStatusType.OK.getId()));
 
-    // TODO(#469): Implement test logic
-    // Use Wrapper to create properly wrapped Boolean for merge_ancestry
-    throw new AssertionError("Not yet implemented");
+    // Verify classMetadataSerializer.scannedClasspathToJson was called with mergeAncestry=true
+    verify(classMetadataSerializer).scannedClasspathToJson(eq(true), isNull(), isNull(), eq(true));
   }
 
   /**
@@ -402,17 +506,33 @@ public class MetaMessageDispatcherTest {
    * Result is plain JSON (not compressed); serializer called with compressAndEncode=false
    */
   @Test
-  @Ignore("Awaiting implementation in #469")
   public void incomingMetaMessage_compressEncodeFalse_returnsUncompressed() throws Exception {
     // Given: MetaMessage with compress_encode=false
+    MetaMessage request = new MetaMessage();
+    request.setService(MetaServiceType.FETCH_CLASSES_INFO.getId());
+    request.setMessageId("msg-compress-false");
+
+    // Create a parameter with name "compress_encode" and value as Boolean false
+    Obj valueObj = Wrapper.wrapForceByValue(Boolean.FALSE);
+    Parameter param = new Parameter();
+    param.setName("compress_encode");
+    param.setValue(valueObj);
+    request.setParams(new Parameter[] {param});
+
+    Path resultPath = Path.of("/tmp/uncompressed-result.json");
+    when(classMetadataSerializer.scannedClasspathToJson(eq(false), isNull(), isNull(), eq(false)))
+        .thenReturn(resultPath);
 
     // When: FETCH_CLASSES_INFO processed
+    MetaMessage response = dispatcher.incomingMetaMessage(request);
 
     // Then: Result is plain JSON (not compressed)
-    // Verify classMetadataSerializer.scannedClasspathToJson was called with compressAndEncode=false
+    assertThat(response, notNullValue());
+    assertThat(response.getStatus(), is(MetaStatusType.OK.getId()));
+    assertThat(response.getBody(), containsString("uncompressed-result.json"));
 
-    // TODO(#469): Implement test logic
-    // Use Wrapper to create properly wrapped Boolean for compress_encode
-    throw new AssertionError("Not yet implemented");
+    // Verify classMetadataSerializer.scannedClasspathToJson was called with compressAndEncode=false
+    verify(classMetadataSerializer)
+        .scannedClasspathToJson(eq(false), isNull(), isNull(), eq(false));
   }
 }
