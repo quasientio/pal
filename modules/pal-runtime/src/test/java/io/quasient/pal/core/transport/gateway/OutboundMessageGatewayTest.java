@@ -11,6 +11,7 @@ package io.quasient.pal.core.transport.gateway;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.*;
 
@@ -550,10 +551,7 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
 
     java.lang.reflect.Method privateMethod =
         OutboundMessageGateway.class.getDeclaredMethod(
-            "sendExecMessage",
-            io.quasient.pal.messages.colfer.Message.class,
-            ExecPhase.class,
-            List.class);
+            "sendExecMessage", Message.class, ExecPhase.class, List.class);
     privateMethod.setAccessible(true);
     privateMethod.invoke(gateway, wrappedMsg, ExecPhase.BEFORE, customHeaders);
 
@@ -562,9 +560,9 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
 
     // Verify the message has concatenated headers
     OutboundMsg outbound = walQueue.poll();
-    assertThat(outbound, is(org.hamcrest.Matchers.notNullValue()));
+    assertThat(outbound, is(notNullValue()));
     List<InternalHeader> headers = outbound.getHeaders();
-    assertThat(headers, is(org.hamcrest.Matchers.notNullValue()));
+    assertThat(headers, is(notNullValue()));
     // Should have writeAheadHeaders (1) + customHeaders (1) = 2
     assertThat(headers.size(), is(2));
   }
@@ -669,7 +667,7 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
 
     // Then: Stats should be accessible and have valid structure
     MessageQueueStats stats = gateway.getPubQueueStats();
-    assertThat(stats.perThread(), is(org.hamcrest.Matchers.notNullValue()));
+    assertThat(stats.perThread(), is(notNullValue()));
     // Verify method executed successfully (we can't guarantee exact stats due to timing)
   }
 
@@ -757,7 +755,7 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
     List<ThreadWaitSnapshot> snapshot = gateway.getPUBWaitSnapshot();
 
     // Then: Snapshot should be non-null (method exercised)
-    assertThat(snapshot, is(org.hamcrest.Matchers.notNullValue()));
+    assertThat(snapshot, is(notNullValue()));
     // Snapshot is immutable List, verify basic properties
     // Note: Due to static registries and test isolation issues, we verify the method works
   }
@@ -814,7 +812,7 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
     List<ThreadWaitSnapshot> snapshot = gateway.getWALWaitSnapshot();
 
     // Then: Snapshot should be non-null (method exercised)
-    assertThat(snapshot, is(org.hamcrest.Matchers.notNullValue()));
+    assertThat(snapshot, is(notNullValue()));
     // Snapshot is immutable List, verify basic properties
     // Note: Due to static registries and test isolation issues, we verify the method works
   }

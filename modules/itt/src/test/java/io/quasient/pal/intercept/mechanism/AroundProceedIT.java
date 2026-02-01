@@ -29,6 +29,7 @@ import io.quasient.pal.messages.colfer.InterceptCallbackRequestMessage;
 import io.quasient.pal.messages.colfer.Message;
 import io.quasient.pal.messages.types.MessageType;
 import io.quasient.pal.serdes.Unwrapper;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -148,7 +149,7 @@ public class AroundProceedIT extends AbstractInterceptIT {
             callbackClass,
             callbackMethod,
             new InterceptableMethodCall(
-                "add", java.util.Arrays.asList("java.lang.Integer", "java.lang.Integer")));
+                "add", Arrays.asList("java.lang.Integer", "java.lang.Integer")));
 
     logger.info("Registering intercept request");
     register(interceptRequest);
