@@ -12,6 +12,7 @@ package io.quasient.pal.core.execution.java.reflect;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
@@ -19,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import org.apache.commons.lang3.ClassUtils;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -462,5 +464,216 @@ public class ReflectionHelperTest {
     private PrivateConstructorOnly() {
       // Private constructor for testing
     }
+  }
+
+  // ============================================================================
+  // Test specifications for issue #547 - Coverage gaps awaiting implementation in #548
+  // ============================================================================
+
+  /**
+   * Tests that the default no-argument constructor creates a ReflectionHelper with default
+   * configuration (allowNonPublic = false).
+   *
+   * <p>Given: No parameters
+   *
+   * <p>When: The default ReflectionHelper() constructor is called
+   *
+   * <p>Then: A ReflectionHelper is created with allowNonPublic set to false (default behavior), and
+   * lookups for non-public members fail appropriately
+   *
+   * <p>Acceptance criteria: [TEST:ReflectionHelperTest.testDefaultConstructor_createsHelper]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #548")
+  public void testDefaultConstructor_createsHelper() {
+    // Given: No parameters
+    // When: Constructor called with new ReflectionHelper()
+    // Then:
+    //   - Helper is created successfully (not null)
+    //   - Helper has allowNonPublic = false (default)
+    //   - Attempting to lookup a private method throws NoSuchMethodException
+    //   - Attempting to lookup a private constructor throws NoSuchMethodException
+    //   - Public methods and constructors are found successfully
+
+    // Verification approach:
+    //   1. Create ReflectionHelper using default constructor
+    //   2. Try to lookup a private method - should throw NoSuchMethodException
+    //   3. Try to lookup a public method - should succeed
+    //   4. Verify the helper behaves consistently with allowNonPublic=false
+
+    // TODO(#548): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that the constructor with a boolean parameter correctly creates a ReflectionHelper with
+   * the specified allowNonPublic configuration.
+   *
+   * <p>Given: A boolean parameter specifying whether to allow non-public member access
+   *
+   * <p>When: The ReflectionHelper(boolean) constructor is called
+   *
+   * <p>Then: A helper is created with the specified configuration, and lookup behavior reflects the
+   * allowNonPublic setting
+   *
+   * <p>Acceptance criteria:
+   * [TEST:ReflectionHelperTest.testConstructor_withBooleanParam_createsHelper]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #548")
+  public void testConstructor_withBooleanParam_createsHelper() {
+    // Test case 1: allowNonPublic = true
+    // Given: Boolean parameter allowNonPublic = true
+    // When: Constructor called with new ReflectionHelper(true)
+    // Then:
+    //   - Helper is created successfully (not null)
+    //   - Private methods can be found via lookupMethod
+    //   - Private constructors can be found via lookupConstructor
+    //   - Public members are still found (backward compatible)
+
+    // Test case 2: allowNonPublic = false
+    // Given: Boolean parameter allowNonPublic = false
+    // When: Constructor called with new ReflectionHelper(false)
+    // Then:
+    //   - Helper is created successfully (not null)
+    //   - Private methods cause NoSuchMethodException
+    //   - Private constructors cause NoSuchMethodException
+    //   - Behavior matches default constructor
+
+    // Verification approach:
+    //   1. Create helper with ReflectionHelper(true)
+    //   2. Lookup a private method - should succeed
+    //   3. Lookup a private constructor - should succeed
+    //   4. Create helper with ReflectionHelper(false)
+    //   5. Lookup same private method - should throw NoSuchMethodException
+    //   6. Lookup same private constructor - should throw NoSuchMethodException
+
+    // TODO(#548): Implement test logic
+    // Hint: Use ClassForTestingMethodLookup and ClassForTestingConstructorLookup
+    // which have both public and private members for testing
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that narrowDownConstructorMatches correctly selects the best matching constructor when
+   * multiple constructors are assignable from the given parameter types.
+   *
+   * <p>Given: Multiple constructor candidates that are all assignable from the provided parameter
+   * types (due to primitive widening or inheritance)
+   *
+   * <p>When: lookupConstructor is called (which internally uses narrowDownConstructorMatches)
+   *
+   * <p>Then: The constructor with exact type matches for non-primitive/non-wrapper types is
+   * selected, narrowing down from multiple candidates to a single best match
+   *
+   * <p>Acceptance criteria:
+   * [TEST:ReflectionHelperTest.testNarrowDownConstructorMatches_selectsBestMatch]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #548")
+  public void testNarrowDownConstructorMatches_selectsBestMatch() {
+    // Given: Class with overloaded constructors:
+    //   Constructor(Object obj)      - accepts any Object
+    //   Constructor(String str)      - accepts String specifically
+    //   Constructor(CharSequence cs) - accepts CharSequence (String is subtype)
+    //
+    // When: lookupConstructor called with String parameter type
+    //
+    // Then:
+    //   - All three constructors initially match (String assignable to all)
+    //   - narrowDownConstructorMatches selects Constructor(String) as exact match
+    //   - The returned constructor has String.class as parameter type
+
+    // Additional test case with primitives:
+    // Given: Class with constructors:
+    //   Constructor(int value)    - takes primitive int
+    //   Constructor(long value)   - takes primitive long (int widens to long)
+    //   Constructor(Number value) - takes Number (Integer is subtype)
+    //
+    // When: lookupConstructor called with int parameter type
+    //
+    // Then:
+    //   - int is assignable to int, long (widening), and Number (boxing)
+    //   - narrowDownConstructorMatches selects Constructor(int) as exact primitive match
+    //   - AmbiguousCallException thrown if exact match cannot be determined
+
+    // Edge case: Multiple equally-specific matches
+    // Given: Ambiguous constructors where no single best match exists
+    // When: lookupConstructor called
+    // Then: AmbiguousCallException is thrown
+
+    // TODO(#548): Implement test logic
+    // Hint: Create a test fixture class with specifically designed constructor overloads
+    // to exercise the narrowing logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that narrowDownMethodMatches correctly selects the best matching method when multiple
+   * methods with the same name are assignable from the given parameter types.
+   *
+   * <p>Given: Multiple method candidates (overloads) that are all assignable from the provided
+   * parameter types
+   *
+   * <p>When: lookupMethod is called (which internally uses narrowDownMethodMatches)
+   *
+   * <p>Then: The method with exact type matches for non-primitive/non-wrapper types is selected,
+   * narrowing down from multiple candidates to a single best match
+   *
+   * <p>Acceptance criteria:
+   * [TEST:ReflectionHelperTest.testNarrowDownMethodMatches_selectsBestMatch]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #548")
+  public void testNarrowDownMethodMatches_selectsBestMatch() {
+    // Given: Class with overloaded methods:
+    //   void process(Object obj)      - accepts any Object
+    //   void process(String str)      - accepts String specifically
+    //   void process(CharSequence cs) - accepts CharSequence (String is subtype)
+    //
+    // When: lookupMethod called with "process" and String parameter type
+    //
+    // Then:
+    //   - All three methods initially match (String assignable to all)
+    //   - narrowDownMethodMatches selects process(String) as exact match
+    //   - The returned method has String.class as parameter type
+
+    // Test case with multiple parameters:
+    // Given: Methods with different parameter combinations:
+    //   void compute(Object a, Object b)
+    //   void compute(String a, Object b)
+    //   void compute(String a, String b)
+    //
+    // When: lookupMethod called with (String, String) parameter types
+    //
+    // Then:
+    //   - All three are assignable
+    //   - narrowDownMethodMatches selects compute(String, String) as best match
+    //   - Both parameters match exactly
+
+    // Test case with primitive widening:
+    // Given: Methods:
+    //   int calculate(int value)
+    //   long calculate(long value)
+    //
+    // When: lookupMethod called with int parameter type
+    //
+    // Then:
+    //   - Both match (int widens to long)
+    //   - narrowDownMethodMatches selects calculate(int) as exact primitive match
+
+    // Edge case: Equally specific matches leading to ambiguity
+    // Given: Methods where narrowing doesn't yield a single result
+    //   void ambiguous(Object a, String b)
+    //   void ambiguous(String a, Object b)
+    //
+    // When: lookupMethod called with (String, String)
+    //
+    // Then: AmbiguousCallException is thrown because neither is more specific
+
+    // TODO(#548): Implement test logic
+    // Hint: Use ClassForTestingMethodLookup or create new fixture with specific overloads
+    // Verify exact method is returned by checking getParameterTypes()
+    fail("Not yet implemented");
   }
 }

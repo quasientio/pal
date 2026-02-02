@@ -16,6 +16,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -31,6 +32,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.zip.GZIPInputStream;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -491,5 +493,236 @@ public class ClassMetadataSerializerTest {
           fieldName.contains("ajc$"),
           is(false));
     }
+  }
+
+  // ============================================================================
+  // Test specifications for issue #547 - Coverage gaps awaiting implementation in #548
+  // ============================================================================
+
+  /**
+   * Tests that the package-private constructor with a boolean parameter correctly creates a
+   * serializer instance with the specified non-public scanning configuration.
+   *
+   * <p>Given: A boolean parameter specifying whether to scan non-public members
+   *
+   * <p>When: The ClassMetadataSerializer(boolean) constructor is called
+   *
+   * <p>Then: A serializer is created with the specified configuration, and scanning behavior
+   * reflects the allowNonPublic setting
+   *
+   * <p>Acceptance criteria:
+   * [TEST:ClassMetadataSerializerTest.testConstructor_withBooleanParam_createsSerializer]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #548")
+  public void testConstructor_withBooleanParam_createsSerializer() {
+    // Given: Boolean parameter rpcAllowNonpublic = true
+    // When: Constructor called with ClassMetadataSerializer(true)
+    // Then:
+    //   - Serializer is created successfully (not null)
+    //   - When scanning, non-public members are included in output
+    //   - Verify by scanning a class with non-public methods and checking JSON output
+
+    // Given: Boolean parameter rpcAllowNonpublic = false
+    // When: Constructor called with ClassMetadataSerializer(false)
+    // Then:
+    //   - Serializer is created successfully (not null)
+    //   - When scanning, only public members are included in output
+
+    // TODO(#548): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that mergeMethods correctly combines methods from a class hierarchy without duplicates,
+   * marking overridden methods appropriately.
+   *
+   * <p>Given: A class hierarchy with multiple classes containing overlapping and unique methods
+   * (e.g., SubClass extends BaseClass, both having methods, some overridden)
+   *
+   * <p>When: scannedClasspathToJson is called with mergeAncestry=true (which triggers mergeMethods)
+   *
+   * <p>Then:
+   *
+   * <ul>
+   *   <li>All methods from all ancestor classes are included
+   *   <li>No duplicate methods appear (same signature appears only once)
+   *   <li>Overridden methods are marked with "overridden":true
+   *   <li>Inherited methods have "inheritedFrom" field set to the declaring class
+   *   <li>java.lang.Object methods are always included
+   * </ul>
+   *
+   * <p>Acceptance criteria:
+   * [TEST:ClassMetadataSerializerTest.testMergeMethods_combinesMethodsCorrectly]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #548")
+  public void testMergeMethods_combinesMethodsCorrectly() {
+    // Given: Test class hierarchy:
+    //   GrandParent - declares methodA(), methodB()
+    //   Parent extends GrandParent - declares methodC(), overrides methodA()
+    //   Child extends Parent - declares methodD(), overrides methodB()
+    //
+    // When: Scan Child with mergeAncestry=true
+    //
+    // Then:
+    //   - Output contains methodA, methodB, methodC, methodD
+    //   - methodA appears once with "overridden":true, "inheritedFrom":"GrandParent"
+    //   - methodB appears once with "overridden":true, "inheritedFrom":"GrandParent"
+    //   - methodC appears with no override flag
+    //   - methodD appears with no override flag
+    //   - java.lang.Object methods (toString, hashCode, equals, etc.) are present
+    //   - No duplicate entries for any method signature
+
+    // TODO(#548): Implement test logic
+    // Hint: Create test fixture classes or use existing org.example.paltest hierarchy
+    // Parse JSON output and verify method counts, flags, and inheritedFrom values
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that mergeFields correctly combines fields from a class hierarchy, detecting field
+   * shadowing and marking shadowed fields appropriately.
+   *
+   * <p>Given: A class hierarchy where child class declares a field with the same name as a parent
+   * field (field shadowing)
+   *
+   * <p>When: scannedClasspathToJson is called with mergeAncestry=true (which triggers mergeFields)
+   *
+   * <p>Then:
+   *
+   * <ul>
+   *   <li>All fields from all ancestor classes are included
+   *   <li>Shadowed fields (same name in child and parent) appear once with "overridden":true
+   *   <li>Shadowed fields have "inheritedFrom" field set to the original declaring class
+   *   <li>Unique fields (not shadowed) have "overridden":false or no override flag
+   * </ul>
+   *
+   * <p>Acceptance criteria:
+   * [TEST:ClassMetadataSerializerTest.testMergeFields_combinesFieldsCorrectly]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #548")
+  public void testMergeFields_combinesFieldsCorrectly() {
+    // Given: Test class hierarchy:
+    //   Parent - declares field "value" (int)
+    //   Child extends Parent - declares field "value" (String) - shadows parent field
+    //   Child also declares unique field "childOnly"
+    //
+    // When: Scan Child with mergeAncestry=true
+    //
+    // Then:
+    //   - "value" field appears once with "overridden":true, "inheritedFrom":"Parent"
+    //   - "childOnly" field appears with "overridden":false
+    //   - Total field count matches expected (no duplicates)
+
+    // TODO(#548): Implement test logic
+    // Hint: Use org.example.paltest.SubClass and BaseClass which have field shadowing
+    // Or create new test fixture classes with explicit field shadowing
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that gatherAllAncestors collects all superclasses and interfaces from a class hierarchy.
+   *
+   * <p>Given: A class with multiple ancestors including superclasses and interfaces (e.g., class
+   * implementing multiple interfaces, extending a class that also implements interfaces)
+   *
+   * <p>When: scannedClasspathToJson is called with mergeAncestry=true (which uses
+   * gatherAllAncestors internally)
+   *
+   * <p>Then:
+   *
+   * <ul>
+   *   <li>All superclasses up to (but not including) java.lang.Object are collected
+   *   <li>All directly implemented interfaces are collected
+   *   <li>All transitively implemented interfaces (interfaces of superclasses) are collected
+   *   <li>The resulting merged members include members from all collected ancestors
+   * </ul>
+   *
+   * <p>Acceptance criteria:
+   * [TEST:ClassMetadataSerializerTest.testGatherAllAncestors_collectsFullHierarchy]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #548")
+  public void testGatherAllAncestors_collectsFullHierarchy() {
+    // Given: Class hierarchy:
+    //   interface InterfaceA { methodFromA(); }
+    //   interface InterfaceB extends InterfaceA { methodFromB(); }
+    //   class GrandParent { methodFromGrandParent(); }
+    //   class Parent extends GrandParent implements InterfaceB { methodFromParent(); }
+    //   class Child extends Parent { methodFromChild(); }
+    //
+    // When: Scan Child with mergeAncestry=true
+    //
+    // Then: JSON output contains methods from all of:
+    //   - Child (methodFromChild)
+    //   - Parent (methodFromParent)
+    //   - GrandParent (methodFromGrandParent)
+    //   - InterfaceB (methodFromB - if not default, may be abstract)
+    //   - InterfaceA (methodFromA - if not default, may be abstract)
+    //   - java.lang.Object (toString, hashCode, etc.)
+
+    // TODO(#548): Implement test logic
+    // Hint: Create test fixture classes with complex inheritance hierarchy
+    // Verify via JSON that methods from all ancestor levels are present
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that gatherAllAncestorsRecursive correctly traverses deeply nested class hierarchies
+   * without missing any ancestors or causing stack overflow.
+   *
+   * <p>Given: A deeply nested class hierarchy (e.g., 5+ levels of inheritance) with interfaces at
+   * various levels
+   *
+   * <p>When: scannedClasspathToJson is called with mergeAncestry=true (which uses
+   * gatherAllAncestorsRecursive)
+   *
+   * <p>Then:
+   *
+   * <ul>
+   *   <li>All levels of the hierarchy are traversed recursively
+   *   <li>Methods and fields from all levels appear in the output
+   *   <li>The recursion handles circular interface inheritance gracefully (no infinite loop)
+   *   <li>Each ancestor is only processed once (no duplicates in processing)
+   * </ul>
+   *
+   * <p>Acceptance criteria:
+   * [TEST:ClassMetadataSerializerTest.testGatherAllAncestorsRecursive_handlesDeepHierarchy]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #548")
+  public void testGatherAllAncestorsRecursive_handlesDeepHierarchy() {
+    // Given: Deep class hierarchy:
+    //   Level5 extends Level4 extends Level3 extends Level2 extends Level1 extends Object
+    //   Each level declares a unique method: level5Method(), level4Method(), etc.
+    //   Level3 implements InterfaceX which extends InterfaceY
+    //
+    // When: Scan Level5 with mergeAncestry=true
+    //
+    // Then:
+    //   - Methods from all 5 levels are present in output
+    //   - Methods from InterfaceX and InterfaceY are included
+    //   - No duplicate methods
+    //   - No stack overflow or infinite recursion
+
+    // Also test edge case:
+    // Given: Interface that extends multiple interfaces forming a diamond pattern
+    //   interface Top { topMethod(); }
+    //   interface Left extends Top { leftMethod(); }
+    //   interface Right extends Top { rightMethod(); }
+    //   class DiamondChild implements Left, Right { childMethod(); }
+    //
+    // When: Scan DiamondChild with mergeAncestry=true
+    //
+    // Then:
+    //   - topMethod appears only once (not duplicated from Left and Right paths)
+    //   - leftMethod, rightMethod, childMethod all present
+
+    // TODO(#548): Implement test logic
+    // Hint: Use existing JDK classes with deep hierarchies (e.g., java.util.ArrayList)
+    // or create custom test fixture classes
+    fail("Not yet implemented");
   }
 }
