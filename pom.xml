@@ -183,44 +183,7 @@
                         </execution>
                     </executions>
                 </plugin>
-                <!--
-                    =====================================================================
-                    CODE COVERAGE (JaCoCo)
-                    =====================================================================
-                    JaCoCo measures code coverage for unit and integration tests.
-
-                    EXCLUDING DEBUG/TRACE LOGGING BRANCHES FROM COVERAGE
-                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-                    JaCoCo does NOT have a built-in filter for conditional logging guards
-                    like `if (logger.isDebugEnabled())` or `if (logger.isTraceEnabled())`.
-                    These branches can affect coverage metrics because:
-                      - isDebugEnabled() branches may not execute if tests run at INFO level
-                      - isTraceEnabled() branches rarely execute since TRACE is typically disabled
-
-                    SOLUTION: Annotation-based exclusion
-                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-                    Since JaCoCo 0.8.2, code annotated with any annotation whose simple name
-                    contains "Generated" (case-sensitive) is automatically excluded from coverage.
-                    We provide `@ExcludeFromCoverageGenerated` in pal-api for this purpose:
-
-                        @ExcludeFromCoverageGenerated("debug logging guard")
-                        public void methodWithLogging() {
-                            if (logger.isTraceEnabled()) {
-                                logger.trace("Expensive: {}", computeExpensive());
-                            }
-                        }
-
-                    ALTERNATIVE: Enable DEBUG/TRACE logging in tests
-                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-                    The logback-test.xml files are configured to run at DEBUG level, which
-                    means isDebugEnabled() branches ARE covered during tests. For full
-                    coverage of isTraceEnabled() branches, change the log level to TRACE
-                    in test configurations.
-
-                    See: https://www.jacoco.org/jacoco/trunk/doc/changes.html
-                    See: io.quasient.pal.common.util.ExcludeFromCoverageGenerated
-                    =====================================================================
-                -->
+                <!-- JaCoCo: Code coverage for unit and integration tests -->
                 <plugin>
                     <groupId>org.jacoco</groupId>
                     <artifactId>jacoco-maven-plugin</artifactId>
