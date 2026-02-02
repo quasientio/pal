@@ -18,9 +18,9 @@ public class JmxClientStaticInitTest {
 
   @Test
   public void staticBlockDisablesRmiCodebaseDownload() throws Exception {
-    System.clearProperty("com.sun.jndi.rmi.object.trustURLCodebase");
-    // Force class initialization
+    // Force class initialization (may already be loaded by other tests in same JVM)
     Class.forName(JmxClient.class.getName());
+    // Verify the static block set the security property
     assertThat(System.getProperty("com.sun.jndi.rmi.object.trustURLCodebase"), is("false"));
   }
 }
