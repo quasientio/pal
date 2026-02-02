@@ -13,7 +13,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
@@ -32,7 +31,6 @@ import java.util.Set;
 import java.util.UUID;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
@@ -513,22 +511,51 @@ public class SessionServiceTest extends ZmqEnabledTest {
    * NO_SUCH_OBJECT status, confirming the object was indeed removed.
    */
   @Test
-  @Ignore("Awaiting implementation in #554")
   public void testDeleteObject_removesObjectSuccessfully() {
     // Given: Session with stored object
-    // - Create a new session by storing an object
-    // - Verify the object is stored (OK status)
+    UUID sessionId = UUID.randomUUID();
+    Object object = new HashMap<>();
+    ObjectRef objectRef = objectLookupStore.storeObject(object);
+
+    // Create session by storing an object
+    SessionCommandMsg sessionCommandMsg =
+        new SessionCommandMsg(SessionCommandType.STORE_OBJECT, sessionId, objectRef);
+    boolean sentOk = sessionCommandMsg.send(socket);
+    assertTrue(sentOk);
+    SessionResponseMsg sessionResponseMsg = SessionResponseMsg.receive(socket, true);
+    assertNotNull(sessionResponseMsg);
+    assertThat(sessionResponseMsg.getStatus(), is(SessionStatusType.OK));
 
     // When: deleteObject called with valid ID
-    // - Send DELETE_OBJECT command with the session ID and object reference
+    sessionCommandMsg =
+        new SessionCommandMsg(SessionCommandType.DELETE_OBJECT, sessionId, objectRef);
+    sentOk = sessionCommandMsg.send(socket);
+    assertTrue(sentOk);
+    sessionResponseMsg = SessionResponseMsg.receive(socket, true);
 
-    // Then: Object removed from session
-    // - Verify response status is OK
-    // - Verify the object is no longer in the session (subsequent delete returns NO_SUCH_OBJECT)
-    // - Verify the session still exists (can store another object in it)
+    // Then: Object removed from session - Verify response status is OK
+    assertNotNull(sessionResponseMsg);
+    assertThat(sessionResponseMsg.getStatus(), is(SessionStatusType.OK));
 
-    // TODO(#554): Implement test logic
-    fail("Not yet implemented");
+    // Verify the object is no longer in the session (subsequent delete returns NO_SUCH_OBJECT)
+    sessionCommandMsg =
+        new SessionCommandMsg(SessionCommandType.DELETE_OBJECT, sessionId, objectRef);
+    sentOk = sessionCommandMsg.send(socket);
+    assertTrue(sentOk);
+    sessionResponseMsg = SessionResponseMsg.receive(socket, true);
+    assertNotNull(sessionResponseMsg);
+    assertThat(sessionResponseMsg.getStatus(), is(SessionStatusType.NO_SUCH_OBJECT));
+
+    // Verify the session still exists (can store another object in it)
+    Object anotherObject = new HashSet<>();
+    ObjectRef anotherObjectRef = objectLookupStore.storeObject(anotherObject);
+    sessionCommandMsg =
+        new SessionCommandMsg(SessionCommandType.STORE_OBJECT, sessionId, anotherObjectRef);
+    sentOk = sessionCommandMsg.send(socket);
+    assertTrue(sentOk);
+    sessionResponseMsg = SessionResponseMsg.receive(socket, true);
+    assertNotNull(sessionResponseMsg);
+    assertThat(sessionResponseMsg.getStatus(), is(SessionStatusType.OK));
   }
 
   /**
@@ -542,22 +569,55 @@ public class SessionServiceTest extends ZmqEnabledTest {
    * status. The session should remain intact and functional after the operation.
    */
   @Test
-  @Ignore("Awaiting implementation in #554")
   public void testDeleteObject_nonexistentObject_handledGracefully() {
     // Given: Session without the object
-    // - Create a session by storing one object
-    // - Create a different ObjectRef that was NOT stored in this session
+    UUID sessionId = UUID.randomUUID();
+    Object object = new HashMap<>();
+    ObjectRef storedObjectRef = objectLookupStore.storeObject(object);
 
-    // When: deleteObject called
-    // - Send DELETE_OBJECT command with the session ID and the non-existent object reference
+    // Create a session by storing one object
+    SessionCommandMsg sessionCommandMsg =
+        new SessionCommandMsg(SessionCommandType.STORE_OBJECT, sessionId, storedObjectRef);
+    boolean sentOk = sessionCommandMsg.send(socket);
+    assertTrue(sentOk);
+    SessionResponseMsg sessionResponseMsg = SessionResponseMsg.receive(socket, true);
+    assertNotNull(sessionResponseMsg);
+    assertThat(sessionResponseMsg.getStatus(), is(SessionStatusType.OK));
 
-    // Then: No error; operation completes
-    // - Verify response status is NO_SUCH_OBJECT (not ERROR or exception)
-    // - Verify the session is still functional (can still delete the original object)
-    // - Verify service continues operating normally
+    // Create a different ObjectRef that was NOT stored in this session
+    ObjectRef nonExistentObjectRef = ObjectRef.from(88888);
 
-    // TODO(#554): Implement test logic
-    fail("Not yet implemented");
+    // When: deleteObject called with non-existent object reference
+    sessionCommandMsg =
+        new SessionCommandMsg(SessionCommandType.DELETE_OBJECT, sessionId, nonExistentObjectRef);
+    sentOk = sessionCommandMsg.send(socket);
+    assertTrue(sentOk);
+    sessionResponseMsg = SessionResponseMsg.receive(socket, true);
+
+    // Then: No error; operation completes with NO_SUCH_OBJECT status
+    assertNotNull(sessionResponseMsg);
+    assertThat(sessionResponseMsg.getStatus(), is(SessionStatusType.NO_SUCH_OBJECT));
+
+    // Verify the session is still functional (can still delete the original object)
+    sessionCommandMsg =
+        new SessionCommandMsg(SessionCommandType.DELETE_OBJECT, sessionId, storedObjectRef);
+    sentOk = sessionCommandMsg.send(socket);
+    assertTrue(sentOk);
+    sessionResponseMsg = SessionResponseMsg.receive(socket, true);
+    assertNotNull(sessionResponseMsg);
+    assertThat(sessionResponseMsg.getStatus(), is(SessionStatusType.OK));
+
+    // Verify service continues operating normally (can create a new session)
+    UUID anotherSessionId = UUID.randomUUID();
+    Object anotherObject = new HashSet<>();
+    ObjectRef anotherObjectRef = objectLookupStore.storeObject(anotherObject);
+    sessionCommandMsg =
+        new SessionCommandMsg(SessionCommandType.STORE_OBJECT, anotherSessionId, anotherObjectRef);
+    sentOk = sessionCommandMsg.send(socket);
+    assertTrue(sentOk);
+    sessionResponseMsg = SessionResponseMsg.receive(socket, true);
+    assertNotNull(sessionResponseMsg);
+    assertThat(sessionResponseMsg.getStatus(), is(SessionStatusType.OK));
   }
 
   /**
@@ -571,25 +631,97 @@ public class SessionServiceTest extends ZmqEnabledTest {
    * CLEAR_SESSIONS) and verifies each is processed with the correct response.
    */
   @Test
-  @Ignore("Awaiting implementation in #554")
   public void testRun_processesSessionCommands() {
-    // Given: SessionService with commands in queue
-    // - Service is already running (started in @Before)
-    // - Prepare multiple commands of different types to send
+    // Given: SessionService running, prepare multiple commands of different types
+    UUID sessionId = UUID.randomUUID();
+    Object object1 = new HashMap<>();
+    Object object2 = new HashSet<>();
+    ObjectRef objectRef1 = objectLookupStore.storeObject(object1);
+    ObjectRef objectRef2 = objectLookupStore.storeObject(object2);
+    ObjectRef nonExistentRef = ObjectRef.from(77777);
 
-    // When: run() executes (processes commands as they arrive)
-    // - Send STORE_OBJECT command -> expect OK
-    // - Send DELETE_OBJECT command with valid ref -> expect OK
-    // - Send DELETE_OBJECT command with invalid ref -> expect NO_SUCH_OBJECT
-    // - Send DELETE_SESSION command -> expect OK (or NO_SUCH_SESSION if already deleted)
-    // - Send CLEAR_SESSIONS command -> expect OK
+    // When/Then: Send STORE_OBJECT command for first object -> expect OK
+    SessionCommandMsg sessionCommandMsg =
+        new SessionCommandMsg(SessionCommandType.STORE_OBJECT, sessionId, objectRef1);
+    boolean sentOk = sessionCommandMsg.send(socket);
+    assertTrue(sentOk);
+    SessionResponseMsg sessionResponseMsg = SessionResponseMsg.receive(socket, true);
+    assertNotNull(sessionResponseMsg);
+    assertThat(sessionResponseMsg.getStatus(), is(SessionStatusType.OK));
 
-    // Then: Commands processed correctly
-    // - Verify each command returns the expected status
-    // - Verify state changes are reflected (e.g., session deleted after DELETE_SESSION)
+    // Send STORE_OBJECT command for second object -> expect OK
+    sessionCommandMsg =
+        new SessionCommandMsg(SessionCommandType.STORE_OBJECT, sessionId, objectRef2);
+    sentOk = sessionCommandMsg.send(socket);
+    assertTrue(sentOk);
+    sessionResponseMsg = SessionResponseMsg.receive(socket, true);
+    assertNotNull(sessionResponseMsg);
+    assertThat(sessionResponseMsg.getStatus(), is(SessionStatusType.OK));
 
-    // TODO(#554): Implement test logic
-    fail("Not yet implemented");
+    // Send DELETE_OBJECT command with valid ref -> expect OK
+    sessionCommandMsg =
+        new SessionCommandMsg(SessionCommandType.DELETE_OBJECT, sessionId, objectRef1);
+    sentOk = sessionCommandMsg.send(socket);
+    assertTrue(sentOk);
+    sessionResponseMsg = SessionResponseMsg.receive(socket, true);
+    assertNotNull(sessionResponseMsg);
+    assertThat(sessionResponseMsg.getStatus(), is(SessionStatusType.OK));
+
+    // Send DELETE_OBJECT command with non-existent ref -> expect NO_SUCH_OBJECT
+    sessionCommandMsg =
+        new SessionCommandMsg(SessionCommandType.DELETE_OBJECT, sessionId, nonExistentRef);
+    sentOk = sessionCommandMsg.send(socket);
+    assertTrue(sentOk);
+    sessionResponseMsg = SessionResponseMsg.receive(socket, true);
+    assertNotNull(sessionResponseMsg);
+    assertThat(sessionResponseMsg.getStatus(), is(SessionStatusType.NO_SUCH_OBJECT));
+
+    // Send DELETE_SESSION command -> expect OK with remaining objectRef2
+    sessionCommandMsg = new SessionCommandMsg(SessionCommandType.DELETE_SESSION, sessionId);
+    sentOk = sessionCommandMsg.send(socket);
+    assertTrue(sentOk);
+    sessionResponseMsg = SessionResponseMsg.receive(socket, true);
+    assertNotNull(sessionResponseMsg);
+    assertThat(sessionResponseMsg.getStatus(), is(SessionStatusType.OK));
+    // Verify objectRef2 was in the deleted session
+    assertThat(sessionResponseMsg.getObjectRefs(), is(Collections.singleton(objectRef2)));
+
+    // Verify session is now deleted (DELETE_SESSION again returns NO_SUCH_SESSION)
+    sessionCommandMsg = new SessionCommandMsg(SessionCommandType.DELETE_SESSION, sessionId);
+    sentOk = sessionCommandMsg.send(socket);
+    assertTrue(sentOk);
+    sessionResponseMsg = SessionResponseMsg.receive(socket, true);
+    assertNotNull(sessionResponseMsg);
+    assertThat(sessionResponseMsg.getStatus(), is(SessionStatusType.NO_SUCH_SESSION));
+
+    // Create a new session to test CLEAR_SESSIONS
+    UUID newSessionId = UUID.randomUUID();
+    Object newObject = "testObject";
+    ObjectRef newObjectRef = objectLookupStore.storeObject(newObject);
+    sessionCommandMsg =
+        new SessionCommandMsg(SessionCommandType.STORE_OBJECT, newSessionId, newObjectRef);
+    sentOk = sessionCommandMsg.send(socket);
+    assertTrue(sentOk);
+    sessionResponseMsg = SessionResponseMsg.receive(socket, true);
+    assertNotNull(sessionResponseMsg);
+    assertThat(sessionResponseMsg.getStatus(), is(SessionStatusType.OK));
+
+    // Send CLEAR_SESSIONS command -> expect OK
+    sessionCommandMsg = new SessionCommandMsg(SessionCommandType.CLEAR_SESSIONS);
+    sentOk = sessionCommandMsg.send(socket);
+    assertTrue(sentOk);
+    sessionResponseMsg = SessionResponseMsg.receive(socket, true);
+    assertNotNull(sessionResponseMsg);
+    assertThat(sessionResponseMsg.getStatus(), is(SessionStatusType.OK));
+
+    // Verify all sessions were cleared (DELETE_OBJECT returns NO_SUCH_SESSION)
+    sessionCommandMsg =
+        new SessionCommandMsg(SessionCommandType.DELETE_OBJECT, newSessionId, newObjectRef);
+    sentOk = sessionCommandMsg.send(socket);
+    assertTrue(sentOk);
+    sessionResponseMsg = SessionResponseMsg.receive(socket, true);
+    assertNotNull(sessionResponseMsg);
+    assertThat(sessionResponseMsg.getStatus(), is(SessionStatusType.NO_SUCH_SESSION));
   }
 
   /**
@@ -602,25 +734,37 @@ public class SessionServiceTest extends ZmqEnabledTest {
    * main loop cleanly. The service should transition to TERMINATED state without errors.
    */
   @Test
-  @Ignore("Awaiting implementation in #554")
-  public void testRun_handlesInterruption() {
+  public void testRun_handlesInterruption() throws Exception {
     // Given: Running SessionService
     // - Service is already running (started in @Before)
-    // - The service is blocked waiting for commands on the REP socket
+    // - Verify the service is healthy by sending a command
+    UUID sessionId = UUID.randomUUID();
+    Object object = new HashMap<>();
+    ObjectRef objectRef = objectLookupStore.storeObject(object);
+    SessionCommandMsg sessionCommandMsg =
+        new SessionCommandMsg(SessionCommandType.STORE_OBJECT, sessionId, objectRef);
+    boolean sentOk = sessionCommandMsg.send(socket);
+    assertTrue(sentOk);
+    SessionResponseMsg sessionResponseMsg = SessionResponseMsg.receive(socket, true);
+    assertNotNull(sessionResponseMsg);
+    assertThat(sessionResponseMsg.getStatus(), is(SessionStatusType.OK));
 
-    // When: Thread interrupted
-    // - Stop the service manager (which triggers shutdown and interruption)
-    // - Wait for service to stop
+    // When: Service manager stopped (triggers interruption via context termination)
+    // - Stop the service manager (which triggers shutdown and ZMQ context termination)
+    manager.stopAsync();
 
     // Then: Exits gracefully
-    // - Verify service transitions to TERMINATED state
-    // - Verify no exceptions are thrown during shutdown
-    // - Verify the service stopped within a reasonable timeout
+    // - Verify service transitions to stopped state within reasonable timeout
+    manager.awaitStopped(java.time.Duration.ofSeconds(5));
 
-    // TODO(#554): Implement test logic
-    // Note: This may require creating a separate SessionService instance to test
-    // the interruption handling without affecting other tests.
-    fail("Not yet implemented");
+    // - Verify service is fully stopped (isHealthy returns false, servicesByState shows terminated)
+    assertThat(manager.isHealthy(), is(false));
+
+    // - Verify all services are in TERMINATED state
+    for (Service service : manager.servicesByState().values()) {
+      assertThat(
+          "Service should be in TERMINATED state", service.state(), is(Service.State.TERMINATED));
+    }
   }
 
   /**
@@ -633,26 +777,72 @@ public class SessionServiceTest extends ZmqEnabledTest {
    * REP socket. After shutdown, attempts to use the socket should fail.
    */
   @Test
-  @Ignore("Awaiting implementation in #554")
-  public void testCloseConnections_closesAllResources() {
+  public void testCloseConnections_closesAllResources() throws Exception {
     // Given: SessionService with open resources
-    // - Service is running with an open REP socket
-    // - The socket is bound to SESSION_SERVICE_ADDRESS
+    // Verify service is running by sending a command
+    UUID sessionId = UUID.randomUUID();
+    Object object = new HashMap<>();
+    ObjectRef objectRef = objectLookupStore.storeObject(object);
+    SessionCommandMsg sessionCommandMsg =
+        new SessionCommandMsg(SessionCommandType.STORE_OBJECT, sessionId, objectRef);
+    boolean sentOk = sessionCommandMsg.send(socket);
+    assertTrue(sentOk);
+    SessionResponseMsg sessionResponseMsg = SessionResponseMsg.receive(socket, true);
+    assertNotNull(sessionResponseMsg);
+    assertThat(sessionResponseMsg.getStatus(), is(SessionStatusType.OK));
 
     // When: closeConnections called (via service shutdown)
-    // - Stop the service manager
-    // - Wait for the service to fully stop
+    manager.stopAsync();
+    manager.awaitStopped(java.time.Duration.ofSeconds(5));
 
     // Then: All resources released
-    // - Verify the service has stopped
-    // - Verify the REP socket is closed (attempting to connect/send should fail or
-    //   a new service can bind to the same address without conflict)
-    // - Verify no resource leaks (context can be closed cleanly)
+    // Verify the service has stopped
+    assertThat(manager.isHealthy(), is(false));
+    for (Service service : manager.servicesByState().values()) {
+      assertThat(
+          "Service should be in TERMINATED state", service.state(), is(Service.State.TERMINATED));
+    }
 
-    // TODO(#554): Implement test logic
-    // Note: This test may need to verify socket closure indirectly since the socket
-    // is private. One approach is to verify that a new service can bind to the same
-    // address after shutdown.
-    fail("Not yet implemented");
+    // Verify REP socket is closed by creating a new service that binds to the same address
+    // If the old socket was not closed, this would fail with address already in use
+    ZContext newContext = createContext();
+    try {
+      UUID newPeerUuid = UUID.randomUUID();
+      SessionService newSessionService =
+          new SessionService(
+              newPeerUuid,
+              newContext,
+              SYNC_SOCKET_ADDRESS,
+              new ThreadGroup("test-thread-group"),
+              "Session_Service_New",
+              SESSION_SERVICE_ADDRESS,
+              objectLookupStore);
+      final Set<Service> newServices = new HashSet<>(Collections.singletonList(newSessionService));
+      ServiceManager newManager = new ServiceManager(newServices);
+      newManager.startAsync().awaitHealthy();
+      collectGoSignals(newServices.size(), newContext);
+
+      // The new service started successfully, proving the old socket was released
+      Socket newSocket = newContext.createSocket(SocketType.REQ);
+      newSocket.connect(SESSION_SERVICE_ADDRESS);
+
+      // Verify new service works
+      Object newObject = new HashSet<>();
+      ObjectRef newObjectRef = objectLookupStore.storeObject(newObject);
+      UUID newSessionId = UUID.randomUUID();
+      SessionCommandMsg newCommandMsg =
+          new SessionCommandMsg(SessionCommandType.STORE_OBJECT, newSessionId, newObjectRef);
+      sentOk = newCommandMsg.send(newSocket);
+      assertTrue(sentOk);
+      SessionResponseMsg newResponseMsg = SessionResponseMsg.receive(newSocket, true);
+      assertNotNull(newResponseMsg);
+      assertThat(newResponseMsg.getStatus(), is(SessionStatusType.OK));
+
+      // Clean up
+      newManager.stopAsync();
+      newSocket.close();
+    } finally {
+      closeContext(newContext);
+    }
   }
 }
