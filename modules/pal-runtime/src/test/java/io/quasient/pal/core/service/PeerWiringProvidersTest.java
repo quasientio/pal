@@ -12,7 +12,6 @@ package io.quasient.pal.core.service;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
-import static org.junit.Assert.fail;
 
 import io.quasient.pal.common.lang.intercept.CheckedExceptionPolicy;
 import io.quasient.pal.common.lang.intercept.ExceptionPropagationPolicy;
@@ -29,7 +28,6 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.zeromq.ZContext;
 
@@ -213,29 +211,38 @@ public class PeerWiringProvidersTest {
    * ExceptionPolicyConfig with all default values.
    */
   @Test
-  @Ignore("Awaiting implementation in #558")
   public void testProvideExceptionPolicyConfig_defaultPolicy_createsConfig() {
     // Given: No exception policy properties configured (using base properties only)
+    Properties props = baseProps();
+    CustomClassloader cl = new CustomClassloader(new URL[] {}, ClassLoader.getSystemClassLoader());
+    PeerWiring wiring = new PeerWiring(props, EnumSet.noneOf(RunOptions.class), ctx, cl);
+
     // When: provideExceptionPolicyConfig() is called
-    // Then: ExceptionPolicyConfig is created with:
-    //   - Global propagation policy = PROPAGATE_CONTROLLED_ONLY (default)
-    //   - Global checked exception policy = WRAP (default)
-    //   - No per-type overrides configured
-    //   - ASYNC types hardcoded to SWALLOW_ALL
+    ExceptionPolicyConfig config = wiring.provideExceptionPolicyConfig();
 
-    // TODO(#558): Implement test logic
-    // - Create PeerWiring with baseProps() only (no exception policy properties)
-    // - Call provideExceptionPolicyConfig()
-    // - Verify getGlobalPropagationPolicy() returns PROPAGATE_CONTROLLED_ONLY
-    // - Verify getGlobalCheckedExceptionPolicy() returns WRAP
-    // - Verify getPropagationPolicyForType(BEFORE) returns global default
-    // - Verify getPropagationPolicyForType(AFTER) returns global default
-    // - Verify getPropagationPolicyForType(AROUND) returns global default
-    // - Verify getCheckedExceptionPolicyForType(BEFORE) returns global default
-    // - Verify getCheckedExceptionPolicyForType(AFTER) returns global default
-    // - Verify getCheckedExceptionPolicyForType(AROUND) returns global default
+    // Then: ExceptionPolicyConfig is created with default values
+    // Global propagation policy = PROPAGATE_CONTROLLED_ONLY (default)
+    assertThat(
+        config.getGlobalPropagationPolicy(),
+        is(ExceptionPropagationPolicy.PROPAGATE_CONTROLLED_ONLY));
+    // Global checked exception policy = WRAP (default)
+    assertThat(config.getGlobalCheckedExceptionPolicy(), is(CheckedExceptionPolicy.WRAP));
 
-    fail("Not yet implemented");
+    // No per-type overrides for BEFORE, AFTER, AROUND (returns null)
+    assertThat(config.getPropagationPolicyForType(InterceptType.BEFORE), is((Object) null));
+    assertThat(config.getPropagationPolicyForType(InterceptType.AFTER), is((Object) null));
+    assertThat(config.getPropagationPolicyForType(InterceptType.AROUND), is((Object) null));
+    assertThat(config.getCheckedExceptionPolicyForType(InterceptType.BEFORE), is((Object) null));
+    assertThat(config.getCheckedExceptionPolicyForType(InterceptType.AFTER), is((Object) null));
+    assertThat(config.getCheckedExceptionPolicyForType(InterceptType.AROUND), is((Object) null));
+
+    // ASYNC types hardcoded to SWALLOW_ALL
+    assertThat(
+        config.getPropagationPolicyForType(InterceptType.BEFORE_ASYNC),
+        is(ExceptionPropagationPolicy.SWALLOW_ALL));
+    assertThat(
+        config.getPropagationPolicyForType(InterceptType.AFTER_ASYNC),
+        is(ExceptionPropagationPolicy.SWALLOW_ALL));
   }
 
   /**
@@ -246,27 +253,33 @@ public class PeerWiringProvidersTest {
    * scenarios.
    */
   @Test
-  @Ignore("Awaiting implementation in #558")
   public void testProvideExceptionPolicyConfig_retryPolicy_createsConfig() {
-    // Given: Exception policy properties configured for retry-friendly behavior:
-    //   - pal.intercept.exception-policy.default = PROPAGATE_EXPLICIT_ONLY
-    //   - pal.intercept.checked-exception-policy.default = WRAP
-    //   - pal.intercept.exception-policy.around = PROPAGATE_CONTROLLED_ONLY
+    // Given: Exception policy properties configured for retry-friendly behavior
+    Properties props = baseProps();
+    props.setProperty("pal.intercept.exception-policy.default", "PROPAGATE_EXPLICIT_ONLY");
+    props.setProperty("pal.intercept.checked-exception-policy.default", "WRAP");
+    props.setProperty("pal.intercept.exception-policy.around", "PROPAGATE_CONTROLLED_ONLY");
+
+    CustomClassloader cl = new CustomClassloader(new URL[] {}, ClassLoader.getSystemClassLoader());
+    PeerWiring wiring = new PeerWiring(props, EnumSet.noneOf(RunOptions.class), ctx, cl);
+
     // When: provideExceptionPolicyConfig() is called
-    // Then: ExceptionPolicyConfig is created with:
-    //   - Global propagation policy = PROPAGATE_EXPLICIT_ONLY
-    //   - Global checked exception policy = WRAP
-    //   - AROUND type uses PROPAGATE_CONTROLLED_ONLY override
+    ExceptionPolicyConfig config = wiring.provideExceptionPolicyConfig();
 
-    // TODO(#558): Implement test logic
-    // - Set properties for PROPAGATE_EXPLICIT_ONLY global policy
-    // - Set properties for PROPAGATE_CONTROLLED_ONLY on AROUND type
-    // - Create PeerWiring and call provideExceptionPolicyConfig()
-    // - Verify getGlobalPropagationPolicy() returns PROPAGATE_EXPLICIT_ONLY
-    // - Verify getPropagationPolicyForType(AROUND) returns PROPAGATE_CONTROLLED_ONLY
-    // - Verify WRAP policy is applied for checked exceptions
-
-    fail("Not yet implemented");
+    // Then: ExceptionPolicyConfig is created with retry-friendly configuration
+    // Global propagation policy = PROPAGATE_EXPLICIT_ONLY
+    assertThat(
+        config.getGlobalPropagationPolicy(),
+        is(ExceptionPropagationPolicy.PROPAGATE_EXPLICIT_ONLY));
+    // Global checked exception policy = WRAP
+    assertThat(config.getGlobalCheckedExceptionPolicy(), is(CheckedExceptionPolicy.WRAP));
+    // AROUND type uses PROPAGATE_CONTROLLED_ONLY override
+    assertThat(
+        config.getPropagationPolicyForType(InterceptType.AROUND),
+        is(ExceptionPropagationPolicy.PROPAGATE_CONTROLLED_ONLY));
+    // BEFORE and AFTER not configured, so null
+    assertThat(config.getPropagationPolicyForType(InterceptType.BEFORE), is((Object) null));
+    assertThat(config.getPropagationPolicyForType(InterceptType.AFTER), is((Object) null));
   }
 
   /**
@@ -276,30 +289,49 @@ public class PeerWiringProvidersTest {
    * creates a fail-fast configuration where all exceptions propagate immediately.
    */
   @Test
-  @Ignore("Awaiting implementation in #558")
   public void testProvideExceptionPolicyConfig_failFastPolicy_createsConfig() {
-    // Given: Exception policy properties configured for fail-fast behavior:
-    //   - pal.intercept.exception-policy.default = PROPAGATE_ALL
-    //   - pal.intercept.checked-exception-policy.default = REJECT
-    //   - pal.intercept.exception-policy.before = PROPAGATE_ALL
-    //   - pal.intercept.exception-policy.after = PROPAGATE_ALL
-    //   - pal.intercept.checked-exception-policy.before = REJECT
-    //   - pal.intercept.checked-exception-policy.after = REJECT
+    // Given: Exception policy properties configured for fail-fast behavior
+    Properties props = baseProps();
+    props.setProperty("pal.intercept.exception-policy.default", "PROPAGATE_ALL");
+    props.setProperty("pal.intercept.checked-exception-policy.default", "REJECT");
+    props.setProperty("pal.intercept.exception-policy.before", "PROPAGATE_ALL");
+    props.setProperty("pal.intercept.exception-policy.after", "PROPAGATE_ALL");
+    props.setProperty("pal.intercept.checked-exception-policy.before", "REJECT");
+    props.setProperty("pal.intercept.checked-exception-policy.after", "REJECT");
+
+    CustomClassloader cl = new CustomClassloader(new URL[] {}, ClassLoader.getSystemClassLoader());
+    PeerWiring wiring = new PeerWiring(props, EnumSet.noneOf(RunOptions.class), ctx, cl);
+
     // When: provideExceptionPolicyConfig() is called
-    // Then: ExceptionPolicyConfig is created with:
-    //   - Global propagation policy = PROPAGATE_ALL
-    //   - Global checked exception policy = REJECT
-    //   - Per-type BEFORE and AFTER policies match fail-fast configuration
+    ExceptionPolicyConfig config = wiring.provideExceptionPolicyConfig();
 
-    // TODO(#558): Implement test logic
-    // - Set all exception policy properties to PROPAGATE_ALL
-    // - Set all checked exception policy properties to REJECT
-    // - Create PeerWiring and call provideExceptionPolicyConfig()
-    // - Verify global policies are PROPAGATE_ALL and REJECT
-    // - Verify per-type policies for BEFORE, AFTER are PROPAGATE_ALL and REJECT
-    // - Verify ASYNC types remain SWALLOW_ALL (hardcoded override)
+    // Then: ExceptionPolicyConfig is created with fail-fast configuration
+    // Global propagation policy = PROPAGATE_ALL
+    assertThat(config.getGlobalPropagationPolicy(), is(ExceptionPropagationPolicy.PROPAGATE_ALL));
+    // Global checked exception policy = REJECT
+    assertThat(config.getGlobalCheckedExceptionPolicy(), is(CheckedExceptionPolicy.REJECT));
 
-    fail("Not yet implemented");
+    // Per-type BEFORE and AFTER policies match fail-fast configuration
+    assertThat(
+        config.getPropagationPolicyForType(InterceptType.BEFORE),
+        is(ExceptionPropagationPolicy.PROPAGATE_ALL));
+    assertThat(
+        config.getPropagationPolicyForType(InterceptType.AFTER),
+        is(ExceptionPropagationPolicy.PROPAGATE_ALL));
+    assertThat(
+        config.getCheckedExceptionPolicyForType(InterceptType.BEFORE),
+        is(CheckedExceptionPolicy.REJECT));
+    assertThat(
+        config.getCheckedExceptionPolicyForType(InterceptType.AFTER),
+        is(CheckedExceptionPolicy.REJECT));
+
+    // ASYNC types remain SWALLOW_ALL (hardcoded override)
+    assertThat(
+        config.getPropagationPolicyForType(InterceptType.BEFORE_ASYNC),
+        is(ExceptionPropagationPolicy.SWALLOW_ALL));
+    assertThat(
+        config.getPropagationPolicyForType(InterceptType.AFTER_ASYNC),
+        is(ExceptionPropagationPolicy.SWALLOW_ALL));
   }
 
   /**
@@ -310,54 +342,129 @@ public class PeerWiringProvidersTest {
    * configurations, invalid property handling for per-type policies, and ASYNC type hardcoding.
    */
   @Test
-  @Ignore("Awaiting implementation in #558")
   public void testProvideExceptionPolicyConfig_allPolicies_coverAllBranches() {
-    // Given: Various exception policy configurations exercising all branches:
-    //   - All ExceptionPropagationPolicy values: PROPAGATE_ALL, PROPAGATE_EXPLICIT_ONLY,
-    //     SWALLOW_ALL, PROPAGATE_CONTROLLED_ONLY
-    //   - All CheckedExceptionPolicy values: WRAP, REJECT, ALLOW_ALL
-    //   - Per-type policies for BEFORE, AFTER, AROUND
-    //   - Invalid per-type propagation policy values (should log warning and skip)
-    //   - Invalid per-type checked exception policy values (should log warning and skip)
-    // When: provideExceptionPolicyConfig() is called with each configuration
-    // Then: All policy branches are covered:
-    //   - Global propagation policy parsing (valid and invalid)
-    //   - Global checked exception policy parsing (valid and invalid)
-    //   - Per-type propagation policy loop for BEFORE, AFTER, AROUND (valid and invalid)
-    //   - Per-type checked exception policy loop for BEFORE, AFTER, AROUND (valid and invalid)
-    //   - ASYNC type hardcoding always applies SWALLOW_ALL
-
-    // TODO(#558): Implement test logic covering these branches:
-    //
     // Branch 1: Per-type propagation policy AROUND with PROPAGATE_EXPLICIT_ONLY
-    // - Set pal.intercept.exception-policy.around = PROPAGATE_EXPLICIT_ONLY
-    // - Verify getPropagationPolicyForType(AROUND) returns PROPAGATE_EXPLICIT_ONLY
-    //
-    // Branch 2: Per-type checked exception policy BEFORE with WRAP
-    // - Set pal.intercept.checked-exception-policy.before = WRAP
-    // - Verify getCheckedExceptionPolicyForType(BEFORE) returns WRAP
-    //
-    // Branch 3: Per-type checked exception policy AROUND with REJECT
-    // - Set pal.intercept.checked-exception-policy.around = REJECT
-    // - Verify getCheckedExceptionPolicyForType(AROUND) returns REJECT
-    //
-    // Branch 4: Invalid per-type propagation policy for AFTER
-    // - Set pal.intercept.exception-policy.after = INVALID_VALUE
-    // - Verify getPropagationPolicyForType(AFTER) returns global default (not INVALID_VALUE)
-    //
-    // Branch 5: Invalid per-type checked exception policy for BEFORE
-    // - Set pal.intercept.checked-exception-policy.before = INVALID_VALUE
-    // - Verify getCheckedExceptionPolicyForType(BEFORE) returns global default (not INVALID_VALUE)
-    //
-    // Branch 6: All InterceptTypes exercised in per-type loops
-    // - Configure policies for BEFORE, AFTER, and AROUND types
-    // - Verify each type has its configured policy
-    //
-    // Branch 7: ASYNC types override verification
-    // - Even if pal.intercept.exception-policy.before-async set to PROPAGATE_ALL
-    // - Verify getPropagationPolicyForType(BEFORE_ASYNC) still returns SWALLOW_ALL
-    // - Verify getPropagationPolicyForType(AFTER_ASYNC) still returns SWALLOW_ALL
+    {
+      Properties props = baseProps();
+      props.setProperty("pal.intercept.exception-policy.around", "PROPAGATE_EXPLICIT_ONLY");
+      CustomClassloader cl =
+          new CustomClassloader(new URL[] {}, ClassLoader.getSystemClassLoader());
+      PeerWiring wiring = new PeerWiring(props, EnumSet.noneOf(RunOptions.class), ctx, cl);
+      ExceptionPolicyConfig config = wiring.provideExceptionPolicyConfig();
+      assertThat(
+          config.getPropagationPolicyForType(InterceptType.AROUND),
+          is(ExceptionPropagationPolicy.PROPAGATE_EXPLICIT_ONLY));
+    }
 
-    fail("Not yet implemented");
+    // Branch 2: Per-type checked exception policy BEFORE with WRAP
+    {
+      Properties props = baseProps();
+      props.setProperty("pal.intercept.checked-exception-policy.before", "WRAP");
+      CustomClassloader cl =
+          new CustomClassloader(new URL[] {}, ClassLoader.getSystemClassLoader());
+      PeerWiring wiring = new PeerWiring(props, EnumSet.noneOf(RunOptions.class), ctx, cl);
+      ExceptionPolicyConfig config = wiring.provideExceptionPolicyConfig();
+      assertThat(
+          config.getCheckedExceptionPolicyForType(InterceptType.BEFORE),
+          is(CheckedExceptionPolicy.WRAP));
+    }
+
+    // Branch 3: Per-type checked exception policy AROUND with REJECT
+    {
+      Properties props = baseProps();
+      props.setProperty("pal.intercept.checked-exception-policy.around", "REJECT");
+      CustomClassloader cl =
+          new CustomClassloader(new URL[] {}, ClassLoader.getSystemClassLoader());
+      PeerWiring wiring = new PeerWiring(props, EnumSet.noneOf(RunOptions.class), ctx, cl);
+      ExceptionPolicyConfig config = wiring.provideExceptionPolicyConfig();
+      assertThat(
+          config.getCheckedExceptionPolicyForType(InterceptType.AROUND),
+          is(CheckedExceptionPolicy.REJECT));
+    }
+
+    // Branch 4: Invalid per-type propagation policy for AFTER
+    // When invalid, the per-type policy remains null (no override applied)
+    {
+      Properties props = baseProps();
+      props.setProperty("pal.intercept.exception-policy.after", "INVALID_VALUE");
+      CustomClassloader cl =
+          new CustomClassloader(new URL[] {}, ClassLoader.getSystemClassLoader());
+      PeerWiring wiring = new PeerWiring(props, EnumSet.noneOf(RunOptions.class), ctx, cl);
+      ExceptionPolicyConfig config = wiring.provideExceptionPolicyConfig();
+      // Invalid value should result in null (no per-type override), not affect global
+      assertThat(config.getPropagationPolicyForType(InterceptType.AFTER), is((Object) null));
+      // Global default should still be PROPAGATE_CONTROLLED_ONLY
+      assertThat(
+          config.getGlobalPropagationPolicy(),
+          is(ExceptionPropagationPolicy.PROPAGATE_CONTROLLED_ONLY));
+    }
+
+    // Branch 5: Invalid per-type checked exception policy for BEFORE
+    {
+      Properties props = baseProps();
+      props.setProperty("pal.intercept.checked-exception-policy.before", "INVALID_VALUE");
+      CustomClassloader cl =
+          new CustomClassloader(new URL[] {}, ClassLoader.getSystemClassLoader());
+      PeerWiring wiring = new PeerWiring(props, EnumSet.noneOf(RunOptions.class), ctx, cl);
+      ExceptionPolicyConfig config = wiring.provideExceptionPolicyConfig();
+      // Invalid value should result in null (no per-type override)
+      assertThat(config.getCheckedExceptionPolicyForType(InterceptType.BEFORE), is((Object) null));
+      // Global default should still be WRAP
+      assertThat(config.getGlobalCheckedExceptionPolicy(), is(CheckedExceptionPolicy.WRAP));
+    }
+
+    // Branch 6: All InterceptTypes exercised in per-type loops with SWALLOW_ALL
+    {
+      Properties props = baseProps();
+      props.setProperty("pal.intercept.exception-policy.before", "SWALLOW_ALL");
+      props.setProperty("pal.intercept.exception-policy.after", "SWALLOW_ALL");
+      props.setProperty("pal.intercept.exception-policy.around", "SWALLOW_ALL");
+      props.setProperty("pal.intercept.checked-exception-policy.before", "ALLOW_ALL");
+      props.setProperty("pal.intercept.checked-exception-policy.after", "ALLOW_ALL");
+      props.setProperty("pal.intercept.checked-exception-policy.around", "ALLOW_ALL");
+      CustomClassloader cl =
+          new CustomClassloader(new URL[] {}, ClassLoader.getSystemClassLoader());
+      PeerWiring wiring = new PeerWiring(props, EnumSet.noneOf(RunOptions.class), ctx, cl);
+      ExceptionPolicyConfig config = wiring.provideExceptionPolicyConfig();
+      // Verify each type has its configured propagation policy
+      assertThat(
+          config.getPropagationPolicyForType(InterceptType.BEFORE),
+          is(ExceptionPropagationPolicy.SWALLOW_ALL));
+      assertThat(
+          config.getPropagationPolicyForType(InterceptType.AFTER),
+          is(ExceptionPropagationPolicy.SWALLOW_ALL));
+      assertThat(
+          config.getPropagationPolicyForType(InterceptType.AROUND),
+          is(ExceptionPropagationPolicy.SWALLOW_ALL));
+      // Verify each type has its configured checked exception policy
+      assertThat(
+          config.getCheckedExceptionPolicyForType(InterceptType.BEFORE),
+          is(CheckedExceptionPolicy.ALLOW_ALL));
+      assertThat(
+          config.getCheckedExceptionPolicyForType(InterceptType.AFTER),
+          is(CheckedExceptionPolicy.ALLOW_ALL));
+      assertThat(
+          config.getCheckedExceptionPolicyForType(InterceptType.AROUND),
+          is(CheckedExceptionPolicy.ALLOW_ALL));
+    }
+
+    // Branch 7: ASYNC types override verification
+    // Even if we attempt to set ASYNC types via properties, they should be hardcoded to SWALLOW_ALL
+    {
+      Properties props = baseProps();
+      props.setProperty("pal.intercept.exception-policy.before-async", "PROPAGATE_ALL");
+      props.setProperty("pal.intercept.exception-policy.after-async", "PROPAGATE_ALL");
+      CustomClassloader cl =
+          new CustomClassloader(new URL[] {}, ClassLoader.getSystemClassLoader());
+      PeerWiring wiring = new PeerWiring(props, EnumSet.noneOf(RunOptions.class), ctx, cl);
+      ExceptionPolicyConfig config = wiring.provideExceptionPolicyConfig();
+      // ASYNC types must always be SWALLOW_ALL regardless of properties
+      assertThat(
+          config.getPropagationPolicyForType(InterceptType.BEFORE_ASYNC),
+          is(ExceptionPropagationPolicy.SWALLOW_ALL));
+      assertThat(
+          config.getPropagationPolicyForType(InterceptType.AFTER_ASYNC),
+          is(ExceptionPropagationPolicy.SWALLOW_ALL));
+    }
   }
 }
