@@ -25,6 +25,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /** Naming convention to use: MethodName_StateUnderTest_ExpectedBehavior. */
@@ -641,6 +642,259 @@ public class ConcurrentHashMapObjectLookupStoreTest {
         store.close();
       }
     }
+  }
+
+  // </editor-fold>
+
+  // ============================================================================
+  // Test specifications for issue #527 - Awaiting implementation in #528
+  // ============================================================================
+
+  // <editor-fold desc="Issue #527 test specifications">
+
+  /**
+   * Verifies that createAsyncManaged(int, float) creates a store with custom parameters.
+   *
+   * <p>Given: Custom capacity (5000) and load factor (0.5f) When: createAsyncManaged(int, float)
+   * called Then: Store created with specified parameters; background cleaner running
+   *
+   * <p>Implementation notes:
+   *
+   * <ul>
+   *   <li>Call createAsyncManaged(5000, 0.5f)
+   *   <li>Verify store is not null
+   *   <li>Verify cleaner is attached and running (via reflection)
+   *   <li>Store some objects to verify functionality
+   *   <li>Close the store
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #528")
+  public void testCreateAsyncManaged_createsWithCustomParams() {
+    // Given: Custom capacity and load factor
+    // When: createAsyncManaged(int, float) called
+    // Then: Store created with specified parameters
+
+    // TODO(#528): Implement test logic
+    // 1. Create store with custom params: createAsyncManaged(5000, 0.5f)
+    // 2. Verify store is not null
+    // 3. Verify cleaner is attached (via reflection)
+    // 4. Store objects to verify functionality
+    // 5. Close store in finally block
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that createAsyncManaged() creates a store with default parameters.
+   *
+   * <p>Given: No parameters When: createAsyncManaged() called Then: Store created with default
+   * parameters (DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR)
+   *
+   * <p>Note: This is a specification duplicate. The existing test
+   * createAsyncManaged_startsBackgroundCleaner already covers this scenario.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #528 - covered by createAsyncManaged_startsBackgroundCleaner")
+  public void testCreateAsyncManaged_createsWithDefaults() {
+    // Given: No parameters
+    // When: createAsyncManaged() called
+    // Then: Store created with default parameters
+
+    // TODO(#528): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that createUnmanaged() creates a store without background processing.
+   *
+   * <p>Given: Valid ObjectLookupStoreStats parameter When: createUnmanaged() called Then: Unmanaged
+   * store created (no background processing); cleaner field is null
+   *
+   * <p>Implementation notes:
+   *
+   * <ul>
+   *   <li>Create stats object
+   *   <li>Call createUnmanaged(stats)
+   *   <li>Verify store is not null
+   *   <li>Verify cleaner is null (via reflection)
+   *   <li>Verify store uses the provided stats object
+   *   <li>Verify store functions correctly without background cleaner
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #528")
+  public void testCreateUnmanaged_createsUnmanagedStore() {
+    // Given: Valid parameters
+    // When: createUnmanaged() called
+    // Then: Unmanaged store created (no background processing)
+
+    // TODO(#528): Implement test logic
+    // 1. Create ObjectLookupStoreStats
+    // 2. Call createUnmanaged(stats)
+    // 3. Verify cleaner is null via reflection
+    // 4. Verify store uses provided stats
+    // 5. Verify manual drainRefQueue works
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that attachCleaner() successfully attaches a cleaner to the store.
+   *
+   * <p>Given: Store without cleaner (created via createUnmanaged) When: attachCleaner() called with
+   * valid cleaner Then: Cleaner attached and active
+   *
+   * <p>Note: This is partially covered by existing tests that use attachCleaner() implicitly.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #528")
+  public void testAttachCleaner_attachesSuccessfully() {
+    // Given: Store without cleaner
+    // When: attachCleaner() called
+    // Then: Cleaner attached and active
+
+    // TODO(#528): Implement test logic
+    // 1. Create unmanaged store
+    // 2. Create background processor cleaner
+    // 3. Call attachCleaner()
+    // 4. Verify cleaner is attached via reflection
+    // 5. Verify cleaner can be started and processes refs
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that clear() removes all objects from the store.
+   *
+   * <p>Given: Store with multiple objects When: clear() called Then: Store is empty
+   *
+   * <p>Note: This is a specification duplicate. The existing test clear_objectsStored_sizeIsZero
+   * already covers this scenario.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #528 - covered by clear_objectsStored_sizeIsZero")
+  public void testClear_removesAllObjects() {
+    // Given: Store with multiple objects
+    // When: clear() called
+    // Then: Store is empty
+
+    // TODO(#528): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that getRefQueue() returns a non-null ReferenceQueue.
+   *
+   * <p>Given: Store instance When: getRefQueue() called Then: Non-null ReferenceQueue returned
+   *
+   * <p>Implementation notes:
+   *
+   * <ul>
+   *   <li>Create any store (async, sync, or unmanaged)
+   *   <li>Call getRefQueue()
+   *   <li>Verify result is not null
+   *   <li>Verify result is a ReferenceQueue instance
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #528")
+  public void testGetRefQueue_returnsQueue() {
+    // Given: Store instance
+    // When: getRefQueue() called
+    // Then: Non-null ReferenceQueue returned
+
+    // TODO(#528): Implement test logic
+    // 1. Create store
+    // 2. Call getRefQueue()
+    // 3. Assert not null
+    // 4. Assert instanceof ReferenceQueue
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that isEmpty() returns true for an empty store.
+   *
+   * <p>Given: Empty store When: isEmpty() called Then: Returns true
+   *
+   * <p>Note: This is a specification duplicate. The existing test isEmpty_noObjectsStored_true
+   * already covers this scenario.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #528 - covered by isEmpty_noObjectsStored_true")
+  public void testIsEmpty_returnsTrueWhenEmpty() {
+    // Given: Empty store
+    // When: isEmpty() called
+    // Then: Returns true
+
+    // TODO(#528): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that isEmpty() returns false when store contains objects.
+   *
+   * <p>Given: Store with objects When: isEmpty() called Then: Returns false
+   *
+   * <p>Note: This is a specification duplicate. The existing test isEmpty_someObjectsStored_false
+   * already covers this scenario.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #528 - covered by isEmpty_someObjectsStored_false")
+  public void testIsEmpty_returnsFalseWhenNotEmpty() {
+    // Given: Store with objects
+    // When: isEmpty() called
+    // Then: Returns false
+
+    // TODO(#528): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that getStats() returns a non-null stats object.
+   *
+   * <p>Given: Store instance When: getStats() called Then: Non-null stats object returned
+   *
+   * <p>Implementation notes:
+   *
+   * <ul>
+   *   <li>Create store (any mode)
+   *   <li>Call getStats()
+   *   <li>Verify result is not null
+   *   <li>Verify result is ObjectLookupStoreStats instance
+   *   <li>Optionally verify counters are initialized to 0
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #528")
+  public void testGetStats_returnsStats() {
+    // Given: Store instance
+    // When: getStats() called
+    // Then: Non-null stats object returned
+
+    // TODO(#528): Implement test logic
+    // 1. Create store
+    // 2. Call getStats()
+    // 3. Assert not null
+    // 4. Verify initial counter values are 0
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that close() stops both cleaner and background processor.
+   *
+   * <p>Given: Store with attached cleaner and processor When: close() called Then: Both cleaner and
+   * processor stopped; store cleared
+   *
+   * <p>Note: This is a specification duplicate. The existing test close_stopsBackgroundProcessor
+   * already covers this scenario.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #528 - covered by close_stopsBackgroundProcessor")
+  public void testClose_closesCleanerAndProcessor() {
+    // Given: Store with attached cleaner and processor
+    // When: close() called
+    // Then: Both cleaner and processor stopped
+
+    // TODO(#528): Implement test logic
+    fail("Not yet implemented");
   }
 
   // </editor-fold>

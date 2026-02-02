@@ -15,10 +15,12 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assert.fail;
 
 import io.quasient.pal.common.objects.ObjectRef;
 import java.lang.reflect.Field;
 import java.util.concurrent.atomic.AtomicReference;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class ObjectLookupStoreBackgroundProcessorTest {
@@ -451,6 +453,91 @@ public class ObjectLookupStoreBackgroundProcessorTest {
         store.close();
       }
     }
+  }
+
+  /* ====================================================================== */
+  /* Test specifications for issue #527 - Awaiting implementation in #528   */
+  /* ====================================================================== */
+
+  /**
+   * Verifies that the 3-arg constructor creates a processor with the specified custom timeout.
+   *
+   * <p>Given: Custom timeout value (e.g., 5000ms) When: Constructor called with custom timeout
+   * Then: Processor created with specified timeout
+   *
+   * <p>Note: This is a specification duplicate to confirm the acceptance criteria. The existing
+   * test constructor_customTimeout_isRespected already covers this scenario.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #528 - covered by constructor_customTimeout_isRespected")
+  public void testConstructorWithCustomTimeout_createsProcessorWithTimeout() {
+    // Given: Custom timeout value (e.g., 5000ms)
+    // When: Constructor called with custom timeout
+    // Then: Processor created with specified timeout
+
+    // TODO(#528): Implement test logic - verify cleanupTimeoutMs field via reflection
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that start() creates and launches a background daemon thread.
+   *
+   * <p>Given: Processor not started When: start() called Then: Background thread is created and
+   * running
+   *
+   * <p>Note: This is a specification duplicate to confirm the acceptance criteria. The existing
+   * test start_launchesDaemonThread_andProcessesReferences already covers this scenario.
+   */
+  @Test
+  @Ignore(
+      "Awaiting implementation in #528 - covered by start_launchesDaemonThread_andProcessesReferences")
+  public void testStart_createsBackgroundThread() {
+    // Given: Processor not started
+    // When: start() called
+    // Then: Background thread is created and running
+
+    // TODO(#528): Implement test logic - verify worker thread is created and running
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that stop() terminates the worker thread gracefully.
+   *
+   * <p>Given: Running processor When: stop() called Then: Thread terminates gracefully
+   *
+   * <p>Note: This is a specification duplicate to confirm the acceptance criteria. The existing
+   * test stop_terminatesBackgroundThread_gracefully already covers this scenario.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #528 - covered by stop_terminatesBackgroundThread_gracefully")
+  public void testStop_terminatesThread() {
+    // Given: Running processor
+    // When: stop() called
+    // Then: Thread terminates gracefully
+
+    // TODO(#528): Implement test logic - verify thread termination
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that runOnce() drains the reference queue and processes all queued items.
+   *
+   * <p>Given: Processor with items in queue When: runOnce() called Then: Queue is drained and items
+   * processed
+   *
+   * <p>Note: This is a specification duplicate to confirm the acceptance criteria. The existing
+   * test removeClearedEntries_removesQueuedReferences already covers this scenario.
+   */
+  @Test
+  @Ignore(
+      "Awaiting implementation in #528 - covered by removeClearedEntries_removesQueuedReferences")
+  public void testRunOnce_drainsQueue() {
+    // Given: Processor with items in queue
+    // When: runOnce() called
+    // Then: Queue is drained and items processed
+
+    // TODO(#528): Implement test logic - verify queue drainage behavior
+    fail("Not yet implemented");
   }
 
   /**
