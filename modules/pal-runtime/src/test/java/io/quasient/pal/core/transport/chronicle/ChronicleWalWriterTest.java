@@ -23,6 +23,7 @@ import io.quasient.pal.common.runtime.ExecPhase;
 import io.quasient.pal.core.ZmqEnabledTest;
 import io.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import io.quasient.pal.core.internal.concurrent.MpscKind;
+import io.quasient.pal.core.transport.WalWriterStats;
 import io.quasient.pal.messages.OutboundMsg;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.InternalHeader;
@@ -48,7 +49,6 @@ import org.jctools.queues.MessagePassingQueue;
 import org.jctools.queues.MpscChunkedArrayQueue;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.zeromq.ZContext;
 
@@ -304,18 +304,92 @@ public class ChronicleWalWriterTest extends ZmqEnabledTest {
    * directWrite_writesAndFlushOnClose test by testing concurrent access scenarios.
    */
   @Test
-  @Ignore("Awaiting implementation in #546")
-  public void testWriteMessage_writesDirectlyToLog() {
+  public void testWriteMessage_writesDirectlyToLog() throws Exception {
     // Given: ChronicleWalWriter configured in direct-write mode (walQueue = null)
-    // When: writeMessage(OutboundMsg) is called from producer threads
-    // Then: Message is written to Chronicle queue using thread-local appender
+    Path directWriteDir = Files.createTempDirectory("chronicle-direct-write-test");
+    LogInfo directWriteLog = new LogInfo("direct_write_log", "n/a");
+    AtomicBoolean localWalFailed = new AtomicBoolean(false);
 
-    // TODO(#546): Implement test logic
-    // 1. Create writer in direct-write mode (walQueue = null)
-    // 2. Call writeMessage() from multiple concurrent threads
-    // 3. Verify all messages appear in the Chronicle queue
-    // 4. Verify thread-local appenders are used (perThreadAppenders set populated)
-    fail("Not yet implemented");
+    ChronicleWalWriter directWriter =
+        new ChronicleWalWriter(
+            PEER_ID,
+            zmqCtx,
+            SYNC_SOCKET_ADDRESS,
+            threadGroup,
+            "DirectWriteTest-Service",
+            /* walQueue */ null, // direct-write mode
+            localWalFailed,
+            "inproc://direct-offsets",
+            "true", // flushOnClose
+            directWriteDir,
+            "TEN_MINUTELY",
+            null,
+            null,
+            new DefaultChronicleQueueFactory());
+
+    directWriter.writeToLog(directWriteLog, false);
+
+    Set<Service> directServices = new HashSet<>(Collections.singletonList(directWriter));
+    ServiceManager directManager = new ServiceManager(directServices);
+    directManager.startAsync().awaitHealthy();
+    collectGoSignals(directServices.size(), zmqCtx);
+
+    // When: writeMessage() is called from multiple concurrent threads
+    int numThreads = 4;
+    int messagesPerThread = 5;
+    List<String> allMessageIds = Collections.synchronizedList(new ArrayList<>());
+    java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(numThreads);
+    java.util.concurrent.ExecutorService executor =
+        java.util.concurrent.Executors.newFixedThreadPool(numThreads);
+
+    for (int t = 0; t < numThreads; t++) {
+      @SuppressWarnings("unused")
+      var unused =
+          executor.submit(
+              () -> {
+                try {
+                  for (int i = 0; i < messagesPerThread; i++) {
+                    Message m =
+                        builder.wrap(builder.buildEmptyConstructor(PEER_ID, "java.lang.String"));
+                    String msgId = m.getExecMessage().getMessageId();
+                    allMessageIds.add(msgId);
+                    OutboundMsg outMsg =
+                        new OutboundMsg(
+                            MessageType.EXEC_CONSTRUCTOR, ExecPhase.BEFORE, null, msgId, null, m);
+                    directWriter.writeMessage(outMsg);
+                  }
+                } finally {
+                  latch.countDown();
+                }
+              });
+    }
+
+    latch.await(10, java.util.concurrent.TimeUnit.SECONDS);
+    executor.shutdown();
+    executor.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS);
+
+    // Stop service to trigger flush
+    directManager.stopAsync().awaitStopped();
+
+    // Then: Verify all messages appear in the Chronicle queue
+    Path qPath = directWriteDir.resolve(directWriteLog.getName());
+    List<String> writtenIds = new ArrayList<>();
+    try (var queue =
+            new DefaultChronicleQueueFactory()
+                .create(qPath, RollCycles.TEN_MINUTELY, 256, 128 * 1024 * 1024);
+        ExcerptTailer tailer = queue.createTailer()) {
+      while (true) {
+        OutboundMsg om = OutboundMsg.readNext(tailer);
+        if (om == null) break;
+        Message m = new Message();
+        m.unmarshal(om.getBody(), 0);
+        writtenIds.add(idOf(m));
+      }
+    }
+
+    assertThat(writtenIds.size(), is(numThreads * messagesPerThread));
+    // Verify all message IDs are present (order may vary due to concurrent writes)
+    assertThat(new HashSet<>(writtenIds), is(new HashSet<>(allMessageIds)));
   }
 
   /**
@@ -329,19 +403,82 @@ public class ChronicleWalWriterTest extends ZmqEnabledTest {
    * the run() method behavior rather than message content verification.
    */
   @Test
-  @Ignore("Awaiting implementation in #546")
-  public void testRun_processesMessagesFromQueue() {
+  public void testRun_processesMessagesFromQueue() throws Exception {
     // Given: ChronicleWalWriter with messages enqueued in walQueue
-    // When: run() executes (consumer thread processes queue)
-    // Then: All messages are drained from queue and written to Chronicle log
+    Path queueTestDir = Files.createTempDirectory("chronicle-queue-test");
+    LogInfo queueTestLog = new LogInfo("queue_test_log", "n/a");
+    AtomicBoolean localWalFailed = new AtomicBoolean(false);
+    HwmMessageQueue<OutboundMsg> localQueue =
+        HwmMessageQueue.createQueue(MpscKind.CHUNKED, 1 << 10, 1 << 20);
 
-    // TODO(#546): Implement test logic
-    // 1. Enqueue several messages to walQueue before starting service
-    // 2. Start the service (triggering run())
-    // 3. Wait for processing to complete
-    // 4. Verify queue is empty and messages appear in Chronicle
-    // 5. Verify messagesReceived and messagesWritten counters
-    fail("Not yet implemented");
+    ChronicleWalWriter queueWriter =
+        new ChronicleWalWriter(
+            PEER_ID,
+            zmqCtx,
+            SYNC_SOCKET_ADDRESS,
+            threadGroup,
+            "QueueProcessTest-Service",
+            localQueue,
+            localWalFailed,
+            "inproc://queue-test-offsets",
+            null, // use default flushOnClose
+            queueTestDir,
+            "TEN_MINUTELY",
+            null,
+            null,
+            new DefaultChronicleQueueFactory());
+
+    queueWriter.writeToLog(queueTestLog, false);
+
+    // Enqueue messages before starting the service
+    int numMessages = 10;
+    List<String> enqueuedIds = new ArrayList<>();
+    for (int i = 0; i < numMessages; i++) {
+      Message m = builder.wrap(builder.buildEmptyConstructor(PEER_ID, "java.lang.String"));
+      String msgId = m.getExecMessage().getMessageId();
+      enqueuedIds.add(msgId);
+      OutboundMsg outMsg = wrap(MessageType.EXEC_CONSTRUCTOR, ExecPhase.BEFORE, null, m);
+      localQueue.offer(outMsg);
+    }
+
+    // When: run() executes (service starts and processes queue)
+    Set<Service> queueServices = new HashSet<>(Collections.singletonList(queueWriter));
+    ServiceManager queueManager = new ServiceManager(queueServices);
+    queueManager.startAsync().awaitHealthy();
+    collectGoSignals(queueServices.size(), zmqCtx);
+
+    // Wait for processing to complete (queue should drain quickly)
+    Thread.sleep(200);
+
+    // Verify counters
+    WalWriterStats stats = queueWriter.getLiveStats();
+    assertThat(
+        "Should have received all messages", stats.messagesReceived(), is((long) numMessages));
+    assertThat("Should have written all messages", stats.messagesWritten(), is((long) numMessages));
+
+    // Stop service
+    queueManager.stopAsync().awaitStopped();
+
+    // Then: Verify queue is empty and messages appear in Chronicle
+    assertThat("Queue should be empty", localQueue.isEmpty(), is(true));
+
+    Path qPath = queueTestDir.resolve(queueTestLog.getName());
+    List<String> writtenIds = new ArrayList<>();
+    try (var queue =
+            new DefaultChronicleQueueFactory()
+                .create(qPath, RollCycles.TEN_MINUTELY, 256, 128 * 1024 * 1024);
+        ExcerptTailer tailer = queue.createTailer()) {
+      while (true) {
+        OutboundMsg om = OutboundMsg.readNext(tailer);
+        if (om == null) break;
+        Message m = new Message();
+        m.unmarshal(om.getBody(), 0);
+        writtenIds.add(idOf(m));
+      }
+    }
+
+    assertThat(writtenIds.size(), is(numMessages));
+    assertThat(writtenIds, is(enqueuedIds));
   }
 
   /**
@@ -354,19 +491,78 @@ public class ChronicleWalWriterTest extends ZmqEnabledTest {
    * ensuring no message loss (when flushOnClose is true) and proper resource cleanup.
    */
   @Test
-  @Ignore("Awaiting implementation in #546")
-  public void testRun_handlesInterruptionGracefully() {
+  public void testRun_handlesInterruptionGracefully() throws Exception {
     // Given: ChronicleWalWriter running and processing messages
-    // When: Service thread is interrupted
-    // Then: Writer exits gracefully; remaining messages are processed if flushOnClose=true
+    Path interruptTestDir = Files.createTempDirectory("chronicle-interrupt-test");
+    LogInfo interruptTestLog = new LogInfo("interrupt_test_log", "n/a");
+    AtomicBoolean localWalFailed = new AtomicBoolean(false);
+    HwmMessageQueue<OutboundMsg> localQueue =
+        HwmMessageQueue.createQueue(MpscKind.CHUNKED, 1 << 10, 1 << 20);
 
-    // TODO(#546): Implement test logic
-    // 1. Start writer with flushOnClose=true
-    // 2. Enqueue messages while service is running
-    // 3. Interrupt the service thread or request shutdown
-    // 4. Verify service stops without throwing
-    // 5. Verify queued messages were flushed to Chronicle before exit
-    fail("Not yet implemented");
+    ChronicleWalWriter interruptWriter =
+        new ChronicleWalWriter(
+            PEER_ID,
+            zmqCtx,
+            SYNC_SOCKET_ADDRESS,
+            threadGroup,
+            "InterruptTest-Service",
+            localQueue,
+            localWalFailed,
+            "inproc://interrupt-test-offsets",
+            "true", // flushOnClose enabled
+            interruptTestDir,
+            "TEN_MINUTELY",
+            null,
+            null,
+            new DefaultChronicleQueueFactory());
+
+    interruptWriter.writeToLog(interruptTestLog, false);
+
+    // Start service
+    Set<Service> interruptServices = new HashSet<>(Collections.singletonList(interruptWriter));
+    ServiceManager interruptManager = new ServiceManager(interruptServices);
+    interruptManager.startAsync().awaitHealthy();
+    collectGoSignals(interruptServices.size(), zmqCtx);
+
+    // Enqueue messages while service is running
+    int numMessages = 5;
+    List<String> enqueuedIds = new ArrayList<>();
+    for (int i = 0; i < numMessages; i++) {
+      Message m = builder.wrap(builder.buildEmptyConstructor(PEER_ID, "java.lang.String"));
+      String msgId = m.getExecMessage().getMessageId();
+      enqueuedIds.add(msgId);
+      OutboundMsg outMsg = wrap(MessageType.EXEC_CONSTRUCTOR, ExecPhase.BEFORE, null, m);
+      localQueue.offer(outMsg);
+    }
+
+    // Brief wait for some processing
+    Thread.sleep(50);
+
+    // When: Request graceful shutdown (which triggers interruption handling)
+    interruptManager.stopAsync().awaitStopped(10, java.util.concurrent.TimeUnit.SECONDS);
+
+    // Then: Verify service stops without throwing
+    assertThat("Service should have stopped", interruptWriter.isRunning(), is(false));
+
+    // Verify queued messages were flushed to Chronicle before exit
+    Path qPath = interruptTestDir.resolve(interruptTestLog.getName());
+    List<String> writtenIds = new ArrayList<>();
+    try (var queue =
+            new DefaultChronicleQueueFactory()
+                .create(qPath, RollCycles.TEN_MINUTELY, 256, 128 * 1024 * 1024);
+        ExcerptTailer tailer = queue.createTailer()) {
+      while (true) {
+        OutboundMsg om = OutboundMsg.readNext(tailer);
+        if (om == null) break;
+        Message m = new Message();
+        m.unmarshal(om.getBody(), 0);
+        writtenIds.add(idOf(m));
+      }
+    }
+
+    // With flushOnClose=true, all messages should be written
+    assertThat(writtenIds.size(), is(numMessages));
+    assertThat(writtenIds, is(enqueuedIds));
   }
 
   /**
@@ -380,19 +576,68 @@ public class ChronicleWalWriterTest extends ZmqEnabledTest {
    * Chronicle queue handles, ZMQ sockets, and Disruptor instances.
    */
   @Test
-  @Ignore("Awaiting implementation in #546")
-  public void testCloseConnections_closesAllResources() {
+  public void testCloseConnections_closesAllResources() throws Exception {
     // Given: ChronicleWalWriter with open connections (queue, appender, offset publisher)
-    // When: closeConnections() is called (via service stop)
-    // Then: Chronicle appender and queue are closed; ZMQ socket is closed; Disruptor is shut down
+    Path closeTestDir = Files.createTempDirectory("chronicle-close-test");
+    LogInfo closeTestLog = new LogInfo("close_test_log", "n/a");
+    AtomicBoolean localWalFailed = new AtomicBoolean(false);
+    HwmMessageQueue<OutboundMsg> localQueue =
+        HwmMessageQueue.createQueue(MpscKind.CHUNKED, 1 << 10, 1 << 20);
 
-    // TODO(#546): Implement test logic
-    // 1. Create writer with offset publishing enabled
-    // 2. Start service and process some messages
-    // 3. Stop service (triggers closeConnections)
-    // 4. Verify all resources are closed (no exceptions, service is terminated)
-    // 5. Optionally verify Chronicle queue files are properly closed (no lock files)
-    fail("Not yet implemented");
+    ChronicleWalWriter closeWriter =
+        new ChronicleWalWriter(
+            PEER_ID,
+            zmqCtx,
+            SYNC_SOCKET_ADDRESS,
+            threadGroup,
+            "CloseTest-Service",
+            localQueue,
+            localWalFailed,
+            "inproc://close-test-offsets",
+            "true",
+            closeTestDir,
+            "TEN_MINUTELY",
+            null,
+            null,
+            new DefaultChronicleQueueFactory());
+
+    // Enable offset publishing by passing true to writeToLog
+    closeWriter.writeToLog(closeTestLog, true);
+
+    // Start service
+    Set<Service> closeServices = new HashSet<>(Collections.singletonList(closeWriter));
+    ServiceManager closeManager = new ServiceManager(closeServices);
+    closeManager.startAsync().awaitHealthy();
+    collectGoSignals(closeServices.size(), zmqCtx);
+
+    // Process some messages
+    for (int i = 0; i < 3; i++) {
+      Message m = builder.wrap(builder.buildEmptyConstructor(PEER_ID, "java.lang.String"));
+      OutboundMsg outMsg = wrap(MessageType.EXEC_CONSTRUCTOR, ExecPhase.BEFORE, null, m);
+      localQueue.offer(outMsg);
+    }
+
+    Thread.sleep(100);
+
+    // When: closeConnections() is called (via service stop)
+    closeManager.stopAsync().awaitStopped(10, java.util.concurrent.TimeUnit.SECONDS);
+
+    // Then: Verify all resources are closed (no exceptions, service is terminated)
+    assertThat("Service should have stopped", closeWriter.isRunning(), is(false));
+    assertThat("Service should be terminated", closeWriter.state(), is(Service.State.TERMINATED));
+
+    // Verify Chronicle queue can be reopened (queue was properly closed)
+    Path qPath = closeTestDir.resolve(closeTestLog.getName());
+    try (var queue =
+            new DefaultChronicleQueueFactory()
+                .create(qPath, RollCycles.TEN_MINUTELY, 256, 128 * 1024 * 1024);
+        ExcerptTailer tailer = queue.createTailer()) {
+      int count = 0;
+      while (OutboundMsg.readNext(tailer) != null) {
+        count++;
+      }
+      assertThat("Messages should be readable after close", count, is(3));
+    }
   }
 
   /**
@@ -406,24 +651,110 @@ public class ChronicleWalWriterTest extends ZmqEnabledTest {
    * proper serialization for each MessageType variant.
    */
   @Test
-  @Ignore("Awaiting implementation in #546")
-  public void testWriteMessageUsingAppender_handlesVariousMessageTypes() {
+  public void testWriteMessageUsingAppender_handlesVariousMessageTypes() throws Exception {
     // Given: OutboundMsg instances of different MessageTypes
-    // When: writeMessageUsingAppender() is called for each
-    // Then: All message types are correctly serialized and written to Chronicle
+    Path msgTypesTestDir = Files.createTempDirectory("chronicle-msgtypes-test");
+    LogInfo msgTypesTestLog = new LogInfo("msgtypes_test_log", "n/a");
+    AtomicBoolean localWalFailed = new AtomicBoolean(false);
+    HwmMessageQueue<OutboundMsg> localQueue =
+        HwmMessageQueue.createQueue(MpscKind.CHUNKED, 1 << 10, 1 << 20);
 
-    // TODO(#546): Implement test logic
-    // 1. Create OutboundMsg for each supported MessageType:
-    //    - EXEC_CONSTRUCTOR
-    //    - EXEC_METHOD
-    //    - EXEC_STATIC_METHOD
-    //    - INTERCEPT_MESSAGE
-    //    - GET_IVAR / SET_IVAR
-    //    - GET_CVAR / SET_CVAR
-    // 2. Write each message using writeMessageUsingAppender
-    // 3. Read back from Chronicle and verify each message type is preserved
-    // 4. Verify message content matches original
-    fail("Not yet implemented");
+    ChronicleWalWriter msgTypesWriter =
+        new ChronicleWalWriter(
+            PEER_ID,
+            zmqCtx,
+            SYNC_SOCKET_ADDRESS,
+            threadGroup,
+            "MsgTypesTest-Service",
+            localQueue,
+            localWalFailed,
+            "inproc://msgtypes-test-offsets",
+            null,
+            msgTypesTestDir,
+            "TEN_MINUTELY",
+            null,
+            null,
+            new DefaultChronicleQueueFactory());
+
+    msgTypesWriter.writeToLog(msgTypesTestLog, false);
+
+    // Start service
+    Set<Service> msgTypesServices = new HashSet<>(Collections.singletonList(msgTypesWriter));
+    ServiceManager msgTypesManager = new ServiceManager(msgTypesServices);
+    msgTypesManager.startAsync().awaitHealthy();
+    collectGoSignals(msgTypesServices.size(), zmqCtx);
+
+    // Create OutboundMsg for each supported MessageType
+    // Note: We use the simpler message types that are easier to construct in tests
+    List<OutboundMsg> messages = new ArrayList<>();
+    List<MessageType> expectedTypes = new ArrayList<>();
+
+    // 1. EXEC_CONSTRUCTOR
+    ExecMessage constructorMsg = builder.buildEmptyConstructor(PEER_ID, "java.lang.String");
+    messages.add(
+        wrap(MessageType.EXEC_CONSTRUCTOR, ExecPhase.BEFORE, null, builder.wrap(constructorMsg)));
+    expectedTypes.add(MessageType.EXEC_CONSTRUCTOR);
+
+    // 2. Another EXEC_CONSTRUCTOR with different class
+    ExecMessage constructorMsg2 = builder.buildEmptyConstructor(PEER_ID, "java.lang.Integer");
+    messages.add(
+        wrap(MessageType.EXEC_CONSTRUCTOR, ExecPhase.BEFORE, null, builder.wrap(constructorMsg2)));
+    expectedTypes.add(MessageType.EXEC_CONSTRUCTOR);
+
+    // 3. EXEC_GET_STATIC (get class/static variable)
+    ExecMessage getStaticMsg = builder.buildGetStatic(PEER_ID, "java.lang.System", "out");
+    messages.add(
+        wrap(MessageType.EXEC_GET_STATIC, ExecPhase.BEFORE, null, builder.wrap(getStaticMsg)));
+    expectedTypes.add(MessageType.EXEC_GET_STATIC);
+
+    // 4. EXEC_PUT_STATIC (set class/static variable)
+    ExecMessage putStaticMsg =
+        builder.buildPutStatic(PEER_ID, "java.lang.System", "out", "java.io.PrintStream", null);
+    messages.add(
+        wrap(MessageType.EXEC_PUT_STATIC, ExecPhase.BEFORE, null, builder.wrap(putStaticMsg)));
+    expectedTypes.add(MessageType.EXEC_PUT_STATIC);
+
+    // 5. INTERCEPT_MESSAGE
+    io.quasient.pal.messages.colfer.InterceptMessage interceptMsg =
+        builder.buildInterceptMessage(
+            PEER_ID,
+            InterceptType.BEFORE,
+            "java.io.PrintStream",
+            "println",
+            Collections.emptyList(),
+            getClass().getName(),
+            "callback");
+    messages.add(
+        wrap(MessageType.INTERCEPT_MESSAGE, ExecPhase.UNDEFINED, null, builder.wrap(interceptMsg)));
+    expectedTypes.add(MessageType.INTERCEPT_MESSAGE);
+
+    // When: Enqueue each message
+    for (OutboundMsg msg : messages) {
+      localQueue.offer(msg);
+    }
+
+    // Wait for processing
+    Thread.sleep(200);
+
+    // Stop service
+    msgTypesManager.stopAsync().awaitStopped();
+
+    // Then: Read back from Chronicle and verify each message type is preserved
+    Path qPath = msgTypesTestDir.resolve(msgTypesTestLog.getName());
+    List<MessageType> readTypes = new ArrayList<>();
+    try (var queue =
+            new DefaultChronicleQueueFactory()
+                .create(qPath, RollCycles.TEN_MINUTELY, 256, 128 * 1024 * 1024);
+        ExcerptTailer tailer = queue.createTailer()) {
+      while (true) {
+        OutboundMsg om = OutboundMsg.readNext(tailer);
+        if (om == null) break;
+        readTypes.add(om.getMessageType());
+      }
+    }
+
+    assertThat("Should have read all message types", readTypes.size(), is(expectedTypes.size()));
+    assertThat("Message types should match", readTypes, is(expectedTypes));
   }
 
   // ───────────────────────── helpers ─────────────────────────

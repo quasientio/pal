@@ -32,8 +32,10 @@ import io.quasient.pal.serdes.colfer.MessageBuilder;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -48,7 +50,6 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -125,6 +126,69 @@ public class ChronicleSourceLogReaderTest extends ZmqEnabledTest {
 
     Set<String> getReceivedMessages() {
       return receivedMessageIds;
+    }
+
+    int getMessagesProcessed() {
+      return messagesProcessed.get();
+    }
+  }
+
+  /**
+   * Worker class that receives messages and preserves the order in which they were received.
+   *
+   * <p>Unlike Worker, this class uses a List to maintain sequential order.
+   */
+  static class SequentialWorker implements Runnable {
+    private final ZMQ.Socket socket;
+    private final ZContext context;
+    private final String dealerAddress;
+    private final java.util.List<String> receivedMessageIds =
+        java.util.Collections.synchronizedList(new java.util.ArrayList<>());
+    private final AtomicInteger messagesProcessed = new AtomicInteger(0);
+
+    SequentialWorker(ZContext context, String dealerAddress) {
+      this.context = context;
+      this.dealerAddress = dealerAddress;
+      this.socket = this.context.createSocket(SocketType.REP);
+    }
+
+    @Override
+    public void run() {
+      this.socket.connect(this.dealerAddress);
+      logger.debug("SequentialWorker connected to DEALER at {}", this.dealerAddress);
+
+      while (!Thread.interrupted()) {
+        InboundLogMsg logMsg;
+        try {
+          logMsg = InboundLogMsg.receive(socket, true);
+          if (logMsg != null) {
+            Message wrapper = new Message();
+            wrapper.unmarshal(logMsg.getBody(), 0);
+            if (wrapper.getExecMessage() != null) {
+              ExecMessage msg = wrapper.getExecMessage();
+              logger.debug("SequentialWorker received message with id: {}", msg.getMessageId());
+              receivedMessageIds.add(msg.getMessageId());
+              messagesProcessed.incrementAndGet();
+            }
+          }
+        } catch (ZMQException ex) {
+          int errorCode = ex.getErrorCode();
+          if (errorCode == ZError.ETERM || errorCode == ZError.EINTR) {
+            break;
+          } else {
+            throw ex;
+          }
+        } catch (Exception e) {
+          logger.error("error parsing received message", e);
+        }
+      }
+
+      this.socket.close();
+      this.context.close();
+    }
+
+    java.util.List<String> getReceivedMessageIdsInOrder() {
+      return new java.util.ArrayList<>(receivedMessageIds);
     }
 
     int getMessagesProcessed() {
@@ -666,21 +730,74 @@ public class ChronicleSourceLogReaderTest extends ZmqEnabledTest {
    * preservation with sequence-numbered messages.
    */
   @Test
-  @Ignore("Awaiting implementation in #546")
-  public void testReadFromLog_readsMessagesSequentially() {
+  public void testReadFromLog_readsMessagesSequentially() throws Exception {
     // Given: Chronicle queue with N messages written in known sequence order
-    // When: readFromLog() is configured and the reader processes messages
-    // Then: Messages are received in exactly the same order they were written
+    int numMessages = 10;
+    List<String> writtenMessageIds = new ArrayList<>();
+    MessageBuilder msgBuilder = new MessageBuilder();
 
-    // TODO(#546): Implement test logic
-    // 1. Create Chronicle queue with test messages containing sequence numbers
-    // 2. Write messages in known order (e.g., msg-1, msg-2, msg-3, ...)
-    // 3. Configure ChronicleSourceLogReader with the queue
-    // 4. Start the reader service
-    // 5. Collect received messages via Worker
-    // 6. Verify messages are received in exact sequential order
-    // 7. Verify no messages are skipped or duplicated
-    fail("Not yet implemented");
+    try (ChronicleQueue queue =
+        queueFactory.create(queuePath, RollCycles.TEN_MINUTELY, 1000, 64 * 1024 * 1024)) {
+      ExcerptAppender appender = queue.createAppender();
+
+      // Write messages in known order
+      for (int i = 0; i < numMessages; i++) {
+        ExecMessage execMsg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+        // Record message IDs in order
+        writtenMessageIds.add(execMsg.getMessageId());
+
+        Message wrapper = msgBuilder.wrap(execMsg);
+        OutboundMsg outboundMsg =
+            new OutboundMsg(
+                MessageType.EXEC_CONSTRUCTOR,
+                ExecPhase.BEFORE,
+                null,
+                execMsg.getMessageId(),
+                execMsg.getResponseToId(),
+                wrapper);
+        outboundMsg.appendTo(appender);
+        logger.debug("Wrote message {} with id {}", i, execMsg.getMessageId());
+      }
+    }
+
+    // Create log info
+    log = new LogInfo(queuePath.toString());
+    log.setLogType(LogInfo.LogType.CHRONICLE);
+
+    // Configure log reader
+    logReader.readFromLog(log, false, null, false);
+
+    // Start worker to receive messages with order tracking
+    SequentialWorker seqWorker = new SequentialWorker(zmqContext, DEALER_ADDRESS);
+    @SuppressWarnings("unused")
+    var workerFuture = execService.submit(seqWorker);
+
+    // Start log reader service
+    services = new HashSet<>();
+    services.add(logReader);
+    manager = new ServiceManager(services);
+    manager.startAsync().awaitHealthy(5, TimeUnit.SECONDS);
+    collectGoSignals(services.size(), zmqContext);
+
+    logReader.acceptRequests(true);
+
+    // Wait for messages to be processed
+    int maxWait = 100;
+    int waited = 0;
+    while (seqWorker.getMessagesProcessed() < numMessages && waited < maxWait) {
+      Thread.sleep(100);
+      waited++;
+    }
+
+    // Then: Verify messages are received in exact sequential order
+    List<String> receivedIds = seqWorker.getReceivedMessageIdsInOrder();
+    assertThat("Should have received all messages", receivedIds.size(), is(numMessages));
+    assertThat(
+        "Messages should be received in exact sequential order",
+        receivedIds,
+        is(writtenMessageIds));
+
+    logger.info("Successfully verified {} messages read in sequential order", numMessages);
   }
 
   /**
@@ -694,19 +811,69 @@ public class ChronicleSourceLogReaderTest extends ZmqEnabledTest {
    * created and positioned at the correct starting point.
    */
   @Test
-  @Ignore("Awaiting implementation in #546")
-  public void testOpenConnections_establishesConnection() {
+  public void testOpenConnections_establishesConnection() throws Exception {
     // Given: Valid Chronicle queue path with existing queue
-    // When: openConnections() is called (triggered by service startup)
-    // Then: Chronicle tailer is created; ZMQ DEALER socket is bound; ready to read
+    int numMessages = 3;
+    MessageBuilder msgBuilder = new MessageBuilder();
 
-    // TODO(#546): Implement test logic
-    // 1. Create a Chronicle queue with some test messages
-    // 2. Configure logReader with the queue path
-    // 3. Start the service (triggers openConnections)
-    // 4. Verify service starts successfully (no exceptions)
-    // 5. Verify the reader can successfully read messages (connection established)
-    // 6. Optionally verify tailer is positioned correctly (at start or specified offset)
-    fail("Not yet implemented");
+    try (ChronicleQueue queue =
+        queueFactory.create(queuePath, RollCycles.TEN_MINUTELY, 1000, 64 * 1024 * 1024)) {
+      ExcerptAppender appender = queue.createAppender();
+
+      for (int i = 0; i < numMessages; i++) {
+        ExecMessage execMsg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+        Message wrapper = msgBuilder.wrap(execMsg);
+        OutboundMsg outboundMsg =
+            new OutboundMsg(
+                MessageType.EXEC_CONSTRUCTOR,
+                ExecPhase.BEFORE,
+                null,
+                execMsg.getMessageId(),
+                execMsg.getResponseToId(),
+                wrapper);
+        outboundMsg.appendTo(appender);
+      }
+    }
+
+    // Create log info
+    log = new LogInfo(queuePath.toString());
+    log.setLogType(LogInfo.LogType.CHRONICLE);
+
+    // Configure log reader
+    logReader.readFromLog(log, false, null, false);
+
+    // When: Start the service (triggers openConnections)
+    services = new HashSet<>();
+    services.add(logReader);
+    manager = new ServiceManager(services);
+
+    // Then: Verify service starts successfully (no exceptions)
+    manager.startAsync().awaitHealthy(5, TimeUnit.SECONDS);
+    collectGoSignals(services.size(), zmqContext);
+
+    assertThat("Service should be running", logReader.isRunning(), is(true));
+
+    // Start a worker to verify the reader can successfully read messages
+    Worker worker = new Worker(zmqContext, DEALER_ADDRESS);
+    @SuppressWarnings("unused")
+    var workerFuture = execService.submit(worker);
+
+    // Enable request processing
+    logReader.acceptRequests(true);
+
+    // Verify the reader can successfully read messages (connection established)
+    int maxWait = 50;
+    int waited = 0;
+    while (worker.getMessagesProcessed() < numMessages && waited < maxWait) {
+      Thread.sleep(100);
+      waited++;
+    }
+
+    assertThat(
+        "Should have read all messages - connection established",
+        worker.getMessagesProcessed(),
+        is(numMessages));
+
+    logger.info("openConnections successfully established connection to Chronicle queue");
   }
 }
