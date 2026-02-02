@@ -48,6 +48,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -648,5 +649,64 @@ public class ChronicleSourceLogReaderTest extends ZmqEnabledTest {
 
     // Verify the service is in a terminated state
     assertThat("Service should not be running after double stop", logReader.isRunning(), is(false));
+  }
+
+  // ==================== Test Specifications for Issue #545 ====================
+  // The following tests are specifications awaiting implementation in issue #546.
+
+  /**
+   * Tests that readFromLog reads messages sequentially from Chronicle queue in order.
+   *
+   * <p>Given: Chronicle queue with multiple messages written in sequence When: readFromLog is
+   * configured and run() processes messages Then: Messages are read in the exact order they were
+   * written
+   *
+   * <p>This test specifically validates the sequential ordering guarantee of Chronicle queue
+   * reading, complementing testReadMessagesFromChronicleQueue by explicitly verifying order
+   * preservation with sequence-numbered messages.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #546")
+  public void testReadFromLog_readsMessagesSequentially() {
+    // Given: Chronicle queue with N messages written in known sequence order
+    // When: readFromLog() is configured and the reader processes messages
+    // Then: Messages are received in exactly the same order they were written
+
+    // TODO(#546): Implement test logic
+    // 1. Create Chronicle queue with test messages containing sequence numbers
+    // 2. Write messages in known order (e.g., msg-1, msg-2, msg-3, ...)
+    // 3. Configure ChronicleSourceLogReader with the queue
+    // 4. Start the reader service
+    // 5. Collect received messages via Worker
+    // 6. Verify messages are received in exact sequential order
+    // 7. Verify no messages are skipped or duplicated
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that openConnections successfully establishes a connection to the Chronicle queue.
+   *
+   * <p>Given: Valid Chronicle queue path with existing queue data When: openConnections() is called
+   * (via service startup) Then: Tailer is created and positioned; DEALER socket is bound; reader is
+   * ready to process
+   *
+   * <p>This test verifies the connection establishment process, ensuring the tailer is properly
+   * created and positioned at the correct starting point.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #546")
+  public void testOpenConnections_establishesConnection() {
+    // Given: Valid Chronicle queue path with existing queue
+    // When: openConnections() is called (triggered by service startup)
+    // Then: Chronicle tailer is created; ZMQ DEALER socket is bound; ready to read
+
+    // TODO(#546): Implement test logic
+    // 1. Create a Chronicle queue with some test messages
+    // 2. Configure logReader with the queue path
+    // 3. Start the service (triggers openConnections)
+    // 4. Verify service starts successfully (no exceptions)
+    // 5. Verify the reader can successfully read messages (connection established)
+    // 6. Optionally verify tailer is positioned correctly (at start or specified offset)
+    fail("Not yet implemented");
   }
 }

@@ -48,6 +48,7 @@ import org.jctools.queues.MessagePassingQueue;
 import org.jctools.queues.MpscChunkedArrayQueue;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.zeromq.ZContext;
 
@@ -286,6 +287,143 @@ public class ChronicleWalWriterTest extends ZmqEnabledTest {
       assertThat(tiny.offer(dummy()), is(true));
     }
     assertThat(tiny.offer(dummy()), is(false));
+  }
+
+  // ==================== Test Specifications for Issue #545 ====================
+  // The following tests are specifications awaiting implementation in issue #546.
+
+  /**
+   * Tests that writeMessage writes directly to the Chronicle log using thread-local appender.
+   *
+   * <p>Given: ChronicleWalWriter configured in direct-write (queueless) mode with open log When:
+   * writeMessage(OutboundMsg) called from multiple threads Then: Messages are written to Chronicle
+   * queue via thread-local appenders
+   *
+   * <p>This test verifies the direct-write code path where producer threads bypass the internal
+   * queue and write directly using per-thread appenders. It complements the existing
+   * directWrite_writesAndFlushOnClose test by testing concurrent access scenarios.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #546")
+  public void testWriteMessage_writesDirectlyToLog() {
+    // Given: ChronicleWalWriter configured in direct-write mode (walQueue = null)
+    // When: writeMessage(OutboundMsg) is called from producer threads
+    // Then: Message is written to Chronicle queue using thread-local appender
+
+    // TODO(#546): Implement test logic
+    // 1. Create writer in direct-write mode (walQueue = null)
+    // 2. Call writeMessage() from multiple concurrent threads
+    // 3. Verify all messages appear in the Chronicle queue
+    // 4. Verify thread-local appenders are used (perThreadAppenders set populated)
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that run() processes messages from the internal queue and writes them to Chronicle.
+   *
+   * <p>Given: ChronicleWalWriter with messages in internal HwmMessageQueue When: run() executes in
+   * consumer thread Then: All messages are processed and written to Chronicle log
+   *
+   * <p>This test verifies the queue-based processing path where the consumer thread drains the
+   * queue and appends messages to Chronicle. It complements publishedMixedMessages by focusing on
+   * the run() method behavior rather than message content verification.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #546")
+  public void testRun_processesMessagesFromQueue() {
+    // Given: ChronicleWalWriter with messages enqueued in walQueue
+    // When: run() executes (consumer thread processes queue)
+    // Then: All messages are drained from queue and written to Chronicle log
+
+    // TODO(#546): Implement test logic
+    // 1. Enqueue several messages to walQueue before starting service
+    // 2. Start the service (triggering run())
+    // 3. Wait for processing to complete
+    // 4. Verify queue is empty and messages appear in Chronicle
+    // 5. Verify messagesReceived and messagesWritten counters
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that run() handles thread interruption gracefully and exits cleanly.
+   *
+   * <p>Given: Running ChronicleWalWriter actively processing messages When: Thread is interrupted
+   * Then: Writer exits gracefully with resources cleaned up properly
+   *
+   * <p>This test verifies the graceful shutdown path when the service thread is interrupted,
+   * ensuring no message loss (when flushOnClose is true) and proper resource cleanup.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #546")
+  public void testRun_handlesInterruptionGracefully() {
+    // Given: ChronicleWalWriter running and processing messages
+    // When: Service thread is interrupted
+    // Then: Writer exits gracefully; remaining messages are processed if flushOnClose=true
+
+    // TODO(#546): Implement test logic
+    // 1. Start writer with flushOnClose=true
+    // 2. Enqueue messages while service is running
+    // 3. Interrupt the service thread or request shutdown
+    // 4. Verify service stops without throwing
+    // 5. Verify queued messages were flushed to Chronicle before exit
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that closeConnections properly closes all resources including appenders and queue.
+   *
+   * <p>Given: ChronicleWalWriter with open Chronicle queue, appender(s), and optional offset
+   * publisher When: closeConnections is called Then: All resources (appender, queue, ZMQ socket,
+   * Disruptor) are closed properly
+   *
+   * <p>This test verifies resource cleanup during shutdown, ensuring no resource leaks for
+   * Chronicle queue handles, ZMQ sockets, and Disruptor instances.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #546")
+  public void testCloseConnections_closesAllResources() {
+    // Given: ChronicleWalWriter with open connections (queue, appender, offset publisher)
+    // When: closeConnections() is called (via service stop)
+    // Then: Chronicle appender and queue are closed; ZMQ socket is closed; Disruptor is shut down
+
+    // TODO(#546): Implement test logic
+    // 1. Create writer with offset publishing enabled
+    // 2. Start service and process some messages
+    // 3. Stop service (triggers closeConnections)
+    // 4. Verify all resources are closed (no exceptions, service is terminated)
+    // 5. Optionally verify Chronicle queue files are properly closed (no lock files)
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that writeMessageUsingAppender handles various message types correctly.
+   *
+   * <p>Given: Different OutboundMsg types (EXEC_CONSTRUCTOR, EXEC_METHOD, INTERCEPT_MESSAGE, etc.)
+   * When: writeMessageUsingAppender is called for each type Then: Each message type is serialized
+   * and written correctly to Chronicle
+   *
+   * <p>This test verifies that the appender correctly handles all supported message types, ensuring
+   * proper serialization for each MessageType variant.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #546")
+  public void testWriteMessageUsingAppender_handlesVariousMessageTypes() {
+    // Given: OutboundMsg instances of different MessageTypes
+    // When: writeMessageUsingAppender() is called for each
+    // Then: All message types are correctly serialized and written to Chronicle
+
+    // TODO(#546): Implement test logic
+    // 1. Create OutboundMsg for each supported MessageType:
+    //    - EXEC_CONSTRUCTOR
+    //    - EXEC_METHOD
+    //    - EXEC_STATIC_METHOD
+    //    - INTERCEPT_MESSAGE
+    //    - GET_IVAR / SET_IVAR
+    //    - GET_CVAR / SET_CVAR
+    // 2. Write each message using writeMessageUsingAppender
+    // 3. Read back from Chronicle and verify each message type is preserved
+    // 4. Verify message content matches original
+    fail("Not yet implemented");
   }
 
   // ───────────────────────── helpers ─────────────────────────
