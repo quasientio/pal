@@ -13,7 +13,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -21,18 +20,27 @@ import static org.mockito.Mockito.when;
 
 import io.quasient.pal.core.transport.MessageChannelType;
 import io.quasient.pal.messages.colfer.ControlMessage;
+import io.quasient.pal.messages.colfer.ExecMessage;
+import io.quasient.pal.messages.colfer.InterceptCallbackRequestMessage;
+import io.quasient.pal.messages.colfer.InterceptCallbackResponseMessage;
 import io.quasient.pal.messages.colfer.Message;
+import io.quasient.pal.messages.colfer.MetaMessage;
 import io.quasient.pal.messages.types.ControlCommandType;
 import io.quasient.pal.messages.types.ControlStatusType;
+import io.quasient.pal.messages.types.MessageType;
+import io.quasient.pal.messages.types.MetaServiceType;
+import io.quasient.pal.messages.types.MetaStatusType;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.zeromq.ZContext;
 
@@ -97,6 +105,50 @@ public class AbstractMessageInvokerThreadTest {
      */
     public Message dispatchMsg(Message m) {
       return dispatch(m, MessageChannelType.ZMQ_SOCKET_RPC);
+    }
+
+    /**
+     * Exposes the protected logMessageDispatch method for testing.
+     *
+     * @param requestMsg the request message
+     * @param responseId the response ID
+     * @param dispatchStart the dispatch start time
+     */
+    public void testLogMessageDispatch(Message requestMsg, String responseId, long dispatchStart) {
+      logMessageDispatch(requestMsg, responseId, dispatchStart);
+    }
+
+    /**
+     * Exposes the protected logMessageDispatch method for testing.
+     *
+     * @param requestMsg the request message
+     * @param responseMessage the response message
+     * @param dispatchStart the dispatch start time
+     */
+    public void testLogMessageDispatch(
+        Message requestMsg, Message responseMessage, long dispatchStart) {
+      logMessageDispatch(requestMsg, responseMessage, dispatchStart);
+    }
+
+    /**
+     * Exposes the protected logMessageDispatch method for testing.
+     *
+     * @param requestId the request ID
+     * @param responseId the response ID
+     * @param dispatchStart the dispatch start time
+     */
+    public void testLogMessageDispatch(String requestId, String responseId, long dispatchStart) {
+      logMessageDispatch(requestId, responseId, dispatchStart);
+    }
+
+    /**
+     * Exposes the protected logMessageDispatch method for testing.
+     *
+     * @param requestId the request ID
+     * @param dispatchStart the dispatch start time
+     */
+    public void testLogMessageDispatch(String requestId, long dispatchStart) {
+      logMessageDispatch(requestId, dispatchStart);
     }
   }
 
@@ -333,18 +385,89 @@ public class AbstractMessageInvokerThreadTest {
    * method returns the correct total across all message families.
    */
   @Test
-  @Ignore("Awaiting implementation in #540")
   public void testGetRequestsDispatched_returnsCorrectCount() {
-    // Given: Invoker that has dispatched some requests
-    // When: getRequestsDispatched called
-    // Then: Returns accurate count
+    // Setup mock responses for all message types
 
-    // TODO(#540): Implement test logic
-    // - Dispatch multiple message types (EXEC, CONTROL, META, INTERCEPT)
-    // - Verify getRequestsDispatched() returns the sum of all successful dispatches
-    // - Verify individual getExecRequestsDispatched(), getControlRequestsDispatched(),
-    //   getMetaRequestsDispatched(), getInterceptRequestsDispatched() match the aggregate
-    fail("Not yet implemented");
+    // Control message setup
+    ControlMessage ctrlReq = builder.buildControlCommandMessage(peerUuid, ControlCommandType.GC);
+    ControlMessage ctrlResp =
+        builder.buildControlStatusMessage(peerUuid, ControlStatusType.OK, ctrlReq.getMessageId());
+    when(dispatcher.incomingControlMessage(any(ControlMessage.class))).thenReturn(ctrlResp);
+
+    // Meta message setup
+    MetaMessage metaReq =
+        builder.buildMetaMessageRequest(
+            peerUuid, ctrlReq.getMessageId(), MetaServiceType.FETCH_CLASSES_INFO);
+    MetaMessage metaResp =
+        builder.buildMetaMessageResponse(
+            peerUuid,
+            MetaServiceType.FETCH_CLASSES_INFO,
+            MetaStatusType.OK,
+            null,
+            metaReq.getMessageId());
+    when(dispatcher.incomingMetaMessage(any(MetaMessage.class))).thenReturn(metaResp);
+
+    // Exec message setup - use buildClassMethod for a static method call
+    ExecMessage execReq =
+        builder.buildClassMethod(
+            peerUuid,
+            "java.lang.String",
+            "valueOf",
+            new String[] {"int"},
+            this,
+            null,
+            new Object[] {1});
+    // Echo the request back as response for simplicity
+    when(dispatcher.incomingCall(any(ExecMessage.class), any(MessageType.class), any()))
+        .thenReturn(execReq);
+
+    // Intercept callback message setup
+    InterceptCallbackRequestMessage interceptReq = new InterceptCallbackRequestMessage();
+    interceptReq.setCallbackId("callback-123");
+    InterceptCallbackResponseMessage interceptResp = new InterceptCallbackResponseMessage();
+    interceptResp.setCallbackId("callback-123");
+    when(dispatcher.incomingInterceptCallback(any(InterceptCallbackRequestMessage.class)))
+        .thenReturn(interceptResp);
+
+    TestInvoker invoker = new TestInvoker(ctx, builder, dispatcher, peerUuid);
+
+    // Verify initial counters are zero
+    assertThat(invoker.getRequestsDispatched(), is(0L));
+    assertThat(invoker.getExecRequestsDispatched(), is(0L));
+    assertThat(invoker.getControlRequestsDispatched(), is(0L));
+    assertThat(invoker.getMetaRequestsDispatched(), is(0L));
+    assertThat(invoker.getInterceptRequestsDispatched(), is(0L));
+
+    // Dispatch 2 control messages
+    invoker.dispatchMsg(builder.wrap(ctrlReq));
+    invoker.dispatchMsg(builder.wrap(ctrlReq));
+
+    // Dispatch 3 meta messages
+    invoker.dispatchMsg(builder.wrap(metaReq));
+    invoker.dispatchMsg(builder.wrap(metaReq));
+    invoker.dispatchMsg(builder.wrap(metaReq));
+
+    // Dispatch 1 exec message
+    invoker.dispatchMsg(builder.wrap(execReq));
+
+    // Dispatch 2 intercept callback messages
+    invoker.dispatchMsg(builder.wrap(interceptReq));
+    invoker.dispatchMsg(builder.wrap(interceptReq));
+
+    // Verify individual counters
+    assertThat(invoker.getControlRequestsDispatched(), is(2L));
+    assertThat(invoker.getMetaRequestsDispatched(), is(3L));
+    assertThat(invoker.getExecRequestsDispatched(), is(1L));
+    assertThat(invoker.getInterceptRequestsDispatched(), is(2L));
+
+    // Verify aggregate equals sum of individuals
+    long expectedTotal =
+        invoker.getExecRequestsDispatched()
+            + invoker.getControlRequestsDispatched()
+            + invoker.getMetaRequestsDispatched()
+            + invoker.getInterceptRequestsDispatched();
+    assertThat(invoker.getRequestsDispatched(), is(expectedTotal));
+    assertThat(invoker.getRequestsDispatched(), is(8L));
   }
 
   /**
@@ -362,18 +485,78 @@ public class AbstractMessageInvokerThreadTest {
    * method returns the correct total across all message families.
    */
   @Test
-  @Ignore("Awaiting implementation in #540")
   public void testGetRequestErrors_returnsCorrectCount() {
-    // Given: Invoker that has encountered some errors
-    // When: getRequestErrors called
-    // Then: Returns accurate count
+    // Configure all dispatchers to throw exceptions
+    doThrow(new RuntimeException("Control error"))
+        .when(dispatcher)
+        .incomingControlMessage(any(ControlMessage.class));
+    doThrow(new RuntimeException("Meta error"))
+        .when(dispatcher)
+        .incomingMetaMessage(any(MetaMessage.class));
+    doThrow(new RuntimeException("Exec error"))
+        .when(dispatcher)
+        .incomingCall(any(ExecMessage.class), any(MessageType.class), any());
+    doThrow(new RuntimeException("Intercept error"))
+        .when(dispatcher)
+        .incomingInterceptCallback(any(InterceptCallbackRequestMessage.class));
 
-    // TODO(#540): Implement test logic
-    // - Cause dispatch errors for multiple message types (EXEC, CONTROL, META, INTERCEPT)
-    // - Verify getRequestErrors() returns the sum of all errors
-    // - Verify individual getExecRequestErrors(), getControlRequestErrors(),
-    //   getMetaRequestErrors(), getInterceptRequestErrors() match the aggregate
-    fail("Not yet implemented");
+    TestInvoker invoker = new TestInvoker(ctx, builder, dispatcher, peerUuid);
+
+    // Verify initial error counters are zero
+    assertThat(invoker.getRequestErrors(), is(0L));
+    assertThat(invoker.getExecRequestErrors(), is(0L));
+    assertThat(invoker.getControlRequestErrors(), is(0L));
+    assertThat(invoker.getMetaRequestErrors(), is(0L));
+    assertThat(invoker.getInterceptRequestErrors(), is(0L));
+
+    // Trigger 2 control errors
+    ControlMessage ctrlReq = builder.buildControlCommandMessage(peerUuid, ControlCommandType.GC);
+    assertThrows(RuntimeException.class, () -> invoker.dispatchMsg(builder.wrap(ctrlReq)));
+    assertThrows(RuntimeException.class, () -> invoker.dispatchMsg(builder.wrap(ctrlReq)));
+
+    // Trigger 3 meta errors
+    MetaMessage metaReq =
+        builder.buildMetaMessageRequest(
+            peerUuid, ctrlReq.getMessageId(), MetaServiceType.FETCH_CLASSES_INFO);
+    assertThrows(RuntimeException.class, () -> invoker.dispatchMsg(builder.wrap(metaReq)));
+    assertThrows(RuntimeException.class, () -> invoker.dispatchMsg(builder.wrap(metaReq)));
+    assertThrows(RuntimeException.class, () -> invoker.dispatchMsg(builder.wrap(metaReq)));
+
+    // Trigger 1 exec error
+    ExecMessage execReq =
+        builder.buildClassMethod(
+            peerUuid,
+            "java.lang.String",
+            "valueOf",
+            new String[] {"int"},
+            this,
+            null,
+            new Object[] {1});
+    assertThrows(RuntimeException.class, () -> invoker.dispatchMsg(builder.wrap(execReq)));
+
+    // Trigger 2 intercept errors
+    InterceptCallbackRequestMessage interceptReq = new InterceptCallbackRequestMessage();
+    interceptReq.setCallbackId("callback-123");
+    assertThrows(RuntimeException.class, () -> invoker.dispatchMsg(builder.wrap(interceptReq)));
+    assertThrows(RuntimeException.class, () -> invoker.dispatchMsg(builder.wrap(interceptReq)));
+
+    // Verify individual error counters
+    assertThat(invoker.getControlRequestErrors(), is(2L));
+    assertThat(invoker.getMetaRequestErrors(), is(3L));
+    assertThat(invoker.getExecRequestErrors(), is(1L));
+    assertThat(invoker.getInterceptRequestErrors(), is(2L));
+
+    // Verify aggregate equals sum of individuals
+    long expectedTotal =
+        invoker.getExecRequestErrors()
+            + invoker.getControlRequestErrors()
+            + invoker.getMetaRequestErrors()
+            + invoker.getInterceptRequestErrors();
+    assertThat(invoker.getRequestErrors(), is(expectedTotal));
+    assertThat(invoker.getRequestErrors(), is(8L));
+
+    // Verify dispatch counters remain at zero (all failed)
+    assertThat(invoker.getRequestsDispatched(), is(0L));
   }
 
   /**
@@ -392,19 +575,67 @@ public class AbstractMessageInvokerThreadTest {
    * registration and event delivery.
    */
   @Test
-  @Ignore("Awaiting implementation in #540")
   public void testAddMessageDispatchListener_addsListenerSuccessfully() {
-    // Given: Invoker without listeners
-    // When: addMessageDispatchListener called
-    // Then: Listener added; receives dispatch events
+    // Setup mock to return a valid response
+    ControlMessage ctrlReq = builder.buildControlCommandMessage(peerUuid, ControlCommandType.GC);
+    ControlMessage ctrlResp =
+        builder.buildControlStatusMessage(peerUuid, ControlStatusType.OK, ctrlReq.getMessageId());
+    when(dispatcher.incomingControlMessage(any(ControlMessage.class))).thenReturn(ctrlResp);
 
-    // TODO(#540): Implement test logic
-    // - Create invoker with no listeners
-    // - Add a listener via addMessageDispatchListener
-    // - Dispatch a message
-    // - Verify listener's onMessageDispatched was called with the correct message
-    // - Verify multiple listeners can be added and all receive events
-    fail("Not yet implemented");
+    TestInvoker invoker = new TestInvoker(ctx, builder, dispatcher, peerUuid);
+
+    // Create first listener to track calls
+    AtomicInteger listener1CallCount = new AtomicInteger(0);
+    List<Message> listener1Messages = new ArrayList<>();
+    MessageDispatchListener listener1 =
+        msg -> {
+          listener1CallCount.incrementAndGet();
+          listener1Messages.add(msg);
+        };
+
+    // Create second listener to track calls
+    AtomicInteger listener2CallCount = new AtomicInteger(0);
+    List<Message> listener2Messages = new ArrayList<>();
+    MessageDispatchListener listener2 =
+        msg -> {
+          listener2CallCount.incrementAndGet();
+          listener2Messages.add(msg);
+        };
+
+    // Add first listener
+    invoker.addMessageDispatchListener(listener1);
+
+    // Dispatch a message
+    Message wrappedRequest1 = builder.wrap(ctrlReq);
+    invoker.dispatchMsg(wrappedRequest1);
+
+    // Verify first listener was called with correct message
+    assertThat(listener1CallCount.get(), is(1));
+    assertThat(listener1Messages.size(), is(1));
+    assertThat(listener1Messages.get(0), is(wrappedRequest1));
+
+    // Add second listener
+    invoker.addMessageDispatchListener(listener2);
+
+    // Dispatch another message
+    ControlMessage ctrlReq2 = builder.buildControlCommandMessage(peerUuid, ControlCommandType.GC);
+    Message wrappedRequest2 = builder.wrap(ctrlReq2);
+    invoker.dispatchMsg(wrappedRequest2);
+
+    // Verify both listeners received the second message
+    assertThat(listener1CallCount.get(), is(2));
+    assertThat(listener2CallCount.get(), is(1));
+    assertThat(listener1Messages.get(1), is(wrappedRequest2));
+    assertThat(listener2Messages.get(0), is(wrappedRequest2));
+
+    // Dispatch a third message to confirm both listeners still active
+    ControlMessage ctrlReq3 = builder.buildControlCommandMessage(peerUuid, ControlCommandType.GC);
+    Message wrappedRequest3 = builder.wrap(ctrlReq3);
+    invoker.dispatchMsg(wrappedRequest3);
+
+    // Verify both listeners received the third message
+    assertThat(listener1CallCount.get(), is(3));
+    assertThat(listener2CallCount.get(), is(2));
   }
 
   /**
@@ -422,20 +653,52 @@ public class AbstractMessageInvokerThreadTest {
    * removal semantics.
    */
   @Test
-  @Ignore("Awaiting implementation in #540")
   public void testRemoveMessageDispatchListener_removesListenerSuccessfully() {
-    // Given: Invoker with registered listener
-    // When: removeMessageDispatchListener called
-    // Then: Listener removed; no longer receives events
+    // Setup mock to return a valid response
+    ControlMessage ctrlReq = builder.buildControlCommandMessage(peerUuid, ControlCommandType.GC);
+    ControlMessage ctrlResp =
+        builder.buildControlStatusMessage(peerUuid, ControlStatusType.OK, ctrlReq.getMessageId());
+    when(dispatcher.incomingControlMessage(any(ControlMessage.class))).thenReturn(ctrlResp);
 
-    // TODO(#540): Implement test logic
-    // - Create invoker and add a listener
-    // - Verify listener receives events on dispatch
-    // - Remove the listener via removeMessageDispatchListener
-    // - Dispatch another message
-    // - Verify listener does NOT receive the event after removal
-    // - Verify removing a non-registered listener does not cause errors
-    fail("Not yet implemented");
+    TestInvoker invoker = new TestInvoker(ctx, builder, dispatcher, peerUuid);
+
+    // Create two listeners to track calls
+    AtomicInteger listener1CallCount = new AtomicInteger(0);
+    MessageDispatchListener listener1 = msg -> listener1CallCount.incrementAndGet();
+
+    AtomicInteger listener2CallCount = new AtomicInteger(0);
+    MessageDispatchListener listener2 = msg -> listener2CallCount.incrementAndGet();
+
+    // Add both listeners
+    invoker.addMessageDispatchListener(listener1);
+    invoker.addMessageDispatchListener(listener2);
+
+    // Dispatch a message - both listeners should be called
+    invoker.dispatchMsg(builder.wrap(ctrlReq));
+    assertThat(listener1CallCount.get(), is(1));
+    assertThat(listener2CallCount.get(), is(1));
+
+    // Remove first listener
+    invoker.removeMessageDispatchListener(listener1);
+
+    // Dispatch another message - only listener2 should be called
+    ControlMessage ctrlReq2 = builder.buildControlCommandMessage(peerUuid, ControlCommandType.GC);
+    invoker.dispatchMsg(builder.wrap(ctrlReq2));
+    assertThat(listener1CallCount.get(), is(1)); // unchanged
+    assertThat(listener2CallCount.get(), is(2)); // incremented
+
+    // Remove second listener
+    invoker.removeMessageDispatchListener(listener2);
+
+    // Dispatch another message - neither listener should be called
+    ControlMessage ctrlReq3 = builder.buildControlCommandMessage(peerUuid, ControlCommandType.GC);
+    invoker.dispatchMsg(builder.wrap(ctrlReq3));
+    assertThat(listener1CallCount.get(), is(1)); // unchanged
+    assertThat(listener2CallCount.get(), is(2)); // unchanged
+
+    // Verify removing a non-registered listener does not cause errors
+    MessageDispatchListener nonRegisteredListener = msg -> {};
+    invoker.removeMessageDispatchListener(nonRegisteredListener); // should not throw
   }
 
   /**
@@ -453,24 +716,42 @@ public class AbstractMessageInvokerThreadTest {
    * exceptions.
    */
   @Test
-  @Ignore("Awaiting implementation in #540")
   public void testLogMessageDispatch_logsWithoutError() {
-    // Given: Message dispatch event
-    // When: logMessageDispatch called
-    // Then: Completes without error; listeners notified
+    TestInvoker invoker = new TestInvoker(ctx, builder, dispatcher, peerUuid);
 
-    // TODO(#540): Implement test logic
-    // - Create invoker and prepare test messages
-    // - Call logMessageDispatch(Message requestMsg, String responseId, long dispatchStart)
-    // - Verify no exception is thrown
-    // - Call logMessageDispatch(Message requestMsg, Message responseMessage, long dispatchStart)
-    // - Verify no exception is thrown
-    // - Call logMessageDispatch(String requestId, String responseId, long dispatchStart)
-    // - Verify no exception is thrown
-    // - Call logMessageDispatch(String requestId, long dispatchStart)
-    // - Verify no exception is thrown
-    // - (Optional) Verify logging output when debug level is enabled
-    fail("Not yet implemented");
+    // Create test messages for use in logMessageDispatch calls
+    ControlMessage ctrlReq = builder.buildControlCommandMessage(peerUuid, ControlCommandType.GC);
+    ControlMessage ctrlResp =
+        builder.buildControlStatusMessage(peerUuid, ControlStatusType.OK, ctrlReq.getMessageId());
+
+    Message wrappedRequest = builder.wrap(ctrlReq);
+    Message wrappedResponse = builder.wrap(ctrlResp);
+
+    long dispatchStart = System.currentTimeMillis() - 100; // 100ms ago
+
+    // Test variant 1: logMessageDispatch(Message requestMsg, String responseId, long dispatchStart)
+    // Should complete without exception
+    invoker.testLogMessageDispatch(wrappedRequest, ctrlResp.getMessageId(), dispatchStart);
+
+    // Test variant 2: logMessageDispatch(Message requestMsg, Message responseMessage, long
+    // dispatchStart)
+    // Should complete without exception
+    invoker.testLogMessageDispatch(wrappedRequest, wrappedResponse, dispatchStart);
+
+    // Test variant 3: logMessageDispatch(String requestId, String responseId, long dispatchStart)
+    // Should complete without exception
+    invoker.testLogMessageDispatch(ctrlReq.getMessageId(), ctrlResp.getMessageId(), dispatchStart);
+
+    // Test variant 4: logMessageDispatch(String requestId, long dispatchStart)
+    // Should complete without exception
+    invoker.testLogMessageDispatch(ctrlReq.getMessageId(), dispatchStart);
+
+    // Test with plain strings - these should also complete without exception
+    invoker.testLogMessageDispatch("req-id", "resp-id", System.currentTimeMillis());
+    invoker.testLogMessageDispatch("req-id-only", System.currentTimeMillis());
+
+    // If we reach here without exceptions, all logMessageDispatch variants work correctly
+    assertTrue("All logMessageDispatch variants completed without error", true);
   }
 
   /**
