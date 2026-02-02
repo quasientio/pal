@@ -13,6 +13,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import io.quasient.pal.common.lang.intercept.AfterPhaseData;
 import io.quasient.pal.common.lang.intercept.CheckedExceptionPolicy;
@@ -39,6 +40,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -925,6 +927,200 @@ public class LocalInterceptCallbackDispatcherTest {
     assertFalse(
         "Should not throw exception when direct throw is swallowed",
         response.shouldThrowException());
+  }
+
+  // ===== Test Specifications for Issue #535 (Awaiting Implementation in #536) =====
+
+  /**
+   * Tests that unwrapException correctly unwraps InvocationTargetException.
+   *
+   * <p>Acceptance Criteria:
+   * [TEST:LocalInterceptCallbackDispatcherTest.testUnwrapException_unwrapsInvocationTargetException]
+   *
+   * <p>The unwrapException method is private, so this test verifies the behavior indirectly by
+   * invoking a callback that throws an exception wrapped in InvocationTargetException (which is
+   * what happens when callbacks are invoked via reflection).
+   */
+  @Test
+  @Ignore("Awaiting implementation in #536")
+  public void testUnwrapException_unwrapsInvocationTargetException() {
+    // Given: A callback that throws a RuntimeException which will be wrapped
+    //        in InvocationTargetException when invoked via reflection
+    // When: The callback is invoked via dispatcher (reflection-based invocation)
+    // Then: The unwrapped RuntimeException is returned, not the InvocationTargetException
+
+    // TODO(#536): Implement test logic
+    // - Create a callback that throws RuntimeException directly
+    // - The reflection-based invocation will wrap it in InvocationTargetException
+    // - Verify the returned exception is the original RuntimeException, not the wrapper
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that unwrapException returns original exception for non-InvocationTargetException.
+   *
+   * <p>Acceptance Criteria:
+   * [TEST:LocalInterceptCallbackDispatcherTest.testUnwrapException_returnsOriginalForNonInvocationTargetException]
+   *
+   * <p>The unwrapException method is private, so this test verifies the behavior indirectly.
+   * Non-InvocationTargetException exceptions should pass through unchanged.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #536")
+  public void testUnwrapException_returnsOriginalForNonInvocationTargetException() {
+    // Given: A regular RuntimeException (not InvocationTargetException)
+    // When: The exception is processed through the dispatcher's exception handling
+    // Then: The original exception is returned unchanged
+
+    // TODO(#536): Implement test logic
+    // - Create a callback that sets an exception via setExceptionToThrow()
+    //   (which bypasses reflection wrapping)
+    // - Verify the returned exception is exactly the one that was set
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that sendLocalAroundCallbacks executes callback chain in order.
+   *
+   * <p>Acceptance Criteria:
+   * [TEST:LocalInterceptCallbackDispatcherTest.testSendLocalAroundCallbacks_executesCallbackChain]
+   *
+   * <p>When multiple AROUND callbacks are registered, they should be executed in the order they
+   * appear in the intercepts list.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #536")
+  public void testSendLocalAroundCallbacks_executesCallbackChain() {
+    // Given: Multiple registered AROUND callbacks (callback1, callback2, callback3)
+    // When: sendLocalAroundCallbacks() called with multiple intercepts
+    // Then: Each callback in chain is executed in order (callback1 -> callback2 -> callback3)
+
+    // TODO(#536): Implement test logic
+    // - Create 3 AROUND intercepts that each record their invocation order
+    // - Send all callbacks via dispatcher
+    // - Verify invocation order matches registration order
+    // - Verify all callbacks that called proceed() are in pendingCallbacks
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that sendLocalAroundCallbacks handles exception in callback appropriately.
+   *
+   * <p>Acceptance Criteria:
+   * [TEST:LocalInterceptCallbackDispatcherTest.testSendLocalAroundCallbacks_handlesExceptionInCallback]
+   *
+   * <p>When a callback throws an exception, it should be processed according to exception policies
+   * and may propagate or be swallowed.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #536")
+  public void testSendLocalAroundCallbacks_handlesExceptionInCallback() {
+    // Given: AROUND callback that throws exception directly
+    // When: sendLocalAroundCallbacks() called
+    // Then: Exception is propagated appropriately based on policy
+
+    // TODO(#536): Implement test logic
+    // - Create AROUND intercept with callback that throws directly
+    // - Test with PROPAGATE_ALL policy - verify exception propagates
+    // - Test with SWALLOW_ALL policy - verify exception is swallowed
+    // - Verify subsequent callbacks are not invoked after exception
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that sendLocalAroundCallbacks with empty chain proceeds normally.
+   *
+   * <p>Acceptance Criteria:
+   * [TEST:LocalInterceptCallbackDispatcherTest.testSendLocalAroundCallbacks_emptyChain_proceedsNormally]
+   *
+   * <p>When no AROUND callbacks are registered, the method should proceed normally.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #536")
+  public void testSendLocalAroundCallbacks_emptyChain_proceedsNormally() {
+    // Given: Empty list of AROUND callbacks
+    // When: sendLocalAroundCallbacks() called
+    // Then: Returns proceed response with no pending callbacks
+
+    // TODO(#536): Implement test logic
+    // - Call sendLocalAroundCallbacks with empty list
+    // - Verify shouldProceed() returns true
+    // - Verify shouldThrowException() returns false
+    // - Verify getPendingCallbacks() is empty
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that sendLocalAroundAfterCallbacks executes after callbacks for pending callbacks.
+   *
+   * <p>Acceptance Criteria:
+   * [TEST:LocalInterceptCallbackDispatcherTest.testSendLocalAroundAfterCallbacks_executesAfterCallbacks]
+   *
+   * <p>After the intercepted method executes, callbacks that called proceed() should have their
+   * AFTER phase processed.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #536")
+  public void testSendLocalAroundAfterCallbacks_executesAfterCallbacks() {
+    // Given: Registered AROUND callbacks that called proceed()
+    // When: sendLocalAroundAfterCallbacks() called with pending callbacks
+    // Then: All after callbacks are executed and return value modifications are collected
+
+    // TODO(#536): Implement test logic
+    // - Send AROUND callbacks via sendLocalAroundCallbacks
+    // - Collect pendingCallbacks from response
+    // - Call sendLocalAroundAfterCallbacks with pendingCallbacks
+    // - Verify return value modifications are applied correctly
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that sendLocalAroundAfterCallbacks handles exception in callback appropriately.
+   *
+   * <p>Acceptance Criteria:
+   * [TEST:LocalInterceptCallbackDispatcherTest.testSendLocalAroundAfterCallbacks_handlesExceptionInCallback]
+   *
+   * <p>When an AFTER-phase callback sets an exception, it should be handled per policy. Other
+   * callbacks should still run (unless policy causes early termination).
+   */
+  @Test
+  @Ignore("Awaiting implementation in #536")
+  public void testSendLocalAroundAfterCallbacks_handlesExceptionInCallback() {
+    // Given: AROUND callback that sets exception after proceed()
+    // When: sendLocalAroundAfterCallbacks() called
+    // Then: Exception handled appropriately per policy; may propagate or be swallowed
+
+    // TODO(#536): Implement test logic
+    // - Create AROUND callback that sets exception via setExceptionToThrow after proceed
+    // - Test with different exception policies
+    // - Verify exception propagation matches policy
+    // - Verify other callbacks in the pending list are processed appropriately
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that sendLocalAroundAfterCallbacks overload executes with return value correctly.
+   *
+   * <p>Acceptance Criteria:
+   * [TEST:LocalInterceptCallbackDispatcherTest.testSendLocalAroundAfterCallbacks_overload_executesWithReturnValue]
+   *
+   * <p>The overloaded version of sendLocalAroundAfterCallbacks that takes declaredExceptions should
+   * execute correctly with the return value.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #536")
+  public void testSendLocalAroundAfterCallbacks_overload_executesWithReturnValue() {
+    // Given: AROUND callback that modifies return value after proceed()
+    // When: Overloaded sendLocalAroundAfterCallbacks() called with declared exceptions
+    // Then: Callbacks receive return value and execute correctly
+
+    // TODO(#536): Implement test logic
+    // - Create AROUND callback that modifies return value after proceed
+    // - Call sendLocalAroundAfterCallbacks with declaredExceptions parameter
+    // - Verify return value override is applied
+    // - Verify hasReturnValueOverride() returns true
+    // - Verify getOverriddenReturnValue() returns the modified value
+    fail("Not yet implemented");
   }
 
   // ===== Test Callbacks Class =====
