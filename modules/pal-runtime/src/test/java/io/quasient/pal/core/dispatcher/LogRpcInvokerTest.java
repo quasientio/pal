@@ -36,9 +36,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
@@ -326,29 +324,6 @@ public class LogRpcInvokerTest extends ZmqEnabledTest {
     assertThat("Message should have been dispatched", dispatched, is(true));
     verify(incomingMessageDispatcher, times(1)).incomingCall(any(), any(), any());
     assertThat(logRpcInvoker.getExecRequestsDispatched(), is(1L));
-  }
-
-  /**
-   * Tests that run() logs a warning and skips messages with unknown format types.
-   *
-   * <p>This verifies that the default branch in the message format switch statement is handled
-   * correctly by logging an error and skipping the message.
-   *
-   * <p>Note: This test is skipped because the default branch in the switch statement on
-   * MessageFormatType is defensive code that cannot be reached through normal API usage. The
-   * MessageFormatType enum only has JSON and BINARY values, and InboundLogMsg.receive() throws
-   * IllegalArgumentException when given an unknown format byte. This test would require reflection
-   * or bytecode manipulation to test, which is not warranted for dead code coverage.
-   */
-  @Test
-  @Ignore("Default branch is unreachable: MessageFormatType enum has only 2 values (JSON, BINARY)")
-  public void run_unknownMessageFormat_logsWarning() {
-    // This test cannot be implemented through normal API usage because:
-    // 1. MessageFormatType is an enum with only JSON (1) and BINARY (2) values
-    // 2. MessageFormatType.fromByte() throws IllegalArgumentException for unknown bytes
-    // 3. InboundLogMsg.receive() would throw before LogRpcInvoker sees the message
-    // The default branch in LogRpcInvoker.run() is defensive code for future enum additions
-    Assert.fail("Cannot test unreachable code path");
   }
 
   /**
