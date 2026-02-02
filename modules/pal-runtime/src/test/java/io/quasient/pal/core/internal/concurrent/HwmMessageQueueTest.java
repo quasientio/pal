@@ -18,8 +18,15 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jctools.queues.MessagePassingQueue;
+import org.junit.Ignore;
 import org.junit.Test;
 
+/**
+ * Tests for {@link HwmMessageQueue}.
+ *
+ * <p>This test class validates the high-water-mark message queue functionality including offer/poll
+ * operations, size tracking, and the various fill/drain methods with their strategies.
+ */
 public class HwmMessageQueueTest {
 
   @Test
@@ -156,5 +163,117 @@ public class HwmMessageQueueTest {
     assertThat(consumed.get(), is(5));
     assertThat(q.currentSize(), is(0));
     assertThat(q.highWaterMark(), is(5));
+  }
+
+  // ========== Test Specifications for Issue #555 ==========
+
+  /**
+   * Test specification: Verify that fill(Supplier) populates the queue.
+   *
+   * <p>This test validates that the fill method with only a Supplier parameter populates the queue
+   * with elements supplied by the Supplier and correctly updates the size and high-water-mark
+   * counters.
+   *
+   * @see HwmMessageQueue#fill(MessagePassingQueue.Supplier)
+   */
+  @Test
+  @Ignore("Awaiting implementation in #556")
+  public void testFill_withSupplier_populatesQueue() {
+    // Given: An empty queue and a supplier that produces elements
+    // When: fill(Supplier) is called
+    // Then: Queue is populated with supplied items
+    // And: currentSize() reflects the number of items added
+    // And: highWaterMark() is updated to reflect the peak
+
+    // TODO(#556): Implement test logic
+    // Implementation hints:
+    // - Create a queue with known capacity
+    // - Create a supplier that returns predictable values
+    // - Call fill(supplier) without limit
+    // - Verify queue contains expected elements via poll()
+    // - Verify size counters are correct
+    org.junit.Assert.fail("Not yet implemented");
+  }
+
+  /**
+   * Test specification: Verify that fill with WaitStrategy and ExitCondition populates queue.
+   *
+   * <p>This test validates that the fill method with Supplier, WaitStrategy, and ExitCondition
+   * parameters correctly populates the queue while respecting the exit condition and using the wait
+   * strategy when the queue is full.
+   *
+   * @see HwmMessageQueue#fill(MessagePassingQueue.Supplier, MessagePassingQueue.WaitStrategy,
+   *     MessagePassingQueue.ExitCondition)
+   */
+  @Test
+  @Ignore("Awaiting implementation in #556")
+  public void testFill_withWaitStrategyAndExitCondition_populatesQueue() {
+    // Given: An empty queue, a supplier, a no-op wait strategy, and an exit condition
+    // When: fill(Supplier, WaitStrategy, ExitCondition) is called
+    // Then: Queue is populated respecting the exit condition
+    // And: Wait strategy is used when queue is full (if applicable)
+    // And: Loop terminates when exit condition returns false
+
+    // TODO(#556): Implement test logic
+    // Implementation hints:
+    // - Create a fixed-size queue
+    // - Create an exit condition that limits iterations (e.g., countdown)
+    // - Use a no-op wait strategy: idleCounter -> 0
+    // - Verify the fill loop terminates as expected
+    // - Verify counters are correct after fill completes
+    org.junit.Assert.fail("Not yet implemented");
+  }
+
+  /**
+   * Test specification: Verify that relaxedPeek returns head without removing it.
+   *
+   * <p>This test validates that the relaxedPeek method returns the head element of the queue
+   * without removing it, leaving the queue state unchanged.
+   *
+   * @see HwmMessageQueue#relaxedPeek()
+   */
+  @Test
+  @Ignore("Awaiting implementation in #556")
+  public void testRelaxedPeek_returnsHeadWithoutRemoving() {
+    // Given: A queue with one or more items
+    // When: relaxedPeek() is called
+    // Then: The head element is returned
+    // And: The queue size remains unchanged
+    // And: Subsequent peek/poll returns the same element
+
+    // TODO(#556): Implement test logic
+    // Implementation hints:
+    // - Create queue and add known elements
+    // - Record initial size
+    // - Call relaxedPeek() multiple times
+    // - Verify same element returned each time
+    // - Verify size unchanged
+    // - Verify poll() returns the same element
+    org.junit.Assert.fail("Not yet implemented");
+  }
+
+  /**
+   * Test specification: Verify that size() returns the correct queue size.
+   *
+   * <p>This test validates that the size() method (delegated to underlying queue) returns the
+   * correct number of elements in the queue.
+   *
+   * @see HwmMessageQueue#size()
+   */
+  @Test
+  @Ignore("Awaiting implementation in #556")
+  public void testSize_returnsCorrectSize() {
+    // Given: A queue with a known number of items
+    // When: size() is called
+    // Then: Returns the correct count matching currentSize()
+
+    // TODO(#556): Implement test logic
+    // Implementation hints:
+    // - Create queue and add known number of elements
+    // - Call size() and compare with currentSize()
+    // - Add more elements and verify size updates
+    // - Remove elements and verify size decrements
+    // Note: size() is the delegate's size which may differ from currentSize() under contention
+    org.junit.Assert.fail("Not yet implemented");
   }
 }

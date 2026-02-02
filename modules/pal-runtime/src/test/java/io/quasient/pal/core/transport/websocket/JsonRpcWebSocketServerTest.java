@@ -34,8 +34,15 @@ import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
+/**
+ * Tests for {@link JsonRpcWebSocketServer}.
+ *
+ * <p>This test class validates the WebSocket server functionality including connection lifecycle
+ * management, message handling, and error handling.
+ */
 public class JsonRpcWebSocketServerTest {
 
   private JsonRpcWebSocketServer server;
@@ -174,5 +181,34 @@ public class JsonRpcWebSocketServerTest {
 
     client.closeBlocking();
     server.close();
+  }
+
+  // ========== Test Specifications for Issue #555 ==========
+
+  /**
+   * Test specification: Verify that onError handles exceptions gracefully.
+   *
+   * <p>This test validates that when an exception occurs on a WebSocket connection, the onError
+   * callback properly logs the error and handles the connection appropriately without crashing the
+   * server.
+   *
+   * @see JsonRpcWebSocketServer#onError(org.java_websocket.WebSocket, Exception)
+   */
+  @Test
+  @Ignore("Awaiting implementation in #556")
+  public void testOnError_handlesErrorGracefully() throws Exception {
+    // Given: A running WebSocket server with an active client connection
+    // When: onError is called with an exception (e.g., simulated socket error)
+    // Then: The error is logged appropriately
+    // And: The server continues to operate for other connections
+    // And: The affected connection is handled appropriately (not necessarily closed)
+
+    // TODO(#556): Implement test logic
+    // Implementation hints:
+    // - Start server and connect a test client
+    // - Simulate an error condition (e.g., use mock WebSocket or trigger IOException)
+    // - Verify server is still operational after error
+    // - Check logs for error message (may require log capture)
+    org.junit.Assert.fail("Not yet implemented");
   }
 }

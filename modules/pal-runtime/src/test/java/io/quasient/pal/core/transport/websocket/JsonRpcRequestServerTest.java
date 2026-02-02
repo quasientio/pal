@@ -50,6 +50,7 @@ import org.java_websocket.handshake.ServerHandshake;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,6 +60,12 @@ import org.zeromq.ZMQ;
 import org.zeromq.ZMQException;
 import zmq.ZError;
 
+/**
+ * Tests for {@link JsonRpcRequestServer}.
+ *
+ * <p>This test class validates the JSON-RPC request server functionality including WebSocket
+ * connection handling, message dispatching via ZeroMQ DEALER sockets, and resource cleanup.
+ */
 public class JsonRpcRequestServerTest extends ZmqEnabledTest {
 
   private static final String DEALER_ADDRESS = "inproc://jsonrpc.dealer";
@@ -252,6 +259,34 @@ public class JsonRpcRequestServerTest extends ZmqEnabledTest {
     Set<String> getReceivedMessageIds() {
       return receivedMsgIds;
     }
+  }
+
+  // ========== Test Specifications for Issue #555 ==========
+
+  /**
+   * Test specification: Verify that closeConnections properly closes server resources.
+   *
+   * <p>This test validates that when closeConnections is called on a running JsonRpcRequestServer,
+   * both the WebSocket server and the ZeroMQ DEALER socket are properly closed and cleaned up.
+   *
+   * @see JsonRpcRequestServer#closeConnections()
+   */
+  @Test
+  @Ignore("Awaiting implementation in #556")
+  public void testCloseConnections_closesServerResources() {
+    // Given: A running JsonRpcRequestServer with active WebSocket and ZMQ connections
+    // When: closeConnections() is called (triggered by service shutdown)
+    // Then: WebSocket server is stopped gracefully
+    // And: ZeroMQ DEALER socket is closed without errors
+    // And: No resource leaks occur
+
+    // TODO(#556): Implement test logic
+    // Implementation hints:
+    // - Start a server with minimal configuration
+    // - Verify connections are open
+    // - Trigger shutdown via ServiceManager
+    // - Verify resources are released (e.g., port is available again)
+    org.junit.Assert.fail("Not yet implemented");
   }
 
   private static final class WsClient extends WebSocketClient {
