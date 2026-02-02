@@ -13,7 +13,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
-import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
@@ -38,7 +37,6 @@ import java.nio.file.Path;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.slf4j.LoggerFactory;
@@ -563,14 +561,27 @@ public class MetaMessageDispatcherTest {
    * @see #incomingMetaMessage_responseContainsPeerUuid()
    */
   @Test
-  @Ignore("Criterion satisfied by existing tests: incomingMetaMessage_fetchClassesInfo_success()")
-  public void testIncomingMetaMessage_dispatchesCorrectly() {
-    // Given: Valid meta message
+  public void testIncomingMetaMessage_dispatchesCorrectly() throws Exception {
+    // Given: Valid meta message with known service type
+    MetaMessage request = new MetaMessage();
+    request.setService(MetaServiceType.FETCH_CLASSES_INFO.getId());
+    request.setMessageId("msg-dispatch-test");
+    request.setFromPeer("peer-dispatch-test");
+
+    Path resultPath = Path.of("/tmp/dispatch-result.json");
+    when(classMetadataSerializer.scannedClasspathToJson(eq(true), isNull(), isNull(), eq(false)))
+        .thenReturn(resultPath);
+
     // When: incomingMetaMessage called
-    // Then: Message dispatched to correct handler
-    //
-    // See incomingMetaMessage_fetchClassesInfo_success() for implementation.
-    fail("This test documents the acceptance criterion - see referenced tests for implementation");
+    MetaMessage response = dispatcher.incomingMetaMessage(request);
+
+    // Then: Message dispatched to correct handler; response generated with OK status
+    assertThat(response, notNullValue());
+    assertThat(response.getStatus(), is(MetaStatusType.OK.getId()));
+    assertThat(response.getResponseToId(), is("msg-dispatch-test"));
+    assertThat(response.getService(), is(MetaServiceType.FETCH_CLASSES_INFO.getId()));
+    assertThat(response.getFromPeer(), is(peerUuid.toString()));
+    verify(classMetadataSerializer).scannedClasspathToJson(eq(true), isNull(), isNull(), eq(false));
   }
 
   /**
@@ -590,15 +601,20 @@ public class MetaMessageDispatcherTest {
    * @see #incomingMetaMessage_unsupportedService_returnsUnsupportedResponse()
    */
   @Test
-  @Ignore(
-      "Criterion satisfied by existing test:"
-          + " incomingMetaMessage_unsupportedService_returnsUnsupportedResponse()")
   public void testIncomingMetaMessage_unknownMessageType_handledGracefully() {
-    // Given: Unknown message type
+    // Given: Meta message with unknown service type
+    MetaMessage request = new MetaMessage();
+    request.setService((byte) 127); // Not mapped to any MetaServiceType
+    request.setMessageId("msg-unknown-test");
+    request.setFromPeer("peer-unknown-test");
+
     // When: incomingMetaMessage called
-    // Then: Handled gracefully; no exception
-    //
-    // See incomingMetaMessage_unsupportedService_returnsUnsupportedResponse() for implementation.
-    fail("This test documents the acceptance criterion - see referenced test for implementation");
+    MetaMessage response = dispatcher.incomingMetaMessage(request);
+
+    // Then: Handled gracefully; no exception thrown; response has UNSUPPORTED status
+    assertThat(response, notNullValue());
+    assertThat(response.getStatus(), is(MetaStatusType.UNSUPPORTED.getId()));
+    assertThat(response.getBody(), containsString("unknown service ID"));
+    assertThat(response.getResponseToId(), is("msg-unknown-test"));
   }
 }

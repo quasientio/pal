@@ -14,7 +14,6 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
@@ -23,6 +22,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.gson.Gson;
+import io.quasient.pal.common.lang.intercept.InterceptPhase;
 import io.quasient.pal.core.ZmqEnabledTest;
 import io.quasient.pal.core.internal.messages.InboundJsonRpcRequestMsg;
 import io.quasient.pal.core.internal.messages.OutboundJsonRpcResponseMsg;
@@ -30,6 +30,7 @@ import io.quasient.pal.core.service.RunOptions;
 import io.quasient.pal.messages.colfer.ControlMessage;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.InterceptCallbackRequestMessage;
+import io.quasient.pal.messages.colfer.InterceptCallbackResponseMessage;
 import io.quasient.pal.messages.colfer.Message;
 import io.quasient.pal.messages.colfer.MetaMessage;
 import io.quasient.pal.messages.jsonrpc.JsonRpcRequest;
@@ -55,7 +56,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
@@ -653,25 +653,47 @@ public class SocketRpcInvokerTest extends ZmqEnabledTest {
    * <p>Then: Returns properly formatted InterceptCallbackResponseMessage with: - callbackId from
    * request - phase from request - throwException set to true - exception properly serialized
    *
-   * <p>Implementation notes:
+   * <p>IMPLEMENTATION NOTE: This acceptance criterion is satisfied by existing tests in {@link
+   * SocketRpcInvokerAroundCallbackTest}: {@link
+   * SocketRpcInvokerAroundCallbackTest#buildErrorResponse_withException_setsFields()} and {@link
+   * SocketRpcInvokerAroundCallbackTest#buildErrorResponse_preservesCallbackId()}.
    *
-   * <ul>
-   *   <li>buildErrorResponse is a private method, use reflection to test
-   *   <li>Verify all fields are set correctly on the response
-   *   <li>Verify exception serialization works correctly
-   * </ul>
+   * @see SocketRpcInvokerAroundCallbackTest#buildErrorResponse_withException_setsFields()
+   * @see SocketRpcInvokerAroundCallbackTest#buildErrorResponse_preservesCallbackId()
    */
   @Test
-  @Ignore("Awaiting implementation in #538")
-  public void testBuildErrorResponse_createsValidErrorResponse() {
-    // Given: Exception and request context
+  public void testBuildErrorResponse_createsValidErrorResponse() throws Exception {
+    // Given: Exception and InterceptCallbackRequestMessage context
+    InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
+    request.setCallbackId("test-callback-id");
+    request.setPhase(InterceptPhase.BEFORE.toByte());
 
-    // When: buildErrorResponse called
+    Exception error = new RuntimeException("Test error for buildErrorResponse");
+
+    // Create invoker for reflection testing
+    SocketRpcInvoker invoker =
+        new SocketRpcInvoker(
+            context,
+            msgBuilder,
+            new HashSet<>(),
+            "inproc://rpc-test",
+            "inproc://json-test",
+            incomingMessageDispatcher,
+            UUID.randomUUID());
+
+    // When: buildErrorResponse called via reflection
+    Method buildErrorMethod =
+        SocketRpcInvoker.class.getDeclaredMethod(
+            "buildErrorResponse", InterceptCallbackRequestMessage.class, Exception.class);
+    buildErrorMethod.setAccessible(true);
+    InterceptCallbackResponseMessage response =
+        (InterceptCallbackResponseMessage) buildErrorMethod.invoke(invoker, request, error);
 
     // Then: Returns properly formatted error response
-
-    // TODO(#538): Implement test logic using reflection to access private method
-    fail("Not yet implemented");
+    assertThat(response.getCallbackId(), is("test-callback-id"));
+    assertThat(response.getPhase(), is(InterceptPhase.BEFORE.toByte()));
+    assertThat(response.getThrowException(), is(true));
+    assertThat(response.getException(), is(notNullValue()));
   }
 
   /**
@@ -695,16 +717,42 @@ public class SocketRpcInvokerTest extends ZmqEnabledTest {
    * @see SocketRpcInvokerHandleExceptionTest#handleSocketException_other_throws()
    */
   @Test
-  @Ignore(
-      "Criterion satisfied by existing tests: handleSocketException_otherError_rethrows(),"
-          + " SocketRpcInvokerHandleExceptionTest")
-  public void testHandleSocketException_logsAndHandlesError() {
+  public void testHandleSocketException_logsAndHandlesError() throws Exception {
     // Given: Socket exception
-    // When: handleSocketException called
-    // Then: Error logged; state cleaned up
-    //
-    // See handleSocketException_otherError_rethrows() and SocketRpcInvokerHandleExceptionTest.
-    fail("This test documents the acceptance criterion - see referenced tests for implementation");
+    SocketRpcInvoker invoker =
+        new SocketRpcInvoker(
+            context,
+            msgBuilder,
+            new HashSet<>(),
+            "inproc://rpc-test",
+            "inproc://json-test",
+            incomingMessageDispatcher,
+            UUID.randomUUID());
+
+    Method handleMethod =
+        SocketRpcInvoker.class.getDeclaredMethod("handleSocketException", ZMQException.class);
+    handleMethod.setAccessible(true);
+
+    // When/Then: For ETERM - returns true
+    boolean etermResult =
+        (boolean) handleMethod.invoke(invoker, new ZMQException("eterm", ZError.ETERM));
+    assertThat("ETERM should return true", etermResult, is(true));
+
+    // When/Then: For EINTR - returns true
+    boolean eintrResult =
+        (boolean) handleMethod.invoke(invoker, new ZMQException("eintr", ZError.EINTR));
+    assertThat("EINTR should return true", eintrResult, is(true));
+
+    // When/Then: For other errors - exception is rethrown
+    boolean exceptionThrown = false;
+    try {
+      handleMethod.invoke(invoker, new ZMQException("other", ZError.EFAULT));
+    } catch (java.lang.reflect.InvocationTargetException ite) {
+      if (ite.getCause() instanceof ZMQException) {
+        exceptionThrown = true;
+      }
+    }
+    assertThat("Non-terminal error should rethrow", exceptionThrown, is(true));
   }
 
   /**
@@ -727,14 +775,41 @@ public class SocketRpcInvokerTest extends ZmqEnabledTest {
    * @see #dispatchJsonRpcRequest_controlMessage_handledCorrectly()
    */
   @Test
-  @Ignore("Criterion satisfied by existing tests: invokeJsonRpcMessage()")
   public void testDispatchJsonRpcRequest_dispatchesSuccessfully() {
     // Given: Valid JSON-RPC request
+    execService.execute(socketRpcInvoker);
+
+    AtomicInteger listenerReceived = new AtomicInteger(0);
+    MessageDispatchListener dispatchListener = message -> listenerReceived.incrementAndGet();
+    socketRpcInvoker.addMessageDispatchListener(dispatchListener);
+
+    final UUID requestUuid = UUID.randomUUID();
+    JsonRpcRequest request =
+        new JsonRpcRequest.Builder()
+            .withMethod("new")
+            .withId(requestUuid.toString())
+            .withParams(new Params.Builder().withType("java.lang.String").build())
+            .build();
+    final UUID clientId = UUID.randomUUID();
+
     // When: dispatchJsonRpcRequest called
-    // Then: Request dispatched; response returned
-    //
-    // See invokeJsonRpcMessage() for implementation.
-    fail("This test documents the acceptance criterion - see referenced tests for implementation");
+    String jsonRpcRequestAsString = gson.toJson(request);
+    InboundJsonRpcRequestMsg inboundMsg =
+        new InboundJsonRpcRequestMsg(clientId, jsonRpcRequestAsString);
+    boolean sentOk = inboundMsg.send(jsonRpcDealerSocket);
+    assertThat("Message should be sent", sentOk, is(true));
+
+    // Then: Request dispatched; response returned with matching ID
+    OutboundJsonRpcResponseMsg outboundMsg =
+        OutboundJsonRpcResponseMsg.receive(jsonRpcDealerSocket, true);
+    assertThat(outboundMsg, is(notNullValue()));
+    JsonRpcResponse jsonRpcResponse =
+        gson.fromJson(outboundMsg.getJsonMessage(), JsonRpcResponse.class);
+
+    assertThat(jsonRpcResponse.getId(), is(requestUuid.toString()));
+    assertThat(socketRpcInvoker.getExecRequestsDispatched(), is(1L));
+    assertThat(listenerReceived.get(), is(1));
+    verify(incomingMessageDispatcher, times(1)).incomingCall(any(), any(), any());
   }
 
   /**
@@ -756,13 +831,23 @@ public class SocketRpcInvokerTest extends ZmqEnabledTest {
    * @see #jsonRpc_unsupportedMethod_returnsError_noDispatch()
    */
   @Test
-  @Ignore("Criterion satisfied by existing tests: jsonRpc_invalidJson_returnsError_noDispatch()")
   public void testDispatchJsonRpcRequest_invalidRequest_returnsError() {
-    // Given: Invalid JSON-RPC request
+    // Given: Invalid JSON-RPC request (malformed JSON)
+    execService.execute(socketRpcInvoker);
+
+    String badJson =
+        "{\"jsonrpc\":\"2.0\",\"id\":\"test-id\",\"method\":\"new\""; // missing closing
+    InboundJsonRpcRequestMsg inbound = new InboundJsonRpcRequestMsg(UUID.randomUUID(), badJson);
+
     // When: dispatchJsonRpcRequest called
-    // Then: Error response returned
-    //
-    // See jsonRpc_invalidJson_returnsError_noDispatch() for implementation.
-    fail("This test documents the acceptance criterion - see referenced tests for implementation");
+    inbound.send(jsonRpcDealerSocket);
+
+    // Then: Error response returned; no dispatch to handler
+    OutboundJsonRpcResponseMsg resp = OutboundJsonRpcResponseMsg.receive(jsonRpcDealerSocket, true);
+    assertThat(resp, is(notNullValue()));
+    JsonRpcResponse json = gson.fromJson(resp.getJsonMessage(), JsonRpcResponse.class);
+
+    assertThat("Error should be present", json.getError() != null, is(true));
+    verify(incomingMessageDispatcher, times(0)).incomingCall(any(), any(), any());
   }
 }

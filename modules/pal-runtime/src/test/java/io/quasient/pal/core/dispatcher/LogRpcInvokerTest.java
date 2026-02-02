@@ -12,7 +12,6 @@ package io.quasient.pal.core.dispatcher;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -38,7 +37,6 @@ import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
@@ -488,9 +486,7 @@ public class LogRpcInvokerTest extends ZmqEnabledTest {
     closeContext(testContext);
   }
 
-  // ===== Test Specifications (Issue #537) =====
-  // These test methods document the acceptance criteria for #537.
-  // They are implemented above with different names following existing patterns.
+  // ===== Acceptance Criteria Tests (Issue #538) =====
 
   /**
    * [TEST:LogRpcInvokerTest.testRun_processesMessagesFromQueue]
@@ -503,22 +499,36 @@ public class LogRpcInvokerTest extends ZmqEnabledTest {
    *
    * <p>Then: Messages are received, parsed (binary or JSON format), and dispatched; responses are
    * generated via the IncomingMessageDispatcher
-   *
-   * <p>IMPLEMENTATION NOTE: This acceptance criterion is satisfied by existing tests {@link
-   * #invokeExecMessage()} and {@link #invokeManyMessages()} which verify message processing.
-   *
-   * @see #invokeExecMessage()
-   * @see #invokeManyMessages()
    */
   @Test
-  @Ignore("Criterion satisfied by existing tests: invokeExecMessage(), invokeManyMessages()")
-  public void testRun_processesMessagesFromQueue() {
+  public void testRun_processesMessagesFromQueue() throws Exception {
     // Given: LogRpcInvoker with messages in queue
-    // When: run() executes
+    execService.execute(logRpcInvoker);
+
+    ExecMessage invokable = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+
+    CountDownLatch latch = new CountDownLatch(1);
+    MessageDispatchListener listener = message -> latch.countDown();
+    logRpcInvoker.addMessageDispatchListener(listener);
+
+    // When: run() executes and processes messages
+    int fakeOffset = 0;
+    Headers emptyHeaders = new RecordHeaders();
+    InboundLogMsg msg =
+        new InboundLogMsg(
+            fakeOffset,
+            MessageFormatType.BINARY,
+            emptyHeaders,
+            ColferUtils.toBytes(msgBuilder.wrap(invokable)));
+    msg.send(dealerSocket);
+
     // Then: Messages are processed; responses generated
-    //
-    // See invokeExecMessage() and invokeManyMessages() for implementation.
-    fail("This test documents the acceptance criterion - see referenced tests for implementation");
+    latch.await();
+
+    verify(incomingMessageDispatcher, times(1)).incomingCall(any(), any(), any());
+    assertThat(execMessageReplies.size(), is(1));
+    assertThat(logRpcInvoker.getExecRequestsDispatched(), is(1L));
+    assertThat(execMessageReplies.get(0).getResponseToId(), is(invokable.getMessageId()));
   }
 
   /**
@@ -531,21 +541,39 @@ public class LogRpcInvokerTest extends ZmqEnabledTest {
    * <p>When: Thread interrupted via interrupt() call
    *
    * <p>Then: Exits gracefully without error; closeConnections() called; no exceptions thrown
-   *
-   * <p>IMPLEMENTATION NOTE: This acceptance criterion is satisfied by existing test {@link
-   * #run_interrupted_exitsGracefully()}.
-   *
-   * @see #run_interrupted_exitsGracefully()
    */
   @Test
-  @Ignore("Criterion satisfied by existing test: run_interrupted_exitsGracefully()")
-  public void testRun_handlesInterruptionGracefully() {
+  public void testRun_handlesInterruptionGracefully() throws Exception {
     // Given: Running LogRpcInvoker
+    ZContext testContext = createContext();
+    Socket testDealerSocket = testContext.createSocket(SocketType.DEALER);
+    String testAddress = "inproc://test_interrupt_ac_" + UUID.randomUUID();
+    testDealerSocket.bind(testAddress);
+
+    IncomingMessageDispatcher testDispatcher = mock(IncomingMessageDispatcher.class);
+    MessageBuilder testMsgBuilder = new MessageBuilder(peerUuid);
+
+    LogRpcInvoker testInvoker =
+        new LogRpcInvoker(testContext, testMsgBuilder, testAddress, testDispatcher, peerUuid);
+
+    Thread invokerThread = new Thread(testInvoker);
+    invokerThread.start();
+
+    // Wait for invoker to enter blocking receive
+    TimeUnit.MILLISECONDS.sleep(100);
+
+    // Verify thread is running
+    assertThat("Invoker thread should be alive", invokerThread.isAlive(), is(true));
+
     // When: Thread interrupted
+    invokerThread.interrupt();
+
     // Then: Exits gracefully without error
-    //
-    // See run_interrupted_exitsGracefully() for implementation.
-    fail("This test documents the acceptance criterion - see referenced test for implementation");
+    invokerThread.join(2000);
+    assertThat("Invoker thread should have terminated", invokerThread.isAlive(), is(false));
+
+    // Cleanup
+    closeContext(testContext);
   }
 
   /**
@@ -558,21 +586,32 @@ public class LogRpcInvokerTest extends ZmqEnabledTest {
    * <p>When: closeConnections() called
    *
    * <p>Then: All resources released; socket is closed; superclass closeConnections() invoked
-   *
-   * <p>IMPLEMENTATION NOTE: This acceptance criterion is satisfied by existing test {@link
-   * #closeConnections_socketAlreadyClosed_noException()} which verifies graceful cleanup.
-   *
-   * @see #closeConnections_socketAlreadyClosed_noException()
    */
   @Test
-  @Ignore(
-      "Criterion satisfied by existing test: closeConnections_socketAlreadyClosed_noException()")
-  public void testCloseConnections_closesAllResources() {
+  public void testCloseConnections_closesAllResources() throws Exception {
     // Given: LogRpcInvoker with open connections
-    // When: closeConnections called
-    // Then: All resources released
-    //
-    // See closeConnections_socketAlreadyClosed_noException() for implementation.
-    fail("This test documents the acceptance criterion - see referenced test for implementation");
+    ZContext testContext = createContext();
+    Socket testDealerSocket = testContext.createSocket(SocketType.DEALER);
+    String testAddress = "inproc://test_close_ac_" + UUID.randomUUID();
+    testDealerSocket.bind(testAddress);
+
+    IncomingMessageDispatcher testDispatcher = mock(IncomingMessageDispatcher.class);
+    MessageBuilder testMsgBuilder = new MessageBuilder(peerUuid);
+
+    LogRpcInvoker testInvoker =
+        new LogRpcInvoker(testContext, testMsgBuilder, testAddress, testDispatcher, peerUuid);
+
+    Thread invokerThread = new Thread(testInvoker);
+    invokerThread.start();
+
+    // Wait for socket to be initialized in run()
+    TimeUnit.MILLISECONDS.sleep(50);
+
+    // When: closeConnections called (via context close which closes all sockets)
+    testContext.close();
+
+    // Then: All resources released (thread exits naturally due to ZMQException ETERM)
+    invokerThread.join(2000);
+    assertThat("Invoker thread should have terminated", invokerThread.isAlive(), is(false));
   }
 }
