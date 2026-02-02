@@ -13,6 +13,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -31,6 +32,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.zeromq.ZContext;
 
@@ -42,6 +44,16 @@ import org.zeromq.ZContext;
  * <p>This test class uses a lightweight concrete implementation (TestInvoker) that provides an
  * empty run() implementation, allowing direct testing of the protected dispatch methods without
  * requiring full thread lifecycle management.
+ *
+ * <p>Test specifications added for issue #539, awaiting implementation in #540:
+ *
+ * <ul>
+ *   <li>{@link #testGetRequestsDispatched_returnsCorrectCount}
+ *   <li>{@link #testGetRequestErrors_returnsCorrectCount}
+ *   <li>{@link #testAddMessageDispatchListener_addsListenerSuccessfully}
+ *   <li>{@link #testRemoveMessageDispatchListener_removesListenerSuccessfully}
+ *   <li>{@link #testLogMessageDispatch_logsWithoutError}
+ * </ul>
  */
 public class AbstractMessageInvokerThreadTest {
 
@@ -301,6 +313,164 @@ public class AbstractMessageInvokerThreadTest {
     // Join the thread to ensure it has fully terminated
     invoker.join(1000);
     assertTrue("Thread should have terminated", !invoker.isAlive());
+  }
+
+  // ==================================================================================
+  // Test specifications for issue #539 - Awaiting implementation in #540
+  // ==================================================================================
+
+  /**
+   * Tests that getRequestsDispatched returns the correct cumulative count across all message types.
+   *
+   * <p>Given: An invoker that has dispatched some requests (EXEC, CONTROL, META, INTERCEPT)
+   *
+   * <p>When: getRequestsDispatched is called
+   *
+   * <p>Then: Returns accurate count equal to sum of all dispatched message types
+   *
+   * <p>Note: This test specification extends coverage of the existing
+   * dispatchWithMetrics_recordsTimingStats test to verify the aggregate getRequestsDispatched()
+   * method returns the correct total across all message families.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #540")
+  public void testGetRequestsDispatched_returnsCorrectCount() {
+    // Given: Invoker that has dispatched some requests
+    // When: getRequestsDispatched called
+    // Then: Returns accurate count
+
+    // TODO(#540): Implement test logic
+    // - Dispatch multiple message types (EXEC, CONTROL, META, INTERCEPT)
+    // - Verify getRequestsDispatched() returns the sum of all successful dispatches
+    // - Verify individual getExecRequestsDispatched(), getControlRequestsDispatched(),
+    //   getMetaRequestsDispatched(), getInterceptRequestsDispatched() match the aggregate
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that getRequestErrors returns the correct cumulative error count across all message
+   * types.
+   *
+   * <p>Given: An invoker that has encountered dispatch errors for various message types
+   *
+   * <p>When: getRequestErrors is called
+   *
+   * <p>Then: Returns accurate count equal to sum of all errors across message families
+   *
+   * <p>Note: This test specification extends coverage of the existing
+   * dispatch_throwsException_logsAndContinues test to verify the aggregate getRequestErrors()
+   * method returns the correct total across all message families.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #540")
+  public void testGetRequestErrors_returnsCorrectCount() {
+    // Given: Invoker that has encountered some errors
+    // When: getRequestErrors called
+    // Then: Returns accurate count
+
+    // TODO(#540): Implement test logic
+    // - Cause dispatch errors for multiple message types (EXEC, CONTROL, META, INTERCEPT)
+    // - Verify getRequestErrors() returns the sum of all errors
+    // - Verify individual getExecRequestErrors(), getControlRequestErrors(),
+    //   getMetaRequestErrors(), getInterceptRequestErrors() match the aggregate
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that addMessageDispatchListener successfully adds a listener that receives dispatch
+   * events.
+   *
+   * <p>Given: An invoker without any listeners registered
+   *
+   * <p>When: addMessageDispatchListener is called with a listener
+   *
+   * <p>Then: The listener is added and receives onMessageDispatched events for subsequent
+   * dispatches
+   *
+   * <p>Note: This test specification formalizes the behavior tested in
+   * addDispatchListener_listenerCalled_onDispatch with explicit verification of listener
+   * registration and event delivery.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #540")
+  public void testAddMessageDispatchListener_addsListenerSuccessfully() {
+    // Given: Invoker without listeners
+    // When: addMessageDispatchListener called
+    // Then: Listener added; receives dispatch events
+
+    // TODO(#540): Implement test logic
+    // - Create invoker with no listeners
+    // - Add a listener via addMessageDispatchListener
+    // - Dispatch a message
+    // - Verify listener's onMessageDispatched was called with the correct message
+    // - Verify multiple listeners can be added and all receive events
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that removeMessageDispatchListener successfully removes a listener so it no longer
+   * receives events.
+   *
+   * <p>Given: An invoker with a registered listener
+   *
+   * <p>When: removeMessageDispatchListener is called for that listener
+   *
+   * <p>Then: The listener is removed and no longer receives onMessageDispatched events
+   *
+   * <p>Note: This test specification formalizes the behavior tested in
+   * removeDispatchListener_listenerNotCalled_afterRemoval with explicit verification of listener
+   * removal semantics.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #540")
+  public void testRemoveMessageDispatchListener_removesListenerSuccessfully() {
+    // Given: Invoker with registered listener
+    // When: removeMessageDispatchListener called
+    // Then: Listener removed; no longer receives events
+
+    // TODO(#540): Implement test logic
+    // - Create invoker and add a listener
+    // - Verify listener receives events on dispatch
+    // - Remove the listener via removeMessageDispatchListener
+    // - Dispatch another message
+    // - Verify listener does NOT receive the event after removal
+    // - Verify removing a non-registered listener does not cause errors
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that logMessageDispatch methods complete without error and notify listeners
+   * appropriately.
+   *
+   * <p>Given: A message dispatch event with request/response IDs and timing information
+   *
+   * <p>When: logMessageDispatch is called (any of the overloaded variants)
+   *
+   * <p>Then: The method completes without error and logs dispatch information (when debug enabled)
+   *
+   * <p>Note: logMessageDispatch is a protected utility method used by subclasses to log dispatch
+   * timing. This test verifies it handles all parameter combinations correctly without throwing
+   * exceptions.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #540")
+  public void testLogMessageDispatch_logsWithoutError() {
+    // Given: Message dispatch event
+    // When: logMessageDispatch called
+    // Then: Completes without error; listeners notified
+
+    // TODO(#540): Implement test logic
+    // - Create invoker and prepare test messages
+    // - Call logMessageDispatch(Message requestMsg, String responseId, long dispatchStart)
+    // - Verify no exception is thrown
+    // - Call logMessageDispatch(Message requestMsg, Message responseMessage, long dispatchStart)
+    // - Verify no exception is thrown
+    // - Call logMessageDispatch(String requestId, String responseId, long dispatchStart)
+    // - Verify no exception is thrown
+    // - Call logMessageDispatch(String requestId, long dispatchStart)
+    // - Verify no exception is thrown
+    // - (Optional) Verify logging output when debug level is enabled
+    fail("Not yet implemented");
   }
 
   /**
