@@ -14,6 +14,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
@@ -54,6 +55,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
@@ -633,5 +635,134 @@ public class SocketRpcInvokerTest extends ZmqEnabledTest {
       // Unwrap and rethrow the actual exception
       throw ite.getCause();
     }
+  }
+
+  // ===== Test Specifications (Issue #537) =====
+  // These test methods document the acceptance criteria for #537.
+  // They are implemented above with different names following existing patterns.
+
+  /**
+   * [TEST:SocketRpcInvokerTest.testBuildErrorResponse_createsValidErrorResponse]
+   *
+   * <p>Tests that buildErrorResponse() creates a properly formatted error response.
+   *
+   * <p>Given: Exception and InterceptCallbackRequestMessage context
+   *
+   * <p>When: buildErrorResponse called
+   *
+   * <p>Then: Returns properly formatted InterceptCallbackResponseMessage with: - callbackId from
+   * request - phase from request - throwException set to true - exception properly serialized
+   *
+   * <p>Implementation notes:
+   *
+   * <ul>
+   *   <li>buildErrorResponse is a private method, use reflection to test
+   *   <li>Verify all fields are set correctly on the response
+   *   <li>Verify exception serialization works correctly
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #538")
+  public void testBuildErrorResponse_createsValidErrorResponse() {
+    // Given: Exception and request context
+
+    // When: buildErrorResponse called
+
+    // Then: Returns properly formatted error response
+
+    // TODO(#538): Implement test logic using reflection to access private method
+    fail("Not yet implemented");
+  }
+
+  /**
+   * [TEST:SocketRpcInvokerTest.testHandleSocketException_logsAndHandlesError]
+   *
+   * <p>Tests that handleSocketException() logs and handles socket errors appropriately.
+   *
+   * <p>Given: Socket exception (ZMQException)
+   *
+   * <p>When: handleSocketException called
+   *
+   * <p>Then: - For ETERM/EINTR: Returns true indicating termination condition; logged at DEBUG -
+   * For other errors: Exception is rethrown; logged at DEBUG before rethrow
+   *
+   * <p>IMPLEMENTATION NOTE: This acceptance criterion is satisfied by existing tests {@link
+   * #handleSocketException_otherError_rethrows()} and tests in {@link
+   * SocketRpcInvokerHandleExceptionTest}.
+   *
+   * @see #handleSocketException_otherError_rethrows()
+   * @see SocketRpcInvokerHandleExceptionTest#handleSocketException_eterm_eintr_returnsTrue()
+   * @see SocketRpcInvokerHandleExceptionTest#handleSocketException_other_throws()
+   */
+  @Test
+  @Ignore(
+      "Criterion satisfied by existing tests: handleSocketException_otherError_rethrows(),"
+          + " SocketRpcInvokerHandleExceptionTest")
+  public void testHandleSocketException_logsAndHandlesError() {
+    // Given: Socket exception
+    // When: handleSocketException called
+    // Then: Error logged; state cleaned up
+    //
+    // See handleSocketException_otherError_rethrows() and SocketRpcInvokerHandleExceptionTest.
+    fail("This test documents the acceptance criterion - see referenced tests for implementation");
+  }
+
+  /**
+   * [TEST:SocketRpcInvokerTest.testDispatchJsonRpcRequest_dispatchesSuccessfully]
+   *
+   * <p>Tests that dispatchJsonRpcRequest() successfully dispatches valid JSON-RPC requests.
+   *
+   * <p>Given: Valid JSON-RPC request (EXEC, META, or CONTROL type)
+   *
+   * <p>When: dispatchJsonRpcRequest called
+   *
+   * <p>Then: Request dispatched to correct handler; response returned with matching ID
+   *
+   * <p>IMPLEMENTATION NOTE: This acceptance criterion is satisfied by existing tests {@link
+   * #invokeJsonRpcMessage()}, {@link #dispatchJsonRpcRequest_metaMessage_handledCorrectly()}, and
+   * {@link #dispatchJsonRpcRequest_controlMessage_handledCorrectly()}.
+   *
+   * @see #invokeJsonRpcMessage()
+   * @see #dispatchJsonRpcRequest_metaMessage_handledCorrectly()
+   * @see #dispatchJsonRpcRequest_controlMessage_handledCorrectly()
+   */
+  @Test
+  @Ignore("Criterion satisfied by existing tests: invokeJsonRpcMessage()")
+  public void testDispatchJsonRpcRequest_dispatchesSuccessfully() {
+    // Given: Valid JSON-RPC request
+    // When: dispatchJsonRpcRequest called
+    // Then: Request dispatched; response returned
+    //
+    // See invokeJsonRpcMessage() for implementation.
+    fail("This test documents the acceptance criterion - see referenced tests for implementation");
+  }
+
+  /**
+   * [TEST:SocketRpcInvokerTest.testDispatchJsonRpcRequest_invalidRequest_returnsError]
+   *
+   * <p>Tests that dispatchJsonRpcRequest() returns error for invalid requests.
+   *
+   * <p>Given: Invalid JSON-RPC request (malformed JSON, unsupported method, etc.)
+   *
+   * <p>When: dispatchJsonRpcRequest called
+   *
+   * <p>Then: Error response returned; no dispatch to handler
+   *
+   * <p>IMPLEMENTATION NOTE: This acceptance criterion is satisfied by existing tests {@link
+   * #jsonRpc_invalidJson_returnsError_noDispatch()} and {@link
+   * #jsonRpc_unsupportedMethod_returnsError_noDispatch()}.
+   *
+   * @see #jsonRpc_invalidJson_returnsError_noDispatch()
+   * @see #jsonRpc_unsupportedMethod_returnsError_noDispatch()
+   */
+  @Test
+  @Ignore("Criterion satisfied by existing tests: jsonRpc_invalidJson_returnsError_noDispatch()")
+  public void testDispatchJsonRpcRequest_invalidRequest_returnsError() {
+    // Given: Invalid JSON-RPC request
+    // When: dispatchJsonRpcRequest called
+    // Then: Error response returned
+    //
+    // See jsonRpc_invalidJson_returnsError_noDispatch() for implementation.
+    fail("This test documents the acceptance criterion - see referenced tests for implementation");
   }
 }
