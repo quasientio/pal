@@ -13,6 +13,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
@@ -31,6 +32,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
@@ -492,5 +494,165 @@ public class SessionServiceTest extends ZmqEnabledTest {
 
     // close zmq context
     closeContext(context);
+  }
+
+  // ===========================================================================
+  // Test specifications for issue #553 - Coverage gaps in SessionService
+  // Implementation will be done in issue #554
+  // ===========================================================================
+
+  /**
+   * Tests that deleteObject removes an object successfully from a session.
+   *
+   * <p>Given: Session with stored object When: deleteObject called with valid ID Then: Object
+   * removed from session
+   *
+   * <p>This test verifies that when an object is stored in a session and the DELETE_OBJECT command
+   * is sent with the correct session ID and object reference, the object is successfully removed
+   * from the session. After removal, attempting to delete the same object again should return
+   * NO_SUCH_OBJECT status, confirming the object was indeed removed.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #554")
+  public void testDeleteObject_removesObjectSuccessfully() {
+    // Given: Session with stored object
+    // - Create a new session by storing an object
+    // - Verify the object is stored (OK status)
+
+    // When: deleteObject called with valid ID
+    // - Send DELETE_OBJECT command with the session ID and object reference
+
+    // Then: Object removed from session
+    // - Verify response status is OK
+    // - Verify the object is no longer in the session (subsequent delete returns NO_SUCH_OBJECT)
+    // - Verify the session still exists (can store another object in it)
+
+    // TODO(#554): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that deleteObject handles non-existent object gracefully.
+   *
+   * <p>Given: Session without the object When: deleteObject called Then: No error; operation
+   * completes with NO_SUCH_OBJECT status
+   *
+   * <p>This test verifies that when attempting to delete an object that does not exist in a valid
+   * session, the operation completes without errors and returns the appropriate NO_SUCH_OBJECT
+   * status. The session should remain intact and functional after the operation.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #554")
+  public void testDeleteObject_nonexistentObject_handledGracefully() {
+    // Given: Session without the object
+    // - Create a session by storing one object
+    // - Create a different ObjectRef that was NOT stored in this session
+
+    // When: deleteObject called
+    // - Send DELETE_OBJECT command with the session ID and the non-existent object reference
+
+    // Then: No error; operation completes
+    // - Verify response status is NO_SUCH_OBJECT (not ERROR or exception)
+    // - Verify the session is still functional (can still delete the original object)
+    // - Verify service continues operating normally
+
+    // TODO(#554): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that run() processes session commands from the queue correctly.
+   *
+   * <p>Given: SessionService with commands in queue When: run() executes Then: Commands processed
+   * correctly in order
+   *
+   * <p>This test verifies the main service loop in run() processes multiple different command types
+   * correctly. It sends a sequence of commands (STORE_OBJECT, DELETE_OBJECT, DELETE_SESSION,
+   * CLEAR_SESSIONS) and verifies each is processed with the correct response.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #554")
+  public void testRun_processesSessionCommands() {
+    // Given: SessionService with commands in queue
+    // - Service is already running (started in @Before)
+    // - Prepare multiple commands of different types to send
+
+    // When: run() executes (processes commands as they arrive)
+    // - Send STORE_OBJECT command -> expect OK
+    // - Send DELETE_OBJECT command with valid ref -> expect OK
+    // - Send DELETE_OBJECT command with invalid ref -> expect NO_SUCH_OBJECT
+    // - Send DELETE_SESSION command -> expect OK (or NO_SUCH_SESSION if already deleted)
+    // - Send CLEAR_SESSIONS command -> expect OK
+
+    // Then: Commands processed correctly
+    // - Verify each command returns the expected status
+    // - Verify state changes are reflected (e.g., session deleted after DELETE_SESSION)
+
+    // TODO(#554): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that run() handles thread interruption gracefully.
+   *
+   * <p>Given: Running SessionService When: Thread interrupted Then: Exits gracefully without
+   * throwing exceptions
+   *
+   * <p>This test verifies that when the service thread is interrupted, the run() method exits its
+   * main loop cleanly. The service should transition to TERMINATED state without errors.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #554")
+  public void testRun_handlesInterruption() {
+    // Given: Running SessionService
+    // - Service is already running (started in @Before)
+    // - The service is blocked waiting for commands on the REP socket
+
+    // When: Thread interrupted
+    // - Stop the service manager (which triggers shutdown and interruption)
+    // - Wait for service to stop
+
+    // Then: Exits gracefully
+    // - Verify service transitions to TERMINATED state
+    // - Verify no exceptions are thrown during shutdown
+    // - Verify the service stopped within a reasonable timeout
+
+    // TODO(#554): Implement test logic
+    // Note: This may require creating a separate SessionService instance to test
+    // the interruption handling without affecting other tests.
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that closeConnections closes all resources properly.
+   *
+   * <p>Given: SessionService with open resources (REP socket) When: closeConnections called Then:
+   * All resources released (socket closed)
+   *
+   * <p>This test verifies that when the service shuts down, closeConnections() properly closes the
+   * REP socket. After shutdown, attempts to use the socket should fail.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #554")
+  public void testCloseConnections_closesAllResources() {
+    // Given: SessionService with open resources
+    // - Service is running with an open REP socket
+    // - The socket is bound to SESSION_SERVICE_ADDRESS
+
+    // When: closeConnections called (via service shutdown)
+    // - Stop the service manager
+    // - Wait for the service to fully stop
+
+    // Then: All resources released
+    // - Verify the service has stopped
+    // - Verify the REP socket is closed (attempting to connect/send should fail or
+    //   a new service can bind to the same address without conflict)
+    // - Verify no resource leaks (context can be closed cleanly)
+
+    // TODO(#554): Implement test logic
+    // Note: This test may need to verify socket closure indirectly since the socket
+    // is private. One approach is to verify that a new service can bind to the same
+    // address after shutdown.
+    fail("Not yet implemented");
   }
 }
