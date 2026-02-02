@@ -9,7 +9,10 @@
  */
 package io.quasient.pal.core.internal.concurrent;
 
-import org.junit.Ignore;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.junit.Assert.fail;
+
 import org.junit.Test;
 
 /**
@@ -20,10 +23,8 @@ import org.junit.Test;
  */
 public class AdaptiveSpinParkWaitStrategyTest {
 
-  // ========== Test Specifications for Issue #555 ==========
-
   /**
-   * Test specification: Verify that toString returns a descriptive string.
+   * Test: Verify that toString returns a descriptive string.
    *
    * <p>This test validates that the toString method returns a meaningful description containing the
    * strategy's configuration parameters (spinIterations and parkNanos).
@@ -31,24 +32,24 @@ public class AdaptiveSpinParkWaitStrategyTest {
    * @see AdaptiveSpinParkWaitStrategy#toString()
    */
   @Test
-  @Ignore("Awaiting implementation in #556")
   public void testToString_returnsDescriptiveString() {
     // Given: An AdaptiveSpinParkWaitStrategy instance with known parameters
-    // When: toString() is called
-    // Then: Returns a string containing the class name and parameter values
+    int spinIterations = 100;
+    long parkNanos = 50_000L;
+    AdaptiveSpinParkWaitStrategy strategy =
+        new AdaptiveSpinParkWaitStrategy(spinIterations, parkNanos);
 
-    // TODO(#556): Implement test logic
-    // Implementation hints:
-    // - Create strategy with custom spinIterations and parkNanos
-    // - Call toString()
-    // - Verify string contains "AdaptiveSpinParkWaitStrategy"
-    // - Verify string contains the spinIterations value
-    // - Verify string contains the parkNanos value
-    org.junit.Assert.fail("Not yet implemented");
+    // When: toString() is called
+    String result = strategy.toString();
+
+    // Then: Returns a string containing the class name and parameter values
+    assertThat(result, containsString("AdaptiveSpinParkWaitStrategy"));
+    assertThat(result, containsString("spinIterations=" + spinIterations));
+    assertThat(result, containsString("parkNanos=" + parkNanos));
   }
 
   /**
-   * Test specification: Verify that constructor validates parameters appropriately.
+   * Test: Verify that constructor validates parameters appropriately.
    *
    * <p>This test validates that the constructor throws IllegalArgumentException when invalid
    * parameters are provided (non-positive spinIterations or parkNanos).
@@ -56,19 +57,37 @@ public class AdaptiveSpinParkWaitStrategyTest {
    * @see AdaptiveSpinParkWaitStrategy#AdaptiveSpinParkWaitStrategy(int, long)
    */
   @Test
-  @Ignore("Awaiting implementation in #556")
   public void testConstructor_invalidParams_handlesValidation() {
-    // Given: Invalid constructor parameters (zero or negative values)
-    // When: Constructor is called with invalid parameters
-    // Then: IllegalArgumentException is thrown with descriptive message
+    // Test with spinIterations = 0, expect IllegalArgumentException
+    try {
+      new AdaptiveSpinParkWaitStrategy(0, 100_000L);
+      fail("Expected IllegalArgumentException for spinIterations = 0");
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), containsString("spinIterations"));
+    }
 
-    // TODO(#556): Implement test logic
-    // Implementation hints:
-    // - Test with spinIterations = 0, expect IllegalArgumentException
-    // - Test with spinIterations = -1, expect IllegalArgumentException
-    // - Test with parkNanos = 0, expect IllegalArgumentException
-    // - Test with parkNanos = -1, expect IllegalArgumentException
-    // - Verify exception messages are descriptive
-    org.junit.Assert.fail("Not yet implemented");
+    // Test with spinIterations = -1, expect IllegalArgumentException
+    try {
+      new AdaptiveSpinParkWaitStrategy(-1, 100_000L);
+      fail("Expected IllegalArgumentException for spinIterations = -1");
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), containsString("spinIterations"));
+    }
+
+    // Test with parkNanos = 0, expect IllegalArgumentException
+    try {
+      new AdaptiveSpinParkWaitStrategy(50, 0L);
+      fail("Expected IllegalArgumentException for parkNanos = 0");
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), containsString("parkNanos"));
+    }
+
+    // Test with parkNanos = -1, expect IllegalArgumentException
+    try {
+      new AdaptiveSpinParkWaitStrategy(50, -1L);
+      fail("Expected IllegalArgumentException for parkNanos = -1");
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), containsString("parkNanos"));
+    }
   }
 }

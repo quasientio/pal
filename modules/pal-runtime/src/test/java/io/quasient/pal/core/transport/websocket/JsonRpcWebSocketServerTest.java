@@ -16,6 +16,7 @@ import static org.junit.Assume.assumeTrue;
 import io.quasient.pal.core.internal.messages.InboundJsonRpcRequestMsg;
 import io.quasient.pal.messages.types.MessageType;
 import io.quasient.pal.messages.types.MetaServiceType;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -34,7 +35,6 @@ import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -183,10 +183,8 @@ public class JsonRpcWebSocketServerTest {
     server.close();
   }
 
-  // ========== Test Specifications for Issue #555 ==========
-
   /**
-   * Test specification: Verify that onError handles exceptions gracefully.
+   * Test: Verify that onError handles exceptions gracefully.
    *
    * <p>This test validates that when an exception occurs on a WebSocket connection, the onError
    * callback properly logs the error and handles the connection appropriately without crashing the
@@ -195,20 +193,51 @@ public class JsonRpcWebSocketServerTest {
    * @see JsonRpcWebSocketServer#onError(org.java_websocket.WebSocket, Exception)
    */
   @Test
-  @Ignore("Awaiting implementation in #556")
   public void testOnError_handlesErrorGracefully() throws Exception {
     // Given: A running WebSocket server with an active client connection
-    // When: onError is called with an exception (e.g., simulated socket error)
-    // Then: The error is logged appropriately
-    // And: The server continues to operate for other connections
-    // And: The affected connection is handled appropriately (not necessarily closed)
+    server.start();
+    boolean ok = ready.await(2, TimeUnit.SECONDS);
+    assumeTrue("server did not start in time", ok);
 
-    // TODO(#556): Implement test logic
-    // Implementation hints:
-    // - Start server and connect a test client
-    // - Simulate an error condition (e.g., use mock WebSocket or trigger IOException)
-    // - Verify server is still operational after error
-    // - Check logs for error message (may require log capture)
-    org.junit.Assert.fail("Not yet implemented");
+    UUID peerId = UUID.randomUUID();
+    String url = "ws://" + bindAddr.getHostString() + ":" + bindAddr.getPort();
+    TestClient client =
+        new TestClient(URI.create(url), Collections.singletonMap("peer-id", peerId.toString()));
+    client.connectBlocking(2, TimeUnit.SECONDS);
+
+    // Verify the server is operational by sending a message
+    String payload = "{\"jsonrpc\":\"2.0\",\"method\":\"test\",\"id\":1}";
+    client.send(payload);
+
+    // Server should enqueue it
+    InboundJsonRpcRequestMsg msg = queue.poll(2, TimeUnit.SECONDS);
+    assertThat(msg != null, is(true));
+
+    // When: onError is called with an exception (simulated)
+    // We call onError directly to test the error handling behavior
+    Exception testException = new IOException("Simulated socket error for testing");
+    server.onError(null, testException);
+
+    // Then: The server continues to operate (didn't crash)
+    // Verify server is still operational by sending another message
+
+    // Connect a second client to verify server is still operational
+    UUID peerId2 = UUID.randomUUID();
+    TestClient client2 =
+        new TestClient(URI.create(url), Collections.singletonMap("peer-id", peerId2.toString()));
+    client2.connectBlocking(2, TimeUnit.SECONDS);
+
+    String payload2 = "{\"jsonrpc\":\"2.0\",\"method\":\"ping2\",\"id\":2}";
+    client2.send(payload2);
+
+    // Server should enqueue the second message, proving it's still operational
+    InboundJsonRpcRequestMsg msg2 = queue.poll(2, TimeUnit.SECONDS);
+    assertThat(msg2 != null, is(true));
+    assertThat(msg2.getJsonMessage(), is(payload2));
+
+    // Cleanup
+    client.closeBlocking();
+    client2.closeBlocking();
+    server.close();
   }
 }

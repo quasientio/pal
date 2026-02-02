@@ -18,7 +18,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jctools.queues.MessagePassingQueue;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -165,10 +164,8 @@ public class HwmMessageQueueTest {
     assertThat(q.highWaterMark(), is(5));
   }
 
-  // ========== Test Specifications for Issue #555 ==========
-
   /**
-   * Test specification: Verify that fill(Supplier) populates the queue.
+   * Test: Verify that fill(Supplier) populates the queue.
    *
    * <p>This test validates that the fill method with only a Supplier parameter populates the queue
    * with elements supplied by the Supplier and correctly updates the size and high-water-mark
@@ -177,26 +174,35 @@ public class HwmMessageQueueTest {
    * @see HwmMessageQueue#fill(MessagePassingQueue.Supplier)
    */
   @Test
-  @Ignore("Awaiting implementation in #556")
   public void testFill_withSupplier_populatesQueue() {
     // Given: An empty queue and a supplier that produces elements
-    // When: fill(Supplier) is called
-    // Then: Queue is populated with supplied items
-    // And: currentSize() reflects the number of items added
-    // And: highWaterMark() is updated to reflect the peak
+    HwmMessageQueue<String> q = HwmMessageQueue.createQueue(MpscKind.FIXED, 8, 8);
+    AtomicInteger callCount = new AtomicInteger(0);
+    MessagePassingQueue.Supplier<String> supplier =
+        () -> {
+          int count = callCount.incrementAndGet();
+          return "item-" + count;
+        };
 
-    // TODO(#556): Implement test logic
-    // Implementation hints:
-    // - Create a queue with known capacity
-    // - Create a supplier that returns predictable values
-    // - Call fill(supplier) without limit
-    // - Verify queue contains expected elements via poll()
-    // - Verify size counters are correct
-    org.junit.Assert.fail("Not yet implemented");
+    // When: fill(Supplier) is called
+    int offered = q.fill(supplier);
+
+    // Then: Queue is populated with supplied items
+    assertThat(offered, greaterThanOrEqualTo(1));
+
+    // And: currentSize() reflects the number of items added
+    assertThat(q.currentSize(), is(offered));
+
+    // And: highWaterMark() is updated to reflect the peak
+    assertThat(q.highWaterMark(), is(offered));
+
+    // Verify queue contains expected elements via poll()
+    String first = q.poll();
+    assertThat(first, is("item-1"));
   }
 
   /**
-   * Test specification: Verify that fill with WaitStrategy and ExitCondition populates queue.
+   * Test: Verify that fill with WaitStrategy and ExitCondition populates queue.
    *
    * <p>This test validates that the fill method with Supplier, WaitStrategy, and ExitCondition
    * parameters correctly populates the queue while respecting the exit condition and using the wait
@@ -206,26 +212,33 @@ public class HwmMessageQueueTest {
    *     MessagePassingQueue.ExitCondition)
    */
   @Test
-  @Ignore("Awaiting implementation in #556")
   public void testFill_withWaitStrategyAndExitCondition_populatesQueue() {
     // Given: An empty queue, a supplier, a no-op wait strategy, and an exit condition
-    // When: fill(Supplier, WaitStrategy, ExitCondition) is called
-    // Then: Queue is populated respecting the exit condition
-    // And: Wait strategy is used when queue is full (if applicable)
-    // And: Loop terminates when exit condition returns false
+    HwmMessageQueue<Integer> q = HwmMessageQueue.createQueue(MpscKind.FIXED, 8, 8);
+    AtomicInteger supplierCallCount = new AtomicInteger(0);
+    MessagePassingQueue.Supplier<Integer> supplier = () -> supplierCallCount.incrementAndGet();
 
-    // TODO(#556): Implement test logic
-    // Implementation hints:
-    // - Create a fixed-size queue
-    // - Create an exit condition that limits iterations (e.g., countdown)
-    // - Use a no-op wait strategy: idleCounter -> 0
-    // - Verify the fill loop terminates as expected
-    // - Verify counters are correct after fill completes
-    org.junit.Assert.fail("Not yet implemented");
+    // Use a no-op wait strategy: idleCounter -> 0
+    MessagePassingQueue.WaitStrategy ws = idleCounter -> 0;
+
+    // Exit condition that limits to 5 iterations
+    AtomicInteger remaining = new AtomicInteger(5);
+    MessagePassingQueue.ExitCondition ec = () -> remaining.decrementAndGet() >= 0;
+
+    // When: fill(Supplier, WaitStrategy, ExitCondition) is called
+    q.fill(supplier, ws, ec);
+
+    // Then: Queue is populated respecting the exit condition
+    // The number of items added depends on exact semantics
+    assertThat(q.currentSize(), greaterThanOrEqualTo(1));
+
+    // And: Loop terminates when exit condition returns false
+    // Verify counters are correct after fill completes
+    assertThat(q.highWaterMark(), is(q.currentSize()));
   }
 
   /**
-   * Test specification: Verify that relaxedPeek returns head without removing it.
+   * Test: Verify that relaxedPeek returns head without removing it.
    *
    * <p>This test validates that the relaxedPeek method returns the head element of the queue
    * without removing it, leaving the queue state unchanged.
@@ -233,27 +246,37 @@ public class HwmMessageQueueTest {
    * @see HwmMessageQueue#relaxedPeek()
    */
   @Test
-  @Ignore("Awaiting implementation in #556")
   public void testRelaxedPeek_returnsHeadWithoutRemoving() {
-    // Given: A queue with one or more items
-    // When: relaxedPeek() is called
-    // Then: The head element is returned
-    // And: The queue size remains unchanged
-    // And: Subsequent peek/poll returns the same element
+    // Given: A queue with known elements
+    HwmMessageQueue<String> q = HwmMessageQueue.createQueue(MpscKind.FIXED, 8, 8);
+    assertTrue(q.offer("first"));
+    assertTrue(q.offer("second"));
+    assertTrue(q.offer("third"));
+    int initialSize = q.currentSize();
+    assertThat(initialSize, is(3));
 
-    // TODO(#556): Implement test logic
-    // Implementation hints:
-    // - Create queue and add known elements
-    // - Record initial size
-    // - Call relaxedPeek() multiple times
-    // - Verify same element returned each time
-    // - Verify size unchanged
-    // - Verify poll() returns the same element
-    org.junit.Assert.fail("Not yet implemented");
+    // When: relaxedPeek() is called
+    String peeked = q.relaxedPeek();
+
+    // Then: The head element is returned
+    assertThat(peeked, is("first"));
+
+    // And: The queue size remains unchanged
+    assertThat(q.currentSize(), is(initialSize));
+
+    // And: Subsequent relaxedPeek returns the same element
+    String peekedAgain = q.relaxedPeek();
+    assertThat(peekedAgain, is("first"));
+    assertThat(q.currentSize(), is(initialSize));
+
+    // And: poll() returns the same element
+    String polled = q.poll();
+    assertThat(polled, is("first"));
+    assertThat(q.currentSize(), is(initialSize - 1));
   }
 
   /**
-   * Test specification: Verify that size() returns the correct queue size.
+   * Test: Verify that size() returns the correct queue size.
    *
    * <p>This test validates that the size() method (delegated to underlying queue) returns the
    * correct number of elements in the queue.
@@ -261,19 +284,38 @@ public class HwmMessageQueueTest {
    * @see HwmMessageQueue#size()
    */
   @Test
-  @Ignore("Awaiting implementation in #556")
   public void testSize_returnsCorrectSize() {
     // Given: A queue with a known number of items
-    // When: size() is called
-    // Then: Returns the correct count matching currentSize()
+    HwmMessageQueue<String> q = HwmMessageQueue.createQueue(MpscKind.FIXED, 8, 8);
+    assertTrue(q.offer("a"));
+    assertTrue(q.offer("b"));
+    assertTrue(q.offer("c"));
 
-    // TODO(#556): Implement test logic
-    // Implementation hints:
-    // - Create queue and add known number of elements
-    // - Call size() and compare with currentSize()
-    // - Add more elements and verify size updates
-    // - Remove elements and verify size decrements
-    // Note: size() is the delegate's size which may differ from currentSize() under contention
-    org.junit.Assert.fail("Not yet implemented");
+    // When: size() is called
+    int size = q.size();
+
+    // Then: Returns the correct count (should match or be close to currentSize)
+    assertThat(size, is(3));
+    assertThat(q.currentSize(), is(3));
+
+    // Add more elements and verify size updates
+    assertTrue(q.offer("d"));
+    assertThat(q.size(), is(4));
+    assertThat(q.currentSize(), is(4));
+
+    // Remove elements and verify size decrements
+    q.poll();
+    assertThat(q.size(), is(3));
+    assertThat(q.currentSize(), is(3));
+
+    q.poll();
+    q.poll();
+    assertThat(q.size(), is(1));
+    assertThat(q.currentSize(), is(1));
+
+    q.poll();
+    assertThat(q.size(), is(0));
+    assertThat(q.currentSize(), is(0));
+    assertTrue(q.isEmpty());
   }
 }
