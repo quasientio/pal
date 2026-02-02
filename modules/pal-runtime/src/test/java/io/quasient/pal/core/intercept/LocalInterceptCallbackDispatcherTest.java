@@ -13,7 +13,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import io.quasient.pal.common.lang.intercept.AfterPhaseData;
 import io.quasient.pal.common.lang.intercept.CheckedExceptionPolicy;
@@ -40,7 +39,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -942,18 +940,41 @@ public class LocalInterceptCallbackDispatcherTest {
    * what happens when callbacks are invoked via reflection).
    */
   @Test
-  @Ignore("Awaiting implementation in #536")
   public void testUnwrapException_unwrapsInvocationTargetException() {
-    // Given: A callback that throws a RuntimeException which will be wrapped
-    //        in InvocationTargetException when invoked via reflection
-    // When: The callback is invoked via dispatcher (reflection-based invocation)
-    // Then: The unwrapped RuntimeException is returned, not the InvocationTargetException
+    // Given: A callback that throws a RuntimeException directly
+    // When invoked via reflection, it will be wrapped in InvocationTargetException
+    // The dispatcher should unwrap it and return the original RuntimeException
 
-    // TODO(#536): Implement test logic
-    // - Create a callback that throws RuntimeException directly
-    // - The reflection-based invocation will wrap it in InvocationTargetException
-    // - Verify the returned exception is the original RuntimeException, not the wrapper
-    fail("Not yet implemented");
+    // Using PROPAGATE_ALL policy ensures the exception propagates
+    LocalInterceptCallbackDispatcher policyDispatcher =
+        createDispatcherWithPolicy(
+            ExceptionPropagationPolicy.PROPAGATE_ALL, CheckedExceptionPolicy.ALLOW_ALL);
+
+    InterceptMessage intercept = createIntercept(InterceptType.BEFORE, "throwDirectException");
+    List<InterceptMessage> intercepts = List.of(intercept);
+
+    // When: sendLocalBeforeCallbacks() called (callback invoked via reflection)
+    ConsolidatedCallbackResponse response =
+        policyDispatcher.sendLocalBeforeCallbacks(
+            intercepts,
+            new Object[] {1, 2},
+            TEST_CLASS,
+            TEST_METHOD,
+            TEST_PARAM_TYPES,
+            TEST_PEER_UUID,
+            null);
+
+    // Then: The unwrapped RuntimeException is returned, not InvocationTargetException
+    assertTrue("Should throw exception", response.shouldThrowException());
+    Throwable thrown = response.getExceptionToThrow();
+    assertNotNull("Exception should not be null", thrown);
+    assertTrue(
+        "Should be RuntimeException, not InvocationTargetException: " + thrown.getClass().getName(),
+        thrown instanceof RuntimeException);
+    assertFalse(
+        "Should not be InvocationTargetException",
+        thrown instanceof java.lang.reflect.InvocationTargetException);
+    assertEquals("Direct throw exception", thrown.getMessage());
   }
 
   /**
@@ -966,17 +987,41 @@ public class LocalInterceptCallbackDispatcherTest {
    * Non-InvocationTargetException exceptions should pass through unchanged.
    */
   @Test
-  @Ignore("Awaiting implementation in #536")
   public void testUnwrapException_returnsOriginalForNonInvocationTargetException() {
-    // Given: A regular RuntimeException (not InvocationTargetException)
-    // When: The exception is processed through the dispatcher's exception handling
-    // Then: The original exception is returned unchanged
+    // Given: A callback that sets an exception via setExceptionToThrow()
+    // This bypasses reflection wrapping so the exception should pass through unchanged
+    RuntimeException expectedException = new RuntimeException("Explicit exception via setter");
+    TestCallbacks.exceptionToThrow = expectedException;
 
-    // TODO(#536): Implement test logic
-    // - Create a callback that sets an exception via setExceptionToThrow()
-    //   (which bypasses reflection wrapping)
-    // - Verify the returned exception is exactly the one that was set
-    fail("Not yet implemented");
+    // Using PROPAGATE_ALL policy ensures the exception propagates
+    LocalInterceptCallbackDispatcher policyDispatcher =
+        createDispatcherWithPolicy(
+            ExceptionPropagationPolicy.PROPAGATE_ALL, CheckedExceptionPolicy.ALLOW_ALL);
+
+    InterceptMessage intercept = createIntercept(InterceptType.BEFORE, "throwException");
+    List<InterceptMessage> intercepts = List.of(intercept);
+
+    // When: sendLocalBeforeCallbacks() called (explicit exception bypasses wrapping)
+    ConsolidatedCallbackResponse response =
+        policyDispatcher.sendLocalBeforeCallbacks(
+            intercepts,
+            new Object[] {1, 2},
+            TEST_CLASS,
+            TEST_METHOD,
+            TEST_PARAM_TYPES,
+            TEST_PEER_UUID,
+            null);
+
+    // Then: The original exception is returned unchanged
+    assertTrue("Should throw exception", response.shouldThrowException());
+    Throwable thrown = response.getExceptionToThrow();
+    assertNotNull("Exception should not be null", thrown);
+    // The exact same instance should be returned (reference equality)
+    assertEquals(
+        "Exception should be the exact same instance",
+        expectedException,
+        response.getExceptionToThrow());
+    assertEquals("Explicit exception via setter", thrown.getMessage());
   }
 
   /**
@@ -989,18 +1034,46 @@ public class LocalInterceptCallbackDispatcherTest {
    * appear in the intercepts list.
    */
   @Test
-  @Ignore("Awaiting implementation in #536")
   public void testSendLocalAroundCallbacks_executesCallbackChain() {
-    // Given: Multiple registered AROUND callbacks (callback1, callback2, callback3)
-    // When: sendLocalAroundCallbacks() called with multiple intercepts
-    // Then: Each callback in chain is executed in order (callback1 -> callback2 -> callback3)
+    // Given: Multiple AROUND intercepts that record their invocation order
+    TestCallbacks.callbackInvocationOrder.clear();
 
-    // TODO(#536): Implement test logic
-    // - Create 3 AROUND intercepts that each record their invocation order
-    // - Send all callbacks via dispatcher
-    // - Verify invocation order matches registration order
-    // - Verify all callbacks that called proceed() are in pendingCallbacks
-    fail("Not yet implemented");
+    InterceptMessage intercept1 = createIntercept(InterceptType.AROUND, "aroundRecordAndProceed1");
+    InterceptMessage intercept2 = createIntercept(InterceptType.AROUND, "aroundRecordAndProceed2");
+    InterceptMessage intercept3 = createIntercept(InterceptType.AROUND, "aroundRecordAndProceed3");
+    List<InterceptMessage> intercepts = List.of(intercept1, intercept2, intercept3);
+
+    LocalAroundAccessor accessor = (args) -> new AfterPhaseData(100, null, false);
+
+    // When: sendLocalAroundCallbacks() called with multiple intercepts
+    LocalAroundConsolidatedResponse response =
+        dispatcher.sendLocalAroundCallbacks(
+            intercepts,
+            new Object[] {5, 3},
+            TEST_CLASS,
+            TEST_METHOD,
+            TEST_PARAM_TYPES,
+            TEST_PEER_UUID,
+            accessor);
+
+    // Then: Each callback in chain is executed in order
+    assertTrue("Should proceed", response.shouldProceed());
+    assertFalse("Should not throw exception", response.shouldThrowException());
+
+    // Verify invocation order - BEFORE phases should be in registration order
+    List<String> invocations = TestCallbacks.callbackInvocationOrder;
+    assertEquals("Should have 6 invocations (3 callbacks x 2 phases)", 6, invocations.size());
+
+    // Verify BEFORE phases execute in order: callback1, callback2, callback3
+    assertEquals("First BEFORE", "aroundRecordAndProceed1_BEFORE", invocations.get(0));
+    assertEquals("First AFTER", "aroundRecordAndProceed1_AFTER", invocations.get(1));
+    assertEquals("Second BEFORE", "aroundRecordAndProceed2_BEFORE", invocations.get(2));
+    assertEquals("Second AFTER", "aroundRecordAndProceed2_AFTER", invocations.get(3));
+    assertEquals("Third BEFORE", "aroundRecordAndProceed3_BEFORE", invocations.get(4));
+    assertEquals("Third AFTER", "aroundRecordAndProceed3_AFTER", invocations.get(5));
+
+    // Verify all callbacks that called proceed() are in pendingCallbacks
+    assertEquals("Should have 3 pending callbacks", 3, response.getPendingCallbacks().size());
   }
 
   /**
@@ -1013,18 +1086,79 @@ public class LocalInterceptCallbackDispatcherTest {
    * and may propagate or be swallowed.
    */
   @Test
-  @Ignore("Awaiting implementation in #536")
   public void testSendLocalAroundCallbacks_handlesExceptionInCallback() {
-    // Given: AROUND callback that throws exception directly
-    // When: sendLocalAroundCallbacks() called
-    // Then: Exception is propagated appropriately based on policy
+    // Test 1: PROPAGATE_ALL policy - exception should propagate
+    TestCallbacks.callbackInvocationOrder.clear();
 
-    // TODO(#536): Implement test logic
-    // - Create AROUND intercept with callback that throws directly
-    // - Test with PROPAGATE_ALL policy - verify exception propagates
-    // - Test with SWALLOW_ALL policy - verify exception is swallowed
-    // - Verify subsequent callbacks are not invoked after exception
-    fail("Not yet implemented");
+    LocalInterceptCallbackDispatcher propagateDispatcher =
+        createDispatcherWithPolicy(
+            ExceptionPropagationPolicy.PROPAGATE_ALL, CheckedExceptionPolicy.ALLOW_ALL);
+
+    // First callback succeeds, second throws directly, third should not be invoked
+    InterceptMessage intercept1 = createIntercept(InterceptType.AROUND, "aroundRecordAndProceed1");
+    InterceptMessage intercept2 = createIntercept(InterceptType.AROUND, "aroundThrowDirect");
+    InterceptMessage intercept3 = createIntercept(InterceptType.AROUND, "aroundRecordAndProceed3");
+    List<InterceptMessage> intercepts = List.of(intercept1, intercept2, intercept3);
+
+    LocalAroundAccessor accessor = (args) -> new AfterPhaseData(100, null, false);
+
+    // When: sendLocalAroundCallbacks() called with PROPAGATE_ALL policy
+    LocalAroundConsolidatedResponse response1 =
+        propagateDispatcher.sendLocalAroundCallbacks(
+            intercepts,
+            new Object[] {5, 3},
+            TEST_CLASS,
+            TEST_METHOD,
+            TEST_PARAM_TYPES,
+            TEST_PEER_UUID,
+            accessor);
+
+    // Then: Exception should propagate
+    assertTrue("Should throw exception with PROPAGATE_ALL", response1.shouldThrowException());
+    assertNotNull("Exception should not be null", response1.getExceptionToThrow());
+    assertEquals(
+        "Should have correct exception message",
+        "AROUND callback direct throw",
+        response1.getExceptionToThrow().getMessage());
+
+    // Verify first callback was invoked (it comes before the throwing one)
+    assertTrue(
+        "First callback BEFORE should be invoked",
+        TestCallbacks.callbackInvocationOrder.contains("aroundRecordAndProceed1_BEFORE"));
+
+    // Verify second callback was invoked (it's the one that throws)
+    assertTrue(
+        "Second callback should be invoked (it throws)",
+        TestCallbacks.callbackInvocationOrder.contains("aroundThrowDirect"));
+
+    // Verify third callback was NOT invoked (processing stopped after exception)
+    assertFalse(
+        "Third callback BEFORE should NOT be invoked",
+        TestCallbacks.callbackInvocationOrder.contains("aroundRecordAndProceed3_BEFORE"));
+
+    // Test 2: SWALLOW_ALL policy - exception should be swallowed
+    TestCallbacks.callbackInvocationOrder.clear();
+
+    LocalInterceptCallbackDispatcher swallowDispatcher =
+        createDispatcherWithPolicy(
+            ExceptionPropagationPolicy.SWALLOW_ALL, CheckedExceptionPolicy.ALLOW_ALL);
+
+    // When: sendLocalAroundCallbacks() called with SWALLOW_ALL policy
+    LocalAroundConsolidatedResponse response2 =
+        swallowDispatcher.sendLocalAroundCallbacks(
+            intercepts,
+            new Object[] {5, 3},
+            TEST_CLASS,
+            TEST_METHOD,
+            TEST_PARAM_TYPES,
+            TEST_PEER_UUID,
+            accessor);
+
+    // Then: Exception should be swallowed, proceed continues
+    // Note: With SWALLOW_ALL, the exception from aroundThrowDirect is swallowed
+    // and processing continues to the next callback
+    assertFalse("Should not throw exception with SWALLOW_ALL", response2.shouldThrowException());
+    assertTrue("Should proceed with SWALLOW_ALL", response2.shouldProceed());
   }
 
   /**
@@ -1036,18 +1170,27 @@ public class LocalInterceptCallbackDispatcherTest {
    * <p>When no AROUND callbacks are registered, the method should proceed normally.
    */
   @Test
-  @Ignore("Awaiting implementation in #536")
   public void testSendLocalAroundCallbacks_emptyChain_proceedsNormally() {
     // Given: Empty list of AROUND callbacks
-    // When: sendLocalAroundCallbacks() called
-    // Then: Returns proceed response with no pending callbacks
+    List<InterceptMessage> emptyIntercepts = new ArrayList<>();
+    LocalAroundAccessor accessor = (args) -> new AfterPhaseData(100, null, false);
 
-    // TODO(#536): Implement test logic
-    // - Call sendLocalAroundCallbacks with empty list
-    // - Verify shouldProceed() returns true
-    // - Verify shouldThrowException() returns false
-    // - Verify getPendingCallbacks() is empty
-    fail("Not yet implemented");
+    // When: sendLocalAroundCallbacks() called with empty list
+    LocalAroundConsolidatedResponse response =
+        dispatcher.sendLocalAroundCallbacks(
+            emptyIntercepts,
+            new Object[] {5, 3},
+            TEST_CLASS,
+            TEST_METHOD,
+            TEST_PARAM_TYPES,
+            TEST_PEER_UUID,
+            accessor);
+
+    // Then: Returns proceed response with no pending callbacks
+    assertTrue("Should proceed when no callbacks", response.shouldProceed());
+    assertFalse("Should not throw exception", response.shouldThrowException());
+    assertTrue("Pending callbacks should be empty", response.getPendingCallbacks().isEmpty());
+    assertTrue("Mutated args should be empty", response.getMutatedArgs().isEmpty());
   }
 
   /**
@@ -1060,18 +1203,41 @@ public class LocalInterceptCallbackDispatcherTest {
    * AFTER phase processed.
    */
   @Test
-  @Ignore("Awaiting implementation in #536")
   public void testSendLocalAroundAfterCallbacks_executesAfterCallbacks() {
-    // Given: Registered AROUND callbacks that called proceed()
-    // When: sendLocalAroundAfterCallbacks() called with pending callbacks
-    // Then: All after callbacks are executed and return value modifications are collected
+    // Given: AROUND callbacks that modify return value after proceed()
+    // The modifyReturnAfterProceed callback sets return value to 999 after proceed()
+    InterceptMessage intercept1 = createIntercept(InterceptType.AROUND, "modifyReturnAfterProceed");
+    List<InterceptMessage> intercepts = List.of(intercept1);
 
-    // TODO(#536): Implement test logic
-    // - Send AROUND callbacks via sendLocalAroundCallbacks
-    // - Collect pendingCallbacks from response
-    // - Call sendLocalAroundAfterCallbacks with pendingCallbacks
-    // - Verify return value modifications are applied correctly
-    fail("Not yet implemented");
+    LocalAroundAccessor accessor = (args) -> new AfterPhaseData(100, null, false);
+
+    // When: sendLocalAroundCallbacks() called to get pending callbacks
+    LocalAroundConsolidatedResponse aroundResponse =
+        dispatcher.sendLocalAroundCallbacks(
+            intercepts,
+            new Object[] {5, 3},
+            TEST_CLASS,
+            TEST_METHOD,
+            TEST_PARAM_TYPES,
+            TEST_PEER_UUID,
+            accessor);
+
+    // Verify we have pending callbacks
+    assertTrue("Should proceed", aroundResponse.shouldProceed());
+    assertEquals("Should have 1 pending callback", 1, aroundResponse.getPendingCallbacks().size());
+
+    // When: sendLocalAroundAfterCallbacks() called with pending callbacks
+    ConsolidatedCallbackResponse afterResponse =
+        dispatcher.sendLocalAroundAfterCallbacks(aroundResponse.getPendingCallbacks(), 100);
+
+    // Then: Return value modification from the callback is collected
+    assertTrue("Should proceed", afterResponse.shouldProceed());
+    assertFalse("Should not throw exception", afterResponse.shouldThrowException());
+    assertTrue("Should have return value override", afterResponse.hasReturnValueOverride());
+    assertEquals(
+        "Return value should be 999 (set by modifyReturnAfterProceed)",
+        999,
+        afterResponse.getOverriddenReturnValue());
   }
 
   /**
@@ -1082,20 +1248,87 @@ public class LocalInterceptCallbackDispatcherTest {
    *
    * <p>When an AFTER-phase callback sets an exception, it should be handled per policy. Other
    * callbacks should still run (unless policy causes early termination).
+   *
+   * <p>Note: This test demonstrates that exceptions set by AROUND callbacks during their execution
+   * are checked both in BEFORE phase (sendLocalAroundCallbacks) and AFTER phase
+   * (sendLocalAroundAfterCallbacks). With SWALLOW_ALL policy, the exception is swallowed in BEFORE
+   * phase so the callback gets added to pendingCallbacks, but the exception is still in the context
+   * and is checked again in AFTER phase.
    */
   @Test
-  @Ignore("Awaiting implementation in #536")
   public void testSendLocalAroundAfterCallbacks_handlesExceptionInCallback() {
-    // Given: AROUND callback that sets exception after proceed()
-    // When: sendLocalAroundAfterCallbacks() called
-    // Then: Exception handled appropriately per policy; may propagate or be swallowed
+    // With SWALLOW_ALL policy in BEFORE phase, exception is swallowed but callback is added
+    // to pendingCallbacks. Then in AFTER phase, the exception is checked again.
+    TestCallbacks.callbackInvocationOrder.clear();
 
-    // TODO(#536): Implement test logic
-    // - Create AROUND callback that sets exception via setExceptionToThrow after proceed
-    // - Test with different exception policies
-    // - Verify exception propagation matches policy
-    // - Verify other callbacks in the pending list are processed appropriately
-    fail("Not yet implemented");
+    LocalInterceptCallbackDispatcher swallowDispatcher =
+        createDispatcherWithPolicy(
+            ExceptionPropagationPolicy.SWALLOW_ALL, CheckedExceptionPolicy.ALLOW_ALL);
+
+    // Using aroundSetExceptionAfterProceed callback - it calls proceed() then sets exception
+    InterceptMessage intercept =
+        createIntercept(InterceptType.AROUND, "aroundSetExceptionAfterProceed");
+    List<InterceptMessage> intercepts = List.of(intercept);
+
+    LocalAroundAccessor accessor = (args) -> new AfterPhaseData(100, null, false);
+
+    // Get pending callbacks from AROUND phase - with SWALLOW_ALL, exception is swallowed
+    // and callback is added to pendingCallbacks
+    LocalAroundConsolidatedResponse aroundResponse =
+        swallowDispatcher.sendLocalAroundCallbacks(
+            intercepts,
+            new Object[] {5, 3},
+            TEST_CLASS,
+            TEST_METHOD,
+            TEST_PARAM_TYPES,
+            TEST_PEER_UUID,
+            accessor);
+
+    // Verify callback was added to pending (exception was swallowed)
+    assertTrue("Should proceed", aroundResponse.shouldProceed());
+    assertFalse("Should not throw exception (swallowed)", aroundResponse.shouldThrowException());
+    assertEquals("Should have 1 pending callback", 1, aroundResponse.getPendingCallbacks().size());
+
+    // When: sendLocalAroundAfterCallbacks() called with SWALLOW_ALL policy
+    ConsolidatedCallbackResponse afterResponse =
+        swallowDispatcher.sendLocalAroundAfterCallbacks(aroundResponse.getPendingCallbacks(), 100);
+
+    // Then: Exception should be swallowed in AFTER phase too
+    assertFalse(
+        "Should not throw exception with SWALLOW_ALL", afterResponse.shouldThrowException());
+    assertTrue("Should proceed", afterResponse.shouldProceed());
+
+    // Now test with PROPAGATE_ALL policy - demonstrates that exception in BEFORE phase
+    // causes callback to NOT be added to pendingCallbacks (different behavior)
+    TestCallbacks.callbackInvocationOrder.clear();
+
+    LocalInterceptCallbackDispatcher propagateDispatcher =
+        createDispatcherWithPolicy(
+            ExceptionPropagationPolicy.PROPAGATE_ALL, CheckedExceptionPolicy.ALLOW_ALL);
+
+    // Get pending callbacks from AROUND phase - with PROPAGATE_ALL, exception propagates
+    // and callback is NOT added to pendingCallbacks
+    LocalAroundConsolidatedResponse aroundResponse2 =
+        propagateDispatcher.sendLocalAroundCallbacks(
+            intercepts,
+            new Object[] {5, 3},
+            TEST_CLASS,
+            TEST_METHOD,
+            TEST_PARAM_TYPES,
+            TEST_PEER_UUID,
+            accessor);
+
+    // Verify exception propagated in BEFORE phase
+    assertTrue("Should throw exception with PROPAGATE_ALL", aroundResponse2.shouldThrowException());
+    assertEquals(
+        "Should have correct exception message",
+        "Exception set after proceed",
+        aroundResponse2.getExceptionToThrow().getMessage());
+
+    // pendingCallbacks should be empty because exception was propagated in BEFORE phase
+    assertTrue(
+        "Pending callbacks should be empty (exception propagated in BEFORE phase)",
+        aroundResponse2.getPendingCallbacks().isEmpty());
   }
 
   /**
@@ -1108,19 +1341,47 @@ public class LocalInterceptCallbackDispatcherTest {
    * execute correctly with the return value.
    */
   @Test
-  @Ignore("Awaiting implementation in #536")
   public void testSendLocalAroundAfterCallbacks_overload_executesWithReturnValue() {
     // Given: AROUND callback that modifies return value after proceed()
-    // When: Overloaded sendLocalAroundAfterCallbacks() called with declared exceptions
-    // Then: Callbacks receive return value and execute correctly
+    InterceptMessage intercept = createIntercept(InterceptType.AROUND, "modifyReturnAfterProceed");
+    List<InterceptMessage> intercepts = List.of(intercept);
 
-    // TODO(#536): Implement test logic
-    // - Create AROUND callback that modifies return value after proceed
-    // - Call sendLocalAroundAfterCallbacks with declaredExceptions parameter
-    // - Verify return value override is applied
-    // - Verify hasReturnValueOverride() returns true
-    // - Verify getOverriddenReturnValue() returns the modified value
-    fail("Not yet implemented");
+    LocalAroundAccessor accessor = (args) -> new AfterPhaseData(100, null, false);
+
+    // Get pending callbacks from AROUND phase
+    LocalAroundConsolidatedResponse aroundResponse =
+        dispatcher.sendLocalAroundCallbacks(
+            intercepts,
+            new Object[] {5, 3},
+            TEST_CLASS,
+            TEST_METHOD,
+            TEST_PARAM_TYPES,
+            TEST_PEER_UUID,
+            accessor);
+
+    // Verify we have pending callbacks
+    assertTrue("Should proceed", aroundResponse.shouldProceed());
+    assertEquals("Should have 1 pending callback", 1, aroundResponse.getPendingCallbacks().size());
+
+    // When: Overloaded sendLocalAroundAfterCallbacks() called with declared exceptions
+    String[] declaredExceptions = new String[] {"java.io.IOException"};
+    ConsolidatedCallbackResponse afterResponse =
+        dispatcher.sendLocalAroundAfterCallbacks(
+            aroundResponse.getPendingCallbacks(), 100, declaredExceptions);
+
+    // Then: Callbacks receive return value and execute correctly
+    assertTrue("Should proceed", afterResponse.shouldProceed());
+    assertFalse("Should not throw exception", afterResponse.shouldThrowException());
+
+    // Verify return value override is applied
+    assertTrue("Should have return value override", afterResponse.hasReturnValueOverride());
+
+    // Verify getOverriddenReturnValue() returns the modified value (999 from
+    // modifyReturnAfterProceed)
+    assertEquals(
+        "Return value should be 999 (set by modifyReturnAfterProceed)",
+        999,
+        afterResponse.getOverriddenReturnValue());
   }
 
   // ===== Test Callbacks Class =====
@@ -1240,6 +1501,57 @@ public class LocalInterceptCallbackDispatcherTest {
     public static InterceptCallbackResponse recordInvocation3(InterceptContext ctx) {
       lastContext = ctx;
       callbackInvocationOrder.add("recordInvocation3");
+      return new InterceptCallbackResponse();
+    }
+
+    /**
+     * AROUND callback that records invocation, calls proceed(), and records again after proceed.
+     */
+    public static InterceptCallbackResponse aroundRecordAndProceed1(InterceptContext ctx) {
+      lastContext = ctx;
+      callbackInvocationOrder.add("aroundRecordAndProceed1_BEFORE");
+      ctx.proceed();
+      callbackInvocationOrder.add("aroundRecordAndProceed1_AFTER");
+      return new InterceptCallbackResponse();
+    }
+
+    /**
+     * AROUND callback that records invocation, calls proceed(), and records again after proceed.
+     */
+    public static InterceptCallbackResponse aroundRecordAndProceed2(InterceptContext ctx) {
+      lastContext = ctx;
+      callbackInvocationOrder.add("aroundRecordAndProceed2_BEFORE");
+      ctx.proceed();
+      callbackInvocationOrder.add("aroundRecordAndProceed2_AFTER");
+      return new InterceptCallbackResponse();
+    }
+
+    /**
+     * AROUND callback that records invocation, calls proceed(), and records again after proceed.
+     */
+    public static InterceptCallbackResponse aroundRecordAndProceed3(InterceptContext ctx) {
+      lastContext = ctx;
+      callbackInvocationOrder.add("aroundRecordAndProceed3_BEFORE");
+      ctx.proceed();
+      callbackInvocationOrder.add("aroundRecordAndProceed3_AFTER");
+      return new InterceptCallbackResponse();
+    }
+
+    /** AROUND callback that throws exception directly (for testing exception handling). */
+    public static InterceptCallbackResponse aroundThrowDirect(InterceptContext ctx) {
+      lastContext = ctx;
+      callbackInvocationOrder.add("aroundThrowDirect");
+      throw new RuntimeException("AROUND callback direct throw");
+    }
+
+    /** AROUND callback that calls proceed() and then sets exception via setExceptionToThrow. */
+    public static InterceptCallbackResponse aroundSetExceptionAfterProceed(InterceptContext ctx) {
+      lastContext = ctx;
+      callbackInvocationOrder.add("aroundSetExceptionAfterProceed_BEFORE");
+      ctx.proceed();
+      callbackInvocationOrder.add("aroundSetExceptionAfterProceed_AFTER");
+      // Set exception after proceed - this should be propagated in AFTER phase
+      ctx.setExceptionToThrow(new RuntimeException("Exception set after proceed"));
       return new InterceptCallbackResponse();
     }
   }
