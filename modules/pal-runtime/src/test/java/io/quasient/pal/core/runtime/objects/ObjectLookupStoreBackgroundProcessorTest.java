@@ -15,12 +15,10 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.fail;
 
 import io.quasient.pal.common.objects.ObjectRef;
 import java.lang.reflect.Field;
 import java.util.concurrent.atomic.AtomicReference;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class ObjectLookupStoreBackgroundProcessorTest {
@@ -465,18 +463,34 @@ public class ObjectLookupStoreBackgroundProcessorTest {
    * <p>Given: Custom timeout value (e.g., 5000ms) When: Constructor called with custom timeout
    * Then: Processor created with specified timeout
    *
-   * <p>Note: This is a specification duplicate to confirm the acceptance criteria. The existing
-   * test constructor_customTimeout_isRespected already covers this scenario.
+   * <p>Note: This verifies the same behavior as constructor_customTimeout_isRespected, using the
+   * naming convention from acceptance criteria.
    */
   @Test
-  @Ignore("Awaiting implementation in #528 - covered by constructor_customTimeout_isRespected")
-  public void testConstructorWithCustomTimeout_createsProcessorWithTimeout() {
-    // Given: Custom timeout value (e.g., 5000ms)
-    // When: Constructor called with custom timeout
-    // Then: Processor created with specified timeout
+  public void testConstructorWithCustomTimeout_createsProcessorWithTimeout() throws Exception {
+    // Given: Custom timeout value
+    ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
+    ConcurrentHashMapObjectLookupStore store = null;
+    try {
+      store = ConcurrentHashMapObjectLookupStore.createUnmanaged(stats);
+      int customTimeout = 5000;
 
-    // TODO(#528): Implement test logic - verify cleanupTimeoutMs field via reflection
-    fail("Not yet implemented");
+      // When: Constructor called with custom timeout
+      ObjectLookupStoreBackgroundProcessor proc =
+          new ObjectLookupStoreBackgroundProcessor(store, stats, customTimeout);
+
+      // Then: Processor created with specified timeout
+      Field timeoutField =
+          ObjectLookupStoreBackgroundProcessor.class.getDeclaredField("cleanupTimeoutMs");
+      timeoutField.setAccessible(true);
+      int actualTimeout = (Integer) timeoutField.get(proc);
+
+      assertThat("Custom timeout should be set correctly", actualTimeout, is(customTimeout));
+    } finally {
+      if (store != null) {
+        store.close();
+      }
+    }
   }
 
   /**
@@ -485,19 +499,38 @@ public class ObjectLookupStoreBackgroundProcessorTest {
    * <p>Given: Processor not started When: start() called Then: Background thread is created and
    * running
    *
-   * <p>Note: This is a specification duplicate to confirm the acceptance criteria. The existing
-   * test start_launchesDaemonThread_andProcessesReferences already covers this scenario.
+   * <p>Note: This verifies the same behavior as start_launchesDaemonThread_andProcessesReferences,
+   * using the naming convention from acceptance criteria.
    */
   @Test
-  @Ignore(
-      "Awaiting implementation in #528 - covered by start_launchesDaemonThread_andProcessesReferences")
-  public void testStart_createsBackgroundThread() {
+  public void testStart_createsBackgroundThread() throws Exception {
     // Given: Processor not started
-    // When: start() called
-    // Then: Background thread is created and running
+    ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
+    ConcurrentHashMapObjectLookupStore store = null;
+    ObjectLookupStoreBackgroundProcessor proc = null;
+    try {
+      store = ConcurrentHashMapObjectLookupStore.createUnmanaged(stats);
+      proc = new ObjectLookupStoreBackgroundProcessor(store, stats, 10);
 
-    // TODO(#528): Implement test logic - verify worker thread is created and running
-    fail("Not yet implemented");
+      // When: start() called
+      proc.start();
+
+      // Then: Background thread is created and running
+      Field workerField = ObjectLookupStoreBackgroundProcessor.class.getDeclaredField("worker");
+      workerField.setAccessible(true);
+      Thread worker = (Thread) workerField.get(proc);
+
+      assertThat("Worker thread should be created", worker, notNullValue());
+      assertThat("Worker thread should be alive", worker.isAlive(), is(true));
+      assertThat("Worker thread should be a daemon", worker.isDaemon(), is(true));
+    } finally {
+      if (proc != null) {
+        proc.stop();
+      }
+      if (store != null) {
+        store.close();
+      }
+    }
   }
 
   /**
@@ -505,18 +538,46 @@ public class ObjectLookupStoreBackgroundProcessorTest {
    *
    * <p>Given: Running processor When: stop() called Then: Thread terminates gracefully
    *
-   * <p>Note: This is a specification duplicate to confirm the acceptance criteria. The existing
-   * test stop_terminatesBackgroundThread_gracefully already covers this scenario.
+   * <p>Note: This verifies the same behavior as stop_terminatesBackgroundThread_gracefully, using
+   * the naming convention from acceptance criteria.
    */
   @Test
-  @Ignore("Awaiting implementation in #528 - covered by stop_terminatesBackgroundThread_gracefully")
-  public void testStop_terminatesThread() {
+  public void testStop_terminatesThread() throws Exception {
     // Given: Running processor
-    // When: stop() called
-    // Then: Thread terminates gracefully
+    ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
+    ConcurrentHashMapObjectLookupStore store = null;
+    ObjectLookupStoreBackgroundProcessor proc = null;
+    try {
+      store = ConcurrentHashMapObjectLookupStore.createUnmanaged(stats);
+      proc = new ObjectLookupStoreBackgroundProcessor(store, stats, 10);
+      proc.start();
 
-    // TODO(#528): Implement test logic - verify thread termination
-    fail("Not yet implemented");
+      // Capture worker thread reference before stop
+      Field workerField = ObjectLookupStoreBackgroundProcessor.class.getDeclaredField("worker");
+      workerField.setAccessible(true);
+      Thread worker = (Thread) workerField.get(proc);
+      assertThat("Worker should be running before stop", worker.isAlive(), is(true));
+
+      // When: stop() called
+      long startTime = System.currentTimeMillis();
+      proc.stop();
+      long elapsed = System.currentTimeMillis() - startTime;
+
+      // Then: Thread terminates gracefully
+      assertThat("stop() should complete within 2 seconds", elapsed, lessThan(2000L));
+
+      Field runningField = ObjectLookupStoreBackgroundProcessor.class.getDeclaredField("running");
+      runningField.setAccessible(true);
+      boolean running = (Boolean) runningField.get(proc);
+      assertThat("running flag should be false after stop()", running, is(false));
+
+      Thread workerAfterStop = (Thread) workerField.get(proc);
+      assertThat("Worker thread should be null after stop()", workerAfterStop, nullValue());
+    } finally {
+      if (store != null) {
+        store.close();
+      }
+    }
   }
 
   /**
@@ -525,19 +586,45 @@ public class ObjectLookupStoreBackgroundProcessorTest {
    * <p>Given: Processor with items in queue When: runOnce() called Then: Queue is drained and items
    * processed
    *
-   * <p>Note: This is a specification duplicate to confirm the acceptance criteria. The existing
-   * test removeClearedEntries_removesQueuedReferences already covers this scenario.
+   * <p>Note: This verifies the same behavior as removeClearedEntries_removesQueuedReferences, using
+   * the naming convention from acceptance criteria.
    */
   @Test
-  @Ignore(
-      "Awaiting implementation in #528 - covered by removeClearedEntries_removesQueuedReferences")
   public void testRunOnce_drainsQueue() {
     // Given: Processor with items in queue
-    // When: runOnce() called
-    // Then: Queue is drained and items processed
+    ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
+    ConcurrentHashMapObjectLookupStore store = null;
+    try {
+      store = ConcurrentHashMapObjectLookupStore.createUnmanaged(stats);
+      ObjectLookupStoreBackgroundProcessor proc =
+          new ObjectLookupStoreBackgroundProcessor(store, stats, 60);
 
-    // TODO(#528): Implement test logic - verify queue drainage behavior
-    fail("Not yet implemented");
+      // Add objects to the store and simulate GC by clearing and enqueueing
+      int n = 5;
+      ObjectRef[] refs = new ObjectRef[n];
+      for (int i = 0; i < n; i++) {
+        refs[i] = store.storeObject(new byte[64 + i]);
+        IdentifiableObject wrapper = store.getObjects().get(refs[i]);
+        wrapper.clear();
+        wrapper.enqueue();
+      }
+
+      // When: runOnce() called
+      int cleared = proc.runOnce();
+
+      // Then: Queue is drained and items processed
+      assertThat("runOnce should return count of cleared entries", cleared, is(n));
+      assertThat(
+          "Stats should track cleared objects", stats.getTotalObjectsCleared().get(), is(5L));
+      for (ObjectRef ref : refs) {
+        assertThat(
+            "All refs should be removed from store", store.containsObjectRef(ref), is(false));
+      }
+    } finally {
+      if (store != null) {
+        store.close();
+      }
+    }
   }
 
   /**

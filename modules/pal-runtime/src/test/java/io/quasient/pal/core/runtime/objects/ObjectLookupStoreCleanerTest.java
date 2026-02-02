@@ -9,8 +9,12 @@
  */
 package io.quasient.pal.core.runtime.objects;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.lang.reflect.Field;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -32,33 +36,54 @@ public class ObjectLookupStoreCleanerTest {
    * <p>Given: Open cleaner with resources (ObjectLookupStoreBackgroundProcessor with running worker
    * thread) When: close() called Then: All resources released without exception; worker thread
    * terminated
-   *
-   * <p>Implementation notes:
-   *
-   * <ul>
-   *   <li>Create an ObjectLookupStoreBackgroundProcessor with a test store and stats
-   *   <li>Call start() to initialize the worker thread
-   *   <li>Verify the worker thread is running
-   *   <li>Call close() which should delegate to stop()
-   *   <li>Verify no exception is thrown
-   *   <li>Verify the worker thread is terminated
-   *   <li>Verify the running flag is false
-   * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #528")
-  public void testClose_closesResourcesSuccessfully() {
+  public void testClose_closesResourcesSuccessfully() throws Exception {
     // Given: Open cleaner with resources
-    // When: close() called
-    // Then: All resources released without exception
+    ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
+    ConcurrentHashMapObjectLookupStore store =
+        ConcurrentHashMapObjectLookupStore.createUnmanaged(stats);
+    ObjectLookupStoreCleaner cleaner = null;
+    Thread workerBefore = null;
 
-    // TODO(#528): Implement test logic
-    // 1. Create test store and stats
-    // 2. Create ObjectLookupStoreBackgroundProcessor
-    // 3. Call start() and verify worker thread is running
-    // 4. Call close()
-    // 5. Verify no exceptions and worker thread terminated
-    fail("Not yet implemented");
+    try {
+      cleaner = new ObjectLookupStoreBackgroundProcessor(store, stats, 10);
+
+      // Start the cleaner to initialize the worker thread
+      cleaner.start();
+
+      // Verify the worker thread is running
+      Field workerField = ObjectLookupStoreBackgroundProcessor.class.getDeclaredField("worker");
+      workerField.setAccessible(true);
+      workerBefore = (Thread) workerField.get(cleaner);
+
+      assertNotNull("Worker thread should be created after start()", workerBefore);
+      assertTrue("Worker thread should be alive before close()", workerBefore.isAlive());
+
+      // When: close() called
+      cleaner.close();
+
+      // Then: All resources released without exception
+
+      // Wait for the thread to terminate
+      workerBefore.join(3000);
+
+      // Verify the worker thread is terminated
+      assertFalse("Worker thread should no longer be alive after close()", workerBefore.isAlive());
+
+      // Verify the running flag is false
+      Field runningField = ObjectLookupStoreBackgroundProcessor.class.getDeclaredField("running");
+      runningField.setAccessible(true);
+      boolean running = (Boolean) runningField.get(cleaner);
+      assertFalse("running flag should be false after close()", running);
+
+      cleaner = null; // Prevent double-close in finally
+    } finally {
+      if (cleaner != null) {
+        cleaner.close();
+      }
+      store.close();
+    }
   }
 
   /**

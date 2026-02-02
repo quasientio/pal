@@ -25,7 +25,6 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /** Naming convention to use: MethodName_StateUnderTest_ExpectedBehavior. */
@@ -657,31 +656,42 @@ public class ConcurrentHashMapObjectLookupStoreTest {
    *
    * <p>Given: Custom capacity (5000) and load factor (0.5f) When: createAsyncManaged(int, float)
    * called Then: Store created with specified parameters; background cleaner running
-   *
-   * <p>Implementation notes:
-   *
-   * <ul>
-   *   <li>Call createAsyncManaged(5000, 0.5f)
-   *   <li>Verify store is not null
-   *   <li>Verify cleaner is attached and running (via reflection)
-   *   <li>Store some objects to verify functionality
-   *   <li>Close the store
-   * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #528")
-  public void testCreateAsyncManaged_createsWithCustomParams() {
+  public void testCreateAsyncManaged_createsWithCustomParams() throws Exception {
     // Given: Custom capacity and load factor
-    // When: createAsyncManaged(int, float) called
-    // Then: Store created with specified parameters
+    ConcurrentHashMapObjectLookupStore store = null;
+    try {
+      // When: createAsyncManaged(int, float) called
+      store = ConcurrentHashMapObjectLookupStore.createAsyncManaged(5000, 0.5f);
 
-    // TODO(#528): Implement test logic
-    // 1. Create store with custom params: createAsyncManaged(5000, 0.5f)
-    // 2. Verify store is not null
-    // 3. Verify cleaner is attached (via reflection)
-    // 4. Store objects to verify functionality
-    // 5. Close store in finally block
-    fail("Not yet implemented");
+      // Then: Store created with specified parameters
+      assertNotNull("Store should not be null", store);
+
+      // Verify cleaner is attached (via reflection)
+      Field cleanerField = ConcurrentHashMapObjectLookupStore.class.getDeclaredField("cleaner");
+      cleanerField.setAccessible(true);
+      ObjectLookupStoreCleaner cleaner = (ObjectLookupStoreCleaner) cleanerField.get(store);
+      assertNotNull("Cleaner should be attached", cleaner);
+
+      // Verify cleaner is running by checking worker thread
+      Field workerField = ObjectLookupStoreBackgroundProcessor.class.getDeclaredField("worker");
+      workerField.setAccessible(true);
+      Thread.sleep(50); // Allow thread to start
+      Thread worker = (Thread) workerField.get(cleaner);
+      assertNotNull("Worker thread should exist", worker);
+      assertTrue("Worker thread should be alive", worker.isAlive());
+
+      // Verify functionality by storing objects
+      Object obj = new Object();
+      ObjectRef ref = store.storeObject(obj);
+      assertNotNull("storeObject should return ObjectRef", ref);
+      assertEquals("lookupObject should retrieve stored object", obj, store.lookupObject(ref));
+    } finally {
+      if (store != null) {
+        store.close();
+      }
+    }
   }
 
   /**
@@ -690,18 +700,37 @@ public class ConcurrentHashMapObjectLookupStoreTest {
    * <p>Given: No parameters When: createAsyncManaged() called Then: Store created with default
    * parameters (DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR)
    *
-   * <p>Note: This is a specification duplicate. The existing test
-   * createAsyncManaged_startsBackgroundCleaner already covers this scenario.
+   * <p>Note: This verifies the same behavior as createAsyncManaged_startsBackgroundCleaner, using
+   * the naming convention from acceptance criteria.
    */
   @Test
-  @Ignore("Awaiting implementation in #528 - covered by createAsyncManaged_startsBackgroundCleaner")
-  public void testCreateAsyncManaged_createsWithDefaults() {
+  public void testCreateAsyncManaged_createsWithDefaults() throws Exception {
     // Given: No parameters
-    // When: createAsyncManaged() called
-    // Then: Store created with default parameters
+    ConcurrentHashMapObjectLookupStore store = null;
+    try {
+      // When: createAsyncManaged() called
+      store = ConcurrentHashMapObjectLookupStore.createAsyncManaged();
 
-    // TODO(#528): Implement test logic
-    fail("Not yet implemented");
+      // Then: Store created with default parameters
+      assertNotNull("Store should not be null", store);
+
+      // Verify cleaner is attached and running
+      Field cleanerField = ConcurrentHashMapObjectLookupStore.class.getDeclaredField("cleaner");
+      cleanerField.setAccessible(true);
+      ObjectLookupStoreCleaner cleaner = (ObjectLookupStoreCleaner) cleanerField.get(store);
+      assertNotNull("Cleaner should be attached", cleaner);
+      assertTrue(
+          "Cleaner should be ObjectLookupStoreBackgroundProcessor",
+          cleaner instanceof ObjectLookupStoreBackgroundProcessor);
+
+      // Verify store is functional
+      assertTrue("Store should be empty initially", store.isEmpty());
+      assertEquals("Store size should be 0", 0L, store.size());
+    } finally {
+      if (store != null) {
+        store.close();
+      }
+    }
   }
 
   /**
@@ -709,32 +738,45 @@ public class ConcurrentHashMapObjectLookupStoreTest {
    *
    * <p>Given: Valid ObjectLookupStoreStats parameter When: createUnmanaged() called Then: Unmanaged
    * store created (no background processing); cleaner field is null
-   *
-   * <p>Implementation notes:
-   *
-   * <ul>
-   *   <li>Create stats object
-   *   <li>Call createUnmanaged(stats)
-   *   <li>Verify store is not null
-   *   <li>Verify cleaner is null (via reflection)
-   *   <li>Verify store uses the provided stats object
-   *   <li>Verify store functions correctly without background cleaner
-   * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #528")
-  public void testCreateUnmanaged_createsUnmanagedStore() {
+  public void testCreateUnmanaged_createsUnmanagedStore() throws Exception {
     // Given: Valid parameters
-    // When: createUnmanaged() called
-    // Then: Unmanaged store created (no background processing)
+    ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
 
-    // TODO(#528): Implement test logic
-    // 1. Create ObjectLookupStoreStats
-    // 2. Call createUnmanaged(stats)
-    // 3. Verify cleaner is null via reflection
-    // 4. Verify store uses provided stats
-    // 5. Verify manual drainRefQueue works
-    fail("Not yet implemented");
+    // When: createUnmanaged() called
+    ConcurrentHashMapObjectLookupStore store =
+        ConcurrentHashMapObjectLookupStore.createUnmanaged(stats);
+
+    try {
+      // Then: Unmanaged store created (no background processing)
+      assertNotNull("Store should not be null", store);
+
+      // Verify cleaner is null via reflection
+      Field cleanerField = ConcurrentHashMapObjectLookupStore.class.getDeclaredField("cleaner");
+      cleanerField.setAccessible(true);
+      ObjectLookupStoreCleaner cleaner = (ObjectLookupStoreCleaner) cleanerField.get(store);
+      assertNull("Cleaner should be null for unmanaged store", cleaner);
+
+      // Verify store uses provided stats
+      assertEquals("Store should use provided stats", stats, store.getStats());
+
+      // Verify store functions correctly without background cleaner
+      Object obj = new Object();
+      ObjectRef ref = store.storeObject(obj);
+      assertNotNull("storeObject should return ObjectRef", ref);
+      assertEquals("lookupObject should retrieve stored object", obj, store.lookupObject(ref));
+
+      // Verify manual drainRefQueue works
+      IdentifiableObject wrapper = store.getObjects().get(ref);
+      wrapper.clear();
+      wrapper.enqueue();
+      int cleared = store.drainRefQueue();
+      assertEquals("drainRefQueue should clear 1 entry", 1, cleared);
+      assertFalse("Ref should be removed after drainRefQueue", store.containsObjectRef(ref));
+    } finally {
+      store.close();
+    }
   }
 
   /**
@@ -742,23 +784,50 @@ public class ConcurrentHashMapObjectLookupStoreTest {
    *
    * <p>Given: Store without cleaner (created via createUnmanaged) When: attachCleaner() called with
    * valid cleaner Then: Cleaner attached and active
-   *
-   * <p>Note: This is partially covered by existing tests that use attachCleaner() implicitly.
    */
   @Test
-  @Ignore("Awaiting implementation in #528")
-  public void testAttachCleaner_attachesSuccessfully() {
+  public void testAttachCleaner_attachesSuccessfully() throws Exception {
     // Given: Store without cleaner
-    // When: attachCleaner() called
-    // Then: Cleaner attached and active
+    ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
+    ConcurrentHashMapObjectLookupStore store =
+        ConcurrentHashMapObjectLookupStore.createUnmanaged(stats);
+    ObjectLookupStoreCleaner cleaner = null;
 
-    // TODO(#528): Implement test logic
-    // 1. Create unmanaged store
-    // 2. Create background processor cleaner
-    // 3. Call attachCleaner()
-    // 4. Verify cleaner is attached via reflection
-    // 5. Verify cleaner can be started and processes refs
-    fail("Not yet implemented");
+    try {
+      // Verify cleaner is initially null
+      Field cleanerField = ConcurrentHashMapObjectLookupStore.class.getDeclaredField("cleaner");
+      cleanerField.setAccessible(true);
+      assertNull("Cleaner should be null initially", cleanerField.get(store));
+
+      // When: attachCleaner() called with valid cleaner
+      cleaner = new ObjectLookupStoreBackgroundProcessor(store, stats, 10);
+      store.attachCleaner(cleaner);
+
+      // Then: Cleaner attached and active
+      assertEquals("Cleaner should be attached", cleaner, cleanerField.get(store));
+
+      // Verify cleaner can be started and processes refs
+      cleaner.start();
+
+      // Add object, simulate GC, and verify cleanup
+      Object obj = new byte[256];
+      ObjectRef ref = store.storeObject(obj);
+      IdentifiableObject wrapper = store.getObjects().get(ref);
+      wrapper.clear();
+      wrapper.enqueue();
+
+      // Wait for background cleanup
+      long deadline = System.currentTimeMillis() + 500;
+      while (store.containsObjectRef(ref) && System.currentTimeMillis() < deadline) {
+        Thread.sleep(10);
+      }
+      assertFalse("Background cleaner should have processed the ref", store.containsObjectRef(ref));
+    } finally {
+      if (cleaner != null) {
+        cleaner.stop();
+      }
+      store.close();
+    }
   }
 
   /**
@@ -766,47 +835,51 @@ public class ConcurrentHashMapObjectLookupStoreTest {
    *
    * <p>Given: Store with multiple objects When: clear() called Then: Store is empty
    *
-   * <p>Note: This is a specification duplicate. The existing test clear_objectsStored_sizeIsZero
-   * already covers this scenario.
+   * <p>Note: This verifies the same behavior as clear_objectsStored_sizeIsZero, using the naming
+   * convention from acceptance criteria.
    */
   @Test
-  @Ignore("Awaiting implementation in #528 - covered by clear_objectsStored_sizeIsZero")
   public void testClear_removesAllObjects() {
     // Given: Store with multiple objects
-    // When: clear() called
-    // Then: Store is empty
+    ConcurrentHashMapObjectLookupStore store =
+        ConcurrentHashMapObjectLookupStore.createAsyncManaged();
+    try {
+      store.storeObject(new Object());
+      store.storeObject(new Object());
+      store.storeObject(new Object());
+      assertEquals("Store should have 3 objects", 3L, store.size());
 
-    // TODO(#528): Implement test logic
-    fail("Not yet implemented");
+      // When: clear() called
+      store.clear();
+
+      // Then: Store is empty
+      assertEquals("Store should be empty after clear()", 0L, store.size());
+      assertTrue("isEmpty() should return true after clear()", store.isEmpty());
+    } finally {
+      store.close();
+    }
   }
 
   /**
    * Verifies that getRefQueue() returns a non-null ReferenceQueue.
    *
    * <p>Given: Store instance When: getRefQueue() called Then: Non-null ReferenceQueue returned
-   *
-   * <p>Implementation notes:
-   *
-   * <ul>
-   *   <li>Create any store (async, sync, or unmanaged)
-   *   <li>Call getRefQueue()
-   *   <li>Verify result is not null
-   *   <li>Verify result is a ReferenceQueue instance
-   * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #528")
   public void testGetRefQueue_returnsQueue() {
     // Given: Store instance
-    // When: getRefQueue() called
-    // Then: Non-null ReferenceQueue returned
+    ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
+    ConcurrentHashMapObjectLookupStore store =
+        ConcurrentHashMapObjectLookupStore.createUnmanaged(stats);
+    try {
+      // When: getRefQueue() called
+      java.lang.ref.ReferenceQueue<Object> refQueue = store.getRefQueue();
 
-    // TODO(#528): Implement test logic
-    // 1. Create store
-    // 2. Call getRefQueue()
-    // 3. Assert not null
-    // 4. Assert instanceof ReferenceQueue
-    fail("Not yet implemented");
+      // Then: Non-null ReferenceQueue returned
+      assertNotNull("getRefQueue() should return non-null ReferenceQueue", refQueue);
+    } finally {
+      store.close();
+    }
   }
 
   /**
@@ -814,18 +887,24 @@ public class ConcurrentHashMapObjectLookupStoreTest {
    *
    * <p>Given: Empty store When: isEmpty() called Then: Returns true
    *
-   * <p>Note: This is a specification duplicate. The existing test isEmpty_noObjectsStored_true
-   * already covers this scenario.
+   * <p>Note: This verifies the same behavior as isEmpty_noObjectsStored_true, using the naming
+   * convention from acceptance criteria.
    */
   @Test
-  @Ignore("Awaiting implementation in #528 - covered by isEmpty_noObjectsStored_true")
   public void testIsEmpty_returnsTrueWhenEmpty() {
     // Given: Empty store
-    // When: isEmpty() called
-    // Then: Returns true
+    ConcurrentHashMapObjectLookupStore store =
+        ConcurrentHashMapObjectLookupStore.createAsyncManaged();
+    try {
+      // When: isEmpty() called
+      boolean result = store.isEmpty();
 
-    // TODO(#528): Implement test logic
-    fail("Not yet implemented");
+      // Then: Returns true
+      assertTrue("isEmpty() should return true for empty store", result);
+      assertEquals("size() should be 0", 0L, store.size());
+    } finally {
+      store.close();
+    }
   }
 
   /**
@@ -833,48 +912,56 @@ public class ConcurrentHashMapObjectLookupStoreTest {
    *
    * <p>Given: Store with objects When: isEmpty() called Then: Returns false
    *
-   * <p>Note: This is a specification duplicate. The existing test isEmpty_someObjectsStored_false
-   * already covers this scenario.
+   * <p>Note: This verifies the same behavior as isEmpty_someObjectsStored_false, using the naming
+   * convention from acceptance criteria.
    */
   @Test
-  @Ignore("Awaiting implementation in #528 - covered by isEmpty_someObjectsStored_false")
   public void testIsEmpty_returnsFalseWhenNotEmpty() {
     // Given: Store with objects
-    // When: isEmpty() called
-    // Then: Returns false
+    ConcurrentHashMapObjectLookupStore store =
+        ConcurrentHashMapObjectLookupStore.createAsyncManaged();
+    try {
+      store.storeObject(new Object());
 
-    // TODO(#528): Implement test logic
-    fail("Not yet implemented");
+      // When: isEmpty() called
+      boolean result = store.isEmpty();
+
+      // Then: Returns false
+      assertFalse("isEmpty() should return false for non-empty store", result);
+      assertEquals("size() should be 1", 1L, store.size());
+    } finally {
+      store.close();
+    }
   }
 
   /**
    * Verifies that getStats() returns a non-null stats object.
    *
    * <p>Given: Store instance When: getStats() called Then: Non-null stats object returned
-   *
-   * <p>Implementation notes:
-   *
-   * <ul>
-   *   <li>Create store (any mode)
-   *   <li>Call getStats()
-   *   <li>Verify result is not null
-   *   <li>Verify result is ObjectLookupStoreStats instance
-   *   <li>Optionally verify counters are initialized to 0
-   * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #528")
   public void testGetStats_returnsStats() {
     // Given: Store instance
-    // When: getStats() called
-    // Then: Non-null stats object returned
+    ConcurrentHashMapObjectLookupStore store =
+        ConcurrentHashMapObjectLookupStore.createAsyncManaged();
+    try {
+      // When: getStats() called
+      ObjectLookupStoreStats stats = store.getStats();
 
-    // TODO(#528): Implement test logic
-    // 1. Create store
-    // 2. Call getStats()
-    // 3. Assert not null
-    // 4. Verify initial counter values are 0
-    fail("Not yet implemented");
+      // Then: Non-null stats object returned
+      assertNotNull("getStats() should return non-null stats object", stats);
+
+      // Verify initial counter values are 0
+      assertEquals(
+          "totalObjectsCleared should be 0 initially", 0L, stats.getTotalObjectsCleared().get());
+      assertEquals(
+          "successfulStoreLookups should be 0 initially",
+          0L,
+          stats.getSuccessfulStoreLookups().get());
+      assertEquals("maxSize should be 0 initially", 0L, stats.getMaxSize().get());
+    } finally {
+      store.close();
+    }
   }
 
   /**
@@ -883,18 +970,50 @@ public class ConcurrentHashMapObjectLookupStoreTest {
    * <p>Given: Store with attached cleaner and processor When: close() called Then: Both cleaner and
    * processor stopped; store cleared
    *
-   * <p>Note: This is a specification duplicate. The existing test close_stopsBackgroundProcessor
-   * already covers this scenario.
+   * <p>Note: This verifies the same behavior as close_stopsBackgroundProcessor, using the naming
+   * convention from acceptance criteria.
    */
   @Test
-  @Ignore("Awaiting implementation in #528 - covered by close_stopsBackgroundProcessor")
-  public void testClose_closesCleanerAndProcessor() {
+  public void testClose_closesCleanerAndProcessor() throws Exception {
     // Given: Store with attached cleaner and processor
-    // When: close() called
-    // Then: Both cleaner and processor stopped
+    ConcurrentHashMapObjectLookupStore store =
+        ConcurrentHashMapObjectLookupStore.createAsyncManaged();
+    Thread workerBefore = null;
 
-    // TODO(#528): Implement test logic
-    fail("Not yet implemented");
+    try {
+      // Store some objects
+      store.storeObject(new Object());
+      store.storeObject(new Object());
+      assertEquals("Store should have 2 objects", 2L, store.size());
+
+      // Get reference to worker thread before close
+      Field cleanerField = ConcurrentHashMapObjectLookupStore.class.getDeclaredField("cleaner");
+      cleanerField.setAccessible(true);
+      ObjectLookupStoreCleaner cleaner = (ObjectLookupStoreCleaner) cleanerField.get(store);
+
+      Field workerField = ObjectLookupStoreBackgroundProcessor.class.getDeclaredField("worker");
+      workerField.setAccessible(true);
+      Thread.sleep(50); // Allow thread to start
+      workerBefore = (Thread) workerField.get(cleaner);
+      assertNotNull("Worker should exist before close", workerBefore);
+      assertTrue("Worker should be alive before close", workerBefore.isAlive());
+
+      // When: close() called
+      store.close();
+
+      // Then: Both cleaner and processor stopped; store cleared
+      workerBefore.join(3000);
+      assertFalse("Worker should be stopped after close", workerBefore.isAlive());
+
+      // Verify store is cleared
+      assertEquals("Store should be empty after close", 0L, store.size());
+
+      store = null; // Prevent double-close in finally
+    } finally {
+      if (store != null) {
+        store.close();
+      }
+    }
   }
 
   // </editor-fold>
