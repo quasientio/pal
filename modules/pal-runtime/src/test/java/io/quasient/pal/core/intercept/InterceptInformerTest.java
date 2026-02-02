@@ -11,6 +11,7 @@ package io.quasient.pal.core.intercept;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -36,6 +37,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
@@ -662,5 +664,54 @@ public class InterceptInformerTest extends ZmqEnabledTest {
     assertThat(sentMessage.clazz, is("com.example.Target"));
     assertThat(sentMessage.callbackClass, is("org.callback.Handler"));
     assertThat(sentMessage.callbackMethod, is("onAfter"));
+  }
+
+  // ========== Test Specifications for Issue #533 ==========
+  // These test stubs serve as executable acceptance criteria for issue #534
+
+  /**
+   * Specification: Close thread-local socket successfully.
+   *
+   * <ul>
+   *   <li>Given: InterceptInformer with thread-local socket
+   *   <li>When: closeThreadLocalSocket called
+   *   <li>Then: Socket is closed; resources released
+   * </ul>
+   *
+   * <p>Acceptance Criteria:
+   * [TEST:InterceptInformerTest.testCloseThreadLocalSocket_closesSocketSuccessfully]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #534")
+  public void testCloseThreadLocalSocket_closesSocketSuccessfully() {
+    // Given: InterceptInformer with thread-local socket
+    // When: closeThreadLocalSocket called
+    // Then: Socket is closed; resources released
+
+    // TODO(#534): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Specification: Close thread-local socket when no socket exists.
+   *
+   * <ul>
+   *   <li>Given: InterceptInformer without thread-local socket
+   *   <li>When: closeThreadLocalSocket called
+   *   <li>Then: No error; method completes normally
+   * </ul>
+   *
+   * <p>Acceptance Criteria:
+   * [TEST:InterceptInformerTest.testCloseThreadLocalSocket_noSocket_handledGracefully]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #534")
+  public void testCloseThreadLocalSocket_noSocket_handledGracefully() {
+    // Given: InterceptInformer without thread-local socket
+    // When: closeThreadLocalSocket called
+    // Then: No error; method completes normally
+
+    // TODO(#534): Implement test logic
+    fail("Not yet implemented");
   }
 }

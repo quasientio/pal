@@ -20,6 +20,7 @@ import io.quasient.pal.common.lang.intercept.InterceptCallbackResponse;
 import io.quasient.pal.common.lang.intercept.InterceptContext;
 import java.util.Locale;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -425,6 +426,171 @@ public class CallbackResolverTest {
             "staticCallback");
 
     assertEquals(registeredCallback, resolved);
+  }
+
+  // ===== Test Specifications for Issue #533 =====
+  // These test stubs serve as executable acceptance criteria for issue #534
+
+  /**
+   * Specification: Register callback test.
+   *
+   * <ul>
+   *   <li>Given: CallbackResolver instance
+   *   <li>When: registerCallback called with valid callback
+   *   <li>Then: Callback is registered; isRegistered returns true
+   * </ul>
+   *
+   * <p>Acceptance Criteria: [TEST:CallbackResolverTest.testRegisterCallback_registersSuccessfully]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #534")
+  public void testRegisterCallback_registersSuccessfully() {
+    // Given: CallbackResolver instance
+    // When: registerCallback called with valid callback
+    // Then: Callback is registered; isRegistered returns true
+
+    // TODO(#534): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Specification: Duplicate callback handling test.
+   *
+   * <ul>
+   *   <li>Given: Already registered callback
+   *   <li>When: registerCallback called again with same callback
+   *   <li>Then: No error; callback still registered once
+   * </ul>
+   *
+   * <p>Note: Based on current implementation, duplicate registration throws IllegalStateException.
+   * This test should verify the actual behavior and document expectations.
+   *
+   * <p>Acceptance Criteria:
+   * [TEST:CallbackResolverTest.testRegisterCallback_duplicateCallback_handledGracefully]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #534")
+  public void testRegisterCallback_duplicateCallback_handledGracefully() {
+    // Given: Already registered callback
+    // When: registerCallback called again with same callback
+    // Then: No error; callback still registered once
+    //       (Note: Current implementation throws IllegalStateException - verify expected behavior)
+
+    // TODO(#534): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Specification: Unregister callback test.
+   *
+   * <ul>
+   *   <li>Given: Registered callback
+   *   <li>When: unregisterCallback called
+   *   <li>Then: Callback is unregistered; isRegistered returns false
+   * </ul>
+   *
+   * <p>Acceptance Criteria:
+   * [TEST:CallbackResolverTest.testUnregisterCallback_unregistersSuccessfully]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #534")
+  public void testUnregisterCallback_unregistersSuccessfully() {
+    // Given: Registered callback
+    // When: unregisterCallback called
+    // Then: Callback is unregistered; isRegistered returns false
+
+    // TODO(#534): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Specification: Unregister nonexistent callback test.
+   *
+   * <ul>
+   *   <li>Given: Callback not registered
+   *   <li>When: unregisterCallback called
+   *   <li>Then: No error; no change to state
+   * </ul>
+   *
+   * <p>Acceptance Criteria:
+   * [TEST:CallbackResolverTest.testUnregisterCallback_nonexistentCallback_handledGracefully]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #534")
+  public void testUnregisterCallback_nonexistentCallback_handledGracefully() {
+    // Given: Callback not registered
+    // When: unregisterCallback called
+    // Then: No error; no change to state
+
+    // TODO(#534): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Specification: isRegistered returns true for registered callback.
+   *
+   * <ul>
+   *   <li>Given: Registered callback
+   *   <li>When: isRegistered called
+   *   <li>Then: Returns true
+   * </ul>
+   *
+   * <p>Acceptance Criteria: [TEST:CallbackResolverTest.testIsRegistered_returnsTrueForRegistered]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #534")
+  public void testIsRegistered_returnsTrueForRegistered() {
+    // Given: Registered callback
+    // When: isRegistered called
+    // Then: Returns true
+
+    // TODO(#534): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Specification: isRegistered returns false for unregistered callback.
+   *
+   * <ul>
+   *   <li>Given: Unregistered callback
+   *   <li>When: isRegistered called
+   *   <li>Then: Returns false
+   * </ul>
+   *
+   * <p>Acceptance Criteria:
+   * [TEST:CallbackResolverTest.testIsRegistered_returnsFalseForUnregistered]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #534")
+  public void testIsRegistered_returnsFalseForUnregistered() {
+    // Given: Unregistered callback
+    // When: isRegistered called
+    // Then: Returns false
+
+    // TODO(#534): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Specification: getRegisteredCount returns correct count.
+   *
+   * <ul>
+   *   <li>Given: Multiple registered callbacks
+   *   <li>When: getRegisteredCount called
+   *   <li>Then: Returns accurate count
+   * </ul>
+   *
+   * <p>Acceptance Criteria: [TEST:CallbackResolverTest.testGetRegisteredCount_returnsCorrectCount]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #534")
+  public void testGetRegisteredCount_returnsCorrectCount() {
+    // Given: Multiple registered callbacks
+    // When: getRegisteredCount called
+    // Then: Returns accurate count
+
+    // TODO(#534): Implement test logic
+    fail("Not yet implemented");
   }
 
   // ===== Test Callback Class =====
