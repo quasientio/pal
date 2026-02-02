@@ -20,7 +20,6 @@ import io.quasient.pal.common.lang.intercept.InterceptCallbackResponse;
 import io.quasient.pal.common.lang.intercept.InterceptContext;
 import java.util.Locale;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -443,14 +442,17 @@ public class CallbackResolverTest {
    * <p>Acceptance Criteria: [TEST:CallbackResolverTest.testRegisterCallback_registersSuccessfully]
    */
   @Test
-  @Ignore("Awaiting implementation in #534")
   public void testRegisterCallback_registersSuccessfully() {
-    // Given: CallbackResolver instance
-    // When: registerCallback called with valid callback
-    // Then: Callback is registered; isRegistered returns true
+    // Given: CallbackResolver instance (created in setUp)
+    String callbackId = "test-callback-success";
+    InterceptCallback callback = (ctx) -> new InterceptCallbackResponse();
 
-    // TODO(#534): Implement test logic
-    fail("Not yet implemented");
+    // When: registerCallback called with valid callback
+    resolver.registerCallback(callbackId, callback);
+
+    // Then: Callback is registered; isRegistered returns true
+    assertTrue("Callback should be registered", resolver.isRegistered(callbackId));
+    assertEquals("Registered count should be 1", 1, resolver.getRegisteredCount());
   }
 
   /**
@@ -458,26 +460,41 @@ public class CallbackResolverTest {
    *
    * <ul>
    *   <li>Given: Already registered callback
-   *   <li>When: registerCallback called again with same callback
-   *   <li>Then: No error; callback still registered once
+   *   <li>When: registerCallback called again with same ID
+   *   <li>Then: IllegalStateException is thrown; original callback remains registered
    * </ul>
    *
-   * <p>Note: Based on current implementation, duplicate registration throws IllegalStateException.
-   * This test should verify the actual behavior and document expectations.
+   * <p>Note: The implementation throws IllegalStateException for duplicate IDs. This test verifies
+   * that the error is handled gracefully by catching the exception and ensuring the original
+   * callback remains registered.
    *
    * <p>Acceptance Criteria:
    * [TEST:CallbackResolverTest.testRegisterCallback_duplicateCallback_handledGracefully]
    */
   @Test
-  @Ignore("Awaiting implementation in #534")
   public void testRegisterCallback_duplicateCallback_handledGracefully() {
     // Given: Already registered callback
-    // When: registerCallback called again with same callback
-    // Then: No error; callback still registered once
-    //       (Note: Current implementation throws IllegalStateException - verify expected behavior)
+    String callbackId = "duplicate-callback-test";
+    InterceptCallback originalCallback =
+        (ctx) -> new InterceptCallbackResponse().setShouldProceed(true);
+    resolver.registerCallback(callbackId, originalCallback);
+    int countBefore = resolver.getRegisteredCount();
 
-    // TODO(#534): Implement test logic
-    fail("Not yet implemented");
+    // When: registerCallback called again with same ID
+    try {
+      InterceptCallback duplicateCallback =
+          (ctx) -> new InterceptCallbackResponse().setShouldProceed(false);
+      resolver.registerCallback(callbackId, duplicateCallback);
+      fail("Expected IllegalStateException for duplicate callback ID");
+    } catch (IllegalStateException e) {
+      // Then: Exception is thrown (handled gracefully)
+      assertTrue("Error message should contain callback ID", e.getMessage().contains(callbackId));
+    }
+
+    // Verify: Original callback remains registered, count unchanged
+    assertTrue("Original callback should still be registered", resolver.isRegistered(callbackId));
+    assertEquals(
+        "Registered count should be unchanged", countBefore, resolver.getRegisteredCount());
   }
 
   /**
@@ -493,14 +510,22 @@ public class CallbackResolverTest {
    * [TEST:CallbackResolverTest.testUnregisterCallback_unregistersSuccessfully]
    */
   @Test
-  @Ignore("Awaiting implementation in #534")
   public void testUnregisterCallback_unregistersSuccessfully() {
     // Given: Registered callback
-    // When: unregisterCallback called
-    // Then: Callback is unregistered; isRegistered returns false
+    String callbackId = "unregister-test-callback";
+    InterceptCallback callback = (ctx) -> new InterceptCallbackResponse();
+    resolver.registerCallback(callbackId, callback);
+    assertTrue(
+        "Callback should be registered before unregister", resolver.isRegistered(callbackId));
+    assertEquals("Count should be 1 before unregister", 1, resolver.getRegisteredCount());
 
-    // TODO(#534): Implement test logic
-    fail("Not yet implemented");
+    // When: unregisterCallback called
+    boolean result = resolver.unregisterCallback(callbackId);
+
+    // Then: Callback is unregistered; isRegistered returns false
+    assertTrue("unregisterCallback should return true", result);
+    assertFalse("Callback should no longer be registered", resolver.isRegistered(callbackId));
+    assertEquals("Registered count should be 0", 0, resolver.getRegisteredCount());
   }
 
   /**
@@ -509,21 +534,26 @@ public class CallbackResolverTest {
    * <ul>
    *   <li>Given: Callback not registered
    *   <li>When: unregisterCallback called
-   *   <li>Then: No error; no change to state
+   *   <li>Then: No error; no change to state; returns false
    * </ul>
    *
    * <p>Acceptance Criteria:
    * [TEST:CallbackResolverTest.testUnregisterCallback_nonexistentCallback_handledGracefully]
    */
   @Test
-  @Ignore("Awaiting implementation in #534")
   public void testUnregisterCallback_nonexistentCallback_handledGracefully() {
     // Given: Callback not registered
-    // When: unregisterCallback called
-    // Then: No error; no change to state
+    String callbackId = "nonexistent-callback";
+    assertFalse("Callback should not be registered", resolver.isRegistered(callbackId));
+    int countBefore = resolver.getRegisteredCount();
 
-    // TODO(#534): Implement test logic
-    fail("Not yet implemented");
+    // When: unregisterCallback called
+    boolean result = resolver.unregisterCallback(callbackId);
+
+    // Then: No error; no change to state; returns false
+    assertFalse("unregisterCallback should return false for nonexistent callback", result);
+    assertEquals(
+        "Registered count should be unchanged", countBefore, resolver.getRegisteredCount());
   }
 
   /**
@@ -538,21 +568,24 @@ public class CallbackResolverTest {
    * <p>Acceptance Criteria: [TEST:CallbackResolverTest.testIsRegistered_returnsTrueForRegistered]
    */
   @Test
-  @Ignore("Awaiting implementation in #534")
   public void testIsRegistered_returnsTrueForRegistered() {
     // Given: Registered callback
-    // When: isRegistered called
-    // Then: Returns true
+    String callbackId = "is-registered-test-callback";
+    InterceptCallback callback = (ctx) -> new InterceptCallbackResponse();
+    resolver.registerCallback(callbackId, callback);
 
-    // TODO(#534): Implement test logic
-    fail("Not yet implemented");
+    // When: isRegistered called
+    boolean result = resolver.isRegistered(callbackId);
+
+    // Then: Returns true
+    assertTrue("isRegistered should return true for registered callback", result);
   }
 
   /**
    * Specification: isRegistered returns false for unregistered callback.
    *
    * <ul>
-   *   <li>Given: Unregistered callback
+   *   <li>Given: Unregistered callback (never registered)
    *   <li>When: isRegistered called
    *   <li>Then: Returns false
    * </ul>
@@ -561,14 +594,15 @@ public class CallbackResolverTest {
    * [TEST:CallbackResolverTest.testIsRegistered_returnsFalseForUnregistered]
    */
   @Test
-  @Ignore("Awaiting implementation in #534")
   public void testIsRegistered_returnsFalseForUnregistered() {
-    // Given: Unregistered callback
-    // When: isRegistered called
-    // Then: Returns false
+    // Given: Unregistered callback (never registered)
+    String callbackId = "never-registered-callback";
 
-    // TODO(#534): Implement test logic
-    fail("Not yet implemented");
+    // When: isRegistered called
+    boolean result = resolver.isRegistered(callbackId);
+
+    // Then: Returns false
+    assertFalse("isRegistered should return false for unregistered callback", result);
   }
 
   /**
@@ -583,14 +617,24 @@ public class CallbackResolverTest {
    * <p>Acceptance Criteria: [TEST:CallbackResolverTest.testGetRegisteredCount_returnsCorrectCount]
    */
   @Test
-  @Ignore("Awaiting implementation in #534")
   public void testGetRegisteredCount_returnsCorrectCount() {
     // Given: Multiple registered callbacks
-    // When: getRegisteredCount called
-    // Then: Returns accurate count
+    assertEquals("Initial count should be 0", 0, resolver.getRegisteredCount());
 
-    // TODO(#534): Implement test logic
-    fail("Not yet implemented");
+    resolver.registerCallback("count-test-1", (ctx) -> new InterceptCallbackResponse());
+    assertEquals("Count should be 1 after first registration", 1, resolver.getRegisteredCount());
+
+    resolver.registerCallback("count-test-2", (ctx) -> new InterceptCallbackResponse());
+    assertEquals("Count should be 2 after second registration", 2, resolver.getRegisteredCount());
+
+    resolver.registerCallback("count-test-3", (ctx) -> new InterceptCallbackResponse());
+    assertEquals("Count should be 3 after third registration", 3, resolver.getRegisteredCount());
+
+    // When: unregister one callback
+    resolver.unregisterCallback("count-test-2");
+
+    // Then: Count reflects the removal
+    assertEquals("Count should be 2 after unregistration", 2, resolver.getRegisteredCount());
   }
 
   // ===== Test Callback Class =====

@@ -11,7 +11,6 @@ package io.quasient.pal.core.intercept;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -37,7 +36,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
@@ -673,30 +671,58 @@ public class InterceptInformerTest extends ZmqEnabledTest {
    * Specification: Close thread-local socket successfully.
    *
    * <ul>
-   *   <li>Given: InterceptInformer with thread-local socket
+   *   <li>Given: InterceptInformer with thread-local socket (created by sending event)
    *   <li>When: closeThreadLocalSocket called
-   *   <li>Then: Socket is closed; resources released
+   *   <li>Then: Socket is closed; resources released; subsequent calls are no-op
    * </ul>
    *
    * <p>Acceptance Criteria:
    * [TEST:InterceptInformerTest.testCloseThreadLocalSocket_closesSocketSuccessfully]
    */
   @Test
-  @Ignore("Awaiting implementation in #534")
   public void testCloseThreadLocalSocket_closesSocketSuccessfully() {
-    // Given: InterceptInformer with thread-local socket
-    // When: closeThreadLocalSocket called
-    // Then: Socket is closed; resources released
+    // Given: InterceptInformer with thread-local socket (created by sending event)
+    execService.execute(new InterceptsStub());
 
-    // TODO(#534): Implement test logic
-    fail("Not yet implemented");
+    var interceptRequest =
+        new InterceptRequest<>(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            InterceptType.BEFORE,
+            "com.example.TestClass",
+            "org.callback.TestHandler",
+            "onIntercept",
+            new InterceptableMethodCall("testMethod", null));
+
+    interceptInformer =
+        new InterceptInformer(
+            context, msgBuilder, directoryConnectionProvider, INTERCEPT_REG_ADDRESS);
+
+    // Create the socket by sending an event
+    InterceptEvent event =
+        new InterceptEvent(
+            InterceptEvent.Type.INTERCEPT_ADDED,
+            "/root/intercepts/peer/test-intercept",
+            UUID.randomUUID(),
+            UUID.randomUUID().toString(),
+            interceptRequest);
+    interceptInformer.interceptEvent(event);
+
+    // Verify message was sent (confirming socket was created and used)
+    assertThat(interceptRequestMessages.size(), is(1));
+
+    // When: closeThreadLocalSocket called
+    interceptInformer.closeThreadLocalSocket();
+
+    // Then: Socket is closed; subsequent calls are no-op (no exception thrown)
+    interceptInformer.closeThreadLocalSocket();
   }
 
   /**
    * Specification: Close thread-local socket when no socket exists.
    *
    * <ul>
-   *   <li>Given: InterceptInformer without thread-local socket
+   *   <li>Given: InterceptInformer without thread-local socket (never used to send events)
    *   <li>When: closeThreadLocalSocket called
    *   <li>Then: No error; method completes normally
    * </ul>
@@ -705,13 +731,18 @@ public class InterceptInformerTest extends ZmqEnabledTest {
    * [TEST:InterceptInformerTest.testCloseThreadLocalSocket_noSocket_handledGracefully]
    */
   @Test
-  @Ignore("Awaiting implementation in #534")
   public void testCloseThreadLocalSocket_noSocket_handledGracefully() {
-    // Given: InterceptInformer without thread-local socket
-    // When: closeThreadLocalSocket called
-    // Then: No error; method completes normally
+    // Given: InterceptInformer without thread-local socket (never used to send events)
+    interceptInformer =
+        new InterceptInformer(
+            context, msgBuilder, directoryConnectionProvider, INTERCEPT_REG_ADDRESS);
 
-    // TODO(#534): Implement test logic
-    fail("Not yet implemented");
+    // When: closeThreadLocalSocket called (no socket was created)
+    // Then: No error; method completes normally (no exception thrown)
+    interceptInformer.closeThreadLocalSocket();
+
+    // Verify idempotence: multiple calls should also complete without error
+    interceptInformer.closeThreadLocalSocket();
+    interceptInformer.closeThreadLocalSocket();
   }
 }
