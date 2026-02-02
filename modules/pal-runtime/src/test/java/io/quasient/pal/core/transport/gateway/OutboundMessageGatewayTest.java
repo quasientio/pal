@@ -41,6 +41,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
@@ -815,6 +816,160 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
     assertThat(snapshot, is(notNullValue()));
     // Snapshot is immutable List, verify basic properties
     // Note: Due to static registries and test isolation issues, we verify the method works
+  }
+
+  // ============================================================================
+  // Test specifications for issue #525 (statistics methods coverage)
+  // These are smoke tests as per user decision in plan #524
+  // ============================================================================
+
+  /**
+   * Tests that blockUntilEnqueued successfully enqueues a message when queue has capacity.
+   *
+   * <p>Given: Gateway with available queue capacity When: blockUntilEnqueued called with valid
+   * OutboundMsg Then: Message is enqueued without blocking; returns true
+   */
+  @Test
+  @Ignore("Awaiting implementation in #526")
+  public void testBlockUntilEnqueued_queuesMessageSuccessfully() {
+    // Given: Gateway with available queue capacity (pubQueue not full)
+    // When: blockUntilEnqueued called with valid OutboundMsg
+    // Then: Message is enqueued without blocking
+
+    // TODO(#526): Implement test logic
+    // Note: blockUntilEnqueued is private, so test via sendExecMessage with
+    // PublishingDropPolicy.NONE
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that getPUBWaitSnapshot returns a valid snapshot with statistics.
+   *
+   * <p>Given: Gateway with some messages processed When: getPUBWaitSnapshot called Then: Returns
+   * non-null WaitSnapshot with valid statistics
+   */
+  @Test
+  @Ignore("Awaiting implementation in #526")
+  public void testGetPUBWaitSnapshot_returnsValidSnapshot() {
+    // Given: Gateway with some messages processed via PUB queue
+    // When: getPUBWaitSnapshot called
+    // Then: Returns non-null List<ThreadWaitSnapshot> with valid structure
+
+    // TODO(#526): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that getWALWaitSnapshot returns a valid snapshot with statistics.
+   *
+   * <p>Given: Gateway with some messages processed When: getWALWaitSnapshot called Then: Returns
+   * non-null WaitSnapshot with valid statistics
+   */
+  @Test
+  @Ignore("Awaiting implementation in #526")
+  public void testGetWALWaitSnapshot_returnsValidSnapshot() {
+    // Given: Gateway with some messages processed via WAL queue
+    // When: getWALWaitSnapshot called
+    // Then: Returns non-null List<ThreadWaitSnapshot> with valid structure
+
+    // TODO(#526): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that getPubQueueStats returns correct statistics for PUB queue.
+   *
+   * <p>Given: Gateway with messages in PUB queue When: getPubQueueStats called Then: Returns stats
+   * object with expected queue metrics
+   */
+  @Test
+  @Ignore("Awaiting implementation in #526")
+  public void testGetPubQueueStats_returnsCorrectStats() {
+    // Given: Gateway with messages processed through PUB queue
+    // When: getPubQueueStats called
+    // Then: Returns MessageQueueStats with:
+    //   - messagesDropped() >= 0
+    //   - totalParkedNanos() >= 0
+    //   - totalParks() >= 0
+    //   - totalFailedOffers() >= 0
+    //   - perThread() is non-null list
+
+    // TODO(#526): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that getWalQueueStats returns correct statistics for WAL queue.
+   *
+   * <p>Given: Gateway with messages in WAL queue When: getWalQueueStats called Then: Returns stats
+   * object with expected queue metrics
+   */
+  @Test
+  @Ignore("Awaiting implementation in #526")
+  public void testGetWalQueueStats_returnsCorrectStats() {
+    // Given: Gateway with messages processed through WAL queue
+    // When: getWalQueueStats called
+    // Then: Returns MessageQueueStats with:
+    //   - totalParkedNanos() >= 0
+    //   - totalParks() >= 0
+    //   - totalFailedOffers() >= 0
+    //   - perThread() is non-null list
+
+    // TODO(#526): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that findThread returns the Thread object for an existing thread ID.
+   *
+   * <p>Given: Gateway with running worker threads When: findThread called with valid thread ID
+   * Then: Returns the Thread object
+   */
+  @Test
+  @Ignore("Awaiting implementation in #526")
+  public void testFindThread_findsExistingThread() {
+    // Given: A known thread that exists (e.g., current thread)
+    // When: findThread called with that thread's ID
+    // Then: Returns the Thread object (not null)
+
+    // TODO(#526): Implement test logic
+    // Note: findThread is private static, may need reflection or indirect testing
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that findThread returns null for an unknown thread ID.
+   *
+   * <p>Given: Gateway with running worker threads When: findThread called with non-existent thread
+   * ID Then: Returns null
+   */
+  @Test
+  @Ignore("Awaiting implementation in #526")
+  public void testFindThread_returnsNullForUnknownId() {
+    // Given: A thread ID that does not exist (e.g., Long.MAX_VALUE)
+    // When: findThread called with that thread ID
+    // Then: Returns null
+
+    // TODO(#526): Implement test logic
+    // Note: findThread is private static, may need reflection or indirect testing
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that printAggregateStats executes without throwing any exception.
+   *
+   * <p>Given: Gateway in any state When: printAggregateStats called Then: Completes without
+   * throwing exception
+   */
+  @Test
+  @Ignore("Awaiting implementation in #526")
+  public void testPrintAggregateStats_executesWithoutError() {
+    // Given: Gateway in any valid state (with or without messages processed)
+    // When: printAggregateStats called
+    // Then: Method completes without throwing any exception
+
+    // TODO(#526): Implement test logic
+    fail("Not yet implemented");
   }
 
   /**
