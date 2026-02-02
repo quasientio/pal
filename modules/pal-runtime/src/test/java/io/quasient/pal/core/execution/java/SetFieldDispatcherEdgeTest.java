@@ -11,17 +11,20 @@ package io.quasient.pal.core.execution.java;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.fail;
 
 import io.quasient.pal.common.objects.ObjectRef;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.Obj;
 import io.quasient.pal.messages.types.MessageType;
+import io.quasient.pal.serdes.colfer.JsonUtil;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.List;
-import org.junit.Ignore;
+import org.aspectj.lang.ProceedingJoinPoint;
 import org.junit.Test;
 
 /**
@@ -35,6 +38,8 @@ import org.junit.Test;
  */
 public class SetFieldDispatcherEdgeTest {
 
+  /** Sample class with fields for testing. */
+  @SuppressWarnings("unused")
   static class Sample {
     @SuppressWarnings({"FieldCanBeLocal", "UnusedVariable"})
     private int hidden = 0;
@@ -42,12 +47,38 @@ public class SetFieldDispatcherEdgeTest {
     public int x = 0;
   }
 
-  // Minimal subclass to expose protected methods
+  /** Sample class with final field for testing. */
+  @SuppressWarnings("unused")
+  static class SampleWithFinal {
+    public final int constValue;
+
+    SampleWithFinal(int value) {
+      this.constValue = value;
+    }
+  }
+
+  /** Minimal subclass to expose protected methods. */
   static class TestDispatcher extends SetFieldDispatcher {
+    /**
+     * Exposes loadAccessibleObject for testing.
+     *
+     * @param className the class name
+     * @param fieldName the field name
+     * @return the accessible object
+     * @throws Exception if field cannot be loaded
+     */
     public AccessibleObject load(String className, String fieldName) throws Exception {
       return loadAccessibleObject(className, fieldName);
     }
 
+    /**
+     * Exposes getValueFromMessage for testing.
+     *
+     * @param valueObject the value object
+     * @param ref the object reference
+     * @param ao the accessible object
+     * @return the extracted value
+     */
     public Object valueFrom(Obj valueObject, int ref, AccessibleObject ao) {
       return getValueFromMessage(valueObject, ref, ao);
     }
@@ -85,6 +116,10 @@ public class SetFieldDispatcherEdgeTest {
     }
   }
 
+  /**
+   * Test that loadAccessibleObject loads declared (non-public) fields when allowNonPublicAccess is
+   * true.
+   */
   @Test
   public void loadAccessibleObject_declaredField_whenNonPublicAllowed() throws Exception {
     TestDispatcher d = new TestDispatcher();
@@ -98,6 +133,7 @@ public class SetFieldDispatcherEdgeTest {
     assertThat(fld.getName(), is("hidden"));
   }
 
+  /** Test that getValueFromMessage throws IllegalArgumentException when class is not found. */
   @Test
   @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public void getValueFromMessage_classNotFound_throwsIAE() throws Exception {
@@ -113,28 +149,46 @@ public class SetFieldDispatcherEdgeTest {
     assertThrows(IllegalArgumentException.class, () -> d.valueFrom(val, 0, fld));
   }
 
-  // ============================================================================
-  // Additional Edge Case Specifications for #552
-  // ============================================================================
-
   /**
    * Test that invoke handles final fields correctly by using reflection.
    *
    * <p>Edge case: final fields require special handling within constructor context.
    */
   @Test
-  @Ignore("Awaiting implementation in #552")
   public void testInvoke_finalField_usesReflection() throws Throwable {
     // Given: A ProceedingJoinPoint for a final field (inside constructor context)
+    TestDispatcher dispatcher = new TestDispatcher();
+    SampleWithFinal target = new SampleWithFinal(10);
+    Field field = SampleWithFinal.class.getField("constValue");
+    int newValue = 999;
+
+    // Use PjpBuilder for proper PJP setup
+    ProceedingJoinPoint pjp =
+        PjpBuilder.create()
+            .kindFieldSet()
+            .fieldExecutionSignature(field)
+            .source("SetFieldDispatcherEdgeTest.java", 0, getClass())
+            .sender(this)
+            .target(target)
+            .args(new Object[] {newValue})
+            // No proceed behavior needed - final fields are handled directly via reflection
+            .build();
+
     // And: Arguments containing the value to set
+    Object[] args = new Object[] {newValue};
 
     // When: invoke is called
+    // Use reflection to access the protected invoke method
+    Method invokeMethod =
+        SetFieldDispatcher.class.getDeclaredMethod(
+            "invoke", ProceedingJoinPoint.class, Object[].class);
+    invokeMethod.setAccessible(true);
+    Object result = invokeMethod.invoke(dispatcher, pjp, args);
 
     // Then: The field is set directly via reflection (field.setAccessible + field.set)
+    assertThat(target.constValue, is(newValue));
     // And: null is returned (not delegating to super.invoke)
-
-    // TODO(#552): Implement test logic
-    fail("Not yet implemented");
+    assertThat(result, is(nullValue()));
   }
 
   /**
@@ -143,18 +197,24 @@ public class SetFieldDispatcherEdgeTest {
    * <p>Edge case: fallback behavior when type information is missing.
    */
   @Test
-  @Ignore("Awaiting implementation in #552")
   public void testGetValueFromMessage_noTypeInfo_usesFieldType() throws Exception {
     // Given: A message object (Obj) without type information (null or empty class name)
-    // And: A field with a known type
+    TestDispatcher dispatcher = new TestDispatcher();
+    Field field = Sample.class.getField("x");
+
+    // Build Obj without type info but with a JSON value
+    Obj valueObj = new Obj();
+    valueObj.setValue(JsonUtil.MAPPER.writeValueAsString(42));
+    valueObj.setClazz(null); // No type info
+    valueObj.setIsNull(false);
 
     // When: getValueFromMessage is called
+    Object result = dispatcher.valueFrom(valueObj, 0, field);
 
     // Then: The value is unwrapped using the field's declared type
+    assertThat(result, is(notNullValue()));
     // And: The correct value is returned
-
-    // TODO(#552): Implement test logic
-    fail("Not yet implemented");
+    assertThat(result, is(42));
   }
 
   /**
@@ -163,17 +223,20 @@ public class SetFieldDispatcherEdgeTest {
    * <p>Edge case: verifies public field access path.
    */
   @Test
-  @Ignore("Awaiting implementation in #552")
   public void testLoadAccessibleObject_publicField_loadsSuccessfully() throws Exception {
     // Given: A class name and a public field name
+    TestDispatcher dispatcher = new TestDispatcher();
+    String className = Sample.class.getName();
+    String fieldName = "x";
 
     // When: loadAccessibleObject is called
+    AccessibleObject ao = dispatcher.load(className, fieldName);
 
     // Then: The public field is returned as AccessibleObject
-    // And: No exception is thrown
-
-    // TODO(#552): Implement test logic
-    fail("Not yet implemented");
+    assertThat(ao, is(notNullValue()));
+    Field fld = (Field) ao;
+    assertThat(fld.getName(), is(fieldName));
+    // And: No exception is thrown (we got here)
   }
 
   /**
@@ -183,17 +246,61 @@ public class SetFieldDispatcherEdgeTest {
    * <p>Edge case: access control enforcement.
    */
   @Test
-  @Ignore("Awaiting implementation in #552")
   public void testLoadAccessibleObject_nonPublicField_whenNotAllowed_throwsException()
       throws Exception {
     // Given: A class with a private field
-    // And: allowNonPublicAccess is false
+    TestDispatcher dispatcher = new TestDispatcher();
+    // And: allowNonPublicAccess is false (default)
+    Field accessFlag = AbstractDispatcher.class.getDeclaredField("allowNonPublicAccess");
+    accessFlag.setAccessible(true);
+    accessFlag.setBoolean(dispatcher, false);
+
+    String className = Sample.class.getName();
+    String fieldName = "hidden"; // private field
 
     // When: loadAccessibleObject is called with the private field name
-
     // Then: NoSuchFieldException is thrown
+    assertThrows(NoSuchFieldException.class, () -> dispatcher.load(className, fieldName));
+  }
 
-    // TODO(#552): Implement test logic
-    fail("Not yet implemented");
+  /**
+   * Test that getValueFromMessage returns null when Obj.isNull is true.
+   *
+   * <p>Edge case: null handling in value extraction.
+   */
+  @Test
+  public void testGetValueFromMessage_objIsNull_returnsNull() throws Exception {
+    // Given: An Obj with isNull = true
+    TestDispatcher dispatcher = new TestDispatcher();
+    Field field = Sample.class.getField("x");
+
+    Obj valueObj = new Obj();
+    valueObj.setIsNull(true);
+
+    // When: getValueFromMessage is called
+    Object result = dispatcher.valueFrom(valueObj, 0, field);
+
+    // Then: null is returned
+    assertThat(result, is(nullValue()));
+  }
+
+  /**
+   * Test that loadAccessibleObject works with nested class fields.
+   *
+   * <p>Edge case: verifies class loading with nested class names.
+   */
+  @Test
+  public void testLoadAccessibleObject_nestedClass_loadsSuccessfully() throws Exception {
+    // Given: A nested class name and a field name
+    TestDispatcher dispatcher = new TestDispatcher();
+    String className = Sample.class.getName(); // This is already a nested class
+    String fieldName = "x";
+
+    // When: loadAccessibleObject is called
+    AccessibleObject ao = dispatcher.load(className, fieldName);
+
+    // Then: The field is loaded successfully
+    assertThat(ao, is(notNullValue()));
+    assertThat(((Field) ao).getName(), is(fieldName));
   }
 }
