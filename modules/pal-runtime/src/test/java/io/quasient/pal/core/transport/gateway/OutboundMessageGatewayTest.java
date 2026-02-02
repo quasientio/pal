@@ -41,7 +41,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
@@ -828,18 +827,35 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
    *
    * <p>Given: Gateway with available queue capacity When: blockUntilEnqueued called with valid
    * OutboundMsg Then: Message is enqueued without blocking; returns true
+   *
+   * <p>Note: blockUntilEnqueued is private, so we test via sendExecMessage with
+   * PublishingDropPolicy.NONE which exercises the blocking enqueue path.
    */
   @Test
-  @Ignore("Awaiting implementation in #526")
   public void testBlockUntilEnqueued_queuesMessageSuccessfully() {
-    // Given: Gateway with available queue capacity (pubQueue not full)
-    // When: blockUntilEnqueued called with valid OutboundMsg
-    // Then: Message is enqueued without blocking
+    // Given: Gateway with PUB enabled and NONE drop policy (uses blockUntilEnqueued path)
+    EnumSet<RunOptions> opts = EnumSet.of(RunOptions.WITH_TCP_PUB);
+    gateway =
+        new OutboundMessageGateway(
+            context,
+            peerUuid,
+            builder,
+            opts,
+            walWriterMock,
+            walQueue,
+            walFailed,
+            pubQueue,
+            PublishingDropPolicy.NONE, // This triggers blockUntilEnqueued
+            SESSION_SERVICE_REQ_ADDRESS);
 
-    // TODO(#526): Implement test logic
-    // Note: blockUntilEnqueued is private, so test via sendExecMessage with
-    // PublishingDropPolicy.NONE
-    fail("Not yet implemented");
+    int initialSize = pubQueue.currentSize();
+
+    // When: sendExecMessage called (which internally calls blockUntilEnqueued for NONE policy)
+    ExecMessage msg = builder.buildEmptyConstructor(peerUuid, "java.lang.String");
+    gateway.sendExecMessage(builder.wrap(msg), ExecPhase.BEFORE);
+
+    // Then: Message is enqueued without blocking (queue has capacity)
+    assertThat(pubQueue.currentSize(), is(initialSize + 1));
   }
 
   /**
@@ -849,14 +865,33 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
    * non-null WaitSnapshot with valid statistics
    */
   @Test
-  @Ignore("Awaiting implementation in #526")
   public void testGetPUBWaitSnapshot_returnsValidSnapshot() {
-    // Given: Gateway with some messages processed via PUB queue
-    // When: getPUBWaitSnapshot called
-    // Then: Returns non-null List<ThreadWaitSnapshot> with valid structure
+    // Given: Gateway with PUB enabled and some messages sent
+    EnumSet<RunOptions> opts = EnumSet.of(RunOptions.WITH_TCP_PUB);
+    gateway =
+        new OutboundMessageGateway(
+            context,
+            peerUuid,
+            builder,
+            opts,
+            walWriterMock,
+            walQueue,
+            walFailed,
+            pubQueue,
+            PublishingDropPolicy.DROP_OLD,
+            SESSION_SERVICE_REQ_ADDRESS);
 
-    // TODO(#526): Implement test logic
-    fail("Not yet implemented");
+    // Send a message to ensure some stats are recorded
+    ExecMessage msg = builder.buildEmptyConstructor(peerUuid, "java.lang.String");
+    gateway.sendExecMessage(builder.wrap(msg), ExecPhase.BEFORE);
+
+    // When: getPUBWaitSnapshot called
+    List<ThreadWaitSnapshot> snapshot = gateway.getPUBWaitSnapshot();
+
+    // Then: Returns non-null immutable list with valid structure
+    assertThat(snapshot, is(notNullValue()));
+    // The list may be empty if no wait stats were recorded (fast offer)
+    // but it should be a valid list instance
   }
 
   /**
@@ -866,14 +901,33 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
    * non-null WaitSnapshot with valid statistics
    */
   @Test
-  @Ignore("Awaiting implementation in #526")
   public void testGetWALWaitSnapshot_returnsValidSnapshot() {
-    // Given: Gateway with some messages processed via WAL queue
-    // When: getWALWaitSnapshot called
-    // Then: Returns non-null List<ThreadWaitSnapshot> with valid structure
+    // Given: Gateway with WAL enabled and some messages sent
+    EnumSet<RunOptions> opts = EnumSet.of(RunOptions.WITH_WAL);
+    gateway =
+        new OutboundMessageGateway(
+            context,
+            peerUuid,
+            builder,
+            opts,
+            walWriterMock,
+            walQueue,
+            walFailed,
+            pubQueue,
+            PublishingDropPolicy.DROP_OLD,
+            SESSION_SERVICE_REQ_ADDRESS);
 
-    // TODO(#526): Implement test logic
-    fail("Not yet implemented");
+    // Send a message to ensure some stats are recorded
+    ExecMessage msg = builder.buildEmptyConstructor(peerUuid, "java.lang.String");
+    gateway.sendExecMessage(builder.wrap(msg), ExecPhase.BEFORE);
+
+    // When: getWALWaitSnapshot called
+    List<ThreadWaitSnapshot> snapshot = gateway.getWALWaitSnapshot();
+
+    // Then: Returns non-null immutable list with valid structure
+    assertThat(snapshot, is(notNullValue()));
+    // The list may be empty if no wait stats were recorded (fast offer)
+    // but it should be a valid list instance
   }
 
   /**
@@ -883,19 +937,38 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
    * object with expected queue metrics
    */
   @Test
-  @Ignore("Awaiting implementation in #526")
   public void testGetPubQueueStats_returnsCorrectStats() {
-    // Given: Gateway with messages processed through PUB queue
-    // When: getPubQueueStats called
-    // Then: Returns MessageQueueStats with:
-    //   - messagesDropped() >= 0
-    //   - totalParkedNanos() >= 0
-    //   - totalParks() >= 0
-    //   - totalFailedOffers() >= 0
-    //   - perThread() is non-null list
+    // Given: Gateway with PUB enabled and some messages sent
+    EnumSet<RunOptions> opts = EnumSet.of(RunOptions.WITH_TCP_PUB);
+    gateway =
+        new OutboundMessageGateway(
+            context,
+            peerUuid,
+            builder,
+            opts,
+            walWriterMock,
+            walQueue,
+            walFailed,
+            pubQueue,
+            PublishingDropPolicy.DROP_OLD,
+            SESSION_SERVICE_REQ_ADDRESS);
 
-    // TODO(#526): Implement test logic
-    fail("Not yet implemented");
+    // Send a few messages to record some stats
+    for (int i = 0; i < 3; i++) {
+      ExecMessage msg = builder.buildEmptyConstructor(peerUuid, "java.lang.String");
+      gateway.sendExecMessage(builder.wrap(msg), ExecPhase.BEFORE);
+    }
+
+    // When: getPubQueueStats called
+    MessageQueueStats stats = gateway.getPubQueueStats();
+
+    // Then: Returns MessageQueueStats with valid values
+    assertThat(stats, is(notNullValue()));
+    assertThat(stats.messagesDropped() >= 0, is(true));
+    assertThat(stats.totalParkedNanos() >= 0, is(true));
+    assertThat(stats.totalParks() >= 0, is(true));
+    assertThat(stats.totalFailedOffers() >= 0, is(true));
+    assertThat(stats.perThread(), is(notNullValue()));
   }
 
   /**
@@ -905,18 +978,37 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
    * object with expected queue metrics
    */
   @Test
-  @Ignore("Awaiting implementation in #526")
   public void testGetWalQueueStats_returnsCorrectStats() {
-    // Given: Gateway with messages processed through WAL queue
-    // When: getWalQueueStats called
-    // Then: Returns MessageQueueStats with:
-    //   - totalParkedNanos() >= 0
-    //   - totalParks() >= 0
-    //   - totalFailedOffers() >= 0
-    //   - perThread() is non-null list
+    // Given: Gateway with WAL enabled and some messages sent
+    EnumSet<RunOptions> opts = EnumSet.of(RunOptions.WITH_WAL);
+    gateway =
+        new OutboundMessageGateway(
+            context,
+            peerUuid,
+            builder,
+            opts,
+            walWriterMock,
+            walQueue,
+            walFailed,
+            pubQueue,
+            PublishingDropPolicy.DROP_OLD,
+            SESSION_SERVICE_REQ_ADDRESS);
 
-    // TODO(#526): Implement test logic
-    fail("Not yet implemented");
+    // Send a few messages to record some stats
+    for (int i = 0; i < 3; i++) {
+      ExecMessage msg = builder.buildEmptyConstructor(peerUuid, "java.lang.String");
+      gateway.sendExecMessage(builder.wrap(msg), ExecPhase.BEFORE);
+    }
+
+    // When: getWalQueueStats called
+    MessageQueueStats stats = gateway.getWalQueueStats();
+
+    // Then: Returns MessageQueueStats with valid values
+    assertThat(stats, is(notNullValue()));
+    assertThat(stats.totalParkedNanos() >= 0, is(true));
+    assertThat(stats.totalParks() >= 0, is(true));
+    assertThat(stats.totalFailedOffers() >= 0, is(true));
+    assertThat(stats.perThread(), is(notNullValue()));
   }
 
   /**
@@ -926,15 +1018,20 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
    * Then: Returns the Thread object
    */
   @Test
-  @Ignore("Awaiting implementation in #526")
-  public void testFindThread_findsExistingThread() {
-    // Given: A known thread that exists (e.g., current thread)
-    // When: findThread called with that thread's ID
-    // Then: Returns the Thread object (not null)
+  public void testFindThread_findsExistingThread() throws Exception {
+    // Given: The current thread exists and has a valid ID
+    Thread currentThread = Thread.currentThread();
+    long threadId = currentThread.getId();
 
-    // TODO(#526): Implement test logic
-    // Note: findThread is private static, may need reflection or indirect testing
-    fail("Not yet implemented");
+    // When: findThread called with current thread's ID (via reflection since it's private static)
+    java.lang.reflect.Method findThreadMethod =
+        OutboundMessageGateway.class.getDeclaredMethod("findThread", long.class);
+    findThreadMethod.setAccessible(true);
+    Thread foundThread = (Thread) findThreadMethod.invoke(null, threadId);
+
+    // Then: Returns the current Thread object (not null)
+    assertThat(foundThread, is(notNullValue()));
+    assertThat(foundThread.getId(), is(threadId));
   }
 
   /**
@@ -944,15 +1041,19 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
    * ID Then: Returns null
    */
   @Test
-  @Ignore("Awaiting implementation in #526")
-  public void testFindThread_returnsNullForUnknownId() {
-    // Given: A thread ID that does not exist (e.g., Long.MAX_VALUE)
-    // When: findThread called with that thread ID
-    // Then: Returns null
+  public void testFindThread_returnsNullForUnknownId() throws Exception {
+    // Given: A thread ID that does not exist
+    long nonExistentThreadId = Long.MAX_VALUE;
 
-    // TODO(#526): Implement test logic
-    // Note: findThread is private static, may need reflection or indirect testing
-    fail("Not yet implemented");
+    // When: findThread called with non-existent thread ID (via reflection since it's private
+    // static)
+    java.lang.reflect.Method findThreadMethod =
+        OutboundMessageGateway.class.getDeclaredMethod("findThread", long.class);
+    findThreadMethod.setAccessible(true);
+    Thread foundThread = (Thread) findThreadMethod.invoke(null, nonExistentThreadId);
+
+    // Then: Returns null
+    assertThat(foundThread, is(org.hamcrest.CoreMatchers.nullValue()));
   }
 
   /**
@@ -962,14 +1063,32 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
    * throwing exception
    */
   @Test
-  @Ignore("Awaiting implementation in #526")
   public void testPrintAggregateStats_executesWithoutError() {
-    // Given: Gateway in any valid state (with or without messages processed)
-    // When: printAggregateStats called
-    // Then: Method completes without throwing any exception
+    // Given: Gateway with both WAL and PUB enabled to exercise both branches
+    EnumSet<RunOptions> opts = EnumSet.of(RunOptions.WITH_WAL, RunOptions.WITH_TCP_PUB);
+    gateway =
+        new OutboundMessageGateway(
+            context,
+            peerUuid,
+            builder,
+            opts,
+            walWriterMock,
+            walQueue,
+            walFailed,
+            pubQueue,
+            PublishingDropPolicy.DROP_OLD,
+            SESSION_SERVICE_REQ_ADDRESS);
 
-    // TODO(#526): Implement test logic
-    fail("Not yet implemented");
+    // Send a few messages to record some stats
+    for (int i = 0; i < 3; i++) {
+      ExecMessage msg = builder.buildEmptyConstructor(peerUuid, "java.lang.String");
+      gateway.sendExecMessage(builder.wrap(msg), ExecPhase.BEFORE);
+    }
+
+    // When/Then: printAggregateStats called without throwing any exception
+    // This is a smoke test that verifies the method completes successfully
+    gateway.printAggregateStats();
+    // If we reach here, the method completed without throwing
   }
 
   /**
