@@ -39,6 +39,7 @@ import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.zeromq.ZContext;
 
@@ -247,5 +248,218 @@ public class SelfBootstrapInvokerTest {
         "Exception from main() should return EXIT_MAIN_THREW_EXCEPTION",
         exitCode,
         is(EXIT_MAIN_THREW_EXCEPTION));
+  }
+
+  // ===========================================================================
+  // Test specifications for issue #541 - Awaiting implementation in #542
+  // ===========================================================================
+
+  /**
+   * Tests that callJar successfully loads and executes a valid JAR file.
+   *
+   * <p>Specification from issue #541:
+   *
+   * <ul>
+   *   <li>Given: Valid JAR file with main class
+   *   <li>When: callJar called
+   *   <li>Then: JAR loaded; main method executed; result returned
+   * </ul>
+   *
+   * <p>Implementation notes:
+   *
+   * <ul>
+   *   <li>Create a temporary JAR with a valid Main-Class manifest entry
+   *   <li>The JAR must contain an actual class file with a main method
+   *   <li>Mock the IncomingMessageDispatcher to return a valid response
+   *   <li>Verify the exit code from main method execution is returned
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #542")
+  public void testCallJar_loadsAndExecutesJar() {
+    // Given: Valid JAR file with main class
+    // When: callJar called
+    // Then: JAR loaded; main method executed; result returned
+
+    // TODO(#542): Implement test logic
+    // 1. Create a temporary JAR file containing a compiled class with main(String[] args)
+    // 2. Add MANIFEST.MF with Main-Class attribute pointing to that class
+    // 3. Configure mock dispatcher to return success response
+    // 4. Call invoker.callJar(jarPath, args)
+    // 5. Verify the exit code matches expected value
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that callJar throws appropriate exception when JAR manifest is missing.
+   *
+   * <p>Specification from issue #541:
+   *
+   * <ul>
+   *   <li>Given: JAR file without Main-Class in manifest
+   *   <li>When: callJar called
+   *   <li>Then: Appropriate exception thrown
+   * </ul>
+   *
+   * <p>Implementation notes:
+   *
+   * <ul>
+   *   <li>Create a JAR with MANIFEST.MF but no Main-Class attribute
+   *   <li>Verify PeerException thrown with ERROR_NO_MAIN_CLASS_IN_JAR_MANIFEST code
+   * </ul>
+   *
+   * <p>Note: This test overlaps with existing test {@link
+   * #callJar_noMainClassInManifest_throwsPeerException()} but uses the naming convention specified
+   * in issue #541 for acceptance criteria tracking.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #542")
+  public void testCallJar_missingManifest_throwsException() {
+    // Given: JAR file without Main-Class in manifest
+    // When: callJar called
+    // Then: Appropriate exception thrown (PeerException with ERROR_NO_MAIN_CLASS_IN_JAR_MANIFEST)
+
+    // TODO(#542): Implement test logic
+    // 1. Create a JAR with only MANIFEST_VERSION set (no Main-Class)
+    // 2. Call invoker.callJar(jarPath, args)
+    // 3. Verify PeerException is thrown with ERROR_NO_MAIN_CLASS_IN_JAR_MANIFEST
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that exceptions thrown by main method in JAR are propagated with correct exit code.
+   *
+   * <p>Specification from issue #541:
+   *
+   * <ul>
+   *   <li>Given: JAR whose main throws exception
+   *   <li>When: callJar called
+   *   <li>Then: Exception propagated with correct exit code
+   * </ul>
+   *
+   * <p>Implementation notes:
+   *
+   * <ul>
+   *   <li>Create a JAR with a main method that throws RuntimeException
+   *   <li>Mock dispatcher to return EXEC_THROWABLE message type
+   *   <li>Verify exit code is EXIT_MAIN_THREW_EXCEPTION (1)
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #542")
+  public void testCallJar_mainThrowsException_propagatesCorrectly() {
+    // Given: JAR whose main throws exception
+    // When: callJar called
+    // Then: Exception propagated with correct exit code (EXIT_MAIN_THREW_EXCEPTION = 1)
+
+    // TODO(#542): Implement test logic
+    // 1. Create a valid JAR file with Main-Class in manifest
+    // 2. Configure mock dispatcher to return EXEC_THROWABLE response
+    // 3. Call invoker.callJar(jarPath, args)
+    // 4. Verify exit code is EXIT_MAIN_THREW_EXCEPTION (1)
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that getIntFromReturnValue returns 0 (EXIT_SUCCESS) for null return value.
+   *
+   * <p>Specification from issue #541:
+   *
+   * <ul>
+   *   <li>Given: Null return value
+   *   <li>When: getIntFromReturnValue called
+   *   <li>Then: Returns 0
+   * </ul>
+   *
+   * <p>Implementation notes:
+   *
+   * <ul>
+   *   <li>Null return value indicates void main() method
+   *   <li>Standard Java convention: void main() completion = success (exit 0)
+   *   <li>Test via callMain with mocked dispatcher returning null object in ReturnValue
+   * </ul>
+   *
+   * <p>Note: This test overlaps with existing test {@link
+   * #getIntFromReturnValue_voidReturn_returns0()} but uses the naming convention specified in issue
+   * #541 for acceptance criteria tracking.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #542")
+  public void testGetIntFromReturnValue_nullValue_returnsZero() {
+    // Given: Null return value (void main method)
+    // When: getIntFromReturnValue called (indirectly via callMain)
+    // Then: Returns 0 (EXIT_SUCCESS)
+
+    // TODO(#542): Implement test logic
+    // 1. Mock dispatcher to return ExecMessage with null returnValue.object
+    // 2. Call invoker.callMain(className, args)
+    // 3. Verify exit code is 0 (EXIT_SUCCESS)
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that getIntFromReturnValue returns the integer value for Integer return.
+   *
+   * <p>Specification from issue #541:
+   *
+   * <ul>
+   *   <li>Given: Integer return value
+   *   <li>When: getIntFromReturnValue called
+   *   <li>Then: Returns the integer value
+   * </ul>
+   *
+   * <p>Implementation notes:
+   *
+   * <ul>
+   *   <li>When main() returns an Integer, that value becomes the exit code
+   *   <li>Test with various values: 0, positive, negative
+   *   <li>Test via callMain with mocked dispatcher returning wrapped Integer
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #542")
+  public void testGetIntFromReturnValue_integerValue_returnsValue() {
+    // Given: Integer return value (e.g., 42)
+    // When: getIntFromReturnValue called (indirectly via callMain)
+    // Then: Returns the integer value (42)
+
+    // TODO(#542): Implement test logic
+    // 1. Mock dispatcher to return ExecMessage with Integer wrapped in returnValue
+    // 2. Call invoker.callMain(className, args)
+    // 3. Verify exit code matches the Integer value
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that getIntFromReturnValue returns error code for non-integer return values.
+   *
+   * <p>Specification from issue #541:
+   *
+   * <ul>
+   *   <li>Given: Non-integer return value (e.g., String)
+   *   <li>When: getIntFromReturnValue called
+   *   <li>Then: Returns appropriate error code
+   * </ul>
+   *
+   * <p>Implementation notes:
+   *
+   * <ul>
+   *   <li>Non-Integer return values cannot be used as exit codes
+   *   <li>Should return EXIT_INVALID_RETURN_VALUE (126)
+   *   <li>Test with String, Object, custom class return types
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #542")
+  public void testGetIntFromReturnValue_nonIntegerValue_returnsErrorCode() {
+    // Given: Non-integer return value (e.g., String "hello")
+    // When: getIntFromReturnValue called (indirectly via callMain)
+    // Then: Returns EXIT_INVALID_RETURN_VALUE (126)
+
+    // TODO(#542): Implement test logic
+    // 1. Mock dispatcher to return ExecMessage with String wrapped in returnValue
+    // 2. Call invoker.callMain(className, args)
+    // 3. Verify exit code is EXIT_INVALID_RETURN_VALUE (126)
+    fail("Not yet implemented");
   }
 }
