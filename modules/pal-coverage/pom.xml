@@ -104,7 +104,7 @@
                                     <artifactId>pal-cli</artifactId>
                                     <version>${project.version}</version>
                                     <outputDirectory>${project.build.directory}/shaded-classes</outputDirectory>
-                                    <excludes>META-INF/versions/**,META-INF/MANIFEST.MF,META-INF/maven/**,META-INF/LICENSE*,META-INF/NOTICE*,META-INF/services/**</excludes>
+                                    <excludes>META-INF/versions/**,META-INF/MANIFEST.MF,META-INF/maven/**,META-INF/LICENSE*,META-INF/NOTICE*,META-INF/services/**,io/quasient/pal/messages/colfer/**</excludes>
                                 </artifactItem>
                             </artifactItems>
                         </configuration>
@@ -243,7 +243,7 @@
                             <executable>bash</executable>
                             <arguments>
                                 <argument>-c</argument>
-                                <argument>if [ -f "${project.build.directory}/jacoco-it-merged.exec" ]; then java -jar "${project.build.directory}/jacococli.jar" report "${project.build.directory}/jacoco-it-merged.exec" --classfiles "${project.build.directory}/shaded-classes" --sourcefiles "${project.basedir}/../pal-api/src/main/java" --sourcefiles "${project.basedir}/../pal-client/src/main/java" --sourcefiles "${project.basedir}/../pal-cli/src/main/java" --sourcefiles "${project.basedir}/../pal-runtime/src/main/java" --html "${project.build.directory}/site/jacoco-aggregate-it" --csv "${project.build.directory}/site/jacoco-aggregate-it/jacoco.csv"; else echo "Skipping IT report: no IT exec files found (ITs may have been skipped)"; fi</argument>
+                                <argument>if [ -f "${project.build.directory}/jacoco-it-merged.exec" ]; then java -jar "${project.build.directory}/jacococli.jar" report "${project.build.directory}/jacoco-it-merged.exec" --classfiles "${project.build.directory}/shaded-classes" --sourcefiles "${project.basedir}/../pal-api/src/main/java" --sourcefiles "${project.basedir}/../pal-client/src/main/java" --sourcefiles "${project.basedir}/../pal-cli/src/main/java" --sourcefiles "${project.basedir}/../pal-runtime/src/main/java" --html "${project.build.directory}/site/jacoco-aggregate-it" --csv "${project.build.directory}/site/jacoco-aggregate-it/jacoco.csv" --xml "${project.build.directory}/site/jacoco-aggregate-it/jacoco.xml"; else echo "Skipping IT report: no IT exec files found (ITs may have been skipped)"; fi</argument>
                             </arguments>
                         </configuration>
                     </execution>
@@ -265,7 +265,7 @@
                             <executable>bash</executable>
                             <arguments>
                                 <argument>-c</argument>
-                                <argument>if [ -f "${project.build.directory}/jacoco-all-merged.exec" ]; then java -jar "${project.build.directory}/jacococli.jar" report "${project.build.directory}/jacoco-all-merged.exec" --classfiles "${project.build.directory}/shaded-classes" --sourcefiles "${project.basedir}/../pal-api/src/main/java" --sourcefiles "${project.basedir}/../pal-client/src/main/java" --sourcefiles "${project.basedir}/../pal-cli/src/main/java" --sourcefiles "${project.basedir}/../pal-runtime/src/main/java" --html "${project.build.directory}/site/jacoco-aggregate-all" --csv "${project.build.directory}/site/jacoco-aggregate-all/jacoco.csv"; else echo "Skipping combined report: no exec files found"; fi</argument>
+                                <argument>if [ -f "${project.build.directory}/jacoco-all-merged.exec" ]; then java -jar "${project.build.directory}/jacococli.jar" report "${project.build.directory}/jacoco-all-merged.exec" --classfiles "${project.build.directory}/shaded-classes" --sourcefiles "${project.basedir}/../pal-api/src/main/java" --sourcefiles "${project.basedir}/../pal-client/src/main/java" --sourcefiles "${project.basedir}/../pal-cli/src/main/java" --sourcefiles "${project.basedir}/../pal-runtime/src/main/java" --html "${project.build.directory}/site/jacoco-aggregate-all" --csv "${project.build.directory}/site/jacoco-aggregate-all/jacoco.csv" --xml "${project.build.directory}/site/jacoco-aggregate-all/jacoco.xml"; else echo "Skipping combined report: no exec files found"; fi</argument>
                             </arguments>
                         </configuration>
                     </execution>
