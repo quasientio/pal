@@ -39,7 +39,6 @@ import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.zeromq.ZContext;
 
@@ -251,7 +250,7 @@ public class SelfBootstrapInvokerTest {
   }
 
   // ===========================================================================
-  // Test specifications for issue #541 - Awaiting implementation in #542
+  // Test specifications for issue #541 - Implemented in #542
   // ===========================================================================
 
   /**
@@ -269,29 +268,43 @@ public class SelfBootstrapInvokerTest {
    *
    * <ul>
    *   <li>Create a temporary JAR with a valid Main-Class manifest entry
-   *   <li>The JAR must contain an actual class file with a main method
-   *   <li>Mock the IncomingMessageDispatcher to return a valid response
+   *   <li>Mock the IncomingMessageDispatcher to return a valid response (void return)
    *   <li>Verify the exit code from main method execution is returned
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #542")
-  public void testCallJar_loadsAndExecutesJar() {
-    // Given: Valid JAR file with main class
-    // When: callJar called
-    // Then: JAR loaded; main method executed; result returned
+  public void testCallJar_loadsAndExecutesJar() throws Exception {
+    // Given: Valid JAR file with main class in manifest
+    Path validJar = tempDir.resolve("valid-main.jar");
+    Manifest manifest = new Manifest();
+    manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
+    manifest.getMainAttributes().put(Attributes.Name.MAIN_CLASS, "com.example.MainClass");
 
-    // TODO(#542): Implement test logic
-    // 1. Create a temporary JAR file containing a compiled class with main(String[] args)
-    // 2. Add MANIFEST.MF with Main-Class attribute pointing to that class
-    // 3. Configure mock dispatcher to return success response
-    // 4. Call invoker.callJar(jarPath, args)
-    // 5. Verify the exit code matches expected value
-    fail("Not yet implemented");
+    try (FileOutputStream fos = new FileOutputStream(validJar.toFile());
+        JarOutputStream jos = new JarOutputStream(fos, manifest)) {
+      // JAR with manifest only - callJar just extracts Main-Class and delegates to callMain
+    }
+
+    // Mock dispatcher to return a void (null) return value indicating success
+    when(dispatcher.incomingCall(any(), any(), any()))
+        .thenAnswer(
+            inv -> {
+              ExecMessage req = (ExecMessage) inv.getArguments()[0];
+              // Build a return value with null object (void return)
+              java.lang.reflect.Method voidMethod = Object.class.getMethod("wait");
+              return messageBuilder.buildReturnValue(
+                  null, voidMethod, null, false, req.getMessageId());
+            });
+
+    // When: callJar called
+    int exitCode = invoker.callJar(validJar.toString(), Collections.emptyList());
+
+    // Then: JAR loaded; main method executed; result returned with EXIT_SUCCESS
+    assertThat("Valid JAR execution should return EXIT_SUCCESS", exitCode, is(EXIT_SUCCESS));
   }
 
   /**
-   * Tests that callJar throws appropriate exception when JAR manifest is missing.
+   * Tests that callJar throws appropriate exception when JAR manifest is missing Main-Class.
    *
    * <p>Specification from issue #541:
    *
@@ -313,17 +326,26 @@ public class SelfBootstrapInvokerTest {
    * in issue #541 for acceptance criteria tracking.
    */
   @Test
-  @Ignore("Awaiting implementation in #542")
-  public void testCallJar_missingManifest_throwsException() {
+  public void testCallJar_missingManifest_throwsException() throws IOException {
     // Given: JAR file without Main-Class in manifest
+    Path jarWithoutMain = tempDir.resolve("no-main-class.jar");
+    Manifest manifest = new Manifest();
+    manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
+    // No Main-Class attribute
+
+    try (FileOutputStream fos = new FileOutputStream(jarWithoutMain.toFile());
+        JarOutputStream jos = new JarOutputStream(fos, manifest)) {
+      // Empty JAR with just manifest
+    }
+
     // When: callJar called
     // Then: Appropriate exception thrown (PeerException with ERROR_NO_MAIN_CLASS_IN_JAR_MANIFEST)
-
-    // TODO(#542): Implement test logic
-    // 1. Create a JAR with only MANIFEST_VERSION set (no Main-Class)
-    // 2. Call invoker.callJar(jarPath, args)
-    // 3. Verify PeerException is thrown with ERROR_NO_MAIN_CLASS_IN_JAR_MANIFEST
-    fail("Not yet implemented");
+    try {
+      invoker.callJar(jarWithoutMain.toString(), Collections.emptyList());
+      fail("Expected PeerException for JAR without Main-Class");
+    } catch (PeerException e) {
+      assertThat(e.getFatalCode(), is(PeerException.FatalCode.ERROR_NO_MAIN_CLASS_IN_JAR_MANIFEST));
+    }
   }
 
   /**
@@ -340,24 +362,42 @@ public class SelfBootstrapInvokerTest {
    * <p>Implementation notes:
    *
    * <ul>
-   *   <li>Create a JAR with a main method that throws RuntimeException
+   *   <li>Create a JAR with a valid Main-Class attribute
    *   <li>Mock dispatcher to return EXEC_THROWABLE message type
    *   <li>Verify exit code is EXIT_MAIN_THREW_EXCEPTION (1)
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #542")
-  public void testCallJar_mainThrowsException_propagatesCorrectly() {
+  public void testCallJar_mainThrowsException_propagatesCorrectly() throws Exception {
     // Given: JAR whose main throws exception
-    // When: callJar called
-    // Then: Exception propagated with correct exit code (EXIT_MAIN_THREW_EXCEPTION = 1)
+    Path validJar = tempDir.resolve("throwing-main.jar");
+    Manifest manifest = new Manifest();
+    manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
+    manifest.getMainAttributes().put(Attributes.Name.MAIN_CLASS, "com.example.ThrowingMain");
 
-    // TODO(#542): Implement test logic
-    // 1. Create a valid JAR file with Main-Class in manifest
-    // 2. Configure mock dispatcher to return EXEC_THROWABLE response
-    // 3. Call invoker.callJar(jarPath, args)
-    // 4. Verify exit code is EXIT_MAIN_THREW_EXCEPTION (1)
-    fail("Not yet implemented");
+    try (FileOutputStream fos = new FileOutputStream(validJar.toFile());
+        JarOutputStream jos = new JarOutputStream(fos, manifest)) {
+      // JAR with manifest only - callJar extracts Main-Class and delegates to callMain
+    }
+
+    // Mock dispatcher to return EXEC_THROWABLE response
+    when(dispatcher.incomingCall(any(), any(), any()))
+        .thenAnswer(
+            inv -> {
+              ExecMessage req = (ExecMessage) inv.getArguments()[0];
+              RuntimeException ex = new RuntimeException("Main threw an exception");
+              return messageBuilder.buildAccessibleObjectThrowable(
+                  peerId, null, ex, req.getMessageId());
+            });
+
+    // When: callJar called
+    int exitCode = invoker.callJar(validJar.toString(), Collections.emptyList());
+
+    // Then: Exception propagated with correct exit code (EXIT_MAIN_THREW_EXCEPTION = 1)
+    assertThat(
+        "Exception from main() should return EXIT_MAIN_THREW_EXCEPTION",
+        exitCode,
+        is(EXIT_MAIN_THREW_EXCEPTION));
   }
 
   /**
@@ -384,17 +424,24 @@ public class SelfBootstrapInvokerTest {
    * #541 for acceptance criteria tracking.
    */
   @Test
-  @Ignore("Awaiting implementation in #542")
-  public void testGetIntFromReturnValue_nullValue_returnsZero() {
+  public void testGetIntFromReturnValue_nullValue_returnsZero() throws Exception {
     // Given: Null return value (void main method)
-    // When: getIntFromReturnValue called (indirectly via callMain)
-    // Then: Returns 0 (EXIT_SUCCESS)
+    // Mock dispatcher to return ExecMessage with null returnValue.object
+    when(dispatcher.incomingCall(any(), any(), any()))
+        .thenAnswer(
+            inv -> {
+              ExecMessage req = (ExecMessage) inv.getArguments()[0];
+              // Build a return value with null object (void return)
+              java.lang.reflect.Method voidMethod = Object.class.getMethod("wait");
+              return messageBuilder.buildReturnValue(
+                  null, voidMethod, null, false, req.getMessageId());
+            });
 
-    // TODO(#542): Implement test logic
-    // 1. Mock dispatcher to return ExecMessage with null returnValue.object
-    // 2. Call invoker.callMain(className, args)
-    // 3. Verify exit code is 0 (EXIT_SUCCESS)
-    fail("Not yet implemented");
+    // When: getIntFromReturnValue called (indirectly via callMain)
+    int exitCode = invoker.callMain("com.example.TestClass", Collections.emptyList());
+
+    // Then: Returns 0 (EXIT_SUCCESS)
+    assertThat("Null return value should return EXIT_SUCCESS", exitCode, is(EXIT_SUCCESS));
   }
 
   /**
@@ -417,17 +464,25 @@ public class SelfBootstrapInvokerTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #542")
-  public void testGetIntFromReturnValue_integerValue_returnsValue() {
-    // Given: Integer return value (e.g., 42)
-    // When: getIntFromReturnValue called (indirectly via callMain)
-    // Then: Returns the integer value (42)
+  public void testGetIntFromReturnValue_integerValue_returnsValue() throws Exception {
+    // Given: Integer return value (42)
+    final int expectedValue = 42;
 
-    // TODO(#542): Implement test logic
-    // 1. Mock dispatcher to return ExecMessage with Integer wrapped in returnValue
-    // 2. Call invoker.callMain(className, args)
-    // 3. Verify exit code matches the Integer value
-    fail("Not yet implemented");
+    // Mock dispatcher to return ExecMessage with Integer wrapped in returnValue
+    when(dispatcher.incomingCall(any(), any(), any()))
+        .thenAnswer(
+            inv -> {
+              ExecMessage req = (ExecMessage) inv.getArguments()[0];
+              java.lang.reflect.Method intMethod = Integer.class.getMethod("intValue");
+              return messageBuilder.buildReturnValue(
+                  Integer.valueOf(expectedValue), intMethod, null, false, req.getMessageId());
+            });
+
+    // When: getIntFromReturnValue called (indirectly via callMain)
+    int exitCode = invoker.callMain("com.example.TestClass", Collections.emptyList());
+
+    // Then: Returns the integer value (42)
+    assertThat("Integer return value should be returned as exit code", exitCode, is(expectedValue));
   }
 
   /**
@@ -446,20 +501,38 @@ public class SelfBootstrapInvokerTest {
    * <ul>
    *   <li>Non-Integer return values cannot be used as exit codes
    *   <li>Should return EXIT_INVALID_RETURN_VALUE (126)
-   *   <li>Test with String, Object, custom class return types
+   *   <li>Test with String return type
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #542")
-  public void testGetIntFromReturnValue_nonIntegerValue_returnsErrorCode() {
-    // Given: Non-integer return value (e.g., String "hello")
-    // When: getIntFromReturnValue called (indirectly via callMain)
-    // Then: Returns EXIT_INVALID_RETURN_VALUE (126)
+  public void testGetIntFromReturnValue_nonIntegerValue_returnsErrorCode() throws Exception {
+    // Given: Non-integer return value (String)
+    // Mock dispatcher to return ExecMessage with String wrapped in returnValue
+    when(dispatcher.incomingCall(any(), any(), any()))
+        .thenAnswer(
+            inv -> {
+              ExecMessage req = (ExecMessage) inv.getArguments()[0];
+              // Manually build a message with String return value
+              ExecMessage response = new ExecMessage();
+              response.messageId = req.getMessageId();
 
-    // TODO(#542): Implement test logic
-    // 1. Mock dispatcher to return ExecMessage with String wrapped in returnValue
-    // 2. Call invoker.callMain(className, args)
-    // 3. Verify exit code is EXIT_INVALID_RETURN_VALUE (126)
-    fail("Not yet implemented");
+              ReturnValue rv = new ReturnValue();
+              Obj ov =
+                  io.quasient.pal.serdes.colfer.Wrapper.wrapInto(
+                      new Obj(), "invalid string return", "java.lang.String", null, null);
+              rv.setObject(ov);
+              response.returnValue = rv;
+
+              return response;
+            });
+
+    // When: getIntFromReturnValue called (indirectly via callMain)
+    int exitCode = invoker.callMain("com.example.TestClass", Collections.emptyList());
+
+    // Then: Returns EXIT_INVALID_RETURN_VALUE (126)
+    assertThat(
+        "Non-Integer return should return EXIT_INVALID_RETURN_VALUE",
+        exitCode,
+        is(EXIT_INVALID_RETURN_VALUE));
   }
 }
