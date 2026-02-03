@@ -18,7 +18,6 @@ import io.quasient.pal.core.ZmqEnabledTest;
 import io.quasient.pal.messages.Marshallable;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -148,19 +147,18 @@ public class InterceptEventMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:InterceptEventMsgTest.testEquals_sameObject_returnsTrue]
    */
   @Test
-  @Ignore("Awaiting implementation in #530")
   public void testEquals_sameObject_returnsTrue() {
-    // Given: A single InterceptEventMsg instance
-    // - Create an InterceptEventMsg with:
-    //   - For REGISTER type: a byte[] body
-    //   - Or for UNREGISTER type: an interceptMessageId string
+    // Given: InterceptEventMsg instances for both REGISTER and UNREGISTER types
+    byte[] body = new byte[] {1, 2, 3};
+    InterceptEventMsg registerMsg = new InterceptEventMsg(body);
+
+    String interceptMsgId = UUID.randomUUID().toString();
+    InterceptEventMsg unregisterMsg = new InterceptEventMsg(interceptMsgId);
 
     // When: equals() is called with the same object reference
-
-    // Then: Returns true
-
-    // TODO(#530): Implement test logic
-    fail("Not yet implemented");
+    // Then: Returns true for both types
+    assertThat(registerMsg.equals(registerMsg), is(true));
+    assertThat(unregisterMsg.equals(unregisterMsg), is(true));
   }
 
   /**
@@ -169,18 +167,25 @@ public class InterceptEventMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:InterceptEventMsgTest.testEquals_equalObjects_returnsTrue]
    */
   @Test
-  @Ignore("Awaiting implementation in #530")
   public void testEquals_equalObjects_returnsTrue() {
     // Given: Two InterceptEventMsg instances with identical field values
-    // - For REGISTER type: both messages have identical byte[] body
-    // - Or for UNREGISTER type: both have identical interceptMessageId string
+    // Test REGISTER type
+    byte[] body = new byte[] {1, 2, 3};
+    InterceptEventMsg registerMsg1 = new InterceptEventMsg(body);
+    InterceptEventMsg registerMsg2 = new InterceptEventMsg(body);
 
     // When: equals() is called comparing message1 to message2
-
     // Then: Returns true
+    assertThat(registerMsg1.equals(registerMsg2), is(true));
+    assertThat(registerMsg2.equals(registerMsg1), is(true));
 
-    // TODO(#530): Implement test logic
-    fail("Not yet implemented");
+    // Test UNREGISTER type
+    String interceptMsgId = UUID.randomUUID().toString();
+    InterceptEventMsg unregisterMsg1 = new InterceptEventMsg(interceptMsgId);
+    InterceptEventMsg unregisterMsg2 = new InterceptEventMsg(interceptMsgId);
+
+    assertThat(unregisterMsg1.equals(unregisterMsg2), is(true));
+    assertThat(unregisterMsg2.equals(unregisterMsg1), is(true));
   }
 
   /**
@@ -189,22 +194,27 @@ public class InterceptEventMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:InterceptEventMsgTest.testEquals_differentObjects_returnsFalse]
    */
   @Test
-  @Ignore("Awaiting implementation in #530")
   public void testEquals_differentObjects_returnsFalse() {
     // Given: Two InterceptEventMsg instances with different field values
-    // - message1: REGISTER type with body {1, 2, 3}
-    // - message2: REGISTER type with body {4, 5, 6}
+    byte[] body1 = new byte[] {1, 2, 3};
+    byte[] body2 = new byte[] {4, 5, 6};
+
+    InterceptEventMsg registerMsg1 = new InterceptEventMsg(body1);
+    InterceptEventMsg registerMsg2 = new InterceptEventMsg(body2);
 
     // When: equals() is called comparing message1 to message2
-
     // Then: Returns false
+    assertThat(registerMsg1.equals(registerMsg2), is(false));
 
-    // Also test with:
-    // - Different types (REGISTER vs UNREGISTER)
-    // - Different interceptMessageId for UNREGISTER type
+    // Also test with different types (REGISTER vs UNREGISTER)
+    String interceptMsgId = UUID.randomUUID().toString();
+    InterceptEventMsg unregisterMsg = new InterceptEventMsg(interceptMsgId);
+    assertThat(registerMsg1.equals(unregisterMsg), is(false));
 
-    // TODO(#530): Implement test logic
-    fail("Not yet implemented");
+    // Different interceptMessageId for UNREGISTER type
+    String interceptMsgId2 = UUID.randomUUID().toString();
+    InterceptEventMsg unregisterMsg2 = new InterceptEventMsg(interceptMsgId2);
+    assertThat(unregisterMsg.equals(unregisterMsg2), is(false));
   }
 
   /**
@@ -213,17 +223,18 @@ public class InterceptEventMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:InterceptEventMsgTest.testEquals_null_returnsFalse]
    */
   @Test
-  @Ignore("Awaiting implementation in #530")
   public void testEquals_null_returnsFalse() {
-    // Given: An InterceptEventMsg instance
-    // - Create message with any valid field values (REGISTER or UNREGISTER type)
+    // Given: InterceptEventMsg instances for both types
+    byte[] body = new byte[] {1, 2, 3};
+    InterceptEventMsg registerMsg = new InterceptEventMsg(body);
+
+    String interceptMsgId = UUID.randomUUID().toString();
+    InterceptEventMsg unregisterMsg = new InterceptEventMsg(interceptMsgId);
 
     // When: equals() is called with null
-
     // Then: Returns false (should not throw NullPointerException)
-
-    // TODO(#530): Implement test logic
-    fail("Not yet implemented");
+    assertThat(registerMsg.equals(null), is(false));
+    assertThat(unregisterMsg.equals(null), is(false));
   }
 
   /**
@@ -232,19 +243,23 @@ public class InterceptEventMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:InterceptEventMsgTest.testHashCode_equalObjects_sameHashCode]
    */
   @Test
-  @Ignore("Awaiting implementation in #530")
   public void testHashCode_equalObjects_sameHashCode() {
     // Given: Two InterceptEventMsg instances with identical field values
-    // - For REGISTER type: both messages have identical byte[] body
-    // - Or for UNREGISTER type: both have identical interceptMessageId string
+    // Test REGISTER type
+    byte[] body = new byte[] {1, 2, 3};
+    InterceptEventMsg registerMsg1 = new InterceptEventMsg(body);
+    InterceptEventMsg registerMsg2 = new InterceptEventMsg(body);
 
     // When: hashCode() is called on both objects
+    // Then: Both hash codes are equal (required by hashCode contract when equals() returns true)
+    assertThat(registerMsg1.hashCode(), is(registerMsg2.hashCode()));
 
-    // Then: Both hash codes are equal
-    // Note: This is required by the hashCode contract when equals() returns true
+    // Test UNREGISTER type
+    String interceptMsgId = UUID.randomUUID().toString();
+    InterceptEventMsg unregisterMsg1 = new InterceptEventMsg(interceptMsgId);
+    InterceptEventMsg unregisterMsg2 = new InterceptEventMsg(interceptMsgId);
 
-    // TODO(#530): Implement test logic
-    fail("Not yet implemented");
+    assertThat(unregisterMsg1.hashCode(), is(unregisterMsg2.hashCode()));
   }
 
   /**
@@ -254,20 +269,25 @@ public class InterceptEventMsgTest extends ZmqEnabledTest {
    * [TEST:InterceptEventMsgTest.testHashCode_differentObjects_likelyDifferentHashCode]
    */
   @Test
-  @Ignore("Awaiting implementation in #530")
   public void testHashCode_differentObjects_likelyDifferentHashCode() {
     // Given: Two InterceptEventMsg instances with different field values
-    // - message1: REGISTER type with body {1, 2, 3}
-    // - message2: REGISTER type with body {4, 5, 6}
+    byte[] body1 = new byte[] {1, 2, 3};
+    byte[] body2 = new byte[] {4, 5, 6};
+
+    InterceptEventMsg registerMsg1 = new InterceptEventMsg(body1);
+    InterceptEventMsg registerMsg2 = new InterceptEventMsg(body2);
 
     // When: hashCode() is called on both objects
+    // Then: Hash codes are likely different (not strictly required, but expected)
+    assertThat(registerMsg1.hashCode(), is(not(registerMsg2.hashCode())));
 
-    // Then: Hash codes are likely different
-    // Note: This is not strictly required by the hashCode contract,
-    // but a good hash function should minimize collisions
+    // Also test UNREGISTER type
+    String interceptMsgId1 = UUID.randomUUID().toString();
+    String interceptMsgId2 = UUID.randomUUID().toString();
+    InterceptEventMsg unregisterMsg1 = new InterceptEventMsg(interceptMsgId1);
+    InterceptEventMsg unregisterMsg2 = new InterceptEventMsg(interceptMsgId2);
 
-    // TODO(#530): Implement test logic
-    fail("Not yet implemented");
+    assertThat(unregisterMsg1.hashCode(), is(not(unregisterMsg2.hashCode())));
   }
 
   /**
@@ -276,21 +296,29 @@ public class InterceptEventMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:InterceptEventMsgTest.testToString_containsRelevantInfo]
    */
   @Test
-  @Ignore("Awaiting implementation in #530")
   public void testToString_containsRelevantInfo() {
-    // Given: An InterceptEventMsg with known field values
-    // - For REGISTER type: type=REGISTER, body=byte array
-    // - Or for UNREGISTER type: type=UNREGISTER, interceptMessageId=string
+    // Given: InterceptEventMsg instances for both types
+
+    // Test REGISTER type
+    byte[] body = new byte[] {10, 20, 30};
+    InterceptEventMsg registerMsg = new InterceptEventMsg(body);
 
     // When: toString() is called
+    String registerResult = registerMsg.toString();
 
-    // Then: The returned string contains:
-    // - The class name or identifier "InterceptEventMsg"
-    // - The type (REGISTER or UNREGISTER)
-    // - For REGISTER: representation of the body
-    // - For UNREGISTER: the interceptMessageId
+    // Then: The returned string contains relevant information
+    assertThat(registerResult, org.hamcrest.Matchers.containsString("InterceptEventMsg"));
+    assertThat(registerResult, org.hamcrest.Matchers.containsString("REGISTER"));
+    assertThat(registerResult, org.hamcrest.Matchers.containsString("[10, 20, 30]"));
 
-    // TODO(#530): Implement test logic
-    fail("Not yet implemented");
+    // Test UNREGISTER type
+    String interceptMsgId = "test-intercept-id-12345";
+    InterceptEventMsg unregisterMsg = new InterceptEventMsg(interceptMsgId);
+
+    String unregisterResult = unregisterMsg.toString();
+
+    assertThat(unregisterResult, org.hamcrest.Matchers.containsString("InterceptEventMsg"));
+    assertThat(unregisterResult, org.hamcrest.Matchers.containsString("UNREGISTER"));
+    assertThat(unregisterResult, org.hamcrest.Matchers.containsString("test-intercept-id-12345"));
   }
 }

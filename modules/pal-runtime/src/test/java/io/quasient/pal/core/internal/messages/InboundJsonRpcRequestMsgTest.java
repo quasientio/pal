@@ -12,11 +12,9 @@ package io.quasient.pal.core.internal.messages;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.fail;
 
 import io.quasient.pal.core.ZmqEnabledTest;
 import java.util.UUID;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -147,19 +145,15 @@ public class InboundJsonRpcRequestMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:InboundJsonRpcRequestMsgTest.testEquals_sameObject_returnsTrue]
    */
   @Test
-  @Ignore("Awaiting implementation in #530")
   public void testEquals_sameObject_returnsTrue() {
     // Given: A single InboundJsonRpcRequestMsg instance
-    // - Create an InboundJsonRpcRequestMsg with:
-    //   - peerId: a random UUID
-    //   - jsonMessage: a valid JSON-RPC request string
+    UUID peerId = UUID.randomUUID();
+    String jsonMessage = "{\"jsonrpc\":\"2.0\",\"method\":\"test\",\"id\":1}";
+    InboundJsonRpcRequestMsg msg = new InboundJsonRpcRequestMsg(peerId, jsonMessage);
 
     // When: equals() is called with the same object reference
-
     // Then: Returns true
-
-    // TODO(#530): Implement test logic
-    fail("Not yet implemented");
+    assertThat(msg.equals(msg), is(true));
   }
 
   /**
@@ -168,19 +162,18 @@ public class InboundJsonRpcRequestMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:InboundJsonRpcRequestMsgTest.testEquals_equalObjects_returnsTrue]
    */
   @Test
-  @Ignore("Awaiting implementation in #530")
   public void testEquals_equalObjects_returnsTrue() {
     // Given: Two InboundJsonRpcRequestMsg instances with identical field values
-    // - Both messages have:
-    //   - peerId: same UUID value
-    //   - jsonMessage: identical JSON-RPC request string
+    UUID peerId = UUID.randomUUID();
+    String jsonMessage = "{\"jsonrpc\":\"2.0\",\"method\":\"test\",\"id\":1}";
+
+    InboundJsonRpcRequestMsg msg1 = new InboundJsonRpcRequestMsg(peerId, jsonMessage);
+    InboundJsonRpcRequestMsg msg2 = new InboundJsonRpcRequestMsg(peerId, jsonMessage);
 
     // When: equals() is called comparing message1 to message2
-
     // Then: Returns true
-
-    // TODO(#530): Implement test logic
-    fail("Not yet implemented");
+    assertThat(msg1.equals(msg2), is(true));
+    assertThat(msg2.equals(msg1), is(true));
   }
 
   /**
@@ -190,22 +183,27 @@ public class InboundJsonRpcRequestMsgTest extends ZmqEnabledTest {
    * [TEST:InboundJsonRpcRequestMsgTest.testEquals_differentObjects_returnsFalse]
    */
   @Test
-  @Ignore("Awaiting implementation in #530")
   public void testEquals_differentObjects_returnsFalse() {
     // Given: Two InboundJsonRpcRequestMsg instances with different field values
-    // - message1 with peerId: UUID1, jsonMessage: "request1"
-    // - message2 with peerId: UUID2, jsonMessage: "request2"
+    UUID peerId1 = UUID.randomUUID();
+    UUID peerId2 = UUID.randomUUID();
+    String jsonMessage1 = "{\"jsonrpc\":\"2.0\",\"method\":\"test1\",\"id\":1}";
+    String jsonMessage2 = "{\"jsonrpc\":\"2.0\",\"method\":\"test2\",\"id\":2}";
+
+    InboundJsonRpcRequestMsg msg1 = new InboundJsonRpcRequestMsg(peerId1, jsonMessage1);
+    InboundJsonRpcRequestMsg msg2 = new InboundJsonRpcRequestMsg(peerId2, jsonMessage2);
 
     // When: equals() is called comparing message1 to message2
-
     // Then: Returns false
+    assertThat(msg1.equals(msg2), is(false));
 
-    // Also test with:
-    // - Same peerId, different jsonMessage
-    // - Different peerId, same jsonMessage
+    // Also test with same peerId, different jsonMessage
+    InboundJsonRpcRequestMsg msgSamePeer = new InboundJsonRpcRequestMsg(peerId1, jsonMessage2);
+    assertThat(msg1.equals(msgSamePeer), is(false));
 
-    // TODO(#530): Implement test logic
-    fail("Not yet implemented");
+    // Different peerId, same jsonMessage
+    InboundJsonRpcRequestMsg msgSameJson = new InboundJsonRpcRequestMsg(peerId2, jsonMessage1);
+    assertThat(msg1.equals(msgSameJson), is(false));
   }
 
   /**
@@ -214,17 +212,15 @@ public class InboundJsonRpcRequestMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:InboundJsonRpcRequestMsgTest.testEquals_null_returnsFalse]
    */
   @Test
-  @Ignore("Awaiting implementation in #530")
   public void testEquals_null_returnsFalse() {
     // Given: An InboundJsonRpcRequestMsg instance
-    // - Create message with any valid field values
+    UUID peerId = UUID.randomUUID();
+    String jsonMessage = "{\"jsonrpc\":\"2.0\",\"method\":\"test\",\"id\":1}";
+    InboundJsonRpcRequestMsg msg = new InboundJsonRpcRequestMsg(peerId, jsonMessage);
 
     // When: equals() is called with null
-
     // Then: Returns false (should not throw NullPointerException)
-
-    // TODO(#530): Implement test logic
-    fail("Not yet implemented");
+    assertThat(msg.equals(null), is(false));
   }
 
   /**
@@ -234,20 +230,17 @@ public class InboundJsonRpcRequestMsgTest extends ZmqEnabledTest {
    * [TEST:InboundJsonRpcRequestMsgTest.testHashCode_equalObjects_sameHashCode]
    */
   @Test
-  @Ignore("Awaiting implementation in #530")
   public void testHashCode_equalObjects_sameHashCode() {
     // Given: Two InboundJsonRpcRequestMsg instances with identical field values
-    // - Both messages have:
-    //   - peerId: same UUID value
-    //   - jsonMessage: identical JSON-RPC request string
+    UUID peerId = UUID.randomUUID();
+    String jsonMessage = "{\"jsonrpc\":\"2.0\",\"method\":\"test\",\"id\":1}";
+
+    InboundJsonRpcRequestMsg msg1 = new InboundJsonRpcRequestMsg(peerId, jsonMessage);
+    InboundJsonRpcRequestMsg msg2 = new InboundJsonRpcRequestMsg(peerId, jsonMessage);
 
     // When: hashCode() is called on both objects
-
-    // Then: Both hash codes are equal
-    // Note: This is required by the hashCode contract when equals() returns true
-
-    // TODO(#530): Implement test logic
-    fail("Not yet implemented");
+    // Then: Both hash codes are equal (required by hashCode contract when equals() returns true)
+    assertThat(msg1.hashCode(), is(msg2.hashCode()));
   }
 
   /**
@@ -257,20 +250,19 @@ public class InboundJsonRpcRequestMsgTest extends ZmqEnabledTest {
    * [TEST:InboundJsonRpcRequestMsgTest.testHashCode_differentObjects_likelyDifferentHashCode]
    */
   @Test
-  @Ignore("Awaiting implementation in #530")
   public void testHashCode_differentObjects_likelyDifferentHashCode() {
     // Given: Two InboundJsonRpcRequestMsg instances with different field values
-    // - message1 with peerId: UUID1, jsonMessage: "request1"
-    // - message2 with peerId: UUID2, jsonMessage: "request2"
+    UUID peerId1 = UUID.randomUUID();
+    UUID peerId2 = UUID.randomUUID();
+    String jsonMessage1 = "{\"jsonrpc\":\"2.0\",\"method\":\"test1\",\"id\":1}";
+    String jsonMessage2 = "{\"jsonrpc\":\"2.0\",\"method\":\"test2\",\"id\":2}";
+
+    InboundJsonRpcRequestMsg msg1 = new InboundJsonRpcRequestMsg(peerId1, jsonMessage1);
+    InboundJsonRpcRequestMsg msg2 = new InboundJsonRpcRequestMsg(peerId2, jsonMessage2);
 
     // When: hashCode() is called on both objects
-
-    // Then: Hash codes are likely different
-    // Note: This is not strictly required by the hashCode contract,
-    // but a good hash function should minimize collisions
-
-    // TODO(#530): Implement test logic
-    fail("Not yet implemented");
+    // Then: Hash codes are likely different (not strictly required, but expected)
+    assertThat(msg1.hashCode(), is(not(msg2.hashCode())));
   }
 
   /**
@@ -279,20 +271,18 @@ public class InboundJsonRpcRequestMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:InboundJsonRpcRequestMsgTest.testToString_containsRelevantInfo]
    */
   @Test
-  @Ignore("Awaiting implementation in #530")
   public void testToString_containsRelevantInfo() {
     // Given: An InboundJsonRpcRequestMsg with known field values
-    // - peerId: a specific UUID
-    // - jsonMessage: a JSON-RPC request string
+    UUID peerId = UUID.fromString("12345678-1234-1234-1234-123456789abc");
+    String jsonMessage = "{\"jsonrpc\":\"2.0\",\"method\":\"testMethod\",\"id\":42}";
+    InboundJsonRpcRequestMsg msg = new InboundJsonRpcRequestMsg(peerId, jsonMessage);
 
     // When: toString() is called
+    String result = msg.toString();
 
-    // Then: The returned string contains:
-    // - The class name or identifier "InboundJsonRpcRequestMsg"
-    // - The peerId value
-    // - The jsonMessage or a representation of it
-
-    // TODO(#530): Implement test logic
-    fail("Not yet implemented");
+    // Then: The returned string contains relevant information
+    assertThat(result, org.hamcrest.Matchers.containsString("InboundJsonRpcRequestMsg"));
+    assertThat(result, org.hamcrest.Matchers.containsString(peerId.toString()));
+    assertThat(result, org.hamcrest.Matchers.containsString("testMethod"));
   }
 }

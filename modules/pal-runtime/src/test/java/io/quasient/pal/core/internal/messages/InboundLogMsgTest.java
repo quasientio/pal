@@ -12,14 +12,12 @@ package io.quasient.pal.core.internal.messages;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.fail;
 
 import io.quasient.pal.core.ZmqEnabledTest;
 import io.quasient.pal.messages.types.MessageFormatType;
 import java.nio.charset.StandardCharsets;
 import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.header.internals.RecordHeaders;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,21 +96,15 @@ public class InboundLogMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:InboundLogMsgTest.testEquals_sameObject_returnsTrue]
    */
   @Test
-  @Ignore("Awaiting implementation in #530")
   public void testEquals_sameObject_returnsTrue() {
     // Given: A single InboundLogMsg instance
-    // - Create an InboundLogMsg with:
-    //   - offset: 100L
-    //   - messageFormat: MessageFormatType.COLFER
-    //   - headers: empty RecordHeaders
-    //   - body: byte array {1, 2, 3}
+    Headers headers = new RecordHeaders();
+    byte[] body = new byte[] {1, 2, 3};
+    InboundLogMsg msg = new InboundLogMsg(100L, MessageFormatType.BINARY, headers, body);
 
     // When: equals() is called with the same object reference
-
     // Then: Returns true
-
-    // TODO(#530): Implement test logic
-    fail("Not yet implemented");
+    assertThat(msg.equals(msg), is(true));
   }
 
   /**
@@ -121,21 +113,20 @@ public class InboundLogMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:InboundLogMsgTest.testEquals_equalObjects_returnsTrue]
    */
   @Test
-  @Ignore("Awaiting implementation in #530")
   public void testEquals_equalObjects_returnsTrue() {
     // Given: Two InboundLogMsg instances with identical field values
-    // - Both messages have:
-    //   - offset: 100L
-    //   - messageFormat: MessageFormatType.COLFER
-    //   - headers: identical RecordHeaders (empty or with same key-value pairs)
-    //   - body: identical byte arrays {1, 2, 3}
+    Headers headers1 = new RecordHeaders();
+    Headers headers2 = new RecordHeaders();
+    byte[] body1 = new byte[] {1, 2, 3};
+    byte[] body2 = new byte[] {1, 2, 3};
+
+    InboundLogMsg msg1 = new InboundLogMsg(100L, MessageFormatType.BINARY, headers1, body1);
+    InboundLogMsg msg2 = new InboundLogMsg(100L, MessageFormatType.BINARY, headers2, body2);
 
     // When: equals() is called comparing message1 to message2
-
     // Then: Returns true
-
-    // TODO(#530): Implement test logic
-    fail("Not yet implemented");
+    assertThat(msg1.equals(msg2), is(true));
+    assertThat(msg2.equals(msg1), is(true));
   }
 
   /**
@@ -144,23 +135,34 @@ public class InboundLogMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:InboundLogMsgTest.testEquals_differentObjects_returnsFalse]
    */
   @Test
-  @Ignore("Awaiting implementation in #530")
   public void testEquals_differentObjects_returnsFalse() {
     // Given: Two InboundLogMsg instances with different field values
-    // - message1 with offset: 100L, body: {1, 2, 3}
-    // - message2 with offset: 200L, body: {4, 5, 6}
+    Headers headers = new RecordHeaders();
+    byte[] body1 = new byte[] {1, 2, 3};
+    byte[] body2 = new byte[] {4, 5, 6};
+
+    InboundLogMsg msg1 = new InboundLogMsg(100L, MessageFormatType.BINARY, headers, body1);
+    InboundLogMsg msg2 = new InboundLogMsg(200L, MessageFormatType.BINARY, headers, body2);
 
     // When: equals() is called comparing message1 to message2
-
     // Then: Returns false
+    assertThat(msg1.equals(msg2), is(false));
 
-    // Also test with:
-    // - Different messageFormat values
-    // - Different headers
-    // - Different body arrays (same length, different content)
+    // Also test with different messageFormat values
+    InboundLogMsg msgDifferentFormat =
+        new InboundLogMsg(100L, MessageFormatType.JSON, headers, body1);
+    assertThat(msg1.equals(msgDifferentFormat), is(false));
 
-    // TODO(#530): Implement test logic
-    fail("Not yet implemented");
+    // Different body arrays (same length, different content)
+    byte[] body3 = new byte[] {1, 2, 4};
+    InboundLogMsg msgDifferentBody =
+        new InboundLogMsg(100L, MessageFormatType.BINARY, headers, body3);
+    assertThat(msg1.equals(msgDifferentBody), is(false));
+
+    // Different offset only
+    InboundLogMsg msgDifferentOffset =
+        new InboundLogMsg(101L, MessageFormatType.BINARY, headers, body1);
+    assertThat(msg1.equals(msgDifferentOffset), is(false));
   }
 
   /**
@@ -169,17 +171,15 @@ public class InboundLogMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:InboundLogMsgTest.testEquals_null_returnsFalse]
    */
   @Test
-  @Ignore("Awaiting implementation in #530")
   public void testEquals_null_returnsFalse() {
     // Given: An InboundLogMsg instance
-    // - Create message with any valid field values
+    Headers headers = new RecordHeaders();
+    byte[] body = new byte[] {1, 2, 3};
+    InboundLogMsg msg = new InboundLogMsg(100L, MessageFormatType.BINARY, headers, body);
 
     // When: equals() is called with null
-
     // Then: Returns false (should not throw NullPointerException)
-
-    // TODO(#530): Implement test logic
-    fail("Not yet implemented");
+    assertThat(msg.equals(null), is(false));
   }
 
   /**
@@ -188,22 +188,19 @@ public class InboundLogMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:InboundLogMsgTest.testHashCode_equalObjects_sameHashCode]
    */
   @Test
-  @Ignore("Awaiting implementation in #530")
   public void testHashCode_equalObjects_sameHashCode() {
     // Given: Two InboundLogMsg instances with identical field values
-    // - Both messages have:
-    //   - offset: 100L
-    //   - messageFormat: MessageFormatType.COLFER
-    //   - headers: identical RecordHeaders
-    //   - body: identical byte arrays {1, 2, 3}
+    Headers headers1 = new RecordHeaders();
+    Headers headers2 = new RecordHeaders();
+    byte[] body1 = new byte[] {1, 2, 3};
+    byte[] body2 = new byte[] {1, 2, 3};
+
+    InboundLogMsg msg1 = new InboundLogMsg(100L, MessageFormatType.BINARY, headers1, body1);
+    InboundLogMsg msg2 = new InboundLogMsg(100L, MessageFormatType.BINARY, headers2, body2);
 
     // When: hashCode() is called on both objects
-
-    // Then: Both hash codes are equal
-    // Note: This is required by the hashCode contract when equals() returns true
-
-    // TODO(#530): Implement test logic
-    fail("Not yet implemented");
+    // Then: Both hash codes are equal (required by hashCode contract when equals() returns true)
+    assertThat(msg1.hashCode(), is(msg2.hashCode()));
   }
 
   /**
@@ -213,20 +210,18 @@ public class InboundLogMsgTest extends ZmqEnabledTest {
    * [TEST:InboundLogMsgTest.testHashCode_differentObjects_likelyDifferentHashCode]
    */
   @Test
-  @Ignore("Awaiting implementation in #530")
   public void testHashCode_differentObjects_likelyDifferentHashCode() {
     // Given: Two InboundLogMsg instances with different field values
-    // - message1 with offset: 100L, body: {1, 2, 3}
-    // - message2 with offset: 200L, body: {4, 5, 6}
+    Headers headers = new RecordHeaders();
+    byte[] body1 = new byte[] {1, 2, 3};
+    byte[] body2 = new byte[] {4, 5, 6};
+
+    InboundLogMsg msg1 = new InboundLogMsg(100L, MessageFormatType.BINARY, headers, body1);
+    InboundLogMsg msg2 = new InboundLogMsg(200L, MessageFormatType.BINARY, headers, body2);
 
     // When: hashCode() is called on both objects
-
-    // Then: Hash codes are likely different
-    // Note: This is not strictly required by the hashCode contract,
-    // but a good hash function should minimize collisions
-
-    // TODO(#530): Implement test logic
-    fail("Not yet implemented");
+    // Then: Hash codes are likely different (not strictly required, but expected)
+    assertThat(msg1.hashCode(), is(not(msg2.hashCode())));
   }
 
   /**
@@ -235,22 +230,18 @@ public class InboundLogMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:InboundLogMsgTest.testToString_containsRelevantInfo]
    */
   @Test
-  @Ignore("Awaiting implementation in #530")
   public void testToString_containsRelevantInfo() {
     // Given: An InboundLogMsg with known field values
-    // - offset: 12345L
-    // - messageFormat: MessageFormatType.COLFER
-    // - headers: RecordHeaders (may be empty)
-    // - body: byte array {10, 20, 30}
+    Headers headers = new RecordHeaders();
+    byte[] body = new byte[] {10, 20, 30};
+    InboundLogMsg msg = new InboundLogMsg(12345L, MessageFormatType.BINARY, headers, body);
 
     // When: toString() is called
+    String result = msg.toString();
 
-    // Then: The returned string contains:
-    // - The class name or identifier "InboundLogMsg"
-    // - The offset value (12345)
-    // - The message format information
-
-    // TODO(#530): Implement test logic
-    fail("Not yet implemented");
+    // Then: The returned string contains relevant information
+    assertThat(result, org.hamcrest.Matchers.containsString("InboundLogMsg"));
+    assertThat(result, org.hamcrest.Matchers.containsString("12345"));
+    assertThat(result, org.hamcrest.Matchers.containsString("BINARY"));
   }
 }

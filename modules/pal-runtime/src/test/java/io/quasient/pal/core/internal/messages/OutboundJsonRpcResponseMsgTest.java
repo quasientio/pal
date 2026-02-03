@@ -13,12 +13,10 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
 import io.quasient.pal.core.ZmqEnabledTest;
 import io.quasient.pal.messages.types.MessageType;
 import java.util.UUID;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
@@ -118,20 +116,16 @@ public class OutboundJsonRpcResponseMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:OutboundJsonRpcResponseMsgTest.testEquals_sameObject_returnsTrue]
    */
   @Test
-  @Ignore("Awaiting implementation in #530")
   public void testEquals_sameObject_returnsTrue() {
     // Given: A single OutboundJsonRpcResponseMsg instance
-    // - Create an OutboundJsonRpcResponseMsg with:
-    //   - peerId: a random UUID
-    //   - jsonMessage: a valid JSON-RPC response string
-    //   - messageType: MessageType.UNKNOWN or any valid type
+    UUID peerId = UUID.randomUUID();
+    String jsonMessage = "{\"jsonrpc\":\"2.0\",\"result\":\"success\",\"id\":1}";
+    OutboundJsonRpcResponseMsg msg =
+        new OutboundJsonRpcResponseMsg(peerId, jsonMessage, MessageType.UNKNOWN);
 
     // When: equals() is called with the same object reference
-
     // Then: Returns true
-
-    // TODO(#530): Implement test logic
-    fail("Not yet implemented");
+    assertThat(msg.equals(msg), is(true));
   }
 
   /**
@@ -141,20 +135,20 @@ public class OutboundJsonRpcResponseMsgTest extends ZmqEnabledTest {
    * [TEST:OutboundJsonRpcResponseMsgTest.testEquals_equalObjects_returnsTrue]
    */
   @Test
-  @Ignore("Awaiting implementation in #530")
   public void testEquals_equalObjects_returnsTrue() {
     // Given: Two OutboundJsonRpcResponseMsg instances with identical field values
-    // - Both messages have:
-    //   - peerId: same UUID value
-    //   - jsonMessage: identical JSON-RPC response string
-    //   - messageType: same MessageType value
+    UUID peerId = UUID.randomUUID();
+    String jsonMessage = "{\"jsonrpc\":\"2.0\",\"result\":\"success\",\"id\":1}";
+
+    OutboundJsonRpcResponseMsg msg1 =
+        new OutboundJsonRpcResponseMsg(peerId, jsonMessage, MessageType.UNKNOWN);
+    OutboundJsonRpcResponseMsg msg2 =
+        new OutboundJsonRpcResponseMsg(peerId, jsonMessage, MessageType.UNKNOWN);
 
     // When: equals() is called comparing message1 to message2
-
     // Then: Returns true
-
-    // TODO(#530): Implement test logic
-    fail("Not yet implemented");
+    assertThat(msg1.equals(msg2), is(true));
+    assertThat(msg2.equals(msg1), is(true));
   }
 
   /**
@@ -164,23 +158,37 @@ public class OutboundJsonRpcResponseMsgTest extends ZmqEnabledTest {
    * [TEST:OutboundJsonRpcResponseMsgTest.testEquals_differentObjects_returnsFalse]
    */
   @Test
-  @Ignore("Awaiting implementation in #530")
   public void testEquals_differentObjects_returnsFalse() {
     // Given: Two OutboundJsonRpcResponseMsg instances with different field values
-    // - message1 with peerId: UUID1, jsonMessage: "response1"
-    // - message2 with peerId: UUID2, jsonMessage: "response2"
+    UUID peerId1 = UUID.randomUUID();
+    UUID peerId2 = UUID.randomUUID();
+    String jsonMessage1 = "{\"jsonrpc\":\"2.0\",\"result\":\"success\",\"id\":1}";
+    String jsonMessage2 = "{\"jsonrpc\":\"2.0\",\"result\":\"failure\",\"id\":2}";
+
+    OutboundJsonRpcResponseMsg msg1 =
+        new OutboundJsonRpcResponseMsg(peerId1, jsonMessage1, MessageType.UNKNOWN);
+    OutboundJsonRpcResponseMsg msg2 =
+        new OutboundJsonRpcResponseMsg(peerId2, jsonMessage2, MessageType.UNKNOWN);
 
     // When: equals() is called comparing message1 to message2
-
     // Then: Returns false
+    assertThat(msg1.equals(msg2), is(false));
 
-    // Also test with:
-    // - Same peerId, different jsonMessage
-    // - Different peerId, same jsonMessage
-    // - Different messageType (note: current equals() may not check messageType)
+    // Also test with same peerId, different jsonMessage
+    OutboundJsonRpcResponseMsg msgSamePeer =
+        new OutboundJsonRpcResponseMsg(peerId1, jsonMessage2, MessageType.UNKNOWN);
+    assertThat(msg1.equals(msgSamePeer), is(false));
 
-    // TODO(#530): Implement test logic
-    fail("Not yet implemented");
+    // Different peerId, same jsonMessage
+    OutboundJsonRpcResponseMsg msgSameJson =
+        new OutboundJsonRpcResponseMsg(peerId2, jsonMessage1, MessageType.UNKNOWN);
+    assertThat(msg1.equals(msgSameJson), is(false));
+
+    // Note: Current equals() implementation does not check messageType,
+    // so different messageType with same peerId and jsonMessage will still be equal
+    OutboundJsonRpcResponseMsg msgDifferentType =
+        new OutboundJsonRpcResponseMsg(peerId1, jsonMessage1, MessageType.EXEC_CONSTRUCTOR);
+    assertThat(msg1.equals(msgDifferentType), is(true)); // messageType is not compared
   }
 
   /**
@@ -189,17 +197,16 @@ public class OutboundJsonRpcResponseMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:OutboundJsonRpcResponseMsgTest.testEquals_null_returnsFalse]
    */
   @Test
-  @Ignore("Awaiting implementation in #530")
   public void testEquals_null_returnsFalse() {
     // Given: An OutboundJsonRpcResponseMsg instance
-    // - Create message with any valid field values
+    UUID peerId = UUID.randomUUID();
+    String jsonMessage = "{\"jsonrpc\":\"2.0\",\"result\":\"success\",\"id\":1}";
+    OutboundJsonRpcResponseMsg msg =
+        new OutboundJsonRpcResponseMsg(peerId, jsonMessage, MessageType.UNKNOWN);
 
     // When: equals() is called with null
-
     // Then: Returns false (should not throw NullPointerException)
-
-    // TODO(#530): Implement test logic
-    fail("Not yet implemented");
+    assertThat(msg.equals(null), is(false));
   }
 
   /**
@@ -209,21 +216,19 @@ public class OutboundJsonRpcResponseMsgTest extends ZmqEnabledTest {
    * [TEST:OutboundJsonRpcResponseMsgTest.testHashCode_equalObjects_sameHashCode]
    */
   @Test
-  @Ignore("Awaiting implementation in #530")
   public void testHashCode_equalObjects_sameHashCode() {
     // Given: Two OutboundJsonRpcResponseMsg instances with identical field values
-    // - Both messages have:
-    //   - peerId: same UUID value
-    //   - jsonMessage: identical JSON-RPC response string
-    //   - messageType: same MessageType value
+    UUID peerId = UUID.randomUUID();
+    String jsonMessage = "{\"jsonrpc\":\"2.0\",\"result\":\"success\",\"id\":1}";
+
+    OutboundJsonRpcResponseMsg msg1 =
+        new OutboundJsonRpcResponseMsg(peerId, jsonMessage, MessageType.UNKNOWN);
+    OutboundJsonRpcResponseMsg msg2 =
+        new OutboundJsonRpcResponseMsg(peerId, jsonMessage, MessageType.UNKNOWN);
 
     // When: hashCode() is called on both objects
-
-    // Then: Both hash codes are equal
-    // Note: This is required by the hashCode contract when equals() returns true
-
-    // TODO(#530): Implement test logic
-    fail("Not yet implemented");
+    // Then: Both hash codes are equal (required by hashCode contract when equals() returns true)
+    assertThat(msg1.hashCode(), is(msg2.hashCode()));
   }
 
   /**
@@ -233,20 +238,21 @@ public class OutboundJsonRpcResponseMsgTest extends ZmqEnabledTest {
    * [TEST:OutboundJsonRpcResponseMsgTest.testHashCode_differentObjects_likelyDifferentHashCode]
    */
   @Test
-  @Ignore("Awaiting implementation in #530")
   public void testHashCode_differentObjects_likelyDifferentHashCode() {
     // Given: Two OutboundJsonRpcResponseMsg instances with different field values
-    // - message1 with peerId: UUID1, jsonMessage: "response1"
-    // - message2 with peerId: UUID2, jsonMessage: "response2"
+    UUID peerId1 = UUID.randomUUID();
+    UUID peerId2 = UUID.randomUUID();
+    String jsonMessage1 = "{\"jsonrpc\":\"2.0\",\"result\":\"success\",\"id\":1}";
+    String jsonMessage2 = "{\"jsonrpc\":\"2.0\",\"result\":\"failure\",\"id\":2}";
+
+    OutboundJsonRpcResponseMsg msg1 =
+        new OutboundJsonRpcResponseMsg(peerId1, jsonMessage1, MessageType.UNKNOWN);
+    OutboundJsonRpcResponseMsg msg2 =
+        new OutboundJsonRpcResponseMsg(peerId2, jsonMessage2, MessageType.UNKNOWN);
 
     // When: hashCode() is called on both objects
-
-    // Then: Hash codes are likely different
-    // Note: This is not strictly required by the hashCode contract,
-    // but a good hash function should minimize collisions
-
-    // TODO(#530): Implement test logic
-    fail("Not yet implemented");
+    // Then: Hash codes are likely different (not strictly required, but expected)
+    assertThat(msg1.hashCode(), is(not(msg2.hashCode())));
   }
 
   /**
@@ -255,21 +261,19 @@ public class OutboundJsonRpcResponseMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:OutboundJsonRpcResponseMsgTest.testToString_containsRelevantInfo]
    */
   @Test
-  @Ignore("Awaiting implementation in #530")
   public void testToString_containsRelevantInfo() {
     // Given: An OutboundJsonRpcResponseMsg with known field values
-    // - peerId: a specific UUID
-    // - jsonMessage: a JSON-RPC response string
-    // - messageType: MessageType.UNKNOWN or any valid type
+    UUID peerId = UUID.fromString("12345678-1234-1234-1234-123456789abc");
+    String jsonMessage = "{\"jsonrpc\":\"2.0\",\"result\":\"testResult\",\"id\":42}";
+    OutboundJsonRpcResponseMsg msg =
+        new OutboundJsonRpcResponseMsg(peerId, jsonMessage, MessageType.UNKNOWN);
 
     // When: toString() is called
+    String result = msg.toString();
 
-    // Then: The returned string contains:
-    // - The class name or identifier "OutboundJsonRpcResponseMsg"
-    // - The peerId value
-    // - The jsonMessage or a representation of it
-
-    // TODO(#530): Implement test logic
-    fail("Not yet implemented");
+    // Then: The returned string contains relevant information
+    assertThat(result, org.hamcrest.Matchers.containsString("OutboundJsonRpcResponseMsg"));
+    assertThat(result, org.hamcrest.Matchers.containsString(peerId.toString()));
+    assertThat(result, org.hamcrest.Matchers.containsString("testResult"));
   }
 }
