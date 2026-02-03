@@ -12,9 +12,11 @@ package io.quasient.pal.core.internal.messages;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
+import static org.junit.Assert.fail;
 
 import io.quasient.pal.core.ZmqEnabledTest;
 import java.util.UUID;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -133,5 +135,164 @@ public class InboundJsonRpcRequestMsgTest extends ZmqEnabledTest {
         """;
     InboundJsonRpcRequestMsg msg4 = new InboundJsonRpcRequestMsg(clientId, jsonMessage2);
     assertThat(msg1, is(not(msg4)));
+  }
+
+  // ============================================================
+  // equals()/hashCode()/toString() test specifications for #530
+  // ============================================================
+
+  /**
+   * Tests that equals() returns true when comparing an object to itself.
+   *
+   * <p>Acceptance Criteria: [TEST:InboundJsonRpcRequestMsgTest.testEquals_sameObject_returnsTrue]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #530")
+  public void testEquals_sameObject_returnsTrue() {
+    // Given: A single InboundJsonRpcRequestMsg instance
+    // - Create an InboundJsonRpcRequestMsg with:
+    //   - peerId: a random UUID
+    //   - jsonMessage: a valid JSON-RPC request string
+
+    // When: equals() is called with the same object reference
+
+    // Then: Returns true
+
+    // TODO(#530): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that equals() returns true when comparing two objects with identical field values.
+   *
+   * <p>Acceptance Criteria: [TEST:InboundJsonRpcRequestMsgTest.testEquals_equalObjects_returnsTrue]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #530")
+  public void testEquals_equalObjects_returnsTrue() {
+    // Given: Two InboundJsonRpcRequestMsg instances with identical field values
+    // - Both messages have:
+    //   - peerId: same UUID value
+    //   - jsonMessage: identical JSON-RPC request string
+
+    // When: equals() is called comparing message1 to message2
+
+    // Then: Returns true
+
+    // TODO(#530): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that equals() returns false when comparing two objects with different field values.
+   *
+   * <p>Acceptance Criteria:
+   * [TEST:InboundJsonRpcRequestMsgTest.testEquals_differentObjects_returnsFalse]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #530")
+  public void testEquals_differentObjects_returnsFalse() {
+    // Given: Two InboundJsonRpcRequestMsg instances with different field values
+    // - message1 with peerId: UUID1, jsonMessage: "request1"
+    // - message2 with peerId: UUID2, jsonMessage: "request2"
+
+    // When: equals() is called comparing message1 to message2
+
+    // Then: Returns false
+
+    // Also test with:
+    // - Same peerId, different jsonMessage
+    // - Different peerId, same jsonMessage
+
+    // TODO(#530): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that equals() returns false when comparing with null.
+   *
+   * <p>Acceptance Criteria: [TEST:InboundJsonRpcRequestMsgTest.testEquals_null_returnsFalse]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #530")
+  public void testEquals_null_returnsFalse() {
+    // Given: An InboundJsonRpcRequestMsg instance
+    // - Create message with any valid field values
+
+    // When: equals() is called with null
+
+    // Then: Returns false (should not throw NullPointerException)
+
+    // TODO(#530): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that hashCode() returns the same value for equal objects.
+   *
+   * <p>Acceptance Criteria:
+   * [TEST:InboundJsonRpcRequestMsgTest.testHashCode_equalObjects_sameHashCode]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #530")
+  public void testHashCode_equalObjects_sameHashCode() {
+    // Given: Two InboundJsonRpcRequestMsg instances with identical field values
+    // - Both messages have:
+    //   - peerId: same UUID value
+    //   - jsonMessage: identical JSON-RPC request string
+
+    // When: hashCode() is called on both objects
+
+    // Then: Both hash codes are equal
+    // Note: This is required by the hashCode contract when equals() returns true
+
+    // TODO(#530): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that hashCode() likely returns different values for different objects.
+   *
+   * <p>Acceptance Criteria:
+   * [TEST:InboundJsonRpcRequestMsgTest.testHashCode_differentObjects_likelyDifferentHashCode]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #530")
+  public void testHashCode_differentObjects_likelyDifferentHashCode() {
+    // Given: Two InboundJsonRpcRequestMsg instances with different field values
+    // - message1 with peerId: UUID1, jsonMessage: "request1"
+    // - message2 with peerId: UUID2, jsonMessage: "request2"
+
+    // When: hashCode() is called on both objects
+
+    // Then: Hash codes are likely different
+    // Note: This is not strictly required by the hashCode contract,
+    // but a good hash function should minimize collisions
+
+    // TODO(#530): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that toString() contains relevant field information.
+   *
+   * <p>Acceptance Criteria: [TEST:InboundJsonRpcRequestMsgTest.testToString_containsRelevantInfo]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #530")
+  public void testToString_containsRelevantInfo() {
+    // Given: An InboundJsonRpcRequestMsg with known field values
+    // - peerId: a specific UUID
+    // - jsonMessage: a JSON-RPC request string
+
+    // When: toString() is called
+
+    // Then: The returned string contains:
+    // - The class name or identifier "InboundJsonRpcRequestMsg"
+    // - The peerId value
+    // - The jsonMessage or a representation of it
+
+    // TODO(#530): Implement test logic
+    fail("Not yet implemented");
   }
 }
