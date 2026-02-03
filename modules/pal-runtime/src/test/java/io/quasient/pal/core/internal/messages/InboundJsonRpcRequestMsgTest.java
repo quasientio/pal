@@ -285,4 +285,35 @@ public class InboundJsonRpcRequestMsgTest extends ZmqEnabledTest {
     assertThat(result, org.hamcrest.Matchers.containsString(peerId.toString()));
     assertThat(result, org.hamcrest.Matchers.containsString("testMethod"));
   }
+
+  // ============================================================
+  // receive() single-arg test specification for #531
+  // ============================================================
+
+  /**
+   * Tests that receive(socket) single-arg version delegates to two-arg version with blocking=false.
+   *
+   * <p>Acceptance Criteria:
+   * [TEST:InboundJsonRpcRequestMsgTest.testReceive_singleArg_delegatesToTwoArgVersion]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #532")
+  public void testReceive_singleArg_delegatesToTwoArgVersion() {
+    // Given: A ZMQ socket pair with an InboundJsonRpcRequestMsg sent through it
+    // - Create a PUSH/PULL socket pair (as used in existing tests)
+    // - Send a valid InboundJsonRpcRequestMsg with:
+    //   - peerId: a random UUID
+    //   - jsonMessage: a valid JSON-RPC request string
+    // - Send without envelope (withEnvelope=false) for PUSH/PULL
+
+    // When: receive(socket) is called (single-arg version, non-blocking)
+
+    // Then:
+    // - Returns a valid InboundJsonRpcRequestMsg when message is available
+    // - The message fields (peerId, jsonMessage) match the sent message
+    // - The single-arg method delegates to receive(socket, false)
+
+    // TODO(#532): Implement test logic
+    fail("Not yet implemented");
+  }
 }

@@ -321,4 +321,34 @@ public class InterceptEventMsgTest extends ZmqEnabledTest {
     assertThat(unregisterResult, org.hamcrest.Matchers.containsString("UNREGISTER"));
     assertThat(unregisterResult, org.hamcrest.Matchers.containsString("test-intercept-id-12345"));
   }
+
+  // ============================================================
+  // receive() single-arg test specification for #531
+  // ============================================================
+
+  /**
+   * Tests that receive(socket) single-arg version delegates to two-arg version with blocking=false.
+   *
+   * <p>Acceptance Criteria:
+   * [TEST:InterceptEventMsgTest.testReceive_singleArg_delegatesToTwoArgVersion]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #532")
+  public void testReceive_singleArg_delegatesToTwoArgVersion() {
+    // Given: A ZMQ socket pair with an InterceptEventMsg sent through it
+    // - Create a REQ/REP socket pair
+    // - Send a valid InterceptEventMsg with:
+    //   - For REGISTER type: a byte[] body
+    //   - Or for UNREGISTER type: an interceptMessageId string
+
+    // When: receive(socket) is called (single-arg version, non-blocking)
+
+    // Then:
+    // - Returns a valid InterceptEventMsg when message is available
+    // - The message fields (type, body or interceptMessageId) match the sent message
+    // - The single-arg method delegates to receive(socket, false)
+
+    // TODO(#532): Implement test logic
+    fail("Not yet implemented");
+  }
 }

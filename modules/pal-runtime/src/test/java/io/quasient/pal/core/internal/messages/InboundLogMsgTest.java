@@ -244,4 +244,35 @@ public class InboundLogMsgTest extends ZmqEnabledTest {
     assertThat(result, org.hamcrest.Matchers.containsString("12345"));
     assertThat(result, org.hamcrest.Matchers.containsString("BINARY"));
   }
+
+  // ============================================================
+  // receive() single-arg test specification for #531
+  // ============================================================
+
+  /**
+   * Tests that receive(socket) single-arg version delegates to two-arg version with blocking=false.
+   *
+   * <p>Acceptance Criteria: [TEST:InboundLogMsgTest.testReceive_singleArg_delegatesToTwoArgVersion]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #532")
+  public void testReceive_singleArg_delegatesToTwoArgVersion() {
+    // Given: A ZMQ socket pair with an InboundLogMsg sent through it
+    // - Create a DEALER/REP socket pair (as InboundLogMsg is sent via DEALER)
+    // - Send a valid InboundLogMsg with:
+    //   - offset: a specific long value
+    //   - messageFormat: MessageFormatType.BINARY
+    //   - headers: RecordHeaders (empty or with some headers)
+    //   - body: a byte array
+
+    // When: receive(socket) is called (single-arg version, non-blocking)
+
+    // Then:
+    // - Returns a valid InboundLogMsg when message is available
+    // - The message fields (offset, messageFormat, headers, body) match the sent message
+    // - The single-arg method delegates to receive(socket, false)
+
+    // TODO(#532): Implement test logic
+    fail("Not yet implemented");
+  }
 }
