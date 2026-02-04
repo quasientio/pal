@@ -12,10 +12,8 @@ package io.quasient.pal.core.runtime.objects;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.lang.reflect.Field;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -93,14 +91,41 @@ public class ObjectLookupStoreCleanerTest {
    * thrown; remains in closed state
    */
   @Test
-  @Ignore("Awaiting implementation in #528")
-  public void testClose_calledMultipleTimes_isIdempotent() {
+  public void testClose_calledMultipleTimes_isIdempotent() throws Exception {
     // Given: Cleaner that has already been closed
-    // When: close() called again
-    // Then: No exception thrown; remains in closed state
+    ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
+    ConcurrentHashMapObjectLookupStore store =
+        ConcurrentHashMapObjectLookupStore.createUnmanaged(stats);
 
-    // TODO(#528): Implement test logic
-    fail("Not yet implemented");
+    try {
+      ObjectLookupStoreCleaner cleaner = new ObjectLookupStoreBackgroundProcessor(store, stats, 10);
+      cleaner.start();
+
+      // Wait for thread to start
+      Thread.sleep(50);
+
+      // First close
+      cleaner.close();
+
+      // Verify the running flag is false after first close
+      Field runningField = ObjectLookupStoreBackgroundProcessor.class.getDeclaredField("running");
+      runningField.setAccessible(true);
+      boolean runningAfterFirstClose = (Boolean) runningField.get(cleaner);
+      assertFalse("running flag should be false after first close()", runningAfterFirstClose);
+
+      // When: close() called again (multiple times)
+      cleaner.close();
+      cleaner.close();
+      cleaner.close();
+
+      // Then: No exception thrown; remains in closed state
+      boolean runningAfterMultipleCloses = (Boolean) runningField.get(cleaner);
+      assertFalse(
+          "running flag should remain false after multiple close() calls",
+          runningAfterMultipleCloses);
+    } finally {
+      store.close();
+    }
   }
 
   /**
@@ -110,15 +135,53 @@ public class ObjectLookupStoreCleanerTest {
    * terminates, running flag is false)
    */
   @Test
-  @Ignore("Awaiting implementation in #528")
-  public void testClose_delegatesToStop() {
+  public void testClose_delegatesToStop() throws Exception {
     // Given: Started cleaner
-    // When: close() called
-    // Then: stop() behavior is executed
+    ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
+    ConcurrentHashMapObjectLookupStore store =
+        ConcurrentHashMapObjectLookupStore.createUnmanaged(stats);
+    ObjectLookupStoreCleaner cleaner = null;
 
-    // TODO(#528): Implement test logic
-    // Verify that close() produces the same effect as stop()
-    fail("Not yet implemented");
+    try {
+      cleaner = new ObjectLookupStoreBackgroundProcessor(store, stats, 10);
+      cleaner.start();
+
+      // Verify the worker thread is running
+      Field workerField = ObjectLookupStoreBackgroundProcessor.class.getDeclaredField("worker");
+      workerField.setAccessible(true);
+      Thread workerBefore = (Thread) workerField.get(cleaner);
+
+      assertNotNull("Worker thread should be created after start()", workerBefore);
+      assertTrue("Worker thread should be alive before close()", workerBefore.isAlive());
+
+      Field runningField = ObjectLookupStoreBackgroundProcessor.class.getDeclaredField("running");
+      runningField.setAccessible(true);
+      assertTrue("running flag should be true before close()", (Boolean) runningField.get(cleaner));
+
+      // When: close() called
+      cleaner.close();
+
+      // Then: stop() behavior is executed (thread terminates, running flag is false)
+      // Wait for the thread to terminate
+      workerBefore.join(3000);
+
+      assertFalse("Worker thread should no longer be alive after close()", workerBefore.isAlive());
+      assertFalse(
+          "running flag should be false after close()", (Boolean) runningField.get(cleaner));
+
+      // Verify worker field is set to null (as stop() does)
+      Thread workerAfter = (Thread) workerField.get(cleaner);
+      assertTrue(
+          "Worker should be null or terminated after close()",
+          workerAfter == null || !workerAfter.isAlive());
+
+      cleaner = null; // Prevent double-close in finally
+    } finally {
+      if (cleaner != null) {
+        cleaner.close();
+      }
+      store.close();
+    }
   }
 
   /**
@@ -127,13 +190,36 @@ public class ObjectLookupStoreCleanerTest {
    * <p>Given: Cleaner that was never started When: close() called Then: No exception thrown
    */
   @Test
-  @Ignore("Awaiting implementation in #528")
-  public void testClose_onUnstartedCleaner_noException() {
+  public void testClose_onUnstartedCleaner_noException() throws Exception {
     // Given: Cleaner that was never started
-    // When: close() called
-    // Then: No exception thrown
+    ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
+    ConcurrentHashMapObjectLookupStore store =
+        ConcurrentHashMapObjectLookupStore.createUnmanaged(stats);
 
-    // TODO(#528): Implement test logic
-    fail("Not yet implemented");
+    try {
+      ObjectLookupStoreCleaner cleaner = new ObjectLookupStoreBackgroundProcessor(store, stats, 10);
+
+      // Verify the cleaner is not started
+      Field runningField = ObjectLookupStoreBackgroundProcessor.class.getDeclaredField("running");
+      runningField.setAccessible(true);
+      assertFalse(
+          "running flag should be false for unstarted cleaner",
+          (Boolean) runningField.get(cleaner));
+
+      Field workerField = ObjectLookupStoreBackgroundProcessor.class.getDeclaredField("worker");
+      workerField.setAccessible(true);
+      assertTrue("Worker should be null for unstarted cleaner", workerField.get(cleaner) == null);
+
+      // When: close() called on unstarted cleaner
+      // Then: No exception thrown
+      cleaner.close();
+
+      // Verify state remains consistent
+      assertFalse(
+          "running flag should remain false after close() on unstarted cleaner",
+          (Boolean) runningField.get(cleaner));
+    } finally {
+      store.close();
+    }
   }
 }
