@@ -20,6 +20,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.security.Permission;
 import java.util.UUID;
 import org.junit.After;
 import org.junit.Before;
@@ -467,12 +468,12 @@ public class MainErrorHandlingTest {
   @SuppressWarnings("removal")
   private static class ExitTrappingSecurityManager extends SecurityManager {
     @Override
-    public void checkPermission(java.security.Permission perm) {
+    public void checkPermission(Permission perm) {
       // Allow all permissions except exitVM
     }
 
     @Override
-    public void checkPermission(java.security.Permission perm, Object context) {
+    public void checkPermission(Permission perm, Object context) {
       // Allow all permissions except exitVM
     }
 

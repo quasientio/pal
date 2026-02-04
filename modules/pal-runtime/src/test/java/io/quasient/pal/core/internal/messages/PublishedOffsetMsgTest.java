@@ -10,6 +10,7 @@
 package io.quasient.pal.core.internal.messages;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 
@@ -209,9 +210,9 @@ public class PublishedOffsetMsgTest extends ZmqEnabledTest {
     String result = msg.toString();
 
     // Then: The returned string contains relevant information
-    assertThat(result, org.hamcrest.Matchers.containsString("PublishedOffsetMsg"));
-    assertThat(result, org.hamcrest.Matchers.containsString("12345"));
-    assertThat(result, org.hamcrest.Matchers.containsString("test-unique-message-id"));
+    assertThat(result, containsString("PublishedOffsetMsg"));
+    assertThat(result, containsString("12345"));
+    assertThat(result, containsString("test-unique-message-id"));
   }
 
   /**

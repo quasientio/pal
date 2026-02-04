@@ -10,6 +10,7 @@
 package io.quasient.pal.core.internal.messages;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.fail;
@@ -307,9 +308,9 @@ public class InterceptEventMsgTest extends ZmqEnabledTest {
     String registerResult = registerMsg.toString();
 
     // Then: The returned string contains relevant information
-    assertThat(registerResult, org.hamcrest.Matchers.containsString("InterceptEventMsg"));
-    assertThat(registerResult, org.hamcrest.Matchers.containsString("REGISTER"));
-    assertThat(registerResult, org.hamcrest.Matchers.containsString("[10, 20, 30]"));
+    assertThat(registerResult, containsString("InterceptEventMsg"));
+    assertThat(registerResult, containsString("REGISTER"));
+    assertThat(registerResult, containsString("[10, 20, 30]"));
 
     // Test UNREGISTER type
     String interceptMsgId = "test-intercept-id-12345";
@@ -317,9 +318,9 @@ public class InterceptEventMsgTest extends ZmqEnabledTest {
 
     String unregisterResult = unregisterMsg.toString();
 
-    assertThat(unregisterResult, org.hamcrest.Matchers.containsString("InterceptEventMsg"));
-    assertThat(unregisterResult, org.hamcrest.Matchers.containsString("UNREGISTER"));
-    assertThat(unregisterResult, org.hamcrest.Matchers.containsString("test-intercept-id-12345"));
+    assertThat(unregisterResult, containsString("InterceptEventMsg"));
+    assertThat(unregisterResult, containsString("UNREGISTER"));
+    assertThat(unregisterResult, containsString("test-intercept-id-12345"));
   }
 
   // ============================================================

@@ -27,6 +27,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -612,7 +613,7 @@ public class ClassMetadataSerializerTest {
 
     // Then: Verify method merging
     // Count occurrences of method names to ensure no duplicates
-    Map<String, Integer> methodCounts = new java.util.HashMap<>();
+    Map<String, Integer> methodCounts = new HashMap<>();
     boolean hasGetA = false;
     boolean hasIMeth = false;
     boolean hasToString = false;
@@ -709,7 +710,7 @@ public class ClassMetadataSerializerTest {
 
     // Then: Verify field merging
     // Count occurrences of field names
-    Map<String, Integer> fieldCounts = new java.util.HashMap<>();
+    Map<String, Integer> fieldCounts = new HashMap<>();
     boolean hasFieldA = false;
     JsonNode fieldANode = null;
 
@@ -907,7 +908,7 @@ public class ClassMetadataSerializerTest {
 
     // Verify methods from all levels are merged (check a few key ones)
     JsonNode methodsArray = classNode.get("methods");
-    Map<String, Integer> methodCounts = new java.util.HashMap<>();
+    Map<String, Integer> methodCounts = new HashMap<>();
     Set<String> methodNames = new HashSet<>();
 
     for (JsonNode methodNode : methodsArray) {

@@ -26,6 +26,7 @@ import io.quasient.pal.core.internal.concurrent.MpscKind;
 import io.quasient.pal.core.transport.WalWriterStats;
 import io.quasient.pal.messages.OutboundMsg;
 import io.quasient.pal.messages.colfer.ExecMessage;
+import io.quasient.pal.messages.colfer.InterceptMessage;
 import io.quasient.pal.messages.colfer.InternalHeader;
 import io.quasient.pal.messages.colfer.Message;
 import io.quasient.pal.messages.types.MessageType;
@@ -38,6 +39,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -338,9 +343,8 @@ public class ChronicleWalWriterTest extends ZmqEnabledTest {
     int numThreads = 4;
     int messagesPerThread = 5;
     List<String> allMessageIds = Collections.synchronizedList(new ArrayList<>());
-    java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(numThreads);
-    java.util.concurrent.ExecutorService executor =
-        java.util.concurrent.Executors.newFixedThreadPool(numThreads);
+    CountDownLatch latch = new CountDownLatch(numThreads);
+    ExecutorService executor = Executors.newFixedThreadPool(numThreads);
 
     for (int t = 0; t < numThreads; t++) {
       @SuppressWarnings("unused")
@@ -364,9 +368,9 @@ public class ChronicleWalWriterTest extends ZmqEnabledTest {
               });
     }
 
-    latch.await(10, java.util.concurrent.TimeUnit.SECONDS);
+    latch.await(10, TimeUnit.SECONDS);
     executor.shutdown();
-    executor.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS);
+    executor.awaitTermination(5, TimeUnit.SECONDS);
 
     // Stop service to trigger flush
     directManager.stopAsync().awaitStopped();
@@ -539,7 +543,7 @@ public class ChronicleWalWriterTest extends ZmqEnabledTest {
     Thread.sleep(50);
 
     // When: Request graceful shutdown (which triggers interruption handling)
-    interruptManager.stopAsync().awaitStopped(10, java.util.concurrent.TimeUnit.SECONDS);
+    interruptManager.stopAsync().awaitStopped(10, TimeUnit.SECONDS);
 
     // Then: Verify service stops without throwing
     assertThat("Service should have stopped", interruptWriter.isRunning(), is(false));
@@ -620,7 +624,7 @@ public class ChronicleWalWriterTest extends ZmqEnabledTest {
     Thread.sleep(100);
 
     // When: closeConnections() is called (via service stop)
-    closeManager.stopAsync().awaitStopped(10, java.util.concurrent.TimeUnit.SECONDS);
+    closeManager.stopAsync().awaitStopped(10, TimeUnit.SECONDS);
 
     // Then: Verify all resources are closed (no exceptions, service is terminated)
     assertThat("Service should have stopped", closeWriter.isRunning(), is(false));
@@ -715,7 +719,7 @@ public class ChronicleWalWriterTest extends ZmqEnabledTest {
     expectedTypes.add(MessageType.EXEC_PUT_STATIC);
 
     // 5. INTERCEPT_MESSAGE
-    io.quasient.pal.messages.colfer.InterceptMessage interceptMsg =
+    InterceptMessage interceptMsg =
         builder.buildInterceptMessage(
             PEER_ID,
             InterceptType.BEFORE,

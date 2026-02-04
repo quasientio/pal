@@ -10,6 +10,7 @@
 package io.quasient.pal.core.internal.messages;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 
@@ -240,9 +241,9 @@ public class InboundLogMsgTest extends ZmqEnabledTest {
     String result = msg.toString();
 
     // Then: The returned string contains relevant information
-    assertThat(result, org.hamcrest.Matchers.containsString("InboundLogMsg"));
-    assertThat(result, org.hamcrest.Matchers.containsString("12345"));
-    assertThat(result, org.hamcrest.Matchers.containsString("BINARY"));
+    assertThat(result, containsString("InboundLogMsg"));
+    assertThat(result, containsString("12345"));
+    assertThat(result, containsString("BINARY"));
   }
 
   // ============================================================

@@ -24,6 +24,7 @@ import io.quasient.pal.core.runtime.objects.ConcurrentHashMapObjectLookupStore;
 import io.quasient.pal.core.runtime.objects.ObjectLookupStore;
 import io.quasient.pal.messages.types.SessionCommandType;
 import io.quasient.pal.messages.types.SessionStatusType;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -755,7 +756,7 @@ public class SessionServiceTest extends ZmqEnabledTest {
 
     // Then: Exits gracefully
     // - Verify service transitions to stopped state within reasonable timeout
-    manager.awaitStopped(java.time.Duration.ofSeconds(5));
+    manager.awaitStopped(Duration.ofSeconds(5));
 
     // - Verify service is fully stopped (isHealthy returns false, servicesByState shows terminated)
     assertThat(manager.isHealthy(), is(false));
@@ -793,7 +794,7 @@ public class SessionServiceTest extends ZmqEnabledTest {
 
     // When: closeConnections called (via service shutdown)
     manager.stopAsync();
-    manager.awaitStopped(java.time.Duration.ofSeconds(5));
+    manager.awaitStopped(Duration.ofSeconds(5));
 
     // Then: All resources released
     // Verify the service has stopped

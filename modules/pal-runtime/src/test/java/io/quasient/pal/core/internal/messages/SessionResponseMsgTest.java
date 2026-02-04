@@ -10,7 +10,9 @@
 package io.quasient.pal.core.internal.messages;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 
 import io.quasient.pal.common.objects.ObjectRef;
 import io.quasient.pal.core.ZmqEnabledTest;
@@ -216,7 +218,7 @@ public class SessionResponseMsgTest extends ZmqEnabledTest {
 
     // When: hashCode() is called on both objects
     // Then: Hash codes are likely different
-    assertThat(msg1.hashCode(), is(org.hamcrest.Matchers.not(msg2.hashCode())));
+    assertThat(msg1.hashCode(), is(not(msg2.hashCode())));
   }
 
   /**
@@ -238,9 +240,9 @@ public class SessionResponseMsgTest extends ZmqEnabledTest {
     String result = msg.toString();
 
     // Then: The returned string contains relevant information
-    assertThat(result, org.hamcrest.Matchers.containsString("SessionResponseMsg"));
-    assertThat(result, org.hamcrest.Matchers.containsString("OK"));
-    assertThat(result, org.hamcrest.Matchers.containsString("98765"));
+    assertThat(result, containsString("SessionResponseMsg"));
+    assertThat(result, containsString("OK"));
+    assertThat(result, containsString("98765"));
   }
 
   /**

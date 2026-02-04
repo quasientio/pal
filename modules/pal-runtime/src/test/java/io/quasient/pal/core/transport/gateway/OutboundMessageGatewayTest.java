@@ -9,6 +9,7 @@
  */
 package io.quasient.pal.core.transport.gateway;
 
+import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
@@ -1053,7 +1054,7 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
     Thread foundThread = (Thread) findThreadMethod.invoke(null, nonExistentThreadId);
 
     // Then: Returns null
-    assertThat(foundThread, is(org.hamcrest.CoreMatchers.nullValue()));
+    assertThat(foundThread, is(nullValue()));
   }
 
   /**

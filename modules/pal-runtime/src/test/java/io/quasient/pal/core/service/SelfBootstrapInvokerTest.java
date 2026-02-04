@@ -27,6 +27,7 @@ import io.quasient.pal.messages.colfer.InstanceMethodCall;
 import io.quasient.pal.messages.colfer.Obj;
 import io.quasient.pal.messages.colfer.ReturnValue;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
+import io.quasient.pal.serdes.colfer.Wrapper;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URL;
@@ -518,7 +519,7 @@ public class SelfBootstrapInvokerTest {
 
               ReturnValue rv = new ReturnValue();
               Obj ov =
-                  io.quasient.pal.serdes.colfer.Wrapper.wrapInto(
+                  Wrapper.wrapInto(
                       new Obj(), "invalid string return", "java.lang.String", null, null);
               rv.setObject(ov);
               response.returnValue = rv;

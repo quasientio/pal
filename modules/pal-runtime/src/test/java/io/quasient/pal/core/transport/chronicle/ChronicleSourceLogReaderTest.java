@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -142,8 +143,7 @@ public class ChronicleSourceLogReaderTest extends ZmqEnabledTest {
     private final ZMQ.Socket socket;
     private final ZContext context;
     private final String dealerAddress;
-    private final java.util.List<String> receivedMessageIds =
-        java.util.Collections.synchronizedList(new java.util.ArrayList<>());
+    private final List<String> receivedMessageIds = Collections.synchronizedList(new ArrayList<>());
     private final AtomicInteger messagesProcessed = new AtomicInteger(0);
 
     SequentialWorker(ZContext context, String dealerAddress) {
@@ -187,8 +187,8 @@ public class ChronicleSourceLogReaderTest extends ZmqEnabledTest {
       this.context.close();
     }
 
-    java.util.List<String> getReceivedMessageIdsInOrder() {
-      return new java.util.ArrayList<>(receivedMessageIds);
+    List<String> getReceivedMessageIdsInOrder() {
+      return new ArrayList<>(receivedMessageIds);
     }
 
     int getMessagesProcessed() {

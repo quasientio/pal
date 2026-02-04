@@ -10,6 +10,7 @@
 package io.quasient.pal.core.internal.messages;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 
@@ -281,9 +282,9 @@ public class InboundJsonRpcRequestMsgTest extends ZmqEnabledTest {
     String result = msg.toString();
 
     // Then: The returned string contains relevant information
-    assertThat(result, org.hamcrest.Matchers.containsString("InboundJsonRpcRequestMsg"));
-    assertThat(result, org.hamcrest.Matchers.containsString(peerId.toString()));
-    assertThat(result, org.hamcrest.Matchers.containsString("testMethod"));
+    assertThat(result, containsString("InboundJsonRpcRequestMsg"));
+    assertThat(result, containsString(peerId.toString()));
+    assertThat(result, containsString("testMethod"));
   }
 
   // ============================================================
