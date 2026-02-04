@@ -11,14 +11,12 @@ package io.quasient.pal.core.internal.messages;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.fail;
 
 import io.quasient.pal.common.objects.ObjectRef;
 import io.quasient.pal.core.ZmqEnabledTest;
 import io.quasient.pal.messages.types.SessionStatusType;
 import java.util.HashSet;
 import java.util.Set;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -91,18 +89,13 @@ public class SessionResponseMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:SessionResponseMsgTest.testEquals_sameObject_returnsTrue]
    */
   @Test
-  @Ignore("Awaiting implementation in #532")
   public void testEquals_sameObject_returnsTrue() {
     // Given: A single SessionResponseMsg instance
-    // - Create a SessionResponseMsg with:
-    //   - statusType: SessionStatusType.OK
+    SessionResponseMsg msg = new SessionResponseMsg(SessionStatusType.OK);
 
     // When: equals() is called with the same object reference
-
     // Then: Returns true
-
-    // TODO(#532): Implement test logic
-    fail("Not yet implemented");
+    assertThat(msg.equals(msg), is(true));
   }
 
   /**
@@ -111,19 +104,23 @@ public class SessionResponseMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:SessionResponseMsgTest.testEquals_equalObjects_returnsTrue]
    */
   @Test
-  @Ignore("Awaiting implementation in #532")
   public void testEquals_equalObjects_returnsTrue() {
     // Given: Two SessionResponseMsg instances with identical field values
-    // - Both messages have:
-    //   - statusType: SessionStatusType.OK
-    //   - objectRefs: identical Set of ObjectRef values
+    Set<ObjectRef> objectRefs1 = new HashSet<>();
+    objectRefs1.add(ObjectRef.from("12345"));
+    objectRefs1.add(ObjectRef.from("67890"));
+
+    Set<ObjectRef> objectRefs2 = new HashSet<>();
+    objectRefs2.add(ObjectRef.from("12345"));
+    objectRefs2.add(ObjectRef.from("67890"));
+
+    SessionResponseMsg msg1 = new SessionResponseMsg(SessionStatusType.OK, objectRefs1);
+    SessionResponseMsg msg2 = new SessionResponseMsg(SessionStatusType.OK, objectRefs2);
 
     // When: equals() is called comparing message1 to message2
-
     // Then: Returns true
-
-    // TODO(#532): Implement test logic
-    fail("Not yet implemented");
+    assertThat(msg1.equals(msg2), is(true));
+    assertThat(msg2.equals(msg1), is(true));
   }
 
   /**
@@ -132,23 +129,29 @@ public class SessionResponseMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:SessionResponseMsgTest.testEquals_differentObjects_returnsFalse]
    */
   @Test
-  @Ignore("Awaiting implementation in #532")
   public void testEquals_differentObjects_returnsFalse() {
     // Given: Two SessionResponseMsg instances with different field values
-    // - message1 with statusType: OK, objectRefs: {ref1}
-    // - message2 with statusType: OK, objectRefs: {ref2}
+    Set<ObjectRef> objectRefs1 = new HashSet<>();
+    objectRefs1.add(ObjectRef.from("12345"));
+
+    Set<ObjectRef> objectRefs2 = new HashSet<>();
+    objectRefs2.add(ObjectRef.from("67890"));
+
+    SessionResponseMsg msg1 = new SessionResponseMsg(SessionStatusType.OK, objectRefs1);
+    SessionResponseMsg msg2 = new SessionResponseMsg(SessionStatusType.OK, objectRefs2);
 
     // When: equals() is called comparing message1 to message2
-
     // Then: Returns false
+    assertThat(msg1.equals(msg2), is(false));
 
-    // Also test with:
-    // - Different statusType values
-    // - Same statusType, different objectRefs
-    // - Same statusType, one with objectRefs and one without
+    // Different statusType values
+    SessionResponseMsg msgDifferentStatus =
+        new SessionResponseMsg(SessionStatusType.NO_SUCH_SESSION, objectRefs1);
+    assertThat(msg1.equals(msgDifferentStatus), is(false));
 
-    // TODO(#532): Implement test logic
-    fail("Not yet implemented");
+    // Same statusType, one with objectRefs and one without
+    SessionResponseMsg msgNoRefs = new SessionResponseMsg(SessionStatusType.OK);
+    assertThat(msg1.equals(msgNoRefs), is(false));
   }
 
   /**
@@ -157,17 +160,13 @@ public class SessionResponseMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:SessionResponseMsgTest.testEquals_null_returnsFalse]
    */
   @Test
-  @Ignore("Awaiting implementation in #532")
   public void testEquals_null_returnsFalse() {
     // Given: A SessionResponseMsg instance
-    // - Create message with statusType: OK
+    SessionResponseMsg msg = new SessionResponseMsg(SessionStatusType.OK);
 
     // When: equals() is called with null
-
     // Then: Returns false (should not throw NullPointerException)
-
-    // TODO(#532): Implement test logic
-    fail("Not yet implemented");
+    assertThat(msg.equals(null), is(false));
   }
 
   /**
@@ -176,20 +175,24 @@ public class SessionResponseMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:SessionResponseMsgTest.testHashCode_equalObjects_sameHashCode]
    */
   @Test
-  @Ignore("Awaiting implementation in #532")
   public void testHashCode_equalObjects_sameHashCode() {
     // Given: Two SessionResponseMsg instances with identical field values
-    // - Both messages have:
-    //   - statusType: SessionStatusType.OK
-    //   - objectRefs: identical Set (or both null)
+    SessionResponseMsg msg1 = new SessionResponseMsg(SessionStatusType.OK);
+    SessionResponseMsg msg2 = new SessionResponseMsg(SessionStatusType.OK);
 
     // When: hashCode() is called on both objects
-
     // Then: Both hash codes are equal
-    // Note: This is required by the hashCode contract when equals() returns true
+    assertThat(msg1.hashCode(), is(msg2.hashCode()));
 
-    // TODO(#532): Implement test logic
-    fail("Not yet implemented");
+    // Also test with objectRefs
+    Set<ObjectRef> objectRefs1 = new HashSet<>();
+    objectRefs1.add(ObjectRef.from("12345"));
+    Set<ObjectRef> objectRefs2 = new HashSet<>();
+    objectRefs2.add(ObjectRef.from("12345"));
+
+    SessionResponseMsg msgWithRefs1 = new SessionResponseMsg(SessionStatusType.OK, objectRefs1);
+    SessionResponseMsg msgWithRefs2 = new SessionResponseMsg(SessionStatusType.OK, objectRefs2);
+    assertThat(msgWithRefs1.hashCode(), is(msgWithRefs2.hashCode()));
   }
 
   /**
@@ -199,20 +202,21 @@ public class SessionResponseMsgTest extends ZmqEnabledTest {
    * [TEST:SessionResponseMsgTest.testHashCode_differentObjects_likelyDifferentHashCode]
    */
   @Test
-  @Ignore("Awaiting implementation in #532")
   public void testHashCode_differentObjects_likelyDifferentHashCode() {
     // Given: Two SessionResponseMsg instances with different field values
-    // - message1 with statusType: OK, objectRefs: {ref1}
-    // - message2 with statusType: SESSION_NOT_FOUND, objectRefs: {ref2}
+    Set<ObjectRef> objectRefs1 = new HashSet<>();
+    objectRefs1.add(ObjectRef.from("12345"));
+
+    Set<ObjectRef> objectRefs2 = new HashSet<>();
+    objectRefs2.add(ObjectRef.from("67890"));
+
+    SessionResponseMsg msg1 = new SessionResponseMsg(SessionStatusType.OK, objectRefs1);
+    SessionResponseMsg msg2 =
+        new SessionResponseMsg(SessionStatusType.NO_SUCH_SESSION, objectRefs2);
 
     // When: hashCode() is called on both objects
-
     // Then: Hash codes are likely different
-    // Note: This is not strictly required by the hashCode contract,
-    // but a good hash function should minimize collisions
-
-    // TODO(#532): Implement test logic
-    fail("Not yet implemented");
+    assertThat(msg1.hashCode(), is(org.hamcrest.Matchers.not(msg2.hashCode())));
   }
 
   /**
@@ -224,22 +228,19 @@ public class SessionResponseMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:SessionResponseMsgTest.testToString_containsRelevantInfo]
    */
   @Test
-  @Ignore("Awaiting implementation in #532")
   public void testToString_containsRelevantInfo() {
     // Given: A SessionResponseMsg with known field values
-    // - statusType: SessionStatusType.OK
-    // - objectRefs: Set containing specific ObjectRef values
+    Set<ObjectRef> objectRefs = new HashSet<>();
+    objectRefs.add(ObjectRef.from("98765"));
+    SessionResponseMsg msg = new SessionResponseMsg(SessionStatusType.OK, objectRefs);
 
     // When: toString() is called
+    String result = msg.toString();
 
-    // Then: The returned string contains:
-    // - The class name or identifier "SessionResponseMsg"
-    // - The status type name (e.g., "OK")
-    // - The object references (if present)
-    // - The size information
-
-    // TODO(#532): Implement test logic
-    fail("Not yet implemented");
+    // Then: The returned string contains relevant information
+    assertThat(result, org.hamcrest.Matchers.containsString("SessionResponseMsg"));
+    assertThat(result, org.hamcrest.Matchers.containsString("OK"));
+    assertThat(result, org.hamcrest.Matchers.containsString("98765"));
   }
 
   /**
@@ -249,20 +250,29 @@ public class SessionResponseMsgTest extends ZmqEnabledTest {
    * [TEST:SessionResponseMsgTest.testReceive_singleArg_delegatesToTwoArgVersion]
    */
   @Test
-  @Ignore("Awaiting implementation in #532")
   public void testReceive_singleArg_delegatesToTwoArgVersion() {
     // Given: A ZMQ socket pair with a SessionResponseMsg sent through it
-    // - Create a REQ/REP socket pair
-    // - Send a valid SessionResponseMsg (e.g., OK status)
+    String socketAddress = "inproc://test-receive-single-arg";
+    ZContext zmqContext = createContext();
+    ZMQ.Socket out = zmqContext.createSocket(SocketType.REQ);
+    out.bind(socketAddress);
+    ZMQ.Socket in = zmqContext.createSocket(SocketType.REP);
+    in.connect(socketAddress);
+
+    // Send a valid SessionResponseMsg
+    SessionResponseMsg msgOut = new SessionResponseMsg(SessionStatusType.OK);
+    msgOut.send(out);
 
     // When: receive(socket) is called (single-arg version, non-blocking)
+    SessionResponseMsg msgIn = SessionResponseMsg.receive(in);
 
-    // Then:
-    // - Returns a valid SessionResponseMsg when message is available
-    // - The message fields match the sent message
-    // - The single-arg method delegates to receive(socket, false)
+    // Then: Returns a valid SessionResponseMsg when message is available
+    assertThat(msgIn, is(msgOut));
+    assertThat(msgIn.getStatus(), is(SessionStatusType.OK));
 
-    // TODO(#532): Implement test logic
-    fail("Not yet implemented");
+    // close
+    out.close();
+    in.close();
+    zmqContext.destroy();
   }
 }

@@ -288,24 +288,46 @@ public class OutboundJsonRpcResponseMsgTest extends ZmqEnabledTest {
    * [TEST:OutboundJsonRpcResponseMsgTest.testReceive_singleArg_delegatesToTwoArgVersion]
    */
   @Test
-  @Ignore("Awaiting implementation in #532")
   public void testReceive_singleArg_delegatesToTwoArgVersion() {
     // Given: A ZMQ socket pair with an OutboundJsonRpcResponseMsg sent through it
-    // - Create a DEALER/REP socket pair
-    // - First send a fake request from DEALER to REP (required before sending response)
-    // - Send a valid OutboundJsonRpcResponseMsg with:
-    //   - peerId: a random UUID
-    //   - jsonMessage: a valid JSON-RPC response string
-    //   - messageType: MessageType.UNKNOWN
+    String socketAddress = "inproc://test-receive-single-arg";
+    ZContext zmqContext = createContext();
+    ZMQ.Socket dealerSocket = zmqContext.createSocket(SocketType.DEALER);
+    dealerSocket.bind(socketAddress);
+    ZMQ.Socket repSocket = zmqContext.createSocket(SocketType.REP);
+    repSocket.connect(socketAddress);
+
+    // First send a fake request from DEALER to REP (required before sending response)
+    dealerSocket.send("", ZMQ.SNDMORE); // emulate empty envelope
+    dealerSocket.send("fake request", 0);
+    String receivedString = repSocket.recvStr();
+    assertEquals("fake request", receivedString);
+
+    // Send a valid OutboundJsonRpcResponseMsg
+    UUID clientId = UUID.randomUUID();
+    String jsonRpcMessage =
+        """
+        {
+          "jsonrpc": "2.0",
+          "result": "testResult",
+          "id": 123
+        }
+        """;
+    OutboundJsonRpcResponseMsg msgOut =
+        new OutboundJsonRpcResponseMsg(clientId, jsonRpcMessage, MessageType.UNKNOWN);
+    msgOut.send(repSocket);
 
     // When: receive(socket) is called (single-arg version, non-blocking)
+    OutboundJsonRpcResponseMsg msgIn = OutboundJsonRpcResponseMsg.receive(dealerSocket);
 
-    // Then:
-    // - Returns a valid OutboundJsonRpcResponseMsg when message is available
-    // - The message fields (peerId, jsonMessage, messageType) match the sent message
-    // - The single-arg method delegates to receive(socket, false)
+    // Then: Returns a valid OutboundJsonRpcResponseMsg when message is available
+    assertThat(msgIn, is(msgOut));
+    assertThat(msgIn.getPeerId(), is(clientId));
+    assertThat(msgIn.getJsonMessage(), is(jsonRpcMessage));
 
-    // TODO(#532): Implement test logic
-    fail("Not yet implemented");
+    // close
+    dealerSocket.close();
+    repSocket.close();
+    zmqContext.destroy();
   }
 }

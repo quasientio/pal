@@ -12,11 +12,9 @@ package io.quasient.pal.core.internal.messages;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.fail;
 
 import io.quasient.pal.core.ZmqEnabledTest;
 import java.util.UUID;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,19 +84,15 @@ public class PublishedOffsetMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:PublishedOffsetMsgTest.testEquals_sameObject_returnsTrue]
    */
   @Test
-  @Ignore("Awaiting implementation in #532")
   public void testEquals_sameObject_returnsTrue() {
     // Given: A single PublishedOffsetMsg instance
-    // - Create a PublishedOffsetMsg with:
-    //   - offset: 12345L
-    //   - messageId: a UUID string
+    long offset = 12345L;
+    String messageId = UUID.randomUUID().toString();
+    PublishedOffsetMsg msg = new PublishedOffsetMsg(offset, messageId);
 
     // When: equals() is called with the same object reference
-
     // Then: Returns true
-
-    // TODO(#532): Implement test logic
-    fail("Not yet implemented");
+    assertThat(msg.equals(msg), is(true));
   }
 
   /**
@@ -107,19 +101,18 @@ public class PublishedOffsetMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:PublishedOffsetMsgTest.testEquals_equalObjects_returnsTrue]
    */
   @Test
-  @Ignore("Awaiting implementation in #532")
   public void testEquals_equalObjects_returnsTrue() {
     // Given: Two PublishedOffsetMsg instances with identical field values
-    // - Both messages have:
-    //   - offset: same long value
-    //   - messageId: same String value
+    long offset = 12345L;
+    String messageId = UUID.randomUUID().toString();
+
+    PublishedOffsetMsg msg1 = new PublishedOffsetMsg(offset, messageId);
+    PublishedOffsetMsg msg2 = new PublishedOffsetMsg(offset, messageId);
 
     // When: equals() is called comparing message1 to message2
-
     // Then: Returns true
-
-    // TODO(#532): Implement test logic
-    fail("Not yet implemented");
+    assertThat(msg1.equals(msg2), is(true));
+    assertThat(msg2.equals(msg1), is(true));
   }
 
   /**
@@ -128,22 +121,25 @@ public class PublishedOffsetMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:PublishedOffsetMsgTest.testEquals_differentObjects_returnsFalse]
    */
   @Test
-  @Ignore("Awaiting implementation in #532")
   public void testEquals_differentObjects_returnsFalse() {
     // Given: Two PublishedOffsetMsg instances with different field values
-    // - message1 with offset: 100L, messageId: "id1"
-    // - message2 with offset: 200L, messageId: "id2"
+    String messageId1 = "test-id-1";
+    String messageId2 = "test-id-2";
+
+    PublishedOffsetMsg msg1 = new PublishedOffsetMsg(100L, messageId1);
+    PublishedOffsetMsg msg2 = new PublishedOffsetMsg(200L, messageId2);
 
     // When: equals() is called comparing message1 to message2
-
     // Then: Returns false
+    assertThat(msg1.equals(msg2), is(false));
 
-    // Also test with:
-    // - Same offset, different messageId
-    // - Different offset, same messageId
+    // Same offset, different messageId
+    PublishedOffsetMsg msgSameOffset = new PublishedOffsetMsg(100L, messageId2);
+    assertThat(msg1.equals(msgSameOffset), is(false));
 
-    // TODO(#532): Implement test logic
-    fail("Not yet implemented");
+    // Different offset, same messageId
+    PublishedOffsetMsg msgSameId = new PublishedOffsetMsg(200L, messageId1);
+    assertThat(msg1.equals(msgSameId), is(false));
   }
 
   /**
@@ -152,17 +148,13 @@ public class PublishedOffsetMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:PublishedOffsetMsgTest.testEquals_null_returnsFalse]
    */
   @Test
-  @Ignore("Awaiting implementation in #532")
   public void testEquals_null_returnsFalse() {
     // Given: A PublishedOffsetMsg instance
-    // - Create message with any valid field values
+    PublishedOffsetMsg msg = new PublishedOffsetMsg(12345L, "test-message-id");
 
     // When: equals() is called with null
-
     // Then: Returns false (should not throw NullPointerException)
-
-    // TODO(#532): Implement test logic
-    fail("Not yet implemented");
+    assertThat(msg.equals(null), is(false));
   }
 
   /**
@@ -171,20 +163,17 @@ public class PublishedOffsetMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:PublishedOffsetMsgTest.testHashCode_equalObjects_sameHashCode]
    */
   @Test
-  @Ignore("Awaiting implementation in #532")
   public void testHashCode_equalObjects_sameHashCode() {
     // Given: Two PublishedOffsetMsg instances with identical field values
-    // - Both messages have:
-    //   - offset: same long value
-    //   - messageId: same String value
+    long offset = 12345L;
+    String messageId = "test-message-id";
+
+    PublishedOffsetMsg msg1 = new PublishedOffsetMsg(offset, messageId);
+    PublishedOffsetMsg msg2 = new PublishedOffsetMsg(offset, messageId);
 
     // When: hashCode() is called on both objects
-
     // Then: Both hash codes are equal
-    // Note: This is required by the hashCode contract when equals() returns true
-
-    // TODO(#532): Implement test logic
-    fail("Not yet implemented");
+    assertThat(msg1.hashCode(), is(msg2.hashCode()));
   }
 
   /**
@@ -194,20 +183,14 @@ public class PublishedOffsetMsgTest extends ZmqEnabledTest {
    * [TEST:PublishedOffsetMsgTest.testHashCode_differentObjects_likelyDifferentHashCode]
    */
   @Test
-  @Ignore("Awaiting implementation in #532")
   public void testHashCode_differentObjects_likelyDifferentHashCode() {
     // Given: Two PublishedOffsetMsg instances with different field values
-    // - message1 with offset: 100L, messageId: "id1"
-    // - message2 with offset: 200L, messageId: "id2"
+    PublishedOffsetMsg msg1 = new PublishedOffsetMsg(100L, "id1");
+    PublishedOffsetMsg msg2 = new PublishedOffsetMsg(200L, "id2");
 
     // When: hashCode() is called on both objects
-
     // Then: Hash codes are likely different
-    // Note: This is not strictly required by the hashCode contract,
-    // but a good hash function should minimize collisions
-
-    // TODO(#532): Implement test logic
-    fail("Not yet implemented");
+    assertThat(msg1.hashCode(), is(not(msg2.hashCode())));
   }
 
   /**
@@ -216,21 +199,19 @@ public class PublishedOffsetMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:PublishedOffsetMsgTest.testToString_containsRelevantInfo]
    */
   @Test
-  @Ignore("Awaiting implementation in #532")
   public void testToString_containsRelevantInfo() {
     // Given: A PublishedOffsetMsg with known field values
-    // - offset: 12345L
-    // - messageId: a specific UUID string
+    long offset = 12345L;
+    String messageId = "test-unique-message-id";
+    PublishedOffsetMsg msg = new PublishedOffsetMsg(offset, messageId);
 
     // When: toString() is called
+    String result = msg.toString();
 
-    // Then: The returned string contains:
-    // - The class name or identifier "PublishedOffsetMsg"
-    // - The offset value
-    // - The messageId value
-
-    // TODO(#532): Implement test logic
-    fail("Not yet implemented");
+    // Then: The returned string contains relevant information
+    assertThat(result, org.hamcrest.Matchers.containsString("PublishedOffsetMsg"));
+    assertThat(result, org.hamcrest.Matchers.containsString("12345"));
+    assertThat(result, org.hamcrest.Matchers.containsString("test-unique-message-id"));
   }
 
   /**
@@ -240,21 +221,33 @@ public class PublishedOffsetMsgTest extends ZmqEnabledTest {
    * [TEST:PublishedOffsetMsgTest.testReceive_singleArg_delegatesToTwoArgVersion]
    */
   @Test
-  @Ignore("Awaiting implementation in #532")
   public void testReceive_singleArg_delegatesToTwoArgVersion() {
     // Given: A ZMQ socket pair with a PublishedOffsetMsg sent through it
-    // - Create a REQ/REP socket pair
-    // - Send a valid PublishedOffsetMsg
+    String socketAddress = "inproc://test-receive-single-arg";
+    ZContext zmqContext = createContext();
+    ZMQ.Socket in = zmqContext.createSocket(SocketType.REP);
+    in.bind(socketAddress);
+    ZMQ.Socket out = zmqContext.createSocket(SocketType.REQ);
+    out.connect(socketAddress);
+
+    // Send a valid PublishedOffsetMsg
+    long offset = 98765L;
+    String messageId = UUID.randomUUID().toString();
+    PublishedOffsetMsg msgOut = new PublishedOffsetMsg(offset, messageId);
+    msgOut.send(out);
 
     // When: receive(socket) is called (single-arg version, non-blocking)
+    PublishedOffsetMsg msgIn = PublishedOffsetMsg.receive(in);
 
-    // Then:
-    // - Returns a valid PublishedOffsetMsg when message is available
-    // - The message fields match the sent message
-    // - The single-arg method delegates to receive(socket, false)
+    // Then: Returns a valid PublishedOffsetMsg when message is available
+    assertThat(msgIn, is(msgOut));
+    assertThat(msgIn.getOffset(), is(offset));
+    assertThat(msgIn.getMessageId(), is(messageId));
 
-    // TODO(#532): Implement test logic
-    fail("Not yet implemented");
+    // close
+    out.close();
+    in.close();
+    zmqContext.destroy();
   }
 
   /**
@@ -263,22 +256,37 @@ public class PublishedOffsetMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:PublishedOffsetMsgTest.testSend_writesMessageToSocket]
    */
   @Test
-  @Ignore("Awaiting implementation in #532")
   public void testSend_writesMessageToSocket() {
     // Given: A valid PublishedOffsetMsg instance and a ZMQ socket pair
-    // - Create a PublishedOffsetMsg with:
-    //   - offset: 98765L
-    //   - messageId: a specific UUID string
-    // - Create a REQ/REP socket pair
+    long offset = 98765L;
+    String messageId = "test-send-message-id";
+    PublishedOffsetMsg msgOut = new PublishedOffsetMsg(offset, messageId);
+
+    String socketAddress = "inproc://test-send";
+    ZContext zmqContext = createContext();
+    ZMQ.Socket in = zmqContext.createSocket(SocketType.REP);
+    in.bind(socketAddress);
+    ZMQ.Socket out = zmqContext.createSocket(SocketType.REQ);
+    out.connect(socketAddress);
 
     // When: send(socket) is called
+    boolean sendResult = msgOut.send(out);
 
-    // Then:
-    // - Returns true indicating successful send
-    // - The message size is correctly calculated (8 bytes for offset + messageId bytes)
-    // - The message can be received and reconstructed with matching fields
+    // Then: Returns true indicating successful send
+    assertThat(sendResult, is(true));
 
-    // TODO(#532): Implement test logic
-    fail("Not yet implemented");
+    // The message size is correctly calculated (8 bytes for offset + messageId bytes)
+    int expectedSize = 8 + messageId.getBytes(ZMQ.CHARSET).length;
+    assertThat(msgOut.getSize(), is(expectedSize));
+
+    // The message can be received and reconstructed with matching fields
+    PublishedOffsetMsg msgIn = PublishedOffsetMsg.receive(in, true);
+    assertThat(msgIn.getOffset(), is(offset));
+    assertThat(msgIn.getMessageId(), is(messageId));
+
+    // close
+    out.close();
+    in.close();
+    zmqContext.destroy();
   }
 }

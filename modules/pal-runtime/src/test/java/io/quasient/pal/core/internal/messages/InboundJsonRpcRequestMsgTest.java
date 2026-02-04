@@ -297,23 +297,40 @@ public class InboundJsonRpcRequestMsgTest extends ZmqEnabledTest {
    * [TEST:InboundJsonRpcRequestMsgTest.testReceive_singleArg_delegatesToTwoArgVersion]
    */
   @Test
-  @Ignore("Awaiting implementation in #532")
   public void testReceive_singleArg_delegatesToTwoArgVersion() {
     // Given: A ZMQ socket pair with an InboundJsonRpcRequestMsg sent through it
-    // - Create a PUSH/PULL socket pair (as used in existing tests)
-    // - Send a valid InboundJsonRpcRequestMsg with:
-    //   - peerId: a random UUID
-    //   - jsonMessage: a valid JSON-RPC request string
-    // - Send without envelope (withEnvelope=false) for PUSH/PULL
+    String pushAddress = "inproc://test-receive-single-arg";
+    ZContext zmqContext = createContext();
+    ZMQ.Socket pushSocket = zmqContext.createSocket(SocketType.PUSH);
+    pushSocket.bind(pushAddress);
+    ZMQ.Socket pullSocket = zmqContext.createSocket(SocketType.PULL);
+    pullSocket.connect(pushAddress);
+
+    // Send a valid InboundJsonRpcRequestMsg (without envelope for PUSH/PULL)
+    UUID clientId = UUID.randomUUID();
+    String jsonMessage =
+        """
+        {
+          "jsonrpc": "2.0",
+          "method": "testMethod",
+          "params": [],
+          "id": 99
+        }
+        """;
+    InboundJsonRpcRequestMsg msgOut = new InboundJsonRpcRequestMsg(clientId, jsonMessage);
+    msgOut.send(pushSocket, false);
 
     // When: receive(socket) is called (single-arg version, non-blocking)
+    InboundJsonRpcRequestMsg msgIn = InboundJsonRpcRequestMsg.receive(pullSocket);
 
-    // Then:
-    // - Returns a valid InboundJsonRpcRequestMsg when message is available
-    // - The message fields (peerId, jsonMessage) match the sent message
-    // - The single-arg method delegates to receive(socket, false)
+    // Then: Returns a valid InboundJsonRpcRequestMsg when message is available
+    assertThat(msgIn, is(msgOut));
+    assertThat(msgIn.getPeerId(), is(clientId));
+    assertThat(msgIn.getJsonMessage(), is(jsonMessage));
 
-    // TODO(#532): Implement test logic
-    fail("Not yet implemented");
+    // close
+    pushSocket.close();
+    pullSocket.close();
+    zmqContext.destroy();
   }
 }

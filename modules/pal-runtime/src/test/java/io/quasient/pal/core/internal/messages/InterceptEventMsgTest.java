@@ -333,22 +333,31 @@ public class InterceptEventMsgTest extends ZmqEnabledTest {
    * [TEST:InterceptEventMsgTest.testReceive_singleArg_delegatesToTwoArgVersion]
    */
   @Test
-  @Ignore("Awaiting implementation in #532")
   public void testReceive_singleArg_delegatesToTwoArgVersion() {
     // Given: A ZMQ socket pair with an InterceptEventMsg sent through it
-    // - Create a REQ/REP socket pair
-    // - Send a valid InterceptEventMsg with:
-    //   - For REGISTER type: a byte[] body
-    //   - Or for UNREGISTER type: an interceptMessageId string
+    String socketAddress = "inproc://test-receive-single-arg";
+    ZContext zmqContext = createContext();
+    ZMQ.Socket in = zmqContext.createSocket(SocketType.REP);
+    in.bind(socketAddress);
+    ZMQ.Socket out = zmqContext.createSocket(SocketType.REQ);
+    out.connect(socketAddress);
+
+    // Send a valid InterceptEventMsg (REGISTER type with byte[] body)
+    byte[] body = "test intercept message body".getBytes(StandardCharsets.UTF_8);
+    InterceptEventMsg msgOut = new InterceptEventMsg(body);
+    msgOut.send(out);
 
     // When: receive(socket) is called (single-arg version, non-blocking)
+    InterceptEventMsg msgIn = InterceptEventMsg.receive(in);
 
-    // Then:
-    // - Returns a valid InterceptEventMsg when message is available
-    // - The message fields (type, body or interceptMessageId) match the sent message
-    // - The single-arg method delegates to receive(socket, false)
+    // Then: Returns a valid InterceptEventMsg when message is available
+    assertThat(msgIn, is(msgOut));
+    assertThat(msgIn.getType(), is(InterceptEventMsg.Type.REGISTER));
+    assertThat(msgIn.getBody(), is(body));
 
-    // TODO(#532): Implement test logic
-    fail("Not yet implemented");
+    // close
+    out.close();
+    in.close();
+    zmqContext.destroy();
   }
 }

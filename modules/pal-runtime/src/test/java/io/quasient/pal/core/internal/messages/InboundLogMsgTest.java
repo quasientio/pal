@@ -255,24 +255,35 @@ public class InboundLogMsgTest extends ZmqEnabledTest {
    * <p>Acceptance Criteria: [TEST:InboundLogMsgTest.testReceive_singleArg_delegatesToTwoArgVersion]
    */
   @Test
-  @Ignore("Awaiting implementation in #532")
   public void testReceive_singleArg_delegatesToTwoArgVersion() {
     // Given: A ZMQ socket pair with an InboundLogMsg sent through it
-    // - Create a DEALER/REP socket pair (as InboundLogMsg is sent via DEALER)
-    // - Send a valid InboundLogMsg with:
-    //   - offset: a specific long value
-    //   - messageFormat: MessageFormatType.BINARY
-    //   - headers: RecordHeaders (empty or with some headers)
-    //   - body: a byte array
+    long offset = 12345L;
+    byte[] body = "test message body".getBytes(StandardCharsets.UTF_8);
+    Headers headers = new RecordHeaders();
+    InboundLogMsg msgOut = new InboundLogMsg(offset, MessageFormatType.BINARY, headers, body);
+
+    // Create a DEALER/REP socket pair (as InboundLogMsg is sent via DEALER)
+    String socketAddress = "inproc://test-receive-single-arg";
+    ZContext zmqContext = createContext();
+    ZMQ.Socket out = zmqContext.createSocket(SocketType.DEALER);
+    out.bind(socketAddress);
+    ZMQ.Socket in = zmqContext.createSocket(SocketType.REP);
+    in.connect(socketAddress);
+
+    // Send the message
+    msgOut.send(out);
 
     // When: receive(socket) is called (single-arg version, non-blocking)
+    InboundLogMsg msgIn = InboundLogMsg.receive(in);
 
-    // Then:
-    // - Returns a valid InboundLogMsg when message is available
-    // - The message fields (offset, messageFormat, headers, body) match the sent message
-    // - The single-arg method delegates to receive(socket, false)
+    // Then: Returns a valid InboundLogMsg when message is available
+    assertThat(msgIn, is(msgOut));
+    assertThat(msgIn.getOffset(), is(offset));
+    assertThat(msgIn.getMessageFormat(), is(MessageFormatType.BINARY));
 
-    // TODO(#532): Implement test logic
-    fail("Not yet implemented");
+    // close
+    out.close();
+    in.close();
+    zmqContext.destroy();
   }
 }
