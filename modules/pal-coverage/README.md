@@ -26,12 +26,17 @@ Reports are generated in `target/site/`:
 |-----------|-------------|----------|
 | `jacoco-aggregate/` | Unit test coverage only | Evaluating unit test quality |
 | `jacoco-aggregate-it/` | Integration test coverage only | Evaluating IT coverage of runtime code |
-| `jacoco-aggregate-all/` | Combined unit + IT coverage | Overall coverage assessment |
+| `jacoco-aggregate-all/` | Combined unit + IT (shaded classes) | Legacy combined report (has limitations) |
+| `jacoco-merged/` | **Merged unit + IT (line-level)** | **Recommended for overall coverage** |
 
-Open `index.html` in any directory to view the HTML report, or use `jacoco.csv` for
-programmatic analysis.
+Open `index.html` in any directory to view the HTML report, or use `jacoco.csv`/`jacoco.xml`
+for programmatic analysis.
 
 ### Which Report to Use
+
+- **Merged report** (`jacoco-merged/`): **Recommended.** Combines unit test and IT coverage
+  at the line level, giving accurate total coverage. Filters to only PAL packages (excludes
+  shaded third-party dependencies). Use this for overall coverage assessment.
 
 - **Unit test report** (`jacoco-aggregate/`): Most accurate for PAL classes. Use this to
   identify gaps in unit test coverage. No bytecode mismatch warnings for PAL code.
@@ -39,9 +44,9 @@ programmatic analysis.
 - **IT report** (`jacoco-aggregate-it/`): Shows what code paths are exercised by integration
   tests. Useful for understanding end-to-end coverage. Only generated when ITs have run.
 
-- **Combined report** (`jacoco-aggregate-all/`): Provides the "big picture" but may
-  undercount unit test coverage due to bytecode differences between shaded/unshaded classes.
-  Use for overall assessment, but prefer the unit test report for detailed analysis.
+- **Legacy combined report** (`jacoco-aggregate-all/`): Uses shaded classes, which causes
+  bytecode checksum mismatches with unit test coverage. May undercount coverage for classes
+  that reference relocated dependencies (like slf4j). Prefer `jacoco-merged/` instead.
 
 ### Understanding Coverage Metrics
 
@@ -89,7 +94,57 @@ COMPLEXITY_COVERED, METHOD_MISSED, METHOD_COVERED`
 4. **Report generation**:
    - Unit test report: Uses `report-aggregate` with unshaded `target/classes`
    - IT report: Unpacks shaded JAR, uses `report` goal with those classes
-   - Combined report: Uses shaded classes (IT coverage accurate, unit coverage partial)
+   - Legacy combined report: Uses shaded classes (IT coverage accurate, unit coverage partial)
+   - **Merged report**: Uses `merge_jacoco_reports.py` to combine at line level (see below)
+
+## Merged Report (Line-Level Merge)
+
+The `jacoco-merged/` report solves the checksum mismatch problem by merging coverage
+at the **line level** rather than relying on JaCoCo's bytecode checksum matching.
+
+### The Problem
+
+JaCoCo uses bytecode checksums to match coverage data to classes. When:
+- Unit tests run against **unshaded** classes (`target/classes`)
+- Integration tests run against **shaded** classes (relocated packages like `org.slf4j` → `io.quasient.pal.shd.org.slf4j`)
+
+The checksums don't match, and JaCoCo silently drops coverage data. This affects any
+class that references a relocated dependency (most classes import slf4j for logging).
+
+### The Solution
+
+The `merge_jacoco_reports.py` script:
+
+1. Parses both XML reports (`jacoco-aggregate/jacoco.xml` and `jacoco-aggregate-it/jacoco.xml`)
+2. Extracts line-level coverage data (`<line nr="X" ci="..." mi="...">`)
+3. For each line appearing in either report, takes `max(covered)` and `min(missed)`
+4. Recalculates class/package counters from merged line data
+5. Generates combined XML and HTML reports
+
+### Why Line-Level Merge is More Accurate
+
+Counter-level merge (old approach):
+- If UT covers 50 instructions and IT covers 40 different instructions
+- Reports: `max(50, 40) = 50` covered (undercount)
+
+Line-level merge (new approach):
+- Combines coverage at each line
+- Reports: `50 + 40 = 90` covered (accurate union)
+
+### Running the Merge Manually
+
+The merge runs automatically during `mvn verify`. To run manually:
+
+```bash
+cd modules/pal-coverage
+python3 merge_jacoco_reports.py \
+    target/site/jacoco-aggregate/jacoco.xml \
+    target/site/jacoco-aggregate-it/jacoco.xml \
+    target/site/jacoco-merged \
+    --filter io/quasient/pal
+```
+
+The `--filter` option limits output to PAL packages (excludes shaded third-party deps).
 
 ## Expected Warnings
 
@@ -100,20 +155,36 @@ During report generation, you may see JaCoCo warnings like:
 [WARN] Execution data for class io/quasient/pal/... does not match.
 ```
 
-**These warnings are expected** and occur because:
+**These warnings are expected** for the legacy reports and occur because:
 
 1. **IT report**: May warn about third-party classes (grpc, etcd, etc.) where the bytecode
    in the shaded JAR differs from what was actually executed (due to JVM optimizations or
    different class loading).
 
-2. **Combined report**: Will warn about PAL classes where unit test coverage (recorded
-   against unshaded classes) doesn't match the shaded bytecode. This is unavoidable since:
-   - Unit tests run against `target/classes` (unshaded)
-   - IT tests run against the shaded JAR
-   - Combined report must use one set of class files
+2. **Legacy combined report** (`jacoco-aggregate-all/`): Will warn about PAL classes where
+   unit test coverage (recorded against unshaded classes) doesn't match the shaded bytecode.
+   This is why the `jacoco-merged/` report was created—it avoids this problem entirely.
 
 The **unit test report** (`jacoco-aggregate/`) should have no warnings for PAL classes
 since it uses unshaded classes that match the unit test exec files.
+
+The **merged report** (`jacoco-merged/`) avoids checksum issues by merging XML data at the
+line level, rather than relying on JaCoCo's bytecode matching.
+
+## Viewing Reports in a Browser
+
+To serve the HTML reports over HTTP:
+
+```bash
+# Serve all reports (can compare between them)
+cd modules/pal-coverage/target/site
+python3 -m http.server 8000
+```
+
+Then browse:
+- http://localhost:8000/jacoco-merged/ (recommended - combined coverage)
+- http://localhost:8000/jacoco-aggregate/ (unit tests only)
+- http://localhost:8000/jacoco-aggregate-it/ (integration tests only)
 
 ## Viewing Coverage for a Single Module
 

@@ -269,6 +269,35 @@
                             </arguments>
                         </configuration>
                     </execution>
+
+                    <!--
+                        Merged report combining unit tests (unshaded) and IT (shaded).
+                        This solves the checksum mismatch problem where unit test coverage
+                        for classes referencing relocated packages (e.g., slf4j) is lost
+                        in the jacoco-aggregate-all report.
+
+                        The merge script:
+                        - Parses both XML reports
+                        - For classes in both: takes max(covered), min(missed)
+                        - For classes in only one: includes as-is
+                        - Generates merged XML and HTML reports
+                        - Filters to only io/quasient/pal/* packages (excludes shaded deps)
+                    -->
+                    <execution>
+                        <id>jacoco-report-merged</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>bash</executable>
+                            <workingDirectory>${project.basedir}</workingDirectory>
+                            <arguments>
+                                <argument>-c</argument>
+                                <argument>if [ -f "${project.build.directory}/site/jacoco-aggregate/jacoco.xml" ] &amp;&amp; [ -f "${project.build.directory}/site/jacoco-aggregate-it/jacoco.xml" ]; then python3 merge_jacoco_reports.py "${project.build.directory}/site/jacoco-aggregate/jacoco.xml" "${project.build.directory}/site/jacoco-aggregate-it/jacoco.xml" "${project.build.directory}/site/jacoco-merged" --filter io/quasient/pal; else echo "Skipping merged report: unit test or IT XML report not found"; fi</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
         </plugins>
