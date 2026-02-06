@@ -21,7 +21,9 @@ import io.quasient.pal.apps.quantized.intercept.StringMethods;
 import io.quasient.pal.common.directory.nodes.InterceptRequest;
 import io.quasient.pal.common.lang.intercept.CheckedExceptionPolicy;
 import io.quasient.pal.common.lang.intercept.ExceptionPropagationPolicy;
+import io.quasient.pal.common.lang.intercept.InterceptPhaseViolationException;
 import io.quasient.pal.common.lang.intercept.InterceptType;
+import io.quasient.pal.common.lang.intercept.InterceptTypeNotSupportedException;
 import io.quasient.pal.common.lang.intercept.InterceptableMethodCall;
 import io.quasient.pal.common.objects.ObjectRef;
 import io.quasient.pal.intercept.AbstractInterceptIT;
@@ -104,7 +106,7 @@ public class ExceptionHandlingIT extends AbstractInterceptIT {
   // ==================== API Misuse Tests ====================
 
   /**
-   * Tests that API misuse exceptions from remote callbacks are filtered and not propagated.
+   * Tests that API misuse exceptions from remote callbacks are propagated to the caller.
    *
    * <p><b>Given:</b> Remote BEFORE callback that calls getReturnValue() (API misuse)
    *
@@ -113,23 +115,20 @@ public class ExceptionHandlingIT extends AbstractInterceptIT {
    * <p><b>Then:</b>
    *
    * <ul>
-   *   <li>Method executes normally (API misuse is filtered)
+   *   <li>InterceptTypeNotSupportedException is propagated to caller
    *   <li>API misuse is logged on interceptor peer
-   *   <li>No exception propagated to caller
    * </ul>
    *
    * <p>This test verifies that InterceptTypeNotSupportedException thrown when a BEFORE callback
-   * attempts to call getReturnValue() is classified as API misuse and filtered according to the
-   * exception policy.
+   * attempts to call getReturnValue() is classified as API misuse and propagated to the caller,
+   * bypassing all exception policies.
    */
   @Test
-  public void shouldNotPropagateApiMisuseExceptionFromRemoteCallback() throws Exception {
+  public void shouldPropagateApiMisuseExceptionFromRemoteCallback() throws Exception {
     logger.info(
-        "===== shouldNotPropagateApiMisuseExceptionFromRemoteCallback [{}]: TEST STARTED =====",
-        path);
+        "===== shouldPropagateApiMisuseExceptionFromRemoteCallback [{}]: TEST STARTED =====", path);
 
     // 1. Register a BEFORE intercept with apiMisuseGetReturnValueInBefore callback
-    // Using default policy which should filter API misuse exceptions
     UUID interceptUuid = UUID.randomUUID();
     InterceptRequest<InterceptableMethodCall> interceptRequest =
         new InterceptRequest<>(
@@ -165,15 +164,28 @@ public class ExceptionHandlingIT extends AbstractInterceptIT {
             new String[] {"java.lang.String"},
             new Object[] {"hello"});
 
-    // 4. Verify no exception was propagated - API misuse is filtered
+    // 4. Verify API misuse exception WAS propagated
     assertThat(
-        "API misuse exception should be filtered, no exception propagated",
+        "API misuse exception should be propagated",
         response.getRaisedThrowable(),
-        is(nullValue()));
+        is(notNullValue()));
 
-    // 5. Verify method returned expected value (executed normally)
-    String returnValue = (String) Unwrapper.unwrapObject(response.getReturnValue().getObject());
-    assertThat("Method should execute normally with original argument", returnValue, is("hello"));
+    // 5. Verify exception is InterceptTypeNotSupportedException
+    // For remote callbacks, the exception may be wrapped in RuntimeException during transmission,
+    // so we check that either:
+    // a) The type is InterceptTypeNotSupportedException directly, or
+    // b) The message contains InterceptTypeNotSupportedException (wrapped case)
+    String exceptionType = response.getRaisedThrowable().getThrowable().getType();
+    String exceptionMessage = response.getRaisedThrowable().getThrowable().getMessage();
+    String expectedTypeName = InterceptTypeNotSupportedException.class.getName();
+    boolean isCorrectException =
+        exceptionType.equals(expectedTypeName) || exceptionMessage.contains(expectedTypeName);
+    assertTrue(
+        "Exception should be or contain InterceptTypeNotSupportedException, but got type="
+            + exceptionType
+            + ", message="
+            + exceptionMessage,
+        isCorrectException);
 
     // 6. Verify API misuse was logged on interceptor peer
     assertTrue(
@@ -182,12 +194,12 @@ public class ExceptionHandlingIT extends AbstractInterceptIT {
             "API_MISUSE_GET_RETURN_IN_BEFORE: attempting invalid getReturnValue"));
 
     logger.info(
-        "===== shouldNotPropagateApiMisuseExceptionFromRemoteCallback [{}]: TEST COMPLETED =====",
+        "===== shouldPropagateApiMisuseExceptionFromRemoteCallback [{}]: TEST COMPLETED =====",
         path);
   }
 
   /**
-   * Tests that API misuse exceptions from local callbacks are filtered and not propagated.
+   * Tests that API misuse exceptions from local callbacks are propagated to the caller.
    *
    * <p><b>Given:</b> Local AROUND callback that calls setArg() after proceed() (API misuse)
    *
@@ -196,20 +208,18 @@ public class ExceptionHandlingIT extends AbstractInterceptIT {
    * <p><b>Then:</b>
    *
    * <ul>
-   *   <li>Method continues with original return value
-   *   <li>API misuse (InterceptPhaseViolationException) is logged
-   *   <li>No exception propagated to caller
+   *   <li>InterceptPhaseViolationException is propagated to caller
+   *   <li>API misuse is logged
    * </ul>
    *
    * <p>This test verifies that InterceptPhaseViolationException thrown when an AROUND callback
-   * attempts to call setArg() after proceed() is classified as API misuse and filtered according to
-   * the exception policy.
+   * attempts to call setArg() after proceed() is classified as API misuse and propagated to the
+   * caller, bypassing all exception policies.
    */
   @Test
-  public void shouldNotPropagateApiMisuseExceptionFromLocalCallback() throws Exception {
+  public void shouldPropagateApiMisuseExceptionFromLocalCallback() throws Exception {
     logger.info(
-        "===== shouldNotPropagateApiMisuseExceptionFromLocalCallback [{}]: TEST STARTED =====",
-        path);
+        "===== shouldPropagateApiMisuseExceptionFromLocalCallback [{}]: TEST STARTED =====", path);
 
     // 1. Register a local AROUND intercept with apiMisuseSetArgAfterProceed callback
     // Local = callback peer UUID equals interceptable peer UUID
@@ -248,15 +258,26 @@ public class ExceptionHandlingIT extends AbstractInterceptIT {
             new String[] {"java.lang.String"},
             new Object[] {"hello"});
 
-    // 4. Verify no exception was propagated - API misuse is filtered
+    // 4. Verify API misuse exception WAS propagated
     assertThat(
-        "API misuse exception should be filtered, no exception propagated",
+        "API misuse exception should be propagated",
         response.getRaisedThrowable(),
-        is(nullValue()));
+        is(notNullValue()));
 
-    // 5. Verify method returned expected value (from proceed())
-    String returnValue = (String) Unwrapper.unwrapObject(response.getReturnValue().getObject());
-    assertThat("Method should return original value from proceed()", returnValue, is("hello"));
+    // 5. Verify exception is InterceptPhaseViolationException
+    // For local callbacks, the exception type should be preserved directly
+    // We check both type and message for consistency with remote callback test pattern
+    String exceptionType = response.getRaisedThrowable().getThrowable().getType();
+    String exceptionMessage = response.getRaisedThrowable().getThrowable().getMessage();
+    String expectedTypeName = InterceptPhaseViolationException.class.getName();
+    boolean isCorrectException =
+        exceptionType.equals(expectedTypeName) || exceptionMessage.contains(expectedTypeName);
+    assertTrue(
+        "Exception should be or contain InterceptPhaseViolationException, but got type="
+            + exceptionType
+            + ", message="
+            + exceptionMessage,
+        isCorrectException);
 
     // 6. Verify API misuse was logged
     assertTrue(
@@ -265,7 +286,7 @@ public class ExceptionHandlingIT extends AbstractInterceptIT {
             "API_MISUSE_SET_ARG_AFTER_PROCEED: attempting invalid setArg"));
 
     logger.info(
-        "===== shouldNotPropagateApiMisuseExceptionFromLocalCallback [{}]: TEST COMPLETED =====",
+        "===== shouldPropagateApiMisuseExceptionFromLocalCallback [{}]: TEST COMPLETED =====",
         path);
   }
 
