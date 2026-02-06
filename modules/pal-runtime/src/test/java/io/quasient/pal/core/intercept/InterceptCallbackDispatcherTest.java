@@ -438,21 +438,21 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
   // ===== Exception Handling Policy Tests =====
 
   /**
-   * Tests that API misuse errors are logged and do not propagate to caller.
+   * Tests that API misuse errors are logged and propagate to caller.
    *
    * <p>Given: A callback response with isApiMisuseError=true
    *
    * <p>When: Processing the response from a synchronous callback
    *
-   * <p>Then: The error is logged but not propagated to the caller; processing continues with
-   * remaining callbacks
+   * <p>Then: The error is logged and propagated to the caller; processing stops immediately
    *
    * <p>This test verifies that API misuse errors (such as IllegalArgumentException when a callback
-   * handler is improperly implemented) are treated as non-fatal errors that should not disrupt the
-   * normal flow of the intercepted operation.
+   * handler is improperly implemented) always propagate regardless of exception policy. These
+   * indicate programming errors that should be visible to developers immediately, not silently
+   * swallowed.
    */
   @Test
-  public void shouldLogApiMisuseErrorAndContinue() throws Exception {
+  public void shouldLogAndPropagateApiMisuseError() throws Exception {
     // Setup: Create stub server that responds with API misuse error
     String endpoint = "inproc://api-misuse-test";
     UUID remotePeerUuid = UUID.randomUUID();
@@ -492,13 +492,16 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
 
     ExecMessage execMessage = messageBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
 
-    // Execute - API misuse error should be logged but not propagate
+    // Execute - API misuse error should be logged and propagated
     InterceptCallbackDispatcher.ConsolidatedCallbackResponse response =
         dispatcher.sendBeforeCallbacks(result, execMessage, new Object[0]);
 
-    // Verify: No exception should be thrown (API misuse is swallowed)
-    assertThat("API misuse error should not propagate", response.shouldThrowException(), is(false));
-    assertThat("Should proceed with execution", response.shouldProceed(), is(true));
+    // Verify: API misuse exception should be propagated (bypasses exception policy)
+    assertThat("API misuse error should propagate", response.shouldThrowException(), is(true));
+    assertThat(
+        "Exception message should match",
+        response.getExceptionToThrow().getMessage(),
+        is("API misuse error"));
 
     server.requestStop();
   }

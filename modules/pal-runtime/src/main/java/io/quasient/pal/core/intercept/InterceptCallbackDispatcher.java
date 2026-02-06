@@ -13,6 +13,7 @@ import static io.quasient.pal.serdes.colfer.ColferUtils.toBytes;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.quasient.pal.common.lang.intercept.ExceptionPropagationPolicy;
+import io.quasient.pal.common.lang.intercept.InterceptApiMisuseException;
 import io.quasient.pal.common.lang.intercept.InterceptPhase;
 import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.cxn.directory.DirectoryConnectionProvider;
@@ -628,7 +629,9 @@ public class InterceptCallbackDispatcher {
    * <p>This method handles both API misuse errors and business exceptions:
    *
    * <ul>
-   *   <li><b>API misuse errors:</b> Logged and swallowed (returns null)
+   *   <li><b>API misuse errors:</b> Always propagate regardless of policy. These indicate
+   *       programming errors in callback handler implementations that should be visible to
+   *       developers immediately.
    *   <li><b>Business exceptions:</b> Deserialized and policy applied to determine if they should
    *       propagate
    * </ul>
@@ -636,7 +639,8 @@ public class InterceptCallbackDispatcher {
    * @param response the callback response containing exception information
    * @param interceptMessage the intercept message for policy resolution
    * @param interceptType the type of intercept for policy resolution
-   * @return the exception to throw (if policy allows), or null if swallowed
+   * @return the exception to throw (if policy allows propagation or if API misuse), or null if
+   *     swallowed by policy
    */
   private Throwable processCallbackException(
       InterceptCallbackResponseMessage response,
@@ -647,18 +651,18 @@ public class InterceptCallbackDispatcher {
       return null;
     }
 
-    // Check for API misuse error
+    // Check for API misuse error - these always propagate (bypass policy)
     if (response.getIsApiMisuseError()) {
-      // API misuse errors are logged but not propagated
-      logger.error(
-          "API misuse error in callback for intercept type {}: {}. "
-              + "This indicates improper callback handler implementation. "
-              + "The error will be logged but not propagated to the caller.",
-          interceptType,
+      Throwable apiMisuseException =
           response.getException() != null
               ? ExceptionSerdes.deserializeException(response.getException())
-              : "Unknown error");
-      return null; // Swallow API misuse errors
+              : new InterceptApiMisuseException("Unknown API misuse error", null, null, null);
+      logger.error(
+          "API misuse error in callback for intercept type {}: {}. "
+              + "This indicates improper callback handler implementation.",
+          interceptType,
+          apiMisuseException.getMessage());
+      return apiMisuseException; // Propagate to caller
     }
 
     // Deserialize the business exception
