@@ -11,6 +11,8 @@ package io.quasient.pal.apps.callbacks.exception;
 
 import io.quasient.pal.common.lang.intercept.InterceptCallbackResponse;
 import io.quasient.pal.common.lang.intercept.InterceptContext;
+import io.quasient.pal.common.lang.intercept.InterceptPhaseViolationException;
+import io.quasient.pal.common.lang.intercept.InterceptTypeNotSupportedException;
 import java.sql.SQLException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,22 +55,27 @@ public final class ExceptionTestCallbacks {
    * BEFORE callback that attempts to call {@link InterceptContext#getReturnValue()}.
    *
    * <p>This is invalid API usage because return values are not available in BEFORE phase. This
-   * callback should trigger an {@link
-   * io.quasient.pal.common.lang.intercept.InterceptTypeNotSupportedException}.
+   * callback should trigger an {@link InterceptTypeNotSupportedException}.
    *
    * <p><b>Expected behavior:</b> The context will throw InterceptTypeNotSupportedException when
-   * getReturnValue() is called, which will propagate to the callback dispatcher and be handled
-   * according to the configured exception policy.
+   * getReturnValue() is called. This callback catches the exception, logs a diagnostic message for
+   * integration test verification, and re-throws so it propagates to the caller.
    *
    * @param ctx the intercept context
    * @return the intercept response (not reached due to exception)
+   * @throws InterceptTypeNotSupportedException always thrown after catching and logging
    */
   public static InterceptCallbackResponse apiMisuseGetReturnValueInBefore(InterceptContext ctx) {
-    logger.info("API_MISUSE_GET_RETURN_IN_BEFORE: attempting invalid getReturnValue() call");
-    // This will throw InterceptTypeNotSupportedException
-    ctx.getReturnValue();
-    logger.error("API_MISUSE_GET_RETURN_IN_BEFORE: ERROR - did not throw exception");
-    return new InterceptCallbackResponse();
+    try {
+      logger.info("API_MISUSE_GET_RETURN_IN_BEFORE: attempting invalid getReturnValue() call");
+      // This will throw InterceptTypeNotSupportedException
+      ctx.getReturnValue();
+      logger.error("API_MISUSE_GET_RETURN_IN_BEFORE: ERROR - did not throw exception");
+      return new InterceptCallbackResponse();
+    } catch (InterceptTypeNotSupportedException e) {
+      logger.info("API_MISUSE_GET_RETURN_IN_BEFORE: caught expected exception: {}", e.getMessage());
+      throw e; // Propagate to caller
+    }
   }
 
   /**
@@ -76,24 +83,30 @@ public final class ExceptionTestCallbacks {
    * InterceptContext#proceed()}.
    *
    * <p>This is invalid API usage because argument mutation is only allowed in BEFORE phase (before
-   * proceed() is called). This callback should trigger an {@link
-   * io.quasient.pal.common.lang.intercept.InterceptPhaseViolationException}.
+   * proceed() is called). This callback should trigger an {@link InterceptPhaseViolationException}.
    *
    * <p><b>Expected behavior:</b> The context will throw InterceptPhaseViolationException when
-   * setArg() is called after proceed(), which will propagate to the callback dispatcher and be
-   * handled according to the configured exception policy.
+   * setArg() is called after proceed(). This callback catches the exception, logs a diagnostic
+   * message for integration test verification, and re-throws so it propagates to the caller.
    *
    * @param ctx the intercept context
    * @return the intercept response (not reached due to exception)
+   * @throws InterceptPhaseViolationException always thrown after catching and logging
    */
   public static InterceptCallbackResponse apiMisuseSetArgAfterProceed(InterceptContext ctx) {
     logger.info("API_MISUSE_SET_ARG_AFTER_PROCEED: calling proceed()");
     ctx.proceed();
-    logger.info("API_MISUSE_SET_ARG_AFTER_PROCEED: attempting invalid setArg() call");
-    // This will throw InterceptPhaseViolationException
-    ctx.setArg(0, 999);
-    logger.error("API_MISUSE_SET_ARG_AFTER_PROCEED: ERROR - did not throw exception");
-    return new InterceptCallbackResponse();
+    try {
+      logger.info("API_MISUSE_SET_ARG_AFTER_PROCEED: attempting invalid setArg() call");
+      // This will throw InterceptPhaseViolationException
+      ctx.setArg(0, 999);
+      logger.error("API_MISUSE_SET_ARG_AFTER_PROCEED: ERROR - did not throw exception");
+      return new InterceptCallbackResponse();
+    } catch (InterceptPhaseViolationException e) {
+      logger.info(
+          "API_MISUSE_SET_ARG_AFTER_PROCEED: caught expected exception: {}", e.getMessage());
+      throw e; // Propagate to caller
+    }
   }
 
   // ==================== Business Exception Callbacks ====================
