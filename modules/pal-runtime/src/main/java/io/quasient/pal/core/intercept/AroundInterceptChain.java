@@ -322,7 +322,28 @@ public class AroundInterceptChain {
     }
   }
 
-  /** Invokes a local AROUND intercept in the chain. */
+  /**
+   * Invokes a local AROUND intercept in the chain.
+   *
+   * <p>This method executes the callback handler and processes the result. If the callback throws
+   * an exception, the following behavior applies:
+   *
+   * <ul>
+   *   <li>{@link SkipExecutionException}: Re-thrown to propagate skip signal through chain
+   *   <li>{@link InterceptApiMisuseException}: Always propagated (bypasses exception policy) since
+   *       these indicate programming errors in the callback handler that should be immediately
+   *       visible to developers
+   *   <li>Other exceptions: Stored in {@link AfterPhaseData} for downstream handling
+   * </ul>
+   *
+   * @param index the current position in the chain
+   * @param handle the local AROUND handle containing callback info
+   * @param args the current arguments (may have been mutated by outer layers)
+   * @param execMessage the execution message for context
+   * @return the result from this layer and all inner layers
+   * @throws SkipExecutionException if a layer decides to skip execution
+   * @throws InterceptApiMisuseException if the callback handler misuses the intercept API
+   */
   private AfterPhaseData invokeLocal(
       int index, LocalAroundHandle handle, Object[] args, ExecMessage execMessage) {
 
@@ -367,21 +388,17 @@ public class AroundInterceptChain {
       // which wraps all thrown exceptions in InvocationTargetException. We need to unwrap
       // the cause for proper exception handling downstream.
       // - SkipExecutionException: re-throw to propagate skip signal through chain
-      // - InterceptApiMisuseException: log and filter (don't propagate)
+      // - InterceptApiMisuseException: always propagate (bypasses policy)
       // - Other exceptions: store unwrapped cause in AfterPhaseData
       // See AroundChainIT.testAroundSkipInMiddleOfChain.
       Throwable cause = e.getCause();
       if (cause instanceof SkipExecutionException skipExecutionException) {
         throw skipExecutionException;
       }
-      // Filter API misuse exceptions - log but don't propagate
-      if (cause instanceof InterceptApiMisuseException) {
-        logger.warn("API misuse exception from AROUND callback: {}", cause.getMessage());
-        // If proceed() was called, return its result; otherwise return null
-        // This allows the method to complete normally despite the callback bug
-        Object returnValue = context.isProceedCalled() ? context.getReturnValueInternal() : null;
-        Throwable thrownException = context.isProceedCalled() ? context.getThrownException() : null;
-        return new AfterPhaseData(returnValue, thrownException, context.isVoid());
+      // API misuse exceptions always propagate (bypass policy)
+      if (cause instanceof InterceptApiMisuseException interceptApiMisuseException) {
+        logger.error("API misuse exception from AROUND callback: {}", cause.getMessage());
+        throw interceptApiMisuseException; // Propagate by re-throwing
       }
       // Store unwrapped exception for other cases
       return new AfterPhaseData(null, cause != null ? cause : e, false);
