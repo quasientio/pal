@@ -141,7 +141,9 @@ public class LocalInterceptCallbackDispatcher {
    * <p>This method implements the following logic:
    *
    * <ol>
-   *   <li>API misuse exceptions (InterceptApiMisuseException) are always filtered and logged
+   *   <li>API misuse exceptions (InterceptApiMisuseException) always propagate regardless of
+   *       policy. These indicate programming errors in callback handlers (e.g., calling
+   *       getReturnValue() in BEFORE phase) and must be visible to developers.
    *   <li>For other exceptions, the propagation policy determines handling:
    *       <ul>
    *         <li>PROPAGATE_ALL: All exceptions propagate
@@ -193,14 +195,14 @@ public class LocalInterceptCallbackDispatcher {
       return new ExceptionHandlingResult(false, null);
     }
 
-    // Step 1: Always filter API misuse exceptions
+    // Step 1: API misuse exceptions always propagate (bypass policy)
     if (exceptionToConsider instanceof InterceptApiMisuseException) {
-      logger.warn(
+      logger.error(
           "API misuse exception from callback: class={}, method={}, exception={}",
           callbackClass,
           callbackMethod,
           exceptionToConsider.getMessage());
-      return new ExceptionHandlingResult(false, null);
+      return new ExceptionHandlingResult(true, exceptionToConsider);
     }
 
     // Step 2: Resolve propagation policy
@@ -293,7 +295,7 @@ public class LocalInterceptCallbackDispatcher {
    * <p>Exception handling is controlled by exception policies:
    *
    * <ul>
-   *   <li>API misuse exceptions are always filtered and logged but not propagated
+   *   <li>API misuse exceptions always propagate regardless of policy
    *   <li>Propagation policy determines which exceptions propagate to the caller
    *   <li>Checked exception policy validates exceptions against declared exceptions
    * </ul>
@@ -593,7 +595,7 @@ public class LocalInterceptCallbackDispatcher {
    * <p>Exception handling is controlled by exception policies:
    *
    * <ul>
-   *   <li>API misuse exceptions are always filtered and logged but not propagated
+   *   <li>API misuse exceptions always propagate regardless of policy
    *   <li>Propagation policy determines which exceptions propagate to the caller
    *   <li>Checked exception policy validates exceptions against declared exceptions
    * </ul>
@@ -955,7 +957,7 @@ public class LocalInterceptCallbackDispatcher {
    * <p>Exception handling is controlled by exception policies:
    *
    * <ul>
-   *   <li>API misuse exceptions are always filtered and logged but not propagated
+   *   <li>API misuse exceptions always propagate regardless of policy
    *   <li>Propagation policy determines which exceptions propagate to the caller
    *   <li>Checked exception policy validates exceptions against declared exceptions
    * </ul>
@@ -1165,7 +1167,7 @@ public class LocalInterceptCallbackDispatcher {
    * <p>Exception handling is controlled by exception policies:
    *
    * <ul>
-   *   <li>API misuse exceptions are always filtered and logged but not propagated
+   *   <li>API misuse exceptions always propagate regardless of policy
    *   <li>Propagation policy determines which exceptions propagate to the caller
    *   <li>Checked exception policy validates exceptions against declared exceptions
    * </ul>

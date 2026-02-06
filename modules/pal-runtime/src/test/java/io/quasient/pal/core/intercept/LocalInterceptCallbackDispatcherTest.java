@@ -402,18 +402,22 @@ public class LocalInterceptCallbackDispatcherTest {
   }
 
   /**
-   * Tests that API misuse exceptions (InterceptApiMisuseException) are filtered and not propagated.
+   * Tests that API misuse exceptions (InterceptApiMisuseException) are propagated regardless of
+   * policy.
+   *
+   * <p>API misuse exceptions indicate programming errors in callback handlers and must always be
+   * visible to developers. This is critical for fail-fast debugging.
    *
    * <p>Acceptance Criteria:
-   * [TEST:LocalInterceptCallbackDispatcherTest.shouldFilterApiMisuseExceptionAndNotPropagate]
+   * [TEST:LocalInterceptCallbackDispatcherTest.shouldPropagateApiMisuseException]
    */
   @Test
-  public void shouldFilterApiMisuseExceptionAndNotPropagate() {
+  public void shouldPropagateApiMisuseException() {
     // Given: Callback throws InterceptApiMisuseException (API misuse)
-    // Configure with PROPAGATE_ALL to ensure only API misuse filtering is being tested
+    // Configure with SWALLOW_ALL to verify API misuse bypasses all policies
     LocalInterceptCallbackDispatcher policyDispatcher =
         createDispatcherWithPolicy(
-            ExceptionPropagationPolicy.PROPAGATE_ALL, CheckedExceptionPolicy.ALLOW_ALL);
+            ExceptionPropagationPolicy.SWALLOW_ALL, CheckedExceptionPolicy.ALLOW_ALL);
 
     InterceptMessage intercept = createIntercept(InterceptType.BEFORE, "throwApiMisuseException");
     List<InterceptMessage> intercepts = List.of(intercept);
@@ -429,10 +433,12 @@ public class LocalInterceptCallbackDispatcherTest {
             TEST_PEER_UUID,
             null);
 
-    // Then: Exception is logged but not propagated; method continues normally
-    assertTrue("Should proceed when API misuse exception is filtered", response.shouldProceed());
-    assertFalse(
-        "Should not throw exception when API misuse is filtered", response.shouldThrowException());
+    // Then: API misuse exception is propagated (bypasses policy)
+    assertTrue("Should throw exception when API misuse occurs", response.shouldThrowException());
+    assertNotNull("Exception should be the API misuse exception", response.getExceptionToThrow());
+    assertTrue(
+        "Exception should be an InterceptApiMisuseException",
+        response.getExceptionToThrow() instanceof InterceptApiMisuseException);
   }
 
   /**
