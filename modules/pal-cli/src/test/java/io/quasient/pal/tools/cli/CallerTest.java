@@ -11,29 +11,110 @@ package io.quasient.pal.tools.cli;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import io.quasient.pal.common.directory.nodes.PeerInfo;
+import io.quasient.pal.cxn.directory.DirectoryConnectionProvider;
+import io.quasient.pal.cxn.directory.PalDirectory;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.Obj;
 import io.quasient.pal.messages.colfer.RaisedThrowable;
 import io.quasient.pal.messages.colfer.ReturnValue;
+import io.quasient.pal.messages.jsonrpc.JsonRpcError;
+import io.quasient.pal.messages.jsonrpc.JsonRpcResponse;
+import io.quasient.pal.messages.jsonrpc.JsonRpcResponseReturnValue;
+import io.quasient.pal.messages.types.RpcType;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class CallerTest {
+
+  // ===========================================================================
+  // Helper methods
+  // ===========================================================================
+
+  /**
+   * Sets a field value on an object via reflection, searching the class hierarchy.
+   *
+   * @param target the object on which to set the field
+   * @param fieldName the name of the field to set
+   * @param value the value to set
+   */
+  private static void setField(Object target, String fieldName, Object value) throws Exception {
+    Field f = findField(target.getClass(), fieldName);
+    f.setAccessible(true);
+    f.set(target, value);
+  }
+
+  /**
+   * Gets a field value from an object via reflection, searching the class hierarchy.
+   *
+   * @param target the object from which to read the field
+   * @param fieldName the name of the field to read
+   * @return the field value
+   */
+  private static Object getField(Object target, String fieldName) throws Exception {
+    Field f = findField(target.getClass(), fieldName);
+    f.setAccessible(true);
+    return f.get(target);
+  }
+
+  /**
+   * Finds a field by name in the given class or its superclasses.
+   *
+   * @param clazz the class to search
+   * @param name the field name
+   * @return the found Field
+   * @throws NoSuchFieldException if the field is not found in the class hierarchy
+   */
+  private static Field findField(Class<?> clazz, String name) throws NoSuchFieldException {
+    Class<?> current = clazz;
+    while (current != null) {
+      try {
+        return current.getDeclaredField(name);
+      } catch (NoSuchFieldException e) {
+        current = current.getSuperclass();
+      }
+    }
+    throw new NoSuchFieldException(name);
+  }
+
+  /**
+   * Creates a Caller instance with a mock PalDirectory injected via a mock
+   * DirectoryConnectionProvider.
+   *
+   * @param mockDir the mock PalDirectory to inject
+   * @return a configured Caller instance
+   */
+  private static Caller createCallerWithMockDirectory(PalDirectory mockDir) throws Exception {
+    Caller c = new Caller();
+    DirectoryConnectionProvider dcp = mock(DirectoryConnectionProvider.class);
+    when(dcp.get()).thenReturn(Optional.of(mockDir));
+    setField(c, "directoryConnectionProvider", dcp);
+    return c;
+  }
+
+  // ===========================================================================
+  // Existing tests
+  // ===========================================================================
 
   @Test
   public void validateInput_errors_on_conflicts() throws Exception {
@@ -352,7 +433,7 @@ public class CallerTest {
   }
 
   // ============================================================================
-  // Test specifications for additional Caller coverage - Awaiting #628
+  // Test extensions for additional Caller coverage - #628
   // ============================================================================
 
   /**
@@ -363,15 +444,16 @@ public class CallerTest {
    * accordingly.
    */
   @Test
-  @Ignore("Awaiting implementation in #628")
-  public void validateInput_peerAddressTcp_setsPeerAddress() {
-    // Given: A Caller with peerIdentifier set to "tcp://host:port" and a className set
-    // When: validateInput() is called
-    // Then: The peerAddress field should be set to "tcp://host:port"
-    //       and peerUuid should be null, peerName should be null
+  public void validateInput_peerAddressTcp_setsPeerAddress() throws Exception {
+    Caller c = new Caller();
+    setField(c, "peerIdentifier", "tcp://localhost:5555");
+    setField(c, "className", "java.lang.System");
 
-    // TODO(#628): Implement test logic
-    fail("Not yet implemented");
+    c.validateInput();
+
+    assertThat(getField(c, "peerAddress"), is("tcp://localhost:5555"));
+    assertThat(getField(c, "peerUuid"), is(nullValue()));
+    assertThat(getField(c, "peerName"), is(nullValue()));
   }
 
   /**
@@ -381,15 +463,16 @@ public class CallerTest {
    * recognize it as a direct address and set the peerAddress field accordingly.
    */
   @Test
-  @Ignore("Awaiting implementation in #628")
-  public void validateInput_peerAddressWs_setsPeerAddress() {
-    // Given: A Caller with peerIdentifier set to "ws://host:port" and a className set
-    // When: validateInput() is called
-    // Then: The peerAddress field should be set to "ws://host:port"
-    //       and peerUuid should be null, peerName should be null
+  public void validateInput_peerAddressWs_setsPeerAddress() throws Exception {
+    Caller c = new Caller();
+    setField(c, "peerIdentifier", "ws://localhost:8080");
+    setField(c, "className", "java.lang.System");
 
-    // TODO(#628): Implement test logic
-    fail("Not yet implemented");
+    c.validateInput();
+
+    assertThat(getField(c, "peerAddress"), is("ws://localhost:8080"));
+    assertThat(getField(c, "peerUuid"), is(nullValue()));
+    assertThat(getField(c, "peerName"), is(nullValue()));
   }
 
   /**
@@ -399,16 +482,16 @@ public class CallerTest {
    * validateInput() should set the peerName field for later directory lookup.
    */
   @Test
-  @Ignore("Awaiting implementation in #628")
-  public void validateInput_peerName_setsPeerName() {
-    // Given: A Caller with peerIdentifier set to a non-UUID, non-address string like "my-peer"
-    //        and a className set
-    // When: validateInput() is called
-    // Then: The peerName field should be set to "my-peer"
-    //       and peerUuid should be null, peerAddress should be null
+  public void validateInput_peerName_setsPeerName() throws Exception {
+    Caller c = new Caller();
+    setField(c, "peerIdentifier", "my-peer");
+    setField(c, "className", "java.lang.System");
 
-    // TODO(#628): Implement test logic
-    fail("Not yet implemented");
+    c.validateInput();
+
+    assertThat(getField(c, "peerName"), is("my-peer"));
+    assertThat(getField(c, "peerUuid"), is(nullValue()));
+    assertThat(getField(c, "peerAddress"), is(nullValue()));
   }
 
   /**
@@ -418,14 +501,14 @@ public class CallerTest {
    * RuntimeException with a descriptive message.
    */
   @Test
-  @Ignore("Awaiting implementation in #628")
-  public void validateInput_rpcType_invalidValue_throwsRuntimeException() {
-    // Given: A Caller with peerIdentifier set and rpcType set to an invalid value like "INVALID"
-    // When: validateInput() is called
-    // Then: A RuntimeException is thrown with message containing "Invalid RPC type"
+  public void validateInput_rpcType_invalidValue_throwsRuntimeException() throws Exception {
+    Caller c = new Caller();
+    setField(c, "peerIdentifier", "tcp://localhost:5555");
+    setField(c, "rpcType", "INVALID");
+    setField(c, "className", "java.lang.System");
 
-    // TODO(#628): Implement test logic
-    fail("Not yet implemented");
+    Exception e = assertThrows(RuntimeException.class, c::validateInput);
+    assertThat(e.getMessage(), containsString("Invalid RPC type"));
   }
 
   /**
@@ -435,16 +518,14 @@ public class CallerTest {
    * <p>JSON-RPC requires a WebSocket address (ws://). Using it with a tcp:// address should fail.
    */
   @Test
-  @Ignore("Awaiting implementation in #628")
-  public void validateInput_jsonRpc_withNonWsAddress_throwsRuntimeException() {
-    // Given: A Caller with peerIdentifier set to "tcp://host:port",
-    //        rpcType set to "JSON_RPC", and a className set
-    // When: validateInput() is called
-    // Then: A RuntimeException is thrown with message containing
-    //       "Peer address must start with ws://"
+  public void validateInput_jsonRpc_withNonWsAddress_throwsRuntimeException() throws Exception {
+    Caller c = new Caller();
+    setField(c, "peerIdentifier", "tcp://localhost:5555");
+    setField(c, "rpcType", "JSON_RPC");
+    setField(c, "className", "java.lang.System");
 
-    // TODO(#628): Implement test logic
-    fail("Not yet implemented");
+    Exception e = assertThrows(RuntimeException.class, c::validateInput);
+    assertThat(e.getMessage(), containsString("Peer address must start with ws://"));
   }
 
   /**
@@ -454,16 +535,25 @@ public class CallerTest {
    * <p>Stdin JSON-RPC requests require a ws:// address. A tcp:// address is incompatible.
    */
   @Test
-  @Ignore("Awaiting implementation in #628")
-  public void validateInput_tcpAddressWithStdinRequests_throwsRuntimeException() {
-    // Given: A Caller with peerIdentifier set to "tcp://host:port",
-    //        stdin populated with JSON-RPC requests, and no className set
-    // When: validateInput() is called
-    // Then: A RuntimeException is thrown with message containing
-    //       "JSON-RPC requests given through STDIN, but peer address does not start with ws://"
+  public void validateInput_tcpAddressWithStdinRequests_throwsRuntimeException() throws Exception {
+    Caller c = new Caller();
+    setField(c, "peerIdentifier", "tcp://localhost:5555");
 
-    // TODO(#628): Implement test logic
-    fail("Not yet implemented");
+    InputStream originalIn = System.in;
+    try {
+      System.setIn(
+          new ByteArrayInputStream(
+              "{\"jsonrpc\":\"2.0\",\"method\":\"test\",\"id\":1}\n"
+                  .getBytes(StandardCharsets.UTF_8)));
+
+      Exception e = assertThrows(RuntimeException.class, c::validateInput);
+      assertThat(
+          e.getMessage(),
+          containsString(
+              "JSON-RPC requests given through STDIN, but peer address does not start with ws://"));
+    } finally {
+      System.setIn(originalIn);
+    }
   }
 
   /**
@@ -473,34 +563,38 @@ public class CallerTest {
    * clause exception.
    */
   @Test
-  @Ignore("Awaiting implementation in #628")
   public void sendRequestsWithManyClients_oneThread_throwsIllegalArgument() throws Exception {
-    // Given: A Caller instance with numberOfThreads set to 1 via reflection
-    // When: The private sendRequestsWithManyClients() method is invoked via reflection
-    // Then: An IllegalArgumentException is thrown with message containing
-    //       "Method must be called with clients > 1"
+    Caller c = new Caller();
+    setField(c, "numberOfThreads", 1);
 
-    // TODO(#628): Implement test logic
-    fail("Not yet implemented");
+    Method m = Caller.class.getDeclaredMethod("sendRequestsWithManyClients");
+    m.setAccessible(true);
+
+    InvocationTargetException ex = assertThrows(InvocationTargetException.class, () -> m.invoke(c));
+    assertThat(ex.getCause().getClass().getName(), containsString("IllegalArgumentException"));
+    assertThat(
+        ex.getCause().getMessage(), containsString("Method must be called with clients > 1"));
   }
 
   /**
-   * Tests that printIfRequired(JsonRpcResponse) produces no output when response is null.
+   * Tests that printIfRequired(JsonRpcResponse) produces no output when printResponses is disabled.
    *
-   * <p>When a null JsonRpcResponse is passed to printIfRequired, the method should handle it
-   * gracefully without producing output or throwing an exception (depending on serializer
-   * behavior).
+   * <p>When printResponses is false, the method should not print anything.
    */
   @Test
-  @Ignore("Awaiting implementation in #628")
   public void printIfRequired_jsonRpcResponse_null_noOutput() throws Exception {
-    // Given: A Caller with printResponses enabled and a captured output stream
-    // When: The private printIfRequired(JsonRpcResponse) method is invoked with null
-    // Then: No output is produced or a RuntimeException wrapping JsonSerializationException
-    //       is thrown (verify the actual behavior)
+    Caller c = new Caller();
+    setField(c, "printResponses", false);
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    setField(c, "out", new PrintStream(bout));
 
-    // TODO(#628): Implement test logic
-    fail("Not yet implemented");
+    Method m = Caller.class.getDeclaredMethod("printIfRequired", JsonRpcResponse.class);
+    m.setAccessible(true);
+
+    JsonRpcResponse response = JsonRpcResponse.builder().withId("1").withResult(null).build();
+    m.invoke(c, response);
+
+    assertEquals("", bout.toString(StandardCharsets.UTF_8));
   }
 
   /**
@@ -511,15 +605,24 @@ public class CallerTest {
    * the output stream.
    */
   @Test
-  @Ignore("Awaiting implementation in #628")
   public void printIfRequired_jsonRpcResponse_withResult_printsResult() throws Exception {
-    // Given: A Caller with printResponses enabled and a captured output stream,
-    //        and a JsonRpcResponse built with a result (using JsonRpcResponse.builder())
-    // When: The private printIfRequired(JsonRpcResponse) method is invoked via reflection
-    // Then: The output stream contains the JSON serialization of the response
+    Caller c = new Caller();
+    setField(c, "printResponses", true);
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    setField(c, "out", new PrintStream(bout));
 
-    // TODO(#628): Implement test logic
-    fail("Not yet implemented");
+    JsonRpcResponseReturnValue returnValue =
+        JsonRpcResponseReturnValue.builder().withIsVoid(false).build();
+    JsonRpcResponse response =
+        JsonRpcResponse.builder().withId("test-123").withResult(returnValue).build();
+
+    Method m = Caller.class.getDeclaredMethod("printIfRequired", JsonRpcResponse.class);
+    m.setAccessible(true);
+    m.invoke(c, response);
+
+    String output = bout.toString(StandardCharsets.UTF_8);
+    assertThat(output, containsString("test-123"));
+    assertThat(output, containsString("2.0"));
   }
 
   /**
@@ -530,15 +633,23 @@ public class CallerTest {
    * the output stream.
    */
   @Test
-  @Ignore("Awaiting implementation in #628")
   public void printIfRequired_jsonRpcResponse_withError_printsError() throws Exception {
-    // Given: A Caller with printResponses enabled and a captured output stream,
-    //        and a JsonRpcResponse built with a JsonRpcError
-    // When: The private printIfRequired(JsonRpcResponse) method is invoked via reflection
-    // Then: The output stream contains the JSON serialization of the error response
+    Caller c = new Caller();
+    setField(c, "printResponses", true);
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    setField(c, "out", new PrintStream(bout));
 
-    // TODO(#628): Implement test logic
-    fail("Not yet implemented");
+    JsonRpcError error = new JsonRpcError(-32700, "Parse error");
+    JsonRpcResponse response = JsonRpcResponse.builder().withId("err-456").withError(error).build();
+
+    Method m = Caller.class.getDeclaredMethod("printIfRequired", JsonRpcResponse.class);
+    m.setAccessible(true);
+    m.invoke(c, response);
+
+    String output = bout.toString(StandardCharsets.UTF_8);
+    assertThat(output, containsString("err-456"));
+    assertThat(output, containsString("Parse error"));
+    assertThat(output, containsString("-32700"));
   }
 
   /**
@@ -548,14 +659,42 @@ public class CallerTest {
    * class name, method name, and arguments for a single call.
    */
   @Test
-  @Ignore("Awaiting implementation in #628")
   public void buildCallRequests_singleStaticMethod_buildsCorrectly() throws Exception {
-    // Given: A StaticMethodCallBuilder constructed with a class, method, and arg list
-    // When: buildExecMessage() is called
-    // Then: The resulting ExecMessage has the correct class, method, and parameter values
+    Caller c = new Caller();
+    UUID peer = UUID.randomUUID();
 
-    // TODO(#628): Implement test logic
-    fail("Not yet implemented");
+    Class<?> inner = null;
+    for (Class<?> cl : Caller.class.getDeclaredClasses()) {
+      if (cl.getSimpleName().equals("StaticMethodCallBuilder")) {
+        inner = cl;
+        break;
+      }
+    }
+    Assert.assertNotNull(inner);
+
+    Constructor<?> cons =
+        inner.getDeclaredConstructor(
+            Caller.class, UUID.class, String.class, String.class, List.class);
+    cons.setAccessible(true);
+    Object builder =
+        cons.newInstance(c, peer, "com.example.MyClass", "doWork", List.of("arg1", "arg2"));
+
+    Method buildExec = builder.getClass().getDeclaredMethod("buildExecMessage");
+    ExecMessage em = (ExecMessage) buildExec.invoke(builder);
+
+    assertEquals("com.example.MyClass", em.getClassMethodCall().getClazz().getName());
+    assertEquals("doWork", em.getClassMethodCall().getName());
+
+    // Verify parameters contain the args
+    var parametersField = inner.getDeclaredField("parameters");
+    parametersField.setAccessible(true);
+    Object[] parameters = (Object[]) parametersField.get(builder);
+    Assert.assertNotNull(parameters);
+    assertEquals(1, parameters.length);
+    String[] args = (String[]) parameters[0];
+    assertEquals(2, args.length);
+    assertEquals("arg1", args[0]);
+    assertEquals("arg2", args[1]);
   }
 
   /**
@@ -564,16 +703,29 @@ public class CallerTest {
    * <p>Verifies that when stdin contains JSON-RPC request lines, they are captured in the
    * stdinRequests list during validateInput().
    */
+  @SuppressWarnings("unchecked")
   @Test
-  @Ignore("Awaiting implementation in #628")
   public void buildCallRequests_fromStdin_readsAndBuilds() throws Exception {
-    // Given: A Caller with peerIdentifier set to "ws://host:port" and stdin providing
-    //        JSON-RPC request lines, no className set
-    // When: validateInput() is called
-    // Then: The stdinRequests field (via reflection) contains the lines read from stdin
+    Caller c = new Caller();
+    setField(c, "peerIdentifier", "ws://localhost:8080");
 
-    // TODO(#628): Implement test logic
-    fail("Not yet implemented");
+    String jsonLine1 = "{\"jsonrpc\":\"2.0\",\"method\":\"test1\",\"id\":1}";
+    String jsonLine2 = "{\"jsonrpc\":\"2.0\",\"method\":\"test2\",\"id\":2}";
+    String stdinContent = jsonLine1 + "\n" + jsonLine2 + "\n";
+
+    InputStream originalIn = System.in;
+    try {
+      System.setIn(new ByteArrayInputStream(stdinContent.getBytes(StandardCharsets.UTF_8)));
+      c.validateInput();
+
+      List<String> stdinRequests = (List<String>) getField(c, "stdinRequests");
+      Assert.assertNotNull(stdinRequests);
+      assertEquals(2, stdinRequests.size());
+      assertEquals(jsonLine1, stdinRequests.get(0));
+      assertEquals(jsonLine2, stdinRequests.get(1));
+    } finally {
+      System.setIn(originalIn);
+    }
   }
 
   /**
@@ -583,15 +735,21 @@ public class CallerTest {
    * ZMQ_RPC.
    */
   @Test
-  @Ignore("Awaiting implementation in #628")
   public void getRpcTypeForPeer_onlyZmqRpc_returnsZmqRpc() throws Exception {
-    // Given: A Caller with a mock PalDirectory (via reflection on directoryConnectionProvider)
-    //        that returns a PeerInfo with zmqRpcAddress set and jsonrpcAddress null
-    // When: The private getRpcTypeForPeer(UUID) method is invoked via reflection
-    // Then: RpcType.ZMQ_RPC is returned
+    UUID peerUuid = UUID.randomUUID();
+    PeerInfo peerInfo = new PeerInfo(peerUuid);
+    peerInfo.setZmqRpcAddress("tcp://localhost:5555");
 
-    // TODO(#628): Implement test logic
-    fail("Not yet implemented");
+    PalDirectory mockDir = mock(PalDirectory.class);
+    when(mockDir.getPeer(peerUuid)).thenReturn(peerInfo);
+
+    Caller c = createCallerWithMockDirectory(mockDir);
+
+    Method m = Caller.class.getDeclaredMethod("getRpcTypeForPeer", UUID.class);
+    m.setAccessible(true);
+    RpcType result = (RpcType) m.invoke(c, peerUuid);
+
+    assertThat(result, is(RpcType.ZMQ_RPC));
   }
 
   /**
@@ -601,15 +759,21 @@ public class CallerTest {
    * JSON_RPC.
    */
   @Test
-  @Ignore("Awaiting implementation in #628")
   public void getRpcTypeForPeer_onlyJsonRpc_returnsJsonRpc() throws Exception {
-    // Given: A Caller with a mock PalDirectory (via reflection on directoryConnectionProvider)
-    //        that returns a PeerInfo with jsonrpcAddress set and zmqRpcAddress null
-    // When: The private getRpcTypeForPeer(UUID) method is invoked via reflection
-    // Then: RpcType.JSON_RPC is returned
+    UUID peerUuid = UUID.randomUUID();
+    PeerInfo peerInfo = new PeerInfo(peerUuid);
+    peerInfo.setJsonrpcAddress("ws://localhost:8080");
 
-    // TODO(#628): Implement test logic
-    fail("Not yet implemented");
+    PalDirectory mockDir = mock(PalDirectory.class);
+    when(mockDir.getPeer(peerUuid)).thenReturn(peerInfo);
+
+    Caller c = createCallerWithMockDirectory(mockDir);
+
+    Method m = Caller.class.getDeclaredMethod("getRpcTypeForPeer", UUID.class);
+    m.setAccessible(true);
+    RpcType result = (RpcType) m.invoke(c, peerUuid);
+
+    assertThat(result, is(RpcType.JSON_RPC));
   }
 
   /**
@@ -619,14 +783,22 @@ public class CallerTest {
    * should throw a RuntimeException indicating the peer has no RPC address.
    */
   @Test
-  @Ignore("Awaiting implementation in #628")
   public void getRpcTypeForPeer_neitherRpcType_throwsRuntimeException() throws Exception {
-    // Given: A Caller with a mock PalDirectory (via reflection on directoryConnectionProvider)
-    //        that returns a PeerInfo with both zmqRpcAddress and jsonrpcAddress null
-    // When: The private getRpcTypeForPeer(UUID) method is invoked via reflection
-    // Then: A RuntimeException is thrown with message "Peer does not have any RPC address"
+    UUID peerUuid = UUID.randomUUID();
+    PeerInfo peerInfo = new PeerInfo(peerUuid);
+    // Both addresses are null by default
 
-    // TODO(#628): Implement test logic
-    fail("Not yet implemented");
+    PalDirectory mockDir = mock(PalDirectory.class);
+    when(mockDir.getPeer(peerUuid)).thenReturn(peerInfo);
+
+    Caller c = createCallerWithMockDirectory(mockDir);
+
+    Method m = Caller.class.getDeclaredMethod("getRpcTypeForPeer", UUID.class);
+    m.setAccessible(true);
+
+    InvocationTargetException ex =
+        assertThrows(InvocationTargetException.class, () -> m.invoke(c, peerUuid));
+    assertThat(ex.getCause().getClass().getName(), containsString("RuntimeException"));
+    assertThat(ex.getCause().getMessage(), containsString("Peer does not have any RPC address"));
   }
 }
