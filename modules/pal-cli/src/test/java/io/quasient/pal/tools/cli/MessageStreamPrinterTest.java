@@ -12,6 +12,7 @@ package io.quasient.pal.tools.cli;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.fail;
 
 import io.quasient.pal.common.objects.ObjectRef;
 import io.quasient.pal.messages.LogMessage;
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class MessageStreamPrinterTest {
@@ -400,5 +402,352 @@ public class MessageStreamPrinterTest {
 
     // Then: latch.getCount() returns 0
     assertThat(printer.socketPrinterLatch.getCount(), is(0L));
+  }
+
+  // ==========================================================================
+  // Test specifications for printVerboseFilters, resolveLogInfo, getLogMessage,
+  // getFormat, and shouldPrint (offset filtering)
+  // Issue #629 - Awaiting implementation in #630
+  // ==========================================================================
+
+  /**
+   * Tests that printVerboseFilters prints all filter details when every filter field is set.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #630")
+  public void printVerboseFilters_allFiltersSet_printsAll() throws Exception {
+    // Given: A MessageStreamPrinter with all filter fields set:
+    //   msgFormats = ["BINARY"], msgTypes = ["CONSTRUCTOR"],
+    //   fromPeer = "some-peer-uuid", threadName = "main",
+    //   id = "msg-1", offset = 42L
+
+    // When: printVerboseFilters(headerLine, offsetDescriptor) is called via reflection
+
+    // Then: The output contains:
+    //   - The header line
+    //   - "Filtering by format(s): BINARY"
+    //   - "Filtering by type(s): CONSTRUCTOR"
+    //   - "Filtering by peer: some-peer-uuid"
+    //   - "Filtering by thread: main"
+    //   - "Filtering by message id: msg-1"
+    //   - "Will print message with offset id: 42 and then exit"
+
+    // TODO(#630): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that printVerboseFilters prints only the header line when no filters are set.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #630")
+  public void printVerboseFilters_noFilters_printsHeaderOnly() throws Exception {
+    // Given: A MessageStreamPrinter with all filter fields left as null/default
+    //   (msgFormats=null, msgTypes=null, fromPeer=null, threadName=null, id=null, offset=null)
+
+    // When: printVerboseFilters("Header line", "offset id") is called via reflection
+
+    // Then: The output contains only the header line ("Header line")
+    //   and does NOT contain any "Filtering by" lines
+    //   and does NOT contain "Will print message with"
+
+    // TODO(#630): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that printVerboseFilters prints only the format filter line when only msgFormats is set.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #630")
+  public void printVerboseFilters_formatFilterOnly_printsFormat() throws Exception {
+    // Given: A MessageStreamPrinter with only msgFormats = ["BINARY", "JSON"]
+    //   (all other filter fields are null/default)
+
+    // When: printVerboseFilters("Header", "offset id") is called via reflection
+
+    // Then: The output contains:
+    //   - "Header"
+    //   - "Filtering by format(s): BINARY,JSON"
+    //   and does NOT contain "Filtering by type(s)" or "Filtering by peer"
+    //   or "Filtering by thread" or "Filtering by message id"
+    //   or "Will print message with"
+
+    // TODO(#630): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that printVerboseFilters prints only the type filter line when only msgTypes is set.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #630")
+  public void printVerboseFilters_typeFilterOnly_printsType() throws Exception {
+    // Given: A MessageStreamPrinter with only msgTypes = ["CONSTRUCTOR", "INSTANCE_METHOD"]
+    //   (all other filter fields are null/default)
+
+    // When: printVerboseFilters("Header", "offset id") is called via reflection
+
+    // Then: The output contains:
+    //   - "Header"
+    //   - "Filtering by type(s): CONSTRUCTOR,INSTANCE_METHOD"
+    //   and does NOT contain "Filtering by format(s)" or "Filtering by peer"
+    //   or "Filtering by thread" or "Filtering by message id"
+    //   or "Will print message with"
+
+    // TODO(#630): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that printVerboseFilters prints only the peer filter line when only fromPeer is set.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #630")
+  public void printVerboseFilters_peerFilterOnly_printsPeer() throws Exception {
+    // Given: A MessageStreamPrinter with only fromPeer = "peer-uuid-123"
+    //   (all other filter fields are null/default)
+
+    // When: printVerboseFilters("Header", "offset id") is called via reflection
+
+    // Then: The output contains:
+    //   - "Header"
+    //   - "Filtering by peer: peer-uuid-123"
+    //   and does NOT contain "Filtering by format(s)" or "Filtering by type(s)"
+    //   or "Filtering by thread" or "Filtering by message id"
+    //   or "Will print message with"
+
+    // TODO(#630): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that printVerboseFilters prints only the thread filter line when only threadName is set.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #630")
+  public void printVerboseFilters_threadFilterOnly_printsThread() throws Exception {
+    // Given: A MessageStreamPrinter with only threadName = "worker-1"
+    //   (all other filter fields are null/default)
+
+    // When: printVerboseFilters("Header", "offset id") is called via reflection
+
+    // Then: The output contains:
+    //   - "Header"
+    //   - "Filtering by thread: worker-1"
+    //   and does NOT contain "Filtering by format(s)" or "Filtering by type(s)"
+    //   or "Filtering by peer" or "Filtering by message id"
+    //   or "Will print message with"
+
+    // TODO(#630): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that printVerboseFilters prints only the id filter line when only id is set.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #630")
+  public void printVerboseFilters_idFilterOnly_printsId() throws Exception {
+    // Given: A MessageStreamPrinter with only id = "msg-42"
+    //   (all other filter fields are null/default)
+
+    // When: printVerboseFilters("Header", "offset id") is called via reflection
+
+    // Then: The output contains:
+    //   - "Header"
+    //   - "Filtering by message id: msg-42"
+    //   and does NOT contain "Filtering by format(s)" or "Filtering by type(s)"
+    //   or "Filtering by peer" or "Filtering by thread"
+    //   or "Will print message with"
+
+    // TODO(#630): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that printVerboseFilters prints only the offset line when only offset is set.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #630")
+  public void printVerboseFilters_offsetSet_printsOffset() throws Exception {
+    // Given: A MessageStreamPrinter with only offset = 99L
+    //   (all other filter fields are null/default)
+
+    // When: printVerboseFilters("Header", "offset id") is called via reflection
+
+    // Then: The output contains:
+    //   - "Header"
+    //   - "Will print message with offset id: 99 and then exit"
+    //   and does NOT contain any "Filtering by" lines
+
+    // TODO(#630): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that resolveLogInfo returns LogInfo when the log is found by name in the directory.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #630")
+  public void resolveLogInfo_foundByName_returnsLogInfo() throws Exception {
+    // Given: A PalDirectory mock/stub where getLogInfo("my-log") returns a valid LogInfo
+    //   (use Mockito or reflection to create a suitable PalDirectory stub)
+
+    // When: resolveLogInfo(palDirectory, "my-log") is called via reflection
+
+    // Then: The returned LogInfo is not null and matches the one returned by the directory
+
+    // TODO(#630): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that resolveLogInfo tries UUID lookup when name lookup fails, and returns LogInfo if UUID
+   * lookup succeeds.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #630")
+  public void resolveLogInfo_notFoundByName_triesUuid() throws Exception {
+    // Given: A PalDirectory where getLogInfo(name) throws RuntimeException
+    //   but listAllLogs() returns a list containing a LogInfo with a matching UUID
+
+    // When: resolveLogInfo(palDirectory, validUuidString) is called via reflection
+
+    // Then: The returned LogInfo is not null (found by UUID fallback)
+
+    // TODO(#630): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that resolveLogInfo returns null when both name and UUID lookups fail.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #630")
+  public void resolveLogInfo_invalidUuid_returnsNull() throws Exception {
+    // Given: A PalDirectory where getLogInfo(name) returns null
+    //   and the identifier is not a valid UUID (e.g., "not-a-uuid")
+
+    // When: resolveLogInfo(palDirectory, "not-a-uuid") is called via reflection
+
+    // Then: The returned LogInfo is null
+
+    // TODO(#630): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that getLogMessage creates a LogMessage from an OutboundMsg with correct headers and
+   * content.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #630")
+  public void getLogMessage_createsLogMessageFromOutboundMsg() throws Exception {
+    // Given: An OutboundMsg with:
+    //   - messageType = some MessageType (e.g., EXEC_CONSTRUCTOR)
+    //   - messageId = "msg-123"
+    //   - responseToId = "resp-456"
+    //   - body = valid serialized Message bytes
+    //   And a deserialized Message object, and a logicalOffset (e.g., 5L)
+
+    // When: getLogMessage(outboundMsg, 5L, message) is called via reflection
+    //   (getLogMessage is a private static method on MessageStreamPrinter)
+
+    // Then: The returned LogMessage has:
+    //   - headers containing "message-type" = MessageType.name()
+    //   - headers containing "message-format" = "BINARY"
+    //   - headers containing "message-id" = "msg-123"
+    //   - headers containing "response-to-id" = "resp-456"
+    //   - content equal to the provided Message
+
+    // TODO(#630): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that getFormat returns the explicitly specified format when set.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #630")
+  public void getFormat_explicitFormat_returnsSpecified() throws Exception {
+    // Given: A MessageStreamPrinter with formatOptions.json = true
+
+    // When: getFormat() is called via reflection
+
+    // Then: Returns OutputFormat.JSON
+    // (This verifies the format selection path for explicit format)
+
+    // TODO(#630): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that getFormat returns COMPACT (the default) when no format is explicitly set.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #630")
+  public void getFormat_defaultFormat_returnsFull() throws Exception {
+    // Given: A MessageStreamPrinter with formatOptions = null (no format specified)
+
+    // When: getFormat() is called via reflection
+
+    // Then: Returns OutputFormat.COMPACT (the default format)
+    // Note: Despite the method name referencing "Full", the actual default is COMPACT
+
+    // TODO(#630): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that shouldPrint correctly filters by offset when offset filter is set.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #630")
+  public void shouldPrint_withOffset_filtersByOffset() throws Exception {
+    // Given: A MessageStreamPrinter with offset = 10L
+    //   and a valid LogMessage
+
+    // When: shouldPrint(10L, key, logMessage) is called via reflection (matching offset)
+
+    // Then: Returns true (offset matches, short-circuits other filters)
+
+    // And When: shouldPrint(5L, key, logMessage) is called (non-matching offset)
+
+    // Then: Returns false if other filters also don't match,
+    //   or falls through to other filter checks if offset doesn't match
+
+    // TODO(#630): Implement test logic
+    fail("Not yet implemented");
   }
 }
