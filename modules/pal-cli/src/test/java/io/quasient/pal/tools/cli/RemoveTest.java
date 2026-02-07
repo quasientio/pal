@@ -15,19 +15,117 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import io.quasient.pal.common.directory.nodes.LogInfo;
 import io.quasient.pal.common.directory.nodes.LogInfo.LogType;
+import io.quasient.pal.common.directory.nodes.PeerInfo;
+import io.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import io.quasient.pal.cxn.directory.PalDirectory;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import org.junit.Ignore;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import org.junit.Test;
 
+/** Unit tests for {@link Remove}. */
 public class RemoveTest {
+
+  // ===========================================================================
+  // Helper methods
+  // ===========================================================================
+
+  /**
+   * Sets a field value on an object via reflection, searching the class hierarchy.
+   *
+   * @param target the object on which to set the field
+   * @param fieldName the name of the field to set
+   * @param value the value to set
+   */
+  private static void setField(Object target, String fieldName, Object value) throws Exception {
+    Field f = findField(target.getClass(), fieldName);
+    f.setAccessible(true);
+    f.set(target, value);
+  }
+
+  /**
+   * Gets a field value from an object via reflection, searching the class hierarchy.
+   *
+   * @param target the object from which to read the field
+   * @param fieldName the name of the field to read
+   * @return the field value
+   */
+  private static Object getField(Object target, String fieldName) throws Exception {
+    Field f = findField(target.getClass(), fieldName);
+    f.setAccessible(true);
+    return f.get(target);
+  }
+
+  /**
+   * Finds a field by name in the given class or its superclasses.
+   *
+   * @param clazz the class to search
+   * @param name the field name
+   * @return the found Field
+   * @throws NoSuchFieldException if the field is not found in the class hierarchy
+   */
+  private static Field findField(Class<?> clazz, String name) throws NoSuchFieldException {
+    Class<?> current = clazz;
+    while (current != null) {
+      try {
+        return current.getDeclaredField(name);
+      } catch (NoSuchFieldException e) {
+        current = current.getSuperclass();
+      }
+    }
+    throw new NoSuchFieldException(name);
+  }
+
+  /**
+   * Creates a Remove instance with a mock PalDirectory injected via a mock
+   * DirectoryConnectionProvider.
+   *
+   * @param mockDir the mock PalDirectory to inject
+   * @return a configured Remove instance
+   */
+  private static Remove createRemoveWithMockDirectory(PalDirectory mockDir) throws Exception {
+    Remove rm = new Remove();
+    DirectoryConnectionProvider dcp = mock(DirectoryConnectionProvider.class);
+    when(dcp.get()).thenReturn(Optional.of(mockDir));
+    setField(rm, "directoryConnectionProvider", dcp);
+    return rm;
+  }
+
+  /**
+   * Creates a Remove instance with a mock PalDirectory and wired output streams.
+   *
+   * @param mockDir the mock PalDirectory to inject
+   * @param bout the output stream to capture standard output
+   * @return a configured Remove instance
+   */
+  private static Remove createRemoveWithMockDirAndOutput(
+      PalDirectory mockDir, ByteArrayOutputStream bout) throws Exception {
+    Remove rm = createRemoveWithMockDirectory(mockDir);
+    setField(rm, "out", new PrintStream(bout));
+    return rm;
+  }
+
+  // ===========================================================================
+  // Existing tests
+  // ===========================================================================
 
   @Test
   public void runCommand_withoutFlags_printsUsageAndReturnsOne() throws Exception {
@@ -167,7 +265,7 @@ public class RemoveTest {
   }
 
   // ===========================================================================
-  // Test specifications for runCommand() log deletion paths - Issue #631
+  // Tests for runCommand() log deletion paths - Issue #632
   // ===========================================================================
 
   /**
@@ -178,24 +276,30 @@ public class RemoveTest {
    * filters by UUID, and deletes matching logs.
    */
   @Test
-  @Ignore("Awaiting implementation in #632")
-  public void runCommand_deleteLogs_withUuid_deletesLogByUuid() {
-    // Given: Remove instance with deleteLogs=true
-    //        argList contains a valid UUID string
-    //        A mock PalDirectory that returns a log matching the UUID
-    // When: runCommand() is invoked
-    // Then: deleteLogsWithUuid() is called with the parsed UUID
-    //       The matching log is deleted from the directory and backing store
+  public void runCommand_deleteLogs_withUuid_deletesLogByUuid() throws Exception {
+    // Given
+    UUID logUuid = UUID.randomUUID();
+    LogInfo logInfo = new LogInfo("test-log", logUuid, "localhost:29092");
+    logInfo.setLogType(LogType.KAFKA);
 
-    // TODO(#632): Implement test logic
-    //   - Create Remove instance, inject palCommand with NO_URL directory
-    //   - Set deleteLogs=true via reflection
-    //   - Set argList=[<uuid-string>] via reflection
-    //   - Set up a mock DirectoryConnectionProvider returning a PalDirectory
-    //     that returns a Set<LogInfo> containing one log with matching UUID
-    //   - Invoke call() or runCommand() via reflection
-    //   - Verify the log was deleted (directory.deleteLog called)
-    fail("Not yet implemented");
+    PalDirectory mockDir = mock(PalDirectory.class);
+    Set<LogInfo> logs = new HashSet<>();
+    logs.add(logInfo);
+    when(mockDir.listAllLogs()).thenReturn(logs);
+
+    Remove rm = createRemoveWithMockDirectory(mockDir);
+    setField(rm, "deleteLogs", true);
+    setField(rm, "argList", List.of(logUuid.toString()));
+
+    // When
+    Method runCommand = Remove.class.getDeclaredMethod("runCommand");
+    runCommand.setAccessible(true);
+    int result = (int) runCommand.invoke(rm);
+
+    // Then
+    verify(mockDir).listAllLogs();
+    verify(mockDir).deleteLog("test-log");
+    assertThat(result, is(0));
   }
 
   /**
@@ -205,22 +309,33 @@ public class RemoveTest {
    * deletes each one.
    */
   @Test
-  @Ignore("Awaiting implementation in #632")
-  public void runCommand_deleteLogs_deleteAll_deletesAllLogs() {
-    // Given: Remove instance with deleteLogs=true, deleteAll=true
-    //        A mock PalDirectory that returns multiple logs
-    // When: runCommand() is invoked
-    // Then: All logs returned by listAllLogs() are deleted
-    //       Each log is unregistered from directory and removed from backing store
+  public void runCommand_deleteLogs_deleteAll_deletesAllLogs() throws Exception {
+    // Given
+    LogInfo log1 = new LogInfo("log-1", UUID.randomUUID(), "localhost:29092");
+    log1.setLogType(LogType.KAFKA);
+    LogInfo log2 = new LogInfo("log-2", UUID.randomUUID(), "localhost:29092");
+    log2.setLogType(LogType.KAFKA);
 
-    // TODO(#632): Implement test logic
-    //   - Create Remove instance, inject palCommand with NO_URL directory
-    //   - Set deleteLogs=true, deleteAll=true via reflection
-    //   - Set up mock DirectoryConnectionProvider with PalDirectory
-    //     returning multiple LogInfo entries from listAllLogs()
-    //   - Invoke runCommand() via reflection
-    //   - Verify all logs were deleted
-    fail("Not yet implemented");
+    PalDirectory mockDir = mock(PalDirectory.class);
+    Set<LogInfo> logs = new HashSet<>();
+    logs.add(log1);
+    logs.add(log2);
+    when(mockDir.listAllLogs()).thenReturn(logs);
+
+    Remove rm = createRemoveWithMockDirectory(mockDir);
+    setField(rm, "deleteLogs", true);
+    setField(rm, "deleteAll", true);
+
+    // When
+    Method runCommand = Remove.class.getDeclaredMethod("runCommand");
+    runCommand.setAccessible(true);
+    int result = (int) runCommand.invoke(rm);
+
+    // Then
+    verify(mockDir).listAllLogs();
+    verify(mockDir).deleteLog("log-1");
+    verify(mockDir).deleteLog("log-2");
+    assertThat(result, is(0));
   }
 
   /**
@@ -230,22 +345,23 @@ public class RemoveTest {
    * getPalDirectory().deletePeers().
    */
   @Test
-  @Ignore("Awaiting implementation in #632")
-  public void runCommand_deletePeers_deleteAll_deletesAllPeers() {
-    // Given: Remove instance with deletePeers=true, deleteAll=true
-    //        A mock PalDirectory
-    // When: runCommand() is invoked
-    // Then: getPalDirectory().deletePeers() is called
-    //       The number of unregistered peers is logged
+  public void runCommand_deletePeers_deleteAll_deletesAllPeers() throws Exception {
+    // Given
+    PalDirectory mockDir = mock(PalDirectory.class);
+    when(mockDir.deletePeers()).thenReturn(3L);
 
-    // TODO(#632): Implement test logic
-    //   - Create Remove instance, inject palCommand with NO_URL directory
-    //   - Set deletePeers=true, deleteAll=true via reflection
-    //   - Set up mock DirectoryConnectionProvider with PalDirectory
-    //     where deletePeers() returns a count
-    //   - Invoke runCommand() via reflection
-    //   - Verify deletePeers() was called on the directory
-    fail("Not yet implemented");
+    Remove rm = createRemoveWithMockDirectory(mockDir);
+    setField(rm, "deletePeers", true);
+    setField(rm, "deleteAll", true);
+
+    // When
+    Method runCommand = Remove.class.getDeclaredMethod("runCommand");
+    runCommand.setAccessible(true);
+    int result = (int) runCommand.invoke(rm);
+
+    // Then
+    verify(mockDir).deletePeers();
+    assertThat(result, is(0));
   }
 
   /**
@@ -256,29 +372,43 @@ public class RemoveTest {
    * peers are deleted.
    */
   @Test
-  @Ignore("Awaiting implementation in #632")
-  public void runCommand_deletePeers_withStartingWith_deletesMatchingPeers() {
-    // Given: Remove instance with deletePeers=true, startingWith=true
-    //        argList contains a prefix string (not a valid UUID)
-    //        A mock PalDirectory returning peers with various names
-    // When: runCommand() is invoked
-    // Then: Only peers whose name starts with the prefix are deleted
-    //       Non-matching peers are not affected
+  public void runCommand_deletePeers_withStartingWith_deletesMatchingPeers() throws Exception {
+    // Given
+    UUID peer1Uuid = UUID.randomUUID();
+    UUID peer2Uuid = UUID.randomUUID();
+    UUID peer3Uuid = UUID.randomUUID();
+    PeerInfo peer1 = new PeerInfo(peer1Uuid, "test-peer-1");
+    PeerInfo peer2 = new PeerInfo(peer2Uuid, "test-peer-2");
+    PeerInfo peer3 = new PeerInfo(peer3Uuid, "other-peer");
 
-    // TODO(#632): Implement test logic
-    //   - Create Remove instance, inject palCommand
-    //   - Set deletePeers=true, startingWith=true via reflection
-    //   - Set argList=["test-"] via reflection
-    //   - Mock PalDirectory.listPeers() to return peers:
-    //     "test-peer-1", "test-peer-2", "other-peer"
-    //   - Mock isPeerAlive() to return false for matching peers
-    //   - Invoke runCommand() via reflection
-    //   - Verify deletePeer() called for "test-peer-1" and "test-peer-2" only
-    fail("Not yet implemented");
+    PalDirectory mockDir = mock(PalDirectory.class);
+    Set<PeerInfo> allPeers = new HashSet<>();
+    allPeers.add(peer1);
+    allPeers.add(peer2);
+    allPeers.add(peer3);
+    when(mockDir.listPeers()).thenReturn(allPeers);
+    when(mockDir.isPeerAlive(any(UUID.class))).thenReturn(false);
+
+    Remove rm = createRemoveWithMockDirectory(mockDir);
+    setField(rm, "deletePeers", true);
+    setField(rm, "startingWith", true);
+    setField(rm, "argList", List.of("test-"));
+
+    // When
+    Method runCommand = Remove.class.getDeclaredMethod("runCommand");
+    runCommand.setAccessible(true);
+    int result = (int) runCommand.invoke(rm);
+
+    // Then
+    verify(mockDir).listPeers();
+    verify(mockDir).deletePeer(peer1Uuid);
+    verify(mockDir).deletePeer(peer2Uuid);
+    verify(mockDir, never()).deletePeer(peer3Uuid);
+    assertThat(result, is(0));
   }
 
   // ===========================================================================
-  // Test specifications for deleteLog() - Issue #631
+  // Tests for deleteLog() - Issue #632
   // ===========================================================================
 
   /**
@@ -288,22 +418,35 @@ public class RemoveTest {
    * instead of removeFromKafka().
    */
   @Test
-  @Ignore("Awaiting implementation in #632")
-  public void deleteLog_chronicleLog_removesChronicleQueue() {
-    // Given: A LogInfo with LogType.CHRONICLE and a valid path
-    //        Remove instance with no directory connection (directoryConnectionProvider is null)
-    // When: deleteLog() is invoked via reflection
-    // Then: removeChronicleLog() is called (not removeFromKafka)
-    //       The Chronicle queue at the path is processed for deletion
+  public void deleteLog_chronicleLog_removesChronicleQueue() throws Exception {
+    // Given: A LogInfo with CHRONICLE type pointing to a temp directory with .cq4 files
+    Path tempDir = Files.createTempDirectory("removetest-chronicle");
+    try {
+      // Create a fake .cq4 file so queueExists returns true
+      Files.createFile(tempDir.resolve("data.cq4"));
 
-    // TODO(#632): Implement test logic
-    //   - Create Remove instance
-    //   - Create LogInfo with type CHRONICLE, name="/tmp/test-chronicle-queue"
-    //   - Access private deleteLog(LogInfo) via reflection
-    //   - Invoke deleteLog with the CHRONICLE LogInfo
-    //   - Verify Chronicle path is processed (may need to check via log output
-    //     or use a temp directory that exists/doesn't exist)
-    fail("Not yet implemented");
+      LogInfo logInfo = new LogInfo(tempDir.toString());
+      logInfo.setLogType(LogType.CHRONICLE);
+
+      // No directory connection (direct mode)
+      Remove rm = new Remove();
+
+      Method deleteLogMethod = Remove.class.getDeclaredMethod("deleteLog", LogInfo.class);
+      deleteLogMethod.setAccessible(true);
+
+      // When
+      deleteLogMethod.invoke(rm, logInfo);
+
+      // Then: Chronicle directory should be deleted
+      int errors = (int) getField(rm, "errors");
+      assertThat(errors, is(0));
+      assertThat("Chronicle dir should be deleted", !Files.exists(tempDir));
+    } finally {
+      // Clean up in case test fails
+      if (Files.exists(tempDir)) {
+        deleteRecursive(tempDir);
+      }
+    }
   }
 
   /**
@@ -313,25 +456,37 @@ public class RemoveTest {
    * the backing store without attempting directory operations.
    */
   @Test
-  @Ignore("Awaiting implementation in #632")
-  public void deleteLog_noDirectory_skipsDirectoryUnregistration() {
-    // Given: A LogInfo (Kafka or Chronicle type)
-    //        Remove instance with directoryConnectionProvider = null
-    // When: deleteLog() is invoked via reflection
-    // Then: No directory unregistration is attempted (no exception thrown)
-    //       The backing store removal proceeds normally
+  public void deleteLog_noDirectory_skipsDirectoryUnregistration() throws Exception {
+    // Given: A LogInfo with CHRONICLE type, no directory connection
+    Path tempDir = Files.createTempDirectory("removetest-nodir");
+    try {
+      Files.createFile(tempDir.resolve("data.cq4"));
 
-    // TODO(#632): Implement test logic
-    //   - Create Remove instance (directoryConnectionProvider is null by default)
-    //   - Create a LogInfo with CHRONICLE type (to avoid needing real Kafka)
-    //   - Access private deleteLog(LogInfo) via reflection
-    //   - Invoke it and verify no exception is thrown for directory operations
-    //   - Verify the method continues to the backing store removal
-    fail("Not yet implemented");
+      LogInfo logInfo = new LogInfo(tempDir.toString());
+      logInfo.setLogType(LogType.CHRONICLE);
+
+      Remove rm = new Remove();
+      // directoryConnectionProvider is null by default
+
+      Method deleteLogMethod = Remove.class.getDeclaredMethod("deleteLog", LogInfo.class);
+      deleteLogMethod.setAccessible(true);
+
+      // When
+      deleteLogMethod.invoke(rm, logInfo);
+
+      // Then: No exception thrown, Chronicle log deleted, no errors
+      int errors = (int) getField(rm, "errors");
+      assertThat(errors, is(0));
+      assertThat("Chronicle dir should be deleted", !Files.exists(tempDir));
+    } finally {
+      if (Files.exists(tempDir)) {
+        deleteRecursive(tempDir);
+      }
+    }
   }
 
   // ===========================================================================
-  // Test specifications for removeChronicleLog() - Issue #631
+  // Tests for removeChronicleLog() - Issue #632
   // ===========================================================================
 
   /**
@@ -341,24 +496,23 @@ public class RemoveTest {
    * warning is logged and no deletion is attempted (no error incremented).
    */
   @Test
-  @Ignore("Awaiting implementation in #632")
-  public void removeChronicleLog_nonExistentPath_logsWarning() {
-    // Given: A LogInfo with CHRONICLE type pointing to a non-existent path
-    //        Remove instance
-    // When: removeChronicleLog() is invoked via reflection
-    // Then: A warning is logged: "Chronicle log '...' does not exist at path: ..."
-    //       No error is incremented
-    //       No deletion is attempted
+  public void removeChronicleLog_nonExistentPath_logsWarning() throws Exception {
+    // Given: A LogInfo pointing to a non-existent path
+    LogInfo logInfo = new LogInfo("/nonexistent/path/that/does/not/exist");
+    logInfo.setLogType(LogType.CHRONICLE);
 
-    // TODO(#632): Implement test logic
-    //   - Create Remove instance
-    //   - Create LogInfo with name="/nonexistent/path/that/does/not/exist"
-    //     and LogType.CHRONICLE
-    //   - Access private removeChronicleLog(LogInfo) via reflection
-    //   - Invoke it
-    //   - Verify errors field remains 0 via reflection
-    //   - Optionally capture log output to verify warning message
-    fail("Not yet implemented");
+    Remove rm = new Remove();
+
+    Method removeChronicleLogMethod =
+        Remove.class.getDeclaredMethod("removeChronicleLog", LogInfo.class);
+    removeChronicleLogMethod.setAccessible(true);
+
+    // When
+    removeChronicleLogMethod.invoke(rm, logInfo);
+
+    // Then: No error incremented (warning logged but not an error)
+    int errors = (int) getField(rm, "errors");
+    assertThat(errors, is(0));
   }
 
   /**
@@ -368,27 +522,37 @@ public class RemoveTest {
    * and the queue is removed. On successful deletion, no error is incremented.
    */
   @Test
-  @Ignore("Awaiting implementation in #632")
-  public void removeChronicleLog_existentPath_deletes() {
-    // Given: A LogInfo with CHRONICLE type pointing to an existing Chronicle queue path
-    //        Remove instance
-    // When: removeChronicleLog() is invoked via reflection
-    // Then: ChronicleLogUtil.deleteQueue() is called with the path
-    //       On success, no error is incremented
-    //       A debug message is logged about successful deletion
+  public void removeChronicleLog_existentPath_deletes() throws Exception {
+    // Given: A temp directory with a Chronicle queue file
+    Path tempDir = Files.createTempDirectory("removetest-exists");
+    try {
+      Files.createFile(tempDir.resolve("data.cq4"));
 
-    // TODO(#632): Implement test logic
-    //   - Create a temp directory with Chronicle queue structure
-    //   - Create LogInfo with name=<temp-dir-path> and LogType.CHRONICLE
-    //   - Access private removeChronicleLog(LogInfo) via reflection
-    //   - Invoke it
-    //   - Verify the temp directory was deleted
-    //   - Verify errors field remains 0 via reflection
-    fail("Not yet implemented");
+      LogInfo logInfo = new LogInfo(tempDir.toString());
+      logInfo.setLogType(LogType.CHRONICLE);
+
+      Remove rm = new Remove();
+
+      Method removeChronicleLogMethod =
+          Remove.class.getDeclaredMethod("removeChronicleLog", LogInfo.class);
+      removeChronicleLogMethod.setAccessible(true);
+
+      // When
+      removeChronicleLogMethod.invoke(rm, logInfo);
+
+      // Then: Directory deleted, no errors
+      int errors = (int) getField(rm, "errors");
+      assertThat(errors, is(0));
+      assertThat("Chronicle dir should be deleted", !Files.exists(tempDir));
+    } finally {
+      if (Files.exists(tempDir)) {
+        deleteRecursive(tempDir);
+      }
+    }
   }
 
   // ===========================================================================
-  // Test specifications for deletePeer() - Issue #631
+  // Tests for deletePeer() - Issue #632
   // ===========================================================================
 
   /**
@@ -398,26 +562,30 @@ public class RemoveTest {
    * error message is printed, and the error counter is incremented.
    */
   @Test
-  @Ignore("Awaiting implementation in #632")
-  public void deletePeer_aliveWithoutForce_blocked() {
-    // Given: A peer UUID for a peer that is alive (isPeerAlive returns true)
-    //        Remove instance with force=false
-    //        A mock PalDirectory where isPeerAlive(uuid) returns true
-    // When: deletePeer(uuid) is invoked via reflection
-    // Then: out prints "Cannot remove peer <uuid>: peer is alive..."
-    //       errors is incremented by 1
-    //       deletePeer() on PalDirectory is NOT called
+  public void deletePeer_aliveWithoutForce_blocked() throws Exception {
+    // Given
+    UUID peerUuid = UUID.randomUUID();
+    PalDirectory mockDir = mock(PalDirectory.class);
+    when(mockDir.isPeerAlive(peerUuid)).thenReturn(true);
 
-    // TODO(#632): Implement test logic
-    //   - Create Remove instance with force=false
-    //   - Set up mock DirectoryConnectionProvider with PalDirectory
-    //     where isPeerAlive(uuid) returns true
-    //   - Capture output stream
-    //   - Access private deletePeer(UUID) via reflection
-    //   - Invoke it with a test UUID
-    //   - Verify output contains "Cannot remove peer" and "alive"
-    //   - Verify errors field == 1 via reflection
-    fail("Not yet implemented");
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    Remove rm = createRemoveWithMockDirAndOutput(mockDir, bout);
+    setField(rm, "force", false);
+
+    Method deletePeerMethod = Remove.class.getDeclaredMethod("deletePeer", UUID.class);
+    deletePeerMethod.setAccessible(true);
+
+    // When
+    deletePeerMethod.invoke(rm, peerUuid);
+
+    // Then
+    verify(mockDir).isPeerAlive(peerUuid);
+    verify(mockDir, never()).deletePeer(any(UUID.class));
+    int errors = (int) getField(rm, "errors");
+    assertThat(errors, is(1));
+    String output = bout.toString(UTF_8);
+    assertThat(output, containsString("Cannot remove peer"));
+    assertThat(output, containsString("alive"));
   }
 
   /**
@@ -427,24 +595,26 @@ public class RemoveTest {
    * being alive.
    */
   @Test
-  @Ignore("Awaiting implementation in #632")
-  public void deletePeer_aliveWithForce_deletes() {
-    // Given: A peer UUID for a peer that is alive (isPeerAlive returns true)
-    //        Remove instance with force=true
-    //        A mock PalDirectory where isPeerAlive(uuid) returns true
-    // When: deletePeer(uuid) is invoked via reflection
-    // Then: getPalDirectory().deletePeer(uuid) IS called
-    //       No error is incremented
+  public void deletePeer_aliveWithForce_deletes() throws Exception {
+    // Given
+    UUID peerUuid = UUID.randomUUID();
+    PalDirectory mockDir = mock(PalDirectory.class);
+    when(mockDir.isPeerAlive(peerUuid)).thenReturn(true);
 
-    // TODO(#632): Implement test logic
-    //   - Create Remove instance with force=true (set via reflection)
-    //   - Set up mock DirectoryConnectionProvider with PalDirectory
-    //     where isPeerAlive(uuid) returns true
-    //   - Access private deletePeer(UUID) via reflection
-    //   - Invoke it
-    //   - Verify deletePeer(uuid) was called on the directory
-    //   - Verify errors field == 0 via reflection
-    fail("Not yet implemented");
+    Remove rm = createRemoveWithMockDirectory(mockDir);
+    setField(rm, "force", true);
+
+    Method deletePeerMethod = Remove.class.getDeclaredMethod("deletePeer", UUID.class);
+    deletePeerMethod.setAccessible(true);
+
+    // When
+    deletePeerMethod.invoke(rm, peerUuid);
+
+    // Then
+    verify(mockDir).isPeerAlive(peerUuid);
+    verify(mockDir).deletePeer(peerUuid);
+    int errors = (int) getField(rm, "errors");
+    assertThat(errors, is(0));
   }
 
   /**
@@ -454,28 +624,30 @@ public class RemoveTest {
    * flag.
    */
   @Test
-  @Ignore("Awaiting implementation in #632")
-  public void deletePeer_notAlive_deletes() {
-    // Given: A peer UUID for a peer that is NOT alive (isPeerAlive returns false)
-    //        Remove instance with force=false
-    //        A mock PalDirectory where isPeerAlive(uuid) returns false
-    // When: deletePeer(uuid) is invoked via reflection
-    // Then: getPalDirectory().deletePeer(uuid) IS called
-    //       No error is incremented
+  public void deletePeer_notAlive_deletes() throws Exception {
+    // Given
+    UUID peerUuid = UUID.randomUUID();
+    PalDirectory mockDir = mock(PalDirectory.class);
+    when(mockDir.isPeerAlive(peerUuid)).thenReturn(false);
 
-    // TODO(#632): Implement test logic
-    //   - Create Remove instance with force=false
-    //   - Set up mock DirectoryConnectionProvider with PalDirectory
-    //     where isPeerAlive(uuid) returns false
-    //   - Access private deletePeer(UUID) via reflection
-    //   - Invoke it
-    //   - Verify deletePeer(uuid) was called on the directory
-    //   - Verify errors field == 0 via reflection
-    fail("Not yet implemented");
+    Remove rm = createRemoveWithMockDirectory(mockDir);
+    setField(rm, "force", false);
+
+    Method deletePeerMethod = Remove.class.getDeclaredMethod("deletePeer", UUID.class);
+    deletePeerMethod.setAccessible(true);
+
+    // When
+    deletePeerMethod.invoke(rm, peerUuid);
+
+    // Then
+    verify(mockDir).isPeerAlive(peerUuid);
+    verify(mockDir).deletePeer(peerUuid);
+    int errors = (int) getField(rm, "errors");
+    assertThat(errors, is(0));
   }
 
   // ===========================================================================
-  // Test specifications for resolveLogInfo() - Issue #631
+  // Tests for resolveLogInfo() - Issue #632
   // ===========================================================================
 
   /**
@@ -486,29 +658,30 @@ public class RemoveTest {
    * returns null and logs an error.
    */
   @Test
-  @Ignore("Awaiting implementation in #632")
-  public void resolveLogInfo_kafkaWithoutServersOrEnvVar_returnsNull() {
-    // Given: logNameOrPath = "my-topic" (no "file:" prefix)
-    //        kafkaServers field is null
-    //        KAFKA_SERVERS environment variable is not set
-    //        No directoryConnectionProvider configured
-    // When: resolveLogInfo("my-topic") is invoked via reflection
-    // Then: Returns null
-    //       An error is logged about not being able to resolve the log
+  public void resolveLogInfo_kafkaWithoutServersOrEnvVar_returnsNull() throws Exception {
+    // Given
+    Remove rm = new Remove();
+    setField(rm, "kafkaServers", null);
 
-    // TODO(#632): Implement test logic
-    //   - Create Remove instance
-    //   - Set kafkaServers=null via reflection
-    //   - Access private resolveLogInfo(String) via reflection
-    //   - Invoke with "my-topic"
-    //   - If KAFKA_SERVERS env var is not set, assert result is null
-    //   - If KAFKA_SERVERS env var IS set, adapt assertion accordingly
-    //     (similar to existing testResolveLogInfo_failsWithoutKafkaServers)
-    fail("Not yet implemented");
+    Method resolveLogInfoMethod = Remove.class.getDeclaredMethod("resolveLogInfo", String.class);
+    resolveLogInfoMethod.setAccessible(true);
+
+    // When
+    LogInfo result = (LogInfo) resolveLogInfoMethod.invoke(rm, "my-topic");
+
+    // Then: If KAFKA_SERVERS env var is not set, result should be null
+    String kafkaServersEnv = System.getenv("KAFKA_SERVERS");
+    if (kafkaServersEnv == null || kafkaServersEnv.isEmpty()) {
+      assertThat(result, is(nullValue()));
+    } else {
+      assertThat(result, is(notNullValue()));
+      assertThat(result.getLogType(), is(LogType.KAFKA));
+      assertThat(result.getBootstrapServers(), is(kafkaServersEnv));
+    }
   }
 
   // ===========================================================================
-  // Test specifications for deleteLogsWithUuid() - Issue #631
+  // Tests for deleteLogsWithUuid() - Issue #632
   // ===========================================================================
 
   /**
@@ -518,53 +691,68 @@ public class RemoveTest {
    * for confirmation.
    */
   @Test
-  @Ignore("Awaiting implementation in #632")
-  public void deleteLogsWithUuid_singleMatch_deletes() {
-    // Given: A UUID that matches exactly one log in the directory
-    //        A mock PalDirectory returning one log with matching UUID from listAllLogs()
-    // When: deleteLogsWithUuid(uuid) is invoked via reflection
-    // Then: The matching log is deleted (deleteLog called)
-    //       No confirmation prompt is shown (only 1 match)
+  public void deleteLogsWithUuid_singleMatch_deletes() throws Exception {
+    // Given
+    UUID logUuid = UUID.randomUUID();
+    LogInfo logInfo = new LogInfo("matching-log", logUuid, "localhost:29092");
+    logInfo.setLogType(LogType.KAFKA);
 
-    // TODO(#632): Implement test logic
-    //   - Create Remove instance
-    //   - Set up mock DirectoryConnectionProvider with PalDirectory
-    //     where listAllLogs() returns a Set with one LogInfo having the target UUID
-    //   - Access private deleteLogsWithUuid(UUID) via reflection
-    //   - Invoke it
-    //   - Verify the log was deleted
-    fail("Not yet implemented");
+    PalDirectory mockDir = mock(PalDirectory.class);
+    Set<LogInfo> logs = new HashSet<>();
+    logs.add(logInfo);
+    when(mockDir.listAllLogs()).thenReturn(logs);
+
+    Remove rm = createRemoveWithMockDirectory(mockDir);
+
+    Method deleteLogsWithUuidMethod =
+        Remove.class.getDeclaredMethod("deleteLogsWithUuid", UUID.class);
+    deleteLogsWithUuidMethod.setAccessible(true);
+
+    // When
+    deleteLogsWithUuidMethod.invoke(rm, logUuid);
+
+    // Then
+    verify(mockDir).listAllLogs();
+    verify(mockDir).deleteLog("matching-log");
+    int errors = (int) getField(rm, "errors");
+    assertThat(errors, is(0));
   }
 
   /**
-   * Tests that deleteLogsWithUuid increments errors when no log matches the given UUID.
+   * Tests that deleteLogsWithUuid does not delete anything when no log matches the given UUID.
    *
    * <p>Verifies that when no logs match the UUID, no deletion occurs. The empty matching set
-   * results in no action (no error increment from deleteLogsWithUuid itself, but the for loop
-   * simply iterates over an empty set).
+   * results in no action.
    */
   @Test
-  @Ignore("Awaiting implementation in #632")
-  public void deleteLogsWithUuid_noMatch_incrementsErrors() {
-    // Given: A UUID that matches no logs in the directory
-    //        A mock PalDirectory returning logs that do NOT match the UUID
-    // When: deleteLogsWithUuid(uuid) is invoked via reflection
-    // Then: No log is deleted
-    //       The matching set is empty, so the for loop does nothing
+  public void deleteLogsWithUuid_noMatch_incrementsErrors() throws Exception {
+    // Given
+    UUID searchUuid = UUID.randomUUID();
+    UUID otherUuid = UUID.randomUUID();
+    LogInfo otherLog = new LogInfo("other-log", otherUuid, "localhost:29092");
+    otherLog.setLogType(LogType.KAFKA);
 
-    // TODO(#632): Implement test logic
-    //   - Create Remove instance
-    //   - Set up mock DirectoryConnectionProvider with PalDirectory
-    //     where listAllLogs() returns logs with different UUIDs
-    //   - Access private deleteLogsWithUuid(UUID) via reflection
-    //   - Invoke it with a non-matching UUID
-    //   - Verify no deletion occurred
-    //   - Verify errors field value via reflection
-    fail("Not yet implemented");
+    PalDirectory mockDir = mock(PalDirectory.class);
+    Set<LogInfo> logs = new HashSet<>();
+    logs.add(otherLog);
+    when(mockDir.listAllLogs()).thenReturn(logs);
+
+    Remove rm = createRemoveWithMockDirectory(mockDir);
+
+    Method deleteLogsWithUuidMethod =
+        Remove.class.getDeclaredMethod("deleteLogsWithUuid", UUID.class);
+    deleteLogsWithUuidMethod.setAccessible(true);
+
+    // When
+    deleteLogsWithUuidMethod.invoke(rm, searchUuid);
+
+    // Then: No log deleted since no UUID match
+    verify(mockDir).listAllLogs();
+    verify(mockDir, never()).deleteLog(any(String.class));
   }
 
   // ===========================================================================
-  // Test specifications for runCommand() log deletion by name - Issue #631
+  // Tests for runCommand() log deletion by name - Issue #632
   // ===========================================================================
 
   /**
@@ -575,25 +763,36 @@ public class RemoveTest {
    * resolved via resolveLogInfo(), then deleted.
    */
   @Test
-  @Ignore("Awaiting implementation in #632")
-  public void runCommand_deleteLogs_withName_deletesLogByName() {
-    // Given: Remove instance with deleteLogs=true
-    //        argList contains a log name (not a valid UUID)
-    //        startingWith=false
-    //        resolveLogInfo() returns a valid LogInfo for the name
-    // When: runCommand() is invoked
-    // Then: resolveLogInfo(name) is called
-    //       deleteLog() is called with the resolved LogInfo
+  public void runCommand_deleteLogs_withName_deletesLogByName() throws Exception {
+    // Given: Remove with deleteLogs=true, a log name (not UUID), and kafkaServers configured
+    // In direct mode (no directory), resolveLogInfo creates a Kafka LogInfo
+    // deleteLog will attempt Kafka removal but since there's no real Kafka,
+    // we use a Chronicle log path to avoid Kafka dependency
+    Path tempDir = Files.createTempDirectory("removetest-byname");
+    try {
+      Files.createFile(tempDir.resolve("data.cq4"));
 
-    // TODO(#632): Implement test logic
-    //   - Create Remove instance, inject palCommand
-    //   - Set deleteLogs=true, startingWith=false via reflection
-    //   - Set argList=["my-log-name"] via reflection
-    //   - Set kafkaServers="localhost:29092" so resolveLogInfo returns valid Kafka LogInfo
-    //   - Invoke runCommand() via reflection
-    //   - Verify that the log was processed for deletion
-    //   - This may need a mock directory or careful setup to avoid real Kafka calls
-    fail("Not yet implemented");
+      Remove rm = new Remove();
+      setField(rm, "deleteLogs", true);
+      setField(rm, "startingWith", false);
+      setField(rm, "argList", List.of("file:" + tempDir));
+
+      Method runCommand = Remove.class.getDeclaredMethod("runCommand");
+      runCommand.setAccessible(true);
+
+      // When
+      int result = (int) runCommand.invoke(rm);
+
+      // Then: The Chronicle log should be deleted
+      int errors = (int) getField(rm, "errors");
+      assertThat(errors, is(0));
+      assertThat(result, is(0));
+      assertThat("Chronicle dir should be deleted", !Files.exists(tempDir));
+    } finally {
+      if (Files.exists(tempDir)) {
+        deleteRecursive(tempDir);
+      }
+    }
   }
 
   /**
@@ -604,23 +803,62 @@ public class RemoveTest {
    * matching logs are deleted.
    */
   @Test
-  @Ignore("Awaiting implementation in #632")
-  public void runCommand_deleteLogs_withStartingWith_deletesMatchingLogs() {
-    // Given: Remove instance with deleteLogs=true, startingWith=true
-    //        argList contains a prefix string (not a valid UUID)
-    //        A mock PalDirectory returning logs with various names
-    // When: runCommand() is invoked
-    // Then: Only logs whose name starts with the prefix are deleted
-    //       Non-matching logs are not affected
+  public void runCommand_deleteLogs_withStartingWith_deletesMatchingLogs() throws Exception {
+    // Given
+    LogInfo log1 = new LogInfo("test-log-1", UUID.randomUUID(), "localhost:29092");
+    log1.setLogType(LogType.KAFKA);
+    LogInfo log2 = new LogInfo("test-log-2", UUID.randomUUID(), "localhost:29092");
+    log2.setLogType(LogType.KAFKA);
+    LogInfo log3 = new LogInfo("other-log", UUID.randomUUID(), "localhost:29092");
+    log3.setLogType(LogType.KAFKA);
 
-    // TODO(#632): Implement test logic
-    //   - Create Remove instance, inject palCommand
-    //   - Set deleteLogs=true, startingWith=true via reflection
-    //   - Set argList=["test-"] via reflection
-    //   - Mock PalDirectory.listAllLogs() to return logs:
-    //     "test-log-1", "test-log-2", "other-log"
-    //   - Invoke runCommand() via reflection
-    //   - Verify deleteLog() called for "test-log-1" and "test-log-2" only
-    fail("Not yet implemented");
+    PalDirectory mockDir = mock(PalDirectory.class);
+    Set<LogInfo> allLogs = new HashSet<>();
+    allLogs.add(log1);
+    allLogs.add(log2);
+    allLogs.add(log3);
+    when(mockDir.listAllLogs()).thenReturn(allLogs);
+
+    Remove rm = createRemoveWithMockDirectory(mockDir);
+    setField(rm, "deleteLogs", true);
+    setField(rm, "startingWith", true);
+    setField(rm, "argList", List.of("test-"));
+
+    Method runCommand = Remove.class.getDeclaredMethod("runCommand");
+    runCommand.setAccessible(true);
+
+    // When
+    int result = (int) runCommand.invoke(rm);
+
+    // Then
+    verify(mockDir).listAllLogs();
+    verify(mockDir).deleteLog("test-log-1");
+    verify(mockDir).deleteLog("test-log-2");
+    verify(mockDir, never()).deleteLog("other-log");
+    assertThat(result, is(0));
+  }
+
+  // ===========================================================================
+  // Helper for temp directory cleanup
+  // ===========================================================================
+
+  /**
+   * Recursively deletes a directory and all its contents.
+   *
+   * @param dir the directory to delete
+   */
+  private static void deleteRecursive(Path dir) throws IOException {
+    try (var stream = Files.walk(dir)) {
+      stream
+          .sorted(Comparator.reverseOrder())
+          .forEach(
+              path -> {
+                try {
+                  Files.delete(path);
+                } catch (IOException e) {
+                  // best-effort cleanup
+                }
+              });
+    }
   }
 }
