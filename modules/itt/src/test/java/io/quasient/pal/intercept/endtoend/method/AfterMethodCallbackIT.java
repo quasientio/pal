@@ -12,7 +12,7 @@ package io.quasient.pal.intercept.endtoend.method;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -20,6 +20,7 @@ import io.quasient.pal.InterceptEndToEndTestSuite;
 import io.quasient.pal.apps.callbacks.method.MethodHandlers;
 import io.quasient.pal.apps.quantized.intercept.StringMethods;
 import io.quasient.pal.common.directory.nodes.InterceptRequest;
+import io.quasient.pal.common.lang.intercept.InterceptApiMisuseException;
 import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.common.lang.intercept.InterceptableMethodCall;
 import io.quasient.pal.common.objects.ObjectRef;
@@ -272,10 +273,12 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
   }
 
   /**
-   * Tests that attempting to set return value on void method throws IllegalStateException.
+   * Tests that attempting to set return value on void method propagates
+   * InterceptApiMisuseException.
    *
    * <p>Registers an AFTER intercept on StringMethods.printMessage() (void method) with a callback
-   * that attempts to call setReturnValue(). Verifies that this throws IllegalStateException.
+   * that attempts to call setReturnValue(). Verifies that the InterceptApiMisuseException is
+   * propagated to the caller, allowing developers to detect callback bugs.
    */
   @Test
   public void testVoidMethodCannotSetReturnValue() throws Exception {
@@ -318,26 +321,34 @@ public class AfterMethodCallbackIT extends AbstractInterceptIT {
             new String[] {"java.lang.String"},
             new Object[] {inputValue});
 
-    // API misuse exceptions (InterceptApiMisuseException) are filtered and logged, not propagated.
+    // API misuse exceptions (InterceptApiMisuseException) are now propagated to the caller.
     // The callback attempts setReturnValue() on a void method, which throws
-    // InterceptApiMisuseException.
-    // This exception is caught by the dispatcher, logged as a warning, and filtered (not
-    // propagated).
-    // This design ensures that callback bugs don't break the application.
+    // InterceptApiMisuseException. This exception bypasses all exception policies and is
+    // propagated to the caller, ensuring developers are aware of callback bugs.
 
     assertThat(
-        "No exception should propagate (API misuse exceptions are filtered)",
+        "API misuse exception should be propagated",
         response.getRaisedThrowable(),
-        is(nullValue()));
+        is(notNullValue()));
+
+    // Verify exception type is InterceptApiMisuseException
+    String exceptionType = response.getRaisedThrowable().getThrowable().getType();
+    String exceptionMessage = response.getRaisedThrowable().getThrowable().getMessage();
+    String expectedTypeName = InterceptApiMisuseException.class.getName();
+    boolean isCorrectException =
+        exceptionType.equals(expectedTypeName) || exceptionMessage.contains(expectedTypeName);
+    assertTrue(
+        "Exception should be or contain InterceptApiMisuseException, but got type="
+            + exceptionType
+            + ", message="
+            + exceptionMessage,
+        isCorrectException);
 
     // Verify the callback logged its attempt to set return value (before the exception was thrown)
     assertTrue(
         "Expected attemptSetReturnValueOnVoid callback to log attempt",
         InterceptEndToEndTestSuite.waitForAppLogLine(
             "attemptSetReturnValueOnVoid: attempting to set return value on void method"));
-
-    // Note: The API misuse warning is logged by the runtime (pal-runtime), not the app (itt-apps),
-    // so we can't verify it with waitForAppLogLine. The warning can be seen in the runtime logs.
 
     logger.info(
         "===== testVoidMethodCannotSetReturnValue [{}]: TEST COMPLETED SUCCESSFULLY =====",
