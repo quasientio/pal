@@ -11,21 +11,32 @@ package io.quasient.pal.tools.cli;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.fail;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import io.quasient.pal.common.directory.nodes.LogInfo;
 import io.quasient.pal.common.objects.ObjectRef;
+import io.quasient.pal.common.runtime.ExecPhase;
+import io.quasient.pal.cxn.directory.PalDirectory;
 import io.quasient.pal.messages.LogMessage;
+import io.quasient.pal.messages.OutboundMsg;
 import io.quasient.pal.messages.colfer.Message;
+import io.quasient.pal.messages.types.MessageType;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class MessageStreamPrinterTest {
@@ -416,26 +427,41 @@ public class MessageStreamPrinterTest {
    * @throws Exception if reflection fails
    */
   @Test
-  @Ignore("Awaiting implementation in #630")
   public void printVerboseFilters_allFiltersSet_printsAll() throws Exception {
-    // Given: A MessageStreamPrinter with all filter fields set:
-    //   msgFormats = ["BINARY"], msgTypes = ["CONSTRUCTOR"],
-    //   fromPeer = "some-peer-uuid", threadName = "main",
-    //   id = "msg-1", offset = 42L
+    // Given
+    MessageStreamPrinter p = new MessageStreamPrinter();
+    setField(p, "msgFormats", List.of("BINARY"));
+    setField(p, "msgTypes", List.of("CONSTRUCTOR"));
+    setField(p, "fromPeer", "some-peer-uuid");
+    setField(p, "threadName", "main");
+    setField(p, "id", "msg-1");
+    setField(p, "offset", 42L);
 
-    // When: printVerboseFilters(headerLine, offsetDescriptor) is called via reflection
+    // Capture System.out
+    PrintStream originalOut = System.out;
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(bout, true, UTF_8));
 
-    // Then: The output contains:
-    //   - The header line
-    //   - "Filtering by format(s): BINARY"
-    //   - "Filtering by type(s): CONSTRUCTOR"
-    //   - "Filtering by peer: some-peer-uuid"
-    //   - "Filtering by thread: main"
-    //   - "Filtering by message id: msg-1"
-    //   - "Will print message with offset id: 42 and then exit"
+    try {
+      // When
+      Method m =
+          MessageStreamPrinter.class.getDeclaredMethod(
+              "printVerboseFilters", String.class, String.class);
+      m.setAccessible(true);
+      m.invoke(p, "Header line", "offset id");
 
-    // TODO(#630): Implement test logic
-    fail("Not yet implemented");
+      // Then
+      String output = bout.toString(UTF_8);
+      assertThat(output, containsString("Header line"));
+      assertThat(output, containsString("Filtering by format(s): BINARY"));
+      assertThat(output, containsString("Filtering by type(s): CONSTRUCTOR"));
+      assertThat(output, containsString("Filtering by peer: some-peer-uuid"));
+      assertThat(output, containsString("Filtering by thread: main"));
+      assertThat(output, containsString("Filtering by message id: msg-1"));
+      assertThat(output, containsString("Will print message with offset id: 42 and then exit"));
+    } finally {
+      System.setOut(originalOut);
+    }
   }
 
   /**
@@ -444,19 +470,30 @@ public class MessageStreamPrinterTest {
    * @throws Exception if reflection fails
    */
   @Test
-  @Ignore("Awaiting implementation in #630")
   public void printVerboseFilters_noFilters_printsHeaderOnly() throws Exception {
-    // Given: A MessageStreamPrinter with all filter fields left as null/default
-    //   (msgFormats=null, msgTypes=null, fromPeer=null, threadName=null, id=null, offset=null)
+    // Given: all filter fields are null/default
+    MessageStreamPrinter p = new MessageStreamPrinter();
 
-    // When: printVerboseFilters("Header line", "offset id") is called via reflection
+    PrintStream originalOut = System.out;
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(bout, true, UTF_8));
 
-    // Then: The output contains only the header line ("Header line")
-    //   and does NOT contain any "Filtering by" lines
-    //   and does NOT contain "Will print message with"
+    try {
+      // When
+      Method m =
+          MessageStreamPrinter.class.getDeclaredMethod(
+              "printVerboseFilters", String.class, String.class);
+      m.setAccessible(true);
+      m.invoke(p, "Header line", "offset id");
 
-    // TODO(#630): Implement test logic
-    fail("Not yet implemented");
+      // Then
+      String output = bout.toString(UTF_8);
+      assertThat(output, containsString("Header line"));
+      assertThat(output, not(containsString("Filtering by")));
+      assertThat(output, not(containsString("Will print message with")));
+    } finally {
+      System.setOut(originalOut);
+    }
   }
 
   /**
@@ -465,22 +502,35 @@ public class MessageStreamPrinterTest {
    * @throws Exception if reflection fails
    */
   @Test
-  @Ignore("Awaiting implementation in #630")
   public void printVerboseFilters_formatFilterOnly_printsFormat() throws Exception {
-    // Given: A MessageStreamPrinter with only msgFormats = ["BINARY", "JSON"]
-    //   (all other filter fields are null/default)
+    // Given
+    MessageStreamPrinter p = new MessageStreamPrinter();
+    setField(p, "msgFormats", List.of("BINARY", "JSON"));
 
-    // When: printVerboseFilters("Header", "offset id") is called via reflection
+    PrintStream originalOut = System.out;
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(bout, true, UTF_8));
 
-    // Then: The output contains:
-    //   - "Header"
-    //   - "Filtering by format(s): BINARY,JSON"
-    //   and does NOT contain "Filtering by type(s)" or "Filtering by peer"
-    //   or "Filtering by thread" or "Filtering by message id"
-    //   or "Will print message with"
+    try {
+      // When
+      Method m =
+          MessageStreamPrinter.class.getDeclaredMethod(
+              "printVerboseFilters", String.class, String.class);
+      m.setAccessible(true);
+      m.invoke(p, "Header", "offset id");
 
-    // TODO(#630): Implement test logic
-    fail("Not yet implemented");
+      // Then
+      String output = bout.toString(UTF_8);
+      assertThat(output, containsString("Header"));
+      assertThat(output, containsString("Filtering by format(s): BINARY,JSON"));
+      assertThat(output, not(containsString("Filtering by type(s)")));
+      assertThat(output, not(containsString("Filtering by peer")));
+      assertThat(output, not(containsString("Filtering by thread")));
+      assertThat(output, not(containsString("Filtering by message id")));
+      assertThat(output, not(containsString("Will print message with")));
+    } finally {
+      System.setOut(originalOut);
+    }
   }
 
   /**
@@ -489,22 +539,35 @@ public class MessageStreamPrinterTest {
    * @throws Exception if reflection fails
    */
   @Test
-  @Ignore("Awaiting implementation in #630")
   public void printVerboseFilters_typeFilterOnly_printsType() throws Exception {
-    // Given: A MessageStreamPrinter with only msgTypes = ["CONSTRUCTOR", "INSTANCE_METHOD"]
-    //   (all other filter fields are null/default)
+    // Given
+    MessageStreamPrinter p = new MessageStreamPrinter();
+    setField(p, "msgTypes", List.of("CONSTRUCTOR", "INSTANCE_METHOD"));
 
-    // When: printVerboseFilters("Header", "offset id") is called via reflection
+    PrintStream originalOut = System.out;
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(bout, true, UTF_8));
 
-    // Then: The output contains:
-    //   - "Header"
-    //   - "Filtering by type(s): CONSTRUCTOR,INSTANCE_METHOD"
-    //   and does NOT contain "Filtering by format(s)" or "Filtering by peer"
-    //   or "Filtering by thread" or "Filtering by message id"
-    //   or "Will print message with"
+    try {
+      // When
+      Method m =
+          MessageStreamPrinter.class.getDeclaredMethod(
+              "printVerboseFilters", String.class, String.class);
+      m.setAccessible(true);
+      m.invoke(p, "Header", "offset id");
 
-    // TODO(#630): Implement test logic
-    fail("Not yet implemented");
+      // Then
+      String output = bout.toString(UTF_8);
+      assertThat(output, containsString("Header"));
+      assertThat(output, containsString("Filtering by type(s): CONSTRUCTOR,INSTANCE_METHOD"));
+      assertThat(output, not(containsString("Filtering by format(s)")));
+      assertThat(output, not(containsString("Filtering by peer")));
+      assertThat(output, not(containsString("Filtering by thread")));
+      assertThat(output, not(containsString("Filtering by message id")));
+      assertThat(output, not(containsString("Will print message with")));
+    } finally {
+      System.setOut(originalOut);
+    }
   }
 
   /**
@@ -513,22 +576,35 @@ public class MessageStreamPrinterTest {
    * @throws Exception if reflection fails
    */
   @Test
-  @Ignore("Awaiting implementation in #630")
   public void printVerboseFilters_peerFilterOnly_printsPeer() throws Exception {
-    // Given: A MessageStreamPrinter with only fromPeer = "peer-uuid-123"
-    //   (all other filter fields are null/default)
+    // Given
+    MessageStreamPrinter p = new MessageStreamPrinter();
+    setField(p, "fromPeer", "peer-uuid-123");
 
-    // When: printVerboseFilters("Header", "offset id") is called via reflection
+    PrintStream originalOut = System.out;
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(bout, true, UTF_8));
 
-    // Then: The output contains:
-    //   - "Header"
-    //   - "Filtering by peer: peer-uuid-123"
-    //   and does NOT contain "Filtering by format(s)" or "Filtering by type(s)"
-    //   or "Filtering by thread" or "Filtering by message id"
-    //   or "Will print message with"
+    try {
+      // When
+      Method m =
+          MessageStreamPrinter.class.getDeclaredMethod(
+              "printVerboseFilters", String.class, String.class);
+      m.setAccessible(true);
+      m.invoke(p, "Header", "offset id");
 
-    // TODO(#630): Implement test logic
-    fail("Not yet implemented");
+      // Then
+      String output = bout.toString(UTF_8);
+      assertThat(output, containsString("Header"));
+      assertThat(output, containsString("Filtering by peer: peer-uuid-123"));
+      assertThat(output, not(containsString("Filtering by format(s)")));
+      assertThat(output, not(containsString("Filtering by type(s)")));
+      assertThat(output, not(containsString("Filtering by thread")));
+      assertThat(output, not(containsString("Filtering by message id")));
+      assertThat(output, not(containsString("Will print message with")));
+    } finally {
+      System.setOut(originalOut);
+    }
   }
 
   /**
@@ -537,22 +613,35 @@ public class MessageStreamPrinterTest {
    * @throws Exception if reflection fails
    */
   @Test
-  @Ignore("Awaiting implementation in #630")
   public void printVerboseFilters_threadFilterOnly_printsThread() throws Exception {
-    // Given: A MessageStreamPrinter with only threadName = "worker-1"
-    //   (all other filter fields are null/default)
+    // Given
+    MessageStreamPrinter p = new MessageStreamPrinter();
+    setField(p, "threadName", "worker-1");
 
-    // When: printVerboseFilters("Header", "offset id") is called via reflection
+    PrintStream originalOut = System.out;
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(bout, true, UTF_8));
 
-    // Then: The output contains:
-    //   - "Header"
-    //   - "Filtering by thread: worker-1"
-    //   and does NOT contain "Filtering by format(s)" or "Filtering by type(s)"
-    //   or "Filtering by peer" or "Filtering by message id"
-    //   or "Will print message with"
+    try {
+      // When
+      Method m =
+          MessageStreamPrinter.class.getDeclaredMethod(
+              "printVerboseFilters", String.class, String.class);
+      m.setAccessible(true);
+      m.invoke(p, "Header", "offset id");
 
-    // TODO(#630): Implement test logic
-    fail("Not yet implemented");
+      // Then
+      String output = bout.toString(UTF_8);
+      assertThat(output, containsString("Header"));
+      assertThat(output, containsString("Filtering by thread: worker-1"));
+      assertThat(output, not(containsString("Filtering by format(s)")));
+      assertThat(output, not(containsString("Filtering by type(s)")));
+      assertThat(output, not(containsString("Filtering by peer")));
+      assertThat(output, not(containsString("Filtering by message id")));
+      assertThat(output, not(containsString("Will print message with")));
+    } finally {
+      System.setOut(originalOut);
+    }
   }
 
   /**
@@ -561,22 +650,35 @@ public class MessageStreamPrinterTest {
    * @throws Exception if reflection fails
    */
   @Test
-  @Ignore("Awaiting implementation in #630")
   public void printVerboseFilters_idFilterOnly_printsId() throws Exception {
-    // Given: A MessageStreamPrinter with only id = "msg-42"
-    //   (all other filter fields are null/default)
+    // Given
+    MessageStreamPrinter p = new MessageStreamPrinter();
+    setField(p, "id", "msg-42");
 
-    // When: printVerboseFilters("Header", "offset id") is called via reflection
+    PrintStream originalOut = System.out;
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(bout, true, UTF_8));
 
-    // Then: The output contains:
-    //   - "Header"
-    //   - "Filtering by message id: msg-42"
-    //   and does NOT contain "Filtering by format(s)" or "Filtering by type(s)"
-    //   or "Filtering by peer" or "Filtering by thread"
-    //   or "Will print message with"
+    try {
+      // When
+      Method m =
+          MessageStreamPrinter.class.getDeclaredMethod(
+              "printVerboseFilters", String.class, String.class);
+      m.setAccessible(true);
+      m.invoke(p, "Header", "offset id");
 
-    // TODO(#630): Implement test logic
-    fail("Not yet implemented");
+      // Then
+      String output = bout.toString(UTF_8);
+      assertThat(output, containsString("Header"));
+      assertThat(output, containsString("Filtering by message id: msg-42"));
+      assertThat(output, not(containsString("Filtering by format(s)")));
+      assertThat(output, not(containsString("Filtering by type(s)")));
+      assertThat(output, not(containsString("Filtering by peer")));
+      assertThat(output, not(containsString("Filtering by thread")));
+      assertThat(output, not(containsString("Will print message with")));
+    } finally {
+      System.setOut(originalOut);
+    }
   }
 
   /**
@@ -585,20 +687,31 @@ public class MessageStreamPrinterTest {
    * @throws Exception if reflection fails
    */
   @Test
-  @Ignore("Awaiting implementation in #630")
   public void printVerboseFilters_offsetSet_printsOffset() throws Exception {
-    // Given: A MessageStreamPrinter with only offset = 99L
-    //   (all other filter fields are null/default)
+    // Given
+    MessageStreamPrinter p = new MessageStreamPrinter();
+    setField(p, "offset", 99L);
 
-    // When: printVerboseFilters("Header", "offset id") is called via reflection
+    PrintStream originalOut = System.out;
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(bout, true, UTF_8));
 
-    // Then: The output contains:
-    //   - "Header"
-    //   - "Will print message with offset id: 99 and then exit"
-    //   and does NOT contain any "Filtering by" lines
+    try {
+      // When
+      Method m =
+          MessageStreamPrinter.class.getDeclaredMethod(
+              "printVerboseFilters", String.class, String.class);
+      m.setAccessible(true);
+      m.invoke(p, "Header", "offset id");
 
-    // TODO(#630): Implement test logic
-    fail("Not yet implemented");
+      // Then
+      String output = bout.toString(UTF_8);
+      assertThat(output, containsString("Header"));
+      assertThat(output, containsString("Will print message with offset id: 99 and then exit"));
+      assertThat(output, not(containsString("Filtering by")));
+    } finally {
+      System.setOut(originalOut);
+    }
   }
 
   /**
@@ -607,17 +720,24 @@ public class MessageStreamPrinterTest {
    * @throws Exception if reflection fails
    */
   @Test
-  @Ignore("Awaiting implementation in #630")
   public void resolveLogInfo_foundByName_returnsLogInfo() throws Exception {
-    // Given: A PalDirectory mock/stub where getLogInfo("my-log") returns a valid LogInfo
-    //   (use Mockito or reflection to create a suitable PalDirectory stub)
+    // Given
+    LogInfo expected = new LogInfo("my-log");
+    PalDirectory palDirectory = mock(PalDirectory.class);
+    when(palDirectory.getLogInfo("my-log")).thenReturn(expected);
 
-    // When: resolveLogInfo(palDirectory, "my-log") is called via reflection
+    MessageStreamPrinter p = new MessageStreamPrinter();
+    Method m =
+        MessageStreamPrinter.class.getDeclaredMethod(
+            "resolveLogInfo", PalDirectory.class, String.class);
+    m.setAccessible(true);
 
-    // Then: The returned LogInfo is not null and matches the one returned by the directory
+    // When
+    LogInfo result = (LogInfo) m.invoke(p, palDirectory, "my-log");
 
-    // TODO(#630): Implement test logic
-    fail("Not yet implemented");
+    // Then
+    assertThat(result, is(notNullValue()));
+    assertThat(result.getName(), is("my-log"));
   }
 
   /**
@@ -627,17 +747,26 @@ public class MessageStreamPrinterTest {
    * @throws Exception if reflection fails
    */
   @Test
-  @Ignore("Awaiting implementation in #630")
   public void resolveLogInfo_notFoundByName_triesUuid() throws Exception {
-    // Given: A PalDirectory where getLogInfo(name) throws RuntimeException
-    //   but listAllLogs() returns a list containing a LogInfo with a matching UUID
+    // Given: getLogInfo(name) throws RuntimeException, listAllLogs returns matching UUID
+    UUID logUuid = UUID.randomUUID();
+    LogInfo expected = new LogInfo("some-log", logUuid);
+    PalDirectory palDirectory = mock(PalDirectory.class);
+    when(palDirectory.getLogInfo(logUuid.toString())).thenThrow(new RuntimeException("not found"));
+    when(palDirectory.listAllLogs()).thenReturn(Set.of(expected));
 
-    // When: resolveLogInfo(palDirectory, validUuidString) is called via reflection
+    MessageStreamPrinter p = new MessageStreamPrinter();
+    Method m =
+        MessageStreamPrinter.class.getDeclaredMethod(
+            "resolveLogInfo", PalDirectory.class, String.class);
+    m.setAccessible(true);
 
-    // Then: The returned LogInfo is not null (found by UUID fallback)
+    // When
+    LogInfo result = (LogInfo) m.invoke(p, palDirectory, logUuid.toString());
 
-    // TODO(#630): Implement test logic
-    fail("Not yet implemented");
+    // Then
+    assertThat(result, is(notNullValue()));
+    assertThat(result.getUuid(), is(logUuid));
   }
 
   /**
@@ -646,17 +775,22 @@ public class MessageStreamPrinterTest {
    * @throws Exception if reflection fails
    */
   @Test
-  @Ignore("Awaiting implementation in #630")
   public void resolveLogInfo_invalidUuid_returnsNull() throws Exception {
-    // Given: A PalDirectory where getLogInfo(name) returns null
-    //   and the identifier is not a valid UUID (e.g., "not-a-uuid")
+    // Given: getLogInfo(name) returns null, identifier is not a valid UUID
+    PalDirectory palDirectory = mock(PalDirectory.class);
+    when(palDirectory.getLogInfo("not-a-uuid")).thenReturn(null);
 
-    // When: resolveLogInfo(palDirectory, "not-a-uuid") is called via reflection
+    MessageStreamPrinter p = new MessageStreamPrinter();
+    Method m =
+        MessageStreamPrinter.class.getDeclaredMethod(
+            "resolveLogInfo", PalDirectory.class, String.class);
+    m.setAccessible(true);
 
-    // Then: The returned LogInfo is null
+    // When
+    LogInfo result = (LogInfo) m.invoke(p, palDirectory, "not-a-uuid");
 
-    // TODO(#630): Implement test logic
-    fail("Not yet implemented");
+    // Then
+    assertThat(result, is(nullValue()));
   }
 
   /**
@@ -666,27 +800,33 @@ public class MessageStreamPrinterTest {
    * @throws Exception if reflection fails
    */
   @Test
-  @Ignore("Awaiting implementation in #630")
   public void getLogMessage_createsLogMessageFromOutboundMsg() throws Exception {
-    // Given: An OutboundMsg with:
-    //   - messageType = some MessageType (e.g., EXEC_CONSTRUCTOR)
-    //   - messageId = "msg-123"
-    //   - responseToId = "resp-456"
-    //   - body = valid serialized Message bytes
-    //   And a deserialized Message object, and a logicalOffset (e.g., 5L)
+    // Given: Build a Message and wrap it in an OutboundMsg
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    var em = b.buildEmptyConstructor(peer, "java.lang.String");
+    Message message = b.wrap(em);
 
-    // When: getLogMessage(outboundMsg, 5L, message) is called via reflection
-    //   (getLogMessage is a private static method on MessageStreamPrinter)
+    OutboundMsg outboundMsg =
+        new OutboundMsg(
+            MessageType.EXEC_CONSTRUCTOR, ExecPhase.BEFORE, null, "msg-123", "resp-456", message);
 
-    // Then: The returned LogMessage has:
-    //   - headers containing "message-type" = MessageType.name()
-    //   - headers containing "message-format" = "BINARY"
-    //   - headers containing "message-id" = "msg-123"
-    //   - headers containing "response-to-id" = "resp-456"
-    //   - content equal to the provided Message
+    // When: getLogMessage called via reflection
+    Method m =
+        MessageStreamPrinter.class.getDeclaredMethod(
+            "getLogMessage", OutboundMsg.class, long.class, Message.class);
+    m.setAccessible(true);
 
-    // TODO(#630): Implement test logic
-    fail("Not yet implemented");
+    @SuppressWarnings("unchecked")
+    LogMessage<Message> result = (LogMessage<Message>) m.invoke(null, outboundMsg, 5L, message);
+
+    // Then: headers and content are correct
+    assertThat(result, is(notNullValue()));
+    assertThat(result.getHeaders().get("message-type"), is("EXEC_CONSTRUCTOR"));
+    assertThat(result.getHeaders().get("message-format"), is("BINARY"));
+    assertThat(result.getHeaders().get("message-id"), is("msg-123"));
+    assertThat(result.getHeaders().get("response-to-id"), is("resp-456"));
+    assertThat(result.getContent(), is(message));
   }
 
   /**
@@ -695,17 +835,28 @@ public class MessageStreamPrinterTest {
    * @throws Exception if reflection fails
    */
   @Test
-  @Ignore("Awaiting implementation in #630")
   public void getFormat_explicitFormat_returnsSpecified() throws Exception {
-    // Given: A MessageStreamPrinter with formatOptions.json = true
+    // Given: formatOptions.json = true
+    MessageStreamPrinter p = new MessageStreamPrinter();
 
-    // When: getFormat() is called via reflection
+    Class<?> formatOptionsClass =
+        Class.forName("io.quasient.pal.tools.cli.MessageStreamPrinter$FormatOptions");
+    Object formatOptions = formatOptionsClass.getDeclaredConstructor().newInstance();
+    var jsonField = formatOptionsClass.getDeclaredField("json");
+    jsonField.setAccessible(true);
+    jsonField.set(formatOptions, true);
 
-    // Then: Returns OutputFormat.JSON
-    // (This verifies the format selection path for explicit format)
+    var fmtOptsField = MessageStreamPrinter.class.getDeclaredField("formatOptions");
+    fmtOptsField.setAccessible(true);
+    fmtOptsField.set(p, formatOptions);
 
-    // TODO(#630): Implement test logic
-    fail("Not yet implemented");
+    // When
+    Method getFormat = MessageStreamPrinter.class.getDeclaredMethod("getFormat");
+    getFormat.setAccessible(true);
+    Object result = getFormat.invoke(p);
+
+    // Then
+    assertThat(result, is(MessageStreamPrinter.OutputFormat.JSON));
   }
 
   /**
@@ -714,17 +865,17 @@ public class MessageStreamPrinterTest {
    * @throws Exception if reflection fails
    */
   @Test
-  @Ignore("Awaiting implementation in #630")
   public void getFormat_defaultFormat_returnsFull() throws Exception {
-    // Given: A MessageStreamPrinter with formatOptions = null (no format specified)
+    // Given: formatOptions = null (no format specified)
+    MessageStreamPrinter p = new MessageStreamPrinter();
 
-    // When: getFormat() is called via reflection
+    // When
+    Method getFormat = MessageStreamPrinter.class.getDeclaredMethod("getFormat");
+    getFormat.setAccessible(true);
+    Object result = getFormat.invoke(p);
 
-    // Then: Returns OutputFormat.COMPACT (the default format)
-    // Note: Despite the method name referencing "Full", the actual default is COMPACT
-
-    // TODO(#630): Implement test logic
-    fail("Not yet implemented");
+    // Then: Returns COMPACT (the default)
+    assertThat(result, is(MessageStreamPrinter.OutputFormat.COMPACT));
   }
 
   /**
@@ -733,21 +884,66 @@ public class MessageStreamPrinterTest {
    * @throws Exception if reflection fails
    */
   @Test
-  @Ignore("Awaiting implementation in #630")
   public void shouldPrint_withOffset_filtersByOffset() throws Exception {
-    // Given: A MessageStreamPrinter with offset = 10L
-    //   and a valid LogMessage
+    // Given
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    var em = b.buildEmptyConstructor(peer, "java.lang.String");
+    var m = b.wrap(em);
+    LogMessage<?> lm = logOf(m);
 
-    // When: shouldPrint(10L, key, logMessage) is called via reflection (matching offset)
+    MessageStreamPrinter p = new MessageStreamPrinter();
+    setField(p, "offset", 10L);
 
-    // Then: Returns true (offset matches, short-circuits other filters)
+    Method shouldPrint =
+        MessageStreamPrinter.class.getDeclaredMethod(
+            "shouldPrint", Long.class, String.class, LogMessage.class);
+    shouldPrint.setAccessible(true);
 
-    // And When: shouldPrint(5L, key, logMessage) is called (non-matching offset)
+    // When: matching offset
+    boolean matchResult = (boolean) shouldPrint.invoke(p, 10L, peer.toString(), lm);
 
-    // Then: Returns false if other filters also don't match,
-    //   or falls through to other filter checks if offset doesn't match
+    // Then: true (offset matches, short-circuits)
+    assertThat(matchResult, is(true));
 
-    // TODO(#630): Implement test logic
-    fail("Not yet implemented");
+    // When: non-matching offset, no other filters set
+    boolean noMatchResult = (boolean) shouldPrint.invoke(p, 5L, peer.toString(), lm);
+
+    // Then: true because remaining filters (all null) pass through
+    assertThat(noMatchResult, is(true));
+  }
+
+  /**
+   * Sets a field value on the target object or its superclass hierarchy via reflection.
+   *
+   * @param target the target object
+   * @param fieldName the field name
+   * @param value the value to set
+   * @throws Exception if reflection fails
+   */
+  private static void setField(Object target, String fieldName, Object value) throws Exception {
+    Field f = findField(target.getClass(), fieldName);
+    f.setAccessible(true);
+    f.set(target, value);
+  }
+
+  /**
+   * Finds a declared field in the class hierarchy.
+   *
+   * @param clazz the class to start searching from
+   * @param name the field name
+   * @return the field
+   * @throws NoSuchFieldException if not found in any superclass
+   */
+  private static Field findField(Class<?> clazz, String name) throws NoSuchFieldException {
+    Class<?> current = clazz;
+    while (current != null) {
+      try {
+        return current.getDeclaredField(name);
+      } catch (NoSuchFieldException e) {
+        current = current.getSuperclass();
+      }
+    }
+    throw new NoSuchFieldException(name);
   }
 }
