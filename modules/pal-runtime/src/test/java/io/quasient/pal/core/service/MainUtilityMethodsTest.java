@@ -12,9 +12,11 @@ package io.quasient.pal.core.service;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assert.fail;
 
 import java.lang.reflect.Method;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -149,5 +151,95 @@ public class MainUtilityMethodsTest {
     // isChronicleLog returns false for null, so extractLogName returns null unchanged
     String result = (String) extractLogNameMethod.invoke(null, (Object) null);
     assertThat(result, nullValue());
+  }
+
+  // ===== Test stubs for #633 (awaiting implementation in #634) =====
+
+  /**
+   * Tests that createCustomClassloader() with a valid classpath creates a classloader that can load
+   * classes from the specified path.
+   *
+   * <p>Acceptance criterion:
+   * [TEST:MainUtilityMethodsTest.createCustomClassloader_withClasspath_createsLoader]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #634")
+  public void createCustomClassloader_withClasspath_createsLoader() throws Exception {
+    // Given: Main instance with classpath field set to a valid directory
+    //        (e.g., "target/test-classes")
+    // When: createCustomClassloader() is called via reflection
+    // Then: The customClassloader field should be non-null
+    //       and should be an instance of CustomClassloader
+
+    // TODO(#634): Implement test logic
+    // Hint: Set "classpath" field via reflection, call private createCustomClassloader(),
+    //       then reflect the "customClassloader" field and verify it's non-null
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that createCustomClassloader() with null/empty classpath creates a classloader using the
+   * default (context) classloader as parent.
+   *
+   * <p>Acceptance criterion:
+   * [TEST:MainUtilityMethodsTest.createCustomClassloader_emptyClasspath_usesDefault]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #634")
+  public void createCustomClassloader_emptyClasspath_usesDefault() throws Exception {
+    // Given: Main instance with classpath field left as null (default)
+    // When: createCustomClassloader() is called via reflection
+    // Then: The customClassloader field should be non-null
+    //       (created with empty URL array, parent is context classloader)
+
+    // TODO(#634): Implement test logic
+    // Hint: Leave "classpath" as null, call private createCustomClassloader(),
+    //       then reflect the "customClassloader" field and verify it's non-null
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that initLogging() with a custom logback config (via "peer.logging" system property)
+   * applies that custom configuration.
+   *
+   * <p>Acceptance criterion:
+   * [TEST:MainUtilityMethodsTest.initLogging_withCustomLogbackConfig_usesCustomConfig]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #634")
+  public void initLogging_withCustomLogbackConfig_usesCustomConfig() throws Exception {
+    // Given: A valid logback XML config file on disk
+    //        System property "peer.logging" set to that file's path
+    // When: initLogging() is called via reflection
+    // Then: The Logback context should be configured with the custom configuration
+    //       (verify by checking a logger level or appender set by the custom config)
+
+    // TODO(#634): Implement test logic
+    // Hint: Create a temp logback config file, set System.setProperty("peer.logging", path),
+    //       call private initLogging(), verify LoggerContext state.
+    //       Clean up: restore the system property and reset Logback in @After.
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that initLogging() without a custom config falls back to the default configuration
+   * resource (/peer-logging-fallback.xml).
+   *
+   * <p>Acceptance criterion:
+   * [TEST:MainUtilityMethodsTest.initLogging_withoutCustomConfig_usesDefault]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #634")
+  public void initLogging_withoutCustomConfig_usesDefault() throws Exception {
+    // Given: System property "peer.logging" is null or not set
+    // When: initLogging() is called via reflection
+    // Then: The Logback context should be configured using the default
+    //       /peer-logging-fallback.xml resource (no errors on stderr)
+
+    // TODO(#634): Implement test logic
+    // Hint: Ensure System.getProperty("peer.logging") is null,
+    //       call private initLogging(), verify no errors printed to stderr.
+    //       Clean up: reset Logback in @After.
+    fail("Not yet implemented");
   }
 }
