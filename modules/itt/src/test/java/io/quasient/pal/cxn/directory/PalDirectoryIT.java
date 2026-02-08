@@ -42,6 +42,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -2068,5 +2069,366 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
       assertTrue(
           "Should fail within reasonable time frame (elapsed: " + elapsed + "ms)", elapsed < 2000);
     }
+  }
+
+  // ==========================================================================
+  // Test Specifications for Issue #636
+  // Awaiting implementation in #638
+  // ==========================================================================
+
+  /**
+   * Tests that peerExists returns true for a registered peer.
+   *
+   * <p>Specification #1 from Issue #636:
+   *
+   * <ul>
+   *   <li>Given: A registered peer in the directory
+   *   <li>When: peerExists(uuid) is called with the peer's UUID
+   *   <li>Then: Returns true
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #638")
+  public void peerExists_existingPeer_returnsTrue() throws Exception {
+    // Given: A registered peer
+    // When: peerExists(uuid)
+    // Then: returns true
+
+    // TODO(#638): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that peerExists returns false for a non-existent peer.
+   *
+   * <p>Specification #2 from Issue #636:
+   *
+   * <ul>
+   *   <li>Given: A random UUID not registered in the directory
+   *   <li>When: peerExists(uuid) is called with the random UUID
+   *   <li>Then: Returns false
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #638")
+  public void peerExists_nonExistentPeer_returnsFalse() throws Exception {
+    // Given: Random UUID not in directory
+    // When: peerExists(uuid)
+    // Then: returns false
+
+    // TODO(#638): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that updatePeer with a lease ID updates the peer's state and mtime.
+   *
+   * <p>Specification #3 from Issue #636:
+   *
+   * <ul>
+   *   <li>Given: A registered peer with an active lease
+   *   <li>When: updatePeer(peerInfo, leaseId) is called
+   *   <li>Then: The peer's state and mtime are updated in the directory
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #638")
+  public void updatePeer_withLeaseId_updatesStateAndMtime() throws Exception {
+    // Given: A registered peer with a live lease (created via createPeerLease)
+    // When: updatePeer(updatedPeerInfo, leaseId) called with the lease ID
+    // Then: Peer state is updated, mtime is refreshed, state is bound to lease
+
+    // TODO(#638): Implement test logic
+    // 1. Create peer
+    // 2. Create peer lease via palDirectory.createPeerLease(uuid, ttl)
+    // 3. Record initial mtime
+    // 4. Sleep briefly to ensure mtime changes
+    // 5. Call updatePeer(peerInfo, lease.getLeaseId())
+    // 6. Retrieve peer and verify mtime changed
+    // 7. Verify state reflects updated values
+    // 8. Clean up lease via lease.close()
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that getSourceLogId returns the UUID for a peer with a registered source log.
+   *
+   * <p>Specification #4 from Issue #636:
+   *
+   * <ul>
+   *   <li>Given: A peer with a registered source log
+   *   <li>When: getSourceLogId(peerUuid) is called
+   *   <li>Then: The UUID of the source log is returned
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #638")
+  public void getSourceLogId_existingSourceLog_returnsUuid() throws Exception {
+    // Given: Peer with a source log registered via setSourceLog()
+    // When: getSourceLogId(peerUuid)
+    // Then: Returns the source log's UUID
+
+    // TODO(#638): Implement test logic
+    // 1. Create peer
+    // 2. Create log via createAutoLog()
+    // 3. Register it as source log via setSourceLog(peerInfo, logInfo, null)
+    // 4. Call getSourceLogId(peerUuid)
+    // 5. Assert returned UUID equals the log's UUID
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that getSourceLogId returns null for a peer without a source log.
+   *
+   * <p>Specification #5 from Issue #636:
+   *
+   * <ul>
+   *   <li>Given: A peer without a source log
+   *   <li>When: getSourceLogId(peerUuid) is called
+   *   <li>Then: Returns null
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #638")
+  public void getSourceLogId_noSourceLog_returnsNull_spec636() throws Exception {
+    // Given: Peer created without any source log registration
+    // When: getSourceLogId(peerUuid)
+    // Then: Returns null
+
+    // TODO(#638): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that getWalId returns the UUID for a peer with a registered WAL.
+   *
+   * <p>Specification #6 from Issue #636:
+   *
+   * <ul>
+   *   <li>Given: A peer with a registered WAL (write-ahead log)
+   *   <li>When: getWalId(peerUuid) is called
+   *   <li>Then: The UUID of the WAL is returned
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #638")
+  public void getWalId_existingWal_returnsUuid() throws Exception {
+    // Given: Peer with a WAL registered via setWalLog()
+    // When: getWalId(peerUuid)
+    // Then: Returns the WAL's UUID
+
+    // TODO(#638): Implement test logic
+    // 1. Create peer
+    // 2. Create log via createAutoLog()
+    // 3. Register it as WAL via setWalLog(peerInfo, logInfo, null)
+    // 4. Call getWalId(peerUuid)
+    // 5. Assert returned UUID equals the log's UUID
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that getWalId returns null for a peer without a WAL.
+   *
+   * <p>Specification #7 from Issue #636:
+   *
+   * <ul>
+   *   <li>Given: A peer without a WAL
+   *   <li>When: getWalId(peerUuid) is called
+   *   <li>Then: Returns null
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #638")
+  public void getWalId_noWal_returnsNull_spec636() throws Exception {
+    // Given: Peer created without any WAL registration
+    // When: getWalId(peerUuid)
+    // Then: Returns null
+
+    // TODO(#638): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that countLogsWithPrefix returns the correct count for matching logs.
+   *
+   * <p>Specification #8 from Issue #636:
+   *
+   * <ul>
+   *   <li>Given: 3 logs created with the same prefix
+   *   <li>When: countLogsWithPrefix(prefix) is called
+   *   <li>Then: Returns 3
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #638")
+  public void countLogsWithPrefix_matchingLogs_returnsCount() throws Exception {
+    // Given: 3 logs with same prefix (e.g., "count-test-636")
+    // When: countLogsWithPrefix("count-test-636")
+    // Then: Returns 3
+
+    // TODO(#638): Implement test logic
+    // 1. Create 3 logs using createAutoLog(prefix, kafkaServers)
+    // 2. Call countLogsWithPrefix(prefix)
+    // 3. Assert equals 3
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that deleteLogsWithPrefix deletes all matching logs.
+   *
+   * <p>Specification #9 from Issue #636:
+   *
+   * <ul>
+   *   <li>Given: Multiple logs with a shared prefix
+   *   <li>When: deleteLogsWithPrefix(prefix) is called
+   *   <li>Then: All logs matching the prefix are deleted
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #638")
+  public void deleteLogsWithPrefix_matchingLogs_deletesAllMatching() throws Exception {
+    // Given: Multiple logs with prefix (e.g., "delete-prefix-636")
+    // When: deleteLogsWithPrefix("delete-prefix-636")
+    // Then: All matching logs deleted, countLogsWithPrefix returns 0
+
+    // TODO(#638): Implement test logic
+    // 1. Create N logs with prefix
+    // 2. Verify countLogsWithPrefix returns N
+    // 3. Call deleteLogsWithPrefix(prefix)
+    // 4. Verify return value equals N
+    // 5. Verify countLogsWithPrefix now returns 0
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that createIntercept with a non-zero TTL creates the intercept with its own dedicated
+   * lease.
+   *
+   * <p>Specification #10 from Issue #636:
+   *
+   * <ul>
+   *   <li>Given: A registered peer
+   *   <li>When: createIntercept(request, ttlSeconds) is called with a non-zero TTL
+   *   <li>Then: The intercept is created with a separate dedicated lease (not the peer lease)
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #638")
+  public void createIntercept_withDedicatedTtl_createsWithOwnLease() throws Exception {
+    // Given: A registered peer (no peer lease)
+    // When: createIntercept(request, 10) with TTL=10 seconds
+    // Then: Intercept created with its own lease, visible in listInterceptsForPeer
+
+    // TODO(#638): Implement test logic
+    // 1. Create peer
+    // 2. Create intercept request with TTL > 0 (e.g., 10 seconds)
+    // 3. Verify intercept exists via listInterceptsForPeer
+    // 4. Verify peer still exists (dedicated lease is separate from peer)
+    // 5. Clean up intercept
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that createIntercept with TTL=0 and no peer lease persists without any lease.
+   *
+   * <p>Specification #11 from Issue #636:
+   *
+   * <ul>
+   *   <li>Given: A registered peer with no active lease
+   *   <li>When: createIntercept(request, 0) is called with TTL=0
+   *   <li>Then: The intercept is created without any lease (persists indefinitely)
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #638")
+  public void createIntercept_withZeroTtl_usesNoPeerLease() throws Exception {
+    // Given: Peer with no active peer lease
+    // When: createIntercept(request, 0)
+    // Then: Intercept created with no lease, persists indefinitely
+
+    // TODO(#638): Implement test logic
+    // 1. Create peer (without creating a peer lease)
+    // 2. Create intercept with TTL=0
+    // 3. Verify intercept exists
+    // 4. Wait briefly (e.g., 2 seconds)
+    // 5. Verify intercept still exists (no expiration)
+    // 6. Clean up
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that deleteIntercept removes an existing intercept.
+   *
+   * <p>Specification #12 from Issue #636:
+   *
+   * <ul>
+   *   <li>Given: A peer with an existing intercept
+   *   <li>When: deleteIntercept(peerUuid, interceptUuid) is called
+   *   <li>Then: The intercept is removed from the directory
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #638")
+  public void deleteIntercept_existingIntercept_removes() throws Exception {
+    // Given: Peer with an intercept registered
+    // When: deleteIntercept(peerUuid, interceptUuid)
+    // Then: Intercept no longer in listInterceptsForPeer
+
+    // TODO(#638): Implement test logic
+    // 1. Create peer
+    // 2. Create intercept request
+    // 3. Verify intercept exists (listInterceptsForPeer size == 1)
+    // 4. Call deleteIntercept(peerUuid, interceptUuid)
+    // 5. Verify listInterceptsForPeer is empty
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that listAllIntercepts returns all intercepts across multiple peers.
+   *
+   * <p>Specification #13 from Issue #636:
+   *
+   * <ul>
+   *   <li>Given: 3 intercepts spread across multiple peers
+   *   <li>When: listAllIntercepts() is called
+   *   <li>Then: All 3 intercepts are returned
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #638")
+  public void listAllIntercepts_multipleIntercepts_returnsAll() throws Exception {
+    // Given: 3 intercepts across 2 peers
+    // When: listAllIntercepts()
+    // Then: Returns set of size 3
+
+    // TODO(#638): Implement test logic
+    // 1. Create 2 peers
+    // 2. Create 2 intercepts for peer1, 1 intercept for peer2
+    // 3. Call listAllIntercepts()
+    // 4. Assert size == 3
+    // 5. Verify all intercept UUIDs are present
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that listAllIntercepts returns an empty set when no intercepts exist.
+   *
+   * <p>Specification #14 from Issue #636:
+   *
+   * <ul>
+   *   <li>Given: No intercepts in the directory
+   *   <li>When: listAllIntercepts() is called
+   *   <li>Then: An empty set is returned
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #638")
+  public void listAllIntercepts_noIntercepts_returnsEmpty() throws Exception {
+    // Given: No intercepts in directory (clean state from @Before)
+    // When: listAllIntercepts()
+    // Then: Returns empty set
+
+    // TODO(#638): Implement test logic
+    fail("Not yet implemented");
   }
 }
