@@ -66,6 +66,7 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1879,5 +1880,215 @@ public class ThinPeerIT extends AbstractIntegrationTest {
         }
       }
     }
+  }
+
+  // ============================================================================
+  // ThinPeer Integration Test Specifications (Issue #635)
+  // These test specifications define acceptance criteria for ThinPeer methods
+  // that require real Kafka/ZMQ infrastructure. Implementation in #637.
+  // ============================================================================
+
+  /**
+   * Tests that getAllWalMessages retrieves all messages written to a Kafka WAL.
+   *
+   * <p>Acceptance Criteria:
+   * [INTEGRATION:ThinPeerIT.getAllWalMessages_multipleMessages_allRetrieved]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #637")
+  public void getAllWalMessages_multipleMessages_allRetrieved() throws Exception {
+    // Given: ThinPeer with Kafka WAL configured (real producer and consumer properties),
+    //        3 ExecMessages written to the WAL via sendExecMessageToLog()
+    // When: getAllWalMessages() is called
+    // Then: All 3 messages are returned in the list
+
+    // TODO(#637): Implement test logic
+    // 1. Create ThinPeer with real Kafka consumer/producer properties and a test log
+    // 2. Send 3 distinct ExecMessages to the log via sendExecMessageToLog()
+    // 3. Wait for sends to complete (Future.get())
+    // 4. Call getAllWalMessages()
+    // 5. Assert returned list has size >= 3
+    // 6. Verify messages match what was sent (by message ID or content)
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that getAllWalMessages returns an empty list for an empty WAL.
+   *
+   * <p>Acceptance Criteria: [INTEGRATION:ThinPeerIT.getAllWalMessages_emptyLog_returnsEmptyList]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #637")
+  public void getAllWalMessages_emptyLog_returnsEmptyList() throws Exception {
+    // Given: ThinPeer with Kafka WAL configured but no messages written
+    // When: getAllWalMessages() is called
+    // Then: An empty list is returned
+
+    // TODO(#637): Implement test logic
+    // 1. Create a fresh test log (unique name to ensure no pre-existing messages)
+    // 2. Create ThinPeer with real Kafka consumer/producer properties and the fresh log
+    // 3. Call getAllWalMessages() immediately without sending any messages
+    // 4. Assert returned list is empty (size == 0)
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that getMessages retrieves the requested number of messages from a given offset.
+   *
+   * <p>Acceptance Criteria: [INTEGRATION:ThinPeerIT.getMessages_fromOffset_returnsRequestedCount]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #637")
+  public void getMessages_fromOffset_returnsRequestedCount() throws Exception {
+    // Given: ThinPeer with Kafka WAL containing 5 messages
+    // When: getMessages(2, 2) is called (start at offset 2, request 2 messages)
+    // Then: Exactly 2 ConsumerRecords are returned from offset 2
+
+    // TODO(#637): Implement test logic
+    // 1. Create ThinPeer with real Kafka consumer/producer properties and a test log
+    // 2. Send 5 distinct ExecMessages to the log
+    // 3. Wait for all sends to complete
+    // 4. Call getMessages(2, 2)
+    // 5. Assert returned list has size == 2
+    // 6. Verify messages correspond to offsets 2 and 3
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that sendJsonRpcRequestToLog sends a valid request successfully.
+   *
+   * <p>Acceptance Criteria:
+   * [INTEGRATION:ThinPeerIT.sendJsonRpcRequestToLog_validRequest_sentSuccessfully]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #637")
+  public void sendJsonRpcRequestToLog_validRequest_sentSuccessfully() throws Exception {
+    // Given: ThinPeer configured as a producer with a Kafka WAL
+    // When: sendJsonRpcRequestToLog() is called with a valid JsonRpcRequest
+    // Then: The returned Future completes successfully (no exception)
+
+    // TODO(#637): Implement test logic
+    // 1. Create ThinPeer with real Kafka producer properties and a test log
+    // 2. Build a valid JsonRpcRequest using JsonRpcMessageFactory.buildClassMethodCall()
+    // 3. Call sendJsonRpcRequestToLog(request)
+    // 4. Assert the returned Future completes within timeout (future.get(5, SECONDS))
+    // 5. Verify RecordMetadata has a valid offset (>= 0)
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that the listener thread receives messages sent to the ThinPeer's inbound socket.
+   *
+   * <p>Acceptance Criteria: [INTEGRATION:ThinPeerIT.startListenerThread_receivesMessages]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #637")
+  public void startListenerThread_receivesMessages() throws Exception {
+    // Given: ThinPeer initialized with a ZMQ RPC address (which starts the listener thread),
+    //        and a registered IncomingMessageListener
+    // When: A message arrives on the inbound RPC socket (sent from another ThinPeer)
+    // Then: The listener's onMessageReceived() callback is invoked with the message
+
+    // TODO(#637): Implement test logic
+    // 1. Create ThinPeer with withZmqRpcAddress("tcp://127.0.0.1:0") to bind inbound socket
+    //    and start the listener thread
+    // 2. Register an IncomingMessageListener that captures received messages
+    // 3. Create a second ThinPeer and connect it to the first peer's ZMQ address
+    // 4. Send a message from the second peer to the first peer
+    // 5. Wait briefly for async delivery
+    // 6. Assert the listener was called and the message was received
+    // 7. Alternatively, verify pullReceivedMessages() returns the message
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that connectToPeer with timeout connects successfully to a valid ZMQ peer.
+   *
+   * <p>Acceptance Criteria: [INTEGRATION:ThinPeerIT.connectZmqSocketWithTimeout_validPeer_connects]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #637")
+  public void connectZmqSocketWithTimeout_validPeer_connects() throws Exception {
+    // Given: A running ZMQ peer (the shared peer) with a known address
+    // When: connectToPeer(peerInfo, Duration.ofSeconds(10)) is called
+    // Then: Returns true, isTalkingToPeer() returns true, isZmqSocketConnected() returns true
+
+    // TODO(#637): Implement test logic
+    // 1. Create ThinPeer with ZMQ_RPC outbound type
+    // 2. Find the shared ZMQ peer via findRpcPeer()
+    // 3. Call connectToPeer(peerInfo, Duration.ofSeconds(10))
+    // 4. Assert returns true
+    // 5. Assert isTalkingToPeer() is true
+    // 6. Assert isZmqSocketConnected() is true
+    // 7. Assert getCurrentPeer() matches the connected peer
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that connectToPeer with timeout returns false for a non-existent ZMQ address.
+   *
+   * <p>Acceptance Criteria:
+   * [INTEGRATION:ThinPeerIT.connectZmqSocketWithTimeout_invalidPeer_returnsFalse]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #637")
+  public void connectZmqSocketWithTimeout_invalidPeer_returnsFalse() throws Exception {
+    // Given: A PeerInfo with a non-existent ZMQ RPC address
+    // When: connectToPeer(invalidPeerInfo, Duration.ofSeconds(2)) is called
+    // Then: Returns false within the timeout period
+
+    // TODO(#637): Implement test logic
+    // 1. Create ThinPeer with ZMQ_RPC outbound type
+    // 2. Create a PeerInfo with a non-existent ZMQ address (e.g., tcp://localhost:59999)
+    // 3. Call connectToPeer(invalidPeerInfo, Duration.ofSeconds(2))
+    // 4. Assert returns false
+    // 5. Assert elapsed time respects the timeout (within reasonable margin)
+    // 6. Assert ThinPeer is still usable (not closed)
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that sendPing returns a positive elapsed time for a connected ZMQ peer.
+   *
+   * <p>Acceptance Criteria: [INTEGRATION:ThinPeerIT.sendPing_zmqSocket_returnsElapsedTime]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #637")
+  public void sendPing_zmqSocket_returnsElapsedTime() throws Exception {
+    // Given: ThinPeer connected to the shared peer via ZMQ RPC
+    // When: sendPing() is called
+    // Then: Returns a positive elapsed time (>= 0.0 milliseconds)
+
+    // TODO(#637): Implement test logic
+    // 1. Create ThinPeer with ZMQ_RPC outbound type
+    // 2. Connect to the shared ZMQ peer
+    // 3. Call sendPing()
+    // 4. Assert returned value >= 0.0 (positive elapsed time in milliseconds)
+    // 5. Optionally call sendPing(Duration.ofSeconds(5)) to test the timeout variant
+    // 6. Assert the timeout variant also returns >= 0.0
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that sendToPeer with a ControlMessage receives a valid response.
+   *
+   * <p>Acceptance Criteria: [INTEGRATION:ThinPeerIT.sendToPeer_controlMessage_receivesResponse]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #637")
+  public void sendToPeer_controlMessage_receivesResponse() throws Exception {
+    // Given: ThinPeer connected to a running peer via ZMQ RPC
+    // When: sendToPeer() is called with a PING ControlMessage
+    // Then: A ControlMessage response is returned with OK status
+
+    // TODO(#637): Implement test logic
+    // 1. Create ThinPeer with ZMQ_RPC outbound type
+    // 2. Connect to the shared ZMQ peer
+    // 3. Build a PING ControlMessage using msgBuilder.buildControlCommandMessage()
+    // 4. Call sendToPeer(controlMessage)
+    // 5. Assert response is not null
+    // 6. Assert response status is ControlStatusType.OK
+    // 7. Assert response.getResponseToId() matches the sent message's ID
+    fail("Not yet implemented");
   }
 }
