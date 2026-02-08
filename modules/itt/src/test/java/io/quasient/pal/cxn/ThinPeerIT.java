@@ -35,10 +35,12 @@ import io.quasient.pal.messages.jsonrpc.JsonRpcResponse;
 import io.quasient.pal.messages.types.ControlCommandType;
 import io.quasient.pal.messages.types.ControlStatusType;
 import io.quasient.pal.messages.types.RpcType;
+import io.quasient.pal.serdes.colfer.ColferUtils;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
 import io.quasient.pal.serdes.jsonrpc.JsonRpcMessageFactory;
 import io.quasient.pal.serdes.kafka.typed.KafkaLogMessageSerializer;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -72,6 +74,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.ZContext;
+import org.zeromq.ZMQ;
 
 public class ThinPeerIT extends AbstractIntegrationTest {
 
@@ -2103,10 +2106,21 @@ public class ThinPeerIT extends AbstractIntegrationTest {
       receiverPeerInfo.setZmqRpcAddress(listenerAddress);
       sender.connectToPeer(receiverPeerInfo);
 
-      // Send a control message (PING) from sender to receiver
+      // Send a control message (PING) from sender to receiver using raw ZMQ socket.
+      // We cannot use sendToPeer() because the receiver's listener thread responds with
+      // an empty ack (not a valid serialized ControlMessage), which would cause a
+      // BufferUnderflowException during unmarshal.
       ControlMessage pingMsg =
           msgBuilder.buildControlCommandMessage(sender.getPeerUuid(), ControlCommandType.PING);
-      sender.sendToPeer(pingMsg);
+      Field socketField = ThinPeer.class.getDeclaredField("peerSocket");
+      socketField.setAccessible(true);
+      ZMQ.Socket rawSocket = (ZMQ.Socket) socketField.get(sender);
+      Field builderField = ThinPeer.class.getDeclaredField("msgBuilder");
+      builderField.setAccessible(true);
+      MessageBuilder senderMsgBuilder = (MessageBuilder) builderField.get(sender);
+      byte[] msgBytes = ColferUtils.toBytes(senderMsgBuilder.wrap(pingMsg));
+      rawSocket.send(msgBytes);
+      rawSocket.recv(0); // receive and discard the empty ack
 
       // Wait briefly for async delivery
       Thread.sleep(500);
@@ -2124,15 +2138,15 @@ public class ThinPeerIT extends AbstractIntegrationTest {
       if (sender != null && !sender.isClosed()) {
         try {
           sender.close();
-        } catch (IllegalStateException e) {
-          logger.debug("Ignoring IllegalStateException while closing sender ThinPeer", e);
+        } catch (Exception e) {
+          logger.debug("Ignoring exception while closing sender ThinPeer", e);
         }
       }
       if (receiver != null && !receiver.isClosed()) {
         try {
           receiver.close();
-        } catch (IllegalStateException e) {
-          logger.debug("Ignoring IllegalStateException while closing receiver ThinPeer", e);
+        } catch (Exception e) {
+          logger.debug("Ignoring exception while closing receiver ThinPeer", e);
         }
       }
     }
