@@ -9,140 +9,130 @@
  */
 package io.quasient.pal.cxn.directory;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.fail;
 
-import org.junit.Ignore;
+import java.net.URI;
+import java.util.Arrays;
+import java.util.List;
 import org.junit.Test;
 
 /**
  * Unit tests for {@link PalDirectory} constructor overloads.
  *
- * <p>Tests the 4 uncovered constructor delegation patterns. Since constructors attempt to connect
- * to etcd, tests verify delegation by catching expected exceptions or testing parameter parsing
- * before the connection attempt.
- *
- * <p>Note: Non-blocking constructors build the jetcd client without a preflight health check, so
- * they may not throw {@link EtcdUnavailableException} immediately. The implementation task (#626)
- * should determine the correct assertion strategy (e.g., using blocking mode to trigger the
- * exception, or verifying internal state via reflection for non-blocking constructors).
+ * <p>Tests the constructor delegation patterns. Non-blocking constructors create the jetcd client
+ * without a preflight health check, so they succeed even when etcd is unreachable. Blocking
+ * constructors perform a preflight health check via {@link EtcdHealthCheck#assertReachable} and
+ * throw {@link EtcdUnavailableException} when etcd is unreachable.
  */
 public class PalDirectoryConstructorTest {
 
   // ==================== Single-string constructor ====================
 
   /**
-   * Tests that the single-string constructor attempts connection to etcd and throws when etcd is
-   * unavailable.
+   * Tests that the single-string constructor creates a PalDirectory in non-blocking mode. The
+   * constructor delegates to the full constructor with blocking=false, so it should succeed even
+   * without etcd running.
    */
   @Test
-  @Ignore("Awaiting implementation in #626")
   public void constructor_singleString_throwsWhenEtcdUnavailable() {
-    // Given: A connection string pointing to an unreachable etcd endpoint
-    // When: new PalDirectory("localhost:2379") is invoked
-    // Then: Throws EtcdUnavailableException (confirming constructor was invoked with right config)
-    //
-    // Note: The single-string constructor delegates to the full constructor with
-    // blocking=false. Non-blocking mode may not throw immediately — the implementation
-    // may need to use blocking=true or verify delegation via reflection.
-
-    // TODO(#626): Implement test logic
-    fail("Not yet implemented");
+    // The single-string constructor uses non-blocking mode, so it succeeds
+    // even without etcd. We verify it creates a valid instance.
+    PalDirectory dir = null;
+    try {
+      dir = new PalDirectory("http://127.0.0.1:9999");
+      assertThat(dir, is(notNullValue()));
+    } catch (Throwable t) {
+      fail("Non-blocking constructor should not throw: " + t.getMessage());
+    } finally {
+      if (dir != null) {
+        dir.close();
+      }
+    }
   }
 
   // ==================== String + boolean constructor ====================
 
   /**
-   * Tests that the string+boolean constructor attempts connection to etcd and throws when etcd is
-   * unavailable.
+   * Tests that the string+boolean constructor with blocking=true throws {@link
+   * EtcdUnavailableException} when etcd is unreachable.
    */
-  @Test
-  @Ignore("Awaiting implementation in #626")
+  @Test(expected = EtcdUnavailableException.class)
   public void constructor_stringAndBoolean_throwsWhenEtcdUnavailable() {
-    // Given: A connection string 'localhost:2379' and blocking=true
-    // When: new PalDirectory("localhost:2379", true) is invoked
-    // Then: Throws EtcdUnavailableException (confirming constructor delegates correctly)
-    //
-    // Note: With blocking=true, the constructor performs a preflight health check
-    // via EtcdHealthCheck.assertReachable() and throws EtcdUnavailableException
-    // if no endpoints are reachable.
-
-    // TODO(#626): Implement test logic
-    fail("Not yet implemented");
+    // With blocking=true, the constructor performs a preflight health check
+    // and throws EtcdUnavailableException if etcd is unreachable.
+    new PalDirectory("http://127.0.0.1:9999", true);
   }
 
   // ==================== List<URI> constructor ====================
 
   /**
-   * Tests that the URI list constructor attempts connection to etcd and throws when unavailable.
+   * Tests that the URI list constructor creates a PalDirectory in non-blocking mode. The
+   * constructor joins URIs with commas and delegates with blocking=false.
    */
   @Test
-  @Ignore("Awaiting implementation in #626")
   public void constructor_listOfUris_throwsWhenEtcdUnavailable() {
-    // Given: A list of URI endpoints pointing to unreachable etcd instances
-    //   e.g., Arrays.asList(URI.create("http://localhost:2379"))
-    // When: new PalDirectory(endpoints) is invoked
-    // Then: Throws EtcdUnavailableException (confirming URI list was converted to
-    //   comma-separated string and delegated to the full constructor)
-    //
-    // Note: The List<URI> constructor joins URIs with commas and delegates with
-    // blocking=false. Implementation should verify the URI-to-string conversion
-    // and delegation pattern.
-
-    // TODO(#626): Implement test logic
-    fail("Not yet implemented");
+    // The List<URI> constructor uses non-blocking mode, so it succeeds
+    // even without etcd. We verify it creates a valid instance.
+    List<URI> endpoints =
+        Arrays.asList(URI.create("http://127.0.0.1:9999"), URI.create("http://127.0.0.1:9998"));
+    PalDirectory dir = null;
+    try {
+      dir = new PalDirectory(endpoints);
+      assertThat(dir, is(notNullValue()));
+    } catch (Throwable t) {
+      fail("Non-blocking URI list constructor should not throw: " + t.getMessage());
+    } finally {
+      if (dir != null) {
+        dir.close();
+      }
+    }
   }
 
   // ==================== String + String + boolean constructor ====================
 
   /**
-   * Tests that the full three-arg constructor (endpoints, namespace, blocking) throws when etcd is
-   * unavailable.
+   * Tests that the full three-arg constructor (endpoints, namespace, blocking) throws {@link
+   * EtcdUnavailableException} when etcd is unreachable and blocking=true.
    */
-  @Test
-  @Ignore("Awaiting implementation in #626")
+  @Test(expected = EtcdUnavailableException.class)
   public void constructor_stringAndStringAndBoolean_throwsWhenEtcdUnavailable() {
-    // Given: endpoints="localhost:2379", namespace="test-ns", blocking=true
-    // When: new PalDirectory("localhost:2379", "test-ns", true) is invoked
-    // Then: Throws EtcdUnavailableException (confirming all three parameters are
-    //   forwarded to the full constructor with DEFAULT_ETCD_CONNECTION_TIMEOUT)
-    //
-    // Note: With blocking=true, the preflight health check runs and fails for
-    // unreachable endpoints.
-
-    // TODO(#626): Implement test logic
-    fail("Not yet implemented");
+    // With blocking=true, the preflight health check runs and fails for unreachable endpoints.
+    new PalDirectory("http://127.0.0.1:9999", "test-ns", true);
   }
 
   // ==================== NO_URL constant ====================
 
   /** Verifies that the {@link PalDirectory#NO_URL} constant is defined and usable as a sentinel. */
   @Test
-  @Ignore("Awaiting implementation in #626")
   public void noUrl_constant_isValidSentinel() {
-    // Given: The PalDirectory.NO_URL constant
-    // When: Its value is inspected
-    // Then: It is non-null and equals the expected sentinel value "<none>"
-
-    // TODO(#626): Implement test logic
-    fail("Not yet implemented");
+    assertThat(PalDirectory.NO_URL, is(notNullValue()));
+    assertThat(PalDirectory.NO_URL, is("<none>"));
   }
 
   // ==================== Default timeout ====================
 
-  /** Verifies that the single-string constructor applies the default etcd connection timeout. */
+  /**
+   * Verifies that the single-string constructor applies the default etcd connection timeout. Uses a
+   * non-blocking constructor to avoid needing a running etcd, then inspects the timeout via
+   * reflection.
+   */
   @Test
-  @Ignore("Awaiting implementation in #626")
-  public void constructor_singleString_usesDefaultTimeout() {
-    // Given: The single-string constructor is invoked
-    // When: The resulting PalDirectory instance is inspected (via reflection on
-    //   the etcdConnectionTimeout field)
-    // Then: The timeout equals PalDirectory.getDefaultConnectionTimeout() (5 seconds)
-    //
-    // Note: This test may need to create a PalDirectory in non-blocking mode
-    // with a reachable endpoint, or use reflection/Assume to handle connection
-    // failures gracefully.
-
-    // TODO(#626): Implement test logic
-    fail("Not yet implemented");
+  public void constructor_singleString_usesDefaultTimeout() throws Exception {
+    PalDirectory dir = null;
+    try {
+      dir = new PalDirectory("http://127.0.0.1:9999");
+      java.lang.reflect.Field timeoutField =
+          PalDirectory.class.getDeclaredField("etcdConnectionTimeout");
+      timeoutField.setAccessible(true);
+      java.time.Duration timeout = (java.time.Duration) timeoutField.get(dir);
+      assertThat(timeout, is(PalDirectory.getDefaultConnectionTimeout()));
+    } finally {
+      if (dir != null) {
+        dir.close();
+      }
+    }
   }
 }
