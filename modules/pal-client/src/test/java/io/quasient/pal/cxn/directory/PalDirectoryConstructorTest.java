@@ -14,7 +14,9 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.fail;
 
+import java.lang.reflect.Field;
 import java.net.URI;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.Test;
@@ -124,10 +126,9 @@ public class PalDirectoryConstructorTest {
     PalDirectory dir = null;
     try {
       dir = new PalDirectory("http://127.0.0.1:9999");
-      java.lang.reflect.Field timeoutField =
-          PalDirectory.class.getDeclaredField("etcdConnectionTimeout");
+      Field timeoutField = PalDirectory.class.getDeclaredField("etcdConnectionTimeout");
       timeoutField.setAccessible(true);
-      java.time.Duration timeout = (java.time.Duration) timeoutField.get(dir);
+      Duration timeout = (Duration) timeoutField.get(dir);
       assertThat(timeout, is(PalDirectory.getDefaultConnectionTimeout()));
     } finally {
       if (dir != null) {
