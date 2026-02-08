@@ -9,9 +9,26 @@
  */
 package io.quasient.pal.cxn;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.sameInstance;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
-import org.junit.Ignore;
+import io.quasient.pal.messages.LogMessage;
+import io.quasient.pal.messages.colfer.Message;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.Test;
 
 /**
@@ -38,14 +55,12 @@ public class ThinPeerGettersAndStateTest {
    * <p>Then: Returns false (the {@code consuming} field defaults to false)
    */
   @Test
-  @Ignore("Awaiting implementation in #624")
   public void isConsuming_defaultFalse() {
     // Given: A freshly constructed ThinPeer
-    // When: isConsuming() is called
-    // Then: Returns false
+    ThinPeer peer = new ThinPeer();
 
-    // TODO(#624): Implement test logic
-    fail("Not yet implemented");
+    // When/Then: isConsuming() returns false
+    assertFalse(peer.isConsuming());
   }
 
   /**
@@ -58,14 +73,12 @@ public class ThinPeerGettersAndStateTest {
    * <p>Then: Returns false (the {@code producing} field defaults to false)
    */
   @Test
-  @Ignore("Awaiting implementation in #624")
   public void isProducing_defaultFalse() {
     // Given: A freshly constructed ThinPeer
-    // When: isProducing() is called
-    // Then: Returns false
+    ThinPeer peer = new ThinPeer();
 
-    // TODO(#624): Implement test logic
-    fail("Not yet implemented");
+    // When/Then: isProducing() returns false
+    assertFalse(peer.isProducing());
   }
 
   /**
@@ -78,14 +91,12 @@ public class ThinPeerGettersAndStateTest {
    * <p>Then: Returns false (the {@code registerSelf} field defaults to false)
    */
   @Test
-  @Ignore("Awaiting implementation in #624")
   public void isSelfRegistering_defaultFalse() {
     // Given: A freshly constructed ThinPeer
-    // When: isSelfRegistering() is called
-    // Then: Returns false
+    ThinPeer peer = new ThinPeer();
 
-    // TODO(#624): Implement test logic
-    fail("Not yet implemented");
+    // When/Then: isSelfRegistering() returns false
+    assertFalse(peer.isSelfRegistering());
   }
 
   /**
@@ -98,14 +109,12 @@ public class ThinPeerGettersAndStateTest {
    * <p>Then: Returns false (the {@code talkingToPeer} field defaults to false)
    */
   @Test
-  @Ignore("Awaiting implementation in #624")
   public void isTalkingToPeer_defaultFalse() {
     // Given: A freshly constructed ThinPeer
-    // When: isTalkingToPeer() is called
-    // Then: Returns false
+    ThinPeer peer = new ThinPeer();
 
-    // TODO(#624): Implement test logic
-    fail("Not yet implemented");
+    // When/Then: isTalkingToPeer() returns false
+    assertFalse(peer.isTalkingToPeer());
   }
 
   /**
@@ -118,14 +127,12 @@ public class ThinPeerGettersAndStateTest {
    * <p>Then: Returns false (the {@code isZmqSocketConnected} field defaults to false)
    */
   @Test
-  @Ignore("Awaiting implementation in #624")
   public void isZmqSocketConnected_defaultFalse() {
     // Given: A freshly constructed ThinPeer
-    // When: isZmqSocketConnected() is called
-    // Then: Returns false
+    ThinPeer peer = new ThinPeer();
 
-    // TODO(#624): Implement test logic
-    fail("Not yet implemented");
+    // When/Then: isZmqSocketConnected() returns false
+    assertFalse(peer.isZmqSocketConnected());
   }
 
   /**
@@ -138,14 +145,12 @@ public class ThinPeerGettersAndStateTest {
    * <p>Then: Returns false (the {@code logIOEnabled} field defaults to false)
    */
   @Test
-  @Ignore("Awaiting implementation in #624")
   public void isLogIOEnabled_defaultFalse() {
     // Given: A freshly constructed ThinPeer
-    // When: isLogIOEnabled() is called
-    // Then: Returns false
+    ThinPeer peer = new ThinPeer();
 
-    // TODO(#624): Implement test logic
-    fail("Not yet implemented");
+    // When/Then: isLogIOEnabled() returns false
+    assertFalse(peer.isLogIOEnabled());
   }
 
   /**
@@ -158,14 +163,12 @@ public class ThinPeerGettersAndStateTest {
    * <p>Then: Returns false (the {@code closed} field defaults to false)
    */
   @Test
-  @Ignore("Awaiting implementation in #624")
   public void isClosed_defaultFalse() {
     // Given: A freshly constructed ThinPeer
-    // When: isClosed() is called
-    // Then: Returns false
+    ThinPeer peer = new ThinPeer();
 
-    // TODO(#624): Implement test logic
-    fail("Not yet implemented");
+    // When/Then: isClosed() returns false
+    assertFalse(peer.isClosed());
   }
 
   /**
@@ -178,14 +181,12 @@ public class ThinPeerGettersAndStateTest {
    * <p>Then: Returns false (the {@code initialized} field defaults to false)
    */
   @Test
-  @Ignore("Awaiting implementation in #624")
   public void isInitialized_defaultFalse() {
     // Given: A freshly constructed ThinPeer
-    // When: isInitialized() is called
-    // Then: Returns false
+    ThinPeer peer = new ThinPeer();
 
-    // TODO(#624): Implement test logic
-    fail("Not yet implemented");
+    // When/Then: isInitialized() returns false
+    assertFalse(peer.isInitialized());
   }
 
   // ==================== Reflection-based getter tests ====================
@@ -203,14 +204,15 @@ public class ThinPeerGettersAndStateTest {
    * setAccessible(true)} and {@code setBoolean(peer, true)}.
    */
   @Test
-  @Ignore("Awaiting implementation in #624")
-  public void isConsuming_reflectsField() {
+  public void isConsuming_reflectsField() throws Exception {
     // Given: A ThinPeer with consuming=true (set via reflection on field "consuming")
-    // When: isConsuming() is called
-    // Then: Returns true
+    ThinPeer peer = new ThinPeer();
+    Field consumingField = ThinPeer.class.getDeclaredField("consuming");
+    consumingField.setAccessible(true);
+    consumingField.setBoolean(peer, true);
 
-    // TODO(#624): Implement test logic
-    fail("Not yet implemented");
+    // When/Then: isConsuming() returns true
+    assertTrue(peer.isConsuming());
   }
 
   /**
@@ -226,14 +228,15 @@ public class ThinPeerGettersAndStateTest {
    * setAccessible(true)} and {@code setBoolean(peer, true)}.
    */
   @Test
-  @Ignore("Awaiting implementation in #624")
-  public void isProducing_reflectsField() {
+  public void isProducing_reflectsField() throws Exception {
     // Given: A ThinPeer with producing=true (set via reflection on field "producing")
-    // When: isProducing() is called
-    // Then: Returns true
+    ThinPeer peer = new ThinPeer();
+    Field producingField = ThinPeer.class.getDeclaredField("producing");
+    producingField.setAccessible(true);
+    producingField.setBoolean(peer, true);
 
-    // TODO(#624): Implement test logic
-    fail("Not yet implemented");
+    // When/Then: isProducing() returns true
+    assertTrue(peer.isProducing());
   }
 
   /**
@@ -249,14 +252,15 @@ public class ThinPeerGettersAndStateTest {
    * setAccessible(true)} and {@code setBoolean(peer, true)}.
    */
   @Test
-  @Ignore("Awaiting implementation in #624")
-  public void isSelfRegistering_reflectsField() {
+  public void isSelfRegistering_reflectsField() throws Exception {
     // Given: A ThinPeer with registerSelf=true (set via reflection on field "registerSelf")
-    // When: isSelfRegistering() is called
-    // Then: Returns true
+    ThinPeer peer = new ThinPeer();
+    Field registerSelfField = ThinPeer.class.getDeclaredField("registerSelf");
+    registerSelfField.setAccessible(true);
+    registerSelfField.setBoolean(peer, true);
 
-    // TODO(#624): Implement test logic
-    fail("Not yet implemented");
+    // When/Then: isSelfRegistering() returns true
+    assertTrue(peer.isSelfRegistering());
   }
 
   // ==================== Cache and message tests ====================
@@ -275,14 +279,17 @@ public class ThinPeerGettersAndStateTest {
    * m.setAccessible(true); Object result = m.invoke(peer, 42L); assertThat(result, nullValue());}
    */
   @Test
-  @Ignore("Awaiting implementation in #624")
-  public void getCachedMessageAtOffset_nullWhenNotCached() {
+  public void getCachedMessageAtOffset_nullWhenNotCached() throws Exception {
     // Given: A ThinPeer with an empty lastRecordsRead map (default)
-    // When: getCachedMessageAtOffset(42L) is called via reflection
-    // Then: Returns null
+    ThinPeer peer = new ThinPeer();
 
-    // TODO(#624): Implement test logic
-    fail("Not yet implemented");
+    // When: getCachedMessageAtOffset(42L) is called via reflection
+    Method method = ThinPeer.class.getDeclaredMethod("getCachedMessageAtOffset", Long.class);
+    method.setAccessible(true);
+    Object result = method.invoke(peer, 42L);
+
+    // Then: Returns null
+    assertThat(result, nullValue());
   }
 
   /**
@@ -300,16 +307,34 @@ public class ThinPeerGettersAndStateTest {
    * ConsumerRecord<>("topic", 0, 42L, "key", logMessage)}. Use reflection to invoke the private
    * method.
    */
+  @SuppressWarnings("unchecked")
   @Test
-  @Ignore("Awaiting implementation in #624")
-  public void getCachedMessageAtOffset_returnsCachedMessage() {
+  public void getCachedMessageAtOffset_returnsCachedMessage() throws Exception {
     // Given: A ThinPeer with lastRecordsRead containing a ConsumerRecord at offset 42
-    //   (set via reflection on field "lastRecordsRead")
-    // When: getCachedMessageAtOffset(42L) is called via reflection
-    // Then: Returns the LogMessage from the ConsumerRecord, with offset set to 42
+    ThinPeer peer = new ThinPeer();
+    Message wrappedMessage = new Message();
+    LogMessage<Message> logMessage =
+        new LogMessage<>("test-topic", 42L, new HashMap<>(), wrappedMessage);
 
-    // TODO(#624): Implement test logic
-    fail("Not yet implemented");
+    ConsumerRecord<String, LogMessage<?>> record =
+        new ConsumerRecord<>("test-topic", 0, 42L, "key", logMessage);
+
+    Field lastRecordsField = ThinPeer.class.getDeclaredField("lastRecordsRead");
+    lastRecordsField.setAccessible(true);
+    Map<Long, ConsumerRecord<String, LogMessage<?>>> cache =
+        (Map<Long, ConsumerRecord<String, LogMessage<?>>>) lastRecordsField.get(peer);
+    cache.put(42L, record);
+
+    // When: getCachedMessageAtOffset(42L) is called via reflection
+    Method method = ThinPeer.class.getDeclaredMethod("getCachedMessageAtOffset", Long.class);
+    method.setAccessible(true);
+    Object result = method.invoke(peer, 42L);
+
+    // Then: Returns the LogMessage from the ConsumerRecord, with offset set to 42
+    assertThat(result, notNullValue());
+    LogMessage<?> returned = (LogMessage<?>) result;
+    assertThat(returned.getOffset(), is(42L));
+    assertThat(returned, sameInstance(logMessage));
   }
 
   /**
@@ -326,16 +351,31 @@ public class ThinPeerGettersAndStateTest {
    * instances to it, then call pullReceivedMessages(). Verify the returned list has the expected
    * messages. Call pullReceivedMessages() again and verify it returns an empty list.
    */
+  @SuppressWarnings("unchecked")
   @Test
-  @Ignore("Awaiting implementation in #624")
-  public void pullReceivedMessages_returnsAndClears() {
+  public void pullReceivedMessages_returnsAndClears() throws Exception {
     // Given: A ThinPeer with messages added to receivedMessages (via reflection)
-    // When: pullReceivedMessages() is called
-    // Then: Returns the accumulated messages and clears the internal list
-    //   - A second call to pullReceivedMessages() returns an empty list
+    ThinPeer peer = new ThinPeer();
+    Message msg1 = new Message();
+    Message msg2 = new Message();
 
-    // TODO(#624): Implement test logic
-    fail("Not yet implemented");
+    Field receivedField = ThinPeer.class.getDeclaredField("receivedMessages");
+    receivedField.setAccessible(true);
+    List<Message> receivedMessages = (List<Message>) receivedField.get(peer);
+    receivedMessages.add(msg1);
+    receivedMessages.add(msg2);
+
+    // When: pullReceivedMessages() is called
+    List<Message> pulled = peer.pullReceivedMessages();
+
+    // Then: Returns the accumulated messages
+    assertThat(pulled, hasSize(2));
+    assertThat(pulled.get(0), sameInstance(msg1));
+    assertThat(pulled.get(1), sameInstance(msg2));
+
+    // And a second call returns an empty list
+    List<Message> pulledAgain = peer.pullReceivedMessages();
+    assertThat(pulledAgain, empty());
   }
 
   // ==================== Message listener tests ====================
@@ -353,17 +393,31 @@ public class ThinPeerGettersAndStateTest {
    * <p>Implementation note: Access the {@code messageListeners} field via reflection to verify set
    * contents. Create the listener as a no-op lambda implementing {@link IncomingMessageListener}.
    */
+  @SuppressWarnings("unchecked")
   @Test
-  @Ignore("Awaiting implementation in #624")
-  public void addAndRemoveMessageListener_updatesListeners() {
+  public void addAndRemoveMessageListener_updatesListeners() throws Exception {
     // Given: A ThinPeer and an IncomingMessageListener lambda
-    // When: addMessageListener(listener) is called
-    // Then: messageListeners set (via reflection) contains the listener
-    // When: removeMessageListener(listener) is called
-    // Then: messageListeners set (via reflection) no longer contains the listener
+    ThinPeer peer = new ThinPeer();
+    IncomingMessageListener listener = message -> {};
 
-    // TODO(#624): Implement test logic
-    fail("Not yet implemented");
+    Field listenersField = ThinPeer.class.getDeclaredField("messageListeners");
+    listenersField.setAccessible(true);
+    Set<IncomingMessageListener> listeners =
+        (Set<IncomingMessageListener>) listenersField.get(peer);
+
+    // When: addMessageListener(listener) is called
+    peer.addMessageListener(listener);
+
+    // Then: messageListeners set contains the listener
+    assertThat(listeners.size(), is(1));
+    assertTrue(listeners.contains(listener));
+
+    // When: removeMessageListener(listener) is called
+    peer.removeMessageListener(listener);
+
+    // Then: messageListeners set no longer contains the listener
+    assertThat(listeners.size(), is(0));
+    assertFalse(listeners.contains(listener));
   }
 
   // ==================== Builder-configured getter tests ====================
@@ -382,14 +436,12 @@ public class ThinPeerGettersAndStateTest {
    * assertThat(peer.getPollingDuration(), is(Duration.ofMillis(500)))}.
    */
   @Test
-  @Ignore("Awaiting implementation in #624")
   public void getPollingDuration_returnsSetValue() {
     // Given: A ThinPeer configured with withPollingDuration(500)
-    // When: getPollingDuration() is called
-    // Then: Returns Duration.ofMillis(500)
+    ThinPeer peer = new ThinPeer().withPollingDuration(500);
 
-    // TODO(#624): Implement test logic
-    fail("Not yet implemented");
+    // When/Then: getPollingDuration() returns Duration.ofMillis(500)
+    assertThat(peer.getPollingDuration(), is(Duration.ofMillis(500)));
   }
 
   /**
@@ -402,13 +454,11 @@ public class ThinPeerGettersAndStateTest {
    * <p>Then: Returns "http://localhost:2379"
    */
   @Test
-  @Ignore("Awaiting implementation in #624")
   public void getPalDirectoryUrl_returnsSetValue() {
     // Given: A ThinPeer configured with withDirectoryUrl("http://localhost:2379")
-    // When: getPalDirectoryUrl() is called
-    // Then: Returns "http://localhost:2379"
+    ThinPeer peer = new ThinPeer().withDirectoryUrl("http://localhost:2379");
 
-    // TODO(#624): Implement test logic
-    fail("Not yet implemented");
+    // When/Then: getPalDirectoryUrl() returns "http://localhost:2379"
+    assertThat(peer.getPalDirectoryUrl(), is("http://localhost:2379"));
   }
 }
