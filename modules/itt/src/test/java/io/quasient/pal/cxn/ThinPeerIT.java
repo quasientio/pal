@@ -57,16 +57,17 @@ import java.util.stream.Stream;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.MockConsumer;
 import org.apache.kafka.clients.consumer.OffsetResetStrategy;
 import org.apache.kafka.clients.producer.MockProducer;
+import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.Cluster;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1883,9 +1884,8 @@ public class ThinPeerIT extends AbstractIntegrationTest {
   }
 
   // ============================================================================
-  // ThinPeer Integration Test Specifications (Issue #635)
-  // These test specifications define acceptance criteria for ThinPeer methods
-  // that require real Kafka/ZMQ infrastructure. Implementation in #637.
+  // ThinPeer Integration Tests (Issue #637)
+  // Tests for ThinPeer methods that require real Kafka/ZMQ infrastructure.
   // ============================================================================
 
   /**
@@ -1895,21 +1895,44 @@ public class ThinPeerIT extends AbstractIntegrationTest {
    * [INTEGRATION:ThinPeerIT.getAllWalMessages_multipleMessages_allRetrieved]
    */
   @Test
-  @Ignore("Awaiting implementation in #637")
   public void getAllWalMessages_multipleMessages_allRetrieved() throws Exception {
-    // Given: ThinPeer with Kafka WAL configured (real producer and consumer properties),
-    //        3 ExecMessages written to the WAL via sendExecMessageToLog()
-    // When: getAllWalMessages() is called
-    // Then: All 3 messages are returned in the list
+    LogInfo testLog = createTestLog();
+    Properties consumerProperties = getKafkaConsumerProperties();
+    Properties producerProperties = getKafkaProducerProperties();
 
-    // TODO(#637): Implement test logic
-    // 1. Create ThinPeer with real Kafka consumer/producer properties and a test log
-    // 2. Send 3 distinct ExecMessages to the log via sendExecMessageToLog()
-    // 3. Wait for sends to complete (Future.get())
-    // 4. Call getAllWalMessages()
-    // 5. Assert returned list has size >= 3
-    // 6. Verify messages match what was sent (by message ID or content)
-    fail("Not yet implemented");
+    ThinPeer tp = null;
+    try {
+      tp =
+          new ThinPeer()
+              .withDirectoryProvider(directoryConnectionProvider)
+              .withConsumerProperties(consumerProperties)
+              .withProducerProperties(producerProperties)
+              .withLog(testLog)
+              .withSelfRegistration(false)
+              .init();
+
+      // Send 3 distinct ExecMessages
+      for (int i = 0; i < 3; i++) {
+        ExecMessage execMsg =
+            msgBuilder.buildEmptyConstructor(tp.getPeerUuid(), "java.lang.String");
+        Future<?> sendFuture = tp.sendExecMessageToLog(execMsg);
+        sendFuture.get(10, TimeUnit.SECONDS);
+      }
+
+      // Retrieve all messages
+      List<LogMessage<?>> allMessages = tp.getAllWalMessages();
+
+      // Verify all 3 messages are returned
+      assertThat("Should retrieve at least 3 messages", allMessages.size() >= 3, is(true));
+    } finally {
+      if (tp != null && !tp.isClosed()) {
+        try {
+          tp.close();
+        } catch (IllegalStateException e) {
+          logger.debug("Ignoring IllegalStateException while closing ThinPeer", e);
+        }
+      }
+    }
   }
 
   /**
@@ -1918,18 +1941,37 @@ public class ThinPeerIT extends AbstractIntegrationTest {
    * <p>Acceptance Criteria: [INTEGRATION:ThinPeerIT.getAllWalMessages_emptyLog_returnsEmptyList]
    */
   @Test
-  @Ignore("Awaiting implementation in #637")
   public void getAllWalMessages_emptyLog_returnsEmptyList() throws Exception {
-    // Given: ThinPeer with Kafka WAL configured but no messages written
-    // When: getAllWalMessages() is called
-    // Then: An empty list is returned
+    LogInfo testLog = createTestLog();
+    Properties consumerProperties = getKafkaConsumerProperties();
+    Properties producerProperties = getKafkaProducerProperties();
 
-    // TODO(#637): Implement test logic
-    // 1. Create a fresh test log (unique name to ensure no pre-existing messages)
-    // 2. Create ThinPeer with real Kafka consumer/producer properties and the fresh log
-    // 3. Call getAllWalMessages() immediately without sending any messages
-    // 4. Assert returned list is empty (size == 0)
-    fail("Not yet implemented");
+    ThinPeer tp = null;
+    try {
+      tp =
+          new ThinPeer()
+              .withDirectoryProvider(directoryConnectionProvider)
+              .withConsumerProperties(consumerProperties)
+              .withProducerProperties(producerProperties)
+              .withLog(testLog)
+              .withSelfRegistration(false)
+              .init();
+
+      // Call getAllWalMessages on a fresh (empty) log
+      List<LogMessage<?>> allMessages = tp.getAllWalMessages();
+
+      // Should return an empty list
+      assertNotNull("Returned list should not be null", allMessages);
+      assertThat("Empty log should return empty list", allMessages.size(), is(0));
+    } finally {
+      if (tp != null && !tp.isClosed()) {
+        try {
+          tp.close();
+        } catch (IllegalStateException e) {
+          logger.debug("Ignoring IllegalStateException while closing ThinPeer", e);
+        }
+      }
+    }
   }
 
   /**
@@ -1938,20 +1980,46 @@ public class ThinPeerIT extends AbstractIntegrationTest {
    * <p>Acceptance Criteria: [INTEGRATION:ThinPeerIT.getMessages_fromOffset_returnsRequestedCount]
    */
   @Test
-  @Ignore("Awaiting implementation in #637")
   public void getMessages_fromOffset_returnsRequestedCount() throws Exception {
-    // Given: ThinPeer with Kafka WAL containing 5 messages
-    // When: getMessages(2, 2) is called (start at offset 2, request 2 messages)
-    // Then: Exactly 2 ConsumerRecords are returned from offset 2
+    LogInfo testLog = createTestLog();
+    Properties consumerProperties = getKafkaConsumerProperties();
+    Properties producerProperties = getKafkaProducerProperties();
 
-    // TODO(#637): Implement test logic
-    // 1. Create ThinPeer with real Kafka consumer/producer properties and a test log
-    // 2. Send 5 distinct ExecMessages to the log
-    // 3. Wait for all sends to complete
-    // 4. Call getMessages(2, 2)
-    // 5. Assert returned list has size == 2
-    // 6. Verify messages correspond to offsets 2 and 3
-    fail("Not yet implemented");
+    ThinPeer tp = null;
+    try {
+      tp =
+          new ThinPeer()
+              .withDirectoryProvider(directoryConnectionProvider)
+              .withConsumerProperties(consumerProperties)
+              .withProducerProperties(producerProperties)
+              .withLog(testLog)
+              .withSelfRegistration(false)
+              .init();
+
+      // Send 5 distinct ExecMessages
+      for (int i = 0; i < 5; i++) {
+        ExecMessage execMsg =
+            msgBuilder.buildEmptyConstructor(tp.getPeerUuid(), "java.lang.String");
+        Future<?> sendFuture = tp.sendExecMessageToLog(execMsg);
+        sendFuture.get(10, TimeUnit.SECONDS);
+      }
+
+      // Get 2 messages starting at offset 2
+      List<ConsumerRecord<?, ?>> records = tp.getMessages(2, 2);
+
+      // Verify exactly 2 records returned starting at offset 2
+      assertThat("Should retrieve exactly 2 records", records.size(), is(2));
+      assertThat("First record should be at offset 2", records.get(0).offset(), is(2L));
+      assertThat("Second record should be at offset 3", records.get(1).offset(), is(3L));
+    } finally {
+      if (tp != null && !tp.isClosed()) {
+        try {
+          tp.close();
+        } catch (IllegalStateException e) {
+          logger.debug("Ignoring IllegalStateException while closing ThinPeer", e);
+        }
+      }
+    }
   }
 
   /**
@@ -1961,19 +2029,43 @@ public class ThinPeerIT extends AbstractIntegrationTest {
    * [INTEGRATION:ThinPeerIT.sendJsonRpcRequestToLog_validRequest_sentSuccessfully]
    */
   @Test
-  @Ignore("Awaiting implementation in #637")
   public void sendJsonRpcRequestToLog_validRequest_sentSuccessfully() throws Exception {
-    // Given: ThinPeer configured as a producer with a Kafka WAL
-    // When: sendJsonRpcRequestToLog() is called with a valid JsonRpcRequest
-    // Then: The returned Future completes successfully (no exception)
+    LogInfo testLog = createTestLog();
+    Properties producerProperties = getKafkaProducerProperties();
 
-    // TODO(#637): Implement test logic
-    // 1. Create ThinPeer with real Kafka producer properties and a test log
-    // 2. Build a valid JsonRpcRequest using JsonRpcMessageFactory.buildClassMethodCall()
-    // 3. Call sendJsonRpcRequestToLog(request)
-    // 4. Assert the returned Future completes within timeout (future.get(5, SECONDS))
-    // 5. Verify RecordMetadata has a valid offset (>= 0)
-    fail("Not yet implemented");
+    ThinPeer tp = null;
+    try {
+      tp =
+          new ThinPeer()
+              .withDirectoryProvider(directoryConnectionProvider)
+              .withProducerProperties(producerProperties)
+              .withOutputLog(testLog)
+              .withSelfRegistration(false)
+              .init();
+
+      // Build a valid JsonRpcRequest
+      JsonRpcRequest request =
+          JsonRpcMessageFactory.buildClassMethodCall(
+              "io.quasient.pal.apps.quantized.rpc.Methods",
+              "staticIntNoArgs",
+              Collections.emptyList());
+
+      // Send to log
+      Future<RecordMetadata> sendFuture = tp.sendJsonRpcRequestToLog(request);
+      RecordMetadata metadata = sendFuture.get(10, TimeUnit.SECONDS);
+
+      // Verify the send completed successfully with a valid offset
+      assertNotNull("RecordMetadata should not be null", metadata);
+      assertTrue("Offset should be >= 0", metadata.offset() >= 0);
+    } finally {
+      if (tp != null && !tp.isClosed()) {
+        try {
+          tp.close();
+        } catch (IllegalStateException e) {
+          logger.debug("Ignoring IllegalStateException while closing ThinPeer", e);
+        }
+      }
+    }
   }
 
   /**
@@ -1982,23 +2074,68 @@ public class ThinPeerIT extends AbstractIntegrationTest {
    * <p>Acceptance Criteria: [INTEGRATION:ThinPeerIT.startListenerThread_receivesMessages]
    */
   @Test
-  @Ignore("Awaiting implementation in #637")
   public void startListenerThread_receivesMessages() throws Exception {
-    // Given: ThinPeer initialized with a ZMQ RPC address (which starts the listener thread),
-    //        and a registered IncomingMessageListener
-    // When: A message arrives on the inbound RPC socket (sent from another ThinPeer)
-    // Then: The listener's onMessageReceived() callback is invoked with the message
+    String listenerAddress = "tcp://127.0.0.1:5660";
+    ThinPeer receiver = null;
+    ThinPeer sender = null;
+    try {
+      // Create receiving ThinPeer with ZMQ RPC address (starts listener thread)
+      receiver =
+          new ThinPeer()
+              .withDirectoryProvider(directoryConnectionProvider)
+              .withZmqRpcAddress(listenerAddress)
+              .withSelfRegistration(false)
+              .init();
 
-    // TODO(#637): Implement test logic
-    // 1. Create ThinPeer with withZmqRpcAddress("tcp://127.0.0.1:0") to bind inbound socket
-    //    and start the listener thread
-    // 2. Register an IncomingMessageListener that captures received messages
-    // 3. Create a second ThinPeer and connect it to the first peer's ZMQ address
-    // 4. Send a message from the second peer to the first peer
-    // 5. Wait briefly for async delivery
-    // 6. Assert the listener was called and the message was received
-    // 7. Alternatively, verify pullReceivedMessages() returns the message
-    fail("Not yet implemented");
+      // Register an IncomingMessageListener that captures received messages
+      List<Message> capturedMessages = Collections.synchronizedList(new ArrayList<>());
+      receiver.addMessageListener(capturedMessages::add);
+
+      // Create sender ThinPeer and connect it to the receiver's ZMQ address
+      sender =
+          new ThinPeer()
+              .withDirectoryProvider(directoryConnectionProvider)
+              .withOutboundRpcType(RpcType.ZMQ_RPC)
+              .withSelfRegistration(false)
+              .init();
+
+      PeerInfo receiverPeerInfo = new PeerInfo(receiver.getPeerUuid());
+      receiverPeerInfo.setZmqRpcAddress(listenerAddress);
+      sender.connectToPeer(receiverPeerInfo);
+
+      // Send a control message (PING) from sender to receiver
+      ControlMessage pingMsg =
+          msgBuilder.buildControlCommandMessage(sender.getPeerUuid(), ControlCommandType.PING);
+      sender.sendToPeer(pingMsg);
+
+      // Wait briefly for async delivery
+      Thread.sleep(500);
+
+      // Verify the listener received the message via pullReceivedMessages
+      List<Message> received = receiver.pullReceivedMessages();
+      assertThat("Should have received at least 1 message", received.size() >= 1, is(true));
+
+      // Also verify the IncomingMessageListener was notified
+      assertThat(
+          "Listener should have captured at least 1 message",
+          capturedMessages.size() >= 1,
+          is(true));
+    } finally {
+      if (sender != null && !sender.isClosed()) {
+        try {
+          sender.close();
+        } catch (IllegalStateException e) {
+          logger.debug("Ignoring IllegalStateException while closing sender ThinPeer", e);
+        }
+      }
+      if (receiver != null && !receiver.isClosed()) {
+        try {
+          receiver.close();
+        } catch (IllegalStateException e) {
+          logger.debug("Ignoring IllegalStateException while closing receiver ThinPeer", e);
+        }
+      }
+    }
   }
 
   /**
@@ -2007,21 +2144,34 @@ public class ThinPeerIT extends AbstractIntegrationTest {
    * <p>Acceptance Criteria: [INTEGRATION:ThinPeerIT.connectZmqSocketWithTimeout_validPeer_connects]
    */
   @Test
-  @Ignore("Awaiting implementation in #637")
   public void connectZmqSocketWithTimeout_validPeer_connects() throws Exception {
-    // Given: A running ZMQ peer (the shared peer) with a known address
-    // When: connectToPeer(peerInfo, Duration.ofSeconds(10)) is called
-    // Then: Returns true, isTalkingToPeer() returns true, isZmqSocketConnected() returns true
+    ThinPeer tp = null;
+    try {
+      tp =
+          new ThinPeer()
+              .withDirectoryProvider(directoryConnectionProvider)
+              .withOutboundRpcType(RpcType.ZMQ_RPC)
+              .withSelfRegistration(false)
+              .init();
 
-    // TODO(#637): Implement test logic
-    // 1. Create ThinPeer with ZMQ_RPC outbound type
-    // 2. Find the shared ZMQ peer via findRpcPeer()
-    // 3. Call connectToPeer(peerInfo, Duration.ofSeconds(10))
-    // 4. Assert returns true
-    // 5. Assert isTalkingToPeer() is true
-    // 6. Assert isZmqSocketConnected() is true
-    // 7. Assert getCurrentPeer() matches the connected peer
-    fail("Not yet implemented");
+      PeerInfo zmqPeer = findRpcPeer(RpcType.ZMQ_RPC, directoryConnectionProvider).orElseThrow();
+      boolean connected = tp.connectToPeer(zmqPeer, Duration.ofSeconds(10));
+
+      assertTrue("Should connect successfully", connected);
+      assertTrue("Should be talking to peer", tp.isTalkingToPeer());
+      assertTrue("ZMQ socket should be connected", tp.isZmqSocketConnected());
+      assertNotNull("Current peer should not be null", tp.getCurrentPeer());
+      assertEquals(
+          "Current peer UUID should match", zmqPeer.getUuid(), tp.getCurrentPeer().getUuid());
+    } finally {
+      if (tp != null && !tp.isClosed()) {
+        try {
+          tp.close();
+        } catch (IllegalStateException e) {
+          logger.debug("Ignoring IllegalStateException while closing ThinPeer", e);
+        }
+      }
+    }
   }
 
   /**
@@ -2031,20 +2181,35 @@ public class ThinPeerIT extends AbstractIntegrationTest {
    * [INTEGRATION:ThinPeerIT.connectZmqSocketWithTimeout_invalidPeer_returnsFalse]
    */
   @Test
-  @Ignore("Awaiting implementation in #637")
   public void connectZmqSocketWithTimeout_invalidPeer_returnsFalse() throws Exception {
-    // Given: A PeerInfo with a non-existent ZMQ RPC address
-    // When: connectToPeer(invalidPeerInfo, Duration.ofSeconds(2)) is called
-    // Then: Returns false within the timeout period
+    ThinPeer tp = null;
+    try {
+      tp =
+          new ThinPeer()
+              .withDirectoryProvider(directoryConnectionProvider)
+              .withOutboundRpcType(RpcType.ZMQ_RPC)
+              .withSelfRegistration(false)
+              .init();
 
-    // TODO(#637): Implement test logic
-    // 1. Create ThinPeer with ZMQ_RPC outbound type
-    // 2. Create a PeerInfo with a non-existent ZMQ address (e.g., tcp://localhost:59999)
-    // 3. Call connectToPeer(invalidPeerInfo, Duration.ofSeconds(2))
-    // 4. Assert returns false
-    // 5. Assert elapsed time respects the timeout (within reasonable margin)
-    // 6. Assert ThinPeer is still usable (not closed)
-    fail("Not yet implemented");
+      PeerInfo invalidPeer = new PeerInfo(UUID.randomUUID());
+      invalidPeer.setZmqRpcAddress("tcp://localhost:59999");
+
+      long startTime = System.currentTimeMillis();
+      boolean connected = tp.connectToPeer(invalidPeer, Duration.ofSeconds(2));
+      long elapsed = System.currentTimeMillis() - startTime;
+
+      assertFalse("Should not connect to non-existent peer", connected);
+      assertTrue("Should respect timeout (elapsed: " + elapsed + "ms)", elapsed < 4000);
+      assertFalse("ThinPeer should still be usable (not closed)", tp.isClosed());
+    } finally {
+      if (tp != null && !tp.isClosed()) {
+        try {
+          tp.close();
+        } catch (IllegalStateException e) {
+          logger.debug("Ignoring IllegalStateException while closing ThinPeer", e);
+        }
+      }
+    }
   }
 
   /**
@@ -2053,20 +2218,37 @@ public class ThinPeerIT extends AbstractIntegrationTest {
    * <p>Acceptance Criteria: [INTEGRATION:ThinPeerIT.sendPing_zmqSocket_returnsElapsedTime]
    */
   @Test
-  @Ignore("Awaiting implementation in #637")
   public void sendPing_zmqSocket_returnsElapsedTime() throws Exception {
-    // Given: ThinPeer connected to the shared peer via ZMQ RPC
-    // When: sendPing() is called
-    // Then: Returns a positive elapsed time (>= 0.0 milliseconds)
+    ThinPeer tp = null;
+    try {
+      tp =
+          new ThinPeer()
+              .withDirectoryProvider(directoryConnectionProvider)
+              .withOutboundRpcType(RpcType.ZMQ_RPC)
+              .withSelfRegistration(false)
+              .init();
 
-    // TODO(#637): Implement test logic
-    // 1. Create ThinPeer with ZMQ_RPC outbound type
-    // 2. Connect to the shared ZMQ peer
-    // 3. Call sendPing()
-    // 4. Assert returned value >= 0.0 (positive elapsed time in milliseconds)
-    // 5. Optionally call sendPing(Duration.ofSeconds(5)) to test the timeout variant
-    // 6. Assert the timeout variant also returns >= 0.0
-    fail("Not yet implemented");
+      PeerInfo zmqPeer = findRpcPeer(RpcType.ZMQ_RPC, directoryConnectionProvider).orElseThrow();
+      tp.connectToPeer(zmqPeer);
+
+      // Test sendPing() without timeout
+      double pingTime = tp.sendPing();
+      assertTrue("Ping should return valid time (>= 0.0), got: " + pingTime, pingTime >= 0.0);
+
+      // Test sendPing(Duration) with explicit timeout
+      double pingTimeWithTimeout = tp.sendPing(Duration.ofSeconds(5));
+      assertTrue(
+          "Ping with timeout should return valid time (>= 0.0), got: " + pingTimeWithTimeout,
+          pingTimeWithTimeout >= 0.0);
+    } finally {
+      if (tp != null && !tp.isClosed()) {
+        try {
+          tp.close();
+        } catch (IllegalStateException e) {
+          logger.debug("Ignoring IllegalStateException while closing ThinPeer", e);
+        }
+      }
+    }
   }
 
   /**
@@ -2075,20 +2257,40 @@ public class ThinPeerIT extends AbstractIntegrationTest {
    * <p>Acceptance Criteria: [INTEGRATION:ThinPeerIT.sendToPeer_controlMessage_receivesResponse]
    */
   @Test
-  @Ignore("Awaiting implementation in #637")
   public void sendToPeer_controlMessage_receivesResponse() throws Exception {
-    // Given: ThinPeer connected to a running peer via ZMQ RPC
-    // When: sendToPeer() is called with a PING ControlMessage
-    // Then: A ControlMessage response is returned with OK status
+    ThinPeer tp = null;
+    try {
+      tp =
+          new ThinPeer()
+              .withDirectoryProvider(directoryConnectionProvider)
+              .withOutboundRpcType(RpcType.ZMQ_RPC)
+              .withSelfRegistration(false)
+              .init();
 
-    // TODO(#637): Implement test logic
-    // 1. Create ThinPeer with ZMQ_RPC outbound type
-    // 2. Connect to the shared ZMQ peer
-    // 3. Build a PING ControlMessage using msgBuilder.buildControlCommandMessage()
-    // 4. Call sendToPeer(controlMessage)
-    // 5. Assert response is not null
-    // 6. Assert response status is ControlStatusType.OK
-    // 7. Assert response.getResponseToId() matches the sent message's ID
-    fail("Not yet implemented");
+      PeerInfo zmqPeer = findRpcPeer(RpcType.ZMQ_RPC, directoryConnectionProvider).orElseThrow();
+      tp.connectToPeer(zmqPeer);
+
+      // Build and send a PING ControlMessage
+      ControlMessage pingMsg =
+          msgBuilder.buildControlCommandMessage(tp.getPeerUuid(), ControlCommandType.PING);
+      ControlMessage response = tp.sendToPeer(pingMsg);
+
+      // Verify response
+      assertNotNull("Response should not be null", response);
+      assertEquals(
+          "Response status should be OK", ControlStatusType.OK.toId(), response.getStatus());
+      assertEquals(
+          "Response should reference sent message ID",
+          pingMsg.getMessageId(),
+          response.getResponseToId());
+    } finally {
+      if (tp != null && !tp.isClosed()) {
+        try {
+          tp.close();
+        } catch (IllegalStateException e) {
+          logger.debug("Ignoring IllegalStateException while closing ThinPeer", e);
+        }
+      }
+    }
   }
 }
