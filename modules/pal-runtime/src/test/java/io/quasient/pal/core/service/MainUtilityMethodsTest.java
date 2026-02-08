@@ -9,15 +9,28 @@
  */
 package io.quasient.pal.core.service;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.fail;
+import static org.slf4j.Logger.ROOT_LOGGER_NAME;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.LoggerContext;
+import ch.qos.logback.classic.util.ContextInitializer;
+import io.quasient.pal.core.execution.java.CustomClassloader;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
+import org.slf4j.LoggerFactory;
 
 /**
  * Unit tests for private utility methods in {@link Main}.
@@ -153,93 +166,132 @@ public class MainUtilityMethodsTest {
     assertThat(result, nullValue());
   }
 
-  // ===== Test stubs for #633 (awaiting implementation in #634) =====
+  /** Original peer.logging system property value, saved for restoration. */
+  private String originalPeerLogging;
 
-  /**
-   * Tests that createCustomClassloader() with a valid classpath creates a classloader that can load
-   * classes from the specified path.
-   *
-   * <p>Acceptance criterion:
-   * [TEST:MainUtilityMethodsTest.createCustomClassloader_withClasspath_createsLoader]
-   */
+  @After
+  public void resetLogback() {
+    // Restore system property
+    if (originalPeerLogging != null) {
+      System.setProperty("peer.logging", originalPeerLogging);
+    } else {
+      System.clearProperty("peer.logging");
+    }
+    // Reset Logback to prevent state pollution across tests
+    LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
+    context.reset();
+    ContextInitializer ci = new ContextInitializer(context);
+    try {
+      ci.autoConfig();
+    } catch (Exception e) {
+      // If auto-config fails, just leave it reset
+    }
+  }
+
+  // ===== Tests for createCustomClassloader and initLogging =====
+
+  /** Tests that createCustomClassloader() with a classpath creates the right classloader type. */
   @Test
-  @Ignore("Awaiting implementation in #634")
   public void createCustomClassloader_withClasspath_createsLoader() throws Exception {
-    // Given: Main instance with classpath field set to a valid directory
-    //        (e.g., "target/test-classes")
-    // When: createCustomClassloader() is called via reflection
-    // Then: The customClassloader field should be non-null
-    //       and should be an instance of CustomClassloader
+    Main m = new Main();
+    Field cpField = Main.class.getDeclaredField("classpath");
+    cpField.setAccessible(true);
+    cpField.set(m, "target/test-classes");
 
-    // TODO(#634): Implement test logic
-    // Hint: Set "classpath" field via reflection, call private createCustomClassloader(),
-    //       then reflect the "customClassloader" field and verify it's non-null
-    fail("Not yet implemented");
+    Method createCcl = Main.class.getDeclaredMethod("createCustomClassloader");
+    createCcl.setAccessible(true);
+    createCcl.invoke(m);
+
+    Field cclField = Main.class.getDeclaredField("customClassloader");
+    cclField.setAccessible(true);
+    Object ccl = cclField.get(m);
+    assertThat(ccl, is(notNullValue()));
+    assertThat(ccl, instanceOf(CustomClassloader.class));
   }
 
-  /**
-   * Tests that createCustomClassloader() with null/empty classpath creates a classloader using the
-   * default (context) classloader as parent.
-   *
-   * <p>Acceptance criterion:
-   * [TEST:MainUtilityMethodsTest.createCustomClassloader_emptyClasspath_usesDefault]
-   */
+  /** Tests that createCustomClassloader() with null classpath still creates a classloader. */
   @Test
-  @Ignore("Awaiting implementation in #634")
   public void createCustomClassloader_emptyClasspath_usesDefault() throws Exception {
-    // Given: Main instance with classpath field left as null (default)
-    // When: createCustomClassloader() is called via reflection
-    // Then: The customClassloader field should be non-null
-    //       (created with empty URL array, parent is context classloader)
+    Main m = new Main();
+    // classpath is null by default
 
-    // TODO(#634): Implement test logic
-    // Hint: Leave "classpath" as null, call private createCustomClassloader(),
-    //       then reflect the "customClassloader" field and verify it's non-null
-    fail("Not yet implemented");
+    Method createCcl = Main.class.getDeclaredMethod("createCustomClassloader");
+    createCcl.setAccessible(true);
+    createCcl.invoke(m);
+
+    Field cclField = Main.class.getDeclaredField("customClassloader");
+    cclField.setAccessible(true);
+    Object ccl = cclField.get(m);
+    assertThat(ccl, is(notNullValue()));
+    assertThat(ccl, instanceOf(CustomClassloader.class));
   }
 
-  /**
-   * Tests that initLogging() with a custom logback config (via "peer.logging" system property)
-   * applies that custom configuration.
-   *
-   * <p>Acceptance criterion:
-   * [TEST:MainUtilityMethodsTest.initLogging_withCustomLogbackConfig_usesCustomConfig]
-   */
+  /** Tests that initLogging() applies a custom logback configuration. */
   @Test
-  @Ignore("Awaiting implementation in #634")
   public void initLogging_withCustomLogbackConfig_usesCustomConfig() throws Exception {
-    // Given: A valid logback XML config file on disk
-    //        System property "peer.logging" set to that file's path
-    // When: initLogging() is called via reflection
-    // Then: The Logback context should be configured with the custom configuration
-    //       (verify by checking a logger level or appender set by the custom config)
+    originalPeerLogging = System.getProperty("peer.logging");
 
-    // TODO(#634): Implement test logic
-    // Hint: Create a temp logback config file, set System.setProperty("peer.logging", path),
-    //       call private initLogging(), verify LoggerContext state.
-    //       Clean up: restore the system property and reset Logback in @After.
-    fail("Not yet implemented");
+    // Create a temp logback config file with a known root level
+    Path tmpConfig = Files.createTempFile("logback-test-", ".xml");
+    Files.writeString(
+        tmpConfig,
+        """
+        <configuration>
+          <root level="WARN"/>
+        </configuration>
+        """);
+    System.setProperty("peer.logging", tmpConfig.toString());
+
+    Main m = new Main();
+    Method initLogging = Main.class.getDeclaredMethod("initLogging");
+    initLogging.setAccessible(true);
+    initLogging.invoke(m);
+
+    LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
+    assertThat(context.getLogger(ROOT_LOGGER_NAME).getLevel(), is(Level.WARN));
+
+    Files.deleteIfExists(tmpConfig);
   }
 
-  /**
-   * Tests that initLogging() without a custom config falls back to the default configuration
-   * resource (/peer-logging-fallback.xml).
-   *
-   * <p>Acceptance criterion:
-   * [TEST:MainUtilityMethodsTest.initLogging_withoutCustomConfig_usesDefault]
-   */
+  /** Tests that initLogging() uses the fallback config when no custom config is set. */
   @Test
-  @Ignore("Awaiting implementation in #634")
   public void initLogging_withoutCustomConfig_usesDefault() throws Exception {
-    // Given: System property "peer.logging" is null or not set
-    // When: initLogging() is called via reflection
-    // Then: The Logback context should be configured using the default
-    //       /peer-logging-fallback.xml resource (no errors on stderr)
+    originalPeerLogging = System.getProperty("peer.logging");
+    System.clearProperty("peer.logging");
 
-    // TODO(#634): Implement test logic
-    // Hint: Ensure System.getProperty("peer.logging") is null,
-    //       call private initLogging(), verify no errors printed to stderr.
-    //       Clean up: reset Logback in @After.
-    fail("Not yet implemented");
+    PrintStream originalErr = System.err;
+    ByteArrayOutputStream capturedErr = new ByteArrayOutputStream();
+    System.setErr(new PrintStream(capturedErr));
+    try {
+      Main m = new Main();
+      Method initLogging = Main.class.getDeclaredMethod("initLogging");
+      initLogging.setAccessible(true);
+      initLogging.invoke(m);
+
+      // The default config sets root level to ERROR
+      LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
+      assertThat(context.getLogger(ROOT_LOGGER_NAME).getLevel(), is(Level.ERROR));
+
+      // No errors should be printed to stderr
+      String errOutput = capturedErr.toString(UTF_8);
+      assertThat(errOutput.contains("Error loading logging configuration"), is(false));
+    } finally {
+      System.setErr(originalErr);
+    }
+  }
+
+  /** Tests that createCustomClassloader() stores the classloader in the expected field. */
+  @Test
+  public void createCustomClassloader_setsFieldOnMainInstance() throws Exception {
+    Main m = new Main();
+    Field cclField = Main.class.getDeclaredField("customClassloader");
+    cclField.setAccessible(true);
+    assertThat(cclField.get(m), is(nullValue()));
+
+    Method createCcl = Main.class.getDeclaredMethod("createCustomClassloader");
+    createCcl.setAccessible(true);
+    createCcl.invoke(m);
+
+    assertThat(cclField.get(m), is(notNullValue()));
   }
 }

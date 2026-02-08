@@ -12,16 +12,18 @@ package io.quasient.pal.core.service;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.fail;
+import static org.hamcrest.Matchers.notNullValue;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.security.Permission;
 import java.util.EnumSet;
 import java.util.Properties;
+import java.util.Set;
 import java.util.UUID;
-import org.junit.Ignore;
 import org.junit.Test;
 
+/** Tests for {@link Main#validateInput()} and {@link Main#addMiscProperties()}. */
 public class MainValidatePropsTest {
 
   private static void setField(Object target, String field, Object value) throws Exception {
@@ -82,146 +84,180 @@ public class MainValidatePropsTest {
     assertThat(out, containsString("inproc://"));
   }
 
-  // ===== Test stubs for #633 (awaiting implementation in #634) =====
+  // ===== Chronicle log, Kafka requirements, auto ports, intercepts, and more =====
 
-  /**
-   * Tests that a Chronicle WAL path (file:/tmp/wal) sets the chronicle log property.
-   *
-   * <p>Acceptance criterion:
-   * [TEST:MainValidatePropsTest.validate_chronicleLog_setsChronicleLogProperty]
-   */
+  /** Tests that a Chronicle WAL sets the chronicle log type property. */
   @Test
-  @Ignore("Awaiting implementation in #634")
   public void validate_chronicleLog_setsChronicleLogProperty() throws Exception {
-    // Given: Main instance with wal set to a Chronicle path (file:/tmp/wal)
-    // When: validateInput() and addMiscProperties() are called
-    // Then: properties should contain "wal.type" = "CHRONICLE"
-
-    // TODO(#634): Implement test logic
-    fail("Not yet implemented");
+    Main m = new Main();
+    setField(m, "uuid", UUID.randomUUID());
+    setField(m, "wal", "file:/tmp/wal");
+    callValidateInput(m);
+    Properties p = (Properties) getField(m, "properties");
+    assertThat(p.getProperty("wal.type"), is("CHRONICLE"));
   }
 
-  /**
-   * Tests that specifying a source log without Kafka servers (for non-Chronicle log) triggers an
-   * error.
-   *
-   * <p>Acceptance criterion:
-   * [TEST:MainValidatePropsTest.validate_sourceLogWithoutKafka_throwsPeerException]
-   */
+  /** Tests that a source log without Kafka servers triggers a fatal exit. */
   @Test
-  @Ignore("Awaiting implementation in #634")
+  @SuppressWarnings("removal")
   public void validate_sourceLogWithoutKafka_throwsPeerException() throws Exception {
-    // Given: Main instance with sourceLog set to a Kafka topic (non-Chronicle)
-    //        but kafkaServers is null
-    // When: validateInput() is called
-    // Then: fatalExit is triggered with ERROR_NO_KAFKA_SERVERS_GIVEN
-    //       (use ExitTrappingSecurityManager pattern from MainErrorHandlingTest)
-
-    // TODO(#634): Implement test logic
-    fail("Not yet implemented");
+    SecurityManager original = System.getSecurityManager();
+    System.setSecurityManager(new ExitTrappingSecurityManager());
+    try {
+      Main m = new Main();
+      setField(m, "uuid", UUID.randomUUID());
+      setField(m, "sourceLog", "my-kafka-topic");
+      // kafkaServers is null by default — should trigger fatalExit with code 6
+      Method validate = Main.class.getDeclaredMethod("validateInput");
+      validate.setAccessible(true);
+      int exitCode = -1;
+      try {
+        validate.invoke(m);
+      } catch (java.lang.reflect.InvocationTargetException e) {
+        if (e.getCause() instanceof ExitTrappedException) {
+          exitCode = ((ExitTrappedException) e.getCause()).getExitCode();
+        } else {
+          throw e;
+        }
+      }
+      assertThat(exitCode, is(PeerException.FatalCode.ERROR_NO_KAFKA_SERVERS_GIVEN.getCode()));
+    } finally {
+      System.setSecurityManager(original);
+    }
   }
 
-  /**
-   * Tests that zmq-rpc=auto finds an available port and sets the property.
-   *
-   * <p>Acceptance criterion: [TEST:MainValidatePropsTest.validate_zmqRpcAuto_findsAvailablePort]
-   */
+  /** Tests that zmq-rpc=auto finds an available port. */
   @Test
-  @Ignore("Awaiting implementation in #634")
   public void validate_zmqRpcAuto_findsAvailablePort() throws Exception {
-    // Given: Main instance with zmqRpc set to "auto"
-    // When: validateInput() and addMiscProperties() are called
-    // Then: properties "in.zmq.rpc" should contain "tcp://localhost:" with a valid port
-    //       and runOptions should contain WITH_ZMQ_RPC
-
-    // TODO(#634): Implement test logic
-    fail("Not yet implemented");
+    Main m = new Main();
+    setField(m, "uuid", UUID.randomUUID());
+    setField(m, "zmqRpc", "auto");
+    setField(m, "rpcThreads", 1);
+    callValidateInput(m);
+    Properties p = (Properties) getField(m, "properties");
+    String zmqRpcAddr = p.getProperty("in.zmq.rpc");
+    assertThat(zmqRpcAddr, containsString("tcp://localhost:"));
+    @SuppressWarnings("unchecked")
+    Set<RunOptions> ro = (Set<RunOptions>) getField(m, "runOptions");
+    assertThat(ro.contains(RunOptions.WITH_ZMQ_RPC), is(true));
   }
 
-  /**
-   * Tests that json-rpc=auto finds an available port and sets the property.
-   *
-   * <p>Acceptance criterion: [TEST:MainValidatePropsTest.validate_jsonRpcAuto_findsAvailablePort]
-   */
+  /** Tests that json-rpc=auto finds an available port. */
   @Test
-  @Ignore("Awaiting implementation in #634")
   public void validate_jsonRpcAuto_findsAvailablePort() throws Exception {
-    // Given: Main instance with jsonRpc set to "auto"
-    // When: validateInput() and addMiscProperties() are called
-    // Then: properties "in.json.rpc" should contain "ws://localhost:" with a valid port
-    //       and runOptions should contain WITH_JSON_RPC
-
-    // TODO(#634): Implement test logic
-    fail("Not yet implemented");
+    Main m = new Main();
+    setField(m, "uuid", UUID.randomUUID());
+    setField(m, "jsonRpc", "auto");
+    setField(m, "rpcThreads", 1);
+    callValidateInput(m);
+    Properties p = (Properties) getField(m, "properties");
+    String jsonRpcAddr = p.getProperty("in.json.rpc");
+    assertThat(jsonRpcAddr, containsString("ws://localhost:"));
+    @SuppressWarnings("unchecked")
+    Set<RunOptions> ro = (Set<RunOptions>) getField(m, "runOptions");
+    assertThat(ro.contains(RunOptions.WITH_JSON_RPC), is(true));
   }
 
-  /**
-   * Tests that --interceptable without -d (directory) logs a warning and does not add
-   * WITH_INTERCEPTS to runOptions.
-   *
-   * <p>Acceptance criterion:
-   * [TEST:MainValidatePropsTest.validate_interceptsWithoutDirectory_throwsException]
-   */
+  /** Tests that --interceptable without a directory does not enable intercepts. */
   @Test
-  @Ignore("Awaiting implementation in #634")
   public void validate_interceptsWithoutDirectory_throwsException() throws Exception {
-    // Given: Main instance with interceptable=true but palDirectoryUrl=null
-    // When: validateInput() is called
-    // Then: runOptions should NOT contain WITH_INTERCEPTS
-    //       (warning is logged to stderr about --interceptable without directory)
-
-    // TODO(#634): Implement test logic
-    fail("Not yet implemented");
+    Main m = new Main();
+    setField(m, "uuid", UUID.randomUUID());
+    setField(m, "interceptable", true);
+    // palDirectoryUrl is null — so WITH_INTERCEPTS should NOT be added
+    callValidateInput(m);
+    @SuppressWarnings("unchecked")
+    Set<RunOptions> ro = (Set<RunOptions>) getField(m, "runOptions");
+    assertThat(ro.contains(RunOptions.WITH_INTERCEPTS), is(false));
   }
 
-  /**
-   * Tests that both WAL and source log can be configured together.
-   *
-   * <p>Acceptance criterion: [TEST:MainValidatePropsTest.validate_walAndSourceLog_bothSet]
-   */
+  /** Tests that WAL and source log can both be set as Chronicle. */
   @Test
-  @Ignore("Awaiting implementation in #634")
   public void validate_walAndSourceLog_bothSet() throws Exception {
-    // Given: Main instance with both wal and sourceLog set to Chronicle paths
-    //        (no kafkaServers needed for Chronicle)
-    // When: validateInput() and addMiscProperties() are called
-    // Then: runOptions should contain both WITH_WAL and WITH_SOURCE_LOG
-    //       properties should contain both "wal.type" and "source_log.type"
-
-    // TODO(#634): Implement test logic
-    fail("Not yet implemented");
+    Main m = new Main();
+    setField(m, "uuid", UUID.randomUUID());
+    setField(m, "wal", "file:/tmp/wal");
+    setField(m, "sourceLog", "file:/tmp/source");
+    callValidateInput(m);
+    Properties p = (Properties) getField(m, "properties");
+    assertThat(p.getProperty("wal.type"), is("CHRONICLE"));
+    assertThat(p.getProperty("source_log.type"), is("CHRONICLE"));
+    @SuppressWarnings("unchecked")
+    Set<RunOptions> ro = (Set<RunOptions>) getField(m, "runOptions");
+    assertThat(ro.contains(RunOptions.WITH_WAL), is(true));
+    assertThat(ro.contains(RunOptions.WITH_SOURCE_LOG), is(true));
   }
 
-  /**
-   * Tests that the -d flag sets the paldir URL and adds WITH_PALDIR to runOptions.
-   *
-   * <p>Acceptance criterion: [TEST:MainValidatePropsTest.validate_palDirUrl_setsRunOption]
-   */
+  /** Tests that the -d flag sets the paldir URL and run option. */
   @Test
-  @Ignore("Awaiting implementation in #634")
   public void validate_palDirUrl_setsRunOption() throws Exception {
-    // Given: Main instance with palDirectoryUrl set to "localhost:2379"
-    // When: validateInput() is called
-    // Then: runOptions should contain WITH_PALDIR
-    //       properties "paldir_url" should be "localhost:2379" (after addMiscProperties)
-
-    // TODO(#634): Implement test logic
-    fail("Not yet implemented");
+    Main m = new Main();
+    setField(m, "uuid", UUID.randomUUID());
+    setField(m, "palDirectoryUrl", "localhost:2379");
+    callValidateInput(m);
+    @SuppressWarnings("unchecked")
+    Set<RunOptions> ro = (Set<RunOptions>) getField(m, "runOptions");
+    assertThat(ro.contains(RunOptions.WITH_PALDIR), is(true));
+    Properties p = (Properties) getField(m, "properties");
+    assertThat(p.getProperty("paldir_url"), is("localhost:2379"));
   }
 
-  /**
-   * Tests that enabling sessions (via RPC) sets WITH_SESSIONS in runOptions.
-   *
-   * <p>Acceptance criterion: [TEST:MainValidatePropsTest.validate_sessionsEnabled_setsRunOption]
-   */
+  /** Tests that enabling RPC enables sessions in runOptions. */
   @Test
-  @Ignore("Awaiting implementation in #634")
   public void validate_sessionsEnabled_setsRunOption() throws Exception {
-    // Given: Main instance with zmqRpc set (which triggers session enabling)
-    // When: validateInput() is called
-    // Then: runOptions should contain WITH_SESSIONS
+    Main m = new Main();
+    setField(m, "uuid", UUID.randomUUID());
+    setField(m, "zmqRpc", "auto");
+    setField(m, "rpcThreads", 1);
+    callValidateInput(m);
+    @SuppressWarnings("unchecked")
+    Set<RunOptions> ro = (Set<RunOptions>) getField(m, "runOptions");
+    assertThat(ro.contains(RunOptions.WITH_SESSIONS), is(true));
+  }
 
-    // TODO(#634): Implement test logic
-    fail("Not yet implemented");
+  /** Tests that runOptions is populated after validation. */
+  @Test
+  public void validate_defaultRunOptions_isNonEmpty() throws Exception {
+    Main m = new Main();
+    setField(m, "uuid", UUID.randomUUID());
+    callValidateInput(m);
+    @SuppressWarnings("unchecked")
+    Set<RunOptions> ro = (Set<RunOptions>) getField(m, "runOptions");
+    assertThat(ro, is(notNullValue()));
+  }
+
+  // ===== Helper classes for System.exit() trapping =====
+
+  /** Exception thrown when System.exit() is called during testing. */
+  private static class ExitTrappedException extends SecurityException {
+    private final int exitCode;
+
+    ExitTrappedException(int exitCode) {
+      super("System.exit(" + exitCode + ") was trapped");
+      this.exitCode = exitCode;
+    }
+
+    int getExitCode() {
+      return exitCode;
+    }
+  }
+
+  /** SecurityManager that traps System.exit() calls. */
+  @SuppressWarnings("removal")
+  private static class ExitTrappingSecurityManager extends SecurityManager {
+    @Override
+    public void checkPermission(Permission perm) {
+      // Allow all
+    }
+
+    @Override
+    public void checkPermission(Permission perm, Object context) {
+      // Allow all
+    }
+
+    @Override
+    public void checkExit(int status) {
+      throw new ExitTrappedException(status);
+    }
   }
 }

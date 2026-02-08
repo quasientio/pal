@@ -11,6 +11,7 @@ package io.quasient.pal.core.service;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
@@ -18,13 +19,14 @@ import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.util.ContextInitializer;
 import io.quasient.pal.common.cli.PalCommand;
 import java.lang.reflect.Field;
+import java.security.Permission;
 import java.util.Properties;
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 
+/** Tests for {@link Main#call()}. */
 public class MainCallTest {
 
   @After
@@ -125,48 +127,77 @@ public class MainCallTest {
     pf.set(app, dummy);
   }
 
-  // ===== Test stubs for #633 (awaiting implementation in #634) =====
+  // ===== Tests for JAR handling and classpath =====
 
-  /**
-   * Tests that specifying a non-existent JAR file results in exit code 9
-   * (ERROR_JAR_NOT_FOUND_OR_MISSING_MANIFEST).
-   *
-   * <p>Acceptance criterion:
-   * [TEST:MainCallTest.call_withJarFile_nonExistentJar_throwsPeerException]
-   */
+  /** Tests that a non-existent JAR file triggers a fatal exit with code 9. */
   @Test
-  @Ignore("Awaiting implementation in #634")
+  @SuppressWarnings("removal")
   public void call_withJarFile_nonExistentJar_throwsPeerException() throws Exception {
-    // Given: Main instance configured with -jar pointing to a non-existent JAR file
-    // When: call() is invoked
-    // Then: The call should result in a PeerException with
-    //       FatalCode ERROR_JAR_NOT_FOUND_OR_MISSING_MANIFEST (exit code 9)
+    SecurityManager original = System.getSecurityManager();
+    System.setSecurityManager(
+        new SecurityManager() {
+          @Override
+          public void checkPermission(Permission perm) {
+            // Allow all
+          }
 
-    // TODO(#634): Implement test logic
-    // Hint: Use CommandLine.parseArgs("-jar", "/nonexistent/path/fake.jar")
-    //       and setParentCommandToEmpty(app), then call app.call()
-    //       Verify via exit code or ExitTrappingSecurityManager pattern
-    fail("Not yet implemented");
+          @Override
+          public void checkPermission(Permission perm, Object context) {
+            // Allow all
+          }
+
+          @Override
+          public void checkExit(int status) {
+            throw new SecurityException("exit(" + status + ")");
+          }
+        });
+    try {
+      Main app = new Main();
+      CommandLine cl = new CommandLine(app);
+      cl.parseArgs("-jar", "/nonexistent/path/fake.jar");
+      setParentCommandToEmpty(app);
+      try {
+        app.call();
+        fail("Expected SecurityException from System.exit() trap");
+      } catch (SecurityException e) {
+        assertThat(
+            e.getMessage(),
+            is(
+                "exit("
+                    + PeerException.FatalCode.ERROR_JAR_NOT_FOUND_OR_MISSING_MANIFEST.getCode()
+                    + ")"));
+      }
+    } finally {
+      System.setSecurityManager(original);
+    }
   }
 
-  /**
-   * Tests that the -cp flag creates a classloader with the specified classpath entries.
-   *
-   * <p>Acceptance criterion: [TEST:MainCallTest.call_withCustomClasspath_setsClassloader]
-   */
+  /** Tests that -cp flag creates a custom classloader for the specified path. */
   @Test
-  @Ignore("Awaiting implementation in #634")
   public void call_withCustomClasspath_setsClassloader() throws Exception {
-    // Given: Main instance configured with -cp pointing to a valid directory
-    // When: call() is invoked with a valid main class
-    // Then: The customClassloader field should be non-null and configured
-    //       with the specified classpath entries
+    Main app = new Main();
+    CommandLine cl = new CommandLine(app);
+    cl.parseArgs("-cp", "target/test-classes", "io.quasient.pal.core.service.testdata.DummyMain");
+    setParentCommandToEmpty(app);
+    int code = app.call();
+    assertThat(code, is(0));
+    Field f = Main.class.getDeclaredField("customClassloader");
+    f.setAccessible(true);
+    assertThat(f.get(app), is(notNullValue()));
+  }
 
-    // TODO(#634): Implement test logic
-    // Hint: Use CommandLine.parseArgs("-cp", "/some/path",
-    //       "io.quasient.pal.core.service.testdata.DummyMain")
-    //       and setParentCommandToEmpty(app), then call app.call()
-    //       Reflect the "customClassloader" field to verify it's set
-    fail("Not yet implemented");
+  /** Tests that call() sets the out.pub property. */
+  @Test
+  public void call_setsOutPubProperty() throws Exception {
+    Main app = new Main();
+    CommandLine cl = new CommandLine(app);
+    cl.parseArgs("io.quasient.pal.core.service.testdata.DummyMain");
+    setParentCommandToEmpty(app);
+    int code = app.call();
+    assertThat(code, is(0));
+    Field f = Main.class.getDeclaredField("properties");
+    f.setAccessible(true);
+    Properties p = (Properties) f.get(app);
+    assertThat(p.getProperty("out.pub"), is(notNullValue()));
   }
 }
