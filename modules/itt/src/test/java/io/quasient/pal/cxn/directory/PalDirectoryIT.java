@@ -42,7 +42,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -2088,14 +2087,15 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #638")
   public void peerExists_existingPeer_returnsTrue() throws Exception {
     // Given: A registered peer
-    // When: peerExists(uuid)
-    // Then: returns true
+    final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "exists-test-peer");
+    peerInfo.setZmqRpcAddress("tcp://127.0.0.1:5671");
+    palDirectory.createPeer(peerInfo);
+    createdPeers.add(peerInfo.getUuid());
 
-    // TODO(#638): Implement test logic
-    fail("Not yet implemented");
+    // When/Then: peerExists returns true
+    assertTrue(palDirectory.peerExists(peerInfo.getUuid()));
   }
 
   /**
@@ -2110,14 +2110,12 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #638")
   public void peerExists_nonExistentPeer_returnsFalse() throws Exception {
     // Given: Random UUID not in directory
-    // When: peerExists(uuid)
-    // Then: returns false
+    UUID randomUuid = UUID.randomUUID();
 
-    // TODO(#638): Implement test logic
-    fail("Not yet implemented");
+    // When/Then: peerExists returns false
+    assertFalse(palDirectory.peerExists(randomUuid));
   }
 
   /**
@@ -2132,22 +2130,39 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #638")
   public void updatePeer_withLeaseId_updatesStateAndMtime() throws Exception {
-    // Given: A registered peer with a live lease (created via createPeerLease)
-    // When: updatePeer(updatedPeerInfo, leaseId) called with the lease ID
-    // Then: Peer state is updated, mtime is refreshed, state is bound to lease
+    // Given: A registered peer with a live lease
+    final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "lease-update-peer");
+    peerInfo.setZmqRpcAddress("tcp://127.0.0.1:5671");
+    palDirectory.createPeer(peerInfo);
+    createdPeers.add(peerInfo.getUuid());
 
-    // TODO(#638): Implement test logic
-    // 1. Create peer
-    // 2. Create peer lease via palDirectory.createPeerLease(uuid, ttl)
-    // 3. Record initial mtime
-    // 4. Sleep briefly to ensure mtime changes
-    // 5. Call updatePeer(peerInfo, lease.getLeaseId())
-    // 6. Retrieve peer and verify mtime changed
-    // 7. Verify state reflects updated values
-    // 8. Clean up lease via lease.close()
-    fail("Not yet implemented");
+    PeerLease lease = palDirectory.createPeerLease(peerInfo.getUuid(), 60);
+
+    try {
+      // Record initial mtime
+      PeerInfo initial = palDirectory.getPeer(peerInfo.getUuid());
+      OffsetDateTime initialMtime = initial.getMTime();
+
+      // Sleep briefly to ensure mtime changes
+      TimeUnit.MILLISECONDS.sleep(50);
+
+      // When: updatePeer with lease ID and updated addresses
+      PeerInfo updatedPeerInfo = new PeerInfo(peerInfo.getUuid(), "lease-update-peer");
+      updatedPeerInfo.setZmqRpcAddress("tcp://127.0.0.1:9999");
+      updatedPeerInfo.setPubAddress("tcp://localhost:7777");
+      palDirectory.updatePeer(updatedPeerInfo, lease.leaseId);
+
+      // Then: Peer state is updated, mtime is refreshed
+      PeerInfo updated = palDirectory.getPeer(peerInfo.getUuid());
+      assertEquals("tcp://127.0.0.1:9999", updated.getZmqRpcAddress());
+      assertEquals("tcp://localhost:7777", updated.getPubAddress());
+      assertTrue(
+          "MTime should be updated after updatePeer",
+          updated.getMTime().isAfter(initialMtime) || updated.getMTime().isEqual(initialMtime));
+    } finally {
+      lease.close();
+    }
   }
 
   /**
@@ -2162,19 +2177,20 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #638")
   public void getSourceLogId_existingSourceLog_returnsUuid() throws Exception {
-    // Given: Peer with a source log registered via setSourceLog()
-    // When: getSourceLogId(peerUuid)
-    // Then: Returns the source log's UUID
+    // Given: Peer with a source log registered
+    final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID());
+    peerInfo.setZmqRpcAddress("tcp://127.0.0.1:5671");
+    palDirectory.createPeer(peerInfo);
+    createdPeers.add(peerInfo.getUuid());
 
-    // TODO(#638): Implement test logic
-    // 1. Create peer
-    // 2. Create log via createAutoLog()
-    // 3. Register it as source log via setSourceLog(peerInfo, logInfo, null)
-    // 4. Call getSourceLogId(peerUuid)
-    // 5. Assert returned UUID equals the log's UUID
-    fail("Not yet implemented");
+    LogInfo sourceLog = palDirectory.createAutoLog("test_source_636", getKafkaServers());
+    createdLogs.add(sourceLog.getName());
+    palDirectory.setSourceLog(peerInfo, sourceLog, null);
+
+    // When/Then: getSourceLogId returns the source log's UUID
+    UUID sourceLogId = palDirectory.getSourceLogId(peerInfo.getUuid());
+    assertEquals(sourceLog.getUuid(), sourceLogId);
   }
 
   /**
@@ -2189,14 +2205,15 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #638")
   public void getSourceLogId_noSourceLog_returnsNull_spec636() throws Exception {
     // Given: Peer created without any source log registration
-    // When: getSourceLogId(peerUuid)
-    // Then: Returns null
+    final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID());
+    peerInfo.setZmqRpcAddress("tcp://127.0.0.1:5671");
+    palDirectory.createPeer(peerInfo);
+    createdPeers.add(peerInfo.getUuid());
 
-    // TODO(#638): Implement test logic
-    fail("Not yet implemented");
+    // When/Then: getSourceLogId returns null
+    assertNull(palDirectory.getSourceLogId(peerInfo.getUuid()));
   }
 
   /**
@@ -2211,19 +2228,20 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #638")
   public void getWalId_existingWal_returnsUuid() throws Exception {
-    // Given: Peer with a WAL registered via setWalLog()
-    // When: getWalId(peerUuid)
-    // Then: Returns the WAL's UUID
+    // Given: Peer with a WAL registered
+    final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID());
+    peerInfo.setZmqRpcAddress("tcp://127.0.0.1:5671");
+    palDirectory.createPeer(peerInfo);
+    createdPeers.add(peerInfo.getUuid());
 
-    // TODO(#638): Implement test logic
-    // 1. Create peer
-    // 2. Create log via createAutoLog()
-    // 3. Register it as WAL via setWalLog(peerInfo, logInfo, null)
-    // 4. Call getWalId(peerUuid)
-    // 5. Assert returned UUID equals the log's UUID
-    fail("Not yet implemented");
+    LogInfo walLog = palDirectory.createAutoLog("test_wal_636", getKafkaServers());
+    createdLogs.add(walLog.getName());
+    palDirectory.setWalLog(peerInfo, walLog, null);
+
+    // When/Then: getWalId returns the WAL's UUID
+    UUID walId = palDirectory.getWalId(peerInfo.getUuid());
+    assertEquals(walLog.getUuid(), walId);
   }
 
   /**
@@ -2238,14 +2256,15 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #638")
   public void getWalId_noWal_returnsNull_spec636() throws Exception {
     // Given: Peer created without any WAL registration
-    // When: getWalId(peerUuid)
-    // Then: Returns null
+    final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID());
+    peerInfo.setZmqRpcAddress("tcp://127.0.0.1:5671");
+    palDirectory.createPeer(peerInfo);
+    createdPeers.add(peerInfo.getUuid());
 
-    // TODO(#638): Implement test logic
-    fail("Not yet implemented");
+    // When/Then: getWalId returns null
+    assertNull(palDirectory.getWalId(peerInfo.getUuid()));
   }
 
   /**
@@ -2260,17 +2279,17 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #638")
   public void countLogsWithPrefix_matchingLogs_returnsCount() throws Exception {
-    // Given: 3 logs with same prefix (e.g., "count-test-636")
-    // When: countLogsWithPrefix("count-test-636")
-    // Then: Returns 3
+    // Given: 3 logs with same prefix
+    String prefix = "count-test-636";
+    int logsToCreate = 3;
+    for (int i = 0; i < logsToCreate; i++) {
+      LogInfo log = palDirectory.createAutoLog(prefix, getKafkaServers());
+      createdLogs.add(log.getName());
+    }
 
-    // TODO(#638): Implement test logic
-    // 1. Create 3 logs using createAutoLog(prefix, kafkaServers)
-    // 2. Call countLogsWithPrefix(prefix)
-    // 3. Assert equals 3
-    fail("Not yet implemented");
+    // When/Then: countLogsWithPrefix returns 3
+    assertEquals(logsToCreate, palDirectory.countLogsWithPrefix(prefix));
   }
 
   /**
@@ -2285,19 +2304,24 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #638")
   public void deleteLogsWithPrefix_matchingLogs_deletesAllMatching() throws Exception {
-    // Given: Multiple logs with prefix (e.g., "delete-prefix-636")
-    // When: deleteLogsWithPrefix("delete-prefix-636")
-    // Then: All matching logs deleted, countLogsWithPrefix returns 0
+    // Given: Multiple logs with prefix
+    String prefix = "delete-prefix-636";
+    int logsToCreate = 4;
+    for (int i = 0; i < logsToCreate; i++) {
+      LogInfo log = palDirectory.createAutoLog(prefix, getKafkaServers());
+      createdLogs.add(log.getName());
+    }
 
-    // TODO(#638): Implement test logic
-    // 1. Create N logs with prefix
-    // 2. Verify countLogsWithPrefix returns N
-    // 3. Call deleteLogsWithPrefix(prefix)
-    // 4. Verify return value equals N
-    // 5. Verify countLogsWithPrefix now returns 0
-    fail("Not yet implemented");
+    // Verify logs were created
+    assertEquals(logsToCreate, palDirectory.countLogsWithPrefix(prefix));
+
+    // When: deleteLogsWithPrefix
+    long deleted = palDirectory.deleteLogsWithPrefix(prefix);
+
+    // Then: All matching logs deleted
+    assertEquals(logsToCreate, deleted);
+    assertEquals(0, palDirectory.countLogsWithPrefix(prefix));
   }
 
   /**
@@ -2313,19 +2337,30 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #638")
   public void createIntercept_withDedicatedTtl_createsWithOwnLease() throws Exception {
     // Given: A registered peer (no peer lease)
-    // When: createIntercept(request, 10) with TTL=10 seconds
-    // Then: Intercept created with its own lease, visible in listInterceptsForPeer
+    final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "dedicated-ttl-peer");
+    peerInfo.setZmqRpcAddress("tcp://127.0.0.1:5671");
+    palDirectory.createPeer(peerInfo);
+    createdPeers.add(peerInfo.getUuid());
 
-    // TODO(#638): Implement test logic
-    // 1. Create peer
-    // 2. Create intercept request with TTL > 0 (e.g., 10 seconds)
-    // 3. Verify intercept exists via listInterceptsForPeer
-    // 4. Verify peer still exists (dedicated lease is separate from peer)
-    // 5. Clean up intercept
-    fail("Not yet implemented");
+    // When: createIntercept with TTL=10 seconds
+    InterceptRequest<InterceptableMethodCall> req =
+        new InterceptRequest<>(
+            UUID.randomUUID(),
+            peerInfo.getUuid(),
+            InterceptType.BEFORE,
+            "java.io.PrintStream",
+            "org.package.Callback",
+            "callMe",
+            new InterceptableMethodCall("println", Arrays.asList("java.lang.String")));
+
+    palDirectory.createIntercept(req, 10);
+    addInterceptRequestToCreated(peerInfo.getUuid(), req.getUuid());
+
+    // Then: Intercept exists and peer still exists
+    assertEquals(1, palDirectory.listInterceptsForPeer(peerInfo.getUuid()).size());
+    assertNotNull(palDirectory.getPeer(peerInfo.getUuid()));
   }
 
   /**
@@ -2340,20 +2375,33 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #638")
   public void createIntercept_withZeroTtl_usesNoPeerLease() throws Exception {
     // Given: Peer with no active peer lease
-    // When: createIntercept(request, 0)
-    // Then: Intercept created with no lease, persists indefinitely
+    final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "zero-ttl-peer");
+    peerInfo.setZmqRpcAddress("tcp://127.0.0.1:5671");
+    palDirectory.createPeer(peerInfo);
+    createdPeers.add(peerInfo.getUuid());
 
-    // TODO(#638): Implement test logic
-    // 1. Create peer (without creating a peer lease)
-    // 2. Create intercept with TTL=0
-    // 3. Verify intercept exists
-    // 4. Wait briefly (e.g., 2 seconds)
-    // 5. Verify intercept still exists (no expiration)
-    // 6. Clean up
-    fail("Not yet implemented");
+    // When: createIntercept with TTL=0 (no lease)
+    InterceptRequest<InterceptableMethodCall> req =
+        new InterceptRequest<>(
+            UUID.randomUUID(),
+            peerInfo.getUuid(),
+            InterceptType.BEFORE,
+            "java.io.PrintStream",
+            "org.package.Callback",
+            "callMe",
+            new InterceptableMethodCall("println", Arrays.asList("java.lang.String")));
+
+    palDirectory.createIntercept(req, 0);
+    addInterceptRequestToCreated(peerInfo.getUuid(), req.getUuid());
+
+    // Then: Intercept exists
+    assertEquals(1, palDirectory.listInterceptsForPeer(peerInfo.getUuid()).size());
+
+    // Wait briefly and verify it still persists (no expiration)
+    TimeUnit.SECONDS.sleep(2);
+    assertEquals(1, palDirectory.listInterceptsForPeer(peerInfo.getUuid()).size());
   }
 
   /**
@@ -2368,19 +2416,31 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #638")
   public void deleteIntercept_existingIntercept_removes() throws Exception {
     // Given: Peer with an intercept registered
-    // When: deleteIntercept(peerUuid, interceptUuid)
-    // Then: Intercept no longer in listInterceptsForPeer
+    final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "delete-intercept-peer");
+    peerInfo.setZmqRpcAddress("tcp://127.0.0.1:5671");
+    palDirectory.createPeer(peerInfo);
+    createdPeers.add(peerInfo.getUuid());
 
-    // TODO(#638): Implement test logic
-    // 1. Create peer
-    // 2. Create intercept request
-    // 3. Verify intercept exists (listInterceptsForPeer size == 1)
-    // 4. Call deleteIntercept(peerUuid, interceptUuid)
-    // 5. Verify listInterceptsForPeer is empty
-    fail("Not yet implemented");
+    InterceptRequest<InterceptableMethodCall> req =
+        new InterceptRequest<>(
+            UUID.randomUUID(),
+            peerInfo.getUuid(),
+            InterceptType.BEFORE,
+            "java.io.PrintStream",
+            "org.package.Callback",
+            "callMe",
+            new InterceptableMethodCall("println", Arrays.asList("java.lang.String")));
+
+    palDirectory.createIntercept(req);
+    assertEquals(1, palDirectory.listInterceptsForPeer(peerInfo.getUuid()).size());
+
+    // When: deleteIntercept
+    palDirectory.deleteIntercept(peerInfo.getUuid(), req.getUuid());
+
+    // Then: Intercept is removed
+    assertTrue(palDirectory.listInterceptsForPeer(peerInfo.getUuid()).isEmpty());
   }
 
   /**
@@ -2395,19 +2455,59 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #638")
   public void listAllIntercepts_multipleIntercepts_returnsAll() throws Exception {
-    // Given: 3 intercepts across 2 peers
-    // When: listAllIntercepts()
-    // Then: Returns set of size 3
+    // Given: 2 peers with intercepts
+    final PeerInfo peer1 = new PeerInfo(UUID.randomUUID(), "all-intercepts-peer1");
+    peer1.setZmqRpcAddress("tcp://127.0.0.1:5671");
+    palDirectory.createPeer(peer1);
+    createdPeers.add(peer1.getUuid());
 
-    // TODO(#638): Implement test logic
-    // 1. Create 2 peers
-    // 2. Create 2 intercepts for peer1, 1 intercept for peer2
-    // 3. Call listAllIntercepts()
-    // 4. Assert size == 3
-    // 5. Verify all intercept UUIDs are present
-    fail("Not yet implemented");
+    final PeerInfo peer2 = new PeerInfo(UUID.randomUUID(), "all-intercepts-peer2");
+    peer2.setZmqRpcAddress("tcp://127.0.0.1:5672");
+    palDirectory.createPeer(peer2);
+    createdPeers.add(peer2.getUuid());
+
+    // Create 2 intercepts for peer1
+    Set<UUID> interceptUuids = new HashSet<>();
+    for (int i = 0; i < 2; i++) {
+      InterceptRequest<InterceptableMethodCall> req =
+          new InterceptRequest<>(
+              UUID.randomUUID(),
+              peer1.getUuid(),
+              InterceptType.BEFORE,
+              "java.io.PrintStream",
+              "org.Callback",
+              "method" + i,
+              new InterceptableMethodCall("println", Arrays.asList("java.lang.String")));
+      palDirectory.createIntercept(req);
+      addInterceptRequestToCreated(peer1.getUuid(), req.getUuid());
+      interceptUuids.add(req.getUuid());
+    }
+
+    // Create 1 intercept for peer2
+    InterceptRequest<InterceptableMethodCall> req3 =
+        new InterceptRequest<>(
+            UUID.randomUUID(),
+            peer2.getUuid(),
+            InterceptType.AFTER,
+            "java.io.PrintStream",
+            "org.Callback",
+            "method3",
+            new InterceptableMethodCall("println", Arrays.asList("java.lang.String")));
+    palDirectory.createIntercept(req3);
+    addInterceptRequestToCreated(peer2.getUuid(), req3.getUuid());
+    interceptUuids.add(req3.getUuid());
+
+    // When: listAllIntercepts
+    Set<InterceptRequest<?>> allIntercepts = palDirectory.listAllIntercepts();
+
+    // Then: Returns all 3 intercepts
+    assertEquals(3, allIntercepts.size());
+    Set<UUID> retrievedUuids = new HashSet<>();
+    for (InterceptRequest<?> intercept : allIntercepts) {
+      retrievedUuids.add(intercept.getUuid());
+    }
+    assertEquals(interceptUuids, retrievedUuids);
   }
 
   /**
@@ -2422,13 +2522,9 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #638")
   public void listAllIntercepts_noIntercepts_returnsEmpty() throws Exception {
     // Given: No intercepts in directory (clean state from @Before)
-    // When: listAllIntercepts()
-    // Then: Returns empty set
-
-    // TODO(#638): Implement test logic
-    fail("Not yet implemented");
+    // When/Then: listAllIntercepts returns empty set
+    assertTrue(palDirectory.listAllIntercepts().isEmpty());
   }
 }

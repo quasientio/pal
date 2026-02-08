@@ -9,18 +9,22 @@
  */
 package io.quasient.pal.cxn.directory;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import io.quasient.pal.AbstractIntegrationTest;
+import io.quasient.pal.common.directory.nodes.InterceptRequest;
+import io.quasient.pal.common.directory.nodes.LogInfo;
 import io.quasient.pal.common.directory.nodes.PeerInfo;
+import io.quasient.pal.common.lang.intercept.InterceptType;
+import io.quasient.pal.common.lang.intercept.InterceptableMethodCall;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,15 +45,26 @@ public class PalDirectoryPeerDeletionIT extends AbstractIntegrationTest {
 
   private PalDirectory palDirectory;
   private Set<UUID> createdPeers;
+  private Set<String> createdLogs;
 
   @Before
   public void setUp() {
     palDirectory = new PalDirectory(getPalDirectoryUrl(), true);
     createdPeers = new HashSet<>();
+    createdLogs = new HashSet<>();
   }
 
   @After
   public void tearDown() throws Exception {
+    // Clean up any logs we created that weren't deleted by the test
+    for (String log : createdLogs) {
+      try {
+        palDirectory.deleteLog(log);
+        logger.debug("Cleaned up log: {}", log);
+      } catch (Exception e) {
+        logger.warn("Failed to clean up log {}: {}", log, e.getMessage());
+      }
+    }
     // Clean up any peers we created that weren't deleted by the test
     for (UUID peerUuid : createdPeers) {
       try {
@@ -77,6 +92,26 @@ public class PalDirectoryPeerDeletionIT extends AbstractIntegrationTest {
     palDirectory.createPeer(peer);
     createdPeers.add(peer.getUuid());
     return peer;
+  }
+
+  /**
+   * Creates an intercept request for a peer.
+   *
+   * @param peerUuid the UUID of the peer
+   * @param callbackMethod the callback method name
+   * @throws Exception if intercept creation fails
+   */
+  private void createInterceptForPeer(UUID peerUuid, String callbackMethod) throws Exception {
+    InterceptRequest<InterceptableMethodCall> req =
+        new InterceptRequest<>(
+            UUID.randomUUID(),
+            peerUuid,
+            InterceptType.BEFORE,
+            "java.io.PrintStream",
+            "org.package.Callback",
+            callbackMethod,
+            new InterceptableMethodCall("println", Arrays.asList("java.lang.String")));
+    palDirectory.createIntercept(req);
   }
 
   @Test
@@ -195,23 +230,42 @@ public class PalDirectoryPeerDeletionIT extends AbstractIntegrationTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #638")
   public void purgePeersExcept_withInterceptsOnPeers_cleansUpIntercepts() throws Exception {
-    // Given: 3 peers, each with intercepts registered
-    // When: purgePeersExcept({peer2.uuid}) - exclude peer2 only
-    // Then: Intercepts on peer1 and peer3 are cleaned up,
-    //       intercepts on peer2 remain intact
+    // Given: 3 peers, each with an intercept registered
+    PeerInfo peer1 = createTestPeer("intercept-purge-peer1");
+    PeerInfo peer2 = createTestPeer("intercept-purge-peer2");
+    PeerInfo peer3 = createTestPeer("intercept-purge-peer3");
 
-    // TODO(#638): Implement test logic
-    // 1. Create 3 peers
-    // 2. Create intercept(s) for each peer via palDirectory.createIntercept()
-    // 3. Verify all intercepts exist via listInterceptsForPeer() / listAllIntercepts()
-    // 4. Call purgePeersExcept with exclusion set containing only peer2
-    // 5. Verify peer2 still exists and its intercepts remain
-    // 6. Verify peer1 and peer3 are deleted
-    // 7. Verify intercepts for peer1 and peer3 are removed
-    //    (listInterceptsForPeer returns empty for deleted peers)
-    fail("Not yet implemented");
+    createInterceptForPeer(peer1.getUuid(), "method1");
+    createInterceptForPeer(peer2.getUuid(), "method2");
+    createInterceptForPeer(peer3.getUuid(), "method3");
+
+    // Verify all intercepts exist
+    assertEquals(1, palDirectory.listInterceptsForPeer(peer1.getUuid()).size());
+    assertEquals(1, palDirectory.listInterceptsForPeer(peer2.getUuid()).size());
+    assertEquals(1, palDirectory.listInterceptsForPeer(peer3.getUuid()).size());
+
+    // When: purgePeersExcept({peer2.uuid})
+    Set<UUID> exclusions = new HashSet<>();
+    exclusions.add(peer2.getUuid());
+    long deleted = palDirectory.purgePeersExcept(exclusions);
+
+    // Then: peer1 and peer3 are deleted, peer2 remains
+    assertTrue("Should have deleted at least 2 peers", deleted >= 2);
+    assertFalse("peer1 should be deleted", palDirectory.peerExists(peer1.getUuid()));
+    assertTrue("peer2 should remain", palDirectory.peerExists(peer2.getUuid()));
+    assertFalse("peer3 should be deleted", palDirectory.peerExists(peer3.getUuid()));
+
+    // Intercepts on deleted peers are cleaned up
+    assertTrue(palDirectory.listInterceptsForPeer(peer1.getUuid()).isEmpty());
+    assertTrue(palDirectory.listInterceptsForPeer(peer3.getUuid()).isEmpty());
+
+    // Intercepts on excluded peer remain
+    assertEquals(1, palDirectory.listInterceptsForPeer(peer2.getUuid()).size());
+
+    // Update tracking
+    createdPeers.remove(peer1.getUuid());
+    createdPeers.remove(peer3.getUuid());
   }
 
   /**
@@ -226,20 +280,29 @@ public class PalDirectoryPeerDeletionIT extends AbstractIntegrationTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #638")
   public void purgePeersExcept_excludeSubset_deletesRemainder() throws Exception {
     // Given: 4 peers in directory
-    // When: purgePeersExcept({peer1.uuid, peer3.uuid})
-    // Then: peer2 and peer4 deleted; peer1 and peer3 remain
+    PeerInfo peer1 = createTestPeer("subset-peer1");
+    PeerInfo peer2 = createTestPeer("subset-peer2");
+    PeerInfo peer3 = createTestPeer("subset-peer3");
+    PeerInfo peer4 = createTestPeer("subset-peer4");
 
-    // TODO(#638): Implement test logic
-    // 1. Create 4 peers
-    // 2. Build exclusion set with peer1 and peer3 UUIDs
-    // 3. Call purgePeersExcept(exclusions)
-    // 4. Verify return value >= 2
-    // 5. Verify peer1 and peer3 still exist
-    // 6. Verify peer2 and peer4 are deleted
-    fail("Not yet implemented");
+    // When: purgePeersExcept({peer1.uuid, peer3.uuid})
+    Set<UUID> exclusions = new HashSet<>();
+    exclusions.add(peer1.getUuid());
+    exclusions.add(peer3.getUuid());
+    long deleted = palDirectory.purgePeersExcept(exclusions);
+
+    // Then: peer2 and peer4 deleted; peer1 and peer3 remain
+    assertTrue("Should have deleted at least 2 peers", deleted >= 2);
+    assertTrue("peer1 should remain", palDirectory.peerExists(peer1.getUuid()));
+    assertFalse("peer2 should be deleted", palDirectory.peerExists(peer2.getUuid()));
+    assertTrue("peer3 should remain", palDirectory.peerExists(peer3.getUuid()));
+    assertFalse("peer4 should be deleted", palDirectory.peerExists(peer4.getUuid()));
+
+    // Update tracking
+    createdPeers.remove(peer2.getUuid());
+    createdPeers.remove(peer4.getUuid());
   }
 
   /**
@@ -254,20 +317,25 @@ public class PalDirectoryPeerDeletionIT extends AbstractIntegrationTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #638")
   public void purgeLogsExcept_withExclusions_excludedLogsRemain() throws Exception {
-    // Given: 3 logs, one of which is in the exclusion set
-    // When: purgeLogsExcept({log2.uuid})
-    // Then: log2 remains; log1 and log3 are deleted
+    // Given: 3 logs
+    LogInfo log1 = palDirectory.createAutoLog("purge-log-test", getKafkaServers());
+    createdLogs.add(log1.getName());
+    LogInfo log2 = palDirectory.createAutoLog("purge-log-test", getKafkaServers());
+    createdLogs.add(log2.getName());
+    LogInfo log3 = palDirectory.createAutoLog("purge-log-test", getKafkaServers());
+    createdLogs.add(log3.getName());
 
-    // TODO(#638): Implement test logic
-    // 1. Create 3 logs via createAutoLog()
-    // 2. Build exclusion set with log2 UUID
-    // 3. Call purgeLogsExcept(exclusions)
-    // 4. Verify return value == 2
-    // 5. Verify log2 still exists via logExists(log2.uuid)
-    // 6. Verify log1 and log3 are deleted
-    fail("Not yet implemented");
+    // When: purgeLogsExcept({log2.uuid})
+    Set<UUID> exclusions = new HashSet<>();
+    exclusions.add(log2.getUuid());
+    long deleted = palDirectory.purgeLogsExcept(exclusions);
+
+    // Then: log2 remains; log1 and log3 are deleted
+    assertEquals(2, deleted);
+    assertFalse("log1 should be deleted", palDirectory.logExists(log1.getUuid()));
+    assertTrue("log2 should remain", palDirectory.logExists(log2.getUuid()));
+    assertFalse("log3 should be deleted", palDirectory.logExists(log3.getUuid()));
   }
 
   /**
@@ -282,16 +350,14 @@ public class PalDirectoryPeerDeletionIT extends AbstractIntegrationTest {
    * </ul>
    */
   @Test
-  @Ignore("Awaiting implementation in #638")
   public void purgeLogsExcept_noLogs_returnsZero() throws Exception {
     // Given: Empty directory (no logs)
-    // When: purgeLogsExcept(null)
-    // Then: Returns 0
+    assertTrue("Directory should have no logs", palDirectory.listAllLogs().isEmpty());
 
-    // TODO(#638): Implement test logic
-    // 1. Verify directory has no logs (listAllLogs is empty)
-    // 2. Call purgeLogsExcept(null)
-    // 3. Assert return value == 0
-    fail("Not yet implemented");
+    // When: purgeLogsExcept(null)
+    long deleted = palDirectory.purgeLogsExcept(null);
+
+    // Then: Returns 0
+    assertEquals(0, deleted);
   }
 }
