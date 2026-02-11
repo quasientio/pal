@@ -602,6 +602,7 @@ public class DispatchBenchmark {
     // PUB queue params
     props.setProperty("pub.queue.type", pubQueueType.name());
     switch (pubQueueType) {
+      case NONE -> {} // no queue params needed
       case FIXED, CHUNKED, GROWABLE -> {
         props.setProperty(
             "pub.queue.initial",
@@ -610,7 +611,6 @@ public class DispatchBenchmark {
             "pub.queue.max",
             System.getProperty("pub.queue.max", String.valueOf(DEF_PUB_QUEUE_MAX)));
       }
-      default -> throw new IllegalArgumentException("Unsupported pub.queue.type=" + pubQueueType);
     }
 
     // MessagePublisher params
@@ -645,12 +645,25 @@ public class DispatchBenchmark {
         "pub.drop.keep_pct",
         System.getProperty("pub.drop.keep_pct", String.valueOf(DEF_DROP_KEEP_PCT)));
 
+    // KafkaSourceLogReader params (required by Guice even when SOURCE_LOG is disabled)
+    props.setProperty("source.log", "");
+    props.setProperty(
+        "key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+    props.setProperty(
+        "value.deserializer", "org.apache.kafka.common.serialization.ByteArrayDeserializer");
+    props.setProperty("enable.auto.commit", "true");
+    props.setProperty("auto.commit.interval.ms", "1000");
+    props.setProperty("auto.offset.reset", "earliest");
+    props.setProperty("session.timeout.ms", "10000");
+    props.setProperty("pollDuration", "100");
+
     // Params required by other classes (execution.java/*)
     props.setProperty(
         "messages.with_src_context",
         System.getProperty("messages.with_src_context", String.valueOf(DEF_WITH_SRC_CONTEXT)));
     props.setProperty("rpc.allow_nonpublic", "false");
     props.setProperty("paldir_url", PalDirectory.NO_URL);
+    props.setProperty("etcd.connect.timeout.ms", "5000");
 
     // Intercept drain timeout (required by InterceptActivationCoordinator via PeerWiring)
     props.setProperty(
