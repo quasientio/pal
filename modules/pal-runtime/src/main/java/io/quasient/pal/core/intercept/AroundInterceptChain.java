@@ -562,6 +562,18 @@ public class AroundInterceptChain {
     private RemoteAroundDispatcher remoteDispatcher;
 
     /**
+     * Resets this builder for reuse, clearing all handles and references.
+     *
+     * <p>This method is intended for use with thread-local pooling: the builder can be reused
+     * across multiple chain constructions on the same thread without allocating a new instance.
+     */
+    public void reset() {
+      handles.clear();
+      methodInvoker = null;
+      remoteDispatcher = null;
+    }
+
+    /**
      * Adds a local AROUND handle to the chain.
      *
      * @param intercept the intercept message
@@ -585,7 +597,7 @@ public class AroundInterceptChain {
     }
 
     /**
-     * Adds a remote AROUND handle to the chain.
+     * Adds a remote AROUND handle to the chain with an auto-generated callback ID.
      *
      * @param intercept the intercept message
      * @param callbackPeerUuid the callback peer UUID
@@ -593,6 +605,22 @@ public class AroundInterceptChain {
      */
     public Builder addRemote(InterceptMessage intercept, UUID callbackPeerUuid) {
       String callbackId = UUID.randomUUID().toString();
+      handles.add(new RemoteAroundHandle(intercept, callbackPeerUuid, callbackId));
+      return this;
+    }
+
+    /**
+     * Adds a remote AROUND handle to the chain with a pre-generated callback ID.
+     *
+     * <p>This overload avoids the {@code UUID.randomUUID()} allocation by accepting a pre-generated
+     * callback ID (e.g., from an {@link java.util.concurrent.atomic.AtomicLong} counter).
+     *
+     * @param intercept the intercept message
+     * @param callbackPeerUuid the callback peer UUID
+     * @param callbackId the pre-generated callback ID
+     * @return this builder
+     */
+    public Builder addRemote(InterceptMessage intercept, UUID callbackPeerUuid, String callbackId) {
       handles.add(new RemoteAroundHandle(intercept, callbackPeerUuid, callbackId));
       return this;
     }

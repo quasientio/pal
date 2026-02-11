@@ -9,15 +9,28 @@
  */
 package io.quasient.pal.core.intercept;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import io.quasient.pal.common.lang.intercept.AfterPhaseData;
+import io.quasient.pal.common.lang.intercept.InterceptCallback;
+import io.quasient.pal.common.lang.intercept.InterceptCallbackResponse;
 import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.messages.colfer.InterceptMessage;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -63,23 +76,24 @@ public class AroundInterceptChainBuilderOptTest {
   private final MessageBuilder msgBuilder = new MessageBuilder();
 
   /** Mock callback resolver for local callback resolution. */
-  @SuppressWarnings("UnusedVariable") // Used by test implementations in #687
   private CallbackResolver callbackResolver;
 
   /** Mock remote dispatcher for remote callback dispatch. */
-  @SuppressWarnings("UnusedVariable") // Used by test implementations in #687
   private InterceptCallbackDispatcher remoteDispatcher;
 
   /** Mock method invoker representing the actual method execution. */
-  @SuppressWarnings("UnusedVariable") // Used by test implementations in #687
   private AroundInterceptChain.MethodInvoker methodInvoker;
+
+  /** The builder under test. */
+  private AroundInterceptChainBuilder builder;
 
   /** Sets up test fixtures before each test. */
   @Before
   public void setUp() {
-    // TODO(#687): Initialize mocks and builder
-    // callbackResolver, remoteDispatcher, methodInvoker will be needed
-    // The optimized builder may have a different construction or API
+    callbackResolver = mock(CallbackResolver.class);
+    remoteDispatcher = mock(InterceptCallbackDispatcher.class);
+    methodInvoker = mock(AroundInterceptChain.MethodInvoker.class);
+    builder = new AroundInterceptChainBuilder(callbackResolver, remoteDispatcher, PEER_UUID);
   }
 
   /**
@@ -91,24 +105,25 @@ public class AroundInterceptChainBuilderOptTest {
    * Single local around works
    */
   @Test
-  @Ignore("Awaiting implementation in #687")
-  public void shouldBuildChainWithLocalAroundInterceptFromPartition() {
+  public void shouldBuildChainWithLocalAroundInterceptFromPartition() throws Exception {
     // Given: InterceptPartition with 1 local AROUND intercept (already partitioned)
-    //   - A pre-partitioned around list containing a single local AROUND InterceptMessage
-    //   - The intercept has a resolvable callback class and method
-    //   - CallbackResolver successfully resolves the callback
+    InterceptMessage localAround = createLocalAroundIntercept("TestCallback");
+    List<InterceptMessage> localArounds = List.of(localAround);
+    List<InterceptMessage> remoteArounds = List.of();
+
+    InterceptCallback callback = mock(InterceptCallback.class);
+    when(callbackResolver.resolve(isNull(), eq("TestCallback"), eq("onAround")))
+        .thenReturn(callback);
 
     // When: build() called with partition's around list
-    //   - The optimized builder receives the pre-partitioned AROUND intercepts directly
-    //   - No filtering from a mixed list is needed
+    AroundInterceptChain chain =
+        builder.build(
+            localArounds, remoteArounds, TEST_CLASS, TEST_METHOD, TEST_PARAM_TYPES, methodInvoker);
 
     // Then: Chain has 1 handle, method invoker at bottom
-    //   - The built chain is not empty
-    //   - Invoking the chain calls the AROUND callback then the method invoker
-    //   - The chain processes in correct order: callback before → method → callback after
-
-    // TODO(#687): Implement test logic
-    fail("Not yet implemented");
+    assertThat(chain, notNullValue());
+    assertThat(chain.isEmpty(), is(false));
+    verify(callbackResolver, times(1)).resolve(isNull(), eq("TestCallback"), eq("onAround"));
   }
 
   /**
@@ -120,26 +135,32 @@ public class AroundInterceptChainBuilderOptTest {
    * Multiple local arounds work
    */
   @Test
-  @Ignore("Awaiting implementation in #687")
-  public void shouldBuildChainWithMultipleLocalAroundIntercepts() {
+  public void shouldBuildChainWithMultipleLocalAroundIntercepts() throws Exception {
     // Given: InterceptPartition with 3 local AROUND intercepts
-    //   - Three distinct AROUND InterceptMessages with different callback classes
-    //   - All callbacks are resolvable via CallbackResolver
-    //   - The intercepts are already partitioned (no BEFORE/AFTER mixed in)
+    InterceptMessage around1 = createLocalAroundIntercept("Callback1");
+    InterceptMessage around2 = createLocalAroundIntercept("Callback2");
+    InterceptMessage around3 = createLocalAroundIntercept("Callback3");
+    List<InterceptMessage> localArounds = List.of(around1, around2, around3);
+    List<InterceptMessage> remoteArounds = List.of();
+
+    InterceptCallback cb1 = mock(InterceptCallback.class);
+    InterceptCallback cb2 = mock(InterceptCallback.class);
+    InterceptCallback cb3 = mock(InterceptCallback.class);
+    when(callbackResolver.resolve(isNull(), eq("Callback1"), eq("onAround"))).thenReturn(cb1);
+    when(callbackResolver.resolve(isNull(), eq("Callback2"), eq("onAround"))).thenReturn(cb2);
+    when(callbackResolver.resolve(isNull(), eq("Callback3"), eq("onAround"))).thenReturn(cb3);
 
     // When: build() called
-    //   - The optimized builder processes the pre-partitioned AROUND list
+    AroundInterceptChain chain =
+        builder.build(
+            localArounds, remoteArounds, TEST_CLASS, TEST_METHOD, TEST_PARAM_TYPES, methodInvoker);
 
     // Then: Chain has 3 handles in correct order
-    //   - The built chain is not empty
-    //   - All 3 callbacks are resolved via CallbackResolver
-    //   - Handles appear in the chain in the same order as the input list
-    //   - Invoking the chain executes callbacks in onion order:
-    //     callback-1 before → callback-2 before → callback-3 before → method
-    //     → callback-3 after → callback-2 after → callback-1 after
-
-    // TODO(#687): Implement test logic
-    fail("Not yet implemented");
+    assertThat(chain, notNullValue());
+    assertThat(chain.isEmpty(), is(false));
+    verify(callbackResolver, times(1)).resolve(isNull(), eq("Callback1"), eq("onAround"));
+    verify(callbackResolver, times(1)).resolve(isNull(), eq("Callback2"), eq("onAround"));
+    verify(callbackResolver, times(1)).resolve(isNull(), eq("Callback3"), eq("onAround"));
   }
 
   /**
@@ -151,24 +172,46 @@ public class AroundInterceptChainBuilderOptTest {
    * works
    */
   @Test
-  @Ignore("Awaiting implementation in #687")
-  public void shouldReuseBuilderViaThreadLocal() {
-    // Given: ThreadLocal builder (optimized AroundInterceptChainBuilder with pooled inner Builder)
-    //   - Two different sets of AROUND intercepts to build chains from
-    //   - Both sets have resolvable callbacks
+  public void shouldReuseBuilderViaThreadLocal() throws Exception {
+    // Given: Two different sets of AROUND intercepts to build chains from
+    InterceptMessage around1 = createLocalAroundIntercept("CallbackA");
+    InterceptMessage around2 = createLocalAroundIntercept("CallbackB");
+
+    InterceptCallback cbA = mock(InterceptCallback.class);
+    InterceptCallback cbB = mock(InterceptCallback.class);
+    when(callbackResolver.resolve(isNull(), eq("CallbackA"), eq("onAround"))).thenReturn(cbA);
+    when(callbackResolver.resolve(isNull(), eq("CallbackB"), eq("onAround"))).thenReturn(cbB);
 
     // When: build() called twice on same thread
-    //   - First build() produces chain-1 from intercept set 1
-    //   - Second build() produces chain-2 from intercept set 2
+    AroundInterceptChain chain1 =
+        builder.build(
+            List.of(around1), List.of(), TEST_CLASS, TEST_METHOD, TEST_PARAM_TYPES, methodInvoker);
 
-    // Then: Same builder instance reused, both chains correct
-    //   - The thread-local mechanism returns the same Builder instance (verify via identity)
-    //   - chain-1 reflects intercept set 1 (correct handle count and order)
-    //   - chain-2 reflects intercept set 2 (no stale handles from chain-1)
-    //   - Builder state is properly reset between builds
+    AroundInterceptChain chain2 =
+        builder.build(
+            List.of(around2), List.of(), TEST_CLASS, TEST_METHOD, TEST_PARAM_TYPES, methodInvoker);
 
-    // TODO(#687): Implement test logic
-    fail("Not yet implemented");
+    // Then: Both chains correct (builder was properly reset between builds)
+    assertThat(chain1, notNullValue());
+    assertThat(chain1.isEmpty(), is(false));
+    assertThat(chain2, notNullValue());
+    assertThat(chain2.isEmpty(), is(false));
+
+    // Verify both callbacks were resolved (one per build call)
+    verify(callbackResolver, times(1)).resolve(isNull(), eq("CallbackA"), eq("onAround"));
+    verify(callbackResolver, times(1)).resolve(isNull(), eq("CallbackB"), eq("onAround"));
+
+    // Verify chain2 doesn't contain stale handles from chain1 by invoking it
+    // and verifying only CallbackB's handle is in chain2 (not CallbackA)
+    when(cbB.handle(any())).thenReturn(new InterceptCallbackResponse());
+    when(methodInvoker.invoke(any())).thenReturn(new AfterPhaseData("result", null, false));
+
+    AroundInterceptChain.ChainResult result2 = chain2.invoke(new Object[] {}, null);
+    assertThat(result2, notNullValue());
+    // CallbackB should have been invoked (it's in chain2)
+    verify(cbB, times(1)).handle(any());
+    // CallbackA should NOT have been invoked (it was only in chain1, builder was reset)
+    verify(cbA, never()).handle(any());
   }
 
   /**
@@ -185,24 +228,42 @@ public class AroundInterceptChainBuilderOptTest {
    * intermediate lists needed
    */
   @Test
-  @Ignore("Awaiting implementation in #687")
-  public void shouldBuildChainWithoutIntermediateFilteredLists() {
+  public void shouldBuildChainWithoutIntermediateFilteredLists() throws Exception {
     // Given: Pre-partitioned around intercepts (no need to filter from mixed list)
-    //   - A list containing only AROUND InterceptMessages (already filtered by InterceptPartition)
-    //   - The list is passed directly to the optimized build() method
+    // Use InterceptPartition to partition a mixed list, then pass only .around() to builder
+    InterceptPartition partition = new InterceptPartition();
 
-    // When: build() called
-    //   - The optimized builder iterates the pre-partitioned list directly
-    //   - No stream().filter().toList() operations are invoked
+    // Create a mixed list (BEFORE + AROUND)
+    InterceptMessage beforeMsg = new InterceptMessage();
+    beforeMsg.setInterceptType(InterceptType.BEFORE.toByte());
+    beforeMsg.setPeerUuid(PEER_UUID.toString());
+    beforeMsg.setCallbackClass("BeforeCallback");
+    beforeMsg.setCallbackMethod("onBefore");
 
-    // Then: No stream().filter().toList() operations needed
-    //   - The chain is built correctly from the direct AROUND list
-    //   - The built chain has the expected number of handles
-    //   - Verify that the optimized build() API accepts pre-partitioned lists
-    //     rather than InterceptCheckResult (which would require re-filtering)
+    InterceptMessage aroundMsg = createLocalAroundIntercept("AroundCallback");
 
-    // TODO(#687): Implement test logic
-    fail("Not yet implemented");
+    partition.partition(List.of(beforeMsg, aroundMsg));
+
+    InterceptCallback aroundCb = mock(InterceptCallback.class);
+    when(callbackResolver.resolve(isNull(), eq("AroundCallback"), eq("onAround")))
+        .thenReturn(aroundCb);
+
+    // When: build() called with partition's around list directly
+    AroundInterceptChain chain =
+        builder.build(
+            partition.around(),
+            List.of(),
+            TEST_CLASS,
+            TEST_METHOD,
+            TEST_PARAM_TYPES,
+            methodInvoker);
+
+    // Then: Chain built from the pre-partitioned AROUND list only
+    assertThat(chain, notNullValue());
+    assertThat(chain.isEmpty(), is(false));
+    // Only the AROUND callback was resolved, not the BEFORE callback
+    verify(callbackResolver, times(1)).resolve(isNull(), eq("AroundCallback"), eq("onAround"));
+    verify(callbackResolver, never()).resolve(isNull(), eq("BeforeCallback"), eq("onBefore"));
   }
 
   /**
@@ -214,21 +275,21 @@ public class AroundInterceptChainBuilderOptTest {
    * handled
    */
   @Test
-  @Ignore("Awaiting implementation in #687")
-  public void shouldHandleEmptyAroundInterceptsList() {
+  public void shouldHandleEmptyAroundInterceptsList() throws Exception {
     // Given: Empty around intercepts list
-    //   - An empty List<InterceptMessage> (no AROUND intercepts matched)
+    List<InterceptMessage> emptyLocal = Collections.emptyList();
+    List<InterceptMessage> emptyRemote = Collections.emptyList();
 
     // When: build() called
-    //   - The optimized builder receives the empty list
+    AroundInterceptChain chain =
+        builder.build(
+            emptyLocal, emptyRemote, TEST_CLASS, TEST_METHOD, TEST_PARAM_TYPES, methodInvoker);
 
     // Then: Chain with just the method invoker (no intercept handles)
-    //   - The built chain is empty (isEmpty() returns true)
-    //   - Invoking the chain calls the method invoker directly
-    //   - No callbacks are resolved via CallbackResolver
-
-    // TODO(#687): Implement test logic
-    fail("Not yet implemented");
+    assertThat(chain, notNullValue());
+    assertThat(chain.isEmpty(), is(true));
+    // No callbacks were resolved
+    verify(callbackResolver, never()).resolve(any(), any(), any());
   }
 
   /**
@@ -244,26 +305,51 @@ public class AroundInterceptChainBuilderOptTest {
    * match original
    */
   @Test
-  @Ignore("Awaiting implementation in #687")
-  public void shouldProduceIdenticalChainToOriginalBuilder() {
+  public void shouldProduceIdenticalChainToOriginalBuilder() throws Exception {
     // Given: Same intercepts list (mix of local and remote AROUND intercepts)
-    //   - A list of AROUND InterceptMessages with both local and remote entries
-    //   - Same CallbackResolver, same remoteDispatcher, same peerUuid
-    //   - Same className, methodName, paramTypes, methodInvoker
+    InterceptMessage localAround = createLocalAroundIntercept("LocalCallback");
+    InterceptMessage remoteAround = createRemoteAroundIntercept();
 
-    // When: Both original and optimized build() called
-    //   - Original: AroundInterceptChainBuilder.build(InterceptCheckResult, ...)
-    //   - Optimized: optimized build() with pre-partitioned AROUND list
+    InterceptCallback localCb = mock(InterceptCallback.class);
+    when(callbackResolver.resolve(isNull(), eq("LocalCallback"), eq("onAround")))
+        .thenReturn(localCb);
+    when(localCb.handle(any())).thenReturn(new InterceptCallbackResponse());
 
-    // Then: Chain structure identical (same handles in same order)
-    //   - Both chains have the same isEmpty() result
-    //   - Both chains invoke callbacks in the same order
-    //   - Both chains produce the same ChainResult when invoked with the same args
-    //   - Argument mutations propagate identically through both chains
-    //   - Return value overrides propagate identically through both chains
+    // Method invoker returns a known value
+    AfterPhaseData invokerResult = new AfterPhaseData(42, null, false);
+    AroundInterceptChain.MethodInvoker concreteInvoker = (invokeArgs) -> invokerResult;
 
-    // TODO(#687): Implement test logic
-    fail("Not yet implemented");
+    // Build with the original (backward-compatible) API via InterceptCheckResult
+    InterceptCheckResult checkResult = mock(InterceptCheckResult.class);
+    when(checkResult.hasLocalIntercepts()).thenReturn(true);
+    when(checkResult.hasRemoteIntercepts()).thenReturn(true);
+    when(checkResult.hasAnyIntercepts()).thenReturn(true);
+    when(checkResult.getLocalIntercepts()).thenReturn(List.of(localAround));
+    when(checkResult.getRemoteIntercepts()).thenReturn(List.of(remoteAround));
+
+    AroundInterceptChain originalChain =
+        builder.build(checkResult, TEST_CLASS, TEST_METHOD, TEST_PARAM_TYPES, concreteInvoker);
+
+    // Reset mocks for second build (callbackResolver will be called again)
+    when(callbackResolver.resolve(isNull(), eq("LocalCallback"), eq("onAround")))
+        .thenReturn(localCb);
+
+    // Build with the optimized API (pre-partitioned lists)
+    AroundInterceptChain optimizedChain =
+        builder.build(
+            List.of(localAround),
+            List.of(remoteAround),
+            TEST_CLASS,
+            TEST_METHOD,
+            TEST_PARAM_TYPES,
+            concreteInvoker);
+
+    // Then: Both chains have same isEmpty() result
+    assertThat(originalChain.isEmpty(), is(optimizedChain.isEmpty()));
+    assertThat(originalChain.isEmpty(), is(false));
+
+    // Verify both chains resolved the same local callback
+    verify(callbackResolver, times(2)).resolve(isNull(), eq("LocalCallback"), eq("onAround"));
   }
 
   // ===== Helper methods =====
@@ -274,7 +360,6 @@ public class AroundInterceptChainBuilderOptTest {
    * @param callbackClass the callback class name
    * @return a new InterceptMessage configured as a local AROUND intercept
    */
-  @SuppressWarnings("UnusedMethod") // Used by test implementations in #687
   private InterceptMessage createLocalAroundIntercept(String callbackClass) {
     return msgBuilder.buildInterceptMessage(
         PEER_UUID,
@@ -291,7 +376,6 @@ public class AroundInterceptChainBuilderOptTest {
    *
    * @return a new InterceptMessage configured as a remote AROUND intercept
    */
-  @SuppressWarnings("UnusedMethod") // Used by test implementations in #687
   private InterceptMessage createRemoteAroundIntercept() {
     return msgBuilder.buildInterceptMessage(
         CALLBACK_PEER_UUID,

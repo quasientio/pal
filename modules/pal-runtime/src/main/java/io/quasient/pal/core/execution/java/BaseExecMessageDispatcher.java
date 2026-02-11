@@ -33,6 +33,7 @@ import io.quasient.pal.core.internal.messages.SessionCommandMsg;
 import io.quasient.pal.core.service.RunOptions;
 import io.quasient.pal.core.transport.MessageChannelType;
 import io.quasient.pal.messages.colfer.ExecMessage;
+import io.quasient.pal.messages.colfer.InterceptMessage;
 import io.quasient.pal.messages.colfer.Obj;
 import io.quasient.pal.messages.colfer.Parameter;
 import io.quasient.pal.messages.types.MessageType;
@@ -161,6 +162,8 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       final List<String> paramTypesList = ParamTypeExtractor.asList(paramTypeNames);
 
       Object[] finalArgs = args;
+      // Captured local AROUND intercepts from partition (for optimized chain building)
+      List<InterceptMessage> localAroundIntercepts = List.of();
       if (beforeInterceptCheck != null && beforeInterceptCheck.hasLocalIntercepts()) {
         // Extract className/methodName once for all BEFORE intercept phases
         if (className == null) {
@@ -171,6 +174,11 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         // Single-pass partition of local intercepts by type
         InterceptPartition beforePartition = TL_PARTITION.get();
         beforePartition.partition(beforeInterceptCheck.getLocalIntercepts());
+
+        // Capture local AROUND intercepts before TL_PARTITION could be reused
+        if (!beforePartition.around().isEmpty()) {
+          localAroundIntercepts = new ArrayList<>(beforePartition.around());
+        }
 
         if (!beforePartition.before().isEmpty()) {
           ConsolidatedCallbackResponse localResponse =
@@ -249,6 +257,16 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
           methodName = getMethodNameFromPjp(pjp);
         }
 
+        // Extract remote AROUND intercepts via partition (reuse TL_PARTITION, local is done)
+        List<InterceptMessage> remoteAroundIntercepts = List.of();
+        if (beforeInterceptCheck.hasRemoteIntercepts()) {
+          InterceptPartition remotePartition = TL_PARTITION.get();
+          remotePartition.partition(beforeInterceptCheck.getRemoteIntercepts());
+          if (!remotePartition.around().isEmpty()) {
+            remoteAroundIntercepts = new ArrayList<>(remotePartition.around());
+          }
+        }
+
         // Method invoker for the innermost layer
         final Object[] argsForChain = finalArgs;
         AroundInterceptChain.MethodInvoker methodInvoker =
@@ -263,7 +281,12 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
         aroundChain =
             aroundChainBuilder.build(
-                beforeInterceptCheck, className, methodName, paramTypesList, methodInvoker);
+                localAroundIntercepts,
+                remoteAroundIntercepts,
+                className,
+                methodName,
+                paramTypesList,
+                methodInvoker);
       }
 
       // Execute AROUND chain OR invoke method directly
@@ -541,6 +564,9 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       // Process BEFORE intercept callbacks and apply argument mutations
       List<MessageArgument> finalArgs = args;
 
+      // Captured local AROUND intercepts from partition (for optimized chain building)
+      List<InterceptMessage> localAroundIntercepts = List.of();
+
       // Handle LOCAL BEFORE intercepts first (before remote)
       if (exceptionWhileLoading == null
           && beforeInterceptCheck != null
@@ -548,6 +574,11 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         // Single-pass partition of local intercepts by type
         InterceptPartition beforePartition = TL_PARTITION.get();
         beforePartition.partition(beforeInterceptCheck.getLocalIntercepts());
+
+        // Capture local AROUND intercepts before TL_PARTITION could be reused
+        if (!beforePartition.around().isEmpty()) {
+          localAroundIntercepts = new ArrayList<>(beforePartition.around());
+        }
 
         if (!beforePartition.before().isEmpty()) {
           className = getClassname(incomingCall);
@@ -631,6 +662,16 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
           paramTypesList = List.of();
         }
 
+        // Extract remote AROUND intercepts via partition (reuse TL_PARTITION, local is done)
+        List<InterceptMessage> remoteAroundIntercepts = List.of();
+        if (beforeInterceptCheck.hasRemoteIntercepts()) {
+          InterceptPartition remotePartition = TL_PARTITION.get();
+          remotePartition.partition(beforeInterceptCheck.getRemoteIntercepts());
+          if (!remotePartition.around().isEmpty()) {
+            remoteAroundIntercepts = new ArrayList<>(remotePartition.around());
+          }
+        }
+
         // Capture for lambda
         final AccessibleObject accessibleForChain = accessibleObject;
         final Object targetForChain = target;
@@ -668,7 +709,12 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
         aroundChain =
             aroundChainBuilder.build(
-                beforeInterceptCheck, className, methodName, paramTypesList, methodInvoker);
+                localAroundIntercepts,
+                remoteAroundIntercepts,
+                className,
+                methodName,
+                paramTypesList,
+                methodInvoker);
       }
 
       // Handle REMOTE BEFORE intercept callbacks
