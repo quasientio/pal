@@ -19,6 +19,7 @@ import io.quasient.pal.messages.colfer.InstanceFieldGet;
 import io.quasient.pal.messages.colfer.InstanceFieldPut;
 import io.quasient.pal.messages.colfer.InstanceFieldPutDone;
 import io.quasient.pal.messages.colfer.InstanceMethodCall;
+import io.quasient.pal.messages.colfer.InterceptCallbackRequestMessage;
 import io.quasient.pal.messages.colfer.Method;
 import io.quasient.pal.messages.colfer.Obj;
 import io.quasient.pal.messages.colfer.Parameter;
@@ -189,6 +190,23 @@ public final class TlScratchHolder {
     final var x = s().cctx;
     x.reset();
     return x;
+  }
+
+  /**
+   * Returns a reusable {@link InterceptCallbackRequestMessage}, reset for fresh use.
+   *
+   * <p><b>Nested dispatch hazard:</b> The returned object is a thread-local singleton. It must be
+   * fully consumed (serialized) before any operation that could trigger a nested dispatch (e.g., an
+   * intercept callback that itself invokes an intercepted method). A nested dispatch that calls
+   * {@code icbr()} will reset the same instance, corrupting the outer caller's reference. This
+   * follows the same pattern as {@link #exec()} and {@link #rv()}.
+   *
+   * @return cleared {@code InterceptCallbackRequestMessage}
+   */
+  public static InterceptCallbackRequestMessage icbr() {
+    final TlMsgScratch s = TL.get();
+    s.icbr.reset();
+    return s.icbr;
   }
 
   /**

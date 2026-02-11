@@ -9,14 +9,23 @@
  */
 package io.quasient.pal.serdes.colfer.scratches;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.sameInstance;
 
-import org.junit.Ignore;
+import io.quasient.pal.messages.colfer.ExecMessage;
+import io.quasient.pal.messages.colfer.InterceptCallbackRequestMessage;
+import io.quasient.pal.messages.colfer.Obj;
+import io.quasient.pal.messages.colfer.RaisedThrowable;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Test;
 
 /**
  * Tests for the {@link TlScratchHolder#icbr()} accessor that provides a reusable, thread-local
- * {@link io.quasient.pal.messages.colfer.InterceptCallbackRequestMessage}.
+ * {@link InterceptCallbackRequestMessage}.
  *
  * <p>These tests verify the core contract of thread-local scratch objects: reset-on-access, same
  * instance reuse within a thread, isolation across threads, and the known nested dispatch
@@ -32,37 +41,34 @@ public class TlScratchHolderInterceptTest {
 
   /**
    * Verifies that {@link TlScratchHolder#icbr()} returns a non-null {@link
-   * io.quasient.pal.messages.colfer.InterceptCallbackRequestMessage} with all fields reset to their
-   * default values.
+   * InterceptCallbackRequestMessage} with all fields reset to their default values.
    *
    * <p>The reset state means: all String fields are empty ({@code ""}), all byte/int fields are 0,
    * boolean fields are false, and all object references (exec, returnValue, thrownException) are
    * null.
    */
   @Test
-  @Ignore("Awaiting implementation in #691")
   public void shouldProvideReusableInterceptCallbackRequestMessage() {
     // Given: TlScratchHolder on current thread (no prior calls)
 
     // When: TlScratchHolder.icbr() called
+    InterceptCallbackRequestMessage icbr = TlScratchHolder.icbr();
 
-    // Then: Returns non-null InterceptCallbackRequestMessage with all fields reset:
-    //       - callbackId == ""
-    //       - phase == 0
-    //       - interceptType == 0
-    //       - interceptedPeer == ""
-    //       - registeredCallbackId == ""
-    //       - callbackClass == ""
-    //       - callbackMethod == ""
-    //       - exec == null
-    //       - returnValue == null
-    //       - returnValueRef == 0
-    //       - isVoid == false
-    //       - thrownException == null
-    //       - timeoutMs == 0
-
-    // TODO(#691): Implement test logic
-    fail("Not yet implemented");
+    // Then: Returns non-null InterceptCallbackRequestMessage with all fields reset
+    assertThat(icbr, is(notNullValue()));
+    assertThat(icbr.getCallbackId(), is(""));
+    assertThat(icbr.getPhase(), is((byte) 0));
+    assertThat(icbr.getInterceptType(), is((byte) 0));
+    assertThat(icbr.getInterceptedPeer(), is(""));
+    assertThat(icbr.getRegisteredCallbackId(), is(""));
+    assertThat(icbr.getCallbackClass(), is(""));
+    assertThat(icbr.getCallbackMethod(), is(""));
+    assertThat(icbr.getExec(), is(nullValue()));
+    assertThat(icbr.getReturnValue(), is(nullValue()));
+    assertThat(icbr.getReturnValueRef(), is(0));
+    assertThat(icbr.getIsVoid(), is(false));
+    assertThat(icbr.getThrownException(), is(nullValue()));
+    assertThat(icbr.getTimeoutMs(), is(0));
   }
 
   /**
@@ -70,91 +76,85 @@ public class TlScratchHolderInterceptTest {
    * exact same object reference, confirming thread-local reuse (no new allocations).
    */
   @Test
-  @Ignore("Awaiting implementation in #691")
   public void shouldReturnSameInstanceOnRepeatedCalls() {
     // Given: TlScratchHolder on current thread
 
     // When: TlScratchHolder.icbr() called twice
+    InterceptCallbackRequestMessage first = TlScratchHolder.icbr();
+    InterceptCallbackRequestMessage second = TlScratchHolder.icbr();
 
     // Then: Same object reference returned (assertSame)
-    //       - First call and second call return identical instance
-    //       - No new allocation occurred
-
-    // TODO(#691): Implement test logic
-    fail("Not yet implemented");
+    assertThat(second, is(sameInstance(first)));
   }
 
   /**
-   * Verifies that after setting fields on an {@link
-   * io.quasient.pal.messages.colfer.InterceptCallbackRequestMessage} obtained from {@link
-   * TlScratchHolder#icbr()}, a subsequent call to {@code icbr()} returns the same instance with all
-   * fields reset to defaults.
+   * Verifies that after setting fields on an {@link InterceptCallbackRequestMessage} obtained from
+   * {@link TlScratchHolder#icbr()}, a subsequent call to {@code icbr()} returns the same instance
+   * with all fields reset to defaults.
    *
    * <p>This confirms the reset-on-access contract: each call to the accessor resets the scratch
    * object before returning it.
    */
   @Test
-  @Ignore("Awaiting implementation in #691")
   public void shouldResetFieldsBetweenCalls() {
     // Given: InterceptCallbackRequestMessage obtained via TlScratchHolder.icbr()
-    //        with fields set to non-default values:
-    //        - callbackId = "test-callback-123"
-    //        - phase = 1 (BEFORE)
-    //        - interceptType = 3 (AROUND)
-    //        - interceptedPeer = "peer-uuid-abc"
-    //        - registeredCallbackId = "reg-456"
-    //        - callbackClass = "com.example.Handler"
-    //        - callbackMethod = "onBefore"
-    //        - exec = (a non-null ExecMessage)
-    //        - returnValue = (a non-null Obj)
-    //        - returnValueRef = 42
-    //        - isVoid = true
-    //        - thrownException = (a non-null RaisedThrowable)
-    //        - timeoutMs = 5000
+    //        with fields set to non-default values
+    InterceptCallbackRequestMessage icbr = TlScratchHolder.icbr();
+    icbr.setCallbackId("test-callback-123");
+    icbr.setPhase((byte) 1);
+    icbr.setInterceptType((byte) 3);
+    icbr.setInterceptedPeer("peer-uuid-abc");
+    icbr.setRegisteredCallbackId("reg-456");
+    icbr.setCallbackClass("com.example.Handler");
+    icbr.setCallbackMethod("onBefore");
+    icbr.setExec(new ExecMessage());
+    icbr.setReturnValue(new Obj());
+    icbr.setReturnValueRef(42);
+    icbr.setIsVoid(true);
+    icbr.setThrownException(new RaisedThrowable());
+    icbr.setTimeoutMs(5000);
 
     // When: TlScratchHolder.icbr() called again
+    InterceptCallbackRequestMessage resetIcbr = TlScratchHolder.icbr();
 
-    // Then: All fields are reset to defaults:
-    //        - callbackId == ""
-    //        - phase == 0
-    //        - interceptType == 0
-    //        - interceptedPeer == ""
-    //        - registeredCallbackId == ""
-    //        - callbackClass == ""
-    //        - callbackMethod == ""
-    //        - exec == null
-    //        - returnValue == null
-    //        - returnValueRef == 0
-    //        - isVoid == false
-    //        - thrownException == null
-    //        - timeoutMs == 0
-
-    // TODO(#691): Implement test logic
-    fail("Not yet implemented");
+    // Then: All fields are reset to defaults
+    assertThat(resetIcbr, is(sameInstance(icbr)));
+    assertThat(resetIcbr.getCallbackId(), is(""));
+    assertThat(resetIcbr.getPhase(), is((byte) 0));
+    assertThat(resetIcbr.getInterceptType(), is((byte) 0));
+    assertThat(resetIcbr.getInterceptedPeer(), is(""));
+    assertThat(resetIcbr.getRegisteredCallbackId(), is(""));
+    assertThat(resetIcbr.getCallbackClass(), is(""));
+    assertThat(resetIcbr.getCallbackMethod(), is(""));
+    assertThat(resetIcbr.getExec(), is(nullValue()));
+    assertThat(resetIcbr.getReturnValue(), is(nullValue()));
+    assertThat(resetIcbr.getReturnValueRef(), is(0));
+    assertThat(resetIcbr.getIsVoid(), is(false));
+    assertThat(resetIcbr.getThrownException(), is(nullValue()));
+    assertThat(resetIcbr.getTimeoutMs(), is(0));
   }
 
   /**
    * Verifies that {@link TlScratchHolder#icbr()} returns different object instances on different
    * threads, confirming thread-local isolation.
    *
-   * <p>Each thread has its own {@link TlMsgScratch}, so the {@link
-   * io.quasient.pal.messages.colfer.InterceptCallbackRequestMessage} instances must be distinct
-   * across threads.
+   * <p>Each thread has its own {@link TlMsgScratch}, so the {@link InterceptCallbackRequestMessage}
+   * instances must be distinct across threads.
    */
   @Test
-  @Ignore("Awaiting implementation in #691")
-  public void shouldProvideIsolatedInstancesAcrossThreads() {
+  public void shouldProvideIsolatedInstancesAcrossThreads() throws Exception {
     // Given: Two threads (main thread and a spawned thread)
+    InterceptCallbackRequestMessage mainInstance = TlScratchHolder.icbr();
 
     // When: Both threads call TlScratchHolder.icbr()
+    AtomicReference<InterceptCallbackRequestMessage> otherInstance = new AtomicReference<>();
+    Thread thread = new Thread(() -> otherInstance.set(TlScratchHolder.icbr()));
+    thread.start();
+    thread.join();
 
-    // Then: Different object references returned (assertNotSame)
-    //       - Main thread's instance != spawned thread's instance
-    //       - Each thread gets its own isolated scratch object
-    //       - Setting fields on one thread's instance does not affect the other
-
-    // TODO(#691): Implement test logic
-    fail("Not yet implemented");
+    // Then: Different object references returned
+    assertThat(otherInstance.get(), is(notNullValue()));
+    assertThat(otherInstance.get(), is(not(sameInstance(mainInstance))));
   }
 
   /**
@@ -171,34 +171,31 @@ public class TlScratchHolderInterceptTest {
    * serialize the scratch object before any operation that could trigger a nested dispatch.
    */
   @Test
-  @Ignore("Awaiting implementation in #691")
   public void shouldBeCorruptedByNestedDispatch() {
     // Given: InterceptCallbackRequestMessage obtained via TlScratchHolder.icbr()
-    //        with fields set:
-    //        - callbackId = "outer-callback"
-    //        - phase = 2 (AFTER)
-    //        - interceptType = 1 (BEFORE)
-    //        - interceptedPeer = "outer-peer-uuid"
-    //        - callbackClass = "com.example.OuterHandler"
-    //        - callbackMethod = "onAfter"
-    //        - timeoutMs = 3000
+    //        with fields set
+    InterceptCallbackRequestMessage outer = TlScratchHolder.icbr();
+    outer.setCallbackId("outer-callback");
+    outer.setPhase((byte) 2);
+    outer.setInterceptType((byte) 1);
+    outer.setInterceptedPeer("outer-peer-uuid");
+    outer.setCallbackClass("com.example.OuterHandler");
+    outer.setCallbackMethod("onAfter");
+    outer.setTimeoutMs(3000);
 
     // When: Another TlScratchHolder.icbr() call occurs on the same thread
     //       (simulating a nested dispatch that needs its own
     //       InterceptCallbackRequestMessage)
+    InterceptCallbackRequestMessage inner = TlScratchHolder.icbr();
 
-    // Then: First reference now has reset fields (documents the hazard):
-    //       - The outer reference and inner reference are the same object (assertSame)
-    //       - callbackId == "" (was "outer-callback")
-    //       - phase == 0 (was 2)
-    //       - interceptType == 0 (was 1)
-    //       - interceptedPeer == "" (was "outer-peer-uuid")
-    //       - callbackClass == "" (was "com.example.OuterHandler")
-    //       - callbackMethod == "" (was "onAfter")
-    //       - timeoutMs == 0 (was 3000)
-    //       - The outer's previously-set values are LOST
-
-    // TODO(#691): Implement test logic
-    fail("Not yet implemented");
+    // Then: First reference now has reset fields (documents the hazard)
+    assertThat(inner, is(sameInstance(outer)));
+    assertThat(outer.getCallbackId(), is(""));
+    assertThat(outer.getPhase(), is((byte) 0));
+    assertThat(outer.getInterceptType(), is((byte) 0));
+    assertThat(outer.getInterceptedPeer(), is(""));
+    assertThat(outer.getCallbackClass(), is(""));
+    assertThat(outer.getCallbackMethod(), is(""));
+    assertThat(outer.getTimeoutMs(), is(0));
   }
 }

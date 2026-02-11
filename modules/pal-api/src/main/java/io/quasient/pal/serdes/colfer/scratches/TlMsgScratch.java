@@ -19,6 +19,7 @@ import io.quasient.pal.messages.colfer.InstanceFieldGet;
 import io.quasient.pal.messages.colfer.InstanceFieldPut;
 import io.quasient.pal.messages.colfer.InstanceFieldPutDone;
 import io.quasient.pal.messages.colfer.InstanceMethodCall;
+import io.quasient.pal.messages.colfer.InterceptCallbackRequestMessage;
 import io.quasient.pal.messages.colfer.Method;
 import io.quasient.pal.messages.colfer.Obj;
 import io.quasient.pal.messages.colfer.Parameter;
@@ -77,6 +78,9 @@ public final class TlMsgScratch {
 
   /** Reusable message {@code Context} buffer. */
   final Context cctx = new Context();
+
+  /** Reusable {@code InterceptCallbackRequestMessage} buffer. */
+  final InterceptCallbackRequestMessage icbr = new InterceptCallbackRequestMessage();
 
   /** Pool of reusable {@code Parameter} instances. */
   final ArrayList<Parameter> params = new ArrayList<>(8);
