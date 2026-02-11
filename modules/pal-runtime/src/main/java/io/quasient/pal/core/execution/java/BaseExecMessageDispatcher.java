@@ -28,6 +28,7 @@ import io.quasient.pal.core.intercept.InterceptCallbackDispatcher;
 import io.quasient.pal.core.intercept.InterceptCallbackDispatcher.ConsolidatedCallbackResponse;
 import io.quasient.pal.core.intercept.InterceptCheckResult;
 import io.quasient.pal.core.intercept.InterceptChecker;
+import io.quasient.pal.core.intercept.ParamTypeExtractor;
 import io.quasient.pal.core.internal.messages.SessionCommandMsg;
 import io.quasient.pal.core.service.RunOptions;
 import io.quasient.pal.core.transport.MessageChannelType;
@@ -42,14 +43,12 @@ import io.quasient.pal.serdes.colfer.ColferUtils;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.Signature;
-import org.aspectj.lang.reflect.CodeSignature;
 import org.aspectj.lang.reflect.ConstructorSignature;
 
 /**
@@ -85,16 +84,20 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     // This allows intercepts to wait for in-flight calls to complete before activation
     final boolean trackingEnabled =
         runOptions != null && runOptions.contains(RunOptions.WITH_IN_FLIGHT_TRACKING);
+
+    // Extract param types once from the signature for reuse across tracking, intercepts, and
+    // callbacks. Uses signature-based caching so repeated calls to the same method skip extraction.
+    final String[] paramTypeNames =
+        ParamTypeExtractor.extractFromSignature(pjp.getStaticPart().getSignature());
+
     String className = null;
     String methodName = null;
-    String[] trackingParamTypes = null;
 
     if (trackingEnabled) {
       className = getClassNameFromPjp(pjp);
       methodName = getMethodNameFromPjp(pjp);
-      trackingParamTypes = getParamTypesForTracking(pjp);
       try {
-        inFlightDispatchTracker.enterDispatch(className, methodName, trackingParamTypes);
+        inFlightDispatchTracker.enterDispatch(className, methodName, paramTypeNames);
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
         throw new RuntimeException("Interrupted while entering dispatch", e);
@@ -151,22 +154,27 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       }
 
       // Handle LOCAL BEFORE intercepts (no ExecMessage needed for hot-path optimization)
+      // Pre-compute param types list once for all intercept callbacks that need List<String>
+      final List<String> paramTypesList = ParamTypeExtractor.asList(paramTypeNames);
+
       Object[] finalArgs = args;
       if (beforeInterceptCheck != null && beforeInterceptCheck.hasLocalIntercepts()) {
+        // Extract className/methodName once for all BEFORE intercept phases
+        if (className == null) {
+          className = getClassNameFromPjp(pjp);
+          methodName = getMethodNameFromPjp(pjp);
+        }
+
         List<InterceptMessage> localBeforeIntercepts =
             filterBeforeIntercepts(beforeInterceptCheck.getLocalIntercepts());
         if (!localBeforeIntercepts.isEmpty()) {
-          className = getClassNameFromPjp(pjp);
-          methodName = getMethodNameFromPjp(pjp);
-          List<String> paramTypes = getParamTypesFromPjp(pjp);
-
           ConsolidatedCallbackResponse localResponse =
               localInterceptCallbackDispatcher.sendLocalBeforeCallbacks(
                   localBeforeIntercepts,
                   finalArgs,
                   className,
                   methodName,
-                  paramTypes,
+                  paramTypesList,
                   peerUuid.toString());
 
           // Check if local callback wants to throw an exception
@@ -192,16 +200,12 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         List<InterceptMessage> localBeforeAsyncIntercepts =
             filterBeforeAsyncIntercepts(beforeInterceptCheck.getLocalIntercepts());
         if (!localBeforeAsyncIntercepts.isEmpty()) {
-          className = getClassNameFromPjp(pjp);
-          methodName = getMethodNameFromPjp(pjp);
-          List<String> paramTypes = getParamTypesFromPjp(pjp);
-
           localInterceptCallbackDispatcher.sendLocalBeforeAsyncCallbacks(
               localBeforeAsyncIntercepts,
               finalArgs,
               className,
               methodName,
-              paramTypes,
+              paramTypesList,
               peerUuid.toString());
         }
       }
@@ -237,9 +241,10 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       // Each proceed() invokes the next layer, not the method directly
       AroundInterceptChain aroundChain = null;
       if (beforeInterceptCheck != null && beforeInterceptCheck.hasAnyIntercepts()) {
-        className = getClassNameFromPjp(pjp);
-        methodName = getMethodNameFromPjp(pjp);
-        List<String> paramTypes = getParamTypesFromPjp(pjp);
+        if (className == null) {
+          className = getClassNameFromPjp(pjp);
+          methodName = getMethodNameFromPjp(pjp);
+        }
 
         // Method invoker for the innermost layer
         final Object[] argsForChain = finalArgs;
@@ -255,7 +260,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
         aroundChain =
             aroundChainBuilder.build(
-                beforeInterceptCheck, className, methodName, paramTypes, methodInvoker);
+                beforeInterceptCheck, className, methodName, paramTypesList, methodInvoker);
       }
 
       // Execute AROUND chain OR invoke method directly
@@ -294,12 +299,15 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       // Handle LOCAL AFTER intercepts first (before remote AFTER)
       // Local intercepts run regardless of whether we have ExecMessage
       if (afterInterceptCheck != null && afterInterceptCheck.hasLocalIntercepts()) {
+        // Ensure className/methodName are extracted (may already be set from BEFORE phase)
+        if (className == null) {
+          className = getClassNameFromPjp(pjp);
+          methodName = getMethodNameFromPjp(pjp);
+        }
+
         List<InterceptMessage> localAfterIntercepts =
             filterAfterIntercepts(afterInterceptCheck.getLocalIntercepts());
         if (!localAfterIntercepts.isEmpty()) {
-          className = getClassNameFromPjp(pjp);
-          methodName = getMethodNameFromPjp(pjp);
-          List<String> paramTypes = getParamTypesFromPjp(pjp);
           boolean returnsVoidLocal = returnsVoid(pjp);
 
           ConsolidatedCallbackResponse localAfterResponse =
@@ -311,7 +319,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
                   throwableWrapper != null ? throwableWrapper.throwable() : null,
                   className,
                   methodName,
-                  paramTypes,
+                  paramTypesList,
                   peerUuid.toString());
 
           // Check if local callback wants to throw an exception
@@ -330,9 +338,6 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         List<InterceptMessage> localAfterAsyncIntercepts =
             filterAfterAsyncIntercepts(afterInterceptCheck.getLocalIntercepts());
         if (!localAfterAsyncIntercepts.isEmpty()) {
-          className = getClassNameFromPjp(pjp);
-          methodName = getMethodNameFromPjp(pjp);
-          List<String> paramTypes = getParamTypesFromPjp(pjp);
           boolean returnsVoidLocal = returnsVoid(pjp);
 
           localInterceptCallbackDispatcher.sendLocalAfterAsyncCallbacks(
@@ -343,7 +348,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
               throwableWrapper != null ? throwableWrapper.throwable() : null,
               className,
               methodName,
-              paramTypes,
+              paramTypesList,
               peerUuid.toString());
         }
       }
@@ -420,7 +425,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     } finally {
       // Always exit dispatch tracking, even if an exception occurred
       if (trackingEnabled) {
-        inFlightDispatchTracker.exitDispatch(className, methodName, trackingParamTypes);
+        inFlightDispatchTracker.exitDispatch(className, methodName, paramTypeNames);
       }
     }
   }
@@ -1314,45 +1319,6 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       return "new";
     }
     return sig.getName();
-  }
-
-  /**
-   * Extracts parameter type names from a ProceedingJoinPoint.
-   *
-   * @param pjp the proceeding join point
-   * @return list of parameter type names, or empty list for fields
-   */
-  private List<String> getParamTypesFromPjp(ProceedingJoinPoint pjp) {
-    Signature sig = pjp.getSignature();
-    if (sig instanceof CodeSignature codeSig) {
-      Class<?>[] paramTypes = codeSig.getParameterTypes();
-      if (paramTypes != null && paramTypes.length > 0) {
-        return Arrays.stream(paramTypes).map(Class::getName).toList();
-      }
-    }
-    return List.of();
-  }
-
-  /**
-   * Extracts parameter type names from a ProceedingJoinPoint for in-flight dispatch tracking.
-   *
-   * <p>Returns {@code null} for field operations (no params), or a {@code String[]} of
-   * fully-qualified parameter type names for methods and constructors (may be empty for no-arg).
-   *
-   * @param pjp the proceeding join point
-   * @return array of parameter type names, or {@code null} for field operations
-   */
-  @SuppressFBWarnings(
-      value = "PZLA_PREFER_ZERO_LENGTH_ARRAYS",
-      justification =
-          "Null signals a field operation (no parameter types) vs empty array for"
-              + " no-arg methods/constructors; this distinction is required by InFlightDispatchTracker")
-  private String[] getParamTypesForTracking(ProceedingJoinPoint pjp) {
-    Signature sig = pjp.getSignature();
-    if (sig instanceof CodeSignature codeSig) {
-      return Arrays.stream(codeSig.getParameterTypes()).map(Class::getName).toArray(String[]::new);
-    }
-    return null; // Field operations
   }
 
   /**

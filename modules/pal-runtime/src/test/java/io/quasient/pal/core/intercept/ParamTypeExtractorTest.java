@@ -9,9 +9,15 @@
  */
 package io.quasient.pal.core.intercept;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.CoreMatchers.sameInstance;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertNotNull;
 
-import org.junit.Ignore;
+import java.util.Arrays;
+import java.util.List;
 import org.junit.Test;
 
 /**
@@ -44,17 +50,16 @@ public class ParamTypeExtractorTest {
    * names for array types (e.g., {@code "[D"} for {@code double[]}).
    */
   @Test
-  @Ignore("Awaiting implementation in #689")
   public void shouldExtractParamTypesFromClasses() {
     // Given: Class[] containing a primitive, a reference type, and an array type
-    //   {int.class, String.class, double[].class}
-    //
-    // When: extractParamTypes() is called with this input
-    //
-    // Then: Returns String[] {"int", "java.lang.String", "[D"}
+    Class<?>[] input = {int.class, String.class, double[].class};
 
-    // TODO(#689): Implement test logic
-    fail("Not yet implemented");
+    // When: extractParamTypes() is called with this input
+    String[] result = ParamTypeExtractor.extractParamTypes(input);
+
+    // Then: Returns String[] {"int", "java.lang.String", "[D"}
+    assertNotNull(result);
+    assertArrayEquals(new String[] {"int", "java.lang.String", "[D"}, result);
   }
 
   /**
@@ -62,16 +67,16 @@ public class ParamTypeExtractorTest {
    * null.
    */
   @Test
-  @Ignore("Awaiting implementation in #689")
   public void shouldExtractEmptyParamTypes() {
     // Given: An empty Class[] (zero-length array)
-    //
-    // When: extractParamTypes() is called with this input
-    //
-    // Then: Returns an empty String[] (length 0)
+    Class<?>[] input = {};
 
-    // TODO(#689): Implement test logic
-    fail("Not yet implemented");
+    // When: extractParamTypes() is called with this input
+    String[] result = ParamTypeExtractor.extractParamTypes(input);
+
+    // Then: Returns an empty String[] (length 0)
+    assertNotNull(result);
+    assertThat(result.length, is(0));
   }
 
   /**
@@ -79,16 +84,14 @@ public class ParamTypeExtractorTest {
    * semantic used by in-flight dispatch tracking.
    */
   @Test
-  @Ignore("Awaiting implementation in #689")
   public void shouldExtractNullParamTypes() {
     // Given: null Class[] input
-    //
-    // When: extractParamTypes() is called with null
-    //
-    // Then: Returns null (not an empty array)
 
-    // TODO(#689): Implement test logic
-    fail("Not yet implemented");
+    // When: extractParamTypes() is called with null
+    String[] result = ParamTypeExtractor.extractParamTypes(null);
+
+    // Then: Returns null (not an empty array)
+    assertThat(result, is(nullValue()));
   }
 
   /**
@@ -99,22 +102,24 @@ public class ParamTypeExtractorTest {
    * thread-local buffer. The buffer is only re-allocated when the input length changes.
    */
   @Test
-  @Ignore("Awaiting implementation in #689")
   public void shouldReuseArrayViaThreadLocal() {
     // Given: A ThreadLocal String[] buffer is used internally by the extractor
-    //
+
     // When: extractParamTypes() is called twice with same-length Class[] inputs
     //   First call: {int.class, String.class}
+    String[] result1 =
+        ParamTypeExtractor.extractParamTypes(new Class<?>[] {int.class, String.class});
+
     //   Second call: {double.class, long.class}
-    //
+    String[] result2 =
+        ParamTypeExtractor.extractParamTypes(new Class<?>[] {double.class, long.class});
+
     // Then: The returned String[] instance from both calls is the same object
-    //   (assertThat(result2, is(sameInstance(result1))))
-    //
+    assertThat(result2, is(sameInstance(result1)));
+
     // Note: The *contents* will differ (reflecting the second call's types),
     //   but the array container itself is reused.
-
-    // TODO(#689): Implement test logic
-    fail("Not yet implemented");
+    assertArrayEquals(new String[] {"double", "long"}, result2);
   }
 
   /**
@@ -125,20 +130,18 @@ public class ParamTypeExtractorTest {
    * Arrays.stream(paramTypes).map(Class::getName).toList()}.
    */
   @Test
-  @Ignore("Awaiting implementation in #689")
   public void shouldMatchExistingExtractParamTypesOutput() {
-    // Given: A Class[] input with various types:
-    //   {String.class, int.class, double[].class, Object.class, byte.class, List.class}
-    //
-    // When: Both the existing stream-based extraction and the new loop-based extraction
-    //   are applied to the same input:
-    //   - Existing: Arrays.stream(paramTypes).map(Class::getName).toList()
-    //   - New: ParamTypeExtractor.extractParamTypes(paramTypes)
-    //
-    // Then: The results are identical (same elements in same order)
-    //   assertThat(Arrays.asList(newResult), is(existingResult))
+    // Given: A Class[] input with various types
+    Class<?>[] input = {
+      String.class, int.class, double[].class, Object.class, byte.class, List.class
+    };
 
-    // TODO(#689): Implement test logic
-    fail("Not yet implemented");
+    // When: Both the existing stream-based extraction and the new loop-based extraction
+    //   are applied to the same input
+    List<String> existingResult = Arrays.stream(input).map(Class::getName).toList();
+    String[] newResult = ParamTypeExtractor.extractParamTypes(input);
+
+    // Then: The results are identical (same elements in same order)
+    assertThat(Arrays.asList(newResult), is(existingResult));
   }
 }

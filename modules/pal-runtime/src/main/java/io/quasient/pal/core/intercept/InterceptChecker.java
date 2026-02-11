@@ -21,7 +21,6 @@ import java.util.UUID;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.Signature;
-import org.aspectj.lang.reflect.CodeSignature;
 import org.aspectj.lang.reflect.ConstructorSignature;
 import org.aspectj.lang.reflect.FieldSignature;
 import org.aspectj.lang.reflect.MethodSignature;
@@ -186,17 +185,14 @@ public class InterceptChecker {
   /**
    * Extracts parameter type names from the AspectJ signature.
    *
-   * <p>For methods and constructors, this returns an array of fully qualified parameter type names.
-   * For fields, this returns null since fields do not have parameters.
+   * <p>Delegates to {@link ParamTypeExtractor#extractFromSignature(Signature)} which provides
+   * signature-based caching, eliminating repeated extraction for the same method signature.
    *
    * @param ajSig the AspectJ signature
    * @return array of parameter type names, or null for fields
    */
   private String[] extractParamTypes(Signature ajSig) {
-    if (ajSig instanceof CodeSignature codeSig) {
-      return Arrays.stream(codeSig.getParameterTypes()).map(Class::getName).toArray(String[]::new);
-    }
-    return null; // Fields have no params
+    return ParamTypeExtractor.extractFromSignature(ajSig);
   }
 
   /**

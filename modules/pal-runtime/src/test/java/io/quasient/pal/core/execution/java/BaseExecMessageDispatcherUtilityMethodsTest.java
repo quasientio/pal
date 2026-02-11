@@ -10,7 +10,6 @@
 package io.quasient.pal.core.execution.java;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
@@ -40,7 +39,6 @@ import java.util.Map;
 import java.util.UUID;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.Signature;
-import org.aspectj.lang.reflect.CodeSignature;
 import org.aspectj.lang.reflect.ConstructorSignature;
 import org.aspectj.lang.reflect.FieldSignature;
 import org.aspectj.lang.reflect.MethodSignature;
@@ -417,117 +415,9 @@ public class BaseExecMessageDispatcherUtilityMethodsTest {
     assertThat(result, is("myField"));
   }
 
-  // ===== Tests for getParamTypesFromPjp() via reflection =====
-
-  @Test
-  public void getParamTypesFromPjp_methodWithParams_returnsTypeNames() throws Exception {
-    Method privateMethod =
-        BaseExecMessageDispatcher.class.getDeclaredMethod(
-            "getParamTypesFromPjp", ProceedingJoinPoint.class);
-    privateMethod.setAccessible(true);
-
-    ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
-    CodeSignature sig = mock(CodeSignature.class);
-    when(pjp.getSignature()).thenReturn(sig);
-    when(sig.getParameterTypes()).thenReturn(new Class<?>[] {String.class, int.class});
-
-    @SuppressWarnings("unchecked")
-    List<String> result = (List<String>) privateMethod.invoke(dispatcher, pjp);
-
-    assertThat(result, hasSize(2));
-    assertThat(result.get(0), is("java.lang.String"));
-    assertThat(result.get(1), is("int"));
-  }
-
-  @Test
-  public void getParamTypesFromPjp_methodNoParams_returnsEmptyList() throws Exception {
-    Method privateMethod =
-        BaseExecMessageDispatcher.class.getDeclaredMethod(
-            "getParamTypesFromPjp", ProceedingJoinPoint.class);
-    privateMethod.setAccessible(true);
-
-    ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
-    CodeSignature sig = mock(CodeSignature.class);
-    when(pjp.getSignature()).thenReturn(sig);
-    when(sig.getParameterTypes()).thenReturn(new Class<?>[0]);
-
-    @SuppressWarnings("unchecked")
-    List<String> result = (List<String>) privateMethod.invoke(dispatcher, pjp);
-
-    assertThat(result, empty());
-  }
-
-  @Test
-  public void getParamTypesFromPjp_field_returnsEmptyList() throws Exception {
-    Method privateMethod =
-        BaseExecMessageDispatcher.class.getDeclaredMethod(
-            "getParamTypesFromPjp", ProceedingJoinPoint.class);
-    privateMethod.setAccessible(true);
-
-    ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
-    FieldSignature sig = mock(FieldSignature.class);
-    when(pjp.getSignature()).thenReturn(sig);
-
-    @SuppressWarnings("unchecked")
-    List<String> result = (List<String>) privateMethod.invoke(dispatcher, pjp);
-
-    assertThat(result, empty());
-  }
-
-  // ===== Tests for getParamTypesForTracking() via reflection =====
-
-  @Test
-  public void getParamTypesForTracking_method_returnsStringArray() throws Exception {
-    Method privateMethod =
-        BaseExecMessageDispatcher.class.getDeclaredMethod(
-            "getParamTypesForTracking", ProceedingJoinPoint.class);
-    privateMethod.setAccessible(true);
-
-    ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
-    CodeSignature sig = mock(CodeSignature.class);
-    when(pjp.getSignature()).thenReturn(sig);
-    when(sig.getParameterTypes()).thenReturn(new Class<?>[] {String.class});
-
-    String[] result = (String[]) privateMethod.invoke(dispatcher, pjp);
-
-    assertThat(result, notNullValue());
-    assertThat(result.length, is(1));
-    assertThat(result[0], is("java.lang.String"));
-  }
-
-  @Test
-  public void getParamTypesForTracking_noArgMethod_returnsEmptyArray() throws Exception {
-    Method privateMethod =
-        BaseExecMessageDispatcher.class.getDeclaredMethod(
-            "getParamTypesForTracking", ProceedingJoinPoint.class);
-    privateMethod.setAccessible(true);
-
-    ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
-    CodeSignature sig = mock(CodeSignature.class);
-    when(pjp.getSignature()).thenReturn(sig);
-    when(sig.getParameterTypes()).thenReturn(new Class<?>[0]);
-
-    String[] result = (String[]) privateMethod.invoke(dispatcher, pjp);
-
-    assertThat(result, notNullValue());
-    assertThat(result.length, is(0));
-  }
-
-  @Test
-  public void getParamTypesForTracking_field_returnsNull() throws Exception {
-    Method privateMethod =
-        BaseExecMessageDispatcher.class.getDeclaredMethod(
-            "getParamTypesForTracking", ProceedingJoinPoint.class);
-    privateMethod.setAccessible(true);
-
-    ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
-    FieldSignature sig = mock(FieldSignature.class);
-    when(pjp.getSignature()).thenReturn(sig);
-
-    String[] result = (String[]) privateMethod.invoke(dispatcher, pjp);
-
-    assertThat(result, nullValue());
-  }
+  // Note: Tests for getParamTypesFromPjp() and getParamTypesForTracking() were removed in #689.
+  // These private methods were replaced by ParamTypeExtractor, which is tested in
+  // ParamTypeExtractorTest.
 
   // ===== Testable dispatcher implementation =====
 
