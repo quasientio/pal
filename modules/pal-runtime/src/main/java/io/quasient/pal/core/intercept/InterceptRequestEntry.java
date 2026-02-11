@@ -55,8 +55,14 @@ public class InterceptRequestEntry {
   private final InterceptMessage interceptMessage;
 
   /**
-   * Matcher for comparing dot-separated paths, configured to trim tokens and ignore case. Caution:
-   * This instance is not thread-safe.
+   * Matcher for comparing dot-separated paths, configured to trim tokens and ignore case.
+   *
+   * <p><b>Thread safety:</b> This shared static instance is safe for concurrent use. {@code
+   * AntPathMatcherArrays} (v1.0.0) is an immutable, effectively thread-safe class: all instance
+   * fields are {@code final}, there is no mutable state (no caches, buffers, or counters), and
+   * {@code isMatch()} is a pure function that operates only on method-local {@code char[]} arrays
+   * and final fields. See {@link io.quasient.pal.core.intercept.AntPathMatcherThreadSafetyTest} for
+   * empirical verification.
    */
   private static final AntPathMatcherArrays matcher =
       new AntPathMatcherArrays.Builder()

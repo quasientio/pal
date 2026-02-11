@@ -9,12 +9,23 @@
  */
 package io.quasient.pal.core.intercept;
 
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import io.github.azagniotov.matcher.AntPathMatcherArrays;
+import io.quasient.pal.common.lang.intercept.InterceptType;
+import io.quasient.pal.messages.colfer.InterceptMessage;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
-import org.junit.Ignore;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -23,10 +34,23 @@ import org.junit.rules.Timeout;
  * Thread-safety verification tests for the static {@link AntPathMatcherArrays} instance used in
  * {@link InterceptRequestEntry} (line 61) and {@link InFlightDispatchTracker} (line 237).
  *
- * <p>The Javadoc at {@code InterceptRequestEntry.java:59} explicitly warns "This instance is not
- * thread-safe", but the implementation appears to have no mutable state after construction. These
- * tests empirically verify thread safety by hammering the shared static instance from many threads
- * concurrently and checking that all results remain correct.
+ * <p>Analysis of the {@code AntPathMatcherArrays} bytecode (v1.0.0) confirms the class is
+ * <b>unconditionally thread-safe</b>:
+ *
+ * <ul>
+ *   <li>All 4 instance fields ({@code pathSeparator}, {@code ignoreCase}, {@code matchStart},
+ *       {@code trimTokens}) are {@code private final}
+ *   <li>All 4 static fields ({@code ASTERISK}, {@code QUESTION}, {@code BLANK}, {@code
+ *       ASCII_CASE_DIFFERENCE_VALUE}) are {@code private static final} compile-time constants
+ *   <li>There are <b>no caches, buffers, counters, or any mutable state</b>
+ *   <li>{@code isMatch()} is a <b>pure function</b>: it creates only method-local {@code char[]}
+ *       arrays (via {@code String.toCharArray()}) and delegates to recursive private helpers that
+ *       read only method parameters and final fields
+ *   <li>No {@code synchronized} blocks, no {@code volatile} fields, no lazy initialization
+ * </ul>
+ *
+ * <p>These tests empirically verify thread safety by hammering the shared static instance from many
+ * threads concurrently and checking that all results remain correct.
  *
  * <p>Phase 0 of the hot-path optimization plan (#668): safety verification before proceeding with
  * optimization work that assumes thread-safe read-only matching.
@@ -63,6 +87,23 @@ public class AntPathMatcherThreadSafetyTest {
   /** Shared peer UUID for test intercept messages. */
   private final UUID peerUuid = UUID.randomUUID();
 
+  /** Executor service for running concurrent threads. */
+  private ExecutorService executor;
+
+  /** Sets up the thread pool before each test. */
+  @Before
+  public void setUp() {
+    executor = Executors.newFixedThreadPool(THREAD_COUNT);
+  }
+
+  /** Shuts down the thread pool after each test. */
+  @After
+  public void tearDown() {
+    if (executor != null) {
+      executor.shutdownNow();
+    }
+  }
+
   /**
    * Verifies that 64 threads can concurrently call {@code isMatch()} with exact (non-wildcard)
    * patterns and get correct results every time.
@@ -71,22 +112,49 @@ public class AntPathMatcherThreadSafetyTest {
    * dot-separated names with no wildcards.
    */
   @Test
-  @Ignore("Awaiting implementation in #670")
-  public void shouldMatchConcurrentlyWithExactPatterns() {
-    // Given: Static AntPathMatcherArrays instance configured with '.' separator,
-    //        trimTokens, ignoreCase
-    // When: 64 threads concurrently call isMatch() with exact patterns
-    //       (e.g., "com.example.Foo.bar") for 10,000 iterations each
-    // Then: All match results are correct (no false positives or negatives)
-    //
-    // Exact patterns to test:
-    //   - "com.example.Foo.bar" vs "com.example.Foo.bar" -> true
-    //   - "com.example.Foo.bar" vs "com.example.Foo.baz" -> false
-    //   - "java.io.PrintStream.println" vs "java.io.PrintStream.println" -> true
-    //   - "java.lang.System.gc" vs "java.lang.System.exit" -> false
+  public void shouldMatchConcurrentlyWithExactPatterns() throws Exception {
+    CyclicBarrier barrier = new CyclicBarrier(THREAD_COUNT);
+    AtomicInteger failures = new AtomicInteger(0);
+    CountDownLatch done = new CountDownLatch(THREAD_COUNT);
 
-    // TODO(#670): Implement test logic
-    fail("Not yet implemented");
+    for (int t = 0; t < THREAD_COUNT; t++) {
+      var unused =
+          executor.submit(
+              () -> {
+                try {
+                  barrier.await();
+                  for (int i = 0; i < ITERATIONS_PER_THREAD; i++) {
+                    // Exact match: same pattern and path
+                    if (!matcher.isMatch("com.example.Foo.bar", "com.example.Foo.bar")) {
+                      failures.incrementAndGet();
+                    }
+                    // Exact non-match: different method name
+                    if (matcher.isMatch("com.example.Foo.bar", "com.example.Foo.baz")) {
+                      failures.incrementAndGet();
+                    }
+                    // Exact match: different class
+                    if (!matcher.isMatch(
+                        "java.io.PrintStream.println", "java.io.PrintStream.println")) {
+                      failures.incrementAndGet();
+                    }
+                    // Exact non-match: different method
+                    if (matcher.isMatch("java.lang.System.gc", "java.lang.System.exit")) {
+                      failures.incrementAndGet();
+                    }
+                  }
+                } catch (Exception e) {
+                  failures.incrementAndGet();
+                } finally {
+                  done.countDown();
+                }
+              });
+    }
+
+    done.await();
+    assertEquals(
+        "Expected zero failures across " + THREAD_COUNT + " threads with exact patterns",
+        0,
+        failures.get());
   }
 
   /**
@@ -98,26 +166,63 @@ public class AntPathMatcherThreadSafetyTest {
    * involve internal array tokenization and comparison loops.
    */
   @Test
-  @Ignore("Awaiting implementation in #670")
-  public void shouldMatchConcurrentlyWithWildcardPatterns() {
-    // Given: Same static AntPathMatcherArrays instance
-    // When: 64 threads concurrently call isMatch() with wildcard patterns
-    //       ("com.example.*.bar", "com.**.bar", "com.example.Foo.*")
-    //       for 10,000 iterations each
-    // Then: All match results are correct
-    //
-    // Wildcard patterns to test:
-    //   - "com.example.*.bar" vs "com.example.Foo.bar" -> true
-    //   - "com.example.*.bar" vs "com.example.Foo.baz" -> false
-    //   - "com.**.bar" vs "com.example.deep.nested.Foo.bar" -> true
-    //   - "com.**.bar" vs "com.example.Foo.baz" -> false
-    //   - "com.example.Foo.*" vs "com.example.Foo.bar" -> true
-    //   - "com.example.Foo.*" vs "com.other.Foo.bar" -> false
-    //   - "com.example.Fo?.bar" vs "com.example.Foo.bar" -> true
-    //   - "com.example.Fo?.bar" vs "com.example.Food.bar" -> false
+  public void shouldMatchConcurrentlyWithWildcardPatterns() throws Exception {
+    CyclicBarrier barrier = new CyclicBarrier(THREAD_COUNT);
+    AtomicInteger failures = new AtomicInteger(0);
+    CountDownLatch done = new CountDownLatch(THREAD_COUNT);
 
-    // TODO(#670): Implement test logic
-    fail("Not yet implemented");
+    for (int t = 0; t < THREAD_COUNT; t++) {
+      var unused =
+          executor.submit(
+              () -> {
+                try {
+                  barrier.await();
+                  for (int i = 0; i < ITERATIONS_PER_THREAD; i++) {
+                    // Single wildcard: matches any single segment
+                    if (!matcher.isMatch("com.example.*.bar", "com.example.Foo.bar")) {
+                      failures.incrementAndGet();
+                    }
+                    if (matcher.isMatch("com.example.*.bar", "com.example.Foo.baz")) {
+                      failures.incrementAndGet();
+                    }
+
+                    // Double wildcard: matches multiple segments
+                    if (!matcher.isMatch("com.**.bar", "com.example.deep.nested.Foo.bar")) {
+                      failures.incrementAndGet();
+                    }
+                    if (matcher.isMatch("com.**.bar", "com.example.Foo.baz")) {
+                      failures.incrementAndGet();
+                    }
+
+                    // Trailing wildcard
+                    if (!matcher.isMatch("com.example.Foo.*", "com.example.Foo.bar")) {
+                      failures.incrementAndGet();
+                    }
+                    if (matcher.isMatch("com.example.Foo.*", "com.other.Foo.bar")) {
+                      failures.incrementAndGet();
+                    }
+
+                    // Question mark: matches single character
+                    if (!matcher.isMatch("com.example.Fo?.bar", "com.example.Foo.bar")) {
+                      failures.incrementAndGet();
+                    }
+                    if (matcher.isMatch("com.example.Fo?.bar", "com.example.Food.bar")) {
+                      failures.incrementAndGet();
+                    }
+                  }
+                } catch (Exception e) {
+                  failures.incrementAndGet();
+                } finally {
+                  done.countDown();
+                }
+              });
+    }
+
+    done.await();
+    assertEquals(
+        "Expected zero failures across " + THREAD_COUNT + " threads with wildcard patterns",
+        0,
+        failures.get());
   }
 
   /**
@@ -128,21 +233,62 @@ public class AntPathMatcherThreadSafetyTest {
    * exercising both the "match found" and "match not found" code paths concurrently.
    */
   @Test
-  @Ignore("Awaiting implementation in #670")
-  public void shouldMatchConcurrentlyWithMixedMatchAndNonMatch() {
-    // Given: Same static instance, mix of patterns that match and don't match
-    // When: 64 threads concurrently call isMatch() with alternating matching and
-    //       non-matching inputs
-    // Then: Results consistent with single-threaded execution
-    //
-    // Each thread should:
-    //   1. Pre-compute expected results for each (pattern, path) pair in single-threaded setup
-    //   2. In the concurrent phase, verify each call returns the pre-computed expected result
-    //   3. Use a variety of patterns: exact, single-wildcard, double-wildcard, question-mark
-    //   4. Mix true-expected and false-expected pairs roughly equally
+  public void shouldMatchConcurrentlyWithMixedMatchAndNonMatch() throws Exception {
+    // Pre-compute test cases with expected results
+    List<Object[]> testCases = new ArrayList<>();
+    testCases.add(new Object[] {"com.example.Foo.bar", "com.example.Foo.bar", true});
+    testCases.add(new Object[] {"com.example.Foo.bar", "com.example.Foo.baz", false});
+    testCases.add(new Object[] {"com.example.*.bar", "com.example.Foo.bar", true});
+    testCases.add(new Object[] {"com.example.*.bar", "com.other.Foo.bar", false});
+    testCases.add(new Object[] {"com.**.process", "com.deep.nested.Handler.process", true});
+    testCases.add(new Object[] {"com.**.process", "com.deep.nested.Handler.execute", false});
+    testCases.add(new Object[] {"io.quasient.pal.*.run", "io.quasient.pal.Main.run", true});
+    testCases.add(new Object[] {"io.quasient.pal.*.run", "io.quasient.pal.Main.stop", false});
+    testCases.add(new Object[] {"*.*.Foo.bar", "com.example.Foo.bar", true});
+    testCases.add(new Object[] {"*.*.Foo.bar", "com.example.Bar.bar", false});
+    testCases.add(new Object[] {"com.example.Fo?.bar", "com.example.Fox.bar", true});
+    testCases.add(new Object[] {"com.example.Fo?.bar", "com.example.Foxx.bar", false});
 
-    // TODO(#670): Implement test logic
-    fail("Not yet implemented");
+    // Verify single-threaded correctness first
+    for (Object[] tc : testCases) {
+      boolean result = matcher.isMatch((String) tc[0], (String) tc[1]);
+      assertEquals(
+          "Pre-check failed for pattern='" + tc[0] + "' path='" + tc[1] + "'", tc[2], result);
+    }
+
+    CyclicBarrier barrier = new CyclicBarrier(THREAD_COUNT);
+    AtomicInteger failures = new AtomicInteger(0);
+    CountDownLatch done = new CountDownLatch(THREAD_COUNT);
+
+    for (int t = 0; t < THREAD_COUNT; t++) {
+      var unused =
+          executor.submit(
+              () -> {
+                try {
+                  barrier.await();
+                  for (int i = 0; i < ITERATIONS_PER_THREAD; i++) {
+                    for (Object[] tc : testCases) {
+                      boolean result = matcher.isMatch((String) tc[0], (String) tc[1]);
+                      if (result != (boolean) tc[2]) {
+                        failures.incrementAndGet();
+                      }
+                    }
+                  }
+                } catch (Exception e) {
+                  failures.incrementAndGet();
+                } finally {
+                  done.countDown();
+                }
+              });
+    }
+
+    done.await();
+    assertEquals(
+        "Expected zero failures across "
+            + THREAD_COUNT
+            + " threads with mixed match/non-match inputs",
+        0,
+        failures.get());
   }
 
   /**
@@ -154,59 +300,184 @@ public class AntPathMatcherThreadSafetyTest {
    * algorithm has no shared mutable state.
    */
   @Test
-  @Ignore("Awaiting implementation in #670")
-  public void shouldMatchConcurrentlyWithDoubleWildcard() {
-    // Given: Pattern "**.*" (match everything) and specific paths
-    // When: 64 threads call isMatch() concurrently
-    // Then: All return true
-    //
-    // Paths to test against "**.*":
-    //   - "com.example.Foo.bar"
-    //   - "java.io.PrintStream.println"
-    //   - "a.b"
-    //   - "very.deep.package.structure.ClassName.methodName"
-    //   - "Single.method"
-    //
-    // All of these should match "**.*" and every thread should see true.
+  public void shouldMatchConcurrentlyWithDoubleWildcard() throws Exception {
+    String[] paths = {
+      "com.example.Foo.bar",
+      "java.io.PrintStream.println",
+      "a.b",
+      "very.deep.package.structure.ClassName.methodName",
+      "Single.method"
+    };
 
-    // TODO(#670): Implement test logic
-    fail("Not yet implemented");
+    CyclicBarrier barrier = new CyclicBarrier(THREAD_COUNT);
+    AtomicInteger failures = new AtomicInteger(0);
+    CountDownLatch done = new CountDownLatch(THREAD_COUNT);
+
+    for (int t = 0; t < THREAD_COUNT; t++) {
+      var unused =
+          executor.submit(
+              () -> {
+                try {
+                  barrier.await();
+                  for (int i = 0; i < ITERATIONS_PER_THREAD; i++) {
+                    for (String path : paths) {
+                      if (!matcher.isMatch("**.*", path)) {
+                        failures.incrementAndGet();
+                      }
+                    }
+                  }
+                } catch (Exception e) {
+                  failures.incrementAndGet();
+                } finally {
+                  done.countDown();
+                }
+              });
+    }
+
+    done.await();
+    assertEquals(
+        "Expected zero failures: '**.*' should match all paths across " + THREAD_COUNT + " threads",
+        0,
+        failures.get());
   }
 
   /**
    * Verifies that the full {@link InterceptRequestEntry#matches(String, String, String[])} method
    * is thread-safe when called concurrently on the SAME entry object by 64 threads.
    *
-   * <p>This goes beyond just testing {@code AntPathMatcherArrays.isMatch()} — it also exercises the
-   * {@code String.format()} and {@code String.join()} calls within matches(), as well as the
+   * <p>This goes beyond just testing {@code AntPathMatcherArrays.isMatch()} -- it also exercises
+   * the {@code String.format()} and {@code String.join()} calls within matches(), as well as the
    * parameter type comparison logic. The entry object's fields (pattern, paramTypes) are final and
    * should be safely published, but this test verifies it empirically.
+   *
+   * <p>Also tests the optimized overload {@link InterceptRequestEntry#matches(String, String)}
+   * concurrently to verify both code paths.
    */
   @Test
-  @Ignore("Awaiting implementation in #670")
-  public void shouldMatchConcurrentlyWithParameterTypes() {
-    // Given: InterceptRequestEntry instances with paramTypes
-    // When: 64 threads concurrently call matches(className, execName, paramTypes)
-    //       on the SAME entry object
-    // Then: All results correct (verifies the full matches() path including
-    //       String.format and String.join)
-    //
-    // Entry configurations to test:
-    //   - Entry with pattern "com.example.Foo.bar" and paramTypes "int,String"
-    //     * matches("com.example.Foo", "bar", {"int", "String"}) -> true
-    //     * matches("com.example.Foo", "bar", {"int", "int"}) -> false
-    //     * matches("com.example.Foo", "bar", {"int"}) -> false
-    //   - Entry with pattern "com.example.*.process" and paramTypes "long"
-    //     * matches("com.example.Handler", "process", {"long"}) -> true
-    //     * matches("com.example.Handler", "process", {"int"}) -> false
-    //   - Entry with pattern "com.example.Foo.bar" and empty paramTypes (zero-arg method)
-    //     * matches("com.example.Foo", "bar", new String[0]) -> true
-    //     * matches("com.example.Foo", "bar", {"int"}) -> false
-    //
-    // Also test the optimized overload matches(String, String) concurrently
-    // to verify both code paths.
+  public void shouldMatchConcurrentlyWithParameterTypes() throws Exception {
+    // Build entry: com.example.Foo.bar(int,String)
+    InterceptMessage msgFooBar =
+        msgBuilder.buildInterceptMessage(
+            peerUuid,
+            InterceptType.BEFORE,
+            "com.example.Foo",
+            "bar",
+            List.of("int", "String"),
+            "callback.Class",
+            "callbackMethod");
+    InterceptRequestEntry entryFooBar = new InterceptRequestEntry(msgFooBar);
 
-    // TODO(#670): Implement test logic
-    fail("Not yet implemented");
+    // Build entry: com.example.*.process(long)
+    InterceptMessage msgWildcard =
+        msgBuilder.buildInterceptMessage(
+            peerUuid,
+            InterceptType.BEFORE,
+            "com.example.*",
+            "process",
+            List.of("long"),
+            "callback.Class",
+            "callbackMethod");
+    InterceptRequestEntry entryWildcard = new InterceptRequestEntry(msgWildcard);
+
+    // Build entry: com.example.Foo.bar() (zero-arg)
+    InterceptMessage msgNoArgs =
+        msgBuilder.buildInterceptMessage(
+            peerUuid,
+            InterceptType.BEFORE,
+            "com.example.Foo",
+            "bar",
+            List.of(),
+            "callback.Class",
+            "callbackMethod");
+    InterceptRequestEntry entryNoArgs = new InterceptRequestEntry(msgNoArgs);
+
+    // Verify single-threaded correctness first
+    assertTrue(entryFooBar.matches("com.example.Foo", "bar", new String[] {"int", "String"}));
+    assertTrue(!entryFooBar.matches("com.example.Foo", "bar", new String[] {"int", "int"}));
+    assertTrue(!entryFooBar.matches("com.example.Foo", "bar", new String[] {"int"}));
+
+    assertTrue(entryWildcard.matches("com.example.Handler", "process", new String[] {"long"}));
+    assertTrue(!entryWildcard.matches("com.example.Handler", "process", new String[] {"int"}));
+
+    assertTrue(entryNoArgs.matches("com.example.Foo", "bar", new String[0]));
+    assertTrue(!entryNoArgs.matches("com.example.Foo", "bar", new String[] {"int"}));
+
+    // Verify optimized overload
+    assertTrue(entryFooBar.matches("com.example.Foo.bar", "int,String"));
+    assertTrue(!entryFooBar.matches("com.example.Foo.bar", "int,int"));
+    assertTrue(entryNoArgs.matches("com.example.Foo.bar", ""));
+    assertTrue(!entryNoArgs.matches("com.example.Foo.bar", "int"));
+
+    CyclicBarrier barrier = new CyclicBarrier(THREAD_COUNT);
+    AtomicInteger failures = new AtomicInteger(0);
+    CountDownLatch done = new CountDownLatch(THREAD_COUNT);
+
+    for (int t = 0; t < THREAD_COUNT; t++) {
+      var unused =
+          executor.submit(
+              () -> {
+                try {
+                  barrier.await();
+                  for (int i = 0; i < ITERATIONS_PER_THREAD; i++) {
+                    // entryFooBar: com.example.Foo.bar(int,String)
+                    if (!entryFooBar.matches(
+                        "com.example.Foo", "bar", new String[] {"int", "String"})) {
+                      failures.incrementAndGet();
+                    }
+                    if (entryFooBar.matches(
+                        "com.example.Foo", "bar", new String[] {"int", "int"})) {
+                      failures.incrementAndGet();
+                    }
+                    if (entryFooBar.matches("com.example.Foo", "bar", new String[] {"int"})) {
+                      failures.incrementAndGet();
+                    }
+
+                    // entryWildcard: com.example.*.process(long)
+                    if (!entryWildcard.matches(
+                        "com.example.Handler", "process", new String[] {"long"})) {
+                      failures.incrementAndGet();
+                    }
+                    if (entryWildcard.matches(
+                        "com.example.Handler", "process", new String[] {"int"})) {
+                      failures.incrementAndGet();
+                    }
+
+                    // entryNoArgs: com.example.Foo.bar()
+                    if (!entryNoArgs.matches("com.example.Foo", "bar", new String[0])) {
+                      failures.incrementAndGet();
+                    }
+                    if (entryNoArgs.matches("com.example.Foo", "bar", new String[] {"int"})) {
+                      failures.incrementAndGet();
+                    }
+
+                    // Optimized overload: matches(String, String)
+                    if (!entryFooBar.matches("com.example.Foo.bar", "int,String")) {
+                      failures.incrementAndGet();
+                    }
+                    if (entryFooBar.matches("com.example.Foo.bar", "int,int")) {
+                      failures.incrementAndGet();
+                    }
+                    if (!entryNoArgs.matches("com.example.Foo.bar", "")) {
+                      failures.incrementAndGet();
+                    }
+                    if (entryNoArgs.matches("com.example.Foo.bar", "int")) {
+                      failures.incrementAndGet();
+                    }
+                  }
+                } catch (Exception e) {
+                  failures.incrementAndGet();
+                } finally {
+                  done.countDown();
+                }
+              });
+    }
+
+    done.await();
+    assertEquals(
+        "Expected zero failures across "
+            + THREAD_COUNT
+            + " threads with InterceptRequestEntry.matches()",
+        0,
+        failures.get());
   }
 }

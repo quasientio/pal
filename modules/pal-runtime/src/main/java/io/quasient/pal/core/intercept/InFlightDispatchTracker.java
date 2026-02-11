@@ -229,7 +229,13 @@ public class InFlightDispatchTracker {
    * Matcher for comparing dot-separated patterns.
    *
    * <p>Configured to match case-insensitively with token trimming, consistent with intercept
-   * pattern matching elsewhere in the codebase.
+   * pattern matching elsewhere in the codebase (see {@link InterceptRequestEntry}).
+   *
+   * <p><b>Thread safety:</b> This shared static instance is safe for concurrent use. {@code
+   * AntPathMatcherArrays} (v1.0.0) is an immutable, effectively thread-safe class: all instance
+   * fields are {@code final}, there is no mutable state (no caches, buffers, or counters), and
+   * {@code isMatch()} is a pure function that operates only on method-local {@code char[]} arrays
+   * and final fields. See {@link AntPathMatcherThreadSafetyTest} for empirical verification.
    */
   private static final AntPathMatcherArrays matcher =
       new AntPathMatcherArrays.Builder()
