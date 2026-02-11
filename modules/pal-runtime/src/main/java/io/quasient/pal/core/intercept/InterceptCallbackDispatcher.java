@@ -31,6 +31,7 @@ import io.quasient.pal.serdes.colfer.MessageBuilder;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -842,7 +843,7 @@ public class InterceptCallbackDispatcher {
      * @return a proceed response
      */
     public static ConsolidatedCallbackResponse proceed() {
-      return new ConsolidatedCallbackResponse(true, new HashMap<>(), null);
+      return new ConsolidatedCallbackResponse(true, Collections.emptyMap(), null);
     }
 
     /**

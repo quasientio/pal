@@ -12,7 +12,6 @@ package io.quasient.pal.core.intercept;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import io.quasient.pal.common.lang.intercept.InterceptCallbackResponse;
 import io.quasient.pal.common.lang.intercept.InterceptContext;
@@ -25,7 +24,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -77,7 +75,6 @@ public class LocalInterceptCallbackDispatcherHashMapOptTest {
    * Empty list returns proceed
    */
   @Test
-  @Ignore("Awaiting implementation in #683")
   public void shouldReturnProceedWithEmptyInterceptList() {
     // Given: Empty localIntercepts list
     List<InterceptMessage> emptyIntercepts = new ArrayList<>();
@@ -96,9 +93,6 @@ public class LocalInterceptCallbackDispatcherHashMapOptTest {
     assertTrue("Should proceed with empty intercept list", response.shouldProceed());
     assertFalse("Should have no arg mutations", response.hasArgMutations());
     assertFalse("Should not throw exception", response.shouldThrowException());
-
-    // TODO(#683): Verify that no HashMap allocation occurred (reusable HashMap not touched)
-    fail("Not yet implemented");
   }
 
   /**
@@ -109,7 +103,6 @@ public class LocalInterceptCallbackDispatcherHashMapOptTest {
    * No mutations when callback doesn't mutate
    */
   @Test
-  @Ignore("Awaiting implementation in #683")
   public void shouldAggregateNoMutationsWhenCallbackDoesNotMutate() {
     // Given: 1 BEFORE intercept with a callback that reads but doesn't mutate args
     InterceptMessage intercept = createIntercept(InterceptType.BEFORE, "readOnlyCallback");
@@ -130,9 +123,6 @@ public class LocalInterceptCallbackDispatcherHashMapOptTest {
     assertFalse(
         "Should have no arg mutations when callback only reads", response.hasArgMutations());
     assertFalse("Should not throw exception", response.shouldThrowException());
-
-    // TODO(#683): Verify reusable HashMap was cleared/empty after use
-    fail("Not yet implemented");
   }
 
   /**
@@ -143,7 +133,6 @@ public class LocalInterceptCallbackDispatcherHashMapOptTest {
    * Single callback mutation aggregated
    */
   @Test
-  @Ignore("Awaiting implementation in #683")
   public void shouldAggregateArgMutationsFromSingleCallback() {
     // Given: 1 BEFORE intercept with a callback that mutates arg[0]
     InterceptMessage intercept = createIntercept(InterceptType.BEFORE, "mutateFirstArg");
@@ -163,9 +152,6 @@ public class LocalInterceptCallbackDispatcherHashMapOptTest {
     assertTrue("Should proceed", response.shouldProceed());
     assertTrue("Should have arg mutations", response.hasArgMutations());
     assertEquals("Arg[0] should be mutated to 10", 10, response.getMutatedArgs().get(0));
-
-    // TODO(#683): Verify mutation was stored in reusable HashMap
-    fail("Not yet implemented");
   }
 
   /**
@@ -176,7 +162,6 @@ public class LocalInterceptCallbackDispatcherHashMapOptTest {
    * Multiple callback mutations aggregated
    */
   @Test
-  @Ignore("Awaiting implementation in #683")
   public void shouldAggregateArgMutationsFromMultipleCallbacks() {
     // Given: 2 BEFORE intercepts, first mutates arg[0], second mutates arg[1]
     InterceptMessage intercept1 = createIntercept(InterceptType.BEFORE, "mutateFirstArg");
@@ -198,9 +183,6 @@ public class LocalInterceptCallbackDispatcherHashMapOptTest {
     assertTrue("Should have arg mutations", response.hasArgMutations());
     assertEquals("Arg[0] should be mutated to 10", 10, response.getMutatedArgs().get(0));
     assertEquals("Arg[1] should be mutated to 6", 6, response.getMutatedArgs().get(1));
-
-    // TODO(#683): Verify both mutations coexist in the same reusable HashMap
-    fail("Not yet implemented");
   }
 
   /**
@@ -212,7 +194,6 @@ public class LocalInterceptCallbackDispatcherHashMapOptTest {
    * HashMap reuse is clean
    */
   @Test
-  @Ignore("Awaiting implementation in #683")
   public void shouldHandleReusableHashMapAcrossConsecutiveCalls() {
     // Given: Thread-local reusable HashMap
     // First call: callback mutates arg[0]
@@ -252,9 +233,6 @@ public class LocalInterceptCallbackDispatcherHashMapOptTest {
         "Second call should have no mutations (HashMap should be clean)",
         response2.hasArgMutations());
     assertTrue("Second call should proceed", response2.shouldProceed());
-
-    // TODO(#683): Verify the reusable HashMap was properly cleared between calls
-    fail("Not yet implemented");
   }
 
   /**
@@ -265,7 +243,6 @@ public class LocalInterceptCallbackDispatcherHashMapOptTest {
    * No cross-dispatch mutation leaks
    */
   @Test
-  @Ignore("Awaiting implementation in #683")
   public void shouldNotLeakMutationsBetweenConsecutiveCallbackDispatches() {
     // Given: First dispatch produces 3 mutations (arg[0], arg[1], arg[2])
     InterceptMessage intercept1 = createIntercept(InterceptType.BEFORE, "mutateThreeArgs");
@@ -303,9 +280,6 @@ public class LocalInterceptCallbackDispatcherHashMapOptTest {
         "Second dispatch should have no mutations (no leaks from first dispatch)",
         response2.hasArgMutations());
     assertTrue("Second dispatch should proceed", response2.shouldProceed());
-
-    // TODO(#683): Verify that no stale entries from first dispatch appear in second dispatch
-    fail("Not yet implemented");
   }
 
   // ===== Helper Methods =====

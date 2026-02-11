@@ -24,6 +24,7 @@ import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -72,6 +73,17 @@ public class LocalInterceptCallbackDispatcher {
   private static final Logger logger =
       LoggerFactory.getLogger(LocalInterceptCallbackDispatcher.class);
 
+  /**
+   * Thread-local reusable HashMap for collecting argument mutations during callback dispatch.
+   *
+   * <p>This eliminates per-dispatch {@code new HashMap<>()} allocations. The map is cleared before
+   * each use and its contents are copied into the response via {@link #snapshotMutations(Map)} when
+   * non-empty. Mutation maps are typically small (0-3 entries) and short-lived, making them ideal
+   * for thread-local reuse.
+   */
+  private static final ThreadLocal<HashMap<Integer, Object>> TL_MUTATIONS =
+      ThreadLocal.withInitial(HashMap::new);
+
   /** Shared callback resolver for looking up registered callbacks and resolving static methods. */
   private final CallbackResolver callbackResolver;
 
@@ -118,6 +130,20 @@ public class LocalInterceptCallbackDispatcher {
    */
   private static ExceptionPolicyResolver createDefaultPolicyResolver() {
     return new ExceptionPolicyResolver(new ExceptionPolicyConfig.Builder().build());
+  }
+
+  /**
+   * Creates a snapshot of the given mutations map for safe inclusion in a response.
+   *
+   * <p>If the map is empty, returns {@link Collections#emptyMap()} to avoid allocation. If
+   * non-empty, returns a new {@link HashMap} copy so the response is independent of the reusable
+   * thread-local map.
+   *
+   * @param mutations the mutations map to snapshot (may be the thread-local reusable map)
+   * @return an independent map suitable for inclusion in a response object
+   */
+  private static Map<Integer, Object> snapshotMutations(Map<Integer, Object> mutations) {
+    return mutations.isEmpty() ? Collections.emptyMap() : new HashMap<>(mutations);
   }
 
   // ---- Exception handling helpers ----
@@ -344,7 +370,9 @@ public class LocalInterceptCallbackDispatcher {
           methodName);
     }
 
-    Map<Integer, Object> aggregatedMutations = new HashMap<>();
+    // Reuse thread-local HashMap for collecting mutations (cleared before use)
+    HashMap<Integer, Object> aggregatedMutations = TL_MUTATIONS.get();
+    aggregatedMutations.clear();
     Throwable exceptionToThrow = null;
 
     // Create metadata once and share across all callbacks for this invocation
@@ -379,12 +407,14 @@ public class LocalInterceptCallbackDispatcher {
         InterceptCallbackResponse response = callback.handle(context);
         callbackCompletedSuccessfully = true;
 
-        // Aggregate argument mutations
+        // Aggregate argument mutations (only indices that actually changed)
         if (context.isArgsModified()) {
           Object[] modifiedArgs = context.getArgsInternal();
           if (modifiedArgs != null) {
             for (int i = 0; i < modifiedArgs.length; i++) {
-              aggregatedMutations.put(i, modifiedArgs[i]);
+              if (modifiedArgs[i] != args[i]) {
+                aggregatedMutations.put(i, modifiedArgs[i]);
+              }
             }
           }
         }
@@ -427,8 +457,9 @@ public class LocalInterceptCallbackDispatcher {
       }
     }
 
+    // Snapshot the thread-local map: empty → emptyMap() singleton, non-empty → defensive copy
     return new InterceptCallbackDispatcher.ConsolidatedCallbackResponse(
-        exceptionToThrow == null, aggregatedMutations, exceptionToThrow);
+        exceptionToThrow == null, snapshotMutations(aggregatedMutations), exceptionToThrow);
   }
 
   // ---- BEFORE_ASYNC callbacks (fire-and-forget) ----
@@ -744,7 +775,7 @@ public class LocalInterceptCallbackDispatcher {
     }
 
     return new InterceptCallbackDispatcher.ConsolidatedCallbackResponse(
-        true, new HashMap<>(), exceptionToThrow, currentReturnValue, returnValueOverridden);
+        true, Collections.emptyMap(), exceptionToThrow, currentReturnValue, returnValueOverridden);
   }
 
   // ---- AFTER_ASYNC callbacks (fire-and-forget) ----
@@ -1029,8 +1060,9 @@ public class LocalInterceptCallbackDispatcher {
           methodName);
     }
 
-    // Track state across all callbacks
-    Map<Integer, Object> mutatedArgs = new HashMap<>();
+    // Reuse thread-local HashMap for collecting mutations (cleared before use)
+    HashMap<Integer, Object> mutatedArgs = TL_MUTATIONS.get();
+    mutatedArgs.clear();
     List<LocalAroundCallbackState> pendingCallbacks = new ArrayList<>();
     Throwable exceptionToThrow = null;
     Object[] currentArgs = args;
@@ -1117,7 +1149,9 @@ public class LocalInterceptCallbackDispatcher {
           Object[] modifiedArgs = context.getArgsInternal();
           if (modifiedArgs != null) {
             for (int i = 0; i < modifiedArgs.length; i++) {
-              mutatedArgs.put(i, modifiedArgs[i]);
+              if (modifiedArgs[i] != currentArgs[i]) {
+                mutatedArgs.put(i, modifiedArgs[i]);
+              }
             }
             // Update currentArgs for next callback
             currentArgs = modifiedArgs;
@@ -1154,8 +1188,9 @@ public class LocalInterceptCallbackDispatcher {
       }
     }
 
+    // Snapshot the thread-local map: empty → emptyMap() singleton, non-empty → defensive copy
     return new LocalAroundConsolidatedResponse(
-        true, mutatedArgs, exceptionToThrow, pendingCallbacks);
+        true, snapshotMutations(mutatedArgs), exceptionToThrow, pendingCallbacks);
   }
 
   /**
@@ -1261,7 +1296,7 @@ public class LocalInterceptCallbackDispatcher {
     }
 
     return new InterceptCallbackDispatcher.ConsolidatedCallbackResponse(
-        true, new HashMap<>(), exceptionToThrow, currentReturnValue, hasOverride);
+        true, Collections.emptyMap(), exceptionToThrow, currentReturnValue, hasOverride);
   }
 
   // ---- Response classes ----
@@ -1328,9 +1363,9 @@ public class LocalInterceptCallbackDispatcher {
      */
     private LocalAroundConsolidatedResponse(Object skipReturnValue, Throwable exceptionToThrow) {
       this.shouldProceed = false;
-      this.mutatedArgs = new HashMap<>();
+      this.mutatedArgs = Collections.emptyMap();
       this.exceptionToThrow = exceptionToThrow;
-      this.pendingCallbacks = new ArrayList<>();
+      this.pendingCallbacks = Collections.emptyList();
       this.skipReturnValue = skipReturnValue;
     }
 
@@ -1340,7 +1375,8 @@ public class LocalInterceptCallbackDispatcher {
      * @return proceed response
      */
     public static LocalAroundConsolidatedResponse proceed() {
-      return new LocalAroundConsolidatedResponse(true, new HashMap<>(), null, new ArrayList<>());
+      return new LocalAroundConsolidatedResponse(
+          true, Collections.emptyMap(), null, Collections.emptyList());
     }
 
     /**
