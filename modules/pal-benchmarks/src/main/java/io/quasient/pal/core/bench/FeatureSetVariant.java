@@ -39,7 +39,25 @@ public enum FeatureSetVariant {
   INTERCEPTS_WAL,
 
   /** Intercepts + TCP-PUB + WAL (full hot path). */
-  INTERCEPTS_PUB_WAL;
+  INTERCEPTS_PUB_WAL,
+
+  /**
+   * Intercepts with BEFORE_ASYNC callback registered.
+   *
+   * <p>Exercises the async callback dispatch path for BEFORE_ASYNC intercepts. Uses the executor
+   * selected by {@code VirtualThreadCallbackExecutor} (virtual threads on Java 21+, cached pool on
+   * Java 17).
+   */
+  INTERCEPTS_BEFORE_ASYNC,
+
+  /**
+   * Intercepts with AFTER_ASYNC callback registered.
+   *
+   * <p>Exercises the async callback dispatch path for AFTER_ASYNC intercepts. Uses the executor
+   * selected by {@code VirtualThreadCallbackExecutor} (virtual threads on Java 21+, cached pool on
+   * Java 17).
+   */
+  INTERCEPTS_AFTER_ASYNC;
 
   /**
    * Return the {@link RunOptions} equivalent to this variant.
@@ -49,7 +67,8 @@ public enum FeatureSetVariant {
   public EnumSet<RunOptions> toRunOptions() {
     final EnumSet<RunOptions> runOpts = EnumSet.noneOf(RunOptions.class);
     switch (this) {
-      case INTERCEPTS -> runOpts.add(RunOptions.WITH_INTERCEPTS);
+      case INTERCEPTS, INTERCEPTS_BEFORE_ASYNC, INTERCEPTS_AFTER_ASYNC ->
+          runOpts.add(RunOptions.WITH_INTERCEPTS);
       case PUB -> runOpts.add(RunOptions.WITH_TCP_PUB);
       case WAL -> runOpts.add(RunOptions.WITH_WAL);
       case PUB_WAL -> {

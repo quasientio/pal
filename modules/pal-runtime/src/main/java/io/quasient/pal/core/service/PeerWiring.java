@@ -32,6 +32,7 @@ import io.quasient.pal.core.intercept.ExceptionPolicyResolver;
 import io.quasient.pal.core.intercept.InFlightDispatchTracker;
 import io.quasient.pal.core.intercept.InterceptActivationCoordinator;
 import io.quasient.pal.core.intercept.PendingInterceptActivation;
+import io.quasient.pal.core.intercept.VirtualThreadCallbackExecutor;
 import io.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import io.quasient.pal.core.internal.concurrent.MpscKind;
 import io.quasient.pal.core.runtime.objects.ConcurrentHashMapObjectLookupStore;
@@ -62,7 +63,6 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -519,20 +519,32 @@ public class PeerWiring extends AbstractModule {
    * Provides the executor service for asynchronous local intercept callbacks.
    *
    * <p>This executor is used to run BEFORE_ASYNC and AFTER_ASYNC intercept callbacks in the
-   * background without blocking the main execution thread. Uses a cached thread pool for efficient
-   * resource utilization with varying callback loads.
+   * background without blocking the main execution thread.
    *
-   * <p>The executor uses {@link InterceptAsyncThreadFactory} which ensures threads inherit the
-   * {@link CustomClassloader} for proper class resolution during callback execution.
+   * <p><b>Executor selection (via {@link VirtualThreadCallbackExecutor}):</b>
+   *
+   * <ul>
+   *   <li><b>Java 21+:</b> Virtual thread executor ({@code
+   *       Executors.newVirtualThreadPerTaskExecutor()}) — eliminates thread pool sizing, ~1KB per
+   *       thread
+   *   <li><b>Java 17-20:</b> Cached thread pool ({@code Executors.newCachedThreadPool()}) — auto
+   *       scales to demand
+   *   <li><b>Override:</b> Set {@code -Dpal.intercept.async.executor=VIRTUAL|CACHED|FIXED}
+   * </ul>
+   *
+   * <p>For CACHED and FIXED executors, threads are created via {@link InterceptAsyncThreadFactory}
+   * which ensures threads inherit the {@link CustomClassloader} for proper class resolution during
+   * callback execution.
    *
    * @return an ExecutorService for async intercept callbacks
+   * @see VirtualThreadCallbackExecutor
    */
   @SuppressWarnings({"unused", "CloseableProvides"})
   @Provides
   @Singleton
   @Named("intercept.async.executor")
   public ExecutorService provideInterceptAsyncExecutor() {
-    return Executors.newCachedThreadPool(
+    return VirtualThreadCallbackExecutor.create(
         new InterceptAsyncThreadFactory(serviceThreadGroup, customClassloader));
   }
 

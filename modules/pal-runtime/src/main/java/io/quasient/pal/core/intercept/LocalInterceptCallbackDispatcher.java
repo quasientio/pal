@@ -45,11 +45,25 @@ import org.slf4j.LoggerFactory;
  *   <li><b>Simpler error handling:</b> No timeouts or network errors
  * </ul>
  *
+ * <p><b>Async Callback Executor:</b> BEFORE_ASYNC and AFTER_ASYNC callbacks are dispatched via an
+ * injected {@link ExecutorService}. The executor implementation is selected by {@link
+ * VirtualThreadCallbackExecutor}:
+ *
+ * <ul>
+ *   <li><b>Java 21+:</b> Virtual thread executor — each async callback runs on a lightweight
+ *       virtual thread (~1KB), eliminating thread pool sizing concerns. Ideal for the callback
+ *       workload (short-lived, potentially blocking on I/O).
+ *   <li><b>Java 17-20:</b> Cached thread pool — auto-scales to demand, reuses idle threads.
+ *   <li><b>Override:</b> Set system property {@code
+ *       pal.intercept.async.executor=VIRTUAL|CACHED|FIXED}
+ * </ul>
+ *
  * <p><b>Thread Safety:</b> This class is thread-safe. Callback handlers must also be thread-safe,
  * as they may be invoked concurrently for different intercept requests.
  *
  * @see InterceptCallbackDispatcher for remote intercept handling
  * @see CallbackResolver for callback resolution
+ * @see VirtualThreadCallbackExecutor for executor selection strategy
  */
 @Singleton
 public class LocalInterceptCallbackDispatcher {
