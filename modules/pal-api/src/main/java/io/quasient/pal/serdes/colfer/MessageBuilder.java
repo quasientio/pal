@@ -101,6 +101,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -175,6 +176,9 @@ public final class MessageBuilder {
 
   /** Instance of UTC clock for timestamps */
   private static final Clock utcClock = Clock.systemUTC();
+
+  /** Counter for generating unique callback IDs without UUID allocation overhead. */
+  private static final AtomicLong CALLBACK_ID_COUNTER = new AtomicLong();
 
   /** ID of this peer (required through constructor for methods in hot-path) */
   private String peerId;
@@ -2206,9 +2210,109 @@ public final class MessageBuilder {
       Throwable thrownException) {
 
     InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
-
-    // Set unique callback ID
     request.setCallbackId(UUID.randomUUID().toString());
+
+    populateCallbackRequest(
+        request,
+        peerUuid,
+        interceptMessage,
+        execMessage,
+        phase,
+        returnValue,
+        isVoid,
+        thrownException,
+        false);
+
+    return request;
+  }
+
+  /**
+   * Ephemeral (allocation-minimized) version of {@link #buildInterceptCallbackRequest} that reuses
+   * thread-local scratch objects from {@link TlScratchHolder} instead of allocating new instances.
+   *
+   * <p>This method eliminates the following allocations compared to the regular version:
+   *
+   * <ul>
+   *   <li>{@code new InterceptCallbackRequestMessage()} &rarr; {@link TlScratchHolder#icbr()}
+   *   <li>{@code UUID.randomUUID().toString()} &rarr; counter-based ID ({@code peerUuid + "-" +
+   *       counter})
+   *   <li>{@code new ReturnValue()} &rarr; {@link TlScratchHolder#rv()} (AFTER phase only)
+   *   <li>{@code new Obj()} for return value serialization &rarr; {@link TlScratchHolder#valObj()}
+   * </ul>
+   *
+   * <p>The {@link #cloneExecMessage} call is intentionally retained: the input {@code execMessage}
+   * may be a thread-local scratch from {@link TlScratchHolder#exec()}, and cloning is required for
+   * correctness when return value serialization triggers nested dispatches.
+   *
+   * <p><b>CRITICAL &mdash; Consume before nested dispatch:</b> The returned {@link
+   * InterceptCallbackRequestMessage} is a thread-local scratch object. Callers <b>MUST</b>
+   * serialize it to bytes (e.g., via {@code marshal()}) before any operation that could trigger a
+   * nested dispatch, because a nested dispatch calling this method or {@link
+   * TlScratchHolder#icbr()} will reset the same instance. This follows the same contract as other
+   * ephemeral methods in this class.
+   *
+   * @param peerUuid the UUID of the peer being intercepted
+   * @param interceptMessage the intercept message containing callback routing info
+   * @param execMessage the execution message with operation metadata (will be cloned)
+   * @param phase the callback phase (BEFORE or AFTER)
+   * @param returnValue the return value (AFTER phase only, may be null)
+   * @param isVoid whether the method is void
+   * @param thrownException the thrown exception (AFTER phase only, may be null)
+   * @return the scratch {@link InterceptCallbackRequestMessage}; must be serialized before nested
+   *     dispatch
+   */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
+  public InterceptCallbackRequestMessage buildInterceptCallbackRequestEphemeral(
+      UUID peerUuid,
+      InterceptMessage interceptMessage,
+      ExecMessage execMessage,
+      io.quasient.pal.common.lang.intercept.InterceptPhase phase,
+      Object returnValue,
+      boolean isVoid,
+      Throwable thrownException) {
+
+    InterceptCallbackRequestMessage request = TlScratchHolder.icbr();
+    request.setCallbackId(peerUuid.toString() + "-" + CALLBACK_ID_COUNTER.getAndIncrement());
+
+    populateCallbackRequest(
+        request,
+        peerUuid,
+        interceptMessage,
+        execMessage,
+        phase,
+        returnValue,
+        isVoid,
+        thrownException,
+        true);
+
+    return request;
+  }
+
+  /**
+   * Populates an {@link InterceptCallbackRequestMessage} with common fields and phase-specific
+   * data. Shared by both the allocating and ephemeral builder methods.
+   *
+   * @param request the request to populate (already has callbackId set)
+   * @param peerUuid the UUID of the peer being intercepted
+   * @param interceptMessage the intercept message containing callback routing info
+   * @param execMessage the execution message (will be cloned)
+   * @param phase the callback phase
+   * @param returnValue the return value (AFTER phase only)
+   * @param isVoid whether the method is void
+   * @param thrownException the thrown exception (AFTER phase only)
+   * @param ephemeral if true, use scratch objects from TlScratchHolder for sub-allocations
+   */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
+  private void populateCallbackRequest(
+      InterceptCallbackRequestMessage request,
+      UUID peerUuid,
+      InterceptMessage interceptMessage,
+      ExecMessage execMessage,
+      io.quasient.pal.common.lang.intercept.InterceptPhase phase,
+      Object returnValue,
+      boolean isVoid,
+      Throwable thrownException,
+      boolean ephemeral) {
 
     // Set phase and type
     request.setPhase(phase.toByte());
@@ -2233,7 +2337,10 @@ public final class MessageBuilder {
     if (phase == io.quasient.pal.common.lang.intercept.InterceptPhase.AFTER) {
       request.setIsVoid(isVoid);
       if (!isVoid && returnValue != null) {
-        request.setReturnValue(serializeObjectForCallback(returnValue));
+        request.setReturnValue(
+            ephemeral
+                ? serializeObjectForCallbackEphemeral(returnValue)
+                : serializeObjectForCallback(returnValue));
       }
       if (thrownException != null) {
         request.setThrownException(ExceptionSerdes.serializeException(thrownException));
@@ -2242,10 +2349,13 @@ public final class MessageBuilder {
       // For AROUND AFTER callbacks, the exec message may be from BEFORE phase and lack
       // return value. Only set if not already present (regular AFTER callbacks have it).
       if (clonedExec.getReturnValue() == null) {
-        ReturnValue rv = new ReturnValue();
+        ReturnValue rv = ephemeral ? TlScratchHolder.rv() : new ReturnValue();
         rv.isVoid = isVoid;
         if (!isVoid && returnValue != null) {
-          rv.object = serializeObjectForCallback(returnValue);
+          rv.object =
+              ephemeral
+                  ? serializeObjectForCallbackEphemeral(returnValue)
+                  : serializeObjectForCallback(returnValue);
         }
         clonedExec.setReturnValue(rv);
       }
@@ -2255,25 +2365,39 @@ public final class MessageBuilder {
       if (clonedExec.getInstanceFieldPut() != null
           && clonedExec.getInstanceFieldPutDone() == null) {
         InstanceFieldPut put = clonedExec.getInstanceFieldPut();
-        clonedExec.setInstanceFieldPutDone(
-            new InstanceFieldPutDone()
-                .withClazz(put.getClazz())
-                .withField(put.getField())
-                .withInstanceFieldPutId(clonedExec.getMessageId()));
+        if (ephemeral) {
+          InstanceFieldPutDone done = TlScratchHolder.ifpd();
+          done.setClazz(put.getClazz());
+          done.setField(put.getField());
+          done.setInstanceFieldPutId(clonedExec.getMessageId());
+          clonedExec.setInstanceFieldPutDone(done);
+        } else {
+          clonedExec.setInstanceFieldPutDone(
+              new InstanceFieldPutDone()
+                  .withClazz(put.getClazz())
+                  .withField(put.getField())
+                  .withInstanceFieldPutId(clonedExec.getMessageId()));
+        }
         clonedExec.setInstanceFieldPut(null);
       }
       if (clonedExec.getStaticFieldPut() != null && clonedExec.getStaticFieldPutDone() == null) {
         StaticFieldPut put = clonedExec.getStaticFieldPut();
-        clonedExec.setStaticFieldPutDone(
-            new StaticFieldPutDone()
-                .withClazz(put.getClazz())
-                .withField(put.getField())
-                .withStaticFieldPutId(clonedExec.getMessageId()));
+        if (ephemeral) {
+          StaticFieldPutDone done = TlScratchHolder.sfpd();
+          done.setClazz(put.getClazz());
+          done.setField(put.getField());
+          done.setStaticFieldPutId(clonedExec.getMessageId());
+          clonedExec.setStaticFieldPutDone(done);
+        } else {
+          clonedExec.setStaticFieldPutDone(
+              new StaticFieldPutDone()
+                  .withClazz(put.getClazz())
+                  .withField(put.getField())
+                  .withStaticFieldPutId(clonedExec.getMessageId()));
+        }
         clonedExec.setStaticFieldPut(null);
       }
     }
-
-    return request;
   }
 
   /**
@@ -3345,6 +3469,32 @@ public final class MessageBuilder {
       // For non-serializable objects (e.g., newly constructed objects in AFTER callbacks),
       // we still send the callback but mark the value as "not available" by setting
       // only the class name. The callback can still be useful for monitoring/logging.
+      logger.warn(
+          "Cannot serialize value of type {} for callback, sending without value: {}",
+          className,
+          e.getMessage());
+      obj.setClazz(getWrappedClass(className));
+      return obj;
+    }
+  }
+
+  /**
+   * Ephemeral version of {@link #serializeObjectForCallback(Object)} that uses {@link
+   * TlScratchHolder#valObj()} instead of allocating a new {@link Obj}.
+   *
+   * @param value the object to serialize
+   * @return the scratch {@link Obj}; must be consumed before nested dispatch
+   */
+  private Obj serializeObjectForCallbackEphemeral(Object value) {
+    Obj obj = TlScratchHolder.valObj();
+    if (value == null) {
+      obj.setIsNull(true);
+      return obj;
+    }
+    String className = value.getClass().getName();
+    try {
+      return Wrapper.wrapInto(obj, value, className, null, WrapPolicy.FORCE_BY_VALUE);
+    } catch (NonWrappableObjectException e) {
       logger.warn(
           "Cannot serialize value of type {} for callback, sending without value: {}",
           className,

@@ -9,16 +9,35 @@
  */
 package io.quasient.pal.serdes.colfer;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.CoreMatchers.sameInstance;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
-import org.junit.Ignore;
+import io.quasient.pal.common.lang.intercept.InterceptPhase;
+import io.quasient.pal.common.lang.intercept.InterceptType;
+import io.quasient.pal.messages.colfer.ExecMessage;
+import io.quasient.pal.messages.colfer.InterceptCallbackRequestMessage;
+import io.quasient.pal.messages.colfer.InterceptMessage;
+import io.quasient.pal.messages.colfer.ReturnValue;
+import io.quasient.pal.serdes.colfer.scratches.TlScratchHolder;
+import java.util.UUID;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
  * Unit test specs for the ephemeral (TlScratchHolder-backed) version of {@link
- * MessageBuilder#buildInterceptCallbackRequest}. These tests verify that the ephemeral variant
- * produces identical output to the regular version while reusing thread-local scratch objects
- * instead of allocating new instances.
+ * MessageBuilder#buildInterceptCallbackRequestEphemeral}. These tests verify that the ephemeral
+ * variant produces identical output to the regular version while reusing thread-local scratch
+ * objects instead of allocating new instances.
  *
  * <p>Part of Phase 2.2: Ephemeral MessageBuilder method optimization. The ephemeral method replaces
  * the multi-allocation {@code buildInterceptCallbackRequest()} with a version that reuses
@@ -27,10 +46,32 @@ import org.junit.Test;
  *
  * <p>Depends on task #693 (implement buildInterceptCallbackRequestEphemeral).
  *
- * @see MessageBuilder#buildInterceptCallbackRequest
+ * @see MessageBuilder#buildInterceptCallbackRequestEphemeral
  * @see io.quasient.pal.serdes.colfer.scratches.TlScratchHolder
  */
 public class MessageBuilderInterceptEphemeralTest {
+
+  private final UUID peerUuid = UUID.randomUUID();
+  private MessageBuilder builder;
+  private InterceptMessage interceptMessage;
+  private ExecMessage execMessage;
+
+  /** Sets up shared test fixtures. */
+  @Before
+  public void setUp() {
+    builder = new MessageBuilder(peerUuid);
+
+    interceptMessage =
+        new InterceptMessage()
+            .withPeerUuid(peerUuid.toString())
+            .withInterceptType(InterceptType.BEFORE.toByte())
+            .withCallbackClass("com.example.MyCallback")
+            .withCallbackMethod("onBefore");
+
+    execMessage = new ExecMessage();
+    execMessage.setPeerUuid(peerUuid.toString());
+    execMessage.setMessageId("test-msg-001");
+  }
 
   /**
    * Verifies that the ephemeral version of {@code buildInterceptCallbackRequest()} produces a
@@ -40,28 +81,19 @@ public class MessageBuilderInterceptEphemeralTest {
    * equivalent output for the same inputs.
    */
   @Test
-  @Ignore("Awaiting implementation in #693")
   public void shouldBuildEphemeralInterceptCallbackRequestWithSameFields() {
-    // Given: Same inputs as regular buildInterceptCallbackRequest()
-    //        - A peer UUID
-    //        - An InterceptMessage with BEFORE type and callback routing info
-    //        - An ExecMessage with operation metadata
-    //        - BEFORE phase
-    //        - No return value (null), not void, no exception
+    InterceptCallbackRequestMessage result =
+        builder.buildInterceptCallbackRequestEphemeral(
+            peerUuid, interceptMessage, execMessage, InterceptPhase.BEFORE, null, false, null);
 
-    // When: buildInterceptCallbackRequestEphemeral() called with those inputs
-
-    // Then: All fields match the regular version's output:
-    //       - phase matches InterceptPhase.BEFORE.toByte()
-    //       - interceptType matches the InterceptMessage's interceptType
-    //       - interceptedPeer matches peerUuid.toString()
-    //       - callbackClass matches InterceptMessage's callbackClass
-    //       - callbackMethod matches InterceptMessage's callbackMethod
-    //       - exec is non-null (cloned from input)
-    //       - callbackId is non-null and non-empty
-
-    // TODO(#693): Implement test logic
-    fail("Not yet implemented");
+    assertThat(result.getPhase(), is(InterceptPhase.BEFORE.toByte()));
+    assertThat(result.getInterceptType(), is(interceptMessage.getInterceptType()));
+    assertThat(result.getInterceptedPeer(), is(peerUuid.toString()));
+    assertThat(result.getCallbackClass(), is("com.example.MyCallback"));
+    assertThat(result.getCallbackMethod(), is("onBefore"));
+    assertThat(result.getExec(), is(notNullValue()));
+    assertThat(result.getCallbackId(), is(notNullValue()));
+    assertFalse(result.getCallbackId().isEmpty());
   }
 
   /**
@@ -73,21 +105,35 @@ public class MessageBuilderInterceptEphemeralTest {
    * while maintaining uniqueness within a single peer.
    */
   @Test
-  @Ignore("Awaiting implementation in #693")
   public void shouldUseCounterBasedCallbackId() {
-    // Given: Two consecutive calls to buildInterceptCallbackRequestEphemeral()
-    //        with the same peer UUID
+    InterceptCallbackRequestMessage result1 =
+        builder.buildInterceptCallbackRequestEphemeral(
+            peerUuid, interceptMessage, execMessage, InterceptPhase.BEFORE, null, false, null);
+    String id1 = result1.getCallbackId();
 
-    // When: buildInterceptCallbackRequestEphemeral() called twice
+    InterceptCallbackRequestMessage result2 =
+        builder.buildInterceptCallbackRequestEphemeral(
+            peerUuid, interceptMessage, execMessage, InterceptPhase.BEFORE, null, false, null);
+    String id2 = result2.getCallbackId();
 
-    // Then: Callback IDs are:
-    //       - Different from each other
-    //       - Sequential (second ID > first ID numerically in the counter portion)
-    //       - Contain the peer UUID as a prefix (format: "{peerUuid}-{counter}")
-    //       - Non-null and non-empty
+    // Both IDs are non-null and non-empty
+    assertNotNull(id1);
+    assertNotNull(id2);
+    assertFalse(id1.isEmpty());
+    assertFalse(id2.isEmpty());
 
-    // TODO(#693): Implement test logic
-    fail("Not yet implemented");
+    // IDs are different
+    assertThat(id1, is(not(id2)));
+
+    // Both contain the peer UUID as prefix
+    String prefix = peerUuid.toString();
+    assertThat(id1, containsString(prefix));
+    assertThat(id2, containsString(prefix));
+
+    // Counter portion is sequential: extract counter from format "{peerUuid}-{counter}"
+    long counter1 = Long.parseLong(id1.substring(prefix.length() + 1));
+    long counter2 = Long.parseLong(id2.substring(prefix.length() + 1));
+    assertThat(counter2, is(greaterThan(counter1)));
   }
 
   /**
@@ -100,19 +146,21 @@ public class MessageBuilderInterceptEphemeralTest {
    * TlScratchHolder.icbr()} to avoid heap allocation on every call.
    */
   @Test
-  @Ignore("Awaiting implementation in #693")
   public void shouldReturnScratchObjectNotNewAllocation() {
-    // Given: TlScratchHolder on current thread
+    InterceptCallbackRequestMessage result1 =
+        builder.buildInterceptCallbackRequestEphemeral(
+            peerUuid, interceptMessage, execMessage, InterceptPhase.BEFORE, null, false, null);
 
-    // When: buildInterceptCallbackRequestEphemeral() called twice
+    InterceptCallbackRequestMessage result2 =
+        builder.buildInterceptCallbackRequestEphemeral(
+            peerUuid, interceptMessage, execMessage, InterceptPhase.BEFORE, null, false, null);
 
-    // Then: Same InterceptCallbackRequestMessage reference returned both times
-    //       (both come from TlScratchHolder.icbr() which returns the thread-local instance)
-    //       Note: fields will differ between calls because reset() is called,
-    //       but the object identity (==) should be the same
+    // Same object reference (both come from TlScratchHolder.icbr())
+    assertSame(result1, result2);
 
-    // TODO(#693): Implement test logic
-    fail("Not yet implemented");
+    // Also verify it's the same object that TlScratchHolder.icbr() returns
+    InterceptCallbackRequestMessage scratch = TlScratchHolder.icbr();
+    assertSame(result1, scratch);
   }
 
   /**
@@ -124,25 +172,29 @@ public class MessageBuilderInterceptEphemeralTest {
    * <p>This ensures the scratch-object-based message is wire-compatible with the regular version.
    */
   @Test
-  @Ignore("Awaiting implementation in #693")
   public void shouldSerializeCorrectlyToBytes() {
-    // Given: An InterceptCallbackRequestMessage built via the ephemeral method
-    //        with BEFORE phase, a valid ExecMessage, and callback routing info
+    InterceptCallbackRequestMessage result =
+        builder.buildInterceptCallbackRequestEphemeral(
+            peerUuid, interceptMessage, execMessage, InterceptPhase.BEFORE, null, false, null);
 
-    // When: Serialized to bytes via Colfer marshal()
-    //       Then deserialized via unmarshal() into a fresh InterceptCallbackRequestMessage
+    // Serialize via Colfer marshal
+    byte[] buf = new byte[result.marshalFit()];
+    int len = result.marshal(buf, 0);
+    assertTrue(len > 0);
 
-    // Then: Deserialized message has equivalent field values:
-    //       - callbackId matches
-    //       - phase matches
-    //       - interceptType matches
-    //       - interceptedPeer matches
-    //       - callbackClass matches
-    //       - callbackMethod matches
-    //       - exec is non-null and carries the same peerUuid
+    // Deserialize into a fresh instance
+    InterceptCallbackRequestMessage deserialized = new InterceptCallbackRequestMessage();
+    deserialized.unmarshal(buf, 0, len);
 
-    // TODO(#693): Implement test logic
-    fail("Not yet implemented");
+    // Verify field equivalence
+    assertThat(deserialized.getCallbackId(), is(result.getCallbackId()));
+    assertThat(deserialized.getPhase(), is(result.getPhase()));
+    assertThat(deserialized.getInterceptType(), is(result.getInterceptType()));
+    assertThat(deserialized.getInterceptedPeer(), is(result.getInterceptedPeer()));
+    assertThat(deserialized.getCallbackClass(), is(result.getCallbackClass()));
+    assertThat(deserialized.getCallbackMethod(), is(result.getCallbackMethod()));
+    assertThat(deserialized.getExec(), is(notNullValue()));
+    assertThat(deserialized.getExec().getPeerUuid(), is(peerUuid.toString()));
   }
 
   /**
@@ -158,20 +210,30 @@ public class MessageBuilderInterceptEphemeralTest {
    * @see <a href="message-passing-flow.md">TlScratchHolder mutation warning</a>
    */
   @Test
-  @Ignore("Awaiting implementation in #693")
   public void shouldHandleExecMessageCloneCorrectly() {
-    // Given: An ExecMessage that is a scratch object (e.g., from TlScratchHolder.exec())
-    //        with fields set: peerUuid, messageId
+    // Use a scratch ExecMessage (simulating hot-path usage)
+    ExecMessage scratchExec = TlScratchHolder.exec();
+    scratchExec.setPeerUuid(peerUuid.toString());
+    scratchExec.setMessageId("scratch-msg-001");
 
-    // When: buildInterceptCallbackRequestEphemeral() called with this ExecMessage
+    InterceptCallbackRequestMessage result =
+        builder.buildInterceptCallbackRequestEphemeral(
+            peerUuid, interceptMessage, scratchExec, InterceptPhase.BEFORE, null, false, null);
 
-    // Then: The ExecMessage stored in the result is a CLONE (different reference)
-    //       of the input, not the same object reference.
-    //       Mutating the original ExecMessage after the call should NOT affect
-    //       the cloned exec inside the callback request.
+    ExecMessage clonedExec = result.getExec();
 
-    // TODO(#693): Implement test logic
-    fail("Not yet implemented");
+    // Must be a different reference (clone, not same object)
+    assertNotSame(scratchExec, clonedExec);
+
+    // Must have the same data
+    assertThat(clonedExec.getPeerUuid(), is(peerUuid.toString()));
+    assertThat(clonedExec.getMessageId(), is("scratch-msg-001"));
+
+    // Mutating the original scratch should NOT affect the clone
+    scratchExec.setPeerUuid("mutated-peer");
+    scratchExec.setMessageId("mutated-msg");
+    assertThat(clonedExec.getPeerUuid(), is(peerUuid.toString()));
+    assertThat(clonedExec.getMessageId(), is("scratch-msg-001"));
   }
 
   /**
@@ -185,24 +247,43 @@ public class MessageBuilderInterceptEphemeralTest {
    * object instead.
    */
   @Test
-  @Ignore("Awaiting implementation in #693")
   public void shouldUseReusableReturnValue() {
-    // Given: An AFTER phase callback request where the ExecMessage's returnValue is null
-    //        (simulating an AROUND AFTER callback where the exec was from BEFORE phase)
-    //        with a non-void return value
+    // Configure an AFTER-phase intercept message
+    InterceptMessage afterIntercept =
+        new InterceptMessage()
+            .withPeerUuid(peerUuid.toString())
+            .withInterceptType(InterceptType.AFTER.toByte())
+            .withCallbackClass("com.example.MyCallback")
+            .withCallbackMethod("onAfter");
 
-    // When: buildInterceptCallbackRequestEphemeral() called with:
-    //       - phase = InterceptPhase.AFTER
-    //       - returnValue = some object (e.g., Integer 42)
-    //       - isVoid = false
-    //       - thrownException = null
+    // ExecMessage without a ReturnValue set (simulating AROUND AFTER where exec was from BEFORE)
+    ExecMessage afterExec = new ExecMessage();
+    afterExec.setPeerUuid(peerUuid.toString());
+    afterExec.setMessageId("after-msg-001");
+    // Importantly: afterExec.getReturnValue() is null
 
-    // Then: The ReturnValue set on the cloned exec is from TlScratchHolder.rv()
-    //       (same reference as TlScratchHolder.rv() returns for this thread)
-    //       - rv.isVoid == false
-    //       - rv.object is non-null (serialized return value)
+    InterceptCallbackRequestMessage result =
+        builder.buildInterceptCallbackRequestEphemeral(
+            peerUuid,
+            afterIntercept,
+            afterExec,
+            InterceptPhase.AFTER,
+            Integer.valueOf(42),
+            false,
+            null);
 
-    // TODO(#693): Implement test logic
-    fail("Not yet implemented");
+    // The cloned exec should now have a ReturnValue set
+    ReturnValue rv = result.getExec().getReturnValue();
+    assertNotNull(rv);
+    assertFalse(rv.isVoid);
+    assertNotNull(rv.object);
+
+    // Verify it's the TlScratchHolder.rv() instance (same thread-local reference)
+    // Note: we call TlScratchHolder.rv() AFTER the method, which resets the same instance.
+    // To test identity, we need to check that the rv inside the result IS the scratch object.
+    // Since TlScratchHolder.rv() returns and resets the same object, we verify by comparing
+    // the reference to the thread-local's underlying field.
+    ReturnValue scratch = TlScratchHolder.rv();
+    assertThat(rv, is(sameInstance(scratch)));
   }
 }
