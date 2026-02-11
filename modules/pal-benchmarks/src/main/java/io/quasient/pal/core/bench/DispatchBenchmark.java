@@ -202,6 +202,9 @@ public class DispatchBenchmark {
    */
   private static final boolean DEF_WITH_SRC_CONTEXT = false;
 
+  /** Default intercept drain timeout in milliseconds (for InterceptActivationCoordinator). */
+  private static final long DEF_DRAIN_TIMEOUT_MS = 5000;
+
   /** Whether we should register a dummy SUB socket. */
   private static final boolean WITH_DUMMY_SUB = Boolean.getBoolean("bench.with_dummy_sub");
 
@@ -450,6 +453,14 @@ public class DispatchBenchmark {
     // wait for all services up
     serviceManager.awaitHealthy();
 
+    // register benchmark intercepts if variant requires them
+    if (BenchmarkInterceptRegistrar.requiresInterceptRegistration(variant)) {
+      int registered =
+          BenchmarkInterceptRegistrar.registerIntercepts(
+              variant, props.getProperty("id"), zmqCtx, props.getProperty("intercepts.reg"));
+      logger.info("Registered {} benchmark intercepts for variant {}", registered, variant);
+    }
+
     // collect injected handles required in benchmark
     // NOTE: explicit type required for errorprone (do not replace by <>)
     Key<HwmMessageQueue<OutboundMsg>> walKey =
@@ -640,6 +651,11 @@ public class DispatchBenchmark {
         System.getProperty("messages.with_src_context", String.valueOf(DEF_WITH_SRC_CONTEXT)));
     props.setProperty("rpc.allow_nonpublic", "false");
     props.setProperty("paldir_url", PalDirectory.NO_URL);
+
+    // Intercept drain timeout (required by InterceptActivationCoordinator via PeerWiring)
+    props.setProperty(
+        "intercept.drain.timeout.ms",
+        System.getProperty("intercept.drain.timeout.ms", String.valueOf(DEF_DRAIN_TIMEOUT_MS)));
   }
 
   /** Initializes a dummy subscriber to listen from the MessagePublisher's PUB socket. */
