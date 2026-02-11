@@ -9,9 +9,16 @@
  */
 package io.quasient.pal.core.intercept;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
 
-import org.junit.Ignore;
+import io.quasient.pal.common.lang.FieldOpType;
+import io.quasient.pal.common.lang.intercept.InterceptType;
+import io.quasient.pal.messages.colfer.InterceptMessage;
+import io.quasient.pal.serdes.colfer.MessageBuilder;
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
 import org.junit.Test;
 
 /**
@@ -27,21 +34,56 @@ import org.junit.Test;
  */
 public class InterceptRequestEntryOptimizedMatchTest {
 
+  /** Shared message builder for constructing intercept messages. */
+  private final MessageBuilder msgBuilder = new MessageBuilder();
+
+  /** Shared peer UUID for test intercept messages. */
+  private final UUID peerUuid = UUID.randomUUID();
+
+  /**
+   * Creates an {@link InterceptRequestEntry} for a method interception with the given class,
+   * method, and parameter types.
+   */
+  private InterceptRequestEntry buildMethodEntry(
+      String className, String methodName, List<String> paramTypes) {
+    InterceptMessage im =
+        msgBuilder.buildInterceptMessage(
+            peerUuid,
+            InterceptType.BEFORE,
+            className,
+            methodName,
+            paramTypes,
+            "callback.Class",
+            "callbackMethod");
+    return new InterceptRequestEntry(im);
+  }
+
+  /**
+   * Creates an {@link InterceptRequestEntry} for a field interception with the given class and
+   * field name.
+   */
+  private InterceptRequestEntry buildFieldEntry(String className, String fieldName) {
+    InterceptMessage im =
+        msgBuilder.buildInterceptMessage(
+            peerUuid,
+            InterceptType.BEFORE,
+            className,
+            fieldName,
+            FieldOpType.GET,
+            "callback.Class",
+            "callbackMethod");
+    return new InterceptRequestEntry(im);
+  }
+
   /**
    * Verifies that the optimized matches() returns true when the pre-computed executable path
    * exactly matches the entry's pattern.
    */
   @Test
-  @Ignore("Awaiting implementation in #679")
   public void shouldMatchWithPrecomputedExactPath() {
-    // Given: InterceptRequestEntry with pattern "com.example.Foo.bar"
-    //        (className="com.example.Foo", methodName="bar")
-    // When: matches("com.example.Foo.bar", null) called
-    //        (null joinedParamTypes because entry has empty params, but we test path matching)
-    // Then: Returns true
+    InterceptRequestEntry entry = buildMethodEntry("com.example.Foo", "bar", List.of());
 
-    // TODO(#679): Implement test logic
-    fail("Not yet implemented");
+    assertThat(entry.matches("com.example.Foo.bar", ""), is(true));
   }
 
   /**
@@ -49,15 +91,10 @@ public class InterceptRequestEntryOptimizedMatchTest {
    * not match the entry's pattern.
    */
   @Test
-  @Ignore("Awaiting implementation in #679")
   public void shouldNotMatchWithPrecomputedDifferentPath() {
-    // Given: InterceptRequestEntry with pattern "com.example.Foo.bar"
-    //        (className="com.example.Foo", methodName="bar")
-    // When: matches("com.example.Foo.baz", null) called
-    // Then: Returns false
+    InterceptRequestEntry entry = buildMethodEntry("com.example.Foo", "bar", List.of());
 
-    // TODO(#679): Implement test logic
-    fail("Not yet implemented");
+    assertThat(entry.matches("com.example.Foo.baz", ""), is(false));
   }
 
   /**
@@ -65,15 +102,10 @@ public class InterceptRequestEntryOptimizedMatchTest {
    * AntPathMatcher.
    */
   @Test
-  @Ignore("Awaiting implementation in #679")
   public void shouldMatchWithPrecomputedWildcardPattern() {
-    // Given: InterceptRequestEntry with pattern "com.example.*.bar"
-    //        (className="com.example.*", methodName="bar")
-    // When: matches("com.example.Foo.bar", null) called
-    // Then: Returns true (wildcard '*' matches 'Foo')
+    InterceptRequestEntry entry = buildMethodEntry("com.example.*", "bar", List.of());
 
-    // TODO(#679): Implement test logic
-    fail("Not yet implemented");
+    assertThat(entry.matches("com.example.Foo.bar", ""), is(true));
   }
 
   /**
@@ -81,15 +113,11 @@ public class InterceptRequestEntryOptimizedMatchTest {
    * types match.
    */
   @Test
-  @Ignore("Awaiting implementation in #679")
   public void shouldMatchWithPrecomputedParamTypes() {
-    // Given: InterceptRequestEntry with pattern "com.example.Foo.bar"
-    //        and paramTypes "int,String" (method with two parameters)
-    // When: matches("com.example.Foo.bar", "int,String") called
-    // Then: Returns true
+    InterceptRequestEntry entry =
+        buildMethodEntry("com.example.Foo", "bar", List.of("int", "String"));
 
-    // TODO(#679): Implement test logic
-    fail("Not yet implemented");
+    assertThat(entry.matches("com.example.Foo.bar", "int,String"), is(true));
   }
 
   /**
@@ -97,15 +125,11 @@ public class InterceptRequestEntryOptimizedMatchTest {
    * executable path matches.
    */
   @Test
-  @Ignore("Awaiting implementation in #679")
   public void shouldNotMatchWhenParamTypesDiffer() {
-    // Given: InterceptRequestEntry with pattern "com.example.Foo.bar"
-    //        and paramTypes "int,String"
-    // When: matches("com.example.Foo.bar", "int,int") called
-    // Then: Returns false (path matches but param types differ)
+    InterceptRequestEntry entry =
+        buildMethodEntry("com.example.Foo", "bar", List.of("int", "String"));
 
-    // TODO(#679): Implement test logic
-    fail("Not yet implemented");
+    assertThat(entry.matches("com.example.Foo.bar", "int,int"), is(false));
   }
 
   /**
@@ -114,40 +138,111 @@ public class InterceptRequestEntryOptimizedMatchTest {
    *
    * <p>This is the most critical test: it ensures behavioral equivalence between the original
    * {@code matches(String className, String execName, String[] paramTypes)} and the optimized
-   * {@code matches(String execPath, String joinedParams)} for 100 different input combinations
+   * {@code matches(String execPath, String joinedParams)} for 100+ different input combinations
    * including wildcards, null params, empty params, and various class/method patterns.
    */
   @Test
-  @Ignore("Awaiting implementation in #679")
   public void shouldProduceIdenticalResultsToOriginalMethod() {
-    // Given: Same InterceptRequestEntry, same inputs
-    // When: Both original matches(className, execName, paramTypes[]) and
-    //        optimized matches(execPath, joinedParams) called
-    // Then: Results are identical for 100 different input combinations including:
-    //        - Exact matches
-    //        - Wildcard patterns (*, **, ?)
-    //        - null paramTypes
-    //        - Empty paramTypes arrays
-    //        - Single parameter types
-    //        - Multiple parameter types
-    //        - Non-matching paths
-    //        - Case variations (matcher is case-insensitive)
-    //        - Deep package paths
-    //        - Different method names with same class
+    // Various entry configurations: (className pattern, methodName, paramTypes)
+    // isField tracks whether each entry is a field entry (null paramTypes internally)
+    InterceptRequestEntry[] entries = {
+      // Exact class, exact method, no params
+      buildMethodEntry("com.example.Foo", "bar", List.of()),
+      // Exact class, exact method, one param
+      buildMethodEntry("com.example.Foo", "bar", List.of("int")),
+      // Exact class, exact method, multiple params
+      buildMethodEntry("com.example.Foo", "bar", List.of("int", "java.lang.String", "boolean")),
+      // Wildcard class, exact method, no params
+      buildMethodEntry("com.example.*", "bar", List.of()),
+      // Double-wildcard, exact method, no params
+      buildMethodEntry("com.**", "bar", List.of()),
+      // Exact class, wildcard method, no params
+      buildMethodEntry("com.example.Foo", "*", List.of()),
+      // All wildcards
+      buildMethodEntry("**", "*", List.of()),
+      // Question mark wildcard
+      buildMethodEntry("com.example.Fo?", "bar", List.of()),
+      // Field entry (null paramTypes)
+      buildFieldEntry("com.example.Foo", "myField"),
+      // Deep package path
+      buildMethodEntry("com.example.deep.nested.pkg.Foo", "doSomething", List.of("long")),
+    };
+    boolean[] isField = {false, false, false, false, false, false, false, false, true, false};
 
-    // TODO(#679): Implement test logic
-    // Suggested approach:
-    //   1. Create multiple InterceptRequestEntry instances with various patterns
-    //      (exact, wildcard *, **, ?) and param type configurations (none, one, multiple)
-    //   2. Define a matrix of (className, executableName, parameterTypes[]) test inputs
-    //   3. For each entry x input combination:
-    //      a. Call original: entry.matches(className, execName, paramTypes)
-    //      b. Pre-compute: execPath = className + "." + execName
-    //                       joinedParams = paramTypes != null ? String.join(",", paramTypes) : null
-    //      c. Call optimized: entry.matches(execPath, joinedParams)
-    //      d. Assert both results are equal
-    //   4. Ensure at least 100 combinations are tested
-    fail("Not yet implemented");
+    // Various (className, executableName, parameterTypes[]) test inputs
+    String[][] classAndMethod = {
+      {"com.example.Foo", "bar"},
+      {"com.example.Foo", "baz"},
+      {"com.example.Bar", "bar"},
+      {"com.example.Foo", "BAR"}, // case variation (matcher is case-insensitive)
+      {"COM.EXAMPLE.FOO", "BAR"}, // all-upper case variation
+      {"com.example.Fox", "bar"}, // for '?' wildcard
+      {"com.example.deep.nested.pkg.Foo", "doSomething"},
+      {"com.other.Foo", "bar"},
+      {"com.example.Foo", "myField"},
+      {"java.lang.System", "gc"},
+    };
+
+    // Various parameter type arrays (including null for fields)
+    String[][] paramTypesInputs = {
+      null, // field access
+      new String[0], // zero-arg method
+      {"int"},
+      {"int", "java.lang.String", "boolean"},
+      {"int", "int"},
+      {"long"},
+      {"java.lang.String"},
+    };
+
+    int combinations = 0;
+    for (int ei = 0; ei < entries.length; ei++) {
+      InterceptRequestEntry entry = entries[ei];
+      for (String[] cm : classAndMethod) {
+        String className = cm[0];
+        String execName = cm[1];
+        for (String[] paramTypes : paramTypesInputs) {
+          // Pre-compute for optimized call
+          String execPath = className + "." + execName;
+          String joinedParams = paramTypes != null ? String.join(",", paramTypes) : null;
+
+          // The original matches() throws NPE when entry has non-null paramTypes but
+          // parameterTypes arg is null (String.join doesn't accept null array).
+          // For null paramTypes inputs against method entries, only test the optimized method.
+          boolean canCallOriginal = paramTypes != null || isField[ei];
+
+          if (canCallOriginal) {
+            boolean originalResult = entry.matches(className, execName, paramTypes);
+            boolean optimizedResult = entry.matches(execPath, joinedParams);
+
+            assertThat(
+                "Mismatch for entry pattern with input ("
+                    + className
+                    + "."
+                    + execName
+                    + ", params="
+                    + Arrays.toString(paramTypes)
+                    + ")",
+                optimizedResult,
+                is(originalResult));
+          } else {
+            // Only test the optimized method (should return false for method entry with null input)
+            boolean optimizedResult = entry.matches(execPath, joinedParams);
+            assertThat(
+                "Method entry should not match null params: " + execPath,
+                optimizedResult,
+                is(false));
+          }
+
+          combinations++;
+        }
+      }
+    }
+
+    // Ensure we tested at least 100 combinations
+    assertThat(
+        "Expected at least 100 input combinations, got " + combinations,
+        combinations >= 100,
+        is(true));
   }
 
   /**
@@ -159,20 +254,26 @@ public class InterceptRequestEntryOptimizedMatchTest {
    * (both represent field access). When only one is null, the match should fail.
    */
   @Test
-  @Ignore("Awaiting implementation in #679")
   public void shouldHandleNullParamTypesInBothMethods() {
-    // Given: InterceptRequestEntry with null paramTypes (field interception)
-    // When: Both methods called with null param inputs
-    // Then: Both return true (null == null for field matching)
-    //
-    // Also verify:
-    //   - Entry with null paramTypes vs non-null input -> both return false
-    //   - Entry with non-null paramTypes vs null input -> both return false
+    // Field entry has null paramTypes
+    InterceptRequestEntry fieldEntry = buildFieldEntry("com.example.Foo", "myField");
 
-    // TODO(#679): Implement test logic
-    // Note: Field interceptions have null paramTypes. Use buildInterceptMessage
-    // with field variant (fieldName, FieldOpType) to create field entries.
-    fail("Not yet implemented");
+    // Method entry has non-null paramTypes (empty string for zero-arg method)
+    InterceptRequestEntry methodEntry = buildMethodEntry("com.example.Foo", "myField", List.of());
+
+    // Both null: field entry vs null input -> both should return true
+    assertThat(fieldEntry.matches("com.example.Foo", "myField", null), is(true));
+    assertThat(fieldEntry.matches("com.example.Foo.myField", null), is(true));
+
+    // Field entry (null paramTypes) vs non-null input -> both should return false
+    assertThat(fieldEntry.matches("com.example.Foo", "myField", new String[0]), is(false));
+    assertThat(fieldEntry.matches("com.example.Foo.myField", ""), is(false));
+
+    // Method entry (non-null paramTypes) vs null input -> optimized returns false.
+    // Note: The original matches(String, String, String[]) throws NPE when entry has non-null
+    // paramTypes and parameterTypes arg is null (String.join doesn't accept null array).
+    // The optimized method handles this gracefully via Objects.equals.
+    assertThat(methodEntry.matches("com.example.Foo.myField", null), is(false));
   }
 
   /**
@@ -184,15 +285,16 @@ public class InterceptRequestEntryOptimizedMatchTest {
    * ""} as joinedParamTypes from {@code String.join(",", new String[0])}).
    */
   @Test
-  @Ignore("Awaiting implementation in #679")
   public void shouldHandleEmptyParamTypesArray() {
-    // Given: InterceptRequestEntry with empty paramTypes (zero-arg method)
-    // When: Both methods called with empty param inputs:
-    //        - Original: matches(className, execName, new String[0])
-    //        - Optimized: matches(execPath, "")  [String.join(",", new String[0]) == ""]
-    // Then: Both return consistent results (both true for matching path)
+    InterceptRequestEntry entry = buildMethodEntry("com.example.Foo", "bar", List.of());
 
-    // TODO(#679): Implement test logic
-    fail("Not yet implemented");
+    // Original with empty array
+    boolean originalResult = entry.matches("com.example.Foo", "bar", new String[0]);
+    // Optimized with "" (String.join(",", new String[0]) == "")
+    boolean optimizedResult = entry.matches("com.example.Foo.bar", "");
+
+    assertThat(originalResult, is(true));
+    assertThat(optimizedResult, is(true));
+    assertThat(optimizedResult, is(originalResult));
   }
 }
