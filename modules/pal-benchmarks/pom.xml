@@ -61,6 +61,16 @@
       <artifactId>error_prone_core</artifactId>
     </dependency>
 
+    <!-- TESTING -->
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest-core</artifactId>
+    </dependency>
+
   </dependencies>
 
   <build>

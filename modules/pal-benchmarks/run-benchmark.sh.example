@@ -32,7 +32,35 @@ ITER_TIME=25s
 MODES=avgt,sample
 
 #-------- Variant & IoProfile ---------
-# One of: NOWEAVE,NOOP,INTERCEPTS,PUB,WAL,PUB_WAL,INTERCEPTS_PUB,INTERCEPTS_WAL,INTERCEPTS_PUB_WAL
+# Variants (set one or comma-separate several for comparison):
+#
+#   Infrastructure variants:
+#     NOWEAVE              - non-woven method call (baseline, no PAL overhead)
+#     NOOP                 - woven but no subsystems (quantization cost only)
+#     INTERCEPTS           - intercepts enabled, none registered (infra overhead)
+#     PUB                  - TCP-PUB only
+#     WAL                  - Write-Ahead Log only
+#     PUB_WAL              - PUB + WAL combined
+#     INTERCEPTS_PUB       - Intercepts + TCP-PUB
+#     INTERCEPTS_WAL       - Intercepts + WAL
+#     INTERCEPTS_PUB_WAL   - Full hot path (all three)
+#
+#   Intercept callback variants (local no-op callbacks):
+#     INTERCEPTS_BEFORE       - BEFORE intercept registered
+#     INTERCEPTS_AFTER        - AFTER intercept registered
+#     INTERCEPTS_AROUND       - AROUND intercept registered (chain + proceed)
+#     INTERCEPTS_BEFORE_AFTER - BEFORE + AFTER intercepts registered
+#     INTERCEPTS_ALL          - BEFORE + AFTER + AROUND all registered
+#
+#   In-flight tracking variants:
+#     NOOP_IN_FLIGHT              - no intercepts, tracking only (isolate tracker cost)
+#     INTERCEPTS_IN_FLIGHT        - intercepts + tracking, none registered
+#     INTERCEPTS_BEFORE_IN_FLIGHT - intercepts + tracking + BEFORE registered
+#
+#   Async callback variants:
+#     INTERCEPTS_BEFORE_ASYNC  - BEFORE_ASYNC callback (virtual threads / cached pool)
+#     INTERCEPTS_AFTER_ASYNC   - AFTER_ASYNC callback (virtual threads / cached pool)
+#
 VARIANT=NOOP
 
 # One of: CPU_ONLY, MOCK, REAL
@@ -43,7 +71,7 @@ IO_PROFILE=CPU_ONLY
 # Just the matcher && callback cost
 # -p variant=INTERCEPTS
 # -p ioProfile=CPU_ONLY
-# 
+#
 # WAL serialisation cost (no network)
 # -p variant=WAL
 # -p ioProfile=MOCK
@@ -51,7 +79,7 @@ IO_PROFILE=CPU_ONLY
 # PUB + WAL with real brokers
 # -p variant=PUB_WAL
 # -p ioProfile=REAL
-# 
+#
 # Only the quantization cost
 # -p variant=NOOP
 # -p ioProfile=CPU_ONLY
@@ -63,6 +91,24 @@ IO_PROFILE=CPU_ONLY
 # End to End, full-featured run with production-like cost
 # -p variant=INTERCEPTS_PUB_WAL
 # -p ioProfile=REAL
+#
+# --- Intercept overhead benchmarks ---
+#
+# Compare individual intercept types (BEFORE vs AFTER vs AROUND)
+# -p variant=INTERCEPTS_BEFORE,INTERCEPTS_AFTER,INTERCEPTS_AROUND
+# -p ioProfile=CPU_ONLY
+#
+# Full comparison: no intercepts vs each intercept type vs all combined
+# -p variant=NOOP,INTERCEPTS,INTERCEPTS_BEFORE,INTERCEPTS_AFTER,INTERCEPTS_AROUND,INTERCEPTS_ALL
+# -p ioProfile=CPU_ONLY
+#
+# Isolate in-flight tracking overhead
+# -p variant=NOOP,NOOP_IN_FLIGHT,INTERCEPTS,INTERCEPTS_IN_FLIGHT
+# -p ioProfile=CPU_ONLY
+#
+# In-flight tracking with active intercepts
+# -p variant=INTERCEPTS_BEFORE,INTERCEPTS_BEFORE_IN_FLIGHT
+# -p ioProfile=CPU_ONLY
 
 
 #-------- Input Mode & Message type distribution ---------
