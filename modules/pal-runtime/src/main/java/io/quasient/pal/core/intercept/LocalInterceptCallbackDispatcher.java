@@ -347,6 +347,10 @@ public class LocalInterceptCallbackDispatcher {
     Map<Integer, Object> aggregatedMutations = new HashMap<>();
     Throwable exceptionToThrow = null;
 
+    // Create metadata once and share across all callbacks for this invocation
+    InterceptContext.LocalInterceptMetadata metadata =
+        new InterceptContext.LocalInterceptMetadata(className, methodName, paramTypes);
+
     for (InterceptMessage intercept : localIntercepts) {
       InterceptType interceptType = InterceptType.fromByte(intercept.getInterceptType());
 
@@ -366,10 +370,10 @@ public class LocalInterceptCallbackDispatcher {
             callbackResolver.resolve(
                 null, intercept.getCallbackClass(), intercept.getCallbackMethod());
 
-        // Create context for BEFORE phase
+        // Create pooled context for BEFORE phase (sync callback — safe to reuse)
         InterceptContext context =
-            InterceptContext.forLocalBeforePhase(
-                className, methodName, paramTypes, interceptType, interceptedPeerUuid, args);
+            InterceptContext.forLocalBeforePhasePooled(
+                metadata, interceptType, interceptedPeerUuid, args);
 
         // Invoke the callback
         InterceptCallbackResponse response = callback.handle(context);
@@ -476,6 +480,10 @@ public class LocalInterceptCallbackDispatcher {
           methodName);
     }
 
+    // Create metadata once and share across async callbacks (immutable, safe to share)
+    InterceptContext.LocalInterceptMetadata metadata =
+        new InterceptContext.LocalInterceptMetadata(className, methodName, paramTypes);
+
     for (InterceptMessage intercept : localIntercepts) {
       InterceptType interceptType = InterceptType.fromByte(intercept.getInterceptType());
 
@@ -485,8 +493,7 @@ public class LocalInterceptCallbackDispatcher {
       }
 
       // Submit callback to executor (fire-and-forget, Future result intentionally ignored)
-      submitAsyncBeforeCallback(
-          intercept, args, className, methodName, paramTypes, interceptType, interceptedPeerUuid);
+      submitAsyncBeforeCallback(intercept, args, metadata, interceptType, interceptedPeerUuid);
     }
   }
 
@@ -496,11 +503,13 @@ public class LocalInterceptCallbackDispatcher {
    * <p>This method is extracted to satisfy spotbugs dead local store warnings when ignoring the
    * Future return value intentionally for fire-and-forget semantics.
    *
+   * <p><b>IMPORTANT:</b> Async callbacks MUST use fresh InterceptContext allocations (not pooled),
+   * because the callback executes on a different thread after this method returns. The pooled
+   * context would be recycled on the calling thread before the async callback reads it.
+   *
    * @param intercept the intercept message
    * @param args the method arguments
-   * @param className the class name
-   * @param methodName the method name
-   * @param paramTypes the parameter types
+   * @param metadata the pre-built metadata (immutable, safe to share across threads)
    * @param interceptType the intercept type
    * @param interceptedPeerUuid the UUID of the intercepted peer
    */
@@ -511,9 +520,7 @@ public class LocalInterceptCallbackDispatcher {
   private void submitAsyncBeforeCallback(
       InterceptMessage intercept,
       Object[] args,
-      String className,
-      String methodName,
-      List<String> paramTypes,
+      InterceptContext.LocalInterceptMetadata metadata,
       InterceptType interceptType,
       String interceptedPeerUuid) {
     asyncExecutor.submit(
@@ -524,10 +531,10 @@ public class LocalInterceptCallbackDispatcher {
                 callbackResolver.resolve(
                     null, intercept.getCallbackClass(), intercept.getCallbackMethod());
 
-            // Create context for BEFORE phase (no mutations allowed for async)
+            // Create FRESH context for BEFORE phase (NOT pooled — async runs on different thread)
             InterceptContext context =
                 InterceptContext.forLocalBeforePhase(
-                    className, methodName, paramTypes, interceptType, interceptedPeerUuid, args);
+                    metadata, interceptType, interceptedPeerUuid, args);
 
             // Invoke the callback (response is ignored for fire-and-forget)
             callback.handle(context);
@@ -654,6 +661,10 @@ public class LocalInterceptCallbackDispatcher {
     boolean returnValueOverridden = false;
     Throwable exceptionToThrow = null;
 
+    // Create metadata once and share across all callbacks for this invocation
+    InterceptContext.LocalInterceptMetadata metadata =
+        new InterceptContext.LocalInterceptMetadata(className, methodName, paramTypes);
+
     for (InterceptMessage intercept : localIntercepts) {
       InterceptType interceptType = InterceptType.fromByte(intercept.getInterceptType());
 
@@ -673,12 +684,10 @@ public class LocalInterceptCallbackDispatcher {
             callbackResolver.resolve(
                 null, intercept.getCallbackClass(), intercept.getCallbackMethod());
 
-        // Create context for AFTER phase
+        // Create context for AFTER phase (reuse metadata)
         InterceptContext context =
             InterceptContext.forLocalAfterPhase(
-                className,
-                methodName,
-                paramTypes,
+                metadata,
                 interceptType,
                 interceptedPeerUuid,
                 args,
@@ -794,6 +803,10 @@ public class LocalInterceptCallbackDispatcher {
           methodName);
     }
 
+    // Create metadata once and share across async callbacks (immutable, safe to share)
+    InterceptContext.LocalInterceptMetadata metadata =
+        new InterceptContext.LocalInterceptMetadata(className, methodName, paramTypes);
+
     for (InterceptMessage intercept : localIntercepts) {
       InterceptType interceptType = InterceptType.fromByte(intercept.getInterceptType());
 
@@ -809,9 +822,7 @@ public class LocalInterceptCallbackDispatcher {
           returnValue,
           isVoid,
           thrownException,
-          className,
-          methodName,
-          paramTypes,
+          metadata,
           interceptType,
           interceptedPeerUuid);
     }
@@ -823,14 +834,15 @@ public class LocalInterceptCallbackDispatcher {
    * <p>This method is extracted to satisfy spotbugs dead local store warnings when ignoring the
    * Future return value intentionally for fire-and-forget semantics.
    *
+   * <p><b>IMPORTANT:</b> Async callbacks MUST use fresh InterceptContext allocations (not pooled),
+   * because the callback executes on a different thread after this method returns.
+   *
    * @param intercept the intercept message
    * @param args the method arguments
    * @param returnValue the return value (may be null)
    * @param isVoid whether the method is void
    * @param thrownException exception thrown (may be null)
-   * @param className the class name
-   * @param methodName the method name
-   * @param paramTypes the parameter types
+   * @param metadata the pre-built metadata (immutable, safe to share across threads)
    * @param interceptType the intercept type
    * @param interceptedPeerUuid the UUID of the intercepted peer
    */
@@ -844,9 +856,7 @@ public class LocalInterceptCallbackDispatcher {
       Object returnValue,
       boolean isVoid,
       Throwable thrownException,
-      String className,
-      String methodName,
-      List<String> paramTypes,
+      InterceptContext.LocalInterceptMetadata metadata,
       InterceptType interceptType,
       String interceptedPeerUuid) {
     asyncExecutor.submit(
@@ -857,12 +867,10 @@ public class LocalInterceptCallbackDispatcher {
                 callbackResolver.resolve(
                     null, intercept.getCallbackClass(), intercept.getCallbackMethod());
 
-            // Create context for AFTER phase (no overrides applied for async)
+            // Create FRESH context for AFTER phase (NOT pooled — async runs on different thread)
             InterceptContext context =
                 InterceptContext.forLocalAfterPhase(
-                    className,
-                    methodName,
-                    paramTypes,
+                    metadata,
                     interceptType,
                     interceptedPeerUuid,
                     args,
@@ -1027,6 +1035,10 @@ public class LocalInterceptCallbackDispatcher {
     Throwable exceptionToThrow = null;
     Object[] currentArgs = args;
 
+    // Create metadata once and share across all AROUND callbacks for this invocation
+    InterceptContext.LocalInterceptMetadata metadata =
+        new InterceptContext.LocalInterceptMetadata(className, methodName, paramTypes);
+
     // Process AROUND intercepts
     for (InterceptMessage intercept : aroundIntercepts) {
       InterceptType interceptType = InterceptType.AROUND;
@@ -1040,10 +1052,10 @@ public class LocalInterceptCallbackDispatcher {
             callbackResolver.resolve(
                 null, intercept.getCallbackClass(), intercept.getCallbackMethod());
 
-        // Create context for AROUND (starts in BEFORE phase)
+        // Create context for AROUND (starts in BEFORE phase, reuse metadata)
+        // AROUND contexts are NOT pooled because they may be stored in pendingCallbacks
         InterceptContext context =
-            InterceptContext.forLocalAroundPhase(
-                className, methodName, paramTypes, interceptedPeerUuid, currentArgs);
+            InterceptContext.forLocalAroundPhase(metadata, interceptedPeerUuid, currentArgs);
 
         // Set the local around accessor
         context.setLocalAroundAccessor(localAroundAccessor);

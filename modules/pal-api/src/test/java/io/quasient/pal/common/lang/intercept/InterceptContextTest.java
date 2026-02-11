@@ -1091,7 +1091,18 @@ public class InterceptContextTest {
     assertArrayEquals(new Object[] {"hello", 42}, ctx.getArgs());
   }
 
-  /** Tests that forLocalBeforePhase() copies the args array to prevent external modification. */
+  /**
+   * Tests that forLocalBeforePhase() uses deferred args copy (copy-on-write).
+   *
+   * <p>With the deferred copy optimization, the internal args reference points to the original
+   * array until first mutation via setArg(). The getArgs() method always returns a defensive copy,
+   * but getArgsInternal() returns the direct internal reference. This test verifies:
+   *
+   * <ul>
+   *   <li>Before setArg(): internal args is the same reference as original
+   *   <li>After setArg(): internal args is a copy, original is unmodified
+   * </ul>
+   */
   @Test
   public void testForLocalBeforePhaseArgsAreCopied() {
     Object[] args = new Object[] {"original"};
@@ -1105,11 +1116,14 @@ public class InterceptContextTest {
             peerUuid,
             args);
 
-    // Modify original array
-    args[0] = "modified";
+    // Before mutation: internal args is the same reference (deferred copy)
+    assertSame(args, ctx.getArgsInternal());
 
-    // Context should have the original value
-    assertEquals("original", ctx.getArgs()[0]);
+    // After setArg: copy-on-write creates a new array, original is unmodified
+    ctx.setArg(0, "modified");
+    assertEquals("original", args[0]);
+    assertEquals("modified", ctx.getArgs()[0]);
+    assertNotSame(args, ctx.getArgsInternal());
   }
 
   /** Tests that forLocalAfterPhase() creates a valid AFTER-phase local context. */

@@ -172,27 +172,98 @@ public final class InterceptContext {
    * <p>Local intercepts (where callback peer == intercepted peer) can avoid the overhead of
    * creating an ExecMessage by using this lightweight metadata container instead.
    *
-   * @param className the fully qualified name of the intercepted class
-   * @param methodName the name of the intercepted method, constructor, or field
-   * @param paramTypes the parameter type names (for methods/constructors), immutable, may be empty
+   * <p><b>Optimization:</b> This metadata can be created once per dispatch and shared across
+   * multiple {@link InterceptContext} instances for the same invocation, avoiding repeated
+   * allocation and {@code List.copyOf()} overhead.
    */
-  public record LocalInterceptMetadata(
-      @Nonnull String className, @Nonnull String methodName, @Nonnull List<String> paramTypes) {
+  public static final class LocalInterceptMetadata {
+
+    /** The fully qualified name of the intercepted class. */
+    @Nonnull private final String className;
+
+    /** The name of the intercepted method, constructor, or field. */
+    @Nonnull private final String methodName;
+
+    /** The parameter type names as a raw array (avoids List.copyOf() overhead). */
+    @Nonnull private final String[] paramTypesArray;
+
+    /** Lazily-initialized immutable list view of parameter types. */
+    @Nullable private volatile List<String> paramTypesList;
+
     /**
-     * Creates a new LocalInterceptMetadata.
+     * Creates a new LocalInterceptMetadata from a List of parameter types.
      *
      * @param className the class name (must not be null)
      * @param methodName the method/field name (must not be null)
      * @param paramTypes the parameter types (must not be null, may be empty)
      */
-    public LocalInterceptMetadata {
-      Objects.requireNonNull(className, "className must not be null");
-      Objects.requireNonNull(methodName, "methodName must not be null");
+    public LocalInterceptMetadata(
+        @Nonnull String className, @Nonnull String methodName, @Nonnull List<String> paramTypes) {
+      this.className = Objects.requireNonNull(className, "className must not be null");
+      this.methodName = Objects.requireNonNull(methodName, "methodName must not be null");
       Objects.requireNonNull(paramTypes, "paramTypes must not be null");
-      // Ensure immutability
-      paramTypes = List.copyOf(paramTypes);
+      this.paramTypesArray = paramTypes.toArray(new String[0]);
+    }
+
+    /**
+     * Creates a new LocalInterceptMetadata from a String array of parameter types.
+     *
+     * <p>This constructor avoids the {@code List.copyOf()} overhead by accepting the raw array
+     * directly. The array is defensively copied to ensure immutability.
+     *
+     * @param className the class name (must not be null)
+     * @param methodName the method/field name (must not be null)
+     * @param paramTypes the parameter types array (must not be null, may be empty)
+     */
+    public LocalInterceptMetadata(
+        @Nonnull String className, @Nonnull String methodName, @Nonnull String[] paramTypes) {
+      this.className = Objects.requireNonNull(className, "className must not be null");
+      this.methodName = Objects.requireNonNull(methodName, "methodName must not be null");
+      Objects.requireNonNull(paramTypes, "paramTypes must not be null");
+      this.paramTypesArray = Arrays.copyOf(paramTypes, paramTypes.length);
+    }
+
+    /**
+     * Returns the fully qualified name of the intercepted class.
+     *
+     * @return the class name (never null)
+     */
+    @Nonnull
+    public String className() {
+      return className;
+    }
+
+    /**
+     * Returns the name of the intercepted method, constructor, or field.
+     *
+     * @return the method name (never null)
+     */
+    @Nonnull
+    public String methodName() {
+      return methodName;
+    }
+
+    /**
+     * Returns the parameter type names as an immutable list.
+     *
+     * <p>The list is lazily created on first access to avoid allocation if never called.
+     *
+     * @return the parameter types (never null, may be empty)
+     */
+    @Nonnull
+    public List<String> paramTypes() {
+      List<String> result = paramTypesList;
+      if (result == null) {
+        result = List.of(paramTypesArray);
+        paramTypesList = result;
+      }
+      return result;
     }
   }
+
+  /** ThreadLocal pool for reusable InterceptContext instances. */
+  private static final ThreadLocal<InterceptContext> TL_CONTEXT =
+      ThreadLocal.withInitial(InterceptContext::new);
 
   /**
    * The execution message containing operation metadata (null for local intercepts).
@@ -200,7 +271,7 @@ public final class InterceptContext {
    * <p>For remote intercepts, this contains the full ExecMessage with all metadata. For local
    * intercepts, this is null and {@link #localMetadata} is used instead.
    */
-  @Nullable private final ExecMessage exec;
+  @Nullable private ExecMessage exec;
 
   /**
    * Metadata for local intercepts (null for remote intercepts).
@@ -208,7 +279,7 @@ public final class InterceptContext {
    * <p>For local intercepts, this provides lightweight access to class/method information without
    * the overhead of ExecMessage creation.
    */
-  @Nullable private final LocalInterceptMetadata localMetadata;
+  @Nullable private LocalInterceptMetadata localMetadata;
 
   /**
    * The current callback phase (BEFORE or AFTER). Mutable for AROUND intercepts after proceed().
@@ -216,10 +287,10 @@ public final class InterceptContext {
   @Nonnull private InterceptPhase phase;
 
   /** The type of intercept (BEFORE, AFTER, or AROUND). */
-  @Nonnull private final InterceptType interceptType;
+  @Nonnull private InterceptType interceptType;
 
   /** The UUID of the peer being intercepted. */
-  @Nonnull private final String interceptedPeerUuid;
+  @Nonnull private String interceptedPeerUuid;
 
   /** The method arguments. Mutable via {@link #setArg(int, Object)}. */
   @Nullable private Object[] args;
@@ -268,11 +339,28 @@ public final class InterceptContext {
   /** Flag indicating whether arguments have been modified. */
   private boolean argsModified = false;
 
+  /**
+   * Flag indicating whether the args array has been defensively copied.
+   *
+   * <p>When false, the internal {@code args} reference points to the original array passed to the
+   * factory method. The copy is deferred until the first mutation via {@link #setArg(int, Object)}.
+   * This copy-on-write optimization avoids unnecessary array allocation for read-only callbacks.
+   */
+  private boolean argsCopied = false;
+
   /** Flag indicating whether the return value has been modified. */
   private boolean returnValueModified = false;
 
   /** The exception to throw instead of normal execution/return. */
   @Nullable private Throwable exceptionToThrow;
+
+  /**
+   * Flag indicating whether this context was obtained from the ThreadLocal pool.
+   *
+   * <p>Pooled contexts must NOT be stored, passed to other threads, or used beyond the scope of a
+   * single synchronous callback invocation. They are recycled after the callback returns.
+   */
+  private boolean pooled = false;
 
   /**
    * Constructs an {@code InterceptContext} for remote intercepts (with ExecMessage).
@@ -338,6 +426,96 @@ public final class InterceptContext {
     this.returnValue = returnValue;
     this.isVoidMutable = isVoid;
     this.thrownException = thrownException;
+  }
+
+  /**
+   * No-arg constructor for ThreadLocal pooling.
+   *
+   * <p>Creates an uninitialized context that must be initialized via {@link
+   * #initForLocalBeforePhase} before use.
+   */
+  @SuppressWarnings("NullAway")
+  private InterceptContext() {
+    // Fields will be set by initForLocalBeforePhase()
+    this.phase = InterceptPhase.BEFORE;
+    this.interceptType = InterceptType.BEFORE;
+    this.interceptedPeerUuid = "";
+  }
+
+  /**
+   * Resets all mutable state, preparing this context for reuse from the ThreadLocal pool.
+   *
+   * <p>After reset, all fields are cleared:
+   *
+   * <ul>
+   *   <li>exec and localMetadata are null
+   *   <li>args, returnValue, thrownException, exceptionToThrow are null
+   *   <li>All modification flags (argsModified, argsCopied, returnValueModified) are false
+   *   <li>proceedCalled is false
+   *   <li>AROUND accessors are null
+   *   <li>isVoidMutable is false
+   * </ul>
+   *
+   * <p><b>Internal API:</b> This method is for use by the pooling infrastructure only.
+   */
+  public void reset() {
+    this.exec = null;
+    this.localMetadata = null;
+    this.phase = InterceptPhase.BEFORE;
+    this.interceptType = InterceptType.BEFORE;
+    this.interceptedPeerUuid = "";
+    this.args = null;
+    this.returnValue = null;
+    this.isVoidMutable = false;
+    this.thrownException = null;
+    this.argsModified = false;
+    this.argsCopied = false;
+    this.returnValueModified = false;
+    this.exceptionToThrow = null;
+    this.proceedCalled = false;
+    this.aroundSocketAccessor = null;
+    this.localAroundAccessor = null;
+    this.callbackId = null;
+    this.timeoutMs = 0;
+    this.pooled = false;
+  }
+
+  /**
+   * Initializes a pooled context for local BEFORE phase.
+   *
+   * <p><b>Internal API:</b> Used by {@link #forLocalBeforePhasePooled} to configure a recycled
+   * context instance.
+   *
+   * @param metadata the pre-built metadata
+   * @param interceptType the type of intercept
+   * @param interceptedPeerUuid the UUID of the peer being intercepted
+   * @param args the method arguments (NOT copied — deferred until setArg())
+   */
+  private void initForLocalBeforePhase(
+      @Nonnull LocalInterceptMetadata metadata,
+      @Nonnull InterceptType interceptType,
+      @Nonnull String interceptedPeerUuid,
+      @Nullable Object[] args) {
+    this.exec = null;
+    this.localMetadata = Objects.requireNonNull(metadata, "metadata must not be null");
+    this.phase = InterceptPhase.BEFORE;
+    this.interceptType = Objects.requireNonNull(interceptType, "interceptType must not be null");
+    this.interceptedPeerUuid =
+        Objects.requireNonNull(interceptedPeerUuid, "interceptedPeerUuid must not be null");
+    this.args = args;
+    this.returnValue = null;
+    this.isVoidMutable = false;
+    this.thrownException = null;
+    this.argsModified = false;
+    this.argsCopied = false;
+    this.returnValueModified = false;
+    this.exceptionToThrow = null;
+    this.proceedCalled = false;
+    this.aroundSocketAccessor = null;
+    this.localAroundAccessor = null;
+    this.callbackId = null;
+    this.timeoutMs = 0;
+    this.pooled = true;
   }
 
   /**
@@ -420,15 +598,78 @@ public final class InterceptContext {
       @Nonnull String interceptedPeerUuid,
       @Nullable Object[] args) {
     LocalInterceptMetadata metadata = new LocalInterceptMetadata(className, methodName, paramTypes);
+    return forLocalBeforePhase(metadata, interceptType, interceptedPeerUuid, args);
+  }
+
+  /**
+   * Creates a new {@code InterceptContext} for the BEFORE phase of a local intercept, reusing
+   * pre-built metadata.
+   *
+   * <p>This overload accepts a pre-built {@link LocalInterceptMetadata} to avoid repeated metadata
+   * allocation when dispatching multiple callbacks for the same invocation.
+   *
+   * <p><b>Optimization:</b> The args array is NOT eagerly copied. Instead, copy is deferred until
+   * the first {@link #setArg(int, Object)} call (copy-on-write). This means zero-cost for read-only
+   * callbacks.
+   *
+   * @param metadata the pre-built metadata (shared across callbacks)
+   * @param interceptType the type of intercept
+   * @param interceptedPeerUuid the UUID of the peer being intercepted
+   * @param args the method arguments (live Java objects)
+   * @return a new BEFORE-phase context for local intercept
+   */
+  public static InterceptContext forLocalBeforePhase(
+      @Nonnull LocalInterceptMetadata metadata,
+      @Nonnull InterceptType interceptType,
+      @Nonnull String interceptedPeerUuid,
+      @Nullable Object[] args) {
+    // Deferred copy: args reference is stored directly, copy happens on first setArg()
     return new InterceptContext(
         metadata,
         InterceptPhase.BEFORE,
         interceptType,
         interceptedPeerUuid,
-        args != null ? Arrays.copyOf(args, args.length) : null,
+        args,
         null,
         false,
         null);
+  }
+
+  /**
+   * Returns a pooled {@code InterceptContext} for the BEFORE phase of a local intercept.
+   *
+   * <p>This method reuses a thread-local context instance, avoiding allocation entirely for
+   * synchronous callbacks. The pooled context is initialized with the given parameters and marked
+   * as pooled ({@link #isPooled()} returns true).
+   *
+   * <p><b>CRITICAL SAFETY CONSTRAINT:</b> The pooled context is ONLY safe for local BEFORE/AFTER
+   * callbacks where the callback is invoked synchronously and the context is not stored. For ASYNC
+   * callbacks (BEFORE_ASYNC, AFTER_ASYNC), a fresh allocation via {@link #forLocalBeforePhase} is
+   * required because the callback may execute on a different thread after the context is recycled.
+   *
+   * <p><b>Lifecycle:</b>
+   *
+   * <ol>
+   *   <li>Caller obtains the pooled context via this method
+   *   <li>Caller invokes the callback synchronously
+   *   <li>Caller reads any mutations from the context
+   *   <li>Context is automatically available for reuse on the next call (same thread)
+   * </ol>
+   *
+   * @param metadata the pre-built metadata (shared across callbacks)
+   * @param interceptType the type of intercept (must be BEFORE, not BEFORE_ASYNC)
+   * @param interceptedPeerUuid the UUID of the peer being intercepted
+   * @param args the method arguments (NOT copied — deferred until setArg())
+   * @return the pooled BEFORE-phase context (same thread-local instance each time)
+   */
+  public static InterceptContext forLocalBeforePhasePooled(
+      @Nonnull LocalInterceptMetadata metadata,
+      @Nonnull InterceptType interceptType,
+      @Nonnull String interceptedPeerUuid,
+      @Nullable Object[] args) {
+    InterceptContext ctx = TL_CONTEXT.get();
+    ctx.initForLocalBeforePhase(metadata, interceptType, interceptedPeerUuid, args);
+    return ctx;
   }
 
   /**
@@ -459,6 +700,34 @@ public final class InterceptContext {
       boolean isVoid,
       @Nullable Throwable thrownException) {
     LocalInterceptMetadata metadata = new LocalInterceptMetadata(className, methodName, paramTypes);
+    return forLocalAfterPhase(
+        metadata, interceptType, interceptedPeerUuid, args, returnValue, isVoid, thrownException);
+  }
+
+  /**
+   * Creates a new {@code InterceptContext} for the AFTER phase of a local intercept, reusing
+   * pre-built metadata.
+   *
+   * <p>This overload accepts a pre-built {@link LocalInterceptMetadata} to avoid repeated metadata
+   * allocation when dispatching multiple callbacks for the same invocation.
+   *
+   * @param metadata the pre-built metadata (shared across callbacks)
+   * @param interceptType the type of intercept
+   * @param interceptedPeerUuid the UUID of the peer being intercepted
+   * @param args the method arguments (live Java objects)
+   * @param returnValue the return value (null if void or exception thrown)
+   * @param isVoid whether the method has a void return type
+   * @param thrownException the exception thrown (null if normal completion)
+   * @return a new AFTER-phase context for local intercept
+   */
+  public static InterceptContext forLocalAfterPhase(
+      @Nonnull LocalInterceptMetadata metadata,
+      @Nonnull InterceptType interceptType,
+      @Nonnull String interceptedPeerUuid,
+      @Nullable Object[] args,
+      @Nullable Object returnValue,
+      boolean isVoid,
+      @Nullable Throwable thrownException) {
     return new InterceptContext(
         metadata,
         InterceptPhase.AFTER,
@@ -500,12 +769,35 @@ public final class InterceptContext {
       @Nonnull String interceptedPeerUuid,
       @Nullable Object[] args) {
     LocalInterceptMetadata metadata = new LocalInterceptMetadata(className, methodName, paramTypes);
+    return forLocalAroundPhase(metadata, interceptedPeerUuid, args);
+  }
+
+  /**
+   * Creates a new {@code InterceptContext} for a local AROUND intercept, reusing pre-built
+   * metadata.
+   *
+   * <p>This overload accepts a pre-built {@link LocalInterceptMetadata} to avoid repeated metadata
+   * allocation when dispatching multiple callbacks for the same invocation.
+   *
+   * <p><b>Optimization:</b> The args array is NOT eagerly copied. Instead, copy is deferred until
+   * the first {@link #setArg(int, Object)} call (copy-on-write).
+   *
+   * @param metadata the pre-built metadata (shared across callbacks)
+   * @param interceptedPeerUuid the UUID of the peer being intercepted
+   * @param args the method arguments (live Java objects)
+   * @return a new context for local AROUND intercept (starts in BEFORE phase)
+   */
+  public static InterceptContext forLocalAroundPhase(
+      @Nonnull LocalInterceptMetadata metadata,
+      @Nonnull String interceptedPeerUuid,
+      @Nullable Object[] args) {
+    // Deferred copy: args reference is stored directly, copy happens on first setArg()
     return new InterceptContext(
         metadata,
         InterceptPhase.BEFORE,
         InterceptType.AROUND,
         interceptedPeerUuid,
-        args != null ? Arrays.copyOf(args, args.length) : null,
+        args,
         null,
         false,
         null);
@@ -557,6 +849,19 @@ public final class InterceptContext {
   @Nullable
   public LocalInterceptMetadata getLocalMetadata() {
     return localMetadata;
+  }
+
+  /**
+   * Returns whether this context was obtained from the ThreadLocal pool.
+   *
+   * <p>Pooled contexts must NOT be stored, passed to other threads, or used beyond the scope of a
+   * single synchronous callback invocation. Attempting to store a pooled context (e.g., in a static
+   * field or collection) will result in undefined behavior when the context is recycled.
+   *
+   * @return {@code true} if this context is pooled, {@code false} for freshly allocated contexts
+   */
+  public boolean isPooled() {
+    return pooled;
   }
 
   /**
@@ -720,10 +1025,13 @@ public final class InterceptContext {
           "Argument index " + index + " out of bounds for length " + args.length);
     }
     // Copy-on-write: create a defensive copy on first modification
-    if (!argsModified) {
+    // This handles both the deferred-copy case (argsCopied=false, args is original reference)
+    // and the legacy case where args was already copied at construction time
+    if (!argsCopied) {
       args = Arrays.copyOf(args, args.length);
-      argsModified = true;
+      argsCopied = true;
     }
+    argsModified = true;
     args[index] = value;
   }
 

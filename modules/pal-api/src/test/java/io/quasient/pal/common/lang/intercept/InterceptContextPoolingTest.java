@@ -9,14 +9,21 @@
  */
 package io.quasient.pal.common.lang.intercept;
 
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import org.junit.Ignore;
+import java.util.List;
 import org.junit.Test;
 
 /**
- * Unit test specifications for {@link InterceptContext} pooling and deferred argument array
- * copying.
+ * Unit tests for {@link InterceptContext} pooling and deferred argument array copying.
  *
  * <p>These tests verify the optimized InterceptContext behavior where:
  *
@@ -27,11 +34,21 @@ import org.junit.Test;
  *       instances
  * </ul>
  *
- * <p>All tests are skipped (via {@link Ignore}) pending implementation in issue #685.
- *
  * @see InterceptContext
  */
 public class InterceptContextPoolingTest {
+
+  /** Shared constants for test setup. */
+  private static final String CLASS_NAME = "com.example.MyClass";
+
+  /** Shared constants for test setup. */
+  private static final String METHOD_NAME = "myMethod";
+
+  /** Shared constants for test setup. */
+  private static final String PEER_UUID = "peer-uuid-123";
+
+  /** Shared parameter types for test setup. */
+  private static final List<String> PARAM_TYPES = List.of("int", "String", "double");
 
   /**
    * Verifies that read-only access to arguments does not trigger a defensive copy.
@@ -41,21 +58,23 @@ public class InterceptContextPoolingTest {
    * The internal args reference should remain the original array passed to the factory method.
    */
   @Test
-  @Ignore("Awaiting implementation in #685")
   public void shouldDeferArgsCopyWhenNoMutation() {
     // Given: InterceptContext created with args [1, "hello", 3.14]
-    // When: getArgs() called (read-only access) — note: getArgs() returns a defensive copy
-    //       to the caller, but the internal array should still be the original reference
-    // Then: Internal args array (via getArgsInternal()) is the original reference — no
-    //       defensive copy was created at construction time
+    Object[] originalArgs = new Object[] {1, "hello", 3.14};
 
-    // TODO(#685): Implement test logic
-    // 1. Create an Object[] array: {1, "hello", 3.14}
-    // 2. Create InterceptContext via forLocalBeforePhase() with that array
-    // 3. Call getArgs() (read-only, external defensive copy is expected)
-    // 4. Verify getArgsInternal() returns the SAME reference as the original array
-    //    (assertSame), proving no eager copy was made at construction time
-    fail("Not yet implemented");
+    InterceptContext ctx =
+        InterceptContext.forLocalBeforePhase(
+            CLASS_NAME, METHOD_NAME, PARAM_TYPES, InterceptType.BEFORE, PEER_UUID, originalArgs);
+
+    // When: getArgs() called (read-only access) — note: getArgs() returns a defensive copy
+    // to the caller, but the internal array should still be the original reference
+    Object[] externalCopy = ctx.getArgs();
+    assertNotNull(externalCopy);
+    assertArrayEquals(new Object[] {1, "hello", 3.14}, externalCopy);
+
+    // Then: Internal args array (via getArgsInternal()) is the original reference — no
+    // defensive copy was created at construction time
+    assertSame(originalArgs, ctx.getArgsInternal());
   }
 
   /**
@@ -65,20 +84,21 @@ public class InterceptContextPoolingTest {
    * setArg()}. After the copy, the original array passed to the factory must remain unmodified.
    */
   @Test
-  @Ignore("Awaiting implementation in #685")
   public void shouldCopyArgsOnFirstSetArg() {
     // Given: InterceptContext created with args [1, "hello", 3.14]
-    // When: setArg(0, 42) called
-    // Then: Internal args is a copy (original array unchanged), arg[0] == 42
+    Object[] originalArgs = new Object[] {1, "hello", 3.14};
 
-    // TODO(#685): Implement test logic
-    // 1. Create original Object[] array: {1, "hello", 3.14}
-    // 2. Create InterceptContext via forLocalBeforePhase() with that array
-    // 3. Call setArg(0, 42)
-    // 4. Verify getArgsInternal() is NOT the same reference as original (assertNotSame)
-    // 5. Verify getArgsInternal()[0] == 42
-    // 6. Verify original array[0] still == 1 (unmodified)
-    fail("Not yet implemented");
+    InterceptContext ctx =
+        InterceptContext.forLocalBeforePhase(
+            CLASS_NAME, METHOD_NAME, PARAM_TYPES, InterceptType.BEFORE, PEER_UUID, originalArgs);
+
+    // When: setArg(0, 42) called
+    ctx.setArg(0, 42);
+
+    // Then: Internal args is a copy (original array unchanged), arg[0] == 42
+    assertNotSame(originalArgs, ctx.getArgsInternal());
+    assertEquals(42, ctx.getArgsInternal()[0]);
+    assertEquals(1, originalArgs[0]); // Original unmodified
   }
 
   /**
@@ -89,20 +109,24 @@ public class InterceptContextPoolingTest {
    * mutations should operate on the same copied array without allocating again.
    */
   @Test
-  @Ignore("Awaiting implementation in #685")
   public void shouldNotCopyArgsOnSubsequentSetArg() {
     // Given: InterceptContext where setArg already triggered copy
-    // When: setArg(1, "world") called
-    // Then: No additional copy created — same internal array reference as after first setArg
+    Object[] originalArgs = new Object[] {1, "hello", 3.14};
 
-    // TODO(#685): Implement test logic
-    // 1. Create InterceptContext via forLocalBeforePhase() with args [1, "hello", 3.14]
-    // 2. Call setArg(0, 42) — triggers copy-on-write
-    // 3. Capture reference to getArgsInternal()
-    // 4. Call setArg(1, "world") — should NOT create another copy
-    // 5. Verify getArgsInternal() is the SAME reference as captured (assertSame)
-    // 6. Verify getArgsInternal() contains [42, "world", 3.14]
-    fail("Not yet implemented");
+    InterceptContext ctx =
+        InterceptContext.forLocalBeforePhase(
+            CLASS_NAME, METHOD_NAME, PARAM_TYPES, InterceptType.BEFORE, PEER_UUID, originalArgs);
+
+    // When: first setArg triggers copy
+    ctx.setArg(0, 42);
+    Object[] afterFirstCopy = ctx.getArgsInternal();
+
+    // When: setArg(1, "world") called — should NOT create another copy
+    ctx.setArg(1, "world");
+
+    // Then: No additional copy created — same internal array reference as after first setArg
+    assertSame(afterFirstCopy, ctx.getArgsInternal());
+    assertArrayEquals(new Object[] {42, "world", 3.14}, ctx.getArgsInternal());
   }
 
   /**
@@ -113,54 +137,69 @@ public class InterceptContextPoolingTest {
    * The object should be ready for reinitialization via a factory or init method.
    */
   @Test
-  @Ignore("Awaiting implementation in #685")
   public void shouldResetCorrectlyForPooling() {
     // Given: InterceptContext previously used (has metadata, args, mutation flags)
-    // When: reset() called
-    // Then: All fields cleared, object ready for reuse
+    Object[] args = new Object[] {1, "hello", 3.14};
+    InterceptContext ctx =
+        InterceptContext.forLocalBeforePhase(
+            CLASS_NAME, METHOD_NAME, PARAM_TYPES, InterceptType.BEFORE, PEER_UUID, args);
 
-    // TODO(#685): Implement test logic
-    // 1. Create InterceptContext via forLocalBeforePhase() with args [1, "hello", 3.14]
-    // 2. Call setArg(0, 42) — sets argsModified flag
-    // 3. Call reset()
-    // 4. Verify getArgsInternal() returns null (args cleared)
-    // 5. Verify internal state is cleared:
-    //    - argsModified flag is false (no copy-on-write state carried over)
-    //    - returnValueModified flag is false
-    //    - proceedCalled flag is false
-    //    - exceptionToThrow is null
-    //    - localMetadata is null
-    //    - exec is null
-    //    - aroundSocketAccessor is null
-    //    - localAroundAccessor is null
-    // 6. Verify the object can be reused (e.g., re-initialized and used in a new dispatch)
-    fail("Not yet implemented");
+    // Modify the context to set various flags
+    ctx.setArg(0, 42);
+    assertTrue(ctx.isArgsModified());
+
+    // When: reset() called
+    ctx.reset();
+
+    // Then: All fields cleared, object ready for reuse
+    assertNull(ctx.getArgsInternal());
+    assertFalse(ctx.isArgsModified());
+    assertFalse(ctx.isReturnValueModified());
+    assertFalse(ctx.isProceedCalled());
+    assertNull(ctx.getExceptionToThrow());
+    assertNull(ctx.getLocalMetadata());
+    assertNull(ctx.getExec());
+    assertFalse(ctx.isPooled());
+
+    // Verify the object can be reused (basic structural integrity after reset)
+    Object[] newArgs = ctx.getArgs();
+    assertNotNull(newArgs);
+    assertEquals(0, newArgs.length);
   }
 
   /**
-   * Verifies that {@link LocalInterceptMetadata} instances can be created once and shared across
-   * multiple {@link InterceptContext} instances.
+   * Verifies that {@link InterceptContext.LocalInterceptMetadata} instances can be created once and
+   * shared across multiple {@link InterceptContext} instances.
    *
    * <p>Since className, methodName, and paramTypes are the same for all callbacks on the same
    * invocation, the metadata should be created once and reused to avoid repeated allocation and
    * {@code List.copyOf()} overhead.
    */
   @Test
-  @Ignore("Awaiting implementation in #685")
   public void shouldCacheLocalInterceptMetadataAcrossCallbacks() {
     // Given: Same className, methodName, paramTypes for multiple callbacks
-    // When: LocalInterceptMetadata created once and shared across InterceptContext instances
-    // Then: All contexts reference the same metadata object
+    InterceptContext.LocalInterceptMetadata metadata =
+        new InterceptContext.LocalInterceptMetadata(CLASS_NAME, METHOD_NAME, PARAM_TYPES);
 
-    // TODO(#685): Implement test logic
-    // 1. Create a single LocalInterceptMetadata with CLASS_NAME, METHOD_NAME, PARAM_TYPES
-    // 2. Create multiple InterceptContext instances sharing that same metadata object
-    //    (this may require a new factory method that accepts pre-built metadata, or the
-    //    existing forLocalBeforePhase signature may be extended)
-    // 3. Verify all contexts return the SAME metadata reference via getLocalMetadata()
-    //    (assertSame on all pairs)
-    // 4. Verify metadata content is correct (className, methodName, paramTypes match)
-    fail("Not yet implemented");
+    Object[] args = new Object[] {1, "hello"};
+
+    // When: Create multiple InterceptContext instances sharing that same metadata object
+    InterceptContext ctx1 =
+        InterceptContext.forLocalBeforePhase(metadata, InterceptType.BEFORE, PEER_UUID, args);
+    InterceptContext ctx2 =
+        InterceptContext.forLocalBeforePhase(metadata, InterceptType.BEFORE, PEER_UUID, args);
+    InterceptContext ctx3 =
+        InterceptContext.forLocalBeforePhase(metadata, InterceptType.BEFORE, PEER_UUID, args);
+
+    // Then: All contexts reference the SAME metadata
+    assertSame(metadata, ctx1.getLocalMetadata());
+    assertSame(metadata, ctx2.getLocalMetadata());
+    assertSame(metadata, ctx3.getLocalMetadata());
+
+    // Verify metadata content is correct
+    assertEquals(CLASS_NAME, metadata.className());
+    assertEquals(METHOD_NAME, metadata.methodName());
+    assertEquals(PARAM_TYPES, metadata.paramTypes());
   }
 
   /**
@@ -171,22 +210,34 @@ public class InterceptContextPoolingTest {
    * copy-on-write to protect the original array from corruption.
    */
   @Test
-  @Ignore("Awaiting implementation in #685")
   public void shouldNotCorruptOriginalArgsArrayWhenCallbackMutates() {
     // Given: Original args array [1, 2, 3]
-    // When: Callback calls setArg(0, 99)
-    // Then: Original array still [1, 2, 3]; context args are [99, 2, 3]
+    Object[] originalArgs = new Object[] {1, 2, 3};
 
-    // TODO(#685): Implement test logic
-    // 1. Create original Object[] array: {1, 2, 3}
-    // 2. Create InterceptContext via forLocalBeforePhase() with that array
-    // 3. Simulate callback: call setArg(0, 99)
-    // 4. Verify original array is still {1, 2, 3} (assertArrayEquals)
-    // 5. Verify context's getArgs() returns {99, 2, 3}
-    // 6. Also verify for multiple mutations: setArg(1, 88), setArg(2, 77)
-    // 7. Original array must still be {1, 2, 3}
-    // 8. Context's getArgs() returns {99, 88, 77}
-    fail("Not yet implemented");
+    InterceptContext ctx =
+        InterceptContext.forLocalBeforePhase(
+            CLASS_NAME,
+            METHOD_NAME,
+            List.of("int", "int", "int"),
+            InterceptType.BEFORE,
+            PEER_UUID,
+            originalArgs);
+
+    // When: Callback calls setArg(0, 99)
+    ctx.setArg(0, 99);
+
+    // Then: Original array still [1, 2, 3]; context args are [99, 2, 3]
+    assertArrayEquals(new Object[] {1, 2, 3}, originalArgs);
+    assertArrayEquals(new Object[] {99, 2, 3}, ctx.getArgs());
+
+    // Also verify for multiple mutations: setArg(1, 88), setArg(2, 77)
+    ctx.setArg(1, 88);
+    ctx.setArg(2, 77);
+
+    // Original array must still be {1, 2, 3}
+    assertArrayEquals(new Object[] {1, 2, 3}, originalArgs);
+    // Context's getArgs() returns {99, 88, 77}
+    assertArrayEquals(new Object[] {99, 88, 77}, ctx.getArgs());
   }
 
   /**
@@ -198,20 +249,113 @@ public class InterceptContextPoolingTest {
    * getArgs()} returns an empty array for null internal args.
    */
   @Test
-  @Ignore("Awaiting implementation in #685")
   public void shouldHandleNullArgsGracefully() {
     // Given: InterceptContext created with null args (e.g., no-arg method)
-    // When: getArgs() called
-    // Then: Returns empty array (consistent with existing behavior)
+    InterceptContext ctx =
+        InterceptContext.forLocalBeforePhase(
+            CLASS_NAME, METHOD_NAME, List.of(), InterceptType.BEFORE, PEER_UUID, null);
 
-    // TODO(#685): Implement test logic
-    // 1. Create InterceptContext via forLocalBeforePhase() with null args
-    // 2. Call getArgs()
-    // 3. Verify result is not null
-    // 4. Verify result is an empty array (length == 0)
-    // 5. Verify getArgsInternal() returns null (internal representation unchanged)
-    // 6. Verify setArg(0, "anything") throws IllegalStateException
-    //    ("No arguments available to modify")
-    fail("Not yet implemented");
+    // When: getArgs() called
+    Object[] args = ctx.getArgs();
+
+    // Then: Returns empty array (consistent with existing behavior)
+    assertNotNull(args);
+    assertEquals(0, args.length);
+
+    // Verify getArgsInternal() returns null (internal representation unchanged)
+    assertNull(ctx.getArgsInternal());
+
+    // Verify setArg(0, "anything") throws IllegalStateException
+    try {
+      ctx.setArg(0, "anything");
+      fail("Expected IllegalStateException for no arguments");
+    } catch (IllegalStateException e) {
+      assertTrue(e.getMessage().contains("No arguments available"));
+    }
+  }
+
+  /**
+   * Verifies that the pooled factory returns a context marked as pooled.
+   *
+   * <p>Pooled contexts have the {@code isPooled()} flag set to true, warning callers that the
+   * context must not be stored or passed to other threads.
+   */
+  @Test
+  public void shouldMarkPooledContextAsPooled() {
+    InterceptContext.LocalInterceptMetadata metadata =
+        new InterceptContext.LocalInterceptMetadata(CLASS_NAME, METHOD_NAME, PARAM_TYPES);
+
+    InterceptContext ctx =
+        InterceptContext.forLocalBeforePhasePooled(
+            metadata, InterceptType.BEFORE, PEER_UUID, new Object[] {1, 2});
+
+    assertTrue(ctx.isPooled());
+    assertEquals(InterceptPhase.BEFORE, ctx.getPhase());
+    assertEquals(InterceptType.BEFORE, ctx.getInterceptType());
+    assertEquals(PEER_UUID, ctx.getInterceptedPeerUuid());
+    assertSame(metadata, ctx.getLocalMetadata());
+  }
+
+  /**
+   * Verifies that the pooled factory returns the same instance on the same thread.
+   *
+   * <p>This confirms that the ThreadLocal pooling mechanism reuses instances rather than allocating
+   * new ones.
+   */
+  @Test
+  public void shouldReusePooledInstanceOnSameThread() {
+    InterceptContext.LocalInterceptMetadata metadata =
+        new InterceptContext.LocalInterceptMetadata(CLASS_NAME, METHOD_NAME, PARAM_TYPES);
+
+    InterceptContext ctx1 =
+        InterceptContext.forLocalBeforePhasePooled(
+            metadata, InterceptType.BEFORE, PEER_UUID, new Object[] {1});
+
+    InterceptContext ctx2 =
+        InterceptContext.forLocalBeforePhasePooled(
+            metadata, InterceptType.BEFORE, PEER_UUID, new Object[] {2});
+
+    // Same thread-local instance
+    assertSame(ctx1, ctx2);
+
+    // But re-initialized with latest args
+    assertArrayEquals(new Object[] {2}, ctx2.getArgsInternal());
+  }
+
+  /**
+   * Verifies that non-pooled factory does NOT mark context as pooled.
+   *
+   * <p>Fresh allocations via the regular factory methods should not be marked as pooled, ensuring
+   * they are safe for async callbacks and storage.
+   */
+  @Test
+  public void shouldNotMarkRegularContextAsPooled() {
+    InterceptContext ctx =
+        InterceptContext.forLocalBeforePhase(
+            CLASS_NAME, METHOD_NAME, PARAM_TYPES, InterceptType.BEFORE, PEER_UUID, new Object[0]);
+
+    assertFalse(ctx.isPooled());
+  }
+
+  /**
+   * Verifies that LocalInterceptMetadata can be constructed from String[] for optimization.
+   *
+   * <p>The String[] constructor avoids the overhead of creating an intermediate List when parameter
+   * types are already available as an array.
+   */
+  @Test
+  public void shouldSupportStringArrayConstructorForMetadata() {
+    String[] paramTypesArray = new String[] {"int", "String"};
+
+    InterceptContext.LocalInterceptMetadata metadata =
+        new InterceptContext.LocalInterceptMetadata(CLASS_NAME, METHOD_NAME, paramTypesArray);
+
+    assertEquals(CLASS_NAME, metadata.className());
+    assertEquals(METHOD_NAME, metadata.methodName());
+    assertEquals(List.of("int", "String"), metadata.paramTypes());
+
+    // Verify defensive copy — modifying original array should not affect metadata
+    paramTypesArray[0] = "long";
+    assertEquals("int", metadata.paramTypes().get(0));
   }
 }
