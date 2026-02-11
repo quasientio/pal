@@ -11,13 +11,11 @@ package io.quasient.pal.core.intercept;
 
 import io.github.azagniotov.matcher.AntPathMatcherArrays;
 import jakarta.inject.Singleton;
-import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -239,6 +237,18 @@ public class InFlightDispatchTracker {
           .withTrimTokens()
           .withIgnoreCase()
           .build();
+
+  /**
+   * Thread-local {@link StringBuilder} reused for building dispatch keys, eliminating per-call
+   * allocations of stream pipelines and intermediate strings.
+   *
+   * <p>Each thread gets its own {@code StringBuilder} instance that is reset (via {@link
+   * StringBuilder#setLength(int)}) before each use. This avoids the overhead of {@link
+   * java.util.Arrays#stream(Object[])} and {@link
+   * java.util.stream.Collectors#joining(CharSequence)} that the original implementation used.
+   */
+  private static final ThreadLocal<StringBuilder> TL_KEY_BUILDER =
+      ThreadLocal.withInitial(() -> new StringBuilder(128));
 
   /**
    * Records that a dispatch has entered execution for the specified class, method, and parameter
@@ -554,17 +564,59 @@ public class InFlightDispatchTracker {
    *   <li>Field operations: {@code className.fieldName} (no parentheses)
    * </ul>
    *
+   * <p>This implementation uses a thread-local {@link StringBuilder} to avoid the overhead of
+   * {@link java.util.Arrays#stream(Object[])} and {@link
+   * java.util.stream.Collectors#joining(CharSequence)} that was used in the original stream-based
+   * approach.
+   *
    * @param className the fully qualified class name
    * @param executableName the method, constructor ("new"), or field name
    * @param parameterTypes the parameter type names, or {@code null} for field operations
    * @return the dispatch key string
    */
   static String buildKey(String className, String executableName, String[] parameterTypes) {
-    String classMethod = className + "." + executableName;
     if (parameterTypes == null) {
-      return classMethod;
+      return className + "." + executableName;
     }
-    return classMethod + "(" + Arrays.stream(parameterTypes).collect(Collectors.joining(",")) + ")";
+    StringBuilder sb = TL_KEY_BUILDER.get();
+    sb.setLength(0);
+    sb.append(className).append('.').append(executableName).append('(');
+    for (int i = 0; i < parameterTypes.length; i++) {
+      if (i > 0) {
+        sb.append(',');
+      }
+      sb.append(parameterTypes[i]);
+    }
+    sb.append(')');
+    return sb.toString();
+  }
+
+  /**
+   * Builds a dispatch key from pre-computed executable path and joined parameter types.
+   *
+   * <p>This overload eliminates redundant string construction when the caller has already computed
+   * the {@code className.executableName} path and the comma-joined parameter types string. This is
+   * useful in the {@code InterceptChecker} where these values are computed once and reused across
+   * multiple intercept entry checks.
+   *
+   * <p>The key format is the same as {@link #buildKey(String, String, String[])}:
+   *
+   * <ul>
+   *   <li>With params: {@code executablePath(joinedParamTypes)} e.g., {@code
+   *       "com.example.Calc.add(int,String)"}
+   *   <li>Without params (null joinedParamTypes): {@code executablePath} e.g., {@code
+   *       "com.example.Foo.myField"}
+   * </ul>
+   *
+   * @param executablePath the pre-computed {@code className.executableName} string
+   * @param joinedParamTypes the comma-joined parameter types, or {@code null} for field operations
+   * @return the dispatch key string
+   */
+  static String buildKey(String executablePath, String joinedParamTypes) {
+    if (joinedParamTypes == null) {
+      return executablePath;
+    }
+    return executablePath + "(" + joinedParamTypes + ")";
   }
 
   /**

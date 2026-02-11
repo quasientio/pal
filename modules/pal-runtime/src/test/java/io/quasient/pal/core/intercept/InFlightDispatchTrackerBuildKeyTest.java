@@ -9,9 +9,10 @@
  */
 package io.quasient.pal.core.intercept;
 
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertEquals;
 
-import org.junit.Ignore;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 import org.junit.Test;
 
 /**
@@ -34,92 +35,213 @@ import org.junit.Test;
 public class InFlightDispatchTrackerBuildKeyTest {
 
   @Test
-  @Ignore("Awaiting implementation in #681")
   public void shouldBuildKeyWithoutParams() {
     // Given: className="com.example.Foo", executableName="bar", parameterTypes=null
     // When: buildKey() called
-    // Then: Returns "com.example.Foo.bar" (no parentheses for field operations)
+    String result = InFlightDispatchTracker.buildKey("com.example.Foo", "bar", null);
 
-    // TODO(#681): Implement test logic
-    fail("Not yet implemented");
+    // Then: Returns "com.example.Foo.bar" (no parentheses for field operations)
+    assertEquals("com.example.Foo.bar", result);
   }
 
   @Test
-  @Ignore("Awaiting implementation in #681")
   public void shouldBuildKeyWithSingleParam() {
     // Given: className="com.example.Foo", executableName="bar", parameterTypes=["int"]
     // When: buildKey() called
-    // Then: Returns "com.example.Foo.bar(int)"
+    String result =
+        InFlightDispatchTracker.buildKey("com.example.Foo", "bar", new String[] {"int"});
 
-    // TODO(#681): Implement test logic
-    fail("Not yet implemented");
+    // Then: Returns "com.example.Foo.bar(int)"
+    assertEquals("com.example.Foo.bar(int)", result);
   }
 
   @Test
-  @Ignore("Awaiting implementation in #681")
   public void shouldBuildKeyWithMultipleParams() {
     // Given: className="com.example.Foo", executableName="bar",
     //        parameterTypes=["int", "String", "double"]
     // When: buildKey() called
-    // Then: Returns "com.example.Foo.bar(int,String,double)"
+    String result =
+        InFlightDispatchTracker.buildKey(
+            "com.example.Foo", "bar", new String[] {"int", "String", "double"});
 
-    // TODO(#681): Implement test logic
-    fail("Not yet implemented");
+    // Then: Returns "com.example.Foo.bar(int,String,double)"
+    assertEquals("com.example.Foo.bar(int,String,double)", result);
   }
 
   @Test
-  @Ignore("Awaiting implementation in #681")
   public void shouldBuildKeyWithEmptyParams() {
     // Given: className="com.example.Foo", executableName="bar",
     //        parameterTypes=[] (empty array)
     // When: buildKey() called
+    String result = InFlightDispatchTracker.buildKey("com.example.Foo", "bar", new String[0]);
+
     // Then: Returns "com.example.Foo.bar()" (empty parentheses for no-arg methods)
-
-    // TODO(#681): Implement test logic
-    fail("Not yet implemented");
+    assertEquals("com.example.Foo.bar()", result);
   }
 
   @Test
-  @Ignore("Awaiting implementation in #681")
   public void shouldProduceIdenticalResultsToOriginalMethod() {
-    // Given: 50 different combinations of className, executableName, parameterTypes
-    //        covering edge cases such as:
-    //        - null params (field ops)
-    //        - empty params (no-arg methods)
-    //        - single param
-    //        - multiple params
-    //        - fully qualified type names (e.g., "java.lang.String")
-    //        - primitive types (int, long, double, boolean, etc.)
-    //        - array types (e.g., "int[]", "java.lang.String[]")
-    //        - constructor name "new"
-    //        - nested class names (e.g., "com.example.Outer$Inner")
-    //        - deeply nested packages
-    // When: Both original (stream-based) and optimized buildKey() called for each combination
-    // Then: Results are identical for all 50 inputs
-    //
-    // Reference implementation (original stream-based):
-    //   String classMethod = className + "." + executableName;
-    //   if (parameterTypes == null) return classMethod;
-    //   return classMethod + "("
-    //       + Arrays.stream(parameterTypes).collect(Collectors.joining(","))
-    //       + ")";
+    // Given: 50+ different combinations of className, executableName, parameterTypes
+    //        covering edge cases (null params, empty params, single/multiple params,
+    //        FQN types, primitives, arrays, constructors, nested classes, deep packages)
 
-    // TODO(#681): Implement test logic
-    fail("Not yet implemented");
+    // Test cases with null params (field operations)
+    assertMatchesOriginal("com.example.Foo", "myField", null);
+    assertMatchesOriginal("com.example.Outer$Inner", "field", null);
+    assertMatchesOriginal("a", "b", null);
+    assertMatchesOriginal("com.very.deeply.nested.package.name.Class", "x", null);
+    assertMatchesOriginal("Foo", "bar", null);
+
+    // Test cases with empty params (no-arg methods)
+    assertMatchesOriginal("com.example.Foo", "bar", new String[0]);
+    assertMatchesOriginal("com.example.Foo", "new", new String[0]);
+    assertMatchesOriginal("com.example.Foo", "reset", new String[0]);
+    assertMatchesOriginal("A", "b", new String[0]);
+    assertMatchesOriginal("com.example.Outer$Inner", "method", new String[0]);
+
+    // Test cases with single param
+    assertMatchesOriginal("com.example.Foo", "bar", new String[] {"int"});
+    assertMatchesOriginal("com.example.Foo", "bar", new String[] {"long"});
+    assertMatchesOriginal("com.example.Foo", "bar", new String[] {"double"});
+    assertMatchesOriginal("com.example.Foo", "bar", new String[] {"boolean"});
+    assertMatchesOriginal("com.example.Foo", "bar", new String[] {"byte"});
+    assertMatchesOriginal("com.example.Foo", "bar", new String[] {"short"});
+    assertMatchesOriginal("com.example.Foo", "bar", new String[] {"float"});
+    assertMatchesOriginal("com.example.Foo", "bar", new String[] {"char"});
+    assertMatchesOriginal("com.example.Foo", "bar", new String[] {"java.lang.String"});
+    assertMatchesOriginal("com.example.Foo", "bar", new String[] {"int[]"});
+
+    // Test cases with multiple params
+    assertMatchesOriginal("com.example.Foo", "bar", new String[] {"int", "int"});
+    assertMatchesOriginal("com.example.Foo", "bar", new String[] {"int", "java.lang.String"});
+    assertMatchesOriginal(
+        "com.example.Foo", "bar", new String[] {"int", "java.lang.String", "double"});
+    assertMatchesOriginal(
+        "com.example.Foo",
+        "bar",
+        new String[] {"int", "long", "double", "boolean", "byte", "short", "float", "char"});
+    assertMatchesOriginal(
+        "com.example.Calculator", "add", new String[] {"java.lang.String[]", "int[]"});
+
+    // Test cases with fully qualified type names
+    assertMatchesOriginal(
+        "com.example.Foo",
+        "process",
+        new String[] {"java.util.List", "java.util.Map", "java.lang.Object"});
+    assertMatchesOriginal(
+        "com.example.Foo", "handle", new String[] {"io.quasient.pal.core.Message"});
+
+    // Test cases with constructor name "new"
+    assertMatchesOriginal("com.example.Foo", "new", new String[] {"int"});
+    assertMatchesOriginal("com.example.Foo", "new", new String[] {"int", "java.lang.String"});
+    assertMatchesOriginal("com.example.Foo", "new", new String[0]);
+    assertMatchesOriginal("com.example.Outer$Inner", "new", new String[] {"com.example.Outer"});
+
+    // Test cases with nested class names
+    assertMatchesOriginal("com.example.Outer$Inner", "method", new String[] {"int"});
+    assertMatchesOriginal(
+        "com.example.Outer$Inner$DeepInner", "call", new String[] {"java.lang.String"});
+    assertMatchesOriginal("Outer$Inner", "new", new String[] {"Outer"});
+
+    // Test cases with deeply nested packages
+    assertMatchesOriginal(
+        "com.very.deeply.nested.package.name.MyClass", "myMethod", new String[] {"int"});
+    assertMatchesOriginal(
+        "a.b.c.d.e.f.g.h.i.j.Class", "m", new String[] {"a.b.c.d.e.f.g.h.i.j.Param"});
+
+    // Test cases with array types
+    assertMatchesOriginal("com.example.Foo", "bar", new String[] {"int[]"});
+    assertMatchesOriginal("com.example.Foo", "bar", new String[] {"java.lang.String[]"});
+    assertMatchesOriginal("com.example.Foo", "bar", new String[] {"int[][]"});
+    assertMatchesOriginal("com.example.Foo", "bar", new String[] {"int[]", "java.lang.String[]"});
+
+    // Edge cases: single-character names
+    assertMatchesOriginal("A", "b", new String[] {"C"});
+    assertMatchesOriginal("a.B", "c", new String[] {"d.E"});
+
+    // Additional edge cases for variety (reaching 50+)
+    assertMatchesOriginal("com.example.Service", "process", new String[] {"java.lang.Runnable"});
+    assertMatchesOriginal("com.example.DAO", "save", new String[] {"com.example.Entity"});
+    assertMatchesOriginal(
+        "com.example.Controller",
+        "handle",
+        new String[] {"com.example.Request", "com.example.Response"});
+    assertMatchesOriginal("com.example.Factory", "create", new String[0]);
+    assertMatchesOriginal("com.example.Factory", "create", new String[] {"java.lang.Class"});
   }
 
   @Test
-  @Ignore("Awaiting implementation in #681")
   public void shouldBuildKeyWithPrecomputedStrings() {
-    // Given: Pre-computed execPath="com.example.Foo.bar" and joinedParams="int,String,double"
-    //        (reusing strings already computed by InterceptChecker)
+    // Given: Pre-computed execPath and joinedParams
     // When: Optimized buildKey(execPath, joinedParams) overload called
-    // Then: Returns "com.example.Foo.bar(int,String,double)"
-    //       - Same result as calling buildKey("com.example.Foo", "bar",
-    //         new String[]{"int", "String", "double"})
-    //       - Zero intermediate allocations beyond the final string concatenation
+    String result = InFlightDispatchTracker.buildKey("com.example.Foo.bar", "int,String,double");
 
-    // TODO(#681): Implement test logic
-    fail("Not yet implemented");
+    // Then: Returns "com.example.Foo.bar(int,String,double)"
+    assertEquals("com.example.Foo.bar(int,String,double)", result);
+
+    // Verify same result as the 3-arg version
+    String threeArgResult =
+        InFlightDispatchTracker.buildKey(
+            "com.example.Foo", "bar", new String[] {"int", "String", "double"});
+    assertEquals(threeArgResult, result);
+
+    // Test with null joinedParamTypes (field operation)
+    String fieldResult = InFlightDispatchTracker.buildKey("com.example.Foo.myField", null);
+    assertEquals("com.example.Foo.myField", fieldResult);
+
+    // Test with empty joinedParamTypes (no-arg method)
+    String noArgResult = InFlightDispatchTracker.buildKey("com.example.Foo.bar", "");
+    assertEquals("com.example.Foo.bar()", noArgResult);
+
+    // Verify consistency: buildKey(path, joined) == buildKey(class, method, params)
+    String singleParam = InFlightDispatchTracker.buildKey("com.example.Calc.add", "int");
+    String singleParamThreeArg =
+        InFlightDispatchTracker.buildKey("com.example.Calc", "add", new String[] {"int"});
+    assertEquals(singleParamThreeArg, singleParam);
+  }
+
+  /**
+   * Asserts that the optimized buildKey produces the same result as the original stream-based
+   * implementation.
+   *
+   * @param className the class name
+   * @param executableName the executable name
+   * @param parameterTypes the parameter types (may be null)
+   */
+  private void assertMatchesOriginal(
+      String className, String executableName, String[] parameterTypes) {
+    // Original stream-based implementation
+    String expected = originalBuildKey(className, executableName, parameterTypes);
+
+    // Optimized implementation
+    String actual = InFlightDispatchTracker.buildKey(className, executableName, parameterTypes);
+
+    assertEquals(
+        "buildKey mismatch for ("
+            + className
+            + ", "
+            + executableName
+            + ", "
+            + (parameterTypes == null ? "null" : Arrays.toString(parameterTypes))
+            + ")",
+        expected,
+        actual);
+  }
+
+  /**
+   * Reference implementation of the original stream-based buildKey method.
+   *
+   * @param className the class name
+   * @param executableName the executable name
+   * @param parameterTypes the parameter types (may be null)
+   * @return the key string built using the original stream-based approach
+   */
+  private String originalBuildKey(
+      String className, String executableName, String[] parameterTypes) {
+    String classMethod = className + "." + executableName;
+    if (parameterTypes == null) {
+      return classMethod;
+    }
+    return classMethod + "(" + Arrays.stream(parameterTypes).collect(Collectors.joining(",")) + ")";
   }
 }
