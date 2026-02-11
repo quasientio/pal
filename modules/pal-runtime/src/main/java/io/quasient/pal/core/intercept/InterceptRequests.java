@@ -20,7 +20,6 @@ import io.quasient.pal.messages.types.MessageType;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,8 +51,25 @@ public class InterceptRequests {
   private volatile List<InterceptRequestEntry> fieldPutIntercepts = new ArrayList<>();
 
   /**
+   * Thread-local reusable list for collecting matching intercept messages.
+   *
+   * <p>Callers must consume the returned list before any operation that could re-enter {@link
+   * #getMatchingIntercepts} on the same thread. The list contents are valid only until the next
+   * call to this method on the same thread.
+   */
+  private static final ThreadLocal<ArrayList<InterceptMessage>> TL_RESULTS =
+      ThreadLocal.withInitial(ArrayList::new);
+
+  /**
    * Filters the provided list of intercept request entries to find those matching the given
-   * criteria.
+   * criteria using pre-computed strings and loop-based matching.
+   *
+   * <p>This method pre-computes the executable path and joined parameter types once, then passes
+   * them to each entry's optimized {@link InterceptRequestEntry#matches(String, String)} method.
+   * This reduces allocations from N*2 (where N = registered intercepts) to 2 total per call.
+   *
+   * <p>The returned list is a thread-local reusable list. Callers must consume it before any
+   * operation that could re-enter this method on the same thread.
    *
    * @param className the fully qualified class name
    * @param executableName the method/field/constructor name
@@ -68,10 +84,17 @@ public class InterceptRequests {
       String[] parameterTypes,
       List<InterceptRequestEntry> interceptRequestEntries) {
 
-    return interceptRequestEntries.stream()
-        .filter(i -> i.matches(className, executableName, parameterTypes))
-        .map(InterceptRequestEntry::getInterceptMessage)
-        .collect(Collectors.toList());
+    String execPath = className + "." + executableName;
+    String joinedParams = parameterTypes != null ? String.join(",", parameterTypes) : null;
+    ArrayList<InterceptMessage> results = TL_RESULTS.get();
+    results.clear();
+    for (int i = 0; i < interceptRequestEntries.size(); i++) {
+      InterceptRequestEntry entry = interceptRequestEntries.get(i);
+      if (entry.matches(execPath, joinedParams)) {
+        results.add(entry.getInterceptMessage());
+      }
+    }
+    return results;
   }
 
   /**

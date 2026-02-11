@@ -157,6 +157,35 @@ public class InterceptRequestEntry {
   }
 
   /**
+   * Determines whether the provided pre-computed executable path and joined parameter types match
+   * this interception entry.
+   *
+   * <p>This is an optimized overload of {@link #matches(String, String, String[])} that accepts
+   * pre-computed strings instead of computing them on every call. This reduces allocations from N*2
+   * (where N = registered intercepts) to 2 total per intercept check, since the caller pre-computes
+   * the "className.executableName" and "param1,param2" strings once and passes them to each entry.
+   *
+   * @param executablePath the pre-computed executable path in the form "className.executableName"
+   * @param joinedParamTypes the pre-computed comma-separated parameter types, or null for field
+   *     interceptions
+   * @return true if both the executable path and the parameter types match the stored entry; false
+   *     otherwise
+   */
+  public boolean matches(String executablePath, String joinedParamTypes) {
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          "Matching entry pattern '{}' against execMessage pattern '{}'", pattern, executablePath);
+    }
+    if (!matcher.isMatch(pattern, executablePath)) {
+      return false;
+    }
+    if (paramTypes == null) {
+      return joinedParamTypes == null;
+    }
+    return Objects.equals(paramTypes, joinedParamTypes);
+  }
+
+  /**
    * Retrieves the intercept message associated with this interception entry.
    *
    * @return the intercept message detailing the intercepted class member

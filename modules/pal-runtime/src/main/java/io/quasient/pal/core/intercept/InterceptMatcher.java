@@ -205,11 +205,25 @@ public class InterceptMatcher extends ConnectedService {
   }
 
   /**
+   * Thread-local reusable list for consolidating matching intercept messages across intercept
+   * types.
+   *
+   * <p>This avoids allocating a new {@code ArrayList} and performing {@code addAll()} on every
+   * intercept check. Callers must consume the returned list before any operation that could
+   * re-enter this method on the same thread.
+   */
+  private static final ThreadLocal<ArrayList<InterceptMessage>> TL_CONSOLIDATED =
+      ThreadLocal.withInitial(ArrayList::new);
+
+  /**
    * Retrieves intercept messages that match the given execution parameters.
    *
    * <p>Depending on the specified execution phase, the method aggregates intercept requests
    * corresponding to pre-execution (BEFORE) or post-execution (AFTER) phases. If an unsupported
    * execution phase is provided, an UnsupportedOperationException is thrown.
+   *
+   * <p>The returned list is a thread-local reusable list. Callers must consume it before any
+   * operation that could re-enter this method on the same thread.
    *
    * @param className the fully qualified class name
    * @param executableName the method/field/constructor name
@@ -225,44 +239,59 @@ public class InterceptMatcher extends ConnectedService {
       String[] parameterTypes,
       MessageType messageType,
       ExecPhase phase) {
+    ArrayList<InterceptMessage> consolidated = TL_CONSOLIDATED.get();
+    consolidated.clear();
+
     if (ExecPhase.BEFORE.equals(phase)) {
-      final List<InterceptMessage> beforeIntercepts =
+      appendMatches(
+          consolidated,
           allIntercepts
               .get(InterceptType.BEFORE)
-              .getMatchingIntercepts(className, executableName, parameterTypes, messageType);
-      final List<InterceptMessage> beforeAsyncIntercepts =
+              .getMatchingIntercepts(className, executableName, parameterTypes, messageType));
+      appendMatches(
+          consolidated,
           allIntercepts
               .get(InterceptType.BEFORE_ASYNC)
-              .getMatchingIntercepts(className, executableName, parameterTypes, messageType);
-      final List<InterceptMessage> aroundIntercepts =
+              .getMatchingIntercepts(className, executableName, parameterTypes, messageType));
+      appendMatches(
+          consolidated,
           allIntercepts
               .get(InterceptType.AROUND)
-              .getMatchingIntercepts(className, executableName, parameterTypes, messageType);
-      final List<InterceptMessage> interceptMessages =
-          new ArrayList<>(
-              beforeIntercepts.size() + beforeAsyncIntercepts.size() + aroundIntercepts.size());
-      interceptMessages.addAll(beforeIntercepts);
-      interceptMessages.addAll(beforeAsyncIntercepts);
-      interceptMessages.addAll(aroundIntercepts);
-      return interceptMessages;
+              .getMatchingIntercepts(className, executableName, parameterTypes, messageType));
+      return consolidated;
     }
     if (ExecPhase.AFTER.equals(phase)) {
-      final List<InterceptMessage> afterIntercepts =
+      appendMatches(
+          consolidated,
           allIntercepts
               .get(InterceptType.AFTER)
-              .getMatchingIntercepts(className, executableName, parameterTypes, messageType);
-      final List<InterceptMessage> afterAsyncIntercepts =
+              .getMatchingIntercepts(className, executableName, parameterTypes, messageType));
+      appendMatches(
+          consolidated,
           allIntercepts
               .get(InterceptType.AFTER_ASYNC)
-              .getMatchingIntercepts(className, executableName, parameterTypes, messageType);
-      final List<InterceptMessage> interceptMessages =
-          new ArrayList<>(afterIntercepts.size() + afterAsyncIntercepts.size());
-      interceptMessages.addAll(afterIntercepts);
-      interceptMessages.addAll(afterAsyncIntercepts);
-      return interceptMessages;
+              .getMatchingIntercepts(className, executableName, parameterTypes, messageType));
+      return consolidated;
     }
 
     throw new UnsupportedOperationException("Unsupported execution phase: " + phase);
+  }
+
+  /**
+   * Appends all elements from the source list to the target list using indexed iteration.
+   *
+   * <p>This is used instead of {@link List#addAll} to avoid intermediate array copies. The source
+   * list may be a thread-local reusable list from {@link InterceptRequests}, so its contents must
+   * be copied into the target before the next call to {@link
+   * InterceptRequests#getMatchingIntercepts}.
+   *
+   * @param target the list to append to
+   * @param source the list to copy from
+   */
+  private static void appendMatches(List<InterceptMessage> target, List<InterceptMessage> source) {
+    for (int i = 0; i < source.size(); i++) {
+      target.add(source.get(i));
+    }
   }
 
   /**
