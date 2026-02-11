@@ -9,15 +9,19 @@
  */
 package io.quasient.pal.core.intercept;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.sameInstance;
 
 import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.messages.colfer.InterceptMessage;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CyclicBarrier;
-import org.junit.Ignore;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Test;
 
 /**
@@ -49,7 +53,6 @@ public class InterceptPartitionTest {
    * @param type the intercept type to assign
    * @return a new InterceptMessage configured with the specified type
    */
-  @SuppressWarnings("UnusedMethod") // Used by test implementations in #677
   private InterceptMessage buildIntercept(InterceptType type) {
     return msgBuilder.buildInterceptMessage(
         peerUuid, type, "com.example.Foo", "bar", List.of(), "callback.Class", "callbackMethod");
@@ -62,14 +65,15 @@ public class InterceptPartitionTest {
    * partition must reflect that cleanly.
    */
   @Test
-  @Ignore("Awaiting implementation in #677")
   public void shouldPartitionEmptyList() {
-    // Given: Empty list of InterceptMessages
-    // When: partition() called
-    // Then: All sub-lists (before, beforeAsync, after, afterAsync, around) are empty
+    InterceptPartition partition = new InterceptPartition();
+    partition.partition(List.of());
 
-    // TODO(#677): Implement test logic
-    fail("Not yet implemented");
+    assertThat(partition.before(), hasSize(0));
+    assertThat(partition.beforeAsync(), hasSize(0));
+    assertThat(partition.after(), hasSize(0));
+    assertThat(partition.afterAsync(), hasSize(0));
+    assertThat(partition.around(), hasSize(0));
   }
 
   /**
@@ -77,14 +81,17 @@ public class InterceptPartitionTest {
    * the {@code before} sub-list containing the element and all other sub-lists remaining empty.
    */
   @Test
-  @Ignore("Awaiting implementation in #677")
   public void shouldPartitionSingleBeforeIntercept() {
-    // Given: List with one BEFORE InterceptMessage
-    // When: partition() called
-    // Then: before has 1 element, all others empty
+    InterceptMessage beforeMsg = buildIntercept(InterceptType.BEFORE);
+    InterceptPartition partition = new InterceptPartition();
+    partition.partition(List.of(beforeMsg));
 
-    // TODO(#677): Implement test logic
-    fail("Not yet implemented");
+    assertThat(partition.before(), hasSize(1));
+    assertThat(partition.before().get(0), is(sameInstance(beforeMsg)));
+    assertThat(partition.beforeAsync(), hasSize(0));
+    assertThat(partition.after(), hasSize(0));
+    assertThat(partition.afterAsync(), hasSize(0));
+    assertThat(partition.around(), hasSize(0));
   }
 
   /**
@@ -95,14 +102,50 @@ public class InterceptPartitionTest {
    * correct elements (same object references, preserving insertion order within each partition).
    */
   @Test
-  @Ignore("Awaiting implementation in #677")
   public void shouldPartitionMixedInterceptTypes() {
-    // Given: List with 2 BEFORE, 1 AFTER, 1 BEFORE_ASYNC, 3 AFTER_ASYNC, 2 AROUND
-    // When: partition() called
-    // Then: Each sub-list has correct count and correct elements
+    InterceptMessage before1 = buildIntercept(InterceptType.BEFORE);
+    InterceptMessage before2 = buildIntercept(InterceptType.BEFORE);
+    InterceptMessage after1 = buildIntercept(InterceptType.AFTER);
+    InterceptMessage beforeAsync1 = buildIntercept(InterceptType.BEFORE_ASYNC);
+    InterceptMessage afterAsync1 = buildIntercept(InterceptType.AFTER_ASYNC);
+    InterceptMessage afterAsync2 = buildIntercept(InterceptType.AFTER_ASYNC);
+    InterceptMessage afterAsync3 = buildIntercept(InterceptType.AFTER_ASYNC);
+    InterceptMessage around1 = buildIntercept(InterceptType.AROUND);
+    InterceptMessage around2 = buildIntercept(InterceptType.AROUND);
 
-    // TODO(#677): Implement test logic
-    fail("Not yet implemented");
+    List<InterceptMessage> all =
+        List.of(
+            before1,
+            afterAsync1,
+            around1,
+            before2,
+            after1,
+            beforeAsync1,
+            afterAsync2,
+            around2,
+            afterAsync3);
+
+    InterceptPartition partition = new InterceptPartition();
+    partition.partition(all);
+
+    assertThat(partition.before(), hasSize(2));
+    assertThat(partition.before().get(0), is(sameInstance(before1)));
+    assertThat(partition.before().get(1), is(sameInstance(before2)));
+
+    assertThat(partition.after(), hasSize(1));
+    assertThat(partition.after().get(0), is(sameInstance(after1)));
+
+    assertThat(partition.beforeAsync(), hasSize(1));
+    assertThat(partition.beforeAsync().get(0), is(sameInstance(beforeAsync1)));
+
+    assertThat(partition.afterAsync(), hasSize(3));
+    assertThat(partition.afterAsync().get(0), is(sameInstance(afterAsync1)));
+    assertThat(partition.afterAsync().get(1), is(sameInstance(afterAsync2)));
+    assertThat(partition.afterAsync().get(2), is(sameInstance(afterAsync3)));
+
+    assertThat(partition.around(), hasSize(2));
+    assertThat(partition.around().get(0), is(sameInstance(around1)));
+    assertThat(partition.around().get(1), is(sameInstance(around2)));
   }
 
   /**
@@ -113,14 +156,34 @@ public class InterceptPartitionTest {
    * partitioning should remain.
    */
   @Test
-  @Ignore("Awaiting implementation in #677")
   public void shouldClearOnReuse() {
-    // Given: InterceptPartition previously partitioned with elements
-    // When: partition() called again with different list
-    // Then: Previous elements gone, new elements correct
+    InterceptPartition partition = new InterceptPartition();
 
-    // TODO(#677): Implement test logic
-    fail("Not yet implemented");
+    // First partition: all five types
+    partition.partition(
+        List.of(
+            buildIntercept(InterceptType.BEFORE),
+            buildIntercept(InterceptType.AFTER),
+            buildIntercept(InterceptType.BEFORE_ASYNC),
+            buildIntercept(InterceptType.AFTER_ASYNC),
+            buildIntercept(InterceptType.AROUND)));
+
+    assertThat(partition.before(), hasSize(1));
+    assertThat(partition.after(), hasSize(1));
+    assertThat(partition.beforeAsync(), hasSize(1));
+    assertThat(partition.afterAsync(), hasSize(1));
+    assertThat(partition.around(), hasSize(1));
+
+    // Second partition: only AFTER
+    InterceptMessage afterOnly = buildIntercept(InterceptType.AFTER);
+    partition.partition(List.of(afterOnly));
+
+    assertThat(partition.before(), hasSize(0));
+    assertThat(partition.after(), hasSize(1));
+    assertThat(partition.after().get(0), is(sameInstance(afterOnly)));
+    assertThat(partition.beforeAsync(), hasSize(0));
+    assertThat(partition.afterAsync(), hasSize(0));
+    assertThat(partition.around(), hasSize(0));
   }
 
   /**
@@ -132,14 +195,23 @@ public class InterceptPartitionTest {
    * across multiple dispatch cycles without creating new instances.
    */
   @Test
-  @Ignore("Awaiting implementation in #677")
   public void shouldBeReusableViaThreadLocal() {
-    // Given: ThreadLocal<InterceptPartition>
-    // When: Same thread calls partition() multiple times
-    // Then: Same instance reused, results always correct
+    ThreadLocal<InterceptPartition> tl = ThreadLocal.withInitial(InterceptPartition::new);
 
-    // TODO(#677): Implement test logic
-    fail("Not yet implemented");
+    InterceptPartition first = tl.get();
+    InterceptPartition second = tl.get();
+    assertThat(second, is(sameInstance(first)));
+
+    // First use
+    first.partition(List.of(buildIntercept(InterceptType.BEFORE)));
+    assertThat(first.before(), hasSize(1));
+    assertThat(first.after(), hasSize(0));
+
+    // Reuse same instance
+    second.partition(
+        List.of(buildIntercept(InterceptType.AFTER), buildIntercept(InterceptType.AFTER)));
+    assertThat(second.before(), hasSize(0));
+    assertThat(second.after(), hasSize(2));
   }
 
   /**
@@ -154,14 +226,53 @@ public class InterceptPartitionTest {
    * partitioning simultaneously.
    */
   @Test
-  @Ignore("Awaiting implementation in #677")
-  public void shouldHandleConcurrentPartitioningOnDifferentThreads() {
-    // Given: ThreadLocal<InterceptPartition>
-    // When: 16 threads concurrently partition different lists
-    // Then: Each thread gets correct, independent results
+  public void shouldHandleConcurrentPartitioningOnDifferentThreads() throws Exception {
+    int threadCount = 16;
+    CyclicBarrier barrier = new CyclicBarrier(threadCount);
+    ThreadLocal<InterceptPartition> tl = ThreadLocal.withInitial(InterceptPartition::new);
+    AtomicReference<AssertionError> failure = new AtomicReference<>();
 
-    // TODO(#677): Implement test logic
-    fail("Not yet implemented");
+    Thread[] threads = new Thread[threadCount];
+    for (int t = 0; t < threadCount; t++) {
+      final int threadIdx = t;
+      threads[t] =
+          new Thread(
+              () -> {
+                try {
+                  // Each thread builds a unique distribution:
+                  // thread i gets (i+1) BEFORE messages and 1 AFTER message
+                  List<InterceptMessage> input = new ArrayList<>();
+                  for (int b = 0; b <= threadIdx; b++) {
+                    input.add(buildIntercept(InterceptType.BEFORE));
+                  }
+                  input.add(buildIntercept(InterceptType.AFTER));
+
+                  barrier.await();
+
+                  InterceptPartition partition = tl.get();
+                  partition.partition(input);
+
+                  assertThat(partition.before(), hasSize(threadIdx + 1));
+                  assertThat(partition.after(), hasSize(1));
+                  assertThat(partition.beforeAsync(), hasSize(0));
+                  assertThat(partition.afterAsync(), hasSize(0));
+                  assertThat(partition.around(), hasSize(0));
+                } catch (AssertionError e) {
+                  failure.compareAndSet(null, e);
+                } catch (Exception e) {
+                  failure.compareAndSet(null, new AssertionError("Thread exception", e));
+                }
+              });
+      threads[t].start();
+    }
+
+    for (Thread thread : threads) {
+      thread.join(5000);
+    }
+
+    if (failure.get() != null) {
+      throw failure.get();
+    }
   }
 
   /**
@@ -181,13 +292,50 @@ public class InterceptPartitionTest {
    * <p>The partition-based approach must produce identical lists for all five intercept types.
    */
   @Test
-  @Ignore("Awaiting implementation in #677")
   public void shouldProduceResultsEquivalentToStreamFiltering() {
-    // Given: Same list of mixed InterceptMessages
-    // When: Both stream-filter approach and partition approach applied
-    // Then: Results are identical (element-by-element comparison)
+    List<InterceptMessage> mixed =
+        List.of(
+            buildIntercept(InterceptType.AROUND),
+            buildIntercept(InterceptType.BEFORE),
+            buildIntercept(InterceptType.AFTER_ASYNC),
+            buildIntercept(InterceptType.BEFORE_ASYNC),
+            buildIntercept(InterceptType.AFTER),
+            buildIntercept(InterceptType.BEFORE),
+            buildIntercept(InterceptType.AROUND),
+            buildIntercept(InterceptType.AFTER_ASYNC));
 
-    // TODO(#677): Implement test logic
-    fail("Not yet implemented");
+    // Reference: original stream-based filtering
+    List<InterceptMessage> refBefore =
+        mixed.stream()
+            .filter(im -> InterceptType.fromByte(im.getInterceptType()) == InterceptType.BEFORE)
+            .toList();
+    List<InterceptMessage> refAfter =
+        mixed.stream()
+            .filter(im -> InterceptType.fromByte(im.getInterceptType()) == InterceptType.AFTER)
+            .toList();
+    List<InterceptMessage> refBeforeAsync =
+        mixed.stream()
+            .filter(
+                im -> InterceptType.fromByte(im.getInterceptType()) == InterceptType.BEFORE_ASYNC)
+            .toList();
+    List<InterceptMessage> refAfterAsync =
+        mixed.stream()
+            .filter(
+                im -> InterceptType.fromByte(im.getInterceptType()) == InterceptType.AFTER_ASYNC)
+            .toList();
+    List<InterceptMessage> refAround =
+        mixed.stream()
+            .filter(im -> InterceptType.fromByte(im.getInterceptType()) == InterceptType.AROUND)
+            .toList();
+
+    // Partition approach
+    InterceptPartition partition = new InterceptPartition();
+    partition.partition(mixed);
+
+    assertThat(partition.before(), is(refBefore));
+    assertThat(partition.after(), is(refAfter));
+    assertThat(partition.beforeAsync(), is(refBeforeAsync));
+    assertThat(partition.afterAsync(), is(refAfterAsync));
+    assertThat(partition.around(), is(refAround));
   }
 }

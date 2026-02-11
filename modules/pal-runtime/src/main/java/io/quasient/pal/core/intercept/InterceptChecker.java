@@ -15,6 +15,7 @@ import io.quasient.pal.messages.colfer.InterceptMessage;
 import io.quasient.pal.messages.types.MessageType;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -48,11 +49,15 @@ public class InterceptChecker {
   /** Logger instance for debugging intercept matching operations. */
   private static final Logger logger = LoggerFactory.getLogger(InterceptChecker.class);
 
+  /** Thread-local partition for separating local vs remote intercepts without allocation. */
+  private static final ThreadLocal<LocalRemotePartition> TL_LR_PARTITION =
+      ThreadLocal.withInitial(LocalRemotePartition::new);
+
   /** Matcher responsible for finding registered intercepts that match execution criteria. */
   private final InterceptMatcher interceptMatcher;
 
-  /** UUID of this peer, used to distinguish local intercepts from remote intercepts. */
-  private final UUID peerUuid;
+  /** Pre-computed string form of the peer UUID, avoiding repeated toString() calls. */
+  private final String peerUuidString;
 
   /**
    * Constructs a new InterceptChecker with the specified intercept matcher and peer UUID.
@@ -66,7 +71,7 @@ public class InterceptChecker {
   @Inject
   public InterceptChecker(InterceptMatcher interceptMatcher, UUID peerUuid) {
     this.interceptMatcher = interceptMatcher;
-    this.peerUuid = peerUuid;
+    this.peerUuidString = peerUuid.toString();
   }
 
   /**
@@ -134,11 +139,12 @@ public class InterceptChecker {
       logger.debug("Found {} matching intercepts", matches.size());
     }
 
-    // Separate local vs remote intercepts
-    List<InterceptMessage> remoteIntercepts = filterRemoteIntercepts(matches);
-    List<InterceptMessage> localIntercepts = filterLocalIntercepts(matches);
+    // Separate local vs remote intercepts in a single pass
+    LocalRemotePartition lrPartition = TL_LR_PARTITION.get();
+    lrPartition.partition(matches, peerUuidString);
 
-    return new InterceptCheckResult(remoteIntercepts, localIntercepts);
+    return new InterceptCheckResult(
+        new ArrayList<>(lrPartition.remote()), new ArrayList<>(lrPartition.local()));
   }
 
   /**
@@ -193,34 +199,5 @@ public class InterceptChecker {
    */
   private String[] extractParamTypes(Signature ajSig) {
     return ParamTypeExtractor.extractFromSignature(ajSig);
-  }
-
-  /**
-   * Filters the list of matched intercepts to return only those that require remote peer callbacks.
-   *
-   * <p>An intercept is considered remote when its callback peer UUID differs from this peer's UUID.
-   * Remote intercepts require ZMQ message passing to invoke the callback on the target peer.
-   *
-   * @param matches the list of all matched intercepts
-   * @return the list of remote intercepts (callbacks on other peers)
-   */
-  private List<InterceptMessage> filterRemoteIntercepts(List<InterceptMessage> matches) {
-    String thisPeerUuidString = peerUuid.toString();
-    return matches.stream().filter(im -> !thisPeerUuidString.equals(im.getPeerUuid())).toList();
-  }
-
-  /**
-   * Filters the list of matched intercepts to return only those that can be handled locally.
-   *
-   * <p>An intercept is considered local when its callback peer UUID matches this peer's UUID. Local
-   * intercepts can be invoked directly without ZMQ message passing overhead, avoiding serialization
-   * costs and network latency.
-   *
-   * @param matches the list of all matched intercepts
-   * @return the list of local intercepts (callbacks on this peer)
-   */
-  private List<InterceptMessage> filterLocalIntercepts(List<InterceptMessage> matches) {
-    String thisPeerUuidString = peerUuid.toString();
-    return matches.stream().filter(im -> thisPeerUuidString.equals(im.getPeerUuid())).toList();
   }
 }

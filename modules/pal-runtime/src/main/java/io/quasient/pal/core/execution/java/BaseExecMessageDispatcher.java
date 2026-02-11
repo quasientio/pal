@@ -16,7 +16,6 @@ import static io.quasient.pal.serdes.colfer.ExecMessageUtils.getParameterTypes;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.quasient.pal.common.lang.intercept.AfterPhaseData;
-import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.common.objects.ObjectRef;
 import io.quasient.pal.common.runtime.Context;
 import io.quasient.pal.common.runtime.ContextFactory;
@@ -28,12 +27,12 @@ import io.quasient.pal.core.intercept.InterceptCallbackDispatcher;
 import io.quasient.pal.core.intercept.InterceptCallbackDispatcher.ConsolidatedCallbackResponse;
 import io.quasient.pal.core.intercept.InterceptCheckResult;
 import io.quasient.pal.core.intercept.InterceptChecker;
+import io.quasient.pal.core.intercept.InterceptPartition;
 import io.quasient.pal.core.intercept.ParamTypeExtractor;
 import io.quasient.pal.core.internal.messages.SessionCommandMsg;
 import io.quasient.pal.core.service.RunOptions;
 import io.quasient.pal.core.transport.MessageChannelType;
 import io.quasient.pal.messages.colfer.ExecMessage;
-import io.quasient.pal.messages.colfer.InterceptMessage;
 import io.quasient.pal.messages.colfer.Obj;
 import io.quasient.pal.messages.colfer.Parameter;
 import io.quasient.pal.messages.types.MessageType;
@@ -63,6 +62,10 @@ import org.aspectj.lang.reflect.ConstructorSignature;
         "Control flow for AspectJ join points; dead store for explicit variable tracking")
 abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     implements Dispatcher, ExecMessageDispatcher {
+
+  /** Thread-local partition for separating intercepts by type without per-dispatch allocation. */
+  private static final ThreadLocal<InterceptPartition> TL_PARTITION =
+      ThreadLocal.withInitial(InterceptPartition::new);
 
   /**
    * Dispatches an execution request by performing pre-invocation messaging, invoking the target
@@ -165,12 +168,14 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
           methodName = getMethodNameFromPjp(pjp);
         }
 
-        List<InterceptMessage> localBeforeIntercepts =
-            filterBeforeIntercepts(beforeInterceptCheck.getLocalIntercepts());
-        if (!localBeforeIntercepts.isEmpty()) {
+        // Single-pass partition of local intercepts by type
+        InterceptPartition beforePartition = TL_PARTITION.get();
+        beforePartition.partition(beforeInterceptCheck.getLocalIntercepts());
+
+        if (!beforePartition.before().isEmpty()) {
           ConsolidatedCallbackResponse localResponse =
               localInterceptCallbackDispatcher.sendLocalBeforeCallbacks(
-                  localBeforeIntercepts,
+                  beforePartition.before(),
                   finalArgs,
                   className,
                   methodName,
@@ -197,11 +202,9 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         }
 
         // Handle LOCAL BEFORE_ASYNC intercepts (fire-and-forget, no blocking)
-        List<InterceptMessage> localBeforeAsyncIntercepts =
-            filterBeforeAsyncIntercepts(beforeInterceptCheck.getLocalIntercepts());
-        if (!localBeforeAsyncIntercepts.isEmpty()) {
+        if (!beforePartition.beforeAsync().isEmpty()) {
           localInterceptCallbackDispatcher.sendLocalBeforeAsyncCallbacks(
-              localBeforeAsyncIntercepts,
+              beforePartition.beforeAsync(),
               finalArgs,
               className,
               methodName,
@@ -305,14 +308,16 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
           methodName = getMethodNameFromPjp(pjp);
         }
 
-        List<InterceptMessage> localAfterIntercepts =
-            filterAfterIntercepts(afterInterceptCheck.getLocalIntercepts());
-        if (!localAfterIntercepts.isEmpty()) {
+        // Single-pass partition of local intercepts by type
+        InterceptPartition afterPartition = TL_PARTITION.get();
+        afterPartition.partition(afterInterceptCheck.getLocalIntercepts());
+
+        if (!afterPartition.after().isEmpty()) {
           boolean returnsVoidLocal = returnsVoid(pjp);
 
           ConsolidatedCallbackResponse localAfterResponse =
               localInterceptCallbackDispatcher.sendLocalAfterCallbacks(
-                  localAfterIntercepts,
+                  afterPartition.after(),
                   finalArgs,
                   returnValue,
                   returnsVoidLocal,
@@ -335,13 +340,11 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         }
 
         // Handle LOCAL AFTER_ASYNC intercepts (fire-and-forget, no blocking)
-        List<InterceptMessage> localAfterAsyncIntercepts =
-            filterAfterAsyncIntercepts(afterInterceptCheck.getLocalIntercepts());
-        if (!localAfterAsyncIntercepts.isEmpty()) {
+        if (!afterPartition.afterAsync().isEmpty()) {
           boolean returnsVoidLocal = returnsVoid(pjp);
 
           localInterceptCallbackDispatcher.sendLocalAfterAsyncCallbacks(
-              localAfterAsyncIntercepts,
+              afterPartition.afterAsync(),
               finalArgs,
               returnValue,
               returnsVoidLocal,
@@ -542,9 +545,11 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       if (exceptionWhileLoading == null
           && beforeInterceptCheck != null
           && beforeInterceptCheck.hasLocalIntercepts()) {
-        List<InterceptMessage> localBeforeIntercepts =
-            filterBeforeIntercepts(beforeInterceptCheck.getLocalIntercepts());
-        if (!localBeforeIntercepts.isEmpty()) {
+        // Single-pass partition of local intercepts by type
+        InterceptPartition beforePartition = TL_PARTITION.get();
+        beforePartition.partition(beforeInterceptCheck.getLocalIntercepts());
+
+        if (!beforePartition.before().isEmpty()) {
           className = getClassname(incomingCall);
           methodName = getExecutableName(incomingCall);
           List<String> paramTypesList = getParameterTypes(incomingCall);
@@ -562,7 +567,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
           ConsolidatedCallbackResponse localBeforeResponse =
               localInterceptCallbackDispatcher.sendLocalBeforeCallbacks(
-                  localBeforeIntercepts,
+                  beforePartition.before(),
                   argValues,
                   className,
                   methodName,
@@ -598,14 +603,12 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         }
 
         // Handle LOCAL BEFORE_ASYNC intercepts (fire-and-forget, no blocking)
-        List<InterceptMessage> localBeforeAsyncIntercepts =
-            filterBeforeAsyncIntercepts(beforeInterceptCheck.getLocalIntercepts());
-        if (!localBeforeAsyncIntercepts.isEmpty()) {
+        if (!beforePartition.beforeAsync().isEmpty()) {
           IncomingInterceptMetadata meta = extractInterceptMetadata(incomingCall);
           Object[] argValues = extractArgValuesFromIncoming(messageType, value, finalArgs, args);
 
           localInterceptCallbackDispatcher.sendLocalBeforeAsyncCallbacks(
-              localBeforeAsyncIntercepts,
+              beforePartition.beforeAsync(),
               argValues,
               meta.className(),
               meta.methodName(),
@@ -786,16 +789,18 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
       // Handle LOCAL AFTER intercepts first (before remote)
       if (afterInterceptCheck != null && afterInterceptCheck.hasLocalIntercepts()) {
-        List<InterceptMessage> localAfterIntercepts =
-            filterAfterIntercepts(afterInterceptCheck.getLocalIntercepts());
-        if (!localAfterIntercepts.isEmpty()) {
+        // Single-pass partition of local intercepts by type
+        InterceptPartition afterPartition = TL_PARTITION.get();
+        afterPartition.partition(afterInterceptCheck.getLocalIntercepts());
+
+        if (!afterPartition.after().isEmpty()) {
           IncomingInterceptMetadata meta = extractInterceptMetadata(incomingCall);
           boolean returnsVoidLocal = accessibleObject != null && returnsVoid(accessibleObject);
           Object[] argValues = extractArgValuesFromIncoming(messageType, value, finalArgs, null);
 
           ConsolidatedCallbackResponse localAfterResponse =
               localInterceptCallbackDispatcher.sendLocalAfterCallbacks(
-                  localAfterIntercepts,
+                  afterPartition.after(),
                   argValues,
                   returnValue,
                   returnsVoidLocal,
@@ -817,15 +822,13 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         }
 
         // Handle LOCAL AFTER_ASYNC intercepts (fire-and-forget, no blocking)
-        List<InterceptMessage> localAfterAsyncIntercepts =
-            filterAfterAsyncIntercepts(afterInterceptCheck.getLocalIntercepts());
-        if (!localAfterAsyncIntercepts.isEmpty()) {
+        if (!afterPartition.afterAsync().isEmpty()) {
           IncomingInterceptMetadata meta = extractInterceptMetadata(incomingCall);
           boolean returnsVoidLocal = accessibleObject != null && returnsVoid(accessibleObject);
           Object[] argValues = extractArgValuesFromIncoming(messageType, value, finalArgs, null);
 
           localInterceptCallbackDispatcher.sendLocalAfterAsyncCallbacks(
-              localAfterAsyncIntercepts,
+              afterPartition.afterAsync(),
               argValues,
               returnValue,
               returnsVoidLocal,
@@ -1319,54 +1322,6 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       return "new";
     }
     return sig.getName();
-  }
-
-  /**
-   * Filters intercept messages to return only BEFORE type intercepts.
-   *
-   * @param intercepts the list of intercepts to filter
-   * @return list of BEFORE intercepts
-   */
-  private List<InterceptMessage> filterBeforeIntercepts(List<InterceptMessage> intercepts) {
-    return intercepts.stream()
-        .filter(im -> InterceptType.fromByte(im.getInterceptType()) == InterceptType.BEFORE)
-        .toList();
-  }
-
-  /**
-   * Filters intercept messages to return only AFTER type intercepts.
-   *
-   * @param intercepts the list of intercepts to filter
-   * @return list of AFTER intercepts
-   */
-  private List<InterceptMessage> filterAfterIntercepts(List<InterceptMessage> intercepts) {
-    return intercepts.stream()
-        .filter(im -> InterceptType.fromByte(im.getInterceptType()) == InterceptType.AFTER)
-        .toList();
-  }
-
-  /**
-   * Filters intercept messages to return only BEFORE_ASYNC type intercepts.
-   *
-   * @param intercepts the list of intercepts to filter
-   * @return list of BEFORE_ASYNC intercepts
-   */
-  private List<InterceptMessage> filterBeforeAsyncIntercepts(List<InterceptMessage> intercepts) {
-    return intercepts.stream()
-        .filter(im -> InterceptType.fromByte(im.getInterceptType()) == InterceptType.BEFORE_ASYNC)
-        .toList();
-  }
-
-  /**
-   * Filters intercept messages to return only AFTER_ASYNC type intercepts.
-   *
-   * @param intercepts the list of intercepts to filter
-   * @return list of AFTER_ASYNC intercepts
-   */
-  private List<InterceptMessage> filterAfterAsyncIntercepts(List<InterceptMessage> intercepts) {
-    return intercepts.stream()
-        .filter(im -> InterceptType.fromByte(im.getInterceptType()) == InterceptType.AFTER_ASYNC)
-        .toList();
   }
 
   /**
