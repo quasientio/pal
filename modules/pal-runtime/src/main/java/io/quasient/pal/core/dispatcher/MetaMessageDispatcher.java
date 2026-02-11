@@ -9,6 +9,7 @@
  */
 package io.quasient.pal.core.dispatcher;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.quasient.pal.core.execution.java.reflect.ClassMetadataSerializer;
 import io.quasient.pal.messages.colfer.MetaMessage;
 import io.quasient.pal.messages.colfer.Parameter;
@@ -59,6 +60,11 @@ public class MetaMessageDispatcher {
    * @param messageBuilder Component that builds meta message responses.
    */
   @Inject
+  @SuppressFBWarnings(
+      value = "EI_EXPOSE_REP2",
+      justification =
+          "MessageBuilder is a Guice-managed singleton; storing the injected reference"
+              + " is standard DI practice and does not expose internal representation.")
   public MetaMessageDispatcher(
       UUID peerUuid,
       ClassMetadataSerializer classMetadataSerializer,
