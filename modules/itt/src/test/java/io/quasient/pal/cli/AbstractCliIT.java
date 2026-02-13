@@ -68,26 +68,39 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
   @After
   public void tearDownCLITest() throws ExecutionException, InterruptedException {
     cleanUpChronicleLogDirectories();
-    deleteLogsRemainingInPalDirectory();
+    deleteStaleEntriesInPalDirectory();
   }
 
-  private void deleteLogsRemainingInPalDirectory() {
-    Set<LogInfo> allLogs = null;
+  /**
+   * Deletes any peers and logs remaining in the PAL directory after a test.
+   *
+   * <p>CLI tests launch peers via {@code launchPeer()} which registers them in etcd with a 60s TTL
+   * lease. When the peer process is killed, the lease may keep the registration alive for up to 60
+   * seconds. This method cleans up those stale registrations so they don't interfere with
+   * subsequent test runs.
+   */
+  private void deleteStaleEntriesInPalDirectory() {
     PalDirectory palDirectory = new PalDirectory(getPalDirectoryUrl(), true);
     try {
-      allLogs = palDirectory.listAllLogs();
+      // Delete stale peer registrations left behind by killed peer processes
+      palDirectory.deletePeers();
     } catch (Exception e) {
-      // ignore
+      logger.error("Error cleaning up peers", e);
     }
-    if (allLogs != null && !allLogs.isEmpty()) {
-      allLogs.forEach(
-          l -> {
-            try {
-              palDirectory.deleteLog(l.getUuid());
-            } catch (Exception e) {
-              logger.error("Error cleaning up log", e);
-            }
-          });
+    try {
+      Set<LogInfo> allLogs = palDirectory.listAllLogs();
+      if (allLogs != null && !allLogs.isEmpty()) {
+        allLogs.forEach(
+            l -> {
+              try {
+                palDirectory.deleteLog(l.getUuid());
+              } catch (Exception e) {
+                logger.error("Error cleaning up log", e);
+              }
+            });
+      }
+    } catch (Exception e) {
+      logger.error("Error listing logs for cleanup", e);
     }
     palDirectory.close();
   }

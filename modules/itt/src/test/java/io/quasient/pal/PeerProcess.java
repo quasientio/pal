@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
@@ -60,17 +61,22 @@ public class PeerProcess {
   /** The peer's name (for logging purposes). */
   private final String peerName;
 
+  /** The peer's UUID, used for directory cleanup. */
+  private final UUID peerId;
+
   /**
    * Creates a new PeerProcess wrapper.
    *
    * @param process the underlying process
    * @param logFilePath path to the peer's log file
    * @param peerName the peer's name (for logging)
+   * @param peerId the peer's UUID
    */
-  public PeerProcess(Process process, Path logFilePath, String peerName) {
+  public PeerProcess(Process process, Path logFilePath, String peerName, UUID peerId) {
     this.process = process;
     this.logFilePath = logFilePath;
     this.peerName = peerName;
+    this.peerId = peerId;
   }
 
   /**
@@ -98,6 +104,15 @@ public class PeerProcess {
    */
   public String getPeerName() {
     return peerName;
+  }
+
+  /**
+   * Returns the peer's UUID.
+   *
+   * @return the peer UUID
+   */
+  public UUID getPeerId() {
+    return peerId;
   }
 
   /**

@@ -531,7 +531,8 @@ public abstract class AbstractIntegrationTest {
     }
 
     logger.info("Peer is ready");
-    return new PeerProcess(process, logPath, peerName != null ? peerName : "peer-" + peerId);
+    return new PeerProcess(
+        process, logPath, peerName != null ? peerName : "peer-" + peerId, peerId);
   }
 
   /**
