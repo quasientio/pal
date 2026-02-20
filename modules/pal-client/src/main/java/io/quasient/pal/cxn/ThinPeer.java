@@ -1723,6 +1723,22 @@ public class ThinPeer {
   }
 
   /**
+   * Sends an ExecMessage to the connected peer with a thread affinity hint, then awaits the
+   * response. The thread affinity is applied to the message before sending, allowing the receiving
+   * peer to route execution to a matching executor thread (e.g., {@code "fx-thread"} for the JavaFX
+   * Application Thread).
+   *
+   * @param message the ExecMessage to send
+   * @param threadAffinity the thread affinity hint, or {@code null} to leave unchanged
+   * @return the ExecMessage response from the peer
+   * @throws IllegalStateException if not connected to a peer or the instance is not initialized
+   */
+  public ExecMessage sendToPeer(ExecMessage message, @Nullable String threadAffinity) {
+    MessageBuilder.withThreadAffinity(message, threadAffinity);
+    return sendToPeer(message);
+  }
+
+  /**
    * Sends a ControlMessage directly to the connected peer and awaits the response for up to the
    * given timeout, if one is given. Otherwise, it waits indefinitely for the response.
    *

@@ -218,6 +218,16 @@ public class Caller extends AbstractPalSubcommand {
   @Option(names = "-v", description = "run verbosely")
   private boolean verbose;
 
+  /**
+   * Thread affinity hint for the target peer. When set, the receiving peer routes execution to a
+   * matching executor thread (e.g., {@code "fx-thread"} for the JavaFX Application Thread).
+   */
+  @Option(
+      names = {"--thread-affinity"},
+      paramLabel = "affinity",
+      description = "thread affinity hint for the target peer (e.g., 'fx-thread')")
+  private String threadAffinity;
+
   /** Displays the help message when requested. */
   @SuppressWarnings("unused")
   @Option(
@@ -943,15 +953,18 @@ public class Caller extends AbstractPalSubcommand {
      * @return the constructed {@link ExecMessage}.
      */
     public ExecMessage buildExecMessage() {
-      return messageBuilder.buildClassMethod(
-          thinPeerUuid,
-          className,
-          methodName,
-          parameterTypesNamesArray,
-          Caller.this,
-          null,
-          parameters,
-          argObjRefs);
+      ExecMessage msg =
+          messageBuilder.buildClassMethod(
+              thinPeerUuid,
+              className,
+              methodName,
+              parameterTypesNamesArray,
+              Caller.this,
+              null,
+              parameters,
+              argObjRefs);
+      MessageBuilder.withThreadAffinity(msg, threadAffinity);
+      return msg;
     }
 
     /**
@@ -969,6 +982,10 @@ public class Caller extends AbstractPalSubcommand {
                 .withType("[Ljava.lang.String;")
                 .withValue(argList.toArray(new String[0]))
                 .build());
+      }
+
+      if (threadAffinity != null) {
+        paramsBuilder.withThreadAffinity(threadAffinity);
       }
 
       return new JsonRpcRequest.Builder()
