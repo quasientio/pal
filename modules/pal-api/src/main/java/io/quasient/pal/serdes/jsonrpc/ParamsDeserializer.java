@@ -103,6 +103,10 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
       params.setArgs(new ArrayList<>()); // Default empty list if `args` is missing
     }
 
+    if (jsonObject.has("threadAffinity")) {
+      params.setThreadAffinity(context.deserialize(jsonObject.get("threadAffinity"), String.class));
+    }
+
     return params;
   }
 

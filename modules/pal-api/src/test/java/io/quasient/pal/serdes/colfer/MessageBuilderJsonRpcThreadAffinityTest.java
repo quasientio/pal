@@ -9,11 +9,17 @@
  */
 package io.quasient.pal.serdes.colfer;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.emptyString;
 
+import io.quasient.pal.messages.colfer.ExecMessage;
+import io.quasient.pal.messages.colfer.Message;
+import io.quasient.pal.messages.jsonrpc.JsonRpcRequest;
+import io.quasient.pal.serdes.jsonrpc.JsonRpcMessageFactory;
+import java.util.ArrayList;
 import java.util.UUID;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -23,7 +29,6 @@ import org.junit.Test;
  * to the resulting {@code ExecMessage} when converting from JSON-RPC request format to the internal
  * Colfer message format.
  */
-@SuppressWarnings("UnusedVariable")
 public class MessageBuilderJsonRpcThreadAffinityTest {
 
   private final UUID peerId = UUID.randomUUID();
@@ -35,47 +40,39 @@ public class MessageBuilderJsonRpcThreadAffinityTest {
   }
 
   @Test
-  @Ignore("Awaiting implementation in #745")
   public void jsonRpcRequestToExecMessagePreservesThreadAffinity() {
-    // Given: JsonRpcRequest with Params containing threadAffinity="fx-thread" (class method call)
-    // When: jsonRpcRequestToExecMessage() called
-    // Then: Resulting ExecMessage has threadAffinity == "fx-thread"
+    JsonRpcRequest req =
+        JsonRpcMessageFactory.buildClassMethodCall("com.example.Foo", "bar", new ArrayList<>());
+    req.getParams().setThreadAffinity("fx-thread");
 
-    // TODO(#745): Implement test logic
-    // Build a class method call JsonRpcRequest via JsonRpcMessageFactory,
-    // set threadAffinity="fx-thread" on the Params,
-    // call builder.jsonRpcRequestToExecMessage(req, peerId),
-    // assert em.getThreadAffinity() equals "fx-thread"
-    fail("Not yet implemented");
+    Message msg = builder.jsonRpcRequestToExecMessage(req, peerId);
+    ExecMessage em = msg.getExecMessage();
+
+    assertThat(em.getThreadAffinity(), is("fx-thread"));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #745")
   public void jsonRpcRequestToExecMessageNullThreadAffinity() {
-    // Given: JsonRpcRequest with Params where threadAffinity is null
-    // When: jsonRpcRequestToExecMessage() called
-    // Then: Resulting ExecMessage has threadAffinity == null (or empty, per Colfer default)
+    JsonRpcRequest req =
+        JsonRpcMessageFactory.buildClassMethodCall("com.example.Foo", "bar", new ArrayList<>());
+    // threadAffinity is null by default
 
-    // TODO(#745): Implement test logic
-    // Build a class method call JsonRpcRequest via JsonRpcMessageFactory,
-    // do NOT set threadAffinity on the Params (leave as null),
-    // call builder.jsonRpcRequestToExecMessage(req, peerId),
-    // assert em.getThreadAffinity() is null or empty
-    fail("Not yet implemented");
+    Message msg = builder.jsonRpcRequestToExecMessage(req, peerId);
+    ExecMessage em = msg.getExecMessage();
+
+    assertThat(em.getThreadAffinity(), is(emptyString()));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #745")
   public void jsonRpcRequestToExecMessageEmptyThreadAffinity() {
-    // Given: JsonRpcRequest with Params where threadAffinity is ""
-    // When: jsonRpcRequestToExecMessage() called
-    // Then: Resulting ExecMessage has threadAffinity == null (empty treated as absent)
+    JsonRpcRequest req =
+        JsonRpcMessageFactory.buildClassMethodCall("com.example.Foo", "bar", new ArrayList<>());
+    req.getParams().setThreadAffinity("");
 
-    // TODO(#745): Implement test logic
-    // Build a class method call JsonRpcRequest via JsonRpcMessageFactory,
-    // set threadAffinity="" on the Params,
-    // call builder.jsonRpcRequestToExecMessage(req, peerId),
-    // assert em.getThreadAffinity() is null or empty (empty treated as absent)
-    fail("Not yet implemented");
+    Message msg = builder.jsonRpcRequestToExecMessage(req, peerId);
+    ExecMessage em = msg.getExecMessage();
+
+    // Empty string treated as absent — threadAffinity remains at Colfer default ("")
+    assertThat(em.getThreadAffinity(), is(emptyString()));
   }
 }

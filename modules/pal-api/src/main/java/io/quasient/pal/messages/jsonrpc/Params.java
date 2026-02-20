@@ -44,6 +44,9 @@ public class Params {
   /** Optional value associated with the JSON-RPC request. */
   @Nullable private Argument value;
 
+  /** Optional thread affinity hint for the receiving peer. */
+  @Nullable private String threadAffinity;
+
   /**
    * Retrieves the type of the JSON-RPC request.
    *
@@ -156,6 +159,25 @@ public class Params {
     this.value = value;
   }
 
+  /**
+   * Retrieves the thread affinity hint for the receiving peer.
+   *
+   * @return the thread affinity string, or {@code null} if not set
+   */
+  @Nullable
+  public String getThreadAffinity() {
+    return threadAffinity;
+  }
+
+  /**
+   * Sets the thread affinity hint for the receiving peer.
+   *
+   * @param threadAffinity the thread affinity string, or {@code null} to unset
+   */
+  public void setThreadAffinity(@Nullable String threadAffinity) {
+    this.threadAffinity = threadAffinity;
+  }
+
   /** {@inheritDoc} */
   @Override
   public boolean equals(Object o) {
@@ -167,13 +189,14 @@ public class Params {
         && Objects.equals(field, params.field)
         && Objects.equals(instance, params.instance)
         && Objects.equals(args, params.args)
-        && Objects.equals(value, params.value);
+        && Objects.equals(value, params.value)
+        && Objects.equals(threadAffinity, params.threadAffinity);
   }
 
   /** {@inheritDoc} */
   @Override
   public int hashCode() {
-    return Objects.hash(type, method, field, instance, args, value);
+    return Objects.hash(type, method, field, instance, args, value, threadAffinity);
   }
 
   /** {@inheritDoc} */
@@ -192,6 +215,9 @@ public class Params {
         + '\''
         + ", type='"
         + type
+        + '\''
+        + ", threadAffinity='"
+        + threadAffinity
         + '\''
         + ", value="
         + value
@@ -295,6 +321,17 @@ public class Params {
      */
     public Builder withValue(Argument value) {
       params.setValue(value);
+      return this;
+    }
+
+    /**
+     * Sets the thread affinity hint for the receiving peer.
+     *
+     * @param threadAffinity the thread affinity string
+     * @return the current builder instance
+     */
+    public Builder withThreadAffinity(String threadAffinity) {
+      params.setThreadAffinity(threadAffinity);
       return this;
     }
 

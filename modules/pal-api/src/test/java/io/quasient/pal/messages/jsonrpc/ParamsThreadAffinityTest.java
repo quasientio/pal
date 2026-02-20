@@ -9,9 +9,12 @@
  */
 package io.quasient.pal.messages.jsonrpc;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.IsNot.not;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -23,48 +26,35 @@ import org.junit.Test;
 public class ParamsThreadAffinityTest {
 
   @Test
-  @Ignore("Awaiting implementation in #745")
   public void threadAffinityGetterSetter() {
-    // Given: Params instance
-    // When: setThreadAffinity("fx-thread") then getThreadAffinity()
-    // Then: Returns "fx-thread"
+    Params params = new Params();
+    assertThat(params.getThreadAffinity(), is(nullValue()));
 
-    // TODO(#745): Implement test logic
-    fail("Not yet implemented");
+    params.setThreadAffinity("fx-thread");
+    assertThat(params.getThreadAffinity(), is("fx-thread"));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #745")
   public void threadAffinityInEqualsAndHashCode() {
-    // Given: Two Params instances, identical except threadAffinity
-    // When: equals() and hashCode() compared
-    // Then: Not equal, different hashCodes
+    Params a =
+        Params.builder().withType("Foo").withMethod("bar").withThreadAffinity("fx-thread").build();
+    Params b = Params.builder().withType("Foo").withMethod("bar").build();
 
-    // TODO(#745): Implement test logic
-    // Build two Params with same type/method but different threadAffinity values,
-    // assert they are not equal and have different hashCodes
-    fail("Not yet implemented");
+    assertThat(a, is(not(b)));
+    assertThat(a.hashCode(), is(not(b.hashCode())));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #745")
   public void threadAffinityInBuilder() {
-    // Given: Params.builder().withType("Foo").withThreadAffinity("fx-thread").build()
-    // When: getThreadAffinity() called
-    // Then: Returns "fx-thread"
-
-    // TODO(#745): Implement test logic
-    fail("Not yet implemented");
+    Params params = Params.builder().withType("Foo").withThreadAffinity("fx-thread").build();
+    assertThat(params.getThreadAffinity(), is("fx-thread"));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #745")
   public void threadAffinityInToString() {
-    // Given: Params with threadAffinity set
-    // When: toString() called
-    // Then: Contains "threadAffinity"
-
-    // TODO(#745): Implement test logic
-    fail("Not yet implemented");
+    Params params = new Params();
+    params.setThreadAffinity("fx-thread");
+    assertThat(params.toString(), containsString("threadAffinity"));
+    assertThat(params.toString(), containsString("fx-thread"));
   }
 }

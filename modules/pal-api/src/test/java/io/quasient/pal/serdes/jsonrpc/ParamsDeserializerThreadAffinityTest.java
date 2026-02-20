@@ -9,12 +9,13 @@
  */
 package io.quasient.pal.serdes.jsonrpc;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import io.quasient.pal.messages.jsonrpc.Params;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -23,42 +24,29 @@ import org.junit.Test;
  * <p>Verifies that the {@code threadAffinity} field in a JSON-RPC params object is correctly parsed
  * into {@link Params#getThreadAffinity()}.
  */
-@SuppressWarnings("UnusedVariable")
 public class ParamsDeserializerThreadAffinityTest {
 
   private final Gson gson =
       new GsonBuilder().registerTypeAdapter(Params.class, new ParamsDeserializer()).create();
 
   @Test
-  @Ignore("Awaiting implementation in #745")
   public void deserializesThreadAffinity() {
-    // Given: JSON with {"type":"Foo","method":"bar","threadAffinity":"fx-thread"}
-    // When: Deserialized to Params
-    // Then: params.getThreadAffinity() == "fx-thread"
-
-    // TODO(#745): Implement test logic
-    fail("Not yet implemented");
+    String json = "{\"type\":\"Foo\",\"method\":\"bar\",\"threadAffinity\":\"fx-thread\"}";
+    Params params = gson.fromJson(json, Params.class);
+    assertThat(params.getThreadAffinity(), is("fx-thread"));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #745")
   public void missingThreadAffinityIsNull() {
-    // Given: JSON with {"type":"Foo","method":"bar"} (no threadAffinity field)
-    // When: Deserialized to Params
-    // Then: params.getThreadAffinity() == null
-
-    // TODO(#745): Implement test logic
-    fail("Not yet implemented");
+    String json = "{\"type\":\"Foo\",\"method\":\"bar\"}";
+    Params params = gson.fromJson(json, Params.class);
+    assertThat(params.getThreadAffinity(), is(nullValue()));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #745")
   public void nullThreadAffinityIsNull() {
-    // Given: JSON with {"type":"Foo","method":"bar","threadAffinity":null}
-    // When: Deserialized to Params
-    // Then: params.getThreadAffinity() == null
-
-    // TODO(#745): Implement test logic
-    fail("Not yet implemented");
+    String json = "{\"type\":\"Foo\",\"method\":\"bar\",\"threadAffinity\":null}";
+    Params params = gson.fromJson(json, Params.class);
+    assertThat(params.getThreadAffinity(), is(nullValue()));
   }
 }

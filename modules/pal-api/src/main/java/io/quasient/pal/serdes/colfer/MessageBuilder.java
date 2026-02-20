@@ -2826,6 +2826,12 @@ public final class MessageBuilder {
           execMessage.setInstanceMethodCall(createInstanceMethodCall(jsonRpcRequest));
       default -> throw new IllegalArgumentException("Unsupported ExecMessageType: " + messageType);
     }
+
+    String threadAffinity = jsonRpcRequest.getParams().getThreadAffinity();
+    if (threadAffinity != null && !threadAffinity.isEmpty()) {
+      execMessage.setThreadAffinity(threadAffinity);
+    }
+
     return wrap(execMessage);
   }
 
@@ -3549,5 +3555,21 @@ public final class MessageBuilder {
     final MessageType messageType = getMessageTypeOf(metaMessage);
     return new Message().withMessageType(messageType.getId()).withMetaMessage(metaMessage);
   }
+
   // </editor-fold>
+
+  /**
+   * Sets the thread affinity on an existing {@link ExecMessage} if the value is non-null and
+   * non-empty.
+   *
+   * @param msg the exec message to modify
+   * @param threadAffinity the thread affinity hint, or {@code null}/{@code ""} to leave unchanged
+   * @return the same {@code msg} instance for fluent chaining
+   */
+  public static ExecMessage withThreadAffinity(ExecMessage msg, String threadAffinity) {
+    if (threadAffinity != null && !threadAffinity.isEmpty()) {
+      msg.setThreadAffinity(threadAffinity);
+    }
+    return msg;
+  }
 }
