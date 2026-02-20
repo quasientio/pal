@@ -22,9 +22,12 @@ import io.quasient.pal.common.lang.intercept.ExceptionPropagationPolicy;
 import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.common.runtime.DispatchForwarder;
 import io.quasient.pal.common.runtime.ProxyDispatcher;
+import io.quasient.pal.common.runtime.ThreadAffinity;
 import io.quasient.pal.core.annotations.AnnotationProcessor;
 import io.quasient.pal.core.annotations.AnnotationsProcessor;
 import io.quasient.pal.core.dispatcher.InterceptAsyncThreadFactory;
+import io.quasient.pal.core.execution.JavaFxInvocationExecutor;
+import io.quasient.pal.core.execution.ThreadAffinityDispatcher;
 import io.quasient.pal.core.execution.java.AspectProxyDispatcher;
 import io.quasient.pal.core.execution.java.CustomClassloader;
 import io.quasient.pal.core.intercept.ExceptionPolicyConfig;
@@ -686,5 +689,27 @@ public class PeerWiring extends AbstractModule {
   @Singleton
   public ExceptionPolicyResolver provideExceptionPolicyResolver(ExceptionPolicyConfig config) {
     return new ExceptionPolicyResolver(config);
+  }
+
+  /**
+   * Provides the {@link ThreadAffinityDispatcher} for routing invocations based on thread affinity.
+   *
+   * <p>When the {@code execution.fx.thread.enabled} property is {@code true}, registers a {@link
+   * JavaFxInvocationExecutor} for the {@link ThreadAffinity#FX_THREAD} affinity key. The executor
+   * marshals invocations onto the JavaFX Application Thread.
+   *
+   * @return the configured thread affinity dispatcher
+   */
+  @SuppressWarnings("unused")
+  @Provides
+  @Singleton
+  public ThreadAffinityDispatcher provideThreadAffinityDispatcher() {
+    ThreadAffinityDispatcher dispatcher = new ThreadAffinityDispatcher();
+    String fxThreadEnabled = properties.getProperty("execution.fx.thread.enabled", "false");
+    if (Boolean.parseBoolean(fxThreadEnabled)) {
+      long timeoutMs = Long.parseLong(properties.getProperty("execution.fx.timeout.ms", "30000"));
+      dispatcher.register(ThreadAffinity.FX_THREAD, new JavaFxInvocationExecutor(timeoutMs));
+    }
+    return dispatcher;
   }
 }

@@ -678,6 +678,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         final Object valueForChain = value;
         final List<MessageArgument> argsForChain = finalArgs;
         final boolean isFieldPut = isFieldPutOperation(messageType);
+        final String threadAffinityForChain = incomingCall.getThreadAffinity();
 
         AroundInterceptChain.MethodInvoker methodInvoker =
             (invokeArgs) -> {
@@ -696,8 +697,15 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
                 if (isFieldPut && invokeArgs != null && invokeArgs.length > 0) {
                   invokeValue = invokeArgs[0];
                 }
+                // Route through ThreadAffinityDispatcher for thread affinity support
+                final List<MessageArgument> chainArgs = invokeArgsList;
+                final Object chainValue = invokeValue;
                 Object result =
-                    invokeIncoming(accessibleForChain, targetForChain, invokeArgsList, invokeValue);
+                    threadAffinityDispatcher.execute(
+                        threadAffinityForChain,
+                        () ->
+                            invokeIncoming(
+                                accessibleForChain, targetForChain, chainArgs, chainValue));
                 boolean isVoid = accessibleForChain != null && returnsVoid(accessibleForChain);
                 return new AfterPhaseData(result, null, isVoid);
               } catch (Throwable th) {
@@ -781,7 +789,16 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
           // No AROUND intercepts - invoke directly
           try {
             // 7. Invoke constructor/method/field (using possibly mutated args and value)
-            returnValue = invokeIncoming(accessibleObject, target, finalArgs, value);
+            // Route through ThreadAffinityDispatcher for thread affinity support
+            final AccessibleObject directAccessible = accessibleObject;
+            final Object directTarget = target;
+            final List<MessageArgument> directArgs = finalArgs;
+            final Object directValue = value;
+            final String threadAffinity = incomingCall.getThreadAffinity();
+            returnValue =
+                threadAffinityDispatcher.execute(
+                    threadAffinity,
+                    () -> invokeIncoming(directAccessible, directTarget, directArgs, directValue));
             if (logger.isTraceEnabled()) {
               String returnedClass =
                   returnValue == null ? "unavailable" : returnValue.getClass().toString();
@@ -793,6 +810,9 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
             exceptionWhileInvoking = e.getCause();
           } catch (ReflectiveOperationException | IllegalArgumentException e) {
             logger.error("Error during invocation phase - invoke", e);
+            exceptionWhileInvoking = e;
+          } catch (Exception e) {
+            logger.error("Error during invocation phase - thread affinity dispatch", e);
             exceptionWhileInvoking = e;
           }
         }

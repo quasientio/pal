@@ -9,19 +9,44 @@
  */
 package io.quasient.pal.core.execution.java;
 
-import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import io.quasient.pal.common.lang.intercept.AfterPhaseData;
+import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.common.objects.ObjectRef;
 import io.quasient.pal.common.runtime.Context;
+import io.quasient.pal.common.runtime.ThreadAffinity;
+import io.quasient.pal.core.execution.ThreadAffinityDispatcher;
+import io.quasient.pal.core.intercept.AroundInterceptChain;
+import io.quasient.pal.core.intercept.AroundInterceptChainBuilder;
+import io.quasient.pal.core.intercept.InterceptCheckResult;
+import io.quasient.pal.core.intercept.InterceptChecker;
+import io.quasient.pal.core.intercept.LocalInterceptCallbackDispatcher;
+import io.quasient.pal.core.service.RunOptions;
+import io.quasient.pal.core.transport.MessageChannelType;
+import io.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import io.quasient.pal.messages.colfer.ExecMessage;
+import io.quasient.pal.messages.colfer.InstanceMethodCall;
+import io.quasient.pal.messages.colfer.InterceptMessage;
 import io.quasient.pal.messages.colfer.Parameter;
+import io.quasient.pal.messages.colfer.ReturnValue;
 import io.quasient.pal.messages.types.MessageType;
+import io.quasient.pal.serdes.colfer.MessageBuilder;
 import java.lang.reflect.AccessibleObject;
+import java.lang.reflect.Field;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.Callable;
 import org.aspectj.lang.ProceedingJoinPoint;
-import org.junit.Ignore;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 
 /**
  * Unit tests for verifying that BaseExecMessageDispatcher correctly uses ThreadAffinityDispatcher
@@ -77,7 +102,11 @@ public class BaseExecMessageDispatcherThreadAffinityTest {
         AccessibleObject accessibleObject,
         Throwable exceptionWhileLoading,
         Throwable exceptionWhileInvoking) {
-      return new ExecMessage();
+      ExecMessage msg = new ExecMessage();
+      ReturnValue rv = new ReturnValue();
+      rv.isVoid = true;
+      msg.returnValue = rv;
+      return msg;
     }
 
     @Override
@@ -121,6 +150,68 @@ public class BaseExecMessageDispatcherThreadAffinityTest {
     }
   }
 
+  /**
+   * Sets a field on {@link AbstractDispatcher} via reflection.
+   *
+   * @param dispatcher the dispatcher instance
+   * @param fieldName the field name
+   * @param value the value to set
+   */
+  private static void setField(AbstractDispatcher dispatcher, String fieldName, Object value)
+      throws Exception {
+    Field f = AbstractDispatcher.class.getDeclaredField(fieldName);
+    f.setAccessible(true);
+    f.set(dispatcher, value);
+  }
+
+  /**
+   * Creates an ExecMessage with an InstanceMethodCall set (so getMessageTypeOf returns
+   * EXEC_INSTANCE_METHOD) and the given thread affinity.
+   *
+   * @param threadAffinity the thread affinity to set, or null for default
+   * @return a configured ExecMessage
+   */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes") // Class conflicts with java.lang.Class
+  private static ExecMessage createInstanceMethodExecMessage(String threadAffinity) {
+    ExecMessage msg = new ExecMessage();
+    InstanceMethodCall call = new InstanceMethodCall();
+    call.name = "testMethod";
+    io.quasient.pal.messages.colfer.Class clazz = new io.quasient.pal.messages.colfer.Class();
+    clazz.name = "test.TestClass";
+    call.clazz = clazz;
+    msg.instanceMethodCall = call;
+    if (threadAffinity != null) {
+      msg.setThreadAffinity(threadAffinity);
+    }
+    return msg;
+  }
+
+  /**
+   * Creates a MinimalOkForAffinity dispatcher with required dependencies injected.
+   *
+   * @param mockDispatcher the mock ThreadAffinityDispatcher
+   * @param runOptions the run options to use
+   * @return a configured dispatcher ready for testing
+   */
+  private static MinimalOkForAffinity createDispatcher(
+      ThreadAffinityDispatcher mockDispatcher, Set<RunOptions> runOptions) throws Exception {
+    MinimalOkForAffinity d = new MinimalOkForAffinity();
+    setField(d, "runOptions", runOptions);
+    setField(d, "threadAffinityDispatcher", mockDispatcher);
+
+    // Mock messageGateway (called at end of dispatchIncoming to send the after exec message)
+    OutboundMessageGateway mockGateway = mock(OutboundMessageGateway.class);
+    when(mockGateway.sendExecMessage(any(), any())).thenReturn(new ExecMessage());
+    setField(d, "messageGateway", mockGateway);
+
+    // Real MessageBuilder (used by messageGateway.sendExecMessage via wrap())
+    MessageBuilder messageBuilder =
+        new MessageBuilder(UUID.fromString("00000000-0000-0000-0000-000000000001"));
+    setField(d, "messageBuilder", messageBuilder);
+
+    return d;
+  }
+
   // ===== Direct invocation path tests =====
 
   /**
@@ -128,57 +219,48 @@ public class BaseExecMessageDispatcherThreadAffinityTest {
    * ThreadAffinityDispatcher with the thread affinity from the ExecMessage.
    */
   @Test
-  @Ignore("Awaiting implementation in #741")
-  public void directInvocationPathUsesThreadAffinityDispatcher() {
-    // Given: BaseExecMessageDispatcher with mock ThreadAffinityDispatcher;
-    //        ExecMessage with threadAffinity="fx-thread";
-    //        no AROUND intercepts configured
-    //
-    // When: dispatchIncoming() processes the message
-    //
-    // Then: ThreadAffinityDispatcher.execute() is called with "fx-thread"
-    //       and a callable that wraps invokeIncoming()
+  @SuppressWarnings("unchecked")
+  public void directInvocationPathUsesThreadAffinityDispatcher() throws Exception {
+    // Given: mock ThreadAffinityDispatcher; no AROUND intercepts
+    ThreadAffinityDispatcher mockDispatcher = mock(ThreadAffinityDispatcher.class);
+    when(mockDispatcher.execute(any(), any(Callable.class))).thenReturn(null);
 
-    // TODO(#741): Implement test logic
-    // 1. Create MinimalOkForAffinity dispatcher
-    // 2. Inject mock ThreadAffinityDispatcher via reflection
-    // 3. Inject required dependencies (runOptions, interceptChecker, etc.)
-    // 4. Create ExecMessage with threadAffinity="fx-thread" and
-    //    InstanceMethodCall populated for EXEC_INSTANCE_METHOD type
-    // 5. Call dispatchIncoming(execMessage, MessageChannelType.ZMQ_RPC)
-    // 6. Verify mock ThreadAffinityDispatcher.execute() was called
-    //    with "fx-thread" as the affinity argument
-    // 7. Verify the callable passed to execute() wraps invokeIncoming()
-    fail("Not yet implemented");
+    MinimalOkForAffinity d = createDispatcher(mockDispatcher, EnumSet.noneOf(RunOptions.class));
+
+    // Create ExecMessage with threadAffinity="fx-thread"
+    ExecMessage msg = createInstanceMethodExecMessage(ThreadAffinity.FX_THREAD);
+
+    // When: dispatchIncoming processes the message
+    d.dispatchIncoming(msg, MessageChannelType.ZMQ_SOCKET_RPC);
+
+    // Then: ThreadAffinityDispatcher.execute() is called with "fx-thread"
+    verify(mockDispatcher).execute(eq(ThreadAffinity.FX_THREAD), any(Callable.class));
   }
 
   // ===== Null affinity tests =====
 
   /**
    * Verifies that when ExecMessage has null threadAffinity, the dispatcher still routes through
-   * ThreadAffinityDispatcher with null affinity (which falls back to direct execution).
+   * ThreadAffinityDispatcher with the default (empty) affinity from ExecMessage.
    */
   @Test
-  @Ignore("Awaiting implementation in #741")
-  public void nullAffinityPassedToDispatcher() {
-    // Given: BaseExecMessageDispatcher with mock ThreadAffinityDispatcher;
-    //        ExecMessage with null threadAffinity
-    //
-    // When: dispatchIncoming() processes the message
-    //
-    // Then: ThreadAffinityDispatcher.execute() is called with null affinity
-    //       (which triggers direct execution via DirectInvocationExecutor)
+  @SuppressWarnings("unchecked")
+  public void nullAffinityPassedToDispatcher() throws Exception {
+    // Given: mock ThreadAffinityDispatcher; default threadAffinity (empty string)
+    ThreadAffinityDispatcher mockDispatcher = mock(ThreadAffinityDispatcher.class);
+    when(mockDispatcher.execute(any(), any(Callable.class))).thenReturn(null);
 
-    // TODO(#741): Implement test logic
-    // 1. Create MinimalOkForAffinity dispatcher
-    // 2. Inject mock ThreadAffinityDispatcher via reflection
-    // 3. Inject required dependencies (runOptions, interceptChecker, etc.)
-    // 4. Create ExecMessage with null/default threadAffinity and
-    //    InstanceMethodCall populated for EXEC_INSTANCE_METHOD type
-    // 5. Call dispatchIncoming(execMessage, MessageChannelType.ZMQ_RPC)
-    // 6. Verify mock ThreadAffinityDispatcher.execute() was called
-    //    with null as the affinity argument
-    fail("Not yet implemented");
+    MinimalOkForAffinity d = createDispatcher(mockDispatcher, EnumSet.noneOf(RunOptions.class));
+
+    // Create ExecMessage with default (empty) threadAffinity
+    ExecMessage msg = createInstanceMethodExecMessage(null);
+
+    // When: dispatchIncoming processes the message
+    d.dispatchIncoming(msg, MessageChannelType.ZMQ_SOCKET_RPC);
+
+    // Then: ThreadAffinityDispatcher.execute() is called with empty string (default)
+    // ExecMessage defaults threadAffinity to "" (empty string), not null
+    verify(mockDispatcher).execute(eq(""), any(Callable.class));
   }
 
   // ===== AROUND chain path tests =====
@@ -188,38 +270,71 @@ public class BaseExecMessageDispatcherThreadAffinityTest {
    * chain routes through ThreadAffinityDispatcher with the correct thread affinity.
    */
   @Test
-  @Ignore("Awaiting implementation in #741")
-  public void aroundChainPathUsesThreadAffinityDispatcher() {
-    // Given: BaseExecMessageDispatcher with mock ThreadAffinityDispatcher;
-    //        ExecMessage with threadAffinity="fx-thread";
-    //        AROUND intercept chain configured (so invocation goes through
-    //        the MethodInvoker lambda rather than the direct path)
-    //
-    // When: The MethodInvoker (inside AROUND chain) is invoked during
-    //        dispatchIncoming() processing
-    //
-    // Then: ThreadAffinityDispatcher.execute() is called with "fx-thread"
-    //       wrapping the invokeIncoming() call inside the chain
+  @SuppressWarnings("unchecked")
+  public void aroundChainPathUsesThreadAffinityDispatcher() throws Exception {
+    // Given: mock ThreadAffinityDispatcher
+    ThreadAffinityDispatcher mockDispatcher = mock(ThreadAffinityDispatcher.class);
+    when(mockDispatcher.execute(any(), any(Callable.class))).thenReturn(null);
 
-    // TODO(#741): Implement test logic
-    // 1. Create MinimalOkForAffinity dispatcher
-    // 2. Inject mock ThreadAffinityDispatcher via reflection
-    // 3. Inject required dependencies including:
-    //    - runOptions with WITH_INTERCEPTS enabled
-    //    - mock InterceptChecker that returns AROUND intercepts
-    //    - mock AroundInterceptChainBuilder that captures the MethodInvoker
-    //    - mock LocalInterceptCallbackDispatcher
-    //    - mock InterceptCallbackDispatcher
-    // 4. Create ExecMessage with threadAffinity="fx-thread" and
-    //    InstanceMethodCall populated for EXEC_INSTANCE_METHOD type
-    // 5. Call dispatchIncoming(execMessage, MessageChannelType.ZMQ_RPC)
-    // 6. Verify that when the captured MethodInvoker is invoked,
-    //    it calls ThreadAffinityDispatcher.execute() with "fx-thread"
-    //
-    // Note: If mocking the full AROUND chain path is impractical,
-    // an alternative approach is to verify the ThreadAffinityDispatcher
-    // field is properly injectable and that the MethodInvoker lambda
-    // references it, deferring full integration verification to task #741.
-    fail("Not yet implemented");
+    MinimalOkForAffinity d =
+        createDispatcher(mockDispatcher, EnumSet.of(RunOptions.WITH_INTERCEPTS));
+
+    // Mock InterceptChecker to return local AROUND intercepts
+    InterceptMessage aroundIntercept = new InterceptMessage();
+    aroundIntercept.setInterceptType(InterceptType.AROUND.toByte());
+    aroundIntercept.setCallbackClass("test.Callback");
+    aroundIntercept.setCallbackMethod("onAround");
+
+    InterceptCheckResult checkResult =
+        new InterceptCheckResult(
+            Collections.emptyList(), Collections.singletonList(aroundIntercept));
+
+    InterceptChecker mockChecker = mock(InterceptChecker.class);
+    when(mockChecker.checkIntercepts(any(), any(), any(), any(), any())).thenReturn(checkResult);
+    setField(d, "interceptChecker", mockChecker);
+
+    // Mock LocalInterceptCallbackDispatcher (needed for BEFORE local intercept handling)
+    LocalInterceptCallbackDispatcher mockLocalDispatcher =
+        mock(LocalInterceptCallbackDispatcher.class);
+    setField(d, "localInterceptCallbackDispatcher", mockLocalDispatcher);
+
+    // Mock AroundInterceptChainBuilder — capture the MethodInvoker and invoke it
+    AroundInterceptChainBuilder mockChainBuilder = mock(AroundInterceptChainBuilder.class);
+    ArgumentCaptor<AroundInterceptChain.MethodInvoker> invokerCaptor =
+        ArgumentCaptor.forClass(AroundInterceptChain.MethodInvoker.class);
+
+    // Create a mock AroundInterceptChain whose invoke() calls the captured MethodInvoker
+    AroundInterceptChain mockChain = mock(AroundInterceptChain.class);
+    when(mockChain.isEmpty()).thenReturn(false);
+    when(mockChain.invoke(any(), any()))
+        .thenAnswer(
+            invocation -> {
+              // Get the MethodInvoker that was captured during build()
+              AroundInterceptChain.MethodInvoker methodInvoker = invokerCaptor.getValue();
+              Object[] args = invocation.getArgument(0);
+              AfterPhaseData result = methodInvoker.invoke(args);
+              return new AroundInterceptChain.ChainResult(
+                  result.returnValue(), result.thrownException(), result.isVoid(), true);
+            });
+
+    when(mockChainBuilder.build(
+            any(List.class),
+            any(List.class),
+            any(),
+            any(),
+            any(List.class),
+            invokerCaptor.capture()))
+        .thenReturn(mockChain);
+    setField(d, "aroundChainBuilder", mockChainBuilder);
+
+    // Create ExecMessage with threadAffinity="fx-thread"
+    ExecMessage msg = createInstanceMethodExecMessage(ThreadAffinity.FX_THREAD);
+
+    // When: dispatchIncoming processes the message (which triggers the AROUND chain)
+    d.dispatchIncoming(msg, MessageChannelType.ZMQ_SOCKET_RPC);
+
+    // Then: ThreadAffinityDispatcher.execute() is called with "fx-thread"
+    // from within the MethodInvoker lambda in the AROUND chain
+    verify(mockDispatcher).execute(eq(ThreadAffinity.FX_THREAD), any(Callable.class));
   }
 }

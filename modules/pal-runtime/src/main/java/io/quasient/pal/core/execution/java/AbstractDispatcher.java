@@ -9,6 +9,7 @@
  */
 package io.quasient.pal.core.execution.java;
 
+import io.quasient.pal.core.execution.ThreadAffinityDispatcher;
 import io.quasient.pal.core.execution.java.reflect.ReflectionHelper;
 import io.quasient.pal.core.intercept.AroundInterceptChainBuilder;
 import io.quasient.pal.core.intercept.InFlightDispatchTracker;
@@ -73,6 +74,15 @@ abstract class AbstractDispatcher {
 
   /** Tracker for in-flight dispatch operations, used for intercept coordination. */
   protected InFlightDispatchTracker inFlightDispatchTracker;
+
+  /**
+   * Dispatcher for routing invocations based on thread affinity (e.g., FX thread).
+   *
+   * <p>Initialized with a default instance (direct execution only) so that {@code
+   * dispatchIncoming()} is safe before Guice injection completes or in test harnesses that do not
+   * inject this field.
+   */
+  protected ThreadAffinityDispatcher threadAffinityDispatcher = new ThreadAffinityDispatcher();
 
   /**
    * Sets the unique identifier (UUID) for the peer.
@@ -199,5 +209,20 @@ abstract class AbstractDispatcher {
   @Inject
   final void setInFlightDispatchTracker(InFlightDispatchTracker inFlightDispatchTracker) {
     this.inFlightDispatchTracker = inFlightDispatchTracker;
+  }
+
+  /**
+   * Sets the {@link ThreadAffinityDispatcher} for routing invocations based on thread affinity.
+   *
+   * <p>This dispatcher routes incoming RPC invocations to the appropriate thread based on the
+   * thread affinity specified in the {@link io.quasient.pal.messages.colfer.ExecMessage}. For
+   * example, calls tagged with {@code "fx-thread"} affinity are routed to the JavaFX Application
+   * Thread.
+   *
+   * @param threadAffinityDispatcher the thread affinity dispatcher instance
+   */
+  @Inject
+  final void setThreadAffinityDispatcher(ThreadAffinityDispatcher threadAffinityDispatcher) {
+    this.threadAffinityDispatcher = threadAffinityDispatcher;
   }
 }
