@@ -87,6 +87,13 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
   /** Method metadata for exception validation */
   public String[] declaredExceptions;
 
+  /**
+   * Optional thread affinity hint for the receiving peer. When set (e.g., "fx-thread"), the
+   * receiving peer routes execution to the named thread if a matching executor is registered. When
+   * empty/null, execution proceeds on the invoker thread (default).
+   */
+  public String threadAffinity;
+
   /** Default constructor */
   public ExecMessage() {
     init();
@@ -102,6 +109,7 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
     currentTime = "";
     responseToId = "";
     declaredExceptions = _zeroDeclaredExceptions;
+    threadAffinity = "";
   }
 
   /** {@link #reset(InputStream) Reusable} deserialization of Colfer streams. */
@@ -212,7 +220,9 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
             + 6
             + (long) this.responseToId.length() * 3
             + 6
-            + (long) this.declaredExceptions.length * 6;
+            + (long) this.declaredExceptions.length * 6
+            + 6
+            + (long) this.threadAffinity.length() * 3;
     if (this.constructorCall != null) n += 1 + (long) this.constructorCall.marshalFit();
     if (this.instanceMethodCall != null) n += 1 + (long) this.instanceMethodCall.marshalFit();
     if (this.classMethodCall != null) n += 1 + (long) this.classMethodCall.marshalFit();
@@ -675,6 +685,54 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
         }
       }
 
+      if (!this.threadAffinity.isEmpty()) {
+        buf[i++] = (byte) 20;
+        int start = ++i;
+
+        String s = this.threadAffinity;
+        for (int sIndex = 0, sLength = s.length(); sIndex < sLength; sIndex++) {
+          char c = s.charAt(sIndex);
+          if (c < '\u0080') {
+            buf[i++] = (byte) c;
+          } else if (c < '\u0800') {
+            buf[i++] = (byte) (192 | c >>> 6);
+            buf[i++] = (byte) (128 | c & 63);
+          } else if (c < '\ud800' || c > '\udfff') {
+            buf[i++] = (byte) (224 | c >>> 12);
+            buf[i++] = (byte) (128 | c >>> 6 & 63);
+            buf[i++] = (byte) (128 | c & 63);
+          } else {
+            int cp = 0;
+            if (++sIndex < sLength) cp = Character.toCodePoint(c, s.charAt(sIndex));
+            if ((cp >= 1 << 16) && (cp < 1 << 21)) {
+              buf[i++] = (byte) (240 | cp >>> 18);
+              buf[i++] = (byte) (128 | cp >>> 12 & 63);
+              buf[i++] = (byte) (128 | cp >>> 6 & 63);
+              buf[i++] = (byte) (128 | cp & 63);
+            } else buf[i++] = (byte) '?';
+          }
+        }
+        int size = i - start;
+        if (size > ExecMessage.colferSizeMax)
+          throw new IllegalStateException(
+              format(
+                  "colfer: io.quasient.pal.messages/colfer.ExecMessage.threadAffinity size %d exceeds %d UTF-8 bytes",
+                  size, ExecMessage.colferSizeMax));
+
+        int ii = start - 1;
+        if (size > 0x7f) {
+          i++;
+          for (int x = size; x >= 1 << 14; x >>>= 7) i++;
+          System.arraycopy(buf, start, buf, i - size, size);
+
+          do {
+            buf[ii++] = (byte) (size | 0x80);
+            size >>>= 7;
+          } while (size > 0x7f);
+        }
+        buf[ii] = (byte) size;
+      }
+
       buf[i++] = (byte) 0x7f;
       return i;
     } catch (ArrayIndexOutOfBoundsException e) {
@@ -960,6 +1018,25 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
         header = buf[i++];
       }
 
+      if (header == (byte) 20) {
+        int size = 0;
+        for (int shift = 0; true; shift += 7) {
+          byte b = buf[i++];
+          size |= (b & 0x7f) << shift;
+          if (shift == 28 || b >= 0) break;
+        }
+        if (size < 0 || size > ExecMessage.colferSizeMax)
+          throw new SecurityException(
+              format(
+                  "colfer: io.quasient.pal.messages/colfer.ExecMessage.threadAffinity size %d exceeds %d UTF-8 bytes",
+                  size, ExecMessage.colferSizeMax));
+
+        int start = i;
+        i += size;
+        this.threadAffinity = new String(buf, start, size, StandardCharsets.UTF_8);
+        header = buf[i++];
+      }
+
       if (header != (byte) 0x7f)
         throw new InputMismatchException(format("colfer: unknown header at byte %d", i - 1));
     } finally {
@@ -976,7 +1053,7 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
   }
 
   // {@link Serializable} version number.
-  private static final long serialVersionUID = 20L;
+  private static final long serialVersionUID = 21L;
 
   // {@link Serializable} Colfer extension.
   private void writeObject(ObjectOutputStream out) throws IOException {
@@ -1581,6 +1658,35 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
     return this;
   }
 
+  /**
+   * Gets io.quasient.pal.messages/colfer.ExecMessage.threadAffinity.
+   *
+   * @return the value.
+   */
+  public String getThreadAffinity() {
+    return this.threadAffinity;
+  }
+
+  /**
+   * Sets io.quasient.pal.messages/colfer.ExecMessage.threadAffinity.
+   *
+   * @param value the replacement.
+   */
+  public void setThreadAffinity(String value) {
+    this.threadAffinity = value;
+  }
+
+  /**
+   * Sets io.quasient.pal.messages/colfer.ExecMessage.threadAffinity.
+   *
+   * @param value the replacement.
+   * @return {@code this}.
+   */
+  public ExecMessage withThreadAffinity(String value) {
+    this.threadAffinity = value;
+    return this;
+  }
+
   @Override
   public final int hashCode() {
     int h = 1;
@@ -1604,6 +1710,7 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
     if (this.raisedThrowable != null) h = 31 * h + this.raisedThrowable.hashCode();
     if (this.returnValue != null) h = 31 * h + this.returnValue.hashCode();
     for (String o : this.declaredExceptions) h = 31 * h + (o == null ? 0 : o.hashCode());
+    if (this.threadAffinity != null) h = 31 * h + this.threadAffinity.hashCode();
     return h;
   }
 
@@ -1661,7 +1768,10 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
         && (this.returnValue == null
             ? o.returnValue == null
             : this.returnValue.equals(o.returnValue))
-        && java.util.Arrays.equals(this.declaredExceptions, o.declaredExceptions);
+        && java.util.Arrays.equals(this.declaredExceptions, o.declaredExceptions)
+        && (this.threadAffinity == null
+            ? o.threadAffinity == null
+            : this.threadAffinity.equals(o.threadAffinity));
   }
 
   @Override
@@ -1762,6 +1872,10 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
           this.declaredExceptions[i] = jsonArray.get(i).getAsString();
         }
       }
+      if (json.has("threadAffinity")) {
+        this.threadAffinity = json.get("threadAffinity").getAsString();
+      }
+
     } catch (Exception e) {
       throw new JsonParseException("Error deserializing json object: " + e.getMessage(), e);
     }

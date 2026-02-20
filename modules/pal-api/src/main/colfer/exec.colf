@@ -34,4 +34,10 @@ type ExecMessage struct {
 
 	// Method metadata for exception validation
 	declaredExceptions []text // Declared checked exceptions for method calls
+
+	// Optional thread affinity hint for the receiving peer.
+	// When set (e.g., "fx-thread"), the receiving peer routes execution
+	// to the named thread if a matching executor is registered.
+	// When empty/null, execution proceeds on the invoker thread (default).
+	threadAffinity text
 }
