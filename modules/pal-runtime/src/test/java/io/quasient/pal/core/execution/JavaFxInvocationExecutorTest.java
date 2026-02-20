@@ -9,9 +9,15 @@
  */
 package io.quasient.pal.core.execution;
 
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
 
-import org.junit.Ignore;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Test;
 
 /**
@@ -30,22 +36,25 @@ public class JavaFxInvocationExecutorTest {
   /**
    * Tests the fail-fast behavior when JavaFX is not on the classpath.
    *
-   * <p>If JavaFX IS on the test classpath, this test should verify the constructor succeeds
-   * instead. The test may need a custom classloader to simulate the absence of JavaFX, or it can
-   * verify behavior based on the actual classpath environment.
+   * <p>If JavaFX IS on the test classpath, this test verifies the constructor succeeds instead.
    *
    * @throws Exception if reflection fails unexpectedly
    */
   @Test
-  @Ignore("Awaiting implementation in #739")
   public void constructorFailsWithoutJavaFxOnClasspath() throws Exception {
-    // Given: JavaFX not on classpath (may need custom classloader to simulate)
-    // When: JavaFxInvocationExecutor constructor is called
-    // Then: IllegalStateException is thrown with descriptive message
-    // Note: If JavaFX IS on the test classpath, verify constructor succeeds instead
-
-    // TODO(#739): Implement test logic
-    fail("Not yet implemented");
+    if (isJavaFxAvailable()) {
+      // JavaFX is on classpath - verify constructor succeeds
+      JavaFxInvocationExecutor executor = new JavaFxInvocationExecutor();
+      assertThat(executor != null, is(true));
+    } else {
+      // JavaFX is not on classpath - verify fail-fast
+      try {
+        new JavaFxInvocationExecutor();
+        fail("Expected IllegalStateException when JavaFX is not on classpath");
+      } catch (IllegalStateException e) {
+        assertThat(e.getMessage(), containsString("JavaFX not on classpath"));
+      }
+    }
   }
 
   /**
@@ -56,15 +65,20 @@ public class JavaFxInvocationExecutorTest {
    * @throws Exception if invocation or toolkit initialization fails
    */
   @Test
-  @Ignore("Awaiting implementation in #739")
   public void executesOnFxThread() throws Exception {
-    // Given: JavaFX toolkit initialized, JavaFxInvocationExecutor instance
-    // When: execute(callable) is called from a non-FX thread
-    // Then: Callable executes on the FX Application Thread
-    //       (verified via Platform.isFxApplicationThread())
+    assumeTrue("JavaFX not available on test classpath", isJavaFxAvailable());
+    initFxToolkit();
 
-    // TODO(#739): Implement test logic
-    fail("Not yet implemented");
+    JavaFxInvocationExecutor executor = new JavaFxInvocationExecutor();
+    AtomicBoolean onFxThread = new AtomicBoolean(false);
+
+    executor.execute(
+        () -> {
+          onFxThread.set(isFxApplicationThread());
+          return null;
+        });
+
+    assertThat(onFxThread.get(), is(true));
   }
 
   /**
@@ -76,14 +90,31 @@ public class JavaFxInvocationExecutorTest {
    * @throws Exception if invocation or toolkit initialization fails
    */
   @Test
-  @Ignore("Awaiting implementation in #739")
   public void directExecutionWhenAlreadyOnFxThread() throws Exception {
-    // Given: JavaFxInvocationExecutor, callable that records thread name
-    // When: execute(callable) is called FROM the FX thread
-    // Then: Callable executes without Platform.runLater() (direct invocation)
+    assumeTrue("JavaFX not available on test classpath", isJavaFxAvailable());
+    initFxToolkit();
 
-    // TODO(#739): Implement test logic
-    fail("Not yet implemented");
+    JavaFxInvocationExecutor executor = new JavaFxInvocationExecutor();
+    AtomicReference<Object> result = new AtomicReference<>();
+    AtomicReference<Throwable> error = new AtomicReference<>();
+    CountDownLatch latch = new CountDownLatch(1);
+
+    runOnFxThread(
+        () -> {
+          try {
+            result.set(executor.execute(() -> "from-fx-thread"));
+          } catch (Exception e) {
+            error.set(e);
+          } finally {
+            latch.countDown();
+          }
+        });
+
+    latch.await();
+    if (error.get() != null) {
+      throw new RuntimeException("Unexpected error on FX thread", error.get());
+    }
+    assertThat(result.get(), is("from-fx-thread"));
   }
 
   /**
@@ -95,13 +126,72 @@ public class JavaFxInvocationExecutorTest {
    * @throws Exception if invocation or toolkit initialization fails
    */
   @Test
-  @Ignore("Awaiting implementation in #739")
   public void propagatesExceptionFromFxThread() throws Exception {
-    // Given: JavaFxInvocationExecutor, callable that throws RuntimeException
-    // When: execute(callable) is called
-    // Then: RuntimeException is propagated to the calling thread
+    assumeTrue("JavaFX not available on test classpath", isJavaFxAvailable());
+    initFxToolkit();
 
-    // TODO(#739): Implement test logic
-    fail("Not yet implemented");
+    JavaFxInvocationExecutor executor = new JavaFxInvocationExecutor();
+    try {
+      executor.execute(
+          () -> {
+            throw new RuntimeException("fx error");
+          });
+      fail("Expected RuntimeException to be propagated");
+    } catch (RuntimeException e) {
+      assertThat(e.getMessage(), is("fx error"));
+    }
+  }
+
+  /**
+   * Checks whether JavaFX classes are available on the test classpath.
+   *
+   * @return true if javafx.application.Platform can be loaded
+   */
+  private static boolean isJavaFxAvailable() {
+    try {
+      Class.forName("javafx.application.Platform");
+      return true;
+    } catch (ClassNotFoundException e) {
+      return false;
+    }
+  }
+
+  /**
+   * Initializes the JavaFX toolkit if not already initialized.
+   *
+   * @throws Exception if toolkit initialization fails
+   */
+  private static void initFxToolkit() throws Exception {
+    Class<?> platform = Class.forName("javafx.application.Platform");
+    try {
+      platform.getMethod("startup", Runnable.class).invoke(null, (Runnable) () -> {});
+    } catch (Exception e) {
+      // Toolkit already initialized - ignore
+    }
+  }
+
+  /**
+   * Checks if the current thread is the FX Application Thread via reflection.
+   *
+   * @return true if on the FX thread
+   */
+  private static boolean isFxApplicationThread() {
+    try {
+      Class<?> platform = Class.forName("javafx.application.Platform");
+      return (boolean) platform.getMethod("isFxApplicationThread").invoke(null);
+    } catch (Exception e) {
+      return false;
+    }
+  }
+
+  /**
+   * Submits a runnable to the FX Application Thread via reflection.
+   *
+   * @param task the task to run on the FX thread
+   * @throws Exception if reflection or invocation fails
+   */
+  private static void runOnFxThread(Runnable task) throws Exception {
+    Class<?> platform = Class.forName("javafx.application.Platform");
+    platform.getMethod("runLater", Runnable.class).invoke(null, task);
   }
 }

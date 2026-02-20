@@ -9,9 +9,10 @@
  */
 package io.quasient.pal.core.execution;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-import org.junit.Ignore;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.Test;
 
 /**
@@ -30,14 +31,20 @@ public class ThreadAffinityDispatcherTest {
    * @throws Exception if invocation fails unexpectedly
    */
   @Test
-  @Ignore("Awaiting implementation in #739")
   public void nullAffinityUsesDirectExecution() throws Exception {
-    // Given: A ThreadAffinityDispatcher with an executor registered for "fx-thread"
-    // When: execute(null, callable) is called
-    // Then: Callable is invoked directly (not through the registered executor)
+    ThreadAffinityDispatcher dispatcher = new ThreadAffinityDispatcher();
+    AtomicBoolean customExecutorUsed = new AtomicBoolean(false);
+    dispatcher.register(
+        "fx-thread",
+        invocation -> {
+          customExecutorUsed.set(true);
+          return invocation.call();
+        });
 
-    // TODO(#739): Implement test logic
-    fail("Not yet implemented");
+    Object result = dispatcher.execute(null, () -> "direct");
+
+    assertThat(result, is("direct"));
+    assertThat(customExecutorUsed.get(), is(false));
   }
 
   /**
@@ -47,14 +54,20 @@ public class ThreadAffinityDispatcherTest {
    * @throws Exception if invocation fails unexpectedly
    */
   @Test
-  @Ignore("Awaiting implementation in #739")
   public void emptyAffinityUsesDirectExecution() throws Exception {
-    // Given: A ThreadAffinityDispatcher with an executor registered for "fx-thread"
-    // When: execute("", callable) is called
-    // Then: Callable is invoked directly (not through the registered executor)
+    ThreadAffinityDispatcher dispatcher = new ThreadAffinityDispatcher();
+    AtomicBoolean customExecutorUsed = new AtomicBoolean(false);
+    dispatcher.register(
+        "fx-thread",
+        invocation -> {
+          customExecutorUsed.set(true);
+          return invocation.call();
+        });
 
-    // TODO(#739): Implement test logic
-    fail("Not yet implemented");
+    Object result = dispatcher.execute("", () -> "direct");
+
+    assertThat(result, is("direct"));
+    assertThat(customExecutorUsed.get(), is(false));
   }
 
   /**
@@ -63,14 +76,20 @@ public class ThreadAffinityDispatcherTest {
    * @throws Exception if invocation fails unexpectedly
    */
   @Test
-  @Ignore("Awaiting implementation in #739")
   public void registeredAffinityRoutesToExecutor() throws Exception {
-    // Given: A ThreadAffinityDispatcher with a mock InvocationExecutor registered for "fx-thread"
-    // When: execute("fx-thread", callable) is called
-    // Then: The mock executor's execute() method is invoked with the callable
+    ThreadAffinityDispatcher dispatcher = new ThreadAffinityDispatcher();
+    AtomicBoolean customExecutorUsed = new AtomicBoolean(false);
+    dispatcher.register(
+        "fx-thread",
+        invocation -> {
+          customExecutorUsed.set(true);
+          return invocation.call();
+        });
 
-    // TODO(#739): Implement test logic
-    fail("Not yet implemented");
+    Object result = dispatcher.execute("fx-thread", () -> "routed");
+
+    assertThat(result, is("routed"));
+    assertThat(customExecutorUsed.get(), is(true));
   }
 
   /**
@@ -80,40 +99,28 @@ public class ThreadAffinityDispatcherTest {
    * @throws Exception if invocation fails unexpectedly
    */
   @Test
-  @Ignore("Awaiting implementation in #739")
   public void unknownAffinityFallsBackToDirectExecution() throws Exception {
-    // Given: A ThreadAffinityDispatcher with no executors registered
-    // When: execute("unknown-affinity", callable) is called
-    // Then: Callable is invoked directly (fallback behavior), warning logged
+    ThreadAffinityDispatcher dispatcher = new ThreadAffinityDispatcher();
 
-    // TODO(#739): Implement test logic
-    fail("Not yet implemented");
+    Object result = dispatcher.execute("unknown-affinity", () -> "fallback");
+
+    assertThat(result, is("fallback"));
   }
 
   /**
    * Tests that registering an executor with a {@code null} key throws {@link NullPointerException}.
    */
-  @Test
-  @Ignore("Awaiting implementation in #739")
+  @Test(expected = NullPointerException.class)
   public void registerRejectsNullKey() {
-    // Given: A ThreadAffinityDispatcher
-    // When: register(null, executor) is called
-    // Then: NullPointerException is thrown
-
-    // TODO(#739): Implement test logic
-    fail("Not yet implemented");
+    ThreadAffinityDispatcher dispatcher = new ThreadAffinityDispatcher();
+    dispatcher.register(null, invocation -> invocation.call());
   }
 
   /** Tests that registering a {@code null} executor throws {@link NullPointerException}. */
-  @Test
-  @Ignore("Awaiting implementation in #739")
+  @Test(expected = NullPointerException.class)
   public void registerRejectsNullExecutor() {
-    // Given: A ThreadAffinityDispatcher
-    // When: register("fx-thread", null) is called
-    // Then: NullPointerException is thrown
-
-    // TODO(#739): Implement test logic
-    fail("Not yet implemented");
+    ThreadAffinityDispatcher dispatcher = new ThreadAffinityDispatcher();
+    dispatcher.register("fx-thread", null);
   }
 
   /**
@@ -121,14 +128,12 @@ public class ThreadAffinityDispatcherTest {
    * unregistered keys.
    */
   @Test
-  @Ignore("Awaiting implementation in #739")
   public void hasExecutorReturnsCorrectly() {
-    // Given: A ThreadAffinityDispatcher with "fx-thread" registered
-    // When: hasExecutor("fx-thread") and hasExecutor("other") are called
-    // Then: Returns true and false respectively
+    ThreadAffinityDispatcher dispatcher = new ThreadAffinityDispatcher();
+    dispatcher.register("fx-thread", invocation -> invocation.call());
 
-    // TODO(#739): Implement test logic
-    fail("Not yet implemented");
+    assertThat(dispatcher.hasExecutor("fx-thread"), is(true));
+    assertThat(dispatcher.hasExecutor("other"), is(false));
   }
 
   /**
@@ -136,14 +141,15 @@ public class ThreadAffinityDispatcherTest {
    *
    * @throws Exception if invocation fails unexpectedly
    */
-  @Test
-  @Ignore("Awaiting implementation in #739")
+  @Test(expected = RuntimeException.class)
   public void propagatesExceptionFromExecutor() throws Exception {
-    // Given: A ThreadAffinityDispatcher with an executor that throws RuntimeException
-    // When: execute("fx-thread", callable) is called
-    // Then: The RuntimeException is propagated to the caller
+    ThreadAffinityDispatcher dispatcher = new ThreadAffinityDispatcher();
+    dispatcher.register(
+        "fx-thread",
+        invocation -> {
+          throw new RuntimeException("executor error");
+        });
 
-    // TODO(#739): Implement test logic
-    fail("Not yet implemented");
+    dispatcher.execute("fx-thread", () -> "should not reach");
   }
 }

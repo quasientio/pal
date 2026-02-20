@@ -9,9 +9,11 @@
  */
 package io.quasient.pal.core.execution;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.sameInstance;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-import org.junit.Ignore;
+import java.io.IOException;
 import org.junit.Test;
 
 /**
@@ -29,14 +31,18 @@ public class DirectInvocationExecutorTest {
    * @throws Exception if invocation fails unexpectedly
    */
   @Test
-  @Ignore("Awaiting implementation in #739")
   public void executesCallableDirectly() throws Exception {
-    // Given: A DirectInvocationExecutor instance and a Callable returning "hello"
-    // When: execute(callable) is called
-    // Then: Returns "hello", executes on the calling thread
+    DirectInvocationExecutor executor = new DirectInvocationExecutor();
+    Thread callingThread = Thread.currentThread();
 
-    // TODO(#739): Implement test logic
-    fail("Not yet implemented");
+    Object result =
+        executor.execute(
+            () -> {
+              assertThat(Thread.currentThread(), is(sameInstance(callingThread)));
+              return "hello";
+            });
+
+    assertThat(result, is("hello"));
   }
 
   /**
@@ -44,15 +50,13 @@ public class DirectInvocationExecutorTest {
    *
    * @throws Exception if invocation fails unexpectedly
    */
-  @Test
-  @Ignore("Awaiting implementation in #739")
+  @Test(expected = RuntimeException.class)
   public void propagatesException() throws Exception {
-    // Given: A DirectInvocationExecutor and a Callable that throws RuntimeException
-    // When: execute(callable) is called
-    // Then: RuntimeException is propagated directly
-
-    // TODO(#739): Implement test logic
-    fail("Not yet implemented");
+    DirectInvocationExecutor executor = new DirectInvocationExecutor();
+    executor.execute(
+        () -> {
+          throw new RuntimeException("test error");
+        });
   }
 
   /**
@@ -60,14 +64,12 @@ public class DirectInvocationExecutorTest {
    *
    * @throws Exception if invocation fails unexpectedly
    */
-  @Test
-  @Ignore("Awaiting implementation in #739")
+  @Test(expected = IOException.class)
   public void propagatesCheckedExceptions() throws Exception {
-    // Given: A DirectInvocationExecutor and a Callable that throws IOException
-    // When: execute(callable) is called
-    // Then: IOException is propagated directly
-
-    // TODO(#739): Implement test logic
-    fail("Not yet implemented");
+    DirectInvocationExecutor executor = new DirectInvocationExecutor();
+    executor.execute(
+        () -> {
+          throw new IOException("test io error");
+        });
   }
 }
