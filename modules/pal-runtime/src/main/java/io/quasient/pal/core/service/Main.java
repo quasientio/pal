@@ -337,6 +337,22 @@ public class Main implements Callable<Integer> {
   private boolean interceptable = false;
 
   /**
+   * Flag to enable JavaFX Application Thread execution for RPC calls that request {@code fx-thread}
+   * affinity. When enabled, the peer registers a {@code JavaFxInvocationExecutor} that routes
+   * matching RPC calls to the JavaFX Application Thread via {@code Platform.runLater()}.
+   */
+  @Option(
+      names = {"--fx-thread"},
+      description =
+          "enable JavaFX Application Thread execution for RPC calls that request"
+              + " 'fx-thread' affinity. When using this option, consider --rpc-threads 2+"
+              + " to prevent RPC starvation during long UI operations"
+              + " (default: ${DEFAULT-VALUE})",
+      defaultValue = "false",
+      showDefaultValue = CommandLine.Help.Visibility.ALWAYS)
+  private boolean fxThread;
+
+  /**
    * Flag to include source context in Log messages. When enabled, additional source information is
    * included.
    */
@@ -820,6 +836,14 @@ public class Main implements Callable<Integer> {
       }
     }
 
+    // fx thread via env override if CLI not provided
+    if (!fxThread) {
+      String fxEnv = System.getenv("FX_THREAD");
+      if (fxEnv != null && Boolean.parseBoolean(fxEnv.trim())) {
+        fxThread = true;
+      }
+    }
+
     // exception policy via env override if CLI not provided
     exceptionPolicy = getParameter("EXCEPTION_POLICY", exceptionPolicy);
 
@@ -1170,6 +1194,9 @@ public class Main implements Callable<Integer> {
     if (drainTimeoutMs != null) {
       properties.setProperty("intercept.drain.timeout.ms", String.valueOf(drainTimeoutMs));
     }
+
+    // fx thread execution
+    properties.setProperty("execution.fx.thread.enabled", String.valueOf(fxThread));
 
     // exception policy configuration
     if (exceptionPolicy != null && !exceptionPolicy.isBlank()) {
