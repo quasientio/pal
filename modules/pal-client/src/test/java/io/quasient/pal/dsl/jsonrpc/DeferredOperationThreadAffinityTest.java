@@ -9,9 +9,10 @@
  */
 package io.quasient.pal.dsl.jsonrpc;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -19,9 +20,6 @@ import org.junit.Test;
  *
  * <p>Verifies that the thread affinity property defaults to {@code null} and can be set and
  * retrieved via getter/setter.
- *
- * <p>All tests are skipped until the {@code threadAffinity} field is added to {@link
- * DeferredOperation} in #747.
  */
 public class DeferredOperationThreadAffinityTest {
 
@@ -31,16 +29,9 @@ public class DeferredOperationThreadAffinityTest {
    * <p>Acceptance criterion: [TEST:DeferredOperationThreadAffinityTest.threadAffinityDefaultIsNull]
    */
   @Test
-  @Ignore("Awaiting implementation in #747")
   public void threadAffinityDefaultIsNull() {
-    // Given: DeferredOperation created via any static factory
-    // When:  getThreadAffinity() called
-    // Then:  Returns null
-    //
-    // DeferredOperation op = DeferredOperation.staticMethod("Foo", "bar", null, null);
-    // assertThat(op.getThreadAffinity(), is(nullValue()));
-
-    fail("Not yet implemented — awaiting #747");
+    DeferredOperation op = DeferredOperation.staticMethod("Foo", "bar", null, null);
+    assertThat(op.getThreadAffinity(), is(nullValue()));
   }
 
   /**
@@ -49,16 +40,9 @@ public class DeferredOperationThreadAffinityTest {
    * <p>Acceptance criterion: [TEST:DeferredOperationThreadAffinityTest.threadAffinitySetAndGet]
    */
   @Test
-  @Ignore("Awaiting implementation in #747")
   public void threadAffinitySetAndGet() {
-    // Given: DeferredOperation
-    // When:  setThreadAffinity("fx-thread") then getThreadAffinity()
-    // Then:  Returns "fx-thread"
-    //
-    // DeferredOperation op = DeferredOperation.newInstance("Foo", "var", null);
-    // op.setThreadAffinity("fx-thread");
-    // assertThat(op.getThreadAffinity(), is("fx-thread"));
-
-    fail("Not yet implemented — awaiting #747");
+    DeferredOperation op = DeferredOperation.newInstance("Foo", "var", null);
+    op.setThreadAffinity("fx-thread");
+    assertThat(op.getThreadAffinity(), is("fx-thread"));
   }
 }

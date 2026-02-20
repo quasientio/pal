@@ -83,6 +83,12 @@ public class RpcChain {
   protected final IdGenerator idGenerator;
 
   /**
+   * Thread affinity hint to apply to the next deferred operation. Consumed (reset to {@code null})
+   * after a single operation is added.
+   */
+  private String pendingThreadAffinity;
+
+  /**
    * Constructs an RpcChain with the specified ThinPeer and a default ID generator.
    *
    * @param thinPeer the ThinPeer instance used to send JSON-RPC requests
@@ -274,11 +280,37 @@ public class RpcChain {
   }
 
   /**
-   * Adds a deferred operation to the execution queue.
+   * Sets a custom thread affinity hint to apply to the next operation added to this chain. The
+   * affinity is consumed after a single operation and reset to {@code null}.
+   *
+   * @param affinity the thread affinity string (e.g., {@code "fx-thread"})
+   * @return this RpcChain instance for method chaining
+   */
+  public RpcChain withThreadAffinity(String affinity) {
+    this.pendingThreadAffinity = affinity;
+    return this;
+  }
+
+  /**
+   * Convenience method that sets the thread affinity to {@code "fx-thread"} for the next operation.
+   * Equivalent to {@code withThreadAffinity("fx-thread")}.
+   *
+   * @return this RpcChain instance for method chaining
+   */
+  public RpcChain onFxThread() {
+    return withThreadAffinity("fx-thread");
+  }
+
+  /**
+   * Adds a deferred operation to the execution queue. If a pending thread affinity has been set via
+   * {@link #withThreadAffinity(String)} or {@link #onFxThread()}, it is applied to the operation
+   * and then consumed (reset to {@code null}).
    *
    * @param op the DeferredOperation to add to the queue
    */
   protected void addOperation(DeferredOperation op) {
+    op.setThreadAffinity(pendingThreadAffinity);
+    pendingThreadAffinity = null;
     operations.add(op);
   }
 
@@ -330,35 +362,40 @@ public class RpcChain {
       }
     }
     ObjectRef ref;
+    JsonRpcRequest req;
 
     switch (op.getOpType()) {
       case NEW_INSTANCE -> {
-        return JsonRpcMessageFactory.buildConstructorCall(id, op.getClassName(), argumentList);
+        req = JsonRpcMessageFactory.buildConstructorCall(id, op.getClassName(), argumentList);
       }
       case STATIC_METHOD -> {
-        return JsonRpcMessageFactory.buildClassMethodCall(
-            id, op.getClassName(), op.getMethodName(), argumentList);
+        req =
+            JsonRpcMessageFactory.buildClassMethodCall(
+                id, op.getClassName(), op.getMethodName(), argumentList);
       }
       case INSTANCE_METHOD -> {
         ref = resolveInstanceRef(op.getInstanceVarName(), op.getDirectInstanceRef());
-        return JsonRpcMessageFactory.buildInstanceMethodCall(
-            id, op.getClassName(), op.getMethodName(), ref.getRef(), argumentList);
+        req =
+            JsonRpcMessageFactory.buildInstanceMethodCall(
+                id, op.getClassName(), op.getMethodName(), ref.getRef(), argumentList);
       }
       case STATIC_FIELD_GET -> {
-        return JsonRpcMessageFactory.buildStaticFieldGet(id, op.getClassName(), op.getFieldName());
+        req = JsonRpcMessageFactory.buildStaticFieldGet(id, op.getClassName(), op.getFieldName());
       }
       case STATIC_FIELD_PUT -> {
         if (rawArgs == null || rawArgs.length != 1) {
           throw new IllegalArgumentException("STATIC_FIELD_PUT requires exactly 1 argument");
         }
         Argument valArg = resolveArgument(rawArgs[0]);
-        return JsonRpcMessageFactory.buildStaticFieldPut(
-            id, op.getClassName(), op.getFieldName(), valArg);
+        req =
+            JsonRpcMessageFactory.buildStaticFieldPut(
+                id, op.getClassName(), op.getFieldName(), valArg);
       }
       case INSTANCE_FIELD_GET -> {
         ref = resolveInstanceRef(op.getInstanceVarName(), op.getDirectInstanceRef());
-        return JsonRpcMessageFactory.buildInstanceFieldGet(
-            id, op.getClassName(), ref.getRef(), op.getFieldName());
+        req =
+            JsonRpcMessageFactory.buildInstanceFieldGet(
+                id, op.getClassName(), ref.getRef(), op.getFieldName());
       }
       case INSTANCE_FIELD_PUT -> {
         ref = resolveInstanceRef(op.getInstanceVarName(), op.getDirectInstanceRef());
@@ -366,12 +403,18 @@ public class RpcChain {
           throw new IllegalArgumentException("INSTANCE_FIELD_PUT requires exactly 1 argument");
         }
         Argument valueArg = resolveArgument(rawArgs[0]);
-        return JsonRpcMessageFactory.buildInstanceFieldPut(
-            id, op.getClassName(), ref.getRef(), op.getFieldName(), valueArg);
+        req =
+            JsonRpcMessageFactory.buildInstanceFieldPut(
+                id, op.getClassName(), ref.getRef(), op.getFieldName(), valueArg);
       }
       default ->
           throw new IllegalArgumentException("Unsupported operation type: " + op.getOpType());
     }
+
+    if (op.getThreadAffinity() != null && req.getParams() != null) {
+      req.getParams().setThreadAffinity(op.getThreadAffinity());
+    }
+    return req;
   }
 
   /**

@@ -67,6 +67,13 @@ public class DeferredOperation {
   private String resultVarName;
 
   /**
+   * Optional thread affinity hint for the receiving peer. When set (e.g., {@code "fx-thread"}), the
+   * receiving peer routes execution to the named thread if a matching executor is registered. When
+   * {@code null}, execution proceeds on the invoker thread (default).
+   */
+  @Nullable private String threadAffinity;
+
+  /**
    * Creates a deferred operation to instantiate a new object of the specified class.
    *
    * @param className the fully qualified name of the class to instantiate
@@ -294,5 +301,24 @@ public class DeferredOperation {
    */
   public String getResultVarName() {
     return resultVarName;
+  }
+
+  /**
+   * Retrieves the thread affinity hint for the receiving peer.
+   *
+   * @return the thread affinity string, or {@code null} if not set
+   */
+  @Nullable
+  public String getThreadAffinity() {
+    return threadAffinity;
+  }
+
+  /**
+   * Sets the thread affinity hint for the receiving peer.
+   *
+   * @param threadAffinity the thread affinity string, or {@code null} to unset
+   */
+  public void setThreadAffinity(@Nullable String threadAffinity) {
+    this.threadAffinity = threadAffinity;
   }
 }

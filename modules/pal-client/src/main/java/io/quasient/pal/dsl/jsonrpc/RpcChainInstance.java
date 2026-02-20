@@ -55,6 +55,29 @@ public class RpcChainInstance {
   }
 
   /**
+   * Sets a custom thread affinity hint to apply to the next operation added to this chain. The
+   * affinity is consumed after a single operation and reset to {@code null}.
+   *
+   * @param affinity the thread affinity string (e.g., {@code "fx-thread"})
+   * @return this RpcChainInstance for method chaining
+   */
+  public RpcChainInstance withThreadAffinity(String affinity) {
+    rootChain.withThreadAffinity(affinity);
+    return this;
+  }
+
+  /**
+   * Convenience method that sets the thread affinity to {@code "fx-thread"} for the next operation.
+   * Equivalent to {@code withThreadAffinity("fx-thread")}.
+   *
+   * @return this RpcChainInstance for method chaining
+   */
+  public RpcChainInstance onFxThread() {
+    rootChain.onFxThread();
+    return this;
+  }
+
+  /**
    * Calls an instance method without arguments on the remote object.
    *
    * @param methodName The name of the method to invoke.
