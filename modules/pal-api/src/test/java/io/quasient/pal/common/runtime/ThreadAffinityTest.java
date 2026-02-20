@@ -9,9 +9,11 @@
  */
 package io.quasient.pal.common.runtime;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
 
-import org.junit.Ignore;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Modifier;
 import org.junit.Test;
 
 /**
@@ -30,18 +32,12 @@ public class ThreadAffinityTest {
    * <p>Given: ThreadAffinity.FX_THREAD constant When: Accessed Then: Equals "fx-thread"
    */
   @Test
-  @Ignore("Awaiting implementation in #737")
   public void fxThreadConstantHasExpectedValue() {
-    // Given: ThreadAffinity.FX_THREAD constant
-
-    // When: Accessed
-    // String value = ThreadAffinity.FX_THREAD;
+    // Given/When: ThreadAffinity.FX_THREAD constant accessed
+    String value = ThreadAffinity.FX_THREAD;
 
     // Then: Equals "fx-thread"
-    // assertThat(value, is("fx-thread"));
-
-    // TODO(#737): Uncomment assertions when ThreadAffinity is implemented
-    fail("Not yet implemented");
+    assertThat(value, is("fx-thread"));
   }
 
   /**
@@ -51,26 +47,14 @@ public class ThreadAffinityTest {
    * via reflection.
    *
    * <p>Given: ThreadAffinity class When: Attempting to instantiate via reflection Then: Constructor
-   * is private, throws exception
+   * is private
    */
   @Test
-  @Ignore("Awaiting implementation in #737")
   public void constructorIsPrivate() throws Exception {
     // Given: ThreadAffinity class
-    // Constructor<?> constructor = ThreadAffinity.class.getDeclaredConstructor();
+    Constructor<?> constructor = ThreadAffinity.class.getDeclaredConstructor();
 
-    // When: Attempting to instantiate via reflection
-    // assertThat(java.lang.reflect.Modifier.isPrivate(constructor.getModifiers()), is(true));
-    // constructor.setAccessible(true);
-
-    // Then: Constructor is accessible but class is a utility class with private constructor
-    // try {
-    //   constructor.newInstance();
-    // } catch (InvocationTargetException expected) {
-    //   // Expected if constructor throws
-    // }
-
-    // TODO(#737): Uncomment assertions when ThreadAffinity is implemented
-    fail("Not yet implemented");
+    // Then: Constructor is private
+    assertThat(Modifier.isPrivate(constructor.getModifiers()), is(true));
   }
 }

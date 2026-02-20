@@ -15,7 +15,6 @@ import static org.hamcrest.Matchers.is;
 import com.google.gson.JsonObject;
 import io.quasient.pal.messages.colfer.ClassMethodCall;
 import io.quasient.pal.messages.colfer.ExecMessage;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -36,7 +35,6 @@ public class ExecMessageThreadAffinityTest {
    * has threadAffinity == "fx-thread"
    */
   @Test
-  @Ignore("Awaiting implementation in #737")
   public void roundTripWithThreadAffinity() throws Exception {
     // Given: ExecMessage with threadAffinity set to "fx-thread" and a classMethodCall
     ExecMessage message = new ExecMessage();
@@ -65,7 +63,6 @@ public class ExecMessageThreadAffinityTest {
    * deserialized Then: Deserialized message has threadAffinity == empty string (Colfer default)
    */
   @Test
-  @Ignore("Awaiting implementation in #737")
   public void roundTripWithNullThreadAffinity() throws Exception {
     // Given: ExecMessage with threadAffinity left at default (empty string in Colfer)
     ExecMessage message = new ExecMessage();
@@ -92,7 +89,6 @@ public class ExecMessageThreadAffinityTest {
    * threadAffinity is empty string (Colfer default after init())
    */
   @Test
-  @Ignore("Awaiting implementation in #737")
   public void resetClearsThreadAffinity() {
     // Given: ExecMessage with threadAffinity set to "fx-thread"
     ExecMessage message = new ExecMessage();
@@ -115,7 +111,6 @@ public class ExecMessageThreadAffinityTest {
    * ExecMessage.fromJson(json) is called Then: threadAffinity == "fx-thread"
    */
   @Test
-  @Ignore("Awaiting implementation in #737")
   public void fromJsonParsesThreadAffinity() {
     // Given: JSON object with "threadAffinity": "fx-thread" and required fields
     JsonObject json = new JsonObject();
@@ -139,7 +134,6 @@ public class ExecMessageThreadAffinityTest {
    * Then: threadAffinity is empty string (Colfer default)
    */
   @Test
-  @Ignore("Awaiting implementation in #737")
   public void fromJsonOmittedThreadAffinityIsNull() {
     // Given: JSON object without threadAffinity field
     JsonObject json = new JsonObject();
