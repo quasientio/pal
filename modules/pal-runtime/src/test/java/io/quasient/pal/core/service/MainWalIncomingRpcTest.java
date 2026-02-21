@@ -9,10 +9,14 @@
  */
 package io.quasient.pal.core.service;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
 
-import org.junit.Ignore;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.Set;
 import org.junit.Test;
+import picocli.CommandLine;
 
 /**
  * Tests for the {@code --wal-incoming-rpc} and {@code --wal-all-incoming-rpc} CLI options in {@link
@@ -38,29 +42,21 @@ public class MainWalIncomingRpcTest {
    * @throws Exception if reflection or parsing fails
    */
   @Test
-  @Ignore("Awaiting implementation in #778")
   public void walIncomingRpcFlag_setsRunOption() throws Exception {
-    // Given: CLI args include --wal-incoming-rpc with --wal my-wal and -k localhost:29092
-    // When: Main parses args and validateInput() sets runOptions
-    // Then: runOptions contains WITH_WAL_INCOMING_RPC
+    Main main = new Main();
+    new CommandLine(main)
+        .parseArgs("--wal-incoming-rpc", "--wal", "my-wal", "-k", "localhost:29092");
 
-    // TODO(#778): Implement test logic
-    // Main main = new Main();
-    // new CommandLine(main).parseArgs(
-    //     "--wal-incoming-rpc", "--wal", "my-wal", "-k", "localhost:29092");
-    //
-    // Method validateInput = Main.class.getDeclaredMethod("validateInput");
-    // validateInput.setAccessible(true);
-    // validateInput.invoke(main);
-    //
-    // Field runOptionsField = Main.class.getDeclaredField("runOptions");
-    // runOptionsField.setAccessible(true);
-    // @SuppressWarnings("unchecked")
-    // Set<RunOptions> runOptions = (Set<RunOptions>) runOptionsField.get(main);
-    //
-    // assertThat(runOptions.contains(RunOptions.WITH_WAL_INCOMING_RPC), is(true));
+    Method validateInput = Main.class.getDeclaredMethod("validateInput");
+    validateInput.setAccessible(true);
+    validateInput.invoke(main);
 
-    fail("Not yet implemented");
+    Field runOptionsField = Main.class.getDeclaredField("runOptions");
+    runOptionsField.setAccessible(true);
+    @SuppressWarnings("unchecked")
+    Set<RunOptions> runOptions = (Set<RunOptions>) runOptionsField.get(main);
+
+    assertThat(runOptions.contains(RunOptions.WITH_WAL_INCOMING_RPC), is(true));
   }
 
   /**
@@ -73,30 +69,22 @@ public class MainWalIncomingRpcTest {
    * @throws Exception if reflection or parsing fails
    */
   @Test
-  @Ignore("Awaiting implementation in #778")
   public void walAllIncomingRpcFlag_setsBothRunOptions() throws Exception {
-    // Given: CLI args include --wal-all-incoming-rpc with --wal my-wal and -k localhost:29092
-    // When: Main parses args and validateInput() sets runOptions
-    // Then: runOptions contains both WITH_WAL_INCOMING_RPC and WITH_WAL_ALL_INCOMING_RPC
+    Main main = new Main();
+    new CommandLine(main)
+        .parseArgs("--wal-all-incoming-rpc", "--wal", "my-wal", "-k", "localhost:29092");
 
-    // TODO(#778): Implement test logic
-    // Main main = new Main();
-    // new CommandLine(main).parseArgs(
-    //     "--wal-all-incoming-rpc", "--wal", "my-wal", "-k", "localhost:29092");
-    //
-    // Method validateInput = Main.class.getDeclaredMethod("validateInput");
-    // validateInput.setAccessible(true);
-    // validateInput.invoke(main);
-    //
-    // Field runOptionsField = Main.class.getDeclaredField("runOptions");
-    // runOptionsField.setAccessible(true);
-    // @SuppressWarnings("unchecked")
-    // Set<RunOptions> runOptions = (Set<RunOptions>) runOptionsField.get(main);
-    //
-    // assertThat(runOptions.contains(RunOptions.WITH_WAL_INCOMING_RPC), is(true));
-    // assertThat(runOptions.contains(RunOptions.WITH_WAL_ALL_INCOMING_RPC), is(true));
+    Method validateInput = Main.class.getDeclaredMethod("validateInput");
+    validateInput.setAccessible(true);
+    validateInput.invoke(main);
 
-    fail("Not yet implemented");
+    Field runOptionsField = Main.class.getDeclaredField("runOptions");
+    runOptionsField.setAccessible(true);
+    @SuppressWarnings("unchecked")
+    Set<RunOptions> runOptions = (Set<RunOptions>) runOptionsField.get(main);
+
+    assertThat(runOptions.contains(RunOptions.WITH_WAL_INCOMING_RPC), is(true));
+    assertThat(runOptions.contains(RunOptions.WITH_WAL_ALL_INCOMING_RPC), is(true));
   }
 
   /**
@@ -113,28 +101,20 @@ public class MainWalIncomingRpcTest {
    * @throws Exception if reflection or parsing fails
    */
   @Test
-  @Ignore("Awaiting implementation in #778")
   public void walIncomingRpcFlag_withoutWal_doesNotSetOption() throws Exception {
-    // Given: CLI args include --wal-incoming-rpc but NO --wal flag and NO --tcp-pub
-    // When: Main parses args and validateInput() sets runOptions
-    // Then: runOptions does NOT contain WITH_WAL_INCOMING_RPC (no WAL destination available)
+    Main main = new Main();
+    new CommandLine(main).parseArgs("--wal-incoming-rpc");
 
-    // TODO(#778): Implement test logic
-    // Main main = new Main();
-    // new CommandLine(main).parseArgs("--wal-incoming-rpc");
-    //
-    // Method validateInput = Main.class.getDeclaredMethod("validateInput");
-    // validateInput.setAccessible(true);
-    // validateInput.invoke(main);
-    //
-    // Field runOptionsField = Main.class.getDeclaredField("runOptions");
-    // runOptionsField.setAccessible(true);
-    // @SuppressWarnings("unchecked")
-    // Set<RunOptions> runOptions = (Set<RunOptions>) runOptionsField.get(main);
-    //
-    // assertThat(runOptions.contains(RunOptions.WITH_WAL_INCOMING_RPC), is(false));
+    Method validateInput = Main.class.getDeclaredMethod("validateInput");
+    validateInput.setAccessible(true);
+    validateInput.invoke(main);
 
-    fail("Not yet implemented");
+    Field runOptionsField = Main.class.getDeclaredField("runOptions");
+    runOptionsField.setAccessible(true);
+    @SuppressWarnings("unchecked")
+    Set<RunOptions> runOptions = (Set<RunOptions>) runOptionsField.get(main);
+
+    assertThat(runOptions.contains(RunOptions.WITH_WAL_INCOMING_RPC), is(false));
   }
 
   /**
@@ -150,27 +130,19 @@ public class MainWalIncomingRpcTest {
    * @throws Exception if reflection or parsing fails
    */
   @Test
-  @Ignore("Awaiting implementation in #778")
   public void walIncomingRpcFlag_withTcpPub_setsRunOption() throws Exception {
-    // Given: CLI args include --wal-incoming-rpc with --tcp-pub auto (no --wal)
-    // When: Main parses args and validateInput() sets runOptions
-    // Then: runOptions contains WITH_WAL_INCOMING_RPC (TCP PUB is a valid destination)
+    Main main = new Main();
+    new CommandLine(main).parseArgs("--wal-incoming-rpc", "--tcp-pub", "auto");
 
-    // TODO(#778): Implement test logic
-    // Main main = new Main();
-    // new CommandLine(main).parseArgs("--wal-incoming-rpc", "--tcp-pub", "auto");
-    //
-    // Method validateInput = Main.class.getDeclaredMethod("validateInput");
-    // validateInput.setAccessible(true);
-    // validateInput.invoke(main);
-    //
-    // Field runOptionsField = Main.class.getDeclaredField("runOptions");
-    // runOptionsField.setAccessible(true);
-    // @SuppressWarnings("unchecked")
-    // Set<RunOptions> runOptions = (Set<RunOptions>) runOptionsField.get(main);
-    //
-    // assertThat(runOptions.contains(RunOptions.WITH_WAL_INCOMING_RPC), is(true));
+    Method validateInput = Main.class.getDeclaredMethod("validateInput");
+    validateInput.setAccessible(true);
+    validateInput.invoke(main);
 
-    fail("Not yet implemented");
+    Field runOptionsField = Main.class.getDeclaredField("runOptions");
+    runOptionsField.setAccessible(true);
+    @SuppressWarnings("unchecked")
+    Set<RunOptions> runOptions = (Set<RunOptions>) runOptionsField.get(main);
+
+    assertThat(runOptions.contains(RunOptions.WITH_WAL_INCOMING_RPC), is(true));
   }
 }
