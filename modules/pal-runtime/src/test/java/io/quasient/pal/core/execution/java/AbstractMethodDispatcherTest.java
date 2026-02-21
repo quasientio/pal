@@ -38,4 +38,15 @@ public abstract class AbstractMethodDispatcherTest extends AbstractDispatcherTes
 
   public abstract void dispatchIncoming_throwsNoSuchMethodException_exceptionThrown()
       throws Exception;
+
+  // WAL incoming RPC tests (#775)
+  public abstract void dispatchIncoming_withWalIncomingRpc_sendsBothBeforeAndAfter()
+      throws Exception;
+
+  public abstract void dispatchIncoming_withoutWalIncomingRpc_sendsOnlyAfter() throws Exception;
+
+  public abstract void dispatchIncoming_logRpc_withWalAllIncomingRpc_sendsBothBeforeAndAfter()
+      throws Exception;
+
+  public abstract void dispatchIncoming_logRpc_withWalIncomingRpc_sendsOnlyAfter() throws Exception;
 }

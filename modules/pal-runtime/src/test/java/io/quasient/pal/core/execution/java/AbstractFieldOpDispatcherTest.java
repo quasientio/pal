@@ -43,4 +43,15 @@ public abstract class AbstractFieldOpDispatcherTest extends AbstractDispatcherTe
   public abstract void dispatch_throwable_ok() throws Throwable;
 
   public abstract void dispatchIncoming_throwable_ok() throws Exception;
+
+  // WAL incoming RPC tests (#775)
+  public abstract void dispatchIncoming_withWalIncomingRpc_sendsBothBeforeAndAfter()
+      throws Exception;
+
+  public abstract void dispatchIncoming_withoutWalIncomingRpc_sendsOnlyAfter() throws Exception;
+
+  public abstract void dispatchIncoming_logRpc_withWalAllIncomingRpc_sendsBothBeforeAndAfter()
+      throws Exception;
+
+  public abstract void dispatchIncoming_logRpc_withWalIncomingRpc_sendsOnlyAfter() throws Exception;
 }
