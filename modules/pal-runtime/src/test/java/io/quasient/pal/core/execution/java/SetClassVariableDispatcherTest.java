@@ -20,7 +20,6 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.sameInstance;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
 
 import io.quasient.pal.common.objects.ObjectRef;
 import io.quasient.pal.core.service.RunOptions;
@@ -34,7 +33,6 @@ import java.util.concurrent.Callable;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -708,77 +706,99 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
   /* -------------------------------------------------------*/
 
   @Test
-  @Ignore("Awaiting implementation in #776")
   @Override
   public void dispatchIncoming_withWalIncomingRpc_sendsBothBeforeAndAfter() throws Exception {
-    // Given: runOptions = {WITH_WAL, WITH_WAL_INCOMING_RPC}
-    //        dispatcher created with these runOptions
-    //        incomingMessage built via messageBuilder.buildPutStatic()
-    //        channel = WEBSOCKET_RPC
-    //
-    // When: dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC)
-    //
-    // Then: outboundMessageGateway.sendExecMessage() called exactly 2 times
-    //       first call with ExecPhase.BEFORE, second with ExecPhase.AFTER
+    ExecMessageDispatcher walDispatcher =
+        new SetClassVariableDispatcher(
+            peerUuid,
+            EnumSet.of(RunOptions.WITH_WAL, RunOptions.WITH_WAL_INCOMING_RPC),
+            messageBuilder,
+            outboundMessageGateway,
+            Boolean.TRUE.toString(),
+            objectLookupStore);
 
-    // TODO(#776): Implement test logic
-    fail("Not yet implemented");
+    String fieldName = "someShort";
+    short newFieldValue = 987;
+    String fieldValueClassName = short.class.getName();
+    ExecMessage incomingMessage =
+        messageBuilder.buildPutStatic(
+            peerUuid, targetClass.getName(), fieldName, fieldValueClassName, newFieldValue);
+
+    walDispatcher.dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
+    verifyDispatcherConnectorSendExecMessageCalledTwice();
   }
 
   @Test
-  @Ignore("Awaiting implementation in #776")
   @Override
   public void dispatchIncoming_withoutWalIncomingRpc_sendsOnlyAfter() throws Exception {
-    // Given: runOptions = {WITH_WAL} (no WITH_WAL_INCOMING_RPC)
-    //        dispatcher created with these runOptions
-    //        incomingMessage built via messageBuilder.buildPutStatic()
-    //        channel = WEBSOCKET_RPC
-    //
-    // When: dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC)
-    //
-    // Then: outboundMessageGateway.sendExecMessage() called exactly 1 time (only AFTER)
-    //       backward compatibility: without WITH_WAL_INCOMING_RPC, only AFTER is sent
+    ExecMessageDispatcher walDispatcher =
+        new SetClassVariableDispatcher(
+            peerUuid,
+            EnumSet.of(RunOptions.WITH_WAL),
+            messageBuilder,
+            outboundMessageGateway,
+            Boolean.TRUE.toString(),
+            objectLookupStore);
 
-    // TODO(#776): Implement test logic
-    fail("Not yet implemented");
+    String fieldName = "someShort";
+    short newFieldValue = 987;
+    String fieldValueClassName = short.class.getName();
+    ExecMessage incomingMessage =
+        messageBuilder.buildPutStatic(
+            peerUuid, targetClass.getName(), fieldName, fieldValueClassName, newFieldValue);
+
+    walDispatcher.dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
+    verifyDispatcherConnectorSendExecMessageCalledOnce();
   }
 
   @Test
-  @Ignore("Awaiting implementation in #776")
   @Override
   public void dispatchIncoming_logRpc_withWalAllIncomingRpc_sendsBothBeforeAndAfter()
       throws Exception {
-    // Given: runOptions = {WITH_WAL, WITH_WAL_INCOMING_RPC, WITH_WAL_ALL_INCOMING_RPC}
-    //        sourceAndWalAreSameLog = false
-    //        dispatcher created with these runOptions
-    //        incomingMessage built via messageBuilder.buildPutStatic()
-    //        channel = LOG_RPC
-    //
-    // When: dispatchIncoming(incomingMessage, MessageChannelType.LOG_RPC)
-    //
-    // Then: outboundMessageGateway.sendExecMessage() called exactly 2 times
-    //       LOG_RPC included because WITH_WAL_ALL_INCOMING_RPC is set
+    ExecMessageDispatcher walDispatcher =
+        new SetClassVariableDispatcher(
+            peerUuid,
+            EnumSet.of(
+                RunOptions.WITH_WAL,
+                RunOptions.WITH_WAL_INCOMING_RPC,
+                RunOptions.WITH_WAL_ALL_INCOMING_RPC),
+            messageBuilder,
+            outboundMessageGateway,
+            Boolean.TRUE.toString(),
+            objectLookupStore);
 
-    // TODO(#776): Implement test logic
-    fail("Not yet implemented");
+    String fieldName = "someShort";
+    short newFieldValue = 987;
+    String fieldValueClassName = short.class.getName();
+    ExecMessage incomingMessage =
+        messageBuilder.buildPutStatic(
+            peerUuid, targetClass.getName(), fieldName, fieldValueClassName, newFieldValue);
+
+    walDispatcher.dispatchIncoming(incomingMessage, MessageChannelType.LOG_RPC);
+    verifyDispatcherConnectorSendExecMessageCalledTwice();
   }
 
   @Test
-  @Ignore("Awaiting implementation in #776")
   @Override
   public void dispatchIncoming_logRpc_withWalIncomingRpc_sendsOnlyAfter() throws Exception {
-    // Given: runOptions = {WITH_WAL, WITH_WAL_INCOMING_RPC} (no WITH_WAL_ALL_INCOMING_RPC)
-    //        dispatcher created with these runOptions
-    //        incomingMessage built via messageBuilder.buildPutStatic()
-    //        channel = LOG_RPC
-    //
-    // When: dispatchIncoming(incomingMessage, MessageChannelType.LOG_RPC)
-    //
-    // Then: outboundMessageGateway.sendExecMessage() called exactly 1 time (only AFTER)
-    //       LOG_RPC excluded because WITH_WAL_ALL_INCOMING_RPC is not set
+    ExecMessageDispatcher walDispatcher =
+        new SetClassVariableDispatcher(
+            peerUuid,
+            EnumSet.of(RunOptions.WITH_WAL, RunOptions.WITH_WAL_INCOMING_RPC),
+            messageBuilder,
+            outboundMessageGateway,
+            Boolean.TRUE.toString(),
+            objectLookupStore);
 
-    // TODO(#776): Implement test logic
-    fail("Not yet implemented");
+    String fieldName = "someShort";
+    short newFieldValue = 987;
+    String fieldValueClassName = short.class.getName();
+    ExecMessage incomingMessage =
+        messageBuilder.buildPutStatic(
+            peerUuid, targetClass.getName(), fieldName, fieldValueClassName, newFieldValue);
+
+    walDispatcher.dispatchIncoming(incomingMessage, MessageChannelType.LOG_RPC);
+    verifyDispatcherConnectorSendExecMessageCalledOnce();
   }
 
   // auxiliary class

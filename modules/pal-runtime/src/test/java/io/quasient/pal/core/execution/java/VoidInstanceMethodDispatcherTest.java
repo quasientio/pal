@@ -32,7 +32,6 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -738,77 +737,131 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
   /* -------------------------------------------------------*/
 
   @Test
-  @Ignore("Awaiting implementation in #776")
   @Override
   public void dispatchIncoming_withWalIncomingRpc_sendsBothBeforeAndAfter() throws Exception {
-    // Given: runOptions = {WITH_WAL, WITH_WAL_INCOMING_RPC}
-    //        dispatcher created with these runOptions
-    //        incomingMessage built via messageBuilder.buildInstanceMethod()
-    //        channel = WEBSOCKET_RPC
-    //
-    // When: dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC)
-    //
-    // Then: outboundMessageGateway.sendExecMessage() called exactly 2 times
-    //       first call with ExecPhase.BEFORE, second with ExecPhase.AFTER
+    ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
+    ObjectRef targetObjRef = objectLookupStore.storeObject(target);
 
-    // TODO(#776): Implement test logic
-    fail("Not yet implemented");
+    ExecMessageDispatcher walDispatcher =
+        new InstanceMethodDispatcher(
+            peerUuid,
+            EnumSet.of(RunOptions.WITH_WAL, RunOptions.WITH_WAL_INCOMING_RPC),
+            messageBuilder,
+            outboundMessageGateway,
+            Boolean.TRUE.toString(),
+            reflectionHelper,
+            objectLookupStore);
+
+    String methodName = "addHelloWorld";
+    ExecMessage incomingMessage =
+        messageBuilder.buildInstanceMethod(
+            peerUuid,
+            targetClass.getName(),
+            methodName,
+            targetObjRef,
+            toNames(new Class<?>[] {}),
+            new Object[] {},
+            new ObjectRef[] {});
+
+    walDispatcher.dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
+    verifyDispatcherConnectorSendExecMessageCalledTwice();
   }
 
   @Test
-  @Ignore("Awaiting implementation in #776")
   @Override
   public void dispatchIncoming_withoutWalIncomingRpc_sendsOnlyAfter() throws Exception {
-    // Given: runOptions = {WITH_WAL} (no WITH_WAL_INCOMING_RPC)
-    //        dispatcher created with these runOptions
-    //        incomingMessage built via messageBuilder.buildInstanceMethod()
-    //        channel = WEBSOCKET_RPC
-    //
-    // When: dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC)
-    //
-    // Then: outboundMessageGateway.sendExecMessage() called exactly 1 time (only AFTER)
-    //       backward compatibility: without WITH_WAL_INCOMING_RPC, only AFTER is sent
+    ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
+    ObjectRef targetObjRef = objectLookupStore.storeObject(target);
 
-    // TODO(#776): Implement test logic
-    fail("Not yet implemented");
+    ExecMessageDispatcher walDispatcher =
+        new InstanceMethodDispatcher(
+            peerUuid,
+            EnumSet.of(RunOptions.WITH_WAL),
+            messageBuilder,
+            outboundMessageGateway,
+            Boolean.TRUE.toString(),
+            reflectionHelper,
+            objectLookupStore);
+
+    String methodName = "addHelloWorld";
+    ExecMessage incomingMessage =
+        messageBuilder.buildInstanceMethod(
+            peerUuid,
+            targetClass.getName(),
+            methodName,
+            targetObjRef,
+            toNames(new Class<?>[] {}),
+            new Object[] {},
+            new ObjectRef[] {});
+
+    walDispatcher.dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
+    verifyDispatcherConnectorSendExecMessageCalledOnce();
   }
 
   @Test
-  @Ignore("Awaiting implementation in #776")
   @Override
   public void dispatchIncoming_logRpc_withWalAllIncomingRpc_sendsBothBeforeAndAfter()
       throws Exception {
-    // Given: runOptions = {WITH_WAL, WITH_WAL_INCOMING_RPC, WITH_WAL_ALL_INCOMING_RPC}
-    //        sourceAndWalAreSameLog = false
-    //        dispatcher created with these runOptions
-    //        incomingMessage built via messageBuilder.buildInstanceMethod()
-    //        channel = LOG_RPC
-    //
-    // When: dispatchIncoming(incomingMessage, MessageChannelType.LOG_RPC)
-    //
-    // Then: outboundMessageGateway.sendExecMessage() called exactly 2 times
-    //       LOG_RPC included because WITH_WAL_ALL_INCOMING_RPC is set
+    ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
+    ObjectRef targetObjRef = objectLookupStore.storeObject(target);
 
-    // TODO(#776): Implement test logic
-    fail("Not yet implemented");
+    ExecMessageDispatcher walDispatcher =
+        new InstanceMethodDispatcher(
+            peerUuid,
+            EnumSet.of(
+                RunOptions.WITH_WAL,
+                RunOptions.WITH_WAL_INCOMING_RPC,
+                RunOptions.WITH_WAL_ALL_INCOMING_RPC),
+            messageBuilder,
+            outboundMessageGateway,
+            Boolean.TRUE.toString(),
+            reflectionHelper,
+            objectLookupStore);
+
+    String methodName = "addHelloWorld";
+    ExecMessage incomingMessage =
+        messageBuilder.buildInstanceMethod(
+            peerUuid,
+            targetClass.getName(),
+            methodName,
+            targetObjRef,
+            toNames(new Class<?>[] {}),
+            new Object[] {},
+            new ObjectRef[] {});
+
+    walDispatcher.dispatchIncoming(incomingMessage, MessageChannelType.LOG_RPC);
+    verifyDispatcherConnectorSendExecMessageCalledTwice();
   }
 
   @Test
-  @Ignore("Awaiting implementation in #776")
   @Override
   public void dispatchIncoming_logRpc_withWalIncomingRpc_sendsOnlyAfter() throws Exception {
-    // Given: runOptions = {WITH_WAL, WITH_WAL_INCOMING_RPC} (no WITH_WAL_ALL_INCOMING_RPC)
-    //        dispatcher created with these runOptions
-    //        incomingMessage built via messageBuilder.buildInstanceMethod()
-    //        channel = LOG_RPC
-    //
-    // When: dispatchIncoming(incomingMessage, MessageChannelType.LOG_RPC)
-    //
-    // Then: outboundMessageGateway.sendExecMessage() called exactly 1 time (only AFTER)
-    //       LOG_RPC excluded because WITH_WAL_ALL_INCOMING_RPC is not set
+    ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
+    ObjectRef targetObjRef = objectLookupStore.storeObject(target);
 
-    // TODO(#776): Implement test logic
-    fail("Not yet implemented");
+    ExecMessageDispatcher walDispatcher =
+        new InstanceMethodDispatcher(
+            peerUuid,
+            EnumSet.of(RunOptions.WITH_WAL, RunOptions.WITH_WAL_INCOMING_RPC),
+            messageBuilder,
+            outboundMessageGateway,
+            Boolean.TRUE.toString(),
+            reflectionHelper,
+            objectLookupStore);
+
+    String methodName = "addHelloWorld";
+    ExecMessage incomingMessage =
+        messageBuilder.buildInstanceMethod(
+            peerUuid,
+            targetClass.getName(),
+            methodName,
+            targetObjRef,
+            toNames(new Class<?>[] {}),
+            new Object[] {},
+            new ObjectRef[] {});
+
+    walDispatcher.dispatchIncoming(incomingMessage, MessageChannelType.LOG_RPC);
+    verifyDispatcherConnectorSendExecMessageCalledOnce();
   }
 
   // auxiliary class
