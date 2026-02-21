@@ -459,10 +459,18 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
   /**
    * Dispatches an incoming (via RPC or Log) execution message.
    *
-   * <p>This method validates the message type, writes ahead if not coming from Log, and performs
-   * the loading and invocation phases including argument extraction, accessible object loading, and
-   * target retrieval. It also handles intercept callbacks (BEFORE, AROUND, AFTER) when intercepts
-   * are enabled. Finally, it sends an after-execution message to complete the processing.
+   * <p>This method validates the message type, optionally sends a BEFORE-phase message to WAL/PUB,
+   * and performs the loading and invocation phases including argument extraction, accessible object
+   * loading, and target retrieval. It also handles intercept callbacks (BEFORE, AROUND, AFTER) when
+   * intercepts are enabled. Finally, it sends an AFTER-phase execution message to complete the
+   * processing.
+   *
+   * <p>The BEFORE WAL/PUB send is controlled by {@link RunOptions#WITH_WAL_INCOMING_RPC} and, for
+   * {@link MessageChannelType#LOG_RPC} channels, additionally by {@link
+   * RunOptions#WITH_WAL_ALL_INCOMING_RPC}. This mirrors the hot-path {@link
+   * #dispatch(ProceedingJoinPoint)} behavior where both BEFORE and AFTER messages are sent,
+   * ensuring incoming RPC operations produce the same BEFORE+AFTER message pair in the WAL for
+   * time-travel debugging and event sourcing.
    *
    * @param incomingCall the execution message to process
    * @param messageChannel the transport channel through which the message was received
@@ -524,6 +532,13 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
                 paramTypes,
                 messageType,
                 ExecPhase.BEFORE);
+      }
+
+      // Send BEFORE message to WAL/PUB (consistent with hot-path dispatch())
+      if (shouldWriteIncomingToWal(messageChannel)) {
+        @SuppressWarnings("unused")
+        final ExecMessage beforeExecResponseMsg =
+            messageGateway.sendExecMessage(messageBuilder.wrap(incomingCall), ExecPhase.BEFORE);
       }
 
       Throwable exceptionWhileLoading = null;
@@ -1444,7 +1459,6 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
    * @param messageChannel the transport channel through which the message was received
    * @return true if the incoming message should be written to WAL/PUB
    */
-  @SuppressWarnings("UnusedMethod") // Called from dispatchIncoming() in #776
   private boolean shouldWriteIncomingToWal(MessageChannelType messageChannel) {
     boolean withPubOrWal =
         runOptions.contains(RunOptions.WITH_WAL) || runOptions.contains(RunOptions.WITH_TCP_PUB);
