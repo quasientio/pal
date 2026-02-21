@@ -9,13 +9,29 @@
  */
 package io.quasient.pal.core.execution.java;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import io.quasient.pal.common.objects.ObjectRef;
+import io.quasient.pal.common.runtime.Context;
 import io.quasient.pal.core.service.RunOptions;
 import io.quasient.pal.core.transport.MessageChannelType;
+import io.quasient.pal.messages.colfer.ExecMessage;
+import io.quasient.pal.messages.colfer.Parameter;
+import io.quasient.pal.messages.types.MessageType;
+import java.lang.reflect.AccessibleObject;
+import java.lang.reflect.Method;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.List;
 import java.util.Set;
-import org.junit.Ignore;
+import org.aspectj.lang.ProceedingJoinPoint;
 import org.junit.Test;
+import org.slf4j.LoggerFactory;
 
 /**
  * Unit tests for the {@code shouldWriteIncomingToWal(MessageChannelType)} helper method in {@link
@@ -48,7 +64,6 @@ public class BaseExecMessageDispatcherShouldWriteIncomingToWalTest {
    * @param ro the set of run options to inject
    * @throws Exception if reflection fails
    */
-  @SuppressWarnings("UnusedMethod") // Will be used when #774 removes @Ignore
   private static void setRunOptions(AbstractDispatcher d, Set<RunOptions> ro) throws Exception {
     var f = AbstractDispatcher.class.getDeclaredField("runOptions");
     f.setAccessible(true);
@@ -62,7 +77,6 @@ public class BaseExecMessageDispatcherShouldWriteIncomingToWalTest {
    * @param sameLog whether source log and WAL are the same
    * @throws Exception if reflection fails
    */
-  @SuppressWarnings("UnusedMethod") // Will be used when #774 removes @Ignore
   private static void setSourceAndWalAreSameLog(AbstractDispatcher d, boolean sameLog)
       throws Exception {
     var f = AbstractDispatcher.class.getDeclaredField("sourceAndWalAreSameLog");
@@ -70,19 +84,109 @@ public class BaseExecMessageDispatcherShouldWriteIncomingToWalTest {
     f.setBoolean(d, sameLog);
   }
 
+  /**
+   * Reflection helper to invoke the private {@code shouldWriteIncomingToWal} method.
+   *
+   * @param d the dispatcher instance
+   * @param channel the message channel type
+   * @return the boolean result of the method
+   * @throws Exception if reflection fails
+   */
+  private static boolean invokeShouldWriteIncomingToWal(
+      BaseExecMessageDispatcher d, MessageChannelType channel) throws Exception {
+    Method m =
+        BaseExecMessageDispatcher.class.getDeclaredMethod(
+            "shouldWriteIncomingToWal", MessageChannelType.class);
+    m.setAccessible(true);
+    return (boolean) m.invoke(d, channel);
+  }
+
+  /** Minimal concrete subclass of {@link BaseExecMessageDispatcher} for testing. */
+  static class MinimalOk extends BaseExecMessageDispatcher {
+
+    @Override
+    protected ExecMessage createBeforeExecMessage(
+        Context ctxt,
+        Object sender,
+        Object target,
+        Object[] args,
+        boolean includeDeclaredExceptions) {
+      return new ExecMessage();
+    }
+
+    @Override
+    protected ExecMessage createAfterExecMessage(
+        Context ctxt, Object value, ObjectRef objectRef, boolean isVoid) {
+      return new ExecMessage();
+    }
+
+    @Override
+    protected ExecMessage createAfterExecMessage(
+        ExecMessage execMessage,
+        Object valueObject,
+        ObjectRef valueObjRef,
+        AccessibleObject accessibleObject,
+        Throwable exceptionWhileLoading,
+        Throwable exceptionWhileInvoking) {
+      return new ExecMessage();
+    }
+
+    @Override
+    protected Object invokeIncoming(
+        AccessibleObject accessibleObject,
+        Object target,
+        List<MessageArgument> args,
+        Object value) {
+      return null;
+    }
+
+    @Override
+    protected boolean returnsVoid(AccessibleObject accessibleObject) {
+      return false;
+    }
+
+    @Override
+    protected boolean returnsVoid(ProceedingJoinPoint pjp) {
+      return false;
+    }
+
+    @Override
+    protected MessageType getBeforeExecMessageType() {
+      return MessageType.EXEC_INSTANCE_METHOD;
+    }
+
+    @Override
+    protected List<Parameter> getParameterList(ExecMessage execMessage) {
+      return Collections.emptyList();
+    }
+
+    @Override
+    protected AccessibleObject loadAccessibleObject(
+        ExecMessage execMessage, List<Class<?>> parameterTypes, List<Object> args) {
+      return null;
+    }
+
+    @Override
+    public MessageType getSupportedMessageType() {
+      return MessageType.EXEC_INSTANCE_METHOD;
+    }
+  }
+
   // ---------------------------------------------------------------
   // Test 1: No incoming WAL without explicit opt-in
   // ---------------------------------------------------------------
 
   @Test
-  @Ignore("Awaiting implementation in #774")
   public void shouldWriteIncomingToWal_withoutWalIncomingRpc_returnsFalse() throws Exception {
     // Given: runOptions = {WITH_WAL} (no WITH_WAL_INCOMING_RPC)
-    // When:  shouldWriteIncomingToWal(WEBSOCKET_RPC)
-    // Then:  returns false
+    MinimalOk dispatcher = new MinimalOk();
+    setRunOptions(dispatcher, EnumSet.of(RunOptions.WITH_WAL));
 
-    // TODO(#774): Implement test logic
-    fail("Not yet implemented");
+    // When
+    boolean result = invokeShouldWriteIncomingToWal(dispatcher, MessageChannelType.WEBSOCKET_RPC);
+
+    // Then
+    assertThat(result, is(false));
   }
 
   // ---------------------------------------------------------------
@@ -90,14 +194,16 @@ public class BaseExecMessageDispatcherShouldWriteIncomingToWalTest {
   // ---------------------------------------------------------------
 
   @Test
-  @Ignore("Awaiting implementation in #774")
   public void shouldWriteIncomingToWal_withWalIncomingRpc_zmqSocket_returnsTrue() throws Exception {
     // Given: runOptions = {WITH_WAL, WITH_WAL_INCOMING_RPC}
-    // When:  shouldWriteIncomingToWal(ZMQ_SOCKET_RPC)
-    // Then:  returns true
+    MinimalOk dispatcher = new MinimalOk();
+    setRunOptions(dispatcher, EnumSet.of(RunOptions.WITH_WAL, RunOptions.WITH_WAL_INCOMING_RPC));
 
-    // TODO(#774): Implement test logic
-    fail("Not yet implemented");
+    // When
+    boolean result = invokeShouldWriteIncomingToWal(dispatcher, MessageChannelType.ZMQ_SOCKET_RPC);
+
+    // Then
+    assertThat(result, is(true));
   }
 
   // ---------------------------------------------------------------
@@ -105,14 +211,16 @@ public class BaseExecMessageDispatcherShouldWriteIncomingToWalTest {
   // ---------------------------------------------------------------
 
   @Test
-  @Ignore("Awaiting implementation in #774")
   public void shouldWriteIncomingToWal_withWalIncomingRpc_websocket_returnsTrue() throws Exception {
     // Given: runOptions = {WITH_WAL, WITH_WAL_INCOMING_RPC}
-    // When:  shouldWriteIncomingToWal(WEBSOCKET_RPC)
-    // Then:  returns true
+    MinimalOk dispatcher = new MinimalOk();
+    setRunOptions(dispatcher, EnumSet.of(RunOptions.WITH_WAL, RunOptions.WITH_WAL_INCOMING_RPC));
 
-    // TODO(#774): Implement test logic
-    fail("Not yet implemented");
+    // When
+    boolean result = invokeShouldWriteIncomingToWal(dispatcher, MessageChannelType.WEBSOCKET_RPC);
+
+    // Then
+    assertThat(result, is(true));
   }
 
   // ---------------------------------------------------------------
@@ -120,14 +228,16 @@ public class BaseExecMessageDispatcherShouldWriteIncomingToWalTest {
   // ---------------------------------------------------------------
 
   @Test
-  @Ignore("Awaiting implementation in #774")
   public void shouldWriteIncomingToWal_withWalIncomingRpc_cliRpc_returnsTrue() throws Exception {
     // Given: runOptions = {WITH_WAL, WITH_WAL_INCOMING_RPC}
-    // When:  shouldWriteIncomingToWal(CLI_RPC)
-    // Then:  returns true
+    MinimalOk dispatcher = new MinimalOk();
+    setRunOptions(dispatcher, EnumSet.of(RunOptions.WITH_WAL, RunOptions.WITH_WAL_INCOMING_RPC));
 
-    // TODO(#774): Implement test logic
-    fail("Not yet implemented");
+    // When
+    boolean result = invokeShouldWriteIncomingToWal(dispatcher, MessageChannelType.CLI_RPC);
+
+    // Then
+    assertThat(result, is(true));
   }
 
   // ---------------------------------------------------------------
@@ -135,14 +245,16 @@ public class BaseExecMessageDispatcherShouldWriteIncomingToWalTest {
   // ---------------------------------------------------------------
 
   @Test
-  @Ignore("Awaiting implementation in #774")
   public void shouldWriteIncomingToWal_withWalIncomingRpc_logRpc_returnsFalse() throws Exception {
     // Given: runOptions = {WITH_WAL, WITH_WAL_INCOMING_RPC} (no WITH_WAL_ALL_INCOMING_RPC)
-    // When:  shouldWriteIncomingToWal(LOG_RPC)
-    // Then:  returns false (LOG_RPC excluded without ALL flag)
+    MinimalOk dispatcher = new MinimalOk();
+    setRunOptions(dispatcher, EnumSet.of(RunOptions.WITH_WAL, RunOptions.WITH_WAL_INCOMING_RPC));
 
-    // TODO(#774): Implement test logic
-    fail("Not yet implemented");
+    // When
+    boolean result = invokeShouldWriteIncomingToWal(dispatcher, MessageChannelType.LOG_RPC);
+
+    // Then
+    assertThat(result, is(false));
   }
 
   // ---------------------------------------------------------------
@@ -150,15 +262,23 @@ public class BaseExecMessageDispatcherShouldWriteIncomingToWalTest {
   // ---------------------------------------------------------------
 
   @Test
-  @Ignore("Awaiting implementation in #774")
   public void shouldWriteIncomingToWal_withWalAllIncomingRpc_logRpc_returnsTrue() throws Exception {
     // Given: runOptions = {WITH_WAL, WITH_WAL_INCOMING_RPC, WITH_WAL_ALL_INCOMING_RPC}
     //        sourceAndWalAreSameLog = false
-    // When:  shouldWriteIncomingToWal(LOG_RPC)
-    // Then:  returns true
+    MinimalOk dispatcher = new MinimalOk();
+    setRunOptions(
+        dispatcher,
+        EnumSet.of(
+            RunOptions.WITH_WAL,
+            RunOptions.WITH_WAL_INCOMING_RPC,
+            RunOptions.WITH_WAL_ALL_INCOMING_RPC));
+    setSourceAndWalAreSameLog(dispatcher, false);
 
-    // TODO(#774): Implement test logic
-    fail("Not yet implemented");
+    // When
+    boolean result = invokeShouldWriteIncomingToWal(dispatcher, MessageChannelType.LOG_RPC);
+
+    // Then
+    assertThat(result, is(true));
   }
 
   // ---------------------------------------------------------------
@@ -166,16 +286,24 @@ public class BaseExecMessageDispatcherShouldWriteIncomingToWalTest {
   // ---------------------------------------------------------------
 
   @Test
-  @Ignore("Awaiting implementation in #774")
   public void shouldWriteIncomingToWal_withWalAllIncomingRpc_sameLog_returnsFalse()
       throws Exception {
     // Given: runOptions = {WITH_WAL, WITH_WAL_INCOMING_RPC, WITH_WAL_ALL_INCOMING_RPC}
     //        sourceAndWalAreSameLog = true
-    // When:  shouldWriteIncomingToWal(LOG_RPC)
-    // Then:  returns false (circularity guard overrides WITH_WAL_ALL_INCOMING_RPC)
+    MinimalOk dispatcher = new MinimalOk();
+    setRunOptions(
+        dispatcher,
+        EnumSet.of(
+            RunOptions.WITH_WAL,
+            RunOptions.WITH_WAL_INCOMING_RPC,
+            RunOptions.WITH_WAL_ALL_INCOMING_RPC));
+    setSourceAndWalAreSameLog(dispatcher, true);
 
-    // TODO(#774): Implement test logic
-    fail("Not yet implemented");
+    // When
+    boolean result = invokeShouldWriteIncomingToWal(dispatcher, MessageChannelType.LOG_RPC);
+
+    // Then
+    assertThat(result, is(false));
   }
 
   // ---------------------------------------------------------------
@@ -183,16 +311,24 @@ public class BaseExecMessageDispatcherShouldWriteIncomingToWalTest {
   // ---------------------------------------------------------------
 
   @Test
-  @Ignore("Awaiting implementation in #774")
   public void shouldWriteIncomingToWal_withWalAllIncomingRpc_sameLog_websocket_returnsTrue()
       throws Exception {
     // Given: runOptions = {WITH_WAL, WITH_WAL_INCOMING_RPC, WITH_WAL_ALL_INCOMING_RPC}
     //        sourceAndWalAreSameLog = true
-    // When:  shouldWriteIncomingToWal(WEBSOCKET_RPC)
-    // Then:  returns true (circularity guard only affects LOG_RPC)
+    MinimalOk dispatcher = new MinimalOk();
+    setRunOptions(
+        dispatcher,
+        EnumSet.of(
+            RunOptions.WITH_WAL,
+            RunOptions.WITH_WAL_INCOMING_RPC,
+            RunOptions.WITH_WAL_ALL_INCOMING_RPC));
+    setSourceAndWalAreSameLog(dispatcher, true);
 
-    // TODO(#774): Implement test logic
-    fail("Not yet implemented");
+    // When
+    boolean result = invokeShouldWriteIncomingToWal(dispatcher, MessageChannelType.WEBSOCKET_RPC);
+
+    // Then
+    assertThat(result, is(true));
   }
 
   // ---------------------------------------------------------------
@@ -200,15 +336,18 @@ public class BaseExecMessageDispatcherShouldWriteIncomingToWalTest {
   // ---------------------------------------------------------------
 
   @Test
-  @Ignore("Awaiting implementation in #774")
   public void shouldWriteIncomingToWal_withTcpPubOnly_withWalIncomingRpc_returnsTrue()
       throws Exception {
     // Given: runOptions = {WITH_TCP_PUB, WITH_WAL_INCOMING_RPC} (no WITH_WAL)
-    // When:  shouldWriteIncomingToWal(WEBSOCKET_RPC)
-    // Then:  returns true (WITH_TCP_PUB also triggers the send path)
+    MinimalOk dispatcher = new MinimalOk();
+    setRunOptions(
+        dispatcher, EnumSet.of(RunOptions.WITH_TCP_PUB, RunOptions.WITH_WAL_INCOMING_RPC));
 
-    // TODO(#774): Implement test logic
-    fail("Not yet implemented");
+    // When
+    boolean result = invokeShouldWriteIncomingToWal(dispatcher, MessageChannelType.WEBSOCKET_RPC);
+
+    // Then
+    assertThat(result, is(true));
   }
 
   // ---------------------------------------------------------------
@@ -216,15 +355,17 @@ public class BaseExecMessageDispatcherShouldWriteIncomingToWalTest {
   // ---------------------------------------------------------------
 
   @Test
-  @Ignore("Awaiting implementation in #774")
   public void shouldWriteIncomingToWal_noPubNorWal_withWalIncomingRpc_returnsFalse()
       throws Exception {
     // Given: runOptions = {WITH_WAL_INCOMING_RPC} (no WITH_WAL, no WITH_TCP_PUB)
-    // When:  shouldWriteIncomingToWal(WEBSOCKET_RPC)
-    // Then:  returns false (no destination for messages)
+    MinimalOk dispatcher = new MinimalOk();
+    setRunOptions(dispatcher, EnumSet.of(RunOptions.WITH_WAL_INCOMING_RPC));
 
-    // TODO(#774): Implement test logic
-    fail("Not yet implemented");
+    // When
+    boolean result = invokeShouldWriteIncomingToWal(dispatcher, MessageChannelType.WEBSOCKET_RPC);
+
+    // Then
+    assertThat(result, is(false));
   }
 
   // ---------------------------------------------------------------
@@ -232,15 +373,42 @@ public class BaseExecMessageDispatcherShouldWriteIncomingToWalTest {
   // ---------------------------------------------------------------
 
   @Test
-  @Ignore("Awaiting implementation in #774")
   public void shouldWriteIncomingToWal_withWalAllIncomingRpc_sameLog_logsWarning()
       throws Exception {
     // Given: runOptions = {WITH_WAL, WITH_WAL_INCOMING_RPC, WITH_WAL_ALL_INCOMING_RPC}
     //        sourceAndWalAreSameLog = true
-    // When:  shouldWriteIncomingToWal(LOG_RPC)
-    // Then:  returns false AND a warning is logged (verify using a log appender or similar)
+    MinimalOk dispatcher = new MinimalOk();
+    setRunOptions(
+        dispatcher,
+        EnumSet.of(
+            RunOptions.WITH_WAL,
+            RunOptions.WITH_WAL_INCOMING_RPC,
+            RunOptions.WITH_WAL_ALL_INCOMING_RPC));
+    setSourceAndWalAreSameLog(dispatcher, true);
 
-    // TODO(#774): Implement test logic
-    fail("Not yet implemented");
+    // Attach a ListAppender to capture log output
+    Logger logger = (Logger) LoggerFactory.getLogger(MinimalOk.class);
+    ListAppender<ILoggingEvent> listAppender = new ListAppender<>();
+    listAppender.start();
+    logger.addAppender(listAppender);
+
+    try {
+      // When
+      boolean result = invokeShouldWriteIncomingToWal(dispatcher, MessageChannelType.LOG_RPC);
+
+      // Then: returns false
+      assertThat(result, is(false));
+
+      // Then: warning was logged
+      boolean warningLogged =
+          listAppender.list.stream()
+              .anyMatch(
+                  event ->
+                      event.getLevel() == Level.WARN
+                          && event.getFormattedMessage().contains("circular"));
+      assertThat("Warning should be logged for circularity override", warningLogged, is(true));
+    } finally {
+      logger.detachAppender(listAppender);
+    }
   }
 }

@@ -1430,6 +1430,42 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       String className, String methodName, List<String> paramTypes) {}
 
   /**
+   * Determines whether an incoming message should be written to WAL/PUB.
+   *
+   * <p>The decision considers three factors:
+   *
+   * <ol>
+   *   <li>Whether WAL or TCP PUB is enabled ({@code WITH_WAL} or {@code WITH_TCP_PUB})
+   *   <li>Whether incoming RPC WAL writing is enabled ({@code WITH_WAL_INCOMING_RPC})
+   *   <li>For {@code LOG_RPC} channels: whether {@code WITH_WAL_ALL_INCOMING_RPC} is enabled AND
+   *       source and WAL are not the same log (circularity guard)
+   * </ol>
+   *
+   * @param messageChannel the transport channel through which the message was received
+   * @return true if the incoming message should be written to WAL/PUB
+   */
+  @SuppressWarnings("UnusedMethod") // Called from dispatchIncoming() in #776
+  private boolean shouldWriteIncomingToWal(MessageChannelType messageChannel) {
+    boolean withPubOrWal =
+        runOptions.contains(RunOptions.WITH_WAL) || runOptions.contains(RunOptions.WITH_TCP_PUB);
+    if (!withPubOrWal || !runOptions.contains(RunOptions.WITH_WAL_INCOMING_RPC)) {
+      return false;
+    }
+    if (messageChannel == MessageChannelType.LOG_RPC) {
+      if (!runOptions.contains(RunOptions.WITH_WAL_ALL_INCOMING_RPC)) {
+        return false;
+      }
+      if (sourceAndWalAreSameLog) {
+        logger.warn(
+            "WITH_WAL_ALL_INCOMING_RPC is enabled but source and WAL are the same log;"
+                + " ignoring to prevent circular writes");
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
    * Extracts intercept metadata from an incoming message.
    *
    * @param incomingCall the incoming execution message
