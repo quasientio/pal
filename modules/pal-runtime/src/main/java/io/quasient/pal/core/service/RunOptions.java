@@ -60,6 +60,25 @@ public enum RunOptions {
   /** Enables write-ahead publishing of messages to the Log. */
   WITH_WAL,
 
+  /**
+   * Enables write-ahead logging of incoming RPC calls.
+   *
+   * <p>When enabled, incoming messages from {@code ZMQ_SOCKET_RPC}, {@code WEBSOCKET_RPC}, and
+   * {@code CLI_RPC} channels are written to WAL/PUB in both BEFORE and AFTER phases, consistent
+   * with the hot-path {@code dispatch()} behavior. Messages arriving via {@code LOG_RPC} are
+   * excluded to prevent circular writes; use {@link #WITH_WAL_ALL_INCOMING_RPC} to include those.
+   */
+  WITH_WAL_INCOMING_RPC,
+
+  /**
+   * Extends {@link #WITH_WAL_INCOMING_RPC} to also include {@code LOG_RPC} channel messages.
+   *
+   * <p>This is intended for scenarios where the source log and WAL are different (e.g., consuming
+   * from one Kafka topic while writing WAL to another). When the source log and WAL are the same
+   * log, this option is overridden by the circularity guard to prevent infinite feedback loops.
+   */
+  WITH_WAL_ALL_INCOMING_RPC,
+
   /** Enables sessions - automatically set if any RPC interface is enabled */
   WITH_SESSIONS,
 

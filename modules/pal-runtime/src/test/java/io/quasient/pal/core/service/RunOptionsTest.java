@@ -13,10 +13,8 @@ import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.fail;
 
 import java.util.EnumSet;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -75,14 +73,20 @@ public class RunOptionsTest {
    * <p>Acceptance Criterion: [TEST:RunOptionsTest.withWalIncomingRpc_isDistinctEnumValue]
    */
   @Test
-  @Ignore("Awaiting implementation in #772")
   public void withWalIncomingRpc_isDistinctEnumValue() {
     // Given: The RunOptions enum
     // When: WITH_WAL_INCOMING_RPC is accessed
-    // Then: Enum value exists, is distinct from other values, and can be added to EnumSet
+    RunOptions option = RunOptions.WITH_WAL_INCOMING_RPC;
 
-    // TODO(#772): Implement test logic
-    fail("Not yet implemented");
+    // Then: Enum value exists, is distinct from other values, and can be added to EnumSet
+    assertThat(option, is(notNullValue()));
+    assertThat(option.name(), is("WITH_WAL_INCOMING_RPC"));
+
+    EnumSet<RunOptions> options = EnumSet.of(RunOptions.WITH_WAL);
+    options.add(option);
+    assertThat(options, hasItem(RunOptions.WITH_WAL_INCOMING_RPC));
+    assertThat(options, hasItem(RunOptions.WITH_WAL));
+    assertThat(options.size(), is(2));
   }
 
   /**
@@ -92,14 +96,20 @@ public class RunOptionsTest {
    * <p>Acceptance Criterion: [TEST:RunOptionsTest.withWalAllIncomingRpc_isDistinctEnumValue]
    */
   @Test
-  @Ignore("Awaiting implementation in #772")
   public void withWalAllIncomingRpc_isDistinctEnumValue() {
     // Given: The RunOptions enum
     // When: WITH_WAL_ALL_INCOMING_RPC is accessed
-    // Then: Enum value exists, is distinct from other values, and can be added to EnumSet
+    RunOptions option = RunOptions.WITH_WAL_ALL_INCOMING_RPC;
 
-    // TODO(#772): Implement test logic
-    fail("Not yet implemented");
+    // Then: Enum value exists, is distinct from other values, and can be added to EnumSet
+    assertThat(option, is(notNullValue()));
+    assertThat(option.name(), is("WITH_WAL_ALL_INCOMING_RPC"));
+
+    EnumSet<RunOptions> options = EnumSet.of(RunOptions.WITH_WAL);
+    options.add(option);
+    assertThat(options, hasItem(RunOptions.WITH_WAL_ALL_INCOMING_RPC));
+    assertThat(options, hasItem(RunOptions.WITH_WAL));
+    assertThat(options.size(), is(2));
   }
 
   /**
@@ -113,14 +123,20 @@ public class RunOptionsTest {
    * <p>Acceptance Criterion: [TEST:RunOptionsTest.enumSet_canContainBothNewOptions]
    */
   @Test
-  @Ignore("Awaiting implementation in #772")
   public void enumSet_canContainBothNewOptions() {
     // Given: An EnumSet with WITH_WAL, WITH_WAL_INCOMING_RPC, and WITH_WAL_ALL_INCOMING_RPC
+    EnumSet<RunOptions> options =
+        EnumSet.of(
+            RunOptions.WITH_WAL,
+            RunOptions.WITH_WAL_INCOMING_RPC,
+            RunOptions.WITH_WAL_ALL_INCOMING_RPC);
+
     // When: Checked for containment
     // Then: All three are independently present
-
-    // TODO(#772): Implement test logic
-    fail("Not yet implemented");
+    assertThat(options, hasItem(RunOptions.WITH_WAL));
+    assertThat(options, hasItem(RunOptions.WITH_WAL_INCOMING_RPC));
+    assertThat(options, hasItem(RunOptions.WITH_WAL_ALL_INCOMING_RPC));
+    assertThat(options.size(), is(3));
   }
 
   /**
@@ -135,13 +151,25 @@ public class RunOptionsTest {
    * <p>Acceptance Criterion: [TEST:RunOptionsTest.enumValues_containsAllExpectedOptions]
    */
   @Test
-  @Ignore("Awaiting implementation in #772")
   public void enumValues_containsAllExpectedOptions() {
     // Given: RunOptions.values()
+    RunOptions[] values = RunOptions.values();
+
     // When: Length is checked
     // Then: Contains all 11 expected values (9 existing + 2 new)
+    assertThat(values.length, is(11));
 
-    // TODO(#772): Implement test logic
-    fail("Not yet implemented");
+    EnumSet<RunOptions> allOptions = EnumSet.allOf(RunOptions.class);
+    assertThat(allOptions, hasItem(RunOptions.WITH_PALDIR));
+    assertThat(allOptions, hasItem(RunOptions.WITH_ZMQ_RPC));
+    assertThat(allOptions, hasItem(RunOptions.WITH_JSON_RPC));
+    assertThat(allOptions, hasItem(RunOptions.WITH_TCP_PUB));
+    assertThat(allOptions, hasItem(RunOptions.WITH_INTERCEPTS));
+    assertThat(allOptions, hasItem(RunOptions.WITH_SOURCE_LOG));
+    assertThat(allOptions, hasItem(RunOptions.WITH_WAL));
+    assertThat(allOptions, hasItem(RunOptions.WITH_WAL_INCOMING_RPC));
+    assertThat(allOptions, hasItem(RunOptions.WITH_WAL_ALL_INCOMING_RPC));
+    assertThat(allOptions, hasItem(RunOptions.WITH_SESSIONS));
+    assertThat(allOptions, hasItem(RunOptions.WITH_IN_FLIGHT_TRACKING));
   }
 }
