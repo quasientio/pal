@@ -156,11 +156,13 @@
 
                         <!-- Standalone peer startup tests (issue #483) -->
                         <include>**/core/service/PeerStartupIT.java</include>
+
+                        <!-- Incoming WAL integration tests (issue #780) -->
+                        <include>**/core/service/IncomingWalIT.java</include>
                     </includes>
 
                     <!-- exclude ITs that are already executed via the suites -->
                     <excludes>
-                        <exclude>**/core/**/*IT.java</exclude>
                         <exclude>**/intercept/**/*IT.java</exclude>
                     </excludes>
                 </configuration>

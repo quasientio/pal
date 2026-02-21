@@ -9,14 +9,21 @@
  */
 package io.quasient.pal.core.service;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.not;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import io.quasient.pal.PeerProcess;
 import io.quasient.pal.cli.AbstractCliIT;
+import java.util.UUID;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Integration tests for incoming WAL/PUB behavior.
@@ -36,6 +43,11 @@ import org.junit.Test;
  * @see <a href="https://github.com/quasient/pal/issues/779">Issue #779</a>
  */
 public class IncomingWalIT extends AbstractCliIT {
+
+  private static final Logger logger = LoggerFactory.getLogger(IncomingWalIT.class);
+
+  /** Test application class used for RPC invocations. */
+  private static final String METHODS_CLASS = "io.quasient.pal.apps.quantized.rpc.Methods";
 
   /** Peer process launched for testing, or null if not launched. */
   private PeerProcess peerProcess;
@@ -71,38 +83,82 @@ public class IncomingWalIT extends AbstractCliIT {
    * Verifies that incoming RPC writes both BEFORE and AFTER messages to WAL when {@code
    * --wal-incoming-rpc} is enabled.
    *
-   * <p>Given: Peer launched with {@code --wal <topic> --wal-incoming-rpc --rpc auto -k <kafka> -d
-   * <etcd>} running a woven app JAR with a callable method
+   * <p>Given: Peer launched with {@code --wal <topic> --wal-incoming-rpc --zmq-rpc auto -k <kafka>
+   * -d <etcd>} running a woven app JAR with a callable method
    *
-   * <p>When: {@code pal call -d <etcd> -p <peer-uuid> com.example.TestClass.testMethod} invoked
+   * <p>When: {@code pal call -d <etcd> -p <peer-name> -m processArgs
+   * io.quasient.pal.apps.quantized.rpc.Methods wal-test-arg} invoked
    *
-   * <p>Then: {@code pal print -d <etcd> -l <wal-topic>} shows both the BEFORE message
-   * (instanceMethodCall with no returnValue) and the AFTER message (with returnValue) for the
-   * incoming RPC call
+   * <p>Then: {@code pal print -d <etcd> -l <wal-topic>} shows both the BEFORE message (call to
+   * processArgs) and the AFTER message (with return value PROCESSED) for the incoming RPC call
    *
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #780")
   public void incomingRpc_withWalIncomingRpc_writesBothBeforeAndAfterToWal() throws Exception {
-    // Given: Peer launched with --wal-incoming-rpc flag and RPC enabled
-    //   - Create unique Kafka topic for WAL
-    //   - Launch peer with: -d <etcd> -k <kafka> --wal <topic> --wal-incoming-rpc --zmq-rpc auto
-    //   - Use woven app from itt-apps classpath
-    //   - Keep peer alive with --as-service
+    String palDirectory = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    String walName = "test-iwal-both-" + generateId();
+    String peerName = "test-iwal-both-" + generateId();
+    UUID peerId = UUID.randomUUID();
 
-    // When: Invoke a method on the peer via pal call
-    //   - runCall(-d, <etcd>, -p, <peer-name>, --rpc-type, ZMQ_RPC, -m, <method>, <class>, args)
-    //   - Wait for call to complete successfully (exit code 0)
+    // Given: Peer launched with --wal-incoming-rpc flag and RPC enabled
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDirectory,
+            "-k",
+            kafkaServers,
+            "-n",
+            peerName,
+            "--wal",
+            walName,
+            "--wal-incoming-rpc",
+            "--zmq-rpc",
+            "auto",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    // When: Invoke processArgs method on the peer via pal call
+    CliProcessResult callResult =
+        runCall(
+            "-d",
+            palDirectory,
+            "-p",
+            peerName,
+            "--rpc-type",
+            "ZMQ_RPC",
+            "-m",
+            "processArgs",
+            METHODS_CLASS,
+            "wal-test-arg");
+
+    assertEquals("Expected successful call", 0, callResult.exitCode());
+    assertThat("Expected processed output", callResult.stdout(), containsString("PROCESSED"));
+
+    // Stop peer to flush WAL
+    stopPeer(peerProcess);
+    peerProcess = null;
+
+    // Brief delay to let Kafka commit
+    Thread.sleep(1000);
 
     // Then: WAL contains both BEFORE and AFTER messages for the incoming RPC
-    //   - runPrint(-d, <etcd>, -l, <wal-topic>, --full)
-    //   - Verify BEFORE message: contains instanceMethodCall with no returnValue
-    //   - Verify AFTER message: contains returnValue for the same method
-    //   - Total message count includes both BEFORE and AFTER for the incoming call
+    CliProcessResult printResult = runPrint("-d", palDirectory, "-l", walName);
+    assertEquals("Expected successful print", 0, printResult.exitCode());
 
-    // TODO(#780): Implement test logic
-    fail("Not yet implemented");
+    String output = printResult.stdout();
+    // With --wal-incoming-rpc, BEFORE message (call) should be present for processArgs
+    assertThat(
+        "Expected BEFORE message for processArgs in WAL",
+        output,
+        containsString("call Methods.processArgs"));
+    // AFTER message (return) should also be in WAL
+    assertThat("Expected AFTER message with return value", output, containsString("PROCESSED"));
+
+    logger.info("Successfully verified both BEFORE and AFTER messages in WAL for incoming RPC");
   }
 
   /**
@@ -118,26 +174,68 @@ public class IncomingWalIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #780")
   public void incomingRpc_withoutWalIncomingRpc_writesOnlyAfterToWal() throws Exception {
-    // Given: Peer launched WITHOUT --wal-incoming-rpc flag (default behavior)
-    //   - Create unique Kafka topic for WAL
-    //   - Launch peer with: -d <etcd> -k <kafka> --wal <topic> --zmq-rpc auto
-    //   - Use woven app from itt-apps classpath
-    //   - Keep peer alive with --as-service
+    String palDirectory = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    String walName = "test-iwal-after-" + generateId();
+    String peerName = "test-iwal-after-" + generateId();
+    UUID peerId = UUID.randomUUID();
 
-    // When: Invoke a method on the peer via pal call
-    //   - runCall(-d, <etcd>, -p, <peer-name>, --rpc-type, ZMQ_RPC, -m, <method>, <class>, args)
-    //   - Wait for call to complete successfully (exit code 0)
+    // Given: Peer launched WITHOUT --wal-incoming-rpc flag (default behavior)
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDirectory,
+            "-k",
+            kafkaServers,
+            "-n",
+            peerName,
+            "--wal",
+            walName,
+            "--zmq-rpc",
+            "auto",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    // When: Invoke processArgs method on the peer via pal call
+    CliProcessResult callResult =
+        runCall(
+            "-d",
+            palDirectory,
+            "-p",
+            peerName,
+            "--rpc-type",
+            "ZMQ_RPC",
+            "-m",
+            "processArgs",
+            METHODS_CLASS,
+            "wal-test-arg");
+
+    assertEquals("Expected successful call", 0, callResult.exitCode());
+    assertThat("Expected processed output", callResult.stdout(), containsString("PROCESSED"));
+
+    // Stop peer to flush WAL
+    stopPeer(peerProcess);
+    peerProcess = null;
+
+    Thread.sleep(1000);
 
     // Then: WAL contains only the AFTER message (no BEFORE for incoming RPC)
-    //   - runPrint(-d, <etcd>, -l, <wal-topic>, --full)
-    //   - Verify AFTER message: contains returnValue
-    //   - Verify NO BEFORE message for the incoming RPC call
-    //   - Compare message count to the --wal-incoming-rpc test (should have fewer messages)
+    CliProcessResult printResult = runPrint("-d", palDirectory, "-l", walName);
+    assertEquals("Expected successful print", 0, printResult.exitCode());
 
-    // TODO(#780): Implement test logic
-    fail("Not yet implemented");
+    String output = printResult.stdout();
+    // Without --wal-incoming-rpc, NO BEFORE message for processArgs in WAL
+    assertThat(
+        "Expected no BEFORE message for processArgs",
+        output,
+        not(containsString("call Methods.processArgs")));
+    // AFTER message should still be present (existing behavior unchanged)
+    assertThat("Expected AFTER message with return value", output, containsString("PROCESSED"));
+
+    logger.info("Successfully verified backward compatibility: only AFTER in WAL without flag");
   }
 
   /**
@@ -155,26 +253,79 @@ public class IncomingWalIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #780")
   public void logRpc_withWalAllIncomingRpc_differentLogs_writesBothToWal() throws Exception {
-    // Given: Source log populated by a previously-run peer, WAL is a different topic
-    //   - Create unique Kafka topics for source-log and WAL (different topics)
-    //   - Launch a "producer" peer with: --wal <source-topic> to populate the source log
-    //   - Wait for producer peer to complete and generate messages
-    //   - Launch a "consumer" peer with: --source-log <source-topic> --wal <wal-topic>
-    //     --wal-all-incoming-rpc -k <kafka> -d <etcd>
+    String palDirectory = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    String sourceLogName = "test-iwal-source-" + generateId();
+    String walLogName = "test-iwal-wal-" + generateId();
 
-    // When: Consumer peer replays messages from source log
-    //   - joinPeer() to wait for replay to complete
+    // Step 1: Launch producer peer to populate source log by running Methods.main()
+    UUID producerId = UUID.randomUUID();
+    peerProcess =
+        launchPeer(
+            producerId,
+            "-d",
+            palDirectory,
+            "-k",
+            kafkaServers,
+            "--wal",
+            sourceLogName,
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
 
-    // Then: WAL topic contains both BEFORE and AFTER messages for replayed operations
-    //   - runPrint(-d, <etcd>, -l, <wal-topic>, --full)
-    //   - Verify BEFORE messages present for replayed operations
-    //   - Verify AFTER messages present for replayed operations
-    //   - Each operation should have a BEFORE+AFTER pair in the WAL
+    // Wait for producer to complete (Methods.main() runs and exits)
+    int producerExitCode = joinPeer(peerProcess, 15);
+    assertEquals("Expected successful producer exit", 0, producerExitCode);
+    peerProcess = null;
 
-    // TODO(#780): Implement test logic
-    fail("Not yet implemented");
+    // Verify source log has messages
+    CliProcessResult sourceCheck = runPrint("-d", palDirectory, "-l", sourceLogName);
+    assertEquals("Expected successful source print", 0, sourceCheck.exitCode());
+    assertThat("Expected messages in source log", sourceCheck.stdout().length(), greaterThan(0));
+
+    // Step 2: Launch consumer peer with --wal-all-incoming-rpc and different WAL topic
+    UUID consumerId = UUID.randomUUID();
+    secondaryPeerProcess =
+        launchPeer(
+            consumerId,
+            "-d",
+            palDirectory,
+            "-k",
+            kafkaServers,
+            "-s",
+            sourceLogName,
+            "-w",
+            walLogName,
+            "--wal-all-incoming-rpc",
+            "-cp",
+            getIttAppsClasspath());
+
+    // Wait for consumer to process messages from source log
+    Thread.sleep(8000);
+
+    // Stop consumer to flush WAL
+    stopPeer(secondaryPeerProcess);
+    secondaryPeerProcess = null;
+
+    Thread.sleep(1000);
+
+    // Step 3: Verify WAL contains messages from replayed operations
+    CliProcessResult walPrint = runPrint("-d", palDirectory, "-l", walLogName);
+    assertEquals("Expected successful WAL print", 0, walPrint.exitCode());
+
+    String walOutput = walPrint.stdout();
+    assertThat("Expected messages in WAL", walOutput.length(), greaterThan(0));
+    // With --wal-all-incoming-rpc, BEFORE (call) messages should be present from LOG_RPC
+    assertThat(
+        "Expected BEFORE messages in WAL (call entries)", walOutput, containsString("call "));
+    // AFTER (return) messages should also be present
+    assertThat(
+        "Expected AFTER messages in WAL (return entries)", walOutput, containsString("return "));
+
+    logger.info(
+        "Successfully verified LOG_RPC messages written to different WAL with"
+            + " --wal-all-incoming-rpc");
   }
 
   /**
@@ -191,27 +342,87 @@ public class IncomingWalIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #780")
   public void logRpc_withSameLog_walAllIncomingRpc_doesNotDuplicate() throws Exception {
-    // Given: Peer using same Kafka topic for source-log and WAL
-    //   - Create unique Kafka topic (used as both source and WAL)
-    //   - Launch a "producer" peer to populate the topic first
-    //   - Wait for producer peer to complete
-    //   - Launch a "consumer" peer with: --log <same-topic> --wal-all-incoming-rpc
-    //     -k <kafka> -d <etcd>
-    //   - The --log flag uses the same topic for both reading and writing
+    String palDirectory = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    String logName = "test-iwal-same-" + generateId();
 
-    // When: Consumer peer reads from the log
-    //   - joinPeer() to wait for peer to process messages
+    // Step 1: Launch producer peer to populate the log with Methods.main() messages
+    UUID producerId = UUID.randomUUID();
+    peerProcess =
+        launchPeer(
+            producerId,
+            "-d",
+            palDirectory,
+            "-k",
+            kafkaServers,
+            "--log",
+            logName,
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
 
-    // Then: Circularity guard prevents duplicate BEFORE messages
-    //   - runPrint(-d, <etcd>, -l, <same-topic>, --full)
-    //   - Verify message count: no duplicated BEFORE messages from re-writing
-    //   - Verify peer log file contains warning about circularity guard
-    //     (peerProcess.containsLogLine() or waitForLogLine() for warning pattern)
-    //   - The WAL should contain only the original messages, not re-written copies
+    // Wait for producer to complete
+    int producerExitCode = joinPeer(peerProcess, 15);
+    assertEquals("Expected successful producer exit", 0, producerExitCode);
+    peerProcess = null;
 
-    // TODO(#780): Implement test logic
-    fail("Not yet implemented");
+    // Count original messages in log
+    CliProcessResult originalPrint = runPrint("-d", palDirectory, "-l", logName);
+    assertEquals("Expected successful print", 0, originalPrint.exitCode());
+    long originalLineCount = originalPrint.stdout().lines().filter(l -> !l.isBlank()).count();
+    assertThat("Expected messages in log", originalLineCount, greaterThan(0L));
+
+    logger.info("Original message count in log: {}", originalLineCount);
+
+    // Step 2: Launch consumer with same log (--log) and --wal-all-incoming-rpc
+    // The circularity guard should prevent BEFORE writes since source == WAL
+    UUID consumerId = UUID.randomUUID();
+    secondaryPeerProcess =
+        launchPeer(
+            consumerId,
+            "-d",
+            palDirectory,
+            "-k",
+            kafkaServers,
+            "--log",
+            logName,
+            "--wal-all-incoming-rpc",
+            "-cp",
+            getIttAppsClasspath());
+
+    // Wait for consumer to process messages
+    Thread.sleep(8000);
+
+    // Step 3: Verify circularity guard warning in consumer's log
+    assertTrue(
+        "Expected circularity guard warning in consumer log",
+        secondaryPeerProcess.containsLogLine(
+            "source and WAL are the same log.*ignoring to prevent circular writes"));
+
+    // Stop consumer to flush WAL
+    stopPeer(secondaryPeerProcess);
+    secondaryPeerProcess = null;
+
+    Thread.sleep(1000);
+
+    // Step 4: Verify no unbounded message growth
+    CliProcessResult afterPrint = runPrint("-d", palDirectory, "-l", logName);
+    assertEquals("Expected successful print after consumer", 0, afterPrint.exitCode());
+    long afterLineCount = afterPrint.stdout().lines().filter(l -> !l.isBlank()).count();
+
+    logger.info(
+        "Message count after consumer: {} (original: {})", afterLineCount, originalLineCount);
+
+    // With circularity guard, BEFORE messages are NOT written back.
+    // AFTER messages may still be written (existing behavior not guarded by
+    // shouldWriteIncomingToWal).
+    // The source log reader already skips self-produced offsets, preventing infinite loops.
+    // The message count should not have grown unboundedly.
+    assertThat(
+        "Message count should not have grown unboundedly (circularity guard)",
+        afterLineCount < originalLineCount * 3);
+
+    logger.info("Successfully verified circularity guard prevents unbounded message growth");
   }
 }
