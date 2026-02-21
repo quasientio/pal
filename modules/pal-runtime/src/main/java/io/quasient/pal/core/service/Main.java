@@ -67,6 +67,7 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
@@ -212,6 +213,28 @@ public class Main implements Callable<Integer> {
               + " Pal generate a Kafka topic name with --log-prefix ('auto' works only with"
               + " <pal_directory>). Use 'file:/path' for Chronicle queue (absolute or relative path).")
   private String wal; // corresponding ENV var: WAL
+
+  /**
+   * Flag to enable writing incoming RPC calls (from ZMQ, JSON-RPC, and CLI channels) to WAL/PUB in
+   * both BEFORE and AFTER phases, consistent with the hot-path {@code dispatch()} behavior.
+   * Messages arriving via LOG_RPC are excluded; use {@code --wal-all-incoming-rpc} to include
+   * those.
+   */
+  @Option(
+      names = {"--wal-incoming-rpc"},
+      description = "Write incoming RPC calls to WAL (in addition to locally-initiated calls)")
+  private boolean walIncomingRpc = false;
+
+  /**
+   * Flag to enable writing ALL incoming RPC calls to WAL/PUB, including LOG_RPC channel messages.
+   * Implies {@code --wal-incoming-rpc}. Intended for scenarios where the source log and WAL are
+   * different; when they are the same log, the circularity guard overrides this option.
+   */
+  @Option(
+      names = {"--wal-all-incoming-rpc"},
+      description =
+          "Write ALL incoming RPC calls to WAL including LOG_RPC" + " (implies --wal-incoming-rpc)")
+  private boolean walAllIncomingRpc = false;
 
   /**
    * Log configuration specifying the Log name for both reading and writing. Using 'auto' works only
@@ -939,6 +962,19 @@ public class Main implements Callable<Integer> {
       runOptions.add(RunOptions.WITH_TCP_PUB);
     }
 
+    if (walIncomingRpc || walAllIncomingRpc) {
+      if (runOptions.contains(RunOptions.WITH_WAL)
+          || runOptions.contains(RunOptions.WITH_TCP_PUB)) {
+        runOptions.add(RunOptions.WITH_WAL_INCOMING_RPC);
+      }
+    }
+    if (walAllIncomingRpc) {
+      if (runOptions.contains(RunOptions.WITH_WAL)
+          || runOptions.contains(RunOptions.WITH_TCP_PUB)) {
+        runOptions.add(RunOptions.WITH_WAL_ALL_INCOMING_RPC);
+      }
+    }
+
     // ensure that if offset was given, a log name to read from was also given
     if (startOffset != null && (sourceLog == null || sourceLog.equalsIgnoreCase("auto"))) {
       fatalExit(null, PeerException.FatalCode.ERROR_NO_LOG_GIVEN);
@@ -1197,6 +1233,10 @@ public class Main implements Callable<Integer> {
 
     // fx thread execution
     properties.setProperty("execution.fx.thread.enabled", String.valueOf(fxThread));
+
+    // source-log and WAL same-log determination (circularity guard for incoming WAL writes)
+    properties.setProperty(
+        "log.sourceAndWalAreSameLog", String.valueOf(Objects.equals(sourceLog, wal)));
 
     // exception policy configuration
     if (exceptionPolicy != null && !exceptionPolicy.isBlank()) {

@@ -9,6 +9,7 @@
  */
 package io.quasient.pal.core.execution.java;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.quasient.pal.core.execution.ThreadAffinityDispatcher;
 import io.quasient.pal.core.execution.java.reflect.ReflectionHelper;
 import io.quasient.pal.core.intercept.AroundInterceptChainBuilder;
@@ -74,6 +75,15 @@ abstract class AbstractDispatcher {
 
   /** Tracker for in-flight dispatch operations, used for intercept coordination. */
   protected InFlightDispatchTracker inFlightDispatchTracker;
+
+  /**
+   * Whether the source log and WAL refer to the same log. Used as a circularity guard to prevent
+   * infinite feedback loops when writing incoming LOG_RPC messages to WAL.
+   */
+  @SuppressFBWarnings(
+      value = "URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD",
+      justification = "Wired for use by dispatchIncoming() in BaseExecMessageDispatcher")
+  protected boolean sourceAndWalAreSameLog;
 
   /**
    * Dispatcher for routing invocations based on thread affinity (e.g., FX thread).
@@ -224,5 +234,20 @@ abstract class AbstractDispatcher {
   @Inject
   final void setThreadAffinityDispatcher(ThreadAffinityDispatcher threadAffinityDispatcher) {
     this.threadAffinityDispatcher = threadAffinityDispatcher;
+  }
+
+  /**
+   * Sets whether the source log and WAL are the same log.
+   *
+   * <p>When {@code true}, the {@code WITH_WAL_ALL_INCOMING_RPC} option is overridden by a
+   * circularity guard to prevent infinite feedback loops from writing LOG_RPC messages back to the
+   * same log they were read from.
+   *
+   * @param sourceAndWalAreSameLog string representation of the boolean flag
+   */
+  @Inject
+  final void setSourceAndWalAreSameLog(
+      @Named("log.sourceAndWalAreSameLog") String sourceAndWalAreSameLog) {
+    this.sourceAndWalAreSameLog = Boolean.parseBoolean(sourceAndWalAreSameLog);
   }
 }

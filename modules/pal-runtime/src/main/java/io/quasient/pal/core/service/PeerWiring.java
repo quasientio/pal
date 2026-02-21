@@ -189,6 +189,10 @@ public class PeerWiring extends AbstractModule {
   @Override
   protected void configure() {
 
+    // Default sourceAndWalAreSameLog to false when not set by Main.addMiscProperties()
+    // (e.g., when PeerWiring is used directly in benchmarks or tests).
+    properties.putIfAbsent("log.sourceAndWalAreSameLog", "false");
+
     Names.bindProperties(binder(), properties);
 
     // bind implementations
