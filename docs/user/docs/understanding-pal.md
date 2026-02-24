@@ -11,10 +11,12 @@ calculator.add(2, 3);  // Happens, then gone forever
 PAL reifies operations as messages:
 
 ```java
-calculator.add(2, 3);  // Becomes a persistent, inspectable message
+calculator.add(2, 3);
+// → ExecMessage { class: "Calculator", method: "add", args: [2, 3] }
+// The operation persists, can be replayed, routed, intercepted
 ```
 
-This simple change has profound implications.
+Same code, but now every operation is a first-class entity. This has profound implications.
 
 ## Quantization: Operations Become Messages
 
@@ -126,7 +128,7 @@ paymentService.charge(card, 100.00);
 paymentService.charge(card, 100.00);
 
 // Later: Replay the entire execution
-pal print -l payment-log --output-format FULL
+pal print -l payment-log --full
 // See exact sequence: charge() → validate() → authorize() → capture()
 
 // Or replay to reproduce a bug
@@ -186,12 +188,16 @@ public int calculateDiscount(Order order) {
 }
 
 // But at runtime, register an intercept:
-InterceptRequest intercept = InterceptRequest.builder()
-    .classPattern("OrderService")
-    .methodPattern("calculateDiscount")
-    .interceptType(InterceptType.AROUND)
-    .callbackPeer(myCallbackPeer)
-    .build();
+InterceptRequest<InterceptableMethodCall> intercept =
+    new InterceptRequest<>(
+        UUID.randomUUID(),
+        myCallbackPeer,
+        InterceptType.AROUND,
+        "com.example.OrderService",
+        "com.example.DiscountOverride",
+        "applyNewDiscount",
+        new InterceptableMethodCall(
+            "calculateDiscount", Arrays.asList("com.example.Order")));
 
 // Now when calculateDiscount() is called:
 // 1. Message created: {method: "calculateDiscount", args: [order]}
@@ -344,12 +350,16 @@ Intercepts are dynamic callbacks registered at runtime.
 
 ```java
 // Register an intercept
-InterceptRequest intercept = InterceptRequest.builder()
-    .classPattern("com.example.OrderService")
-    .methodPattern("processOrder")
-    .interceptType(InterceptType.BEFORE)
-    .callbackPeer("monitor-peer-uuid")
-    .build();
+InterceptRequest<InterceptableMethodCall> intercept =
+    new InterceptRequest<>(
+        UUID.randomUUID(),                   // intercept ID
+        monitorPeerUuid,                     // callback peer
+        InterceptType.BEFORE,                // type
+        "com.example.OrderService",          // class to intercept
+        "com.example.OrderMonitor",          // callback class
+        "onBeforeProcessOrder",              // callback method
+        new InterceptableMethodCall(
+            "processOrder", Arrays.asList("com.example.Order")));
 palDirectory.createIntercept(intercept);
 
 // Now when any peer calls OrderService.processOrder():
@@ -435,7 +445,7 @@ public class Main {
 mvn compile  # aspectj-maven-plugin configured
 
 # Run with PAL
-pal run --wal payment-log --rpc auto -cp app.jar Main
+pal run --wal payment-log --json-rpc auto -cp app.jar Main
 
 # Now:
 # - Every method call is logged to payment-log

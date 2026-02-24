@@ -79,12 +79,14 @@ public class UserServiceTest {
     @Test
     public void testCreateUserSavesToDatabase() {
         // Register intercept for database save
-        InterceptRequest intercept = InterceptRequest.builder()
-            .classPattern("com.example.app.DatabaseService")
-            .methodPattern("save")
-            .interceptType(InterceptType.BEFORE)
-            .callbackPeer(callbackPeerUuid)
-            .build();
+        InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
+            UUID.randomUUID(),
+            callbackPeerUuid,
+            InterceptType.BEFORE,
+            "com.example.app.DatabaseService",
+            "com.example.app.DatabaseCallback",
+            "handle",
+            new InterceptableMethodCall("save", Collections.emptyList()));
         directory.createIntercept(intercept);
 
         // Call application
@@ -108,12 +110,14 @@ public class UserServiceTest {
     @Test
     public void testCreateUserSendsWelcomeEmail() {
         // Register intercept for email service
-        InterceptRequest intercept = InterceptRequest.builder()
-            .classPattern("com.example.app.EmailService")
-            .methodPattern("sendWelcome")
-            .interceptType(InterceptType.BEFORE)
-            .callbackPeer(callbackPeerUuid)
-            .build();
+        InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
+            UUID.randomUUID(),
+            callbackPeerUuid,
+            InterceptType.BEFORE,
+            "com.example.app.EmailService",
+            "com.example.app.EmailCallback",
+            "handle",
+            new InterceptableMethodCall("sendWelcome", Collections.emptyList()));
         directory.createIntercept(intercept);
 
         // Call application
@@ -141,7 +145,7 @@ public class UserServiceTest {
             "pal", "run",
             "-d", "localhost:2379",
             "--interceptable",
-            "--rpc", "auto",
+            "--json-rpc", "auto",
             "-cp", "target/app.jar",
             "com.example.app.Main"
         );
@@ -173,12 +177,14 @@ public class UserServiceTest {
 @Test
 public void testMethodWasCalled() {
     // Setup intercept
-    InterceptRequest intercept = InterceptRequest.builder()
-        .classPattern("com.example.Service")
-        .methodPattern("process")
-        .interceptType(InterceptType.BEFORE)
-        .callbackPeer(callbackPeerUuid)
-        .build();
+    InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
+        UUID.randomUUID(),
+        callbackPeerUuid,
+        InterceptType.BEFORE,
+        "com.example.Service",
+        "com.example.ServiceCallback",
+        "handle",
+        new InterceptableMethodCall("process", Collections.emptyList()));
     directory.createIntercept(intercept);
 
     // Execute
@@ -260,12 +266,14 @@ public void testErrorPathDoesNotSendEmail() {
 @Test
 public void testWithMockedDatabase() {
     // Mock database to return test data
-    InterceptRequest intercept = InterceptRequest.builder()
-        .classPattern("com.example.DatabaseService")
-        .methodPattern("findUser")
-        .interceptType(InterceptType.AROUND)
-        .callbackPeer(callbackPeerUuid)
-        .build();
+    InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
+        UUID.randomUUID(),
+        callbackPeerUuid,
+        InterceptType.AROUND,
+        "com.example.DatabaseService",
+        "com.example.MockDatabaseCallback",
+        "handle",
+        new InterceptableMethodCall("findUser", Collections.emptyList()));
     directory.createIntercept(intercept);
 
     // Configure callback peer to return mock data
@@ -287,12 +295,14 @@ public void testWithMockedDatabase() {
 @Test
 public void testInternalStateAfterOperation() {
     // Intercept to inspect state
-    InterceptRequest intercept = InterceptRequest.builder()
-        .classPattern("com.example.ShoppingCart")
-        .methodPattern("addItem")
-        .interceptType(InterceptType.AFTER)
-        .callbackPeer(callbackPeerUuid)
-        .build();
+    InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
+        UUID.randomUUID(),
+        callbackPeerUuid,
+        InterceptType.AFTER,
+        "com.example.ShoppingCart",
+        "com.example.CartStateCallback",
+        "handle",
+        new InterceptableMethodCall("addItem", Collections.emptyList()));
     directory.createIntercept(intercept);
 
     // Execute
@@ -348,12 +358,14 @@ public abstract class PalIntegrationTest {
 
     protected void createIntercept(String className, String methodName,
                                    InterceptType type) {
-        InterceptRequest intercept = InterceptRequest.builder()
-            .classPattern(className)
-            .methodPattern(methodName)
-            .interceptType(type)
-            .callbackPeer(callbackPeerUuid)
-            .build();
+        InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
+            UUID.randomUUID(),
+            callbackPeerUuid,
+            type,
+            className,
+            "com.example.TestCallback",
+            "handle",
+            new InterceptableMethodCall(methodName, Collections.emptyList()));
         directory.createIntercept(intercept);
     }
 
@@ -453,13 +465,13 @@ public void tearDown() {
 Narrow patterns reduce noise:
 
 ```java
-// Good
-.classPattern("com.example.OrderService")
-.methodPattern("processOrder")
+// Good: specific class and method
+new InterceptableMethodCall("processOrder", Collections.emptyList())
+// with clazz = "com.example.OrderService"
 
-// Avoid (too broad)
-.classPattern("com.example.**.*")
-.methodPattern("*")
+// Avoid (too broad):
+new InterceptableMethodCall("*", Collections.emptyList())
+// with clazz = "com.example.**.*"
 ```
 
 ### 3. Wait for Callbacks
@@ -498,20 +510,24 @@ In-flight tracking applies to all operation types -- methods, constructors, and 
 
 ```java
 // Intercept a constructor
-InterceptRequest ctorIntercept = InterceptRequest.builder()
-    .classPattern("com.example.UserService")
-    .methodPattern("new")
-    .interceptType(InterceptType.BEFORE)
-    .callbackPeer(callbackPeerUuid)
-    .build();
+InterceptRequest<InterceptableMethodCall> ctorIntercept = new InterceptRequest<>(
+    UUID.randomUUID(),
+    callbackPeerUuid,
+    InterceptType.BEFORE,
+    "com.example.UserService",
+    "com.example.ConstructorCallback",
+    "handle",
+    new InterceptableMethodCall("new", Collections.emptyList()));
 
 // Intercept a field access
-InterceptRequest fieldIntercept = InterceptRequest.builder()
-    .classPattern("com.example.Config")
-    .fieldPattern("maxRetries")
-    .interceptType(InterceptType.AROUND)
-    .callbackPeer(callbackPeerUuid)
-    .build();
+InterceptRequest<InterceptableFieldOp> fieldIntercept = new InterceptRequest<>(
+    UUID.randomUUID(),
+    callbackPeerUuid,
+    InterceptType.AROUND,
+    "com.example.Config",
+    "com.example.FieldCallback",
+    "handle",
+    new InterceptableFieldOp("maxRetries", FieldOpType.GET));
 ```
 
 Parameter types are also considered: intercepting `process(String)` does not affect `process(String, int)`. This means tests for overloaded methods can safely target specific signatures without interfering with other overloads.

@@ -28,7 +28,7 @@ PAL supports two message formats:
 
 Start peer with binary RPC:
 ```bash
-pal run -d localhost:2379 --rpc auto \
+pal run -d localhost:2379 --json-rpc auto \
   -cp app.jar com.example.Service
 ```
 
@@ -234,15 +234,7 @@ The exception is serialized, sent back, and re-thrown on the caller side.
 
 ### Timeouts
 
-Set RPC timeout:
-
-```bash
-pal call -d localhost:2379 -p peer-name \
-  --timeout 5000 \
-  com.example.SlowService process
-```
-
-Timeout in milliseconds. Default: 30 seconds.
+RPC timeouts are configured at the transport level, not via a CLI flag. ZeroMQ and WebSocket transports have their own timeout settings. See transport configuration documentation for details.
 
 ### Peer Not Found
 
@@ -312,7 +304,7 @@ No built-in authorization. To restrict access:
 
 **Server**:
 ```bash
-pal run -d etcd:2379 --rpc auto -n calculator \
+pal run -d etcd:2379 --json-rpc auto -n calculator \
   -cp calc.jar com.example.Calculator
 ```
 
@@ -344,11 +336,11 @@ pal run -k kafka:9092 --source-log work-queue \
 Start multiple instances with same name:
 ```bash
 # Terminal 1
-pal run -d etcd:2379 --rpc auto -n worker \
+pal run -d etcd:2379 --json-rpc auto -n worker \
   -cp worker.jar com.example.Worker
 
 # Terminal 2
-pal run -d etcd:2379 --rpc auto -n worker \
+pal run -d etcd:2379 --json-rpc auto -n worker \
   -cp worker.jar com.example.Worker
 ```
 

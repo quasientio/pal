@@ -116,7 +116,7 @@ mvn clean install
 ```bash
 pal run -d localhost:2379 -k localhost:29092 \
   --wal calculator-wal \
-  --rpc auto \
+  --json-rpc auto \
   --json-rpc auto \
   --interceptable \
   --in-flight-tracking \
@@ -130,7 +130,7 @@ pal run -d localhost:2379 -k localhost:29092 \
 - `-d localhost:2379`: Registers in etcd directory
 - `-k localhost:29092`: Uses Kafka for logs
 - `--wal calculator-wal`: Writes all operations to Kafka topic
-- `--rpc auto`: Enables binary RPC on random port
+- `--json-rpc auto`: Enables binary RPC on random port
 - `--json-rpc auto`: Enables JSON-RPC on random port
 - `--interceptable`: Allows dynamic interception
 - `--in-flight-tracking`: Waits for in-flight calls to complete before activating new intercepts (enabled by default, shown here for clarity)
@@ -187,7 +187,7 @@ All operations are logged to Kafka:
 
 ```bash
 # Print calculator's WAL
-$ pal print -d localhost:2379 -l calculator-wal --output-format COMPACT
+$ pal print -d localhost:2379 -l calculator-wal --compact
 
 offset=0 id=abc123 message=CalculatorService.add(5, 3)
 offset=1 id=abc124 message=CalculatorService.multiply(4, 7)
@@ -283,12 +283,14 @@ public class MonitorService {
         UUID myUuid = UUID.randomUUID();
 
         // Register intercept for all calculator methods
-        InterceptRequest intercept = InterceptRequest.builder()
-            .classPattern("com.example.calculator.CalculatorService")
-            .methodPattern("*")
-            .interceptType(InterceptType.AFTER)
-            .callbackPeer(myUuid)
-            .build();
+        InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
+            UUID.randomUUID(),
+            myUuid,
+            InterceptType.AFTER,
+            "com.example.calculator.CalculatorService",
+            "com.example.monitor.MonitorService",
+            "handleCallback",
+            new InterceptableMethodCall("*", Collections.emptyList()));
 
         directory.createIntercept(intercept);
         System.out.println("Monitoring all calculator operations...");
@@ -309,7 +311,7 @@ public class MonitorService {
 ### Run Monitor
 
 ```bash
-pal run -d localhost:2379 --rpc auto -n monitor \
+pal run -d localhost:2379 --json-rpc auto -n monitor \
   -cp target/monitor-1.0-SNAPSHOT.jar \
   com.example.monitor.MonitorService
 
@@ -347,19 +349,19 @@ Start multiple calculator instances:
 ```bash
 # Terminal 1
 pal run -d localhost:2379 -k localhost:29092 \
-  --wal calc-wal-1 --rpc auto -n calculator-1 \
+  --wal calc-wal-1 --json-rpc auto -n calculator-1 \
   -cp target/calculator-1.0-SNAPSHOT.jar \
   com.example.calculator.CalculatorService
 
 # Terminal 2
 pal run -d localhost:2379 -k localhost:29092 \
-  --wal calc-wal-2 --rpc auto -n calculator-2 \
+  --wal calc-wal-2 --json-rpc auto -n calculator-2 \
   -cp target/calculator-1.0-SNAPSHOT.jar \
   com.example.calculator.CalculatorService
 
 # Terminal 3
 pal run -d localhost:2379 -k localhost:29092 \
-  --wal calc-wal-3 --rpc auto -n calculator-3 \
+  --wal calc-wal-3 --json-rpc auto -n calculator-3 \
   -cp target/calculator-1.0-SNAPSHOT.jar \
   com.example.calculator.CalculatorService
 ```

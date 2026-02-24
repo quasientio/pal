@@ -212,7 +212,7 @@ Let's start simple: run with Chronicle Queue (no Kafka/etcd needed).
 
 ```bash
 # Run the application with PAL
-pal run --wal file:/tmp/tutorial-wal --rpc auto \
+pal run --wal file:/tmp/tutorial-wal --json-rpc auto \
   -cp target/classes \
   tutorial.Main
 ```
@@ -258,7 +258,7 @@ Let's see what PAL captured:
 
 ```bash
 # Print all messages from the log
-pal print -l file:/tmp/tutorial-wal --output-format FULL
+pal print -l file:/tmp/tutorial-wal --full
 ```
 
 Output (abbreviated):
@@ -382,7 +382,7 @@ In one terminal:
 
 ```bash
 pal run -d localhost:2379 -k localhost:29092 \
-  --wal calculator-wal --rpc auto -n calculator \
+  --wal calculator-wal --json-rpc auto -n calculator \
   -cp target/classes \
   tutorial.CalculatorService
 ```
@@ -444,7 +444,7 @@ pal ls -d localhost:2379 -L -l
 
 ```bash
 # Print messages from calculator's WAL
-pal print -d localhost:2379 -l calculator-wal --output-format FULL
+pal print -d localhost:2379 -l calculator-wal --full
 
 # You'll see the RPC call captured:
 # Message 0:
@@ -495,12 +495,15 @@ public class MonitorService {
         PalDirectory directory = ...; // Get from runtime
 
         // Register intercept for all Calculator methods
-        InterceptRequest intercept = InterceptRequest.builder()
-            .classPattern("tutorial.Calculator")
-            .methodPattern("*")  // All methods
-            .interceptType(InterceptType.BEFORE)
-            .callbackPeer(System.getProperty("pal.peer.uuid"))
-            .build();
+        UUID myPeerUuid = UUID.fromString(System.getProperty("pal.peer.uuid"));
+        InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
+            UUID.randomUUID(),
+            myPeerUuid,
+            InterceptType.BEFORE,
+            "tutorial.Calculator",
+            "tutorial.Monitor",
+            "onCalculatorCall",
+            new InterceptableMethodCall("*", Collections.emptyList()));
 
         directory.createIntercept(intercept);
 
@@ -543,10 +546,10 @@ pal ls -d localhost:2379 -L
 pal print -d localhost:2379 -l my-log
 
 # Print with full details
-pal print -d localhost:2379 -l my-log --output-format FULL
+pal print -d localhost:2379 -l my-log --full
 
-# Print specific range
-pal print -d localhost:2379 -l my-log --from 100 --to 200
+# Print specific message at offset 100
+pal print -d localhost:2379 -l my-log -o 100
 ```
 
 ### Call Remote Methods
@@ -575,10 +578,10 @@ curl -X POST http://localhost:8080/rpc \
 
 ```bash
 # Remove a peer from directory
-pal rm -d localhost:2379 -p my-peer-uuid
+pal rm -d localhost:2379 -P my-peer-uuid
 
 # Remove a log from directory (doesn't delete Kafka topic)
-pal rm -d localhost:2379 -l my-log
+pal rm -d localhost:2379 -L my-log
 
 # Clean local Chronicle logs
 rm -rf /tmp/tutorial-wal

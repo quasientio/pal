@@ -13,7 +13,7 @@ pal <subcommand> [OPTIONS] [ARGUMENTS]
 Common options across all subcommands:
 
 - `-d, --dir <URL>` - PAL directory URL (etcd endpoint, e.g., `localhost:2379`)
-- `-k, --kafka-servers <host:port>` - Kafka bootstrap servers (for direct access)
+- `-k, --kafka-servers <host:port>` - Kafka bootstrap servers (available on `print`, `call`, and `rm` only)
 - `-h, --help` - Display help for the subcommand
 
 The directory URL can also be set via the `PAL_DIRECTORY` environment variable. Kafka servers can be set via the `KAFKA_SERVERS` environment variable.
@@ -33,7 +33,7 @@ Uses the PAL directory (etcd) to look up resources by name or UUID. This is the 
 - Automatic resolution of log locations
 - Shared visibility across distributed systems
 
-**Usage**: Specify `-d/--directory` option or set `PAL_DIRECTORY` environment variable.
+**Usage**: Specify `-d/--dir` option or set `PAL_DIRECTORY` environment variable.
 
 ```bash
 pal print -d localhost:2379 -l my-log
@@ -92,6 +92,7 @@ pal ls [OPTIONS]
 | `-S, --sort-by-size` | Sort logs by size, largest first |
 | `-c, --sort-by-ctime` | Sort by creation/uptime, newest first |
 | `-r, --reverse` | Reverse the sorting order |
+| `--no-trim` | Disable trimming of long field values |
 
 ### Behavior
 
@@ -182,7 +183,9 @@ pal print -pa <HOST:PORT> [OPTIONS]
 | `-pa, --peer-address <HOST:PORT>` | Subscribe to peer by address |
 | `-o, --offset <number>` | Print message at specific offset and exit |
 | `-f, --follow` | Follow new messages (like `tail -f`) |
-| `--output-format <FORMAT>` | Output format: `FULL`, `JSON`, `COMPACT` (default: `COMPACT`) |
+| `--compact` | Compact output format (default) |
+| `--json` | JSON output format |
+| `--full` | Full output format with all details |
 | `--formats <list>` | Filter by message format: `BINARY`, `JSON` (comma-separated) |
 | `--types <list>` | Filter by message type (comma-separated, see below) |
 | `-fp, --from-peer <uuid>` | Filter by peer UUID |
@@ -237,7 +240,7 @@ offset: 42,
 pal print -d localhost:2379 -l my-wal-log
 
 # Print messages from a Chronicle log in full format
-pal print -d localhost:2379 -l my-chronicle-log --output-format FULL
+pal print -d localhost:2379 -l my-chronicle-log --full
 
 # Print message at specific offset
 pal print -d localhost:2379 -l my-log -o 100
@@ -252,7 +255,7 @@ pal print -d localhost:2379 -l my-log -f
 pal print -d localhost:2379 -l my-log --types CLASS_METHOD,INSTANCE_METHOD
 
 # Print messages in JSON format
-pal print -d localhost:2379 -l my-log --output-format JSON
+pal print -d localhost:2379 -l my-log --json
 
 # Print messages from specific peer
 pal print -d localhost:2379 -l my-log -fp <peer-uuid>
@@ -265,7 +268,7 @@ pal print -d localhost:2379 -l my-log -v
 
 ```bash
 # Print from Chronicle log (absolute path)
-pal print -l file:/tmp/my-chronicle-log --output-format FULL
+pal print -l file:/tmp/my-chronicle-log --full
 
 # Print from Chronicle log (relative path)
 pal print -l file:./logs/my-log
@@ -321,7 +324,7 @@ Invoke methods on remote peers or write messages to logs using RPC.
 
 ```bash
 # CLI mode: Call static method with String[] parameter
-pal call [OPTIONS] -p <PEER> -m <METHOD> <CLASS> [args...]
+pal call [OPTIONS] -p <PEER> [-m <METHOD>] <CLASS> [args...]
 
 # JSON-RPC stdin mode: Send arbitrary JSON-RPC requests
 echo '<JSON_RPC_REQUEST>' | pal call [OPTIONS] -p <PEER_ADDRESS>
@@ -409,10 +412,10 @@ pal call -d localhost:2379 -p my-peer com.example.App arg1 arg2
 pal call -d localhost:2379 -p my-peer -m processData com.example.Processor data1 data2
 
 # Call using peer address instead of name
-pal call -d localhost:2379 -p tcp://localhost:5001 com.example.App
+pal call -p tcp://localhost:5001 com.example.App
 
 # Call using JSON-RPC endpoint
-pal call -d localhost:2379 -p ws://localhost:9001 com.example.App
+pal call -p ws://localhost:9001 com.example.App
 ```
 
 #### Writing to Logs (Registry Mode)
@@ -531,7 +534,6 @@ pal rm [OPTIONS] -L <LOG...>   # Remove logs
 |--------|-------------|
 | `-P, --delete-peers` | Delete peers |
 | `-L, --delete-logs` | Delete logs |
-| `-l, --log <name\|path>` | Delete a single log (alternative to `-L`, supports direct mode paths like `file:path`) |
 | `-k, --kafka-servers <host:port>` | Kafka bootstrap servers (for direct Kafka access without `-d`) |
 | `-s, --starting-with` | Treat arguments as prefixes (delete all matching) |
 | `-a, --all` | Delete all peers or logs |
@@ -678,7 +680,7 @@ pal rm -d localhost:2379 -L dev-peer-wal
 pal run -d localhost:2379 -k localhost:29092 --wal test-run -cp target/test-classes com.example.MyTest
 
 # Replay and analyze
-pal print -d localhost:2379 -l test-run --output-format FULL --types CLASS_METHOD
+pal print -d localhost:2379 -l test-run --full --types CLASS_METHOD
 
 # Print specific message
 pal print -d localhost:2379 -l test-run -o 42
@@ -707,7 +709,7 @@ pal print -d etcd.prod.example.com:2379 -l shared-events -f --types THROWABLE
 pal call -d localhost:2379 -p bench-peer -t 10 com.example.Benchmark -v
 
 # Analyze log for performance metrics
-pal print -d localhost:2379 -l bench-wal --output-format COMPACT | grep -E "method=process"
+pal print -d localhost:2379 -l bench-wal --compact | grep -E "method=process"
 ```
 
 ---

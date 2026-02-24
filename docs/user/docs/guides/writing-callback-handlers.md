@@ -44,13 +44,14 @@ public class UpperCaseCurrencyCallback implements InterceptCallback {
 
 **How to use**:
 ```java
-InterceptRequest intercept = InterceptRequest.builder()
-    .classPattern("com.example.PaymentService")
-    .methodPattern("processCurrency")
-    .interceptType(InterceptType.BEFORE)
-    .callbackClass(UpperCaseCurrencyCallback.class.getName())
-    .callbackMethod("handle")
-    .build();
+InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
+    UUID.randomUUID(),
+    callbackPeerUuid,
+    InterceptType.BEFORE,
+    "com.example.PaymentService",
+    UpperCaseCurrencyCallback.class.getName(),
+    "handle",
+    new InterceptableMethodCall("processCurrency", Collections.emptyList()));
 ```
 
 ## Example 2: Return Value Override (AFTER)
@@ -75,13 +76,14 @@ public class RedactSsnCallback implements InterceptCallback {
 
 **How to use**:
 ```java
-InterceptRequest intercept = InterceptRequest.builder()
-    .classPattern("com.example.CustomerService")
-    .methodPattern("getCustomer")
-    .interceptType(InterceptType.AFTER)
-    .callbackClass(RedactSsnCallback.class.getName())
-    .callbackMethod("handle")
-    .build();
+InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
+    UUID.randomUUID(),
+    callbackPeerUuid,
+    InterceptType.AFTER,
+    "com.example.CustomerService",
+    RedactSsnCallback.class.getName(),
+    "handle",
+    new InterceptableMethodCall("getCustomer", Collections.emptyList()));
 ```
 
 ## Example 3: Caching with Execution Control (AROUND)
@@ -135,13 +137,14 @@ public class CachingCallback implements InterceptCallback {
 
 **How to use**:
 ```java
-InterceptRequest intercept = InterceptRequest.builder()
-    .classPattern("com.example.ReportService")
-    .methodPattern("generateExpensiveReport")
-    .interceptType(InterceptType.AROUND)
-    .callbackClass(CachingCallback.class.getName())
-    .callbackMethod("handle")
-    .build();
+InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
+    UUID.randomUUID(),
+    callbackPeerUuid,
+    InterceptType.AROUND,
+    "com.example.ReportService",
+    CachingCallback.class.getName(),
+    "handle",
+    new InterceptableMethodCall("generateExpensiveReport", Collections.emptyList()));
 ```
 
 ## Static Callback Methods
@@ -161,10 +164,16 @@ public class ValidationHandlers {
 }
 ```
 
-Register with:
+Register with callbackClass and callbackMethod in the InterceptRequest constructor:
 ```java
-.callbackClass("com.example.ValidationHandlers")
-.callbackMethod("validateNonNull")
+new InterceptRequest<>(
+    UUID.randomUUID(),
+    callbackPeerUuid,
+    InterceptType.BEFORE,
+    "com.example.Service",
+    "com.example.ValidationHandlers",  // callbackClass
+    "validateNonNull",                 // callbackMethod
+    new InterceptableMethodCall("*", Collections.emptyList()));
 ```
 
 ## Thread Safety
@@ -445,15 +454,17 @@ java -Dpal.intercept.exception-policy.before=PROPAGATE_ALL \
 
 Via InterceptRequest:
 ```java
-InterceptRequest intercept = InterceptRequest.builder()
-    .classPattern("com.example.PaymentService")
-    .methodPattern("processPayment")
-    .interceptType(InterceptType.BEFORE)
-    .callbackClass(AuthCallback.class.getName())
-    .callbackMethod("handle")
-    .exceptionPropagationPolicy(ExceptionPropagationPolicy.PROPAGATE_ALL)
-    .checkedExceptionPolicy(CheckedExceptionPolicy.REJECT)
-    .build();
+InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
+    UUID.randomUUID(),
+    callbackPeerUuid,
+    InterceptType.BEFORE,
+    "com.example.PaymentService",
+    AuthCallback.class.getName(),
+    "handle",
+    new InterceptableMethodCall("processPayment", Collections.emptyList()),
+    false,
+    ExceptionPropagationPolicy.PROPAGATE_ALL,
+    CheckedExceptionPolicy.REJECT);
 ```
 
 **Resolution order**: Per-intercept override → Per-type default → Global default
@@ -464,23 +475,34 @@ InterceptRequest intercept = InterceptRequest.builder()
 
 ```java
 // Use PROPAGATE_ALL to catch bugs early in testing
-InterceptRequest.builder()
-    .interceptType(InterceptType.BEFORE)
-    .callbackClass(ValidationCallback.class.getName())
-    .exceptionPropagationPolicy(ExceptionPropagationPolicy.PROPAGATE_ALL)
-    .checkedExceptionPolicy(CheckedExceptionPolicy.REJECT)
-    .build();
+new InterceptRequest<>(
+    UUID.randomUUID(),
+    callbackPeerUuid,
+    InterceptType.BEFORE,
+    "com.example.Service",
+    ValidationCallback.class.getName(),
+    "handle",
+    new InterceptableMethodCall("*", Collections.emptyList()),
+    false,
+    ExceptionPropagationPolicy.PROPAGATE_ALL,
+    CheckedExceptionPolicy.REJECT);
 ```
 
 #### Pattern 2: Resilient Monitoring (AFTER intercept)
 
 ```java
 // Use SWALLOW_ALL so monitoring failures don't break application
-InterceptRequest.builder()
-    .interceptType(InterceptType.AFTER)
-    .callbackClass(MetricsCallback.class.getName())
-    .exceptionPropagationPolicy(ExceptionPropagationPolicy.SWALLOW_ALL)
-    .build();
+new InterceptRequest<>(
+    UUID.randomUUID(),
+    callbackPeerUuid,
+    InterceptType.AFTER,
+    "com.example.Service",
+    MetricsCallback.class.getName(),
+    "handle",
+    new InterceptableMethodCall("*", Collections.emptyList()),
+    false,
+    ExceptionPropagationPolicy.SWALLOW_ALL,
+    null);
 ```
 
 #### Pattern 3: Production Authorization (BEFORE intercept)
@@ -534,11 +556,17 @@ public class ExceptionHandlingCallback implements InterceptCallback {
 
 ```java
 // This exception will be logged but never propagate
-InterceptRequest.builder()
-    .interceptType(InterceptType.BEFORE_ASYNC)
-    .callbackClass(AsyncCallback.class.getName())
-    .exceptionPropagationPolicy(ExceptionPropagationPolicy.PROPAGATE_ALL)  // ignored
-    .build();
+new InterceptRequest<>(
+    UUID.randomUUID(),
+    callbackPeerUuid,
+    InterceptType.BEFORE_ASYNC,
+    "com.example.Service",
+    AsyncCallback.class.getName(),
+    "handle",
+    new InterceptableMethodCall("*", Collections.emptyList()),
+    false,
+    ExceptionPropagationPolicy.PROPAGATE_ALL,  // ignored for async
+    null);
 ```
 
 **Reason**: Async intercepts don't block the caller, so there's no synchronous path to propagate exceptions.

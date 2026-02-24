@@ -25,12 +25,12 @@ pal run -cp myapp.jar com.example.Main
 
 Peer with RPC:
 ```bash
-pal run --rpc auto -cp myapp.jar com.example.Main
+pal run --json-rpc auto -cp myapp.jar com.example.Main
 ```
 
 Named peer in directory:
 ```bash
-pal run -d localhost:2379 -n my-peer --rpc auto \
+pal run -d localhost:2379 -n my-peer --json-rpc auto \
   -cp myapp.jar com.example.Main
 ```
 
@@ -98,7 +98,7 @@ Full distributed mode:
 
 ```bash
 pal run -d localhost:2379 -k localhost:29092 \
-  --wal my-wal --rpc auto -n my-service \
+  --wal my-wal --json-rpc auto -n my-service \
   -cp app.jar com.example.Service
 ```
 
@@ -114,7 +114,7 @@ Enable dynamic callbacks:
 
 ```bash
 pal run -d localhost:2379 --interceptable \
-  --rpc auto -cp app.jar com.example.Main
+  --json-rpc auto -cp app.jar com.example.Main
 ```
 
 Now you can register intercepts at runtime to get callbacks before/after method calls.
@@ -175,7 +175,7 @@ pal run --source-log file:/tmp/execution -cp app.jar
 
 See exactly what happened:
 ```bash
-pal print -l file:/tmp/execution --output-format FULL
+pal print -l file:/tmp/execution --full
 ```
 
 ### Backup and Recovery
@@ -275,7 +275,7 @@ pal rm -d localhost:2379 -L old-log
 Long-running service that handles RPC calls:
 ```bash
 pal run -d etcd:2379 -k kafka:9092 \
-  --wal service-wal --rpc auto -n my-service \
+  --wal service-wal --json-rpc auto -n my-service \
   -cp service.jar com.example.Service
 ```
 
@@ -292,7 +292,7 @@ pal run -k kafka:9092 \
 
 Local testing with Chronicle:
 ```bash
-pal run --wal file:/tmp/dev --rpc auto \
+pal run --wal file:/tmp/dev --json-rpc auto \
   -cp target/classes com.example.Dev
 ```
 
@@ -301,7 +301,7 @@ pal run --wal file:/tmp/dev --rpc auto \
 Intercepts and observes other peers:
 ```bash
 pal run -d etcd:2379 --interceptable \
-  --rpc auto -n monitor \
+  --json-rpc auto -n monitor \
   -cp monitor.jar com.example.Monitor
 ```
 

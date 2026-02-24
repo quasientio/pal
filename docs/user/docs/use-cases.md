@@ -82,10 +82,10 @@ public void testOrderProcessing() {
 
 ```bash
 # Terminal 1: Run service A (real)
-pal run --wal service-a-log --rpc auto -cp service-a.jar Main
+pal run --wal service-a-log --json-rpc auto -cp service-a.jar Main
 
 # Terminal 2: Run service B with intercepted dependencies
-pal run --interceptable --wal service-b-log --rpc auto -cp service-b.jar Main
+pal run --interceptable --wal service-b-log --json-rpc auto -cp service-b.jar Main
 
 # Terminal 3: Register intercepts for service B's external calls
 # (Intercept calls to Service C, return canned responses)
@@ -123,14 +123,21 @@ Traditional fix requires:
 
 Hot-patch in 60 seconds:
 
-```bash
-# 1. Register an AROUND intercept that fixes the bug
-pal intercept -d localhost:2379 -p order-service \
-  --class OrderService --method calculateDiscount \
-  --type AROUND --callback-peer fix-peer
+```java
+// Register an AROUND intercept that fixes the bug
+// (Intercepts are registered via the Java API or etcd, not via CLI)
+InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
+    UUID.randomUUID(),
+    fixPeerUuid,
+    InterceptType.AROUND,
+    "OrderService",
+    "com.example.DiscountFixCallback",
+    "handle",
+    new InterceptableMethodCall("calculateDiscount", Collections.emptyList()));
+palDirectory.createIntercept(intercept);
 
-# The fix-peer returns correct calculation:
-# return order.getTotal() * 0.10
+// The fix-peer returns correct calculation:
+// return order.getTotal() * 0.10
 ```
 
 **Total: 60 seconds, zero downtime.**
@@ -170,12 +177,15 @@ T+0:30  Proper fix deployed
 
 ```java
 // Register intercept that routes to new implementation
-InterceptRequest intercept = InterceptRequest.builder()
-    .classPattern("RecommendationService")
-    .methodPattern("getRecommendations")
-    .interceptType(InterceptType.AROUND)
-    .callbackPeer("experiment-peer")
-    .build();
+UUID experimentPeerUuid = directory.findPeerByName("experiment-peer").getUuid();
+InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
+    UUID.randomUUID(),
+    experimentPeerUuid,
+    InterceptType.AROUND,
+    "RecommendationService",
+    "com.example.ExperimentCallback",
+    "handleIntercept",
+    new InterceptableMethodCall("getRecommendations", Collections.emptyList()));
 
 // In experiment-peer:
 public List<Product> handleIntercept(Context ctx) {
@@ -238,17 +248,17 @@ Requires: REST endpoints, HTTP clients, error handling, retry logic, circuit bre
 ```bash
 # Peer 1: Order Service
 pal run -d etcd:2379 -k kafka:9092 \
-  --wal order-wal --rpc auto -n order-service \
+  --wal order-wal --json-rpc auto -n order-service \
   -cp order.jar OrderService
 
 # Peer 2: Payment Service
 pal run -d etcd:2379 -k kafka:9092 \
-  --wal payment-wal --rpc auto -n payment-service \
+  --wal payment-wal --json-rpc auto -n payment-service \
   -cp payment.jar PaymentService
 
 # Peer 3: Inventory Service
 pal run -d etcd:2379 -k kafka:9092 \
-  --wal inventory-wal --rpc auto -n inventory-service \
+  --wal inventory-wal --json-rpc auto -n inventory-service \
   -cp inventory.jar InventoryService
 ```
 
@@ -314,8 +324,8 @@ orderService.processOrder(order);
 **PAL converts this to asynchronous message** if configured:
 
 ```bash
-# Run with async message handling
-pal run --wal order-wal --async-dispatch -cp app.jar OrderService
+# Run with message-based dispatch
+pal run --wal order-wal --json-rpc auto -cp app.jar OrderService
 ```
 
 Now `orderService.processOrder(order)` executes asynchronously via message passing, but code looks synchronous.
@@ -338,10 +348,10 @@ Every operation is automatically logged:
 
 ```bash
 # Run with comprehensive logging
-pal run --wal audit-log --audit-mode full -cp app.jar
+pal run --wal audit-log -cp app.jar
 
 # Later: Query audit log
-pal print -l audit-log --filter "class=AccountService" --output-format FULL
+pal print -l audit-log --types INSTANCE_METHOD,CLASS_METHOD --full
 ```
 
 **Output:**
@@ -374,12 +384,9 @@ Message 1048:
 **Solution:**
 
 ```bash
-# Query all operations involving user's email
-pal print -l application-log \
-  --filter "args contains 'user@example.com'" \
-  --from-date "2023-01-01" \
-  --to-date "2023-12-31" \
-  --output-format JSON > user-data.json
+# Query all operations from the application log in JSON format
+pal print -l application-log --json > user-data.json
+# Then search the JSON output for the user's email
 ```
 
 **Every operation involving that user is captured automatically.**
@@ -399,17 +406,14 @@ Finding performance bottlenecks requires:
 Every operation is timed and logged:
 
 ```bash
-# Run with performance logging
-pal run --wal perf-log --timing full -cp app.jar
+# Run with logging to WAL
+pal run --wal perf-log -cp app.jar
 
-# Later: Analyze performance
-pal print -l perf-log --output-format TIMING
+# Later: Analyze messages with full detail
+pal print -l perf-log --full
 
-# Output shows duration for every method call:
-# OrderService.processOrder: 523ms
-#   ├─ PaymentService.charge: 450ms  ← bottleneck
-#   ├─ InventoryService.reserve: 45ms
-#   └─ NotificationService.send: 12ms
+# Output shows every method call with arguments and results,
+# which can be used to identify bottlenecks
 ```
 
 **Automatic performance profiling with zero instrumentation.**
@@ -421,16 +425,14 @@ pal print -l perf-log --output-format TIMING
 **Solution:**
 
 ```bash
-# 1. Identify slow request in production
-pal print -l prod-log --filter "duration > 1000ms" --output-format FULL
+# 1. Review production messages with full detail
+pal print -l prod-log --full
 
-# 2. Extract that specific execution
-pal extract -l prod-log --request-id req-12345 -o /tmp/slow-request.log
+# 2. Replay the production log locally to investigate
+pal run --source-log prod-log -cp app.jar
 
-# 3. Replay locally to investigate
-pal run --source-log /tmp/slow-request.log --timing full -cp app.jar
-
-# 4. See exact timing breakdown of what happened in production
+# 3. Inspect the replayed output for performance issues
+pal print -l prod-log --full
 ```
 
 **Reproduce production performance issue locally, with exact data and timing.**
@@ -450,14 +452,16 @@ Regression testing requires:
 Capture production traffic, replay as tests:
 
 ```bash
-# 1. Capture production traffic for one day
-pal run --wal prod-traffic --capture-mode full -cp app.jar
+# 1. Capture production traffic (all operations are logged to WAL automatically)
+pal run --wal prod-traffic -cp app.jar
 
 # 2. During QA: Replay production traffic against new version
-pal run --source-log prod-traffic -cp app-v2.jar
+pal run --source-log prod-traffic -cp app-v2.jar --wal qa-replay
 
-# 3. Compare outputs
-pal diff --log1 prod-traffic --log2 qa-replay --output-format SUMMARY
+# 3. Inspect both logs and compare outputs
+pal print -l prod-traffic --json > prod-output.json
+pal print -l qa-replay --json > qa-output.json
+# Compare the two JSON outputs to find behavioral differences
 ```
 
 **Test with real production traffic, not manually written test cases.**
@@ -476,13 +480,10 @@ pal run --wal golden-master -cp app-v1.jar
 # 2. Replay against new version
 pal run --source-log golden-master -cp app-v2.jar --wal v2-output
 
-# 3. Compare
-pal diff --log1 golden-master --log2 v2-output
-
-# Output shows any behavioral differences:
-# DIFF in Message 1047:
-#   v1 result: 42
-#   v2 result: 43  ← regression!
+# 3. Compare by inspecting both logs
+pal print -l golden-master --json > v1-output.json
+pal print -l v2-output --json > v2-output.json
+# Diff the JSON outputs to find behavioral differences
 ```
 
 **Automated compatibility testing using production traffic as oracle.**
@@ -496,7 +497,7 @@ The power of PAL is that these capabilities work together because they emerge fr
 **Development:**
 ```bash
 # Develop locally with Chronicle (fast iteration)
-pal run --wal file:/tmp/dev-log --rpc auto -cp target/classes Main
+pal run --wal file:/tmp/dev-log --json-rpc auto -cp target/classes Main
 ```
 
 **Testing:**
@@ -509,32 +510,38 @@ pal run --interceptable --wal file:/tmp/test-log -cp target/test-classes Tests
 ```bash
 # Deploy to staging with Kafka
 pal run -d staging-etcd:2379 -k staging-kafka:9092 \
-  --wal staging-log --rpc auto -cp app.jar
+  --wal staging-log --json-rpc auto -cp app.jar
 ```
 
 **Production:**
 ```bash
 # Deploy to production
 pal run -d prod-etcd:2379 -k prod-kafka:9092 \
-  --wal prod-log --rpc auto --interceptable -cp app.jar
+  --wal prod-log --json-rpc auto --interceptable -cp app.jar
 ```
 
 **Incident:**
-```bash
-# Hot-patch production bug via interception
-pal intercept -d prod-etcd:2379 -p service-uuid \
-  --class BuggyClass --method buggyMethod --type AROUND
+```java
+// Hot-patch production bug via interception
+// (Intercepts are registered via the Java API or etcd, not via CLI)
+InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
+    UUID.randomUUID(),
+    fixPeerUuid,
+    InterceptType.AROUND,
+    "BuggyClass",
+    "com.example.BugFixCallback",
+    "handle",
+    new InterceptableMethodCall("buggyMethod", Collections.emptyList()));
+palDirectory.createIntercept(intercept);
 ```
 
 **Post-Mortem:**
 ```bash
 # Analyze what happened
-pal print -l prod-log --from-time "2023-11-09T14:00:00" \
-  --to-time "2023-11-09T14:30:00" --output-format FULL
+pal print -l prod-log --full
 
-# Replay incident locally
-pal extract -l prod-log --time-range "14:00:00-14:30:00" -o /tmp/incident.log
-pal run --source-log /tmp/incident.log -cp app.jar
+# Replay the production log locally to investigate
+pal run --source-log prod-log -cp app.jar
 ```
 
 **Same tool, same abstraction, different use cases at each stage.**

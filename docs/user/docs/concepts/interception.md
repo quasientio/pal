@@ -30,12 +30,14 @@ PAL's interception system lets you register these callbacks **dynamically** whil
 Callback executes **before** the method, synchronously:
 
 ```java
-InterceptRequest intercept = InterceptRequest.builder()
-    .classPattern("com.example.Calculator")
-    .methodPattern("add")
-    .interceptType(InterceptType.BEFORE)
-    .callbackPeer(myPeerUuid)
-    .build();
+InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
+    UUID.randomUUID(),
+    myPeerUuid,
+    InterceptType.BEFORE,
+    "com.example.Calculator",
+    "com.example.CalculatorCallback",
+    "handle",
+    new InterceptableMethodCall("add", Collections.emptyList()));
 ```
 
 **Use cases**:
@@ -52,12 +54,14 @@ InterceptRequest intercept = InterceptRequest.builder()
 Callback executes **after** the method completes, synchronously:
 
 ```java
-InterceptRequest intercept = InterceptRequest.builder()
-    .classPattern("com.example.Calculator")
-    .methodPattern("add")
-    .interceptType(InterceptType.AFTER)
-    .callbackPeer(myPeerUuid)
-    .build();
+InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
+    UUID.randomUUID(),
+    myPeerUuid,
+    InterceptType.AFTER,
+    "com.example.Calculator",
+    "com.example.CalculatorCallback",
+    "handle",
+    new InterceptableMethodCall("add", Collections.emptyList()));
 ```
 
 **Use cases**:
@@ -74,12 +78,14 @@ InterceptRequest intercept = InterceptRequest.builder()
 Callback **wraps** the method execution with before/after logic. Call `ctx.proceed()` to execute the method (or next layer in the chain), or skip execution entirely:
 
 ```java
-InterceptRequest intercept = InterceptRequest.builder()
-    .classPattern("com.example.Calculator")
-    .methodPattern("add")
-    .interceptType(InterceptType.AROUND)
-    .callbackPeer(myPeerUuid)
-    .build();
+InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
+    UUID.randomUUID(),
+    myPeerUuid,
+    InterceptType.AROUND,
+    "com.example.Calculator",
+    "com.example.CalculatorCallback",
+    "handle",
+    new InterceptableMethodCall("add", Collections.emptyList()));
 ```
 
 **Use cases**:
@@ -102,12 +108,14 @@ InterceptRequest intercept = InterceptRequest.builder()
 Fire-and-forget callbacks that don't block execution:
 
 ```java
-InterceptRequest intercept = InterceptRequest.builder()
-    .classPattern("com.example.Service")
-    .methodPattern("process")
-    .interceptType(InterceptType.BEFORE_ASYNC)  // or AFTER_ASYNC
-    .callbackPeer(myPeerUuid)
-    .build();
+InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
+    UUID.randomUUID(),
+    myPeerUuid,
+    InterceptType.BEFORE_ASYNC,  // or AFTER_ASYNC
+    "com.example.Service",
+    "com.example.ServiceCallback",
+    "handle",
+    new InterceptableMethodCall("process", Collections.emptyList()));
 ```
 
 **Use cases**:
@@ -201,12 +209,14 @@ Multiple AROUND intercepts form a **chain** where each `proceed()` invokes the n
 PalDirectory directory = new PalDirectory("localhost:2379");
 
 // 2. Create intercept request
-InterceptRequest intercept = InterceptRequest.builder()
-    .classPattern("com.example.Service")
-    .methodPattern("processRequest")
-    .interceptType(InterceptType.BEFORE)
-    .callbackPeer(myCallbackPeerUuid)
-    .build();
+InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
+    UUID.randomUUID(),
+    myCallbackPeerUuid,
+    InterceptType.BEFORE,
+    "com.example.Service",
+    "com.example.ServiceCallback",
+    "handleProcessRequest",
+    new InterceptableMethodCall("processRequest", Collections.emptyList()));
 
 // 3. Register
 directory.createIntercept(intercept);
@@ -220,22 +230,22 @@ Use ant-style patterns to match classes and methods:
 
 #### Exact Match
 ```java
-.classPattern("com.example.Calculator")
-.methodPattern("add")
+// clazz and InterceptableMethodCall name
+"com.example.Calculator", ..., new InterceptableMethodCall("add", Collections.emptyList())
 ```
 Matches only `Calculator.add()`.
 
 #### Wildcard
 ```java
-.classPattern("com.example.*")
-.methodPattern("process*")
+// clazz and InterceptableMethodCall name
+"com.example.*", ..., new InterceptableMethodCall("process*", Collections.emptyList())
 ```
 Matches all classes in `com.example` package with methods starting with "process".
 
 #### Recursive
 ```java
-.classPattern("com.example.**.*")
-.methodPattern("*")
+// clazz and InterceptableMethodCall name
+"com.example.**.*", ..., new InterceptableMethodCall("*", Collections.emptyList())
 ```
 Matches all classes in `com.example` and subpackages, all methods.
 
@@ -264,7 +274,7 @@ public class CallbackPeer {
 
 Run it:
 ```bash
-pal run -d localhost:2379 --rpc auto -n callback-peer \
+pal run -d localhost:2379 --json-rpc auto -n callback-peer \
   -cp callback.jar com.example.CallbackPeer
 ```
 
@@ -303,12 +313,14 @@ public void testServiceCalledWithCorrectArgs() {
     UUID callbackPeerUuid = startCallbackPeer();
 
     // 3. Register intercept
-    InterceptRequest intercept = InterceptRequest.builder()
-        .classPattern("com.example.Service")
-        .methodPattern("processRequest")
-        .interceptType(InterceptType.BEFORE)
-        .callbackPeer(callbackPeerUuid)
-        .build();
+    InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
+        UUID.randomUUID(),
+        callbackPeerUuid,
+        InterceptType.BEFORE,
+        "com.example.Service",
+        "com.example.ServiceCallback",
+        "handle",
+        new InterceptableMethodCall("processRequest", Collections.emptyList()));
     directory.createIntercept(intercept);
 
     // 4. Trigger application behavior
@@ -326,19 +338,23 @@ public void testServiceCalledWithCorrectArgs() {
 
 ```java
 // Measure method execution time
-InterceptRequest beforeIntercept = InterceptRequest.builder()
-    .classPattern("com.example.Service")
-    .methodPattern("*")
-    .interceptType(InterceptType.BEFORE)
-    .callbackPeer(monitorPeerUuid)
-    .build();
+InterceptRequest<InterceptableMethodCall> beforeIntercept = new InterceptRequest<>(
+    UUID.randomUUID(),
+    monitorPeerUuid,
+    InterceptType.BEFORE,
+    "com.example.Service",
+    "com.example.MonitorCallback",
+    "handleBeforeCallback",
+    new InterceptableMethodCall("*", Collections.emptyList()));
 
-InterceptRequest afterIntercept = InterceptRequest.builder()
-    .classPattern("com.example.Service")
-    .methodPattern("*")
-    .interceptType(InterceptType.AFTER)
-    .callbackPeer(monitorPeerUuid)
-    .build();
+InterceptRequest<InterceptableMethodCall> afterIntercept = new InterceptRequest<>(
+    UUID.randomUUID(),
+    monitorPeerUuid,
+    InterceptType.AFTER,
+    "com.example.Service",
+    "com.example.MonitorCallback",
+    "handleAfterCallback",
+    new InterceptableMethodCall("*", Collections.emptyList()));
 
 // In monitor peer:
 Map<String, Long> startTimes = new ConcurrentHashMap<>();
@@ -358,12 +374,14 @@ public void handleAfterCallback(ExecMessage msg) {
 
 ```java
 // Log all method calls
-InterceptRequest intercept = InterceptRequest.builder()
-    .classPattern("com.example.**.*")
-    .methodPattern("*")
-    .interceptType(InterceptType.BEFORE)
-    .callbackPeer(auditPeerUuid)
-    .build();
+InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
+    UUID.randomUUID(),
+    auditPeerUuid,
+    InterceptType.BEFORE,
+    "com.example.**.*",
+    "com.example.AuditCallback",
+    "handleCallback",
+    new InterceptableMethodCall("*", Collections.emptyList()));
 
 // In audit peer:
 public void handleCallback(ExecMessage msg) {
@@ -378,12 +396,14 @@ public void handleCallback(ExecMessage msg) {
 
 ```java
 // Mock expensive operation
-InterceptRequest intercept = InterceptRequest.builder()
-    .classPattern("com.example.DatabaseService")
-    .methodPattern("queryDatabase")
-    .interceptType(InterceptType.AROUND)
-    .callbackPeer(mockPeerUuid)
-    .build();
+InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
+    UUID.randomUUID(),
+    mockPeerUuid,
+    InterceptType.AROUND,
+    "com.example.DatabaseService",
+    "com.example.MockCallback",
+    "handleAroundCallback",
+    new InterceptableMethodCall("queryDatabase", Collections.emptyList()));
 
 // In mock peer:
 public Object handleAroundCallback(ExecMessage msg) {
@@ -465,13 +485,15 @@ Both settings are also available as environment variables: `IN_FLIGHT_TRACKING` 
 Individual intercepts can bypass the drain by setting `forceImmediate` to `true`:
 
 ```java
-InterceptRequest intercept = InterceptRequest.builder()
-    .classPattern("com.example.HangingService")
-    .methodPattern("blockingCall")
-    .interceptType(InterceptType.BEFORE)
-    .callbackPeer(callbackPeerUuid)
-    .forceImmediate(true)
-    .build();
+InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
+    UUID.randomUUID(),
+    callbackPeerUuid,
+    InterceptType.BEFORE,
+    "com.example.HangingService",
+    "com.example.EmergencyCallback",
+    "handle",
+    new InterceptableMethodCall("blockingCall", Collections.emptyList()),
+    true /* forceImmediate */);
 ```
 
 **When to use**: Emergency hot-patches where the target method is hanging or stuck, monitoring intercepts where strict activation safety isn't needed, or any case where you need the intercept active immediately regardless of in-flight calls.
@@ -488,21 +510,16 @@ Disable in-flight tracking (`--in-flight-tracking=false`) when:
 
 ### List Active Intercepts
 
-```bash
-pal ls -d localhost:2379 -I
-```
+Intercepts are managed via the etcd directory and Java API. The `pal ls` command does not support listing intercepts directly. Use the Java API to query registered intercepts:
 
-Shows all registered intercepts.
+```java
+List<InterceptRequest> intercepts = directory.listIntercepts();
+```
 
 ### Remove Intercept
 
 ```java
 directory.removeIntercept(interceptUuid);
-```
-
-Or from CLI:
-```bash
-pal rm -d localhost:2379 -I intercept-uuid
 ```
 
 ### Update Intercept
@@ -675,12 +692,17 @@ export CHECKED_EXCEPTION_POLICY=REJECT
 #### Per-Intercept Override
 
 ```java
-InterceptRequest.builder()
-    .interceptType(InterceptType.BEFORE)
-    .callbackClass(AuthCallback.class.getName())
-    .exceptionPropagationPolicy(ExceptionPropagationPolicy.PROPAGATE_ALL)
-    .checkedExceptionPolicy(CheckedExceptionPolicy.REJECT)
-    .build();
+new InterceptRequest<>(
+    UUID.randomUUID(),
+    callbackPeerUuid,
+    InterceptType.BEFORE,
+    "com.example.SecuredService",
+    AuthCallback.class.getName(),
+    "handle",
+    new InterceptableMethodCall("*", Collections.emptyList()),
+    false,
+    ExceptionPropagationPolicy.PROPAGATE_ALL,
+    CheckedExceptionPolicy.REJECT);
 ```
 
 ### Exception Handling Examples
@@ -701,10 +723,14 @@ public class ValidationCallback implements InterceptCallback {
 }
 
 // Register with default policy (PROPAGATE_CONTROLLED_ONLY)
-InterceptRequest.builder()
-    .interceptType(InterceptType.BEFORE)
-    .callbackClass(ValidationCallback.class.getName())
-    .build();
+new InterceptRequest<>(
+    UUID.randomUUID(),
+    callbackPeerUuid,
+    InterceptType.BEFORE,
+    "com.example.Service",
+    ValidationCallback.class.getName(),
+    "handle",
+    new InterceptableMethodCall("*", Collections.emptyList()));
 ```
 
 #### Example 2: Resilient Monitoring
@@ -720,11 +746,17 @@ public class MetricsCallback implements InterceptCallback {
 }
 
 // Register with SWALLOW_ALL policy
-InterceptRequest.builder()
-    .interceptType(InterceptType.AFTER)
-    .callbackClass(MetricsCallback.class.getName())
-    .exceptionPropagationPolicy(ExceptionPropagationPolicy.SWALLOW_ALL)
-    .build();
+new InterceptRequest<>(
+    UUID.randomUUID(),
+    callbackPeerUuid,
+    InterceptType.AFTER,
+    "com.example.Service",
+    MetricsCallback.class.getName(),
+    "handle",
+    new InterceptableMethodCall("*", Collections.emptyList()),
+    false,
+    ExceptionPropagationPolicy.SWALLOW_ALL,
+    null);
 ```
 
 #### Example 3: Exception Transformation in AROUND
@@ -789,11 +821,17 @@ These exceptions help you catch programming errors during development. Fix the c
 
 ```java
 // Fire-and-forget - exceptions logged but never propagate
-InterceptRequest.builder()
-    .interceptType(InterceptType.BEFORE_ASYNC)
-    .callbackClass(AsyncCallback.class.getName())
-    .exceptionPropagationPolicy(ExceptionPropagationPolicy.PROPAGATE_ALL)  // ignored
-    .build();
+new InterceptRequest<>(
+    UUID.randomUUID(),
+    callbackPeerUuid,
+    InterceptType.BEFORE_ASYNC,
+    "com.example.Service",
+    AsyncCallback.class.getName(),
+    "handle",
+    new InterceptableMethodCall("*", Collections.emptyList()),
+    false,
+    ExceptionPropagationPolicy.PROPAGATE_ALL,  // ignored for async
+    null);
 ```
 
 This is because async intercepts don't block the caller, so there's no synchronous path to propagate exceptions.

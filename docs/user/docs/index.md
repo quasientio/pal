@@ -97,12 +97,12 @@ See [Getting Started](getting-started.md) for detailed installation.
 
 ```bash
 # Simple local peer with Chronicle Queue
-pal run --wal file:/tmp/my-wal --rpc auto \
+pal run --wal file:/tmp/my-wal --json-rpc auto \
   -cp myapp.jar com.example.Main
 
 # Distributed peer with Kafka
 pal run -d localhost:2379 -k localhost:29092 \
-  --wal my-wal --rpc auto \
+  --wal my-wal --json-rpc auto \
   -cp myapp.jar com.example.Main
 ```
 
@@ -158,13 +158,17 @@ Learn more: [Log Backends](concepts/logs.md)
 Insert callbacks before, after, or around any method call at runtime:
 
 ```java
-// Register intercept
-InterceptRequest intercept = InterceptRequest.builder()
-    .classPattern("com.example.Calculator")
-    .methodPattern("add")
-    .interceptType(InterceptType.BEFORE)
-    .callbackPeer(myPeerUuid)
-    .build();
+// Register intercept via constructor
+InterceptRequest<InterceptableMethodCall> intercept =
+    new InterceptRequest<>(
+        UUID.randomUUID(),           // intercept ID
+        myPeerUuid,                  // callback peer
+        InterceptType.BEFORE,        // type
+        "com.example.Calculator",    // class to intercept
+        "com.example.Monitor",       // callback class
+        "onBeforeAdd",               // callback method
+        new InterceptableMethodCall(
+            "add", Arrays.asList("int", "int")));
 palDirectory.createIntercept(intercept);
 
 // Your callback gets called before Calculator.add()
@@ -178,7 +182,7 @@ Learn more: [Interception](concepts/interception.md)
 
 ```bash
 # Run with Chronicle (no infrastructure needed)
-pal run --wal file:/tmp/dev-log --rpc auto \
+pal run --wal file:/tmp/dev-log --json-rpc auto \
   -cp target/classes com.example.Dev
 
 # Test with interception
@@ -192,7 +196,7 @@ Guide: [Local Development](guides/local-development.md)
 ```bash
 # Peer A: Service provider
 pal run -d etcd:2379 -k kafka:9092 \
-  --wal service-wal --rpc auto -n my-service \
+  --wal service-wal --json-rpc auto -n my-service \
   -cp service.jar com.example.Service
 
 # Peer B: Client
@@ -240,7 +244,7 @@ pal run --source-log file:/tmp/execution-log \
   -cp app.jar
 
 # Or print to see what happened
-pal print -l file:/tmp/execution-log --output-format FULL
+pal print -l file:/tmp/execution-log --full
 ```
 
 ### Distributed RPC
@@ -248,7 +252,7 @@ pal print -l file:/tmp/execution-log --output-format FULL
 ```bash
 # Terminal 1: Start service peer
 pal run -d localhost:2379 -k localhost:29092 \
-  --wal service-wal --rpc auto -n calculator \
+  --wal service-wal --json-rpc auto -n calculator \
   -cp calc.jar com.example.Calculator
 
 # Terminal 2: Call service
@@ -263,7 +267,7 @@ pal call -d localhost:2379 -p calculator \
 ```bash
 # Start peer with interception enabled
 pal run -d localhost:2379 --interceptable \
-  --rpc auto -n monitored-app \
+  --json-rpc auto -n monitored-app \
   -cp app.jar com.example.App
 
 # From monitoring code, register intercepts

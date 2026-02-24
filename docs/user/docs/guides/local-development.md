@@ -148,7 +148,7 @@ Result: WORLD
 ### Inspect the WAL
 
 ```bash
-pal print -l file:/tmp/dev-wal --output-format COMPACT
+pal print -l file:/tmp/dev-wal --compact
 ```
 
 See all operations logged:
@@ -166,7 +166,7 @@ When developing locally with Chronicle Queue, all CLI commands support direct mo
 
 ```bash
 # Print messages from Chronicle log
-pal print -l file:/tmp/dev-wal --output-format FULL
+pal print -l file:/tmp/dev-wal --full
 
 # Call method and write to Chronicle log
 pal call -l file:/tmp/dev-wal com.example.HelloService processMessage "test"
@@ -362,7 +362,7 @@ Watch messages in real-time:
 pal run --wal file:/tmp/live-wal -cp target/classes com.example.HelloService
 
 # Terminal 2: Follow log
-pal print -l file:/tmp/live-wal -f --output-format FULL
+pal print -l file:/tmp/live-wal -f --full
 ```
 
 See every method call, argument, and return value.
@@ -463,7 +463,7 @@ pal run --wal file:dev-wal -cp target/classes com.example.Service
 
 # Test distributed setup
 pal run -d localhost:2379 -k localhost:29092 \
-  --wal service-wal --rpc auto \
+  --wal service-wal --json-rpc auto \
   -cp target/service.jar com.example.Service
 ```
 
@@ -535,7 +535,7 @@ pal run --wal file:dev-wal \
   -cp target/classes com.example.HelloService test1 test2
 
 # 5. Check results
-pal print -l file:dev-wal --output-format COMPACT
+pal print -l file:dev-wal --compact
 
 # 6. Make changes to code
 vim src/main/java/com/example/HelloService.java

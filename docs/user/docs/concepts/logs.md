@@ -69,7 +69,7 @@ pal run --source-log file:/tmp/my-queue -cp app.jar
 
 **Print queue contents**:
 ```bash
-pal print -l file:/tmp/my-queue --output-format FULL
+pal print -l file:/tmp/my-queue --full
 ```
 
 **Delete old queue**:
@@ -111,7 +111,7 @@ pal run -k localhost:29092 --wal my-wal -cp app.jar
 
 # With directory and Kafka
 pal run -d localhost:2379 -k localhost:29092 \
-  --wal my-wal --rpc auto \
+  --wal my-wal --json-rpc auto \
   -cp app.jar com.example.Service
 ```
 
@@ -178,12 +178,12 @@ kafka-console-consumer.sh --bootstrap-server localhost:29092 \
 
 ```bash
 # Development
-pal run --wal file:/tmp/dev-log --rpc auto \
+pal run --wal file:/tmp/dev-log --json-rpc auto \
   -cp target/classes com.example.Service
 
 # Production
 pal run -d etcd:2379 -k kafka:9092 \
-  --wal service-wal --rpc auto \
+  --wal service-wal --json-rpc auto \
   -cp service.jar com.example.Service
 ```
 
@@ -286,7 +286,7 @@ pal print -l file:/tmp/my-log -f
 pal print -d localhost:2379 -l my-log
 
 # Print with full details
-pal print -d localhost:2379 -l my-log --output-format FULL
+pal print -d localhost:2379 -l my-log --full
 
 # Follow new messages
 pal print -d localhost:2379 -l my-log -f
@@ -418,7 +418,7 @@ kafka-topics.sh --bootstrap-server localhost:29092 \
 
 Use Chronicle Queue:
 ```bash
-pal run --wal file:/tmp/dev --rpc auto \
+pal run --wal file:/tmp/dev --json-rpc auto \
   -cp target/classes com.example.Dev
 ```
 
