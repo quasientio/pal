@@ -9,9 +9,18 @@
  */
 package io.quasient.pal.common.replay;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.hasItem;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-import org.junit.Ignore;
+import io.quasient.pal.messages.colfer.Class;
+import io.quasient.pal.messages.colfer.ExecMessage;
+import io.quasient.pal.messages.colfer.InstanceMethodCall;
+import io.quasient.pal.messages.colfer.ReturnValue;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import org.junit.Test;
 
 /**
@@ -34,14 +43,19 @@ public class WalIndexTest {
    * structural issues.
    */
   @Test
-  @Ignore("Awaiting implementation in #801")
   public void pairsLinearSequence() {
-    // Given: A list with two entries — A_OP at offset 0 and A_RET at offset 1
-    // When: WalIndex is built from this list
-    // Then: pairs contains 0↔1, spans contains 0→Span(0,1), structuralIssues is empty
+    // Given
+    List<WalEntry> entries =
+        Arrays.asList(makeOperation(0, "self-caller", 1), makeCompletion(1, "self-caller", 2));
 
-    // TODO(#801): Implement test logic
-    fail("Not yet implemented");
+    // When
+    WalIndex index = WalIndex.build(entries);
+
+    // Then
+    assertThat(index.getPairs().get(0L), is(1L));
+    assertThat(index.getPairs().get(1L), is(0L));
+    assertThat(index.getSpans().get(0L), is(new Span(0, 1)));
+    assertThat(index.getStructuralIssues().isEmpty(), is(true));
   }
 
   /**
@@ -52,14 +66,26 @@ public class WalIndexTest {
    * 1→(1,2)}.
    */
   @Test
-  @Ignore("Awaiting implementation in #801")
   public void pairsNestedSequence() {
-    // Given: A list with four entries — A_OP(0), B_OP(1), B_RET(2), A_RET(3)
-    // When: WalIndex is built from this list
-    // Then: pairs contains {0↔3, 1↔2}, spans contains {0→Span(0,3), 1→Span(1,2)}
+    // Given
+    List<WalEntry> entries =
+        Arrays.asList(
+            makeOperation(0, "self-caller", 1),
+            makeOperation(1, "self-caller", 2),
+            makeCompletion(2, "self-caller", 3),
+            makeCompletion(3, "self-caller", 4));
 
-    // TODO(#801): Implement test logic
-    fail("Not yet implemented");
+    // When
+    WalIndex index = WalIndex.build(entries);
+
+    // Then
+    assertThat(index.getPairs().get(0L), is(3L));
+    assertThat(index.getPairs().get(3L), is(0L));
+    assertThat(index.getPairs().get(1L), is(2L));
+    assertThat(index.getPairs().get(2L), is(1L));
+    assertThat(index.getSpans().get(0L), is(new Span(0, 3)));
+    assertThat(index.getSpans().get(1L), is(new Span(1, 2)));
+    assertThat(index.getStructuralIssues().isEmpty(), is(true));
   }
 
   /**
@@ -69,14 +95,25 @@ public class WalIndexTest {
    * 2↔3}.
    */
   @Test
-  @Ignore("Awaiting implementation in #801")
   public void pairsDeeplyNested() {
-    // Given: A list with six entries — A_OP(0), B_OP(1), C_OP(2), C_RET(3), B_RET(4), A_RET(5)
-    // When: WalIndex is built from this list
-    // Then: pairs contains {0↔5, 1↔4, 2↔3}
+    // Given
+    List<WalEntry> entries =
+        Arrays.asList(
+            makeOperation(0, "self-caller", 1),
+            makeOperation(1, "self-caller", 2),
+            makeOperation(2, "self-caller", 3),
+            makeCompletion(3, "self-caller", 4),
+            makeCompletion(4, "self-caller", 5),
+            makeCompletion(5, "self-caller", 6));
 
-    // TODO(#801): Implement test logic
-    fail("Not yet implemented");
+    // When
+    WalIndex index = WalIndex.build(entries);
+
+    // Then
+    assertThat(index.getPairs().get(0L), is(5L));
+    assertThat(index.getPairs().get(1L), is(4L));
+    assertThat(index.getPairs().get(2L), is(3L));
+    assertThat(index.getStructuralIssues().isEmpty(), is(true));
   }
 
   /**
@@ -86,14 +123,24 @@ public class WalIndexTest {
    * <p>Input: [A_OP(0), A_RET(1), B_OP(2), B_RET(3)]. Expected: pairs={0↔1, 2↔3}.
    */
   @Test
-  @Ignore("Awaiting implementation in #801")
   public void pairsSequentialSiblings() {
-    // Given: A list with four entries — A_OP(0), A_RET(1), B_OP(2), B_RET(3)
-    // When: WalIndex is built from this list
-    // Then: pairs contains {0↔1, 2↔3}, spans contains {0→Span(0,1), 2→Span(2,3)}
+    // Given
+    List<WalEntry> entries =
+        Arrays.asList(
+            makeOperation(0, "self-caller", 1),
+            makeCompletion(1, "self-caller", 2),
+            makeOperation(2, "self-caller", 3),
+            makeCompletion(3, "self-caller", 4));
 
-    // TODO(#801): Implement test logic
-    fail("Not yet implemented");
+    // When
+    WalIndex index = WalIndex.build(entries);
+
+    // Then
+    assertThat(index.getPairs().get(0L), is(1L));
+    assertThat(index.getPairs().get(2L), is(3L));
+    assertThat(index.getSpans().get(0L), is(new Span(0, 1)));
+    assertThat(index.getSpans().get(2L), is(new Span(2, 3)));
+    assertThat(index.getStructuralIssues().isEmpty(), is(true));
   }
 
   /**
@@ -104,14 +151,28 @@ public class WalIndexTest {
    * each mapping to the correct subset of entries.
    */
   @Test
-  @Ignore("Awaiting implementation in #801")
   public void groupsByThread() {
-    // Given: A list of entries where some have threadName="thread-1" and others "thread-2"
-    // When: WalIndex is built from this list
-    // Then: byThread map has two keys ("thread-1" and "thread-2"), each with correct entries
+    // Given
+    WalEntry t1Op = makeOperation(0, "thread-1", 1);
+    WalEntry t2Op = makeOperation(1, "thread-2", 2);
+    WalEntry t1Ret = makeCompletion(2, "thread-1", 3);
+    WalEntry t2Ret = makeCompletion(3, "thread-2", 4);
+    List<WalEntry> entries = Arrays.asList(t1Op, t2Op, t1Ret, t2Ret);
 
-    // TODO(#801): Implement test logic
-    fail("Not yet implemented");
+    // When
+    WalIndex index = WalIndex.build(entries);
+
+    // Then
+    List<WalEntry> thread1Entries = index.getEntriesForThread("thread-1");
+    List<WalEntry> thread2Entries = index.getEntriesForThread("thread-2");
+    assertThat(thread1Entries, is(notNullValue()));
+    assertThat(thread2Entries, is(notNullValue()));
+    assertThat(thread1Entries.size(), is(2));
+    assertThat(thread2Entries.size(), is(2));
+    assertThat(thread1Entries.get(0).getOffset(), is(0L));
+    assertThat(thread1Entries.get(1).getOffset(), is(2L));
+    assertThat(thread2Entries.get(0).getOffset(), is(1L));
+    assertThat(thread2Entries.get(1).getOffset(), is(3L));
   }
 
   /**
@@ -121,14 +182,20 @@ public class WalIndexTest {
    * corresponding entry.
    */
   @Test
-  @Ignore("Awaiting implementation in #801")
   public void indexesByBuilderSeq() {
-    // Given: A list of entries with builderSeq values 1, 2, and 3
-    // When: WalIndex is built from this list
-    // Then: byBuilderSeq maps 1→entry1, 2→entry2, 3→entry3
+    // Given
+    WalEntry entry1 = makeOperation(0, "self-caller", 1);
+    WalEntry entry2 = makeOperation(1, "self-caller", 2);
+    WalEntry entry3 = makeCompletion(2, "self-caller", 3);
+    List<WalEntry> entries = Arrays.asList(entry1, entry2, entry3);
 
-    // TODO(#801): Implement test logic
-    fail("Not yet implemented");
+    // When
+    WalIndex index = WalIndex.build(entries);
+
+    // Then
+    assertThat(index.getEntryByBuilderSeq(1).getOffset(), is(0L));
+    assertThat(index.getEntryByBuilderSeq(2).getOffset(), is(1L));
+    assertThat(index.getEntryByBuilderSeq(3).getOffset(), is(2L));
   }
 
   /**
@@ -139,14 +206,17 @@ public class WalIndexTest {
    * is non-empty.
    */
   @Test
-  @Ignore("Awaiting implementation in #801")
   public void reportsOrphanedCompletion() {
-    // Given: A list with a single COMPLETION entry at offset 0 (no preceding OPERATION)
-    // When: WalIndex is built from this list
-    // Then: structuralIssues is non-empty, reporting orphaned completion
+    // Given
+    List<WalEntry> entries = Collections.singletonList(makeCompletion(0, "self-caller", 1));
 
-    // TODO(#801): Implement test logic
-    fail("Not yet implemented");
+    // When
+    WalIndex index = WalIndex.build(entries);
+
+    // Then
+    assertThat(index.getStructuralIssues().isEmpty(), is(false));
+    assertThat(index.getStructuralIssues(), hasItem("Orphaned completion at offset 0"));
+    assertThat(index.getPairs().isEmpty(), is(true));
   }
 
   /**
@@ -157,14 +227,18 @@ public class WalIndexTest {
    * structuralIssues contains an unmatched operation warning.
    */
   @Test
-  @Ignore("Awaiting implementation in #801")
   public void reportsUnmatchedOperation() {
-    // Given: A list with a single OPERATION entry at offset 0 (no following COMPLETION)
-    // When: WalIndex is built from this list
-    // Then: structuralIssues is non-empty, reporting unmatched operation
+    // Given
+    List<WalEntry> entries = Collections.singletonList(makeOperation(0, "self-caller", 1));
 
-    // TODO(#801): Implement test logic
-    fail("Not yet implemented");
+    // When
+    WalIndex index = WalIndex.build(entries);
+
+    // Then
+    assertThat(index.getStructuralIssues().isEmpty(), is(false));
+    assertThat(index.getStructuralIssues(), hasItem("Unmatched operation at offset 0"));
+    assertThat(index.getPairs().isEmpty(), is(true));
+    assertThat(index.getSpans().isEmpty(), is(true));
   }
 
   /**
@@ -172,14 +246,18 @@ public class WalIndexTest {
    * spans, and zero structural issues.
    */
   @Test
-  @Ignore("Awaiting implementation in #801")
   public void handlesEmptyWal() {
-    // Given: An empty list of WalEntry
-    // When: WalIndex is built from this list
-    // Then: entries is empty, pairs is empty, spans is empty, structuralIssues is empty
+    // Given
+    List<WalEntry> entries = Collections.emptyList();
 
-    // TODO(#801): Implement test logic
-    fail("Not yet implemented");
+    // When
+    WalIndex index = WalIndex.build(entries);
+
+    // Then
+    assertThat(index.getEntries().isEmpty(), is(true));
+    assertThat(index.getPairs().isEmpty(), is(true));
+    assertThat(index.getSpans().isEmpty(), is(true));
+    assertThat(index.getStructuralIssues().isEmpty(), is(true));
   }
 
   /**
@@ -187,13 +265,58 @@ public class WalIndexTest {
    * reports the unmatched entry as a structural issue.
    */
   @Test
-  @Ignore("Awaiting implementation in #801")
   public void handlesSingleEntry() {
-    // Given: A list with a single OPERATION entry at offset 0
-    // When: WalIndex is built from this list
-    // Then: no pairs, structuralIssues reports unmatched operation
+    // Given
+    List<WalEntry> entries = Collections.singletonList(makeOperation(0, "self-caller", 1));
 
-    // TODO(#801): Implement test logic
-    fail("Not yet implemented");
+    // When
+    WalIndex index = WalIndex.build(entries);
+
+    // Then
+    assertThat(index.getEntries().size(), is(1));
+    assertThat(index.getPairs().isEmpty(), is(true));
+    assertThat(index.getStructuralIssues().isEmpty(), is(false));
+    assertThat(index.getStructuralIssues(), hasItem("Unmatched operation at offset 0"));
+  }
+
+  /**
+   * Creates a synthetic OPERATION {@link WalEntry} using an {@link InstanceMethodCall}-based {@link
+   * ExecMessage}.
+   *
+   * @param offset the WAL offset
+   * @param threadName the thread name
+   * @param builderSeq the builder sequence number
+   * @return a new operation entry
+   */
+  private static WalEntry makeOperation(long offset, String threadName, int builderSeq) {
+    ExecMessage msg = new ExecMessage();
+    msg.setThreadName(threadName);
+    msg.setBuilderSeq(builderSeq);
+    InstanceMethodCall imc = new InstanceMethodCall();
+    imc.setName("op" + offset);
+    Class clazz = new Class();
+    clazz.setName("com.example.Test");
+    imc.setClazz(clazz);
+    msg.setInstanceMethodCall(imc);
+    return WalEntry.fromExecMessage(offset, msg);
+  }
+
+  /**
+   * Creates a synthetic COMPLETION {@link WalEntry} using a {@link ReturnValue}-based {@link
+   * ExecMessage}.
+   *
+   * @param offset the WAL offset
+   * @param threadName the thread name
+   * @param builderSeq the builder sequence number
+   * @return a new completion entry
+   */
+  private static WalEntry makeCompletion(long offset, String threadName, int builderSeq) {
+    ExecMessage msg = new ExecMessage();
+    msg.setThreadName(threadName);
+    msg.setBuilderSeq(builderSeq);
+    ReturnValue rv = new ReturnValue();
+    rv.setIsVoid(true);
+    msg.setReturnValue(rv);
+    return WalEntry.fromExecMessage(offset, msg);
   }
 }
