@@ -45,7 +45,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -264,8 +264,9 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
    * When used with --offset, also shows the corresponding return value or exception for the
    * operation at the specified offset.
    *
-   * <p>Scans subsequent messages to find the RETURN_VALUE or THROWABLE message that has a matching
-   * responseToId linking it back to the operation at the given offset.
+   * <p>Scans subsequent messages using nesting-depth tracking to find the matching return value.
+   * Each operation increments depth; each return/done message decrements it. When depth reaches
+   * zero, the matching return has been found.
    */
   @Option(
       names = {"--with-return"},
@@ -523,17 +524,15 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
 
       // 7) Start polling
       final AtomicBoolean done = new AtomicBoolean(false);
-      // Tracks the message ID at the given offset when --with-return is used
-      final AtomicReference<String> foundOffsetMsgId = new AtomicReference<>();
+      // Tracks nesting depth when scanning for the matching return with --with-return
+      final AtomicInteger withReturnDepth = new AtomicInteger(0);
       while (!done.get()) {
 
         ConsumerRecords<String, LogMessage<?>> records = consumer.poll(Duration.ofMillis(200));
         if (records.isEmpty()) {
           // a) If we are in follow mode => keep waiting
-          // b) If offset != null => maybe we already read that offset? We handle that below
-          // c) If not follow => check if we are "caught up"
-          if (!follow && offset == null) {
-            // We can compare current position to endOffset
+          // b) If not follow => check if we are "caught up"
+          if (!follow) {
             long positionNow = consumer.position(partition0);
             if (positionNow >= endOffset) {
               if (verbose) {
@@ -557,14 +556,19 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
                   if (!withReturn) {
                     done.set(true);
                   } else {
-                    // Store the message ID to find the matching return value
-                    foundOffsetMsgId.set(extractMessageId(rec.value()));
+                    // Start nesting-depth scan for matching return value
+                    withReturnDepth.set(1);
                   }
-                } else if (withReturn && foundOffsetMsgId.get() != null) {
-                  // After printing offset message, scan for matching return
-                  if (isResponseTo(rec.value(), foundOffsetMsgId.get())) {
-                    printRecord(rec.key(), rec.value(), currentOffset);
-                    done.set(true);
+                } else if (withReturn && withReturnDepth.get() > 0) {
+                  // Scan for matching return using nesting depth tracking
+                  if (isReturnType(rec.value())) {
+                    int newDepth = withReturnDepth.decrementAndGet();
+                    if (newDepth == 0) {
+                      printRecord(rec.key(), rec.value(), currentOffset);
+                      done.set(true);
+                    }
+                  } else {
+                    withReturnDepth.incrementAndGet();
                   }
                 }
               } else if (shouldPrint(currentOffset, rec.key(), rec.value())) {
@@ -679,8 +683,8 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
       // Read and print messages, using logical offsets
       boolean messageFound = false;
       long logicalOffset = 0; // Track logical 0-based sequential offset
-      // Tracks the message ID at the given offset when --with-return is used
-      String withReturnMsgId = null;
+      // Tracks nesting depth when scanning for the matching return with --with-return
+      int withReturnDepth = 0;
 
       while (true) {
         OutboundMsg outboundMsg = OutboundMsg.readNext(tailer);
@@ -716,20 +720,24 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
             // Found the requested offset, print it
             printRecord(logMessage, logicalOffset);
             if (withReturn) {
-              // Store message ID to find matching return value
-              withReturnMsgId = extractMessageId(logMessage);
+              // Start nesting-depth scan for matching return value
+              withReturnDepth = 1;
             } else if (!follow) {
               // Not in follow mode, we're done after printing the requested offset
               break;
             }
-          } else if (withReturnMsgId != null) {
-            // Scanning for matching return value after the offset message
-            if (isResponseTo(logMessage, withReturnMsgId)) {
-              printRecord(logMessage, logicalOffset);
-              if (!follow) {
-                break;
+          } else if (withReturn && withReturnDepth > 0) {
+            // Scan for matching return using nesting depth tracking
+            if (isReturnType(logMessage)) {
+              withReturnDepth--;
+              if (withReturnDepth == 0) {
+                printRecord(logMessage, logicalOffset);
+                if (!follow) {
+                  break;
+                }
               }
-              withReturnMsgId = null;
+            } else {
+              withReturnDepth++;
             }
           } else if (logicalOffset > offset && !follow) {
             // We've passed the offset without finding it (shouldn't happen), exit
@@ -780,41 +788,25 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
   }
 
   /**
-   * Extracts the message ID from a log message for use with the {@code --with-return} option.
+   * Checks whether the given message is a return/done type (RETURN_VALUE, THROWABLE,
+   * PUT_STATIC_DONE, or PUT_FIELD_DONE).
    *
-   * @param msg the log message
-   * @return the message ID, or {@code null} if not available
-   */
-  private static String extractMessageId(LogMessage<?> msg) {
-    if (isColferMessage(msg)) {
-      Message m = (Message) msg.getContent();
-      if (m != null && m.getExecMessage() != null) {
-        return m.getExecMessage().getMessageId();
-      }
-    }
-    return getId(msg);
-  }
-
-  /**
-   * Checks whether the given message is a response (RETURN_VALUE or THROWABLE) to the operation
-   * with the specified message ID.
+   * <p>Used by the {@code --with-return} option to track nesting depth: operation messages increase
+   * depth, return/done messages decrease it. When depth reaches zero, the matching return has been
+   * found.
    *
    * @param msg the log message to check
-   * @param originalMsgId the message ID of the original operation
-   * @return {@code true} if this message is a response to the original operation
+   * @return {@code true} if the message is a return or done type
    */
-  private static boolean isResponseTo(LogMessage<?> msg, String originalMsgId) {
-    if (originalMsgId == null) {
-      return false;
-    }
+  static boolean isReturnType(LogMessage<?> msg) {
     if (isColferMessage(msg)) {
       Message m = (Message) msg.getContent();
-      if (m != null && m.getExecMessage() != null) {
-        ExecMessage exec = m.getExecMessage();
-        // Check if this is a RETURN_VALUE or THROWABLE with matching responseToId
-        if (exec.getReturnValue() != null || exec.getRaisedThrowable() != null) {
-          return originalMsgId.equals(exec.getResponseToId());
-        }
+      if (m != null) {
+        MessageType msgType = MessageType.fromId(m.getMessageType());
+        return msgType == MessageType.EXEC_RETURN_VALUE
+            || msgType == MessageType.EXEC_THROWABLE
+            || msgType == MessageType.EXEC_PUT_STATIC_DONE
+            || msgType == MessageType.EXEC_PUT_FIELD_DONE;
       }
     }
     return false;

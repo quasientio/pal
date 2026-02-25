@@ -1070,48 +1070,21 @@ public class MessageStreamPrinterTest {
   }
 
   // ==========================================================================
-  // Tests for --with-return (extractMessageId, isResponseTo)
+  // Tests for --with-return (isReturnType)
   // ==========================================================================
 
   /**
-   * Tests that extractMessageId returns the message ID from a Colfer message.
+   * Tests that isReturnType returns true for EXEC_RETURN_VALUE messages.
    *
    * @throws Exception if reflection fails
    */
   @Test
-  public void extractMessageId_colferMessage_returnsId() throws Exception {
-    UUID peer = UUID.randomUUID();
-    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
-    var em = b.buildEmptyConstructor(peer, "java.lang.String");
-    var m = b.wrap(em);
-    LogMessage<?> lm = logOf(m);
-
-    Method extractId =
-        MessageStreamPrinter.class.getDeclaredMethod("extractMessageId", LogMessage.class);
-    extractId.setAccessible(true);
-    String result = (String) extractId.invoke(null, lm);
-
-    assertThat(result, is(notNullValue()));
-    assertThat(result, is(em.getMessageId()));
-  }
-
-  /**
-   * Tests that isResponseTo returns true when a RETURN_VALUE message has a matching responseToId.
-   *
-   * @throws Exception if reflection fails
-   */
-  @Test
-  public void isResponseTo_matchingReturn_returnsTrue() throws Exception {
-    UUID peer = UUID.randomUUID();
-    String originalMsgId = "original-msg-123";
-
-    // Build a return value message with responseToId set
+  public void isReturnType_returnValue_returnsTrue() throws Exception {
     var returnMsg = new ExecMessage();
-    returnMsg.setPeerUuid(peer.toString());
+    returnMsg.setPeerUuid(UUID.randomUUID().toString());
     returnMsg.setMessageId("ret-1");
     returnMsg.setThreadName("main");
     returnMsg.setCurrentTime("2026-01-01T00:00:00Z");
-    returnMsg.setResponseToId(originalMsgId);
     var rv = new ReturnValue();
     rv.setIsVoid(true);
     returnMsg.setReturnValue(rv);
@@ -1120,67 +1093,60 @@ public class MessageStreamPrinterTest {
     m.setExecMessage(returnMsg);
     LogMessage<?> lm = logOf(m);
 
-    Method isResp =
-        MessageStreamPrinter.class.getDeclaredMethod(
-            "isResponseTo", LogMessage.class, String.class);
-    isResp.setAccessible(true);
-    boolean result = (boolean) isResp.invoke(null, lm, originalMsgId);
-
-    assertThat(result, is(true));
+    assertThat(MessageStreamPrinter.isReturnType(lm), is(true));
   }
 
   /**
-   * Tests that isResponseTo returns false when the responseToId does not match.
+   * Tests that isReturnType returns true for EXEC_THROWABLE messages.
    *
    * @throws Exception if reflection fails
    */
   @Test
-  public void isResponseTo_mismatchingReturn_returnsFalse() throws Exception {
-    UUID peer = UUID.randomUUID();
-
-    var returnMsg = new ExecMessage();
-    returnMsg.setPeerUuid(peer.toString());
-    returnMsg.setMessageId("ret-1");
-    returnMsg.setThreadName("main");
-    returnMsg.setCurrentTime("2026-01-01T00:00:00Z");
-    returnMsg.setResponseToId("different-msg-id");
-    var rv = new ReturnValue();
-    rv.setIsVoid(true);
-    returnMsg.setReturnValue(rv);
+  public void isReturnType_throwable_returnsTrue() throws Exception {
     Message m = new Message();
-    m.setMessageType(MessageType.EXEC_RETURN_VALUE.getId());
-    m.setExecMessage(returnMsg);
+    m.setMessageType(MessageType.EXEC_THROWABLE.getId());
     LogMessage<?> lm = logOf(m);
 
-    Method isResp =
-        MessageStreamPrinter.class.getDeclaredMethod(
-            "isResponseTo", LogMessage.class, String.class);
-    isResp.setAccessible(true);
-    boolean result = (boolean) isResp.invoke(null, lm, "original-msg-123");
-
-    assertThat(result, is(false));
+    assertThat(MessageStreamPrinter.isReturnType(lm), is(true));
   }
 
   /**
-   * Tests that isResponseTo returns false for non-return messages (e.g., CONSTRUCTOR).
+   * Tests that isReturnType returns false for operation messages (e.g., CONSTRUCTOR).
    *
    * @throws Exception if reflection fails
    */
   @Test
-  public void isResponseTo_nonReturnMessage_returnsFalse() throws Exception {
+  public void isReturnType_constructor_returnsFalse() throws Exception {
     UUID peer = UUID.randomUUID();
     MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
     var em = b.buildEmptyConstructor(peer, "java.lang.String");
     var m = b.wrap(em);
     LogMessage<?> lm = logOf(m);
 
-    Method isResp =
-        MessageStreamPrinter.class.getDeclaredMethod(
-            "isResponseTo", LogMessage.class, String.class);
-    isResp.setAccessible(true);
-    boolean result = (boolean) isResp.invoke(null, lm, "any-id");
+    assertThat(MessageStreamPrinter.isReturnType(lm), is(false));
+  }
 
-    assertThat(result, is(false));
+  /**
+   * Tests that isReturnType returns false for METHOD_CALL messages.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  public void isReturnType_methodCall_returnsFalse() throws Exception {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    var em =
+        b.buildInstanceMethod(
+            peer,
+            "java.util.ArrayList",
+            "add",
+            ObjectRef.randomRef(),
+            new String[] {"int"},
+            new Object[] {1});
+    var m = b.wrap(em);
+    LogMessage<?> lm = logOf(m);
+
+    assertThat(MessageStreamPrinter.isReturnType(lm), is(false));
   }
 
   // ==========================================================================
