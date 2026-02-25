@@ -9,155 +9,235 @@
  */
 package io.quasient.pal.core.replay;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-import org.junit.Ignore;
+import io.quasient.pal.common.replay.WalEntry;
+import io.quasient.pal.core.replay.DivergenceDetector.DivergencePolicy;
+import io.quasient.pal.core.replay.DivergenceDetector.DivergenceType;
+import io.quasient.pal.messages.colfer.Class;
+import io.quasient.pal.messages.colfer.ExecMessage;
+import io.quasient.pal.messages.colfer.InstanceMethodCall;
+import io.quasient.pal.messages.colfer.Obj;
+import io.quasient.pal.messages.colfer.ReturnValue;
+import io.quasient.pal.messages.types.MessageType;
+import java.util.List;
 import org.junit.Test;
 
 /**
- * Unit test specifications for {@code DivergenceDetector} — the verification engine that compares
- * actual return values against WAL-recorded values and accumulates a divergence report.
+ * Unit tests for {@code DivergenceDetector} — the verification engine that compares actual return
+ * values against WAL-recorded values and accumulates a divergence report.
  *
  * <p>Tests cover return-value comparison (equal, null, mismatch), operation mismatch reporting
  * (extra, missing, wrong signature), report aggregation, and divergence policy behavior (HALT vs
  * WARN).
- *
- * <p>Each test is a stub awaiting implementation in issue #811.
  */
 public class DivergenceDetectorTest {
 
   /** Verifies no divergence is reported when WAL and actual return values are equal. */
   @Test
-  @Ignore("Awaiting implementation in #811")
   public void noDivergenceForEqualValues() {
-    // Given: A WalEntry with return value 42
-    // When: compareReturnValue(walEntry, 42) is called
-    // Then: No divergences reported; hasDivergences() returns false
+    DivergenceDetector detector = new DivergenceDetector(DivergencePolicy.WARN);
+    WalEntry entry = createReturnValueEntry(42);
 
-    // TODO(#811): Implement test logic
-    fail("Not yet implemented");
+    detector.compareReturnValue(entry, 42);
+
+    assertThat(detector.hasDivergences(), is(false));
   }
 
   /** Verifies VALUE_MISMATCH divergence when WAL and actual return values differ. */
   @Test
-  @Ignore("Awaiting implementation in #811")
   public void valueMismatchForDifferentValues() {
-    // Given: A WalEntry with return value 42
-    // When: compareReturnValue(walEntry, 99) is called
-    // Then: VALUE_MISMATCH divergence recorded
+    DivergenceDetector detector = new DivergenceDetector(DivergencePolicy.WARN);
+    WalEntry entry = createReturnValueEntry(42);
 
-    // TODO(#811): Implement test logic
-    fail("Not yet implemented");
+    detector.compareReturnValue(entry, 99);
+
+    assertThat(detector.hasDivergences(), is(true));
+    assertThat(
+        detector.getReport().getDivergences().get(0).type(), is(DivergenceType.VALUE_MISMATCH));
   }
 
   /** Verifies no divergence when both WAL and actual return values are null. */
   @Test
-  @Ignore("Awaiting implementation in #811")
   public void noDivergenceForBothNull() {
-    // Given: A WalEntry with null return value
-    // When: compareReturnValue(walEntry, null) is called
-    // Then: No divergences reported
+    DivergenceDetector detector = new DivergenceDetector(DivergencePolicy.WARN);
+    WalEntry entry = createNullReturnValueEntry();
 
-    // TODO(#811): Implement test logic
-    fail("Not yet implemented");
+    detector.compareReturnValue(entry, null);
+
+    assertThat(detector.hasDivergences(), is(false));
   }
 
   /** Verifies VALUE_MISMATCH when WAL has null but actual is non-null. */
   @Test
-  @Ignore("Awaiting implementation in #811")
   public void valueMismatchNullVsNonNull() {
-    // Given: A WalEntry with null return value
-    // When: compareReturnValue(walEntry, "hello") is called
-    // Then: VALUE_MISMATCH divergence recorded
+    DivergenceDetector detector = new DivergenceDetector(DivergencePolicy.WARN);
+    WalEntry entry = createNullReturnValueEntry();
 
-    // TODO(#811): Implement test logic
-    fail("Not yet implemented");
+    detector.compareReturnValue(entry, "hello");
+
+    assertThat(detector.hasDivergences(), is(true));
+    assertThat(
+        detector.getReport().getDivergences().get(0).type(), is(DivergenceType.VALUE_MISMATCH));
   }
 
   /** Verifies OPERATION_MISMATCH is reported when WAL and live signatures differ. */
   @Test
-  @Ignore("Awaiting implementation in #811")
   public void operationMismatchReported() {
-    // Given: A WalEntry expecting one operation and an actual OperationSignature for a different
-    // one
-    // When: reportOperationMismatch(expectedWalEntry, actualSignature) is called
-    // Then: OPERATION_MISMATCH divergence in report
+    DivergenceDetector detector = new DivergenceDetector(DivergencePolicy.WARN);
+    WalEntry expected = createInstanceMethodEntry("com.example.Calculator", "add");
+    OperationSignature actual =
+        new OperationSignature(
+            "com.example.Calculator", "subtract", List.of(), MessageType.EXEC_INSTANCE_METHOD);
 
-    // TODO(#811): Implement test logic
-    fail("Not yet implemented");
+    detector.reportOperationMismatch(expected, actual);
+
+    assertThat(detector.hasDivergences(), is(true));
+    assertThat(
+        detector.getReport().getDivergences().get(0).type(), is(DivergenceType.OPERATION_MISMATCH));
   }
 
   /** Verifies EXTRA_OPERATION is reported when live execution has an operation not in the WAL. */
   @Test
-  @Ignore("Awaiting implementation in #811")
   public void extraOperationReported() {
-    // Given: An OperationSignature for an operation not present in the WAL
-    // When: reportExtraOperation(signature) is called
-    // Then: EXTRA_OPERATION divergence in report
+    DivergenceDetector detector = new DivergenceDetector(DivergencePolicy.WARN);
+    OperationSignature actual =
+        new OperationSignature(
+            "com.example.Calculator", "multiply", List.of(), MessageType.EXEC_INSTANCE_METHOD);
 
-    // TODO(#811): Implement test logic
-    fail("Not yet implemented");
+    detector.reportExtraOperation(actual);
+
+    assertThat(detector.hasDivergences(), is(true));
+    assertThat(
+        detector.getReport().getDivergences().get(0).type(), is(DivergenceType.EXTRA_OPERATION));
   }
 
   /**
    * Verifies MISSING_OPERATION is reported when the WAL expects an operation not in live execution.
    */
   @Test
-  @Ignore("Awaiting implementation in #811")
   public void missingOperationReported() {
-    // Given: A WalEntry for an expected operation that was not executed live
-    // When: reportMissingOperation(walEntry) is called
-    // Then: MISSING_OPERATION divergence in report
+    DivergenceDetector detector = new DivergenceDetector(DivergencePolicy.WARN);
+    WalEntry expected = createInstanceMethodEntry("com.example.Calculator", "add");
 
-    // TODO(#811): Implement test logic
-    fail("Not yet implemented");
+    detector.reportMissingOperation(expected);
+
+    assertThat(detector.hasDivergences(), is(true));
+    assertThat(
+        detector.getReport().getDivergences().get(0).type(), is(DivergenceType.MISSING_OPERATION));
   }
 
   /** Verifies that multiple divergences are aggregated in the report. */
   @Test
-  @Ignore("Awaiting implementation in #811")
   public void reportAggregatesDivergences() {
-    // Given: Multiple divergences reported (VALUE_MISMATCH, EXTRA_OPERATION, MISSING_OPERATION)
-    // When: getReport() is called
-    // Then: Report contains all divergences; hasDivergences() returns true
+    DivergenceDetector detector = new DivergenceDetector(DivergencePolicy.WARN);
+    WalEntry entry = createReturnValueEntry(42);
 
-    // TODO(#811): Implement test logic
-    fail("Not yet implemented");
+    detector.compareReturnValue(entry, 99);
+    detector.reportExtraOperation(
+        new OperationSignature(
+            "com.example.Foo", "bar", List.of(), MessageType.EXEC_INSTANCE_METHOD));
+    detector.reportMissingOperation(createInstanceMethodEntry("com.example.Baz", "qux"));
+
+    assertThat(detector.hasDivergences(), is(true));
+    DivergenceReport report = detector.getReport();
+    assertThat(report.size(), is(3));
   }
 
   /** Verifies that an empty report is returned when no divergences have been recorded. */
   @Test
-  @Ignore("Awaiting implementation in #811")
   public void emptyReportWhenNoDivergences() {
-    // Given: A DivergenceDetector with no divergences reported
-    // When: getReport() is called
-    // Then: hasDivergences() returns false; getReport().getDivergences() is empty
+    DivergenceDetector detector = new DivergenceDetector(DivergencePolicy.WARN);
 
-    // TODO(#811): Implement test logic
-    fail("Not yet implemented");
+    assertThat(detector.hasDivergences(), is(false));
+    assertThat(detector.getReport().isEmpty(), is(true));
+    assertThat(detector.getReport().getDivergences().size(), is(0));
   }
 
   /** Verifies that HALT policy throws an exception immediately on divergence. */
-  @Test
-  @Ignore("Awaiting implementation in #811")
+  @Test(expected = RuntimeException.class)
   public void haltPolicyThrowsOnDivergence() {
-    // Given: A DivergenceDetector with policy=HALT
-    // When: A VALUE_MISMATCH divergence is detected via compareReturnValue
-    // Then: An exception is thrown immediately
+    DivergenceDetector detector = new DivergenceDetector(DivergencePolicy.HALT);
+    WalEntry entry = createReturnValueEntry(42);
 
-    // TODO(#811): Implement test logic
-    fail("Not yet implemented");
+    detector.compareReturnValue(entry, 99);
   }
 
   /** Verifies that WARN policy records divergence but does not throw. */
   @Test
-  @Ignore("Awaiting implementation in #811")
   public void warnPolicyLogsButContinues() {
-    // Given: A DivergenceDetector with policy=WARN
-    // When: A VALUE_MISMATCH divergence is detected via compareReturnValue
-    // Then: Divergence is recorded in report but no exception is thrown
+    DivergenceDetector detector = new DivergenceDetector(DivergencePolicy.WARN);
+    WalEntry entry = createReturnValueEntry(42);
 
-    // TODO(#811): Implement test logic
-    fail("Not yet implemented");
+    detector.compareReturnValue(entry, 99);
+
+    assertThat(detector.hasDivergences(), is(true));
+    assertThat(detector.getReport().size(), is(1));
+  }
+
+  /**
+   * Creates a WalEntry for an EXEC_RETURN_VALUE with a non-null integer return value.
+   *
+   * @param value the integer return value to embed in the WAL entry
+   * @return a WalEntry wrapping a ReturnValue with the given integer
+   */
+  private static WalEntry createReturnValueEntry(int value) {
+    ExecMessage msg = new ExecMessage();
+    msg.setThreadName("self-caller");
+    msg.setBuilderSeq(1);
+
+    ReturnValue rv = new ReturnValue();
+    Obj obj = new Obj();
+    obj.setValue(String.valueOf(value));
+    Class clazz = new Class();
+    clazz.setName("java.lang.Integer");
+    obj.setClazz(clazz);
+    rv.setObject(obj);
+    msg.setReturnValue(rv);
+    return WalEntry.fromExecMessage(0L, msg);
+  }
+
+  /**
+   * Creates a WalEntry for an EXEC_RETURN_VALUE with a null return value.
+   *
+   * @return a WalEntry wrapping a ReturnValue with isNull=true
+   */
+  private static WalEntry createNullReturnValueEntry() {
+    ExecMessage msg = new ExecMessage();
+    msg.setThreadName("self-caller");
+    msg.setBuilderSeq(1);
+
+    ReturnValue rv = new ReturnValue();
+    Obj obj = new Obj();
+    obj.setIsNull(true);
+    Class objClazz = new Class();
+    objClazz.setName("java.lang.Object");
+    obj.setClazz(objClazz);
+    rv.setObject(obj);
+    msg.setReturnValue(rv);
+    return WalEntry.fromExecMessage(0L, msg);
+  }
+
+  /**
+   * Creates a WalEntry for an EXEC_INSTANCE_METHOD operation.
+   *
+   * @param className the class name
+   * @param methodName the method name
+   * @return a WalEntry wrapping an instance method call
+   */
+  private static WalEntry createInstanceMethodEntry(String className, String methodName) {
+    ExecMessage msg = new ExecMessage();
+    msg.setThreadName("self-caller");
+    msg.setBuilderSeq(1);
+
+    InstanceMethodCall imc = new InstanceMethodCall();
+    imc.setName(methodName);
+    imc.setObjectRef(1);
+    Class clazz = new Class();
+    clazz.setName(className);
+    imc.setClazz(clazz);
+    msg.setInstanceMethodCall(imc);
+    return WalEntry.fromExecMessage(0L, msg);
   }
 }

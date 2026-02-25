@@ -9,77 +9,135 @@
  */
 package io.quasient.pal.core.replay;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-import org.junit.Ignore;
+import io.quasient.pal.common.replay.WalEntry;
+import io.quasient.pal.messages.colfer.Class;
+import io.quasient.pal.messages.colfer.ExecMessage;
+import io.quasient.pal.messages.colfer.InstanceMethodCall;
+import io.quasient.pal.messages.colfer.Obj;
+import io.quasient.pal.messages.colfer.Parameter;
+import io.quasient.pal.messages.types.MessageType;
+import java.util.Arrays;
 import org.junit.Test;
 
 /**
- * Unit test specifications for {@code OperationSignature} — the value type used to match live
- * execution against the WAL oracle by comparing class name, method name, parameter types, and
- * message type.
- *
- * <p>Each test is a stub awaiting implementation in issue #811.
+ * Unit tests for {@code OperationSignature} — the value type used to match live execution against
+ * the WAL oracle by comparing class name, method name, parameter types, and message type.
  */
 public class OperationSignatureTest {
 
   /** Verifies that two signatures with identical fields match. */
   @Test
-  @Ignore("Awaiting implementation in #811")
   public void matchesSameSignature() {
-    // Given: Two OperationSignatures with same className, executableName, paramTypes, messageType
-    // When: matches() is called
-    // Then: returns true
+    OperationSignature sig1 =
+        new OperationSignature(
+            "com.example.Calculator",
+            "add",
+            Arrays.asList("int", "int"),
+            MessageType.EXEC_INSTANCE_METHOD);
+    OperationSignature sig2 =
+        new OperationSignature(
+            "com.example.Calculator",
+            "add",
+            Arrays.asList("int", "int"),
+            MessageType.EXEC_INSTANCE_METHOD);
 
-    // TODO(#811): Implement test logic
-    fail("Not yet implemented");
+    assertThat(sig1.matches(sig2), is(true));
   }
 
   /** Verifies that signatures differing only in className do not match. */
   @Test
-  @Ignore("Awaiting implementation in #811")
   public void doesNotMatchDifferentClass() {
-    // Given: Two OperationSignatures identical except className differs
-    // When: matches() is called
-    // Then: returns false
+    OperationSignature sig1 =
+        new OperationSignature(
+            "com.example.Calculator",
+            "add",
+            Arrays.asList("int", "int"),
+            MessageType.EXEC_INSTANCE_METHOD);
+    OperationSignature sig2 =
+        new OperationSignature(
+            "com.example.OtherClass",
+            "add",
+            Arrays.asList("int", "int"),
+            MessageType.EXEC_INSTANCE_METHOD);
 
-    // TODO(#811): Implement test logic
-    fail("Not yet implemented");
+    assertThat(sig1.matches(sig2), is(false));
   }
 
   /** Verifies that signatures differing only in executableName do not match. */
   @Test
-  @Ignore("Awaiting implementation in #811")
   public void doesNotMatchDifferentMethod() {
-    // Given: Two OperationSignatures identical except executableName differs
-    // When: matches() is called
-    // Then: returns false
+    OperationSignature sig1 =
+        new OperationSignature(
+            "com.example.Calculator",
+            "add",
+            Arrays.asList("int", "int"),
+            MessageType.EXEC_INSTANCE_METHOD);
+    OperationSignature sig2 =
+        new OperationSignature(
+            "com.example.Calculator",
+            "subtract",
+            Arrays.asList("int", "int"),
+            MessageType.EXEC_INSTANCE_METHOD);
 
-    // TODO(#811): Implement test logic
-    fail("Not yet implemented");
+    assertThat(sig1.matches(sig2), is(false));
   }
 
   /** Verifies that signatures differing only in paramTypes do not match. */
   @Test
-  @Ignore("Awaiting implementation in #811")
   public void doesNotMatchDifferentParams() {
-    // Given: Two OperationSignatures identical except paramTypes differs
-    // When: matches() is called
-    // Then: returns false
+    OperationSignature sig1 =
+        new OperationSignature(
+            "com.example.Calculator",
+            "add",
+            Arrays.asList("int", "int"),
+            MessageType.EXEC_INSTANCE_METHOD);
+    OperationSignature sig2 =
+        new OperationSignature(
+            "com.example.Calculator",
+            "add",
+            Arrays.asList("double", "double"),
+            MessageType.EXEC_INSTANCE_METHOD);
 
-    // TODO(#811): Implement test logic
-    fail("Not yet implemented");
+    assertThat(sig1.matches(sig2), is(false));
   }
 
   /** Verifies that {@code fromWalEntry} correctly extracts all fields from a WalEntry. */
   @Test
-  @Ignore("Awaiting implementation in #811")
   public void fromWalEntryExtractsCorrectly() {
-    // Given: A WalEntry with known className, executableName, paramTypes, and messageType
-    // When: OperationSignature.fromWalEntry(entry) is called
-    // Then: All fields in the returned OperationSignature match the WalEntry's fields
+    ExecMessage msg = new ExecMessage();
+    msg.setThreadName("self-caller");
+    msg.setBuilderSeq(1);
 
-    // TODO(#811): Implement test logic
-    fail("Not yet implemented");
+    InstanceMethodCall imc = new InstanceMethodCall();
+    imc.setName("add");
+    imc.setObjectRef(7);
+    Class clazz = new Class();
+    clazz.setName("com.example.Calculator");
+    imc.setClazz(clazz);
+    Parameter p1 = new Parameter();
+    Obj obj1 = new Obj();
+    Class intClass1 = new Class();
+    intClass1.setName("int");
+    obj1.setClazz(intClass1);
+    p1.setValue(obj1);
+    Parameter p2 = new Parameter();
+    Obj obj2 = new Obj();
+    Class intClass2 = new Class();
+    intClass2.setName("int");
+    obj2.setClazz(intClass2);
+    p2.setValue(obj2);
+    imc.setParameters(new Parameter[] {p1, p2});
+    msg.setInstanceMethodCall(imc);
+
+    WalEntry entry = WalEntry.fromExecMessage(10L, msg);
+    OperationSignature sig = OperationSignature.fromWalEntry(entry);
+
+    assertThat(sig.className(), is("com.example.Calculator"));
+    assertThat(sig.executableName(), is("add"));
+    assertThat(sig.paramTypes(), is(Arrays.asList("int", "int")));
+    assertThat(sig.messageType(), is(MessageType.EXEC_INSTANCE_METHOD));
   }
 }
