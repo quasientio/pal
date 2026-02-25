@@ -1095,4 +1095,284 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     logger.info("Successfully filtered messages by thread name from socket");
   }
+
+  // ==========================================================================
+  // Tests for new features: TREE format, --with-return, --filter
+  // ==========================================================================
+
+  /**
+   * Tests that `pal print --tree` outputs messages in tree format from a Chronicle log.
+   *
+   * <p>The tree format shows operations with indented nesting, using [offset] markers to identify
+   * each operation in the call tree.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testPrint_chronicleLog_treeFormat() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+
+    // Create a Chronicle WAL by launching a peer
+    String walName = "test-print-chronicle-tree-" + generateId();
+    trackChronicleLog(walName);
+    String walPath = "file:" + walName;
+
+    UUID peerId = UUID.randomUUID();
+    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+
+    peerProcess =
+        launchPeer(
+            peerId, "-d", palDirectory, "--wal", walPath, "-cp", getIttAppsClasspath(), classToRun);
+
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
+    peerProcess = null;
+
+    // Print messages in TREE format
+    AbstractCliIT.CliProcessResult printResult =
+        runPrint("-d", palDirectory, "-l", walName, "--tree");
+
+    assertEquals("Expected successful print", 0, printResult.exitCode());
+    assertThat("Expected content in output", !printResult.stdout().isEmpty());
+    // TREE format uses [offset] markers
+    assertThat("Expected tree-style [offset] markers", printResult.stdout().contains("[0]"));
+
+    logger.info("Successfully printed messages from Chronicle log in TREE format");
+  }
+
+  /**
+   * Tests that `pal print --tree` outputs messages in tree format from a Kafka log.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testPrint_kafkaLog_treeFormat() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+
+    String walName = "test-print-kafka-tree-" + generateId();
+    UUID peerId = UUID.randomUUID();
+    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDirectory,
+            "-k",
+            kafkaServers,
+            "--wal",
+            walName,
+            "-cp",
+            getIttAppsClasspath(),
+            classToRun);
+
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
+    peerProcess = null;
+
+    AbstractCliIT.CliProcessResult printResult =
+        runPrint("-d", palDirectory, "-l", walName, "--tree");
+
+    assertEquals("Expected successful print", 0, printResult.exitCode());
+    assertThat("Expected content in output", !printResult.stdout().isEmpty());
+    assertThat("Expected tree-style [offset] markers", printResult.stdout().contains("[0]"));
+
+    logger.info("Successfully printed messages from Kafka log in TREE format");
+  }
+
+  /**
+   * Tests that `pal print --offset N --with-return` shows the operation at the given offset and its
+   * corresponding return value from a Chronicle log.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testPrint_chronicleLog_withReturn() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+
+    String walName = "test-print-chronicle-withreturn-" + generateId();
+    trackChronicleLog(walName);
+    String walPath = "file:" + walName;
+
+    UUID peerId = UUID.randomUUID();
+    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+
+    peerProcess =
+        launchPeer(
+            peerId, "-d", palDirectory, "--wal", walPath, "-cp", getIttAppsClasspath(), classToRun);
+
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
+    peerProcess = null;
+
+    // Print offset 0 with its return value
+    AbstractCliIT.CliProcessResult printResult =
+        runPrint("-d", palDirectory, "-l", walName, "-o", "0", "--with-return", "--full");
+
+    assertEquals("Expected successful print", 0, printResult.exitCode());
+    assertThat("Expected content in output", !printResult.stdout().isEmpty());
+    // Should have printed at least two messages: the operation + its return value
+    // Both will have CONTEXT: markers in FULL format
+    String stdout = printResult.stdout();
+    int contextCount = countOccurrences(stdout, "CONTEXT:");
+    assertThat("Expected at least 2 CONTEXT markers (operation + return)", contextCount >= 2);
+
+    logger.info("Successfully printed operation with return value from Chronicle log");
+  }
+
+  /**
+   * Tests that `pal print --offset N --with-return` shows the operation at the given offset and its
+   * corresponding return value from a Kafka log.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testPrint_kafkaLog_withReturn() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+
+    String walName = "test-print-kafka-withreturn-" + generateId();
+    UUID peerId = UUID.randomUUID();
+    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDirectory,
+            "-k",
+            kafkaServers,
+            "--wal",
+            walName,
+            "-cp",
+            getIttAppsClasspath(),
+            classToRun);
+
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
+    peerProcess = null;
+
+    // Print offset 0 with its return value
+    AbstractCliIT.CliProcessResult printResult =
+        runPrint("-d", palDirectory, "-l", walName, "-o", "0", "--with-return", "--full");
+
+    assertEquals("Expected successful print", 0, printResult.exitCode());
+    assertThat("Expected content in output", !printResult.stdout().isEmpty());
+    String stdout = printResult.stdout();
+    int contextCount = countOccurrences(stdout, "CONTEXT:");
+    assertThat("Expected at least 2 CONTEXT markers (operation + return)", contextCount >= 2);
+
+    logger.info("Successfully printed operation with return value from Kafka log");
+  }
+
+  /**
+   * Tests that `pal print --filter "class=..."` filters messages by class name from a Chronicle
+   * log.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testPrint_chronicleLog_filterByClass() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+
+    String walName = "test-print-chronicle-filter-class-" + generateId();
+    trackChronicleLog(walName);
+    String walPath = "file:" + walName;
+
+    UUID peerId = UUID.randomUUID();
+    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+
+    peerProcess =
+        launchPeer(
+            peerId, "-d", palDirectory, "--wal", walPath, "-cp", getIttAppsClasspath(), classToRun);
+
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
+    peerProcess = null;
+
+    // Print all messages first to confirm there are some
+    AbstractCliIT.CliProcessResult allResult = runPrint("-d", palDirectory, "-l", walName);
+    assertEquals("Expected successful print", 0, allResult.exitCode());
+    assertThat("Expected messages in log", !allResult.stdout().isEmpty());
+
+    // Filter by a class that likely doesn't exist - should produce no output
+    AbstractCliIT.CliProcessResult filteredResult =
+        runPrint(
+            "-d", palDirectory, "-l", walName, "--filter", "class=com.nonexistent.DoesNotExist");
+
+    assertEquals("Expected successful print with filter", 0, filteredResult.exitCode());
+    // Filtered output should be smaller (fewer or no matching messages)
+    assertThat(
+        "Filtered output should be smaller than unfiltered",
+        filteredResult.stdout().length() < allResult.stdout().length());
+
+    logger.info("Successfully filtered messages by class name from Chronicle log");
+  }
+
+  /**
+   * Tests that `pal print --filter "class=..."` filters messages by class name from a Kafka log.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testPrint_kafkaLog_filterByClass() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+
+    String walName = "test-print-kafka-filter-class-" + generateId();
+    UUID peerId = UUID.randomUUID();
+    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDirectory,
+            "-k",
+            kafkaServers,
+            "--wal",
+            walName,
+            "-cp",
+            getIttAppsClasspath(),
+            classToRun);
+
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
+    peerProcess = null;
+
+    // Print all messages first
+    AbstractCliIT.CliProcessResult allResult = runPrint("-d", palDirectory, "-l", walName);
+    assertEquals("Expected successful print", 0, allResult.exitCode());
+    assertThat("Expected messages in log", !allResult.stdout().isEmpty());
+
+    // Filter by non-existent class
+    AbstractCliIT.CliProcessResult filteredResult =
+        runPrint(
+            "-d", palDirectory, "-l", walName, "--filter", "class=com.nonexistent.DoesNotExist");
+
+    assertEquals("Expected successful print with filter", 0, filteredResult.exitCode());
+    assertThat(
+        "Filtered output should be smaller than unfiltered",
+        filteredResult.stdout().length() < allResult.stdout().length());
+
+    logger.info("Successfully filtered messages by class name from Kafka log");
+  }
+
+  /**
+   * Counts the number of occurrences of a substring within a string.
+   *
+   * @param text the string to search in
+   * @param target the substring to count
+   * @return the number of occurrences
+   */
+  private static int countOccurrences(String text, String target) {
+    int count = 0;
+    int idx = 0;
+    while ((idx = text.indexOf(target, idx)) != -1) {
+      count++;
+      idx += target.length();
+    }
+    return count;
+  }
 }

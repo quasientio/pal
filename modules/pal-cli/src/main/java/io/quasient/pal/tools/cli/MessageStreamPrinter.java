@@ -11,6 +11,8 @@ package io.quasient.pal.tools.cli;
 
 import static io.quasient.pal.common.util.Strings.stringAfter;
 import static io.quasient.pal.common.util.Strings.stringBefore;
+import static io.quasient.pal.serdes.colfer.ExecMessageUtils.getClassname;
+import static io.quasient.pal.serdes.colfer.ExecMessageUtils.getMessageTypeOf;
 import static picocli.CommandLine.ArgGroup;
 import static picocli.CommandLine.Option;
 
@@ -25,6 +27,8 @@ import io.quasient.pal.messages.MessageStreamer;
 import io.quasient.pal.messages.OutboundMsg;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.Message;
+import io.quasient.pal.messages.types.MessageFamily;
+import io.quasient.pal.messages.types.MessageType;
 import io.quasient.pal.serdes.colfer.ColferUtils;
 import io.quasient.pal.serdes.kafka.typed.KafkaLogMessageDeserializer;
 import java.nio.file.Path;
@@ -41,6 +45,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -113,7 +118,10 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
     JSON,
 
     /** Minimalist output showing only the essentials in a compact form. */
-    COMPACT
+    COMPACT,
+
+    /** Tree view showing nested operation structure with indentation. */
+    TREE
   }
 
   /** Parent command that provides access to the main PalCommand context. */
@@ -253,6 +261,41 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
   private String id;
 
   /**
+   * When used with --offset, also shows the corresponding return value or exception for the
+   * operation at the specified offset.
+   *
+   * <p>Scans subsequent messages to find the RETURN_VALUE or THROWABLE message that has a matching
+   * responseToId linking it back to the operation at the given offset.
+   */
+  @Option(
+      names = {"--with-return"},
+      description =
+          "Show the return value for the operation at the given offset (use with --offset)")
+  private boolean withReturn;
+
+  /**
+   * Pattern-based filter for messages.
+   *
+   * <p>Supported patterns:
+   *
+   * <ul>
+   *   <li>{@code class=com.example.OrderService} - filter by fully-qualified class name
+   *   <li>{@code method=add} - filter by method or field name
+   * </ul>
+   *
+   * <p>Multiple filters can be specified and all must match (AND logic).
+   */
+  @Option(
+      names = {"--filter"},
+      arity = "0..*",
+      split = ",",
+      paramLabel = "key=value",
+      description =
+          "Filter by pattern (e.g., class=com.example.OrderService, method=add). "
+              + "Multiple comma-separated filters use AND logic.")
+  private List<String> filters;
+
+  /**
    * Output format options group.
    *
    * <p>These options are mutually exclusive. If none is specified, COMPACT is the default.
@@ -275,6 +318,12 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
         names = {"--full"},
         description = "Full output format with all details")
     boolean full;
+
+    /** Flag indicating tree output format should be used. */
+    @Option(
+        names = {"--tree"},
+        description = "Tree output showing nested operation structure")
+    boolean tree;
   }
 
   /**
@@ -298,6 +347,9 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
     }
     if (formatOptions.json) {
       return OutputFormat.JSON;
+    }
+    if (formatOptions.tree) {
+      return OutputFormat.TREE;
     }
     // Default to COMPACT (this covers both explicit -c and no option selected)
     return OutputFormat.COMPACT;
@@ -471,6 +523,8 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
 
       // 7) Start polling
       final AtomicBoolean done = new AtomicBoolean(false);
+      // Tracks the message ID at the given offset when --with-return is used
+      final AtomicReference<String> foundOffsetMsgId = new AtomicReference<>();
       while (!done.get()) {
 
         ConsumerRecords<String, LogMessage<?>> records = consumer.poll(Duration.ofMillis(200));
@@ -500,7 +554,18 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
               if (offset != null) {
                 if (currentOffset == offset) {
                   printRecord(rec.key(), rec.value(), currentOffset);
-                  done.set(true);
+                  if (!withReturn) {
+                    done.set(true);
+                  } else {
+                    // Store the message ID to find the matching return value
+                    foundOffsetMsgId.set(extractMessageId(rec.value()));
+                  }
+                } else if (withReturn && foundOffsetMsgId.get() != null) {
+                  // After printing offset message, scan for matching return
+                  if (isResponseTo(rec.value(), foundOffsetMsgId.get())) {
+                    printRecord(rec.key(), rec.value(), currentOffset);
+                    done.set(true);
+                  }
                 }
               } else if (shouldPrint(currentOffset, rec.key(), rec.value())) {
                 // if no offset given, apply filters and print
@@ -542,8 +607,14 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
     if (id != null) {
       System.out.printf("Filtering by message id: %s%n", id);
     }
+    if (filters != null) {
+      System.out.printf("Filtering by pattern(s): %s%n", String.join(",", filters));
+    }
     if (offset != null) {
       System.out.printf("Will print message with %s: %s and then exit%n", offsetDescriptor, offset);
+      if (withReturn) {
+        System.out.println("Will also show return value for the operation");
+      }
     }
   }
 
@@ -608,6 +679,8 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
       // Read and print messages, using logical offsets
       boolean messageFound = false;
       long logicalOffset = 0; // Track logical 0-based sequential offset
+      // Tracks the message ID at the given offset when --with-return is used
+      String withReturnMsgId = null;
 
       while (true) {
         OutboundMsg outboundMsg = OutboundMsg.readNext(tailer);
@@ -642,9 +715,21 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
           if (logicalOffset == offset) {
             // Found the requested offset, print it
             printRecord(logMessage, logicalOffset);
-            if (!follow) {
+            if (withReturn) {
+              // Store message ID to find matching return value
+              withReturnMsgId = extractMessageId(logMessage);
+            } else if (!follow) {
               // Not in follow mode, we're done after printing the requested offset
               break;
+            }
+          } else if (withReturnMsgId != null) {
+            // Scanning for matching return value after the offset message
+            if (isResponseTo(logMessage, withReturnMsgId)) {
+              printRecord(logMessage, logicalOffset);
+              if (!follow) {
+                break;
+              }
+              withReturnMsgId = null;
             }
           } else if (logicalOffset > offset && !follow) {
             // We've passed the offset without finding it (shouldn't happen), exit
@@ -692,6 +777,47 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
 
     // return new LogMessage using Chronicle constructor (no topic)
     return new LogMessage<>(currentIndex, headers, message);
+  }
+
+  /**
+   * Extracts the message ID from a log message for use with the {@code --with-return} option.
+   *
+   * @param msg the log message
+   * @return the message ID, or {@code null} if not available
+   */
+  private static String extractMessageId(LogMessage<?> msg) {
+    if (isColferMessage(msg)) {
+      Message m = (Message) msg.getContent();
+      if (m != null && m.getExecMessage() != null) {
+        return m.getExecMessage().getMessageId();
+      }
+    }
+    return getId(msg);
+  }
+
+  /**
+   * Checks whether the given message is a response (RETURN_VALUE or THROWABLE) to the operation
+   * with the specified message ID.
+   *
+   * @param msg the log message to check
+   * @param originalMsgId the message ID of the original operation
+   * @return {@code true} if this message is a response to the original operation
+   */
+  private static boolean isResponseTo(LogMessage<?> msg, String originalMsgId) {
+    if (originalMsgId == null) {
+      return false;
+    }
+    if (isColferMessage(msg)) {
+      Message m = (Message) msg.getContent();
+      if (m != null && m.getExecMessage() != null) {
+        ExecMessage exec = m.getExecMessage();
+        // Check if this is a RETURN_VALUE or THROWABLE with matching responseToId
+        if (exec.getReturnValue() != null || exec.getRaisedThrowable() != null) {
+          return originalMsgId.equals(exec.getResponseToId());
+        }
+      }
+    }
+    return false;
   }
 
   /**
@@ -751,9 +877,86 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
     // 5) messageId
     if (id != null) {
       String msgId = getId(msg);
-      return id.equalsIgnoreCase(msgId);
+      if (!id.equalsIgnoreCase(msgId)) {
+        return false;
+      }
+    }
+    // 6) pattern-based filters
+    if (filters != null && !matchesFilters(msg)) {
+      return false;
     }
     return true;
+  }
+
+  /**
+   * Checks if a message matches all configured pattern-based filters.
+   *
+   * <p>Supported filter keys:
+   *
+   * <ul>
+   *   <li>{@code class} - matches against the fully-qualified class name
+   *   <li>{@code method} - matches against the method or field name
+   * </ul>
+   *
+   * @param msg the log message to check
+   * @return {@code true} if the message matches all filters, {@code false} otherwise
+   */
+  private boolean matchesFilters(LogMessage<?> msg) {
+    if (!isColferMessage(msg)) {
+      return false;
+    }
+    Message m = (Message) msg.getContent();
+    if (m == null || m.getExecMessage() == null) {
+      return false;
+    }
+    ExecMessage execMsg = m.getExecMessage();
+    MessageType msgType = getMessageTypeOf(execMsg);
+    if (msgType.getFamily() != MessageFamily.EXEC) {
+      return false;
+    }
+    for (String filter : filters) {
+      int eqIdx = filter.indexOf('=');
+      if (eqIdx <= 0 || eqIdx >= filter.length() - 1) {
+        continue;
+      }
+      String key = filter.substring(0, eqIdx).trim();
+      String value = filter.substring(eqIdx + 1).trim();
+      if ("class".equals(key)) {
+        String className = getClassname(execMsg);
+        if (className == null || !className.contains(value)) {
+          return false;
+        }
+      } else if ("method".equals(key)) {
+        String methodName = getExecMethodName(execMsg, msgType);
+        if (methodName == null || !methodName.contains(value)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Extracts the method or field name from an execution message, returning {@code null} for message
+   * types that do not have a method/field name (e.g., RETURN_VALUE, THROWABLE).
+   *
+   * @param execMsg the execution message
+   * @param msgType the message type
+   * @return the method or field name, or {@code null} if not applicable
+   */
+  private static String getExecMethodName(ExecMessage execMsg, MessageType msgType) {
+    return switch (msgType) {
+      case EXEC_CONSTRUCTOR -> "new";
+      case EXEC_INSTANCE_METHOD -> execMsg.getInstanceMethodCall().getName();
+      case EXEC_CLASS_METHOD -> execMsg.getClassMethodCall().getName();
+      case EXEC_GET_STATIC -> execMsg.getStaticFieldGet().getField().getName();
+      case EXEC_GET_FIELD -> execMsg.getInstanceFieldGet().getField().getName();
+      case EXEC_PUT_STATIC -> execMsg.getStaticFieldPut().getField().getName();
+      case EXEC_PUT_FIELD -> execMsg.getInstanceFieldPut().getField().getName();
+      case EXEC_PUT_STATIC_DONE -> execMsg.getStaticFieldPutDone().getField().getName();
+      case EXEC_PUT_FIELD_DONE -> execMsg.getInstanceFieldPutDone().getField().getName();
+      default -> null;
+    };
   }
 
   /**
@@ -774,8 +977,63 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
       case COMPACT ->
           System.out.printf(
               "offset=%d id=%s message=%s%n", offset, getId(msg), getMessageOneLiner(msg));
+      case TREE -> printTreeRecord(msg, offset);
       default -> throw new IllegalStateException("Unexpected value: " + getFormat());
     }
+  }
+
+  /** Tracks the current nesting depth for TREE output format. */
+  private int treeDepth = 0;
+
+  /**
+   * Prints a single record in TREE format with indentation based on nesting depth.
+   *
+   * <p>Operations (constructor calls, method calls, field access) increase depth, while return
+   * values and exceptions decrease depth. This produces an indented tree view showing the nested
+   * call structure.
+   *
+   * @param msg the log message to print
+   * @param offset the offset of the message
+   */
+  private void printTreeRecord(LogMessage<?> msg, long offset) {
+    if (!isColferMessage(msg)) {
+      System.out.printf("%s[%d] %s%n", indent(treeDepth), offset, getMessageOneLiner(msg));
+      return;
+    }
+
+    Message m = (Message) msg.getContent();
+    if (m == null || m.getExecMessage() == null) {
+      System.out.printf("%s[%d] %s%n", indent(treeDepth), offset, getMessageOneLiner(msg));
+      return;
+    }
+
+    MessageType msgType = MessageType.fromId(m.getMessageType());
+    boolean isReturn =
+        msgType == MessageType.EXEC_RETURN_VALUE || msgType == MessageType.EXEC_THROWABLE;
+
+    if (isReturn && treeDepth > 0) {
+      treeDepth--;
+    }
+
+    String summary = getMessageOneLiner(msg);
+    System.out.printf("%s[%d] %s%n", indent(treeDepth), offset, summary);
+
+    if (!isReturn) {
+      treeDepth++;
+    }
+  }
+
+  /**
+   * Creates an indentation string for the given depth level in tree output.
+   *
+   * @param depth the nesting depth
+   * @return a string of spaces for indentation
+   */
+  private static String indent(int depth) {
+    if (depth <= 0) {
+      return "";
+    }
+    return "  ".repeat(depth);
   }
 
   /**

@@ -25,7 +25,9 @@ import io.quasient.pal.common.runtime.ExecPhase;
 import io.quasient.pal.cxn.directory.PalDirectory;
 import io.quasient.pal.messages.LogMessage;
 import io.quasient.pal.messages.OutboundMsg;
+import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.Message;
+import io.quasient.pal.messages.colfer.ReturnValue;
 import io.quasient.pal.messages.types.MessageType;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
 import java.io.ByteArrayOutputStream;
@@ -121,6 +123,11 @@ public class MessageStreamPrinterTest {
           var fullField = formatOptionsClass.getDeclaredField("full");
           fullField.setAccessible(true);
           fullField.set(formatOptions, true);
+        }
+        case TREE -> {
+          var treeField = formatOptionsClass.getDeclaredField("tree");
+          treeField.setAccessible(true);
+          treeField.set(formatOptions, true);
         }
       }
 
@@ -911,6 +918,504 @@ public class MessageStreamPrinterTest {
 
     // Then: true because remaining filters (all null) pass through
     assertThat(noMatchResult, is(true));
+  }
+
+  // ==========================================================================
+  // Tests for TREE output format
+  // ==========================================================================
+
+  /**
+   * Tests that getFormat returns TREE when tree flag is set.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  public void getFormat_returnsTree_whenTreeFlagSet() throws Exception {
+    MessageStreamPrinter p = new MessageStreamPrinter();
+
+    Class<?> formatOptionsClass =
+        Class.forName("io.quasient.pal.tools.cli.MessageStreamPrinter$FormatOptions");
+    Object formatOptions = formatOptionsClass.getDeclaredConstructor().newInstance();
+    var treeField = formatOptionsClass.getDeclaredField("tree");
+    treeField.setAccessible(true);
+    treeField.set(formatOptions, true);
+
+    var fmtOptsField = MessageStreamPrinter.class.getDeclaredField("formatOptions");
+    fmtOptsField.setAccessible(true);
+    fmtOptsField.set(p, formatOptions);
+
+    Method getFormat = MessageStreamPrinter.class.getDeclaredMethod("getFormat");
+    getFormat.setAccessible(true);
+    Object result = getFormat.invoke(p);
+
+    assertThat(result, is(MessageStreamPrinter.OutputFormat.TREE));
+  }
+
+  /**
+   * Tests that TREE format produces indented output with offset markers.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  public void printRecord_treeFormat_producesIndentedOutput() throws Exception {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    var em = b.buildEmptyConstructor(peer, "java.lang.String");
+    var m = b.wrap(em);
+    LogMessage<?> lm = logOf(m);
+
+    MessageStreamPrinter p = new MessageStreamPrinter();
+
+    // Set TREE format
+    Class<?> formatOptionsClass =
+        Class.forName("io.quasient.pal.tools.cli.MessageStreamPrinter$FormatOptions");
+    Object formatOptions = formatOptionsClass.getDeclaredConstructor().newInstance();
+    var treeField = formatOptionsClass.getDeclaredField("tree");
+    treeField.setAccessible(true);
+    treeField.set(formatOptions, true);
+    var fmtOptsField = MessageStreamPrinter.class.getDeclaredField("formatOptions");
+    fmtOptsField.setAccessible(true);
+    fmtOptsField.set(p, formatOptions);
+
+    // Capture output
+    PrintStream originalOut = System.out;
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(bout, true, UTF_8));
+
+    try {
+      Method printRecord =
+          MessageStreamPrinter.class.getDeclaredMethod(
+              "printRecord", String.class, LogMessage.class, long.class);
+      printRecord.setAccessible(true);
+      printRecord.invoke(p, peer.toString(), lm, 5L);
+
+      String output = bout.toString(UTF_8);
+      // TREE format should contain [offset] and the summary
+      assertThat(output, containsString("[5]"));
+      assertThat(output, containsString("new String"));
+    } finally {
+      System.setOut(originalOut);
+    }
+  }
+
+  /**
+   * Tests that TREE format increases depth after operations and decreases after returns.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  public void printRecord_treeFormat_nestingIncreasesAndDecreases() throws Exception {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+
+    // Constructor call - should increase depth
+    var constructorMsg = b.buildEmptyConstructor(peer, "java.lang.String");
+    var m1 = b.wrap(constructorMsg);
+    LogMessage<?> lm1 = logOf(m1);
+
+    // Return value - should decrease depth
+    var returnMsg = new ExecMessage();
+    returnMsg.setPeerUuid(peer.toString());
+    returnMsg.setMessageId("ret-1");
+    returnMsg.setThreadName("main");
+    returnMsg.setCurrentTime("2026-01-01T00:00:00Z");
+    var rv = new ReturnValue();
+    rv.setIsVoid(true);
+    returnMsg.setReturnValue(rv);
+    Message m2 = new Message();
+    m2.setMessageType(MessageType.EXEC_RETURN_VALUE.getId());
+    m2.setExecMessage(returnMsg);
+    LogMessage<?> lm2 = logOf(m2);
+
+    MessageStreamPrinter p = new MessageStreamPrinter();
+
+    // Set TREE format
+    Class<?> formatOptionsClass =
+        Class.forName("io.quasient.pal.tools.cli.MessageStreamPrinter$FormatOptions");
+    Object formatOptions = formatOptionsClass.getDeclaredConstructor().newInstance();
+    var treeField = formatOptionsClass.getDeclaredField("tree");
+    treeField.setAccessible(true);
+    treeField.set(formatOptions, true);
+    var fmtOptsField = MessageStreamPrinter.class.getDeclaredField("formatOptions");
+    fmtOptsField.setAccessible(true);
+    fmtOptsField.set(p, formatOptions);
+
+    // Capture output
+    PrintStream originalOut = System.out;
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(bout, true, UTF_8));
+
+    try {
+      Method printRecord =
+          MessageStreamPrinter.class.getDeclaredMethod(
+              "printRecord", String.class, LogMessage.class, long.class);
+      printRecord.setAccessible(true);
+
+      // Print constructor (depth 0 -> 1)
+      printRecord.invoke(p, peer.toString(), lm1, 0L);
+      // Print return (depth 1 -> 0)
+      printRecord.invoke(p, peer.toString(), lm2, 1L);
+
+      String output = bout.toString(UTF_8);
+      String[] lines = output.split("\n", -1);
+      // First line (constructor) should not be indented
+      assertThat(lines[0], containsString("[0]"));
+      assertThat(lines[0], containsString("new String"));
+      // Second line (return) should not be indented either (depth decreases before print)
+      assertThat(lines[1], containsString("[1]"));
+      assertThat(lines[1], containsString("return void"));
+    } finally {
+      System.setOut(originalOut);
+    }
+  }
+
+  // ==========================================================================
+  // Tests for --with-return (extractMessageId, isResponseTo)
+  // ==========================================================================
+
+  /**
+   * Tests that extractMessageId returns the message ID from a Colfer message.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  public void extractMessageId_colferMessage_returnsId() throws Exception {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    var em = b.buildEmptyConstructor(peer, "java.lang.String");
+    var m = b.wrap(em);
+    LogMessage<?> lm = logOf(m);
+
+    Method extractId =
+        MessageStreamPrinter.class.getDeclaredMethod("extractMessageId", LogMessage.class);
+    extractId.setAccessible(true);
+    String result = (String) extractId.invoke(null, lm);
+
+    assertThat(result, is(notNullValue()));
+    assertThat(result, is(em.getMessageId()));
+  }
+
+  /**
+   * Tests that isResponseTo returns true when a RETURN_VALUE message has a matching responseToId.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  public void isResponseTo_matchingReturn_returnsTrue() throws Exception {
+    UUID peer = UUID.randomUUID();
+    String originalMsgId = "original-msg-123";
+
+    // Build a return value message with responseToId set
+    var returnMsg = new ExecMessage();
+    returnMsg.setPeerUuid(peer.toString());
+    returnMsg.setMessageId("ret-1");
+    returnMsg.setThreadName("main");
+    returnMsg.setCurrentTime("2026-01-01T00:00:00Z");
+    returnMsg.setResponseToId(originalMsgId);
+    var rv = new ReturnValue();
+    rv.setIsVoid(true);
+    returnMsg.setReturnValue(rv);
+    Message m = new Message();
+    m.setMessageType(MessageType.EXEC_RETURN_VALUE.getId());
+    m.setExecMessage(returnMsg);
+    LogMessage<?> lm = logOf(m);
+
+    Method isResp =
+        MessageStreamPrinter.class.getDeclaredMethod(
+            "isResponseTo", LogMessage.class, String.class);
+    isResp.setAccessible(true);
+    boolean result = (boolean) isResp.invoke(null, lm, originalMsgId);
+
+    assertThat(result, is(true));
+  }
+
+  /**
+   * Tests that isResponseTo returns false when the responseToId does not match.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  public void isResponseTo_mismatchingReturn_returnsFalse() throws Exception {
+    UUID peer = UUID.randomUUID();
+
+    var returnMsg = new ExecMessage();
+    returnMsg.setPeerUuid(peer.toString());
+    returnMsg.setMessageId("ret-1");
+    returnMsg.setThreadName("main");
+    returnMsg.setCurrentTime("2026-01-01T00:00:00Z");
+    returnMsg.setResponseToId("different-msg-id");
+    var rv = new ReturnValue();
+    rv.setIsVoid(true);
+    returnMsg.setReturnValue(rv);
+    Message m = new Message();
+    m.setMessageType(MessageType.EXEC_RETURN_VALUE.getId());
+    m.setExecMessage(returnMsg);
+    LogMessage<?> lm = logOf(m);
+
+    Method isResp =
+        MessageStreamPrinter.class.getDeclaredMethod(
+            "isResponseTo", LogMessage.class, String.class);
+    isResp.setAccessible(true);
+    boolean result = (boolean) isResp.invoke(null, lm, "original-msg-123");
+
+    assertThat(result, is(false));
+  }
+
+  /**
+   * Tests that isResponseTo returns false for non-return messages (e.g., CONSTRUCTOR).
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  public void isResponseTo_nonReturnMessage_returnsFalse() throws Exception {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    var em = b.buildEmptyConstructor(peer, "java.lang.String");
+    var m = b.wrap(em);
+    LogMessage<?> lm = logOf(m);
+
+    Method isResp =
+        MessageStreamPrinter.class.getDeclaredMethod(
+            "isResponseTo", LogMessage.class, String.class);
+    isResp.setAccessible(true);
+    boolean result = (boolean) isResp.invoke(null, lm, "any-id");
+
+    assertThat(result, is(false));
+  }
+
+  // ==========================================================================
+  // Tests for --filter (matchesFilters, shouldPrint with filters)
+  // ==========================================================================
+
+  /**
+   * Tests that shouldPrint accepts messages matching a class filter.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  public void shouldPrint_withClassFilter_matchesClass() throws Exception {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    var em = b.buildEmptyConstructor(peer, "java.lang.String");
+    var m = b.wrap(em);
+    LogMessage<?> lm = logOf(m);
+
+    MessageStreamPrinter p = new MessageStreamPrinter();
+    setField(p, "filters", List.of("class=java.lang.String"));
+
+    Method shouldPrint =
+        MessageStreamPrinter.class.getDeclaredMethod(
+            "shouldPrint", Long.class, String.class, LogMessage.class);
+    shouldPrint.setAccessible(true);
+    boolean result = (boolean) shouldPrint.invoke(p, 5L, peer.toString(), lm);
+
+    assertThat(result, is(true));
+  }
+
+  /**
+   * Tests that shouldPrint rejects messages not matching a class filter.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  public void shouldPrint_withClassFilter_rejectsMismatch() throws Exception {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    var em = b.buildEmptyConstructor(peer, "java.lang.String");
+    var m = b.wrap(em);
+    LogMessage<?> lm = logOf(m);
+
+    MessageStreamPrinter p = new MessageStreamPrinter();
+    setField(p, "filters", List.of("class=com.example.OrderService"));
+
+    Method shouldPrint =
+        MessageStreamPrinter.class.getDeclaredMethod(
+            "shouldPrint", Long.class, String.class, LogMessage.class);
+    shouldPrint.setAccessible(true);
+    boolean result = (boolean) shouldPrint.invoke(p, 5L, peer.toString(), lm);
+
+    assertThat(result, is(false));
+  }
+
+  /**
+   * Tests that shouldPrint accepts messages matching a method filter.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  public void shouldPrint_withMethodFilter_matchesMethod() throws Exception {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    var em =
+        b.buildInstanceMethod(
+            peer,
+            "java.util.ArrayList",
+            "add",
+            ObjectRef.randomRef(),
+            new String[] {"int"},
+            new Object[] {1});
+    var m = b.wrap(em);
+    LogMessage<?> lm = logOf(m);
+
+    MessageStreamPrinter p = new MessageStreamPrinter();
+    setField(p, "filters", List.of("method=add"));
+
+    Method shouldPrint =
+        MessageStreamPrinter.class.getDeclaredMethod(
+            "shouldPrint", Long.class, String.class, LogMessage.class);
+    shouldPrint.setAccessible(true);
+    boolean result = (boolean) shouldPrint.invoke(p, 5L, peer.toString(), lm);
+
+    assertThat(result, is(true));
+  }
+
+  /**
+   * Tests that shouldPrint rejects messages not matching a method filter.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  public void shouldPrint_withMethodFilter_rejectsMismatch() throws Exception {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    var em =
+        b.buildInstanceMethod(
+            peer,
+            "java.util.ArrayList",
+            "add",
+            ObjectRef.randomRef(),
+            new String[] {"int"},
+            new Object[] {1});
+    var m = b.wrap(em);
+    LogMessage<?> lm = logOf(m);
+
+    MessageStreamPrinter p = new MessageStreamPrinter();
+    setField(p, "filters", List.of("method=remove"));
+
+    Method shouldPrint =
+        MessageStreamPrinter.class.getDeclaredMethod(
+            "shouldPrint", Long.class, String.class, LogMessage.class);
+    shouldPrint.setAccessible(true);
+    boolean result = (boolean) shouldPrint.invoke(p, 5L, peer.toString(), lm);
+
+    assertThat(result, is(false));
+  }
+
+  /**
+   * Tests that shouldPrint applies AND logic when both class and method filters are set.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  public void shouldPrint_withMultipleFilters_appliesAndLogic() throws Exception {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    var em =
+        b.buildInstanceMethod(
+            peer,
+            "java.util.ArrayList",
+            "add",
+            ObjectRef.randomRef(),
+            new String[] {"int"},
+            new Object[] {1});
+    var m = b.wrap(em);
+    LogMessage<?> lm = logOf(m);
+
+    MessageStreamPrinter p = new MessageStreamPrinter();
+    setField(p, "filters", List.of("class=java.util.ArrayList", "method=add"));
+
+    Method shouldPrint =
+        MessageStreamPrinter.class.getDeclaredMethod(
+            "shouldPrint", Long.class, String.class, LogMessage.class);
+    shouldPrint.setAccessible(true);
+    boolean result = (boolean) shouldPrint.invoke(p, 5L, peer.toString(), lm);
+
+    assertThat(result, is(true));
+  }
+
+  /**
+   * Tests that filter supports partial class name matching (contains, not exact match).
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  public void shouldPrint_withClassFilter_supportsPartialMatch() throws Exception {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    var em = b.buildEmptyConstructor(peer, "java.lang.String");
+    var m = b.wrap(em);
+    LogMessage<?> lm = logOf(m);
+
+    MessageStreamPrinter p = new MessageStreamPrinter();
+    setField(p, "filters", List.of("class=String"));
+
+    Method shouldPrint =
+        MessageStreamPrinter.class.getDeclaredMethod(
+            "shouldPrint", Long.class, String.class, LogMessage.class);
+    shouldPrint.setAccessible(true);
+    boolean result = (boolean) shouldPrint.invoke(p, 5L, peer.toString(), lm);
+
+    assertThat(result, is(true));
+  }
+
+  /**
+   * Tests that printVerboseFilters outputs filter patterns when set.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  public void printVerboseFilters_withFilters_printsPatterns() throws Exception {
+    MessageStreamPrinter p = new MessageStreamPrinter();
+    setField(p, "filters", List.of("class=com.example.OrderService"));
+
+    PrintStream originalOut = System.out;
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(bout, true, UTF_8));
+
+    try {
+      Method m =
+          MessageStreamPrinter.class.getDeclaredMethod(
+              "printVerboseFilters", String.class, String.class);
+      m.setAccessible(true);
+      m.invoke(p, "Header", "offset id");
+
+      String output = bout.toString(UTF_8);
+      assertThat(output, containsString("Filtering by pattern(s):"));
+      assertThat(output, containsString("class=com.example.OrderService"));
+    } finally {
+      System.setOut(originalOut);
+    }
+  }
+
+  /**
+   * Tests that printVerboseFilters shows --with-return indication when offset and withReturn are
+   * set.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  public void printVerboseFilters_withReturn_showsReturnMessage() throws Exception {
+    MessageStreamPrinter p = new MessageStreamPrinter();
+    setField(p, "offset", 10L);
+    setField(p, "withReturn", true);
+
+    PrintStream originalOut = System.out;
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(bout, true, UTF_8));
+
+    try {
+      Method m =
+          MessageStreamPrinter.class.getDeclaredMethod(
+              "printVerboseFilters", String.class, String.class);
+      m.setAccessible(true);
+      m.invoke(p, "Header", "offset id");
+
+      String output = bout.toString(UTF_8);
+      assertThat(output, containsString("Will print message with offset id: 10"));
+      assertThat(output, containsString("Will also show return value"));
+    } finally {
+      System.setOut(originalOut);
+    }
   }
 
   /**

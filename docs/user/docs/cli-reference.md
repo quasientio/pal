@@ -186,6 +186,9 @@ pal print -pa <HOST:PORT> [OPTIONS]
 | `--compact` | Compact output format (default) |
 | `--json` | JSON output format |
 | `--full` | Full output format with all details |
+| `--tree` | Tree output format showing operation nesting |
+| `--with-return` | Also print the return value or exception for the message at `--offset` |
+| `--filter <key=value>` | Filter messages by pattern (repeatable; `class=` and `method=` supported) |
 | `--formats <list>` | Filter by message format: `BINARY`, `JSON` (comma-separated) |
 | `--types <list>` | Filter by message type (comma-separated, see below) |
 | `-fp, --from-peer <uuid>` | Filter by peer UUID |
@@ -222,6 +225,18 @@ HEADERS: {message-type: EXEC_CLASS_METHOD, message-format: BINARY, ...}
   "detailed": "json representation"
 }
 ```
+
+**TREE**:
+```
+[0] com.example.App.main(String[])
+  [1] com.example.Service.process()
+    [2] com.example.Dao.query()
+    [3] ← returned
+  [4] ← returned
+[5] ← returned
+```
+
+Displays messages with indentation reflecting call nesting. Operations (method calls, constructors) increase nesting depth; return values and exceptions decrease it. Useful for understanding call hierarchies at a glance.
 
 **JSON**:
 ```
@@ -262,6 +277,24 @@ pal print -d localhost:2379 -l my-log -fp <peer-uuid>
 
 # Verbose output with diagnostics
 pal print -d localhost:2379 -l my-log -v
+
+# Print messages as an indented operation tree
+pal print -d localhost:2379 -l my-log --tree
+
+# Print a specific operation and its return value
+pal print -d localhost:2379 -l my-log -o 42 --with-return
+
+# Print a specific operation and its return value in full format
+pal print -d localhost:2379 -l my-log -o 42 --with-return --full
+
+# Filter messages by class name (substring match)
+pal print -d localhost:2379 -l my-log --filter "class=OrderService"
+
+# Filter messages by method name
+pal print -d localhost:2379 -l my-log --filter "method=processOrder"
+
+# Combine multiple filters (AND logic)
+pal print -d localhost:2379 -l my-log --filter "class=OrderService" --filter "method=process"
 ```
 
 #### Reading from Logs (Direct Mode)
@@ -288,6 +321,15 @@ pal print -l file:/tmp/my-log -o 100
 
 # Combine direct mode with filters
 pal print -k localhost:29092 -l my-topic --types CLASS_METHOD -f
+
+# Tree view from Chronicle log
+pal print -l file:/tmp/my-log --tree
+
+# Operation with return value from Chronicle log
+pal print -l file:/tmp/my-log -o 0 --with-return
+
+# Filter by class from Kafka log
+pal print -k localhost:29092 -l my-topic --filter "class=OrderService"
 ```
 
 #### Subscribing to Peers
@@ -308,7 +350,10 @@ pal print -d localhost:2379 -pu <peer-uuid> --types CLASS_METHOD
 - **Offset behavior**:
   - For Kafka logs: offset refers to Kafka partition offset
   - For Chronicle logs: offset refers to queue index
-  - When `-o` is specified, all other filters are ignored
+  - When `-o` is specified without `--with-return`, all other filters are ignored
+- **`--with-return`**: Must be used with `--offset`. After printing the message at the given offset, scans forward for a matching `RETURN_VALUE` or `THROWABLE` message (matched by message ID) and prints it too
+- **`--filter`**: Supports `class=<substring>` and `method=<substring>` patterns. Multiple `--filter` options apply AND logic (all must match). Uses substring matching, so `class=Order` matches `com.example.OrderService`
+- **`--tree`**: Shows operation nesting with indentation. Method calls and constructors increase depth; return values and exceptions decrease it. Incompatible with `--json` and `--full`
 - **Follow mode** (`-f`): Waits for new messages indefinitely (use Ctrl-C to exit)
 - **Log resolution**: Can specify log by name or UUID
 - **Chronicle vs Kafka**: The tool automatically detects log type from directory registration
@@ -682,8 +727,14 @@ pal run -d localhost:2379 -k localhost:29092 --wal test-run -cp target/test-clas
 # Replay and analyze
 pal print -d localhost:2379 -l test-run --full --types CLASS_METHOD
 
-# Print specific message
-pal print -d localhost:2379 -l test-run -o 42
+# View call tree
+pal print -d localhost:2379 -l test-run --tree
+
+# Print specific message and its return value
+pal print -d localhost:2379 -l test-run -o 42 --with-return
+
+# Filter to specific class
+pal print -d localhost:2379 -l test-run --filter "class=OrderService"
 
 # Cleanup test artifacts
 pal rm -d localhost:2379 -L -s test- --force
