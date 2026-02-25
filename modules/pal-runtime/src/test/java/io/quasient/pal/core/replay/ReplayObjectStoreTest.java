@@ -9,13 +9,15 @@
  */
 package io.quasient.pal.core.replay;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.CoreMatchers.sameInstance;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
- * Unit tests for {@code ReplayObjectStore} — the bidirectional mapping between WAL object refs
+ * Unit tests for {@link ReplayObjectStore} — the bidirectional mapping between WAL object refs
  * (int) and live JVM objects created during replay.
  *
  * <p>Naming convention: MethodName_StateUnderTest_ExpectedBehavior.
@@ -23,79 +25,88 @@ import org.junit.Test;
 public class ReplayObjectStoreTest {
 
   @Test
-  @Ignore("Awaiting implementation in #809")
   public void registerAndResolve() {
-    // Given: register(42, myObject)
-    // When: resolve(42)
-    // Then: returns myObject
+    // Given
+    ReplayObjectStore store = new ReplayObjectStore();
+    Object myObject = new Object();
 
-    // TODO(#809): Implement test logic
-    fail("Not yet implemented");
+    // When
+    store.register(42, myObject);
+
+    // Then
+    assertThat(store.resolve(42), is(sameInstance(myObject)));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #809")
   public void resolveOrNullForUnknownRef() {
-    // Given: empty store
-    // When: resolveOrNull(99)
-    // Then: returns null
+    // Given
+    ReplayObjectStore store = new ReplayObjectStore();
 
-    // TODO(#809): Implement test logic
-    fail("Not yet implemented");
+    // When / Then
+    assertThat(store.resolveOrNull(99), is(nullValue()));
   }
 
-  @Test
-  @Ignore("Awaiting implementation in #809")
+  @Test(expected = IllegalArgumentException.class)
   public void resolveThrowsForUnknownRef() {
-    // Given: empty store
-    // When: resolve(99)
-    // Then: throws IllegalArgumentException or similar
+    // Given
+    ReplayObjectStore store = new ReplayObjectStore();
 
-    // TODO(#809): Implement test logic
-    fail("Not yet implemented");
+    // When
+    store.resolve(99);
   }
 
   @Test
-  @Ignore("Awaiting implementation in #809")
   public void getWalRefReverseLookup() {
-    // Given: register(42, myObject)
-    // When: getWalRef(myObject)
-    // Then: returns 42
+    // Given
+    ReplayObjectStore store = new ReplayObjectStore();
+    Object myObject = new Object();
+    store.register(42, myObject);
 
-    // TODO(#809): Implement test logic
-    fail("Not yet implemented");
+    // When / Then
+    assertThat(store.getWalRef(myObject), is(42));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #809")
   public void multipleRegistrations() {
-    // Given: register(1, obj1), register(2, obj2)
-    // When: resolve(1), resolve(2)
-    // Then: returns obj1, obj2 respectively
+    // Given
+    ReplayObjectStore store = new ReplayObjectStore();
+    Object obj1 = new Object();
+    Object obj2 = new Object();
+    store.register(1, obj1);
+    store.register(2, obj2);
 
-    // TODO(#809): Implement test logic
-    fail("Not yet implemented");
+    // When / Then
+    assertThat(store.resolve(1), is(sameInstance(obj1)));
+    assertThat(store.resolve(2), is(sameInstance(obj2)));
+    assertThat(store.size(), is(2));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #809")
   public void overwriteRef() {
-    // Given: register(42, obj1), then register(42, obj2)
-    // When: resolve(42)
-    // Then: returns obj2 (latest)
+    // Given
+    ReplayObjectStore store = new ReplayObjectStore();
+    Object obj1 = new Object();
+    Object obj2 = new Object();
+    store.register(42, obj1);
 
-    // TODO(#809): Implement test logic
-    fail("Not yet implemented");
+    // When
+    store.register(42, obj2);
+
+    // Then
+    assertThat(store.resolve(42), is(sameInstance(obj2)));
+    assertThat(store.size(), is(1));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #809")
   public void identityBasedReverseLookup() {
-    // Given: Two equal but non-identical objects. register(1, obj1).
-    // When: getWalRef(obj2)
-    // Then: returns 0 or throws (identity-based, not equals-based)
+    // Given: Two equal but non-identical objects
+    ReplayObjectStore store = new ReplayObjectStore();
+    String obj1 = new String("test");
+    String obj2 = new String("test");
+    store.register(1, obj1);
 
-    // TODO(#809): Implement test logic
-    fail("Not yet implemented");
+    // When / Then: identity-based, so obj2 is not found even though obj1.equals(obj2)
+    assertThat(store.getWalRef(obj2), is(0));
+    assertThat(store.getWalRef(obj1), is(1));
   }
 }
