@@ -9,9 +9,18 @@
  */
 package io.quasient.pal.core.replay;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.sameInstance;
 
-import org.junit.Ignore;
+import io.quasient.pal.common.replay.WalEntry;
+import io.quasient.pal.messages.colfer.Class;
+import io.quasient.pal.messages.colfer.ExecMessage;
+import io.quasient.pal.messages.colfer.InstanceMethodCall;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import org.junit.Test;
 
 /**
@@ -25,97 +34,114 @@ public class ReplayCursorTest {
 
   /** Verifies that peeking returns the first entry without advancing the cursor position. */
   @Test
-  @Ignore("Awaiting implementation in #807")
   public void peekNextReturnsFirstEntry() {
-    // Given: A cursor initialized with 3 WalEntry instances
-    // When: peekNext() is called
-    // Then: Returns the entry at position 0 without advancing the cursor
+    List<WalEntry> entries = makeEntries("t1", 10, 20, 30);
+    ReplayCursor cursor = new ReplayCursor("t1", entries);
 
-    // TODO(#807): Implement test logic
-    fail("Not yet implemented");
+    WalEntry peeked = cursor.peekNext();
+    assertThat(peeked, is(sameInstance(entries.get(0))));
+    assertThat(cursor.getPosition(), is(0));
+
+    WalEntry peekedAgain = cursor.peekNext();
+    assertThat(peekedAgain, is(sameInstance(entries.get(0))));
+    assertThat(cursor.getPosition(), is(0));
   }
 
   /** Verifies that advance returns the current entry and moves the cursor forward by one. */
   @Test
-  @Ignore("Awaiting implementation in #807")
   public void advanceMovesForward() {
-    // Given: A cursor initialized with 3 WalEntry instances
-    // When: advance() is called once
-    // Then: Returns the entry at position 0, and subsequent peekNext() returns position 1
+    List<WalEntry> entries = makeEntries("t1", 10, 20, 30);
+    ReplayCursor cursor = new ReplayCursor("t1", entries);
 
-    // TODO(#807): Implement test logic
-    fail("Not yet implemented");
+    WalEntry advanced = cursor.advance();
+    assertThat(advanced, is(sameInstance(entries.get(0))));
+    assertThat(cursor.peekNext(), is(sameInstance(entries.get(1))));
+    assertThat(cursor.getPosition(), is(1));
   }
 
   /** Verifies that multiple advances traverse all entries in order. */
   @Test
-  @Ignore("Awaiting implementation in #807")
   public void advanceMultipleTimes() {
-    // Given: A cursor initialized with 3 WalEntry instances
-    // When: advance() is called 3 times
-    // Then: Returns entries at positions 0, 1, 2 in order
+    List<WalEntry> entries = makeEntries("t1", 10, 20, 30);
+    ReplayCursor cursor = new ReplayCursor("t1", entries);
 
-    // TODO(#807): Implement test logic
-    fail("Not yet implemented");
+    assertThat(cursor.advance(), is(sameInstance(entries.get(0))));
+    assertThat(cursor.advance(), is(sameInstance(entries.get(1))));
+    assertThat(cursor.advance(), is(sameInstance(entries.get(2))));
   }
 
   /** Verifies that the cursor reports exhaustion after all entries are consumed. */
   @Test
-  @Ignore("Awaiting implementation in #807")
   public void isExhaustedWhenAllConsumed() {
-    // Given: A cursor initialized with 2 WalEntry instances
-    // When: advance() is called 2 times
-    // Then: isExhausted() returns true and peekNext() returns null
+    List<WalEntry> entries = makeEntries("t1", 10, 20);
+    ReplayCursor cursor = new ReplayCursor("t1", entries);
 
-    // TODO(#807): Implement test logic
-    fail("Not yet implemented");
+    cursor.advance();
+    cursor.advance();
+    assertThat(cursor.isExhausted(), is(true));
+    assertThat(cursor.peekNext(), is(nullValue()));
   }
 
   /** Verifies that an empty cursor is immediately exhausted. */
   @Test
-  @Ignore("Awaiting implementation in #807")
   public void isExhaustedOnEmpty() {
-    // Given: A cursor initialized with 0 entries (empty list)
-    // When: isExhausted() is called
-    // Then: Returns true immediately
-
-    // TODO(#807): Implement test logic
-    fail("Not yet implemented");
+    ReplayCursor cursor = new ReplayCursor("t1", Collections.emptyList());
+    assertThat(cursor.isExhausted(), is(true));
+    assertThat(cursor.peekNext(), is(nullValue()));
+    assertThat(cursor.advance(), is(nullValue()));
   }
 
   /** Verifies that advancePast skips forward to the correct offset. */
   @Test
-  @Ignore("Awaiting implementation in #807")
   public void advancePastSkipsToOffset() {
-    // Given: A cursor with entries at offsets [10, 20, 30, 40]
-    // When: advancePast(20) is called
-    // Then: Next peekNext() returns the entry at offset 30
+    List<WalEntry> entries = makeEntries("t1", 10, 20, 30, 40);
+    ReplayCursor cursor = new ReplayCursor("t1", entries);
 
-    // TODO(#807): Implement test logic
-    fail("Not yet implemented");
+    cursor.advancePast(20);
+    assertThat(cursor.peekNext().getOffset(), is(30L));
   }
 
   /** Verifies that advancePast beyond all entries exhausts the cursor. */
   @Test
-  @Ignore("Awaiting implementation in #807")
   public void advancePastBeyondAllEntries() {
-    // Given: A cursor with entries at offsets [10, 20]
-    // When: advancePast(100) is called
-    // Then: isExhausted() returns true
+    List<WalEntry> entries = makeEntries("t1", 10, 20);
+    ReplayCursor cursor = new ReplayCursor("t1", entries);
 
-    // TODO(#807): Implement test logic
-    fail("Not yet implemented");
+    cursor.advancePast(100);
+    assertThat(cursor.isExhausted(), is(true));
   }
 
   /** Verifies that the thread name is accessible via the getter. */
   @Test
-  @Ignore("Awaiting implementation in #807")
   public void threadNameAccessor() {
-    // Given: A cursor created with threadName "self-caller"
-    // When: getThreadName() is called
-    // Then: Returns "self-caller"
+    ReplayCursor cursor = new ReplayCursor("self-caller", Collections.emptyList());
+    assertThat(cursor.getThreadName(), is("self-caller"));
+  }
 
-    // TODO(#807): Implement test logic
-    fail("Not yet implemented");
+  /**
+   * Creates a list of synthetic OPERATION {@link WalEntry} instances with the given offsets.
+   *
+   * @param threadName the thread name for all entries
+   * @param offsets the WAL offsets for each entry
+   * @return a mutable list of entries
+   */
+  private static List<WalEntry> makeEntries(String threadName, long... offsets) {
+    List<WalEntry> entries = new ArrayList<>();
+    int seq = 0;
+    for (long offset : offsets) {
+      ExecMessage msg = new ExecMessage();
+      msg.setThreadName(threadName);
+      msg.setBuilderSeq(seq++);
+
+      InstanceMethodCall imc = new InstanceMethodCall();
+      imc.setName("op" + offset);
+      Class clazz = new Class();
+      clazz.setName("com.example.Test");
+      imc.setClazz(clazz);
+      msg.setInstanceMethodCall(imc);
+
+      entries.add(WalEntry.fromExecMessage(offset, msg));
+    }
+    return entries;
   }
 }

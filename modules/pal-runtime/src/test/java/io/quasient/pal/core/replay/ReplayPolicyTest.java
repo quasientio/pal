@@ -9,9 +9,10 @@
  */
 package io.quasient.pal.core.replay;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
 
-import org.junit.Ignore;
+import io.quasient.pal.messages.types.MessageType;
 import org.junit.Test;
 
 /**
@@ -26,37 +27,28 @@ public class ReplayPolicyTest {
 
   /** Verifies that the default policy always returns RE_EXECUTE regardless of input. */
   @Test
-  @Ignore("Awaiting implementation in #807")
   public void alwaysReturnsReExecute() {
-    // Given: A default ReplayPolicy instance
-    // When: getAction() is called with any className, methodName, and MessageType
-    // Then: Returns RE_EXECUTE
-
-    // TODO(#807): Implement test logic
-    fail("Not yet implemented");
+    ReplayPolicy policy = new ReplayPolicy();
+    assertThat(
+        policy.getAction("com.example.Foo", "bar", MessageType.EXEC_INSTANCE_METHOD),
+        is(ReplayPolicy.ReplayAction.RE_EXECUTE));
   }
 
   /** Verifies that RE_EXECUTE is returned for constructor operations. */
   @Test
-  @Ignore("Awaiting implementation in #807")
   public void reExecuteForConstructor() {
-    // Given: A default ReplayPolicy instance
-    // When: getAction("Foo", "new", EXEC_CONSTRUCTOR) is called
-    // Then: Returns RE_EXECUTE
-
-    // TODO(#807): Implement test logic
-    fail("Not yet implemented");
+    ReplayPolicy policy = new ReplayPolicy();
+    assertThat(
+        policy.getAction("Foo", "new", MessageType.EXEC_CONSTRUCTOR),
+        is(ReplayPolicy.ReplayAction.RE_EXECUTE));
   }
 
   /** Verifies that RE_EXECUTE is returned for static method operations. */
   @Test
-  @Ignore("Awaiting implementation in #807")
   public void reExecuteForStaticMethod() {
-    // Given: A default ReplayPolicy instance
-    // When: getAction("Foo", "bar", EXEC_CLASS_METHOD) is called
-    // Then: Returns RE_EXECUTE
-
-    // TODO(#807): Implement test logic
-    fail("Not yet implemented");
+    ReplayPolicy policy = new ReplayPolicy();
+    assertThat(
+        policy.getAction("Foo", "bar", MessageType.EXEC_CLASS_METHOD),
+        is(ReplayPolicy.ReplayAction.RE_EXECUTE));
   }
 }
