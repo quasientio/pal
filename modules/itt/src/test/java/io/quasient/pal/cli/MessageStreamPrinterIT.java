@@ -10,6 +10,7 @@
 package io.quasient.pal.cli;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertEquals;
 
 import io.quasient.pal.PeerProcess;
@@ -1264,6 +1265,98 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
     assertThat("Expected at least 2 CONTEXT markers (operation + return)", contextCount >= 2);
 
     logger.info("Successfully printed operation with return value from Kafka log");
+  }
+
+  /**
+   * Tests that `pal print --offset 0 --with-return` correctly finds the matching return for a
+   * method that throws an exception, using nesting-depth tracking (Chronicle log).
+   *
+   * <p>Uses {@code ThrowingMain} whose {@code main()} calls {@code alwaysThrows()} inside a
+   * try-catch. The {@code alwaysThrows()} method (offset 0) has nested operations inside it (the
+   * {@code new RuntimeException} constructor), so the nesting-depth tracker must correctly skip
+   * those inner returns and find the return that closes the top-level call.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testPrint_chronicleLog_withReturn_throwingMethod() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+
+    String walName = "test-print-chronicle-withreturn-throw-" + generateId();
+    trackChronicleLog(walName);
+    String walPath = "file:" + walName;
+
+    UUID peerId = UUID.randomUUID();
+    String classToRun = "io.quasient.pal.apps.quantized.rpc.ThrowingMain";
+
+    peerProcess =
+        launchPeer(
+            peerId, "-d", palDirectory, "--wal", walPath, "-cp", getIttAppsClasspath(), classToRun);
+
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
+    peerProcess = null;
+
+    // Print offset 0 (alwaysThrows() call) with its matching return
+    AbstractCliIT.CliProcessResult printResult =
+        runPrint("-d", palDirectory, "-l", walName, "-o", "0", "--with-return", "--full");
+
+    assertEquals("Expected successful print", 0, printResult.exitCode());
+    String stdout = printResult.stdout();
+    assertThat("Expected content in output", !stdout.isEmpty());
+    int contextCount = countOccurrences(stdout, "CONTEXT:");
+    assertThat("Expected 2 CONTEXT markers (operation + return)", contextCount >= 2);
+    // The operation at offset 0 should be the alwaysThrows() call
+    assertThat("Expected alwaysThrows call", stdout, containsString("alwaysThrows"));
+
+    logger.info(
+        "Successfully printed operation with return for throwing method from Chronicle log");
+  }
+
+  /**
+   * Tests that `pal print --offset 0 --with-return` correctly finds the matching return for a
+   * method that throws an exception, using nesting-depth tracking (Kafka log).
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testPrint_kafkaLog_withReturn_throwingMethod() throws Exception {
+    String palDirectory = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+
+    String walName = "test-print-kafka-withreturn-throw-" + generateId();
+    UUID peerId = UUID.randomUUID();
+    String classToRun = "io.quasient.pal.apps.quantized.rpc.ThrowingMain";
+
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDirectory,
+            "-k",
+            kafkaServers,
+            "--wal",
+            walName,
+            "-cp",
+            getIttAppsClasspath(),
+            classToRun);
+
+    int peerExitCode = joinPeer(peerProcess, 10);
+    assertEquals("Expected successful peer exit code", 0, peerExitCode);
+    peerProcess = null;
+
+    // Print offset 0 (alwaysThrows() call) with its matching return
+    AbstractCliIT.CliProcessResult printResult =
+        runPrint("-d", palDirectory, "-l", walName, "-o", "0", "--with-return", "--full");
+
+    assertEquals("Expected successful print", 0, printResult.exitCode());
+    String stdout = printResult.stdout();
+    assertThat("Expected content in output", !stdout.isEmpty());
+    int contextCount = countOccurrences(stdout, "CONTEXT:");
+    assertThat("Expected 2 CONTEXT markers (operation + return)", contextCount >= 2);
+    assertThat("Expected alwaysThrows call", stdout, containsString("alwaysThrows"));
+
+    logger.info("Successfully printed operation with return for throwing method from Kafka log");
   }
 
   /**
