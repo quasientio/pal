@@ -397,7 +397,11 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
         // 6. Wrap object or exception
         final ExecMessage afterExecMsg =
-            createAfterExecMessage(ctx, returnValue, objectRef, returnsVoid);
+            createAfterExecMessage(
+                ctx,
+                throwableWrapper != null ? throwableWrapper : returnValue,
+                objectRef,
+                returnsVoid);
 
         // 7. Send object or exception (WAL/PUB only)
         @SuppressWarnings("unused")

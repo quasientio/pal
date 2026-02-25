@@ -14,16 +14,24 @@ import static io.quasient.pal.core.ExecMessageMatchers.ComesFromReflectable.come
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import io.quasient.pal.common.objects.ObjectRef;
+import io.quasient.pal.common.runtime.ExecPhase;
 import io.quasient.pal.core.service.RunOptions;
 import io.quasient.pal.core.transport.MessageChannelType;
 import io.quasient.pal.messages.colfer.ExecMessage;
+import io.quasient.pal.messages.colfer.Message;
+import io.quasient.pal.messages.types.MessageType;
 import io.quasient.pal.serdes.Unwrapper;
+import io.quasient.pal.serdes.colfer.ExecMessageUtils;
 import java.lang.reflect.Method;
 import java.util.EnumSet;
 import java.util.Locale;
@@ -32,6 +40,7 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -240,6 +249,50 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 
     // ── expect ───────────────────────────────────────────────
     verifyDispatcherConnectorSendExecMessageCalledTwice();
+  }
+
+  /* ----------------------------------------------------------
+   * 6.  dispatch_throwsException_walAfterMessageIsExecThrowable
+   * ---------------------------------------------------------- */
+  @Test
+  public void dispatch_throwsException_walAfterMessageIsExecThrowable() throws Throwable {
+
+    // ── signature ────────────────────────────────────────────
+    String methodName = "toUpperCase";
+    Method m = targetClass.getDeclaredMethod(methodName);
+
+    // ── target instance (value == null → NPE when called) ───
+    ClassForNonVoidInstanceMethodTest target = new ClassForNonVoidInstanceMethodTest();
+
+    // ── PJP ──────────────────────────────────────────────────
+    ProceedingJoinPoint pjp = createPjp(m, target, new Object[] {}, target::toUpperCase);
+
+    // ── dispatch (expect NPE) ────────────────────────────────
+    try {
+      dispatcher.dispatch(pjp);
+      fail("Should have thrown a NullPointerException");
+    } catch (NullPointerException expected) {
+      // expected
+    }
+
+    // ── capture the after-exec message sent to the gateway ──
+    ArgumentCaptor<Message> msgCaptor = ArgumentCaptor.forClass(Message.class);
+    ArgumentCaptor<ExecPhase> phaseCaptor = ArgumentCaptor.forClass(ExecPhase.class);
+    verify(outboundMessageGateway, times(2))
+        .sendExecMessage(msgCaptor.capture(), phaseCaptor.capture());
+
+    // Second call is the AFTER phase
+    Message afterMessage = msgCaptor.getAllValues().get(1);
+    ExecMessage afterExec = afterMessage.getExecMessage();
+    assertThat(
+        "After-exec message should be EXEC_THROWABLE when the method threw an exception",
+        ExecMessageUtils.getMessageTypeOf(afterExec),
+        is(MessageType.EXEC_THROWABLE));
+    assertThat(afterExec.getRaisedThrowable(), is(notNullValue()));
+    assertThat(afterExec.getReturnValue(), is(nullValue()));
+    assertThat(
+        afterExec.getRaisedThrowable().getThrowable().getType(),
+        is("java.lang.NullPointerException"));
   }
 
   /* -------------------------------------------------------*/
