@@ -13,26 +13,33 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import io.quasient.pal.cli.AbstractCliIT;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Integration tests for the {@code pal wal-index} command with MinimalReceiptCalculator.
  *
- * <p>Validates the Phase 0 pipeline end-to-end: peer records WAL with Chronicle Queue, WalReader
- * reads it, WalIndex pairs and spans entries, and the CLI displays results.
+ * <p>Validates the WAL index pipeline end-to-end for both Chronicle Queue and Kafka backends: peer
+ * records WAL, WalReader reads it, WalIndex pairs and spans entries, and the CLI displays results.
  *
- * <p>All tests use Chronicle-only WAL paths ({@code file:} prefix). Each test records a fresh WAL
- * and tracks it for cleanup.
+ * <p>Parameterized over backend type: "chronicle" uses {@code file:} prefix WAL paths, "kafka" uses
+ * Kafka topic names with {@code -k} bootstrap servers.
  */
+@RunWith(Parameterized.class)
 public class WalIndexMinimalReceiptCalculatorIT extends AbstractCliIT {
 
   /** Logger for this test class. */
@@ -43,8 +50,30 @@ public class WalIndexMinimalReceiptCalculatorIT extends AbstractCliIT {
   private static final String MAIN_CLASS =
       "io.quasient.pal.apps.quantized.replay.MinimalReceiptCalculator";
 
+  /** The WAL backend type for this test run ("chronicle" or "kafka"). */
+  private final String backend;
+
   /**
-   * Records a WAL by running the peer with the given application arguments.
+   * Creates a parameterized test instance for the given backend.
+   *
+   * @param backend the WAL backend type ("chronicle" or "kafka")
+   */
+  public WalIndexMinimalReceiptCalculatorIT(String backend) {
+    this.backend = backend;
+  }
+
+  /**
+   * Returns the parameterized backend types.
+   *
+   * @return collection of parameters: "chronicle" and "kafka"
+   */
+  @Parameters(name = "{0}")
+  public static Collection<Object[]> data() {
+    return Arrays.asList(new Object[] {"chronicle"}, new Object[] {"kafka"});
+  }
+
+  /**
+   * Records a WAL by running the peer with the given application arguments using a Chronicle WAL.
    *
    * <p>Launches a peer with {@code pal run} using a Chronicle WAL at the specified path. The peer
    * runs the {@link #MAIN_CLASS} application, writes all operations to the WAL, then exits.
@@ -54,7 +83,7 @@ public class WalIndexMinimalReceiptCalculatorIT extends AbstractCliIT {
    * @return the process result containing exit code, stdout, and stderr
    * @throws Exception if recording fails
    */
-  private ProcessResult recordWal(String walPath, String... appArgs) throws Exception {
+  private ProcessResult recordChronicleWal(String walPath, String... appArgs) throws Exception {
     List<String> args = new ArrayList<>();
     args.add("-d");
     args.add(getPalDirectoryUrl());
@@ -71,15 +100,27 @@ public class WalIndexMinimalReceiptCalculatorIT extends AbstractCliIT {
    * Records a WAL with MinimalReceiptCalculator, runs {@code pal wal-index}, and verifies that the
    * index reports zero structural issues and balanced operation/completion pairs.
    *
+   * <p>For the "chronicle" backend, the full test runs end-to-end. For the "kafka" backend, the
+   * test is a specification stub awaiting implementation in #854.
+   *
    * @throws Exception if test execution fails
    */
   @Test
   public void walIndexShowsBalancedPairs() throws Exception {
+    if ("kafka".equals(backend)) {
+      // Given: A WAL recorded with MinimalReceiptCalculator using Kafka backend
+      // When: pal wal-index -k kafkaServers topicName
+      // Then: Exit code 0, Issues: 0, operations count == completions count, Pairs > 0
+
+      // TODO(#854): Implement Kafka backend test logic
+      fail("Not yet implemented");
+    }
+
     String walPath = "/tmp/pal-walindex-balanced-" + generateId();
     trackChronicleLog(walPath);
 
     // Record WAL with MinimalReceiptCalculator
-    ProcessResult recordResult = recordWal(walPath, "milk:2,bread:1,apple:5");
+    ProcessResult recordResult = recordChronicleWal(walPath, "milk:2,bread:1,apple:5");
     assertEquals("Recording should succeed", 0, recordResult.exitCode());
     logger.info("WAL recorded at: {}", walPath);
 
@@ -121,15 +162,28 @@ public class WalIndexMinimalReceiptCalculatorIT extends AbstractCliIT {
    * that the verbose output contains entry details including OPERATION/COMPLETION kinds and the
    * MinimalReceiptCalculator class name.
    *
+   * <p>For the "chronicle" backend, the full test runs end-to-end. For the "kafka" backend, the
+   * test is a specification stub awaiting implementation in #854.
+   *
    * @throws Exception if test execution fails
    */
   @Test
   public void walIndexVerboseShowsEntries() throws Exception {
+    if ("kafka".equals(backend)) {
+      // Given: A WAL recorded with MinimalReceiptCalculator using Kafka backend
+      // When: pal wal-index -k kafkaServers --verbose topicName
+      // Then: Exit code 0, output contains OPERATION and COMPLETION entries,
+      //       contains MinimalReceiptCalculator class name
+
+      // TODO(#854): Implement Kafka backend test logic
+      fail("Not yet implemented");
+    }
+
     String walPath = "/tmp/pal-walindex-verbose-" + generateId();
     trackChronicleLog(walPath);
 
     // Record WAL with MinimalReceiptCalculator
-    ProcessResult recordResult = recordWal(walPath, "milk:2,bread:1,apple:5");
+    ProcessResult recordResult = recordChronicleWal(walPath, "milk:2,bread:1,apple:5");
     assertEquals("Recording should succeed", 0, recordResult.exitCode());
     logger.info("WAL recorded at: {}", walPath);
 
