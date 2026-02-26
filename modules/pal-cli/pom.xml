@@ -223,6 +223,7 @@
                             <artifact>io.quasient.pal:pal-client</artifact>
                             <includes>
                                 <include>io/quasient/pal/cxn/**</include>
+                                <include>io/quasient/pal/common/replay/**</include>
                                 <include>io/quasient/pal/messages/**</include>
                             </includes>
                         </filter>
