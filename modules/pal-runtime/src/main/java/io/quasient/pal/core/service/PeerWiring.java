@@ -761,11 +761,17 @@ public class PeerWiring extends AbstractModule {
         entries.size(),
         index.getStructuralIssues().size());
 
+    String policyStr = properties.getProperty("replay.divergence.policy", "WARN");
+    DivergenceDetector.DivergencePolicy policy;
+    try {
+      policy = DivergenceDetector.DivergencePolicy.valueOf(policyStr);
+    } catch (IllegalArgumentException e) {
+      logger.warn("Unknown replay divergence policy '{}', defaulting to WARN", policyStr);
+      policy = DivergenceDetector.DivergencePolicy.WARN;
+    }
+
     return new ReplayContext(
-        index,
-        new ReplayPolicy(),
-        new ReplayObjectStore(),
-        new DivergenceDetector(DivergenceDetector.DivergencePolicy.WARN));
+        index, new ReplayPolicy(), new ReplayObjectStore(), new DivergenceDetector(policy));
   }
 
   /**

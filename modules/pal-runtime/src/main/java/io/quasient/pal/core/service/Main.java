@@ -37,6 +37,8 @@ import io.quasient.pal.core.execution.java.DynamicResourceBundleControlProvider;
 import io.quasient.pal.core.intercept.InterceptInformer;
 import io.quasient.pal.core.intercept.InterceptMatcher;
 import io.quasient.pal.core.internal.concurrent.HwmMessageQueue;
+import io.quasient.pal.core.replay.DivergenceReport;
+import io.quasient.pal.core.replay.ReplayContext;
 import io.quasient.pal.core.runtime.session.SessionService;
 import io.quasient.pal.core.transport.SourceLogReader;
 import io.quasient.pal.core.transport.WalWriter;
@@ -248,6 +250,18 @@ public class Main implements Callable<Integer> {
           "WAL path for deterministic replay (mutually exclusive with --wal, --source-log,"
               + " and --log)")
   private String replayWalPath;
+
+  /**
+   * Divergence handling policy for deterministic replay mode. Controls what happens when live
+   * execution diverges from the WAL oracle. Only relevant when {@code --replay-wal} is set.
+   */
+  @Option(
+      names = {"--replay-divergence-policy"},
+      paramLabel = "WARN|HALT|IGNORE",
+      defaultValue = "WARN",
+      description =
+          "Divergence handling policy for replay: WARN, HALT, IGNORE (default: ${DEFAULT-VALUE})")
+  private String replayDivergencePolicy;
 
   /**
    * Log configuration specifying the Log name for both reading and writing. Using 'auto' works only
@@ -980,6 +994,7 @@ public class Main implements Callable<Integer> {
       }
       runOptions.add(RunOptions.WITH_REPLAY);
       properties.setProperty("replay.wal.path", replayWalPath);
+      properties.setProperty("replay.divergence.policy", replayDivergencePolicy);
     }
 
     if (tcpPub != null) {
@@ -1844,6 +1859,11 @@ public class Main implements Callable<Integer> {
       mainCalled = true;
     }
 
+    // After replay, print divergence report and adjust exit code
+    if (mainCalled && runOptions.contains(RunOptions.WITH_REPLAY)) {
+      returnValue = handleReplayDivergenceReport(injector, returnValue);
+    }
+
     if (!mainCalled || asService) {
       if (manager != null) {
         manager.awaitStopped();
@@ -1852,5 +1872,29 @@ public class Main implements Callable<Integer> {
       }
     }
     return returnValue;
+  }
+
+  /**
+   * Retrieves the divergence report from the {@link ReplayContext} after replay completes, prints
+   * it to stderr, and adjusts the exit code if divergences were detected.
+   *
+   * @param injector the Guice injector used to obtain the {@link ReplayContext}
+   * @param currentReturnValue the current return value from the application
+   * @return the adjusted return value: {@code 2} if divergences were detected and the current
+   *     return value is {@code 0}, otherwise the original return value
+   */
+  private int handleReplayDivergenceReport(Injector injector, int currentReturnValue) {
+    ReplayContext replayContext = injector.getInstance(ReplayContext.class);
+    if (replayContext == null) {
+      return currentReturnValue;
+    }
+    DivergenceReport report = replayContext.getDivergenceDetector().getReport();
+    if (!report.isEmpty()) {
+      System.err.print(report.formatAsText());
+      if (currentReturnValue == 0) {
+        return 2;
+      }
+    }
+    return currentReturnValue;
   }
 }

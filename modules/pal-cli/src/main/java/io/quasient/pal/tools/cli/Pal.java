@@ -112,7 +112,8 @@ public class Pal implements Callable<Integer>, PalCommand {
 
     // subcommands other than 'run' must be subclasses of AbstractPalSubcommand
     java.util.List<AbstractPalSubcommand> subcommands =
-        Arrays.asList(new MessageStreamPrinter(), new Caller(), new List(), new Remove());
+        Arrays.asList(
+            new MessageStreamPrinter(), new Caller(), new List(), new Remove(), new Replay());
     subcommands.forEach(commandLine::addSubcommand);
 
     // at last Help
