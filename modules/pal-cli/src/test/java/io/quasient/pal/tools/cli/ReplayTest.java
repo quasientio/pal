@@ -14,10 +14,12 @@ import static org.hamcrest.Matchers.arrayContaining;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.fail;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
+import org.junit.Ignore;
 import org.junit.Test;
 import picocli.CommandLine;
 
@@ -279,5 +281,109 @@ public class ReplayTest {
   public void testInitializeNoOp() throws Exception {
     Replay replay = new Replay();
     replay.initialize(); // should not throw
+  }
+
+  // ===========================================================================
+  // Kafka and PalDirectory support tests (awaiting implementation in #850)
+  // ===========================================================================
+
+  /** Verifies that the --kafka-servers option is parsed correctly via picocli. */
+  @Test
+  @Ignore("Awaiting implementation in #850")
+  public void testParseKafkaServersOption() {
+    // Given: Command args "--kafka-servers localhost:29092 -w my-topic -cp app.jar MyMain"
+    // When: Parsed via picocli
+    // Then: kafkaServers field = "localhost:29092"
+
+    // TODO(#850): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /** Verifies that the short -k form of --kafka-servers is parsed correctly. */
+  @Test
+  @Ignore("Awaiting implementation in #850")
+  public void testParseShortKafkaServersOption() {
+    // Given: Command args "-k localhost:29092 -w my-topic -cp app.jar MyMain"
+    // When: Parsed via picocli
+    // Then: kafkaServers field = "localhost:29092"
+
+    // TODO(#850): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /** Verifies that buildMainArgs includes -k when Kafka servers are specified. */
+  @Test
+  @Ignore("Awaiting implementation in #850")
+  public void testBuildMainArgsWithKafka() {
+    // Given: walPath = "my-topic", kafkaServers = "localhost:29092",
+    //        classpath = "app.jar", mainClass = "MyMain", divergencePolicy = "WARN"
+    // When: buildMainArgs() is called
+    // Then: Result contains "--replay-wal", "my-topic", "-k", "localhost:29092",
+    //       "--replay-divergence-policy", "WARN", "-cp", "app.jar", "MyMain"
+
+    // TODO(#850): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /** Verifies that buildMainArgs excludes -k when using Chronicle WAL without Kafka. */
+  @Test
+  @Ignore("Awaiting implementation in #850")
+  public void testBuildMainArgsWithChronicleNoKafka() {
+    // Given: walPath = "file:/tmp/my-wal", kafkaServers = null,
+    //        classpath = "app.jar", mainClass = "MyMain"
+    // When: buildMainArgs() is called
+    // Then: Result does NOT contain "-k" and correctly includes "file:/tmp/my-wal"
+
+    // TODO(#850): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /** Verifies that buildMainArgs includes resolved Kafka servers from PalDirectory. */
+  @Test
+  @Ignore("Awaiting implementation in #850")
+  public void testBuildMainArgsWithPalDirectory() {
+    // Given: walPath resolved to Kafka topic with servers (palDirectory connection available),
+    //        kafkaServers resolved from PalDirectory
+    // When: buildMainArgs() is called
+    // Then: Result contains "-k" with the resolved Kafka servers
+
+    // TODO(#850): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /** Verifies that validateInput rejects a Kafka WAL topic without -k or -d. */
+  @Test
+  @Ignore("Awaiting implementation in #850")
+  public void testValidateInputRejectsKafkaWithoutServersAndWithoutDirectory() {
+    // Given: walPath = "my-topic" (no file: prefix), kafkaServers = null, no PalDirectory
+    // When: validateInput() is called
+    // Then: RuntimeException thrown with message about requiring -k or -d
+
+    // TODO(#850): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /** Verifies that validateInput accepts a Kafka WAL topic when -k is provided. */
+  @Test
+  @Ignore("Awaiting implementation in #850")
+  public void testValidateInputAcceptsKafkaWithServers() {
+    // Given: walPath = "my-topic", kafkaServers = "localhost:29092"
+    // When: validateInput() is called
+    // Then: No exception thrown
+
+    // TODO(#850): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /** Verifies that validateInput accepts a Chronicle WAL without Kafka servers. */
+  @Test
+  @Ignore("Awaiting implementation in #850")
+  public void testValidateInputAcceptsChronicleWithoutKafka() {
+    // Given: walPath = "file:/tmp/my-wal", kafkaServers = null
+    // When: validateInput() is called
+    // Then: No exception thrown
+
+    // TODO(#850): Implement test logic
+    fail("Not yet implemented");
   }
 }
