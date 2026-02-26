@@ -17,6 +17,8 @@ import static io.quasient.pal.serdes.colfer.ExecMessageUtils.getParameterTypes;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.quasient.pal.common.lang.intercept.AfterPhaseData;
 import io.quasient.pal.common.objects.ObjectRef;
+import io.quasient.pal.common.replay.WalEntry;
+import io.quasient.pal.common.replay.WalEntryKind;
 import io.quasient.pal.common.runtime.Context;
 import io.quasient.pal.common.runtime.ContextFactory;
 import io.quasient.pal.common.runtime.Dispatcher;
@@ -30,12 +32,15 @@ import io.quasient.pal.core.intercept.InterceptChecker;
 import io.quasient.pal.core.intercept.InterceptPartition;
 import io.quasient.pal.core.intercept.ParamTypeExtractor;
 import io.quasient.pal.core.internal.messages.SessionCommandMsg;
+import io.quasient.pal.core.replay.OperationSignature;
+import io.quasient.pal.core.replay.ReplayCursor;
 import io.quasient.pal.core.service.RunOptions;
 import io.quasient.pal.core.transport.MessageChannelType;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.InterceptMessage;
 import io.quasient.pal.messages.colfer.Obj;
 import io.quasient.pal.messages.colfer.Parameter;
+import io.quasient.pal.messages.colfer.ReturnValue;
 import io.quasient.pal.messages.types.MessageType;
 import io.quasient.pal.messages.types.SessionCommandType;
 import io.quasient.pal.serdes.Unwrapper;
@@ -83,6 +88,13 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
    */
   @Override
   public final Object dispatch(ProceedingJoinPoint pjp) throws Throwable {
+
+    // Replay fast-path: bypass all normal dispatch logic (intercepts, WAL writing, PUB sending)
+    if (replayContext != null
+        && runOptions != null
+        && runOptions.contains(RunOptions.WITH_REPLAY)) {
+      return dispatchReplay(pjp);
+    }
 
     // Track in-flight dispatch for intercept coordination (if enabled)
     // This allows intercepts to wait for in-flight calls to complete before activation
@@ -458,6 +470,84 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         inFlightDispatchTracker.exitDispatch(className, methodName, paramTypeNames);
       }
     }
+  }
+
+  /**
+   * Replay fast-path: matches the live operation against the WAL oracle, executes it, verifies the
+   * return value, and advances the cursor.
+   *
+   * <p>This method completely bypasses all intercept logic, WAL writing, PUB sending, and message
+   * creation. The replay path is purely: match → execute → verify → advance.
+   *
+   * <p>Nested operations advance the cursor themselves (each nested {@code dispatch()} call enters
+   * this same method), so the cursor correctly walks through the balanced-parentheses WAL
+   * structure.
+   *
+   * @param pjp the {@link ProceedingJoinPoint} handle from AspectJ weaving
+   * @return the result of the executed operation
+   * @throws Throwable if the invoked operation throws
+   */
+  private Object dispatchReplay(ProceedingJoinPoint pjp) throws Throwable {
+    String threadName = Thread.currentThread().getName();
+    ReplayCursor cursor = replayContext.getCursor(threadName);
+
+    // Step 1: Match against WAL
+    WalEntry expectedEntry = cursor.peekNext();
+    OperationSignature liveSig = OperationSignature.fromJoinPoint(pjp, getBeforeExecMessageType());
+
+    if (expectedEntry == null || expectedEntry.getKind() != WalEntryKind.OPERATION) {
+      // Cursor exhausted or unexpected completion entry — extra live operation
+      replayContext.getDivergenceDetector().reportExtraOperation(liveSig);
+      return invoke(pjp, pjp.getArgs());
+    }
+
+    OperationSignature walSig = OperationSignature.fromWalEntry(expectedEntry);
+    if (!liveSig.matches(walSig)) {
+      // Operation signature mismatch — record divergence but still execute (best-effort)
+      replayContext.getDivergenceDetector().reportOperationMismatch(expectedEntry, liveSig);
+      return invoke(pjp, pjp.getArgs());
+    }
+
+    // Step 2: RE_EXECUTE — advance past operation entry, invoke, then verify completion
+    cursor.advance();
+
+    Object result = invoke(pjp, pjp.getArgs());
+
+    // Step 3: Verify return value against WAL completion entry
+    WalEntry completionEntry = cursor.peekNext();
+    if (completionEntry != null && completionEntry.getKind() == WalEntryKind.COMPLETION) {
+      replayContext.getDivergenceDetector().compareReturnValue(completionEntry, result);
+
+      // Register object ref mapping if the return value has a ref in the WAL
+      if (result != null) {
+        int walRef = extractReturnRef(completionEntry);
+        if (walRef != 0) {
+          replayContext.getObjectStore().register(walRef, result);
+        }
+      }
+
+      cursor.advance();
+    }
+
+    return result;
+  }
+
+  /**
+   * Extracts the object reference from a WAL completion entry's return value.
+   *
+   * @param completionEntry the completion WAL entry (must be a COMPLETION kind)
+   * @return the object reference from the return value, or {@code 0} if none
+   */
+  private static int extractReturnRef(WalEntry completionEntry) {
+    ReturnValue returnValue = completionEntry.getRawMessage().getReturnValue();
+    if (returnValue == null) {
+      return 0;
+    }
+    Obj obj = returnValue.getObject();
+    if (obj == null) {
+      return 0;
+    }
+    return obj.getRef();
   }
 
   /**

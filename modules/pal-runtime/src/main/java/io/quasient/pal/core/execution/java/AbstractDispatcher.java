@@ -17,6 +17,7 @@ import io.quasient.pal.core.intercept.InFlightDispatchTracker;
 import io.quasient.pal.core.intercept.InterceptCallbackDispatcher;
 import io.quasient.pal.core.intercept.InterceptChecker;
 import io.quasient.pal.core.intercept.LocalInterceptCallbackDispatcher;
+import io.quasient.pal.core.replay.ReplayContext;
 import io.quasient.pal.core.runtime.objects.ObjectLookupStore;
 import io.quasient.pal.core.service.RunOptions;
 import io.quasient.pal.core.transport.gateway.OutboundMessageGateway;
@@ -25,6 +26,7 @@ import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import java.util.Set;
 import java.util.UUID;
+import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -84,6 +86,15 @@ abstract class AbstractDispatcher {
       value = "URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD",
       justification = "Wired for use by dispatchIncoming() in BaseExecMessageDispatcher")
   protected boolean sourceAndWalAreSameLog;
+
+  /**
+   * Replay context for deterministic WAL replay, or {@code null} when not in replay mode.
+   *
+   * <p>Injected as optional so that non-replay peers do not fail during Guice wiring. The dispatch
+   * fast-path checks {@code runOptions.contains(RunOptions.WITH_REPLAY)} before accessing this
+   * field, so a {@code null} value is safe.
+   */
+  protected ReplayContext replayContext;
 
   /**
    * Dispatcher for routing invocations based on thread affinity (e.g., FX thread).
@@ -219,6 +230,20 @@ abstract class AbstractDispatcher {
   @Inject
   final void setInFlightDispatchTracker(InFlightDispatchTracker inFlightDispatchTracker) {
     this.inFlightDispatchTracker = inFlightDispatchTracker;
+  }
+
+  /**
+   * Sets the {@link ReplayContext} for deterministic WAL replay.
+   *
+   * <p>This injection is optional: when the peer is not running in replay mode, Guice provides
+   * {@code null} and the replay fast-path in {@code dispatch()} is never entered.
+   *
+   * @param replayContext the replay context, or {@code null} when not in replay mode
+   */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
+  @com.google.inject.Inject(optional = true)
+  final void setReplayContext(@Nullable ReplayContext replayContext) {
+    this.replayContext = replayContext;
   }
 
   /**

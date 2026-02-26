@@ -20,6 +20,8 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.quasient.pal.common.lang.intercept.CheckedExceptionPolicy;
 import io.quasient.pal.common.lang.intercept.ExceptionPropagationPolicy;
 import io.quasient.pal.common.lang.intercept.InterceptType;
+import io.quasient.pal.common.replay.WalEntry;
+import io.quasient.pal.common.replay.WalIndex;
 import io.quasient.pal.common.runtime.DispatchForwarder;
 import io.quasient.pal.common.runtime.ProxyDispatcher;
 import io.quasient.pal.common.runtime.ThreadAffinity;
@@ -38,6 +40,10 @@ import io.quasient.pal.core.intercept.PendingInterceptActivation;
 import io.quasient.pal.core.intercept.VirtualThreadCallbackExecutor;
 import io.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import io.quasient.pal.core.internal.concurrent.MpscKind;
+import io.quasient.pal.core.replay.DivergenceDetector;
+import io.quasient.pal.core.replay.ReplayContext;
+import io.quasient.pal.core.replay.ReplayObjectStore;
+import io.quasient.pal.core.replay.ReplayPolicy;
 import io.quasient.pal.core.runtime.objects.ConcurrentHashMapObjectLookupStore;
 import io.quasient.pal.core.runtime.objects.ObjectLookupStore;
 import io.quasient.pal.core.transport.SourceLogReader;
@@ -55,6 +61,9 @@ import io.quasient.pal.core.transport.zmq.publish.MessagePublisherConfig;
 import io.quasient.pal.core.transport.zmq.publish.PublishingDropPolicy;
 import io.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import io.quasient.pal.messages.OutboundMsg;
+import io.quasient.pal.messages.colfer.ExecMessage;
+import io.quasient.pal.messages.colfer.Message;
+import io.quasient.pal.messages.types.MessageFamily;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -68,6 +77,9 @@ import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.jctools.queues.MessagePassingQueue;
 import org.jctools.queues.MpscUnboundedArrayQueue;
@@ -715,5 +727,110 @@ public class PeerWiring extends AbstractModule {
       dispatcher.register(ThreadAffinity.FX_THREAD, new JavaFxInvocationExecutor(timeoutMs));
     }
     return dispatcher;
+  }
+
+  /**
+   * Provides the {@link ReplayContext} for deterministic WAL replay, or {@code null} when the peer
+   * is not running in replay mode.
+   *
+   * <p>When {@link RunOptions#WITH_REPLAY} is set, the entire WAL is loaded into memory during peer
+   * initialization (before {@code main()} is called). This is acceptable for Phase 1's scope of
+   * single-threaded debugging sessions.
+   *
+   * @return the replay context, or {@code null} if not in replay mode
+   */
+  @SuppressWarnings("unused")
+  @Provides
+  @Singleton
+  @Nullable
+  ReplayContext provideReplayContext() {
+    if (!runOptions.contains(RunOptions.WITH_REPLAY)) {
+      return null;
+    }
+
+    String walPathStr = properties.getProperty("replay.wal.path");
+    if (walPathStr == null || walPathStr.isBlank()) {
+      throw new IllegalStateException("WITH_REPLAY is set but replay.wal.path is not configured");
+    }
+
+    Path walPath = resolveReplayWalPath(walPathStr);
+    List<WalEntry> entries = readChronicleWal(walPath);
+    WalIndex index = WalIndex.build(entries);
+    logger.info(
+        "Replay WAL loaded: {} entries, {} structural issues",
+        entries.size(),
+        index.getStructuralIssues().size());
+
+    return new ReplayContext(
+        index,
+        new ReplayPolicy(),
+        new ReplayObjectStore(),
+        new DivergenceDetector(DivergenceDetector.DivergencePolicy.WARN));
+  }
+
+  /**
+   * Resolves the replay WAL path from the {@code file:} prefixed specification.
+   *
+   * <p>Strips the {@code file:} prefix and resolves relative paths against the Chronicle base
+   * directory (if configured) or the current working directory.
+   *
+   * @param walPathStr the WAL path specification (e.g., {@code file:/tmp/my-wal})
+   * @return the resolved filesystem path
+   */
+  private Path resolveReplayWalPath(String walPathStr) {
+    String pathPart;
+    if (walPathStr.startsWith("file:")) {
+      pathPart = walPathStr.substring("file:".length());
+    } else {
+      pathPart = walPathStr;
+    }
+
+    Path path = Paths.get(pathPart);
+    if (!path.isAbsolute()) {
+      String baseDir = properties.getProperty("wal.chronicle.base_dir");
+      if (baseDir != null && !baseDir.isBlank()) {
+        path = Paths.get(baseDir).resolve(path);
+      }
+    }
+    return path;
+  }
+
+  /**
+   * Reads all EXEC-family messages from a Chronicle WAL and converts them to {@link WalEntry}
+   * instances.
+   *
+   * <p>Follows the same deserialization path as {@code pal print}: {@link
+   * OutboundMsg#readNext(ExcerptTailer)} → {@link Message#unmarshal(byte[], int)} → {@link
+   * ExecMessage} → {@link WalEntry}.
+   *
+   * @param walPath the filesystem path to the Chronicle queue directory
+   * @return a list of WAL entries in offset order
+   */
+  private static List<WalEntry> readChronicleWal(Path walPath) {
+    List<WalEntry> entries = new ArrayList<>();
+    try (ChronicleQueue queue =
+        SingleChronicleQueueBuilder.binary(walPath.toFile()).readOnly(true).build()) {
+      ExcerptTailer tailer = queue.createTailer();
+      long logicalOffset = 0;
+
+      while (true) {
+        OutboundMsg outboundMsg = OutboundMsg.readNext(tailer);
+        if (outboundMsg == null) {
+          break;
+        }
+
+        // Only process EXEC family messages
+        if (outboundMsg.getMessageType().getFamily() == MessageFamily.EXEC) {
+          Message message = new Message();
+          message.unmarshal(outboundMsg.getBody(), 0);
+          ExecMessage execMessage = message.getExecMessage();
+          if (execMessage != null) {
+            entries.add(WalEntry.fromExecMessage(logicalOffset, execMessage));
+          }
+        }
+        logicalOffset++;
+      }
+    }
+    return entries;
   }
 }
