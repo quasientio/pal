@@ -13,20 +13,26 @@ import static picocli.CommandLine.Option;
 import static picocli.CommandLine.Parameters;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import io.quasient.pal.common.cli.PalCommand;
+import io.quasient.pal.common.directory.nodes.LogInfo;
 import io.quasient.pal.core.service.Main;
+import io.quasient.pal.cxn.directory.PalDirectory;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.ParentCommand;
 
 /**
  * CLI command that replays an application deterministically from a recorded Write-Ahead Log (WAL).
  *
  * <p>This command wraps {@code pal run} with replay-specific options and a simplified argument
- * surface. It does not require etcd, Kafka, or intercept configuration — replay runs locally
- * against a Chronicle Queue WAL.
+ * surface. It supports both Chronicle Queue WALs (local, via {@code file:} prefix) and Kafka WAL
+ * topics (distributed, via topic name). When a PalDirectory is available ({@code -d}), log names
+ * are resolved to their backing Kafka bootstrap servers automatically.
  *
  * <p>Internally, it composes the appropriate {@code --replay-wal} and related flags and delegates
  * to {@link Main} for peer startup and replay execution.
@@ -54,16 +60,32 @@ public class Replay extends AbstractPalSubcommand {
   /** Exit code returned when divergences are detected during replay. */
   static final int EXIT_CODE_DIVERGENCES = 2;
 
+  /** Parent command that provides access to the PalDirectory connection string. */
+  @ParentCommand PalCommand palCommand;
+
   /**
-   * Path to the WAL to replay from. Must use the {@code file:} prefix for Chronicle Queue WALs
-   * (e.g., {@code file:/tmp/my-wal}).
+   * Path to the WAL to replay from. Use the {@code file:} prefix for Chronicle Queue WALs (e.g.,
+   * {@code file:/tmp/my-wal}), or a plain topic name for Kafka WALs.
    */
   @Option(
       names = {"-w", "--wal"},
       required = true,
-      paramLabel = "file:/path",
-      description = "WAL path to replay from (e.g., file:/tmp/my-wal)")
+      paramLabel = "name|file:/path",
+      description = "WAL path to replay from (file:/path for Chronicle, or topic name for Kafka)")
   private String walPath;
+
+  /**
+   * Kafka bootstrap servers for direct access to Kafka WAL topics. Required for Kafka WAL topics
+   * when PalDirectory ({@code -d}) is not available.
+   */
+  @Option(
+      names = {"-k", "--kafka-servers"},
+      paramLabel = "bootstrap_servers",
+      description = "Kafka bootstrap servers (required for Kafka WAL topics without -d)")
+  private String kafkaServers;
+
+  /** Kafka servers resolved from PalDirectory during initialization. */
+  private String resolvedKafkaServers;
 
   /**
    * Policy controlling how divergences between live execution and the WAL oracle are handled.
@@ -116,9 +138,11 @@ public class Replay extends AbstractPalSubcommand {
    * Validates the command-line input.
    *
    * <p>Ensures the {@code --divergence-policy} value is one of the accepted values: {@code WARN},
-   * {@code HALT}, or {@code IGNORE}.
+   * {@code HALT}, or {@code IGNORE}. For non-Chronicle WAL paths, validates that either {@code -k}
+   * (Kafka servers) or {@code -d} (PalDirectory) is available.
    *
-   * @throws RuntimeException if the divergence policy is not a valid value
+   * @throws RuntimeException if the divergence policy is not a valid value, or if a Kafka WAL topic
+   *     is specified without Kafka servers or PalDirectory
    */
   @Override
   protected void validateInput() {
@@ -128,16 +152,63 @@ public class Replay extends AbstractPalSubcommand {
           "Invalid divergence policy: '" + divergencePolicy + "'. Must be WARN, HALT, or IGNORE.");
     }
     divergencePolicy = upper;
+
+    if (!walPath.startsWith("file:") && kafkaServers == null && !isPalDirectoryAvailable()) {
+      throw new RuntimeException(
+          "Kafka WAL topics require --kafka-servers (-k) or a PAL directory (-d). "
+              + "For Chronicle Queue WALs, use the 'file:' prefix (e.g., file:/tmp/my-wal).");
+    }
   }
 
   /**
-   * Initialization step — no-op for replay since no external services are required.
+   * Checks whether a PalDirectory connection is available via the parent command.
    *
-   * @throws Exception never thrown
+   * @return {@code true} if a non-empty directory connection string is configured
+   */
+  private boolean isPalDirectoryAvailable() {
+    if (palCommand == null) {
+      return false;
+    }
+    String connStr = palCommand.getPalDirectoryConnectionString();
+    return connStr != null && !connStr.isEmpty() && !PalDirectory.NO_URL.equals(connStr);
+  }
+
+  /**
+   * Initializes the replay command by resolving Kafka bootstrap servers if needed.
+   *
+   * <p>For Chronicle WAL paths (starting with {@code file:}), no initialization is required. For
+   * Kafka WAL topics, this method resolves the bootstrap servers either from PalDirectory (if
+   * available) or from the explicit {@code -k} option.
+   *
+   * @throws Exception if directory connection initialization fails
    */
   @Override
   protected void initialize() throws Exception {
-    // Replay requires no external services (no etcd, no Kafka).
+    if (walPath == null || walPath.startsWith("file:")) {
+      return;
+    }
+
+    if (isPalDirectoryAvailable()) {
+      initializeDirectoryConnectionProvider(palCommand.getPalDirectoryConnectionString());
+      PalDirectory palDirectory = null;
+      try {
+        Optional<PalDirectory> palDirOpt = directoryConnectionProvider.get();
+        palDirectory = palDirOpt.orElse(null);
+      } catch (RuntimeException e) {
+        // PalDirectory connection failed; fall through to use explicit -k
+      }
+
+      if (palDirectory != null) {
+        LogInfo logInfo = palDirectory.getLogInfo(walPath);
+        if (logInfo != null && logInfo.getBootstrapServers() != null) {
+          resolvedKafkaServers = logInfo.getBootstrapServers();
+        }
+      }
+    }
+
+    if (resolvedKafkaServers == null && kafkaServers != null) {
+      resolvedKafkaServers = kafkaServers;
+    }
   }
 
   /**
@@ -157,13 +228,15 @@ public class Replay extends AbstractPalSubcommand {
   }
 
   /**
-   * Closes resources — no-op for replay since no directory connection is established.
+   * Closes resources including the directory connection provider if it was initialized.
    *
-   * @throws IOException never thrown
+   * @throws IOException if an I/O error occurs while closing resources
    */
   @Override
   protected void closeResources() throws IOException {
-    // No directory connection to close.
+    if (directoryConnectionProvider != null) {
+      super.closeResources();
+    }
   }
 
   /**
@@ -174,12 +247,11 @@ public class Replay extends AbstractPalSubcommand {
    * <ul>
    *   <li>{@code --replay-wal <walPath>} — the WAL path for deterministic replay
    *   <li>{@code --replay-divergence-policy <policy>} — the divergence handling policy
+   *   <li>{@code -k <kafkaServers>} — Kafka bootstrap servers (if Kafka WAL, resolved or explicit)
    *   <li>{@code -cp <classpath>} — the application classpath
    *   <li>The main class name
    *   <li>Any additional application arguments
    * </ul>
-   *
-   * <p>No etcd ({@code -d}), Kafka ({@code -k}), or intercept flags are included.
    *
    * @return the composed argument array
    */
@@ -189,6 +261,10 @@ public class Replay extends AbstractPalSubcommand {
     args.add(walPath);
     args.add("--replay-divergence-policy");
     args.add(divergencePolicy);
+    if (resolvedKafkaServers != null) {
+      args.add("-k");
+      args.add(resolvedKafkaServers);
+    }
     args.add("-cp");
     args.add(classpath);
     args.add(mainClass);
