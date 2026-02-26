@@ -9,9 +9,19 @@
  */
 package io.quasient.pal.core.replay;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.sameInstance;
 
-import org.junit.Ignore;
+import io.quasient.pal.common.replay.WalEntry;
+import io.quasient.pal.common.replay.WalIndex;
+import io.quasient.pal.messages.colfer.Class;
+import io.quasient.pal.messages.colfer.ExecMessage;
+import io.quasient.pal.messages.colfer.InstanceMethodCall;
+import io.quasient.pal.messages.colfer.ReturnValue;
+import java.util.Arrays;
+import java.util.List;
 import org.junit.Test;
 
 /**
@@ -29,87 +39,179 @@ public class ReplayContextTest {
    * in the WalIndex.
    */
   @Test
-  @Ignore("Awaiting implementation in #813")
   public void getCursorCreatesOnFirstAccess() {
     // Given: ReplayContext with WalIndex containing entries for 'self-caller' thread
-    // When: getCursor('self-caller')
-    // Then: returns non-null ReplayCursor with correct entries
+    List<WalEntry> entries =
+        Arrays.asList(makeOperation(0L, "self-caller", 1), makeCompletion(1L, "self-caller", 2));
+    WalIndex walIndex = WalIndex.build(entries);
+    ReplayContext ctx = createContext(walIndex);
 
-    // TODO(#813): Implement test logic
-    fail("Not yet implemented");
+    // When: getCursor('self-caller')
+    ReplayCursor cursor = ctx.getCursor("self-caller");
+
+    // Then: returns non-null ReplayCursor that is not exhausted
+    assertThat(cursor, is(notNullValue()));
+    assertThat(cursor.isExhausted(), is(false));
+    assertThat(cursor.getThreadName(), is("self-caller"));
   }
 
   /** Verifies that getCursor returns the same cached instance on subsequent calls. */
   @Test
-  @Ignore("Awaiting implementation in #813")
   public void getCursorReturnsSameInstance() {
     // Given: ReplayContext with WalIndex containing entries for 'self-caller' thread
-    // When: getCursor('self-caller') called twice
-    // Then: returns same ReplayCursor instance (cached)
+    List<WalEntry> entries =
+        Arrays.asList(makeOperation(0L, "self-caller", 1), makeCompletion(1L, "self-caller", 2));
+    WalIndex walIndex = WalIndex.build(entries);
+    ReplayContext ctx = createContext(walIndex);
 
-    // TODO(#813): Implement test logic
-    fail("Not yet implemented");
+    // When: getCursor('self-caller') called twice
+    ReplayCursor first = ctx.getCursor("self-caller");
+    ReplayCursor second = ctx.getCursor("self-caller");
+
+    // Then: returns same ReplayCursor instance (cached)
+    assertThat(second, is(sameInstance(first)));
   }
 
   /**
    * Verifies that getCursor for an unknown thread returns a cursor that is immediately exhausted.
    */
   @Test
-  @Ignore("Awaiting implementation in #813")
   public void getCursorForUnknownThread() {
     // Given: ReplayContext with WalIndex that has no entries for 'unknown-thread'
-    // When: getCursor('unknown-thread')
-    // Then: returns ReplayCursor that is immediately exhausted (empty entry list)
+    List<WalEntry> entries =
+        Arrays.asList(makeOperation(0L, "self-caller", 1), makeCompletion(1L, "self-caller", 2));
+    WalIndex walIndex = WalIndex.build(entries);
+    ReplayContext ctx = createContext(walIndex);
 
-    // TODO(#813): Implement test logic
-    fail("Not yet implemented");
+    // When: getCursor('unknown-thread')
+    ReplayCursor cursor = ctx.getCursor("unknown-thread");
+
+    // Then: returns ReplayCursor that is immediately exhausted (empty entry list)
+    assertThat(cursor, is(notNullValue()));
+    assertThat(cursor.isExhausted(), is(true));
+    assertThat(cursor.getThreadName(), is("unknown-thread"));
   }
 
   /** Verifies that getDivergenceDetector returns the instance passed at construction. */
   @Test
-  @Ignore("Awaiting implementation in #813")
   public void delegatesToDivergenceDetector() {
     // Given: ReplayContext constructed with a specific DivergenceDetector instance
+    DivergenceDetector detector = new DivergenceDetector(DivergenceDetector.DivergencePolicy.WARN);
+    ReplayContext ctx =
+        new ReplayContext(
+            WalIndex.build(Arrays.asList()), new ReplayPolicy(), new ReplayObjectStore(), detector);
+
     // When: getDivergenceDetector()
     // Then: returns the same DivergenceDetector instance passed at construction
-
-    // TODO(#813): Implement test logic
-    fail("Not yet implemented");
+    assertThat(ctx.getDivergenceDetector(), is(sameInstance(detector)));
   }
 
   /** Verifies that getObjectStore returns the instance passed at construction. */
   @Test
-  @Ignore("Awaiting implementation in #813")
   public void delegatesToObjectStore() {
     // Given: ReplayContext constructed with a specific ReplayObjectStore instance
+    ReplayObjectStore store = new ReplayObjectStore();
+    ReplayContext ctx =
+        new ReplayContext(
+            WalIndex.build(Arrays.asList()),
+            new ReplayPolicy(),
+            store,
+            new DivergenceDetector(DivergenceDetector.DivergencePolicy.WARN));
+
     // When: getObjectStore()
     // Then: returns the same ReplayObjectStore instance passed at construction
-
-    // TODO(#813): Implement test logic
-    fail("Not yet implemented");
+    assertThat(ctx.getObjectStore(), is(sameInstance(store)));
   }
 
   /** Verifies that getPolicy returns the instance passed at construction. */
   @Test
-  @Ignore("Awaiting implementation in #813")
   public void delegatesToPolicy() {
     // Given: ReplayContext constructed with a specific ReplayPolicy instance
+    ReplayPolicy policy = new ReplayPolicy();
+    ReplayContext ctx =
+        new ReplayContext(
+            WalIndex.build(Arrays.asList()),
+            policy,
+            new ReplayObjectStore(),
+            new DivergenceDetector(DivergenceDetector.DivergencePolicy.WARN));
+
     // When: getPolicy()
     // Then: returns the same ReplayPolicy instance passed at construction
-
-    // TODO(#813): Implement test logic
-    fail("Not yet implemented");
+    assertThat(ctx.getPolicy(), is(sameInstance(policy)));
   }
 
   /** Verifies that getWalIndex returns the instance passed at construction. */
   @Test
-  @Ignore("Awaiting implementation in #813")
   public void walIndexAccessible() {
     // Given: ReplayContext constructed with a specific WalIndex instance
+    WalIndex walIndex = WalIndex.build(Arrays.asList());
+    ReplayContext ctx =
+        new ReplayContext(
+            walIndex,
+            new ReplayPolicy(),
+            new ReplayObjectStore(),
+            new DivergenceDetector(DivergenceDetector.DivergencePolicy.WARN));
+
     // When: getWalIndex()
     // Then: returns the same WalIndex instance passed at construction
+    assertThat(ctx.getWalIndex(), is(sameInstance(walIndex)));
+  }
 
-    // TODO(#813): Implement test logic
-    fail("Not yet implemented");
+  /**
+   * Creates a {@link ReplayContext} with default sub-components and the given WalIndex.
+   *
+   * @param walIndex the WalIndex to use
+   * @return a new ReplayContext
+   */
+  private static ReplayContext createContext(WalIndex walIndex) {
+    return new ReplayContext(
+        walIndex,
+        new ReplayPolicy(),
+        new ReplayObjectStore(),
+        new DivergenceDetector(DivergenceDetector.DivergencePolicy.WARN));
+  }
+
+  /**
+   * Creates an OPERATION {@link WalEntry} (instance method call).
+   *
+   * @param offset the WAL offset
+   * @param threadName the thread name
+   * @param builderSeq the builder sequence number
+   * @return a new WalEntry of kind OPERATION
+   */
+  private static WalEntry makeOperation(long offset, String threadName, int builderSeq) {
+    ExecMessage msg = new ExecMessage();
+    msg.setThreadName(threadName);
+    msg.setBuilderSeq(builderSeq);
+
+    InstanceMethodCall imc = new InstanceMethodCall();
+    imc.setName("testMethod");
+    imc.setObjectRef(1);
+    Class clazz = new Class();
+    clazz.setName("com.example.TestClass");
+    imc.setClazz(clazz);
+    msg.setInstanceMethodCall(imc);
+
+    return WalEntry.fromExecMessage(offset, msg);
+  }
+
+  /**
+   * Creates a COMPLETION {@link WalEntry} (void return value).
+   *
+   * @param offset the WAL offset
+   * @param threadName the thread name
+   * @param builderSeq the builder sequence number
+   * @return a new WalEntry of kind COMPLETION
+   */
+  private static WalEntry makeCompletion(long offset, String threadName, int builderSeq) {
+    ExecMessage msg = new ExecMessage();
+    msg.setThreadName(threadName);
+    msg.setBuilderSeq(builderSeq);
+
+    ReturnValue rv = new ReturnValue();
+    rv.setIsVoid(true);
+    msg.setReturnValue(rv);
+
+    return WalEntry.fromExecMessage(offset, msg);
   }
 }
