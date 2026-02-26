@@ -101,7 +101,52 @@ public final class WalReader {
       }
     }
 
+    filterBootstrapMainCompletion(entries);
+
     return entries;
+  }
+
+  /**
+   * Filters out the trailing bootstrap {@code main()} completion if present.
+   *
+   * <p>{@code SelfBootstrapInvoker} invokes {@code main()} directly via reflection, so the
+   * operation (BEFORE message) is never written to the WAL. However, the completion (AFTER message
+   * / EXEC_RETURN_VALUE) <em>is</em> written because the dispatch path's {@code
+   * createAfterExecMessage} fires after execution. This leaves an orphaned completion at the end of
+   * every peer-recorded WAL.
+   *
+   * <p>This method removes that trailing orphaned completion when:
+   *
+   * <ol>
+   *   <li>The last entry is a {@link WalEntryKind#COMPLETION}
+   *   <li>Its executable name is {@code "main"}
+   *   <li>No {@link WalEntryKind#OPERATION} entry for {@code "main"} exists in the WAL
+   * </ol>
+   *
+   * @param entries the mutable list of entries to filter in place
+   */
+  static void filterBootstrapMainCompletion(List<WalEntry> entries) {
+    if (entries.isEmpty()) {
+      return;
+    }
+
+    WalEntry lastEntry = entries.get(entries.size() - 1);
+    if (lastEntry.getKind() != WalEntryKind.COMPLETION
+        || !"main".equals(lastEntry.getExecutableName())) {
+      return;
+    }
+
+    boolean hasMainOperation =
+        entries.stream()
+            .anyMatch(
+                e -> e.getKind() == WalEntryKind.OPERATION && "main".equals(e.getExecutableName()));
+
+    if (!hasMainOperation) {
+      logger.debug(
+          "Filtering bootstrap main() completion at offset {} (no matching OPERATION)",
+          lastEntry.getOffset());
+      entries.remove(entries.size() - 1);
+    }
   }
 
   /**

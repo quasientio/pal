@@ -21,6 +21,8 @@ import io.quasient.pal.messages.colfer.ControlMessage;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.InstanceMethodCall;
 import io.quasient.pal.messages.colfer.Message;
+import io.quasient.pal.messages.colfer.Method;
+import io.quasient.pal.messages.colfer.Reflectable;
 import io.quasient.pal.messages.colfer.ReturnValue;
 import io.quasient.pal.messages.types.MessageType;
 import java.io.IOException;
@@ -238,6 +240,65 @@ public class WalReaderTest {
     assertThat(entry.getKind(), is(WalEntryKind.OPERATION));
   }
 
+  /**
+   * Verifies that the bootstrap {@code main()} completion at the end of the WAL is filtered out
+   * when no matching {@code main()} operation exists.
+   *
+   * <p>SelfBootstrapInvoker invokes {@code main()} directly (outside AspectJ weaving), so the
+   * operation is never written to the WAL. The completion IS written, leaving an orphaned trailing
+   * entry. {@link WalReader} must filter this known artifact.
+   */
+  @Test
+  public void filtersBootstrapMainCompletion() {
+    // Given: A Chronicle queue with an OPERATION + COMPLETION pair,
+    //        followed by an orphaned main() COMPLETION (bootstrap artifact)
+    Path queuePath = tempDir.resolve("bootstrap-filter");
+    try (ChronicleQueue queue =
+        SingleChronicleQueueBuilder.single(queuePath.toFile())
+            .wireType(WireType.BINARY_LIGHT)
+            .build()) {
+      ExcerptAppender appender = queue.createAppender();
+
+      appendExecInstanceMethod(appender, "self-caller", 1, "com.example.Foo", "bar");
+      appendExecReturnValue(appender, "self-caller", 2);
+      appendExecReturnValueFromMain(appender, "self-caller", 3);
+    }
+
+    // When: WalReader.readChronicleWal(path) is called
+    List<WalEntry> entries = WalReader.readChronicleWal(queuePath);
+
+    // Then: Bootstrap main() completion is filtered out, only 2 entries remain
+    assertThat("Bootstrap main() completion should be filtered", entries.size(), is(2));
+    assertThat(entries.get(0).getKind(), is(WalEntryKind.OPERATION));
+    assertThat(entries.get(1).getKind(), is(WalEntryKind.COMPLETION));
+  }
+
+  /**
+   * Verifies that a {@code main()} completion is NOT filtered when a matching {@code main()}
+   * operation exists in the WAL (i.e., main() was invoked via AspectJ dispatch, not via
+   * SelfBootstrapInvoker).
+   */
+  @Test
+  public void preservesMainCompletionWhenMatchingOperationExists() {
+    // Given: A Chronicle queue with a main() OPERATION and main() COMPLETION (not orphaned)
+    Path queuePath = tempDir.resolve("main-with-op");
+    try (ChronicleQueue queue =
+        SingleChronicleQueueBuilder.single(queuePath.toFile())
+            .wireType(WireType.BINARY_LIGHT)
+            .build()) {
+      ExcerptAppender appender = queue.createAppender();
+
+      appendExecInstanceMethod(appender, "self-caller", 1, "com.example.App", "main");
+      appendExecReturnValueFromMain(appender, "self-caller", 2);
+    }
+
+    // When: WalReader.readChronicleWal(path) is called
+    List<WalEntry> entries = WalReader.readChronicleWal(queuePath);
+
+    // Then: Both entries preserved (main() completion is NOT filtered because operation exists)
+    assertThat("main() completion should be kept when operation exists", entries.size(), is(2));
+  }
+
   // ============================================================================
   // Helper methods for creating test messages
   // ============================================================================
@@ -355,6 +416,46 @@ public class WalReaderTest {
 
     ReturnValue rv = new ReturnValue();
     rv.setIsVoid(true);
+    execMsg.setReturnValue(rv);
+
+    Message wrapper =
+        new Message()
+            .withMessageType(MessageType.EXEC_RETURN_VALUE.getId())
+            .withExecMessage(execMsg);
+    OutboundMsg outboundMsg =
+        new OutboundMsg(
+            MessageType.EXEC_RETURN_VALUE,
+            ExecPhase.AFTER,
+            null,
+            execMsg.getMessageId(),
+            null,
+            wrapper);
+    outboundMsg.appendTo(appender);
+  }
+
+  /**
+   * Appends an EXEC_RETURN_VALUE message for {@code main()} to the queue (bootstrap artifact).
+   *
+   * @param appender the queue appender
+   * @param threadName the thread name
+   * @param builderSeq the builder sequence number
+   */
+  private void appendExecReturnValueFromMain(
+      ExcerptAppender appender, String threadName, int builderSeq) {
+    ExecMessage execMsg = new ExecMessage();
+    execMsg.setThreadName(threadName);
+    execMsg.setBuilderSeq(builderSeq);
+    execMsg.setPeerUuid(UUID.randomUUID().toString());
+    execMsg.setMessageId(UUID.randomUUID().toString());
+    execMsg.setCurrentTime(String.valueOf(System.currentTimeMillis()));
+
+    ReturnValue rv = new ReturnValue();
+    rv.setIsVoid(true);
+    Method mainMethod = new Method();
+    mainMethod.setName("main");
+    Reflectable from = new Reflectable();
+    from.setMethod(mainMethod);
+    rv.setFrom(from);
     execMsg.setReturnValue(rv);
 
     Message wrapper =

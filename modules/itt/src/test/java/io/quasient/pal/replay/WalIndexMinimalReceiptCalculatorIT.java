@@ -69,13 +69,7 @@ public class WalIndexMinimalReceiptCalculatorIT extends AbstractCliIT {
 
   /**
    * Records a WAL with MinimalReceiptCalculator, runs {@code pal wal-index}, and verifies that the
-   * index reports balanced operation/completion pairs with at most one structural issue (the
-   * expected orphaned main() completion from SelfBootstrapInvoker).
-   *
-   * <p>The WAL always contains one orphaned completion for the {@code main()} method because
-   * SelfBootstrapInvoker invokes main() outside of AspectJ weaving, so the operation is not
-   * captured in the WAL but its completion is recorded. Every other operation has a matching
-   * completion, verified by the pairs count equaling the operations count.
+   * index reports zero structural issues and balanced operation/completion pairs.
    *
    * @throws Exception if test execution fails
    */
@@ -99,6 +93,12 @@ public class WalIndexMinimalReceiptCalculatorIT extends AbstractCliIT {
     // Verify exit code 0
     assertEquals("wal-index should succeed", 0, indexResult.exitCode());
 
+    // Verify zero structural issues
+    assertThat(
+        "Output should contain Issues count", indexResult.stdout(), containsString("Issues:"));
+    assertThat(
+        "Output should report zero issues", indexResult.stdout(), containsString("Issues:      0"));
+
     // Verify positive entry count
     assertThat(
         "Output should contain Entries count", indexResult.stdout(), containsString("Entries:"));
@@ -110,27 +110,10 @@ public class WalIndexMinimalReceiptCalculatorIT extends AbstractCliIT {
     int pairs = extractCount(indexResult.stdout(), "Pairs:");
     assertThat("Should have positive pair count", pairs, greaterThan(0));
 
-    // Verify operations and completions counts are positive
+    // Verify operations count equals completions count (balanced WAL)
     int operations = extractCount(indexResult.stdout(), "Operations:");
     int completions = extractCount(indexResult.stdout(), "Completions:");
-    assertThat("Should have positive operation count", operations, greaterThan(0));
-    assertThat("Should have positive completion count", completions, greaterThan(0));
-
-    // Every recorded operation has a matching completion (pairs == operations)
-    assertEquals(
-        "Every operation should have a matching completion (pairs == operations)",
-        operations,
-        pairs);
-
-    // The WAL has at most one orphaned completion (from the main() bootstrap).
-    // completions - operations accounts for the main() completion that has no matching operation.
-    int issues = extractCount(indexResult.stdout(), "Issues:");
-    assertThat(
-        "Output should contain Issues count", indexResult.stdout(), containsString("Issues:"));
-    assertEquals(
-        "At most one structural issue (orphaned main() completion)",
-        completions - operations,
-        issues);
+    assertEquals("Operations should equal completions (balanced WAL)", operations, completions);
   }
 
   /**
