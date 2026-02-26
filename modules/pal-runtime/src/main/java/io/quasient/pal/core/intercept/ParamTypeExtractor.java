@@ -178,6 +178,49 @@ public final class ParamTypeExtractor {
   }
 
   /**
+   * Extracts parameter type names from actual argument objects, with fallback to declared types
+   * from the signature for {@code null} arguments.
+   *
+   * <p>This method is used during replay to match actual runtime types against WAL-recorded types.
+   * The WAL records the actual runtime types of arguments, so this method mirrors that behavior by
+   * using {@code arg.getClass().getName()} for each non-null argument.
+   *
+   * <p>Unlike {@link #extractFromSignature(Signature)}, this method allocates a fresh array on each
+   * call because the result is stored in {@link
+   * io.quasient.pal.core.replay.OperationSignature#paramTypes()} and must remain stable.
+   *
+   * @param args the actual argument values from {@code ProceedingJoinPoint.getArgs()}
+   * @param signature the AspectJ signature for fallback on {@code null} arguments
+   * @return array of actual runtime type names, or {@code null} for field operations
+   */
+  public static String[] extractFromArgs(Object[] args, Signature signature) {
+    if (!(signature instanceof CodeSignature codeSignature)) {
+      return null;
+    }
+    if (args == null || args.length == 0) {
+      return EMPTY;
+    }
+    Class<?>[] declaredTypes = codeSignature.getParameterTypes();
+    String[] result = new String[args.length];
+    for (int i = 0; i < args.length; i++) {
+      if (declaredTypes != null && i < declaredTypes.length && declaredTypes[i].isPrimitive()) {
+        // Use declared type for primitives: args are autoboxed (double → Double) but the WAL
+        // records primitive type names (e.g., "double", "int", "boolean").
+        result[i] = declaredTypes[i].getName();
+      } else if (args[i] != null) {
+        // Use actual runtime type for reference parameters to match WAL-recorded types
+        // (e.g., String instead of Object for HashMap.put(Object, Object) called with String).
+        result[i] = args[i].getClass().getName();
+      } else if (declaredTypes != null && i < declaredTypes.length) {
+        result[i] = declaredTypes[i].getName();
+      } else {
+        result[i] = "java.lang.Object";
+      }
+    }
+    return result;
+  }
+
+  /**
    * Computes the executable path from class name and executable name.
    *
    * @param className the fully qualified class name

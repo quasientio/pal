@@ -13,6 +13,7 @@ import io.quasient.pal.common.replay.WalEntry;
 import io.quasient.pal.messages.colfer.ReturnValue;
 import io.quasient.pal.serdes.Unwrapper;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import org.slf4j.Logger;
@@ -112,7 +113,7 @@ public class DivergenceDetector {
       }
     }
 
-    if (!Objects.equals(expectedValue, actualValue)) {
+    if (!deepEquals(expectedValue, actualValue)) {
       recordDivergence(
           new Divergence(
               DivergenceType.VALUE_MISMATCH,
@@ -193,6 +194,31 @@ public class DivergenceDetector {
    */
   public boolean hasDivergences() {
     return !divergences.isEmpty();
+  }
+
+  /**
+   * Array-aware equality check. Uses {@link Arrays#deepEquals} for Object arrays, {@link
+   * Arrays#equals} for primitive arrays, and {@link Objects#equals} for all other types.
+   *
+   * @param a the first value
+   * @param b the second value
+   * @return {@code true} if the values are deeply equal
+   */
+  private static boolean deepEquals(Object a, Object b) {
+    if (a == b) {
+      return true;
+    }
+    if (a == null || b == null) {
+      return false;
+    }
+    if (a instanceof Object[] arrayA && b instanceof Object[] arrayB) {
+      return Arrays.deepEquals(arrayA, arrayB);
+    }
+    if (a.getClass().isArray() && b.getClass().isArray()) {
+      // Primitive arrays: delegate to Arrays.equals for each primitive type
+      return Objects.deepEquals(a, b);
+    }
+    return Objects.equals(a, b);
   }
 
   /**

@@ -74,7 +74,8 @@ public record OperationSignature(
    *
    * <p>Uses {@code pjp.getSignature().getDeclaringTypeName()} for the class name, {@code
    * pjp.getSignature().getName()} for the executable name, and {@link
-   * ParamTypeExtractor#extractFromSignature} for the parameter types.
+   * ParamTypeExtractor#extractFromArgs} for the parameter types (matching the actual runtime types
+   * recorded in the WAL rather than the declared signature types).
    *
    * @param pjp the proceeding join point from AspectJ dispatch
    * @param msgType the message type classifying this operation
@@ -83,7 +84,14 @@ public record OperationSignature(
   public static OperationSignature fromJoinPoint(ProceedingJoinPoint pjp, MessageType msgType) {
     String className = pjp.getSignature().getDeclaringTypeName();
     String executableName = pjp.getSignature().getName();
-    String[] paramTypeNames = ParamTypeExtractor.extractFromSignature(pjp.getSignature());
+    // Normalize constructor names: AspectJ returns "<init>" but the WAL records "new"
+    if ("<init>".equals(executableName)) {
+      executableName = "new";
+    }
+    // Use actual argument types (not declared signature types) to match WAL-recorded types.
+    // The WAL records runtime types (e.g., String, Double for HashMap.put("milk", 2.49)),
+    // while the declared signature types would be (Object, Object).
+    String[] paramTypeNames = ParamTypeExtractor.extractFromArgs(pjp.getArgs(), pjp.getSignature());
     List<String> paramTypes = ParamTypeExtractor.asList(paramTypeNames);
     return new OperationSignature(className, executableName, paramTypes, msgType);
   }
@@ -101,6 +109,24 @@ public record OperationSignature(
   public boolean matches(OperationSignature other) {
     return Objects.equals(this.className, other.className)
         && Objects.equals(this.executableName, other.executableName)
-        && Objects.equals(this.paramTypes, other.paramTypes);
+        && paramTypesMatch(this.paramTypes, other.paramTypes);
+  }
+
+  /**
+   * Compares parameter type lists, treating {@code null} and empty list as equivalent. Fields have
+   * no parameters and may be recorded as {@code null} in the WAL but as an empty list from the live
+   * PJP.
+   *
+   * @param a first parameter type list
+   * @param b second parameter type list
+   * @return {@code true} if both are effectively equal
+   */
+  private static boolean paramTypesMatch(List<String> a, List<String> b) {
+    boolean aEmpty = a == null || a.isEmpty();
+    boolean bEmpty = b == null || b.isEmpty();
+    if (aEmpty && bEmpty) {
+      return true;
+    }
+    return Objects.equals(a, b);
   }
 }
