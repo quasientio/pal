@@ -12,6 +12,7 @@ package io.quasient.pal.common.replay;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import io.quasient.pal.common.runtime.ExecPhase;
 import io.quasient.pal.messages.OutboundMsg;
@@ -38,6 +39,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -297,6 +299,165 @@ public class WalReaderTest {
 
     // Then: Both entries preserved (main() completion is NOT filtered because operation exists)
     assertThat("main() completion should be kept when operation exists", entries.size(), is(2));
+  }
+
+  // ============================================================================
+  // Kafka WAL reading tests (awaiting implementation in #846)
+  // ============================================================================
+
+  /**
+   * Verifies that reading an empty Kafka topic returns an empty list.
+   *
+   * <p>This mirrors {@link #readsEmptyQueue()} but for the Kafka reading path, using a mock {@code
+   * Consumer} that returns empty records on poll with an end offset of 0.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #846")
+  public void readsEmptyKafkaTopic() {
+    // Given: A mock Consumer that returns empty records on poll, with end offset 0
+    // When: readKafkaWal(consumer, "test-topic") is called
+    // Then: Returns empty list
+
+    // TODO(#846): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that non-EXEC messages are filtered out from Kafka records.
+   *
+   * <p>This mirrors {@link #readsExecMessagesOnly()} but for the Kafka reading path. A mock {@code
+   * Consumer} returns 3 records: 2 with EXEC family types (EXEC_INSTANCE_METHOD, EXEC_RETURN_VALUE)
+   * and 1 with CONTROL family type. Only the 2 EXEC messages should be returned.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #846")
+  public void readsExecMessagesOnlyFromKafka() {
+    // Given: A mock Consumer returning 3 records: 2 EXEC family (EXEC_INSTANCE_METHOD,
+    //        EXEC_RETURN_VALUE) and 1 CONTROL family (CONTROL_MESSAGE_REQUEST)
+    // When: readKafkaWal(consumer, "test-topic") is called
+    // Then: Returns list of size 2, only EXEC messages
+
+    // TODO(#846): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that multiple EXEC messages from Kafka are read in correct order.
+   *
+   * <p>This mirrors {@link #readsMultipleExecMessages()} but for the Kafka reading path. A mock
+   * {@code Consumer} returns 5 EXEC records (mix of OPERATION and COMPLETION types). All 5 should
+   * appear in the result list in the same order.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #846")
+  public void readsMultipleExecMessagesFromKafka() {
+    // Given: A mock Consumer returning 5 EXEC records (mix of OPERATION and COMPLETION types)
+    // When: readKafkaWal(consumer, "test-topic") is called
+    // Then: Returns list of size 5 in correct order
+
+    // TODO(#846): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that Kafka record offsets are correctly mapped to {@link WalEntry} offsets.
+   *
+   * <p>This mirrors {@link #preservesOffsetOrder()} but for the Kafka reading path. Kafka record
+   * offsets (0, 1, 2, 3) should be preserved as the corresponding {@code WalEntry} offsets.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #846")
+  public void preservesKafkaOffsetOrder() {
+    // Given: A mock Consumer returning records with Kafka offsets 0, 1, 2, 3
+    // When: readKafkaWal(consumer, "test-topic") is called
+    // Then: WalEntry offsets match Kafka record offsets (0, 1, 2, 3)
+
+    // TODO(#846): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that fields are correctly deserialized from a Kafka record into a {@link WalEntry}.
+   *
+   * <p>This mirrors {@link #extractsCorrectFields()} but for the Kafka reading path. A single
+   * EXEC_INSTANCE_METHOD record with known className, methodName, threadName, and builderSeq is
+   * consumed. The resulting {@code WalEntry} must have matching field values.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #846")
+  public void extractsCorrectFieldsFromKafka() {
+    // Given: A mock Consumer returning a single EXEC_INSTANCE_METHOD record with known
+    //        className, methodName, threadName, builderSeq
+    // When: readKafkaWal(consumer, "test-topic") is called
+    // Then: WalEntry has correct className, executableName, threadName, builderSeq,
+    //       messageType, kind
+
+    // TODO(#846): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that the orphaned bootstrap {@code main()} completion is filtered from Kafka WAL
+   * entries.
+   *
+   * <p>This mirrors {@link #filtersBootstrapMainCompletion()} but for the Kafka reading path. A
+   * mock {@code Consumer} returns records where the last entry is an orphaned main() COMPLETION
+   * (EXEC_RETURN_VALUE with executableName="main" and no matching OPERATION). The orphaned
+   * completion should be removed from the results.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #846")
+  public void filtersBootstrapMainCompletionFromKafka() {
+    // Given: A mock Consumer returning records where last entry is an orphaned main()
+    //        COMPLETION (EXEC_RETURN_VALUE with executableName="main" and no matching OPERATION)
+    // When: readKafkaWal(consumer, "test-topic") is called
+    // Then: The orphaned main() completion is removed from results
+
+    // TODO(#846): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  // ============================================================================
+  // isChronicleLog tests (awaiting implementation in #846)
+  // ============================================================================
+
+  /**
+   * Verifies that {@code isChronicleLog} returns {@code true} for a log spec with the {@code file:}
+   * prefix.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #846")
+  public void isChronicleLogDetectsFilePrefix() {
+    // Given: logSpec = "file:/tmp/my-wal"
+    // When: WalReader.isChronicleLog(logSpec) is called
+    // Then: Returns true
+
+    // TODO(#846): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /** Verifies that {@code isChronicleLog} returns {@code false} for a plain Kafka topic name. */
+  @Test
+  @Ignore("Awaiting implementation in #846")
+  public void isChronicleLogRejectsPlainTopicName() {
+    // Given: logSpec = "my-kafka-topic"
+    // When: WalReader.isChronicleLog(logSpec) is called
+    // Then: Returns false
+
+    // TODO(#846): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /** Verifies that {@code isChronicleLog} returns {@code false} for a {@code null} log spec. */
+  @Test
+  @Ignore("Awaiting implementation in #846")
+  public void isChronicleLogHandlesNull() {
+    // Given: logSpec = null
+    // When: WalReader.isChronicleLog(logSpec) is called
+    // Then: Returns false
+
+    // TODO(#846): Implement test logic
+    fail("Not yet implemented");
   }
 
   // ============================================================================
