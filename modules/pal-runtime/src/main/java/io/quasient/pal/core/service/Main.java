@@ -242,13 +242,16 @@ public class Main implements Callable<Integer> {
    * Specifies the WAL path for deterministic replay mode. When set, the peer re-executes the
    * application from {@code main()} while verifying each operation against the pre-recorded WAL.
    * Mutually exclusive with {@code --wal}, {@code --source-log}, and {@code --log}.
+   *
+   * <p>Accepts either a Chronicle Queue path ({@code file:/path}) or a Kafka topic name. When using
+   * a Kafka topic, {@code --kafka-servers} must also be provided.
    */
   @Option(
       names = {"--replay-wal"},
-      paramLabel = "file:/path",
+      paramLabel = "name|file:/path",
       description =
-          "WAL path for deterministic replay (mutually exclusive with --wal, --source-log,"
-              + " and --log)")
+          "WAL path for deterministic replay: file:/path for Chronicle, topic name for Kafka"
+              + " (mutually exclusive with --wal, --source-log, and --log)")
   private String replayWalPath;
 
   /**
@@ -992,9 +995,18 @@ public class Main implements Callable<Integer> {
             PeerException.FatalCode.ERROR_VALIDATING_PROPERTIES,
             "ERROR: --replay-wal is mutually exclusive with --wal, --source-log, and --log.");
       }
+      if (!isChronicleLog(replayWalPath) && kafkaServers == null) {
+        fatalExit(
+            null,
+            PeerException.FatalCode.ERROR_VALIDATING_PROPERTIES,
+            "ERROR: --replay-wal with a Kafka topic requires --kafka-servers (-k).");
+      }
       runOptions.add(RunOptions.WITH_REPLAY);
       properties.setProperty("replay.wal.path", replayWalPath);
       properties.setProperty("replay.divergence.policy", replayDivergencePolicy);
+      if (kafkaServers != null) {
+        properties.setProperty("replay.kafka.servers", kafkaServers);
+      }
     }
 
     if (tcpPub != null) {

@@ -22,6 +22,7 @@ import io.quasient.pal.common.lang.intercept.ExceptionPropagationPolicy;
 import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.common.replay.WalEntry;
 import io.quasient.pal.common.replay.WalIndex;
+import io.quasient.pal.common.replay.WalReader;
 import io.quasient.pal.common.runtime.DispatchForwarder;
 import io.quasient.pal.common.runtime.ProxyDispatcher;
 import io.quasient.pal.common.runtime.ThreadAffinity;
@@ -61,9 +62,6 @@ import io.quasient.pal.core.transport.zmq.publish.MessagePublisherConfig;
 import io.quasient.pal.core.transport.zmq.publish.PublishingDropPolicy;
 import io.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import io.quasient.pal.messages.OutboundMsg;
-import io.quasient.pal.messages.colfer.ExecMessage;
-import io.quasient.pal.messages.colfer.Message;
-import io.quasient.pal.messages.types.MessageFamily;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -77,9 +75,6 @@ import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
-import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.jctools.queues.MessagePassingQueue;
 import org.jctools.queues.MpscUnboundedArrayQueue;
@@ -737,6 +732,10 @@ public class PeerWiring extends AbstractModule {
    * initialization (before {@code main()} is called). This is acceptable for Phase 1's scope of
    * single-threaded debugging sessions.
    *
+   * <p>Supports both Chronicle Queue and Kafka WAL backends. The backend is determined by the
+   * {@code replay.wal.path} property: paths starting with {@code file:} use Chronicle Queue, all
+   * others are treated as Kafka topic names (requiring {@code replay.kafka.servers}).
+   *
    * @return the replay context, or {@code null} if not in replay mode
    */
   @SuppressWarnings("unused")
@@ -753,8 +752,18 @@ public class PeerWiring extends AbstractModule {
       throw new IllegalStateException("WITH_REPLAY is set but replay.wal.path is not configured");
     }
 
-    Path walPath = resolveReplayWalPath(walPathStr);
-    List<WalEntry> entries = readChronicleWal(walPath);
+    List<WalEntry> entries;
+    if (WalReader.isChronicleLog(walPathStr)) {
+      Path walPath = resolveReplayWalPath(walPathStr);
+      entries = WalReader.readChronicleWal(walPath);
+    } else {
+      String kafkaServers = properties.getProperty("replay.kafka.servers");
+      if (kafkaServers == null || kafkaServers.isBlank()) {
+        throw new IllegalStateException("Kafka replay WAL requires replay.kafka.servers property");
+      }
+      entries = WalReader.readKafkaWal(kafkaServers, walPathStr);
+    }
+
     WalIndex index = WalIndex.build(entries);
     logger.info(
         "Replay WAL loaded: {} entries, {} structural issues",
@@ -799,44 +808,5 @@ public class PeerWiring extends AbstractModule {
       }
     }
     return path;
-  }
-
-  /**
-   * Reads all EXEC-family messages from a Chronicle WAL and converts them to {@link WalEntry}
-   * instances.
-   *
-   * <p>Follows the same deserialization path as {@code pal print}: {@link
-   * OutboundMsg#readNext(ExcerptTailer)} → {@link Message#unmarshal(byte[], int)} → {@link
-   * ExecMessage} → {@link WalEntry}.
-   *
-   * @param walPath the filesystem path to the Chronicle queue directory
-   * @return a list of WAL entries in offset order
-   */
-  private static List<WalEntry> readChronicleWal(Path walPath) {
-    List<WalEntry> entries = new ArrayList<>();
-    try (ChronicleQueue queue =
-        SingleChronicleQueueBuilder.binary(walPath.toFile()).readOnly(true).build()) {
-      ExcerptTailer tailer = queue.createTailer();
-      long logicalOffset = 0;
-
-      while (true) {
-        OutboundMsg outboundMsg = OutboundMsg.readNext(tailer);
-        if (outboundMsg == null) {
-          break;
-        }
-
-        // Only process EXEC family messages
-        if (outboundMsg.getMessageType().getFamily() == MessageFamily.EXEC) {
-          Message message = new Message();
-          message.unmarshal(outboundMsg.getBody(), 0);
-          ExecMessage execMessage = message.getExecMessage();
-          if (execMessage != null) {
-            entries.add(WalEntry.fromExecMessage(logicalOffset, execMessage));
-          }
-        }
-        logicalOffset++;
-      }
-    }
-    return entries;
   }
 }
