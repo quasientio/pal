@@ -9,25 +9,68 @@
  */
 package io.quasient.pal.common.replay;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertTrue;
 
-import org.junit.Ignore;
+import io.quasient.pal.common.runtime.ExecPhase;
+import io.quasient.pal.messages.OutboundMsg;
+import io.quasient.pal.messages.colfer.Class;
+import io.quasient.pal.messages.colfer.ConstructorCall;
+import io.quasient.pal.messages.colfer.ControlMessage;
+import io.quasient.pal.messages.colfer.ExecMessage;
+import io.quasient.pal.messages.colfer.InstanceMethodCall;
+import io.quasient.pal.messages.colfer.Message;
+import io.quasient.pal.messages.colfer.ReturnValue;
+import io.quasient.pal.messages.types.MessageType;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Comparator;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Stream;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.wire.WireType;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
- * Unit tests for {@code WalReader} — the utility that reads all {@code ExecMessage} entries from a
+ * Unit tests for {@link WalReader} — the utility that reads all {@code ExecMessage} entries from a
  * Chronicle queue and returns a {@code List<WalEntry>}.
  *
- * <p>Tests use real Chronicle queues in temporary directories (via {@code @Rule TemporaryFolder})
- * to validate the full deserialization pipeline: Chronicle queue &rarr; {@code
- * OutboundMsg.readNext()} &rarr; {@code Message.unmarshal()} &rarr; {@code ExecMessage} &rarr;
- * {@code WalEntry.fromExecMessage()}.
+ * <p>Tests use real Chronicle queues in temporary directories to validate the full deserialization
+ * pipeline: Chronicle queue &rarr; {@link OutboundMsg#readNext} &rarr; {@link
+ * Message#unmarshal(byte[], int)} &rarr; {@link ExecMessage} &rarr; {@link
+ * WalEntry#fromExecMessage(long, ExecMessage)}.
  *
  * <p>Test infrastructure follows the pattern from {@code ChronicleLogUtilTest}: create a Chronicle
- * queue with {@code SingleChronicleQueueBuilder}, write {@code OutboundMsg} instances via {@code
- * ExcerptAppender}, then read back with {@code WalReader.readChronicleWal(path)}.
+ * queue with {@link SingleChronicleQueueBuilder}, write {@link OutboundMsg} instances via {@link
+ * ExcerptAppender}, then read back with {@link WalReader#readChronicleWal(Path)}.
  */
 public class WalReaderTest {
+
+  /** Temporary directory for test queues. */
+  private Path tempDir;
+
+  /** Sets up a temporary directory for each test. */
+  @Before
+  public void setUp() throws IOException {
+    tempDir = Files.createTempDirectory("wal-reader-test-");
+  }
+
+  /** Cleans up the temporary directory after each test. */
+  @After
+  public void tearDown() throws IOException {
+    if (tempDir != null && Files.exists(tempDir)) {
+      try (Stream<Path> paths = Files.walk(tempDir)) {
+        paths.sorted(Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
+      }
+    }
+  }
 
   /**
    * Verifies that reading an empty Chronicle queue returns an empty list.
@@ -36,14 +79,16 @@ public class WalReaderTest {
    * produce zero {@code WalEntry} instances.
    */
   @Test
-  @Ignore("Awaiting implementation in #803")
   public void readsEmptyQueue() {
     // Given: A Chronicle queue with zero messages
-    // When: WalReader.readChronicleWal(path) is called
-    // Then: Returns an empty list
+    Path queuePath = tempDir.resolve("empty-queue");
+    createEmptyQueue(queuePath);
 
-    // TODO(#803): Implement test logic
-    fail("Not yet implemented");
+    // When: WalReader.readChronicleWal(path) is called
+    List<WalEntry> entries = WalReader.readChronicleWal(queuePath);
+
+    // Then: Returns an empty list
+    assertThat("Empty queue should produce empty list", entries.size(), is(0));
   }
 
   /**
@@ -54,14 +99,30 @@ public class WalReaderTest {
    * size 2, having filtered out the CONTROL message.
    */
   @Test
-  @Ignore("Awaiting implementation in #803")
   public void readsExecMessagesOnly() {
     // Given: A Chronicle queue with 2 EXEC messages and 1 CONTROL message
-    // When: WalReader.readChronicleWal(path) is called
-    // Then: Returns a list of size 2 (CONTROL message filtered out)
+    Path queuePath = tempDir.resolve("mixed-messages");
+    try (ChronicleQueue queue =
+        SingleChronicleQueueBuilder.single(queuePath.toFile())
+            .wireType(WireType.BINARY_LIGHT)
+            .build()) {
+      ExcerptAppender appender = queue.createAppender();
 
-    // TODO(#803): Implement test logic
-    fail("Not yet implemented");
+      // Write EXEC instance method message
+      appendExecInstanceMethod(appender, "self-caller", 1, "com.example.Foo", "bar");
+
+      // Write CONTROL message
+      appendControlMessage(appender);
+
+      // Write EXEC return value message
+      appendExecReturnValue(appender, "self-caller", 2);
+    }
+
+    // When: WalReader.readChronicleWal(path) is called
+    List<WalEntry> entries = WalReader.readChronicleWal(queuePath);
+
+    // Then: Returns a list of size 2 (CONTROL message filtered out)
+    assertThat("Should filter out non-EXEC messages", entries.size(), is(2));
   }
 
   /**
@@ -73,14 +134,32 @@ public class WalReaderTest {
    * should appear in the result list, in the same order they were appended.
    */
   @Test
-  @Ignore("Awaiting implementation in #803")
   public void readsMultipleExecMessages() {
     // Given: A Chronicle queue with 5 EXEC messages (mix of OPERATION and COMPLETION types)
-    // When: WalReader.readChronicleWal(path) is called
-    // Then: Returns a list of size 5, entries in offset order, each WalEntry has correct offset
+    Path queuePath = tempDir.resolve("multiple-messages");
+    try (ChronicleQueue queue =
+        SingleChronicleQueueBuilder.single(queuePath.toFile())
+            .wireType(WireType.BINARY_LIGHT)
+            .build()) {
+      ExcerptAppender appender = queue.createAppender();
 
-    // TODO(#803): Implement test logic
-    fail("Not yet implemented");
+      appendExecConstructor(appender, "self-caller", 1, "com.example.Widget");
+      appendExecReturnValue(appender, "self-caller", 2);
+      appendExecInstanceMethod(appender, "self-caller", 3, "com.example.Widget", "process");
+      appendExecInstanceMethod(appender, "self-caller", 4, "com.example.Widget", "compute");
+      appendExecReturnValue(appender, "self-caller", 5);
+    }
+
+    // When: WalReader.readChronicleWal(path) is called
+    List<WalEntry> entries = WalReader.readChronicleWal(queuePath);
+
+    // Then: Returns a list of size 5, entries in offset order
+    assertThat("Should read all 5 EXEC messages", entries.size(), is(5));
+    assertThat(entries.get(0).getKind(), is(WalEntryKind.OPERATION));
+    assertThat(entries.get(1).getKind(), is(WalEntryKind.COMPLETION));
+    assertThat(entries.get(2).getKind(), is(WalEntryKind.OPERATION));
+    assertThat(entries.get(3).getKind(), is(WalEntryKind.OPERATION));
+    assertThat(entries.get(4).getKind(), is(WalEntryKind.COMPLETION));
   }
 
   /**
@@ -91,14 +170,38 @@ public class WalReaderTest {
    * correct sequence.
    */
   @Test
-  @Ignore("Awaiting implementation in #803")
   public void preservesOffsetOrder() {
     // Given: A Chronicle queue with known messages appended in sequence
-    // When: WalReader.readChronicleWal(path) is called
-    // Then: WalEntry offsets are monotonically increasing (each offset > previous offset)
+    Path queuePath = tempDir.resolve("offset-order");
+    try (ChronicleQueue queue =
+        SingleChronicleQueueBuilder.single(queuePath.toFile())
+            .wireType(WireType.BINARY_LIGHT)
+            .build()) {
+      ExcerptAppender appender = queue.createAppender();
 
-    // TODO(#803): Implement test logic
-    fail("Not yet implemented");
+      for (int i = 0; i < 5; i++) {
+        appendExecInstanceMethod(appender, "self-caller", i, "com.example.Test", "method" + i);
+      }
+    }
+
+    // When: WalReader.readChronicleWal(path) is called
+    List<WalEntry> entries = WalReader.readChronicleWal(queuePath);
+
+    // Then: WalEntry offsets are monotonically increasing (each offset > previous offset)
+    assertThat("Should have 5 entries", entries.size(), is(5));
+    for (int i = 1; i < entries.size(); i++) {
+      assertTrue(
+          "Offset at index "
+              + i
+              + " ("
+              + entries.get(i).getOffset()
+              + ") should be > offset at index "
+              + (i - 1)
+              + " ("
+              + entries.get(i - 1).getOffset()
+              + ")",
+          entries.get(i).getOffset() > entries.get(i - 1).getOffset());
+    }
   }
 
   /**
@@ -109,15 +212,189 @@ public class WalReaderTest {
    * confirming the full deserialization pipeline preserves data fidelity.
    */
   @Test
-  @Ignore("Awaiting implementation in #803")
   public void extractsCorrectFields() {
-    // Given: A Chronicle queue with one EXEC_INSTANCE_METHOD message with known
-    //        threadName="self-caller", builderSeq=42, className="com.example.Calculator",
-    //        methodName="add"
-    // When: WalReader.readChronicleWal(path) is called
-    // Then: Returned WalEntry has matching threadName, builderSeq, className, executableName
+    // Given: A Chronicle queue with one EXEC_INSTANCE_METHOD message with known fields
+    Path queuePath = tempDir.resolve("field-extraction");
+    try (ChronicleQueue queue =
+        SingleChronicleQueueBuilder.single(queuePath.toFile())
+            .wireType(WireType.BINARY_LIGHT)
+            .build()) {
+      ExcerptAppender appender = queue.createAppender();
 
-    // TODO(#803): Implement test logic
-    fail("Not yet implemented");
+      appendExecInstanceMethod(appender, "self-caller", 42, "com.example.Calculator", "add");
+    }
+
+    // When: WalReader.readChronicleWal(path) is called
+    List<WalEntry> entries = WalReader.readChronicleWal(queuePath);
+
+    // Then: Returned WalEntry has matching threadName, builderSeq, className, executableName
+    assertThat("Should have exactly 1 entry", entries.size(), is(1));
+    WalEntry entry = entries.get(0);
+    assertThat(entry.getThreadName(), is("self-caller"));
+    assertThat(entry.getBuilderSeq(), is(42));
+    assertThat(entry.getClassName(), is("com.example.Calculator"));
+    assertThat(entry.getExecutableName(), is("add"));
+    assertThat(entry.getMessageType(), is(MessageType.EXEC_INSTANCE_METHOD));
+    assertThat(entry.getKind(), is(WalEntryKind.OPERATION));
+  }
+
+  // ============================================================================
+  // Helper methods for creating test messages
+  // ============================================================================
+
+  /**
+   * Creates an empty Chronicle queue at the specified path.
+   *
+   * @param queuePath the path where the Chronicle queue should be created
+   */
+  private void createEmptyQueue(Path queuePath) {
+    try (ChronicleQueue queue =
+        SingleChronicleQueueBuilder.single(queuePath.toFile())
+            .wireType(WireType.BINARY_LIGHT)
+            .build()) {
+      queue.createAppender();
+    }
+  }
+
+  /**
+   * Appends an EXEC_INSTANCE_METHOD message to the queue.
+   *
+   * @param appender the queue appender
+   * @param threadName the thread name
+   * @param builderSeq the builder sequence number
+   * @param className the class name
+   * @param methodName the method name
+   */
+  private void appendExecInstanceMethod(
+      ExcerptAppender appender,
+      String threadName,
+      int builderSeq,
+      String className,
+      String methodName) {
+    ExecMessage execMsg = new ExecMessage();
+    execMsg.setThreadName(threadName);
+    execMsg.setBuilderSeq(builderSeq);
+    execMsg.setPeerUuid(UUID.randomUUID().toString());
+    execMsg.setMessageId(UUID.randomUUID().toString());
+    execMsg.setCurrentTime(String.valueOf(System.currentTimeMillis()));
+
+    InstanceMethodCall imc = new InstanceMethodCall();
+    imc.setName(methodName);
+    Class clazz = new Class();
+    clazz.setName(className);
+    imc.setClazz(clazz);
+    execMsg.setInstanceMethodCall(imc);
+
+    Message wrapper =
+        new Message()
+            .withMessageType(MessageType.EXEC_INSTANCE_METHOD.getId())
+            .withExecMessage(execMsg);
+    OutboundMsg outboundMsg =
+        new OutboundMsg(
+            MessageType.EXEC_INSTANCE_METHOD,
+            ExecPhase.BEFORE,
+            null,
+            execMsg.getMessageId(),
+            null,
+            wrapper);
+    outboundMsg.appendTo(appender);
+  }
+
+  /**
+   * Appends an EXEC_CONSTRUCTOR message to the queue.
+   *
+   * @param appender the queue appender
+   * @param threadName the thread name
+   * @param builderSeq the builder sequence number
+   * @param className the class name
+   */
+  private void appendExecConstructor(
+      ExcerptAppender appender, String threadName, int builderSeq, String className) {
+    ExecMessage execMsg = new ExecMessage();
+    execMsg.setThreadName(threadName);
+    execMsg.setBuilderSeq(builderSeq);
+    execMsg.setPeerUuid(UUID.randomUUID().toString());
+    execMsg.setMessageId(UUID.randomUUID().toString());
+    execMsg.setCurrentTime(String.valueOf(System.currentTimeMillis()));
+
+    ConstructorCall cc = new ConstructorCall();
+    Class clazz = new Class();
+    clazz.setName(className);
+    cc.setClazz(clazz);
+    execMsg.setConstructorCall(cc);
+
+    Message wrapper =
+        new Message()
+            .withMessageType(MessageType.EXEC_CONSTRUCTOR.getId())
+            .withExecMessage(execMsg);
+    OutboundMsg outboundMsg =
+        new OutboundMsg(
+            MessageType.EXEC_CONSTRUCTOR,
+            ExecPhase.BEFORE,
+            null,
+            execMsg.getMessageId(),
+            null,
+            wrapper);
+    outboundMsg.appendTo(appender);
+  }
+
+  /**
+   * Appends an EXEC_RETURN_VALUE message to the queue.
+   *
+   * @param appender the queue appender
+   * @param threadName the thread name
+   * @param builderSeq the builder sequence number
+   */
+  private void appendExecReturnValue(ExcerptAppender appender, String threadName, int builderSeq) {
+    ExecMessage execMsg = new ExecMessage();
+    execMsg.setThreadName(threadName);
+    execMsg.setBuilderSeq(builderSeq);
+    execMsg.setPeerUuid(UUID.randomUUID().toString());
+    execMsg.setMessageId(UUID.randomUUID().toString());
+    execMsg.setCurrentTime(String.valueOf(System.currentTimeMillis()));
+
+    ReturnValue rv = new ReturnValue();
+    rv.setIsVoid(true);
+    execMsg.setReturnValue(rv);
+
+    Message wrapper =
+        new Message()
+            .withMessageType(MessageType.EXEC_RETURN_VALUE.getId())
+            .withExecMessage(execMsg);
+    OutboundMsg outboundMsg =
+        new OutboundMsg(
+            MessageType.EXEC_RETURN_VALUE,
+            ExecPhase.AFTER,
+            null,
+            execMsg.getMessageId(),
+            null,
+            wrapper);
+    outboundMsg.appendTo(appender);
+  }
+
+  /**
+   * Appends a CONTROL_MESSAGE_REQUEST message to the queue.
+   *
+   * @param appender the queue appender
+   */
+  private void appendControlMessage(ExcerptAppender appender) {
+    ControlMessage ctrl = new ControlMessage();
+    ctrl.setFromPeer(UUID.randomUUID().toString());
+    ctrl.setMessageId(UUID.randomUUID().toString());
+    ctrl.setBody("test");
+
+    Message wrapper =
+        new Message()
+            .withMessageType(MessageType.CONTROL_MESSAGE_REQUEST.getId())
+            .withControlMessage(ctrl);
+    OutboundMsg outboundMsg =
+        new OutboundMsg(
+            MessageType.CONTROL_MESSAGE_REQUEST,
+            ExecPhase.UNDEFINED,
+            null,
+            ctrl.getMessageId(),
+            null,
+            wrapper);
+    outboundMsg.appendTo(appender);
   }
 }
