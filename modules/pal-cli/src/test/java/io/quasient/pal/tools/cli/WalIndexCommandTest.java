@@ -14,8 +14,8 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.fail;
 
+import io.quasient.pal.common.cli.PalCommand;
 import io.quasient.pal.common.replay.WalEntry;
 import io.quasient.pal.common.replay.WalIndex;
 import io.quasient.pal.messages.colfer.Class;
@@ -32,7 +32,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import org.junit.Ignore;
 import org.junit.Test;
 import picocli.CommandLine;
 
@@ -473,122 +472,72 @@ public class WalIndexCommandTest {
   // Kafka and PalDirectory support tests (specifications for #849)
   // ===========================================================================
 
-  /**
-   * Verifies that the --kafka-servers option is correctly parsed via picocli.
-   *
-   * @see <a href="https://github.io/quasientinc/pal/issues/849">#849</a>
-   */
+  /** Verifies that the --kafka-servers option is correctly parsed via picocli. */
   @Test
-  @Ignore("Awaiting implementation in #849")
-  public void testParseKafkaServersOption() {
-    // Given: Command args "--kafka-servers localhost:29092 file:/tmp/wal"
-    // When: Parsed via picocli
-    // Then: kafkaServers field = "localhost:29092", logPath = "file:/tmp/wal"
-
-    // TODO(#849): Implement test logic
-    fail("Not yet implemented");
+  public void testParseKafkaServersOption() throws Exception {
+    WalIndexCommand cmd = parseCommand("--kafka-servers", "localhost:29092", "file:/tmp/wal");
+    assertThat(getField(cmd, "kafkaServers"), is("localhost:29092"));
+    assertThat(getField(cmd, "logPath"), is("file:/tmp/wal"));
   }
 
-  /**
-   * Verifies that the short -k form of the Kafka servers option is correctly parsed.
-   *
-   * @see <a href="https://github.io/quasientinc/pal/issues/849">#849</a>
-   */
+  /** Verifies that the short -k form of the Kafka servers option is correctly parsed. */
   @Test
-  @Ignore("Awaiting implementation in #849")
-  public void testParseShortKafkaServersOption() {
-    // Given: Command args "-k localhost:29092 my-topic"
-    // When: Parsed via picocli
-    // Then: kafkaServers field = "localhost:29092", logPath = "my-topic"
-
-    // TODO(#849): Implement test logic
-    fail("Not yet implemented");
+  public void testParseShortKafkaServersOption() throws Exception {
+    WalIndexCommand cmd = parseCommand("-k", "localhost:29092", "my-topic");
+    assertThat(getField(cmd, "kafkaServers"), is("localhost:29092"));
+    assertThat(getField(cmd, "logPath"), is("my-topic"));
   }
 
-  /**
-   * Verifies that validateInput accepts a Kafka topic name when --kafka-servers is provided.
-   *
-   * @see <a href="https://github.io/quasientinc/pal/issues/849">#849</a>
-   */
+  /** Verifies that validateInput accepts a Kafka topic name when --kafka-servers is provided. */
   @Test
-  @Ignore("Awaiting implementation in #849")
   public void testValidateInputAcceptsKafkaTopicWithServers() {
-    // Given: logPath = "my-topic", kafkaServers = "localhost:29092"
-    // When: validateInput() is called
-    // Then: No exception thrown
-
-    // TODO(#849): Implement test logic
-    fail("Not yet implemented");
+    WalIndexCommand cmd = parseCommand("-k", "localhost:29092", "my-topic");
+    cmd.validateInput(); // should not throw
   }
 
   /**
    * Verifies that validateInput still accepts Chronicle paths without Kafka servers (backward
    * compatibility).
-   *
-   * @see <a href="https://github.io/quasientinc/pal/issues/849">#849</a>
    */
   @Test
-  @Ignore("Awaiting implementation in #849")
   public void testValidateInputAcceptsChroniclePathWithoutServers() {
-    // Given: logPath = "file:/tmp/my-wal", kafkaServers = null
-    // When: validateInput() is called
-    // Then: No exception thrown (existing behavior preserved)
-
-    // TODO(#849): Implement test logic
-    fail("Not yet implemented");
+    WalIndexCommand cmd = parseCommand("file:/tmp/my-wal");
+    cmd.validateInput(); // should not throw
   }
 
   /**
    * Verifies that validateInput rejects a Kafka topic name when neither --kafka-servers nor
-   * PalDirectory is configured. This test REPLACES the existing
-   * testValidateInputRejectsNoFilePrefix behavior once #849 is implemented.
-   *
-   * @see <a href="https://github.io/quasientinc/pal/issues/849">#849</a>
+   * PalDirectory is configured.
    */
   @Test
-  @Ignore("Awaiting implementation in #849")
   public void testValidateInputRejectsKafkaTopicWithoutServersAndWithoutDirectory() {
-    // Given: logPath = "my-topic", kafkaServers = null, no PalDirectory configured
-    // When: validateInput() is called
-    // Then: RuntimeException thrown with message about requiring -k or -d
-
-    // TODO(#849): Implement test logic
-    fail("Not yet implemented");
+    WalIndexCommand cmd = parseCommand("my-topic");
+    RuntimeException e = assertThrows(RuntimeException.class, cmd::validateInput);
+    assertThat(e.getMessage(), containsString("--kafka-servers"));
+    assertThat(e.getMessage(), containsString("-d"));
   }
 
   /**
    * Verifies that validateInput rejects paths with an incorrect prefix when no Kafka servers or
    * PalDirectory is configured.
-   *
-   * @see <a href="https://github.io/quasientinc/pal/issues/849">#849</a>
    */
   @Test
-  @Ignore("Awaiting implementation in #849")
   public void testValidateInputRejectsWrongPrefixWithoutServers() {
-    // Given: logPath = "http://something", kafkaServers = null, no PalDirectory
-    // When: validateInput() is called
-    // Then: RuntimeException thrown
-
-    // TODO(#849): Implement test logic
-    fail("Not yet implemented");
+    WalIndexCommand cmd = parseCommand("http://something");
+    RuntimeException e = assertThrows(RuntimeException.class, cmd::validateInput);
+    assertThat(e.getMessage(), containsString("--kafka-servers"));
   }
 
   /**
    * Verifies that validateInput accepts a Kafka topic name when PalDirectory is available (via
    * {@code @ParentCommand} mock), even without explicit --kafka-servers. The topic will be resolved
    * via PalDirectory at runtime.
-   *
-   * @see <a href="https://github.io/quasientinc/pal/issues/849">#849</a>
    */
   @Test
-  @Ignore("Awaiting implementation in #849")
-  public void testValidateInputAcceptsTopicWithPalDirectory() {
-    // Given: logPath = "my-topic", kafkaServers = null, PalDirectory connection string set
-    //        (via @ParentCommand mock with non-null directory URL)
-    // When: validateInput() is called
-    // Then: No exception thrown (will resolve via PalDirectory at runtime)
-
-    // TODO(#849): Implement test logic
-    fail("Not yet implemented");
+  public void testValidateInputAcceptsTopicWithPalDirectory() throws Exception {
+    WalIndexCommand cmd = parseCommand("my-topic");
+    // Simulate a parent command with a PalDirectory URL
+    setField(cmd, "palCommand", (PalCommand) () -> "localhost:2379");
+    cmd.validateInput(); // should not throw
   }
 }

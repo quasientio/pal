@@ -13,23 +13,34 @@ import static picocli.CommandLine.Option;
 import static picocli.CommandLine.Parameters;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import io.quasient.pal.common.cli.PalCommand;
+import io.quasient.pal.common.directory.nodes.LogInfo;
 import io.quasient.pal.common.replay.WalEntry;
 import io.quasient.pal.common.replay.WalEntryKind;
 import io.quasient.pal.common.replay.WalIndex;
 import io.quasient.pal.common.replay.WalReader;
 import io.quasient.pal.cxn.chronicle.ChronicleLogUtil;
+import io.quasient.pal.cxn.directory.PalDirectory;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.ParentCommand;
 
 /**
  * CLI command that indexes and analyzes a Write-Ahead Log (WAL).
  *
- * <p>This command reads a Chronicle Queue WAL, builds a {@link WalIndex}, and prints a summary of
- * the WAL structure including entry counts, operation/completion pairing, thread listing, and any
- * structural issues detected.
+ * <p>This command reads a WAL from either a Chronicle Queue or a Kafka topic, builds a {@link
+ * WalIndex}, and prints a summary of the WAL structure including entry counts, operation/completion
+ * pairing, thread listing, and any structural issues detected.
+ *
+ * <p>Chronicle WALs use the {@code file:} prefix (e.g., {@code file:/tmp/my-wal}). Kafka WALs are
+ * specified by topic name and require either {@code --kafka-servers} ({@code -k}) or a PAL
+ * directory connection ({@code -d}) from which to resolve the log's bootstrap servers.
  *
  * <p>The {@code --verbose} flag enables per-entry detail output showing offset, kind, thread name,
  * and operation signature for each WAL entry.
@@ -43,7 +54,11 @@ import picocli.CommandLine.Command;
  */
 @Command(
     name = "wal-index",
-    customSynopsis = "pal wal-index [OPTIONS] <logPath>%n",
+    customSynopsis = {
+      "pal wal-index [OPTIONS] file:/path       (Chronicle Queue)",
+      "pal wal-index -k <servers> [OPTIONS] <topic>  (Kafka)",
+      "pal wal-index -d <url> [OPTIONS] <name>       (PalDirectory)%n"
+    },
     description = "Index and analyze a WAL",
     separator = " ",
     sortOptions = false,
@@ -56,12 +71,29 @@ public class WalIndexCommand extends AbstractPalSubcommand {
   /** The {@code file:} prefix used for Chronicle Queue log paths. */
   static final String CHRONICLE_FILE_PREFIX = "file:";
 
+  /** Parent command that provides access to the main PalCommand context. */
+  @ParentCommand PalCommand palCommand;
+
   /**
-   * The log path parameter specifying the WAL to analyze. Must use the {@code file:} prefix for
-   * Chronicle Queue WALs (e.g., {@code file:/tmp/my-wal}).
+   * The log path parameter specifying the WAL to analyze. Use {@code file:/path} for Chronicle
+   * Queue WALs or a plain topic name for Kafka WALs.
    */
-  @Parameters(index = "0", description = "Log path (e.g., file:/tmp/my-wal)")
+  @Parameters(
+      index = "0",
+      paramLabel = "name|file:/path",
+      description = "Log path: file:/path for Chronicle Queue, or topic name for Kafka")
   private String logPath;
+
+  /**
+   * Kafka bootstrap servers for direct access to a Kafka WAL topic without PalDirectory.
+   *
+   * <p>Required when specifying a Kafka topic name without a PalDirectory connection ({@code -d}).
+   */
+  @Option(
+      names = {"-k", "--kafka-servers"},
+      paramLabel = "bootstrap_servers",
+      description = "Kafka bootstrap servers (required for Kafka WAL topics without -d)")
+  private String kafkaServers;
 
   /** When {@code true}, prints detailed per-entry listing in addition to the summary. */
   @Option(
@@ -83,52 +115,93 @@ public class WalIndexCommand extends AbstractPalSubcommand {
   /**
    * Validates the command-line input.
    *
-   * <p>Ensures that the log path starts with the {@code file:} prefix, since only Chronicle Queue
-   * WALs are currently supported.
+   * <p>Accepts Chronicle WALs (with {@code file:} prefix) unconditionally. For Kafka WAL topics
+   * (plain topic names without the prefix), requires either {@code --kafka-servers} ({@code -k}) or
+   * a PalDirectory connection ({@code -d}) to resolve the log's bootstrap servers.
    *
-   * @throws RuntimeException if the log path does not start with {@code file:}
+   * @throws RuntimeException if the log path is a Kafka topic without {@code -k} or {@code -d}
    */
   @Override
   protected void validateInput() {
-    if (!logPath.startsWith(CHRONICLE_FILE_PREFIX)) {
-      throw new RuntimeException(
-          "Log path must start with '"
-              + CHRONICLE_FILE_PREFIX
-              + "' for Chronicle Queue WALs (e.g., file:/tmp/my-wal).");
+    if (logPath.startsWith(CHRONICLE_FILE_PREFIX)) {
+      return;
     }
+    if (kafkaServers != null) {
+      return;
+    }
+    if (hasPalDirectory()) {
+      return;
+    }
+    throw new RuntimeException(
+        "Kafka WAL topics require --kafka-servers (-k) or a PAL directory connection (-d). "
+            + "For Chronicle Queue WALs, use the 'file:' prefix (e.g., file:/tmp/my-wal).");
   }
 
   /**
-   * Initialization step — no-op for wal-index since no external services are required.
+   * Checks whether a PalDirectory connection is available via the parent command.
    *
-   * @throws Exception never thrown
+   * @return {@code true} if a non-{@link PalDirectory#NO_URL} directory URL is configured
+   */
+  private boolean hasPalDirectory() {
+    if (palCommand == null) {
+      return false;
+    }
+    String palDirUrl = palCommand.getPalDirectoryConnectionString();
+    return palDirUrl != null && !PalDirectory.NO_URL.equals(palDirUrl);
+  }
+
+  /**
+   * Initializes external service connections if needed.
+   *
+   * <p>When a PalDirectory connection is available (via {@code -d}), the directory connection
+   * provider is initialized to support Kafka log name resolution.
+   *
+   * @throws Exception if an error occurs during initialization
    */
   @Override
   protected void initialize() throws Exception {
-    // No external services required.
+    if (hasPalDirectory()) {
+      initializeDirectoryConnectionProvider(palCommand.getPalDirectoryConnectionString());
+    }
   }
 
   /**
    * Executes the wal-index command by reading and indexing the WAL, then printing the summary.
    *
-   * <p>Parses the log path, verifies the Chronicle queue exists, reads and indexes the WAL via
-   * {@link WalReader#readAndIndexChronicleWal(Path)}, and prints the summary to stdout. If {@link
-   * #verbose} is enabled, also prints per-entry details.
+   * <p>Routes to the appropriate backend based on the log path:
+   *
+   * <ul>
+   *   <li>If the path starts with {@code file:}, reads from a Chronicle Queue
+   *   <li>Otherwise, reads from a Kafka topic, resolving bootstrap servers via {@code -k} or
+   *       PalDirectory
+   * </ul>
+   *
+   * <p>If {@link #verbose} is enabled, also prints per-entry details.
    *
    * @return {@code 0} on success, {@code 1} on error
    * @throws Exception if an unexpected error occurs during WAL reading
    */
   @Override
   protected int runCommand() throws Exception {
-    String filesystemPath = logPath.substring(CHRONICLE_FILE_PREFIX.length());
-    Path queuePath = Paths.get(filesystemPath);
+    WalIndex index;
 
-    if (!ChronicleLogUtil.queueExists(queuePath)) {
-      err.println("Chronicle log does not exist at path: " + queuePath);
-      return 1;
+    if (logPath.startsWith(CHRONICLE_FILE_PREFIX)) {
+      String filesystemPath = logPath.substring(CHRONICLE_FILE_PREFIX.length());
+      Path queuePath = Paths.get(filesystemPath);
+
+      if (!ChronicleLogUtil.queueExists(queuePath)) {
+        err.println("Chronicle log does not exist at path: " + queuePath);
+        return 1;
+      }
+
+      index = WalReader.readAndIndexChronicleWal(queuePath);
+    } else {
+      String resolvedServers = resolveKafkaBootstrapServers(logPath);
+      if (resolvedServers == null) {
+        return 1;
+      }
+      index = WalReader.readAndIndexKafkaWal(resolvedServers, logPath);
     }
-
-    WalIndex index = WalReader.readAndIndexChronicleWal(queuePath);
 
     if (verbose) {
       printVerboseEntries(index);
@@ -139,13 +212,105 @@ public class WalIndexCommand extends AbstractPalSubcommand {
   }
 
   /**
-   * Closes resources — no-op for wal-index since no directory connection is established.
+   * Resolves Kafka bootstrap servers for the given topic name.
    *
-   * @throws IOException never thrown
+   * <p>Resolution order:
+   *
+   * <ol>
+   *   <li>If PalDirectory is available, resolve the log by name to obtain {@link LogInfo} with
+   *       bootstrap servers
+   *   <li>If {@code --kafka-servers} ({@code -k}) is provided, use those servers directly
+   *   <li>If neither is available, prints an error and returns {@code null}
+   * </ol>
+   *
+   * @param topicName the Kafka topic name to resolve
+   * @return the bootstrap servers string, or {@code null} if resolution fails
+   */
+  private String resolveKafkaBootstrapServers(String topicName) {
+    if (directoryConnectionProvider != null) {
+      try {
+        Optional<PalDirectory> palDirOpt = directoryConnectionProvider.get();
+        if (palDirOpt.isPresent()) {
+          LogInfo logInfo = resolveLogInfo(palDirOpt.get(), topicName);
+          if (logInfo != null && logInfo.getBootstrapServers() != null) {
+            return logInfo.getBootstrapServers();
+          }
+        }
+      } catch (RuntimeException e) {
+        err.println("Error resolving log via PalDirectory: " + e.getMessage());
+      }
+    }
+
+    if (kafkaServers != null) {
+      return kafkaServers;
+    }
+
+    err.println(
+        "Cannot resolve Kafka bootstrap servers for topic: "
+            + topicName
+            + ". Use --kafka-servers (-k) or ensure the log is registered in the PAL directory.");
+    return null;
+  }
+
+  /**
+   * Resolves a {@link LogInfo} from the PalDirectory by log name or UUID.
+   *
+   * <p>Follows the same resolution pattern as {@link MessageStreamPrinter}: first attempts to look
+   * up the log by name, then falls back to treating the identifier as a UUID.
+   *
+   * @param palDirectory the PalDirectory instance for accessing log information
+   * @param logIdentifier the name or UUID of the log to resolve
+   * @return the resolved {@link LogInfo}, or {@code null} if no matching log is found
+   */
+  private LogInfo resolveLogInfo(PalDirectory palDirectory, String logIdentifier) {
+    LogInfo log = null;
+    try {
+      log = palDirectory.getLogInfo(logIdentifier);
+    } catch (RuntimeException | ExecutionException | InterruptedException e) {
+      // not found by name, try UUID below
+    }
+
+    if (log == null) {
+      UUID parsedUuid = null;
+      try {
+        parsedUuid = UUID.fromString(logIdentifier);
+      } catch (IllegalArgumentException iae) {
+        // not a valid UUID
+      }
+      if (parsedUuid != null) {
+        final UUID logUuid = parsedUuid;
+        try {
+          Optional<LogInfo> logInfoByUuid =
+              palDirectory.listAllLogs().stream()
+                  .filter(l -> logUuid.equals(l.getUuid()))
+                  .findFirst();
+          if (logInfoByUuid.isPresent()) {
+            log = logInfoByUuid.get();
+          }
+        } catch (RuntimeException | ExecutionException | InterruptedException e) {
+          // unable to list logs
+        }
+      }
+    }
+    return log;
+  }
+
+  /**
+   * Closes the directory connection provider if it was initialized.
+   *
+   * @throws IOException if an I/O error occurs while closing resources
    */
   @Override
   protected void closeResources() throws IOException {
-    // No directory connection to close.
+    if (directoryConnectionProvider != null) {
+      directoryConnectionProvider
+          .get()
+          .ifPresent(
+              c -> {
+                Optional<PalDirectory> palDirectory = directoryConnectionProvider.get();
+                palDirectory.ifPresent(PalDirectory::close);
+              });
+    }
   }
 
   /**
