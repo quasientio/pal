@@ -159,6 +159,9 @@
 
                         <!-- Incoming WAL integration tests (issue #780) -->
                         <include>**/core/service/IncomingWalIT.java</include>
+
+                        <!-- Replay integration tests -->
+                        <include>**/replay/**/*IT.java</include>
                     </includes>
 
                     <!-- exclude ITs that are already executed via the suites -->
