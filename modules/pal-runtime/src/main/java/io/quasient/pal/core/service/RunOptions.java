@@ -94,5 +94,14 @@ public enum RunOptions {
    * for existing in-flight calls to drain, allowing safe intercept activation without race
    * conditions.
    */
-  WITH_IN_FLIGHT_TRACKING
+  WITH_IN_FLIGHT_TRACKING,
+
+  /**
+   * Enables WAL-guided deterministic replay mode.
+   *
+   * <p>When activated, the peer re-executes the application from {@code main()} while verifying
+   * each operation against a pre-recorded WAL oracle. Mutually exclusive with {@link #WITH_WAL},
+   * {@link #WITH_SOURCE_LOG}, and the {@code --log} shorthand.
+   */
+  WITH_REPLAY
 }

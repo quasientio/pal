@@ -237,6 +237,19 @@ public class Main implements Callable<Integer> {
   private boolean walAllIncomingRpc = false;
 
   /**
+   * Specifies the WAL path for deterministic replay mode. When set, the peer re-executes the
+   * application from {@code main()} while verifying each operation against the pre-recorded WAL.
+   * Mutually exclusive with {@code --wal}, {@code --source-log}, and {@code --log}.
+   */
+  @Option(
+      names = {"--replay-wal"},
+      paramLabel = "file:/path",
+      description =
+          "WAL path for deterministic replay (mutually exclusive with --wal, --source-log,"
+              + " and --log)")
+  private String replayWalPath;
+
+  /**
    * Log configuration specifying the Log name for both reading and writing. Using 'auto' works only
    * when a PAL directory is specified.
    */
@@ -956,6 +969,17 @@ public class Main implements Callable<Integer> {
 
     if (wal != null) {
       runOptions.add(RunOptions.WITH_WAL);
+    }
+
+    if (replayWalPath != null) {
+      if (wal != null || sourceLog != null || log != null) {
+        fatalExit(
+            null,
+            PeerException.FatalCode.ERROR_VALIDATING_PROPERTIES,
+            "ERROR: --replay-wal is mutually exclusive with --wal, --source-log, and --log.");
+      }
+      runOptions.add(RunOptions.WITH_REPLAY);
+      properties.setProperty("replay.wal.path", replayWalPath);
     }
 
     if (tcpPub != null) {

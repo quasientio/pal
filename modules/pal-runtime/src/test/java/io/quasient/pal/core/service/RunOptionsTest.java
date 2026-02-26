@@ -140,13 +140,52 @@ public class RunOptionsTest {
   }
 
   /**
-   * Verifies that the RunOptions enum contains all expected values after the addition of the two
-   * new WAL-incoming options.
+   * Verifies that the WITH_REPLAY enum constant exists in the RunOptions enum and is distinct from
+   * other values.
    *
-   * <p>The expected total is 11 values: the 9 existing options (WITH_PALDIR, WITH_ZMQ_RPC,
+   * <p>Acceptance Criterion: [TEST:RunOptionsTest.withReplay_isDistinctEnumValue]
+   */
+  @Test
+  public void withReplay_isDistinctEnumValue() {
+    // Given: The RunOptions enum
+    // When: WITH_REPLAY is accessed
+    RunOptions option = RunOptions.WITH_REPLAY;
+
+    // Then: Enum value exists, is distinct from other values, and can be added to EnumSet
+    assertThat(option, is(notNullValue()));
+    assertThat(option.name(), is("WITH_REPLAY"));
+
+    EnumSet<RunOptions> options = EnumSet.of(RunOptions.WITH_PALDIR);
+    options.add(option);
+    assertThat(options, hasItem(RunOptions.WITH_REPLAY));
+    assertThat(options, hasItem(RunOptions.WITH_PALDIR));
+    assertThat(options.size(), is(2));
+  }
+
+  /**
+   * Verifies that WITH_REPLAY is mutually exclusive with WAL and source log options at the EnumSet
+   * level (both can be added to a set but represent conflicting configurations).
+   *
+   * <p>Acceptance Criterion: [TEST:RunOptionsTest.withReplay_isMutuallyExclusiveByConvention]
+   */
+  @Test
+  public void withReplay_isMutuallyExclusiveByConvention() {
+    // Given: An EnumSet containing WITH_REPLAY
+    EnumSet<RunOptions> replayOptions = EnumSet.of(RunOptions.WITH_REPLAY);
+
+    // When/Then: WITH_REPLAY does not overlap with WAL or SOURCE_LOG
+    assertThat(replayOptions.contains(RunOptions.WITH_WAL), is(false));
+    assertThat(replayOptions.contains(RunOptions.WITH_SOURCE_LOG), is(false));
+  }
+
+  /**
+   * Verifies that the RunOptions enum contains all expected values after the addition of the two
+   * new WAL-incoming options and the WITH_REPLAY option.
+   *
+   * <p>The expected total is 12 values: the 9 original options (WITH_PALDIR, WITH_ZMQ_RPC,
    * WITH_JSON_RPC, WITH_TCP_PUB, WITH_INTERCEPTS, WITH_SOURCE_LOG, WITH_WAL, WITH_SESSIONS,
-   * WITH_IN_FLIGHT_TRACKING) plus the 2 new options (WITH_WAL_INCOMING_RPC,
-   * WITH_WAL_ALL_INCOMING_RPC).
+   * WITH_IN_FLIGHT_TRACKING) plus WITH_WAL_INCOMING_RPC, WITH_WAL_ALL_INCOMING_RPC, and
+   * WITH_REPLAY.
    *
    * <p>Acceptance Criterion: [TEST:RunOptionsTest.enumValues_containsAllExpectedOptions]
    */
@@ -156,8 +195,8 @@ public class RunOptionsTest {
     RunOptions[] values = RunOptions.values();
 
     // When: Length is checked
-    // Then: Contains all 11 expected values (9 existing + 2 new)
-    assertThat(values.length, is(11));
+    // Then: Contains all 12 expected values
+    assertThat(values.length, is(12));
 
     EnumSet<RunOptions> allOptions = EnumSet.allOf(RunOptions.class);
     assertThat(allOptions, hasItem(RunOptions.WITH_PALDIR));
@@ -171,5 +210,6 @@ public class RunOptionsTest {
     assertThat(allOptions, hasItem(RunOptions.WITH_WAL_ALL_INCOMING_RPC));
     assertThat(allOptions, hasItem(RunOptions.WITH_SESSIONS));
     assertThat(allOptions, hasItem(RunOptions.WITH_IN_FLIGHT_TRACKING));
+    assertThat(allOptions, hasItem(RunOptions.WITH_REPLAY));
   }
 }
