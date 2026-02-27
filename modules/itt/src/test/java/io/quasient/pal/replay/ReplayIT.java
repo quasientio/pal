@@ -17,7 +17,6 @@ import static org.junit.Assert.assertNotEquals;
 
 import io.quasient.pal.cli.AbstractCliIT;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -34,8 +33,10 @@ import org.slf4j.LoggerFactory;
  * <p>Tests validate the complete replay pipeline: record WAL, replay the application from the
  * recorded WAL, verify execution against the WAL oracle, and report divergences.
  *
- * <p>Parameterized over backend type: "chronicle" uses {@code file:} prefix WAL paths, "kafka" uses
- * Kafka topic names with {@code -k} bootstrap servers.
+ * <p>Parameterized over two dimensions: backend type ("chronicle" or "kafka") and test application
+ * class. Chronicle uses {@code file:} prefix WAL paths; Kafka uses topic names with {@code -k}
+ * bootstrap servers. Each test application is a deterministic, single-threaded program from the
+ * {@code io.quasient.pal.apps.quantized.replay} package.
  */
 @RunWith(Parameterized.class)
 public class ReplayIT extends AbstractCliIT {
@@ -43,30 +44,72 @@ public class ReplayIT extends AbstractCliIT {
   /** Logger for this test class. */
   private static final Logger logger = LoggerFactory.getLogger(ReplayIT.class);
 
-  /** Fully qualified name of the test application used for recording and replaying. */
-  private static final String MAIN_CLASS =
-      "io.quasient.pal.apps.quantized.replay.MinimalReceiptCalculator";
+  /** Package prefix shared by all replay test applications. */
+  private static final String APP_PACKAGE = "io.quasient.pal.apps.quantized.replay.";
+
+  /** Configurations for all test application classes. */
+  private static final TestAppConfig[] TEST_APPS = {
+    new TestAppConfig(
+        "MinimalReceiptCalculator",
+        APP_PACKAGE + "MinimalReceiptCalculator",
+        new String[] {"milk:2,bread:1,apple:5"},
+        "Run 1:",
+        new String[] {"milk:1"},
+        new String[] {"bread:2"}),
+    new TestAppConfig(
+        "DataAnalyzer",
+        APP_PACKAGE + "DataAnalyzer",
+        new String[] {"the cat in the hat"},
+        "Unique words:",
+        new String[] {"hello"},
+        new String[] {"goodbye world"}),
+    new TestAppConfig(
+        "WordStats",
+        APP_PACKAGE + "WordStats",
+        new String[] {"hi there"},
+        "Max:",
+        new String[] {"a"},
+        new String[] {"zzzzz"}),
+    new TestAppConfig(
+        "OrderTotal",
+        APP_PACKAGE + "OrderTotal",
+        new String[] {"TX|A|gum=1.00|0|"},
+        "total",
+        new String[] {"TX|A|gum=1.00|0|"},
+        new String[] {"NY|B|tea=2.10|5|50"})
+  };
 
   /** The WAL backend type for this test run ("chronicle" or "kafka"). */
   private final String backend;
 
+  /** The test application configuration for this test run. */
+  private final TestAppConfig testApp;
+
   /**
-   * Creates a parameterized test instance for the given backend.
+   * Creates a parameterized test instance for the given backend and test application.
    *
    * @param backend the WAL backend type ("chronicle" or "kafka")
+   * @param testApp the test application configuration
    */
-  public ReplayIT(String backend) {
+  public ReplayIT(String backend, TestAppConfig testApp) {
     this.backend = backend;
+    this.testApp = testApp;
   }
 
   /**
-   * Returns the parameterized backend types.
+   * Returns the parameterized combinations of backend types and test application classes.
    *
-   * @return collection of parameters: "chronicle" and "kafka"
+   * @return collection of parameters: all combinations of {"chronicle", "kafka"} and test apps
    */
-  @Parameters(name = "{0}")
+  @Parameters(name = "{0}-{1}")
   public static Collection<Object[]> data() {
-    return Arrays.asList(new Object[] {"chronicle"}, new Object[] {"kafka"});
+    List<Object[]> params = new ArrayList<>();
+    for (String backend : new String[] {"chronicle", "kafka"}) {
+      for (TestAppConfig config : TEST_APPS) {
+        params.add(new Object[] {backend, config});
+      }
+    }
+    return params;
   }
 
   /**
@@ -113,7 +156,7 @@ public class ReplayIT extends AbstractCliIT {
     args.add(walSpec);
     args.add("-cp");
     args.add(getIttAppsClasspath());
-    args.add(MAIN_CLASS);
+    args.add(testApp.mainClass);
     Collections.addAll(args, appArgs);
     return runPeer(args.toArray(new String[0]));
   }
@@ -144,14 +187,14 @@ public class ReplayIT extends AbstractCliIT {
     args.addAll(replayOptions);
     args.add("-cp");
     args.add(getIttAppsClasspath());
-    args.add(MAIN_CLASS);
+    args.add(testApp.mainClass);
     Collections.addAll(args, appArgs);
     return runReplay(args.toArray(new String[0]));
   }
 
   /**
-   * Records and replays MinimalReceiptCalculator with identical arguments. Verifies that replay
-   * produces zero divergences, exit code 0, and the same stdout output as the recording.
+   * Records and replays the test application with identical arguments. Verifies that replay
+   * produces zero divergences, exit code 0, and the expected output marker in stdout.
    *
    * @throws Exception if test execution fails
    */
@@ -159,17 +202,18 @@ public class ReplayIT extends AbstractCliIT {
   public void replayZeroDivergence() throws Exception {
     String walSpec = createWalSpec("replay-zero-div");
 
-    // Record WAL with MinimalReceiptCalculator
-    ProcessResult recordResult = recordWal(walSpec, "milk:2,bread:1,apple:5");
+    // Record WAL with the test application
+    ProcessResult recordResult = recordWal(walSpec, testApp.recordArgs);
     assertEquals("Recording should succeed", 0, recordResult.exitCode());
     assertThat(
-        "Recording should produce Run output", recordResult.stdout(), containsString("Run 1:"));
+        "Recording should produce expected output",
+        recordResult.stdout(),
+        containsString(testApp.expectedOutputMarker));
 
-    String expectedRunLine = extractRunLine(recordResult.stdout());
-    logger.info("Recorded output: {}", expectedRunLine);
+    logger.info("Recorded output: {}", recordResult.stdout().trim());
 
     // Replay from the same WAL with the same arguments
-    CliProcessResult replayResult = doReplay(walSpec, List.of(), "milk:2,bread:1,apple:5");
+    CliProcessResult replayResult = doReplay(walSpec, List.of(), testApp.recordArgs);
 
     logger.info("Replay exit code: {}", replayResult.exitCode());
     logger.info("Replay stdout: {}", replayResult.stdout());
@@ -177,9 +221,9 @@ public class ReplayIT extends AbstractCliIT {
 
     assertEquals("Replay should succeed with zero divergences", 0, replayResult.exitCode());
     assertThat(
-        "Replay should contain same Run output",
+        "Replay should contain expected output marker",
         replayResult.stdout(),
-        containsString(expectedRunLine));
+        containsString(testApp.expectedOutputMarker));
     assertThat(
         "Replay stderr should not contain DIVERGENCE",
         replayResult.stderr(),
@@ -200,12 +244,12 @@ public class ReplayIT extends AbstractCliIT {
   public void replayCrossDivergence() throws Exception {
     String walSpec = createWalSpec("replay-cross-div");
 
-    // Record with "milk:1"
-    ProcessResult recordResult = recordWal(walSpec, "milk:1");
+    // Record with the cross-record arguments
+    ProcessResult recordResult = recordWal(walSpec, testApp.crossRecordArgs);
     assertEquals("Recording should succeed", 0, recordResult.exitCode());
 
-    // Replay with different arguments "bread:2"
-    CliProcessResult replayResult = doReplay(walSpec, List.of(), "bread:2");
+    // Replay with different arguments
+    CliProcessResult replayResult = doReplay(walSpec, List.of(), testApp.crossReplayArgs);
 
     logger.info("Cross-divergence replay exit code: {}", replayResult.exitCode());
     logger.info("Cross-divergence replay stderr: {}", replayResult.stderr());
@@ -227,13 +271,13 @@ public class ReplayIT extends AbstractCliIT {
   public void replayWithHaltPolicy() throws Exception {
     String walSpec = createWalSpec("replay-halt");
 
-    // Record with "milk:1"
-    ProcessResult recordResult = recordWal(walSpec, "milk:1");
+    // Record with the cross-record arguments
+    ProcessResult recordResult = recordWal(walSpec, testApp.crossRecordArgs);
     assertEquals("Recording should succeed", 0, recordResult.exitCode());
 
     // Replay with HALT policy and different arguments
     CliProcessResult replayResult =
-        doReplay(walSpec, List.of("--divergence-policy", "HALT"), "bread:2");
+        doReplay(walSpec, List.of("--divergence-policy", "HALT"), testApp.crossReplayArgs);
 
     logger.info("HALT policy replay exit code: {}", replayResult.exitCode());
     logger.info("HALT policy replay stderr: {}", replayResult.stderr());
@@ -243,19 +287,60 @@ public class ReplayIT extends AbstractCliIT {
   }
 
   /**
-   * Extracts the "Run 1: ..." line from stdout output.
+   * Configuration for a test application class used in replay integration tests.
    *
-   * @param output the stdout output to search
-   * @return the trimmed line starting with "Run 1:"
-   * @throws IllegalStateException if no matching line is found
+   * <p>Encapsulates the fully qualified main class name, arguments for recording and replaying, an
+   * expected output marker for verifying correct execution, and separate record/replay arguments
+   * for cross-divergence tests.
    */
-  private String extractRunLine(String output) {
-    return output
-        .lines()
-        .map(String::trim)
-        .filter(line -> line.startsWith("Run 1:"))
-        .findFirst()
-        .orElseThrow(
-            () -> new IllegalStateException("No 'Run 1:' line found in output:\n" + output));
+  static final class TestAppConfig {
+
+    /** Short display name for parameterized test output. */
+    final String displayName;
+
+    /** Fully qualified main class name. */
+    final String mainClass;
+
+    /** Arguments for the zero-divergence recording and replay. */
+    final String[] recordArgs;
+
+    /** Substring expected in stdout when the application runs successfully. */
+    final String expectedOutputMarker;
+
+    /** Arguments for recording in cross-divergence tests. */
+    final String[] crossRecordArgs;
+
+    /** Arguments for replaying in cross-divergence tests (different from crossRecordArgs). */
+    final String[] crossReplayArgs;
+
+    /**
+     * Creates a test application configuration.
+     *
+     * @param displayName short name for test display
+     * @param mainClass fully qualified main class name
+     * @param recordArgs arguments for recording
+     * @param expectedOutputMarker substring expected in stdout
+     * @param crossRecordArgs arguments for cross-divergence recording
+     * @param crossReplayArgs arguments for cross-divergence replaying
+     */
+    TestAppConfig(
+        String displayName,
+        String mainClass,
+        String[] recordArgs,
+        String expectedOutputMarker,
+        String[] crossRecordArgs,
+        String[] crossReplayArgs) {
+      this.displayName = displayName;
+      this.mainClass = mainClass;
+      this.recordArgs = recordArgs;
+      this.expectedOutputMarker = expectedOutputMarker;
+      this.crossRecordArgs = crossRecordArgs;
+      this.crossReplayArgs = crossReplayArgs;
+    }
+
+    @Override
+    public String toString() {
+      return displayName;
+    }
   }
 }
