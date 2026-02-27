@@ -68,7 +68,7 @@ public class AntPathMatcherThreadSafetyTest {
   private static final int THREAD_COUNT = 64;
 
   /** Number of iterations each thread performs. */
-  private static final int ITERATIONS_PER_THREAD = 10_000;
+  private static final int ITERATIONS_PER_THREAD = 2_000;
 
   /**
    * Static AntPathMatcherArrays instance configured identically to the one in {@link

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- [Fix] Reduce AntPathMatcherThreadSafetyTest iterations to prevent intermittent timeouts on loaded CI
 - [Feature] Add `WalReader` utility for reading Chronicle WAL entries into `WalEntry`/`WalIndex` structures
 - [Feature] Add `pal replay` CLI command for deterministic WAL replay with simplified arguments and divergence reporting
 - [Test] Add integration tests for deterministic WAL replay (zero divergence, cross-divergence, HALT policy)
