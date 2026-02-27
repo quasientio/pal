@@ -26,6 +26,11 @@
         <Package name="~.*\.jmh_generated"/>
     </Match>
 
+    <!-- Exclude quantized replay sample apps (test applications for integration tests) -->
+    <Match>
+        <Package name="io.quasient.pal.apps.quantized.replay"/>
+    </Match>
+
     <!--
         AspectJ-generated singleton instance fields.
         These are internal AspectJ implementation details that cannot be modified.
