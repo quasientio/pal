@@ -14,7 +14,6 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.fail;
 
 import io.quasient.pal.cli.AbstractCliIT;
 import java.util.ArrayList;
@@ -71,22 +70,47 @@ public class ReplayIT extends AbstractCliIT {
   }
 
   /**
+   * Creates a WAL spec appropriate for the current backend.
+   *
+   * <p>For Chronicle, returns a {@code file:}-prefixed path and registers it for cleanup. For
+   * Kafka, returns a unique topic name (no cleanup needed; topics are ephemeral).
+   *
+   * @param prefix a descriptive prefix for the WAL name
+   * @return the WAL spec string
+   */
+  private String createWalSpec(String prefix) {
+    String id = generateId();
+    if ("chronicle".equals(backend)) {
+      String path = "/tmp/pal-" + prefix + "-" + id;
+      trackChronicleLog(path);
+      return "file:" + path;
+    } else {
+      return "test-" + prefix + "-" + id;
+    }
+  }
+
+  /**
    * Records a WAL by running the peer with the given application arguments.
    *
-   * <p>Launches a peer with {@code pal run} using a Chronicle WAL at the specified path. The peer
-   * runs the {@link #MAIN_CLASS} application, writes all operations to the WAL, then exits.
+   * <p>Launches a peer with {@code pal run} using a WAL at the specified location. For Chronicle,
+   * the WAL spec is a {@code file:}-prefixed path. For Kafka, a topic name is used with {@code -k}
+   * bootstrap servers.
    *
-   * @param walPath absolute path for the Chronicle WAL directory
+   * @param walSpec the WAL spec (Chronicle file path or Kafka topic name)
    * @param appArgs application arguments passed to the main class
    * @return the process result containing exit code, stdout, and stderr
    * @throws Exception if recording fails
    */
-  private ProcessResult recordWal(String walPath, String... appArgs) throws Exception {
+  private ProcessResult recordWal(String walSpec, String... appArgs) throws Exception {
     List<String> args = new ArrayList<>();
     args.add("-d");
     args.add(getPalDirectoryUrl());
+    if ("kafka".equals(backend)) {
+      args.add("-k");
+      args.add(getKafkaServers());
+    }
     args.add("--wal");
-    args.add("file:" + walPath);
+    args.add(walSpec);
     args.add("-cp");
     args.add(getIttAppsClasspath());
     args.add(MAIN_CLASS);
@@ -95,35 +119,48 @@ public class ReplayIT extends AbstractCliIT {
   }
 
   /**
+   * Runs a replay against the given WAL spec with optional replay options and application
+   * arguments.
+   *
+   * <p>Builds the argument list with {@code --wal} and, for Kafka backend, {@code -k} bootstrap
+   * servers. Replay options (such as {@code --divergence-policy HALT}) are inserted before {@code
+   * -cp}.
+   *
+   * @param walSpec the WAL spec (Chronicle file path or Kafka topic name)
+   * @param replayOptions additional replay options before {@code -cp} (e.g., divergence policy)
+   * @param appArgs application arguments passed to the main class
+   * @return the CLI process result containing exit code, stdout, and stderr
+   * @throws Exception if replay fails
+   */
+  private CliProcessResult doReplay(String walSpec, List<String> replayOptions, String... appArgs)
+      throws Exception {
+    List<String> args = new ArrayList<>();
+    args.add("--wal");
+    args.add(walSpec);
+    if ("kafka".equals(backend)) {
+      args.add("-k");
+      args.add(getKafkaServers());
+    }
+    args.addAll(replayOptions);
+    args.add("-cp");
+    args.add(getIttAppsClasspath());
+    args.add(MAIN_CLASS);
+    Collections.addAll(args, appArgs);
+    return runReplay(args.toArray(new String[0]));
+  }
+
+  /**
    * Records and replays MinimalReceiptCalculator with identical arguments. Verifies that replay
    * produces zero divergences, exit code 0, and the same stdout output as the recording.
-   *
-   * <p>For the "chronicle" backend, the full test runs end-to-end. For the "kafka" backend, the
-   * test is a specification stub awaiting implementation in #854.
    *
    * @throws Exception if test execution fails
    */
   @Test
   public void replayZeroDivergence() throws Exception {
-    if ("kafka".equals(backend)) {
-      // Given: WAL recorded with Kafka backend
-      //        (pal run -d ... -k kafkaServers --wal topicName -cp ... MainClass
-      //        "milk:2,bread:1,apple:5")
-      // When: Replay with same args
-      //        (pal replay -k kafkaServers --wal topicName -cp ... MainClass
-      //        "milk:2,bread:1,apple:5")
-      // Then: Exit code 0, stdout contains expected receipt output,
-      //       stderr does not contain DIVERGENCE or MISMATCH
-
-      // TODO(#854): Implement Kafka backend test logic
-      fail("Not yet implemented");
-    }
-
-    String walPath = "/tmp/pal-replay-zero-div-" + generateId();
-    trackChronicleLog(walPath);
+    String walSpec = createWalSpec("replay-zero-div");
 
     // Record WAL with MinimalReceiptCalculator
-    ProcessResult recordResult = recordWal(walPath, "milk:2,bread:1,apple:5");
+    ProcessResult recordResult = recordWal(walSpec, "milk:2,bread:1,apple:5");
     assertEquals("Recording should succeed", 0, recordResult.exitCode());
     assertThat(
         "Recording should produce Run output", recordResult.stdout(), containsString("Run 1:"));
@@ -132,14 +169,7 @@ public class ReplayIT extends AbstractCliIT {
     logger.info("Recorded output: {}", expectedRunLine);
 
     // Replay from the same WAL with the same arguments
-    CliProcessResult replayResult =
-        runReplay(
-            "--wal",
-            "file:" + walPath,
-            "-cp",
-            getIttAppsClasspath(),
-            MAIN_CLASS,
-            "milk:2,bread:1,apple:5");
+    CliProcessResult replayResult = doReplay(walSpec, List.of(), "milk:2,bread:1,apple:5");
 
     logger.info("Replay exit code: {}", replayResult.exitCode());
     logger.info("Replay stdout: {}", replayResult.stdout());
@@ -164,34 +194,18 @@ public class ReplayIT extends AbstractCliIT {
    * Records with one set of arguments and replays with different arguments. Verifies that
    * divergences are detected with VALUE_MISMATCH and the exit code is 2.
    *
-   * <p>For the "chronicle" backend, the full test runs end-to-end. For the "kafka" backend, the
-   * test is a specification stub awaiting implementation in #854.
-   *
    * @throws Exception if test execution fails
    */
   @Test
   public void replayCrossDivergence() throws Exception {
-    if ("kafka".equals(backend)) {
-      // Given: WAL recorded with Kafka backend with args "milk:2,bread:1,apple:5"
-      // When: Replay with different args "milk:3,bread:2,apple:1"
-      //        (pal replay -k kafkaServers --wal topicName -cp ... MainClass
-      //        "milk:3,bread:2,apple:1")
-      // Then: Exit code 2 (divergences detected), stderr contains VALUE_MISMATCH
-
-      // TODO(#854): Implement Kafka backend test logic
-      fail("Not yet implemented");
-    }
-
-    String walPath = "/tmp/pal-replay-cross-div-" + generateId();
-    trackChronicleLog(walPath);
+    String walSpec = createWalSpec("replay-cross-div");
 
     // Record with "milk:1"
-    ProcessResult recordResult = recordWal(walPath, "milk:1");
+    ProcessResult recordResult = recordWal(walSpec, "milk:1");
     assertEquals("Recording should succeed", 0, recordResult.exitCode());
 
     // Replay with different arguments "bread:2"
-    CliProcessResult replayResult =
-        runReplay("--wal", "file:" + walPath, "-cp", getIttAppsClasspath(), MAIN_CLASS, "bread:2");
+    CliProcessResult replayResult = doReplay(walSpec, List.of(), "bread:2");
 
     logger.info("Cross-divergence replay exit code: {}", replayResult.exitCode());
     logger.info("Cross-divergence replay stderr: {}", replayResult.stderr());
@@ -207,42 +221,19 @@ public class ReplayIT extends AbstractCliIT {
    * Records with one set of arguments and replays with HALT divergence policy and different
    * arguments. Verifies that the application halts on first divergence with a non-zero exit code.
    *
-   * <p>For the "chronicle" backend, the full test runs end-to-end. For the "kafka" backend, the
-   * test is a specification stub awaiting implementation in #854.
-   *
    * @throws Exception if test execution fails
    */
   @Test
   public void replayWithHaltPolicy() throws Exception {
-    if ("kafka".equals(backend)) {
-      // Given: WAL recorded with Kafka backend with args "milk:1"
-      // When: Replay with HALT divergence policy and different args "bread:2"
-      //        (pal replay -k kafkaServers --wal topicName --divergence-policy HALT
-      //        -cp ... MainClass "bread:2")
-      // Then: Exit code != 0 (application halts on first divergence)
-
-      // TODO(#854): Implement Kafka backend test logic
-      fail("Not yet implemented");
-    }
-
-    String walPath = "/tmp/pal-replay-halt-" + generateId();
-    trackChronicleLog(walPath);
+    String walSpec = createWalSpec("replay-halt");
 
     // Record with "milk:1"
-    ProcessResult recordResult = recordWal(walPath, "milk:1");
+    ProcessResult recordResult = recordWal(walSpec, "milk:1");
     assertEquals("Recording should succeed", 0, recordResult.exitCode());
 
     // Replay with HALT policy and different arguments
     CliProcessResult replayResult =
-        runReplay(
-            "--wal",
-            "file:" + walPath,
-            "--divergence-policy",
-            "HALT",
-            "-cp",
-            getIttAppsClasspath(),
-            MAIN_CLASS,
-            "bread:2");
+        doReplay(walSpec, List.of("--divergence-policy", "HALT"), "bread:2");
 
     logger.info("HALT policy replay exit code: {}", replayResult.exitCode());
     logger.info("HALT policy replay stderr: {}", replayResult.stderr());
