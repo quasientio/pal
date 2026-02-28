@@ -35,6 +35,12 @@ import org.slf4j.LoggerFactory;
  * <p>Validates the WAL index pipeline end-to-end for both Chronicle Queue and Kafka backends: peer
  * records WAL, WalReader reads it, WalIndex pairs and spans entries, and the CLI displays results.
  *
+ * <p>The WAL is expected to be structurally consistent (zero issues, balanced operation/completion
+ * pairs) because BEFORE and AFTER messages are symmetrically gated by {@code
+ * shouldWriteIncomingToWal} in {@code BaseExecMessageDispatcher.dispatchIncoming()}. When
+ * WAL-writing is disabled for a given incoming channel, neither the BEFORE nor the AFTER message is
+ * written, so orphaned entries cannot occur.
+ *
  * <p>Parameterized over backend type: "chronicle" uses {@code file:} prefix WAL paths, "kafka" uses
  * Kafka topic names with {@code -k} bootstrap servers.
  */
@@ -145,6 +151,10 @@ public class WalIndexMinimalReceiptCalculatorIT extends AbstractCliIT {
   /**
    * Records a WAL with MinimalReceiptCalculator, runs {@code pal wal-index}, and verifies that the
    * index reports zero structural issues and balanced operation/completion pairs.
+   *
+   * <p>BEFORE and AFTER messages are symmetrically gated by {@code shouldWriteIncomingToWal}, so
+   * the WAL is structurally consistent by design: every OPERATION entry has a matching COMPLETION
+   * entry, and no orphaned entries exist.
    *
    * @throws Exception if test execution fails
    */
