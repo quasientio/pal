@@ -48,10 +48,10 @@ public abstract class AbstractFieldOpDispatcherTest extends AbstractDispatcherTe
   public abstract void dispatchIncoming_withWalIncomingRpc_sendsBothBeforeAndAfter()
       throws Exception;
 
-  public abstract void dispatchIncoming_withoutWalIncomingRpc_sendsOnlyAfter() throws Exception;
+  public abstract void dispatchIncoming_withoutWalIncomingRpc_sendsNeither() throws Exception;
 
   public abstract void dispatchIncoming_logRpc_withWalAllIncomingRpc_sendsBothBeforeAndAfter()
       throws Exception;
 
-  public abstract void dispatchIncoming_logRpc_withWalIncomingRpc_sendsOnlyAfter() throws Exception;
+  public abstract void dispatchIncoming_logRpc_withWalIncomingRpc_sendsNeither() throws Exception;
 }

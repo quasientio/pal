@@ -36,6 +36,7 @@ import java.util.stream.DoubleStream;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.hamcrest.Matchers;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -744,8 +745,12 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
   }
 
   @Test
+  @Ignore("Awaiting implementation in #878")
   @Override
-  public void dispatchIncoming_withoutWalIncomingRpc_sendsOnlyAfter() throws Exception {
+  public void dispatchIncoming_withoutWalIncomingRpc_sendsNeither() throws Exception {
+    // Given: A dispatcher configured with WITH_WAL but without WITH_WAL_INCOMING_RPC
+    // When: dispatchIncoming() is called with WEBSOCKET_RPC channel
+    // Then: Neither BEFORE nor AFTER messages are sent to the gateway (zero calls)
     ExecMessageDispatcher walDispatcher =
         new ClassMethodDispatcher(
             peerUuid,
@@ -768,8 +773,9 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
             new Object[] {},
             new ObjectRef[] {});
 
+    // TODO(#878): Remove @Ignore when AFTER message gating is implemented
     walDispatcher.dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
-    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    verifyDispatcherConnectorSendExecMessageNeverCalled();
   }
 
   @Test
@@ -806,8 +812,12 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
   }
 
   @Test
+  @Ignore("Awaiting implementation in #878")
   @Override
-  public void dispatchIncoming_logRpc_withWalIncomingRpc_sendsOnlyAfter() throws Exception {
+  public void dispatchIncoming_logRpc_withWalIncomingRpc_sendsNeither() throws Exception {
+    // Given: A dispatcher configured with WITH_WAL and WITH_WAL_INCOMING_RPC
+    // When: dispatchIncoming() is called with LOG_RPC channel
+    // Then: Neither BEFORE nor AFTER messages are sent to the gateway (zero calls)
     ExecMessageDispatcher walDispatcher =
         new ClassMethodDispatcher(
             peerUuid,
@@ -830,8 +840,9 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
             new Object[] {},
             new ObjectRef[] {});
 
+    // TODO(#878): Remove @Ignore when AFTER message gating is implemented
     walDispatcher.dispatchIncoming(incomingMessage, MessageChannelType.LOG_RPC);
-    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    verifyDispatcherConnectorSendExecMessageNeverCalled();
   }
 
   // auxiliary class

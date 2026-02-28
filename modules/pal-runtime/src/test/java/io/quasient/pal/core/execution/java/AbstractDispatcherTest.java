@@ -54,7 +54,7 @@ public abstract class AbstractDispatcherTest {
 
   protected AbstractDispatcherTest() {}
 
-  private void verifyDispatcherConnectorSendExecMessageCalledTimes(int n) {
+  protected void verifyDispatcherConnectorSendExecMessageCalledTimes(int n) {
     verify(outboundMessageGateway, times(n)).sendExecMessage(any(), any());
   }
 
@@ -64,6 +64,10 @@ public abstract class AbstractDispatcherTest {
 
   protected void verifyDispatcherConnectorSendExecMessageCalledOnce() {
     verifyDispatcherConnectorSendExecMessageCalledTimes(1);
+  }
+
+  protected void verifyDispatcherConnectorSendExecMessageNeverCalled() {
+    verifyDispatcherConnectorSendExecMessageCalledTimes(0);
   }
 
   protected String[] toNames(Class<?>[] types) {
