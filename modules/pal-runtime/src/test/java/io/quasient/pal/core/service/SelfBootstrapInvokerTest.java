@@ -536,4 +536,71 @@ public class SelfBootstrapInvokerTest {
         exitCode,
         is(EXIT_INVALID_RETURN_VALUE));
   }
+
+  // ===========================================================================
+  // Test specifications for issue #879 - Awaiting implementation in #880
+  // ===========================================================================
+
+  /**
+   * Tests that callMain does NOT wait for offset when WITH_WAL is set but WITH_WAL_INCOMING_CLI is
+   * NOT set.
+   *
+   * <p>Specification from issue #879:
+   *
+   * <ul>
+   *   <li>Given: SelfBootstrapInvoker constructed with runOptions containing WITH_WAL but not
+   *       WITH_WAL_INCOMING_CLI
+   *   <li>When: callMain() is invoked
+   *   <li>Then: The offset subscriber setup and wait loop are skipped; callMain returns without
+   *       blocking on offset publication
+   * </ul>
+   *
+   * <p>Context: After the fix in #877, the AFTER message for CLI_RPC is only written to WAL when
+   * WITH_WAL_INCOMING_CLI is set. If the AFTER message is not written, no offset is published for
+   * it, and the existing offset wait (lines 211-240) would block forever. This test ensures the
+   * wait is skipped when the AFTER message won't be written.
+   */
+  @Test
+  @org.junit.Ignore("Awaiting implementation in #880")
+  public void callMain_withWalWithoutIncomingCli_doesNotWaitForOffset() {
+    // Given: SelfBootstrapInvoker with WITH_WAL enabled but WITHOUT WITH_WAL_INCOMING_CLI
+    //        (i.e., runOptions = EnumSet.of(RunOptions.WITH_WAL))
+    // When: callMain() is invoked with a valid class name
+    // Then: callMain completes without blocking on offset publication
+    //       (offset subscriber setup and wait loop at lines 211-240 are skipped)
+
+    // TODO(#880): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that callMain DOES wait for offset when both WITH_WAL and WITH_WAL_INCOMING_CLI are set.
+   *
+   * <p>Specification from issue #879:
+   *
+   * <ul>
+   *   <li>Given: SelfBootstrapInvoker constructed with runOptions containing both WITH_WAL and
+   *       WITH_WAL_INCOMING_CLI
+   *   <li>When: callMain() is invoked
+   *   <li>Then: The offset subscriber is set up and callMain waits for the offset publication
+   *       matching the response message ID before returning
+   * </ul>
+   *
+   * <p>Context: When WITH_WAL_INCOMING_CLI is enabled, the AFTER message for CLI_RPC is written to
+   * WAL, so the offset will be published. In this case, the existing offset wait behavior (lines
+   * 211-240) should remain active to ensure all messages have been durably written before the peer
+   * exits.
+   */
+  @Test
+  @org.junit.Ignore("Awaiting implementation in #880")
+  public void callMain_withWalAndIncomingCli_waitsForOffset() {
+    // Given: SelfBootstrapInvoker with both WITH_WAL and WITH_WAL_INCOMING_CLI enabled
+    //        (i.e., runOptions = EnumSet.of(RunOptions.WITH_WAL, RunOptions.WITH_WAL_INCOMING_CLI))
+    // When: callMain() is invoked with a valid class name
+    // Then: callMain sets up offset subscriber and waits for PublishedOffsetMsg
+    //       matching the response message ID before returning
+
+    // TODO(#880): Implement test logic
+    fail("Not yet implemented");
+  }
 }
