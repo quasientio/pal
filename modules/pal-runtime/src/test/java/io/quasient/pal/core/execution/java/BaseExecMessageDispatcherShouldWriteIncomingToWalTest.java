@@ -11,7 +11,6 @@ package io.quasient.pal.core.execution.java;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.fail;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
@@ -31,7 +30,6 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import org.aspectj.lang.ProceedingJoinPoint;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
@@ -230,14 +228,16 @@ public class BaseExecMessageDispatcherShouldWriteIncomingToWalTest {
   // ---------------------------------------------------------------
 
   @Test
-  @Ignore("Awaiting implementation in #878")
   public void shouldWriteIncomingToWal_withWalIncomingRpc_cliRpc_returnsFalse() throws Exception {
     // Given: RunOptions {WITH_WAL, WITH_WAL_INCOMING_RPC} (no WITH_WAL_INCOMING_CLI)
-    // When: shouldWriteIncomingToWal(CLI_RPC)
-    // Then: returns false (CLI_RPC now requires its own WITH_WAL_INCOMING_CLI flag)
+    MinimalOk dispatcher = new MinimalOk();
+    setRunOptions(dispatcher, EnumSet.of(RunOptions.WITH_WAL, RunOptions.WITH_WAL_INCOMING_RPC));
 
-    // TODO(#878): Implement test logic
-    fail("Not yet implemented");
+    // When
+    boolean result = invokeShouldWriteIncomingToWal(dispatcher, MessageChannelType.CLI_RPC);
+
+    // Then: returns false (CLI_RPC now requires its own WITH_WAL_INCOMING_CLI flag)
+    assertThat(result, is(false));
   }
 
   // ---------------------------------------------------------------
@@ -245,14 +245,16 @@ public class BaseExecMessageDispatcherShouldWriteIncomingToWalTest {
   // ---------------------------------------------------------------
 
   @Test
-  @Ignore("Awaiting implementation in #878")
   public void shouldWriteIncomingToWal_withWalIncomingCli_cliRpc_returnsTrue() throws Exception {
     // Given: RunOptions {WITH_WAL, WITH_WAL_INCOMING_CLI}
-    // When: shouldWriteIncomingToWal(CLI_RPC)
-    // Then: returns true
+    MinimalOk dispatcher = new MinimalOk();
+    setRunOptions(dispatcher, EnumSet.of(RunOptions.WITH_WAL, RunOptions.WITH_WAL_INCOMING_CLI));
 
-    // TODO(#878): Implement test logic
-    fail("Not yet implemented");
+    // When
+    boolean result = invokeShouldWriteIncomingToWal(dispatcher, MessageChannelType.CLI_RPC);
+
+    // Then
+    assertThat(result, is(true));
   }
 
   // ---------------------------------------------------------------
@@ -260,15 +262,17 @@ public class BaseExecMessageDispatcherShouldWriteIncomingToWalTest {
   // ---------------------------------------------------------------
 
   @Test
-  @Ignore("Awaiting implementation in #878")
   public void shouldWriteIncomingToWal_withWalIncomingCli_websocket_returnsFalse()
       throws Exception {
     // Given: RunOptions {WITH_WAL, WITH_WAL_INCOMING_CLI} (no WITH_WAL_INCOMING_RPC)
-    // When: shouldWriteIncomingToWal(WEBSOCKET_RPC)
-    // Then: returns false (CLI flag only controls CLI_RPC)
+    MinimalOk dispatcher = new MinimalOk();
+    setRunOptions(dispatcher, EnumSet.of(RunOptions.WITH_WAL, RunOptions.WITH_WAL_INCOMING_CLI));
 
-    // TODO(#878): Implement test logic
-    fail("Not yet implemented");
+    // When
+    boolean result = invokeShouldWriteIncomingToWal(dispatcher, MessageChannelType.WEBSOCKET_RPC);
+
+    // Then: returns false (CLI flag only controls CLI_RPC)
+    assertThat(result, is(false));
   }
 
   // ---------------------------------------------------------------
@@ -276,14 +280,21 @@ public class BaseExecMessageDispatcherShouldWriteIncomingToWalTest {
   // ---------------------------------------------------------------
 
   @Test
-  @Ignore("Awaiting implementation in #878")
   public void shouldWriteIncomingToWal_withBothFlags_cliRpc_returnsTrue() throws Exception {
     // Given: RunOptions {WITH_WAL, WITH_WAL_INCOMING_RPC, WITH_WAL_INCOMING_CLI}
-    // When: shouldWriteIncomingToWal(CLI_RPC)
-    // Then: returns true
+    MinimalOk dispatcher = new MinimalOk();
+    setRunOptions(
+        dispatcher,
+        EnumSet.of(
+            RunOptions.WITH_WAL,
+            RunOptions.WITH_WAL_INCOMING_RPC,
+            RunOptions.WITH_WAL_INCOMING_CLI));
 
-    // TODO(#878): Implement test logic
-    fail("Not yet implemented");
+    // When
+    boolean result = invokeShouldWriteIncomingToWal(dispatcher, MessageChannelType.CLI_RPC);
+
+    // Then
+    assertThat(result, is(true));
   }
 
   // ---------------------------------------------------------------
@@ -291,15 +302,17 @@ public class BaseExecMessageDispatcherShouldWriteIncomingToWalTest {
   // ---------------------------------------------------------------
 
   @Test
-  @Ignore("Awaiting implementation in #878")
   public void shouldWriteIncomingToWal_withWalIncomingCli_noPubNorWal_returnsFalse()
       throws Exception {
     // Given: RunOptions {WITH_WAL_INCOMING_CLI} (no WITH_WAL, no WITH_TCP_PUB)
-    // When: shouldWriteIncomingToWal(CLI_RPC)
-    // Then: returns false (no destination)
+    MinimalOk dispatcher = new MinimalOk();
+    setRunOptions(dispatcher, EnumSet.of(RunOptions.WITH_WAL_INCOMING_CLI));
 
-    // TODO(#878): Implement test logic
-    fail("Not yet implemented");
+    // When
+    boolean result = invokeShouldWriteIncomingToWal(dispatcher, MessageChannelType.CLI_RPC);
+
+    // Then: returns false (no destination)
+    assertThat(result, is(false));
   }
 
   // ---------------------------------------------------------------

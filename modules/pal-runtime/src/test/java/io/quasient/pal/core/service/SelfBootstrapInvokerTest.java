@@ -40,6 +40,7 @@ import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.zeromq.ZContext;
 
@@ -561,7 +562,7 @@ public class SelfBootstrapInvokerTest {
    * wait is skipped when the AFTER message won't be written.
    */
   @Test
-  @org.junit.Ignore("Awaiting implementation in #880")
+  @Ignore("Awaiting implementation in #880")
   public void callMain_withWalWithoutIncomingCli_doesNotWaitForOffset() {
     // Given: SelfBootstrapInvoker with WITH_WAL enabled but WITHOUT WITH_WAL_INCOMING_CLI
     //        (i.e., runOptions = EnumSet.of(RunOptions.WITH_WAL))
@@ -592,7 +593,7 @@ public class SelfBootstrapInvokerTest {
    * exits.
    */
   @Test
-  @org.junit.Ignore("Awaiting implementation in #880")
+  @Ignore("Awaiting implementation in #880")
   public void callMain_withWalAndIncomingCli_waitsForOffset() {
     // Given: SelfBootstrapInvoker with both WITH_WAL and WITH_WAL_INCOMING_CLI enabled
     //        (i.e., runOptions = EnumSet.of(RunOptions.WITH_WAL, RunOptions.WITH_WAL_INCOMING_CLI))

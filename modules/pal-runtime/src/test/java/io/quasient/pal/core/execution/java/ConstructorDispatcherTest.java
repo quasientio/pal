@@ -31,7 +31,6 @@ import java.util.concurrent.Callable;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.hamcrest.Matchers;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -242,7 +241,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
-    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    verifyDispatcherConnectorSendExecMessageNeverCalled();
 
     assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
@@ -278,7 +277,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
-    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    verifyDispatcherConnectorSendExecMessageNeverCalled();
 
     assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
@@ -313,7 +312,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
-    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    verifyDispatcherConnectorSendExecMessageNeverCalled();
     assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
     ObjectRef objRef = ObjectRef.from(responseMessage.getReturnValue().getObject().getRef());
@@ -349,7 +348,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
-    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    verifyDispatcherConnectorSendExecMessageNeverCalled();
     assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(2L));
     ObjectRef retObjRef = ObjectRef.from(responseMessage.getReturnValue().getObject().getRef());
@@ -382,7 +381,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
-    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    verifyDispatcherConnectorSendExecMessageNeverCalled();
     assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
     ObjectRef objRef = ObjectRef.from(responseMessage.getReturnValue().getObject().getRef());
@@ -415,7 +414,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
-    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    verifyDispatcherConnectorSendExecMessageNeverCalled();
     assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
     assertTrue(
@@ -447,7 +446,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
-    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    verifyDispatcherConnectorSendExecMessageNeverCalled();
     assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
     ObjectRef objRef = ObjectRef.from(responseMessage.getReturnValue().getObject().getRef());
@@ -478,7 +477,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
-    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    verifyDispatcherConnectorSendExecMessageNeverCalled();
     assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(0L));
     assertThat(
@@ -503,7 +502,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
-    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    verifyDispatcherConnectorSendExecMessageNeverCalled();
     assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(0L));
     assertThat(
@@ -634,7 +633,6 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
   }
 
   @Test
-  @Ignore("Awaiting implementation in #878")
   @Override
   public void dispatchIncoming_withoutWalIncomingRpc_sendsNeither() throws Exception {
     // Given: A dispatcher configured with WITH_WAL but without WITH_WAL_INCOMING_RPC
@@ -683,7 +681,6 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
   }
 
   @Test
-  @Ignore("Awaiting implementation in #878")
   @Override
   public void dispatchIncoming_logRpc_withWalIncomingRpc_sendsNeither() throws Exception {
     // Given: A dispatcher configured with WITH_WAL and WITH_WAL_INCOMING_RPC

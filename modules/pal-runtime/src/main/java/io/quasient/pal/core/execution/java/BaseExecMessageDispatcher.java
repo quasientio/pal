@@ -1067,9 +1067,14 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         finalAfterExecMsg = afterExecMsg;
       }
 
-      // 11. Send object or exception, and receive
-      final ExecMessage afterExecResponseMsg =
-          messageGateway.sendExecMessage(messageBuilder.wrap(finalAfterExecMsg), ExecPhase.AFTER);
+      // 11. Send object or exception to WAL/PUB (consistent with BEFORE message gating)
+      final ExecMessage afterExecResponseMsg;
+      if (shouldWriteIncomingToWal(messageChannel)) {
+        afterExecResponseMsg =
+            messageGateway.sendExecMessage(messageBuilder.wrap(finalAfterExecMsg), ExecPhase.AFTER);
+      } else {
+        afterExecResponseMsg = finalAfterExecMsg;
+      }
 
       // 12. Return received message
       if (logger.isTraceEnabled()) {
@@ -1541,14 +1546,17 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
   /**
    * Determines whether an incoming message should be written to WAL/PUB.
    *
-   * <p>The decision considers three factors:
+   * <p>The decision uses a three-channel matrix:
    *
-   * <ol>
-   *   <li>Whether WAL or TCP PUB is enabled ({@code WITH_WAL} or {@code WITH_TCP_PUB})
-   *   <li>Whether incoming RPC WAL writing is enabled ({@code WITH_WAL_INCOMING_RPC})
-   *   <li>For {@code LOG_RPC} channels: whether {@code WITH_WAL_ALL_INCOMING_RPC} is enabled AND
-   *       source and WAL are not the same log (circularity guard)
-   * </ol>
+   * <ul>
+   *   <li>{@code CLI_RPC} &mdash; requires {@code WITH_WAL_INCOMING_CLI}
+   *   <li>{@code LOG_RPC} &mdash; requires {@code WITH_WAL_INCOMING_RPC} + {@code
+   *       WITH_WAL_ALL_INCOMING_RPC} + circularity guard (source and WAL must differ)
+   *   <li>Others ({@code ZMQ_SOCKET_RPC}, {@code WEBSOCKET_RPC}) &mdash; requires {@code
+   *       WITH_WAL_INCOMING_RPC}
+   * </ul>
+   *
+   * <p>All channels require at least {@code WITH_WAL} or {@code WITH_TCP_PUB} to be enabled.
    *
    * @param messageChannel the transport channel through which the message was received
    * @return true if the incoming message should be written to WAL/PUB
@@ -1556,7 +1564,13 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
   private boolean shouldWriteIncomingToWal(MessageChannelType messageChannel) {
     boolean withPubOrWal =
         runOptions.contains(RunOptions.WITH_WAL) || runOptions.contains(RunOptions.WITH_TCP_PUB);
-    if (!withPubOrWal || !runOptions.contains(RunOptions.WITH_WAL_INCOMING_RPC)) {
+    if (!withPubOrWal) {
+      return false;
+    }
+    if (messageChannel == MessageChannelType.CLI_RPC) {
+      return runOptions.contains(RunOptions.WITH_WAL_INCOMING_CLI);
+    }
+    if (!runOptions.contains(RunOptions.WITH_WAL_INCOMING_RPC)) {
       return false;
     }
     if (messageChannel == MessageChannelType.LOG_RPC) {

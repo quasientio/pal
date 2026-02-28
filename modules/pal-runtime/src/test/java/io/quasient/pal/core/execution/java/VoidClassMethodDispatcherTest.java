@@ -35,7 +35,6 @@ import java.util.stream.LongStream;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -299,7 +298,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
-    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    verifyDispatcherConnectorSendExecMessageNeverCalled();
     assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(0L));
     assertTrue(responseMessage.getReturnValue().getIsVoid());
@@ -338,7 +337,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
-    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    verifyDispatcherConnectorSendExecMessageNeverCalled();
     assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(0L));
     assertTrue(responseMessage.getReturnValue().getIsVoid());
@@ -376,7 +375,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
-    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    verifyDispatcherConnectorSendExecMessageNeverCalled();
     assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(0L));
     assertTrue(responseMessage.getReturnValue().getIsVoid());
@@ -416,7 +415,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
-    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    verifyDispatcherConnectorSendExecMessageNeverCalled();
     assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
     assertTrue(responseMessage.getReturnValue().getIsVoid());
@@ -454,7 +453,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
-    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    verifyDispatcherConnectorSendExecMessageNeverCalled();
     assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(0L));
     assertTrue(responseMessage.getReturnValue().getIsVoid());
@@ -492,7 +491,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
-    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    verifyDispatcherConnectorSendExecMessageNeverCalled();
     assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
     assertTrue(responseMessage.getReturnValue().getIsVoid());
@@ -527,7 +526,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
-    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    verifyDispatcherConnectorSendExecMessageNeverCalled();
     assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(0L));
     assertThat(
@@ -560,7 +559,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
-    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    verifyDispatcherConnectorSendExecMessageNeverCalled();
     assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(0L));
     assertThat(
@@ -590,7 +589,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
     ExecMessage responseMessage =
         ((ExecMessageDispatcher) onlyPublicDispatcher)
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
-    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    verifyDispatcherConnectorSendExecMessageNeverCalled();
     assertTrue(responseMessage.getReturnValue().getIsVoid());
     assertThat(responseMessage.getRaisedThrowable(), is(nullValue()));
   }
@@ -740,7 +739,6 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
   }
 
   @Test
-  @Ignore("Awaiting implementation in #878")
   @Override
   public void dispatchIncoming_withoutWalIncomingRpc_sendsNeither() throws Exception {
     // Given: A dispatcher configured with WITH_WAL but without WITH_WAL_INCOMING_RPC
@@ -807,7 +805,6 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
   }
 
   @Test
-  @Ignore("Awaiting implementation in #878")
   @Override
   public void dispatchIncoming_logRpc_withWalIncomingRpc_sendsNeither() throws Exception {
     // Given: A dispatcher configured with WITH_WAL and WITH_WAL_INCOMING_RPC

@@ -33,7 +33,6 @@ import java.util.concurrent.Callable;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -366,7 +365,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
-    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    verifyDispatcherConnectorSendExecMessageNeverCalled();
     assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(0L));
     assertThat(responseMessage.getReturnValue(), is(nullValue()));
@@ -397,7 +396,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
-    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    verifyDispatcherConnectorSendExecMessageNeverCalled();
     assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(0L));
     assertThat(responseMessage.getReturnValue(), is(nullValue()));
@@ -429,7 +428,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
-    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    verifyDispatcherConnectorSendExecMessageNeverCalled();
     assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(0L));
     assertThat(responseMessage.getReturnValue(), is(nullValue()));
@@ -460,7 +459,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
-    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    verifyDispatcherConnectorSendExecMessageNeverCalled();
     assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(0L));
     assertThat(responseMessage.getReturnValue(), is(nullValue()));
@@ -490,7 +489,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
-    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    verifyDispatcherConnectorSendExecMessageNeverCalled();
     assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
     assertThat(responseMessage.getReturnValue(), is(nullValue()));
@@ -520,7 +519,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
-    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    verifyDispatcherConnectorSendExecMessageNeverCalled();
     assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(0L));
     assertThat(responseMessage.getReturnValue(), is(nullValue()));
@@ -550,7 +549,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
-    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    verifyDispatcherConnectorSendExecMessageNeverCalled();
     assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
     assertThat(responseMessage.getReturnValue(), is(nullValue()));
@@ -580,7 +579,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
 
     // expect
-    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    verifyDispatcherConnectorSendExecMessageNeverCalled();
     assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
     assertThat(responseMessage.getReturnValue(), is(nullValue()));
@@ -730,7 +729,6 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
   }
 
   @Test
-  @Ignore("Awaiting implementation in #878")
   @Override
   public void dispatchIncoming_withoutWalIncomingRpc_sendsNeither() throws Exception {
     // Given: A dispatcher configured with WITH_WAL but without WITH_WAL_INCOMING_RPC
@@ -785,7 +783,6 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
   }
 
   @Test
-  @Ignore("Awaiting implementation in #878")
   @Override
   public void dispatchIncoming_logRpc_withWalIncomingRpc_sendsNeither() throws Exception {
     // Given: A dispatcher configured with WITH_WAL and WITH_WAL_INCOMING_RPC
