@@ -217,10 +217,11 @@ public class Main implements Callable<Integer> {
   private String wal; // corresponding ENV var: WAL
 
   /**
-   * Flag to enable writing incoming RPC calls (from ZMQ, JSON-RPC, and CLI channels) to WAL/PUB in
-   * both BEFORE and AFTER phases, consistent with the hot-path {@code dispatch()} behavior.
-   * Messages arriving via LOG_RPC are excluded; use {@code --wal-all-incoming-rpc} to include
-   * those.
+   * Flag to enable writing incoming RPC calls (from ZMQ and JSON-RPC channels) to WAL/PUB in both
+   * BEFORE and AFTER phases, consistent with the hot-path {@code dispatch()} behavior. The CLI
+   * channel ({@code SelfBootstrapInvoker}) is independently controlled by {@code
+   * --wal-incoming-cli}. Messages arriving via LOG_RPC are excluded; use {@code
+   * --wal-all-incoming-rpc} to include those.
    */
   @Option(
       names = {"--wal-incoming-rpc"},
@@ -237,6 +238,16 @@ public class Main implements Callable<Integer> {
       description =
           "Write ALL incoming RPC calls to WAL including LOG_RPC" + " (implies --wal-incoming-rpc)")
   private boolean walAllIncomingRpc = false;
+
+  /**
+   * Flag to enable writing incoming CLI bootstrap calls (from {@code SelfBootstrapInvoker}) to
+   * WAL/PUB in both BEFORE and AFTER phases. This is independent of {@code --wal-incoming-rpc},
+   * which controls ZMQ and WebSocket RPC channels.
+   */
+  @Option(
+      names = {"--wal-incoming-cli"},
+      description = "Write incoming CLI bootstrap calls to WAL")
+  private boolean walIncomingCli = false;
 
   /**
    * Specifies the WAL path for deterministic replay mode. When set, the peer re-executes the
@@ -1023,6 +1034,12 @@ public class Main implements Callable<Integer> {
       if (runOptions.contains(RunOptions.WITH_WAL)
           || runOptions.contains(RunOptions.WITH_TCP_PUB)) {
         runOptions.add(RunOptions.WITH_WAL_ALL_INCOMING_RPC);
+      }
+    }
+    if (walIncomingCli) {
+      if (runOptions.contains(RunOptions.WITH_WAL)
+          || runOptions.contains(RunOptions.WITH_TCP_PUB)) {
+        runOptions.add(RunOptions.WITH_WAL_INCOMING_CLI);
       }
     }
 

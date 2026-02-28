@@ -9,10 +9,14 @@
  */
 package io.quasient.pal.core.service;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
 
-import org.junit.Ignore;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.Set;
 import org.junit.Test;
+import picocli.CommandLine;
 
 /**
  * Tests for the {@code --wal-incoming-cli} CLI option in {@link Main}.
@@ -39,14 +43,21 @@ public class MainWalIncomingCliTest {
    * @throws Exception if reflection or parsing fails
    */
   @Test
-  @Ignore("Awaiting implementation in #877")
   public void walIncomingCliFlag_setsRunOption() throws Exception {
-    // Given: Main parsed with --wal-incoming-cli --wal my-wal -k localhost:29092
-    // When: validateInput() is invoked via reflection
-    // Then: runOptions contains WITH_WAL_INCOMING_CLI
+    Main main = new Main();
+    new CommandLine(main)
+        .parseArgs("--wal-incoming-cli", "--wal", "my-wal", "-k", "localhost:29092");
 
-    // TODO(#877): Implement test logic
-    fail("Not yet implemented");
+    Method validateInput = Main.class.getDeclaredMethod("validateInput");
+    validateInput.setAccessible(true);
+    validateInput.invoke(main);
+
+    Field runOptionsField = Main.class.getDeclaredField("runOptions");
+    runOptionsField.setAccessible(true);
+    @SuppressWarnings("unchecked")
+    Set<RunOptions> runOptions = (Set<RunOptions>) runOptionsField.get(main);
+
+    assertThat(runOptions.contains(RunOptions.WITH_WAL_INCOMING_CLI), is(true));
   }
 
   /**
@@ -62,14 +73,20 @@ public class MainWalIncomingCliTest {
    * @throws Exception if reflection or parsing fails
    */
   @Test
-  @Ignore("Awaiting implementation in #877")
   public void walIncomingCliFlag_withoutWal_doesNotSetOption() throws Exception {
-    // Given: Main parsed with --wal-incoming-cli only (no --wal, no --tcp-pub)
-    // When: validateInput() is invoked via reflection
-    // Then: runOptions does NOT contain WITH_WAL_INCOMING_CLI
+    Main main = new Main();
+    new CommandLine(main).parseArgs("--wal-incoming-cli");
 
-    // TODO(#877): Implement test logic
-    fail("Not yet implemented");
+    Method validateInput = Main.class.getDeclaredMethod("validateInput");
+    validateInput.setAccessible(true);
+    validateInput.invoke(main);
+
+    Field runOptionsField = Main.class.getDeclaredField("runOptions");
+    runOptionsField.setAccessible(true);
+    @SuppressWarnings("unchecked")
+    Set<RunOptions> runOptions = (Set<RunOptions>) runOptionsField.get(main);
+
+    assertThat(runOptions.contains(RunOptions.WITH_WAL_INCOMING_CLI), is(false));
   }
 
   /**
@@ -85,14 +102,20 @@ public class MainWalIncomingCliTest {
    * @throws Exception if reflection or parsing fails
    */
   @Test
-  @Ignore("Awaiting implementation in #877")
   public void walIncomingCliFlag_withTcpPub_setsRunOption() throws Exception {
-    // Given: Main parsed with --wal-incoming-cli --tcp-pub auto
-    // When: validateInput() is invoked via reflection
-    // Then: runOptions contains WITH_WAL_INCOMING_CLI
+    Main main = new Main();
+    new CommandLine(main).parseArgs("--wal-incoming-cli", "--tcp-pub", "auto");
 
-    // TODO(#877): Implement test logic
-    fail("Not yet implemented");
+    Method validateInput = Main.class.getDeclaredMethod("validateInput");
+    validateInput.setAccessible(true);
+    validateInput.invoke(main);
+
+    Field runOptionsField = Main.class.getDeclaredField("runOptions");
+    runOptionsField.setAccessible(true);
+    @SuppressWarnings("unchecked")
+    Set<RunOptions> runOptions = (Set<RunOptions>) runOptionsField.get(main);
+
+    assertThat(runOptions.contains(RunOptions.WITH_WAL_INCOMING_CLI), is(true));
   }
 
   /**
@@ -106,14 +129,20 @@ public class MainWalIncomingCliTest {
    * @throws Exception if reflection or parsing fails
    */
   @Test
-  @Ignore("Awaiting implementation in #877")
   public void walIncomingRpcFlag_doesNotSetCliOption() throws Exception {
-    // Given: Main parsed with --wal-incoming-rpc --wal my-wal -k localhost:29092 (no
-    //        --wal-incoming-cli)
-    // When: validateInput() is invoked via reflection
-    // Then: runOptions does NOT contain WITH_WAL_INCOMING_CLI (flags are independent)
+    Main main = new Main();
+    new CommandLine(main)
+        .parseArgs("--wal-incoming-rpc", "--wal", "my-wal", "-k", "localhost:29092");
 
-    // TODO(#877): Implement test logic
-    fail("Not yet implemented");
+    Method validateInput = Main.class.getDeclaredMethod("validateInput");
+    validateInput.setAccessible(true);
+    validateInput.invoke(main);
+
+    Field runOptionsField = Main.class.getDeclaredField("runOptions");
+    runOptionsField.setAccessible(true);
+    @SuppressWarnings("unchecked")
+    Set<RunOptions> runOptions = (Set<RunOptions>) runOptionsField.get(main);
+
+    assertThat(runOptions.contains(RunOptions.WITH_WAL_INCOMING_CLI), is(false));
   }
 }

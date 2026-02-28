@@ -63,12 +63,24 @@ public enum RunOptions {
   /**
    * Enables write-ahead logging of incoming RPC calls.
    *
-   * <p>When enabled, incoming messages from {@code ZMQ_SOCKET_RPC}, {@code WEBSOCKET_RPC}, and
-   * {@code CLI_RPC} channels are written to WAL/PUB in both BEFORE and AFTER phases, consistent
-   * with the hot-path {@code dispatch()} behavior. Messages arriving via {@code LOG_RPC} are
-   * excluded to prevent circular writes; use {@link #WITH_WAL_ALL_INCOMING_RPC} to include those.
+   * <p>When enabled, incoming messages from {@code ZMQ_SOCKET_RPC} and {@code WEBSOCKET_RPC}
+   * channels are written to WAL/PUB in both BEFORE and AFTER phases, consistent with the hot-path
+   * {@code dispatch()} behavior. The {@code CLI_RPC} channel (used by {@link
+   * io.quasient.pal.core.service.SelfBootstrapInvoker}) is independently controlled by {@link
+   * #WITH_WAL_INCOMING_CLI}. Messages arriving via {@code LOG_RPC} are excluded to prevent circular
+   * writes; use {@link #WITH_WAL_ALL_INCOMING_RPC} to include those.
    */
   WITH_WAL_INCOMING_RPC,
+
+  /**
+   * Enables write-ahead logging of incoming CLI bootstrap calls.
+   *
+   * <p>When enabled, incoming messages from the {@code CLI_RPC} channel (used by {@link
+   * io.quasient.pal.core.service.SelfBootstrapInvoker}) are written to WAL/PUB in both BEFORE and
+   * AFTER phases. This is independent of {@link #WITH_WAL_INCOMING_RPC}, which controls {@code
+   * ZMQ_SOCKET_RPC} and {@code WEBSOCKET_RPC} channels.
+   */
+  WITH_WAL_INCOMING_CLI,
 
   /**
    * Extends {@link #WITH_WAL_INCOMING_RPC} to also include {@code LOG_RPC} channel messages.

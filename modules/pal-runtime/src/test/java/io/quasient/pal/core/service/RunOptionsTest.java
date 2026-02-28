@@ -179,13 +179,13 @@ public class RunOptionsTest {
   }
 
   /**
-   * Verifies that the RunOptions enum contains all expected values after the addition of the two
-   * new WAL-incoming options and the WITH_REPLAY option.
+   * Verifies that the RunOptions enum contains all expected values after the addition of the
+   * WAL-incoming options and the WITH_REPLAY option.
    *
-   * <p>The expected total is 12 values: the 9 original options (WITH_PALDIR, WITH_ZMQ_RPC,
+   * <p>The expected total is 13 values: the 9 original options (WITH_PALDIR, WITH_ZMQ_RPC,
    * WITH_JSON_RPC, WITH_TCP_PUB, WITH_INTERCEPTS, WITH_SOURCE_LOG, WITH_WAL, WITH_SESSIONS,
-   * WITH_IN_FLIGHT_TRACKING) plus WITH_WAL_INCOMING_RPC, WITH_WAL_ALL_INCOMING_RPC, and
-   * WITH_REPLAY.
+   * WITH_IN_FLIGHT_TRACKING) plus WITH_WAL_INCOMING_RPC, WITH_WAL_INCOMING_CLI,
+   * WITH_WAL_ALL_INCOMING_RPC, and WITH_REPLAY.
    *
    * <p>Acceptance Criterion: [TEST:RunOptionsTest.enumValues_containsAllExpectedOptions]
    */
@@ -195,8 +195,8 @@ public class RunOptionsTest {
     RunOptions[] values = RunOptions.values();
 
     // When: Length is checked
-    // Then: Contains all 12 expected values
-    assertThat(values.length, is(12));
+    // Then: Contains all 13 expected values
+    assertThat(values.length, is(13));
 
     EnumSet<RunOptions> allOptions = EnumSet.allOf(RunOptions.class);
     assertThat(allOptions, hasItem(RunOptions.WITH_PALDIR));
@@ -207,6 +207,7 @@ public class RunOptionsTest {
     assertThat(allOptions, hasItem(RunOptions.WITH_SOURCE_LOG));
     assertThat(allOptions, hasItem(RunOptions.WITH_WAL));
     assertThat(allOptions, hasItem(RunOptions.WITH_WAL_INCOMING_RPC));
+    assertThat(allOptions, hasItem(RunOptions.WITH_WAL_INCOMING_CLI));
     assertThat(allOptions, hasItem(RunOptions.WITH_WAL_ALL_INCOMING_RPC));
     assertThat(allOptions, hasItem(RunOptions.WITH_SESSIONS));
     assertThat(allOptions, hasItem(RunOptions.WITH_IN_FLIGHT_TRACKING));
