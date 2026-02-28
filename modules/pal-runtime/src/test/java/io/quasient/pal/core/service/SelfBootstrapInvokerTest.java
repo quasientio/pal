@@ -22,6 +22,7 @@ import static org.mockito.Mockito.when;
 
 import io.quasient.pal.core.dispatcher.IncomingMessageDispatcher;
 import io.quasient.pal.core.execution.java.CustomClassloader;
+import io.quasient.pal.core.internal.messages.PublishedOffsetMsg;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.InstanceMethodCall;
 import io.quasient.pal.messages.colfer.Obj;
@@ -34,15 +35,20 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.jar.Attributes;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
+import org.zeromq.SocketType;
 import org.zeromq.ZContext;
+import org.zeromq.ZMQ;
 
 /**
  * Unit tests for {@link SelfBootstrapInvoker}.
@@ -539,14 +545,12 @@ public class SelfBootstrapInvokerTest {
   }
 
   // ===========================================================================
-  // Test specifications for issue #879 - Awaiting implementation in #880
+  // Offset wait behavior tests
   // ===========================================================================
 
   /**
    * Tests that callMain does NOT wait for offset when WITH_WAL is set but WITH_WAL_INCOMING_CLI is
    * NOT set.
-   *
-   * <p>Specification from issue #879:
    *
    * <ul>
    *   <li>Given: SelfBootstrapInvoker constructed with runOptions containing WITH_WAL but not
@@ -556,28 +560,43 @@ public class SelfBootstrapInvokerTest {
    *       blocking on offset publication
    * </ul>
    *
-   * <p>Context: After the fix in #877, the AFTER message for CLI_RPC is only written to WAL when
-   * WITH_WAL_INCOMING_CLI is set. If the AFTER message is not written, no offset is published for
-   * it, and the existing offset wait (lines 211-240) would block forever. This test ensures the
-   * wait is skipped when the AFTER message won't be written.
+   * <p>Context: The AFTER message for CLI_RPC is only written to WAL when WITH_WAL_INCOMING_CLI is
+   * set. If the AFTER message is not written, no offset is published for it, and the offset wait
+   * would block forever. This test ensures the wait is skipped when the AFTER message won't be
+   * written.
    */
   @Test
-  @Ignore("Awaiting implementation in #880")
-  public void callMain_withWalWithoutIncomingCli_doesNotWaitForOffset() {
+  public void callMain_withWalWithoutIncomingCli_doesNotWaitForOffset() throws Exception {
     // Given: SelfBootstrapInvoker with WITH_WAL enabled but WITHOUT WITH_WAL_INCOMING_CLI
-    //        (i.e., runOptions = EnumSet.of(RunOptions.WITH_WAL))
-    // When: callMain() is invoked with a valid class name
-    // Then: callMain completes without blocking on offset publication
-    //       (offset subscriber setup and wait loop at lines 211-240 are skipped)
+    SelfBootstrapInvoker walOnlyInvoker =
+        new SelfBootstrapInvoker(
+            peerId,
+            dispatcher,
+            messageBuilder,
+            classloader,
+            ctx,
+            "inproc://offs-wal-only",
+            EnumSet.of(RunOptions.WITH_WAL));
 
-    // TODO(#880): Implement test logic
-    fail("Not yet implemented");
+    // Mock dispatcher to return void (null) return value
+    when(dispatcher.incomingCall(any(), any(), any()))
+        .thenAnswer(
+            inv -> {
+              ExecMessage req = (ExecMessage) inv.getArguments()[0];
+              java.lang.reflect.Method voidMethod = Object.class.getMethod("wait");
+              return messageBuilder.buildReturnValue(
+                  null, voidMethod, null, false, req.getMessageId());
+            });
+
+    // When: callMain() is invoked - should complete without blocking on offset
+    int exitCode = walOnlyInvoker.callMain("com.example.TestClass", Collections.emptyList());
+
+    // Then: callMain returns without blocking on offset publication
+    assertThat(exitCode, is(EXIT_SUCCESS));
   }
 
   /**
    * Tests that callMain DOES wait for offset when both WITH_WAL and WITH_WAL_INCOMING_CLI are set.
-   *
-   * <p>Specification from issue #879:
    *
    * <ul>
    *   <li>Given: SelfBootstrapInvoker constructed with runOptions containing both WITH_WAL and
@@ -588,20 +607,73 @@ public class SelfBootstrapInvokerTest {
    * </ul>
    *
    * <p>Context: When WITH_WAL_INCOMING_CLI is enabled, the AFTER message for CLI_RPC is written to
-   * WAL, so the offset will be published. In this case, the existing offset wait behavior (lines
-   * 211-240) should remain active to ensure all messages have been durably written before the peer
-   * exits.
+   * WAL, so the offset will be published. The offset wait behavior should remain active to ensure
+   * all messages have been durably written before the peer exits.
    */
   @Test
-  @Ignore("Awaiting implementation in #880")
-  public void callMain_withWalAndIncomingCli_waitsForOffset() {
+  public void callMain_withWalAndIncomingCli_waitsForOffset() throws Exception {
     // Given: SelfBootstrapInvoker with both WITH_WAL and WITH_WAL_INCOMING_CLI enabled
-    //        (i.e., runOptions = EnumSet.of(RunOptions.WITH_WAL, RunOptions.WITH_WAL_INCOMING_CLI))
-    // When: callMain() is invoked with a valid class name
-    // Then: callMain sets up offset subscriber and waits for PublishedOffsetMsg
-    //       matching the response message ID before returning
+    String offsetAddr = "inproc://offs-wal-cli";
+    SelfBootstrapInvoker walCliInvoker =
+        new SelfBootstrapInvoker(
+            peerId,
+            dispatcher,
+            messageBuilder,
+            classloader,
+            ctx,
+            offsetAddr,
+            EnumSet.of(RunOptions.WITH_WAL, RunOptions.WITH_WAL_INCOMING_CLI));
 
-    // TODO(#880): Implement test logic
-    fail("Not yet implemented");
+    // Set up a PUB socket to publish offset messages
+    ZMQ.Socket pubSocket = ctx.createSocket(SocketType.PUB);
+    pubSocket.bind(offsetAddr);
+
+    // Capture the response message ID so we can publish a matching offset
+    AtomicReference<String> responseMessageId = new AtomicReference<>();
+    CountDownLatch dispatchComplete = new CountDownLatch(1);
+
+    // Mock dispatcher to return void (null) return value and capture message ID
+    when(dispatcher.incomingCall(any(), any(), any()))
+        .thenAnswer(
+            inv -> {
+              ExecMessage req = (ExecMessage) inv.getArguments()[0];
+              java.lang.reflect.Method voidMethod = Object.class.getMethod("wait");
+              ExecMessage response =
+                  messageBuilder.buildReturnValue(
+                      null, voidMethod, null, false, req.getMessageId());
+              responseMessageId.set(response.getMessageId());
+              dispatchComplete.countDown();
+              return response;
+            });
+
+    // When: callMain() is invoked on a separate thread (it will block waiting for offset)
+    AtomicReference<Integer> exitCodeRef = new AtomicReference<>();
+    Thread callThread =
+        new Thread(
+            () -> {
+              try {
+                exitCodeRef.set(
+                    walCliInvoker.callMain("com.example.TestClass", Collections.emptyList()));
+              } catch (PeerException e) {
+                throw new RuntimeException(e);
+              }
+            });
+    callThread.start();
+
+    // Wait for dispatch to complete so we have the response message ID
+    assertThat("Dispatch should complete", dispatchComplete.await(5, TimeUnit.SECONDS), is(true));
+
+    // Allow time for the SUB socket to connect and the offset wait loop to start
+    Thread.sleep(100);
+
+    // Publish the matching offset
+    new PublishedOffsetMsg(42L, responseMessageId.get()).send(pubSocket);
+
+    // Then: callMain should complete after receiving the matching offset
+    callThread.join(5000);
+    assertThat("callMain should have completed", callThread.isAlive(), is(false));
+    assertThat(exitCodeRef.get(), is(EXIT_SUCCESS));
+
+    pubSocket.close();
   }
 }

@@ -133,9 +133,12 @@ public class SelfBootstrapInvoker {
    * Invokes the main method of the specified Java class via a bootstrapping message.
    *
    * <p>This method builds an execution message to call the main method asynchronously on a new
-   * thread. If the runtime option for log offset synchronization is enabled, it will subscribe to
-   * offset messages to ensure log consistency. The exit value returned from the remote call is
-   * extracted from the response.
+   * thread. If both {@link RunOptions#WITH_WAL} and {@link RunOptions#WITH_WAL_INCOMING_CLI} are
+   * enabled, it subscribes to offset messages and waits for the response message's offset to be
+   * published, ensuring all messages have been durably written to the WAL before returning. When
+   * {@code WITH_WAL_INCOMING_CLI} is not set, the AFTER message for the CLI_RPC channel is not
+   * written to WAL, so no offset synchronization is performed. The exit value returned from the
+   * remote call is extracted from the response.
    *
    * @param className the fully qualified name of the class whose main method should be executed.
    * @param argList a list of arguments to pass to the main method; may be null to denote no
@@ -188,9 +191,12 @@ public class SelfBootstrapInvoker {
     invokingThread.setName("self-caller");
     invokingThread.setContextClassLoader(customClassloader);
 
-    // prepare offset subscriber
+    // prepare offset subscriber (only when the AFTER message will actually be written to WAL)
     Socket offsetSubscriber = null;
-    if (runOptions.contains(RunOptions.WITH_WAL)) {
+    boolean waitForCliOffset =
+        runOptions.contains(RunOptions.WITH_WAL)
+            && runOptions.contains(RunOptions.WITH_WAL_INCOMING_CLI);
+    if (waitForCliOffset) {
       offsetSubscriber = context.createSocket(SocketType.SUB);
       offsetSubscriber.connect(offsetPubAddress);
       offsetSubscriber.subscribe(ZMQ.SUBSCRIPTION_ALL);
@@ -208,7 +214,7 @@ public class SelfBootstrapInvoker {
     assert response != null;
 
     // wait for the response message offset, to ensure all msg's from have been written to the log
-    if (runOptions.contains(RunOptions.WITH_WAL)) {
+    if (waitForCliOffset) {
       boolean offsetPublished = false;
       long offset = -1;
       String msgId = null;
