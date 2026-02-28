@@ -22,8 +22,6 @@ import io.quasient.pal.messages.colfer.ControlMessage;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.InstanceMethodCall;
 import io.quasient.pal.messages.colfer.Message;
-import io.quasient.pal.messages.colfer.Method;
-import io.quasient.pal.messages.colfer.Reflectable;
 import io.quasient.pal.messages.colfer.ReturnValue;
 import io.quasient.pal.messages.types.MessageType;
 import java.io.IOException;
@@ -257,65 +255,6 @@ public class WalReaderTest {
     assertThat(entry.getKind(), is(WalEntryKind.OPERATION));
   }
 
-  /**
-   * Verifies that the bootstrap {@code main()} completion at the end of the WAL is filtered out
-   * when no matching {@code main()} operation exists.
-   *
-   * <p>SelfBootstrapInvoker invokes {@code main()} directly (outside AspectJ weaving), so the
-   * operation is never written to the WAL. The completion IS written, leaving an orphaned trailing
-   * entry. {@link WalReader} must filter this known artifact.
-   */
-  @Test
-  public void filtersBootstrapMainCompletion() {
-    // Given: A Chronicle queue with an OPERATION + COMPLETION pair,
-    //        followed by an orphaned main() COMPLETION (bootstrap artifact)
-    Path queuePath = tempDir.resolve("bootstrap-filter");
-    try (ChronicleQueue queue =
-        SingleChronicleQueueBuilder.single(queuePath.toFile())
-            .wireType(WireType.BINARY_LIGHT)
-            .build()) {
-      ExcerptAppender appender = queue.createAppender();
-
-      appendExecInstanceMethod(appender, "self-caller", 1, "com.example.Foo", "bar");
-      appendExecReturnValue(appender, "self-caller", 2);
-      appendExecReturnValueFromMain(appender, "self-caller", 3);
-    }
-
-    // When: WalReader.readChronicleWal(path) is called
-    List<WalEntry> entries = WalReader.readChronicleWal(queuePath);
-
-    // Then: Bootstrap main() completion is filtered out, only 2 entries remain
-    assertThat("Bootstrap main() completion should be filtered", entries.size(), is(2));
-    assertThat(entries.get(0).getKind(), is(WalEntryKind.OPERATION));
-    assertThat(entries.get(1).getKind(), is(WalEntryKind.COMPLETION));
-  }
-
-  /**
-   * Verifies that a {@code main()} completion is NOT filtered when a matching {@code main()}
-   * operation exists in the WAL (i.e., main() was invoked via AspectJ dispatch, not via
-   * SelfBootstrapInvoker).
-   */
-  @Test
-  public void preservesMainCompletionWhenMatchingOperationExists() {
-    // Given: A Chronicle queue with a main() OPERATION and main() COMPLETION (not orphaned)
-    Path queuePath = tempDir.resolve("main-with-op");
-    try (ChronicleQueue queue =
-        SingleChronicleQueueBuilder.single(queuePath.toFile())
-            .wireType(WireType.BINARY_LIGHT)
-            .build()) {
-      ExcerptAppender appender = queue.createAppender();
-
-      appendExecInstanceMethod(appender, "self-caller", 1, "com.example.App", "main");
-      appendExecReturnValueFromMain(appender, "self-caller", 2);
-    }
-
-    // When: WalReader.readChronicleWal(path) is called
-    List<WalEntry> entries = WalReader.readChronicleWal(queuePath);
-
-    // Then: Both entries preserved (main() completion is NOT filtered because operation exists)
-    assertThat("main() completion should be kept when operation exists", entries.size(), is(2));
-  }
-
   // ============================================================================
   // Kafka WAL reading tests
   // ============================================================================
@@ -474,38 +413,6 @@ public class WalReaderTest {
     assertThat(entry.getKind(), is(WalEntryKind.OPERATION));
   }
 
-  /**
-   * Verifies that the orphaned bootstrap {@code main()} completion is filtered from Kafka WAL
-   * entries.
-   *
-   * <p>This mirrors {@link #filtersBootstrapMainCompletion()} but for the Kafka reading path. A
-   * mock {@code Consumer} returns records where the last entry is an orphaned main() COMPLETION
-   * (EXEC_RETURN_VALUE with executableName="main" and no matching OPERATION). The orphaned
-   * completion should be removed from the results.
-   */
-  @Test
-  public void filtersBootstrapMainCompletionFromKafka() {
-    // Given: A mock Consumer returning records where last entry is an orphaned main() COMPLETION
-    String topic = "test-topic";
-    TopicPartition partition0 = new TopicPartition(topic, 0);
-
-    List<ConsumerRecord<String, byte[]>> records = new ArrayList<>();
-    records.add(
-        createKafkaExecInstanceMethodRecord(topic, 0, "self-caller", 1, "com.example.Foo", "bar"));
-    records.add(createKafkaExecReturnValueRecord(topic, 1, "self-caller", 2));
-    records.add(createKafkaExecReturnValueFromMainRecord(topic, 2, "self-caller", 3));
-
-    Consumer<String, byte[]> consumer = mockConsumer(partition0, 3L, records);
-
-    // When: readKafkaWal(consumer, topic) is called
-    List<WalEntry> entries = WalReader.readKafkaWal(consumer, topic);
-
-    // Then: Bootstrap main() completion is filtered out, only 2 entries remain
-    assertThat("Bootstrap main() completion should be filtered", entries.size(), is(2));
-    assertThat(entries.get(0).getKind(), is(WalEntryKind.OPERATION));
-    assertThat(entries.get(1).getKind(), is(WalEntryKind.COMPLETION));
-  }
-
   // ============================================================================
   // isChronicleLog tests
   // ============================================================================
@@ -652,46 +559,6 @@ public class WalReaderTest {
 
     ReturnValue rv = new ReturnValue();
     rv.setIsVoid(true);
-    execMsg.setReturnValue(rv);
-
-    Message wrapper =
-        new Message()
-            .withMessageType(MessageType.EXEC_RETURN_VALUE.getId())
-            .withExecMessage(execMsg);
-    OutboundMsg outboundMsg =
-        new OutboundMsg(
-            MessageType.EXEC_RETURN_VALUE,
-            ExecPhase.AFTER,
-            null,
-            execMsg.getMessageId(),
-            null,
-            wrapper);
-    outboundMsg.appendTo(appender);
-  }
-
-  /**
-   * Appends an EXEC_RETURN_VALUE message for {@code main()} to the queue (bootstrap artifact).
-   *
-   * @param appender the queue appender
-   * @param threadName the thread name
-   * @param builderSeq the builder sequence number
-   */
-  private void appendExecReturnValueFromMain(
-      ExcerptAppender appender, String threadName, int builderSeq) {
-    ExecMessage execMsg = new ExecMessage();
-    execMsg.setThreadName(threadName);
-    execMsg.setBuilderSeq(builderSeq);
-    execMsg.setPeerUuid(UUID.randomUUID().toString());
-    execMsg.setMessageId(UUID.randomUUID().toString());
-    execMsg.setCurrentTime(String.valueOf(System.currentTimeMillis()));
-
-    ReturnValue rv = new ReturnValue();
-    rv.setIsVoid(true);
-    Method mainMethod = new Method();
-    mainMethod.setName("main");
-    Reflectable from = new Reflectable();
-    from.setMethod(mainMethod);
-    rv.setFrom(from);
     execMsg.setReturnValue(rv);
 
     Message wrapper =
@@ -911,56 +778,6 @@ public class WalReaderTest {
 
     ReturnValue rv = new ReturnValue();
     rv.setIsVoid(true);
-    execMsg.setReturnValue(rv);
-
-    Message wrapper =
-        new Message()
-            .withMessageType(MessageType.EXEC_RETURN_VALUE.getId())
-            .withExecMessage(execMsg);
-
-    RecordHeaders headers = new RecordHeaders();
-    headers.add("message-type", new byte[] {MessageType.EXEC_RETURN_VALUE.getId()});
-
-    return new ConsumerRecord<>(
-        topic,
-        0,
-        offset,
-        ConsumerRecord.NO_TIMESTAMP,
-        TimestampType.NO_TIMESTAMP_TYPE,
-        -1,
-        -1,
-        null,
-        serializeMessage(wrapper),
-        headers,
-        Optional.empty());
-  }
-
-  /**
-   * Creates a Kafka {@link ConsumerRecord} for an EXEC_RETURN_VALUE message from {@code main()}
-   * (bootstrap artifact).
-   *
-   * @param topic the topic name
-   * @param offset the record offset
-   * @param threadName the thread name
-   * @param builderSeq the builder sequence number
-   * @return a consumer record with the serialized message and message-type header
-   */
-  private ConsumerRecord<String, byte[]> createKafkaExecReturnValueFromMainRecord(
-      String topic, long offset, String threadName, int builderSeq) {
-    ExecMessage execMsg = new ExecMessage();
-    execMsg.setThreadName(threadName);
-    execMsg.setBuilderSeq(builderSeq);
-    execMsg.setPeerUuid(UUID.randomUUID().toString());
-    execMsg.setMessageId(UUID.randomUUID().toString());
-    execMsg.setCurrentTime(String.valueOf(System.currentTimeMillis()));
-
-    ReturnValue rv = new ReturnValue();
-    rv.setIsVoid(true);
-    Method mainMethod = new Method();
-    mainMethod.setName("main");
-    Reflectable from = new Reflectable();
-    from.setMethod(mainMethod);
-    rv.setFrom(from);
     execMsg.setReturnValue(rv);
 
     Message wrapper =
