@@ -296,16 +296,21 @@ public class KafkaCliIT extends AbstractCliIT {
   /**
    * Tests that {@code pal call} can write to Kafka logs with PAL_DIRECTORY (Registry Mode).
    *
+   * <p>Uses split source/WAL logs with {@code --wal-all-incoming-rpc} so the peer writes LOG_RPC
+   * AFTER responses to the WAL. The caller writes to the source log and reads the response from the
+   * WAL.
+   *
    * @throws Exception if test execution fails
    */
   @Test
   public void testCallKafkaLog_withPalDirectory() throws Exception {
     String palDirectory = getPalDirectoryUrl();
     String kafkaServers = getKafkaServers();
-    String walName = "test-call-kafka-registry-" + generateId();
+    String sourceName = "test-call-kafka-registry-src-" + generateId();
+    String walName = "test-call-kafka-registry-wal-" + generateId();
     UUID peerId = UUID.randomUUID();
 
-    // Launch peer with Kafka log (keep it running)
+    // Launch peer with split Kafka logs and --wal-all-incoming-rpc
     peerProcess =
         launchPeer(
             peerId,
@@ -313,17 +318,24 @@ public class KafkaCliIT extends AbstractCliIT {
             palDirectory,
             "-k",
             kafkaServers,
-            "--log",
+            "-s",
+            sourceName,
+            "-w",
             walName,
+            "--wal-all-incoming-rpc",
             "-cp",
             getIttAppsClasspath());
 
-    // Call a method via the log using PAL_DIRECTORY (Registry Mode)
+    // Call a method via the source log, reading response from WAL
     CliProcessResult callResult =
         runCall(
             "-d",
             palDirectory,
-            "-l",
+            "-k",
+            kafkaServers,
+            "--output-log",
+            sourceName,
+            "--input-log",
             walName,
             "io.quasient.pal.apps.quantized.rpc.Methods",
             "-m",
@@ -346,16 +358,21 @@ public class KafkaCliIT extends AbstractCliIT {
   /**
    * Tests that {@code pal call} can write to Kafka logs without PAL_DIRECTORY (Direct Mode).
    *
+   * <p>Uses split source/WAL logs with {@code --wal-all-incoming-rpc} so the peer writes LOG_RPC
+   * AFTER responses to the WAL. The caller writes to the source log and reads the response from the
+   * WAL.
+   *
    * @throws Exception if test execution fails
    */
   @Test
   public void testCallKafkaLog_withoutPalDirectory() throws Exception {
     String palDirectory = getPalDirectoryUrl();
     String kafkaServers = getKafkaServers();
-    String walName = "test-call-kafka-direct-" + generateId();
+    String sourceName = "test-call-kafka-direct-src-" + generateId();
+    String walName = "test-call-kafka-direct-wal-" + generateId();
     UUID peerId = UUID.randomUUID();
 
-    // Launch peer with Kafka log (keep it running, no PAL_DIRECTORY needed for call)
+    // Launch peer with split Kafka logs and --wal-all-incoming-rpc
     peerProcess =
         launchPeer(
             peerId,
@@ -363,17 +380,22 @@ public class KafkaCliIT extends AbstractCliIT {
             palDirectory,
             "-k",
             kafkaServers,
-            "--log",
+            "-s",
+            sourceName,
+            "-w",
             walName,
+            "--wal-all-incoming-rpc",
             "-cp",
             getIttAppsClasspath());
 
-    // Call a method via the log without PAL_DIRECTORY (Direct Mode)
+    // Call a method via the source log, reading response from WAL (Direct Mode)
     CliProcessResult callResult =
         runCall(
             "-k",
             kafkaServers,
-            "-l",
+            "--output-log",
+            sourceName,
+            "--input-log",
             walName,
             "io.quasient.pal.apps.quantized.rpc.Methods",
             "-m",

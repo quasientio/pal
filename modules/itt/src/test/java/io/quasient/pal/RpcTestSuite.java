@@ -90,6 +90,12 @@ public class RpcTestSuite extends AbstractIntegrationTest {
   public static final UUID SHARED_PEER_UUID =
       UUID.fromString("00000000-0000-0000-0000-000000000001");
 
+  /** Source log name for the shared RPC peer (what the peer reads from). */
+  public static final String SHARED_PEER_SOURCE_LOG = "itt-rpc-source";
+
+  /** WAL log name for the shared RPC peer (where the peer writes output). */
+  public static final String SHARED_PEER_WAL_LOG = "itt-rpc-wal";
+
   /** Shared peer process, launched once for all tests in the suite. */
   private static PeerProcess sharedPeerProcess;
 
@@ -144,10 +150,11 @@ public class RpcTestSuite extends AbstractIntegrationTest {
             "--rpc-threads",
             "3",
             "--rpc-allow-nonpublic",
-            "--log",
-            "auto",
-            "--log-prefix",
-            "itt",
+            "--wal-all-incoming-rpc",
+            "--source-log",
+            SHARED_PEER_SOURCE_LOG,
+            "--wal",
+            SHARED_PEER_WAL_LOG,
             "-cp",
             ittAppsClasspath);
 

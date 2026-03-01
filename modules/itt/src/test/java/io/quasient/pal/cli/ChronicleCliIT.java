@@ -577,28 +577,50 @@ public class ChronicleCliIT extends AbstractCliIT {
   /**
    * Tests that {@code pal call} can write to Chronicle logs with PAL_DIRECTORY (Registry Mode).
    *
+   * <p>Uses split source/WAL logs with {@code --wal-all-incoming-rpc} so the peer writes LOG_RPC
+   * AFTER responses to the WAL. The caller writes to the source log and reads the response from the
+   * WAL.
+   *
    * @throws Exception if test execution fails
    */
   @Test
   public void testCallChronicleLog_withPalDirectory() throws Exception {
     String palDirectory = getPalDirectoryUrl();
-    String walName = "test-call-chronicle-registry-" + generateId();
+    String sourceName = "test-call-chronicle-registry-src-" + generateId();
+    String walName = "test-call-chronicle-registry-wal-" + generateId();
 
+    trackChronicleLog(sourceName);
     trackChronicleLog(walName);
 
-    // Launch peer with Chronicle log (keep it running)
+    // Pre-create the source Chronicle directory so the peer can start reading from it.
+    // Chronicle source log reader requires the directory to exist when source != WAL.
+    String palHome = System.getenv("PAL_HOME");
+    Files.createDirectories(Paths.get(palHome, sourceName));
+
+    // Launch peer with split Chronicle logs and --wal-all-incoming-rpc
     UUID peerId = UUID.randomUUID();
 
     peerProcess =
         launchPeer(
-            peerId, "-d", palDirectory, "--log", "file:" + walName, "-cp", getIttAppsClasspath());
+            peerId,
+            "-d",
+            palDirectory,
+            "-s",
+            "file:" + sourceName,
+            "-w",
+            "file:" + walName,
+            "--wal-all-incoming-rpc",
+            "-cp",
+            getIttAppsClasspath());
 
-    // Call a method via the log using PAL_DIRECTORY (Registry Mode)
+    // Call a method via the source log, reading response from WAL
     CliProcessResult callResult =
         runCall(
             "-d",
             palDirectory,
-            "-l",
+            "--output-log",
+            "file:" + sourceName,
+            "--input-log",
             "file:" + walName,
             "io.quasient.pal.apps.quantized.rpc.Methods",
             "-m",
@@ -621,19 +643,29 @@ public class ChronicleCliIT extends AbstractCliIT {
   /**
    * Tests that {@code pal call} can write to Chronicle logs without PAL_DIRECTORY (Direct Mode).
    *
+   * <p>Uses split source/WAL logs with {@code --wal-all-incoming-rpc} so the peer writes LOG_RPC
+   * AFTER responses to the WAL. The caller writes to the source log and reads the response from the
+   * WAL.
+   *
    * @throws Exception if test execution fails
    */
   @Test
   public void testCallChronicleLog_withoutPalDirectory() throws Exception {
     String palDirectory = getPalDirectoryUrl();
-    String walName = "test-call-chronicle-direct-" + generateId();
+    String sourceName = "test-call-chronicle-direct-src-" + generateId();
+    String walName = "test-call-chronicle-direct-wal-" + generateId();
 
-    // Use an absolute path to for the Log: avoids retrieving it from PalDirectory after peer launch
+    // Use absolute paths for Direct Mode
+    Path absSourcePath = Paths.get(System.getProperty("java.io.tmpdir"), sourceName);
     Path absWalPath = Paths.get(System.getProperty("java.io.tmpdir"), walName);
 
+    trackChronicleLog(absSourcePath.toString());
     trackChronicleLog(absWalPath.toString());
 
-    // Launch peer with Chronicle log (keep it running, no PAL_DIRECTORY needed)
+    // Pre-create the source Chronicle directory so the peer can start reading from it.
+    Files.createDirectories(absSourcePath);
+
+    // Launch peer with split Chronicle logs and --wal-all-incoming-rpc
     UUID peerId = UUID.randomUUID();
 
     peerProcess =
@@ -641,15 +673,20 @@ public class ChronicleCliIT extends AbstractCliIT {
             peerId,
             "-d",
             palDirectory,
-            "--log",
+            "-s",
+            "file:" + absSourcePath,
+            "-w",
             "file:" + absWalPath,
+            "--wal-all-incoming-rpc",
             "-cp",
             getIttAppsClasspath());
 
-    // Call a method via the log without PAL_DIRECTORY (Direct Mode)
+    // Call a method via the source log, reading response from WAL (Direct Mode)
     CliProcessResult callResult =
         runCall(
-            "-l",
+            "--output-log",
+            "file:" + absSourcePath,
+            "--input-log",
             "file:" + absWalPath,
             "io.quasient.pal.apps.quantized.rpc.Methods",
             "-m",

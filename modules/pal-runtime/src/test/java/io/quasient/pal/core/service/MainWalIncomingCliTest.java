@@ -119,20 +119,27 @@ public class MainWalIncomingCliTest {
   }
 
   /**
-   * Tests that the {@code --wal-incoming-rpc} flag does NOT set {@code WITH_WAL_INCOMING_CLI}.
+   * Tests that explicitly disabling {@code --no-wal-incoming-cli} prevents {@code
+   * WITH_WAL_INCOMING_CLI} from being set, even when {@code --wal-incoming-rpc} is enabled.
    *
    * <p>The {@code --wal-incoming-rpc} and {@code --wal-incoming-cli} flags are independent; each
-   * controls its own channel. Enabling one should not imply the other.
+   * controls its own channel. Disabling one does not affect the other.
    *
-   * <p>Acceptance criterion: [TEST:MainWalIncomingCliTest.walIncomingRpcFlag_doesNotSetCliOption]
+   * <p>Acceptance criterion: [TEST:MainWalIncomingCliTest.noWalIncomingCliFlag_doesNotSetCliOption]
    *
    * @throws Exception if reflection or parsing fails
    */
   @Test
-  public void walIncomingRpcFlag_doesNotSetCliOption() throws Exception {
+  public void noWalIncomingCliFlag_doesNotSetCliOption() throws Exception {
     Main main = new Main();
     new CommandLine(main)
-        .parseArgs("--wal-incoming-rpc", "--wal", "my-wal", "-k", "localhost:29092");
+        .parseArgs(
+            "--no-wal-incoming-cli",
+            "--wal-incoming-rpc",
+            "--wal",
+            "my-wal",
+            "-k",
+            "localhost:29092");
 
     Method validateInput = Main.class.getDeclaredMethod("validateInput");
     validateInput.setAccessible(true);

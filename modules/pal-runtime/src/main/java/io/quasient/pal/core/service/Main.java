@@ -217,16 +217,17 @@ public class Main implements Callable<Integer> {
   private String wal; // corresponding ENV var: WAL
 
   /**
-   * Flag to enable writing incoming RPC calls (from ZMQ and JSON-RPC channels) to WAL/PUB in both
-   * BEFORE and AFTER phases, consistent with the hot-path {@code dispatch()} behavior. The CLI
-   * channel ({@code SelfBootstrapInvoker}) is independently controlled by {@code
-   * --wal-incoming-cli}. Messages arriving via LOG_RPC are excluded; use {@code
-   * --wal-all-incoming-rpc} to include those.
+   * Flag to enable writing incoming RPC calls (from ZMQ, JSON-RPC, and CLI channels) to WAL/PUB in
+   * both BEFORE and AFTER phases, consistent with the hot-path {@code dispatch()} behavior.
+   * Messages arriving via LOG_RPC are excluded; use {@code --wal-all-incoming-rpc} to include
+   * those.
    */
   @Option(
       names = {"--wal-incoming-rpc"},
+      negatable = true,
+      fallbackValue = "true",
       description = "Write incoming RPC calls to WAL (in addition to locally-initiated calls)")
-  private boolean walIncomingRpc = false;
+  private boolean walIncomingRpc = true;
 
   /**
    * Flag to enable writing ALL incoming RPC calls to WAL/PUB, including LOG_RPC channel messages.
@@ -246,8 +247,10 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--wal-incoming-cli"},
+      negatable = true,
+      fallbackValue = "true",
       description = "Write incoming CLI bootstrap calls to WAL")
-  private boolean walIncomingCli = false;
+  private boolean walIncomingCli = true;
 
   /**
    * Specifies the WAL path for deterministic replay mode. When set, the peer re-executes the

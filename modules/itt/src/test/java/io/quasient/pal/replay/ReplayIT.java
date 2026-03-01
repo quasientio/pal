@@ -154,6 +154,8 @@ public class ReplayIT extends AbstractCliIT {
     }
     args.add("--wal");
     args.add(walSpec);
+    // Disable CLI bootstrap writes to WAL so only application messages appear in the recording.
+    args.add("--no-wal-incoming-cli");
     args.add("-cp");
     args.add(getIttAppsClasspath());
     args.add(testApp.mainClass);

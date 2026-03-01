@@ -1291,13 +1291,23 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     peerProcess =
         launchPeer(
-            peerId, "-d", palDirectory, "--wal", walPath, "-cp", getIttAppsClasspath(), classToRun);
+            peerId,
+            "-d",
+            palDirectory,
+            "--no-wal-incoming-cli",
+            "--wal",
+            walPath,
+            "-cp",
+            getIttAppsClasspath(),
+            classToRun);
 
     int peerExitCode = joinPeer(peerProcess, 10);
     assertEquals("Expected successful peer exit code", 0, peerExitCode);
     peerProcess = null;
 
-    // Print offset 0 (alwaysThrows() call) with its matching return
+    // Print offset 0 (alwaysThrows() call) with its matching return.
+    // --no-wal-incoming-cli prevents the CLI_RPC main() BEFORE/AFTER from appearing in the WAL,
+    // so offset 0 is the first hot-path operation (alwaysThrows()).
     AbstractCliIT.CliProcessResult printResult =
         runPrint("-d", palDirectory, "-l", walName, "-o", "0", "--with-return", "--full");
 
@@ -1335,6 +1345,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
             palDirectory,
             "-k",
             kafkaServers,
+            "--no-wal-incoming-cli",
             "--wal",
             walName,
             "-cp",
@@ -1345,7 +1356,9 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
     assertEquals("Expected successful peer exit code", 0, peerExitCode);
     peerProcess = null;
 
-    // Print offset 0 (alwaysThrows() call) with its matching return
+    // Print offset 0 (alwaysThrows() call) with its matching return.
+    // --no-wal-incoming-cli prevents the CLI_RPC main() BEFORE/AFTER from appearing in the WAL,
+    // so offset 0 is the first hot-path operation (alwaysThrows()).
     AbstractCliIT.CliProcessResult printResult =
         runPrint("-d", palDirectory, "-l", walName, "-o", "0", "--with-return", "--full");
 

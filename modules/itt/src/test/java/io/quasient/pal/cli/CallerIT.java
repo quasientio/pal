@@ -14,6 +14,8 @@ import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertEquals;
 
 import io.quasient.pal.PeerProcess;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Locale;
 import java.util.UUID;
 import org.junit.After;
@@ -142,13 +144,14 @@ public class CallerIT extends AbstractCliIT {
             "-cp",
             getIttAppsClasspath());
 
-    // Call a method targeting the log
+    // Call a void method targeting the log with --forget-response (LOG_RPC AFTER is gated)
     AbstractCliIT.CliProcessResult callResult =
         runCall(
             "-d",
             palDirectory,
             "-l",
             logName,
+            "--forget-response",
             "io.quasient.pal.apps.quantized.rpc.Methods",
             "staticVoidWithStringArg",
             "test-to-log");
@@ -934,13 +937,15 @@ public class CallerIT extends AbstractCliIT {
             "-cp",
             getIttAppsClasspath());
 
-    // When: `pal call --log <log-name>` to write message to Kafka log
+    // When: `pal call --log <log-name>` to write message to Kafka log (--forget-response
+    // because LOG_RPC AFTER is gated)
     AbstractCliIT.CliProcessResult callResult =
         runCall(
             "-d",
             palDirectory,
             "-l",
             logName,
+            "--forget-response",
             "io.quasient.pal.apps.quantized.rpc.Methods",
             "staticVoidWithStringArg",
             "kafka-log-test-message");
@@ -972,33 +977,50 @@ public class CallerIT extends AbstractCliIT {
    */
   @Test
   public void testCall_toChronicleLog_writesMessage() throws Exception {
-    // Given: Chronicle log path
+    // Given: Chronicle log path (split source/WAL for LOG_RPC response delivery)
     String palDirectory = getPalDirectoryUrl();
 
-    // Use file: URI scheme for Chronicle log (note: single colon, no double slash)
-    String walName = "test-call-chronicle-caller-" + generateId();
+    String sourceName = "test-call-chronicle-caller-src-" + generateId();
+    String walName = "test-call-chronicle-caller-wal-" + generateId();
+    trackChronicleLog(sourceName);
     trackChronicleLog(walName);
 
-    // Launch a peer with Chronicle log (use --log to register in directory)
+    // Pre-create the source Chronicle directory so the peer can start reading from it.
+    // Chronicle source log reader requires the directory to exist when source != WAL.
+    String palHome = System.getenv("PAL_HOME");
+    Files.createDirectories(Paths.get(palHome, sourceName));
+
+    // Launch a peer with split Chronicle logs and --wal-all-incoming-rpc
     UUID peerId = UUID.randomUUID();
     peerProcess =
         launchPeer(
-            peerId, "-d", palDirectory, "--log", "file:" + walName, "-cp", getIttAppsClasspath());
+            peerId,
+            "-d",
+            palDirectory,
+            "-s",
+            "file:" + sourceName,
+            "-w",
+            "file:" + walName,
+            "--wal-all-incoming-rpc",
+            "-cp",
+            getIttAppsClasspath());
 
-    // When: `pal call --log file:test-log` to write message to Chronicle log
+    // When: `pal call` writes to source log, reads response from WAL
     // Use -m to specify method name for CLI mode (requires String[] signature)
     AbstractCliIT.CliProcessResult callResult =
         runCall(
             "-d",
             palDirectory,
-            "-l",
+            "--output-log",
+            "file:" + sourceName,
+            "--input-log",
             "file:" + walName,
             "io.quasient.pal.apps.quantized.rpc.Methods",
             "-m",
             "staticStringWithStringArgs",
             "chronicle-log-test-message");
 
-    // Then: Exit code 0; message appears in Chronicle log
+    // Then: Exit code 0; response received from WAL
     assertEquals("Expected successful call to Chronicle log", 0, callResult.exitCode());
     assertThat(
         "Expected result in output",

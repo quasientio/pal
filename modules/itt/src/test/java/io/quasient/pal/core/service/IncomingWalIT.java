@@ -162,26 +162,28 @@ public class IncomingWalIT extends AbstractCliIT {
   }
 
   /**
-   * Verifies backward compatibility: only AFTER message written to WAL without {@code
-   * --wal-incoming-rpc} flag.
+   * Verifies that with {@code --no-wal-incoming-rpc}, neither BEFORE nor AFTER messages for
+   * incoming RPC calls are written to WAL. Only hot-path messages from the method's internal
+   * execution appear in the WAL.
    *
-   * <p>Given: Same setup but WITHOUT {@code --wal-incoming-rpc} flag
+   * <p>Given: Same setup but with {@code --no-wal-incoming-rpc} to explicitly disable incoming WAL
    *
    * <p>When: Same {@code pal call} invoked
    *
-   * <p>Then: {@code pal print} shows only the AFTER message (backward compatibility preserved)
+   * <p>Then: {@code pal print} shows only hot-path messages from internal execution (e.g., {@code
+   * String.join}), not the incoming RPC's BEFORE or AFTER messages
    *
    * @throws Exception if test execution fails
    */
   @Test
-  public void incomingRpc_withoutWalIncomingRpc_writesOnlyAfterToWal() throws Exception {
+  public void incomingRpc_withoutWalIncomingRpc_writesNoIncomingRpcToWal() throws Exception {
     String palDirectory = getPalDirectoryUrl();
     String kafkaServers = getKafkaServers();
     String walName = "test-iwal-after-" + generateId();
     String peerName = "test-iwal-after-" + generateId();
     UUID peerId = UUID.randomUUID();
 
-    // Given: Peer launched WITHOUT --wal-incoming-rpc flag (default behavior)
+    // Given: Peer launched with --no-wal-incoming-rpc to disable incoming RPC WAL writes
     peerProcess =
         launchPeer(
             peerId,
@@ -193,6 +195,7 @@ public class IncomingWalIT extends AbstractCliIT {
             peerName,
             "--wal",
             walName,
+            "--no-wal-incoming-rpc",
             "--zmq-rpc",
             "auto",
             "--as-service",
@@ -222,7 +225,7 @@ public class IncomingWalIT extends AbstractCliIT {
 
     Thread.sleep(1000);
 
-    // Then: WAL contains only the AFTER message (no BEFORE for incoming RPC)
+    // Then: WAL contains no incoming RPC messages (symmetric gating of BEFORE and AFTER)
     CliProcessResult printResult = runPrint("-d", palDirectory, "-l", walName);
     assertEquals("Expected successful print", 0, printResult.exitCode());
 
@@ -232,10 +235,19 @@ public class IncomingWalIT extends AbstractCliIT {
         "Expected no BEFORE message for processArgs",
         output,
         not(containsString("call Methods.processArgs")));
-    // AFTER message should still be present (existing behavior unchanged)
-    assertThat("Expected AFTER message with return value", output, containsString("PROCESSED"));
+    // Without --wal-incoming-rpc, NO AFTER message for incoming RPC either (symmetric gating)
+    assertThat(
+        "Expected no AFTER message for incoming RPC processArgs",
+        output,
+        not(containsString("PROCESSED")));
+    // Hot-path messages from internal execution should still be present
+    assertThat(
+        "Expected hot-path messages from internal execution",
+        output,
+        containsString("String.join"));
 
-    logger.info("Successfully verified backward compatibility: only AFTER in WAL without flag");
+    logger.info(
+        "Successfully verified symmetric WAL gating: no incoming RPC messages without flag");
   }
 
   /**

@@ -100,6 +100,12 @@ public class ThinPeerIT extends AbstractIntegrationTest {
   public static final UUID SHARED_PEER_UUID =
       UUID.fromString("00000000-0000-0000-0000-000000000004");
 
+  /** Source log name for the shared peer (what the peer reads from). */
+  private static final String SHARED_PEER_SOURCE_LOG = "itt-thinpeer-source";
+
+  /** WAL log name for the shared peer (where the peer writes output). */
+  private static final String SHARED_PEER_WAL_LOG = "itt-thinpeer-wal";
+
   /** Shared peer process for tests that need RPC peers. */
   private static PeerProcess sharedPeerProcess;
 
@@ -147,10 +153,11 @@ public class ThinPeerIT extends AbstractIntegrationTest {
             "--rpc-threads",
             "3",
             "--rpc-allow-nonpublic",
-            "--log",
-            "auto",
-            "--log-prefix",
-            "itt",
+            "--wal-all-incoming-rpc",
+            "--source-log",
+            "itt-thinpeer-source",
+            "--wal",
+            "itt-thinpeer-wal",
             "-cp",
             ittAppsClasspath);
 
@@ -578,17 +585,21 @@ public class ThinPeerIT extends AbstractIntegrationTest {
 
   /**
    * Tests sending an ExecMessage to a log and receiving the response from a peer that reads from
-   * that log. Uses the shared peer's log (with prefix "itt") that the peer is already reading from.
+   * that log. The shared peer uses separate source and WAL logs with {@code
+   * --wal-all-incoming-rpc}, so the ThinPeer writes to the source log and reads the response from
+   * the WAL.
    */
   @Test
   public void testSendExecMessageToLogAndReceive() throws Exception {
     Properties consumerProperties = getKafkaConsumerProperties();
     Properties producerProperties = getKafkaProducerProperties();
 
-    // Find the shared peer's log (created with prefix "itt")
-    LogInfo sharedPeerLog = palDirectory.getLatestLogWithPrefix("itt");
-    assertNotNull("Shared peer log should exist", sharedPeerLog);
-    logger.info("Using shared peer log: {}", sharedPeerLog.getName());
+    // The shared peer reads from "itt-thinpeer-source" and writes WAL to "itt-thinpeer-wal"
+    LogInfo sourceLog = palDirectory.getLogInfo(SHARED_PEER_SOURCE_LOG);
+    assertNotNull("Shared peer source log should exist", sourceLog);
+    LogInfo walLog = palDirectory.getLogInfo(SHARED_PEER_WAL_LOG);
+    assertNotNull("Shared peer WAL log should exist", walLog);
+    logger.info("Using source log: {}, WAL log: {}", sourceLog.getName(), walLog.getName());
 
     ThinPeer tp = null;
     try {
@@ -597,7 +608,8 @@ public class ThinPeerIT extends AbstractIntegrationTest {
               .withDirectoryProvider(directoryConnectionProvider)
               .withConsumerProperties(consumerProperties)
               .withProducerProperties(producerProperties)
-              .withLog(sharedPeerLog)
+              .withOutputLog(sourceLog)
+              .withInputLog(walLog)
               .withOutboundRpcType(RpcType.ZMQ_RPC)
               .init();
 

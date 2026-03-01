@@ -15,6 +15,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import io.quasient.pal.RpcTestSuite;
+import io.quasient.pal.common.directory.nodes.LogInfo;
 import io.quasient.pal.common.directory.nodes.PeerInfo;
 import io.quasient.pal.common.objects.ObjectRef;
 import io.quasient.pal.cxn.ThinPeer;
@@ -84,13 +85,22 @@ public abstract class AbstractJsonRpcMessageIT extends AbstractRpcMessageIT
     if (jsonRpcPeer == null) {
       throw new RuntimeException("Shared RPC test peer not found in directory after 5 seconds");
     }
+    // Look up the shared peer's separate source and WAL logs
+    PalDirectory palDir =
+        directoryConnectionProvider
+            .get()
+            .orElseThrow(() -> new RuntimeException("Could not connect to directory"));
+    LogInfo sourceLog = palDir.getLogInfo(RpcTestSuite.SHARED_PEER_SOURCE_LOG);
+    LogInfo walLog = palDir.getLogInfo(RpcTestSuite.SHARED_PEER_WAL_LOG);
+
     thinPeer =
         new ThinPeer()
             .withUuid(clientId)
             .withDirectoryProvider(directoryConnectionProvider)
             .withConsumerProperties(consumerProperties)
             .withProducerProperties(producerProperties)
-            .withLogPrefix("itt")
+            .withOutputLog(sourceLog)
+            .withInputLog(walLog)
             .withInitialPeer(jsonRpcPeer)
             .withOutboundRpcType(RpcType.JSON_RPC)
             .withWebsocketConnectionLostTimeout(-1) // deactivate timeout for slow CI envs
