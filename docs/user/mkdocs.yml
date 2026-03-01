@@ -12,6 +12,7 @@ nav:
     - Log Backends: concepts/logs.md
   - Guides:
     - Local Development: guides/local-development.md
+    - Deterministic Replay: guides/deterministic-replay.md
     - Distributed Application: guides/distributed-application.md
     - Testing with Interception: guides/testing-with-interception.md
     - Writing Callback Handlers: guides/writing-callback-handlers.md

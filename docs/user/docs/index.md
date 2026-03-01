@@ -226,26 +226,34 @@ Guide: [Testing with Interception](guides/testing-with-interception.md)
 | `pal call` | Send RPC calls to peers or logs |
 | `pal print` | Print messages from logs or peer streams |
 | `pal ls` | List registered peers and logs |
+| `pal replay` | Replay application and verify against recorded WAL |
+| `pal wal-index` | Analyze WAL structure and entry pairing |
 | `pal rm` | Remove peers or logs from directory |
 
 See [CLI Reference](cli-reference.md) for complete documentation.
 
 ## Example Workflows
 
-### Capture Execution to Log
+### Capture and Replay Execution
 
 ```bash
 # Run with WAL
 pal run --wal file:/tmp/execution-log \
   -cp app.jar com.example.Main arg1 arg2
 
-# Replay later
+# Replay and verify execution against the WAL
+pal replay --wal file:/tmp/execution-log \
+  -cp app.jar com.example.Main arg1 arg2
+
+# Or replay individual operations from the WAL
 pal run --source-log file:/tmp/execution-log \
   -cp app.jar
 
-# Or print to see what happened
+# Print to see what happened
 pal print -l file:/tmp/execution-log --full
 ```
+
+Guide: [Deterministic Replay](guides/deterministic-replay.md)
 
 ### Distributed RPC
 

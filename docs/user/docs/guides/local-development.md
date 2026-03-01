@@ -196,6 +196,18 @@ pal run --source-log file:/tmp/dev-wal \
 
 All logged operations are re-executed.
 
+### Deterministic Replay
+
+For verifying that code changes don't alter behavior, use `pal replay` instead. This re-runs the application from `main()` and verifies every operation against the recorded WAL:
+
+```bash
+pal replay --wal file:/tmp/dev-wal \
+  -cp target/myapp-1.0-SNAPSHOT.jar \
+  com.example.HelloService hello world
+```
+
+Exit code `0` means the execution matched the WAL exactly. Exit code `2` means divergences were detected. See the [Deterministic Replay Guide](deterministic-replay.md) for full details.
+
 ## Fast Iteration Loop
 
 ### 1. Edit Code
@@ -406,6 +418,9 @@ pal run --wal file:session1 -cp target/classes com.example.Main input1
 
 # Replay multiple times while debugging
 pal run --source-log file:session1 -cp target/classes com.example.Main
+
+# Or use deterministic replay to verify behavior
+pal replay --wal file:session1 -cp target/classes com.example.Main input1
 ```
 
 No need to re-create test data.
@@ -559,6 +574,7 @@ mvn package
 ## Further Reading
 
 - [Concepts: Log Backends](../concepts/logs.md) - Deep dive into Chronicle vs Kafka
+- [Deterministic Replay](deterministic-replay.md) - Verify code changes against recorded WALs
 - [Testing with Interception](testing-with-interception.md) - Automated testing patterns
 - [Distributed Application Guide](distributed-application.md) - Moving to production
 - [CLI Reference](../cli-reference.md) - All `pal run` options

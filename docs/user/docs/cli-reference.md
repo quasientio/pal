@@ -71,6 +71,8 @@ pal print -k localhost:29092 -l my-log
 | `pal print` | ✓ | ✓ | Both Chronicle and Kafka |
 | `pal call` | ✓ | ✓ | Both Chronicle and Kafka |
 | `pal rm` | ✓ | ✓ | Both Chronicle and Kafka |
+| `pal replay` | ✓ | ✓ | Both Chronicle and Kafka |
+| `pal wal-index` | ✓ | ✓ | Both Chronicle and Kafka |
 
 ## pal run - WAL Options
 
@@ -749,6 +751,198 @@ Cannot remove peer my-peer (uuid): peer is alive (has active lease). Use --force
 - **Return code**: Returns the number of errors encountered (0 = success)
 - **Direct mode**: Removes from backing store only (doesn't unregister from PAL directory if it was registered there)
 - **Registry mode vs Direct mode**: Use registry mode for full cleanup (unregister + delete backing store), use direct mode for quick local log deletion
+
+---
+
+## pal replay - Deterministic WAL Replay
+
+Re-execute an application from `main()` while verifying every operation against a previously recorded WAL. The WAL acts as an oracle: each operation that the application performs is matched against the corresponding WAL entry, and the return value is compared. Any difference is reported as a divergence.
+
+This is not "playing back a recording." The application runs naturally from `main()`, hitting the same AspectJ call sites as during the original execution. The replay system verifies that every operation produces the same result.
+
+### Synopsis
+
+```bash
+pal replay [OPTIONS] class [args...]
+```
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `-w, --wal <name\|file:/path>` | **(Required)** WAL to replay from. Use `file:/path` for Chronicle Queue or a topic name for Kafka |
+| `-k, --kafka-servers <host:port>` | Kafka bootstrap servers (required for Kafka WAL topics without `-d`) |
+| `--divergence-policy <WARN\|HALT\|IGNORE>` | Action on divergence (default: `WARN`) |
+| `-cp, --classpath <CLASSPATH>` | **(Required)** Classpath for the application |
+
+### Positional Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `class` | **(Required)** Fully qualified main class to replay |
+| `args...` | Application arguments passed to `main()` |
+
+### Divergence Policies
+
+| Policy | Behavior |
+|--------|----------|
+| `WARN` | Log each divergence to stderr and continue (default) |
+| `HALT` | Stop immediately on the first divergence |
+| `IGNORE` | Silently record divergences without logging |
+
+### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Replay completed with zero divergences |
+| `1` | Application error (missing class, uncaught exception) |
+| `2` | Divergences detected between live execution and WAL |
+
+### How It Works
+
+1. The WAL is loaded and indexed. Operations and their return values are paired (each method call is matched to its return value entry).
+2. The application starts from `main()` with the provided arguments.
+3. At every quantized operation (method call, constructor, field access), the replay system:
+   - Matches the live operation's signature against the next expected WAL entry
+   - Executes the operation normally
+   - Compares the actual return value against the WAL-recorded value
+   - Reports a divergence if they differ
+4. After the application completes, a divergence report is printed to stderr (if any).
+
+### Examples
+
+#### Replay from Chronicle Queue
+
+```bash
+# Step 1: Record a WAL
+pal run --wal file:/tmp/my-wal -cp target/classes com.example.App arg1 arg2
+
+# Step 2: Replay from the recorded WAL
+pal replay --wal file:/tmp/my-wal -cp target/classes com.example.App arg1 arg2
+```
+
+#### Replay from Kafka
+
+```bash
+# Step 1: Record to Kafka
+pal run -d localhost:2379 -k localhost:29092 --wal my-topic \
+  -cp app.jar com.example.App
+
+# Step 2: Replay from Kafka (with explicit servers)
+pal replay --wal my-topic -k localhost:29092 \
+  -cp app.jar com.example.App
+
+# Or with PAL directory (resolves Kafka servers automatically)
+pal replay -d localhost:2379 --wal my-topic \
+  -cp app.jar com.example.App
+```
+
+#### Detecting Divergences
+
+```bash
+# Record with one set of arguments
+pal run --wal file:/tmp/baseline -cp target/classes com.example.App input-A
+
+# Replay with different arguments — produces divergences
+pal replay --wal file:/tmp/baseline -cp target/classes com.example.App input-B
+# Exit code: 2
+# stderr shows: [VALUE_MISMATCH] offset=N: expected "X" but got "Y"
+```
+
+#### Halt on First Divergence
+
+```bash
+pal replay --wal file:/tmp/my-wal --divergence-policy HALT \
+  -cp target/classes com.example.App
+```
+
+### Notes
+
+- Replay is **read-only**: no new WAL is written during replay. The recorded WAL is consumed but not modified.
+- The application must be compiled with the same AspectJ weaving as during recording. Class version mismatches will surface as operation mismatches.
+- Replay currently supports **single-threaded** applications (Phase 1). Multi-threaded replay is planned.
+- When recording a WAL intended for replay, use `--no-wal-incoming-cli` if you want the WAL to contain only the hot-path operations (excluding the bootstrap `main()` wrapper). This is often the right choice for cleaner replay matching.
+
+---
+
+## pal wal-index - Analyze WAL Structure
+
+Index a WAL and print a structural summary: entry counts, operation/completion pairing, threads, and any structural issues (orphaned or unmatched entries).
+
+### Synopsis
+
+```bash
+pal wal-index [OPTIONS] file:/path             # Chronicle Queue
+pal wal-index -k <servers> [OPTIONS] <topic>   # Kafka
+pal wal-index -d <url> [OPTIONS] <name>        # PalDirectory
+```
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `-k, --kafka-servers <host:port>` | Kafka bootstrap servers (required for Kafka topics without `-d`) |
+| `-v, --verbose` | Show per-entry detail listing before the summary |
+
+### Positional Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `name\|file:/path` | **(Required)** Log path: `file:/path` for Chronicle Queue, or topic name for Kafka |
+
+### Output
+
+**Summary** (always printed):
+
+```
+WAL Index Summary
+  Entries:     142
+  Operations:  71
+  Completions: 71
+  Pairs:       71
+  Threads:     [main]
+  Issues:      0
+```
+
+- **Entries**: Total WAL entries
+- **Operations**: Entries that open a scope (method calls, constructors, field access)
+- **Completions**: Entries that close a scope (return values, exceptions, field-write confirmations)
+- **Pairs**: Number of matched operation/completion pairs
+- **Threads**: Thread names found in the WAL
+- **Issues**: Structural problems (orphaned completions without a matching operation, or operations without a completion)
+
+**Verbose** (`-v`, printed before summary):
+
+```
+[0] OPERATION main MinimalReceiptCalculator.main(String[])
+[1] OPERATION main MinimalReceiptCalculator.parseCart(String[])
+[2] OPERATION main HashMap.new()
+[3] COMPLETION main HashMap
+...
+```
+
+Each entry shows: `[offset] kind threadName className.executableName(paramTypes)`
+
+### Examples
+
+```bash
+# Analyze a Chronicle WAL
+pal wal-index file:/tmp/my-wal
+
+# Analyze with per-entry detail
+pal wal-index --verbose file:/tmp/my-wal
+
+# Analyze a Kafka WAL
+pal wal-index -k localhost:29092 my-topic
+
+# Analyze via PAL directory
+pal wal-index -d localhost:2379 my-log-name
+```
+
+### Notes
+
+- A balanced WAL has equal Operations and Completions counts and zero Issues. Imbalances indicate the application was interrupted mid-execution or the WAL was truncated.
+- This command is useful for verifying a WAL before replay, and for understanding the structure of recorded executions.
 
 ---
 
