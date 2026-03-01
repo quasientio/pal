@@ -22,12 +22,12 @@ import org.junit.Test;
 public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
 
   protected final String className = "io.quasient.pal.apps.quantized.rpc.Constructors";
-  private static int messageId = 0;
 
   @Test
   public void constructor_invalidJson_parseErrorThrown() throws Exception {
 
     // missing comma after "method": "new"
+    String requestId = generateId();
     String request =
         """
                      {
@@ -39,12 +39,12 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
                       }
                     }
                     """
-            .formatted(++messageId, className);
+            .formatted(requestId, className);
 
-    JsonRpcResponse responseMessage = sendAndReceive(request, String.valueOf(messageId));
+    JsonRpcResponse responseMessage = sendAndReceive(request, requestId);
 
     assertErrorResponse(
-        messageId,
+        requestId,
         responseMessage,
         JsonRpcErrorCode.PARSE_ERROR,
         null,
@@ -55,6 +55,7 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
   public void constructor_invalidRequestNoMethod_invalidJsonRpcRequestThrown() throws Exception {
 
     // missing method field
+    String requestId = generateId();
     String request =
         """
                      {
@@ -65,12 +66,12 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
                       }
                     }
                     """
-            .formatted(++messageId, className);
+            .formatted(requestId, className);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
-        messageId, responseMessage, JsonRpcErrorCode.INVALID_REQUEST, null, "Method is missing");
+        requestId, responseMessage, JsonRpcErrorCode.INVALID_REQUEST, null, "Method is missing");
   }
 
   @Test
@@ -78,6 +79,7 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
       throws Exception {
 
     // missing method field
+    String requestId = generateId();
     String request =
         """
                      {
@@ -89,12 +91,12 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
                       }
                     }
                     """
-            .formatted(++messageId, className);
+            .formatted(requestId, className);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
-        messageId,
+        requestId,
         responseMessage,
         JsonRpcErrorCode.INVALID_REQUEST,
         null,
@@ -103,6 +105,7 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
 
   @Test
   public void constructor_constructor3DoublesDoesNotExist_noSuchMethodThrown() throws Exception {
+    String requestId = generateId();
     String request =
         """
                      {
@@ -119,12 +122,12 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
                       }
                     }
                     """
-            .formatted(++messageId, className);
+            .formatted(requestId, className);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
-        messageId,
+        requestId,
         responseMessage,
         JsonRpcErrorCode.METHOD_NOT_FOUND,
         "java.lang.NoSuchMethodException",
@@ -134,6 +137,7 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
   @Test
   public void constructor_noSuchClass_classNotFoundThrown() throws Exception {
     String nonExistingClass = "io.quasient.pal.apps.IDontExist";
+    String requestId = generateId();
     String request =
         """
                      {
@@ -145,12 +149,12 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
                       }
                     }
                     """
-            .formatted(++messageId, nonExistingClass);
+            .formatted(requestId, nonExistingClass);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
-        messageId,
+        requestId,
         responseMessage,
         JsonRpcErrorCode.METHOD_NOT_FOUND,
         "java.lang.ClassNotFoundException",
@@ -159,6 +163,7 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
 
   @Test
   public void constructor_missingParams_invalidParamsThrown() throws Exception {
+    String requestId = generateId();
     String request =
         """
                      {
@@ -167,16 +172,17 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
                       "method": "new"
                     }
                     """
-            .formatted(++messageId);
+            .formatted(requestId);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
-        messageId, responseMessage, JsonRpcErrorCode.INVALID_PARAMS, null, "Params are missing");
+        requestId, responseMessage, JsonRpcErrorCode.INVALID_PARAMS, null, "Params are missing");
   }
 
   @Test
   public void constructor_missingTypeInParams_invalidParamsThrown() throws Exception {
+    String requestId = generateId();
     String request =
         """
                          {
@@ -190,12 +196,12 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
                           }
                         }
                         """
-            .formatted(++messageId);
+            .formatted(requestId);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
-        messageId,
+        requestId,
         responseMessage,
         JsonRpcErrorCode.INVALID_PARAMS,
         null,
@@ -204,6 +210,7 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
 
   @Test
   public void constructor_invalidCharsInType_invalidParamsThrown() throws Exception {
+    String requestId = generateId();
     String request =
         """
                              {
@@ -215,12 +222,12 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
                               }
                             }
                             """
-            .formatted(++messageId);
+            .formatted(requestId);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
-        messageId,
+        requestId,
         responseMessage,
         JsonRpcErrorCode.INVALID_PARAMS,
         null,
@@ -229,6 +236,7 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
 
   @Test
   public void constructor_reservedKeywordInType_invalidParamsThrown() throws Exception {
+    String requestId = generateId();
     String request =
         """
                                  {
@@ -240,12 +248,12 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
                                   }
                                 }
                                 """
-            .formatted(++messageId);
+            .formatted(requestId);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
-        messageId,
+        requestId,
         responseMessage,
         JsonRpcErrorCode.INVALID_PARAMS,
         null,
@@ -254,6 +262,7 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
 
   @Test
   public void constructor_callWithoutMethod_invalidParamsThrown() throws Exception {
+    String requestId = generateId();
     String request =
         """
                                      {
@@ -265,12 +274,12 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
                                       }
                                     }
                                     """
-            .formatted(++messageId, className);
+            .formatted(requestId, className);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
-        messageId,
+        requestId,
         responseMessage,
         JsonRpcErrorCode.INVALID_PARAMS,
         null,
@@ -279,6 +288,7 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
 
   @Test
   public void constructor_getWithoutField_invalidParamsThrown() throws Exception {
+    String requestId = generateId();
     String request =
         """
                                      {
@@ -290,12 +300,12 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
                                       }
                                     }
                                     """
-            .formatted(++messageId, className);
+            .formatted(requestId, className);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
-        messageId,
+        requestId,
         responseMessage,
         JsonRpcErrorCode.INVALID_PARAMS,
         null,
@@ -304,6 +314,7 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
 
   @Test
   public void constructor_putWithoutField_invalidParamsThrown() throws Exception {
+    String requestId = generateId();
     String request =
         """
                                      {
@@ -316,12 +327,12 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
                                       }
                                     }
                                     """
-            .formatted(++messageId, className);
+            .formatted(requestId, className);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
-        messageId,
+        requestId,
         responseMessage,
         JsonRpcErrorCode.INVALID_PARAMS,
         null,
@@ -330,6 +341,7 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
 
   @Test
   public void constructor_putWithoutValue_invalidParamsThrown() throws Exception {
+    String requestId = generateId();
     String request =
         """
                                      {
@@ -342,12 +354,12 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
                                       }
                                     }
                                     """
-            .formatted(++messageId, className);
+            .formatted(requestId, className);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
-        messageId,
+        requestId,
         responseMessage,
         JsonRpcErrorCode.INVALID_PARAMS,
         null,

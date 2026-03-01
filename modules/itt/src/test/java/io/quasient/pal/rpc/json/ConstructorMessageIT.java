@@ -38,14 +38,14 @@ public class ConstructorMessageIT extends AbstractJsonRpcMessageIT {
         """
                      {
                       "jsonrpc": "2.0",
-                      "id": 1,
+                      "id": %s,
                       "method": "new",
                       "params": {
                         "type": "%s"
                       }
                     }
                     """
-            .formatted(className);
+            .formatted(generateId(), className);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -63,7 +63,7 @@ public class ConstructorMessageIT extends AbstractJsonRpcMessageIT {
         """
                      {
                       "jsonrpc": "2.0",
-                      "id": 1,
+                      "id": %s,
                       "method": "new",
                       "params": {
                         "type": "%s",
@@ -73,7 +73,7 @@ public class ConstructorMessageIT extends AbstractJsonRpcMessageIT {
                       }
                     }
                     """
-            .formatted(className);
+            .formatted(generateId(), className);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -91,7 +91,7 @@ public class ConstructorMessageIT extends AbstractJsonRpcMessageIT {
         """
                      {
                       "jsonrpc": "2.0",
-                      "id": 1,
+                      "id": %s,
                       "method": "new",
                       "params": {
                         "type": "%s",
@@ -101,7 +101,7 @@ public class ConstructorMessageIT extends AbstractJsonRpcMessageIT {
                       }
                     }
                     """
-            .formatted(className);
+            .formatted(generateId(), className);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -119,7 +119,7 @@ public class ConstructorMessageIT extends AbstractJsonRpcMessageIT {
         """
                      {
                       "jsonrpc": "2.0",
-                      "id": 1,
+                      "id": %s,
                       "method": "new",
                       "params": {
                         "type": "%s",
@@ -129,7 +129,7 @@ public class ConstructorMessageIT extends AbstractJsonRpcMessageIT {
                       }
                     }
                     """
-            .formatted(className);
+            .formatted(generateId(), className);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -149,14 +149,14 @@ public class ConstructorMessageIT extends AbstractJsonRpcMessageIT {
         """
                      {
                       "jsonrpc": "2.0",
-                      "id": 1,
+                      "id": %s,
                       "method": "new",
                       "params": {
                         "type": "%s"
                       }
                     }
                     """
-            .formatted(className);
+            .formatted(generateId(), className);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
     // assert that the result is not null
@@ -172,7 +172,7 @@ public class ConstructorMessageIT extends AbstractJsonRpcMessageIT {
         """
                      {
                       "jsonrpc": "2.0",
-                      "id": 1,
+                      "id": %s,
                       "method": "new",
                       "params": {
                         "type": "%s",
@@ -182,7 +182,7 @@ public class ConstructorMessageIT extends AbstractJsonRpcMessageIT {
                       }
                     }
                     """
-            .formatted(className, instanceId);
+            .formatted(generateId(), className, instanceId);
     responseMessage = sendAndReceive(request);
     logger.debug("responseMessage: {}", responseMessage);
 

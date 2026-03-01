@@ -26,7 +26,7 @@ import javax.annotation.Nullable;
 public interface JsonRpcMessageAssertions {
 
   default void assertErrorResponse(
-      Integer requestId,
+      Object requestId,
       JsonRpcResponse response,
       JsonRpcErrorCode expectedErrorCode,
       String expectedThrowableType,
@@ -40,7 +40,7 @@ public interface JsonRpcMessageAssertions {
   }
 
   default void assertErrorResponse(
-      Integer requestId,
+      Object requestId,
       JsonRpcResponse response,
       JsonRpcErrorCode expectedErrorCode,
       @Nullable String expectedThrowableType) {

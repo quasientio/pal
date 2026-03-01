@@ -22,7 +22,6 @@ import org.junit.runners.Parameterized;
 @RunWith(Parameterized.class)
 public class GetMessageIT extends AbstractJsonRpcMessageIT {
 
-  private static int messageId = 0;
   private static final String CLASS_NAME = "io.quasient.pal.apps.rpc.Variables";
 
   public GetMessageIT(TargetType targetType) {
@@ -46,10 +45,10 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
                 "type": "%s",
                 "field": "%s"
               },
-              "id": %d
+              "id": %s
             }
             """
-            .formatted(CLASS_NAME, fieldName, ++messageId);
+            .formatted(CLASS_NAME, fieldName, generateId());
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -68,10 +67,10 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
                 "type": "%s",
                 "field": "%s"
               },
-              "id": %d
+              "id": %s
             }
             """
-            .formatted(CLASS_NAME, fieldName, ++messageId);
+            .formatted(CLASS_NAME, fieldName, generateId());
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -90,10 +89,10 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
                 "type": "%s",
                 "field": "%s"
               },
-              "id": %d
+              "id": %s
             }
             """
-            .formatted(CLASS_NAME, fieldName, ++messageId);
+            .formatted(CLASS_NAME, fieldName, generateId());
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -112,10 +111,10 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
                 "type": "%s",
                 "field": "%s"
               },
-              "id": %d
+              "id": %s
             }
             """
-            .formatted(CLASS_NAME, fieldName, ++messageId);
+            .formatted(CLASS_NAME, fieldName, generateId());
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -134,10 +133,10 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
                 "type": "%s",
                 "field": "%s"
               },
-              "id": %d
+              "id": %s
             }
             """
-            .formatted(CLASS_NAME, fieldName, ++messageId);
+            .formatted(CLASS_NAME, fieldName, generateId());
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -148,6 +147,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
   public void getClassVariable_noSuchClass_exThrown() throws Exception {
     String nonExistingClass = "io.quasient.pal.apps.IDontExist";
     String fieldName = "aProtectedBool";
+    String requestId = generateId();
     String request =
         """
             {
@@ -157,15 +157,15 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
                 "type": "%s",
                 "field": "%s"
               },
-              "id": %d
+              "id": %s
             }
             """
-            .formatted(nonExistingClass, fieldName, ++messageId);
+            .formatted(nonExistingClass, fieldName, requestId);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
-        messageId,
+        requestId,
         responseMessage,
         JsonRpcErrorCode.METHOD_NOT_FOUND,
         "java.lang.ClassNotFoundException",
@@ -175,6 +175,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
   @Test
   public void getClassVariable_noSuchField_exThrown() throws Exception {
     String fieldName = "aMadeUpField";
+    String requestId = generateId();
     String request =
         """
             {
@@ -184,15 +185,15 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
                 "type": "%s",
                 "field": "%s"
               },
-              "id": %d
+              "id": %s
             }
             """
-            .formatted(CLASS_NAME, fieldName, ++messageId);
+            .formatted(CLASS_NAME, fieldName, requestId);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
-        messageId,
+        requestId,
         responseMessage,
         JsonRpcErrorCode.METHOD_NOT_FOUND,
         "java.lang.NoSuchFieldException",
@@ -212,10 +213,10 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
               "params": {
                 "type": "%s"
               },
-              "id": %d
+              "id": %s
             }
             """
-            .formatted(CLASS_NAME, ++messageId);
+            .formatted(CLASS_NAME, generateId());
 
     JsonRpcResponse createResponse = sendAndReceive(createRequest);
 
@@ -236,10 +237,10 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
                 "field": "%s",
                 "instance": %d
               },
-              "id": %d
+              "id": %s
             }
             """
-            .formatted(CLASS_NAME, fieldName, instanceRef, ++messageId);
+            .formatted(CLASS_NAME, fieldName, instanceRef, generateId());
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -259,10 +260,10 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
               "params": {
                 "type": "%s"
               },
-              "id": %d
+              "id": %s
             }
             """
-            .formatted(CLASS_NAME, ++messageId);
+            .formatted(CLASS_NAME, generateId());
 
     JsonRpcResponse createResponse = sendAndReceive(createRequest);
 
@@ -283,10 +284,10 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
                 "field": "%s",
                 "instance": %d
               },
-              "id": %d
+              "id": %s
             }
             """
-            .formatted(CLASS_NAME, fieldName, instanceRef, ++messageId);
+            .formatted(CLASS_NAME, fieldName, instanceRef, generateId());
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -306,10 +307,10 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
               "params": {
                 "type": "%s"
               },
-              "id": %d
+              "id": %s
             }
             """
-            .formatted(CLASS_NAME, ++messageId);
+            .formatted(CLASS_NAME, generateId());
 
     JsonRpcResponse createResponse = sendAndReceive(createRequest);
 
@@ -330,10 +331,10 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
                 "field": "%s",
                 "instance": %d
               },
-              "id": %d
+              "id": %s
             }
             """
-            .formatted(CLASS_NAME, fieldName, instanceRef, ++messageId);
+            .formatted(CLASS_NAME, fieldName, instanceRef, generateId());
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -353,10 +354,10 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
               "params": {
                 "type": "%s"
               },
-              "id": %d
+              "id": %s
             }
             """
-            .formatted(CLASS_NAME, ++messageId);
+            .formatted(CLASS_NAME, generateId());
 
     JsonRpcResponse createResponse = sendAndReceive(createRequest);
 
@@ -377,10 +378,10 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
                 "field": "%s",
                 "instance": %d
               },
-              "id": %d
+              "id": %s
             }
             """
-            .formatted(CLASS_NAME, fieldName, instanceRef, ++messageId);
+            .formatted(CLASS_NAME, fieldName, instanceRef, generateId());
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -400,10 +401,10 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
               "params": {
                 "type": "%s"
               },
-              "id": %d
+              "id": %s
             }
             """
-            .formatted(CLASS_NAME, ++messageId);
+            .formatted(CLASS_NAME, generateId());
 
     JsonRpcResponse createResponse = sendAndReceive(createRequest);
 
@@ -424,10 +425,10 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
                 "field": "%s",
                 "instance": %d
               },
-              "id": %d
+              "id": %s
             }
             """
-            .formatted(CLASS_NAME, fieldName, instanceRef, ++messageId);
+            .formatted(CLASS_NAME, fieldName, instanceRef, generateId());
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -447,10 +448,10 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
               "params": {
                 "type": "%s"
               },
-              "id": %d
+              "id": %s
             }
             """
-            .formatted(CLASS_NAME, ++messageId);
+            .formatted(CLASS_NAME, generateId());
 
     JsonRpcResponse createResponse = sendAndReceive(createRequest);
 
@@ -471,10 +472,10 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
                 "field": "%s",
                 "instance": %d
               },
-              "id": %d
+              "id": %s
             }
             """
-            .formatted(CLASS_NAME, fieldName, instanceRef, ++messageId);
+            .formatted(CLASS_NAME, fieldName, instanceRef, generateId());
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -494,10 +495,10 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
               "params": {
                 "type": "%s"
               },
-              "id": %d
+              "id": %s
             }
             """
-            .formatted(CLASS_NAME, ++messageId);
+            .formatted(CLASS_NAME, generateId());
 
     JsonRpcResponse createResponse = sendAndReceive(createRequest);
 
@@ -518,10 +519,10 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
                 "field": "%s",
                 "instance": %d
               },
-              "id": %d
+              "id": %s
             }
             """
-            .formatted(CLASS_NAME, fieldName, instanceRef, ++messageId);
+            .formatted(CLASS_NAME, fieldName, instanceRef, generateId());
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -542,10 +543,10 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
               "params": {
                 "type": "%s"
               },
-              "id": %d
+              "id": %s
             }
             """
-            .formatted(CLASS_NAME, ++messageId);
+            .formatted(CLASS_NAME, generateId());
 
     JsonRpcResponse createResponse = sendAndReceive(createRequest);
     assertNotNull(createResponse.getResult());
@@ -554,6 +555,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
     assertNotNull(instanceRef);
 
     // Attempt to get a field from a non-existing class
+    String requestId = generateId();
     String request =
         """
             {
@@ -564,15 +566,15 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
                 "field": "%s",
                 "instance": %d
               },
-              "id": %d
+              "id": %s
             }
             """
-            .formatted(nonExistingClass, fieldName, instanceRef, ++messageId);
+            .formatted(nonExistingClass, fieldName, instanceRef, requestId);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
-        messageId,
+        requestId,
         responseMessage,
         JsonRpcErrorCode.METHOD_NOT_FOUND,
         "java.lang.ClassNotFoundException",
@@ -587,6 +589,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
     int fakeInstanceRef = 38923;
 
     // Attempt to get the field
+    String requestId = generateId();
     String request =
         """
             {
@@ -597,15 +600,15 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
                 "field": "%s",
                 "instance": %d
               },
-              "id": %d
+              "id": %s
             }
             """
-            .formatted(CLASS_NAME, fieldName, fakeInstanceRef, ++messageId);
+            .formatted(CLASS_NAME, fieldName, fakeInstanceRef, requestId);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
-        messageId,
+        requestId,
         responseMessage,
         JsonRpcErrorCode.SERVER_ERROR,
         "java.lang.NullPointerException",
@@ -625,10 +628,10 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
               "params": {
                 "type": "%s"
               },
-              "id": %d
+              "id": %s
             }
             """
-            .formatted(CLASS_NAME, ++messageId);
+            .formatted(CLASS_NAME, generateId());
 
     JsonRpcResponse createResponse = sendAndReceive(createRequest);
     assertNotNull(createResponse.getResult());
@@ -637,6 +640,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
     assertNotNull(instanceRef);
 
     // Attempt to get a non-existing field
+    String requestId = generateId();
     String request =
         """
             {
@@ -647,15 +651,15 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
                 "field": "%s",
                 "instance": %d
               },
-              "id": %d
+              "id": %s
             }
             """
-            .formatted(CLASS_NAME, fieldName, instanceRef, ++messageId);
+            .formatted(CLASS_NAME, fieldName, instanceRef, requestId);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
     assertErrorResponse(
-        messageId,
+        requestId,
         responseMessage,
         JsonRpcErrorCode.METHOD_NOT_FOUND,
         "java.lang.NoSuchFieldException",

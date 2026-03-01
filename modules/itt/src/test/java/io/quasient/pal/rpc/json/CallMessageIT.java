@@ -31,7 +31,6 @@ import org.junit.runners.Parameterized;
 @RunWith(Parameterized.class)
 public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
-  private static int messageId = 0;
   private static final String CLASS_NAME = "io.quasient.pal.apps.quantized.rpc.Methods";
 
   public CallMessageIT(TargetType targetType) {
@@ -50,7 +49,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "%s",
@@ -61,7 +60,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME, methodName);
+            .formatted(generateId(), CLASS_NAME, methodName);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -80,7 +79,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "%s",
@@ -92,7 +91,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME, methodName);
+            .formatted(generateId(), CLASS_NAME, methodName);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -111,7 +110,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "%s",
@@ -119,7 +118,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME, methodName);
+            .formatted(generateId(), CLASS_NAME, methodName);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -138,7 +137,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "%s",
@@ -149,7 +148,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME, methodName);
+            .formatted(generateId(), CLASS_NAME, methodName);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -170,14 +169,14 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "new",
               "params": {
                 "type": "java.util.ArrayList"
               }
             }
             """
-            .formatted(++messageId);
+            .formatted(generateId());
 
     JsonRpcResponse createResponse = sendAndReceive(createRequest);
 
@@ -196,7 +195,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
           """
               {
                 "jsonrpc": "2.0",
-                "id": %d,
+                "id": %s,
                 "method": "call",
                 "params": {
                   "type": "java.util.ArrayList",
@@ -208,7 +207,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
                 }
               }
               """
-              .formatted(++messageId, listRef, someInt);
+              .formatted(generateId(), listRef, someInt);
 
       JsonRpcResponse addResponse = sendAndReceive(addRequest);
       // Assert that the result is not null
@@ -220,7 +219,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "%s",
@@ -231,7 +230,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME, methodName, listRef);
+            .formatted(generateId(), CLASS_NAME, methodName, listRef);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -252,7 +251,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "%s",
@@ -260,7 +259,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, nonExistingClass, methodName);
+            .formatted(generateId(), nonExistingClass, methodName);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -291,7 +290,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "%s",
@@ -299,7 +298,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME, methodName);
+            .formatted(generateId(), CLASS_NAME, methodName);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -330,7 +329,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "%s",
@@ -338,7 +337,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME, methodName);
+            .formatted(generateId(), CLASS_NAME, methodName);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -369,7 +368,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "%s",
@@ -380,7 +379,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME, methodName, param);
+            .formatted(generateId(), CLASS_NAME, methodName, param);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -405,7 +404,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "%s",
@@ -413,7 +412,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME, methodName);
+            .formatted(generateId(), CLASS_NAME, methodName);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -439,14 +438,14 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "new",
               "params": {
                 "type": "java.util.ArrayList"
               }
             }
             """
-            .formatted(++messageId);
+            .formatted(generateId());
 
     JsonRpcResponse createResponse = sendAndReceive(createRequest);
     assertNotNull(createResponse.getResult());
@@ -462,7 +461,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
           """
               {
                 "jsonrpc": "2.0",
-                "id": %d,
+                "id": %s,
                 "method": "call",
                 "params": {
                   "type": "java.util.ArrayList",
@@ -474,7 +473,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
                 }
               }
               """
-              .formatted(++messageId, listRef, someInt);
+              .formatted(generateId(), listRef, someInt);
 
       JsonRpcResponse addResponse = sendAndReceive(addRequest);
       assertNotNull(addResponse.getResult());
@@ -485,7 +484,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "%s",
@@ -496,7 +495,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME, methodName, listRef);
+            .formatted(generateId(), CLASS_NAME, methodName, listRef);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -522,14 +521,14 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "new",
               "params": {
                 "type": "java.util.ArrayList"
               }
             }
             """
-            .formatted(++messageId);
+            .formatted(generateId());
 
     JsonRpcResponse createResponse = sendAndReceive(createRequest);
     assertNotNull(createResponse.getResult());
@@ -544,7 +543,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "java.util.Collections",
@@ -557,7 +556,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
             }
             """
             .formatted(
-                ++messageId,
+                generateId(),
                 listRef,
                 someIntegers.getClass().getName(),
                 arrayToJsonString(someIntegers, false));
@@ -570,7 +569,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "%s",
@@ -581,7 +580,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME, methodName, listRef);
+            .formatted(generateId(), CLASS_NAME, methodName, listRef);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -606,7 +605,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "%s",
@@ -614,7 +613,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME, methodName);
+            .formatted(generateId(), CLASS_NAME, methodName);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -639,7 +638,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "%s",
@@ -650,7 +649,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME, methodName, param);
+            .formatted(generateId(), CLASS_NAME, methodName, param);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -675,7 +674,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "%s",
@@ -683,7 +682,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME, methodName);
+            .formatted(generateId(), CLASS_NAME, methodName);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -708,7 +707,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "%s",
@@ -716,7 +715,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME, methodName);
+            .formatted(generateId(), CLASS_NAME, methodName);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -741,7 +740,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "%s",
@@ -749,7 +748,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME, methodName);
+            .formatted(generateId(), CLASS_NAME, methodName);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
     assertNotNull(responseMessage.getResult());
@@ -763,7 +762,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "%s",
@@ -771,7 +770,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME, methodName);
+            .formatted(generateId(), CLASS_NAME, methodName);
 
     responseMessage = sendAndReceive(request);
     assertNotNull(responseMessage.getResult());
@@ -793,7 +792,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "%s",
@@ -801,7 +800,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME, methodName);
+            .formatted(generateId(), CLASS_NAME, methodName);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
     assertNotNull(responseMessage.getResult());
@@ -824,7 +823,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "java.lang.Integer",
@@ -835,7 +834,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, methodName, param);
+            .formatted(generateId(), methodName, param);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -865,7 +864,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "%s",
@@ -873,7 +872,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME, methodName);
+            .formatted(generateId(), CLASS_NAME, methodName);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -902,14 +901,14 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "new",
               "params": {
                 "type": "%s"
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME);
+            .formatted(generateId(), CLASS_NAME);
 
     JsonRpcResponse createResponse = sendAndReceive(createRequest);
     assertNotNull(createResponse.getResult());
@@ -922,7 +921,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "%s",
@@ -931,7 +930,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME, methodName, instanceRef);
+            .formatted(generateId(), CLASS_NAME, methodName, instanceRef);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -953,14 +952,14 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "new",
               "params": {
                 "type": "%s"
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME);
+            .formatted(generateId(), CLASS_NAME);
 
     JsonRpcResponse createResponse = sendAndReceive(createRequest);
     assertNotNull(createResponse.getResult());
@@ -973,7 +972,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "%s",
@@ -985,7 +984,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME, methodName, instanceRef, param);
+            .formatted(generateId(), CLASS_NAME, methodName, instanceRef, param);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -1006,14 +1005,14 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "new",
               "params": {
                 "type": "%s"
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME);
+            .formatted(generateId(), CLASS_NAME);
 
     JsonRpcResponse createResponse = sendAndReceive(createRequest);
     assertNotNull(createResponse.getResult());
@@ -1026,7 +1025,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "%s",
@@ -1035,7 +1034,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME, methodName, instanceRef);
+            .formatted(generateId(), CLASS_NAME, methodName, instanceRef);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -1056,14 +1055,14 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "new",
               "params": {
                 "type": "%s"
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME);
+            .formatted(generateId(), CLASS_NAME);
 
     JsonRpcResponse createResponse = sendAndReceive(createRequest);
     assertNotNull(createResponse.getResult());
@@ -1076,7 +1075,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "%s",
@@ -1088,7 +1087,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME, methodName, instanceRef);
+            .formatted(generateId(), CLASS_NAME, methodName, instanceRef);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -1118,14 +1117,14 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "new",
               "params": {
                 "type": "%s"
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME);
+            .formatted(generateId(), CLASS_NAME);
 
     JsonRpcResponse createResponse = sendAndReceive(createRequest);
     assertNotNull(createResponse.getResult());
@@ -1138,7 +1137,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "%s",
@@ -1150,7 +1149,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, nonExistingClass, methodName, instanceRef);
+            .formatted(generateId(), nonExistingClass, methodName, instanceRef);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -1182,14 +1181,14 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "new",
               "params": {
                 "type": "%s"
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME);
+            .formatted(generateId(), CLASS_NAME);
 
     JsonRpcResponse createResponse = sendAndReceive(createRequest);
     assertNotNull(createResponse.getResult());
@@ -1202,7 +1201,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "%s",
@@ -1211,7 +1210,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME, methodName, instanceRef);
+            .formatted(generateId(), CLASS_NAME, methodName, instanceRef);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -1246,7 +1245,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "%s",
@@ -1255,7 +1254,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME, methodName, fakeInstanceRef);
+            .formatted(generateId(), CLASS_NAME, methodName, fakeInstanceRef);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -1284,14 +1283,14 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "new",
               "params": {
                 "type": "%s"
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME);
+            .formatted(generateId(), CLASS_NAME);
 
     JsonRpcResponse createResponse = sendAndReceive(createRequest);
     assertNotNull(createResponse.getResult());
@@ -1304,7 +1303,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "%s",
@@ -1313,7 +1312,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME, methodName, instanceRef);
+            .formatted(generateId(), CLASS_NAME, methodName, instanceRef);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -1339,14 +1338,14 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "new",
               "params": {
                 "type": "%s"
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME);
+            .formatted(generateId(), CLASS_NAME);
 
     JsonRpcResponse createResponse = sendAndReceive(createRequest);
     assertNotNull(createResponse.getResult());
@@ -1359,7 +1358,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "%s",
@@ -1368,7 +1367,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME, methodName, instanceRef);
+            .formatted(generateId(), CLASS_NAME, methodName, instanceRef);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -1391,14 +1390,14 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "new",
               "params": {
                 "type": "%s"
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME);
+            .formatted(generateId(), CLASS_NAME);
 
     JsonRpcResponse createResponse = sendAndReceive(createRequest);
     assertNotNull(createResponse.getResult());
@@ -1411,7 +1410,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "%s",
@@ -1420,7 +1419,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME, methodName, instanceRef);
+            .formatted(generateId(), CLASS_NAME, methodName, instanceRef);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
@@ -1443,14 +1442,14 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "new",
               "params": {
                 "type": "java.util.ArrayList"
               }
             }
             """
-            .formatted(++messageId);
+            .formatted(generateId());
 
     JsonRpcResponse createListResponse = sendAndReceive(createListRequest);
     assertNotNull(createListResponse.getResult());
@@ -1465,7 +1464,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
           """
               {
                 "jsonrpc": "2.0",
-                "id": %d,
+                "id": %s,
                 "method": "call",
                 "params": {
                   "type": "java.util.ArrayList",
@@ -1477,7 +1476,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
                 }
               }
               """
-              .formatted(++messageId, listRef, someInt);
+              .formatted(generateId(), listRef, someInt);
 
       JsonRpcResponse addResponse = sendAndReceive(addRequest);
       assertNotNull(addResponse.getResult());
@@ -1488,14 +1487,14 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "new",
               "params": {
                 "type": "%s"
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME);
+            .formatted(generateId(), CLASS_NAME);
 
     JsonRpcResponse createInstanceResponse = sendAndReceive(createInstanceRequest);
     assertNotNull(createInstanceResponse.getResult());
@@ -1509,7 +1508,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "%s",
@@ -1522,7 +1521,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME, methodName, instanceRef, offsetParam, listRef);
+            .formatted(generateId(), CLASS_NAME, methodName, instanceRef, offsetParam, listRef);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
     assertNotNull(responseMessage.getResult());
@@ -1546,14 +1545,14 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "new",
               "params": {
                 "type": "%s"
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME);
+            .formatted(generateId(), CLASS_NAME);
 
     JsonRpcResponse createInstanceResponse = sendAndReceive(createInstanceRequest);
     assertNotNull(createInstanceResponse.getResult());
@@ -1569,7 +1568,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
         """
             {
               "jsonrpc": "2.0",
-              "id": %d,
+              "id": %s,
               "method": "call",
               "params": {
                 "type": "%s",
@@ -1581,7 +1580,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
               }
             }
             """
-            .formatted(++messageId, CLASS_NAME, methodName, instanceRef, param);
+            .formatted(generateId(), CLASS_NAME, methodName, instanceRef, param);
 
     JsonRpcResponse responseMessage = sendAndReceive(request);
 
