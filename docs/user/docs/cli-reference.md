@@ -1,6 +1,6 @@
 # CLI Reference
 
-PAL provides a command-line interface for managing peers, logs, and remote procedure calls. This reference documents all CLI subcommands except `pal run` (covered in the Getting Started guide).
+PAL provides a command-line interface for managing peers, logs, and remote procedure calls. For a hands-on introduction to `pal run`, see the [Getting Started](getting-started.md) guide. This reference covers all CLI subcommands, starting with `pal run` WAL options.
 
 ## Overview
 
@@ -71,6 +71,62 @@ pal print -k localhost:29092 -l my-log
 | `pal print` | ✓ | ✓ | Both Chronicle and Kafka |
 | `pal call` | ✓ | ✓ | Both Chronicle and Kafka |
 | `pal rm` | ✓ | ✓ | Both Chronicle and Kafka |
+
+## pal run - WAL Options
+
+The `pal run` command starts a new peer. The [Getting Started](getting-started.md) guide covers basic usage. This section documents the WAL (Write-Ahead Log) options that control which messages are written to the log.
+
+### WAL Incoming Message Flags
+
+By default, when a WAL is configured (`--wal`), PAL writes **all** messages to it: both locally-initiated operations (from the peer's own application code) and incoming operations (from RPC calls or CLI bootstrap). These flags let you control which incoming messages are written.
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--wal-incoming-rpc` / `--no-wal-incoming-rpc` | `true` | Write incoming RPC calls to WAL. Covers ZMQ-RPC and JSON-RPC (WebSocket) channels. Does **not** include messages arriving via source log replay (`LOG_RPC`). |
+| `--wal-incoming-cli` / `--no-wal-incoming-cli` | `true` | Write incoming CLI bootstrap calls to WAL. Covers the `main()` invocation initiated by `SelfBootstrapInvoker` when a main class is specified on the command line. |
+| `--wal-all-incoming-rpc` | `false` | Write **all** incoming RPC calls to WAL, including `LOG_RPC` (source log replay). Implies `--wal-incoming-rpc`. Has a built-in circularity guard: if the source log and WAL are the same log, this option is ignored to prevent infinite feedback loops. |
+
+These flags only take effect when a WAL or TCP PUB destination is configured (i.e., `--wal` or `--tcp-pub` is specified). Without a destination, the flags are silently ignored.
+
+### When to Use These Flags
+
+**Default behavior (all enabled)** is correct for most use cases: the WAL captures a complete record of everything the peer did, regardless of how the operation was initiated.
+
+Disable `--wal-incoming-rpc` when:
+
+- You want the WAL to only contain locally-initiated operations
+- The caller is already logging the RPC on its side
+
+Disable `--wal-incoming-cli` when:
+
+- You don't need the bootstrap `main()` call recorded in the WAL
+- You want the WAL to start recording only after the application is initialized
+
+Enable `--wal-all-incoming-rpc` when:
+
+- You are consuming from one log (source) and writing to a different log (WAL)
+- You want replayed messages to be re-published to the WAL for downstream consumers
+
+### Examples
+
+```bash
+# Default: all incoming messages written to WAL
+pal run -k localhost:29092 --wal my-wal --json-rpc auto -cp app.jar com.example.Main
+
+# Disable WAL writes for incoming RPC (only locally-initiated operations logged)
+pal run -k localhost:29092 --wal my-wal --no-wal-incoming-rpc --json-rpc auto \
+  -cp app.jar com.example.Main
+
+# Disable WAL writes for the CLI bootstrap main() call
+pal run -k localhost:29092 --wal my-wal --no-wal-incoming-cli --json-rpc auto \
+  -cp app.jar com.example.Main
+
+# Consume from one Kafka topic, re-publish all messages (including replayed) to another
+pal run -k localhost:29092 --source-log input-topic --wal output-topic \
+  --wal-all-incoming-rpc -cp app.jar
+```
+
+---
 
 ## pal ls - List Peers and Logs
 

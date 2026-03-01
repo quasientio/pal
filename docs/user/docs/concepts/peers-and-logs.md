@@ -189,6 +189,30 @@ pal run --source-log file:/tmp/peer-wal \
 
 Starts from offset 1000 instead of the beginning.
 
+### Controlling What Gets Written to the WAL
+
+By default, the WAL records **everything** the peer does: operations from the peer's own application code, incoming RPC calls from other peers, and the initial `main()` bootstrap call. You can control this with three flags:
+
+```bash
+# Default: all incoming messages are logged to WAL
+pal run --wal file:/tmp/my-wal -cp app.jar com.example.Main
+
+# Don't log incoming RPC calls to WAL (only locally-initiated operations)
+pal run --wal file:/tmp/my-wal --no-wal-incoming-rpc --json-rpc auto \
+  -cp app.jar com.example.Main
+
+# Don't log the bootstrap main() call to WAL
+pal run --wal file:/tmp/my-wal --no-wal-incoming-cli -cp app.jar com.example.Main
+```
+
+| Flag | Default | What it controls |
+|------|---------|------------------|
+| `--wal-incoming-rpc` | On | Incoming RPC calls (ZMQ, WebSocket) |
+| `--wal-incoming-cli` | On | The `main()` bootstrap call |
+| `--wal-all-incoming-rpc` | Off | Extends RPC logging to include source log replay |
+
+See the [CLI Reference](../cli-reference.md#pal-run---wal-options) for full details and examples.
+
 ## Source Logs vs WALs
 
 - **WAL (Write-Ahead Log)**: What this peer writes
