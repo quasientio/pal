@@ -123,6 +123,12 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
         LogInfo logToDelete = palDirectory.getLogInfo(chronicleDir.toString());
         if (logToDelete != null) {
           absChronicleDirPath = Path.of(palDirectory.getLogInfo(chronicleDir.toString()).getName());
+        } else {
+          // Fallback: resolve against PAL_HOME (peer process working directory)
+          String palHome = System.getenv("PAL_HOME");
+          if (palHome != null) {
+            absChronicleDirPath = Path.of(palHome).resolve(chronicleDir);
+          }
         }
       }
 
