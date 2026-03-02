@@ -106,6 +106,10 @@ public class MainReplayInputInjectorsTest {
 
     assertThat(threads, hasSize(2));
 
+    // In the real flow, dispatchIncoming() counts down the injector ready latch after loading
+    // the target class. Simulate this by counting it down here so injectors can proceed.
+    replayContext.countDownInjectorLatch();
+
     // Wait for threads to finish
     for (Thread t : threads) {
       t.join(5000);
@@ -148,6 +152,9 @@ public class MainReplayInputInjectorsTest {
 
     assertThat(threads, hasSize(1));
     assertThat(threads.get(0).isDaemon(), is(true));
+
+    // Count down the injector ready latch so the thread can proceed and finish.
+    replayContext.countDownInjectorLatch();
 
     for (Thread t : threads) {
       t.join(5000);
@@ -210,6 +217,10 @@ public class MainReplayInputInjectorsTest {
 
     assertThat(threads, hasSize(1));
 
+    // In the real flow, dispatchIncoming() counts down the injector ready latch after loading
+    // the target class. Simulate this by counting it down here so injectors can proceed.
+    replayContext.countDownInjectorLatch();
+
     for (Thread t : threads) {
       t.join(5000);
     }
@@ -245,6 +256,9 @@ public class MainReplayInputInjectorsTest {
 
     assertThat(threads, hasSize(1));
     assertThat(threads.get(0).getContextClassLoader(), is(cl));
+
+    // Count down the injector ready latch so the thread can proceed and finish.
+    replayContext.countDownInjectorLatch();
 
     for (Thread t : threads) {
       t.join(5000);

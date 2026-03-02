@@ -701,6 +701,14 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         exceptionWhileLoading = ex;
       }
 
+      // After the loading phase, the target class is initialized (static initializers have run).
+      // Count down the injector ready latch so replay input injector threads can proceed.
+      // This ensures class static initialization runs on the self-caller thread (matching
+      // the recording) before any injector thread can trigger class loading.
+      if (replayContext != null && runOptions.contains(RunOptions.WITH_REPLAY)) {
+        replayContext.countDownInjectorLatch();
+      }
+
       // Process BEFORE intercept callbacks and apply argument mutations
       List<MessageArgument> finalArgs = args;
 

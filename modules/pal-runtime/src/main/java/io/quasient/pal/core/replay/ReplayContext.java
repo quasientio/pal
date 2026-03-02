@@ -15,6 +15,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * Central coordination object for deterministic WAL replay.
@@ -48,6 +49,14 @@ public class ReplayContext {
 
   /** Lazily created and cached per-thread cursors. Thread-safe via {@link ConcurrentHashMap}. */
   private final Map<String, ReplayCursor> cursors = new ConcurrentHashMap<>();
+
+  /**
+   * Latch that gates replay input injector threads until the self-caller has loaded and initialized
+   * the target application class. This prevents class-loading race conditions where an injector
+   * thread could trigger static initialization on the wrong thread, causing cursor misalignment.
+   * Set via {@link #setInjectorReadyLatch} and counted down via {@link #countDownInjectorLatch}.
+   */
+  private volatile CountDownLatch injectorReadyLatch;
 
   /**
    * Constructs a new {@code ReplayContext} with all required sub-components.
@@ -133,5 +142,31 @@ public class ReplayContext {
    */
   public ReplayGate getReplayGate() {
     return replayGate;
+  }
+
+  /**
+   * Sets the latch that gates replay input injector threads. The latch will be counted down by
+   * {@link #countDownInjectorLatch()} after the self-caller thread has loaded the target
+   * application class (triggering static initialization on the correct thread).
+   *
+   * @param latch the latch to set, or {@code null} to clear
+   */
+  public void setInjectorReadyLatch(CountDownLatch latch) {
+    this.injectorReadyLatch = latch;
+  }
+
+  /**
+   * Counts down the injector ready latch if one has been set. This is called from {@code
+   * dispatchIncoming()} after the class-loading phase completes, ensuring that static
+   * initialization has run on the self-caller thread before any injector thread can trigger class
+   * loading.
+   *
+   * <p>Safe to call multiple times; after the first countdown, subsequent calls are no-ops.
+   */
+  public void countDownInjectorLatch() {
+    CountDownLatch latch = this.injectorReadyLatch;
+    if (latch != null) {
+      latch.countDown();
+    }
   }
 }

@@ -1996,8 +1996,11 @@ public class Main implements Callable<Integer> {
 
     logger.info("Started {} replay input injector thread(s)", threads.size());
 
-    // Count down ready latch to signal peer initialization is complete
-    readyLatch.countDown();
+    // Store the ready latch in ReplayContext. It will be counted down from
+    // dispatchIncoming() after the self-caller thread loads the target class,
+    // ensuring static initialization runs on the correct thread (self-caller)
+    // before any injector thread can trigger class loading.
+    replayContext.setInjectorReadyLatch(readyLatch);
 
     return threads;
   }
