@@ -316,8 +316,9 @@ public class WalIndexCommand extends AbstractPalSubcommand {
   /**
    * Prints the WAL index summary to stdout.
    *
-   * <p>Displays total entry count, operation count, completion count, pair count, thread names, and
-   * issue count. If structural issues exist, they are printed individually.
+   * <p>Displays total entry count, operation count, completion count, pair count, entry-point
+   * count, thread names, input thread names, and issue count. If structural issues exist, they are
+   * printed individually.
    *
    * @param index the WAL index to summarize
    */
@@ -327,18 +328,22 @@ public class WalIndexCommand extends AbstractPalSubcommand {
         entries.stream().filter(e -> e.getKind() == WalEntryKind.OPERATION).count();
     long completionCount =
         entries.stream().filter(e -> e.getKind() == WalEntryKind.COMPLETION).count();
+    long entryPointCount = entries.stream().filter(WalEntry::isEntryPoint).count();
     long pairCount = index.getSpans().size();
     List<String> threads =
         entries.stream().map(WalEntry::getThreadName).distinct().sorted().toList();
+    List<String> inputThreads = index.getInputThreadNames().stream().sorted().toList();
     List<String> issues = index.getStructuralIssues();
 
     out.println("WAL Index Summary");
-    out.printf("  Entries:     %d%n", entries.size());
-    out.printf("  Operations:  %d%n", operationCount);
-    out.printf("  Completions: %d%n", completionCount);
-    out.printf("  Pairs:       %d%n", pairCount);
-    out.printf("  Threads:     %s%n", threads);
-    out.printf("  Issues:      %d%n", issues.size());
+    out.printf("  Entries:       %d%n", entries.size());
+    out.printf("  Operations:    %d%n", operationCount);
+    out.printf("  Completions:   %d%n", completionCount);
+    out.printf("  Entry points:  %d%n", entryPointCount);
+    out.printf("  Pairs:         %d%n", pairCount);
+    out.printf("  Threads:       %s%n", threads);
+    out.printf("  Input threads: %s%n", inputThreads);
+    out.printf("  Issues:        %d%n", issues.size());
 
     if (!issues.isEmpty()) {
       out.println();
@@ -353,15 +358,21 @@ public class WalIndexCommand extends AbstractPalSubcommand {
    * Prints detailed per-entry listing to stdout.
    *
    * <p>Each entry is formatted as: {@code [offset] kind threadName
-   * className.executableName(paramTypes)}
+   * className.executableName(paramTypes)}. Entry-point operations are annotated with a {@code
+   * [ENTRY_POINT]} marker after the kind field.
    *
    * @param index the WAL index whose entries to print
    */
   void printVerboseEntries(WalIndex index) {
     for (WalEntry entry : index.getEntries()) {
+      String epMarker = entry.isEntryPoint() ? " [ENTRY_POINT]" : "";
       out.printf(
-          "[%d] %s %s %s%n",
-          entry.getOffset(), entry.getKind(), entry.getThreadName(), formatSignature(entry));
+          "[%d] %s%s %s %s%n",
+          entry.getOffset(),
+          entry.getKind(),
+          epMarker,
+          entry.getThreadName(),
+          formatSignature(entry));
     }
     out.println();
   }

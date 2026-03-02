@@ -511,7 +511,13 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     }
 
     // Step 2: RE_EXECUTE — advance past operation entry, invoke, then verify completion
+    long operationOffset = expectedEntry.getOffset();
     cursor.advance();
+
+    // Advance the gate after consuming the OPERATION entry so that injection threads
+    // waiting on subsequent offsets can proceed even if invoke() blocks (e.g.,
+    // CountDownLatch.await blocks until a shutdown entry-point is injected).
+    replayContext.getReplayGate().advanceTo(operationOffset);
 
     Object result = invoke(pjp, pjp.getArgs());
 
@@ -636,6 +642,9 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
       // Send BEFORE message to WAL/PUB (consistent with hot-path dispatch())
       if (shouldWriteIncomingToWal(messageChannel)) {
+        // Record the executor thread name (not the sender's thread) so that multi-threaded
+        // replay can create per-thread injectors matching the actual execution topology.
+        incomingCall.setThreadName(Thread.currentThread().getName());
         incomingCall.setEntryPoint(true);
         @SuppressWarnings("unused")
         final ExecMessage beforeExecResponseMsg =
@@ -644,13 +653,16 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
       // During replay, advance the cursor past the entry-point OPERATION entry so that nested
       // operations within the invoked method hit dispatchReplay() with a correctly positioned
-      // cursor.
+      // cursor. Also advance the ReplayGate so other threads waiting on subsequent offsets can
+      // proceed.
       if (replayContext != null && runOptions.contains(RunOptions.WITH_REPLAY)) {
         String threadName = Thread.currentThread().getName();
         ReplayCursor cursor = replayContext.getCursor(threadName);
         WalEntry peeked = cursor.peekNext();
         if (peeked != null && peeked.getKind() == WalEntryKind.OPERATION && peeked.isEntryPoint()) {
+          long entryPointOffset = peeked.getOffset();
           cursor.advance(); // skip past the entry-point OPERATION entry
+          replayContext.getReplayGate().advanceTo(entryPointOffset);
         }
       }
 

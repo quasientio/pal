@@ -274,12 +274,13 @@ public class WalIndexCommandTest {
     // Then
     String output = baos.toString(StandardCharsets.UTF_8);
     assertThat(output, containsString("WAL Index Summary"));
-    assertThat(output, containsString("Entries:     4"));
-    assertThat(output, containsString("Operations:  2"));
-    assertThat(output, containsString("Completions: 2"));
-    assertThat(output, containsString("Pairs:       2"));
+    assertThat(output, containsString("Entries:       4"));
+    assertThat(output, containsString("Operations:    2"));
+    assertThat(output, containsString("Completions:   2"));
+    assertThat(output, containsString("Entry points:  0"));
+    assertThat(output, containsString("Pairs:         2"));
     assertThat(output, containsString("self-caller"));
-    assertThat(output, containsString("Issues:      0"));
+    assertThat(output, containsString("Issues:        0"));
     assertThat(output, not(containsString("Structural Issues")));
   }
 
@@ -301,7 +302,7 @@ public class WalIndexCommandTest {
 
     // Then
     String output = baos.toString(StandardCharsets.UTF_8);
-    assertThat(output, containsString("Issues:      1"));
+    assertThat(output, containsString("Issues:        1"));
     assertThat(output, containsString("Structural Issues"));
     assertThat(output, containsString("Orphaned completion at offset 0"));
   }
@@ -323,11 +324,12 @@ public class WalIndexCommandTest {
 
     // Then
     String output = baos.toString(StandardCharsets.UTF_8);
-    assertThat(output, containsString("Entries:     0"));
-    assertThat(output, containsString("Operations:  0"));
-    assertThat(output, containsString("Completions: 0"));
-    assertThat(output, containsString("Pairs:       0"));
-    assertThat(output, containsString("Issues:      0"));
+    assertThat(output, containsString("Entries:       0"));
+    assertThat(output, containsString("Operations:    0"));
+    assertThat(output, containsString("Completions:   0"));
+    assertThat(output, containsString("Entry points:  0"));
+    assertThat(output, containsString("Pairs:         0"));
+    assertThat(output, containsString("Issues:        0"));
   }
 
   /** Verifies the summary lists multiple threads. */
@@ -462,10 +464,11 @@ public class WalIndexCommandTest {
 
     // Then
     String output = baos.toString(StandardCharsets.UTF_8);
-    assertThat(output, containsString("Entries:     6"));
-    assertThat(output, containsString("Operations:  3"));
-    assertThat(output, containsString("Completions: 3"));
-    assertThat(output, containsString("Pairs:       3"));
+    assertThat(output, containsString("Entries:       6"));
+    assertThat(output, containsString("Operations:    3"));
+    assertThat(output, containsString("Completions:   3"));
+    assertThat(output, containsString("Entry points:  0"));
+    assertThat(output, containsString("Pairs:         3"));
   }
 
   // ===========================================================================

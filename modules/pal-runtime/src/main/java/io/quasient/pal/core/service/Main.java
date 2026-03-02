@@ -1968,6 +1968,12 @@ public class Main implements Callable<Integer> {
     CountDownLatch readyLatch = new CountDownLatch(1);
 
     for (String threadName : inputThreadNames) {
+      // The self-caller thread's entry point (main()) is already invoked by
+      // SelfBootstrapInvoker — do not create a duplicate injector for it.
+      if ("self-caller".equals(threadName)) {
+        continue;
+      }
+
       List<WalEntry> entryPoints = walIndex.getEntryPointsForThread(threadName);
       if (entryPoints.isEmpty()) {
         continue;
