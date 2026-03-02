@@ -14,6 +14,7 @@ import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.CoreMatchers.sameInstance;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.fail;
 
 import io.quasient.pal.messages.colfer.Class;
 import io.quasient.pal.messages.colfer.ConstructorCall;
@@ -26,6 +27,7 @@ import io.quasient.pal.messages.colfer.StaticFieldPutDone;
 import io.quasient.pal.messages.colfer.Throwable;
 import io.quasient.pal.messages.types.MessageType;
 import java.util.Collections;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -178,5 +180,50 @@ public class WalEntryTest {
     assertThat(entry.getClassName(), is("com.example.Config"));
     assertThat(entry.getExecutableName(), is("MAX_SIZE"));
     assertThat(entry.getObjectRef(), is(0));
+  }
+
+  /**
+   * Verifies that {@code WalEntry} correctly extracts {@code entryPoint = true} from an {@code
+   * ExecMessage} that has the entry-point marker set.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #898")
+  public void fromExecMessage_extractsEntryPointTrue() {
+    // Given: ExecMessage with entryPoint = true and an instance method call
+    // When: WalEntry.fromExecMessage(offset, msg) is called
+    // Then: entry.isEntryPoint() returns true
+
+    // TODO(#898): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that {@code WalEntry} defaults {@code entryPoint} to {@code false} when the {@code
+   * ExecMessage} does not explicitly set it.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #898")
+  public void fromExecMessage_extractsEntryPointFalseByDefault() {
+    // Given: ExecMessage with entryPoint not explicitly set (default false)
+    // When: WalEntry.fromExecMessage(offset, msg) is called
+    // Then: entry.isEntryPoint() returns false
+
+    // TODO(#898): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that the entry-point marker is preserved on COMPLETION kind entries (e.g., return
+   * values) so that completions of entry-point operations can be identified.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #898")
+  public void fromExecMessage_entryPointOnCompletion() {
+    // Given: ExecMessage with entryPoint = true and a return value (COMPLETION kind)
+    // When: WalEntry.fromExecMessage(offset, msg) is called
+    // Then: entry.isEntryPoint() returns true (marker preserved on completions)
+
+    // TODO(#898): Implement test logic
+    fail("Not yet implemented");
   }
 }
