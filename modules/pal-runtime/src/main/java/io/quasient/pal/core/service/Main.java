@@ -281,6 +281,20 @@ public class Main implements Callable<Integer> {
   private String replayDivergencePolicy;
 
   /**
+   * Thread ordering mode for multi-threaded deterministic replay. Controls whether entry-point
+   * injection follows WAL-offset ordering or runs without ordering constraints. Only relevant when
+   * {@code --replay-wal} is set.
+   */
+  @Option(
+      names = {"--replay-threading"},
+      paramLabel = "ordered|unordered",
+      defaultValue = "ordered",
+      description =
+          "Thread ordering for multi-threaded replay: ordered (default) or unordered"
+              + " (default: ${DEFAULT-VALUE})")
+  private String replayThreading;
+
+  /**
    * Log configuration specifying the Log name for both reading and writing. Using 'auto' works only
    * when a PAL directory is specified.
    */
@@ -1018,6 +1032,7 @@ public class Main implements Callable<Integer> {
       runOptions.add(RunOptions.WITH_REPLAY);
       properties.setProperty("replay.wal.path", replayWalPath);
       properties.setProperty("replay.divergence.policy", replayDivergencePolicy);
+      properties.setProperty("replay.threading", replayThreading);
       if (kafkaServers != null) {
         properties.setProperty("replay.kafka.servers", kafkaServers);
       }

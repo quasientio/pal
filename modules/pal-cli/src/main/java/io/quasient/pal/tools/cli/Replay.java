@@ -104,6 +104,20 @@ public class Replay extends AbstractPalSubcommand {
   private String divergencePolicy;
 
   /**
+   * Thread ordering mode for multi-threaded deterministic replay. Controls whether entry-point
+   * injection follows WAL-offset ordering ({@code ordered}) or runs without ordering constraints
+   * ({@code unordered}).
+   */
+  @Option(
+      names = {"--replay-threading"},
+      defaultValue = "ordered",
+      paramLabel = "ordered|unordered",
+      description =
+          "Thread ordering for multi-threaded replay: ordered or unordered"
+              + " (default: ${DEFAULT-VALUE})")
+  private String replayThreading;
+
+  /**
    * Classpath for the application to replay. Specifies folders or JAR files containing the
    * application classes.
    */
@@ -261,6 +275,8 @@ public class Replay extends AbstractPalSubcommand {
     args.add(walPath);
     args.add("--replay-divergence-policy");
     args.add(divergencePolicy);
+    args.add("--replay-threading");
+    args.add(replayThreading);
     if (resolvedKafkaServers != null) {
       args.add("-k");
       args.add(resolvedKafkaServers);

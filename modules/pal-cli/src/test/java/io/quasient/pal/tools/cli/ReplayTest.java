@@ -231,6 +231,8 @@ public class ReplayTest {
             "file:/tmp/my-wal",
             "--replay-divergence-policy",
             "HALT",
+            "--replay-threading",
+            "ordered",
             "-cp",
             "target/app.jar",
             "com.example.Main",
@@ -252,6 +254,8 @@ public class ReplayTest {
             "file:/tmp/wal",
             "--replay-divergence-policy",
             "WARN",
+            "--replay-threading",
+            "ordered",
             "-cp",
             "app.jar",
             "com.example.Main"));
@@ -335,6 +339,8 @@ public class ReplayTest {
             "my-topic",
             "--replay-divergence-policy",
             "WARN",
+            "--replay-threading",
+            "ordered",
             "-k",
             "localhost:29092",
             "-cp",
@@ -387,5 +393,94 @@ public class ReplayTest {
   public void testValidateInputAcceptsChronicleWithoutKafka() {
     Replay replay = parseReplay("--wal", "file:/tmp/my-wal", "-cp", "app.jar", "MyMain");
     replay.validateInput();
+  }
+
+  // ===========================================================================
+  // --replay-threading option tests
+  // ===========================================================================
+
+  /** Verifies that the default value for --replay-threading is "ordered". */
+  @Test
+  public void testDefaultReplayThreading() throws Exception {
+    Replay replay = parseReplay("--wal", "file:/tmp/wal", "-cp", "app.jar", "com.example.Main");
+
+    assertThat(getField(replay, "replayThreading"), is("ordered"));
+  }
+
+  /** Verifies that --replay-threading can be set to "unordered". */
+  @Test
+  public void testReplayThreadingUnordered() throws Exception {
+    Replay replay =
+        parseReplay(
+            "--wal",
+            "file:/tmp/wal",
+            "--replay-threading",
+            "unordered",
+            "-cp",
+            "app.jar",
+            "com.example.Main");
+
+    assertThat(getField(replay, "replayThreading"), is("unordered"));
+  }
+
+  /** Verifies that buildMainArgs includes --replay-threading with default value. */
+  @Test
+  public void testBuildMainArgsIncludesReplayThreadingDefault() throws Exception {
+    Replay replay = parseReplay("--wal", "file:/tmp/wal", "-cp", "app.jar", "com.example.Main");
+    replay.validateInput();
+
+    String[] args = replay.buildMainArgs();
+    assertThat(args, hasItemInArray("--replay-threading"));
+    assertThat(args, hasItemInArray("ordered"));
+  }
+
+  /** Verifies that buildMainArgs includes --replay-threading with explicit unordered value. */
+  @Test
+  public void testBuildMainArgsIncludesReplayThreadingUnordered() throws Exception {
+    Replay replay =
+        parseReplay(
+            "--wal",
+            "file:/tmp/wal",
+            "--replay-threading",
+            "unordered",
+            "-cp",
+            "app.jar",
+            "com.example.Main");
+    replay.validateInput();
+
+    String[] args = replay.buildMainArgs();
+    assertThat(args, hasItemInArray("--replay-threading"));
+    assertThat(args, hasItemInArray("unordered"));
+  }
+
+  /** Verifies the full argument array with --replay-threading included. */
+  @Test
+  public void testBuildMainArgsWithReplayThreadingFullArgs() throws Exception {
+    Replay replay =
+        parseReplay(
+            "--wal",
+            "file:/tmp/my-wal",
+            "--divergence-policy",
+            "HALT",
+            "--replay-threading",
+            "unordered",
+            "-cp",
+            "target/app.jar",
+            "com.example.Main");
+    replay.validateInput();
+
+    String[] args = replay.buildMainArgs();
+    assertThat(
+        args,
+        arrayContaining(
+            "--replay-wal",
+            "file:/tmp/my-wal",
+            "--replay-divergence-policy",
+            "HALT",
+            "--replay-threading",
+            "unordered",
+            "-cp",
+            "target/app.jar",
+            "com.example.Main"));
   }
 }
