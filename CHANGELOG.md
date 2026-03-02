@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- [Feature] Add RpcCalculator test application for multi-threaded RPC replay integration tests
 - [Doc] Update WalIndexMinimalReceiptCalculatorIT Javadoc to reflect symmetric BEFORE/AFTER WAL gating
 - [Fix] SelfBootstrapInvoker offset wait now gated by WITH_WAL_INCOMING_CLI to prevent blocking when AFTER message is not written to WAL
 - [Fix] Reduce AntPathMatcherThreadSafetyTest iterations to prevent intermittent timeouts on loaded CI
