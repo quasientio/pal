@@ -65,6 +65,12 @@ public final class WalEntry {
   private final WalEntryKind kind;
 
   /**
+   * Whether this entry represents an entry-point operation (e.g., an incoming RPC call that
+   * initiates a new causal chain on a non-self-caller thread).
+   */
+  private final boolean entryPoint;
+
+  /**
    * Constructs a new {@code WalEntry} with all fields.
    *
    * @param offset the WAL offset
@@ -77,6 +83,7 @@ public final class WalEntry {
    * @param objectRef the object reference
    * @param rawMessage the raw ExecMessage
    * @param kind the entry kind (OPERATION or COMPLETION)
+   * @param entryPoint whether this is an entry-point operation
    */
   private WalEntry(
       long offset,
@@ -88,7 +95,8 @@ public final class WalEntry {
       List<String> paramTypes,
       int objectRef,
       ExecMessage rawMessage,
-      WalEntryKind kind) {
+      WalEntryKind kind,
+      boolean entryPoint) {
     this.offset = offset;
     this.messageType = messageType;
     this.threadName = threadName;
@@ -99,6 +107,7 @@ public final class WalEntry {
     this.objectRef = objectRef;
     this.rawMessage = rawMessage;
     this.kind = kind;
+    this.entryPoint = entryPoint;
   }
 
   /**
@@ -131,6 +140,8 @@ public final class WalEntry {
       objectRef = 0;
     }
 
+    boolean entryPoint = msg.getEntryPoint();
+
     return new WalEntry(
         offset,
         msgType,
@@ -141,7 +152,8 @@ public final class WalEntry {
         paramTypes,
         objectRef,
         msg,
-        kind);
+        kind,
+        entryPoint);
   }
 
   /**
@@ -257,5 +269,18 @@ public final class WalEntry {
    */
   public WalEntryKind getKind() {
     return kind;
+  }
+
+  /**
+   * Returns whether this entry represents an entry-point operation.
+   *
+   * <p>Entry-point operations are incoming RPC calls or other external inputs that initiate a new
+   * causal chain on a non-self-caller thread. During deterministic WAL replay, entry-point
+   * operations are injected from the WAL rather than matched against the cursor.
+   *
+   * @return {@code true} if this is an entry-point operation, {@code false} otherwise
+   */
+  public boolean isEntryPoint() {
+    return entryPoint;
   }
 }

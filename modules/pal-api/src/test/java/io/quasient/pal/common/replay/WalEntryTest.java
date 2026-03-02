@@ -14,7 +14,6 @@ import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.CoreMatchers.sameInstance;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.fail;
 
 import io.quasient.pal.messages.colfer.Class;
 import io.quasient.pal.messages.colfer.ConstructorCall;
@@ -27,7 +26,6 @@ import io.quasient.pal.messages.colfer.StaticFieldPutDone;
 import io.quasient.pal.messages.colfer.Throwable;
 import io.quasient.pal.messages.types.MessageType;
 import java.util.Collections;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -187,14 +185,27 @@ public class WalEntryTest {
    * ExecMessage} that has the entry-point marker set.
    */
   @Test
-  @Ignore("Awaiting implementation in #898")
   public void fromExecMessage_extractsEntryPointTrue() {
     // Given: ExecMessage with entryPoint = true and an instance method call
-    // When: WalEntry.fromExecMessage(offset, msg) is called
-    // Then: entry.isEntryPoint() returns true
+    ExecMessage msg = new ExecMessage();
+    msg.setThreadName("rpc-worker-1");
+    msg.setBuilderSeq(1);
+    msg.setEntryPoint(true);
 
-    // TODO(#898): Implement test logic
-    fail("Not yet implemented");
+    InstanceMethodCall imc = new InstanceMethodCall();
+    imc.setName("handle");
+    imc.setObjectRef(3);
+    Class clazz = new Class();
+    clazz.setName("com.example.Handler");
+    imc.setClazz(clazz);
+    msg.setInstanceMethodCall(imc);
+
+    // When: WalEntry.fromExecMessage(offset, msg) is called
+    WalEntry entry = WalEntry.fromExecMessage(10L, msg);
+
+    // Then: entry.isEntryPoint() returns true
+    assertThat(entry.isEntryPoint(), is(true));
+    assertThat(entry.getKind(), is(WalEntryKind.OPERATION));
   }
 
   /**
@@ -202,14 +213,24 @@ public class WalEntryTest {
    * ExecMessage} does not explicitly set it.
    */
   @Test
-  @Ignore("Awaiting implementation in #898")
   public void fromExecMessage_extractsEntryPointFalseByDefault() {
     // Given: ExecMessage with entryPoint not explicitly set (default false)
-    // When: WalEntry.fromExecMessage(offset, msg) is called
-    // Then: entry.isEntryPoint() returns false
+    ExecMessage msg = new ExecMessage();
+    msg.setThreadName("self-caller");
+    msg.setBuilderSeq(1);
 
-    // TODO(#898): Implement test logic
-    fail("Not yet implemented");
+    InstanceMethodCall imc = new InstanceMethodCall();
+    imc.setName("compute");
+    Class clazz = new Class();
+    clazz.setName("com.example.Service");
+    imc.setClazz(clazz);
+    msg.setInstanceMethodCall(imc);
+
+    // When: WalEntry.fromExecMessage(offset, msg) is called
+    WalEntry entry = WalEntry.fromExecMessage(20L, msg);
+
+    // Then: entry.isEntryPoint() returns false
+    assertThat(entry.isEntryPoint(), is(false));
   }
 
   /**
@@ -217,13 +238,22 @@ public class WalEntryTest {
    * values) so that completions of entry-point operations can be identified.
    */
   @Test
-  @Ignore("Awaiting implementation in #898")
   public void fromExecMessage_entryPointOnCompletion() {
     // Given: ExecMessage with entryPoint = true and a return value (COMPLETION kind)
-    // When: WalEntry.fromExecMessage(offset, msg) is called
-    // Then: entry.isEntryPoint() returns true (marker preserved on completions)
+    ExecMessage msg = new ExecMessage();
+    msg.setThreadName("rpc-worker-1");
+    msg.setBuilderSeq(2);
+    msg.setEntryPoint(true);
 
-    // TODO(#898): Implement test logic
-    fail("Not yet implemented");
+    ReturnValue rv = new ReturnValue();
+    rv.setIsVoid(true);
+    msg.setReturnValue(rv);
+
+    // When: WalEntry.fromExecMessage(offset, msg) is called
+    WalEntry entry = WalEntry.fromExecMessage(15L, msg);
+
+    // Then: entry.isEntryPoint() returns true (marker preserved on completions)
+    assertThat(entry.isEntryPoint(), is(true));
+    assertThat(entry.getKind(), is(WalEntryKind.COMPLETION));
   }
 }

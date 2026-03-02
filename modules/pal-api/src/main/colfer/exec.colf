@@ -40,4 +40,10 @@ type ExecMessage struct {
 	// to the named thread if a matching executor is registered.
 	// When empty/null, execution proceeds on the invoker thread (default).
 	threadAffinity text
+
+	// Whether this message represents an entry-point operation (e.g., an
+	// incoming RPC call that initiates a new causal chain on a non-self-caller
+	// thread). Used during deterministic WAL replay to distinguish injected
+	// inputs from nested operations.
+	entryPoint bool
 }

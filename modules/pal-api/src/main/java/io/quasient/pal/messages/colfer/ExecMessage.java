@@ -94,6 +94,13 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
    */
   public String threadAffinity;
 
+  /**
+   * Whether this message represents an entry-point operation (e.g., an incoming RPC call that
+   * initiates a new causal chain on a non-self-caller thread). Used during deterministic WAL replay
+   * to distinguish injected inputs from nested operations.
+   */
+  public boolean entryPoint;
+
   /** Default constructor */
   public ExecMessage() {
     init();
@@ -222,7 +229,8 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
             + 6
             + (long) this.declaredExceptions.length * 6
             + 6
-            + (long) this.threadAffinity.length() * 3;
+            + (long) this.threadAffinity.length() * 3
+            + 1;
     if (this.constructorCall != null) n += 1 + (long) this.constructorCall.marshalFit();
     if (this.instanceMethodCall != null) n += 1 + (long) this.instanceMethodCall.marshalFit();
     if (this.classMethodCall != null) n += 1 + (long) this.classMethodCall.marshalFit();
@@ -733,6 +741,10 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
         buf[ii] = (byte) size;
       }
 
+      if (this.entryPoint) {
+        buf[i++] = (byte) 21;
+      }
+
       buf[i++] = (byte) 0x7f;
       return i;
     } catch (ArrayIndexOutOfBoundsException e) {
@@ -1037,6 +1049,11 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
         header = buf[i++];
       }
 
+      if (header == (byte) 21) {
+        this.entryPoint = true;
+        header = buf[i++];
+      }
+
       if (header != (byte) 0x7f)
         throw new InputMismatchException(format("colfer: unknown header at byte %d", i - 1));
     } finally {
@@ -1053,7 +1070,7 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
   }
 
   // {@link Serializable} version number.
-  private static final long serialVersionUID = 21L;
+  private static final long serialVersionUID = 22L;
 
   // {@link Serializable} Colfer extension.
   private void writeObject(ObjectOutputStream out) throws IOException {
@@ -1687,6 +1704,35 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
     return this;
   }
 
+  /**
+   * Gets io.quasient.pal.messages/colfer.ExecMessage.entryPoint.
+   *
+   * @return the value.
+   */
+  public boolean getEntryPoint() {
+    return this.entryPoint;
+  }
+
+  /**
+   * Sets io.quasient.pal.messages/colfer.ExecMessage.entryPoint.
+   *
+   * @param value the replacement.
+   */
+  public void setEntryPoint(boolean value) {
+    this.entryPoint = value;
+  }
+
+  /**
+   * Sets io.quasient.pal.messages/colfer.ExecMessage.entryPoint.
+   *
+   * @param value the replacement.
+   * @return {@code this}.
+   */
+  public ExecMessage withEntryPoint(boolean value) {
+    this.entryPoint = value;
+    return this;
+  }
+
   @Override
   public final int hashCode() {
     int h = 1;
@@ -1711,6 +1757,7 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
     if (this.returnValue != null) h = 31 * h + this.returnValue.hashCode();
     for (String o : this.declaredExceptions) h = 31 * h + (o == null ? 0 : o.hashCode());
     if (this.threadAffinity != null) h = 31 * h + this.threadAffinity.hashCode();
+    h = 31 * h + (this.entryPoint ? 1231 : 1237);
     return h;
   }
 
@@ -1771,7 +1818,8 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
         && java.util.Arrays.equals(this.declaredExceptions, o.declaredExceptions)
         && (this.threadAffinity == null
             ? o.threadAffinity == null
-            : this.threadAffinity.equals(o.threadAffinity));
+            : this.threadAffinity.equals(o.threadAffinity))
+        && this.entryPoint == o.entryPoint;
   }
 
   @Override
@@ -1876,6 +1924,10 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
         this.threadAffinity = json.get("threadAffinity").getAsString();
       }
 
+      if (json.has("entryPoint")) {
+        this.entryPoint = json.get("entryPoint").getAsBoolean();
+      }
+
     } catch (Exception e) {
       throw new JsonParseException("Error deserializing json object: " + e.getMessage(), e);
     }
@@ -1902,5 +1954,6 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
     this.instanceFieldPutDone = null;
     this.raisedThrowable = null;
     this.returnValue = null;
+    this.entryPoint = false;
   }
 }

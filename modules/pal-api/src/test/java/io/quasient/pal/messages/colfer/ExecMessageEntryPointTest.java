@@ -9,17 +9,16 @@
  */
 package io.quasient.pal.messages.colfer;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
  * Unit tests for the {@code entryPoint} boolean field on {@code ExecMessage}.
  *
  * <p>Validates the default value, getter/setter behavior, and Colfer serialization round-trip
- * fidelity of the entry-point marker. These tests define the contract before the field is
- * implemented in issue #898.
+ * fidelity of the entry-point marker.
  *
  * @see ExecMessage
  */
@@ -30,13 +29,9 @@ public class ExecMessageEntryPointTest {
    * false}.
    */
   @Test
-  @Ignore("Awaiting implementation in #898")
   public void entryPointDefaultsFalse() {
-    // Given: New ExecMessage instance
-    // Then: msg.getEntryPoint() returns false
-
-    // TODO(#898): Implement test logic
-    fail("Not yet implemented");
+    ExecMessage msg = new ExecMessage();
+    assertThat(msg.getEntryPoint(), is(false));
   }
 
   /**
@@ -44,14 +39,20 @@ public class ExecMessageEntryPointTest {
    * marshal/unmarshal round-trip with the value preserved.
    */
   @Test
-  @Ignore("Awaiting implementation in #898")
   public void entryPointRoundTrip() {
-    // Given: ExecMessage with setEntryPoint(true), serialized via Colfer marshal()
-    // When: Deserialized via unmarshal()
-    // Then: getEntryPoint() returns true
+    // Given: ExecMessage with entryPoint set to true
+    ExecMessage msg = new ExecMessage();
+    msg.setEntryPoint(true);
 
-    // TODO(#898): Implement test logic
-    fail("Not yet implemented");
+    // When: Serialized and deserialized via Colfer
+    byte[] buf = new byte[msg.marshalFit()];
+    int length = msg.marshal(buf, 0);
+
+    ExecMessage deserialized = new ExecMessage();
+    deserialized.unmarshal(buf, 0, length);
+
+    // Then: entryPoint is preserved as true
+    assertThat(deserialized.getEntryPoint(), is(true));
   }
 
   /**
@@ -59,13 +60,18 @@ public class ExecMessageEntryPointTest {
    * survives a Colfer marshal/unmarshal round-trip with the value preserved as {@code false}.
    */
   @Test
-  @Ignore("Awaiting implementation in #898")
   public void entryPointFalseRoundTrip() {
-    // Given: ExecMessage with entryPoint left as default (false), serialized via Colfer
-    // When: Deserialized
-    // Then: getEntryPoint() returns false
+    // Given: ExecMessage with entryPoint left as default (false)
+    ExecMessage msg = new ExecMessage();
 
-    // TODO(#898): Implement test logic
-    fail("Not yet implemented");
+    // When: Serialized and deserialized via Colfer
+    byte[] buf = new byte[msg.marshalFit()];
+    int length = msg.marshal(buf, 0);
+
+    ExecMessage deserialized = new ExecMessage();
+    deserialized.unmarshal(buf, 0, length);
+
+    // Then: entryPoint is preserved as false
+    assertThat(deserialized.getEntryPoint(), is(false));
   }
 }
