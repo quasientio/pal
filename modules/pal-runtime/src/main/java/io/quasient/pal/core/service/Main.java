@@ -27,8 +27,11 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.quasient.pal.common.cli.PalCommand;
 import io.quasient.pal.common.directory.nodes.LogInfo;
 import io.quasient.pal.common.directory.nodes.PeerInfo;
+import io.quasient.pal.common.replay.WalEntry;
+import io.quasient.pal.common.replay.WalIndex;
 import io.quasient.pal.common.util.Strings;
 import io.quasient.pal.core.annotations.AnnotationsProcessor;
+import io.quasient.pal.core.dispatcher.IncomingMessageDispatcher;
 import io.quasient.pal.core.dispatcher.LogRpcExecutor;
 import io.quasient.pal.core.dispatcher.SocketRpcExecutor;
 import io.quasient.pal.core.dispatcher.thread.ThreadPool;
@@ -39,6 +42,7 @@ import io.quasient.pal.core.intercept.InterceptMatcher;
 import io.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import io.quasient.pal.core.replay.DivergenceReport;
 import io.quasient.pal.core.replay.ReplayContext;
+import io.quasient.pal.core.replay.ReplayInputInjector;
 import io.quasient.pal.core.runtime.session.SessionService;
 import io.quasient.pal.core.transport.SourceLogReader;
 import io.quasient.pal.core.transport.WalWriter;
@@ -1876,6 +1880,16 @@ public class Main implements Callable<Integer> {
       injector.getInstance(SocketRpcExecutor.class).startAllThreads();
     }
 
+    // Set up replay input injectors if replay mode has input threads
+    List<Thread> replayInjectorThreads = new ArrayList<>();
+    if (runOptions.contains(RunOptions.WITH_REPLAY)) {
+      ReplayContext replayContext = injector.getInstance(ReplayContext.class);
+      if (replayContext != null) {
+        replayInjectorThreads =
+            startReplayInputInjectors(replayContext, injector, customClassloader);
+      }
+    }
+
     // now call target (main class or JAR file), if given
     boolean mainCalled = false;
     int returnValue = 0;
@@ -1906,6 +1920,9 @@ public class Main implements Callable<Integer> {
       mainCalled = true;
     }
 
+    // Join replay injector threads after self-caller completes
+    joinReplayInjectorThreads(replayInjectorThreads);
+
     // After replay, print divergence report and adjust exit code
     if (mainCalled && runOptions.contains(RunOptions.WITH_REPLAY)) {
       returnValue = handleReplayDivergenceReport(injector, returnValue);
@@ -1919,6 +1936,93 @@ public class Main implements Callable<Integer> {
       }
     }
     return returnValue;
+  }
+
+  /** Timeout in seconds for joining replay injector threads. */
+  private static final long REPLAY_INJECTOR_JOIN_TIMEOUT_SECONDS = 60;
+
+  /**
+   * Creates and starts {@link ReplayInputInjector} threads for each non-self-caller thread with
+   * entry-point operations in the WAL index.
+   *
+   * <p>Each injector thread is named to match the WAL thread name (so that {@link
+   * io.quasient.pal.core.replay.ReplayCursor} lookup works correctly) and set as a daemon thread. A
+   * shared {@link CountDownLatch} is counted down before returning, signaling to all injectors that
+   * peer initialization is complete and they can begin injecting entry-point messages.
+   *
+   * @param replayContext the replay context containing the WAL index and replay gate
+   * @param injector the Guice injector for obtaining the {@link IncomingMessageDispatcher}
+   * @param classloader the custom classloader to set on injector threads
+   * @return the list of started injector threads (empty if no input threads exist)
+   */
+  private List<Thread> startReplayInputInjectors(
+      ReplayContext replayContext, Injector injector, CustomClassloader classloader) {
+    WalIndex walIndex = replayContext.getWalIndex();
+    Set<String> inputThreadNames = walIndex.getInputThreadNames();
+    List<Thread> threads = new ArrayList<>();
+    if (inputThreadNames.isEmpty()) {
+      return threads;
+    }
+
+    IncomingMessageDispatcher dispatcher = injector.getInstance(IncomingMessageDispatcher.class);
+    CountDownLatch readyLatch = new CountDownLatch(1);
+
+    for (String threadName : inputThreadNames) {
+      List<WalEntry> entryPoints = walIndex.getEntryPointsForThread(threadName);
+      if (entryPoints.isEmpty()) {
+        continue;
+      }
+
+      ReplayInputInjector injectorRunnable =
+          new ReplayInputInjector(
+              threadName, entryPoints, dispatcher, replayContext.getReplayGate(), readyLatch);
+
+      Thread thread = new Thread(injectorRunnable, threadName);
+      thread.setDaemon(true);
+      thread.setContextClassLoader(classloader);
+      threads.add(thread);
+    }
+
+    // Start all injector threads (they will block on readyLatch)
+    for (Thread thread : threads) {
+      thread.start();
+    }
+
+    logger.info("Started {} replay input injector thread(s)", threads.size());
+
+    // Count down ready latch to signal peer initialization is complete
+    readyLatch.countDown();
+
+    return threads;
+  }
+
+  /**
+   * Joins replay injector threads with a timeout, logging warnings for threads that do not complete
+   * in time or that throw exceptions.
+   *
+   * @param threads the injector threads to join
+   */
+  private void joinReplayInjectorThreads(List<Thread> threads) {
+    if (threads.isEmpty()) {
+      return;
+    }
+
+    for (Thread thread : threads) {
+      try {
+        thread.join(TimeUnit.SECONDS.toMillis(REPLAY_INJECTOR_JOIN_TIMEOUT_SECONDS));
+        if (thread.isAlive()) {
+          logger.warn(
+              "Replay input injector thread '{}' did not complete within {}s timeout",
+              thread.getName(),
+              REPLAY_INJECTOR_JOIN_TIMEOUT_SECONDS);
+        }
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        logger.warn(
+            "Interrupted while joining replay input injector thread '{}'", thread.getName());
+        break;
+      }
+    }
   }
 
   /**
