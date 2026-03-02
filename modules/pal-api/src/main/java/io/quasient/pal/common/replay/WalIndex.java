@@ -17,6 +17,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * An indexed view of a WAL (Write-Ahead Log), providing bidirectional operation/completion pairing,
@@ -51,6 +52,13 @@ public final class WalIndex {
   /** Maps each builder sequence number to the corresponding entry. */
   private final Map<Integer, WalEntry> byBuilderSeq;
 
+  /**
+   * Maps each thread name to the list of entry-point {@link WalEntryKind#OPERATION} entries
+   * produced by that thread, in offset order. Only threads with at least one entry-point operation
+   * appear as keys.
+   */
+  private final Map<String, List<WalEntry>> entryPointsByThread;
+
   /** Descriptions of pairing or balance problems detected during indexing. */
   private final List<String> structuralIssues;
 
@@ -62,6 +70,7 @@ public final class WalIndex {
    * @param spans operation offset → span map
    * @param byThread thread name → entries map
    * @param byBuilderSeq builder sequence → entry map
+   * @param entryPointsByThread thread name → entry-point operation entries map
    * @param structuralIssues list of pairing/balance problem descriptions
    */
   private WalIndex(
@@ -70,19 +79,21 @@ public final class WalIndex {
       Map<Long, Span> spans,
       Map<String, List<WalEntry>> byThread,
       Map<Integer, WalEntry> byBuilderSeq,
+      Map<String, List<WalEntry>> entryPointsByThread,
       List<String> structuralIssues) {
     this.entries = Collections.unmodifiableList(entries);
     this.pairs = Collections.unmodifiableMap(pairs);
     this.spans = Collections.unmodifiableMap(spans);
     this.byThread = Collections.unmodifiableMap(byThread);
     this.byBuilderSeq = Collections.unmodifiableMap(byBuilderSeq);
+    this.entryPointsByThread = Collections.unmodifiableMap(entryPointsByThread);
     this.structuralIssues = Collections.unmodifiableList(structuralIssues);
   }
 
   /**
    * Builds a {@code WalIndex} from a list of {@link WalEntry} instances in offset order.
    *
-   * <p>The build process performs four steps:
+   * <p>The build process performs five steps:
    *
    * <ol>
    *   <li><b>Pairing:</b> Uses an {@link ArrayDeque} as a stack. For each entry, if it is an {@link
@@ -96,6 +107,8 @@ public final class WalIndex {
    *       map of thread name to entry list.
    *   <li><b>BuilderSeq indexing:</b> Each entry is indexed by its {@link
    *       WalEntry#getBuilderSeq()}.
+   *   <li><b>Entry-point classification:</b> Entries marked as entry points with {@code kind ==
+   *       OPERATION} are grouped by thread name into a separate map, preserving offset order.
    * </ol>
    *
    * @param entries the WAL entries in offset order
@@ -141,7 +154,27 @@ public final class WalIndex {
       byBuilderSeq.put(entry.getBuilderSeq(), entry);
     }
 
-    return new WalIndex(new ArrayList<>(entries), pairs, spans, byThread, byBuilderSeq, issues);
+    Map<String, List<WalEntry>> mutableEntryPoints = new LinkedHashMap<>();
+    for (WalEntry entry : entries) {
+      if (entry.isEntryPoint() && entry.getKind() == WalEntryKind.OPERATION) {
+        mutableEntryPoints
+            .computeIfAbsent(entry.getThreadName(), k -> new ArrayList<>())
+            .add(entry);
+      }
+    }
+    Map<String, List<WalEntry>> entryPointsByThread = new LinkedHashMap<>();
+    for (Map.Entry<String, List<WalEntry>> e : mutableEntryPoints.entrySet()) {
+      entryPointsByThread.put(e.getKey(), Collections.unmodifiableList(e.getValue()));
+    }
+
+    return new WalIndex(
+        new ArrayList<>(entries),
+        pairs,
+        spans,
+        byThread,
+        byBuilderSeq,
+        entryPointsByThread,
+        issues);
   }
 
   /**
@@ -192,6 +225,35 @@ public final class WalIndex {
    */
   public WalEntry getEntryByBuilderSeq(int builderSeq) {
     return byBuilderSeq.get(builderSeq);
+  }
+
+  /**
+   * Returns the set of thread names that have at least one entry-point operation.
+   *
+   * <p>This is used by {@code ReplayInputInjector} to discover which threads need WAL-driven input
+   * injection during multi-threaded replay.
+   *
+   * @return an unmodifiable set of thread names with entry points
+   */
+  public Set<String> getInputThreadNames() {
+    return entryPointsByThread.keySet();
+  }
+
+  /**
+   * Returns the entry-point {@link WalEntryKind#OPERATION} entries for the given thread, in WAL
+   * offset order.
+   *
+   * <p>Only entries that are both marked as entry points and have {@code kind == OPERATION} are
+   * included. Completion entries are excluded even if they carry the entry-point marker, since
+   * completions are not injected during replay.
+   *
+   * @param threadName the thread name to look up
+   * @return an unmodifiable list of entry-point operations for that thread, or an empty list if the
+   *     thread has no entry points or does not exist in the WAL
+   */
+  public List<WalEntry> getEntryPointsForThread(String threadName) {
+    List<WalEntry> result = entryPointsByThread.get(threadName);
+    return result != null ? result : Collections.emptyList();
   }
 
   /**

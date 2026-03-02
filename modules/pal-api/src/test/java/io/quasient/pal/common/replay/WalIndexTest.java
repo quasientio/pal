@@ -13,7 +13,6 @@ import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.fail;
 
 import io.quasient.pal.messages.colfer.Class;
 import io.quasient.pal.messages.colfer.ExecMessage;
@@ -22,7 +21,7 @@ import io.quasient.pal.messages.colfer.ReturnValue;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import org.junit.Ignore;
+import java.util.Set;
 import org.junit.Test;
 
 /**
@@ -293,15 +292,27 @@ public class WalIndexTest {
    * injection during multi-threaded replay.
    */
   @Test
-  @Ignore("Awaiting implementation in #900")
   public void getInputThreadNames_returnsThreadsWithEntryPoints() {
     // Given: WAL with entries on threads 'self-caller', 'rpc-worker-1', 'rpc-worker-2';
     //        entry points marked on rpc-worker threads only
-    // When: walIndex.getInputThreadNames()
-    // Then: Returns set containing 'rpc-worker-1' and 'rpc-worker-2'
+    List<WalEntry> entries =
+        Arrays.asList(
+            makeOperation(0, "self-caller", 1),
+            makeEntryPointOperation(1, "rpc-worker-1", 2),
+            makeEntryPointOperation(2, "rpc-worker-2", 3),
+            makeCompletion(3, "rpc-worker-2", 4),
+            makeCompletion(4, "rpc-worker-1", 5),
+            makeCompletion(5, "self-caller", 6));
 
-    // TODO(#900): Implement test logic
-    fail("Not yet implemented");
+    // When
+    WalIndex index = WalIndex.build(entries);
+    Set<String> inputThreads = index.getInputThreadNames();
+
+    // Then
+    assertThat(inputThreads.size(), is(2));
+    assertThat(inputThreads.contains("rpc-worker-1"), is(true));
+    assertThat(inputThreads.contains("rpc-worker-2"), is(true));
+    assertThat(inputThreads.contains("self-caller"), is(false));
   }
 
   /**
@@ -310,14 +321,20 @@ public class WalIndexTest {
    * operations).
    */
   @Test
-  @Ignore("Awaiting implementation in #900")
   public void getInputThreadNames_emptyWhenNoEntryPoints() {
     // Given: WAL with all entries having entryPoint = false (single-threaded app)
-    // When: walIndex.getInputThreadNames()
-    // Then: Returns empty set
+    List<WalEntry> entries =
+        Arrays.asList(
+            makeOperation(0, "self-caller", 1),
+            makeOperation(1, "self-caller", 2),
+            makeCompletion(2, "self-caller", 3),
+            makeCompletion(3, "self-caller", 4));
 
-    // TODO(#900): Implement test logic
-    fail("Not yet implemented");
+    // When
+    WalIndex index = WalIndex.build(entries);
+
+    // Then
+    assertThat(index.getInputThreadNames().isEmpty(), is(true));
   }
 
   /**
@@ -326,16 +343,32 @@ public class WalIndexTest {
    * operations on the same thread.
    */
   @Test
-  @Ignore("Awaiting implementation in #900")
   public void getEntryPointsForThread_returnsOnlyEntryPointOperations() {
-    // Given: WAL with thread 'rpc-worker-1' having 3 entry-point operations and 5 nested
-    //        operations (entryPoint = false)
-    // When: walIndex.getEntryPointsForThread("rpc-worker-1")
-    // Then: Returns list of 3 entries, all with isEntryPoint() == true and
-    //       getKind() == OPERATION
+    // Given: WAL with thread 'rpc-worker-1' having 3 entry-point operations and
+    //        nested operations (entryPoint = false)
+    List<WalEntry> entries =
+        Arrays.asList(
+            makeEntryPointOperation(0, "rpc-worker-1", 1),
+            makeOperation(1, "rpc-worker-1", 2),
+            makeCompletion(2, "rpc-worker-1", 3),
+            makeCompletion(3, "rpc-worker-1", 4),
+            makeEntryPointOperation(4, "rpc-worker-1", 5),
+            makeOperation(5, "rpc-worker-1", 6),
+            makeCompletion(6, "rpc-worker-1", 7),
+            makeCompletion(7, "rpc-worker-1", 8),
+            makeEntryPointOperation(8, "rpc-worker-1", 9),
+            makeCompletion(9, "rpc-worker-1", 10));
 
-    // TODO(#900): Implement test logic
-    fail("Not yet implemented");
+    // When
+    WalIndex index = WalIndex.build(entries);
+    List<WalEntry> entryPoints = index.getEntryPointsForThread("rpc-worker-1");
+
+    // Then
+    assertThat(entryPoints.size(), is(3));
+    for (WalEntry ep : entryPoints) {
+      assertThat(ep.isEntryPoint(), is(true));
+      assertThat(ep.getKind(), is(WalEntryKind.OPERATION));
+    }
   }
 
   /**
@@ -344,14 +377,21 @@ public class WalIndexTest {
    * completions are not injected during replay — they are the result of executing the operation.
    */
   @Test
-  @Ignore("Awaiting implementation in #900")
   public void getEntryPointsForThread_excludesCompletions() {
     // Given: WAL with entry-point operation and its completion both marked entryPoint = true
-    // When: walIndex.getEntryPointsForThread(threadName)
-    // Then: Returns only the OPERATION entries, not completions
+    List<WalEntry> entries =
+        Arrays.asList(
+            makeEntryPointOperation(0, "rpc-worker-1", 1),
+            makeEntryPointCompletion(1, "rpc-worker-1", 2));
 
-    // TODO(#900): Implement test logic
-    fail("Not yet implemented");
+    // When
+    WalIndex index = WalIndex.build(entries);
+    List<WalEntry> entryPoints = index.getEntryPointsForThread("rpc-worker-1");
+
+    // Then: only the OPERATION, not the completion
+    assertThat(entryPoints.size(), is(1));
+    assertThat(entryPoints.get(0).getKind(), is(WalEntryKind.OPERATION));
+    assertThat(entryPoints.get(0).getOffset(), is(0L));
   }
 
   /**
@@ -360,14 +400,16 @@ public class WalIndexTest {
    * application).
    */
   @Test
-  @Ignore("Awaiting implementation in #900")
   public void getEntryPointsForThread_emptyForThreadWithoutEntryPoints() {
     // Given: WAL with self-caller thread having no entry-point markers
-    // When: walIndex.getEntryPointsForThread("self-caller")
-    // Then: Returns empty list
+    List<WalEntry> entries =
+        Arrays.asList(makeOperation(0, "self-caller", 1), makeCompletion(1, "self-caller", 2));
 
-    // TODO(#900): Implement test logic
-    fail("Not yet implemented");
+    // When
+    WalIndex index = WalIndex.build(entries);
+
+    // Then
+    assertThat(index.getEntryPointsForThread("self-caller").isEmpty(), is(true));
   }
 
   /**
@@ -375,14 +417,16 @@ public class WalIndexTest {
    * name that does not appear in the WAL at all.
    */
   @Test
-  @Ignore("Awaiting implementation in #900")
   public void getEntryPointsForThread_emptyForUnknownThread() {
     // Given: Normal WAL index (no thread named "nonexistent-thread")
-    // When: walIndex.getEntryPointsForThread("nonexistent-thread")
-    // Then: Returns empty list
+    List<WalEntry> entries =
+        Arrays.asList(makeOperation(0, "self-caller", 1), makeCompletion(1, "self-caller", 2));
 
-    // TODO(#900): Implement test logic
-    fail("Not yet implemented");
+    // When
+    WalIndex index = WalIndex.build(entries);
+
+    // Then
+    assertThat(index.getEntryPointsForThread("nonexistent-thread").isEmpty(), is(true));
   }
 
   /**
@@ -391,14 +435,26 @@ public class WalIndexTest {
    * sequentially and uses WAL offsets for the ordering barrier.
    */
   @Test
-  @Ignore("Awaiting implementation in #900")
   public void getEntryPointsForThread_preservesOffsetOrder() {
     // Given: WAL with thread 'rpc-worker-1' having entry points at offsets 10, 50, 100
-    // When: walIndex.getEntryPointsForThread("rpc-worker-1")
-    // Then: Returns entries in offset order (10, 50, 100)
+    List<WalEntry> entries =
+        Arrays.asList(
+            makeEntryPointOperation(10, "rpc-worker-1", 1),
+            makeCompletion(20, "rpc-worker-1", 2),
+            makeEntryPointOperation(50, "rpc-worker-1", 3),
+            makeCompletion(60, "rpc-worker-1", 4),
+            makeEntryPointOperation(100, "rpc-worker-1", 5),
+            makeCompletion(110, "rpc-worker-1", 6));
 
-    // TODO(#900): Implement test logic
-    fail("Not yet implemented");
+    // When
+    WalIndex index = WalIndex.build(entries);
+    List<WalEntry> entryPoints = index.getEntryPointsForThread("rpc-worker-1");
+
+    // Then: entries in offset order (10, 50, 100)
+    assertThat(entryPoints.size(), is(3));
+    assertThat(entryPoints.get(0).getOffset(), is(10L));
+    assertThat(entryPoints.get(1).getOffset(), is(50L));
+    assertThat(entryPoints.get(2).getOffset(), is(100L));
   }
 
   /**
@@ -436,6 +492,49 @@ public class WalIndexTest {
     ExecMessage msg = new ExecMessage();
     msg.setThreadName(threadName);
     msg.setBuilderSeq(builderSeq);
+    ReturnValue rv = new ReturnValue();
+    rv.setIsVoid(true);
+    msg.setReturnValue(rv);
+    return WalEntry.fromExecMessage(offset, msg);
+  }
+
+  /**
+   * Creates a synthetic entry-point OPERATION {@link WalEntry} with the {@code entryPoint} flag
+   * set.
+   *
+   * @param offset the WAL offset
+   * @param threadName the thread name
+   * @param builderSeq the builder sequence number
+   * @return a new entry-point operation entry
+   */
+  private static WalEntry makeEntryPointOperation(long offset, String threadName, int builderSeq) {
+    ExecMessage msg = new ExecMessage();
+    msg.setThreadName(threadName);
+    msg.setBuilderSeq(builderSeq);
+    msg.setEntryPoint(true);
+    InstanceMethodCall imc = new InstanceMethodCall();
+    imc.setName("entryOp" + offset);
+    Class clazz = new Class();
+    clazz.setName("com.example.Test");
+    imc.setClazz(clazz);
+    msg.setInstanceMethodCall(imc);
+    return WalEntry.fromExecMessage(offset, msg);
+  }
+
+  /**
+   * Creates a synthetic entry-point COMPLETION {@link WalEntry} with the {@code entryPoint} flag
+   * set.
+   *
+   * @param offset the WAL offset
+   * @param threadName the thread name
+   * @param builderSeq the builder sequence number
+   * @return a new entry-point completion entry
+   */
+  private static WalEntry makeEntryPointCompletion(long offset, String threadName, int builderSeq) {
+    ExecMessage msg = new ExecMessage();
+    msg.setThreadName(threadName);
+    msg.setBuilderSeq(builderSeq);
+    msg.setEntryPoint(true);
     ReturnValue rv = new ReturnValue();
     rv.setIsVoid(true);
     msg.setReturnValue(rv);
