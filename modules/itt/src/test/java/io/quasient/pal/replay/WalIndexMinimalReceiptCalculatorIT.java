@@ -181,7 +181,9 @@ public class WalIndexMinimalReceiptCalculatorIT extends AbstractCliIT {
     assertThat(
         "Output should contain Issues count", indexResult.stdout(), containsString("Issues:"));
     assertThat(
-        "Output should report zero issues", indexResult.stdout(), containsString("Issues:      0"));
+        "Output should report zero issues",
+        indexResult.stdout(),
+        containsString("Issues:        0"));
 
     // Verify positive entry count
     assertThat(
