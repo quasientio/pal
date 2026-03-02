@@ -9,13 +9,36 @@
  */
 package io.quasient.pal.core.replay;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.sameInstance;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
-import org.junit.Ignore;
+import io.quasient.pal.common.replay.WalEntry;
+import io.quasient.pal.core.dispatcher.IncomingMessageDispatcher;
+import io.quasient.pal.core.transport.MessageChannelType;
+import io.quasient.pal.messages.colfer.Class;
+import io.quasient.pal.messages.colfer.ClassMethodCall;
+import io.quasient.pal.messages.colfer.ExecMessage;
+import io.quasient.pal.messages.colfer.InstanceMethodCall;
+import io.quasient.pal.messages.types.MessageType;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 
 /**
- * Unit tests for {@code ReplayInputInjector} — the component that drives WAL-based input injection
+ * Unit tests for {@link ReplayInputInjector} — the component that drives WAL-based input injection
  * on non-self-caller threads during deterministic replay.
  *
  * <p>ReplayInputInjector reads entry-point operations from the {@code WalIndex} for a specific
@@ -33,16 +56,27 @@ public class ReplayInputInjectorTest {
    * message dispatcher.
    */
   @Test
-  @Ignore("Awaiting implementation in #907")
   public void injectsAllEntryPointsForThread() {
-    // Given: WalIndex with 3 entry-point operations on thread 'rpc-worker-1';
-    //        mock IncomingMessageDispatcher
-    // When: ReplayInputInjector runs to completion
-    // Then: incomingMessageDispatcher.incomingCall() invoked exactly 3 times
-    //       with correct ExecMessages
+    // Given: 3 entry-point operations on thread 'rpc-worker-1'; mock IncomingMessageDispatcher
+    IncomingMessageDispatcher dispatcher = mock(IncomingMessageDispatcher.class);
+    ReplayGate gate = new ReplayGate(false);
+    CountDownLatch readyLatch = new CountDownLatch(0);
 
-    // TODO(#907): Implement test logic
-    fail("Not yet implemented");
+    List<WalEntry> entryPoints = new ArrayList<>();
+    entryPoints.add(makeEntryPoint(10L, "rpc-worker-1", 1, "methodA"));
+    entryPoints.add(makeEntryPoint(20L, "rpc-worker-1", 2, "methodB"));
+    entryPoints.add(makeEntryPoint(30L, "rpc-worker-1", 3, "methodC"));
+
+    ReplayInputInjector injector =
+        new ReplayInputInjector("rpc-worker-1", entryPoints, dispatcher, gate, readyLatch);
+
+    // When: ReplayInputInjector runs to completion
+    injector.run();
+
+    // Then: incomingMessageDispatcher.incomingCall() invoked exactly 3 times
+    verify(dispatcher, times(3))
+        .incomingCall(
+            any(ExecMessage.class), any(MessageType.class), eq(MessageChannelType.CLI_RPC));
   }
 
   /**
@@ -50,14 +84,30 @@ public class ReplayInputInjectorTest {
    * corresponding {@code WalEntry}.
    */
   @Test
-  @Ignore("Awaiting implementation in #907")
   public void usesCorrectMessageType() {
-    // Given: WalIndex with entry points of types EXEC_INSTANCE_METHOD and EXEC_CLASS_METHOD
-    // When: ReplayInputInjector runs
-    // Then: Each incomingCall() invocation uses the correct MessageType from the WalEntry
+    // Given: entry points of types EXEC_INSTANCE_METHOD and EXEC_CLASS_METHOD
+    IncomingMessageDispatcher dispatcher = mock(IncomingMessageDispatcher.class);
+    ReplayGate gate = new ReplayGate(false);
+    CountDownLatch readyLatch = new CountDownLatch(0);
 
-    // TODO(#907): Implement test logic
-    fail("Not yet implemented");
+    List<WalEntry> entryPoints = new ArrayList<>();
+    entryPoints.add(makeEntryPoint(10L, "rpc-worker-1", 1, "instanceMethod"));
+    entryPoints.add(makeClassMethodEntryPoint(20L, "rpc-worker-1", 2, "staticMethod"));
+
+    ReplayInputInjector injector =
+        new ReplayInputInjector("rpc-worker-1", entryPoints, dispatcher, gate, readyLatch);
+
+    // When: ReplayInputInjector runs
+    injector.run();
+
+    // Then: Each incomingCall() invocation uses the correct MessageType from the WalEntry
+    ArgumentCaptor<MessageType> typeCaptor = ArgumentCaptor.forClass(MessageType.class);
+    verify(dispatcher, times(2))
+        .incomingCall(any(ExecMessage.class), typeCaptor.capture(), eq(MessageChannelType.CLI_RPC));
+
+    List<MessageType> capturedTypes = typeCaptor.getAllValues();
+    assertThat(capturedTypes.get(0), is(MessageType.EXEC_INSTANCE_METHOD));
+    assertThat(capturedTypes.get(1), is(MessageType.EXEC_CLASS_METHOD));
   }
 
   /**
@@ -65,15 +115,61 @@ public class ReplayInputInjectorTest {
    * injecting each entry point.
    */
   @Test
-  @Ignore("Awaiting implementation in #907")
-  public void waitsForOrderingGateBeforeInjection() {
-    // Given: ReplayGate at offset 0; 2 entry points at offsets 10 and 50
-    // When: ReplayInputInjector starts (gate blocks first entry point)
-    // Then: First injection doesn't happen until gate reaches offset 9;
-    //       second doesn't happen until gate reaches 49
+  public void waitsForOrderingGateBeforeInjection() throws Exception {
+    // Given: ReplayGate at offset -1 (ordered mode); 2 entry points at offsets 10 and 50
+    IncomingMessageDispatcher dispatcher = mock(IncomingMessageDispatcher.class);
+    ReplayGate gate = new ReplayGate(true);
+    CountDownLatch readyLatch = new CountDownLatch(0);
 
-    // TODO(#907): Implement test logic
-    fail("Not yet implemented");
+    List<WalEntry> entryPoints = new ArrayList<>();
+    entryPoints.add(makeEntryPoint(10L, "rpc-worker-1", 1, "methodA"));
+    entryPoints.add(makeEntryPoint(50L, "rpc-worker-1", 2, "methodB"));
+
+    ReplayInputInjector injector =
+        new ReplayInputInjector("rpc-worker-1", entryPoints, dispatcher, gate, readyLatch);
+
+    AtomicBoolean firstInjected = new AtomicBoolean(false);
+    AtomicBoolean secondInjected = new AtomicBoolean(false);
+    CountDownLatch done = new CountDownLatch(1);
+
+    // Track when injections happen via mock side effects
+    doAnswer(
+            invocation -> {
+              if (!firstInjected.get()) {
+                firstInjected.set(true);
+              } else {
+                secondInjected.set(true);
+              }
+              return null;
+            })
+        .when(dispatcher)
+        .incomingCall(
+            any(ExecMessage.class), any(MessageType.class), any(MessageChannelType.class));
+
+    // When: ReplayInputInjector starts (gate blocks first entry point)
+    Thread injectorThread =
+        new Thread(
+            () -> {
+              injector.run();
+              done.countDown();
+            });
+    injectorThread.start();
+
+    // Then: First injection doesn't happen until gate reaches offset 9
+    Thread.sleep(50);
+    assertThat("First injection should be blocked", firstInjected.get(), is(false));
+
+    gate.advanceTo(9);
+    Thread.sleep(50);
+    assertThat("First injection should have happened", firstInjected.get(), is(true));
+
+    // Second doesn't happen until gate reaches 49
+    assertThat("Second injection should be blocked", secondInjected.get(), is(false));
+
+    gate.advanceTo(49);
+    boolean completed = done.await(2, TimeUnit.SECONDS);
+    assertThat("Injector should complete", completed, is(true));
+    assertThat("Second injection should have happened", secondInjected.get(), is(true));
   }
 
   /**
@@ -81,14 +177,27 @@ public class ReplayInputInjectorTest {
    * isComplete()} returns true.
    */
   @Test
-  @Ignore("Awaiting implementation in #907")
   public void completesWhenAllEntryPointsInjected() {
-    // Given: WalIndex with 2 entry points; ReplayGate that never blocks (unordered)
-    // When: ReplayInputInjector.run() called
-    // Then: Method returns after both entry points are injected; isComplete() returns true
+    // Given: 2 entry points; ReplayGate that never blocks (unordered)
+    IncomingMessageDispatcher dispatcher = mock(IncomingMessageDispatcher.class);
+    ReplayGate gate = new ReplayGate(false);
+    CountDownLatch readyLatch = new CountDownLatch(0);
 
-    // TODO(#907): Implement test logic
-    fail("Not yet implemented");
+    List<WalEntry> entryPoints = new ArrayList<>();
+    entryPoints.add(makeEntryPoint(10L, "rpc-worker-1", 1, "methodA"));
+    entryPoints.add(makeEntryPoint(20L, "rpc-worker-1", 2, "methodB"));
+
+    ReplayInputInjector injector =
+        new ReplayInputInjector("rpc-worker-1", entryPoints, dispatcher, gate, readyLatch);
+
+    // Before run: not complete
+    assertThat(injector.isComplete(), is(false));
+
+    // When: ReplayInputInjector.run() called
+    injector.run();
+
+    // Then: isComplete() returns true
+    assertThat(injector.isComplete(), is(true));
   }
 
   /**
@@ -96,14 +205,24 @@ public class ReplayInputInjectorTest {
    * thread gracefully.
    */
   @Test
-  @Ignore("Awaiting implementation in #907")
   public void handlesEmptyEntryPointList() {
-    // Given: WalIndex with no entry points for thread 'rpc-worker-3'
-    // When: ReplayInputInjector.run() called
-    // Then: Returns immediately; no calls to incomingMessageDispatcher
+    // Given: empty entry points list
+    IncomingMessageDispatcher dispatcher = mock(IncomingMessageDispatcher.class);
+    ReplayGate gate = new ReplayGate(false);
+    CountDownLatch readyLatch = new CountDownLatch(0);
 
-    // TODO(#907): Implement test logic
-    fail("Not yet implemented");
+    ReplayInputInjector injector =
+        new ReplayInputInjector(
+            "rpc-worker-3", Collections.emptyList(), dispatcher, gate, readyLatch);
+
+    // When: ReplayInputInjector.run() called
+    injector.run();
+
+    // Then: Returns immediately; no calls to incomingMessageDispatcher; marked complete
+    verify(dispatcher, never())
+        .incomingCall(
+            any(ExecMessage.class), any(MessageType.class), any(MessageChannelType.class));
+    assertThat(injector.isComplete(), is(true));
   }
 
   /**
@@ -111,14 +230,33 @@ public class ReplayInputInjectorTest {
    * dispatcher without modification.
    */
   @Test
-  @Ignore("Awaiting implementation in #907")
   public void passesRawMessageFromWalEntry() {
-    // Given: WalEntry with specific ExecMessage (including serialized arguments)
-    // When: ReplayInputInjector injects this entry point
-    // Then: The ExecMessage passed to incomingCall() is the rawMessage from the WalEntry
+    // Given: WalEntry with specific ExecMessage
+    IncomingMessageDispatcher dispatcher = mock(IncomingMessageDispatcher.class);
+    ReplayGate gate = new ReplayGate(false);
+    CountDownLatch readyLatch = new CountDownLatch(0);
 
-    // TODO(#907): Implement test logic
-    fail("Not yet implemented");
+    WalEntry entryPoint = makeEntryPoint(10L, "rpc-worker-1", 1, "targetMethod");
+    ExecMessage expectedMsg = entryPoint.getRawMessage();
+
+    ReplayInputInjector injector =
+        new ReplayInputInjector("rpc-worker-1", List.of(entryPoint), dispatcher, gate, readyLatch);
+
+    // When: ReplayInputInjector injects this entry point
+    injector.run();
+
+    // Then: The ExecMessage passed to incomingCall() is the exact rawMessage from the WalEntry
+    ArgumentCaptor<ExecMessage> msgCaptor = ArgumentCaptor.forClass(ExecMessage.class);
+    verify(dispatcher)
+        .incomingCall(
+            msgCaptor.capture(),
+            eq(MessageType.EXEC_INSTANCE_METHOD),
+            eq(MessageChannelType.CLI_RPC));
+
+    assertThat(
+        "Should pass the exact same ExecMessage object from WalEntry",
+        msgCaptor.getValue(),
+        is(sameInstance(expectedMsg)));
   }
 
   /**
@@ -126,14 +264,97 @@ public class ReplayInputInjectorTest {
    * injections.
    */
   @Test
-  @Ignore("Awaiting implementation in #907")
-  public void waitsForReadyLatchBeforeStarting() {
+  public void waitsForReadyLatchBeforeStarting() throws Exception {
     // Given: ReplayInputInjector with a readyLatch that is not yet counted down
-    // When: ReplayInputInjector.run() starts on a separate thread
-    // Then: No injections happen until latch is counted down;
-    //       injections proceed after countdown
+    IncomingMessageDispatcher dispatcher = mock(IncomingMessageDispatcher.class);
+    ReplayGate gate = new ReplayGate(false);
+    CountDownLatch readyLatch = new CountDownLatch(1);
 
-    // TODO(#907): Implement test logic
-    fail("Not yet implemented");
+    List<WalEntry> entryPoints = List.of(makeEntryPoint(10L, "rpc-worker-1", 1, "methodA"));
+
+    ReplayInputInjector injector =
+        new ReplayInputInjector("rpc-worker-1", entryPoints, dispatcher, gate, readyLatch);
+
+    CountDownLatch done = new CountDownLatch(1);
+
+    // When: ReplayInputInjector.run() starts on a separate thread
+    Thread injectorThread =
+        new Thread(
+            () -> {
+              injector.run();
+              done.countDown();
+            });
+    injectorThread.start();
+
+    // Then: No injections happen until latch is counted down
+    Thread.sleep(50);
+    verify(dispatcher, never())
+        .incomingCall(
+            any(ExecMessage.class), any(MessageType.class), any(MessageChannelType.class));
+    assertThat("Should not be complete before latch countdown", injector.isComplete(), is(false));
+
+    // Injections proceed after countdown
+    readyLatch.countDown();
+    boolean completed = done.await(2, TimeUnit.SECONDS);
+    assertThat("Injector thread should complete", completed, is(true));
+    verify(dispatcher, times(1))
+        .incomingCall(
+            any(ExecMessage.class), any(MessageType.class), eq(MessageChannelType.CLI_RPC));
+    assertThat(injector.isComplete(), is(true));
+  }
+
+  /**
+   * Creates an entry-point {@link WalEntry} with an {@code InstanceMethodCall} (message type {@code
+   * EXEC_INSTANCE_METHOD}).
+   *
+   * @param offset the WAL offset
+   * @param threadName the thread name
+   * @param builderSeq the builder sequence number
+   * @param methodName the method name
+   * @return a new entry-point WalEntry
+   */
+  private static WalEntry makeEntryPoint(
+      long offset, String threadName, int builderSeq, String methodName) {
+    ExecMessage msg = new ExecMessage();
+    msg.setThreadName(threadName);
+    msg.setBuilderSeq(builderSeq);
+    msg.setEntryPoint(true);
+
+    InstanceMethodCall imc = new InstanceMethodCall();
+    imc.setName(methodName);
+    imc.setObjectRef(1);
+    Class clazz = new Class();
+    clazz.setName("com.example.TestService");
+    imc.setClazz(clazz);
+    msg.setInstanceMethodCall(imc);
+
+    return WalEntry.fromExecMessage(offset, msg);
+  }
+
+  /**
+   * Creates an entry-point {@link WalEntry} with a {@code ClassMethodCall} (message type {@code
+   * EXEC_CLASS_METHOD}).
+   *
+   * @param offset the WAL offset
+   * @param threadName the thread name
+   * @param builderSeq the builder sequence number
+   * @param methodName the method name
+   * @return a new entry-point WalEntry
+   */
+  private static WalEntry makeClassMethodEntryPoint(
+      long offset, String threadName, int builderSeq, String methodName) {
+    ExecMessage msg = new ExecMessage();
+    msg.setThreadName(threadName);
+    msg.setBuilderSeq(builderSeq);
+    msg.setEntryPoint(true);
+
+    ClassMethodCall cmc = new ClassMethodCall();
+    cmc.setName(methodName);
+    Class clazz = new Class();
+    clazz.setName("com.example.TestService");
+    cmc.setClazz(clazz);
+    msg.setClassMethodCall(cmc);
+
+    return WalEntry.fromExecMessage(offset, msg);
   }
 }
