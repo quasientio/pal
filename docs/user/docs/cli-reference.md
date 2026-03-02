@@ -773,6 +773,7 @@ pal replay [OPTIONS] class [args...]
 | `-w, --wal <name\|file:/path>` | **(Required)** WAL to replay from. Use `file:/path` for Chronicle Queue or a topic name for Kafka |
 | `-k, --kafka-servers <host:port>` | Kafka bootstrap servers (required for Kafka WAL topics without `-d`) |
 | `--divergence-policy <WARN\|HALT\|IGNORE>` | Action on divergence (default: `WARN`) |
+| `--replay-threading <ordered\|unordered>` | Thread ordering for multi-threaded replay (default: `ordered`). See [Multi-Threaded Replay](#multi-threaded-replay) |
 | `-cp, --classpath <CLASSPATH>` | **(Required)** Classpath for the application |
 
 ### Positional Arguments
@@ -856,11 +857,33 @@ pal replay --wal file:/tmp/my-wal --divergence-policy HALT \
   -cp target/classes com.example.App
 ```
 
+### Multi-Threaded Replay
+
+When the WAL contains operations from multiple threads (e.g., RPC worker threads), replay automatically detects entry-point operations and spawns `ReplayInputInjector` threads to re-inject them. No additional configuration is required beyond ensuring `--wal-incoming-rpc` was enabled during recording (this is the default).
+
+The `--replay-threading` option controls cross-thread ordering:
+
+| Value | Behavior |
+|-------|----------|
+| `ordered` (default) | Entry-point injection follows WAL-offset ordering. Preserves the recorded execution order across threads. |
+| `unordered` | Entry-point injection runs without ordering constraints. Faster, but cross-thread order may differ from the recording. |
+
+```bash
+# Replay a multi-threaded RPC service (ordered by default)
+pal replay --wal file:/tmp/service-wal -cp target/classes com.example.ServiceMain
+
+# Replay without cross-thread ordering constraints
+pal replay --wal file:/tmp/service-wal --replay-threading unordered \
+  -cp target/classes com.example.ServiceMain
+```
+
+See the [Deterministic Replay Guide](guides/deterministic-replay.md#multi-threaded-replay) for a complete walkthrough.
+
 ### Notes
 
 - Replay is **read-only**: no new WAL is written during replay. The recorded WAL is consumed but not modified.
 - The application must be compiled with the same AspectJ weaving as during recording. Class version mismatches will surface as operation mismatches.
-- Replay currently supports **single-threaded** applications (Phase 1). Multi-threaded replay is planned.
+- **Multi-threaded replay** is supported for applications that receive input on multiple threads (RPC services, web apps, Swing applications). Entry-point operations must be captured in the WAL during recording (`--wal-incoming-rpc`, enabled by default).
 - When recording a WAL intended for replay, use `--no-wal-incoming-cli` if you want the WAL to contain only the hot-path operations (excluding the bootstrap `main()` wrapper). This is often the right choice for cleaner replay matching.
 
 ---
@@ -922,6 +945,8 @@ WAL Index Summary
 ```
 
 Each entry shows: `[offset] kind threadName className.executableName(paramTypes)`
+
+For multi-threaded WALs recorded with `--wal-incoming-rpc`, entry-point operations (incoming RPC calls that initiate a new causal chain on a non-self-caller thread) are marked in the WAL. These entry-point markers are used by the replay system's `ReplayInputInjector` to identify which operations to re-inject during multi-threaded replay.
 
 ### Examples
 

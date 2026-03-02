@@ -46,6 +46,18 @@ pal run -d localhost:2379 -k localhost:29092 --wal my-topic \
   -cp app.jar com.example.App arg1 arg2
 ```
 
+### Recording RPC Applications
+
+If your application receives input via RPC (ZMQ, JSON-RPC, or WebSocket), ensure that `--wal-incoming-rpc` is enabled during recording. This is the default, but if you have previously disabled it, re-enable it:
+
+```bash
+pal run --wal file:/tmp/service-wal --wal-incoming-rpc \
+  --json-rpc auto --rpc-threads 4 \
+  -cp target/classes com.example.ServiceMain
+```
+
+With `--wal-incoming-rpc`, each incoming RPC call is recorded as an **entry-point operation** in the WAL. These entry-point markers are essential for multi-threaded replay — they tell the replay system which operations were external inputs that need to be re-injected during replay.
+
 ## Replaying from a WAL
 
 ### Basic Replay
@@ -147,6 +159,20 @@ WAL Index Summary
 
 A healthy WAL has equal Operations and Completions, all entries paired, and zero issues. Issues indicate the application was interrupted mid-execution.
 
+For a multi-threaded application with RPC input, the output shows multiple threads and entry-point operations:
+
+```
+WAL Index Summary
+  Entries:     320
+  Operations:  160
+  Completions: 160
+  Pairs:       160
+  Threads:     [main, rpc-worker-1, rpc-worker-2]
+  Issues:      0
+```
+
+Entry-point operations (marked in the WAL during recording with `--wal-incoming-rpc`) indicate where external input arrived. During replay, these entry points are re-injected by the `ReplayInputInjector`.
+
 For per-entry detail:
 
 ```bash
@@ -200,9 +226,103 @@ pal replay --wal file:/tmp/golden-run \
 # Exit code: 2 — divergences show exactly where behavior differs
 ```
 
+## Multi-Threaded Replay
+
+Replay supports applications that receive input on multiple threads — RPC services, web applications, Swing GUIs, and timer-based applications. During recording, the WAL captures operations from all threads. During replay, the self-caller thread (running `main()`) is application-driven as before, while input threads are **WAL-driven**: entry-point operations are injected from the WAL into the runtime.
+
+### How It Works
+
+Replay uses a hybrid model:
+
+- **Self-caller thread** (the thread running `main()`): The application runs naturally. Operations are matched against the WAL cursor and verified, exactly as in single-threaded replay.
+- **Input threads** (RPC workers, UI threads, HTTP handlers): A `ReplayInputInjector` reads entry-point operations from the WAL and dispatches them into the system. Once injected, the method body runs through woven code, producing nested operations that are matched against the WAL cursor — the same mechanism as the self-caller thread.
+
+```
+Self-caller thread:
+  main() → dispatch() → WAL cursor match → execute → verify
+
+Input thread (RPC, UI, etc.):
+  ReplayInputInjector reads WAL → injects method call → dispatch() → WAL cursor match → verify
+```
+
+Cross-thread ordering is maintained by a `ReplayGate` that ensures input injection threads do not run ahead of the self-caller thread. The gate uses WAL offsets: after each operation completes on the self-caller thread, the gate advances, allowing input injection threads whose entry points follow in the WAL to proceed.
+
+### Prerequisite: `--wal-incoming-rpc` During Recording
+
+Multi-threaded replay requires that incoming RPC calls were recorded as entry-point operations in the WAL. This is the default behavior when a WAL is configured, but if you have previously disabled it, ensure it is re-enabled:
+
+```bash
+# Record with RPC input captured (--wal-incoming-rpc is on by default)
+pal run --wal file:/tmp/service-wal \
+  --json-rpc auto --rpc-threads 4 \
+  -cp target/classes com.example.ServiceMain
+```
+
+Without `--wal-incoming-rpc`, the WAL will not contain entry-point markers for input threads, and replay will only cover the self-caller thread.
+
+### Example: Record and Replay an RPC Service
+
+```bash
+# 1. Start the service and record a WAL
+pal run --wal file:/tmp/service-wal \
+  --json-rpc auto --rpc-threads 3 \
+  -cp target/classes com.example.ServiceMain
+
+# 2. Send requests to the service (from another terminal)
+pal call -p ws://localhost:9001 com.example.Service processOrder "order-1"
+pal call -p ws://localhost:9001 com.example.Service processOrder "order-2"
+pal call -p ws://localhost:9001 com.example.Service processOrder "order-3"
+
+# 3. Stop the service (Ctrl-C or let it complete)
+
+# 4. Inspect the WAL
+pal wal-index file:/tmp/service-wal
+# Threads:     [main, rpc-worker-1, rpc-worker-2, rpc-worker-3]
+
+# 5. Replay — the replay system injects the recorded RPC calls
+pal replay --wal file:/tmp/service-wal \
+  -cp target/classes com.example.ServiceMain
+```
+
+During step 5, the replay system:
+
+1. Runs `main()` on the self-caller thread (sets up the service)
+2. Spawns a `ReplayInputInjector` thread for each recorded input thread (`rpc-worker-1`, `rpc-worker-2`, etc.)
+3. Each injector re-dispatches the entry-point operations (the `processOrder` calls) from the WAL
+4. Nested operations within each injected call are matched against the WAL cursor and verified
+
+### `--replay-threading` Flag
+
+The `--replay-threading` option controls cross-thread ordering during multi-threaded replay:
+
+| Value | Behavior |
+|-------|----------|
+| `ordered` (default) | Entry-point injection follows WAL-offset ordering. Input injection threads wait for the self-caller thread to reach the appropriate point before injecting each entry point. Preserves the recorded execution order. |
+| `unordered` | Entry-point injection runs without ordering constraints. Faster, but the execution order may differ from the recording. Use when order between threads does not matter (e.g., independent request handlers). |
+
+```bash
+# Default: ordered replay (preserves recorded execution order)
+pal replay --wal file:/tmp/service-wal \
+  -cp target/classes com.example.ServiceMain
+
+# Unordered: faster, but cross-thread order may differ
+pal replay --wal file:/tmp/service-wal --replay-threading unordered \
+  -cp target/classes com.example.ServiceMain
+```
+
+### Supported Scenarios
+
+| Scenario | Input Thread | What Gets Injected |
+|----------|-------------|---------------------|
+| PAL RPC service | `rpc-worker-N` | Incoming ZMQ/JSON-RPC method calls |
+| Web app | `http-worker-N` | HTTP request handler invocations |
+| Swing app | `AWT-EventQueue-0` | UI event handler calls |
+| Timer-based | `scheduler-N` | Scheduled task invocations |
+
+For all scenarios, the prerequisite is the same: the entry-point operations must be captured in the WAL during recording. For PAL RPC services, `--wal-incoming-rpc` handles this automatically. For web apps, Swing apps, and timer-based applications, the framework's request/event dispatch must go through PAL-woven code.
+
 ## Current Limitations
 
-- **Single-threaded applications only**: Replay currently supports the self-caller thread (the thread running `main()`). Multi-threaded replay (for web apps, RPC services, Swing applications) is planned.
 - **RE_EXECUTE only**: All operations are re-executed and verified. Side-effect shielding (stubbing I/O, databases, time functions from the WAL without executing them) is planned.
 - **Same code version expected**: Replay works best when the recorded and replayed code are identical or have small, targeted changes. Large structural changes will produce many operation-mismatch divergences.
 - **No WAL output during replay**: Replay is read-only. A new WAL is not written during replay. This will be addressed when replay is integrated as a layer within the normal dispatch path.

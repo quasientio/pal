@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- [Doc] Update user and developer documentation for multi-threaded replay (Phase 2): add multi-threaded replay section to user guide, document ReplayInputInjector/ReplayGate/entry-point markers in developer guide, add --replay-threading to CLI reference, mark Phase 2 complete in addendum spec
 - [Feature] Add RpcCalculator test application for multi-threaded RPC replay integration tests
 - [Doc] Update WalIndexMinimalReceiptCalculatorIT Javadoc to reflect symmetric BEFORE/AFTER WAL gating
 - [Fix] SelfBootstrapInvoker offset wait now gated by WITH_WAL_INCOMING_CLI to prevent blocking when AFTER message is not written to WAL
