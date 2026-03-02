@@ -13,6 +13,7 @@ import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.fail;
 
 import io.quasient.pal.messages.colfer.Class;
 import io.quasient.pal.messages.colfer.ExecMessage;
@@ -21,6 +22,7 @@ import io.quasient.pal.messages.colfer.ReturnValue;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -277,6 +279,126 @@ public class WalIndexTest {
     assertThat(index.getPairs().isEmpty(), is(true));
     assertThat(index.getStructuralIssues().isEmpty(), is(false));
     assertThat(index.getStructuralIssues(), hasItem("Unmatched operation at offset 0"));
+  }
+
+  // ===========================================================================================
+  // Entry-point classification tests (Issue #899 — specs for #900 implementation)
+  // ===========================================================================================
+
+  /**
+   * Verifies that {@code getInputThreadNames()} returns threads that have at least one entry-point
+   * operation, excluding threads (like the self-caller) that have no entry-point markers.
+   *
+   * <p>This is used by {@code ReplayInputInjector} to determine which threads need WAL-driven input
+   * injection during multi-threaded replay.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #900")
+  public void getInputThreadNames_returnsThreadsWithEntryPoints() {
+    // Given: WAL with entries on threads 'self-caller', 'rpc-worker-1', 'rpc-worker-2';
+    //        entry points marked on rpc-worker threads only
+    // When: walIndex.getInputThreadNames()
+    // Then: Returns set containing 'rpc-worker-1' and 'rpc-worker-2'
+
+    // TODO(#900): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that {@code getInputThreadNames()} returns an empty set when no entries in the WAL
+   * have the entry-point marker set (e.g., a single-threaded application with only self-caller
+   * operations).
+   */
+  @Test
+  @Ignore("Awaiting implementation in #900")
+  public void getInputThreadNames_emptyWhenNoEntryPoints() {
+    // Given: WAL with all entries having entryPoint = false (single-threaded app)
+    // When: walIndex.getInputThreadNames()
+    // Then: Returns empty set
+
+    // TODO(#900): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that {@code getEntryPointsForThread()} returns only the entries that are both marked
+   * as entry points and have {@code kind == OPERATION}, excluding nested (non-entry-point)
+   * operations on the same thread.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #900")
+  public void getEntryPointsForThread_returnsOnlyEntryPointOperations() {
+    // Given: WAL with thread 'rpc-worker-1' having 3 entry-point operations and 5 nested
+    //        operations (entryPoint = false)
+    // When: walIndex.getEntryPointsForThread("rpc-worker-1")
+    // Then: Returns list of 3 entries, all with isEntryPoint() == true and
+    //       getKind() == OPERATION
+
+    // TODO(#900): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that {@code getEntryPointsForThread()} excludes COMPLETION entries even when they are
+   * marked with {@code entryPoint = true}. Only OPERATION entries should be returned, since
+   * completions are not injected during replay — they are the result of executing the operation.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #900")
+  public void getEntryPointsForThread_excludesCompletions() {
+    // Given: WAL with entry-point operation and its completion both marked entryPoint = true
+    // When: walIndex.getEntryPointsForThread(threadName)
+    // Then: Returns only the OPERATION entries, not completions
+
+    // TODO(#900): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that {@code getEntryPointsForThread()} returns an empty list for a thread that exists
+   * in the WAL but has no entry-point markers (e.g., the self-caller thread in a typical
+   * application).
+   */
+  @Test
+  @Ignore("Awaiting implementation in #900")
+  public void getEntryPointsForThread_emptyForThreadWithoutEntryPoints() {
+    // Given: WAL with self-caller thread having no entry-point markers
+    // When: walIndex.getEntryPointsForThread("self-caller")
+    // Then: Returns empty list
+
+    // TODO(#900): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that {@code getEntryPointsForThread()} returns an empty list when called with a thread
+   * name that does not appear in the WAL at all.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #900")
+  public void getEntryPointsForThread_emptyForUnknownThread() {
+    // Given: Normal WAL index (no thread named "nonexistent-thread")
+    // When: walIndex.getEntryPointsForThread("nonexistent-thread")
+    // Then: Returns empty list
+
+    // TODO(#900): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that {@code getEntryPointsForThread()} returns entry-point operations in WAL offset
+   * order. This ordering is important because {@code ReplayInputInjector} processes entry points
+   * sequentially and uses WAL offsets for the ordering barrier.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #900")
+  public void getEntryPointsForThread_preservesOffsetOrder() {
+    // Given: WAL with thread 'rpc-worker-1' having entry points at offsets 10, 50, 100
+    // When: walIndex.getEntryPointsForThread("rpc-worker-1")
+    // Then: Returns entries in offset order (10, 50, 100)
+
+    // TODO(#900): Implement test logic
+    fail("Not yet implemented");
   }
 
   /**
