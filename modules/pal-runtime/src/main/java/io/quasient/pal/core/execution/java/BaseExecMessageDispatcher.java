@@ -632,6 +632,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
       // Send BEFORE message to WAL/PUB (consistent with hot-path dispatch())
       if (shouldWriteIncomingToWal(messageChannel)) {
+        incomingCall.setEntryPoint(true);
         @SuppressWarnings("unused")
         final ExecMessage beforeExecResponseMsg =
             messageGateway.sendExecMessage(messageBuilder.wrap(incomingCall), ExecPhase.BEFORE);
@@ -1072,6 +1073,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       // 11. Send object or exception to WAL/PUB (consistent with BEFORE message gating)
       final ExecMessage afterExecResponseMsg;
       if (shouldWriteIncomingToWal(messageChannel)) {
+        finalAfterExecMsg.setEntryPoint(true);
         afterExecResponseMsg =
             messageGateway.sendExecMessage(messageBuilder.wrap(finalAfterExecMsg), ExecPhase.AFTER);
       } else {
