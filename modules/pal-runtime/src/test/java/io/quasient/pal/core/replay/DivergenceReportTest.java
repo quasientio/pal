@@ -9,9 +9,11 @@
  */
 package io.quasient.pal.core.replay;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-import org.junit.Ignore;
+import io.quasient.pal.core.replay.DivergenceDetector.DivergenceType;
+import java.util.List;
 import org.junit.Test;
 
 /**
@@ -28,16 +30,31 @@ public class DivergenceReportTest {
    * from multiple threads.
    */
   @Test
-  @Ignore("Awaiting implementation in #903")
   public void formatAsText_includesThreadContext() {
-    // Given: DivergenceReport with divergences from multiple threads
-    //        ('self-caller' and 'rpc-worker-1')
-    // When: formatAsText() called
-    // Then: Output contains thread names for each divergence entry
-    //       (e.g., "[VALUE_MISMATCH] thread=rpc-worker-1 offset=...")
+    Divergence d1 =
+        new Divergence(
+            DivergenceType.VALUE_MISMATCH,
+            42,
+            "rpc-worker-1",
+            "Return value mismatch for Foo.bar",
+            10,
+            20);
+    Divergence d2 =
+        new Divergence(
+            DivergenceType.OPERATION_MISMATCH,
+            100,
+            "self-caller",
+            "Expected Baz.qux but got Baz.quux",
+            null,
+            null);
+    DivergenceReport report = new DivergenceReport(List.of(d1, d2));
 
-    // TODO(#903): Implement test logic
-    fail("Not yet implemented");
+    String text = report.formatAsText();
+
+    assertThat(text, containsString("thread=rpc-worker-1"));
+    assertThat(text, containsString("thread=self-caller"));
+    assertThat(text, containsString("[VALUE_MISMATCH] thread=rpc-worker-1 offset=42"));
+    assertThat(text, containsString("[OPERATION_MISMATCH] thread=self-caller offset=100"));
   }
 
   /**
@@ -45,13 +62,20 @@ public class DivergenceReportTest {
    * divergences from only a single thread.
    */
   @Test
-  @Ignore("Awaiting implementation in #903")
   public void formatAsText_singleThread_includesThreadContext() {
-    // Given: DivergenceReport with divergences from only one thread
-    // When: formatAsText() called
-    // Then: Output still includes thread name for each entry
+    Divergence d =
+        new Divergence(
+            DivergenceType.EXTRA_OPERATION,
+            -1,
+            "self-caller",
+            "Extra operation: Foo.bar",
+            null,
+            null);
+    DivergenceReport report = new DivergenceReport(List.of(d));
 
-    // TODO(#903): Implement test logic
-    fail("Not yet implemented");
+    String text = report.formatAsText();
+
+    assertThat(text, containsString("thread=self-caller"));
+    assertThat(text, containsString("[EXTRA_OPERATION] thread=self-caller offset=-1"));
   }
 }

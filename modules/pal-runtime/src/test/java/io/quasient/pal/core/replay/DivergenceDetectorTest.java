@@ -11,7 +11,6 @@ package io.quasient.pal.core.replay;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.fail;
 
 import io.quasient.pal.common.replay.WalEntry;
 import io.quasient.pal.core.replay.DivergenceDetector.DivergencePolicy;
@@ -23,7 +22,6 @@ import io.quasient.pal.messages.colfer.Obj;
 import io.quasient.pal.messages.colfer.ReturnValue;
 import io.quasient.pal.messages.types.MessageType;
 import java.util.List;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -42,7 +40,7 @@ public class DivergenceDetectorTest {
     DivergenceDetector detector = new DivergenceDetector(DivergencePolicy.WARN);
     WalEntry entry = createReturnValueEntry(42);
 
-    detector.compareReturnValue(entry, 42);
+    detector.compareReturnValue(entry, 42, "self-caller");
 
     assertThat(detector.hasDivergences(), is(false));
   }
@@ -53,7 +51,7 @@ public class DivergenceDetectorTest {
     DivergenceDetector detector = new DivergenceDetector(DivergencePolicy.WARN);
     WalEntry entry = createReturnValueEntry(42);
 
-    detector.compareReturnValue(entry, 99);
+    detector.compareReturnValue(entry, 99, "self-caller");
 
     assertThat(detector.hasDivergences(), is(true));
     assertThat(
@@ -66,7 +64,7 @@ public class DivergenceDetectorTest {
     DivergenceDetector detector = new DivergenceDetector(DivergencePolicy.WARN);
     WalEntry entry = createNullReturnValueEntry();
 
-    detector.compareReturnValue(entry, null);
+    detector.compareReturnValue(entry, null, "self-caller");
 
     assertThat(detector.hasDivergences(), is(false));
   }
@@ -77,7 +75,7 @@ public class DivergenceDetectorTest {
     DivergenceDetector detector = new DivergenceDetector(DivergencePolicy.WARN);
     WalEntry entry = createNullReturnValueEntry();
 
-    detector.compareReturnValue(entry, "hello");
+    detector.compareReturnValue(entry, "hello", "self-caller");
 
     assertThat(detector.hasDivergences(), is(true));
     assertThat(
@@ -93,7 +91,7 @@ public class DivergenceDetectorTest {
         new OperationSignature(
             "com.example.Calculator", "subtract", List.of(), MessageType.EXEC_INSTANCE_METHOD);
 
-    detector.reportOperationMismatch(expected, actual);
+    detector.reportOperationMismatch(expected, actual, "self-caller");
 
     assertThat(detector.hasDivergences(), is(true));
     assertThat(
@@ -108,7 +106,7 @@ public class DivergenceDetectorTest {
         new OperationSignature(
             "com.example.Calculator", "multiply", List.of(), MessageType.EXEC_INSTANCE_METHOD);
 
-    detector.reportExtraOperation(actual);
+    detector.reportExtraOperation(actual, "self-caller");
 
     assertThat(detector.hasDivergences(), is(true));
     assertThat(
@@ -123,7 +121,7 @@ public class DivergenceDetectorTest {
     DivergenceDetector detector = new DivergenceDetector(DivergencePolicy.WARN);
     WalEntry expected = createInstanceMethodEntry("com.example.Calculator", "add");
 
-    detector.reportMissingOperation(expected);
+    detector.reportMissingOperation(expected, "self-caller");
 
     assertThat(detector.hasDivergences(), is(true));
     assertThat(
@@ -136,11 +134,13 @@ public class DivergenceDetectorTest {
     DivergenceDetector detector = new DivergenceDetector(DivergencePolicy.WARN);
     WalEntry entry = createReturnValueEntry(42);
 
-    detector.compareReturnValue(entry, 99);
+    detector.compareReturnValue(entry, 99, "self-caller");
     detector.reportExtraOperation(
         new OperationSignature(
-            "com.example.Foo", "bar", List.of(), MessageType.EXEC_INSTANCE_METHOD));
-    detector.reportMissingOperation(createInstanceMethodEntry("com.example.Baz", "qux"));
+            "com.example.Foo", "bar", List.of(), MessageType.EXEC_INSTANCE_METHOD),
+        "self-caller");
+    detector.reportMissingOperation(
+        createInstanceMethodEntry("com.example.Baz", "qux"), "self-caller");
 
     assertThat(detector.hasDivergences(), is(true));
     DivergenceReport report = detector.getReport();
@@ -163,7 +163,7 @@ public class DivergenceDetectorTest {
     DivergenceDetector detector = new DivergenceDetector(DivergencePolicy.HALT);
     WalEntry entry = createReturnValueEntry(42);
 
-    detector.compareReturnValue(entry, 99);
+    detector.compareReturnValue(entry, 99, "self-caller");
   }
 
   /** Verifies that WARN policy records divergence but does not throw. */
@@ -172,7 +172,7 @@ public class DivergenceDetectorTest {
     DivergenceDetector detector = new DivergenceDetector(DivergencePolicy.WARN);
     WalEntry entry = createReturnValueEntry(42);
 
-    detector.compareReturnValue(entry, 99);
+    detector.compareReturnValue(entry, 99, "self-caller");
 
     assertThat(detector.hasDivergences(), is(true));
     assertThat(detector.getReport().size(), is(1));
@@ -183,14 +183,16 @@ public class DivergenceDetectorTest {
    * detected on a named thread.
    */
   @Test
-  @Ignore("Awaiting implementation in #903")
   public void compareReturnValue_recordsThreadName() {
-    // Given: DivergenceDetector with WARN policy; WalEntry from thread 'rpc-worker-1'
-    // When: compareReturnValue(walEntry, mismatchedValue) called on thread 'rpc-worker-1'
-    // Then: The resulting Divergence has threadName() == "rpc-worker-1"
+    DivergenceDetector detector = new DivergenceDetector(DivergencePolicy.WARN);
+    WalEntry entry = createReturnValueEntry(42);
 
-    // TODO(#903): Implement test logic
-    fail("Not yet implemented");
+    detector.compareReturnValue(entry, 99, "rpc-worker-1");
+
+    assertThat(detector.hasDivergences(), is(true));
+    Divergence divergence = detector.getReport().getDivergences().get(0);
+    assertThat(divergence.type(), is(DivergenceType.VALUE_MISMATCH));
+    assertThat(divergence.threadName(), is("rpc-worker-1"));
   }
 
   /**
@@ -198,14 +200,19 @@ public class DivergenceDetectorTest {
    * reported from a named thread.
    */
   @Test
-  @Ignore("Awaiting implementation in #903")
   public void reportOperationMismatch_recordsThreadName() {
-    // Given: DivergenceDetector; operation mismatch reported from thread 'self-caller'
-    // When: reportOperationMismatch(...) called
-    // Then: Divergence has threadName() == "self-caller"
+    DivergenceDetector detector = new DivergenceDetector(DivergencePolicy.WARN);
+    WalEntry expected = createInstanceMethodEntry("com.example.Calculator", "add");
+    OperationSignature actual =
+        new OperationSignature(
+            "com.example.Calculator", "subtract", List.of(), MessageType.EXEC_INSTANCE_METHOD);
 
-    // TODO(#903): Implement test logic
-    fail("Not yet implemented");
+    detector.reportOperationMismatch(expected, actual, "self-caller");
+
+    assertThat(detector.hasDivergences(), is(true));
+    Divergence divergence = detector.getReport().getDivergences().get(0);
+    assertThat(divergence.type(), is(DivergenceType.OPERATION_MISMATCH));
+    assertThat(divergence.threadName(), is("self-caller"));
   }
 
   /**
@@ -213,14 +220,18 @@ public class DivergenceDetectorTest {
    * from a named thread.
    */
   @Test
-  @Ignore("Awaiting implementation in #903")
   public void reportExtraOperation_recordsThreadName() {
-    // Given: DivergenceDetector; extra operation on thread 'rpc-worker-2'
-    // When: reportExtraOperation(...) called
-    // Then: Divergence has threadName() == "rpc-worker-2"
+    DivergenceDetector detector = new DivergenceDetector(DivergencePolicy.WARN);
+    OperationSignature actual =
+        new OperationSignature(
+            "com.example.Calculator", "multiply", List.of(), MessageType.EXEC_INSTANCE_METHOD);
 
-    // TODO(#903): Implement test logic
-    fail("Not yet implemented");
+    detector.reportExtraOperation(actual, "rpc-worker-2");
+
+    assertThat(detector.hasDivergences(), is(true));
+    Divergence divergence = detector.getReport().getDivergences().get(0);
+    assertThat(divergence.type(), is(DivergenceType.EXTRA_OPERATION));
+    assertThat(divergence.threadName(), is("rpc-worker-2"));
   }
 
   /**

@@ -85,8 +85,9 @@ public class DivergenceDetector {
    *
    * @param walEntry the WAL entry containing the expected return value
    * @param actualValue the actual value from live execution
+   * @param threadName the name of the thread on which the comparison is performed
    */
-  public void compareReturnValue(WalEntry walEntry, Object actualValue) {
+  public void compareReturnValue(WalEntry walEntry, Object actualValue, String threadName) {
     ReturnValue returnValue = walEntry.getRawMessage().getReturnValue();
     if (returnValue == null) {
       return;
@@ -118,6 +119,7 @@ public class DivergenceDetector {
           new Divergence(
               DivergenceType.VALUE_MISMATCH,
               walEntry.getOffset(),
+              threadName,
               String.format(
                   "Return value mismatch for %s.%s",
                   walEntry.getClassName(), walEntry.getExecutableName()),
@@ -131,12 +133,15 @@ public class DivergenceDetector {
    *
    * @param expected the WAL entry for the expected operation
    * @param actual the actual operation signature from live execution
+   * @param threadName the name of the thread on which the mismatch was detected
    */
-  public void reportOperationMismatch(WalEntry expected, OperationSignature actual) {
+  public void reportOperationMismatch(
+      WalEntry expected, OperationSignature actual, String threadName) {
     recordDivergence(
         new Divergence(
             DivergenceType.OPERATION_MISMATCH,
             expected.getOffset(),
+            threadName,
             String.format(
                 "Expected %s.%s but got %s.%s",
                 expected.getClassName(),
@@ -151,12 +156,14 @@ public class DivergenceDetector {
    * Reports that live execution produced an operation not present in the WAL.
    *
    * @param actual the extra operation signature from live execution
+   * @param threadName the name of the thread on which the extra operation was detected
    */
-  public void reportExtraOperation(OperationSignature actual) {
+  public void reportExtraOperation(OperationSignature actual, String threadName) {
     recordDivergence(
         new Divergence(
             DivergenceType.EXTRA_OPERATION,
             -1,
+            threadName,
             String.format("Extra operation: %s.%s", actual.className(), actual.executableName()),
             null,
             actual));
@@ -166,12 +173,14 @@ public class DivergenceDetector {
    * Reports that the WAL expects an operation that was not executed live.
    *
    * @param expected the WAL entry for the missing operation
+   * @param threadName the name of the thread on which the missing operation was detected
    */
-  public void reportMissingOperation(WalEntry expected) {
+  public void reportMissingOperation(WalEntry expected, String threadName) {
     recordDivergence(
         new Divergence(
             DivergenceType.MISSING_OPERATION,
             expected.getOffset(),
+            threadName,
             String.format(
                 "Missing operation: %s.%s", expected.getClassName(), expected.getExecutableName()),
             OperationSignature.fromWalEntry(expected),
@@ -234,8 +243,9 @@ public class DivergenceDetector {
     }
     if (policy == DivergencePolicy.WARN) {
       logger.warn(
-          "Replay divergence at offset {}: {} (expected={}, actual={})",
+          "Replay divergence at offset {} thread={}: {} (expected={}, actual={})",
           divergence.walOffset(),
+          divergence.threadName(),
           divergence.description(),
           divergence.expected(),
           divergence.actual());

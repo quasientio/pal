@@ -497,14 +497,16 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
     if (expectedEntry == null || expectedEntry.getKind() != WalEntryKind.OPERATION) {
       // Cursor exhausted or unexpected completion entry — extra live operation
-      replayContext.getDivergenceDetector().reportExtraOperation(liveSig);
+      replayContext.getDivergenceDetector().reportExtraOperation(liveSig, threadName);
       return invoke(pjp, pjp.getArgs());
     }
 
     OperationSignature walSig = OperationSignature.fromWalEntry(expectedEntry);
     if (!liveSig.matches(walSig)) {
       // Operation signature mismatch — record divergence but still execute (best-effort)
-      replayContext.getDivergenceDetector().reportOperationMismatch(expectedEntry, liveSig);
+      replayContext
+          .getDivergenceDetector()
+          .reportOperationMismatch(expectedEntry, liveSig, threadName);
       return invoke(pjp, pjp.getArgs());
     }
 
@@ -516,7 +518,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     // Step 3: Verify return value against WAL completion entry
     WalEntry completionEntry = cursor.peekNext();
     if (completionEntry != null && completionEntry.getKind() == WalEntryKind.COMPLETION) {
-      replayContext.getDivergenceDetector().compareReturnValue(completionEntry, result);
+      replayContext.getDivergenceDetector().compareReturnValue(completionEntry, result, threadName);
 
       // Register object ref mapping if the return value has a ref in the WAL
       if (result != null) {

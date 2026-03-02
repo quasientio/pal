@@ -44,8 +44,8 @@ public class DivergenceReport {
   /**
    * Formats this report as plain text suitable for stderr output.
    *
-   * <p>Each divergence is printed on its own line with the format: {@code [TYPE] offset=N:
-   * description (expected=E, actual=A)}
+   * <p>Each divergence is printed on its own line with the format: {@code [TYPE] thread=threadName
+   * offset=N: description (expected=E, actual=A)}
    *
    * @return the formatted report text, or an empty string if there are no divergences
    */
@@ -61,7 +61,9 @@ public class DivergenceReport {
           .append(i + 1)
           .append(". [")
           .append(d.type())
-          .append("] offset=")
+          .append("] thread=")
+          .append(d.threadName())
+          .append(" offset=")
           .append(d.walOffset())
           .append(": ")
           .append(d.description())

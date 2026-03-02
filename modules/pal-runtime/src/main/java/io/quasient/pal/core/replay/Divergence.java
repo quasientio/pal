@@ -15,6 +15,7 @@ package io.quasient.pal.core.replay;
  *
  * @param type the category of divergence (e.g., value mismatch, operation mismatch)
  * @param walOffset the WAL offset of the entry where the divergence was detected
+ * @param threadName the name of the thread on which the divergence was detected
  * @param description a human-readable description of the divergence
  * @param expected the expected value from the WAL recording (may be {@code null})
  * @param actual the actual value from live execution (may be {@code null})
@@ -22,6 +23,7 @@ package io.quasient.pal.core.replay;
 public record Divergence(
     DivergenceDetector.DivergenceType type,
     long walOffset,
+    String threadName,
     String description,
     Object expected,
     Object actual) {}
