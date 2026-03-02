@@ -11,6 +11,7 @@ package io.quasient.pal.core.replay;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.fail;
 
 import io.quasient.pal.common.replay.WalEntry;
 import io.quasient.pal.core.replay.DivergenceDetector.DivergencePolicy;
@@ -22,6 +23,7 @@ import io.quasient.pal.messages.colfer.Obj;
 import io.quasient.pal.messages.colfer.ReturnValue;
 import io.quasient.pal.messages.types.MessageType;
 import java.util.List;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -174,6 +176,51 @@ public class DivergenceDetectorTest {
 
     assertThat(detector.hasDivergences(), is(true));
     assertThat(detector.getReport().size(), is(1));
+  }
+
+  /**
+   * Verifies that the thread name is recorded in the divergence when a return value mismatch is
+   * detected on a named thread.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #903")
+  public void compareReturnValue_recordsThreadName() {
+    // Given: DivergenceDetector with WARN policy; WalEntry from thread 'rpc-worker-1'
+    // When: compareReturnValue(walEntry, mismatchedValue) called on thread 'rpc-worker-1'
+    // Then: The resulting Divergence has threadName() == "rpc-worker-1"
+
+    // TODO(#903): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that the thread name is recorded in the divergence when an operation mismatch is
+   * reported from a named thread.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #903")
+  public void reportOperationMismatch_recordsThreadName() {
+    // Given: DivergenceDetector; operation mismatch reported from thread 'self-caller'
+    // When: reportOperationMismatch(...) called
+    // Then: Divergence has threadName() == "self-caller"
+
+    // TODO(#903): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that the thread name is recorded in the divergence when an extra operation is reported
+   * from a named thread.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #903")
+  public void reportExtraOperation_recordsThreadName() {
+    // Given: DivergenceDetector; extra operation on thread 'rpc-worker-2'
+    // When: reportExtraOperation(...) called
+    // Then: Divergence has threadName() == "rpc-worker-2"
+
+    // TODO(#903): Implement test logic
+    fail("Not yet implemented");
   }
 
   /**
