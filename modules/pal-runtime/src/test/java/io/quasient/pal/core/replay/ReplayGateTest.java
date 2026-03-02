@@ -9,9 +9,19 @@
  */
 package io.quasient.pal.core.replay;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.lessThan;
 
-import org.junit.Ignore;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import org.junit.Test;
 
 /**
@@ -33,14 +43,20 @@ public class ReplayGateTest {
    * lower value.
    */
   @Test
-  @Ignore("Awaiting implementation in #905")
   public void advanceTo_updatesGateMonotonically() {
     // Given: ReplayGate with initial state (no offsets advanced)
-    // When: advanceTo(10) then advanceTo(20) then advanceTo(15)
-    // Then: Current gate value is 20 (never goes backward)
+    ReplayGate gate = new ReplayGate(true);
 
-    // TODO(#905): Implement test logic
-    fail("Not yet implemented");
+    // When: advanceTo(10) then advanceTo(20) then advanceTo(15)
+    gate.advanceTo(10);
+    assertThat(gate.getCompletedOffset(), is(10L));
+
+    gate.advanceTo(20);
+    assertThat(gate.getCompletedOffset(), is(20L));
+
+    gate.advanceTo(15);
+    // Then: Current gate value is 20 (never goes backward)
+    assertThat(gate.getCompletedOffset(), is(20L));
   }
 
   /**
@@ -48,14 +64,18 @@ public class ReplayGateTest {
    * advanced past the requested offset.
    */
   @Test
-  @Ignore("Awaiting implementation in #905")
   public void waitForOffset_proceedsImmediatelyWhenAlreadyPast() {
     // Given: ReplayGate with gate advanced to offset 50
-    // When: waitForOffset(30) called
-    // Then: Returns immediately without blocking
+    ReplayGate gate = new ReplayGate(true);
+    gate.advanceTo(50);
 
-    // TODO(#905): Implement test logic
-    fail("Not yet implemented");
+    // When: waitForOffset(30) called
+    long start = System.nanoTime();
+    gate.waitForOffset(30);
+    long elapsed = System.nanoTime() - start;
+
+    // Then: Returns immediately without blocking (less than 5ms)
+    assertThat(elapsed, is(lessThan(TimeUnit.MILLISECONDS.toNanos(5))));
   }
 
   /**
@@ -63,28 +83,48 @@ public class ReplayGateTest {
    * the gate to (or past) the requested offset.
    */
   @Test
-  @Ignore("Awaiting implementation in #905")
-  public void waitForOffset_blocksUntilGateAdvanced() {
-    // Given: ReplayGate with gate at offset 0
-    // When: Thread A calls waitForOffset(10) (blocks);
-    //       Thread B calls advanceTo(10) after 100ms delay
-    // Then: Thread A unblocks after Thread B advances the gate;
-    //       total blocking time ~100ms (±50ms)
+  public void waitForOffset_blocksUntilGateAdvanced() throws Exception {
+    // Given: ReplayGate with gate at initial state (-1)
+    ReplayGate gate = new ReplayGate(true);
+    AtomicBoolean unblocked = new AtomicBoolean(false);
+    CountDownLatch done = new CountDownLatch(1);
 
-    // TODO(#905): Implement test logic
-    fail("Not yet implemented");
+    // When: Thread A calls waitForOffset(10) (blocks)
+    Thread waiter =
+        new Thread(
+            () -> {
+              gate.waitForOffset(10);
+              unblocked.set(true);
+              done.countDown();
+            });
+    waiter.start();
+
+    // Verify still blocked after a short wait
+    Thread.sleep(50);
+    assertThat("Should still be blocked before advanceTo", unblocked.get(), is(false));
+
+    // Thread B calls advanceTo(9) after 100ms delay
+    gate.advanceTo(9);
+
+    // Then: Thread A unblocks after Thread B advances the gate
+    boolean completed = done.await(2, TimeUnit.SECONDS);
+    assertThat("Waiter thread should have completed", completed, is(true));
+    assertThat(unblocked.get(), is(true));
   }
 
   /** Verifies that waiting for offset zero never blocks, regardless of the current gate value. */
   @Test
-  @Ignore("Awaiting implementation in #905")
   public void waitForOffset_zeroOffsetNeverBlocks() {
-    // Given: ReplayGate with initial state (gate at 0)
-    // When: waitForOffset(0) called
-    // Then: Returns immediately without blocking
+    // Given: ReplayGate with initial state (gate at -1)
+    ReplayGate gate = new ReplayGate(true);
 
-    // TODO(#905): Implement test logic
-    fail("Not yet implemented");
+    // When: waitForOffset(0) called
+    long start = System.nanoTime();
+    gate.waitForOffset(0);
+    long elapsed = System.nanoTime() - start;
+
+    // Then: Returns immediately without blocking (less than 5ms)
+    assertThat(elapsed, is(lessThan(TimeUnit.MILLISECONDS.toNanos(5))));
   }
 
   /**
@@ -92,14 +132,17 @@ public class ReplayGateTest {
    * not been reached.
    */
   @Test
-  @Ignore("Awaiting implementation in #905")
   public void unorderedMode_neverBlocks() {
     // Given: ReplayGate created with ordered = false (unordered mode)
-    // When: waitForOffset(999999) called without any advanceTo()
-    // Then: Returns immediately without blocking
+    ReplayGate gate = new ReplayGate(false);
 
-    // TODO(#905): Implement test logic
-    fail("Not yet implemented");
+    // When: waitForOffset(999999) called without any advanceTo()
+    long start = System.nanoTime();
+    gate.waitForOffset(999999);
+    long elapsed = System.nanoTime() - start;
+
+    // Then: Returns immediately without blocking (less than 5ms)
+    assertThat(elapsed, is(lessThan(TimeUnit.MILLISECONDS.toNanos(5))));
   }
 
   /**
@@ -107,14 +150,35 @@ public class ReplayGateTest {
    * with the final gate value reflecting the maximum offset provided.
    */
   @Test
-  @Ignore("Awaiting implementation in #905")
-  public void concurrentAdvanceTo_threadSafe() {
+  public void concurrentAdvanceTo_threadSafe() throws Exception {
     // Given: ReplayGate with initial state
-    // When: 10 threads concurrently call advanceTo() with values 1 through 10
-    // Then: Final gate value is 10; no exceptions thrown
+    ReplayGate gate = new ReplayGate(true);
+    int threadCount = 10;
+    CyclicBarrier barrier = new CyclicBarrier(threadCount);
+    CountDownLatch done = new CountDownLatch(threadCount);
 
-    // TODO(#905): Implement test logic
-    fail("Not yet implemented");
+    // When: 10 threads concurrently call advanceTo() with values 1 through 10
+    for (int i = 1; i <= threadCount; i++) {
+      final long offset = i;
+      new Thread(
+              () -> {
+                try {
+                  barrier.await(5, TimeUnit.SECONDS);
+                  gate.advanceTo(offset);
+                } catch (Exception e) {
+                  throw new RuntimeException(e);
+                } finally {
+                  done.countDown();
+                }
+              })
+          .start();
+    }
+
+    boolean completed = done.await(5, TimeUnit.SECONDS);
+    assertThat("All threads should complete", completed, is(true));
+
+    // Then: Final gate value is 10; no exceptions thrown
+    assertThat(gate.getCompletedOffset(), is(10L));
   }
 
   /**
@@ -122,15 +186,56 @@ public class ReplayGateTest {
    * gate advances.
    */
   @Test
-  @Ignore("Awaiting implementation in #905")
-  public void waitForOffset_multipleWaiters() {
-    // Given: ReplayGate at offset 0
-    // When: Thread A waits for offset 5; Thread B waits for offset 10;
-    //       gate advances to 5 then to 10
-    // Then: Thread A unblocks first (at advance to 5);
-    //       Thread B unblocks second (at advance to 10)
+  public void waitForOffset_multipleWaiters() throws Exception {
+    // Given: ReplayGate at initial state
+    ReplayGate gate = new ReplayGate(true);
+    List<Long> unblockOrder = Collections.synchronizedList(new ArrayList<>());
+    AtomicLong sequencer = new AtomicLong(0);
+    CountDownLatch waitersReady = new CountDownLatch(2);
+    CountDownLatch allDone = new CountDownLatch(2);
 
-    // TODO(#905): Implement test logic
-    fail("Not yet implemented");
+    // When: Thread A waits for offset 5; Thread B waits for offset 10
+    Thread waiterA =
+        new Thread(
+            () -> {
+              waitersReady.countDown();
+              gate.waitForOffset(5);
+              unblockOrder.add(sequencer.getAndIncrement());
+              allDone.countDown();
+            });
+
+    Thread waiterB =
+        new Thread(
+            () -> {
+              waitersReady.countDown();
+              gate.waitForOffset(10);
+              unblockOrder.add(sequencer.getAndIncrement());
+              allDone.countDown();
+            });
+
+    waiterA.start();
+    waiterB.start();
+
+    // Wait for both waiters to be blocked
+    waitersReady.await(2, TimeUnit.SECONDS);
+    Thread.sleep(50); // Give threads time to enter waitForOffset
+
+    // Gate advances to 4 (offset 5 needs completedOffset >= 4)
+    gate.advanceTo(4);
+    Thread.sleep(50); // Give thread A time to unblock
+
+    // Then: Thread A unblocks first (at advance to 4, since waitForOffset(5) needs >= 4)
+    assertThat(
+        "At least waiter A should have unblocked", unblockOrder.size(), greaterThanOrEqualTo(1));
+    assertThat("Waiter A should unblock first", unblockOrder.get(0), is(0L));
+
+    // Gate advances to 9 (offset 10 needs completedOffset >= 9)
+    gate.advanceTo(9);
+
+    // Thread B unblocks second (at advance to 9)
+    boolean completed = allDone.await(2, TimeUnit.SECONDS);
+    assertThat("Both waiters should complete", completed, is(true));
+    assertThat("Both waiters should have recorded", unblockOrder.size(), is(2));
+    assertThat("Waiter B should unblock second", unblockOrder.get(1), is(1L));
   }
 }

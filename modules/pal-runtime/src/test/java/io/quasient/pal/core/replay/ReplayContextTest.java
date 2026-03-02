@@ -99,7 +99,11 @@ public class ReplayContextTest {
     DivergenceDetector detector = new DivergenceDetector(DivergenceDetector.DivergencePolicy.WARN);
     ReplayContext ctx =
         new ReplayContext(
-            WalIndex.build(Arrays.asList()), new ReplayPolicy(), new ReplayObjectStore(), detector);
+            WalIndex.build(Arrays.asList()),
+            new ReplayPolicy(),
+            new ReplayObjectStore(),
+            detector,
+            new ReplayGate(true));
 
     // When: getDivergenceDetector()
     // Then: returns the same DivergenceDetector instance passed at construction
@@ -116,7 +120,8 @@ public class ReplayContextTest {
             WalIndex.build(Arrays.asList()),
             new ReplayPolicy(),
             store,
-            new DivergenceDetector(DivergenceDetector.DivergencePolicy.WARN));
+            new DivergenceDetector(DivergenceDetector.DivergencePolicy.WARN),
+            new ReplayGate(true));
 
     // When: getObjectStore()
     // Then: returns the same ReplayObjectStore instance passed at construction
@@ -133,7 +138,8 @@ public class ReplayContextTest {
             WalIndex.build(Arrays.asList()),
             policy,
             new ReplayObjectStore(),
-            new DivergenceDetector(DivergenceDetector.DivergencePolicy.WARN));
+            new DivergenceDetector(DivergenceDetector.DivergencePolicy.WARN),
+            new ReplayGate(true));
 
     // When: getPolicy()
     // Then: returns the same ReplayPolicy instance passed at construction
@@ -150,7 +156,8 @@ public class ReplayContextTest {
             walIndex,
             new ReplayPolicy(),
             new ReplayObjectStore(),
-            new DivergenceDetector(DivergenceDetector.DivergencePolicy.WARN));
+            new DivergenceDetector(DivergenceDetector.DivergencePolicy.WARN),
+            new ReplayGate(true));
 
     // When: getWalIndex()
     // Then: returns the same WalIndex instance passed at construction
@@ -168,7 +175,8 @@ public class ReplayContextTest {
         walIndex,
         new ReplayPolicy(),
         new ReplayObjectStore(),
-        new DivergenceDetector(DivergenceDetector.DivergencePolicy.WARN));
+        new DivergenceDetector(DivergenceDetector.DivergencePolicy.WARN),
+        new ReplayGate(true));
   }
 
   /**

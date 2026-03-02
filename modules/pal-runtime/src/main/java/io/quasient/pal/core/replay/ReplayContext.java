@@ -43,6 +43,9 @@ public class ReplayContext {
   /** Verification engine that compares actual values against WAL-recorded values. */
   private final DivergenceDetector divergenceDetector;
 
+  /** WAL-offset-based ordering barrier for cross-thread replay coordination. */
+  private final ReplayGate replayGate;
+
   /** Lazily created and cached per-thread cursors. Thread-safe via {@link ConcurrentHashMap}. */
   private final Map<String, ReplayCursor> cursors = new ConcurrentHashMap<>();
 
@@ -53,16 +56,19 @@ public class ReplayContext {
    * @param policy the policy determining replay actions
    * @param objectStore the bidirectional WAL ref ↔ live object mapping
    * @param divergenceDetector the verification engine for comparing actual vs WAL values
+   * @param replayGate the WAL-offset ordering barrier for cross-thread coordination
    */
   public ReplayContext(
       WalIndex walIndex,
       ReplayPolicy policy,
       ReplayObjectStore objectStore,
-      DivergenceDetector divergenceDetector) {
+      DivergenceDetector divergenceDetector,
+      ReplayGate replayGate) {
     this.walIndex = walIndex;
     this.policy = policy;
     this.objectStore = objectStore;
     this.divergenceDetector = divergenceDetector;
+    this.replayGate = replayGate;
   }
 
   /**
@@ -118,5 +124,14 @@ public class ReplayContext {
    */
   public DivergenceDetector getDivergenceDetector() {
     return divergenceDetector;
+  }
+
+  /**
+   * Returns the WAL-offset ordering barrier for cross-thread replay coordination.
+   *
+   * @return the replay gate
+   */
+  public ReplayGate getReplayGate() {
+    return replayGate;
   }
 }

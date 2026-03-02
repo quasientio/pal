@@ -43,6 +43,7 @@ import io.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import io.quasient.pal.core.internal.concurrent.MpscKind;
 import io.quasient.pal.core.replay.DivergenceDetector;
 import io.quasient.pal.core.replay.ReplayContext;
+import io.quasient.pal.core.replay.ReplayGate;
 import io.quasient.pal.core.replay.ReplayObjectStore;
 import io.quasient.pal.core.replay.ReplayPolicy;
 import io.quasient.pal.core.runtime.objects.ConcurrentHashMapObjectLookupStore;
@@ -779,8 +780,15 @@ public class PeerWiring extends AbstractModule {
       policy = DivergenceDetector.DivergencePolicy.WARN;
     }
 
+    String threading = properties.getProperty("replay.threading", "ordered");
+    boolean ordered = !"unordered".equalsIgnoreCase(threading);
+
     return new ReplayContext(
-        index, new ReplayPolicy(), new ReplayObjectStore(), new DivergenceDetector(policy));
+        index,
+        new ReplayPolicy(),
+        new ReplayObjectStore(),
+        new DivergenceDetector(policy),
+        new ReplayGate(ordered));
   }
 
   /**

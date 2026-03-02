@@ -23,6 +23,7 @@ import io.quasient.pal.common.replay.WalIndex;
 import io.quasient.pal.common.runtime.Context;
 import io.quasient.pal.core.replay.DivergenceDetector;
 import io.quasient.pal.core.replay.ReplayContext;
+import io.quasient.pal.core.replay.ReplayGate;
 import io.quasient.pal.core.replay.ReplayObjectStore;
 import io.quasient.pal.core.replay.ReplayPolicy;
 import io.quasient.pal.core.service.RunOptions;
@@ -88,7 +89,8 @@ public class ReplayDispatchTest {
     WalIndex index = WalIndex.build(entries);
     DivergenceDetector detector = new DivergenceDetector(DivergenceDetector.DivergencePolicy.WARN);
     ReplayContext ctx =
-        new ReplayContext(index, new ReplayPolicy(), new ReplayObjectStore(), detector);
+        new ReplayContext(
+            index, new ReplayPolicy(), new ReplayObjectStore(), detector, new ReplayGate(true));
 
     MinimalDispatcher dispatcher = new MinimalDispatcher();
     setRunOptions(dispatcher, EnumSet.of(RunOptions.WITH_REPLAY));
@@ -119,7 +121,8 @@ public class ReplayDispatchTest {
     WalIndex index = WalIndex.build(entries);
     DivergenceDetector detector = new DivergenceDetector(DivergenceDetector.DivergencePolicy.WARN);
     ReplayContext ctx =
-        new ReplayContext(index, new ReplayPolicy(), new ReplayObjectStore(), detector);
+        new ReplayContext(
+            index, new ReplayPolicy(), new ReplayObjectStore(), detector, new ReplayGate(true));
 
     MinimalDispatcher dispatcher = new MinimalDispatcher();
     setRunOptions(dispatcher, EnumSet.of(RunOptions.WITH_REPLAY));
@@ -152,7 +155,8 @@ public class ReplayDispatchTest {
     WalIndex index = WalIndex.build(entries);
     DivergenceDetector detector = new DivergenceDetector(DivergenceDetector.DivergencePolicy.WARN);
     ReplayContext ctx =
-        new ReplayContext(index, new ReplayPolicy(), new ReplayObjectStore(), detector);
+        new ReplayContext(
+            index, new ReplayPolicy(), new ReplayObjectStore(), detector, new ReplayGate(true));
 
     MinimalDispatcher dispatcher = new MinimalDispatcher();
     setRunOptions(dispatcher, EnumSet.of(RunOptions.WITH_REPLAY));
@@ -184,7 +188,8 @@ public class ReplayDispatchTest {
     WalIndex index = WalIndex.build(entries);
     DivergenceDetector detector = new DivergenceDetector(DivergenceDetector.DivergencePolicy.WARN);
     ReplayContext ctx =
-        new ReplayContext(index, new ReplayPolicy(), new ReplayObjectStore(), detector);
+        new ReplayContext(
+            index, new ReplayPolicy(), new ReplayObjectStore(), detector, new ReplayGate(true));
 
     MinimalDispatcher dispatcher = new MinimalDispatcher();
     setRunOptions(dispatcher, EnumSet.of(RunOptions.WITH_REPLAY));
@@ -219,7 +224,8 @@ public class ReplayDispatchTest {
     WalIndex index = WalIndex.build(entries);
     DivergenceDetector detector = new DivergenceDetector(DivergenceDetector.DivergencePolicy.WARN);
     ReplayContext ctx =
-        new ReplayContext(index, new ReplayPolicy(), new ReplayObjectStore(), detector);
+        new ReplayContext(
+            index, new ReplayPolicy(), new ReplayObjectStore(), detector, new ReplayGate(true));
 
     // Outer dispatcher — when pjp.proceed() is called, it simulates the nested dispatch of B
     MinimalDispatcher outerDispatcher = new MinimalDispatcher();
@@ -261,7 +267,8 @@ public class ReplayDispatchTest {
     WalIndex index = WalIndex.build(entries);
     DivergenceDetector detector = new DivergenceDetector(DivergenceDetector.DivergencePolicy.WARN);
     ReplayObjectStore objectStore = new ReplayObjectStore();
-    ReplayContext ctx = new ReplayContext(index, new ReplayPolicy(), objectStore, detector);
+    ReplayContext ctx =
+        new ReplayContext(index, new ReplayPolicy(), objectStore, detector, new ReplayGate(true));
 
     MinimalDispatcher dispatcher = new MinimalDispatcher();
     setRunOptions(dispatcher, EnumSet.of(RunOptions.WITH_REPLAY));
