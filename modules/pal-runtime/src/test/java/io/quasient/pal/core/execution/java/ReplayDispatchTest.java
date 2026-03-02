@@ -286,6 +286,73 @@ public class ReplayDispatchTest {
     assertThat(objectStore.getWalRef(newObj), is(7));
   }
 
+  /**
+   * Verifies that the {@link ReplayGate} is advanced to the completion offset after each
+   * operation+completion pair in {@code dispatchReplay()}.
+   */
+  @Test
+  public void replayGateAdvancedAfterCompletion() throws Throwable {
+    // Given: WAL with [OP(Foo.bar)@0, RET(value="42")@1]
+    List<WalEntry> entries = new ArrayList<>();
+    entries.add(makeOperation(0L, "self-caller", 0, "com.example.Foo", "bar"));
+    entries.add(makeReturnValue(1L, "self-caller", 1, "42", "java.lang.String"));
+    WalIndex index = WalIndex.build(entries);
+    DivergenceDetector detector = new DivergenceDetector(DivergenceDetector.DivergencePolicy.WARN);
+    ReplayGate gate = new ReplayGate(true);
+    ReplayContext ctx =
+        new ReplayContext(index, new ReplayPolicy(), new ReplayObjectStore(), detector, gate);
+
+    MinimalDispatcher dispatcher = new MinimalDispatcher();
+    setRunOptions(dispatcher, EnumSet.of(RunOptions.WITH_REPLAY));
+    setReplayContext(dispatcher, ctx);
+
+    ProceedingJoinPoint pjp = buildPjp("com.example.Foo", "bar", new Object[] {}, "42");
+
+    // When
+    dispatcher.dispatch(pjp);
+
+    // Then: gate is advanced to the completion offset (1)
+    assertThat(gate.getCompletedOffset(), is(1L));
+  }
+
+  /**
+   * Verifies that the {@link ReplayGate} is advanced after nested operations, tracking the highest
+   * completion offset processed.
+   */
+  @Test
+  public void replayGateAdvancedThroughNestedOperations() throws Throwable {
+    // Given: WAL [A_OP@0, B_OP@1, B_RET@2, A_RET@3]
+    List<WalEntry> entries = new ArrayList<>();
+    entries.add(makeOperation(0L, "self-caller", 0, "com.example.Outer", "a"));
+    entries.add(makeOperation(1L, "self-caller", 1, "com.example.Inner", "b"));
+    entries.add(makeReturnValue(2L, "self-caller", 2, "10", "java.lang.String"));
+    entries.add(makeReturnValue(3L, "self-caller", 3, "20", "java.lang.String"));
+    WalIndex index = WalIndex.build(entries);
+    DivergenceDetector detector = new DivergenceDetector(DivergenceDetector.DivergencePolicy.WARN);
+    ReplayGate gate = new ReplayGate(true);
+    ReplayContext ctx =
+        new ReplayContext(index, new ReplayPolicy(), new ReplayObjectStore(), detector, gate);
+
+    MinimalDispatcher outerDispatcher = new MinimalDispatcher();
+    setRunOptions(outerDispatcher, EnumSet.of(RunOptions.WITH_REPLAY));
+    setReplayContext(outerDispatcher, ctx);
+
+    MinimalDispatcher innerDispatcher = new MinimalDispatcher();
+    setRunOptions(innerDispatcher, EnumSet.of(RunOptions.WITH_REPLAY));
+    setReplayContext(innerDispatcher, ctx);
+
+    ProceedingJoinPoint innerPjp = buildPjp("com.example.Inner", "b", new Object[] {}, "10");
+    ProceedingJoinPoint outerPjp =
+        buildPjpWithNestedDispatch(
+            "com.example.Outer", "a", new Object[] {}, innerDispatcher, innerPjp, "20");
+
+    // When
+    outerDispatcher.dispatch(outerPjp);
+
+    // Then: gate advanced through both completions, ending at offset 3
+    assertThat(gate.getCompletedOffset(), is(3L));
+  }
+
   // ──────────────────── Helpers ────────────────────
 
   /** Sets {@code runOptions} on an AbstractDispatcher via reflection. */

@@ -528,7 +528,11 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         }
       }
 
+      long completionOffset = completionEntry.getOffset();
       cursor.advance();
+
+      // Advance the ReplayGate so injection threads waiting on WAL ordering can proceed
+      replayContext.getReplayGate().advanceTo(completionOffset);
     }
 
     return result;
@@ -636,6 +640,18 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         @SuppressWarnings("unused")
         final ExecMessage beforeExecResponseMsg =
             messageGateway.sendExecMessage(messageBuilder.wrap(incomingCall), ExecPhase.BEFORE);
+      }
+
+      // During replay, advance the cursor past the entry-point OPERATION entry so that nested
+      // operations within the invoked method hit dispatchReplay() with a correctly positioned
+      // cursor.
+      if (replayContext != null && runOptions.contains(RunOptions.WITH_REPLAY)) {
+        String threadName = Thread.currentThread().getName();
+        ReplayCursor cursor = replayContext.getCursor(threadName);
+        WalEntry peeked = cursor.peekNext();
+        if (peeked != null && peeked.getKind() == WalEntryKind.OPERATION && peeked.isEntryPoint()) {
+          cursor.advance(); // skip past the entry-point OPERATION entry
+        }
       }
 
       Throwable exceptionWhileLoading = null;
@@ -1080,7 +1096,20 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         afterExecResponseMsg = finalAfterExecMsg;
       }
 
-      // 12. Return received message
+      // 12. During replay, advance the cursor past the entry-point COMPLETION entry and advance
+      // the ReplayGate to the completion offset so other threads can proceed.
+      if (replayContext != null && runOptions.contains(RunOptions.WITH_REPLAY)) {
+        String threadName = Thread.currentThread().getName();
+        ReplayCursor cursor = replayContext.getCursor(threadName);
+        WalEntry peeked = cursor.peekNext();
+        if (peeked != null && peeked.getKind() == WalEntryKind.COMPLETION) {
+          long completionOffset = peeked.getOffset();
+          cursor.advance(); // skip past the entry-point COMPLETION entry
+          replayContext.getReplayGate().advanceTo(completionOffset);
+        }
+      }
+
+      // 13. Return received message
       if (logger.isTraceEnabled()) {
         logger.trace(
             "dispatchIncoming:out returning message: {}", ColferUtils.format(afterExecResponseMsg));
@@ -1566,6 +1595,10 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
    * @return true if the incoming message should be written to WAL/PUB
    */
   private boolean shouldWriteIncomingToWal(MessageChannelType messageChannel) {
+    // During replay, incoming messages are being replayed from the WAL — do not write them back.
+    if (runOptions.contains(RunOptions.WITH_REPLAY)) {
+      return false;
+    }
     boolean withPubOrWal =
         runOptions.contains(RunOptions.WITH_WAL) || runOptions.contains(RunOptions.WITH_TCP_PUB);
     if (!withPubOrWal) {

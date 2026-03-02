@@ -486,4 +486,62 @@ public class BaseExecMessageDispatcherShouldWriteIncomingToWalTest {
       logger.detachAppender(listAppender);
     }
   }
+
+  // ---------------------------------------------------------------
+  // Test 12: Replay mode always returns false
+  // ---------------------------------------------------------------
+
+  @Test
+  public void shouldWriteIncomingToWal_withReplayMode_returnsFalse() throws Exception {
+    // Given: runOptions = {WITH_REPLAY, WITH_WAL, WITH_WAL_INCOMING_RPC}
+    // Even though WAL writing is otherwise enabled, replay mode suppresses it.
+    MinimalOk dispatcher = new MinimalOk();
+    setRunOptions(
+        dispatcher,
+        EnumSet.of(RunOptions.WITH_REPLAY, RunOptions.WITH_WAL, RunOptions.WITH_WAL_INCOMING_RPC));
+
+    // When
+    boolean result = invokeShouldWriteIncomingToWal(dispatcher, MessageChannelType.ZMQ_SOCKET_RPC);
+
+    // Then
+    assertThat(result, is(false));
+  }
+
+  // ---------------------------------------------------------------
+  // Test 13: Replay mode suppresses CLI_RPC WAL writes
+  // ---------------------------------------------------------------
+
+  @Test
+  public void shouldWriteIncomingToWal_withReplayMode_cliRpc_returnsFalse() throws Exception {
+    // Given: runOptions = {WITH_REPLAY, WITH_WAL, WITH_WAL_INCOMING_CLI}
+    MinimalOk dispatcher = new MinimalOk();
+    setRunOptions(
+        dispatcher,
+        EnumSet.of(RunOptions.WITH_REPLAY, RunOptions.WITH_WAL, RunOptions.WITH_WAL_INCOMING_CLI));
+
+    // When
+    boolean result = invokeShouldWriteIncomingToWal(dispatcher, MessageChannelType.CLI_RPC);
+
+    // Then
+    assertThat(result, is(false));
+  }
+
+  // ---------------------------------------------------------------
+  // Test 14: Replay mode suppresses WebSocket WAL writes
+  // ---------------------------------------------------------------
+
+  @Test
+  public void shouldWriteIncomingToWal_withReplayMode_websocket_returnsFalse() throws Exception {
+    // Given: runOptions = {WITH_REPLAY, WITH_WAL, WITH_WAL_INCOMING_RPC}
+    MinimalOk dispatcher = new MinimalOk();
+    setRunOptions(
+        dispatcher,
+        EnumSet.of(RunOptions.WITH_REPLAY, RunOptions.WITH_WAL, RunOptions.WITH_WAL_INCOMING_RPC));
+
+    // When
+    boolean result = invokeShouldWriteIncomingToWal(dispatcher, MessageChannelType.WEBSOCKET_RPC);
+
+    // Then
+    assertThat(result, is(false));
+  }
 }
