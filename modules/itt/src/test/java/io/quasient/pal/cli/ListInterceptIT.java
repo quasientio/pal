@@ -168,8 +168,8 @@ public class ListInterceptIT extends AbstractCliIT {
     peerId = UUID.randomUUID();
     String peerName = "icpt-peer-" + generateId();
     String walName = "icpt-wal-" + generateId();
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
 
+    // Launch a long-running peer with WAL so both peer and log are registered in etcd
     peerProcess =
         launchPeer(
             peerId,
@@ -181,23 +181,6 @@ public class ListInterceptIT extends AbstractCliIT {
             peerName,
             "--wal",
             walName,
-            "--interceptable",
-            "-cp",
-            getIttAppsClasspath(),
-            classToRun);
-
-    int peerExitCode = joinPeer(peerProcess, 10);
-    assertEquals("Expected successful peer exit code", 0, peerExitCode);
-    peerProcess = null;
-
-    // Re-launch peer (needed for intercept registration since peer must exist)
-    peerProcess =
-        launchPeer(
-            peerId,
-            "-d",
-            palDirectoryUrl,
-            "-n",
-            peerName,
             "--interceptable",
             "-cp",
             getIttAppsClasspath());

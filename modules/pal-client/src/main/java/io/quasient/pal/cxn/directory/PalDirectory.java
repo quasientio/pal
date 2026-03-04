@@ -919,6 +919,10 @@ public class PalDirectory {
   public void createIntercept(InterceptRequest<?> intercept, long ttlSeconds)
       throws ExecutionException, InterruptedException, NoPeerInfoNodeException {
 
+    long now = System.currentTimeMillis();
+    if (intercept.getCTime() == null) intercept.setCtime(now);
+    if (intercept.getMTime() == null) intercept.setMtime(now);
+
     UUID peerUuid = intercept.getPeer();
     UUID interceptUuid = intercept.getUuid();
 

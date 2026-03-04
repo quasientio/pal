@@ -469,6 +469,9 @@ public class List extends AbstractPalSubcommand {
    * @return a formatted date string in "MMM dd HH:mm" format
    */
   private static String getFormattedDate(OffsetDateTime dateTime) {
+    if (dateTime == null) {
+      return "??";
+    }
     return format(
         "%s %02d %02d:%02d",
         dateTime.getMonth().getDisplayName(TextStyle.SHORT, Locale.getDefault()),
@@ -670,7 +673,8 @@ public class List extends AbstractPalSubcommand {
     final Comparator<InterceptRequest<?>> comparator;
     if (sortByCTime) {
       final Comparator<InterceptRequest<?>> cTimeComparator =
-          Comparator.comparing(InterceptRequest::getCTime);
+          Comparator.comparing(
+              InterceptRequest::getCTime, Comparator.nullsLast(Comparator.naturalOrder()));
       comparator = reverseOrder ? cTimeComparator : cTimeComparator.reversed();
     } else {
       final Comparator<InterceptRequest<?>> classComparator =

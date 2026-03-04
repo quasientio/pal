@@ -401,7 +401,11 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
                 + LINE_SEP // 8. forceImmediate
                 + "%s"
                 + LINE_SEP // 9. exceptionPropagationPolicy
-                + "%s", // 10. checkedExceptionPolicy
+                + "%s"
+                + LINE_SEP // 10. checkedExceptionPolicy
+                + "%s"
+                + LINE_SEP // 11. ctime (epoch millis)
+                + "%s", // 12. mtime (epoch millis)
             uuid,
             peer,
             type.toByte(),
@@ -412,7 +416,9 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
             interceptable.toSerializedString(),
             forceImmediate,
             exceptionPropagationPolicy != null ? exceptionPropagationPolicy.name() : "null",
-            checkedExceptionPolicy != null ? checkedExceptionPolicy.name() : "null");
+            checkedExceptionPolicy != null ? checkedExceptionPolicy.name() : "null",
+            getCtimeMillis() != null ? getCtimeMillis() : "null",
+            getMtimeMillis() != null ? getMtimeMillis() : "null");
     return s.getBytes(charset);
   }
 
@@ -454,17 +460,28 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
     final CheckedExceptionPolicy checkedExceptionPolicy =
         parts[10].equals("null") ? null : CheckedExceptionPolicy.valueOf(parts[10]);
 
-    return new InterceptRequest<>(
-        uuid,
-        peer,
-        type,
-        clazz,
-        callbackClass,
-        callbackMethod,
-        interceptable,
-        forceImmediate,
-        exceptionPropagationPolicy,
-        checkedExceptionPolicy);
+    InterceptRequest<?> request =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            type,
+            clazz,
+            callbackClass,
+            callbackMethod,
+            interceptable,
+            forceImmediate,
+            exceptionPropagationPolicy,
+            checkedExceptionPolicy);
+
+    // ctime/mtime fields added after the original 11 fields
+    if (parts.length > 11 && !parts[11].equals("null")) {
+      request.setCtime(Long.parseLong(parts[11]));
+    }
+    if (parts.length > 12 && !parts[12].equals("null")) {
+      request.setMtime(Long.parseLong(parts[12]));
+    }
+
+    return request;
   }
 
   /**
