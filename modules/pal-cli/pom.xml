@@ -177,12 +177,6 @@
                             </excludes>
                         </filter>
                         <filter>
-                            <artifact>com.alibaba.fastjson2:fastjson2</artifact>
-                            <excludes>
-                                <exclude>META-INF/versions/**</exclude>
-                            </excludes>
-                        </filter>
-                        <filter>
                             <artifact>org.springframework.boot:spring-boot-loader</artifact>
                             <includes>
                                 <include>org/springframework/boot/loader/net/protocol/nested/**</include>

@@ -9,7 +9,13 @@
  */
 package io.quasient.pal.common.directory.nodes;
 
-import com.alibaba.fastjson.JSON;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.UncheckedIOException;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -24,6 +30,16 @@ import java.time.ZoneOffset;
  * <p>The creation and modification times are managed as {@link OffsetDateTime} instances in UTC.
  */
 public abstract class InfoNode {
+
+  /**
+   * Shared Jackson {@link ObjectMapper} used by {@link #toJson()} and subclass {@code fromJson}
+   * methods. Configured to ignore unknown properties during deserialization so that read-only
+   * computed fields (such as {@code humanReadableByteSize}) do not cause errors.
+   */
+  static final ObjectMapper MAPPER =
+      new ObjectMapper()
+          .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+          .setSerializationInclusion(JsonInclude.Include.NON_NULL);
 
   /**
    * The creation time of the node, stored as an {@link OffsetDateTime} in UTC.
@@ -45,6 +61,7 @@ public abstract class InfoNode {
    * @param ctime the creation time in epoch milliseconds. Must be a non-negative value representing
    *     milliseconds since the Unix epoch.
    */
+  @JsonProperty("ctime")
   public final void setCtime(long ctime) {
     Instant instant = Instant.ofEpochMilli(ctime);
     this.ctime = OffsetDateTime.ofInstant(instant, ZoneOffset.UTC);
@@ -71,6 +88,7 @@ public abstract class InfoNode {
    * @param mtime the modification time in epoch milliseconds. Must be a non-negative value
    *     representing milliseconds since the Unix epoch.
    */
+  @JsonProperty("mtime")
   public final void setMtime(long mtime) {
     Instant instant = Instant.ofEpochMilli(mtime);
     this.mtime = OffsetDateTime.ofInstant(instant, ZoneOffset.UTC);
@@ -81,6 +99,7 @@ public abstract class InfoNode {
    *
    * @return the creation time as an {@link OffsetDateTime} in UTC.
    */
+  @JsonIgnore
   public final OffsetDateTime getCTime() {
     return ctime;
   }
@@ -90,17 +109,42 @@ public abstract class InfoNode {
    *
    * @return the modification time as an {@link OffsetDateTime} in UTC.
    */
+  @JsonIgnore
   public final OffsetDateTime getMTime() {
     return mtime;
+  }
+
+  /**
+   * Returns the creation time as epoch milliseconds for JSON serialization.
+   *
+   * @return the creation time in epoch milliseconds, or {@code null} if not set.
+   */
+  @JsonProperty("ctime")
+  final Long getCtimeMillis() {
+    return ctime != null ? ctime.toInstant().toEpochMilli() : null;
+  }
+
+  /**
+   * Returns the modification time as epoch milliseconds for JSON serialization.
+   *
+   * @return the modification time in epoch milliseconds, or {@code null} if not set.
+   */
+  @JsonProperty("mtime")
+  final Long getMtimeMillis() {
+    return mtime != null ? mtime.toInstant().toEpochMilli() : null;
   }
 
   /**
    * Serializes the node's information to a JSON string.
    *
    * @return a JSON representation of the node.
-   * @throws com.alibaba.fastjson.JSONException if serialization fails.
+   * @throws UncheckedIOException if serialization fails.
    */
   public final String toJson() {
-    return JSON.toJSONString(this);
+    try {
+      return MAPPER.writeValueAsString(this);
+    } catch (JsonProcessingException e) {
+      throw new UncheckedIOException(e);
+    }
   }
 }

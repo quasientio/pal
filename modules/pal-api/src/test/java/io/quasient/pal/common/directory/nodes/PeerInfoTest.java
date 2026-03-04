@@ -12,6 +12,7 @@ package io.quasient.pal.common.directory.nodes;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
@@ -96,6 +97,34 @@ public class PeerInfoTest {
     assertNotEquals(a, different);
     assertNotEquals(a, null);
     assertNotEquals(a, new Object());
+  }
+
+  @Test
+  public void toJsonAndFromJsonRoundTrip() {
+    peerInfo.setCtime(1700000000000L);
+    peerInfo.setMtime(1700001000000L);
+
+    String json = peerInfo.toJson();
+    PeerInfo restored = PeerInfo.fromJson(json);
+
+    assertThat(restored.getUuid(), is(peerUuid));
+    assertThat(restored.getName(), is(peerName));
+    assertThat(restored.getZmqRpcAddress(), is(zmqRpcAddress));
+    assertThat(restored.getJsonrpcAddress(), is(jsonRpcAddress));
+    assertThat(restored.getPubAddress(), is(pubAddress));
+    assertThat(restored.getJmxAddress(), is(jmxAddress));
+    assertThat(restored.getCTime(), is(peerInfo.getCTime()));
+    assertThat(restored.getMTime(), is(peerInfo.getMTime()));
+  }
+
+  @Test
+  public void fromJsonWithMinimalFields() {
+    UUID uuid = UUID.randomUUID();
+    PeerInfo minimal = new PeerInfo(uuid);
+    String json = minimal.toJson();
+    PeerInfo restored = PeerInfo.fromJson(json);
+    assertThat(restored.getUuid(), is(uuid));
+    assertThat(restored.getName(), is(nullValue()));
   }
 
   @Test

@@ -9,7 +9,8 @@
  */
 package io.quasient.pal.common.directory.nodes;
 
-import com.alibaba.fastjson.JSON;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import java.io.UncheckedIOException;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -297,10 +298,13 @@ public final class PeerInfo extends InfoNode implements Comparable<PeerInfo> {
    *
    * @param repr the JSON string representing a {@code PeerInfo}; must not be {@code null}
    * @return a {@code PeerInfo} object parsed from the JSON string
-   * @throws com.alibaba.fastjson.JSONException if the JSON parsing fails
-   * @see JSON#parseObject(String, Class)
+   * @throws UncheckedIOException if the JSON parsing fails
    */
   public static PeerInfo fromJson(String repr) {
-    return JSON.parseObject(repr, PeerInfo.class);
+    try {
+      return MAPPER.readValue(repr, PeerInfo.class);
+    } catch (JsonProcessingException e) {
+      throw new UncheckedIOException(e);
+    }
   }
 }

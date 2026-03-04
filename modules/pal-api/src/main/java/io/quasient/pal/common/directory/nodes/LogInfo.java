@@ -9,8 +9,11 @@
  */
 package io.quasient.pal.common.directory.nodes;
 
-import com.alibaba.fastjson.JSON;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import io.quasient.pal.common.util.ByteSizeConverter;
+import java.io.UncheckedIOException;
 import java.util.Objects;
 import java.util.UUID;
 import javax.annotation.Nonnull;
@@ -79,7 +82,8 @@ public final class LogInfo extends InfoNode implements Comparable<LogInfo> {
    * @param name the unique name of the log, used as a key in etcd. Must not be null.
    * @throws NullPointerException if the name is null.
    */
-  public LogInfo(@Nonnull String name) {
+  @JsonCreator
+  public LogInfo(@JsonProperty("name") @Nonnull String name) {
     this.name = Objects.requireNonNull(name);
   }
 
@@ -334,10 +338,13 @@ public final class LogInfo extends InfoNode implements Comparable<LogInfo> {
    *
    * @param repr the JSON string representing a LogInfo object.
    * @return a LogInfo instance parsed from the JSON string.
-   * @throws com.alibaba.fastjson.JSONException if the JSON parsing fails.
-   * @see com.alibaba.fastjson.JSON#parseObject(String, Class)
+   * @throws UncheckedIOException if the JSON parsing fails.
    */
   public static LogInfo fromJson(String repr) {
-    return JSON.parseObject(repr, LogInfo.class);
+    try {
+      return MAPPER.readValue(repr, LogInfo.class);
+    } catch (JsonProcessingException e) {
+      throw new UncheckedIOException(e);
+    }
   }
 }

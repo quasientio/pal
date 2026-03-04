@@ -119,6 +119,42 @@ public class LogInfoTest {
   }
 
   @Test
+  public void toJsonAndFromJsonRoundTrip() {
+    UUID uuid = UUID.randomUUID();
+    logInfo.setUuid(uuid);
+    logInfo.setBootstrapServers("localhost:9092");
+    logInfo.setStartOffset(10);
+    logInfo.setEndOffset(200);
+    logInfo.setBytes(4096);
+    logInfo.setLogType(LogInfo.LogType.CHRONICLE);
+    logInfo.setCtime(1700000000000L);
+    logInfo.setMtime(1700001000000L);
+
+    String json = logInfo.toJson();
+    LogInfo restored = LogInfo.fromJson(json);
+
+    assertThat(restored.getName(), is(name));
+    assertThat(restored.getUuid(), is(uuid));
+    assertThat(restored.getBootstrapServers(), is("localhost:9092"));
+    assertThat(restored.getStartOffset(), is(10L));
+    assertThat(restored.getEndOffset(), is(200L));
+    assertThat(restored.getBytes(), is(4096L));
+    assertThat(restored.getLogType(), is(LogInfo.LogType.CHRONICLE));
+    assertThat(restored.getCTime(), is(logInfo.getCTime()));
+    assertThat(restored.getMTime(), is(logInfo.getMTime()));
+  }
+
+  @Test
+  public void fromJsonWithMinimalFields() {
+    LogInfo minimal = new LogInfo("minimal-log");
+    String json = minimal.toJson();
+    LogInfo restored = LogInfo.fromJson(json);
+    assertThat(restored.getName(), is("minimal-log"));
+    assertThat(restored.getUuid(), is(nullValue()));
+    assertThat(restored.getBootstrapServers(), is(nullValue()));
+  }
+
+  @Test
   public void testToString() {
 
     // set time fields

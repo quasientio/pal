@@ -53,15 +53,6 @@ Pal incorporates the libraries listed below.
 * **dev.failsafe:failsafe:3.3.2**  
     Licence: Apache License, Version 2.0
  — https://failsafe.dev/failsafe
-* **com.alibaba:fastjson:2.0.49**  
-    Licence: Apache 2
- — https://github.com/alibaba/fastjson2
-* **com.alibaba.fastjson2:fastjson2:2.0.49**  
-    Licence: Apache 2
- — https://github.com/alibaba/fastjson2
-* **com.alibaba.fastjson2:fastjson2-extension:2.0.49**  
-    Licence: Apache 2
- — https://github.com/alibaba/fastjson2
 * **com.google.code.findbugs:jsr305:3.0.2**  
     Licence: The Apache Software License, Version 2.0
  — http://findbugs.sourceforge.net/
