@@ -515,22 +515,10 @@ public class MessageStreamStatsIT extends AbstractCliIT {
     UUID peerId = UUID.randomUUID();
     String pubEndpoint = "localhost:41781";
 
-    // Launch a peer with TCP PUB socket and a class that generates messages
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
-
-    peerProcess =
-        launchPeer(
-            peerId,
-            "-d",
-            palDirectory,
-            "--tcp-pub",
-            pubEndpoint,
-            "-cp",
-            getIttAppsClasspath(),
-            classToRun);
-
-    // When: MessageStreamStats created with peer UUID and address
-    // Use the socket-based constructor
+    // Start subscriber BEFORE launching the peer to avoid the ZMQ "slow joiner" problem.
+    // ZMQ SUB can connect to a non-existing endpoint; the connection completes automatically
+    // when the PUB socket is created during peer startup. This ensures the subscriber is
+    // ready to receive messages before the peer's main class publishes them.
     MessageStreamStats stats =
         new MessageStreamStats(palDirectory, peerId, "tcp://" + pubEndpoint, null, null, null);
 
@@ -545,6 +533,23 @@ public class MessageStreamStatsIT extends AbstractCliIT {
                 return 1;
               }
             });
+
+    // Allow ZMQ subscriber socket to initialize before launching the peer
+    Thread.sleep(200);
+
+    // Launch a peer with TCP PUB socket and a class that generates messages
+    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDirectory,
+            "--tcp-pub",
+            pubEndpoint,
+            "-cp",
+            getIttAppsClasspath(),
+            classToRun);
 
     // Wait for socket to connect and process messages
     int maxWaitSeconds = 10;
@@ -611,21 +616,7 @@ public class MessageStreamStatsIT extends AbstractCliIT {
     UUID peerId = UUID.randomUUID();
     String pubEndpoint = "localhost:41782";
 
-    // Launch a peer with TCP PUB socket and a class that generates multiple message types
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
-
-    peerProcess =
-        launchPeer(
-            peerId,
-            "-d",
-            palDirectory,
-            "--tcp-pub",
-            pubEndpoint,
-            "-cp",
-            getIttAppsClasspath(),
-            classToRun);
-
-    // When: MessageStreamStats created with type filter for EXEC_CONSTRUCTOR only
+    // Start subscriber BEFORE launching the peer to avoid the ZMQ "slow joiner" problem.
     List<String> msgTypes = List.of("EXEC_CONSTRUCTOR");
     MessageStreamStats stats =
         new MessageStreamStats(palDirectory, peerId, "tcp://" + pubEndpoint, msgTypes, null, null);
@@ -641,6 +632,23 @@ public class MessageStreamStatsIT extends AbstractCliIT {
                 return 1;
               }
             });
+
+    // Allow ZMQ subscriber socket to initialize before launching the peer
+    Thread.sleep(200);
+
+    // Launch a peer with TCP PUB socket and a class that generates multiple message types
+    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDirectory,
+            "--tcp-pub",
+            pubEndpoint,
+            "-cp",
+            getIttAppsClasspath(),
+            classToRun);
 
     // Wait for socket to connect and process messages
     int maxWaitSeconds = 10;
@@ -711,21 +719,7 @@ public class MessageStreamStatsIT extends AbstractCliIT {
     UUID peerId = UUID.randomUUID();
     String pubEndpoint = "localhost:41783";
 
-    // Launch a peer with TCP PUB socket
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
-
-    peerProcess =
-        launchPeer(
-            peerId,
-            "-d",
-            palDirectory,
-            "--tcp-pub",
-            pubEndpoint,
-            "-cp",
-            getIttAppsClasspath(),
-            classToRun);
-
-    // When: MessageStreamStats created with peer filter
+    // Start subscriber BEFORE launching the peer to avoid the ZMQ "slow joiner" problem.
     String filterPeerUuid = peerId.toString();
     MessageStreamStats stats =
         new MessageStreamStats(
@@ -742,6 +736,23 @@ public class MessageStreamStatsIT extends AbstractCliIT {
                 return 1;
               }
             });
+
+    // Allow ZMQ subscriber socket to initialize before launching the peer
+    Thread.sleep(200);
+
+    // Launch a peer with TCP PUB socket
+    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDirectory,
+            "--tcp-pub",
+            pubEndpoint,
+            "-cp",
+            getIttAppsClasspath(),
+            classToRun);
 
     // Wait for socket to connect and process messages
     int maxWaitSeconds = 10;
