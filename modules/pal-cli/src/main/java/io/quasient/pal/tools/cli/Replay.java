@@ -47,7 +47,12 @@ import picocli.CommandLine.ParentCommand;
  */
 @Command(
     name = "replay",
-    customSynopsis = "pal replay [OPTIONS] class [args...]%n",
+    customSynopsis = {
+      "pal replay [OPTIONS] class [args...]",
+      "            (to replay a class)",
+      "    or pal replay [OPTIONS] -jar jarFile [args...]",
+      "            (to replay a jar file)%n"
+    },
     description = "Replay application deterministically from a recorded WAL",
     separator = " ",
     sortOptions = false,
@@ -119,14 +124,24 @@ public class Replay extends AbstractPalSubcommand {
 
   /**
    * Classpath for the application to replay. Specifies folders or JAR files containing the
-   * application classes.
+   * application classes. Required when replaying a class; optional when using {@code -jar}.
    */
   @Option(
       names = {"-cp", "--classpath"},
-      required = true,
       paramLabel = "CLASSPATH",
-      description = "Classpath for the application")
+      description = "Classpath for the application (required when replaying a class)")
   private String classpath;
+
+  /**
+   * JAR file to replay. When specified, the Main-Class is read from the JAR's MANIFEST.MF file. The
+   * JAR is automatically added to the classpath. Mutually exclusive with specifying a main class
+   * directly.
+   */
+  @Option(
+      names = {"-jar"},
+      paramLabel = "jarFile",
+      description = "JAR file to replay (Main-Class from manifest)")
+  private String jarFile;
 
   /** Displays the help message when requested. */
   @SuppressWarnings("unused")
@@ -136,13 +151,22 @@ public class Replay extends AbstractPalSubcommand {
       description = "display this help message")
   private boolean helpRequested = false;
 
-  /** The fully qualified name of the main class to replay. */
-  @Parameters(index = "0", description = "Main class to replay")
+  /**
+   * Positional arguments from the command line. When not using {@code -jar}, the first element is
+   * the main class name and the rest are application arguments. When using {@code -jar}, all
+   * elements are application arguments.
+   */
+  @SuppressWarnings("unused")
+  @Parameters(arity = "0..*", description = "Main class and/or application arguments")
+  private List<String> positionalArgs;
+
+  /**
+   * The fully qualified name of the main class to replay. Parsed from {@code positionalArgs} in
+   * {@link #validateInput()} when not using {@code -jar}.
+   */
   private String mainClass;
 
-  /** Optional application arguments passed to the main class during replay. */
-  @SuppressWarnings("unused")
-  @Parameters(index = "1..*", arity = "0..*", description = "Application arguments")
+  /** Application arguments passed to the main class during replay. */
   private List<String> appArgs;
 
   /** Constructs a new {@code Replay} command instance. */
@@ -153,10 +177,12 @@ public class Replay extends AbstractPalSubcommand {
    *
    * <p>Ensures the {@code --divergence-policy} value is one of the accepted values: {@code WARN},
    * {@code HALT}, or {@code IGNORE}. For non-Chronicle WAL paths, validates that either {@code -k}
-   * (Kafka servers) or {@code -d} (PalDirectory) is available.
+   * (Kafka servers) or {@code -d} (PalDirectory) is available. Validates that either a main class
+   * or {@code -jar} is specified, and that {@code -cp} is provided when using a main class.
    *
-   * @throws RuntimeException if the divergence policy is not a valid value, or if a Kafka WAL topic
-   *     is specified without Kafka servers or PalDirectory
+   * @throws RuntimeException if the divergence policy is not a valid value, if a Kafka WAL topic is
+   *     specified without Kafka servers or PalDirectory, if neither main class nor -jar is
+   *     specified, or if -cp is missing when using a main class
    */
   @Override
   protected void validateInput() {
@@ -171,6 +197,30 @@ public class Replay extends AbstractPalSubcommand {
       throw new RuntimeException(
           "Kafka WAL topics require --kafka-servers (-k) or a PAL directory (-d). "
               + "For Chronicle Queue WALs, use the 'file:' prefix (e.g., file:/tmp/my-wal).");
+    }
+
+    // Parse positional arguments into mainClass and appArgs based on -jar usage
+    if (jarFile != null) {
+      // When using -jar, all positional args are application arguments
+      appArgs = positionalArgs;
+    } else if (positionalArgs != null && !positionalArgs.isEmpty()) {
+      // When not using -jar, first positional arg is the main class
+      mainClass = positionalArgs.get(0);
+      appArgs = positionalArgs.size() > 1 ? positionalArgs.subList(1, positionalArgs.size()) : null;
+    }
+
+    // Validate that either mainClass or -jar is specified
+    if (mainClass == null && jarFile == null) {
+      throw new RuntimeException(
+          "Either a main class or -jar must be specified. "
+              + "Usage: pal replay [OPTIONS] class [args...] or pal replay [OPTIONS] -jar jarFile [args...]");
+    }
+
+    // Validate that -cp is provided when using a main class (not -jar)
+    if (jarFile == null && classpath == null) {
+      throw new RuntimeException(
+          "Classpath (-cp/--classpath) is required when replaying a class. "
+              + "Use -jar to replay a JAR file without specifying a classpath.");
     }
   }
 
@@ -262,8 +312,9 @@ public class Replay extends AbstractPalSubcommand {
    *   <li>{@code --replay-wal <walPath>} — the WAL path for deterministic replay
    *   <li>{@code --replay-divergence-policy <policy>} — the divergence handling policy
    *   <li>{@code -k <kafkaServers>} — Kafka bootstrap servers (if Kafka WAL, resolved or explicit)
-   *   <li>{@code -cp <classpath>} — the application classpath
-   *   <li>The main class name
+   *   <li>{@code -cp <classpath>} — the application classpath (if provided)
+   *   <li>{@code -jar <jarFile>} — the JAR file to replay (if specified), OR
+   *   <li>The main class name (if not using -jar)
    *   <li>Any additional application arguments
    * </ul>
    *
@@ -281,9 +332,16 @@ public class Replay extends AbstractPalSubcommand {
       args.add("-k");
       args.add(resolvedKafkaServers);
     }
-    args.add("-cp");
-    args.add(classpath);
-    args.add(mainClass);
+    if (classpath != null) {
+      args.add("-cp");
+      args.add(classpath);
+    }
+    if (jarFile != null) {
+      args.add("-jar");
+      args.add(jarFile);
+    } else {
+      args.add(mainClass);
+    }
     if (appArgs != null) {
       args.addAll(appArgs);
     }

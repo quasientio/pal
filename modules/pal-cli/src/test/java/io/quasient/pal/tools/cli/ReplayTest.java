@@ -97,7 +97,7 @@ public class ReplayTest {
   // Argument parsing tests
   // ===========================================================================
 
-  /** Verifies that all required and optional fields are correctly parsed. */
+  /** Verifies that all required and optional fields are correctly parsed and validated. */
   @Test
   public void testParseAllOptions() throws Exception {
     Replay replay =
@@ -111,6 +111,7 @@ public class ReplayTest {
             "com.example.Main",
             "arg1",
             "arg2");
+    replay.validateInput(); // mainClass and appArgs are set during validation
 
     assertThat(getField(replay, "walPath"), is("file:/tmp/my-wal"));
     assertThat(getField(replay, "divergencePolicy"), is("HALT"));
@@ -482,5 +483,172 @@ public class ReplayTest {
             "-cp",
             "target/app.jar",
             "com.example.Main"));
+  }
+
+  // ===========================================================================
+  // -jar option tests
+  // ===========================================================================
+
+  /** Verifies that the -jar option is parsed correctly. */
+  @Test
+  public void testParseJarOption() throws Exception {
+    Replay replay = parseReplay("--wal", "file:/tmp/wal", "-jar", "myapp.jar");
+    replay.validateInput();
+
+    assertThat(getField(replay, "jarFile"), is("myapp.jar"));
+  }
+
+  /** Verifies that -jar works with app arguments. */
+  @Test
+  public void testParseJarOptionWithAppArgs() throws Exception {
+    Replay replay = parseReplay("--wal", "file:/tmp/wal", "-jar", "myapp.jar", "arg1", "arg2");
+    replay.validateInput(); // appArgs are set during validation when using -jar
+
+    assertThat(getField(replay, "jarFile"), is("myapp.jar"));
+    @SuppressWarnings("unchecked")
+    List<String> appArgs = (List<String>) getField(replay, "appArgs");
+    assertThat(appArgs, is(Arrays.asList("arg1", "arg2")));
+  }
+
+  /** Verifies that -jar works with optional -cp for additional classpath entries. */
+  @Test
+  public void testParseJarOptionWithClasspath() throws Exception {
+    Replay replay =
+        parseReplay("--wal", "file:/tmp/wal", "-cp", "lib/extra.jar", "-jar", "myapp.jar");
+    replay.validateInput();
+
+    assertThat(getField(replay, "jarFile"), is("myapp.jar"));
+    assertThat(getField(replay, "classpath"), is("lib/extra.jar"));
+  }
+
+  /** Verifies that validateInput accepts -jar without -cp. */
+  @Test
+  public void testValidateInputAcceptsJarWithoutClasspath() {
+    Replay replay = parseReplay("--wal", "file:/tmp/wal", "-jar", "myapp.jar");
+    replay.validateInput(); // should not throw
+  }
+
+  /** Verifies that validateInput rejects missing both mainClass and -jar. */
+  @Test
+  public void testValidateInputRejectsMissingMainClassAndJar() {
+    Replay replay = parseReplay("--wal", "file:/tmp/wal", "-cp", "app.jar");
+
+    RuntimeException e = assertThrows(RuntimeException.class, replay::validateInput);
+    assertThat(e.getMessage(), containsString("main class or -jar must be specified"));
+  }
+
+  /** Verifies that validateInput rejects mainClass without -cp (when not using -jar). */
+  @Test
+  public void testValidateInputRejectsMainClassWithoutClasspath() {
+    Replay replay = parseReplay("--wal", "file:/tmp/wal", "com.example.Main");
+
+    RuntimeException e = assertThrows(RuntimeException.class, replay::validateInput);
+    assertThat(e.getMessage(), containsString("Classpath"));
+    assertThat(e.getMessage(), containsString("required"));
+  }
+
+  /** Verifies that buildMainArgs includes -jar when specified. */
+  @Test
+  public void testBuildMainArgsWithJar() throws Exception {
+    Replay replay = parseReplay("--wal", "file:/tmp/my-wal", "-jar", "myapp.jar");
+    replay.validateInput();
+
+    String[] args = replay.buildMainArgs();
+    assertThat(
+        args,
+        arrayContaining(
+            "--replay-wal",
+            "file:/tmp/my-wal",
+            "--replay-divergence-policy",
+            "WARN",
+            "--replay-threading",
+            "ordered",
+            "-jar",
+            "myapp.jar"));
+  }
+
+  /** Verifies that buildMainArgs includes -jar with -cp when both are specified. */
+  @Test
+  public void testBuildMainArgsWithJarAndClasspath() throws Exception {
+    Replay replay =
+        parseReplay("--wal", "file:/tmp/my-wal", "-cp", "lib/extra.jar", "-jar", "myapp.jar");
+    replay.validateInput();
+
+    String[] args = replay.buildMainArgs();
+    assertThat(
+        args,
+        arrayContaining(
+            "--replay-wal",
+            "file:/tmp/my-wal",
+            "--replay-divergence-policy",
+            "WARN",
+            "--replay-threading",
+            "ordered",
+            "-cp",
+            "lib/extra.jar",
+            "-jar",
+            "myapp.jar"));
+  }
+
+  /** Verifies that buildMainArgs includes -jar with app arguments. */
+  @Test
+  public void testBuildMainArgsWithJarAndAppArgs() throws Exception {
+    Replay replay = parseReplay("--wal", "file:/tmp/my-wal", "-jar", "myapp.jar", "arg1", "arg2");
+    replay.validateInput();
+
+    String[] args = replay.buildMainArgs();
+    assertThat(
+        args,
+        arrayContaining(
+            "--replay-wal",
+            "file:/tmp/my-wal",
+            "--replay-divergence-policy",
+            "WARN",
+            "--replay-threading",
+            "ordered",
+            "-jar",
+            "myapp.jar",
+            "arg1",
+            "arg2"));
+  }
+
+  /** Verifies that buildMainArgs includes -jar with Kafka servers. */
+  @Test
+  public void testBuildMainArgsWithJarAndKafka() throws Exception {
+    Replay replay = parseReplay("-k", "localhost:29092", "--wal", "my-topic", "-jar", "myapp.jar");
+    replay.validateInput();
+    setField(replay, "resolvedKafkaServers", "localhost:29092");
+
+    String[] args = replay.buildMainArgs();
+    assertThat(
+        args,
+        arrayContaining(
+            "--replay-wal",
+            "my-topic",
+            "--replay-divergence-policy",
+            "WARN",
+            "--replay-threading",
+            "ordered",
+            "-k",
+            "localhost:29092",
+            "-jar",
+            "myapp.jar"));
+  }
+
+  /**
+   * Verifies that buildMainArgs treats positional args as app args when -jar is specified, not as
+   * mainClass.
+   */
+  @Test
+  public void testBuildMainArgsWithJarTreatsPositionalArgsAsAppArgs() throws Exception {
+    // When -jar is specified, positional args like "SomeClass" become app arguments,
+    // not the main class (which is read from the JAR manifest by Main)
+    Replay replay = parseReplay("--wal", "file:/tmp/wal", "-jar", "myapp.jar", "SomeClass");
+    replay.validateInput();
+
+    String[] args = replay.buildMainArgs();
+    assertThat(args, hasItemInArray("-jar"));
+    assertThat(args, hasItemInArray("myapp.jar"));
+    assertThat(args, hasItemInArray("SomeClass")); // treated as app arg, not main class
   }
 }
