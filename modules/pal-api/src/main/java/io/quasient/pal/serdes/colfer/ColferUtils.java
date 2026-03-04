@@ -242,7 +242,9 @@ public class ColferUtils {
    * Wraps a {@link Marshallable} message to defer JSON formatting until {@code toString()} is
    * called.
    *
-   * <p>This is useful for optimizing logging by avoiding unnecessary serialization.
+   * <p>This is useful for optimizing logging by avoiding unnecessary serialization. If
+   * serialization fails (e.g., for an empty or malformed message), a fallback string describing the
+   * error is returned instead of throwing an exception.
    *
    * @param message the message to format
    * @return a lazily-formatted wrapper that serializes the message to JSON upon calling {@code
@@ -252,7 +254,13 @@ public class ColferUtils {
     return new Object() {
       @Override
       public String toString() {
-        return toJson(message, false);
+        try {
+          return toJson(message, false);
+        } catch (Exception e) {
+          // Return a fallback for empty/malformed messages (e.g., ExecMessage with no type set)
+          String messageType = message == null ? "null" : message.getClass().getSimpleName();
+          return "<" + messageType + ": serialization failed - " + e.getMessage() + ">";
+        }
       }
     };
   }
