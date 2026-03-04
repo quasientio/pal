@@ -799,13 +799,15 @@ pal replay [OPTIONS] class [args...]
 | `-k, --kafka-servers <host:port>` | Kafka bootstrap servers (required for Kafka WAL topics without `-d`) |
 | `--divergence-policy <WARN\|HALT\|IGNORE>` | Action on divergence (default: `WARN`) |
 | `--replay-threading <ordered\|unordered>` | Thread ordering for multi-threaded replay (default: `ordered`). See [Multi-Threaded Replay](#multi-threaded-replay) |
-| `-cp, --classpath <CLASSPATH>` | **(Required)** Classpath for the application |
+| `-cp, --classpath <CLASSPATH>` | Classpath for the application (required when replaying a class) |
+| `-jar <jarFile>` | JAR file to replay (Main-Class from manifest). Alternative to specifying a main class |
+| `--fx-thread` | Enable JavaFX Application Thread execution. Required for replaying JavaFX applications (default: `false`) |
 
 ### Positional Arguments
 
 | Argument | Description |
 |----------|-------------|
-| `class` | **(Required)** Fully qualified main class to replay |
+| `class` | Fully qualified main class to replay (required unless using `-jar`) |
 | `args...` | Application arguments passed to `main()` |
 
 ### Divergence Policies
@@ -909,6 +911,7 @@ See the [Deterministic Replay Guide](guides/deterministic-replay.md#multi-thread
 - Replay is **read-only**: no new WAL is written during replay. The recorded WAL is consumed but not modified.
 - The application must be compiled with the same AspectJ weaving as during recording. Class version mismatches will surface as operation mismatches.
 - **Multi-threaded replay** is supported for applications that receive input on multiple threads (RPC services, web apps, Swing applications). Entry-point operations must be captured in the WAL during recording (`--wal-incoming-rpc`, enabled by default).
+- **JavaFX applications** require `--fx-thread` during both recording and replay. This routes UI event handlers to the real JavaFX Application Thread.
 - When recording a WAL intended for replay, use `--no-wal-incoming-cli` if you want the WAL to contain only the hot-path operations (excluding the bootstrap `main()` wrapper). This is often the right choice for cleaner replay matching.
 
 ---

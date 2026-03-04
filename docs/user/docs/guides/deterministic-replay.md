@@ -318,8 +318,39 @@ pal replay --wal file:/tmp/service-wal --replay-threading unordered \
 | Web app | `http-worker-N` | HTTP request handler invocations |
 | Swing app | `AWT-EventQueue-0` | UI event handler calls |
 | Timer-based | `scheduler-N` | Scheduled task invocations |
+| JavaFX app | `JavaFX Application Thread` | Button handlers, event callbacks |
 
 For all scenarios, the prerequisite is the same: the entry-point operations must be captured in the WAL during recording. For PAL RPC services, `--wal-incoming-rpc` handles this automatically. For web apps, Swing apps, and timer-based applications, the framework's request/event dispatch must go through PAL-woven code.
+
+### JavaFX Applications
+
+JavaFX applications require the `--fx-thread` flag during both recording and replay. This ensures that UI event handlers (button clicks, callbacks, etc.) are executed on the real JavaFX Application Thread rather than a PAL-managed thread.
+
+**Recording a JavaFX application:**
+
+```bash
+pal run --wal file:/tmp/fx-wal --fx-thread \
+  -jar target/my-javafx-app.jar
+```
+
+**Replaying a JavaFX application:**
+
+```bash
+pal replay --wal file:/tmp/fx-wal --fx-thread \
+  -jar target/my-javafx-app.jar
+```
+
+Without `--fx-thread`, UI interactions recorded on the JavaFX Application Thread will not be replayed correctly — the replay system would inject them on a PAL-managed thread, which cannot interact with the JavaFX scene graph.
+
+**How it works:**
+
+1. During recording, operations on the JavaFX Application Thread are marked with `threadAffinity = "fx-thread"` in the WAL.
+2. During replay, the `ThreadAffinityDispatcher` routes these entry points to the real JavaFX thread via `Platform.runLater()`.
+3. The UI event handlers execute on the real FX thread, producing the same nested operations as during recording.
+
+**Lambda class name normalization:**
+
+JavaFX applications heavily use lambdas for event handlers. Lambda class names are non-deterministic across JVM runs (e.g., `DashboardController$Lambda$653/0x00007fb994397710` in one run vs `DashboardController$Lambda$562/0x00007fbd08449670` in another). PAL automatically normalizes these during signature matching by stripping the `$N/address` suffix, so that `Foo$Lambda` matches regardless of the specific lambda index or memory address.
 
 ## Current Limitations
 
