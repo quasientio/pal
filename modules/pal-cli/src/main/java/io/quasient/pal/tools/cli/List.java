@@ -13,9 +13,13 @@ import static java.lang.String.format;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.quasient.pal.common.cli.PalCommand;
+import io.quasient.pal.common.directory.nodes.InterceptRequest;
 import io.quasient.pal.common.directory.nodes.LogInfo;
 import io.quasient.pal.common.directory.nodes.LogInfo.LogType;
 import io.quasient.pal.common.directory.nodes.PeerInfo;
+import io.quasient.pal.common.lang.intercept.Interceptable;
+import io.quasient.pal.common.lang.intercept.InterceptableFieldOp;
+import io.quasient.pal.common.lang.intercept.InterceptableMethodCall;
 import io.quasient.pal.common.util.Strings;
 import io.quasient.pal.cxn.chronicle.ChronicleLogUtil;
 import java.io.IOException;
@@ -87,6 +91,12 @@ public class List extends AbstractPalSubcommand {
       description = "list peers")
   private boolean listPeers;
 
+  /** Flag indicating whether to list intercepts. */
+  @Option(
+      names = {"-I", "--intercepts"},
+      description = "list intercepts")
+  private boolean listIntercepts;
+
   /** Flag indicating whether to use long listing format. */
   @Option(
       names = {"-l", "--long"},
@@ -153,6 +163,15 @@ public class List extends AbstractPalSubcommand {
   /** Maximum allowed length (in characters) for endpoint addresses. */
   private static final short MAX_ENDPOINT_LEN = 20;
 
+  /** Maximum allowed length (in characters) for intercept class names. */
+  private static final short MAX_INTERCEPT_CLASS_LEN = 30;
+
+  /** Maximum allowed length (in characters) for intercept target (method/field) names. */
+  private static final short MAX_INTERCEPT_TARGET_LEN = 25;
+
+  /** Maximum allowed length (in characters) for intercept callback display. */
+  private static final short MAX_INTERCEPT_CALLBACK_LEN = 30;
+
   /**
    * Format string for long listing of logs.
    *
@@ -176,6 +195,16 @@ public class List extends AbstractPalSubcommand {
           MAX_ENDPOINT_LEN,
           MAX_ENDPOINT_LEN,
           MAX_ENDPOINT_LEN);
+
+  /**
+   * Format string for long listing of intercepts.
+   *
+   * <p>uuid peer type class target callback CTime
+   */
+  private static final String INTERCEPTS_LONG_FORMAT =
+      format(
+          "%%-36s %%-36s %%-12s %%-%ds %%-%ds %%-%ds %%-12s",
+          MAX_INTERCEPT_CLASS_LEN, MAX_INTERCEPT_TARGET_LEN, MAX_INTERCEPT_CALLBACK_LEN);
 
   /**
    * Initializes the subcommand by setting up the directory connection.
@@ -203,10 +232,11 @@ public class List extends AbstractPalSubcommand {
    */
   @Override
   public void validateInput() {
-    // When neither flag is specified, we'll list both (handled in runCommand)
-    // Only error if BOTH flags are specified
-    if (listLogs && listPeers) {
-      throw new RuntimeException("Use either -L (--logs) or -P (--peers), but not both.");
+    // Count how many filter flags are set
+    int flagCount = (listLogs ? 1 : 0) + (listPeers ? 1 : 0) + (listIntercepts ? 1 : 0);
+    if (flagCount > 1) {
+      throw new RuntimeException(
+          "Use only one of -L (--logs), -P (--peers), or -I (--intercepts).");
     }
   }
 
@@ -569,6 +599,89 @@ public class List extends AbstractPalSubcommand {
   }
 
   /**
+   * Formats the interceptable target for display.
+   *
+   * <p>For method calls, shows the method name and parameter types. For field operations, shows the
+   * field name and operation type (GET/PUT).
+   *
+   * @param interceptable the interceptable to format
+   * @return a human-readable target description
+   */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
+  static String formatInterceptTarget(Interceptable interceptable) {
+    if (interceptable instanceof InterceptableMethodCall methodCall) {
+      java.util.List<String> paramTypes = methodCall.getParameterTypes();
+      if (paramTypes.isEmpty()) {
+        return methodCall.getName() + "()";
+      }
+      return methodCall.getName()
+          + "("
+          + paramTypes.stream()
+              .map(t -> t.contains(".") ? t.substring(t.lastIndexOf('.') + 1) : t)
+              .collect(Collectors.joining(", "))
+          + ")";
+    } else if (interceptable instanceof InterceptableFieldOp fieldOp) {
+      return fieldOp.getName() + " [" + fieldOp.getFieldOpType() + "]";
+    }
+    return interceptable.getName();
+  }
+
+  /**
+   * Prints the information of an intercept in the appropriate format.
+   *
+   * @param intercept the {@link InterceptRequest} object to print
+   */
+  private void print(InterceptRequest<?> intercept) {
+    if (longListing) {
+      String callbackDisplay =
+          intercept.getCallbackClass().contains(".")
+              ? intercept
+                      .getCallbackClass()
+                      .substring(intercept.getCallbackClass().lastIndexOf('.') + 1)
+                  + "."
+                  + intercept.getCallbackMethod()
+              : intercept.getCallbackClass() + "." + intercept.getCallbackMethod();
+      String classDisplay =
+          intercept.getClazz().contains(".")
+              ? intercept.getClazz().substring(intercept.getClazz().lastIndexOf('.') + 1)
+              : intercept.getClazz();
+
+      out.printf(
+          INTERCEPTS_LONG_FORMAT + "%n",
+          intercept.getUuid(),
+          intercept.getPeer(),
+          intercept.getType(),
+          optionallyTrim(classDisplay, MAX_INTERCEPT_CLASS_LEN),
+          optionallyTrim(
+              formatInterceptTarget(intercept.getInterceptable()), MAX_INTERCEPT_TARGET_LEN),
+          optionallyTrim(callbackDisplay, MAX_INTERCEPT_CALLBACK_LEN),
+          getFormattedDate(intercept.getCTime()));
+    } else {
+      out.printf("%s%n", intercept.getUuid());
+    }
+  }
+
+  /**
+   * Prints the set of intercepts in the specified order.
+   *
+   * @param intercepts the set of {@link InterceptRequest} objects to print
+   */
+  private void printIntercepts(Set<InterceptRequest<?>> intercepts) {
+    final Comparator<InterceptRequest<?>> comparator;
+    if (sortByCTime) {
+      final Comparator<InterceptRequest<?>> cTimeComparator =
+          Comparator.comparing(InterceptRequest::getCTime);
+      comparator = reverseOrder ? cTimeComparator : cTimeComparator.reversed();
+    } else {
+      final Comparator<InterceptRequest<?>> classComparator =
+          Comparator.comparing(InterceptRequest::getClazz);
+      comparator = reverseOrder ? classComparator.reversed() : classComparator;
+    }
+
+    intercepts.stream().sorted(comparator).forEach(this::print);
+  }
+
+  /**
    * Closes all resources associated with the subcommand.
    *
    * <p>Closes Kafka admin clients before delegating to the superclass method.
@@ -616,9 +729,11 @@ public class List extends AbstractPalSubcommand {
       return 1;
     }
 
-    // When neither flag is specified, list both
-    boolean shouldListLogs = listLogs || !listPeers;
-    boolean shouldListPeers = listPeers || !listLogs;
+    // When no filter flag is specified, list logs and peers (not intercepts)
+    boolean noFilterSpecified = !listLogs && !listPeers && !listIntercepts;
+    boolean shouldListLogs = listLogs || noFilterSpecified;
+    boolean shouldListPeers = listPeers || noFilterSpecified;
+    boolean shouldListIntercepts = listIntercepts;
 
     if (shouldListLogs) {
       // get all logs in directory
@@ -703,6 +818,26 @@ public class List extends AbstractPalSubcommand {
         }
       }
       printPeers(peers);
+    }
+
+    if (shouldListIntercepts) {
+      Set<InterceptRequest<?>> intercepts = getPalDirectory().listAllIntercepts();
+      logger.debug("{} intercepts found in directory", intercepts.size());
+      if (longListing) {
+        out.printf("total %d%n", intercepts.size());
+        if (!intercepts.isEmpty()) {
+          out.printf(
+              INTERCEPTS_LONG_FORMAT + "%n",
+              "UUID",
+              "Peer",
+              "Type",
+              "Class",
+              "Target",
+              "Callback",
+              "Created");
+        }
+      }
+      printIntercepts(intercepts);
     }
     return 0;
   }

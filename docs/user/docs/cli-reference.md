@@ -130,9 +130,9 @@ pal run -k localhost:29092 --source-log input-topic --wal output-topic \
 
 ---
 
-## pal ls - List Peers and Logs
+## pal ls - List Peers, Logs, and Intercepts
 
-List registered peers and logs in the directory.
+List registered peers, logs, and intercepts in the directory.
 
 ### Synopsis
 
@@ -146,6 +146,7 @@ pal ls [OPTIONS]
 |--------|-------------|
 | `-P, --peers` | List only peers |
 | `-L, --logs` | List only logs |
+| `-I, --intercepts` | List only intercepts |
 | `-l, --long` | Use long listing format with detailed information |
 | `-S, --sort-by-size` | Sort logs by size, largest first |
 | `-c, --sort-by-ctime` | Sort by creation/uptime, newest first |
@@ -154,7 +155,8 @@ pal ls [OPTIONS]
 
 ### Behavior
 
-- **No flags**: Lists both peers and logs
+- **No flags**: Lists both peers and logs (intercepts require explicit `-I`)
+- **Filter flags** (`-P`, `-L`, `-I`): Are mutually exclusive; use only one at a time
 - **Short format**: Shows names (or UUIDs if no name is set)
 - **Long format** (`-l`): Shows detailed information including UUIDs, endpoints, sizes, offsets, and timestamps
 
@@ -178,6 +180,15 @@ pal ls -d localhost:2379 -L -S -l
 
 # List logs sorted by size (smallest first)
 pal ls -d localhost:2379 -L -S -r
+
+# List all registered intercepts
+pal ls -d localhost:2379 -I
+
+# List intercepts with detailed information
+pal ls -d localhost:2379 -I -l
+
+# List intercepts sorted by creation time (newest first)
+pal ls -d localhost:2379 -I -c -l
 ```
 
 ### Long Format Output
@@ -207,12 +218,26 @@ Name                 UUID                                 Size       Start    --
 - End: Last available offset/index
 - Created: Creation timestamp (MMM dd HH:mm format)
 
+**Intercepts** (`-I -l`):
+```
+UUID                                 Peer                                 Type         Class                          Target                    Callback                       Created
+```
+
+- UUID: Intercept request unique identifier
+- Peer: UUID of the peer that registered the intercept
+- Type: Intercept type (BEFORE, AFTER, AROUND, BEFORE_ASYNC, AFTER_ASYNC)
+- Class: Simple name of the intercepted class
+- Target: Intercepted method signature or field operation (e.g., `add(int, int)` or `counter [GET]`)
+- Callback: Simple callback class name and method (e.g., `Handler.onAdd`)
+- Created: Creation timestamp (MMM dd HH:mm format)
+
 ### Notes
 
 - Lists both Kafka and Chronicle logs
 - Chronicle logs use `file:` prefix in the directory but are displayed without it
 - Long format truncates long values with ".." to fit columns
 - Logs must exist in their backing store (Kafka or Chronicle) to be displayed
+- Intercepts are listed from the etcd directory; they exist as long as the owning peer's lease is active
 
 ---
 
