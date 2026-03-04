@@ -152,6 +152,21 @@ public class Replay extends AbstractPalSubcommand {
   private boolean helpRequested = false;
 
   /**
+   * Enable JavaFX Application Thread execution for replaying JavaFX applications.
+   *
+   * <p>When enabled, entry points recorded on the JavaFX Application Thread are routed to the real
+   * FX thread via {@code Platform.runLater()} during replay. Required for replaying JavaFX
+   * applications that use button handlers, event callbacks, or other FX thread interactions.
+   */
+  @Option(
+      names = {"--fx-thread"},
+      description =
+          "Enable JavaFX Application Thread execution for replaying JavaFX applications"
+              + " (default: ${DEFAULT-VALUE})",
+      defaultValue = "false")
+  private boolean fxThread;
+
+  /**
    * Positional arguments from the command line. When not using {@code -jar}, the first element is
    * the main class name and the rest are application arguments. When using {@code -jar}, all
    * elements are application arguments.
@@ -335,6 +350,9 @@ public class Replay extends AbstractPalSubcommand {
     if (classpath != null) {
       args.add("-cp");
       args.add(classpath);
+    }
+    if (fxThread) {
+      args.add("--fx-thread");
     }
     if (jarFile != null) {
       args.add("-jar");

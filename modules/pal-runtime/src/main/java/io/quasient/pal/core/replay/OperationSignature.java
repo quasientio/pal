@@ -117,9 +117,13 @@ public record OperationSignature(
    * no parameters and may be recorded as {@code null} in the WAL but as an empty list from the live
    * PJP.
    *
+   * <p>Lambda class names are normalized before comparison since the JVM generates
+   * non-deterministic synthetic class names of the form {@code EnclosingClass$$Lambda$N/0xaddress}
+   * where N and the memory address change between JVM runs.
+   *
    * @param a first parameter type list
    * @param b second parameter type list
-   * @return {@code true} if both are effectively equal
+   * @return {@code true} if both are effectively equal (with lambda normalization)
    */
   private static boolean paramTypesMatch(List<String> a, List<String> b) {
     boolean aEmpty = a == null || a.isEmpty();
@@ -127,6 +131,60 @@ public record OperationSignature(
     if (aEmpty && bEmpty) {
       return true;
     }
-    return Objects.equals(a, b);
+    if (aEmpty || bEmpty) {
+      return false;
+    }
+    if (a.size() != b.size()) {
+      return false;
+    }
+    for (int i = 0; i < a.size(); i++) {
+      if (!typeNamesMatch(a.get(i), b.get(i))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Compares two type names, normalizing lambda class names.
+   *
+   * <p>Lambda classes have synthetic names like {@code com.example.Foo$$Lambda$123/0x7f...} where
+   * the number and address suffix change between JVM runs. This method strips everything after
+   * {@code $$Lambda} to make them comparable.
+   *
+   * @param a first type name
+   * @param b second type name
+   * @return {@code true} if the type names match (with lambda normalization)
+   */
+  private static boolean typeNamesMatch(String a, String b) {
+    if (Objects.equals(a, b)) {
+      return true;
+    }
+    // Normalize lambda class names: strip the $$Lambda$N/address suffix
+    return Objects.equals(normalizeLambdaClassName(a), normalizeLambdaClassName(b));
+  }
+
+  /** Marker for lambda class names in the class name string. */
+  private static final String LAMBDA_MARKER = "$$Lambda";
+
+  /**
+   * Normalizes a lambda class name by stripping the non-deterministic suffix.
+   *
+   * <p>Transforms {@code com.example.Foo$$Lambda$123/0x7fab...} to {@code com.example.Foo$$Lambda}.
+   * Non-lambda class names are returned unchanged.
+   *
+   * @param className the class name to normalize
+   * @return the normalized class name
+   */
+  private static String normalizeLambdaClassName(String className) {
+    if (className == null) {
+      return null;
+    }
+    int lambdaIdx = className.indexOf(LAMBDA_MARKER);
+    if (lambdaIdx < 0) {
+      return className;
+    }
+    // Return "EnclosingClass$$Lambda" (strip the $N/address part)
+    return className.substring(0, lambdaIdx + LAMBDA_MARKER.length());
   }
 }

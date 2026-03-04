@@ -74,6 +74,24 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       ThreadLocal.withInitial(InterceptPartition::new);
 
   /**
+   * Thread-local dispatch depth counter for detecting entry points.
+   *
+   * <p>When a dispatch starts at depth 0, it means the call originated from unweaved code (e.g.,
+   * JavaFX event dispatcher, external framework callback). Such calls are "entry points" that
+   * represent external stimuli entering the PAL-tracked execution graph.
+   *
+   * <p>During replay, entry points are injected by {@link
+   * io.quasient.pal.core.replay.ReplayInputInjector} to re-trigger the same execution paths.
+   */
+  private static final ThreadLocal<Integer> TL_DISPATCH_DEPTH = ThreadLocal.withInitial(() -> 0);
+
+  /** The name of the JavaFX Application Thread as created by the JavaFX runtime. */
+  private static final String JAVAFX_APPLICATION_THREAD = "JavaFX Application Thread";
+
+  /** Thread affinity key for routing to the JavaFX Application Thread during replay. */
+  private static final String FX_THREAD_AFFINITY = "fx-thread";
+
+  /**
    * Dispatches an execution request by performing pre-invocation messaging, invoking the target
    * accessible object, and sending post-invocation messaging.
    *
@@ -96,6 +114,28 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       return dispatchReplay(pjp);
     }
 
+    // Track dispatch depth to detect entry points (calls from unweaved code like JavaFX events).
+    // When depth == 0, this call originated outside weaved code and is an entry point.
+    final int depthAtEntry = TL_DISPATCH_DEPTH.get();
+    final boolean isEntryPoint = (depthAtEntry == 0);
+    TL_DISPATCH_DEPTH.set(depthAtEntry + 1);
+
+    try {
+      return dispatchInternal(pjp, isEntryPoint);
+    } finally {
+      TL_DISPATCH_DEPTH.set(depthAtEntry);
+    }
+  }
+
+  /**
+   * Internal dispatch implementation, extracted to support depth tracking try-finally wrapper.
+   *
+   * @param pjp the {@link ProceedingJoinPoint} handle
+   * @param isEntryPoint true if this dispatch is an entry point (call from unweaved code)
+   * @return the result of the executed operation
+   * @throws Throwable if an error occurs during invocation
+   */
+  private Object dispatchInternal(ProceedingJoinPoint pjp, boolean isEntryPoint) throws Throwable {
     // Track in-flight dispatch for intercept coordination (if enabled)
     // This allows intercepts to wait for in-flight calls to complete before activation
     final boolean trackingEnabled =
@@ -162,6 +202,15 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         // 1. Wrap message
         beforeExecMsg =
             createBeforeExecMessage(ctx, sender, target, args, includeDeclaredExceptions);
+
+        // Mark as entry point if this call originated from unweaved code (e.g., JavaFX callback)
+        if (isEntryPoint) {
+          beforeExecMsg.setEntryPoint(true);
+          // Set thread affinity for JavaFX thread so replay can route to the real FX thread
+          if (JAVAFX_APPLICATION_THREAD.equals(Thread.currentThread().getName())) {
+            beforeExecMsg.setThreadAffinity(FX_THREAD_AFFINITY);
+          }
+        }
 
         // 2. Send message (WAL/PUB only - intercepts handled separately)
         @SuppressWarnings("unused")
@@ -415,6 +464,15 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
                 objectRef,
                 returnsVoid);
 
+        // Mark as entry point if this call originated from unweaved code
+        if (isEntryPoint) {
+          afterExecMsg.setEntryPoint(true);
+          // Set thread affinity for JavaFX thread so replay can route to the real FX thread
+          if (JAVAFX_APPLICATION_THREAD.equals(Thread.currentThread().getName())) {
+            afterExecMsg.setThreadAffinity(FX_THREAD_AFFINITY);
+          }
+        }
+
         // 7. Send object or exception (WAL/PUB only)
         @SuppressWarnings("unused")
         final ExecMessage afterExecResponseMsg =
@@ -655,9 +713,14 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       // operations within the invoked method hit dispatchReplay() with a correctly positioned
       // cursor. Also advance the ReplayGate so other threads waiting on subsequent offsets can
       // proceed.
+      //
+      // Use the message's recorded thread name (not Thread.currentThread().getName()) because
+      // for JavaFX entry points, the injector thread may have a different name (e.g.,
+      // "pal-fx-replay-injector") while the WAL entries are keyed to "JavaFX Application Thread".
+      // The actual execution will happen on the real FX thread, which has the correct name.
       if (replayContext != null && runOptions.contains(RunOptions.WITH_REPLAY)) {
-        String threadName = Thread.currentThread().getName();
-        ReplayCursor cursor = replayContext.getCursor(threadName);
+        String walThreadName = incomingCall.getThreadName();
+        ReplayCursor cursor = replayContext.getCursor(walThreadName);
         WalEntry peeked = cursor.peekNext();
         if (peeked != null && peeked.getKind() == WalEntryKind.OPERATION && peeked.isEntryPoint()) {
           long entryPointOffset = peeked.getOffset();
@@ -1118,9 +1181,13 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
       // 12. During replay, advance the cursor past the entry-point COMPLETION entry and advance
       // the ReplayGate to the completion offset so other threads can proceed.
+      //
+      // Use the message's recorded thread name (not Thread.currentThread().getName()) for the
+      // same reason as in step 7: JavaFX entry points may be injected from a differently-named
+      // thread but the cursor is keyed to the WAL's recorded thread name.
       if (replayContext != null && runOptions.contains(RunOptions.WITH_REPLAY)) {
-        String threadName = Thread.currentThread().getName();
-        ReplayCursor cursor = replayContext.getCursor(threadName);
+        String walThreadName = incomingCall.getThreadName();
+        ReplayCursor cursor = replayContext.getCursor(walThreadName);
         WalEntry peeked = cursor.peekNext();
         if (peeked != null && peeked.getKind() == WalEntryKind.COMPLETION) {
           long completionOffset = peeked.getOffset();

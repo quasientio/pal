@@ -352,6 +352,7 @@ public class DispatchIncomingReplayTest {
   private static ExecMessage createInstanceMethodExecMessage(
       String className, String methodName, boolean entryPoint) {
     ExecMessage msg = new ExecMessage();
+    msg.setThreadName(RPC_THREAD_NAME); // Required for cursor lookup in dispatchIncoming()
     InstanceMethodCall call = new InstanceMethodCall();
     call.setName(methodName);
     io.quasient.pal.messages.colfer.Class clazz = new io.quasient.pal.messages.colfer.Class();

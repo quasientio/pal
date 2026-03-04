@@ -1942,6 +1942,19 @@ public class Main implements Callable<Integer> {
   private static final long REPLAY_INJECTOR_JOIN_TIMEOUT_SECONDS = 60;
 
   /**
+   * The name of the JavaFX Application Thread as created by the JavaFX runtime. Entry points
+   * recorded on this thread require special handling during replay - they must be routed through
+   * the real JavaFX thread via {@code Platform.runLater()}, not injected on a fake thread.
+   */
+  private static final String JAVAFX_APPLICATION_THREAD = "JavaFX Application Thread";
+
+  /**
+   * Thread name for the replay injector that handles JavaFX entry points. Uses a distinct name to
+   * avoid conflicting with the real JavaFX Application Thread.
+   */
+  private static final String FX_REPLAY_INJECTOR_THREAD = "pal-fx-replay-injector";
+
+  /**
    * Creates and starts {@link ReplayInputInjector} threads for each non-self-caller thread with
    * entry-point operations in the WAL index.
    *
@@ -1979,11 +1992,18 @@ public class Main implements Callable<Integer> {
         continue;
       }
 
+      // For JavaFX Application Thread entry points, use a different thread name to avoid
+      // conflicting with the real JavaFX thread. The actual execution will be routed to the
+      // real FX thread via ThreadAffinityDispatcher (when entry points have threadAffinity
+      // = "fx-thread") or via Platform.runLater() through JavaFxInvocationExecutor.
+      String injectorThreadName =
+          JAVAFX_APPLICATION_THREAD.equals(threadName) ? FX_REPLAY_INJECTOR_THREAD : threadName;
+
       ReplayInputInjector injectorRunnable =
           new ReplayInputInjector(
               threadName, entryPoints, dispatcher, replayContext.getReplayGate(), readyLatch);
 
-      Thread thread = new Thread(injectorRunnable, threadName);
+      Thread thread = new Thread(injectorRunnable, injectorThreadName);
       thread.setDaemon(true);
       thread.setContextClassLoader(classloader);
       threads.add(thread);

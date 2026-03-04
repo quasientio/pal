@@ -104,6 +104,50 @@ public class OperationSignatureTest {
     assertThat(sig1.matches(sig2), is(false));
   }
 
+  /**
+   * Verifies that lambda class names with different numbers and addresses still match.
+   *
+   * <p>Lambda classes have synthetic names like {@code Foo$$Lambda$653/0x00007fb994397710} where
+   * the number (653) and memory address change between JVM runs. Replay must treat these as
+   * equivalent.
+   */
+  @Test
+  public void matchesLambdaClassesWithDifferentSuffixes() {
+    OperationSignature recorded =
+        new OperationSignature(
+            "javafx.scene.control.Button",
+            "setOnAction",
+            Arrays.asList("com.example.Controller$$Lambda$653/0x00007fb994397710"),
+            MessageType.EXEC_INSTANCE_METHOD);
+    OperationSignature replayed =
+        new OperationSignature(
+            "javafx.scene.control.Button",
+            "setOnAction",
+            Arrays.asList("com.example.Controller$$Lambda$562/0x00007fbd08449670"),
+            MessageType.EXEC_INSTANCE_METHOD);
+
+    assertThat(recorded.matches(replayed), is(true));
+  }
+
+  /** Verifies that lambda classes from different enclosing classes do not match. */
+  @Test
+  public void doesNotMatchLambdasFromDifferentClasses() {
+    OperationSignature sig1 =
+        new OperationSignature(
+            "javafx.scene.control.Button",
+            "setOnAction",
+            Arrays.asList("com.example.ControllerA$$Lambda$100/0x123"),
+            MessageType.EXEC_INSTANCE_METHOD);
+    OperationSignature sig2 =
+        new OperationSignature(
+            "javafx.scene.control.Button",
+            "setOnAction",
+            Arrays.asList("com.example.ControllerB$$Lambda$200/0x456"),
+            MessageType.EXEC_INSTANCE_METHOD);
+
+    assertThat(sig1.matches(sig2), is(false));
+  }
+
   /** Verifies that {@code fromWalEntry} correctly extracts all fields from a WalEntry. */
   @Test
   public void fromWalEntryExtractsCorrectly() {
