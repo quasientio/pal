@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- [Feature] Add SideEffectAnalyzer for detecting unsafe stubs during replay — warns when stubbing would silently drop PUT_FIELD/PUT_STATIC mutations visible outside the span
 - [Feature] Add configurable replay policy system with ReplayPolicyRule (Ant-style pattern matching), BuiltInStubRules (--shield-io), ReplayPolicyParser (YAML + CLI options), and extended ReplayPolicy with first-match-wins rule evaluation
 - [Enhancement] Replace alibaba fastjson with Jackson for InfoNode/LogInfo/PeerInfo JSON serialization
 - [Feature] Add `pal ls -I` command to list registered intercepts in the PAL directory
