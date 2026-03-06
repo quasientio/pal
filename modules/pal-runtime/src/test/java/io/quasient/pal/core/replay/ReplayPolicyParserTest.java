@@ -9,122 +9,131 @@
  */
 package io.quasient.pal.core.replay;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
 
-import org.junit.Ignore;
+import io.quasient.pal.core.replay.ReplayPolicy.ReplayAction;
+import io.quasient.pal.messages.types.MessageType;
 import org.junit.Test;
 
 /**
  * Unit tests for {@code ReplayPolicyParser} — parses YAML replay policy files and CLI options into
  * {@link ReplayPolicy} instances. Covers YAML parsing, built-in shield-IO rules, CLI pattern
  * overrides, error handling, and stub-all-else behavior.
- *
- * @see <a href="https://github.io/quasientinc/pal/issues/946">#946</a>
  */
 public class ReplayPolicyParserTest {
 
   /**
    * Verifies that a well-formed YAML string with a default action and multiple rules is correctly
    * parsed into a {@link ReplayPolicy} with the expected rules and default action.
-   *
-   * @see <a href="https://github.io/quasientinc/pal/issues/946">#946</a>
    */
   @Test
-  @Ignore("Awaiting implementation in #946")
   public void parsesYamlWithRulesAndDefault() {
-    // Given: YAML string with defaultAction=STUB_FROM_WAL and two rules
-    //        (e.g., java.lang.System.currentTimeMillis->STUB_FROM_WAL,
-    //         com.example.Service.**->RE_EXECUTE)
-    // When: ReplayPolicyParser.parseYaml(yamlString) called
-    // Then: Returns ReplayPolicy with correct rules and STUB_FROM_WAL as default action
+    String yaml =
+        """
+        defaultAction: STUB_FROM_WAL
+        rules:
+          - class: "java.lang.System"
+            method: "currentTimeMillis"
+            action: STUB_FROM_WAL
+          - class: "com.example.Service"
+            method: "**"
+            action: RE_EXECUTE
+        """;
 
-    // TODO(#946): Implement test logic
-    fail("Not yet implemented");
+    ReplayPolicy policy = ReplayPolicyParser.parseYaml(yaml);
+
+    assertThat(policy.getDefaultAction(), is(ReplayAction.STUB_FROM_WAL));
+    assertThat(policy.getRules().size(), is(2));
+    assertThat(
+        policy.getAction("java.lang.System", "currentTimeMillis", MessageType.EXEC_CLASS_METHOD),
+        is(ReplayAction.STUB_FROM_WAL));
+    assertThat(
+        policy.getAction("com.example.Service", "doWork", MessageType.EXEC_INSTANCE_METHOD),
+        is(ReplayAction.RE_EXECUTE));
   }
 
   /**
    * Verifies that a YAML string containing only a default action and no rules produces a policy
    * with an empty rule list and the specified default.
-   *
-   * @see <a href="https://github.io/quasientinc/pal/issues/946">#946</a>
    */
   @Test
-  @Ignore("Awaiting implementation in #946")
   public void parsesEmptyYamlToDefaultPolicy() {
-    // Given: YAML with only defaultAction (e.g., "defaultAction: RE_EXECUTE"), no rules
-    // When: Parsed
-    // Then: Returns policy with empty rules list and RE_EXECUTE as default
+    String yaml = "defaultAction: RE_EXECUTE\n";
 
-    // TODO(#946): Implement test logic
-    fail("Not yet implemented");
+    ReplayPolicy policy = ReplayPolicyParser.parseYaml(yaml);
+
+    assertThat(policy.getRules().size(), is(0));
+    assertThat(policy.getDefaultAction(), is(ReplayAction.RE_EXECUTE));
   }
 
   /**
    * Verifies that the {@code --shield-io} flag activates built-in I/O stubbing rules covering
    * System.currentTimeMillis, System.nanoTime, Math.random, and other I/O-dependent operations.
-   *
-   * @see <a href="https://github.io/quasientinc/pal/issues/946">#946</a>
    */
   @Test
-  @Ignore("Awaiting implementation in #946")
   public void shieldIoRulesApplied() {
-    // Given: --shield-io flag enabled
-    // When: ReplayPolicyParser.fromOptions(shieldIo=true, ...) called
-    // Then: Policy contains built-in I/O rules matching System.currentTimeMillis,
-    //       System.nanoTime, Math.random, java.util.Random.**, etc.
+    ReplayPolicy policy = ReplayPolicyParser.fromOptions(null, true, null, null, false);
 
-    // TODO(#946): Implement test logic
-    fail("Not yet implemented");
+    assertThat(
+        policy.getAction("java.lang.System", "currentTimeMillis", MessageType.EXEC_CLASS_METHOD),
+        is(ReplayAction.STUB_FROM_WAL));
+    assertThat(
+        policy.getAction("java.lang.System", "nanoTime", MessageType.EXEC_CLASS_METHOD),
+        is(ReplayAction.STUB_FROM_WAL));
+    assertThat(
+        policy.getAction("java.lang.Math", "random", MessageType.EXEC_CLASS_METHOD),
+        is(ReplayAction.STUB_FROM_WAL));
+    assertThat(
+        policy.getAction("java.util.Random", "nextInt", MessageType.EXEC_INSTANCE_METHOD),
+        is(ReplayAction.STUB_FROM_WAL));
   }
 
   /**
    * Verifies that CLI patterns (--re-execute, --stub) take precedence over YAML-defined rules when
    * both are provided, and that --stub-all-else adds a catch-all STUB_FROM_WAL default.
-   *
-   * @see <a href="https://github.io/quasientinc/pal/issues/946">#946</a>
    */
   @Test
-  @Ignore("Awaiting implementation in #946")
   public void cliPatternsOverrideYaml() {
-    // Given: YAML with rules + --re-execute com.example.** + --stub-all-else
-    // When: Parsed with CLI overrides
-    // Then: CLI patterns take precedence; stub-all-else adds catch-all STUB_FROM_WAL default
+    ReplayPolicy policy =
+        ReplayPolicyParser.fromOptions(null, false, new String[] {"com.example.**"}, null, true);
 
-    // TODO(#946): Implement test logic
-    fail("Not yet implemented");
+    // CLI --re-execute pattern should match
+    assertThat(
+        policy.getAction("com.example.Service", "doWork", MessageType.EXEC_INSTANCE_METHOD),
+        is(ReplayAction.RE_EXECUTE));
+    // Everything else should be stubbed due to --stub-all-else
+    assertThat(
+        policy.getAction("com.other.Bar", "baz", MessageType.EXEC_INSTANCE_METHOD),
+        is(ReplayAction.STUB_FROM_WAL));
   }
 
   /**
    * Verifies that malformed YAML content causes an {@link IllegalArgumentException} with a
    * descriptive error message.
-   *
-   * @see <a href="https://github.io/quasientinc/pal/issues/946">#946</a>
    */
-  @Test
-  @Ignore("Awaiting implementation in #946")
+  @Test(expected = IllegalArgumentException.class)
   public void malformedYamlThrowsException() {
-    // Given: Invalid YAML content (e.g., unclosed brackets, invalid syntax)
-    // When: Parsed
-    // Then: Throws IllegalArgumentException with descriptive message
-
-    // TODO(#946): Implement test logic
-    fail("Not yet implemented");
+    ReplayPolicyParser.parseYaml("{{invalid yaml: [unclosed");
   }
 
   /**
    * Verifies that --re-execute patterns combined with --stub-all-else sets the default action to
    * STUB_FROM_WAL, so all operations not matching --re-execute patterns are stubbed.
-   *
-   * @see <a href="https://github.io/quasientinc/pal/issues/946">#946</a>
    */
   @Test
-  @Ignore("Awaiting implementation in #946")
   public void stubAllElseAddsDefaultStub() {
-    // Given: --re-execute patterns + --stub-all-else
-    // When: Parsed
-    // Then: Default action is STUB_FROM_WAL
+    ReplayPolicy policy =
+        ReplayPolicyParser.fromOptions(null, false, new String[] {"com.myapp.**"}, null, true);
 
-    // TODO(#946): Implement test logic
-    fail("Not yet implemented");
+    assertThat(policy.getDefaultAction(), is(ReplayAction.STUB_FROM_WAL));
+    // Matching --re-execute pattern
+    assertThat(
+        policy.getAction("com.myapp.Foo", "bar", MessageType.EXEC_INSTANCE_METHOD),
+        is(ReplayAction.RE_EXECUTE));
+    // Non-matching falls to default STUB_FROM_WAL
+    assertThat(
+        policy.getAction("com.other.Baz", "qux", MessageType.EXEC_INSTANCE_METHOD),
+        is(ReplayAction.STUB_FROM_WAL));
   }
 }
