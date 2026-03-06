@@ -800,6 +800,12 @@ pal replay [OPTIONS] class [args...]
 | `--divergence-policy <WARN\|HALT\|IGNORE>` | Action on divergence (default: `WARN`) |
 | `--replay-threading <ordered\|unordered>` | Thread ordering for multi-threaded replay (default: `ordered`). See [Multi-Threaded Replay](#multi-threaded-replay) |
 | `--delay <milliseconds>` | Delay before each entry-point injection for slow-motion replay visualization (default: `0`, disabled). See [Slow-Motion Replay](#slow-motion-replay) |
+| `--replay-policy <path>` | Path to a YAML replay policy file. See [Side-Effect Shielding](#side-effect-shielding) |
+| `--shield-io` | Enable built-in I/O stubbing rules (time, random, I/O streams, JDBC). See [Side-Effect Shielding](#side-effect-shielding) |
+| `--re-execute <patterns>` | Comma-separated Ant-style patterns for classes/methods to re-execute (highest priority) |
+| `--stub <patterns>` | Comma-separated Ant-style patterns for classes/methods to stub from WAL |
+| `--stub-all-else` | Stub all operations not matched by explicit `--re-execute` rules (sets default action to `STUB_FROM_WAL`) |
+| `--force-stub` | Proceed with replay even if unsafe stubs are detected by the side-effect analyzer |
 | `-cp, --classpath <CLASSPATH>` | Classpath for the application (required when replaying a class) |
 | `-jar <jarFile>` | JAR file to replay (Main-Class from manifest). Alternative to specifying a main class |
 | `--fx-thread` | Enable JavaFX Application Thread execution. Required for replaying JavaFX applications (default: `false`) |
@@ -918,6 +924,55 @@ pal replay --wal file:/tmp/service-wal --replay-threading unordered \
 ```
 
 See the [Deterministic Replay Guide](guides/deterministic-replay.md#multi-threaded-replay) for a complete walkthrough.
+
+### Side-Effect Shielding
+
+By default, all operations are re-executed during replay. Side-effect shielding allows operations to be **stubbed** — returning WAL-recorded values without executing — for I/O, databases, time, randomness, and other non-deterministic or unavailable resources.
+
+See the [Deterministic Replay Guide](guides/deterministic-replay.md#side-effect-shielding-replay-policy) for detailed configuration guidance.
+
+#### Built-in I/O Shielding
+
+```bash
+# Stub common non-deterministic operations (time, random, I/O, JDBC)
+pal replay --wal file:/tmp/my-wal --shield-io \
+  -cp target/classes com.example.App
+```
+
+#### YAML Policy File
+
+```bash
+# Apply a custom replay policy
+pal replay --wal file:/tmp/my-wal --replay-policy policy.yaml \
+  -cp target/classes com.example.App
+```
+
+#### CLI Pattern Flags
+
+```bash
+# Stub specific operations
+pal replay --wal file:/tmp/my-wal \
+  --stub "java.lang.System.currentTimeMillis,java.io.**.**" \
+  -cp target/classes com.example.App
+
+# Re-execute only your code, stub everything else
+pal replay --wal file:/tmp/my-wal \
+  --re-execute "com.example.**" --stub-all-else \
+  -cp target/classes com.example.App
+
+# Combine approaches
+pal replay --wal file:/tmp/my-wal --shield-io \
+  --re-execute "com.example.TimeService.**" \
+  -cp target/classes com.example.App
+```
+
+#### Unsafe Stub Override
+
+```bash
+# Proceed despite unsafe stub warnings
+pal replay --wal file:/tmp/my-wal --replay-policy policy.yaml --force-stub \
+  -cp target/classes com.example.App
+```
 
 ### Notes
 

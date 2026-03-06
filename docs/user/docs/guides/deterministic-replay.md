@@ -368,11 +368,221 @@ JavaFX applications heavily use lambdas for event handlers. Lambda class names a
 
 Replay injections can access private fields and methods regardless of the `--allow-nonpublic` setting. This is intentional: replay is re-executing operations that originally ran inside the JVM with full access. The `--allow-nonpublic` flag only affects external RPC calls.
 
+## Side-Effect Shielding (Replay Policy)
+
+By default, every operation is re-executed during replay (`RE_EXECUTE`). This works well for pure computations, but fails when the recorded execution interacted with external resources — databases, network services, the filesystem, `System.currentTimeMillis()`, `Math.random()`, etc. These resources may be unavailable, or they may produce different results during replay.
+
+**Side-effect shielding** solves this: instead of re-executing an operation, the replay system returns the value that was recorded in the WAL. The operation is **stubbed** — skipped entirely, along with all nested operations within its span.
+
+### Replay Actions
+
+Each operation during replay is assigned one of five actions:
+
+| Action | Behavior |
+|--------|----------|
+| `RE_EXECUTE` | Execute the operation and verify the return value against the WAL (default) |
+| `RE_EXECUTE_UNCHECKED` | Execute without verification |
+| `STUB_FROM_WAL` | Return the WAL-recorded value without executing |
+| `STUB_FROM_WAL_VERIFIED` | Return the WAL value, but also execute and compare (for validation) |
+| `STUB_WITH_SIDE_EFFECTS` | Return the WAL-recorded value and replay any field mutations from within the span |
+
+### When to Use Each Action
+
+**`STUB_FROM_WAL`** — Use for operations that are pure functions of external state: time, random numbers, network reads, console output. These operations have no side effects visible to the caller beyond their return value.
+
+**`STUB_WITH_SIDE_EFFECTS`** — Use for operations that mutate objects visible to the caller. For example, a method like `enricher.enrich(order)` that modifies the `order` object's fields while also contacting a database. Stubbing with side effects returns the WAL value and replays the field mutations, so the caller sees the same state without the database call.
+
+**`RE_EXECUTE`** — Use for deterministic pure computations (the default). The operation runs normally and the return value is verified against the WAL.
+
+### Quick Start: `--shield-io`
+
+The simplest way to enable side-effect shielding is the `--shield-io` flag, which activates built-in rules for common non-deterministic operations:
+
+```bash
+pal replay --wal file:/tmp/my-wal --shield-io \
+  -cp target/classes com.example.App arg1 arg2
+```
+
+This stubs `System.currentTimeMillis()`, `Math.random()`, `java.io` streams, `java.net` operations, and `DriverManager.getConnection()` — all from WAL-recorded values. Everything else is re-executed normally.
+
+### Replay Policy Configuration (YAML)
+
+For fine-grained control, create a YAML policy file:
+
+```yaml
+defaultAction: RE_EXECUTE
+
+rules:
+  - class: "java.lang.System"
+    method: "currentTimeMillis"
+    action: STUB_FROM_WAL
+
+  - class: "java.lang.System"
+    method: "nanoTime"
+    action: STUB_FROM_WAL
+
+  - class: "java.lang.Math"
+    method: "random"
+    action: STUB_FROM_WAL
+
+  - class: "com.example.ExternalService"
+    method: "**"
+    action: STUB_WITH_SIDE_EFFECTS
+
+  - class: "java.io.**"
+    method: "**"
+    action: STUB_FROM_WAL
+```
+
+Apply it with `--replay-policy`:
+
+```bash
+pal replay --wal file:/tmp/my-wal --replay-policy policy.yaml \
+  -cp target/classes com.example.App
+```
+
+**Pattern syntax:** Class and method patterns use Ant-style matching:
+
+- `*` matches any single path segment
+- `**` matches zero or more segments
+- `?` matches a single character
+
+Examples: `java.io.**` matches all classes under `java.io`, `com.example.Service` matches exactly that class, `process*` matches `processOrder`, `processPayment`, etc.
+
+**Rule evaluation:** Rules are evaluated in order; the first matching rule wins. If no rule matches, the `defaultAction` is used.
+
+### CLI Pattern Flags
+
+For quick one-off configurations without a YAML file:
+
+```bash
+# Stub specific classes
+pal replay --wal file:/tmp/my-wal \
+  --stub "java.lang.System.currentTimeMillis,java.lang.Math.random" \
+  -cp target/classes com.example.App
+
+# Re-execute specific classes, stub everything else
+pal replay --wal file:/tmp/my-wal \
+  --re-execute "com.example.**" --stub-all-else \
+  -cp target/classes com.example.App
+
+# Combine --shield-io with explicit re-execute overrides
+pal replay --wal file:/tmp/my-wal --shield-io \
+  --re-execute "com.example.TimeService.**" \
+  -cp target/classes com.example.App
+```
+
+**Flag priority** (highest to lowest):
+
+1. `--re-execute` patterns
+2. `--stub` patterns
+3. `--shield-io` built-in rules
+4. `--replay-policy` YAML file rules
+
+### Phantom Object Cascading
+
+When a constructor or object-returning method is stubbed, the returned object may not be reconstructable from the WAL (e.g., a `java.sql.Connection`). In this case, the object becomes a **phantom** — a placeholder that exists only in the WAL's reference space.
+
+Any subsequent operation on a phantom object is automatically stubbed, regardless of the replay policy. This cascading behavior means you only need to stub the root operation (e.g., `DriverManager.getConnection()`), and all operations on the resulting connection, prepared statements, and result sets are automatically handled.
+
+```bash
+# Stub only the connection factory — everything downstream cascades
+pal replay --wal file:/tmp/my-wal \
+  --stub "java.sql.DriverManager.getConnection" \
+  -cp target/classes com.example.App
+```
+
+### Unsafe Stub Warnings
+
+The replay system analyzes the WAL at startup to detect **unsafe stubs** — operations that would be stubbed but contain field mutations visible outside the span. For example, stubbing a method that modifies a passed-in object's fields would cause the caller to see stale state.
+
+When unsafe stubs are detected, the replay exits with an error:
+
+```
+WARNING: Stubbing com.example.Enricher.enrich() at offset 42 is unsafe.
+  Span contains PUT_FIELD order.enriched (ref 12345) referenced at offset 55 (outside span).
+  Consider: RE_EXECUTE or STUB_WITH_SIDE_EFFECTS
+```
+
+**Resolution options:**
+
+1. Change the action to `RE_EXECUTE` (re-execute the operation normally)
+2. Change the action to `STUB_WITH_SIDE_EFFECTS` (stub but replay field mutations)
+3. Use `--force-stub` to proceed with acknowledged risk
+
+```bash
+# Force replay despite unsafe stub warnings
+pal replay --wal file:/tmp/my-wal --replay-policy policy.yaml --force-stub \
+  -cp target/classes com.example.App
+```
+
+### Common Policy Configurations
+
+#### Replay with I/O Shielding (Most Common)
+
+Stub all I/O and non-deterministic operations, re-execute application logic:
+
+```bash
+pal replay --wal file:/tmp/my-wal --shield-io \
+  -cp target/classes com.example.App
+```
+
+#### Replay with Database Shielding
+
+Stub database operations while re-executing business logic:
+
+```yaml
+# db-shield.yaml
+defaultAction: RE_EXECUTE
+
+rules:
+  - class: "java.sql.DriverManager"
+    method: "getConnection"
+    action: STUB_FROM_WAL
+
+  - class: "com.example.repository.**"
+    method: "**"
+    action: STUB_WITH_SIDE_EFFECTS
+```
+
+```bash
+pal replay --wal file:/tmp/my-wal --replay-policy db-shield.yaml \
+  -cp target/classes com.example.App
+```
+
+#### Minimal Re-Execution (Stub Everything Else)
+
+Only re-execute your application code, stub all library and framework calls:
+
+```bash
+pal replay --wal file:/tmp/my-wal \
+  --re-execute "com.example.**" --stub-all-else \
+  -cp target/classes com.example.App
+```
+
+#### Validation Mode (Stub + Verify)
+
+Use `STUB_FROM_WAL_VERIFIED` to stub operations but also execute them in the background and compare results. Useful for verifying that a stub is safe before committing to it:
+
+```yaml
+# validate-stubs.yaml
+defaultAction: RE_EXECUTE
+
+rules:
+  - class: "java.lang.System"
+    method: "currentTimeMillis"
+    action: STUB_FROM_WAL_VERIFIED
+
+  - class: "com.example.ExternalService"
+    method: "**"
+    action: STUB_FROM_WAL_VERIFIED
+```
+
 ## Current Limitations
 
-- **RE_EXECUTE only**: All operations are re-executed and verified. Side-effect shielding (stubbing I/O, databases, time functions from the WAL without executing them) is planned.
 - **Same code version expected**: Replay works best when the recorded and replayed code are identical or have small, targeted changes. Large structural changes will produce many operation-mismatch divergences.
 - **No WAL output during replay**: Replay is read-only. A new WAL is not written during replay. This will be addressed when replay is integrated as a layer within the normal dispatch path.
+- **Complex object reconstruction**: Stubbed return values are reconstructed from the WAL. Primitives, strings, and JSON-serializable objects are handled. Complex objects (e.g., database connections) become phantoms — their operations are auto-stubbed via phantom cascading.
 
 ## Further Reading
 
