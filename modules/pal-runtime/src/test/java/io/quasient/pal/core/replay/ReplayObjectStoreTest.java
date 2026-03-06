@@ -13,7 +13,9 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.CoreMatchers.sameInstance;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.fail;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -108,5 +110,56 @@ public class ReplayObjectStoreTest {
     // When / Then: identity-based, so obj2 is not found even though obj1.equals(obj2)
     assertThat(store.getWalRef(obj2), is(0));
     assertThat(store.getWalRef(obj1), is(1));
+  }
+
+  // ---- Phantom reference tracking tests (Phase 4: Side-Effect Shielding) ----
+
+  /** Tests that a phantom-registered ref is recognized as phantom. */
+  @Test
+  @Ignore("Awaiting implementation in #948")
+  public void registerPhantomAndCheckIsPhantom() {
+    // Given: Empty store
+    // When: registerPhantom(42) called
+    // Then: isPhantom(42) returns true
+
+    // TODO(#948): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /** Tests that isPhantom returns false for a ref that was never registered. */
+  @Test
+  @Ignore("Awaiting implementation in #948")
+  public void isPhantomReturnsFalseForUnknownRef() {
+    // Given: Empty store
+    // When: isPhantom(99) called
+    // Then: Returns false
+
+    // TODO(#948): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /** Tests that live objects and phantoms can coexist without interference. */
+  @Test
+  @Ignore("Awaiting implementation in #948")
+  public void phantomAndLiveObjectCoexist() {
+    // Given: Store with register(1, obj) and registerPhantom(2)
+    // When: Both refs are checked
+    // Then: resolveOrNull(1) returns obj, isPhantom(1) returns false,
+    //       isPhantom(2) returns true, resolveOrNull(2) returns null
+
+    // TODO(#948): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /** Tests that registering a live object overrides a previous phantom registration. */
+  @Test
+  @Ignore("Awaiting implementation in #948")
+  public void registerOverridesPhantom() {
+    // Given: Store with registerPhantom(42)
+    // When: register(42, realObj) called
+    // Then: isPhantom(42) returns false, resolveOrNull(42) returns realObj
+
+    // TODO(#948): Implement test logic
+    fail("Not yet implemented");
   }
 }
