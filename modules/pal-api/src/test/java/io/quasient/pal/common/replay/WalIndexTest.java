@@ -13,6 +13,7 @@ import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.fail;
 
 import io.quasient.pal.messages.colfer.Class;
 import io.quasient.pal.messages.colfer.ExecMessage;
@@ -22,6 +23,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -455,6 +457,71 @@ public class WalIndexTest {
     assertThat(entryPoints.get(0).getOffset(), is(10L));
     assertThat(entryPoints.get(1).getOffset(), is(50L));
     assertThat(entryPoints.get(2).getOffset(), is(100L));
+  }
+
+  // ===========================================================================================
+  // Offset lookup and span entry query tests (Issue #942 — specs for #943 implementation)
+  // ===========================================================================================
+
+  /**
+   * Verifies that {@code getEntryAtOffset()} returns the correct entry when the requested offset
+   * exists in the index.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #943")
+  public void getEntryAtOffsetReturnsCorrectEntry() {
+    // Given: WalIndex built from entries at offsets [10, 20, 30, 40]
+    // When: getEntryAtOffset(20) called
+    // Then: Returns the entry with offset 20
+
+    // TODO(#943): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that {@code getEntryAtOffset()} returns null when the requested offset does not exist
+   * in the index.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #943")
+  public void getEntryAtOffsetReturnsNullForMissingOffset() {
+    // Given: WalIndex built from entries at offsets [10, 20, 30]
+    // When: getEntryAtOffset(15) called
+    // Then: Returns null
+
+    // TODO(#943): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that {@code getEntriesInSpan()} returns only the entries strictly inside the span
+   * boundaries (exclusive of the span's operation and completion offsets).
+   */
+  @Test
+  @Ignore("Awaiting implementation in #943")
+  public void getEntriesInSpanReturnsInnerEntries() {
+    // Given: WalIndex with span(10, 40), entries at offsets [10, 20, 30, 40]
+    // When: getEntriesInSpan(Span(10, 40)) called
+    // Then: Returns entries at offsets [20, 30] (exclusive of boundaries)
+
+    // TODO(#943): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that {@code getEntriesInSpan()} returns an empty list when the span contains no
+   * entries between its operation and completion offsets (adjacent offsets with nothing in
+   * between).
+   */
+  @Test
+  @Ignore("Awaiting implementation in #943")
+  public void getEntriesInSpanReturnsEmptyForEmptySpan() {
+    // Given: WalIndex with span(10, 20), entries at offsets [10, 20] (no entries between)
+    // When: getEntriesInSpan(Span(10, 20)) called
+    // Then: Returns empty list
+
+    // TODO(#943): Implement test logic
+    fail("Not yet implemented");
   }
 
   /**
