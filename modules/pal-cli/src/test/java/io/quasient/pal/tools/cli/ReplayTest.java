@@ -651,4 +651,225 @@ public class ReplayTest {
     assertThat(args, hasItemInArray("myapp.jar"));
     assertThat(args, hasItemInArray("SomeClass")); // treated as app arg, not main class
   }
+
+  // ===========================================================================
+  // Side-effect shielding option tests
+  // ===========================================================================
+
+  /** Verifies that --replay-policy is parsed correctly. */
+  @Test
+  public void testParseReplayPolicyOption() throws Exception {
+    Replay replay =
+        parseReplay(
+            "--wal",
+            "file:/tmp/wal",
+            "--replay-policy",
+            "/tmp/policy.yaml",
+            "-cp",
+            "app.jar",
+            "com.example.Main");
+
+    assertThat(getField(replay, "replayPolicyPath"), is("/tmp/policy.yaml"));
+  }
+
+  /** Verifies that --shield-io is parsed as boolean. */
+  @Test
+  public void testParseShieldIoOption() throws Exception {
+    Replay replay =
+        parseReplay("--wal", "file:/tmp/wal", "--shield-io", "-cp", "app.jar", "com.example.Main");
+
+    assertThat(getField(replay, "shieldIo"), is(true));
+  }
+
+  /** Verifies that --re-execute parses comma-separated patterns. */
+  @Test
+  public void testParseReExecutePatterns() throws Exception {
+    Replay replay =
+        parseReplay(
+            "--wal",
+            "file:/tmp/wal",
+            "--re-execute",
+            "com.example.**,com.other.**",
+            "-cp",
+            "app.jar",
+            "com.example.Main");
+
+    String[] patterns = (String[]) getField(replay, "reExecutePatterns");
+    assertThat(patterns, arrayContaining("com.example.**", "com.other.**"));
+  }
+
+  /** Verifies that --stub parses comma-separated patterns. */
+  @Test
+  public void testParseStubPatterns() throws Exception {
+    Replay replay =
+        parseReplay(
+            "--wal",
+            "file:/tmp/wal",
+            "--stub",
+            "java.io.**,java.net.**",
+            "-cp",
+            "app.jar",
+            "com.example.Main");
+
+    String[] patterns = (String[]) getField(replay, "stubPatterns");
+    assertThat(patterns, arrayContaining("java.io.**", "java.net.**"));
+  }
+
+  /** Verifies that --stub-all-else is parsed as boolean. */
+  @Test
+  public void testParseStubAllElseOption() throws Exception {
+    Replay replay =
+        parseReplay(
+            "--wal", "file:/tmp/wal", "--stub-all-else", "-cp", "app.jar", "com.example.Main");
+
+    assertThat(getField(replay, "stubAllElse"), is(true));
+  }
+
+  /** Verifies that --force-stub is parsed as boolean. */
+  @Test
+  public void testParseForceStubOption() throws Exception {
+    Replay replay =
+        parseReplay("--wal", "file:/tmp/wal", "--force-stub", "-cp", "app.jar", "com.example.Main");
+
+    assertThat(getField(replay, "forceStub"), is(true));
+  }
+
+  /** Verifies that buildMainArgs includes --replay-policy when specified. */
+  @Test
+  public void testBuildMainArgsWithReplayPolicy() throws Exception {
+    Replay replay =
+        parseReplay(
+            "--wal",
+            "file:/tmp/wal",
+            "--replay-policy",
+            "/tmp/policy.yaml",
+            "-cp",
+            "app.jar",
+            "com.example.Main");
+    replay.validateInput();
+
+    String[] args = replay.buildMainArgs();
+    assertThat(args, hasItemInArray("--replay-policy"));
+    assertThat(args, hasItemInArray("/tmp/policy.yaml"));
+  }
+
+  /** Verifies that buildMainArgs includes --replay-shield-io when --shield-io is set. */
+  @Test
+  public void testBuildMainArgsWithShieldIo() throws Exception {
+    Replay replay =
+        parseReplay("--wal", "file:/tmp/wal", "--shield-io", "-cp", "app.jar", "com.example.Main");
+    replay.validateInput();
+
+    String[] args = replay.buildMainArgs();
+    assertThat(args, hasItemInArray("--replay-shield-io"));
+  }
+
+  /** Verifies that buildMainArgs includes --replay-re-execute with joined patterns. */
+  @Test
+  public void testBuildMainArgsWithReExecutePatterns() throws Exception {
+    Replay replay =
+        parseReplay(
+            "--wal",
+            "file:/tmp/wal",
+            "--re-execute",
+            "com.example.**,com.other.**",
+            "-cp",
+            "app.jar",
+            "com.example.Main");
+    replay.validateInput();
+
+    String[] args = replay.buildMainArgs();
+    assertThat(args, hasItemInArray("--replay-re-execute"));
+    assertThat(args, hasItemInArray("com.example.**,com.other.**"));
+  }
+
+  /** Verifies that buildMainArgs includes --replay-stub with joined patterns. */
+  @Test
+  public void testBuildMainArgsWithStubPatterns() throws Exception {
+    Replay replay =
+        parseReplay(
+            "--wal",
+            "file:/tmp/wal",
+            "--stub",
+            "java.io.**,java.net.**",
+            "-cp",
+            "app.jar",
+            "com.example.Main");
+    replay.validateInput();
+
+    String[] args = replay.buildMainArgs();
+    assertThat(args, hasItemInArray("--replay-stub"));
+    assertThat(args, hasItemInArray("java.io.**,java.net.**"));
+  }
+
+  /** Verifies that buildMainArgs includes --replay-stub-all-else when --stub-all-else is set. */
+  @Test
+  public void testBuildMainArgsWithStubAllElse() throws Exception {
+    Replay replay =
+        parseReplay(
+            "--wal", "file:/tmp/wal", "--stub-all-else", "-cp", "app.jar", "com.example.Main");
+    replay.validateInput();
+
+    String[] args = replay.buildMainArgs();
+    assertThat(args, hasItemInArray("--replay-stub-all-else"));
+  }
+
+  /** Verifies that buildMainArgs includes --replay-force-stub when --force-stub is set. */
+  @Test
+  public void testBuildMainArgsWithForceStub() throws Exception {
+    Replay replay =
+        parseReplay("--wal", "file:/tmp/wal", "--force-stub", "-cp", "app.jar", "com.example.Main");
+    replay.validateInput();
+
+    String[] args = replay.buildMainArgs();
+    assertThat(args, hasItemInArray("--replay-force-stub"));
+  }
+
+  /** Verifies that buildMainArgs omits side-effect options when not specified. */
+  @Test
+  public void testBuildMainArgsOmitsSideEffectOptionsWhenNotSet() throws Exception {
+    Replay replay = parseReplay("--wal", "file:/tmp/wal", "-cp", "app.jar", "com.example.Main");
+    replay.validateInput();
+
+    String[] args = replay.buildMainArgs();
+    assertThat(args, not(hasItemInArray("--replay-policy")));
+    assertThat(args, not(hasItemInArray("--replay-shield-io")));
+    assertThat(args, not(hasItemInArray("--replay-re-execute")));
+    assertThat(args, not(hasItemInArray("--replay-stub")));
+    assertThat(args, not(hasItemInArray("--replay-stub-all-else")));
+    assertThat(args, not(hasItemInArray("--replay-force-stub")));
+  }
+
+  /** Verifies that buildMainArgs includes all side-effect options together. */
+  @Test
+  public void testBuildMainArgsWithAllSideEffectOptions() throws Exception {
+    Replay replay =
+        parseReplay(
+            "--wal",
+            "file:/tmp/wal",
+            "--replay-policy",
+            "/tmp/p.yaml",
+            "--shield-io",
+            "--re-execute",
+            "com.example.**",
+            "--stub",
+            "java.io.**",
+            "--stub-all-else",
+            "--force-stub",
+            "-cp",
+            "app.jar",
+            "com.example.Main");
+    replay.validateInput();
+
+    String[] args = replay.buildMainArgs();
+    assertThat(args, hasItemInArray("--replay-policy"));
+    assertThat(args, hasItemInArray("/tmp/p.yaml"));
+    assertThat(args, hasItemInArray("--replay-shield-io"));
+    assertThat(args, hasItemInArray("--replay-re-execute"));
+    assertThat(args, hasItemInArray("com.example.**"));
+    assertThat(args, hasItemInArray("--replay-stub"));
+    assertThat(args, hasItemInArray("java.io.**"));
+    assertThat(args, hasItemInArray("--replay-stub-all-else"));
+    assertThat(args, hasItemInArray("--replay-force-stub"));
+  }
 }

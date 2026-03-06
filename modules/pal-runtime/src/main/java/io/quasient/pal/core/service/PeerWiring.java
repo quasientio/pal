@@ -46,6 +46,8 @@ import io.quasient.pal.core.replay.ReplayContext;
 import io.quasient.pal.core.replay.ReplayGate;
 import io.quasient.pal.core.replay.ReplayObjectStore;
 import io.quasient.pal.core.replay.ReplayPolicy;
+import io.quasient.pal.core.replay.ReplayPolicyParser;
+import io.quasient.pal.core.replay.SideEffectAnalyzer;
 import io.quasient.pal.core.runtime.objects.ConcurrentHashMapObjectLookupStore;
 import io.quasient.pal.core.runtime.objects.ObjectLookupStore;
 import io.quasient.pal.core.transport.SourceLogReader;
@@ -792,13 +794,65 @@ public class PeerWiring extends AbstractModule {
       logger.warn("Invalid replay.delay value '{}', defaulting to 0 (no delay)", delayStr);
     }
 
+    ReplayPolicy replayPolicy = buildReplayPolicy();
+
+    List<SideEffectAnalyzer.UnsafeStubWarning> warnings =
+        new SideEffectAnalyzer().analyze(index, replayPolicy);
+    if (!warnings.isEmpty()) {
+      boolean forceStub =
+          Boolean.parseBoolean(properties.getProperty("replay.force.stub", "false"));
+      if (forceStub) {
+        logger.warn(
+            "Side-effect analysis detected {} unsafe stub(s); proceeding due to --force-stub",
+            warnings.size());
+      } else {
+        throw new IllegalStateException(
+            "Side-effect analysis detected "
+                + warnings.size()
+                + " unsafe stub(s). Use --force-stub to proceed anyway. "
+                + "See warnings above for details.");
+      }
+    }
+
     return new ReplayContext(
         index,
-        new ReplayPolicy(),
+        replayPolicy,
         new ReplayObjectStore(),
         new DivergenceDetector(policy),
         new ReplayGate(ordered),
         operationDelayMs);
+  }
+
+  /**
+   * Builds a {@link ReplayPolicy} from the configured properties.
+   *
+   * <p>Reads the replay policy configuration from properties set by the CLI layer ({@code
+   * replay.policy.path}, {@code replay.shield.io}, {@code replay.re-execute.patterns}, {@code
+   * replay.stub.patterns}, {@code replay.stub.all.else}). If no policy-related properties are set,
+   * returns a default policy that re-executes all operations.
+   *
+   * @return the constructed replay policy
+   */
+  private ReplayPolicy buildReplayPolicy() {
+    String policyPath = properties.getProperty("replay.policy.path");
+    boolean shieldIo = Boolean.parseBoolean(properties.getProperty("replay.shield.io", "false"));
+    String reExecStr = properties.getProperty("replay.re-execute.patterns");
+    String stubStr = properties.getProperty("replay.stub.patterns");
+    boolean stubAllElse =
+        Boolean.parseBoolean(properties.getProperty("replay.stub.all.else", "false"));
+
+    boolean hasAnyPolicyConfig =
+        policyPath != null || shieldIo || reExecStr != null || stubStr != null || stubAllElse;
+
+    if (!hasAnyPolicyConfig) {
+      return new ReplayPolicy();
+    }
+
+    String[] reExecPatterns = reExecStr != null ? reExecStr.split(",") : null;
+    String[] stubPatterns = stubStr != null ? stubStr.split(",") : null;
+
+    return ReplayPolicyParser.fromOptions(
+        policyPath, shieldIo, reExecPatterns, stubPatterns, stubAllElse);
   }
 
   /**

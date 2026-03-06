@@ -313,6 +313,68 @@ public class Main implements Callable<Integer> {
   private String replayDelay;
 
   /**
+   * Path to a YAML replay policy file that defines per-class/method rules for re-executing or
+   * stubbing operations during replay. Only relevant when {@code --replay-wal} is set.
+   */
+  @Option(
+      names = {"--replay-policy"},
+      paramLabel = "path",
+      description = "Path to YAML replay policy file for side-effect shielding")
+  private String replayPolicyPath;
+
+  /**
+   * Enables built-in I/O stubbing rules that stub non-deterministic operations such as {@code
+   * System.currentTimeMillis()}, {@code Math.random()}, and standard I/O classes during replay.
+   * Only relevant when {@code --replay-wal} is set.
+   */
+  @Option(
+      names = {"--replay-shield-io"},
+      description = "Enable built-in I/O stubbing rules for non-deterministic operations")
+  private boolean replayShieldIo;
+
+  /**
+   * Comma-separated Ant-style patterns for classes/methods to re-execute during replay. Only
+   * relevant when {@code --replay-wal} is set.
+   */
+  @Option(
+      names = {"--replay-re-execute"},
+      paramLabel = "patterns",
+      split = ",",
+      description = "Comma-separated Ant-style patterns for classes to re-execute during replay")
+  private String[] replayReExecutePatterns;
+
+  /**
+   * Comma-separated Ant-style patterns for classes/methods to stub from the WAL during replay.
+   * Stubbed operations return WAL-recorded values without executing. Only relevant when {@code
+   * --replay-wal} is set.
+   */
+  @Option(
+      names = {"--replay-stub"},
+      paramLabel = "patterns",
+      split = ",",
+      description = "Comma-separated Ant-style patterns for classes to stub from WAL during replay")
+  private String[] replayStubPatterns;
+
+  /**
+   * When set, all operations not matching a {@code --replay-re-execute} pattern are stubbed from
+   * the WAL. Only relevant when {@code --replay-wal} is set.
+   */
+  @Option(
+      names = {"--replay-stub-all-else"},
+      description = "Stub all operations not matching --replay-re-execute patterns")
+  private boolean replayStubAllElse;
+
+  /**
+   * When set, proceeds with replay even when the side-effect analyzer detects unsafe stubs. Without
+   * this flag, the replay fails fast on unsafe stubs. Only relevant when {@code --replay-wal} is
+   * set.
+   */
+  @Option(
+      names = {"--replay-force-stub"},
+      description = "Proceed even when unsafe stubs are detected by side-effect analysis")
+  private boolean replayForceStub;
+
+  /**
    * Log configuration specifying the Log name for both reading and writing. Using 'auto' works only
    * when a PAL directory is specified.
    */
@@ -1055,6 +1117,19 @@ public class Main implements Callable<Integer> {
       if (kafkaServers != null) {
         properties.setProperty("replay.kafka.servers", kafkaServers);
       }
+      if (replayPolicyPath != null) {
+        properties.setProperty("replay.policy.path", replayPolicyPath);
+      }
+      properties.setProperty("replay.shield.io", String.valueOf(replayShieldIo));
+      if (replayReExecutePatterns != null) {
+        properties.setProperty(
+            "replay.re-execute.patterns", String.join(",", replayReExecutePatterns));
+      }
+      if (replayStubPatterns != null) {
+        properties.setProperty("replay.stub.patterns", String.join(",", replayStubPatterns));
+      }
+      properties.setProperty("replay.stub.all.else", String.valueOf(replayStubAllElse));
+      properties.setProperty("replay.force.stub", String.valueOf(replayForceStub));
     }
 
     if (tcpPub != null) {

@@ -183,6 +183,66 @@ public class Replay extends AbstractPalSubcommand {
   private String delay;
 
   /**
+   * Path to a YAML replay policy file. The policy defines per-class/method rules that control
+   * whether operations are re-executed or stubbed from the WAL during replay.
+   */
+  @Option(
+      names = {"--replay-policy"},
+      paramLabel = "path",
+      description = "Path to YAML replay policy file")
+  private String replayPolicyPath;
+
+  /**
+   * Enables built-in I/O stubbing rules that stub non-deterministic operations such as {@code
+   * System.currentTimeMillis()}, {@code Math.random()}, and I/O classes.
+   */
+  @Option(
+      names = {"--shield-io"},
+      description = "Enable built-in I/O stubbing rules for non-deterministic operations")
+  private boolean shieldIo;
+
+  /**
+   * Comma-separated Ant-style patterns for classes/methods to re-execute during replay. Patterns
+   * use dot-separated class names (e.g., {@code "com.example.**"}).
+   */
+  @Option(
+      names = {"--re-execute"},
+      paramLabel = "patterns",
+      split = ",",
+      description = "Comma-separated Ant-style patterns for classes to re-execute")
+  private String[] reExecutePatterns;
+
+  /**
+   * Comma-separated Ant-style patterns for classes/methods to stub from the WAL during replay.
+   * Stubbed operations return their WAL-recorded values without executing.
+   */
+  @Option(
+      names = {"--stub"},
+      paramLabel = "patterns",
+      split = ",",
+      description = "Comma-separated Ant-style patterns for classes to stub from WAL")
+  private String[] stubPatterns;
+
+  /**
+   * When set, all operations not matching a {@code --re-execute} pattern are stubbed from the WAL.
+   * This effectively inverts the default behavior from re-execute-all to stub-all.
+   */
+  @Option(
+      names = {"--stub-all-else"},
+      description = "Stub all operations not matching --re-execute patterns")
+  private boolean stubAllElse;
+
+  /**
+   * When set, proceeds with replay even when the {@link
+   * io.quasient.pal.core.replay.SideEffectAnalyzer} detects unsafe stubs. Without this flag, the
+   * replay fails fast on unsafe stubs.
+   */
+  @Option(
+      names = {"--force-stub"},
+      description = "Proceed even when unsafe stubs are detected by side-effect analysis")
+  private boolean forceStub;
+
+  /**
    * Positional arguments from the command line. When not using {@code -jar}, the first element is
    * the main class name and the rest are application arguments. When using {@code -jar}, all
    * elements are application arguments.
@@ -373,6 +433,27 @@ public class Replay extends AbstractPalSubcommand {
     if (delay != null && !"0".equals(delay)) {
       args.add("--replay-delay");
       args.add(delay);
+    }
+    if (replayPolicyPath != null) {
+      args.add("--replay-policy");
+      args.add(replayPolicyPath);
+    }
+    if (shieldIo) {
+      args.add("--replay-shield-io");
+    }
+    if (reExecutePatterns != null) {
+      args.add("--replay-re-execute");
+      args.add(String.join(",", reExecutePatterns));
+    }
+    if (stubPatterns != null) {
+      args.add("--replay-stub");
+      args.add(String.join(",", stubPatterns));
+    }
+    if (stubAllElse) {
+      args.add("--replay-stub-all-else");
+    }
+    if (forceStub) {
+      args.add("--replay-force-stub");
     }
     if (jarFile != null) {
       args.add("-jar");
