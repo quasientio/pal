@@ -11,6 +11,7 @@ package io.quasient.pal.core.replay;
 
 import io.quasient.pal.core.replay.ReplayPolicy.ReplayAction;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -18,6 +19,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.error.YAMLException;
 
 /**
  * Parses replay policy configuration from YAML content and CLI options into a {@link ReplayPolicy}.
@@ -75,7 +77,7 @@ public final class ReplayPolicyParser {
             "Replay policy YAML must be a mapping, got: " + loaded.getClass().getSimpleName());
       }
       doc = (Map<String, Object>) loaded;
-    } catch (org.yaml.snakeyaml.error.YAMLException e) {
+    } catch (YAMLException e) {
       throw new IllegalArgumentException("Malformed replay policy YAML: " + e.getMessage(), e);
     }
 
@@ -157,7 +159,7 @@ public final class ReplayPolicyParser {
       try {
         yamlContent = Files.readString(Path.of(yamlPath));
       } catch (IOException e) {
-        throw new java.io.UncheckedIOException("Cannot read replay policy file: " + yamlPath, e);
+        throw new UncheckedIOException("Cannot read replay policy file: " + yamlPath, e);
       }
       ReplayPolicy yamlPolicy = parseYaml(yamlContent);
       allRules.addAll(yamlPolicy.getRules());

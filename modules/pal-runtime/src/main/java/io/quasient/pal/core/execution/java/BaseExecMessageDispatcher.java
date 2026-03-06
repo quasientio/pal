@@ -17,6 +17,7 @@ import static io.quasient.pal.serdes.colfer.ExecMessageUtils.getParameterTypes;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.quasient.pal.common.lang.intercept.AfterPhaseData;
 import io.quasient.pal.common.objects.ObjectRef;
+import io.quasient.pal.common.replay.Span;
 import io.quasient.pal.common.replay.WalEntry;
 import io.quasient.pal.common.replay.WalEntryKind;
 import io.quasient.pal.common.runtime.Context;
@@ -35,12 +36,14 @@ import io.quasient.pal.core.internal.messages.SessionCommandMsg;
 import io.quasient.pal.core.replay.OperationSignature;
 import io.quasient.pal.core.replay.ReplayContext;
 import io.quasient.pal.core.replay.ReplayCursor;
+import io.quasient.pal.core.replay.ReplayPolicy.ReplayAction;
 import io.quasient.pal.core.service.RunOptions;
 import io.quasient.pal.core.transport.MessageChannelType;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.InterceptMessage;
 import io.quasient.pal.messages.colfer.Obj;
 import io.quasient.pal.messages.colfer.Parameter;
+import io.quasient.pal.messages.colfer.RaisedThrowable;
 import io.quasient.pal.messages.colfer.ReturnValue;
 import io.quasient.pal.messages.types.MessageType;
 import io.quasient.pal.messages.types.SessionCommandType;
@@ -667,8 +670,25 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       }
     }
 
-    // Step 2: RE_EXECUTE — advance past operation entry, invoke, then verify completion
+    // Consult the replay policy to determine whether to re-execute or stub this operation.
+    // Phantom cascading takes priority: if the target object is a phantom (its constructor was
+    // stubbed), all operations on it are automatically stubbed regardless of the policy.
     long operationOffset = expectedEntry.getOffset();
+    ReplayAction action = resolveReplayAction(expectedEntry);
+
+    switch (action) {
+      case STUB_FROM_WAL:
+      case STUB_FROM_WAL_VERIFIED:
+        return handleStub(cursor, expectedEntry, operationOffset, pjp, action);
+      case STUB_WITH_SIDE_EFFECTS:
+        return handleStubWithSideEffects(cursor, expectedEntry, operationOffset, pjp);
+      case RE_EXECUTE:
+      case RE_EXECUTE_UNCHECKED:
+      default:
+        break;
+    }
+
+    // Step 2: RE_EXECUTE — advance past operation entry, invoke, then verify completion
     cursor.advance();
 
     // Register target object if this is an instance method/field call and the target isn't
@@ -843,6 +863,255 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     }
     // Constructor, static method, static field — no target object
     return 0;
+  }
+
+  /**
+   * Determines the replay action for the given WAL entry by checking phantom cascading first, then
+   * consulting the replay policy.
+   *
+   * <p>Phantom cascading takes priority: if the operation's target object is a phantom (its
+   * constructor was stubbed), the operation is automatically stubbed from WAL regardless of the
+   * policy. This ensures that all operations on objects that were never created during replay are
+   * consistently stubbed, cascading through the entire dependency tree.
+   *
+   * @param entry the WAL operation entry to evaluate
+   * @return the resolved replay action
+   */
+  private ReplayAction resolveReplayAction(WalEntry entry) {
+    if (isPhantomTarget(entry)) {
+      return ReplayAction.STUB_FROM_WAL;
+    }
+    return replayContext
+        .getPolicy()
+        .getAction(entry.getClassName(), entry.getExecutableName(), entry.getMessageType());
+  }
+
+  /**
+   * Returns whether the target object of the given WAL entry is a phantom in the replay object
+   * store.
+   *
+   * <p>A phantom target indicates that the object's constructor was stubbed during replay, so the
+   * object was never actually created. Any subsequent operations on phantom targets must also be
+   * stubbed.
+   *
+   * @param entry the WAL operation entry to check
+   * @return {@code true} if the target object reference is non-zero and registered as a phantom
+   */
+  private boolean isPhantomTarget(WalEntry entry) {
+    int targetRef = extractTargetRef(entry);
+    return targetRef != 0 && replayContext.getObjectStore().isPhantom(targetRef);
+  }
+
+  /**
+   * Handles the {@link ReplayAction#STUB_FROM_WAL} and {@link ReplayAction#STUB_FROM_WAL_VERIFIED}
+   * dispatch paths by returning the WAL-recorded value without executing the operation.
+   *
+   * <p>This method:
+   *
+   * <ol>
+   *   <li>Finds the span's completion entry via the WAL index
+   *   <li>Checks for exception replay (re-throws WAL-recorded exceptions)
+   *   <li>Reconstructs the return value from the completion entry
+   *   <li>Registers phantom or live objects in the object store
+   *   <li>Marks entry points as handled
+   *   <li>Advances the cursor past the entire span (skipping nested operations)
+   *   <li>Advances the replay gate to the completion offset
+   *   <li>For STUB_FROM_WAL_VERIFIED: also invokes the operation and compares (best-effort)
+   * </ol>
+   *
+   * @param cursor the per-thread replay cursor
+   * @param expectedEntry the matched WAL operation entry
+   * @param operationOffset the WAL offset of the operation
+   * @param pjp the AspectJ join point handle
+   * @param action the specific stub action (STUB_FROM_WAL or STUB_FROM_WAL_VERIFIED)
+   * @return the reconstructed return value from the WAL
+   * @throws Throwable if the WAL completion entry contains a raised throwable
+   */
+  private Object handleStub(
+      ReplayCursor cursor,
+      WalEntry expectedEntry,
+      long operationOffset,
+      ProceedingJoinPoint pjp,
+      ReplayAction action)
+      throws Throwable {
+
+    // 1. Find the span's completion entry
+    Span span = replayContext.getWalIndex().getSpans().get(operationOffset);
+    if (span == null) {
+      // No span found — fall back to re-execution (defensive; should not happen for valid WALs)
+      logger.warn(
+          "No span found for STUB_FROM_WAL at offset {}, falling back to RE_EXECUTE",
+          operationOffset);
+      cursor.advance();
+      return invoke(pjp, pjp.getArgs());
+    }
+    long completionOffset = span.completionOffset();
+    WalEntry completionEntry = replayContext.getWalIndex().getEntryAtOffset(completionOffset);
+    if (completionEntry == null) {
+      logger.warn(
+          "No completion entry at offset {} for STUB_FROM_WAL at offset {}, falling back to RE_EXECUTE",
+          completionOffset,
+          operationOffset);
+      cursor.advance();
+      return invoke(pjp, pjp.getArgs());
+    }
+
+    // 2. Check for exception replay: if the completion entry has a raisedThrowable, reconstruct
+    // and re-throw it so the stub faithfully reproduces the original behavior including exceptions.
+    ExecMessage completionMsg = completionEntry.getRawMessage();
+    RaisedThrowable raised = completionMsg.getRaisedThrowable();
+    if (raised != null && raised.getThrowable() != null) {
+      advanceAfterStub(cursor, expectedEntry, operationOffset, completionOffset);
+      throw reconstructThrowable(raised.getThrowable());
+    }
+
+    // 3. Reconstruct the return value from the WAL
+    Object stubbedValue = reconstructReturnValue(completionEntry);
+
+    // 4. Register phantom or live object in the object store
+    int walRef = extractReturnRef(completionEntry);
+    if (walRef != 0) {
+      if (stubbedValue != null) {
+        replayContext.getObjectStore().register(walRef, stubbedValue);
+      } else {
+        replayContext.getObjectStore().registerPhantom(walRef);
+      }
+    }
+
+    // 5-7. Mark entry point, advance cursor, advance gate
+    advanceAfterStub(cursor, expectedEntry, operationOffset, completionOffset);
+
+    // 8. STUB_FROM_WAL_VERIFIED: also invoke the operation and compare (best-effort)
+    if (action == ReplayAction.STUB_FROM_WAL_VERIFIED) {
+      try {
+        Object liveResult = invoke(pjp, pjp.getArgs());
+        replayContext
+            .getDivergenceDetector()
+            .compareReturnValue(completionEntry, liveResult, Thread.currentThread().getName());
+      } catch (Throwable t) {
+        logger.debug("STUB_FROM_WAL_VERIFIED execution threw: {}", t.getMessage());
+      }
+    }
+
+    return stubbedValue;
+  }
+
+  /**
+   * Placeholder for the {@link ReplayAction#STUB_WITH_SIDE_EFFECTS} dispatch path.
+   *
+   * <p>This action stubs the return value from WAL and additionally replays field mutations (PUT
+   * entries) from within the span. Full implementation is in a separate task.
+   *
+   * @param cursor the per-thread replay cursor
+   * @param expectedEntry the matched WAL operation entry
+   * @param operationOffset the WAL offset of the operation
+   * @param pjp the AspectJ join point handle
+   * @return the reconstructed return value from the WAL
+   * @throws Throwable if the WAL completion entry contains a raised throwable
+   */
+  private Object handleStubWithSideEffects(
+      ReplayCursor cursor, WalEntry expectedEntry, long operationOffset, ProceedingJoinPoint pjp)
+      throws Throwable {
+    // Delegate to handleStub for now; full STUB_WITH_SIDE_EFFECTS implementation (field mutation
+    // replay) will be added in a subsequent task.
+    return handleStub(cursor, expectedEntry, operationOffset, pjp, ReplayAction.STUB_FROM_WAL);
+  }
+
+  /**
+   * Common post-stub bookkeeping: marks entry points as handled, advances the cursor past the span,
+   * and advances the replay gate.
+   *
+   * @param cursor the per-thread replay cursor
+   * @param expectedEntry the matched WAL operation entry
+   * @param operationOffset the WAL offset of the operation
+   * @param completionOffset the WAL offset of the span's completion entry
+   */
+  private void advanceAfterStub(
+      ReplayCursor cursor, WalEntry expectedEntry, long operationOffset, long completionOffset) {
+    if (expectedEntry.isEntryPoint()) {
+      replayContext.markEntryPointHandled(operationOffset);
+      logger.debug("Entry point at offset {} handled via STUB_FROM_WAL dispatch", operationOffset);
+    }
+
+    cursor.advancePast(completionOffset);
+    replayContext.getReplayGate().advanceTo(completionOffset);
+  }
+
+  /**
+   * Reconstructs a return value from a WAL completion entry.
+   *
+   * <p>Handles the following cases:
+   *
+   * <ul>
+   *   <li><b>Void method:</b> {@link ReturnValue#getIsVoid()} is true — returns {@code null}
+   *   <li><b>Null return:</b> {@link Obj#getIsNull()} is true — returns {@code null}
+   *   <li><b>Reference-only:</b> ref is non-zero but no serialized value — returns {@code null}
+   *       (object will be registered as phantom)
+   *   <li><b>Value object:</b> deserializable via {@link Unwrapper#unwrapObject(Obj)} — returns the
+   *       reconstructed object
+   *   <li><b>Unreconstructable:</b> {@link UnsupportedOperationException} from unwrapper — returns
+   *       {@code null} (object will be registered as phantom)
+   * </ul>
+   *
+   * @param completionEntry the WAL completion entry containing the return value
+   * @return the reconstructed value, or {@code null} for void/null/unreconstructable returns
+   */
+  private Object reconstructReturnValue(WalEntry completionEntry) {
+    ExecMessage msg = completionEntry.getRawMessage();
+    ReturnValue rv = msg.getReturnValue();
+    if (rv == null || rv.getIsVoid()) {
+      return null;
+    }
+    Obj obj = rv.getObject();
+    if (obj == null || obj.getIsNull()) {
+      return null;
+    }
+    // Reference-only: has a ref but no serialized value
+    if (obj.getRef() != 0 && (obj.getValue() == null || obj.getValue().isEmpty())) {
+      return null;
+    }
+    try {
+      return Unwrapper.unwrapObject(obj);
+    } catch (UnsupportedOperationException | ClassNotFoundException e) {
+      logger.debug(
+          "Cannot reconstruct return value at offset {}, registering as phantom: {}",
+          completionEntry.getOffset(),
+          e.getMessage());
+      return null;
+    }
+  }
+
+  /**
+   * Reconstructs a {@link Throwable java.lang.Throwable} from a WAL-recorded Colfer {@link
+   * io.quasient.pal.messages.colfer.Throwable}.
+   *
+   * <p>Attempts to instantiate the original exception class via its {@code String} constructor. If
+   * the class cannot be found or instantiated, falls back to a {@link RuntimeException} wrapping
+   * the original message and type name.
+   *
+   * @param colferThrowable the serialized throwable from the WAL completion entry
+   * @return a reconstructed Java throwable
+   */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes") // colfer.Throwable clashes with java.lang
+  private static Throwable reconstructThrowable(
+      io.quasient.pal.messages.colfer.Throwable colferThrowable) {
+    String typeName = colferThrowable.getType();
+    String message = colferThrowable.getMessage();
+    try {
+      Class<?> clazz =
+          Class.forName(typeName, true, Thread.currentThread().getContextClassLoader());
+      if (Throwable.class.isAssignableFrom(clazz)) {
+        try {
+          return (Throwable) clazz.getConstructor(String.class).newInstance(message);
+        } catch (ReflectiveOperationException e) {
+          // No String constructor — try no-arg
+          return (Throwable) clazz.getConstructor().newInstance();
+        }
+      }
+    } catch (ReflectiveOperationException e) {
+      // Cannot reconstruct the original type
+    }
+    return new RuntimeException(typeName + ": " + message);
   }
 
   /**

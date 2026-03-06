@@ -21,9 +21,11 @@ import io.quasient.pal.messages.colfer.Class;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.Field;
 import io.quasient.pal.messages.colfer.InstanceFieldPut;
+import io.quasient.pal.messages.colfer.InstanceFieldPutDone;
 import io.quasient.pal.messages.colfer.InstanceMethodCall;
 import io.quasient.pal.messages.colfer.ReturnValue;
 import io.quasient.pal.messages.colfer.StaticFieldPut;
+import io.quasient.pal.messages.colfer.StaticFieldPutDone;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.Test;
@@ -300,8 +302,7 @@ public class SideEffectAnalyzerTest {
     ExecMessage msg = new ExecMessage();
     msg.setThreadName("self-caller");
     msg.setBuilderSeq(builderSeq);
-    io.quasient.pal.messages.colfer.InstanceFieldPutDone done =
-        new io.quasient.pal.messages.colfer.InstanceFieldPutDone();
+    InstanceFieldPutDone done = new InstanceFieldPutDone();
     Class clazz = new Class();
     clazz.setName("com.example.Done");
     done.setClazz(clazz);
@@ -348,8 +349,7 @@ public class SideEffectAnalyzerTest {
     ExecMessage msg = new ExecMessage();
     msg.setThreadName("self-caller");
     msg.setBuilderSeq(builderSeq);
-    io.quasient.pal.messages.colfer.StaticFieldPutDone done =
-        new io.quasient.pal.messages.colfer.StaticFieldPutDone();
+    StaticFieldPutDone done = new StaticFieldPutDone();
     Class clazz = new Class();
     clazz.setName("com.example.Done");
     done.setClazz(clazz);
