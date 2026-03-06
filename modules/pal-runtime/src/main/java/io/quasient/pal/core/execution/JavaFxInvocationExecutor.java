@@ -44,24 +44,37 @@ public final class JavaFxInvocationExecutor implements InvocationExecutor {
   private final long timeoutMs;
 
   /**
-   * Creates a new executor with the default timeout of 30 seconds.
+   * Creates a new executor with the default timeout of 30 seconds, using the current thread's
+   * context classloader.
    *
    * @throws IllegalStateException if JavaFX is not on the classpath
    */
   public JavaFxInvocationExecutor() {
-    this(DEFAULT_TIMEOUT_MS);
+    this(DEFAULT_TIMEOUT_MS, Thread.currentThread().getContextClassLoader());
   }
 
   /**
-   * Creates a new executor with the specified timeout.
+   * Creates a new executor with the specified timeout, using the current thread's context
+   * classloader.
    *
    * @param timeoutMs the maximum time in milliseconds to wait for FX thread completion
    * @throws IllegalStateException if JavaFX is not on the classpath
    */
   public JavaFxInvocationExecutor(long timeoutMs) {
+    this(timeoutMs, Thread.currentThread().getContextClassLoader());
+  }
+
+  /**
+   * Creates a new executor with the specified timeout and classloader.
+   *
+   * @param timeoutMs the maximum time in milliseconds to wait for FX thread completion
+   * @param classLoader the classloader to use for loading JavaFX classes
+   * @throws IllegalStateException if JavaFX is not on the classpath
+   */
+  public JavaFxInvocationExecutor(long timeoutMs, ClassLoader classLoader) {
     this.timeoutMs = timeoutMs;
     try {
-      Class<?> platform = Class.forName("javafx.application.Platform");
+      Class<?> platform = Class.forName("javafx.application.Platform", true, classLoader);
       this.runLaterMethod = platform.getMethod("runLater", Runnable.class);
       this.isFxApplicationThreadMethod = platform.getMethod("isFxApplicationThread");
     } catch (ReflectiveOperationException e) {

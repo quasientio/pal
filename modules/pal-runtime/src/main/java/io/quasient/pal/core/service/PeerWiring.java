@@ -720,7 +720,8 @@ public class PeerWiring extends AbstractModule {
     String fxThreadEnabled = properties.getProperty("execution.fx.thread.enabled", "false");
     if (Boolean.parseBoolean(fxThreadEnabled)) {
       long timeoutMs = Long.parseLong(properties.getProperty("execution.fx.timeout.ms", "30000"));
-      dispatcher.register(ThreadAffinity.FX_THREAD, new JavaFxInvocationExecutor(timeoutMs));
+      dispatcher.register(
+          ThreadAffinity.FX_THREAD, new JavaFxInvocationExecutor(timeoutMs, customClassloader));
     }
     return dispatcher;
   }
