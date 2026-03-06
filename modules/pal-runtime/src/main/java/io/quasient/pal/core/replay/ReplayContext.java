@@ -14,7 +14,10 @@ import io.quasient.pal.common.replay.WalIndex;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 
 /**
@@ -47,8 +50,29 @@ public class ReplayContext {
   /** WAL-offset-based ordering barrier for cross-thread replay coordination. */
   private final ReplayGate replayGate;
 
+  /**
+   * Delay in milliseconds to wait before processing each OPERATION entry. Used for slow-motion
+   * replay visualization. A value of {@code 0} disables the delay.
+   */
+  private final long operationDelayMs;
+
   /** Lazily created and cached per-thread cursors. Thread-safe via {@link ConcurrentHashMap}. */
   private final Map<String, ReplayCursor> cursors = new ConcurrentHashMap<>();
+
+  /**
+   * Tracks entry-point WAL offsets that have been handled via {@code dispatchReplay()} (the real
+   * runtime path, e.g., JavaFX calling start() which calls constructor/buildUI). These entry points
+   * should not be re-injected by {@link ReplayInputInjector} to avoid duplicate execution.
+   */
+  private final Set<Long> handledEntryPoints = ConcurrentHashMap.newKeySet();
+
+  /**
+   * Per-thread queue of pending injection offsets. The {@link ReplayInputInjector} pushes the entry
+   * point offset before calling {@code incomingCall()}, and the callback in {@code
+   * dispatchIncoming()} pops it to know the exact offset being injected. This avoids race
+   * conditions where the cursor has advanced by the time the callback runs.
+   */
+  private final Map<String, Queue<Long>> pendingInjectionOffsets = new ConcurrentHashMap<>();
 
   /**
    * Latch that gates replay input injector threads until the self-caller has loaded and initialized
@@ -73,11 +97,32 @@ public class ReplayContext {
       ReplayObjectStore objectStore,
       DivergenceDetector divergenceDetector,
       ReplayGate replayGate) {
+    this(walIndex, policy, objectStore, divergenceDetector, replayGate, 0L);
+  }
+
+  /**
+   * Constructs a new {@code ReplayContext} with all required sub-components and an operation delay.
+   *
+   * @param walIndex the indexed WAL providing the oracle for replay
+   * @param policy the policy determining replay actions
+   * @param objectStore the bidirectional WAL ref ↔ live object mapping
+   * @param divergenceDetector the verification engine for comparing actual vs WAL values
+   * @param replayGate the WAL-offset ordering barrier for cross-thread coordination
+   * @param operationDelayMs delay in milliseconds before each operation entry (0 to disable)
+   */
+  public ReplayContext(
+      WalIndex walIndex,
+      ReplayPolicy policy,
+      ReplayObjectStore objectStore,
+      DivergenceDetector divergenceDetector,
+      ReplayGate replayGate,
+      long operationDelayMs) {
     this.walIndex = walIndex;
     this.policy = policy;
     this.objectStore = objectStore;
     this.divergenceDetector = divergenceDetector;
     this.replayGate = replayGate;
+    this.operationDelayMs = operationDelayMs;
   }
 
   /**
@@ -145,6 +190,17 @@ public class ReplayContext {
   }
 
   /**
+   * Returns the delay in milliseconds to wait before processing each OPERATION entry.
+   *
+   * <p>Used for slow-motion replay visualization. A value of {@code 0} means no delay.
+   *
+   * @return the operation delay in milliseconds
+   */
+  public long getOperationDelayMs() {
+    return operationDelayMs;
+  }
+
+  /**
    * Sets the latch that gates replay input injector threads. The latch will be counted down by
    * {@link #countDownInjectorLatch()} after the self-caller thread has loaded the target
    * application class (triggering static initialization on the correct thread).
@@ -168,5 +224,73 @@ public class ReplayContext {
     if (latch != null) {
       latch.countDown();
     }
+  }
+
+  /**
+   * Marks an entry-point WAL offset as having been handled via {@code dispatchReplay()}.
+   *
+   * <p>This is called when an entry-point operation is executed via the real runtime path (e.g.,
+   * JavaFX calling start() which calls constructor/buildUI). The {@link ReplayInputInjector} checks
+   * this before injecting to avoid duplicate execution.
+   *
+   * @param offset the WAL offset of the handled entry point
+   */
+  public void markEntryPointHandled(long offset) {
+    handledEntryPoints.add(offset);
+  }
+
+  /**
+   * Checks whether an entry-point WAL offset has already been handled via {@code dispatchReplay()}.
+   *
+   * <p>The {@link ReplayInputInjector} should call this before injecting an entry point. If it
+   * returns {@code true}, the entry point was already executed by the real runtime and should not
+   * be re-injected.
+   *
+   * @param offset the WAL offset of the entry point to check
+   * @return {@code true} if the entry point was already handled, {@code false} otherwise
+   */
+  public boolean isEntryPointHandled(long offset) {
+    return handledEntryPoints.contains(offset);
+  }
+
+  /**
+   * Pushes an entry-point offset to the pending injection queue for the given thread.
+   *
+   * <p>This is called by {@link ReplayInputInjector} immediately before calling {@code
+   * incomingCall()} to record the exact offset being injected. The callback in {@code
+   * dispatchIncoming()} will pop this offset to verify it hasn't already been handled.
+   *
+   * @param threadName the name of the target thread for the injection
+   * @param offset the WAL offset of the entry point being injected
+   */
+  public void pushPendingInjection(String threadName, long offset) {
+    boolean added =
+        pendingInjectionOffsets
+            .computeIfAbsent(threadName, k -> new ConcurrentLinkedQueue<>())
+            .offer(offset);
+    // ConcurrentLinkedQueue.offer() always returns true (unbounded queue), but check defensively
+    if (!added) {
+      throw new IllegalStateException(
+          "Failed to add pending injection offset " + offset + " for thread " + threadName);
+    }
+  }
+
+  /**
+   * Pops the next pending injection offset for the given thread.
+   *
+   * <p>This is called by the callback in {@code dispatchIncoming()} to retrieve the exact offset
+   * that was pushed by the injector. This offset can then be used to check {@link
+   * #isEntryPointHandled} for race detection.
+   *
+   * @param threadName the name of the thread to pop from
+   * @return the next pending offset, or {@code -1} if no pending injections exist
+   */
+  public long popPendingInjection(String threadName) {
+    Queue<Long> queue = pendingInjectionOffsets.get(threadName);
+    if (queue == null) {
+      return -1L;
+    }
+    Long offset = queue.poll();
+    return offset != null ? offset : -1L;
   }
 }

@@ -167,6 +167,22 @@ public class Replay extends AbstractPalSubcommand {
   private boolean fxThread;
 
   /**
+   * Delay in milliseconds before processing each OPERATION entry during replay.
+   *
+   * <p>Used for slow-motion replay visualization: pauses before each recorded operation to make it
+   * easier to observe the replay on the UI. A value of {@code 0} disables the delay. The default of
+   * {@code 2000} (2 seconds) provides a comfortable pace for visual debugging.
+   */
+  @Option(
+      names = {"--delay"},
+      paramLabel = "milliseconds",
+      defaultValue = "0",
+      description =
+          "Delay in milliseconds before each operation for slow-motion replay visualization"
+              + " (default: ${DEFAULT-VALUE})")
+  private String delay;
+
+  /**
    * Positional arguments from the command line. When not using {@code -jar}, the first element is
    * the main class name and the rest are application arguments. When using {@code -jar}, all
    * elements are application arguments.
@@ -353,6 +369,10 @@ public class Replay extends AbstractPalSubcommand {
     }
     if (fxThread) {
       args.add("--fx-thread");
+    }
+    if (delay != null && !"0".equals(delay)) {
+      args.add("--replay-delay");
+      args.add(delay);
     }
     if (jarFile != null) {
       args.add("-jar");

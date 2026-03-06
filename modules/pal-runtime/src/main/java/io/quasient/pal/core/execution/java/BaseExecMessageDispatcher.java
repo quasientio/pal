@@ -33,6 +33,7 @@ import io.quasient.pal.core.intercept.InterceptPartition;
 import io.quasient.pal.core.intercept.ParamTypeExtractor;
 import io.quasient.pal.core.internal.messages.SessionCommandMsg;
 import io.quasient.pal.core.replay.OperationSignature;
+import io.quasient.pal.core.replay.ReplayContext;
 import io.quasient.pal.core.replay.ReplayCursor;
 import io.quasient.pal.core.service.RunOptions;
 import io.quasient.pal.core.transport.MessageChannelType;
@@ -553,24 +554,153 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     WalEntry expectedEntry = cursor.peekNext();
     OperationSignature liveSig = OperationSignature.fromJoinPoint(pjp, getBeforeExecMessageType());
 
+    // Skip COMPLETION entries for entry points that were skipped (called by unweaved code).
+    // When an entry point's OPERATION is skipped, its COMPLETION is still in the WAL and
+    // must also be skipped. Entry point completions are identifiable by the entryPoint flag.
+    while (expectedEntry != null
+        && expectedEntry.getKind() == WalEntryKind.COMPLETION
+        && expectedEntry.isEntryPoint()) {
+      long completionOffset = expectedEntry.getOffset();
+      cursor.advance();
+      replayContext.getReplayGate().advanceTo(completionOffset);
+      logger.debug(
+          "Skipped entry point COMPLETION at offset {} (entry point was called by unweaved code)",
+          completionOffset);
+      expectedEntry = cursor.peekNext();
+    }
+
     if (expectedEntry == null || expectedEntry.getKind() != WalEntryKind.OPERATION) {
-      // Cursor exhausted or unexpected completion entry — extra live operation
+      // Cursor exhausted or unexpected completion entry — extra live operation.
+      // Advance the gate to Long.MAX_VALUE to signal that this thread's WAL entries
+      // are exhausted. This unblocks any injectors waiting for entry points on this
+      // thread - they can proceed since there are no more WAL entries to wait for.
+      // Without this, the injector would wait forever for a gate offset that never
+      // comes (because extra operations don't have WAL offsets to advance the gate).
+      replayContext.getReplayGate().advanceTo(Long.MAX_VALUE);
       replayContext.getDivergenceDetector().reportExtraOperation(liveSig, threadName);
       return invoke(pjp, pjp.getArgs());
     }
 
     OperationSignature walSig = OperationSignature.fromWalEntry(expectedEntry);
     if (!liveSig.matches(walSig)) {
-      // Operation signature mismatch — record divergence but still execute (best-effort)
-      replayContext
-          .getDivergenceDetector()
-          .reportOperationMismatch(expectedEntry, liveSig, threadName);
-      return invoke(pjp, pjp.getArgs());
+      // If the expected entry is an entry point and there's a mismatch, it might be because
+      // the entry point was called by unweaved code (e.g., JavaFX calling constructor) and
+      // we're now seeing a nested operation inside that entry point. In this case, we should:
+      // 1. Mark the entry point as handled (so injector doesn't try to inject it)
+      // 2. Advance past the entry point
+      // 3. Re-check with the next WAL entry
+      // This handles the JavaFX case where the constructor entry point is never directly
+      // visible to dispatchReplay() because JavaFX (unweaved) calls it.
+      if (expectedEntry.isEntryPoint()) {
+        long skippedOffset = expectedEntry.getOffset();
+        replayContext.markEntryPointHandled(skippedOffset);
+        cursor.advance();
+        // Advance gate so injector waiting on this offset can proceed (and see it's handled)
+        replayContext.getReplayGate().advanceTo(skippedOffset);
+        logger.debug(
+            "Skipped entry point at offset {} (called by unweaved code), re-matching",
+            skippedOffset);
+
+        // Re-check with the next entry. Keep skipping entry points until we find a match
+        // or a non-entry-point mismatch. This handles cases with multiple consecutive
+        // entry points called by unweaved code.
+        while (true) {
+          expectedEntry = cursor.peekNext();
+
+          // Skip COMPLETION entries for entry points that were skipped. When an entry
+          // point's OPERATION is skipped, its COMPLETION is still in the WAL.
+          while (expectedEntry != null
+              && expectedEntry.getKind() == WalEntryKind.COMPLETION
+              && expectedEntry.isEntryPoint()) {
+            long completionOffset = expectedEntry.getOffset();
+            cursor.advance();
+            replayContext.getReplayGate().advanceTo(completionOffset);
+            logger.debug(
+                "Skipped entry point COMPLETION at offset {} during re-matching", completionOffset);
+            expectedEntry = cursor.peekNext();
+          }
+
+          if (expectedEntry == null || expectedEntry.getKind() != WalEntryKind.OPERATION) {
+            // Cursor exhausted or unexpected entry after skipping
+            replayContext.getDivergenceDetector().reportExtraOperation(liveSig, threadName);
+            return invoke(pjp, pjp.getArgs());
+          }
+
+          walSig = OperationSignature.fromWalEntry(expectedEntry);
+          if (liveSig.matches(walSig)) {
+            // Matched after skipping entry point(s) - continue with normal flow below
+            break;
+          }
+
+          // Still mismatched - if it's another entry point, skip it too
+          if (expectedEntry.isEntryPoint()) {
+            long anotherSkippedOffset = expectedEntry.getOffset();
+            replayContext.markEntryPointHandled(anotherSkippedOffset);
+            cursor.advance();
+            replayContext.getReplayGate().advanceTo(anotherSkippedOffset);
+            logger.debug(
+                "Skipped another entry point at offset {} (called by unweaved code)",
+                anotherSkippedOffset);
+            // Continue loop to check next entry
+          } else {
+            // Non-entry-point mismatch - advance cursor/gate and invoke
+            // This ensures we make progress even with mismatches
+            long mismatchOffset = expectedEntry.getOffset();
+            cursor.advance();
+            replayContext.getReplayGate().advanceTo(mismatchOffset);
+            replayContext
+                .getDivergenceDetector()
+                .reportOperationMismatch(expectedEntry, liveSig, threadName);
+            return invoke(pjp, pjp.getArgs());
+          }
+        }
+      } else {
+        // Regular mismatch (not an entry point) — advance cursor/gate and execute
+        // This ensures we make progress even with mismatches
+        long mismatchOffset = expectedEntry.getOffset();
+        cursor.advance();
+        replayContext.getReplayGate().advanceTo(mismatchOffset);
+        replayContext
+            .getDivergenceDetector()
+            .reportOperationMismatch(expectedEntry, liveSig, threadName);
+        return invoke(pjp, pjp.getArgs());
+      }
     }
 
     // Step 2: RE_EXECUTE — advance past operation entry, invoke, then verify completion
     long operationOffset = expectedEntry.getOffset();
     cursor.advance();
+
+    // Register target object if this is an instance method/field call and the target isn't
+    // already registered. This handles objects created by unweaved code (e.g., JavaFX
+    // controllers created by FXMLLoader) that later become targets of entry point injection.
+    Object target = pjp.getTarget();
+    if (target != null) {
+      int walTargetRef = extractTargetRef(expectedEntry);
+      if (walTargetRef != 0 && replayContext.getObjectStore().resolveOrNull(walTargetRef) == null) {
+        replayContext.getObjectStore().register(walTargetRef, target);
+      }
+    }
+
+    // Also register argument objects that aren't already registered. This catches objects
+    // created by unweaved code that are passed as arguments before becoming entry point targets.
+    registerArgumentObjects(expectedEntry, pjp.getArgs());
+
+    // If this operation is an entry point being executed via the real runtime (e.g., JavaFX
+    // calling start() which calls constructor/buildUI), mark it as handled so the
+    // ReplayInputInjector doesn't try to inject it again. This prevents duplicate execution
+    // when both the real runtime and the injector try to execute the same entry point.
+    //
+    // IMPORTANT: This MUST happen BEFORE advancing the gate. The gate advancement unblocks
+    // the injector, which will check isEntryPointHandled(). If we mark after advancing,
+    // there's a race where the injector sees the gate has reached this offset but the
+    // entry point isn't marked as handled yet, causing duplicate execution.
+    if (expectedEntry.isEntryPoint()) {
+      replayContext.markEntryPointHandled(operationOffset);
+      logger.debug(
+          "Entry point at offset {} handled via dispatchReplay (real runtime path)",
+          operationOffset);
+    }
 
     // Advance the gate after consuming the OPERATION entry so that injection threads
     // waiting on subsequent offsets can proceed even if invoke() blocks (e.g.,
@@ -621,6 +751,101 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
   }
 
   /**
+   * Registers argument objects from the WAL entry with their corresponding live objects.
+   *
+   * <p>During replay, objects created by unweaved code (e.g., JavaFX controllers created by
+   * FXMLLoader) may be passed as arguments to weaved methods before they become targets. This
+   * method ensures such objects are registered in the {@link
+   * io.quasient.pal.core.replay.ReplayObjectStore} so they can be resolved later when entry point
+   * injection needs to find them by WAL ref.
+   *
+   * @param operationEntry the operation WAL entry containing parameter refs
+   * @param liveArgs the live argument objects from {@code pjp.getArgs()}
+   */
+  private void registerArgumentObjects(WalEntry operationEntry, Object[] liveArgs) {
+    if (liveArgs == null || liveArgs.length == 0) {
+      return;
+    }
+    ExecMessage msg = operationEntry.getRawMessage();
+    if (msg == null) {
+      return;
+    }
+
+    Parameter[] params = extractParameters(msg);
+    if (params.length == 0) {
+      return;
+    }
+
+    // Match WAL parameter refs with live arguments by index
+    int minLen = Math.min(params.length, liveArgs.length);
+    for (int i = 0; i < minLen; i++) {
+      Object liveArg = liveArgs[i];
+      if (liveArg == null) {
+        continue;
+      }
+      Parameter param = params[i];
+      if (param == null || param.getValue() == null) {
+        continue;
+      }
+      int walRef = param.getValue().getRef();
+      if (walRef != 0 && replayContext.getObjectStore().resolveOrNull(walRef) == null) {
+        replayContext.getObjectStore().register(walRef, liveArg);
+      }
+    }
+  }
+
+  /**
+   * Extracts the parameter array from an ExecMessage based on its type.
+   *
+   * @param msg the execution message
+   * @return the parameter array, or an empty array if the message type has no parameters
+   */
+  private static Parameter[] extractParameters(ExecMessage msg) {
+    if (msg.getInstanceMethodCall() != null) {
+      return msg.getInstanceMethodCall().getParameters();
+    }
+    if (msg.getClassMethodCall() != null) {
+      return msg.getClassMethodCall().getParameters();
+    }
+    if (msg.getConstructorCall() != null) {
+      return msg.getConstructorCall().getParameters();
+    }
+    // Field operations have no parameters (value is stored separately)
+    return new Parameter[0];
+  }
+
+  /**
+   * Extracts the target object reference from a WAL operation entry.
+   *
+   * <p>This is used during replay to register objects created by unweaved code (e.g., JavaFX
+   * controllers) when they're first seen as targets of weaved method calls. Only instance method
+   * calls and instance field operations have target objects.
+   *
+   * @param operationEntry the operation WAL entry (must be an OPERATION kind)
+   * @return the target object reference, or {@code 0} if the operation has no target
+   */
+  private static int extractTargetRef(WalEntry operationEntry) {
+    ExecMessage msg = operationEntry.getRawMessage();
+    if (msg == null) {
+      return 0;
+    }
+    // Instance method call
+    if (msg.getInstanceMethodCall() != null) {
+      return msg.getInstanceMethodCall().getObjectRef();
+    }
+    // Instance field get
+    if (msg.getInstanceFieldGet() != null) {
+      return msg.getInstanceFieldGet().getObjectRef();
+    }
+    // Instance field put
+    if (msg.getInstanceFieldPut() != null) {
+      return msg.getInstanceFieldPut().getObjectRef();
+    }
+    // Constructor, static method, static field — no target object
+    return 0;
+  }
+
+  /**
    * Dispatches an incoming (via RPC or Log) execution message.
    *
    * <p>This method validates the message type, optionally sends a BEFORE-phase message to WAL/PUB,
@@ -663,6 +888,14 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         Thread.currentThread().interrupt();
         throw new RuntimeException("Interrupted while entering dispatch", e);
       }
+    }
+
+    // Enable replay injection mode for REPLAY_INJECTION channel to allow non-public access.
+    // Replay injections are replaying operations that originally ran inside the JVM with full
+    // access, so they should be able to access private fields/methods.
+    final boolean isReplayInjection = messageChannel == MessageChannelType.REPLAY_INJECTION;
+    if (isReplayInjection) {
+      setReplayInjectionMode(true);
     }
 
     try {
@@ -709,24 +942,25 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
             messageGateway.sendExecMessage(messageBuilder.wrap(incomingCall), ExecPhase.BEFORE);
       }
 
-      // During replay, advance the cursor past the entry-point OPERATION entry so that nested
-      // operations within the invoked method hit dispatchReplay() with a correctly positioned
-      // cursor. Also advance the ReplayGate so other threads waiting on subsequent offsets can
-      // proceed.
+      // During replay of entry points, we need to advance the cursor past the entry-point
+      // OPERATION entry so that nested operations see the correct cursor position. This
+      // advancement MUST happen on the target thread (e.g., FX thread), not the injector thread.
+      // Otherwise, the target thread's ongoing nested operations (via dispatchReplay) will see
+      // a cursor that has been prematurely advanced, causing OPERATION_MISMATCH divergences.
       //
-      // Use the message's recorded thread name (not Thread.currentThread().getName()) because
-      // for JavaFX entry points, the injector thread may have a different name (e.g.,
-      // "pal-fx-replay-injector") while the WAL entries are keyed to "JavaFX Application Thread".
-      // The actual execution will happen on the real FX thread, which has the correct name.
-      if (replayContext != null && runOptions.contains(RunOptions.WITH_REPLAY)) {
+      // We use incomingCall.isEntryPoint() to determine if cursor advancement is needed, rather
+      // than peeking the cursor. Peeking would be racy because the cursor is owned by the target
+      // thread (which may be advancing it concurrently via dispatchReplay), not the injector
+      // thread that calls dispatchIncoming().
+      //
+      // The ReplayGate advancement is done in ReplayInputInjector (which knows the WAL offset),
+      // not here.
+      ReplayCursor replayEntryPointCursor = null;
+      if (replayContext != null
+          && runOptions.contains(RunOptions.WITH_REPLAY)
+          && incomingCall.getEntryPoint()) {
         String walThreadName = incomingCall.getThreadName();
-        ReplayCursor cursor = replayContext.getCursor(walThreadName);
-        WalEntry peeked = cursor.peekNext();
-        if (peeked != null && peeked.getKind() == WalEntryKind.OPERATION && peeked.isEntryPoint()) {
-          long entryPointOffset = peeked.getOffset();
-          cursor.advance(); // skip past the entry-point OPERATION entry
-          replayContext.getReplayGate().advanceTo(entryPointOffset);
-        }
+        replayEntryPointCursor = replayContext.getCursor(walThreadName);
       }
 
       Throwable exceptionWhileLoading = null;
@@ -756,7 +990,8 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         value = getValueFromMessage(incomingCall, accessibleObject);
 
         // 6. (Optionally) Set field/method accessible, allowing to break Java access rules
-        if (allowNonPublicAccess) { // extra-check, since already checked in loadAccessibleObject
+        if (shouldAllowNonPublicAccess()) { // extra-check, since already checked in
+          // loadAccessibleObject
           accessibleObject.setAccessible(true);
         }
       } catch (ReflectiveOperationException | AmbiguousCallException | RuntimeException ex) {
@@ -890,6 +1125,8 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         final List<MessageArgument> argsForChain = finalArgs;
         final boolean isFieldPut = isFieldPutOperation(messageType);
         final String threadAffinityForChain = incomingCall.getThreadAffinity();
+        final ReplayCursor chainReplayCursor = replayEntryPointCursor;
+        final ReplayContext chainReplayContext = replayContext;
 
         AroundInterceptChain.MethodInvoker methodInvoker =
             (invokeArgs) -> {
@@ -914,9 +1151,44 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
                 Object result =
                     threadAffinityDispatcher.execute(
                         threadAffinityForChain,
-                        () ->
-                            invokeIncoming(
-                                accessibleForChain, targetForChain, chainArgs, chainValue));
+                        () -> {
+                          // For entry points, check if dispatchReplay already handled this entry
+                          // point before we invoke. This prevents duplicate execution when both
+                          // the injector and the real runtime race to execute the same entry point.
+                          //
+                          // We get the entry point offset from the pending injection queue that the
+                          // ReplayInputInjector pushed BEFORE calling incomingCall(). This is the
+                          // correct offset - using the cursor would be racy since the cursor may
+                          // have been advanced by dispatchReplay on this thread.
+                          if (chainReplayCursor != null && chainReplayContext != null) {
+                            long injectedOffset =
+                                chainReplayContext.popPendingInjection(
+                                    Thread.currentThread().getName());
+                            if (injectedOffset >= 0) {
+                              boolean alreadyHandled =
+                                  chainReplayContext.isEntryPointHandled(injectedOffset);
+                              WalEntry currentEntry = chainReplayCursor.peekNext();
+                              long currentOffset =
+                                  (currentEntry != null) ? currentEntry.getOffset() : -1;
+                              logger.info(
+                                  "[dispatchIncoming-chain] injectedOffset={} alreadyHandled={}"
+                                      + " cursorAt={}",
+                                  injectedOffset,
+                                  alreadyHandled,
+                                  currentOffset);
+                              if (alreadyHandled) {
+                                logger.info(
+                                    "[dispatchIncoming-chain] SKIP injectedOffset={} - race detected",
+                                    injectedOffset);
+                                return null;
+                              }
+                              // Entry point not yet handled - advance cursor and invoke
+                              chainReplayCursor.advance();
+                            }
+                          }
+                          return invokeIncoming(
+                              accessibleForChain, targetForChain, chainArgs, chainValue);
+                        });
                 boolean isVoid = accessibleForChain != null && returnsVoid(accessibleForChain);
                 return new AfterPhaseData(result, null, isVoid);
               } catch (Throwable th) {
@@ -1006,10 +1278,49 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
             final List<MessageArgument> directArgs = finalArgs;
             final Object directValue = value;
             final String threadAffinity = incomingCall.getThreadAffinity();
+            final ReplayCursor directReplayCursor = replayEntryPointCursor;
+            final ReplayContext directReplayContext = replayContext;
             returnValue =
                 threadAffinityDispatcher.execute(
                     threadAffinity,
-                    () -> invokeIncoming(directAccessible, directTarget, directArgs, directValue));
+                    () -> {
+                      // For entry points, check if dispatchReplay already handled this entry
+                      // point before we invoke. This prevents duplicate execution when both
+                      // the injector and the real runtime race to execute the same entry point.
+                      //
+                      // We get the entry point offset from the pending injection queue that the
+                      // ReplayInputInjector pushed BEFORE calling incomingCall(). This is the
+                      // correct offset - using the cursor would be racy since the cursor may
+                      // have been advanced by dispatchReplay on this thread.
+                      if (directReplayCursor != null && directReplayContext != null) {
+                        long injectedOffset =
+                            directReplayContext.popPendingInjection(
+                                Thread.currentThread().getName());
+                        if (injectedOffset >= 0) {
+                          boolean alreadyHandled =
+                              directReplayContext.isEntryPointHandled(injectedOffset);
+                          WalEntry currentEntry = directReplayCursor.peekNext();
+                          long currentOffset =
+                              (currentEntry != null) ? currentEntry.getOffset() : -1;
+                          logger.info(
+                              "[dispatchIncoming-direct] injectedOffset={} alreadyHandled={}"
+                                  + " cursorAt={}",
+                              injectedOffset,
+                              alreadyHandled,
+                              currentOffset);
+                          if (alreadyHandled) {
+                            logger.info(
+                                "[dispatchIncoming-direct] SKIP injectedOffset={} - race detected",
+                                injectedOffset);
+                            return null;
+                          }
+                          // Entry point not yet handled - advance cursor and invoke
+                          directReplayCursor.advance();
+                        }
+                      }
+                      return invokeIncoming(
+                          directAccessible, directTarget, directArgs, directValue);
+                    });
             if (logger.isTraceEnabled()) {
               String returnedClass =
                   returnValue == null ? "unavailable" : returnValue.getClass().toString();
@@ -1053,8 +1364,10 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
           logger.error("Error after invocation phase - mapping objectref -> return value", e);
         }
 
-        // 9. Save returnValue to peer's session
-        if (objectRef != null && incomingCall.getPeerUuid() != null) {
+        // 9. Save returnValue to peer's session (skip during replay - no session service)
+        final boolean isReplayMode =
+            replayContext != null && runOptions.contains(RunOptions.WITH_REPLAY);
+        if (!isReplayMode && objectRef != null && incomingCall.getPeerUuid() != null) {
           try {
             final UUID peerUuid = UUID.fromString(incomingCall.getPeerUuid());
             storeObjectInSession(peerUuid, objectRef);
@@ -1190,6 +1503,22 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         ReplayCursor cursor = replayContext.getCursor(walThreadName);
         WalEntry peeked = cursor.peekNext();
         if (peeked != null && peeked.getKind() == WalEntryKind.COMPLETION) {
+          // Register return value in ReplayObjectStore with its WAL ref. This is critical for
+          // constructors: the constructed object needs to be registered so subsequent method
+          // calls on it can find the target object by WAL ref.
+          if (returnValue != null) {
+            int walRef = extractReturnRef(peeked);
+            if (walRef != 0) {
+              replayContext.getObjectStore().register(walRef, returnValue);
+              if (logger.isDebugEnabled()) {
+                logger.debug(
+                    "Registered entry-point return value in ReplayObjectStore: {} -> {}",
+                    walRef,
+                    returnValue.getClass().getName());
+              }
+            }
+          }
+
           long completionOffset = peeked.getOffset();
           cursor.advance(); // skip past the entry-point COMPLETION entry
           replayContext.getReplayGate().advanceTo(completionOffset);
@@ -1203,6 +1532,10 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       }
       return afterExecResponseMsg;
     } finally {
+      // Clear replay injection mode if it was set
+      if (isReplayInjection) {
+        setReplayInjectionMode(false);
+      }
       // Always exit dispatch tracking, even if an exception occurred
       if (trackingEnabled) {
         inFlightDispatchTracker.exitDispatch(className, methodName, trackingParamTypes);
@@ -1291,6 +1624,10 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     final List<MessageArgument> args = new ArrayList<>();
     final List<Parameter> parameterList = getParameterList(execMessage);
 
+    // Check if we're in replay mode and should use ReplayObjectStore
+    final boolean useReplayObjectStore =
+        replayContext != null && runOptions.contains(RunOptions.WITH_REPLAY);
+
     int i = 0;
     if (parameterList != null) {
       for (Parameter parameter : parameterList) {
@@ -1304,9 +1641,13 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
           Object lookedUpObj = null;
           final int objRef = obj.getRef();
           if (objRef != 0) {
-            // First try to fetch object by reference (works only with locally-instantiated/stored
-            // objects)
-            lookedUpObj = objectLookupStore.lookupObject(ObjectRef.from(objRef));
+            if (useReplayObjectStore) {
+              // In replay mode, look up from ReplayObjectStore which maps WAL refs to live objects
+              lookedUpObj = replayContext.getObjectStore().resolveOrNull(objRef);
+            } else {
+              // Normal RPC mode: fetch from objectLookupStore
+              lookedUpObj = objectLookupStore.lookupObject(ObjectRef.from(objRef));
+            }
           }
           if (lookedUpObj != null) {
             args.add(new MessageArgument(lookedUpObj, true));

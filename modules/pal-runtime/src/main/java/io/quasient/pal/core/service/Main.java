@@ -299,6 +299,20 @@ public class Main implements Callable<Integer> {
   private String replayThreading;
 
   /**
+   * Delay in milliseconds before processing each OPERATION entry during replay. Used for
+   * slow-motion replay visualization. A value of {@code 0} disables the delay. Only relevant when
+   * {@code --replay-wal} is set.
+   */
+  @Option(
+      names = {"--replay-delay"},
+      paramLabel = "milliseconds",
+      defaultValue = "0",
+      description =
+          "Delay in milliseconds before each operation entry for slow-motion replay visualization"
+              + " (default: ${DEFAULT-VALUE})")
+  private String replayDelay;
+
+  /**
    * Log configuration specifying the Log name for both reading and writing. Using 'auto' works only
    * when a PAL directory is specified.
    */
@@ -1037,6 +1051,7 @@ public class Main implements Callable<Integer> {
       properties.setProperty("replay.wal.path", replayWalPath);
       properties.setProperty("replay.divergence.policy", replayDivergencePolicy);
       properties.setProperty("replay.threading", replayThreading);
+      properties.setProperty("replay.delay", replayDelay);
       if (kafkaServers != null) {
         properties.setProperty("replay.kafka.servers", kafkaServers);
       }
@@ -2001,7 +2016,13 @@ public class Main implements Callable<Integer> {
 
       ReplayInputInjector injectorRunnable =
           new ReplayInputInjector(
-              threadName, entryPoints, dispatcher, replayContext.getReplayGate(), readyLatch);
+              threadName,
+              entryPoints,
+              dispatcher,
+              replayContext.getReplayGate(),
+              replayContext,
+              readyLatch,
+              replayContext.getOperationDelayMs());
 
       Thread thread = new Thread(injectorRunnable, injectorThreadName);
       thread.setDaemon(true);

@@ -783,12 +783,21 @@ public class PeerWiring extends AbstractModule {
     String threading = properties.getProperty("replay.threading", "ordered");
     boolean ordered = !"unordered".equalsIgnoreCase(threading);
 
+    String delayStr = properties.getProperty("replay.delay", "0");
+    long operationDelayMs = 0L;
+    try {
+      operationDelayMs = Long.parseLong(delayStr);
+    } catch (NumberFormatException e) {
+      logger.warn("Invalid replay.delay value '{}', defaulting to 0 (no delay)", delayStr);
+    }
+
     return new ReplayContext(
         index,
         new ReplayPolicy(),
         new ReplayObjectStore(),
         new DivergenceDetector(policy),
-        new ReplayGate(ordered));
+        new ReplayGate(ordered),
+        operationDelayMs);
   }
 
   /**

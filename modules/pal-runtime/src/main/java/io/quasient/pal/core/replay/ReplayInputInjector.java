@@ -9,6 +9,7 @@
  */
 package io.quasient.pal.core.replay;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.quasient.pal.common.replay.WalEntry;
 import io.quasient.pal.core.dispatcher.IncomingMessageDispatcher;
 import io.quasient.pal.core.transport.MessageChannelType;
@@ -44,6 +45,9 @@ import org.slf4j.LoggerFactory;
  * <p>Thread safety: The {@code complete} field is {@code volatile} for cross-thread visibility.
  * This class is designed to run on a single thread whose name matches the WAL thread name.
  */
+@SuppressFBWarnings(
+    value = "EI_EXPOSE_REP2",
+    justification = "ReplayContext is intentionally shared across replay components")
 public class ReplayInputInjector implements Runnable {
 
   /** Logger instance. */
@@ -61,19 +65,29 @@ public class ReplayInputInjector implements Runnable {
   /** The ordering barrier for cross-thread replay coordination. */
   private final ReplayGate replayGate;
 
+  /** The replay context for checking if entry points were already handled. */
+  private final ReplayContext replayContext;
+
   /** Latch that gates injection start on peer initialization completion. */
   private final CountDownLatch readyLatch;
+
+  /**
+   * Delay in milliseconds before injecting each entry point. Used for slow-motion replay
+   * visualization. A value of {@code 0} disables the delay.
+   */
+  private final long operationDelayMs;
 
   /** Whether all entry points have been injected. Volatile for cross-thread visibility. */
   private volatile boolean complete;
 
   /**
-   * Constructs a new {@code ReplayInputInjector}.
+   * Constructs a new {@code ReplayInputInjector} with no operation delay.
    *
    * @param threadName the WAL thread name this injector is responsible for
    * @param entryPoints the entry-point operations to inject, in WAL offset order
    * @param incomingMessageDispatcher the dispatcher for injecting messages into the runtime
    * @param replayGate the WAL-offset ordering barrier for cross-thread coordination
+   * @param replayContext the replay context for checking if entry points were already handled
    * @param readyLatch latch that must be counted down before injection starts (peer initialization)
    */
   public ReplayInputInjector(
@@ -81,12 +95,44 @@ public class ReplayInputInjector implements Runnable {
       List<WalEntry> entryPoints,
       IncomingMessageDispatcher incomingMessageDispatcher,
       ReplayGate replayGate,
+      ReplayContext replayContext,
       CountDownLatch readyLatch) {
+    this(
+        threadName,
+        entryPoints,
+        incomingMessageDispatcher,
+        replayGate,
+        replayContext,
+        readyLatch,
+        0L);
+  }
+
+  /**
+   * Constructs a new {@code ReplayInputInjector} with a configurable operation delay.
+   *
+   * @param threadName the WAL thread name this injector is responsible for
+   * @param entryPoints the entry-point operations to inject, in WAL offset order
+   * @param incomingMessageDispatcher the dispatcher for injecting messages into the runtime
+   * @param replayGate the WAL-offset ordering barrier for cross-thread coordination
+   * @param replayContext the replay context for checking if entry points were already handled
+   * @param readyLatch latch that must be counted down before injection starts (peer initialization)
+   * @param operationDelayMs delay in milliseconds before each entry point injection (0 to disable)
+   */
+  public ReplayInputInjector(
+      String threadName,
+      List<WalEntry> entryPoints,
+      IncomingMessageDispatcher incomingMessageDispatcher,
+      ReplayGate replayGate,
+      ReplayContext replayContext,
+      CountDownLatch readyLatch,
+      long operationDelayMs) {
     this.threadName = threadName;
     this.entryPoints = Collections.unmodifiableList(new ArrayList<>(entryPoints));
     this.incomingMessageDispatcher = incomingMessageDispatcher;
     this.replayGate = replayGate;
+    this.replayContext = replayContext;
     this.readyLatch = readyLatch;
+    this.operationDelayMs = operationDelayMs;
   }
 
   /**
@@ -111,11 +157,73 @@ public class ReplayInputInjector implements Runnable {
         threadName,
         entryPoints.size());
 
+    int entryPointIndex = 0;
     for (WalEntry entryPoint : entryPoints) {
+      entryPointIndex++;
+      logger.info(
+          "[{}] Waiting for entry point {}/{} at offset {} (gate currently at {}): {}.{}",
+          threadName,
+          entryPointIndex,
+          entryPoints.size(),
+          entryPoint.getOffset(),
+          replayGate.getCompletedOffset(),
+          entryPoint.getClassName(),
+          entryPoint.getExecutableName());
+
       replayGate.waitForOffset(entryPoint.getOffset());
+
+      logger.debug(
+          "[{}] Gate reached offset {}, checking if handled", threadName, entryPoint.getOffset());
+
+      // Skip entry points that were already handled via dispatchReplay() (the real runtime
+      // path, e.g., JavaFX calling start() which calls constructor/buildUI). This prevents
+      // duplicate execution when both the real runtime and the injector try to execute the
+      // same entry point.
+      if (replayContext.isEntryPointHandled(entryPoint.getOffset())) {
+        logger.debug(
+            "[{}] Skipping entry point at offset {} - already handled via dispatchReplay",
+            threadName,
+            entryPoint.getOffset());
+        continue;
+      }
+
+      logger.debug(
+          "[{}] Injecting entry point at offset {}: {}.{}",
+          threadName,
+          entryPoint.getOffset(),
+          entryPoint.getClassName(),
+          entryPoint.getExecutableName());
+
+      // Advance the gate to signal that we've reached this entry point's offset. This allows
+      // other threads waiting on subsequent offsets to proceed. We do this HERE (in the
+      // injector) rather than in dispatchIncoming() because the injector knows the offset
+      // from the WalEntry, while dispatchIncoming() would have to peek the cursor (which is
+      // racy since the cursor is owned by the target thread, not the injector thread).
+      replayGate.advanceTo(entryPoint.getOffset());
+
+      // Apply slow-motion delay if configured (for visual debugging)
+      if (operationDelayMs > 0) {
+        try {
+          Thread.sleep(operationDelayMs);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          logger.debug("Replay delay interrupted for thread '{}'", threadName);
+          return;
+        }
+      }
+
+      // Push the entry point offset to the pending injection queue BEFORE calling incomingCall().
+      // The callback in dispatchIncoming() will pop this offset to know the exact entry point
+      // being injected, avoiding race conditions where the cursor has advanced by the time
+      // the callback runs (especially with Platform.runLater() for JavaFX thread affinity).
+      replayContext.pushPendingInjection(threadName, entryPoint.getOffset());
+
       ExecMessage msg = entryPoint.getRawMessage();
       incomingMessageDispatcher.incomingCall(
-          msg, entryPoint.getMessageType(), MessageChannelType.CLI_RPC);
+          msg, entryPoint.getMessageType(), MessageChannelType.REPLAY_INJECTION);
+
+      logger.debug(
+          "[{}] Finished injecting entry point at offset {}", threadName, entryPoint.getOffset());
     }
 
     complete = true;
