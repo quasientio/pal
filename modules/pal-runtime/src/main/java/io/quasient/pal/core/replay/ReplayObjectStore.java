@@ -11,6 +11,7 @@ package io.quasient.pal.core.replay;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -35,6 +36,15 @@ public class ReplayObjectStore {
   private final Map<Integer, Object> walRefToLiveObject = new ConcurrentHashMap<>();
 
   /**
+   * WAL refs that are registered as phantoms. A phantom ref represents an object whose constructor
+   * was stubbed during replay — the object was never actually created, but its ref must be tracked
+   * so that subsequent operations on it can be automatically stubbed (phantom cascading).
+   *
+   * <p>Thread-safe for concurrent access via {@link ConcurrentHashMap#newKeySet()}.
+   */
+  private final Set<Integer> phantomRefs = ConcurrentHashMap.newKeySet();
+
+  /**
    * Reverse mapping: live JVM object → WAL object ref. Uses identity semantics (not {@code equals})
    * so that distinct objects with the same logical value are tracked independently.
    */
@@ -55,6 +65,7 @@ public class ReplayObjectStore {
       liveObjectToWalRef.remove(previous);
     }
     liveObjectToWalRef.put(liveObject, walRef);
+    phantomRefs.remove(walRef);
   }
 
   /**
@@ -94,6 +105,31 @@ public class ReplayObjectStore {
   public int getWalRef(Object liveObject) {
     Integer ref = liveObjectToWalRef.get(liveObject);
     return ref != null ? ref : 0;
+  }
+
+  /**
+   * Registers a WAL ref as a phantom. A phantom represents an object whose constructor was stubbed
+   * during replay — no live object exists, but the ref is tracked so that subsequent operations
+   * targeting this ref can be automatically stubbed (phantom cascading).
+   *
+   * <p>If a live object is later registered for the same ref via {@link #register(int, Object)},
+   * the phantom status is cleared.
+   *
+   * @param walRef the WAL object reference to mark as phantom
+   */
+  public void registerPhantom(int walRef) {
+    phantomRefs.add(walRef);
+  }
+
+  /**
+   * Returns whether the given WAL ref is registered as a phantom.
+   *
+   * @param walRef the WAL object reference to check
+   * @return {@code true} if the ref was registered as a phantom and no live object has since
+   *     overridden it, {@code false} otherwise
+   */
+  public boolean isPhantom(int walRef) {
+    return phantomRefs.contains(walRef);
   }
 
   /**

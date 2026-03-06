@@ -13,9 +13,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.CoreMatchers.sameInstance;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.fail;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -116,50 +114,56 @@ public class ReplayObjectStoreTest {
 
   /** Tests that a phantom-registered ref is recognized as phantom. */
   @Test
-  @Ignore("Awaiting implementation in #948")
   public void registerPhantomAndCheckIsPhantom() {
-    // Given: Empty store
-    // When: registerPhantom(42) called
-    // Then: isPhantom(42) returns true
+    // Given
+    ReplayObjectStore store = new ReplayObjectStore();
 
-    // TODO(#948): Implement test logic
-    fail("Not yet implemented");
+    // When
+    store.registerPhantom(42);
+
+    // Then
+    assertThat(store.isPhantom(42), is(true));
   }
 
   /** Tests that isPhantom returns false for a ref that was never registered. */
   @Test
-  @Ignore("Awaiting implementation in #948")
   public void isPhantomReturnsFalseForUnknownRef() {
-    // Given: Empty store
-    // When: isPhantom(99) called
-    // Then: Returns false
+    // Given
+    ReplayObjectStore store = new ReplayObjectStore();
 
-    // TODO(#948): Implement test logic
-    fail("Not yet implemented");
+    // When / Then
+    assertThat(store.isPhantom(99), is(false));
   }
 
   /** Tests that live objects and phantoms can coexist without interference. */
   @Test
-  @Ignore("Awaiting implementation in #948")
   public void phantomAndLiveObjectCoexist() {
-    // Given: Store with register(1, obj) and registerPhantom(2)
-    // When: Both refs are checked
-    // Then: resolveOrNull(1) returns obj, isPhantom(1) returns false,
-    //       isPhantom(2) returns true, resolveOrNull(2) returns null
+    // Given
+    ReplayObjectStore store = new ReplayObjectStore();
+    Object obj = new Object();
+    store.register(1, obj);
+    store.registerPhantom(2);
 
-    // TODO(#948): Implement test logic
-    fail("Not yet implemented");
+    // When / Then
+    assertThat(store.resolveOrNull(1), is(sameInstance(obj)));
+    assertThat(store.isPhantom(1), is(false));
+    assertThat(store.isPhantom(2), is(true));
+    assertThat(store.resolveOrNull(2), is(nullValue()));
   }
 
   /** Tests that registering a live object overrides a previous phantom registration. */
   @Test
-  @Ignore("Awaiting implementation in #948")
   public void registerOverridesPhantom() {
-    // Given: Store with registerPhantom(42)
-    // When: register(42, realObj) called
-    // Then: isPhantom(42) returns false, resolveOrNull(42) returns realObj
+    // Given
+    ReplayObjectStore store = new ReplayObjectStore();
+    store.registerPhantom(42);
+    Object realObj = new Object();
 
-    // TODO(#948): Implement test logic
-    fail("Not yet implemented");
+    // When
+    store.register(42, realObj);
+
+    // Then
+    assertThat(store.isPhantom(42), is(false));
+    assertThat(store.resolveOrNull(42), is(sameInstance(realObj)));
   }
 }
