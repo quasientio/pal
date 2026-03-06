@@ -37,6 +37,7 @@ import io.quasient.pal.core.replay.OperationSignature;
 import io.quasient.pal.core.replay.ReplayContext;
 import io.quasient.pal.core.replay.ReplayCursor;
 import io.quasient.pal.core.replay.ReplayPolicy.ReplayAction;
+import io.quasient.pal.core.replay.SpanFieldMutationReplayer;
 import io.quasient.pal.core.service.RunOptions;
 import io.quasient.pal.core.transport.MessageChannelType;
 import io.quasient.pal.messages.colfer.ExecMessage;
@@ -94,6 +95,14 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
   /** Thread affinity key for routing to the JavaFX Application Thread during replay. */
   private static final String FX_THREAD_AFFINITY = "fx-thread";
+
+  /**
+   * Replayer for field mutations within stubbed spans. Used by the {@link
+   * ReplayAction#STUB_WITH_SIDE_EFFECTS} dispatch path to apply PUT_FIELD and PUT_STATIC mutations
+   * from the WAL without executing the original method.
+   */
+  private final SpanFieldMutationReplayer spanFieldMutationReplayer =
+      new SpanFieldMutationReplayer();
 
   /**
    * Dispatches an execution request by performing pre-invocation messaging, invoking the target
@@ -997,10 +1006,20 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
   }
 
   /**
-   * Placeholder for the {@link ReplayAction#STUB_WITH_SIDE_EFFECTS} dispatch path.
+   * Handles the {@link ReplayAction#STUB_WITH_SIDE_EFFECTS} dispatch path by returning the
+   * WAL-recorded value and replaying field mutations (PUT_FIELD / PUT_STATIC) from within the span.
    *
-   * <p>This action stubs the return value from WAL and additionally replays field mutations (PUT
-   * entries) from within the span. Full implementation is in a separate task.
+   * <p>This combines the stub return behavior of {@link #handleStub} with field mutation replay via
+   * {@link SpanFieldMutationReplayer}. The method:
+   *
+   * <ol>
+   *   <li>Finds the span's completion entry via the WAL index
+   *   <li>Checks for exception replay (re-throws WAL-recorded exceptions)
+   *   <li>Reconstructs the return value from the completion entry
+   *   <li>Replays PUT_FIELD and PUT_STATIC mutations from within the span
+   *   <li>Registers phantom or live objects in the object store
+   *   <li>Marks entry points as handled, advances cursor and gate
+   * </ol>
    *
    * @param cursor the per-thread replay cursor
    * @param expectedEntry the matched WAL operation entry
@@ -1012,9 +1031,59 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
   private Object handleStubWithSideEffects(
       ReplayCursor cursor, WalEntry expectedEntry, long operationOffset, ProceedingJoinPoint pjp)
       throws Throwable {
-    // Delegate to handleStub for now; full STUB_WITH_SIDE_EFFECTS implementation (field mutation
-    // replay) will be added in a subsequent task.
-    return handleStub(cursor, expectedEntry, operationOffset, pjp, ReplayAction.STUB_FROM_WAL);
+
+    // 1. Find the span's completion entry
+    Span span = replayContext.getWalIndex().getSpans().get(operationOffset);
+    if (span == null) {
+      logger.warn(
+          "No span found for STUB_WITH_SIDE_EFFECTS at offset {}, falling back to RE_EXECUTE",
+          operationOffset);
+      cursor.advance();
+      return invoke(pjp, pjp.getArgs());
+    }
+    long completionOffset = span.completionOffset();
+    WalEntry completionEntry = replayContext.getWalIndex().getEntryAtOffset(completionOffset);
+    if (completionEntry == null) {
+      logger.warn(
+          "No completion entry at offset {} for STUB_WITH_SIDE_EFFECTS at offset {}, falling back to RE_EXECUTE",
+          completionOffset,
+          operationOffset);
+      cursor.advance();
+      return invoke(pjp, pjp.getArgs());
+    }
+
+    // 2. Check for exception replay
+    ExecMessage completionMsg = completionEntry.getRawMessage();
+    RaisedThrowable raised = completionMsg.getRaisedThrowable();
+    if (raised != null && raised.getThrowable() != null) {
+      // Replay mutations even before re-throwing, so side effects are applied
+      spanFieldMutationReplayer.replayMutations(
+          replayContext.getWalIndex(), span, replayContext.getObjectStore());
+      advanceAfterStub(cursor, expectedEntry, operationOffset, completionOffset);
+      throw reconstructThrowable(raised.getThrowable());
+    }
+
+    // 3. Reconstruct the return value from the WAL
+    Object stubbedValue = reconstructReturnValue(completionEntry);
+
+    // 4. Replay PUT_FIELD and PUT_STATIC mutations from within the span
+    spanFieldMutationReplayer.replayMutations(
+        replayContext.getWalIndex(), span, replayContext.getObjectStore());
+
+    // 5. Register phantom or live object in the object store
+    int walRef = extractReturnRef(completionEntry);
+    if (walRef != 0) {
+      if (stubbedValue != null) {
+        replayContext.getObjectStore().register(walRef, stubbedValue);
+      } else {
+        replayContext.getObjectStore().registerPhantom(walRef);
+      }
+    }
+
+    // 6. Mark entry point, advance cursor, advance gate
+    advanceAfterStub(cursor, expectedEntry, operationOffset, completionOffset);
+
+    return stubbedValue;
   }
 
   /**
