@@ -12,8 +12,8 @@ package io.quasient.pal.common.replay;
 import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.fail;
 
 import io.quasient.pal.messages.colfer.Class;
 import io.quasient.pal.messages.colfer.ExecMessage;
@@ -23,7 +23,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -468,14 +467,22 @@ public class WalIndexTest {
    * exists in the index.
    */
   @Test
-  @Ignore("Awaiting implementation in #943")
   public void getEntryAtOffsetReturnsCorrectEntry() {
-    // Given: WalIndex built from entries at offsets [10, 20, 30, 40]
-    // When: getEntryAtOffset(20) called
-    // Then: Returns the entry with offset 20
+    // Given
+    List<WalEntry> entries =
+        Arrays.asList(
+            makeOperation(10, "self-caller", 1),
+            makeOperation(20, "self-caller", 2),
+            makeCompletion(30, "self-caller", 3),
+            makeCompletion(40, "self-caller", 4));
+    WalIndex index = WalIndex.build(entries);
 
-    // TODO(#943): Implement test logic
-    fail("Not yet implemented");
+    // When
+    WalEntry result = index.getEntryAtOffset(20);
+
+    // Then
+    assertThat(result, is(notNullValue()));
+    assertThat(result.getOffset(), is(20L));
   }
 
   /**
@@ -483,14 +490,20 @@ public class WalIndexTest {
    * in the index.
    */
   @Test
-  @Ignore("Awaiting implementation in #943")
   public void getEntryAtOffsetReturnsNullForMissingOffset() {
-    // Given: WalIndex built from entries at offsets [10, 20, 30]
-    // When: getEntryAtOffset(15) called
-    // Then: Returns null
+    // Given
+    List<WalEntry> entries =
+        Arrays.asList(
+            makeOperation(10, "self-caller", 1),
+            makeOperation(20, "self-caller", 2),
+            makeCompletion(30, "self-caller", 3));
+    WalIndex index = WalIndex.build(entries);
 
-    // TODO(#943): Implement test logic
-    fail("Not yet implemented");
+    // When
+    WalEntry result = index.getEntryAtOffset(15);
+
+    // Then
+    assertThat(result, is(nullValue()));
   }
 
   /**
@@ -498,14 +511,24 @@ public class WalIndexTest {
    * boundaries (exclusive of the span's operation and completion offsets).
    */
   @Test
-  @Ignore("Awaiting implementation in #943")
   public void getEntriesInSpanReturnsInnerEntries() {
-    // Given: WalIndex with span(10, 40), entries at offsets [10, 20, 30, 40]
-    // When: getEntriesInSpan(Span(10, 40)) called
-    // Then: Returns entries at offsets [20, 30] (exclusive of boundaries)
+    // Given: outer span(10, 40) with inner entries at offsets 20 and 30
+    List<WalEntry> entries =
+        Arrays.asList(
+            makeOperation(10, "self-caller", 1),
+            makeOperation(20, "self-caller", 2),
+            makeCompletion(30, "self-caller", 3),
+            makeCompletion(40, "self-caller", 4));
+    WalIndex index = WalIndex.build(entries);
+    Span span = new Span(10, 40);
 
-    // TODO(#943): Implement test logic
-    fail("Not yet implemented");
+    // When
+    List<WalEntry> inner = index.getEntriesInSpan(span);
+
+    // Then
+    assertThat(inner.size(), is(2));
+    assertThat(inner.get(0).getOffset(), is(20L));
+    assertThat(inner.get(1).getOffset(), is(30L));
   }
 
   /**
@@ -514,14 +537,18 @@ public class WalIndexTest {
    * between).
    */
   @Test
-  @Ignore("Awaiting implementation in #943")
   public void getEntriesInSpanReturnsEmptyForEmptySpan() {
-    // Given: WalIndex with span(10, 20), entries at offsets [10, 20] (no entries between)
-    // When: getEntriesInSpan(Span(10, 20)) called
-    // Then: Returns empty list
+    // Given: adjacent span(10, 20) with no entries between boundaries
+    List<WalEntry> entries =
+        Arrays.asList(makeOperation(10, "self-caller", 1), makeCompletion(20, "self-caller", 2));
+    WalIndex index = WalIndex.build(entries);
+    Span span = new Span(10, 20);
 
-    // TODO(#943): Implement test logic
-    fail("Not yet implemented");
+    // When
+    List<WalEntry> inner = index.getEntriesInSpan(span);
+
+    // Then
+    assertThat(inner.isEmpty(), is(true));
   }
 
   /**

@@ -18,6 +18,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * An indexed view of a WAL (Write-Ahead Log), providing bidirectional operation/completion pairing,
@@ -52,6 +53,9 @@ public final class WalIndex {
   /** Maps each builder sequence number to the corresponding entry. */
   private final Map<Integer, WalEntry> byBuilderSeq;
 
+  /** Maps each WAL offset to the corresponding entry for O(1) lookup. */
+  private final Map<Long, WalEntry> byOffset;
+
   /**
    * Maps each thread name to the list of entry-point {@link WalEntryKind#OPERATION} entries
    * produced by that thread, in offset order. Only threads with at least one entry-point operation
@@ -70,6 +74,7 @@ public final class WalIndex {
    * @param spans operation offset → span map
    * @param byThread thread name → entries map
    * @param byBuilderSeq builder sequence → entry map
+   * @param byOffset WAL offset → entry map
    * @param entryPointsByThread thread name → entry-point operation entries map
    * @param structuralIssues list of pairing/balance problem descriptions
    */
@@ -79,6 +84,7 @@ public final class WalIndex {
       Map<Long, Span> spans,
       Map<String, List<WalEntry>> byThread,
       Map<Integer, WalEntry> byBuilderSeq,
+      Map<Long, WalEntry> byOffset,
       Map<String, List<WalEntry>> entryPointsByThread,
       List<String> structuralIssues) {
     this.entries = Collections.unmodifiableList(entries);
@@ -86,6 +92,7 @@ public final class WalIndex {
     this.spans = Collections.unmodifiableMap(spans);
     this.byThread = Collections.unmodifiableMap(byThread);
     this.byBuilderSeq = Collections.unmodifiableMap(byBuilderSeq);
+    this.byOffset = Collections.unmodifiableMap(byOffset);
     this.entryPointsByThread = Collections.unmodifiableMap(entryPointsByThread);
     this.structuralIssues = Collections.unmodifiableList(structuralIssues);
   }
@@ -150,8 +157,10 @@ public final class WalIndex {
     }
 
     Map<Integer, WalEntry> byBuilderSeq = new HashMap<>();
+    Map<Long, WalEntry> byOffset = new HashMap<>();
     for (WalEntry entry : entries) {
       byBuilderSeq.put(entry.getBuilderSeq(), entry);
+      byOffset.put(entry.getOffset(), entry);
     }
 
     Map<String, List<WalEntry>> mutableEntryPoints = new LinkedHashMap<>();
@@ -173,6 +182,7 @@ public final class WalIndex {
         spans,
         byThread,
         byBuilderSeq,
+        byOffset,
         entryPointsByThread,
         issues);
   }
@@ -286,5 +296,39 @@ public final class WalIndex {
    */
   public Long getOperationOffset(long completionOffset) {
     return pairs.get(completionOffset);
+  }
+
+  /**
+   * Returns the entry at the given WAL offset, or {@code null} if no entry exists at that offset.
+   *
+   * <p>This provides O(1) lookup by offset, backed by a {@link HashMap}. It is used by the {@code
+   * STUB_FROM_WAL} dispatch path to locate completion entries for return value reconstruction.
+   *
+   * @param offset the WAL offset to look up
+   * @return the entry at that offset, or {@code null} if not found
+   */
+  public WalEntry getEntryAtOffset(long offset) {
+    return byOffset.get(offset);
+  }
+
+  /**
+   * Returns all entries strictly inside the given span (exclusive of the span's operation and
+   * completion offsets).
+   *
+   * <p>This is used by {@code STUB_WITH_SIDE_EFFECTS} to enumerate PUT entries within a stubbed
+   * span for side-effect replay.
+   *
+   * @param span the span whose inner entries are requested
+   * @return an unmodifiable list of entries with offsets strictly between the span's operation and
+   *     completion offsets
+   */
+  public List<WalEntry> getEntriesInSpan(Span span) {
+    return Collections.unmodifiableList(
+        entries.stream()
+            .filter(
+                e ->
+                    e.getOffset() > span.operationOffset()
+                        && e.getOffset() < span.completionOffset())
+            .collect(Collectors.toList()));
   }
 }
