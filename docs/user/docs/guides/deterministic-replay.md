@@ -69,6 +69,18 @@ pal replay --wal file:/tmp/my-wal \
 
 If the application produces the same operations with the same return values, the exit code is `0` and no divergences are reported.
 
+### Slow-Motion Replay
+
+For UI applications (JavaFX, Swing), operations can happen too fast to observe during replay. Use the `--delay` option to add a pause before each entry-point injection:
+
+```bash
+# 2-second delay between entry points (good for visual debugging)
+pal replay --wal file:/tmp/fx-wal --fx-thread --delay 2000 \
+  -jar target/my-javafx-app.jar
+```
+
+The delay is specified in milliseconds. Use larger values (2000-5000ms) when you want to observe each UI state change, smaller values (200-500ms) for faster replay that's still visible. A value of `0` (the default) disables the delay.
+
 ### Replay from Kafka
 
 ```bash
@@ -351,6 +363,10 @@ Without `--fx-thread`, UI interactions recorded on the JavaFX Application Thread
 **Lambda class name normalization:**
 
 JavaFX applications heavily use lambdas for event handlers. Lambda class names are non-deterministic across JVM runs (e.g., `DashboardController$Lambda$653/0x00007fb994397710` in one run vs `DashboardController$Lambda$562/0x00007fbd08449670` in another). PAL automatically normalizes these during signature matching by stripping the `$N/address` suffix, so that `Foo$Lambda` matches regardless of the specific lambda index or memory address.
+
+**Non-public access:**
+
+Replay injections can access private fields and methods regardless of the `--allow-nonpublic` setting. This is intentional: replay is re-executing operations that originally ran inside the JVM with full access. The `--allow-nonpublic` flag only affects external RPC calls.
 
 ## Current Limitations
 

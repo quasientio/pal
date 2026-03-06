@@ -799,6 +799,7 @@ pal replay [OPTIONS] class [args...]
 | `-k, --kafka-servers <host:port>` | Kafka bootstrap servers (required for Kafka WAL topics without `-d`) |
 | `--divergence-policy <WARN\|HALT\|IGNORE>` | Action on divergence (default: `WARN`) |
 | `--replay-threading <ordered\|unordered>` | Thread ordering for multi-threaded replay (default: `ordered`). See [Multi-Threaded Replay](#multi-threaded-replay) |
+| `--delay <milliseconds>` | Delay before each entry-point injection for slow-motion replay visualization (default: `0`, disabled). See [Slow-Motion Replay](#slow-motion-replay) |
 | `-cp, --classpath <CLASSPATH>` | Classpath for the application (required when replaying a class) |
 | `-jar <jarFile>` | JAR file to replay (Main-Class from manifest). Alternative to specifying a main class |
 | `--fx-thread` | Enable JavaFX Application Thread execution. Required for replaying JavaFX applications (default: `false`) |
@@ -883,6 +884,18 @@ pal replay --wal file:/tmp/baseline -cp target/classes com.example.App input-B
 pal replay --wal file:/tmp/my-wal --divergence-policy HALT \
   -cp target/classes com.example.App
 ```
+
+### Slow-Motion Replay
+
+For UI applications (JavaFX, Swing), operations can happen too fast to observe during replay. Use `--delay` to add a pause before each entry-point injection:
+
+```bash
+# 2-second delay between entry points (good for visual debugging)
+pal replay --wal file:/tmp/fx-wal --fx-thread --delay 2000 \
+  -jar target/my-javafx-app.jar
+```
+
+The delay is specified in milliseconds. Use larger values (2000-5000ms) to observe each UI state change, smaller values (200-500ms) for faster but still visible replay.
 
 ### Multi-Threaded Replay
 
