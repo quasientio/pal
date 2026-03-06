@@ -97,6 +97,7 @@
         <jackson.version>2.18.1</jackson.version>
         <spring-boot-loader.version>3.2.1</spring-boot-loader.version>
         <jmh.version>1.37</jmh.version>
+        <snakeyaml.version>2.2</snakeyaml.version>
 
         <!-- LOGGING -->
         <logs.dir>logs</logs.dir>
@@ -868,6 +869,13 @@
                 <groupId>io.github.classgraph</groupId>
                 <artifactId>classgraph</artifactId>
                 <version>${classgraph.version}</version>
+            </dependency>
+
+            <!-- YAML parsing -->
+            <dependency>
+                <groupId>org.yaml</groupId>
+                <artifactId>snakeyaml</artifactId>
+                <version>${snakeyaml.version}</version>
             </dependency>
 
             <!-- JMH benchmarks -->
