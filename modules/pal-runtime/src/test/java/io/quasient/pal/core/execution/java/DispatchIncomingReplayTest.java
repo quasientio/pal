@@ -117,6 +117,9 @@ public class DispatchIncomingReplayTest {
 
     ExecMessage msg = createInstanceMethodExecMessage("com.example.Foo", "bar", true);
 
+    // Simulate what ReplayInputInjector does: push the entry point offset before incomingCall
+    ctx.pushPendingInjection(RPC_THREAD_NAME, 0L);
+
     // When
     dispatcher.dispatchIncoming(msg, MessageChannelType.CLI_RPC);
 
@@ -148,6 +151,9 @@ public class DispatchIncomingReplayTest {
         createReplayDispatcher(EnumSet.of(RunOptions.WITH_REPLAY), ctx, null);
 
     ExecMessage msg = createInstanceMethodExecMessage("com.example.Foo", "bar", true);
+
+    // Simulate what ReplayInputInjector does: push the entry point offset before incomingCall
+    ctx.pushPendingInjection(RPC_THREAD_NAME, 0L);
 
     // When
     dispatcher.dispatchIncoming(msg, MessageChannelType.CLI_RPC);
@@ -182,6 +188,9 @@ public class DispatchIncomingReplayTest {
 
     ExecMessage msg = createInstanceMethodExecMessage("com.example.Foo", "bar", true);
 
+    // Simulate what ReplayInputInjector does: push the entry point offset before incomingCall
+    ctx.pushPendingInjection(RPC_THREAD_NAME, 10L);
+
     // When
     dispatcher.dispatchIncoming(msg, MessageChannelType.CLI_RPC);
 
@@ -215,6 +224,8 @@ public class DispatchIncomingReplayTest {
         createReplayDispatcher(EnumSet.of(RunOptions.WITH_REPLAY), ctx, null);
 
     // When: inject first entry point
+    // Simulate what ReplayInputInjector does: push the entry point offset before incomingCall
+    ctx.pushPendingInjection(RPC_THREAD_NAME, 0L);
     ExecMessage msg1 = createInstanceMethodExecMessage("com.example.Foo", "bar", true);
     dispatcher.dispatchIncoming(msg1, MessageChannelType.CLI_RPC);
 
@@ -222,6 +233,8 @@ public class DispatchIncomingReplayTest {
     assertThat(gate.getCompletedOffset(), is(1L));
 
     // When: inject second entry point
+    // Simulate what ReplayInputInjector does: push the entry point offset before incomingCall
+    ctx.pushPendingInjection(RPC_THREAD_NAME, 2L);
     ExecMessage msg2 = createInstanceMethodExecMessage("com.example.Foo", "baz", true);
     dispatcher.dispatchIncoming(msg2, MessageChannelType.CLI_RPC);
 

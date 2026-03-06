@@ -13,12 +13,14 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.sameInstance;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import io.quasient.pal.common.replay.WalEntry;
 import io.quasient.pal.core.dispatcher.IncomingMessageDispatcher;
@@ -60,6 +62,8 @@ public class ReplayInputInjectorTest {
     // Given: 3 entry-point operations on thread 'rpc-worker-1'; mock IncomingMessageDispatcher
     IncomingMessageDispatcher dispatcher = mock(IncomingMessageDispatcher.class);
     ReplayGate gate = new ReplayGate(false);
+    ReplayContext replayContext = mock(ReplayContext.class);
+    when(replayContext.isEntryPointHandled(anyLong())).thenReturn(false);
     CountDownLatch readyLatch = new CountDownLatch(0);
 
     List<WalEntry> entryPoints = new ArrayList<>();
@@ -68,7 +72,8 @@ public class ReplayInputInjectorTest {
     entryPoints.add(makeEntryPoint(30L, "rpc-worker-1", 3, "methodC"));
 
     ReplayInputInjector injector =
-        new ReplayInputInjector("rpc-worker-1", entryPoints, dispatcher, gate, readyLatch);
+        new ReplayInputInjector(
+            "rpc-worker-1", entryPoints, dispatcher, gate, replayContext, readyLatch);
 
     // When: ReplayInputInjector runs to completion
     injector.run();
@@ -76,7 +81,9 @@ public class ReplayInputInjectorTest {
     // Then: incomingMessageDispatcher.incomingCall() invoked exactly 3 times
     verify(dispatcher, times(3))
         .incomingCall(
-            any(ExecMessage.class), any(MessageType.class), eq(MessageChannelType.CLI_RPC));
+            any(ExecMessage.class),
+            any(MessageType.class),
+            eq(MessageChannelType.REPLAY_INJECTION));
   }
 
   /**
@@ -88,6 +95,8 @@ public class ReplayInputInjectorTest {
     // Given: entry points of types EXEC_INSTANCE_METHOD and EXEC_CLASS_METHOD
     IncomingMessageDispatcher dispatcher = mock(IncomingMessageDispatcher.class);
     ReplayGate gate = new ReplayGate(false);
+    ReplayContext replayContext = mock(ReplayContext.class);
+    when(replayContext.isEntryPointHandled(anyLong())).thenReturn(false);
     CountDownLatch readyLatch = new CountDownLatch(0);
 
     List<WalEntry> entryPoints = new ArrayList<>();
@@ -95,7 +104,8 @@ public class ReplayInputInjectorTest {
     entryPoints.add(makeClassMethodEntryPoint(20L, "rpc-worker-1", 2, "staticMethod"));
 
     ReplayInputInjector injector =
-        new ReplayInputInjector("rpc-worker-1", entryPoints, dispatcher, gate, readyLatch);
+        new ReplayInputInjector(
+            "rpc-worker-1", entryPoints, dispatcher, gate, replayContext, readyLatch);
 
     // When: ReplayInputInjector runs
     injector.run();
@@ -103,7 +113,8 @@ public class ReplayInputInjectorTest {
     // Then: Each incomingCall() invocation uses the correct MessageType from the WalEntry
     ArgumentCaptor<MessageType> typeCaptor = ArgumentCaptor.forClass(MessageType.class);
     verify(dispatcher, times(2))
-        .incomingCall(any(ExecMessage.class), typeCaptor.capture(), eq(MessageChannelType.CLI_RPC));
+        .incomingCall(
+            any(ExecMessage.class), typeCaptor.capture(), eq(MessageChannelType.REPLAY_INJECTION));
 
     List<MessageType> capturedTypes = typeCaptor.getAllValues();
     assertThat(capturedTypes.get(0), is(MessageType.EXEC_INSTANCE_METHOD));
@@ -119,6 +130,8 @@ public class ReplayInputInjectorTest {
     // Given: ReplayGate at offset -1 (ordered mode); 2 entry points at offsets 10 and 50
     IncomingMessageDispatcher dispatcher = mock(IncomingMessageDispatcher.class);
     ReplayGate gate = new ReplayGate(true);
+    ReplayContext replayContext = mock(ReplayContext.class);
+    when(replayContext.isEntryPointHandled(anyLong())).thenReturn(false);
     CountDownLatch readyLatch = new CountDownLatch(0);
 
     List<WalEntry> entryPoints = new ArrayList<>();
@@ -126,7 +139,8 @@ public class ReplayInputInjectorTest {
     entryPoints.add(makeEntryPoint(50L, "rpc-worker-1", 2, "methodB"));
 
     ReplayInputInjector injector =
-        new ReplayInputInjector("rpc-worker-1", entryPoints, dispatcher, gate, readyLatch);
+        new ReplayInputInjector(
+            "rpc-worker-1", entryPoints, dispatcher, gate, replayContext, readyLatch);
 
     AtomicBoolean firstInjected = new AtomicBoolean(false);
     AtomicBoolean secondInjected = new AtomicBoolean(false);
@@ -181,6 +195,8 @@ public class ReplayInputInjectorTest {
     // Given: 2 entry points; ReplayGate that never blocks (unordered)
     IncomingMessageDispatcher dispatcher = mock(IncomingMessageDispatcher.class);
     ReplayGate gate = new ReplayGate(false);
+    ReplayContext replayContext = mock(ReplayContext.class);
+    when(replayContext.isEntryPointHandled(anyLong())).thenReturn(false);
     CountDownLatch readyLatch = new CountDownLatch(0);
 
     List<WalEntry> entryPoints = new ArrayList<>();
@@ -188,7 +204,8 @@ public class ReplayInputInjectorTest {
     entryPoints.add(makeEntryPoint(20L, "rpc-worker-1", 2, "methodB"));
 
     ReplayInputInjector injector =
-        new ReplayInputInjector("rpc-worker-1", entryPoints, dispatcher, gate, readyLatch);
+        new ReplayInputInjector(
+            "rpc-worker-1", entryPoints, dispatcher, gate, replayContext, readyLatch);
 
     // Before run: not complete
     assertThat(injector.isComplete(), is(false));
@@ -209,11 +226,13 @@ public class ReplayInputInjectorTest {
     // Given: empty entry points list
     IncomingMessageDispatcher dispatcher = mock(IncomingMessageDispatcher.class);
     ReplayGate gate = new ReplayGate(false);
+    ReplayContext replayContext = mock(ReplayContext.class);
+    when(replayContext.isEntryPointHandled(anyLong())).thenReturn(false);
     CountDownLatch readyLatch = new CountDownLatch(0);
 
     ReplayInputInjector injector =
         new ReplayInputInjector(
-            "rpc-worker-3", Collections.emptyList(), dispatcher, gate, readyLatch);
+            "rpc-worker-3", Collections.emptyList(), dispatcher, gate, replayContext, readyLatch);
 
     // When: ReplayInputInjector.run() called
     injector.run();
@@ -234,13 +253,16 @@ public class ReplayInputInjectorTest {
     // Given: WalEntry with specific ExecMessage
     IncomingMessageDispatcher dispatcher = mock(IncomingMessageDispatcher.class);
     ReplayGate gate = new ReplayGate(false);
+    ReplayContext replayContext = mock(ReplayContext.class);
+    when(replayContext.isEntryPointHandled(anyLong())).thenReturn(false);
     CountDownLatch readyLatch = new CountDownLatch(0);
 
     WalEntry entryPoint = makeEntryPoint(10L, "rpc-worker-1", 1, "targetMethod");
     ExecMessage expectedMsg = entryPoint.getRawMessage();
 
     ReplayInputInjector injector =
-        new ReplayInputInjector("rpc-worker-1", List.of(entryPoint), dispatcher, gate, readyLatch);
+        new ReplayInputInjector(
+            "rpc-worker-1", List.of(entryPoint), dispatcher, gate, replayContext, readyLatch);
 
     // When: ReplayInputInjector injects this entry point
     injector.run();
@@ -251,7 +273,7 @@ public class ReplayInputInjectorTest {
         .incomingCall(
             msgCaptor.capture(),
             eq(MessageType.EXEC_INSTANCE_METHOD),
-            eq(MessageChannelType.CLI_RPC));
+            eq(MessageChannelType.REPLAY_INJECTION));
 
     assertThat(
         "Should pass the exact same ExecMessage object from WalEntry",
@@ -268,12 +290,15 @@ public class ReplayInputInjectorTest {
     // Given: ReplayInputInjector with a readyLatch that is not yet counted down
     IncomingMessageDispatcher dispatcher = mock(IncomingMessageDispatcher.class);
     ReplayGate gate = new ReplayGate(false);
+    ReplayContext replayContext = mock(ReplayContext.class);
+    when(replayContext.isEntryPointHandled(anyLong())).thenReturn(false);
     CountDownLatch readyLatch = new CountDownLatch(1);
 
     List<WalEntry> entryPoints = List.of(makeEntryPoint(10L, "rpc-worker-1", 1, "methodA"));
 
     ReplayInputInjector injector =
-        new ReplayInputInjector("rpc-worker-1", entryPoints, dispatcher, gate, readyLatch);
+        new ReplayInputInjector(
+            "rpc-worker-1", entryPoints, dispatcher, gate, replayContext, readyLatch);
 
     CountDownLatch done = new CountDownLatch(1);
 
@@ -299,7 +324,9 @@ public class ReplayInputInjectorTest {
     assertThat("Injector thread should complete", completed, is(true));
     verify(dispatcher, times(1))
         .incomingCall(
-            any(ExecMessage.class), any(MessageType.class), eq(MessageChannelType.CLI_RPC));
+            any(ExecMessage.class),
+            any(MessageType.class),
+            eq(MessageChannelType.REPLAY_INJECTION));
     assertThat(injector.isComplete(), is(true));
   }
 
