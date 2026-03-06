@@ -38,7 +38,10 @@ public class ReplayPolicy {
     STUB_FROM_WAL,
 
     /** Return the WAL-recorded value and verify that the arguments match the WAL. */
-    STUB_FROM_WAL_VERIFIED
+    STUB_FROM_WAL_VERIFIED,
+
+    /** Return the WAL-recorded value and replay field mutations from within the span. */
+    STUB_WITH_SIDE_EFFECTS
   }
 
   /**
