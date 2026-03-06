@@ -10,6 +10,7 @@
 package io.quasient.pal.core.execution.java;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import io.quasient.pal.common.objects.ObjectRef;
 import io.quasient.pal.core.execution.ThreadAffinityDispatcher;
 import io.quasient.pal.core.execution.java.reflect.ReflectionHelper;
 import io.quasient.pal.core.intercept.AroundInterceptChainBuilder;
@@ -62,6 +63,14 @@ abstract class AbstractDispatcher {
    * Flag indicating whether non-public methods and fields can be accessed during RPC invocation.
    */
   protected boolean allowNonPublicAccess;
+
+  /**
+   * Thread-local flag indicating whether the current thread is processing a replay injection. When
+   * {@code true}, non-public access is always allowed regardless of the {@link
+   * #allowNonPublicAccess} configuration, since replay injections are replaying operations that
+   * originally ran inside the JVM with full access.
+   */
+  private static final ThreadLocal<Boolean> replayInjectionMode = new ThreadLocal<>();
 
   /** Checker for matching intercepts without creating ExecMessage (hot-path optimization). */
   protected InterceptChecker interceptChecker;
@@ -178,6 +187,40 @@ abstract class AbstractDispatcher {
   }
 
   /**
+   * Returns whether non-public access should be allowed for the current operation.
+   *
+   * <p>This returns {@code true} if either:
+   *
+   * <ul>
+   *   <li>The {@code rpc.allow_nonpublic} configuration is set to {@code true}, OR
+   *   <li>The current thread is processing a replay injection (operations that originally ran
+   *       inside the JVM with full access)
+   * </ul>
+   *
+   * @return {@code true} if non-public access should be allowed
+   */
+  protected final boolean shouldAllowNonPublicAccess() {
+    return allowNonPublicAccess || Boolean.TRUE.equals(replayInjectionMode.get());
+  }
+
+  /**
+   * Sets the replay injection mode for the current thread.
+   *
+   * <p>This is called by {@code dispatchIncoming} when processing a {@link
+   * io.quasient.pal.core.transport.MessageChannelType#REPLAY_INJECTION} channel to enable
+   * non-public access for replay entry point operations.
+   *
+   * @param enabled {@code true} to enable replay injection mode, {@code false} to disable
+   */
+  protected static void setReplayInjectionMode(boolean enabled) {
+    if (enabled) {
+      replayInjectionMode.set(Boolean.TRUE);
+    } else {
+      replayInjectionMode.remove();
+    }
+  }
+
+  /**
    * Sets the {@link InterceptChecker} for checking intercepts without message creation.
    *
    * @param interceptChecker the intercept checker instance
@@ -274,5 +317,39 @@ abstract class AbstractDispatcher {
   final void setSourceAndWalAreSameLog(
       @Named("log.sourceAndWalAreSameLog") String sourceAndWalAreSameLog) {
     this.sourceAndWalAreSameLog = Boolean.parseBoolean(sourceAndWalAreSameLog);
+  }
+
+  /**
+   * Resolves an object by its reference, checking ReplayObjectStore when in replay mode.
+   *
+   * <p>In replay mode, WAL object references are looked up in the {@link
+   * io.quasient.pal.core.replay.ReplayObjectStore} which maps WAL refs to live objects created
+   * during replay. In normal RPC mode, the {@link
+   * io.quasient.pal.core.runtime.objects.ObjectLookupStore} is used.
+   *
+   * @param objRefValue the object reference value from the WAL message
+   * @return the resolved object
+   * @throws NullPointerException if no object is found for the given reference
+   */
+  protected final Object resolveObjectByRef(int objRefValue) throws NullPointerException {
+    boolean useReplayObjectStore =
+        replayContext != null && runOptions.contains(RunOptions.WITH_REPLAY);
+
+    if (useReplayObjectStore) {
+      Object target = replayContext.getObjectStore().resolveOrNull(objRefValue);
+      if (target == null) {
+        throw new NullPointerException(
+            String.format("No object found with objRef: %d in ReplayObjectStore", objRefValue));
+      }
+      return target;
+    } else {
+      ObjectRef targetObjRef = ObjectRef.from(objRefValue);
+      if (objectLookupStore.containsObjectRef(targetObjRef)) {
+        return objectLookupStore.lookupObject(targetObjRef);
+      } else {
+        throw new NullPointerException(
+            String.format("No object found with objRef: %d", targetObjRef.getRef()));
+      }
+    }
   }
 }

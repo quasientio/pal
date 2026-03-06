@@ -21,7 +21,14 @@ public enum MessageChannelType {
   LOG_RPC("LOG_RPC"),
 
   /** CLI (typically for bootstrapping, by calling main or similar CLI utility). */
-  CLI_RPC("CLI_RPC");
+  CLI_RPC("CLI_RPC"),
+
+  /**
+   * Replay injection channel (used by {@link io.quasient.pal.core.replay.ReplayInputInjector} to
+   * inject entry points during replay). This channel type always allows non-public access since
+   * we're replaying operations that originally ran inside the JVM with full access.
+   */
+  REPLAY_INJECTION("REPLAY_INJECTION");
 
   /** Name representing the message channel type. */
   final String name;

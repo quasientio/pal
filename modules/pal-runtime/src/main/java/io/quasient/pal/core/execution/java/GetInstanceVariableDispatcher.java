@@ -9,9 +9,7 @@
  */
 package io.quasient.pal.core.execution.java;
 
-import io.quasient.pal.common.objects.ObjectRef;
 import io.quasient.pal.core.runtime.objects.ObjectLookupStore;
-import io.quasient.pal.core.runtime.objects.ObjectNotFoundException;
 import io.quasient.pal.core.service.RunOptions;
 import io.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import io.quasient.pal.messages.colfer.ExecMessage;
@@ -110,19 +108,8 @@ public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
    */
   @Override
   protected Object getTargetFromMessage(ExecMessage execMessage) throws NullPointerException {
-    Object target;
-    ObjectRef targetObjRef = ObjectRef.from(execMessage.getInstanceFieldGet().getObjectRef());
-    if (objectLookupStore.containsObjectRef(targetObjRef)) {
-      target = objectLookupStore.lookupObject(targetObjRef);
-    } else {
-      Exception objectNotFoundException =
-          new ObjectNotFoundException(
-              String.format("No object found with objRef: %d", targetObjRef.getRef()));
-      NullPointerException npe = new NullPointerException(objectNotFoundException.getMessage());
-      npe.initCause(objectNotFoundException);
-      throw npe;
-    }
-    return target;
+    int objRefValue = execMessage.getInstanceFieldGet().getObjectRef();
+    return resolveObjectByRef(objRefValue);
   }
 
   /**
@@ -154,7 +141,7 @@ public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
     try {
       return clazz.getField(fieldName);
     } catch (NoSuchFieldException e) {
-      if (allowNonPublicAccess) {
+      if (shouldAllowNonPublicAccess()) {
         return clazz.getDeclaredField(fieldName);
       }
       throw e;

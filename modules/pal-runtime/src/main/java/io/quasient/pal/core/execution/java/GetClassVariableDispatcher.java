@@ -121,7 +121,7 @@ public class GetClassVariableDispatcher extends GetFieldDispatcher {
     try {
       return clazz.getField(fieldName);
     } catch (NoSuchFieldException e) {
-      if (allowNonPublicAccess) {
+      if (shouldAllowNonPublicAccess()) {
         return clazz.getDeclaredField(fieldName);
       }
       throw e;

@@ -13,7 +13,6 @@ import io.quasient.pal.common.objects.ObjectRef;
 import io.quasient.pal.common.runtime.Context;
 import io.quasient.pal.core.execution.java.reflect.ReflectionHelper;
 import io.quasient.pal.core.runtime.objects.ObjectLookupStore;
-import io.quasient.pal.core.runtime.objects.ObjectNotFoundException;
 import io.quasient.pal.core.service.RunOptions;
 import io.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import io.quasient.pal.messages.colfer.ExecMessage;
@@ -161,24 +160,11 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
    */
   @Override
   protected Object getTargetFromMessage(ExecMessage execMessage) throws NullPointerException {
-    if (logger.isTraceEnabled()) {
-      if (execMessage.getInstanceMethodCall().getObjectRef() != 0) {
-        logger.trace("ObjectRef: {}", execMessage.getInstanceMethodCall().getObjectRef());
-      }
+    int objRefValue = execMessage.getInstanceMethodCall().getObjectRef();
+    if (logger.isTraceEnabled() && objRefValue != 0) {
+      logger.trace("ObjectRef: {}", objRefValue);
     }
-
-    Object target;
-    ObjectRef targetObjRef = ObjectRef.from(execMessage.getInstanceMethodCall().getObjectRef());
-    if (objectLookupStore.containsObjectRef(targetObjRef)) {
-      target = objectLookupStore.lookupObject(targetObjRef);
-    } else {
-      Exception objectNotFoundException =
-          new ObjectNotFoundException(
-              String.format("No object found with objRef: %d", targetObjRef.getRef()));
-      NullPointerException npe = new NullPointerException(objectNotFoundException.getMessage());
-      npe.initCause(objectNotFoundException);
-      throw npe;
-    }
+    Object target = resolveObjectByRef(objRefValue);
     if (logger.isTraceEnabled()) {
       logger.trace("Loaded target: {}", target);
     }
