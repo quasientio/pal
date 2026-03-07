@@ -51,16 +51,15 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
             runOptions,
             messageBuilder,
             outboundMessageGateway,
-            Boolean.TRUE.toString(),
             reflectionHelper,
             objectLookupStore);
+    ((AbstractDispatcher) dispatcher).allowNonPublicAccess = true;
     onlyPublicDispatcher =
         new ConstructorDispatcher(
             peerUuid,
             runOptions,
             messageBuilder,
             outboundMessageGateway,
-            Boolean.FALSE.toString(),
             onlyPublicReflectionHelper,
             objectLookupStore);
   }
@@ -609,7 +608,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
   }
 
   /* -------------------------------------------------------*/
-  /*        WAL incoming RPC tests (#775)                   */
+  /*        WAL incoming RPC tests                   */
   /* -------------------------------------------------------*/
 
   @Test
@@ -621,7 +620,6 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
             EnumSet.of(RunOptions.WITH_WAL, RunOptions.WITH_WAL_INCOMING_RPC),
             messageBuilder,
             outboundMessageGateway,
-            Boolean.TRUE.toString(),
             reflectionHelper,
             objectLookupStore);
 
@@ -644,14 +642,12 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
             EnumSet.of(RunOptions.WITH_WAL),
             messageBuilder,
             outboundMessageGateway,
-            Boolean.TRUE.toString(),
             reflectionHelper,
             objectLookupStore);
 
     ExecMessage incomingMessage =
         messageBuilder.buildEmptyConstructor(peerUuid, targetClass.getName());
 
-    // TODO(#878): Remove @Ignore when AFTER message gating is implemented
     walDispatcher.dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
     verifyDispatcherConnectorSendExecMessageNeverCalled();
   }
@@ -669,7 +665,6 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
                 RunOptions.WITH_WAL_ALL_INCOMING_RPC),
             messageBuilder,
             outboundMessageGateway,
-            Boolean.TRUE.toString(),
             reflectionHelper,
             objectLookupStore);
 
@@ -692,14 +687,12 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
             EnumSet.of(RunOptions.WITH_WAL, RunOptions.WITH_WAL_INCOMING_RPC),
             messageBuilder,
             outboundMessageGateway,
-            Boolean.TRUE.toString(),
             reflectionHelper,
             objectLookupStore);
 
     ExecMessage incomingMessage =
         messageBuilder.buildEmptyConstructor(peerUuid, targetClass.getName());
 
-    // TODO(#878): Remove @Ignore when AFTER message gating is implemented
     walDispatcher.dispatchIncoming(incomingMessage, MessageChannelType.LOG_RPC);
     verifyDispatcherConnectorSendExecMessageNeverCalled();
   }

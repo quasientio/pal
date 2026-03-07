@@ -49,20 +49,11 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     runOptions = EnumSet.of(RunOptions.WITH_TCP_PUB);
     dispatcher =
         new SetClassVariableDispatcher(
-            peerUuid,
-            runOptions,
-            messageBuilder,
-            outboundMessageGateway,
-            Boolean.TRUE.toString(),
-            objectLookupStore);
+            peerUuid, runOptions, messageBuilder, outboundMessageGateway, objectLookupStore);
+    ((AbstractDispatcher) dispatcher).allowNonPublicAccess = true;
     onlyPublicDispatcher =
         new SetClassVariableDispatcher(
-            peerUuid,
-            runOptions,
-            messageBuilder,
-            outboundMessageGateway,
-            Boolean.FALSE.toString(),
-            objectLookupStore);
+            peerUuid, runOptions, messageBuilder, outboundMessageGateway, objectLookupStore);
   }
 
   @After
@@ -702,7 +693,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
   }
 
   /* -------------------------------------------------------*/
-  /*        WAL incoming RPC tests (#775)                   */
+  /*        WAL incoming RPC tests                   */
   /* -------------------------------------------------------*/
 
   @Test
@@ -714,7 +705,6 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
             EnumSet.of(RunOptions.WITH_WAL, RunOptions.WITH_WAL_INCOMING_RPC),
             messageBuilder,
             outboundMessageGateway,
-            Boolean.TRUE.toString(),
             objectLookupStore);
 
     String fieldName = "someShort";
@@ -740,7 +730,6 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
             EnumSet.of(RunOptions.WITH_WAL),
             messageBuilder,
             outboundMessageGateway,
-            Boolean.TRUE.toString(),
             objectLookupStore);
 
     String fieldName = "someShort";
@@ -750,7 +739,6 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
         messageBuilder.buildPutStatic(
             peerUuid, targetClass.getName(), fieldName, fieldValueClassName, newFieldValue);
 
-    // TODO(#878): Remove @Ignore when AFTER message gating is implemented
     walDispatcher.dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
     verifyDispatcherConnectorSendExecMessageNeverCalled();
   }
@@ -768,7 +756,6 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
                 RunOptions.WITH_WAL_ALL_INCOMING_RPC),
             messageBuilder,
             outboundMessageGateway,
-            Boolean.TRUE.toString(),
             objectLookupStore);
 
     String fieldName = "someShort";
@@ -794,7 +781,6 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
             EnumSet.of(RunOptions.WITH_WAL, RunOptions.WITH_WAL_INCOMING_RPC),
             messageBuilder,
             outboundMessageGateway,
-            Boolean.TRUE.toString(),
             objectLookupStore);
 
     String fieldName = "someShort";
@@ -804,7 +790,6 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
         messageBuilder.buildPutStatic(
             peerUuid, targetClass.getName(), fieldName, fieldValueClassName, newFieldValue);
 
-    // TODO(#878): Remove @Ignore when AFTER message gating is implemented
     walDispatcher.dispatchIncoming(incomingMessage, MessageChannelType.LOG_RPC);
     verifyDispatcherConnectorSendExecMessageNeverCalled();
   }

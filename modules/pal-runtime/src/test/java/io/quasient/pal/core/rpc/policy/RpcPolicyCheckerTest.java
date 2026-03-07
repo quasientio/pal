@@ -23,6 +23,7 @@ import io.quasient.pal.messages.colfer.ConstructorCall;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.InstanceMethodCall;
 import io.quasient.pal.messages.types.MessageType;
+import java.util.EnumSet;
 import java.util.List;
 import org.junit.After;
 import org.junit.Before;
@@ -213,7 +214,7 @@ public class RpcPolicyCheckerTest {
                     null,
                     RpcPolicyAction.ALLOW,
                     null,
-                    java.util.EnumSet.of(MemberCategory.CONSTRUCTOR))),
+                    EnumSet.of(MemberCategory.CONSTRUCTOR))),
             RpcPolicyAction.DENY);
     RpcPolicyChecker checker = new RpcPolicyChecker(policy);
 
@@ -289,6 +290,7 @@ public class RpcPolicyCheckerTest {
    * @param methodName the method name
    * @return the constructed message
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes") // Class conflicts with java.lang.Class
   private static ExecMessage createInstanceMethodMessage(String className, String methodName) {
     io.quasient.pal.messages.colfer.Class clazz = new io.quasient.pal.messages.colfer.Class();
     clazz.name = className;
@@ -308,6 +310,7 @@ public class RpcPolicyCheckerTest {
    * @param className the fully-qualified class name
    * @return the constructed message
    */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes") // Class conflicts with java.lang.Class
   private static ExecMessage createConstructorMessage(String className) {
     io.quasient.pal.messages.colfer.Class clazz = new io.quasient.pal.messages.colfer.Class();
     clazz.name = className;

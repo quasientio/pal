@@ -9,10 +9,27 @@
  */
 package io.quasient.pal.core.service;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 
-import org.junit.Ignore;
+import io.quasient.pal.core.execution.java.CustomClassloader;
+import io.quasient.pal.core.rpc.policy.RpcPolicy;
+import io.quasient.pal.core.rpc.policy.RpcPolicyAction;
+import io.quasient.pal.core.rpc.policy.RpcPolicyPresets;
+import java.io.IOException;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.EnumSet;
+import java.util.Properties;
+import java.util.UUID;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
+import org.zeromq.ZContext;
 
 /**
  * Tests for the RPC policy construction logic in {@link PeerWiring}.
@@ -22,43 +39,91 @@ import org.junit.Test;
  */
 public class PeerWiringRpcPolicyTest {
 
+  /** ZeroMQ context required by PeerWiring. */
+  private ZContext ctx;
+
+  @Before
+  public void setUp() {
+    ctx = new ZContext(1);
+  }
+
+  @After
+  public void tearDown() {
+    ctx.close();
+  }
+
   /**
    * Tests that buildRpcPolicy returns a default DENY policy with no rules when no RPC policy
    * configuration is provided.
    */
   @Test
-  @Ignore("Awaiting implementation in #1001")
   public void shouldBuildDefaultPolicyWhenNoConfigProvided() {
-    // Given: No rpc.policy.path, no presets, default_action=DENY
-    // When: buildRpcPolicy() called
-    // Then: Returns policy with DENY default, empty rules
+    // Given: No rpc.policy.path, no presets, no default_action
+    Properties props = baseProps();
+    PeerWiring wiring = createWiring(props);
 
-    // TODO(#1001): Implement test logic
-    fail("Not yet implemented");
+    // When
+    RpcPolicy policy = wiring.provideRpcPolicy();
+
+    // Then: Returns policy with DENY default, empty rules
+    assertThat(policy.getDefaultAction(), is(RpcPolicyAction.DENY));
+    assertThat(policy.getRules(), is(empty()));
   }
 
   /** Tests that buildRpcPolicy parses rules from a YAML file when rpc.policy.path is provided. */
   @Test
-  @Ignore("Awaiting implementation in #1001")
-  public void shouldBuildPolicyFromYamlPath() {
+  public void shouldBuildPolicyFromYamlPath() throws IOException {
     // Given: rpc.policy.path pointing to a temp YAML file with rules
-    // When: buildRpcPolicy() called
-    // Then: Returns policy with parsed rules
+    Path yamlFile = Files.createTempFile("rpc-policy-", ".yaml");
+    try {
+      Files.writeString(
+          yamlFile,
+          """
+              version: 1
+              defaultAction: ALLOW
+              rules:
+                - pattern: "com.example.api.**"
+                  action: ALLOW
+                - pattern: "com.example.internal.**"
+                  action: DENY
+              """);
 
-    // TODO(#1001): Implement test logic
-    fail("Not yet implemented");
+      Properties props = baseProps();
+      props.setProperty("rpc.policy.path", yamlFile.toString());
+      PeerWiring wiring = createWiring(props);
+
+      // When
+      RpcPolicy policy = wiring.provideRpcPolicy();
+
+      // Then: Returns policy with parsed rules and ALLOW default from YAML
+      assertThat(policy.getRules().size(), is(2));
+      assertThat(policy.getRules().get(0).getAction(), is(RpcPolicyAction.ALLOW));
+      assertThat(policy.getRules().get(1).getAction(), is(RpcPolicyAction.DENY));
+      assertThat(policy.getDefaultAction(), is(RpcPolicyAction.ALLOW));
+    } finally {
+      Files.deleteIfExists(yamlFile);
+    }
   }
 
   /** Tests that buildRpcPolicy applies preset rules when only rpc.policy.presets is provided. */
   @Test
-  @Ignore("Awaiting implementation in #1001")
   public void shouldBuildPolicyFromPresetsOnly() {
     // Given: rpc.policy.presets="deny-unsafe", no YAML path
-    // When: buildRpcPolicy() called
-    // Then: Returns policy with deny-unsafe rules
+    Properties props = baseProps();
+    props.setProperty("rpc.policy.presets", "deny-unsafe");
+    PeerWiring wiring = createWiring(props);
 
-    // TODO(#1001): Implement test logic
-    fail("Not yet implemented");
+    // When
+    RpcPolicy policy = wiring.provideRpcPolicy();
+
+    // Then: Returns policy with deny-unsafe rules
+    int expectedRuleCount = RpcPolicyPresets.getDenyUnsafeRules().size();
+    assertThat(policy.getRules().size(), is(expectedRuleCount));
+    assertThat(policy.getRules().size(), is(greaterThan(0)));
+    // All preset rules should be DENY
+    for (int i = 0; i < policy.getRules().size(); i++) {
+      assertThat(policy.getRules().get(i).getAction(), is(RpcPolicyAction.DENY));
+    }
   }
 
   /**
@@ -66,13 +131,58 @@ public class PeerWiringRpcPolicyTest {
    * appearing first (higher priority) followed by preset rules.
    */
   @Test
-  @Ignore("Awaiting implementation in #1001")
-  public void shouldBuildPolicyFromYamlAndPresets() {
+  public void shouldBuildPolicyFromYamlAndPresets() throws IOException {
     // Given: Both YAML path and presets provided
-    // When: buildRpcPolicy() called
-    // Then: User rules from YAML come first, then presets
+    Path yamlFile = Files.createTempFile("rpc-policy-", ".yaml");
+    try {
+      Files.writeString(
+          yamlFile,
+          """
+              version: 1
+              defaultAction: DENY
+              rules:
+                - pattern: "com.example.api.**"
+                  action: ALLOW
+              """);
 
-    // TODO(#1001): Implement test logic
-    fail("Not yet implemented");
+      Properties props = baseProps();
+      props.setProperty("rpc.policy.path", yamlFile.toString());
+      props.setProperty("rpc.policy.presets", "deny-unsafe");
+      PeerWiring wiring = createWiring(props);
+
+      // When
+      RpcPolicy policy = wiring.provideRpcPolicy();
+
+      // Then: User rules from YAML come first, then presets
+      int yamlRuleCount = 1;
+      int presetRuleCount = RpcPolicyPresets.getDenyUnsafeRules().size();
+      assertThat(policy.getRules().size(), is(yamlRuleCount + presetRuleCount));
+      // First rule is from YAML (ALLOW)
+      assertThat(policy.getRules().get(0).getAction(), is(RpcPolicyAction.ALLOW));
+      // Remaining rules are from preset (DENY)
+      assertThat(policy.getRules().get(1).getAction(), is(RpcPolicyAction.DENY));
+      assertThat(policy.getRules(), is(not(empty())));
+    } finally {
+      Files.deleteIfExists(yamlFile);
+    }
+  }
+
+  /** Creates base properties required by PeerWiring. */
+  private Properties baseProps() {
+    Properties p = new Properties();
+    p.setProperty("id", UUID.randomUUID().toString());
+    p.setProperty("wal.queue.type", "CHUNKED");
+    p.setProperty("wal.queue.initial", "1024");
+    p.setProperty("wal.queue.max", "2048");
+    p.setProperty("pub.queue.type", "CHUNKED");
+    p.setProperty("pub.queue.initial", "1024");
+    p.setProperty("pub.queue.max", "2048");
+    return p;
+  }
+
+  /** Creates a PeerWiring instance with the given properties. */
+  private PeerWiring createWiring(Properties props) {
+    CustomClassloader cl = new CustomClassloader(new URL[] {}, ClassLoader.getSystemClassLoader());
+    return new PeerWiring(props, EnumSet.noneOf(RunOptions.class), ctx, cl);
   }
 }

@@ -124,7 +124,7 @@ public class ClassMetadataSerializerTest {
   }
 
   // ============================================================================
-  // Tests for issue #461 - ClassMetadataSerializer additional coverage
+  // ClassMetadataSerializer additional coverage
   // ============================================================================
 
   /**
@@ -427,7 +427,7 @@ public class ClassMetadataSerializerTest {
 
     try {
       ClassMetadataSerializer serializerWithCustomLoader =
-          new ClassMetadataSerializer("false", customLoader);
+          new ClassMetadataSerializer(customLoader);
 
       // When: scannedClasspathToJson called with a specific class
       Path outFile =
@@ -496,7 +496,7 @@ public class ClassMetadataSerializerTest {
   }
 
   // ============================================================================
-  // Test specifications for issue #547 - Coverage gaps awaiting implementation in #548
+  // Test specifications for coverage gaps awaiting implementation
   // ============================================================================
 
   /**

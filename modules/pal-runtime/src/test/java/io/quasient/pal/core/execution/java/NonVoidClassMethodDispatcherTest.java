@@ -55,16 +55,15 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
             runOptions,
             messageBuilder,
             outboundMessageGateway,
-            Boolean.TRUE.toString(),
             reflectionHelper,
             objectLookupStore);
+    ((AbstractDispatcher) dispatcher).allowNonPublicAccess = true;
     onlyPublicDispatcher =
         new ClassMethodDispatcher(
             peerUuid,
             runOptions,
             messageBuilder,
             outboundMessageGateway,
-            Boolean.FALSE.toString(),
             onlyPublicReflectionHelper,
             objectLookupStore);
   }
@@ -711,7 +710,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
   }
 
   /* -------------------------------------------------------*/
-  /*        WAL incoming RPC tests (#775)                   */
+  /*        WAL incoming RPC tests                   */
   /* -------------------------------------------------------*/
 
   @Test
@@ -723,7 +722,6 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
             EnumSet.of(RunOptions.WITH_WAL, RunOptions.WITH_WAL_INCOMING_RPC),
             messageBuilder,
             outboundMessageGateway,
-            Boolean.TRUE.toString(),
             reflectionHelper,
             objectLookupStore);
 
@@ -755,7 +753,6 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
             EnumSet.of(RunOptions.WITH_WAL),
             messageBuilder,
             outboundMessageGateway,
-            Boolean.TRUE.toString(),
             reflectionHelper,
             objectLookupStore);
 
@@ -771,7 +768,6 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
             new Object[] {},
             new ObjectRef[] {});
 
-    // TODO(#878): Remove @Ignore when AFTER message gating is implemented
     walDispatcher.dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
     verifyDispatcherConnectorSendExecMessageNeverCalled();
   }
@@ -789,7 +785,6 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
                 RunOptions.WITH_WAL_ALL_INCOMING_RPC),
             messageBuilder,
             outboundMessageGateway,
-            Boolean.TRUE.toString(),
             reflectionHelper,
             objectLookupStore);
 
@@ -821,7 +816,6 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
             EnumSet.of(RunOptions.WITH_WAL, RunOptions.WITH_WAL_INCOMING_RPC),
             messageBuilder,
             outboundMessageGateway,
-            Boolean.TRUE.toString(),
             reflectionHelper,
             objectLookupStore);
 
@@ -837,7 +831,6 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
             new Object[] {},
             new ObjectRef[] {});
 
-    // TODO(#878): Remove @Ignore when AFTER message gating is implemented
     walDispatcher.dispatchIncoming(incomingMessage, MessageChannelType.LOG_RPC);
     verifyDispatcherConnectorSendExecMessageNeverCalled();
   }
