@@ -171,4 +171,23 @@ public class RpcPolicyRule {
   public Set<MemberCategory> getMembers() {
     return members != null ? EnumSet.copyOf(members) : null;
   }
+
+  /**
+   * Tests whether this rule matches the given class-method path and member category, ignoring the
+   * channel dimension.
+   *
+   * <p>This variant is intended for metadata serialization, where the goal is to determine if a
+   * member is accessible on <em>any</em> channel. Channel-restricted rules are still evaluated
+   * (they match regardless of the actual channel).
+   *
+   * @param classMethodPath the fully-qualified path in the form {@code "com.example.Foo.bar"}
+   * @param memberCategory the category of the member being accessed
+   * @return {@code true} if the operation matches this rule (ignoring channel)
+   */
+  public boolean matchesForMetadata(String classMethodPath, MemberCategory memberCategory) {
+    if (members != null && !members.contains(memberCategory)) {
+      return false;
+    }
+    return MATCHER.isMatch(fullPattern, classMethodPath);
+  }
 }

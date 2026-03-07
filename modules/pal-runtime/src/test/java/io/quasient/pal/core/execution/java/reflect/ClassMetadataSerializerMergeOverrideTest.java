@@ -13,16 +13,21 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 
+import io.quasient.pal.core.rpc.policy.RpcPolicy;
+import io.quasient.pal.core.rpc.policy.RpcPolicyAction;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Set;
 import org.junit.Test;
 
+/** Tests for merge/override behavior in {@link ClassMetadataSerializer}. */
 public class ClassMetadataSerializerMergeOverrideTest {
 
   @Test
   public void mergeAncestry_marksOverriddenMembers() throws Exception {
-    ClassMetadataSerializer serializer = new ClassMetadataSerializer(false);
+    RpcPolicy allowAll = new RpcPolicy(List.of(), RpcPolicyAction.ALLOW);
+    ClassMetadataSerializer serializer = new ClassMetadataSerializer(allowAll);
     String subName = "org.example.paltest.SubClass";
     Path out =
         serializer.scannedClasspathToJson(

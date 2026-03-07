@@ -13,21 +13,28 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 
+import io.quasient.pal.core.rpc.policy.RpcPolicy;
+import io.quasient.pal.core.rpc.policy.RpcPolicyAction;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Base64;
+import java.util.List;
 import java.util.Set;
 import java.util.zip.GZIPInputStream;
 import org.junit.Test;
 
+/** Edge-case tests for {@link ClassMetadataSerializer}. */
 public class ClassMetadataSerializerEdgeTest {
+
+  /** An allow-all policy that permits all members on all channels. */
+  private static final RpcPolicy ALLOW_ALL_POLICY = new RpcPolicy(List.of(), RpcPolicyAction.ALLOW);
 
   @Test
   public void compressedSingleClassMerged_containsArrayList() throws Exception {
-    ClassMetadataSerializer serializer = new ClassMetadataSerializer(false);
+    ClassMetadataSerializer serializer = new ClassMetadataSerializer(ALLOW_ALL_POLICY);
     Path out =
         serializer.scannedClasspathToJson(
             /* compressAndEncode */ true,
@@ -53,16 +60,16 @@ public class ClassMetadataSerializerEdgeTest {
   }
 
   @Test
-  public void scanNonPublic_includesNonPublicMethods() throws Exception {
-    ClassMetadataSerializer serializer = new ClassMetadataSerializer(true);
+  public void allowAllPolicy_includesNonPublicMethods() throws Exception {
+    ClassMetadataSerializer serializer = new ClassMetadataSerializer(ALLOW_ALL_POLICY);
     Path out =
         serializer.scannedClasspathToJson(
             /* compressAndEncode */ false, Set.of("java.util.ArrayList"), null, false);
     String json = Files.readString(out);
     Files.deleteIfExists(out);
 
-    // It's hard to pin an exact non-public method; assert that some method entry has modifiers 0
-    // which indicates package-private in ClassGraph's modifier encoding used here.
+    // With allow-all policy and full visibility scanning, non-public methods are included.
+    // modifiers=0 indicates package-private in ClassGraph's modifier encoding.
     boolean hasNonPublic = json.contains("\"modifiers\":0");
     assertThat(hasNonPublic, is(true));
   }

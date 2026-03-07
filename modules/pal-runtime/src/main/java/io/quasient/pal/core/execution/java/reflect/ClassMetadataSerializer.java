@@ -23,6 +23,8 @@ import io.github.classgraph.MethodInfo;
 import io.github.classgraph.MethodParameterInfo;
 import io.github.classgraph.ScanResult;
 import io.quasient.pal.core.execution.java.CustomClassloader;
+import io.quasient.pal.core.rpc.policy.MemberCategory;
+import io.quasient.pal.core.rpc.policy.RpcPolicy;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.io.FileOutputStream;
@@ -49,6 +51,10 @@ import org.slf4j.LoggerFactory;
  * configuration. The generated metadata includes details such as class modifiers, source file,
  * inheritance hierarchies, constructors, methods, and fields. In addition, it supports merging of
  * inherited members from ancestor classes and interfaces.
+ *
+ * <p>Metadata output is filtered by the configured {@link RpcPolicy}: only classes and members that
+ * the policy allows are included in the output. This ensures that RPC clients only discover methods
+ * they are authorized to call.
  */
 @Singleton
 @SuppressFBWarnings(
@@ -66,8 +72,8 @@ public class ClassMetadataSerializer {
   private static final Set<String> CLASS_PREFIXES_TO_EXCLUDE =
       Set.of("com.sun.", "sun.", "jdk.", PAL_PREFIX);
 
-  /** Flag indicating whether non-public classes and members should be scanned. */
-  private final boolean scanNonPublic;
+  /** The RPC policy used to filter metadata output. */
+  private final RpcPolicy rpcPolicy;
 
   /**
    * Optional custom classloader used to load classes during scanning. Null to use the default
@@ -76,27 +82,28 @@ public class ClassMetadataSerializer {
   @Nullable private final CustomClassloader customClassloader;
 
   /**
-   * Constructs a ClassMetadataSerializer with an optional custom classloader.
+   * Constructs a ClassMetadataSerializer with an optional custom classloader and an RPC policy.
    *
-   * <p>Non-public member scanning is disabled (the {@code --rpc-allow-nonpublic} flag has been
-   * removed). Only public members are included in metadata output.
+   * <p>The policy controls which classes and members appear in the serialized metadata output. Only
+   * members that the policy allows are included.
    *
    * @param customClassloader optional custom classloader to be used for scanning; may be null.
+   * @param rpcPolicy the RPC policy used to filter metadata output.
    */
   @Inject
-  public ClassMetadataSerializer(@Nullable CustomClassloader customClassloader) {
-    this.scanNonPublic = false;
+  public ClassMetadataSerializer(
+      @Nullable CustomClassloader customClassloader, RpcPolicy rpcPolicy) {
+    this.rpcPolicy = rpcPolicy;
     this.customClassloader = customClassloader;
   }
 
   /**
-   * Constructs a ClassMetadataSerializer configured to allow or disallow scanning of non-public
-   * members.
+   * Constructs a ClassMetadataSerializer with the given RPC policy and no custom classloader.
    *
-   * @param rpcAllowNonpublic flag to enable scanning of non-public classes and members.
+   * @param rpcPolicy the RPC policy used to filter metadata output.
    */
-  ClassMetadataSerializer(boolean rpcAllowNonpublic) {
-    this.scanNonPublic = rpcAllowNonpublic;
+  ClassMetadataSerializer(RpcPolicy rpcPolicy) {
+    this.rpcPolicy = rpcPolicy;
     this.customClassloader = null;
   }
 
@@ -105,6 +112,10 @@ public class ClassMetadataSerializer {
    * JSON file. Depending on the parameters, the output may be compressed with GZIP and encoded
    * using Base64. The metadata includes class details such as name, modifiers, inheritance
    * information, constructors, methods, and fields.
+   *
+   * <p>Classes and members are filtered by the configured {@link RpcPolicy}. Only members that the
+   * policy allows (on any channel) are included. Classes with no accessible members after filtering
+   * are omitted entirely.
    *
    * @param compressAndEncode if true, the output JSON is GZip-compressed and Base64-encoded.
    * @param includeClasses optional set of fully qualified class names to restrict the scan; if
@@ -132,7 +143,10 @@ public class ClassMetadataSerializer {
             .enableFieldInfo()
             .disableRuntimeInvisibleAnnotations()
             .enableSystemJarsAndModules()
-            .removeTemporaryFilesAfterScan();
+            .removeTemporaryFilesAfterScan()
+            .ignoreClassVisibility()
+            .ignoreMethodVisibility()
+            .ignoreFieldVisibility();
 
     if (includeClasses != null && !includeClasses.isEmpty()) {
       // we will only scan the classes to include
@@ -144,10 +158,6 @@ public class ClassMetadataSerializer {
     if (customClassloader != null) {
       classGraph.overrideClassLoaders(customClassloader);
       classGraph.ignoreParentClassLoaders();
-    }
-
-    if (scanNonPublic) {
-      classGraph.ignoreClassVisibility().ignoreMethodVisibility().ignoreFieldVisibility();
     }
 
     // Decide on file suffix
@@ -216,15 +226,20 @@ public class ClassMetadataSerializer {
         ArrayNode methodsArray = mapper.createArrayNode();
         ArrayNode fieldsArray = mapper.createArrayNode();
 
-        fillConstructorsArray(mapper, classInfo, constructorsArray);
+        fillConstructorsArray(mapper, classInfo, constructorsArray, className);
         if (!mergeAncestry) {
-          fillMethodsArray(mapper, classInfo, methodsArray);
-          fillFieldsArray(mapper, classInfo, fieldsArray);
+          fillMethodsArray(mapper, classInfo, methodsArray, className);
+          fillFieldsArray(mapper, classInfo, fieldsArray, className);
         } else {
           // We'll gather from all ancestors (including interfaces).
           // This method returns a merged representation for each category.
-          mergeMethods(mapper, classInfo, methodsArray);
-          mergeFields(mapper, classInfo, fieldsArray);
+          mergeMethods(mapper, classInfo, methodsArray, className);
+          mergeFields(mapper, classInfo, fieldsArray, className);
+        }
+
+        // Skip classes with no accessible members after policy filtering
+        if (constructorsArray.isEmpty() && methodsArray.isEmpty() && fieldsArray.isEmpty()) {
+          continue;
         }
 
         // Attach arrays
@@ -249,16 +264,20 @@ public class ClassMetadataSerializer {
 
   /**
    * Collects declared constructors for the given class metadata, excluding synthetic and
-   * aspect-weaver generated constructors.
+   * aspect-weaver generated constructors and those denied by the RPC policy.
    *
    * @param mapper ObjectMapper used for constructing JSON objects.
    * @param classInfo metadata of the class whose constructors are to be serialized.
    * @param constructorsArray ArrayNode where the serialized constructor data is added.
+   * @param className the fully-qualified class name for policy evaluation.
    */
-  private static void fillConstructorsArray(
-      ObjectMapper mapper, ClassInfo classInfo, ArrayNode constructorsArray) {
+  private void fillConstructorsArray(
+      ObjectMapper mapper, ClassInfo classInfo, ArrayNode constructorsArray, String className) {
     for (MethodInfo constructorInfo : classInfo.getDeclaredConstructorInfo()) {
       if (isAspectWeaverMethod(constructorInfo)) {
+        continue;
+      }
+      if (!rpcPolicy.isAccessibleForMetadata(className, "<init>", MemberCategory.CONSTRUCTOR)) {
         continue;
       }
       ObjectNode constructorObject = createConstructorJson(mapper, constructorInfo);
@@ -268,19 +287,25 @@ public class ClassMetadataSerializer {
 
   /**
    * Collects declared methods for the given class metadata, excluding synthetic and aspect-weaver
-   * items, and adds them to the provided JSON array. Additionally, ensures inclusion of
-   * java.lang.Object methods.
+   * items and those denied by the RPC policy, and adds them to the provided JSON array.
+   * Additionally, ensures inclusion of accessible java.lang.Object methods.
    *
    * @param mapper ObjectMapper used to create JSON nodes.
    * @param classInfo metadata of the class to process.
    * @param methodsArray ArrayNode to which the method metadata is added.
+   * @param className the fully-qualified class name for policy evaluation.
    */
-  private static void fillMethodsArray(
-      ObjectMapper mapper, ClassInfo classInfo, ArrayNode methodsArray) {
+  private void fillMethodsArray(
+      ObjectMapper mapper, ClassInfo classInfo, ArrayNode methodsArray, String className) {
 
     Map<String, ObjectNode> signatureToMethodMap = new HashMap<>();
     for (MethodInfo methodInfo : classInfo.getMethodInfo()) {
       if (isAspectWeaverMethod(methodInfo)) {
+        continue;
+      }
+      MemberCategory category =
+          methodInfo.isStatic() ? MemberCategory.STATIC_METHOD : MemberCategory.METHOD;
+      if (!rpcPolicy.isAccessibleForMetadata(className, methodInfo.getName(), category)) {
         continue;
       }
       String sig = methodSignature(methodInfo);
@@ -288,8 +313,8 @@ public class ClassMetadataSerializer {
       signatureToMethodMap.put(sig, methodObject);
     }
 
-    // 2) forcibly add all java.lang.Object methods via reflection
-    addJavaLangObjectMethodsViaReflection(mapper, signatureToMethodMap);
+    // 2) forcibly add all java.lang.Object methods via reflection (if allowed by policy)
+    addJavaLangObjectMethodsViaReflection(mapper, signatureToMethodMap, className);
 
     // Put all the methods in the final array
     for (ObjectNode method : signatureToMethodMap.values()) {
@@ -299,16 +324,21 @@ public class ClassMetadataSerializer {
 
   /**
    * Collects declared fields for the provided class metadata, excluding synthetic and aspect-weaver
-   * fields, and appends the serialized data into the given JSON array.
+   * fields and those denied by the RPC policy, and appends the serialized data into the given JSON
+   * array.
    *
    * @param mapper ObjectMapper used for JSON creation.
    * @param classInfo metadata of the class whose fields are being processed.
    * @param fieldsArray ArrayNode to hold the serialized field data.
+   * @param className the fully-qualified class name for policy evaluation.
    */
-  private static void fillFieldsArray(
-      ObjectMapper mapper, ClassInfo classInfo, ArrayNode fieldsArray) {
+  private void fillFieldsArray(
+      ObjectMapper mapper, ClassInfo classInfo, ArrayNode fieldsArray, String className) {
     for (FieldInfo fieldInfo : classInfo.getFieldInfo()) {
       if (isAspectWeaverField(fieldInfo)) {
+        continue;
+      }
+      if (!isFieldAccessibleForMetadata(className, fieldInfo.getName())) {
         continue;
       }
       ObjectNode fieldObject = createFieldJson(mapper, fieldInfo, null, false);
@@ -320,14 +350,15 @@ public class ClassMetadataSerializer {
    * Merges methods from all ancestors (superclasses, interfaces, and their ancestors) into a
    * unified set. For methods overridden in the local class, the local version replaces the
    * inherited one and is marked as overridden. Also ensures that all methods from java.lang.Object
-   * are included.
+   * are included. Methods denied by the RPC policy are filtered out.
    *
    * @param mapper ObjectMapper used for creating JSON representations.
    * @param classInfo metadata of the class for which to merge methods.
    * @param methodsArray ArrayNode where the merged method metadata is stored.
+   * @param className the fully-qualified class name for policy evaluation.
    */
-  private static void mergeMethods(
-      ObjectMapper mapper, ClassInfo classInfo, ArrayNode methodsArray) {
+  private void mergeMethods(
+      ObjectMapper mapper, ClassInfo classInfo, ArrayNode methodsArray, String className) {
     Map<String, ObjectNode> signatureToMethodMap = new HashMap<>();
 
     // 1) gather from all ancestors
@@ -335,6 +366,11 @@ public class ClassMetadataSerializer {
     for (ClassInfo ancestor : allAncestors) {
       for (MethodInfo methodInfo : ancestor.getDeclaredMethodInfo()) {
         if (isAspectWeaverMethod(methodInfo)) {
+          continue;
+        }
+        MemberCategory category =
+            methodInfo.isStatic() ? MemberCategory.STATIC_METHOD : MemberCategory.METHOD;
+        if (!rpcPolicy.isAccessibleForMetadata(className, methodInfo.getName(), category)) {
           continue;
         }
         String sig = methodSignature(methodInfo);
@@ -345,12 +381,17 @@ public class ClassMetadataSerializer {
       }
     }
 
-    // 2) forcibly add all java.lang.Object methods via reflection
-    addJavaLangObjectMethodsViaReflection(mapper, signatureToMethodMap);
+    // 2) forcibly add all java.lang.Object methods via reflection (if allowed by policy)
+    addJavaLangObjectMethodsViaReflection(mapper, signatureToMethodMap, className);
 
     // 3) incorporate local declared methods
     for (MethodInfo methodInfo : classInfo.getDeclaredMethodInfo()) {
       if (isAspectWeaverMethod(methodInfo)) {
+        continue;
+      }
+      MemberCategory category =
+          methodInfo.isStatic() ? MemberCategory.STATIC_METHOD : MemberCategory.METHOD;
+      if (!rpcPolicy.isAccessibleForMetadata(className, methodInfo.getName(), category)) {
         continue;
       }
       String sig = methodSignature(methodInfo);
@@ -376,13 +417,15 @@ public class ClassMetadataSerializer {
   /**
    * Merges fields from all ancestors into a unified set. If the local class declares a field that
    * shadows an inherited field, the local field replaces the ancestor field and is flagged as
-   * overridden.
+   * overridden. Fields denied by the RPC policy are filtered out.
    *
    * @param mapper ObjectMapper used to construct JSON objects.
    * @param classInfo metadata of the class whose fields are merged.
    * @param fieldsArray ArrayNode to which the merged field data is added.
+   * @param className the fully-qualified class name for policy evaluation.
    */
-  private static void mergeFields(ObjectMapper mapper, ClassInfo classInfo, ArrayNode fieldsArray) {
+  private void mergeFields(
+      ObjectMapper mapper, ClassInfo classInfo, ArrayNode fieldsArray, String className) {
     Map<String, ObjectNode> nameMap = new HashMap<>();
 
     // Step 1: gather from all ancestors
@@ -390,6 +433,9 @@ public class ClassMetadataSerializer {
     for (ClassInfo ancestor : allAncestors) {
       for (FieldInfo fieldInfo : ancestor.getDeclaredFieldInfo()) {
         if (isAspectWeaverField(fieldInfo)) {
+          continue;
+        }
+        if (!isFieldAccessibleForMetadata(className, fieldInfo.getName())) {
           continue;
         }
         String fieldName = fieldInfo.getName();
@@ -403,6 +449,9 @@ public class ClassMetadataSerializer {
     // Step 2: local declared fields
     for (FieldInfo fieldInfo : classInfo.getDeclaredFieldInfo()) {
       if (isAspectWeaverField(fieldInfo)) {
+        continue;
+      }
+      if (!isFieldAccessibleForMetadata(className, fieldInfo.getName())) {
         continue;
       }
       String fieldName = fieldInfo.getName();
@@ -421,6 +470,19 @@ public class ClassMetadataSerializer {
     for (ObjectNode field : nameMap.values()) {
       fieldsArray.add(field);
     }
+  }
+
+  /**
+   * Checks whether a field is accessible for metadata purposes by checking both FIELD_GET and
+   * FIELD_SET categories against the policy.
+   *
+   * @param className the fully-qualified class name
+   * @param fieldName the field name
+   * @return {@code true} if the field is accessible for either get or set
+   */
+  private boolean isFieldAccessibleForMetadata(String className, String fieldName) {
+    return rpcPolicy.isAccessibleForMetadata(className, fieldName, MemberCategory.FIELD_GET)
+        || rpcPolicy.isAccessibleForMetadata(className, fieldName, MemberCategory.FIELD_SET);
   }
 
   /**
@@ -479,20 +541,29 @@ public class ClassMetadataSerializer {
 
   /**
    * Adds methods from java.lang.Object to the provided signature map if they are not already
-   * present. This ensures that standard Object methods are included in the metadata scan.
+   * present and the RPC policy allows them. This ensures that standard Object methods are included
+   * in the metadata scan when permitted.
    *
    * @param mapper ObjectMapper used for creating JSON nodes.
    * @param signatureMap Map associating method signatures with their JSON representations.
+   * @param className the fully-qualified class name for policy evaluation.
    */
-  private static void addJavaLangObjectMethodsViaReflection(
-      ObjectMapper mapper, Map<String, ObjectNode> signatureMap) {
+  private void addJavaLangObjectMethodsViaReflection(
+      ObjectMapper mapper, Map<String, ObjectNode> signatureMap, String className) {
 
     for (Method m : Object.class.getDeclaredMethods()) {
       if (m.isSynthetic() || m.getName().contains("$")) {
         continue;
       }
+      MemberCategory category =
+          Modifier.isStatic(m.getModifiers())
+              ? MemberCategory.STATIC_METHOD
+              : MemberCategory.METHOD;
+      if (!rpcPolicy.isAccessibleForMetadata(className, m.getName(), category)) {
+        continue;
+      }
       String sig = reflectionMethodSignature(m);
-      // If it’s not already known, we add it as inherited from java.lang.Object
+      // If it's not already known, we add it as inherited from java.lang.Object
       if (!signatureMap.containsKey(sig)) {
         ObjectNode methodJson =
             createMethodJsonFromReflection(mapper, m, "java.lang.Object", false);
@@ -670,7 +741,7 @@ public class ClassMetadataSerializer {
       if (i > 0) {
         sb.append(", ");
       }
-      // the parameter’s type signature (including generics)
+      // the parameter's type signature (including generics)
       sb.append(params[i].getTypeSignatureOrTypeDescriptor().toString());
     }
     sb.append(")");

@@ -20,6 +20,8 @@ import static org.junit.Assert.assertTrue;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quasient.pal.core.execution.java.CustomClassloader;
+import io.quasient.pal.core.rpc.policy.RpcPolicy;
+import io.quasient.pal.core.rpc.policy.RpcPolicyAction;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.net.URL;
@@ -29,6 +31,7 @@ import java.nio.file.Path;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.zip.GZIPInputStream;
@@ -43,12 +46,14 @@ import org.junit.Test;
  */
 public class ClassMetadataSerializerTest {
 
+  /** An allow-all policy that permits all members on all channels. */
+  private static final RpcPolicy ALLOW_ALL_POLICY = new RpcPolicy(List.of(), RpcPolicyAction.ALLOW);
+
   private ClassMetadataSerializer classMetadataSerializer;
 
   @Before
   public void setUp() throws Exception {
-    boolean scanNonPublic = false;
-    classMetadataSerializer = new ClassMetadataSerializer(scanNonPublic);
+    classMetadataSerializer = new ClassMetadataSerializer(ALLOW_ALL_POLICY);
   }
 
   private int findOccurrences(String searchString, String content) {
@@ -114,8 +119,6 @@ public class ClassMetadataSerializerTest {
 
     String searchString = "className";
     assertEquals(3, findOccurrences(searchString, scannedClasses));
-
-    // verify that some inherited methods are included
 
     // inherited from Object
     assertEquals(3 * 3, findOccurrences("\"wait\"", scannedClasses));
@@ -229,13 +232,11 @@ public class ClassMetadataSerializerTest {
   @Test
   public void mergeMethods_overriddenMethod_markedAsOverride() throws Exception {
     // Given: Child class overriding parent method (SubClass.getA() overrides BaseClass.getA())
-    // Note: BaseClass is package-private, so we need scanNonPublic=true
-    ClassMetadataSerializer nonPublicSerializer = new ClassMetadataSerializer(true);
     String subClassName = "org.example.paltest.SubClass";
 
     // When: Ancestry merged via scannedClasspathToJson with mergeAncestry=true
     Path outFile =
-        nonPublicSerializer.scannedClasspathToJson(false, Set.of(subClassName), null, true);
+        classMetadataSerializer.scannedClasspathToJson(false, Set.of(subClassName), null, true);
     String json = Files.readString(outFile);
     Files.delete(outFile);
 
@@ -275,13 +276,11 @@ public class ClassMetadataSerializerTest {
   @Test
   public void mergeFields_shadowedField_markedCorrectly() throws Exception {
     // Given: Child class with field shadowing parent field (SubClass.a shadows BaseClass.a)
-    // Note: BaseClass is package-private, so we need scanNonPublic=true
-    ClassMetadataSerializer nonPublicSerializer = new ClassMetadataSerializer(true);
     String subClassName = "org.example.paltest.SubClass";
 
     // When: Ancestry merged via scannedClasspathToJson with mergeAncestry=true
     Path outFile =
-        nonPublicSerializer.scannedClasspathToJson(false, Set.of(subClassName), null, true);
+        classMetadataSerializer.scannedClasspathToJson(false, Set.of(subClassName), null, true);
     String json = Files.readString(outFile);
     Files.delete(outFile);
 
@@ -427,7 +426,7 @@ public class ClassMetadataSerializerTest {
 
     try {
       ClassMetadataSerializer serializerWithCustomLoader =
-          new ClassMetadataSerializer(customLoader);
+          new ClassMetadataSerializer(customLoader, ALLOW_ALL_POLICY);
 
       // When: scannedClasspathToJson called with a specific class
       Path outFile =
@@ -500,55 +499,38 @@ public class ClassMetadataSerializerTest {
   // ============================================================================
 
   /**
-   * Tests that the package-private constructor with a boolean parameter correctly creates a
-   * serializer instance with the specified non-public scanning configuration.
-   *
-   * <p>Given: A boolean parameter specifying whether to scan non-public members
-   *
-   * <p>When: The ClassMetadataSerializer(boolean) constructor is called
-   *
-   * <p>Then: A serializer is created with the specified configuration, and scanning behavior
-   * reflects the allowNonPublic setting
+   * Tests that the package-private constructor with an RpcPolicy parameter correctly creates a
+   * serializer instance with the specified policy configuration.
    *
    * <p>Acceptance criteria:
    * [TEST:ClassMetadataSerializerTest.testConstructor_withBooleanParam_createsSerializer]
    */
   @Test
   public void testConstructor_withBooleanParam_createsSerializer() throws Exception {
-    // Test case 1: scanNonPublic = true
-    // Given: Boolean parameter rpcAllowNonpublic = true
-    ClassMetadataSerializer nonPublicSerializer = new ClassMetadataSerializer(true);
+    // Test case 1: allow-all policy (equivalent to old scanNonPublic=true)
+    ClassMetadataSerializer allowAllSerializer = new ClassMetadataSerializer(ALLOW_ALL_POLICY);
 
-    // Then: Serializer is created successfully (not null)
-    // (implicit - no exception thrown)
-
-    // When scanning, non-public members are included in output
+    // When scanning, all members are included in output
     // Use org.example.paltest.BaseClass which is package-private
     Path nonPublicOutFile =
-        nonPublicSerializer.scannedClasspathToJson(
+        allowAllSerializer.scannedClasspathToJson(
             false, Set.of("org.example.paltest.BaseClass"), null, false);
     String nonPublicJson = Files.readString(nonPublicOutFile);
     Files.delete(nonPublicOutFile);
 
-    // BaseClass is package-private, so it should be found when scanNonPublic=true
+    // BaseClass is package-private, found because we always scan with full visibility
     ObjectMapper mapper = new ObjectMapper();
     JsonNode nonPublicRoot = mapper.readTree(nonPublicJson);
     assertThat(nonPublicRoot.isArray(), is(true));
     assertThat(
-        "Should find the package-private BaseClass when scanNonPublic=true",
+        "Should find the package-private BaseClass with allow-all policy",
         nonPublicRoot.size(),
         is(1));
     assertThat(nonPublicRoot.get(0).get("className").asText(), is("org.example.paltest.BaseClass"));
 
-    // Test case 2: scanNonPublic = false
-    // Given: Boolean parameter rpcAllowNonpublic = false
-    ClassMetadataSerializer publicOnlySerializer = new ClassMetadataSerializer(false);
-
-    // (Serializer is created successfully - no exception)
-    // When scanning, only public members are included in output
-    // Scan a public class to verify it works
+    // Test case 2: also with allow-all policy, scan a public class
     Path publicOutFile =
-        publicOnlySerializer.scannedClasspathToJson(
+        allowAllSerializer.scannedClasspathToJson(
             false, Set.of("org.example.paltest.SubClass"), null, false);
     String publicJson = Files.readString(publicOutFile);
     Files.delete(publicOutFile);
@@ -574,35 +556,17 @@ public class ClassMetadataSerializerTest {
    * Tests that mergeMethods correctly combines methods from a class hierarchy without duplicates,
    * marking overridden methods appropriately.
    *
-   * <p>Given: A class hierarchy with multiple classes containing overlapping and unique methods
-   * (e.g., SubClass extends BaseClass, both having methods, some overridden)
-   *
-   * <p>When: scannedClasspathToJson is called with mergeAncestry=true (which triggers mergeMethods)
-   *
-   * <p>Then:
-   *
-   * <ul>
-   *   <li>All methods from all ancestor classes are included
-   *   <li>No duplicate methods appear (same signature appears only once)
-   *   <li>Overridden methods are marked with "overridden":true
-   *   <li>Inherited methods have "inheritedFrom" field set to the declaring class
-   *   <li>java.lang.Object methods are always included
-   * </ul>
-   *
    * <p>Acceptance criteria:
    * [TEST:ClassMetadataSerializerTest.testMergeMethods_combinesMethodsCorrectly]
    */
   @Test
   public void testMergeMethods_combinesMethodsCorrectly() throws Exception {
     // Given: org.example.paltest.SubClass extends BaseClass
-    // SubClass overrides getA() from BaseClass and implements iMeth() from BaseIface
-    // Note: BaseClass is package-private, so we need scanNonPublic=true
-    ClassMetadataSerializer nonPublicSerializer = new ClassMetadataSerializer(true);
     String subClassName = "org.example.paltest.SubClass";
 
     // When: Scan SubClass with mergeAncestry=true
     Path outFile =
-        nonPublicSerializer.scannedClasspathToJson(false, Set.of(subClassName), null, true);
+        classMetadataSerializer.scannedClasspathToJson(false, Set.of(subClassName), null, true);
     String json = Files.readString(outFile);
     Files.delete(outFile);
 
@@ -612,7 +576,6 @@ public class ClassMetadataSerializerTest {
     JsonNode methodsArray = classNode.get("methods");
 
     // Then: Verify method merging
-    // Count occurrences of method names to ensure no duplicates
     Map<String, Integer> methodCounts = new HashMap<>();
     boolean hasGetA = false;
     boolean hasIMeth = false;
@@ -626,7 +589,6 @@ public class ClassMetadataSerializerTest {
 
       if ("getA".equals(name)) {
         hasGetA = true;
-        // getA should be marked as overridden since SubClass overrides it from BaseClass
         assertThat(
             "getA should be marked as overridden",
             methodNode.get("overridden").asBoolean(),
@@ -639,9 +601,7 @@ public class ClassMetadataSerializerTest {
 
       if ("iMeth".equals(name)) {
         hasIMeth = true;
-        // iMeth is declared in SubClass but also defined in BaseIface
       }
-
       if ("toString".equals(name)) {
         hasToString = true;
       }
@@ -653,53 +613,27 @@ public class ClassMetadataSerializerTest {
       }
     }
 
-    // Verify expected methods are present
     assertThat("getA method should be present", hasGetA, is(true));
     assertThat("iMeth method should be present", hasIMeth, is(true));
-
-    // Verify java.lang.Object methods are included
     assertThat("toString should be present from Object", hasToString, is(true));
     assertThat("hashCode should be present from Object", hasHashCode, is(true));
     assertThat("equals should be present from Object", hasEquals, is(true));
-
-    // Verify no duplicate methods (same signature should appear only once)
-    // Methods like wait() have 3 overloads, so we check that unique signatures are not duplicated
     assertThat("getA should appear exactly once", methodCounts.get("getA"), is(1));
     assertThat("iMeth should appear exactly once", methodCounts.get("iMeth"), is(1));
   }
 
   /**
-   * Tests that mergeFields correctly combines fields from a class hierarchy, detecting field
-   * shadowing and marking shadowed fields appropriately.
-   *
-   * <p>Given: A class hierarchy where child class declares a field with the same name as a parent
-   * field (field shadowing)
-   *
-   * <p>When: scannedClasspathToJson is called with mergeAncestry=true (which triggers mergeFields)
-   *
-   * <p>Then:
-   *
-   * <ul>
-   *   <li>All fields from all ancestor classes are included
-   *   <li>Shadowed fields (same name in child and parent) appear once with "overridden":true
-   *   <li>Shadowed fields have "inheritedFrom" field set to the original declaring class
-   *   <li>Unique fields (not shadowed) have "overridden":false or no override flag
-   * </ul>
+   * Tests that mergeFields correctly combines fields from a class hierarchy.
    *
    * <p>Acceptance criteria:
    * [TEST:ClassMetadataSerializerTest.testMergeFields_combinesFieldsCorrectly]
    */
   @Test
   public void testMergeFields_combinesFieldsCorrectly() throws Exception {
-    // Given: org.example.paltest.SubClass extends BaseClass
-    // SubClass.a shadows BaseClass.a (both are public int fields)
-    // Note: BaseClass is package-private, so we need scanNonPublic=true
-    ClassMetadataSerializer nonPublicSerializer = new ClassMetadataSerializer(true);
     String subClassName = "org.example.paltest.SubClass";
 
-    // When: Scan SubClass with mergeAncestry=true
     Path outFile =
-        nonPublicSerializer.scannedClasspathToJson(false, Set.of(subClassName), null, true);
+        classMetadataSerializer.scannedClasspathToJson(false, Set.of(subClassName), null, true);
     String json = Files.readString(outFile);
     Files.delete(outFile);
 
@@ -708,8 +642,6 @@ public class ClassMetadataSerializerTest {
     JsonNode classNode = root.get(0);
     JsonNode fieldsArray = classNode.get("fields");
 
-    // Then: Verify field merging
-    // Count occurrences of field names
     Map<String, Integer> fieldCounts = new HashMap<>();
     boolean hasFieldA = false;
     JsonNode fieldANode = null;
@@ -724,13 +656,8 @@ public class ClassMetadataSerializerTest {
       }
     }
 
-    // Verify the shadowing field "a" is present
     assertThat("Field 'a' should be present", hasFieldA, is(true));
-
-    // Verify field "a" appears exactly once (no duplicate due to merging)
     assertThat("Field 'a' should appear exactly once", fieldCounts.get("a"), is(1));
-
-    // Verify the shadowing field has overridden=true and inheritedFrom set
     assertThat(
         "Field 'a' should be marked as overridden (shadowed)",
         fieldANode.get("overridden").asBoolean(),
@@ -744,38 +671,15 @@ public class ClassMetadataSerializerTest {
   /**
    * Tests that gatherAllAncestors collects all superclasses and interfaces from a class hierarchy.
    *
-   * <p>Given: A class with multiple ancestors including superclasses and interfaces (e.g., class
-   * implementing multiple interfaces, extending a class that also implements interfaces)
-   *
-   * <p>When: scannedClasspathToJson is called with mergeAncestry=true (which uses
-   * gatherAllAncestors internally)
-   *
-   * <p>Then:
-   *
-   * <ul>
-   *   <li>All superclasses up to (but not including) java.lang.Object are collected
-   *   <li>All directly implemented interfaces are collected
-   *   <li>All transitively implemented interfaces (interfaces of superclasses) are collected
-   *   <li>The resulting merged members include members from all collected ancestors
-   * </ul>
-   *
    * <p>Acceptance criteria:
    * [TEST:ClassMetadataSerializerTest.testGatherAllAncestors_collectsFullHierarchy]
    */
   @Test
   public void testGatherAllAncestors_collectsFullHierarchy() throws Exception {
-    // Given: org.example.paltest.SubClass hierarchy:
-    //   BaseIface { iMeth(); }
-    //   BaseClass { getA(); }
-    //   SubClass extends BaseClass implements BaseIface { getA() override, iMeth() impl }
-    //
-    // Note: BaseClass and BaseIface are package-private, so we need scanNonPublic=true
-    ClassMetadataSerializer nonPublicSerializer = new ClassMetadataSerializer(true);
     String subClassName = "org.example.paltest.SubClass";
 
-    // When: Scan SubClass with mergeAncestry=true
     Path outFile =
-        nonPublicSerializer.scannedClasspathToJson(false, Set.of(subClassName), null, true);
+        classMetadataSerializer.scannedClasspathToJson(false, Set.of(subClassName), null, true);
     String json = Files.readString(outFile);
     Files.delete(outFile);
 
@@ -783,8 +687,6 @@ public class ClassMetadataSerializerTest {
     JsonNode root = mapper.readTree(json);
     JsonNode classNode = root.get(0);
 
-    // Then: Verify the class info shows correct ancestry
-    // Check superclasses array
     JsonNode superclassesArray = classNode.get("superclasses");
     assertThat("Should have superclasses", superclassesArray.size(), greaterThan(0));
 
@@ -796,10 +698,7 @@ public class ClassMetadataSerializerTest {
         "Should include BaseClass as superclass",
         superclasses.contains("org.example.paltest.BaseClass"),
         is(true));
-    // Note: java.lang.Object may or may not be in superclasses array depending on ClassGraph
-    // What matters is that Object methods are collected via gatherAllAncestors
 
-    // Check interfaces array
     JsonNode interfacesArray = classNode.get("interfaces");
     Set<String> interfaces = new HashSet<>();
     for (JsonNode iface : interfacesArray) {
@@ -810,19 +709,15 @@ public class ClassMetadataSerializerTest {
         interfaces.contains("org.example.paltest.BaseIface"),
         is(true));
 
-    // Verify methods from all ancestors are merged
     JsonNode methodsArray = classNode.get("methods");
     Set<String> methodNames = new HashSet<>();
     for (JsonNode methodNode : methodsArray) {
       methodNames.add(methodNode.get("name").asText());
     }
 
-    // Methods from SubClass itself
     assertThat(
         "Should have iMeth from SubClass/BaseIface", methodNames.contains("iMeth"), is(true));
     assertThat("Should have getA from SubClass/BaseClass", methodNames.contains("getA"), is(true));
-
-    // Methods from java.lang.Object
     assertThat("Should have toString from Object", methodNames.contains("toString"), is(true));
     assertThat("Should have hashCode from Object", methodNames.contains("hashCode"), is(true));
     assertThat("Should have equals from Object", methodNames.contains("equals"), is(true));
@@ -833,39 +728,15 @@ public class ClassMetadataSerializerTest {
   }
 
   /**
-   * Tests that gatherAllAncestorsRecursive correctly traverses deeply nested class hierarchies
-   * without missing any ancestors or causing stack overflow.
-   *
-   * <p>Given: A deeply nested class hierarchy (e.g., 5+ levels of inheritance) with interfaces at
-   * various levels
-   *
-   * <p>When: scannedClasspathToJson is called with mergeAncestry=true (which uses
-   * gatherAllAncestorsRecursive)
-   *
-   * <p>Then:
-   *
-   * <ul>
-   *   <li>All levels of the hierarchy are traversed recursively
-   *   <li>Methods and fields from all levels appear in the output
-   *   <li>The recursion handles circular interface inheritance gracefully (no infinite loop)
-   *   <li>Each ancestor is only processed once (no duplicates in processing)
-   * </ul>
+   * Tests that gatherAllAncestorsRecursive correctly traverses deeply nested class hierarchies.
    *
    * <p>Acceptance criteria:
    * [TEST:ClassMetadataSerializerTest.testGatherAllAncestorsRecursive_handlesDeepHierarchy]
    */
   @Test
   public void testGatherAllAncestorsRecursive_handlesDeepHierarchy() throws Exception {
-    // Given: java.util.ArrayList has a deep hierarchy:
-    //   ArrayList extends AbstractList extends AbstractCollection extends Object
-    //   ArrayList implements List, RandomAccess, Cloneable, Serializable
-    //   List extends Collection extends Iterable
-    //   Collection extends Iterable
-    //
-    // This forms a diamond pattern where both List and Collection extend Iterable
-    ClassMetadataSerializer serializer = new ClassMetadataSerializer(false);
+    ClassMetadataSerializer serializer = new ClassMetadataSerializer(ALLOW_ALL_POLICY);
 
-    // When: Scan ArrayList with mergeAncestry=true
     Path outFile =
         serializer.scannedClasspathToJson(false, Set.of("java.util.ArrayList"), null, true);
     String json = Files.readString(outFile);
@@ -875,23 +746,18 @@ public class ClassMetadataSerializerTest {
     JsonNode root = mapper.readTree(json);
     JsonNode classNode = root.get(0);
 
-    // Then: Verify all levels are traversed
     JsonNode superclassesArray = classNode.get("superclasses");
     Set<String> superclasses = new HashSet<>();
     for (JsonNode sc : superclassesArray) {
       superclasses.add(sc.asText());
     }
-    // Verify superclass hierarchy traversed
     assertThat(
         "Should include AbstractList", superclasses.contains("java.util.AbstractList"), is(true));
     assertThat(
         "Should include AbstractCollection",
         superclasses.contains("java.util.AbstractCollection"),
         is(true));
-    // Note: java.lang.Object may or may not be in superclasses array - ClassGraph includes it
-    // but what matters is the recursive traversal works (methods from all levels collected)
 
-    // Verify interfaces array contains all interfaces
     JsonNode interfacesArray = classNode.get("interfaces");
     Set<String> interfaces = new HashSet<>();
     for (JsonNode iface : interfacesArray) {
@@ -906,41 +772,20 @@ public class ClassMetadataSerializerTest {
     assertThat("Should include Collection", interfaces.contains("java.util.Collection"), is(true));
     assertThat("Should include Iterable", interfaces.contains("java.lang.Iterable"), is(true));
 
-    // Verify methods from all levels are merged (check a few key ones)
     JsonNode methodsArray = classNode.get("methods");
-    Map<String, Integer> methodCounts = new HashMap<>();
     Set<String> methodNames = new HashSet<>();
-
     for (JsonNode methodNode : methodsArray) {
-      String name = methodNode.get("name").asText();
-      methodCounts.put(name, methodCounts.getOrDefault(name, 0) + 1);
-      methodNames.add(name);
+      methodNames.add(methodNode.get("name").asText());
     }
 
-    // Methods from ArrayList
     assertThat("Should have add from ArrayList/List", methodNames.contains("add"), is(true));
     assertThat("Should have get from ArrayList/List", methodNames.contains("get"), is(true));
     assertThat("Should have size from ArrayList/List", methodNames.contains("size"), is(true));
     assertThat(
         "Should have clear from ArrayList/Collection", methodNames.contains("clear"), is(true));
-
-    // Methods from Object
     assertThat("Should have toString from Object", methodNames.contains("toString"), is(true));
     assertThat("Should have hashCode from Object", methodNames.contains("hashCode"), is(true));
-
-    // Methods from Iterable (via diamond)
     assertThat("Should have iterator from Iterable", methodNames.contains("iterator"), is(true));
-
-    // Verify no method signature is duplicated (e.g., iterator from diamond inheritance)
-    // Methods with same name but different signatures (overloads) are allowed,
-    // but the same exact signature should appear only once
-    // For simple check, ensure iterator appears (it's inherited via diamond pattern)
-    assertThat(
-        "iterator should be present from Iterable via diamond",
-        methodNames.contains("iterator"),
-        is(true));
-
-    // Verify that the process completed without stack overflow (implicit - no exception)
     assertThat("Total methods should be reasonable", methodsArray.size(), greaterThan(20));
   }
 }

@@ -12,16 +12,21 @@ package io.quasient.pal.core.execution.java.reflect;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 
+import io.quasient.pal.core.rpc.policy.RpcPolicy;
+import io.quasient.pal.core.rpc.policy.RpcPolicyAction;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Set;
 import org.junit.Test;
 
+/** Tests for generic signature handling in {@link ClassMetadataSerializer}. */
 public class ClassMetadataSerializerGenericSignatureTest {
 
   @Test
   public void includesGenericParameterTypesInMethodSignatures() throws Exception {
-    ClassMetadataSerializer serializer = new ClassMetadataSerializer(false);
+    RpcPolicy allowAll = new RpcPolicy(List.of(), RpcPolicyAction.ALLOW);
+    ClassMetadataSerializer serializer = new ClassMetadataSerializer(allowAll);
     String cls = "org.example.paltest.GenericMethods";
     Path out = serializer.scannedClasspathToJson(false, Set.of(cls), null, false);
     String json = Files.readString(out);

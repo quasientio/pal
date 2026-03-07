@@ -83,6 +83,44 @@ public class RpcPolicy {
   }
 
   /**
+   * Evaluates an RPC operation against this policy's rules without considering the message channel.
+   *
+   * <p>This variant is intended for metadata serialization, where the goal is to determine if a
+   * member is accessible on <em>any</em> channel. Channel-restricted rules are still matched
+   * (ignoring their channel filter) so that members accessible on at least one channel appear in
+   * metadata output.
+   *
+   * @param className the fully-qualified class name of the target
+   * @param memberName the method or field name being accessed
+   * @param memberCategory the category of the member being accessed
+   * @return the action determined by the first matching rule, or the default action
+   */
+  public RpcPolicyAction evaluateForMetadata(
+      String className, String memberName, MemberCategory memberCategory) {
+    String path = className + "." + memberName;
+    for (RpcPolicyRule rule : rules) {
+      if (rule.matchesForMetadata(path, memberCategory)) {
+        return rule.getAction();
+      }
+    }
+    return defaultAction;
+  }
+
+  /**
+   * Returns whether the given member is accessible for metadata purposes (allowed on any channel).
+   *
+   * @param className the fully-qualified class name
+   * @param memberName the method, field, or constructor name
+   * @param memberCategory the category of the member
+   * @return {@code true} if the policy allows access (ignoring channel)
+   */
+  public boolean isAccessibleForMetadata(
+      String className, String memberName, MemberCategory memberCategory) {
+    RpcPolicyAction action = evaluateForMetadata(className, memberName, memberCategory);
+    return action == RpcPolicyAction.ALLOW || action == RpcPolicyAction.LOG_AND_ALLOW;
+  }
+
+  /**
    * Returns the ordered, unmodifiable list of rules in this policy.
    *
    * @return the rules list
