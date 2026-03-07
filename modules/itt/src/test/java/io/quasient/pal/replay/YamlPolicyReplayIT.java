@@ -152,7 +152,7 @@ public class YamlPolicyReplayIT extends AbstractCliIT {
       CliProcessResult replayResult =
           doReplay(
               walSpec,
-              List.of("--replay-policy", policyFile.toString()),
+              List.of("--policy", policyFile.toString()),
               APP_PACKAGE + "StubPatternApp",
               "5",
               "3");
@@ -177,7 +177,7 @@ public class YamlPolicyReplayIT extends AbstractCliIT {
       CliProcessResult replayResult =
           doReplay(
               walSpec,
-              List.of("--replay-policy", policyFile.toString()),
+              List.of("--policy", policyFile.toString()),
               APP_PACKAGE + "StubPatternApp",
               "service");
 

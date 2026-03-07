@@ -151,7 +151,7 @@ public class UnsafeStubWarningReplayIT extends AbstractCliIT {
       CliProcessResult replayResult =
           doReplay(
               walSpec,
-              List.of("--replay-policy", policyFile.toString()),
+              List.of("--policy", policyFile.toString()),
               APP_PACKAGE + "MutatingApp",
               "widget",
               "100");
@@ -170,7 +170,7 @@ public class UnsafeStubWarningReplayIT extends AbstractCliIT {
       CliProcessResult replayResult =
           doReplay(
               walSpec,
-              List.of("--replay-policy", policyFile.toString()),
+              List.of("--policy", policyFile.toString()),
               APP_PACKAGE + "MutatingApp",
               "service");
 
@@ -215,7 +215,7 @@ public class UnsafeStubWarningReplayIT extends AbstractCliIT {
       CliProcessResult replayResult =
           doReplay(
               walSpec,
-              List.of("--replay-policy", policyFile.toString(), "--force-stub"),
+              List.of("--policy", policyFile.toString(), "--force-stub"),
               APP_PACKAGE + "MutatingApp",
               "widget",
               "100");
@@ -238,7 +238,7 @@ public class UnsafeStubWarningReplayIT extends AbstractCliIT {
       CliProcessResult replayResult =
           doReplay(
               walSpec,
-              List.of("--replay-policy", policyFile.toString(), "--force-stub"),
+              List.of("--policy", policyFile.toString(), "--force-stub"),
               APP_PACKAGE + "MutatingApp",
               "service");
 

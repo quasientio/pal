@@ -415,7 +415,7 @@ public class ReplayTest {
         parseReplay(
             "--wal",
             "file:/tmp/wal",
-            "--replay-threading",
+            "--threading",
             "unordered",
             "-cp",
             "app.jar",
@@ -442,7 +442,7 @@ public class ReplayTest {
         parseReplay(
             "--wal",
             "file:/tmp/wal",
-            "--replay-threading",
+            "--threading",
             "unordered",
             "-cp",
             "app.jar",
@@ -463,7 +463,7 @@ public class ReplayTest {
             "file:/tmp/my-wal",
             "--divergence-policy",
             "HALT",
-            "--replay-threading",
+            "--threading",
             "unordered",
             "-cp",
             "target/app.jar",
@@ -656,14 +656,14 @@ public class ReplayTest {
   // Side-effect shielding option tests
   // ===========================================================================
 
-  /** Verifies that --replay-policy is parsed correctly. */
+  /** Verifies that --policy is parsed correctly. */
   @Test
   public void testParseReplayPolicyOption() throws Exception {
     Replay replay =
         parseReplay(
             "--wal",
             "file:/tmp/wal",
-            "--replay-policy",
+            "--policy",
             "/tmp/policy.yaml",
             "-cp",
             "app.jar",
@@ -741,7 +741,7 @@ public class ReplayTest {
         parseReplay(
             "--wal",
             "file:/tmp/wal",
-            "--replay-policy",
+            "--policy",
             "/tmp/policy.yaml",
             "-cp",
             "app.jar",
@@ -847,7 +847,7 @@ public class ReplayTest {
         parseReplay(
             "--wal",
             "file:/tmp/wal",
-            "--replay-policy",
+            "--policy",
             "/tmp/p.yaml",
             "--shield-io",
             "--re-execute",

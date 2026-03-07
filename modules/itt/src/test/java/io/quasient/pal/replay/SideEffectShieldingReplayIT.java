@@ -158,7 +158,7 @@ public class SideEffectShieldingReplayIT extends AbstractCliIT {
       CliProcessResult replayResult =
           doReplay(
               walSpec,
-              List.of("--replay-policy", policyFile.toString()),
+              List.of("--policy", policyFile.toString()),
               APP_PACKAGE + "MutatingApp",
               "widget",
               "100");
@@ -182,7 +182,7 @@ public class SideEffectShieldingReplayIT extends AbstractCliIT {
       CliProcessResult replayResult =
           doReplay(
               walSpec,
-              List.of("--replay-policy", policyFile.toString()),
+              List.of("--policy", policyFile.toString()),
               APP_PACKAGE + "MutatingApp",
               "service");
 

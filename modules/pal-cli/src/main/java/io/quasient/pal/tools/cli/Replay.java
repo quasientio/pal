@@ -114,7 +114,7 @@ public class Replay extends AbstractPalSubcommand {
    * ({@code unordered}).
    */
   @Option(
-      names = {"--replay-threading"},
+      names = {"--threading"},
       defaultValue = "ordered",
       paramLabel = "ordered|unordered",
       description =
@@ -187,7 +187,7 @@ public class Replay extends AbstractPalSubcommand {
    * whether operations are re-executed or stubbed from the WAL during replay.
    */
   @Option(
-      names = {"--replay-policy"},
+      names = {"--policy"},
       paramLabel = "path",
       description = "Path to YAML replay policy file")
   private String replayPolicyPath;

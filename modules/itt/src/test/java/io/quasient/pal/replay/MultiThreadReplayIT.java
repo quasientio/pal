@@ -236,7 +236,7 @@ public class MultiThreadReplayIT extends AbstractCliIT {
   public void replayWithUnorderedThreading_zeroDivergence() throws Exception {
     String walSpec = recordMultiThreadWal("mt-unord");
 
-    CliProcessResult replayResult = doReplay(walSpec, List.of("--replay-threading", "unordered"));
+    CliProcessResult replayResult = doReplay(walSpec, List.of("--threading", "unordered"));
 
     logger.info("Unordered replay exit code: {}", replayResult.exitCode());
     logger.info("Unordered replay stdout: {}", replayResult.stdout());
@@ -465,7 +465,7 @@ public class MultiThreadReplayIT extends AbstractCliIT {
    * arguments.
    *
    * @param walSpec the WAL spec (Chronicle path or Kafka topic)
-   * @param replayOptions additional replay options (e.g., {@code --replay-threading unordered})
+   * @param replayOptions additional replay options (e.g., {@code --threading unordered})
    * @param appArgs application arguments passed to the main class (e.g., {@code "broken"})
    * @return the CLI process result
    * @throws Exception if replay fails

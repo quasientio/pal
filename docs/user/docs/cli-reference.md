@@ -798,9 +798,9 @@ pal replay [OPTIONS] class [args...]
 | `-w, --wal <name\|file:/path>` | **(Required)** WAL to replay from. Use `file:/path` for Chronicle Queue or a topic name for Kafka |
 | `-k, --kafka-servers <host:port>` | Kafka bootstrap servers (required for Kafka WAL topics without `-d`) |
 | `--divergence-policy <WARN\|HALT\|IGNORE>` | Action on divergence (default: `WARN`) |
-| `--replay-threading <ordered\|unordered>` | Thread ordering for multi-threaded replay (default: `ordered`). See [Multi-Threaded Replay](#multi-threaded-replay) |
+| `--threading <ordered\|unordered>` | Thread ordering for multi-threaded replay (default: `ordered`). See [Multi-Threaded Replay](#multi-threaded-replay) |
 | `--delay <milliseconds>` | Delay before each entry-point injection for slow-motion replay visualization (default: `0`, disabled). See [Slow-Motion Replay](#slow-motion-replay) |
-| `--replay-policy <path>` | Path to a YAML replay policy file. See [Side-Effect Shielding](#side-effect-shielding) |
+| `--policy <path>` | Path to a YAML replay policy file. See [Side-Effect Shielding](#side-effect-shielding) |
 | `--shield-io` | Enable built-in I/O stubbing rules (time, random, I/O streams, JDBC). See [Side-Effect Shielding](#side-effect-shielding) |
 | `--re-execute <patterns>` | Comma-separated Ant-style patterns for classes/methods to re-execute (highest priority) |
 | `--stub <patterns>` | Comma-separated Ant-style patterns for classes/methods to stub from WAL |
@@ -907,7 +907,7 @@ The delay is specified in milliseconds. Use larger values (2000-5000ms) to obser
 
 When the WAL contains operations from multiple threads (e.g., RPC worker threads), replay automatically detects entry-point operations and spawns `ReplayInputInjector` threads to re-inject them. No additional configuration is required beyond ensuring `--wal-incoming-rpc` was enabled during recording (this is the default).
 
-The `--replay-threading` option controls cross-thread ordering:
+The `--threading` option controls cross-thread ordering:
 
 | Value | Behavior |
 |-------|----------|
@@ -919,7 +919,7 @@ The `--replay-threading` option controls cross-thread ordering:
 pal replay --wal file:/tmp/service-wal -cp target/classes com.example.ServiceMain
 
 # Replay without cross-thread ordering constraints
-pal replay --wal file:/tmp/service-wal --replay-threading unordered \
+pal replay --wal file:/tmp/service-wal --threading unordered \
   -cp target/classes com.example.ServiceMain
 ```
 
@@ -943,7 +943,7 @@ pal replay --wal file:/tmp/my-wal --shield-io \
 
 ```bash
 # Apply a custom replay policy
-pal replay --wal file:/tmp/my-wal --replay-policy policy.yaml \
+pal replay --wal file:/tmp/my-wal --policy policy.yaml \
   -cp target/classes com.example.App
 ```
 
@@ -970,7 +970,7 @@ pal replay --wal file:/tmp/my-wal --shield-io \
 
 ```bash
 # Proceed despite unsafe stub warnings
-pal replay --wal file:/tmp/my-wal --replay-policy policy.yaml --force-stub \
+pal replay --wal file:/tmp/my-wal --policy policy.yaml --force-stub \
   -cp target/classes com.example.App
 ```
 

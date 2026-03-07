@@ -303,9 +303,9 @@ During step 5, the replay system:
 3. Each injector re-dispatches the entry-point operations (the `processOrder` calls) from the WAL
 4. Nested operations within each injected call are matched against the WAL cursor and verified
 
-### `--replay-threading` Flag
+### `--threading` Flag
 
-The `--replay-threading` option controls cross-thread ordering during multi-threaded replay:
+The `--threading` option controls cross-thread ordering during multi-threaded replay:
 
 | Value | Behavior |
 |-------|----------|
@@ -318,7 +318,7 @@ pal replay --wal file:/tmp/service-wal \
   -cp target/classes com.example.ServiceMain
 
 # Unordered: faster, but cross-thread order may differ
-pal replay --wal file:/tmp/service-wal --replay-threading unordered \
+pal replay --wal file:/tmp/service-wal --threading unordered \
   -cp target/classes com.example.ServiceMain
 ```
 
@@ -434,10 +434,10 @@ rules:
     action: STUB_FROM_WAL
 ```
 
-Apply it with `--replay-policy`:
+Apply it with `--policy`:
 
 ```bash
-pal replay --wal file:/tmp/my-wal --replay-policy policy.yaml \
+pal replay --wal file:/tmp/my-wal --policy policy.yaml \
   -cp target/classes com.example.App
 ```
 
@@ -477,7 +477,7 @@ pal replay --wal file:/tmp/my-wal --shield-io \
 1. `--re-execute` patterns
 2. `--stub` patterns
 3. `--shield-io` built-in rules
-4. `--replay-policy` YAML file rules
+4. `--policy` YAML file rules
 
 ### Phantom Object Cascading
 
@@ -512,7 +512,7 @@ WARNING: Stubbing com.example.Enricher.enrich() at offset 42 is unsafe.
 
 ```bash
 # Force replay despite unsafe stub warnings
-pal replay --wal file:/tmp/my-wal --replay-policy policy.yaml --force-stub \
+pal replay --wal file:/tmp/my-wal --policy policy.yaml --force-stub \
   -cp target/classes com.example.App
 ```
 
@@ -546,7 +546,7 @@ rules:
 ```
 
 ```bash
-pal replay --wal file:/tmp/my-wal --replay-policy db-shield.yaml \
+pal replay --wal file:/tmp/my-wal --policy db-shield.yaml \
   -cp target/classes com.example.App
 ```
 
