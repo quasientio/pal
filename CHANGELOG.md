@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- [Feature] Add RpcPolicyAction and MemberCategory enums for the RPC policy system
 - [Feature] Add STUB_FROM_WAL dispatch path in BaseExecMessageDispatcher — supports return value reconstruction, phantom cascading, exception replay, span skipping, and STUB_FROM_WAL_VERIFIED mode
 - [Feature] Add SideEffectAnalyzer for detecting unsafe stubs during replay — warns when stubbing would silently drop PUT_FIELD/PUT_STATIC mutations visible outside the span
 - [Feature] Add configurable replay policy system with ReplayPolicyRule (Ant-style pattern matching), BuiltInStubRules (--shield-io), ReplayPolicyParser (YAML + CLI options), and extended ReplayPolicy with first-match-wins rule evaluation
