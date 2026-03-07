@@ -9,9 +9,13 @@
  */
 package io.quasient.pal.core.rpc.policy;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
-import org.junit.Ignore;
+import io.quasient.pal.core.transport.MessageChannelType;
+import java.util.List;
 import org.junit.Test;
 
 /**
@@ -20,133 +24,213 @@ import org.junit.Test;
  *
  * <p>Each preset category (deny-unsafe, deny-jdk-internals, deny-classloading, deny-reflection,
  * deny-serialization, deny-scripting, deny-pal-internals) is tested against representative target
- * patterns. Risk #6 (bypass via field access to sensitive objects) is specifically verified for
- * {@code ProcessBuilder} by testing all member categories.
+ * patterns. The field-access bypass scenario is specifically verified for {@code ProcessBuilder} by
+ * testing all member categories.
  */
 public class RpcPolicyPresetsTest {
 
   /** Verifies that the deny-unsafe preset blocks {@code System.exit}. */
   @Test
-  @Ignore("Awaiting implementation in #993")
   public void denyUnsafeShouldBlockSystemExit() {
-    // Given: deny-unsafe rules
-    // When: match "java.lang.System.exit" with any channel, METHOD
-    // Then: matches with DENY action
+    List<RpcPolicyRule> rules = RpcPolicyPresets.getDenyUnsafeRules();
 
-    // TODO(#993): Implement test logic
-    fail("Not yet implemented");
+    assertTrue(
+        anyRuleMatches(
+            rules,
+            "java.lang.System.exit",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD));
   }
 
   /** Verifies that the deny-unsafe preset blocks {@code Runtime.exec}. */
   @Test
-  @Ignore("Awaiting implementation in #993")
   public void denyUnsafeShouldBlockRuntimeExec() {
-    // Given: deny-unsafe rules
-    // When: match "java.lang.Runtime.exec"
-    // Then: matches with DENY
+    List<RpcPolicyRule> rules = RpcPolicyPresets.getDenyUnsafeRules();
 
-    // TODO(#993): Implement test logic
-    fail("Not yet implemented");
+    assertTrue(
+        anyRuleMatches(
+            rules,
+            "java.lang.Runtime.exec",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD));
   }
 
   /**
-   * Verifies that the deny-unsafe preset blocks all member types on {@code ProcessBuilder} (Risk #6
-   * mitigation). Methods, constructors, and field access must all be denied.
+   * Verifies that the deny-unsafe preset blocks all member types on {@code ProcessBuilder}
+   * (field-access bypass prevention). Methods, constructors, and field access must all be denied.
    */
   @Test
-  @Ignore("Awaiting implementation in #993")
   public void denyUnsafeShouldBlockProcessBuilderAllMembers() {
-    // Given: deny-unsafe rules
-    // When: match "java.lang.ProcessBuilder.start" (METHOD) -> DENY
-    // When: match "java.lang.ProcessBuilder.command" (FIELD_GET) -> DENY
-    // When: match "java.lang.ProcessBuilder" (CONSTRUCTOR) -> DENY
-    // Then: all member types denied (Risk #6 mitigation)
+    List<RpcPolicyRule> rules = RpcPolicyPresets.getDenyUnsafeRules();
 
-    // TODO(#993): Implement test logic
-    fail("Not yet implemented");
+    // Method access denied
+    assertTrue(
+        anyRuleMatches(
+            rules,
+            "java.lang.ProcessBuilder.start",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD));
+    // Field access denied (prevents bypass via field reference)
+    assertTrue(
+        anyRuleMatches(
+            rules,
+            "java.lang.ProcessBuilder.command",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.FIELD_GET));
+    // Constructor denied
+    assertTrue(
+        anyRuleMatches(
+            rules,
+            "java.lang.ProcessBuilder.ProcessBuilder",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.CONSTRUCTOR));
+
+    // Also verify Process.** blocks all member types
+    assertTrue(
+        anyRuleMatches(
+            rules,
+            "java.lang.Process.waitFor",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD));
+    assertTrue(
+        anyRuleMatches(
+            rules,
+            "java.lang.Process.exitValue",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.FIELD_GET));
   }
 
   /** Verifies that the deny-jdk-internals preset blocks {@code com.sun} packages. */
   @Test
-  @Ignore("Awaiting implementation in #993")
   public void denyJdkInternalsShouldBlockComSun() {
-    // Given: deny-jdk-internals rules
-    // When: match "com.sun.internal.Foo.bar"
-    // Then: matches with DENY
+    List<RpcPolicyRule> rules = RpcPolicyPresets.getDenyJdkInternalRules();
 
-    // TODO(#993): Implement test logic
-    fail("Not yet implemented");
+    assertTrue(
+        anyRuleMatches(
+            rules,
+            "com.sun.internal.Foo.bar",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD));
   }
 
   /** Verifies that the deny-classloading preset blocks {@code Class.forName}. */
   @Test
-  @Ignore("Awaiting implementation in #993")
   public void denyClassloadingShouldBlockClassForName() {
-    // Given: deny-classloading rules
-    // When: match "java.lang.Class.forName"
-    // Then: matches with DENY
+    List<RpcPolicyRule> rules = RpcPolicyPresets.getDenyClassloadingRules();
 
-    // TODO(#993): Implement test logic
-    fail("Not yet implemented");
+    assertTrue(
+        anyRuleMatches(
+            rules,
+            "java.lang.Class.forName",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.STATIC_METHOD));
   }
 
   /** Verifies that the deny-reflection preset blocks {@code java.lang.reflect} package. */
   @Test
-  @Ignore("Awaiting implementation in #993")
   public void denyReflectionShouldBlockReflectPackage() {
-    // Given: deny-reflection rules
-    // When: match "java.lang.reflect.Method.invoke"
-    // Then: matches with DENY
+    List<RpcPolicyRule> rules = RpcPolicyPresets.getDenyReflectionRules();
 
-    // TODO(#993): Implement test logic
-    fail("Not yet implemented");
+    assertTrue(
+        anyRuleMatches(
+            rules,
+            "java.lang.reflect.Method.invoke",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD));
   }
 
   /** Verifies that the deny-serialization preset blocks {@code ObjectInputStream}. */
   @Test
-  @Ignore("Awaiting implementation in #993")
   public void denySerializationShouldBlockObjectInputStream() {
-    // Given: deny-serialization rules
-    // When: match "java.io.ObjectInputStream.readObject"
-    // Then: matches with DENY
+    List<RpcPolicyRule> rules = RpcPolicyPresets.getDenySerializationRules();
 
-    // TODO(#993): Implement test logic
-    fail("Not yet implemented");
+    assertTrue(
+        anyRuleMatches(
+            rules,
+            "java.io.ObjectInputStream.readObject",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD));
   }
 
   /** Verifies that the deny-scripting preset blocks {@code ScriptEngine}. */
   @Test
-  @Ignore("Awaiting implementation in #993")
   public void denyScriptingShouldBlockScriptEngine() {
-    // Given: deny-scripting rules
-    // When: match "javax.script.ScriptEngine.eval"
-    // Then: matches with DENY
+    List<RpcPolicyRule> rules = RpcPolicyPresets.getDenyScriptingRules();
 
-    // TODO(#993): Implement test logic
-    fail("Not yet implemented");
+    assertTrue(
+        anyRuleMatches(
+            rules,
+            "javax.script.ScriptEngine.eval",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD));
   }
 
   /** Verifies that the deny-pal-internals preset blocks PAL core classes. */
   @Test
-  @Ignore("Awaiting implementation in #993")
   public void denyPalInternalsShouldBlockPalCore() {
-    // Given: deny-pal-internals rules
-    // When: match "io.quasient.pal.core.Main.run"
-    // Then: matches with DENY
+    List<RpcPolicyRule> rules = RpcPolicyPresets.getDenyPalInternalRules();
 
-    // TODO(#993): Implement test logic
-    fail("Not yet implemented");
+    assertTrue(
+        anyRuleMatches(
+            rules,
+            "io.quasient.pal.core.Main.run",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD));
   }
 
   /** Verifies that no preset rules produce false positives on unrelated application classes. */
   @Test
-  @Ignore("Awaiting implementation in #993")
   public void presetRulesShouldNotBlockUnrelatedClasses() {
-    // Given: any preset rules (all presets combined)
-    // When: match "com.example.MyApp.doSomething"
-    // Then: none of the preset rules match
+    for (String presetName : RpcPolicyPresets.allPresetNames()) {
+      List<RpcPolicyRule> rules = RpcPolicyPresets.resolvePreset(presetName);
+      assertFalse(
+          "Preset " + presetName + " should not match com.example.MyApp.doSomething",
+          anyRuleMatches(
+              rules,
+              "com.example.MyApp.doSomething",
+              MessageChannelType.ZMQ_SOCKET_RPC,
+              MemberCategory.METHOD));
+    }
+  }
 
-    // TODO(#993): Implement test logic
-    fail("Not yet implemented");
+  /** Verifies that {@code resolvePreset} maps preset names to rule lists. */
+  @Test
+  public void resolvePresetShouldReturnRulesForKnownPresets() {
+    for (String name : RpcPolicyPresets.allPresetNames()) {
+      List<RpcPolicyRule> rules = RpcPolicyPresets.resolvePreset(name);
+      assertFalse("Preset " + name + " should have rules", rules.isEmpty());
+      for (RpcPolicyRule rule : rules) {
+        assertThat("All preset rules should be DENY", rule.getAction(), is(RpcPolicyAction.DENY));
+      }
+    }
+  }
+
+  /** Verifies that {@code resolvePreset} throws for unknown presets. */
+  @Test(expected = IllegalArgumentException.class)
+  public void resolvePresetShouldThrowForUnknownPreset() {
+    RpcPolicyPresets.resolvePreset("nonexistent-preset");
+  }
+
+  /** Verifies that {@code allPresetNames} returns all 7 preset categories. */
+  @Test
+  public void allPresetNamesShouldReturnSevenPresets() {
+    assertThat(RpcPolicyPresets.allPresetNames().size(), is(7));
+  }
+
+  /**
+   * Checks whether any rule in the list matches the given path, channel, and member category.
+   *
+   * @param rules the rules to test
+   * @param classMethodPath the fully-qualified class.method path
+   * @param channel the message channel
+   * @param category the member category
+   * @return {@code true} if any rule matches
+   */
+  private static boolean anyRuleMatches(
+      List<RpcPolicyRule> rules,
+      String classMethodPath,
+      MessageChannelType channel,
+      MemberCategory category) {
+    return rules.stream().anyMatch(rule -> rule.matches(classMethodPath, channel, category));
   }
 }
