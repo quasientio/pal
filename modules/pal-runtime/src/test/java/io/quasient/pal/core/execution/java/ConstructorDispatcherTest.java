@@ -53,7 +53,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
             outboundMessageGateway,
             reflectionHelper,
             objectLookupStore);
-    ((AbstractDispatcher) dispatcher).allowNonPublicAccess = true;
+    wireRpcPolicyChecker(dispatcher);
     onlyPublicDispatcher =
         new ConstructorDispatcher(
             peerUuid,
@@ -62,6 +62,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
             outboundMessageGateway,
             onlyPublicReflectionHelper,
             objectLookupStore);
+    wireRpcPolicyChecker(onlyPublicDispatcher);
   }
 
   private <T> ProceedingJoinPoint createPjp(

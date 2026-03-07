@@ -49,6 +49,7 @@ import io.quasient.pal.core.replay.ReplayPolicy;
 import io.quasient.pal.core.replay.ReplayPolicyParser;
 import io.quasient.pal.core.replay.SideEffectAnalyzer;
 import io.quasient.pal.core.rpc.policy.RpcPolicy;
+import io.quasient.pal.core.rpc.policy.RpcPolicyAction;
 import io.quasient.pal.core.rpc.policy.RpcPolicyChecker;
 import io.quasient.pal.core.rpc.policy.RpcPolicyParser;
 import io.quasient.pal.core.runtime.objects.ConcurrentHashMapObjectLookupStore;
@@ -881,7 +882,8 @@ public class PeerWiring extends AbstractModule {
    *
    * <p>Reads the RPC policy configuration from properties set by the CLI layer ({@code
    * rpc.policy.path}, {@code rpc.policy.presets}, {@code rpc.default_action}). If no policy-related
-   * properties are set, returns a default deny-all policy with no rules.
+   * properties are set, returns a permissive allow-all policy with no rules, preserving the
+   * pre-policy behavior where all RPC operations were allowed by default.
    *
    * @return the constructed RPC policy
    */
@@ -893,7 +895,7 @@ public class PeerWiring extends AbstractModule {
     boolean hasAnyConfig = policyPath != null || presets != null;
 
     if (!hasAnyConfig && defaultAction == null) {
-      return new RpcPolicy();
+      return new RpcPolicy(List.of(), RpcPolicyAction.ALLOW);
     }
 
     return RpcPolicyParser.fromOptions(policyPath, presets, defaultAction);

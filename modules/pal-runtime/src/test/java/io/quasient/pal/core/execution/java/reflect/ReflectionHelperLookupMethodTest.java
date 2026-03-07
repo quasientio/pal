@@ -48,7 +48,7 @@ import org.junit.Test;
  */
 public class ReflectionHelperLookupMethodTest extends AbstractReflectionHelperTestBase {
 
-  private final ReflectionHelper reflectionHelper = new ReflectionHelper();
+  private final ReflectionHelper reflectionHelper = new ReflectionHelper(false);
   private final ReflectionHelper reflectionHelperWithNonPublicAccess = new ReflectionHelper(true);
   private final Class<?> clazz = ClassForTestingMethodLookup.class;
 

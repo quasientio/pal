@@ -49,17 +49,6 @@ public class ReflectionHelper {
   /** Logger for internal diagnostics and tracing of reflection operations. */
   private static final Logger logger = LoggerFactory.getLogger(ReflectionHelper.class);
 
-  /**
-   * Default flag indicating whether non-public methods and constructors are allowed in lookup
-   * operations.
-   */
-  private static final boolean ALLOW_NON_PUBLIC_DEFAULT = false;
-
-  /**
-   * Flag that determines if non-public constructors and methods should be considered during lookup.
-   */
-  private final boolean allowNonPublic;
-
   /** Cache to store resolved methods keyed by unique signatures. */
   private final Map<String, Method> matchedMethodsCache = new ConcurrentHashMap<>();
 
@@ -67,9 +56,30 @@ public class ReflectionHelper {
   private final Map<String, Constructor<?>> matchedConstructorsCache = new ConcurrentHashMap<>();
 
   /**
-   * Constructs a ReflectionHelper using the default configuration.
+   * Constructs a ReflectionHelper.
    *
-   * <p>Non-public member lookup is disabled. Only public members are resolved during RPC dispatch.
+   * <p>All members (public and non-public) are considered during lookup because RPC access control
+   * is enforced earlier in the dispatch path by the RPC policy checker. Once the policy permits an
+   * operation, reflective loading must be able to find the target member regardless of visibility.
+   */
+  /**
+   * Default flag indicating whether non-public methods and constructors are allowed in lookup
+   * operations. Defaults to {@code true} because RPC access control is enforced earlier in the
+   * dispatch path by the RPC policy checker.
+   */
+  private static final boolean ALLOW_NON_PUBLIC_DEFAULT = true;
+
+  /**
+   * Flag that determines if non-public constructors and methods should be considered during lookup.
+   */
+  private final boolean allowNonPublic;
+
+  /**
+   * Constructs a ReflectionHelper with non-public access enabled by default.
+   *
+   * <p>All members (public and non-public) are considered during lookup because RPC access control
+   * is enforced earlier in the dispatch path by the RPC policy checker. Once the policy permits an
+   * operation, reflective loading must be able to find the target member regardless of visibility.
    */
   @Inject
   public ReflectionHelper() {

@@ -50,10 +50,11 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     dispatcher =
         new SetClassVariableDispatcher(
             peerUuid, runOptions, messageBuilder, outboundMessageGateway, objectLookupStore);
-    ((AbstractDispatcher) dispatcher).allowNonPublicAccess = true;
+    wireRpcPolicyChecker(dispatcher);
     onlyPublicDispatcher =
         new SetClassVariableDispatcher(
             peerUuid, runOptions, messageBuilder, outboundMessageGateway, objectLookupStore);
+    wireRpcPolicyChecker(onlyPublicDispatcher);
   }
 
   @After
@@ -613,17 +614,15 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
         messageBuilder.buildPutStatic(
             peerUuid, targetClass.getName(), fieldName, fieldClassName, newFieldValue);
 
-    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    // Both dispatchers can access non-public fields since RPC access control is now
+    // handled by RpcPolicyChecker before loading (shouldAllowNonPublicAccess() always true).
     ExecMessage responseMessage =
         ((ExecMessageDispatcher) onlyPublicDispatcher)
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
     assertNull(responseMessage.getReturnValue());
-    assertNull(responseMessage.getStaticFieldPutDone());
-    assertThat(
-        responseMessage.getRaisedThrowable().getThrowable().getType(),
-        is(NoSuchFieldException.class.getName()));
+    assertThat(responseMessage.getStaticFieldPutDone().getField().getName(), is(fieldName));
+    assertNull(responseMessage.getRaisedThrowable());
 
-    // dispatch with the all access dispatcher - expect no exception
     responseMessage =
         ((ExecMessageDispatcher) dispatcher)
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
@@ -643,17 +642,15 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
         messageBuilder.buildPutStatic(
             peerUuid, targetClass.getName(), fieldName, fieldClassName, newFieldValue);
 
-    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    // Both dispatchers can access non-public fields since RPC access control is now
+    // handled by RpcPolicyChecker before loading (shouldAllowNonPublicAccess() always true).
     ExecMessage responseMessage =
         ((ExecMessageDispatcher) onlyPublicDispatcher)
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
     assertNull(responseMessage.getReturnValue());
-    assertNull(responseMessage.getStaticFieldPutDone());
-    assertThat(
-        responseMessage.getRaisedThrowable().getThrowable().getType(),
-        is(NoSuchFieldException.class.getName()));
+    assertThat(responseMessage.getStaticFieldPutDone().getField().getName(), is(fieldName));
+    assertNull(responseMessage.getRaisedThrowable());
 
-    // dispatch with the all access dispatcher - expect no exception
     responseMessage =
         ((ExecMessageDispatcher) dispatcher)
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
@@ -673,17 +670,15 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
         messageBuilder.buildPutStatic(
             peerUuid, targetClass.getName(), fieldName, fieldClassName, newFieldValue);
 
-    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    // Both dispatchers can access non-public fields since RPC access control is now
+    // handled by RpcPolicyChecker before loading (shouldAllowNonPublicAccess() always true).
     ExecMessage responseMessage =
         ((ExecMessageDispatcher) onlyPublicDispatcher)
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
     assertNull(responseMessage.getReturnValue());
-    assertNull(responseMessage.getStaticFieldPutDone());
-    assertThat(
-        responseMessage.getRaisedThrowable().getThrowable().getType(),
-        is(NoSuchFieldException.class.getName()));
+    assertThat(responseMessage.getStaticFieldPutDone().getField().getName(), is(fieldName));
+    assertNull(responseMessage.getRaisedThrowable());
 
-    // dispatch with the all access dispatcher - expect no exception
     responseMessage =
         ((ExecMessageDispatcher) dispatcher)
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);

@@ -19,6 +19,9 @@ import static org.mockito.Mockito.when;
 
 import io.quasient.pal.common.runtime.Dispatcher;
 import io.quasient.pal.core.execution.java.reflect.ReflectionHelper;
+import io.quasient.pal.core.rpc.policy.RpcPolicy;
+import io.quasient.pal.core.rpc.policy.RpcPolicyAction;
+import io.quasient.pal.core.rpc.policy.RpcPolicyChecker;
 import io.quasient.pal.core.runtime.objects.ConcurrentHashMapObjectLookupStore;
 import io.quasient.pal.core.runtime.objects.ObjectLookupStore;
 import io.quasient.pal.core.service.RunOptions;
@@ -27,6 +30,7 @@ import io.quasient.pal.messages.colfer.Message;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.After;
@@ -42,10 +46,13 @@ public abstract class AbstractDispatcherTest {
 
   protected MessageBuilder messageBuilder = new MessageBuilder();
 
-  protected ReflectionHelper reflectionHelper =
-      new ReflectionHelper(true); // allow access to private, protected and package private methods
+  protected ReflectionHelper reflectionHelper = new ReflectionHelper();
 
-  protected ReflectionHelper onlyPublicReflectionHelper = new ReflectionHelper();
+  protected ReflectionHelper onlyPublicReflectionHelper = new ReflectionHelper(false);
+
+  /** Permissive RPC policy checker that allows all operations (for test use). */
+  protected RpcPolicyChecker rpcPolicyChecker =
+      new RpcPolicyChecker(new RpcPolicy(List.of(), RpcPolicyAction.ALLOW));
 
   protected Set<RunOptions> runOptions = EnumSet.noneOf(RunOptions.class);
   protected OutboundMessageGateway outboundMessageGateway;
@@ -53,6 +60,14 @@ public abstract class AbstractDispatcherTest {
   protected Dispatcher onlyPublicDispatcher;
 
   protected AbstractDispatcherTest() {}
+
+  /**
+   * Wires the RPC policy checker into a dispatcher. Call this after creating each dispatcher in
+   * subclass setUp() methods.
+   */
+  protected void wireRpcPolicyChecker(Dispatcher d) {
+    ((AbstractDispatcher) d).setRpcPolicyChecker(rpcPolicyChecker);
+  }
 
   protected void verifyDispatcherConnectorSendExecMessageCalledTimes(int n) {
     verify(outboundMessageGateway, times(n)).sendExecMessage(any(), any());

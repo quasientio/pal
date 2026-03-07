@@ -661,7 +661,6 @@ public class DispatchBenchmark {
     props.setProperty(
         "messages.with_src_context",
         System.getProperty("messages.with_src_context", String.valueOf(DEF_WITH_SRC_CONTEXT)));
-    props.setProperty("rpc.allow_nonpublic", "false");
     props.setProperty("paldir_url", PalDirectory.NO_URL);
     props.setProperty("etcd.connect.timeout.ms", "5000");
 

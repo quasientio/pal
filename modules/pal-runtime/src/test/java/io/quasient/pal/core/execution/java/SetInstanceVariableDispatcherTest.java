@@ -50,10 +50,11 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     dispatcher =
         new SetInstanceVariableDispatcher(
             peerUuid, runOptions, messageBuilder, outboundMessageGateway, objectLookupStore);
-    ((AbstractDispatcher) dispatcher).allowNonPublicAccess = true;
+    wireRpcPolicyChecker(dispatcher);
     onlyPublicDispatcher =
         new SetInstanceVariableDispatcher(
             peerUuid, runOptions, messageBuilder, outboundMessageGateway, objectLookupStore);
+    wireRpcPolicyChecker(onlyPublicDispatcher);
   }
 
   private <T> ProceedingJoinPoint createPjp(
@@ -701,16 +702,14 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
             fieldClassName,
             newFieldValue);
 
-    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    // Both dispatchers can access non-public fields since RPC access control is now
+    // handled by RpcPolicyChecker before loading (shouldAllowNonPublicAccess() always true).
     ExecMessage responseMessage =
         ((ExecMessageDispatcher) onlyPublicDispatcher)
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
-    assertNull(responseMessage.getInstanceFieldPutDone());
-    assertThat(
-        responseMessage.getRaisedThrowable().getThrowable().getType(),
-        is(NoSuchFieldException.class.getName()));
+    assertThat(responseMessage.getInstanceFieldPutDone().getField().getName(), is(fieldName));
+    assertNull(responseMessage.getRaisedThrowable());
 
-    // dispatch with the all access dispatcher - expect no exception
     responseMessage =
         ((ExecMessageDispatcher) dispatcher)
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
@@ -739,16 +738,14 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
             fieldClassName,
             newFieldValue);
 
-    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    // Both dispatchers can access non-public fields since RPC access control is now
+    // handled by RpcPolicyChecker before loading (shouldAllowNonPublicAccess() always true).
     ExecMessage responseMessage =
         ((ExecMessageDispatcher) onlyPublicDispatcher)
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
-    assertNull(responseMessage.getInstanceFieldPutDone());
-    assertThat(
-        responseMessage.getRaisedThrowable().getThrowable().getType(),
-        is(NoSuchFieldException.class.getName()));
+    assertThat(responseMessage.getInstanceFieldPutDone().getField().getName(), is(fieldName));
+    assertNull(responseMessage.getRaisedThrowable());
 
-    // dispatch with the all access dispatcher - expect no exception
     responseMessage =
         ((ExecMessageDispatcher) dispatcher)
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
@@ -777,16 +774,14 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
             fieldClassName,
             newFieldValue);
 
-    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    // Both dispatchers can access non-public fields since RPC access control is now
+    // handled by RpcPolicyChecker before loading (shouldAllowNonPublicAccess() always true).
     ExecMessage responseMessage =
         ((ExecMessageDispatcher) onlyPublicDispatcher)
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
-    assertNull(responseMessage.getInstanceFieldPutDone());
-    assertThat(
-        responseMessage.getRaisedThrowable().getThrowable().getType(),
-        is(NoSuchFieldException.class.getName()));
+    assertThat(responseMessage.getInstanceFieldPutDone().getField().getName(), is(fieldName));
+    assertNull(responseMessage.getRaisedThrowable());
 
-    // dispatch with the all access dispatcher - expect no exception
     responseMessage =
         ((ExecMessageDispatcher) dispatcher)
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);

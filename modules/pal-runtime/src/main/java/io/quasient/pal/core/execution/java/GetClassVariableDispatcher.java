@@ -35,9 +35,7 @@ public class GetClassVariableDispatcher extends GetFieldDispatcher {
    * Constructs a dispatcher for retrieving static field values from a class.
    *
    * <p>This constructor configures the dispatcher with necessary parameters including identifiers,
-   * message serialization tools, connection details, and lookup store. The {@code
-   * allowNonPublicAccess} parameter indicates whether attempts to access non-public fields are
-   * permitted if a public field is unavailable.
+   * message serialization tools, connection details, and lookup store.
    *
    * @param peerUuid a unique identifier for the peer
    * @param runOptions the run options governing enabled features

@@ -19,12 +19,16 @@ import io.quasient.pal.core.intercept.InterceptCallbackDispatcher;
 import io.quasient.pal.core.intercept.InterceptChecker;
 import io.quasient.pal.core.intercept.LocalInterceptCallbackDispatcher;
 import io.quasient.pal.core.replay.ReplayContext;
+import io.quasient.pal.core.rpc.policy.RpcPolicy;
+import io.quasient.pal.core.rpc.policy.RpcPolicyAction;
+import io.quasient.pal.core.rpc.policy.RpcPolicyChecker;
 import io.quasient.pal.core.runtime.objects.ObjectLookupStore;
 import io.quasient.pal.core.service.RunOptions;
 import io.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import javax.annotation.Nullable;
@@ -60,20 +64,16 @@ abstract class AbstractDispatcher {
   protected OutboundMessageGateway messageGateway;
 
   /**
-   * Flag indicating whether non-public methods and fields can be accessed during RPC invocation.
-   * Always {@code false} since the {@code --rpc-allow-nonpublic} flag has been removed; non-public
-   * access is only permitted during replay injection.
+   * RPC policy checker for access control on incoming RPC operations. Initialized with a permissive
+   * default (allow all) so that test harnesses that do not inject this field are safe.
    */
-  @SuppressFBWarnings(
-      value = "UWF_UNWRITTEN_PUBLIC_OR_PROTECTED_FIELD",
-      justification = "Set directly by tests in same package; will be replaced by RpcPolicyChecker")
-  protected boolean allowNonPublicAccess;
+  protected RpcPolicyChecker rpcPolicyChecker =
+      new RpcPolicyChecker(new RpcPolicy(List.of(), RpcPolicyAction.ALLOW));
 
   /**
    * Thread-local flag indicating whether the current thread is processing a replay injection. When
-   * {@code true}, non-public access is always allowed regardless of the {@link
-   * #allowNonPublicAccess} configuration, since replay injections are replaying operations that
-   * originally ran inside the JVM with full access.
+   * {@code true}, non-public access is always allowed since replay injections are replaying
+   * operations that originally ran inside the JVM with full access.
    */
   private static final ThreadLocal<Boolean> replayInjectionMode = new ThreadLocal<>();
 
@@ -181,15 +181,27 @@ abstract class AbstractDispatcher {
   }
 
   /**
+   * Injects the {@link RpcPolicyChecker} for evaluating incoming RPC messages against the
+   * configured RPC policy.
+   *
+   * @param rpcPolicyChecker the policy checker instance
+   */
+  @Inject
+  final void setRpcPolicyChecker(RpcPolicyChecker rpcPolicyChecker) {
+    this.rpcPolicyChecker = rpcPolicyChecker;
+  }
+
+  /**
    * Returns whether non-public access should be allowed for the current operation.
    *
-   * <p>Returns {@code true} only when the current thread is processing a replay injection
-   * (operations that originally ran inside the JVM with full access).
+   * <p>Always returns {@code true} because RPC access control is now enforced earlier in the
+   * dispatch path by {@link RpcPolicyChecker}. Once the policy permits an operation, all visibility
+   * levels are accessible for reflective loading and invocation.
    *
-   * @return {@code true} if non-public access should be allowed
+   * @return always {@code true}
    */
   protected final boolean shouldAllowNonPublicAccess() {
-    return allowNonPublicAccess || Boolean.TRUE.equals(replayInjectionMode.get());
+    return true;
   }
 
   /**

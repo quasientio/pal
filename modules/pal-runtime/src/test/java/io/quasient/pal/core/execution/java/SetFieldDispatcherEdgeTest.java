@@ -117,16 +117,13 @@ public class SetFieldDispatcherEdgeTest {
   }
 
   /**
-   * Test that loadAccessibleObject loads declared (non-public) fields when allowNonPublicAccess is
-   * true.
+   * Test that loadAccessibleObject loads declared (non-public) fields. Non-public access is always
+   * allowed since RPC access control is now handled by {@code RpcPolicyChecker} earlier in the
+   * dispatch path.
    */
   @Test
   public void loadAccessibleObject_declaredField_whenNonPublicAllowed() throws Exception {
     TestDispatcher d = new TestDispatcher();
-    // allow nonpublic via reflection on AbstractDispatcher field
-    var f = AbstractDispatcher.class.getDeclaredField("allowNonPublicAccess");
-    f.setAccessible(true);
-    f.setBoolean(d, true);
 
     AccessibleObject ao = d.load(Sample.class.getName(), "hidden");
     Field fld = (Field) ao;
@@ -240,27 +237,23 @@ public class SetFieldDispatcherEdgeTest {
   }
 
   /**
-   * Test that loadAccessibleObject throws NoSuchFieldException for non-public fields when access is
-   * disallowed.
-   *
-   * <p>Edge case: access control enforcement.
+   * Test that loadAccessibleObject can load non-public fields. Non-public access is always allowed
+   * since RPC access control is now handled by {@code RpcPolicyChecker} earlier in the dispatch
+   * path.
    */
   @Test
-  public void testLoadAccessibleObject_nonPublicField_whenNotAllowed_throwsException()
-      throws Exception {
+  public void testLoadAccessibleObject_nonPublicField_alwaysSucceeds() throws Exception {
     // Given: A class with a private field
     TestDispatcher dispatcher = new TestDispatcher();
-    // And: allowNonPublicAccess is false (default)
-    Field accessFlag = AbstractDispatcher.class.getDeclaredField("allowNonPublicAccess");
-    accessFlag.setAccessible(true);
-    accessFlag.setBoolean(dispatcher, false);
 
     String className = Sample.class.getName();
     String fieldName = "hidden"; // private field
 
     // When: loadAccessibleObject is called with the private field name
-    // Then: NoSuchFieldException is thrown
-    assertThrows(NoSuchFieldException.class, () -> dispatcher.load(className, fieldName));
+    // Then: The field is found (no exception) since non-public access is always allowed
+    AccessibleObject ao = dispatcher.load(className, fieldName);
+    assertThat(ao, is(notNullValue()));
+    assertThat(((Field) ao).getName(), is(fieldName));
   }
 
   /**

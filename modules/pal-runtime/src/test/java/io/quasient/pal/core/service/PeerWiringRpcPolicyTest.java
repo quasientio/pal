@@ -53,8 +53,9 @@ public class PeerWiringRpcPolicyTest {
   }
 
   /**
-   * Tests that buildRpcPolicy returns a default DENY policy with no rules when no RPC policy
-   * configuration is provided.
+   * Tests that buildRpcPolicy returns a default ALLOW policy with no rules when no RPC policy
+   * configuration is provided, preserving the pre-policy behavior where all RPC operations were
+   * allowed.
    */
   @Test
   public void shouldBuildDefaultPolicyWhenNoConfigProvided() {
@@ -65,8 +66,8 @@ public class PeerWiringRpcPolicyTest {
     // When
     RpcPolicy policy = wiring.provideRpcPolicy();
 
-    // Then: Returns policy with DENY default, empty rules
-    assertThat(policy.getDefaultAction(), is(RpcPolicyAction.DENY));
+    // Then: Returns policy with ALLOW default, empty rules
+    assertThat(policy.getDefaultAction(), is(RpcPolicyAction.ALLOW));
     assertThat(policy.getRules(), is(empty()));
   }
 

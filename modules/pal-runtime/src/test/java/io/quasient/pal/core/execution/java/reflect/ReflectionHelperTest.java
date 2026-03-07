@@ -25,15 +25,13 @@ import org.junit.Test;
 /**
  * Unit tests for {@link ReflectionHelper} focusing on edge cases in reflection utilities.
  *
- * <p>This test class covers primitive handling, method lookup with primitive parameters,
- * multi-dimensional arrays, primitive-wrapper compatibility, and instance creation scenarios.
- *
- * <p>Test specifications created as part of issue #479, implemented as part of issue #480.
+ * <p>Covers primitive handling, method lookup, arrays, primitive-wrapper compatibility, and
+ * instance creation scenarios.
  */
 public class ReflectionHelperTest {
 
-  /** ReflectionHelper instance with default configuration (allowNonPublic = false). */
-  private final ReflectionHelper reflectionHelper = new ReflectionHelper();
+  /** ReflectionHelper instance with public-only access (allowNonPublic = false). */
+  private final ReflectionHelper reflectionHelper = new ReflectionHelper(false);
 
   // ========================================================================
   // Test: unwrapPrimitive_allPrimitiveTypes_unwrapsCorrectly
@@ -466,7 +464,7 @@ public class ReflectionHelperTest {
   }
 
   // ============================================================================
-  // Test specifications for issue #547 - Coverage gaps awaiting implementation in #548
+  // ReflectionHelper constructor and configuration tests
   // ============================================================================
 
   /**
@@ -477,8 +475,8 @@ public class ReflectionHelperTest {
    *
    * <p>When: The default ReflectionHelper() constructor is called
    *
-   * <p>Then: A ReflectionHelper is created with allowNonPublic set to false (default behavior), and
-   * lookups for non-public members fail appropriately
+   * <p>Then: A ReflectionHelper is created with allowNonPublic set to true (default behavior), and
+   * lookups for non-public members succeed
    *
    * <p>Acceptance criteria: [TEST:ReflectionHelperTest.testDefaultConstructor_createsHelper]
    */
@@ -509,30 +507,24 @@ public class ReflectionHelperTest {
             Arrays.asList(Byte.TYPE, Byte.TYPE));
     assertNotNull("Should find public constructor", publicConstructor);
 
-    // Verify private method lookup throws NoSuchMethodException
-    try {
-      helper.lookupMethod(
-          ClassForTestingMethodLookup.class,
-          new Object[] {"test"},
-          Collections.singletonList(String.class),
-          "privateMethodWithOneParam");
-      fail("Should throw NoSuchMethodException for private method");
-    } catch (NoSuchMethodException e) {
-      // Expected behavior
-      assertTrue(e.getMessage().contains("privateMethodWithOneParam"));
-    }
+    // Verify private method lookup succeeds (default allowNonPublic is true)
+    Method privateMethod =
+        helper.lookupMethod(
+            ClassForTestingMethodLookup.class,
+            new Object[] {"test"},
+            Collections.singletonList(String.class),
+            "privateMethodWithOneParam");
+    assertNotNull("Should find private method with default allowNonPublic=true", privateMethod);
+    assertEquals("privateMethodWithOneParam", privateMethod.getName());
 
-    // Verify private constructor lookup throws NoSuchMethodException
-    try {
-      helper.lookupConstructor(
-          ClassForTestingConstructorLookup.class,
-          new Object[] {(byte) 1, (byte) 2, 3},
-          Arrays.asList(Byte.TYPE, Byte.TYPE, Integer.TYPE));
-      fail("Should throw NoSuchMethodException for private constructor");
-    } catch (NoSuchMethodException e) {
-      // Expected behavior
-      assertTrue(e.getMessage().contains("ClassForTestingConstructorLookup"));
-    }
+    // Verify private constructor lookup succeeds (default allowNonPublic is true)
+    Constructor<?> privateConstructor =
+        helper.lookupConstructor(
+            ClassForTestingConstructorLookup.class,
+            new Object[] {(byte) 1, (byte) 2, 3},
+            Arrays.asList(Byte.TYPE, Byte.TYPE, Integer.TYPE));
+    assertNotNull(
+        "Should find private constructor with default allowNonPublic=true", privateConstructor);
   }
 
   /**

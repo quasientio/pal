@@ -61,7 +61,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
             outboundMessageGateway,
             reflectionHelper,
             objectLookupStore);
-    ((AbstractDispatcher) dispatcher).allowNonPublicAccess = true;
+    wireRpcPolicyChecker(dispatcher);
     onlyPublicDispatcher =
         new InstanceMethodDispatcher(
             peerUuid,
@@ -70,6 +70,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
             outboundMessageGateway,
             onlyPublicReflectionHelper,
             objectLookupStore);
+    wireRpcPolicyChecker(onlyPublicDispatcher);
   }
 
   private <T> ProceedingJoinPoint createPjp(

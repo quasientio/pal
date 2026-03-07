@@ -48,10 +48,11 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     dispatcher =
         new GetInstanceVariableDispatcher(
             peerUuid, runOptions, messageBuilder, outboundMessageGateway, objectLookupStore);
-    ((AbstractDispatcher) dispatcher).allowNonPublicAccess = true;
+    wireRpcPolicyChecker(dispatcher);
     onlyPublicDispatcher =
         new GetInstanceVariableDispatcher(
             peerUuid, runOptions, messageBuilder, outboundMessageGateway, objectLookupStore);
+    wireRpcPolicyChecker(onlyPublicDispatcher);
   }
 
   private <T> ProceedingJoinPoint createPjp(Field field, Object target, Callable<T> proceedCallback)
@@ -571,17 +572,14 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     ExecMessage incomingMessage =
         messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName, targetObjRef);
 
-    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    // Both dispatchers can access non-public fields since RPC access control is now
+    // handled by RpcPolicyChecker before loading (shouldAllowNonPublicAccess() always true).
     ExecMessage responseMessage =
         ((ExecMessageDispatcher) onlyPublicDispatcher)
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
-    assertNull(responseMessage.getReturnValue());
-    assertNotNull(responseMessage.getRaisedThrowable());
-    assertThat(
-        responseMessage.getRaisedThrowable().getThrowable().getType(),
-        is(NoSuchFieldException.class.getName()));
+    assertNotNull(responseMessage.getReturnValue());
+    assertNull(responseMessage.getRaisedThrowable());
 
-    // dispatch with the all access dispatcher - expect no exception
     responseMessage =
         ((ExecMessageDispatcher) dispatcher)
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
@@ -603,17 +601,14 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     ExecMessage incomingMessage =
         messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName, targetObjRef);
 
-    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    // Both dispatchers can access non-public fields since RPC access control is now
+    // handled by RpcPolicyChecker before loading (shouldAllowNonPublicAccess() always true).
     ExecMessage responseMessage =
         ((ExecMessageDispatcher) onlyPublicDispatcher)
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
-    assertNull(responseMessage.getReturnValue());
-    assertNotNull(responseMessage.getRaisedThrowable());
-    assertThat(
-        responseMessage.getRaisedThrowable().getThrowable().getType(),
-        is(NoSuchFieldException.class.getName()));
+    assertNotNull(responseMessage.getReturnValue());
+    assertNull(responseMessage.getRaisedThrowable());
 
-    // dispatch with the all access dispatcher - expect no exception
     responseMessage =
         ((ExecMessageDispatcher) dispatcher)
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
@@ -635,17 +630,14 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     ExecMessage incomingMessage =
         messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName, targetObjRef);
 
-    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    // Both dispatchers can access non-public fields since RPC access control is now
+    // handled by RpcPolicyChecker before loading (shouldAllowNonPublicAccess() always true).
     ExecMessage responseMessage =
         ((ExecMessageDispatcher) onlyPublicDispatcher)
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
-    assertNull(responseMessage.getReturnValue());
-    assertNotNull(responseMessage.getRaisedThrowable());
-    assertThat(
-        responseMessage.getRaisedThrowable().getThrowable().getType(),
-        is(NoSuchFieldException.class.getName()));
+    assertNotNull(responseMessage.getReturnValue());
+    assertNull(responseMessage.getRaisedThrowable());
 
-    // dispatch with the all access dispatcher - expect no exception
     responseMessage =
         ((ExecMessageDispatcher) dispatcher)
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);

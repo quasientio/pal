@@ -443,7 +443,6 @@ public class DispatchBenchmarkInterceptVariantTest {
     props.setProperty("intercepts.reg", interceptRegAddress);
     props.setProperty("intercept.drain.timeout.ms", "5000");
     props.setProperty("paldir_url", PalDirectory.NO_URL);
-    props.setProperty("rpc.allow_nonpublic", "false");
     props.setProperty("messages.with_src_context", "false");
 
     // ZMQ inproc endpoints (required by various service constructors)

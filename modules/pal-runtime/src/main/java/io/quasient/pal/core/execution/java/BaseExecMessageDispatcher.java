@@ -1254,6 +1254,10 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
             "Unsupported message type: " + messageType + " for dispatcher: " + this.getClass());
       }
 
+      // RPC policy check: deny operations that violate the configured policy.
+      // The REPLAY_INJECTION exemption is handled inside RpcPolicyChecker.
+      rpcPolicyChecker.checkAccess(incomingCall, messageType, messageChannel);
+
       // Check intercepts BEFORE loading/invocation phases
       final boolean isMessageInterceptable = InterceptChecker.isInterceptableType(messageType);
       InterceptCheckResult beforeInterceptCheck = null;
@@ -1328,8 +1332,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         value = getValueFromMessage(incomingCall, accessibleObject);
 
         // 6. (Optionally) Set field/method accessible, allowing to break Java access rules
-        if (shouldAllowNonPublicAccess()) { // extra-check, since already checked in
-          // loadAccessibleObject
+        if (accessibleObject != null && shouldAllowNonPublicAccess()) {
           accessibleObject.setAccessible(true);
         }
       } catch (ReflectiveOperationException | AmbiguousCallException | RuntimeException ex) {
