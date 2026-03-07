@@ -1,0 +1,14 @@
+# RPC Policy — Development Profile
+#
+# Permissive policy for local development.
+# Allows all operations except dangerous system calls and PAL internals.
+#
+# Usage:
+#   pal run --rpc-policy rpc-policy-dev.yaml ...
+
+version: 1
+defaultAction: ALLOW
+
+presets:
+  deny-unsafe: true
+  deny-pal-internals: true

@@ -9,9 +9,18 @@
  */
 package io.quasient.pal.core.rpc.policy;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
-import org.junit.Ignore;
+import io.quasient.pal.core.transport.MessageChannelType;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Set;
 import org.junit.Test;
 
 /**
@@ -29,14 +38,17 @@ public class RpcPolicyParserTest {
    * parses into a policy with DENY default and no rules.
    */
   @Test
-  @Ignore("Awaiting implementation in #995")
   public void shouldParseMinimalYaml() {
-    // Given: YAML with only "version: 1" and "defaultAction: DENY"
-    // When: parseYaml(yaml)
-    // Then: Returns policy with DENY default, empty rules list
+    String yaml =
+        """
+        version: 1
+        defaultAction: DENY
+        """;
 
-    // TODO(#995): Implement test logic
-    fail("Not yet implemented");
+    RpcPolicy policy = RpcPolicyParser.parseYaml(yaml);
+
+    assertThat(policy.getDefaultAction(), is(RpcPolicyAction.DENY));
+    assertThat(policy.getRules().size(), is(0));
   }
 
   /**
@@ -45,14 +57,32 @@ public class RpcPolicyParserTest {
    * and action.
    */
   @Test
-  @Ignore("Awaiting implementation in #995")
   public void shouldParseRulesWithClassAndMethodPatterns() {
-    // Given: YAML with rules containing class, method, action fields
-    // When: parseYaml(yaml)
-    // Then: Rules have correct classPattern, memberPattern, action
+    String yaml =
+        """
+        version: 1
+        defaultAction: DENY
+        rules:
+          - class: "com.example.api.**"
+            method: "**"
+            action: ALLOW
+          - class: "com.example.Calculator"
+            method: "add"
+            action: ALLOW
+        """;
 
-    // TODO(#995): Implement test logic
-    fail("Not yet implemented");
+    RpcPolicy policy = RpcPolicyParser.parseYaml(yaml);
+
+    assertThat(policy.getRules().size(), is(2));
+    RpcPolicyRule first = policy.getRules().get(0);
+    assertThat(first.getClassPattern(), is("com.example.api.**"));
+    assertThat(first.getMemberPattern(), is("**"));
+    assertThat(first.getAction(), is(RpcPolicyAction.ALLOW));
+
+    RpcPolicyRule second = policy.getRules().get(1);
+    assertThat(second.getClassPattern(), is("com.example.Calculator"));
+    assertThat(second.getMemberPattern(), is("add"));
+    assertThat(second.getAction(), is(RpcPolicyAction.ALLOW));
   }
 
   /**
@@ -60,14 +90,24 @@ public class RpcPolicyParserTest {
    * rule whose channels set contains only {@code ZMQ_SOCKET_RPC}.
    */
   @Test
-  @Ignore("Awaiting implementation in #995")
   public void shouldParseChannelConstraint() {
-    // Given: YAML rule with "channel: ZMQ_SOCKET_RPC"
-    // When: parseYaml(yaml)
-    // Then: Rule has channels set containing only ZMQ_SOCKET_RPC
+    String yaml =
+        """
+        version: 1
+        defaultAction: DENY
+        rules:
+          - class: "com.example.admin.**"
+            action: ALLOW
+            channel: ZMQ_SOCKET_RPC
+        """;
 
-    // TODO(#995): Implement test logic
-    fail("Not yet implemented");
+    RpcPolicy policy = RpcPolicyParser.parseYaml(yaml);
+
+    assertThat(policy.getRules().size(), is(1));
+    Set<MessageChannelType> channels = policy.getRules().get(0).getChannels();
+    assertNotNull(channels);
+    assertThat(channels.size(), is(1));
+    assertTrue(channels.contains(MessageChannelType.ZMQ_SOCKET_RPC));
   }
 
   /**
@@ -75,14 +115,25 @@ public class RpcPolicyParserTest {
    * constraint is parsed into a rule whose channels set contains both values.
    */
   @Test
-  @Ignore("Awaiting implementation in #995")
   public void shouldParseChannelListConstraint() {
-    // Given: YAML rule with "channel: [ZMQ_SOCKET_RPC, WEBSOCKET_RPC]"
-    // When: parseYaml(yaml)
-    // Then: Rule has channels set with both ZMQ_SOCKET_RPC and WEBSOCKET_RPC
+    String yaml =
+        """
+        version: 1
+        defaultAction: DENY
+        rules:
+          - class: "com.example.admin.**"
+            action: ALLOW
+            channel: [ZMQ_SOCKET_RPC, WEBSOCKET_RPC]
+        """;
 
-    // TODO(#995): Implement test logic
-    fail("Not yet implemented");
+    RpcPolicy policy = RpcPolicyParser.parseYaml(yaml);
+
+    assertThat(policy.getRules().size(), is(1));
+    Set<MessageChannelType> channels = policy.getRules().get(0).getChannels();
+    assertNotNull(channels);
+    assertThat(channels.size(), is(2));
+    assertTrue(channels.contains(MessageChannelType.ZMQ_SOCKET_RPC));
+    assertTrue(channels.contains(MessageChannelType.WEBSOCKET_RPC));
   }
 
   /**
@@ -90,14 +141,25 @@ public class RpcPolicyParserTest {
    * members set contains both {@link MemberCategory#METHOD} and {@link MemberCategory#CONSTRUCTOR}.
    */
   @Test
-  @Ignore("Awaiting implementation in #995")
   public void shouldParseMembersConstraint() {
-    // Given: YAML rule with "members: [METHOD, CONSTRUCTOR]"
-    // When: parseYaml(yaml)
-    // Then: Rule has members set with METHOD and CONSTRUCTOR
+    String yaml =
+        """
+        version: 1
+        defaultAction: DENY
+        rules:
+          - class: "com.example.dto.**"
+            action: ALLOW
+            members: [METHOD, CONSTRUCTOR]
+        """;
 
-    // TODO(#995): Implement test logic
-    fail("Not yet implemented");
+    RpcPolicy policy = RpcPolicyParser.parseYaml(yaml);
+
+    assertThat(policy.getRules().size(), is(1));
+    Set<MemberCategory> members = policy.getRules().get(0).getMembers();
+    assertNotNull(members);
+    assertThat(members.size(), is(2));
+    assertTrue(members.contains(MemberCategory.METHOD));
+    assertTrue(members.contains(MemberCategory.CONSTRUCTOR));
   }
 
   /**
@@ -106,14 +168,23 @@ public class RpcPolicyParserTest {
    * parsed policy.
    */
   @Test
-  @Ignore("Awaiting implementation in #995")
   public void shouldParsePresetsSection() {
-    // Given: YAML with "presets: { deny-unsafe: true, deny-jdk-internals: true }"
-    // When: parseYaml(yaml)
-    // Then: Policy rules include deny-unsafe and deny-jdk-internals preset rules
+    String yaml =
+        """
+        version: 1
+        defaultAction: DENY
+        presets:
+          deny-unsafe: true
+          deny-jdk-internals: true
+        """;
 
-    // TODO(#995): Implement test logic
-    fail("Not yet implemented");
+    RpcPolicy policy = RpcPolicyParser.parseYaml(yaml);
+
+    List<RpcPolicyRule> rules = policy.getRules();
+    int expectedSize =
+        RpcPolicyPresets.getDenyUnsafeRules().size()
+            + RpcPolicyPresets.getDenyJdkInternalRules().size();
+    assertThat(rules.size(), is(expectedSize));
   }
 
   /**
@@ -121,14 +192,18 @@ public class RpcPolicyParserTest {
    * parsed policy.
    */
   @Test
-  @Ignore("Awaiting implementation in #995")
   public void shouldIgnoreDisabledPresets() {
-    // Given: YAML with "presets: { deny-unsafe: false }"
-    // When: parseYaml(yaml)
-    // Then: No deny-unsafe rules in policy
+    String yaml =
+        """
+        version: 1
+        defaultAction: DENY
+        presets:
+          deny-unsafe: false
+        """;
 
-    // TODO(#995): Implement test logic
-    fail("Not yet implemented");
+    RpcPolicy policy = RpcPolicyParser.parseYaml(yaml);
+
+    assertThat(policy.getRules().size(), is(0));
   }
 
   /**
@@ -137,44 +212,49 @@ public class RpcPolicyParserTest {
    * "bar"}).
    */
   @Test
-  @Ignore("Awaiting implementation in #995")
   public void shouldParsePatternShorthand() {
-    // Given: YAML rule with 'pattern: "com.example.Foo.bar"' (combined class.method format)
-    // When: parseYaml(yaml)
-    // Then: Correctly splits into classPattern "com.example.Foo" and memberPattern "bar"
+    String yaml =
+        """
+        version: 1
+        defaultAction: DENY
+        rules:
+          - pattern: "com.example.Foo.bar"
+            action: ALLOW
+        """;
 
-    // TODO(#995): Implement test logic
-    fail("Not yet implemented");
+    RpcPolicy policy = RpcPolicyParser.parseYaml(yaml);
+
+    assertThat(policy.getRules().size(), is(1));
+    RpcPolicyRule rule = policy.getRules().get(0);
+    assertThat(rule.getClassPattern(), is("com.example.Foo"));
+    assertThat(rule.getMemberPattern(), is("bar"));
   }
 
   /**
    * Verifies that malformed (syntactically invalid) YAML input causes an {@link
    * IllegalArgumentException} to be thrown.
    */
-  @Test
-  @Ignore("Awaiting implementation in #995")
+  @Test(expected = IllegalArgumentException.class)
   public void shouldThrowOnMalformedYaml() {
-    // Given: Invalid YAML string (e.g. unclosed brackets, bad indentation)
-    // When: parseYaml(yaml)
-    // Then: Throws IllegalArgumentException
-
-    // TODO(#995): Implement test logic
-    fail("Not yet implemented");
+    String yaml = ":\n  - {\n  invalid: [unclosed";
+    RpcPolicyParser.parseYaml(yaml);
   }
 
   /**
    * Verifies that a YAML rule missing the required {@code action} field causes an {@link
    * IllegalArgumentException} to be thrown.
    */
-  @Test
-  @Ignore("Awaiting implementation in #995")
+  @Test(expected = IllegalArgumentException.class)
   public void shouldThrowOnMissingRequiredFields() {
-    // Given: YAML rule missing "action" field
-    // When: parseYaml(yaml)
-    // Then: Throws IllegalArgumentException
-
-    // TODO(#995): Implement test logic
-    fail("Not yet implemented");
+    String yaml =
+        """
+        version: 1
+        defaultAction: DENY
+        rules:
+          - class: "com.example.Foo"
+            method: "bar"
+        """;
+    RpcPolicyParser.parseYaml(yaml);
   }
 
   /**
@@ -182,14 +262,14 @@ public class RpcPolicyParserTest {
    * containing only preset rules and the specified default action.
    */
   @Test
-  @Ignore("Awaiting implementation in #995")
   public void shouldBuildFromOptionsWithPresetsOnly() {
-    // Given: presets="deny-unsafe,deny-jdk-internals", no YAML path
-    // When: fromOptions(null, "deny-unsafe,deny-jdk-internals", "DENY")
-    // Then: Policy has preset rules + DENY default action
+    RpcPolicy policy = RpcPolicyParser.fromOptions(null, "deny-unsafe,deny-jdk-internals", "DENY");
 
-    // TODO(#995): Implement test logic
-    fail("Not yet implemented");
+    assertThat(policy.getDefaultAction(), is(RpcPolicyAction.DENY));
+    int expectedSize =
+        RpcPolicyPresets.getDenyUnsafeRules().size()
+            + RpcPolicyPresets.getDenyJdkInternalRules().size();
+    assertThat(policy.getRules().size(), is(expectedSize));
   }
 
   /**
@@ -197,14 +277,37 @@ public class RpcPolicyParserTest {
    * where user rules (from YAML) come first, then preset rules, then the default action.
    */
   @Test
-  @Ignore("Awaiting implementation in #995")
-  public void shouldBuildFromOptionsWithYamlAndPresets() {
-    // Given: YAML file path + presets string
-    // When: fromOptions(yamlPath, presets, "DENY")
-    // Then: User rules (from YAML) come first, then preset rules, then default action
+  public void shouldBuildFromOptionsWithYamlAndPresets() throws IOException {
+    String yaml =
+        """
+        version: 1
+        defaultAction: ALLOW
+        rules:
+          - class: "com.example.api.**"
+            action: ALLOW
+        """;
 
-    // TODO(#995): Implement test logic
-    fail("Not yet implemented");
+    Path tempFile = Files.createTempFile("rpc-policy-test", ".yaml");
+    try {
+      Files.writeString(tempFile, yaml);
+
+      RpcPolicy policy = RpcPolicyParser.fromOptions(tempFile.toString(), "deny-unsafe", "DENY");
+
+      assertThat(policy.getDefaultAction(), is(RpcPolicyAction.DENY));
+      List<RpcPolicyRule> rules = policy.getRules();
+
+      // User rules come first
+      assertThat(rules.get(0).getClassPattern(), is("com.example.api.**"));
+      assertThat(rules.get(0).getAction(), is(RpcPolicyAction.ALLOW));
+
+      // Then preset rules
+      int presetStart = 1;
+      int presetCount = RpcPolicyPresets.getDenyUnsafeRules().size();
+      assertThat(rules.size(), is(1 + presetCount));
+      assertThat(rules.get(presetStart).getAction(), is(RpcPolicyAction.DENY));
+    } finally {
+      Files.deleteIfExists(tempFile);
+    }
   }
 
   /**
@@ -212,14 +315,13 @@ public class RpcPolicyParserTest {
    * 1.
    */
   @Test
-  @Ignore("Awaiting implementation in #995")
   public void shouldDefaultToVersionOne() {
-    // Given: YAML without version field (only defaultAction and/or rules)
-    // When: parseYaml(yaml)
-    // Then: Parses successfully (version defaults to 1)
+    String yaml = "defaultAction: ALLOW\n";
 
-    // TODO(#995): Implement test logic
-    fail("Not yet implemented");
+    RpcPolicy policy = RpcPolicyParser.parseYaml(yaml);
+
+    assertThat(policy.getDefaultAction(), is(RpcPolicyAction.ALLOW));
+    assertThat(policy.getRules().size(), is(0));
   }
 
   /**
@@ -228,13 +330,27 @@ public class RpcPolicyParserTest {
    * should emit a WARN-level log message.
    */
   @Test
-  @Ignore("Awaiting implementation in #995")
-  public void shouldWarnWhenDefaultIsDenyWithNoAllowRules() {
-    // Given: YAML with defaultAction=DENY, only DENY rules (no ALLOW rules)
-    // When: fromOptions(...) with this YAML
-    // Then: Logs a WARN (verify via test logger or no exception thrown)
+  public void shouldWarnWhenDefaultIsDenyWithNoAllowRules() throws IOException {
+    String yaml =
+        """
+        version: 1
+        defaultAction: DENY
+        rules:
+          - class: "com.example.Foo"
+            action: DENY
+        """;
 
-    // TODO(#995): Implement test logic
-    fail("Not yet implemented");
+    Path tempFile = Files.createTempFile("rpc-policy-warn-test", ".yaml");
+    try {
+      Files.writeString(tempFile, yaml);
+
+      // Should not throw — just logs a warning
+      RpcPolicy policy = RpcPolicyParser.fromOptions(tempFile.toString(), null, "DENY");
+
+      assertThat(policy.getDefaultAction(), is(RpcPolicyAction.DENY));
+      assertNull(policy.getRules().get(0).getChannels());
+    } finally {
+      Files.deleteIfExists(tempFile);
+    }
   }
 }

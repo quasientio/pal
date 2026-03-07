@@ -1,0 +1,29 @@
+# RPC Policy — Production Profile
+#
+# Restrictive allowlist policy for production deployments.
+# Denies all operations by default; only explicitly allowed patterns are accessible.
+#
+# Usage:
+#   pal run --rpc-policy rpc-policy-prod.yaml ...
+
+version: 1
+defaultAction: DENY
+
+presets:
+  deny-unsafe: true
+  deny-jdk-internals: true
+  deny-pal-internals: true
+  deny-classloading: true
+  deny-reflection: true
+  deny-serialization: true
+  deny-scripting: true
+
+rules:
+  # Allow your application's public API
+  - pattern: "com.example.api.**"
+    action: ALLOW
+
+  # Allow specific service classes via ZMQ only
+  - pattern: "com.example.service.**"
+    channel: ZMQ_SOCKET_RPC
+    action: ALLOW

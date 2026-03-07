@@ -1,0 +1,18 @@
+# RPC Policy — Test Profile
+#
+# Broad access with logging for test environments.
+# Allows all operations and logs every access for debugging.
+#
+# Usage:
+#   pal run --rpc-policy rpc-policy-test.yaml ...
+
+version: 1
+defaultAction: LOG_AND_ALLOW
+
+presets:
+  deny-unsafe: true
+
+rules:
+  # Allow application code without logging
+  - pattern: "com.example.**"
+    action: ALLOW
