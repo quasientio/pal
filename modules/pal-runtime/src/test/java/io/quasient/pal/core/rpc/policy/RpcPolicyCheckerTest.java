@@ -9,10 +9,25 @@
  */
 package io.quasient.pal.core.rpc.policy;
 
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.fail;
 
-import org.junit.Ignore;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import io.quasient.pal.core.transport.MessageChannelType;
+import io.quasient.pal.messages.colfer.ConstructorCall;
+import io.quasient.pal.messages.colfer.ExecMessage;
+import io.quasient.pal.messages.colfer.InstanceMethodCall;
+import io.quasient.pal.messages.types.MessageType;
+import java.util.List;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.LoggerFactory;
 
 /**
  * Unit tests for {@link RpcPolicyChecker}, the singleton service that extracts metadata from {@code
@@ -24,19 +39,42 @@ import org.junit.Test;
  */
 public class RpcPolicyCheckerTest {
 
+  /** Log appender for capturing log output from {@link RpcPolicyChecker}. */
+  private ListAppender<ILoggingEvent> listAppender;
+
+  /** The logback logger for {@link RpcPolicyChecker}. */
+  private Logger checkerLogger;
+
+  /** Sets up the log capture appender before each test. */
+  @Before
+  public void setUp() {
+    checkerLogger = (Logger) LoggerFactory.getLogger(RpcPolicyChecker.class);
+    listAppender = new ListAppender<>();
+    listAppender.start();
+    checkerLogger.addAppender(listAppender);
+  }
+
+  /** Tears down the log capture appender after each test. */
+  @After
+  public void tearDown() {
+    checkerLogger.detachAppender(listAppender);
+    listAppender.stop();
+  }
+
   /**
    * Verifies that no exception is thrown when the policy evaluates the operation to {@link
    * RpcPolicyAction#ALLOW}.
    */
   @Test
-  @Ignore("Awaiting implementation in #997")
   public void shouldPassWhenPolicyReturnsAllow() {
-    // Given: Policy that evaluates to ALLOW
-    // When: checkAccess(msg, EXEC_INSTANCE_METHOD, ZMQ_SOCKET_RPC)
-    // Then: No exception thrown
+    RpcPolicy policy =
+        new RpcPolicy(
+            List.of(new RpcPolicyRule("com.example.**", null, RpcPolicyAction.ALLOW, null, null)),
+            RpcPolicyAction.DENY);
+    RpcPolicyChecker checker = new RpcPolicyChecker(policy);
 
-    // TODO(#997): Implement test logic
-    fail("Not yet implemented");
+    ExecMessage msg = createInstanceMethodMessage("com.example.Foo", "bar");
+    checker.checkAccess(msg, MessageType.EXEC_INSTANCE_METHOD, MessageChannelType.ZMQ_SOCKET_RPC);
   }
 
   /**
@@ -44,14 +82,19 @@ public class RpcPolicyCheckerTest {
    * and channel when the policy evaluates to {@link RpcPolicyAction#DENY}.
    */
   @Test
-  @Ignore("Awaiting implementation in #997")
   public void shouldThrowWhenPolicyReturnsDeny() {
-    // Given: Policy that evaluates to DENY
-    // When: checkAccess(msg, EXEC_INSTANCE_METHOD, ZMQ_SOCKET_RPC)
-    // Then: Throws RpcAccessDeniedException with correct className, memberName, channel
+    RpcPolicy policy = new RpcPolicy(List.of(), RpcPolicyAction.DENY);
+    RpcPolicyChecker checker = new RpcPolicyChecker(policy);
 
-    // TODO(#997): Implement test logic
-    fail("Not yet implemented");
+    ExecMessage msg = createInstanceMethodMessage("com.example.Foo", "bar");
+    try {
+      checker.checkAccess(msg, MessageType.EXEC_INSTANCE_METHOD, MessageChannelType.ZMQ_SOCKET_RPC);
+      fail("Expected RpcAccessDeniedException");
+    } catch (RpcAccessDeniedException e) {
+      assertThat(e.getClassName(), is("com.example.Foo"));
+      assertThat(e.getMemberName(), is("bar"));
+      assertThat(e.getChannel(), is(MessageChannelType.ZMQ_SOCKET_RPC));
+    }
   }
 
   /**
@@ -59,14 +102,23 @@ public class RpcPolicyCheckerTest {
    * info-level log message is emitted.
    */
   @Test
-  @Ignore("Awaiting implementation in #997")
   public void shouldLogAndPassForLogAndAllow() {
-    // Given: Policy that evaluates to LOG_AND_ALLOW
-    // When: checkAccess(...)
-    // Then: No exception; logger.info called (verify via mock/test logger)
+    RpcPolicy policy =
+        new RpcPolicy(
+            List.of(
+                new RpcPolicyRule(
+                    "com.example.**", null, RpcPolicyAction.LOG_AND_ALLOW, null, null)),
+            RpcPolicyAction.DENY);
+    RpcPolicyChecker checker = new RpcPolicyChecker(policy);
 
-    // TODO(#997): Implement test logic
-    fail("Not yet implemented");
+    ExecMessage msg = createInstanceMethodMessage("com.example.Foo", "bar");
+    checker.checkAccess(msg, MessageType.EXEC_INSTANCE_METHOD, MessageChannelType.ZMQ_SOCKET_RPC);
+
+    assertThat(listAppender.list, hasSize(1));
+    ILoggingEvent event = listAppender.list.get(0);
+    assertThat(event.getLevel(), is(Level.INFO));
+    assertThat(event.getFormattedMessage().contains("com.example.Foo"), is(true));
+    assertThat(event.getFormattedMessage().contains("bar"), is(true));
   }
 
   /**
@@ -74,14 +126,27 @@ public class RpcPolicyCheckerTest {
    * that a warn-level log message is emitted.
    */
   @Test
-  @Ignore("Awaiting implementation in #997")
   public void shouldLogAndThrowForLogAndDeny() {
-    // Given: Policy that evaluates to LOG_AND_DENY
-    // When: checkAccess(...)
-    // Then: Throws RpcAccessDeniedException; logger.warn called
+    RpcPolicy policy =
+        new RpcPolicy(
+            List.of(
+                new RpcPolicyRule(
+                    "com.example.**", null, RpcPolicyAction.LOG_AND_DENY, null, null)),
+            RpcPolicyAction.ALLOW);
+    RpcPolicyChecker checker = new RpcPolicyChecker(policy);
 
-    // TODO(#997): Implement test logic
-    fail("Not yet implemented");
+    ExecMessage msg = createInstanceMethodMessage("com.example.Foo", "bar");
+    try {
+      checker.checkAccess(msg, MessageType.EXEC_INSTANCE_METHOD, MessageChannelType.ZMQ_SOCKET_RPC);
+      fail("Expected RpcAccessDeniedException");
+    } catch (RpcAccessDeniedException e) {
+      assertThat(e.getClassName(), is("com.example.Foo"));
+    }
+
+    assertThat(listAppender.list, hasSize(1));
+    ILoggingEvent event = listAppender.list.get(0);
+    assertThat(event.getLevel(), is(Level.WARN));
+    assertThat(event.getFormattedMessage().contains("com.example.Foo"), is(true));
   }
 
   /**
@@ -89,14 +154,19 @@ public class RpcPolicyCheckerTest {
    * containing an instance method call and passes it to the policy's {@code evaluate()} method.
    */
   @Test
-  @Ignore("Awaiting implementation in #997")
   public void shouldExtractClassnameFromExecMessage() {
-    // Given: ExecMessage with instanceMethodCall containing class "com.example.Foo"
-    // When: checkAccess is called
-    // Then: Policy.evaluate() receives "com.example.Foo" as className
+    RpcPolicy policy =
+        new RpcPolicy(
+            List.of(
+                new RpcPolicyRule("com.example.Foo.**", null, RpcPolicyAction.ALLOW, null, null)),
+            RpcPolicyAction.DENY);
+    RpcPolicyChecker checker = new RpcPolicyChecker(policy);
 
-    // TODO(#997): Implement test logic
-    fail("Not yet implemented");
+    ExecMessage msg = createInstanceMethodMessage("com.example.Foo", "doSomething");
+
+    // If the class name is correctly extracted, the rule matches and no exception is thrown.
+    // If extraction fails, the default DENY action would cause an exception.
+    checker.checkAccess(msg, MessageType.EXEC_INSTANCE_METHOD, MessageChannelType.ZMQ_SOCKET_RPC);
   }
 
   /**
@@ -104,14 +174,29 @@ public class RpcPolicyCheckerTest {
    * instance method call and passes it to the policy's {@code evaluate()} method.
    */
   @Test
-  @Ignore("Awaiting implementation in #997")
   public void shouldExtractMemberNameFromExecMessage() {
-    // Given: ExecMessage with instanceMethodCall named "bar"
-    // When: checkAccess is called
-    // Then: Policy.evaluate() receives "bar" as memberName
+    RpcPolicy policy =
+        new RpcPolicy(
+            List.of(
+                new RpcPolicyRule(
+                    "com.example.Foo", "specificMethod", RpcPolicyAction.ALLOW, null, null)),
+            RpcPolicyAction.DENY);
+    RpcPolicyChecker checker = new RpcPolicyChecker(policy);
 
-    // TODO(#997): Implement test logic
-    fail("Not yet implemented");
+    ExecMessage msg = createInstanceMethodMessage("com.example.Foo", "specificMethod");
+
+    // Passes only if the member name "specificMethod" is correctly extracted
+    checker.checkAccess(msg, MessageType.EXEC_INSTANCE_METHOD, MessageChannelType.ZMQ_SOCKET_RPC);
+
+    // A different member name should be denied
+    ExecMessage wrongMsg = createInstanceMethodMessage("com.example.Foo", "otherMethod");
+    try {
+      checker.checkAccess(
+          wrongMsg, MessageType.EXEC_INSTANCE_METHOD, MessageChannelType.ZMQ_SOCKET_RPC);
+      fail("Expected RpcAccessDeniedException for non-matching member name");
+    } catch (RpcAccessDeniedException e) {
+      assertThat(e.getMemberName(), is("otherMethod"));
+    }
   }
 
   /**
@@ -119,29 +204,119 @@ public class RpcPolicyCheckerTest {
    * MemberCategory#CONSTRUCTOR} when delegating to the policy.
    */
   @Test
-  @Ignore("Awaiting implementation in #997")
   public void shouldMapMessageTypeToMemberCategory() {
-    // Given: MessageType.EXEC_CONSTRUCTOR
-    // When: checkAccess with this type
-    // Then: Policy.evaluate() receives MemberCategory.CONSTRUCTOR
+    RpcPolicy policy =
+        new RpcPolicy(
+            List.of(
+                new RpcPolicyRule(
+                    "com.example.Foo.**",
+                    null,
+                    RpcPolicyAction.ALLOW,
+                    null,
+                    java.util.EnumSet.of(MemberCategory.CONSTRUCTOR))),
+            RpcPolicyAction.DENY);
+    RpcPolicyChecker checker = new RpcPolicyChecker(policy);
 
-    // TODO(#997): Implement test logic
-    fail("Not yet implemented");
+    ExecMessage msg = createConstructorMessage("com.example.Foo");
+
+    // The rule only allows CONSTRUCTOR category; passes only if MessageType is correctly mapped
+    checker.checkAccess(msg, MessageType.EXEC_CONSTRUCTOR, MessageChannelType.ZMQ_SOCKET_RPC);
   }
 
   /**
-   * Verifies that operations arriving via {@link
-   * io.quasient.pal.core.transport.MessageChannelType#REPLAY_INJECTION} are exempt from policy
-   * checks, even when the policy default is DENY.
+   * Verifies that operations arriving via {@link MessageChannelType#REPLAY_INJECTION} are exempt
+   * from policy checks, even when the policy default is DENY.
    */
   @Test
-  @Ignore("Awaiting implementation in #997")
   public void shouldExemptReplayInjectionChannel() {
-    // Given: Policy with DENY default
-    // When: checkAccess with MessageChannelType.REPLAY_INJECTION
-    // Then: No exception (replay is exempt from policy)
+    RpcPolicy policy = new RpcPolicy(List.of(), RpcPolicyAction.DENY);
+    RpcPolicyChecker checker = new RpcPolicyChecker(policy);
 
-    // TODO(#997): Implement test logic
-    fail("Not yet implemented");
+    ExecMessage msg = createInstanceMethodMessage("com.example.Foo", "bar");
+
+    // Should not throw even though policy denies everything
+    checker.checkAccess(msg, MessageType.EXEC_INSTANCE_METHOD, MessageChannelType.REPLAY_INJECTION);
+  }
+
+  /**
+   * Verifies that {@link RpcPolicyChecker#isAccessible(String, String, MessageChannelType,
+   * MemberCategory)} returns {@code true} for ALLOW and LOG_AND_ALLOW actions and {@code false} for
+   * DENY and LOG_AND_DENY actions.
+   */
+  @Test
+  public void shouldReturnCorrectAccessibilityForIsAccessible() {
+    RpcPolicy policy =
+        new RpcPolicy(
+            List.of(new RpcPolicyRule("com.example.**", null, RpcPolicyAction.ALLOW, null, null)),
+            RpcPolicyAction.DENY);
+    RpcPolicyChecker checker = new RpcPolicyChecker(policy);
+
+    assertThat(
+        checker.isAccessible(
+            "com.example.Foo", "bar", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD),
+        is(true));
+    assertThat(
+        checker.isAccessible(
+            "com.other.Foo", "bar", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD),
+        is(false));
+  }
+
+  /**
+   * Verifies that {@link RpcPolicyChecker#isAccessible(String, String, MessageChannelType,
+   * MemberCategory)} returns {@code true} for {@link RpcPolicyAction#LOG_AND_ALLOW}.
+   */
+  @Test
+  public void shouldReturnTrueForLogAndAllowInIsAccessible() {
+    RpcPolicy policy =
+        new RpcPolicy(
+            List.of(
+                new RpcPolicyRule(
+                    "com.example.**", null, RpcPolicyAction.LOG_AND_ALLOW, null, null)),
+            RpcPolicyAction.DENY);
+    RpcPolicyChecker checker = new RpcPolicyChecker(policy);
+
+    assertThat(
+        checker.isAccessible(
+            "com.example.Foo", "bar", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD),
+        is(true));
+  }
+
+  /**
+   * Creates an {@link ExecMessage} containing an {@link InstanceMethodCall} with the given class
+   * name and method name.
+   *
+   * @param className the fully-qualified class name
+   * @param methodName the method name
+   * @return the constructed message
+   */
+  private static ExecMessage createInstanceMethodMessage(String className, String methodName) {
+    io.quasient.pal.messages.colfer.Class clazz = new io.quasient.pal.messages.colfer.Class();
+    clazz.name = className;
+
+    InstanceMethodCall call = new InstanceMethodCall();
+    call.clazz = clazz;
+    call.name = methodName;
+
+    ExecMessage msg = new ExecMessage();
+    msg.instanceMethodCall = call;
+    return msg;
+  }
+
+  /**
+   * Creates an {@link ExecMessage} containing a {@link ConstructorCall} with the given class name.
+   *
+   * @param className the fully-qualified class name
+   * @return the constructed message
+   */
+  private static ExecMessage createConstructorMessage(String className) {
+    io.quasient.pal.messages.colfer.Class clazz = new io.quasient.pal.messages.colfer.Class();
+    clazz.name = className;
+
+    ConstructorCall call = new ConstructorCall();
+    call.clazz = clazz;
+
+    ExecMessage msg = new ExecMessage();
+    msg.constructorCall = call;
+    return msg;
   }
 }
