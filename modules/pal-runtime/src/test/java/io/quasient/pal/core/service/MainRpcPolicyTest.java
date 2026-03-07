@@ -9,10 +9,16 @@
  */
 package io.quasient.pal.core.service;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 
-import org.junit.Ignore;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.Properties;
+import java.util.UUID;
 import org.junit.Test;
+import picocli.CommandLine;
 
 /**
  * Tests for the RPC policy CLI options in {@link Main}.
@@ -23,75 +29,122 @@ import org.junit.Test;
  */
 public class MainRpcPolicyTest {
 
-  /** Tests that --rpc-policy sets the rpc.policy.path property. */
+  /** Tests that --rpc-policy sets the rpcPolicyPath field. */
   @Test
-  @Ignore("Awaiting implementation in #999")
-  public void shouldAcceptRpcPolicyFlag() {
+  public void shouldAcceptRpcPolicyFlag() throws Exception {
     // Given: CLI args including --rpc-policy /path/to/policy.yaml
-    // When: Main parses CLI
-    // Then: rpcPolicyPath property is set to "/path/to/policy.yaml"
+    Main main = new Main();
+    new CommandLine(main).parseArgs("--rpc-policy", "/path/to/policy.yaml");
 
-    // TODO(#999): Implement test logic
-    fail("Not yet implemented");
+    // Then: rpcPolicyPath field is set to "/path/to/policy.yaml"
+    Field field = Main.class.getDeclaredField("rpcPolicyPath");
+    field.setAccessible(true);
+    assertThat(field.get(main), is("/path/to/policy.yaml"));
   }
 
-  /** Tests that --rpc-policy-preset sets the rpc.policy.presets property. */
+  /** Tests that --rpc-policy-preset sets the rpcPolicyPresets field. */
   @Test
-  @Ignore("Awaiting implementation in #999")
-  public void shouldAcceptRpcPolicyPresetFlag() {
+  public void shouldAcceptRpcPolicyPresetFlag() throws Exception {
     // Given: CLI args including --rpc-policy-preset deny-unsafe,deny-jdk-internals
-    // When: Main parses CLI
-    // Then: rpcPolicyPresets property is set to "deny-unsafe,deny-jdk-internals"
+    Main main = new Main();
+    new CommandLine(main).parseArgs("--rpc-policy-preset", "deny-unsafe,deny-jdk-internals");
 
-    // TODO(#999): Implement test logic
-    fail("Not yet implemented");
+    // Then: rpcPolicyPresets field is set to "deny-unsafe,deny-jdk-internals"
+    Field field = Main.class.getDeclaredField("rpcPolicyPresets");
+    field.setAccessible(true);
+    assertThat(field.get(main), is("deny-unsafe,deny-jdk-internals"));
   }
 
   /** Tests that --rpc-default-action accepts and stores the given value. */
   @Test
-  @Ignore("Awaiting implementation in #999")
-  public void shouldAcceptRpcDefaultActionFlag() {
+  public void shouldAcceptRpcDefaultActionFlag() throws Exception {
     // Given: CLI args including --rpc-default-action ALLOW
-    // When: Main parses CLI
-    // Then: rpcDefaultAction property is "ALLOW"
+    Main main = new Main();
+    new CommandLine(main).parseArgs("--rpc-default-action", "ALLOW");
 
-    // TODO(#999): Implement test logic
-    fail("Not yet implemented");
+    // Then: rpcDefaultAction field is "ALLOW"
+    Field field = Main.class.getDeclaredField("rpcDefaultAction");
+    field.setAccessible(true);
+    assertThat(field.get(main), is("ALLOW"));
   }
 
   /** Tests that --rpc-default-action defaults to DENY when not specified. */
   @Test
-  @Ignore("Awaiting implementation in #999")
-  public void shouldDefaultRpcDefaultActionToDeny() {
+  public void shouldDefaultRpcDefaultActionToDeny() throws Exception {
     // Given: CLI args without --rpc-default-action
-    // When: Main parses CLI
-    // Then: rpcDefaultAction defaults to "DENY"
+    Main main = new Main();
+    new CommandLine(main).parseArgs();
 
-    // TODO(#999): Implement test logic
-    fail("Not yet implemented");
+    // Then: rpcDefaultAction defaults to "DENY"
+    Field field = Main.class.getDeclaredField("rpcDefaultAction");
+    field.setAccessible(true);
+    assertThat(field.get(main), is("DENY"));
   }
 
   /** Tests that the removed --rpc-allow-nonpublic flag is no longer accepted. */
-  @Test
-  @Ignore("Awaiting implementation in #999")
+  @Test(expected = CommandLine.UnmatchedArgumentException.class)
   public void shouldNotHaveRpcAllowNonpublicFlag() {
     // Given: CLI args with --rpc-allow-nonpublic
     // When: Main parses CLI
-    // Then: Parsing fails with ParameterException (flag has been removed)
-
-    // TODO(#999): Implement test logic
-    fail("Not yet implemented");
+    // Then: Parsing fails (flag has been removed)
+    new CommandLine(new Main()).parseArgs("--rpc-allow-nonpublic");
   }
 
-  /** Tests that all RPC policy flags are propagated as properties. */
+  /** Tests that all RPC policy flags are propagated as properties via addMiscProperties(). */
   @Test
-  @Ignore("Awaiting implementation in #999")
-  public void shouldPropagateRpcPolicyProperties() {
-    // Given: All RPC policy flags set (--rpc-policy, --rpc-policy-preset, --rpc-default-action)
-    // When: addMiscProperties() runs (via validateInput)
-    // Then: Properties contain rpc.policy.path, rpc.policy.presets, rpc.default_action
+  public void shouldPropagateRpcPolicyProperties() throws Exception {
+    // Given: All RPC policy flags set
+    Main main = new Main();
+    new CommandLine(main)
+        .parseArgs(
+            "--rpc-policy", "/tmp/policy.yaml",
+            "--rpc-policy-preset", "deny-unsafe,deny-jdk-internals",
+            "--rpc-default-action", "ALLOW");
 
-    // TODO(#999): Implement test logic
-    fail("Not yet implemented");
+    // Set required uuid to avoid NPE in addMiscProperties
+    Field uuidField = Main.class.getDeclaredField("uuid");
+    uuidField.setAccessible(true);
+    uuidField.set(main, UUID.randomUUID());
+
+    // When: addMiscProperties() runs
+    Method method = Main.class.getDeclaredMethod("addMiscProperties");
+    method.setAccessible(true);
+    method.invoke(main);
+
+    // Then: Properties contain rpc.policy.path, rpc.policy.presets, rpc.default_action
+    Field propertiesField = Main.class.getDeclaredField("properties");
+    propertiesField.setAccessible(true);
+    Properties properties = (Properties) propertiesField.get(main);
+
+    assertThat(properties.getProperty("rpc.policy.path"), is("/tmp/policy.yaml"));
+    assertThat(properties.getProperty("rpc.policy.presets"), is("deny-unsafe,deny-jdk-internals"));
+    assertThat(properties.getProperty("rpc.default_action"), is("ALLOW"));
+  }
+
+  /** Tests that optional properties are not set when CLI flags are omitted. */
+  @Test
+  public void shouldNotSetOptionalPropertiesWhenFlagsOmitted() throws Exception {
+    // Given: No RPC policy flags set (only defaults)
+    Main main = new Main();
+    new CommandLine(main).parseArgs();
+
+    // Set required uuid
+    Field uuidField = Main.class.getDeclaredField("uuid");
+    uuidField.setAccessible(true);
+    uuidField.set(main, UUID.randomUUID());
+
+    // When: addMiscProperties() runs
+    Method method = Main.class.getDeclaredMethod("addMiscProperties");
+    method.setAccessible(true);
+    method.invoke(main);
+
+    // Then: Optional properties are absent, default action is DENY
+    Field propertiesField = Main.class.getDeclaredField("properties");
+    propertiesField.setAccessible(true);
+    Properties properties = (Properties) propertiesField.get(main);
+
+    assertThat(properties.getProperty("rpc.policy.path"), is(nullValue()));
+    assertThat(properties.getProperty("rpc.policy.presets"), is(nullValue()));
+    assertThat(properties.getProperty("rpc.default_action"), is("DENY"));
   }
 }

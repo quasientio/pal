@@ -481,12 +481,31 @@ public class Main implements Callable<Integer> {
       description = "number of threads for RPC requests (default: ${DEFAULT-VALUE})")
   private Integer rpcThreads;
 
-  /** Flag to allow the invocation of nonpublic methods and fields via RPC. The default is false. */
+  /** Path to an RPC access policy YAML file that controls which operations are allowed via RPC. */
   @Option(
-      names = {"--rpc-allow-nonpublic"},
-      defaultValue = "false",
-      description = "allow invocation of nonpublic methods and fields (default: ${DEFAULT-VALUE})")
-  private boolean rpcAllowNonPublic;
+      names = {"--rpc-policy"},
+      description = "path to RPC access policy YAML file")
+  private String rpcPolicyPath;
+
+  /**
+   * Comma-separated list of built-in preset names to enable (e.g., {@code
+   * deny-unsafe,deny-jdk-internals}).
+   */
+  @Option(
+      names = {"--rpc-policy-preset"},
+      description = "comma-separated preset names (e.g., deny-unsafe,deny-jdk-internals)")
+  private String rpcPolicyPresets;
+
+  /**
+   * Default RPC action when no policy rule matches. Must be {@code ALLOW} or {@code DENY}. Defaults
+   * to {@code DENY}.
+   */
+  @Option(
+      names = {"--rpc-default-action"},
+      defaultValue = "DENY",
+      description =
+          "default RPC action when no rule matches: ALLOW or DENY (default: ${DEFAULT-VALUE})")
+  private String rpcDefaultAction = "DENY";
 
   /**
    * Flag indicating whether message interception is enabled. Only applicable when registering with
@@ -1403,8 +1422,16 @@ public class Main implements Callable<Integer> {
     // message content options
     properties.setProperty("messages.with_src_context", String.valueOf(includeSourceContext));
 
-    // rpc options
-    properties.setProperty("rpc.allow_nonpublic", String.valueOf(rpcAllowNonPublic));
+    // rpc policy options
+    if (rpcPolicyPath != null) {
+      properties.setProperty("rpc.policy.path", rpcPolicyPath);
+    }
+    if (rpcPolicyPresets != null) {
+      properties.setProperty("rpc.policy.presets", rpcPolicyPresets);
+    }
+    properties.setProperty("rpc.default_action", rpcDefaultAction);
+    // TODO(#1001): Remove once dispatchers no longer inject rpc.allow_nonpublic
+    properties.setProperty("rpc.allow_nonpublic", "false");
 
     // in-flight tracking options
     if (drainTimeoutMs != null) {
