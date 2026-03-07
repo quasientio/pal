@@ -9,9 +9,13 @@
  */
 package io.quasient.pal.core.rpc.policy;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-import org.junit.Ignore;
+import io.quasient.pal.core.transport.MessageChannelType;
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.List;
 import org.junit.Test;
 
 /**
@@ -26,14 +30,14 @@ public class RpcPolicyTest {
    * evaluated operation.
    */
   @Test
-  @Ignore("Awaiting implementation in #991")
   public void shouldReturnDefaultActionWhenNoRulesMatch() {
-    // Given: RpcPolicy with defaultAction=DENY, empty rules
-    // When: evaluate("com.example.Foo", "bar", ZMQ_SOCKET_RPC, METHOD)
-    // Then: returns DENY
+    RpcPolicy policy = new RpcPolicy(List.of(), RpcPolicyAction.DENY);
 
-    // TODO(#991): Implement test logic
-    fail("Not yet implemented");
+    RpcPolicyAction result =
+        policy.evaluate(
+            "com.example.Foo", "bar", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD);
+
+    assertThat(result, is(RpcPolicyAction.DENY));
   }
 
   /**
@@ -41,14 +45,18 @@ public class RpcPolicyTest {
    * action is returned.
    */
   @Test
-  @Ignore("Awaiting implementation in #991")
   public void shouldReturnFirstMatchingRuleAction() {
-    // Given: Rules [pattern=com.example.**, action=ALLOW], [pattern=com.**, action=DENY]
-    // When: evaluate("com.example.Foo", "bar", ...)
-    // Then: returns ALLOW (first match wins)
+    List<RpcPolicyRule> rules =
+        List.of(
+            new RpcPolicyRule("com.example.**", null, RpcPolicyAction.ALLOW, null, null),
+            new RpcPolicyRule("com.**", null, RpcPolicyAction.DENY, null, null));
+    RpcPolicy policy = new RpcPolicy(rules, RpcPolicyAction.DENY);
 
-    // TODO(#991): Implement test logic
-    fail("Not yet implemented");
+    RpcPolicyAction result =
+        policy.evaluate(
+            "com.example.Foo", "bar", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD);
+
+    assertThat(result, is(RpcPolicyAction.ALLOW));
   }
 
   /**
@@ -56,15 +64,21 @@ public class RpcPolicyTest {
    * ordered rule list.
    */
   @Test
-  @Ignore("Awaiting implementation in #991")
   public void shouldFallThroughToSecondRule() {
-    // Given: Rules [pattern=com.example.api.**, action=ALLOW],
-    //              [pattern=com.example.**, action=DENY]
-    // When: evaluate("com.example.internal.Foo", "bar", ...)
-    // Then: returns DENY (doesn't match first rule, matches second)
+    List<RpcPolicyRule> rules =
+        List.of(
+            new RpcPolicyRule("com.example.api.**", null, RpcPolicyAction.ALLOW, null, null),
+            new RpcPolicyRule("com.example.**", null, RpcPolicyAction.DENY, null, null));
+    RpcPolicy policy = new RpcPolicy(rules, RpcPolicyAction.ALLOW);
 
-    // TODO(#991): Implement test logic
-    fail("Not yet implemented");
+    RpcPolicyAction result =
+        policy.evaluate(
+            "com.example.internal.Foo",
+            "bar",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD);
+
+    assertThat(result, is(RpcPolicyAction.DENY));
   }
 
   /**
@@ -72,15 +86,23 @@ public class RpcPolicyTest {
    * operations on other channels fall through to subsequent rules.
    */
   @Test
-  @Ignore("Awaiting implementation in #991")
   public void shouldFilterByChannelInRules() {
-    // Given: Rules [pattern=com.example.**, channel=ZMQ_SOCKET_RPC, action=ALLOW],
-    //              [pattern=com.example.**, action=DENY]
-    // When: evaluate(..., WEBSOCKET_RPC, ...)
-    // Then: returns DENY (first rule doesn't match due to channel, second does)
+    List<RpcPolicyRule> rules =
+        List.of(
+            new RpcPolicyRule(
+                "com.example.**",
+                null,
+                RpcPolicyAction.ALLOW,
+                EnumSet.of(MessageChannelType.ZMQ_SOCKET_RPC),
+                null),
+            new RpcPolicyRule("com.example.**", null, RpcPolicyAction.DENY, null, null));
+    RpcPolicy policy = new RpcPolicy(rules, RpcPolicyAction.ALLOW);
 
-    // TODO(#991): Implement test logic
-    fail("Not yet implemented");
+    RpcPolicyAction result =
+        policy.evaluate(
+            "com.example.Foo", "bar", MessageChannelType.WEBSOCKET_RPC, MemberCategory.METHOD);
+
+    assertThat(result, is(RpcPolicyAction.DENY));
   }
 
   /**
@@ -88,27 +110,38 @@ public class RpcPolicyTest {
    * categories, and operations with other categories fall through.
    */
   @Test
-  @Ignore("Awaiting implementation in #991")
   public void shouldFilterByMemberCategoryInRules() {
-    // Given: Rules [pattern=com.example.Config.**, members={FIELD_GET}, action=ALLOW],
-    //              [pattern=com.example.Config.**, action=DENY]
-    // When: evaluate(..., FIELD_SET)
-    // Then: returns DENY
+    List<RpcPolicyRule> rules =
+        List.of(
+            new RpcPolicyRule(
+                "com.example.Config.**",
+                null,
+                RpcPolicyAction.ALLOW,
+                null,
+                EnumSet.of(MemberCategory.FIELD_GET)),
+            new RpcPolicyRule("com.example.Config.**", null, RpcPolicyAction.DENY, null, null));
+    RpcPolicy policy = new RpcPolicy(rules, RpcPolicyAction.ALLOW);
 
-    // TODO(#991): Implement test logic
-    fail("Not yet implemented");
+    RpcPolicyAction result =
+        policy.evaluate(
+            "com.example.Config",
+            "debugMode",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.FIELD_SET);
+
+    assertThat(result, is(RpcPolicyAction.DENY));
   }
 
   /** Verifies that a policy with defaultAction=ALLOW returns ALLOW when no rules match. */
   @Test
-  @Ignore("Awaiting implementation in #991")
   public void shouldReturnAllowForDefaultAllowPolicy() {
-    // Given: defaultAction=ALLOW, no rules
-    // When: evaluate any operation
-    // Then: returns ALLOW
+    RpcPolicy policy = new RpcPolicy(List.of(), RpcPolicyAction.ALLOW);
 
-    // TODO(#991): Implement test logic
-    fail("Not yet implemented");
+    RpcPolicyAction result =
+        policy.evaluate(
+            "com.example.Foo", "bar", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD);
+
+    assertThat(result, is(RpcPolicyAction.ALLOW));
   }
 
   /**
@@ -116,14 +149,15 @@ public class RpcPolicyTest {
    * operations are denied even when the default action is ALLOW.
    */
   @Test
-  @Ignore("Awaiting implementation in #991")
   public void shouldEvaluatePresetsBeforeDefaultAction() {
-    // Given: Preset deny rules for System.exit, defaultAction=ALLOW
-    // When: evaluate("java.lang.System", "exit", ...)
-    // Then: returns DENY
+    List<RpcPolicyRule> presetRules = RpcPolicyPresets.getDenyUnsafeRules();
+    RpcPolicy policy = new RpcPolicy(presetRules, RpcPolicyAction.ALLOW);
 
-    // TODO(#991): Implement test logic
-    fail("Not yet implemented");
+    RpcPolicyAction result =
+        policy.evaluate(
+            "java.lang.System", "exit", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD);
+
+    assertThat(result, is(RpcPolicyAction.DENY));
   }
 
   /**
@@ -131,32 +165,51 @@ public class RpcPolicyTest {
    * override preset denials with explicit ALLOW rules.
    */
   @Test
-  @Ignore("Awaiting implementation in #991")
   public void shouldAllowUserRulesToOverridePresets() {
-    // Given: User rule [pattern=java.lang.Class.forName, action=ALLOW] placed BEFORE
-    //        preset deny-classloading rules
-    // When: evaluate("java.lang.Class", "forName", ...)
-    // Then: returns ALLOW (user rule wins because it's first)
+    List<RpcPolicyRule> rules = new ArrayList<>();
+    rules.add(new RpcPolicyRule("java.lang.Class", "forName", RpcPolicyAction.ALLOW, null, null));
+    rules.addAll(RpcPolicyPresets.getDenyClassloadingRules());
+    RpcPolicy policy = new RpcPolicy(rules, RpcPolicyAction.DENY);
 
-    // TODO(#991): Implement test logic
-    fail("Not yet implemented");
+    RpcPolicyAction result =
+        policy.evaluate(
+            "java.lang.Class", "forName", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD);
+
+    assertThat(result, is(RpcPolicyAction.ALLOW));
   }
 
   /**
    * Verifies that the deny-unsafe preset blocks all member types (methods, constructors, fields) on
-   * dangerous classes like {@code ProcessBuilder}, preventing bypass via field access (Risk #6).
+   * dangerous classes like {@code ProcessBuilder}, preventing bypass via field access.
    */
   @Test
-  @Ignore("Awaiting implementation in #991")
   public void shouldCheckAccessForAllDangerousClassMembers() {
-    // Given: Policy with deny-unsafe preset
-    // When: evaluate field GET on ProcessBuilder → DENY
-    // When: evaluate constructor on ProcessBuilder → DENY
-    // When: evaluate method on ProcessBuilder → DENY
-    // Then: All member types on dangerous classes are denied (Risk #6)
+    List<RpcPolicyRule> presetRules = RpcPolicyPresets.getDenyUnsafeRules();
+    RpcPolicy policy = new RpcPolicy(presetRules, RpcPolicyAction.ALLOW);
 
-    // TODO(#991): Implement test logic
-    fail("Not yet implemented");
+    assertThat(
+        policy.evaluate(
+            "java.lang.ProcessBuilder",
+            "command",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.FIELD_GET),
+        is(RpcPolicyAction.DENY));
+
+    assertThat(
+        policy.evaluate(
+            "java.lang.ProcessBuilder",
+            "start",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.CONSTRUCTOR),
+        is(RpcPolicyAction.DENY));
+
+    assertThat(
+        policy.evaluate(
+            "java.lang.ProcessBuilder",
+            "start",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD),
+        is(RpcPolicyAction.DENY));
   }
 
   /**
@@ -164,13 +217,15 @@ public class RpcPolicyTest {
    * form the path used for pattern matching.
    */
   @Test
-  @Ignore("Awaiting implementation in #991")
   public void shouldBuildClassMethodPath() {
-    // Given: A rule with pattern matching "com.example.Foo.bar"
-    // When: evaluate("com.example.Foo", "bar", ...)
-    // Then: The rule matches, confirming path is correctly built as className + "." + memberName
+    List<RpcPolicyRule> rules =
+        List.of(new RpcPolicyRule("com.example.Foo", "bar", RpcPolicyAction.ALLOW, null, null));
+    RpcPolicy policy = new RpcPolicy(rules, RpcPolicyAction.DENY);
 
-    // TODO(#991): Implement test logic
-    fail("Not yet implemented");
+    RpcPolicyAction result =
+        policy.evaluate(
+            "com.example.Foo", "bar", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD);
+
+    assertThat(result, is(RpcPolicyAction.ALLOW));
   }
 }
