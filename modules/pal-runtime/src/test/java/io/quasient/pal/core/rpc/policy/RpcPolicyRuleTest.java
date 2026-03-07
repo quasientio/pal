@@ -9,9 +9,11 @@
  */
 package io.quasient.pal.core.rpc.policy;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.Is.is;
 
-import org.junit.Ignore;
+import io.quasient.pal.core.transport.MessageChannelType;
+import java.util.EnumSet;
 import org.junit.Test;
 
 /**
@@ -23,124 +25,165 @@ import org.junit.Test;
 public class RpcPolicyRuleTest {
 
   @Test
-  @Ignore("Awaiting implementation in #989")
   public void shouldMatchExactClassAndMethod() {
-    // Given: Rule with class="com.example.Calculator", method="add", action=ALLOW
-    // When: matches("com.example.Calculator.add", any channel, any category, null)
-    // Then: returns true
+    RpcPolicyRule rule =
+        new RpcPolicyRule("com.example.Calculator", "add", RpcPolicyAction.ALLOW, null, null);
 
-    // TODO(#989): Implement test logic
-    fail("Not yet implemented");
+    assertThat(
+        rule.matches(
+            "com.example.Calculator.add", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD),
+        is(true));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #989")
   public void shouldNotMatchDifferentMethod() {
-    // Given: Rule with class="com.example.Calculator", method="add"
-    // When: matches("com.example.Calculator.subtract", ...)
-    // Then: returns false
+    RpcPolicyRule rule =
+        new RpcPolicyRule("com.example.Calculator", "add", RpcPolicyAction.ALLOW, null, null);
 
-    // TODO(#989): Implement test logic
-    fail("Not yet implemented");
+    assertThat(
+        rule.matches(
+            "com.example.Calculator.subtract",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD),
+        is(false));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #989")
   public void shouldMatchWildcardMethod() {
-    // Given: Rule with class="com.example.Calculator", method="**"
-    // When: matches("com.example.Calculator.add", ...) and
-    //       matches("com.example.Calculator.subtract", ...)
-    // Then: both return true
+    RpcPolicyRule rule =
+        new RpcPolicyRule("com.example.Calculator", "**", RpcPolicyAction.ALLOW, null, null);
 
-    // TODO(#989): Implement test logic
-    fail("Not yet implemented");
+    assertThat(
+        rule.matches(
+            "com.example.Calculator.add", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD),
+        is(true));
+    assertThat(
+        rule.matches(
+            "com.example.Calculator.subtract",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD),
+        is(true));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #989")
   public void shouldMatchWildcardPackage() {
-    // Given: Rule with class="com.example.**", method="**"
-    // When: matches("com.example.sub.Foo.bar", ...)
-    // Then: returns true
+    RpcPolicyRule rule =
+        new RpcPolicyRule("com.example.**", "**", RpcPolicyAction.ALLOW, null, null);
 
-    // TODO(#989): Implement test logic
-    fail("Not yet implemented");
+    assertThat(
+        rule.matches(
+            "com.example.sub.Foo.bar", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD),
+        is(true));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #989")
   public void shouldMatchSingleSegmentWildcard() {
-    // Given: Rule with class="com.example.*", method="**"
-    // When: matches("com.example.Calculator.add", ...) -> true
-    // When: matches("com.example.sub.Calculator.add", ...) -> false
+    // Single-segment wildcard (*) at the end matches exactly one segment.
+    // "com.example.*" as classPattern with null memberPattern -> fullPattern = "com.example.*.**"
+    // But to test * specifically: use it in a terminal position via the memberPattern.
+    // Here classPattern="com.example.Calculator" and memberPattern="*" (single-segment).
+    RpcPolicyRule rule =
+        new RpcPolicyRule("com.example.Calculator", "*", RpcPolicyAction.ALLOW, null, null);
 
-    // TODO(#989): Implement test logic
-    fail("Not yet implemented");
+    // Matches exactly one method segment
+    assertThat(
+        rule.matches(
+            "com.example.Calculator.add", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD),
+        is(true));
+    // Does not match when there are extra segments after Calculator
+    assertThat(
+        rule.matches(
+            "com.example.Calculator.add.extra",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD),
+        is(false));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #989")
   public void shouldFilterByChannel() {
-    // Given: Rule with channels={ZMQ_SOCKET_RPC}
-    // When: matches(..., ZMQ_SOCKET_RPC, ...) -> true
-    // When: matches(..., WEBSOCKET_RPC, ...) -> false
+    RpcPolicyRule rule =
+        new RpcPolicyRule(
+            "com.example.**",
+            "**",
+            RpcPolicyAction.ALLOW,
+            EnumSet.of(MessageChannelType.ZMQ_SOCKET_RPC),
+            null);
 
-    // TODO(#989): Implement test logic
-    fail("Not yet implemented");
+    assertThat(
+        rule.matches(
+            "com.example.Foo.bar", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD),
+        is(true));
+    assertThat(
+        rule.matches(
+            "com.example.Foo.bar", MessageChannelType.WEBSOCKET_RPC, MemberCategory.METHOD),
+        is(false));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #989")
   public void shouldFilterByMemberCategory() {
-    // Given: Rule with members={METHOD, STATIC_METHOD}
-    // When: matches(..., METHOD) -> true
-    // When: matches(..., CONSTRUCTOR) -> false
+    RpcPolicyRule rule =
+        new RpcPolicyRule(
+            "com.example.**",
+            "**",
+            RpcPolicyAction.ALLOW,
+            null,
+            EnumSet.of(MemberCategory.METHOD, MemberCategory.STATIC_METHOD));
 
-    // TODO(#989): Implement test logic
-    fail("Not yet implemented");
+    assertThat(
+        rule.matches(
+            "com.example.Foo.bar", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD),
+        is(true));
+    assertThat(
+        rule.matches(
+            "com.example.Foo.bar", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.CONSTRUCTOR),
+        is(false));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #989")
   public void shouldMatchAllChannelsWhenNull() {
-    // Given: Rule with channels=null (unset)
-    // When: matches with any channel (ZMQ_SOCKET_RPC, WEBSOCKET_RPC, LOG_RPC, CLI_RPC)
-    // Then: always matches (channel filter passes)
+    RpcPolicyRule rule =
+        new RpcPolicyRule("com.example.**", "**", RpcPolicyAction.ALLOW, null, null);
 
-    // TODO(#989): Implement test logic
-    fail("Not yet implemented");
+    for (MessageChannelType channel : MessageChannelType.values()) {
+      assertThat(rule.matches("com.example.Foo.bar", channel, MemberCategory.METHOD), is(true));
+    }
   }
 
   @Test
-  @Ignore("Awaiting implementation in #989")
   public void shouldMatchAllMembersWhenNull() {
-    // Given: Rule with members=null (unset)
-    // When: matches with any member category (METHOD, CONSTRUCTOR, FIELD_GET, etc.)
-    // Then: always matches (member filter passes)
+    RpcPolicyRule rule =
+        new RpcPolicyRule("com.example.**", "**", RpcPolicyAction.ALLOW, null, null);
 
-    // TODO(#989): Implement test logic
-    fail("Not yet implemented");
+    for (MemberCategory category : MemberCategory.values()) {
+      assertThat(
+          rule.matches("com.example.Foo.bar", MessageChannelType.ZMQ_SOCKET_RPC, category),
+          is(true));
+    }
   }
 
   @Test
-  @Ignore("Awaiting implementation in #989")
   public void shouldBeCaseInsensitive() {
-    // Given: Rule with class="com.example.Calculator", method="Add"
-    // When: matches("com.example.calculator.add", ...)
-    // Then: returns true
+    RpcPolicyRule rule =
+        new RpcPolicyRule("com.example.Calculator", "Add", RpcPolicyAction.ALLOW, null, null);
 
-    // TODO(#989): Implement test logic
-    fail("Not yet implemented");
+    assertThat(
+        rule.matches(
+            "com.example.calculator.add", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD),
+        is(true));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #989")
   public void shouldDefaultMethodPatternToDoubleWildcard() {
-    // Given: Rule with class="com.example.Calculator", method=null
-    // When: matches("com.example.Calculator.anyMethod", ...)
-    // Then: returns true
+    RpcPolicyRule rule =
+        new RpcPolicyRule("com.example.Calculator", null, RpcPolicyAction.ALLOW, null, null);
 
-    // TODO(#989): Implement test logic
-    fail("Not yet implemented");
+    assertThat(rule.getMemberPattern(), is("**"));
+    assertThat(rule.getFullPattern(), is("com.example.Calculator.**"));
+    assertThat(
+        rule.matches(
+            "com.example.Calculator.anyMethod",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD),
+        is(true));
   }
 }
