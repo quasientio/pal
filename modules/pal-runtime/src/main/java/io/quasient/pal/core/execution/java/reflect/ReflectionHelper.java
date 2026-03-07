@@ -12,7 +12,6 @@ package io.quasient.pal.core.execution.java.reflect;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.quasient.pal.core.execution.java.AmbiguousCallException;
 import jakarta.inject.Inject;
-import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Member;
@@ -70,8 +69,9 @@ public class ReflectionHelper {
   /**
    * Constructs a ReflectionHelper using the default configuration.
    *
-   * <p>Non-public member lookup is configured based on a predetermined default flag.
+   * <p>Non-public member lookup is disabled. Only public members are resolved during RPC dispatch.
    */
+  @Inject
   public ReflectionHelper() {
     this(ALLOW_NON_PUBLIC_DEFAULT);
   }
@@ -84,20 +84,6 @@ public class ReflectionHelper {
    */
   public ReflectionHelper(boolean allowNonPublic) {
     this.allowNonPublic = allowNonPublic;
-  }
-
-  /**
-   * Constructs a ReflectionHelper with a configuration provided via dependency injection.
-   *
-   * <p>The provided string is parsed as a boolean to determine if non-public member lookup is
-   * permitted.
-   *
-   * @param rpcAllowNonpublicStr a string representing a boolean value ("true" or "false") to enable
-   *     non-public member access.
-   */
-  @Inject
-  public ReflectionHelper(@Named("rpc.allow_nonpublic") String rpcAllowNonpublicStr) {
-    this.allowNonPublic = Boolean.parseBoolean(rpcAllowNonpublicStr);
   }
 
   /**

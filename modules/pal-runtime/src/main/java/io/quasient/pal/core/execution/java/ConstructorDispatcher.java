@@ -24,7 +24,6 @@ import io.quasient.pal.messages.colfer.Parameter;
 import io.quasient.pal.messages.types.MessageType;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
 import jakarta.inject.Inject;
-import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Constructor;
@@ -54,7 +53,6 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
    * @param runOptions the run options governing enabled features
    * @param messageBuilder builder used to create execution messages for dispatching
    * @param gateway instance of {@link OutboundMessageGateway} used to facilitate message transport
-   * @param allowNonPublicAccess flag indicating whether non-public constructors may be accessed
    * @param reflectionHelper helper utility for performing reflection-based lookups
    * @param objectLookupStore store used for managing object references during dispatch
    */
@@ -64,14 +62,12 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
       Set<RunOptions> runOptions,
       MessageBuilder messageBuilder,
       OutboundMessageGateway gateway,
-      @Named("rpc.allow_nonpublic") String allowNonPublicAccess,
       ReflectionHelper reflectionHelper,
       ObjectLookupStore objectLookupStore) {
     setPeerUuid(peerUuid);
     setRunOptions(runOptions);
     setMessageBuilder(messageBuilder);
     setMessageGateway(gateway);
-    setAllowNonPublicAccess(allowNonPublicAccess);
     setReflectionHelper(reflectionHelper);
     setObjectLookupStore(objectLookupStore);
   }

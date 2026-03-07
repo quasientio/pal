@@ -1430,9 +1430,6 @@ public class Main implements Callable<Integer> {
       properties.setProperty("rpc.policy.presets", rpcPolicyPresets);
     }
     properties.setProperty("rpc.default_action", rpcDefaultAction);
-    // TODO(#1001): Remove once dispatchers no longer inject rpc.allow_nonpublic
-    properties.setProperty("rpc.allow_nonpublic", "false");
-
     // in-flight tracking options
     if (drainTimeoutMs != null) {
       properties.setProperty("intercept.drain.timeout.ms", String.valueOf(drainTimeoutMs));

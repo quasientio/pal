@@ -61,7 +61,12 @@ abstract class AbstractDispatcher {
 
   /**
    * Flag indicating whether non-public methods and fields can be accessed during RPC invocation.
+   * Always {@code false} since the {@code --rpc-allow-nonpublic} flag has been removed; non-public
+   * access is only permitted during replay injection.
    */
+  @SuppressFBWarnings(
+      value = "UWF_UNWRITTEN_PUBLIC_OR_PROTECTED_FIELD",
+      justification = "Set directly by tests in same package; will be replaced by RpcPolicyChecker")
   protected boolean allowNonPublicAccess;
 
   /**
@@ -176,26 +181,10 @@ abstract class AbstractDispatcher {
   }
 
   /**
-   * Configures whether non-public access is allowed during RPC invocations.
-   *
-   * @param allowNonPublicAccess a String representing a boolean value ("true" or "false") that
-   *     enables or disables non-public member access.
-   */
-  @Inject
-  final void setAllowNonPublicAccess(@Named("rpc.allow_nonpublic") String allowNonPublicAccess) {
-    this.allowNonPublicAccess = Boolean.parseBoolean(allowNonPublicAccess);
-  }
-
-  /**
    * Returns whether non-public access should be allowed for the current operation.
    *
-   * <p>This returns {@code true} if either:
-   *
-   * <ul>
-   *   <li>The {@code rpc.allow_nonpublic} configuration is set to {@code true}, OR
-   *   <li>The current thread is processing a replay injection (operations that originally ran
-   *       inside the JVM with full access)
-   * </ul>
+   * <p>Returns {@code true} only when the current thread is processing a replay injection
+   * (operations that originally ran inside the JVM with full access).
    *
    * @return {@code true} if non-public access should be allowed
    */

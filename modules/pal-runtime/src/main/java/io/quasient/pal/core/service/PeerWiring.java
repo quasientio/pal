@@ -48,6 +48,9 @@ import io.quasient.pal.core.replay.ReplayObjectStore;
 import io.quasient.pal.core.replay.ReplayPolicy;
 import io.quasient.pal.core.replay.ReplayPolicyParser;
 import io.quasient.pal.core.replay.SideEffectAnalyzer;
+import io.quasient.pal.core.rpc.policy.RpcPolicy;
+import io.quasient.pal.core.rpc.policy.RpcPolicyChecker;
+import io.quasient.pal.core.rpc.policy.RpcPolicyParser;
 import io.quasient.pal.core.runtime.objects.ConcurrentHashMapObjectLookupStore;
 import io.quasient.pal.core.runtime.objects.ObjectLookupStore;
 import io.quasient.pal.core.transport.SourceLogReader;
@@ -231,6 +234,9 @@ public class PeerWiring extends AbstractModule {
     // Intercept coordination components
     bind(InFlightDispatchTracker.class).asEagerSingleton();
     bind(InterceptActivationCoordinator.class).asEagerSingleton();
+
+    // RPC policy checker
+    bind(RpcPolicyChecker.class).in(Singleton.class);
 
     // AspectProxy and DispatchForwarder's fields are static
     requestStaticInjection(AspectProxyDispatcher.class);
@@ -853,6 +859,44 @@ public class PeerWiring extends AbstractModule {
 
     return ReplayPolicyParser.fromOptions(
         policyPath, shieldIo, reExecPatterns, stubPatterns, stubAllElse);
+  }
+
+  /**
+   * Provides the singleton {@link RpcPolicy} for the peer.
+   *
+   * <p>Delegates to {@link #buildRpcPolicy()} to construct the policy from CLI properties ({@code
+   * rpc.policy.path}, {@code rpc.policy.presets}, {@code rpc.default_action}).
+   *
+   * @return the constructed RPC policy
+   */
+  @SuppressWarnings("unused")
+  @Provides
+  @Singleton
+  RpcPolicy provideRpcPolicy() {
+    return buildRpcPolicy();
+  }
+
+  /**
+   * Builds an {@link RpcPolicy} from the configured properties.
+   *
+   * <p>Reads the RPC policy configuration from properties set by the CLI layer ({@code
+   * rpc.policy.path}, {@code rpc.policy.presets}, {@code rpc.default_action}). If no policy-related
+   * properties are set, returns a default deny-all policy with no rules.
+   *
+   * @return the constructed RPC policy
+   */
+  private RpcPolicy buildRpcPolicy() {
+    String policyPath = properties.getProperty("rpc.policy.path");
+    String presets = properties.getProperty("rpc.policy.presets");
+    String defaultAction = properties.getProperty("rpc.default_action");
+
+    boolean hasAnyConfig = policyPath != null || presets != null;
+
+    if (!hasAnyConfig && defaultAction == null) {
+      return new RpcPolicy();
+    }
+
+    return RpcPolicyParser.fromOptions(policyPath, presets, defaultAction);
   }
 
   /**

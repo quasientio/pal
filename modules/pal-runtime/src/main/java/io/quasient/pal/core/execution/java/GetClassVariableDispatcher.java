@@ -16,7 +16,6 @@ import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.types.MessageType;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
 import jakarta.inject.Inject;
-import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.lang.reflect.AccessibleObject;
 import java.util.List;
@@ -44,8 +43,6 @@ public class GetClassVariableDispatcher extends GetFieldDispatcher {
    * @param runOptions the run options governing enabled features
    * @param messageBuilder the builder responsible for constructing execution messages
    * @param gateway instance of {@link OutboundMessageGateway} handling message routing
-   * @param allowNonPublicAccess a configuration flag (as String) indicating if non-public fields
-   *     may be accessed
    * @param objectLookupStore a store for tracking and retrieving objects by identifier
    */
   @Inject
@@ -54,13 +51,11 @@ public class GetClassVariableDispatcher extends GetFieldDispatcher {
       Set<RunOptions> runOptions,
       MessageBuilder messageBuilder,
       OutboundMessageGateway gateway,
-      @Named("rpc.allow_nonpublic") String allowNonPublicAccess,
       ObjectLookupStore objectLookupStore) {
     setPeerUuid(peerUuid);
     setRunOptions(runOptions);
     setMessageBuilder(messageBuilder);
     setMessageGateway(gateway);
-    setAllowNonPublicAccess(allowNonPublicAccess);
     setObjectLookupStore(objectLookupStore);
   }
 

@@ -24,7 +24,6 @@ import io.github.classgraph.MethodParameterInfo;
 import io.github.classgraph.ScanResult;
 import io.quasient.pal.core.execution.java.CustomClassloader;
 import jakarta.inject.Inject;
-import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
@@ -77,18 +76,16 @@ public class ClassMetadataSerializer {
   @Nullable private final CustomClassloader customClassloader;
 
   /**
-   * Constructs a ClassMetadataSerializer with the specified non-public scanning option and optional
-   * custom classloader.
+   * Constructs a ClassMetadataSerializer with an optional custom classloader.
    *
-   * @param rpcAllowNonpublicStr string value that is parsed to determine if non-public members
-   *     should be scanned.
+   * <p>Non-public member scanning is disabled (the {@code --rpc-allow-nonpublic} flag has been
+   * removed). Only public members are included in metadata output.
+   *
    * @param customClassloader optional custom classloader to be used for scanning; may be null.
    */
   @Inject
-  public ClassMetadataSerializer(
-      @Named("rpc.allow_nonpublic") String rpcAllowNonpublicStr,
-      @Nullable CustomClassloader customClassloader) {
-    this.scanNonPublic = Boolean.parseBoolean(rpcAllowNonpublicStr);
+  public ClassMetadataSerializer(@Nullable CustomClassloader customClassloader) {
+    this.scanNonPublic = false;
     this.customClassloader = customClassloader;
   }
 
