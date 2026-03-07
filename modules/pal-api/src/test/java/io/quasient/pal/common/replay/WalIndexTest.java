@@ -281,9 +281,9 @@ public class WalIndexTest {
     assertThat(index.getStructuralIssues(), hasItem("Unmatched operation at offset 0"));
   }
 
-  // ===========================================================================================
-  // Entry-point classification tests (Issue #899 — specs for #900 implementation)
-  // ===========================================================================================
+  // ================================
+  // Entry-point classification tests
+  // ================================
 
   /**
    * Verifies that {@code getInputThreadNames()} returns threads that have at least one entry-point
