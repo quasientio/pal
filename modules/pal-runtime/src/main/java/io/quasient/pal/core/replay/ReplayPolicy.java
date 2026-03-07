@@ -25,12 +25,7 @@ import java.util.List;
  */
 public class ReplayPolicy {
 
-  /**
-   * The action the replay system should take for a given operation.
-   *
-   * <p>All values are defined for forward compatibility. Phase 1 only implements {@link
-   * #RE_EXECUTE}; Phase 4 adds configurable policy support for all actions.
-   */
+  /** The action the replay system should take for a given operation. */
   public enum ReplayAction {
     /** Execute the operation live and verify the return value against the WAL. */
     RE_EXECUTE,
@@ -54,12 +49,7 @@ public class ReplayPolicy {
   /** The fallback action when no rule matches. */
   private final ReplayAction defaultAction;
 
-  /**
-   * Creates a replay policy with default behavior (no rules, {@link ReplayAction#RE_EXECUTE}).
-   *
-   * <p>This constructor preserves backward compatibility with Phase 1 behavior where all operations
-   * are re-executed.
-   */
+  /** Creates a replay policy with default behavior (no rules, {@link ReplayAction#RE_EXECUTE}). */
   public ReplayPolicy() {
     this(Collections.emptyList(), ReplayAction.RE_EXECUTE);
   }

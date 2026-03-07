@@ -84,8 +84,21 @@ public class SpanFieldMutationReplayer {
 
     String className = put.getClazz().getName();
     String fieldName = put.getField().getName();
-    Object value =
-        reconstructFieldValue(put.getValueObject(), put.getValueObjectRef(), objectStore);
+    Object value;
+    try {
+      value = reconstructFieldValue(put.getValueObject(), put.getValueObjectRef(), objectStore);
+    } catch (UnsupportedOperationException | ClassNotFoundException e) {
+      logger.warn(
+          "Skipping PUT_FIELD {}.{} on ref {}: value not reconstructable ({})",
+          className,
+          fieldName,
+          targetRef,
+          e.getMessage());
+      if (put.getValueObjectRef() != 0) {
+        objectStore.registerPhantom(put.getValueObjectRef());
+      }
+      return;
+    }
 
     try {
       Class<?> clazz =
@@ -116,8 +129,20 @@ public class SpanFieldMutationReplayer {
   private void replayStaticFieldPut(StaticFieldPut put, ReplayObjectStore objectStore) {
     String className = put.getClazz().getName();
     String fieldName = put.getField().getName();
-    Object value =
-        reconstructFieldValue(put.getValueObject(), put.getValueObjectRef(), objectStore);
+    Object value;
+    try {
+      value = reconstructFieldValue(put.getValueObject(), put.getValueObjectRef(), objectStore);
+    } catch (UnsupportedOperationException | ClassNotFoundException e) {
+      logger.warn(
+          "Skipping PUT_STATIC {}.{}: value not reconstructable ({})",
+          className,
+          fieldName,
+          e.getMessage());
+      if (put.getValueObjectRef() != 0) {
+        objectStore.registerPhantom(put.getValueObjectRef());
+      }
+      return;
+    }
 
     try {
       Class<?> clazz =
@@ -139,16 +164,18 @@ public class SpanFieldMutationReplayer {
    *   <li>If {@code valueObjRef != 0}, attempt to resolve from the object store.
    *   <li>If the object store lookup fails or the ref is zero, fall back to {@link
    *       Unwrapper#unwrapObject(Obj)}.
-   *   <li>Return {@code null} for non-reconstructable values.
    * </ol>
    *
    * @param valueObj the serialized value object from the WAL (may be null)
    * @param valueObjRef the WAL object ref for the value (0 if none)
    * @param objectStore the replay object store for resolving refs
-   * @return the reconstructed value, or {@code null} if not reconstructable
+   * @return the reconstructed value, or {@code null} for genuine null values
+   * @throws UnsupportedOperationException if the value is a reference-only object that cannot be
+   *     deserialized
+   * @throws ClassNotFoundException if the value's type class cannot be found
    */
-  private Object reconstructFieldValue(
-      Obj valueObj, int valueObjRef, ReplayObjectStore objectStore) {
+  private Object reconstructFieldValue(Obj valueObj, int valueObjRef, ReplayObjectStore objectStore)
+      throws ClassNotFoundException {
     if (valueObjRef != 0) {
       Object resolved = objectStore.resolveOrNull(valueObjRef);
       if (resolved != null) {
@@ -158,11 +185,11 @@ public class SpanFieldMutationReplayer {
     if (valueObj == null || valueObj.getIsNull()) {
       return null;
     }
-    try {
-      return Unwrapper.unwrapObject(valueObj);
-    } catch (Exception e) {
-      logger.debug("Cannot reconstruct field value: {}", e.getMessage());
-      return null;
+    // Reference-only: has a ref but no serialized value — unreconstructable
+    if (valueObj.getRef() != 0 && (valueObj.getValue() == null || valueObj.getValue().isEmpty())) {
+      throw new UnsupportedOperationException(
+          "Cannot reconstruct reference-only field value (ref=" + valueObjRef + ")");
     }
+    return Unwrapper.unwrapObject(valueObj);
   }
 }

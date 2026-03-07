@@ -11,7 +11,6 @@ package io.quasient.pal.core.replay;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.nullValue;
 
 import io.quasient.pal.common.replay.Span;
 import io.quasient.pal.common.replay.WalEntry;
@@ -127,11 +126,11 @@ public class SpanFieldMutationReplayerTest {
   }
 
   /**
-   * Verifies that a PUT_FIELD whose value is a reference-only object (no serialized data) does not
-   * throw and sets the field to null.
+   * Verifies that a PUT_FIELD whose value is a reference-only object (no serialized data) skips the
+   * mutation (preserving the original field value) and registers the value ref as phantom.
    */
   @Test
-  public void skipsUnreconstructableValue() {
+  public void skipsUnreconstructableValueAndRegistersPhantom() {
     // Given: Span containing PUT_FIELD with reference-only value (no serialized data)
     InstanceTarget target = new InstanceTarget();
     target.name = "original";
@@ -150,8 +149,9 @@ public class SpanFieldMutationReplayerTest {
     // When: Replayed
     replayer.replayMutations(index, span, objectStore);
 
-    // Then: No exception thrown; field set to null (ref 77 unresolvable, no serialized data)
-    assertThat(target.name, is(nullValue()));
+    // Then: Mutation skipped; field retains original value; value ref registered as phantom
+    assertThat(target.name, is("original"));
+    assertThat(objectStore.isPhantom(77), is(true));
   }
 
   /**
