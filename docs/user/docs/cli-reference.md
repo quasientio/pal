@@ -109,6 +109,37 @@ Enable `--wal-all-incoming-rpc` when:
 - You are consuming from one log (source) and writing to a different log (WAL)
 - You want replayed messages to be re-published to the WAL for downstream consumers
 
+### RPC Policy Flags
+
+Control which operations remote callers can invoke via RPC. See [RPC Policy](concepts/rpc-policy.md) for full documentation.
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--rpc-policy <path>` | -- | Path to RPC access policy YAML file |
+| `--rpc-policy-preset <names>` | -- | Comma-separated preset names to enable (e.g., `deny-unsafe,deny-jdk-internals`) |
+| `--rpc-default-action <action>` | `ALLOW` | Default action when no rule matches: `ALLOW` or `DENY` |
+
+When no policy flags are specified, all public RPC operations are allowed (backward-compatible default). When a policy is configured, it gates every incoming RPC message before dispatch.
+
+Available presets: `deny-unsafe`, `deny-jdk-internals`, `deny-classloading`, `deny-reflection`, `deny-serialization`, `deny-scripting`, `deny-pal-internals`.
+
+```bash
+# Block dangerous operations
+pal run -d localhost:2379 --zmq-rpc auto \
+  --rpc-policy-preset deny-unsafe,deny-jdk-internals \
+  -cp app.jar com.example.Main
+
+# Use a YAML policy file
+pal run -d localhost:2379 --zmq-rpc auto \
+  --rpc-policy rpc-policy.yaml \
+  -cp app.jar com.example.Main
+
+# Deny by default, allow only via policy rules
+pal run -d localhost:2379 --zmq-rpc auto \
+  --rpc-policy rpc-policy.yaml --rpc-default-action DENY \
+  -cp app.jar com.example.Main
+```
+
 ### Examples
 
 ```bash

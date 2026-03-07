@@ -292,11 +292,21 @@ Consumer processes in batch.
 
 ### Method Access Control
 
-No built-in authorization. To restrict access:
+PAL provides an [RPC policy system](rpc-policy.md) that controls which operations remote callers can invoke. Policies are defined in YAML files and support:
 
-1. Use network firewalls
-2. Implement authorization in your code
-3. Use interception to add security checks
+- Ant-style pattern matching for classes and methods
+- Built-in safety presets that block dangerous operations (`System.exit`, `Runtime.exec`, etc.)
+- Channel-scoped rules (different policies for ZMQ vs WebSocket)
+- Member category filtering (methods, constructors, fields)
+
+```bash
+# Quick setup: block dangerous operations
+pal run -d localhost:2379 --zmq-rpc auto \
+  --rpc-policy-preset deny-unsafe,deny-jdk-internals \
+  -cp app.jar com.example.Main
+```
+
+See [RPC Policy](rpc-policy.md) for the full guide.
 
 ## Common Patterns
 
