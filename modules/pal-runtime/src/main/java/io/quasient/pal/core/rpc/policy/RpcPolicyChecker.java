@@ -56,6 +56,8 @@ public class RpcPolicyChecker {
    *
    * <p>Operations on the {@link MessageChannelType#REPLAY_INJECTION} channel are always permitted
    * without consulting the policy, since they represent replayed operations that already executed.
+   * Similarly, {@link MessageChannelType#CLI_RPC} operations are exempt because they represent the
+   * peer invoking its own main class — a local operation, not a remote call.
    *
    * <p>For all other channels, the checker extracts the class name and member name from the message
    * via {@link ExecMessageUtils}, maps the {@link MessageType} to a {@link MemberCategory}, and
@@ -74,7 +76,7 @@ public class RpcPolicyChecker {
    * @throws RpcAccessDeniedException if the policy denies access
    */
   public void checkAccess(ExecMessage msg, MessageType type, MessageChannelType channel) {
-    if (channel == MessageChannelType.REPLAY_INJECTION) {
+    if (channel == MessageChannelType.REPLAY_INJECTION || channel == MessageChannelType.CLI_RPC) {
       return;
     }
 

@@ -196,6 +196,12 @@ public abstract class AbstractIntegrationTest {
     // Add the test arguments
     command.addAll(Arrays.asList(args));
 
+    // Default RPC policy to ALLOW for tests, unless explicitly specified
+    if (!Arrays.asList(args).contains("--rpc-default-action")) {
+      command.add("--rpc-default-action");
+      command.add("ALLOW");
+    }
+
     logger.info("Running command: {}", String.join(" ", command));
 
     ProcessBuilder pb = new ProcessBuilder(command);
@@ -384,6 +390,12 @@ public abstract class AbstractIntegrationTest {
 
     // Add given args
     command.addAll(Arrays.asList(args));
+
+    // Default RPC policy to ALLOW for tests, unless explicitly specified
+    if (!Arrays.asList(args).contains("--rpc-default-action")) {
+      command.add("--rpc-default-action");
+      command.add("ALLOW");
+    }
 
     logger.info("Launching new peer: {}", String.join(" ", command));
 

@@ -221,7 +221,6 @@ public class ConcurrentCallbackTestSuite extends AbstractIntegrationTest {
             String.valueOf(ZMQ_RPC_PORT),
             "--rpc-threads",
             String.valueOf(RPC_THREAD_COUNT),
-            "--rpc-allow-nonpublic",
             "--interceptable",
             "--log",
             "auto",

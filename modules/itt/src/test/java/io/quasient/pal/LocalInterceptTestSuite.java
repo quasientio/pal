@@ -232,7 +232,6 @@ public class LocalInterceptTestSuite extends AbstractIntegrationTest {
             "5659",
             "--rpc-threads",
             "3",
-            "--rpc-allow-nonpublic",
             "--interceptable",
             "--log",
             "auto",

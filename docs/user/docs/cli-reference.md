@@ -117,9 +117,9 @@ Control which operations remote callers can invoke via RPC. See [RPC Policy](con
 |--------|---------|-------------|
 | `--rpc-policy <path>` | -- | Path to RPC access policy YAML file |
 | `--rpc-policy-preset <names>` | -- | Comma-separated preset names to enable (e.g., `deny-unsafe,deny-jdk-internals`) |
-| `--rpc-default-action <action>` | `ALLOW` | Default action when no rule matches: `ALLOW` or `DENY` |
+| `--rpc-default-action <action>` | `DENY` | Default action when no rule matches: `ALLOW` or `DENY` |
 
-When no policy flags are specified, all public RPC operations are allowed (backward-compatible default). When a policy is configured, it gates every incoming RPC message before dispatch.
+When no policy flags are specified, all RPC operations are denied by default. To allow RPC calls, configure a policy with explicit ALLOW rules or pass `--rpc-default-action ALLOW`. When a policy is configured, it gates every incoming RPC message before dispatch.
 
 Available presets: `deny-unsafe`, `deny-jdk-internals`, `deny-classloading`, `deny-reflection`, `deny-serialization`, `deny-scripting`, `deny-pal-internals`.
 

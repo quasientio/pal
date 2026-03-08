@@ -68,17 +68,17 @@ public class MainRpcPolicyTest {
     assertThat(field.get(main), is("ALLOW"));
   }
 
-  /** Tests that --rpc-default-action defaults to ALLOW when not specified. */
+  /** Tests that --rpc-default-action defaults to DENY when not specified. */
   @Test
-  public void shouldDefaultRpcDefaultActionToAllow() throws Exception {
+  public void shouldDefaultRpcDefaultActionToDeny() throws Exception {
     // Given: CLI args without --rpc-default-action
     Main main = new Main();
     new CommandLine(main).parseArgs();
 
-    // Then: rpcDefaultAction defaults to "ALLOW"
+    // Then: rpcDefaultAction defaults to "DENY"
     Field field = Main.class.getDeclaredField("rpcDefaultAction");
     field.setAccessible(true);
-    assertThat(field.get(main), is("ALLOW"));
+    assertThat(field.get(main), is("DENY"));
   }
 
   /** Tests that the removed --rpc-allow-nonpublic flag is no longer accepted. */
@@ -138,13 +138,13 @@ public class MainRpcPolicyTest {
     method.setAccessible(true);
     method.invoke(main);
 
-    // Then: Optional properties are absent, default action is ALLOW
+    // Then: Optional properties are absent, default action is DENY
     Field propertiesField = Main.class.getDeclaredField("properties");
     propertiesField.setAccessible(true);
     Properties properties = (Properties) propertiesField.get(main);
 
     assertThat(properties.getProperty("rpc.policy.path"), is(nullValue()));
     assertThat(properties.getProperty("rpc.policy.presets"), is(nullValue()));
-    assertThat(properties.getProperty("rpc.default_action"), is("ALLOW"));
+    assertThat(properties.getProperty("rpc.default_action"), is("DENY"));
   }
 }

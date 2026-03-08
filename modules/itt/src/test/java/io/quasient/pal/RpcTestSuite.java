@@ -149,7 +149,6 @@ public class RpcTestSuite extends AbstractIntegrationTest {
             "7789",
             "--rpc-threads",
             "3",
-            "--rpc-allow-nonpublic",
             "--wal-all-incoming-rpc",
             "--source-log",
             SHARED_PEER_SOURCE_LOG,

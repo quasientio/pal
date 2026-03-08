@@ -231,9 +231,9 @@ The `LOG_AND_*` actions are useful for auditing or for testing a policy before e
 
 ## Default Behavior
 
-When **no policy is configured** (no `--rpc-policy`, no `--rpc-policy-preset`, no `--rpc-default-action`), all public RPC operations are allowed. This preserves backward compatibility with peers that have no policy.
+When **no policy is configured** (no `--rpc-policy`, no `--rpc-policy-preset`, no `--rpc-default-action`), all RPC operations are denied by default. To allow RPC calls, configure a policy with explicit ALLOW rules or pass `--rpc-default-action ALLOW`.
 
-When a policy **is** configured, the `defaultAction` applies to any operation that doesn't match a rule. Use `DENY` for a secure allowlist model, `ALLOW` for a blocklist model.
+When a policy **is** configured, the `defaultAction` applies to any operation that doesn't match a rule. Use `DENY` (the default) for a secure allowlist model, `ALLOW` for a blocklist model.
 
 ## Metadata Filtering
 
@@ -308,7 +308,7 @@ rules:
 |------|-------------|
 | `--rpc-policy <path>` | Path to RPC policy YAML file |
 | `--rpc-policy-preset <names>` | Comma-separated preset names (e.g., `deny-unsafe,deny-jdk-internals`) |
-| `--rpc-default-action <action>` | Default action when no rule matches: `ALLOW` or `DENY` (default: `ALLOW`) |
+| `--rpc-default-action <action>` | Default action when no rule matches: `ALLOW` or `DENY` (default: `DENY`) |
 
 These flags can be combined. When both a YAML file and CLI presets are provided, user-defined rules from the YAML file have highest priority, followed by preset rules, followed by the default action.
 

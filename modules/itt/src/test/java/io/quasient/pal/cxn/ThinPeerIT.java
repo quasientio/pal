@@ -152,7 +152,6 @@ public class ThinPeerIT extends AbstractIntegrationTest {
             "7792",
             "--rpc-threads",
             "3",
-            "--rpc-allow-nonpublic",
             "--wal-all-incoming-rpc",
             "--source-log",
             "itt-thinpeer-source",

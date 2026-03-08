@@ -455,6 +455,9 @@ public class Replay extends AbstractPalSubcommand {
     if (forceStub) {
       args.add("--replay-force-stub");
     }
+    // Replay is a local operation that does not serve RPC, so always allow all operations
+    args.add("--rpc-default-action");
+    args.add("ALLOW");
     if (jarFile != null) {
       args.add("-jar");
       args.add(jarFile);

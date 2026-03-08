@@ -240,6 +240,22 @@ public class RpcPolicyCheckerTest {
   }
 
   /**
+   * Verifies that operations arriving via {@link MessageChannelType#CLI_RPC} are exempt from policy
+   * checks, even when the policy default is DENY. CLI_RPC represents the peer invoking its own main
+   * class — a local operation, not a remote call.
+   */
+  @Test
+  public void shouldExemptCliRpcChannel() {
+    RpcPolicy policy = new RpcPolicy(List.of(), RpcPolicyAction.DENY);
+    RpcPolicyChecker checker = new RpcPolicyChecker(policy);
+
+    ExecMessage msg = createInstanceMethodMessage("com.example.Foo", "bar");
+
+    // Should not throw even though policy denies everything
+    checker.checkAccess(msg, MessageType.EXEC_INSTANCE_METHOD, MessageChannelType.CLI_RPC);
+  }
+
+  /**
    * Verifies that {@link RpcPolicyChecker#isAccessible(String, String, MessageChannelType,
    * MemberCategory)} returns {@code true} for ALLOW and LOG_AND_ALLOW actions and {@code false} for
    * DENY and LOG_AND_DENY actions.

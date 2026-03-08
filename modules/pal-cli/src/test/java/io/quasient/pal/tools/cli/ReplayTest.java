@@ -236,6 +236,8 @@ public class ReplayTest {
             "ordered",
             "-cp",
             "target/app.jar",
+            "--rpc-default-action",
+            "ALLOW",
             "com.example.Main",
             "arg1",
             "arg2"));
@@ -259,6 +261,8 @@ public class ReplayTest {
             "ordered",
             "-cp",
             "app.jar",
+            "--rpc-default-action",
+            "ALLOW",
             "com.example.Main"));
   }
 
@@ -346,6 +350,8 @@ public class ReplayTest {
             "localhost:29092",
             "-cp",
             "app.jar",
+            "--rpc-default-action",
+            "ALLOW",
             "MyMain"));
   }
 
@@ -482,6 +488,8 @@ public class ReplayTest {
             "unordered",
             "-cp",
             "target/app.jar",
+            "--rpc-default-action",
+            "ALLOW",
             "com.example.Main"));
   }
 
@@ -563,6 +571,8 @@ public class ReplayTest {
             "WARN",
             "--replay-threading",
             "ordered",
+            "--rpc-default-action",
+            "ALLOW",
             "-jar",
             "myapp.jar"));
   }
@@ -586,6 +596,8 @@ public class ReplayTest {
             "ordered",
             "-cp",
             "lib/extra.jar",
+            "--rpc-default-action",
+            "ALLOW",
             "-jar",
             "myapp.jar"));
   }
@@ -606,6 +618,8 @@ public class ReplayTest {
             "WARN",
             "--replay-threading",
             "ordered",
+            "--rpc-default-action",
+            "ALLOW",
             "-jar",
             "myapp.jar",
             "arg1",
@@ -631,6 +645,8 @@ public class ReplayTest {
             "ordered",
             "-k",
             "localhost:29092",
+            "--rpc-default-action",
+            "ALLOW",
             "-jar",
             "myapp.jar"));
   }

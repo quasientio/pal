@@ -216,7 +216,6 @@ public class InterceptFlowTestSuite extends AbstractIntegrationTest {
             "5657",
             "--rpc-threads",
             "3",
-            "--rpc-allow-nonpublic",
             "--interceptable",
             "--log",
             "auto",

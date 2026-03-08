@@ -498,15 +498,14 @@ public class Main implements Callable<Integer> {
 
   /**
    * Default RPC action when no policy rule matches. Must be {@code ALLOW} or {@code DENY}. Defaults
-   * to {@code ALLOW} to preserve backward compatibility (all RPC operations are allowed when no
-   * policy is configured).
+   * to {@code DENY} so that peers deny all RPC operations unless explicitly allowed by a policy.
    */
   @Option(
       names = {"--rpc-default-action"},
-      defaultValue = "ALLOW",
+      defaultValue = "DENY",
       description =
           "default RPC action when no rule matches: ALLOW or DENY (default: ${DEFAULT-VALUE})")
-  private String rpcDefaultAction = "ALLOW";
+  private String rpcDefaultAction = "DENY";
 
   /**
    * Flag indicating whether message interception is enabled. Only applicable when registering with
