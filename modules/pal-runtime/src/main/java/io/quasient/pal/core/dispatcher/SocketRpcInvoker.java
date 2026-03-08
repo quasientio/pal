@@ -25,6 +25,7 @@ import io.quasient.pal.core.internal.messages.OutboundJsonRpcResponseMsg;
 import io.quasient.pal.core.service.RunOptions;
 import io.quasient.pal.core.transport.MessageChannelType;
 import io.quasient.pal.core.transport.gateway.OutboundMessageGateway;
+import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.InterceptCallbackRequestMessage;
 import io.quasient.pal.messages.colfer.InterceptCallbackResponseMessage;
 import io.quasient.pal.messages.colfer.Message;
@@ -343,6 +344,19 @@ class SocketRpcInvoker extends AbstractMessageInvokerThread {
         }
       } catch (Exception e) {
         logger.error("Error dispatching message w/id {}", getMessageId(requestMsg), e);
+
+        // Send error response so the caller does not hang waiting for a reply.
+        // This is critical for RpcAccessDeniedException and any other dispatch-time errors.
+        ExecMessage requestExec = requestMsg.getExecMessage();
+        if (requestExec != null) {
+          ExecMessage errorResponse = new ExecMessage();
+          errorResponse.setMessageId(requestExec.getMessageId());
+          errorResponse.setRaisedThrowable(ExceptionSerdes.serializeException(e));
+          zmqRpcSocket.send(ColferUtils.toBytes(messageBuilder.wrap(errorResponse)));
+        } else {
+          // Non-exec message dispatch error: send an empty reply to unblock the REQ socket
+          zmqRpcSocket.send(new byte[0]);
+        }
       }
     }
   }
