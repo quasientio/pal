@@ -32,7 +32,7 @@ import java.util.Set;
  *   <li><b>deny-reflection:</b> java.lang.reflect.**, java.lang.invoke.**
  *   <li><b>deny-serialization:</b> java.io.ObjectInputStream.**
  *   <li><b>deny-scripting:</b> javax.script.**
- *   <li><b>deny-pal-internals:</b> io.quasient.pal.core.**, io.quasient.pal.weave.**
+ *   <li><b>deny-pal-internals:</b> io.quasient.pal.**
  * </ul>
  *
  * <p><b>Field access bypass prevention:</b> ProcessBuilder and Process use {@code **} for the
@@ -156,12 +156,15 @@ public final class RpcPolicyPresets {
   /**
    * Returns deny rules for PAL internal packages.
    *
-   * <p>Blocks all members in {@code io.quasient.pal.core.**} and {@code io.quasient.pal.weave.**}.
+   * <p>Blocks all members in {@code io.quasient.pal.**}. This covers every PAL subpackage (core,
+   * weave, common, cxn, dsl, messages, serdes, tools) and any future subpackages, ensuring that
+   * remote callers cannot invoke PAL runtime internals. User application classes outside the {@code
+   * io.quasient.pal} namespace are unaffected.
    *
    * @return an unmodifiable list of deny rules for PAL internals
    */
   public static List<RpcPolicyRule> getDenyPalInternalRules() {
-    return List.of(deny("io.quasient.pal.core.**", "**"), deny("io.quasient.pal.weave.**", "**"));
+    return List.of(deny("io.quasient.pal.**", "**"));
   }
 
   /**

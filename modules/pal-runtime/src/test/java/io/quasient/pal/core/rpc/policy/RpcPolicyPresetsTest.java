@@ -165,15 +165,54 @@ public class RpcPolicyPresetsTest {
             MemberCategory.METHOD));
   }
 
-  /** Verifies that the deny-pal-internals preset blocks PAL core classes. */
+  /** Verifies that the deny-pal-internals preset blocks all PAL packages. */
   @Test
-  public void denyPalInternalsShouldBlockPalCore() {
+  public void denyPalInternalsShouldBlockAllPalPackages() {
     List<RpcPolicyRule> rules = RpcPolicyPresets.getDenyPalInternalRules();
 
+    // Core
     assertTrue(
+        "Should block pal.core classes",
         anyRuleMatches(
             rules,
             "io.quasient.pal.core.Main.run",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD));
+
+    // Subpackages that were previously not covered
+    assertTrue(
+        "Should block pal.common classes",
+        anyRuleMatches(
+            rules,
+            "io.quasient.pal.common.objects.ObjectRef.from",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD));
+    assertTrue(
+        "Should block pal.cxn classes",
+        anyRuleMatches(
+            rules,
+            "io.quasient.pal.cxn.ThinPeer.init",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD));
+    assertTrue(
+        "Should block pal.messages classes",
+        anyRuleMatches(
+            rules,
+            "io.quasient.pal.messages.colfer.ExecMessage.getMessageId",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD));
+    assertTrue(
+        "Should block pal.serdes classes",
+        anyRuleMatches(
+            rules,
+            "io.quasient.pal.serdes.colfer.MessageBuilder.wrap",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD));
+    assertTrue(
+        "Should block pal.weave classes",
+        anyRuleMatches(
+            rules,
+            "io.quasient.pal.weave.FullQuantizeAspect.aspectOf",
             MessageChannelType.ZMQ_SOCKET_RPC,
             MemberCategory.METHOD));
   }

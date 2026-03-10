@@ -144,7 +144,7 @@ Presets are predefined deny rules for common threat categories. They are evaluat
 | `deny-reflection` | `java.lang.reflect.**`, `java.lang.invoke.**` |
 | `deny-serialization` | `java.io.ObjectInputStream.*` |
 | `deny-scripting` | `javax.script.**` |
-| `deny-pal-internals` | `io.quasient.pal.core.**`, `io.quasient.pal.weave.**` |
+| `deny-pal-internals` | `io.quasient.pal.**` |
 
 Enable presets via YAML or CLI:
 
