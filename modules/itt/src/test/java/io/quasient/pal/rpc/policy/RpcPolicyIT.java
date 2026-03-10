@@ -30,25 +30,35 @@ import io.quasient.pal.cxn.directory.PalDirectory;
 import io.quasient.pal.messages.colfer.ControlMessage;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.MetaMessage;
+import io.quasient.pal.messages.jsonrpc.Argument;
+import io.quasient.pal.messages.jsonrpc.JsonRpcRequest;
+import io.quasient.pal.messages.jsonrpc.JsonRpcResponse;
+import io.quasient.pal.messages.jsonrpc.ResponseObject;
+import io.quasient.pal.messages.types.JsonRpcErrorCode;
 import io.quasient.pal.messages.types.MetaServiceType;
 import io.quasient.pal.messages.types.MetaStatusType;
 import io.quasient.pal.messages.types.RpcType;
 import io.quasient.pal.serdes.Unwrapper;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
+import io.quasient.pal.serdes.jsonrpc.JsonRpcMessageFactory;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,9 +70,12 @@ import org.slf4j.LoggerFactory;
  * peer with the {@code --rpc-policy} flag pointing to it, performs RPC calls, and verifies the
  * policy is enforced.
  *
+ * <p>Tests are parameterized to run against both ZMQ-RPC and JSON-RPC transports.
+ *
  * <p><b>Infrastructure requirements:</b> etcd (Docker), Kafka (Docker), test application JARs from
  * itt-apps module.
  */
+@RunWith(Parameterized.class)
 public class RpcPolicyIT extends AbstractIntegrationTest {
 
   private static final Logger logger = LoggerFactory.getLogger(RpcPolicyIT.class);
@@ -80,7 +93,29 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
   /** Client UUID for ThinPeer identification. */
   private final UUID clientId = UUID.randomUUID();
 
+  /** The RPC transport type under test, injected by the parameterized runner. */
+  private final RpcType rpcType;
+
   @Rule public TemporaryFolder tempFolder = new TemporaryFolder();
+
+  /**
+   * Returns the parameter combinations for the parameterized runner.
+   *
+   * @return a collection of single-element arrays, each containing an {@link RpcType}
+   */
+  @Parameterized.Parameters(name = "{0}")
+  public static Collection<Object[]> transports() {
+    return List.of(new Object[] {RpcType.ZMQ_RPC}, new Object[] {RpcType.JSON_RPC});
+  }
+
+  /**
+   * Constructs a parameterized test instance for the given RPC transport type.
+   *
+   * @param rpcType the RPC transport to use for this test run
+   */
+  public RpcPolicyIT(RpcType rpcType) {
+    this.rpcType = rpcType;
+  }
 
   /**
    * Verifies that a peer with {@code --rpc-default-action DENY} and no rules denies all RPC calls.
@@ -93,25 +128,21 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
     PalDirectory directory = null;
 
     try {
-      peer =
-          launchPolicyPeer(
-              peerId, "--rpc-default-action", "DENY", "--zmq-rpc", "auto", "--as-service");
+      peer = launchPolicyPeer(peerId, "--rpc-default-action", "DENY", "--as-service");
 
       directory = new PalDirectory(getPalDirectoryUrl(), null, true);
       PeerInfo peerInfo = waitForPeerInDirectory(directory, peerId);
-      thinPeer = createZmqThinPeer(peerInfo);
+      thinPeer = createThinPeer(peerInfo);
 
       // Call a static method — should be denied
-      ExecMessage response =
-          callStaticMethod(
-              thinPeer,
-              METHODS_CLASS,
-              "testNonVoidStatic",
-              new String[] {"java.lang.String"},
-              new Object[] {"hello"});
+      callStaticMethodAndAssertDenied(
+          thinPeer,
+          METHODS_CLASS,
+          "testNonVoidStatic",
+          new String[] {"java.lang.String"},
+          new Object[] {"hello"});
 
-      assertAccessDenied(response);
-      logger.info("shouldDenyAllByDefaultWithNoRules: RPC correctly denied");
+      logger.info("shouldDenyAllByDefaultWithNoRules [{}]: RPC correctly denied", rpcType);
     } finally {
       cleanup(thinPeer, peer, peerId, directory);
     }
@@ -130,36 +161,26 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
 
     try {
       File policyFile = writePolicyFile("allow-method", allowMethodPolicy());
-      peer =
-          launchPolicyPeer(
-              peerId,
-              "--rpc-policy",
-              policyFile.getAbsolutePath(),
-              "--zmq-rpc",
-              "auto",
-              "--as-service");
+      peer = launchPolicyPeer(peerId, "--rpc-policy", policyFile.getAbsolutePath(), "--as-service");
 
       directory = new PalDirectory(getPalDirectoryUrl(), null, true);
       PeerInfo peerInfo = waitForPeerInDirectory(directory, peerId);
-      thinPeer = createZmqThinPeer(peerInfo);
+      thinPeer = createThinPeer(peerInfo);
 
       // Call testNonVoidStatic — should be allowed
-      ExecMessage response =
-          callStaticMethod(
+      Object result =
+          callStaticMethodAndAssertAllowed(
               thinPeer,
               METHODS_CLASS,
               "testNonVoidStatic",
               new String[] {"java.lang.String"},
               new Object[] {"UPPER"});
 
-      assertThat(
-          "Response should have return value", response.getReturnValue(), is(not(nullValue())));
-      assertThat(
-          "Response should not have throwable", response.getRaisedThrowable(), is(nullValue()));
-
-      Object result = Unwrapper.unwrapObject(response.getReturnValue().getObject());
-      assertEquals("upper", ((String) result).toLowerCase(Locale.getDefault()));
-      logger.info("shouldAllowExplicitlyAllowedMethods: RPC correctly allowed");
+      assertNotNull("Result should not be null", result);
+      // ZMQ returns the unwrapped String; JSON-RPC returns the JSON-encoded value (with quotes)
+      String resultStr = ((String) result).replace("\"", "");
+      assertEquals("upper", resultStr.toLowerCase(Locale.getDefault()));
+      logger.info("shouldAllowExplicitlyAllowedMethods [{}]: RPC correctly allowed", rpcType);
     } finally {
       cleanup(thinPeer, peer, peerId, directory);
     }
@@ -182,20 +203,18 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
               policyFile.getAbsolutePath(),
               "--rpc-default-action",
               "DENY",
-              "--zmq-rpc",
-              "auto",
               "--as-service");
 
       directory = new PalDirectory(getPalDirectoryUrl(), null, true);
       PeerInfo peerInfo = waitForPeerInDirectory(directory, peerId);
-      thinPeer = createZmqThinPeer(peerInfo);
+      thinPeer = createThinPeer(peerInfo);
 
       // Call giveMeNull — NOT in allowlist, should be denied
-      ExecMessage response =
-          callStaticMethod(thinPeer, METHODS_CLASS, "giveMeNull", new String[0], new Object[0]);
+      callStaticMethodAndAssertDenied(
+          thinPeer, METHODS_CLASS, "giveMeNull", new String[0], new Object[0]);
 
-      assertAccessDenied(response);
-      logger.info("shouldDenyMethodsNotInAllowlist: Unlisted method correctly denied");
+      logger.info(
+          "shouldDenyMethodsNotInAllowlist [{}]: Unlisted method correctly denied", rpcType);
     } finally {
       cleanup(thinPeer, peer, peerId, directory);
     }
@@ -217,33 +236,28 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
               "deny-unsafe",
               "--rpc-default-action",
               "ALLOW",
-              "--zmq-rpc",
-              "auto",
               "--as-service");
 
       directory = new PalDirectory(getPalDirectoryUrl(), null, true);
       PeerInfo peerInfo = waitForPeerInDirectory(directory, peerId);
-      thinPeer = createZmqThinPeer(peerInfo);
+      thinPeer = createThinPeer(peerInfo);
 
       // Call System.exit(0) — should be blocked by deny-unsafe preset
-      ExecMessage response =
-          callStaticMethod(
-              thinPeer, "java.lang.System", "exit", new String[] {"int"}, new Object[] {0});
-
-      assertAccessDenied(response);
+      callStaticMethodAndAssertDenied(
+          thinPeer, "java.lang.System", "exit", new String[] {"int"}, new Object[] {0});
 
       // Verify a normal method is still allowed (not blocked by preset)
-      ExecMessage allowedResponse =
-          callStaticMethod(
+      Object allowedResult =
+          callStaticMethodAndAssertAllowed(
               thinPeer,
               METHODS_CLASS,
               "testNonVoidStatic",
               new String[] {"java.lang.String"},
               new Object[] {"hello"});
 
-      assertThat(
-          "Normal method should be allowed", allowedResponse.getRaisedThrowable(), is(nullValue()));
-      logger.info("shouldEnforceDenyUnsafePreset: Unsafe operations correctly blocked");
+      assertNotNull("Normal method should return a value", allowedResult);
+      logger.info(
+          "shouldEnforceDenyUnsafePreset [{}]: Unsafe operations correctly blocked", rpcType);
     } finally {
       cleanup(thinPeer, peer, peerId, directory);
     }
@@ -252,89 +266,98 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
   /**
    * Verifies that channel-scoped rules allow or deny based on the RPC channel type.
    *
-   * <p>Tests with two peers: one whose policy allows Methods.** only for ZMQ_SOCKET_RPC (so ZMQ
-   * calls succeed), and one whose policy allows Methods.** only for WEBSOCKET_RPC (so ZMQ calls are
-   * denied). This validates that the channel constraint in rules is enforced.
+   * <p>Tests with two peers: one whose policy allows Methods.** only for ZMQ_SOCKET_RPC, and one
+   * whose policy allows Methods.** only for WEBSOCKET_RPC. When using ZMQ transport, the ZMQ peer
+   * allows and the WebSocket peer denies. When using JSON-RPC transport (which maps to
+   * WEBSOCKET_RPC), the WebSocket peer allows and the ZMQ peer denies.
    */
   @Test
   public void shouldEnforceChannelScopedRules() throws Exception {
-    UUID allowedPeerId = UUID.randomUUID();
-    UUID deniedPeerId = UUID.randomUUID();
-    PeerProcess allowedPeer = null;
-    PeerProcess deniedPeer = null;
-    ThinPeer allowedThinPeer = null;
-    ThinPeer deniedThinPeer = null;
+    UUID zmqPeerId = UUID.randomUUID();
+    UUID wsPeerId = UUID.randomUUID();
+    PeerProcess zmqPeer = null;
+    PeerProcess wsPeer = null;
+    ThinPeer zmqThinPeer = null;
+    ThinPeer wsThinPeer = null;
     PalDirectory directory = null;
 
     try {
-      // Peer 1: allows Methods.** only for ZMQ_SOCKET_RPC → ZMQ call should succeed
-      File allowedPolicyFile = writePolicyFile("channel-zmq-allowed", channelScopedPolicy());
-      allowedPeer =
+      // Peer 1: allows Methods.** only for ZMQ_SOCKET_RPC
+      File zmqPolicyFile = writePolicyFile("channel-zmq-allowed", channelScopedPolicy());
+      zmqPeer =
           launchPolicyPeer(
-              allowedPeerId,
+              zmqPeerId,
               "--rpc-policy",
-              allowedPolicyFile.getAbsolutePath(),
-              "--zmq-rpc",
-              "auto",
+              zmqPolicyFile.getAbsolutePath(),
+              "--rpc-default-action",
+              "DENY",
               "--as-service");
 
       directory = new PalDirectory(getPalDirectoryUrl(), null, true);
-      PeerInfo allowedPeerInfo = waitForPeerInDirectory(directory, allowedPeerId);
-      allowedThinPeer = createZmqThinPeer(allowedPeerInfo);
+      PeerInfo zmqPeerInfo = waitForPeerInDirectory(directory, zmqPeerId);
+      zmqThinPeer = createThinPeer(zmqPeerInfo);
 
-      ExecMessage zmqAllowedResponse =
-          callStaticMethod(
-              allowedThinPeer,
-              METHODS_CLASS,
-              "testNonVoidStatic",
-              new String[] {"java.lang.String"},
-              new Object[] {"hello"});
-
-      assertThat(
-          "ZMQ call should be allowed when channel matches rule",
-          zmqAllowedResponse.getRaisedThrowable(),
-          is(nullValue()));
-
-      // Peer 2: allows Methods.** only for WEBSOCKET_RPC → ZMQ call should be denied
-      File deniedPolicyFile =
-          writePolicyFile("channel-ws-only", channelScopedWebsocketOnlyPolicy());
-      deniedPeer =
+      // Peer 2: allows Methods.** only for WEBSOCKET_RPC
+      File wsPolicyFile = writePolicyFile("channel-ws-only", channelScopedWebsocketOnlyPolicy());
+      wsPeer =
           launchPolicyPeer(
-              deniedPeerId,
+              wsPeerId,
               "--rpc-policy",
-              deniedPolicyFile.getAbsolutePath(),
+              wsPolicyFile.getAbsolutePath(),
               "--rpc-default-action",
               "DENY",
-              "--zmq-rpc",
-              "auto",
               "--as-service");
 
-      PeerInfo deniedPeerInfo = waitForPeerInDirectory(directory, deniedPeerId);
-      deniedThinPeer = createZmqThinPeer(deniedPeerInfo);
+      PeerInfo wsPeerInfo = waitForPeerInDirectory(directory, wsPeerId);
+      wsThinPeer = createThinPeer(wsPeerInfo);
 
-      ExecMessage zmqDeniedResponse =
-          callStaticMethod(
-              deniedThinPeer,
-              METHODS_CLASS,
-              "testNonVoidStatic",
-              new String[] {"java.lang.String"},
-              new Object[] {"hello"});
+      if (rpcType == RpcType.ZMQ_RPC) {
+        // ZMQ transport → ZMQ_SOCKET_RPC channel: peer1 allows, peer2 denies
+        callStaticMethodAndAssertAllowed(
+            zmqThinPeer,
+            METHODS_CLASS,
+            "testNonVoidStatic",
+            new String[] {"java.lang.String"},
+            new Object[] {"hello"});
 
-      assertAccessDenied(zmqDeniedResponse);
-      logger.info("shouldEnforceChannelScopedRules: Channel-scoped rules correctly enforced");
-    } finally {
-      closeThinPeer(allowedThinPeer);
-      closeThinPeer(deniedThinPeer);
-      if (allowedPeer != null) {
-        stopPeer(allowedPeer);
+        callStaticMethodAndAssertDenied(
+            wsThinPeer,
+            METHODS_CLASS,
+            "testNonVoidStatic",
+            new String[] {"java.lang.String"},
+            new Object[] {"hello"});
+      } else {
+        // JSON-RPC transport → WEBSOCKET_RPC channel: peer1 denies, peer2 allows
+        callStaticMethodAndAssertDenied(
+            zmqThinPeer,
+            METHODS_CLASS,
+            "testNonVoidStatic",
+            new String[] {"java.lang.String"},
+            new Object[] {"hello"});
+
+        callStaticMethodAndAssertAllowed(
+            wsThinPeer,
+            METHODS_CLASS,
+            "testNonVoidStatic",
+            new String[] {"java.lang.String"},
+            new Object[] {"hello"});
       }
-      if (deniedPeer != null) {
-        stopPeer(deniedPeer);
+
+      logger.info(
+          "shouldEnforceChannelScopedRules [{}]: Channel-scoped rules correctly enforced", rpcType);
+    } finally {
+      closeThinPeer(zmqThinPeer);
+      closeThinPeer(wsThinPeer);
+      if (zmqPeer != null) {
+        stopPeer(zmqPeer);
+      }
+      if (wsPeer != null) {
+        stopPeer(wsPeer);
       }
       if (directory != null) {
         try {
-          directory.deletePeer(allowedPeerId);
-          directory.deletePeer(deniedPeerId);
+          directory.deletePeer(zmqPeerId);
+          directory.deletePeer(wsPeerId);
         } catch (Exception e) {
           logger.warn("Cleanup: failed to delete peers from directory", e);
         }
@@ -350,6 +373,10 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
    *
    * <p>Note: classes in the {@code io.quasient.pal.*} namespace are always excluded from metadata
    * by the serializer's hardcoded prefix list, so this test uses JDK classes to verify filtering.
+   *
+   * <p>Metadata queries use the binary (Colfer) protocol via ZMQ regardless of the parameterized
+   * transport, because {@code sendToPeer(MetaMessage)} is only available over ZMQ. The test still
+   * runs for both parameters to verify metadata filtering is independent of the active transport.
    */
   @Test
   public void shouldFilterMetadataToMatchPolicy() throws Exception {
@@ -368,12 +395,11 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
               policyFile.getAbsolutePath(),
               "--rpc-default-action",
               "DENY",
-              "--zmq-rpc",
-              "auto",
               "--as-service");
 
       directory = new PalDirectory(getPalDirectoryUrl(), null, true);
       PeerInfo peerInfo = waitForPeerInDirectory(directory, peerId);
+      // Always use ZMQ for metadata queries (MetaMessage is a binary/Colfer protocol)
       thinPeer = createZmqThinPeer(peerInfo);
 
       // Request a GC first (metadata serialization is memory-intensive)
@@ -422,7 +448,7 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
 
       // Clean up metadata memory
       sendGcCommand(thinPeer);
-      logger.info("shouldFilterMetadataToMatchPolicy: Metadata correctly filtered");
+      logger.info("shouldFilterMetadataToMatchPolicy [{}]: Metadata correctly filtered", rpcType);
     } finally {
       cleanup(thinPeer, peer, peerId, directory);
     }
@@ -597,11 +623,11 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
   /**
    * Launches a peer with the given policy-related arguments plus standard infrastructure flags.
    *
-   * <p>Automatically adds {@code -d} (directory), {@code -k} (Kafka), and {@code -cp} (classpath)
-   * flags.
+   * <p>Automatically adds {@code -d} (directory), {@code -cp} (classpath), {@code --zmq-rpc auto},
+   * and {@code --json-rpc auto} flags so that both transports are available.
    *
    * @param peerId the UUID to assign to the peer
-   * @param extraArgs additional command-line arguments (policy flags, RPC flags, etc.)
+   * @param extraArgs additional command-line arguments (policy flags, etc.)
    * @return the launched peer process
    * @throws IOException if process launch fails
    * @throws InterruptedException if waiting is interrupted
@@ -616,6 +642,10 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
     args.add(getPalDirectoryUrl());
     args.add("-cp");
     args.add(ittAppsClasspath);
+    args.add("--zmq-rpc");
+    args.add("auto");
+    args.add("--json-rpc");
+    args.add("auto");
 
     for (String arg : extraArgs) {
       args.add(arg);
@@ -670,6 +700,20 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
   }
 
   /**
+   * Creates a ThinPeer connected to the given peer using the parameterized {@link #rpcType}.
+   *
+   * @param peerInfo the peer to connect to
+   * @return an initialized ThinPeer
+   */
+  private ThinPeer createThinPeer(PeerInfo peerInfo) throws Exception {
+    return new ThinPeer()
+        .withUuid(clientId)
+        .withInitialPeer(peerInfo)
+        .withOutboundRpcType(rpcType)
+        .init();
+  }
+
+  /**
    * Calls a static method via ZMQ RPC and returns the response.
    *
    * @param tp the ThinPeer to send through
@@ -695,6 +739,86 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
   }
 
   /**
+   * Calls a static method via JSON-RPC and returns the response.
+   *
+   * @param tp the ThinPeer to send through
+   * @param className the class name
+   * @param methodName the method name
+   * @param paramTypes parameter type names
+   * @param params parameter values
+   * @return the JSON-RPC response
+   * @throws Exception if the call fails or times out
+   */
+  private JsonRpcResponse callStaticMethodJsonRpc(
+      ThinPeer tp, String className, String methodName, String[] paramTypes, Object[] params)
+      throws Exception {
+    List<Argument> arguments = new ArrayList<>();
+    for (int i = 0; i < params.length; i++) {
+      arguments.add(new Argument(params[i], paramTypes[i]));
+    }
+    JsonRpcRequest request =
+        JsonRpcMessageFactory.buildClassMethodCall(className, methodName, arguments);
+    return tp.sendJsonRpcRequestToPeer(request).get(30, TimeUnit.SECONDS);
+  }
+
+  /**
+   * Calls a static method using the parameterized transport and asserts that the call is denied by
+   * the RPC policy.
+   *
+   * @param tp the ThinPeer to send through
+   * @param className the class name
+   * @param methodName the method name
+   * @param paramTypes parameter type names
+   * @param params parameter values
+   * @throws Exception if the call fails unexpectedly
+   */
+  private void callStaticMethodAndAssertDenied(
+      ThinPeer tp, String className, String methodName, String[] paramTypes, Object[] params)
+      throws Exception {
+    if (rpcType == RpcType.ZMQ_RPC) {
+      ExecMessage response = callStaticMethod(tp, className, methodName, paramTypes, params);
+      assertAccessDenied(response);
+    } else {
+      JsonRpcResponse response =
+          callStaticMethodJsonRpc(tp, className, methodName, paramTypes, params);
+      assertJsonRpcAccessDenied(response);
+    }
+  }
+
+  /**
+   * Calls a static method using the parameterized transport and asserts that the call is allowed.
+   * Returns the unwrapped result value.
+   *
+   * @param tp the ThinPeer to send through
+   * @param className the class name
+   * @param methodName the method name
+   * @param paramTypes parameter type names
+   * @param params parameter values
+   * @return the unwrapped return value from the call
+   * @throws Exception if the call fails unexpectedly
+   */
+  private Object callStaticMethodAndAssertAllowed(
+      ThinPeer tp, String className, String methodName, String[] paramTypes, Object[] params)
+      throws Exception {
+    if (rpcType == RpcType.ZMQ_RPC) {
+      ExecMessage response = callStaticMethod(tp, className, methodName, paramTypes, params);
+      assertThat(
+          "Response should have return value", response.getReturnValue(), is(not(nullValue())));
+      assertThat(
+          "Response should not have throwable", response.getRaisedThrowable(), is(nullValue()));
+      return Unwrapper.unwrapObject(response.getReturnValue().getObject());
+    } else {
+      JsonRpcResponse response =
+          callStaticMethodJsonRpc(tp, className, methodName, paramTypes, params);
+      assertThat("JSON-RPC response should not have error", response.getError(), is(nullValue()));
+      assertThat(
+          "JSON-RPC response should have result", response.getResult(), is(not(nullValue())));
+      ResponseObject responseObject = response.getResult().getValue();
+      return responseObject != null ? responseObject.getValue() : null;
+    }
+  }
+
+  /**
    * Sends a GC command to the peer via the ThinPeer.
    *
    * @param tp the ThinPeer to send through
@@ -709,7 +833,7 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
   // ===========================================================================================
 
   /**
-   * Asserts that the response indicates an RPC access denied error.
+   * Asserts that the ZMQ response indicates an RPC access denied error.
    *
    * @param response the ExecMessage response to check
    */
@@ -722,6 +846,28 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
         "Throwable type should be RpcAccessDeniedException",
         ACCESS_DENIED_EX,
         response.getRaisedThrowable().getThrowable().getType());
+  }
+
+  /**
+   * Asserts that the JSON-RPC response indicates an RPC access denied error.
+   *
+   * @param response the JsonRpcResponse to check
+   */
+  private void assertJsonRpcAccessDenied(JsonRpcResponse response) {
+    assertThat(
+        "JSON-RPC response should have error for access denial",
+        response.getError(),
+        is(not(nullValue())));
+    assertEquals(
+        "Error code should be RPC_ACCESS_DENIED",
+        JsonRpcErrorCode.RPC_ACCESS_DENIED.getCode(),
+        response.getError().getCode());
+    assertThat(
+        "Error data should not be null", response.getError().getData(), is(not(nullValue())));
+    assertEquals(
+        "Error data throwable type should be RpcAccessDeniedException",
+        ACCESS_DENIED_EX,
+        response.getError().getData().getThrowableType());
   }
 
   /**
