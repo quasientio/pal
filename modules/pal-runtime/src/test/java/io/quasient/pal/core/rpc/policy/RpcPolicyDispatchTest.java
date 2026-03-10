@@ -39,13 +39,13 @@ import org.junit.Before;
 import org.junit.Test;
 
 /**
- * Integration tests for {@link RpcPolicyChecker} integration into the dispatch path via {@code
+ * Tests for {@link RpcPolicyChecker} wiring into the dispatch path via {@code
  * BaseExecMessageDispatcher.dispatchIncoming()}.
  *
  * <p>These tests verify that the policy check is correctly wired into the dispatch path, before any
  * reflective loading occurs, and that replay injection is exempt from policy enforcement.
  */
-public class RpcPolicyDispatchIntegrationTest {
+public class RpcPolicyDispatchTest {
 
   /** Sample class for constructor invocation tests. */
   @SuppressWarnings("unused")
