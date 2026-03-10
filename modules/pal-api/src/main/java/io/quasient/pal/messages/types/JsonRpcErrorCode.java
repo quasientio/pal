@@ -52,8 +52,16 @@ public enum JsonRpcErrorCode {
   INTERNAL_ERROR("Internal error", -32603),
 
   /**
+   * The requested RPC operation was denied by the peer's RPC access-control policy. Clients can
+   * check for this code to distinguish policy denials from other server errors.
+   *
+   * <p>Error code: -32001
+   */
+  RPC_ACCESS_DENIED("RPC access denied", -32001),
+
+  /**
    * Generic server-side error not covered by the other codes. The actual error code may vary from
-   * -32000 to -32099.
+   * -32000 to -32099 (except -32001, which is reserved for {@link #RPC_ACCESS_DENIED}).
    *
    * <p>Error code: -32000
    */

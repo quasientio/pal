@@ -22,6 +22,7 @@ import io.quasient.pal.common.lang.intercept.InterceptPhase;
 import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.core.internal.messages.InboundJsonRpcRequestMsg;
 import io.quasient.pal.core.internal.messages.OutboundJsonRpcResponseMsg;
+import io.quasient.pal.core.rpc.policy.RpcAccessDeniedException;
 import io.quasient.pal.core.service.RunOptions;
 import io.quasient.pal.core.transport.MessageChannelType;
 import io.quasient.pal.core.transport.gateway.OutboundMessageGateway;
@@ -30,8 +31,11 @@ import io.quasient.pal.messages.colfer.InterceptCallbackRequestMessage;
 import io.quasient.pal.messages.colfer.InterceptCallbackResponseMessage;
 import io.quasient.pal.messages.colfer.Message;
 import io.quasient.pal.messages.colfer.RaisedThrowable;
+import io.quasient.pal.messages.jsonrpc.JsonRpcError;
+import io.quasient.pal.messages.jsonrpc.JsonRpcErrorData;
 import io.quasient.pal.messages.jsonrpc.JsonRpcRequest;
 import io.quasient.pal.messages.jsonrpc.JsonRpcResponse;
+import io.quasient.pal.messages.types.JsonRpcErrorCode;
 import io.quasient.pal.messages.types.MessageFamily;
 import io.quasient.pal.messages.types.MessageType;
 import io.quasient.pal.serdes.Unwrapper;
@@ -634,6 +638,35 @@ class SocketRpcInvoker extends AbstractMessageInvokerThread {
     Message responseMessage;
     try {
       responseMessage = dispatch(requestMsg, MessageChannelType.WEBSOCKET_RPC);
+    } catch (RpcAccessDeniedException accessDeniedException) {
+      // RPC access denied — return dedicated error code so clients can detect policy denials
+      logger.warn(
+          "RPC access denied for message w/id {}: {}",
+          getMessageId(requestMsg),
+          accessDeniedException.getMessage());
+      JsonRpcErrorData errorData = new JsonRpcErrorData();
+      errorData.setRequestId(requestId);
+      errorData.setThrowableType(accessDeniedException.getClass().getName());
+      errorData.setMessage(accessDeniedException.getMessage());
+      JsonRpcError error =
+          new JsonRpcError(
+              JsonRpcErrorCode.RPC_ACCESS_DENIED.getCode(),
+              JsonRpcErrorCode.RPC_ACCESS_DENIED.getMessage(),
+              errorData);
+      jsonRpcResponse = new JsonRpcResponse();
+      jsonRpcResponse.setId(requestId);
+      jsonRpcResponse.setError(error);
+      try {
+        new OutboundJsonRpcResponseMsg(
+                jsonrpcMsg.getPeerId(),
+                JsonRpcSerializer.toJson(jsonRpcResponse),
+                MessageType.UNKNOWN)
+            .send(jsonrpcSocket);
+      } catch (JsonSerializationException ex) {
+        logger.error("Error sending JSON-RPC access denied response", ex);
+      }
+      logMessageDispatch(requestMsg, jsonRpcResponse.getId(), started);
+      return;
     } catch (Exception dispatchException) {
 
       // dispatching failed, log and send error response

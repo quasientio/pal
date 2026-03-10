@@ -26,7 +26,9 @@ import io.quasient.pal.common.lang.intercept.InterceptPhase;
 import io.quasient.pal.core.ZmqEnabledTest;
 import io.quasient.pal.core.internal.messages.InboundJsonRpcRequestMsg;
 import io.quasient.pal.core.internal.messages.OutboundJsonRpcResponseMsg;
+import io.quasient.pal.core.rpc.policy.RpcAccessDeniedException;
 import io.quasient.pal.core.service.RunOptions;
+import io.quasient.pal.core.transport.MessageChannelType;
 import io.quasient.pal.messages.colfer.ControlMessage;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.InterceptCallbackRequestMessage;
@@ -38,6 +40,7 @@ import io.quasient.pal.messages.jsonrpc.JsonRpcResponse;
 import io.quasient.pal.messages.jsonrpc.Params;
 import io.quasient.pal.messages.types.ControlCommandType;
 import io.quasient.pal.messages.types.ControlStatusType;
+import io.quasient.pal.messages.types.JsonRpcErrorCode;
 import io.quasient.pal.messages.types.MetaServiceType;
 import io.quasient.pal.messages.types.MetaStatusType;
 import io.quasient.pal.serdes.colfer.ColferUtils;
@@ -509,6 +512,75 @@ public class SocketRpcInvokerTest extends ZmqEnabledTest {
         "Error data message should contain exception details",
         response.getError().getData().getMessage(),
         containsString("Simulated dispatch failure"));
+
+    // Verify dispatcher was called (and threw exception)
+    verify(incomingMessageDispatcher, times(1)).incomingCall(any(), any(), any());
+  }
+
+  /**
+   * Tests that RPC access denied returns a dedicated error code (-32001).
+   *
+   * <p>Given: IncomingMessageDispatcher that throws RpcAccessDeniedException during dispatch
+   *
+   * <p>When: JSON-RPC request is dispatched
+   *
+   * <p>Then: JSON-RPC error response should be returned with error code -32001, message "RPC access
+   * denied", and error data containing the exception details
+   */
+  @Test
+  public void dispatchJsonRpcRequest_rpcAccessDenied_returnsAccessDeniedErrorCode() {
+    // Reset mock and configure to throw RpcAccessDeniedException
+    reset(incomingMessageDispatcher);
+    when(incomingMessageDispatcher.incomingCall(any(), any(), any()))
+        .thenThrow(
+            new RpcAccessDeniedException(
+                "com.example.Foo", "bar", MessageChannelType.WEBSOCKET_RPC));
+
+    // Start invoker thread
+    execService.execute(socketRpcInvoker);
+
+    // Create valid JSON-RPC EXEC request
+    final UUID requestUuid = UUID.randomUUID();
+    JsonRpcRequest request =
+        new JsonRpcRequest.Builder()
+            .withMethod("new")
+            .withId(requestUuid.toString())
+            .withParams(new Params.Builder().withType("java.lang.String").build())
+            .build();
+
+    // Send via JSON-RPC socket
+    String jsonRpcRequestAsString = gson.toJson(request);
+    InboundJsonRpcRequestMsg inboundMsg =
+        new InboundJsonRpcRequestMsg(UUID.randomUUID(), jsonRpcRequestAsString);
+    boolean sentOk = inboundMsg.send(jsonRpcDealerSocket);
+    assertThat("Message should be sent successfully", sentOk, is(true));
+
+    // Get response
+    OutboundJsonRpcResponseMsg outboundMsg =
+        OutboundJsonRpcResponseMsg.receive(jsonRpcDealerSocket, true);
+    assertThat("Response should not be null", outboundMsg, is(notNullValue()));
+    JsonRpcResponse response = gson.fromJson(outboundMsg.getJsonMessage(), JsonRpcResponse.class);
+
+    // Verify error response has dedicated RPC_ACCESS_DENIED code
+    assertThat("Response should have error", response.getError(), is(notNullValue()));
+    assertThat("Response result should be null", response.getResult(), is(nullValue()));
+    assertThat(
+        "Error code should be RPC_ACCESS_DENIED",
+        response.getError().getCode(),
+        is(JsonRpcErrorCode.RPC_ACCESS_DENIED.getCode()));
+    assertThat(
+        "Error message should be 'RPC access denied'",
+        response.getError().getMessage(),
+        is("RPC access denied"));
+    assertThat("Error data should be present", response.getError().getData(), is(notNullValue()));
+    assertThat(
+        "Error data message should contain denial details",
+        response.getError().getData().getMessage(),
+        containsString("com.example.Foo.bar"));
+    assertThat(
+        "Error data throwable type should be RpcAccessDeniedException",
+        response.getError().getData().getThrowableType(),
+        is("io.quasient.pal.core.rpc.policy.RpcAccessDeniedException"));
 
     // Verify dispatcher was called (and threw exception)
     verify(incomingMessageDispatcher, times(1)).incomingCall(any(), any(), any());
