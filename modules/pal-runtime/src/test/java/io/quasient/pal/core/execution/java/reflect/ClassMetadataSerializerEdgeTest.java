@@ -68,7 +68,7 @@ public class ClassMetadataSerializerEdgeTest {
     String json = Files.readString(out);
     Files.deleteIfExists(out);
 
-    // With allow-all policy and full visibility scanning, non-public methods are included.
+    // With allow-all policy, non-public methods are included.
     // modifiers=0 indicates package-private in ClassGraph's modifier encoding.
     boolean hasNonPublic = json.contains("\"modifiers\":0");
     assertThat(hasNonPublic, is(true));

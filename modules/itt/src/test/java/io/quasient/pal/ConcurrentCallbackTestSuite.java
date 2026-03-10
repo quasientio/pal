@@ -49,7 +49,6 @@ import org.slf4j.LoggerFactory;
  * <ul>
  *   <li>ZMQ RPC on port {@value #ZMQ_RPC_PORT}
  *   <li>{@value #RPC_THREAD_COUNT} RPC threads (required for 100+ concurrent calls)
- *   <li>Allow non-public method invocation
  *   <li><b>Interception enabled (--interceptable)</b>
  *   <li>ITT apps classes on classpath
  * </ul>

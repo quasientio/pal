@@ -31,7 +31,7 @@ import org.junit.Test;
  * Edge case tests for {@link SetFieldDispatcher}.
  *
  * <p>This class tests edge cases and error handling of SetFieldDispatcher via a minimal test
- * subclass, covering field loading with non-public access and error handling in value extraction.
+ * subclass, covering field loading and error handling in value extraction.
  *
  * @see SetFieldDispatcher
  * @see SetFieldDispatcherTest
@@ -116,13 +116,9 @@ public class SetFieldDispatcherEdgeTest {
     }
   }
 
-  /**
-   * Test that loadAccessibleObject loads declared (non-public) fields. Non-public access is always
-   * allowed since RPC access control is now handled by {@code RpcPolicyChecker} earlier in the
-   * dispatch path.
-   */
+  /** Test that loadAccessibleObject loads declared (non-public) fields. */
   @Test
-  public void loadAccessibleObject_declaredField_whenNonPublicAllowed() throws Exception {
+  public void loadAccessibleObject_declaredField() throws Exception {
     TestDispatcher d = new TestDispatcher();
 
     AccessibleObject ao = d.load(Sample.class.getName(), "hidden");
@@ -236,13 +232,9 @@ public class SetFieldDispatcherEdgeTest {
     // And: No exception is thrown (we got here)
   }
 
-  /**
-   * Test that loadAccessibleObject can load non-public fields. Non-public access is always allowed
-   * since RPC access control is now handled by {@code RpcPolicyChecker} earlier in the dispatch
-   * path.
-   */
+  /** Test that loadAccessibleObject can load non-public fields. */
   @Test
-  public void testLoadAccessibleObject_nonPublicField_alwaysSucceeds() throws Exception {
+  public void testLoadAccessibleObject_nonPublicField_succeeds() throws Exception {
     // Given: A class with a private field
     TestDispatcher dispatcher = new TestDispatcher();
 
@@ -250,7 +242,7 @@ public class SetFieldDispatcherEdgeTest {
     String fieldName = "hidden"; // private field
 
     // When: loadAccessibleObject is called with the private field name
-    // Then: The field is found (no exception) since non-public access is always allowed
+    // Then: The field is found (no exception)
     AccessibleObject ao = dispatcher.load(className, fieldName);
     assertThat(ao, is(notNullValue()));
     assertThat(((Field) ao).getName(), is(fieldName));

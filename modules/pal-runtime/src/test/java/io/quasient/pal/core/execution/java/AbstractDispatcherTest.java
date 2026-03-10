@@ -48,8 +48,6 @@ public abstract class AbstractDispatcherTest {
 
   protected ReflectionHelper reflectionHelper = new ReflectionHelper();
 
-  protected ReflectionHelper onlyPublicReflectionHelper = new ReflectionHelper(false);
-
   /** Permissive RPC policy checker that allows all operations (for test use). */
   protected RpcPolicyChecker rpcPolicyChecker =
       new RpcPolicyChecker(new RpcPolicy(List.of(), RpcPolicyAction.ALLOW));
@@ -57,7 +55,6 @@ public abstract class AbstractDispatcherTest {
   protected Set<RunOptions> runOptions = EnumSet.noneOf(RunOptions.class);
   protected OutboundMessageGateway outboundMessageGateway;
   protected Dispatcher dispatcher;
-  protected Dispatcher onlyPublicDispatcher;
 
   protected AbstractDispatcherTest() {}
 

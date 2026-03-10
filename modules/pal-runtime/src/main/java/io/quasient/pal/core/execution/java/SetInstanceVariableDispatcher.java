@@ -38,8 +38,7 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
    * Constructs a new dispatcher for handling instance variable modifications.
    *
    * <p>The dispatcher is initialized with necessary dependencies used to locate the target object,
-   * build response messages, and manage field accessibility, including support for non-public field
-   * access if enabled.
+   * build response messages, and manage field accessibility.
    *
    * @param peerUuid the unique identifier of the peer
    * @param runOptions the run options governing enabled features

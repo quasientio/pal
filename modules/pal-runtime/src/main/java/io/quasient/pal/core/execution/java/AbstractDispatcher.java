@@ -70,13 +70,6 @@ abstract class AbstractDispatcher {
   protected RpcPolicyChecker rpcPolicyChecker =
       new RpcPolicyChecker(new RpcPolicy(List.of(), RpcPolicyAction.ALLOW));
 
-  /**
-   * Thread-local flag indicating whether the current thread is processing a replay injection. When
-   * {@code true}, non-public access is always allowed since replay injections are replaying
-   * operations that originally ran inside the JVM with full access.
-   */
-  private static final ThreadLocal<Boolean> replayInjectionMode = new ThreadLocal<>();
-
   /** Checker for matching intercepts without creating ExecMessage (hot-path optimization). */
   protected InterceptChecker interceptChecker;
 
@@ -189,36 +182,6 @@ abstract class AbstractDispatcher {
   @Inject
   final void setRpcPolicyChecker(RpcPolicyChecker rpcPolicyChecker) {
     this.rpcPolicyChecker = rpcPolicyChecker;
-  }
-
-  /**
-   * Returns whether non-public access should be allowed for the current operation.
-   *
-   * <p>Always returns {@code true} because RPC access control is now enforced earlier in the
-   * dispatch path by {@link RpcPolicyChecker}. Once the policy permits an operation, all visibility
-   * levels are accessible for reflective loading and invocation.
-   *
-   * @return always {@code true}
-   */
-  protected final boolean shouldAllowNonPublicAccess() {
-    return true;
-  }
-
-  /**
-   * Sets the replay injection mode for the current thread.
-   *
-   * <p>This is called by {@code dispatchIncoming} when processing a {@link
-   * io.quasient.pal.core.transport.MessageChannelType#REPLAY_INJECTION} channel to enable
-   * non-public access for replay entry point operations.
-   *
-   * @param enabled {@code true} to enable replay injection mode, {@code false} to disable
-   */
-  protected static void setReplayInjectionMode(boolean enabled) {
-    if (enabled) {
-      replayInjectionMode.set(Boolean.TRUE);
-    } else {
-      replayInjectionMode.remove();
-    }
   }
 
   /**

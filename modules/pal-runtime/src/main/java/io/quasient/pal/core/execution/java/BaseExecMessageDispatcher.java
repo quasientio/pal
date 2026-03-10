@@ -1228,14 +1228,6 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       }
     }
 
-    // Enable replay injection mode for REPLAY_INJECTION channel to allow non-public access.
-    // Replay injections are replaying operations that originally ran inside the JVM with full
-    // access, so they should be able to access private fields/methods.
-    final boolean isReplayInjection = messageChannel == MessageChannelType.REPLAY_INJECTION;
-    if (isReplayInjection) {
-      setReplayInjectionMode(true);
-    }
-
     try {
       if (logger.isTraceEnabled()) {
         logger.trace(
@@ -1331,8 +1323,9 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         // 5. Load value for assigning field ops
         value = getValueFromMessage(incomingCall, accessibleObject);
 
-        // 6. (Optionally) Set field/method accessible, allowing to break Java access rules
-        if (accessibleObject != null && shouldAllowNonPublicAccess()) {
+        // 6. Set field/method accessible — RPC access control is enforced earlier by
+        // RpcPolicyChecker, so once permitted, all visibility levels are accessible.
+        if (accessibleObject != null) {
           accessibleObject.setAccessible(true);
         }
       } catch (ReflectiveOperationException | AmbiguousCallException | RuntimeException ex) {
@@ -1873,10 +1866,6 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       }
       return afterExecResponseMsg;
     } finally {
-      // Clear replay injection mode if it was set
-      if (isReplayInjection) {
-        setReplayInjectionMode(false);
-      }
       // Always exit dispatch tracking, even if an exception occurred
       if (trackingEnabled) {
         inFlightDispatchTracker.exitDispatch(className, methodName, trackingParamTypes);

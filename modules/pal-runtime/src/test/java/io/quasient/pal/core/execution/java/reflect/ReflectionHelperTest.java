@@ -12,7 +12,6 @@ package io.quasient.pal.core.execution.java.reflect;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
@@ -30,8 +29,8 @@ import org.junit.Test;
  */
 public class ReflectionHelperTest {
 
-  /** ReflectionHelper instance with public-only access (allowNonPublic = false). */
-  private final ReflectionHelper reflectionHelper = new ReflectionHelper(false);
+  /** ReflectionHelper instance with default configuration (always allows non-public access). */
+  private final ReflectionHelper reflectionHelper = new ReflectionHelper();
 
   // ========================================================================
   // Test: unwrapPrimitive_allPrimitiveTypes_unwrapsCorrectly
@@ -341,72 +340,29 @@ public class ReflectionHelperTest {
     assertEquals("noParams", typedInstance.getParam());
   }
 
-  // ========================================================================
-  // Test: createInstance_privateConstructor_throwsException
-  // ========================================================================
-
   /**
-   * Tests that lookupConstructor throws an appropriate exception when attempting to find a private
-   * constructor with allowNonPublic set to false.
-   *
-   * <p>Given: A class with only a private constructor (and allowNonPublic is false)
-   *
-   * <p>When: lookupConstructor is called
-   *
-   * <p>Then: NoSuchMethodException is thrown
-   */
-  @Test(expected = NoSuchMethodException.class)
-  public void createInstance_privateConstructor_throwsException() throws Exception {
-    // Given: A class with only private constructors
-    Class<?> clazz = PrivateConstructorOnly.class;
-
-    // When: lookupConstructor is called with allowNonPublic = false (default)
-    // Then: NoSuchMethodException is thrown
-    reflectionHelper.lookupConstructor(clazz, new Object[] {}, new ArrayList<>());
-  }
-
-  /**
-   * Verifies that ReflectionHelper with allowNonPublic=true CAN find private constructors.
+   * Tests that lookupConstructor can find a private constructor, since the default ReflectionHelper
+   * always allows non-public access.
    *
    * @throws Exception if constructor lookup fails unexpectedly
    */
   @Test
-  public void createInstance_privateConstructor_withAllowNonPublic_succeeds() throws Exception {
-    // Given: A class with only private constructors and a helper that allows non-public access
+  public void createInstance_privateConstructor_succeeds() throws Exception {
+    // Given: A class with only private constructors
     Class<?> clazz = PrivateConstructorOnly.class;
-    ReflectionHelper nonPublicHelper = new ReflectionHelper(true);
 
-    // When: lookupConstructor is called with allowNonPublic = true
+    // When: lookupConstructor is called (default allows non-public access)
     Constructor<?> constructor =
-        nonPublicHelper.lookupConstructor(clazz, new Object[] {}, new ArrayList<>());
+        reflectionHelper.lookupConstructor(clazz, new Object[] {}, new ArrayList<>());
 
     // Then: The private constructor is found
-    assertNotNull("Should find private constructor when allowNonPublic=true", constructor);
+    assertNotNull("Should find private constructor", constructor);
     assertEquals(0, constructor.getParameterCount());
 
     // Can create instance after setting accessible
     constructor.setAccessible(true);
     Object instance = constructor.newInstance();
     assertNotNull("Should create instance via private constructor", instance);
-  }
-
-  /**
-   * Tests that lookupConstructor correctly throws NoSuchMethodException when trying to access a
-   * private constructor with specific parameters.
-   *
-   * @throws Exception if an unexpected exception occurs
-   */
-  @Test(expected = NoSuchMethodException.class)
-  public void createInstance_privateConstructorWithParams_throwsException() throws Exception {
-    // Given: ClassForTestingConstructorLookup has a private constructor with (byte, byte, int)
-    Class<?> clazz = ClassForTestingConstructorLookup.class;
-
-    // When: lookupConstructor is called for the private constructor signature
-    // Then: NoSuchMethodException is thrown because allowNonPublic = false
-    reflectionHelper.lookupConstructor(
-        clazz,
-        new Object[] {(byte) 1, (byte) 2, 3},
-        Arrays.asList(Byte.TYPE, Byte.TYPE, Integer.TYPE));
   }
 
   // ========================================================================
@@ -453,7 +409,7 @@ public class ReflectionHelperTest {
 
   /**
    * Test fixture class with only a private constructor. Used for testing that lookupConstructor
-   * correctly throws an exception when allowNonPublic is false.
+   * correctly finds private constructors.
    */
   public static class PrivateConstructorOnly {
 
@@ -468,15 +424,14 @@ public class ReflectionHelperTest {
   // ============================================================================
 
   /**
-   * Tests that the default no-argument constructor creates a ReflectionHelper with default
-   * configuration (allowNonPublic = false).
+   * Tests that the default no-argument constructor creates a ReflectionHelper that always allows
+   * non-public access.
    *
    * <p>Given: No parameters
    *
    * <p>When: The default ReflectionHelper() constructor is called
    *
-   * <p>Then: A ReflectionHelper is created with allowNonPublic set to true (default behavior), and
-   * lookups for non-public members succeed
+   * <p>Then: A ReflectionHelper is created that can look up both public and non-public members
    *
    * <p>Acceptance criteria: [TEST:ReflectionHelperTest.testDefaultConstructor_createsHelper]
    */
@@ -507,108 +462,23 @@ public class ReflectionHelperTest {
             Arrays.asList(Byte.TYPE, Byte.TYPE));
     assertNotNull("Should find public constructor", publicConstructor);
 
-    // Verify private method lookup succeeds (default allowNonPublic is true)
+    // Verify private method lookup succeeds (default always allows non-public access)
     Method privateMethod =
         helper.lookupMethod(
             ClassForTestingMethodLookup.class,
             new Object[] {"test"},
             Collections.singletonList(String.class),
             "privateMethodWithOneParam");
-    assertNotNull("Should find private method with default allowNonPublic=true", privateMethod);
+    assertNotNull("Should find private method", privateMethod);
     assertEquals("privateMethodWithOneParam", privateMethod.getName());
 
-    // Verify private constructor lookup succeeds (default allowNonPublic is true)
+    // Verify private constructor lookup succeeds (default always allows non-public access)
     Constructor<?> privateConstructor =
         helper.lookupConstructor(
             ClassForTestingConstructorLookup.class,
             new Object[] {(byte) 1, (byte) 2, 3},
             Arrays.asList(Byte.TYPE, Byte.TYPE, Integer.TYPE));
-    assertNotNull(
-        "Should find private constructor with default allowNonPublic=true", privateConstructor);
-  }
-
-  /**
-   * Tests that the constructor with a boolean parameter correctly creates a ReflectionHelper with
-   * the specified allowNonPublic configuration.
-   *
-   * <p>Given: A boolean parameter specifying whether to allow non-public member access
-   *
-   * <p>When: The ReflectionHelper(boolean) constructor is called
-   *
-   * <p>Then: A helper is created with the specified configuration, and lookup behavior reflects the
-   * allowNonPublic setting
-   *
-   * <p>Acceptance criteria:
-   * [TEST:ReflectionHelperTest.testConstructor_withBooleanParam_createsHelper]
-   */
-  @Test
-  public void testConstructor_withBooleanParam_createsHelper() throws Exception {
-    // Test case 1: allowNonPublic = true
-    ReflectionHelper helperAllowNonPublic = new ReflectionHelper(true);
-    assertNotNull("ReflectionHelper(true) should create helper", helperAllowNonPublic);
-
-    // Private method can be found with allowNonPublic=true
-    Method privateMethod =
-        helperAllowNonPublic.lookupMethod(
-            ClassForTestingMethodLookup.class,
-            new Object[] {"test"},
-            Collections.singletonList(String.class),
-            "privateMethodWithOneParam");
-    assertNotNull("Should find private method when allowNonPublic=true", privateMethod);
-    assertEquals("privateMethodWithOneParam", privateMethod.getName());
-
-    // Private constructor can be found with allowNonPublic=true
-    Constructor<?> privateConstructor =
-        helperAllowNonPublic.lookupConstructor(
-            ClassForTestingConstructorLookup.class,
-            new Object[] {(byte) 1, (byte) 2, 3},
-            Arrays.asList(Byte.TYPE, Byte.TYPE, Integer.TYPE));
-    assertNotNull("Should find private constructor when allowNonPublic=true", privateConstructor);
-
-    // Public members are still found (backward compatible)
-    Method publicMethod =
-        helperAllowNonPublic.lookupMethod(
-            ClassForTestingMethodLookup.class,
-            new Object[] {"test"},
-            Collections.singletonList(String.class),
-            "publicMethodWithOneParam");
-    assertNotNull("Should still find public method", publicMethod);
-
-    // Test case 2: allowNonPublic = false
-    ReflectionHelper helperNoNonPublic = new ReflectionHelper(false);
-    assertNotNull("ReflectionHelper(false) should create helper", helperNoNonPublic);
-
-    // Private methods cause NoSuchMethodException
-    try {
-      helperNoNonPublic.lookupMethod(
-          ClassForTestingMethodLookup.class,
-          new Object[] {"test"},
-          Collections.singletonList(String.class),
-          "privateMethodWithOneParam");
-      fail("Should throw NoSuchMethodException for private method when allowNonPublic=false");
-    } catch (NoSuchMethodException e) {
-      // Expected behavior
-    }
-
-    // Private constructors cause NoSuchMethodException
-    try {
-      helperNoNonPublic.lookupConstructor(
-          ClassForTestingConstructorLookup.class,
-          new Object[] {(byte) 1, (byte) 2, 3},
-          Arrays.asList(Byte.TYPE, Byte.TYPE, Integer.TYPE));
-      fail("Should throw NoSuchMethodException for private constructor when allowNonPublic=false");
-    } catch (NoSuchMethodException e) {
-      // Expected behavior
-    }
-
-    // Public members should be found with allowNonPublic=false
-    Method publicMethod2 =
-        helperNoNonPublic.lookupMethod(
-            ClassForTestingMethodLookup.class,
-            new Object[] {"test"},
-            Collections.singletonList(String.class),
-            "publicMethodWithOneParam");
-    assertNotNull("Should find public method when allowNonPublic=false", publicMethod2);
+    assertNotNull("Should find private constructor", privateConstructor);
   }
 
   /**

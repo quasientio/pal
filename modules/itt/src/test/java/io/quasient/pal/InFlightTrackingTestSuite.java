@@ -58,7 +58,6 @@ import org.junit.runners.Suite;
  * <ul>
  *   <li>ZMQ RPC on ports 5661 (interceptable) and 5662 (interceptor)
  *   <li>3 RPC threads (interceptable), 1 RPC thread (interceptor)
- *   <li>Allow non-public method invocation
  *   <li><b>Interception enabled (--interceptable)</b> on interceptable peer
  *   <li><b>In-flight tracking enabled (--in-flight-tracking)</b> on interceptable peer
  *   <li><b>Drain timeout configured (--drain-timeout-ms 5000)</b> on interceptable peer

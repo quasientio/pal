@@ -60,7 +60,6 @@ import org.slf4j.LoggerFactory;
  * <ul>
  *   <li>ZMQ RPC on port 5659
  *   <li>3 RPC threads
- *   <li>Allow non-public method invocation
  *   <li><b>Interception enabled (--interceptable)</b>
  *   <li>ITT apps classes on classpath
  * </ul>

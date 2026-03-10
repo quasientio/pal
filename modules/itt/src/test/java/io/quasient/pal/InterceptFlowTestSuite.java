@@ -91,7 +91,6 @@ import org.slf4j.LoggerFactory;
  *   <li>ZMQ RPC on port 5657
  *   <li>JSON-RPC on port 7790
  *   <li>3 RPC threads
- *   <li>Allow non-public method invocation
  *   <li><b>Interception enabled (--interceptable)</b>
  *   <li>ITT apps classes on classpath
  * </ul>

@@ -44,7 +44,6 @@ import org.slf4j.LoggerFactory;
  *   <li>ZMQ RPC on port 5656
  *   <li>JSON-RPC on port 7789
  *   <li>3 RPC threads
- *   <li>Allow non-public method invocation
  *   <li>ITT apps classes on classpath
  * </ul>
  *

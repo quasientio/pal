@@ -36,8 +36,9 @@ import org.slf4j.LoggerFactory;
  *
  * <p>This helper provides functionality to locate the appropriate method or constructor based on
  * provided parameters and known parameter types, including handling subtype relationships and
- * primitive widening where applicable. It also supports caching of lookup results and can
- * optionally allow access to non-public members.
+ * primitive widening where applicable. It also supports caching of lookup results and always
+ * considers both public and non-public members. RPC access control is enforced earlier in the
+ * dispatch path by the RPC policy checker.
  *
  * <p>NOTE: lookupMethod will not currently find inherited methods if they are not public.
  */
@@ -62,39 +63,8 @@ public class ReflectionHelper {
    * is enforced earlier in the dispatch path by the RPC policy checker. Once the policy permits an
    * operation, reflective loading must be able to find the target member regardless of visibility.
    */
-  /**
-   * Default flag indicating whether non-public methods and constructors are allowed in lookup
-   * operations. Defaults to {@code true} because RPC access control is enforced earlier in the
-   * dispatch path by the RPC policy checker.
-   */
-  private static final boolean ALLOW_NON_PUBLIC_DEFAULT = true;
-
-  /**
-   * Flag that determines if non-public constructors and methods should be considered during lookup.
-   */
-  private final boolean allowNonPublic;
-
-  /**
-   * Constructs a ReflectionHelper with non-public access enabled by default.
-   *
-   * <p>All members (public and non-public) are considered during lookup because RPC access control
-   * is enforced earlier in the dispatch path by the RPC policy checker. Once the policy permits an
-   * operation, reflective loading must be able to find the target member regardless of visibility.
-   */
   @Inject
-  public ReflectionHelper() {
-    this(ALLOW_NON_PUBLIC_DEFAULT);
-  }
-
-  /**
-   * Constructs a ReflectionHelper with a specified configuration.
-   *
-   * @param allowNonPublic if true, allows lookup of non-public methods and constructors; otherwise,
-   *     only public members are considered.
-   */
-  public ReflectionHelper(boolean allowNonPublic) {
-    this.allowNonPublic = allowNonPublic;
-  }
+  public ReflectionHelper() {}
 
   /**
    * Locates and returns a method in the specified class that best matches the provided method name
@@ -102,9 +72,9 @@ public class ReflectionHelper {
    *
    * <p>The resolution process applies assignability rules to check for both exact and subtype
    * matches of method parameters. It first attempts a direct lookup using the provided known
-   * parameter types. If no exact match is found, it scans public and optionally non-public methods
-   * to find assignable candidates. In ambiguous cases, the best candidate is chosen by narrowing
-   * matches based on exact type equivalence for non-primitive and non-wrapper types.
+   * parameter types. If no exact match is found, it scans public and non-public methods to find
+   * assignable candidates. In ambiguous cases, the best candidate is chosen by narrowing matches
+   * based on exact type equivalence for non-primitive and non-wrapper types.
    *
    * <p>Matching results are cached for improved performance on subsequent calls.
    *
@@ -154,11 +124,7 @@ public class ReflectionHelper {
       try {
         methodFound = clazz.getMethod(methodName, parameterTypesArray);
       } catch (NoSuchMethodException e) {
-        if (allowNonPublic) {
-          methodFound = clazz.getDeclaredMethod(methodName, parameterTypesArray);
-        } else {
-          throw e; // rethrow so we can catch it below
-        }
+        methodFound = clazz.getDeclaredMethod(methodName, parameterTypesArray);
       }
       cache(clazz, methodName, parameterTypes, methodFound);
       if (logger.isDebugEnabled()) {
@@ -185,28 +151,24 @@ public class ReflectionHelper {
       return methodPicked;
     }
 
-    // now scan other (i.e. non-public) methods
-    if (allowNonPublic) {
-      matchingMethods =
-          collectMatchingMethods(
-              Arrays.stream(clazz.getDeclaredMethods())
-                  .filter(
-                      m ->
-                          !Modifier.isPublic(
-                              m.getModifiers())), // we already checked the public ones
-              parameters,
-              parameterTypesArray,
-              methodName);
+    // now scan non-public methods
+    matchingMethods =
+        collectMatchingMethods(
+            Arrays.stream(clazz.getDeclaredMethods())
+                .filter(
+                    m ->
+                        !Modifier.isPublic(m.getModifiers())), // we already checked the public ones
+            parameters,
+            parameterTypesArray,
+            methodName);
 
-      methodPicked =
-          pickMethodOrThrow(
-              clazz, methodName, parameterTypes, parameterTypesArray, matchingMethods);
-      if (methodPicked != null) {
-        if (logger.isDebugEnabled()) {
-          logger.debug("Got method with signature in step3: {}", methodPicked.toGenericString());
-        }
-        return methodPicked;
+    methodPicked =
+        pickMethodOrThrow(clazz, methodName, parameterTypes, parameterTypesArray, matchingMethods);
+    if (methodPicked != null) {
+      if (logger.isDebugEnabled()) {
+        logger.debug("Got method with signature in step3: {}", methodPicked.toGenericString());
       }
+      return methodPicked;
     }
     throw new NoSuchMethodException(
         String.format(
@@ -222,9 +184,8 @@ public class ReflectionHelper {
    *
    * <p>The resolution process applies assignability rules similar to method lookup. It first
    * attempts an exact match using the known parameter types. If no exact public constructor is
-   * found, it scans for assignable candidates among public and optionally non-public constructors,
-   * narrowing down ambiguous matches based on type equivalence for non-primitive and non-wrapper
-   * types.
+   * found, it scans for assignable candidates among public and non-public constructors, narrowing
+   * down ambiguous matches based on type equivalence for non-primitive and non-wrapper types.
    *
    * <p>Matching results are cached for improved performance on subsequent calls.
    *
@@ -273,11 +234,7 @@ public class ReflectionHelper {
       try {
         constructorFound = clazz.getConstructor(parameterTypesArray);
       } catch (NoSuchMethodException e) {
-        if (allowNonPublic) {
-          constructorFound = clazz.getDeclaredConstructor(parameterTypesArray);
-        } else {
-          throw e; // rethrow so we can catch it below
-        }
+        constructorFound = clazz.getDeclaredConstructor(parameterTypesArray);
       }
       cache(clazz, null, parameterTypes, constructorFound);
       if (logger.isDebugEnabled()) {
@@ -305,26 +262,23 @@ public class ReflectionHelper {
       return picked;
     }
 
-    // now scan other (i.e. non-public) constructors
-    if (allowNonPublic) {
-      matchingConstructors =
-          collectMatchingConstructors(
-              Arrays.stream(clazz.getDeclaredConstructors())
-                  .filter(
-                      m ->
-                          !Modifier.isPublic(
-                              m.getModifiers())), // we already checked the public ones
-              parameters,
-              parameterTypesArray);
+    // now scan non-public constructors
+    matchingConstructors =
+        collectMatchingConstructors(
+            Arrays.stream(clazz.getDeclaredConstructors())
+                .filter(
+                    m ->
+                        !Modifier.isPublic(m.getModifiers())), // we already checked the public ones
+            parameters,
+            parameterTypesArray);
 
-      picked =
-          pickConstructorOrThrow(clazz, parameterTypes, parameterTypesArray, matchingConstructors);
-      if (picked != null) {
-        if (logger.isDebugEnabled()) {
-          logger.debug("Got constructor with signature in step3: {}", picked.toGenericString());
-        }
-        return picked;
+    picked =
+        pickConstructorOrThrow(clazz, parameterTypes, parameterTypesArray, matchingConstructors);
+    if (picked != null) {
+      if (logger.isDebugEnabled()) {
+        logger.debug("Got constructor with signature in step3: {}", picked.toGenericString());
       }
+      return picked;
     }
     throw new NoSuchMethodException(
         String.format(

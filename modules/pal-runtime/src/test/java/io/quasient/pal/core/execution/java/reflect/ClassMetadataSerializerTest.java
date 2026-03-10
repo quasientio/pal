@@ -507,7 +507,7 @@ public class ClassMetadataSerializerTest {
    */
   @Test
   public void testConstructor_withBooleanParam_createsSerializer() throws Exception {
-    // Test case 1: allow-all policy (equivalent to old scanNonPublic=true)
+    // Test case 1: allow-all policy
     ClassMetadataSerializer allowAllSerializer = new ClassMetadataSerializer(ALLOW_ALL_POLICY);
 
     // When scanning, all members are included in output

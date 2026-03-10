@@ -86,7 +86,6 @@ import org.slf4j.LoggerFactory;
  *   <li>ZMQ RPC on ports 5657 (interceptable) and 5658 (interceptor)
  *   <li>JSON-RPC on port 7790
  *   <li>3 RPC threads (interceptable), 1 RPC thread (interceptor)
- *   <li>Allow non-public method invocation
  *   <li><b>Interception enabled (--interceptable)</b> on interceptable peer
  *   <li>ITT apps classes on classpath
  * </ul>

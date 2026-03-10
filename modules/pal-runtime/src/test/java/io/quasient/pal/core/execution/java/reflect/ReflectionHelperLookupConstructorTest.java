@@ -54,8 +54,7 @@ import org.junit.Test;
  */
 public class ReflectionHelperLookupConstructorTest extends AbstractReflectionHelperTestBase {
 
-  private final ReflectionHelper reflectionHelper = new ReflectionHelper(false);
-  private final ReflectionHelper reflectionHelperWithNonPublicAccess = new ReflectionHelper(true);
+  private final ReflectionHelper reflectionHelper = new ReflectionHelper();
   private final Class<?> clazz = ClassForTestingConstructorLookup.class;
 
   @Override
@@ -746,53 +745,33 @@ public class ReflectionHelperLookupConstructorTest extends AbstractReflectionHel
     assertEquals("publicConstructor", invoke(constructor, args));
   }
 
-  @Test(expected = NoSuchMethodException.class)
+  @Test
   public void privateConstructor() throws Exception {
     Object[] args = new Object[] {(byte) 3, (byte) 7, 4};
-    reflectionHelper.lookupConstructor(
-        clazz, args, Arrays.asList(Byte.TYPE, Byte.TYPE, Integer.TYPE));
-  }
-
-  @Test
-  public void privateConstructor_withNonPublicReflectionHelper() throws Exception {
-    Object[] args = new Object[] {(byte) 3, (byte) 7, 4};
     Constructor<?> constructor =
-        reflectionHelperWithNonPublicAccess.lookupConstructor(
+        reflectionHelper.lookupConstructor(
             clazz, args, Arrays.asList(Byte.TYPE, Byte.TYPE, Integer.TYPE));
 
     assertNotNull(constructor);
     assertEquals("privateConstructor", invoke(constructor, args));
   }
 
-  @Test(expected = NoSuchMethodException.class)
+  @Test
   public void protectedConstructor() throws Exception {
     Object[] args = new Object[] {(byte) 3, (byte) 7, (short) 4};
-    reflectionHelper.lookupConstructor(
-        clazz, args, Arrays.asList(Byte.TYPE, Byte.TYPE, Short.TYPE));
-  }
-
-  @Test
-  public void protectedConstructor_withNonPublicReflectionHelper() throws Exception {
-    Object[] args = new Object[] {(byte) 3, (byte) 7, (short) 4};
     Constructor<?> constructor =
-        reflectionHelperWithNonPublicAccess.lookupConstructor(
+        reflectionHelper.lookupConstructor(
             clazz, args, Arrays.asList(Byte.TYPE, Byte.TYPE, Short.TYPE));
 
     assertNotNull(constructor);
     assertEquals("protectedConstructor", invoke(constructor, args));
   }
 
-  @Test(expected = NoSuchMethodException.class)
+  @Test
   public void packageProtectedConstructor() throws Exception {
     Object[] args = new Object[] {(byte) 3, (byte) 7, 4L};
-    reflectionHelper.lookupConstructor(clazz, args, Arrays.asList(Byte.TYPE, Byte.TYPE, Long.TYPE));
-  }
-
-  @Test
-  public void packageProtectedConstructor_withNonPublicReflectionHelper() throws Exception {
-    Object[] args = new Object[] {(byte) 3, (byte) 7, 4L};
     Constructor<?> constructor =
-        reflectionHelperWithNonPublicAccess.lookupConstructor(
+        reflectionHelper.lookupConstructor(
             clazz, args, Arrays.asList(Byte.TYPE, Byte.TYPE, Long.TYPE));
 
     assertNotNull(constructor);

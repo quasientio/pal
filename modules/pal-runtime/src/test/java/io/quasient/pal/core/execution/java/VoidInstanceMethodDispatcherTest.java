@@ -54,15 +54,6 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
             reflectionHelper,
             objectLookupStore);
     wireRpcPolicyChecker(dispatcher);
-    onlyPublicDispatcher =
-        new InstanceMethodDispatcher(
-            peerUuid,
-            runOptions,
-            messageBuilder,
-            outboundMessageGateway,
-            onlyPublicReflectionHelper,
-            objectLookupStore);
-    wireRpcPolicyChecker(onlyPublicDispatcher);
   }
 
   private <T> ProceedingJoinPoint createPjp(
@@ -606,7 +597,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // dispatch
     ExecMessage responseMessage =
-        ((ExecMessageDispatcher) onlyPublicDispatcher)
+        ((ExecMessageDispatcher) dispatcher)
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
     assertNotNull(responseMessage.getReturnValue());
     assertNull(responseMessage.getRaisedThrowable());
@@ -635,17 +626,8 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
             args,
             argObjRefs);
 
-    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    // dispatch
     ExecMessage responseMessage =
-        ((ExecMessageDispatcher) onlyPublicDispatcher)
-            .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
-    assertNull(responseMessage.getReturnValue());
-    assertThat(
-        responseMessage.getRaisedThrowable().getThrowable().getType(),
-        is("java.lang.NoSuchMethodException"));
-
-    // dispatch with the all access dispatcher - expect no exception
-    responseMessage =
         ((ExecMessageDispatcher) dispatcher)
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
     assertNotNull(responseMessage.getReturnValue());
@@ -675,17 +657,8 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
             args,
             argObjRefs);
 
-    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    // dispatch
     ExecMessage responseMessage =
-        ((ExecMessageDispatcher) onlyPublicDispatcher)
-            .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
-    assertNull(responseMessage.getReturnValue());
-    assertThat(
-        responseMessage.getRaisedThrowable().getThrowable().getType(),
-        is("java.lang.NoSuchMethodException"));
-
-    // dispatch with the all access dispatcher - expect no exception
-    responseMessage =
         ((ExecMessageDispatcher) dispatcher)
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
     assertNotNull(responseMessage.getReturnValue());
@@ -715,17 +688,8 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
             args,
             argObjRefs);
 
-    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    // dispatch
     ExecMessage responseMessage =
-        ((ExecMessageDispatcher) onlyPublicDispatcher)
-            .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
-    assertNull(responseMessage.getReturnValue());
-    assertThat(
-        responseMessage.getRaisedThrowable().getThrowable().getType(),
-        is("java.lang.NoSuchMethodException"));
-
-    // dispatch with the all access dispatcher - expect no exception
-    responseMessage =
         ((ExecMessageDispatcher) dispatcher)
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
     assertNotNull(responseMessage.getReturnValue());

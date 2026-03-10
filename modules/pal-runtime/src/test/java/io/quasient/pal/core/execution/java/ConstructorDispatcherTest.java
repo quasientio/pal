@@ -54,15 +54,6 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
             reflectionHelper,
             objectLookupStore);
     wireRpcPolicyChecker(dispatcher);
-    onlyPublicDispatcher =
-        new ConstructorDispatcher(
-            peerUuid,
-            runOptions,
-            messageBuilder,
-            outboundMessageGateway,
-            onlyPublicReflectionHelper,
-            objectLookupStore);
-    wireRpcPolicyChecker(onlyPublicDispatcher);
   }
 
   private <T> ProceedingJoinPoint createPjp(
@@ -517,16 +508,8 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
     ExecMessage incomingMessage =
         messageBuilder.buildEmptyConstructor(peerUuid, targetClass.getName());
 
-    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    // dispatch
     ExecMessage responseMessage =
-        ((ExecMessageDispatcher) onlyPublicDispatcher)
-            .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
-    assertThat(
-        responseMessage.getRaisedThrowable().getThrowable().getType(),
-        is("java.lang.NoSuchMethodException"));
-
-    // dispatch with the all access dispatcher - expect no exception
-    responseMessage =
         ((ExecMessageDispatcher) dispatcher)
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
     assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
@@ -544,9 +527,9 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
         messageBuilder.buildNonEmptyConstructor(
             peerUuid, targetClass.getName(), toNames(parameterTypes), args, argRefs);
 
-    // dispatch with the onlyPublicDispatcher - expect no exception
+    // dispatch
     ExecMessage responseMessage =
-        ((ExecMessageDispatcher) onlyPublicDispatcher)
+        ((ExecMessageDispatcher) dispatcher)
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
     assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
     assertNull(responseMessage.getRaisedThrowable());
@@ -564,16 +547,8 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
         messageBuilder.buildNonEmptyConstructor(
             peerUuid, targetClass.getName(), toNames(parameterTypes), args, argRefs);
 
-    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    // dispatch
     ExecMessage responseMessage =
-        ((ExecMessageDispatcher) onlyPublicDispatcher)
-            .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
-    assertThat(
-        responseMessage.getRaisedThrowable().getThrowable().getType(),
-        is("java.lang.NoSuchMethodException"));
-
-    // dispatch with the all access dispatcher - expect no exception
-    responseMessage =
         ((ExecMessageDispatcher) dispatcher)
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
     assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));
@@ -592,16 +567,8 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
         messageBuilder.buildNonEmptyConstructor(
             peerUuid, targetClass.getName(), toNames(parameterTypes), args, argRefs);
 
-    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    // dispatch
     ExecMessage responseMessage =
-        ((ExecMessageDispatcher) onlyPublicDispatcher)
-            .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
-    assertThat(
-        responseMessage.getRaisedThrowable().getThrowable().getType(),
-        is("java.lang.NoSuchMethodException"));
-
-    // dispatch with the all access dispatcher - expect no exception
-    responseMessage =
         ((ExecMessageDispatcher) dispatcher)
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
     assertThat(responseMessage.getResponseToId(), is(incomingMessage.getMessageId()));

@@ -366,7 +366,7 @@ JavaFX applications heavily use lambdas for event handlers. Lambda class names a
 
 **Non-public access:**
 
-Replay injections can access private fields and methods regardless of the `--allow-nonpublic` setting. This is intentional: replay is re-executing operations that originally ran inside the JVM with full access. The `--allow-nonpublic` flag only affects external RPC calls.
+Replay injections can access private fields and methods because they re-execute operations that originally ran inside the JVM with full access. RPC access control (handled by RPC policy) does not apply to replay injections.
 
 ## Side-Effect Shielding (Replay Policy)
 

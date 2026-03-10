@@ -49,10 +49,6 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
         new GetInstanceVariableDispatcher(
             peerUuid, runOptions, messageBuilder, outboundMessageGateway, objectLookupStore);
     wireRpcPolicyChecker(dispatcher);
-    onlyPublicDispatcher =
-        new GetInstanceVariableDispatcher(
-            peerUuid, runOptions, messageBuilder, outboundMessageGateway, objectLookupStore);
-    wireRpcPolicyChecker(onlyPublicDispatcher);
   }
 
   private <T> ProceedingJoinPoint createPjp(Field field, Object target, Callable<T> proceedCallback)
@@ -550,9 +546,9 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     ExecMessage incomingMessage =
         messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName, targetObjRef);
 
-    // dispatch with the onlyPublicDispatcher - expect no exception
+    // dispatch
     ExecMessage responseMessage =
-        ((ExecMessageDispatcher) onlyPublicDispatcher)
+        ((ExecMessageDispatcher) dispatcher)
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
     assertNotNull(responseMessage.getReturnValue());
     assertFalse(responseMessage.getReturnValue().getIsVoid());
@@ -572,15 +568,8 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     ExecMessage incomingMessage =
         messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName, targetObjRef);
 
-    // Both dispatchers can access non-public fields since RPC access control is now
-    // handled by RpcPolicyChecker before loading (shouldAllowNonPublicAccess() always true).
+    // dispatch
     ExecMessage responseMessage =
-        ((ExecMessageDispatcher) onlyPublicDispatcher)
-            .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
-    assertNotNull(responseMessage.getReturnValue());
-    assertNull(responseMessage.getRaisedThrowable());
-
-    responseMessage =
         ((ExecMessageDispatcher) dispatcher)
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
     assertNotNull(responseMessage.getReturnValue());
@@ -601,15 +590,8 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     ExecMessage incomingMessage =
         messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName, targetObjRef);
 
-    // Both dispatchers can access non-public fields since RPC access control is now
-    // handled by RpcPolicyChecker before loading (shouldAllowNonPublicAccess() always true).
+    // dispatch
     ExecMessage responseMessage =
-        ((ExecMessageDispatcher) onlyPublicDispatcher)
-            .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
-    assertNotNull(responseMessage.getReturnValue());
-    assertNull(responseMessage.getRaisedThrowable());
-
-    responseMessage =
         ((ExecMessageDispatcher) dispatcher)
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
     assertNotNull(responseMessage.getReturnValue());
@@ -630,15 +612,8 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     ExecMessage incomingMessage =
         messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName, targetObjRef);
 
-    // Both dispatchers can access non-public fields since RPC access control is now
-    // handled by RpcPolicyChecker before loading (shouldAllowNonPublicAccess() always true).
+    // dispatch
     ExecMessage responseMessage =
-        ((ExecMessageDispatcher) onlyPublicDispatcher)
-            .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
-    assertNotNull(responseMessage.getReturnValue());
-    assertNull(responseMessage.getRaisedThrowable());
-
-    responseMessage =
         ((ExecMessageDispatcher) dispatcher)
             .dispatchIncoming(incomingMessage, MessageChannelType.WEBSOCKET_RPC);
     assertNotNull(responseMessage.getReturnValue());

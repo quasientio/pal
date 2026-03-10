@@ -25,8 +25,7 @@ import java.util.UUID;
 /**
  * Dispatcher responsible for handling requests for accessing static fields (class variables). This
  * class extends the field dispatcher functionality by specifically targeting class-level (static)
- * variables and determining the appropriate reflective field access, considering the configuration
- * for non-public access.
+ * variables and determining the appropriate reflective field access.
  */
 @Singleton
 public class GetClassVariableDispatcher extends GetFieldDispatcher {
@@ -88,9 +87,8 @@ public class GetClassVariableDispatcher extends GetFieldDispatcher {
    *
    * <p>The method attempts to load the class designated in the {@code execMessage} using the
    * current thread's context class loader. It then tries to retrieve the public field with the
-   * provided name. If the public field is not found and non-public access is enabled, the method
-   * returns the declared (possibly non-public) field. Otherwise, it propagates the encountered
-   * {@link NoSuchFieldException}.
+   * provided name. If not found, it falls back to the declared (possibly non-public) field. RPC
+   * access control is enforced earlier in the dispatch path by the RPC policy checker.
    *
    * @param execMessage the execution message containing details of the static field operation
    * @param parameterTypes the list of expected parameter types (required by the API, though unused
@@ -114,10 +112,7 @@ public class GetClassVariableDispatcher extends GetFieldDispatcher {
     try {
       return clazz.getField(fieldName);
     } catch (NoSuchFieldException e) {
-      if (shouldAllowNonPublicAccess()) {
-        return clazz.getDeclaredField(fieldName);
-      }
-      throw e;
+      return clazz.getDeclaredField(fieldName);
     }
   }
 

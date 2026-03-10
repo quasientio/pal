@@ -27,8 +27,7 @@ import java.util.UUID;
  *
  * <p>This class extends the field dispatcher to support accessing instance fields on objects
  * referenced in RPC execution messages. It handles the retrieval of the target object and the
- * corresponding field from a class based on the provided message, optionally allowing non-public
- * field access based on configuration.
+ * corresponding field from a class based on the provided message.
  */
 @Singleton
 public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
@@ -38,8 +37,8 @@ public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
    *
    * <p>Initializes the necessary components to locate and retrieve the requested field value from
    * an instance. This includes setting the peer identifier, the message builder for RPC
-   * communications, a gateway for dispatching messages, the access control flag for non-public
-   * members, and the store used to lookup object references.
+   * communications, a gateway for dispatching messages, and the store used to lookup object
+   * references.
    *
    * @param peerUuid the unique identifier for the peer.
    * @param runOptions the run options governing enabled features
@@ -111,9 +110,9 @@ public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
    * Loads the accessible field object from the target class as specified in the execution message.
    *
    * <p>The method attempts to load the class based on the name provided in the message and then
-   * looks for a public field matching the provided field name. If the public field is not found and
-   * non-public access is permitted, it will attempt to retrieve a declared (possibly non-public)
-   * field.
+   * looks for a public field matching the provided field name. If not found, it falls back to the
+   * declared (possibly non-public) field. RPC access control is enforced earlier in the dispatch
+   * path by the RPC policy checker.
    *
    * @param execMessage the execution message containing the class and field information.
    * @param parameterTypes a list of parameter types; not used in this context.
@@ -136,10 +135,7 @@ public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
     try {
       return clazz.getField(fieldName);
     } catch (NoSuchFieldException e) {
-      if (shouldAllowNonPublicAccess()) {
-        return clazz.getDeclaredField(fieldName);
-      }
-      throw e;
+      return clazz.getDeclaredField(fieldName);
     }
   }
 

@@ -25,8 +25,7 @@ public enum MessageChannelType {
 
   /**
    * Replay injection channel (used by {@link io.quasient.pal.core.replay.ReplayInputInjector} to
-   * inject entry points during replay). This channel type always allows non-public access since
-   * we're replaying operations that originally ran inside the JVM with full access.
+   * inject entry points during replay).
    */
   REPLAY_INJECTION("REPLAY_INJECTION");
 

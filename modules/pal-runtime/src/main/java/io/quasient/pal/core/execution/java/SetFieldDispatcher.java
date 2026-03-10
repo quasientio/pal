@@ -91,8 +91,9 @@ public abstract class SetFieldDispatcher extends FieldOpDispatcher {
    * Loads the {@code AccessibleObject} representing the field specified by the class name and field
    * name.
    *
-   * <p>The method attempts to obtain a public field from the given class; if not found and if
-   * non-public access is allowed, it attempts to retrieve the declared field.
+   * <p>The method attempts to obtain a public field from the given class; if not found, it falls
+   * back to the declared (possibly non-public) field. RPC access control is enforced earlier in the
+   * dispatch path by the RPC policy checker.
    *
    * @param className the fully qualified name of the class that contains the field.
    * @param fieldName the name of the field to be accessed.
@@ -107,10 +108,7 @@ public abstract class SetFieldDispatcher extends FieldOpDispatcher {
     try {
       return clazz.getField(fieldName);
     } catch (NoSuchFieldException e) {
-      if (shouldAllowNonPublicAccess()) {
-        return clazz.getDeclaredField(fieldName);
-      }
-      throw e;
+      return clazz.getDeclaredField(fieldName);
     }
   }
 
