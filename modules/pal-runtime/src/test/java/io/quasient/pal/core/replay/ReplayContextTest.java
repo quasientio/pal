@@ -246,53 +246,49 @@ public class ReplayContextTest {
   // ===== hasInjectorForThread tests =====
 
   /**
-   * Verifies that {@code hasInjectorForThread} returns true for a thread whose name appears in
-   * {@code WalIndex.getInputThreadNames()} (i.e., the thread has entry-point operations).
+   * Verifies that {@code hasInjectorForThread} returns true for a thread that has been explicitly
+   * registered via {@code registerInjectorThread}.
    */
   @Test
-  public void hasInjectorForThread_returnsTrueForInputThread() {
-    // Given: WalIndex with entry-point operations on 'fx-thread'
-    List<WalEntry> entries =
-        Arrays.asList(
-            makeOperation(0L, "self-caller", 1),
-            makeEntryPointOperation(1L, "fx-thread", 2),
-            makeCompletion(2L, "fx-thread", 3),
-            makeCompletion(3L, "self-caller", 4));
-    WalIndex walIndex = WalIndex.build(entries);
-    ReplayContext ctx = createContext(walIndex);
+  public void hasInjectorForThread_returnsTrueForRegisteredThread() {
+    // Given: ReplayContext with a registered injector thread
+    ReplayContext ctx = createContext(WalIndex.build(Arrays.asList()));
+    ctx.registerInjectorThread("fx-thread");
 
     // When / Then
     assertThat(ctx.hasInjectorForThread("fx-thread"), is(true));
   }
 
   /**
-   * Verifies that {@code hasInjectorForThread} returns false for the self-caller thread, which has
-   * operations but no entry-point markers (self-caller's main() is handled by SelfBootstrapInvoker,
-   * not by a ReplayInputInjector).
+   * Verifies that {@code hasInjectorForThread} returns false for the self-caller thread even when
+   * self-caller has entry-point operations in the WAL. The self-caller is handled by
+   * SelfBootstrapInvoker, not by a ReplayInputInjector, so it should never be registered.
    */
   @Test
   public void hasInjectorForThread_returnsFalseForSelfCaller() {
-    // Given: WalIndex with only self-caller operations (no entry-point markers)
+    // Given: WalIndex with self-caller entry-point operations (simulates --no-wal-incoming-cli
+    // NOT being used), but self-caller is NOT registered as an injector thread
     List<WalEntry> entries =
-        Arrays.asList(makeOperation(0L, "self-caller", 1), makeCompletion(1L, "self-caller", 2));
+        Arrays.asList(
+            makeEntryPointOperation(0L, "self-caller", 1), makeCompletion(1L, "self-caller", 2));
     WalIndex walIndex = WalIndex.build(entries);
     ReplayContext ctx = createContext(walIndex);
+    // Note: self-caller is NOT registered (Main.java skips it)
 
-    // When / Then
+    // When / Then: returns false despite self-caller being in getInputThreadNames()
+    assertThat(walIndex.getInputThreadNames().contains("self-caller"), is(true));
     assertThat(ctx.hasInjectorForThread("self-caller"), is(false));
   }
 
   /**
-   * Verifies that {@code hasInjectorForThread} returns false for a thread name that does not appear
-   * in the WAL at all.
+   * Verifies that {@code hasInjectorForThread} returns false for a thread name that has not been
+   * registered, even if other threads are registered.
    */
   @Test
-  public void hasInjectorForThread_returnsFalseForUnknownThread() {
-    // Given: WalIndex with entries for other threads
-    List<WalEntry> entries =
-        Arrays.asList(makeOperation(0L, "self-caller", 1), makeCompletion(1L, "self-caller", 2));
-    WalIndex walIndex = WalIndex.build(entries);
-    ReplayContext ctx = createContext(walIndex);
+  public void hasInjectorForThread_returnsFalseForUnregisteredThread() {
+    // Given: ReplayContext with a different thread registered
+    ReplayContext ctx = createContext(WalIndex.build(Arrays.asList()));
+    ctx.registerInjectorThread("fx-thread");
 
     // When / Then
     assertThat(ctx.hasInjectorForThread("unknown-thread"), is(false));

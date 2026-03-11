@@ -12,9 +12,7 @@ package io.quasient.pal.core.execution.java;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import io.quasient.pal.common.objects.ObjectRef;
@@ -56,11 +54,11 @@ import org.junit.Test;
  * <p>These tests verify that:
  *
  * <ul>
- *   <li>When an entry point's thread has a corresponding {@code ReplayInputInjector} (i.e., thread
- *       name is in {@code WalIndex.getInputThreadNames()}), the full span is skipped via {@code
+ *   <li>When an entry point's thread has a registered {@code ReplayInputInjector} (via {@code
+ *       ReplayContext.registerInjectorThread()}), the full span is skipped via {@code
  *       advancePast(completionOffset)}
- *   <li>When an entry point's thread does NOT have an injector (e.g., self-caller main()), only the
- *       OPERATION entry is skipped via {@code cursor.advance()}
+ *   <li>When an entry point's thread does NOT have a registered injector (e.g., self-caller
+ *       main()), only the OPERATION entry is skipped via {@code cursor.advance()}
  *   <li>The COMPLETION skip loop is active only when span-skip was NOT used
  * </ul>
  */
@@ -118,7 +116,8 @@ public class DispatchReplaySpanSkipTest {
     ReplayContext ctx =
         new ReplayContext(index, new ReplayPolicy(), new ReplayObjectStore(), detector, gate);
 
-    // Verify precondition: fx-thread IS in input thread names (has injector)
+    // Register fx-thread as having an injector (simulates Main.startReplayInputInjectors)
+    ctx.registerInjectorThread(FX_THREAD);
     assertThat(ctx.hasInjectorForThread(FX_THREAD), is(true));
 
     MinimalDispatcher dispatcher = new MinimalDispatcher();
@@ -153,9 +152,9 @@ public class DispatchReplaySpanSkipTest {
     //   offset 1: nested OP (doWork) — should match the live operation after skip
     //   offset 2: nested RET (completion of doWork)
     //   offset 3: entry-point COMPLETION (entryPoint=true, pairs with offset 0)
-    // We use a spy to make hasInjectorForThread return false, simulating the scenario
-    // where main() is recorded as entry point but no ReplayInputInjector exists for
-    // self-caller (SelfBootstrapInvoker handles it instead).
+    // The self-caller thread has entry points in the WAL but no registered injector
+    // (Main.java skips creating an injector for self-caller; SelfBootstrapInvoker
+    // handles it instead).
     Thread.currentThread().setName(SELF_CALLER);
 
     List<WalEntry> entries = new ArrayList<>();
@@ -168,9 +167,8 @@ public class DispatchReplaySpanSkipTest {
     DivergenceDetector detector = new DivergenceDetector(DivergenceDetector.DivergencePolicy.WARN);
     ReplayGate gate = new ReplayGate(true);
     ReplayContext ctx =
-        spy(new ReplayContext(index, new ReplayPolicy(), new ReplayObjectStore(), detector, gate));
-    // Override: self-caller has no injector (SelfBootstrapInvoker handles it)
-    doReturn(false).when(ctx).hasInjectorForThread(SELF_CALLER);
+        new ReplayContext(index, new ReplayPolicy(), new ReplayObjectStore(), detector, gate);
+    // self-caller is NOT registered as an injector thread (mirrors Main.java behavior)
 
     MinimalDispatcher dispatcher = new MinimalDispatcher();
     setRunOptions(dispatcher, EnumSet.of(RunOptions.WITH_REPLAY));
@@ -222,8 +220,8 @@ public class DispatchReplaySpanSkipTest {
     DivergenceDetector detector = new DivergenceDetector(DivergenceDetector.DivergencePolicy.WARN);
     ReplayGate gate = new ReplayGate(true);
     ReplayContext ctx =
-        spy(new ReplayContext(index, new ReplayPolicy(), new ReplayObjectStore(), detector, gate));
-    doReturn(false).when(ctx).hasInjectorForThread(SELF_CALLER);
+        new ReplayContext(index, new ReplayPolicy(), new ReplayObjectStore(), detector, gate);
+    // self-caller is NOT registered as an injector thread
 
     MinimalDispatcher dispatcher = new MinimalDispatcher();
     setRunOptions(dispatcher, EnumSet.of(RunOptions.WITH_REPLAY));

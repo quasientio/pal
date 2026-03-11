@@ -72,6 +72,8 @@ pal run --wal file:/tmp/service-wal --no-wal-incoming-cli \
 
 This is recommended when `main()` is purely setup code. Omitting it keeps the WAL focused on the actual RPC entry points and avoids potential complications during multi-threaded replay where the self-caller's entry-point span could interfere with cursor alignment.
 
+**Recommended for RPC services:** When using `--wal-incoming-rpc` with multi-threaded RPC services (e.g., `--rpc-threads 4`), you should also add `--no-wal-incoming-cli`. Without it, the self-caller's `main()` entry point is recorded in the WAL, but during replay the self-caller thread does not use a `ReplayInputInjector` (its `main()` is called naturally by `SelfBootstrapInvoker`). This mismatch between the WAL data and the replay mechanism can cause cursor misalignment during multi-threaded replay.
+
 **Note:** `--no-wal-incoming-cli` is **not** automatically enabled when `--wal-incoming-rpc` is specified. This is intentional: in some applications, `main()` contains business logic that should be replayed as an injected entry point rather than just running naturally. Add `--no-wal-incoming-cli` explicitly when you know that `main()` is purely setup code and does not contain injectable logic.
 
 ## Replaying from a WAL
