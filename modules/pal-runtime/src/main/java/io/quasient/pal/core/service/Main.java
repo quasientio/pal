@@ -2124,6 +2124,8 @@ public class Main implements Callable<Integer> {
       String injectorThreadName =
           JAVAFX_APPLICATION_THREAD.equals(threadName) ? FX_REPLAY_INJECTOR_THREAD : threadName;
 
+      replayContext.registerInjectorThread(threadName);
+
       ReplayInputInjector injectorRunnable =
           new ReplayInputInjector(
               threadName,

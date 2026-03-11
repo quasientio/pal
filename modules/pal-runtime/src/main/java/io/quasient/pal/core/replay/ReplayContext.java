@@ -75,6 +75,21 @@ public class ReplayContext {
   private final Map<String, Queue<Long>> pendingInjectionOffsets = new ConcurrentHashMap<>();
 
   /**
+   * Thread names for which a {@link ReplayInputInjector} was actually created and started.
+   *
+   * <p>This is distinct from {@link WalIndex#getInputThreadNames()}: the WAL may contain
+   * entry-point operations for threads that do not get injectors (e.g., the self-caller thread,
+   * whose main() is invoked by {@code SelfBootstrapInvoker} rather than by injection). Using {@code
+   * getInputThreadNames()} directly would incorrectly report the self-caller as having an injector
+   * when {@code --no-wal-incoming-cli} is not used, causing span-skip where operation-only skip is
+   * needed.
+   *
+   * <p>Threads are registered via {@link #registerInjectorThread} from {@code
+   * Main.startReplayInputInjectors()}.
+   */
+  private final Set<String> injectorThreadNames = ConcurrentHashMap.newKeySet();
+
+  /**
    * Latch that gates replay input injector threads until the self-caller has loaded and initialized
    * the target application class. This prevents class-loading race conditions where an injector
    * thread could trigger static initialization on the wrong thread, causing cursor misalignment.
@@ -295,22 +310,36 @@ public class ReplayContext {
   }
 
   /**
+   * Registers a thread name as having a corresponding {@link ReplayInputInjector}.
+   *
+   * <p>This is called by {@code Main.startReplayInputInjectors()} for each thread that actually
+   * gets an injector. Not all threads with entry points in the WAL get injectors — the self-caller
+   * thread is skipped because its main() is invoked by {@code SelfBootstrapInvoker}.
+   *
+   * @param threadName the WAL thread name for which an injector was created
+   */
+  public void registerInjectorThread(String threadName) {
+    injectorThreadNames.add(threadName);
+  }
+
+  /**
    * Checks whether the given thread has a corresponding {@link ReplayInputInjector}.
    *
-   * <p>A thread has an injector if its name appears in {@link WalIndex#getInputThreadNames()},
-   * meaning it has at least one entry-point OPERATION in the WAL. Threads without injectors (e.g.,
-   * the self-caller thread) have their entry points handled by {@code SelfBootstrapInvoker} rather
-   * than by injection, so their nested operations should remain in the cursor for matching.
+   * <p>A thread has an injector only if it was explicitly registered via {@link
+   * #registerInjectorThread}. This is intentionally decoupled from {@link
+   * WalIndex#getInputThreadNames()}: the WAL may contain entry-point operations for the self-caller
+   * thread (when {@code --no-wal-incoming-cli} is not used), but the self-caller does not get an
+   * injector because its main() is invoked by {@code SelfBootstrapInvoker}.
    *
    * <p>This is used by {@code dispatchReplay()} to decide the skip strategy when an entry point is
    * encountered: if an injector exists, the entire span is skipped (nested ops will be handled by
    * the injector); otherwise, only the OPERATION entry is skipped and nested ops remain available.
    *
    * @param threadName the name of the thread to check
-   * @return {@code true} if the thread has a corresponding injector, {@code false} otherwise
+   * @return {@code true} if the thread has a registered injector, {@code false} otherwise
    */
   public boolean hasInjectorForThread(String threadName) {
-    return walIndex.getInputThreadNames().contains(threadName);
+    return injectorThreadNames.contains(threadName);
   }
 
   /**
