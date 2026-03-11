@@ -605,13 +605,54 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       // visible to dispatchReplay() because JavaFX (unweaved) calls it.
       if (expectedEntry.isEntryPoint()) {
         long skippedOffset = expectedEntry.getOffset();
+
+        // Check if this entry point is pending injection. If so, don't skip it - this would
+        // race with the injector. Report the live operation as extra and let the injection
+        // happen normally.
+        if (replayContext.isPendingInjection(threadName, skippedOffset)) {
+          logger.info(
+              "[{}] Entry point at offset {} is pending injection, not skipping. "
+                  + "Live operation {} will be reported as extra.",
+              threadName,
+              skippedOffset,
+              liveSig);
+          replayContext.getDivergenceDetector().reportExtraOperation(liveSig, threadName);
+          return invoke(pjp, pjp.getArgs());
+        }
+
         replayContext.markEntryPointHandled(skippedOffset);
-        cursor.advance();
-        // Advance gate so injector waiting on this offset can proceed (and see it's handled)
-        replayContext.getReplayGate().advanceTo(skippedOffset);
-        logger.debug(
-            "Skipped entry point at offset {} (called by unweaved code), re-matching",
-            skippedOffset);
+
+        // Skip the ENTIRE SPAN of the entry point (from OPERATION to COMPLETION, including
+        // all nested operations). This prevents cursor misalignment when entry points have
+        // nested operations that would otherwise cause mismatches.
+        //
+        // IMPORTANT: We only advance the gate to the OPERATION offset, not the completion
+        // offset. Advancing to completion would signal that all operations in the span are
+        // "done", but they were skipped on THIS thread. Other threads (e.g., FX thread)
+        // might have operations within this offset range that haven't been processed yet.
+        // Advancing the gate too far would cause the injector to proceed without waiting.
+        Long completionOffset = replayContext.getWalIndex().getCompletionOffset(skippedOffset);
+        if (completionOffset != null) {
+          cursor.advancePast(completionOffset);
+          // Only advance gate to operation offset, not completion
+          replayContext.getReplayGate().advanceTo(skippedOffset);
+          logger.debug(
+              "[{}] Skipped entry point SPAN at offset {} -> {} (called by unweaved code), "
+                  + "gate advanced to {}, re-matching",
+              threadName,
+              skippedOffset,
+              completionOffset,
+              skippedOffset);
+        } else {
+          // No completion found (unpaired entry) - just skip the OPERATION
+          cursor.advance();
+          replayContext.getReplayGate().advanceTo(skippedOffset);
+          logger.debug(
+              "[{}] Skipped entry point at offset {} (called by unweaved code, unpaired), "
+                  + "re-matching",
+              threadName,
+              skippedOffset);
+        }
 
         // Re-check with the next entry. Keep skipping entry points until we find a match
         // or a non-entry-point mismatch. This handles cases with multiple consecutive
@@ -619,21 +660,12 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         while (true) {
           expectedEntry = cursor.peekNext();
 
-          // Skip COMPLETION entries for entry points that were skipped. When an entry
-          // point's OPERATION is skipped, its COMPLETION is still in the WAL.
-          while (expectedEntry != null
-              && expectedEntry.getKind() == WalEntryKind.COMPLETION
-              && expectedEntry.isEntryPoint()) {
-            long completionOffset = expectedEntry.getOffset();
-            cursor.advance();
-            replayContext.getReplayGate().advanceTo(completionOffset);
-            logger.debug(
-                "Skipped entry point COMPLETION at offset {} during re-matching", completionOffset);
-            expectedEntry = cursor.peekNext();
-          }
-
           if (expectedEntry == null || expectedEntry.getKind() != WalEntryKind.OPERATION) {
             // Cursor exhausted or unexpected entry after skipping
+            logger.info(
+                "[{}] Cursor exhausted after skipping entry points. Live op {} is extra.",
+                threadName,
+                liveSig);
             replayContext.getDivergenceDetector().reportExtraOperation(liveSig, threadName);
             return invoke(pjp, pjp.getArgs());
           }
@@ -641,18 +673,52 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
           walSig = OperationSignature.fromWalEntry(expectedEntry);
           if (liveSig.matches(walSig)) {
             // Matched after skipping entry point(s) - continue with normal flow below
+            logger.debug(
+                "[{}] Matched {} after skipping entry point(s), cursor at offset {}",
+                threadName,
+                liveSig,
+                expectedEntry.getOffset());
             break;
           }
 
-          // Still mismatched - if it's another entry point, skip it too
+          // Still mismatched - if it's another entry point, skip it too (with its full span)
           if (expectedEntry.isEntryPoint()) {
             long anotherSkippedOffset = expectedEntry.getOffset();
+
+            // Check if pending injection
+            if (replayContext.isPendingInjection(threadName, anotherSkippedOffset)) {
+              logger.info(
+                  "[{}] Entry point at offset {} is pending injection, stopping skip loop. "
+                      + "Live operation {} will be reported as extra.",
+                  threadName,
+                  anotherSkippedOffset,
+                  liveSig);
+              replayContext.getDivergenceDetector().reportExtraOperation(liveSig, threadName);
+              return invoke(pjp, pjp.getArgs());
+            }
+
             replayContext.markEntryPointHandled(anotherSkippedOffset);
-            cursor.advance();
-            replayContext.getReplayGate().advanceTo(anotherSkippedOffset);
-            logger.debug(
-                "Skipped another entry point at offset {} (called by unweaved code)",
-                anotherSkippedOffset);
+
+            Long anotherCompletionOffset =
+                replayContext.getWalIndex().getCompletionOffset(anotherSkippedOffset);
+            if (anotherCompletionOffset != null) {
+              cursor.advancePast(anotherCompletionOffset);
+              // Only advance gate to operation offset
+              replayContext.getReplayGate().advanceTo(anotherSkippedOffset);
+              logger.debug(
+                  "[{}] Skipped another entry point SPAN at offset {} -> {}, gate at {}",
+                  threadName,
+                  anotherSkippedOffset,
+                  anotherCompletionOffset,
+                  anotherSkippedOffset);
+            } else {
+              cursor.advance();
+              replayContext.getReplayGate().advanceTo(anotherSkippedOffset);
+              logger.debug(
+                  "[{}] Skipped another entry point at offset {} (unpaired)",
+                  threadName,
+                  anotherSkippedOffset);
+            }
             // Continue loop to check next entry
           } else {
             // Non-entry-point mismatch - advance cursor/gate and invoke
@@ -1107,6 +1173,129 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
   }
 
   /**
+   * Handles phantom object stubbing for entry point injection when the target object doesn't exist.
+   *
+   * <p>This is called from {@code dispatchIncoming} when the loading phase fails because the target
+   * object (created by unweaved code, e.g., JavaFX KeyEvent) isn't in the ReplayObjectStore.
+   * Instead of failing, we check if the operation should be stubbed and return the WAL-recorded
+   * value.
+   *
+   * <p>The method:
+   *
+   * <ol>
+   *   <li>Finds the span's completion entry via the WAL index
+   *   <li>Checks for exception replay (re-throws WAL-recorded exceptions)
+   *   <li>Reconstructs the return value from the completion entry
+   *   <li>Replays field mutations if action is {@code STUB_WITH_SIDE_EFFECTS}
+   *   <li>Registers phantom or live objects in the object store
+   *   <li>Marks the entry point as handled and advances the replay gate
+   *   <li>Creates and returns the response ExecMessage
+   * </ol>
+   *
+   * @param incomingCall the original incoming message
+   * @param operationOffset the WAL offset of the operation (from pending injection queue)
+   * @param action the stub action (STUB_FROM_WAL, STUB_FROM_WAL_VERIFIED, or
+   *     STUB_WITH_SIDE_EFFECTS)
+   * @return the response ExecMessage with the stubbed return value, or {@code null} if stubbing
+   *     cannot be performed (caller should fall back to normal error handling)
+   * @throws Throwable if the WAL completion entry contains a raised throwable
+   */
+  private ExecMessage handlePhantomStub(
+      ExecMessage incomingCall, long operationOffset, ReplayAction action) throws Throwable {
+
+    // 1. Find the span's completion entry
+    Span span = replayContext.getWalIndex().getSpans().get(operationOffset);
+    if (span == null) {
+      logger.warn("No span found for phantom stub at offset {}, cannot stub", operationOffset);
+      return null;
+    }
+    long completionOffset = span.completionOffset();
+    WalEntry completionEntry = replayContext.getWalIndex().getEntryAtOffset(completionOffset);
+    if (completionEntry == null) {
+      logger.warn(
+          "No completion entry at offset {} for phantom stub at offset {}, cannot stub",
+          completionOffset,
+          operationOffset);
+      return null;
+    }
+
+    // 2. Check for exception replay
+    ExecMessage completionMsg = completionEntry.getRawMessage();
+    RaisedThrowable raised = completionMsg.getRaisedThrowable();
+    if (raised != null && raised.getThrowable() != null) {
+      String walThreadName = incomingCall.getThreadName();
+      advancePhantomStub(walThreadName, operationOffset, completionOffset);
+      throw reconstructThrowable(raised.getThrowable());
+    }
+
+    // 3. Reconstruct the return value from the WAL
+    Object stubbedValue = reconstructReturnValue(completionEntry);
+
+    // 4. Replay field mutations if action is STUB_WITH_SIDE_EFFECTS
+    if (action == ReplayAction.STUB_WITH_SIDE_EFFECTS) {
+      spanFieldMutationReplayer.replayMutations(
+          replayContext.getWalIndex(), span, replayContext.getObjectStore());
+    }
+
+    // 5. Register phantom or live object in the object store
+    int walRef = extractReturnRef(completionEntry);
+    if (walRef != 0) {
+      if (stubbedValue != null) {
+        replayContext.getObjectStore().register(walRef, stubbedValue);
+      } else {
+        replayContext.getObjectStore().registerPhantom(walRef);
+      }
+    }
+
+    // 6. Mark entry point as handled, advance cursor and gate
+    String walThreadName = incomingCall.getThreadName();
+    advancePhantomStub(walThreadName, operationOffset, completionOffset);
+
+    // 7. Create and return the response ExecMessage by copying from WAL completion.
+    // We cannot use createAfterExecMessage because that requires the AccessibleObject,
+    // which we don't have since the loading phase failed before we could resolve it.
+    // Instead, we create a response message that copies the return value from the WAL.
+    ExecMessage response = new ExecMessage();
+    response.setMessageId(incomingCall.getMessageId());
+    response.setPeerUuid(incomingCall.getPeerUuid());
+    response.setReturnValue(completionMsg.getReturnValue());
+    return response;
+  }
+
+  /**
+   * Advances replay state after handling a phantom stub in dispatchIncoming.
+   *
+   * <p>This method advances both the per-thread cursor AND the gate. Unlike {@link
+   * #advanceAfterStub} which is called during dispatchReplay (where we already have the cursor),
+   * this is called from dispatchIncoming where we need to look up the cursor by thread name.
+   *
+   * @param walThreadName the WAL thread name (from the incoming message)
+   * @param operationOffset the WAL offset of the operation entry
+   * @param completionOffset the WAL offset of the completion entry
+   */
+  private void advancePhantomStub(
+      String walThreadName, long operationOffset, long completionOffset) {
+    // Mark entry point as handled (phantom stubs in dispatchIncoming are always entry points)
+    replayContext.markEntryPointHandled(operationOffset);
+    logger.debug("Entry point at offset {} handled via phantom stub", operationOffset);
+
+    // Advance the per-thread cursor past the operation and completion entries.
+    // This is critical: without this, subsequent dispatchIncoming calls on the same thread
+    // will see a stale cursor position and fail to match.
+    ReplayCursor cursor = replayContext.getCursor(walThreadName);
+    if (cursor != null) {
+      cursor.advancePast(completionOffset);
+      logger.debug(
+          "Phantom stub advanced cursor for thread '{}' past completion offset {}",
+          walThreadName,
+          completionOffset);
+    }
+
+    // Advance the gate to the completion offset
+    replayContext.getReplayGate().advanceTo(completionOffset);
+  }
+
+  /**
    * Reconstructs a return value from a WAL completion entry.
    *
    * <p>Handles the following cases:
@@ -1214,6 +1403,14 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     String className = null;
     String methodName = null;
     String[] trackingParamTypes = null;
+
+    // Enable replay injection mode for REPLAY_INJECTION channel to allow non-public access.
+    // Replay injections are replaying operations that originally ran inside the JVM with full
+    // access, so they should be able to access private fields/methods.
+    final boolean isReplayInjection = messageChannel == MessageChannelType.REPLAY_INJECTION;
+    if (isReplayInjection) {
+      setReplayInjectionMode(true);
+    }
 
     if (trackingEnabled) {
       className = getClassname(incomingCall);
@@ -1329,8 +1526,112 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
           accessibleObject.setAccessible(true);
         }
       } catch (ReflectiveOperationException | AmbiguousCallException | RuntimeException ex) {
-        logger.error("Error during loading phase", ex);
+        // Log at DEBUG for replay injection (phantom stub may recover), ERROR otherwise
+        if (isReplayInjection && replayContext != null) {
+          logger.debug("Loading phase failed (phantom stub may handle): {}", ex.getMessage());
+        } else {
+          logger.error("Error during loading phase", ex);
+        }
         exceptionWhileLoading = ex;
+      }
+
+      // Handle phantom object stubbing: when loading phase fails during replay injection because
+      // the target object doesn't exist (e.g., KeyEvent created by unweaved JavaFX code), check
+      // if the operation should be stubbed. If yes, return the WAL-recorded value directly.
+      if (isReplayInjection
+          && exceptionWhileLoading != null
+          && replayContext != null
+          && runOptions.contains(RunOptions.WITH_REPLAY)) {
+
+        // Use the WAL thread name from the message, not the current (injector) thread name.
+        // The pending injection was pushed with the WAL thread name by ReplayInputInjector.
+        String phantomThreadName = incomingCall.getThreadName();
+        long phantomOffset = replayContext.popPendingInjection(phantomThreadName);
+
+        // Debug: log phantom stub check details
+        String phantomClassName = getClassname(incomingCall);
+        String phantomMethodName = getExecutableName(incomingCall);
+        logger.debug(
+            "Phantom stub check: threadName={}, offset={}, class={}, method={}",
+            phantomThreadName,
+            phantomOffset,
+            phantomClassName,
+            phantomMethodName);
+
+        if (phantomOffset >= 0) {
+          // Check if this operation should be stubbed according to the replay policy
+          ReplayAction phantomAction =
+              replayContext.getPolicy().getAction(phantomClassName, phantomMethodName, messageType);
+
+          logger.debug(
+              "Phantom stub action for {}.{}: {} (messageType={})",
+              phantomClassName,
+              phantomMethodName,
+              phantomAction,
+              messageType);
+
+          if (phantomAction == ReplayAction.STUB_FROM_WAL
+              || phantomAction == ReplayAction.STUB_FROM_WAL_VERIFIED
+              || phantomAction == ReplayAction.STUB_WITH_SIDE_EFFECTS) {
+
+            logger.info(
+                "Phantom object stubbing: operation {}.{} at offset {} has missing target, "
+                    + "returning WAL-recorded value (action={})",
+                phantomClassName,
+                phantomMethodName,
+                phantomOffset,
+                phantomAction);
+
+            try {
+              ExecMessage phantomResponse =
+                  handlePhantomStub(incomingCall, phantomOffset, phantomAction);
+              if (phantomResponse != null) {
+                // Clear tracking and replay injection mode before returning
+                if (trackingEnabled) {
+                  inFlightDispatchTracker.exitDispatch(className, methodName, trackingParamTypes);
+                }
+                setReplayInjectionMode(false);
+                return phantomResponse;
+              }
+              // If handlePhantomStub returns null, fall through to normal error handling
+            } catch (Throwable t) {
+              logger.warn(
+                  "Phantom stub handling failed for {}.{} at offset {}, "
+                      + "falling back to error response: {}",
+                  phantomClassName,
+                  phantomMethodName,
+                  phantomOffset,
+                  t.getMessage());
+              // Fall through to normal error handling
+            }
+          } else {
+            // Non-stub action (e.g., RE_EXECUTE) but target doesn't exist.
+            // We can't execute, but we must still advance past the entry point
+            // so the injector doesn't wait forever.
+            logger.warn(
+                "Phantom object skip: operation {}.{} at offset {} has missing target and "
+                    + "action={} (not stubbable), skipping entry point",
+                phantomClassName,
+                phantomMethodName,
+                phantomOffset,
+                phantomAction);
+
+            Long completionOffset = replayContext.getWalIndex().getCompletionOffset(phantomOffset);
+            if (completionOffset != null) {
+              advancePhantomStub(phantomThreadName, phantomOffset, completionOffset);
+            }
+
+            // Return null response (void-like) since we can't execute
+            if (trackingEnabled) {
+              inFlightDispatchTracker.exitDispatch(className, methodName, trackingParamTypes);
+            }
+            setReplayInjectionMode(false);
+            ExecMessage skipResponse = new ExecMessage();
+            skipResponse.setMessageId(incomingCall.getMessageId());
+            skipResponse.setPeerUuid(incomingCall.getPeerUuid());
+            return skipResponse;
+          }
+        }
       }
 
       // After the loading phase, the target class is initialized (static initializers have run).
@@ -1339,6 +1640,58 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       // the recording) before any injector thread can trigger class loading.
       if (replayContext != null && runOptions.contains(RunOptions.WITH_REPLAY)) {
         replayContext.countDownInjectorLatch();
+      }
+
+      // Handle replay injection stubbing: even when loading succeeds (target exists), check if
+      // the operation matches a stub pattern. If yes, return the WAL-recorded value instead of
+      // executing. This is critical for operations like TextField.getText() where the target
+      // exists but we need the recorded value, not the live (empty) value.
+      if (isReplayInjection
+          && exceptionWhileLoading == null
+          && replayContext != null
+          && runOptions.contains(RunOptions.WITH_REPLAY)) {
+
+        String stubClassName = getClassname(incomingCall);
+        String stubMethodName = getExecutableName(incomingCall);
+        ReplayAction stubAction =
+            replayContext.getPolicy().getAction(stubClassName, stubMethodName, messageType);
+
+        if (stubAction == ReplayAction.STUB_FROM_WAL
+            || stubAction == ReplayAction.STUB_FROM_WAL_VERIFIED
+            || stubAction == ReplayAction.STUB_WITH_SIDE_EFFECTS) {
+
+          // Get the pending injection offset for this entry point
+          String walThreadName = incomingCall.getThreadName();
+          long stubOffset = replayContext.popPendingInjection(walThreadName);
+
+          if (stubOffset >= 0) {
+            logger.info(
+                "Replay injection stub: {}.{} at offset {} - returning WAL value instead of "
+                    + "executing (action={})",
+                stubClassName,
+                stubMethodName,
+                stubOffset,
+                stubAction);
+
+            try {
+              ExecMessage stubResponse = handlePhantomStub(incomingCall, stubOffset, stubAction);
+              if (stubResponse != null) {
+                if (trackingEnabled) {
+                  inFlightDispatchTracker.exitDispatch(className, methodName, trackingParamTypes);
+                }
+                setReplayInjectionMode(false);
+                return stubResponse;
+              }
+            } catch (Throwable t) {
+              logger.warn(
+                  "Replay injection stub failed for {}.{} at offset {}, falling back to execution: {}",
+                  stubClassName,
+                  stubMethodName,
+                  stubOffset,
+                  t.getMessage());
+            }
+          }
+        }
       }
 
       // Process BEFORE intercept callbacks and apply argument mutations
@@ -1494,6 +1847,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
                           // ReplayInputInjector pushed BEFORE calling incomingCall(). This is the
                           // correct offset - using the cursor would be racy since the cursor may
                           // have been advanced by dispatchReplay on this thread.
+                          long injectedOffsetForCompletion = -1;
                           if (chainReplayCursor != null && chainReplayContext != null) {
                             long injectedOffset =
                                 chainReplayContext.popPendingInjection(
@@ -1511,17 +1865,58 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
                                   alreadyHandled,
                                   currentOffset);
                               if (alreadyHandled) {
-                                logger.info(
-                                    "[dispatchIncoming-chain] SKIP injectedOffset={} - race detected",
-                                    injectedOffset);
+                                // Entry point was already handled (skipped by dispatchReplay).
+                                // Advance the gate to completion offset so the injector can
+                                // proceed.
+                                Long completionOffset =
+                                    chainReplayContext
+                                        .getWalIndex()
+                                        .getCompletionOffset(injectedOffset);
+                                if (completionOffset != null) {
+                                  chainReplayContext.getReplayGate().advanceTo(completionOffset);
+                                  logger.info(
+                                      "[dispatchIncoming-chain] SKIP injectedOffset={}, "
+                                          + "advanced gate to {} for injector",
+                                      injectedOffset,
+                                      completionOffset);
+                                } else {
+                                  logger.info(
+                                      "[dispatchIncoming-chain] SKIP injectedOffset={} - race detected",
+                                      injectedOffset);
+                                }
                                 return null;
                               }
                               // Entry point not yet handled - advance cursor and invoke
                               chainReplayCursor.advance();
+                              injectedOffsetForCompletion = injectedOffset;
                             }
                           }
-                          return invokeIncoming(
-                              accessibleForChain, targetForChain, chainArgs, chainValue);
+                          Object invokeResult =
+                              invokeIncoming(
+                                  accessibleForChain, targetForChain, chainArgs, chainValue);
+
+                          // After invoke completes, advance cursor past COMPLETION and gate.
+                          // The nested operations inside the method advanced the cursor through
+                          // the span, but the COMPLETION entry is still there (reflection-invoked
+                          // methods don't trigger aspect advice for completion).
+                          if (injectedOffsetForCompletion >= 0
+                              && chainReplayCursor != null
+                              && chainReplayContext != null) {
+                            Long completionOffset =
+                                chainReplayContext
+                                    .getWalIndex()
+                                    .getCompletionOffset(injectedOffsetForCompletion);
+                            if (completionOffset != null) {
+                              chainReplayCursor.advancePast(completionOffset);
+                              chainReplayContext.getReplayGate().advanceTo(completionOffset);
+                              logger.info(
+                                  "[dispatchIncoming-chain] Entry point {} completed, "
+                                      + "advanced cursor/gate past completion {}",
+                                  injectedOffsetForCompletion,
+                                  completionOffset);
+                            }
+                          }
+                          return invokeResult;
                         });
                 boolean isVoid = accessibleForChain != null && returnsVoid(accessibleForChain);
                 return new AfterPhaseData(result, null, isVoid);
@@ -1626,6 +2021,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
                       // ReplayInputInjector pushed BEFORE calling incomingCall(). This is the
                       // correct offset - using the cursor would be racy since the cursor may
                       // have been advanced by dispatchReplay on this thread.
+                      long injectedOffsetForCompletion = -1;
                       if (directReplayCursor != null && directReplayContext != null) {
                         long injectedOffset =
                             directReplayContext.popPendingInjection(
@@ -1643,17 +2039,53 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
                               alreadyHandled,
                               currentOffset);
                           if (alreadyHandled) {
-                            logger.info(
-                                "[dispatchIncoming-direct] SKIP injectedOffset={} - race detected",
-                                injectedOffset);
+                            // Entry point was already handled (skipped by dispatchReplay).
+                            // Advance the gate to completion offset so the injector can proceed.
+                            Long completionOffset =
+                                directReplayContext
+                                    .getWalIndex()
+                                    .getCompletionOffset(injectedOffset);
+                            if (completionOffset != null) {
+                              directReplayContext.getReplayGate().advanceTo(completionOffset);
+                              logger.info(
+                                  "[dispatchIncoming-direct] SKIP injectedOffset={}, "
+                                      + "advanced gate to {} for injector",
+                                  injectedOffset,
+                                  completionOffset);
+                            } else {
+                              logger.info(
+                                  "[dispatchIncoming-direct] SKIP injectedOffset={} - race detected",
+                                  injectedOffset);
+                            }
                             return null;
                           }
                           // Entry point not yet handled - advance cursor and invoke
                           directReplayCursor.advance();
+                          injectedOffsetForCompletion = injectedOffset;
                         }
                       }
-                      return invokeIncoming(
-                          directAccessible, directTarget, directArgs, directValue);
+                      Object invokeResult =
+                          invokeIncoming(directAccessible, directTarget, directArgs, directValue);
+
+                      // After invoke completes, advance cursor past COMPLETION and gate.
+                      if (injectedOffsetForCompletion >= 0
+                          && directReplayCursor != null
+                          && directReplayContext != null) {
+                        Long completionOffset =
+                            directReplayContext
+                                .getWalIndex()
+                                .getCompletionOffset(injectedOffsetForCompletion);
+                        if (completionOffset != null) {
+                          directReplayCursor.advancePast(completionOffset);
+                          directReplayContext.getReplayGate().advanceTo(completionOffset);
+                          logger.info(
+                              "[dispatchIncoming-direct] Entry point {} completed, "
+                                  + "advanced cursor/gate past completion {}",
+                              injectedOffsetForCompletion,
+                              completionOffset);
+                        }
+                      }
+                      return invokeResult;
                     });
             if (logger.isTraceEnabled()) {
               String returnedClass =
@@ -1866,6 +2298,10 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       }
       return afterExecResponseMsg;
     } finally {
+      // Clear replay injection mode if it was set
+      if (isReplayInjection) {
+        setReplayInjectionMode(false);
+      }
       // Always exit dispatch tracking, even if an exception occurred
       if (trackingEnabled) {
         inFlightDispatchTracker.exitDispatch(className, methodName, trackingParamTypes);
@@ -2397,5 +2833,19 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       paramTypesList = List.of();
     }
     return new IncomingInterceptMetadata(className, methodName, paramTypesList);
+  }
+
+  /**
+   * Reserved hook for clearing replay injection mode state.
+   *
+   * <p>This method is called when exiting early from {@link #dispatchIncoming} during phantom stub
+   * or replay injection stub handling. Currently a no-op; may be used in the future to clear
+   * thread-local state if needed.
+   *
+   * @param mode whether replay injection mode should be active
+   */
+  @SuppressWarnings("unused")
+  private void setReplayInjectionMode(boolean mode) {
+    // No-op: reserved for future use if thread-local state tracking is needed
   }
 }

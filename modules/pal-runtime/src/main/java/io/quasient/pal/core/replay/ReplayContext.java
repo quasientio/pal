@@ -293,4 +293,26 @@ public class ReplayContext {
     Long offset = queue.poll();
     return offset != null ? offset : -1L;
   }
+
+  /**
+   * Checks whether an offset is pending injection for the given thread.
+   *
+   * <p>This is used by {@code dispatchReplay()} to avoid skipping entry points that are about to be
+   * injected. Without this check, there's a race condition: the injector pushes an offset and calls
+   * {@code incomingCall()}, which queues a callback via {@code Platform.runLater()}. Meanwhile, a
+   * live operation on the same thread triggers {@code dispatchReplay()}, which sees a mismatch with
+   * the pending entry point and skips it. This causes the injection callback to find the entry
+   * point already "handled" and skip, leading to missed injections.
+   *
+   * @param threadName the name of the thread to check
+   * @param offset the WAL offset to check
+   * @return {@code true} if the offset is pending injection, {@code false} otherwise
+   */
+  public boolean isPendingInjection(String threadName, long offset) {
+    Queue<Long> queue = pendingInjectionOffsets.get(threadName);
+    if (queue == null) {
+      return false;
+    }
+    return queue.contains(offset);
+  }
 }

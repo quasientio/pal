@@ -23,12 +23,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.quasient.pal.common.replay.WalEntry;
+import io.quasient.pal.common.replay.WalIndex;
 import io.quasient.pal.core.dispatcher.IncomingMessageDispatcher;
 import io.quasient.pal.core.transport.MessageChannelType;
 import io.quasient.pal.messages.colfer.Class;
 import io.quasient.pal.messages.colfer.ClassMethodCall;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.InstanceMethodCall;
+import io.quasient.pal.messages.colfer.ReturnValue;
 import io.quasient.pal.messages.types.MessageType;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -71,9 +73,10 @@ public class ReplayInputInjectorTest {
     entryPoints.add(makeEntryPoint(20L, "rpc-worker-1", 2, "methodB"));
     entryPoints.add(makeEntryPoint(30L, "rpc-worker-1", 3, "methodC"));
 
+    WalIndex walIndex = buildWalIndex(entryPoints);
     ReplayInputInjector injector =
         new ReplayInputInjector(
-            "rpc-worker-1", entryPoints, dispatcher, gate, replayContext, readyLatch);
+            "rpc-worker-1", entryPoints, dispatcher, gate, replayContext, readyLatch, walIndex);
 
     // When: ReplayInputInjector runs to completion
     injector.run();
@@ -103,9 +106,10 @@ public class ReplayInputInjectorTest {
     entryPoints.add(makeEntryPoint(10L, "rpc-worker-1", 1, "instanceMethod"));
     entryPoints.add(makeClassMethodEntryPoint(20L, "rpc-worker-1", 2, "staticMethod"));
 
+    WalIndex walIndex = buildWalIndex(entryPoints);
     ReplayInputInjector injector =
         new ReplayInputInjector(
-            "rpc-worker-1", entryPoints, dispatcher, gate, replayContext, readyLatch);
+            "rpc-worker-1", entryPoints, dispatcher, gate, replayContext, readyLatch, walIndex);
 
     // When: ReplayInputInjector runs
     injector.run();
@@ -138,9 +142,10 @@ public class ReplayInputInjectorTest {
     entryPoints.add(makeEntryPoint(10L, "rpc-worker-1", 1, "methodA"));
     entryPoints.add(makeEntryPoint(50L, "rpc-worker-1", 2, "methodB"));
 
+    WalIndex walIndex = buildWalIndex(entryPoints);
     ReplayInputInjector injector =
         new ReplayInputInjector(
-            "rpc-worker-1", entryPoints, dispatcher, gate, replayContext, readyLatch);
+            "rpc-worker-1", entryPoints, dispatcher, gate, replayContext, readyLatch, walIndex);
 
     AtomicBoolean firstInjected = new AtomicBoolean(false);
     AtomicBoolean secondInjected = new AtomicBoolean(false);
@@ -177,13 +182,27 @@ public class ReplayInputInjectorTest {
     Thread.sleep(50);
     assertThat("First injection should have happened", firstInjected.get(), is(true));
 
-    // Second doesn't happen until gate reaches 49
+    // Second doesn't happen until first entry point's completion (offset 11) + 1 is reached
+    // AND the gate reaches offset 49 (entry point 2 is at offset 50)
     assertThat("Second injection should be blocked", secondInjected.get(), is(false));
 
+    // Advance past first entry point's completion (offset 11) + 1 = 12
+    gate.advanceTo(12);
+    Thread.sleep(50);
+    assertThat(
+        "Second injection should still be blocked (waiting for offset 49)",
+        secondInjected.get(),
+        is(false));
+
+    // Advance to allow second entry point (at offset 50)
     gate.advanceTo(49);
+    Thread.sleep(50);
+    assertThat("Second injection should have happened", secondInjected.get(), is(true));
+
+    // Advance past second entry point's completion (offset 51) + 1 = 52 for injector to complete
+    gate.advanceTo(52);
     boolean completed = done.await(2, TimeUnit.SECONDS);
     assertThat("Injector should complete", completed, is(true));
-    assertThat("Second injection should have happened", secondInjected.get(), is(true));
   }
 
   /**
@@ -203,9 +222,10 @@ public class ReplayInputInjectorTest {
     entryPoints.add(makeEntryPoint(10L, "rpc-worker-1", 1, "methodA"));
     entryPoints.add(makeEntryPoint(20L, "rpc-worker-1", 2, "methodB"));
 
+    WalIndex walIndex = buildWalIndex(entryPoints);
     ReplayInputInjector injector =
         new ReplayInputInjector(
-            "rpc-worker-1", entryPoints, dispatcher, gate, replayContext, readyLatch);
+            "rpc-worker-1", entryPoints, dispatcher, gate, replayContext, readyLatch, walIndex);
 
     // Before run: not complete
     assertThat(injector.isComplete(), is(false));
@@ -230,9 +250,11 @@ public class ReplayInputInjectorTest {
     when(replayContext.isEntryPointHandled(anyLong())).thenReturn(false);
     CountDownLatch readyLatch = new CountDownLatch(0);
 
+    List<WalEntry> emptyList = Collections.emptyList();
+    WalIndex walIndex = buildWalIndex(emptyList);
     ReplayInputInjector injector =
         new ReplayInputInjector(
-            "rpc-worker-3", Collections.emptyList(), dispatcher, gate, replayContext, readyLatch);
+            "rpc-worker-3", emptyList, dispatcher, gate, replayContext, readyLatch, walIndex);
 
     // When: ReplayInputInjector.run() called
     injector.run();
@@ -260,9 +282,11 @@ public class ReplayInputInjectorTest {
     WalEntry entryPoint = makeEntryPoint(10L, "rpc-worker-1", 1, "targetMethod");
     ExecMessage expectedMsg = entryPoint.getRawMessage();
 
+    List<WalEntry> entryPointList = List.of(entryPoint);
+    WalIndex walIndex = buildWalIndex(entryPointList);
     ReplayInputInjector injector =
         new ReplayInputInjector(
-            "rpc-worker-1", List.of(entryPoint), dispatcher, gate, replayContext, readyLatch);
+            "rpc-worker-1", entryPointList, dispatcher, gate, replayContext, readyLatch, walIndex);
 
     // When: ReplayInputInjector injects this entry point
     injector.run();
@@ -296,9 +320,10 @@ public class ReplayInputInjectorTest {
 
     List<WalEntry> entryPoints = List.of(makeEntryPoint(10L, "rpc-worker-1", 1, "methodA"));
 
+    WalIndex walIndex = buildWalIndex(entryPoints);
     ReplayInputInjector injector =
         new ReplayInputInjector(
-            "rpc-worker-1", entryPoints, dispatcher, gate, replayContext, readyLatch);
+            "rpc-worker-1", entryPoints, dispatcher, gate, replayContext, readyLatch, walIndex);
 
     CountDownLatch done = new CountDownLatch(1);
 
@@ -383,5 +408,41 @@ public class ReplayInputInjectorTest {
     msg.setClassMethodCall(cmc);
 
     return WalEntry.fromExecMessage(offset, msg);
+  }
+
+  /**
+   * Creates a completion {@link WalEntry} for an operation at the given offset.
+   *
+   * @param completionOffset the offset of this completion entry
+   * @param threadName the thread name
+   * @param builderSeq the builder sequence number
+   * @return a new completion WalEntry
+   */
+  private static WalEntry makeCompletion(long completionOffset, String threadName, int builderSeq) {
+    ExecMessage msg = new ExecMessage();
+    msg.setThreadName(threadName);
+    msg.setBuilderSeq(builderSeq);
+    ReturnValue rv = new ReturnValue();
+    rv.setIsVoid(true);
+    msg.setReturnValue(rv);
+    return WalEntry.fromExecMessage(completionOffset, msg);
+  }
+
+  /**
+   * Builds a {@link WalIndex} from the given entry points with completion entries.
+   *
+   * <p>For each entry point at offset O, a completion entry is created at offset O+1.
+   *
+   * @param entryPoints the entry points to include
+   * @return a WalIndex with proper operation/completion pairing
+   */
+  private static WalIndex buildWalIndex(List<WalEntry> entryPoints) {
+    List<WalEntry> allEntries = new ArrayList<>();
+    int builderSeq = 100; // Start after any entry point sequences
+    for (WalEntry ep : entryPoints) {
+      allEntries.add(ep);
+      allEntries.add(makeCompletion(ep.getOffset() + 1, ep.getThreadName(), builderSeq++));
+    }
+    return WalIndex.build(allEntries);
   }
 }

@@ -11,6 +11,7 @@ package io.quasient.pal.core.replay;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.quasient.pal.common.replay.WalEntry;
+import io.quasient.pal.common.replay.WalIndex;
 import io.quasient.pal.core.dispatcher.IncomingMessageDispatcher;
 import io.quasient.pal.core.transport.MessageChannelType;
 import io.quasient.pal.messages.colfer.ExecMessage;
@@ -77,6 +78,12 @@ public class ReplayInputInjector implements Runnable {
    */
   private final long operationDelayMs;
 
+  /**
+   * The WAL index for looking up completion offsets. Used to wait for each entry point's span to
+   * complete before proceeding to the next entry point.
+   */
+  private final WalIndex walIndex;
+
   /** Whether all entry points have been injected. Volatile for cross-thread visibility. */
   private volatile boolean complete;
 
@@ -89,6 +96,7 @@ public class ReplayInputInjector implements Runnable {
    * @param replayGate the WAL-offset ordering barrier for cross-thread coordination
    * @param replayContext the replay context for checking if entry points were already handled
    * @param readyLatch latch that must be counted down before injection starts (peer initialization)
+   * @param walIndex the WAL index for looking up completion offsets
    */
   public ReplayInputInjector(
       String threadName,
@@ -96,7 +104,8 @@ public class ReplayInputInjector implements Runnable {
       IncomingMessageDispatcher incomingMessageDispatcher,
       ReplayGate replayGate,
       ReplayContext replayContext,
-      CountDownLatch readyLatch) {
+      CountDownLatch readyLatch,
+      WalIndex walIndex) {
     this(
         threadName,
         entryPoints,
@@ -104,7 +113,8 @@ public class ReplayInputInjector implements Runnable {
         replayGate,
         replayContext,
         readyLatch,
-        0L);
+        0L,
+        walIndex);
   }
 
   /**
@@ -117,6 +127,7 @@ public class ReplayInputInjector implements Runnable {
    * @param replayContext the replay context for checking if entry points were already handled
    * @param readyLatch latch that must be counted down before injection starts (peer initialization)
    * @param operationDelayMs delay in milliseconds before each entry point injection (0 to disable)
+   * @param walIndex the WAL index for looking up completion offsets
    */
   public ReplayInputInjector(
       String threadName,
@@ -125,7 +136,8 @@ public class ReplayInputInjector implements Runnable {
       ReplayGate replayGate,
       ReplayContext replayContext,
       CountDownLatch readyLatch,
-      long operationDelayMs) {
+      long operationDelayMs,
+      WalIndex walIndex) {
     this.threadName = threadName;
     this.entryPoints = Collections.unmodifiableList(new ArrayList<>(entryPoints));
     this.incomingMessageDispatcher = incomingMessageDispatcher;
@@ -133,6 +145,7 @@ public class ReplayInputInjector implements Runnable {
     this.replayContext = replayContext;
     this.readyLatch = readyLatch;
     this.operationDelayMs = operationDelayMs;
+    this.walIndex = walIndex;
   }
 
   /**
@@ -172,20 +185,14 @@ public class ReplayInputInjector implements Runnable {
 
       replayGate.waitForOffset(entryPoint.getOffset());
 
-      logger.debug(
-          "[{}] Gate reached offset {}, checking if handled", threadName, entryPoint.getOffset());
-
-      // Skip entry points that were already handled via dispatchReplay() (the real runtime
-      // path, e.g., JavaFX calling start() which calls constructor/buildUI). This prevents
-      // duplicate execution when both the real runtime and the injector try to execute the
-      // same entry point.
-      if (replayContext.isEntryPointHandled(entryPoint.getOffset())) {
-        logger.debug(
-            "[{}] Skipping entry point at offset {} - already handled via dispatchReplay",
-            threadName,
-            entryPoint.getOffset());
-        continue;
-      }
+      // NOTE: We intentionally do NOT check isEntryPointHandled() here on the injector thread.
+      // There's a memory visibility race: dispatchReplay on the FX thread might mark the entry
+      // point as handled and advance the gate, but this thread might see the gate advanced
+      // without seeing the handled flag (due to cross-data-structure visibility issues).
+      //
+      // Instead, we always inject (queue the callback) and let the callback's isEntryPointHandled
+      // check handle it. The callback runs on the FX thread, same as dispatchReplay, so there
+      // are no visibility issues.
 
       logger.debug(
           "[{}] Injecting entry point at offset {}: {}.{}",
@@ -221,6 +228,30 @@ public class ReplayInputInjector implements Runnable {
       ExecMessage msg = entryPoint.getRawMessage();
       incomingMessageDispatcher.incomingCall(
           msg, entryPoint.getMessageType(), MessageChannelType.REPLAY_INJECTION);
+
+      // Wait for the entry point's completion before proceeding to the next entry point.
+      // This ensures all nested operations within the entry point's span are processed,
+      // preventing race conditions where the next injection overlaps with the current one's
+      // nested operations (which caused cursor misalignment without --delay).
+      Long completionOffset = walIndex.getCompletionOffset(entryPoint.getOffset());
+      if (completionOffset != null) {
+        logger.debug(
+            "[{}] Waiting for completion of entry point at offset {} (completion at {})",
+            threadName,
+            entryPoint.getOffset(),
+            completionOffset);
+        replayGate.waitForOffset(completionOffset + 1);
+        logger.debug(
+            "[{}] Entry point at offset {} completed (gate at {})",
+            threadName,
+            entryPoint.getOffset(),
+            replayGate.getCompletedOffset());
+      } else {
+        logger.warn(
+            "[{}] No completion offset found for entry point at offset {} - proceeding without wait",
+            threadName,
+            entryPoint.getOffset());
+      }
 
       logger.debug(
           "[{}] Finished injecting entry point at offset {}", threadName, entryPoint.getOffset());
