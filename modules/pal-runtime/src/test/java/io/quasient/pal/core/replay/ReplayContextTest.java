@@ -13,6 +13,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.sameInstance;
+import static org.junit.Assert.fail;
 
 import io.quasient.pal.common.replay.WalEntry;
 import io.quasient.pal.common.replay.WalIndex;
@@ -22,6 +23,7 @@ import io.quasient.pal.messages.colfer.InstanceMethodCall;
 import io.quasient.pal.messages.colfer.ReturnValue;
 import java.util.Arrays;
 import java.util.List;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -162,6 +164,82 @@ public class ReplayContextTest {
     // When: getWalIndex()
     // Then: returns the same WalIndex instance passed at construction
     assertThat(ctx.getWalIndex(), is(sameInstance(walIndex)));
+  }
+
+  // ===== isPendingInjection / pushPendingInjection / popPendingInjection tests =====
+
+  /** Verifies that isPendingInjection returns false when no injections have been pushed. */
+  @Test
+  @Ignore("Awaiting implementation in #1039")
+  public void isPendingInjection_returnsFalseWhenEmpty() {
+    // Given: ReplayContext with no pending injections
+    // When: isPendingInjection('thread-1', 100) called
+    // Then: returns false
+
+    // TODO(#1039): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /** Verifies that isPendingInjection returns true after a matching push. */
+  @Test
+  @Ignore("Awaiting implementation in #1039")
+  public void isPendingInjection_returnsTrueAfterPush() {
+    // Given: ReplayContext with pushPendingInjection('thread-1', 100) called
+    // When: isPendingInjection('thread-1', 100) called
+    // Then: returns true
+
+    // TODO(#1039): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /** Verifies that isPendingInjection returns false when the offset does not match. */
+  @Test
+  @Ignore("Awaiting implementation in #1039")
+  public void isPendingInjection_returnsFalseForDifferentOffset() {
+    // Given: ReplayContext with pushPendingInjection('thread-1', 100) called
+    // When: isPendingInjection('thread-1', 200) called
+    // Then: returns false
+
+    // TODO(#1039): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /** Verifies that isPendingInjection returns false when the thread name does not match. */
+  @Test
+  @Ignore("Awaiting implementation in #1039")
+  public void isPendingInjection_returnsFalseForDifferentThread() {
+    // Given: ReplayContext with pushPendingInjection('thread-1', 100) called
+    // When: isPendingInjection('thread-2', 100) called
+    // Then: returns false
+
+    // TODO(#1039): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that popPendingInjection removes the entry and isPendingInjection returns false after.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1039")
+  public void popPendingInjection_removesFromQueue() {
+    // Given: ReplayContext with pushPendingInjection('thread-1', 100) called
+    // When: popPendingInjection('thread-1') called, then isPendingInjection('thread-1', 100)
+    // Then: pop returns 100; isPendingInjection returns false
+
+    // TODO(#1039): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /** Verifies that multiple offsets are queued per thread in FIFO order. */
+  @Test
+  @Ignore("Awaiting implementation in #1039")
+  public void pushPendingInjection_multipleOffsetsQueued() {
+    // Given: pushPendingInjection('thread-1', 100) then pushPendingInjection('thread-1', 200)
+    // When: isPendingInjection('thread-1', 100) and isPendingInjection('thread-1', 200)
+    // Then: both return true; popPendingInjection returns 100 first, then 200 (FIFO)
+
+    // TODO(#1039): Implement test logic
+    fail("Not yet implemented");
   }
 
   /**
