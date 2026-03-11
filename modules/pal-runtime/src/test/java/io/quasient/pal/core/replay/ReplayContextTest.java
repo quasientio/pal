@@ -242,6 +242,55 @@ public class ReplayContextTest {
     fail("Not yet implemented");
   }
 
+  // ===== hasInjectorForThread tests =====
+
+  /**
+   * Verifies that {@code hasInjectorForThread} returns true for a thread whose name appears in
+   * {@code WalIndex.getInputThreadNames()} (i.e., the thread has entry-point operations).
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1039")
+  public void hasInjectorForThread_returnsTrueForInputThread() {
+    // Given: WalIndex built with entries where 'fx-thread' has entry-point operations
+    // When: hasInjectorForThread('fx-thread') called
+    // Then: returns true
+
+    // TODO(#1039): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that {@code hasInjectorForThread} returns false for the self-caller thread, which has
+   * operations but no entry-point markers (self-caller's main() is handled by SelfBootstrapInvoker,
+   * not by a ReplayInputInjector).
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1039")
+  public void hasInjectorForThread_returnsFalseForSelfCaller() {
+    // Given: WalIndex built with entries where only 'self-caller' operations exist
+    //        (no entry-point markers on self-caller thread)
+    // When: hasInjectorForThread('self-caller') called
+    // Then: returns false
+
+    // TODO(#1039): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that {@code hasInjectorForThread} returns false for a thread name that does not appear
+   * in the WAL at all.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1039")
+  public void hasInjectorForThread_returnsFalseForUnknownThread() {
+    // Given: WalIndex built with entries (for other threads)
+    // When: hasInjectorForThread('unknown-thread') called
+    // Then: returns false
+
+    // TODO(#1039): Implement test logic
+    fail("Not yet implemented");
+  }
+
   /**
    * Creates a {@link ReplayContext} with default sub-components and the given WalIndex.
    *
