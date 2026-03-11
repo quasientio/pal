@@ -1441,13 +1441,10 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     String methodName = null;
     String[] trackingParamTypes = null;
 
-    // Enable replay injection mode for REPLAY_INJECTION channel to allow non-public access.
-    // Replay injections are replaying operations that originally ran inside the JVM with full
-    // access, so they should be able to access private fields/methods.
+    // Track whether this is a replay injection for phantom stub and logging decisions below.
+    // Replay injections replay operations that originally ran inside the JVM with full access,
+    // so they should be able to access private fields/methods.
     final boolean isReplayInjection = messageChannel == MessageChannelType.REPLAY_INJECTION;
-    if (isReplayInjection) {
-      setReplayInjectionMode(true);
-    }
 
     if (trackingEnabled) {
       className = getClassname(incomingCall);
@@ -1633,7 +1630,6 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
                 if (trackingEnabled) {
                   inFlightDispatchTracker.exitDispatch(className, methodName, trackingParamTypes);
                 }
-                setReplayInjectionMode(false);
                 return phantomResponse;
               }
               // If handlePhantomStub returns null, fall through to normal error handling
@@ -1668,7 +1664,6 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
             if (trackingEnabled) {
               inFlightDispatchTracker.exitDispatch(className, methodName, trackingParamTypes);
             }
-            setReplayInjectionMode(false);
             ExecMessage skipResponse = new ExecMessage();
             skipResponse.setMessageId(incomingCall.getMessageId());
             skipResponse.setPeerUuid(incomingCall.getPeerUuid());
@@ -1722,7 +1717,6 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
                 if (trackingEnabled) {
                   inFlightDispatchTracker.exitDispatch(className, methodName, trackingParamTypes);
                 }
-                setReplayInjectionMode(false);
                 return stubResponse;
               }
             } catch (Throwable t) {
@@ -2341,10 +2335,6 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       }
       return afterExecResponseMsg;
     } finally {
-      // Clear replay injection mode if it was set
-      if (isReplayInjection) {
-        setReplayInjectionMode(false);
-      }
       // Always exit dispatch tracking, even if an exception occurred
       if (trackingEnabled) {
         inFlightDispatchTracker.exitDispatch(className, methodName, trackingParamTypes);
@@ -2876,19 +2866,5 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       paramTypesList = List.of();
     }
     return new IncomingInterceptMetadata(className, methodName, paramTypesList);
-  }
-
-  /**
-   * Reserved hook for clearing replay injection mode state.
-   *
-   * <p>This method is called when exiting early from {@link #dispatchIncoming} during phantom stub
-   * or replay injection stub handling. Currently a no-op; may be used in the future to clear
-   * thread-local state if needed.
-   *
-   * @param mode whether replay injection mode should be active
-   */
-  @SuppressWarnings("unused")
-  private void setReplayInjectionMode(boolean mode) {
-    // No-op: reserved for future use if thread-local state tracking is needed
   }
 }
