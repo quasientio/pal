@@ -13,7 +13,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.sameInstance;
-import static org.junit.Assert.fail;
 
 import io.quasient.pal.common.replay.WalEntry;
 import io.quasient.pal.common.replay.WalIndex;
@@ -23,7 +22,6 @@ import io.quasient.pal.messages.colfer.InstanceMethodCall;
 import io.quasient.pal.messages.colfer.ReturnValue;
 import java.util.Arrays;
 import java.util.List;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -170,76 +168,79 @@ public class ReplayContextTest {
 
   /** Verifies that isPendingInjection returns false when no injections have been pushed. */
   @Test
-  @Ignore("Awaiting implementation in #1039")
   public void isPendingInjection_returnsFalseWhenEmpty() {
-    // Given: ReplayContext with no pending injections
-    // When: isPendingInjection('thread-1', 100) called
-    // Then: returns false
+    // Given
+    ReplayContext ctx = createContext(WalIndex.build(Arrays.asList()));
 
-    // TODO(#1039): Implement test logic
-    fail("Not yet implemented");
+    // When / Then
+    assertThat(ctx.isPendingInjection("thread-1", 100L), is(false));
   }
 
   /** Verifies that isPendingInjection returns true after a matching push. */
   @Test
-  @Ignore("Awaiting implementation in #1039")
   public void isPendingInjection_returnsTrueAfterPush() {
-    // Given: ReplayContext with pushPendingInjection('thread-1', 100) called
-    // When: isPendingInjection('thread-1', 100) called
-    // Then: returns true
+    // Given
+    ReplayContext ctx = createContext(WalIndex.build(Arrays.asList()));
+    ctx.pushPendingInjection("thread-1", 100L);
 
-    // TODO(#1039): Implement test logic
-    fail("Not yet implemented");
+    // When / Then
+    assertThat(ctx.isPendingInjection("thread-1", 100L), is(true));
   }
 
   /** Verifies that isPendingInjection returns false when the offset does not match. */
   @Test
-  @Ignore("Awaiting implementation in #1039")
   public void isPendingInjection_returnsFalseForDifferentOffset() {
-    // Given: ReplayContext with pushPendingInjection('thread-1', 100) called
-    // When: isPendingInjection('thread-1', 200) called
-    // Then: returns false
+    // Given
+    ReplayContext ctx = createContext(WalIndex.build(Arrays.asList()));
+    ctx.pushPendingInjection("thread-1", 100L);
 
-    // TODO(#1039): Implement test logic
-    fail("Not yet implemented");
+    // When / Then
+    assertThat(ctx.isPendingInjection("thread-1", 200L), is(false));
   }
 
   /** Verifies that isPendingInjection returns false when the thread name does not match. */
   @Test
-  @Ignore("Awaiting implementation in #1039")
   public void isPendingInjection_returnsFalseForDifferentThread() {
-    // Given: ReplayContext with pushPendingInjection('thread-1', 100) called
-    // When: isPendingInjection('thread-2', 100) called
-    // Then: returns false
+    // Given
+    ReplayContext ctx = createContext(WalIndex.build(Arrays.asList()));
+    ctx.pushPendingInjection("thread-1", 100L);
 
-    // TODO(#1039): Implement test logic
-    fail("Not yet implemented");
+    // When / Then
+    assertThat(ctx.isPendingInjection("thread-2", 100L), is(false));
   }
 
   /**
    * Verifies that popPendingInjection removes the entry and isPendingInjection returns false after.
    */
   @Test
-  @Ignore("Awaiting implementation in #1039")
   public void popPendingInjection_removesFromQueue() {
-    // Given: ReplayContext with pushPendingInjection('thread-1', 100) called
-    // When: popPendingInjection('thread-1') called, then isPendingInjection('thread-1', 100)
-    // Then: pop returns 100; isPendingInjection returns false
+    // Given
+    ReplayContext ctx = createContext(WalIndex.build(Arrays.asList()));
+    ctx.pushPendingInjection("thread-1", 100L);
 
-    // TODO(#1039): Implement test logic
-    fail("Not yet implemented");
+    // When
+    long popped = ctx.popPendingInjection("thread-1");
+
+    // Then
+    assertThat(popped, is(100L));
+    assertThat(ctx.isPendingInjection("thread-1", 100L), is(false));
   }
 
   /** Verifies that multiple offsets are queued per thread in FIFO order. */
   @Test
-  @Ignore("Awaiting implementation in #1039")
   public void pushPendingInjection_multipleOffsetsQueued() {
-    // Given: pushPendingInjection('thread-1', 100) then pushPendingInjection('thread-1', 200)
-    // When: isPendingInjection('thread-1', 100) and isPendingInjection('thread-1', 200)
-    // Then: both return true; popPendingInjection returns 100 first, then 200 (FIFO)
+    // Given
+    ReplayContext ctx = createContext(WalIndex.build(Arrays.asList()));
+    ctx.pushPendingInjection("thread-1", 100L);
+    ctx.pushPendingInjection("thread-1", 200L);
 
-    // TODO(#1039): Implement test logic
-    fail("Not yet implemented");
+    // When / Then: both are pending
+    assertThat(ctx.isPendingInjection("thread-1", 100L), is(true));
+    assertThat(ctx.isPendingInjection("thread-1", 200L), is(true));
+
+    // When / Then: FIFO order
+    assertThat(ctx.popPendingInjection("thread-1"), is(100L));
+    assertThat(ctx.popPendingInjection("thread-1"), is(200L));
   }
 
   // ===== hasInjectorForThread tests =====
@@ -249,14 +250,19 @@ public class ReplayContextTest {
    * {@code WalIndex.getInputThreadNames()} (i.e., the thread has entry-point operations).
    */
   @Test
-  @Ignore("Awaiting implementation in #1039")
   public void hasInjectorForThread_returnsTrueForInputThread() {
-    // Given: WalIndex built with entries where 'fx-thread' has entry-point operations
-    // When: hasInjectorForThread('fx-thread') called
-    // Then: returns true
+    // Given: WalIndex with entry-point operations on 'fx-thread'
+    List<WalEntry> entries =
+        Arrays.asList(
+            makeOperation(0L, "self-caller", 1),
+            makeEntryPointOperation(1L, "fx-thread", 2),
+            makeCompletion(2L, "fx-thread", 3),
+            makeCompletion(3L, "self-caller", 4));
+    WalIndex walIndex = WalIndex.build(entries);
+    ReplayContext ctx = createContext(walIndex);
 
-    // TODO(#1039): Implement test logic
-    fail("Not yet implemented");
+    // When / Then
+    assertThat(ctx.hasInjectorForThread("fx-thread"), is(true));
   }
 
   /**
@@ -265,15 +271,15 @@ public class ReplayContextTest {
    * not by a ReplayInputInjector).
    */
   @Test
-  @Ignore("Awaiting implementation in #1039")
   public void hasInjectorForThread_returnsFalseForSelfCaller() {
-    // Given: WalIndex built with entries where only 'self-caller' operations exist
-    //        (no entry-point markers on self-caller thread)
-    // When: hasInjectorForThread('self-caller') called
-    // Then: returns false
+    // Given: WalIndex with only self-caller operations (no entry-point markers)
+    List<WalEntry> entries =
+        Arrays.asList(makeOperation(0L, "self-caller", 1), makeCompletion(1L, "self-caller", 2));
+    WalIndex walIndex = WalIndex.build(entries);
+    ReplayContext ctx = createContext(walIndex);
 
-    // TODO(#1039): Implement test logic
-    fail("Not yet implemented");
+    // When / Then
+    assertThat(ctx.hasInjectorForThread("self-caller"), is(false));
   }
 
   /**
@@ -281,14 +287,15 @@ public class ReplayContextTest {
    * in the WAL at all.
    */
   @Test
-  @Ignore("Awaiting implementation in #1039")
   public void hasInjectorForThread_returnsFalseForUnknownThread() {
-    // Given: WalIndex built with entries (for other threads)
-    // When: hasInjectorForThread('unknown-thread') called
-    // Then: returns false
+    // Given: WalIndex with entries for other threads
+    List<WalEntry> entries =
+        Arrays.asList(makeOperation(0L, "self-caller", 1), makeCompletion(1L, "self-caller", 2));
+    WalIndex walIndex = WalIndex.build(entries);
+    ReplayContext ctx = createContext(walIndex);
 
-    // TODO(#1039): Implement test logic
-    fail("Not yet implemented");
+    // When / Then
+    assertThat(ctx.hasInjectorForThread("unknown-thread"), is(false));
   }
 
   /**
@@ -346,6 +353,31 @@ public class ReplayContextTest {
     ReturnValue rv = new ReturnValue();
     rv.setIsVoid(true);
     msg.setReturnValue(rv);
+
+    return WalEntry.fromExecMessage(offset, msg);
+  }
+
+  /**
+   * Creates an entry-point OPERATION {@link WalEntry}.
+   *
+   * @param offset the WAL offset
+   * @param threadName the thread name
+   * @param builderSeq the builder sequence number
+   * @return a new entry-point WalEntry of kind OPERATION
+   */
+  private static WalEntry makeEntryPointOperation(long offset, String threadName, int builderSeq) {
+    ExecMessage msg = new ExecMessage();
+    msg.setThreadName(threadName);
+    msg.setBuilderSeq(builderSeq);
+    msg.setEntryPoint(true);
+
+    InstanceMethodCall imc = new InstanceMethodCall();
+    imc.setName("entryOp" + offset);
+    imc.setObjectRef(1);
+    Class clazz = new Class();
+    clazz.setName("com.example.TestClass");
+    imc.setClazz(clazz);
+    msg.setInstanceMethodCall(imc);
 
     return WalEntry.fromExecMessage(offset, msg);
   }
