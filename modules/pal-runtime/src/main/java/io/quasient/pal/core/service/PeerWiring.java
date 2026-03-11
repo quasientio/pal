@@ -834,22 +834,28 @@ public class PeerWiring extends AbstractModule {
    * Builds a {@link ReplayPolicy} from the configured properties.
    *
    * <p>Reads the replay policy configuration from properties set by the CLI layer ({@code
-   * replay.policy.path}, {@code replay.shield.io}, {@code replay.re-execute.patterns}, {@code
-   * replay.stub.patterns}, {@code replay.stub.all.else}). If no policy-related properties are set,
-   * returns a default policy that re-executes all operations.
+   * replay.policy.path}, {@code replay.shield.io}, {@code replay.shield.fx}, {@code
+   * replay.re-execute.patterns}, {@code replay.stub.patterns}, {@code replay.stub.all.else}). If no
+   * policy-related properties are set, returns a default policy that re-executes all operations.
    *
    * @return the constructed replay policy
    */
   private ReplayPolicy buildReplayPolicy() {
     String policyPath = properties.getProperty("replay.policy.path");
     boolean shieldIo = Boolean.parseBoolean(properties.getProperty("replay.shield.io", "false"));
+    boolean shieldFx = Boolean.parseBoolean(properties.getProperty("replay.shield.fx", "false"));
     String reExecStr = properties.getProperty("replay.re-execute.patterns");
     String stubStr = properties.getProperty("replay.stub.patterns");
     boolean stubAllElse =
         Boolean.parseBoolean(properties.getProperty("replay.stub.all.else", "false"));
 
     boolean hasAnyPolicyConfig =
-        policyPath != null || shieldIo || reExecStr != null || stubStr != null || stubAllElse;
+        policyPath != null
+            || shieldIo
+            || shieldFx
+            || reExecStr != null
+            || stubStr != null
+            || stubAllElse;
 
     if (!hasAnyPolicyConfig) {
       return new ReplayPolicy();
@@ -859,7 +865,7 @@ public class PeerWiring extends AbstractModule {
     String[] stubPatterns = stubStr != null ? stubStr.split(",") : null;
 
     return ReplayPolicyParser.fromOptions(
-        policyPath, shieldIo, reExecPatterns, stubPatterns, stubAllElse);
+        policyPath, shieldIo, shieldFx, reExecPatterns, stubPatterns, stubAllElse);
   }
 
   /**

@@ -202,6 +202,15 @@ public class Replay extends AbstractPalSubcommand {
   private boolean shieldIo;
 
   /**
+   * Enables built-in JavaFX stubbing rules that stub wall-clock-dependent operations such as {@code
+   * Animation.play()}, {@code Timeline.play()}, and {@code AnimationTimer.start()}.
+   */
+  @Option(
+      names = {"--shield-fx"},
+      description = "Enable built-in JavaFX stubbing rules for animation/timing operations")
+  private boolean shieldFx;
+
+  /**
    * Comma-separated Ant-style patterns for classes/methods to re-execute during replay. Patterns
    * use dot-separated class names (e.g., {@code "com.example.**"}).
    */
@@ -440,6 +449,9 @@ public class Replay extends AbstractPalSubcommand {
     }
     if (shieldIo) {
       args.add("--replay-shield-io");
+    }
+    if (shieldFx) {
+      args.add("--replay-shield-fx");
     }
     if (reExecutePatterns != null) {
       args.add("--replay-re-execute");

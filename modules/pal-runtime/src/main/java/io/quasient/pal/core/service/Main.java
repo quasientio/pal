@@ -333,6 +333,16 @@ public class Main implements Callable<Integer> {
   private boolean replayShieldIo;
 
   /**
+   * Enables built-in JavaFX stubbing rules that stub wall-clock-dependent operations such as {@code
+   * Animation.play()}, {@code Timeline.play()}, and {@code AnimationTimer.start()} during replay.
+   * Only relevant when {@code --replay-wal} is set.
+   */
+  @Option(
+      names = {"--replay-shield-fx"},
+      description = "Enable built-in JavaFX stubbing rules for animation/timing operations")
+  private boolean replayShieldFx;
+
+  /**
    * Comma-separated Ant-style patterns for classes/methods to re-execute during replay. Only
    * relevant when {@code --replay-wal} is set.
    */
@@ -1140,6 +1150,7 @@ public class Main implements Callable<Integer> {
         properties.setProperty("replay.policy.path", replayPolicyPath);
       }
       properties.setProperty("replay.shield.io", String.valueOf(replayShieldIo));
+      properties.setProperty("replay.shield.fx", String.valueOf(replayShieldFx));
       if (replayReExecutePatterns != null) {
         properties.setProperty(
             "replay.re-execute.patterns", String.join(",", replayReExecutePatterns));
@@ -2121,7 +2132,8 @@ public class Main implements Callable<Integer> {
               replayContext.getReplayGate(),
               replayContext,
               readyLatch,
-              replayContext.getOperationDelayMs());
+              replayContext.getOperationDelayMs(),
+              walIndex);
 
       Thread thread = new Thread(injectorRunnable, injectorThreadName);
       thread.setDaemon(true);

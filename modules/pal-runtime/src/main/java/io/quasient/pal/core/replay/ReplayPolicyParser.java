@@ -24,12 +24,13 @@ import org.yaml.snakeyaml.error.YAMLException;
 /**
  * Parses replay policy configuration from YAML content and CLI options into a {@link ReplayPolicy}.
  *
- * <p>Supports three sources of rules, applied in priority order:
+ * <p>Supports four sources of rules, applied in priority order:
  *
  * <ol>
  *   <li><b>CLI patterns</b> ({@code --re-execute}, {@code --stub}): highest priority, prepended
  *       before YAML rules
- *   <li><b>Built-in rules</b> ({@code --shield-io}): I/O and non-deterministic operation stubs
+ *   <li><b>Built-in I/O rules</b> ({@code --shield-io}): I/O and non-deterministic operation stubs
+ *   <li><b>Built-in JavaFX rules</b> ({@code --shield-fx}): JavaFX animation and timing stubs
  *   <li><b>YAML file</b> ({@code --replay-policy}): user-defined rules with a default action
  * </ol>
  *
@@ -114,11 +115,13 @@ public final class ReplayPolicyParser {
    * Builds a {@link ReplayPolicy} from CLI options and an optional YAML file.
    *
    * <p>CLI patterns are prepended before YAML rules (higher priority). The {@code --shield-io} flag
-   * adds built-in I/O rules after CLI patterns but before YAML rules. The {@code --stub-all-else}
-   * flag overrides the default action to {@link ReplayAction#STUB_FROM_WAL}.
+   * adds built-in I/O rules after CLI patterns but before YAML rules. The {@code --shield-fx} flag
+   * adds built-in JavaFX rules. The {@code --stub-all-else} flag overrides the default action to
+   * {@link ReplayAction#STUB_FROM_WAL}.
    *
    * @param yamlPath path to a YAML replay policy file, or {@code null} if not provided
    * @param shieldIo whether to include built-in I/O shield rules
+   * @param shieldFx whether to include built-in JavaFX shield rules
    * @param reExecutePatterns Ant-style patterns for operations to re-execute, or {@code null}
    * @param stubPatterns Ant-style patterns for operations to stub, or {@code null}
    * @param stubAllElse whether to set the default action to {@link ReplayAction#STUB_FROM_WAL}
@@ -129,6 +132,7 @@ public final class ReplayPolicyParser {
   public static ReplayPolicy fromOptions(
       String yamlPath,
       boolean shieldIo,
+      boolean shieldFx,
       String[] reExecutePatterns,
       String[] stubPatterns,
       boolean stubAllElse) {
@@ -148,9 +152,12 @@ public final class ReplayPolicyParser {
       }
     }
 
-    // 2. Built-in I/O shield rules
+    // 2. Built-in shield rules
     if (shieldIo) {
       allRules.addAll(BuiltInStubRules.getIoShieldRules());
+    }
+    if (shieldFx) {
+      allRules.addAll(BuiltInStubRules.getFxShieldRules());
     }
 
     // 3. YAML file rules

@@ -73,7 +73,7 @@ public class ReplayPolicyParserTest {
    */
   @Test
   public void shieldIoRulesApplied() {
-    ReplayPolicy policy = ReplayPolicyParser.fromOptions(null, true, null, null, false);
+    ReplayPolicy policy = ReplayPolicyParser.fromOptions(null, true, false, null, null, false);
 
     assertThat(
         policy.getAction("java.lang.System", "currentTimeMillis", MessageType.EXEC_CLASS_METHOD),
@@ -96,7 +96,8 @@ public class ReplayPolicyParserTest {
   @Test
   public void cliPatternsOverrideYaml() {
     ReplayPolicy policy =
-        ReplayPolicyParser.fromOptions(null, false, new String[] {"com.example.**"}, null, true);
+        ReplayPolicyParser.fromOptions(
+            null, false, false, new String[] {"com.example.**"}, null, true);
 
     // CLI --re-execute pattern should match
     assertThat(
@@ -124,7 +125,8 @@ public class ReplayPolicyParserTest {
   @Test
   public void stubAllElseAddsDefaultStub() {
     ReplayPolicy policy =
-        ReplayPolicyParser.fromOptions(null, false, new String[] {"com.myapp.**"}, null, true);
+        ReplayPolicyParser.fromOptions(
+            null, false, false, new String[] {"com.myapp.**"}, null, true);
 
     assertThat(policy.getDefaultAction(), is(ReplayAction.STUB_FROM_WAL));
     // Matching --re-execute pattern

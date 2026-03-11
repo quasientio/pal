@@ -76,6 +76,35 @@ public final class BuiltInStubRules {
   }
 
   /**
+   * Returns the built-in JavaFX shield rules for deterministic replay.
+   *
+   * <p>These rules stub JavaFX operations that depend on wall-clock timing:
+   *
+   * <ul>
+   *   <li><b>Animation callbacks:</b> {@code Animation.setOnFinished} (prevents callbacks from
+   *       firing after WAL cursor is exhausted, while still allowing animations to run for visual
+   *       effects)
+   *   <li><b>Animation Timer:</b> {@code AnimationTimer.start/stop} (prevents per-frame handle()
+   *       calls that would cause massive divergences)
+   * </ul>
+   *
+   * @return an unmodifiable list of built-in JavaFX shield rules
+   */
+  public static List<ReplayPolicyRule> getFxShieldRules() {
+    return List.of(
+        // Animation callback registration - stub to prevent callbacks from firing
+        // after the WAL cursor is exhausted. This allows animations to run (for
+        // visual effects) while preventing the callback operations from being
+        // logged as "extra operations".
+        rule("javafx.animation.*", "setOnFinished", ReplayAction.STUB_FROM_WAL),
+        // AnimationTimer (uses wall-clock pulses) - stub start/stop entirely
+        // since AnimationTimer.handle() fires every frame and would cause
+        // massive divergences
+        rule("javafx.animation.AnimationTimer", "start", ReplayAction.STUB_FROM_WAL),
+        rule("javafx.animation.AnimationTimer", "stop", ReplayAction.STUB_FROM_WAL));
+  }
+
+  /**
    * Convenience factory for creating a rule with the given patterns and action.
    *
    * @param classPattern the Ant-style class pattern

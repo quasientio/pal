@@ -386,6 +386,44 @@ Each operation during replay is assigned one of five actions:
 | `STUB_FROM_WAL_VERIFIED` | Return the WAL value, but also execute and compare (for validation) |
 | `STUB_WITH_SIDE_EFFECTS` | Return the WAL-recorded value and replay any field mutations from within the span |
 
+### Entry Points vs Nested Operations
+
+Understanding when replay actions apply is critical:
+
+**Entry point injection** (operations injected by `ReplayInputInjector` via `dispatchIncoming`):
+- Arguments **always** come from the WAL message — this is how injection works
+- The method body **always** executes with those WAL arguments
+- RE_EXECUTE vs STUB does not apply to the entry point itself
+
+**Nested operations** (operations inside entry points, handled via `dispatchReplay`):
+- Arguments come from **live execution state** (`pjp.getArgs()`)
+- This is where RE_EXECUTE vs STUB makes a difference
+
+| Aspect | RE_EXECUTE | STUB_FROM_WAL |
+|--------|------------|---------------|
+| **Arguments** | Live (from current execution) | Ignored |
+| **Execution** | Yes, runs the code | No, skipped |
+| **Return value** | Live result | WAL-recorded value |
+| **Divergence** | Detected if result ≠ WAL | Never (uses WAL value) |
+
+**Example flow:**
+
+```
+Entry point: submitTransaction("100", "Starbucks")  ← WAL args (always)
+  │
+  └─ Nested: createTransaction(100.0, "Starbucks")  ← live args
+       │
+       └─ Nested: System.currentTimeMillis()
+            │
+            ├─ RE_EXECUTE: executes → returns 1699999500000 (current time)
+            │              WAL expected 1699999200000 → VALUE_MISMATCH
+            │
+            └─ STUB_FROM_WAL: skips → returns 1699999200000 (WAL value)
+                              No divergence
+```
+
+In this example, `submitTransaction` is injected with its recorded arguments (`"100"`, `"Starbucks"`), so those values flow correctly into the method body. But `System.currentTimeMillis()` is a nested call that executes during replay — with RE_EXECUTE it returns the current time (causing a divergence), while with STUB_FROM_WAL it returns the recorded time.
+
 ### When to Use Each Action
 
 **`STUB_FROM_WAL`** — Use for operations that are pure functions of external state: time, random numbers, network reads, console output. These operations have no side effects visible to the caller beyond their return value.
@@ -403,7 +441,18 @@ pal replay --wal file:/tmp/my-wal --shield-io \
   -cp target/classes com.example.App arg1 arg2
 ```
 
-This stubs `System.currentTimeMillis()`, `Math.random()`, `java.io` streams, `java.net` operations, and `DriverManager.getConnection()` — all from WAL-recorded values. Everything else is re-executed normally.
+This stubs time operations (`System.currentTimeMillis()`, `System.nanoTime()`, and `java.time.*.now()` methods like `LocalTime.now()`, `Instant.now()`, etc.), random generators (`Math.random()`, `Random.**`, `ThreadLocalRandom.**`), I/O streams (`java.io` readers/writers), network operations (`java.net.**`), and `DriverManager.getConnection()` — all from WAL-recorded values. Everything else is re-executed normally.
+
+### JavaFX Applications: `--shield-fx`
+
+For JavaFX applications, use `--shield-fx` to stub wall-clock-dependent animation operations:
+
+```bash
+pal replay --wal file:/tmp/my-wal --shield-io --shield-fx --fx-thread \
+  -jar target/my-javafx-app.jar
+```
+
+This stubs `Animation.setOnFinished()` (and similar callback setters) and `AnimationTimer.start/stop`. Animations still run for visual effects, but their completion callbacks are prevented from firing, avoiding spurious "extra operation" divergences after the WAL cursor is exhausted.
 
 ### Replay Policy Configuration (YAML)
 
@@ -419,6 +468,10 @@ rules:
 
   - class: "java.lang.System"
     method: "nanoTime"
+    action: STUB_FROM_WAL
+
+  - class: "java.time.LocalTime"
+    method: "now"
     action: STUB_FROM_WAL
 
   - class: "java.lang.Math"
@@ -470,6 +523,10 @@ pal replay --wal file:/tmp/my-wal \
 pal replay --wal file:/tmp/my-wal --shield-io \
   --re-execute "com.example.TimeService.**" \
   -cp target/classes com.example.App
+
+# JavaFX app: shield I/O and animations
+pal replay --wal file:/tmp/my-wal --shield-io --shield-fx --fx-thread \
+  -jar target/my-javafx-app.jar
 ```
 
 **Flag priority** (highest to lowest):
@@ -477,7 +534,8 @@ pal replay --wal file:/tmp/my-wal --shield-io \
 1. `--re-execute` patterns
 2. `--stub` patterns
 3. `--shield-io` built-in rules
-4. `--policy` YAML file rules
+4. `--shield-fx` built-in rules
+5. `--policy` YAML file rules
 
 ### Phantom Object Cascading
 
