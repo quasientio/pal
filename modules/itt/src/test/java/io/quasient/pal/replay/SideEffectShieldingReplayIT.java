@@ -290,6 +290,7 @@ public class SideEffectShieldingReplayIT extends AbstractCliIT {
     launchArgs.add("--rpc-threads");
     launchArgs.add("2");
     launchArgs.add("--wal-incoming-rpc");
+    launchArgs.add("--no-wal-incoming-cli");
     launchArgs.add("--as-service");
     launchArgs.add("-cp");
     launchArgs.add(getIttAppsClasspath());

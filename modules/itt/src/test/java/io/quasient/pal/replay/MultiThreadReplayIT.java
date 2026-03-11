@@ -398,6 +398,7 @@ public class MultiThreadReplayIT extends AbstractCliIT {
     args.add("--rpc-threads");
     args.add(String.valueOf(RPC_THREADS));
     args.add("--wal-incoming-rpc");
+    args.add("--no-wal-incoming-cli");
     args.add("--as-service");
     args.add("-cp");
     args.add(getIttAppsClasspath());

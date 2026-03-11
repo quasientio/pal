@@ -477,6 +477,7 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
               getPalDirectoryUrl(),
               "--wal",
               "file:" + chronicleDir,
+              "--no-wal-incoming-cli",
               "-cp",
               ittAppsClasspath,
               METHODS_CLASS);
