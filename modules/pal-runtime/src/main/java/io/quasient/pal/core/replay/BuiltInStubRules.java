@@ -30,7 +30,9 @@ public final class BuiltInStubRules {
    * <p>These rules stub operations that depend on external state:
    *
    * <ul>
-   *   <li><b>Time:</b> {@code System.currentTimeMillis}, {@code System.nanoTime}
+   *   <li><b>Time:</b> {@code System.currentTimeMillis}, {@code System.nanoTime}, {@code
+   *       java.time.Clock.instant/millis}, {@code java.time.*.now} (Instant, LocalTime, LocalDate,
+   *       LocalDateTime, ZonedDateTime, OffsetDateTime, OffsetTime, Year, YearMonth, MonthDay)
    *   <li><b>Random:</b> {@code Math.random}, {@code java.util.Random.**}, {@code
    *       ThreadLocalRandom.**}
    *   <li><b>I/O reads:</b> {@code InputStream.**}, {@code Reader.**}, {@code java.net.**}
@@ -42,9 +44,22 @@ public final class BuiltInStubRules {
    */
   public static List<ReplayPolicyRule> getIoShieldRules() {
     return List.of(
-        // Time
+        // Time - legacy
         rule("java.lang.System", "currentTimeMillis", ReplayAction.STUB_FROM_WAL),
         rule("java.lang.System", "nanoTime", ReplayAction.STUB_FROM_WAL),
+        // Time - java.time API
+        rule("java.time.Clock", "instant", ReplayAction.STUB_FROM_WAL),
+        rule("java.time.Clock", "millis", ReplayAction.STUB_FROM_WAL),
+        rule("java.time.Instant", "now", ReplayAction.STUB_FROM_WAL),
+        rule("java.time.LocalTime", "now", ReplayAction.STUB_FROM_WAL),
+        rule("java.time.LocalDate", "now", ReplayAction.STUB_FROM_WAL),
+        rule("java.time.LocalDateTime", "now", ReplayAction.STUB_FROM_WAL),
+        rule("java.time.ZonedDateTime", "now", ReplayAction.STUB_FROM_WAL),
+        rule("java.time.OffsetDateTime", "now", ReplayAction.STUB_FROM_WAL),
+        rule("java.time.OffsetTime", "now", ReplayAction.STUB_FROM_WAL),
+        rule("java.time.Year", "now", ReplayAction.STUB_FROM_WAL),
+        rule("java.time.YearMonth", "now", ReplayAction.STUB_FROM_WAL),
+        rule("java.time.MonthDay", "now", ReplayAction.STUB_FROM_WAL),
         // Random
         rule("java.lang.Math", "random", ReplayAction.STUB_FROM_WAL),
         rule("java.util.Random", "**", ReplayAction.STUB_FROM_WAL),
