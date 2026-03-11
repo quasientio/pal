@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- [Doc] Update developer architecture documentation for deterministic replay: document conditional span-skip logic, phantom stub handling, ReplayInputInjector wait-for-completion behavior, isPendingInjection/hasInjectorForThread methods, --shield-fx flag, expanded --shield-io java.time coverage, and --no-wal-incoming-cli testing requirement
 - [Fix] Make entry-point span-skip conditional on injector presence in dispatchReplay — only skip entire span when the entry point's thread has a ReplayInputInjector; otherwise skip only the OPERATION entry, leaving nested operations available for cursor matching. Reinstates COMPLETION skip loop for operation-only skip path.
 - [Doc] Add --no-wal-incoming-cli documentation to deterministic replay user guide: explain purpose, relationship with --wal-incoming-rpc, and when to use it
 - [Doc] Add user guide, developer architecture doc, and CLI reference for RPC policy system
