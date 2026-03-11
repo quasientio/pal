@@ -575,9 +575,11 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       long completionOffset = expectedEntry.getOffset();
       cursor.advance();
       replayContext.getReplayGate().advanceTo(completionOffset);
-      logger.debug(
-          "Skipped entry point COMPLETION at offset {} (entry point was called by unweaved code)",
-          completionOffset);
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            "Skipped entry point COMPLETION at offset {} (entry point was called by unweaved code)",
+            completionOffset);
+      }
       expectedEntry = cursor.peekNext();
     }
 
@@ -814,9 +816,11 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     // entry point isn't marked as handled yet, causing duplicate execution.
     if (expectedEntry.isEntryPoint()) {
       replayContext.markEntryPointHandled(operationOffset);
-      logger.debug(
-          "Entry point at offset {} handled via dispatchReplay (real runtime path)",
-          operationOffset);
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            "Entry point at offset {} handled via dispatchReplay (real runtime path)",
+            operationOffset);
+      }
     }
 
     // Advance the gate after consuming the OPERATION entry so that injection threads
@@ -1086,7 +1090,9 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
             .getDivergenceDetector()
             .compareReturnValue(completionEntry, liveResult, Thread.currentThread().getName());
       } catch (Throwable t) {
-        logger.debug("STUB_FROM_WAL_VERIFIED execution threw: {}", t.getMessage());
+        if (logger.isDebugEnabled()) {
+          logger.debug("STUB_FROM_WAL_VERIFIED execution threw: {}", t.getMessage());
+        }
       }
     }
 
@@ -1187,7 +1193,10 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       ReplayCursor cursor, WalEntry expectedEntry, long operationOffset, long completionOffset) {
     if (expectedEntry.isEntryPoint()) {
       replayContext.markEntryPointHandled(operationOffset);
-      logger.debug("Entry point at offset {} handled via STUB_FROM_WAL dispatch", operationOffset);
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            "Entry point at offset {} handled via STUB_FROM_WAL dispatch", operationOffset);
+      }
     }
 
     cursor.advancePast(completionOffset);
@@ -1299,7 +1308,9 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       String walThreadName, long operationOffset, long completionOffset) {
     // Mark entry point as handled (phantom stubs in dispatchIncoming are always entry points)
     replayContext.markEntryPointHandled(operationOffset);
-    logger.debug("Entry point at offset {} handled via phantom stub", operationOffset);
+    if (logger.isDebugEnabled()) {
+      logger.debug("Entry point at offset {} handled via phantom stub", operationOffset);
+    }
 
     // Advance the per-thread cursor past the operation and completion entries.
     // This is critical: without this, subsequent dispatchIncoming calls on the same thread
@@ -1307,10 +1318,12 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     ReplayCursor cursor = replayContext.getCursor(walThreadName);
     if (cursor != null) {
       cursor.advancePast(completionOffset);
-      logger.debug(
-          "Phantom stub advanced cursor for thread '{}' past completion offset {}",
-          walThreadName,
-          completionOffset);
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            "Phantom stub advanced cursor for thread '{}' past completion offset {}",
+            walThreadName,
+            completionOffset);
+      }
     }
 
     // Advance the gate to the completion offset
@@ -1353,10 +1366,12 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     try {
       return Unwrapper.unwrapObject(obj);
     } catch (UnsupportedOperationException | ClassNotFoundException e) {
-      logger.debug(
-          "Cannot reconstruct return value at offset {}, registering as phantom: {}",
-          completionEntry.getOffset(),
-          e.getMessage());
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            "Cannot reconstruct return value at offset {}, registering as phantom: {}",
+            completionEntry.getOffset(),
+            e.getMessage());
+      }
       return null;
     }
   }
@@ -1550,7 +1565,9 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       } catch (ReflectiveOperationException | AmbiguousCallException | RuntimeException ex) {
         // Log at DEBUG for replay injection (phantom stub may recover), ERROR otherwise
         if (isReplayInjection && replayContext != null) {
-          logger.debug("Loading phase failed (phantom stub may handle): {}", ex.getMessage());
+          if (logger.isDebugEnabled()) {
+            logger.debug("Loading phase failed (phantom stub may handle): {}", ex.getMessage());
+          }
         } else {
           logger.error("Error during loading phase", ex);
         }
@@ -1573,24 +1590,28 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         // Debug: log phantom stub check details
         String phantomClassName = getClassname(incomingCall);
         String phantomMethodName = getExecutableName(incomingCall);
-        logger.debug(
-            "Phantom stub check: threadName={}, offset={}, class={}, method={}",
-            phantomThreadName,
-            phantomOffset,
-            phantomClassName,
-            phantomMethodName);
+        if (logger.isDebugEnabled()) {
+          logger.debug(
+              "Phantom stub check: threadName={}, offset={}, class={}, method={}",
+              phantomThreadName,
+              phantomOffset,
+              phantomClassName,
+              phantomMethodName);
+        }
 
         if (phantomOffset >= 0) {
           // Check if this operation should be stubbed according to the replay policy
           ReplayAction phantomAction =
               replayContext.getPolicy().getAction(phantomClassName, phantomMethodName, messageType);
 
-          logger.debug(
-              "Phantom stub action for {}.{}: {} (messageType={})",
-              phantomClassName,
-              phantomMethodName,
-              phantomAction,
-              messageType);
+          if (logger.isDebugEnabled()) {
+            logger.debug(
+                "Phantom stub action for {}.{}: {} (messageType={})",
+                phantomClassName,
+                phantomMethodName,
+                phantomAction,
+                messageType);
+          }
 
           if (phantomAction == ReplayAction.STUB_FROM_WAL
               || phantomAction == ReplayAction.STUB_FROM_WAL_VERIFIED

@@ -194,12 +194,14 @@ public class ReplayInputInjector implements Runnable {
       // check handle it. The callback runs on the FX thread, same as dispatchReplay, so there
       // are no visibility issues.
 
-      logger.debug(
-          "[{}] Injecting entry point at offset {}: {}.{}",
-          threadName,
-          entryPoint.getOffset(),
-          entryPoint.getClassName(),
-          entryPoint.getExecutableName());
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            "[{}] Injecting entry point at offset {}: {}.{}",
+            threadName,
+            entryPoint.getOffset(),
+            entryPoint.getClassName(),
+            entryPoint.getExecutableName());
+      }
 
       // Advance the gate to signal that we've reached this entry point's offset. This allows
       // other threads waiting on subsequent offsets to proceed. We do this HERE (in the
@@ -214,7 +216,9 @@ public class ReplayInputInjector implements Runnable {
           Thread.sleep(operationDelayMs);
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
-          logger.debug("Replay delay interrupted for thread '{}'", threadName);
+          if (logger.isDebugEnabled()) {
+            logger.debug("Replay delay interrupted for thread '{}'", threadName);
+          }
           return;
         }
       }
@@ -235,17 +239,21 @@ public class ReplayInputInjector implements Runnable {
       // nested operations (which caused cursor misalignment without --delay).
       Long completionOffset = walIndex.getCompletionOffset(entryPoint.getOffset());
       if (completionOffset != null) {
-        logger.debug(
-            "[{}] Waiting for completion of entry point at offset {} (completion at {})",
-            threadName,
-            entryPoint.getOffset(),
-            completionOffset);
+        if (logger.isDebugEnabled()) {
+          logger.debug(
+              "[{}] Waiting for completion of entry point at offset {} (completion at {})",
+              threadName,
+              entryPoint.getOffset(),
+              completionOffset);
+        }
         replayGate.waitForOffset(completionOffset + 1);
-        logger.debug(
-            "[{}] Entry point at offset {} completed (gate at {})",
-            threadName,
-            entryPoint.getOffset(),
-            replayGate.getCompletedOffset());
+        if (logger.isDebugEnabled()) {
+          logger.debug(
+              "[{}] Entry point at offset {} completed (gate at {})",
+              threadName,
+              entryPoint.getOffset(),
+              replayGate.getCompletedOffset());
+        }
       } else {
         logger.warn(
             "[{}] No completion offset found for entry point at offset {} - proceeding without wait",
@@ -253,8 +261,10 @@ public class ReplayInputInjector implements Runnable {
             entryPoint.getOffset());
       }
 
-      logger.debug(
-          "[{}] Finished injecting entry point at offset {}", threadName, entryPoint.getOffset());
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            "[{}] Finished injecting entry point at offset {}", threadName, entryPoint.getOffset());
+      }
     }
 
     complete = true;
