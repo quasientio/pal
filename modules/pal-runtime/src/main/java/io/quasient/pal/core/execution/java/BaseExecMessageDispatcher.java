@@ -622,35 +622,35 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
         replayContext.markEntryPointHandled(skippedOffset);
 
-        // Skip the ENTIRE SPAN of the entry point (from OPERATION to COMPLETION, including
-        // all nested operations). This prevents cursor misalignment when entry points have
-        // nested operations that would otherwise cause mismatches.
-        //
-        // IMPORTANT: We only advance the gate to the OPERATION offset, not the completion
-        // offset. Advancing to completion would signal that all operations in the span are
-        // "done", but they were skipped on THIS thread. Other threads (e.g., FX thread)
-        // might have operations within this offset range that haven't been processed yet.
-        // Advancing the gate too far would cause the injector to proceed without waiting.
-        Long completionOffset = replayContext.getWalIndex().getCompletionOffset(skippedOffset);
-        if (completionOffset != null) {
-          cursor.advancePast(completionOffset);
-          // Only advance gate to operation offset, not completion
-          replayContext.getReplayGate().advanceTo(skippedOffset);
+        // Determine skip strategy based on whether the entry point's thread has an injector.
+        // If an injector exists, the entry point will be injected on its target thread and
+        // nested operations will be handled there — skip the entire span.
+        // If no injector exists (e.g., self-caller main()), nested operations will run on
+        // this thread through dispatchReplay — skip only the OPERATION entry.
+        boolean hasInjector = replayContext.hasInjectorForThread(expectedEntry.getThreadName());
+        if (hasInjector) {
+          Long completionOffset = replayContext.getWalIndex().getCompletionOffset(skippedOffset);
+          if (completionOffset != null) {
+            cursor.advancePast(completionOffset);
+          } else {
+            cursor.advance();
+          }
+        } else {
+          cursor.advance();
+        }
+
+        // Only advance gate to operation offset, not completion. Advancing to completion
+        // would signal all operations in the span are "done", but other threads may have
+        // operations within this offset range that haven't been processed yet.
+        replayContext.getReplayGate().advanceTo(skippedOffset);
+        if (logger.isDebugEnabled()) {
           logger.debug(
-              "[{}] Skipped entry point SPAN at offset {} -> {} (called by unweaved code), "
+              "[{}] Skipped entry point at offset {} (hasInjector={}, strategy={}), "
                   + "gate advanced to {}, re-matching",
               threadName,
               skippedOffset,
-              completionOffset,
-              skippedOffset);
-        } else {
-          // No completion found (unpaired entry) - just skip the OPERATION
-          cursor.advance();
-          replayContext.getReplayGate().advanceTo(skippedOffset);
-          logger.debug(
-              "[{}] Skipped entry point at offset {} (called by unweaved code, unpaired), "
-                  + "re-matching",
-              threadName,
+              hasInjector,
+              hasInjector ? "span-skip" : "operation-only",
               skippedOffset);
         }
 
@@ -660,12 +660,27 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         while (true) {
           expectedEntry = cursor.peekNext();
 
+          // When operation-only skip was used (no injector), the COMPLETION entry for the
+          // skipped entry point remains in the cursor and must be skipped here.
+          if (!hasInjector) {
+            while (expectedEntry != null
+                && expectedEntry.getKind() == WalEntryKind.COMPLETION
+                && expectedEntry.isEntryPoint()) {
+              long completionOff = expectedEntry.getOffset();
+              cursor.advance();
+              replayContext.getReplayGate().advanceTo(completionOff);
+              expectedEntry = cursor.peekNext();
+            }
+          }
+
           if (expectedEntry == null || expectedEntry.getKind() != WalEntryKind.OPERATION) {
             // Cursor exhausted or unexpected entry after skipping
-            logger.info(
-                "[{}] Cursor exhausted after skipping entry points. Live op {} is extra.",
-                threadName,
-                liveSig);
+            if (logger.isInfoEnabled()) {
+              logger.info(
+                  "[{}] Cursor exhausted after skipping entry points. Live op {} is extra.",
+                  threadName,
+                  liveSig);
+            }
             replayContext.getDivergenceDetector().reportExtraOperation(liveSig, threadName);
             return invoke(pjp, pjp.getArgs());
           }
@@ -673,51 +688,58 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
           walSig = OperationSignature.fromWalEntry(expectedEntry);
           if (liveSig.matches(walSig)) {
             // Matched after skipping entry point(s) - continue with normal flow below
-            logger.debug(
-                "[{}] Matched {} after skipping entry point(s), cursor at offset {}",
-                threadName,
-                liveSig,
-                expectedEntry.getOffset());
+            if (logger.isDebugEnabled()) {
+              logger.debug(
+                  "[{}] Matched {} after skipping entry point(s), cursor at offset {}",
+                  threadName,
+                  liveSig,
+                  expectedEntry.getOffset());
+            }
             break;
           }
 
-          // Still mismatched - if it's another entry point, skip it too (with its full span)
+          // Still mismatched - if it's another entry point, skip it too
           if (expectedEntry.isEntryPoint()) {
             long anotherSkippedOffset = expectedEntry.getOffset();
 
             // Check if pending injection
             if (replayContext.isPendingInjection(threadName, anotherSkippedOffset)) {
-              logger.info(
-                  "[{}] Entry point at offset {} is pending injection, stopping skip loop. "
-                      + "Live operation {} will be reported as extra.",
-                  threadName,
-                  anotherSkippedOffset,
-                  liveSig);
+              if (logger.isInfoEnabled()) {
+                logger.info(
+                    "[{}] Entry point at offset {} is pending injection, stopping skip loop. "
+                        + "Live operation {} will be reported as extra.",
+                    threadName,
+                    anotherSkippedOffset,
+                    liveSig);
+              }
               replayContext.getDivergenceDetector().reportExtraOperation(liveSig, threadName);
               return invoke(pjp, pjp.getArgs());
             }
 
             replayContext.markEntryPointHandled(anotherSkippedOffset);
 
-            Long anotherCompletionOffset =
-                replayContext.getWalIndex().getCompletionOffset(anotherSkippedOffset);
-            if (anotherCompletionOffset != null) {
-              cursor.advancePast(anotherCompletionOffset);
-              // Only advance gate to operation offset
-              replayContext.getReplayGate().advanceTo(anotherSkippedOffset);
-              logger.debug(
-                  "[{}] Skipped another entry point SPAN at offset {} -> {}, gate at {}",
-                  threadName,
-                  anotherSkippedOffset,
-                  anotherCompletionOffset,
-                  anotherSkippedOffset);
+            boolean anotherHasInjector =
+                replayContext.hasInjectorForThread(expectedEntry.getThreadName());
+            if (anotherHasInjector) {
+              Long anotherCompletionOffset =
+                  replayContext.getWalIndex().getCompletionOffset(anotherSkippedOffset);
+              if (anotherCompletionOffset != null) {
+                cursor.advancePast(anotherCompletionOffset);
+              } else {
+                cursor.advance();
+              }
             } else {
               cursor.advance();
-              replayContext.getReplayGate().advanceTo(anotherSkippedOffset);
+              // Track that we used operation-only skip for the COMPLETION skip loop
+              hasInjector = false;
+            }
+            replayContext.getReplayGate().advanceTo(anotherSkippedOffset);
+            if (logger.isDebugEnabled()) {
               logger.debug(
-                  "[{}] Skipped another entry point at offset {} (unpaired)",
+                  "[{}] Skipped another entry point at offset {} (hasInjector={})",
                   threadName,
-                  anotherSkippedOffset);
+                  anotherSkippedOffset,
+                  anotherHasInjector);
             }
             // Continue loop to check next entry
           } else {

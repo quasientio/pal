@@ -295,6 +295,25 @@ public class ReplayContext {
   }
 
   /**
+   * Checks whether the given thread has a corresponding {@link ReplayInputInjector}.
+   *
+   * <p>A thread has an injector if its name appears in {@link WalIndex#getInputThreadNames()},
+   * meaning it has at least one entry-point OPERATION in the WAL. Threads without injectors (e.g.,
+   * the self-caller thread) have their entry points handled by {@code SelfBootstrapInvoker} rather
+   * than by injection, so their nested operations should remain in the cursor for matching.
+   *
+   * <p>This is used by {@code dispatchReplay()} to decide the skip strategy when an entry point is
+   * encountered: if an injector exists, the entire span is skipped (nested ops will be handled by
+   * the injector); otherwise, only the OPERATION entry is skipped and nested ops remain available.
+   *
+   * @param threadName the name of the thread to check
+   * @return {@code true} if the thread has a corresponding injector, {@code false} otherwise
+   */
+  public boolean hasInjectorForThread(String threadName) {
+    return walIndex.getInputThreadNames().contains(threadName);
+  }
+
+  /**
    * Checks whether an offset is pending injection for the given thread.
    *
    * <p>This is used by {@code dispatchReplay()} to avoid skipping entry points that are about to be
