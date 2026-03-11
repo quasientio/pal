@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- [Doc] Add --no-wal-incoming-cli documentation to deterministic replay user guide: explain purpose, relationship with --wal-incoming-rpc, and when to use it
 - [Doc] Add user guide, developer architecture doc, and CLI reference for RPC policy system
 - [Feature] Add RpcPolicyAction and MemberCategory enums for the RPC policy system
 - [Feature] Add STUB_FROM_WAL dispatch path in BaseExecMessageDispatcher — supports return value reconstruction, phantom cascading, exception replay, span skipping, and STUB_FROM_WAL_VERIFIED mode

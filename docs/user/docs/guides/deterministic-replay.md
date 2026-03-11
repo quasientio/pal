@@ -58,6 +58,22 @@ pal run --wal file:/tmp/service-wal --wal-incoming-rpc \
 
 With `--wal-incoming-rpc`, each incoming RPC call is recorded as an **entry-point operation** in the WAL. These entry-point markers are essential for multi-threaded replay — they tell the replay system which operations were external inputs that need to be re-injected during replay.
 
+#### Excluding the Self-Caller's `main()`: `--no-wal-incoming-cli`
+
+By default, the self-caller's `main()` invocation is also recorded as an entry-point operation in the WAL. For RPC services where `main()` contains only service setup code (e.g., starting an RPC listener, initializing configuration), this entry point is unnecessary — `main()` will be called naturally by the replay system via `SelfBootstrapInvoker` and does not need to be re-injected.
+
+Use `--no-wal-incoming-cli` to exclude the `main()` invocation from the WAL:
+
+```bash
+pal run --wal file:/tmp/service-wal --no-wal-incoming-cli \
+  --json-rpc auto --rpc-threads 4 \
+  -cp target/classes com.example.ServiceMain
+```
+
+This is recommended when `main()` is purely setup code. Omitting it keeps the WAL focused on the actual RPC entry points and avoids potential complications during multi-threaded replay where the self-caller's entry-point span could interfere with cursor alignment.
+
+**Note:** `--no-wal-incoming-cli` is **not** automatically enabled when `--wal-incoming-rpc` is specified. This is intentional: in some applications, `main()` contains business logic that should be replayed as an injected entry point rather than just running naturally. Add `--no-wal-incoming-cli` explicitly when you know that `main()` is purely setup code and does not contain injectable logic.
+
 ## Replaying from a WAL
 
 ### Basic Replay
